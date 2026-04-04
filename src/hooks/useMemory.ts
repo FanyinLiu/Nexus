@@ -31,8 +31,8 @@ type UseMemoryParams = {
 export function useMemory({ settings }: UseMemoryParams) {
   const [memories, setMemories] = useState<MemoryItem[]>(() => loadMemories())
   const [dailyMemories, setDailyMemories] = useState<DailyMemoryStore>(() => loadDailyMemories())
-  const memoriesRef = useRef<MemoryItem[]>(loadMemories())
-  const dailyMemoriesRef = useRef<DailyMemoryStore>(loadDailyMemories())
+  const memoriesRef = useRef(memories)
+  const dailyMemoriesRef = useRef(dailyMemories)
   const settingsRef = useRef(settings)
 
   useEffect(() => {
