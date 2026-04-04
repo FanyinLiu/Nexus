@@ -124,6 +124,12 @@ app.whenReady()
     await ensureRendererServer()
     registerMediaPermissionHandlers()
     registerIpc()
+
+    // macOS: hide dock icon for desktop pet (floating widget mode)
+    if (process.platform === 'darwin' && app.dock) {
+      app.dock.hide()
+    }
+
     createMainWindow()
     applyPetWindowState()
     createTray()

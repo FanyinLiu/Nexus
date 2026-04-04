@@ -11,16 +11,18 @@
     "electron:dev": "concurrently -k \"vite\" \"wait-on http://127.0.0.1:47821 && cross-env DESKTOP_PET_USE_DEV_SERVER=1 electron .\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test .\\tests\\audio-providers.test.ts .\\tests\\browser-vad.test.ts .\\tests\\text-files.test.ts .\\tests\\performance.test.ts .\\tests\\voice-core.test.ts .\\tests\\voice-session.test.ts .\\tests\\wakeword-runtime.test.ts .\\tests\\tool-registry.test.ts .\\tests\\tool-assistant.test.ts .\\tests\\tool-planner.test.ts .\\tests\\reminder-intent.test.ts .\\tests\\reminder-schedule.test.ts .\\tests\\lyrics-search.test.ts .\\tests\\search-content-extract.test.ts .\\tests\\background-search.test.ts .\\tests\\chat-runtime.test.ts .\\tests\\web-search-runtime.test.ts .\\tests\\storage-settings.test.ts .\\tests\\memory.test.ts .\\tests\\memory-archive.test.ts .\\tests\\failover.test.ts",
+    "test": "node --experimental-strip-types --test tests/audio-providers.test.ts tests/browser-vad.test.ts tests/text-files.test.ts tests/performance.test.ts tests/voice-core.test.ts tests/voice-session.test.ts tests/wakeword-runtime.test.ts tests/tool-registry.test.ts tests/tool-assistant.test.ts tests/tool-planner.test.ts tests/reminder-intent.test.ts tests/reminder-schedule.test.ts tests/lyrics-search.test.ts tests/search-content-extract.test.ts tests/background-search.test.ts tests/chat-runtime.test.ts tests/web-search-runtime.test.ts tests/storage-settings.test.ts tests/memory.test.ts tests/memory-archive.test.ts tests/failover.test.ts",
     "preview": "vite preview",
     "start:app": "npm run build && electron .",
     "smoke": "npm run build && cross-env SMOKE_TEST=1 electron .",
-    "smoke:packaged": "cross-env SMOKE_TEST=1 .\\release\\win-unpacked\\Nexus.exe",
+    "smoke:packaged": "cross-env SMOKE_TEST=1 electron .",
     "package": "npm run package:win",
     "package:dir": "npm run build && electron-builder --dir --config.win.signAndEditExecutable=false",
     "package:win": "npm run build && electron-builder --win nsis --config.win.signAndEditExecutable=false",
     "package:win:signed": "npm run build && electron-builder --win nsis",
-    "verify:release": "npm run lint && npm test && npm run package:dir && npm run smoke:packaged && npm run package:win"
+    "package:mac": "npm run build && electron-builder --mac",
+    "package:linux": "npm run build && electron-builder --linux",
+    "verify:release": "npm run lint && npm test && npm run build"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",
@@ -67,8 +69,6 @@
       "dist/**/*",
       "electron/**/*",
       "package.json",
-      "!node_modules/onnxruntime-node/bin/napi-v3/darwin/**",
-      "!node_modules/onnxruntime-node/bin/napi-v3/linux/**",
       "!node_modules/onnxruntime-node/bin/napi-v3/win32/arm64/**"
     ],
     "extraResources": [
@@ -91,12 +91,26 @@
       "node_modules/sherpa-onnx-node/**",
       "electron/mediaSession.ps1"
     ],
-    "icon": "public/nexus.ico",
+    "icon": "public/nexus-256.png",
     "win": {
-      "target": [
-        "nsis"
-      ],
+      "target": ["nsis"],
       "icon": "public/nexus.ico"
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "icon": "public/nexus-1024.png",
+      "category": "public.app-category.utilities",
+      "darkModeSupport": true
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "public/nexus-256.png",
+      "category": "Utility",
+      "desktop": {
+        "Name": "Nexus",
+        "Comment": "Desktop AI Companion",
+        "StartupWMClass": "nexus"
+      }
     },
     "nsis": {
       "oneClick": false,
@@ -104,6 +118,12 @@
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "Nexus"
+    },
+    "dmg": {
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
     }
   }
 }

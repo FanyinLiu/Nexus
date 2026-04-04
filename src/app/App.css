@@ -1243,7 +1243,7 @@
 
 /* Clean refresh */
 .desktop-pet-root {
-  font-family: "Segoe UI Variable Text", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
   --text-h: #1a1e2e;
   --text-soft: rgba(60, 70, 90, 0.6);
   --panel-surface: rgba(255, 255, 255, 0.92);
