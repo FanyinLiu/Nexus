@@ -50,8 +50,9 @@ export function useAppController() {
     () => view === 'panel' && getInitialPanelSection() === 'settings',
   )
   const [panelWindowState, setPanelWindowState] = useState<PanelWindowState>({ collapsed: false })
-  const [isPinned, setIsPinned] = useState(() => loadPetWindowPreferences().isPinned)
-  const [clickThrough, setClickThrough] = useState(() => loadPetWindowPreferences().clickThrough)
+  const initialPrefs = loadPetWindowPreferences()
+  const [isPinned, setIsPinned] = useState(initialPrefs.isPinned)
+  const [clickThrough, setClickThrough] = useState(initialPrefs.clickThrough)
 
   // Sync React state when settings change in storage (after save or external update)
   useEffect(() => {
@@ -76,9 +77,9 @@ export function useAppController() {
   const sendMessageRef = useRef<ChatController['sendMessage']>(async () => false)
 
   useEffect(() => {
-    initializeSettingsWithVault().then((hydrated) => {
-      setSettings(hydrated)
-    })
+    initializeSettingsWithVault()
+      .then((hydrated) => setSettings(hydrated))
+      .catch(() => { /* vault unavailable — settings loaded without keys */ })
   }, [])
 
   const reminderTaskStore = useReminderTaskStore()

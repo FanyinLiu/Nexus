@@ -21,14 +21,10 @@ export function getSettingsSnapshot(): AppSettings {
 
 export function setSettingsSnapshot(nextSettings: AppSettings) {
   cachedHydratedSettings = nextSettings
-  // Save synchronously first (with keys in plaintext temporarily),
-  // then dehydrate keys to vault asynchronously.
-  saveSettings(nextSettings)
+  // Dehydrate keys to vault first, then write stripped settings to localStorage.
+  // Only one write — never persists plaintext keys.
   void dehydrateSettingsKeys(nextSettings).then((stripped) => {
-    // Re-save with keys stripped (vault has them now).
-    // Use silent: true to avoid dispatching an event that would trigger
-    // subscribeToSettings → hydrateSettingsKeys → setSettings → infinite loop.
-    saveSettings(stripped, { silent: true })
+    saveSettings(stripped)
   })
 }
 
@@ -99,13 +95,5 @@ export function subscribeToSettings(listener: (settings: AppSettings) => void) {
   return () => {
     window.removeEventListener(SETTINGS_UPDATED_EVENT, handleSettingsUpdated as EventListener)
     window.removeEventListener('storage', handleStorage)
-  }
-}
-
-export function createSettingsStore() {
-  return {
-    getSnapshot: getSettingsSnapshot,
-    setSnapshot: setSettingsSnapshot,
-    subscribe: subscribeToSettings,
   }
 }

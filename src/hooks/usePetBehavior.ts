@@ -91,6 +91,9 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
     if (performanceCueTimerRef.current) {
       window.clearTimeout(performanceCueTimerRef.current)
     }
+    if (hoverTimerRef.current) {
+      window.clearTimeout(hoverTimerRef.current)
+    }
     performanceCueQueueRef.current = []
   }, [])
 
