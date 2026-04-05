@@ -970,6 +970,7 @@ export function useVoice(ctx: UseVoiceContext) {
   }
 
   function startVoiceConversation(options?: VoiceConversationOptions) {
+    try {
     startVoiceConversationEntrypoint({
       options,
       settingsRef: ctx.settingsRef,
@@ -1006,6 +1007,11 @@ export function useVoice(ctx: UseVoiceContext) {
       startLocalWhisperConversation,
       startApiVoiceConversation,
     })
+    } catch (err) {
+      console.error('[Voice] startVoiceConversation failed:', err)
+      ctx.setError(err instanceof Error ? err.message : '语音启动失败，请重试。')
+      voiceStateRef.current = 'idle'
+    }
   }
 
   function stopVoiceConversation() {

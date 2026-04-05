@@ -228,7 +228,12 @@ export function scheduleVoiceRestart(options: ScheduleVoiceRestartOptions) {
       options.showPetStatus(statusText, 6_000, 4_500)
     }
 
-    options.startVoiceConversation({ restart: true, passive: true })
+    try {
+      options.startVoiceConversation({ restart: true, passive: true })
+    } catch (err) {
+      console.warn('[ContinuousVoice] restart failed:', err)
+      options.showPetStatus('语音重启失败，请手动重试。', 4_000, 3_000)
+    }
   }, delay)
 }
 
