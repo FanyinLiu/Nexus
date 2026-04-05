@@ -36,7 +36,6 @@ export function ConsoleSection({
   active,
   continuousVoiceActive,
   debugConsoleEvents,
-  liveTranscript,
   onClearDebugConsole,
   reminderTasks,
   speechLevel,
@@ -57,8 +56,6 @@ export function ConsoleSection({
   const visibleReminderTasks = reminderTasks.slice(0, 6)
   const noValueLabel = ti('settings.console.none')
   const voicePipelineSummary = voicePipeline.detail || ti('settings.console.waiting_summary')
-  const transcriptPreview = liveTranscript || voicePipeline.transcript || noValueLabel
-
   return (
     <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
       <div className="settings-section__title-row">
@@ -93,19 +90,6 @@ export function ConsoleSection({
             <span>{ti('settings.console.updated')} {formatConsoleTimestamp(voicePipeline.updatedAt, uiLanguage)}</span>
             <span>{ti('settings.console.level')} {Math.round(Math.max(0, Math.min(1, speechLevel)) * 100)}%</span>
           </div>
-        </article>
-
-        <article className="settings-console-card">
-          <div className="settings-console-card__header">
-            <span className="settings-console-badge">{ti('settings.console.live_transcript')}</span>
-            <span className="settings-console-card__meta">
-              {ti('settings.console.last_final')} {voicePipeline.transcript ? ti('settings.console.updated') : noValueLabel}
-            </span>
-          </div>
-          <div className="settings-console-card__headline">
-            <strong>{transcriptPreview}</strong>
-          </div>
-          <p>{voicePipeline.transcript || ti('settings.console.transcript_empty')}</p>
         </article>
 
         <article className="settings-console-card">
