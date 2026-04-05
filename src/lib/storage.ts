@@ -86,7 +86,7 @@ const defaultSettings: AppSettings = {
   speechInputApiBaseUrl: '',
   speechInputApiKey: '',
   speechInputModel: 'streaming-paraformer-bilingual-zh-en',
-  speechOutputProviderId: 'edge-tts',
+  speechOutputProviderId: 'browser',
   speechOutputApiBaseUrl: '',
   speechOutputApiKey: '',
   speechOutputModel: '',
