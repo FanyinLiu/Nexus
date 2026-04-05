@@ -166,33 +166,15 @@ export async function runDoctorChecks({
         detail: formatLocalServiceProbeDetail(serviceResults),
         repairActions: activeSpeechOutputServiceFailure
           ? [{
-              id: 'switch-local-tts-provider',
-              label: draftSettings.speechOutputProviderId === 'cosyvoice-tts'
-                ? '先切到备用 Qwen3-TTS'
-                : '先切回 CosyVoice2',
-              description: draftSettings.speechOutputProviderId === 'cosyvoice-tts'
-                ? '当前 CosyVoice2 端口不通，先切到备用本地 Qwen3-TTS 恢复播报。'
-                : '当前本地 Qwen3-TTS 端口不通，先切回 CosyVoice2 恢复播报。',
+              id: 'switch-to-edge-tts',
+              label: '切换到 Edge TTS（免费在线）',
+              description: '当前本地 TTS 端口不通，切换到免费的 Edge TTS 恢复语音播报。',
               settingsPatch: {
-                speechOutputProviderId: draftSettings.speechOutputProviderId === 'cosyvoice-tts'
-                  ? 'local-qwen3-tts'
-                  : 'cosyvoice-tts',
-                speechOutputApiBaseUrl: getSpeechOutputProviderPreset(
-                  draftSettings.speechOutputProviderId === 'cosyvoice-tts'
-                    ? 'local-qwen3-tts'
-                    : 'cosyvoice-tts',
-                ).baseUrl,
+                speechOutputProviderId: 'edge-tts',
+                speechOutputApiBaseUrl: getSpeechOutputProviderPreset('edge-tts').baseUrl,
                 speechOutputApiKey: '',
-                speechOutputModel: getSpeechOutputProviderPreset(
-                  draftSettings.speechOutputProviderId === 'cosyvoice-tts'
-                    ? 'local-qwen3-tts'
-                    : 'cosyvoice-tts',
-                ).defaultModel,
-                speechOutputVoice: getSpeechOutputProviderPreset(
-                  draftSettings.speechOutputProviderId === 'cosyvoice-tts'
-                    ? 'local-qwen3-tts'
-                    : 'cosyvoice-tts',
-                ).defaultVoice,
+                speechOutputModel: getSpeechOutputProviderPreset('edge-tts').defaultModel,
+                speechOutputVoice: getSpeechOutputProviderPreset('edge-tts').defaultVoice,
               },
             }]
           : [],
