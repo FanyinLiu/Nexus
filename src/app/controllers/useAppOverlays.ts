@@ -21,7 +21,6 @@ import { setSettingsSnapshot } from '../store/settingsStore'
 import type {
   AppSettings,
   DebugConsoleEvent,
-  DoctorReport,
   ReminderTask,
 } from '../../types'
 
@@ -88,13 +87,6 @@ type UseAppOverlaysOptions = {
   updateReminderTask: ReminderTaskStore['updateReminderTask']
   removeReminderTask: ReminderTaskStore['removeReminderTask']
   clearDebugConsoleEvents: () => void
-  runDoctor: (
-    draftSettings: AppSettings,
-    options?: { autoRepair?: boolean },
-  ) => Promise<{
-    report: DoctorReport
-    patchedSettings?: Partial<AppSettings>
-  }>
 }
 
 export function useAppOverlays({
@@ -116,7 +108,6 @@ export function useAppOverlays({
   updateReminderTask,
   removeReminderTask,
   clearDebugConsoleEvents,
-  runDoctor,
 }: UseAppOverlaysOptions) {
   const onboardingPendingInitial = useMemo(() => !loadOnboardingCompleted(), [])
   const [onboardingPending, setOnboardingPending] = useState(onboardingPendingInitial)
@@ -309,7 +300,6 @@ export function useAppOverlays({
       }
     },
     onRunAudioSmokeTest: async (draftSettings) => voice.runAudioSmokeTest(draftSettings),
-    onRunDoctor: runDoctor,
     onClearDebugConsole: clearDebugConsoleEvents,
     onCloneVoice: async (payload) => {
       if (!window.desktopPet?.cloneVoice) {

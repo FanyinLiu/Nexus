@@ -29,7 +29,6 @@ import {
   CloneSection,
   ConsoleSection,
   ContextSection,
-  DoctorSection,
   HistorySection,
   IntegrationsSection,
   MemorySection,
@@ -43,7 +42,6 @@ import type {
   AppSettings,
   DailyMemoryEntry,
   DebugConsoleEvent,
-  DoctorReport,
   MemoryItem,
   PetWindowState,
   ReminderTask,
@@ -134,13 +132,6 @@ export type SettingsDrawerProps = {
     message: string
   }>
   onRunAudioSmokeTest: (settings: AppSettings) => Promise<ConnectionResult>
-  onRunDoctor: (
-    settings: AppSettings,
-    options?: { autoRepair?: boolean },
-  ) => Promise<{
-    report: DoctorReport
-    patchedSettings?: Partial<AppSettings>
-  }>
   onClearDebugConsole: () => void
   onCloneVoice: (payload: CloneVoicePayload) => Promise<{
     voiceId: string
@@ -150,12 +141,6 @@ export type SettingsDrawerProps = {
 
 function renderSettingsCardIcon(iconKey: string) {
   switch (iconKey) {
-    case 'doctor':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M16 3a6 6 0 0 0-6 6v2a6 6 0 0 0 5 5.91V19h-1.5a4.5 4.5 0 0 0-4.5 4.5V26a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2.5a4.5 4.5 0 0 0-4.5-4.5H17v-2.09A6 6 0 0 0 22 11V9a6 6 0 0 0-6-6Zm-1 8V9h-2a1 1 0 1 1 0-2h2V5a1 1 0 1 1 2 0v2h2a1 1 0 1 1 0 2h-2v2a1 1 0 1 1-2 0Z" />
-        </svg>
-      )
     case 'console':
       return (
         <svg viewBox="0 0 32 32" aria-hidden="true">
@@ -248,7 +233,6 @@ export function SettingsDrawer({
   onLoadSpeechVoices,
   onPreviewSpeech,
   onRunAudioSmokeTest,
-  onRunDoctor,
   onClearDebugConsole,
   onCloneVoice,
 }: SettingsDrawerProps) {
@@ -284,9 +268,6 @@ export function SettingsDrawer({
   const [speechPreviewStatus, setSpeechPreviewStatus] = useState<ConnectionResult | null>(null)
   const [runningAudioSmoke, setRunningAudioSmoke] = useState(false)
   const [audioSmokeStatus, setAudioSmokeStatus] = useState<ConnectionResult | null>(null)
-  const [doctorReport, setDoctorReport] = useState<DoctorReport | null>(null)
-  const [runningDoctor, setRunningDoctor] = useState(false)
-  const [applyingDoctorRepairs, setApplyingDoctorRepairs] = useState(false)
   const [chatHistoryStatus, setChatHistoryStatus] = useState<ConnectionResult | null>(null)
   const [exportingChatHistory, setExportingChatHistory] = useState(false)
   const [importingChatHistory, setImportingChatHistory] = useState(false)
@@ -329,7 +310,6 @@ export function SettingsDrawer({
   const activeSectionLabel = settingsSectionOptions.find((section) => section.id === activeSectionId)?.label
     ?? settingsSectionOptions[0].label
   const activeSectionDescriptionById: Record<SettingsSectionId, string> = {
-    doctor: t('集中检查语音、模型、唤醒词、调度器和窗口状态。', 'Inspect voice, models, wake word, scheduler, and window state together.'),
     console: t('查看当前运行链路、日志、转写和后台任务状态。', 'Review the live pipeline, logs, transcripts, and background tasks.'),
     model: t('单独管理大模型提供商、模型名称和主链路故障切换。', 'Manage the primary LLM provider, model id, and failover in one place.'),
     chat: t('调整角色名称、用户称呼、系统提示词和 Live2D 角色。', 'Tune the companion identity, user name, system prompt, and Live2D character.'),
@@ -345,15 +325,6 @@ export function SettingsDrawer({
     description: string
     preview: string[]
   }> = {
-    doctor: {
-      eyebrow: t('诊断与修复', 'Diagnostics & Repair'),
-      glyph: 'doctor',
-      description: activeSectionDescriptionById.doctor,
-      preview: [
-        runningDoctor ? t('体检中', 'Running checks') : t('一键体检', 'One-click doctor'),
-        doctorReport ? t('已有报告', 'Report ready') : t('暂无报告', 'No report'),
-      ],
-    },
     console: {
       eyebrow: t('运行态观察', 'Runtime Monitor'),
       glyph: 'console',
@@ -707,28 +678,6 @@ export function SettingsDrawer({
     }
   }
 
-  async function handleRunDoctor(autoRepair = false) {
-    if (autoRepair) {
-      setApplyingDoctorRepairs(true)
-    } else {
-      setRunningDoctor(true)
-    }
-
-    try {
-      const result = await onRunDoctor(draft, { autoRepair })
-      setDoctorReport(result.report)
-
-      if (result.patchedSettings) {
-        setDraft((current) => ({
-          ...current,
-          ...result.patchedSettings,
-        }))
-      }
-    } finally {
-      setRunningDoctor(false)
-      setApplyingDoctorRepairs(false)
-    }
-  }
 
   async function updateWindowState(partial: Partial<PetWindowState>) {
     const nextState = {
@@ -1104,50 +1053,26 @@ export function SettingsDrawer({
         <div className="settings-drawer__body">
           {settingsView === 'home' ? (
             <div className="settings-home">
-              {(() => {
-                const groups: Array<{ label: string; ids: SettingsSectionId[] }> = [
-                  { label: '', ids: ['model', 'chat'] },
-                  { label: t('语音与交互', 'Voice & Interaction'), ids: ['voice', 'memory'] },
-                  { label: t('外观与窗口', 'Appearance & Window'), ids: ['window', 'integrations'] },
-                  { label: t('数据与诊断', 'Data & Diagnostics'), ids: ['history', 'console', 'doctor'] },
-                ]
-
-                const cardMap = new Map(settingsHomeCards.map((c) => [c.key, c]))
-
-                return groups.map((group, groupIndex) => (
-                  <div key={`group-${groupIndex}`} className="settings-home__group">
-                    {group.label ? (
-                      <p className="settings-home__group-label">{group.label}</p>
-                    ) : null}
-                    <div className="settings-home__group-card">
-                      {group.ids.map((id) => {
-                        const card = cardMap.get(id)
-                        if (!card) return null
-                        return (
-                          <button
-                            key={card.key}
-                            type="button"
-                            className="settings-home-card"
-                            data-section={card.key}
-                            onClick={() => handleOpenSettingsSection(card.sectionId)}
-                          >
-                            <span className="settings-home-card__glyph" aria-hidden="true">
-                              {renderSettingsCardIcon(card.glyph)}
-                            </span>
-                            <span className="settings-home-card__label">{card.title}</span>
-                            <span className="settings-home-card__value">{card.preview[0] ?? ''}</span>
-                            <span className="settings-home-card__chevron" aria-hidden="true">
-                              <svg width="8" height="13" viewBox="0 0 8 13" fill="none">
-                                <path d="M1 1l5.5 5.5L1 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))
-              })()}
+              {settingsHomeCards.map((card) => (
+                <button
+                  key={card.key}
+                  type="button"
+                  className="settings-home-card"
+                  data-section={card.key}
+                  onClick={() => handleOpenSettingsSection(card.sectionId)}
+                >
+                  <span className="settings-home-card__glyph" aria-hidden="true">
+                    {renderSettingsCardIcon(card.glyph)}
+                  </span>
+                  <span className="settings-home-card__label">{card.title}</span>
+                  <span className="settings-home-card__value">{card.preview[0] ?? ''}</span>
+                  <span className="settings-home-card__chevron" aria-hidden="true">
+                    <svg width="8" height="13" viewBox="0 0 8 13" fill="none">
+                      <path d="M1 1l5.5 5.5L1 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                </button>
+              ))}
             </div>
           ) : (
             <div className="settings-page">
@@ -1166,16 +1091,6 @@ export function SettingsDrawer({
               </div>
 
               <div className="settings-drawer__content settings-drawer__sections">
-
-        <DoctorSection
-          active={activeSectionId === 'doctor'}
-          applyingDoctorRepairs={applyingDoctorRepairs}
-          doctorReport={doctorReport}
-          runningDoctor={runningDoctor}
-          uiLanguage={uiLanguage}
-          onApplyDoctorRepairs={() => void handleRunDoctor(true)}
-          onRunDoctor={() => void handleRunDoctor(false)}
-        />
 
         <ConsoleSection
           active={activeSectionId === 'console'}

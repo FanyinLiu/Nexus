@@ -6,8 +6,6 @@ import {
 import { subscribeToSettings } from '../store/settingsStore'
 import {
   loadPetWindowPreferences,
-  syncSpeechProviderProfiles,
-  syncTextProviderProfiles,
 } from '../../lib'
 import type {
   AppSettings,
@@ -38,7 +36,6 @@ import { useDebugConsole } from './useDebugConsole'
 import { useDesktopBridge } from './useDesktopBridge'
 import { useMediaSessionController } from './useMediaSessionController'
 import { useReminderTaskStore } from './useReminderTaskStore'
-import { runDoctorChecks } from './runDoctorChecks'
 
 type ChatController = ReturnType<typeof useChat>
 type ReminderTaskStore = ReturnType<typeof useReminderTaskStore>
@@ -434,33 +431,6 @@ export function useAppController() {
     onEvent: debugConsole.appendDebugConsoleEvent,
   })
 
-  const runDoctor = useCallback(async (
-    draftSettings: AppSettings,
-    options?: { autoRepair?: boolean },
-  ) => {
-    const result = await runDoctorChecks({
-      draftSettings,
-      reminderTasks: reminderTaskStore.reminderTasks,
-      runtimeSnapshot,
-      voice,
-    })
-
-    const patchedSettings = options?.autoRepair ? result.suggestedSettingsPatch : undefined
-    if (patchedSettings && Object.keys(patchedSettings).length) {
-      const nextSettings = syncTextProviderProfiles(syncSpeechProviderProfiles({
-        ...draftSettings,
-        ...patchedSettings,
-      }))
-      settingsRef.current = nextSettings
-      setSettings(nextSettings)
-    }
-
-    return {
-      report: result.report,
-      patchedSettings,
-    }
-  }, [reminderTaskStore.reminderTasks, runtimeSnapshot, voice])
-
   const mediaSessionController = useMediaSessionController({
     view,
     appendSystemMessage: chat.appendSystemMessage,
@@ -485,7 +455,6 @@ export function useAppController() {
     updateReminderTask: reminderTaskStore.updateReminderTask,
     removeReminderTask: reminderTaskStore.removeReminderTask,
     clearDebugConsoleEvents: debugConsole.clearDebugConsoleEvents,
-    runDoctor,
   })
 
   return {

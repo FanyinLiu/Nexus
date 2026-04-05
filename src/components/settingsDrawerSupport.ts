@@ -567,7 +567,6 @@ export function getReminderTemplatePresets(uiLanguage: UiLanguage): Array<{
 export type ReminderTaskActionKind = ReminderTaskAction['kind']
 
 export type SettingsSectionId =
-  | 'doctor'
   | 'console'
   | 'model'
   | 'chat'
@@ -578,7 +577,6 @@ export type SettingsSectionId =
   | 'integrations'
 
 const SETTINGS_SECTION_DESCRIPTION_KEY_MAP: Record<SettingsSectionId, Parameters<typeof pickTranslatedUiText>[1]> = {
-  doctor: 'settings.section_desc.doctor',
   console: 'settings.section_desc.console',
   model: 'settings.section_desc.model',
   chat: 'settings.section_desc.chat',
@@ -590,7 +588,6 @@ const SETTINGS_SECTION_DESCRIPTION_KEY_MAP: Record<SettingsSectionId, Parameters
 }
 
 const SETTINGS_SECTION_EYEBROW_KEY_MAP: Record<SettingsSectionId, Parameters<typeof pickTranslatedUiText>[1]> = {
-  doctor: 'settings.section_eyebrow.doctor',
   console: 'settings.section_eyebrow.console',
   model: 'settings.section_eyebrow.model',
   chat: 'settings.section_eyebrow.chat',
@@ -619,7 +616,6 @@ export function getSettingsSectionOptions(uiLanguage: UiLanguage): Array<{
     { id: 'integrations', label: pickTranslatedUiText(uiLanguage, 'settings.section.integrations') },
     { id: 'history', label: pickTranslatedUiText(uiLanguage, 'settings.section.history') },
     { id: 'console', label: pickTranslatedUiText(uiLanguage, 'settings.section.console') },
-    { id: 'doctor', label: pickTranslatedUiText(uiLanguage, 'settings.section.doctor') },
   ]
 }
 
