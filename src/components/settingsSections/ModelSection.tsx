@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { API_PROVIDER_PRESETS, getApiProviderPreset } from '../../lib/apiProviders'
 import type { AppSettings, ServiceConnectionCapability } from '../../types'
@@ -19,7 +20,7 @@ type ModelSectionProps = {
   renderTextTestResult: () => ReactNode
 }
 
-export function ModelSection({
+export const ModelSection = memo(function ModelSection({
   active,
   draft,
   setDraft,
@@ -169,4 +170,4 @@ export function ModelSection({
       {renderTextTestResult()}
     </section>
   )
-}
+})

@@ -3,29 +3,30 @@ import {
   SETTINGS_UPDATED_EVENT,
   loadSettings,
   saveSettings,
-} from '../../lib'
+} from '../../lib/storage.ts'
 import {
   dehydrateSettingsKeys,
   hydrateSettingsKeys,
   migrateKeysToVault,
 } from '../../lib/keyVaultBridge.ts'
-import type { AppSettings } from '../../types'
+import type { AppSettings } from '../../types/index.ts'
 
 let vaultMigrationDone = false
 let cachedHydratedSettings: AppSettings | null = null
 
 export function getSettingsSnapshot(): AppSettings {
   if (cachedHydratedSettings) return cachedHydratedSettings
-  return loadSettings()
+  const settings = loadSettings()
+  cachedHydratedSettings = settings
+  return settings
 }
 
-export function setSettingsSnapshot(nextSettings: AppSettings) {
+export async function setSettingsSnapshot(nextSettings: AppSettings) {
   cachedHydratedSettings = nextSettings
   // Dehydrate keys to vault first, then write stripped settings to localStorage.
   // Only one write — never persists plaintext keys.
-  void dehydrateSettingsKeys(nextSettings).then((stripped) => {
-    saveSettings(stripped)
-  })
+  const stripped = await dehydrateSettingsKeys(nextSettings)
+  saveSettings(stripped)
 }
 
 /**
@@ -33,7 +34,7 @@ export function setSettingsSnapshot(nextSettings: AppSettings) {
  * then hydrate the settings object with decrypted keys from vault.
  */
 export async function initializeSettingsWithVault(): Promise<AppSettings> {
-  let settings = loadSettings()
+  let settings = cachedHydratedSettings ?? loadSettings()
 
   if (!vaultMigrationDone) {
     vaultMigrationDone = true

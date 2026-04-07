@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import {
   buildVolcengineCredential,
@@ -56,7 +57,7 @@ type SpeechOutputSectionProps = {
   renderSpeechOutputTestResult: () => ReactNode
 }
 
-export function SpeechOutputSection({
+export const SpeechOutputSection = memo(function SpeechOutputSection({
   active,
   draft,
   setDraft,
@@ -682,4 +683,4 @@ export function SpeechOutputSection({
       {renderSpeechOutputTestResult()}
     </section>
   )
-}
+})

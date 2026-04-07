@@ -1,3 +1,4 @@
+import type { AutonomySettings } from './autonomy'
 import type { AppLocale } from './i18n'
 import type { MemorySearchMode } from './memory'
 import type { PetMood } from './pet'
@@ -206,6 +207,7 @@ export type AppSettings =
   & PresenceSettings
   & SystemSettings
   & IntegrationSettings
+  & AutonomySettings
 
 export interface PetWindowPreferences {
   isPinned: boolean

@@ -37,11 +37,13 @@ export type SpeechOutputAdjustmentSupport = {
 export type SpeechInputProtocol =
   | 'browser'
   | 'sherpa'
+  | 'sensevoice'
   | 'whisper'
   | 'openai-compatible'
   | 'elevenlabs'
   | 'volcengine'
   | 'funasr'
+  | 'tencent'
 
 export type SpeechInputProviderEntry = {
   id: string
@@ -68,6 +70,19 @@ export const SPEECH_INPUT_PROVIDERS: SpeechInputProviderEntry[] = [
     modelOptions: [
       { value: 'streaming-paraformer-bilingual-zh-en', label: 'Paraformer 中英双语流式（推荐）' },
       { value: 'streaming-zipformer-bilingual-zh-en', label: 'Zipformer 中英双语流式' },
+    ],
+  },
+  {
+    id: 'local-sensevoice',
+    label: '[本地] SenseVoice 高精度识别',
+    baseUrl: '',
+    defaultModel: 'sensevoice-zh-en',
+    notes: '阿里 SenseVoice-Small 离线识别，10秒音频仅需70ms处理（比Whisper快15倍），中文准确率极高。需先下载模型到 sherpa-models 目录。',
+    protocol: 'sensevoice',
+    kind: 'local',
+    hidden: false,
+    modelOptions: [
+      { value: 'sensevoice-zh-en', label: 'SenseVoice 中英双语（推荐）' },
     ],
   },
   {
@@ -143,6 +158,24 @@ export const SPEECH_INPUT_PROVIDERS: SpeechInputProviderEntry[] = [
     hidden: false,
     modelOptions: [],
   },
+  {
+    id: 'tencent-asr',
+    label: '[云端] 腾讯云实时语音识别',
+    baseUrl: '',
+    defaultModel: '16k_zh',
+    notes: '腾讯云实时流式语音识别，中文识别准确率高，延迟低。API Key 一栏填写 `APPID:SecretId:SecretKey`，在腾讯云控制台 > 访问管理 > API 密钥 中获取。',
+    protocol: 'tencent',
+    kind: 'remote',
+    hidden: false,
+    modelOptions: [
+      { value: '16k_zh', label: '中文通用 16kHz（推荐）' },
+      { value: '16k_zh_large', label: '中文大模型 16kHz（更准）' },
+      { value: '16k_en', label: '英文 16kHz' },
+      { value: '16k_zh_en', label: '中英混合 16kHz' },
+      { value: '16k_ja', label: '日语 16kHz' },
+      { value: '16k_ko', label: '韩语 16kHz' },
+    ],
+  },
 ]
 
 // ── Speech output provider catalog ──
@@ -160,6 +193,7 @@ export type SpeechOutputProtocol =
   | 'cosyvoice'
   | 'local-qwen3'
   | 'edge-tts'
+  | 'fish-speech'
 
 export type SpeechOutputProviderEntry = {
   id: string
@@ -358,6 +392,23 @@ export const SPEECH_OUTPUT_PROVIDERS: SpeechOutputProviderEntry[] = [
     modelOptions: [],
     fallbackVoiceOptions: [],
     adjustmentSupport: { rate: false, pitch: false, volume: false, note: '当前这条 TTS 链路暂时主要靠音色和风格指令控制，语速、语调和音量还没有稳定直通。' },
+  },
+  {
+    id: 'fish-speech-tts',
+    label: '[本地] Fish Speech 1.5（高品质）',
+    baseUrl: 'http://127.0.0.1:8080',
+    defaultModel: 'openaudio-s1-mini',
+    defaultVoice: '',
+    notes: '2026 年开源 TTS 音质最高（ELO 1339），支持流式合成和语音克隆。需本地部署 Fish Speech 服务（需12GB显存）。',
+    protocol: 'fish-speech',
+    kind: 'local',
+    hidden: false,
+    supportsStreaming: true,
+    modelOptions: [
+      { value: 'openaudio-s1-mini', label: 'OpenAudio S1-Mini 0.5B（推荐）' },
+    ],
+    fallbackVoiceOptions: [],
+    adjustmentSupport: { rate: false, pitch: false, volume: false, note: 'Fish Speech 通过参考音频和提示词控制音色风格，暂不支持直接调节语速语调。' },
   },
 ]
 

@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, rename } from 'node:fs/promises'
 import path from 'node:path'
 import { app } from 'electron'
 
@@ -12,6 +12,7 @@ const _index = new Map()
 let _loaded = false
 let _dirty = false
 let _saveTimer = null
+let _savePromise = null
 
 function getStorePath() {
   return path.join(app.getPath('userData'), STORE_FILENAME)
@@ -45,15 +46,10 @@ async function ensureLoaded() {
   _loaded = true
 }
 
-function scheduleSave() {
-  _dirty = true
-  if (_saveTimer) return
+async function doSave() {
+  if (_savePromise) return _savePromise
 
-  _saveTimer = setTimeout(async () => {
-    _saveTimer = null
-    if (!_dirty) return
-    _dirty = false
-
+  _savePromise = (async () => {
     try {
       const entries = [..._index.entries()].map(([id, entry]) => ({
         id,
@@ -62,11 +58,32 @@ function scheduleSave() {
 
       const dir = path.dirname(getStorePath())
       await mkdir(dir, { recursive: true })
-      await writeFile(getStorePath(), JSON.stringify({ version: 1, entries }))
+
+      // 原子写入：先写入临时文件，再重命名
+      const storePath = getStorePath()
+      const tempPath = storePath + '.tmp'
+      await writeFile(tempPath, JSON.stringify({ version: 1, entries }))
+      await rename(tempPath, storePath)
     } catch (err) {
       console.error('[memoryVectorStore] save failed:', err.message)
       _dirty = true
+    } finally {
+      _savePromise = null
     }
+  })()
+
+  return _savePromise
+}
+
+function scheduleSave() {
+  _dirty = true
+  if (_saveTimer) return
+
+  _saveTimer = setTimeout(async () => {
+    _saveTimer = null
+    if (!_dirty) return
+    _dirty = false
+    await doSave()
   }, SAVE_DEBOUNCE_MS)
 }
 

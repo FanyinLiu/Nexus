@@ -85,6 +85,7 @@ export type StreamingSpeechOutputController = {
 export type UseVoiceContext = {
   settings: AppSettings
   settingsRef: RefObject<AppSettings>
+  applySettingsUpdate?: (update: (current: AppSettings) => AppSettings) => Promise<AppSettings> | AppSettings
   busyRef: RefObject<boolean>
   view: WindowView
   setMood: (mood: PetMood) => void

@@ -99,6 +99,10 @@ function isEdgeTtsSpeechOutputProvider(providerId) {
   return providerId === 'edge-tts'
 }
 
+function isFishSpeechSpeechOutputProvider(providerId) {
+  return providerId === 'fish-speech-tts'
+}
+
 // ── URL / timeout resolution ──
 
 function resolveLocalSpeechCommand(providerId, baseUrl) {
@@ -127,6 +131,10 @@ function resolveSpeechOutputBaseUrl(providerId, baseUrl) {
 
   if (isLocalQwen3TtsSpeechOutputProvider(providerId)) {
     return normalized || LOCAL_QWEN3_TTS_DEFAULT_BASE_URL
+  }
+
+  if (isFishSpeechSpeechOutputProvider(providerId)) {
+    return normalized || 'http://127.0.0.1:8080'
   }
 
   return normalized
@@ -1166,7 +1174,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
 
     const response = isLocalQwen3Tts
       ? await withRequestTimeout(
-          fetch(endpoint, {
+          () => fetch(endpoint, {
             method: 'POST',
             headers,
             body: requestBody,
@@ -1354,7 +1362,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
     }
   }
 
-  // ── CosyVoice2: collect full PCM response (non-streaming, avoids pipeline settle issues) ──
+  // ── CosyVoice2: stream PCM response for low first-chunk latency ──
   if (isCosyVoiceSpeechOutputProvider(payload.providerId)) {
     const rawMode = payload.model || 'sft'
     const mode = (rawMode === 'sft' || rawMode === 'instruct') ? rawMode : 'sft'
@@ -1365,14 +1373,13 @@ async function synthesizeRemoteTts(sessionPayload, text) {
       formBody.append('instruct_text', payload.instructions?.trim() || '用自然亲切的语气说')
     }
     const bodyStr = formBody.toString()
-    console.log('[CosyVoice] synthesize:', mode, 'voice:', payload.voice || '中文女', 'text:', content.slice(0, 40))
+    console.log('[CosyVoice] streaming synthesize:', mode, 'voice:', payload.voice || '中文女', 'text:', content.slice(0, 40))
 
     const url = new URL(`${baseUrl}/inference_${mode}`)
-    const pcmBuffer = await new Promise((resolve, reject) => {
+    const pcmStream = await new Promise((resolve, reject) => {
       let settled = false
       const settle = (fn, value) => { if (!settled) { settled = true; fn(value) } }
 
-      // Hard wall-clock timeout — covers server hangs after sending headers
       const hardTimeout = setTimeout(() => {
         req.destroy()
         settle(reject, new Error('CosyVoice2 响应超时（硬超时）'))
@@ -1390,23 +1397,20 @@ async function synthesizeRemoteTts(sessionPayload, text) {
         },
         timeout: AUDIO_SYNTH_TIMEOUT_MS,
       }, (res) => {
-        const chunks = []
-        res.on('data', (c) => chunks.push(c))
-        res.on('end', () => {
-          clearTimeout(hardTimeout)
-          if (res.statusCode !== 200) {
-            const body = Buffer.concat(chunks).toString('utf-8').slice(0, 500)
+        clearTimeout(hardTimeout)
+        if (res.statusCode !== 200) {
+          const errorChunks = []
+          res.on('data', (c) => errorChunks.push(c))
+          res.on('end', () => {
+            const body = Buffer.concat(errorChunks).toString('utf-8').slice(0, 500)
             console.error('[CosyVoice] 合成失败:', res.statusCode, body)
             settle(reject, new Error('CosyVoice2 合成失败（状态码：' + res.statusCode + '）' + body))
-            return
-          }
-          console.log('[CosyVoice] response complete:', Buffer.concat(chunks).length, 'bytes')
-          settle(resolve, Buffer.concat(chunks))
-        })
-        res.on('error', (err) => {
-          clearTimeout(hardTimeout)
-          settle(reject, new Error('CosyVoice2 音频接收失败：' + (err?.message || '连接中断')))
-        })
+          })
+          return
+        }
+        // Hand the live response stream back — ttsStreamService.emitStreamedPcmResult
+        // will decode PCM chunks as they arrive, giving near-instant first-chunk playback.
+        settle(resolve, res)
       })
       req.on('error', (err) => { clearTimeout(hardTimeout); settle(reject, new Error('CosyVoice2 服务连接失败：' + err.message)) })
       req.on('timeout', () => { req.destroy(); clearTimeout(hardTimeout); settle(reject, new Error('CosyVoice2 响应超时')) })
@@ -1414,7 +1418,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
       req.end()
     })
 
-    return { pcmBuffer, pcmSampleRate: 24000 }
+    return { pcmStream, pcmSampleRate: 24000 }
   }
 
   // ── Edge TTS: Microsoft Edge Read Aloud, free, ultra-low latency ──
@@ -1426,6 +1430,35 @@ async function synthesizeRemoteTts(sessionPayload, text) {
       pitch: Number.isFinite(payload.pitch) ? payload.pitch : undefined,
       volume: Number.isFinite(payload.volume) ? payload.volume : undefined,
     })
+  }
+
+  // ── Fish Speech 1.5: high-quality local TTS ──
+  if (isFishSpeechSpeechOutputProvider(payload.providerId)) {
+    const fishBaseUrl = normalizeBaseUrl(payload.baseUrl) || 'http://127.0.0.1:8080'
+    const endpoint = `${fishBaseUrl}/v1/tts`
+    console.log('[Fish-Speech] synthesize:', content.slice(0, 40), 'voice:', payload.voice || '(default)')
+
+    const requestBody = JSON.stringify({
+      text: content,
+      reference_id: payload.voice || undefined,
+      format: 'wav',
+      streaming: false,
+    })
+
+    const response = await performNetworkRequest(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: requestBody,
+      timeoutMs: synthTimeoutMs,
+      timeoutMessage: 'Fish Speech 合成超时，请检查服务是否已启动。',
+    })
+
+    if (!response.ok) {
+      throw new Error(await extractResponseErrorMessage(response, `Fish Speech 合成失败（状态码：${response.status}）`))
+    }
+
+    const audioBase64 = Buffer.from(await response.arrayBuffer()).toString('base64')
+    return { audioBase64, mimeType: 'audio/wav' }
   }
 
   throw new Error('当前语音输出提供商暂未接通流式播放。')
@@ -1468,6 +1501,7 @@ export {
   synthesizeVolcengineSpeechOutputWithFallback,
   formatVolcengineSpeechOutputCombo,
   createSilentWavBase64,
+  isFishSpeechSpeechOutputProvider,
   mapLanguageToMiniMaxBoost,
   mapLanguageToDashScopeType,
 }

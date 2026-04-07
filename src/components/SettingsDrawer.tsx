@@ -1,21 +1,14 @@
-﻿import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import {
-
   getMemorySearchModeOptions,
   getSettingsSectionOptions,
   type ConnectionResult,
   type SettingsSectionId,
 } from './settingsDrawerSupport'
 import {
-  getFallbackSpeechOutputVoices,
   getApiProviderPreset,
-  getAvailableSpeechSynthesisVoices,
   getVoiceCloneProviderPreset,
-  isLocalSherpaSpeechOutputProvider,
-  isMiniMaxSpeechOutputProvider,
-  isVoiceCloneDisabled,
   switchSpeechOutputProvider,
-  updateCurrentSpeechOutputProviderProfile,
   switchTextProvider,
   clampPresenceIntervalMinutes,
   resolveLocalizedText,
@@ -25,6 +18,7 @@ import { MEMORY_EMBEDDING_MODEL_OPTIONS } from '../features/memory'
 import type { PetModelDefinition } from '../features/pet'
 import type { ReminderTaskDraftInput } from '../features/reminders'
 import {
+  AutonomySection,
   ChatSection,
   CloneSection,
   ConsoleSection,
@@ -38,16 +32,23 @@ import {
   VoiceSection,
   WindowSection,
 } from './settingsSections'
+import {
+  useConnectionTests,
+  useSpeechVoiceManagement,
+  useVoiceCloneActions,
+  useChatHistoryActions,
+  useMemoryArchiveActions,
+  useWindowStateSync,
+  usePetModelImport,
+} from './settingsDrawerHooks'
 import type {
   AppSettings,
   DailyMemoryEntry,
   DebugConsoleEvent,
   MemoryItem,
-  PetWindowState,
   ReminderTask,
   ServiceConnectionCapability,
   SpeechVoiceListResponse,
-  SpeechVoiceOption,
   VoicePipelineState,
   VoiceState,
   VoiceTraceEntry,
@@ -137,6 +138,12 @@ export type SettingsDrawerProps = {
     voiceId: string
     message: string
   }>
+  // Notification channels (optional — only present when autonomy is wired)
+  notificationChannels?: import('../types').NotificationChannel[]
+  notificationChannelsLoading?: boolean
+  onAddNotificationChannel?: (draft: Omit<import('../types').NotificationChannel, 'id'>) => Promise<void>
+  onUpdateNotificationChannel?: (id: string, patch: Partial<import('../types').NotificationChannel>) => Promise<void>
+  onRemoveNotificationChannel?: (id: string) => Promise<void>
 }
 
 function renderSettingsCardIcon(iconKey: string) {
@@ -190,6 +197,12 @@ function renderSettingsCardIcon(iconKey: string) {
           <path fill="currentColor" d="M14 4a1 1 0 0 0-1 1v4.05A3.5 3.5 0 0 1 9.05 13H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h4.05A3.5 3.5 0 0 1 13 22.95V27a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4.05A3.5 3.5 0 0 1 22.95 19H27a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-4.05A3.5 3.5 0 0 1 19 9.05V5a1 1 0 0 0-1-1h-4Z" />
         </svg>
       )
+    case 'autonomy':
+      return (
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path fill="currentColor" d="M16 3a1 1 0 0 1 .87.5l2.5 4.33 4.96 1.17a1 1 0 0 1 .58 1.62L21.5 14.5l.78 5.13a1 1 0 0 1-1.45 1.05L16 18l-4.83 2.68a1 1 0 0 1-1.45-1.05l.78-5.13-3.41-3.88a1 1 0 0 1 .58-1.62l4.96-1.17 2.5-4.33A1 1 0 0 1 16 3ZM8 24a1 1 0 1 0 0 2h16a1 1 0 1 0 0-2H8Zm2 4a1 1 0 1 0 0 2h12a1 1 0 1 0 0-2H10Z" />
+        </svg>
+      )
     default:
       return null
   }
@@ -235,61 +248,64 @@ export function SettingsDrawer({
   onRunAudioSmokeTest,
   onClearDebugConsole,
   onCloneVoice,
+  notificationChannels,
+  notificationChannelsLoading,
+  onAddNotificationChannel,
+  onUpdateNotificationChannel,
+  onRemoveNotificationChannel,
 }: SettingsDrawerProps) {
   const [draft, setDraft] = useState(settings)
   const [activeSectionId, setActiveSectionId] = useState<SettingsSectionId>('console')
   const [settingsView, setSettingsView] = useState<'home' | 'section'>('home')
-  const [testingTarget, setTestingTarget] = useState<ServiceConnectionCapability | null>(null)
-  const [testResults, setTestResults] = useState<
-    Partial<Record<ServiceConnectionCapability, ConnectionResult>>
-  >({})
-  const [cloneFiles, setCloneFiles] = useState<File[]>([])
-  const [cloneName, setCloneName] = useState(`${settings.companionName} 音色`)
-  const [cloneDescription, setCloneDescription] = useState('')
-  const [removeBackgroundNoise, setRemoveBackgroundNoise] = useState(true)
-  const [cloningVoice, setCloningVoice] = useState(false)
-  const [cloneStatus, setCloneStatus] = useState<ConnectionResult | null>(null)
-  const [importingPetModel, setImportingPetModel] = useState(false)
-  const [petModelStatus, setPetModelStatus] = useState<ConnectionResult | null>(null)
-  const [localVoices, setLocalVoices] = useState<
-    Array<{
-      id: string
-      name: string
-      lang: string
-      localService: boolean
-      default: boolean
-    }>
-  >([])
-  const [speechVoiceOptions, setSpeechVoiceOptions] = useState<SpeechVoiceOption[]>([])
-  const [speechVoiceStatus, setSpeechVoiceStatus] = useState<ConnectionResult | null>(null)
-  const [loadingSpeechVoices, setLoadingSpeechVoices] = useState(false)
-  const [speechPreviewText, setSpeechPreviewText] = useState(`你好，我是${settings.companionName}，现在来试一下当前的语音播报。`)
-  const [previewingSpeech, setPreviewingSpeech] = useState(false)
-  const [speechPreviewStatus, setSpeechPreviewStatus] = useState<ConnectionResult | null>(null)
-  const [runningAudioSmoke, setRunningAudioSmoke] = useState(false)
-  const [audioSmokeStatus, setAudioSmokeStatus] = useState<ConnectionResult | null>(null)
-  const [chatHistoryStatus, setChatHistoryStatus] = useState<ConnectionResult | null>(null)
-  const [exportingChatHistory, setExportingChatHistory] = useState(false)
-  const [importingChatHistory, setImportingChatHistory] = useState(false)
-  const [clearingChatHistory, setClearingChatHistory] = useState(false)
-  const [memoryArchiveStatus, setMemoryArchiveStatus] = useState<ConnectionResult | null>(null)
-  const [exportingMemoryArchive, setExportingMemoryArchive] = useState(false)
-  const [importingMemoryArchive, setImportingMemoryArchive] = useState(false)
-  const [clearingMemoryArchive, setClearingMemoryArchive] = useState(false)
-  const [petWindowState, setPetWindowState] = useState<PetWindowState>({
-    isPinned: true,
-    clickThrough: false,
-    petHotspotActive: false,
+
+  const speechVoices = useSpeechVoiceManagement({
+    draft,
+    settings,
+    open,
+    onLoadSpeechVoices,
+    onPreviewSpeech,
+    onRunAudioSmokeTest,
   })
-  const [windowStatusMessage, setWindowStatusMessage] = useState<string | null>(null)
-  const windowStateSnapshotRef = useRef<PetWindowState | null>(null)
-  const windowStateTouchedRef = useRef(false)
+
+  const connectionTests = useConnectionTests({
+    draft,
+    onTestConnection,
+    handleLoadSpeechVoices: speechVoices.handleLoadSpeechVoices,
+  })
+
+  const voiceClone = useVoiceCloneActions({
+    draft,
+    settings,
+    onCloneVoice,
+    setDraft,
+  })
+
+  const chatHistory = useChatHistoryActions({
+    chatMessageCount,
+    onExportChatHistory,
+    onImportChatHistory,
+    onClearChatHistory,
+  })
+
+  const memoryArchive = useMemoryArchiveActions({
+    memories,
+    dailyMemoryEntries,
+    onExportMemoryArchive,
+    onImportMemoryArchive,
+    onClearMemoryArchive,
+  })
+
+  const windowState = useWindowStateSync({ open })
+
+  const petModel_ = usePetModelImport({
+    onImportPetModel,
+    setDraft,
+  })
 
   const textProvider = getApiProviderPreset(draft.apiProviderId)
   const petModel = petModelPresets.find((preset) => preset.id === draft.petModelId) ?? petModelPresets[0]
   const voiceCloneProvider = getVoiceCloneProviderPreset(draft.voiceCloneProviderId)
 
-  const fallbackSpeechVoiceOptions = getFallbackSpeechOutputVoices(draft.speechOutputProviderId)
   const uiLanguage = draft.uiLanguage
   const t = (zhCN: string, enUS: string) => resolveLocalizedText(uiLanguage, {
     'zh-CN': zhCN,
@@ -318,6 +334,7 @@ export function SettingsDrawer({
     voice: t('统一配置连续对话、输入输出链路和语音体验。', 'Configure continuous talk mode plus the input and output voice pipeline.'),
     window: t('控制桌宠、面板和桌面交互方式。', 'Control the desktop pet, panel, and on-screen behavior.'),
     integrations: t('集中管理 MCP、Minecraft 与 Factorio 等模块接入。', 'Manage MCP, Minecraft, and Factorio module integrations.'),
+    autonomy: t('配置自治引擎：焦点感知、主动智能、记忆整理和通知桥。', 'Configure autonomy: focus awareness, proactive intelligence, memory dream, and notification bridge.'),
   }
   const settingsSectionMetaById: Record<SettingsSectionId, {
     eyebrow: string
@@ -388,7 +405,7 @@ export function SettingsDrawer({
       description: activeSectionDescriptionById.window,
       preview: [
         petModel?.label ?? t('桌宠模型', 'Desktop pet'),
-        petWindowState.clickThrough ? t('穿透开启', 'Click-through on') : t('正常交互', 'Interactive'),
+        windowState.petWindowState.clickThrough ? t('穿透开启', 'Click-through on') : t('正常交互', 'Interactive'),
       ],
     },
     integrations: {
@@ -400,6 +417,17 @@ export function SettingsDrawer({
         draft.minecraftIntegrationEnabled || draft.factorioIntegrationEnabled
           ? t('游戏模块已启用', 'Game modules enabled')
           : t('游戏模块待命', 'Game modules idle'),
+      ],
+    },
+    autonomy: {
+      eyebrow: t('自主行为', 'Autonomous Behavior'),
+      glyph: 'autonomy',
+      description: activeSectionDescriptionById.autonomy,
+      preview: [
+        draft.autonomyEnabled ? t('自治引擎开启', 'Autonomy on') : t('自治引擎关闭', 'Autonomy off'),
+        draft.autonomyEnabled && draft.autonomyDreamEnabled
+          ? t('记忆整理开启', 'Dream enabled')
+          : t('记忆整理关闭', 'Dream off'),
       ],
     },
   }
@@ -424,8 +452,8 @@ export function SettingsDrawer({
     if (open) {
       console.info('[SettingsDrawer] SYNC draft from settings, provider:', settings.speechOutputProviderId)
       setDraft(settings)
-      setCloneName(`${settings.companionName} 音色`)
-      setSpeechPreviewText(`你好，我是${settings.companionName}，现在来试一下当前的语音播报。`)
+      voiceClone.syncCloneName(settings.companionName)
+      speechVoices.syncPreviewText(settings.companionName)
       setSettingsView('home')
     }
   }, [open])
@@ -461,101 +489,16 @@ export function SettingsDrawer({
     ))
   }, [petModelPresets])
 
+  // Reset all transient state when drawer opens/closes or settings change
   useEffect(() => {
-    setTestingTarget(null)
-    setTestResults({})
-    setCloneFiles([])
-    setCloneDescription('')
-    setRemoveBackgroundNoise(true)
-    setCloneStatus(null)
-    setPetModelStatus(null)
-    setImportingPetModel(false)
-    setCloningVoice(false)
-    setSpeechVoiceStatus(null)
-    setLoadingSpeechVoices(false)
-    setPreviewingSpeech(false)
-    setSpeechPreviewStatus(null)
-    setRunningAudioSmoke(false)
-    setAudioSmokeStatus(null)
-    setChatHistoryStatus(null)
-    setExportingChatHistory(false)
-    setImportingChatHistory(false)
-    setClearingChatHistory(false)
-    setMemoryArchiveStatus(null)
-    setExportingMemoryArchive(false)
-    setImportingMemoryArchive(false)
-    setClearingMemoryArchive(false)
-    setWindowStatusMessage(null)
+    connectionTests.resetConnectionTests()
+    voiceClone.resetVoiceClone()
+    petModel_.resetPetModelImport()
+    speechVoices.resetSpeechVoices()
+    chatHistory.resetChatHistory()
+    memoryArchive.resetMemoryArchive()
+    windowState.resetWindowState()
   }, [open, settings])
-
-  useEffect(() => {
-    if (!open) {
-      windowStateSnapshotRef.current = null
-      windowStateTouchedRef.current = false
-      return
-    }
-
-    if (!windowStateTouchedRef.current) {
-      windowStateSnapshotRef.current = petWindowState
-    }
-  }, [open, petWindowState])
-
-  useEffect(() => {
-    setSpeechVoiceOptions(getFallbackSpeechOutputVoices(settings.speechOutputProviderId))
-  }, [settings.speechOutputProviderId])
-
-  useEffect(() => {
-    setSpeechVoiceOptions((current) => {
-      if (!fallbackSpeechVoiceOptions.length) {
-        return current
-      }
-
-      if (current.length) {
-        return current
-      }
-
-      return fallbackSpeechVoiceOptions
-    })
-  }, [fallbackSpeechVoiceOptions])
-
-  useEffect(() => {
-    if (!open || !('speechSynthesis' in window)) return undefined
-
-    const updateVoices = () => {
-      setLocalVoices(getAvailableSpeechSynthesisVoices())
-    }
-
-    updateVoices()
-    window.speechSynthesis.addEventListener('voiceschanged', updateVoices)
-
-    return () => {
-      window.speechSynthesis.removeEventListener('voiceschanged', updateVoices)
-    }
-  }, [open])
-
-  useEffect(() => {
-    let alive = true
-
-    const syncState = (state?: PetWindowState) => {
-      if (!alive || !state) return
-      setPetWindowState(state)
-    }
-
-    window.desktopPet?.getPetWindowState?.()
-      .then(syncState)
-      .catch(() => {})
-
-    const unsubscribe = window.desktopPet?.subscribePetWindowState?.((state: PetWindowState) => {
-      syncState(state)
-    })
-
-    return () => {
-      alive = false
-      if (typeof unsubscribe === 'function') {
-        unsubscribe()
-      }
-    }
-  }, [])
 
   function applyTextProviderPreset(providerId: string) {
     setDraft((prev) => switchTextProvider(prev, providerId))
@@ -568,8 +511,7 @@ export function SettingsDrawer({
       console.info('[SettingsDrawer] draft updated: prev provider:', prev.speechOutputProviderId, '→ next:', next.speechOutputProviderId)
       return next
     })
-    setSpeechVoiceOptions(getFallbackSpeechOutputVoices(providerId))
-    setSpeechVoiceStatus(null)
+    speechVoices.applySpeechOutputPreset(providerId)
   }
 
   function applyVoiceClonePreset(providerId: string) {
@@ -582,418 +524,9 @@ export function SettingsDrawer({
     }))
   }
 
-  async function runConnectionTest(capability: ServiceConnectionCapability) {
-    setTestingTarget(capability)
-    const result = await onTestConnection(capability, draft)
-    setTestResults((current) => ({
-      ...current,
-      [capability]: result,
-    }))
-    setTestingTarget(null)
-
-    if (
-      capability === 'speech-output'
-      && result.ok
-      && (
-        isMiniMaxSpeechOutputProvider(draft.speechOutputProviderId)
-        || isLocalSherpaSpeechOutputProvider(draft.speechOutputProviderId)
-        || draft.speechOutputProviderId === 'local-qwen3-tts'
-      )
-    ) {
-      await handleLoadSpeechVoices(false)
-    }
-  }
-
-  async function handleLoadSpeechVoices(showStatus = true) {
-    setLoadingSpeechVoices(true)
-
-    try {
-      const result = await onLoadSpeechVoices(draft)
-      setSpeechVoiceOptions(result.voices.length ? result.voices : fallbackSpeechVoiceOptions)
-
-      if (showStatus) {
-        setSpeechVoiceStatus({
-          ok: true,
-          message: result.message,
-        })
-      }
-    } catch (error) {
-      setSpeechVoiceOptions(fallbackSpeechVoiceOptions)
-
-      if (showStatus) {
-        setSpeechVoiceStatus({
-          ok: false,
-          message: error instanceof Error ? error.message : '拉取在线音色列表失败，请稍后再试。',
-        })
-      }
-    } finally {
-      setLoadingSpeechVoices(false)
-    }
-  }
-
-  async function handlePreviewSpeech() {
-    const previewText = speechPreviewText.trim()
-
-    if (!previewText) {
-      setSpeechPreviewStatus({
-        ok: false,
-        message: '请先填写一段试听文本。',
-      })
-      return
-    }
-
-    setPreviewingSpeech(true)
-    setSpeechPreviewStatus(null)
-
-    try {
-      const result = await onPreviewSpeech(draft, previewText)
-      setSpeechPreviewStatus({
-        ok: true,
-        message: result.message,
-      })
-    } catch (error) {
-      setSpeechPreviewStatus({
-        ok: false,
-        message: error instanceof Error ? error.message : '试听失败，请稍后再试。',
-      })
-    } finally {
-      setPreviewingSpeech(false)
-    }
-  }
-
-  async function handleRunAudioSmokeTest() {
-    setRunningAudioSmoke(true)
-    setAudioSmokeStatus(null)
-
-    try {
-      const result = await onRunAudioSmokeTest(draft)
-      setAudioSmokeStatus(result)
-    } catch (error) {
-      setAudioSmokeStatus({
-        ok: false,
-        message: error instanceof Error ? error.message : '音频链路自检失败，请稍后再试。',
-      })
-    } finally {
-      setRunningAudioSmoke(false)
-    }
-  }
-
-
-  async function updateWindowState(partial: Partial<PetWindowState>) {
-    const nextState = {
-      ...petWindowState,
-      ...partial,
-    }
-
-    windowStateTouchedRef.current = true
-    setWindowStatusMessage('正在同步桌面状态…')
-    try {
-      await window.desktopPet?.updatePetWindowState?.(nextState)
-      setPetWindowState(nextState)
-      setWindowStatusMessage('桌面行为已同步')
-    } catch {
-      setWindowStatusMessage('桌面行为同步失败，请重试')
-    }
-  }
-
   function handleDismiss() {
-    const snapshot = windowStateSnapshotRef.current
-    const hasPendingWindowChanges = snapshot && (
-      snapshot.isPinned !== petWindowState.isPinned
-      || snapshot.clickThrough !== petWindowState.clickThrough
-      || snapshot.petHotspotActive !== petWindowState.petHotspotActive
-    )
-
-    if (hasPendingWindowChanges) {
-      void window.desktopPet?.updatePetWindowState?.(snapshot).catch(() => undefined)
-    }
-
+    windowState.rollbackWindowState()
     onClose()
-  }
-
-  async function handleImportPetModel() {
-    setImportingPetModel(true)
-    setPetModelStatus(null)
-
-    try {
-      const result = await onImportPetModel()
-
-      if (!result) {
-        return
-      }
-
-      setDraft((current) => ({
-        ...current,
-        petModelId: result.model.id,
-      }))
-      setPetModelStatus({
-        ok: true,
-        message: result.message,
-      })
-    } catch (error) {
-      setPetModelStatus({
-        ok: false,
-        message: error instanceof Error ? error.message : '导入本地 Live2D 模型失败，请稍后再试。',
-      })
-    } finally {
-      setImportingPetModel(false)
-    }
-  }
-
-  async function handleCloneVoice() {
-    if (isVoiceCloneDisabled(draft.voiceCloneProviderId)) {
-      setCloneStatus({
-        ok: false,
-        message: '当前没有启用语音克隆服务。',
-      })
-      return
-    }
-
-    if (!cloneFiles.length) {
-      setCloneStatus({
-        ok: false,
-        message: '请至少选择一段语音样本文件。',
-      })
-      return
-    }
-
-    setCloningVoice(true)
-    setCloneStatus(null)
-
-    try {
-      const result = await onCloneVoice({
-        settings: draft,
-        name: cloneName.trim() || `${draft.companionName} 音色`,
-        description: cloneDescription,
-        files: cloneFiles,
-        removeBackgroundNoise,
-      })
-
-      setDraft((prev) => updateCurrentSpeechOutputProviderProfile(
-        {
-          ...switchSpeechOutputProvider(
-            {
-              ...prev,
-              clonedVoiceId: result.voiceId,
-            },
-            'elevenlabs-tts',
-          ),
-          clonedVoiceId: result.voiceId,
-        },
-        {
-          apiBaseUrl: prev.voiceCloneApiBaseUrl || prev.speechOutputApiBaseUrl,
-          apiKey: prev.voiceCloneApiKey || prev.speechOutputApiKey,
-          voice: result.voiceId,
-        },
-      ))
-      setCloneFiles([])
-      setCloneStatus({
-        ok: true,
-        message: result.message + ' 已自动写入克隆音色 ID，并切换到 ElevenLabs 播报。',
-      })
-    } catch (error) {
-      setCloneStatus({
-        ok: false,
-        message: error instanceof Error ? error.message : '语音克隆失败，请稍后再试。',
-      })
-    } finally {
-      setCloningVoice(false)
-    }
-  }
-
-  async function handleExportChatHistory() {
-    setExportingChatHistory(true)
-    setChatHistoryStatus(null)
-
-    try {
-      const result = await onExportChatHistory()
-      if (result.canceled) {
-        return
-      }
-
-      setChatHistoryStatus({
-        ok: true,
-        message: result.message,
-      })
-    } catch (error) {
-      setChatHistoryStatus({
-        ok: false,
-        message: error instanceof Error ? error.message : '导出聊天记录失败，请稍后再试。',
-      })
-    } finally {
-      setExportingChatHistory(false)
-    }
-  }
-
-  async function handleImportChatHistory() {
-    if (chatMessageCount > 0) {
-      const confirmed = window.confirm('导入会替换当前聊天记录，但不会改动记忆库。要继续吗？')
-      if (!confirmed) {
-        return
-      }
-    }
-
-    setImportingChatHistory(true)
-    setChatHistoryStatus(null)
-
-    try {
-      const result = await onImportChatHistory()
-      if (result.canceled) {
-        return
-      }
-
-      setChatHistoryStatus({
-        ok: true,
-        message: result.message,
-      })
-    } catch (error) {
-      setChatHistoryStatus({
-        ok: false,
-        message: error instanceof Error ? error.message : '导入聊天记录失败，请稍后再试。',
-      })
-    } finally {
-      setImportingChatHistory(false)
-    }
-  }
-
-  async function handleClearChatHistory() {
-    if (!chatMessageCount) {
-      setChatHistoryStatus({
-        ok: false,
-        message: '当前没有可清空的聊天记录。',
-      })
-      return
-    }
-
-    const confirmed = window.confirm('确认清空当前聊天记录吗？这不会删除长期记忆和每日日志。')
-    if (!confirmed) {
-      return
-    }
-
-    setClearingChatHistory(true)
-    setChatHistoryStatus(null)
-
-    try {
-      const result = await onClearChatHistory()
-      if (result.canceled) {
-        return
-      }
-
-      setChatHistoryStatus({
-        ok: true,
-        message: result.message,
-      })
-    } catch (error) {
-      setChatHistoryStatus({
-        ok: false,
-        message: error instanceof Error ? error.message : '清空聊天记录失败，请稍后再试。',
-      })
-    } finally {
-      setClearingChatHistory(false)
-    }
-  }
-
-  async function handleExportMemoryArchive() {
-    setExportingMemoryArchive(true)
-    setMemoryArchiveStatus(null)
-
-    try {
-      const result = await onExportMemoryArchive()
-      if (result.canceled) {
-        return
-      }
-
-      setMemoryArchiveStatus({
-        ok: true,
-        message: result.message,
-      })
-    } catch (error) {
-      setMemoryArchiveStatus({
-        ok: false,
-        message: error instanceof Error ? error.message : '导出记忆库失败，请稍后再试。',
-      })
-    } finally {
-      setExportingMemoryArchive(false)
-    }
-  }
-
-  async function handleImportMemoryArchive() {
-    if (memories.length || dailyMemoryEntries.length) {
-      const confirmed = window.confirm('导入会替换当前长期记忆和每日日志。要继续吗？')
-      if (!confirmed) {
-        return
-      }
-    }
-
-    setImportingMemoryArchive(true)
-    setMemoryArchiveStatus(null)
-
-    try {
-      const result = await onImportMemoryArchive()
-      if (result.canceled) {
-        return
-      }
-
-      setMemoryArchiveStatus({
-        ok: true,
-        message: result.message,
-      })
-    } catch (error) {
-      setMemoryArchiveStatus({
-        ok: false,
-        message: error instanceof Error ? error.message : '导入记忆库失败，请稍后再试。',
-      })
-    } finally {
-      setImportingMemoryArchive(false)
-    }
-  }
-
-  async function handleClearMemoryArchive() {
-    if (!memories.length && !dailyMemoryEntries.length) {
-      setMemoryArchiveStatus({
-        ok: false,
-        message: '当前没有可清空的记忆内容。',
-      })
-      return
-    }
-
-    const confirmed = window.confirm('确认清空当前长期记忆和每日日志吗？')
-    if (!confirmed) {
-      return
-    }
-
-    setClearingMemoryArchive(true)
-    setMemoryArchiveStatus(null)
-
-    try {
-      const result = await onClearMemoryArchive()
-      if (result.canceled) {
-        return
-      }
-
-      setMemoryArchiveStatus({
-        ok: true,
-        message: result.message,
-      })
-    } catch (error) {
-      setMemoryArchiveStatus({
-        ok: false,
-        message: error instanceof Error ? error.message : '清空记忆库失败，请稍后再试。',
-      })
-    } finally {
-      setClearingMemoryArchive(false)
-    }
-  }
-
-  function renderTestResult(capability: ServiceConnectionCapability) {
-    const result = testResults[capability]
-    if (!result) return null
-
-    return (
-      <div className={result.ok ? 'settings-test-result is-success' : 'settings-test-result is-error'}>
-        {result.message}
-      </div>
-    )
   }
 
   function handleOpenSettingsSection(sectionId: SettingsSectionId) {
@@ -1110,37 +643,37 @@ export function SettingsDrawer({
           active={activeSectionId === 'model'}
           draft={draft}
           setDraft={setDraft}
-          testingTarget={testingTarget}
+          testingTarget={connectionTests.testingTarget}
           textProvider={textProvider}
           t={t}
           getProviderRegionLabel={getProviderRegionLabel}
           onApplyTextProviderPreset={applyTextProviderPreset}
-          onRunTextConnectionTest={() => void runConnectionTest('text')}
-          renderTextTestResult={() => renderTestResult('text')}
+          onRunTextConnectionTest={() => void connectionTests.runConnectionTest('text')}
+          renderTextTestResult={() => connectionTests.renderTestResult('text')}
         />
 
         <ChatSection
           active={activeSectionId === 'chat'}
           draft={draft}
           setDraft={setDraft}
-          setCloneName={setCloneName}
+          setCloneName={voiceClone.setCloneName}
           petModelPresets={petModelPresets}
-          importingPetModel={importingPetModel}
-          petModelStatus={petModelStatus}
-          onImportPetModel={() => void handleImportPetModel()}
+          importingPetModel={petModel_.importingPetModel}
+          petModelStatus={petModel_.petModelStatus}
+          onImportPetModel={() => void petModel_.handleImportPetModel()}
         />
 
         <HistorySection
           active={activeSectionId === 'history'}
           chatMessageCount={chatMessageCount}
           chatBusy={chatBusy}
-          exportingChatHistory={exportingChatHistory}
-          importingChatHistory={importingChatHistory}
-          clearingChatHistory={clearingChatHistory}
-          chatHistoryStatus={chatHistoryStatus}
-          onExportChatHistory={() => void handleExportChatHistory()}
-          onImportChatHistory={() => void handleImportChatHistory()}
-          onClearChatHistory={() => void handleClearChatHistory()}
+          exportingChatHistory={chatHistory.exportingChatHistory}
+          importingChatHistory={chatHistory.importingChatHistory}
+          clearingChatHistory={chatHistory.clearingChatHistory}
+          chatHistoryStatus={chatHistory.chatHistoryStatus}
+          onExportChatHistory={() => void chatHistory.handleExportChatHistory()}
+          onImportChatHistory={() => void chatHistory.handleImportChatHistory()}
+          onClearChatHistory={() => void chatHistory.handleClearChatHistory()}
         />
 
         <MemorySection
@@ -1153,14 +686,14 @@ export function SettingsDrawer({
           memorySearchModeOptions={memorySearchModeOptions}
           selectedMemorySearchMode={selectedMemorySearchMode}
           selectedMemoryEmbeddingModel={selectedMemoryEmbeddingModel}
-          exportingMemoryArchive={exportingMemoryArchive}
-          importingMemoryArchive={importingMemoryArchive}
-          clearingMemoryArchive={clearingMemoryArchive}
+          exportingMemoryArchive={memoryArchive.exportingMemoryArchive}
+          importingMemoryArchive={memoryArchive.importingMemoryArchive}
+          clearingMemoryArchive={memoryArchive.clearingMemoryArchive}
           chatBusy={chatBusy}
-          memoryArchiveStatus={memoryArchiveStatus}
-          onExportMemoryArchive={() => void handleExportMemoryArchive()}
-          onImportMemoryArchive={() => void handleImportMemoryArchive()}
-          onClearMemoryArchive={() => void handleClearMemoryArchive()}
+          memoryArchiveStatus={memoryArchive.memoryArchiveStatus}
+          onExportMemoryArchive={() => void memoryArchive.handleExportMemoryArchive()}
+          onImportMemoryArchive={() => void memoryArchive.handleImportMemoryArchive()}
+          onClearMemoryArchive={() => void memoryArchive.handleClearMemoryArchive()}
           onAddManualMemory={onAddManualMemory}
           onUpdateMemory={onUpdateMemory}
           onRemoveMemory={onRemoveMemory}
@@ -1171,13 +704,13 @@ export function SettingsDrawer({
 
         <VoiceSection
           active={activeSectionId === 'voice'}
-          audioSmokeStatus={audioSmokeStatus}
+          audioSmokeStatus={speechVoices.audioSmokeStatus}
           draft={draft}
-          onRunAudioSmokeTest={() => void handleRunAudioSmokeTest()}
-          previewingSpeech={previewingSpeech}
-          runningAudioSmoke={runningAudioSmoke}
+          onRunAudioSmokeTest={() => void speechVoices.handleRunAudioSmokeTest()}
+          previewingSpeech={speechVoices.previewingSpeech}
+          runningAudioSmoke={speechVoices.runningAudioSmoke}
           setDraft={setDraft}
-          testingTarget={testingTarget}
+          testingTarget={connectionTests.testingTarget}
           uiLanguage={uiLanguage}
         />
 
@@ -1185,61 +718,61 @@ export function SettingsDrawer({
           active={activeSectionId === 'voice'}
           draft={draft}
           setDraft={setDraft}
-          testingTarget={testingTarget}
-          onRunSpeechInputConnectionTest={() => void runConnectionTest('speech-input')}
-          renderSpeechInputTestResult={() => renderTestResult('speech-input')}
+          testingTarget={connectionTests.testingTarget}
+          onRunSpeechInputConnectionTest={() => void connectionTests.runConnectionTest('speech-input')}
+          renderSpeechInputTestResult={() => connectionTests.renderTestResult('speech-input')}
         />
 
         <SpeechOutputSection
           active={activeSectionId === 'voice'}
           draft={draft}
           setDraft={setDraft}
-          localVoices={localVoices}
-          speechVoiceOptions={speechVoiceOptions}
-          speechVoiceStatus={speechVoiceStatus}
-          loadingSpeechVoices={loadingSpeechVoices}
-          speechPreviewText={speechPreviewText}
-          setSpeechPreviewText={setSpeechPreviewText}
-          speechPreviewStatus={speechPreviewStatus}
-          previewingSpeech={previewingSpeech}
-          testingTarget={testingTarget}
+          localVoices={speechVoices.localVoices}
+          speechVoiceOptions={speechVoices.speechVoiceOptions}
+          speechVoiceStatus={speechVoices.speechVoiceStatus}
+          loadingSpeechVoices={speechVoices.loadingSpeechVoices}
+          speechPreviewText={speechVoices.speechPreviewText}
+          setSpeechPreviewText={speechVoices.setSpeechPreviewText}
+          speechPreviewStatus={speechVoices.speechPreviewStatus}
+          previewingSpeech={speechVoices.previewingSpeech}
+          testingTarget={connectionTests.testingTarget}
           onApplySpeechOutputPreset={applySpeechOutputPreset}
-          onLoadSpeechVoices={() => void handleLoadSpeechVoices()}
-          onPreviewSpeech={() => void handlePreviewSpeech()}
-          onRunSpeechOutputConnectionTest={() => void runConnectionTest('speech-output')}
-          renderSpeechOutputTestResult={() => renderTestResult('speech-output')}
+          onLoadSpeechVoices={() => void speechVoices.handleLoadSpeechVoices()}
+          onPreviewSpeech={() => void speechVoices.handlePreviewSpeech()}
+          onRunSpeechOutputConnectionTest={() => void connectionTests.runConnectionTest('speech-output')}
+          renderSpeechOutputTestResult={() => connectionTests.renderTestResult('speech-output')}
         />
 
         <CloneSection
           active={activeSectionId === 'voice'}
           draft={draft}
           setDraft={setDraft}
-          testingTarget={testingTarget}
-          cloneFiles={cloneFiles}
-          cloneName={cloneName}
-          cloneDescription={cloneDescription}
-          removeBackgroundNoise={removeBackgroundNoise}
-          cloningVoice={cloningVoice}
-          cloneStatus={cloneStatus}
+          testingTarget={connectionTests.testingTarget}
+          cloneFiles={voiceClone.cloneFiles}
+          cloneName={voiceClone.cloneName}
+          cloneDescription={voiceClone.cloneDescription}
+          removeBackgroundNoise={voiceClone.removeBackgroundNoise}
+          cloningVoice={voiceClone.cloningVoice}
+          cloneStatus={voiceClone.cloneStatus}
           voiceCloneProvider={voiceCloneProvider}
           applyVoiceClonePreset={applyVoiceClonePreset}
-          setCloneFiles={setCloneFiles}
-          setCloneName={setCloneName}
-          setCloneDescription={setCloneDescription}
-          setRemoveBackgroundNoise={setRemoveBackgroundNoise}
-          onRunVoiceCloneConnectionTest={() => void runConnectionTest('voice-clone')}
-          onCloneVoice={() => void handleCloneVoice()}
-          renderVoiceCloneTestResult={() => renderTestResult('voice-clone')}
+          setCloneFiles={voiceClone.setCloneFiles}
+          setCloneName={voiceClone.setCloneName}
+          setCloneDescription={voiceClone.setCloneDescription}
+          setRemoveBackgroundNoise={voiceClone.setRemoveBackgroundNoise}
+          onRunVoiceCloneConnectionTest={() => void connectionTests.runConnectionTest('voice-clone')}
+          onCloneVoice={() => void voiceClone.handleCloneVoice()}
+          renderVoiceCloneTestResult={() => connectionTests.renderTestResult('voice-clone')}
         />
 
         <WindowSection
           active={activeSectionId === 'window'}
           draft={draft}
-          petWindowState={petWindowState}
+          petWindowState={windowState.petWindowState}
           setDraft={setDraft}
           uiLanguage={uiLanguage}
-          updateWindowState={updateWindowState}
-          windowStatusMessage={windowStatusMessage}
+          updateWindowState={windowState.updateWindowState}
+          windowStatusMessage={windowState.windowStatusMessage}
         />
 
         <IntegrationsSection
@@ -1247,6 +780,17 @@ export function SettingsDrawer({
           draft={draft}
           setDraft={setDraft}
           uiLanguage={uiLanguage}
+        />
+
+        <AutonomySection
+          active={activeSectionId === 'autonomy'}
+          draft={draft}
+          setDraft={setDraft}
+          channels={notificationChannels}
+          channelsLoading={notificationChannelsLoading}
+          onAddChannel={onAddNotificationChannel}
+          onUpdateChannel={onUpdateNotificationChannel}
+          onRemoveChannel={onRemoveNotificationChannel}
         />
 
         <ContextSection

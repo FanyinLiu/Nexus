@@ -1,3 +1,4 @@
+export * from './AutonomySection'
 export * from './ChatSection'
 export * from './CloneSection'
 export * from './ConsoleSection'

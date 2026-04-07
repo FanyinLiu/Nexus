@@ -32,10 +32,12 @@ import {
 } from '../../features/tools'
 import { getSettingsSnapshot, initializeSettingsWithVault } from '../store/settingsStore'
 import { useAppOverlays } from './useAppOverlays'
+import { useAutonomyController } from './useAutonomyController'
 import { useDebugConsole } from './useDebugConsole'
 import { useDesktopBridge } from './useDesktopBridge'
 import { useMediaSessionController } from './useMediaSessionController'
 import { useReminderTaskStore } from './useReminderTaskStore'
+import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
 
 type ChatController = ReturnType<typeof useChat>
 type ReminderTaskStore = ReturnType<typeof useReminderTaskStore>
@@ -162,15 +164,25 @@ export function useAppController() {
   }, [])
 
   const toggleContinuousVoiceMode = useCallback(() => {
-    setSettings((current) => ({
-      ...current,
-      continuousVoiceModeEnabled: !current.continuousVoiceModeEnabled,
-    }))
+    void commitSettingsUpdate(
+      (current) => ({
+        ...current,
+        continuousVoiceModeEnabled: !current.continuousVoiceModeEnabled,
+      }),
+      (nextSettings) => {
+        settingsRef.current = nextSettings
+        setSettings(nextSettings)
+      },
+    )
   }, [])
 
   const voice = useVoice({
     settings,
     settingsRef,
+    applySettingsUpdate: (update) => commitSettingsUpdate(update, (nextSettings) => {
+      settingsRef.current = nextSettings
+      setSettings(nextSettings)
+    }),
     busyRef,
     view,
     setMood: pet.setMood,
@@ -188,6 +200,10 @@ export function useAppController() {
   const chat = useChat({
     settingsRef,
     setSettings,
+    applySettingsUpdate: (update) => commitSettingsUpdate(update, (nextSettings) => {
+      settingsRef.current = nextSettings
+      setSettings(nextSettings)
+    }),
     memoriesRef: memory.memoriesRef,
     dailyMemoriesRef: memory.dailyMemoriesRef,
     setMemories: memory.setMemories,
@@ -206,6 +222,7 @@ export function useAppController() {
     speakAssistantReply: voice.speakAssistantReply,
     beginStreamingSpeechReply: voice.beginStreamingSpeechReply,
     scheduleVoiceRestart: voice.scheduleVoiceRestart,
+    busEmit: voice.busEmit,
     shouldAutoRestartVoice: voice.shouldAutoRestartVoice,
     clearPendingVoiceRestart: voice.clearPendingVoiceRestart,
     resetNoSpeechRestartCount: voice.resetNoSpeechRestartCount,
@@ -431,6 +448,36 @@ export function useAppController() {
     onEvent: debugConsole.appendDebugConsoleEvent,
   })
 
+  // ── Autonomy subsystem ──────────────────────────────────────────────────────
+
+  const autonomy = useAutonomyController({
+    settings,
+    settingsRef,
+    messagesRef,
+    memory,
+    reminderTasksRef: reminderTaskStore.reminderTasksRef,
+    chat,
+    debugConsole,
+  })
+
+  // Wake autonomy when user sends a chat message
+  const originalSendMessage = chat.sendMessage
+  const autonomyAwareSendMessage = useCallback(async (...args: Parameters<typeof originalSendMessage>) => {
+    autonomy.focusAwareness.markActive()
+    autonomy.autonomyTick.wakeUp()
+    const result = await originalSendMessage(...args)
+    if (result) {
+      autonomy.memoryDream.incrementSessionCount()
+    }
+    return result
+  }, [originalSendMessage, autonomy.focusAwareness, autonomy.autonomyTick, autonomy.memoryDream])
+
+  // Patch chat.sendMessage with autonomy-aware wrapper
+  const chatWithAutonomy = useMemo(() => ({
+    ...chat,
+    sendMessage: autonomyAwareSendMessage,
+  }), [chat, autonomyAwareSendMessage])
+
   const mediaSessionController = useMediaSessionController({
     view,
     appendSystemMessage: chat.appendSystemMessage,
@@ -448,13 +495,18 @@ export function useAppController() {
     debugConsoleEvents: debugConsole.debugConsoleEvents,
     loadPetModels,
     memory,
-    chat,
+    chat: chatWithAutonomy,
     pet,
     voice,
     addReminderTask: reminderTaskStore.addReminderTask,
     updateReminderTask: reminderTaskStore.updateReminderTask,
     removeReminderTask: reminderTaskStore.removeReminderTask,
     clearDebugConsoleEvents: debugConsole.clearDebugConsoleEvents,
+    notificationChannels: autonomy.notificationBridge.channels,
+    notificationChannelsLoading: autonomy.notificationBridge.channelsLoading,
+    onAddNotificationChannel: autonomy.notificationBridge.addChannel,
+    onUpdateNotificationChannel: autonomy.notificationBridge.updateChannel,
+    onRemoveNotificationChannel: autonomy.notificationBridge.removeChannel,
   })
 
   return {
@@ -465,7 +517,7 @@ export function useAppController() {
       petModel,
       pet,
       voice,
-      chat,
+      chat: chatWithAutonomy,
       isPinned,
       clickThrough,
       runtimeSnapshot,
@@ -482,6 +534,9 @@ export function useAppController() {
       handleMediaSessionControl: mediaSessionController.handleMediaSessionControl,
       dismissCurrentMediaSession: mediaSessionController.dismissCurrentMediaSession,
       startMediaPolling: mediaSessionController.startMediaPolling,
+      autonomyState: autonomy.autonomyTick.autonomyState,
+      focusState: autonomy.focusAwareness.focusState,
+      notificationUnreadCount: autonomy.notificationBridge.unreadCount,
     },
     panelView: {
       settings,
@@ -489,13 +544,17 @@ export function useAppController() {
       memory,
       pet,
       voice,
-      chat,
+      chat: chatWithAutonomy,
       runtimeSnapshot,
       petRuntimeContinuousVoiceActive,
       panelCollapsed,
       openSettingsPanel,
       togglePanelCollapse,
       closePanel,
+      autonomyState: autonomy.autonomyTick.autonomyState,
+      focusState: autonomy.focusAwareness.focusState,
+      notificationBridge: autonomy.notificationBridge,
+      contextScheduler: autonomy.contextScheduler,
     },
   }
 }

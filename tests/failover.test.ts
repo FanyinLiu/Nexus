@@ -70,6 +70,11 @@ test('non-Error values are handled', () => {
   assert.ok(isFailoverEligibleError(undefined))
 })
 
+test('aborted requests are not eligible for failover', () => {
+  assert.ok(!isFailoverEligibleError(new Error('This operation was aborted')))
+  assert.ok(!isFailoverEligibleError(new Error('模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：This operation was aborted')))
+})
+
 // ── recordFailoverFailure / isFailoverCoolingDown ──
 
 test('records failure and enters cooldown', () => {
@@ -235,4 +240,26 @@ test('non-eligible errors do not trigger failover', async () => {
     }),
     { message: '请先填写API Key' },
   )
+})
+
+test('aborted requests do not trigger fallback providers', async () => {
+  const attempted: string[] = []
+
+  await assert.rejects(
+    executeWithFailover({
+      domain: 'chat',
+      candidates: [
+        { id: 'primary', identity: 'p', payload: null },
+        { id: 'fallback', identity: 'f', payload: null },
+      ],
+      execute: async (candidate) => {
+        attempted.push(candidate.id)
+        throw new Error('模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：This operation was aborted')
+      },
+      failoverEnabled: true,
+    }),
+    { message: '模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：This operation was aborted' },
+  )
+
+  assert.deepEqual(attempted, ['primary'])
 })

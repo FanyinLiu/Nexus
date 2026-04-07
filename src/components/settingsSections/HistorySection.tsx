@@ -1,3 +1,5 @@
+import { memo } from 'react'
+
 type StatusMessage = {
   ok: boolean
   message: string
@@ -16,7 +18,7 @@ type HistorySectionProps = {
   onClearChatHistory: () => void
 }
 
-export function HistorySection({
+export const HistorySection = memo(function HistorySection({
   active,
   chatMessageCount,
   chatBusy,
@@ -91,4 +93,4 @@ export function HistorySection({
       ) : null}
     </section>
   )
-}
+})

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { AppSettings, PetWindowState, UiLanguage } from '../../types'
@@ -12,7 +13,7 @@ type WindowSectionProps = {
   windowStatusMessage: string | null
 }
 
-export function WindowSection({
+export const WindowSection = memo(function WindowSection({
   active,
   draft,
   petWindowState,
@@ -76,4 +77,4 @@ export function WindowSection({
       <p className="settings-drawer__hint">{ti('settings.window.click_through_note')}</p>
     </section>
   )
-}
+})

@@ -98,6 +98,12 @@ export function isFailoverEligibleError(error: unknown) {
     return true
   }
 
+  if (
+    /aborterror|aborted|已取消|已中止|cancell?ed/u.test(message)
+  ) {
+    return false
+  }
+
   return !(
     /请先填写|未连接桌面客户端|没有可播报的文本|没有可用的音频轨道|关键词不能为空|模型名|API Key/u.test(message)
   )

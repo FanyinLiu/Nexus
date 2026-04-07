@@ -17,37 +17,44 @@ export type StreamingSpeechOutputRuntime = {
   resetPlayer?: () => void
 }
 
+function resolveChunkerConfig(providerId: string) {
+  if (providerId === 'cosyvoice-tts') {
+    return {
+      maxChunkLength: 150,
+      minForcedChunkLength: 60,
+      preferredEarlySplitLength: 50,
+      firstChunkMaxLength: 80,
+      firstChunkMinForcedChunkLength: 32,
+      firstChunkPreferredEarlySplitLength: 24,
+    }
+  }
+
+  if (providerId === 'local-qwen3-tts') {
+    return {
+      absoluteMinChunkLength: 8,
+      maxChunkLength: 88,
+      minForcedChunkLength: 26,
+      preferredEarlySplitLength: 20,
+      firstChunkMaxLength: 40,
+      firstChunkMinForcedChunkLength: 16,
+      firstChunkPreferredEarlySplitLength: 12,
+    }
+  }
+
+  return {
+    firstChunkMaxLength: 48,
+    firstChunkMinForcedChunkLength: 18,
+    firstChunkPreferredEarlySplitLength: 14,
+  }
+}
+
 function createChunker(speechSettings: AppSettings) {
-  const isCosyVoiceTts = speechSettings.speechOutputProviderId === 'cosyvoice-tts'
   const isLocalQwenTts = speechSettings.speechOutputProviderId === 'local-qwen3-tts'
 
   return {
     isLocalQwenTts,
     chunker: new StreamingTtsChunker(
-      isCosyVoiceTts
-        ? {
-            maxChunkLength: 150,
-            minForcedChunkLength: 60,
-            preferredEarlySplitLength: 50,
-            firstChunkMaxLength: 220,
-            firstChunkMinForcedChunkLength: 96,
-            firstChunkPreferredEarlySplitLength: 72,
-          }
-        : isLocalQwenTts
-          ? {
-              absoluteMinChunkLength: 2,
-              maxChunkLength: 88,
-              minForcedChunkLength: 26,
-              preferredEarlySplitLength: 20,
-              firstChunkMaxLength: 6,
-              firstChunkMinForcedChunkLength: 2,
-              firstChunkPreferredEarlySplitLength: 2,
-            }
-          : {
-              firstChunkMaxLength: 120,
-              firstChunkMinForcedChunkLength: 40,
-              firstChunkPreferredEarlySplitLength: 32,
-            },
+      resolveChunkerConfig(speechSettings.speechOutputProviderId),
     ),
   }
 }
@@ -63,7 +70,8 @@ export function createStreamingSpeechOutputController(
 
   const { chunker, isLocalQwenTts } = createChunker(speechSettings)
   const player = runtime.getPlayer()
-  const effectiveVoice = speechSettings.clonedVoiceId || speechSettings.speechOutputVoice
+  // Voice cloning disabled — always use the provider's configured voice.
+  const effectiveVoice = speechSettings.speechOutputVoice
   const requestId = createId('tts-stream')
   let started = false
   let ended = false
@@ -125,6 +133,7 @@ export function createStreamingSpeechOutputController(
       return
     }
 
+    console.log('[StreamingSpeechOutput] settleSuccess — calling onEnd')
     settled = true
     cleanup()
     resolveAllPlayed?.()
@@ -155,9 +164,9 @@ export function createStreamingSpeechOutputController(
     }
 
     player.waitForDrain().then(() => {
-      settleSuccess()
+      if (!settled) settleSuccess()
     }).catch((error) => {
-      fail(error instanceof Error ? error : new Error('流式音频播放失败。'))
+      if (!settled) fail(error instanceof Error ? error : new Error('流式音频播放失败。'))
     })
   }
 

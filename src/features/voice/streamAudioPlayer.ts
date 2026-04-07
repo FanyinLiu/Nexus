@@ -6,7 +6,7 @@ type StreamAudioPlayerOptions = {
   onLevel?: (level: number) => void
 }
 
-const DEFAULT_INITIAL_BUFFER_SECONDS = 0.08
+const DEFAULT_INITIAL_BUFFER_SECONDS = 0.03
 const SCHEDULE_LOOKAHEAD_SECONDS = 0.02
 const CHUNK_TRANSITION_SMOOTH_MS = 2
 const STREAM_START_PREROLL_MS = 12
@@ -236,13 +236,17 @@ export class StreamAudioPlayer {
     this.keepaliveOsc = null
 
     const context = this.audioContext
+    // 先关闭 context，再清除引用
+    if (context) {
+      try {
+        void context.close().catch(() => undefined)
+      } catch {
+        // no-op
+      }
+    }
     this.audioContext = null
     this.analyser = null
     this.masterGain = null
-
-    if (context) {
-      void context.close().catch(() => undefined)
-    }
   }
 
   private ensureAudioContext() {

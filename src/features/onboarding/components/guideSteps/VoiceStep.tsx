@@ -1,6 +1,7 @@
 import {
   type SpeechModelOption,
   isLocalSherpaSpeechInputProvider,
+  isSenseVoiceSpeechInputProvider,
   USER_VISIBLE_SPEECH_INPUT_PROVIDER_PRESETS,
   USER_VISIBLE_SPEECH_OUTPUT_PROVIDER_PRESETS,
 } from '../../../../lib/audioProviders'
@@ -87,7 +88,7 @@ export function VoiceStep({
 
           <p className="onboarding-tip">{speechInputProvider.notes}</p>
 
-          {!isLocalSherpaSpeechInputProvider(draft.speechInputProviderId) ? (
+          {!isLocalSherpaSpeechInputProvider(draft.speechInputProviderId) && !isSenseVoiceSpeechInputProvider(draft.speechInputProviderId) ? (
             <div className="onboarding-grid onboarding-grid--two">
               <label>
                 <span>输入接口地址</span>

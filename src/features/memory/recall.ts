@@ -134,7 +134,9 @@ async function indexMemoriesToVectorStore<T extends { id: string; content: strin
   }
 
   if (batch.length) {
-    await window.desktopPet.memoryVectorIndexBatch(batch).catch(() => {})
+    await window.desktopPet.memoryVectorIndexBatch(batch).catch((error) => {
+      console.warn('[Memory] Vector index batch failed:', error)
+    })
   }
 }
 
@@ -176,7 +178,9 @@ async function buildVectorScoreMap<T extends { id: string; content: string }>(
       }
 
       return scoreMap
-    } catch {}
+    } catch {
+      // fall back to per-item embeddings below
+    }
   }
 
   const pairs = await Promise.all(items.map(async (item) => {
@@ -228,10 +232,15 @@ export async function buildMemoryRecallContext({
   const recentDaily = getRecentDailyEntries(dailyMemories, retentionDays).slice(0, 24)
   const keywordDaily = rankDailyEntries(recentDaily, query)
 
+  const keywordDailyResult = uniqueById([
+    ...keywordDaily.slice(0, dailyLimit),
+    ...recentDaily.slice(0, 2),
+  ]).slice(0, dailyLimit)
+
   if (searchMode === 'keyword') {
     return {
       longTerm: keywordLongTerm.slice(0, longTermLimit),
-      daily: uniqueById([...keywordDaily.slice(0, dailyLimit), ...recentDaily.slice(0, 2)]).slice(0, dailyLimit),
+      daily: keywordDailyResult,
       semantic: [],
       searchModeUsed: 'keyword',
       vectorSearchAvailable: false,
@@ -274,7 +283,7 @@ export async function buildMemoryRecallContext({
   } catch {
     return {
       longTerm: keywordLongTerm.slice(0, longTermLimit),
-      daily: uniqueById([...keywordDaily.slice(0, dailyLimit), ...recentDaily.slice(0, 2)]).slice(0, dailyLimit),
+      daily: keywordDailyResult,
       semantic: [],
       searchModeUsed: 'keyword',
       vectorSearchAvailable: false,

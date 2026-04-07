@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type {
   ChatToolResult,
   WebSearchDisplay,
@@ -357,7 +358,7 @@ function renderSearchMeta(result: WebSearchResponse) {
   )
 }
 
-export function ToolResultCard({ toolResult, variant = 'chat' }: ToolResultCardProps) {
+export const ToolResultCard = memo(function ToolResultCard({ toolResult, variant = 'chat' }: ToolResultCardProps) {
   const className = `tool-result-card tool-result-card--${toolResult.kind} tool-result-card--${variant}`
 
   if (toolResult.kind === 'weather') {
@@ -406,4 +407,4 @@ export function ToolResultCard({ toolResult, variant = 'chat' }: ToolResultCardP
         : renderChatSearchBody(toolResult.result)}
     </section>
   )
-}
+})

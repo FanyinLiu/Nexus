@@ -11,14 +11,20 @@ export async function readTextSafe(response) {
   return response.text().catch(() => '')
 }
 
-export async function withRequestTimeout(promise, timeoutMs, timeoutMessage) {
+export async function withRequestTimeout(
+  promiseFactory,
+  timeoutMs,
+  timeoutMessage,
+  abortController,
+) {
   let timer = null
 
   try {
     return await Promise.race([
-      promise,
+      promiseFactory(),
       new Promise((_, reject) => {
         timer = setTimeout(() => {
+          abortController?.abort?.()
           reject(new Error(timeoutMessage))
         }, timeoutMs)
       }),
@@ -35,31 +41,35 @@ export async function performNetworkRequest(url, options = {}) {
     body,
     timeoutMs = CONNECTION_TEST_TIMEOUT_MS,
     timeoutMessage = '请求超时，请检查网络、代理或服务状态。',
+    signal,
     ...rest
   } = options
 
+  const abortController = signal ? null : new AbortController()
+  const requestSignal = signal ?? abortController?.signal
+
   if (body instanceof FormData) {
     return withRequestTimeout(
-      fetch(url, {
+      () => fetch(url, {
         ...rest,
         body,
+        signal: requestSignal,
       }),
       timeoutMs,
       timeoutMessage,
+      abortController,
     )
   }
 
   return withRequestTimeout(
-    net.fetch(url, {
+    () => net.fetch(url, {
       ...rest,
-      ...(body !== undefined && body !== null
-        ? {
-            body,
-          }
-        : {}),
+      signal: requestSignal,
+      ...(body != null ? { body } : {}),
     }),
     timeoutMs,
     timeoutMessage,
+    abortController,
   )
 }
 

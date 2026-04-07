@@ -63,6 +63,10 @@ const DEBUG_EVENT_SOURCE_LABELS: Record<DebugConsoleEvent['source'], LocalizedTe
     'zh-CN': '系统',
     'en-US': 'System',
   },
+  autonomy: {
+    'zh-CN': '自主引擎',
+    'en-US': 'Autonomy',
+  },
 }
 
 const VOICE_PIPELINE_STEP_LABELS: Record<VoicePipelineState['step'], LocalizedText> = {
@@ -575,6 +579,7 @@ export type SettingsSectionId =
   | 'voice'
   | 'window'
   | 'integrations'
+  | 'autonomy'
 
 const SETTINGS_SECTION_DESCRIPTION_KEY_MAP: Record<SettingsSectionId, Parameters<typeof pickTranslatedUiText>[1]> = {
   console: 'settings.section_desc.console',
@@ -585,6 +590,7 @@ const SETTINGS_SECTION_DESCRIPTION_KEY_MAP: Record<SettingsSectionId, Parameters
   voice: 'settings.section_desc.voice',
   window: 'settings.section_desc.window',
   integrations: 'settings.section_desc.integrations',
+  autonomy: 'settings.section_desc.autonomy',
 }
 
 const SETTINGS_SECTION_EYEBROW_KEY_MAP: Record<SettingsSectionId, Parameters<typeof pickTranslatedUiText>[1]> = {
@@ -596,6 +602,7 @@ const SETTINGS_SECTION_EYEBROW_KEY_MAP: Record<SettingsSectionId, Parameters<typ
   voice: 'settings.section_eyebrow.voice',
   window: 'settings.section_eyebrow.window',
   integrations: 'settings.section_eyebrow.integrations',
+  autonomy: 'settings.section_eyebrow.autonomy',
 }
 
 export type VolcengineCredentialParts = {
@@ -615,6 +622,7 @@ export function getSettingsSectionOptions(uiLanguage: UiLanguage): Array<{
     { id: 'window', label: pickTranslatedUiText(uiLanguage, 'settings.section.window') },
     { id: 'integrations', label: pickTranslatedUiText(uiLanguage, 'settings.section.integrations') },
     { id: 'history', label: pickTranslatedUiText(uiLanguage, 'settings.section.history') },
+    { id: 'autonomy', label: pickTranslatedUiText(uiLanguage, 'settings.section.autonomy') },
     { id: 'console', label: pickTranslatedUiText(uiLanguage, 'settings.section.console') },
   ]
 }

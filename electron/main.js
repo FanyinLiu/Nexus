@@ -49,8 +49,6 @@ const hasSingleInstanceLock = app.requestSingleInstanceLock()
 
 // ── Chromium flags ──
 
-app.commandLine.appendSwitch('enable-unsafe-swiftshader')
-app.commandLine.appendSwitch('allow-file-access-from-files')
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
 if (!hasSingleInstanceLock) {

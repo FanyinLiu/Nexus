@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { MemoryPanel } from '../../features/memory/components'
 import { MEMORY_EMBEDDING_MODEL_OPTIONS } from '../../features/memory/constants'
@@ -52,7 +53,7 @@ type MemorySectionProps = {
   onRemoveDailyEntry?: (id: string, day: string) => void
 }
 
-export function MemorySection({
+export const MemorySection = memo(function MemorySection({
   active,
   draft,
   setDraft,
@@ -426,4 +427,4 @@ export function MemorySection({
       />
     </section>
   )
-}
+})

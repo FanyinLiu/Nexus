@@ -3,9 +3,11 @@ import {
   createInitialWakewordRuntimeState,
   hearingConfigFromSettings,
   type FunasrStreamSession,
+  type SenseVoiceStreamSession,
   type SherpaStreamSession,
   type WakewordRuntimeController,
 } from '../features/hearing'
+import type { TencentAsrStreamSession } from '../features/hearing/tencentAsr'
 import {
   createVoiceSessionState,
   logVoiceEvent,
@@ -67,11 +69,16 @@ import {
   startLocalWhisperRecordingConversation,
 } from './voice/recordingConversations'
 import { startFunasrConversation } from './voice/funasrConversation'
+import { startTencentConversation, type TencentConversationState } from './voice/tencentConversation'
+import { startSenseVoiceConversation, type SenseVoiceConversationState } from './voice/sensevoiceConversation'
 import { startSherpaConversation } from './voice/sherpaConversation'
 import {
   beginStreamingSpeechReplyRuntime,
   speakAssistantReplyRuntime,
 } from './voice/speechReply'
+import { VoiceBus } from '../features/voice/bus'
+import type { BusEffect, VoicePhase } from '../features/voice/busReducer'
+import type { VoiceBusEvent } from '../features/voice/busEvents'
 import { startSpeechOutputRuntime } from './voice/speechOutputRuntime'
 import {
   handleRecognizedVoiceTranscriptRuntime,
@@ -84,6 +91,8 @@ import {
   createWakewordRuntimeBinding,
   beginVoiceListeningSessionRuntime,
   clearFunasrConversationStateRuntime,
+  clearTencentConversationStateRuntime,
+  clearSenseVoiceConversationStateRuntime,
   clearSherpaConversationStateRuntime,
   destroyVadSessionRuntime,
   dispatchVoiceSessionAndSyncRuntime,
@@ -137,13 +146,14 @@ export function useVoice(ctx: UseVoiceContext) {
   const inputRef = ctx.inputRef
   const setInput = ctx.setInput
   const view = ctx.view
-  const [voiceState, setVoiceState] = useState<VoiceState>('idle')
+  const [voiceState, setVoiceStateRaw] = useState<VoiceState>('idle')
   const [continuousVoiceActive, setContinuousVoiceActive] = useState(false)
   const [liveTranscript, setLiveTranscript] = useState('')
   const [speechLevel, setSpeechLevel] = useState(0)
   const [wakewordState, setWakewordState] = useState<WakewordRuntimeState>(() => createInitialWakewordRuntimeState())
-  const [voicePipeline, setVoicePipeline] = useState<VoicePipelineState>(() => loadVoicePipelineState())
-  const [voiceTrace, setVoiceTrace] = useState<VoiceTraceEntry[]>(() => loadVoiceTrace())
+  const voiceEnabled = settings.speechInputEnabled || settings.speechOutputEnabled
+  const [voicePipeline, setVoicePipeline] = useState<VoicePipelineState>(() => voiceEnabled ? loadVoicePipelineState() : { step: 'idle' as const, detail: '', transcript: '', updatedAt: '' })
+  const [voiceTrace, setVoiceTrace] = useState<VoiceTraceEntry[]>(() => voiceEnabled ? loadVoiceTrace() : [])
 
   const voiceStateRef = useRef<VoiceState>('idle')
   const voiceSessionRef = useRef(createVoiceSessionState())
@@ -170,8 +180,12 @@ export function useVoice(ctx: UseVoiceContext) {
   )
   const sherpaSessionRef = useRef<SherpaStreamSession | null>(null)
   const sherpaConversationRef = useRef<SherpaConversationState | null>(null)
+  const sensevoiceSessionRef = useRef<SenseVoiceStreamSession | null>(null)
+  const sensevoiceConversationRef = useRef<SenseVoiceConversationState | null>(null)
   const funasrSessionRef = useRef<FunasrStreamSession | null>(null)
   const funasrConversationRef = useRef<FunasrConversationState | null>(null)
+  const tencentAsrSessionRef = useRef<TencentAsrStreamSession | null>(null)
+  const tencentConversationRef = useRef<TencentConversationState | null>(null)
   const speechInterruptMonitorRef = useRef<SpeechInterruptMonitorSession | null>(null)
   const wakewordRuntimeRef = useRef<WakewordRuntimeController | null>(null)
   const wakewordRuntimeStateChangeRef = useRef<(
@@ -197,10 +211,74 @@ export function useVoice(ctx: UseVoiceContext) {
   const stopVadListeningRef = useRef<(cancel?: boolean) => Promise<void>>(async () => undefined)
   const stopActiveSpeechOutputRef = useRef<() => void>(() => undefined)
 
+  // ── Voice event bus ──────────────────────────────────────────────────────
+  const voiceBusRef = useRef<VoiceBus | null>(null)
+  if (!voiceBusRef.current) {
+    voiceBusRef.current = new VoiceBus()
+  }
+  const voiceBus = voiceBusRef.current
+
   const browserSpeechRecognitionSupported = isBrowserSpeechRecognitionSupported()
   const setSettings = ctx.setSettings
 
+  // ── Bus effect executor ────────────────────────────────────────────────
+  function executeBusEffects(effects: BusEffect[]) {
+    for (const effect of effects) {
+      switch (effect.type) {
+        case 'restart_voice':
+          window.setTimeout(() => {
+            if (voiceBus.phase !== 'idle') return
+            try {
+              startVoiceConversation({ restart: true, passive: true })
+            } catch (err) {
+              console.warn('[VoiceBus] restart failed:', err)
+              showPetStatus('语音重启失败，请手动重试。', 4_000, 3_000)
+            }
+          }, effect.delay)
+          break
+        case 'set_mood':
+          ctx.setMood(effect.mood)
+          break
+        case 'show_status':
+          showPetStatus(effect.message, effect.duration)
+          break
+        case 'log':
+          console[effect.level]('[VoiceBus]', effect.message, effect.data ?? '')
+          break
+      }
+    }
+  }
+
+  function voiceStateForBusPhase(phase: VoicePhase): VoiceState {
+    switch (phase) {
+      case 'listening': return 'listening'
+      case 'transcribing': return 'processing'
+      case 'speaking': return 'speaking'
+      default: return 'idle'
+    }
+  }
+
+  function busEmit(event: VoiceBusEvent) {
+    const prevPhase = voiceBus.phase
+    const effects = voiceBus.emit(event)
+    const nextPhase = voiceBus.phase
+    // Sync voiceState when bus phase changes — replaces the legacy
+    // dispatchVoiceSessionAndSync → setVoiceState path for bus-driven events.
+    if (prevPhase !== nextPhase) {
+      setVoiceState(voiceStateForBusPhase(nextPhase))
+    }
+    executeBusEffects(effects)
+  }
+
   // ── Ref sync ───────────────────────────────────────────────────────────────
+  // All voice-state changes should go through setVoiceStateSync so the ref
+  // is updated synchronously (scheduleVoiceRestart reads the ref, not React state).
+  // The useEffect is kept only as a safety net for edge cases.
+
+  function setVoiceState(next: VoiceState) {
+    voiceStateRef.current = next
+    setVoiceStateRaw(next)
+  }
 
   useEffect(() => {
     voiceStateRef.current = voiceState
@@ -208,11 +286,22 @@ export function useVoice(ctx: UseVoiceContext) {
 
   // ── Persistence ────────────────────────────────────────────────────────────
 
+  const voicePipelineSaveSkipRef = useRef(true)
+  const voiceTraceSaveSkipRef = useRef(true)
+
   useEffect(() => {
+    if (voicePipelineSaveSkipRef.current) {
+      voicePipelineSaveSkipRef.current = false
+      return
+    }
     saveVoicePipelineState(voicePipeline)
   }, [voicePipeline])
 
   useEffect(() => {
+    if (voiceTraceSaveSkipRef.current) {
+      voiceTraceSaveSkipRef.current = false
+      return
+    }
     saveVoiceTrace(voiceTrace)
   }, [voiceTrace])
 
@@ -370,9 +459,23 @@ export function useVoice(ctx: UseVoiceContext) {
     })
   }
 
+  function clearSenseVoiceConversationState() {
+    clearSenseVoiceConversationStateRuntime({
+      sensevoiceConversationRef,
+      setSpeechLevelValue,
+    })
+  }
+
   function clearFunasrConversationState() {
     clearFunasrConversationStateRuntime({
       funasrConversationRef,
+      setSpeechLevelValue,
+    })
+  }
+
+  function clearTencentConversationState() {
+    clearTencentConversationStateRuntime({
+      tencentConversationRef,
       setSpeechLevelValue,
     })
   }
@@ -696,7 +799,7 @@ export function useVoice(ctx: UseVoiceContext) {
 
   // ── Voice restart / TTS ────────────────────────────────────────────────────
 
-  function scheduleVoiceRestart(statusText = '我继续收音，你可以接着说。', delay = 520) {
+  function scheduleVoiceRestart(statusText = '我继续收音，你可以接着说。', delay = 520, force?: boolean) {
     scheduleContinuousVoiceRestart({
       restartVoiceTimerRef,
       recognitionRef,
@@ -708,6 +811,7 @@ export function useVoice(ctx: UseVoiceContext) {
       startVoiceConversation,
       statusText,
       delay,
+      force,
     })
   }
 
@@ -718,11 +822,9 @@ export function useVoice(ctx: UseVoiceContext) {
       shouldResumeContinuousVoice,
       currentSettings: ctx.settingsRef.current,
       startSpeechOutput,
-      dispatchVoiceSessionAndSync,
       setMood: ctx.setMood,
       setError: ctx.setError,
-      shouldAutoRestartVoice,
-      scheduleVoiceRestart,
+      busEmit,
       startSpeechInterruptMonitor,
       stopSpeechInterruptMonitor,
       isSpeechInterrupted,
@@ -741,11 +843,9 @@ export function useVoice(ctx: UseVoiceContext) {
       speechGeneration: ++assistantSpeechGenerationRef.current,
       shouldResumeContinuousVoice,
       currentSettings: ctx.settingsRef.current,
-      dispatchVoiceSessionAndSync,
       setMood: ctx.setMood,
       setError: ctx.setError,
-      shouldAutoRestartVoice,
-      scheduleVoiceRestart,
+      busEmit,
       startSpeechInterruptMonitor,
       stopSpeechInterruptMonitor,
       isSpeechInterrupted,
@@ -841,6 +941,41 @@ export function useVoice(ctx: UseVoiceContext) {
     })
   }
 
+  // ── SenseVoice offline conversation ────────────────────────────────────────
+
+  async function startSenseVoiceVoiceConversation(options?: VoiceConversationOptions) {
+    await startSenseVoiceConversation({
+      options,
+      currentSettings: ctx.settingsRef.current,
+      voiceStateRef,
+      suppressVoiceReplyRef,
+      sensevoiceSessionRef,
+      sensevoiceConversationRef,
+      clearPendingVoiceRestart,
+      canInterruptSpeech,
+      interruptSpeakingForVoiceInput,
+      setContinuousVoiceSession,
+      shouldKeepContinuousVoiceSession,
+      resetNoSpeechRestartCount,
+      clearSenseVoiceConversationState,
+      beginVoiceListeningSession,
+      dispatchVoiceSession,
+      dispatchVoiceSessionAndSync,
+      setVoiceState,
+      setMood: ctx.setMood,
+      setError: ctx.setError,
+      setLiveTranscript,
+      updateVoicePipeline,
+      appendVoiceTrace,
+      showPetStatus,
+      setSpeechLevelValue,
+      handleRecognizedVoiceTranscript,
+      handleVoiceListeningFailure,
+      switchSpeechInputToLocalWhisper,
+      shouldAutoRestartVoice,
+    })
+  }
+
   // ── FunASR streaming conversation ──────────────────────────────────────────
 
   async function startFunasrVoiceConversation(options?: VoiceConversationOptions) {
@@ -858,6 +993,41 @@ export function useVoice(ctx: UseVoiceContext) {
       shouldKeepContinuousVoiceSession,
       resetNoSpeechRestartCount,
       clearFunasrConversationState,
+      beginVoiceListeningSession,
+      dispatchVoiceSession,
+      dispatchVoiceSessionAndSync,
+      setVoiceState,
+      setMood: ctx.setMood,
+      setError: ctx.setError,
+      setLiveTranscript,
+      updateVoicePipeline,
+      appendVoiceTrace,
+      showPetStatus,
+      setSpeechLevelValue,
+      handleRecognizedVoiceTranscript,
+      handleVoiceListeningFailure,
+      switchSpeechInputToLocalWhisper,
+      shouldAutoRestartVoice,
+    })
+  }
+
+  // ── Tencent Cloud ASR streaming conversation ───────────────────────────────
+
+  async function startTencentAsrConversation(options?: VoiceConversationOptions) {
+    await startTencentConversation({
+      options,
+      currentSettings: ctx.settingsRef.current,
+      voiceStateRef,
+      suppressVoiceReplyRef,
+      tencentAsrSessionRef,
+      tencentConversationRef,
+      clearPendingVoiceRestart,
+      canInterruptSpeech,
+      interruptSpeakingForVoiceInput,
+      setContinuousVoiceSession,
+      shouldKeepContinuousVoiceSession,
+      resetNoSpeechRestartCount,
+      clearTencentConversationState,
       beginVoiceListeningSession,
       dispatchVoiceSession,
       dispatchVoiceSessionAndSync,
@@ -981,7 +1151,9 @@ export function useVoice(ctx: UseVoiceContext) {
       recognitionRef,
       vadSessionRef,
       sherpaSessionRef,
+      sensevoiceSessionRef,
       funasrSessionRef,
+      tencentAsrSessionRef,
       clearPendingVoiceRestart,
       canInterruptSpeech,
       interruptSpeakingForVoiceInput,
@@ -1002,7 +1174,9 @@ export function useVoice(ctx: UseVoiceContext) {
       ensureSupportedSpeechInputSettings,
       switchSpeechInputToLocalWhisper,
       startSherpaVoiceConversation,
+      startSenseVoiceConversation: startSenseVoiceVoiceConversation,
       startFunasrVoiceConversation,
+      startTencentAsrConversation,
       startVadVoiceConversation,
       startLocalWhisperConversation,
       startApiVoiceConversation,
@@ -1010,7 +1184,7 @@ export function useVoice(ctx: UseVoiceContext) {
     } catch (err) {
       console.error('[Voice] startVoiceConversation failed:', err)
       ctx.setError(err instanceof Error ? err.message : '语音启动失败，请重试。')
-      voiceStateRef.current = 'idle'
+      setVoiceState('idle')
     }
   }
 
@@ -1020,16 +1194,21 @@ export function useVoice(ctx: UseVoiceContext) {
       suppressVoiceReplyRef,
       recognitionRef,
       sherpaSessionRef,
+      sensevoiceSessionRef,
       funasrSessionRef,
+      tencentAsrSessionRef,
       clearPendingVoiceRestart,
       setContinuousVoiceSession,
       resetNoSpeechRestartCount,
       clearSherpaConversationState,
+      clearSenseVoiceConversationState,
       clearFunasrConversationState,
+      clearTencentConversationState,
       stopApiRecording,
       stopVadListening,
       stopActiveSpeechOutput,
       dispatchVoiceSessionAndSync,
+      busEmit,
       setLiveTranscript,
       setMood: ctx.setMood,
       updateVoicePipeline,
@@ -1085,20 +1264,25 @@ export function useVoice(ctx: UseVoiceContext) {
   }, [handleWakewordKeywordDetected])
 
   useEffect(() => {
+    // Only create wakeword runtime if speech input is enabled and trigger mode is wake_word
+    if (!settings.speechInputEnabled || settings.voiceTriggerMode !== 'wake_word') {
+      return
+    }
+
     return createWakewordRuntimeBinding({
       wakewordRuntimeRef,
       wakewordRuntimeStateChangeRef,
       wakewordKeywordDetectedRef,
       setWakewordState,
     })
-  }, [])
+  }, [settings.speechInputEnabled, settings.voiceTriggerMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    startVoiceConversationRef.current = startVoiceConversation
-    stopApiRecordingRef.current = stopApiRecording
-    stopVadListeningRef.current = stopVadListening
-    stopActiveSpeechOutputRef.current = stopActiveSpeechOutput
-  })
+  // Keep refs current — intentionally no deps to capture latest closures.
+  // Use a layout-time assignment instead of useEffect to avoid extra render cycles.
+  startVoiceConversationRef.current = startVoiceConversation
+  stopApiRecordingRef.current = stopApiRecording
+  stopVadListeningRef.current = stopVadListening
+  stopActiveSpeechOutputRef.current = stopActiveSpeechOutput
 
   // ── Test functions ─────────────────────────────────────────────────────────
 
@@ -1148,7 +1332,7 @@ export function useVoice(ctx: UseVoiceContext) {
   // Ensure supported speech input settings on mount
   useEffect(() => {
     ensureSupportedSpeechInputSettings()
-  })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     return setupLocalQwenSpeechWarmupRuntime({
@@ -1166,7 +1350,20 @@ export function useVoice(ctx: UseVoiceContext) {
       clonedVoiceId: settings.clonedVoiceId,
       warmupKeyRef: localQwenSpeechWarmupKeyRef,
     })
-  })
+  }, [ // eslint-disable-line react-hooks/exhaustive-deps
+    settings.speechOutputEnabled,
+    settings.speechOutputProviderId,
+    settings.speechOutputApiBaseUrl,
+    settings.speechOutputApiKey,
+    settings.speechOutputModel,
+    settings.speechOutputVoice,
+    settings.speechOutputInstructions,
+    settings.speechSynthesisLang,
+    settings.speechRate,
+    settings.speechPitch,
+    settings.speechVolume,
+    settings.clonedVoiceId,
+  ])
 
   // Disable continuous voice when setting is off
   useEffect(() => {
@@ -1174,7 +1371,7 @@ export function useVoice(ctx: UseVoiceContext) {
 
     clearPendingVoiceRestart()
     setContinuousVoiceSession(false)
-  })
+  }, [settings.continuousVoiceModeEnabled, clearPendingVoiceRestart]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // If runtime continuous voice is already active on startup, keep the saved setting aligned.
   useEffect(() => {
@@ -1182,6 +1379,18 @@ export function useVoice(ctx: UseVoiceContext) {
     previousContinuousVoiceActiveRef.current = continuousVoiceActive
 
     if (wasActive || !continuousVoiceActive || settings.continuousVoiceModeEnabled) {
+      return
+    }
+
+    if (ctx.applySettingsUpdate) {
+      void ctx.applySettingsUpdate((current) => (
+        current.continuousVoiceModeEnabled
+          ? current
+          : {
+              ...current,
+              continuousVoiceModeEnabled: true,
+            }
+      ))
       return
     }
 
@@ -1193,7 +1402,7 @@ export function useVoice(ctx: UseVoiceContext) {
             continuousVoiceModeEnabled: true,
           }
     ))
-  })
+  }, [continuousVoiceActive, settings.continuousVoiceModeEnabled]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const runtime = wakewordRuntimeRef.current
@@ -1307,15 +1516,22 @@ export function useVoice(ctx: UseVoiceContext) {
   ])
   */
   useEffect(() => {
-    preloadHiddenWhisperRuntime({
-      settings: ctx.settingsRef.current,
-      refs: {
-        workerRef: localAsrWorkerRef,
-        requestIdRef: localAsrRequestIdRef,
-        pendingRef: localAsrPendingRef,
-      },
-      appendVoiceTrace,
-    })
+    // Only preload whisper if speech input is actually enabled
+    if (!ctx.settingsRef.current.speechInputEnabled) return
+
+    // Defer whisper preload to avoid blocking startup
+    const timerId = window.setTimeout(() => {
+      preloadHiddenWhisperRuntime({
+        settings: ctx.settingsRef.current,
+        refs: {
+          workerRef: localAsrWorkerRef,
+          requestIdRef: localAsrRequestIdRef,
+          pendingRef: localAsrPendingRef,
+        },
+        appendVoiceTrace,
+      })
+    }, 2_000)
+    return () => window.clearTimeout(timerId)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup on unmount
@@ -1336,10 +1552,15 @@ export function useVoice(ctx: UseVoiceContext) {
           pendingRef: localAsrPendingRef,
         },
         sherpaSessionRef,
+        sensevoiceSessionRef,
         wakewordRuntimeRef,
       })
     }
   }, [clearPendingVoiceRestart])
+
+  useEffect(() => {
+    return () => { voiceBus.destroy() }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     // State
@@ -1373,6 +1594,8 @@ export function useVoice(ctx: UseVoiceContext) {
     speakAssistantReply,
     beginStreamingSpeechReply,
     scheduleVoiceRestart,
+    voiceBus,
+    busEmit,
     shouldAutoRestartVoice,
     clearPendingVoiceRestart,
     resetNoSpeechRestartCount,

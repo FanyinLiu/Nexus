@@ -179,9 +179,39 @@ export async function fetchBingRssItems(query, limit = 5) {
     .slice(0, Math.max(1, Math.min(Number(limit) || 5, 8)))
 }
 
+function isValidHttpUrl(urlString) {
+  try {
+    const url = new URL(urlString)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function isInternalUrl(urlString) {
+  try {
+    const url = new URL(urlString)
+    const hostname = url.hostname.toLowerCase()
+    const blockedHostnames = [
+      'localhost', '127.0.0.1', '0.0.0.0',
+      '::1', '10.', '192.168.', '172.16.', '172.17.', '172.18.', '172.19.',
+      '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.',
+      '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.'
+    ]
+    return blockedHostnames.some(h => hostname === h || hostname.startsWith(h))
+  } catch {
+    return true
+  }
+}
+
 async function enrichSearchItemsWithPreview(items, query) {
   const enrichedItems = await Promise.all(items.map(async (item, index) => {
     if (index >= 4) {
+      return item
+    }
+
+    // SSRF防护：验证URL
+    if (!isValidHttpUrl(item.url) || isInternalUrl(item.url)) {
       return item
     }
 

@@ -60,6 +60,9 @@ export const VOICE_TRACE_STORAGE_KEY = 'nexus:voice-trace'
 export const ONBOARDING_STORAGE_KEY = 'nexus:onboarding'
 export const REMINDER_TASKS_STORAGE_KEY = 'nexus:reminder-tasks'
 export const DEBUG_CONSOLE_EVENTS_STORAGE_KEY = 'nexus:debug-console-events'
+export const AUTONOMY_DREAM_LOG_STORAGE_KEY = 'nexus:autonomy:dream-log'
+export const AUTONOMY_CONTEXT_TRIGGERS_STORAGE_KEY = 'nexus:autonomy:context-triggers'
+export const AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY = 'nexus:autonomy:notification-messages'
 
 type PetRuntimeState = {
   mood: PetMood
@@ -151,6 +154,21 @@ const defaultSettings: AppSettings = {
   textProviderProfiles: {},
   speechInputProviderProfiles: {},
   speechOutputProviderProfiles: {},
+  // Autonomy defaults — all off so existing users see no behavior change
+  autonomyEnabled: false,
+  autonomyTickIntervalSeconds: 30,
+  autonomySleepAfterIdleMinutes: 15,
+  autonomyWakeOnInput: true,
+  autonomyDreamEnabled: true,
+  autonomyDreamIntervalHours: 24,
+  autonomyDreamMinSessions: 5,
+  autonomyFocusAwarenessEnabled: true,
+  autonomyIdleThresholdSeconds: 300,
+  autonomyContextTriggersEnabled: false,
+  autonomyNotificationsEnabled: false,
+  autonomyQuietHoursStart: 23,
+  autonomyQuietHoursEnd: 7,
+  autonomyCostLimitDailyTicks: 100,
 }
 
 const defaultPetRuntimeState: PetRuntimeState = {
@@ -192,7 +210,7 @@ function normalizeReminderTaskAction(action: ReminderTaskAction | null | undefin
   }
 }
 
-function readJson<T>(key: string, fallback: T): T {
+export function readJson<T>(key: string, fallback: T): T {
   try {
     const raw = window.localStorage.getItem(key)
     if (!raw) return fallback
@@ -202,8 +220,21 @@ function readJson<T>(key: string, fallback: T): T {
   }
 }
 
-function writeJson<T>(key: string, value: T) {
+export function writeJson<T>(key: string, value: T): void {
   window.localStorage.setItem(key, JSON.stringify(value))
+}
+
+const debouncedTimers = new Map<string, number>()
+
+export function writeJsonDebounced<T>(key: string, value: T, delayMs = 500): void {
+  const existing = debouncedTimers.get(key)
+  if (existing) {
+    window.clearTimeout(existing)
+  }
+  debouncedTimers.set(key, window.setTimeout(() => {
+    debouncedTimers.delete(key)
+    writeJson(key, value)
+  }, delayMs))
 }
 
 function clampInteger(value: number, fallback: number, min: number, max: number) {
@@ -223,14 +254,17 @@ function resolveVoiceTriggerMode(stored: Partial<AppSettings>): VoiceTriggerMode
   }
 }
 
-
-
 export function loadChatMessages(): ChatMessage[] {
   return readJson<ChatMessage[]>(CHAT_STORAGE_KEY, [])
 }
 
+const MAX_PERSISTED_CHAT_MESSAGES = 500
+
 export function saveChatMessages(messages: ChatMessage[]) {
-  writeJson(CHAT_STORAGE_KEY, messages)
+  const capped = messages.length > MAX_PERSISTED_CHAT_MESSAGES
+    ? messages.slice(-MAX_PERSISTED_CHAT_MESSAGES)
+    : messages
+  writeJsonDebounced(CHAT_STORAGE_KEY, capped)
 }
 
 export function loadVoicePipelineState(): VoicePipelineState {
@@ -241,7 +275,7 @@ export function loadVoicePipelineState(): VoicePipelineState {
 }
 
 export function saveVoicePipelineState(state: VoicePipelineState) {
-  writeJson(VOICE_PIPELINE_STORAGE_KEY, state)
+  writeJsonDebounced(VOICE_PIPELINE_STORAGE_KEY, state, 300)
 }
 
 export function loadVoiceTrace(): VoiceTraceEntry[] {
@@ -249,7 +283,7 @@ export function loadVoiceTrace(): VoiceTraceEntry[] {
 }
 
 export function saveVoiceTrace(trace: VoiceTraceEntry[]) {
-  writeJson(VOICE_TRACE_STORAGE_KEY, trace.slice(0, 8))
+  writeJsonDebounced(VOICE_TRACE_STORAGE_KEY, trace.slice(0, 8), 300)
 }
 
 export function loadDebugConsoleEvents(): DebugConsoleEvent[] {
@@ -291,7 +325,7 @@ export function loadDebugConsoleEvents(): DebugConsoleEvent[] {
 }
 
 export function saveDebugConsoleEvents(events: DebugConsoleEvent[]) {
-  writeJson(DEBUG_CONSOLE_EVENTS_STORAGE_KEY, events.slice(0, 60))
+  writeJsonDebounced(DEBUG_CONSOLE_EVENTS_STORAGE_KEY, events.slice(0, 60))
 }
 
 export function loadReminderTasks(): ReminderTask[] {
@@ -356,7 +390,7 @@ export function loadMemories(): MemoryItem[] {
 }
 
 export function saveMemories(memories: MemoryItem[]) {
-  writeJson(MEMORY_STORAGE_KEY, memories)
+  writeJsonDebounced(MEMORY_STORAGE_KEY, memories)
 }
 
 export function loadDailyMemories(): DailyMemoryStore {
@@ -364,7 +398,7 @@ export function loadDailyMemories(): DailyMemoryStore {
 }
 
 export function saveDailyMemories(memories: DailyMemoryStore) {
-  writeJson(DAILY_MEMORY_STORAGE_KEY, memories)
+  writeJsonDebounced(DAILY_MEMORY_STORAGE_KEY, memories)
 }
 
 function syncActiveCharacterProfile(settings: AppSettings): AppSettings {
@@ -623,6 +657,7 @@ export function saveSettings(settings: AppSettings, options?: { silent?: boolean
 
 function resolveThemeId(storedThemeId: unknown): AppSettings['themeId'] {
   switch (storedThemeId) {
+    case 'editorial':
     case 'soft':
     case 'high-contrast':
     case 'nexus-default':

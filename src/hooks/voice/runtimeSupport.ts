@@ -18,6 +18,8 @@ import { stopSpeaking as stopBrowserSpeaking } from '../../lib/voice'
 import { createId } from '../../lib'
 import type { VoiceState } from '../../types'
 import { cleanupApiRecordingSession } from './recordingSession'
+import type { SenseVoiceConversationState } from './sensevoiceConversation'
+import type { TencentConversationState } from './tencentConversation'
 import type {
   ApiRecordingSession,
   FunasrConversationState,
@@ -105,8 +107,18 @@ type ClearSherpaConversationStateRuntimeOptions = {
   setSpeechLevelValue: (level: number) => void
 }
 
+type ClearSenseVoiceConversationStateRuntimeOptions = {
+  sensevoiceConversationRef: MutableRefObject<SenseVoiceConversationState | null>
+  setSpeechLevelValue: (level: number) => void
+}
+
 type ClearFunasrConversationStateRuntimeOptions = {
   funasrConversationRef: MutableRefObject<FunasrConversationState | null>
+  setSpeechLevelValue: (level: number) => void
+}
+
+type ClearTencentConversationStateRuntimeOptions = {
+  tencentConversationRef: MutableRefObject<TencentConversationState | null>
   setSpeechLevelValue: (level: number) => void
 }
 
@@ -152,6 +164,10 @@ export function dispatchVoiceSessionAndSyncRuntime(
   const nextVoiceState = getVoiceStateForSessionPhase(nextState.phase)
 
   if (options.voiceStateRef.current !== nextVoiceState) {
+    // Sync the ref immediately so that scheduleVoiceRestart (which fires on
+    // a short timer) sees the updated value before the React render cycle
+    // propagates the state change back through the useEffect ref-sync.
+    options.voiceStateRef.current = nextVoiceState
     options.setVoiceState(nextVoiceState)
   }
 
@@ -310,6 +326,24 @@ export function clearSherpaConversationStateRuntime(
   options.setSpeechLevelValue(0)
 }
 
+export function clearSenseVoiceConversationStateRuntime(
+  options: ClearSenseVoiceConversationStateRuntimeOptions,
+) {
+  const session = options.sensevoiceConversationRef.current
+  if (!session) return
+
+  if (session.noSpeechTimer) {
+    window.clearTimeout(session.noSpeechTimer)
+  }
+
+  if (session.maxDurationTimer) {
+    window.clearTimeout(session.maxDurationTimer)
+  }
+
+  options.sensevoiceConversationRef.current = null
+  options.setSpeechLevelValue(0)
+}
+
 export function clearFunasrConversationStateRuntime(
   options: ClearFunasrConversationStateRuntimeOptions,
 ) {
@@ -325,6 +359,24 @@ export function clearFunasrConversationStateRuntime(
   }
 
   options.funasrConversationRef.current = null
+  options.setSpeechLevelValue(0)
+}
+
+export function clearTencentConversationStateRuntime(
+  options: ClearTencentConversationStateRuntimeOptions,
+) {
+  const session = options.tencentConversationRef.current
+  if (!session) return
+
+  if (session.noSpeechTimer) {
+    window.clearTimeout(session.noSpeechTimer)
+  }
+
+  if (session.maxDurationTimer) {
+    window.clearTimeout(session.maxDurationTimer)
+  }
+
+  options.tencentConversationRef.current = null
   options.setSpeechLevelValue(0)
 }
 

@@ -143,8 +143,8 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
     }
 
     const maybeResumeVoice = () => {
-      if (options.shouldResumeContinuousVoice && dependencies.ctx.shouldAutoRestartVoice()) {
-        dependencies.ctx.scheduleVoiceRestart('The local task is done. You can keep talking.', 520)
+      if (options.shouldResumeContinuousVoice) {
+        dependencies.ctx.scheduleVoiceRestart('The local task is done. You can keep talking.', 520, true)
       }
     }
 

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { clampPresenceIntervalMinutes } from '../../lib/settings'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
@@ -24,7 +25,7 @@ type VoiceSectionProps = {
   uiLanguage: UiLanguage
 }
 
-export function VoiceSection({
+export const VoiceSection = memo(function VoiceSection({
   active,
   audioSmokeStatus,
   draft,
@@ -131,6 +132,7 @@ export function VoiceSection({
         <input
           type="checkbox"
           checked={draft.voiceInterruptionEnabled}
+          disabled
           onChange={(event) =>
             setDraft((prev) => ({
               ...prev,
@@ -139,6 +141,16 @@ export function VoiceSection({
           }
         />
       </label>
+
+      <p className="settings-drawer__hint">
+        {ti('settings.voice.note')}
+        {' '}
+        {uiLanguage === 'zh-CN'
+          ? '当前版本暂未启用语音打断，避免误把播报声音识别成用户输入。'
+          : uiLanguage === 'zh-TW'
+            ? '目前版本暫未啟用語音打斷，避免把播報聲音誤判成使用者輸入。'
+            : 'Speech interruption is temporarily unavailable to avoid false interrupts caused by TTS audio bleeding back into the microphone.'}
+      </p>
 
       <label className="settings-toggle">
         <span>{ti('settings.voice.enable_stt_failover')}</span>
@@ -257,4 +269,4 @@ export function VoiceSection({
       </label>
     </section>
   )
-}
+})

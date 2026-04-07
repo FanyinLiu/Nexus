@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 function resolveManualChunk(id: string) {
   const normalizedId = id.replace(/\\/g, '/')
 
+  // ── vendor chunks ──────────────────────────────────────────────
   if (normalizedId.includes('node_modules/react/')
     || normalizedId.includes('node_modules/react-dom/')
     || normalizedId.includes('node_modules/scheduler/')) {
@@ -27,6 +28,24 @@ function resolveManualChunk(id: string) {
     return 'voice-vendor'
   }
 
+  if (normalizedId.includes('node_modules/tesseract.js')) {
+    return 'tesseract-vendor'
+  }
+
+  // ── feature runtime chunks ─────────────────────────────────────
+  if (normalizedId.includes('/src/features/hearing/')) {
+    return 'hearing-runtime'
+  }
+
+  if (normalizedId.includes('/src/features/vision/')) {
+    return 'vision-runtime'
+  }
+
+  if (normalizedId.includes('/src/features/autonomy/')) {
+    return 'autonomy-runtime'
+  }
+
+  // ── app runtime chunks ─────────────────────────────────────────
   if (
     normalizedId.includes('/src/hooks/useVoice.ts')
     || normalizedId.includes('/src/hooks/voice/')
@@ -58,6 +77,12 @@ function resolveManualChunk(id: string) {
     return 'app-runtime'
   }
 
+  // ── UI chunks ──────────────────────────────────────────────────
+  if (normalizedId.includes('/src/components/settingsSections/')
+    || normalizedId.includes('/src/components/SettingsDrawer')) {
+    return 'settings-ui'
+  }
+
   return undefined
 }
 
@@ -66,6 +91,9 @@ export default defineConfig({
   base: './',
   plugins: [tailwindcss(), react()],
   build: {
+    minify: 'esbuild',
+    target: 'esnext',
+    cssCodeSplit: true,
     // Remaining large chunks are optional local-ML runtimes that stay lazy.
     chunkSizeWarningLimit: 950,
     rollupOptions: {
@@ -73,6 +101,10 @@ export default defineConfig({
         manualChunks: resolveManualChunk,
       },
     },
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
+    exclude: ['@huggingface/transformers', 'onnxruntime-web'],
   },
   server: {
     host: '127.0.0.1',

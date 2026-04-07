@@ -316,13 +316,13 @@ export async function tryTranscribeWithSpeechInputFailoverRuntime(
         (await options.transcribeWithLocalWhisper(options.audioBlob, candidate.payload)).trim(),
     })
 
-    options.applySpeechInputProviderFallback(
-      'local-whisper',
-      '语音识别已自动切换到本地 Whisper。',
-    )
+    // Only log — do NOT mutate settingsRef.  Previous behavior permanently
+    // switched the runtime settings to local-whisper, meaning all subsequent
+    // recognition would bypass the user's chosen cloud STT provider even if
+    // it recovered on the very next request.
     options.appendVoiceTrace(
-      '语音识别已自动回退',
-      `${options.currentSettings.speechInputProviderId} -> ${fallbackSettings.speechInputProviderId}`,
+      '语音识别本次回退',
+      `${options.currentSettings.speechInputProviderId} -> ${fallbackSettings.speechInputProviderId}（仅本次，不改变设置）`,
       'success',
     )
     return result.result

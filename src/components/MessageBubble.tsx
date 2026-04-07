@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { ReactNode } from 'react'
 import type { ChatMessage } from '../types'
 import { ToolResultCard } from './ToolResultCard'
@@ -54,7 +55,7 @@ function renderLinkedContent(content: string) {
   return parts.length ? parts : content
 }
 
-export function MessageBubble({ message, assistantName = '星绘' }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ message, assistantName = '星绘' }: MessageBubbleProps) {
   const speakerLabel = message.role === 'assistant'
     ? assistantName
     : message.role === 'system'
@@ -85,4 +86,4 @@ export function MessageBubble({ message, assistantName = '星绘' }: MessageBubb
       </div>
     </article>
   )
-}
+})

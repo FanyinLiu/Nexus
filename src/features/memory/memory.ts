@@ -68,7 +68,9 @@ const IMPORTANCE_WEIGHTS: Record<MemoryImportance, number> = {
 const TIME_DECAY_HALF_LIFE_DAYS = 30
 
 export function computeTimeDecay(memoryTimestamp: string, nowMs = Date.now()) {
-  const ageMs = nowMs - Date.parse(memoryTimestamp)
+  const parsed = Date.parse(memoryTimestamp)
+  if (Number.isNaN(parsed)) return 1
+  const ageMs = nowMs - parsed
   if (ageMs <= 0) return 1
   const ageDays = ageMs / (1000 * 60 * 60 * 24)
   return Math.pow(0.5, ageDays / TIME_DECAY_HALF_LIFE_DAYS)

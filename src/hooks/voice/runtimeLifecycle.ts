@@ -1,5 +1,6 @@
 import type { MutableRefObject } from 'react'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
+import type { SenseVoiceStreamSession } from '../../features/hearing/localSenseVoice.ts'
 import type { SherpaStreamSession } from '../../features/hearing/localSherpa.ts'
 import type { BrowserSpeechRecognition } from '../../lib/voice'
 import { createId } from '../../lib'
@@ -51,6 +52,7 @@ export type CleanupVoiceRuntimeResourcesOptions = {
   stopActiveSpeechOutput: () => void
   localAsrRefs: LocalAsrRuntimeRefs
   sherpaSessionRef: MutableRefObject<SherpaStreamSession | null>
+  sensevoiceSessionRef: MutableRefObject<SenseVoiceStreamSession | null>
   wakewordRuntimeRef: MutableRefObject<WakewordRuntimeController | null>
 }
 
@@ -67,7 +69,8 @@ export function setupLocalQwenSpeechWarmupRuntime(
     return undefined
   }
 
-  const effectiveVoice = options.clonedVoiceId || options.speechOutputVoice
+  // Voice cloning disabled — always use the provider's configured voice.
+  const effectiveVoice = options.speechOutputVoice
   const warmupKey = [
     options.speechOutputProviderId,
     options.speechOutputApiBaseUrl,
@@ -175,6 +178,8 @@ export function cleanupVoiceRuntimeResources(
   cleanupLocalAsrRuntime(options.localAsrRefs, '本地 Whisper 已停止。')
   options.sherpaSessionRef.current?.abort()
   options.sherpaSessionRef.current = null
+  options.sensevoiceSessionRef.current?.abort()
+  options.sensevoiceSessionRef.current = null
   options.wakewordRuntimeRef.current?.destroy()
   options.wakewordRuntimeRef.current = null
 }

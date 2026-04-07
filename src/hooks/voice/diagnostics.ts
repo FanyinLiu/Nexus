@@ -16,6 +16,7 @@ import {
   isLocalSherpaSpeechInputProvider,
   isLocalWhisperSpeechInputProvider,
 } from '../../lib/audioProviders'
+import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import { checkSherpaAvailability } from '../../features/hearing/localSherpa.ts'
 import { getAvailableSpeechSynthesisVoices } from '../../lib/voice'
 import type { AppSettings } from '../../types'
@@ -151,23 +152,42 @@ export async function testSpeechInputReadinessRuntime(
       }
     }
 
-    return {
-      ok: true,
-      message:
-        providerId === 'local-sherpa'
-          ? '麦克风权限已就绪，本地流式识别引擎和模型都正常。'
-          : providerId === 'local-whisper'
-            ? '麦克风权限已就绪，本地 Whisper 模型和录音链路都正常。'
-            : providerId === 'browser'
-              ? '麦克风权限已就绪，浏览器原生语音识别可以启动。'
-              : '麦克风权限已就绪，本地录音链路正常。',
+    if (providerId === 'local-sensevoice') {
+      const status = await checkSenseVoiceAvailability()
+      if (!status.installed) {
+        return {
+          ok: false,
+          message: 'sherpa-onnx-node 未安装，请先运行 npm install sherpa-onnx-node。',
+        }
+      }
+      if (!status.modelFound) {
+        return {
+          ok: false,
+          message: `未找到 SenseVoice 模型，请将 sherpa-onnx-sense-voice-zh-en-2024-07-17 目录放到 ${status.modelsDir} 下。`,
+        }
+      }
     }
+
+    let message: string
+    if (providerId === 'local-sensevoice') {
+      message = '麦克风权限已就绪，SenseVoice 离线识别引擎和模型都正常。'
+    } else if (providerId === 'local-sherpa') {
+      message = '麦克风权限已就绪，本地流式识别引擎和模型都正常。'
+    } else if (providerId === 'local-whisper') {
+      message = '麦克风权限已就绪，本地 Whisper 模型和录音链路都正常。'
+    } else if (providerId === 'browser') {
+      message = '麦克风权限已就绪，浏览器原生语音识别可以启动。'
+    } else {
+      message = '麦克风权限已就绪，本地录音链路正常。'
+    }
+
+    return { ok: true, message }
   } catch (caught) {
     return {
       ok: false,
       message: mapMicrophoneDiagnosticError(
         caught,
-        providerId === 'local-whisper' || providerId === 'local-sherpa',
+        providerId === 'local-whisper' || providerId === 'local-sherpa' || providerId === 'local-sensevoice',
       ),
     }
   } finally {
@@ -358,7 +378,8 @@ export async function testSpeechOutputReadinessRuntime(
     baseUrl: options.draftSettings.speechOutputApiBaseUrl,
     apiKey: options.draftSettings.speechOutputApiKey,
     model: options.draftSettings.speechOutputModel,
-    voice: options.draftSettings.clonedVoiceId || options.draftSettings.speechOutputVoice,
+    // Voice cloning disabled — always use the provider's configured voice.
+    voice: options.draftSettings.speechOutputVoice,
   })
 
   if (!remoteSpeechCheck.ok) {

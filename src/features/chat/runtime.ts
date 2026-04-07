@@ -25,6 +25,7 @@ type McpToolDescriptor = {
 type AssistantReplyRequestOptions = {
   responseProfile?: 'default' | 'voice_balanced'
   traceId?: string
+  requestId?: string
   desktopContext?: DesktopContextSnapshot | null
   gameContext?: string
   toolContext?: string
@@ -42,6 +43,10 @@ export type AssistantReplyRuntimeResult = {
   providerId: string
   usedFallback: boolean
   settingsPatch?: Partial<AppSettings>
+}
+
+type AbortableChatRequest = Promise<AssistantReplyRuntimeResult> & {
+  abort: () => Promise<void>
 }
 
 function buildDailyMemorySection(memoryContext: MemoryRecallContext) {
@@ -191,6 +196,7 @@ function buildChatRequestPayload(
     apiKey: settings.apiKey,
     model: settings.model,
     traceId: options.traceId,
+    requestId: options.requestId,
     messages: toRequestMessages(settings, history, memoryContext, options),
     temperature: responseProfile === 'voice_balanced' ? 0.7 : 0.85,
     maxTokens: responseProfile === 'voice_balanced' ? 220 : 500,
@@ -287,24 +293,39 @@ export async function requestAssistantReply(
   )
 }
 
-export async function requestAssistantReplyStreaming(
+export function requestAssistantReplyStreaming(
   settings: AppSettings,
   history: ChatMessage[],
   memoryContext: MemoryRecallContext,
   onDelta: (delta: string, done: boolean) => void,
   options: AssistantReplyRequestOptions = {},
-) {
+): AbortableChatRequest {
   if (!window.desktopPet?.completeChatStream) {
-    const result = await requestAssistantReply(settings, history, memoryContext, options)
-    onDelta(result.response.content, true)
-    return result
+    const request = requestAssistantReply(settings, history, memoryContext, options)
+    const wrapped = request.then((result) => {
+      onDelta(result.response.content, true)
+      return result
+    }) as AbortableChatRequest
+    wrapped.abort = async () => undefined
+    return wrapped
   }
 
-  return executeChatRequestWithFailover(
+  let activeRequest: (Promise<ChatCompletionResponse> & { abort?: () => Promise<void> }) | null = null
+
+  const request = executeChatRequestWithFailover(
     settings,
     history,
     memoryContext,
     options,
-    (payload) => window.desktopPet!.completeChatStream(payload, onDelta),
-  )
+    (payload) => {
+      activeRequest = window.desktopPet!.completeChatStream(payload, onDelta)
+      return activeRequest
+    },
+  ) as AbortableChatRequest
+
+  request.abort = async () => {
+    await activeRequest?.abort?.()
+  }
+
+  return request
 }

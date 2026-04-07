@@ -1,5 +1,6 @@
 export * from './analytics'
 export * from './app'
+export * from './autonomy'
 export * from './chat'
 export * from './context'
 export * from './debug'

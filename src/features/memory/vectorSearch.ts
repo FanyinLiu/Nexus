@@ -1,8 +1,21 @@
 import { LOCAL_HASH_MEMORY_MODEL_ID } from './constants'
 
 const localHashDimensions = 256
+const MAX_CACHE_SIZE = 1000
 const embeddingCache = new Map<string, Promise<number[]>>()
 let remoteVectorRuntimePromise: Promise<typeof import('./vectorSearchRuntime')> | null = null
+
+function setEmbeddingCache(key: string, value: Promise<number[]>): void {
+  if (embeddingCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = embeddingCache.keys().next().value
+    if (firstKey !== undefined) {
+      embeddingCache.delete(firstKey)
+    }
+  }
+  embeddingCache.set(key, value)
+}
+
+// 重新导出，确保外部使用 setEmbeddingCache
 
 function normalizeForEmbedding(text: string) {
   return text.toLowerCase().replace(/\s+/g, ' ').trim()
@@ -104,7 +117,7 @@ export async function embedMemorySearchText(text: string, model: string) {
     return runtime.embedRemoteMemorySearchText(normalizedText, model)
   })()
 
-  embeddingCache.set(cacheKey, nextEmbedding)
+  setEmbeddingCache(cacheKey, nextEmbedding)
 
   try {
     return await nextEmbedding

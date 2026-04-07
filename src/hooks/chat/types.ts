@@ -43,6 +43,7 @@ export type PendingReminderDraftInput =
 export type UseChatContext = {
   settingsRef: RefObject<AppSettings>
   setSettings: Dispatch<SetStateAction<AppSettings>>
+  applySettingsUpdate?: (update: (current: AppSettings) => AppSettings) => Promise<AppSettings> | AppSettings
   memoriesRef: RefObject<MemoryItem[]>
   dailyMemoriesRef: RefObject<DailyMemoryStore>
   setMemories: Dispatch<SetStateAction<MemoryItem[]>>
@@ -65,7 +66,8 @@ export type UseChatContext = {
     waitForCompletion: () => Promise<void>
     hasStarted: () => boolean
   } | null
-  scheduleVoiceRestart: (statusText: string, delayMs: number) => void
+  scheduleVoiceRestart: (statusText: string, delayMs: number, force?: boolean) => void
+  busEmit: (event: import('../../features/voice/busEvents').VoiceBusEvent) => void
   shouldAutoRestartVoice: () => boolean
   clearPendingVoiceRestart: () => void
   resetNoSpeechRestartCount: () => void

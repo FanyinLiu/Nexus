@@ -63,7 +63,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
       const currentSettings = getSettingsSnapshot()
       if (currentSettings.themeId !== normalizedThemeId) {
-        setSettingsSnapshot({
+        void setSettingsSnapshot({
           ...currentSettings,
           themeId: normalizedThemeId,
         })

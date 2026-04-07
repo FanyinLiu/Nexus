@@ -21,6 +21,7 @@ import type {
   PetDialogBubbleState,
 } from '../../types'
 import { getSpeechOutputErrorMessage } from './support'
+import { bindStreamingAbort } from './streamAbort'
 import type { UseChatContext } from './types'
 
 async function loadAvailableMcpTools() {
@@ -58,25 +59,26 @@ export type AssistantReplyRunnerOptions = {
   traceLabel: string
   shouldResumeContinuousVoice: boolean
   toolIntentPlan: ToolIntentPlan
+  turnId: number
+  isLatestTurn: () => boolean
 }
 
 type AssistantReplyRunnerDependencies = {
   ctx: Pick<
     UseChatContext,
     | 'appendDailyMemoryEntries'
+    | 'applySettingsUpdate'
     | 'appendDebugConsoleEvent'
     | 'appendVoiceTrace'
     | 'beginStreamingSpeechReply'
+    | 'busEmit'
     | 'clearPendingVoiceRestart'
     | 'loadDesktopContextSnapshot'
     | 'queuePetPerformanceCue'
     | 'resetNoSpeechRestartCount'
-    | 'scheduleVoiceRestart'
     | 'setMood'
     | 'setSettings'
-    | 'setVoiceState'
     | 'settingsRef'
-    | 'shouldAutoRestartVoice'
     | 'speakAssistantReply'
     | 'suppressVoiceReplyRef'
     | 'updatePetStatus'
@@ -93,6 +95,7 @@ type AssistantReplyRunnerDependencies = {
     options: SpeechPlaybackFailureOptions,
   ) => void
   setError: (error: string | null) => void
+  setActiveStreamAbort: (abort: (() => Promise<void>) | null) => void
 }
 
 function buildToolFailurePromptContext(toolExecutionErrorMessage: string) {
@@ -120,6 +123,8 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       traceLabel,
       shouldResumeContinuousVoice,
       toolIntentPlan,
+      turnId,
+      isLatestTurn,
     } = options
 
     logVoiceEvent('sending message to assistant', {
@@ -198,7 +203,8 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         : null
 
       let streamedReplyContent = ''
-      const response = await requestAssistantReplyStreaming(
+      const request = bindStreamingAbort(
+        requestAssistantReplyStreaming(
         currentSettings,
         nextMessages,
         memoryContext,
@@ -228,6 +234,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         {
           responseProfile: fromVoice ? 'voice_balanced' : 'default',
           traceId: traceId || undefined,
+          requestId: traceId || undefined,
           desktopContext,
           intentContext: [toolIntentPlan.promptContext, resolvedToolFailurePromptContext]
             .filter(Boolean)
@@ -236,15 +243,23 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           mcpTools,
           gameContext,
         },
+        ),
+        (abort) => {
+          dependencies.setActiveStreamAbort(abort)
+        },
       )
+      const response = await request
 
       if (response.usedFallback && response.settingsPatch) {
-        const patchedSettings = {
-          ...dependencies.ctx.settingsRef.current,
-          ...response.settingsPatch,
-        }
-        dependencies.ctx.settingsRef.current = patchedSettings
-        dependencies.ctx.setSettings((current) => ({
+        const applyFallbackPatch = dependencies.ctx.applySettingsUpdate
+          ?? ((update: (current: AppSettings) => AppSettings) => {
+            const patchedSettings = update(dependencies.ctx.settingsRef.current)
+            dependencies.ctx.settingsRef.current = patchedSettings
+            dependencies.ctx.setSettings(patchedSettings)
+            return patchedSettings
+          })
+
+        await applyFallbackPatch((current: AppSettings) => ({
           ...current,
           ...response.settingsPatch,
         }))
@@ -276,6 +291,14 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         assistantSpokenContent: assistantPerformance.spokenContent,
         toolSpeechOutput,
       })
+      if (!isLatestTurn()) {
+        logVoiceEvent('assistant reply ignored because a newer turn is active', {
+          traceId: traceId || undefined,
+          source,
+          turnId,
+        })
+        return false
+      }
       const finalAssistantMessageContent = assistantPresentation.chatContent
       const finalAssistantReplyForStatus = assistantPresentation.statusContent || assistantReplyForStatus
       const assistantSpeechOutput = assistantPresentation.speechContent
@@ -395,8 +418,12 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         // But if we timed out waiting, the callback may not have fired yet —
         // ensure voice state recovers so the user can keep talking.
         if (ttsWaitTimedOut && shouldResumeContinuousVoice) {
-          dependencies.ctx.setVoiceState('idle')
-          dependencies.ctx.scheduleVoiceRestart('语音播报还在继续，你可以接着说。', 800)
+          // Bus drives voiceState → 'idle' + restart_voice effect
+          dependencies.ctx.busEmit({
+            type: 'tts:completed',
+            speechGeneration: 0,
+            shouldResumeContinuousVoice: true,
+          })
         }
       } else if (
         currentSettings.speechOutputEnabled
@@ -415,11 +442,8 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           })
         }
       } else {
-        dependencies.ctx.setVoiceState('idle')
-        window.setTimeout(() => dependencies.ctx.setMood('idle'), 2600)
-        if (shouldResumeContinuousVoice) {
-          dependencies.ctx.scheduleVoiceRestart('我继续收音，你可以接着说。', 520)
-        }
+        // Bus drives voiceState → 'idle' + setMood('idle')
+        dependencies.ctx.busEmit({ type: 'session:completed' })
       }
 
       return true
@@ -449,14 +473,17 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       }
 
       dependencies.setError(fromVoice ? `本句发送失败：${errorMessage}` : errorMessage)
-      dependencies.ctx.setVoiceState('idle')
+      // Bus drives voiceState → 'idle'
+      dependencies.ctx.busEmit({ type: 'session:aborted', reason: errorMessage })
       if (shouldResumeContinuousVoice) {
         dependencies.ctx.clearPendingVoiceRestart()
         dependencies.ctx.resetNoSpeechRestartCount()
         dependencies.ctx.updatePetStatus('本句发送失败，当前连续语音已暂停。', 3200)
-        if (dependencies.ctx.shouldAutoRestartVoice()) {
-          dependencies.ctx.scheduleVoiceRestart('这句没发出去，我继续听，你可以直接补一句。', 720)
-        }
+        dependencies.ctx.busEmit({
+          type: 'voice:restart_requested',
+          reason: 'error_recovery',
+          force: true,
+        })
       } else if (fromVoice) {
         dependencies.ctx.updatePetStatus('本句发送失败，请稍后再试。', 3200)
       }

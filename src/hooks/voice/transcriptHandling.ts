@@ -293,10 +293,9 @@ export async function handleRecognizedVoiceTranscriptRuntime(
   if (transcriptDecision.mode === 'direct_send') {
     logVoiceEvent('forwarding transcript directly to assistant')
     options.appendVoiceTrace('准备发送', `#${traceLabel} 将识别文本直接发给大模型`)
+    // Remember content BEFORE sending to prevent duplicate sends from concurrent calls.
+    options.rememberSubmittedVoiceContent(transcriptDecision.content)
     const sent = await options.sendMessage(transcriptDecision.content, { source: 'voice', traceId })
-    if (sent) {
-      options.rememberSubmittedVoiceContent(transcriptDecision.content)
-    }
     return sent
   }
 
@@ -311,10 +310,9 @@ export async function handleRecognizedVoiceTranscriptRuntime(
     traceId,
     content: transcriptDecision.content,
   })
+  // Remember content BEFORE sending to prevent duplicate sends from concurrent calls.
+  options.rememberSubmittedVoiceContent(transcriptDecision.content)
   const sent = await options.sendMessage(transcriptDecision.content, { source: 'voice', traceId })
-  if (sent) {
-    options.rememberSubmittedVoiceContent(transcriptDecision.content)
-  }
   return sent
 }
 

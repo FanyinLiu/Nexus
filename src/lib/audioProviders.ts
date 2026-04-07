@@ -169,8 +169,16 @@ export function isLocalSherpaSpeechInputProvider(providerId: string) {
   return getSpeechInputProvider(providerId).protocol === 'sherpa'
 }
 
+export function isSenseVoiceSpeechInputProvider(providerId: string) {
+  return getSpeechInputProvider(providerId).protocol === 'sensevoice'
+}
+
 export function isFunAsrSpeechInputProvider(providerId: string) {
   return getSpeechInputProvider(providerId).protocol === 'funasr'
+}
+
+export function isTencentAsrSpeechInputProvider(providerId: string) {
+  return getSpeechInputProvider(providerId).protocol === 'tencent'
 }
 
 export function isBrowserSpeechOutputProvider(providerId: string) {

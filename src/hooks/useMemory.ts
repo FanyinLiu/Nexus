@@ -43,22 +43,37 @@ export function useMemory({ settings }: UseMemoryParams) {
     memoriesRef.current = memories
   }, [memories])
 
+  const memoriesSaveSkipRef = useRef(true)
+  const dailyMemoriesSaveSkipRef = useRef(true)
+
   useEffect(() => {
     dailyMemoriesRef.current = dailyMemories
   }, [dailyMemories])
 
   useEffect(() => {
+    if (memoriesSaveSkipRef.current) {
+      memoriesSaveSkipRef.current = false
+      return
+    }
     saveMemories(memories)
   }, [memories])
 
   useEffect(() => {
+    if (dailyMemoriesSaveSkipRef.current) {
+      dailyMemoriesSaveSkipRef.current = false
+      return
+    }
     saveDailyMemories(dailyMemories)
   }, [dailyMemories])
 
   useEffect(() => {
     if (settings.memorySearchMode === 'keyword') return
 
-    void warmupMemoryVectorModel(settings.memoryEmbeddingModel).catch(() => undefined)
+    // Defer warmup to avoid blocking startup render
+    const timerId = window.setTimeout(() => {
+      void warmupMemoryVectorModel(settings.memoryEmbeddingModel).catch(() => undefined)
+    }, 3_000)
+    return () => window.clearTimeout(timerId)
   }, [settings.memoryEmbeddingModel, settings.memorySearchMode])
 
   const recentDailyMemoryEntries = getRecentDailyEntries(dailyMemories, 1).slice(0, 8)

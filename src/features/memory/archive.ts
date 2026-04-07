@@ -124,8 +124,9 @@ export function parseMemoryArchive(raw: string) {
 
   try {
     parsed = JSON.parse(raw)
-  } catch {
-    throw new Error('记忆库 JSON 解析失败，请检查文件内容。')
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '未知错误'
+    throw new Error(`记忆库 JSON 解析失败: ${message}`)
   }
 
   const rawMemories = Array.isArray(parsed)

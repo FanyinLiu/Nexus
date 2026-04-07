@@ -1,4 +1,4 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
+import { memo, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import { parseNumberInput } from '../settingsDrawerSupport'
 import {
   getIntegrationText,
@@ -28,7 +28,7 @@ type IntegrationPanelId = InspectableIntegrationModuleId
 const inspectableModules = getInspectableIntegrationModules()
 const roadmapModules = getRoadmapIntegrationModules()
 
-export function IntegrationsSection({
+export const IntegrationsSection = memo(function IntegrationsSection({
   active,
   draft,
   setDraft,
@@ -549,4 +549,4 @@ export function IntegrationsSection({
       {roadmapModules.map((descriptor) => renderRoadmapCard(descriptor))}
     </section>
   )
-}
+})

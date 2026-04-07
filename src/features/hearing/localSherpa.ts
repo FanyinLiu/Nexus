@@ -74,13 +74,17 @@ export async function startSherpaStream(
   // Buffer audio that arrives before sherpa is ready
   let sherpaReady = false
   const earlyBuffer: Float32Array[] = []
+  const MAX_EARLY_BUFFER_SIZE = 16000 * 10 // 10秒音频限制 (16kHz * 10s)
 
   processorNode.onaudioprocess = (event) => {
     const channelData = event.inputBuffer.getChannelData(0)
     if (!channelData.length) return
     const samples = new Float32Array(channelData)
     if (!sherpaReady) {
-      earlyBuffer.push(samples)
+      const currentSize = earlyBuffer.reduce((sum, chunk) => sum + chunk.length, 0)
+      if (currentSize < MAX_EARLY_BUFFER_SIZE) {
+        earlyBuffer.push(samples)
+      }
     }
     let energy = 0
     for (const sample of samples) energy += sample * sample
@@ -211,7 +215,7 @@ export async function startSherpaStream(
     }
     callbacks.onActivity?.(Math.sqrt(energy / samples.length))
 
-    pushChain = pushChain.catch(() => undefined).then(async () => {
+    pushChain = pushChain.then(async () => {
       if (destroyed || finalizing) {
         return
       }

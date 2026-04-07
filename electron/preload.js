@@ -51,8 +51,11 @@ contextBridge.exposeInMainWorld('desktopPet', {
       }
     }
     ipcRenderer.on('chat:stream-delta', handler)
-    return ipcRenderer.invoke('chat:complete-stream', { ...payload, requestId }).finally(() => {
+    const streamPromise = ipcRenderer.invoke('chat:complete-stream', { ...payload, requestId }).finally(() => {
       ipcRenderer.removeListener('chat:stream-delta', handler)
+    })
+    return Object.assign(streamPromise, {
+      abort: () => ipcRenderer.invoke('chat:abort-stream', { requestId }),
     })
   },
   testChatConnection: (payload) => ipcRenderer.invoke('chat:test-connection', payload),
@@ -83,6 +86,14 @@ contextBridge.exposeInMainWorld('desktopPet', {
   sherpaFinish: () => ipcRenderer.invoke('sherpa:finish'),
   sherpaAbort: () => ipcRenderer.invoke('sherpa:abort'),
 
+  // SenseVoice offline ASR (sherpa-onnx OfflineRecognizer)
+  sensevoiceStatus: () => ipcRenderer.invoke('sensevoice:status'),
+  sensevoiceStart: () => ipcRenderer.invoke('sensevoice:start'),
+  sensevoiceFeed: (payload) => ipcRenderer.invoke('sensevoice:feed', payload),
+  sensevoiceFinish: () => ipcRenderer.invoke('sensevoice:finish'),
+  sensevoiceAbort: () => ipcRenderer.invoke('sensevoice:abort'),
+  sensevoiceTranscribe: (payload) => ipcRenderer.invoke('sensevoice:transcribe', payload),
+
   // Sherpa-onnx keyword spotter (wake word)
   kwsStatus: (payload) => ipcRenderer.invoke('kws:status', payload),
   kwsStart: (payload) => ipcRenderer.invoke('kws:start', payload),
@@ -108,6 +119,19 @@ contextBridge.exposeInMainWorld('desktopPet', {
     const handler = (_event, payload) => listener(payload)
     ipcRenderer.on('funasr:result', handler)
     return () => ipcRenderer.removeListener('funasr:result', handler)
+  },
+
+  // Tencent Cloud Real-Time ASR
+  tencentAsrConnect: (payload) => ipcRenderer.invoke('tencent-asr:connect', payload),
+  tencentAsrDisconnect: () => ipcRenderer.invoke('tencent-asr:disconnect'),
+  tencentAsrFeed: (payload) => ipcRenderer.invoke('tencent-asr:feed', payload),
+  tencentAsrFinish: () => ipcRenderer.invoke('tencent-asr:finish'),
+  tencentAsrAbort: () => ipcRenderer.invoke('tencent-asr:abort'),
+  tencentAsrStatus: () => ipcRenderer.invoke('tencent-asr:status'),
+  subscribeTencentAsrResult: (listener) => {
+    const handler = (_event, payload) => listener(payload)
+    ipcRenderer.on('tencent-asr:result', handler)
+    return () => ipcRenderer.removeListener('tencent-asr:result', handler)
   },
 
   // Minecraft Gateway

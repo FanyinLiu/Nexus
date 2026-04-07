@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import {
   buildVolcengineCredential,
@@ -9,6 +10,7 @@ import {
   getSpeechInputProviderPreset,
   isLocalSherpaSpeechInputProvider,
   isLocalWhisperSpeechInputProvider,
+  isSenseVoiceSpeechInputProvider,
   isVolcengineSpeechInputProvider,
   USER_VISIBLE_SPEECH_INPUT_PROVIDER_PRESETS,
 } from '../../lib/audioProviders'
@@ -28,7 +30,7 @@ type SpeechInputSectionProps = {
   renderSpeechInputTestResult: () => ReactNode
 }
 
-export function SpeechInputSection({
+export const SpeechInputSection = memo(function SpeechInputSection({
   active,
   draft,
   setDraft,
@@ -39,21 +41,26 @@ export function SpeechInputSection({
   const speechInputProvider = getSpeechInputProviderPreset(draft.speechInputProviderId)
   const speechInputModelOptions = getSpeechInputModelOptions(draft.speechInputProviderId)
   const isLocalSherpaSpeechInput = isLocalSherpaSpeechInputProvider(draft.speechInputProviderId)
+  const isSenseVoiceSpeechInput = isSenseVoiceSpeechInputProvider(draft.speechInputProviderId)
   const isLocalWhisperSpeechInput = isLocalWhisperSpeechInputProvider(draft.speechInputProviderId)
-  const isLocalSpeechInput = isLocalSherpaSpeechInput || isLocalWhisperSpeechInput
+  const isLocalSpeechInput = isLocalSherpaSpeechInput || isSenseVoiceSpeechInput || isLocalWhisperSpeechInput
   const isVolcengineSpeechInput = isVolcengineSpeechInputProvider(draft.speechInputProviderId)
   const speechInputVolcengineCredentials = parseVolcengineCredentialParts(draft.speechInputApiKey)
   const browserSpeechRecognitionSupported = isBrowserSpeechRecognitionSupported()
   const speechInputModelLabel = isLocalSherpaSpeechInput
     ? '本地流式模型'
-    : isLocalWhisperSpeechInput
-      ? 'Whisper 模型'
-      : '语音输入模型'
+    : isSenseVoiceSpeechInput
+      ? 'SenseVoice 模型'
+      : isLocalWhisperSpeechInput
+        ? 'Whisper 模型'
+        : '语音输入模型'
   const speechInputModelHint = isLocalSherpaSpeechInput
     ? 'Sherpa-onnx 需要你先把模型放进 `sherpa-models` 目录；推荐先用 Paraformer 中英双语流式模型。'
-    : isLocalWhisperSpeechInput
-      ? '本地 Whisper 首次使用会自动下载所选模型，之后可以离线运行。`whisper-base` 更稳，`whisper-small` 更准但更慢。'
-      : ''
+    : isSenseVoiceSpeechInput
+      ? '需要先把 sherpa-onnx-sense-voice-zh-en-2024-07-17 目录放到 `sherpa-models` 下。10秒音频仅需70ms，中文识别准确率极高。'
+      : isLocalWhisperSpeechInput
+        ? '本地 Whisper 首次使用会自动下载所选模型，之后可以离线运行。`whisper-base` 更稳，`whisper-small` 更准但更慢。'
+        : ''
 
   function applySpeechInputPreset(providerId: string) {
     setDraft((prev) => switchSpeechInputProvider(prev, providerId))
@@ -266,4 +273,4 @@ export function SpeechInputSection({
       {renderSpeechInputTestResult()}
     </section>
   )
-}
+})

@@ -43,3 +43,4 @@ tmp_test_keyword_spotter_transducer.js
 *.corrupt-backup
 __pycache__/
 *.pyc
+.claude/

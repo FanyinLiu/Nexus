@@ -1,4 +1,4 @@
-import { useState, type Dispatch, type SetStateAction } from 'react'
+import { memo, useState, type Dispatch, type SetStateAction } from 'react'
 import {
   formatReminderActionSummary,
   formatReminderCenterNextLabel,
@@ -69,7 +69,7 @@ function buildReminderAction(
   }
 }
 
-export function ContextSection({
+export const ContextSection = memo(function ContextSection({
   active,
   draft,
   setDraft,
@@ -731,4 +731,4 @@ export function ContextSection({
 
     </section>
   )
-}
+})

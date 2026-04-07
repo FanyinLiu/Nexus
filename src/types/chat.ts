@@ -49,6 +49,7 @@ export interface ChatCompletionRequest {
   apiKey: string
   model: string
   traceId?: string
+  requestId?: string
   messages: Array<{
     role: 'system' | 'user' | 'assistant'
     content: ChatMessageContent

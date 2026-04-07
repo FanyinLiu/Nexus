@@ -2,13 +2,8 @@ import { randomUUID } from 'node:crypto'
 import { decodePcm16LeBufferToFloat32, enhanceSpeechSamples } from './audioPostprocess.js'
 
 const STREAM_CHUNK_SIZE = 4096
-const INITIAL_STREAM_CHUNK_SIZE = 3072
+const INITIAL_STREAM_CHUNK_SIZE = 1024
 const DEFAULT_PCM_SAMPLE_RATE = 24000
-const ULTRA_FAST_LEAD_IN_MIN_CJK_CHARS = 2
-const ULTRA_FAST_LEAD_IN_MAX_CJK_CHARS = 4
-const ULTRA_FAST_LEAD_IN_MIN_LATIN_CHARS = 4
-const ULTRA_FAST_LEAD_IN_MAX_LATIN_CHARS = 10
-const ULTRA_FAST_LEAD_IN_BOUNDARY_PATTERN = /[\s,，、:：;；.!?。！？]/u
 
 function chunkSamples(samples, chunkSize = STREAM_CHUNK_SIZE) {
   const chunks = []
@@ -118,50 +113,6 @@ function buildLeadInOptions(session, options = {}) {
     fadeInMs: session.hasEmittedAudio ? 8 : 12,
     fadeOutMs: Number.isFinite(options.fadeOutMs) ? options.fadeOutMs : 6,
     normalizePeak: options.normalizePeak !== false,
-  }
-}
-
-function isLikelyCjkText(text) {
-  return /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u
-    .test(String(text ?? ''))
-}
-
-function splitUltraFastLeadInText(text) {
-  const normalized = String(text ?? '').trim()
-  if (!normalized) {
-    return { leadInText: '', remainingText: '' }
-  }
-
-  const chars = Array.from(normalized)
-  const isCjk = isLikelyCjkText(normalized)
-  const minLeadChars = isCjk ? ULTRA_FAST_LEAD_IN_MIN_CJK_CHARS : ULTRA_FAST_LEAD_IN_MIN_LATIN_CHARS
-  const maxLeadChars = isCjk ? ULTRA_FAST_LEAD_IN_MAX_CJK_CHARS : ULTRA_FAST_LEAD_IN_MAX_LATIN_CHARS
-
-  for (
-    let index = Math.max(0, minLeadChars - 1);
-    index < Math.min(chars.length - 1, maxLeadChars);
-    index += 1
-  ) {
-    if (ULTRA_FAST_LEAD_IN_BOUNDARY_PATTERN.test(chars[index] ?? '')) {
-      return {
-        leadInText: chars.slice(0, index + 1).join('').trim(),
-        remainingText: chars.slice(index + 1).join('').trim(),
-      }
-    }
-  }
-
-  if (chars.length <= minLeadChars) {
-    return { leadInText: normalized, remainingText: '' }
-  }
-
-  const splitIndex = Math.min(
-    chars.length - 1,
-    maxLeadChars,
-    Math.max(minLeadChars, isCjk ? maxLeadChars : minLeadChars),
-  )
-  return {
-    leadInText: chars.slice(0, splitIndex).join('').trim(),
-    remainingText: chars.slice(splitIndex).join('').trim(),
   }
 }
 
@@ -342,45 +293,10 @@ export function createTtsStreamService({ sherpaTtsService, synthesizeRemote, war
 
   async function synthesizeAndEmitRemote(session, text) {
     await warmupRemoteSession(session)
+    if (session.closed) return
     const result = await synthesizeRemote(session.payload, text)
+    if (session.closed) return
     await emitRemoteResult(session, text, result)
-  }
-
-  async function synthesizeAndEmitUltraFastLeadIn(session, text) {
-    const { leadInText, remainingText } = splitUltraFastLeadInText(text)
-    if (!leadInText) {
-      await synthesizeAndEmitRemote(session, text)
-      return
-    }
-
-    const remotePromise = remainingText
-      ? warmupRemoteSession(session).then(() => synthesizeRemote(session.payload, remainingText))
-      : null
-
-    await session.sherpaWarmup?.catch(() => undefined)
-
-    const { samples, sampleRate } = await sherpaTtsService.synthesizeSamples(leadInText, {
-      speed: Number.isFinite(session.payload?.rate) ? session.payload.rate : 1,
-      sid: 0,
-      leadingSilenceMs: 0,
-      fadeInMs: 0,
-      fadeOutMs: 4,
-      normalizePeak: false,
-    })
-
-    if (session.closed) {
-      return
-    }
-
-    emitSamples(session, samples, sampleRate, leadInText)
-
-    if (remotePromise) {
-      const result = await remotePromise
-      if (session.closed) {
-        return
-      }
-      await emitRemoteResult(session, remainingText, result)
-    }
   }
 
   return {
@@ -409,10 +325,6 @@ export function createTtsStreamService({ sherpaTtsService, synthesizeRemote, war
         chain: Promise.resolve(),
         closed: false,
         hasEmittedAudio: false,
-        ultraFastLeadInUsed: false,
-        sherpaWarmup: payload?.providerId === 'local-qwen3-tts' && sherpaTtsService.isAvailable()
-          ? sherpaTtsService.ensureReady().catch(() => undefined)
-          : Promise.resolve(),
         remoteWarmup: payload?.providerId === 'local-qwen3-tts' && typeof warmupRemote === 'function'
           ? Promise.resolve(warmupRemote(payload)).catch(() => undefined)
           : Promise.resolve(),
@@ -433,10 +345,6 @@ export function createTtsStreamService({ sherpaTtsService, synthesizeRemote, war
       }
 
       const isLocalSherpa = session.payload?.providerId === 'local-sherpa-tts'
-      const shouldUseUltraFastLeadIn = session.payload?.providerId === 'local-qwen3-tts'
-        && !session.hasEmittedAudio
-        && !session.ultraFastLeadInUsed
-        && sherpaTtsService.isAvailable()
 
       session.chain = session.chain.then(async () => {
         if (session.closed) {
@@ -458,12 +366,6 @@ export function createTtsStreamService({ sherpaTtsService, synthesizeRemote, war
             }
 
             emitSamples(session, samples, sampleRate, text)
-            return
-          }
-
-          if (shouldUseUltraFastLeadIn) {
-            session.ultraFastLeadInUsed = true
-            await synthesizeAndEmitUltraFastLeadIn(session, text)
             return
           }
 

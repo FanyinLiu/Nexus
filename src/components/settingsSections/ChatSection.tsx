@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { PetModelDefinition } from '../../features/pet'
 import {
@@ -24,7 +25,7 @@ type ChatSectionProps = {
   onImportPetModel: () => void
 }
 
-export function ChatSection({
+export const ChatSection = memo(function ChatSection({
   active,
   draft,
   setDraft,
@@ -245,4 +246,4 @@ export function ChatSection({
       ) : null}
     </section>
   )
-}
+})

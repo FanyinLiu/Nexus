@@ -108,7 +108,11 @@ export function startBrowserRecognitionConversation(
     }
   }
 
+  let finalized = false
+
   recognition.onresult = async (event: BrowserSpeechRecognitionEvent) => {
+    if (finalized) return
+
     let finalTranscript = ''
     let interimTranscript = ''
 
@@ -132,6 +136,7 @@ export function startBrowserRecognitionConversation(
     }
 
     if (finalTranscript) {
+      finalized = true
       params.resetNoSpeechRestartCount()
       params.recognitionRef.current = null
       recognition.stop()

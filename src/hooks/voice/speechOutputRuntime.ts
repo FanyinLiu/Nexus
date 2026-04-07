@@ -6,7 +6,7 @@ import {
 } from '../../features/voice/runtimeSupport'
 import { segmentTextForSpeech } from '../../features/voice/streamingTts'
 import { prepareTextForTts } from '../../features/voice/text'
-import { getSpeechOutputProviderPreset, isBrowserSpeechOutputProvider } from '../../lib/audioProviders'
+import { isBrowserSpeechOutputProvider } from '../../lib/audioProviders'
 import { shorten } from '../../lib/common'
 import { executeWithFailover, type FailoverCandidate } from '../../features/failover/orchestrator.ts'
 import { speakText as speakBrowserText } from '../../lib/voice'
@@ -89,7 +89,8 @@ export async function playSpeechOutputWithSettingsRuntime(
     throw new Error('没有可播报的文本内容。')
   }
 
-  const effectiveVoice = speechSettings.clonedVoiceId || speechSettings.speechOutputVoice
+  // Voice cloning disabled — always use the provider's configured voice.
+  const effectiveVoice = speechSettings.speechOutputVoice
   const playbackQueue = runtime.getAudioPlaybackQueue()
   let started = false
 
@@ -161,7 +162,7 @@ export async function startSpeechOutputRuntime(
       s.speechOutputProviderId,
       s.speechOutputApiBaseUrl,
       s.speechOutputModel,
-      s.clonedVoiceId || s.speechOutputVoice,
+      s.speechOutputVoice,
     ].join('|'),
     payload: s,
   }))
@@ -191,13 +192,13 @@ export async function startSpeechOutputRuntime(
     })
 
     if (result.usedFallback) {
-      options.applySpeechOutputProviderFallback(
-        result.candidateId,
-        `语音播报已自动切换到 ${getSpeechOutputProviderPreset(result.candidateId).label}。`,
-      )
+      // Only log the fallback — do NOT mutate settingsRef.  Previous behavior
+      // permanently switched the runtime settings to the fallback provider,
+      // meaning all subsequent responses would use a different provider/voice
+      // even if the primary provider recovered on the very next request.
       options.appendVoiceTrace(
-        '语音播报已自动回退',
-        `${options.speechSettings.speechOutputProviderId} -> ${result.candidateId}`,
+        '语音播报本次回退',
+        `${options.speechSettings.speechOutputProviderId} -> ${result.candidateId}（仅本次，不改变设置）`,
         'success',
       )
     }

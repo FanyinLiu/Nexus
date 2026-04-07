@@ -73,9 +73,13 @@ export function TalkModeOverlay({
 
   useEffect(() => {
     if (prevVoiceState.current === 'speaking' && voiceState === 'listening') {
-      setInterrupted(true)
-      if (interruptedTimer.current) window.clearTimeout(interruptedTimer.current)
-      interruptedTimer.current = window.setTimeout(() => setInterrupted(false), INTERRUPTED_DURATION_MS)
+      const timerId = window.setTimeout(() => {
+        setInterrupted(true)
+        if (interruptedTimer.current) window.clearTimeout(interruptedTimer.current)
+        interruptedTimer.current = window.setTimeout(() => setInterrupted(false), INTERRUPTED_DURATION_MS)
+      }, 0)
+      prevVoiceState.current = voiceState
+      return () => window.clearTimeout(timerId)
     }
     prevVoiceState.current = voiceState
     return () => {

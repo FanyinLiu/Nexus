@@ -29,6 +29,9 @@ type ContinuousVoiceOptions = {
   settingsRef: RefObject<AppSettings>
 }
 
+/** Max number of times scheduleVoiceRestart will reschedule when blocked by busy/speaking guards. */
+const MAX_RESTART_RETRIES = 8
+
 type ScheduleVoiceRestartOptions = {
   restartVoiceTimerRef: MutableRefObject<number | null>
   recognitionRef: MutableRefObject<BrowserSpeechRecognition | null>
@@ -40,6 +43,10 @@ type ScheduleVoiceRestartOptions = {
   startVoiceConversation: (options?: VoiceConversationOptions) => void
   statusText?: string
   delay?: number
+  /** When true, skip the shouldAutoRestartVoice() gate (used for voice-initiated turns). */
+  force?: boolean
+  /** Internal: tracks how many times the restart has been rescheduled. */
+  _retryCount?: number
 }
 
 type PauseContinuousVoiceOptions = {
@@ -133,11 +140,14 @@ export function clearPendingVoiceRestart(
 export function shouldAutoRestartVoice(
   options: ShouldAutoRestartVoiceOptions,
 ) {
-  return (
-    options.continuousVoiceActiveRef.current
-    && options.settingsRef.current.continuousVoiceModeEnabled
-    && options.settingsRef.current.voiceTriggerMode !== 'wake_word'
-  )
+  const active = options.continuousVoiceActiveRef.current
+  const enabled = options.settingsRef.current.continuousVoiceModeEnabled
+  const notWakeWord = options.settingsRef.current.voiceTriggerMode !== 'wake_word'
+  const result = active && enabled && notWakeWord
+  if (!result) {
+    console.log('[ContinuousVoice] shouldAutoRestartVoice=false — active:', active, 'enabled:', enabled, 'notWakeWord:', notWakeWord)
+  }
+  return result
 }
 
 export function shouldKeepContinuousVoiceSession(
@@ -152,6 +162,7 @@ export function shouldKeepContinuousVoiceSession(
 export function canInterruptSpeech(_options: ContinuousVoiceOptions) {
   // Disabled: echo-cancelled mic still picks up TTS output, causing false interrupts
   // that abort multi-chunk speech. Needs hardware echo cancellation to work reliably.
+  void _options
   return false
 }
 
@@ -194,32 +205,60 @@ export function pauseContinuousVoice(options: PauseContinuousVoiceOptions) {
   options.showPetStatus(statusText, 3_200, 4_000)
 }
 
+/**
+ * @deprecated Prefer emitting bus events (`tts:completed`, `tts:error`, `voice:restart_requested`)
+ * via `busEmit()` — the bus effect executor in `useVoice` handles restart scheduling automatically.
+ * This function is kept during the dual-write migration period and will be removed once all
+ * callers have been migrated to the VoiceBus event path.
+ */
 export function scheduleVoiceRestart(options: ScheduleVoiceRestartOptions) {
   const statusText = options.statusText || '我继续收音，你可以接着说。'
-  const delay = options.delay ?? 520
+  const delay = options.delay ?? 150
+  const force = options.force ?? false
+  const retryCount = options._retryCount ?? 0
 
-  if (!options.shouldAutoRestartVoice() || options.restartVoiceTimerRef.current) {
+  const autoRestart = force || options.shouldAutoRestartVoice()
+  const hasPendingTimer = Boolean(options.restartVoiceTimerRef.current)
+  if (!autoRestart || hasPendingTimer) {
+    console.log('[ContinuousVoice] scheduleVoiceRestart BLOCKED — autoRestart:', autoRestart, 'force:', force, 'hasPendingTimer:', hasPendingTimer)
     return
   }
+
+  console.log('[ContinuousVoice] scheduleVoiceRestart — delay:', delay, 'force:', force, 'retry:', retryCount)
 
   options.restartVoiceTimerRef.current = window.setTimeout(() => {
     options.restartVoiceTimerRef.current = null
 
-    if (!options.shouldAutoRestartVoice()) {
+    if (!force && !options.shouldAutoRestartVoice()) {
+      console.log('[ContinuousVoice] timer — shouldAutoRestartVoice()=false, aborting')
       return
     }
 
+    const gates = {
+      recognition: Boolean(options.recognitionRef.current),
+      vadSession: Boolean(options.vadSessionRef.current),
+      busy: Boolean(options.busyRef.current),
+      voiceState: options.voiceStateRef.current,
+    }
+
     if (
-      options.recognitionRef.current
-      || options.vadSessionRef.current
-      || options.busyRef.current
-      || options.voiceStateRef.current === 'processing'
-      || options.voiceStateRef.current === 'speaking'
+      gates.recognition
+      || gates.vadSession
+      || gates.busy
+      || gates.voiceState === 'processing'
+      || gates.voiceState === 'speaking'
     ) {
+      if (retryCount >= MAX_RESTART_RETRIES) {
+        console.warn('[ContinuousVoice] restart gave up after', retryCount, 'retries — gates:', JSON.stringify(gates))
+        options.showPetStatus('语音重启超时，请手动点击麦克风。', 4_000, 3_000)
+        return
+      }
+      console.log('[ContinuousVoice] timer — blocked (retry', retryCount + 1, '), gates:', JSON.stringify(gates))
       scheduleVoiceRestart({
         ...options,
         statusText,
         delay: 320,
+        _retryCount: retryCount + 1,
       })
       return
     }
@@ -229,6 +268,7 @@ export function scheduleVoiceRestart(options: ScheduleVoiceRestartOptions) {
     }
 
     try {
+      console.log('[ContinuousVoice] starting voice conversation (restart)')
       options.startVoiceConversation({ restart: true, passive: true })
     } catch (err) {
       console.warn('[ContinuousVoice] restart failed:', err)

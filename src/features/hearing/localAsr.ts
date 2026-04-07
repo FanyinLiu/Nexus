@@ -124,6 +124,12 @@ export function cleanupLocalAsrRuntime(
   message: string,
 ) {
   rejectPendingLocalAsrRequests(refs.pendingRef, message)
-  refs.workerRef.current?.terminate()
-  refs.workerRef.current = null
+  const worker = refs.workerRef.current
+  if (worker) {
+    // 清理事件监听器，防止内存泄漏
+    worker.onmessage = null
+    worker.onerror = null
+    worker.terminate()
+    refs.workerRef.current = null
+  }
 }

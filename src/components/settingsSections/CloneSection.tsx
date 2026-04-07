@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import {
   isVoiceCloneDisabled,
@@ -38,7 +39,7 @@ type CloneSectionProps = {
   renderVoiceCloneTestResult: () => ReactNode
 }
 
-export function CloneSection({
+export const CloneSection = memo(function CloneSection({
   active,
   draft,
   setDraft,
@@ -205,4 +206,4 @@ export function CloneSection({
       ) : null}
     </section>
   )
-}
+})

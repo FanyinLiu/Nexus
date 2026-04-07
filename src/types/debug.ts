@@ -1,4 +1,4 @@
-export type DebugConsoleEventSource = 'voice' | 'reminder' | 'scheduler' | 'tool' | 'system'
+export type DebugConsoleEventSource = 'voice' | 'reminder' | 'scheduler' | 'tool' | 'system' | 'autonomy'
 
 export type DebugConsoleEventTone = 'info' | 'success' | 'warning' | 'error'
 

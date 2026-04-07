@@ -51,6 +51,7 @@ import type {
 } from '../../types'
 import { getSettingsSnapshot } from '../store/settingsStore'
 import { setRuntimeSnapshot as persistRuntimeSnapshot } from '../store/runtimeStore'
+import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
 
 const DEFAULT_RUNTIME_SNAPSHOT: RuntimeStateSnapshot = {
   mood: 'idle',
@@ -178,7 +179,7 @@ export function useDesktopBridge({
 
     window.localStorage.setItem(VOICE_TRIGGER_DIRECT_SEND_MIGRATION_KEY, '1')
     const timerId = window.setTimeout(() => {
-      setSettings((current) => {
+      void commitSettingsUpdate((current) => {
         if (
           current.voiceTriggerMode === 'direct_send'
           && !current.wakeWordEnabled
@@ -193,7 +194,7 @@ export function useDesktopBridge({
           wakeWordEnabled: false,
           wakeWord: '星绘',
         }
-      })
+      }, setSettings)
     }, 0)
 
     return () => window.clearTimeout(timerId)
@@ -346,20 +347,27 @@ export function useDesktopBridge({
   }, [view])
 
   useEffect(() => {
+    let assistantActivity: RuntimeStateSnapshot['assistantActivity']
+    if (voice.voiceState === 'speaking') {
+      assistantActivity = 'speaking'
+    } else if (voice.voiceState === 'listening') {
+      assistantActivity = 'listening'
+    } else {
+      assistantActivity = chat.assistantActivity
+    }
+
+    const nextArmedTask = reminderTasks.find((task) => task.enabled && task.nextRunAt)
+
     const nextRuntimeState: Partial<RuntimeStateSnapshot> = {
       continuousVoiceActive: view === 'pet' ? voice.continuousVoiceActive : false,
       panelSettingsOpen: settingsOpen,
       voiceState: voice.voiceState,
-      assistantActivity: voice.voiceState === 'speaking'
-        ? 'speaking'
-        : voice.voiceState === 'listening'
-          ? 'listening'
-          : chat.assistantActivity,
+      assistantActivity,
       searchInProgress: chat.assistantActivity === 'searching' || chat.assistantActivity === 'summarizing',
       ttsInProgress: voice.voiceState === 'speaking',
       schedulerArmed: reminderTasks.some((task) => task.enabled),
-      schedulerNextRunAt: reminderTasks.find((task) => task.enabled && task.nextRunAt)?.nextRunAt ?? '',
-      activeTaskLabel: reminderTasks.find((task) => task.enabled && task.nextRunAt)?.title ?? '',
+      schedulerNextRunAt: nextArmedTask?.nextRunAt ?? '',
+      activeTaskLabel: nextArmedTask?.title ?? '',
     }
 
     if (view === 'pet') {

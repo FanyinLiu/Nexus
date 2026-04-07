@@ -2,8 +2,7 @@ import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
 
 import { loadSettings, SETTINGS_STORAGE_KEY } from '../src/lib/storage.ts'
-
-const LOCAL_FIRST_TTS_MIGRATION_STORAGE_KEY = 'nexus:migration:tts-local-first-v1'
+import { commitSettingsUpdate } from '../src/app/store/commitSettingsUpdate.ts'
 
 type LocalStorageMock = {
   getItem: (key: string) => string | null
@@ -89,4 +88,59 @@ test('preserves an explicit local whisper speech input selection on load', () =>
   assert.equal(settings.speechInputApiBaseUrl, '')
   assert.equal(settings.speechInputApiKey, '')
   assert.equal(settings.speechInputModel, 'Xenova/whisper-small')
+})
+
+test('preserves the editorial theme selection on load', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      themeId: 'editorial',
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.themeId, 'editorial')
+})
+
+test('commitSettingsUpdate persists settings changes and applies them in memory', async () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      continuousVoiceModeEnabled: false,
+    }),
+  })
+
+  let appliedSettings = null as Awaited<ReturnType<typeof loadSettings>> | null
+
+  Object.defineProperty(globalThis, 'window', {
+    value: {
+      localStorage,
+      dispatchEvent: () => true,
+    },
+    configurable: true,
+    writable: true,
+  })
+
+  commitSettingsUpdate(
+    (current) => ({
+      ...current,
+      continuousVoiceModeEnabled: true,
+    }),
+    (nextSettings) => {
+      appliedSettings = nextSettings
+    },
+  )
+
+  await Promise.resolve()
+
+  assert.equal(appliedSettings?.continuousVoiceModeEnabled, true)
+  assert.equal(
+    JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}').continuousVoiceModeEnabled,
+    true,
+  )
 })

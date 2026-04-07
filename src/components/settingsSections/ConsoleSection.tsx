@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { formatReminderScheduleSummaryForUi } from '../../features/reminders/schedule'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type {
@@ -32,7 +33,7 @@ type ConsoleSectionProps = {
   voiceTrace: VoiceTraceEntry[]
 }
 
-export function ConsoleSection({
+export const ConsoleSection = memo(function ConsoleSection({
   active,
   continuousVoiceActive,
   debugConsoleEvents,
@@ -215,4 +216,4 @@ export function ConsoleSection({
       </div>
     </section>
   )
-}
+})

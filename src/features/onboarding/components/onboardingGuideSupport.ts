@@ -1,4 +1,4 @@
-import { isLocalSherpaSpeechInputProvider } from '../../../lib/audioProviders'
+import { isLocalSherpaSpeechInputProvider, isSenseVoiceSpeechInputProvider } from '../../../lib/audioProviders'
 import type { AppSettings } from '../../../types'
 import type { OnboardingStep, OnboardingStepId } from './guideSteps'
 
@@ -57,6 +57,7 @@ export function getOnboardingStepError(
       if (!draft.speechInputProviderId.trim()) return '先选择一个语音输入方案。'
       if (
         !isLocalSherpaSpeechInputProvider(draft.speechInputProviderId)
+        && !isSenseVoiceSpeechInputProvider(draft.speechInputProviderId)
         && !draft.speechInputApiBaseUrl.trim()
       ) {
         return '当前语音输入方案需要填写接口地址。'

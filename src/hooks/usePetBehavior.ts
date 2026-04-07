@@ -236,6 +236,8 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
   }, [ctx.settingsRef, dismissAmbientPresence])
 
   // Proactive presence interval check
+  // When autonomy is enabled, this legacy random system is bypassed —
+  // the proactive engine (proactiveEngine.ts) handles all ambient messages.
   useEffect(() => {
     if (ctx.view !== 'pet') return
 
@@ -244,6 +246,8 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
 
       if (document.visibilityState !== 'visible') return
       if (!ctx.settingsRef.current.proactivePresenceEnabled) return
+      // Autonomy proactive engine takes over when enabled
+      if (ctx.settingsRef.current.autonomyEnabled) return
       if (now < proactivePresenceDeferredUntilRef.current) return
       if (loadAmbientPresence()) return
 

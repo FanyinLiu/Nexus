@@ -42,13 +42,12 @@ import type {
 export type { UseChatContext } from './chat'
 
 export function useChat(ctx: UseChatContext) {
-  const initialMessages = sanitizeLoadedMessages(loadChatMessages())
-  const [messages, setMessages] = useState<ChatMessage[]>(() => initialMessages)
+  const [messages, setMessages] = useState<ChatMessage[]>(() => sanitizeLoadedMessages(loadChatMessages()))
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setErrorRaw] = useState<string | null>(null)
   const errorTimerRef = useRef<number | null>(null)
-  const setError = (value: string | null) => {
+  const setError = useCallback((value: string | null) => {
     if (errorTimerRef.current) {
       window.clearTimeout(errorTimerRef.current)
       errorTimerRef.current = null
@@ -60,19 +59,22 @@ export function useChat(ctx: UseChatContext) {
         errorTimerRef.current = null
       }, 8_000)
     }
-  }
+  }, [])
   const [petDialogBubble, setPetDialogBubble] = useState<PetDialogBubbleState | null>(null)
   const [assistantActivity, setAssistantActivity] = useState<AssistantRuntimeActivity>('idle')
 
-  const messagesRef = useRef<ChatMessage[]>(initialMessages)
+  const messagesRef = useRef<ChatMessage[]>(messages)
   const inputRef = useRef('')
   const busyRef = useRef(false)
   const backgroundSearchCountRef = useRef(0)
+  const activeTurnIdRef = useRef(0)
+  const activeStreamAbortRef = useRef<(() => Promise<void>) | null>(null)
   const pendingReminderDraftRef = useRef<PendingReminderDraft | null>(null)
   const toolPlannerContextRef = useRef<ToolPlannerContext | null>(null)
   const petDialogHideTimerRef = useRef<number | null>(null)
   const deferredCompanionNoticesRef = useRef<CompanionNoticePayload[]>([])
   const flushingDeferredCompanionNoticesRef = useRef(false)
+  const messagesSaveSkipRef = useRef(true)
 
   useEffect(() => {
     messagesRef.current = messages
@@ -84,10 +86,18 @@ export function useChat(ctx: UseChatContext) {
 
   useEffect(() => {
     busyRef.current = busy
-    setAssistantActivity(backgroundSearchCountRef.current > 0 ? 'searching' : busy ? 'thinking' : 'idle')
+    if (backgroundSearchCountRef.current > 0) {
+      setAssistantActivity('searching')
+    } else {
+      setAssistantActivity(busy ? 'thinking' : 'idle')
+    }
   }, [busy])
 
   useEffect(() => {
+    if (messagesSaveSkipRef.current) {
+      messagesSaveSkipRef.current = false
+      return
+    }
     saveChatMessages(messages)
   }, [messages])
 
@@ -190,7 +200,7 @@ export function useChat(ctx: UseChatContext) {
       const speechErrorMessage = getSpeechOutputErrorMessage(speechError)
       setError(`内容已展示，但语音播报失败：${speechErrorMessage}`)
     }
-  }, [appendChatMessage, ctx, presentPetDialogBubble])
+  }, [appendChatMessage, ctx, presentPetDialogBubble, setError])
 
   const canDeliverDeferredCompanionNotice = useCallback(() => (
     !busyRef.current
@@ -253,7 +263,11 @@ export function useChat(ctx: UseChatContext) {
 
   const endBackgroundSearchActivity = useCallback(() => {
     backgroundSearchCountRef.current = Math.max(0, backgroundSearchCountRef.current - 1)
-    setAssistantActivity(backgroundSearchCountRef.current > 0 ? 'searching' : busyRef.current ? 'thinking' : 'idle')
+    if (backgroundSearchCountRef.current > 0) {
+      setAssistantActivity('searching')
+    } else {
+      setAssistantActivity(busyRef.current ? 'thinking' : 'idle')
+    }
   }, [])
 
   const handleSpeechPlaybackFailure = useCallback((speechError: unknown, options: {
@@ -275,16 +289,21 @@ export function useChat(ctx: UseChatContext) {
     }
 
     setError(options.fromVoice ? `模型已经回复，但语音播报失败：${speechErrorMessage}` : speechErrorMessage)
-    ctx.setVoiceState('idle')
-    window.setTimeout(() => ctx.setMood('idle'), 2600)
-
-    if (options.shouldResumeContinuousVoice) {
-      ctx.scheduleVoiceRestart('播报出了点问题，但收音不会停。', 620)
-    }
-  }, [ctx])
+    // Bus drives voiceState → 'idle' + restart_voice + setMood('idle')
+    ctx.busEmit({
+      type: 'tts:error',
+      message: speechErrorMessage,
+      speechGeneration: 0,
+      shouldResumeContinuousVoice: options.shouldResumeContinuousVoice ?? false,
+    })
+  }, [ctx, setError])
 
   const syncAssistantActivity = useCallback(() => {
-    setAssistantActivity(backgroundSearchCountRef.current > 0 ? 'searching' : busyRef.current ? 'thinking' : 'idle')
+    if (backgroundSearchCountRef.current > 0) {
+      setAssistantActivity('searching')
+    } else {
+      setAssistantActivity(busyRef.current ? 'thinking' : 'idle')
+    }
   }, [])
 
   const runBackgroundWebSearch = useMemo(() => createBackgroundWebSearchRunner({
@@ -321,7 +340,10 @@ export function useChat(ctx: UseChatContext) {
       presentPetDialogBubble,
       handleSpeechPlaybackFailure,
       setError,
-    }), [appendChatMessage, appendSystemMessage, ctx, handleSpeechPlaybackFailure, presentPetDialogBubble])
+      setActiveStreamAbort: (abort) => {
+        activeStreamAbortRef.current = abort
+      },
+    }), [appendChatMessage, appendSystemMessage, ctx, handleSpeechPlaybackFailure, presentPetDialogBubble, setError])
 
   const replaceChatHistory = useCallback((nextMessages: ChatMessage[]) => {
     messagesRef.current = nextMessages
@@ -329,7 +351,7 @@ export function useChat(ctx: UseChatContext) {
     setError(null)
     setInput('')
     inputRef.current = ''
-  }, [])
+  }, [setError])
 
   const exportChatHistory = useCallback(async () => {
     const fileNameDate = new Date().toISOString().slice(0, 10)
@@ -512,8 +534,12 @@ export function useChat(ctx: UseChatContext) {
     ctx.clearPetPerformanceCue()
     ctx.setMood('thinking')
     ctx.setVoiceState('processing')
+    ctx.busEmit({ type: 'chat:busy_changed', busy: true })
     setError(null)
     ctx.setLiveTranscript('')
+    const turnId = ++activeTurnIdRef.current
+    void activeStreamAbortRef.current?.().catch(() => undefined)
+    activeStreamAbortRef.current = null
 
     if (fromVoice) {
       ctx.updateVoicePipeline('sending', '识别文本已进入聊天，正在请求大模型。', content)
@@ -540,10 +566,14 @@ export function useChat(ctx: UseChatContext) {
           traceLabel,
           shouldResumeContinuousVoice,
           toolIntentPlan,
+          turnId,
+          isLatestTurn: () => activeTurnIdRef.current === turnId,
         }),
         new Promise<boolean>((resolve) => {
           window.setTimeout(() => {
             console.warn('[Chat] Turn hard timeout — forcing busy=false')
+            void activeStreamAbortRef.current?.().catch(() => undefined)
+            activeStreamAbortRef.current = null
             resolve(false)
           }, TURN_HARD_TIMEOUT_MS)
         }),
@@ -551,6 +581,7 @@ export function useChat(ctx: UseChatContext) {
     } finally {
       busyRef.current = false
       setBusy(false)
+      activeStreamAbortRef.current = null
       void flushDeferredCompanionNotices()
     }
 

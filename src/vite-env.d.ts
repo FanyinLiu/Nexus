@@ -179,7 +179,7 @@ declare global {
       completeChatStream: (
         payload: ChatCompletionRequest,
         onDelta: (delta: string, done: boolean) => void,
-      ) => Promise<ChatCompletionResponse>
+      ) => Promise<ChatCompletionResponse> & { abort: () => Promise<void> }
       testChatConnection: (payload: {
         providerId?: string
         baseUrl: string
@@ -217,6 +217,15 @@ declare global {
       funasrAbort: () => Promise<{ ok: boolean }>
       funasrStatus: () => Promise<FunAsrStatus>
       subscribeFunasrResult: (listener: (event: { type: 'partial' | 'final'; text: string }) => void) => () => void
+
+      // Tencent Cloud Real-Time ASR
+      tencentAsrConnect: (payload: { appId: string; secretId: string; secretKey: string; engineModelType?: string; hotwordList?: string }) => Promise<{ state: string }>
+      tencentAsrDisconnect: () => Promise<{ ok: boolean }>
+      tencentAsrFeed: (payload: { samples: number[] | Float32Array; sampleRate?: number }) => Promise<{ ok: boolean }>
+      tencentAsrFinish: () => Promise<{ text: string }>
+      tencentAsrAbort: () => Promise<{ ok: boolean }>
+      tencentAsrStatus: () => Promise<{ state: string }>
+      subscribeTencentAsrResult: (listener: (event: { type: 'partial' | 'final' | 'error'; text: string }) => void) => () => void
 
       // Minecraft Gateway
       minecraftConnect: (payload: { address: string; port: number; username: string }) => Promise<MinecraftGatewayStatus>
@@ -284,6 +293,18 @@ declare global {
         storePath: string
       }>
 
+      // SenseVoice offline ASR (sherpa-onnx OfflineRecognizer)
+      sensevoiceStatus: () => Promise<{ installed: boolean; modelFound: boolean; modelsDir: string; currentModelId: string | null }>
+      sensevoiceStart: () => Promise<{ ok: boolean; sampleRate: number }>
+      sensevoiceFeed: (
+        payload: { samples: number[] | Float32Array },
+      ) => Promise<{ ok: boolean }>
+      sensevoiceFinish: () => Promise<{ text: string }>
+      sensevoiceAbort: () => Promise<{ ok: boolean }>
+      sensevoiceTranscribe: (
+        payload: { samples: number[] | Float32Array; sampleRate?: number },
+      ) => Promise<{ text: string }>
+
       // Sherpa-onnx streaming ASR
       sherpaStatus: () => Promise<{ installed: boolean; modelFound: boolean; modelsDir: string }>
       sherpaStart: (payload?: { modelId?: string }) => Promise<{ ok: boolean; sampleRate: number }>
@@ -313,6 +334,18 @@ declare global {
       realtimeSendText: (payload: { text: string }) => Promise<{ ok: boolean }>
       realtimeState: () => Promise<{ state: 'idle' | 'connecting' | 'active' | 'error'; sessionId: string }>
       subscribeRealtimeEvent: (listener: (event: RealtimeEvent) => void) => () => void
+
+      // Autonomy: system idle & power events
+      /** Returns system idle time in seconds. */
+      getSystemIdleTime: () => Promise<number>
+      subscribePowerEvents: (listener: (event: { kind: import('./types').PowerEventKind }) => void) => () => void
+
+      // Autonomy: notification bridge
+      getNotificationChannels: () => Promise<import('./types').NotificationChannel[]>
+      setNotificationChannels: (channels: import('./types').NotificationChannel[]) => Promise<void>
+      startNotificationBridge: () => Promise<void>
+      stopNotificationBridge: () => Promise<void>
+      subscribeNotifications: (listener: (message: import('./types').NotificationMessage) => void) => () => void
 
       // Key vault (safeStorage encryption)
       vaultIsAvailable: () => Promise<boolean>

@@ -4,8 +4,11 @@ import {
   isFunAsrSpeechInputProvider,
   isLocalSherpaSpeechInputProvider,
   isLocalWhisperSpeechInputProvider,
+  isSenseVoiceSpeechInputProvider,
+  isTencentAsrSpeechInputProvider,
 } from '../../lib/audioProviders'
 import { checkSherpaAvailability } from '../../features/hearing/localSherpa.ts'
+import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import type {
   VoiceSessionEvent,
   VoiceSessionTransport,
@@ -23,7 +26,9 @@ import type {
 } from './types'
 import type { BrowserSpeechRecognition } from '../../lib/voice'
 import type { FunasrStreamSession } from '../../features/hearing/localFunasr.ts'
+import type { TencentAsrStreamSession } from '../../features/hearing/tencentAsr.ts'
 import type { SherpaStreamSession } from '../../features/hearing/localSherpa.ts'
+import type { SenseVoiceStreamSession } from '../../features/hearing/localSenseVoice.ts'
 
 type ShowPetStatus = (
   message: string,
@@ -47,7 +52,9 @@ export type StartVoiceConversationEntrypointOptions = {
   recognitionRef: MutableRefObject<BrowserSpeechRecognition | null>
   vadSessionRef: MutableRefObject<VadConversationSession | null>
   sherpaSessionRef: MutableRefObject<SherpaStreamSession | null>
+  sensevoiceSessionRef: MutableRefObject<SenseVoiceStreamSession | null>
   funasrSessionRef: MutableRefObject<FunasrStreamSession | null>
+  tencentAsrSessionRef: MutableRefObject<TencentAsrStreamSession | null>
   clearPendingVoiceRestart: () => void
   canInterruptSpeech: () => boolean
   interruptSpeakingForVoiceInput: () => boolean
@@ -75,7 +82,9 @@ export type StartVoiceConversationEntrypointOptions = {
   ensureSupportedSpeechInputSettings: (announce?: boolean) => AppSettings
   switchSpeechInputToLocalWhisper: (statusText?: string) => unknown
   startSherpaVoiceConversation: (options?: VoiceConversationOptions) => Promise<void>
+  startSenseVoiceConversation: (options?: VoiceConversationOptions) => Promise<void>
   startFunasrVoiceConversation: (options?: VoiceConversationOptions) => Promise<void>
+  startTencentAsrConversation: (options?: VoiceConversationOptions) => Promise<void>
   startVadVoiceConversation: (
     transcribeMode: 'api' | 'local',
     options?: VoiceConversationOptions,
@@ -92,16 +101,21 @@ export type StopVoiceConversationEntrypointOptions = {
   suppressVoiceReplyRef: MutableRefObject<boolean>
   recognitionRef: MutableRefObject<BrowserSpeechRecognition | null>
   sherpaSessionRef: MutableRefObject<SherpaStreamSession | null>
+  sensevoiceSessionRef: MutableRefObject<SenseVoiceStreamSession | null>
   funasrSessionRef: MutableRefObject<FunasrStreamSession | null>
+  tencentAsrSessionRef: MutableRefObject<TencentAsrStreamSession | null>
   clearPendingVoiceRestart: () => void
   setContinuousVoiceSession: (active: boolean) => void
   resetNoSpeechRestartCount: () => void
   clearSherpaConversationState: () => void
+  clearSenseVoiceConversationState: () => void
   clearFunasrConversationState: () => void
+  clearTencentConversationState: () => void
   stopApiRecording: (cancel?: boolean) => void
   stopVadListening: (cancel?: boolean) => Promise<void>
   stopActiveSpeechOutput: () => void
   dispatchVoiceSessionAndSync: (event: VoiceSessionEvent) => unknown
+  busEmit: (event: import('../../features/voice/busEvents').VoiceBusEvent) => void
   setLiveTranscript: (transcript: string) => void
   setMood: (mood: PetMood) => void
   updateVoicePipeline: (
@@ -141,8 +155,31 @@ export function startVoiceConversationEntrypoint(
     return
   }
 
+  if (isSenseVoiceSpeechInputProvider(currentSettings.speechInputProviderId)) {
+    void checkSenseVoiceAvailability().then((status) => {
+      if (!isSenseVoiceSpeechInputProvider(params.settingsRef.current.speechInputProviderId)) {
+        return
+      }
+
+      if (!status.installed || !status.modelFound) {
+        params.switchSpeechInputToLocalWhisper('SenseVoice 模型缺失，已自动切换到本地 Whisper。')
+        return
+      }
+
+      void params.startSenseVoiceConversation(params.options)
+    }).catch(() => {
+      params.switchSpeechInputToLocalWhisper('SenseVoice 不可用，已自动切换到本地 Whisper。')
+    })
+    return
+  }
+
   if (isFunAsrSpeechInputProvider(currentSettings.speechInputProviderId)) {
     void params.startFunasrVoiceConversation(params.options)
+    return
+  }
+
+  if (isTencentAsrSpeechInputProvider(currentSettings.speechInputProviderId)) {
+    void params.startTencentAsrConversation(params.options)
     return
   }
 
@@ -158,9 +195,18 @@ export function startVoiceConversationEntrypoint(
     params.busyRef.current
     || params.vadSessionRef.current
     || params.sherpaSessionRef.current
+    || params.sensevoiceSessionRef.current
     || params.funasrSessionRef.current
+    || params.tencentAsrSessionRef.current
     || params.voiceStateRef.current === 'processing'
   ) {
+    console.log('[VoiceEntrypoint] startVoiceConversation blocked — busy:', params.busyRef.current,
+      'vad:', Boolean(params.vadSessionRef.current),
+      'sherpa:', Boolean(params.sherpaSessionRef.current),
+      'sensevoice:', Boolean(params.sensevoiceSessionRef.current),
+      'funasr:', Boolean(params.funasrSessionRef.current),
+      'tencent:', Boolean(params.tencentAsrSessionRef.current),
+      'voiceState:', params.voiceStateRef.current)
     return
   }
 
@@ -224,15 +270,21 @@ export function stopVoiceConversationEntrypoint(
   params.clearSherpaConversationState()
   params.sherpaSessionRef.current?.abort()
   params.sherpaSessionRef.current = null
+  params.clearSenseVoiceConversationState()
+  params.sensevoiceSessionRef.current?.abort()
+  params.sensevoiceSessionRef.current = null
   params.clearFunasrConversationState()
   params.funasrSessionRef.current?.abort()
   params.funasrSessionRef.current = null
+  params.clearTencentConversationState()
+  params.tencentAsrSessionRef.current?.abort()
+  params.tencentAsrSessionRef.current = null
   params.stopApiRecording(true)
   void params.stopVadListening(true)
   params.stopActiveSpeechOutput()
   params.dispatchVoiceSessionAndSync({ type: 'aborted' })
+  params.busEmit({ type: 'session:aborted', reason: 'user_stopped' })
   params.setLiveTranscript('')
-  params.setMood('idle')
   params.updateVoicePipeline(
     'idle',
     wasContinuousVoiceActive ? '连续语音已停止' : '语音已停止',

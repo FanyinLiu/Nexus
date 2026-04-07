@@ -1,4 +1,3 @@
-import type { VoiceSessionEvent } from '../../features/voice/sessionMachine'
 import { isSherpaTtsUnavailableMessage } from '../../features/voice/runtimeSupport'
 import { isBrowserSpeechOutputProvider } from '../../lib/audioProviders'
 import type { AppSettings, PetMood } from '../../types'
@@ -8,18 +7,13 @@ import {
 } from './streamingSpeechOutput'
 import type { StreamingSpeechOutputController } from './types'
 
-type DispatchVoiceSessionAndSync = (event: VoiceSessionEvent) => unknown
-type ScheduleVoiceRestart = (statusText?: string, delay?: number) => void
-
 type BaseSpeechReplyOptions = {
   speechGeneration: number
   shouldResumeContinuousVoice: boolean
   currentSettings: AppSettings
-  dispatchVoiceSessionAndSync: DispatchVoiceSessionAndSync
   setMood: (mood: PetMood) => void
   setError: (error: string | null) => void
-  shouldAutoRestartVoice: () => boolean
-  scheduleVoiceRestart: ScheduleVoiceRestart
+  busEmit: (event: import('../../features/voice/busEvents').VoiceBusEvent) => void
   startSpeechInterruptMonitor: (
     speechGeneration: number,
     shouldResumeContinuousVoice: boolean,
@@ -47,18 +41,6 @@ export type BeginStreamingSpeechReplyRuntimeOptions = BaseSpeechReplyOptions & {
   switchSpeechOutputToBrowser: (statusText?: string) => unknown
 }
 
-function scheduleResumeIfNeeded(
-  shouldResumeContinuousVoice: boolean,
-  shouldAutoRestartVoice: () => boolean,
-  scheduleVoiceRestart: ScheduleVoiceRestart,
-  statusText: string,
-  delay: number,
-) {
-  if (shouldResumeContinuousVoice && shouldAutoRestartVoice()) {
-    scheduleVoiceRestart(statusText, delay)
-  }
-}
-
 function shouldIgnoreInterruptedSpeech(
   speechGeneration: number,
   usesBrowserSpeechOutput: boolean,
@@ -84,12 +66,16 @@ function createSpeechReplyCallbacks(
 ) {
   return {
     onStart: () => {
-      options.dispatchVoiceSessionAndSync({ type: 'tts_started', text: options.text })
-      options.setMood('happy')
-      // Speech interrupt monitor disabled: echo-cancelled mic still picks up
-      // TTS output, causing false interrupts that abort multi-chunk speech.
+      console.log('[SpeechReply] onStart — tts:started')
+      options.busEmit({
+        type: 'tts:started',
+        text: options.text,
+        speechGeneration: options.speechGeneration,
+      })
+      // Bus effect handles setMood('happy') and voiceState → 'speaking'
     },
     onEnd: () => {
+      console.log('[SpeechReply] onEnd fired — shouldResumeContinuousVoice:', options.shouldResumeContinuousVoice)
       options.stopSpeechInterruptMonitor()
 
       if (shouldIgnoreInterruptedSpeech(
@@ -98,16 +84,19 @@ function createSpeechReplyCallbacks(
         options.isSpeechInterrupted,
         options.clearSpeechInterruptedFlag,
       )) {
+        console.log('[SpeechReply] onEnd — ignored (speech interrupted)')
         return
       }
 
-      options.dispatchVoiceSessionAndSync({ type: 'session_completed' })
-      options.setMood('idle')
-      if (options.shouldResumeContinuousVoice) {
-        options.scheduleVoiceRestart('我继续收音，你可以接着说。', 520)
-      }
+      options.busEmit({
+        type: 'tts:completed',
+        speechGeneration: options.speechGeneration,
+        shouldResumeContinuousVoice: options.shouldResumeContinuousVoice,
+      })
+      // Bus effects handle: setMood('idle'), restart_voice, voiceState → 'idle'
     },
     onError: (message: string) => {
+      console.log('[SpeechReply] onError:', message, 'shouldResumeContinuousVoice:', options.shouldResumeContinuousVoice)
       options.stopSpeechInterruptMonitor()
 
       if (shouldIgnoreInterruptedSpeech(
@@ -119,16 +108,14 @@ function createSpeechReplyCallbacks(
         return
       }
 
-      options.dispatchVoiceSessionAndSync({
-        type: 'error',
-        code: 'tts',
+      options.busEmit({
+        type: 'tts:error',
         message,
+        speechGeneration: options.speechGeneration,
+        shouldResumeContinuousVoice: options.shouldResumeContinuousVoice,
       })
-      options.setMood('idle')
       options.setError(message)
-      if (options.shouldResumeContinuousVoice) {
-        options.scheduleVoiceRestart('播报出了点问题，但收音不会停。', 620)
-      }
+      // Bus effects handle: setMood('idle'), restart_voice, voiceState → 'idle'
     },
   }
 }
@@ -143,16 +130,12 @@ export async function speakAssistantReplyRuntime(
   if (!options.currentSettings.speechOutputEnabled || !options.text.trim()) {
     options.stopSpeechInterruptMonitor()
     options.clearSpeechInterruptedFlag(options.speechGeneration)
-    options.dispatchVoiceSessionAndSync({ type: 'session_completed' })
-    window.setTimeout(() => options.setMood('idle'), 2_600)
-
-    scheduleResumeIfNeeded(
-      options.shouldResumeContinuousVoice,
-      options.shouldAutoRestartVoice,
-      options.scheduleVoiceRestart,
-      '我继续收音，你可以接着说。',
-      520,
-    )
+    // Bus drives voiceState → 'idle', setMood('idle'), and restart_voice if needed
+    options.busEmit({
+      type: 'tts:completed',
+      speechGeneration: options.speechGeneration,
+      shouldResumeContinuousVoice: options.shouldResumeContinuousVoice,
+    })
     return
   }
 
@@ -171,7 +154,7 @@ export async function speakAssistantReplyRuntime(
 
     if (options.isSpeechInterrupted(options.speechGeneration)) {
       options.clearSpeechInterruptedFlag(options.speechGeneration)
-      options.dispatchVoiceSessionAndSync({ type: 'tts_interrupted' })
+      options.busEmit({ type: 'tts:interrupted', speechGeneration: options.speechGeneration })
       return
     }
 

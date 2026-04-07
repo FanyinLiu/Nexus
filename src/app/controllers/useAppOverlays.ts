@@ -21,6 +21,7 @@ import { setSettingsSnapshot } from '../store/settingsStore'
 import type {
   AppSettings,
   DebugConsoleEvent,
+  NotificationChannel,
   ReminderTask,
 } from '../../types'
 
@@ -87,6 +88,12 @@ type UseAppOverlaysOptions = {
   updateReminderTask: ReminderTaskStore['updateReminderTask']
   removeReminderTask: ReminderTaskStore['removeReminderTask']
   clearDebugConsoleEvents: () => void
+  // Notification channels (from useNotificationBridge)
+  notificationChannels?: NotificationChannel[]
+  notificationChannelsLoading?: boolean
+  onAddNotificationChannel?: (draft: Omit<NotificationChannel, 'id'>) => Promise<void>
+  onUpdateNotificationChannel?: (id: string, patch: Partial<NotificationChannel>) => Promise<void>
+  onRemoveNotificationChannel?: (id: string) => Promise<void>
 }
 
 export function useAppOverlays({
@@ -108,6 +115,11 @@ export function useAppOverlays({
   updateReminderTask,
   removeReminderTask,
   clearDebugConsoleEvents,
+  notificationChannels,
+  notificationChannelsLoading,
+  onAddNotificationChannel,
+  onUpdateNotificationChannel,
+  onRemoveNotificationChannel,
 }: UseAppOverlaysOptions) {
   const onboardingPendingInitial = useMemo(() => !loadOnboardingCompleted(), [])
   const [onboardingPending, setOnboardingPending] = useState(onboardingPendingInitial)
@@ -139,7 +151,7 @@ export function useAppOverlays({
       toolWebSearchApiBaseUrl: normalizedWebSearchApiBaseUrl,
       launchOnStartup,
     }))
-    setSettingsSnapshot(finalSettings)
+    await setSettingsSnapshot(finalSettings)
     setSettings(finalSettings)
 
     if (options?.closeSettings ?? true) {
@@ -193,6 +205,11 @@ export function useAppOverlays({
     onAddReminderTask: addReminderTask,
     onUpdateReminderTask: updateReminderTask,
     onRemoveReminderTask: removeReminderTask,
+    notificationChannels,
+    notificationChannelsLoading,
+    onAddNotificationChannel,
+    onUpdateNotificationChannel,
+    onRemoveNotificationChannel,
     onSave: async (nextSettings) => {
       await applySettingsSave(nextSettings, {
         closeSettings: true,

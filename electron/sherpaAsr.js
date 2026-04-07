@@ -191,8 +191,8 @@ function buildRecognizerConfig(modelConfig) {
     decodingMethod: 'greedy_search',
     maxActivePaths: 4,
     enableEndpoint: 1,
-    rule1MinTrailingSilence: 2.4,
-    rule2MinTrailingSilence: 1.4,
+    rule1MinTrailingSilence: 1.8,
+    rule2MinTrailingSilence: 1.0,
     rule3MinUtteranceLength: 12,
   }
 
@@ -282,8 +282,15 @@ class SherpaAsrService {
       return false
     }
 
-    this.stream = this.recognizer.createStream()
+    try {
+      this.stream = this.recognizer.createStream()
+    } catch (error) {
+      console.error('[SherpaASR] Failed to create stream:', error)
+      return false
+    }
+
     this.lastPartialText = ''
+    this._lastGain = undefined
     return true
   }
 
@@ -321,7 +328,11 @@ class SherpaAsrService {
     const result = this.recognizer.getResult(this.stream)
     const text = (result.text || '').trim()
 
-    this.recognizer.reset(this.stream)
+    try {
+      this.recognizer.reset(this.stream)
+    } catch (error) {
+      console.error('[SherpaASR] Failed to reset stream after endpoint:', error)
+    }
     this.lastPartialText = ''
 
     return text ? addChinesePunctuation(text) : null
@@ -350,6 +361,7 @@ class SherpaAsrService {
   abortStream() {
     this.stream = null
     this.lastPartialText = ''
+    this._lastGain = undefined
   }
 
   destroy() {
