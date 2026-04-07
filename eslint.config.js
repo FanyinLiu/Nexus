@@ -8,7 +8,6 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   globalIgnores([
     'dist',
-    '.claude/**',
     'public/vendor/**',
     '.venv-qwen3tts/**',
     '.hf-home/**',
