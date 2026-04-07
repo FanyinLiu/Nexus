@@ -1,7 +1,7 @@
 {
   "name": "nexus",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Nexus desktop AI companion built with Electron, React, and TypeScript.",
   "author": "Nexus Team",
   "type": "module",
