@@ -83,17 +83,8 @@ export const VOICE_CLONE_PROVIDER_PRESETS: VoiceCloneProviderPreset[] =
 
 // ── Model & voice option arrays (delegated to catalog entries) ──
 
-export const LOCAL_WHISPER_MODEL_OPTIONS: SpeechModelOption[] =
-  getSpeechInputProvider('local-whisper').modelOptions
-
-export const LOCAL_SHERPA_MODEL_OPTIONS: SpeechModelOption[] =
-  getSpeechInputProvider('local-sherpa').modelOptions
-
 export const MINIMAX_TTS_MODEL_OPTIONS: SpeechModelOption[] =
   getSpeechOutputProvider('minimax-tts').modelOptions
-
-export const LOCAL_QWEN3_TTS_MODEL_OPTIONS: SpeechModelOption[] =
-  getSpeechOutputProvider('local-qwen3-tts').modelOptions
 
 export const COSYVOICE_MODEL_OPTIONS: SpeechModelOption[] =
   getSpeechOutputProvider('cosyvoice-tts').modelOptions
@@ -101,14 +92,8 @@ export const COSYVOICE_MODEL_OPTIONS: SpeechModelOption[] =
 export const MINIMAX_FALLBACK_VOICE_OPTIONS: SpeechVoiceOption[] =
   getSpeechOutputProvider('minimax-tts').fallbackVoiceOptions
 
-export const LOCAL_SHERPA_TTS_FALLBACK_VOICE_OPTIONS: SpeechVoiceOption[] =
-  getSpeechOutputProvider('local-sherpa-tts').fallbackVoiceOptions
-
 export const COSYVOICE_FALLBACK_VOICE_OPTIONS: SpeechVoiceOption[] =
   getSpeechOutputProvider('cosyvoice-tts').fallbackVoiceOptions
-
-export const LOCAL_QWEN3_TTS_FALLBACK_VOICE_OPTIONS: SpeechVoiceOption[] =
-  getSpeechOutputProvider('local-qwen3-tts').fallbackVoiceOptions
 
 export const VOLCENGINE_FALLBACK_VOICE_OPTIONS: SpeechVoiceOption[] =
   getSpeechOutputProvider('volcengine-tts').fallbackVoiceOptions
@@ -158,44 +143,17 @@ export function getFallbackSpeechOutputVoices(providerId: string): SpeechVoiceOp
 // ── Provider type detection (delegated to catalog protocol) ──
 
 export function isBrowserSpeechInputProvider(providerId: string) {
-  return getSpeechInputProvider(providerId).protocol === 'browser'
-}
-
-export function isLocalWhisperSpeechInputProvider(providerId: string) {
-  return getSpeechInputProvider(providerId).protocol === 'whisper'
-}
-
-export function isLocalSherpaSpeechInputProvider(providerId: string) {
-  return getSpeechInputProvider(providerId).protocol === 'sherpa'
+  return providerId === 'browser'
 }
 
 export function isSenseVoiceSpeechInputProvider(providerId: string) {
   return getSpeechInputProvider(providerId).protocol === 'sensevoice'
 }
 
-export function isFunAsrSpeechInputProvider(providerId: string) {
-  return getSpeechInputProvider(providerId).protocol === 'funasr'
-}
-
 export function isTencentAsrSpeechInputProvider(providerId: string) {
   return getSpeechInputProvider(providerId).protocol === 'tencent'
 }
 
-export function isBrowserSpeechOutputProvider(providerId: string) {
-  return getSpeechOutputProvider(providerId).protocol === 'browser'
-}
-
-export function isLocalSherpaSpeechOutputProvider(providerId: string) {
-  return getSpeechOutputProvider(providerId).protocol === 'sherpa'
-}
-
-export function isPiperSpeechOutputProvider(providerId: string) {
-  return getSpeechOutputProvider(providerId).protocol === 'piper'
-}
-
-export function isCoquiSpeechOutputProvider(providerId: string) {
-  return getSpeechOutputProvider(providerId).protocol === 'coqui'
-}
 
 export function isVoiceCloneDisabled(providerId: string) {
   return providerId === 'none'
@@ -210,8 +168,7 @@ export function isOpenAiCompatibleSpeechInputProvider(providerId: string) {
 }
 
 export function isOpenAiCompatibleSpeechOutputProvider(providerId: string) {
-  const protocol = getSpeechOutputProvider(providerId).protocol
-  return protocol === 'openai-compatible' || protocol === 'local-qwen3'
+  return getSpeechOutputProvider(providerId).protocol === 'openai-compatible'
 }
 
 export function isVolcengineSpeechInputProvider(providerId: string) {

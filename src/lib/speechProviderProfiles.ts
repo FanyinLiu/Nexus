@@ -2,9 +2,7 @@ import {
   getSpeechInputProviderPreset,
   getSpeechOutputProviderPreset,
   isBrowserSpeechInputProvider,
-  isBrowserSpeechOutputProvider,
-  isLocalSherpaSpeechInputProvider,
-  isLocalWhisperSpeechInputProvider,
+  isSenseVoiceSpeechInputProvider,
   normalizeSpeechOutputApiBaseUrl,
   resolveSpeechInputModel,
 } from './audioProviders.ts'
@@ -28,18 +26,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isLocalSpeechInputProvider(providerId: string) {
   return (
     isBrowserSpeechInputProvider(providerId)
-    || isLocalSherpaSpeechInputProvider(providerId)
-    || isLocalWhisperSpeechInputProvider(providerId)
+    || isSenseVoiceSpeechInputProvider(providerId)
   )
 }
 
 function isLocalSpeechOutputProvider(providerId: string) {
-  return (
-    isBrowserSpeechOutputProvider(providerId)
-    || providerId === 'local-sherpa-tts'
-    || providerId === 'piper-tts'
-    || providerId === 'coqui-tts'
-  )
+  return providerId === 'cosyvoice-tts'
 }
 
 export function resolveSpeechInputProviderProfile(

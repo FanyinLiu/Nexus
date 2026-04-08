@@ -66,13 +66,13 @@ test('preserves volcengine-tts selection without migration', () => {
   assert.equal(settings.speechOutputVoice, 'BV001_streaming')
 })
 
-test('preserves an explicit local whisper speech input selection on load', () => {
+test('preserves an explicit local sensevoice speech input selection on load', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({
-      speechInputProviderId: 'local-whisper',
+      speechInputProviderId: 'local-sensevoice',
       speechInputApiBaseUrl: 'http://should-not-stick.example.com',
       speechInputApiKey: 'legacy-secret',
-      speechInputModel: 'Xenova/whisper-small',
+      speechInputModel: 'sensevoice-zh-en',
     }),
   })
 
@@ -84,10 +84,10 @@ test('preserves an explicit local whisper speech input selection on load', () =>
 
   const settings = loadSettings()
 
-  assert.equal(settings.speechInputProviderId, 'local-whisper')
+  assert.equal(settings.speechInputProviderId, 'local-sensevoice')
   assert.equal(settings.speechInputApiBaseUrl, '')
   assert.equal(settings.speechInputApiKey, '')
-  assert.equal(settings.speechInputModel, 'Xenova/whisper-small')
+  assert.equal(settings.speechInputModel, 'sensevoice-zh-en')
 })
 
 test('preserves the editorial theme selection on load', () => {

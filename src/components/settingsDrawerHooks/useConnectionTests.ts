@@ -1,7 +1,6 @@
 import { createElement, useState, type ReactNode } from 'react'
 import {
   isMiniMaxSpeechOutputProvider,
-  isLocalSherpaSpeechOutputProvider,
 } from '../../lib'
 import type { ConnectionResult } from '../settingsDrawerSupport'
 import type { AppSettings, ServiceConnectionCapability } from '../../types'
@@ -37,11 +36,7 @@ export function useConnectionTests({
     if (
       capability === 'speech-output'
       && result.ok
-      && (
-        isMiniMaxSpeechOutputProvider(draft.speechOutputProviderId)
-        || isLocalSherpaSpeechOutputProvider(draft.speechOutputProviderId)
-        || draft.speechOutputProviderId === 'local-qwen3-tts'
-      )
+      && isMiniMaxSpeechOutputProvider(draft.speechOutputProviderId)
     ) {
       await handleLoadSpeechVoices(false)
     }

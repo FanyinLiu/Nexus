@@ -35,14 +35,10 @@ export type SpeechOutputAdjustmentSupport = {
 // ── Speech input provider catalog ──
 
 export type SpeechInputProtocol =
-  | 'browser'
-  | 'sherpa'
   | 'sensevoice'
-  | 'whisper'
   | 'openai-compatible'
   | 'elevenlabs'
   | 'volcengine'
-  | 'funasr'
   | 'tencent'
 
 export type SpeechInputProviderEntry = {
@@ -59,20 +55,6 @@ export type SpeechInputProviderEntry = {
 
 export const SPEECH_INPUT_PROVIDERS: SpeechInputProviderEntry[] = [
   {
-    id: 'local-sherpa',
-    label: '[本地] Sherpa 流式识别',
-    baseUrl: '',
-    defaultModel: 'streaming-paraformer-bilingual-zh-en',
-    notes: '推荐首选。真正的流式识别，边说边出字，延迟低、中文准确率高。需要先下载模型到 sherpa-models 目录。',
-    protocol: 'sherpa',
-    kind: 'local',
-    hidden: false,
-    modelOptions: [
-      { value: 'streaming-paraformer-bilingual-zh-en', label: 'Paraformer 中英双语流式（推荐）' },
-      { value: 'streaming-zipformer-bilingual-zh-en', label: 'Zipformer 中英双语流式' },
-    ],
-  },
-  {
     id: 'local-sensevoice',
     label: '[本地] SenseVoice 高精度识别',
     baseUrl: '',
@@ -83,35 +65,6 @@ export const SPEECH_INPUT_PROVIDERS: SpeechInputProviderEntry[] = [
     hidden: false,
     modelOptions: [
       { value: 'sensevoice-zh-en', label: 'SenseVoice 中英双语（推荐）' },
-    ],
-  },
-  {
-    id: 'local-funasr',
-    label: '[本地] FunASR 流式识别',
-    baseUrl: 'ws://127.0.0.1:10095',
-    defaultModel: 'paraformer-zh-streaming',
-    notes: '高精度中文流式识别。需要本地部署 FunASR 服务（pip install funasr 或 Docker），精度远超 Sherpa，支持热词和标点恢复。',
-    protocol: 'funasr',
-    kind: 'local',
-    hidden: false,
-    modelOptions: [
-      { value: 'paraformer-zh-streaming', label: 'Paraformer 中文流式（推荐）' },
-      { value: '2pass', label: '二阶段（流式+离线修正，最高精度）' },
-    ],
-  },
-  {
-    id: 'local-whisper',
-    label: '[本地] Whisper 离线识别',
-    baseUrl: '',
-    defaultModel: 'Xenova/whisper-base',
-    notes: '适合更在意隐私和离线可用。首次会下载模型，之后完全本地运行；如果只是先验证体验，`whisper-base` 会更稳。',
-    protocol: 'whisper',
-    kind: 'local',
-    hidden: false,
-    modelOptions: [
-      { value: 'Xenova/whisper-tiny', label: 'whisper-tiny（启动快）' },
-      { value: 'Xenova/whisper-base', label: 'whisper-base（推荐）' },
-      { value: 'Xenova/whisper-small', label: 'whisper-small（更准）' },
     ],
   },
   {
@@ -181,19 +134,13 @@ export const SPEECH_INPUT_PROVIDERS: SpeechInputProviderEntry[] = [
 // ── Speech output provider catalog ──
 
 export type SpeechOutputProtocol =
-  | 'browser'
-  | 'sherpa'
-  | 'piper'
-  | 'coqui'
   | 'openai-compatible'
   | 'minimax'
   | 'volcengine'
   | 'dashscope'
   | 'elevenlabs'
   | 'cosyvoice'
-  | 'local-qwen3'
   | 'edge-tts'
-  | 'fish-speech'
 
 export type SpeechOutputProviderEntry = {
   id: string
@@ -246,21 +193,6 @@ function buildVolcengineVoiceOptions(): SpeechVoiceOption[] {
 }
 
 export const SPEECH_OUTPUT_PROVIDERS: SpeechOutputProviderEntry[] = [
-  {
-    id: 'browser',
-    label: '[本地] 系统语音（离线）',
-    baseUrl: '',
-    defaultModel: '',
-    defaultVoice: '',
-    notes: '适合先把播报跑通。使用系统自带语音，本地离线、不需要 API Key；如果只是先验证流程，优先选它。',
-    protocol: 'browser',
-    kind: 'browser',
-    hidden: false,
-    supportsStreaming: false,
-    modelOptions: [],
-    fallbackVoiceOptions: [],
-    adjustmentSupport: { rate: true, pitch: true, volume: true, note: '当前使用系统语音，语速、语调和音量都会直接生效。' },
-  },
   {
     id: 'openai-tts',
     label: '[云端] OpenAI TTS',
@@ -392,23 +324,6 @@ export const SPEECH_OUTPUT_PROVIDERS: SpeechOutputProviderEntry[] = [
     modelOptions: [],
     fallbackVoiceOptions: [],
     adjustmentSupport: { rate: false, pitch: false, volume: false, note: '当前这条 TTS 链路暂时主要靠音色和风格指令控制，语速、语调和音量还没有稳定直通。' },
-  },
-  {
-    id: 'fish-speech-tts',
-    label: '[本地] Fish Speech 1.5（高品质）',
-    baseUrl: 'http://127.0.0.1:8080',
-    defaultModel: 'openaudio-s1-mini',
-    defaultVoice: '',
-    notes: '2026 年开源 TTS 音质最高（ELO 1339），支持流式合成和语音克隆。需本地部署 Fish Speech 服务（需12GB显存）。',
-    protocol: 'fish-speech',
-    kind: 'local',
-    hidden: false,
-    supportsStreaming: true,
-    modelOptions: [
-      { value: 'openaudio-s1-mini', label: 'OpenAudio S1-Mini 0.5B（推荐）' },
-    ],
-    fallbackVoiceOptions: [],
-    adjustmentSupport: { rate: false, pitch: false, volume: false, note: 'Fish Speech 通过参考音频和提示词控制音色风格，暂不支持直接调节语速语调。' },
   },
 ]
 

@@ -8,8 +8,6 @@ import {
 import {
   getSpeechInputModelOptions,
   getSpeechInputProviderPreset,
-  isLocalSherpaSpeechInputProvider,
-  isLocalWhisperSpeechInputProvider,
   isSenseVoiceSpeechInputProvider,
   isVolcengineSpeechInputProvider,
   USER_VISIBLE_SPEECH_INPUT_PROVIDER_PRESETS,
@@ -18,7 +16,6 @@ import {
   switchSpeechInputProvider,
   updateCurrentSpeechInputProviderProfile,
 } from '../../lib/speechProviderProfiles'
-import { isBrowserSpeechRecognitionSupported } from '../../lib/voice'
 import type { AppSettings, ServiceConnectionCapability } from '../../types'
 
 type SpeechInputSectionProps = {
@@ -40,27 +37,16 @@ export const SpeechInputSection = memo(function SpeechInputSection({
 }: SpeechInputSectionProps) {
   const speechInputProvider = getSpeechInputProviderPreset(draft.speechInputProviderId)
   const speechInputModelOptions = getSpeechInputModelOptions(draft.speechInputProviderId)
-  const isLocalSherpaSpeechInput = isLocalSherpaSpeechInputProvider(draft.speechInputProviderId)
   const isSenseVoiceSpeechInput = isSenseVoiceSpeechInputProvider(draft.speechInputProviderId)
-  const isLocalWhisperSpeechInput = isLocalWhisperSpeechInputProvider(draft.speechInputProviderId)
-  const isLocalSpeechInput = isLocalSherpaSpeechInput || isSenseVoiceSpeechInput || isLocalWhisperSpeechInput
+  const isLocalSpeechInput = isSenseVoiceSpeechInput
   const isVolcengineSpeechInput = isVolcengineSpeechInputProvider(draft.speechInputProviderId)
   const speechInputVolcengineCredentials = parseVolcengineCredentialParts(draft.speechInputApiKey)
-  const browserSpeechRecognitionSupported = isBrowserSpeechRecognitionSupported()
-  const speechInputModelLabel = isLocalSherpaSpeechInput
-    ? '本地流式模型'
-    : isSenseVoiceSpeechInput
-      ? 'SenseVoice 模型'
-      : isLocalWhisperSpeechInput
-        ? 'Whisper 模型'
-        : '语音输入模型'
-  const speechInputModelHint = isLocalSherpaSpeechInput
-    ? 'Sherpa-onnx 需要你先把模型放进 `sherpa-models` 目录；推荐先用 Paraformer 中英双语流式模型。'
-    : isSenseVoiceSpeechInput
-      ? '需要先把 sherpa-onnx-sense-voice-zh-en-2024-07-17 目录放到 `sherpa-models` 下。10秒音频仅需70ms，中文识别准确率极高。'
-      : isLocalWhisperSpeechInput
-        ? '本地 Whisper 首次使用会自动下载所选模型，之后可以离线运行。`whisper-base` 更稳，`whisper-small` 更准但更慢。'
-        : ''
+  const speechInputModelLabel = isSenseVoiceSpeechInput
+    ? 'SenseVoice 模型'
+    : '语音输入模型'
+  const speechInputModelHint = isSenseVoiceSpeechInput
+    ? '需要先把 sherpa-onnx-sense-voice-zh-en-2024-07-17 目录放到 `sherpa-models` 下。10秒音频仅需70ms，中文识别准确率极高。'
+    : ''
 
   function applySpeechInputPreset(providerId: string) {
     setDraft((prev) => switchSpeechInputProvider(prev, providerId))
@@ -107,11 +93,8 @@ export const SpeechInputSection = memo(function SpeechInputSection({
             <option
               key={provider.id}
               value={provider.id}
-              disabled={provider.id === 'browser' && !browserSpeechRecognitionSupported}
             >
-              {provider.id === 'browser' && !browserSpeechRecognitionSupported
-                ? `${provider.label}（当前不可用）`
-                : provider.label}
+              {provider.label}
             </option>
           ))}
         </select>
@@ -122,12 +105,6 @@ export const SpeechInputSection = memo(function SpeechInputSection({
         {speechInputProvider.baseUrl ? ` 默认地址：${speechInputProvider.baseUrl}` : ''}
         {speechInputProvider.defaultModel ? `，默认模型：${speechInputProvider.defaultModel}` : ''}
       </p>
-
-      {!browserSpeechRecognitionSupported && draft.speechInputProviderId === 'browser' ? (
-        <div className="settings-inline-note">
-          当前 Electron 环境不支持浏览器原生语音识别，建议切换到“本地 Whisper 离线识别”。
-        </div>
-      ) : null}
 
       {!isLocalSpeechInput ? (
         <>

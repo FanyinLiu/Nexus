@@ -78,7 +78,6 @@ export type StartTencentConversationOptions = {
     message: string,
     errorCode?: string,
   ) => void
-  switchSpeechInputToLocalWhisper: (statusText?: string) => unknown
   shouldAutoRestartVoice: () => boolean
 }
 
@@ -343,11 +342,6 @@ export async function startTencentConversation(
     const message = error instanceof Error
       ? error.message
       : '腾讯云语音识别启动失败，请检查凭证和网络。'
-
-    if (params.currentSettings.speechInputFailoverEnabled) {
-      params.switchSpeechInputToLocalWhisper('腾讯云语音识别不可用，已自动切换到本地 Whisper。')
-      return
-    }
 
     params.updateVoicePipeline('idle', message)
     params.setError(message)

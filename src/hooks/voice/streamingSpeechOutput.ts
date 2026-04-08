@@ -29,18 +29,6 @@ function resolveChunkerConfig(providerId: string) {
     }
   }
 
-  if (providerId === 'local-qwen3-tts') {
-    return {
-      absoluteMinChunkLength: 8,
-      maxChunkLength: 88,
-      minForcedChunkLength: 26,
-      preferredEarlySplitLength: 20,
-      firstChunkMaxLength: 40,
-      firstChunkMinForcedChunkLength: 16,
-      firstChunkPreferredEarlySplitLength: 12,
-    }
-  }
-
   return {
     firstChunkMaxLength: 48,
     firstChunkMinForcedChunkLength: 18,
@@ -49,10 +37,7 @@ function resolveChunkerConfig(providerId: string) {
 }
 
 function createChunker(speechSettings: AppSettings) {
-  const isLocalQwenTts = speechSettings.speechOutputProviderId === 'local-qwen3-tts'
-
   return {
-    isLocalQwenTts,
     chunker: new StreamingTtsChunker(
       resolveChunkerConfig(speechSettings.speechOutputProviderId),
     ),
@@ -68,7 +53,7 @@ export function createStreamingSpeechOutputController(
     throw new Error('当前环境未连接桌面客户端，无法使用流式语音播报。')
   }
 
-  const { chunker, isLocalQwenTts } = createChunker(speechSettings)
+  const { chunker } = createChunker(speechSettings)
   const player = runtime.getPlayer()
   // Voice cloning disabled — always use the provider's configured voice.
   const effectiveVoice = speechSettings.speechOutputVoice
@@ -197,12 +182,6 @@ export function createStreamingSpeechOutputController(
     })
 
     return startPromise
-  }
-
-  if (isLocalQwenTts) {
-    void ensureStarted().catch((error) => {
-      fail(error instanceof Error ? error : new Error('流式 TTS 初始化失败。'))
-    })
   }
 
   let finishSent = false

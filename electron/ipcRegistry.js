@@ -24,14 +24,12 @@ let _deferredModulesPromise = null
 function loadDeferredModules() {
   if (!_deferredModulesPromise) {
     _deferredModulesPromise = Promise.all([
-      import('./sherpaTts.js'),
       import('./ipc/sherpaIpc.js'),
       import('./ipc/mcpIpc.js'),
       import('./ipc/pluginIpc.js'),
       import('./ipc/memoryIpc.js'),
-    ]).then(([sherpaTtsService, sherpaIpc, mcpIpc, pluginIpc, memoryIpc]) => {
+    ]).then(([sherpaIpc, mcpIpc, pluginIpc, memoryIpc]) => {
       const ttsStreamService = createTtsStreamService({
-        sherpaTtsService,
         synthesizeRemote: synthesizeRemoteTts,
         warmupRemote: warmupRemoteTtsSession,
       })

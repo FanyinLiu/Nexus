@@ -262,11 +262,3 @@ export function buildSpeechOutputSmokeText(draftSettings: AppSettings) {
   const companionName = draftSettings.companionName.trim() || '桌宠'
   return `你好，我是${companionName}。这是一条语音链路自检播报。`
 }
-
-export function isSherpaTtsUnavailableMessage(message: string) {
-  return (
-    message.includes('本地流式 TTS 不可用')
-    || message.includes('找不到可用的本地 TTS 模型')
-    || message.includes('本地 TTS 合成失败')
-  )
-}

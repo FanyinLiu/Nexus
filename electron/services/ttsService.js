@@ -2,72 +2,39 @@ import {
   normalizeBaseUrl,
   normalizeCosyVoiceBaseUrl,
   performNetworkRequest,
-  withRequestTimeout,
   readJsonSafe,
   readTextSafe,
   extractResponseErrorMessage,
-  buildMultipartBody,
   normalizeLanguageCode,
   audioFormatToMimeType,
 } from '../net.js'
-import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import fs from 'node:fs/promises'
-import path from 'node:path'
-import { Readable } from 'node:stream'
 import http from 'node:http'
 
 const cosyVoiceAgent = new http.Agent({ keepAlive: false, maxSockets: 2 })
-import { app } from 'electron'
 import { synthesizeEdgeTts } from './edgeTts.js'
 
 // ── Constants ──
 
 const AUDIO_SYNTH_TIMEOUT_MS = 25_000
-const LOCAL_QWEN3_TTS_DEFAULT_BASE_URL = 'http://127.0.0.1:5051/v1'
-const LOCAL_QWEN3_TTS_DEFAULT_MODEL = 'Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice'
-const LOCAL_QWEN3_TTS_DEFAULT_VOICE = 'serena'
-const LOCAL_QWEN3_TTS_MAX_NEW_TOKENS = 256
-const LOCAL_QWEN3_TTS_SUPPORTED_MODELS = new Set([
-  'Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice',
-  'Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice',
-])
-const LOCAL_QWEN3_TTS_STREAM_CHUNK_BYTES = 6144
-const LOCAL_QWEN3_TTS_HEALTH_TIMEOUT_MS = 1_800
-const LOCAL_QWEN3_TTS_STARTUP_TIMEOUT_MS = 45_000
-const LOCAL_QWEN3_TTS_SYNTH_TIMEOUT_MS = 90_000
-const LOCAL_QWEN3_TTS_SYNTH_TIMEOUT_PER_CHAR_MS = 900
-const LOCAL_QWEN3_TTS_SYNTH_TIMEOUT_MAX_MS = 180_000
 const VOLCENGINE_TTS_DEFAULT_CLUSTER = 'volcano_tts'
 const VOLCENGINE_TTS_DEFAULT_VOICE = 'BV001_streaming'
-
-// ── Module-level mutable state ──
-
-let localQwen3TtsLaunchPromise = null
 
 // ── Provider detection ──
 
 const SPEECH_PROVIDER_IDS = Object.freeze({
-  localQwen3Tts:  'local-qwen3-tts',
-  piper:          'piper-tts',
-  coqui:          'coqui-tts',
   volcengineSTT:  'volcengine-stt',
   volcengineTTS:  'volcengine-tts',
   minimax:        'minimax-tts',
   dashscope:      'dashscope-tts',
   cosyvoice:      'cosyvoice-tts',
   edgeTts:        'edge-tts',
-  fishSpeech:     'fish-speech-tts',
   openaiSTT:      'openai-stt',
   customOpenaiSTT:'custom-openai-stt',
   openaiTTS:      'openai-tts',
   customOpenaiTTS:'custom-openai-tts',
 })
 
-const isLocalQwen3TtsSpeechOutputProvider = (id) => id === SPEECH_PROVIDER_IDS.localQwen3Tts
-const isPiperSpeechOutputProvider         = (id) => id === SPEECH_PROVIDER_IDS.piper
-const isCoquiSpeechOutputProvider         = (id) => id === SPEECH_PROVIDER_IDS.coqui
-const isLocalCliSpeechOutputProvider      = (id) => isPiperSpeechOutputProvider(id) || isCoquiSpeechOutputProvider(id)
 const isElevenLabsProvider                = (id) => String(id ?? '').startsWith('elevenlabs')
 const isVolcengineSpeechInputProvider     = (id) => id === SPEECH_PROVIDER_IDS.volcengineSTT
 const isVolcengineSpeechOutputProvider    = (id) => id === SPEECH_PROVIDER_IDS.volcengineTTS
@@ -75,32 +42,14 @@ const isMiniMaxSpeechOutputProvider       = (id) => id === SPEECH_PROVIDER_IDS.m
 const isDashScopeSpeechOutputProvider     = (id) => id === SPEECH_PROVIDER_IDS.dashscope
 const isCosyVoiceSpeechOutputProvider     = (id) => id === SPEECH_PROVIDER_IDS.cosyvoice
 const isEdgeTtsSpeechOutputProvider       = (id) => id === SPEECH_PROVIDER_IDS.edgeTts
-const isFishSpeechSpeechOutputProvider    = (id) => id === SPEECH_PROVIDER_IDS.fishSpeech
 
 const OPENAI_COMPATIBLE_STT_IDS = new Set([SPEECH_PROVIDER_IDS.openaiSTT, SPEECH_PROVIDER_IDS.customOpenaiSTT])
 const isOpenAiCompatibleSpeechInputProvider = (id) => OPENAI_COMPATIBLE_STT_IDS.has(id)
 
-const OPENAI_COMPATIBLE_TTS_IDS = new Set([SPEECH_PROVIDER_IDS.openaiTTS, SPEECH_PROVIDER_IDS.customOpenaiTTS, SPEECH_PROVIDER_IDS.localQwen3Tts])
+const OPENAI_COMPATIBLE_TTS_IDS = new Set([SPEECH_PROVIDER_IDS.openaiTTS, SPEECH_PROVIDER_IDS.customOpenaiTTS])
 const isOpenAiCompatibleSpeechOutputProvider = (id) => OPENAI_COMPATIBLE_TTS_IDS.has(id)
 
 // ── URL / timeout resolution ──
-
-function resolveLocalSpeechCommand(providerId, baseUrl) {
-  const normalized = normalizeBaseUrl(baseUrl)
-  if (normalized) {
-    return normalized
-  }
-
-  if (isPiperSpeechOutputProvider(providerId)) {
-    return 'piper'
-  }
-
-  if (isCoquiSpeechOutputProvider(providerId)) {
-    return 'tts'
-  }
-
-  return ''
-}
 
 function resolveSpeechOutputBaseUrl(providerId, baseUrl) {
   const normalized = normalizeBaseUrl(baseUrl)
@@ -109,405 +58,31 @@ function resolveSpeechOutputBaseUrl(providerId, baseUrl) {
     return normalizeCosyVoiceBaseUrl(normalized || 'http://127.0.0.1:50000')
   }
 
-  if (isLocalQwen3TtsSpeechOutputProvider(providerId)) {
-    return normalized || LOCAL_QWEN3_TTS_DEFAULT_BASE_URL
-  }
-
-  if (isFishSpeechSpeechOutputProvider(providerId)) {
-    return normalized || 'http://127.0.0.1:8080'
-  }
-
   return normalized
 }
 
-function resolveSpeechOutputTimeoutMs(providerId, text = '', model = '') {
-  if (!isLocalQwen3TtsSpeechOutputProvider(providerId)) {
-    return AUDIO_SYNTH_TIMEOUT_MS
-  }
-
-  const normalizedText = String(text ?? '').trim()
-  const normalizedModel = String(model ?? '').trim().toLowerCase()
-  const isLargerLocalQwenModel = normalizedModel.includes('1.7b')
-  const baseTimeout = isLargerLocalQwenModel
-    ? LOCAL_QWEN3_TTS_SYNTH_TIMEOUT_MS + 30_000
-    : LOCAL_QWEN3_TTS_SYNTH_TIMEOUT_MS
-  const estimatedTimeout = baseTimeout + normalizedText.length * LOCAL_QWEN3_TTS_SYNTH_TIMEOUT_PER_CHAR_MS
-
-  return Math.min(LOCAL_QWEN3_TTS_SYNTH_TIMEOUT_MAX_MS, estimatedTimeout)
+function resolveSpeechOutputTimeoutMs() {
+  return AUDIO_SYNTH_TIMEOUT_MS
 }
 
-function resolveSpeechOutputTimeoutMessage(providerId) {
-  if (isLocalQwen3TtsSpeechOutputProvider(providerId)) {
-    return '本地 Qwen3-TTS 响应超时。当前本地模型生成会比云端慢一些，请稍后重试，或缩短单次播报文本。'
-  }
-
-  if (isLocalCliSpeechOutputProvider(providerId)) {
-    return '本地命令行 TTS 响应超时，请确认 Piper / Coqui 已正确安装，模型路径可访问，并且命令可以在当前环境里运行。'
-  }
-
+function resolveSpeechOutputTimeoutMessage() {
   return '语音播报响应超时，请检查网络、代理或当前语音服务状态。'
 }
 
-// ── Helpers ──
-
-function parseOptionalSpeakerId(value) {
-  const normalized = String(value ?? '').trim()
-  if (!normalized) {
-    return null
-  }
-
-  const parsed = Number.parseInt(normalized, 10)
-  return Number.isFinite(parsed) ? parsed : null
-}
-
-async function createTempSpeechOutputFilePath(prefix) {
-  const tempDir = path.join(app.getPath('temp'), 'nexus-tts')
-  await fs.mkdir(tempDir, { recursive: true })
-  return path.join(tempDir, `${prefix}-${randomUUID()}.wav`)
-}
-
-async function runLocalSpeechCommand({
-  providerLabel,
-  command,
-  args,
-  inputText,
-  timeoutMs,
-  timeoutMessage,
-}) {
-  return new Promise((resolve, reject) => {
-    let settled = false
-    let stderr = ''
-    let timeoutHandle = null
-
-    const child = spawn(command, args, {
-      windowsHide: true,
-      stdio: ['pipe', 'ignore', 'pipe'],
-    })
-
-    const finish = (handler, value) => {
-      if (settled) {
-        return
-      }
-
-      settled = true
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle)
-      }
-      handler(value)
-    }
-
-    timeoutHandle = setTimeout(() => {
-      child.kill()
-      finish(reject, new Error(timeoutMessage))
-    }, timeoutMs)
-
-    child.stderr?.setEncoding?.('utf8')
-    child.stderr?.on('data', (chunk) => {
-      stderr += String(chunk ?? '')
-    })
-
-    child.on('error', (error) => {
-      const reason = error instanceof Error ? error.message : String(error)
-      finish(reject, new Error(`${providerLabel} command failed to start. ${reason}`))
-    })
-
-    child.on('close', (code) => {
-      if (code === 0) {
-        finish(resolve, undefined)
-        return
-      }
-
-      const detail = stderr.trim() || `${providerLabel} exited with code ${code ?? 'unknown'}.`
-      finish(reject, new Error(detail))
-    })
-
-    if (typeof inputText === 'string') {
-      child.stdin.write(inputText)
-    }
-    child.stdin.end()
-  })
-}
-
-// ── Local CLI synthesizers ──
-
-async function synthesizePiperSpeechOutput(payload, content, timeoutMs, timeoutMessage) {
-  const command = resolveLocalSpeechCommand(payload.providerId, payload.baseUrl)
-  const modelPath = String(payload.model ?? '').trim()
-  if (!modelPath) {
-    throw new Error('Piper TTS requires a model path (`.onnx`).')
-  }
-
-  const outputFilePath = await createTempSpeechOutputFilePath('piper')
-  const args = [
-    '--model',
-    modelPath,
-    '--output_file',
-    outputFilePath,
-  ]
-
-  const speakerId = parseOptionalSpeakerId(payload.voice)
-  if (speakerId !== null) {
-    args.push('--speaker', String(speakerId))
-  }
-
-  try {
-    await runLocalSpeechCommand({
-      providerLabel: 'Piper',
-      command,
-      args,
-      inputText: content,
-      timeoutMs,
-      timeoutMessage,
-    })
-
-    const audioBuffer = await fs.readFile(outputFilePath)
-    return {
-      audioBase64: audioBuffer.toString('base64'),
-      mimeType: 'audio/wav',
-    }
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error)
-    throw new Error(`Piper synthesis failed. ${reason}`)
-  } finally {
-    await fs.rm(outputFilePath, { force: true }).catch(() => undefined)
-  }
-}
-
-async function synthesizeCoquiSpeechOutput(payload, content, timeoutMs, timeoutMessage) {
-  const command = resolveLocalSpeechCommand(payload.providerId, payload.baseUrl)
-  const modelName = String(payload.model ?? '').trim()
-  if (!modelName) {
-    throw new Error('Coqui TTS requires a `model_name`.')
-  }
-
-  const outputFilePath = await createTempSpeechOutputFilePath('coqui')
-  const args = [
-    '--text',
-    content,
-    '--model_name',
-    modelName,
-    '--out_path',
-    outputFilePath,
-  ]
-
-  const speakerValue = String(payload.voice ?? '').trim()
-  if (speakerValue) {
-    args.push('--speaker_idx', speakerValue)
-  }
-
-  const languageValue = String(payload.language ?? '').trim()
-  if (languageValue) {
-    args.push('--language_idx', languageValue)
-  }
-
-  try {
-    await runLocalSpeechCommand({
-      providerLabel: 'Coqui TTS',
-      command,
-      args,
-      timeoutMs,
-      timeoutMessage,
-    })
-
-    const audioBuffer = await fs.readFile(outputFilePath)
-    return {
-      audioBase64: audioBuffer.toString('base64'),
-      mimeType: 'audio/wav',
-    }
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error)
-    throw new Error(`Coqui synthesis failed. ${reason}`)
-  } finally {
-    await fs.rm(outputFilePath, { force: true }).catch(() => undefined)
-  }
-}
-
-// ── Qwen3-TTS model helpers ──
-
-function normalizeLocalQwen3TtsModel(model) {
-  const normalized = String(model ?? '').trim()
-  return LOCAL_QWEN3_TTS_SUPPORTED_MODELS.has(normalized)
-    ? normalized
-    : LOCAL_QWEN3_TTS_DEFAULT_MODEL
-}
-
-function mapLanguageToLocalQwen3TtsLanguage(language) {
-  switch (normalizeLanguageCode(language)) {
-    case 'zh':
-    case 'yue':
-      return 'chinese'
-    case 'en':
-      return 'english'
-    case 'de':
-      return 'german'
-    case 'fr':
-      return 'french'
-    case 'it':
-      return 'italian'
-    case 'ja':
-      return 'japanese'
-    case 'ko':
-      return 'korean'
-    case 'pt':
-      return 'portuguese'
-    case 'ru':
-      return 'russian'
-    case 'es':
-      return 'spanish'
-    default:
-      return 'auto'
-  }
-}
-
 function buildOpenAiCompatibleSpeechRequestPayload(payload, content, options = {}) {
-  const isLocalQwen3Tts = isLocalQwen3TtsSpeechOutputProvider(payload.providerId)
   const responseFormat = String(options.responseFormat ?? '').trim()
-  const localQwenLanguage = isLocalQwen3Tts ? mapLanguageToLocalQwen3TtsLanguage(payload.language) : ''
 
   // OpenAI speed: 0.25-4.0 (Nexus rate is 0.5-2.0, direct map)
   const speed = Number.isFinite(payload.rate) ? Math.min(Math.max(payload.rate, 0.25), 4.0) : undefined
 
   return {
-    model: isLocalQwen3Tts
-      ? normalizeLocalQwen3TtsModel(payload.model)
-      : payload.model || 'gpt-4o-mini-tts',
-    voice: String(payload.voice ?? '').trim() || (isLocalQwen3Tts ? LOCAL_QWEN3_TTS_DEFAULT_VOICE : 'alloy'),
+    model: payload.model || 'gpt-4o-mini-tts',
+    voice: String(payload.voice ?? '').trim() || 'alloy',
     input: content,
     ...(speed != null ? { speed } : {}),
     ...(responseFormat ? { response_format: responseFormat } : {}),
     ...(payload.instructions?.trim() ? { instructions: payload.instructions.trim() } : {}),
-    ...(isLocalQwen3Tts
-      ? {
-          language: localQwenLanguage,
-          max_new_tokens: LOCAL_QWEN3_TTS_MAX_NEW_TOKENS,
-        }
-      : {}),
-    ...(isLocalQwen3Tts && options.stream
-      ? {
-          stream: true,
-          chunk_bytes: LOCAL_QWEN3_TTS_STREAM_CHUNK_BYTES,
-        }
-      : {}),
   }
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
-
-// ── Local Qwen3-TTS service lifecycle ──
-
-async function getLocalQwen3TtsLaunchConfig() {
-  const repoRoot = path.resolve(__dirname, '..')
-  const isWin = process.platform === 'win32'
-  const pythonExe = path.join(repoRoot, '.venv-qwen3tts', isWin ? 'Scripts' : 'bin', isWin ? 'python.exe' : 'python')
-  const serverScript = path.join(repoRoot, 'scripts', 'qwen3_tts_server.py')
-  const hfHome = path.join(repoRoot, '.hf-home')
-  const hubCache = path.join(hfHome, 'hub')
-
-  try {
-    await fs.access(pythonExe)
-  } catch {
-    throw new Error(`没有找到本地 Qwen3-TTS Python 环境：${pythonExe}`)
-  }
-
-  try {
-    await fs.access(serverScript)
-  } catch {
-    throw new Error(`没有找到本地 Qwen3-TTS 服务脚本：${serverScript}`)
-  }
-
-  return {
-    repoRoot,
-    pythonExe,
-    serverScript,
-    hfHome,
-    hubCache,
-  }
-}
-
-async function isLocalQwen3TtsServiceReady(baseUrl) {
-  try {
-    const healthUrl = new URL('/health', resolveSpeechOutputBaseUrl('local-qwen3-tts', baseUrl)).toString()
-    const response = await performNetworkRequest(healthUrl, {
-      method: 'GET',
-      timeoutMs: LOCAL_QWEN3_TTS_HEALTH_TIMEOUT_MS,
-      timeoutMessage: '本地 Qwen3-TTS 健康检查超时。',
-    })
-    return response.ok
-  } catch {
-    return false
-  }
-}
-
-async function waitForLocalQwen3TtsReady(baseUrl, timeoutMs = LOCAL_QWEN3_TTS_STARTUP_TIMEOUT_MS) {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    if (await isLocalQwen3TtsServiceReady(baseUrl)) {
-      return true
-    }
-    await sleep(1_250)
-  }
-
-  return false
-}
-
-async function ensureLocalQwen3TtsService(baseUrl, model) {
-  const resolvedBaseUrl = resolveSpeechOutputBaseUrl('local-qwen3-tts', baseUrl)
-  if (await isLocalQwen3TtsServiceReady(resolvedBaseUrl)) {
-    return resolvedBaseUrl
-  }
-
-  if (!localQwen3TtsLaunchPromise) {
-    localQwen3TtsLaunchPromise = (async () => {
-      const config = await getLocalQwen3TtsLaunchConfig()
-      const parsedBaseUrl = new URL(resolvedBaseUrl)
-      const port = Number(parsedBaseUrl.port || 5051)
-      const normalizedModel = normalizeLocalQwen3TtsModel(model)
-
-      const child = spawn(
-        config.pythonExe,
-        [
-          config.serverScript,
-          '--host',
-          parsedBaseUrl.hostname,
-          '--port',
-          String(port),
-          '--preload-model',
-          normalizedModel,
-        ],
-        {
-          cwd: config.repoRoot,
-          detached: true,
-          windowsHide: true,
-          stdio: 'ignore',
-          env: {
-            ...process.env,
-            HF_HOME: config.hfHome,
-            HUGGINGFACE_HUB_CACHE: config.hubCache,
-            TRANSFORMERS_CACHE: config.hubCache,
-            HF_HUB_DISABLE_TELEMETRY: '1',
-            HF_HUB_DISABLE_SYMLINKS_WARNING: '1',
-          },
-        },
-      )
-
-      child.unref()
-
-      const ready = await waitForLocalQwen3TtsReady(resolvedBaseUrl)
-      if (!ready) {
-        throw new Error('本地 Qwen3-TTS 服务启动超时，请先手动运行 scripts/start_qwen3_tts_server.bat。')
-      }
-    })()
-      .finally(() => {
-        localQwen3TtsLaunchPromise = null
-      })
-  }
-
-  await localQwen3TtsLaunchPromise
-  return resolvedBaseUrl
 }
 
 // ── Authorization ──
@@ -1115,20 +690,10 @@ async function synthesizeRemoteTts(sessionPayload, text) {
   const payload = { ...sessionPayload, text }
   const content = text.trim()
   if (!content) throw new Error('没有可播报的文本内容。')
-  const synthTimeoutMs = resolveSpeechOutputTimeoutMs(payload.providerId, content, payload.model)
-  const synthTimeoutMessage = resolveSpeechOutputTimeoutMessage(payload.providerId)
+  const synthTimeoutMs = resolveSpeechOutputTimeoutMs()
+  const synthTimeoutMessage = resolveSpeechOutputTimeoutMessage()
 
-  if (isPiperSpeechOutputProvider(payload.providerId)) {
-    return synthesizePiperSpeechOutput(payload, content, synthTimeoutMs, synthTimeoutMessage)
-  }
-
-  if (isCoquiSpeechOutputProvider(payload.providerId)) {
-    return synthesizeCoquiSpeechOutput(payload, content, synthTimeoutMs, synthTimeoutMessage)
-  }
-
-  const baseUrl = isLocalQwen3TtsSpeechOutputProvider(payload.providerId)
-    ? await ensureLocalQwen3TtsService(payload.baseUrl, payload.model)
-    : resolveSpeechOutputBaseUrl(payload.providerId, payload.baseUrl)
+  const baseUrl = resolveSpeechOutputBaseUrl(payload.providerId, payload.baseUrl)
   const rate = Number.isFinite(payload.rate) ? payload.rate : 1
   const pitch = Number.isFinite(payload.pitch) ? payload.pitch : 1
   const volume = Number.isFinite(payload.volume) ? payload.volume : 1
@@ -1137,49 +702,27 @@ async function synthesizeRemoteTts(sessionPayload, text) {
 
   // ── OpenAI-compatible: request raw PCM for streaming ──
   if (isOpenAiCompatibleSpeechOutputProvider(payload.providerId)) {
-    const isLocalQwen3Tts = isLocalQwen3TtsSpeechOutputProvider(payload.providerId)
     const endpoint = `${baseUrl}/audio/speech`
     const requestBody = JSON.stringify(buildOpenAiCompatibleSpeechRequestPayload(
       payload,
       content,
-      {
-        responseFormat: 'pcm',
-        stream: isLocalQwen3Tts,
-      },
+      { responseFormat: 'pcm' },
     ))
     const headers = {
       'Content-Type': 'application/json',
       ...buildAuthorizationHeaders(payload.providerId, payload.apiKey),
     }
 
-    const response = isLocalQwen3Tts
-      ? await withRequestTimeout(
-          () => fetch(endpoint, {
-            method: 'POST',
-            headers,
-            body: requestBody,
-          }),
-          synthTimeoutMs,
-          synthTimeoutMessage,
-        )
-      : await performNetworkRequest(endpoint, {
-          method: 'POST',
-          headers,
-          body: requestBody,
-          timeoutMs: synthTimeoutMs,
-          timeoutMessage: synthTimeoutMessage,
-        })
+    const response = await performNetworkRequest(endpoint, {
+      method: 'POST',
+      headers,
+      body: requestBody,
+      timeoutMs: synthTimeoutMs,
+      timeoutMessage: synthTimeoutMessage,
+    })
 
     if (!response.ok) {
       throw new Error(await extractResponseErrorMessage(response, '语音播报请求失败（状态码：' + response.status + '）'))
-    }
-
-    if (isLocalQwen3Tts && response.body) {
-      const headerSampleRate = Number.parseInt(response.headers.get('x-audio-sample-rate') ?? '', 10)
-      return {
-        pcmStream: Readable.fromWeb(response.body),
-        pcmSampleRate: Number.isFinite(headerSampleRate) && headerSampleRate > 0 ? headerSampleRate : 24000,
-      }
     }
 
     const pcmBuffer = Buffer.from(await response.arrayBuffer())
@@ -1412,42 +955,11 @@ async function synthesizeRemoteTts(sessionPayload, text) {
     })
   }
 
-  // ── Fish Speech 1.5: high-quality local TTS ──
-  if (isFishSpeechSpeechOutputProvider(payload.providerId)) {
-    const fishBaseUrl = normalizeBaseUrl(payload.baseUrl) || 'http://127.0.0.1:8080'
-    const endpoint = `${fishBaseUrl}/v1/tts`
-    console.log('[Fish-Speech] synthesize:', content.slice(0, 40), 'voice:', payload.voice || '(default)')
-
-    const requestBody = JSON.stringify({
-      text: content,
-      reference_id: payload.voice || undefined,
-      format: 'wav',
-      streaming: false,
-    })
-
-    const response = await performNetworkRequest(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: requestBody,
-      timeoutMs: synthTimeoutMs,
-      timeoutMessage: 'Fish Speech 合成超时，请检查服务是否已启动。',
-    })
-
-    if (!response.ok) {
-      throw new Error(await extractResponseErrorMessage(response, `Fish Speech 合成失败（状态码：${response.status}）`))
-    }
-
-    const audioBase64 = Buffer.from(await response.arrayBuffer()).toString('base64')
-    return { audioBase64, mimeType: 'audio/wav' }
-  }
-
   throw new Error('当前语音输出提供商暂未接通流式播放。')
 }
 
-async function warmupRemoteTtsSession(sessionPayload) {
-  if (isLocalQwen3TtsSpeechOutputProvider(sessionPayload?.providerId)) {
-    await ensureLocalQwen3TtsService(sessionPayload?.baseUrl, sessionPayload?.model)
-  }
+async function warmupRemoteTtsSession(_sessionPayload) {
+  // No-op: previously used for local Qwen3-TTS service warm-up.
 }
 
 // ── Exports ──
@@ -1458,10 +970,6 @@ export {
   warmupRemoteTtsSession,
   buildAuthorizationHeaders,
   parseVolcengineSpeechCredentials,
-  isLocalQwen3TtsSpeechOutputProvider,
-  isPiperSpeechOutputProvider,
-  isCoquiSpeechOutputProvider,
-  isLocalCliSpeechOutputProvider,
   isElevenLabsProvider,
   isOpenAiCompatibleSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
@@ -1471,16 +979,12 @@ export {
   isVolcengineSpeechInputProvider,
   isOpenAiCompatibleSpeechInputProvider,
   isEdgeTtsSpeechOutputProvider,
-  isFishSpeechSpeechOutputProvider,
   resolveSpeechOutputBaseUrl,
   resolveSpeechOutputTimeoutMs,
   resolveSpeechOutputTimeoutMessage,
-  ensureLocalQwen3TtsService,
   toSpeechVoiceOption,
   extractMiniMaxVoiceOptions,
   buildOpenAiCompatibleSpeechRequestPayload,
-  synthesizePiperSpeechOutput,
-  synthesizeCoquiSpeechOutput,
   synthesizeVolcengineSpeechOutputWithFallback,
   formatVolcengineSpeechOutputCombo,
   createSilentWavBase64,

@@ -69,20 +69,7 @@ type BaseRecordingConversationOptions = {
   shouldAutoRestartVoice: () => boolean
 }
 
-export type StartApiRecordingConversationOptions = BaseRecordingConversationOptions & {
-  tryTranscribeWithSpeechInputFailover: (
-    audioBlob: Blob,
-    currentSettings: AppSettings,
-    error: unknown,
-  ) => Promise<string | null>
-}
-
-export type StartLocalWhisperRecordingConversationOptions = BaseRecordingConversationOptions & {
-  transcribeWithLocalWhisper: (
-    blob: Blob,
-    currentSettings: AppSettings,
-  ) => Promise<string>
-}
+export type StartApiRecordingConversationOptions = BaseRecordingConversationOptions
 
 function prepareRecordingConversation(
   params: BaseRecordingConversationOptions,
@@ -209,124 +196,8 @@ export async function startApiRecordingConversation(
           params.appendVoiceTrace('转写完成', `#${traceLabel} 已拿到识别文本`)
           await params.handleRecognizedVoiceTranscript(transcript, { traceId })
         } catch (error) {
-          const fallbackTranscript = await params.tryTranscribeWithSpeechInputFailover(
-            audioBlob,
-            params.currentSettings,
-            error,
-          )
-
-          if (fallbackTranscript !== null) {
-            if (!fallbackTranscript) {
-              params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
-              return
-            }
-
-            await params.handleRecognizedVoiceTranscript(fallbackTranscript, {
-              traceId: createId('voice'),
-            })
-            return
-          }
-
           params.handleVoiceListeningFailure(
             error instanceof Error ? error.message : '语音识别失败，请稍后再试。',
-          )
-        }
-      },
-    })
-  } catch (error) {
-    params.setContinuousVoiceSession(false)
-    params.setVoiceState('idle')
-    params.setMood('idle')
-    params.setError(
-      error instanceof Error
-        ? error.message
-        : '没有拿到麦克风权限，请在系统里允许应用访问麦克风。',
-    )
-  }
-}
-
-export async function startLocalWhisperRecordingConversation(
-  params: StartLocalWhisperRecordingConversationOptions,
-) {
-  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-    params.setContinuousVoiceSession(false)
-    params.setError('当前环境不支持本地录音识别，请检查麦克风权限。')
-    return
-  }
-
-  const prepared = prepareRecordingConversation(params)
-  if (!prepared.allowed) {
-    return
-  }
-
-  try {
-    await startRecordingSession({
-      sessionRef: params.apiRecordingRef,
-      stopRecording: () => params.stopApiRecording(),
-      threshold: API_RECORDING_RMS_THRESHOLD,
-      maxIdleMs: API_RECORDING_MAX_IDLE_MS,
-      silenceMs: API_RECORDING_SILENCE_MS,
-      maxDurationMs: API_RECORDING_MAX_DURATION_MS,
-      onReady: () => {
-        params.beginVoiceListeningSession('local_whisper')
-        params.setMood('happy')
-        params.setError(null)
-        params.setLiveTranscript('')
-        params.updateVoicePipeline(
-          'listening',
-          params.shouldAutoRestartVoice() ? '本地连续语音已启动，正在听你说话' : '正在本地识别你的语音',
-        )
-
-        if (!prepared.passive) {
-          params.showPetStatus(
-            params.shouldAutoRestartVoice()
-              ? '本地离线语音已开启，我在听，你可以继续说。'
-              : '我在本地离线识别模式下听你说话。',
-            4_200,
-            3_600,
-          )
-        }
-      },
-      onSpeech: () => {
-        params.setLiveTranscript('正在本地录音，请继续...')
-      },
-      onRecorderError: () => {
-        params.handleVoiceListeningFailure('本地录音失败，请检查麦克风是否可用。')
-      },
-      onStop: async ({ audioBlob, session }) => {
-        if (session.cancelled) {
-          params.handleVoiceListeningFailure('语音识别已停止。', 'aborted')
-          return
-        }
-
-        if (!session.hasDetectedSpeech || audioBlob.size === 0) {
-          params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
-          return
-        }
-
-        try {
-          params.dispatchVoiceSessionAndSync({ type: 'stt_finalizing' })
-          params.setMood('thinking')
-          params.updateVoicePipeline('transcribing', '录音结束，正在用本地 Whisper 转写')
-          params.showPetStatus('本地 Whisper 识别中...', 4_000, 3_600)
-          const traceId = createId('voice')
-          const traceLabel = formatTraceLabel(traceId)
-          params.appendVoiceTrace('开始本地转写', `#${traceLabel} 正在调用本地 Whisper`)
-          const transcript = (await params.transcribeWithLocalWhisper(
-            audioBlob,
-            params.currentSettings,
-          )).trim()
-
-          if (!transcript) {
-            params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
-            return
-          }
-
-          params.appendVoiceTrace('本地转写完成', `#${traceLabel} 已拿到识别文本`)
-          await params.handleRecognizedVoiceTranscript(transcript, { traceId })
-        } catch (error) {
-          params.handleVoiceListeningFailure(
-            error instanceof Error ? error.message : '本地 Whisper 识别失败，请稍后再试。',
           )
         }
       },

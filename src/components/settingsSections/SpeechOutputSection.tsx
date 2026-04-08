@@ -13,12 +13,8 @@ import {
   getSpeechOutputAdjustmentSupport,
   getSpeechOutputModelOptions,
   getSpeechOutputProviderPreset,
-  isBrowserSpeechOutputProvider,
-  isCoquiSpeechOutputProvider,
   isEdgeTtsSpeechOutputProvider,
-  isLocalSherpaSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
-  isPiperSpeechOutputProvider,
   isVolcengineSpeechOutputProvider,
   USER_VISIBLE_SPEECH_OUTPUT_PROVIDER_PRESETS,
 } from '../../lib/audioProviders'
@@ -29,19 +25,10 @@ import type {
   SpeechVoiceOption,
 } from '../../types'
 
-type BrowserVoiceOption = {
-  id: string
-  name: string
-  lang: string
-  localService: boolean
-  default: boolean
-}
-
 type SpeechOutputSectionProps = {
   active: boolean
   draft: AppSettings
   setDraft: Dispatch<SetStateAction<AppSettings>>
-  localVoices: BrowserVoiceOption[]
   speechVoiceOptions: SpeechVoiceOption[]
   speechVoiceStatus: ConnectionResult | null
   loadingSpeechVoices: boolean
@@ -61,7 +48,6 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
   active,
   draft,
   setDraft,
-  localVoices,
   speechVoiceOptions,
   speechVoiceStatus,
   loadingSpeechVoices,
@@ -80,54 +66,22 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
   const speechOutputAdjustmentSupport = getSpeechOutputAdjustmentSupport(draft.speechOutputProviderId)
   const speechOutputModelOptions = getSpeechOutputModelOptions(draft.speechOutputProviderId)
   const isVolcengineSpeechOutput = isVolcengineSpeechOutputProvider(draft.speechOutputProviderId)
-  const isLocalSherpaSpeechOutput = isLocalSherpaSpeechOutputProvider(draft.speechOutputProviderId)
-  const isPiperSpeechOutput = isPiperSpeechOutputProvider(draft.speechOutputProviderId)
-  const isCoquiSpeechOutput = isCoquiSpeechOutputProvider(draft.speechOutputProviderId)
   const isEdgeTtsSpeechOutput = isEdgeTtsSpeechOutputProvider(draft.speechOutputProviderId)
-  const isLocalCliSpeechOutput = isPiperSpeechOutput || isCoquiSpeechOutput
   const isCosyVoiceSpeechOutput = draft.speechOutputProviderId === 'cosyvoice-tts'
-  const hideApiCredentials = isEdgeTtsSpeechOutput || isLocalCliSpeechOutput
+  const hideApiCredentials = isEdgeTtsSpeechOutput
   const speechOutputVolcengineCredentials = parseVolcengineCredentialParts(draft.speechOutputApiKey)
-  const speechOutputBaseUrlLabel = isPiperSpeechOutput
-    ? 'Piper 可执行文件路径'
-    : isCoquiSpeechOutput
-      ? 'Coqui 命令路径'
-      : '语音输出接口地址'
-  const speechOutputBaseUrlHint = isPiperSpeechOutput
-    ? '留空时会直接使用系统 PATH 里的 `piper` 命令；如果你是便携版或自定义安装目录，这里填写 `piper.exe` 的绝对路径即可。'
-    : isCoquiSpeechOutput
-      ? '留空时会直接使用系统 PATH 里的 `tts` 命令；如果你有独立环境或脚本包装器，这里填写实际可执行命令路径。'
-      : ''
+  const speechOutputBaseUrlLabel = '语音输出接口地址'
+  const speechOutputBaseUrlHint = ''
   const speechOutputModelLabel = isVolcengineSpeechOutput
     ? '语音业务集群'
-    : isPiperSpeechOutput
-      ? 'Piper 模型 (.onnx)'
-      : isCoquiSpeechOutput
-        ? 'Coqui model_name'
-        : '语音输出模型'
-  const speechOutputModelHint = isPiperSpeechOutput
-    ? '这里填写本地 Piper `.onnx` 音色模型路径，例如 `F:\\models\\zh_CN-huayan-medium.onnx`。这是必填项。'
-    : isCoquiSpeechOutput
-      ? '这里填写 Coqui CLI 可识别的 `model_name`，例如 `tts_models/zh-CN/baker/tacotron2-DDC-GST`。这是必填项。'
-      : ''
+    : '语音输出模型'
+  const speechOutputModelHint = ''
   const speechOutputVoiceLabel = isVolcengineSpeechOutput
     ? '播报音色类型'
-    : isLocalSherpaSpeechOutput
-      ? '本地 Speaker SID'
-      : isPiperSpeechOutput
-        ? 'Piper speaker id（可选）'
-        : isCoquiSpeechOutput
-          ? 'Coqui speaker_idx / speaker（可选）'
-          : isCosyVoiceSpeechOutput
-            ? 'CosyVoice2 音色 / spk_id'
-            : '播报音色 / 音色 ID'
-  const speechOutputVoiceHint = isLocalSherpaSpeechOutput
-    ? '这里填写的是 Sherpa TTS 的 speaker sid。未填写或填错时会自动回退到 `0`。'
-    : isPiperSpeechOutput
-      ? '多说话人 Piper 模型可以在这里填 speaker id；单说话人模型留空即可，运行时会走模型默认 speaker。'
-      : isCoquiSpeechOutput
-        ? '多说话人 Coqui 模型可以在这里填 `speaker_idx` 或 speaker 名称；留空时会让 CLI 按模型默认值合成。'
-        : ''
+    : isCosyVoiceSpeechOutput
+      ? 'CosyVoice2 音色 / spk_id'
+      : '播报音色 / 音色 ID'
+  const speechOutputVoiceHint = ''
 
   function updateSpeechOutputVolcengineCredential(partial: Partial<VolcengineCredentialParts>) {
     setDraft((prev) => {
@@ -180,34 +134,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
         {speechOutputProvider.defaultModel ? `，默认模型：${speechOutputProvider.defaultModel}` : ''}
       </p>
 
-      {isBrowserSpeechOutputProvider(draft.speechOutputProviderId) ? (
-        <>
-          <label>
-            <span>本地系统音色</span>
-            <select
-              value={draft.speechOutputVoice}
-              onChange={(event) =>
-                setDraft((prev) => updateCurrentSpeechOutputProviderProfile(prev, {
-                  voice: event.target.value,
-                }))
-              }
-            >
-              <option value="">自动匹配当前语言</option>
-              {localVoices.map((voice) => (
-                <option key={voice.id} value={voice.id}>
-                  {voice.name} ({voice.lang})
-                  {voice.default ? ' · 默认' : ''}
-                  {voice.localService ? ' · 本地' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <p className="settings-drawer__hint">
-            本地系统语音不会走云端。若系统里安装了中文女声，这里可以直接选中使用。
-          </p>
-        </>
-      ) : isEdgeTtsSpeechOutput ? (
+      {isEdgeTtsSpeechOutput ? (
         <>
           <label>
             <span>音色</span>
@@ -345,14 +272,12 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
             </p>
           ) : null}
 
-          {isMiniMaxSpeechOutputProvider(draft.speechOutputProviderId) || isLocalSherpaSpeechOutput ? (
+          {isMiniMaxSpeechOutputProvider(draft.speechOutputProviderId) ? (
             <>
               <div className="settings-section__title-row">
                 <div>
                   <p className="settings-drawer__hint">
-                    {isLocalSherpaSpeechOutput
-                      ? '本地 Sherpa TTS 会按当前模型实际支持的 speaker 数返回 sid 列表。切换模型后建议先刷新一次。'
-                      : 'MiniMax 已接入在线音色列表。保存前可以先刷新一次，确认下拉选项和当前密钥都正常。'}
+                    MiniMax 已接入在线音色列表。保存前可以先刷新一次，确认下拉选项和当前密钥都正常。
                   </p>
                 </div>
                 <button
@@ -361,12 +286,12 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
                   onClick={onLoadSpeechVoices}
                   disabled={loadingSpeechVoices}
                 >
-                  {loadingSpeechVoices ? '拉取中...' : (isLocalSherpaSpeechOutput ? '刷新本地 Speaker' : '刷新 MiniMax 音色')}
+                  {loadingSpeechVoices ? '拉取中...' : '刷新 MiniMax 音色'}
                 </button>
               </div>
 
               <label>
-                <span>{isLocalSherpaSpeechOutput ? '本地 Sherpa 可选 Speaker' : 'MiniMax 可选音色'}</span>
+                <span>MiniMax 可选音色</span>
                 <select
                   value={speechVoiceOptions.some((voice) => voice.id === draft.speechOutputVoice)
                     ? draft.speechOutputVoice
@@ -381,7 +306,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
                   <option value="__keep-current__">
                     {draft.speechOutputVoice
                       ? `保留当前值：${draft.speechOutputVoice}`
-                      : (isLocalSherpaSpeechOutput ? '请选择一个本地 Speaker sid' : '请选择一个 MiniMax 音色')}
+                      : '请选择一个 MiniMax 音色'}
                   </option>
                   {speechVoiceOptions.map((voice) => (
                     <option key={voice.id} value={voice.id}>
@@ -394,17 +319,14 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
               {speechVoiceOptions.length ? (
                 <p className="settings-drawer__hint">
                   {speechVoiceOptions.find((voice) => voice.id === draft.speechOutputVoice)?.description
-                    ?? (isLocalSherpaSpeechOutput
-                      ? '已加载本地 Sherpa speaker 列表，也可以继续手动填写 sid。'
-                      : '已加载 MiniMax 音色列表，也可以继续手动填写音色 ID。')}
+                    ?? '已加载 MiniMax 音色列表，也可以继续手动填写音色 ID。'}
                 </p>
               ) : null}
             </>
           ) : null}
 
           {speechVoiceOptions.length
-            && !isMiniMaxSpeechOutputProvider(draft.speechOutputProviderId)
-            && !isLocalCliSpeechOutput ? (
+            && !isMiniMaxSpeechOutputProvider(draft.speechOutputProviderId) ? (
             <>
               <label>
                 <span>{
@@ -469,20 +391,18 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
             </div>
           ) : null}
 
-          {!isLocalCliSpeechOutput ? (
-            <label>
-              <span>播报风格指令（OpenAI / CosyVoice2 可用）</span>
-              <textarea
-                rows={3}
-                value={draft.speechOutputInstructions}
-                onChange={(event) =>
-                  setDraft((prev) => updateCurrentSpeechOutputProviderProfile(prev, {
-                    instructions: event.target.value,
-                  }))
-                }
-              />
-            </label>
-          ) : null}
+          <label>
+            <span>播报风格指令（OpenAI / CosyVoice2 可用）</span>
+            <textarea
+              rows={3}
+              value={draft.speechOutputInstructions}
+              onChange={(event) =>
+                setDraft((prev) => updateCurrentSpeechOutputProviderProfile(prev, {
+                  instructions: event.target.value,
+                }))
+              }
+            />
+          </label>
         </>
       )}
 

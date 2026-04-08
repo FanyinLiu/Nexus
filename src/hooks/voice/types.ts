@@ -36,20 +36,6 @@ export type VadConversationSession = {
   speechDetected: boolean
 }
 
-export type SherpaConversationState = {
-  noSpeechTimer: number | null
-  maxDurationTimer: number | null
-  endpointFinalizeTimer: number | null
-  partialCount: number
-  endpointCount: number
-}
-
-export type FunasrConversationState = {
-  noSpeechTimer: number | null
-  maxDurationTimer: number | null
-  partialCount: number
-}
-
 export type SpeechInterruptMonitorSession = {
   stream: MediaStream
   audioContext: AudioContext

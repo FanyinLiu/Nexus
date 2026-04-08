@@ -2,9 +2,7 @@
 import {
   createInitialWakewordRuntimeState,
   hearingConfigFromSettings,
-  type FunasrStreamSession,
   type SenseVoiceStreamSession,
-  type SherpaStreamSession,
   type WakewordRuntimeController,
 } from '../features/hearing'
 import type { TencentAsrStreamSession } from '../features/hearing/tencentAsr'
@@ -20,7 +18,6 @@ import {
 } from '../features/voice'
 import {
   createId,
-  isBrowserSpeechRecognitionSupported,
   loadVoiceTrace,
   loadVoicePipelineState,
   saveVoiceTrace,
@@ -53,25 +50,15 @@ import {
   testSpeechOutputReadinessRuntime,
 } from './voice/diagnostics'
 import {
-  applySpeechInputProviderFallbackRuntime,
   applySpeechOutputProviderFallbackRuntime,
   buildSpeechOutputFailoverCandidatesRuntime,
   ensureSupportedSpeechInputSettingsRuntime,
-  maybeRescoreSherpaTranscriptRuntime,
-  switchSpeechInputToLocalWhisperRuntime,
-  tryTranscribeWithSpeechInputFailoverRuntime,
 } from './voice/providerFallbacks'
 import {
-  transcribeWithLocalWhisper as transcribeWithLocalWhisperRuntime,
-} from './voice/localAsr'
-import {
   startApiRecordingConversation,
-  startLocalWhisperRecordingConversation,
 } from './voice/recordingConversations'
-import { startFunasrConversation } from './voice/funasrConversation'
 import { startTencentConversation, type TencentConversationState } from './voice/tencentConversation'
 import { startSenseVoiceConversation, type SenseVoiceConversationState } from './voice/sensevoiceConversation'
-import { startSherpaConversation } from './voice/sherpaConversation'
 import {
   beginStreamingSpeechReplyRuntime,
   speakAssistantReplyRuntime,
@@ -90,10 +77,8 @@ import {
   cleanupVoiceRuntimeResources,
   createWakewordRuntimeBinding,
   beginVoiceListeningSessionRuntime,
-  clearFunasrConversationStateRuntime,
   clearTencentConversationStateRuntime,
   clearSenseVoiceConversationStateRuntime,
-  clearSherpaConversationStateRuntime,
   destroyVadSessionRuntime,
   dispatchVoiceSessionAndSyncRuntime,
   dispatchVoiceSessionRuntime,
@@ -121,8 +106,6 @@ import type {
 } from '../types'
 import type {
   ApiRecordingSession,
-  FunasrConversationState,
-  SherpaConversationState,
   SpeechInterruptMonitorSession,
   SpeechSegmentMeta,
   StreamingSpeechOutputController,
@@ -178,12 +161,8 @@ export function useVoice(ctx: UseVoiceContext) {
       reject: (error: Error) => void
     }>(),
   )
-  const sherpaSessionRef = useRef<SherpaStreamSession | null>(null)
-  const sherpaConversationRef = useRef<SherpaConversationState | null>(null)
   const sensevoiceSessionRef = useRef<SenseVoiceStreamSession | null>(null)
   const sensevoiceConversationRef = useRef<SenseVoiceConversationState | null>(null)
-  const funasrSessionRef = useRef<FunasrStreamSession | null>(null)
-  const funasrConversationRef = useRef<FunasrConversationState | null>(null)
   const tencentAsrSessionRef = useRef<TencentAsrStreamSession | null>(null)
   const tencentConversationRef = useRef<TencentConversationState | null>(null)
   const speechInterruptMonitorRef = useRef<SpeechInterruptMonitorSession | null>(null)
@@ -218,7 +197,6 @@ export function useVoice(ctx: UseVoiceContext) {
   }
   const voiceBus = voiceBusRef.current
 
-  const browserSpeechRecognitionSupported = isBrowserSpeechRecognitionSupported()
   const setSettings = ctx.setSettings
 
   // ── Bus effect executor ────────────────────────────────────────────────
@@ -452,23 +430,9 @@ export function useVoice(ctx: UseVoiceContext) {
     })
   }
 
-  function clearSherpaConversationState() {
-    clearSherpaConversationStateRuntime({
-      sherpaConversationRef,
-      setSpeechLevelValue,
-    })
-  }
-
   function clearSenseVoiceConversationState() {
     clearSenseVoiceConversationStateRuntime({
       sensevoiceConversationRef,
-      setSpeechLevelValue,
-    })
-  }
-
-  function clearFunasrConversationState() {
-    clearFunasrConversationStateRuntime({
-      funasrConversationRef,
       setSpeechLevelValue,
     })
   }
@@ -520,32 +484,13 @@ export function useVoice(ctx: UseVoiceContext) {
       speechSettings,
       runtime: {
         getAudioPlaybackQueue,
-        simulateBrowserSpeech: (content, rate) => {
-          getSpeechLevelController().simulateText(content, rate)
-        },
         stopSpeechTracking,
       },
       callbacks: options,
       buildSpeechOutputFailoverCandidates,
       applySpeechOutputProviderFallback,
-      switchSpeechOutputToBrowser,
       appendVoiceTrace,
     })
-  }
-
-  async function transcribeWithLocalWhisper(blob: Blob, currentSettings: AppSettings) {
-    return transcribeWithLocalWhisperRuntime(
-      {
-        workerRef: localAsrWorkerRef,
-        requestIdRef: localAsrRequestIdRef,
-        pendingRef: localAsrPendingRef,
-      },
-      blob,
-      currentSettings,
-      {
-        appendVoiceTrace,
-      },
-    )
   }
 
   function resetNoSpeechRestartCount() {
@@ -634,61 +579,6 @@ export function useVoice(ctx: UseVoiceContext) {
     })
   }, [ctx, showPetStatus])
 
-  function applySpeechInputProviderFallback(providerId: string, statusText?: string) {
-    return applySpeechInputProviderFallbackRuntime({
-      providerId,
-      statusText,
-      settingsRef: ctx.settingsRef,
-      showPetStatus,
-    })
-  }
-
-  function switchSpeechInputToLocalWhisper(statusText?: string) {
-    return switchSpeechInputToLocalWhisperRuntime({
-      statusText,
-      settingsRef: ctx.settingsRef,
-      activeVoiceConversationOptions: activeVoiceConversationOptionsRef.current,
-      showPetStatus,
-      startLocalWhisperConversation,
-    })
-  }
-
-  async function maybeRescoreSherpaTranscript(options: {
-    transcript: string
-    audioSamples: Float32Array | null
-    sampleRate: number
-    currentSettings: AppSettings
-    partialCount: number
-    endpointCount: number
-    traceLabel: string
-  }) {
-    return maybeRescoreSherpaTranscriptRuntime({
-      ...options,
-      transcribeWithLocalWhisper,
-      appendVoiceTrace,
-      updateVoicePipeline,
-    })
-  }
-
-  async function tryTranscribeWithSpeechInputFailover(
-    audioBlob: Blob,
-    currentSettings: AppSettings,
-    error: unknown,
-  ) {
-    return tryTranscribeWithSpeechInputFailoverRuntime({
-      audioBlob,
-      currentSettings,
-      error,
-      transcribeWithLocalWhisper,
-      applySpeechInputProviderFallback,
-      appendVoiceTrace,
-    })
-  }
-
-  function switchSpeechOutputToBrowser(statusText?: string) {
-    return applySpeechOutputProviderFallback('cosyvoice-tts', statusText)
-  }
-
   function applySpeechOutputProviderFallback(providerId: string, statusText?: string) {
     return applySpeechOutputProviderFallbackRuntime({
       providerId,
@@ -705,9 +595,8 @@ export function useVoice(ctx: UseVoiceContext) {
   const testSpeechInputReadiness = useCallback(async (draftSettings: AppSettings) => {
     return testSpeechInputReadinessRuntime({
       draftSettings,
-      browserSpeechRecognitionSupported,
     })
-  }, [browserSpeechRecognitionSupported])
+  }, [])
 
   // ── Transcript handling ────────────────────────────────────────────────────
 
@@ -859,7 +748,6 @@ export function useVoice(ctx: UseVoiceContext) {
           streamAudioPlayerRef.current = null
         },
       },
-      switchSpeechOutputToBrowser,
     })
   }
 
@@ -894,49 +782,9 @@ export function useVoice(ctx: UseVoiceContext) {
       showPetStatus,
       setSpeechLevelValue,
       destroyVadSession,
-      transcribeWithLocalWhisper,
-      tryTranscribeWithSpeechInputFailover,
       handleRecognizedVoiceTranscript,
       handleVoiceListeningFailure,
-      startFallbackConversation: transcribeMode === 'local'
-        ? startLocalWhisperConversation
-        : startApiVoiceConversation,
-      shouldAutoRestartVoice,
-    })
-  }
-
-  // ── Sherpa-onnx streaming conversation ────────────────────────────────────
-
-  async function startSherpaVoiceConversation(options?: VoiceConversationOptions) {
-    await startSherpaConversation({
-      options,
-      currentSettings: ctx.settingsRef.current,
-      voiceStateRef,
-      suppressVoiceReplyRef,
-      sherpaSessionRef,
-      sherpaConversationRef,
-      clearPendingVoiceRestart,
-      canInterruptSpeech,
-      interruptSpeakingForVoiceInput,
-      setContinuousVoiceSession,
-      shouldKeepContinuousVoiceSession,
-      resetNoSpeechRestartCount,
-      clearSherpaConversationState,
-      beginVoiceListeningSession,
-      dispatchVoiceSession,
-      dispatchVoiceSessionAndSync,
-      setVoiceState,
-      setMood: ctx.setMood,
-      setError: ctx.setError,
-      setLiveTranscript,
-      updateVoicePipeline,
-      appendVoiceTrace,
-      showPetStatus,
-      setSpeechLevelValue,
-      maybeRescoreSherpaTranscript,
-      handleRecognizedVoiceTranscript,
-      handleVoiceListeningFailure,
-      switchSpeechInputToLocalWhisper,
+      startFallbackConversation: startApiVoiceConversation,
       shouldAutoRestartVoice,
     })
   }
@@ -971,42 +819,6 @@ export function useVoice(ctx: UseVoiceContext) {
       setSpeechLevelValue,
       handleRecognizedVoiceTranscript,
       handleVoiceListeningFailure,
-      switchSpeechInputToLocalWhisper,
-      shouldAutoRestartVoice,
-    })
-  }
-
-  // ── FunASR streaming conversation ──────────────────────────────────────────
-
-  async function startFunasrVoiceConversation(options?: VoiceConversationOptions) {
-    await startFunasrConversation({
-      options,
-      currentSettings: ctx.settingsRef.current,
-      voiceStateRef,
-      suppressVoiceReplyRef,
-      funasrSessionRef,
-      funasrConversationRef,
-      clearPendingVoiceRestart,
-      canInterruptSpeech,
-      interruptSpeakingForVoiceInput,
-      setContinuousVoiceSession,
-      shouldKeepContinuousVoiceSession,
-      resetNoSpeechRestartCount,
-      clearFunasrConversationState,
-      beginVoiceListeningSession,
-      dispatchVoiceSession,
-      dispatchVoiceSessionAndSync,
-      setVoiceState,
-      setMood: ctx.setMood,
-      setError: ctx.setError,
-      setLiveTranscript,
-      updateVoicePipeline,
-      appendVoiceTrace,
-      showPetStatus,
-      setSpeechLevelValue,
-      handleRecognizedVoiceTranscript,
-      handleVoiceListeningFailure,
-      switchSpeechInputToLocalWhisper,
       shouldAutoRestartVoice,
     })
   }
@@ -1041,7 +853,6 @@ export function useVoice(ctx: UseVoiceContext) {
       setSpeechLevelValue,
       handleRecognizedVoiceTranscript,
       handleVoiceListeningFailure,
-      switchSpeechInputToLocalWhisper,
       shouldAutoRestartVoice,
     })
   }
@@ -1073,42 +884,6 @@ export function useVoice(ctx: UseVoiceContext) {
       showPetStatus,
       handleRecognizedVoiceTranscript,
       handleVoiceListeningFailure,
-      tryTranscribeWithSpeechInputFailover,
-      shouldAutoRestartVoice,
-    })
-  }
-
-  // ── Local Whisper conversation ─────────────────────────────────────────────
-
-  async function startLocalWhisperConversation(
-    options?: VoiceConversationOptions,
-    runtimeSettings?: AppSettings,
-  ) {
-    await startLocalWhisperRecordingConversation({
-      options,
-      currentSettings: runtimeSettings ?? ctx.settingsRef.current,
-      apiRecordingRef,
-      voiceStateRef,
-      suppressVoiceReplyRef,
-      clearPendingVoiceRestart,
-      canInterruptSpeech,
-      interruptSpeakingForVoiceInput,
-      setContinuousVoiceSession,
-      shouldKeepContinuousVoiceSession,
-      resetNoSpeechRestartCount,
-      stopApiRecording,
-      beginVoiceListeningSession,
-      dispatchVoiceSessionAndSync,
-      setVoiceState,
-      setMood: ctx.setMood,
-      setError: ctx.setError,
-      setLiveTranscript,
-      updateVoicePipeline,
-      appendVoiceTrace,
-      showPetStatus,
-      handleRecognizedVoiceTranscript,
-      handleVoiceListeningFailure,
-      transcribeWithLocalWhisper,
       shouldAutoRestartVoice,
     })
   }
@@ -1150,9 +925,7 @@ export function useVoice(ctx: UseVoiceContext) {
       suppressVoiceReplyRef,
       recognitionRef,
       vadSessionRef,
-      sherpaSessionRef,
       sensevoiceSessionRef,
-      funasrSessionRef,
       tencentAsrSessionRef,
       clearPendingVoiceRestart,
       canInterruptSpeech,
@@ -1172,13 +945,9 @@ export function useVoice(ctx: UseVoiceContext) {
       shouldAutoRestartVoice,
       scheduleVoiceRestart,
       ensureSupportedSpeechInputSettings,
-      switchSpeechInputToLocalWhisper,
-      startSherpaVoiceConversation,
       startSenseVoiceConversation: startSenseVoiceVoiceConversation,
-      startFunasrVoiceConversation,
       startTencentAsrConversation,
       startVadVoiceConversation,
-      startLocalWhisperConversation,
       startApiVoiceConversation,
     })
     } catch (err) {
@@ -1193,16 +962,12 @@ export function useVoice(ctx: UseVoiceContext) {
       continuousVoiceActiveRef,
       suppressVoiceReplyRef,
       recognitionRef,
-      sherpaSessionRef,
       sensevoiceSessionRef,
-      funasrSessionRef,
       tencentAsrSessionRef,
       clearPendingVoiceRestart,
       setContinuousVoiceSession,
       resetNoSpeechRestartCount,
-      clearSherpaConversationState,
       clearSenseVoiceConversationState,
-      clearFunasrConversationState,
       clearTencentConversationState,
       stopApiRecording,
       stopVadListening,
@@ -1460,7 +1225,6 @@ export function useVoice(ctx: UseVoiceContext) {
         recognitionRef,
         stopApiRecording: stopApiRecordingRef.current,
         stopVadListening: stopVadListeningRef.current,
-        sherpaConversationRef,
         speechLevelValueRef,
         setSpeechLevel,
         stopActiveSpeechOutput: stopActiveSpeechOutputRef.current,
@@ -1469,7 +1233,6 @@ export function useVoice(ctx: UseVoiceContext) {
           requestIdRef: localAsrRequestIdRef,
           pendingRef: localAsrPendingRef,
         },
-        sherpaSessionRef,
         sensevoiceSessionRef,
         wakewordRuntimeRef,
       })

@@ -727,7 +727,6 @@ export function SettingsDrawer({
           active={activeSectionId === 'voice'}
           draft={draft}
           setDraft={setDraft}
-          localVoices={speechVoices.localVoices}
           speechVoiceOptions={speechVoices.speechVoiceOptions}
           speechVoiceStatus={speechVoices.speechVoiceStatus}
           loadingSpeechVoices={speechVoices.loadingSpeechVoices}

@@ -15,13 +15,10 @@ import {
   formatConnectionFailureMessage,
 } from '../net.js'
 import {
-  isLocalQwen3TtsSpeechOutputProvider,
-  isLocalCliSpeechOutputProvider,
   isVolcengineSpeechInputProvider,
   isVolcengineSpeechOutputProvider,
   parseVolcengineSpeechCredentials,
   resolveSpeechOutputBaseUrl,
-  ensureLocalQwen3TtsService,
 } from '../services/ttsService.js'
 import {
   runSpeechInputConnectionSmokeTest,
@@ -315,15 +312,11 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     let baseUrl
     if (payload.capability !== 'speech-output') {
       baseUrl = normalizeBaseUrl(payload.baseUrl)
-    } else if (isLocalQwen3TtsSpeechOutputProvider(payload.providerId)) {
-      baseUrl = await ensureLocalQwen3TtsService(payload.baseUrl, payload.model)
-    } else if (isLocalCliSpeechOutputProvider(payload.providerId)) {
-      baseUrl = normalizeBaseUrl(payload.baseUrl)
     } else {
       baseUrl = resolveSpeechOutputBaseUrl(payload.providerId, payload.baseUrl)
     }
 
-    if (!baseUrl && !(payload.capability === 'speech-output' && isLocalCliSpeechOutputProvider(payload.providerId))) {
+    if (!baseUrl) {
       return {
         ok: false,
         message: '请先填写 API Base URL。',

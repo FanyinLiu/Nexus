@@ -1,58 +1,8 @@
 import { ipcMain } from 'electron'
-import sherpaAsrService from '../sherpaAsr.js'
 import sherpaKwsService from '../sherpaKws.js'
 import sherpaSenseVoiceService from '../sherpaSenseVoice.js'
 
 export function register() {
-  ipcMain.handle('sherpa:status', () => {
-    return sherpaAsrService.getModelStatus()
-  })
-
-  ipcMain.handle('sherpa:start', (_event, payload) => {
-    if (!sherpaAsrService.isAvailable()) {
-      throw new Error('sherpa-onnx-node 未安装，请先运行 npm install sherpa-onnx-node。')
-    }
-
-    const modelId = String(payload?.modelId ?? '').trim() || undefined
-    const ok = sherpaAsrService.startStream(modelId)
-    if (!ok) {
-      const status = sherpaAsrService.getModelStatus(modelId)
-      throw new Error(
-        status.modelFound
-          ? '本地流式识别引擎初始化失败，请检查模型文件完整性。'
-          : modelId
-            ? `未找到流式语音模型 ${modelId}，请将对应模型放到 ${status.modelsDir} 目录下。`
-            : `未找到流式语音模型，请将模型放到 ${status.modelsDir} 目录下。`,
-      )
-    }
-
-    return {
-      ok: true,
-      sampleRate: sherpaAsrService.getSampleRate(),
-    }
-  })
-
-  ipcMain.handle('sherpa:feed', (_event, payload) => {
-    const { samples, sampleRate } = payload
-    if (!samples || !samples.length) return { partial: null, endpoint: null }
-
-    const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
-    const partial = sherpaAsrService.feedAudio(float32, sampleRate)
-    const endpoint = sherpaAsrService.checkEndpoint()
-
-    return { partial, endpoint }
-  })
-
-  ipcMain.handle('sherpa:finish', () => {
-    const text = sherpaAsrService.finishStream()
-    return { text }
-  })
-
-  ipcMain.handle('sherpa:abort', () => {
-    sherpaAsrService.abortStream()
-    return { ok: true }
-  })
-
   ipcMain.handle('kws:status', (_event, payload) => {
     return sherpaKwsService.getStatus(payload)
   })

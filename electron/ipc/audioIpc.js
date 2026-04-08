@@ -1,12 +1,5 @@
 import { randomUUID } from 'node:crypto'
 import { ipcMain } from 'electron'
-let _sherpaTtsService = null
-function getSherpaTtsService() {
-  if (!_sherpaTtsService) {
-    _sherpaTtsService = import('../sherpaTts.js')
-  }
-  return _sherpaTtsService
-}
 import { decodePcm16LeBufferToFloat32, encodeFloat32ToWav, enhanceSpeechSamples } from '../audioPostprocess.js'
 import {
   normalizeBaseUrl,
@@ -22,28 +15,20 @@ import {
 import {
   buildAuthorizationHeaders,
   parseVolcengineSpeechCredentials,
-  isLocalQwen3TtsSpeechOutputProvider,
-  isPiperSpeechOutputProvider,
-  isCoquiSpeechOutputProvider,
-  isLocalCliSpeechOutputProvider,
   isElevenLabsProvider,
   isOpenAiCompatibleSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
   isDashScopeSpeechOutputProvider,
   isCosyVoiceSpeechOutputProvider,
-  isFishSpeechSpeechOutputProvider,
   isVolcengineSpeechOutputProvider,
   isVolcengineSpeechInputProvider,
   isOpenAiCompatibleSpeechInputProvider,
   resolveSpeechOutputBaseUrl,
   resolveSpeechOutputTimeoutMs,
   resolveSpeechOutputTimeoutMessage,
-  ensureLocalQwen3TtsService,
   toSpeechVoiceOption,
   extractMiniMaxVoiceOptions,
   buildOpenAiCompatibleSpeechRequestPayload,
-  synthesizePiperSpeechOutput,
-  synthesizeCoquiSpeechOutput,
   synthesizeVolcengineSpeechOutputWithFallback,
   formatVolcengineSpeechOutputCombo,
   mapLanguageToMiniMaxBoost,
@@ -52,79 +37,7 @@ import {
 
 export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT_MS, VOICE_CLONE_TIMEOUT_MS }) {
   ipcMain.handle('audio:list-voices', async (_event, payload) => {
-    if (payload.providerId === 'local-sherpa-tts') {
-      const sherpaTtsService = await getSherpaTtsService()
-      if (!sherpaTtsService.isAvailable()) {
-        return {
-          voices: [],
-          message: '本地 Sherpa TTS 当前不可用，请先确认模型目录完整。',
-        }
-      }
-
-      const voices = await sherpaTtsService.listVoices()
-      return {
-        voices,
-        message: voices.length
-          ? `已识别到 ${voices.length} 个本地 Sherpa speaker。`
-          : '本地 Sherpa TTS 当前没有返回可用 speaker。',
-      }
-    }
-
-    if (isLocalCliSpeechOutputProvider(payload.providerId)) {
-      return {
-        voices: [],
-        message: 'This local CLI provider does not expose a voice list API. Fill the speaker / voice field manually if your Piper or Coqui model supports it.',
-      }
-    }
-
-    if (isFishSpeechSpeechOutputProvider(payload.providerId)) {
-      const fishBaseUrl = normalizeBaseUrl(payload.baseUrl) || 'http://127.0.0.1:8080'
-      let fishResponse
-      try {
-        fishResponse = await performNetworkRequest(`${fishBaseUrl}/v1/models`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          timeoutMs: AUDIO_VOICE_LIST_TIMEOUT_MS,
-          timeoutMessage: 'Fish Speech 音色列表拉取超时，请检查服务是否已启动。',
-        })
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error)
-        throw new Error(`Fish Speech 音色列表请求失败：${reason}`)
-      }
-
-      const fishData = await readJsonSafe(fishResponse)
-
-      if (!fishResponse.ok) {
-        throw new Error(
-          fishData?.detail ?? fishData?.message ?? `Fish Speech 音色列表请求失败（状态码：${fishResponse.status}）`,
-        )
-      }
-
-      const fishVoices = Array.isArray(fishData)
-        ? fishData.map((item) => ({
-            id: String(item?.id ?? item?.name ?? ''),
-            label: String(item?.name ?? item?.id ?? ''),
-            description: item?.description || '',
-          })).filter((v) => v.id)
-        : Array.isArray(fishData?.data)
-          ? fishData.data.map((item) => ({
-              id: String(item?.id ?? item?.name ?? ''),
-              label: String(item?.name ?? item?.id ?? ''),
-              description: item?.description || '',
-            })).filter((v) => v.id)
-          : []
-
-      return {
-        voices: fishVoices,
-        message: fishVoices.length
-          ? `已拉取 ${fishVoices.length} 个 Fish Speech 参考音色。`
-          : 'Fish Speech 服务已响应，但当前没有返回可用参考音色。可在 voice 栏留空使用默认音色。',
-      }
-    }
-
-    const baseUrl = isLocalQwen3TtsSpeechOutputProvider(payload.providerId)
-      ? await ensureLocalQwen3TtsService(payload.baseUrl, payload.model)
-      : normalizeBaseUrl(payload.baseUrl)
+    const baseUrl = normalizeBaseUrl(payload.baseUrl)
 
     if (!baseUrl) {
       throw new Error('请先填写语音输出 API Base URL。')
@@ -133,7 +46,6 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
     if (
       !isMiniMaxSpeechOutputProvider(payload.providerId)
       && payload.providerId !== 'elevenlabs-tts'
-      && payload.providerId !== 'local-qwen3-tts'
     ) {
       return {
         voices: [],
@@ -394,31 +306,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
     const synthTimeoutMs = resolveSpeechOutputTimeoutMs(payload.providerId, content, payload.model)
     const synthTimeoutMessage = resolveSpeechOutputTimeoutMessage(payload.providerId)
 
-    if (payload.providerId === 'local-sherpa-tts') {
-      const sherpaTtsService = await getSherpaTtsService()
-      const rate = Number.isFinite(payload.rate) ? payload.rate : 1
-      try {
-        return await sherpaTtsService.synthesize(content, {
-          speed: rate,
-          sid: payload.voice,
-        })
-      } catch (err) {
-        console.error('[SherpaTTS] synthesize error:', err)
-        throw new Error(`本地 TTS 合成失败：${err instanceof Error ? err.message : String(err)}`)
-      }
-    }
-
-    if (isPiperSpeechOutputProvider(payload.providerId)) {
-      return synthesizePiperSpeechOutput(payload, content, synthTimeoutMs, synthTimeoutMessage)
-    }
-
-    if (isCoquiSpeechOutputProvider(payload.providerId)) {
-      return synthesizeCoquiSpeechOutput(payload, content, synthTimeoutMs, synthTimeoutMessage)
-    }
-
-    const baseUrl = isLocalQwen3TtsSpeechOutputProvider(payload.providerId)
-      ? await ensureLocalQwen3TtsService(payload.baseUrl, payload.model)
-      : resolveSpeechOutputBaseUrl(payload.providerId, payload.baseUrl)
+    const baseUrl = resolveSpeechOutputBaseUrl(payload.providerId, payload.baseUrl)
     const rate = Number.isFinite(payload.rate) ? payload.rate : 1
     const pitch = Number.isFinite(payload.pitch) ? payload.pitch : 1
     const volume = Number.isFinite(payload.volume) ? payload.volume : 1
@@ -596,37 +484,6 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         audioBase64: wavBuffer.toString('base64'),
         mimeType: 'audio/wav',
       }
-    } else if (isFishSpeechSpeechOutputProvider(payload.providerId)) {
-      const fishBaseUrl = normalizeBaseUrl(payload.baseUrl) || 'http://127.0.0.1:8080'
-      const endpoint = `${fishBaseUrl}/v1/tts`
-
-      const fishRequestBody = JSON.stringify({
-        text: content,
-        reference_id: payload.voice || undefined,
-        format: 'wav',
-        streaming: false,
-      })
-
-      let fishResponse
-      try {
-        fishResponse = await performNetworkRequest(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: fishRequestBody,
-          timeoutMs: synthTimeoutMs,
-          timeoutMessage: 'Fish Speech 合成超时，请检查服务是否已启动。',
-        })
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error)
-        throw new Error(`Fish Speech 连接失败：${reason}`)
-      }
-
-      if (!fishResponse.ok) {
-        throw new Error(await extractResponseErrorMessage(fishResponse, `Fish Speech 合成失败（状态码：${fishResponse.status}）`))
-      }
-
-      const audioBase64 = Buffer.from(await fishResponse.arrayBuffer()).toString('base64')
-      return { audioBase64, mimeType: 'audio/wav' }
     } else {
       throw new Error('当前语音输出提供商暂未接通。')
     }

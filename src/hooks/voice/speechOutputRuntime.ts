@@ -1,15 +1,12 @@
 import type { AudioPlaybackQueue } from '../../features/voice/audioQueue'
 import {
   getCachedTtsResult,
-  isSherpaTtsUnavailableMessage,
   setCachedTtsResult,
 } from '../../features/voice/runtimeSupport'
 import { segmentTextForSpeech } from '../../features/voice/streamingTts'
 import { prepareTextForTts } from '../../features/voice/text'
-import { isBrowserSpeechOutputProvider } from '../../lib/audioProviders'
 import { shorten } from '../../lib/common'
 import { executeWithFailover, type FailoverCandidate } from '../../features/failover/orchestrator.ts'
-import { speakText as speakBrowserText } from '../../lib/voice'
 import type { AppSettings, AudioSynthesisRequest, VoiceTraceEntry } from '../../types'
 import type { SpeechSegmentMeta } from './types'
 
@@ -21,7 +18,6 @@ type SpeechOutputCallbacks = {
 
 export type SpeechOutputPlaybackRuntime = {
   getAudioPlaybackQueue: () => AudioPlaybackQueue<SpeechSegmentMeta>
-  simulateBrowserSpeech: (content: string, rate: number) => void
   stopSpeechTracking: () => void
 }
 
@@ -32,7 +28,6 @@ export type StartSpeechOutputRuntimeOptions = {
   callbacks?: SpeechOutputCallbacks
   buildSpeechOutputFailoverCandidates: (settings: AppSettings) => AppSettings[]
   applySpeechOutputProviderFallback: (providerId: string, statusText?: string) => AppSettings
-  switchSpeechOutputToBrowser: (statusText?: string) => unknown
   appendVoiceTrace: (
     title: string,
     detail: string,
@@ -54,30 +49,6 @@ export async function playSpeechOutputWithSettingsRuntime(
 
   if (!content) {
     throw new Error('没有可播报的文本内容。')
-  }
-
-  if (isBrowserSpeechOutputProvider(speechSettings.speechOutputProviderId)) {
-    speakBrowserText({
-      text: content,
-      lang: speechSettings.speechSynthesisLang,
-      rate: speechSettings.speechRate,
-      pitch: speechSettings.speechPitch,
-      volume: speechSettings.speechVolume,
-      voiceId: speechSettings.speechOutputVoice,
-      onStart: () => {
-        runtime.simulateBrowserSpeech(content, speechSettings.speechRate)
-        callbacks?.onStart?.()
-      },
-      onEnd: () => {
-        runtime.stopSpeechTracking()
-        callbacks?.onEnd?.()
-      },
-      onError: (message) => {
-        runtime.stopSpeechTracking()
-        callbacks?.onError?.(message)
-      },
-    })
-    return
   }
 
   if (!window.desktopPet?.synthesizeAudio) {
@@ -203,9 +174,6 @@ export async function startSpeechOutputRuntime(
       )
     }
   } catch (error) {
-    if (error instanceof Error && isSherpaTtsUnavailableMessage(error.message)) {
-      options.switchSpeechOutputToBrowser('本地 Sherpa TTS 模型缺失，已自动切换到 CosyVoice2 播报。')
-    }
     throw error
   }
 }

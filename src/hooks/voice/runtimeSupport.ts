@@ -22,8 +22,6 @@ import type { SenseVoiceConversationState } from './sensevoiceConversation'
 import type { TencentConversationState } from './tencentConversation'
 import type {
   ApiRecordingSession,
-  FunasrConversationState,
-  SherpaConversationState,
   SpeechSegmentMeta,
   StreamingSpeechOutputController,
   VadConversationSession,
@@ -102,18 +100,8 @@ type StopVadListeningRuntimeOptions = {
   cancel?: boolean
 }
 
-type ClearSherpaConversationStateRuntimeOptions = {
-  sherpaConversationRef: MutableRefObject<SherpaConversationState | null>
-  setSpeechLevelValue: (level: number) => void
-}
-
 type ClearSenseVoiceConversationStateRuntimeOptions = {
   sensevoiceConversationRef: MutableRefObject<SenseVoiceConversationState | null>
-  setSpeechLevelValue: (level: number) => void
-}
-
-type ClearFunasrConversationStateRuntimeOptions = {
-  funasrConversationRef: MutableRefObject<FunasrConversationState | null>
   setSpeechLevelValue: (level: number) => void
 }
 
@@ -302,30 +290,6 @@ export async function stopVadListeningRuntime(
   await options.destroyVadSession(session)
 }
 
-export function clearSherpaConversationStateRuntime(
-  options: ClearSherpaConversationStateRuntimeOptions,
-) {
-  const session = options.sherpaConversationRef.current
-  if (!session) {
-    return
-  }
-
-  if (session.noSpeechTimer) {
-    window.clearTimeout(session.noSpeechTimer)
-  }
-
-  if (session.maxDurationTimer) {
-    window.clearTimeout(session.maxDurationTimer)
-  }
-
-  if (session.endpointFinalizeTimer) {
-    window.clearTimeout(session.endpointFinalizeTimer)
-  }
-
-  options.sherpaConversationRef.current = null
-  options.setSpeechLevelValue(0)
-}
-
 export function clearSenseVoiceConversationStateRuntime(
   options: ClearSenseVoiceConversationStateRuntimeOptions,
 ) {
@@ -341,24 +305,6 @@ export function clearSenseVoiceConversationStateRuntime(
   }
 
   options.sensevoiceConversationRef.current = null
-  options.setSpeechLevelValue(0)
-}
-
-export function clearFunasrConversationStateRuntime(
-  options: ClearFunasrConversationStateRuntimeOptions,
-) {
-  const session = options.funasrConversationRef.current
-  if (!session) return
-
-  if (session.noSpeechTimer) {
-    window.clearTimeout(session.noSpeechTimer)
-  }
-
-  if (session.maxDurationTimer) {
-    window.clearTimeout(session.maxDurationTimer)
-  }
-
-  options.funasrConversationRef.current = null
   options.setSpeechLevelValue(0)
 }
 

@@ -116,7 +116,7 @@ function buildLeadInOptions(session, options = {}) {
   }
 }
 
-export function createTtsStreamService({ sherpaTtsService, synthesizeRemote, warmupRemote }) {
+export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
   const sessions = new Map()
 
   function emit(sender, event) {
@@ -310,11 +310,7 @@ export function createTtsStreamService({ sherpaTtsService, synthesizeRemote, war
         throw new Error('流式 TTS requestId 已存在，请重新发起会话。')
       }
 
-      const isLocalSherpa = payload?.providerId === 'local-sherpa-tts'
-      if (isLocalSherpa && !sherpaTtsService.isAvailable()) {
-        throw new Error('本地流式 TTS 不可用，请检查 Sherpa 模型是否存在。')
-      }
-      if (!isLocalSherpa && !synthesizeRemote) {
+      if (!synthesizeRemote) {
         throw new Error('远程流式 TTS 未配置。')
       }
 
@@ -325,9 +321,7 @@ export function createTtsStreamService({ sherpaTtsService, synthesizeRemote, war
         chain: Promise.resolve(),
         closed: false,
         hasEmittedAudio: false,
-        remoteWarmup: payload?.providerId === 'local-qwen3-tts' && typeof warmupRemote === 'function'
-          ? Promise.resolve(warmupRemote(payload)).catch(() => undefined)
-          : Promise.resolve(),
+        remoteWarmup: Promise.resolve(),
       })
 
       return { ok: true }
@@ -344,31 +338,12 @@ export function createTtsStreamService({ sherpaTtsService, synthesizeRemote, war
         return { ok: true }
       }
 
-      const isLocalSherpa = session.payload?.providerId === 'local-sherpa-tts'
-
       session.chain = session.chain.then(async () => {
         if (session.closed) {
           return
         }
 
         try {
-          if (isLocalSherpa) {
-            const { samples, sampleRate } = await sherpaTtsService.synthesizeSamples(text, {
-              speed: Number.isFinite(session.payload?.rate) ? session.payload.rate : 1,
-              sid: session.payload?.voice,
-              leadingSilenceMs: session.hasEmittedAudio ? 6 : 18,
-              fadeInMs: session.hasEmittedAudio ? 8 : 12,
-              fadeOutMs: 6,
-            })
-
-            if (session.closed) {
-              return
-            }
-
-            emitSamples(session, samples, sampleRate, text)
-            return
-          }
-
           await synthesizeAndEmitRemote(session, text)
         } catch (error) {
           session.closed = true

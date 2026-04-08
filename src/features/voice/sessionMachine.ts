@@ -6,11 +6,8 @@ export type VoiceSessionTransport =
   | 'browser'
   | 'remote_api'
   | 'remote_vad'
-  | 'local_whisper'
   | 'local_vad'
-  | 'local_sherpa'
   | 'local_sensevoice'
-  | 'local_funasr'
 
 export type VoiceSessionCloseReason =
   | 'completed'

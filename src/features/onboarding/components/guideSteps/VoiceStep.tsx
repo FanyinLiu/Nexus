@@ -1,6 +1,5 @@
 import {
   type SpeechModelOption,
-  isLocalSherpaSpeechInputProvider,
   isSenseVoiceSpeechInputProvider,
   USER_VISIBLE_SPEECH_INPUT_PROVIDER_PRESETS,
   USER_VISIBLE_SPEECH_OUTPUT_PROVIDER_PRESETS,
@@ -88,7 +87,7 @@ export function VoiceStep({
 
           <p className="onboarding-tip">{speechInputProvider.notes}</p>
 
-          {!isLocalSherpaSpeechInputProvider(draft.speechInputProviderId) && !isSenseVoiceSpeechInputProvider(draft.speechInputProviderId) ? (
+          {!isSenseVoiceSpeechInputProvider(draft.speechInputProviderId) ? (
             <div className="onboarding-grid onboarding-grid--two">
               <label>
                 <span>输入接口地址</span>
@@ -184,36 +183,34 @@ export function VoiceStep({
 
           <p className="onboarding-tip">{speechOutputProvider.notes}</p>
 
-          {draft.speechOutputProviderId !== 'local-qwen3-tts' ? (
-            <div className="onboarding-grid onboarding-grid--two">
-              <label>
-                <span>输出接口地址</span>
-                <input
-                  value={draft.speechOutputApiBaseUrl}
-                  onChange={(event) => setDraft((current) => updateCurrentSpeechOutputProviderProfile(
-                    current,
-                    {
-                      apiBaseUrl: event.target.value,
-                    },
-                  ))}
-                />
-              </label>
+          <div className="onboarding-grid onboarding-grid--two">
+            <label>
+              <span>输出接口地址</span>
+              <input
+                value={draft.speechOutputApiBaseUrl}
+                onChange={(event) => setDraft((current) => updateCurrentSpeechOutputProviderProfile(
+                  current,
+                  {
+                    apiBaseUrl: event.target.value,
+                  },
+                ))}
+              />
+            </label>
 
-              <label>
-                <span>{isVolcengineSpeechOutput ? '输出密钥（APP_ID:ACCESS_TOKEN）' : '输出密钥'}</span>
-                <input
-                  type="password"
-                  value={draft.speechOutputApiKey}
-                  onChange={(event) => setDraft((current) => updateCurrentSpeechOutputProviderProfile(
-                    current,
-                    {
-                      apiKey: event.target.value,
-                    },
-                  ))}
-                />
-              </label>
-            </div>
-          ) : null}
+            <label>
+              <span>{isVolcengineSpeechOutput ? '输出密钥（APP_ID:ACCESS_TOKEN）' : '输出密钥'}</span>
+              <input
+                type="password"
+                value={draft.speechOutputApiKey}
+                onChange={(event) => setDraft((current) => updateCurrentSpeechOutputProviderProfile(
+                  current,
+                  {
+                    apiKey: event.target.value,
+                  },
+                ))}
+              />
+            </label>
+          </div>
 
           <div className="onboarding-grid onboarding-grid--two">
             <label>
@@ -265,38 +262,36 @@ export function VoiceStep({
             </p>
           ) : null}
 
-          {draft.speechOutputProviderId !== 'local-qwen3-tts' ? (
-            <label>
-              <span>{isVolcengineSpeechOutput ? '音色类型' : '音色 / 音色 ID'}</span>
-              {speechOutputVoiceOptions.length ? (
-                <select
-                  value={draft.speechOutputVoice}
-                  onChange={(event) => setDraft((current) => updateCurrentSpeechOutputProviderProfile(
-                    current,
-                    {
-                      voice: event.target.value,
-                    },
-                  ))}
-                >
-                  {speechOutputVoiceOptions.map((voice) => (
-                    <option key={voice.id} value={voice.id}>
-                      {voice.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  value={draft.speechOutputVoice}
-                  onChange={(event) => setDraft((current) => updateCurrentSpeechOutputProviderProfile(
-                    current,
-                    {
-                      voice: event.target.value,
-                    },
-                  ))}
-                />
-              )}
-            </label>
-          ) : null}
+          <label>
+            <span>{isVolcengineSpeechOutput ? '音色类型' : '音色 / 音色 ID'}</span>
+            {speechOutputVoiceOptions.length ? (
+              <select
+                value={draft.speechOutputVoice}
+                onChange={(event) => setDraft((current) => updateCurrentSpeechOutputProviderProfile(
+                  current,
+                  {
+                    voice: event.target.value,
+                  },
+                ))}
+              >
+                {speechOutputVoiceOptions.map((voice) => (
+                  <option key={voice.id} value={voice.id}>
+                    {voice.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={draft.speechOutputVoice}
+                onChange={(event) => setDraft((current) => updateCurrentSpeechOutputProviderProfile(
+                  current,
+                  {
+                    voice: event.target.value,
+                  },
+                ))}
+              />
+            )}
+          </label>
         </div>
       ) : null}
     </div>

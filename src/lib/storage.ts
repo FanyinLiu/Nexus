@@ -20,8 +20,7 @@ import {
   getSpeechInputProviderPreset,
   getSpeechOutputProviderPreset,
   isBrowserSpeechInputProvider,
-  isLocalSherpaSpeechInputProvider,
-  isLocalWhisperSpeechInputProvider,
+  isSenseVoiceSpeechInputProvider,
   normalizeSpeechOutputApiBaseUrl,
   resolveSpeechInputModel,
 } from './audioProviders.ts'
@@ -85,11 +84,11 @@ const defaultSettings: AppSettings = {
     '你是一位 Windows 桌面上的 Live2D AI 陪伴体。你的名字是星绘。你不是万能 Agent，而是桌边可以长期相处的伙伴。说话温柔、自然、简洁，先直接回应，再自然补一句陪伴感。只在真正相关时使用记忆、桌面上下文和工具结果，不要编造没有观察到的信息。',
   speechInputEnabled: true,
   speechOutputEnabled: true,
-  speechInputProviderId: 'local-sherpa',
+  speechInputProviderId: 'local-sensevoice',
   speechInputApiBaseUrl: '',
   speechInputApiKey: '',
-  speechInputModel: 'streaming-paraformer-bilingual-zh-en',
-  speechOutputProviderId: 'browser',
+  speechInputModel: 'sensevoice-zh-en',
+  speechOutputProviderId: 'edge-tts',
   speechOutputApiBaseUrl: '',
   speechOutputApiKey: '',
   speechOutputModel: '',
@@ -482,11 +481,10 @@ export function loadSettings(): AppSettings {
   const requestedSpeechInputProviderId = stored.speechInputProviderId ?? defaultSettings.speechInputProviderId
   const migrateLegacySpeechInputProvider = isBrowserSpeechInputProvider(requestedSpeechInputProviderId)
   const effectiveSpeechInputProviderId = migrateLegacySpeechInputProvider
-    ? 'local-sherpa'
+    ? 'local-sensevoice'
     : requestedSpeechInputProviderId
   const hasLocalSpeechInputProvider = (
-    isLocalSherpaSpeechInputProvider(effectiveSpeechInputProviderId)
-    || isLocalWhisperSpeechInputProvider(effectiveSpeechInputProviderId)
+    isSenseVoiceSpeechInputProvider(effectiveSpeechInputProviderId)
   )
   const speechInputPreset = getSpeechInputProviderPreset(effectiveSpeechInputProviderId)
   const requestedSpeechInputModel = migrateLegacySpeechInputProvider

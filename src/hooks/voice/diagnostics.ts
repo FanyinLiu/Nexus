@@ -1,9 +1,4 @@
 import {
-  createLocalAsrWorker,
-  normalizeWhisperLanguage,
-  warmupLocalAsrWorker,
-} from '../../features/hearing/localWhisper.ts'
-import {
   AUDIO_SMOKE_PLAYBACK_TIMEOUT_MS,
   buildSpeechOutputSmokeText,
   mapMicrophoneDiagnosticError,
@@ -11,14 +6,9 @@ import {
   requestVoiceInputStream,
 } from '../../features/voice/runtimeSupport'
 import {
-  isBrowserSpeechInputProvider,
-  isBrowserSpeechOutputProvider,
-  isLocalSherpaSpeechInputProvider,
-  isLocalWhisperSpeechInputProvider,
+  isSenseVoiceSpeechInputProvider,
 } from '../../lib/audioProviders'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
-import { checkSherpaAvailability } from '../../features/hearing/localSherpa.ts'
-import { getAvailableSpeechSynthesisVoices } from '../../lib/voice'
 import type { AppSettings } from '../../types'
 
 export type VoiceDiagnosticResult = {
@@ -28,7 +18,6 @@ export type VoiceDiagnosticResult = {
 
 export type TestSpeechInputReadinessRuntimeOptions = {
   draftSettings: AppSettings
-  browserSpeechRecognitionSupported: boolean
 }
 
 export type TestSpeechInputConnectionRuntimeOptions = {
@@ -80,13 +69,6 @@ export async function testSpeechInputReadinessRuntime(
 ): Promise<VoiceDiagnosticResult> {
   const providerId = options.draftSettings.speechInputProviderId
 
-  if (providerId === 'browser' && !options.browserSpeechRecognitionSupported) {
-    return {
-      ok: false,
-      message: '当前 Electron 环境不支持浏览器原生语音识别，建议切换到本地 Whisper。',
-    }
-  }
-
   if (!navigator.mediaDevices?.getUserMedia) {
     return {
       ok: false,
@@ -94,7 +76,7 @@ export async function testSpeechInputReadinessRuntime(
     }
   }
 
-  if (providerId !== 'browser' && typeof MediaRecorder === 'undefined') {
+  if (typeof MediaRecorder === 'undefined') {
     return {
       ok: false,
       message: '当前环境不支持 MediaRecorder，无法完成语音输入录音。',
@@ -102,13 +84,8 @@ export async function testSpeechInputReadinessRuntime(
   }
 
   let stream: MediaStream | null = null
-  let worker: Worker | null = null
 
   try {
-    if (providerId === 'local-whisper') {
-      worker = createLocalAsrWorker()
-    }
-
     stream = (await requestVoiceInputStream({ purpose: 'stt' })).stream
     const audioTracks = stream.getAudioTracks()
 
@@ -119,40 +96,14 @@ export async function testSpeechInputReadinessRuntime(
       }
     }
 
-    if (providerId !== 'browser') {
-      const mimeType = pickRecordingMimeType()
-      if (mimeType) {
-        new MediaRecorder(stream, { mimeType })
-      } else {
-        new MediaRecorder(stream)
-      }
+    const mimeType = pickRecordingMimeType()
+    if (mimeType) {
+      new MediaRecorder(stream, { mimeType })
+    } else {
+      new MediaRecorder(stream)
     }
 
-    if (providerId === 'local-whisper' && worker) {
-      await warmupLocalAsrWorker(
-        worker,
-        options.draftSettings.speechInputModel || 'Xenova/whisper-base',
-        normalizeWhisperLanguage(options.draftSettings.speechRecognitionLang),
-      )
-    }
-
-    if (providerId === 'local-sherpa') {
-      const status = await checkSherpaAvailability()
-      if (!status.installed) {
-        return {
-          ok: false,
-          message: 'sherpa-onnx-node 未安装，请先运行 npm install sherpa-onnx-node。',
-        }
-      }
-      if (!status.modelFound) {
-        return {
-          ok: false,
-          message: `未找到流式语音模型，请将模型放到 ${status.modelsDir} 目录下。`,
-        }
-      }
-    }
-
-    if (providerId === 'local-sensevoice') {
+    if (isSenseVoiceSpeechInputProvider(providerId)) {
       const status = await checkSenseVoiceAvailability()
       if (!status.installed) {
         return {
@@ -168,18 +119,9 @@ export async function testSpeechInputReadinessRuntime(
       }
     }
 
-    let message: string
-    if (providerId === 'local-sensevoice') {
-      message = '麦克风权限已就绪，SenseVoice 离线识别引擎和模型都正常。'
-    } else if (providerId === 'local-sherpa') {
-      message = '麦克风权限已就绪，本地流式识别引擎和模型都正常。'
-    } else if (providerId === 'local-whisper') {
-      message = '麦克风权限已就绪，本地 Whisper 模型和录音链路都正常。'
-    } else if (providerId === 'browser') {
-      message = '麦克风权限已就绪，浏览器原生语音识别可以启动。'
-    } else {
-      message = '麦克风权限已就绪，本地录音链路正常。'
-    }
+    const message = isSenseVoiceSpeechInputProvider(providerId)
+      ? '麦克风权限已就绪，SenseVoice 离线识别引擎和模型都正常。'
+      : '麦克风权限已就绪，本地录音链路正常。'
 
     return { ok: true, message }
   } catch (caught) {
@@ -187,11 +129,10 @@ export async function testSpeechInputReadinessRuntime(
       ok: false,
       message: mapMicrophoneDiagnosticError(
         caught,
-        providerId === 'local-whisper' || providerId === 'local-sherpa' || providerId === 'local-sensevoice',
+        isSenseVoiceSpeechInputProvider(providerId),
       ),
     }
   } finally {
-    worker?.terminate()
     stream?.getTracks().forEach((track) => track.stop())
   }
 }
@@ -204,11 +145,7 @@ export async function testSpeechInputConnectionRuntime(
     return localSpeechCheck
   }
 
-  if (
-    isBrowserSpeechInputProvider(options.draftSettings.speechInputProviderId)
-    || isLocalWhisperSpeechInputProvider(options.draftSettings.speechInputProviderId)
-    || isLocalSherpaSpeechInputProvider(options.draftSettings.speechInputProviderId)
-  ) {
+  if (isSenseVoiceSpeechInputProvider(options.draftSettings.speechInputProviderId)) {
     return localSpeechCheck
   }
 
@@ -309,59 +246,6 @@ export async function testSpeechOutputReadinessRuntime(
     return {
       ok: false,
       message: '请先开启语音播报。',
-    }
-  }
-
-  if (options.draftSettings.speechOutputProviderId === 'local-sherpa-tts') {
-    if (options.options?.playSample) {
-      await options.probeSpeechOutputPlaybackStart(
-        options.draftSettings,
-        options.options.sampleText?.trim() || buildSpeechOutputSmokeText(options.draftSettings),
-      )
-      return { ok: true, message: '本地 VITS TTS 已就绪，试听已确认播报可以启动。' }
-    }
-
-    return { ok: true, message: '本地 VITS TTS 已就绪，无需 API Key，完全离线运行。' }
-  }
-
-  if (isBrowserSpeechOutputProvider(options.draftSettings.speechOutputProviderId)) {
-    if (!('speechSynthesis' in window)) {
-      return {
-        ok: false,
-        message: '当前环境不支持系统语音播报。',
-      }
-    }
-
-    const availableVoices = getAvailableSpeechSynthesisVoices()
-    const selectedVoiceId = options.draftSettings.speechOutputVoice.trim()
-    const matchedVoice = selectedVoiceId
-      ? availableVoices.find((voice) => (
-        voice.id === selectedVoiceId || voice.name === selectedVoiceId
-      )) ?? null
-      : null
-    const localSummary = selectedVoiceId
-      ? matchedVoice
-        ? `已找到当前音色 ${matchedVoice.name}。`
-        : '当前没有找到完全同名的系统音色，播放时会自动尝试最接近的匹配。'
-      : availableVoices.length
-        ? `当前检测到 ${availableVoices.length} 个可用系统音色。`
-        : '当前没有枚举到可用的系统音色，播放时会自动尝试默认发声。'
-
-    if (options.options?.playSample) {
-      await options.probeSpeechOutputPlaybackStart(
-        options.draftSettings,
-        options.options.sampleText?.trim() || buildSpeechOutputSmokeText(options.draftSettings),
-      )
-
-      return {
-        ok: true,
-        message: `系统语音播报已就绪，${localSummary} 已确认本地可以启动语音播放。`,
-      }
-    }
-
-    return {
-      ok: true,
-      message: `系统语音播报已就绪，${localSummary}`,
     }
   }
 

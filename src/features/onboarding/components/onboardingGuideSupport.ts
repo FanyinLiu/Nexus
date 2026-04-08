@@ -1,4 +1,4 @@
-import { isLocalSherpaSpeechInputProvider, isSenseVoiceSpeechInputProvider } from '../../../lib/audioProviders'
+import { isSenseVoiceSpeechInputProvider } from '../../../lib/audioProviders'
 import type { AppSettings } from '../../../types'
 import type { OnboardingStep, OnboardingStepId } from './guideSteps'
 
@@ -56,8 +56,7 @@ export function getOnboardingStepError(
     if (draft.speechInputEnabled) {
       if (!draft.speechInputProviderId.trim()) return '先选择一个语音输入方案。'
       if (
-        !isLocalSherpaSpeechInputProvider(draft.speechInputProviderId)
-        && !isSenseVoiceSpeechInputProvider(draft.speechInputProviderId)
+        !isSenseVoiceSpeechInputProvider(draft.speechInputProviderId)
         && !draft.speechInputApiBaseUrl.trim()
       ) {
         return '当前语音输入方案需要填写接口地址。'
@@ -66,10 +65,7 @@ export function getOnboardingStepError(
 
     if (draft.speechOutputEnabled) {
       if (!draft.speechOutputProviderId.trim()) return '先选择一个语音输出方案。'
-      if (
-        draft.speechOutputProviderId !== 'local-qwen3-tts'
-        && !draft.speechOutputApiBaseUrl.trim()
-      ) {
+      if (!draft.speechOutputApiBaseUrl.trim()) {
         return '当前语音输出方案需要填写接口地址。'
       }
     }

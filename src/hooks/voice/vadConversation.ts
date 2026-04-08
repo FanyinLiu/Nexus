@@ -61,15 +61,6 @@ export type StartVadConversationOptions = {
   showPetStatus: ShowPetStatus
   setSpeechLevelValue: (level: number) => void
   destroyVadSession: (session: VadConversationSession | null) => Promise<void>
-  transcribeWithLocalWhisper: (
-    blob: Blob,
-    currentSettings: AppSettings,
-  ) => Promise<string>
-  tryTranscribeWithSpeechInputFailover: (
-    audioBlob: Blob,
-    currentSettings: AppSettings,
-    error: unknown,
-  ) => Promise<string | null>
   handleRecognizedVoiceTranscript: (
     transcript: string,
     options?: { traceId?: string },
@@ -173,27 +164,23 @@ export async function startVadConversation(
             )
             params.updateVoicePipeline(
               'transcribing',
-              params.transcribeMode === 'local'
-                ? '录音结束，正在用 VAD + 本地 Whisper 转写'
-                : '录音结束，正在用 VAD 转写语音',
+              '录音结束，正在用 VAD 转写语音',
             )
 
             const audioBlob = encodeVadAudioToWavBlob(audio)
-            const transcript = params.transcribeMode === 'local'
-              ? (await params.transcribeWithLocalWhisper(audioBlob, params.currentSettings)).trim()
-              : (
-                  await window.desktopPet!.transcribeAudio({
-                    providerId: params.currentSettings.speechInputProviderId,
-                    baseUrl: params.currentSettings.speechInputApiBaseUrl,
-                    apiKey: params.currentSettings.speechInputApiKey,
-                    model: params.currentSettings.speechInputModel,
-                    traceId,
-                    language: params.currentSettings.speechRecognitionLang,
-                    audioBase64: await blobToBase64(audioBlob),
-                    mimeType: 'audio/wav',
-                    fileName: 'speech.wav',
-                  })
-                ).text.trim()
+            const transcript = (
+              await window.desktopPet!.transcribeAudio({
+                providerId: params.currentSettings.speechInputProviderId,
+                baseUrl: params.currentSettings.speechInputApiBaseUrl,
+                apiKey: params.currentSettings.speechInputApiKey,
+                model: params.currentSettings.speechInputModel,
+                traceId,
+                language: params.currentSettings.speechRecognitionLang,
+                audioBase64: await blobToBase64(audioBlob),
+                mimeType: 'audio/wav',
+                fileName: 'speech.wav',
+              })
+            ).text.trim()
 
             await session.detector.destroy().catch(() => undefined)
 
@@ -209,33 +196,11 @@ export async function startVadConversation(
             await params.handleRecognizedVoiceTranscript(transcript, { traceId })
           } catch (error) {
             await session.detector.destroy().catch(() => undefined)
-            if (params.transcribeMode === 'api') {
-              const audioBlob = encodeVadAudioToWavBlob(audio)
-              const fallbackTranscript = await params.tryTranscribeWithSpeechInputFailover(
-                audioBlob,
-                params.currentSettings,
-                error,
-              )
-
-              if (fallbackTranscript !== null) {
-                if (!fallbackTranscript) {
-                  params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
-                  return
-                }
-
-                await params.handleRecognizedVoiceTranscript(fallbackTranscript, {
-                  traceId: createId('voice'),
-                })
-                return
-              }
-            }
 
             params.handleVoiceListeningFailure(
               error instanceof Error
                 ? error.message
-                : params.transcribeMode === 'local'
-                  ? '本地 Whisper 识别失败，请稍后再试。'
-                  : '语音识别失败，请稍后再试。',
+                : '语音识别失败，请稍后再试。',
             )
           }
         },

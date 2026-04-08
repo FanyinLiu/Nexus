@@ -9,14 +9,10 @@ import {
   USER_VISIBLE_SPEECH_OUTPUT_PROVIDER_PRESETS,
 } from '../src/lib/audioProviders.ts'
 
-test('exposes local whisper in the visible speech input provider list', () => {
+test('exposes local sensevoice in the visible speech input provider list', () => {
   assert.equal(
-    USER_VISIBLE_SPEECH_INPUT_PROVIDER_PRESETS.some((provider) => provider.id === 'local-whisper'),
+    USER_VISIBLE_SPEECH_INPUT_PROVIDER_PRESETS.some((provider) => provider.id === 'local-sensevoice'),
     true,
-  )
-  assert.equal(
-    USER_VISIBLE_SPEECH_INPUT_PROVIDER_PRESETS.some((provider) => provider.id === 'browser'),
-    false,
   )
 })
 

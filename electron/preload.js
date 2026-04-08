@@ -79,13 +79,6 @@ contextBridge.exposeInMainWorld('desktopPet', {
   getSystemMediaSession: () => ipcRenderer.invoke('media-session:get'),
   controlSystemMediaSession: (payload) => ipcRenderer.invoke('media-session:control', payload),
 
-  // Sherpa-onnx streaming ASR
-  sherpaStatus: () => ipcRenderer.invoke('sherpa:status'),
-  sherpaStart: (payload) => ipcRenderer.invoke('sherpa:start', payload),
-  sherpaFeed: (payload) => ipcRenderer.invoke('sherpa:feed', payload),
-  sherpaFinish: () => ipcRenderer.invoke('sherpa:finish'),
-  sherpaAbort: () => ipcRenderer.invoke('sherpa:abort'),
-
   // SenseVoice offline ASR (sherpa-onnx OfflineRecognizer)
   sensevoiceStatus: () => ipcRenderer.invoke('sensevoice:status'),
   sensevoiceStart: () => ipcRenderer.invoke('sensevoice:start'),

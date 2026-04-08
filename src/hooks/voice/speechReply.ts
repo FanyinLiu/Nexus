@@ -1,5 +1,3 @@
-import { isSherpaTtsUnavailableMessage } from '../../features/voice/runtimeSupport'
-import { isBrowserSpeechOutputProvider } from '../../lib/audioProviders'
 import type { AppSettings, PetMood } from '../../types'
 import {
   createStreamingSpeechOutputController,
@@ -38,30 +36,18 @@ export type SpeakAssistantReplyRuntimeOptions = BaseSpeechReplyOptions & {
 
 export type BeginStreamingSpeechReplyRuntimeOptions = BaseSpeechReplyOptions & {
   streamingRuntime: StreamingSpeechOutputRuntime
-  switchSpeechOutputToBrowser: (statusText?: string) => unknown
 }
 
 function shouldIgnoreInterruptedSpeech(
   speechGeneration: number,
-  usesBrowserSpeechOutput: boolean,
   isSpeechInterrupted: (speechGeneration: number) => boolean,
-  clearSpeechInterruptedFlag: (speechGeneration: number) => void,
 ) {
-  if (!isSpeechInterrupted(speechGeneration)) {
-    return false
-  }
-
-  if (usesBrowserSpeechOutput) {
-    clearSpeechInterruptedFlag(speechGeneration)
-  }
-
-  return true
+  return isSpeechInterrupted(speechGeneration)
 }
 
 function createSpeechReplyCallbacks(
   options: BaseSpeechReplyOptions & {
     text: string
-    usesBrowserSpeechOutput: boolean
   },
 ) {
   return {
@@ -80,9 +66,7 @@ function createSpeechReplyCallbacks(
 
       if (shouldIgnoreInterruptedSpeech(
         options.speechGeneration,
-        options.usesBrowserSpeechOutput,
         options.isSpeechInterrupted,
-        options.clearSpeechInterruptedFlag,
       )) {
         console.log('[SpeechReply] onEnd — ignored (speech interrupted)')
         return
@@ -101,9 +85,7 @@ function createSpeechReplyCallbacks(
 
       if (shouldIgnoreInterruptedSpeech(
         options.speechGeneration,
-        options.usesBrowserSpeechOutput,
         options.isSpeechInterrupted,
-        options.clearSpeechInterruptedFlag,
       )) {
         return
       }
@@ -123,10 +105,6 @@ function createSpeechReplyCallbacks(
 export async function speakAssistantReplyRuntime(
   options: SpeakAssistantReplyRuntimeOptions,
 ) {
-  const usesBrowserSpeechOutput = isBrowserSpeechOutputProvider(
-    options.currentSettings.speechOutputProviderId,
-  )
-
   if (!options.currentSettings.speechOutputEnabled || !options.text.trim()) {
     options.stopSpeechInterruptMonitor()
     options.clearSpeechInterruptedFlag(options.speechGeneration)
@@ -146,7 +124,6 @@ export async function speakAssistantReplyRuntime(
       createSpeechReplyCallbacks({
         ...options,
         text: options.text,
-        usesBrowserSpeechOutput,
       }),
     )
   } catch (error) {
@@ -165,11 +142,7 @@ export async function speakAssistantReplyRuntime(
 export function beginStreamingSpeechReplyRuntime(
   options: BeginStreamingSpeechReplyRuntimeOptions,
 ): StreamingSpeechOutputController | null {
-  const usesBrowserSpeechOutput = isBrowserSpeechOutputProvider(
-    options.currentSettings.speechOutputProviderId,
-  )
-
-  if (!options.currentSettings.speechOutputEnabled || usesBrowserSpeechOutput) {
+  if (!options.currentSettings.speechOutputEnabled) {
     return null
   }
 
@@ -180,16 +153,11 @@ export function beginStreamingSpeechReplyRuntime(
       createSpeechReplyCallbacks({
         ...options,
         text: '(streaming)',
-        usesBrowserSpeechOutput,
       }),
     )
   } catch (error) {
-    const message = error instanceof Error ? error.message : '流式语音播报失败。'
-    if (isSherpaTtsUnavailableMessage(message)) {
-      options.switchSpeechOutputToBrowser('本地 Sherpa TTS 模型缺失，已自动切换到 CosyVoice2 播报。')
-      return null
-    }
-
-    throw error instanceof Error ? error : new Error(message)
+    throw error instanceof Error ? error : new Error(
+      error instanceof Error ? error.message : '流式语音播报失败。',
+    )
   }
 }

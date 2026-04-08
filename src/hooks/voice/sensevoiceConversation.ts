@@ -75,7 +75,6 @@ export type StartSenseVoiceConversationOptions = {
     message: string,
     errorCode?: string,
   ) => void
-  switchSpeechInputToLocalWhisper: (statusText?: string) => unknown
   shouldAutoRestartVoice: () => boolean
 }
 
@@ -274,11 +273,6 @@ export async function startSenseVoiceConversation(
     const message = error instanceof Error
       ? error.message
       : 'SenseVoice 识别启动失败，请检查模型和配置。'
-
-    if (params.currentSettings.speechInputFailoverEnabled) {
-      params.switchSpeechInputToLocalWhisper('SenseVoice 不可用，已自动切换到本地 Whisper。')
-      return
-    }
 
     params.updateVoicePipeline('idle', message)
     params.setError(message)
