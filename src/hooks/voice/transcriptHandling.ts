@@ -296,6 +296,14 @@ export async function handleRecognizedVoiceTranscriptRuntime(
     // Remember content BEFORE sending to prevent duplicate sends from concurrent calls.
     options.rememberSubmittedVoiceContent(transcriptDecision.content)
     const sent = await options.sendMessage(transcriptDecision.content, { source: 'voice', traceId })
+
+    if (!sent && options.shouldAutoRestartVoice()) {
+      // sendMessage was rejected (e.g. busy). The bus may be stuck in 'transcribing'.
+      // Dispatch session_completed to push it back to 'idle', then schedule a restart.
+      options.dispatchVoiceSessionAndSync({ type: 'session_completed' })
+      options.scheduleVoiceRestart('消息未发出，我继续收音。', 320)
+    }
+
     return sent
   }
 
@@ -313,6 +321,12 @@ export async function handleRecognizedVoiceTranscriptRuntime(
   // Remember content BEFORE sending to prevent duplicate sends from concurrent calls.
   options.rememberSubmittedVoiceContent(transcriptDecision.content)
   const sent = await options.sendMessage(transcriptDecision.content, { source: 'voice', traceId })
+
+  if (!sent && options.shouldAutoRestartVoice()) {
+    options.dispatchVoiceSessionAndSync({ type: 'session_completed' })
+    options.scheduleVoiceRestart('消息未发出，我继续收音。', 320)
+  }
+
   return sent
 }
 

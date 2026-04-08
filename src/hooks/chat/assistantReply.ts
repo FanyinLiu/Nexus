@@ -442,8 +442,17 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           })
         }
       } else {
-        // Bus drives voiceState → 'idle' + setMood('idle')
-        dependencies.ctx.busEmit({ type: 'session:completed' })
+        // No TTS playback — emit session:completed for bus phase → idle,
+        // plus restart_voice if the turn originated from voice input.
+        if (shouldResumeContinuousVoice) {
+          dependencies.ctx.busEmit({
+            type: 'tts:completed',
+            speechGeneration: 0,
+            shouldResumeContinuousVoice: true,
+          })
+        } else {
+          dependencies.ctx.busEmit({ type: 'session:completed' })
+        }
       }
 
       return true

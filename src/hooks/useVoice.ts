@@ -205,8 +205,13 @@ export function useVoice(ctx: UseVoiceContext) {
       switch (effect.type) {
         case 'restart_voice':
           window.setTimeout(() => {
-            if (voiceBus.phase !== 'idle') return
+            const currentPhase = voiceBus.phase
+            if (currentPhase !== 'idle') {
+              console.log('[VoiceBus] restart_voice skipped — phase:', currentPhase)
+              return
+            }
             try {
+              console.log('[VoiceBus] restart_voice — starting voice conversation')
               startVoiceConversation({ restart: true, passive: true })
             } catch (err) {
               console.warn('[VoiceBus] restart failed:', err)
