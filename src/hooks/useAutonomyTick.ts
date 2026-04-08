@@ -66,7 +66,7 @@ export function useAutonomyTick({
     }, intervalMs)
 
     return () => window.clearInterval(timerId)
-  }, [enabled, tickIntervalSeconds])
+  }, [enabled, tickIntervalSeconds]) // eslint-disable-line react-hooks/exhaustive-deps -- refs are stable identity, accessed inside setInterval callback
 
   // Wake up: called externally when user interacts
   const wakeUp = useCallback(() => {

@@ -477,7 +477,7 @@ export function SettingsDrawer({
       }
       return changed ? patch : current
     })
-  }, [open, settings.apiKey, settings.speechOutputApiKey, settings.speechInputApiKey, settings.voiceCloneApiKey, settings.toolWebSearchApiKey])
+  }, [open, settings.apiKey, settings.speechOutputApiKey, settings.speechInputApiKey, settings.voiceCloneApiKey, settings.toolWebSearchApiKey]) // eslint-disable-line react-hooks/exhaustive-deps -- only sync specific vault keys, not full settings
 
    
   useEffect(() => {
@@ -502,7 +502,7 @@ export function SettingsDrawer({
     chatHistory.resetChatHistory()
     memoryArchive.resetMemoryArchive()
     windowState.resetWindowState()
-  }, [open, settings])
+  }, [open, settings]) // eslint-disable-line react-hooks/exhaustive-deps -- reset functions are stable objects from custom hooks
 
   function applyTextProviderPreset(providerId: string) {
     setDraft((prev) => switchTextProvider(prev, providerId))

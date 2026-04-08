@@ -138,42 +138,38 @@ export async function startSpeechOutputRuntime(
     payload: s,
   }))
 
-  try {
-    const result = await executeWithFailover<AppSettings, void>({
-      domain: 'speech-output',
-      candidates,
-      failoverEnabled: options.speechSettings.speechOutputFailoverEnabled,
-      execute: async (candidate) => {
-        await playSpeechOutputWithSettingsRuntime(
-          options.text,
-          candidate.payload,
-          options.runtime,
-          options.callbacks,
-        )
-      },
-      onEvent: (event) => {
-        if (event.type === 'failure' && event.isPrimary) {
-          options.appendVoiceTrace(
-            '语音播报主链路异常',
-            `${options.speechSettings.speechOutputProviderId}：${shorten(event.error, 80)}`,
-            'error',
-          )
-        }
-      },
-    })
-
-    if (result.usedFallback) {
-      // Only log the fallback — do NOT mutate settingsRef.  Previous behavior
-      // permanently switched the runtime settings to the fallback provider,
-      // meaning all subsequent responses would use a different provider/voice
-      // even if the primary provider recovered on the very next request.
-      options.appendVoiceTrace(
-        '语音播报本次回退',
-        `${options.speechSettings.speechOutputProviderId} -> ${result.candidateId}（仅本次，不改变设置）`,
-        'success',
+  const result = await executeWithFailover<AppSettings, void>({
+    domain: 'speech-output',
+    candidates,
+    failoverEnabled: options.speechSettings.speechOutputFailoverEnabled,
+    execute: async (candidate) => {
+      await playSpeechOutputWithSettingsRuntime(
+        options.text,
+        candidate.payload,
+        options.runtime,
+        options.callbacks,
       )
-    }
-  } catch (error) {
-    throw error
+    },
+    onEvent: (event) => {
+      if (event.type === 'failure' && event.isPrimary) {
+        options.appendVoiceTrace(
+          '语音播报主链路异常',
+          `${options.speechSettings.speechOutputProviderId}：${shorten(event.error, 80)}`,
+          'error',
+        )
+      }
+    },
+  })
+
+  if (result.usedFallback) {
+    // Only log the fallback — do NOT mutate settingsRef.  Previous behavior
+    // permanently switched the runtime settings to the fallback provider,
+    // meaning all subsequent responses would use a different provider/voice
+    // even if the primary provider recovered on the very next request.
+    options.appendVoiceTrace(
+      '语音播报本次回退',
+      `${options.speechSettings.speechOutputProviderId} -> ${result.candidateId}（仅本次，不改变设置）`,
+      'success',
+    )
   }
 }

@@ -1,4 +1,8 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react'
+﻿/* eslint-disable react-hooks/refs -- useVoice is a ref-heavy voice infrastructure
+   hook that must bridge refs, state, and event bus during render.  The lint rule
+   flags `settings` (a plain AppSettings value) because the context object that
+   carries it also holds RefObjects; these are false positives. */
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createInitialWakewordRuntimeState,
   hearingConfigFromSettings,
@@ -1034,7 +1038,7 @@ export function useVoice(ctx: UseVoiceContext) {
       wakewordKeywordDetectedRef,
       setWakewordState,
     })
-  }, [settings.speechInputEnabled, settings.voiceTriggerMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [settings.speechInputEnabled, settings.voiceTriggerMode])  
 
   // Keep refs current — intentionally no deps to capture latest closures.
   // Use a layout-time assignment instead of useEffect to avoid extra render cycles.
@@ -1099,7 +1103,7 @@ export function useVoice(ctx: UseVoiceContext) {
 
     clearPendingVoiceRestart()
     setContinuousVoiceSession(false)
-  }, [settings.continuousVoiceModeEnabled, clearPendingVoiceRestart]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [settings.continuousVoiceModeEnabled, clearPendingVoiceRestart])
 
   // If runtime continuous voice is already active on startup, keep the saved setting aligned.
   useEffect(() => {
@@ -1130,7 +1134,7 @@ export function useVoice(ctx: UseVoiceContext) {
             continuousVoiceModeEnabled: true,
           }
     ))
-  }, [continuousVoiceActive, settings.continuousVoiceModeEnabled]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [continuousVoiceActive, settings.continuousVoiceModeEnabled]) // eslint-disable-line react-hooks/exhaustive-deps -- ctx and setSettings are stable parent references
 
   useEffect(() => {
     const runtime = wakewordRuntimeRef.current
