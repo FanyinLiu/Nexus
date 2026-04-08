@@ -47,61 +47,41 @@ let localQwen3TtsLaunchPromise = null
 
 // ── Provider detection ──
 
-function isLocalQwen3TtsSpeechOutputProvider(providerId) {
-  return providerId === 'local-qwen3-tts'
-}
+const SPEECH_PROVIDER_IDS = Object.freeze({
+  localQwen3Tts:  'local-qwen3-tts',
+  piper:          'piper-tts',
+  coqui:          'coqui-tts',
+  volcengineSTT:  'volcengine-stt',
+  volcengineTTS:  'volcengine-tts',
+  minimax:        'minimax-tts',
+  dashscope:      'dashscope-tts',
+  cosyvoice:      'cosyvoice-tts',
+  edgeTts:        'edge-tts',
+  fishSpeech:     'fish-speech-tts',
+  openaiSTT:      'openai-stt',
+  customOpenaiSTT:'custom-openai-stt',
+  openaiTTS:      'openai-tts',
+  customOpenaiTTS:'custom-openai-tts',
+})
 
-function isPiperSpeechOutputProvider(providerId) {
-  return providerId === 'piper-tts'
-}
+const isLocalQwen3TtsSpeechOutputProvider = (id) => id === SPEECH_PROVIDER_IDS.localQwen3Tts
+const isPiperSpeechOutputProvider         = (id) => id === SPEECH_PROVIDER_IDS.piper
+const isCoquiSpeechOutputProvider         = (id) => id === SPEECH_PROVIDER_IDS.coqui
+const isLocalCliSpeechOutputProvider      = (id) => isPiperSpeechOutputProvider(id) || isCoquiSpeechOutputProvider(id)
+const isElevenLabsProvider                = (id) => String(id ?? '').startsWith('elevenlabs')
+const isVolcengineSpeechInputProvider     = (id) => id === SPEECH_PROVIDER_IDS.volcengineSTT
+const isVolcengineSpeechOutputProvider    = (id) => id === SPEECH_PROVIDER_IDS.volcengineTTS
+const isMiniMaxSpeechOutputProvider       = (id) => id === SPEECH_PROVIDER_IDS.minimax
+const isDashScopeSpeechOutputProvider     = (id) => id === SPEECH_PROVIDER_IDS.dashscope
+const isCosyVoiceSpeechOutputProvider     = (id) => id === SPEECH_PROVIDER_IDS.cosyvoice
+const isEdgeTtsSpeechOutputProvider       = (id) => id === SPEECH_PROVIDER_IDS.edgeTts
+const isFishSpeechSpeechOutputProvider    = (id) => id === SPEECH_PROVIDER_IDS.fishSpeech
 
-function isCoquiSpeechOutputProvider(providerId) {
-  return providerId === 'coqui-tts'
-}
+const OPENAI_COMPATIBLE_STT_IDS = new Set([SPEECH_PROVIDER_IDS.openaiSTT, SPEECH_PROVIDER_IDS.customOpenaiSTT])
+const isOpenAiCompatibleSpeechInputProvider = (id) => OPENAI_COMPATIBLE_STT_IDS.has(id)
 
-function isLocalCliSpeechOutputProvider(providerId) {
-  return isPiperSpeechOutputProvider(providerId) || isCoquiSpeechOutputProvider(providerId)
-}
-
-function isElevenLabsProvider(providerId) {
-  return String(providerId ?? '').startsWith('elevenlabs')
-}
-
-function isOpenAiCompatibleSpeechInputProvider(providerId) {
-  return providerId === 'openai-stt' || providerId === 'custom-openai-stt'
-}
-
-function isVolcengineSpeechInputProvider(providerId) {
-  return providerId === 'volcengine-stt'
-}
-
-function isVolcengineSpeechOutputProvider(providerId) {
-  return providerId === 'volcengine-tts'
-}
-
-function isOpenAiCompatibleSpeechOutputProvider(providerId) {
-  return providerId === 'openai-tts' || providerId === 'custom-openai-tts' || providerId === 'local-qwen3-tts'
-}
-
-function isMiniMaxSpeechOutputProvider(providerId) {
-  return providerId === 'minimax-tts'
-}
-
-function isDashScopeSpeechOutputProvider(providerId) {
-  return providerId === 'dashscope-tts'
-}
-
-function isCosyVoiceSpeechOutputProvider(providerId) {
-  return providerId === 'cosyvoice-tts'
-}
-
-function isEdgeTtsSpeechOutputProvider(providerId) {
-  return providerId === 'edge-tts'
-}
-
-function isFishSpeechSpeechOutputProvider(providerId) {
-  return providerId === 'fish-speech-tts'
-}
+const OPENAI_COMPATIBLE_TTS_IDS = new Set([SPEECH_PROVIDER_IDS.openaiTTS, SPEECH_PROVIDER_IDS.customOpenaiTTS, SPEECH_PROVIDER_IDS.localQwen3Tts])
+const isOpenAiCompatibleSpeechOutputProvider = (id) => OPENAI_COMPATIBLE_TTS_IDS.has(id)
 
 // ── URL / timeout resolution ──
 
@@ -1473,6 +1453,7 @@ async function warmupRemoteTtsSession(sessionPayload) {
 // ── Exports ──
 
 export {
+  SPEECH_PROVIDER_IDS,
   synthesizeRemoteTts,
   warmupRemoteTtsSession,
   buildAuthorizationHeaders,
@@ -1489,6 +1470,8 @@ export {
   isVolcengineSpeechOutputProvider,
   isVolcengineSpeechInputProvider,
   isOpenAiCompatibleSpeechInputProvider,
+  isEdgeTtsSpeechOutputProvider,
+  isFishSpeechSpeechOutputProvider,
   resolveSpeechOutputBaseUrl,
   resolveSpeechOutputTimeoutMs,
   resolveSpeechOutputTimeoutMessage,
@@ -1501,7 +1484,6 @@ export {
   synthesizeVolcengineSpeechOutputWithFallback,
   formatVolcengineSpeechOutputCombo,
   createSilentWavBase64,
-  isFishSpeechSpeechOutputProvider,
   mapLanguageToMiniMaxBoost,
   mapLanguageToDashScopeType,
 }

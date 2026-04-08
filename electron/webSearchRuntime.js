@@ -125,40 +125,46 @@ function normalizeBaseUrl(value) {
   return String(value ?? '').trim().replace(/\/+$/u, '')
 }
 
+function resolveEndpointWithSuffix(baseUrl, defaultBase, suffix = '/search') {
+  const normalized = normalizeBaseUrl(baseUrl)
+  if (!normalized) return `${defaultBase}${suffix}`
+  const suffixPattern = new RegExp(`${suffix.replace(/\//g, '\\/')}$`, 'iu')
+  if (suffixPattern.test(normalized)) return normalized
+  return `${normalized}${suffix}`
+}
+
+function requireSearchApiKey(apiKey, label) {
+  const key = normalizeWhitespace(apiKey)
+  if (!key) throw new Error(`${label} requires an API key.`)
+  return key
+}
+
+async function fetchSearchJson(helpers, endpoint, requestOptions, label) {
+  const response = await helpers.performNetworkRequest(endpoint, {
+    ...requestOptions,
+    timeoutMs: helpers.timeoutMs,
+    timeoutMessage: `${label} timed out.`,
+  })
+  if (!response.ok) {
+    throw new Error(await helpers.extractResponseErrorMessage(response, `${label} failed (${response.status}).`))
+  }
+  return helpers.readJsonSafe(response)
+}
+
 function resolveBraveEndpoint(baseUrl) {
   const normalized = normalizeBaseUrl(baseUrl)
-  if (!normalized) {
-    return DEFAULT_BRAVE_BASE_URL
-  }
-  if (/\/web\/search$/iu.test(normalized)) {
-    return normalized
-  }
-  if (/\/res\/v1$/iu.test(normalized)) {
-    return `${normalized}/web/search`
-  }
+  if (!normalized) return DEFAULT_BRAVE_BASE_URL
+  if (/\/web\/search$/iu.test(normalized)) return normalized
+  if (/\/res\/v1$/iu.test(normalized)) return `${normalized}/web/search`
   return `${normalized}/web/search`
 }
 
 function resolveTavilyEndpoint(baseUrl) {
-  const normalized = normalizeBaseUrl(baseUrl)
-  if (!normalized) {
-    return `${DEFAULT_TAVILY_BASE_URL}/search`
-  }
-  if (/\/search$/iu.test(normalized)) {
-    return normalized
-  }
-  return `${normalized}/search`
+  return resolveEndpointWithSuffix(baseUrl, DEFAULT_TAVILY_BASE_URL)
 }
 
 function resolveExaEndpoint(baseUrl) {
-  const normalized = normalizeBaseUrl(baseUrl)
-  if (!normalized) {
-    return `${DEFAULT_EXA_BASE_URL}/search`
-  }
-  if (/\/search$/iu.test(normalized)) {
-    return normalized
-  }
-  return `${normalized}/search`
+  return resolveEndpointWithSuffix(baseUrl, DEFAULT_EXA_BASE_URL)
 }
 
 function resolveFirecrawlEndpoint(baseUrl, pathname = '/v2/search') {
@@ -495,30 +501,20 @@ async function searchWithDuckDuckGo(request, helpers) {
 }
 
 async function searchWithBrave(request, helpers) {
-  const apiKey = normalizeWhitespace(request.apiKey)
-  if (!apiKey) {
-    throw new Error('Brave Search requires an API key.')
-  }
+  const apiKey = requireSearchApiKey(request.apiKey, 'Brave Search')
 
   const endpoint = new URL(resolveBraveEndpoint(request.baseUrl))
   endpoint.searchParams.set('q', request.query)
   endpoint.searchParams.set('count', String(clampResultCount(request.limit, 10)))
 
-  const response = await helpers.performNetworkRequest(endpoint.toString(), {
+  const data = await fetchSearchJson(helpers, endpoint.toString(), {
     method: 'GET',
     headers: {
       Accept: 'application/json',
       'X-Subscription-Token': apiKey,
     },
-    timeoutMs: helpers.timeoutMs,
-    timeoutMessage: 'Brave Search timed out.',
-  })
+  }, 'Brave Search')
 
-  if (!response.ok) {
-    throw new Error(await helpers.extractResponseErrorMessage(response, `Brave Search failed (${response.status}).`))
-  }
-
-  const data = await helpers.readJsonSafe(response)
   const rawResults = Array.isArray(data?.web?.results) ? data.web.results : []
   const items = rankAndFilterItems(
     rawResults
@@ -541,13 +537,9 @@ async function searchWithBrave(request, helpers) {
 }
 
 async function searchWithTavily(request, helpers) {
-  const apiKey = normalizeWhitespace(request.apiKey)
-  if (!apiKey) {
-    throw new Error('Tavily requires an API key.')
-  }
+  const apiKey = requireSearchApiKey(request.apiKey, 'Tavily')
 
-  const endpoint = resolveTavilyEndpoint(request.baseUrl)
-  const response = await helpers.performNetworkRequest(endpoint, {
+  const data = await fetchSearchJson(helpers, resolveTavilyEndpoint(request.baseUrl), {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -560,15 +552,8 @@ async function searchWithTavily(request, helpers) {
       search_depth: 'advanced',
       include_answer: true,
     }),
-    timeoutMs: helpers.timeoutMs,
-    timeoutMessage: 'Tavily timed out.',
-  })
+  }, 'Tavily')
 
-  if (!response.ok) {
-    throw new Error(await helpers.extractResponseErrorMessage(response, `Tavily failed (${response.status}).`))
-  }
-
-  const data = await helpers.readJsonSafe(response)
   const rawResults = Array.isArray(data?.results) ? data.results : []
   const items = rankAndFilterItems(
     rawResults
@@ -608,13 +593,9 @@ function pickExaSnippet(item, query) {
 }
 
 async function searchWithExa(request, helpers) {
-  const apiKey = normalizeWhitespace(request.apiKey)
-  if (!apiKey) {
-    throw new Error('Exa requires an API key.')
-  }
+  const apiKey = requireSearchApiKey(request.apiKey, 'Exa')
 
-  const endpoint = resolveExaEndpoint(request.baseUrl)
-  const response = await helpers.performNetworkRequest(endpoint, {
+  const data = await fetchSearchJson(helpers, resolveExaEndpoint(request.baseUrl), {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -640,15 +621,8 @@ async function searchWithExa(request, helpers) {
         },
       },
     }),
-    timeoutMs: helpers.timeoutMs,
-    timeoutMessage: 'Exa search timed out.',
-  })
+  }, 'Exa search')
 
-  if (!response.ok) {
-    throw new Error(await helpers.extractResponseErrorMessage(response, `Exa search failed (${response.status}).`))
-  }
-
-  const data = await helpers.readJsonSafe(response)
   const rawResults = Array.isArray(data?.results) ? data.results : []
   const items = rankAndFilterItems(
     rawResults
@@ -743,13 +717,9 @@ function resolveFirecrawlSearchItems(payload) {
 }
 
 async function searchWithFirecrawl(request, helpers) {
-  const apiKey = normalizeWhitespace(request.apiKey)
-  if (!apiKey) {
-    throw new Error('Firecrawl requires an API key.')
-  }
+  const apiKey = requireSearchApiKey(request.apiKey, 'Firecrawl')
 
-  const endpoint = resolveFirecrawlEndpoint(request.baseUrl, '/v2/search')
-  const response = await helpers.performNetworkRequest(endpoint, {
+  const data = await fetchSearchJson(helpers, resolveFirecrawlEndpoint(request.baseUrl, '/v2/search'), {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -763,15 +733,7 @@ async function searchWithFirecrawl(request, helpers) {
         formats: ['markdown'],
       },
     }),
-    timeoutMs: helpers.timeoutMs,
-    timeoutMessage: 'Firecrawl search timed out.',
-  })
-
-  if (!response.ok) {
-    throw new Error(await helpers.extractResponseErrorMessage(response, `Firecrawl search failed (${response.status}).`))
-  }
-
-  const data = await helpers.readJsonSafe(response)
+  }, 'Firecrawl search')
   const items = rankAndFilterItems(
     resolveFirecrawlSearchItems(data)
       .map((item) => ({
@@ -832,13 +794,9 @@ function buildCitationSearchItems(entries, answer) {
 }
 
 async function searchWithGemini(request, helpers) {
-  const apiKey = normalizeWhitespace(request.apiKey)
-  if (!apiKey) {
-    throw new Error('Gemini search requires an API key.')
-  }
+  const apiKey = requireSearchApiKey(request.apiKey, 'Gemini search')
 
-  const endpoint = resolveGeminiEndpoint(request.baseUrl, DEFAULT_GEMINI_SEARCH_MODEL)
-  const response = await helpers.performNetworkRequest(endpoint, {
+  const data = await fetchSearchJson(helpers, resolveGeminiEndpoint(request.baseUrl, DEFAULT_GEMINI_SEARCH_MODEL), {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -846,30 +804,10 @@ async function searchWithGemini(request, helpers) {
       'x-goog-api-key': apiKey,
     },
     body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            {
-              text: request.query,
-            },
-          ],
-        },
-      ],
-      tools: [
-        {
-          google_search: {},
-        },
-      ],
+      contents: [{ parts: [{ text: request.query }] }],
+      tools: [{ google_search: {} }],
     }),
-    timeoutMs: helpers.timeoutMs,
-    timeoutMessage: 'Gemini grounded search timed out.',
-  })
-
-  if (!response.ok) {
-    throw new Error(await helpers.extractResponseErrorMessage(response, `Gemini search failed (${response.status}).`))
-  }
-
-  const data = await helpers.readJsonSafe(response)
+  }, 'Gemini search')
   if (data?.error?.message) {
     throw new Error(normalizeWhitespace(data.error.message) || 'Gemini search failed.')
   }
@@ -906,16 +844,11 @@ async function searchWithGemini(request, helpers) {
 }
 
 async function searchWithPerplexity(request, helpers) {
-  const apiKey = normalizeWhitespace(request.apiKey)
-  if (!apiKey) {
-    throw new Error('Perplexity requires an API key.')
-  }
-
+  const apiKey = requireSearchApiKey(request.apiKey, 'Perplexity')
   const runtime = resolvePerplexityRuntime(request.baseUrl, apiKey)
 
   if (runtime.transport === 'search_api') {
-    const endpoint = resolvePerplexitySearchEndpoint(runtime.baseUrl)
-    const response = await helpers.performNetworkRequest(endpoint, {
+    const data = await fetchSearchJson(helpers, resolvePerplexitySearchEndpoint(runtime.baseUrl), {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -926,15 +859,7 @@ async function searchWithPerplexity(request, helpers) {
         query: request.query,
         max_results: clampResultCount(request.limit, 10),
       }),
-      timeoutMs: helpers.timeoutMs,
-      timeoutMessage: 'Perplexity search timed out.',
-    })
-
-    if (!response.ok) {
-      throw new Error(await helpers.extractResponseErrorMessage(response, `Perplexity search failed (${response.status}).`))
-    }
-
-    const data = await helpers.readJsonSafe(response)
+    }, 'Perplexity search')
     const candidateItems = Array.isArray(data?.results)
       ? data.results
         .map((entry) => ({
@@ -956,8 +881,7 @@ async function searchWithPerplexity(request, helpers) {
     }
   }
 
-  const endpoint = resolvePerplexityChatEndpoint(runtime.baseUrl)
-  const response = await helpers.performNetworkRequest(endpoint, {
+  const data = await fetchSearchJson(helpers, resolvePerplexityChatEndpoint(runtime.baseUrl), {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -966,22 +890,9 @@ async function searchWithPerplexity(request, helpers) {
     },
     body: JSON.stringify({
       model: runtime.model,
-      messages: [
-        {
-          role: 'user',
-          content: request.query,
-        },
-      ],
+      messages: [{ role: 'user', content: request.query }],
     }),
-    timeoutMs: helpers.timeoutMs,
-    timeoutMessage: 'Perplexity search timed out.',
-  })
-
-  if (!response.ok) {
-    throw new Error(await helpers.extractResponseErrorMessage(response, `Perplexity search failed (${response.status}).`))
-  }
-
-  const data = await helpers.readJsonSafe(response)
+  }, 'Perplexity search')
   const answer = normalizeWhitespace(data?.choices?.[0]?.message?.content ?? '')
   const rawCitations = extractPerplexityCitations(data)
   const candidateItems = buildCitationSearchItems(rawCitations, answer)
