@@ -152,7 +152,7 @@ declare global {
       closePanel: () => Promise<void>
       getPanelWindowState: () => Promise<PanelWindowState>
       setPanelWindowState: (state: Partial<PanelWindowState>) => Promise<PanelWindowState>
-      isPanelWindow: () => boolean
+      isPanelWindow: () => Promise<boolean>
       subscribePanelSection: (listener: (payload: { section: 'chat' | 'settings' }) => void) => () => void
       subscribePanelWindowState: (listener: (state: PanelWindowState) => void) => () => void
       subscribeRuntimeState: (listener: (state: {

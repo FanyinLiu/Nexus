@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   getInitialPanelSection,
   getWindowView,
+  getWindowViewSync,
 } from '../appSupport'
 import { subscribeToSettings } from '../store/settingsStore'
 import {
@@ -13,6 +14,7 @@ import type {
   PanelWindowState,
   ReminderTask,
   VoiceState,
+  WindowView,
 } from '../../types'
 import {
   useChat,
@@ -43,11 +45,18 @@ type ChatController = ReturnType<typeof useChat>
 type ReminderTaskStore = ReturnType<typeof useReminderTaskStore>
 
 export function useAppController() {
-  const view = useMemo(() => getWindowView(), [])
+  const [view, setView] = useState<WindowView>(() => getWindowViewSync())
   const [settings, setSettings] = useState<AppSettings>(() => getSettingsSnapshot())
   const [settingsOpen, setSettingsOpen] = useState(
     () => view === 'panel' && getInitialPanelSection() === 'settings',
   )
+
+  // Refine view from async preload bridge (only matters inside Electron)
+  useEffect(() => {
+    void getWindowView().then((resolved) => {
+      if (resolved !== view) setView(resolved)
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [panelWindowState, setPanelWindowState] = useState<PanelWindowState>({ collapsed: false })
   const initialPrefs = loadPetWindowPreferences()
   const [isPinned, setIsPinned] = useState(initialPrefs.isPinned)

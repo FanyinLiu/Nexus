@@ -24,14 +24,19 @@ export const STARTUP_GREETING_DURATION_MS = 9_200
 export const STARTUP_GREETING_SESSION_KEY = 'nexus:startup-greeting-shown'
 export const VOICE_TRIGGER_DIRECT_SEND_MIGRATION_KEY = 'nexus:voice-trigger-direct-send-migration-v1'
 
-export function getWindowView(): WindowView {
-  if (window.desktopPet?.isPanelWindow?.()) {
-    return 'panel'
-  }
-
+/** Synchronous initial guess from URL params (safe for useState initializers). */
+export function getWindowViewSync(): WindowView {
   return new URLSearchParams(window.location.search).get('view') === 'panel'
     ? 'panel'
     : 'pet'
+}
+
+/** Async check that also consults the Electron preload bridge. */
+export async function getWindowView(): Promise<WindowView> {
+  if (await window.desktopPet?.isPanelWindow?.()) {
+    return 'panel'
+  }
+  return getWindowViewSync()
 }
 
 export type PanelSection = 'chat' | 'settings'

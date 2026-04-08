@@ -66,8 +66,8 @@ export function register() {
     dragWindowBy(event, delta)
   })
 
-  ipcMain.on('window:get-view-kind', (event) => {
-    event.returnValue = getViewKind(event)
+  ipcMain.handle('window:get-view-kind', (event) => {
+    return getViewKind(event)
   })
 
   ipcMain.handle('runtime-state:get', () => {

@@ -14,7 +14,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   closePanel: () => ipcRenderer.invoke('window:close-panel'),
   getPanelWindowState: () => ipcRenderer.invoke('panel-window:get-state'),
   setPanelWindowState: (state) => ipcRenderer.invoke('panel-window:set-state', state),
-  isPanelWindow: () => ipcRenderer.sendSync('window:get-view-kind') === 'panel',
+  isPanelWindow: () => ipcRenderer.invoke('window:get-view-kind').then((kind) => kind === 'panel'),
   subscribePanelSection: (listener) => {
     const handler = (_event, payload) => listener(payload)
     ipcRenderer.on('panel-section:changed', handler)

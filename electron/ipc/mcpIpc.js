@@ -2,11 +2,13 @@ import { ipcMain } from 'electron'
 import * as mcpHost from '../services/mcpHost.js'
 import { mcpClientService } from '../services/mcpClient.js'
 import { splitCommandLine } from '../integrationRuntime.js'
+import { requireString, requireObject } from './validate.js'
 
 export function register() {
   // ── MCP stdio client ──
 
   ipcMain.handle('mcp-client:connect', async (_event, config) => {
+    requireObject(config, 'config')
     return mcpClientService.connect(config)
   })
 
@@ -34,9 +36,10 @@ export function register() {
   // ── MCP Host (multi-server) ──
 
   ipcMain.handle('mcp:start', async (_event, payload) => {
-    const id = String(payload?.id ?? '').trim()
-    const command = String(payload?.command ?? '').trim()
-    const args = splitCommandLine(payload?.args ?? '')
+    requireObject(payload, 'payload')
+    const id = requireString(payload.id, 'id')
+    const command = requireString(payload.command, 'command')
+    const args = splitCommandLine(payload.args ?? '')
     await mcpHost.start(id, command, args)
     return mcpHost.getStatus(id)
   })
@@ -48,9 +51,10 @@ export function register() {
   })
 
   ipcMain.handle('mcp:restart', async (_event, payload) => {
-    const id = String(payload?.id ?? '').trim()
-    const command = String(payload?.command ?? '').trim()
-    const args = splitCommandLine(payload?.args ?? '')
+    requireObject(payload, 'payload')
+    const id = requireString(payload.id, 'id')
+    const command = requireString(payload.command, 'command')
+    const args = splitCommandLine(payload.args ?? '')
     await mcpHost.restart(id, command, args)
     return mcpHost.getStatus(id)
   })
@@ -66,9 +70,10 @@ export function register() {
   })
 
   ipcMain.handle('mcp:call-tool', async (_event, payload) => {
-    const id = payload?.serverId ? String(payload.serverId).trim() : null
-    const name = String(payload?.name ?? '')
-    const toolArgs = payload?.arguments ?? {}
+    requireObject(payload, 'payload')
+    const name = requireString(payload.name, 'name')
+    const toolArgs = payload.arguments ?? {}
+    const id = payload.serverId ? String(payload.serverId).trim() : null
     return id
       ? mcpHost.callTool(id, name, toolArgs)
       : mcpHost.callToolByName(name, toolArgs)
