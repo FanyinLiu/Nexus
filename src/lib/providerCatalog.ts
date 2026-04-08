@@ -36,6 +36,7 @@ export type SpeechOutputAdjustmentSupport = {
 
 export type SpeechInputProtocol =
   | 'sensevoice'
+  | 'paraformer'
   | 'openai-compatible'
   | 'elevenlabs'
   | 'volcengine'
@@ -65,6 +66,20 @@ export const SPEECH_INPUT_PROVIDERS: SpeechInputProviderEntry[] = [
     hidden: false,
     modelOptions: [
       { value: 'sensevoice-zh-en', label: 'SenseVoice 中英双语（推荐）' },
+    ],
+  },
+  {
+    id: 'local-paraformer',
+    label: '[本地] Paraformer 流式识别',
+    baseUrl: '',
+    defaultModel: 'paraformer-trilingual',
+    notes: '阿里 Paraformer 流式识别，边说边转写，实时显示识别内容。支持中英粤三语。需先下载模型到 sherpa-models 目录。',
+    protocol: 'paraformer',
+    kind: 'local',
+    hidden: false,
+    modelOptions: [
+      { value: 'paraformer-trilingual', label: 'Paraformer 中英粤三语（推荐）' },
+      { value: 'paraformer-zh-en', label: 'Paraformer 中英双语' },
     ],
   },
   {
@@ -309,6 +324,32 @@ export const SPEECH_OUTPUT_PROVIDERS: SpeechOutputProviderEntry[] = [
       { id: 'ja-JP-NanamiNeural', label: 'Nanami（日语女）', description: '自然な日本語女性音声。' },
     ],
     adjustmentSupport: { rate: true, pitch: true, volume: true, note: '支持语速、语调和音量调节。' },
+  },
+  {
+    id: 'cosyvoice-tts',
+    label: '[本地] CosyVoice TTS',
+    baseUrl: 'http://127.0.0.1:9880',
+    defaultModel: 'cosyvoice-sft',
+    defaultVoice: '中文女',
+    notes: '阿里 CosyVoice 本地语音合成，需先启动本地 CosyVoice 服务。支持 SFT 和 Instruct 两种模式。',
+    protocol: 'cosyvoice',
+    kind: 'local',
+    hidden: false,
+    supportsStreaming: true,
+    modelOptions: [
+      { value: 'cosyvoice-sft', label: 'CosyVoice SFT（推荐）' },
+      { value: 'cosyvoice-instruct', label: 'CosyVoice Instruct（指令控制）' },
+    ],
+    fallbackVoiceOptions: [
+      { id: '中文女', label: '中文女声', description: '默认中文女声，自然流畅。' },
+      { id: '中文男', label: '中文男声', description: '默认中文男声。' },
+      { id: '日语男', label: '日语男声', description: '日语男声。' },
+      { id: '粤语女', label: '粤语女声', description: '粤语女声。' },
+      { id: '英文女', label: '英文女声', description: '英文女声。' },
+      { id: '英文男', label: '英文男声', description: '英文男声。' },
+      { id: '韩语女', label: '韩语女声', description: '韩语女声。' },
+    ],
+    adjustmentSupport: { rate: false, pitch: false, volume: false, note: 'CosyVoice 暂不支持语速、语调和音量参数调节。' },
   },
   {
     id: 'custom-openai-tts',

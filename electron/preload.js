@@ -87,6 +87,13 @@ contextBridge.exposeInMainWorld('desktopPet', {
   sensevoiceAbort: () => ipcRenderer.invoke('sensevoice:abort'),
   sensevoiceTranscribe: (payload) => ipcRenderer.invoke('sensevoice:transcribe', payload),
 
+  // Paraformer streaming ASR (sherpa-onnx OnlineRecognizer)
+  paraformerStatus: () => ipcRenderer.invoke('paraformer:status'),
+  paraformerStart: () => ipcRenderer.invoke('paraformer:start'),
+  paraformerFeed: (payload) => ipcRenderer.invoke('paraformer:feed', payload),
+  paraformerFinish: () => ipcRenderer.invoke('paraformer:finish'),
+  paraformerAbort: () => ipcRenderer.invoke('paraformer:abort'),
+
   // Sherpa-onnx keyword spotter (wake word)
   kwsStatus: (payload) => ipcRenderer.invoke('kws:status', payload),
   kwsStart: (payload) => ipcRenderer.invoke('kws:start', payload),

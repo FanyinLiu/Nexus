@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import sherpaKwsService from '../sherpaKws.js'
 import sherpaSenseVoiceService from '../sherpaSenseVoice.js'
+import sherpaParaformerService from '../sherpaParaformer.js'
 
 export function register() {
   ipcMain.handle('kws:status', (_event, payload) => {
@@ -75,5 +76,42 @@ export function register() {
     const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
     const text = sherpaSenseVoiceService.transcribe(float32, sampleRate || 16000)
     return { text }
+  })
+
+  // ── Paraformer streaming ASR ──
+
+  ipcMain.handle('paraformer:status', () => {
+    return sherpaParaformerService.getStatus()
+  })
+
+  ipcMain.handle('paraformer:start', () => {
+    if (!sherpaParaformerService.isAvailable()) {
+      const status = sherpaParaformerService.getStatus()
+      throw new Error(
+        status.installed
+          ? `Paraformer 模型未安装，请将 sherpa-onnx-streaming-paraformer 目录放到 ${status.modelsDir} 下。`
+          : 'sherpa-onnx-node 未安装，请先运行 npm install sherpa-onnx-node。',
+      )
+    }
+    const ok = sherpaParaformerService.startStream()
+    if (!ok) throw new Error('Paraformer 初始化失败。')
+    return { ok: true, sampleRate: 16000 }
+  })
+
+  ipcMain.handle('paraformer:feed', (_event, payload) => {
+    const { samples } = payload
+    if (!samples || !samples.length) return { text: '', isEndpoint: false }
+    const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
+    return sherpaParaformerService.feedAudio(float32)
+  })
+
+  ipcMain.handle('paraformer:finish', () => {
+    const text = sherpaParaformerService.finishStream()
+    return { text }
+  })
+
+  ipcMain.handle('paraformer:abort', () => {
+    sherpaParaformerService.abortStream()
+    return { ok: true }
   })
 }

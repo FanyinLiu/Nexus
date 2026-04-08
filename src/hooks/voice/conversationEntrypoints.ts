@@ -1,8 +1,10 @@
 import type { MutableRefObject, RefObject } from 'react'
 import {
+  isParaformerSpeechInputProvider,
   isSenseVoiceSpeechInputProvider,
   isTencentAsrSpeechInputProvider,
 } from '../../lib/audioProviders'
+import { checkParaformerAvailability } from '../../features/hearing/localParaformer.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import type {
   VoiceSessionEvent,
@@ -19,6 +21,7 @@ import type {
   VoiceConversationOptions,
 } from './types'
 import type { BrowserSpeechRecognition } from '../../lib/voice'
+import type { ParaformerStreamSession } from '../../features/hearing/localParaformer.ts'
 import type { TencentAsrStreamSession } from '../../features/hearing/tencentAsr.ts'
 import type { SenseVoiceStreamSession } from '../../features/hearing/localSenseVoice.ts'
 
@@ -43,6 +46,7 @@ export type StartVoiceConversationEntrypointOptions = {
   suppressVoiceReplyRef: MutableRefObject<boolean>
   recognitionRef: MutableRefObject<BrowserSpeechRecognition | null>
   vadSessionRef: MutableRefObject<VadConversationSession | null>
+  paraformerSessionRef: MutableRefObject<ParaformerStreamSession | null>
   sensevoiceSessionRef: MutableRefObject<SenseVoiceStreamSession | null>
   tencentAsrSessionRef: MutableRefObject<TencentAsrStreamSession | null>
   clearPendingVoiceRestart: () => void
@@ -70,6 +74,7 @@ export type StartVoiceConversationEntrypointOptions = {
   shouldAutoRestartVoice: () => boolean
   scheduleVoiceRestart: (statusText?: string, delay?: number) => void
   ensureSupportedSpeechInputSettings: (announce?: boolean) => AppSettings
+  startParaformerConversation: (options?: VoiceConversationOptions) => Promise<void>
   startSenseVoiceConversation: (options?: VoiceConversationOptions) => Promise<void>
   startTencentAsrConversation: (options?: VoiceConversationOptions) => Promise<void>
   startVadVoiceConversation: (
@@ -83,11 +88,13 @@ export type StopVoiceConversationEntrypointOptions = {
   continuousVoiceActiveRef: MutableRefObject<boolean>
   suppressVoiceReplyRef: MutableRefObject<boolean>
   recognitionRef: MutableRefObject<BrowserSpeechRecognition | null>
+  paraformerSessionRef: MutableRefObject<ParaformerStreamSession | null>
   sensevoiceSessionRef: MutableRefObject<SenseVoiceStreamSession | null>
   tencentAsrSessionRef: MutableRefObject<TencentAsrStreamSession | null>
   clearPendingVoiceRestart: () => void
   setContinuousVoiceSession: (active: boolean) => void
   resetNoSpeechRestartCount: () => void
+  clearParaformerConversationState: () => void
   clearSenseVoiceConversationState: () => void
   clearTencentConversationState: () => void
   stopApiRecording: (cancel?: boolean) => void
@@ -115,6 +122,24 @@ export function startVoiceConversationEntrypoint(
   }
 
   let currentSettings = params.ensureSupportedSpeechInputSettings(true)
+
+  if (isParaformerSpeechInputProvider(currentSettings.speechInputProviderId)) {
+    void checkParaformerAvailability().then((status) => {
+      if (!isParaformerSpeechInputProvider(params.settingsRef.current.speechInputProviderId)) {
+        return
+      }
+
+      if (!status.installed || !status.modelFound) {
+        params.setError('Paraformer 模型缺失，请检查模型目录。')
+        return
+      }
+
+      void params.startParaformerConversation(params.options)
+    }).catch(() => {
+      params.setError('Paraformer 不可用，请检查安装。')
+    })
+    return
+  }
 
   if (isSenseVoiceSpeechInputProvider(currentSettings.speechInputProviderId)) {
     void checkSenseVoiceAvailability().then((status) => {
@@ -150,12 +175,14 @@ export function startVoiceConversationEntrypoint(
   if (
     params.busyRef.current
     || params.vadSessionRef.current
+    || params.paraformerSessionRef.current
     || params.sensevoiceSessionRef.current
     || params.tencentAsrSessionRef.current
     || params.voiceStateRef.current === 'processing'
   ) {
     console.log('[VoiceEntrypoint] startVoiceConversation blocked — busy:', params.busyRef.current,
       'vad:', Boolean(params.vadSessionRef.current),
+      'paraformer:', Boolean(params.paraformerSessionRef.current),
       'sensevoice:', Boolean(params.sensevoiceSessionRef.current),
       'tencent:', Boolean(params.tencentAsrSessionRef.current),
       'voiceState:', params.voiceStateRef.current)
@@ -181,6 +208,9 @@ export function stopVoiceConversationEntrypoint(
   params.suppressVoiceReplyRef.current = true
   params.recognitionRef.current?.abort()
   params.recognitionRef.current = null
+  params.clearParaformerConversationState()
+  params.paraformerSessionRef.current?.abort()
+  params.paraformerSessionRef.current = null
   params.clearSenseVoiceConversationState()
   params.sensevoiceSessionRef.current?.abort()
   params.sensevoiceSessionRef.current = null

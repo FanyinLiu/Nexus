@@ -291,6 +291,15 @@ declare global {
         payload: { samples: number[] | Float32Array; sampleRate?: number },
       ) => Promise<{ text: string }>
 
+      // Paraformer streaming ASR (sherpa-onnx OnlineRecognizer)
+      paraformerStatus: () => Promise<{ installed: boolean; modelFound: boolean; modelsDir: string; currentModelId: string | null }>
+      paraformerStart: () => Promise<{ ok: boolean; sampleRate: number }>
+      paraformerFeed: (
+        payload: { samples: number[] | Float32Array },
+      ) => Promise<{ text: string; isEndpoint: boolean }>
+      paraformerFinish: () => Promise<{ text: string }>
+      paraformerAbort: () => Promise<{ ok: boolean }>
+
       // Sherpa-onnx streaming ASR
       sherpaStatus: () => Promise<{ installed: boolean; modelFound: boolean; modelsDir: string }>
       sherpaStart: (payload?: { modelId?: string }) => Promise<{ ok: boolean; sampleRate: number }>

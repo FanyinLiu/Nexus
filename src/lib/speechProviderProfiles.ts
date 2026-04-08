@@ -2,6 +2,7 @@ import {
   getSpeechInputProviderPreset,
   getSpeechOutputProviderPreset,
   isBrowserSpeechInputProvider,
+  isParaformerSpeechInputProvider,
   isSenseVoiceSpeechInputProvider,
   normalizeSpeechOutputApiBaseUrl,
   resolveSpeechInputModel,
@@ -27,6 +28,7 @@ function isLocalSpeechInputProvider(providerId: string) {
   return (
     isBrowserSpeechInputProvider(providerId)
     || isSenseVoiceSpeechInputProvider(providerId)
+    || isParaformerSpeechInputProvider(providerId)
   )
 }
 

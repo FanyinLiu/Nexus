@@ -8,6 +8,7 @@ export type VoiceSessionTransport =
   | 'remote_vad'
   | 'local_vad'
   | 'local_sensevoice'
+  | 'local_paraformer'
 
 export type VoiceSessionCloseReason =
   | 'completed'

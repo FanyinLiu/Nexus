@@ -18,6 +18,7 @@ import { stopSpeaking as stopBrowserSpeaking } from '../../lib/voice'
 import { createId } from '../../lib'
 import type { VoiceState } from '../../types'
 import { cleanupApiRecordingSession } from './recordingSession'
+import type { ParaformerConversationState } from './paraformerConversation'
 import type { SenseVoiceConversationState } from './sensevoiceConversation'
 import type { TencentConversationState } from './tencentConversation'
 import type {
@@ -98,6 +99,11 @@ type StopVadListeningRuntimeOptions = {
   vadSessionRef: MutableRefObject<VadConversationSession | null>
   destroyVadSession: (session: VadConversationSession | null) => Promise<void>
   cancel?: boolean
+}
+
+type ClearParaformerConversationStateRuntimeOptions = {
+  paraformerConversationRef: MutableRefObject<ParaformerConversationState | null>
+  setSpeechLevelValue: (level: number) => void
 }
 
 type ClearSenseVoiceConversationStateRuntimeOptions = {
@@ -288,6 +294,24 @@ export async function stopVadListeningRuntime(
 
   session.cancelled = Boolean(options.cancel)
   await options.destroyVadSession(session)
+}
+
+export function clearParaformerConversationStateRuntime(
+  options: ClearParaformerConversationStateRuntimeOptions,
+) {
+  const session = options.paraformerConversationRef.current
+  if (!session) return
+
+  if (session.noSpeechTimer) {
+    window.clearTimeout(session.noSpeechTimer)
+  }
+
+  if (session.maxDurationTimer) {
+    window.clearTimeout(session.maxDurationTimer)
+  }
+
+  options.paraformerConversationRef.current = null
+  options.setSpeechLevelValue(0)
 }
 
 export function clearSenseVoiceConversationStateRuntime(

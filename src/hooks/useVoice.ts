@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createInitialWakewordRuntimeState,
   hearingConfigFromSettings,
+  type ParaformerStreamSession,
   type SenseVoiceStreamSession,
   type WakewordRuntimeController,
 } from '../features/hearing'
@@ -61,6 +62,7 @@ import {
 import {
   startApiRecordingConversation,
 } from './voice/recordingConversations'
+import { startParaformerConversation, type ParaformerConversationState } from './voice/paraformerConversation'
 import { startTencentConversation, type TencentConversationState } from './voice/tencentConversation'
 import { startSenseVoiceConversation, type SenseVoiceConversationState } from './voice/sensevoiceConversation'
 import {
@@ -81,6 +83,7 @@ import {
   cleanupVoiceRuntimeResources,
   createWakewordRuntimeBinding,
   beginVoiceListeningSessionRuntime,
+  clearParaformerConversationStateRuntime,
   clearTencentConversationStateRuntime,
   clearSenseVoiceConversationStateRuntime,
   destroyVadSessionRuntime,
@@ -155,6 +158,8 @@ export function useVoice(ctx: UseVoiceContext) {
   const streamAudioPlayerRef = useRef<StreamAudioPlayer | null>(null)
   const activeStreamingSpeechOutputRef = useRef<StreamingSpeechOutputController | null>(null)
   const speechLevelValueRef = useRef(0)
+  const paraformerSessionRef = useRef<ParaformerStreamSession | null>(null)
+  const paraformerConversationRef = useRef<ParaformerConversationState | null>(null)
   const sensevoiceSessionRef = useRef<SenseVoiceStreamSession | null>(null)
   const sensevoiceConversationRef = useRef<SenseVoiceConversationState | null>(null)
   const tencentAsrSessionRef = useRef<TencentAsrStreamSession | null>(null)
@@ -425,6 +430,13 @@ export function useVoice(ctx: UseVoiceContext) {
       vadSessionRef,
       destroyVadSession,
       cancel,
+    })
+  }
+
+  function clearParaformerConversationState() {
+    clearParaformerConversationStateRuntime({
+      paraformerConversationRef,
+      setSpeechLevelValue,
     })
   }
 
@@ -787,6 +799,40 @@ export function useVoice(ctx: UseVoiceContext) {
     })
   }
 
+  // ── Paraformer streaming conversation ──────────────────────────────────────
+
+  async function startParaformerVoiceConversation(options?: VoiceConversationOptions) {
+    await startParaformerConversation({
+      options,
+      currentSettings: ctx.settingsRef.current,
+      voiceStateRef,
+      suppressVoiceReplyRef,
+      paraformerSessionRef,
+      paraformerConversationRef,
+      clearPendingVoiceRestart,
+      canInterruptSpeech,
+      interruptSpeakingForVoiceInput,
+      setContinuousVoiceSession,
+      shouldKeepContinuousVoiceSession,
+      resetNoSpeechRestartCount,
+      clearParaformerConversationState,
+      beginVoiceListeningSession,
+      dispatchVoiceSession,
+      dispatchVoiceSessionAndSync,
+      setVoiceState,
+      setMood: ctx.setMood,
+      setError: ctx.setError,
+      setLiveTranscript,
+      updateVoicePipeline,
+      appendVoiceTrace,
+      showPetStatus,
+      setSpeechLevelValue,
+      handleRecognizedVoiceTranscript,
+      handleVoiceListeningFailure,
+      shouldAutoRestartVoice,
+    })
+  }
+
   // ── SenseVoice offline conversation ────────────────────────────────────────
 
   async function startSenseVoiceVoiceConversation(options?: VoiceConversationOptions) {
@@ -923,6 +969,7 @@ export function useVoice(ctx: UseVoiceContext) {
       suppressVoiceReplyRef,
       recognitionRef,
       vadSessionRef,
+      paraformerSessionRef,
       sensevoiceSessionRef,
       tencentAsrSessionRef,
       clearPendingVoiceRestart,
@@ -943,6 +990,7 @@ export function useVoice(ctx: UseVoiceContext) {
       shouldAutoRestartVoice,
       scheduleVoiceRestart,
       ensureSupportedSpeechInputSettings,
+      startParaformerConversation: startParaformerVoiceConversation,
       startSenseVoiceConversation: startSenseVoiceVoiceConversation,
       startTencentAsrConversation,
       startVadVoiceConversation,
@@ -960,11 +1008,13 @@ export function useVoice(ctx: UseVoiceContext) {
       continuousVoiceActiveRef,
       suppressVoiceReplyRef,
       recognitionRef,
+      paraformerSessionRef,
       sensevoiceSessionRef,
       tencentAsrSessionRef,
       clearPendingVoiceRestart,
       setContinuousVoiceSession,
       resetNoSpeechRestartCount,
+      clearParaformerConversationState,
       clearSenseVoiceConversationState,
       clearTencentConversationState,
       stopApiRecording,
@@ -1176,6 +1226,7 @@ export function useVoice(ctx: UseVoiceContext) {
         speechLevelValueRef,
         setSpeechLevel,
         stopActiveSpeechOutput: stopActiveSpeechOutputRef.current,
+        paraformerSessionRef,
         sensevoiceSessionRef,
         wakewordRuntimeRef,
       })

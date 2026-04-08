@@ -150,6 +150,10 @@ export function isSenseVoiceSpeechInputProvider(providerId: string) {
   return getSpeechInputProvider(providerId).protocol === 'sensevoice'
 }
 
+export function isParaformerSpeechInputProvider(providerId: string) {
+  return getSpeechInputProvider(providerId).protocol === 'paraformer'
+}
+
 export function isTencentAsrSpeechInputProvider(providerId: string) {
   return getSpeechInputProvider(providerId).protocol === 'tencent'
 }

@@ -1,5 +1,6 @@
 import type { MutableRefObject } from 'react'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
+import type { ParaformerStreamSession } from '../../features/hearing/localParaformer.ts'
 import type { SenseVoiceStreamSession } from '../../features/hearing/localSenseVoice.ts'
 import type { BrowserSpeechRecognition } from '../../lib/voice'
 
@@ -11,6 +12,7 @@ export type CleanupVoiceRuntimeResourcesOptions = {
   speechLevelValueRef: MutableRefObject<number>
   setSpeechLevel: (level: number) => void
   stopActiveSpeechOutput: () => void
+  paraformerSessionRef: MutableRefObject<ParaformerStreamSession | null>
   sensevoiceSessionRef: MutableRefObject<SenseVoiceStreamSession | null>
   wakewordRuntimeRef: MutableRefObject<WakewordRuntimeController | null>
 }
@@ -26,6 +28,8 @@ export function cleanupVoiceRuntimeResources(
   options.speechLevelValueRef.current = 0
   options.setSpeechLevel(0)
   options.stopActiveSpeechOutput()
+  options.paraformerSessionRef.current?.abort()
+  options.paraformerSessionRef.current = null
   options.sensevoiceSessionRef.current?.abort()
   options.sensevoiceSessionRef.current = null
   options.wakewordRuntimeRef.current?.destroy()
