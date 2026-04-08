@@ -45,10 +45,6 @@ import type {
   VoiceCloneResponse,
 } from './types'
 
-type FunAsrStatus = {
-  state: 'disconnected' | 'connecting' | 'ready' | 'streaming'
-  baseUrl: string
-}
 
 type MinecraftGatewayEvent = {
   type: string
@@ -207,16 +203,6 @@ declare global {
       getDesktopContext: (request?: DesktopContextRequest) => Promise<DesktopContextSnapshot>
       getSystemMediaSession: () => Promise<MediaSessionSnapshot>
       controlSystemMediaSession: (payload: MediaSessionControlRequest) => Promise<MediaSessionControlResponse>
-
-      // FunASR Streaming STT
-      funasrConnect: (payload: { baseUrl: string }) => Promise<FunAsrStatus>
-      funasrDisconnect: () => Promise<{ ok: boolean }>
-      funasrStartStream: (payload?: { mode?: string; chunkSize?: number[]; hotwords?: string }) => Promise<{ ok: boolean }>
-      funasrFeed: (payload: { samples: number[] | Float32Array; sampleRate?: number }) => Promise<{ ok: boolean }>
-      funasrFinish: () => Promise<{ text: string }>
-      funasrAbort: () => Promise<{ ok: boolean }>
-      funasrStatus: () => Promise<FunAsrStatus>
-      subscribeFunasrResult: (listener: (event: { type: 'partial' | 'final'; text: string }) => void) => () => void
 
       // Tencent Cloud Real-Time ASR
       tencentAsrConnect: (payload: { appId: string; secretId: string; secretKey: string; engineModelType?: string; hotwordList?: string }) => Promise<{ state: string }>

@@ -56,15 +56,15 @@ const COMMAND_ONLY_TRANSCRIPT_PATTERN = /^(?:(?:帮我|给我|替我|请|麻烦|
  */
 const BACKGROUND_NOISE_ARTIFACT_PATTERNS: RegExp[] = [
   // Subtitle / caption watermarks: (字幕:XXX), （字幕：XXX）, [字幕 XXX], etc.
-  /^[(\[（【]?\s*字幕\s*[:\s：]\s*.+[)\]）】]?\s*$/u,
+  /^[([（【]?\s*字幕\s*[:\s：]\s*.+[)\]）】]?\s*$/u,
   // Credit annotations: (翻译:XXX), (校对:XXX), (后期:XXX), etc.
-  /^[(\[（【]?\s*(?:翻译|校对|后期|剪辑|录制|制作|来源|转载|搬运|压制)\s*[:\s：]\s*.+[)\]）】]?\s*$/u,
+  /^[([（【]?\s*(?:翻译|校对|后期|剪辑|录制|制作|来源|转载|搬运|压制)\s*[:\s：]\s*.+[)\]）】]?\s*$/u,
   // Pure bracket-wrapped short text (likely overlay/watermark, not speech)
-  /^[(\[（【《「].{1,20}[)\]）】》」]$/u,
+  /^[([（【《「].{1,20}[)\]）】》」]$/u,
   // Video platform / channel metadata
   /^(?:CC|HD|4K|1080[Pp]|720[Pp]|subscribe|订阅|关注|点赞|投币|收藏|转发)\s*$/iu,
   // Text that is entirely bracket-enclosed with no CJK content (e.g., "(J Chong)")
-  /^[(\[（【]\s*[^(\[（【)\]）】\u4e00-\u9fff\u3400-\u4dbf]{1,30}\s*[)\]）】]$/u,
+  /^[([（【]\s*[^([（【)\]）】\u4e00-\u9fff\u3400-\u4dbf]{1,30}\s*[)\]）】]$/u,
   // Common ASR hallucinations from silence or background noise
   /^(?:谢谢(?:大家|收看|观看|收听)(?:。|！|$))/u,
   /^(?:感谢(?:收看|观看|收听)(?:。|！|$))/u,

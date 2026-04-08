@@ -1,49 +1,10 @@
 import { BrowserWindow, ipcMain } from 'electron'
-import * as funasrStream from '../services/funasrStream.js'
 import * as tencentAsr from '../services/tencentAsr.js'
 import * as minecraftGateway from '../services/minecraftGateway.js'
 import * as factorioRcon from '../services/factorioRcon.js'
 import * as realtimeVoice from '../services/realtimeVoice.js'
 
 export function register() {
-  // ── FunASR Streaming STT ──
-
-  ipcMain.handle('funasr:connect', async (_event, payload) => {
-    const baseUrl = String(payload?.baseUrl ?? '').trim()
-    await funasrStream.connect(baseUrl)
-    return funasrStream.getStatus()
-  })
-
-  ipcMain.handle('funasr:disconnect', async () => {
-    await funasrStream.disconnect()
-    return { ok: true }
-  })
-
-  ipcMain.handle('funasr:start-stream', (_event, payload) => {
-    funasrStream.startStream(payload)
-    return { ok: true }
-  })
-
-  ipcMain.handle('funasr:feed', (_event, payload) => {
-    const { samples } = payload
-    if (!samples || !samples.length) return { ok: true }
-    const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
-    funasrStream.feedAudio(float32)
-    return { ok: true }
-  })
-
-  ipcMain.handle('funasr:finish', async () => {
-    const text = await funasrStream.finishStream()
-    return { text }
-  })
-
-  ipcMain.handle('funasr:abort', () => {
-    funasrStream.abortStream()
-    return { ok: true }
-  })
-
-  ipcMain.handle('funasr:status', () => funasrStream.getStatus())
-
   // ── Tencent Cloud Real-Time ASR ──
 
   ipcMain.handle('tencent-asr:connect', async (_event, payload) => {

@@ -1,7 +1,24 @@
+import { BrowserWindow } from 'electron'
+
 /**
  * Lightweight IPC payload validators.
  * Each function throws on invalid input so the handler rejects the invoke.
  */
+
+/**
+ * Assert that an IPC event originated from one of our own BrowserWindows.
+ * Rejects requests from rogue or injected webContents that are not part
+ * of the application's known window set.
+ * @param {Electron.IpcMainInvokeEvent} event
+ */
+export function requireTrustedSender(event) {
+  const sender = event?.sender
+  if (!sender) throw new Error('IPC sender missing')
+  const ownerWindow = BrowserWindow.fromWebContents(sender)
+  if (!ownerWindow) {
+    throw new Error('IPC rejected: sender is not a known application window')
+  }
+}
 
 /**
  * Assert a value is a non-empty trimmed string.

@@ -100,20 +100,6 @@ contextBridge.exposeInMainWorld('desktopPet', {
   mcpClientListTools: (serverId) => ipcRenderer.invoke('mcp-client:list-tools', serverId),
   mcpClientStatus: (serverId) => ipcRenderer.invoke('mcp-client:status', serverId),
 
-  // FunASR Streaming STT
-  funasrConnect: (payload) => ipcRenderer.invoke('funasr:connect', payload),
-  funasrDisconnect: () => ipcRenderer.invoke('funasr:disconnect'),
-  funasrStartStream: (payload) => ipcRenderer.invoke('funasr:start-stream', payload),
-  funasrFeed: (payload) => ipcRenderer.invoke('funasr:feed', payload),
-  funasrFinish: () => ipcRenderer.invoke('funasr:finish'),
-  funasrAbort: () => ipcRenderer.invoke('funasr:abort'),
-  funasrStatus: () => ipcRenderer.invoke('funasr:status'),
-  subscribeFunasrResult: (listener) => {
-    const handler = (_event, payload) => listener(payload)
-    ipcRenderer.on('funasr:result', handler)
-    return () => ipcRenderer.removeListener('funasr:result', handler)
-  },
-
   // Tencent Cloud Real-Time ASR
   tencentAsrConnect: (payload) => ipcRenderer.invoke('tencent-asr:connect', payload),
   tencentAsrDisconnect: () => ipcRenderer.invoke('tencent-asr:disconnect'),

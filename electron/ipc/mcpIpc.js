@@ -2,12 +2,13 @@ import { ipcMain } from 'electron'
 import * as mcpHost from '../services/mcpHost.js'
 import { mcpClientService } from '../services/mcpClient.js'
 import { splitCommandLine } from '../integrationRuntime.js'
-import { requireString, requireObject } from './validate.js'
+import { requireString, requireObject, requireTrustedSender } from './validate.js'
 
 export function register() {
   // ── MCP stdio client ──
 
-  ipcMain.handle('mcp-client:connect', async (_event, config) => {
+  ipcMain.handle('mcp-client:connect', async (event, config) => {
+    requireTrustedSender(event)
     requireObject(config, 'config')
     return mcpClientService.connect(config)
   })
@@ -35,7 +36,8 @@ export function register() {
 
   // ── MCP Host (multi-server) ──
 
-  ipcMain.handle('mcp:start', async (_event, payload) => {
+  ipcMain.handle('mcp:start', async (event, payload) => {
+    requireTrustedSender(event)
     requireObject(payload, 'payload')
     const id = requireString(payload.id, 'id')
     const command = requireString(payload.command, 'command')
@@ -44,13 +46,15 @@ export function register() {
     return mcpHost.getStatus(id)
   })
 
-  ipcMain.handle('mcp:stop', async (_event, payload) => {
+  ipcMain.handle('mcp:stop', async (event, payload) => {
+    requireTrustedSender(event)
     const id = String(payload?.id ?? '').trim()
     await mcpHost.stop(id)
     return { ok: true }
   })
 
-  ipcMain.handle('mcp:restart', async (_event, payload) => {
+  ipcMain.handle('mcp:restart', async (event, payload) => {
+    requireTrustedSender(event)
     requireObject(payload, 'payload')
     const id = requireString(payload.id, 'id')
     const command = requireString(payload.command, 'command')
@@ -69,7 +73,8 @@ export function register() {
     return id ? mcpHost.listTools(id) : mcpHost.listAllTools()
   })
 
-  ipcMain.handle('mcp:call-tool', async (_event, payload) => {
+  ipcMain.handle('mcp:call-tool', async (event, payload) => {
+    requireTrustedSender(event)
     requireObject(payload, 'payload')
     const name = requireString(payload.name, 'name')
     const toolArgs = payload.arguments ?? {}
