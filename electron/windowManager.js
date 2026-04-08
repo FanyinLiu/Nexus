@@ -378,6 +378,17 @@ export function createMainWindow() {
     return { action: 'deny' }
   })
 
+  // Prevent the renderer from navigating away from the app origin.
+  // If an attacker manages to redirect the webContents, the preload bridge
+  // would be exposed to an untrusted page.
+  win.webContents.on('will-navigate', (event, url) => {
+    const allowed = getRendererEntry()
+    if (!url.startsWith(allowed)) {
+      console.warn('[security] blocked main-window navigation to', url)
+      event.preventDefault()
+    }
+  })
+
   win.on('closed', () => {
     mainWindow = null
   })
@@ -472,6 +483,14 @@ export function createPanelWindow() {
       }
     } catch { /* ignore malformed URLs */ }
     return { action: 'deny' }
+  })
+
+  win.webContents.on('will-navigate', (event, url) => {
+    const allowed = getRendererEntry()
+    if (!url.startsWith(allowed)) {
+      console.warn('[security] blocked panel-window navigation to', url)
+      event.preventDefault()
+    }
   })
 
   win.on('closed', () => {

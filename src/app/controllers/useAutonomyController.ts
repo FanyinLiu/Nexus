@@ -176,7 +176,7 @@ export function useAutonomyController({
     } else if (action.kind === 'web_search') {
       void chat.pushCompanionNotice({
         chatContent: `【上下文触发 · 搜索】${task.name}\n搜索：${action.query}`,
-        bubbleContent: `搜��：${action.query}`,
+        bubbleContent: `搜索：${action.query}`,
         speechContent: `正在搜索${action.query}`,
         autoHideMs: 10_000,
       })

@@ -448,6 +448,7 @@ export function SettingsDrawer({
   const activeSectionDescription = activeSectionMeta.description
   // Sync draft from external settings ONLY when the drawer opens,
   // not while the user is actively editing.
+   
   useEffect(() => {
     if (open) {
       console.info('[SettingsDrawer] SYNC draft from settings, provider:', settings.speechOutputProviderId)
@@ -456,10 +457,12 @@ export function SettingsDrawer({
       speechVoices.syncPreviewText(settings.companionName)
       setSettingsView('home')
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only fire on open transition, not settings changes
   }, [open])
 
   // Re-sync API keys when vault hydration completes after drawer is already open.
   // This handles the race where settings are loaded with empty keys before vault decrypts them.
+   
   useEffect(() => {
     if (!open) return
     setDraft((current) => {
@@ -476,6 +479,7 @@ export function SettingsDrawer({
     })
   }, [open, settings.apiKey, settings.speechOutputApiKey, settings.speechInputApiKey, settings.voiceCloneApiKey, settings.toolWebSearchApiKey])
 
+   
   useEffect(() => {
     if (!petModelPresets.length) return
 

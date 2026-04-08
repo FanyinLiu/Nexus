@@ -88,10 +88,8 @@ import {
   handleWakewordKeywordDetectedRuntime,
   handleWakewordRuntimeStateChangeRuntime,
   interruptSpeakingForVoiceInputRuntime,
-  preloadHiddenWhisperRuntime,
   setContinuousVoiceSessionRuntime,
   setSpeechLevelValueRuntime,
-  setupLocalQwenSpeechWarmupRuntime,
   stopActiveSpeechOutputRuntime,
   stopApiRecordingRuntime,
   stopSpeechTrackingRuntime,
@@ -153,14 +151,6 @@ export function useVoice(ctx: UseVoiceContext) {
   const streamAudioPlayerRef = useRef<StreamAudioPlayer | null>(null)
   const activeStreamingSpeechOutputRef = useRef<StreamingSpeechOutputController | null>(null)
   const speechLevelValueRef = useRef(0)
-  const localAsrWorkerRef = useRef<Worker | null>(null)
-  const localAsrRequestIdRef = useRef(0)
-  const localAsrPendingRef = useRef(
-    new Map<number, {
-      resolve: (text: string) => void
-      reject: (error: Error) => void
-    }>(),
-  )
   const sensevoiceSessionRef = useRef<SenseVoiceStreamSession | null>(null)
   const sensevoiceConversationRef = useRef<SenseVoiceConversationState | null>(null)
   const tencentAsrSessionRef = useRef<TencentAsrStreamSession | null>(null)
@@ -176,7 +166,6 @@ export function useVoice(ctx: UseVoiceContext) {
   const activeVoiceConversationOptionsRef = useRef<VoiceConversationOptions>({})
   const assistantSpeechGenerationRef = useRef(0)
   const interruptedSpeechGenerationRef = useRef<number | null>(null)
-  const localQwenSpeechWarmupKeyRef = useRef('')
   const lastSubmittedVoiceContentRef = useRef<{ content: string; sentAt: number }>({
     content: '',
     sentAt: 0,
@@ -1104,37 +1093,6 @@ export function useVoice(ctx: UseVoiceContext) {
     ensureSupportedSpeechInputSettings()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    return setupLocalQwenSpeechWarmupRuntime({
-      speechOutputEnabled: settings.speechOutputEnabled,
-      speechOutputProviderId: settings.speechOutputProviderId,
-      speechOutputApiBaseUrl: settings.speechOutputApiBaseUrl,
-      speechOutputApiKey: settings.speechOutputApiKey,
-      speechOutputModel: settings.speechOutputModel,
-      speechOutputVoice: settings.speechOutputVoice,
-      speechOutputInstructions: settings.speechOutputInstructions,
-      speechSynthesisLang: settings.speechSynthesisLang,
-      speechRate: settings.speechRate,
-      speechPitch: settings.speechPitch,
-      speechVolume: settings.speechVolume,
-      clonedVoiceId: settings.clonedVoiceId,
-      warmupKeyRef: localQwenSpeechWarmupKeyRef,
-    })
-  }, [ // eslint-disable-line react-hooks/exhaustive-deps
-    settings.speechOutputEnabled,
-    settings.speechOutputProviderId,
-    settings.speechOutputApiBaseUrl,
-    settings.speechOutputApiKey,
-    settings.speechOutputModel,
-    settings.speechOutputVoice,
-    settings.speechOutputInstructions,
-    settings.speechSynthesisLang,
-    settings.speechRate,
-    settings.speechPitch,
-    settings.speechVolume,
-    settings.clonedVoiceId,
-  ])
-
   // Disable continuous voice when setting is off
   useEffect(() => {
     if (settings.continuousVoiceModeEnabled || !continuousVoiceActiveRef.current) return
@@ -1203,25 +1161,6 @@ export function useVoice(ctx: UseVoiceContext) {
     })
   })
 
-  useEffect(() => {
-    // Only preload whisper if speech input is actually enabled
-    if (!ctx.settingsRef.current.speechInputEnabled) return
-
-    // Defer whisper preload to avoid blocking startup
-    const timerId = window.setTimeout(() => {
-      preloadHiddenWhisperRuntime({
-        settings: ctx.settingsRef.current,
-        refs: {
-          workerRef: localAsrWorkerRef,
-          requestIdRef: localAsrRequestIdRef,
-          pendingRef: localAsrPendingRef,
-        },
-        appendVoiceTrace,
-      })
-    }, 2_000)
-    return () => window.clearTimeout(timerId)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -1233,11 +1172,6 @@ export function useVoice(ctx: UseVoiceContext) {
         speechLevelValueRef,
         setSpeechLevel,
         stopActiveSpeechOutput: stopActiveSpeechOutputRef.current,
-        localAsrRefs: {
-          workerRef: localAsrWorkerRef,
-          requestIdRef: localAsrRequestIdRef,
-          pendingRef: localAsrPendingRef,
-        },
         sensevoiceSessionRef,
         wakewordRuntimeRef,
       })
