@@ -178,7 +178,9 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         const delta = trimChatStreamingDelta(fullContent, rawDelta)
         if (delta) {
           fullContent += delta
-          event.sender.send('chat:stream-delta', { requestId, delta })
+          if (!event.sender.isDestroyed()) {
+            event.sender.send('chat:stream-delta', { requestId, delta })
+          }
         }
         return isChatStreamingPayloadTerminal(requestSpec.protocol, parsed)
       } catch {
@@ -211,7 +213,9 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       reader.releaseLock()
     }
 
-    event.sender.send('chat:stream-delta', { requestId, delta: '', done: true })
+    if (!event.sender.isDestroyed()) {
+      event.sender.send('chat:stream-delta', { requestId, delta: '', done: true })
+    }
 
     const content = extractChatResponseContent(requestSpec.protocol, { content: fullContent })
     if (!content) {

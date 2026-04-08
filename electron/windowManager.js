@@ -361,6 +361,7 @@ export function createMainWindow() {
       preload: getPreloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
       webSecurity: true,
     },
   })
@@ -458,6 +459,7 @@ export function createPanelWindow() {
       preload: getPreloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
       webSecurity: true,
     },
   })
