@@ -22,7 +22,8 @@ test('normalizeWebSearchProviderId supports the OpenClaw-style providers', () =>
   assert.equal(normalizeWebSearchProviderId('firecrawl'), 'firecrawl')
   assert.equal(normalizeWebSearchProviderId('gemini'), 'gemini')
   assert.equal(normalizeWebSearchProviderId('perplexity'), 'perplexity')
-  assert.equal(normalizeWebSearchProviderId('unknown'), 'bing')
+  assert.equal(normalizeWebSearchProviderId('unknown'), 'duckduckgo')
+  assert.equal(normalizeWebSearchProviderId('bing'), 'bing')
 })
 
 test('DuckDuckGo search parses HTML results and decodes redirect URLs', async () => {
