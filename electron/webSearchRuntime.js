@@ -1,4 +1,4 @@
-const DEFAULT_PROVIDER_ID = 'bing'
+const DEFAULT_PROVIDER_ID = 'duckduckgo'
 const DEFAULT_BRAVE_BASE_URL = 'https://api.search.brave.com/res/v1/web/search'
 const DEFAULT_TAVILY_BASE_URL = 'https://api.tavily.com'
 const DEFAULT_DUCKDUCKGO_HTML_ENDPOINT = 'https://html.duckduckgo.com/html'
@@ -267,9 +267,16 @@ function resolvePerplexityRuntime(baseUrl, apiKey) {
 }
 
 function resolvePerplexitySearchEndpoint(baseUrl) {
-  return isDirectPerplexityBaseUrl(baseUrl)
-    ? `${DEFAULT_PERPLEXITY_BASE_URL}/search`
-    : `${DEFAULT_PERPLEXITY_BASE_URL}/search`
+  const normalized = normalizeBaseUrl(baseUrl)
+  if (!normalized || isDirectPerplexityBaseUrl(normalized)) {
+    return `${DEFAULT_PERPLEXITY_BASE_URL}/search`
+  }
+
+  if (/\/search$/iu.test(normalized)) {
+    return normalized
+  }
+
+  return `${normalized}/search`
 }
 
 function resolvePerplexityChatEndpoint(baseUrl) {
@@ -327,7 +334,9 @@ function buildProviderExecutionPlan({
   const normalizedApiKey = normalizeWhitespace(apiKey)
 
   if (!requestedProvider.requiresApiKey) {
-    return [requestedProvider.id]
+    const FREE_PROVIDERS = ['bing', 'duckduckgo']
+    const fallbacks = FREE_PROVIDERS.filter((id) => id !== requestedProvider.id)
+    return [requestedProvider.id, ...fallbacks]
   }
 
   if (normalizedApiKey) {

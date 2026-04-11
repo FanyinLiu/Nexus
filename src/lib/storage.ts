@@ -62,6 +62,9 @@ export const DEBUG_CONSOLE_EVENTS_STORAGE_KEY = 'nexus:debug-console-events'
 export const AUTONOMY_DREAM_LOG_STORAGE_KEY = 'nexus:autonomy:dream-log'
 export const AUTONOMY_CONTEXT_TRIGGERS_STORAGE_KEY = 'nexus:autonomy:context-triggers'
 export const AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY = 'nexus:autonomy:notification-messages'
+export const AUTONOMY_GOALS_STORAGE_KEY = 'nexus:autonomy:goals'
+export const AUTONOMY_RELATIONSHIP_STORAGE_KEY = 'nexus:autonomy:relationship'
+export const AUTONOMY_RHYTHM_STORAGE_KEY = 'nexus:autonomy:rhythm'
 
 type PetRuntimeState = {
   mood: PetMood
@@ -99,6 +102,7 @@ const defaultSettings: AppSettings = {
   voiceCloneApiKey: '',
   clonedVoiceId: '',
   speechRecognitionLang: 'zh-CN',
+  speechInputHotwords: '',
   speechSynthesisLang: 'zh-CN',
   speechRate: 1,
   speechPitch: 1.08,
@@ -119,6 +123,8 @@ const defaultSettings: AppSettings = {
   memoryDailyRecallCount: 4,
   memorySemanticRecallCount: 4,
   memoryDiaryRetentionDays: 7,
+  memoryHotTierMaxChars: 3500,
+  autoSkillGenerationEnabled: true,
   contextAwarenessEnabled: true,
   activeWindowContextEnabled: true,
   clipboardContextEnabled: true,
@@ -130,7 +136,7 @@ const defaultSettings: AppSettings = {
   screenVlmApiKey: '',
   screenVlmModel: '',
   toolWebSearchEnabled: true,
-  toolWebSearchProviderId: 'bing',
+  toolWebSearchProviderId: 'duckduckgo',
   toolWebSearchApiBaseUrl: '',
   toolWebSearchApiKey: '',
   toolWebSearchFallbackToBing: true,
@@ -146,10 +152,21 @@ const defaultSettings: AppSettings = {
   minecraftServerAddress: '',
   minecraftServerPort: 25565,
   minecraftUsername: '',
+  minecraftPermissionMode: 'confirm',
   factorioIntegrationEnabled: false,
   factorioServerAddress: '',
   factorioServerPort: 34197,
   factorioUsername: '',
+  factorioPermissionMode: 'confirm',
+  telegramIntegrationEnabled: false,
+  telegramBotToken: '',
+  telegramAllowedChatIds: '',
+  telegramPermissionMode: 'confirm',
+  discordIntegrationEnabled: false,
+  discordBotToken: '',
+  discordAllowedChannelIds: '',
+  discordPermissionMode: 'confirm',
+  mcpPermissionMode: 'auto',
   textProviderProfiles: {},
   speechInputProviderProfiles: {},
   speechOutputProviderProfiles: {},
@@ -168,6 +185,9 @@ const defaultSettings: AppSettings = {
   autonomyQuietHoursStart: 23,
   autonomyQuietHoursEnd: 7,
   autonomyCostLimitDailyTicks: 100,
+  autonomyMonologueEnabled: false,
+  autonomyMonologueIntervalTicks: 6,
+  autonomyMonologueSpeechThreshold: 65,
 }
 
 const defaultPetRuntimeState: PetRuntimeState = {
@@ -202,6 +222,13 @@ function normalizeReminderTaskAction(action: ReminderTaskAction | null | undefin
     }
   }
 
+  if (action.kind === 'chat_action') {
+    return {
+      kind: 'chat_action',
+      instruction: String(action.instruction ?? '').trim(),
+    }
+  }
+
   return {
     kind: 'web_search',
     query: String(action.query ?? '').trim(),
@@ -214,7 +241,8 @@ export function readJson<T>(key: string, fallback: T): T {
     const raw = window.localStorage.getItem(key)
     if (!raw) return fallback
     return JSON.parse(raw) as T
-  } catch {
+  } catch (err) {
+    console.error(`[storage] Failed to parse stored data for key "${key}":`, err)
     return fallback
   }
 }
@@ -234,6 +262,18 @@ export function writeJsonDebounced<T>(key: string, value: T, delayMs = 500): voi
     debouncedTimers.delete(key)
     writeJson(key, value)
   }, delayMs))
+}
+
+const VALID_PERMISSION_MODES = new Set(['read-only', 'confirm', 'auto'])
+
+function readPermissionMode(
+  value: unknown,
+  fallback: import('../types').IntegrationPermissionMode,
+): import('../types').IntegrationPermissionMode {
+  if (typeof value === 'string' && VALID_PERMISSION_MODES.has(value)) {
+    return value as import('../types').IntegrationPermissionMode
+  }
+  return fallback
 }
 
 function clampInteger(value: number, fallback: number, min: number, max: number) {
@@ -508,13 +548,8 @@ export function loadSettings(): AppSettings {
     speechOutputProviderId,
     stored.speechOutputApiBaseUrl ?? defaultSettings.speechOutputApiBaseUrl,
   )
-  const rawSpeechOutputModel = String(stored.speechOutputModel ?? defaultSettings.speechOutputModel).trim()
+  const speechOutputModel = String(stored.speechOutputModel ?? defaultSettings.speechOutputModel).trim()
     || speechOutputPreset.defaultModel || defaultSettings.speechOutputModel
-  const speechOutputModel = (
-    speechOutputProviderId === 'cosyvoice-tts'
-    && rawSpeechOutputModel !== 'sft'
-    && rawSpeechOutputModel !== 'instruct'
-  ) ? 'sft' : rawSpeechOutputModel
   const speechOutputVoice = String(stored.speechOutputVoice ?? defaultSettings.speechOutputVoice).trim()
     || speechOutputPreset.defaultVoice || defaultSettings.speechOutputVoice
   const speechOutputApiKey = String(stored.speechOutputApiKey ?? defaultSettings.speechOutputApiKey)
@@ -589,6 +624,13 @@ export function loadSettings(): AppSettings {
       1,
       30,
     ),
+    memoryHotTierMaxChars: clampInteger(
+      stored.memoryHotTierMaxChars ?? defaultSettings.memoryHotTierMaxChars,
+      defaultSettings.memoryHotTierMaxChars,
+      500,
+      8000,
+    ),
+    autoSkillGenerationEnabled: stored.autoSkillGenerationEnabled ?? defaultSettings.autoSkillGenerationEnabled,
     proactivePresenceIntervalMinutes: clampPresenceIntervalMinutes(
       stored.proactivePresenceIntervalMinutes ?? defaultSettings.proactivePresenceIntervalMinutes,
     ),
@@ -606,6 +648,7 @@ export function loadSettings(): AppSettings {
       65535,
     ),
     minecraftUsername: String(stored.minecraftUsername ?? defaultSettings.minecraftUsername).trim(),
+    minecraftPermissionMode: readPermissionMode(stored.minecraftPermissionMode, defaultSettings.minecraftPermissionMode),
     factorioIntegrationEnabled: stored.factorioIntegrationEnabled === true,
     factorioServerAddress: String(
       stored.factorioServerAddress ?? defaultSettings.factorioServerAddress,
@@ -617,6 +660,16 @@ export function loadSettings(): AppSettings {
       65535,
     ),
     factorioUsername: String(stored.factorioUsername ?? defaultSettings.factorioUsername).trim(),
+    factorioPermissionMode: readPermissionMode(stored.factorioPermissionMode, defaultSettings.factorioPermissionMode),
+    telegramIntegrationEnabled: Boolean(stored.telegramIntegrationEnabled ?? defaultSettings.telegramIntegrationEnabled),
+    telegramBotToken: String(stored.telegramBotToken ?? defaultSettings.telegramBotToken).trim(),
+    telegramAllowedChatIds: String(stored.telegramAllowedChatIds ?? defaultSettings.telegramAllowedChatIds).trim(),
+    telegramPermissionMode: readPermissionMode(stored.telegramPermissionMode, defaultSettings.telegramPermissionMode),
+    discordIntegrationEnabled: Boolean(stored.discordIntegrationEnabled ?? defaultSettings.discordIntegrationEnabled),
+    discordBotToken: String(stored.discordBotToken ?? defaultSettings.discordBotToken).trim(),
+    discordAllowedChannelIds: String(stored.discordAllowedChannelIds ?? defaultSettings.discordAllowedChannelIds).trim(),
+    discordPermissionMode: readPermissionMode(stored.discordPermissionMode, defaultSettings.discordPermissionMode),
+    mcpPermissionMode: readPermissionMode(stored.mcpPermissionMode, defaultSettings.mcpPermissionMode),
     textProviderProfiles: readStoredTextProviderProfiles(stored.textProviderProfiles),
     speechInputProviderProfiles: readStoredSpeechInputProviderProfiles(stored.speechInputProviderProfiles),
     speechOutputProviderProfiles: storedSpeechOutputProviderProfiles,

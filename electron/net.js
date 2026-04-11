@@ -48,21 +48,13 @@ export async function performNetworkRequest(url, options = {}) {
   const abortController = signal ? null : new AbortController()
   const requestSignal = signal ?? abortController?.signal
 
-  if (body instanceof FormData) {
-    return withRequestTimeout(
-      () => fetch(url, {
-        ...rest,
-        body,
-        signal: requestSignal,
-      }),
-      timeoutMs,
-      timeoutMessage,
-      abortController,
-    )
-  }
+  // Use Node's native fetch for FormData bodies and localhost/loopback URLs —
+  // Electron's net.fetch (Chromium network stack) rejects Buffer/Uint8Array multipart
+  // bodies with ERR_INVALID_ARGUMENT on certain request combinations.
+  const useNativeFetch = body instanceof FormData || isLoopbackUrl(url)
 
   return withRequestTimeout(
-    () => net.fetch(url, {
+    () => (useNativeFetch ? fetch : net.fetch)(url, {
       ...rest,
       signal: requestSignal,
       ...(body != null ? { body } : {}),
@@ -91,6 +83,15 @@ export function normalizeBaseUrl(baseUrl) {
 
 export function isIpv6LoopbackHost(hostname) {
   return hostname === '::1' || hostname === '[::1]'
+}
+
+function isLoopbackUrl(url) {
+  try {
+    const { hostname } = new URL(url)
+    return hostname === 'localhost' || hostname === '127.0.0.1' || isIpv6LoopbackHost(hostname)
+  } catch {
+    return false
+  }
 }
 
 export function shouldLabelAsConnectionFailure(reason) {
@@ -186,23 +187,6 @@ export function buildMultipartBody(parts) {
   return {
     body: Buffer.concat(chunks),
     contentType: `multipart/form-data; boundary=${boundary}`,
-  }
-}
-
-export function normalizeCosyVoiceBaseUrl(baseUrl) {
-  const normalized = normalizeBaseUrl(baseUrl)
-  if (!normalized) return normalized
-
-  try {
-    const parsed = new URL(normalized)
-    if (parsed.hostname !== 'localhost' && !isIpv6LoopbackHost(parsed.hostname)) {
-      return normalized
-    }
-
-    parsed.hostname = '127.0.0.1'
-    return parsed.toString().replace(/\/+$/, '')
-  } catch {
-    return normalized
   }
 }
 
