@@ -99,8 +99,10 @@ export function normalizeWebSearchProviderId(value: string | null | undefined): 
       return 'gemini'
     case 'perplexity':
       return 'perplexity'
-    default:
+    case 'bing':
       return 'bing'
+    default:
+      return 'duckduckgo'
   }
 }
 

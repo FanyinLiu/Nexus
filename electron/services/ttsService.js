@@ -1,6 +1,5 @@
 import {
   normalizeBaseUrl,
-  normalizeCosyVoiceBaseUrl,
   performNetworkRequest,
   readJsonSafe,
   readTextSafe,
@@ -9,9 +8,6 @@ import {
   audioFormatToMimeType,
 } from '../net.js'
 import { randomUUID } from 'node:crypto'
-import http from 'node:http'
-
-const cosyVoiceAgent = new http.Agent({ keepAlive: false, maxSockets: 2 })
 import { synthesizeEdgeTts } from './edgeTts.js'
 
 // ── Constants ──
@@ -27,9 +23,11 @@ const SPEECH_PROVIDER_IDS = Object.freeze({
   volcengineTTS:  'volcengine-tts',
   minimax:        'minimax-tts',
   dashscope:      'dashscope-tts',
-  cosyvoice:      'cosyvoice-tts',
+  omnivoice:      'omnivoice-tts',
   edgeTts:        'edge-tts',
   openaiSTT:      'openai-stt',
+  zhipuSTT:       'zhipu-stt',
+  glmAsrLocal:    'glm-asr-local',
   customOpenaiSTT:'custom-openai-stt',
   openaiTTS:      'openai-tts',
   customOpenaiTTS:'custom-openai-tts',
@@ -40,13 +38,14 @@ const isVolcengineSpeechInputProvider     = (id) => id === SPEECH_PROVIDER_IDS.v
 const isVolcengineSpeechOutputProvider    = (id) => id === SPEECH_PROVIDER_IDS.volcengineTTS
 const isMiniMaxSpeechOutputProvider       = (id) => id === SPEECH_PROVIDER_IDS.minimax
 const isDashScopeSpeechOutputProvider     = (id) => id === SPEECH_PROVIDER_IDS.dashscope
-const isCosyVoiceSpeechOutputProvider     = (id) => id === SPEECH_PROVIDER_IDS.cosyvoice
+const isOmniVoiceSpeechOutputProvider     = (id) => id === SPEECH_PROVIDER_IDS.omnivoice
 const isEdgeTtsSpeechOutputProvider       = (id) => id === SPEECH_PROVIDER_IDS.edgeTts
 
-const OPENAI_COMPATIBLE_STT_IDS = new Set([SPEECH_PROVIDER_IDS.openaiSTT, SPEECH_PROVIDER_IDS.customOpenaiSTT])
+const OPENAI_COMPATIBLE_STT_IDS = new Set([SPEECH_PROVIDER_IDS.openaiSTT, SPEECH_PROVIDER_IDS.zhipuSTT, SPEECH_PROVIDER_IDS.glmAsrLocal, SPEECH_PROVIDER_IDS.customOpenaiSTT])
 const isOpenAiCompatibleSpeechInputProvider = (id) => OPENAI_COMPATIBLE_STT_IDS.has(id)
+const isZhipuSpeechInputProvider = (id) => id === SPEECH_PROVIDER_IDS.zhipuSTT
 
-const OPENAI_COMPATIBLE_TTS_IDS = new Set([SPEECH_PROVIDER_IDS.openaiTTS, SPEECH_PROVIDER_IDS.customOpenaiTTS])
+const OPENAI_COMPATIBLE_TTS_IDS = new Set([SPEECH_PROVIDER_IDS.openaiTTS, SPEECH_PROVIDER_IDS.customOpenaiTTS, SPEECH_PROVIDER_IDS.omnivoice])
 const isOpenAiCompatibleSpeechOutputProvider = (id) => OPENAI_COMPATIBLE_TTS_IDS.has(id)
 
 // ── URL / timeout resolution ──
@@ -54,8 +53,8 @@ const isOpenAiCompatibleSpeechOutputProvider = (id) => OPENAI_COMPATIBLE_TTS_IDS
 function resolveSpeechOutputBaseUrl(providerId, baseUrl) {
   const normalized = normalizeBaseUrl(baseUrl)
 
-  if (isCosyVoiceSpeechOutputProvider(providerId)) {
-    return normalizeCosyVoiceBaseUrl(normalized || 'http://127.0.0.1:50000')
+  if (isOmniVoiceSpeechOutputProvider(providerId)) {
+    return normalized || 'http://127.0.0.1:8000/v1'
   }
 
   return normalized
@@ -885,65 +884,6 @@ async function synthesizeRemoteTts(sessionPayload, text) {
     }
   }
 
-  // ── CosyVoice2: stream PCM response for low first-chunk latency ──
-  if (isCosyVoiceSpeechOutputProvider(payload.providerId)) {
-    const rawMode = payload.model || 'sft'
-    const mode = (rawMode === 'sft' || rawMode === 'instruct') ? rawMode : 'sft'
-    const formBody = new URLSearchParams()
-    formBody.append('tts_text', content)
-    formBody.append('spk_id', payload.voice || '中文女')
-    if (mode === 'instruct') {
-      formBody.append('instruct_text', payload.instructions?.trim() || '用自然亲切的语气说')
-    }
-    const bodyStr = formBody.toString()
-    console.log('[CosyVoice] streaming synthesize:', mode, 'voice:', payload.voice || '中文女', 'text:', content.slice(0, 40))
-
-    const url = new URL(`${baseUrl}/inference_${mode}`)
-    const pcmStream = await new Promise((resolve, reject) => {
-      let settled = false
-      const settle = (fn, value) => { if (!settled) { settled = true; fn(value) } }
-
-      const hardTimeout = setTimeout(() => {
-        req.destroy()
-        settle(reject, new Error('CosyVoice2 响应超时（硬超时）'))
-      }, AUDIO_SYNTH_TIMEOUT_MS + 5_000)
-
-      const req = http.request({
-        hostname: url.hostname,
-        port: url.port,
-        path: url.pathname,
-        method: 'POST',
-        agent: cosyVoiceAgent,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Content-Length': Buffer.byteLength(bodyStr),
-        },
-        timeout: AUDIO_SYNTH_TIMEOUT_MS,
-      }, (res) => {
-        clearTimeout(hardTimeout)
-        if (res.statusCode !== 200) {
-          const errorChunks = []
-          res.on('data', (c) => errorChunks.push(c))
-          res.on('end', () => {
-            const body = Buffer.concat(errorChunks).toString('utf-8').slice(0, 500)
-            console.error('[CosyVoice] 合成失败:', res.statusCode, body)
-            settle(reject, new Error('CosyVoice2 合成失败（状态码：' + res.statusCode + '）' + body))
-          })
-          return
-        }
-        // Hand the live response stream back — ttsStreamService.emitStreamedPcmResult
-        // will decode PCM chunks as they arrive, giving near-instant first-chunk playback.
-        settle(resolve, res)
-      })
-      req.on('error', (err) => { clearTimeout(hardTimeout); settle(reject, new Error('CosyVoice2 服务连接失败：' + err.message)) })
-      req.on('timeout', () => { req.destroy(); clearTimeout(hardTimeout); settle(reject, new Error('CosyVoice2 响应超时')) })
-      req.write(bodyStr)
-      req.end()
-    })
-
-    return { pcmStream, pcmSampleRate: 24000 }
-  }
-
   // ── Edge TTS: Microsoft Edge Read Aloud, free, ultra-low latency ──
   if (isEdgeTtsSpeechOutputProvider(payload.providerId)) {
     console.log('[Edge-TTS] synthesize:', content.slice(0, 40), 'voice:', payload.voice || 'zh-CN-XiaoxiaoNeural')
@@ -974,10 +914,11 @@ export {
   isOpenAiCompatibleSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
   isDashScopeSpeechOutputProvider,
-  isCosyVoiceSpeechOutputProvider,
+  isOmniVoiceSpeechOutputProvider,
   isVolcengineSpeechOutputProvider,
   isVolcengineSpeechInputProvider,
   isOpenAiCompatibleSpeechInputProvider,
+  isZhipuSpeechInputProvider,
   resolveSpeechOutputBaseUrl,
   resolveSpeechOutputTimeoutMs,
   resolveSpeechOutputTimeoutMessage,
