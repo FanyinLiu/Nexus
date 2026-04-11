@@ -17,18 +17,7 @@ export type StreamingSpeechOutputRuntime = {
   resetPlayer?: () => void
 }
 
-function resolveChunkerConfig(providerId: string) {
-  if (providerId === 'cosyvoice-tts') {
-    return {
-      maxChunkLength: 150,
-      minForcedChunkLength: 60,
-      preferredEarlySplitLength: 50,
-      firstChunkMaxLength: 80,
-      firstChunkMinForcedChunkLength: 32,
-      firstChunkPreferredEarlySplitLength: 24,
-    }
-  }
-
+function resolveChunkerConfig(_providerId: string) {
   return {
     firstChunkMaxLength: 48,
     firstChunkMinForcedChunkLength: 18,

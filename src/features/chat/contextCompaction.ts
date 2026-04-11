@@ -121,6 +121,53 @@ export function formatCompactionContext(summary: string): string {
   return `【对话摘要】以下是之前对话的重点回顾，请在回复时自然承接：\n${summary}`
 }
 
+// ── LLM summary cache ──
+
+let _cachedSummary: { hash: string; summary: string } | null = null
+
+function hashOlderText(text: string): string {
+  // Simple hash for cache invalidation — first 80 + last 80 chars + length
+  return `${text.length}:${text.slice(0, 80)}:${text.slice(-80)}`
+}
+
+/**
+ * Summarize older conversation text using the LLM.
+ * Results are cached until the older text changes (new messages compacted).
+ */
+export async function summarizeOlderMessages(olderText: string): Promise<string> {
+  const key = hashOlderText(olderText)
+
+  if (_cachedSummary?.hash === key) {
+    return _cachedSummary.summary
+  }
+
+  try {
+    const prompt = buildCompactionSummaryPrompt(olderText)
+    const response = await window.desktopPet?.completeChat?.({
+      providerId: '',
+      baseUrl: '',
+      apiKey: '',
+      model: '',
+      messages: prompt.map((m) => ({ role: m.role as 'system' | 'user', content: m.content })),
+      temperature: 0.3,
+      maxTokens: 400,
+    })
+
+    if (response?.content) {
+      _cachedSummary = { hash: key, summary: response.content }
+      return response.content
+    }
+  } catch {
+    // LLM summarization failed — fall back to raw text
+  }
+
+  return olderText
+}
+
+export function clearCompactionCache() {
+  _cachedSummary = null
+}
+
 // ── Budget configuration ──
 
 /**

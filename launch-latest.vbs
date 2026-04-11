@@ -3,7 +3,7 @@ Option Explicit
 Dim shell, fso
 Dim projectDir, projectDirLower
 Dim electronExe, distIndex
-Dim cosyVoiceDir, cosyVoicePython, cosyVoiceModelDir
+Dim omniVoicePort, omniVoiceScript, omniVoicePython
 Dim buildCommand, launchCommand
 Dim exitCode
 
@@ -14,9 +14,9 @@ projectDir = fso.GetParentFolderName(WScript.ScriptFullName)
 projectDirLower = LCase(projectDir)
 electronExe = projectDir & "\node_modules\electron\dist\electron.exe"
 distIndex = projectDir & "\dist\index.html"
-cosyVoiceDir = "D:\LM\CosyVoice"
-cosyVoicePython = cosyVoiceDir & "\.venv\Scripts\python.exe"
-cosyVoiceModelDir = cosyVoiceDir & "\pretrained_models\CosyVoice-300M-SFT"
+omniVoicePort = 8000
+omniVoiceScript = projectDir & "\scripts\omnivoice_server.py"
+omniVoicePython = "python"
 
 If Not fso.FileExists(electronExe) Then
   MsgBox "Desktop Pet AI launcher error: electron.exe was not found. Please run npm install in the project folder first.", vbCritical, "Desktop Pet AI"
@@ -24,7 +24,6 @@ If Not fso.FileExists(electronExe) Then
 End If
 
 StopProjectProcesses projectDirLower
-EnsureCosyVoiceRunning
 
 shell.CurrentDirectory = projectDir
 
@@ -40,8 +39,26 @@ If Not fso.FileExists(distIndex) Then
   WScript.Quit 1
 End If
 
+EnsureOmniVoiceRunning
+
 launchCommand = """" & electronExe & """ ."
 shell.Run launchCommand, 1, False
+
+Sub EnsureOmniVoiceRunning()
+  If IsPortOpen("127.0.0.1", omniVoicePort) Then
+    Exit Sub
+  End If
+
+  If Not fso.FileExists(omniVoiceScript) Then
+    Exit Sub
+  End If
+
+  Dim cmd
+  cmd = "cmd.exe /c start /min """" " & omniVoicePython & " """ & omniVoiceScript & """ --port " & CStr(omniVoicePort)
+  shell.Run cmd, 0, False
+
+  WaitForPort "127.0.0.1", omniVoicePort, 30
+End Sub
 
 Sub StopProjectProcesses(targetDirLower)
   Dim service, processes, proc, cmdLine
@@ -65,31 +82,6 @@ Sub StopProjectProcesses(targetDirLower)
       End If
     End If
   Next
-End Sub
-
-Sub EnsureCosyVoiceRunning()
-  Dim startCommand
-
-  If IsPortOpen("127.0.0.1", 50000) Then
-    Exit Sub
-  End If
-
-  If Not fso.FolderExists(cosyVoiceDir) Then
-    Exit Sub
-  End If
-
-  If Not fso.FileExists(cosyVoicePython) Then
-    Exit Sub
-  End If
-
-  If Not fso.FolderExists(cosyVoiceModelDir) Then
-    Exit Sub
-  End If
-
-  startCommand = "cmd.exe /c cd /d """ & cosyVoiceDir & """ && """ & cosyVoicePython & """ runtime\python\fastapi\server.py --port 50000 --model_dir pretrained_models\CosyVoice-300M-SFT >> cosyvoice.out.log 2>> cosyvoice.err.log"
-  shell.Run startCommand, 0, False
-
-  Call WaitForPort("127.0.0.1", 50000, 20)
 End Sub
 
 Function WaitForPort(host, port, timeoutSeconds)

@@ -7,7 +7,10 @@ import * as chatIpc from './ipc/chatIpc.js'
 import * as audioIpc from './ipc/audioIpc.js'
 import * as ttsStreamIpc from './ipc/ttsStreamIpc.js'
 import * as serviceIpc from './ipc/serviceIpc.js'
+import * as telegramIpc from './ipc/telegramIpc.js'
+import * as discordIpc from './ipc/discordIpc.js'
 import * as vaultIpc from './ipc/vaultIpc.js'
+import * as personaIpc from './ipc/personaIpc.js'
 
 const CHAT_REQUEST_TIMEOUT_MS = 25_000
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
@@ -28,7 +31,8 @@ function loadDeferredModules() {
       import('./ipc/mcpIpc.js'),
       import('./ipc/pluginIpc.js'),
       import('./ipc/memoryIpc.js'),
-    ]).then(([sherpaIpc, mcpIpc, pluginIpc, memoryIpc]) => {
+      import('./ipc/skillIpc.js'),
+    ]).then(([sherpaIpc, mcpIpc, pluginIpc, memoryIpc, skillIpc]) => {
       const ttsStreamService = createTtsStreamService({
         synthesizeRemote: synthesizeRemoteTts,
         warmupRemote: warmupRemoteTtsSession,
@@ -39,6 +43,7 @@ function loadDeferredModules() {
       mcpIpc.register()
       pluginIpc.register()
       memoryIpc.register()
+      skillIpc.register()
 
       console.info('[IPC] Deferred modules loaded')
     })
@@ -63,26 +68,33 @@ export function registerIpc() {
   })
 
   serviceIpc.register()
+  telegramIpc.register()
+  discordIpc.register()
   vaultIpc.register()
+  personaIpc.register()
 
   // Load deferred modules when the renderer is ready (first IPC call will trigger it),
   // but also kick off a background load after a short delay as a warm-up.
   setTimeout(loadDeferredModules, 1_500)
 
   app.once('before-quit', async () => {
-    const [mcpHost, memoryVectorStore, minecraftGateway, factorioRcon, realtimeVoice] = await Promise.all([
+    const [mcpHost, memoryVectorStore, minecraftGateway, factorioRcon, realtimeVoice, telegramGateway, discordGateway] = await Promise.all([
       import('./services/mcpHost.js').catch(() => null),
       import('./services/memoryVectorStore.js').catch(() => null),
       import('./services/minecraftGateway.js').catch(() => null),
       import('./services/factorioRcon.js').catch(() => null),
       import('./services/realtimeVoice.js').catch(() => null),
+      import('./services/telegramGateway.js').catch(() => null),
+      import('./services/discordGateway.js').catch(() => null),
     ])
     await Promise.all([
       mcpHost?.stopAll().catch(() => {}),
-      memoryVectorStore?.flush().catch(() => {}),
+      memoryVectorStore?.terminate().catch(() => {}),
       minecraftGateway?.disconnect().catch(() => {}),
       factorioRcon?.disconnect().catch(() => {}),
       realtimeVoice?.stopSession().catch(() => {}),
+      telegramGateway?.disconnect().catch(() => {}),
+      discordGateway?.disconnect().catch(() => {}),
     ])
   })
 }

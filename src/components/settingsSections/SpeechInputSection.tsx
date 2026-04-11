@@ -10,13 +10,17 @@ import {
   getSpeechInputProviderPreset,
   isSenseVoiceSpeechInputProvider,
   isVolcengineSpeechInputProvider,
-  USER_VISIBLE_SPEECH_INPUT_PROVIDER_PRESETS,
 } from '../../lib/audioProviders'
+import { SPEECH_INPUT_PROVIDERS } from '../../lib/providerCatalog'
 import {
   switchSpeechInputProvider,
   updateCurrentSpeechInputProviderProfile,
 } from '../../lib/speechProviderProfiles'
 import type { AppSettings, ServiceConnectionCapability } from '../../types'
+
+const speechInputSelectOptions = SPEECH_INPUT_PROVIDERS
+  .filter((p) => !p.hidden)
+  .map((p) => ({ id: p.id, label: p.label }))
 
 type SpeechInputSectionProps = {
   active: boolean
@@ -89,13 +93,8 @@ export const SpeechInputSection = memo(function SpeechInputSection({
           value={draft.speechInputProviderId}
           onChange={(event) => applySpeechInputPreset(event.target.value)}
         >
-          {USER_VISIBLE_SPEECH_INPUT_PROVIDER_PRESETS.map((provider) => (
-            <option
-              key={provider.id}
-              value={provider.id}
-            >
-              {provider.label}
-            </option>
+          {speechInputSelectOptions.map((opt) => (
+            <option key={opt.id} value={opt.id}>{opt.label}</option>
           ))}
         </select>
       </label>
@@ -246,6 +245,25 @@ export const SpeechInputSection = memo(function SpeechInputSection({
           }
         />
       </label>
+
+      {draft.speechInputProviderId === 'zhipu-stt' ? (
+        <label>
+          <span>热词（提升人名/专有名词识别）</span>
+          <input
+            value={draft.speechInputHotwords}
+            placeholder="周传雄,黄昏,以逗号分隔"
+            onChange={(event) =>
+              setDraft((prev) => ({
+                ...prev,
+                speechInputHotwords: event.target.value,
+              }))
+            }
+          />
+          <p className="settings-drawer__hint">
+            容易被识别错的人名、歌名、专有名词，用逗号分隔，最多 100 个。
+          </p>
+        </label>
+      ) : null}
 
       {renderSpeechInputTestResult()}
     </section>

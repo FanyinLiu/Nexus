@@ -184,16 +184,17 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
 
     proactivePresenceDeferredUntilRef.current = now + duration
     saveLastProactivePresenceAt(now)
+    const previousHistory = loadPresenceHistory()
     const nextHistory: PresenceHistoryItem[] = [
       {
         text: line.text,
         category: line.category,
         createdAt: nextPresence.createdAt,
       },
-      ...presenceHistoryRef.current.map((item) => ({
+      ...previousHistory.map((item) => ({
         text: item.text,
         category: item.category,
-        createdAt: nextPresence.createdAt,
+        createdAt: item.createdAt,
       })),
     ].slice(0, 6)
 

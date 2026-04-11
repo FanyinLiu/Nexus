@@ -33,7 +33,7 @@ function isLocalSpeechInputProvider(providerId: string) {
 }
 
 function isLocalSpeechOutputProvider(providerId: string) {
-  return providerId === 'cosyvoice-tts'
+  return providerId === 'omnivoice-tts'
 }
 
 export function resolveSpeechInputProviderProfile(

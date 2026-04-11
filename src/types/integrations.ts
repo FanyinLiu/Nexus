@@ -1,4 +1,4 @@
-export type InspectableIntegrationModuleId = 'mcp' | 'minecraft' | 'factorio'
+export type InspectableIntegrationModuleId = 'mcp' | 'minecraft' | 'factorio' | 'telegram' | 'discord'
 
 export type IntegrationRuntimeStatus =
   | 'disabled'

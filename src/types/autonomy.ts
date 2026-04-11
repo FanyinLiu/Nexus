@@ -28,7 +28,7 @@ export interface AutonomyTickState {
 // ── Proactive decision ────────────────────────────────────────────────────────
 
 /** Known categories for proactive speech decisions. */
-export type ProactiveSpeakCategory = 'welcome_back' | 'context' | 'memory' | 'idle_check' | 'time'
+export type ProactiveSpeakCategory = 'welcome_back' | 'context' | 'memory' | 'idle_check' | 'time' | 'monologue'
 
 export type ProactiveDecision =
   | { kind: 'silent' }
@@ -103,6 +103,29 @@ export interface NotificationMessage {
   read: boolean
 }
 
+// ── Goal tracking ────────────────────────────────────────────────────────────
+
+export type GoalStatus = 'active' | 'completed' | 'paused' | 'abandoned'
+
+export interface GoalSubtask {
+  id: string
+  title: string
+  done: boolean
+}
+
+export interface Goal {
+  id: string
+  title: string
+  description?: string
+  status: GoalStatus
+  progress: number // 0–100
+  subtasks: GoalSubtask[]
+  deadline?: string // ISO date
+  createdAt: string
+  updatedAt: string
+  completedAt?: string
+}
+
 // ── Settings interface ────────────────────────────────────────────────────────
 
 export interface AutonomySettings {
@@ -120,4 +143,9 @@ export interface AutonomySettings {
   autonomyQuietHoursStart: number
   autonomyQuietHoursEnd: number
   autonomyCostLimitDailyTicks: number
+  autonomyMonologueEnabled: boolean
+  /** How many autonomy ticks between monologue LLM calls. */
+  autonomyMonologueIntervalTicks: number
+  /** Urgency score (0-100) above which the monologue becomes proactive speech. */
+  autonomyMonologueSpeechThreshold: number
 }

@@ -16,14 +16,18 @@ import {
   isEdgeTtsSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
   isVolcengineSpeechOutputProvider,
-  USER_VISIBLE_SPEECH_OUTPUT_PROVIDER_PRESETS,
 } from '../../lib/audioProviders'
+import { SPEECH_OUTPUT_PROVIDERS } from '../../lib/providerCatalog'
 import { updateCurrentSpeechOutputProviderProfile } from '../../lib/speechProviderProfiles'
 import type {
   AppSettings,
   ServiceConnectionCapability,
   SpeechVoiceOption,
 } from '../../types'
+
+const speechOutputSelectOptions = SPEECH_OUTPUT_PROVIDERS
+  .filter((p) => !p.hidden)
+  .map((p) => ({ id: p.id, label: p.label }))
 
 type SpeechOutputSectionProps = {
   active: boolean
@@ -67,7 +71,6 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
   const speechOutputModelOptions = getSpeechOutputModelOptions(draft.speechOutputProviderId)
   const isVolcengineSpeechOutput = isVolcengineSpeechOutputProvider(draft.speechOutputProviderId)
   const isEdgeTtsSpeechOutput = isEdgeTtsSpeechOutputProvider(draft.speechOutputProviderId)
-  const isCosyVoiceSpeechOutput = draft.speechOutputProviderId === 'cosyvoice-tts'
   const hideApiCredentials = isEdgeTtsSpeechOutput
   const speechOutputVolcengineCredentials = parseVolcengineCredentialParts(draft.speechOutputApiKey)
   const speechOutputBaseUrlLabel = '语音输出接口地址'
@@ -78,9 +81,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
   const speechOutputModelHint = ''
   const speechOutputVoiceLabel = isVolcengineSpeechOutput
     ? '播报音色类型'
-    : isCosyVoiceSpeechOutput
-      ? 'CosyVoice2 音色 / spk_id'
-      : '播报音色 / 音色 ID'
+    : '播报音色 / 音色 ID'
   const speechOutputVoiceHint = ''
 
   function updateSpeechOutputVolcengineCredential(partial: Partial<VolcengineCredentialParts>) {
@@ -120,13 +121,12 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
           value={draft.speechOutputProviderId}
           onChange={(event) => onApplySpeechOutputPreset(event.target.value)}
         >
-          {USER_VISIBLE_SPEECH_OUTPUT_PROVIDER_PRESETS.map((provider) => (
-            <option key={provider.id} value={provider.id}>
-              {provider.label}
-            </option>
+          {speechOutputSelectOptions.map((opt) => (
+            <option key={opt.id} value={opt.id}>{opt.label}</option>
           ))}
         </select>
       </label>
+
 
       <p className="settings-drawer__hint">
         {speechOutputProvider.notes}
@@ -332,9 +332,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
                 <span>{
                   isVolcengineSpeechOutput
                     ? '火山推荐音色'
-                    : isCosyVoiceSpeechOutput
-                      ? 'CosyVoice2 预置音色'
-                      : '推荐音色'
+                    : '推荐音色'
                 }</span>
                 <select
                   value={speechVoiceOptions.some((voice) => voice.id === draft.speechOutputVoice)
@@ -392,7 +390,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
           ) : null}
 
           <label>
-            <span>播报风格指令（OpenAI / CosyVoice2 可用）</span>
+            <span>播报风格指令（OpenAI / OmniVoice 可用）</span>
             <textarea
               rows={3}
               value={draft.speechOutputInstructions}

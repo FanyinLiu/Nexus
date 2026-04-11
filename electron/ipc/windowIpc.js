@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain } from 'electron'
 import {
   mainWindow,
   panelWindow,
@@ -35,94 +35,134 @@ import {
   getSystemMediaSessionSnapshot,
 } from '../mediaSessionRuntime.js'
 import { inspectIntegrationRuntime } from '../integrationRuntime.js'
+import { requireTrustedSender } from './validate.js'
 
 export function register() {
-  ipcMain.handle('pet-window:get-state', () => petWindowState)
+  ipcMain.handle('pet-window:get-state', (event) => {
+    requireTrustedSender(event)
+    return petWindowState
+  })
 
-  ipcMain.handle('pet-window:update-state', (_event, state) => {
+  ipcMain.handle('pet-window:update-state', (event, state) => {
+    requireTrustedSender(event)
     return updatePetWindowState(state)
   })
 
-  ipcMain.handle('window:open-panel', (_event, section) => {
+  ipcMain.handle('window:open-panel', (event, section) => {
+    requireTrustedSender(event)
     showPanelWindow(section)
   })
 
   ipcMain.handle('window:open-pet-menu', (event) => {
+    requireTrustedSender(event)
     const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
     showPetContextMenu(sourceWindow)
   })
 
-  ipcMain.handle('window:close-panel', () => {
+  ipcMain.handle('window:close-panel', (event) => {
+    requireTrustedSender(event)
     panelWindow?.hide()
   })
 
-  ipcMain.handle('panel-window:get-state', () => panelWindowState)
+  ipcMain.handle('panel-window:get-state', (event) => {
+    requireTrustedSender(event)
+    return panelWindowState
+  })
 
-  ipcMain.handle('panel-window:set-state', (_event, state) => {
+  ipcMain.handle('panel-window:set-state', (event, state) => {
+    requireTrustedSender(event)
     return updatePanelWindowState(state)
   })
 
   ipcMain.handle('window:drag-by', (event, delta) => {
+    requireTrustedSender(event)
     dragWindowBy(event, delta)
   })
 
   ipcMain.handle('window:get-view-kind', (event) => {
+    requireTrustedSender(event)
     return getViewKind(event)
   })
 
-  ipcMain.handle('runtime-state:get', () => {
+  ipcMain.handle('runtime-state:get', (event) => {
+    requireTrustedSender(event)
     return buildRuntimeStateSnapshot()
   })
 
-  ipcMain.handle('runtime-state:heartbeat', (_event, payload) => {
+  ipcMain.handle('runtime-state:heartbeat', (event, payload) => {
+    requireTrustedSender(event)
     const view = payload?.view === 'panel' ? 'panel' : 'pet'
     updateHeartbeat(view)
     return buildRuntimeStateSnapshot()
   })
 
-  ipcMain.handle('runtime-state:update', (_event, partialState) => {
+  ipcMain.handle('runtime-state:update', (event, partialState) => {
+    requireTrustedSender(event)
     updateRuntimeState(partialState)
   })
 
-  ipcMain.handle('app:get-launch-on-startup', () => {
+  ipcMain.handle('app:get-launch-on-startup', (event) => {
+    requireTrustedSender(event)
     return getLaunchOnStartupState()
   })
 
-  ipcMain.handle('app:set-launch-on-startup', (_event, value) => {
+  ipcMain.handle('app:set-launch-on-startup', (event, value) => {
+    requireTrustedSender(event)
     return setLaunchOnStartupState(Boolean(value))
   })
 
-  ipcMain.handle('pet-model:list', async () => {
+  ipcMain.handle('pet-model:list', async (event) => {
+    requireTrustedSender(event)
     return listAvailablePetModels()
   })
 
-  ipcMain.handle('pet-model:import', async () => {
+  ipcMain.handle('pet-model:import', async (event) => {
+    requireTrustedSender(event)
     return importPetModelFromDialog()
   })
 
+  ipcMain.handle('dialog:confirm', async (event, message) => {
+    requireTrustedSender(event)
+    const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+    const { response } = await dialog.showMessageBox(parentWindow, {
+      type: 'question',
+      buttons: ['确定', '取消'],
+      defaultId: 0,
+      cancelId: 1,
+      message: String(message ?? ''),
+    })
+    return response === 0
+  })
+
   ipcMain.handle('file:save-text', async (event, payload) => {
+    requireTrustedSender(event)
     const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
     return saveTextFileFromDialog(sourceWindow, payload)
   })
 
   ipcMain.handle('file:open-text', async (event, payload) => {
+    requireTrustedSender(event)
     const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
     return openTextFileFromDialog(sourceWindow, payload)
   })
 
   ipcMain.handle('tool:web-search', async (event, payload = {}) => {
+    requireTrustedSender(event)
     return invokeRegisteredTool(event, 'web_search', payload)
   })
 
   ipcMain.handle('tool:get-weather', async (event, payload = {}) => {
+    requireTrustedSender(event)
     return invokeRegisteredTool(event, 'weather_lookup', payload)
   })
 
   ipcMain.handle('tool:open-external', async (event, payload = {}) => {
+    requireTrustedSender(event)
     return invokeRegisteredTool(event, 'open_external_link', payload)
   })
 
-  ipcMain.handle('desktop-context:get', async (_event, request = {}) => {
+  ipcMain.handle('desktop-context:get', async (event, request = {}) => {
+    requireTrustedSender(event)
     const contextPolicy = normalizeDesktopContextPolicy(request?.policy)
     const snapshot = {
       capturedAt: new Date().toISOString(),
@@ -163,15 +203,18 @@ export function register() {
     return snapshot
   })
 
-  ipcMain.handle('media-session:get', async () => {
+  ipcMain.handle('media-session:get', async (event) => {
+    requireTrustedSender(event)
     return getSystemMediaSessionSnapshot()
   })
 
-  ipcMain.handle('media-session:control', async (_event, payload = {}) => {
+  ipcMain.handle('media-session:control', async (event, payload = {}) => {
+    requireTrustedSender(event)
     return controlSystemMediaSession(payload?.action)
   })
 
-  ipcMain.handle('doctor:probe-local-services', async (_event, payload) => {
+  ipcMain.handle('doctor:probe-local-services', async (event, payload) => {
+    requireTrustedSender(event)
     if (!Array.isArray(payload) || !payload.length) {
       return []
     }
@@ -179,7 +222,8 @@ export function register() {
     return Promise.all(payload.map((target) => probeLocalServiceTarget(target)))
   })
 
-  ipcMain.handle('integrations:inspect', async (_event, payload) => {
+  ipcMain.handle('integrations:inspect', async (event, payload) => {
+    requireTrustedSender(event)
     return inspectIntegrationRuntime(payload)
   })
 }

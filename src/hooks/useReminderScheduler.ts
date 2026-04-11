@@ -133,31 +133,33 @@ export function useReminderScheduler({
     timerRef.current = window.setTimeout(() => {
       timerRef.current = null
       const now = new Date()
-      const triggeredTasks: ReminderTask[] = []
+      const threshold = now.getTime() + 1_000
 
-      setTasks((current) => {
-        const updated = current.map((task) => {
-          const nextRunAt = Date.parse(task.nextRunAt ?? '')
-          if (!task.enabled || !Number.isFinite(nextRunAt) || nextRunAt > now.getTime() + 1_000) {
-            return task
-          }
-
-          triggeredTasks.push(task)
-          return markReminderTaskTriggered(task, now)
-        })
-
-        return sortReminderTasks(updated)
+      // Identify triggered tasks outside updater to avoid StrictMode double-fire
+      const triggeredTasks = tasks.filter((task) => {
+        const nextRunAt = Date.parse(task.nextRunAt ?? '')
+        return task.enabled && Number.isFinite(nextRunAt) && nextRunAt <= threshold
       })
 
-      for (const task of triggeredTasks) {
-        onEventRef.current?.({
-          source: 'scheduler',
-          title: '提醒已到触发时间',
-          detail: `${task.title} / ${formatSchedulerTime(task.nextRunAt)}`,
-          tone: 'success',
-          relatedTaskId: task.id,
+      if (triggeredTasks.length > 0) {
+        setTasks((current) => {
+          const triggeredIds = new Set(triggeredTasks.map((t) => t.id))
+          const updated = current.map((task) =>
+            triggeredIds.has(task.id) ? markReminderTaskTriggered(task, now) : task,
+          )
+          return sortReminderTasks(updated)
         })
-        void Promise.resolve(onTriggerRef.current(task))
+
+        for (const task of triggeredTasks) {
+          onEventRef.current?.({
+            source: 'scheduler',
+            title: '提醒已到触发时间',
+            detail: `${task.title} / ${formatSchedulerTime(task.nextRunAt)}`,
+            tone: 'success',
+            relatedTaskId: task.id,
+          })
+          void Promise.resolve(onTriggerRef.current(task))
+        }
       }
     }, delayMs)
 

@@ -7,6 +7,16 @@ import {
   recordDreamResult,
   shouldRunDream,
 } from '../features/autonomy/memoryDream'
+import { applyDecayBatch } from '../features/memory/decay'
+import { clusterMemories, findBestCluster } from '../features/memory/clustering'
+import { archiveMemories, identifyArchiveCandidates } from '../features/memory/coldArchive'
+import { rebuildNarrative } from '../features/memory/narrativeMemory'
+import { recordUsage } from '../features/metering/contextMeter'
+import {
+  buildSkillDistillationPrompt,
+  formatSkillAsMemory,
+  parseSkillDistillationResponse,
+} from '../features/autonomy/skillDistillation'
 import {
   AUTONOMY_DREAM_LOG_STORAGE_KEY,
   readJson,
@@ -27,6 +37,8 @@ export type UseMemoryDreamOptions = {
   setMemories: (updater: (prev: MemoryItem[]) => MemoryItem[]) => void
   enterDreaming: () => void
   exitDreaming: () => void
+  /** Shared busy ref — when true, another LLM call (e.g. chat) is in progress. */
+  busyRef?: React.RefObject<boolean>
   appendDebugConsoleEvent: (event: { source: 'autonomy'; title: string; detail: string }) => void
 }
 
@@ -37,6 +49,7 @@ export function useMemoryDream({
   setMemories,
   enterDreaming,
   exitDreaming,
+  busyRef,
   appendDebugConsoleEvent,
 }: UseMemoryDreamOptions) {
   const [dreamLog, setDreamLog] = useState<MemoryDreamLog>(
@@ -52,6 +65,7 @@ export function useMemoryDream({
 
   const runDream = useCallback(async () => {
     if (dreamRunningRef.current) return
+    if (busyRef?.current) return
     const settings = settingsRef.current
     if (!settings.autonomyEnabled || !settings.autonomyDreamEnabled) return
     if (!shouldRunDream(dreamLogRef.current, settings)) return
@@ -94,28 +108,81 @@ export function useMemoryDream({
         throw new Error('Dream LLM returned empty response')
       }
 
+      recordUsage('dream', `${system}\n${user}`, response.content)
       const ops = parseDreamResponse(response.content)
       const now = new Date().toISOString()
 
-      // Apply operations
+      // ── Skill distillation (bonus dream step — run before memory mutation) ──
+      let distilledSkillCount = 0
+      let distilledSkills: { content: string }[] = []
+      try {
+        const existingSkills = memoriesRef.current
+          .filter((m) => m.content.startsWith('【技能】'))
+          .map((m) => m.content)
+
+        const skillPrompt = buildSkillDistillationPrompt(
+          dailyEntries,
+          existingSkills,
+          settings,
+        )
+
+        if (skillPrompt) {
+          const skillResponse = await window.desktopPet?.completeChat?.({
+            providerId: settings.apiProviderId,
+            baseUrl: settings.apiBaseUrl,
+            apiKey: settings.apiKey,
+            model: settings.model,
+            messages: [
+              { role: 'system', content: skillPrompt.system },
+              { role: 'user', content: skillPrompt.user },
+            ],
+            temperature: 0.3,
+            maxTokens: 1000,
+          })
+
+          if (skillResponse?.content) {
+            recordUsage('skill_distillation', `${skillPrompt.system}\n${skillPrompt.user}`, skillResponse.content)
+            const skills = parseSkillDistillationResponse(skillResponse.content)
+            if (skills.length) {
+              distilledSkills = skills.map((skill) => ({ content: formatSkillAsMemory(skill) }))
+              distilledSkillCount = skills.length
+            }
+          }
+        }
+      } catch (skillError) {
+        appendDebugConsoleEvent({
+          source: 'autonomy',
+          title: '技能提炼失败',
+          detail: skillError instanceof Error ? skillError.message : String(skillError),
+        })
+      }
+
+      // ── Apply all memory mutations in a single setMemories to avoid stale refs ──
+      let archivedCount = 0
+      let clusterCount = 0
+      let finalMemories: MemoryItem[] = []
+
       setMemories((prevMemories) => {
         let updated = [...prevMemories]
 
-        // Prune
-        if (ops.pruneIds.length > 0) {
-          const pruneSet = new Set(ops.pruneIds)
+        // 1. Prune
+        const prunedIds = ops.pruneIds.filter((id) => updated.some((m) => m.id === id))
+        if (prunedIds.length > 0) {
+          const pruneSet = new Set(prunedIds)
           updated = updated.filter((m) => !pruneSet.has(m.id))
         }
 
-        // Update
+        // 2. Update — link to pruned IDs (these are merges)
         for (const upd of ops.updates) {
           const idx = updated.findIndex((m) => m.id === upd.id)
           if (idx >= 0) {
-            updated[idx] = { ...updated[idx], content: upd.content, lastUsedAt: now }
+            const existing = updated[idx]
+            const mergedRelated = [...new Set([...(existing.relatedIds ?? []), ...prunedIds])]
+            updated[idx] = { ...existing, content: upd.content, lastUsedAt: now, relatedIds: mergedRelated.length ? mergedRelated : undefined }
           }
         }
 
-        // Add new
+        // 3. Add new memories from dream
         for (const newMem of ops.newMemories) {
           updated.push({
             id: crypto.randomUUID().slice(0, 8),
@@ -124,16 +191,63 @@ export function useMemoryDream({
             source: 'dream',
             createdAt: now,
             importance: (newMem.importance as MemoryItem['importance']) || 'normal',
+            relatedIds: prunedIds.length ? prunedIds : undefined,
           })
         }
 
+        // 4. Add distilled skills
+        if (distilledSkills.length > 0) {
+          const skillNow = new Date().toISOString()
+          for (const skill of distilledSkills) {
+            updated.push({
+              id: crypto.randomUUID().slice(0, 8),
+              content: skill.content,
+              category: 'reference' as const,
+              source: 'dream' as const,
+              createdAt: skillNow,
+              importance: 'normal' as const,
+            })
+          }
+        }
+
+        // 5. Apply importance decay
+        updated = applyDecayBatch(updated)
+
+        // 6. Semantic clustering + cold archiving
+        const clusters = clusterMemories(updated)
+        clusterCount = clusters.length
+
+        const clusterIdMap = new Map<string, string>()
+        for (const cluster of clusters) {
+          for (const memberId of cluster.memberIds) {
+            clusterIdMap.set(memberId, cluster.id)
+          }
+        }
+        for (const m of updated) {
+          if (!clusterIdMap.has(m.id)) {
+            const bestId = findBestCluster(m, clusters, updated)
+            if (bestId) clusterIdMap.set(m.id, bestId)
+          }
+        }
+
+        const candidates = identifyArchiveCandidates(updated)
+        if (candidates.length > 0) {
+          const { active } = archiveMemories(updated, candidates, clusterIdMap)
+          archivedCount = candidates.length
+          updated = active
+        }
+
+        finalMemories = updated
         return updated
       })
+
+      // ── Rebuild narrative threads from the actual updated memories ──
+      const narrativeSnapshot = rebuildNarrative(finalMemories, dreamLogRef.current.history)
 
       const result: MemoryDreamResult = {
         mergedTopics: ops.updates.length,
         prunedEntries: ops.pruneIds.length,
-        newEntries: ops.newMemories.length,
+        newEntries: ops.newMemories.length + distilledSkillCount,
         startedAt,
         completedAt: new Date().toISOString(),
       }
@@ -143,7 +257,7 @@ export function useMemoryDream({
       appendDebugConsoleEvent({
         source: 'autonomy',
         title: '记忆整理完成',
-        detail: `新增 ${result.newEntries}, 更新 ${result.mergedTopics}, 清理 ${result.prunedEntries}`,
+        detail: `新增 ${ops.newMemories.length}, 更新 ${result.mergedTopics}, 清理 ${result.prunedEntries}${distilledSkillCount ? `, 技能 +${distilledSkillCount}` : ''}${clusterCount ? `, 聚类 ${clusterCount}` : ''}${archivedCount ? `, 归档 ${archivedCount}` : ''}${narrativeSnapshot.threads.length ? `, 叙事线 ${narrativeSnapshot.threads.length}` : ''}`,
       })
     } catch (error) {
       appendDebugConsoleEvent({
@@ -155,7 +269,7 @@ export function useMemoryDream({
       dreamRunningRef.current = false
       exitDreaming()
     }
-  }, [settingsRef, memoriesRef, dailyMemoriesRef, setMemories, enterDreaming, exitDreaming, appendDebugConsoleEvent])
+  }, [settingsRef, memoriesRef, dailyMemoriesRef, setMemories, enterDreaming, exitDreaming, busyRef, appendDebugConsoleEvent])
 
   /** Call after each chat session to track sessions-since-dream. */
   const incrementSessionCount = useCallback(() => {

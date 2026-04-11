@@ -13,6 +13,10 @@ export type ReminderTaskAction =
       query: string
       limit?: number
     }
+  | {
+      kind: 'chat_action'
+      instruction: string
+    }
 
 export type ReminderTaskSchedule =
   | {

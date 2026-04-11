@@ -1,4 +1,8 @@
 import type { MutableRefObject } from 'react'
+import {
+  createVoiceActivityDetector,
+  type VoiceActivityDetector,
+} from '../../features/hearing/browserVad.ts'
 import { normalizeRecognizedVoiceTranscript } from '../../features/hearing/core.ts'
 import {
   startParaformerStream,
@@ -20,11 +24,8 @@ import type {
 } from '../../types'
 import {
   API_RECORDING_MAX_DURATION_MS,
-  SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD,
   SHERPA_STREAM_MAX_IDLE_MS,
-  SHERPA_STREAM_SILENCE_FINISH_MS,
 } from './constants'
-import { createAdaptiveRmsGate } from './support'
 import type { VoiceConversationOptions } from './types'
 
 type ShowPetStatus = (
@@ -36,6 +37,7 @@ type ShowPetStatus = (
 export type ParaformerConversationState = {
   noSpeechTimer: number | null
   maxDurationTimer: number | null
+  vadDetector: VoiceActivityDetector | null
 }
 
 export type StartParaformerConversationOptions = {
@@ -123,8 +125,6 @@ export async function startParaformerConversation(
     let session: ParaformerStreamSession | null = null
     let speechDetected = false
     let finalizing = false
-    let lastSpeechAt = performance.now()
-    const activityGate = createAdaptiveRmsGate(SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD)
 
     const armNoSpeechTimer = () => {
       const state = params.paraformerConversationRef.current
@@ -203,6 +203,42 @@ export async function startParaformerConversation(
 
     params.appendVoiceTrace('开始 Paraformer 识别', `#${traceLabel} 正在使用 Paraformer 流式转写`)
 
+    // ── Silero VAD for accurate speech boundary detection ──────────────
+    let vadDetector: VoiceActivityDetector | null = null
+    try {
+      vadDetector = await createVoiceActivityDetector({
+        onSpeechStart: () => {
+          if (finalizing || !session || params.paraformerSessionRef.current !== session) return
+
+          if (!speechDetected) {
+            speechDetected = true
+            params.dispatchVoiceSession({ type: 'speech_detected' })
+            params.resetNoSpeechRestartCount()
+            params.updateVoicePipeline('listening', '已检测到说话，正在实时识别')
+          }
+
+          armNoSpeechTimer()
+        },
+        onSpeechEnd: async () => {
+          // VAD detected speech end — finalize the Paraformer transcript
+          if (finalizing || !session || params.paraformerSessionRef.current !== session) return
+          void finalizeParaformerTranscript('检测到你已经停下，正在完成识别')
+        },
+        onFrameProcessed: (speechProbability) => {
+          if (!session || params.paraformerSessionRef.current !== session || finalizing) return
+          params.setSpeechLevelValue(speechProbability)
+        },
+        onMisfire: () => {
+          // Very short noise burst, not real speech — ignore
+        },
+      }, params.currentSettings.vadSensitivity)
+      await vadDetector.start()
+    } catch (vadError) {
+      console.warn('[Paraformer] Silero VAD unavailable, speech end detection will rely on Paraformer endpoints only', vadError)
+      vadDetector = null
+    }
+
+    // ── Paraformer streaming ASR for transcription ──────────────────────
     session = await startParaformerStream({
       onPartial: (text) => {
         if (finalizing || !session || params.paraformerSessionRef.current !== session) return
@@ -216,28 +252,9 @@ export async function startParaformerConversation(
       onActivity: (rms) => {
         if (!session || params.paraformerSessionRef.current !== session || finalizing) return
 
-        params.setSpeechLevelValue(clamp(rms * 6, 0, 1))
-
-        if (activityGate.isSpeech(rms)) {
-          lastSpeechAt = performance.now()
-
-          if (!speechDetected) {
-            speechDetected = true
-            params.dispatchVoiceSession({ type: 'speech_detected' })
-            params.resetNoSpeechRestartCount()
-            params.updateVoicePipeline('listening', '已检测到说话，正在实时识别')
-          }
-
-          armNoSpeechTimer()
-          return
-        }
-
-        // Silence detection
-        if (
-          speechDetected
-          && performance.now() - lastSpeechAt >= SHERPA_STREAM_SILENCE_FINISH_MS
-        ) {
-          void finalizeParaformerTranscript('检测到你已经停下，正在完成识别')
+        // When VAD is unavailable, fall back to RMS-based speech level display
+        if (!vadDetector) {
+          params.setSpeechLevelValue(clamp(rms * 6, 0, 1))
         }
       },
       onError: (message) => {
@@ -254,6 +271,7 @@ export async function startParaformerConversation(
     params.paraformerConversationRef.current = {
       noSpeechTimer: null,
       maxDurationTimer: null,
+      vadDetector,
     }
 
     armNoSpeechTimer()

@@ -64,13 +64,18 @@ function buildSsmlMessage(text, voice, rate, pitch, volume) {
   // volume: Nexus 0-1.0 → SSML 0-100
   const volumeStr = volume != null ? `${Math.round(volume * 100)}` : '100'
 
-  const escapedText = text
+  const escapeXml = (s) => String(s ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+    .replace(/'/g, '&apos;')
+    .replace(/"/g, '&quot;')
+
+  const escapedText = escapeXml(text)
+  const escapedVoice = escapeXml(voice)
 
   const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>`
-    + `<voice name='${voice}'>`
+    + `<voice name='${escapedVoice}'>`
     + `<prosody rate='${rateStr}' pitch='${pitchStr}' volume='${volumeStr}'>`
     + escapedText
     + `</prosody></voice></speak>`

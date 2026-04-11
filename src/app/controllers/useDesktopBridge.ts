@@ -118,6 +118,7 @@ type UseDesktopBridgeOptions = {
     | 'voiceState'
     | 'continuousVoiceActive'
     | 'wakewordState'
+    | 'hearingRuntime'
     | 'setVoicePipeline'
     | 'setVoiceTrace'
     | 'ensureSupportedSpeechInputSettings'
@@ -358,10 +359,13 @@ export function useDesktopBridge({
 
     const nextArmedTask = reminderTasks.find((task) => task.enabled && task.nextRunAt)
 
+    const hearingSnap = voice.hearingRuntime.getSnapshot()
     const nextRuntimeState: Partial<RuntimeStateSnapshot> = {
       continuousVoiceActive: view === 'pet' ? voice.continuousVoiceActive : false,
       panelSettingsOpen: settingsOpen,
       voiceState: voice.voiceState,
+      hearingEngine: hearingSnap.engine,
+      hearingPhase: hearingSnap.phase,
       assistantActivity,
       searchInProgress: chat.assistantActivity === 'searching' || chat.assistantActivity === 'summarizing',
       ttsInProgress: voice.voiceState === 'speaking',

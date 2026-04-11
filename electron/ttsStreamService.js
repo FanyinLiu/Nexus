@@ -28,7 +28,7 @@ function emitSampleChunk(session, samples, sampleRate, text, isFinal = false) {
     channels: 1,
     text,
     isFinal,
-    samples: Array.from(samples),
+    samples,
   })
 }
 

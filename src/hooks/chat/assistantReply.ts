@@ -1,9 +1,11 @@
 import { requestAssistantReplyStreaming } from '../../features/chat/runtime'
+import { recordUsage } from '../../features/metering/contextMeter'
 import { formatGameContext, loadGameContext } from '../../features/context/gameContext'
 import {
   createDailyMemoryEntry,
 } from '../../features/memory/memory'
 import { buildMemoryRecallContext } from '../../features/memory/recall'
+import { loadRelevantSkills, shouldGenerateSkill, generateAndSaveSkill } from '../../features/skills/autoSkillGenerator'
 import { parseAssistantPerformanceContent } from '../../features/pet/performance'
 import { buildBuiltInToolSpeechSummary } from '../../features/tools/assistant.ts'
 import type { ToolIntentPlan } from '../../features/tools/planner.ts'
@@ -29,10 +31,28 @@ async function loadAvailableMcpTools() {
     const tools = await window.desktopPet?.mcpListTools?.()
     if (!Array.isArray(tools) || !tools.length) return undefined
 
+    // Load skill guides from running plugins
+    const pluginSkillGuides = new Map<string, string>()
+    try {
+      const plugins = await window.desktopPet?.pluginList?.()
+      if (Array.isArray(plugins)) {
+        for (const plugin of plugins) {
+          if (plugin.running && plugin.skillGuide) {
+            const pluginServerId = `plugin:${plugin.id}`
+            pluginSkillGuides.set(pluginServerId, plugin.skillGuide)
+          }
+        }
+      }
+    } catch {
+      // Plugin list unavailable — proceed without skill guides
+    }
+
     return tools.map((tool) => ({
       name: tool.name,
       description: tool.description,
       serverId: tool.serverId ?? '',
+      inputSchema: tool.inputSchema,
+      skillGuide: pluginSkillGuides.get(tool.serverId ?? '') || '',
     }))
   } catch {
     return undefined
@@ -96,6 +116,8 @@ type AssistantReplyRunnerDependencies = {
   ) => void
   setError: (error: string | null) => void
   setActiveStreamAbort: (abort: (() => Promise<void>) | null) => void
+  /** Called after memory recall to update importance scores via decay feedback. */
+  onMemoryRecalled?: (recalledIds: string[]) => void
 }
 
 function buildToolFailurePromptContext(toolExecutionErrorMessage: string) {
@@ -179,20 +201,29 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         })
       }
 
-      const desktopContext = await dependencies.ctx.loadDesktopContextSnapshot()
-      const mcpTools = await loadAvailableMcpTools()
-      const gameContext = await loadGameContext().then(formatGameContext).catch(() => '')
-      const memoryContext = await buildMemoryRecallContext({
-        query: content,
-        longTermMemories: nextMemories,
-        dailyMemories: nextDailyMemories,
-        searchMode: currentSettings.memorySearchMode,
-        embeddingModel: currentSettings.memoryEmbeddingModel,
-        longTermLimit: currentSettings.memoryLongTermRecallCount,
-        dailyLimit: currentSettings.memoryDailyRecallCount,
-        semanticLimit: currentSettings.memorySemanticRecallCount,
-        retentionDays: currentSettings.memoryDiaryRetentionDays,
-      })
+      // Run all independent context-loading tasks in parallel
+      const [desktopContext, mcpTools, gameContext, memoryContext, autoSkillContext] = await Promise.all([
+        dependencies.ctx.loadDesktopContextSnapshot(),
+        loadAvailableMcpTools(),
+        loadGameContext().then(formatGameContext).catch(() => ''),
+        buildMemoryRecallContext({
+          query: content,
+          longTermMemories: nextMemories,
+          dailyMemories: nextDailyMemories,
+          searchMode: currentSettings.memorySearchMode,
+          embeddingModel: currentSettings.memoryEmbeddingModel,
+          longTermLimit: currentSettings.memoryLongTermRecallCount,
+          dailyLimit: currentSettings.memoryDailyRecallCount,
+          semanticLimit: currentSettings.memorySemanticRecallCount,
+          retentionDays: currentSettings.memoryDiaryRetentionDays,
+        }),
+        loadRelevantSkills(content).catch(() => ''),
+      ])
+
+      // Fire recall feedback — boost importance of memories that were actually used
+      if (memoryContext.recalledLongTermIds?.length && dependencies.onMemoryRecalled) {
+        dependencies.onMemoryRecalled(memoryContext.recalledLongTermIds)
+      }
 
       const shouldDecoupleSpeechFromDisplay = Boolean(chatToolResult)
       const wantStreamingTts = currentSettings.speechOutputEnabled
@@ -242,6 +273,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           toolContext: builtInToolResult?.promptContext,
           mcpTools,
           gameContext,
+          autoSkillContext,
         },
         ),
         (abort) => {
@@ -277,6 +309,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         preview: shorten(response.response.content, 40),
       })
 
+      recordUsage('chat', content, response.response.content)
       const assistantPerformance = parseAssistantPerformanceContent(response.response.content)
       const assistantMessageContent = assistantPerformance.displayContent
         || (assistantPerformance.stageDirections.length ? '（轻轻做了个动作）' : '……')
@@ -329,6 +362,15 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       )
       dependencies.ctx.queuePetPerformanceCue(assistantPerformance.cues)
       dependencies.ctx.setMood('happy')
+
+      // Auto-generate skill document if the response was complex enough
+      const toolCallNames = [
+        ...(builtInToolResult ? [toolIntentPlan.matchedTool?.id ?? 'built-in'] : []),
+        ...(mcpTools ?? []).filter((t) => response.response.tool_calls?.some((tc) => tc.function.name === t.name)).map((t) => t.name),
+      ]
+      if (shouldGenerateSkill({ userQuery: content, assistantReply: response.response.content, toolCallNames, settings: currentSettings })) {
+        void generateAndSaveSkill({ userQuery: content, assistantReply: response.response.content, toolCallNames, settings: currentSettings })
+      }
 
       if (fromVoice) {
         dependencies.ctx.updateVoicePipeline('reply_received', `模型已回复：${shorten(finalAssistantReplyForStatus, 36)}`, content)

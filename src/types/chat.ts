@@ -43,6 +43,24 @@ export type ChatMessageContent = string | Array<
   | { type: 'image_url'; image_url: { url: string; detail?: 'low' | 'high' | 'auto' } }
 >
 
+export interface ChatCompletionToolDefinition {
+  type: 'function'
+  function: {
+    name: string
+    description: string
+    parameters: Record<string, unknown>
+  }
+}
+
+export interface ChatCompletionToolCall {
+  id: string
+  type: 'function'
+  function: {
+    name: string
+    arguments: string
+  }
+}
+
 export interface ChatCompletionRequest {
   providerId?: string
   baseUrl: string
@@ -51,13 +69,18 @@ export interface ChatCompletionRequest {
   traceId?: string
   requestId?: string
   messages: Array<{
-    role: 'system' | 'user' | 'assistant'
+    role: 'system' | 'user' | 'assistant' | 'tool'
     content: ChatMessageContent
+    tool_calls?: ChatCompletionToolCall[]
+    tool_call_id?: string
   }>
   temperature?: number
   maxTokens?: number
+  tools?: ChatCompletionToolDefinition[]
 }
 
 export interface ChatCompletionResponse {
   content: string
+  tool_calls?: ChatCompletionToolCall[]
+  finish_reason?: string
 }

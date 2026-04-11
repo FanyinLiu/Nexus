@@ -86,14 +86,8 @@ export const VOICE_CLONE_PROVIDER_PRESETS: VoiceCloneProviderPreset[] =
 export const MINIMAX_TTS_MODEL_OPTIONS: SpeechModelOption[] =
   getSpeechOutputProvider('minimax-tts').modelOptions
 
-export const COSYVOICE_MODEL_OPTIONS: SpeechModelOption[] =
-  getSpeechOutputProvider('cosyvoice-tts').modelOptions
-
 export const MINIMAX_FALLBACK_VOICE_OPTIONS: SpeechVoiceOption[] =
   getSpeechOutputProvider('minimax-tts').fallbackVoiceOptions
-
-export const COSYVOICE_FALLBACK_VOICE_OPTIONS: SpeechVoiceOption[] =
-  getSpeechOutputProvider('cosyvoice-tts').fallbackVoiceOptions
 
 export const VOLCENGINE_FALLBACK_VOICE_OPTIONS: SpeechVoiceOption[] =
   getSpeechOutputProvider('volcengine-tts').fallbackVoiceOptions
@@ -187,10 +181,6 @@ export function isMiniMaxSpeechOutputProvider(providerId: string) {
   return getSpeechOutputProvider(providerId).protocol === 'minimax'
 }
 
-export function isCosyVoiceSpeechOutputProvider(providerId: string) {
-  return getSpeechOutputProvider(providerId).protocol === 'cosyvoice'
-}
-
 export function isDashScopeSpeechOutputProvider(providerId: string) {
   return getSpeechOutputProvider(providerId).protocol === 'dashscope'
 }
@@ -211,25 +201,7 @@ function normalizeHttpBaseUrl(baseUrl: string) {
   return String(baseUrl ?? '').trim().replace(/\/+$/, '')
 }
 
-function isIpv6LoopbackHost(hostname: string) {
-  return hostname === '::1' || hostname === '[::1]'
-}
-
-export function normalizeSpeechOutputApiBaseUrl(providerId: string, baseUrl: string) {
+export function normalizeSpeechOutputApiBaseUrl(_providerId: string, baseUrl: string) {
   const normalized = normalizeHttpBaseUrl(baseUrl)
-  if (!normalized || !isCosyVoiceSpeechOutputProvider(providerId)) {
-    return normalized
-  }
-
-  try {
-    const parsed = new URL(normalized)
-    if (parsed.hostname !== 'localhost' && !isIpv6LoopbackHost(parsed.hostname)) {
-      return normalized
-    }
-
-    parsed.hostname = '127.0.0.1'
-    return parsed.toString().replace(/\/+$/, '')
-  } catch {
-    return normalized
-  }
+  return normalized
 }

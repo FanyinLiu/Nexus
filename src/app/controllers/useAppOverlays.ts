@@ -211,9 +211,16 @@ export function useAppOverlays({
     onUpdateNotificationChannel,
     onRemoveNotificationChannel,
     onSave: async (nextSettings) => {
-      await applySettingsSave(nextSettings, {
-        closeSettings: true,
-      })
+      try {
+        await applySettingsSave(nextSettings, {
+          closeSettings: true,
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '保存设置失败，请稍后重试。'
+        console.error('[Settings] save failed:', error)
+        chat.setError(message)
+        chat.appendSystemMessage(`设置保存失败：${message}`, 'error')
+      }
     },
     onImportPetModel: async () => {
       if (!window.desktopPet?.importPetModel) {

@@ -87,19 +87,17 @@ export function requireSlotNames(value) {
 }
 
 /**
- * Validate vault store-many entries: [{ slot, plaintext }]
+ * Validate vault store-many entries as a slot -> plaintext map.
  * @param {unknown} value
- * @returns {Array<{ slot: string, plaintext: string }>}
+ * @returns {Record<string, string>}
  */
 export function requireVaultEntries(value) {
-  if (!Array.isArray(value)) {
-    throw new Error('Expected an array of vault entries')
+  const entries = requireObject(value, 'entries')
+  const normalized = {}
+
+  for (const [slot, plaintext] of Object.entries(entries)) {
+    normalized[requireSlotName(slot)] = expectString(plaintext, `entries[${slot}]`)
   }
-  return value.map((entry, i) => {
-    requireObject(entry, `entries[${i}]`)
-    return {
-      slot: requireSlotName(entry.slot),
-      plaintext: expectString(entry.plaintext, `entries[${i}].plaintext`),
-    }
-  })
+
+  return normalized
 }

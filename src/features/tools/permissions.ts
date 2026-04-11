@@ -79,12 +79,22 @@ function buildConfirmationMessage(tool: MatchedBuiltInTool) {
   return `\u5373\u5c06\u8c03\u7528\u7f51\u9875\u641c\u7d22\uff1a${tool.query}\n\n\u786e\u5b9a\u7ee7\u7eed\u5417\uff1f`
 }
 
-export function confirmBuiltInToolExecution(tool: MatchedBuiltInTool, policy: BuiltInToolPolicy) {
+export async function confirmBuiltInToolExecution(tool: MatchedBuiltInTool, policy: BuiltInToolPolicy): Promise<boolean> {
   if (!policy.requiresConfirmation) {
     return true
   }
 
+  // Use main-process dialog via IPC if available (reliable in all Electron modes)
+  if (window.desktopPet?.showConfirmDialog) {
+    try {
+      return await window.desktopPet.showConfirmDialog(buildConfirmationMessage(tool))
+    } catch {
+      // Fall through to window.confirm
+    }
+  }
+
   if (typeof window.confirm !== 'function') {
+    console.warn('[Tools] No confirmation mechanism available, auto-allowing tool:', tool.id)
     return true
   }
 

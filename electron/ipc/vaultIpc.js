@@ -9,6 +9,7 @@ import {
   vaultIsAvailable,
 } from '../services/keyVault.js'
 import {
+  requireTrustedSender,
   requireSlotName,
   requireSlotNames,
   requireVaultEntries,
@@ -16,22 +17,38 @@ import {
 } from './validate.js'
 
 export function register() {
-  ipcMain.handle('vault:is-available', () => vaultIsAvailable())
+  ipcMain.handle('vault:is-available', (event) => {
+    requireTrustedSender(event)
+    return vaultIsAvailable()
+  })
 
-  ipcMain.handle('vault:store', (_event, slot, plaintext) =>
-    vaultStore(requireSlotName(slot), expectString(plaintext, 'plaintext')))
+  ipcMain.handle('vault:store', (event, slot, plaintext) => {
+    requireTrustedSender(event)
+    return vaultStore(requireSlotName(slot), expectString(plaintext, 'plaintext'))
+  })
 
-  ipcMain.handle('vault:retrieve', (_event, slot) =>
-    vaultRetrieve(requireSlotName(slot)))
+  ipcMain.handle('vault:retrieve', (event, slot) => {
+    requireTrustedSender(event)
+    return vaultRetrieve(requireSlotName(slot))
+  })
 
-  ipcMain.handle('vault:delete', (_event, slot) =>
-    vaultDelete(requireSlotName(slot)))
+  ipcMain.handle('vault:delete', (event, slot) => {
+    requireTrustedSender(event)
+    return vaultDelete(requireSlotName(slot))
+  })
 
-  ipcMain.handle('vault:list-slots', () => vaultListSlots())
+  ipcMain.handle('vault:list-slots', (event) => {
+    requireTrustedSender(event)
+    return vaultListSlots()
+  })
 
-  ipcMain.handle('vault:store-many', (_event, entries) =>
-    vaultStoreMany(requireVaultEntries(entries)))
+  ipcMain.handle('vault:store-many', (event, entries) => {
+    requireTrustedSender(event)
+    return vaultStoreMany(requireVaultEntries(entries))
+  })
 
-  ipcMain.handle('vault:retrieve-many', (_event, slots) =>
-    vaultRetrieveMany(requireSlotNames(slots)))
+  ipcMain.handle('vault:retrieve-many', (event, slots) => {
+    requireTrustedSender(event)
+    return vaultRetrieveMany(requireSlotNames(slots))
+  })
 }

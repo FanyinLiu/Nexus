@@ -65,17 +65,14 @@ export function subscribeToSettings(listener: (settings: AppSettings) => void) {
 
   const handleSettingsUpdated = (event: Event) => {
     const customEvent = event as CustomEvent<AppSettings>
-    if (customEvent.detail) {
-      hydrateSettingsKeys(customEvent.detail).then((hydrated) => {
-        cachedHydratedSettings = hydrated
-        listener(hydrated)
-      })
-      return
-    }
-
-    hydrateSettingsKeys(loadSettings()).then((hydrated) => {
+    const base = customEvent.detail || loadSettings()
+    hydrateSettingsKeys(base).then((hydrated) => {
       cachedHydratedSettings = hydrated
       listener(hydrated)
+    }).catch((err) => {
+      console.error('[settingsStore] Vault hydration failed, API keys may be unavailable:', err)
+      cachedHydratedSettings = base
+      listener(base)
     })
   }
 
@@ -84,9 +81,14 @@ export function subscribeToSettings(listener: (settings: AppSettings) => void) {
       return
     }
 
-    hydrateSettingsKeys(loadSettings()).then((hydrated) => {
+    const base = loadSettings()
+    hydrateSettingsKeys(base).then((hydrated) => {
       cachedHydratedSettings = hydrated
       listener(hydrated)
+    }).catch((err) => {
+      console.error('[settingsStore] Vault hydration failed, API keys may be unavailable:', err)
+      cachedHydratedSettings = base
+      listener(base)
     })
   }
 

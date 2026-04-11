@@ -85,17 +85,54 @@ type FactorioGameContext = {
   recentCommands: { command: string; response: string; timestamp: string }[]
 } | null
 
+type TelegramGatewayStatus = {
+  state: 'disconnected' | 'connecting' | 'connected' | 'error'
+  botUsername: string | null
+  allowedChatIds: number[]
+  lastError: string | null
+}
+
+type TelegramIncomingMessage = {
+  chatId: number
+  chatTitle: string
+  fromUser: string
+  text: string
+  messageId: number
+  timestamp: string
+}
+
+type DiscordGatewayStatus = {
+  state: 'disconnected' | 'connecting' | 'connected' | 'error'
+  botUsername: string | null
+  allowedChannelIds: string[]
+  lastError: string | null
+}
+
+type DiscordIncomingMessage = {
+  channelId: string
+  guildId: string | null
+  guildName: string | null
+  channelName: string
+  fromUser: string
+  fromUserId: string
+  text: string
+  messageId: string
+  timestamp: string
+}
+
 type PluginStatus = {
   id: string
   name: string
   description: string
   version: string
   enabled: boolean
+  approved: boolean
   running: boolean
   mcpState: 'stopped' | 'starting' | 'running' | 'crashed'
   toolCount: number
   tools: { name: string; description: string }[]
   capabilities: string[]
+  skillGuide: string
 }
 
 type McpToolDescriptor = {
@@ -166,6 +203,7 @@ declare global {
         model: PetModelDefinition
         message: string
       } | null>
+      showConfirmDialog: (message: string) => Promise<boolean>
       saveTextFile: (payload: TextFileSaveRequest) => Promise<TextFileSaveResponse>
       openTextFile: (payload: TextFileOpenRequest) => Promise<TextFileOpenResponse>
       searchWeb: (payload: WebSearchRequest) => Promise<WebSearchResponse>
@@ -227,10 +265,21 @@ declare global {
       factorioStatus: () => Promise<FactorioRconStatus>
       factorioGameContext: () => Promise<FactorioGameContext>
 
-      // MCP Host (multi-server)
-      mcpStart: (payload: { id: string; command: string; args?: string }) => Promise<McpHostStatus>
-      mcpStop: (payload: { id: string }) => Promise<{ ok: boolean }>
-      mcpRestart: (payload: { id: string; command: string; args?: string }) => Promise<McpHostStatus>
+      // Telegram Gateway
+      telegramConnect: (payload: { botToken: string; allowedChatIds?: number[] }) => Promise<TelegramGatewayStatus>
+      telegramDisconnect: () => Promise<{ ok: boolean }>
+      telegramSendMessage: (payload: { chatId: number; text: string; replyToMessageId?: number; parseMode?: string }) => Promise<{ ok: boolean }>
+      telegramStatus: () => Promise<TelegramGatewayStatus>
+      subscribeTelegramMessage: (listener: (msg: TelegramIncomingMessage) => void) => () => void
+
+      // Discord Gateway
+      discordConnect: (payload: { botToken: string; allowedChannelIds?: string[] }) => Promise<DiscordGatewayStatus>
+      discordDisconnect: () => Promise<{ ok: boolean }>
+      discordSendMessage: (payload: { channelId: string; text: string; replyToMessageId?: string }) => Promise<{ ok: boolean }>
+      discordStatus: () => Promise<DiscordGatewayStatus>
+      subscribeDiscordMessage: (listener: (msg: DiscordIncomingMessage) => void) => () => void
+
+      // MCP Host (multi-server) — start/stop/restart restricted to main process only
       mcpStatus: (payload?: { id: string }) => Promise<McpHostStatus | McpHostStatus[]>
       mcpListTools: (payload?: { id: string }) => Promise<McpToolDescriptor[]>
       mcpCallTool: (payload: { serverId?: string; name: string; arguments?: Record<string, unknown> }) => Promise<unknown>
@@ -245,6 +294,8 @@ declare global {
       pluginDisable: (payload: { id: string }) => Promise<PluginStatus>
       pluginStatus: (payload: { id: string }) => Promise<PluginStatus | null>
       pluginDir: () => Promise<string>
+      pluginApprove: (payload: { id: string }) => Promise<PluginStatus | null>
+      pluginRevoke: (payload: { id: string }) => Promise<PluginStatus | null>
 
       // Memory Vector Store
       memoryVectorIndex: (payload: {
@@ -278,6 +329,84 @@ declare global {
         maxEntries: number
         storePath: string
       }>
+      memoryKeywordSearch: (payload: {
+        query: string
+        limit?: number
+        threshold?: number
+        layer?: string
+      }) => Promise<Array<{
+        id: string
+        content: string
+        layer: string
+        score: number
+      }>>
+      memoryHybridSearch: (payload: {
+        queryEmbedding: number[]
+        queryText: string
+        limit?: number
+        threshold?: number
+        layer?: string
+      }) => Promise<Array<{
+        id: string
+        content: string
+        layer: string
+        vectorScore: number
+        keywordScore: number
+        score: number
+      }>>
+
+      // Auto-generated Skills
+      skillSave: (payload: {
+        id: string
+        title: string
+        trigger: string
+        summary: string
+        content: string
+      }) => Promise<{
+        id: string
+        title: string
+        trigger: string
+        summary: string
+        createdAt: string
+        usedCount: number
+        lastUsedAt: string | null
+      }>
+      skillSearch: (payload: {
+        query: string
+        limit?: number
+      }) => Promise<Array<{
+        id: string
+        title: string
+        trigger: string
+        summary: string
+        content: string
+        relevance: number
+      }>>
+      skillList: () => Promise<Array<{
+        id: string
+        title: string
+        trigger: string
+        summary: string
+        createdAt: string
+        usedCount: number
+      }>>
+      skillGet: (payload: { id: string }) => Promise<{
+        id: string
+        title: string
+        content: string
+      } | null>
+      skillRemove: (payload: { id: string }) => Promise<boolean>
+      skillMarkUsed: (payload: { id: string }) => Promise<{ ok: boolean }>
+      skillStats: () => Promise<{ totalSkills: number; maxSkills: number; skillsDir: string }>
+
+      // Persona (SOUL.md file-based identity)
+      personaLoadSoul: () => Promise<string>
+      personaLoadMemory: () => Promise<string>
+      personaSaveSoul: (payload: { content: string }) => Promise<{ ok: boolean }>
+      personaSaveMemory: (payload: { content: string }) => Promise<{ ok: boolean }>
+      personaPaths: () => Promise<{ personaDir: string; soulPath: string; memoryPath: string }>
+      personaOpenDir: () => Promise<{ ok: boolean }>
+      personaInit: (payload: { defaultSoul: string }) => Promise<{ personaDir: string; soulPath: string; memoryPath: string }>
 
       // SenseVoice offline ASR (sherpa-onnx OfflineRecognizer)
       sensevoiceStatus: () => Promise<{ installed: boolean; modelFound: boolean; modelsDir: string; currentModelId: string | null }>

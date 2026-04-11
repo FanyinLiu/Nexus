@@ -3,11 +3,14 @@ import type {
   AutonomyTickState,
   ChatMessage,
   FocusState,
+  Goal,
   MemoryItem,
   ProactiveDecision,
   ReminderTask,
 } from '../../types'
 import { shouldSuppressAutonomy } from './focusAwareness'
+import { evaluateGoalReminders } from './goalTracker'
+import { predictIntent } from './intentPredictor'
 
 // ── Input context for the decision engine ─────────────────────────────────────
 
@@ -18,6 +21,7 @@ export type ProactiveContextInput = {
   recentMessages: ChatMessage[]
   memories: MemoryItem[]
   pendingReminders: ReminderTask[]
+  goals: Goal[]
   lastPresenceCategory: string | null
   activeWindowTitle: string | null
   settings: AppSettings
@@ -26,11 +30,15 @@ export type ProactiveContextInput = {
 // ── Priority constants ────────────────────────────────────────────────────────
 
 const PRIORITY_REMINDER = 90
+const PRIORITY_GOAL_URGENT = 75
 const PRIORITY_BRIEF_MORNING = 70
 const PRIORITY_WELCOME_BACK = 60
+const PRIORITY_GOAL_MEDIUM = 55
 const PRIORITY_CONTEXT_AWARE = 50
 const PRIORITY_MEMORY_RECALL = 40
 const PRIORITY_IDLE_CHECK = 30
+const PRIORITY_GOAL_LOW = 25
+const PRIORITY_INTENT_SUGGEST = 45
 const PRIORITY_TIME_GREETING = 20
 
 // ── Desktop activity classification ──────────────────────────────────────────
@@ -138,7 +146,7 @@ export function evaluateProactiveContext(input: ProactiveContextInput): Proactiv
   }
 
   // ── Candidate: morning brief ──────────────────────────────────────────────
-  if (isMorningBriefTime(currentHour, tickState)) {
+  if (isMorningBriefTime(currentHour, tickState) && input.lastPresenceCategory !== 'brief') {
     const briefText = buildMorningBrief(input)
     if (briefText) {
       candidates.push({
@@ -171,6 +179,22 @@ export function evaluateProactiveContext(input: ProactiveContextInput): Proactiv
     }
   }
 
+  // ── Candidate: goal progress reminder ─────────────────────────────────────
+  if (input.goals.length > 0 && input.lastPresenceCategory !== 'goal') {
+    const goalReminder = evaluateGoalReminders(input.goals)
+    if (goalReminder) {
+      const priority = goalReminder.urgency === 'high' ? PRIORITY_GOAL_URGENT
+        : goalReminder.urgency === 'medium' ? PRIORITY_GOAL_MEDIUM
+        : PRIORITY_GOAL_LOW
+      candidates.push({
+        kind: 'speak',
+        text: goalReminder.text,
+        category: 'context' as const,
+        priority,
+      })
+    }
+  }
+
   // ── Candidate: context-aware comment based on active window ───────────────
   if (
     activity !== 'unknown'
@@ -185,6 +209,25 @@ export function evaluateProactiveContext(input: ProactiveContextInput): Proactiv
         text: contextLine,
         category: 'context',
         priority: PRIORITY_CONTEXT_AWARE,
+      })
+    }
+  }
+
+  // ── Candidate: intent-based suggestion ─────────────────────────────────────
+  if (
+    input.lastPresenceCategory !== 'context'
+    && tickState.consecutiveIdleTicks >= 2
+  ) {
+    const prediction = predictIntent(
+      input.recentMessages,
+      input.activeWindowTitle,
+      activity,
+      currentHour,
+    )
+    if (prediction.suggestion && prediction.confidence >= 0.6) {
+      candidates.push({
+        kind: 'suggest',
+        suggestion: prediction.suggestion,
       })
     }
   }
@@ -264,7 +307,7 @@ function getDecisionPriority(d: ProactiveDecision): number {
   switch (d.kind) {
     case 'remind': return PRIORITY_REMINDER
     case 'brief': return PRIORITY_BRIEF_MORNING
-    case 'suggest': return 50
+    case 'suggest': return PRIORITY_INTENT_SUGGEST
     case 'speak': return d.priority
     case 'silent': return 0
   }

@@ -6,6 +6,8 @@ import path from 'node:path'
 import { getStatus as getMcpHostStatus, getAllStatuses as getMcpAllStatuses } from './services/mcpHost.js'
 import { getStatus as getMinecraftStatus } from './services/minecraftGateway.js'
 import { getStatus as getFactorioStatus } from './services/factorioRcon.js'
+import { getStatus as getTelegramStatus } from './services/telegramGateway.js'
+import { getStatus as getDiscordStatus } from './services/discordGateway.js'
 
 export function splitCommandLine(rawValue = '') {
   const result = []
@@ -353,6 +355,24 @@ async function inspectGameModule({
   }
 }
 
+function inspectMessagingGateway(id, getStatusFn) {
+  const status = getStatusFn()
+  const connected = status.state === 'connected'
+
+  return {
+    id,
+    status: connected ? 'ready' : status.state === 'error' ? 'error' : 'configured',
+    enabled: status.state !== 'disconnected' || connected,
+    configured: Boolean(status.botUsername),
+    connected,
+    note: connected
+      ? `${id} bot connected as @${status.botUsername}.`
+      : status.lastError
+        ? `${id}: ${status.lastError}`
+        : `${id} gateway idle.`,
+  }
+}
+
 export async function inspectIntegrationRuntime(payload = {}) {
   const modules = await Promise.all([
     inspectMcpModule(payload),
@@ -371,6 +391,9 @@ export async function inspectIntegrationRuntime(payload = {}) {
       username: payload?.factorioUsername,
     }),
   ])
+
+  modules.push(inspectMessagingGateway('telegram', getTelegramStatus))
+  modules.push(inspectMessagingGateway('discord', getDiscordStatus))
 
   return {
     generatedAt: new Date().toISOString(),

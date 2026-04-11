@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   setLaunchOnStartup: (value) => ipcRenderer.invoke('app:set-launch-on-startup', value),
   listPetModels: () => ipcRenderer.invoke('pet-model:list'),
   importPetModel: () => ipcRenderer.invoke('pet-model:import'),
+  showConfirmDialog: (message) => ipcRenderer.invoke('dialog:confirm', message),
   saveTextFile: (payload) => ipcRenderer.invoke('file:save-text', payload),
   openTextFile: (payload) => ipcRenderer.invoke('file:open-text', payload),
   searchWeb: (payload) => ipcRenderer.invoke('tool:web-search', payload),
@@ -100,12 +101,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   kwsFeed: (payload) => ipcRenderer.invoke('kws:feed', payload),
   kwsStop: () => ipcRenderer.invoke('kws:stop'),
 
-  // MCP stdio client (new)
-  mcpClientConnect: (config) => ipcRenderer.invoke('mcp-client:connect', config),
-  mcpClientDisconnect: (serverId) => ipcRenderer.invoke('mcp-client:disconnect', serverId),
-  mcpClientCallTool: (serverId, toolName, args) => ipcRenderer.invoke('mcp-client:call-tool', serverId, toolName, args),
-  mcpClientListTools: (serverId) => ipcRenderer.invoke('mcp-client:list-tools', serverId),
-  mcpClientStatus: (serverId) => ipcRenderer.invoke('mcp-client:status', serverId),
+  // MCP stdio client — restricted to main process only (no renderer access)
 
   // Tencent Cloud Real-Time ASR
   tencentAsrConnect: (payload) => ipcRenderer.invoke('tencent-asr:connect', payload),
@@ -134,10 +130,29 @@ contextBridge.exposeInMainWorld('desktopPet', {
   factorioStatus: () => ipcRenderer.invoke('factorio:status'),
   factorioGameContext: () => ipcRenderer.invoke('factorio:game-context'),
 
-  // MCP Host (multi-server)
-  mcpStart: (payload) => ipcRenderer.invoke('mcp:start', payload),
-  mcpStop: (payload) => ipcRenderer.invoke('mcp:stop', payload),
-  mcpRestart: (payload) => ipcRenderer.invoke('mcp:restart', payload),
+  // Telegram Gateway
+  telegramConnect: (payload) => ipcRenderer.invoke('telegram:connect', payload),
+  telegramDisconnect: () => ipcRenderer.invoke('telegram:disconnect'),
+  telegramSendMessage: (payload) => ipcRenderer.invoke('telegram:send-message', payload),
+  telegramStatus: () => ipcRenderer.invoke('telegram:status'),
+  subscribeTelegramMessage: (listener) => {
+    const handler = (_event, msg) => listener(msg)
+    ipcRenderer.on('telegram:message', handler)
+    return () => ipcRenderer.removeListener('telegram:message', handler)
+  },
+
+  // Discord Gateway
+  discordConnect: (payload) => ipcRenderer.invoke('discord:connect', payload),
+  discordDisconnect: () => ipcRenderer.invoke('discord:disconnect'),
+  discordSendMessage: (payload) => ipcRenderer.invoke('discord:send-message', payload),
+  discordStatus: () => ipcRenderer.invoke('discord:status'),
+  subscribeDiscordMessage: (listener) => {
+    const handler = (_event, msg) => listener(msg)
+    ipcRenderer.on('discord:message', handler)
+    return () => ipcRenderer.removeListener('discord:message', handler)
+  },
+
+  // MCP Host (multi-server) — start/stop/restart restricted to main process only
   mcpStatus: (payload) => ipcRenderer.invoke('mcp:status', payload),
   mcpListTools: (payload) => ipcRenderer.invoke('mcp:list-tools', payload),
   mcpCallTool: (payload) => ipcRenderer.invoke('mcp:call-tool', payload),
@@ -152,6 +167,16 @@ contextBridge.exposeInMainWorld('desktopPet', {
   pluginDisable: (payload) => ipcRenderer.invoke('plugin:disable', payload),
   pluginStatus: (payload) => ipcRenderer.invoke('plugin:status', payload),
   pluginDir: () => ipcRenderer.invoke('plugin:dir'),
+  pluginApprove: (payload) => ipcRenderer.invoke('plugin:approve', payload),
+  pluginRevoke: (payload) => ipcRenderer.invoke('plugin:revoke', payload),
+
+  // Plugin Message Bus
+  pluginBusPublish: (payload) => ipcRenderer.invoke('plugin-bus:publish', payload),
+  pluginBusSubscribe: (payload) => ipcRenderer.invoke('plugin-bus:subscribe', payload),
+  pluginBusUnsubscribe: (payload) => ipcRenderer.invoke('plugin-bus:unsubscribe', payload),
+  pluginBusSubscriptions: () => ipcRenderer.invoke('plugin-bus:subscriptions'),
+  pluginBusRecent: (payload) => ipcRenderer.invoke('plugin-bus:recent', payload),
+  pluginBusStats: () => ipcRenderer.invoke('plugin-bus:stats'),
 
   // Memory Vector Store
   memoryVectorIndex: (payload) => ipcRenderer.invoke('memory:vector-index', payload),
@@ -159,6 +184,26 @@ contextBridge.exposeInMainWorld('desktopPet', {
   memoryVectorSearch: (payload) => ipcRenderer.invoke('memory:vector-search', payload),
   memoryVectorRemove: (payload) => ipcRenderer.invoke('memory:vector-remove', payload),
   memoryVectorStats: () => ipcRenderer.invoke('memory:vector-stats'),
+  memoryKeywordSearch: (payload) => ipcRenderer.invoke('memory:keyword-search', payload),
+  memoryHybridSearch: (payload) => ipcRenderer.invoke('memory:hybrid-search', payload),
+
+  // Auto-generated Skills
+  skillSave: (payload) => ipcRenderer.invoke('skill:save', payload),
+  skillSearch: (payload) => ipcRenderer.invoke('skill:search', payload),
+  skillList: () => ipcRenderer.invoke('skill:list'),
+  skillGet: (payload) => ipcRenderer.invoke('skill:get', payload),
+  skillRemove: (payload) => ipcRenderer.invoke('skill:remove', payload),
+  skillMarkUsed: (payload) => ipcRenderer.invoke('skill:mark-used', payload),
+  skillStats: () => ipcRenderer.invoke('skill:stats'),
+
+  // Persona (SOUL.md file-based identity)
+  personaLoadSoul: () => ipcRenderer.invoke('persona:load-soul'),
+  personaLoadMemory: () => ipcRenderer.invoke('persona:load-memory'),
+  personaSaveSoul: (payload) => ipcRenderer.invoke('persona:save-soul', payload),
+  personaSaveMemory: (payload) => ipcRenderer.invoke('persona:save-memory', payload),
+  personaPaths: () => ipcRenderer.invoke('persona:paths'),
+  personaOpenDir: () => ipcRenderer.invoke('persona:open-dir'),
+  personaInit: (payload) => ipcRenderer.invoke('persona:init', payload),
 
   // Realtime Voice (OpenAI Realtime API)
   realtimeStart: (payload) => ipcRenderer.invoke('realtime:start', payload),

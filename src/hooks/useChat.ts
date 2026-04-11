@@ -11,6 +11,7 @@ import { parseChatHistoryArchive, serializeChatHistoryArchive } from '../feature
 import {
   createDailyMemoryEntry,
   extractMemoriesFromMessage,
+  markRecalled,
   mergeMemories,
 } from '../features/memory'
 import { planToolIntent, type ToolPlannerContext } from '../features/tools'
@@ -343,6 +344,10 @@ export function useChat(ctx: UseChatContext) {
       setActiveStreamAbort: (abort) => {
         activeStreamAbortRef.current = abort
       },
+      onMemoryRecalled: (recalledIds) => {
+        const idSet = new Set(recalledIds)
+        ctx.setMemories((prev) => markRecalled(prev, idSet))
+      },
     }), [appendChatMessage, appendSystemMessage, ctx, handleSpeechPlaybackFailure, presentPetDialogBubble, setError])
 
   const replaceChatHistory = useCallback((nextMessages: ChatMessage[]) => {
@@ -552,6 +557,7 @@ export function useChat(ctx: UseChatContext) {
 
     let sendSucceeded = false
     const TURN_HARD_TIMEOUT_MS = 90_000
+    let hardTimeoutTimer: number | null = null
     try {
       sendSucceeded = await Promise.race([
         runAssistantReplyTurn({
@@ -570,7 +576,8 @@ export function useChat(ctx: UseChatContext) {
           isLatestTurn: () => activeTurnIdRef.current === turnId,
         }),
         new Promise<boolean>((resolve) => {
-          window.setTimeout(() => {
+          hardTimeoutTimer = window.setTimeout(() => {
+            hardTimeoutTimer = null
             console.warn('[Chat] Turn hard timeout — forcing busy=false')
             void activeStreamAbortRef.current?.().catch(() => undefined)
             activeStreamAbortRef.current = null
@@ -579,6 +586,10 @@ export function useChat(ctx: UseChatContext) {
         }),
       ])
     } finally {
+      if (hardTimeoutTimer != null) {
+        window.clearTimeout(hardTimeoutTimer)
+        hardTimeoutTimer = null
+      }
       busyRef.current = false
       setBusy(false)
       activeStreamAbortRef.current = null
@@ -592,6 +603,12 @@ export function useChat(ctx: UseChatContext) {
   useEffect(() => {
     sendMessageRef.current = sendMessage
   })
+
+  // Stable reference — delegates to the ref so downstream hooks / memos don't churn
+  const stableSendMessage = useCallback(
+    (...args: Parameters<typeof sendMessage>) => sendMessageRef.current(...args),
+    [],
+  )
 
   return {
     messages,
@@ -616,6 +633,6 @@ export function useChat(ctx: UseChatContext) {
     importChatHistory,
     clearChatHistory,
     hidePetDialogBubble,
-    sendMessage,
+    sendMessage: stableSendMessage,
   }
 }

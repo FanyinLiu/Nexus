@@ -144,3 +144,49 @@ test('commitSettingsUpdate persists settings changes and applies them in memory'
     true,
   )
 })
+
+test('commitSettingsUpdate stores secret settings in vault and persists stripped settings', async () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      speechOutputApiKey: '',
+    }),
+  })
+
+  let appliedSettings = null as Awaited<ReturnType<typeof loadSettings>> | null
+  let storedVaultEntries: Record<string, string> | null = null
+
+  Object.defineProperty(globalThis, 'window', {
+    value: {
+      localStorage,
+      dispatchEvent: () => true,
+      desktopPet: {
+        vaultStore: async () => {},
+        vaultStoreMany: async (entries: Record<string, string>) => {
+          storedVaultEntries = entries
+        },
+        vaultRetrieveMany: async () => ({}),
+      },
+    },
+    configurable: true,
+    writable: true,
+  })
+
+  await commitSettingsUpdate(
+    (current) => ({
+      ...current,
+      speechOutputApiKey: 'tts-secret',
+    }),
+    (nextSettings) => {
+      appliedSettings = nextSettings
+    },
+  )
+
+  assert.deepEqual(storedVaultEntries, {
+    'settings:speechOutputApiKey': 'tts-secret',
+  })
+  assert.equal(appliedSettings?.speechOutputApiKey, 'tts-secret')
+  assert.equal(
+    JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}').speechOutputApiKey,
+    '',
+  )
+})

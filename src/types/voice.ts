@@ -103,6 +103,7 @@ export interface AudioTranscriptionRequest {
   model: string
   traceId?: string
   language?: string
+  hotwords?: string
   audioBase64: string
   mimeType: string
   fileName?: string

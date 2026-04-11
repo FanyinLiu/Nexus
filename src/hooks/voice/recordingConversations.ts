@@ -181,6 +181,7 @@ export async function startApiRecordingConversation(
             model: params.currentSettings.speechInputModel,
             traceId,
             language: params.currentSettings.speechRecognitionLang,
+            hotwords: params.currentSettings.speechInputHotwords,
             audioBase64: await blobToBase64(audioBlob),
             mimeType: session.mimeType,
             fileName: session.fileName,

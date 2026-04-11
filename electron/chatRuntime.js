@@ -163,6 +163,15 @@ export function buildChatRequest(payload, options = {}) {
   if (protocol === 'anthropic') {
     const normalizedMessages = splitSystemMessages(payload?.messages)
 
+    // Convert OpenAI-style tools to Anthropic format
+    const anthropicTools = Array.isArray(payload?.tools) && payload.tools.length > 0
+      ? payload.tools.map((t) => ({
+          name: t.function?.name ?? t.name,
+          description: t.function?.description ?? t.description ?? '',
+          input_schema: t.function?.parameters ?? t.parameters ?? { type: 'object', properties: {} },
+        }))
+      : undefined
+
     return {
       providerId,
       protocol,
@@ -178,9 +187,14 @@ export function buildChatRequest(payload, options = {}) {
         temperature: payload?.temperature ?? 0.8,
         ...(normalizedMessages.system ? { system: normalizedMessages.system } : {}),
         ...(stream ? { stream: true } : {}),
+        ...(anthropicTools ? { tools: anthropicTools } : {}),
       }),
     }
   }
+
+  const tools = Array.isArray(payload?.tools) && payload.tools.length > 0
+    ? payload.tools
+    : undefined
 
   return {
     providerId,
@@ -196,6 +210,7 @@ export function buildChatRequest(payload, options = {}) {
       temperature: payload?.temperature ?? 0.8,
       max_tokens: payload?.maxTokens ?? 500,
       ...(stream ? { stream: true } : {}),
+      ...(tools ? { tools } : {}),
     }),
   }
 }
@@ -255,6 +270,44 @@ export function extractChatResponseContent(providerId, payload) {
     ?? payload?.content
     ?? '',
   )
+}
+
+/**
+ * Extract tool_calls from the LLM response (OpenAI format).
+ * For Anthropic, converts tool_use content blocks to OpenAI tool_calls format.
+ */
+export function extractChatResponseToolCalls(providerId, payload) {
+  if (getChatProviderProtocol(providerId) === 'anthropic') {
+    // Anthropic returns tool calls as content blocks with type "tool_use"
+    const content = Array.isArray(payload?.content) ? payload.content : []
+    const toolUseBlocks = content.filter((block) => block?.type === 'tool_use')
+    if (!toolUseBlocks.length) return null
+
+    return toolUseBlocks.map((block) => ({
+      id: block.id ?? `call_${Math.random().toString(36).slice(2, 10)}`,
+      type: 'function',
+      function: {
+        name: block.name,
+        arguments: typeof block.input === 'string' ? block.input : JSON.stringify(block.input ?? {}),
+      },
+    }))
+  }
+
+  // OpenAI format
+  const toolCalls = payload?.choices?.[0]?.message?.tool_calls
+  if (!Array.isArray(toolCalls) || !toolCalls.length) return null
+  return toolCalls
+}
+
+/**
+ * Extract finish_reason from the LLM response.
+ */
+export function extractChatResponseFinishReason(providerId, payload) {
+  if (getChatProviderProtocol(providerId) === 'anthropic') {
+    return payload?.stop_reason ?? null
+  }
+
+  return payload?.choices?.[0]?.finish_reason ?? null
 }
 
 export function extractChatStreamingDeltaContent(providerId, payload) {

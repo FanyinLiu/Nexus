@@ -498,6 +498,114 @@ export const IntegrationsSection = memo(function IntegrationsSection({
     )
   }
 
+  function renderTelegramPanel() {
+    return (
+      <>
+        <div className="settings-drawer__card">
+          <div className="settings-section__title-row">
+            <div>
+              <h5>Telegram</h5>
+              <p className="settings-drawer__hint">
+                通过 Telegram Bot 接收和发送消息，实现手机端与伴侣的跨平台对话。
+              </p>
+            </div>
+            <div className="settings-page__meta">
+              <span>{draft.telegramIntegrationEnabled ? ti('settings.integrations.module_enabled') : ti('settings.integrations.module_disabled')}</span>
+            </div>
+          </div>
+
+          <label className="settings-toggle">
+            <span>启用 Telegram 网关</span>
+            <input
+              type="checkbox"
+              checked={draft.telegramIntegrationEnabled}
+              onChange={(event) => setDraft((prev) => ({ ...prev, telegramIntegrationEnabled: event.target.checked }))}
+            />
+          </label>
+
+          <label>
+            <span>Bot Token</span>
+            <input
+              type="password"
+              value={draft.telegramBotToken}
+              placeholder="123456:ABC-DEF..."
+              onChange={(event) => setDraft((prev) => ({ ...prev, telegramBotToken: event.target.value }))}
+            />
+          </label>
+
+          <label>
+            <span>允许的 Chat ID（逗号分隔，留空则接受所有）</span>
+            <input
+              value={draft.telegramAllowedChatIds}
+              placeholder="123456789, -100123456"
+              onChange={(event) => setDraft((prev) => ({ ...prev, telegramAllowedChatIds: event.target.value }))}
+            />
+          </label>
+
+          <p className="settings-inline-note">
+            在 Telegram 中找 @BotFather 创建 Bot 并获取 Token。Chat ID 可通过 @userinfobot 获取。
+          </p>
+        </div>
+
+        {renderRuntimeBlock('telegram')}
+      </>
+    )
+  }
+
+  function renderDiscordPanel() {
+    return (
+      <>
+        <div className="settings-drawer__card">
+          <div className="settings-section__title-row">
+            <div>
+              <h5>Discord</h5>
+              <p className="settings-drawer__hint">
+                通过 Discord Bot 接收和发送消息，实现 Discord 频道与伴侣的跨平台对话。
+              </p>
+            </div>
+            <div className="settings-page__meta">
+              <span>{draft.discordIntegrationEnabled ? ti('settings.integrations.module_enabled') : ti('settings.integrations.module_disabled')}</span>
+            </div>
+          </div>
+
+          <label className="settings-toggle">
+            <span>启用 Discord 网关</span>
+            <input
+              type="checkbox"
+              checked={draft.discordIntegrationEnabled}
+              onChange={(event) => setDraft((prev) => ({ ...prev, discordIntegrationEnabled: event.target.checked }))}
+            />
+          </label>
+
+          <label>
+            <span>Bot Token</span>
+            <input
+              type="password"
+              value={draft.discordBotToken}
+              placeholder="MTIz...abc"
+              onChange={(event) => setDraft((prev) => ({ ...prev, discordBotToken: event.target.value }))}
+            />
+          </label>
+
+          <label>
+            <span>允许的频道 ID（逗号分隔，留空则接受所有）</span>
+            <input
+              value={draft.discordAllowedChannelIds}
+              placeholder="1234567890123456789, 9876543210123456789"
+              onChange={(event) => setDraft((prev) => ({ ...prev, discordAllowedChannelIds: event.target.value }))}
+            />
+          </label>
+
+          <p className="settings-inline-note">
+            在 Discord Developer Portal 创建 Application 和 Bot，开启 Message Content Intent，获取 Token 后填入。频道 ID 可在 Discord 开发者模式下右键频道获取。
+          </p>
+        </div>
+
+        {renderRuntimeBlock('discord')}
+      </>
+    )
+  }
+
   return (
     <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
       <div className="settings-section__title-row">
@@ -538,6 +646,8 @@ export const IntegrationsSection = memo(function IntegrationsSection({
       {activePanelId === 'mcp' ? renderMcpPanel() : null}
       {activePanelId === 'minecraft' ? renderGamePanel('minecraft') : null}
       {activePanelId === 'factorio' ? renderGamePanel('factorio') : null}
+      {activePanelId === 'telegram' ? renderTelegramPanel() : null}
+      {activePanelId === 'discord' ? renderDiscordPanel() : null}
 
       <div className="settings-section__title-row">
         <div>

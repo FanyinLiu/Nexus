@@ -156,7 +156,7 @@ class SherpaParaformerService {
     if (!this.recognizer || !this.stream) return ''
 
     // Flush any remaining audio
-    const tailSamples = new Float32Array(SAMPLE_RATE * 0.3)
+    const tailSamples = new Float32Array(SAMPLE_RATE * 0.8)
     this.stream.acceptWaveform({ samples: tailSamples, sampleRate: SAMPLE_RATE })
 
     while (this.recognizer.isReady(this.stream)) {

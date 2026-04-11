@@ -68,6 +68,13 @@ function normalizeReminderTaskAction(action: ReminderTaskAction | null | undefin
     }
   }
 
+  if (action.kind === 'chat_action') {
+    return {
+      kind: 'chat_action',
+      instruction: String(action.instruction ?? '').trim(),
+    }
+  }
+
   return {
     kind: 'web_search',
     query: String(action.query ?? '').trim(),

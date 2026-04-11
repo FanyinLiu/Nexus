@@ -131,13 +131,13 @@ export async function startSession(options) {
 
     ws.on('close', (code) => {
       clearTimeout(timeoutId)
-      const wasActive = _state === 'active'
+      const previousState = _state
       _ws = null
       _state = 'idle'
       console.info(`[realtime] ws closed (code=${code})`)
       emit({ type: 'state', state: _state, sessionId: _sessionId })
 
-      if (!wasActive && _state === 'connecting') {
+      if (previousState === 'connecting') {
         reject(new Error(`WebSocket closed during handshake (code=${code})`))
       }
     })

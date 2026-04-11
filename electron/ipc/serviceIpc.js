@@ -3,11 +3,13 @@ import * as tencentAsr from '../services/tencentAsr.js'
 import * as minecraftGateway from '../services/minecraftGateway.js'
 import * as factorioRcon from '../services/factorioRcon.js'
 import * as realtimeVoice from '../services/realtimeVoice.js'
+import { requireTrustedSender } from './validate.js'
 
 export function register() {
   // ── Tencent Cloud Real-Time ASR ──
 
-  ipcMain.handle('tencent-asr:connect', async (_event, payload) => {
+  ipcMain.handle('tencent-asr:connect', async (event, payload) => {
+    requireTrustedSender(event)
     await tencentAsr.connect({
       appId: String(payload?.appId ?? '').trim(),
       secretId: String(payload?.secretId ?? '').trim(),
@@ -18,7 +20,8 @@ export function register() {
     return tencentAsr.getStatus()
   })
 
-  ipcMain.handle('tencent-asr:feed', (_event, payload) => {
+  ipcMain.handle('tencent-asr:feed', (event, payload) => {
+    requireTrustedSender(event)
     const { samples } = payload
     if (!samples || !samples.length) return { ok: true }
     const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
@@ -26,26 +29,33 @@ export function register() {
     return { ok: true }
   })
 
-  ipcMain.handle('tencent-asr:finish', async () => {
+  ipcMain.handle('tencent-asr:finish', async (event) => {
+    requireTrustedSender(event)
     const text = await tencentAsr.finishStream()
     return { text }
   })
 
-  ipcMain.handle('tencent-asr:abort', () => {
+  ipcMain.handle('tencent-asr:abort', (event) => {
+    requireTrustedSender(event)
     tencentAsr.abortStream()
     return { ok: true }
   })
 
-  ipcMain.handle('tencent-asr:disconnect', async () => {
+  ipcMain.handle('tencent-asr:disconnect', async (event) => {
+    requireTrustedSender(event)
     await tencentAsr.disconnect()
     return { ok: true }
   })
 
-  ipcMain.handle('tencent-asr:status', () => tencentAsr.getStatus())
+  ipcMain.handle('tencent-asr:status', (event) => {
+    requireTrustedSender(event)
+    return tencentAsr.getStatus()
+  })
 
   // ── Minecraft Gateway ──
 
-  ipcMain.handle('minecraft:connect', async (_event, payload) => {
+  ipcMain.handle('minecraft:connect', async (event, payload) => {
+    requireTrustedSender(event)
     const address = String(payload?.address ?? '').trim()
     const port = Number(payload?.port ?? 19131)
     const username = String(payload?.username ?? '').trim()
@@ -53,23 +63,32 @@ export function register() {
     return minecraftGateway.getStatus()
   })
 
-  ipcMain.handle('minecraft:disconnect', async () => {
+  ipcMain.handle('minecraft:disconnect', async (event) => {
+    requireTrustedSender(event)
     await minecraftGateway.disconnect()
     return { ok: true }
   })
 
-  ipcMain.handle('minecraft:send-command', (_event, payload) => {
+  ipcMain.handle('minecraft:send-command', (event, payload) => {
+    requireTrustedSender(event)
     minecraftGateway.sendCommand(String(payload?.command ?? ''))
     return { ok: true }
   })
 
-  ipcMain.handle('minecraft:status', () => minecraftGateway.getStatus())
+  ipcMain.handle('minecraft:status', (event) => {
+    requireTrustedSender(event)
+    return minecraftGateway.getStatus()
+  })
 
-  ipcMain.handle('minecraft:game-context', () => minecraftGateway.getGameContext())
+  ipcMain.handle('minecraft:game-context', (event) => {
+    requireTrustedSender(event)
+    return minecraftGateway.getGameContext()
+  })
 
   // ── Factorio RCON ──
 
-  ipcMain.handle('factorio:connect', async (_event, payload) => {
+  ipcMain.handle('factorio:connect', async (event, payload) => {
+    requireTrustedSender(event)
     const address = String(payload?.address ?? '').trim()
     const port = Number(payload?.port ?? 34197)
     const password = String(payload?.password ?? '').trim()
@@ -77,20 +96,28 @@ export function register() {
     return factorioRcon.getStatus()
   })
 
-  ipcMain.handle('factorio:disconnect', async () => {
+  ipcMain.handle('factorio:disconnect', async (event) => {
+    requireTrustedSender(event)
     await factorioRcon.disconnect()
     return { ok: true }
   })
 
-  ipcMain.handle('factorio:execute', async (_event, payload) => {
+  ipcMain.handle('factorio:execute', async (event, payload) => {
+    requireTrustedSender(event)
     const command = String(payload?.command ?? '')
     const response = await factorioRcon.execute(command)
     return { response }
   })
 
-  ipcMain.handle('factorio:status', () => factorioRcon.getStatus())
+  ipcMain.handle('factorio:status', (event) => {
+    requireTrustedSender(event)
+    return factorioRcon.getStatus()
+  })
 
-  ipcMain.handle('factorio:game-context', () => factorioRcon.getGameContext())
+  ipcMain.handle('factorio:game-context', (event) => {
+    requireTrustedSender(event)
+    return factorioRcon.getGameContext()
+  })
 
   // ── Realtime Voice (OpenAI Realtime API) ──
 
@@ -100,19 +127,31 @@ export function register() {
     }
   })
 
-  ipcMain.handle('realtime:start', (_event, payload) => realtimeVoice.startSession(payload))
-  ipcMain.handle('realtime:stop', () => realtimeVoice.stopSession())
-  ipcMain.handle('realtime:feed', (_event, payload) => {
+  ipcMain.handle('realtime:start', (event, payload) => {
+    requireTrustedSender(event)
+    return realtimeVoice.startSession(payload)
+  })
+  ipcMain.handle('realtime:stop', (event) => {
+    requireTrustedSender(event)
+    return realtimeVoice.stopSession()
+  })
+  ipcMain.handle('realtime:feed', (event, payload) => {
+    requireTrustedSender(event)
     realtimeVoice.feedAudio(payload.samples)
     return { ok: true }
   })
-  ipcMain.handle('realtime:interrupt', () => {
+  ipcMain.handle('realtime:interrupt', (event) => {
+    requireTrustedSender(event)
     realtimeVoice.interrupt()
     return { ok: true }
   })
-  ipcMain.handle('realtime:send-text', (_event, payload) => {
+  ipcMain.handle('realtime:send-text', (event, payload) => {
+    requireTrustedSender(event)
     realtimeVoice.sendTextMessage(payload.text)
     return { ok: true }
   })
-  ipcMain.handle('realtime:state', () => realtimeVoice.getState())
+  ipcMain.handle('realtime:state', (event) => {
+    requireTrustedSender(event)
+    return realtimeVoice.getState()
+  })
 }

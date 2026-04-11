@@ -310,6 +310,10 @@ export function clearParaformerConversationStateRuntime(
     window.clearTimeout(session.maxDurationTimer)
   }
 
+  if (session.vadDetector) {
+    session.vadDetector.destroy().catch(() => undefined)
+  }
+
   options.paraformerConversationRef.current = null
   options.setSpeechLevelValue(0)
 }

@@ -13,22 +13,26 @@ export function register() {
     return mcpClientService.connect(config)
   })
 
-  ipcMain.handle('mcp-client:disconnect', (_event, serverId) => {
+  ipcMain.handle('mcp-client:disconnect', (event, serverId) => {
+    requireTrustedSender(event)
     mcpClientService.disconnect(serverId)
     return { ok: true }
   })
 
-  ipcMain.handle('mcp-client:call-tool', async (_event, serverId, toolName, args) => {
+  ipcMain.handle('mcp-client:call-tool', async (event, serverId, toolName, args) => {
+    requireTrustedSender(event)
     return mcpClientService.callTool(serverId, toolName, args)
   })
 
-  ipcMain.handle('mcp-client:list-tools', (_event, serverId) => {
+  ipcMain.handle('mcp-client:list-tools', (event, serverId) => {
+    requireTrustedSender(event)
     return serverId
       ? mcpClientService.listTools(serverId)
       : mcpClientService.listAllTools()
   })
 
-  ipcMain.handle('mcp-client:status', (_event, serverId) => {
+  ipcMain.handle('mcp-client:status', (event, serverId) => {
+    requireTrustedSender(event)
     return serverId
       ? mcpClientService.getStatus(serverId)
       : mcpClientService.getAllStatuses()
@@ -63,12 +67,14 @@ export function register() {
     return mcpHost.getStatus(id)
   })
 
-  ipcMain.handle('mcp:status', (_event, payload) => {
+  ipcMain.handle('mcp:status', (event, payload) => {
+    requireTrustedSender(event)
     const id = payload?.id ? String(payload.id).trim() : null
     return id ? mcpHost.getStatus(id) : mcpHost.getAllStatuses()
   })
 
-  ipcMain.handle('mcp:list-tools', (_event, payload) => {
+  ipcMain.handle('mcp:list-tools', (event, payload) => {
+    requireTrustedSender(event)
     const id = payload?.id ? String(payload.id).trim() : null
     return id ? mcpHost.listTools(id) : mcpHost.listAllTools()
   })

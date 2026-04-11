@@ -127,30 +127,61 @@ const INTEGRATION_MODULES: IntegrationModuleDescriptor[] = [
     ],
   },
   {
+    id: 'telegram',
+    inspectable: true,
+    panelId: 'telegram',
+    title: {
+      zhCN: 'Telegram',
+      enUS: 'Telegram',
+    },
+    badge: {
+      zhCN: '消息网关',
+      enUS: 'Messaging gateway',
+    },
+    summary: {
+      zhCN: '通过 Telegram Bot API 长轮询接收消息，实现跨平台对话。',
+      enUS: 'Long-poll Telegram Bot API for cross-platform messaging with your companion.',
+    },
+    designPattern: {
+      zhCN: '基于 Bot API getUpdates 长轮询，主进程服务 + IPC 桥接。',
+      enUS: 'Bot API getUpdates long-polling with main-process service and IPC bridge.',
+    },
+    nextStep: {
+      zhCN: '配置 Bot Token 后即可双向通信，消息自动转入伴侣对话。',
+      enUS: 'Configure a Bot Token to enable bidirectional messaging routed into companion chat.',
+    },
+    references: [
+      'electron/services/telegramGateway.js',
+      'electron/ipc/telegramIpc.js',
+    ],
+  },
+  {
     id: 'discord',
-    inspectable: false,
+    inspectable: true,
+    panelId: 'discord',
     title: {
       zhCN: 'Discord',
       enUS: 'Discord',
     },
     badge: {
-      zhCN: '待接入',
-      enUS: 'Queued',
+      zhCN: '消息网关',
+      enUS: 'Messaging gateway',
     },
     summary: {
-      zhCN: '适合做成 Nexus 的外部消息入口和 Presence 扩展源。',
-      enUS: 'A strong next step for external messaging and Presence expansion in Nexus.',
+      zhCN: '通过 Discord Bot Gateway WebSocket 接收消息，实现跨平台对话。',
+      enUS: 'Connect to Discord Bot Gateway via WebSocket for cross-platform messaging.',
     },
     designPattern: {
-      zhCN: '基于 Discord 模块 store 设计。',
-      enUS: 'Based on a Discord module store pattern.',
+      zhCN: '基于 Discord Gateway WebSocket + REST API，主进程服务 + IPC 桥接。',
+      enUS: 'Discord Gateway WebSocket + REST API with main-process service and IPC bridge.',
     },
     nextStep: {
-      zhCN: '先做模块注册和连接态，再决定要不要把消息流接进主对话。',
-      enUS: 'Start with module registration and connection state, then decide how deeply to wire message flow.',
+      zhCN: '配置 Bot Token 后即可双向通信，消息自动转入伴侣对话。',
+      enUS: 'Configure a Bot Token to enable bidirectional messaging routed into companion chat.',
     },
     references: [
-      'stage-ui/src/stores/modules/discord.ts',
+      'electron/services/discordGateway.js',
+      'electron/ipc/discordIpc.js',
     ],
   },
   {

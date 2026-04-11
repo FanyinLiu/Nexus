@@ -62,11 +62,12 @@ const REMINDER_ENABLE_PATTERNS = [
   /^(?:请|麻烦|帮我|给我|把|将)?\s*(.+?)(?:提醒|任务)(?:启用|开启|恢复|打开)(?:吧|一下)?$/u,
 ]
 const REMINDER_UPDATE_PATTERN = /^(?:请|麻烦|帮我|给我|把|将)?\s*(.+?)(?:提醒|任务)(?:改成|改为|调整为|改到|调整到|换成)\s*(.+)$/u
-const REMINDER_CREATE_HINT_PATTERN = /(?:提醒我|提醒一下|通知我|叫我|喊我|告诉我|记得|设个提醒|设置提醒|新增提醒|创建提醒|定个提醒|定时|播报|搜索|搜一下|查一下|查询)/u
+const REMINDER_CREATE_HINT_PATTERN = /(?:提醒我|提醒一下|通知我|叫我|喊我|告诉我|记得|设个提醒|设置提醒|新增提醒|创建提醒|定个提醒|定时|播报|搜索|搜一下|查一下|查询|总结|汇总|整理|回顾|复盘|归纳|分析|盘点|梳理)/u
 
 const REMINDER_TIMELESS_CREATE_HINT_PATTERN = /(?:提醒我|提醒一下|通知我|叫我|喊我|告诉我|记得|设个提醒|设置提醒|新增提醒|创建提醒|定个提醒|定时提醒)/u
 const REMINDER_SUSPICIOUS_SHORT_PROMPT_PATTERN = /^(?:喝|吃|看|查|搜|找|去|做|买|拿|打|开|关|发|回|听|问|记|背|读|写|学|装|带|放|收|洗|用)$/u
 const REMINDER_REJECTED_FOLLOW_UP_PATTERN = /^(?:好的?|可以|行|嗯|啊|哦|算了|不用了|取消|不是|没事|先这样|先不用|等一下|稍后)$/u
+const QUESTION_CONTEXT_PATTERN = /(?:为什么|为啥|怎么没|吗[？?]?$|什么样|怎么样|是不是|有没有|为何|难道|你查完|查完了吗|没有告诉)/u
 
 const DAY_OFFSET_PATTERNS: Array<{ pattern: RegExp; offset: number }> = [
   { pattern: /后天/u, offset: 2 },
@@ -196,6 +197,13 @@ function deriveReminderAction(prompt: string): ReminderTaskAction {
       kind: 'web_search',
       query,
       limit: 5,
+    }
+  }
+
+  if (/(?:总结|汇总|整理|回顾|复盘|归纳|分析|列出|盘点|梳理)/u.test(normalized)) {
+    return {
+      kind: 'chat_action',
+      instruction: normalized,
     }
   }
 
@@ -517,6 +525,10 @@ export function parseReminderIntent(text: string, now = new Date()): ParsedRemin
     return null
   }
 
+  if (QUESTION_CONTEXT_PATTERN.test(normalized)) {
+    return null
+  }
+
   if (REMINDER_LIST_PATTERN.test(normalized)) {
     return {
       kind: 'list',
@@ -673,6 +685,13 @@ function formatReminderActionSummary(action: ReminderTask['action']) {
 
   if (action.kind === 'web_search') {
     return `网页搜索(${action.query})`
+  }
+
+  if (action.kind === 'chat_action') {
+    const preview = action.instruction.length > 12
+      ? `${action.instruction.slice(0, 11)}…`
+      : action.instruction
+    return `智能动作(${preview})`
   }
 
   return '普通提醒'

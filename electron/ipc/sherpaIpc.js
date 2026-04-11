@@ -2,13 +2,16 @@ import { ipcMain } from 'electron'
 import sherpaKwsService from '../sherpaKws.js'
 import sherpaSenseVoiceService from '../sherpaSenseVoice.js'
 import sherpaParaformerService from '../sherpaParaformer.js'
+import { requireTrustedSender } from './validate.js'
 
 export function register() {
-  ipcMain.handle('kws:status', (_event, payload) => {
+  ipcMain.handle('kws:status', (event, payload) => {
+    requireTrustedSender(event)
     return sherpaKwsService.getStatus(payload)
   })
 
-  ipcMain.handle('kws:start', (_event, payload) => {
+  ipcMain.handle('kws:start', (event, payload) => {
+    requireTrustedSender(event)
     const status = sherpaKwsService.getStatus(payload)
     if (!status.modelFound) {
       throw new Error(status.reason || '唤醒词模型未安装，请运行 setup.bat 下载模型。')
@@ -20,25 +23,29 @@ export function register() {
     return { ok: true, sampleRate: 16000 }
   })
 
-  ipcMain.handle('kws:feed', (_event, payload) => {
+  ipcMain.handle('kws:feed', (event, payload) => {
+    requireTrustedSender(event)
     const { samples, sampleRate } = payload
     if (!samples || !samples.length) return { keyword: null }
     const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
     return sherpaKwsService.feed(float32, sampleRate)
   })
 
-  ipcMain.handle('kws:stop', () => {
+  ipcMain.handle('kws:stop', (event) => {
+    requireTrustedSender(event)
     sherpaKwsService.stop()
     return { ok: true }
   })
 
   // ── SenseVoice offline ASR ──
 
-  ipcMain.handle('sensevoice:status', () => {
+  ipcMain.handle('sensevoice:status', (event) => {
+    requireTrustedSender(event)
     return sherpaSenseVoiceService.getStatus()
   })
 
-  ipcMain.handle('sensevoice:start', () => {
+  ipcMain.handle('sensevoice:start', (event) => {
+    requireTrustedSender(event)
     if (!sherpaSenseVoiceService.isAvailable()) {
       const status = sherpaSenseVoiceService.getStatus()
       throw new Error(
@@ -52,7 +59,8 @@ export function register() {
     return { ok: true, sampleRate: 16000 }
   })
 
-  ipcMain.handle('sensevoice:feed', (_event, payload) => {
+  ipcMain.handle('sensevoice:feed', (event, payload) => {
+    requireTrustedSender(event)
     const { samples } = payload
     if (!samples || !samples.length) return { ok: true }
     const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
@@ -60,17 +68,20 @@ export function register() {
     return { ok: true }
   })
 
-  ipcMain.handle('sensevoice:finish', () => {
+  ipcMain.handle('sensevoice:finish', (event) => {
+    requireTrustedSender(event)
     const text = sherpaSenseVoiceService.finishStream()
     return { text }
   })
 
-  ipcMain.handle('sensevoice:abort', () => {
+  ipcMain.handle('sensevoice:abort', (event) => {
+    requireTrustedSender(event)
     sherpaSenseVoiceService.abortStream()
     return { ok: true }
   })
 
-  ipcMain.handle('sensevoice:transcribe', (_event, payload) => {
+  ipcMain.handle('sensevoice:transcribe', (event, payload) => {
+    requireTrustedSender(event)
     const { samples, sampleRate } = payload
     if (!samples || !samples.length) return { text: '' }
     const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
@@ -80,11 +91,13 @@ export function register() {
 
   // ── Paraformer streaming ASR ──
 
-  ipcMain.handle('paraformer:status', () => {
+  ipcMain.handle('paraformer:status', (event) => {
+    requireTrustedSender(event)
     return sherpaParaformerService.getStatus()
   })
 
-  ipcMain.handle('paraformer:start', () => {
+  ipcMain.handle('paraformer:start', (event) => {
+    requireTrustedSender(event)
     if (!sherpaParaformerService.isAvailable()) {
       const status = sherpaParaformerService.getStatus()
       throw new Error(
@@ -98,19 +111,22 @@ export function register() {
     return { ok: true, sampleRate: 16000 }
   })
 
-  ipcMain.handle('paraformer:feed', (_event, payload) => {
+  ipcMain.handle('paraformer:feed', (event, payload) => {
+    requireTrustedSender(event)
     const { samples } = payload
     if (!samples || !samples.length) return { text: '', isEndpoint: false }
     const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
     return sherpaParaformerService.feedAudio(float32)
   })
 
-  ipcMain.handle('paraformer:finish', () => {
+  ipcMain.handle('paraformer:finish', (event) => {
+    requireTrustedSender(event)
     const text = sherpaParaformerService.finishStream()
     return { text }
   })
 
-  ipcMain.handle('paraformer:abort', () => {
+  ipcMain.handle('paraformer:abort', (event) => {
+    requireTrustedSender(event)
     sherpaParaformerService.abortStream()
     return { ok: true }
   })

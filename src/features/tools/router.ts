@@ -1,3 +1,4 @@
+import { runPreToolHooks, runPostToolHooks } from './hooks'
 import { confirmBuiltInToolExecution, resolveBuiltInToolPolicy } from './permissions'
 import { executeBuiltInTool, isBuiltInToolAvailable } from './registry'
 import type { BuiltInToolResult, MatchedBuiltInTool } from './toolTypes'
@@ -21,9 +22,22 @@ export async function maybeRunMatchedBuiltInTool(
     return null
   }
 
-  if (!confirmBuiltInToolExecution(matchedTool, policy)) {
+  if (!(await confirmBuiltInToolExecution(matchedTool, policy))) {
     return null
   }
 
-  return executeBuiltInTool(matchedTool, policy, settings as Record<string, unknown>)
+  // PreToolUse hooks
+  const preCtx = await runPreToolHooks(matchedTool.id, matchedTool)
+  if (preCtx.blocked) {
+    console.info(`[ToolRouter] ${matchedTool.id} blocked by hook: ${preCtx.blockReason}`)
+    return null
+  }
+
+  const startTime = Date.now()
+  const result = await executeBuiltInTool(matchedTool, policy, settings as Record<string, unknown>)
+
+  // PostToolUse hooks
+  await runPostToolHooks(matchedTool.id, matchedTool, result, Date.now() - startTime)
+
+  return result
 }

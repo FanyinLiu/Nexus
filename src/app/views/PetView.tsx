@@ -75,6 +75,32 @@ export function PetView({
   )
   const petSignalArmed = settings.continuousVoiceModeEnabled || voice.continuousVoiceActive
 
+  // ── Interrupt detection (was in TalkModeOverlay) ──
+  const [interrupted, setInterrupted] = useState(false)
+  const prevVoiceStateRef = useRef(voice.voiceState)
+  const interruptTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (prevVoiceStateRef.current === 'speaking' && voice.voiceState === 'listening') {
+      setInterrupted(true)
+      if (interruptTimerRef.current) window.clearTimeout(interruptTimerRef.current)
+      interruptTimerRef.current = window.setTimeout(() => setInterrupted(false), 900)
+    }
+    prevVoiceStateRef.current = voice.voiceState
+    return () => {
+      if (interruptTimerRef.current) window.clearTimeout(interruptTimerRef.current)
+    }
+  }, [voice.voiceState])
+
+  const micDisplayState: 'idle' | 'listening' | 'thinking' | 'speaking' | 'interrupted' =
+    voice.voiceState === 'idle' ? 'idle'
+    : voice.voiceState === 'listening' && interrupted ? 'interrupted'
+    : voice.voiceState === 'listening' ? 'listening'
+    : voice.voiceState === 'processing' ? 'thinking'
+    : 'speaking'
+
+  const WAVE_SHAPE = [0.6, 0.9, 1.0, 0.9, 0.6]
+
   const [railExpanded, setRailExpanded] = useState(false)
   const railCollapseTimerRef = useRef<number | null>(null)
 
@@ -335,25 +361,44 @@ export function PetView({
                     <path fill="currentColor" d="M4 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5Zm10 0a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V5ZM4 15a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4Zm10 0a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-4Z" />
                   </svg>
                 </button>
+
+                {/* Transcript bubble — floats above mic button when listening */}
+                {micDisplayState === 'listening' && voice.liveTranscript ? (
+                  <div className="pet-window__mic-transcript" aria-live="polite">
+                    {voice.liveTranscript}
+                  </div>
+                ) : null}
+
                 <button
-                  className={`pet-window__anchor-btn pet-window__anchor-btn--mic ${voice.voiceState !== 'idle' ? 'is-live' : ''} ${chat.busy ? 'is-busy' : ''} ${petSignalArmed && voice.voiceState === 'idle' && !chat.busy ? 'is-armed' : ''}`}
+                  className={`pet-window__anchor-btn pet-window__anchor-btn--mic ${voice.voiceState !== 'idle' ? 'is-live' : ''} ${chat.busy ? 'is-busy' : ''} ${petSignalArmed && voice.voiceState === 'idle' && !chat.busy ? 'is-armed' : ''} ${micDisplayState !== 'idle' ? `is-${micDisplayState}` : ''}`}
                   type="button"
                   onClick={voice.toggleVoiceConversation}
                   disabled={voiceActionDisabled}
                   title={petSignalLabel}
                 >
-                  <PetControlIcon
-                    name={
-                      voice.voiceState === 'speaking'
-                        ? 'speaker'
-                        : voice.voiceState === 'listening'
-                          ? 'mic'
-                          : voice.voiceState === 'processing' || chat.busy
-                            ? 'sparkles'
-                            : 'mic'
-                    }
-                    className="pet-window__anchor-icon"
-                  />
+                  {micDisplayState === 'idle' ? (
+                    <PetControlIcon name="mic" className="pet-window__anchor-icon" />
+                  ) : micDisplayState === 'listening' ? (
+                    <div className="mic-btn__pulse-ring" />
+                  ) : micDisplayState === 'thinking' ? (
+                    <div className="mic-btn__dots">
+                      <span className="mic-btn__dot" />
+                      <span className="mic-btn__dot" />
+                      <span className="mic-btn__dot" />
+                    </div>
+                  ) : micDisplayState === 'speaking' ? (
+                    <div className="mic-btn__bars">
+                      {WAVE_SHAPE.map((weight, i) => (
+                        <span
+                          key={i}
+                          className="mic-btn__bar"
+                          style={{ '--bar-scale': 0.3 + voice.speechLevel * 0.7 * weight } as React.CSSProperties}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="mic-btn__interrupted">✋</span>
+                  )}
                   <span className="pet-window__anchor-ring" aria-hidden="true" />
                 </button>
               </div>

@@ -1,6 +1,8 @@
 import { app, BrowserWindow, dialog, session } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { spawn } from 'node:child_process'
+import net from 'node:net'
 
 import { initPetModelService, isPathInsideRoot, getImportedPetModelsRoot, IMPORTED_PET_MODELS_ROUTE } from './services/petModelService.js'
 import { initRendererServer, ensureRendererServer, getRendererServerUrl, closeRendererServer } from './rendererServer.js'
@@ -37,6 +39,20 @@ console.info = createSafeConsoleMethod('info')
 console.warn = createSafeConsoleMethod('warn')
 console.error = createSafeConsoleMethod('error')
 
+// Suppress async EPIPE errors on stdout/stderr streams (e.g. when launcher pipe closes)
+for (const stream of [process.stdout, process.stderr]) {
+  stream?.on('error', (err) => {
+    if (isBrokenPipeConsoleError(err)) return
+    try { process.stderr.write(`[main] stream error: ${err?.message}\n`) } catch {}
+  })
+}
+
+process.on('uncaughtException', (err) => {
+  if (isBrokenPipeConsoleError(err)) return
+  dialog.showErrorBox('Uncaught Exception', err?.stack || String(err))
+  app.exit(1)
+})
+
 // ── Paths & feature flags ──
 
 const __filename = fileURLToPath(import.meta.url)
@@ -67,6 +83,74 @@ function isTrustedRendererOrigin(origin) {
   } catch {
     return normalized.startsWith('file://')
   }
+}
+
+// ── AI service auto-start (OmniVoice TTS + GLM-ASR STT) ──
+
+const OMNIVOICE_PORT = 8000
+const GLM_ASR_PORT = 8001
+
+const childServices = []
+
+function isPortOpen(host, port) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket()
+    socket.setTimeout(1000)
+    socket.once('connect', () => { socket.destroy(); resolve(true) })
+    socket.once('error', () => resolve(false))
+    socket.once('timeout', () => { socket.destroy(); resolve(false) })
+    socket.connect(port, host)
+  })
+}
+
+async function ensureServiceRunning({ tag, port, command, args, cwd, timeoutSec = 60 }) {
+  if (await isPortOpen('127.0.0.1', port)) {
+    console.info(`[${tag}] Already running on port ${port}`)
+    return
+  }
+
+  console.info(`[${tag}] Starting on port ${port}...`)
+  const child = spawn(command, args, {
+    cwd,
+    stdio: 'ignore',
+    detached: true,
+    windowsHide: true,
+  })
+  child.unref()
+  childServices.push(child)
+
+  for (let i = 0; i < timeoutSec; i++) {
+    if (await isPortOpen('127.0.0.1', port)) {
+      console.info(`[${tag}] Ready`)
+      return
+    }
+    await new Promise(r => setTimeout(r, 1000))
+  }
+  console.warn(`[${tag}] Did not start within ${timeoutSec}s`)
+}
+
+function ensureOmniVoiceRunning() {
+  const scriptPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'scripts', 'omnivoice_server.py')
+  return ensureServiceRunning({
+    tag: 'OmniVoice',
+    port: OMNIVOICE_PORT,
+    command: 'python',
+    args: [scriptPath, '--port', String(OMNIVOICE_PORT)],
+    cwd: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
+    timeoutSec: 90,
+  })
+}
+
+function ensureGlmAsrRunning() {
+  const scriptPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'scripts', 'glm_asr_server.py')
+  return ensureServiceRunning({
+    tag: 'GLM-ASR',
+    port: GLM_ASR_PORT,
+    command: 'python',
+    args: [scriptPath, '--port', String(GLM_ASR_PORT)],
+    cwd: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
+    timeoutSec: 120,
+  })
 }
 
 function registerMediaPermissionHandlers() {
@@ -132,6 +216,8 @@ app.whenReady()
     applyPetWindowState()
     createTray()
     autoStartPlugins().catch((err) => console.warn('[pluginHost] auto-start error:', err.message))
+    ensureOmniVoiceRunning().catch((err) => console.warn('[OmniVoice] auto-start error:', err.message))
+    ensureGlmAsrRunning().catch((err) => console.warn('[GLM-ASR] auto-start error:', err.message))
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -168,6 +254,11 @@ app.on('second-instance', () => {
 
 app.on('window-all-closed', () => {
   closeRendererServer()
+  for (const child of childServices) {
+    if (child && !child.killed) {
+      try { process.kill(child.pid) } catch {}
+    }
+  }
   if (process.platform !== 'darwin') {
     app.quit()
   }

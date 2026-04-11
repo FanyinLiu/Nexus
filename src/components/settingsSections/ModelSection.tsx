@@ -1,6 +1,7 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { API_PROVIDER_PRESETS, getApiProviderPreset } from '../../lib/apiProviders'
+import { ProviderChoiceGrid, type ProviderChoiceItem } from '../ProviderChoiceGrid'
 import type { AppSettings, ServiceConnectionCapability } from '../../types'
 
 type ModelSectionProps = {
@@ -35,6 +36,17 @@ export const ModelSection = memo(function ModelSection({
   const currentPreset = getApiProviderPreset(draft.apiProviderId)
   const hasModelOptions = currentPreset.models.length > 0
 
+  const textProviderItems: ProviderChoiceItem[] = useMemo(
+    () => API_PROVIDER_PRESETS
+      .filter((provider) => provider.defaultModel)
+      .map((provider) => ({
+        id: provider.id,
+        label: provider.label,
+        meta: getProviderRegionLabel(provider.region),
+      })),
+    [getProviderRegionLabel],
+  )
+
   return (
     <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
       <div className="settings-section__title-row">
@@ -58,28 +70,11 @@ export const ModelSection = memo(function ModelSection({
         <span className="settings-choice-field__label">
           {t('模型选择', 'Model selection')}
         </span>
-        <div className="settings-choice-grid settings-choice-grid--compact" role="list">
-          {API_PROVIDER_PRESETS.filter((provider) => provider.defaultModel).map((provider) => {
-            const selected = draft.apiProviderId === provider.id
-
-            return (
-              <button
-                key={provider.id}
-                type="button"
-                className={`settings-choice-card settings-choice-card--compact ${selected ? 'is-active' : ''}`}
-                aria-pressed={selected}
-                onClick={() => onApplyTextProviderPreset(provider.id)}
-              >
-                <span className="settings-choice-card__header">
-                  <strong>{provider.label}</strong>
-                </span>
-                <span className="settings-choice-card__meta">
-                  {getProviderRegionLabel(provider.region)}
-                </span>
-              </button>
-            )
-          })}
-        </div>
+        <ProviderChoiceGrid
+          items={textProviderItems}
+          selectedId={draft.apiProviderId}
+          onSelect={onApplyTextProviderPreset}
+        />
       </div>
 
       <label>

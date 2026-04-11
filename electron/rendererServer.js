@@ -160,14 +160,15 @@ export async function ensureRendererServer() {
         const content = await fs.readFile(filePath)
         const isHashedAsset = /[-_.][a-zA-Z0-9]{7,}\.(js|css|wasm)$/.test(filePath)
         response.writeHead(200, {
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': rendererServerUrl || `http://${rendererServerHost}:${rendererServerPreferredPort}`,
           'Cache-Control': isHashedAsset ? 'max-age=31536000, immutable' : 'no-store',
           'Content-Type': getRendererContentType(filePath),
         })
         response.end(content)
       } catch (error) {
+        console.error('[RendererServer] request error:', error)
         response.writeHead(500)
-        response.end(String(error))
+        response.end('Internal Server Error')
       }
     })
   }

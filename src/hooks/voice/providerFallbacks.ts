@@ -123,8 +123,8 @@ export function buildSpeechOutputFailoverCandidatesRuntime(settings: AppSettings
   const providerIds = [settings.speechOutputProviderId]
 
   if (settings.speechOutputFailoverEnabled) {
-    if (settings.speechOutputProviderId !== 'cosyvoice-tts') {
-      providerIds.push('cosyvoice-tts')
+    if (settings.speechOutputProviderId !== 'omnivoice-tts') {
+      providerIds.push('omnivoice-tts')
     }
   }
 

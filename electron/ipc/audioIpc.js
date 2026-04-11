@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto'
 import { ipcMain } from 'electron'
-import { decodePcm16LeBufferToFloat32, encodeFloat32ToWav, enhanceSpeechSamples } from '../audioPostprocess.js'
 import {
   normalizeBaseUrl,
   performNetworkRequest,
@@ -19,10 +18,11 @@ import {
   isOpenAiCompatibleSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
   isDashScopeSpeechOutputProvider,
-  isCosyVoiceSpeechOutputProvider,
+  isOmniVoiceSpeechOutputProvider,
   isVolcengineSpeechOutputProvider,
   isVolcengineSpeechInputProvider,
   isOpenAiCompatibleSpeechInputProvider,
+  isZhipuSpeechInputProvider,
   resolveSpeechOutputBaseUrl,
   resolveSpeechOutputTimeoutMs,
   resolveSpeechOutputTimeoutMessage,
@@ -34,9 +34,11 @@ import {
   mapLanguageToMiniMaxBoost,
   mapLanguageToDashScopeType,
 } from '../services/ttsService.js'
+import { requireTrustedSender } from './validate.js'
 
 export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT_MS, VOICE_CLONE_TIMEOUT_MS }) {
-  ipcMain.handle('audio:list-voices', async (_event, payload) => {
+  ipcMain.handle('audio:list-voices', async (event, payload) => {
+    requireTrustedSender(event)
     const baseUrl = normalizeBaseUrl(payload.baseUrl)
 
     if (!baseUrl) {
@@ -129,7 +131,8 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
     }
   })
 
-  ipcMain.handle('audio:transcribe', async (_event, payload) => {
+  ipcMain.handle('audio:transcribe', async (event, payload) => {
+    requireTrustedSender(event)
     const baseUrl = normalizeBaseUrl(payload.baseUrl)
 
     if (!baseUrl) {
@@ -222,6 +225,21 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
             value: languageCode,
           })
         }
+
+        // ZhipuAI hotwords — improves recognition of names, terms, etc.
+        if (isZhipuSpeechInputProvider(payload.providerId) && payload.hotwords) {
+          const hotwordList = String(payload.hotwords)
+            .split(/[,，\n]/)
+            .map((w) => w.trim())
+            .filter(Boolean)
+          if (hotwordList.length > 0) {
+            multipartParts.push({
+              type: 'field',
+              name: 'hotwords',
+              value: JSON.stringify(hotwordList),
+            })
+          }
+        }
       } else {
         throw new Error('当前语音输入提供商暂未接通。')
       }
@@ -296,7 +314,8 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
     return { text }
   })
 
-  ipcMain.handle('audio:synthesize', async (_event, payload) => {
+  ipcMain.handle('audio:synthesize', async (event, payload) => {
+    requireTrustedSender(event)
     const content = String(payload.text ?? '').trim()
 
     if (!content) {
@@ -422,68 +441,6 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         'Content-Type': 'application/json',
         ...buildAuthorizationHeaders(payload.providerId, payload.apiKey),
       }
-    } else if (isCosyVoiceSpeechOutputProvider(payload.providerId)) {
-      const http = await import('node:http')
-      const rawMode = payload.model || 'sft'
-      const mode = (rawMode === 'sft' || rawMode === 'instruct') ? rawMode : 'sft'
-      const cosyEndpoint = `${baseUrl}/inference_${mode}`
-      const formData = new URLSearchParams()
-      formData.append('tts_text', content)
-      formData.append('spk_id', payload.voice || '中文女')
-      if (mode === 'instruct') {
-        formData.append('instruct_text', payload.instructions?.trim() || '用自然亲切的语气说')
-      }
-      console.log('[CosyVoice] synthesize:', mode, 'voice:', payload.voice || '中文女', 'text:', content.slice(0, 40))
-
-      const cosyBodyStr = formData.toString()
-      const cosyUrl = new URL(cosyEndpoint)
-      const pcmBuffer = await new Promise((resolve, reject) => {
-        const req = http.default.request({
-          hostname: cosyUrl.hostname,
-          port: cosyUrl.port,
-          path: cosyUrl.pathname,
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Content-Length': Buffer.byteLength(cosyBodyStr),
-          },
-          timeout: synthTimeoutMs,
-        }, (res) => {
-          const chunks = []
-          res.on('data', (c) => chunks.push(c))
-          res.on('end', () => {
-            if (res.statusCode !== 200) {
-              const body = Buffer.concat(chunks).toString('utf-8').slice(0, 500)
-              console.error('[CosyVoice] 合成失败:', res.statusCode, body)
-              reject(new Error('CosyVoice2 合成失败（状态码：' + res.statusCode + '）' + body))
-              return
-            }
-            resolve(Buffer.concat(chunks))
-          })
-        })
-        req.on('error', (err) => reject(new Error('CosyVoice2 服务连接失败：' + err.message)))
-        req.on('timeout', () => { req.destroy(); reject(new Error('语音播报响应超时，请检查 CosyVoice2 服务是否已启动。')) })
-        req.write(cosyBodyStr)
-        req.end()
-      })
-      const sampleRate = 24000
-      const wavBuffer = encodeFloat32ToWav(
-        enhanceSpeechSamples(
-          decodePcm16LeBufferToFloat32(pcmBuffer),
-          sampleRate,
-          {
-            prependSilenceMs: 18,
-            fadeInMs: 12,
-            fadeOutMs: 8,
-          },
-        ),
-        sampleRate,
-      )
-
-      return {
-        audioBase64: wavBuffer.toString('base64'),
-        mimeType: 'audio/wav',
-      }
     } else {
       throw new Error('当前语音输出提供商暂未接通。')
     }
@@ -571,7 +528,8 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
     }
   })
 
-  ipcMain.handle('voice:clone', async (_event, payload) => {
+  ipcMain.handle('voice:clone', async (event, payload) => {
+    requireTrustedSender(event)
     const baseUrl = normalizeBaseUrl(payload.baseUrl)
 
     if (!baseUrl) {

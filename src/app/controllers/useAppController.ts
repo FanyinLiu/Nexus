@@ -11,6 +11,7 @@ import {
 import type {
   AppSettings,
   ChatMessage,
+  Goal,
   PanelWindowState,
   ReminderTask,
   VoiceState,
@@ -40,6 +41,8 @@ import { useDesktopBridge } from './useDesktopBridge'
 import { useMediaSessionController } from './useMediaSessionController'
 import { useReminderTaskStore } from './useReminderTaskStore'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
+import { AUTONOMY_GOALS_STORAGE_KEY, readJson, writeJson } from '../../lib/storage'
+import { classifyMessageSignals } from '../../features/autonomy/emotionModel'
 
 type ChatController = ReturnType<typeof useChat>
 type ReminderTaskStore = ReturnType<typeof useReminderTaskStore>
@@ -58,9 +61,8 @@ export function useAppController() {
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [panelWindowState, setPanelWindowState] = useState<PanelWindowState>({ collapsed: false })
-  const initialPrefs = loadPetWindowPreferences()
-  const [isPinned, setIsPinned] = useState(initialPrefs.isPinned)
-  const [clickThrough, setClickThrough] = useState(initialPrefs.clickThrough)
+  const [isPinned, setIsPinned] = useState(() => loadPetWindowPreferences().isPinned)
+  const [clickThrough, setClickThrough] = useState(() => loadPetWindowPreferences().clickThrough)
 
   // Sync React state when settings change in storage (after save or external update)
   useEffect(() => {
@@ -68,6 +70,13 @@ export function useAppController() {
       setSettings(updated)
     })
   }, [])
+
+  const [goals] = useState<Goal[]>(() => readJson<Goal[]>(AUTONOMY_GOALS_STORAGE_KEY, []))
+  const goalsRef = useRef(goals)
+  useEffect(() => {
+    goalsRef.current = goals
+    writeJson(AUTONOMY_GOALS_STORAGE_KEY, goals)
+  }, [goals])
 
   const settingsRef = useRef(settings)
   const settingsOpenRef = useRef(view === 'panel' && getInitialPanelSection() === 'settings')
@@ -333,10 +342,11 @@ export function useAppController() {
     const currentSettings = settingsRef.current
     const defaultSpeechText = task.speechText?.trim() || `${task.title}提醒，${task.prompt.trim()}`
 
+    const actionLabel = action.kind === 'notice' ? '通知' : action.kind === 'weather' ? '天气' : action.kind === 'chat_action' ? '智能动作' : '搜索'
     debugConsole.appendDebugConsoleEvent({
       source: 'tool',
       title: '开始执行自动任务',
-      detail: `${task.title} / ${action.kind === 'notice' ? '通知' : action.kind === 'weather' ? '天气' : '搜索'}`,
+      detail: `${task.title} / ${actionLabel}`,
       relatedTaskId: task.id,
     })
 
@@ -392,6 +402,21 @@ export function useAppController() {
           source: 'tool',
           title: '自动天气任务已完成',
           detail: `${task.title} / ${result.kind === 'weather' ? result.result.resolvedName : action.location || '默认地点'}`,
+          tone: 'success',
+          relatedTaskId: task.id,
+        })
+        return
+      }
+
+      if (action.kind === 'chat_action') {
+        await chat.sendMessage(
+          `【定时智能动作】${task.title}\n请执行以下任务：${action.instruction}`,
+          { source: 'text' },
+        )
+        debugConsole.appendDebugConsoleEvent({
+          source: 'tool',
+          title: '智能动作已触发',
+          detail: `${task.title} / ${action.instruction}`,
           tone: 'success',
           relatedTaskId: task.id,
         })
@@ -465,6 +490,8 @@ export function useAppController() {
     messagesRef,
     memory,
     reminderTasksRef: reminderTaskStore.reminderTasksRef,
+    goalsRef,
+    busyRef,
     chat,
     debugConsole,
   })
@@ -474,12 +501,25 @@ export function useAppController() {
   const autonomyAwareSendMessage = useCallback(async (...args: Parameters<typeof originalSendMessage>) => {
     autonomy.focusAwareness.markActive()
     autonomy.autonomyTick.wakeUp()
+    autonomy.markUserResponse()
+    autonomy.markInteraction()
+
+    // Classify user message text for emotion signals
+    const messageText = typeof args[0] === 'string' ? args[0] : ''
+    if (messageText) {
+      autonomy.applyEmotionSignal('user_returned')
+      for (const signal of classifyMessageSignals(messageText)) {
+        autonomy.applyEmotionSignal(signal)
+      }
+    }
+
     const result = await originalSendMessage(...args)
     if (result) {
       autonomy.memoryDream.incrementSessionCount()
+      autonomy.applyEmotionSignal('task_completed')
     }
     return result
-  }, [originalSendMessage, autonomy.focusAwareness, autonomy.autonomyTick, autonomy.memoryDream])
+  }, [originalSendMessage, autonomy.focusAwareness, autonomy.autonomyTick, autonomy.memoryDream, autonomy.markUserResponse, autonomy.applyEmotionSignal, autonomy.markInteraction])
 
   // Patch chat.sendMessage with autonomy-aware wrapper
   const chatWithAutonomy = useMemo(() => ({

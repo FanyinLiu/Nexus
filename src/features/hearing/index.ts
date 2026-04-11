@@ -1,6 +1,7 @@
 export * from './config'
 export * from './browserVad'
 export * from './core'
+export * from './hearingRuntime'
 export * from './hotwordCorrection'
 export * from './hotwordExtractor'
 export * from './localParaformer'

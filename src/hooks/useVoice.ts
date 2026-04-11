@@ -6,6 +6,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createInitialWakewordRuntimeState,
   hearingConfigFromSettings,
+  HearingRuntime,
+  type HearingPhase,
   type ParaformerStreamSession,
   type SenseVoiceStreamSession,
   type WakewordRuntimeController,
@@ -188,6 +190,13 @@ export function useVoice(ctx: UseVoiceContext) {
   const stopVadListeningRef = useRef<(cancel?: boolean) => Promise<void>>(async () => undefined)
   const stopActiveSpeechOutputRef = useRef<() => void>(() => undefined)
 
+  // ── Hearing runtime (unified input-side store) ──────────────────────────
+  const hearingRuntimeRef = useRef<HearingRuntime | null>(null)
+  if (!hearingRuntimeRef.current) {
+    hearingRuntimeRef.current = new HearingRuntime()
+  }
+  const hearingRuntime = hearingRuntimeRef.current
+
   // ── Voice event bus ──────────────────────────────────────────────────────
   const voiceBusRef = useRef<VoiceBus | null>(null)
   if (!voiceBusRef.current) {
@@ -285,6 +294,23 @@ export function useVoice(ctx: UseVoiceContext) {
     }
     saveVoiceTrace(voiceTrace)
   }, [voiceTrace])
+
+  // ── HearingRuntime sync ────────────────────────────────────────────────────
+  // Sync phase from voiceState → hearingRuntime
+  useEffect(() => {
+    const phaseMap: Record<VoiceState, HearingPhase> = {
+      idle: 'idle',
+      listening: 'listening',
+      processing: 'transcribing',
+      speaking: 'idle',
+    }
+    hearingRuntime.setPhase(phaseMap[voiceState] ?? 'idle')
+  }, [voiceState, hearingRuntime])
+
+  // Sync wakeword listening state
+  useEffect(() => {
+    hearingRuntime.setWakewordListening(wakewordState.active)
+  }, [wakewordState.active, hearingRuntime])
 
   // ── Voice pipeline helpers ─────────────────────────────────────────────────
 
@@ -767,6 +793,7 @@ export function useVoice(ctx: UseVoiceContext) {
     transcribeMode: 'api' | 'local',
     options?: VoiceConversationOptions,
   ) {
+    hearingRuntime.activateEngine('vad')
     await startVadConversation({
       transcribeMode,
       options,
@@ -802,6 +829,7 @@ export function useVoice(ctx: UseVoiceContext) {
   // ── Paraformer streaming conversation ──────────────────────────────────────
 
   async function startParaformerVoiceConversation(options?: VoiceConversationOptions) {
+    hearingRuntime.activateEngine('paraformer')
     await startParaformerConversation({
       options,
       currentSettings: ctx.settingsRef.current,
@@ -836,6 +864,7 @@ export function useVoice(ctx: UseVoiceContext) {
   // ── SenseVoice offline conversation ────────────────────────────────────────
 
   async function startSenseVoiceVoiceConversation(options?: VoiceConversationOptions) {
+    hearingRuntime.activateEngine('sensevoice')
     await startSenseVoiceConversation({
       options,
       currentSettings: ctx.settingsRef.current,
@@ -870,6 +899,7 @@ export function useVoice(ctx: UseVoiceContext) {
   // ── Tencent Cloud ASR streaming conversation ───────────────────────────────
 
   async function startTencentAsrConversation(options?: VoiceConversationOptions) {
+    hearingRuntime.activateEngine('tencent-asr')
     await startTencentConversation({
       options,
       currentSettings: ctx.settingsRef.current,
@@ -904,6 +934,7 @@ export function useVoice(ctx: UseVoiceContext) {
   // ── API recording conversation ─────────────────────────────────────────────
 
   async function startApiVoiceConversation(options?: VoiceConversationOptions) {
+    hearingRuntime.activateEngine('api-recording')
     await startApiRecordingConversation({
       options,
       currentSettings: ctx.settingsRef.current,
@@ -1004,6 +1035,7 @@ export function useVoice(ctx: UseVoiceContext) {
   }
 
   function stopVoiceConversation() {
+    hearingRuntime.clearEngine()
     stopVoiceConversationEntrypoint({
       continuousVoiceActiveRef,
       suppressVoiceReplyRef,
@@ -1234,7 +1266,10 @@ export function useVoice(ctx: UseVoiceContext) {
   }, [clearPendingVoiceRestart])
 
   useEffect(() => {
-    return () => { voiceBus.destroy() }
+    return () => {
+      voiceBus.destroy()
+      hearingRuntime.dispose()
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
@@ -1270,6 +1305,7 @@ export function useVoice(ctx: UseVoiceContext) {
     beginStreamingSpeechReply,
     scheduleVoiceRestart,
     voiceBus,
+    hearingRuntime,
     busEmit,
     shouldAutoRestartVoice,
     clearPendingVoiceRestart,

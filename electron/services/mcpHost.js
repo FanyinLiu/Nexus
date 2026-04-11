@@ -1,6 +1,12 @@
 import { spawn } from 'node:child_process'
+import path from 'node:path'
+import { unsubscribeAll } from './pluginMessageBus.js'
 
 const REQUEST_TIMEOUT_MS = 15_000
+
+// Shell metacharacters that could enable command injection when shell: true is used.
+// We reject commands containing these to allow safe spawning without a shell.
+const SHELL_META_PATTERN = /[&|;<>`$(){}!\r\n]/
 const MAX_RESTART_ATTEMPTS = 3
 const BASE_RESTART_DELAY_MS = 3_000
 
@@ -22,11 +28,21 @@ class McpInstance {
     this.intentionallyStopped = false
     this.pendingStartCommand = null
     this.pendingStartArgs = null
+    /** @type {string[]} Declared capabilities from plugin manifest. */
+    this.capabilities = ['tools']
     /** @type {Map<string, { name: string, description: string, inputSchema: object }>} */
     this.tools = new Map()
     /** @type {Map<number, { resolve: Function, reject: Function, timeoutId: ReturnType<typeof setTimeout> }>} */
     this.pending = new Map()
     this.lineBuffer = ''
+
+    // ── Per-instance resource metrics ──
+    this.metrics = {
+      totalCalls: 0,
+      errorCount: 0,
+      totalLatencyMs: 0,
+      lastCallAt: null,
+    }
   }
 
   _nextId() {
@@ -64,7 +80,9 @@ class McpInstance {
     if (!this.process || !this.process.stdin.writable) return
     try {
       this.process.stdin.write(JSON.stringify({ jsonrpc: '2.0', method, params }) + '\n')
-    } catch {}
+    } catch (err) {
+      console.warn(`[mcpHost:${this.id}] notification send failed (${method}):`, err?.message)
+    }
   }
 
   _handleLine(line) {
@@ -173,6 +191,16 @@ class McpInstance {
       throw new Error(`MCP server [${this.id}] command is required`)
     }
 
+    if (SHELL_META_PATTERN.test(command)) {
+      throw new Error(`MCP server [${this.id}] command contains unsafe shell metacharacters`)
+    }
+
+    for (const arg of args) {
+      if (SHELL_META_PATTERN.test(String(arg))) {
+        throw new Error(`MCP server [${this.id}] argument contains unsafe shell metacharacters`)
+      }
+    }
+
     this.pendingStartCommand = command
     this.pendingStartArgs = args
     this.intentionallyStopped = false
@@ -183,11 +211,21 @@ class McpInstance {
 
     console.info(`[mcpHost:${this.id}] spawning:`, command, args)
 
-    const useShell = process.platform === 'win32'
-    const child = spawn(command, args, {
+    // Resolve .cmd/.bat on Windows without shell: true to avoid command injection.
+    // On Windows, npm/npx install as .cmd files that require shell interpretation.
+    // Use process.env.ComSpec to spawn cmd.exe explicitly with /d /s /c so that
+    // the command string is never interpreted by an implicit shell.
+    let spawnCommand = command
+    let spawnArgs = args
+    if (process.platform === 'win32') {
+      const comspec = process.env.ComSpec || 'cmd.exe'
+      spawnArgs = ['/d', '/s', '/c', `"${command}"`, ...args]
+      spawnCommand = comspec
+    }
+
+    const child = spawn(spawnCommand, spawnArgs, {
       stdio: ['pipe', 'pipe', 'inherit'],
       windowsHide: true,
-      shell: useShell,
     })
 
     this.process = child
@@ -206,19 +244,7 @@ class McpInstance {
       child.once('spawn', resolve)
     })
 
-    try {
-      await this._performHandshake()
-      await this._discoverTools()
-      this.state = 'running'
-      this.restartCount = 0
-      console.info(`[mcpHost:${this.id}] ready, pid:`, this.pid)
-    } catch (err) {
-      this.state = 'crashed'
-      this.process = null
-      child.kill()
-      throw new Error(`MCP handshake failed [${this.id}]: ${err.message}`)
-    }
-
+    // Register exit listener BEFORE handshake to avoid missing early exits
     child.once('exit', (code, signal) => {
       console.warn(`[mcpHost:${this.id}] process exited (code=${code}, signal=${signal})`)
       this.process = null
@@ -231,6 +257,19 @@ class McpInstance {
         this._scheduleRestart()
       }
     })
+
+    try {
+      await this._performHandshake()
+      await this._discoverTools()
+      this.state = 'running'
+      this.restartCount = 0
+      console.info(`[mcpHost:${this.id}] ready, pid:`, this.pid)
+    } catch (err) {
+      this.state = 'crashed'
+      this.process = null
+      child.kill()
+      throw new Error(`MCP handshake failed [${this.id}]: ${err.message}`)
+    }
   }
 
   async stop() {
@@ -264,6 +303,7 @@ class McpInstance {
     this.state = 'stopped'
     this.tools.clear()
     this.pid = null
+    unsubscribeAll(this.id)
     console.info(`[mcpHost:${this.id}] stopped`)
   }
 
@@ -283,6 +323,8 @@ class McpInstance {
       toolCount: this.tools.size,
       tools: [...this.tools.values()].map((t) => ({ name: t.name, description: t.description })),
       restartCount: this.restartCount,
+      capabilities: this.capabilities,
+      metrics: { ...this.metrics },
     }
   }
 
@@ -299,7 +341,19 @@ class McpInstance {
       throw new Error(`Unknown MCP tool: ${name} [${this.id}]`)
     }
 
-    return this._sendRequest('tools/call', { name, arguments: toolArgs })
+    const start = Date.now()
+    this.metrics.totalCalls++
+    this.metrics.lastCallAt = new Date().toISOString()
+
+    try {
+      const result = await this._sendRequest('tools/call', { name, arguments: toolArgs })
+      this.metrics.totalLatencyMs += Date.now() - start
+      return result
+    } catch (err) {
+      this.metrics.errorCount++
+      this.metrics.totalLatencyMs += Date.now() - start
+      throw err
+    }
   }
 }
 
@@ -310,6 +364,24 @@ function getInstance(id) {
     _instances.set(id, instance)
   }
   return instance
+}
+
+export function setCapabilities(id, capabilities) {
+  const instance = getInstance(id)
+  instance.capabilities = Array.isArray(capabilities) ? capabilities : ['tools']
+}
+
+export function getMetrics(id) {
+  const instance = _instances.get(id)
+  return instance ? { ...instance.metrics } : null
+}
+
+export function getAllMetrics() {
+  const result = {}
+  for (const [id, instance] of _instances) {
+    result[id] = { ...instance.metrics }
+  }
+  return result
 }
 
 export async function start(id, command, args = []) {
@@ -388,6 +460,10 @@ export async function callToolByName(name, toolArgs = {}) {
 
 export async function stopAll() {
   await Promise.all(
-    [..._instances.values()].map((instance) => instance.stop().catch(() => {})),
+    [..._instances.values()].map((instance) =>
+      instance.stop().catch((err) => {
+        console.warn(`[mcpHost:${instance.id}] stop failed during shutdown:`, err?.message)
+      }),
+    ),
   )
 }

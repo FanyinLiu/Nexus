@@ -89,6 +89,7 @@ export interface SpeechInputSettings {
   speechInputModel: string
   speechInputFailoverEnabled: boolean
   speechRecognitionLang: string
+  speechInputHotwords: string
   speechInputProviderProfiles: Record<string, SpeechInputProviderProfile>
 }
 
@@ -132,6 +133,8 @@ export interface MemorySettings {
   memoryDailyRecallCount: number
   memorySemanticRecallCount: number
   memoryDiaryRetentionDays: number
+  memoryHotTierMaxChars: number
+  autoSkillGenerationEnabled: boolean
 }
 
 export interface ContextSettings {
@@ -177,15 +180,29 @@ export interface SystemSettings {
   mcpServers: McpServerConfig[]
 }
 
+/** Trust level controlling what an integration can do autonomously. */
+export type IntegrationPermissionMode = 'read-only' | 'confirm' | 'auto'
+
 export interface IntegrationSettings {
   minecraftIntegrationEnabled: boolean
   minecraftServerAddress: string
   minecraftServerPort: number
   minecraftUsername: string
+  minecraftPermissionMode: IntegrationPermissionMode
   factorioIntegrationEnabled: boolean
   factorioServerAddress: string
   factorioServerPort: number
   factorioUsername: string
+  factorioPermissionMode: IntegrationPermissionMode
+  telegramIntegrationEnabled: boolean
+  telegramBotToken: string
+  telegramAllowedChatIds: string
+  telegramPermissionMode: IntegrationPermissionMode
+  discordIntegrationEnabled: boolean
+  discordBotToken: string
+  discordAllowedChannelIds: string
+  discordPermissionMode: IntegrationPermissionMode
+  mcpPermissionMode: IntegrationPermissionMode
 }
 
 export interface SettingsSchema {
@@ -229,6 +246,8 @@ export interface RuntimeStateSnapshot {
   continuousVoiceActive?: boolean
   panelSettingsOpen?: boolean
   voiceState?: VoiceState
+  hearingEngine?: string
+  hearingPhase?: string
   wakewordPhase?: WakewordRuntimePhase
   wakewordActive?: boolean
   wakewordAvailable?: boolean

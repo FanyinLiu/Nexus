@@ -376,6 +376,21 @@ export const AutonomySection = memo(function AutonomySection({
             </div>
           )}
 
+          {/* ── Inner Monologue ──────────────────────────────────────────── */}
+          <SubsectionHeader
+            title="内心独白"
+            hint="定期用 LLM 产生内心想法，当紧迫度超过阈值时主动开口说话。每次消耗一次轻量 API 调用。"
+          />
+
+          <ToggleField label="启用内心独白" field="autonomyMonologueEnabled" {...fieldProps} />
+
+          {draft.autonomyMonologueEnabled && (
+            <div className="settings-grid">
+              <NumberField label="独白间隔（tick 数）" field="autonomyMonologueIntervalTicks" min={2} max={30} step={1} {...fieldProps} />
+              <NumberField label="开口阈值（0-100）" field="autonomyMonologueSpeechThreshold" min={0} max={100} step={5} {...fieldProps} />
+            </div>
+          )}
+
           {/* ── Context Triggers ────────────────────────────────────────────── */}
           <SubsectionHeader
             title="上下文触发器"

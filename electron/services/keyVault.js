@@ -66,12 +66,15 @@ async function _vaultStore(slot, plaintext) {
     return
   }
 
-  if (isEncryptionAvailable()) {
-    const encrypted = safeStorage.encryptString(value)
-    vault[slot] = { e: encrypted.toString('base64'), v: 1 }
-  } else {
-    vault[slot] = { p: value, v: 0 }
+  if (!isEncryptionAvailable()) {
+    throw new Error(
+      '系统加密服务不可用，无法安全存储密钥。'
+      + '在 Linux 下请安装 gnome-keyring 或 kwallet 后重试。',
+    )
   }
+
+  const encrypted = safeStorage.encryptString(value)
+  vault[slot] = { e: encrypted.toString('base64'), v: 1 }
 
   await persistVault()
 }
@@ -128,21 +131,33 @@ export function vaultStoreMany(entries) {
 async function _vaultStoreMany(entries) {
   if (!entries || typeof entries !== 'object') return
 
+  // Phase 1: encrypt all values upfront (may throw — no cache mutation yet)
+  const operations = []
   for (const [slot, value] of Object.entries(entries)) {
     const plaintext = String(value ?? '')
-
     if (!plaintext) {
-      delete (await loadVault())[slot]
+      operations.push({ slot, delete: true })
       continue
     }
 
-    const vault = await loadVault()
+    if (!isEncryptionAvailable()) {
+      throw new Error(
+        '系统加密服务不可用，无法安全存储密钥。'
+        + '在 Linux 下请安装 gnome-keyring 或 kwallet 后重试。',
+      )
+    }
 
-    if (isEncryptionAvailable()) {
-      const encrypted = safeStorage.encryptString(plaintext)
-      vault[slot] = { e: encrypted.toString('base64'), v: 1 }
+    const encrypted = safeStorage.encryptString(plaintext)
+    operations.push({ slot, entry: { e: encrypted.toString('base64'), v: 1 } })
+  }
+
+  // Phase 2: apply all operations atomically (all encryptions succeeded)
+  const vault = await loadVault()
+  for (const op of operations) {
+    if (op.delete) {
+      delete vault[op.slot]
     } else {
-      vault[slot] = { p: plaintext, v: 0 }
+      vault[op.slot] = op.entry
     }
   }
 

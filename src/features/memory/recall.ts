@@ -13,6 +13,7 @@ import {
   scoreLexicalSimilarity,
 } from './memory'
 import { cosineSimilarity, embedMemorySearchText } from './vectorSearch'
+import { getDecayedScore } from './decay'
 
 type BuildMemoryRecallContextParams = {
   query: string
@@ -62,28 +63,37 @@ const CATEGORY_WEIGHT: Record<string, number> = {
   profile: 0,
 }
 
-function scoreItem<T extends { content: string; createdAt: string; category?: string }>(
+function scoreItem<T extends { content: string; createdAt: string; category?: string; importanceScore?: number; importance?: string }>(
   item: T,
   query: string,
   mode: MemorySearchMode,
-  vectorScore: number,
+  scores: ScoreMapEntry,
 ) {
-  const keywordScore = scoreLexicalSimilarity(item.content, query)
+  // Use BM25 score from main process when available, fall back to Jaccard
+  const keywordScore = scores.bm25Score > 0
+    ? scores.bm25Score
+    : scoreLexicalSimilarity(item.content, query)
+  const vectorScore = scores.vectorScore
   const recencyBoost = getRecencyBoost(item.createdAt)
   const categoryBoost = CATEGORY_WEIGHT[item.category ?? ''] ?? 0
+
+  // Decay-weighted importance boost (0–0.15 range)
+  const decayBoost = 'importanceScore' in item
+    ? (getDecayedScore(item as unknown as MemoryItem) - 0.5) * 0.3
+    : 0
 
   if (mode === 'vector') {
     return {
       keywordScore,
       vectorScore,
-      finalScore: vectorScore + recencyBoost + categoryBoost,
+      finalScore: vectorScore + recencyBoost + categoryBoost + decayBoost,
     }
   }
 
   return {
     keywordScore,
     vectorScore,
-    finalScore: keywordScore * 0.55 + vectorScore * 0.45 + recencyBoost + categoryBoost,
+    finalScore: keywordScore * 0.3 + vectorScore * 0.7 + recencyBoost + categoryBoost + decayBoost,
   }
 }
 
@@ -91,15 +101,17 @@ function sortScoredItems<T extends { id: string; createdAt: string; content: str
   items: T[],
   query: string,
   mode: MemorySearchMode,
-  vectorScoreMap: Map<string, number>,
+  scoreMap: Map<string, ScoreMapEntry>,
 ) {
+  const defaultScores: ScoreMapEntry = { vectorScore: 0, bm25Score: 0 }
+
   return items
     .map((item) => {
       const { keywordScore, vectorScore, finalScore } = scoreItem(
         item,
         query,
         mode,
-        vectorScoreMap.get(item.id) ?? 0,
+        scoreMap.get(item.id) ?? defaultScores,
       )
 
       return {
@@ -118,7 +130,21 @@ function sortScoredItems<T extends { id: string; createdAt: string; content: str
     })
 }
 
+let _indexQueue: Promise<void> = Promise.resolve()
+
 async function indexMemoriesToVectorStore<T extends { id: string; content: string }>(
+  items: T[],
+  embeddingModel: string,
+  layer: string,
+) {
+  const job = _indexQueue.then(() => doIndexMemoriesToVectorStore(items, embeddingModel, layer))
+  _indexQueue = job.catch((err) => {
+    console.warn('[memory] Vector index queue job failed:', err)
+  })
+  return job
+}
+
+async function doIndexMemoriesToVectorStore<T extends { id: string; content: string }>(
   items: T[],
   embeddingModel: string,
   layer: string,
@@ -140,16 +166,55 @@ async function indexMemoriesToVectorStore<T extends { id: string; content: strin
   }
 }
 
-async function buildVectorScoreMap<T extends { id: string; content: string }>(
+type ScoreMapEntry = { vectorScore: number; bm25Score: number }
+
+async function buildScoreMap<T extends { id: string; content: string }>(
   items: T[],
   query: string,
   embeddingModel: string,
-) {
+): Promise<Map<string, ScoreMapEntry>> {
   const queryEmbedding = await embedMemorySearchText(query, embeddingModel)
   if (!queryEmbedding.length) {
-    return new Map<string, number>()
+    return new Map()
   }
 
+  // Prefer hybrid search (vector + BM25 in main process)
+  if (window.desktopPet?.memoryHybridSearch) {
+    try {
+      const results = await window.desktopPet.memoryHybridSearch({
+        queryEmbedding,
+        queryText: query,
+        limit: items.length,
+        threshold: 0,
+      })
+
+      const itemIds = new Set(items.map((item) => item.id))
+      const scoreMap = new Map<string, ScoreMapEntry>()
+      for (const r of results) {
+        if (itemIds.has(r.id)) {
+          scoreMap.set(r.id, { vectorScore: r.vectorScore, bm25Score: r.keywordScore })
+        }
+      }
+
+      // Fill missing items with local embeddings (not yet indexed in main process)
+      const missingItems = items.filter((item) => !scoreMap.has(item.id))
+      if (missingItems.length) {
+        const missingPairs = await Promise.all(missingItems.map(async (item) => {
+          const embedding = await embedMemorySearchText(item.content, embeddingModel)
+          return [item.id, cosineSimilarity(queryEmbedding, embedding)] as const
+        }))
+        for (const [id, score] of missingPairs) {
+          scoreMap.set(id, { vectorScore: score, bm25Score: 0 })
+        }
+      }
+
+      return scoreMap
+    } catch (error) {
+      console.warn('[Memory] Hybrid search failed, falling back to vector-only:', error)
+    }
+  }
+
+  // Fallback: vector-only via main process or local computation
   if (window.desktopPet?.memoryVectorSearch) {
     try {
       const results = await window.desktopPet.memoryVectorSearch({
@@ -159,10 +224,10 @@ async function buildVectorScoreMap<T extends { id: string; content: string }>(
       })
 
       const itemIds = new Set(items.map((item) => item.id))
-      const scoreMap = new Map<string, number>()
+      const scoreMap = new Map<string, ScoreMapEntry>()
       for (const result of results) {
         if (itemIds.has(result.id)) {
-          scoreMap.set(result.id, result.score)
+          scoreMap.set(result.id, { vectorScore: result.score, bm25Score: 0 })
         }
       }
 
@@ -173,13 +238,13 @@ async function buildVectorScoreMap<T extends { id: string; content: string }>(
           return [item.id, cosineSimilarity(queryEmbedding, embedding)] as const
         }))
         for (const [id, score] of missingPairs) {
-          scoreMap.set(id, score)
+          scoreMap.set(id, { vectorScore: score, bm25Score: 0 })
         }
       }
 
       return scoreMap
-    } catch {
-      // fall back to per-item embeddings below
+    } catch (error) {
+      console.warn('[Memory] Vector search failed, falling back to per-item embeddings:', error)
     }
   }
 
@@ -188,7 +253,7 @@ async function buildVectorScoreMap<T extends { id: string; content: string }>(
     return [item.id, cosineSimilarity(queryEmbedding, embedding)] as const
   }))
 
-  return new Map(pairs)
+  return new Map(pairs.map(([id, score]) => [id, { vectorScore: score, bm25Score: 0 }]))
 }
 
 function buildSemanticMatches(
@@ -238,12 +303,14 @@ export async function buildMemoryRecallContext({
   ]).slice(0, dailyLimit)
 
   if (searchMode === 'keyword') {
+    const selectedLongTerm = keywordLongTerm.slice(0, longTermLimit)
     return {
-      longTerm: keywordLongTerm.slice(0, longTermLimit),
+      longTerm: selectedLongTerm,
       daily: keywordDailyResult,
       semantic: [],
       searchModeUsed: 'keyword',
       vectorSearchAvailable: false,
+      recalledLongTermIds: selectedLongTerm.map((m) => m.id),
     }
   }
 
@@ -258,20 +325,21 @@ export async function buildMemoryRecallContext({
       ])
 
   try {
-    const vectorScoreMap = await buildVectorScoreMap(
+    const scoreMap = await buildScoreMap(
       [...longTermCandidates, ...dailyCandidates],
       query,
       embeddingModel,
     )
 
-    const scoredLongTerm = sortScoredItems(longTermCandidates, query, searchMode, vectorScoreMap)
-    const scoredDaily = sortScoredItems(dailyCandidates, query, searchMode, vectorScoreMap)
+    const scoredLongTerm = sortScoredItems(longTermCandidates, query, searchMode, scoreMap)
+    const scoredDaily = sortScoredItems(dailyCandidates, query, searchMode, scoreMap)
 
     void indexMemoriesToVectorStore(longTermCandidates, embeddingModel, 'long_term')
     void indexMemoriesToVectorStore(dailyCandidates, embeddingModel, 'daily')
 
+    const selectedLongTerm = scoredLongTerm.slice(0, longTermLimit).map(({ item }) => item)
     return {
-      longTerm: scoredLongTerm.slice(0, longTermLimit).map(({ item }) => item),
+      longTerm: selectedLongTerm,
       daily: uniqueById([
         ...scoredDaily.slice(0, dailyLimit).map(({ item }) => item),
         ...recentDaily.slice(0, 2),
@@ -279,14 +347,18 @@ export async function buildMemoryRecallContext({
       semantic: buildSemanticMatches(scoredLongTerm, scoredDaily, semanticLimit),
       searchModeUsed: searchMode,
       vectorSearchAvailable: true,
+      recalledLongTermIds: selectedLongTerm.map((m) => m.id),
     }
-  } catch {
+  } catch (error) {
+    console.warn('[Memory] Score map build failed, falling back to keyword-only:', error)
+    const fallbackLongTerm = keywordLongTerm.slice(0, longTermLimit)
     return {
-      longTerm: keywordLongTerm.slice(0, longTermLimit),
+      longTerm: fallbackLongTerm,
       daily: keywordDailyResult,
       semantic: [],
       searchModeUsed: 'keyword',
       vectorSearchAvailable: false,
+      recalledLongTermIds: fallbackLongTerm.map((m) => m.id),
     }
   }
 }

@@ -20,6 +20,14 @@ export interface MemoryItem {
   createdAt: string
   lastUsedAt?: string
   importance?: MemoryImportance
+  /** Continuous importance score (0–1+). Decays daily, boosted on recall. */
+  importanceScore?: number
+  /** How many times this memory has been recalled into prompt context. */
+  recallCount?: number
+  /** ISO timestamp of the most recent recall. */
+  lastRecalledAt?: string
+  /** IDs of semantically related memories (cross-session linking). */
+  relatedIds?: string[]
 }
 
 export interface DailyMemoryEntry {
@@ -48,4 +56,31 @@ export interface MemoryRecallContext {
   semantic: MemorySemanticMatch[]
   searchModeUsed: MemorySearchMode
   vectorSearchAvailable: boolean
+  /** IDs of long-term memories that were selected for prompt injection (for recall feedback). */
+  recalledLongTermIds?: string[]
+}
+
+// ── Semantic Clustering ───────────────────────────────────────────────────
+
+export interface MemoryCluster {
+  id: string
+  label: string
+  memberIds: string[]
+  centroidContent: string
+  createdAt: string
+  updatedAt: string
+}
+
+// ── Memory Archive ────────────────────────────────────────────────────────
+
+export interface ArchivedMemory {
+  id: string
+  content: string
+  category: MemoryCategory
+  source: string
+  createdAt: string
+  archivedAt: string
+  finalScore: number
+  importance?: MemoryImportance
+  clusterId?: string
 }

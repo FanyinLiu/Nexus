@@ -12,6 +12,29 @@ import { randomUUID } from 'node:crypto'
 const CONNECT_TIMEOUT_MS = 15_000
 const CALL_TIMEOUT_MS = 30_000
 
+const SHELL_META_PATTERN = /[&|;<>`$(){}!\r\n]/
+
+/** Split an args string respecting single/double quotes (shell-like). */
+function splitArgs(argsString) {
+  if (!argsString) return []
+  const args = []
+  let current = ''
+  let quote = null
+  for (const ch of argsString) {
+    if (quote) {
+      if (ch === quote) { quote = null } else { current += ch }
+    } else if (ch === '"' || ch === "'") {
+      quote = ch
+    } else if (/\s/.test(ch)) {
+      if (current) { args.push(current); current = '' }
+    } else {
+      current += ch
+    }
+  }
+  if (current) args.push(current)
+  return args
+}
+
 // ── JSON-RPC 2.0 helpers ──
 
 function createJsonRpcRequest(method, params = {}) {
@@ -30,7 +53,17 @@ class McpServerConnection {
     this.id = config.id
     this.label = config.label
     this.command = config.command
-    this.args = config.args ? config.args.split(/\s+/).filter(Boolean) : []
+    this.args = splitArgs(config.args)
+
+    if (SHELL_META_PATTERN.test(this.command)) {
+      throw new Error(`MCP client [${this.id}] command contains unsafe shell metacharacters`)
+    }
+    for (const arg of this.args) {
+      if (SHELL_META_PATTERN.test(arg)) {
+        throw new Error(`MCP client [${this.id}] argument contains unsafe shell metacharacters`)
+      }
+    }
+
     this.process = null
     this.status = 'disconnected' // disconnected | connecting | connected | failed
     this.tools = []
@@ -48,7 +81,15 @@ class McpServerConnection {
     this.error = null
 
     try {
-      this.process = spawn(this.command, this.args, {
+      let spawnCommand = this.command
+      let spawnArgs = this.args
+      if (process.platform === 'win32') {
+        const comspec = process.env.ComSpec || 'cmd.exe'
+        spawnArgs = ['/d', '/s', '/c', `"${this.command}"`, ...this.args]
+        spawnCommand = comspec
+      }
+
+      this.process = spawn(spawnCommand, spawnArgs, {
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
       })

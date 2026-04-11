@@ -4,6 +4,8 @@ import {
   buildChatRequest,
   chatProviderRequiresApiKey,
   extractChatResponseContent,
+  extractChatResponseFinishReason,
+  extractChatResponseToolCalls,
   extractChatStreamingDeltaContent,
   isChatStreamingPayloadTerminal,
   normalizeChatProviderId,
@@ -24,9 +26,11 @@ import {
   runSpeechInputConnectionSmokeTest,
   runSpeechOutputConnectionSmokeTest,
 } from '../services/sttService.js'
+import { requireTrustedSender } from './validate.js'
 
 export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS, CONNECTION_TEST_TIMEOUT_MS }) {
-  ipcMain.handle('chat:complete', async (_event, payload) => {
+  ipcMain.handle('chat:complete', async (event, payload) => {
+    requireTrustedSender(event)
     const baseUrl = normalizeBaseUrl(payload.baseUrl)
     const providerId = normalizeChatProviderId(payload.providerId, baseUrl)
     const requestSpec = buildChatRequest(payload, { stream: false })
@@ -62,7 +66,10 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       throw new Error(`模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：${reason}`)
     }
 
-    const data = await response.json().catch(() => ({}))
+    const data = await response.json().catch((parseErr) => {
+      console.warn('[chat:complete] response body is not valid JSON:', parseErr?.message)
+      return {}
+    })
 
     if (!response.ok) {
       console.warn('[chat:complete] request failed', {
@@ -89,8 +96,10 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     }
 
     const content = extractChatResponseContent(requestSpec.protocol, data)
+    const toolCalls = extractChatResponseToolCalls(requestSpec.protocol, data)
+    const finishReason = extractChatResponseFinishReason(requestSpec.protocol, data)
 
-    if (!content) {
+    if (!content && !toolCalls) {
       throw new Error('模型返回了空内容，请检查接口兼容性。')
     }
 
@@ -98,13 +107,19 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       traceId: payload.traceId ?? '',
       baseUrl,
       model: payload.model,
-      contentLength: content.length,
+      contentLength: (content || '').length,
+      toolCallCount: toolCalls?.length ?? 0,
     })
 
-    return { content }
+    return {
+      content: content || '',
+      ...(toolCalls ? { tool_calls: toolCalls } : {}),
+      ...(finishReason ? { finish_reason: finishReason } : {}),
+    }
   })
 
   ipcMain.handle('chat:complete-stream', async (event, payload) => {
+    requireTrustedSender(event)
     const { requestId, ...chatPayload } = payload
     const baseUrl = normalizeBaseUrl(chatPayload.baseUrl)
     const providerId = normalizeChatProviderId(chatPayload.providerId, baseUrl)
@@ -139,6 +154,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     }
 
     if (!response.ok) {
+      activeChatStreamControllers.delete(requestId)
       const data = await response.json().catch(() => ({}))
       if (response.status === 401) {
         throw new Error(
@@ -169,8 +185,14 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         return true
       }
 
+      let parsed
       try {
-        const parsed = JSON.parse(jsonStr)
+        parsed = JSON.parse(jsonStr)
+      } catch {
+        return false // Malformed SSE line — expected, skip
+      }
+
+      try {
         const rawDelta = extractChatStreamingDeltaContent(requestSpec.protocol, parsed)
         const delta = trimChatStreamingDelta(fullContent, rawDelta)
         if (delta) {
@@ -180,7 +202,8 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
           }
         }
         return isChatStreamingPayloadTerminal(requestSpec.protocol, parsed)
-      } catch {
+      } catch (err) {
+        console.error('[chat:stream] delta extraction error:', err?.message)
         return false
       }
     }
@@ -228,7 +251,8 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     return { content }
   })
 
-  ipcMain.handle('chat:abort-stream', async (_event, payload = {}) => {
+  ipcMain.handle('chat:abort-stream', async (event, payload = {}) => {
+    requireTrustedSender(event)
     const requestId = String(payload?.requestId ?? '').trim()
     if (!requestId) return
 
@@ -239,7 +263,8 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     controller.abort()
   })
 
-  ipcMain.handle('chat:test-connection', async (_event, payload) => {
+  ipcMain.handle('chat:test-connection', async (event, payload) => {
+    requireTrustedSender(event)
     const baseUrl = normalizeBaseUrl(payload.baseUrl)
     const providerId = normalizeChatProviderId(payload.providerId, baseUrl)
 
@@ -308,7 +333,8 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     }
   })
 
-  ipcMain.handle('service:test-connection', async (_event, payload) => {
+  ipcMain.handle('service:test-connection', async (event, payload) => {
+    requireTrustedSender(event)
     let baseUrl
     if (payload.capability !== 'speech-output') {
       baseUrl = normalizeBaseUrl(payload.baseUrl)
