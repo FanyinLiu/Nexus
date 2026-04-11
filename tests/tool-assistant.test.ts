@@ -15,24 +15,24 @@ test('prefers structured search display summary when available', () => {
     promptContext: '',
     assistantSummary: '',
     result: {
-      query: 'openclaw 搜索展示',
+      query: 'nexus 搜索展示',
       message: '',
       display: {
         mode: 'answer',
-        title: 'OpenClaw 搜索展示',
-        summary: 'OpenClaw 会先整理最相关结果，再把适合展示的正文片段放进气泡里。',
+        title: 'Nexus 搜索展示',
+        summary: 'Nexus 会先整理最相关结果，再把适合展示的正文片段放进气泡里。',
         panels: [
           {
-            title: 'OpenClaw Web Search',
+            title: 'Nexus Web Search',
             body: '搜索工具会生成结构化结果，便于前端直接展示。',
             host: 'github.com',
-            url: 'https://github.com/openclaw/openclaw',
+            url: 'https://github.com/FanyinLiu/Nexus',
           },
         ],
         sources: [
           {
-            title: 'OpenClaw',
-            url: 'https://github.com/openclaw/openclaw',
+            title: 'Nexus',
+            url: 'https://github.com/FanyinLiu/Nexus',
             host: 'github.com',
           },
         ],
@@ -47,7 +47,7 @@ test('prefers structured search display summary when available', () => {
     },
   })
 
-  assert.equal(summary, 'OpenClaw 会先整理最相关结果，再把适合展示的正文片段放进气泡里。')
+  assert.equal(summary, 'Nexus 会先整理最相关结果，再把适合展示的正文片段放进气泡里。')
 })
 
 test('summarizes relevant web search hits directly without structured display', () => {

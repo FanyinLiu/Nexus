@@ -37,14 +37,14 @@ test('extractPagePreviewFromHtml joins the best正文 segments with line breaks'
     <html>
       <body>
         <article>
-          <p>OpenClaw 的浏览器工具会自动打开候选页，并从页面正文里提取可展示内容。</p>
+          <p>Nexus 的浏览器工具会自动打开候选页，并从页面正文里提取可展示内容。</p>
           <p>这样返回给界面的不是一串链接，而是和搜索标题更贴合的内容摘要。</p>
         </article>
       </body>
     </html>
   `
 
-  const preview = extractPagePreviewFromHtml(html, 'openclaw 搜索结果展示')
+  const preview = extractPagePreviewFromHtml(html, 'nexus 搜索结果展示')
 
   assert.match(preview, /自动打开候选页/)
   assert.match(preview, /不是一串链接/)

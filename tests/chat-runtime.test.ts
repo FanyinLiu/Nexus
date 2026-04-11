@@ -15,7 +15,7 @@ test('ollama is inferred from the default local port and does not require an API
   assert.equal(chatProviderRequiresApiKey('ollama'), false)
 })
 
-test('OpenClaw-style provider base URLs map to the new Nexus provider ids', () => {
+test('provider base URLs map to the correct Nexus provider ids', () => {
   assert.equal(normalizeChatProviderId('', 'https://qianfan.baidubce.com/v2'), 'qianfan')
   assert.equal(normalizeChatProviderId('', 'https://open.bigmodel.cn/api/paas/v4'), 'zai')
   assert.equal(normalizeChatProviderId('', 'https://ark.ap-southeast.bytepluses.com/api/v3'), 'byteplus')

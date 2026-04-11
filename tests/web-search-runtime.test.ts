@@ -16,7 +16,7 @@ function createJsonResponse(payload: unknown, status = 200) {
   }
 }
 
-test('normalizeWebSearchProviderId supports the OpenClaw-style providers', () => {
+test('normalizeWebSearchProviderId supports all configured providers', () => {
   assert.equal(normalizeWebSearchProviderId('duckduckgo'), 'duckduckgo')
   assert.equal(normalizeWebSearchProviderId('exa'), 'exa')
   assert.equal(normalizeWebSearchProviderId('firecrawl'), 'firecrawl')
@@ -29,14 +29,14 @@ test('DuckDuckGo search parses HTML results and decodes redirect URLs', async ()
   const html = `
     <html>
       <body>
-        <a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fopenclaw">OpenClaw Search</a>
-        <a class="result__snippet">OpenClaw style search result summary.</a>
+        <a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fnexus">Nexus Search</a>
+        <a class="result__snippet">Nexus search result summary.</a>
       </body>
     </html>
   `
 
   const result = await runWebSearchWithProviders({
-    query: 'openclaw search',
+    query: 'nexus search',
     providerId: 'duckduckgo',
     limit: 5,
     fallbackToBing: false,
@@ -69,8 +69,8 @@ test('DuckDuckGo search parses HTML results and decodes redirect URLs', async ()
   })
 
   assert.equal(result.providerId, 'duckduckgo')
-  assert.equal(result.items[0]?.url, 'https://example.com/openclaw')
-  assert.match(result.items[0]?.snippet ?? '', /OpenClaw style search result summary/i)
+  assert.equal(result.items[0]?.url, 'https://example.com/nexus')
+  assert.match(result.items[0]?.snippet ?? '', /Nexus search result summary/i)
 })
 
 test('Exa search sends the expected API headers and returns rich previews', async () => {
@@ -78,7 +78,7 @@ test('Exa search sends the expected API headers and returns rich previews', asyn
   const response = createJsonResponse({
     results: [
       {
-        title: 'OpenClaw Exa',
+        title: 'Nexus Exa',
         url: 'https://example.com/exa',
         highlights: ['Structured preview from Exa.'],
         summary: 'A short Exa summary.',
@@ -89,7 +89,7 @@ test('Exa search sends the expected API headers and returns rich previews', asyn
   })
 
   const result = await runWebSearchWithProviders({
-    query: 'openclaw exa',
+    query: 'nexus exa',
     providerId: 'exa',
     apiKey: 'exa-key',
     limit: 5,
@@ -128,7 +128,7 @@ test('Firecrawl search requests scraped markdown and keeps it as contentPreview'
     success: true,
     data: [
       {
-        title: 'OpenClaw Firecrawl',
+        title: 'Nexus Firecrawl',
         url: 'https://example.com/firecrawl',
         description: 'Firecrawl short summary.',
         markdown: '# Heading\n\nFirecrawl markdown body.',
@@ -138,7 +138,7 @@ test('Firecrawl search requests scraped markdown and keeps it as contentPreview'
   })
 
   const result = await runWebSearchWithProviders({
-    query: 'openclaw firecrawl',
+    query: 'nexus firecrawl',
     providerId: 'firecrawl',
     apiKey: 'fc-key',
     limit: 5,
@@ -180,7 +180,7 @@ test('Gemini grounded search returns answer-backed citation items', async () => 
         content: {
           parts: [
             {
-              text: 'Gemini says OpenClaw inspired search grounding can summarize the web first.',
+              text: 'Gemini says Nexus search grounding can summarize the web first.',
             },
           ],
         },
@@ -199,7 +199,7 @@ test('Gemini grounded search returns answer-backed citation items', async () => 
   })
 
   const result = await runWebSearchWithProviders({
-    query: 'openclaw gemini grounding',
+    query: 'nexus gemini grounding',
     providerId: 'gemini',
     apiKey: 'gemini-key',
     limit: 5,
@@ -234,7 +234,7 @@ test('Gemini grounded search returns answer-backed citation items', async () => 
   assert.equal(result.items[0]?.url, 'https://example.com/gemini-source')
 })
 
-test('Perplexity uses the OpenRouter-compatible chat path when the API key matches OpenClaw routing rules', async () => {
+test('Perplexity uses the OpenRouter-compatible chat path when the API key matches routing rules', async () => {
   const seenRequests: Array<{ url: string; headers: Record<string, string>; body: string }> = []
   const response = createJsonResponse({
     choices: [
@@ -255,7 +255,7 @@ test('Perplexity uses the OpenRouter-compatible chat path when the API key match
   })
 
   const result = await runWebSearchWithProviders({
-    query: 'openclaw perplexity routing',
+    query: 'nexus perplexity routing',
     providerId: 'perplexity',
     apiKey: 'sk-or-v1-test',
     limit: 5,
