@@ -3,7 +3,10 @@
   "private": true,
   "version": "0.1.1",
   "description": "Nexus desktop AI companion built with Electron, React, and TypeScript.",
-  "author": "Nexus Team",
+  "author": {
+    "name": "FanyinLiu",
+    "email": "nexus@fanyinliu.com"
+  },
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
@@ -72,22 +75,7 @@
       "package.json",
       "!node_modules/onnxruntime-node/bin/napi-v3/win32/arm64/**"
     ],
-    "extraResources": [
-      {
-        "from": "sherpa-models",
-        "to": "sherpa-models",
-        "filter": [
-          "**/*",
-          "!**/*.tar.bz2",
-          "!**/test_wavs/**",
-          "!sherpa-onnx-streaming-paraformer-bilingual-zh-en/encoder.onnx",
-          "!sherpa-onnx-streaming-paraformer-bilingual-zh-en/decoder.onnx",
-          "!sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01/*.int8.onnx",
-          "!sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01/*epoch-99-avg-1*.onnx",
-          "!sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01/*.int8.onnx"
-        ]
-      }
-    ],
+    "extraResources": [],
     "asarUnpack": [
       "node_modules/sherpa-onnx-node/**",
       "electron/mediaSession.ps1"
@@ -115,11 +103,7 @@
       ],
       "icon": "public/nexus-256.png",
       "category": "Utility",
-      "desktop": {
-        "Name": "Nexus",
-        "Comment": "Desktop AI Companion",
-        "StartupWMClass": "nexus"
-      }
+      "executableName": "nexus"
     },
     "nsis": {
       "oneClick": false,
