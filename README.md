@@ -22,8 +22,7 @@
 
 ---
 
-<!-- Screenshot placeholder — replace with actual screenshot -->
-<!-- <p align="center"><img src="docs/screenshot.png" alt="Nexus Screenshot" width="720" /></p> -->
+<p align="center"><img src="public/banner.png" alt="Nexus Banner" width="720" /></p>
 
 <a id="简体中文"></a>
 
