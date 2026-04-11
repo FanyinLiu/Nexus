@@ -1,12 +1,4 @@
-<p align="center">
-  <img src="public/nexus-256.png" alt="Nexus" width="120" />
-</p>
-
-<h1 align="center">Nexus</h1>
-
-<p align="center">
-  <b>Desktop AI Companion</b> · Windows · Live2D · Voice · Memory · Autonomy
-</p>
+<p align="center"><img src="public/banner.png" alt="Nexus" width="720" /></p>
 
 <p align="center">
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/github/v/release/FanyinLiu/Nexus?style=flat-square&color=blue" alt="Release"></a>
@@ -21,8 +13,6 @@
 </p>
 
 ---
-
-<p align="center"><img src="public/banner.png" alt="Nexus Banner" width="720" /></p>
 
 <a id="简体中文"></a>
 
