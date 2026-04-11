@@ -116,6 +116,8 @@ export function normalizeWebSearchProviderId(value) {
       return 'gemini'
     case 'perplexity':
       return 'perplexity'
+    case 'bing':
+      return 'bing'
     default:
       return DEFAULT_PROVIDER_ID
   }
