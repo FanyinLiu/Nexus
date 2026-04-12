@@ -18,14 +18,11 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            cmd: npx electron-builder --win nsis --config.win.signAndEditExecutable=false
-            pattern: "release/*.exe"
+            cmd: npx electron-builder --win nsis --publish never --config.win.signAndEditExecutable=false
           - os: macos-latest
-            cmd: npx electron-builder --mac dmg zip
-            pattern: "release/*.dmg\nrelease/*.zip"
+            cmd: npx electron-builder --mac dmg zip --publish never
           - os: ubuntu-latest
-            cmd: npx electron-builder --linux AppImage deb
-            pattern: "release/*.AppImage\nrelease/*.deb"
+            cmd: npx electron-builder --linux AppImage deb --publish never
 
     runs-on: ${{ matrix.os }}
 
@@ -44,8 +41,10 @@ jobs:
 
       - run: ${{ matrix.cmd }}
         name: Package installer
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List built artifacts
+        shell: bash
+        run: ls -lh release/
 
       - name: Upload assets to release
         env:
@@ -53,6 +52,9 @@ jobs:
         shell: bash
         run: |
           tag="${{ github.event.release.tag_name || github.event.inputs.tag }}"
-          for f in release/*.exe release/*.dmg release/*.zip release/*.AppImage release/*.deb release/*.blockmap; do
-            [ -f "$f" ] && gh release upload "$tag" "$f" --clobber || true
+          shopt -s nullglob
+          files=(release/*.exe release/*.dmg release/*.zip release/*.AppImage release/*.deb)
+          for f in "${files[@]}"; do
+            echo "Uploading $f ..."
+            gh release upload "$tag" "$f" --clobber
           done
