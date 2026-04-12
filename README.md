@@ -16,7 +16,7 @@
 
 ## Overview
 
-Nexus is a Windows desktop AI companion featuring Live2D character rendering, continuous voice conversation, long-term memory, desktop awareness, autonomous behavior, and multi-platform integrations. It supports 18+ LLM providers and can run fully local or with cloud models.
+Nexus is a desktop AI companion featuring Live2D character rendering, continuous voice conversation, long-term memory, desktop awareness, autonomous behavior, and multi-platform integrations. It supports 18+ LLM providers and can run fully local or with cloud models.
 
 ---
 
@@ -116,7 +116,7 @@ Nexus is a Windows desktop AI companion featuring Live2D character rendering, co
 
 ## Quick Start
 
-**Requirements**: Windows 10/11 · Node.js 22+ · npm 10+
+**Requirements**: Windows / macOS / Linux · Node.js 22+ · npm 10+
 
 ```bash
 # 1. Clone the repository

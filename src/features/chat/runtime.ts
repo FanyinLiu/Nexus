@@ -295,7 +295,7 @@ async function buildSystemPrompt(
   })
 
   const header = [
-    `你是用户的 Windows 桌面 AI 陪伴体，名字叫 ${settings.companionName}。`,
+    `你是用户的桌面 AI 陪伴体，名字叫 ${settings.companionName}。`,
     `用户名是 ${settings.userName}。`,
     `当前日期时间：${currentDateTime}。`,
     '你的定位是 Live2D-first 的桌面伙伴，不是万能 Agent；请优先做好陪伴、回应、提醒与轻量协助。',
