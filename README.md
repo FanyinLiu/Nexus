@@ -9,22 +9,18 @@
 </p>
 
 <p align="center">
-  <a href="#english">English</a> · <a href="#简体中文">简体中文</a> · <a href="#繁體中文">繁體中文</a> · <a href="#日本語">日本語</a>
+  <b>English</b> · <a href="docs/README.zh-CN.md">简体中文</a> · <a href="docs/README.zh-TW.md">繁體中文</a> · <a href="docs/README.ja.md">日本語</a>
 </p>
 
 ---
 
-<a id="english"></a>
-
-## English
-
-### Overview
+## Overview
 
 Nexus is a Windows desktop AI companion featuring Live2D character rendering, continuous voice conversation, long-term memory, desktop awareness, autonomous behavior, and multi-platform integrations. It supports 18+ LLM providers and can run fully local or with cloud models.
 
 ---
 
-### Features
+## Features
 
 | Feature | Description |
 |---------|-------------|
@@ -39,7 +35,7 @@ Nexus is a Windows desktop AI companion featuring Live2D character rendering, co
 
 ---
 
-### Supported Providers
+## Supported Providers
 
 <table>
 <tr>
@@ -62,9 +58,9 @@ Nexus is a Windows desktop AI companion featuring Live2D character rendering, co
 
 ---
 
-### Recommended Models
+## Recommended Models
 
-#### Chat Models (LLM)
+### Chat Models (LLM)
 
 | Use Case | Provider | Model | Notes |
 |----------|----------|-------|-------|
@@ -77,7 +73,7 @@ Nexus is a Windows desktop AI companion featuring Live2D character rendering, co
 | **Local** | Ollama | `qwen3:8b` | Runs smoothly on RTX 3060 12GB, fully offline |
 | **Local (lightweight)** | Ollama | `qwen3:4b` | 4GB VRAM, faster response |
 
-#### STT (Speech-to-Text)
+### STT (Speech-to-Text)
 
 | Use Case | Provider | Model | Notes |
 |----------|----------|-------|-------|
@@ -90,7 +86,7 @@ Nexus is a Windows desktop AI companion featuring Live2D character rendering, co
 | **Cloud (CN, alt)** | Volcengine | `bigmodel` | ByteDance large-model speech recognition |
 | **Cloud (CN, alt)** | Tencent ASR | `16k_zh` | Real-time streaming, low latency, multi-language |
 
-#### TTS (Text-to-Speech)
+### TTS (Text-to-Speech)
 
 | Use Case | Provider | Voice | Notes |
 |----------|----------|-------|-------|
@@ -105,7 +101,7 @@ Nexus is a Windows desktop AI companion featuring Live2D character rendering, co
 
 ---
 
-### Hardware Reference
+## Hardware Reference
 
 | Component | Model |
 |-----------|-------|
@@ -118,7 +114,7 @@ Nexus is a Windows desktop AI companion featuring Live2D character rendering, co
 
 ---
 
-### Quick Start
+## Quick Start
 
 **Requirements**: Windows 10/11 · Node.js 22+ · npm 10+
 
@@ -142,7 +138,7 @@ npm run package:win
 
 ---
 
-### Project Structure
+## Project Structure
 
 ```
 electron/                Desktop runtime & native bridge
@@ -169,7 +165,7 @@ scripts/                 Local model launch scripts (GLM-ASR · OmniVoice)
 
 ---
 
-### Architecture
+## Architecture
 
 ```
                     ┌──────────────────────────────────┐
@@ -200,7 +196,7 @@ scripts/                 Local model launch scripts (GLM-ASR · OmniVoice)
 
 ---
 
-### Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -214,7 +210,7 @@ scripts/                 Local model launch scripts (GLM-ASR · OmniVoice)
 | Local ML | onnxruntime-web · @huggingface/transformers |
 | Packaging | electron-builder |
 
-### Commands
+## Commands
 
 | Command | Description |
 |---------|-------------|
@@ -223,229 +219,6 @@ scripts/                 Local model launch scripts (GLM-ASR · OmniVoice)
 | `npm run build` | Build frontend |
 | `npm test` | Run tests |
 | `npm run package:win` | Package Windows installer |
-
----
-
-<a id="简体中文"></a>
-
-## 简体中文
-
-### 简介
-
-Nexus 是一个面向 Windows 的桌面 AI 陪伴应用，集成 Live2D 角色渲染、连续语音对话、长期记忆、桌面感知、自主行为与多平台集成能力。支持 18+ LLM 提供商，可完全本地运行或使用云端模型。
-
----
-
-### 核心功能
-
-| 功能 | 说明 |
-|------|------|
-| **桌宠 + 面板双视图** | Live2D 角色渲染，表情 / 动作 / 情绪联动 |
-| **连续语音对话** | 多引擎 STT / TTS，唤醒词、VAD 语音活动检测、连续对话、语音打断 |
-| **长期记忆** | 语义向量检索（BM25 + 向量混合）、每日自动日记、主动召回、记忆衰减与归档 |
-| **自主行为** | 内心独白、情绪模型、意图预测、关系追踪、节律学习、技能蒸馏 |
-| **桌面感知** | 剪贴板监听、前台窗口识别、截图 OCR、上下文触发器 |
-| **工具调用** | 网页搜索（自动正文提取）、天气查询、提醒任务、MCP 协议接入 |
-| **多平台集成** | Discord / Telegram 网关、插件系统、技能商店 |
-| **多语言** | 简中 / 繁中 / 英 / 日 / 韩界面语言 |
-
----
-
-### 推荐模型配置
-
-#### 对话模型（LLM）
-
-| 场景 | 推荐提供商 | 推荐模型 | 说明 |
-|------|-----------|---------|------|
-| **日常陪伴（国内首选）** | DeepSeek | `deepseek-chat` | 中文能力强、价格极低，适合长时间陪伴对话 |
-| **日常陪伴（国内备选）** | DashScope Qwen | `qwen-plus` | 阿里通义千问，中文自然，长上下文支持好 |
-| **深度推理** | DeepSeek | `deepseek-reasoner` | 需要复杂推理、数学、代码时使用 |
-| **最强综合** | Anthropic | `claude-sonnet-4-6` | 综合能力最强，工具调用稳定 |
-| **高性价比（海外）** | OpenAI | `gpt-5.4-mini` | 速度快、便宜，适合高频对话 |
-| **免费体验** | Google Gemini | `gemini-2.5-flash` | 免费额度大，适合入门体验 |
-| **本地运行** | Ollama | `qwen3:8b` | RTX 3060 12GB 可流畅运行，完全离线 |
-| **本地运行（轻量）** | Ollama | `qwen3:4b` | 4GB VRAM 即可运行，响应更快 |
-
-#### 语音输入（STT）
-
-| 场景 | 推荐提供商 | 推荐模型 | 说明 |
-|------|-----------|---------|------|
-| **本地高精度** | GLM-ASR-Nano | `glm-asr-nano` | 中文识别准确率高，RTX 3060 可流畅运行，完全离线 |
-| **本地流式** | Paraformer | `paraformer-trilingual` | 边说边出字，延迟低，中英粤三语，适合连续对话 |
-| **本地高精度（备选）** | SenseVoice | `sensevoice-zh-en` | 比 Whisper 快 15 倍，中英双语离线识别 |
-| **云端首选（国内）** | 智谱 GLM-ASR | `glm-asr-2512` | 中文最佳，支持热词纠正 |
-| **云端首选（海外）** | OpenAI | `gpt-4o-mini-transcribe` | 多语言识别，已有 OpenAI Key 可直接用 |
-| **云端高质量（海外）** | ElevenLabs Scribe | `scribe_v1` | 99 种语言，自动加标点，说话人检测 |
-| **云端备选（国内）** | 火山引擎 | `bigmodel` | 字节跳动大模型语音识别 |
-| **云端备选（国内）** | 腾讯云 ASR | `16k_zh` | 实时流式识别，延迟低，中英日韩多语种 |
-
-#### 语音输出（TTS）
-
-| 场景 | 推荐提供商 | 推荐音色 | 说明 |
-|------|-----------|---------|------|
-| **免费首选** | Edge TTS | 晓晓 (`zh-CN-XiaoxiaoNeural`) | 微软免费，音质好，无需 API Key |
-| **本地离线** | CosyVoice | SFT 预置音色 | 完全离线，RTX 3060 可运行 |
-| **本地多语种** | OmniVoice | `female, young adult` | 646 种语言，完全离线，支持描述词组合 |
-| **最自然（国内）** | MiniMax | 少女音色 (`female-shaonv`) | 情感表现力强，适合陪伴角色 |
-| **最自然（海外）** | ElevenLabs | 自选 `voice_id` | 全球顶级语音合成，支持声音克隆 |
-| **海外通用** | OpenAI TTS | `alloy` | 已有 OpenAI Key 可直接用，`gpt-4o-mini-tts` 模型 |
-| **中文指令化** | DashScope Qwen-TTS | `Cherry` | 阿里 Qwen3-TTS，支持方言和指令化播报 |
-| **高性价比（国内）** | 火山引擎 | 灿灿 (`BV700_streaming`) | 自然度高，价格低 |
-
----
-
-### 开发机配置参考
-
-| 组件 | 型号 |
-|------|------|
-| CPU | Intel Core i5-12400F (6C12T) |
-| GPU | NVIDIA GeForce RTX 3060 12GB |
-| 内存 | 32GB DDR4 |
-| 系统 | Windows 11 Pro |
-
-> RTX 3060 12GB 可以流畅运行大部分本地模型（8B 参数以下），包括本地 STT 和 TTS。如果你的显卡 VRAM < 8GB，建议优先使用云端模型。
-
----
-
-<a id="繁體中文"></a>
-
-## 繁體中文
-
-### 簡介
-
-Nexus 是一款面向 Windows 的桌面 AI 陪伴應用，整合 Live2D 角色渲染、連續語音對話、長期記憶、桌面感知、自主行為與多平台整合能力。支援 18+ LLM 供應商，可完全本地運行或使用雲端模型。
-
----
-
-### 核心功能
-
-| 功能 | 說明 |
-|------|------|
-| **桌寵 + 面板雙視圖** | Live2D 角色渲染，表情 / 動作 / 情緒聯動 |
-| **連續語音對話** | 多引擎 STT / TTS，喚醒詞、VAD 語音活動檢測、連續對話、語音打斷 |
-| **長期記憶** | 語義向量檢索（BM25 + 向量混合）、每日自動日記、主動召回、記憶衰減與歸檔 |
-| **自主行為** | 內心獨白、情緒模型、意圖預測、關係追蹤、節律學習、技能蒸餾 |
-| **桌面感知** | 剪貼簿監聽、前台視窗識別、截圖 OCR、上下文觸發器 |
-| **工具呼叫** | 網頁搜尋（自動正文提取）、天氣查詢、提醒任務、MCP 協定接入 |
-| **多平台整合** | Discord / Telegram 閘道、外掛系統、技能商店 |
-| **多語言** | 簡中 / 繁中 / 英 / 日 / 韓介面語言 |
-
----
-
-### 推薦模型配置
-
-#### 對話模型（LLM）
-
-| 場景 | 推薦供應商 | 推薦模型 | 說明 |
-|------|-----------|---------|------|
-| **日常陪伴（首選）** | DeepSeek | `deepseek-chat` | 中文能力強、價格極低，適合長時間陪伴對話 |
-| **日常陪伴（備選）** | DashScope Qwen | `qwen-plus` | 阿里通義千問，中文自然，長上下文支援好 |
-| **深度推理** | DeepSeek | `deepseek-reasoner` | 需要複雜推理、數學、程式碼時使用 |
-| **最強綜合** | Anthropic | `claude-sonnet-4-6` | 綜合能力最強，工具呼叫穩定 |
-| **高性價比（海外）** | OpenAI | `gpt-5.4-mini` | 速度快、便宜，適合高頻對話 |
-| **免費體驗** | Google Gemini | `gemini-2.5-flash` | 免費額度大，適合入門體驗 |
-| **本地運行** | Ollama | `qwen3:8b` | RTX 3060 12GB 可流暢運行，完全離線 |
-
-#### 語音輸入（STT）
-
-| 場景 | 推薦供應商 | 推薦模型 | 說明 |
-|------|-----------|---------|------|
-| **本地高精度** | GLM-ASR-Nano | `glm-asr-nano` | 中文識別準確率高，RTX 3060 可流暢運行，完全離線 |
-| **本地串流** | Paraformer | `paraformer-trilingual` | 邊說邊出字，延遲低，中英粵三語 |
-| **雲端首選** | OpenAI | `gpt-4o-mini-transcribe` | 多語言識別，已有 OpenAI Key 可直接使用 |
-| **雲端高品質** | ElevenLabs Scribe | `scribe_v1` | 99 種語言，自動加標點，說話人檢測 |
-
-#### 語音輸出（TTS）
-
-| 場景 | 推薦供應商 | 推薦音色 | 說明 |
-|------|-----------|---------|------|
-| **免費首選** | Edge TTS | `zh-TW-HsiaoChenNeural` | 微軟免費，音質好，無需 API Key |
-| **本地離線** | CosyVoice | SFT 預設音色 | 完全離線，RTX 3060 可運行 |
-| **最自然（全球）** | ElevenLabs | 自選 `voice_id` | 全球頂級語音合成，支援聲音複製 |
-| **海外通用** | OpenAI TTS | `alloy` | 已有 OpenAI Key 可直接使用，`gpt-4o-mini-tts` 模型 |
-
----
-
-### 開發機配置參考
-
-| 組件 | 型號 |
-|------|------|
-| CPU | Intel Core i5-12400F (6C12T) |
-| GPU | NVIDIA GeForce RTX 3060 12GB |
-| 記憶體 | 32GB DDR4 |
-| 系統 | Windows 11 Pro |
-
-> RTX 3060 12GB 可以流暢運行大部分本地模型（8B 參數以下）。如果你的顯示卡 VRAM < 8GB，建議優先使用雲端模型。
-
----
-
-<a id="日本語"></a>
-
-## 日本語
-
-### 概要
-
-Nexus は Windows 向けのデスクトップ AI コンパニオンアプリです。Live2D キャラクターレンダリング、連続音声会話、長期記憶、デスクトップ認識、自律行動、マルチプラットフォーム統合を備えています。18 以上の LLM プロバイダーに対応し、完全ローカル実行またはクラウドモデルの利用が可能です。
-
----
-
-### 主な機能
-
-| 機能 | 説明 |
-|------|------|
-| **デスクトップペット + パネル二画面** | Live2D キャラクター、表情・モーション・感情連動 |
-| **連続音声会話** | マルチエンジン STT / TTS、ウェイクワード、VAD 音声検出、連続会話、音声割り込み |
-| **長期記憶** | セマンティックベクトル検索（BM25 + ベクトルハイブリッド）、自動日記、能動的想起、記憶減衰とアーカイブ |
-| **自律行動** | 内面独白、感情モデル、意図予測、関係追跡、リズム学習、スキル蒸留 |
-| **デスクトップ認識** | クリップボード監視、フォアグラウンドウィンドウ検出、スクリーンショット OCR、コンテキストトリガー |
-| **ツール呼び出し** | ウェブ検索（自動本文抽出）、天気照会、リマインダー、MCP プロトコル |
-| **マルチプラットフォーム** | Discord / Telegram ゲートウェイ、プラグインシステム、スキルストア |
-| **多言語** | 簡体字中国語 / 繁体字中国語 / 英語 / 日本語 / 韓国語 |
-
----
-
-### おすすめモデル構成
-
-#### 対話モデル（LLM）
-
-| 用途 | プロバイダー | モデル | 備考 |
-|------|------------|--------|------|
-| **日常コンパニオン** | DeepSeek | `deepseek-chat` | 中国語に強く、非常に低コスト |
-| **最強総合** | Anthropic | `claude-sonnet-4-6` | 総合力最高、ツール呼び出しが安定 |
-| **コスパ重視** | OpenAI | `gpt-5.4-mini` | 高速・低価格、高頻度会話向け |
-| **無料枠** | Google Gemini | `gemini-2.5-flash` | 無料枠が大きく、入門に最適 |
-| **ローカル実行** | Ollama | `qwen3:8b` | RTX 3060 12GB でスムーズに動作、完全オフライン |
-
-#### 音声入力（STT）
-
-| 用途 | プロバイダー | モデル | 備考 |
-|------|------------|--------|------|
-| **ローカル高精度** | GLM-ASR-Nano | `glm-asr-nano` | 中国語認識精度が高い、RTX 3060 対応、オフライン |
-| **ローカルストリーミング** | Paraformer | `paraformer-trilingual` | リアルタイム文字起こし、低遅延 |
-| **クラウド（グローバル）** | OpenAI | `gpt-4o-mini-transcribe` | 多言語対応、既存の OpenAI Key で利用可能 |
-| **クラウド（高品質）** | ElevenLabs Scribe | `scribe_v1` | 99 言語、自動句読点、話者検出 |
-
-#### 音声出力（TTS）
-
-| 用途 | プロバイダー | ボイス | 備考 |
-|------|------------|--------|------|
-| **無料おすすめ** | Edge TTS | `ja-JP-NanamiNeural` | Microsoft 無料、API Key 不要 |
-| **ローカルオフライン** | CosyVoice | SFT プリセット | 完全オフライン、RTX 3060 対応 |
-| **最高品質（グローバル）** | ElevenLabs | カスタム `voice_id` | 世界トップクラスの音声合成、声クローン対応 |
-| **クラウド（グローバル）** | OpenAI TTS | `alloy` | 既存の OpenAI Key で利用、`gpt-4o-mini-tts` モデル |
-
----
-
-### 開発機スペック参考
-
-| コンポーネント | モデル |
-|--------------|--------|
-| CPU | Intel Core i5-12400F (6C12T) |
-| GPU | NVIDIA GeForce RTX 3060 12GB |
-| メモリ | 32GB DDR4 |
-| OS | Windows 11 Pro |
-
-> RTX 3060 12GB はほとんどのローカルモデル（8B パラメータ以下）をスムーズに実行できます。VRAM が 8GB 未満の場合は、クラウドモデルの利用を推奨します。
 
 ---
 
