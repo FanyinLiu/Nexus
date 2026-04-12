@@ -1,3 +1,8 @@
+// Solution-style tsconfig: this file does not compile anything itself.
+// Project sources are split into two TypeScript projects:
+//   - tsconfig.app.json   → React frontend in src/
+//   - tsconfig.node.json  → Vite + Node-side configs (vite.config.ts)
+// Both configs target ES2024 and use bundler module resolution.
 {
   "files": [],
   "references": [

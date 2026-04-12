@@ -1,3 +1,10 @@
+' create-shortcut.vbs — Windows-only helper that creates a desktop shortcut
+' for the dev launcher (launch-latest.vbs).
+'
+' macOS users: install the .dmg from GitHub Releases — it places Nexus.app in
+'              Applications and you can drag it to the Dock.
+' Linux users: install the .deb / .AppImage — both register a desktop entry.
+
 Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
@@ -12,7 +19,7 @@ shortcut.TargetPath = "wscript.exe"
 shortcut.Arguments = """" & targetVbs & """"
 shortcut.WorkingDirectory = projectDir
 shortcut.WindowStyle = 7
-shortcut.Description = "Nexus Desktop Pet AI"
+shortcut.Description = "Nexus — desktop AI companion"
 
 If fso.FileExists(iconPath) Then
     shortcut.IconLocation = iconPath & ",0"

@@ -1,9 +1,14 @@
 @echo off
+:: Nexus 一键安装脚本（Windows）
+:: macOS / Linux 用户请改用：
+::     npm install && npm run build && npm run electron:dev
+:: 或从 GitHub Releases 下载对应平台的安装包
+
 chcp 65001 >nul
 title Nexus 一键安装
 
 echo ============================================
-echo   Nexus 一键安装脚本
+echo   Nexus 一键安装脚本（Windows）
 echo ============================================
 echo.
 
@@ -119,7 +124,9 @@ echo ============================================
 echo   安装完成！
 echo ============================================
 echo.
-echo   启动开发模式:  npm run electron:dev
-echo   打包安装程序:  npm run package:win
+echo   启动开发模式:    npm run electron:dev
+echo   打包 Windows:    npm run package:win
+echo   打包 macOS:      npm run package:mac
+echo   打包 Linux:      npm run package:linux
 echo.
 pause

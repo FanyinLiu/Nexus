@@ -26,7 +26,7 @@ tmp-debug/
 release/
 resources/local-speech/
 sherpa-models/*
-!sherpa-models/.gitkeep
+!sherpa-models/README.md
 .venv-qwen3tts/
 .hf-home/
 tmp_qwen3_tts_server_test.wav
