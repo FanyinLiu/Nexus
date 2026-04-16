@@ -84,7 +84,7 @@ let syncChannel: BroadcastChannel | null = null
 if (typeof BroadcastChannel !== 'undefined') {
   syncChannel = new BroadcastChannel('nexus-storage-sync')
   syncChannel.onmessage = (event: MessageEvent<StorageSyncMessage>) => {
-    const { key, value, timestamp: _ts } = event.data
+    const { key, value } = event.data
     if (typeof key !== 'string') return
     // Update local cache so the next readJson call sees the fresh value.
     memoryCache.set(key, value)

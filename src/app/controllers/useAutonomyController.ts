@@ -464,7 +464,7 @@ export function useAutonomyController({
 
     // Evaluate context triggers on each tick
     void evaluateTriggersRef.current()
-  }, [chat, debugConsole, focusAwareness.focusStateRef, goalsRef, memory.memoriesRef, messagesRef, reminderTasksRef, settingsRef])
+  }, [busyRef, chat, debugConsole, focusAwareness.focusStateRef, goalsRef, memory.memoriesRef, messagesRef, reminderTasksRef, settingsRef])
 
   const autonomyTick = useAutonomyTick({
     settingsRef,

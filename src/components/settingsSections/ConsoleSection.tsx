@@ -79,6 +79,9 @@ export const ConsoleSection = memo(function ConsoleSection({
   const visibleReminderTasks = reminderTasks.slice(0, 6)
   const noValueLabel = ti('settings.console.none')
   const voicePipelineSummary = voicePipeline.detail || ti('settings.console.waiting_summary')
+  // Refresh whenever debug events change — new events are a reliable signal
+  // that the cost tracker may have been updated. The memo body doesn't read
+  // `debugConsoleEvents` directly, so it's a deliberate trigger dependency.
   const budgetSnapshot = useMemo(() => {
     const runtime = getCoreRuntime()
     const status = runtime.costTracker.status()
@@ -92,6 +95,7 @@ export const ConsoleSection = memo(function ConsoleSection({
       shouldHardStop: status.shouldHardStop,
       turnCount: entries.length,
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debugConsoleEvents])
   let budgetCapNote = ''
   if (budgetSnapshot.shouldHardStop) budgetCapNote = ` · ${t('已达上限', 'Limit reached')}`

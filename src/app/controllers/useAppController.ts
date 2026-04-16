@@ -325,7 +325,13 @@ export function useAppController() {
     appendDebugConsoleEvent: debugConsole.appendDebugConsoleEvent,
   })
 
+  // Forward the latest chat handlers to refs so the closures we passed into
+  // useChat (which call setErrorRef.current(...) etc.) always see up-to-date
+  // implementations. This is a deliberate break of the hook-circular-dependency
+  // between useAutonomyController, useChat, and these setters — hence the
+  // ref-mutation-through-effect pattern is intentional.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     setErrorRef.current = chat.setError
     setInputFnRef.current = chat.setInput
     appendSystemMessageRef.current = chat.appendSystemMessage

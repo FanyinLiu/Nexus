@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { API_PROVIDER_PRESETS, getApiProviderPreset } from '../../lib/apiProviders'
 import {
@@ -44,14 +44,18 @@ export const ModelSection = memo(function ModelSection({
   const hasModelOptions = currentPreset.models.length > 0
 
   const [extraKeysText, setExtraKeysText] = useState('')
-  useEffect(() => {
+  const [extraKeysProviderId, setExtraKeysProviderId] = useState<string | null>(null)
+  // Reset the textarea whenever the selected provider changes. Done during
+  // render via the prev-prop pattern to avoid set-state-in-effect churn.
+  if (draft.apiProviderId !== extraKeysProviderId) {
     const runtime = getCoreRuntime()
     const existing = runtime.authStore
       .list(draft.apiProviderId)
       .map((p) => p.apiKey)
       .filter((k) => k && k.trim().length > 0)
+    setExtraKeysProviderId(draft.apiProviderId)
     setExtraKeysText(existing.join('\n'))
-  }, [draft.apiProviderId])
+  }
 
   const commitExtraKeys = () => {
     const runtime = getCoreRuntime()

@@ -246,12 +246,14 @@ export function PanelView({
     chat.setPendingImage(null)
   }
 
-  useEffect(() => {
-    // Reset "show all" when the conversation is cleared.
-    if (chat.messages.length === 0) {
-      setShowAllMessages(false)
-    }
+  // Reset "show all" when the conversation is cleared. Doing this during
+  // render (rather than in an effect) avoids a cascading re-render and
+  // satisfies react-hooks/set-state-in-effect.
+  if (chat.messages.length === 0 && showAllMessages) {
+    setShowAllMessages(false)
+  }
 
+  useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
       const messageList = messageListRef.current
       if (!messageList) {

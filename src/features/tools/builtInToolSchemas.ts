@@ -57,7 +57,7 @@ function buildWeatherDescriptor(defaultLocation: string): McpToolDescriptor {
   return {
     name: 'weather',
     description:
-      `Look up current weather, today\'s forecast, and tomorrow\'s forecast for a given location. ${locationHint}Use this for any direct weather / temperature / rain / forecast question. Results include temperature, conditions, wind, and a short natural-language summary.`,
+      `Look up current weather, today's forecast, and tomorrow's forecast for a given location. ${locationHint}Use this for any direct weather / temperature / rain / forecast question. Results include temperature, conditions, wind, and a short natural-language summary.`,
     serverId: BUILT_IN_TOOL_SERVER_ID,
     alwaysInclude: true,
     inputSchema: {

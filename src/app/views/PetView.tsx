@@ -82,14 +82,15 @@ export function PetView({
   const [interruptEpoch, setInterruptEpoch] = useState(0)
   const [prevVoiceState, setPrevVoiceState] = useState(voice.voiceState)
 
-  useEffect(() => {
-    if (voice.voiceState === prevVoiceState) return
+  // Store previous voiceState via the React-recommended render-time pattern.
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  if (voice.voiceState !== prevVoiceState) {
     setPrevVoiceState(voice.voiceState)
     if (prevVoiceState === 'speaking' && voice.voiceState === 'listening') {
       setInterrupted(true)
       setInterruptEpoch((epoch) => epoch + 1)
     }
-  }, [voice.voiceState]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   useEffect(() => {
     if (interruptEpoch === 0) return
