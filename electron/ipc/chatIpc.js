@@ -27,11 +27,13 @@ import {
   runSpeechInputConnectionSmokeTest,
   runSpeechOutputConnectionSmokeTest,
 } from '../services/sttService.js'
-import { requireTrustedSender } from './validate.js'
+import { requireTrustedSender, expectString, assertArray } from './validate.js'
 
 export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS, CONNECTION_TEST_TIMEOUT_MS }) {
   ipcMain.handle('chat:complete', async (event, payload) => {
     requireTrustedSender(event)
+    expectString(payload?.baseUrl, 'payload.baseUrl')
+    assertArray(payload?.messages, 'payload.messages')
     const baseUrl = normalizeBaseUrl(payload.baseUrl)
     const providerId = normalizeChatProviderId(payload.providerId, baseUrl)
     const requestSpec = buildChatRequest(payload, { stream: false })
@@ -121,6 +123,8 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
 
   ipcMain.handle('chat:complete-stream', async (event, payload) => {
     requireTrustedSender(event)
+    expectString(payload?.baseUrl, 'payload.baseUrl')
+    assertArray(payload?.messages, 'payload.messages')
     const { requestId, ...chatPayload } = payload
     const baseUrl = normalizeBaseUrl(chatPayload.baseUrl)
     const providerId = normalizeChatProviderId(chatPayload.providerId, baseUrl)

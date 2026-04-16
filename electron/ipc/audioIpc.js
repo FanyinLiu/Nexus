@@ -34,7 +34,7 @@ import {
   mapLanguageToMiniMaxBoost,
   mapLanguageToDashScopeType,
 } from '../services/ttsService.js'
-import { requireTrustedSender } from './validate.js'
+import { requireTrustedSender, requireString } from './validate.js'
 
 export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT_MS }) {
   ipcMain.handle('audio:list-voices', async (event, payload) => {
@@ -133,8 +133,9 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
 
   ipcMain.handle('audio:transcribe', async (event, payload) => {
     requireTrustedSender(event)
+    requireString(payload?.audioBase64, 'payload.audioBase64')
 
-    if (typeof payload.audioBase64 === 'string' && payload.audioBase64.length > 50_000_000) {
+    if (payload.audioBase64.length > 50_000_000) {
       throw new Error('Audio payload exceeds 50MB limit.')
     }
 

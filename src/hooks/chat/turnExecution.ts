@@ -103,6 +103,7 @@ export async function executeAssistantTurn(
     // here, so this only fires on the stuck path.
     if (ctx.voiceStateRef.current === 'processing') {
       ctx.setVoiceState('idle')
+      ctx.busEmit({ type: 'session:completed' })
     }
     void flushDeferredCompanionNotices()
   }

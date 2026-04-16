@@ -6,7 +6,7 @@ const REQUEST_TIMEOUT_MS = 15_000
 
 // Shell metacharacters that could enable command injection when shell: true is used.
 // We reject commands containing these to allow safe spawning without a shell.
-const SHELL_META_PATTERN = /[&|;<>`$(){}!\r\n]/
+const SHELL_META_PATTERN = /[&|;<>`"$(){}!\r\n]/
 const MAX_RESTART_ATTEMPTS = 3
 const BASE_RESTART_DELAY_MS = 3_000
 
@@ -219,7 +219,11 @@ class McpInstance {
     let spawnArgs = args
     if (process.platform === 'win32') {
       const comspec = process.env.ComSpec || 'cmd.exe'
-      spawnArgs = ['/d', '/s', '/c', `"${command}"`, ...args]
+      // Combine command + args into a single /c string with each part quoted.
+      // /s strips the outermost quotes, leaving individually quoted parts so
+      // that args containing spaces (e.g. "C:\Program Files\...") are preserved.
+      const cmdLine = [`"${command}"`, ...args.map(a => `"${a}"`)].join(' ')
+      spawnArgs = ['/d', '/s', '/c', `"${cmdLine}"`]
       spawnCommand = comspec
     }
 

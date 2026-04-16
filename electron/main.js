@@ -10,6 +10,7 @@ import { mainWindow, panelWindow, panelSection, createMainWindow, createTray, ap
 import { registerIpc } from './ipcRegistry.js'
 import { autoStartPlugins } from './services/pluginHost.js'
 import { initAutoUpdater } from './services/updaterService.js'
+import { closeAuditLog } from './services/auditLog.js'
 
 // ── Console safety: suppress broken-pipe errors on stdout/stderr ──
 
@@ -266,4 +267,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('will-quit', () => {
+  closeAuditLog()
 })

@@ -316,7 +316,10 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         preview: shorten(response.response.content, 40),
       })
 
-      recordUsage('chat', content, response.response.content)
+      // Pass full message history (joined) as input text so contextMeter token
+      // counts reflect the actual context window, not just the last user turn.
+      const allInputText = nextMessages.map((m) => m.content).join('\n')
+      recordUsage('chat', allInputText, response.response.content, { modelId: currentSettings.model })
       const assistantPerformance = parseAssistantPerformanceContent(response.response.content)
       const assistantMessageContent = assistantPerformance.displayContent
         || (assistantPerformance.stageDirections.length ? '（轻轻做了个动作）' : '……')

@@ -159,11 +159,29 @@ export async function ensureRendererServer() {
 
         const content = await fs.readFile(filePath)
         const isHashedAsset = /[-_.][a-zA-Z0-9]{7,}\.(js|css|wasm)$/.test(filePath)
-        response.writeHead(200, {
+        const headers = {
           'Access-Control-Allow-Origin': rendererServerUrl || `http://${rendererServerHost}:${rendererServerPreferredPort}`,
           'Cache-Control': isHashedAsset ? 'max-age=31536000, immutable' : 'no-store',
           'Content-Type': getRendererContentType(filePath),
-        })
+        }
+        if (filePath.endsWith('.html')) {
+          headers['Content-Security-Policy'] = [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: blob:",
+            "font-src 'self' data:",
+            "connect-src 'self' https: http:",
+            "media-src 'self' blob:",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "frame-ancestors 'none'",
+          ].join('; ')
+          headers['X-Content-Type-Options'] = 'nosniff'
+          headers['X-Frame-Options'] = 'DENY'
+        }
+        response.writeHead(200, headers)
         response.end(content)
       } catch (error) {
         console.error('[RendererServer] request error:', error)

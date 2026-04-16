@@ -101,7 +101,6 @@ export type StopVoiceConversationEntrypointOptions = {
   stopVadListening: (cancel?: boolean) => Promise<void>
   stopActiveSpeechOutput: () => void
   dispatchVoiceSessionAndSync: (event: VoiceSessionEvent) => unknown
-  busEmit: (event: import('../../features/voice/busEvents').VoiceBusEvent) => void
   setLiveTranscript: (transcript: string) => void
   setMood: (mood: PetMood) => void
   updateVoicePipeline: (
@@ -228,12 +227,9 @@ export function stopVoiceConversationEntrypoint(
   params.stopApiRecording(true)
   void params.stopVadListening(true)
   params.stopActiveSpeechOutput()
+  // dispatchVoiceSessionAndSync now auto-emits the mapped session:aborted to
+  // VoiceBus, so the explicit busEmit call is no longer needed.
   params.dispatchVoiceSessionAndSync({ type: 'aborted' })
-  params.busEmit({
-    type: 'session:aborted',
-    reason: 'session_aborted',
-    abortReason: 'user_stopped',
-  })
   params.setLiveTranscript('')
   params.updateVoicePipeline(
     'idle',

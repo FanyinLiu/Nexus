@@ -1,11 +1,14 @@
 import { ipcMain } from 'electron'
 import * as workspaceFs from '../services/workspaceFs.js'
-import { requireTrustedSender } from './validate.js'
+import { requireTrustedSender, requireString } from './validate.js'
+import { audit } from '../services/auditLog.js'
 
 export function register() {
   ipcMain.handle('workspace:set-root', async (event, payload) => {
     requireTrustedSender(event)
-    workspaceFs.setWorkspaceRoot(String(payload?.root ?? ''))
+    const root = String(payload?.root ?? '')
+    audit('workspace', 'set-root', { root })
+    workspaceFs.setWorkspaceRoot(root)
     return { ok: true, root: workspaceFs.getWorkspaceRoot() }
   })
 
@@ -16,21 +19,26 @@ export function register() {
 
   ipcMain.handle('workspace:read', async (event, payload) => {
     requireTrustedSender(event)
-    return workspaceFs.readWorkspaceFile(String(payload?.path ?? ''))
+    const filePath = requireString(payload?.path, 'payload.path')
+    return workspaceFs.readWorkspaceFile(filePath)
   })
 
   ipcMain.handle('workspace:write', async (event, payload) => {
     requireTrustedSender(event)
+    const filePath = requireString(payload?.path, 'payload.path')
+    audit('workspace', 'write', { path: filePath })
     return workspaceFs.writeWorkspaceFile(
-      String(payload?.path ?? ''),
+      filePath,
       String(payload?.content ?? ''),
     )
   })
 
   ipcMain.handle('workspace:edit', async (event, payload) => {
     requireTrustedSender(event)
+    const filePath = String(payload?.path ?? '')
+    audit('workspace', 'edit', { path: filePath })
     return workspaceFs.editWorkspaceFile(
-      String(payload?.path ?? ''),
+      filePath,
       String(payload?.oldString ?? ''),
       String(payload?.newString ?? ''),
     )

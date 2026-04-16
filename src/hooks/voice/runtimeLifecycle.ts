@@ -2,6 +2,7 @@ import type { MutableRefObject } from 'react'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
 import type { ParaformerStreamSession } from '../../features/hearing/localParaformer.ts'
 import type { SenseVoiceStreamSession } from '../../features/hearing/localSenseVoice.ts'
+import type { TencentAsrStreamSession } from '../../features/hearing/tencentAsr.ts'
 import type { BrowserSpeechRecognition } from '../../lib/voice'
 
 export type CleanupVoiceRuntimeResourcesOptions = {
@@ -14,6 +15,8 @@ export type CleanupVoiceRuntimeResourcesOptions = {
   stopActiveSpeechOutput: () => void
   paraformerSessionRef: MutableRefObject<ParaformerStreamSession | null>
   sensevoiceSessionRef: MutableRefObject<SenseVoiceStreamSession | null>
+  tencentAsrSessionRef: MutableRefObject<TencentAsrStreamSession | null>
+  apiRecordingRef: MutableRefObject<import('./types').ApiRecordingSession | null>
   wakewordRuntimeRef: MutableRefObject<WakewordRuntimeController | null>
 }
 
@@ -32,6 +35,8 @@ export function cleanupVoiceRuntimeResources(
   options.paraformerSessionRef.current = null
   options.sensevoiceSessionRef.current?.abort()
   options.sensevoiceSessionRef.current = null
+  options.tencentAsrSessionRef.current?.abort()
+  options.tencentAsrSessionRef.current = null
   options.wakewordRuntimeRef.current?.destroy()
   options.wakewordRuntimeRef.current = null
 }

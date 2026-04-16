@@ -198,7 +198,6 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       stopVadListening: bindings.stopVadListening,
       stopActiveSpeechOutput: bindings.stopActiveSpeechOutput,
       dispatchVoiceSessionAndSync: bindings.dispatchVoiceSessionAndSync,
-      busEmit: hookCallbacks.busEmit,
       setLiveTranscript: setters.setLiveTranscript,
       setMood: ctx.setMood,
       updateVoicePipeline: hookCallbacks.updateVoicePipeline,

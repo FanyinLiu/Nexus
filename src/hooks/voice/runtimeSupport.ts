@@ -6,7 +6,6 @@ import {
 } from '../../features/voice/lipSync'
 import {
   createVoiceSessionState,
-  getVoiceStateForSessionPhase,
   reduceVoiceSessionState,
   type VoiceSessionEvent,
   type VoiceSessionState,
@@ -16,6 +15,7 @@ import { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer'
 import { clamp } from '../../lib/common'
 import { stopSpeaking as stopBrowserSpeaking } from '../../lib/voice'
 import { createId } from '../../lib'
+import type { VoiceBusEvent } from '../../features/voice/busEvents'
 import type { VoiceState } from '../../types'
 import { cleanupApiRecordingSession } from './recordingSession'
 import type { ParaformerConversationState } from './paraformerConversation'
@@ -44,6 +44,7 @@ type DispatchVoiceSessionAndSyncRuntimeOptions = {
   voiceStateRef: MutableRefObject<VoiceState>
   setVoiceState: (state: VoiceState) => void
   event: VoiceSessionEvent
+  busEmit: (event: VoiceBusEvent) => void
 }
 
 type BeginVoiceListeningSessionRuntimeOptions = {
@@ -51,6 +52,7 @@ type BeginVoiceListeningSessionRuntimeOptions = {
   voiceStateRef: MutableRefObject<VoiceState>
   setVoiceState: (state: VoiceState) => void
   transport: VoiceSessionTransport
+  busEmit: (event: VoiceBusEvent) => void
 }
 
 type SetSpeechLevelValueRuntimeOptions = {
@@ -82,7 +84,6 @@ type InterruptSpeakingForVoiceInputRuntimeOptions = {
   showPetStatus: ShowPetStatus
   stopActiveSpeechOutput: () => void
   dispatchVoiceSessionAndSync: (event: VoiceSessionEvent) => VoiceSessionState
-  busEmit?: (event: import('../../features/voice/busEvents').VoiceBusEvent) => void
 }
 
 type StopApiRecordingRuntimeOptions = {
@@ -149,21 +150,57 @@ export function dispatchVoiceSessionRuntime(
   return nextState
 }
 
+/**
+ * Map a legacy VoiceSessionEvent to the equivalent VoiceBusEvent so the unified
+ * bus machine stays in sync with every legacy dispatch. The bus machine is the
+ * single source of truth for `voiceStateRef`; the legacy machine remains active
+ * for session metadata (transcript, phase) but no longer drives UI state.
+ */
+function legacyEventToBusEvent(event: VoiceSessionEvent): VoiceBusEvent | null {
+  switch (event.type) {
+    case 'session_started':
+      return { type: 'session:started', sessionId: event.sessionId, transport: event.transport }
+    case 'stt_finalizing':
+      return { type: 'stt:finalizing', text: event.text }
+    case 'stt_final':
+      return { type: 'stt:final', text: event.text }
+    case 'session_completed':
+      return { type: 'session:completed' }
+    case 'tts_interrupted':
+      return { type: 'tts:interrupted', speechGeneration: 0 }
+    case 'tts_started':
+      return { type: 'tts:started', text: event.text, speechGeneration: 0 }
+    case 'aborted':
+      return { type: 'session:aborted', abortReason: event.reason }
+    case 'error':
+      return { type: 'stt:error', code: event.code ?? 'unknown', message: event.message }
+    case 'speech_detected':
+      return { type: 'stt:speech_detected' }
+    case 'stt_partial':
+      return { type: 'stt:partial', text: event.text }
+    case 'stt_endpoint':
+      return { type: 'stt:endpoint', text: event.text }
+    default:
+      return null
+  }
+}
+
 export function dispatchVoiceSessionAndSyncRuntime(
   options: DispatchVoiceSessionAndSyncRuntimeOptions,
 ) {
+  // 1. Update the legacy session state (metadata tracking — transcript, phase, etc.)
   const nextState = dispatchVoiceSessionRuntime({
     voiceSessionRef: options.voiceSessionRef,
     event: options.event,
   })
-  const nextVoiceState = getVoiceStateForSessionPhase(nextState.phase)
 
-  if (options.voiceStateRef.current !== nextVoiceState) {
-    // Sync the ref immediately so that scheduleVoiceRestart (which fires on
-    // a short timer) sees the updated value before the React render cycle
-    // propagates the state change back through the useEffect ref-sync.
-    options.voiceStateRef.current = nextVoiceState
-    options.setVoiceState(nextVoiceState)
+  // 2. Emit the mapped bus event so VoiceBus drives voiceStateRef exclusively.
+  //    The busEmit callback in useVoice.ts reads voiceBus.uiPhase and calls
+  //    setVoiceState when the phase changes, making VoiceBus the single source
+  //    of truth for the UI-facing voice state.
+  const busEvent = legacyEventToBusEvent(options.event)
+  if (busEvent) {
+    options.busEmit(busEvent)
   }
 
   return nextState
@@ -176,6 +213,7 @@ export function beginVoiceListeningSessionRuntime(
     voiceSessionRef: options.voiceSessionRef,
     voiceStateRef: options.voiceStateRef,
     setVoiceState: options.setVoiceState,
+    busEmit: options.busEmit,
     event: {
       type: 'session_started',
       sessionId: createId('voice-session'),
@@ -240,10 +278,8 @@ export function interruptSpeakingForVoiceInputRuntime(
 
   options.stopActiveSpeechOutput()
   options.dispatchVoiceSessionAndSync({ type: 'tts_interrupted' })
-  // Sync the VoiceBus so its internal state also leaves SPEAKING.
-  // Without this the legacy machine goes idle but VoiceBus stays stuck
-  // in SPEAKING — a time bomb if any future logic trusts VoiceBus.uiPhase.
-  options.busEmit?.({ type: 'tts:interrupted', speechGeneration: 0 })
+  // Bus emission is now handled by dispatchVoiceSessionAndSync, which maps
+  // the legacy tts_interrupted event to tts:interrupted on the bus.
   return true
 }
 

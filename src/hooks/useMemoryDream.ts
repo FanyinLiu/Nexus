@@ -108,7 +108,7 @@ export function useMemoryDream({
         throw new Error('Dream LLM returned empty response')
       }
 
-      recordUsage('dream', `${system}\n${user}`, response.content)
+      recordUsage('dream', `${system}\n${user}`, response.content, { modelId: settings.model })
       const ops = parseDreamResponse(response.content)
       const now = new Date().toISOString()
 
@@ -140,7 +140,7 @@ export function useMemoryDream({
           })
 
           if (skillResponse?.content) {
-            recordUsage('skill_distillation', `${skillPrompt.system}\n${skillPrompt.user}`, skillResponse.content)
+            recordUsage('skill_distillation', `${skillPrompt.system}\n${skillPrompt.user}`, skillResponse.content, { modelId: settings.model })
             const skills = parseSkillDistillationResponse(skillResponse.content)
             if (skills.length) {
               distilledSkills = skills.map((skill) => ({ content: formatSkillAsMemory(skill) }))

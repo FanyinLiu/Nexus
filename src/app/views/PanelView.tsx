@@ -2,6 +2,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type ChangeEvent as ReactChangeEvent,
   type ClipboardEvent as ReactClipboardEvent,
   type DragEvent as ReactDragEvent,
@@ -13,6 +14,10 @@ import { ActivePlanStrip, MessageBubble } from '../../components'
 import { resolveCharacterPreset } from '../../features/character'
 import { shorten } from '../../lib'
 import type { UseAppControllerResult } from '../controllers/useAppController'
+
+// Maximum number of messages rendered at once. Older messages are hidden
+// behind a "load earlier" button to keep the DOM lean on long conversations.
+const MESSAGE_PAGE_SIZE = 100
 
 type PanelViewProps = UseAppControllerResult['panelView'] & {
   settingsDrawer: ReactNode
@@ -37,6 +42,7 @@ export function PanelView({
   const messageListRef = useRef<HTMLDivElement | null>(null)
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [showAllMessages, setShowAllMessages] = useState(false)
 
   const characterPreset = useMemo(() => resolveCharacterPreset(), [])
   const timeGreeting = getTimeGreeting()
@@ -241,6 +247,11 @@ export function PanelView({
   }
 
   useEffect(() => {
+    // Reset "show all" when the conversation is cleared.
+    if (chat.messages.length === 0) {
+      setShowAllMessages(false)
+    }
+
     const frameId = window.requestAnimationFrame(() => {
       const messageList = messageListRef.current
       if (!messageList) {
@@ -314,15 +325,28 @@ export function PanelView({
 
             <section className="companion-chat">
 
-              <div ref={messageListRef} className="message-list companion-chat__messages">
+              <div ref={messageListRef} className="message-list companion-chat__messages" aria-live="polite" aria-label="对话消息列表">
                 {chat.messages.length ? (
-                  chat.messages.map((message) => (
-                    <MessageBubble
-                      key={message.id}
-                      message={message}
-                      assistantName={settings.companionName}
-                    />
-                  ))
+                  <>
+                    {!showAllMessages && chat.messages.length > MESSAGE_PAGE_SIZE && (
+                      <div className="message-list__load-earlier">
+                        <button
+                          className="ghost-button"
+                          type="button"
+                          onClick={() => setShowAllMessages(true)}
+                        >
+                          显示更早的 {chat.messages.length - MESSAGE_PAGE_SIZE} 条消息
+                        </button>
+                      </div>
+                    )}
+                    {(showAllMessages ? chat.messages : chat.messages.slice(-MESSAGE_PAGE_SIZE)).map((message) => (
+                      <MessageBubble
+                        key={message.id}
+                        message={message}
+                        assistantName={settings.companionName}
+                      />
+                    ))}
+                  </>
                 ) : (
                   <div className="empty-chat empty-chat--nexus">
                     <div className="empty-chat__copy">
@@ -418,6 +442,7 @@ export function PanelView({
                     type="button"
                     onClick={() => void chat.sendMessage()}
                     disabled={chat.busy || (!chat.input.trim() && !chat.pendingImage)}
+                    aria-label={chat.busy ? `${settings.companionName} 回复中` : '发送消息'}
                   >
                     {chat.busy ? `${settings.companionName} 回复中...` : '发送'}
                   </button>

@@ -2,6 +2,7 @@
 //   - well-known localStorage keys (one per domain)
 //   - JSON read/write helpers with safe-fail and debounced batching
 //   - createId for module-agnostic id generation
+//   - BroadcastChannel-based cross-window state synchronization
 //
 // Domain modules under ./ build on top of these primitives.
 
@@ -51,8 +52,80 @@ export function readJson<T>(key: string, fallback: T): T {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Cross-window sync via BroadcastChannel
+// ---------------------------------------------------------------------------
+
+interface StorageSyncMessage {
+  key: string
+  value: unknown
+  timestamp: number
+}
+
+// In-memory cache: keeps the latest known value per key so incoming sync
+// messages can update it before consumers next call readJson.
+const memoryCache = new Map<string, unknown>()
+
+// Subscriber registry: key → set of callbacks
+const subscribers = new Map<string, Set<(value: unknown) => void>>()
+
+function notifySubscribers(key: string, value: unknown): void {
+  const cbs = subscribers.get(key)
+  if (cbs) {
+    for (const cb of cbs) {
+      try { cb(value) } catch { /* subscriber errors must not break the loop */ }
+    }
+  }
+}
+
+// The channel is created once per renderer process (guard for SSR / Node envs).
+let syncChannel: BroadcastChannel | null = null
+
+if (typeof BroadcastChannel !== 'undefined') {
+  syncChannel = new BroadcastChannel('nexus-storage-sync')
+  syncChannel.onmessage = (event: MessageEvent<StorageSyncMessage>) => {
+    const { key, value, timestamp: _ts } = event.data
+    if (typeof key !== 'string') return
+    // Update local cache so the next readJson call sees the fresh value.
+    memoryCache.set(key, value)
+    notifySubscribers(key, value)
+  }
+}
+
+function broadcastWrite(key: string, value: unknown): void {
+  if (!syncChannel) return
+  const msg: StorageSyncMessage = { key, value, timestamp: Date.now() }
+  try { syncChannel.postMessage(msg) } catch { /* channel may be closed */ }
+}
+
+/**
+ * Subscribe to cross-window storage changes for a specific key.
+ * The callback is invoked whenever another window writes that key via
+ * writeJson or writeJsonDebounced.
+ *
+ * Returns an unsubscribe function.
+ */
+export function onStorageChange(
+  key: string,
+  callback: (value: unknown) => void,
+): () => void {
+  if (!subscribers.has(key)) {
+    subscribers.set(key, new Set())
+  }
+  subscribers.get(key)!.add(callback)
+  return () => {
+    subscribers.get(key)?.delete(callback)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Read / write helpers
+// ---------------------------------------------------------------------------
+
 export function writeJson<T>(key: string, value: T): void {
   window.localStorage.setItem(key, JSON.stringify(value))
+  memoryCache.set(key, value)
+  broadcastWrite(key, value)
 }
 
 // Module-shared timer table so the same key debounced from anywhere collapses
@@ -67,6 +140,7 @@ function flushPendingWrites(): void {
     if (timerId) window.clearTimeout(timerId)
     try {
       window.localStorage.setItem(key, JSON.stringify(value))
+      broadcastWrite(key, value)
     } catch { /* best-effort on unload */ }
   }
   pendingValues.clear()

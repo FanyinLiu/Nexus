@@ -74,6 +74,7 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       voiceSessionRef: refs.voiceSessionRef,
       voiceStateRef: refs.voiceStateRef,
       setVoiceState: setters.setVoiceState,
+      busEmit: hookCallbacks.busEmit,
       event,
     })
   }
@@ -83,6 +84,7 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       voiceSessionRef: refs.voiceSessionRef,
       voiceStateRef: refs.voiceStateRef,
       setVoiceState: setters.setVoiceState,
+      busEmit: hookCallbacks.busEmit,
       transport,
     })
   }
@@ -128,7 +130,6 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       showPetStatus,
       stopActiveSpeechOutput,
       dispatchVoiceSessionAndSync,
-      busEmit: (event) => voiceBus.emit(event),
     })
   }
 
@@ -311,11 +312,9 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       stopActiveSpeechOutput,
       onInterrupted: () => {
         logVoiceEvent('assistant speech interrupted by user speech')
+        // dispatchVoiceSessionAndSync now auto-emits tts:interrupted to the
+        // VoiceBus, so the explicit voiceBus.emit is no longer needed.
         dispatchVoiceSessionAndSync({ type: 'tts_interrupted' })
-        voiceBus.emit({
-          type: 'tts:interrupted',
-          speechGeneration: refs.assistantSpeechGenerationRef.current,
-        })
       },
       setMood: ctx.setMood,
       showPetStatus,

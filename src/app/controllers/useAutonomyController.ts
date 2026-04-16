@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type {
   AppSettings,
   AutonomousAction,
@@ -130,6 +130,7 @@ export type UseAutonomyControllerOptions = {
   }
   reminderTasksRef: React.RefObject<ReminderTask[]>
   goalsRef: React.RefObject<Goal[]>
+  setGoals: React.Dispatch<React.SetStateAction<Goal[]>>
   /** Shared busy ref — when true, a chat LLM call is in progress. */
   busyRef?: React.RefObject<boolean>
   chat: ChatBridge
@@ -159,6 +160,7 @@ export function useAutonomyController({
   memory,
   reminderTasksRef,
   goalsRef,
+  setGoals,
   busyRef,
   chat,
   debugConsole,
@@ -384,7 +386,7 @@ export function useAutonomyController({
           })
 
           if (response?.content) {
-            recordUsage('monologue', `${prompt.system}\n${prompt.user}`, response.content)
+            recordUsage('monologue', `${prompt.system}\n${prompt.user}`, response.content, { modelId: currentSettings.model })
             const result = parseMonologueResponse(response.content)
             if (result) {
               debugConsole.appendDebugConsoleEvent({
@@ -710,7 +712,14 @@ export function useAutonomyController({
     writeJson(AUTONOMY_RHYTHM_STORAGE_KEY, rhythmRef.current)
   }, [])
 
-  return {
+  // Stable getter callbacks — these read from refs so the returned function
+  // identity never changes, yet always returns the latest state.
+  const getEmotionMood = useCallback(() => emotionToPetMood(emotionStateRef.current), [])
+  const getEmotionPrompt = useCallback(() => formatEmotionForPrompt(emotionStateRef.current), [])
+  const getRelationshipPrompt = useCallback(() => formatRelationshipForPrompt(relationshipRef.current), [])
+  const getRhythmPrompt = useCallback(() => formatRhythmSummary(rhythmRef.current), [])
+
+  return useMemo(() => ({
     focusAwareness,
     autonomyTick,
     memoryDream,
@@ -723,13 +732,33 @@ export function useAutonomyController({
     markUserResponse,
     applyEmotionSignal,
     emotionStateRef,
-    getEmotionMood: () => emotionToPetMood(emotionStateRef.current),
-    getEmotionPrompt: () => formatEmotionForPrompt(emotionStateRef.current),
+    getEmotionMood,
+    getEmotionPrompt,
     markInteraction,
     relationshipRef,
-    getRelationshipPrompt: () => formatRelationshipForPrompt(relationshipRef.current),
+    getRelationshipPrompt,
     rhythmRef,
-    getRhythmPrompt: () => formatRhythmSummary(rhythmRef.current),
+    getRhythmPrompt,
     scheduleDecision,
-  }
+    setGoals,
+  }), [
+    focusAwareness,
+    autonomyTick,
+    memoryDream,
+    contextScheduler,
+    notificationBridge,
+    telegramGateway,
+    replyToTelegram,
+    discordGateway,
+    replyToDiscord,
+    markUserResponse,
+    applyEmotionSignal,
+    getEmotionMood,
+    getEmotionPrompt,
+    markInteraction,
+    getRelationshipPrompt,
+    getRhythmPrompt,
+    scheduleDecision,
+    setGoals,
+  ])
 }

@@ -12,7 +12,7 @@ import { randomUUID } from 'node:crypto'
 const CONNECT_TIMEOUT_MS = 15_000
 const CALL_TIMEOUT_MS = 30_000
 
-const SHELL_META_PATTERN = /[&|;<>`$(){}!\r\n]/
+const SHELL_META_PATTERN = /[&|;<>`"$(){}!\r\n]/
 
 /** Split an args string respecting single/double quotes (shell-like). */
 function splitArgs(argsString) {
@@ -85,7 +85,8 @@ class McpServerConnection {
       let spawnArgs = this.args
       if (process.platform === 'win32') {
         const comspec = process.env.ComSpec || 'cmd.exe'
-        spawnArgs = ['/d', '/s', '/c', `"${this.command}"`, ...this.args]
+        const cmdLine = [`"${this.command}"`, ...this.args.map(a => `"${a}"`)].join(' ')
+        spawnArgs = ['/d', '/s', '/c', `"${cmdLine}"`]
         spawnCommand = comspec
       }
 

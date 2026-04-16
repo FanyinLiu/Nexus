@@ -43,6 +43,8 @@ import type {
 
 export type { UseChatContext } from './chat'
 
+const MAX_CHAT_MESSAGES = 500
+
 export function useChat(ctx: UseChatContext) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => sanitizeLoadedMessages(loadChatMessages()))
   const [input, setInput] = useState('')
@@ -206,7 +208,11 @@ export function useChat(ctx: UseChatContext) {
 
   const appendChatMessage = useCallback((message: ChatMessage) => {
     setMessages((current) => {
-      const updatedMessages = [...current, message]
+      const appended = [...current, message]
+      const updatedMessages =
+        appended.length > MAX_CHAT_MESSAGES
+          ? [...appended.slice(0, 2), ...appended.slice(appended.length - (MAX_CHAT_MESSAGES - 2))]
+          : appended
       messagesRef.current = updatedMessages
       return updatedMessages
     })

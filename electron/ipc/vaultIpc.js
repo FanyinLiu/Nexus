@@ -15,6 +15,7 @@ import {
   requireVaultEntries,
   expectString,
 } from './validate.js'
+import { audit } from '../services/auditLog.js'
 
 export function register() {
   ipcMain.handle('vault:is-available', (event) => {
@@ -24,31 +25,42 @@ export function register() {
 
   ipcMain.handle('vault:store', (event, slot, plaintext) => {
     requireTrustedSender(event)
-    return vaultStore(requireSlotName(slot), expectString(plaintext, 'plaintext'))
+    const name = requireSlotName(slot)
+    audit('vault', 'store', { slot: name })
+    return vaultStore(name, expectString(plaintext, 'plaintext'))
   })
 
   ipcMain.handle('vault:retrieve', (event, slot) => {
     requireTrustedSender(event)
-    return vaultRetrieve(requireSlotName(slot))
+    const name = requireSlotName(slot)
+    audit('vault', 'retrieve', { slot: name })
+    return vaultRetrieve(name)
   })
 
   ipcMain.handle('vault:delete', (event, slot) => {
     requireTrustedSender(event)
-    return vaultDelete(requireSlotName(slot))
+    const name = requireSlotName(slot)
+    audit('vault', 'delete', { slot: name })
+    return vaultDelete(name)
   })
 
   ipcMain.handle('vault:list-slots', (event) => {
     requireTrustedSender(event)
+    audit('vault', 'list-slots')
     return vaultListSlots()
   })
 
   ipcMain.handle('vault:store-many', (event, entries) => {
     requireTrustedSender(event)
-    return vaultStoreMany(requireVaultEntries(entries))
+    const validated = requireVaultEntries(entries)
+    audit('vault', 'store-many', { slots: validated.map((e) => e.slot) })
+    return vaultStoreMany(validated)
   })
 
   ipcMain.handle('vault:retrieve-many', (event, slots) => {
     requireTrustedSender(event)
-    return vaultRetrieveMany(requireSlotNames(slots))
+    const names = requireSlotNames(slots)
+    audit('vault', 'retrieve-many', { slots: names })
+    return vaultRetrieveMany(names)
   })
 }

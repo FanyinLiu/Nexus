@@ -600,6 +600,8 @@ export function useVoice(ctx: UseVoiceContext) {
         stopActiveSpeechOutput: stopActiveSpeechOutputRef.current,
         paraformerSessionRef,
         sensevoiceSessionRef,
+        tencentAsrSessionRef,
+        apiRecordingRef,
         wakewordRuntimeRef,
       })
     }

@@ -63,7 +63,7 @@ export function PetDialogBubble({ bubble, assistantName = '星绘' }: PetDialogB
   const timestampLabel = formatBubbleTimestamp(bubble.createdAt)
 
   return (
-    <aside className={`pet-dialog-bubble ${bubble.streaming ? 'is-streaming' : ''}`}>
+    <aside className={`pet-dialog-bubble ${bubble.streaming ? 'is-streaming' : ''}`} aria-live="polite">
       <div className="pet-dialog-bubble__label">
         <span>{assistantName}</span>
         <span className="pet-dialog-bubble__label-meta">

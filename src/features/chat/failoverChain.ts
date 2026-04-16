@@ -41,6 +41,8 @@ export type AssistantReplyRuntimeResult = {
   usedFallback: boolean
   settingsPatch?: Partial<AppSettings>
   authProfileId?: string
+  /** The first successfully dispatched request payload — used for cost accounting. */
+  requestPayload?: ChatCompletionRequest
 }
 
 function buildChatFailoverCandidates(settings: AppSettings): FailoverCandidate<ChatCandidatePayload>[] {
@@ -135,12 +137,20 @@ export async function executeChatRequestWithFailover(
   const candidates = buildChatFailoverCandidates(settings)
   const { authStore } = getCoreRuntime()
 
+  // Capture the first successfully built payload so callers can use it for
+  // cost accounting (system prompt length, tool schemas, message images, etc.)
+  // without rebuilding the prompt a second time.
+  let capturedPayload: ChatCompletionRequest | undefined
+
   const result = await executeWithFailover<ChatCandidatePayload, ChatCompletionResponse>({
     domain: 'chat',
     candidates,
     failoverEnabled: settings.chatFailoverEnabled || candidates.length > 1,
-    execute: async (candidate) =>
-      execute(await buildChatRequestPayload(candidate.payload.settings, history, memoryContext, options)),
+    execute: async (candidate) => {
+      const payload = await buildChatRequestPayload(candidate.payload.settings, history, memoryContext, options)
+      capturedPayload = payload
+      return execute(payload)
+    },
     onEvent: (event) => {
       if (event.type === 'success') {
         const hit = candidates.find((c) => c.id === event.candidateId)
@@ -167,5 +177,6 @@ export async function executeChatRequestWithFailover(
     usedFallback: result.usedFallback,
     settingsPatch: matched?.payload.settingsPatch,
     authProfileId: matched?.payload.authProfileId,
+    requestPayload: capturedPayload,
   } satisfies AssistantReplyRuntimeResult
 }

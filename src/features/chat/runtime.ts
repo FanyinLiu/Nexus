@@ -16,6 +16,7 @@
 
 import type {
   AppSettings,
+  ChatCompletionRequest,
   ChatCompletionResponse,
   ChatMessage,
   MemoryRecallContext,
@@ -32,7 +33,12 @@ import {
   selectToolDeliveryMode,
   type AssistantReplyRequestOptions,
 } from './systemPromptBuilder'
-import { estimateChatMessagesTokens, estimateTokensFromText } from './tokenEstimate'
+import {
+  estimateChatMessagesTokens,
+  estimateTokensFromMessages,
+  estimateTokensFromText,
+  estimateToolSchemasTokens,
+} from './tokenEstimate'
 import { runToolCallLoop } from './toolCallLoop'
 
 export type { AssistantReplyRuntimeResult } from './failoverChain'
@@ -85,11 +91,24 @@ function recordTurnCost(params: {
   tier: ModelTier
   history: ChatMessage[]
   response: ChatCompletionResponse
+  requestPayload?: ChatCompletionRequest
 }) {
-  const { providerId, modelId, tier, history, response } = params
-  const inputTokens = estimateChatMessagesTokens(history)
+  const { providerId, modelId, tier, history, response, requestPayload } = params
+
+  let inputTokens: number
+  if (requestPayload?.messages) {
+    // Estimate from the fully assembled request: system prompt + all messages
+    // (with CJK-aware tokenisation) + tool schema JSON.
+    inputTokens = estimateTokensFromMessages(requestPayload.messages)
+    inputTokens += estimateToolSchemasTokens(requestPayload.tools)
+  } else {
+    // Fallback: use the raw chat history (no system prompt / tool schemas).
+    inputTokens = estimateChatMessagesTokens(history)
+  }
+
   const outputTokens = estimateTokensFromText(response.content ?? '')
   if (inputTokens === 0 && outputTokens === 0) return
+
   recordCostEntry({
     id: '',
     providerId,
@@ -97,6 +116,8 @@ function recordTurnCost(params: {
     tier,
     inputTokens,
     outputTokens,
+    // costUsd is computed by CostTracker.record() via UsagePricingTable —
+    // the value passed here is ignored by recordCostEntry.
     costUsd: 0,
     timestamp: Date.now(),
   })
@@ -123,23 +144,31 @@ export async function requestAssistantReply(
     (payload) => window.desktopPet!.completeChat(payload),
   )
 
+  // Use the winning candidate's settings for subsequent tool-call rounds.
+  // After failover (e.g. primary → Ollama), routedSettings still points to
+  // the primary provider, which would undo the failover for tool rounds.
+  const effectiveSettings = initial.settingsPatch
+    ? { ...routedSettings, ...initial.settingsPatch }
+    : routedSettings
+
   const finalResponse = await runToolCallLoop(
     initial.response,
-    () => buildChatRequestPayload(routedSettings, history, memoryContext, options),
+    () => buildChatRequestPayload(effectiveSettings, history, memoryContext, options),
     (payload) => window.desktopPet!.completeChat(payload),
     {
-      promptModeEnabled: selectToolDeliveryMode(routedSettings) === 'prompt',
-      settings: routedSettings,
+      promptModeEnabled: selectToolDeliveryMode(effectiveSettings) === 'prompt',
+      settings: effectiveSettings,
       onBuiltInToolResult: options.onBuiltInToolResult,
     },
   )
 
   recordTurnCost({
     providerId: extractProviderId(initial.providerId),
-    modelId: routedSettings.model,
+    modelId: effectiveSettings.model,
     tier,
     history,
     response: finalResponse,
+    requestPayload: initial.requestPayload,
   })
 
   return { ...initial, response: finalResponse } satisfies AssistantReplyRuntimeResult
@@ -178,26 +207,31 @@ export function requestAssistantReplyStreaming(
       },
     )
 
+    const effectiveSettings = initial.settingsPatch
+      ? { ...routedSettings, ...initial.settingsPatch }
+      : routedSettings
+
     const finalResponse = await runToolCallLoop(
       initial.response,
-      () => buildChatRequestPayload(routedSettings, history, memoryContext, options),
+      () => buildChatRequestPayload(effectiveSettings, history, memoryContext, options),
       (payload) => {
         activeRequest = window.desktopPet!.completeChatStream(payload, onDelta)
         return activeRequest
       },
       {
-        promptModeEnabled: selectToolDeliveryMode(routedSettings) === 'prompt',
-        settings: routedSettings,
+        promptModeEnabled: selectToolDeliveryMode(effectiveSettings) === 'prompt',
+        settings: effectiveSettings,
         onBuiltInToolResult: options.onBuiltInToolResult,
       },
     )
 
     recordTurnCost({
       providerId: extractProviderId(initial.providerId),
-      modelId: routedSettings.model,
+      modelId: effectiveSettings.model,
       tier,
       history,
       response: finalResponse,
+      requestPayload: initial.requestPayload,
     })
 
     return { ...initial, response: finalResponse } satisfies AssistantReplyRuntimeResult

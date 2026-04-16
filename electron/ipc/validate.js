@@ -87,6 +87,47 @@ export function requireSlotNames(value) {
 }
 
 /**
+ * Assert a value is a finite number, with optional min/max bounds.
+ * @param {unknown} value
+ * @param {string} label
+ * @param {{ min?: number, max?: number }} [opts]
+ * @returns {number}
+ */
+export function assertNumber(value, label = 'value', { min, max } = {}) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`${label} must be a finite number`)
+  }
+  if (min !== undefined && value < min) throw new Error(`${label} must be >= ${min}`)
+  if (max !== undefined && value > max) throw new Error(`${label} must be <= ${max}`)
+  return value
+}
+
+/**
+ * Assert a value is an array.
+ * @param {unknown} value
+ * @param {string} label
+ * @returns {unknown[]}
+ */
+export function assertArray(value, label = 'value') {
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} must be an array`)
+  }
+  return value
+}
+
+/**
+ * Assert a value is a string (may be empty). Null/undefined → ''.
+ * @param {unknown} value
+ * @param {string} label
+ * @returns {string}
+ */
+export function assertOptionalString(value, label = 'value') {
+  if (value === undefined || value === null || value === '') return ''
+  if (typeof value !== 'string') throw new Error(`${label} must be a string`)
+  return value
+}
+
+/**
  * Validate vault store-many entries as a slot -> plaintext map.
  * @param {unknown} value
  * @returns {Record<string, string>}

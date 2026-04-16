@@ -76,23 +76,20 @@ export function PetView({
   const petSignalArmed = settings.continuousVoiceModeEnabled || voice.continuousVoiceActive
 
   // ── Interrupt detection (was in TalkModeOverlay) ──
-  // When voice moves speaking → listening (detected during render via the
-  // prev-state pattern), we set `interrupted` true and bump `interruptEpoch`.
-  // The effect re-runs on each new epoch and arms a fresh 900ms timer that
-  // clears the flag from inside an async callback. setState here happens during
-  // render or inside setTimeout — never synchronously inside the effect body —
-  // so both the React 19 set-state-in-effect and purity rules stay satisfied.
+  // When voice moves speaking → listening we set `interrupted` true and bump
+  // `interruptEpoch`. A second effect arms a 900 ms timer that clears the flag.
   const [interrupted, setInterrupted] = useState(false)
   const [interruptEpoch, setInterruptEpoch] = useState(0)
   const [prevVoiceState, setPrevVoiceState] = useState(voice.voiceState)
 
-  if (voice.voiceState !== prevVoiceState) {
+  useEffect(() => {
+    if (voice.voiceState === prevVoiceState) return
     setPrevVoiceState(voice.voiceState)
     if (prevVoiceState === 'speaking' && voice.voiceState === 'listening') {
       setInterrupted(true)
       setInterruptEpoch((epoch) => epoch + 1)
     }
-  }
+  }, [voice.voiceState]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (interruptEpoch === 0) return
@@ -382,6 +379,8 @@ export function PetView({
                   onClick={voice.toggleVoiceConversation}
                   disabled={voiceActionDisabled}
                   title={petSignalLabel}
+                  aria-label={voice.voiceState !== 'idle' ? 'Stop voice input' : 'Start voice input'}
+                  aria-pressed={voice.voiceState !== 'idle'}
                 >
                   {micDisplayState === 'idle' ? (
                     <PetControlIcon name="mic" className="pet-window__anchor-icon" />

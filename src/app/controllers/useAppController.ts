@@ -13,7 +13,6 @@ import type {
   ChatMessage,
   Goal,
   PanelWindowState,
-  ReminderTask,
   VoiceState,
   WindowView,
 } from '../../types'
@@ -23,19 +22,11 @@ import {
   useGameIntegration,
   useMemory,
   usePetBehavior,
-  useReminderScheduler,
   useVoice,
 } from '../../hooks'
-import { shouldRunReminderScheduler } from '../../features/reminders'
-import {
-  buildBuiltInToolSpeechSummary,
-  executeBuiltInTool,
-  resolveBuiltInToolPolicy,
-  toChatToolResult,
-} from '../../features/tools'
+import { useReminderController } from './useReminderController'
 import { getSettingsSnapshot, initializeSettingsWithVault } from '../store/settingsStore'
 import {
-  broadcastToChannels,
   getCoreRuntime,
   setDiscordKnownChannelIds,
   setTelegramKnownChatIds,
@@ -126,7 +117,7 @@ export function useAppController() {
         return
       }
       // On Windows, require a drive letter prefix (e.g. C:\)
-      const isWindows = typeof navigator !== 'undefined' && /win/i.test(navigator.platform)
+      const isWindows = typeof navigator !== 'undefined' && /Windows/i.test(navigator.userAgent)
       if (isWindows && !/^[A-Za-z]:[\\/]/.test(root)) {
         console.error('[workspaceRoot] Rejected: Windows path must start with a drive letter:', root)
         setErrorRef.current?.('On Windows, workspace root must start with a drive letter (e.g. C:\\).')
@@ -136,7 +127,7 @@ export function useAppController() {
     void window.desktopPet?.workspaceSetRoot?.({ root })
   }, [settings.agentWorkspaceRoot])
 
-  const [goals] = useState<Goal[]>(() => readJson<Goal[]>(AUTONOMY_GOALS_STORAGE_KEY, []))
+  const [goals, setGoals] = useState<Goal[]>(() => readJson<Goal[]>(AUTONOMY_GOALS_STORAGE_KEY, []))
   const goalsRef = useRef(goals)
   useEffect(() => {
     goalsRef.current = goals
@@ -335,10 +326,6 @@ export function useAppController() {
   })
 
   useEffect(() => {
-    sendMessageRef.current = chat.sendMessage
-  }, [chat.sendMessage])
-
-  useEffect(() => {
     setErrorRef.current = chat.setError
     setInputFnRef.current = chat.setInput
     appendSystemMessageRef.current = chat.appendSystemMessage
@@ -414,156 +401,14 @@ export function useAppController() {
     )
   }, [petRuntimeContinuousVoiceActive, view, voice.continuousVoiceActive])
 
-  const handleReminderTaskTrigger = useCallback(async (task: ReminderTask) => {
-    const displayText = task.prompt.trim()
-    const action = task.action
-    const currentSettings = settingsRef.current
-    const defaultSpeechText = task.speechText?.trim() || `${task.title}提醒，${task.prompt.trim()}`
-
-    const actionLabel = action.kind === 'notice' ? 'notice' : action.kind === 'weather' ? 'weather' : action.kind === 'chat_action' ? 'chat_action' : 'search'
-    debugConsole.appendDebugConsoleEvent({
-      source: 'tool',
-      title: 'Starting automated task',
-      detail: `${task.title} / ${actionLabel}`,
-      relatedTaskId: task.id,
-    })
-
-    try {
-      if (action.kind === 'notice') {
-        await chat.pushCompanionNotice({
-          chatContent: `【自动任务】${task.title}\n${displayText}`,
-          bubbleContent: displayText,
-          speechContent: defaultSpeechText,
-          autoHideMs: 16_000,
-        })
-        const broadcastResults = await broadcastToChannels(
-          `${task.title}\n${displayText}`,
-        )
-        const deliveredCount = broadcastResults.filter((r) => r.ok).length
-        debugConsole.appendDebugConsoleEvent({
-          source: 'tool',
-          title: 'Automated reminder dispatched',
-          detail: deliveredCount > 0
-            ? `${task.title} / 本地 + 跨通道 ${deliveredCount}`
-            : `${task.title} / next run visible in task snapshot`,
-          tone: 'success',
-          relatedTaskId: task.id,
-        })
-        return
-      }
-
-      if (action.kind === 'weather') {
-        const policy = resolveBuiltInToolPolicy('weather', currentSettings)
-        if (!policy.enabled) {
-          chat.appendSystemMessage(`本地自动任务「${task.title}」没有执行：天气工具当前已关闭。`, 'error')
-          debugConsole.appendDebugConsoleEvent({
-            source: 'tool',
-            title: 'Automated task skipped',
-            detail: `${task.title} / weather tool currently disabled`,
-            tone: 'error',
-            relatedTaskId: task.id,
-          })
-          return
-        }
-
-        const result = await executeBuiltInTool(
-          {
-            id: 'weather',
-            location: action.location,
-          },
-          policy,
-          currentSettings,
-        )
-
-        await chat.pushCompanionNotice({
-          chatContent: `【自动任务】${task.title}\n${result.assistantSummary}`,
-          bubbleContent: result.assistantSummary,
-          speechContent: task.speechText?.trim() || buildBuiltInToolSpeechSummary(result),
-          autoHideMs: 18_000,
-          toolResult: toChatToolResult(result),
-        })
-        debugConsole.appendDebugConsoleEvent({
-          source: 'tool',
-          title: 'Automated weather task completed',
-          detail: `${task.title} / ${result.kind === 'weather' ? result.result.resolvedName : action.location || 'default location'}`,
-          tone: 'success',
-          relatedTaskId: task.id,
-        })
-        return
-      }
-
-      if (action.kind === 'chat_action') {
-        await chat.sendMessage(
-          `【定时智能动作】${task.title}\n请执行以下任务：${action.instruction}`,
-          { source: 'text' },
-        )
-        debugConsole.appendDebugConsoleEvent({
-          source: 'tool',
-          title: 'Chat action triggered',
-          detail: `${task.title} / ${action.instruction}`,
-          tone: 'success',
-          relatedTaskId: task.id,
-        })
-        return
-      }
-
-      const policy = resolveBuiltInToolPolicy('web_search', currentSettings)
-      if (!policy.enabled) {
-        chat.appendSystemMessage(`本地自动任务「${task.title}」没有执行：网页搜索工具当前已关闭。`, 'error')
-        debugConsole.appendDebugConsoleEvent({
-          source: 'tool',
-          title: 'Automated task skipped',
-          detail: `${task.title} / search tool currently disabled`,
-          tone: 'error',
-          relatedTaskId: task.id,
-        })
-        return
-      }
-
-      const result = await executeBuiltInTool(
-        {
-          id: 'web_search',
-          query: action.query,
-          limit: action.limit ?? 5,
-        },
-        policy,
-        currentSettings,
-      )
-
-      await chat.pushCompanionNotice({
-        chatContent: `【自动任务】${task.title}\n${result.assistantSummary}`,
-        bubbleContent: result.assistantSummary,
-        speechContent: task.speechText?.trim() || buildBuiltInToolSpeechSummary(result),
-        autoHideMs: 18_000,
-        toolResult: toChatToolResult(result),
-      })
-      debugConsole.appendDebugConsoleEvent({
-        source: 'tool',
-        title: 'Automated search task completed',
-        detail: `${task.title} / ${result.kind === 'web_search' ? result.result.query : action.query}`,
-        tone: 'success',
-        relatedTaskId: task.id,
-      })
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '自动任务执行失败。'
-      chat.appendSystemMessage(`本地自动任务「${task.title}」执行失败：${errorMessage}`, 'error')
-      pet.updatePetStatus(`自动任务失败：${task.title}`, 3200)
-      debugConsole.appendDebugConsoleEvent({
-        source: 'tool',
-        title: 'Automated task execution failed',
-        detail: `${task.title} / ${errorMessage}`,
-        tone: 'error',
-        relatedTaskId: task.id,
-      })
-    }
-  }, [chat, debugConsole, pet])
-
-  useReminderScheduler({
-    enabled: shouldRunReminderScheduler(view, runtimeSnapshot),
-    tasks: reminderTaskStore.reminderTasks,
-    setTasks: reminderTaskStore.setReminderTasks,
-    onTrigger: handleReminderTaskTrigger,
-    onEvent: debugConsole.appendDebugConsoleEvent,
+  useReminderController({
+    view,
+    settingsRef,
+    runtimeSnapshot,
+    chat,
+    pet,
+    debugConsole,
+    reminderTaskStore,
   })
 
   // ── Autonomy subsystem ──────────────────────────────────────────────────────
@@ -575,6 +420,7 @@ export function useAppController() {
     memory,
     reminderTasksRef: reminderTaskStore.reminderTasksRef,
     goalsRef,
+    setGoals,
     busyRef,
     chat,
     debugConsole,
@@ -583,13 +429,13 @@ export function useAppController() {
   // Install autonomy's emotion/relationship/rhythm prompt getters into the refs
   // created at the top. This lets useChat (when assembling chat options) read
   // the latest emotion/relationship/rhythm state text into the system prompt.
-  // No dependency array: autonomy returns new getter references every render,
-  // so we sync on every render.
+  // The autonomy getters are now stable (useCallback with [] deps), so this
+  // effect only runs once after mount.
   useEffect(() => {
     emotionPromptGetterRef.current = autonomy.getEmotionPrompt
     relationshipPromptGetterRef.current = autonomy.getRelationshipPrompt
     rhythmPromptGetterRef.current = autonomy.getRhythmPrompt
-  })
+  }, [autonomy.getEmotionPrompt, autonomy.getRelationshipPrompt, autonomy.getRhythmPrompt])
 
   // Wake autonomy when user sends a chat message
   const originalSendMessage = chat.sendMessage
@@ -615,6 +461,12 @@ export function useAppController() {
     }
     return result
   }, [originalSendMessage, autonomy])
+
+  // Point sendMessageRef to the autonomy-aware wrapper so that voice
+  // and other ref-based paths also trigger emotion/interaction tracking.
+  useEffect(() => {
+    sendMessageRef.current = autonomyAwareSendMessage
+  }, [autonomyAwareSendMessage])
 
   // Patch chat.sendMessage with autonomy-aware wrapper
   const chatWithAutonomy = useMemo(() => ({
@@ -653,53 +505,99 @@ export function useAppController() {
     onRemoveNotificationChannel: autonomy.notificationBridge.removeChannel,
   })
 
+  const petView = useMemo(() => ({
+    settings,
+    petModel,
+    pet,
+    voice,
+    chat: chatWithAutonomy,
+    isPinned,
+    clickThrough,
+    runtimeSnapshot,
+    mediaSession: mediaSessionController.mediaSession,
+    musicActionBusy: mediaSessionController.musicActionBusy,
+    dismissedMusicSessionKey: mediaSessionController.dismissedMusicSessionKey,
+    remotePanelSettingsOpen,
+    openSettingsPanel,
+    openChatPanelForVoice,
+    openPetMenu,
+    togglePinned,
+    toggleClickThrough,
+    toggleContinuousVoiceMode,
+    handleMediaSessionControl: mediaSessionController.handleMediaSessionControl,
+    dismissCurrentMediaSession: mediaSessionController.dismissCurrentMediaSession,
+    startMediaPolling: mediaSessionController.startMediaPolling,
+    autonomyState: autonomy.autonomyTick.autonomyState,
+    focusState: autonomy.focusAwareness.focusState,
+    notificationUnreadCount: autonomy.notificationBridge.unreadCount,
+  }), [
+    settings,
+    petModel,
+    pet,
+    voice,
+    chatWithAutonomy,
+    isPinned,
+    clickThrough,
+    runtimeSnapshot,
+    mediaSessionController.mediaSession,
+    mediaSessionController.musicActionBusy,
+    mediaSessionController.dismissedMusicSessionKey,
+    remotePanelSettingsOpen,
+    openSettingsPanel,
+    openChatPanelForVoice,
+    openPetMenu,
+    togglePinned,
+    toggleClickThrough,
+    toggleContinuousVoiceMode,
+    mediaSessionController.handleMediaSessionControl,
+    mediaSessionController.dismissCurrentMediaSession,
+    mediaSessionController.startMediaPolling,
+    autonomy.autonomyTick.autonomyState,
+    autonomy.focusAwareness.focusState,
+    autonomy.notificationBridge.unreadCount,
+  ])
+
+  const panelView = useMemo(() => ({
+    settings,
+    petModel,
+    memory,
+    pet,
+    voice,
+    chat: chatWithAutonomy,
+    runtimeSnapshot,
+    petRuntimeContinuousVoiceActive,
+    panelCollapsed,
+    openSettingsPanel,
+    togglePanelCollapse,
+    closePanel,
+    autonomyState: autonomy.autonomyTick.autonomyState,
+    focusState: autonomy.focusAwareness.focusState,
+    notificationBridge: autonomy.notificationBridge,
+    contextScheduler: autonomy.contextScheduler,
+  }), [
+    settings,
+    petModel,
+    memory,
+    pet,
+    voice,
+    chatWithAutonomy,
+    runtimeSnapshot,
+    petRuntimeContinuousVoiceActive,
+    panelCollapsed,
+    openSettingsPanel,
+    togglePanelCollapse,
+    closePanel,
+    autonomy.autonomyTick.autonomyState,
+    autonomy.focusAwareness.focusState,
+    autonomy.notificationBridge,
+    autonomy.contextScheduler,
+  ])
+
   return {
     view,
     overlays,
-    petView: {
-      settings,
-      petModel,
-      pet,
-      voice,
-      chat: chatWithAutonomy,
-      isPinned,
-      clickThrough,
-      runtimeSnapshot,
-      mediaSession: mediaSessionController.mediaSession,
-      musicActionBusy: mediaSessionController.musicActionBusy,
-      dismissedMusicSessionKey: mediaSessionController.dismissedMusicSessionKey,
-      remotePanelSettingsOpen,
-      openSettingsPanel,
-      openChatPanelForVoice,
-      openPetMenu,
-      togglePinned,
-      toggleClickThrough,
-      toggleContinuousVoiceMode,
-      handleMediaSessionControl: mediaSessionController.handleMediaSessionControl,
-      dismissCurrentMediaSession: mediaSessionController.dismissCurrentMediaSession,
-      startMediaPolling: mediaSessionController.startMediaPolling,
-      autonomyState: autonomy.autonomyTick.autonomyState,
-      focusState: autonomy.focusAwareness.focusState,
-      notificationUnreadCount: autonomy.notificationBridge.unreadCount,
-    },
-    panelView: {
-      settings,
-      petModel,
-      memory,
-      pet,
-      voice,
-      chat: chatWithAutonomy,
-      runtimeSnapshot,
-      petRuntimeContinuousVoiceActive,
-      panelCollapsed,
-      openSettingsPanel,
-      togglePanelCollapse,
-      closePanel,
-      autonomyState: autonomy.autonomyTick.autonomyState,
-      focusState: autonomy.focusAwareness.focusState,
-      notificationBridge: autonomy.notificationBridge,
-      contextScheduler: autonomy.contextScheduler,
-    },
+    petView,
+    panelView,
   }
 }
 

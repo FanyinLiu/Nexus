@@ -3,6 +3,7 @@ import * as pluginHost from '../services/pluginHost.js'
 import * as mcpHost from '../services/mcpHost.js'
 import * as messageBus from '../services/pluginMessageBus.js'
 import { requireTrustedSender } from './validate.js'
+import { audit } from '../services/auditLog.js'
 
 export function register() {
   ipcMain.handle('plugin:scan', async (event) => {
@@ -17,28 +18,38 @@ export function register() {
 
   ipcMain.handle('plugin:start', async (event, payload) => {
     requireTrustedSender(event)
-    return pluginHost.startPlugin(String(payload?.id ?? ''))
+    const id = String(payload?.id ?? '')
+    audit('plugin', 'start', { id })
+    return pluginHost.startPlugin(id)
   })
 
   ipcMain.handle('plugin:stop', async (event, payload) => {
     requireTrustedSender(event)
-    await pluginHost.stopPlugin(String(payload?.id ?? ''))
+    const id = String(payload?.id ?? '')
+    audit('plugin', 'stop', { id })
+    await pluginHost.stopPlugin(id)
     return { ok: true }
   })
 
   ipcMain.handle('plugin:restart', async (event, payload) => {
     requireTrustedSender(event)
-    return pluginHost.restartPlugin(String(payload?.id ?? ''))
+    const id = String(payload?.id ?? '')
+    audit('plugin', 'restart', { id })
+    return pluginHost.restartPlugin(id)
   })
 
   ipcMain.handle('plugin:enable', (event, payload) => {
     requireTrustedSender(event)
-    return pluginHost.enablePlugin(String(payload?.id ?? ''))
+    const id = String(payload?.id ?? '')
+    audit('plugin', 'enable', { id })
+    return pluginHost.enablePlugin(id)
   })
 
   ipcMain.handle('plugin:disable', (event, payload) => {
     requireTrustedSender(event)
-    return pluginHost.disablePlugin(String(payload?.id ?? ''))
+    const id = String(payload?.id ?? '')
+    audit('plugin', 'disable', { id })
+    return pluginHost.disablePlugin(id)
   })
 
   ipcMain.handle('plugin:status', (event, payload) => {
@@ -54,6 +65,7 @@ export function register() {
   ipcMain.handle('plugin:approve', async (event, payload) => {
     requireTrustedSender(event)
     const pluginId = String(payload?.id ?? '')
+    audit('plugin', 'approve', { id: pluginId })
     await pluginHost.approvePlugin(pluginId)
     return pluginHost.getPluginStatus(pluginId)
   })
@@ -61,6 +73,7 @@ export function register() {
   ipcMain.handle('plugin:revoke', async (event, payload) => {
     requireTrustedSender(event)
     const pluginId = String(payload?.id ?? '')
+    audit('plugin', 'revoke', { id: pluginId })
     await pluginHost.revokePluginApproval(pluginId)
     return pluginHost.getPluginStatus(pluginId)
   })
