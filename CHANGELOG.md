@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.2] - 2026-04-16
+
+### Changed
+- Migrate all 8 remaining settings tabs from zh/en-only inline bilingual to full 5-language i18n (zh-CN / en / zh-TW / ja / ko). Total keys: 304 → 516.
+- Trim all settings hint text to 1 concise sentence (was multi-paragraph in many places).
+
 ## [0.2.1] - 2026-04-16
 
 ### Fixed
