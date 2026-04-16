@@ -1,4 +1,5 @@
 import type { AppSettings, PetMood } from '../../types'
+import { voiceDebug } from '../../features/voice/voiceDebugLog'
 import { voiceResumeStore } from '../../features/voice/voiceResumeStore'
 import {
   createStreamingSpeechOutputController,
@@ -53,7 +54,7 @@ function createSpeechReplyCallbacks(
 ) {
   return {
     onStart: () => {
-      console.log('[SpeechReply] onStart — tts:started')
+      voiceDebug('SpeechReply', 'onStart — tts:started')
       // Track full text so an interrupt can compute the unplayed remainder.
       // Streaming case passes the placeholder '(streaming)' — that's fine,
       // the remainder simply won't be useful for streaming, but interrupts
@@ -74,14 +75,14 @@ function createSpeechReplyCallbacks(
       )
     },
     onEnd: () => {
-      console.log('[SpeechReply] onEnd fired — shouldResumeContinuousVoice:', options.shouldResumeContinuousVoice)
+      voiceDebug('SpeechReply', 'onEnd fired — shouldResumeContinuousVoice:', options.shouldResumeContinuousVoice)
       options.stopSpeechInterruptMonitor()
 
       if (shouldIgnoreInterruptedSpeech(
         options.speechGeneration,
         options.isSpeechInterrupted,
       )) {
-        console.log('[SpeechReply] onEnd — ignored (speech interrupted)')
+        voiceDebug('SpeechReply', 'onEnd — ignored (speech interrupted)')
         voiceResumeStore.markInterrupted()
         return
       }
@@ -95,7 +96,7 @@ function createSpeechReplyCallbacks(
       // Bus effects handle: setMood('idle'), restart_voice, voiceState → 'idle'
     },
     onError: (message: string) => {
-      console.log('[SpeechReply] onError:', message, 'shouldResumeContinuousVoice:', options.shouldResumeContinuousVoice)
+      voiceDebug('SpeechReply', 'onError:', message, 'shouldResumeContinuousVoice:', options.shouldResumeContinuousVoice)
       options.stopSpeechInterruptMonitor()
 
       if (shouldIgnoreInterruptedSpeech(

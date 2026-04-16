@@ -14,6 +14,7 @@ import {
 import type { TencentAsrStreamSession } from '../features/hearing/tencentAsr'
 import {
   createVoiceSessionState,
+  voiceDebug,
   type AudioPlaybackQueue,
   type SpeechLevelController,
   type StreamAudioPlayer,
@@ -180,7 +181,7 @@ export function useVoice(ctx: UseVoiceContext) {
     window.setTimeout(() => {
       const currentPhase = voiceBus.phase
       if (currentPhase !== 'idle') {
-        console.log('[VoiceBus] restart_voice skipped — phase:', currentPhase)
+        voiceDebug('VoiceBus', 'restart_voice skipped — phase:', currentPhase)
         return
       }
 
@@ -197,13 +198,13 @@ export function useVoice(ctx: UseVoiceContext) {
           showPetStatus('语音重启超时，请手动点击麦克风。', 4_000, 3_000)
           return
         }
-        console.log('[VoiceBus] restart blocked (retry', retryCount + 1, '), blocker:', guard.blocker)
+        voiceDebug('VoiceBus', 'restart blocked (retry', retryCount + 1, '), blocker:', guard.blocker)
         scheduleBusRestart(getRestartDelay('retry'), retryCount + 1)
         return
       }
 
       try {
-        console.log('[VoiceBus] restart_voice — starting voice conversation')
+        voiceDebug('VoiceBus', 'restart_voice — starting voice conversation')
         lifecycleHolder.current?.startVoiceConversation({ restart: true, passive: true })
       } catch (err) {
         console.warn('[VoiceBus] restart failed:', err)

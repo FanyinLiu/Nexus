@@ -1,5 +1,6 @@
 import type { VoiceBusEvent } from '../../features/voice/busEvents'
 import type { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer'
+import { voiceDebug } from '../../features/voice/voiceDebugLog'
 import { prepareTextForTts } from '../../features/voice/text'
 import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes'
 import { createId } from '../../lib'
@@ -133,7 +134,7 @@ export function createStreamingSpeechOutputController(
       return
     }
 
-    console.log('[StreamingSpeechOutput] settleSuccess — calling onEnd')
+    voiceDebug('StreamingSpeechOutput', 'settleSuccess — calling onEnd')
     settled = true
     cleanup()
     resolveAllPlayed?.()

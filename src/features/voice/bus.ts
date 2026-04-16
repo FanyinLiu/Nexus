@@ -1,4 +1,5 @@
 import type { VoiceBusEvent, VoiceBusEventType } from './busEvents'
+import { voiceDebug } from './voiceDebugLog'
 import {
   createInitialVoiceSessionState,
   reduceVoiceSession,
@@ -112,9 +113,9 @@ export class VoiceBus {
       this._history.splice(0, this._history.length - this.maxHistoryLength)
     }
 
-    // Log phase transitions
+    // Log phase transitions (dev only; compiled out in production).
     if (prevPhase !== nextPhase) {
-      console.log(`[VoiceBus] ${prevPhase} → ${nextPhase}  (${event.type})`)
+      voiceDebug('VoiceBus', `${prevPhase} → ${nextPhase}  (${event.type})`)
     }
 
     // Notify type-specific listeners

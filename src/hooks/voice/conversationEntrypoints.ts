@@ -4,6 +4,7 @@ import {
   isSenseVoiceSpeechInputProvider,
   isTencentAsrSpeechInputProvider,
 } from '../../lib/audioProviders'
+import { voiceDebug } from '../../features/voice/voiceDebugLog'
 import { checkParaformerAvailability } from '../../features/hearing/localParaformer.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import type {
@@ -187,7 +188,7 @@ export function startVoiceConversationEntrypoint(
     || params.tencentAsrSessionRef.current
     || params.voiceStateRef.current === 'processing'
   ) {
-    console.log('[VoiceEntrypoint] startVoiceConversation blocked — busy:', params.busyRef.current,
+    voiceDebug('VoiceEntrypoint', 'startVoiceConversation blocked — busy:', params.busyRef.current,
       'vad:', Boolean(params.vadSessionRef.current),
       'paraformer:', Boolean(params.paraformerSessionRef.current),
       'sensevoice:', Boolean(params.sensevoiceSessionRef.current),

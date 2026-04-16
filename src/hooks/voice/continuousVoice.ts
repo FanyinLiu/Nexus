@@ -9,6 +9,7 @@ import {
   shouldKeepContinuousSession,
 } from '../../features/voice/autoRestartPolicy'
 import { calculateAudioRms, requestVoiceInputStream } from '../../features/voice/runtimeSupport'
+import { voiceDebug } from '../../features/voice/voiceDebugLog'
 import type { BrowserSpeechRecognition } from '../../lib/voice'
 import type { AppSettings, PetMood, VoiceState } from '../../types'
 import {
@@ -159,7 +160,7 @@ export function shouldAutoRestartVoice(
     settings: options.settingsRef.current,
   })
   if (!decision.allowed) {
-    console.log('[ContinuousVoice] shouldAutoRestartVoice=false — reason:', decision.reason)
+    voiceDebug('ContinuousVoice', 'shouldAutoRestartVoice=false — reason:', decision.reason)
   }
   return decision.allowed
 }
@@ -228,17 +229,17 @@ export function scheduleVoiceRestart(options: ScheduleVoiceRestartOptions) {
   const autoRestart = force || options.shouldAutoRestartVoice()
   const hasPendingTimer = Boolean(options.restartVoiceTimerRef.current)
   if (!autoRestart || hasPendingTimer) {
-    console.log('[ContinuousVoice] scheduleVoiceRestart BLOCKED — autoRestart:', autoRestart, 'force:', force, 'hasPendingTimer:', hasPendingTimer)
+    voiceDebug('ContinuousVoice', 'scheduleVoiceRestart BLOCKED — autoRestart:', autoRestart, 'force:', force, 'hasPendingTimer:', hasPendingTimer)
     return
   }
 
-  console.log('[ContinuousVoice] scheduleVoiceRestart — delay:', delay, 'force:', force, 'retry:', retryCount)
+  voiceDebug('ContinuousVoice', 'scheduleVoiceRestart — delay:', delay, 'force:', force, 'retry:', retryCount)
 
   options.restartVoiceTimerRef.current = window.setTimeout(() => {
     options.restartVoiceTimerRef.current = null
 
     if (!force && !options.shouldAutoRestartVoice()) {
-      console.log('[ContinuousVoice] timer — shouldAutoRestartVoice()=false, aborting')
+      voiceDebug('ContinuousVoice', 'timer — shouldAutoRestartVoice()=false, aborting')
       return
     }
 
@@ -255,7 +256,7 @@ export function scheduleVoiceRestart(options: ScheduleVoiceRestartOptions) {
         options.showPetStatus('语音重启超时，请手动点击麦克风。', 4_000, 3_000)
         return
       }
-      console.log('[ContinuousVoice] timer — blocked (retry', retryCount + 1, '), blocker:', guard.blocker)
+      voiceDebug('ContinuousVoice', 'timer — blocked (retry', retryCount + 1, '), blocker:', guard.blocker)
       scheduleVoiceRestart({
         ...options,
         statusText,
@@ -270,7 +271,7 @@ export function scheduleVoiceRestart(options: ScheduleVoiceRestartOptions) {
     }
 
     try {
-      console.log('[ContinuousVoice] starting voice conversation (restart)')
+      voiceDebug('ContinuousVoice', 'starting voice conversation (restart)')
       options.startVoiceConversation({ restart: true, passive: true })
     } catch (err) {
       console.warn('[ContinuousVoice] restart failed:', err)

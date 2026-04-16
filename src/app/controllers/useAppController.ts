@@ -44,6 +44,22 @@ import { classifyMessageSignals } from '../../features/autonomy/emotionModel'
 type ChatController = ReturnType<typeof useChat>
 type ReminderTaskStore = ReturnType<typeof useReminderTaskStore>
 
+/**
+ * Parse a comma-separated whitelist string into an array of validated values.
+ * Caps the result length to prevent pathological configs (user typo or corrupt
+ * sync) from producing enormous arrays.
+ */
+const MAX_WHITELIST_ENTRIES = 256
+function parseIdList<T>(raw: string, project: (piece: string) => T, keep: (value: T) => boolean): T[] {
+  const out: T[] = []
+  for (const piece of raw.split(',')) {
+    const value = project(piece.trim())
+    if (keep(value)) out.push(value)
+    if (out.length >= MAX_WHITELIST_ENTRIES) break
+  }
+  return out
+}
+
 export function useAppController() {
   const [view, setView] = useState<WindowView>(() => getWindowViewSync())
   const [settings, setSettings] = useState<AppSettings>(() => getSettingsSnapshot())
@@ -87,20 +103,14 @@ export function useAppController() {
   // (the React gateway hooks own the actual bridge connections).
   useEffect(() => {
     const allowedChatIds = settings.telegramIntegrationEnabled
-      ? settings.telegramAllowedChatIds
-          .split(',')
-          .map((s) => Number(s.trim()))
-          .filter((n) => Number.isFinite(n) && n !== 0)
+      ? parseIdList(settings.telegramAllowedChatIds, Number, (n) => Number.isFinite(n) && n !== 0)
       : []
     setTelegramKnownChatIds(allowedChatIds)
   }, [settings.telegramIntegrationEnabled, settings.telegramAllowedChatIds])
 
   useEffect(() => {
     const allowedChannelIds = settings.discordIntegrationEnabled
-      ? settings.discordAllowedChannelIds
-          .split(',')
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0)
+      ? parseIdList(settings.discordAllowedChannelIds, (s) => s, (s) => s.length > 0)
       : []
     setDiscordKnownChannelIds(allowedChannelIds)
   }, [settings.discordIntegrationEnabled, settings.discordAllowedChannelIds])
