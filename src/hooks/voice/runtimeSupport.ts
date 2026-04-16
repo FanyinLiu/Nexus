@@ -297,7 +297,6 @@ export async function stopVadListeningRuntime(
     return
   }
 
-  console.warn('[VAD] destroy source: stopVadListening (cancel=' + options.cancel + ')')
   session.cancelled = Boolean(options.cancel)
   await options.destroyVadSession(session)
 }

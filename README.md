@@ -53,13 +53,14 @@ See [docs/COMPARISON.md](docs/COMPARISON.md) for the full 10-project breakdown i
 | Feature | Description |
 |---------|-------------|
 | **Pet + Panel dual-view** | Live2D character with expression, motion, and mood sync |
-| **Continuous voice chat** | Multi-engine STT / TTS with wake word, VAD, continuous conversation, **sentence-immediate streaming TTS** (first audio at first comma), and **echo-cancelled self-interrupt** |
+| **Continuous voice chat** | Multi-engine STT / TTS with always-on wake word (sherpa-onnx KWS), **main-process Silero VAD** (shared audio via IPC, no mic conflicts), continuous conversation, **sentence-immediate streaming TTS**, and **echo-cancelled self-interrupt** |
 | **Long-term memory** | Three-tier hot / warm / cold memory store with hybrid BM25 + vector search over long-term and daily layers, importance decay, cold archive of stale entries, auto daily diary, proactive recall, plus a nightly **dream cycle** that weaves experiences into **narrative threads** |
 | **Autonomous behavior** | Inner monologue, emotion model, intent prediction, relationship tracking, rhythm learning, skill distillation |
 | **Desktop awareness** | Clipboard, foreground window, screenshot OCR, context triggers |
 | **Tool calling** | Web search (auto content extraction), weather, reminders, **MCP protocol with both native function calling and a prompt-mode fallback** for models without a `tools` API |
 | **Provider failover** | Configure a chain of LLM / STT / TTS providers — when the primary fails, Nexus transparently falls through without interrupting the conversation |
-| **Multi-platform** | Discord / Telegram gateways, plugin system, skill store |
+| **Notification bridge** | Local webhook server + RSS feed polling for external notification ingestion |
+| **Multi-platform** | Discord / Telegram gateways (per-chat routing), plugin system, skill store |
 | **Multilingual** | Simplified Chinese / Traditional Chinese / English / Japanese / Korean |
 
 ---

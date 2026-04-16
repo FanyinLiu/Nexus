@@ -174,13 +174,7 @@ export async function createVoiceActivityDetector(
   return {
     start: () => detector.start(),
     pause: () => detector.pause(),
-    destroy: () => {
-      // Temporary diagnostic — log who is calling destroy on a live VAD session
-      // so we can identify the source of the "VAD destroyed immediately after
-      // started micVAD" regression. Safe to remove once the trigger is found.
-      console.warn('[VAD] detector.destroy called — stack:', new Error('vad-destroy').stack)
-      return detector.destroy()
-    },
+    destroy: () => detector.destroy(),
   }
 }
 

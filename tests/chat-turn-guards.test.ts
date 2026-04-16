@@ -29,9 +29,19 @@ test('ignores a late assistant turn when a newer turn is active', () => {
 })
 
 test('bindStreamingAbort registers abort and clears it after resolve', async () => {
-  let activeAbort: (() => Promise<void>) | null | undefined
+  let activeAbort: (() => Promise<void>) | null = null
   let resolveRequest: ((value: string) => void) | null = null
   let aborted = false
+
+  // Setter that supports both direct values and updater functions
+  // (mirrors the real implementation in useChat.ts)
+  const setAbort: import('../src/hooks/chat/streamAbort.ts').AbortSetter = (abortOrUpdater) => {
+    if (typeof abortOrUpdater === 'function' && abortOrUpdater.length > 0) {
+      activeAbort = (abortOrUpdater as (c: (() => Promise<void>) | null) => (() => Promise<void>) | null)(activeAbort)
+    } else {
+      activeAbort = abortOrUpdater as (() => Promise<void>) | null
+    }
+  }
 
   const request = new Promise<string>((resolve) => {
     resolveRequest = resolve
@@ -41,9 +51,7 @@ test('bindStreamingAbort registers abort and clears it after resolve', async () 
     aborted = true
   }
 
-  const trackedRequest = bindStreamingAbort(request, (abort) => {
-    activeAbort = abort
-  })
+  const trackedRequest = bindStreamingAbort(request, setAbort)
 
   assert.equal(typeof activeAbort, 'function')
   await activeAbort?.()
@@ -55,8 +63,16 @@ test('bindStreamingAbort registers abort and clears it after resolve', async () 
 })
 
 test('bindStreamingAbort clears abort on rejection', async () => {
-  let activeAbort: (() => Promise<void>) | null | undefined
+  let activeAbort: (() => Promise<void>) | null = null
   let rejectRequest: ((error: Error) => void) | null = null
+
+  const setAbort: import('../src/hooks/chat/streamAbort.ts').AbortSetter = (abortOrUpdater) => {
+    if (typeof abortOrUpdater === 'function' && abortOrUpdater.length > 0) {
+      activeAbort = (abortOrUpdater as (c: (() => Promise<void>) | null) => (() => Promise<void>) | null)(activeAbort)
+    } else {
+      activeAbort = abortOrUpdater as (() => Promise<void>) | null
+    }
+  }
 
   const request = new Promise<string>((_resolve, reject) => {
     rejectRequest = reject
@@ -64,9 +80,7 @@ test('bindStreamingAbort clears abort on rejection', async () => {
 
   request.abort = async () => undefined
 
-  const trackedRequest = bindStreamingAbort(request, (abort) => {
-    activeAbort = abort
-  })
+  const trackedRequest = bindStreamingAbort(request, setAbort)
 
   rejectRequest?.(new Error('stopped'))
 
