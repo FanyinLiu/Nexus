@@ -18,33 +18,14 @@
 
 **Nexus** is a desktop AI companion that **remembers**, **dreams**, and **lives on your screen**. Built with Electron + React + TypeScript, it pairs a Live2D character with a 4-tier memory architecture, autonomous inner monologue, native MCP tool calling, and streaming voice — designed to feel less like a chatbot and more like a presence.
 
-### What makes Nexus different
+### Highlights
 
-- **Memory that thinks while you sleep** — three-tier hot / warm / cold memory store (in-prompt → on-demand vector recall → importance-decayed cold archive), plus a nightly *dream cycle* that clusters experiences into *narrative threads*. (airi's equivalent is still WIP; Open-LLM-VTuber currently has long-term memory removed.)
+- **Memory that thinks while you sleep** — three-tier hot / warm / cold memory store with hybrid BM25 + vector search, importance decay, cold archiving, and a nightly *dream cycle* that clusters experiences into *narrative threads*.
 - **MCP that works on any model** — native OpenAI function calling **and** a prompt-mode fallback (`<tool_call>` markers in plain text) so even models without a `tools` API can drive tools.
-- **Sentence-immediate streaming TTS** — the first audio chunk plays at the first comma, not after the first sentence. Tuned for sub-second perceived latency on the very first token.
+- **Sentence-immediate streaming TTS** — the first audio chunk plays at the first comma, not after the first sentence. Tuned for sub-second perceived latency.
 - **Multi-provider failover chain** — configure a chain of LLM / STT / TTS providers; when the primary fails, Nexus falls through transparently without interrupting the conversation.
+- **Always-on wake word** — sherpa-onnx keyword spotter with main-process Silero VAD, sharing a single mic stream. Say the wake word and start talking — no button needed.
 - **Echo-cancelled self-interrupt** — listens through the echo-cancelled audio stream so it never wakes itself up while talking back.
-
-### How Nexus compares
-
-| | Nexus | [airi][airi] | [Open-LLM-VTuber][olv] | [Soul of Waifu][sow] | [my-neuro][mn] |
-|---|---|---|---|---|---|
-| Stars | – | 37.8k | 6.8k | 592 | 1.2k |
-| Tech stack | TS + React + Electron | TS + Vue + Electron + Rust | Python | Python | Python + JS |
-| Live2D / VRM | ✓ / ✗ | ✓ / ✓ | ✓ / ✗ | ✓ / ✓ | ✓ / ✗ |
-| Long-term memory | **3-tier + dream cycle** | Alaya (WIP) | removed | Vector RAG + V2 cards | MemOS |
-| MCP / function calling | **native + prompt-mode** | game agents only | ✓ | ✗ | ✓ |
-| Failover chain | **✓** | ✗ | ✗ | ✗ | ✗ |
-| Self-interrupt | **echo-cancelled** | – | VAD | VAD | – |
-| Multi-language UI | zh / en / ja / ko | en | en / zh / ja | en | zh / en |
-
-See [docs/COMPARISON.md](docs/COMPARISON.md) for the full 10-project breakdown including TTS / ASR engine counts, vision support, and licensing.
-
-[airi]: https://github.com/moeru-ai/airi
-[olv]: https://github.com/Open-LLM-VTuber/Open-LLM-VTuber
-[sow]: https://github.com/jofizcd/Soul-of-Waifu
-[mn]: https://github.com/morettt/my-neuro
 
 ---
 
