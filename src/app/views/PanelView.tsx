@@ -78,7 +78,17 @@ export function PanelView({
             : runtimeSnapshot.petOnline || runtimeSnapshot.panelOnline
               ? '在线'
               : voiceStateLabel
-  const chatMessageCount = chat.messages.filter((message) => message.role !== 'system').length
+  // Scope the rendered message list to the current pane session. The
+  // storage archive (and the LLM's visible history via messagesRef) still
+  // contain the full conversation record — users who want to read older
+  // turns open settings → 聊天记录. Filtering here keeps the pane surface
+  // calm on each launch and matches the user's mental model: the pane is a
+  // live conversation window, not a scroll-through of every past turn.
+  const visibleMessages = useMemo(
+    () => chat.messages.filter((m) => new Date(m.createdAt).getTime() >= chat.sessionStartAt),
+    [chat.messages, chat.sessionStartAt],
+  )
+  const chatMessageCount = visibleMessages.filter((message) => message.role !== 'system').length
   const welcomeTitle = `${timeGreeting}，${settings.userName}`
   const welcomeBody = memory.memories[0]?.content
     ? `我还记得你最近提过“${shorten(memory.memories[0].content, 24)}”，如果你希望再继续，我可以帮你把思路接上。`
@@ -249,7 +259,7 @@ export function PanelView({
   // Reset "show all" when the conversation is cleared. Doing this during
   // render (rather than in an effect) avoids a cascading re-render and
   // satisfies react-hooks/set-state-in-effect.
-  if (chat.messages.length === 0 && showAllMessages) {
+  if (visibleMessages.length === 0 && showAllMessages) {
     setShowAllMessages(false)
   }
 
@@ -267,7 +277,7 @@ export function PanelView({
     })
 
     return () => window.cancelAnimationFrame(frameId)
-  }, [chat.messages])
+  }, [visibleMessages])
 
   return (
     <div className={`desktop-pet-root desktop-pet-root--panel ${characterPreset.themeClassName} ${panelCollapsed ? 'desktop-pet-root--panel-collapsed' : ''}`}>
@@ -328,20 +338,20 @@ export function PanelView({
             <section className="companion-chat">
 
               <div ref={messageListRef} className="message-list companion-chat__messages" aria-live="polite" aria-label="对话消息列表">
-                {chat.messages.length ? (
+                {visibleMessages.length ? (
                   <>
-                    {!showAllMessages && chat.messages.length > MESSAGE_PAGE_SIZE && (
+                    {!showAllMessages && visibleMessages.length > MESSAGE_PAGE_SIZE && (
                       <div className="message-list__load-earlier">
                         <button
                           className="ghost-button"
                           type="button"
                           onClick={() => setShowAllMessages(true)}
                         >
-                          显示更早的 {chat.messages.length - MESSAGE_PAGE_SIZE} 条消息
+                          显示更早的 {visibleMessages.length - MESSAGE_PAGE_SIZE} 条消息
                         </button>
                       </div>
                     )}
-                    {(showAllMessages ? chat.messages : chat.messages.slice(-MESSAGE_PAGE_SIZE)).map((message) => (
+                    {(showAllMessages ? visibleMessages : visibleMessages.slice(-MESSAGE_PAGE_SIZE)).map((message) => (
                       <MessageBubble
                         key={message.id}
                         message={message}

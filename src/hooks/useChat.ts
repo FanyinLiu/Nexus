@@ -47,6 +47,13 @@ const MAX_CHAT_MESSAGES = 500
 
 export function useChat(ctx: UseChatContext) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => sanitizeLoadedMessages(loadChatMessages()))
+  // Timestamp marking when the current pane session started. Storage keeps
+  // the full archive (so the LLM still sees "what we talked about last
+  // night"), but the chat pane should only render messages produced after
+  // the user opened this pet instance. Callers filter the message array
+  // through this boundary before rendering; settings → 聊天记录 is how the
+  // user actually browses/searches the archived history.
+  const sessionStartAtRef = useRef<number>(Date.now())
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setErrorRaw] = useState<string | null>(null)
@@ -650,6 +657,7 @@ export function useChat(ctx: UseChatContext) {
 
   return {
     messages,
+    sessionStartAt: sessionStartAtRef.current,
     input,
     busy,
     error,
