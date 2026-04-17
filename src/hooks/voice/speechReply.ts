@@ -5,6 +5,10 @@ import {
   createStreamingSpeechOutputController,
   type StreamingSpeechOutputRuntime,
 } from './streamingSpeechOutput'
+import {
+  createPipelineStreamingSpeechController,
+  isPipelineTtsEnabled,
+} from './pipelineStreamingSpeechOutput.ts'
 import type { StreamingSpeechOutputController } from './types'
 
 type BaseSpeechReplyOptions = {
@@ -164,17 +168,32 @@ export function beginStreamingSpeechReplyRuntime(
   }
 
   try {
+    const callbacks = {
+      ...createSpeechReplyCallbacks({
+        ...options,
+        text: '(streaming)',
+      }),
+      busEmit: options.busEmit,
+      speechGeneration: options.speechGeneration,
+    }
+
+    // Feature-flag gate for the new pipecat-style pipeline. Flip via
+    //   localStorage.setItem('nexus:useTtsPipeline', 'true')
+    // then reload. Default false keeps the legacy controller active
+    // until the migration lands for everyone.
+    if (isPipelineTtsEnabled()) {
+      voiceDebug('SpeechReply', 'using pipeline TTS controller (flag: nexus:useTtsPipeline)')
+      return createPipelineStreamingSpeechController(
+        options.currentSettings,
+        options.streamingRuntime,
+        callbacks,
+      )
+    }
+
     return createStreamingSpeechOutputController(
       options.currentSettings,
       options.streamingRuntime,
-      {
-        ...createSpeechReplyCallbacks({
-          ...options,
-          text: '(streaming)',
-        }),
-        busEmit: options.busEmit,
-        speechGeneration: options.speechGeneration,
-      },
+      callbacks,
     )
   } catch (error) {
     throw error instanceof Error ? error : new Error(

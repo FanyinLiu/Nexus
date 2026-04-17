@@ -13,6 +13,7 @@ import {
 } from './conversationEntrypoints'
 import { scheduleVoiceRestart as scheduleContinuousVoiceRestart } from './continuousVoice'
 import { speakAssistantReplyRuntime, beginStreamingSpeechReplyRuntime } from './speechReply'
+import type { StreamingSpeechOutputController } from './types'
 import type { VoiceConversationOptions } from './types'
 import { expectHolderValue, type VoiceLifecycle, type VoiceRuntimeBag } from './voiceRuntimeBag'
 
@@ -97,7 +98,7 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       clearSpeechInterruptedFlag: bindings.clearSpeechInterruptedFlag,
       streamingRuntime: {
         getPlayer: bindings.getStreamAudioPlayer,
-        setActiveController: (nextController) => {
+        setActiveController: (nextController: StreamingSpeechOutputController | null) => {
           refs.activeStreamingSpeechOutputRef.current = nextController
         },
         resetPlayer: () => {
