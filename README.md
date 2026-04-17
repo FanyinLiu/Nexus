@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/FanyinLiu/Nexus/releases/latest/download/Nexus-Setup-0.2.4.exe"><img src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest/download/Nexus-Setup-0.2.5.exe"><img src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows"></a>
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS"></a>
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
@@ -75,7 +75,7 @@ Grab the latest installer from the [releases page](https://github.com/FanyinLiu/
 
 | Platform | Asset |
 |---|---|
-| Windows | `Nexus-Setup-0.2.4.exe` (NSIS, unsigned — click *More info → Run anyway* on first launch) |
+| Windows | `Nexus-Setup-0.2.5.exe` (NSIS, unsigned — click *More info → Run anyway* on first launch) |
 | macOS | `.dmg` or `.zip` (unsigned — right-click → Open on first launch to bypass Gatekeeper) |
 | Linux | `.AppImage` / `.deb` / `.tar.gz` (AppImage: `chmod +x` then run) |
 
