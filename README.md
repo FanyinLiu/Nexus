@@ -53,7 +53,7 @@ The design goal is persistence of relationship, not just chat. A nightly **dream
 
 - 🤖 **Autonomous inner life.** Inner monologue, emotion model, relationship tracking, rhythm learning, intent prediction. It thinks while you're away and greets you when you come back — not scripted hellos, but observations based on what you've been doing.
 
-- 🔧 **Tool calling (MCP + built-ins).** Web search, weather, reminders, plus any MCP-compatible tool. Works with native function calling **and** a prompt-mode fallback for models that don't support `tools`.
+- 🔧 **Built-in tools.** Web search, weather, reminders. Works with native function calling **and** a prompt-mode fallback for models that don't support `tools`.
 
 - 🔄 **Provider failover.** Chain multiple LLM / STT / TTS providers. When one goes down, Nexus switches to the next without tearing the conversation down.
 
@@ -152,7 +152,6 @@ electron/
 - [ ] Chat pane per-session bucketing (history preserved in archive, pane opens fresh each launch).
 - [ ] First-party Claude Agent SDK integration for plan-mode / native function calling.
 - [ ] Auto-update infrastructure via electron-updater + signed binaries.
-- [ ] Expanded MCP server catalogue with one-click install.
 - [ ] Mobile companion app (voice-only remote for the desktop instance).
 
 ## Contributing
