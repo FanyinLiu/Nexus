@@ -152,6 +152,17 @@ export function createStreamingSpeechOutputController(
       return
     }
 
+    // Lifecycle-trace log — pair this with the renderer-side
+    // `[Chat] TTS wait timeout` to tell "tts played fully" from "tts was
+    // cut off mid-segment". `segmentsFinished < segmentCounter` at settle
+    // means some push_text calls never completed.
+    console.info('[TTS] controller settled (success)', {
+      requestId,
+      segmentsQueued: segmentCounter,
+      pendingSegments,
+      pendingAudioAppends,
+      firstAudioEmitted,
+    })
     voiceDebug('StreamingSpeechOutput', 'settleSuccess — calling onEnd')
     settled = true
     cleanup()
@@ -164,6 +175,14 @@ export function createStreamingSpeechOutputController(
       return
     }
 
+    console.warn('[TTS] controller failed', {
+      requestId,
+      reason: error.message,
+      segmentsQueued: segmentCounter,
+      pendingSegments,
+      pendingAudioAppends,
+      firstAudioEmitted,
+    })
     settled = true
     cleanup()
     player.stopAndClear()
@@ -379,6 +398,18 @@ export function createStreamingSpeechOutputController(
         return
       }
 
+      // Loudly trace every abort — this is the single most common cause
+      // of "TTS got cut off mid-sentence", and knowing the call stack
+      // (is it the user barging in? chat turn unblock? a stale player
+      // reset?) saves several round trips when diagnosing.
+      console.warn('[TTS] controller aborted', {
+        requestId,
+        segmentsQueued: segmentCounter,
+        pendingSegments,
+        pendingAudioAppends,
+        firstAudioEmitted,
+        stack: new Error('abort trace').stack,
+      })
       aborted = true
       settled = true
       cleanup()

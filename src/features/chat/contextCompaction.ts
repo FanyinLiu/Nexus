@@ -5,7 +5,7 @@
  * to prevent context overflow while retaining important information.
  */
 
-import type { ChatMessage, ChatMessageContent } from '../../types'
+import type { AppSettings, ChatMessage, ChatMessageContent } from '../../types'
 
 // ── Token estimation ──
 
@@ -174,21 +174,36 @@ function hashOlderText(text: string): string {
 /**
  * Summarize older conversation text using the LLM.
  * Results are cached until the older text changes (new messages compacted).
+ *
+ * Requires the current AppSettings so the chat-complete IPC can reach a
+ * real provider. Earlier revisions passed empty strings for every auth
+ * field, which reached electron as `Failed to parse URL from
+ * /chat/completions` and the call failed silently — summarization never
+ * ran, but the error spammed the console once per compaction pass.
  */
-export async function summarizeOlderMessages(olderText: string): Promise<string> {
+export async function summarizeOlderMessages(
+  olderText: string,
+  settings: AppSettings,
+): Promise<string> {
   const key = hashOlderText(olderText)
 
   if (_cachedSummary?.hash === key) {
     return _cachedSummary.summary
   }
 
+  if (!settings?.apiBaseUrl || !settings.model) {
+    // Nothing to call — caller will get the raw text back. Don't even
+    // attempt the IPC (and don't log the empty-baseUrl crash).
+    return olderText
+  }
+
   try {
     const prompt = buildCompactionSummaryPrompt(olderText)
     const response = await window.desktopPet?.completeChat?.({
-      providerId: '',
-      baseUrl: '',
-      apiKey: '',
-      model: '',
+      providerId: settings.apiProviderId,
+      baseUrl: settings.apiBaseUrl,
+      apiKey: settings.apiKey,
+      model: settings.model,
       messages: prompt.map((m) => ({ role: m.role as 'system' | 'user', content: m.content })),
       temperature: 0.3,
       maxTokens: 400,

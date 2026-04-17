@@ -272,7 +272,7 @@ async function toRequestMessages(
   let systemContent = systemPrompt
 
   if (compacted && olderMessagesText) {
-    const summary = await summarizeOlderMessages(olderMessagesText)
+    const summary = await summarizeOlderMessages(olderMessagesText, settings)
     systemContent = `${systemPrompt}\n\n${formatCompactionContext(summary)}`
   }
 
