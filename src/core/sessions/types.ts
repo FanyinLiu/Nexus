@@ -1,4 +1,12 @@
-import type { AgentMessage } from '../agent/types'
+export type SessionMessageRole = 'system' | 'user' | 'assistant' | 'tool'
+
+export type SessionMessage = {
+  role: SessionMessageRole
+  content: string
+  toolCallId?: string
+  toolName?: string
+  timestamp: number
+}
 
 export type SessionId = string
 
@@ -12,7 +20,7 @@ export type SessionRecord = {
   tags?: string[]
 }
 
-export type StoredMessage = AgentMessage & {
+export type StoredMessage = SessionMessage & {
   sessionId: SessionId
   messageIndex: number
 }
@@ -22,7 +30,7 @@ export type SessionSearchHit = {
   messageIndex: number
   snippet: string
   score: number
-  role: AgentMessage['role']
+  role: SessionMessage['role']
   timestamp: number
 }
 

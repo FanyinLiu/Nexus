@@ -4,7 +4,7 @@ import type {
   ChatMessage,
   MemoryRecallContext,
 } from '../../types'
-import { requestAssistantReply, type AssistantReplyRequestOptions } from '../../core/agent'
+import { requestAssistantReply, type AssistantReplyRequestOptions } from '../chat/runtime'
 import { getCoreRuntime } from '../../lib/coreRuntime'
 import { createId } from '../../lib'
 import { planStore, type Plan } from '../plan/planStore'

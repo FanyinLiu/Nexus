@@ -31,3 +31,5 @@ export type ToolContext = {
   userId: string
   signal?: AbortSignal
 }
+
+export type ToolExecutor = (args: unknown, context: ToolContext) => Promise<unknown>

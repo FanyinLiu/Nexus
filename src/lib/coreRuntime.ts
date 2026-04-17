@@ -1,19 +1,13 @@
 import {
   AuthProfileStore,
-  CheckpointManager,
-  ChannelRegistry,
   CostTracker,
-  CurationEngine,
   InMemoryMemoryBackend,
-  Scheduler,
   SessionStore,
-  SkillLearner,
   SkillRegistry,
   TodoStore,
   UsagePricingTable,
   type AuthProfile,
   type BudgetConfig,
-  type ChannelId,
   type CostEntry,
 } from '../core'
 import {
@@ -29,15 +23,10 @@ export type CoreRuntime = {
   authStore: AuthProfileStore
   costTracker: CostTracker
   pricing: UsagePricingTable
-  channelRegistry: ChannelRegistry
-  scheduler: Scheduler
   sessionStore: SessionStore
-  curation: CurationEngine
   skills: SkillRegistry
-  skillLearner: SkillLearner
   memoryBackend: InMemoryMemoryBackend
   todoStore: TodoStore
-  checkpointManager: CheckpointManager
   persistAuthProfiles: () => void
   persistBudget: () => void
   refreshBudgetConfig: (config: BudgetConfig) => void
@@ -66,19 +55,13 @@ export function getCoreRuntime(): CoreRuntime {
     })
   }
 
-  const channelRegistry = new ChannelRegistry()
-  const scheduler = new Scheduler({ channelRegistry })
-
   const sessionStore = new SessionStore()
-  const curation = new CurationEngine(sessionStore)
 
   const skills = new SkillRegistry()
   seedDefaultSkills(skills)
-  const skillLearner = new SkillLearner(skills)
 
   const memoryBackend = new InMemoryMemoryBackend()
   const todoStore = new TodoStore()
-  const checkpointManager = new CheckpointManager()
 
   const persistAuthProfiles = () => {
     persistAuthProfileSnapshot(authStore.snapshot())
@@ -95,15 +78,10 @@ export function getCoreRuntime(): CoreRuntime {
     authStore,
     costTracker,
     pricing,
-    channelRegistry,
-    scheduler,
     sessionStore,
-    curation,
     skills,
-    skillLearner,
     memoryBackend,
     todoStore,
-    checkpointManager,
     persistAuthProfiles,
     persistBudget,
     refreshBudgetConfig,
@@ -144,16 +122,10 @@ export function removeAuthProfileFromRuntime(id: string): void {
 
 // ── Cross-channel broadcast ──
 //
-// The runtime tracks "known" conversation IDs per channel, keyed by the
-// existing React gateway hooks (useTelegramGateway / useDiscordGateway) which
-// own the bridge connections. Core code that wants to push a message to every
-// connected channel calls broadcastToChannels(text) — we then fan out via the
-// desktop bridge directly, using whatever conversation IDs have been
-// remembered from inbound traffic or from settings.
-//
-// This keeps the existing React hook architecture intact (no double
-// connections) while giving non-UI subsystems (reminders, agent tools) a
-// single broadcast entry point.
+// Known conversation IDs per channel are tracked here so non-UI subsystems
+// (reminders, agent tools) have a single broadcast entry point. The React
+// gateway hooks (useTelegramGateway / useDiscordGateway) own the bridge
+// connections and remember IDs from inbound traffic and settings.
 
 const knownTelegramChatIds = new Set<number>()
 const knownDiscordChannelIds = new Set<string>()
@@ -245,8 +217,10 @@ export function matchCoreSkills(
     .join('\n')
 }
 
+type BroadcastChannelId = 'telegram' | 'discord'
+
 export type BroadcastResult = {
-  channelId: ChannelId
+  channelId: BroadcastChannelId
   target: string
   ok: boolean
   error?: string

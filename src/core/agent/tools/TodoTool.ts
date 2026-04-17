@@ -1,5 +1,4 @@
-import type { ToolDefinition } from '../../tools/types'
-import type { ToolExecutor } from '../../tools/ManagedToolGateway'
+import type { ToolDefinition, ToolExecutor } from '../../tools/types'
 
 export type TodoStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 

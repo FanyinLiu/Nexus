@@ -1,6 +1,6 @@
-import type { AgentMessage } from '../agent/types'
 import type {
   SessionId,
+  SessionMessage,
   SessionRecord,
   SessionSearchHit,
   SessionSearchOptions,
@@ -78,7 +78,7 @@ export class SessionStore {
     return filtered.sort((a, b) => b.updatedAt - a.updatedAt)
   }
 
-  appendMessage(sessionId: SessionId, message: AgentMessage): StoredMessage {
+  appendMessage(sessionId: SessionId, message: SessionMessage): StoredMessage {
     const session = this.sessions.get(sessionId)
     if (!session) throw new Error(`SessionStore: session ${sessionId} not found`)
     const messageIndex = session.messageCount
