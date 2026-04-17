@@ -37,3 +37,9 @@ export { SentenceAggregator } from './aggregator/SentenceAggregator.ts'
 export type { SentenceAggregatorOptions } from './aggregator/SentenceAggregator.ts'
 export { AudioPlayerSink } from './sinks/AudioPlayerSink.ts'
 export type { AudioPlayerSinkOptions } from './sinks/AudioPlayerSink.ts'
+export { TTSStreamService } from './services/TTSStreamService.ts'
+export type {
+  TTSStreamServiceOptions,
+  TTSStreamServiceSettings,
+  TtsIpcBridge,
+} from './services/TTSStreamService.ts'
