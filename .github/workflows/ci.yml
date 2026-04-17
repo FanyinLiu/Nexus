@@ -22,6 +22,9 @@ jobs:
       - run: npx tsc --noEmit
         name: Type check
 
+      - run: npm run lint
+        name: Lint
+
       - run: npm run build
         name: Vite build
 

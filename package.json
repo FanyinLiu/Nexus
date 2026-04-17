@@ -14,7 +14,7 @@
     "electron:dev": "concurrently -k \"vite\" \"wait-on http://127.0.0.1:47821 && cross-env DESKTOP_PET_USE_DEV_SERVER=1 electron .\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test tests/audio-providers.test.ts tests/browser-vad.test.ts tests/text-files.test.ts tests/performance.test.ts tests/voice-core.test.ts tests/voice-session.test.ts tests/voice-session-machine.test.ts tests/voice-transition-log.test.ts tests/voice-sequence.test.ts tests/auto-restart-policy.test.ts tests/wakeword-runtime.test.ts tests/tool-registry.test.ts tests/tool-assistant.test.ts tests/reminder-intent.test.ts tests/reminder-schedule.test.ts tests/lyrics-search.test.ts tests/search-content-extract.test.ts tests/chat-runtime.test.ts tests/web-search-runtime.test.ts tests/storage-settings.test.ts tests/memory.test.ts tests/memory-archive.test.ts tests/failover.test.ts tests/harness.test.ts tests/chat-turn-guards.test.ts tests/notification-bridge.test.ts",
+    "test": "node --experimental-strip-types --test \"tests/*.test.ts\"",
     "preview": "vite preview",
     "start:app": "npm run build && electron .",
     "smoke": "npm run build && cross-env SMOKE_TEST=1 electron .",

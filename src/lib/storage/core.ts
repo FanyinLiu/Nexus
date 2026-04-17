@@ -79,9 +79,12 @@ function notifySubscribers(key: string, value: unknown): void {
 }
 
 // The channel is created once per renderer process (guard for SSR / Node envs).
+// Node 18+ exposes BroadcastChannel globally but its instance keeps the event
+// loop alive until close(); gate on `window` so the renderer is the only side
+// that opens one.
 let syncChannel: BroadcastChannel | null = null
 
-if (typeof BroadcastChannel !== 'undefined') {
+if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
   syncChannel = new BroadcastChannel('nexus-storage-sync')
   syncChannel.onmessage = (event: MessageEvent<StorageSyncMessage>) => {
     const { key, value } = event.data
