@@ -84,9 +84,23 @@ export function PanelView({
   // turns open settings → 聊天记录. Filtering here keeps the pane surface
   // calm on each launch and matches the user's mental model: the pane is a
   // live conversation window, not a scroll-through of every past turn.
+  //
+  // Implementation: snapshot the archive's message IDs on first render and
+  // show everything appended after. The previous timestamp-based filter
+  // dropped voice transcripts whenever a clock skew or parse hiccup made
+  // `createdAt` evaluate as NaN ≥ sessionStartAt → false, leaving the user
+  // unsure whether STT even worked.
+  const [initialMessageIds, setInitialMessageIds] = useState<Set<string> | null>(null)
+  if (initialMessageIds === null) {
+    setInitialMessageIds(new Set(chat.messages.map((m) => m.id)))
+  }
   const visibleMessages = useMemo(
-    () => chat.messages.filter((m) => new Date(m.createdAt).getTime() >= chat.sessionStartAt),
-    [chat.messages, chat.sessionStartAt],
+    () => (
+      initialMessageIds === null
+        ? []
+        : chat.messages.filter((m) => !initialMessageIds.has(m.id))
+    ),
+    [chat.messages, initialMessageIds],
   )
   const chatMessageCount = visibleMessages.filter((message) => message.role !== 'system').length
   const welcomeTitle = `${timeGreeting}，${settings.userName}`
