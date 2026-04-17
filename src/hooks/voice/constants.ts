@@ -1,6 +1,16 @@
 export const MAX_CONTINUOUS_NO_SPEECH_RESTARTS = 5
 export const API_RECORDING_MAX_DURATION_MS = 8_000
-export const API_RECORDING_MAX_IDLE_MS = 4_800
+// How long a freshly-opened VAD session waits for the user to start
+// speaking before the no-speech timer tears it down. Lowered from 4.8 s
+// to 3 s based on user feedback: after the companion finishes TTS the
+// assistantReply path auto-restarts VAD once (shouldResumeContinuousVoice
+// is true for every voice turn, see useChat.ts), which gives the user a
+// follow-up window without having to re-say the wake word. 3 s matches
+// the explicit ask "TTS 播完就完了，自动重开 3 秒没有 stt 就关闭"; in
+// wake-word-only mode (continuousVoiceModeEnabled = false) the policy
+// returns CONTINUOUS_DISABLED on the first destroy so no retry loop runs
+// — exactly "one 3-second grace window, then back to wake-word".
+export const API_RECORDING_MAX_IDLE_MS = 3_000
 export const API_RECORDING_SILENCE_MS = 1_150
 export const API_RECORDING_RMS_THRESHOLD = 0.0042
 export const SHERPA_STREAM_MAX_IDLE_MS = 9_000

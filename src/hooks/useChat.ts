@@ -525,8 +525,8 @@ export function useChat(ctx: UseChatContext) {
     // Resume the voice loop after TTS for ALL voice-originated turns. Even
     // in wake-word mode, this gives the user a brief VAD window to speak
     // again immediately after the companion replies, without re-waking.
-    // If they don't speak, the noSpeechTimer (4.8s) closes the session
-    // and the wake word listener takes over normally.
+    // If they don't speak, the noSpeechTimer (3 s, see constants.ts)
+    // closes the session and the wake word listener takes over normally.
     const shouldResumeContinuousVoice = fromVoice
 
     if (ctx.voiceStateRef.current === 'speaking') {
