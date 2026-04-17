@@ -269,7 +269,11 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           }
 
           if (done && streamingTtsController) {
-            streamingTtsController.finish()
+            // Per-LLM-round flush, not finalize: runToolCallLoop may fire
+            // another stream after a tool result, and its deltas also need
+            // to reach TTS. finalize() runs once at the end of the turn
+            // below, after `await request` settles.
+            streamingTtsController.flushPending()
           }
         },
         {
@@ -295,6 +299,14 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         },
       )
       const response = await request
+
+      // Turn complete — finalize the streaming TTS controller so the final
+      // audio segment triggers settleSuccess and unblocks waitForCompletion.
+      // Per-round flushes (in the onDelta `done` branch) already queued each
+      // round's text; finish() here only closes the stream.
+      if (streamingTtsController) {
+        streamingTtsController.finish()
+      }
 
       if (response.usedFallback && response.settingsPatch) {
         const applyFallbackPatch = dependencies.ctx.applySettingsUpdate

@@ -70,6 +70,18 @@ export type SpeechSegmentMeta = {
 
 export type StreamingSpeechOutputController = {
   pushDelta: (delta: string) => void
+  /**
+   * Queue whatever text has accumulated so far into segments and start
+   * synthesizing them, but keep the controller open for more `pushDelta`
+   * calls. Use between rounds of an agent turn (e.g. after each LLM stream
+   * finishes but before the tool-call loop fires off the next one) so
+   * pre-tool and post-tool text both make it to TTS.
+   */
+  flushPending: () => void
+  /**
+   * Flush any remaining text and signal that no more deltas will arrive.
+   * Must be called exactly once per controller at the end of the turn.
+   */
   finish: () => void
   waitForCompletion: () => Promise<void>
   hasStarted: () => boolean

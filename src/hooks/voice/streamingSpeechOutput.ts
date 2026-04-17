@@ -312,32 +312,44 @@ export function createStreamingSpeechOutputController(
       })
   }
 
+  // Drain `accumulatedText` into segments. Pulled out of finish() so we can
+  // flush between agent-loop rounds (pre-tool text goes first, post-tool text
+  // appended after the tool result lands) without finalizing the stream.
+  const flushAccumulatedText = () => {
+    const fullText = accumulatedText
+    accumulatedText = ''
+    if (!fullText) return
+    const maxChars = getMaxRequestCharsForProvider(providerId)
+    const segments = splitLongTextAtSentences(fullText, maxChars)
+    for (const segment of segments) {
+      queueSegment(segment)
+    }
+  }
+
   const controller: StreamingSpeechOutputController = {
     pushDelta(delta: string) {
       if (!delta || settled || aborted) {
         return
       }
 
-      // Accumulate silently — no synthesis until finish(). This guarantees
-      // the whole reply becomes a single TTS request (or, for very long
-      // replies, a small number of sentence-boundary-split requests), so
-      // timbre stays consistent across the entire utterance.
+      // Accumulate silently until the next flush. One round of a tool-using
+      // agent turn bundles into one or two TTS requests so timbre stays
+      // consistent across sentences (Volcengine / MiniMax can otherwise
+      // stitch chunks together with different voices).
       accumulatedText += delta
+    },
+    flushPending() {
+      if (finishRequested || settled || aborted) {
+        return
+      }
+      flushAccumulatedText()
     },
     finish() {
       if (finishRequested || settled || aborted) {
         return
       }
 
-      const fullText = accumulatedText
-      accumulatedText = ''
-      if (fullText) {
-        const maxChars = getMaxRequestCharsForProvider(providerId)
-        const segments = splitLongTextAtSentences(fullText, maxChars)
-        for (const segment of segments) {
-          queueSegment(segment)
-        }
-      }
+      flushAccumulatedText()
 
       finishRequested = true
       if (!streamStarted && pendingSegments === 0) {

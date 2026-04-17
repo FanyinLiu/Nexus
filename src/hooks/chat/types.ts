@@ -63,6 +63,7 @@ export type UseChatContext = {
   speakAssistantReply: (text: string, shouldRestart: boolean) => Promise<void>
   beginStreamingSpeechReply: (shouldRestart: boolean) => {
     pushDelta: (delta: string) => void
+    flushPending: () => void
     finish: () => void
     waitForCompletion: () => Promise<void>
     hasStarted: () => boolean
