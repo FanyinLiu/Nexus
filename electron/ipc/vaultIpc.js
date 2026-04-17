@@ -53,7 +53,10 @@ export function register() {
   ipcMain.handle('vault:store-many', (event, entries) => {
     requireTrustedSender(event)
     const validated = requireVaultEntries(entries)
-    audit('vault', 'store-many', { slots: validated.map((e) => e.slot) })
+    // requireVaultEntries returns a Record<slot, plaintext> — using
+    // Array.map on it crashes; pull the slot names via Object.keys so the
+    // audit log is accurate and settings save doesn't bail out here.
+    audit('vault', 'store-many', { slots: Object.keys(validated) })
     return vaultStoreMany(validated)
   })
 
