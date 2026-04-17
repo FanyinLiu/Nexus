@@ -78,30 +78,15 @@ export function PanelView({
             : runtimeSnapshot.petOnline || runtimeSnapshot.panelOnline
               ? '在线'
               : voiceStateLabel
-  // Scope the rendered message list to the current pane session. The
-  // storage archive (and the LLM's visible history via messagesRef) still
-  // contain the full conversation record — users who want to read older
-  // turns open settings → 聊天记录. Filtering here keeps the pane surface
-  // calm on each launch and matches the user's mental model: the pane is a
-  // live conversation window, not a scroll-through of every past turn.
-  //
-  // Implementation: snapshot the archive's message IDs on first render and
-  // show everything appended after. The previous timestamp-based filter
-  // dropped voice transcripts whenever a clock skew or parse hiccup made
-  // `createdAt` evaluate as NaN ≥ sessionStartAt → false, leaving the user
-  // unsure whether STT even worked.
-  const [initialMessageIds, setInitialMessageIds] = useState<Set<string> | null>(null)
-  if (initialMessageIds === null) {
-    setInitialMessageIds(new Set(chat.messages.map((m) => m.id)))
-  }
-  const visibleMessages = useMemo(
-    () => (
-      initialMessageIds === null
-        ? []
-        : chat.messages.filter((m) => !initialMessageIds.has(m.id))
-    ),
-    [chat.messages, initialMessageIds],
-  )
+  // Pane-session scoping reverted — the ID-snapshot approach still
+  // stranded freshly appended STT/text messages in an edge case we
+  // didn't fully nail down on the first try, and a blank pane is much
+  // worse than a long one. Show the full list for now; revisit once we
+  // have a proper server-side session-bucketing layer instead of a
+  // render-time filter. The storage archive and the LLM's context path
+  // (messagesRef) were already operating on the full record, so nothing
+  // else regresses.
+  const visibleMessages = chat.messages
   const chatMessageCount = visibleMessages.filter((message) => message.role !== 'system').length
   const welcomeTitle = `${timeGreeting}，${settings.userName}`
   const welcomeBody = memory.memories[0]?.content
