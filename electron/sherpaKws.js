@@ -494,12 +494,34 @@ class SherpaKwsService {
     this._feedCallCount += 1
     if (this._feedCallCount >= 50) {
       const avgRms = this._feedRmsAccum / this._feedCallCount
+      const peakAccum = this._feedPeakAccum
+      const roundedAvgRms = Number(avgRms.toFixed(4))
+      const roundedPeak = Number(peakAccum.toFixed(4))
       console.info('[SherpaKWS] Audio flowing', {
         chunks: this._feedCallCount,
-        avgRms: Number(avgRms.toFixed(4)),
-        peak: Number(this._feedPeakAccum.toFixed(4)),
+        avgRms: roundedAvgRms,
+        peak: roundedPeak,
         wakeWord: this.runtimeConfig?.wakeWord,
       })
+      // Typical normal speech: peak ~0.1–0.5. Peaks consistently below 0.02
+      // mean the wake-engine effectively hears static — the Zipformer can't
+      // recover acoustic evidence for the keyword and the user ends up
+      // shouting "星绘" repeatedly before one loud-enough pass trips the
+      // threshold. Warn loudly so it's obvious this is a mic-gain issue,
+      // not a model/threshold bug.
+      if (peakAccum < 0.02) {
+        this._lowVolumeStreak = (this._lowVolumeStreak || 0) + 1
+      } else {
+        this._lowVolumeStreak = 0
+      }
+      if (this._lowVolumeStreak >= 2) {
+        console.warn(
+          '[SherpaKWS] mic volume too low — wake word may need to be shouted to trigger. '
+          + 'Raise the microphone level in Windows Sound settings, move closer to the mic, '
+          + 'or enable mic boost on the device.',
+          { avgRms: roundedAvgRms, peak: roundedPeak, lowVolumeStreak: this._lowVolumeStreak },
+        )
+      }
       this._feedCallCount = 0
       this._feedRmsAccum = 0
       this._feedPeakAccum = 0
