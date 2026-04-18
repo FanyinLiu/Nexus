@@ -91,7 +91,11 @@ async function downloadAndExtractArchive(url, parentDir, onProgress) {
   }
 
   try {
-    execSync(`tar xjf "${archivePath}" -C "${parentDir}"`, { stdio: 'pipe' })
+    // -xf (auto-detect compression from magic bytes) works on GNU tar,
+    // BSD tar, and the libarchive tar.exe bundled with Windows 10 1803+.
+    // `-xjf` hard-codes bzip2 and crashes on some BSD tar variants — auto-
+    // detection is both simpler and more portable.
+    execSync(`tar -xf "${archivePath}" -C "${parentDir}"`, { stdio: 'pipe' })
   } finally {
     try { rmSync(archivePath, { force: true }) } catch {}
   }
