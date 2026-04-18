@@ -18,24 +18,8 @@ export interface LorebookEntry {
   priority: number
   createdAt: string
   updatedAt: string
-  /**
-   * Precomputed embedding over `label + keywords + content`. Used by the
-   * semantic-recall path so an entry can fire even when the user's
-   * phrasing doesn't lexically overlap the listed keywords (e.g. keywords
-   * ['妈妈','mom'] but the user writes '我娘亲'). Regenerated on every
-   * save; absent entries fall back to keyword-only triggering until the
-   * next save rebuilds them. The model used to produce this vector is
-   * recorded alongside so a model switch invalidates the cache.
-   */
-  embedding?: number[]
-  embeddingModel?: string
 }
 
 export const MAX_LOREBOOK_ENTRIES_PER_TURN = 6
 export const MAX_LOREBOOK_CONTENT_CHARS = 500
 export const LOREBOOK_SCAN_WINDOW_MESSAGES = 4
-/** Cosine-similarity floor for the semantic-recall path. Anything above
- *  this joins the keyword-matched hits. Local hash embeddings score lower
- *  than hosted transformers but still cluster correctly around 0.5–0.7
- *  for semantically-close pairs; 0.55 is a conservative default. */
-export const LOREBOOK_SEMANTIC_MIN_SIMILARITY = 0.55

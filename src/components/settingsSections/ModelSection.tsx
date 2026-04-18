@@ -264,20 +264,6 @@ export const ModelSection = memo(function ModelSection({
       </label>
 
       <label>
-        <span>{ti('settings.model.summary_model')}</span>
-        <input
-          value={draft.summaryModel}
-          placeholder={draft.modelCheap || draft.model}
-          onChange={(event) =>
-            setDraft((prev) => ({ ...prev, summaryModel: event.target.value }))
-          }
-        />
-      </label>
-      <p className="settings-drawer__hint">
-        {ti('settings.model.summary_model_hint')}
-      </p>
-
-      <label>
         <span>{ti('settings.model.budget_daily')}</span>
         <input
           type="number"

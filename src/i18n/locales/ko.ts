@@ -373,8 +373,6 @@ export const koMessages: TranslationDictionary = {
   'settings.model.tier_cheap': 'Cheap tier (short Q&A / small talk)',
   'settings.model.tier_standard': 'Standard tier (default)',
   'settings.model.tier_heavy': 'Heavy tier (long reasoning / complex code)',
-  'settings.model.summary_model': '대화 요약 모델 (긴 대화 압축용)',
-  'settings.model.summary_model_hint': '비워두면 메인 모델과 공유합니다. 요약은 압축만 하면 되므로 저렴한 모델(deepseek-chat / gpt-4o-mini 등)이면 충분합니다.',
   'settings.model.budget_daily': 'Daily budget cap (USD)',
   'settings.model.budget_monthly': 'Monthly budget cap (USD)',
   'settings.model.budget_downgrade_ratio': 'Downgrade threshold (0 = downgrade immediately, 1 = only at cap)',

@@ -1,5 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { embedMemorySearchText } from '../../features/memory/vectorSearch'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { loadLorebookEntries, saveLorebookEntries } from '../../lib/storage/lorebooks'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { LorebookEntry, UiLanguage } from '../../types'
@@ -7,15 +6,6 @@ import type { LorebookEntry, UiLanguage } from '../../types'
 type LorebooksSectionProps = {
   active: boolean
   uiLanguage: UiLanguage
-  memoryEmbeddingModel: string
-}
-
-function embeddingSourceFor(entry: LorebookEntry): string {
-  return [entry.label, entry.keywords.join(' '), entry.content]
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .join(' ')
-    .trim()
 }
 
 function makeId(): string {
@@ -29,77 +19,15 @@ function cloneEntries(entries: LorebookEntry[]): LorebookEntry[] {
 export const LorebooksSection = memo(function LorebooksSection({
   active,
   uiLanguage,
-  memoryEmbeddingModel,
 }: LorebooksSectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const [entries, setEntries] = useState<LorebookEntry[]>(() => cloneEntries(loadLorebookEntries()))
   const [draftKeywords, setDraftKeywords] = useState<Record<string, string>>({})
-  const embedGenRef = useRef(0)
 
   const persist = useCallback((next: LorebookEntry[]) => {
     setEntries(cloneEntries(next))
     saveLorebookEntries(next)
   }, [])
-
-  // Recompute embeddings when entries or the active embedding model change.
-  // Debounced so every keystroke during editing doesn't fire a request.
-  useEffect(() => {
-    const needsEmbedding = entries.some((entry) => {
-      const source = embeddingSourceFor(entry)
-      if (!source) return false
-      return entry.embeddingModel !== memoryEmbeddingModel
-        || !Array.isArray(entry.embedding)
-        || entry.embedding.length === 0
-    })
-    if (!needsEmbedding) return
-
-    const generation = embedGenRef.current + 1
-    embedGenRef.current = generation
-
-    const handle = window.setTimeout(async () => {
-      try {
-        const updates = await Promise.all(entries.map(async (entry) => {
-          const source = embeddingSourceFor(entry)
-          if (!source) {
-            if (!entry.embedding && !entry.embeddingModel) return entry
-            const cleaned = { ...entry, keywords: [...entry.keywords] }
-            delete cleaned.embedding
-            delete cleaned.embeddingModel
-            return cleaned
-          }
-          if (entry.embeddingModel === memoryEmbeddingModel
-            && Array.isArray(entry.embedding)
-            && entry.embedding.length > 0) {
-            return entry
-          }
-          try {
-            const vector = await embedMemorySearchText(source, memoryEmbeddingModel)
-            if (!vector.length) return entry
-            return {
-              ...entry,
-              keywords: [...entry.keywords],
-              embedding: Array.from(vector),
-              embeddingModel: memoryEmbeddingModel,
-            }
-          } catch (error) {
-            console.warn('[Lorebook] embedding failed for entry', entry.id, error)
-            return entry
-          }
-        }))
-        if (embedGenRef.current !== generation) return
-        const changed = updates.some((entry, index) => entry !== entries[index])
-        if (!changed) return
-        setEntries(cloneEntries(updates))
-        saveLorebookEntries(updates)
-      } catch (error) {
-        console.warn('[Lorebook] embedding batch failed', error)
-      }
-    }, 800)
-
-    return () => {
-      window.clearTimeout(handle)
-    }
-  }, [entries, memoryEmbeddingModel])
 
   const updateEntry = useCallback((id: string, patch: Partial<LorebookEntry>) => {
     const now = new Date().toISOString()

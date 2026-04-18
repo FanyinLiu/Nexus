@@ -199,7 +199,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       }
 
       // Run all independent context-loading tasks in parallel
-      const [desktopContext, mcpTools, gameContext, memoryContext, pluginSkillContext, triggeredLorebookEntries] = await Promise.all([
+      const [desktopContext, mcpTools, gameContext, memoryContext, pluginSkillContext] = await Promise.all([
         dependencies.ctx.loadDesktopContextSnapshot(),
         loadAvailableTools(currentSettings),
         loadGameContext().then(formatGameContext).catch((err) => {
@@ -220,19 +220,6 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         loadRelevantSkills(content).catch((err) => {
           console.warn('[assistantReply] loadRelevantSkills failed; continuing without skill context.', err)
           return ''
-        }),
-        // Lorebook triggering now runs keyword + semantic recall in parallel
-        // with everything else. Semantic recall reuses the same memory
-        // embedding model so there's no new config burden. Entries without
-        // a cached embedding (legacy or not-yet-saved under current model)
-        // fall back to keyword-only; the editor recomputes on save.
-        selectTriggeredLorebookEntries(
-          loadLorebookEntries(),
-          nextMessages,
-          currentSettings.memoryEmbeddingModel,
-        ).catch((err) => {
-          console.warn('[assistantReply] lorebook selection failed, skipping', err)
-          return []
         }),
       ])
 
@@ -314,7 +301,10 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           mcpTools,
           gameContext,
           autoSkillContext,
-          triggeredLorebookEntries,
+          triggeredLorebookEntries: selectTriggeredLorebookEntries(
+            loadLorebookEntries(),
+            nextMessages,
+          ),
           onBuiltInToolResult: handleBuiltInToolResult,
           // Current emotion/relationship/rhythm awareness — the latest values
           // come from useAutonomyController via a ref wrapper. These getters

@@ -143,7 +143,6 @@ const defaultSettings: AppSettings = {
   modelCheap: '',
   modelStandard: '',
   modelHeavy: '',
-  summaryModel: '',
   budgetDailyCapUsd: 0,
   budgetMonthlyCapUsd: 0,
   budgetHardStopEnabled: false,

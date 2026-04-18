@@ -5,15 +5,6 @@ function sanitize(entry: Partial<LorebookEntry>, now: string): LorebookEntry {
   const keywords = Array.isArray(entry.keywords)
     ? entry.keywords.map((k) => String(k ?? '').trim()).filter(Boolean)
     : []
-  // Only accept a cached embedding if the accompanying model id survives
-  // round-tripping. Missing model id means we can't tell which embedder
-  // produced the vector, so the semantic path treats the entry as unindexed.
-  const embedding = Array.isArray(entry.embedding)
-    && entry.embedding.every((x) => typeof x === 'number' && Number.isFinite(x))
-    && typeof entry.embeddingModel === 'string' && entry.embeddingModel
-      ? entry.embedding
-      : undefined
-  const embeddingModel = embedding ? String(entry.embeddingModel) : undefined
   return {
     id: String(entry.id ?? '').trim() || `lorebook-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     label: String(entry.label ?? '').trim(),
@@ -23,7 +14,6 @@ function sanitize(entry: Partial<LorebookEntry>, now: string): LorebookEntry {
     priority: Number.isFinite(entry.priority) ? Number(entry.priority) : 0,
     createdAt: String(entry.createdAt ?? now),
     updatedAt: String(entry.updatedAt ?? now),
-    ...(embedding ? { embedding, embeddingModel } : {}),
   }
 }
 

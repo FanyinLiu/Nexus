@@ -411,8 +411,6 @@ export const zhCNMessages: TranslationDictionary = {
   'settings.model.tier_cheap': '便宜档模型（短问答 / 闲聊）',
   'settings.model.tier_standard': '标准档模型（默认）',
   'settings.model.tier_heavy': '重型档模型（长推理 / 复杂代码）',
-  'settings.model.summary_model': '对话摘要模型（长对话背景压缩）',
-  'settings.model.summary_model_hint': '留空则与主模型共用。推荐用便宜的模型（如 deepseek-chat / gpt-4o-mini），因为摘要只需压缩，不需要推理。',
   'settings.model.budget_daily': '日预算上限（USD）',
   'settings.model.budget_monthly': '月预算上限（USD）',
   'settings.model.budget_downgrade_ratio': '降级阈值（0 = 立刻降级，1 = 用完再降）',

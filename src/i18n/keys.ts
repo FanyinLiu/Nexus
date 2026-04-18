@@ -383,8 +383,6 @@ export const translationKeys: TranslationKey[] = [
   'settings.model.tier_cheap',
   'settings.model.tier_standard',
   'settings.model.tier_heavy',
-  'settings.model.summary_model',
-  'settings.model.summary_model_hint',
   'settings.model.budget_daily',
   'settings.model.budget_monthly',
   'settings.model.budget_downgrade_ratio',

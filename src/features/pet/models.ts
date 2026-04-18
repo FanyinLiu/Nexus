@@ -6,13 +6,6 @@ export type PetExpressionSlot =
   | 'surprised'
   | 'confused'
   | 'embarrassed'
-  | 'excited'
-  | 'calm'
-  | 'affectionate'
-  | 'worried'
-  | 'focused'
-  | 'disappointed'
-  | 'shy'
   | 'listening'
   | 'speaking'
   | 'touchHead'
@@ -142,15 +135,6 @@ export const PET_MODEL_PRESETS: PetModelDefinition[] = [
       surprised: 'exp_08',
       confused: 'exp_03',
       embarrassed: 'exp_07',
-      // Expanded mood slots mapped back onto the 8-expression Mao set; the
-      // slot fallback chain in expressions.ts handles gaps for other models.
-      excited: 'exp_06',
-      calm: 'exp_01',
-      affectionate: 'exp_07',
-      worried: 'exp_03',
-      focused: 'exp_03',
-      disappointed: 'exp_04',
-      shy: 'exp_07',
       touchBody: 'exp_06',
       touchFace: 'exp_07',
       touchHead: 'exp_08',
