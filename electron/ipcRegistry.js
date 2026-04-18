@@ -14,6 +14,7 @@ import * as personaIpc from './ipc/personaIpc.js'
 import * as updaterIpc from './ipc/updaterIpc.js'
 import * as workspaceFsIpc from './ipc/workspaceFsIpc.js'
 import * as sherpaIpc from './ipc/sherpaIpc.js'
+import * as notificationIpc from './ipc/notificationIpc.js'
 
 const CHAT_REQUEST_TIMEOUT_MS = 25_000
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
@@ -24,9 +25,11 @@ const AUDIO_VOICE_LIST_TIMEOUT_MS = 15_000
 const activeChatStreamControllers = new Map()
 
 // Lazy-loaded modules — loaded on first use, not at startup.
-// sherpaIpc is eager because the renderer's wakeword runtime calls kws:status
-// immediately on mount; a deferred registration caused "No handler registered"
-// errors during the first ~1.5s of app startup.
+// Anything the renderer might invoke immediately on mount must go through the
+// eager `registerIpc()` path instead; a deferred registration produces
+// "No handler registered" errors during the first ~1.5s of startup. Known
+// offenders already moved out: sherpaIpc (kws:status), notificationIpc
+// (notification:get-channels via useNotificationBridge).
 let _deferredModulesPromise = null
 
 function loadDeferredModules() {
@@ -37,7 +40,6 @@ function loadDeferredModules() {
       import('./ipc/memoryIpc.js'),
       import('./ipc/skillIpc.js'),
     ]).then(async ([mcpIpc, pluginIpc, memoryIpc, skillIpc]) => {
-      const notificationIpc = await import('./ipc/notificationIpc.js')
       const ttsStreamService = createTtsStreamService({
         synthesizeRemote: synthesizeRemoteTts,
         warmupRemote: warmupRemoteTtsSession,
@@ -48,7 +50,6 @@ function loadDeferredModules() {
       pluginIpc.register()
       memoryIpc.register()
       skillIpc.register()
-      notificationIpc.register()
 
       console.info('[IPC] Deferred modules loaded')
     })
@@ -79,6 +80,7 @@ export function registerIpc() {
   updaterIpc.register()
   workspaceFsIpc.register()
   sherpaIpc.register()
+  notificationIpc.register()
 
   // Load deferred modules when the renderer is ready (first IPC call will trigger it),
   // but also kick off a background load after a short delay as a warm-up.

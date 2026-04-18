@@ -1,72 +1,13 @@
 import { ipcMain } from 'electron'
 import * as mcpHost from '../services/mcpHost.js'
-import { mcpClientService } from '../services/mcpClient.js'
-import { splitCommandLine } from '../integrationRuntime.js'
 import { requireString, requireObject, requireTrustedSender } from './validate.js'
 
+// Only the MCP Host (multi-server) read/invoke handlers are live — lifecycle
+// handlers (start/stop/restart) are driven through plugin:* in pluginIpc.js.
+// The old stdio client (mcp-client:*) had no renderer callers and was removed
+// along with electron/services/mcpClient.js.
+
 export function register() {
-  // ── MCP stdio client ──
-
-  ipcMain.handle('mcp-client:connect', async (event, config) => {
-    requireTrustedSender(event)
-    requireObject(config, 'config')
-    return mcpClientService.connect(config)
-  })
-
-  ipcMain.handle('mcp-client:disconnect', (event, serverId) => {
-    requireTrustedSender(event)
-    mcpClientService.disconnect(serverId)
-    return { ok: true }
-  })
-
-  ipcMain.handle('mcp-client:call-tool', async (event, serverId, toolName, args) => {
-    requireTrustedSender(event)
-    return mcpClientService.callTool(serverId, toolName, args)
-  })
-
-  ipcMain.handle('mcp-client:list-tools', (event, serverId) => {
-    requireTrustedSender(event)
-    return serverId
-      ? mcpClientService.listTools(serverId)
-      : mcpClientService.listAllTools()
-  })
-
-  ipcMain.handle('mcp-client:status', (event, serverId) => {
-    requireTrustedSender(event)
-    return serverId
-      ? mcpClientService.getStatus(serverId)
-      : mcpClientService.getAllStatuses()
-  })
-
-  // ── MCP Host (multi-server) ──
-
-  ipcMain.handle('mcp:start', async (event, payload) => {
-    requireTrustedSender(event)
-    requireObject(payload, 'payload')
-    const id = requireString(payload.id, 'id')
-    const command = requireString(payload.command, 'command')
-    const args = splitCommandLine(payload.args ?? '')
-    await mcpHost.start(id, command, args)
-    return mcpHost.getStatus(id)
-  })
-
-  ipcMain.handle('mcp:stop', async (event, payload) => {
-    requireTrustedSender(event)
-    const id = String(payload?.id ?? '').trim()
-    await mcpHost.stop(id)
-    return { ok: true }
-  })
-
-  ipcMain.handle('mcp:restart', async (event, payload) => {
-    requireTrustedSender(event)
-    requireObject(payload, 'payload')
-    const id = requireString(payload.id, 'id')
-    const command = requireString(payload.command, 'command')
-    const args = splitCommandLine(payload.args ?? '')
-    await mcpHost.restart(id, command, args)
-    return mcpHost.getStatus(id)
-  })
-
   ipcMain.handle('mcp:status', (event, payload) => {
     requireTrustedSender(event)
     const id = payload?.id ? String(payload.id).trim() : null

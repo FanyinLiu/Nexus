@@ -109,6 +109,7 @@ jobs:
             assets: |
               release/*.exe
               release/*.exe.blockmap
+              release/latest.yml
           # Two separate mac runners — one per arch — because npm 10+ skips
           # optional dependencies that don't match the host platform. Building
           # --x64 from an arm64 host (macos-latest is Apple Silicon as of
@@ -123,6 +124,7 @@ jobs:
               release/*.dmg.blockmap
               release/*.zip
               release/*.zip.blockmap
+              release/latest-mac.yml
           - os: macos-latest
             cmd: npx electron-builder --mac dmg zip --arm64 --publish never
             assets: |
@@ -130,12 +132,14 @@ jobs:
               release/*.dmg.blockmap
               release/*.zip
               release/*.zip.blockmap
+              release/latest-mac.yml
           - os: ubuntu-latest
             cmd: npx electron-builder --linux AppImage deb tar.gz --publish never
             assets: |
               release/*.AppImage
               release/*.deb
               release/*.tar.gz
+              release/latest-linux.yml
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60

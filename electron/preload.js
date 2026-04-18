@@ -119,8 +119,6 @@ contextBridge.exposeInMainWorld('desktopPet', {
   vadFlush: () => ipcRenderer.invoke('vad:flush'),
   vadStop: () => ipcRenderer.invoke('vad:stop'),
 
-  // MCP stdio client — restricted to main process only (no renderer access)
-
   // Tencent Cloud Real-Time ASR
   tencentAsrConnect: (payload) => ipcRenderer.invoke('tencent-asr:connect', payload),
   tencentAsrDisconnect: () => ipcRenderer.invoke('tencent-asr:disconnect'),
