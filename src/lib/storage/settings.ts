@@ -167,6 +167,13 @@ const defaultSettings: AppSettings = {
   autonomyMonologueEnabled: false,
   autonomyMonologueIntervalTicks: 6,
   autonomyMonologueSpeechThreshold: 65,
+  // v2 engine — dormant until its code paths land. Users can flip this today
+  // without behavioural change so migration happens at one flag write, not a
+  // settings-schema migration later.
+  autonomyEngineV2: false,
+  autonomyLevelV2: 'med',
+  autonomyModelV2: '',
+  autonomyPersonaStrictnessV2: 'med',
 }
 
 const VALID_PERMISSION_MODES = new Set(['read-only', 'confirm', 'auto'])

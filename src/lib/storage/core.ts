@@ -29,6 +29,7 @@ export const AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY = 'nexus:autonomy:notif
 export const AUTONOMY_GOALS_STORAGE_KEY = 'nexus:autonomy:goals'
 export const AUTONOMY_RELATIONSHIP_STORAGE_KEY = 'nexus:autonomy:relationship'
 export const AUTONOMY_RHYTHM_STORAGE_KEY = 'nexus:autonomy:rhythm'
+export const AUTONOMY_EMOTION_STORAGE_KEY = 'nexus:autonomy:emotion'
 export const AUTH_PROFILES_STORAGE_KEY = 'nexus:auth-profiles'
 export const COST_ENTRIES_STORAGE_KEY = 'nexus:cost-entries'
 export const BUDGET_CONFIG_STORAGE_KEY = 'nexus:budget-config'

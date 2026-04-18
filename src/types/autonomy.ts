@@ -148,4 +148,36 @@ export interface AutonomySettings {
   autonomyMonologueIntervalTicks: number
   /** Urgency score (0-100) above which the monologue becomes proactive speech. */
   autonomyMonologueSpeechThreshold: number
+
+  // ── V2 engine (dormant until Phase 3 lands) ─────────────────────────────────
+  /**
+   * Opt in to the LLM-driven autonomy engine. When false (default) the legacy
+   * rule-based proactiveEngine runs. Flipping this without the v2 code paths
+   * wired up is a no-op — the setting exists so Phase 0 can land ahead of the
+   * code so the v2 rollout doesn't need another settings migration.
+   */
+  autonomyEngineV2: boolean
+  /**
+   * Density + aggressiveness of autonomous speech under the v2 engine.
+   *   off  — never speak proactively, autonomy reduces to state tracking only
+   *   low  — long ticks, rare speech, only big events (morning, welcome back)
+   *   med  — default; every eligible tick is a candidate, ~20% fire
+   *   high — tight ticks, aggressive; risks feeling chatty
+   */
+  autonomyLevelV2: 'off' | 'low' | 'med' | 'high'
+  /**
+   * Which chat provider/model to use for autonomy decisions. Empty string means
+   * reuse the primary chat provider; otherwise a provider preset id (see
+   * apiProviders.ts). Kept as a free-form string so self-hosted setups can
+   * point at any OpenAI-compatible endpoint.
+   */
+  autonomyModelV2: string
+  /**
+   * How hard the persona guardrail works on v2 output.
+   *   loose  — system prompt only, no post-generation check
+   *   med    — signature keyword/style check; retry once on violation
+   *   strict — additional LLM-as-judge pass ("does this sound like X?")
+   *            before anything reaches the user
+   */
+  autonomyPersonaStrictnessV2: 'loose' | 'med' | 'strict'
 }
