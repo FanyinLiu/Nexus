@@ -16,9 +16,6 @@ if (import.meta.env.DEV) {
     const message = typeof firstArg === 'string' ? firstArg : ''
     if (!stormStackLogged && message.includes('Maximum update depth exceeded')) {
       stormStackLogged = true
-      // React's warning usually passes the component stack as a trailing
-      // string arg. Dump every arg plus the caller stack so whichever hint
-      // React left behind actually reaches the terminal log.
       originalError('[STORM DIAG] args[0]:', firstArg)
       for (let i = 1; i < args.length; i += 1) {
         originalError(`[STORM DIAG] args[${i}]:`, args[i])
@@ -27,6 +24,7 @@ if (import.meta.env.DEV) {
     }
     originalError(...args)
   }
+  console.warn('[STORM DIAG] console.error interceptor installed — will dump args+stack on first Maximum-update warning')
 }
 
 createRoot(document.getElementById('root')!).render(
