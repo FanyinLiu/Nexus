@@ -313,13 +313,30 @@ export function useDesktopBridge({
     return () => window.removeEventListener('storage', handleStorage)
   }, [chat, memory, pet, setDebugConsoleEvents, setReminderTasks, setSettings, setClickThrough, setIsPinned, voice])
 
+  // Runtime-state bridge: listens for cross-window snapshot pushes and writes
+  // them into local state. Must depend only on `pet.setMood` — not the whole
+  // `pet` object. `pet` is `usePetBehavior`'s useMemo return, whose identity
+  // changes whenever `mood` (and other inputs) changes. Depending on `pet`
+  // here turned this into a self-feeding render storm:
+  //
+  //   1. applyRuntimeState(state) runs (from main-process push or the
+  //      pendingSnapshot promise)
+  //   2. pet.setMood(state.mood) updates mood in usePetBehavior
+  //   3. mood change re-runs usePetBehavior's useMemo → new `pet` identity
+  //   4. dep `[pet]` sees new value → effect unsubscribes and re-subscribes
+  //   5. pendingSnapshot's `.then(applyRuntimeState)` fires again with the
+  //      same snapshot → GOTO 1
+  //
+  // `pet.setMood` is a React setState from useState, so its reference is
+  // stable across renders by contract — safe to depend on and avoids the loop.
   useEffect(() => {
+    const setMood = pet.setMood
     const applyRuntimeState = (state: RuntimeStateSnapshot) => {
       setRuntimeSnapshotState(state)
       persistRuntimeSnapshot(state)
 
       if (state.mood) {
-        pet.setMood(state.mood)
+        setMood(state.mood)
       }
 
       setPetRuntimeContinuousVoiceActive(Boolean(state.continuousVoiceActive))
@@ -331,7 +348,7 @@ export function useDesktopBridge({
 
     const unsubscribe = window.desktopPet?.subscribeRuntimeState?.(applyRuntimeState)
     return () => unsubscribe?.()
-  }, [pet])
+  }, [pet.setMood])
 
   useEffect(() => {
     const beat = () => {
