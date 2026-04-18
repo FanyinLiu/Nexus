@@ -110,31 +110,24 @@ jobs:
               release/*.exe
               release/*.exe.blockmap
               release/latest.yml
-          # Two separate mac runners — one per arch — because npm 10+ skips
-          # optional dependencies that don't match the host platform. Building
-          # --x64 from an arm64 host (macos-latest is Apple Silicon as of
-          # 2024) silently bundles the darwin-arm64 sherpa-onnx binary into
-          # the x64 .dmg, breaking voice on every Intel machine. Running each
-          # arch on its native runner keeps `npm ci` honest: macos-13 is
-          # Intel, macos-latest is Apple Silicon.
-          - os: macos-13
-            arch: x64
-            cmd: npx electron-builder --mac dmg zip --x64 --publish never
-            assets: |
-              release/*.dmg
-              release/*.dmg.blockmap
-              release/*.zip
-              release/*.zip.blockmap
-              release/latest-mac-x64.yml
+          # Apple Silicon only. Intel Mac (macos-13) was dropped in v0.2.8 —
+          # GitHub deprecated the free-tier `macos-13` runner pool and queue
+          # times climbed to many hours, stalling every release. Apple
+          # transitioned to arm64 in Nov 2020, so remaining Intel-Mac users
+          # are a small and shrinking minority. If we ever need x64 Mac
+          # builds again, the safe path is a dedicated Intel runner (self-
+          # hosted or paid) — cross-building --x64 from an arm64 host
+          # silently bundles the darwin-arm64 sherpa-onnx binary into the
+          # x64 .dmg because npm 10+ skips platform-mismatched optional
+          # dependencies.
           - os: macos-latest
-            arch: arm64
             cmd: npx electron-builder --mac dmg zip --arm64 --publish never
             assets: |
               release/*.dmg
               release/*.dmg.blockmap
               release/*.zip
               release/*.zip.blockmap
-              release/latest-mac-arm64.yml
+              release/latest-mac.yml
           - os: ubuntu-latest
             cmd: npx electron-builder --linux AppImage deb tar.gz --publish never
             assets: |
@@ -175,18 +168,6 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: ${{ matrix.os == 'macos-latest' && 'false' || '' }}
         run: ${{ matrix.cmd }}
 
-      # electron-builder writes `latest-mac.yml` regardless of arch, so the
-      # x64 and arm64 runners would clobber each other's manifest on upload.
-      # Rename per-arch before upload; the merge-mac-yml job downstream
-      # combines them into a single canonical latest-mac.yml.
-      - name: Rename mac update manifest per arch
-        if: startsWith(matrix.os, 'macos-')
-        shell: bash
-        run: |
-          if [ -f "release/latest-mac.yml" ]; then
-            mv "release/latest-mac.yml" "release/latest-mac-${{ matrix.arch }}.yml"
-          fi
-
       - name: List built artifacts
         shell: bash
         run: ls -lh release/ || true
@@ -216,62 +197,8 @@ jobs:
             gh release upload "$TAG" "$f" --clobber --repo "${{ github.repository }}"
           done
 
-  # Merge the two per-arch mac manifests into one canonical `latest-mac.yml`
-  # so electron-updater on macOS can see both x64 and arm64 files in a single
-  # `files[]` array and pick the one matching `os.arch()`. Without this the
-  # second arch's upload would overwrite the first, breaking auto-update for
-  # whichever arch lost the race.
-  merge-mac-yml:
-    needs: [ensure-release, build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download per-arch mac manifests
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.ensure-release.outputs.tag }}
-        shell: bash
-        run: |
-          mkdir -p mac-yml
-          cd mac-yml
-          gh release download "$TAG" --repo "${{ github.repository }}" \
-            --pattern 'latest-mac-x64.yml' --pattern 'latest-mac-arm64.yml'
-          ls -la
-
-      - name: Install pyyaml
-        run: pip install --quiet pyyaml
-
-      - name: Merge manifests into latest-mac.yml
-        shell: bash
-        run: |
-          python3 <<'PY'
-          import yaml
-          x64 = yaml.safe_load(open('mac-yml/latest-mac-x64.yml'))
-          arm = yaml.safe_load(open('mac-yml/latest-mac-arm64.yml'))
-          # Union the files arrays; keep x64 as the canonical top-level entry
-          # (path/sha512/size on the root point to the primary installer,
-          # which electron-updater only uses as a fallback when files[] is
-          # missing — all modern clients read files[] first).
-          merged = dict(x64)
-          seen = {f.get('url') for f in merged.get('files', [])}
-          for f in arm.get('files', []):
-              if f.get('url') not in seen:
-                  merged.setdefault('files', []).append(f)
-          with open('mac-yml/latest-mac.yml', 'w') as out:
-              yaml.safe_dump(merged, out, default_flow_style=False, sort_keys=False)
-          print(open('mac-yml/latest-mac.yml').read())
-          PY
-
-      - name: Upload unified manifest
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.ensure-release.outputs.tag }}
-        shell: bash
-        run: |
-          gh release upload "$TAG" mac-yml/latest-mac.yml \
-            --clobber --repo "${{ github.repository }}"
-
   publish:
-    needs: [ensure-release, build, merge-mac-yml]
+    needs: [ensure-release, build]
     runs-on: ubuntu-latest
     steps:
       - name: Publish draft release
