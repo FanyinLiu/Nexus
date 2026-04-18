@@ -1,7 +1,22 @@
 import { net } from 'electron'
 import { randomUUID } from 'node:crypto'
+import {
+  canonicalizeLoopbackUrl,
+  formatConnectionFailureMessage as _formatConnectionFailureMessage,
+  isIpv6LoopbackHost as _isIpv6LoopbackHost,
+  isLoopbackUrl,
+  normalizeBaseUrl as _normalizeBaseUrl,
+  shouldLabelAsConnectionFailure as _shouldLabelAsConnectionFailure,
+} from './netHelpers.js'
 
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
+
+// Re-export pure helpers so existing import sites (e.g. ipcRegistry, chatIpc,
+// ttsService, sttService) keep working without touching every call site.
+export const normalizeBaseUrl = _normalizeBaseUrl
+export const isIpv6LoopbackHost = _isIpv6LoopbackHost
+export const shouldLabelAsConnectionFailure = _shouldLabelAsConnectionFailure
+export const formatConnectionFailureMessage = _formatConnectionFailureMessage
 
 export async function readJsonSafe(response) {
   return response.json().catch(() => ({}))
@@ -57,10 +72,12 @@ export async function performNetworkRequest(url, options = {}) {
   const isBinaryBody =
     body instanceof Uint8Array ||
     (typeof Buffer !== 'undefined' && Buffer.isBuffer?.(body))
-  const useNativeFetch = body instanceof FormData || isBinaryBody || isLoopbackUrl(url)
+  const loopback = isLoopbackUrl(url)
+  const useNativeFetch = body instanceof FormData || isBinaryBody || loopback
+  const targetUrl = loopback ? canonicalizeLoopbackUrl(url) : url
 
   return withRequestTimeout(
-    () => (useNativeFetch ? fetch : net.fetch)(url, {
+    () => (useNativeFetch ? fetch : net.fetch)(targetUrl, {
       ...rest,
       signal: requestSignal,
       ...(body != null ? { body } : {}),
@@ -150,72 +167,9 @@ export async function extractResponseErrorMessage(response, fallbackMessage) {
   return text.trim() || fallbackMessage
 }
 
-export function normalizeBaseUrl(baseUrl) {
-  return String(baseUrl ?? '').trim().replace(/\/+$/, '')
-}
-
-export function isIpv6LoopbackHost(hostname) {
-  return hostname === '::1' || hostname === '[::1]'
-}
-
-function isLoopbackUrl(url) {
-  try {
-    const { hostname } = new URL(url)
-    return hostname === 'localhost' || hostname === '127.0.0.1' || isIpv6LoopbackHost(hostname)
-  } catch {
-    return false
-  }
-}
-
-export function shouldLabelAsConnectionFailure(reason) {
-  const message = String(reason ?? '').trim()
-  const normalized = message.toLowerCase()
-
-  if (!message) {
-    return true
-  }
-
-  return (
-    normalized.includes('econnrefused')
-    || normalized.includes('err_connection_refused')
-    || normalized.includes('err_connection_reset')
-    || normalized.includes('econreset')
-    || normalized.includes('etimedout')
-    || normalized.includes('enotfound')
-    || normalized.includes('eai_again')
-    || normalized.includes('fetch failed')
-    || normalized.includes('failed to fetch')
-    || normalized.includes('network error')
-    || normalized.includes('socket hang up')
-    || normalized.includes('proxy')
-    || normalized.includes('tls')
-    || normalized.includes('certificate')
-    || normalized.includes('net::err_')
-    || message.includes('服务连接测试超时')
-    || message.includes('请求超时，请检查网络')
-    || message.includes('语音文件下载超时')
-    || message.includes('连接被拒绝')
-    || message.includes('无法连接')
-  )
-}
-
-export function formatConnectionFailureMessage(reason, prefix = '连接失败，请检查 URL、网络或代理设置。') {
-  const message = String(reason ?? '').trim()
-
-  if (!message) {
-    return prefix
-  }
-
-  if (!shouldLabelAsConnectionFailure(message)) {
-    return message
-  }
-
-  if (message.includes('连接失败') || message.includes('超时')) {
-    return message
-  }
-
-  return `${prefix}原始错误：${message}`
-}
+// Pure network helpers (normalizeBaseUrl / isLoopbackUrl / canonicalizeLoopbackUrl
+// / shouldLabelAsConnectionFailure / formatConnectionFailureMessage) live in
+// ./netHelpers.js so they're unit-testable without Electron at import time.
 
 export function getVolcengineStatus(response, data) {
   const headerCode = String(response.headers.get('x-api-status-code') ?? '').trim()
