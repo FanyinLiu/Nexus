@@ -24,6 +24,9 @@ export function loadSubagentSettings(): SubagentSettings {
     dailyBudgetUsd: Number.isFinite(stored.dailyBudgetUsd)
       ? Math.max(0, Number(stored.dailyBudgetUsd))
       : SUBAGENT_DEFAULTS.dailyBudgetUsd,
+    modelOverride: typeof stored.modelOverride === 'string'
+      ? stored.modelOverride
+      : SUBAGENT_DEFAULTS.modelOverride,
   }
 }
 
@@ -31,6 +34,7 @@ export function saveSubagentSettings(settings: SubagentSettings): void {
   writeJsonDebounced(SUBAGENT_SETTINGS_STORAGE_KEY, {
     ...settings,
     maxConcurrent: clampConcurrency(settings.maxConcurrent),
+    modelOverride: typeof settings.modelOverride === 'string' ? settings.modelOverride : '',
   })
 }
 

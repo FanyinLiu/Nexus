@@ -174,6 +174,7 @@ function clampSettings(settings: SubagentSettings): SubagentSettings {
     dailyBudgetUsd: Number.isFinite(settings.dailyBudgetUsd)
       ? Math.max(0, settings.dailyBudgetUsd)
       : 0,
+    modelOverride: typeof settings.modelOverride === 'string' ? settings.modelOverride : '',
   }
 }
 

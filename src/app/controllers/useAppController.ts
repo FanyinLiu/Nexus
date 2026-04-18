@@ -540,6 +540,7 @@ export function useAppController() {
     focusState: autonomy.focusAwareness.focusState,
     notificationBridge: autonomy.notificationBridge,
     contextScheduler: autonomy.contextScheduler,
+    subagentTasks: autonomy.subagentTasks,
   }), [
     settings,
     petModel,
@@ -557,6 +558,7 @@ export function useAppController() {
     autonomy.focusAwareness.focusState,
     autonomy.notificationBridge,
     autonomy.contextScheduler,
+    autonomy.subagentTasks,
   ])
 
   return {

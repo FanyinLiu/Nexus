@@ -40,6 +40,13 @@ export interface SubagentSettings {
   maxConcurrent: number
   perTaskBudgetUsd: number
   dailyBudgetUsd: number
+  /**
+   * Optional model override for subagent LLM loops. Empty string falls back
+   * to `AppSettings.autonomyModelV2`, then to the primary chat model. Lets
+   * the user point subagents at a different provider tier (e.g. a cheap
+   * Haiku for research while autonomy keeps using Sonnet for decisions).
+   */
+  modelOverride: string
 }
 
 export const SUBAGENT_DEFAULTS: SubagentSettings = {
@@ -47,6 +54,7 @@ export const SUBAGENT_DEFAULTS: SubagentSettings = {
   maxConcurrent: 3,
   perTaskBudgetUsd: 0.10,
   dailyBudgetUsd: 1.00,
+  modelOverride: '',
 }
 
 export const SUBAGENT_MAX_CONCURRENT_HARD_CEILING = 3

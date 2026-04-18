@@ -23,7 +23,7 @@
  * tick loop.
  */
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   AppSettings,
   AutonomyTickState,
@@ -47,6 +47,22 @@ import {
   resolveAutonomyV2Config,
   ticksBetweenConsiderations,
 } from '../../features/autonomy/v2/providerResolution.ts'
+import {
+  createSubagentDispatcher,
+  type DispatcherEvent,
+  type SubagentDispatcher,
+} from '../../features/autonomy/subagents/subagentDispatcher.ts'
+import { registerSubagentDispatcher } from '../../features/autonomy/subagents/dispatcherRegistry.ts'
+import {
+  createSubagentRuntime,
+  type SubagentRuntime,
+} from '../../features/autonomy/subagents/subagentRuntime.ts'
+import type { SubagentTask } from '../../types/subagent.ts'
+import {
+  loadSubagentSettings,
+  loadSubagentTasks,
+  saveSubagentTasks,
+} from '../../lib/storage'
 
 const DEFAULT_PROFILE_ID = 'xinghui'
 
@@ -78,6 +94,67 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
   const considerCounterRef = useRef(0)
   const lastUtteranceRef = useRef<{ text: string; at: string } | null>(null)
   const inflightRef = useRef(false)
+
+  // ── Subagent runtime + dispatcher ──────────────────────────────────────────
+  //
+  // Created once per hook instance. The runtime is the pure state machine
+  // (admit / start / usage / complete); the dispatcher is the side-effectful
+  // half that actually runs the LLM loop and executes tools. Both live
+  // behind refs because they're stable for the lifetime of the hook and
+  // downstream consumers read via getter methods.
+  //
+  // Task list is mirrored into React state so the UI (SubagentBubble, still
+  // to be built) can subscribe via the hook's return. The runtime already
+  // emits a fresh slice on every mutation, so React's diff is trivial.
+  const [subagentTasks, setSubagentTasks] = useState<SubagentTask[]>(() => loadSubagentTasks())
+
+  const subagentRuntimeRef = useRef<SubagentRuntime | null>(null)
+  const subagentDispatcherRef = useRef<SubagentDispatcher | null>(null)
+  if (!subagentRuntimeRef.current) {
+    subagentRuntimeRef.current = createSubagentRuntime({
+      settings: loadSubagentSettings(),
+      initialTasks: loadSubagentTasks(),
+      onChange: (tasks) => {
+        saveSubagentTasks(tasks)
+        setSubagentTasks(tasks)
+      },
+    })
+  }
+  if (!subagentDispatcherRef.current) {
+    subagentDispatcherRef.current = createSubagentDispatcher({
+      runtime: subagentRuntimeRef.current,
+      getSettings: () => opts.settingsRef.current as AppSettings,
+      // Resolve subagent model override fresh on every dispatch so that
+      // settings edits take effect without restarting. Empty string falls
+      // through to autonomyModelV2, then to the primary chat model — see
+      // `resolveSubagentModel` in the dispatcher.
+      getSubagentModel: () => loadSubagentSettings().modelOverride,
+      onEvent: (event) => {
+        opts.onDebugEvent?.({
+          source: 'autonomy',
+          title: `[V2] subagent ${event.type}`,
+          detail: dispatcherEventDetail(event),
+        })
+      },
+    })
+  }
+
+  // Keep the runtime's settings in lockstep with live app settings so
+  // budget / capacity changes in Settings → Integrations → Subagents take
+  // effect immediately without a restart.
+  useEffect(() => {
+    const runtime = subagentRuntimeRef.current
+    if (!runtime) return
+    runtime.updateSettings(loadSubagentSettings())
+  }, [opts.settingsRef])
+
+  // Expose the dispatcher to code outside the React tree (specifically the
+  // chat tool-call loop, which handles `spawn_subagent` tool calls). One
+  // autonomy engine per session, so a module-level registry is fine.
+  useEffect(() => {
+    registerSubagentDispatcher(subagentDispatcherRef.current)
+    return () => registerSubagentDispatcher(null)
+  }, [])
 
   // Load persona on mount. Single shot for now — editing persona files
   // on disk won't hot-reload until the user restarts Nexus. We expose
@@ -179,6 +256,23 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
       }
     }
 
+    // Build subagent availability hint for the decision prompt. When the
+    // user has subagents disabled (the default), this stays `enabled: false`
+    // and the decision engine hides the spawn action from the contract — the
+    // model only sees silent / speak. When enabled, we report live capacity
+    // + remaining daily budget so the model can self-throttle.
+    const subagentSettings = loadSubagentSettings()
+    const runtime = subagentRuntimeRef.current!
+    const dailyBudgetRemainingUsd = subagentSettings.dailyBudgetUsd > 0
+      ? Math.max(0, subagentSettings.dailyBudgetUsd - runtime.totalSpentUsd())
+      : null
+    const subagentAvailability = {
+      enabled: subagentSettings.enabled,
+      activeCount: runtime.activeCount(),
+      maxConcurrent: subagentSettings.maxConcurrent,
+      dailyBudgetRemainingUsd,
+    }
+
     inflightRef.current = true
     try {
       const outcome = await runAutonomyDecision({
@@ -187,6 +281,7 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
         decisionConfig: cfg.decisionConfig,
         chat,
         strictness: cfg.strictness,
+        hints: { subagentAvailability },
         onError: (error, origin) => {
           opts.onDebugEvent?.({
             source: 'autonomy',
@@ -196,15 +291,19 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
         },
       })
 
+      const decisionDetail = (() => {
+        if (outcome.result.kind === 'speak') return `spoke: ${outcome.result.text}`
+        if (outcome.result.kind === 'spawn') {
+          return `spawn: ${outcome.result.task} (purpose: ${outcome.result.purpose})`
+        }
+        return `silent: ${outcome.result.reason ?? 'no_reason'}`
+      })()
       opts.onDebugEvent?.({
         source: 'autonomy',
         title: `[V2] decision (${outcome.telemetry.attempts} attempt${
           outcome.telemetry.attempts === 1 ? '' : 's'
         })`,
-        detail:
-          outcome.result.kind === 'speak'
-            ? `spoke: ${outcome.result.text}`
-            : `silent: ${outcome.result.reason ?? 'no_reason'}`,
+        detail: decisionDetail,
       })
 
       if (outcome.result.kind === 'speak') {
@@ -222,6 +321,80 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
             source: 'autonomy',
             title: '[V2] delivery failed',
             detail: error instanceof Error ? error.message : String(error),
+          })
+        }
+      } else if (outcome.result.kind === 'spawn') {
+        // Spawn delivery is two concurrent side effects:
+        //
+        //  1. The optional `announcement` (e.g. "让我查查") goes through the
+        //     same speak path as a normal utterance — chat bubble + TTS —
+        //     so the user hears the companion acknowledge before work starts.
+        //  2. The dispatcher immediately starts the LLM loop with tools.
+        //
+        // Running them in parallel avoids a TTS-first serial delay. When the
+        // dispatcher finishes, its summary is delivered as a follow-up
+        // companion notice. Both sides are fire-and-forget — failures are
+        // logged but never break the tick loop.
+        const { task, purpose, announcement } = outcome.result
+        const now = new Date().toISOString()
+        if (announcement) {
+          lastUtteranceRef.current = { text: announcement, at: now }
+          void opts.pushCompanionNotice({
+            chatContent: `【自主】${announcement}`,
+            bubbleContent: announcement,
+            speechContent: announcement,
+            autoHideMs: 8_000,
+          }).catch((error) => {
+            opts.onDebugEvent?.({
+              source: 'autonomy',
+              title: '[V2] spawn announcement delivery failed',
+              detail: error instanceof Error ? error.message : String(error),
+            })
+          })
+        }
+
+        const dispatcher = subagentDispatcherRef.current
+        const parentTurnId = `autonomy-${Date.now()}`
+        if (!dispatcher) {
+          opts.onDebugEvent?.({
+            source: 'autonomy',
+            title: '[V2] spawn skipped — dispatcher unavailable',
+            detail: `task: ${task}`,
+          })
+        } else {
+          void dispatcher.dispatch({
+            parentTurnId,
+            task,
+            purpose,
+            personaName: persona.id,
+            personaSoul: persona.soul,
+          }).then((result) => {
+            if (result.status !== 'completed') return
+            const summary = result.summary.trim()
+            if (!summary) return
+            // Present the research summary as a fresh companion notice.
+            // We don't speak it aloud by default — summaries can be long,
+            // and forcing TTS would stomp over ongoing user interaction.
+            // The user sees it in chat history; if they want it spoken,
+            // that's a future polish knob.
+            void opts.pushCompanionNotice({
+              chatContent: `【子代理】${summary}`,
+              bubbleContent: summary,
+              speechContent: '',
+              autoHideMs: 18_000,
+            }).catch((error) => {
+              opts.onDebugEvent?.({
+                source: 'autonomy',
+                title: '[V2] spawn summary delivery failed',
+                detail: error instanceof Error ? error.message : String(error),
+              })
+            })
+          }).catch((error) => {
+            opts.onDebugEvent?.({
+              source: 'autonomy',
+              title: '[V2] spawn dispatch crashed',
+              detail: error instanceof Error ? error.message : String(error),
+            })
           })
         }
       }
@@ -245,5 +418,21 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
     considerTick,
     reloadPersona,
     isPersonaLoaded: () => Boolean(personaRef.current?.present),
+    /** Live snapshot of subagent tasks for the UI to subscribe to. */
+    subagentTasks,
+  }
+}
+
+function dispatcherEventDetail(event: DispatcherEvent): string {
+  switch (event.type) {
+    case 'admitted':
+    case 'started':
+      return `${event.taskId} — ${event.task.task}`
+    case 'completed':
+      return `${event.taskId} — ${event.summary.slice(0, 80)}`
+    case 'failed':
+      return `${event.taskId} — ${event.failureReason}`
+    case 'rejected':
+      return `reason: ${event.reason}`
   }
 }

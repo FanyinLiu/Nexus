@@ -541,6 +541,8 @@ export function useAutonomyController({
     getRhythmPrompt: rhythmState.getRhythmPrompt,
     scheduleDecision,
     setGoals,
+    /** Subagent task snapshot surfaced for UI consumers (chat panel chip). */
+    subagentTasks: v2Engine.subagentTasks,
   }), [
     focusAwareness,
     autonomyTick,
@@ -563,5 +565,6 @@ export function useAutonomyController({
     rhythmState.getRhythmPrompt,
     scheduleDecision,
     setGoals,
+    v2Engine.subagentTasks,
   ])
 }

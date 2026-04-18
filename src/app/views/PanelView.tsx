@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react'
 import { getLiveTranscriptLabel, getTimeGreeting, voiceStateLabelMap } from '../appSupport'
-import { ActivePlanStrip, MessageBubble } from '../../components'
+import { ActivePlanStrip, MessageBubble, SubagentTaskStrip } from '../../components'
 import { resolveCharacterPreset } from '../../features/character/presets'
 import { shorten } from '../../lib'
 import type { UseAppControllerResult } from '../controllers/useAppController'
@@ -36,6 +36,7 @@ export function PanelView({
   openSettingsPanel,
   togglePanelCollapse,
   closePanel,
+  subagentTasks,
   settingsDrawer,
   onboardingGuide,
 }: PanelViewProps) {
@@ -334,6 +335,8 @@ export function PanelView({
             </div>
 
             <ActivePlanStrip />
+
+            <SubagentTaskStrip tasks={subagentTasks} />
 
             <section className="companion-chat">
 
