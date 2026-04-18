@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.6] - 2026-04-19
+## [0.2.7] - 2026-04-19
 
 ### Added
 - **Subagent dispatcher** — companion can spawn a bounded background research loop (web search + MCP tools) from two entry points: autonomy engine chooses `spawn` in place of `speak`, or main chat LLM calls the `spawn_subagent` tool mid-turn. Live status rendered in `SubagentTaskStrip` above the chat message list; summary woven back into the final reply.
@@ -22,7 +22,7 @@
 - `react-hooks/exhaustive-deps` warning on `busEmit` — suppressed with comment explaining that `executeBusEffects` is a hoisted declaration closing over the same refs as the hook body.
 
 ### Docs
-- All four existing READMEs (en / zh-CN / zh-TW / ja) refreshed with the v0.2.6 "What's new" section. New `docs/README.ko.md`.
+- All four existing READMEs (en / zh-CN / zh-TW / ja) refreshed with the v0.2.7 "What's new" section. New `docs/README.ko.md`.
 
 ## [0.2.2] - 2026-04-16
 

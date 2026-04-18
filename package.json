@@ -1,7 +1,7 @@
 {
   "name": "nexus",
   "private": true,
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Nexus desktop AI companion built with Electron, React, and TypeScript.",
   "author": {
     "name": "FanyinLiu",

@@ -589,7 +589,7 @@ const SETTINGS_SECTION_DESCRIPTION_KEY_MAP: Record<SettingsSectionId, Parameters
   chat: 'settings.section_desc.chat',
   history: 'settings.section_desc.history',
   memory: 'settings.section_desc.memory',
-  // Lorebooks is new in v0.2.6 — reuse the memory key until a dedicated
+  // Lorebooks is new in v0.2.7 — reuse the memory key until a dedicated
   // i18n entry lands so existing translations don't fall through to the
   // empty string fallback in pickTranslatedUiText.
   lorebooks: 'settings.section_desc.memory',
