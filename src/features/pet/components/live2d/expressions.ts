@@ -6,6 +6,33 @@
 import type { PetMood, PetTouchZone } from '../../../../types'
 import type { PetExpressionSlot, PetModelDefinition } from '../../models'
 
+// Fallback chain per slot: if a model doesn't define an expression for slot
+// X, try the next slot in the chain. Every chain terminates at 'idle', which
+// every model is required to define. Lets new-mood slots (excited, calm, …)
+// degrade gracefully on older models that only ship the original 7 slots.
+const SLOT_FALLBACKS: Partial<Record<PetExpressionSlot, PetExpressionSlot[]>> = {
+  excited: ['happy'],
+  affectionate: ['happy'],
+  calm: ['idle'],
+  worried: ['confused'],
+  focused: ['thinking'],
+  disappointed: ['confused', 'sleepy'],
+  shy: ['embarrassed'],
+}
+
+export function resolveExpressionName(
+  slot: PetExpressionSlot,
+  expressionMap: PetModelDefinition['expressionMap'],
+): string | undefined {
+  const direct = expressionMap[slot]
+  if (direct) return direct
+  for (const next of SLOT_FALLBACKS[slot] ?? []) {
+    const candidate = expressionMap[next]
+    if (candidate) return candidate
+  }
+  return expressionMap.idle
+}
+
 export function resolveExpressionSlot(
   mood: PetMood,
   touchZone: PetTouchZone | null,
@@ -41,6 +68,20 @@ export function resolveExpressionSlot(
       return 'confused'
     case 'embarrassed':
       return 'embarrassed'
+    case 'excited':
+      return 'excited'
+    case 'calm':
+      return 'calm'
+    case 'affectionate':
+      return 'affectionate'
+    case 'worried':
+      return 'worried'
+    case 'focused':
+      return 'focused'
+    case 'disappointed':
+      return 'disappointed'
+    case 'shy':
+      return 'shy'
     default:
       return 'idle'
   }

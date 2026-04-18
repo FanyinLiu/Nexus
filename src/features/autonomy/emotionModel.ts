@@ -91,31 +91,54 @@ export function decayEmotion(state: EmotionState): EmotionState {
  * stronger feelings dominate weaker ones (e.g., high concern wins over high
  * curiosity even if both are above their thresholds).
  *
- * Available PetMoods: idle | thinking | happy | sleepy | surprised | confused | embarrassed
+ * The discrete PetMood set is defined in types/pet.ts. New moods degrade to
+ * semantically close ones when a Live2D model only provides the original 7
+ * expressions — see SLOT_FALLBACKS in features/pet/components/live2d/
+ * expressions.ts.
  */
 export function emotionToPetMood(state: EmotionState): PetMood {
   // Severe states first.
-  if (state.concern > 0.75) return 'confused'
-  if (state.energy < 0.2) return 'sleepy'
+  if (state.energy < 0.18) return 'sleepy'
 
-  // Embarrassed = high warmth + high concern (flustered affection).
+  // Worried = high concern + low-to-mid energy (more specific than 'confused').
+  if (state.concern > 0.75 && state.energy < 0.55) return 'worried'
+  // Confused = high concern with higher energy (flustered).
+  if (state.concern > 0.75) return 'confused'
+
+  // Shy = high warmth + high concern + low energy (quiet, hesitant affection).
+  if (state.warmth > 0.65 && state.concern > 0.5 && state.energy < 0.5) return 'shy'
+  // Embarrassed = high warmth + high concern + more energy (flustered).
   if (state.warmth > 0.7 && state.concern > 0.5) return 'embarrassed'
 
   // Surprised = strong curiosity spike.
-  if (state.curiosity > 0.75) return 'surprised'
+  if (state.curiosity > 0.8) return 'surprised'
 
-  // Happy = warmth and energy together — low energy + warmth feels affectionate
-  // but tired, so we require both.
+  // Excited = very high energy + some warmth (biggest happy sibling).
+  if (state.energy > 0.82 && state.warmth > 0.45) return 'excited'
+
+  // Affectionate = very high warmth, moderate energy (calm closeness).
+  if (state.warmth > 0.8 && state.energy > 0.35 && state.energy < 0.75) return 'affectionate'
+
+  // Happy = good warmth + energy together.
   if (state.warmth > 0.65 && state.energy > 0.5) return 'happy'
 
-  // Thinking = curious but not energetic — mid-curiosity with low/mid energy.
+  // Focused = high curiosity + mid energy + low concern (in the zone).
+  if (state.curiosity > 0.65 && state.energy > 0.45 && state.concern < 0.35) return 'focused'
+
+  // Thinking = mid curiosity with lower energy.
   if (state.curiosity > 0.55 && state.energy < 0.6) return 'thinking'
 
   // Mild lift from energy alone still reads as happy.
   if (state.energy > 0.75 && state.warmth > 0.4) return 'happy'
 
+  // Disappointed = low warmth + low energy (flat, let-down).
+  if (state.warmth < 0.35 && state.energy < 0.45) return 'disappointed'
+
   // Persistent moderate concern without other strong signals → confused.
   if (state.concern > 0.5 && state.energy < 0.5) return 'confused'
+
+  // Calm = low concern, mid-low energy, neutral warmth (relaxed idle).
+  if (state.concern < 0.25 && state.energy < 0.55 && state.warmth > 0.35 && state.warmth < 0.7) return 'calm'
 
   return 'idle'
 }

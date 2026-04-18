@@ -492,6 +492,7 @@ export function SettingsDrawer({
         <LorebooksSection
           active={activeSectionId === 'lorebooks'}
           uiLanguage={draft.uiLanguage}
+          memoryEmbeddingModel={draft.memoryEmbeddingModel}
         />
 
         <MemorySection

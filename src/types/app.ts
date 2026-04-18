@@ -90,6 +90,13 @@ export interface TextProviderSettings {
   modelCheap: string
   modelStandard: string
   modelHeavy: string
+  /**
+   * Model used for rolling conversation summaries (HypaMemory-style). When
+   * empty, falls back to `model`. Separated so users can point summaries at a
+   * cheap/fast model (gpt-4o-mini, deepseek-chat, gemma-2b) while the main
+   * chat stays on their heavy default.
+   */
+  summaryModel: string
   budgetDailyCapUsd: number
   budgetMonthlyCapUsd: number
   budgetHardStopEnabled: boolean

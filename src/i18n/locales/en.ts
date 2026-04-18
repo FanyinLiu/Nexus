@@ -373,6 +373,8 @@ export const enMessages: TranslationDictionary = {
   'settings.model.tier_cheap': 'Cheap tier (short Q&A / small talk)',
   'settings.model.tier_standard': 'Standard tier (default)',
   'settings.model.tier_heavy': 'Heavy tier (long reasoning / complex code)',
+  'settings.model.summary_model': 'Summary model (long-chat recap)',
+  'settings.model.summary_model_hint': 'Leave empty to share the main chat model. A cheap model (deepseek-chat, gpt-4o-mini, etc.) is usually enough — summaries only compress, no heavy reasoning needed.',
   'settings.model.budget_daily': 'Daily budget cap (USD)',
   'settings.model.budget_monthly': 'Monthly budget cap (USD)',
   'settings.model.budget_downgrade_ratio': 'Downgrade threshold (0 = downgrade immediately, 1 = only at cap)',

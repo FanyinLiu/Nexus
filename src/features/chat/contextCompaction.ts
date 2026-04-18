@@ -163,17 +163,49 @@ export function formatCompactionContext(summary: string): string {
 }
 
 // ── LLM summary cache ──
+//
+// Small bounded LRU instead of a single slot: a user who switches between
+// two chat sessions every few turns would otherwise evict each other's cache
+// constantly and pay for a fresh summary every time. Eight entries covers
+// realistic session-switching patterns without growing unbounded.
 
-let _cachedSummary: { hash: string; summary: string } | null = null
+const SUMMARY_CACHE_LIMIT = 8
+const _summaryCache = new Map<string, string>()
 
-function hashOlderText(text: string): string {
-  // Simple hash for cache invalidation — first 80 + last 80 chars + length
-  return `${text.length}:${text.slice(0, 80)}:${text.slice(-80)}`
+function hashOlderText(text: string, model: string): string {
+  // Simple hash for cache invalidation — first 80 + last 80 chars + length.
+  // Prefix with the resolved model id so switching summaryModel busts cached
+  // outputs from the previous model without clearing everything.
+  return `${model}::${text.length}:${text.slice(0, 80)}:${text.slice(-80)}`
+}
+
+function readSummaryCache(key: string): string | null {
+  const hit = _summaryCache.get(key)
+  if (hit === undefined) return null
+  // Touch to mark as most-recently-used.
+  _summaryCache.delete(key)
+  _summaryCache.set(key, hit)
+  return hit
+}
+
+function writeSummaryCache(key: string, value: string): void {
+  if (_summaryCache.has(key)) _summaryCache.delete(key)
+  _summaryCache.set(key, value)
+  while (_summaryCache.size > SUMMARY_CACHE_LIMIT) {
+    const oldest = _summaryCache.keys().next().value
+    if (oldest === undefined) break
+    _summaryCache.delete(oldest)
+  }
 }
 
 /**
  * Summarize older conversation text using the LLM.
  * Results are cached until the older text changes (new messages compacted).
+ *
+ * Prefers `settings.summaryModel` when set so users can route the rolling
+ * conversation summary through a cheap model (deepseek-chat, gpt-4o-mini,
+ * gemma-2b, etc.) while the main chat stays on a heavy default. Falls back
+ * to `settings.model` when `summaryModel` is empty.
  *
  * Requires the current AppSettings so the chat-complete IPC can reach a
  * real provider. Earlier revisions passed empty strings for every auth
@@ -185,13 +217,13 @@ export async function summarizeOlderMessages(
   olderText: string,
   settings: AppSettings,
 ): Promise<string> {
-  const key = hashOlderText(olderText)
+  const resolvedModel = (settings?.summaryModel?.trim()) || settings?.model || ''
+  const key = hashOlderText(olderText, resolvedModel)
 
-  if (_cachedSummary?.hash === key) {
-    return _cachedSummary.summary
-  }
+  const cached = readSummaryCache(key)
+  if (cached) return cached
 
-  if (!settings?.apiBaseUrl || !settings.model) {
+  if (!settings?.apiBaseUrl || !resolvedModel) {
     // Nothing to call — caller will get the raw text back. Don't even
     // attempt the IPC (and don't log the empty-baseUrl crash).
     return olderText
@@ -203,14 +235,14 @@ export async function summarizeOlderMessages(
       providerId: settings.apiProviderId,
       baseUrl: settings.apiBaseUrl,
       apiKey: settings.apiKey,
-      model: settings.model,
+      model: resolvedModel,
       messages: prompt.map((m) => ({ role: m.role as 'system' | 'user', content: m.content })),
       temperature: 0.3,
       maxTokens: 400,
     })
 
     if (response?.content) {
-      _cachedSummary = { hash: key, summary: response.content }
+      writeSummaryCache(key, response.content)
       return response.content
     }
   } catch {
@@ -221,7 +253,7 @@ export async function summarizeOlderMessages(
 }
 
 export function clearCompactionCache() {
-  _cachedSummary = null
+  _summaryCache.clear()
 }
 
 // ── Budget configuration ──

@@ -30,6 +30,13 @@ const MAO_COMPANION_PRESET: CharacterPreset = {
     surprised: '微微吃惊',
     confused: '有些疑惑',
     embarrassed: '害羞不好意思',
+    excited: '兴致高涨',
+    calm: '从容放松',
+    affectionate: '依恋温柔',
+    worried: '有点担心',
+    focused: '专注投入',
+    disappointed: '有点失落',
+    shy: '腼腆收敛',
   },
   voiceStateDescriptors: {
     idle: '安静待命',

@@ -373,6 +373,8 @@ export const jaMessages: TranslationDictionary = {
   'settings.model.tier_cheap': 'Cheap tier (short Q&A / small talk)',
   'settings.model.tier_standard': 'Standard tier (default)',
   'settings.model.tier_heavy': 'Heavy tier (long reasoning / complex code)',
+  'settings.model.summary_model': '会話要約モデル（長い会話の圧縮用）',
+  'settings.model.summary_model_hint': '空欄ならメインモデルと共有。要約は圧縮のみで推論不要なので、安いモデル（deepseek-chat や gpt-4o-mini など）で十分です。',
   'settings.model.budget_daily': 'Daily budget cap (USD)',
   'settings.model.budget_monthly': 'Monthly budget cap (USD)',
   'settings.model.budget_downgrade_ratio': 'Downgrade threshold (0 = downgrade immediately, 1 = only at cap)',

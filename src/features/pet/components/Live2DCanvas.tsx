@@ -9,7 +9,7 @@ import {
 } from '../models'
 import type { PetPerformanceCue } from '../performance'
 import { createBlinkState } from './live2d/blink'
-import { resolveExpressionSlot, resolveMotionGroup } from './live2d/expressions'
+import { resolveExpressionName, resolveExpressionSlot, resolveMotionGroup } from './live2d/expressions'
 import { applyLive2DFrame, type FrameRenderState } from './live2d/frameRender'
 import { layoutLive2DModel, MIN_CANVAS_HEIGHT, MIN_CANVAS_WIDTH } from './live2d/layout'
 import { clamp } from '../../../lib/common'
@@ -133,7 +133,7 @@ export function Live2DCanvas({
     currentExpressionSlotRef.current = nextExpressionSlot
 
     const expressionMap = activeModelDefinitionRef.current.expressionMap
-    const expressionName = expressionMap[nextExpressionSlot] ?? expressionMap.idle
+    const expressionName = resolveExpressionName(nextExpressionSlot, expressionMap)
 
     applyExpression(expressionName)
 
@@ -192,7 +192,7 @@ export function Live2DCanvas({
 
     // Apply expression immediately (lightweight, no animation jerk)
     const expressionMap = activeModelDefinitionRef.current.expressionMap
-    const expressionName = expressionMap[nextSlot] ?? expressionMap.idle
+    const expressionName = resolveExpressionName(nextSlot, expressionMap)
     applyExpression(expressionName)
 
     // Debounce motion triggers to prevent rapid state transitions

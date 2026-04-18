@@ -373,6 +373,8 @@ export const zhTWMessages: TranslationDictionary = {
   'settings.model.tier_cheap': '便宜檔模型（短問答 / 閒聊）',
   'settings.model.tier_standard': '標準檔模型（預設）',
   'settings.model.tier_heavy': '重型檔模型（長推理 / 複雜程式碼）',
+  'settings.model.summary_model': '對話摘要模型（長對話背景壓縮）',
+  'settings.model.summary_model_hint': '留空則與主模型共用。推薦用便宜的模型（例如 deepseek-chat / gpt-4o-mini），因為摘要只需壓縮，不需推理。',
   'settings.model.budget_daily': '日預算上限（USD）',
   'settings.model.budget_monthly': '月預算上限（USD）',
   'settings.model.budget_downgrade_ratio': '降級閾值（0 = 立刻降級，1 = 用完再降）',
