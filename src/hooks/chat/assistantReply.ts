@@ -1,4 +1,5 @@
 import { PromptModeStreamFilter } from '../../features/chat/promptModeMcp'
+import { applyChatOutputTransforms } from '../../features/chat/chatOutputTransforms'
 import { selectToolDeliveryMode } from '../../features/chat/systemPromptBuilder'
 import { requestAssistantReplyStreaming } from '../../features/chat/runtime'
 import { selectTriggeredLorebookEntries } from '../../features/chat/lorebookInjection'
@@ -360,7 +361,16 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       // counts reflect the actual context window, not just the last user turn.
       const allInputText = nextMessages.map((m) => m.content).join('\n')
       recordUsage('chat', allInputText, response.response.content, { modelId: currentSettings.model })
-      const assistantPerformance = parseAssistantPerformanceContent(response.response.content)
+      // User-configured regex transforms (Settings → chatOutputTransforms). Run
+      // BEFORE parseAssistantPerformanceContent so rules that target raw LLM
+      // output (strip <thinking>, drop *actions*, normalise quirks) take
+      // effect before the perf parser pulls displayContent vs spokenContent
+      // apart. An empty / missing rule list is a no-op.
+      const rawAssistantText = applyChatOutputTransforms(
+        response.response.content,
+        currentSettings.chatOutputTransforms,
+      )
+      const assistantPerformance = parseAssistantPerformanceContent(rawAssistantText)
       const assistantMessageContent = assistantPerformance.displayContent
         || (assistantPerformance.stageDirections.length ? '（轻轻做了个动作）' : '……')
       const assistantReplyForStatus = assistantPerformance.spokenContent

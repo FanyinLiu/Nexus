@@ -149,6 +149,7 @@ const defaultSettings: AppSettings = {
   budgetDowngradeRatio: 0.8,
   agentWorkspaceRoot: '',
   agentMaxIterations: 8,
+  chatOutputTransforms: [],
   // Autonomy defaults — all off so existing users see no behavior change
   autonomyEnabled: false,
   autonomyTickIntervalSeconds: 30,

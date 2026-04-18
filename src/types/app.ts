@@ -101,6 +101,34 @@ export interface TextProviderSettings {
   agentWorkspaceRoot: string
   /** Maximum agent loop iterations before forced abort. */
   agentMaxIterations: number
+  /**
+   * Regex-based post-processing rules applied to each LLM reply before it
+   * reaches the chat view / memory layer. Inspired by SillyTavern's regex
+   * extension: users can strip `*action*` blocks, hide `<thinking>`
+   * sections, redact patterns, normalise model quirks, etc., without
+   * touching code. Rules run in array order; an empty list disables the
+   * feature. See `applyChatOutputTransforms` for the engine.
+   */
+  chatOutputTransforms: ChatOutputTransformRule[]
+}
+
+export interface ChatOutputTransformRule {
+  /** Stable unique id for the rule (used by the UI when it lands). */
+  id: string
+  /** Human-readable label for the settings UI. */
+  label: string
+  /**
+   * JavaScript-compatible regex source (without surrounding slashes). The
+   * engine compiles with `new RegExp(find, flags)` and bails out silently
+   * on invalid input — no broken persona ever breaks the chat turn.
+   */
+  find: string
+  /** Replacement text (supports $1, $2… back-references). Default: ''. */
+  replace: string
+  /** Regex flags. Typical: `g`, `gi`, `gs`, `gms`. */
+  flags: string
+  /** Off-switch without having to delete the rule. */
+  enabled: boolean
 }
 
 export interface SpeechInputSettings {
