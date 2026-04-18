@@ -48,6 +48,7 @@ type WakewordRuntimeOptions = {
   triggerCooldownMs?: number
   retryBaseMs?: number
   retryMaxMs?: number
+  retryMaxAttempts?: number
 }
 
 // Lowered from 1500 ms: the 1.5 s cooldown was long enough that a user
@@ -60,6 +61,28 @@ type WakewordRuntimeOptions = {
 const DEFAULT_TRIGGER_COOLDOWN_MS = 500
 const DEFAULT_RETRY_BASE_MS = 1_200
 const DEFAULT_RETRY_MAX_MS = 10_000
+// Give up after N failed retries and mark the listener as unavailable.
+// Infinite retries on machines with no mic hardware (e.g. a headless Mac
+// mini) otherwise floods React with setState cascades from each cycle's
+// state emit + pet-status toast + voiceBus event, eventually tripping
+// "Maximum update depth exceeded".
+const DEFAULT_RETRY_MAX_ATTEMPTS = 5
+
+// Errors that indicate the environment genuinely can't support wakeword
+// listening — no audio input device, permission permanently denied, etc.
+// Short-circuit retries for these so we don't burn CPU on a known-dead path.
+export function isPermanentWakewordError(message: string): boolean {
+  const normalized = String(message ?? '').toLowerCase()
+  if (!normalized) return false
+  return (
+    normalized.includes('device not found')
+    || normalized.includes('notfounderror')
+    || normalized.includes('requested device not found')
+    || normalized.includes('permission denied')
+    || normalized.includes('notallowederror')
+    || normalized.includes('当前环境不支持唤醒词')
+  )
+}
 
 function toIso(timestampMs: number) {
   return new Date(timestampMs).toISOString()
@@ -143,6 +166,7 @@ export function createWakewordRuntime(
   const triggerCooldownMs = options.triggerCooldownMs ?? DEFAULT_TRIGGER_COOLDOWN_MS
   const retryBaseMs = options.retryBaseMs ?? DEFAULT_RETRY_BASE_MS
   const retryMaxMs = options.retryMaxMs ?? DEFAULT_RETRY_MAX_MS
+  const retryMaxAttempts = options.retryMaxAttempts ?? DEFAULT_RETRY_MAX_ATTEMPTS
 
   let state = createInitialWakewordRuntimeState()
   let config = normalizeWakewordRuntimeConfig({
@@ -223,6 +247,26 @@ export function createWakewordRuntime(
 
   function handleRecoverableError(message: string, modelKind: WakewordModelKind) {
     stopListener()
+
+    const giveUp = isPermanentWakewordError(message) || state.retryCount >= retryMaxAttempts
+    if (giveUp) {
+      clearRetryTimer()
+      emitState({
+        ...buildBaseStatePatch(config),
+        phase: 'unavailable',
+        active: false,
+        available: false,
+        modelKind,
+        reason: isPermanentWakewordError(message)
+          ? `唤醒词监听不可用：${message}`
+          : `唤醒词监听重试 ${retryMaxAttempts} 次后仍失败：${message}`,
+        error: message,
+        retryCount: 0,
+        cooldownUntil: '',
+      })
+      return
+    }
+
     scheduleRetry()
     emitState({
       ...buildBaseStatePatch(config),
