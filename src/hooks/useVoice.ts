@@ -252,6 +252,10 @@ export function useVoice(ctx: UseVoiceContext) {
       setVoiceState(nextUiPhase)
     }
     executeBusEffects(effects)
+    // executeBusEffects is a hoisted function declaration that closes over
+    // the same refs as this hook body; its identity is stable and including
+    // it in the dep list would just churn `busEmit` every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceBus, setVoiceState])
 
   // ── Ref sync ───────────────────────────────────────────────────────────────

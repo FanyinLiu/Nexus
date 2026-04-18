@@ -15,6 +15,7 @@ import * as updaterIpc from './ipc/updaterIpc.js'
 import * as workspaceFsIpc from './ipc/workspaceFsIpc.js'
 import * as sherpaIpc from './ipc/sherpaIpc.js'
 import * as notificationIpc from './ipc/notificationIpc.js'
+import * as mcpIpc from './ipc/mcpIpc.js'
 
 const CHAT_REQUEST_TIMEOUT_MS = 25_000
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
@@ -29,24 +30,23 @@ const activeChatStreamControllers = new Map()
 // eager `registerIpc()` path instead; a deferred registration produces
 // "No handler registered" errors during the first ~1.5s of startup. Known
 // offenders already moved out: sherpaIpc (kws:status), notificationIpc
-// (notification:get-channels via useNotificationBridge).
+// (notification:get-channels via useNotificationBridge), and — as of this
+// change — mcpIpc (mcp:sync-servers via useMcpServerSync on App mount).
 let _deferredModulesPromise = null
 
 function loadDeferredModules() {
   if (!_deferredModulesPromise) {
     _deferredModulesPromise = Promise.all([
-      import('./ipc/mcpIpc.js'),
       import('./ipc/pluginIpc.js'),
       import('./ipc/memoryIpc.js'),
       import('./ipc/skillIpc.js'),
-    ]).then(async ([mcpIpc, pluginIpc, memoryIpc, skillIpc]) => {
+    ]).then(async ([pluginIpc, memoryIpc, skillIpc]) => {
       const ttsStreamService = createTtsStreamService({
         synthesizeRemote: synthesizeRemoteTts,
         warmupRemote: warmupRemoteTtsSession,
       })
 
       ttsStreamIpc.register({ ttsStreamService })
-      mcpIpc.register()
       pluginIpc.register()
       memoryIpc.register()
       skillIpc.register()
@@ -81,6 +81,7 @@ export function registerIpc() {
   workspaceFsIpc.register()
   sherpaIpc.register()
   notificationIpc.register()
+  mcpIpc.register()
 
   // Load deferred modules when the renderer is ready (first IPC call will trigger it),
   // but also kick off a background load after a short delay as a warm-up.

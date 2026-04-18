@@ -18,6 +18,11 @@ if (!existsSync(vendorDir)) {
   mkdirSync(vendorDir, { recursive: true })
 }
 
+const ortDir = join(vendorDir, 'ort')
+if (!existsSync(ortDir)) {
+  mkdirSync(ortDir, { recursive: true })
+}
+
 // Copy from node_modules
 const copies = [
   {
@@ -43,6 +48,36 @@ for (const { src, dest, label } of copies) {
   }
   copyFileSync(src, dest)
   console.log(`[vendor] ✓ ${label} (copied from node_modules)`)
+}
+
+// onnxruntime-web wasm + mjs bundles — browserVad.ts sets
+// `onnxWASMBasePath: resolvePublicAssetPath('vendor/ort/')`, so vad-web
+// looks for its ORT runtime under public/vendor/ort/. Without this copy
+// vad-web falls back to a CJS require() that doesn't work in Vite's ESM
+// environment, and the whole Silero VAD path fails with "legacy recording".
+const ortSrcDir = join(root, 'node_modules', 'onnxruntime-web', 'dist')
+if (existsSync(ortSrcDir)) {
+  const ortPatterns = ['ort-wasm-simd-threaded.wasm', 'ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.jsep.wasm', 'ort-wasm-simd-threaded.jsep.mjs']
+  let copied = 0
+  let skipped = 0
+  for (const file of ortPatterns) {
+    const src = join(ortSrcDir, file)
+    const dest = join(ortDir, file)
+    if (existsSync(dest)) { skipped++; continue }
+    if (!existsSync(src)) {
+      console.warn(`[vendor] ✗ ort/${file} — source not found`)
+      continue
+    }
+    copyFileSync(src, dest)
+    copied++
+  }
+  if (copied > 0) {
+    console.log(`[vendor] ✓ ort/ runtime (${copied} files copied, ${skipped} already present)`)
+  } else if (skipped > 0) {
+    console.log(`[vendor] ✓ ort/ runtime (${skipped} files, already present)`)
+  }
+} else {
+  console.warn('[vendor] ✗ onnxruntime-web not installed — Silero VAD will fall back to legacy recording')
 }
 
 // Download Cubism Core from official CDN
