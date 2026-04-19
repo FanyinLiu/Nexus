@@ -9,7 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react'
-import { hoverReactionMap, voiceStateLabelMap } from '../appSupport'
+import { getVoiceStateLabel, pickHoverReaction } from '../appSupport'
 import { MusicPopupCard, PetControlIcon, PetDialogBubble, PetThoughtBubble } from '../../components'
 import { resolveCharacterPreset } from '../../features/character/presets'
 import { clamp } from '../../lib'
@@ -58,7 +58,7 @@ export function PetView({
     params?: Parameters<typeof pickTranslatedUiText>[2],
   ) => pickTranslatedUiText(settings.uiLanguage, key, params)
   const characterPreset = useMemo(() => resolveCharacterPreset(), [])
-  const voiceStateLabel = voiceStateLabelMap[voice.voiceState]
+  const voiceStateLabel = getVoiceStateLabel(voice.voiceState, ti)
   const petSignalLabel = voice.voiceState !== 'idle'
     ? voiceStateLabel
     : settings.continuousVoiceModeEnabled
@@ -235,7 +235,7 @@ export function PetView({
 
     pet.setPetTapActive(true)
     pet.setPetTouchZone(touchZone)
-    pet.updatePetStatus(hoverReactionMap[touchZone][Math.floor(Math.random() * hoverReactionMap[touchZone].length)])
+    pet.updatePetStatus(pickHoverReaction(touchZone, ti))
 
     if (tapTimerRef.current) {
       window.clearTimeout(tapTimerRef.current)

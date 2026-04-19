@@ -11,6 +11,7 @@ import {
   STARTUP_GREETING_SESSION_KEY,
   VOICE_TRIGGER_DIRECT_SEND_MIGRATION_KEY,
   buildStartupGreetingText,
+  makeTranslator,
 } from '../appSupport'
 import {
   DEFAULT_PET_MODEL_ID,
@@ -449,7 +450,7 @@ export function useDesktopBridge({
       return
     }
 
-    const greeting = buildStartupGreetingText(settings, memory.memories)
+    const greeting = buildStartupGreetingText(settings, memory.memories, makeTranslator(settings.uiLanguage))
     publishAmbientPresence(
       {
         text: greeting,

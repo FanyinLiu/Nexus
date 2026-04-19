@@ -1,17 +1,29 @@
 import { shorten } from '../lib/common'
+import { pickTranslatedUiText } from '../lib/uiLanguage'
 import type {
   AppSettings,
   MemoryItem,
   PetTouchZone,
+  TranslationKey,
+  UiLanguage,
   VoiceState,
   WindowView,
 } from '../types'
 
-export const voiceStateLabelMap: Record<VoiceState, string> = {
-  idle: '待命',
-  listening: '聆听中',
-  processing: '理解中',
-  speaking: '说话中',
+type Translator = (
+  key: TranslationKey,
+  params?: Parameters<typeof pickTranslatedUiText>[2],
+) => string
+
+const VOICE_STATE_KEYS: Record<VoiceState, TranslationKey> = {
+  idle: 'voice_state.idle',
+  listening: 'voice_state.listening',
+  processing: 'voice_state.processing',
+  speaking: 'voice_state.speaking',
+}
+
+export function getVoiceStateLabel(state: VoiceState, ti: Translator): string {
+  return ti(VOICE_STATE_KEYS[state])
 }
 
 // Short one-liners shown in the pet status bubble when the user clicks the
@@ -19,32 +31,27 @@ export const voiceStateLabelMap: Record<VoiceState, string> = {
 // matching expression slot + "hit" motion group via the Live2D canvas, so
 // these strings are pure flavour — they fire together with the visual reaction.
 // Pool is intentionally wide (6 per zone) so repeated tapping doesn't read
-// as a script; `Math.random` picks one per tap.
-export const hoverReactionMap: Record<PetTouchZone, string[]> = {
+// as a script. `pickHoverReaction` rolls a uniform random pick per tap and
+// returns the already-localized message.
+const HOVER_REACTION_KEYS: Record<PetTouchZone, readonly TranslationKey[]> = {
   head: [
-    '摸头会让我更安心。',
-    '被轻轻碰到头顶了。',
-    '这一下让我想多露出表情。',
-    '嗯…头顶有点痒痒的。',
-    '好的，头摸到了，记下来了。',
-    '这样我会被你养得很乖。',
+    'touch.head.1', 'touch.head.2', 'touch.head.3',
+    'touch.head.4', 'touch.head.5', 'touch.head.6',
   ],
   face: [
-    '你在看着我吗？',
-    '脸颊这里会更敏感一点。',
-    '这样会让我更有表情。',
-    '呃…这里被戳到会害羞。',
-    '你的手好像有点凉。',
-    '别老盯着我的脸看嘛。',
+    'touch.face.1', 'touch.face.2', 'touch.face.3',
+    'touch.face.4', 'touch.face.5', 'touch.face.6',
   ],
   body: [
-    '我感受到你靠近了。',
-    '这样让我更有能量。',
-    '我能捕捉到你的节奏。',
-    '嗯，抱歉，没想到你会主动过来。',
-    '这一下让我的呼吸也跟着慢了半拍。',
-    '你的触感我记住了。',
+    'touch.body.1', 'touch.body.2', 'touch.body.3',
+    'touch.body.4', 'touch.body.5', 'touch.body.6',
   ],
+}
+
+export function pickHoverReaction(zone: PetTouchZone, ti: Translator): string {
+  const pool = HOVER_REACTION_KEYS[zone]
+  const key = pool[Math.floor(Math.random() * pool.length)] ?? pool[0]
+  return ti(key)
 }
 
 export const STARTUP_GREETING_DURATION_MS = 9_200
@@ -74,27 +81,46 @@ export function getInitialPanelSection(): PanelSection {
     : 'chat'
 }
 
-export function getTimeGreeting() {
+export function getTimeGreeting(ti: Translator): string {
   const hour = new Date().getHours()
 
-  if (hour < 5) return '夜深了'
-  if (hour < 11) return '早安'
-  if (hour < 14) return '中午好'
-  if (hour < 18) return '下午好'
-  return '晚上好'
+  if (hour < 5) return ti('time_greeting.deep_night')
+  if (hour < 11) return ti('time_greeting.morning')
+  if (hour < 14) return ti('time_greeting.noon')
+  if (hour < 18) return ti('time_greeting.afternoon')
+  return ti('time_greeting.evening')
 }
 
-export function getLiveTranscriptLabel(voiceState: VoiceState) {
-  return voiceState === 'listening' ? '识别中' : '识别结果'
+export function getLiveTranscriptLabel(voiceState: VoiceState, ti: Translator): string {
+  return voiceState === 'listening'
+    ? ti('live_transcript.recognizing')
+    : ti('live_transcript.result')
 }
 
-export function buildStartupGreetingText(settings: AppSettings, memories: MemoryItem[]) {
-  const greeting = getTimeGreeting()
+export function buildStartupGreetingText(
+  settings: AppSettings,
+  memories: MemoryItem[],
+  ti: Translator,
+): string {
+  const greeting = getTimeGreeting(ti)
   const latestMemory = memories[0]?.content
 
   if (latestMemory) {
-    return `${greeting}，${settings.userName}。我还记得你最近提过「${shorten(latestMemory, 20)}」，如果你还想延续这个话题，我可以继续帮你理一遍。`
+    return ti('startup_greeting.with_memory', {
+      greeting,
+      userName: settings.userName,
+      memory: shorten(latestMemory, 20),
+    })
   }
 
-  return `${greeting}，${settings.userName}。${settings.companionName} 已经在桌面这边准备好了，想聊时直接叫我。`
+  return ti('startup_greeting.plain', {
+    greeting,
+    userName: settings.userName,
+    companionName: settings.companionName,
+  })
+}
+
+/** Helper for callers that don't already have a ti() — builds one on the fly. */
+export function makeTranslator(uiLanguage: UiLanguage): Translator {
+  return (key, params) => pickTranslatedUiText(uiLanguage, key, params)
 }

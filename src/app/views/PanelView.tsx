@@ -9,7 +9,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from 'react'
-import { getLiveTranscriptLabel, getTimeGreeting, voiceStateLabelMap } from '../appSupport'
+import { getLiveTranscriptLabel, getTimeGreeting, getVoiceStateLabel } from '../appSupport'
 import { ActivePlanStrip, MessageBubble, SubagentTaskStrip } from '../../components'
 import { resolveCharacterPreset } from '../../features/character/presets'
 import { resolveActivePanelScene } from '../../features/panelScene'
@@ -53,7 +53,7 @@ export function PanelView({
     params?: Parameters<typeof pickTranslatedUiText>[2],
   ) => pickTranslatedUiText(settings.uiLanguage, key, params)
   const characterPreset = useMemo(() => resolveCharacterPreset(), [])
-  const timeGreeting = getTimeGreeting()
+  const timeGreeting = getTimeGreeting(ti)
 
   // Re-evaluate the panel scene every 10 minutes so the 'auto' mode drifts
   // with the clock without needing the user to reopen the panel. Manual
@@ -81,7 +81,7 @@ export function PanelView({
     settings.ambientWeatherLocation,
     settings.ambientWeatherEnabled,
   )
-  const voiceStateLabel = voiceStateLabelMap[voice.voiceState]
+  const voiceStateLabel = getVoiceStateLabel(voice.voiceState, ti)
   const nextSchedulerStatusLabel = runtimeSnapshot.schedulerArmed
     ? runtimeSnapshot.activeTaskLabel
       ? ti('panel.next_task_prefix', { name: runtimeSnapshot.activeTaskLabel })
@@ -128,7 +128,7 @@ export function PanelView({
   const welcomeBody = memory.memories[0]?.content
     ? ti('panel.greeting.remembered', { memory: shorten(memory.memories[0].content, 24) })
     : ti('panel.greeting.welcome', { companionName: settings.companionName })
-  const liveTranscriptLabel = getLiveTranscriptLabel(voice.voiceState)
+  const liveTranscriptLabel = getLiveTranscriptLabel(voice.voiceState, ti)
   const liveStatusLine = voice.liveTranscript
     ? `${liveTranscriptLabel}：${shorten(voice.liveTranscript, 34)}`
     : assistantActivityLabel
