@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createId,
-  loadChatMessages,
+  inferSessionTitle,
   openTextFileWithFallback,
-  saveChatMessages,
   saveTextFileWithFallback,
   shorten,
+  upsertChatSession,
 } from '../lib'
 import { getCoreRuntime } from '../lib/coreRuntime'
 import { parseChatHistoryArchive, serializeChatHistoryArchive } from '../features/chat'
@@ -46,28 +46,19 @@ export type { UseChatContext } from './chat'
 const MAX_CHAT_MESSAGES = 500
 
 export function useChat(ctx: UseChatContext) {
-  // Snapshot the archive's message IDs on mount so the pane can filter
-  // them out. useChat lives at the app-root level (useAppController →
-  // useChat), so this ref seeds once at app start and never resets — in
-  // contrast to a PanelView-level snapshot which was wiped by React's
-  // remount cycle and ended up swallowing fresh STT transcripts.
-  //
-  // Storage (and the LLM context via messagesRef) still sees the full
-  // history; this ref only gates what the chat pane renders. Settings →
-  // 聊天记录 remains how the user browses older turns.
-  const initialArchiveRef = useRef<{ ids: Set<string>; messages: ChatMessage[] } | null>(null)
-  if (initialArchiveRef.current === null) {
-    const initial = sanitizeLoadedMessages(loadChatMessages())
-    initialArchiveRef.current = {
-      ids: new Set(initial.map((m) => m.id)),
-      messages: initial,
-    }
-  }
-  const [messages, setMessages] = useState<ChatMessage[]>(() => initialArchiveRef.current!.messages)
-  // Legacy field retained for backwards compatibility with any consumer
-  // still reading sessionStartAt; the real scoping now lives in
-  // archivedMessageIds (below).
-  const sessionStartAtRef = useRef<number>(Date.now())
+  // Each app launch opens a fresh chat bucket. Past sessions are persisted
+  // by id and browsable from Settings → 聊天记录; the pane itself only
+  // ever renders the current session. LLM context continuity across
+  // launches is handled by the memory + dream system, not by dragging
+  // raw message history forward.
+  const currentSessionIdRef = useRef<string>(createId('chat-session'))
+  const currentSessionStartedAtRef = useRef<number>(Date.now())
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  // Retained for backwards compatibility with consumers that may still
+  // read these fields. archivedMessageIds is now an empty set — since
+  // the pane renders the current session only, nothing needs filtering.
+  const sessionStartAtRef = useRef<number>(currentSessionStartedAtRef.current)
+  const archivedMessageIdsRef = useRef<Set<string>>(new Set())
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setErrorRaw] = useState<string | null>(null)
@@ -130,7 +121,13 @@ export function useChat(ctx: UseChatContext) {
       messagesSaveSkipRef.current = false
       return
     }
-    saveChatMessages(messages)
+    upsertChatSession({
+      id: currentSessionIdRef.current,
+      startedAt: currentSessionStartedAtRef.current,
+      lastActiveAt: Date.now(),
+      title: inferSessionTitle(messages),
+      messages,
+    })
 
     const { sessionStore } = getCoreRuntime()
     if (!sessionIdRef.current) {
@@ -672,7 +669,8 @@ export function useChat(ctx: UseChatContext) {
   return {
     messages,
     sessionStartAt: sessionStartAtRef.current,
-    archivedMessageIds: initialArchiveRef.current.ids,
+    archivedMessageIds: archivedMessageIdsRef.current,
+    currentSessionId: currentSessionIdRef.current,
     input,
     busy,
     error,

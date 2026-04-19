@@ -7,6 +7,7 @@
 // Domain modules under ./ build on top of these primitives.
 
 export const CHAT_STORAGE_KEY = 'nexus:chat'
+export const CHAT_SESSIONS_STORAGE_KEY = 'nexus:chat:sessions'
 export const LEGACY_MEMORY_STORAGE_KEY = 'nexus:memory'
 export const MEMORY_STORAGE_KEY = 'nexus:memory:long-term'
 export const DAILY_MEMORY_STORAGE_KEY = 'nexus:memory:daily'

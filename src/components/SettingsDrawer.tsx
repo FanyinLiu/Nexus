@@ -59,6 +59,7 @@ export type SettingsDrawerProps = {
   settings: AppSettings
   chatMessageCount: number
   chatBusy: boolean
+  currentChatSessionId?: string
   memories: MemoryItem[]
   dailyMemoryEntries: DailyMemoryEntry[]
   petModelPresets: PetModelDefinition[]
@@ -139,6 +140,7 @@ export function SettingsDrawer({
   settings,
   chatMessageCount,
   chatBusy,
+  currentChatSessionId,
   memories,
   dailyMemoryEntries,
   petModelPresets,
@@ -480,6 +482,7 @@ export function SettingsDrawer({
           importingChatHistory={chatHistory.importingChatHistory}
           clearingChatHistory={chatHistory.clearingChatHistory}
           chatHistoryStatus={chatHistory.chatHistoryStatus}
+          currentSessionId={currentChatSessionId}
           onExportChatHistory={() => void chatHistory.handleExportChatHistory()}
           onImportChatHistory={() => void chatHistory.handleImportChatHistory()}
           onClearChatHistory={() => void chatHistory.handleClearChatHistory()}

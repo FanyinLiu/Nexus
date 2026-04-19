@@ -15,6 +15,7 @@
 
 export * from './core.ts'
 export * from './chat.ts'
+export * from './chatSessions.ts'
 export * from './memory.ts'
 export * from './voice.ts'
 export * from './reminders.ts'

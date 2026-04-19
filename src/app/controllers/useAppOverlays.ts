@@ -60,6 +60,7 @@ type UseAppOverlaysOptions = {
     | 'messages'
     | 'busy'
     | 'busyRef'
+    | 'currentSessionId'
     | 'setError'
     | 'appendSystemMessage'
     | 'exportChatHistory'
@@ -174,6 +175,7 @@ export function useAppOverlays({
     settings,
     chatMessageCount,
     chatBusy: chat.busy,
+    currentChatSessionId: chat.currentSessionId,
     memories: memory.memories,
     dailyMemoryEntries: memory.recentDailyMemoryEntries,
     petModelPresets,
