@@ -148,15 +148,15 @@ export const HistorySection = memo(function HistorySection({
 
       <div className="settings-section__title-row" style={{ marginTop: 24 }}>
         <div>
-          <h4>往期会话</h4>
+          <h4>{ti('settings.history.archived_title')}</h4>
           <p className="settings-drawer__hint">
-            每次启动 Nexus 会开启新的对话面板，往期对话保留在此——点击展开查看。
+            {ti('settings.history.archived_note')}
           </p>
         </div>
       </div>
 
       {archivedSessions.length === 0 ? (
-        <p className="settings-drawer__hint">（暂无往期会话）</p>
+        <p className="settings-drawer__hint">{ti('settings.history.archived_empty')}</p>
       ) : (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
           {archivedSessions.map((session) => {
@@ -181,10 +181,10 @@ export const HistorySection = memo(function HistorySection({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {session.title ?? '（无标题会话）'}
+                      {session.title ?? ti('settings.history.untitled_session')}
                     </div>
                     <div style={{ fontSize: 12, opacity: 0.65 }}>
-                      {formatTimestamp(session.lastActiveAt)} · {session.messages.length} 条
+                      {formatTimestamp(session.lastActiveAt)} · {session.messages.length} {ti('settings.history.message_count_suffix')}
                     </div>
                   </div>
                   <button
@@ -192,14 +192,14 @@ export const HistorySection = memo(function HistorySection({
                     className="ghost-button"
                     onClick={() => setExpandedId(isExpanded ? null : session.id)}
                   >
-                    {isExpanded ? '收起' : '展开'}
+                    {isExpanded ? ti('settings.history.collapse') : ti('settings.history.expand')}
                   </button>
                   <button
                     type="button"
                     className="ghost-button"
                     onClick={() => handleRemove(session.id)}
                   >
-                    删除
+                    {ti('settings.history.delete')}
                   </button>
                 </div>
 
@@ -226,12 +226,16 @@ export const HistorySection = memo(function HistorySection({
                     }}
                   >
                     {session.messages.length === 0 ? (
-                      <div style={{ opacity: 0.5 }}>（此会话没有消息）</div>
+                      <div style={{ opacity: 0.5 }}>{ti('settings.history.empty_messages')}</div>
                     ) : (
                       session.messages.map((msg) => (
                         <div key={msg.id} style={{ minWidth: 0, maxWidth: '100%' }}>
                           <span style={{ opacity: 0.6, marginRight: 6 }}>
-                            {msg.role === 'user' ? '你' : msg.role === 'assistant' ? '伙伴' : msg.role}
+                            {msg.role === 'user'
+                              ? ti('settings.history.role.user')
+                              : msg.role === 'assistant'
+                                ? ti('settings.history.role.assistant')
+                                : msg.role}
                           </span>
                           <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
                         </div>
