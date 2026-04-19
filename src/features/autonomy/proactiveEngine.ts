@@ -7,10 +7,14 @@ import type {
   MemoryItem,
   ProactiveDecision,
   ReminderTask,
+  TranslationKey,
 } from '../../types'
 import { shouldSuppressAutonomy } from './focusAwareness'
 import { evaluateGoalReminders } from './goalTracker'
 import { predictIntent } from './intentPredictor'
+import { pickTranslatedUiText } from '../../lib/uiLanguage'
+
+type Translator = (key: TranslationKey, params?: Parameters<typeof pickTranslatedUiText>[2]) => string
 
 // ── Input context for the decision engine ─────────────────────────────────────
 
@@ -115,6 +119,7 @@ function isUserDeepFocused(activity: ActivityClass, idleTicks: number, windowTit
  */
 export function evaluateProactiveContext(input: ProactiveContextInput): ProactiveDecision {
   const { tickState, focusState, currentHour, settings } = input
+  const ti: Translator = (key, params) => pickTranslatedUiText(settings.uiLanguage, key, params)
   const activity = classifyActivity(input.activeWindowTitle)
 
   // Gate: suppress during quiet hours, locked screen
@@ -154,7 +159,7 @@ export function evaluateProactiveContext(input: ProactiveContextInput): Proactiv
 
   // ── Candidate: morning brief ──────────────────────────────────────────────
   if (isMorningBriefTime(currentHour, tickState) && input.lastPresenceCategory !== 'brief') {
-    const briefText = buildMorningBrief(input)
+    const briefText = buildMorningBrief(input, ti)
     if (briefText) {
       candidates.push({
         kind: 'brief',
@@ -179,7 +184,7 @@ export function evaluateProactiveContext(input: ProactiveContextInput): Proactiv
     if (idleMinutes >= 30) {
       candidates.push({
         kind: 'speak',
-        text: pickWelcomeBackLine(currentHour, settings.userName, idleMinutes),
+        text: pickWelcomeBackLine(currentHour, settings.userName, idleMinutes, ti),
         category: 'welcome_back',
         priority: PRIORITY_WELCOME_BACK,
       })
@@ -209,7 +214,7 @@ export function evaluateProactiveContext(input: ProactiveContextInput): Proactiv
     && tickState.consecutiveIdleTicks <= 8
     && input.lastPresenceCategory !== 'context'
   ) {
-    const contextLine = pickContextAwareLine(activity, currentHour, settings.userName)
+    const contextLine = pickContextAwareLine(activity, currentHour, settings.userName, ti)
     if (contextLine) {
       candidates.push({
         kind: 'speak',
@@ -249,7 +254,7 @@ export function evaluateProactiveContext(input: ProactiveContextInput): Proactiv
     if (memory) {
       candidates.push({
         kind: 'speak',
-        text: `想起来了，${memory.content}`,
+        text: ti('proactive.memory.remember', { content: memory.content }),
         category: 'memory',
         priority: PRIORITY_MEMORY_RECALL,
       })
@@ -264,7 +269,7 @@ export function evaluateProactiveContext(input: ProactiveContextInput): Proactiv
   ) {
     candidates.push({
       kind: 'speak',
-      text: pickIdleCheckLine(currentHour),
+      text: pickIdleCheckLine(currentHour, ti),
       category: 'idle_check',
       priority: PRIORITY_IDLE_CHECK,
     })
@@ -279,7 +284,7 @@ export function evaluateProactiveContext(input: ProactiveContextInput): Proactiv
   ) {
     candidates.push({
       kind: 'speak',
-      text: pickTimeGreeting(currentHour, settings.companionName),
+      text: pickTimeGreeting(currentHour, settings.companionName, ti),
       category: 'time',
       priority: PRIORITY_TIME_GREETING,
     })
@@ -346,22 +351,22 @@ function isMorningBriefTime(hour: number, state: AutonomyTickState): boolean {
   return ticksSinceWake < 10
 }
 
-function buildMorningBrief(input: ProactiveContextInput): string | null {
+function buildMorningBrief(input: ProactiveContextInput, ti: Translator): string | null {
   const parts: string[] = []
 
   const upcoming = input.pendingReminders.filter((t) => t.enabled).length
   if (upcoming > 0) {
-    parts.push(`今天有 ${upcoming} 个待办提醒`)
+    parts.push(ti('proactive.stats.upcoming_count', { count: upcoming }))
   }
 
   const recentCount = input.recentMessages.filter((m) => m.role === 'user').length
   if (recentCount > 0) {
-    parts.push(`上次聊了 ${recentCount} 轮对话`)
+    parts.push(ti('proactive.stats.recent_count', { count: recentCount }))
   }
 
   if (parts.length === 0) return null
 
-  return `早上好！${parts.join('，')}。有什么需要我帮忙的吗？`
+  return ti('proactive.presence.good_morning', { extras: parts.join('，') })
 }
 
 function pickRelevantMemory(memories: MemoryItem[]): MemoryItem | null {
@@ -375,32 +380,31 @@ function isGreetingTime(hour: number): boolean {
   return hour === 8 || hour === 12 || hour === 18
 }
 
-function pickTimeGreeting(hour: number, name: string): string {
-  if (hour >= 6 && hour < 11) return `${name}在，早上好呀~`
-  if (hour >= 11 && hour < 14) return `中午了，${name}提醒你该吃饭啦。`
-  if (hour >= 17 && hour < 19) return `傍晚了，今天辛苦了~`
-  if (hour >= 22) return `夜深了，早点休息吧。`
-  return `${name}一直在哦。`
+function pickTimeGreeting(hour: number, name: string, ti: Translator): string {
+  if (hour >= 6 && hour < 11) return ti('proactive.presence.hello', { name })
+  if (hour >= 11 && hour < 14) return ti('proactive.presence.lunch', { name })
+  if (hour >= 17 && hour < 19) return ti('proactive.presence.evening')
+  if (hour >= 22) return ti('proactive.presence.late_night')
+  return ti('proactive.presence.anytime', { name })
 }
 
-function pickIdleCheckLine(hour: number): string {
-  if (hour >= 22 || hour < 6) return '你好像离开了一会儿，我先安静待着。'
-  return '好久没互动了，需要我做点什么吗？'
+function pickIdleCheckLine(hour: number, ti: Translator): string {
+  if (hour >= 22 || hour < 6) return ti('proactive.idle.quiet')
+  return ti('proactive.idle.long_absent')
 }
 
 // ── Welcome-back after long idle ─────────────────────────────────────────────
 
-function pickWelcomeBackLine(hour: number, userName: string, idleMinutes: number): string {
+function pickWelcomeBackLine(hour: number, userName: string, idleMinutes: number, ti: Translator): string {
   const roundedMin = Math.round(idleMinutes)
 
   if (hour >= 22 || hour < 6) {
-    return `${userName}，你回来了，刚离开了大约 ${roundedMin} 分钟。夜里不用急，慢慢来。`
+    return ti('proactive.presence.returned_late', { userName, minutes: roundedMin })
   }
 
   const lines = [
-    `${userName}，你回来了！离开了大约 ${roundedMin} 分钟，要继续之前的事吗？`,
-    `欢迎回来，${userName}。离开了一阵子，需要我帮你回顾一下之前在做什么吗？`,
-    `${userName}，好久不见！差不多 ${roundedMin} 分钟了，有什么需要我接上的吗？`,
+    ti('proactive.presence.returned', { userName, minutes: roundedMin }),
+    ti('proactive.presence.long_absent', { userName, minutes: roundedMin }),
   ]
   return pickRandom(lines)
 }
@@ -411,35 +415,36 @@ function pickContextAwareLine(
   activity: ActivityClass,
   hour: number,
   userName: string,
+  ti: Translator,
 ): string | null {
   switch (activity) {
     case 'browsing': {
-      if (hour >= 22) return `${userName}，夜里浏览网页别忘了时间。`
+      if (hour >= 22) return ti('proactive.presence.browsing_late', { userName })
       const lines = [
-        `${userName}，在看网页吗？找到有意思的东西可以发给我。`,
-        `浏览中~如果遇到想讨论的内容，随时丢过来。`,
+        ti('proactive.presence.browsing', { userName }),
+        ti('proactive.presence.ambient_browsing'),
       ]
       return pickRandom(lines)
     }
     case 'media': {
       const lines = [
-        `在听音乐/看视频呢，${userName}放松一下也很好。`,
-        `享受一下~我不打扰，需要的时候叫我就好。`,
+        ti('proactive.presence.music', { userName }),
+        ti('proactive.presence.social'),
       ]
       return pickRandom(lines)
     }
     case 'gaming':
-      return `${userName}在打游戏！我在旁边看着，有事叫我就好。`
+      return ti('proactive.presence.game', { userName })
     case 'communication': {
       const lines = [
-        `在聊天呢，有什么需要我帮忙查的随时说。`,
-        `社交时间~我先安静，需要的时候叫我。`,
+        ti('proactive.presence.chat'),
+        ti('proactive.presence.social'),
       ]
       return pickRandom(lines)
     }
     case 'documents': {
-      if (hour >= 22) return `${userName}，这么晚还在处理文档，辛苦了。`
-      return `在写文档呢，如果需要我帮忙整理或者润色，随时丢过来。`
+      if (hour >= 22) return ti('proactive.presence.doc_late', { userName })
+      return ti('proactive.presence.doc_writing')
     }
     // 'coding' and 'unknown' → engine stays silent
     case 'coding':
