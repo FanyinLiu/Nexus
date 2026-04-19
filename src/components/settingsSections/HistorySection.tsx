@@ -57,6 +57,10 @@ export const HistorySection = memo(function HistorySection({
 
   const sessions = useMemo<ChatSession[]>(
     () => (active ? loadChatSessions() : []),
+    // chatMessageCount + refreshKey are invalidation keys — the memo body
+    // doesn't read them, but they must trigger a fresh loadChatSessions()
+    // when the active session grows or a destructive action fires.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [active, chatMessageCount, refreshKey],
   )
 

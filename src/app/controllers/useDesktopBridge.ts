@@ -362,11 +362,15 @@ export function useDesktopBridge({
     }
   }, [chat.assistantActivity, reminderTasks, settingsOpen, view, voice.continuousVoiceActive, voice.hearingRuntime, voice.voiceState, voice.wakewordState])
 
+  // `setPetHotspotActive` is a stable useState setter; depending on it
+  // (rather than the whole pet memo) prevents the subscriber from being
+  // torn down and re-subscribed on every mood / gaze / cue rotation.
+  const setPetHotspotActive = pet.setPetHotspotActive
   useEffect(() => {
     const applyPetWindowState = (state: import('../../types').PetWindowState) => {
       setIsPinned(state.isPinned)
       setClickThrough(state.clickThrough)
-      pet.setPetHotspotActive(state.petHotspotActive)
+      setPetHotspotActive(state.petHotspotActive)
     }
 
     const pendingState = window.desktopPet?.getPetWindowState?.()
@@ -374,7 +378,7 @@ export function useDesktopBridge({
 
     const unsubscribe = window.desktopPet?.subscribePetWindowState?.(applyPetWindowState)
     return () => unsubscribe?.()
-  }, [pet, setClickThrough, setIsPinned])
+  }, [setClickThrough, setIsPinned, setPetHotspotActive])
 
   useEffect(() => {
     const pendingUpdate = window.desktopPet?.updatePetWindowState?.({
@@ -438,13 +442,15 @@ export function useDesktopBridge({
     return () => window.clearTimeout(timerId)
   }, [applyPanelWindowState, panelCollapsed, settingsOpen, view])
 
+  const ambientPresence = pet.ambientPresence
+  const publishAmbientPresence = pet.publishAmbientPresence
   useEffect(() => {
-    if (view !== 'pet' || pet.ambientPresence || window.sessionStorage.getItem(STARTUP_GREETING_SESSION_KEY) === '1') {
+    if (view !== 'pet' || ambientPresence || window.sessionStorage.getItem(STARTUP_GREETING_SESSION_KEY) === '1') {
       return
     }
 
     const greeting = buildStartupGreetingText(settings, memory.memories)
-    pet.publishAmbientPresence(
+    publishAmbientPresence(
       {
         text: greeting,
         category: 'time',
@@ -452,31 +458,42 @@ export function useDesktopBridge({
       STARTUP_GREETING_DURATION_MS,
     )
     window.sessionStorage.setItem(STARTUP_GREETING_SESSION_KEY, '1')
-  }, [memory.memories, pet, settings, view])
+  }, [ambientPresence, memory.memories, publishAmbientPresence, settings, view])
 
+  // These four effects previously depended on the whole `pet` memo object.
+  // `pet` rotates identity on every internal state change (mood, gazeTarget,
+  // performance cue, hover, tap, etc.), so during a multi-step transition
+  // burst — TTS timeout triggering setMood(idle) → voice restart → voiceState
+  // flip → ambient presence dismiss — each of these effects fires once per
+  // pet rotation, not once per semantically relevant change. The noise was
+  // enough to push React's render detector past its tripwire (~6 "Maximum
+  // update depth exceeded" warnings per TTS timeout). `markPresenceActivity`
+  // is a useCallback with stable deps, so depending on it directly keeps the
+  // behavior identical while restoring change-driven semantics.
+  const markPresenceActivity = pet.markPresenceActivity
   useEffect(() => {
     if (chat.input.trim()) {
-      pet.markPresenceActivity()
+      markPresenceActivity()
     }
-  }, [chat.input, pet])
+  }, [chat.input, markPresenceActivity])
 
   useEffect(() => {
     if (settingsOpen) {
-      pet.markPresenceActivity()
+      markPresenceActivity()
     }
-  }, [pet, settingsOpen])
+  }, [markPresenceActivity, settingsOpen])
 
   useEffect(() => {
     if (chat.busy) {
-      pet.markPresenceActivity()
+      markPresenceActivity()
     }
-  }, [chat.busy, pet])
+  }, [chat.busy, markPresenceActivity])
 
   useEffect(() => {
     if (voice.voiceState !== 'idle') {
-      pet.markPresenceActivity()
+      markPresenceActivity()
     }
-  }, [pet, voice.voiceState])
+  }, [markPresenceActivity, voice.voiceState])
 
   useEffect(() => {
     voice.ensureSupportedSpeechInputSettings()
