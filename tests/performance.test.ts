@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { extractExpressionOverrides, parseAssistantPerformanceContent } from '../src/features/pet/performance.ts'
+import {
+  ExpressionOverrideStreamFilter,
+  extractExpressionOverrides,
+  parseAssistantPerformanceContent,
+} from '../src/features/pet/performance.ts'
 
 test('removes recognized task and silent stage directions from spoken content', () => {
   const parsed = parseAssistantPerformanceContent(
@@ -83,4 +87,44 @@ test('extractExpressionOverrides is a no-op when no tags are present', () => {
 
   assert.equal(result.content, '普通的一句话。')
   assert.equal(result.cues.length, 0)
+})
+
+test('ExpressionOverrideStreamFilter strips a tag delivered in one chunk', () => {
+  const filter = new ExpressionOverrideStreamFilter()
+  const out = filter.push('你好[expr:happy]啊') + filter.flush()
+  assert.equal(out, '你好啊')
+})
+
+test('ExpressionOverrideStreamFilter holds back a partial tag across deltas', () => {
+  const filter = new ExpressionOverrideStreamFilter()
+  // Simulate the LLM streaming the tag one small slice at a time — the
+  // filter must not emit `[`, `[e`, `[ex` ... until the tag completes.
+  const pieces = ['你好', '[', 'expr', ':hap', 'py]', '啊']
+  let streamed = ''
+  for (const piece of pieces) {
+    streamed += filter.push(piece)
+  }
+  streamed += filter.flush()
+  assert.equal(streamed, '你好啊')
+})
+
+test('ExpressionOverrideStreamFilter releases text around a non-tag bracket', () => {
+  const filter = new ExpressionOverrideStreamFilter()
+  const out = filter.push('请看[TODO] 说明') + filter.flush()
+  assert.equal(out, '请看[TODO] 说明')
+})
+
+test('ExpressionOverrideStreamFilter releases long-lived unmatched brackets', () => {
+  const filter = new ExpressionOverrideStreamFilter()
+  // Buffer starts with `[` but never closes. Filter must give up after
+  // the lookahead cap so the bubble doesn't hang.
+  const longTail = 'x'.repeat(80)
+  const out = filter.push('开头[') + filter.push(longTail) + filter.flush()
+  assert.equal(out, `开头[${longTail}`)
+})
+
+test('ExpressionOverrideStreamFilter handles multiple tags in one stream', () => {
+  const filter = new ExpressionOverrideStreamFilter()
+  const out = filter.push('A[expr:happy]B') + filter.push('[expr:surprised]C') + filter.flush()
+  assert.equal(out, 'ABC')
 })

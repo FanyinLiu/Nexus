@@ -69,8 +69,15 @@ export type IdleSequenceController = {
 }
 
 export interface CreateIdleSequenceControllerOptions {
-  /** Override the default fidget pool — typically a per-model list. */
+  /** Static override of the fidget pool — typically a per-model list. */
   pool?: IdleFidgetDefinition[]
+  /**
+   * Dynamic pool lookup re-read on every tick. Takes precedence over `pool`
+   * when set. Use this when the user can swap models at runtime — returning
+   * a fresh list from the latest settings is cheaper than tearing the
+   * controller down and restarting the interval.
+   */
+  getPool?: () => IdleFidgetDefinition[] | undefined
   /** Probability per tick that we emit any fidget at all (0–1). */
   triggerRate?: number
 }
@@ -82,14 +89,22 @@ export function createIdleSequenceController(
   let timerId: number | null = null
   let running = false
 
-  const pool = options.pool && options.pool.length > 0 ? options.pool : DEFAULT_IDLE_FIDGET_POOL
+  const staticPool = options.pool && options.pool.length > 0 ? options.pool : DEFAULT_IDLE_FIDGET_POOL
   const triggerRate = typeof options.triggerRate === 'number'
     ? Math.max(0, Math.min(1, options.triggerRate))
     : DEFAULT_FIDGET_TRIGGER_RATE
 
+  function resolvePool(): IdleFidgetDefinition[] {
+    if (options.getPool) {
+      const dynamic = options.getPool()
+      if (dynamic && dynamic.length > 0) return dynamic
+    }
+    return staticPool
+  }
+
   function tick() {
     if (Math.random() >= triggerRate) return
-    const choice = pickWeightedFidget(pool)
+    const choice = pickWeightedFidget(resolvePool())
     if (!choice) return
     onCue({
       ...fidgetToCue(choice),

@@ -14,7 +14,11 @@ import {
 import { buildMemoryRecallContext } from '../../features/memory/recall'
 import { loadRelevantSkills, shouldGenerateSkill, generateAndSaveSkill } from '../../features/skills/autoSkillGenerator'
 import { matchCoreSkills } from '../../lib/coreRuntime'
-import { extractExpressionOverrides, parseAssistantPerformanceContent } from '../../features/pet/performance'
+import {
+  ExpressionOverrideStreamFilter,
+  extractExpressionOverrides,
+  parseAssistantPerformanceContent,
+} from '../../features/pet/performance'
 import { buildBuiltInToolDescriptors } from '../../features/tools/builtInToolSchemas'
 import { toChatToolResult, type BuiltInToolResult } from '../../features/tools/toolTypes.ts'
 import { logVoiceEvent } from '../../features/voice/shared'
@@ -256,6 +260,10 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       const promptModeStreamFilter = selectToolDeliveryMode(currentSettings) === 'prompt'
         ? new PromptModeStreamFilter()
         : null
+      // Inline `[expr:name]` override tags also get scrubbed from the final
+      // reply, but without this streaming twin they'd flash in the bubble
+      // and get pronounced character-by-character over the TTS channel.
+      const expressionOverrideStreamFilter = new ExpressionOverrideStreamFilter()
       const request = bindStreamingAbort(
         requestAssistantReplyStreaming(
         currentSettings,
@@ -264,9 +272,11 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         (delta, done) => {
           if (!isLatestTurn()) return
 
-          const visibleDelta = promptModeStreamFilter
+          const afterPromptMode = promptModeStreamFilter
             ? promptModeStreamFilter.push(delta) + (done ? promptModeStreamFilter.flush() : '')
             : delta
+          const visibleDelta = expressionOverrideStreamFilter.push(afterPromptMode)
+            + (done ? expressionOverrideStreamFilter.flush() : '')
 
           if (visibleDelta) {
             streamedReplyContent += visibleDelta

@@ -15,8 +15,9 @@ export interface IdleFidgetDefinition {
   /** Short stage direction surfaced in debug UI / accessibility layer. */
   stageDirection?: string
   /**
-   * Relative weight in the random draw. Missing / non-positive weights
-   * weight = 1 (uniform) — no fidget is ever forced over others. Use
+   * Relative weight in the random draw. Omitting the field defaults to 1
+   * (uniform). Setting weight to 0 or a negative number removes the entry
+   * from the draw — handy for disabling an entry without deleting it. Use
    * higher values (e.g. 5 for blinks, 1 for stretches) to bias toward
    * unobtrusive motions.
    */

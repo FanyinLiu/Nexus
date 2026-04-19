@@ -306,15 +306,9 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
       idleControllerRef.current.stop()
     }
 
-    // Pick up the active model's fidget pool when the controller spins up.
-    // If the model ships an `idleFidgets` list it's used; otherwise the
-    // controller falls back to its built-in default pool. Reading from the
-    // settings ref (not state) keeps this effect stable across renders —
-    // swapping models later restarts via the mood / view gating effect
-    // below rather than re-subscribing here.
-    const activeModel = getPetModelPreset(ctx.settingsRef.current?.petModelId)
-    const fidgetPool = activeModel?.idleFidgets
-
+    // Active model's fidget pool is looked up lazily on every tick via
+    // `getPool`. That way switching `petModelId` in Settings picks up the new
+    // pool on the next idle tick instead of needing an app restart.
     const controller = createIdleSequenceController(
       (cue) => {
         // Only queue idle animations when truly idle: mood is 'idle',
@@ -329,7 +323,7 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
           queuePetPerformanceCue([cue])
         }
       },
-      { pool: fidgetPool },
+      { getPool: () => getPetModelPreset(ctx.settingsRef.current?.petModelId)?.idleFidgets },
     )
 
     idleControllerRef.current = controller

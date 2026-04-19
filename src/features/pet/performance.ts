@@ -671,3 +671,66 @@ export function extractExpressionOverrides(content: string): {
   })
   return { content: cleaned, cues }
 }
+
+// Stateful prefix-match for the streaming filter. A buffer that starts with
+// `[` could still grow into a valid `[expr:name]` tag; until we know for
+// sure, we must hold it back from the UI bubble and TTS. Returns true while
+// the buffer remains a plausible prefix.
+function isExpressionTagPrefix(buffer: string): boolean {
+  return /^\[(?:e(?:x(?:p(?:r(?:\s*(?::(?:\s*(?:[a-zA-Z_-]+(?:\s*)?)?)?)?)?)?)?)?)?$/iu.test(buffer)
+}
+
+/**
+ * Streaming companion to extractExpressionOverrides. The final reply gets
+ * scrubbed by extractExpressionOverrides before it lands in chat history,
+ * but streaming deltas are sent straight to the pet dialog bubble AND the
+ * TTS pipeline — without this filter, `[expr:happy]` would flash on screen
+ * and get pronounced character-by-character over the user's speakers.
+ *
+ * Holds back any buffer suffix that could still grow into a tag, strips
+ * completed tags, and passes everything else through verbatim.
+ */
+export class ExpressionOverrideStreamFilter {
+  private buffer = ''
+
+  push(delta: string): string {
+    if (!delta) return ''
+    this.buffer += delta
+    return this.drain(false)
+  }
+
+  flush(): string {
+    return this.drain(true)
+  }
+
+  private drain(forceFlush: boolean): string {
+    this.buffer = this.buffer.replace(EXPRESSION_OVERRIDE_TAG_PATTERN, '')
+
+    if (forceFlush) {
+      const out = this.buffer
+      this.buffer = ''
+      return out
+    }
+
+    const lastOpenIdx = this.buffer.lastIndexOf('[')
+    if (lastOpenIdx === -1) {
+      const out = this.buffer
+      this.buffer = ''
+      return out
+    }
+
+    const suffix = this.buffer.slice(lastOpenIdx)
+    // A runaway suffix (no closing `]` after many chars) is almost certainly
+    // not a tag — flush it so the bubble doesn't appear stuck.
+    const MAX_SUFFIX_LOOKAHEAD = 64
+    if (suffix.length >= MAX_SUFFIX_LOOKAHEAD || !isExpressionTagPrefix(suffix)) {
+      const out = this.buffer
+      this.buffer = ''
+      return out
+    }
+
+    const out = this.buffer.slice(0, lastOpenIdx)
+    this.buffer = suffix
+    return out
+  }
+}
