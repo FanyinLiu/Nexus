@@ -9,6 +9,8 @@
 export const CHAT_STORAGE_KEY = 'nexus:chat'
 export const CHAT_SESSIONS_STORAGE_KEY = 'nexus:chat:sessions'
 export const LOREBOOK_ENTRIES_STORAGE_KEY = 'nexus:lorebooks'
+export const SUBAGENT_SETTINGS_STORAGE_KEY = 'nexus:subagent:settings'
+export const SUBAGENT_TASKS_STORAGE_KEY = 'nexus:subagent:tasks'
 export const LEGACY_MEMORY_STORAGE_KEY = 'nexus:memory'
 export const MEMORY_STORAGE_KEY = 'nexus:memory:long-term'
 export const DAILY_MEMORY_STORAGE_KEY = 'nexus:memory:daily'
