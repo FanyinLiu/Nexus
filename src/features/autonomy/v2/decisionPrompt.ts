@@ -36,6 +36,16 @@ export interface DecisionPromptHints {
    * shouldn't speak so the state transitions stay clean.
    */
   forceSilent?: boolean
+  /**
+   * On retry, the orchestrator passes the previous attempt's guardrail
+   * failure reason and the text that triggered it. The prompt appends a
+   * short correction note so the model knows what shape of drift to
+   * avoid this second try.
+   */
+  previousFailure?: {
+    reason: string
+    rejectedText: string
+  }
 }
 
 export interface ChatMessage {
@@ -256,14 +266,25 @@ export function buildDecisionPrompt(
   }
 
   // The actual decision turn.
-  const userPrompt = [
+  const parts: string[] = [
     formatContextSections(context, hints),
-    '',
-    '---',
-    '',
-    '基于以上状态，你现在要说话吗？按 response contract 输出 JSON。',
-  ].join('\n')
-  messages.push({ role: 'user', content: userPrompt })
+  ]
+
+  if (hints.previousFailure) {
+    parts.push('')
+    parts.push('---')
+    parts.push('')
+    parts.push('## 重试提示')
+    parts.push(`你上一次尝试的回复「${hints.previousFailure.rejectedText}」被人格守门过滤拦下，原因：${hints.previousFailure.reason}。`)
+    parts.push('这次要么返回 silent，要么换一种表达，注意避开上一次的失误。')
+  }
+
+  parts.push('')
+  parts.push('---')
+  parts.push('')
+  parts.push('基于以上状态，你现在要说话吗？按 response contract 输出 JSON。')
+
+  messages.push({ role: 'user', content: parts.join('\n') })
 
   return messages
 }
