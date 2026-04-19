@@ -10,7 +10,7 @@ import {
   updateCurrentSpeechOutputProviderProfile,
 } from '../../../../lib/speechProviderProfiles'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
-import type { AppSettings, SpeechVoiceOption } from '../../../../types'
+import type { AppSettings, SpeechVoiceOption, TranslationKey } from '../../../../types'
 import { LocalVoiceModelsStatus } from './LocalVoiceModelsStatus'
 import type { OnboardingDraftSetter } from './types'
 
@@ -29,6 +29,16 @@ type VoiceStepProps = {
   isVolcengineSpeechOutput: boolean
   onApplySpeechInputPreset: (providerId: string) => void
   onApplySpeechOutputPreset: (providerId: string) => void
+}
+
+function buildResolvedVoiceLabel(
+  voice: SpeechVoiceOption,
+  ti: (key: TranslationKey) => string,
+): string {
+  const base = ti(voice.label as TranslationKey)
+  return voice.needsAuth
+    ? `${base} ${ti('provider.tts.voice.volcengine.needs_auth_suffix')}`
+    : base
 }
 
 export function VoiceStep({
@@ -86,13 +96,13 @@ export function VoiceStep({
             >
               {USER_VISIBLE_SPEECH_INPUT_PROVIDER_PRESETS.map((provider) => (
                 <option key={provider.id} value={provider.id}>
-                  {provider.label}
+                  {ti(provider.label as TranslationKey)}
                 </option>
               ))}
             </select>
           </label>
 
-          <p className="onboarding-tip">{speechInputProvider.notes}</p>
+          <p className="onboarding-tip">{ti(speechInputProvider.notes as TranslationKey)}</p>
 
           {!isSenseVoiceSpeechInputProvider(draft.speechInputProviderId) ? (
             <div className="onboarding-grid onboarding-grid--two">
@@ -140,7 +150,7 @@ export function VoiceStep({
                 >
                   {speechInputModelOptions.map((option) => (
                     <option key={option.value} value={option.value}>
-                      {option.label}
+                      {ti(option.label as TranslationKey)}
                     </option>
                   ))}
                 </select>
@@ -182,13 +192,13 @@ export function VoiceStep({
             >
               {USER_VISIBLE_SPEECH_OUTPUT_PROVIDER_PRESETS.map((provider) => (
                 <option key={provider.id} value={provider.id}>
-                  {provider.label}
+                  {ti(provider.label as TranslationKey)}
                 </option>
               ))}
             </select>
           </label>
 
-          <p className="onboarding-tip">{speechOutputProvider.notes}</p>
+          <p className="onboarding-tip">{ti(speechOutputProvider.notes as TranslationKey)}</p>
 
           {!isSpeechOutputKeyless(draft.speechOutputProviderId) ? (
             <div className="onboarding-grid onboarding-grid--two">
@@ -236,7 +246,7 @@ export function VoiceStep({
                 >
                   {speechOutputModelOptions.map((option) => (
                     <option key={option.value} value={option.value}>
-                      {option.label}
+                      {ti(option.label as TranslationKey)}
                     </option>
                   ))}
                 </select>
@@ -285,7 +295,7 @@ export function VoiceStep({
               >
                 {speechOutputVoiceOptions.map((voice) => (
                   <option key={voice.id} value={voice.id}>
-                    {voice.label}
+                    {buildResolvedVoiceLabel(voice, ti)}
                   </option>
                 ))}
               </select>

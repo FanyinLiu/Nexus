@@ -27,6 +27,7 @@ import type {
   AppSettings,
   ServiceConnectionCapability,
   SpeechVoiceOption,
+  TranslationKey,
 } from '../../types'
 import { UrlInput } from './UrlInput'
 
@@ -73,6 +74,20 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
 }: SpeechOutputSectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
+
+  const resolveVoiceLabel = (voice: SpeechVoiceOption) => {
+    const base = ti(voice.label as TranslationKey)
+    return voice.needsAuth
+      ? `${base} ${ti('provider.tts.voice.volcengine.needs_auth_suffix')}`
+      : base
+  }
+
+  const resolveVoiceDescription = (voice: SpeechVoiceOption): string | undefined => {
+    const base = voice.description ? ti(voice.description as TranslationKey) : undefined
+    if (!voice.needsAuth) return base
+    const fallback = ti('provider.tts.voice.volcengine.needs_auth_fallback')
+    return base ? `${base} ${fallback}` : fallback
+  }
 
   const speechOutputProvider = getSpeechOutputProviderPreset(draft.speechOutputProviderId)
   const speechOutputAdjustmentSupport = getSpeechOutputAdjustmentSupport(draft.speechOutputProviderId)
@@ -131,14 +146,14 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
           onChange={(event) => onApplySpeechOutputPreset(event.target.value)}
         >
           {speechOutputSelectOptions.map((opt) => (
-            <option key={opt.id} value={opt.id}>{opt.label}</option>
+            <option key={opt.id} value={opt.id}>{ti(opt.label)}</option>
           ))}
         </select>
       </label>
 
 
       <p className="settings-drawer__hint">
-        {speechOutputProvider.notes}
+        {ti(speechOutputProvider.notes as TranslationKey)}
         {speechOutputProvider.baseUrl
           ? ` ${ti('settings.speech_output.default_endpoint')}${speechOutputProvider.baseUrl}`
           : ''}
@@ -223,7 +238,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
             >
               {speechOutputModelOptions.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {ti(option.label as TranslationKey)}
                 </option>
               ))}
             </select>
@@ -284,18 +299,25 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
                   ? `${ti('settings.speech_output.keep_current')}${draft.speechOutputVoice}`
                   : ti('settings.speech_output.select_minimax_voice')}
               </option>
-              {speechVoiceOptions.map((voice) => (
-                <option key={voice.id} value={voice.id}>
-                  {voice.label === voice.id ? voice.id : `${voice.label} (${voice.id})`}
-                </option>
-              ))}
+              {speechVoiceOptions.map((voice) => {
+                const resolvedLabel = resolveVoiceLabel(voice)
+                return (
+                  <option key={voice.id} value={voice.id}>
+                    {resolvedLabel === voice.id ? voice.id : `${resolvedLabel} (${voice.id})`}
+                  </option>
+                )
+              })}
             </select>
           </label>
 
           {speechVoiceOptions.length ? (
             <p className="settings-drawer__hint">
-              {speechVoiceOptions.find((voice) => voice.id === draft.speechOutputVoice)?.description
-                ?? ti('settings.speech_output.minimax_voices_loaded')}
+              {(() => {
+                const current = speechVoiceOptions.find((voice) => voice.id === draft.speechOutputVoice)
+                return current
+                  ? resolveVoiceDescription(current) ?? ti('settings.speech_output.minimax_voices_loaded')
+                  : ti('settings.speech_output.minimax_voices_loaded')
+              })()}
             </p>
           ) : null}
         </>
@@ -315,7 +337,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
                 }
               >
                 {speechVoiceOptions.map((voice) => (
-                  <option key={voice.id} value={voice.id}>{voice.label}</option>
+                  <option key={voice.id} value={voice.id}>{resolveVoiceLabel(voice)}</option>
                 ))}
               </select>
             ) : (
@@ -358,17 +380,24 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
                   ? `${ti('settings.speech_output.keep_current')}${draft.speechOutputVoice}`
                   : ti('settings.speech_output.select_voice')}
               </option>
-              {speechVoiceOptions.map((voice) => (
-                <option key={voice.id} value={voice.id}>
-                  {voice.label === voice.id ? voice.id : `${voice.label} (${voice.id})`}
-                </option>
-              ))}
+              {speechVoiceOptions.map((voice) => {
+                const resolvedLabel = resolveVoiceLabel(voice)
+                return (
+                  <option key={voice.id} value={voice.id}>
+                    {resolvedLabel === voice.id ? voice.id : `${resolvedLabel} (${voice.id})`}
+                  </option>
+                )
+              })}
             </select>
           </label>
 
           <p className="settings-drawer__hint">
-            {speechVoiceOptions.find((voice) => voice.id === draft.speechOutputVoice)?.description
-              ?? ti('settings.speech_output.voice_catalog_hint')}
+            {(() => {
+              const current = speechVoiceOptions.find((voice) => voice.id === draft.speechOutputVoice)
+              return current
+                ? resolveVoiceDescription(current) ?? ti('settings.speech_output.voice_catalog_hint')
+                : ti('settings.speech_output.voice_catalog_hint')
+            })()}
           </p>
         </>
       ) : null}
@@ -408,13 +437,17 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
               }
             >
               {speechOutputStyleOptions.map((opt) => (
-                <option key={opt.value || '__default__'} value={opt.value}>{opt.label}</option>
+                <option key={opt.value || '__default__'} value={opt.value}>{ti(opt.label as TranslationKey)}</option>
               ))}
             </select>
           </label>
           <p className="settings-drawer__hint">
-            {speechOutputStyleOptions.find((opt) => opt.value === draft.speechOutputInstructions)?.description
-              ?? ti('settings.speech_output.style_hint')}
+            {(() => {
+              const currentStyle = speechOutputStyleOptions.find((opt) => opt.value === draft.speechOutputInstructions)
+              return currentStyle?.description
+                ? ti(currentStyle.description as TranslationKey)
+                : ti('settings.speech_output.style_hint')
+            })()}
           </p>
         </>
       ) : null}
@@ -436,7 +469,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
         <div className="settings-section__title-row">
           <div>
             <h5>{ti('settings.speech_output.tuning_title')}</h5>
-            <p className="settings-drawer__hint">{speechOutputAdjustmentSupport.note}</p>
+            <p className="settings-drawer__hint">{ti(speechOutputAdjustmentSupport.note as TranslationKey)}</p>
           </div>
           <button
             type="button"

@@ -18,7 +18,7 @@ import {
   updateCurrentSpeechInputProviderProfile,
 } from '../../lib/speechProviderProfiles'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
-import type { AppSettings, ServiceConnectionCapability } from '../../types'
+import type { AppSettings, ServiceConnectionCapability, TranslationKey } from '../../types'
 import { UrlInput } from './UrlInput'
 
 const speechInputSelectOptions = SPEECH_INPUT_PROVIDERS
@@ -103,13 +103,13 @@ export const SpeechInputSection = memo(function SpeechInputSection({
           onChange={(event) => applySpeechInputPreset(event.target.value)}
         >
           {speechInputSelectOptions.map((opt) => (
-            <option key={opt.id} value={opt.id}>{opt.label}</option>
+            <option key={opt.id} value={opt.id}>{ti(opt.label)}</option>
           ))}
         </select>
       </label>
 
       <p className="settings-drawer__hint">
-        {speechInputProvider.notes}
+        {ti(speechInputProvider.notes as TranslationKey)}
         {speechInputProvider.baseUrl
           ? ` ${ti('settings.speech_input.default_endpoint')}${speechInputProvider.baseUrl}`
           : ''}
@@ -193,7 +193,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
           >
             {speechInputModelOptions.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {ti(option.label as TranslationKey)}
               </option>
             ))}
           </select>

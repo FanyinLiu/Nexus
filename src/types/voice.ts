@@ -58,6 +58,12 @@ export interface SpeechVoiceOption {
   id: string
   label: string
   description?: string
+  /**
+   * Volcengine fallback voices set this to `true` when the voice requires
+   * console authorization. Consumers append the needs_auth suffix/fallback at
+   * display time. API-fetched voices omit this flag.
+   */
+  needsAuth?: boolean
 }
 
 export interface SpeechVoiceListResponse {
