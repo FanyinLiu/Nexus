@@ -34,6 +34,48 @@
   padding: 18px;
   overflow: visible;
   background: #0a0c10;
+  transition: background 1.2s ease;
+}
+
+/*
+ * Panel scene backdrops — pure CSS gradient overlays on top of the base
+ * panel color. When the user's panelSceneMode resolves to a scene id, the
+ * PanelView root gets a matching `panel-scene--<id>` class and the gradient
+ * below takes over. Each gradient is a softly-animated multi-stop that
+ * evokes the time of day without requiring image assets.
+ */
+.desktop-pet-root--panel.panel-scene--morning {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 196, 160, 0.28), transparent 55%),
+    radial-gradient(circle at 80% 10%, rgba(255, 230, 195, 0.22), transparent 60%),
+    linear-gradient(160deg, #1a1620 0%, #281f26 50%, #15141c 100%);
+}
+
+.desktop-pet-root--panel.panel-scene--noon {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(180, 220, 255, 0.22), transparent 60%),
+    linear-gradient(180deg, #131a24 0%, #0e141e 60%, #0a0f17 100%);
+}
+
+.desktop-pet-root--panel.panel-scene--afternoon {
+  background:
+    radial-gradient(circle at 85% 30%, rgba(255, 190, 140, 0.22), transparent 55%),
+    radial-gradient(circle at 10% 80%, rgba(255, 170, 120, 0.14), transparent 65%),
+    linear-gradient(155deg, #1b1712 0%, #201a17 55%, #14110f 100%);
+}
+
+.desktop-pet-root--panel.panel-scene--dusk {
+  background:
+    radial-gradient(circle at 15% 85%, rgba(120, 90, 180, 0.28), transparent 55%),
+    radial-gradient(circle at 85% 15%, rgba(255, 120, 160, 0.22), transparent 60%),
+    linear-gradient(175deg, #140c1c 0%, #1b1028 50%, #0c0812 100%);
+}
+
+.desktop-pet-root--panel.panel-scene--night {
+  background:
+    radial-gradient(circle at 70% 20%, rgba(90, 120, 200, 0.18), transparent 55%),
+    radial-gradient(circle at 20% 80%, rgba(70, 100, 180, 0.12), transparent 60%),
+    linear-gradient(180deg, #06080f 0%, #090c17 50%, #04060c 100%);
 }
 
 .eyebrow {

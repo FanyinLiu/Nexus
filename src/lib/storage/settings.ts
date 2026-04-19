@@ -10,6 +10,7 @@ import {
   resolveSpeechInputModel,
 } from '../audioProviders.ts'
 import { inferApiProviderId } from '../apiProviders.ts'
+import { normalizePanelSceneMode } from '../../features/panelScene/resolver.ts'
 import { clampPresenceIntervalMinutes } from '../settings.ts'
 import { CURRENT_SETTINGS_SCHEMA_VERSION, migrateSettings } from '../settingsMigrations.ts'
 import {
@@ -38,6 +39,7 @@ const defaultSettings: AppSettings = {
   petModelId: DEFAULT_PET_MODEL_ID,
   uiLanguage: 'zh-CN',
   themeId: 'nexus-default',
+  panelSceneMode: 'auto',
   apiProviderId: 'openai',
   companionName: '星绘',
   userName: '主人',
@@ -347,6 +349,7 @@ export function loadSettings(): AppSettings {
     settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
     uiLanguage: normalizeUiLanguage(stored.uiLanguage),
     themeId: resolveThemeId(stored.themeId),
+    panelSceneMode: normalizePanelSceneMode(stored.panelSceneMode),
     apiProviderId: inferredProviderId,
     speechInputProviderId: effectiveSpeechInputProviderId,
     speechInputApiBaseUrl,

@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
+import { PANEL_SCENE_MODE_OPTIONS } from '../../features/panelScene'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { AppSettings, PetWindowState, UiLanguage } from '../../types'
 
@@ -75,6 +76,29 @@ export const WindowSection = memo(function WindowSection({
       </label>
 
       <p className="settings-drawer__hint">{ti('settings.window.click_through_note')}</p>
+
+      <label className="settings-section__field">
+        <span>聊天面板背景</span>
+        <select
+          value={draft.panelSceneMode}
+          onChange={(event) =>
+            setDraft((prev) => ({
+              ...prev,
+              panelSceneMode: event.target.value as typeof prev.panelSceneMode,
+            }))
+          }
+        >
+          {PANEL_SCENE_MODE_OPTIONS.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <p className="settings-drawer__hint">
+        「按时间自动切换」会每 10 分钟根据本机时钟选清晨 / 正午 / 午后 / 黄昏 / 夜晚之一；选固定场景会一直停留在该氛围里。
+      </p>
     </section>
   )
 })

@@ -2,6 +2,7 @@ import type { AutonomySettings } from './autonomy'
 import type { AppLocale } from './i18n'
 import type { MemorySearchMode } from './memory'
 import type { PetMood } from './pet'
+import type { PanelSceneMode } from '../features/panelScene'
 import type { ThemeId } from './theme'
 import type { WebSearchProviderId } from './tools'
 import type {
@@ -70,6 +71,12 @@ export interface IdentitySettings {
 export interface AppearanceSettings {
   uiLanguage: AppLocale
   themeId: ThemeId
+  /**
+   * Ambient backdrop for the chat panel — 'off' hides the backdrop,
+   * 'auto' shifts with the hour of day, or an explicit scene id pins
+   * it. See `src/features/panelScene/resolver.ts`.
+   */
+  panelSceneMode: PanelSceneMode
 }
 
 export interface TextProviderSettings {
