@@ -2,7 +2,8 @@ import type { SettingsSectionId } from './settingsDrawerSupport'
 import type { PetModelDefinition } from '../features/pet'
 import { getWebSearchProviderPreset } from '../lib/webSearchProviders'
 import { getApiProviderPreset } from '../lib'
-import type { AppSettings, DailyMemoryEntry, DebugConsoleEvent, MemoryItem } from '../types'
+import { pickTranslatedUiText } from '../lib/uiLanguage'
+import type { AppSettings, DailyMemoryEntry, DebugConsoleEvent, MemoryItem, UiLanguage } from '../types'
 
 export type SettingsSectionDescriptionMap = Record<SettingsSectionId, string>
 
@@ -15,10 +16,14 @@ export type SettingsSectionMetaEntry = {
 
 export type SettingsSectionMetaMap = Record<SettingsSectionId, SettingsSectionMetaEntry>
 
-type Translator = (zhCN: string, enUS: string) => string
+type Translator = (
+  key: Parameters<typeof pickTranslatedUiText>[1],
+  params?: Parameters<typeof pickTranslatedUiText>[2],
+) => string
 
 export type BuildSettingsSectionMetaInput = {
-  t: Translator
+  ti: Translator
+  uiLanguage: UiLanguage
   draft: AppSettings
   petModel: PetModelDefinition | undefined
   memories: MemoryItem[]
@@ -30,19 +35,19 @@ export type BuildSettingsSectionMetaInput = {
   clickThroughEnabled: boolean
 }
 
-export function buildSettingsSectionDescriptions(t: Translator): SettingsSectionDescriptionMap {
+export function buildSettingsSectionDescriptions(ti: Translator): SettingsSectionDescriptionMap {
   return {
-    console: t('运行控制台：语音状态、API 用量、操作记录、提醒和后台任务一览。', 'Runtime console: voice status, API usage, action log, reminders, and background tasks at a glance.'),
-    model: t('单独管理大模型提供商、模型名称和主链路故障切换。', 'Manage the primary LLM provider, model id, and failover in one place.'),
-    chat: t('调整角色名称、用户称呼、系统提示词和 Live2D 角色。', 'Tune the companion identity, user name, system prompt, and Live2D character.'),
-    history: t('管理当前会话聊天记录的导入、导出与清理。', 'Manage import, export, and cleanup for the current chat history.'),
-    memory: t('整理长期记忆、日记和向量检索策略。', 'Manage long-term memory, diary entries, and retrieval strategy.'),
-    lorebooks: t('按关键词触发的背景设定条目，相关话题出现时才注入 prompt。', 'Keyword-triggered world knowledge entries — injected into the prompt only when relevant topics come up.'),
-    voice: t('统一配置连续对话、输入输出链路和语音体验。', 'Configure continuous talk mode plus the input and output voice pipeline.'),
-    window: t('控制桌宠、面板和桌面交互方式。', 'Control the desktop pet, panel, and on-screen behavior.'),
-    integrations: t('把 Nexus 连到外部系统：MCP 工具、游戏服务器、Telegram / Discord 聊天桥。', 'Connect Nexus to external systems: MCP tools, game servers, and Telegram / Discord chat bridges.'),
-    tools: t('决定助手能不能自己调用搜索、天气、打开链接这些工具，并配置搜索后端。', 'Control whether the companion can call search, weather, and open-link tools on its own, and choose the search backend.'),
-    autonomy: t('配置自治引擎：焦点感知、主动智能、记忆整理和通知桥。', 'Configure autonomy: focus awareness, proactive intelligence, memory dream, and notification bridge.'),
+    console: ti('settings.section_desc.console'),
+    model: ti('settings.section_desc.model'),
+    chat: ti('settings.section_desc.chat'),
+    history: ti('settings.section_desc.history'),
+    memory: ti('settings.section_desc.memory'),
+    lorebooks: ti('settings.section_desc.lorebooks'),
+    voice: ti('settings.section_desc.voice'),
+    window: ti('settings.section_desc.window'),
+    integrations: ti('settings.section_desc.integrations'),
+    tools: ti('settings.section_desc.tools'),
+    autonomy: ti('settings.section_desc.autonomy'),
   }
 }
 
@@ -51,7 +56,7 @@ export function buildSettingsSectionMeta(input: BuildSettingsSectionMetaInput): 
   meta: SettingsSectionMetaMap
 } {
   const {
-    t,
+    ti,
     draft,
     petModel,
     memories,
@@ -63,116 +68,126 @@ export function buildSettingsSectionMeta(input: BuildSettingsSectionMetaInput): 
     clickThroughEnabled,
   } = input
 
-  const descriptions = buildSettingsSectionDescriptions(t)
+  const descriptions = buildSettingsSectionDescriptions(ti)
   const textProvider = getApiProviderPreset(draft.apiProviderId)
 
   const meta: SettingsSectionMetaMap = {
     console: {
-      eyebrow: t('运行态观察', 'Runtime Monitor'),
+      eyebrow: ti('settings.section_eyebrow.console'),
       glyph: 'console',
       description: descriptions.console,
       preview: [
-        liveTranscript ? t('实时转写中', 'Live transcript') : t('等待语音输入', 'Waiting for voice'),
-        `${debugConsoleEvents.length} ${t('条事件', 'events')}`,
+        liveTranscript ? ti('settings.preview.console.live_transcript') : ti('settings.preview.console.waiting_for_voice'),
+        `${debugConsoleEvents.length} ${ti('settings.preview.metrics.events')}`,
       ],
     },
     model: {
-      eyebrow: t('主对话模型', 'Primary LLM'),
+      eyebrow: ti('settings.section_eyebrow.model'),
       glyph: 'model',
       description: descriptions.model,
       preview: [
         textProvider.label,
-        draft.model || t('未填写模型', 'No model set'),
+        draft.model || ti('settings.preview.model.no_model'),
       ],
     },
     chat: {
-      eyebrow: t('角色与设定', 'Companion Profile'),
+      eyebrow: ti('settings.section_eyebrow.chat'),
       glyph: 'chat',
       description: descriptions.chat,
       preview: [
-        draft.companionName || t('未命名角色', 'Unnamed companion'),
-        petModel?.label ?? t('未选择 Live2D', 'No Live2D selected'),
+        draft.companionName || ti('settings.preview.chat.unnamed'),
+        petModel?.label ?? ti('settings.preview.chat.no_live2d'),
         draft.characterProfiles.length
-          ? t(`${draft.characterProfiles.length} 个角色档案`, `${draft.characterProfiles.length} profile(s)`)
+          ? ti('settings.preview.chat.profile_count', { count: draft.characterProfiles.length })
           : '',
       ].filter(Boolean),
     },
     history: {
-      eyebrow: t('会话归档', 'Conversation Archive'),
+      eyebrow: ti('settings.section_eyebrow.history'),
       glyph: 'history',
       description: descriptions.history,
       preview: [
-        `${chatMessageCount} ${t('条消息', 'messages')}`,
-        t('导入 / 导出 / 清理', 'Import / Export / Clear'),
+        `${chatMessageCount} ${ti('settings.preview.metrics.messages')}`,
+        ti('settings.preview.history.actions'),
       ],
     },
     memory: {
-      eyebrow: t('长期记忆', 'Long-term Memory'),
+      eyebrow: ti('settings.section_eyebrow.memory'),
       glyph: 'memory',
       description: descriptions.memory,
       preview: [
-        `${memories.length} ${t('条记忆', 'memories')}`,
-        `${dailyMemoryEntries.length} ${t('条日记', 'daily notes')}`,
+        `${memories.length} ${ti('settings.preview.metrics.memories')}`,
+        `${dailyMemoryEntries.length} ${ti('settings.preview.metrics.daily_notes')}`,
       ],
     },
     lorebooks: {
-      eyebrow: t('Lorebook 背景条目', 'Lorebooks'),
+      eyebrow: ti('settings.section_eyebrow.lorebooks'),
       glyph: 'memory',
       description: descriptions.lorebooks,
       preview: [
-        t('关键词触发注入', 'Keyword-triggered injection'),
-        t('按需补齐背景', 'Topic-aware world knowledge'),
+        ti('settings.preview.lorebooks.tagline_1'),
+        ti('settings.preview.lorebooks.tagline_2'),
       ],
     },
     voice: {
-      eyebrow: t('连续对话模式', 'Talk Mode'),
+      eyebrow: ti('settings.section_eyebrow.voice'),
       glyph: 'voice',
       description: descriptions.voice,
       preview: [
-        draft.continuousVoiceModeEnabled ? t('连续语音开启', 'Continuous voice on') : t('连续语音关闭', 'Continuous voice off'),
-        continuousVoiceActive ? t('当前正在监听', 'Live session running') : t('当前待命', 'Standing by'),
+        draft.continuousVoiceModeEnabled
+          ? ti('settings.preview.voice.continuous_on')
+          : ti('settings.preview.voice.continuous_off'),
+        continuousVoiceActive
+          ? ti('settings.preview.voice.live_session')
+          : ti('settings.preview.voice.standing_by'),
       ],
     },
     window: {
-      eyebrow: t('桌宠与面板', 'Pet & Window'),
+      eyebrow: ti('settings.section_eyebrow.window'),
       glyph: 'window',
       description: descriptions.window,
       preview: [
-        petModel?.label ?? t('桌宠模型', 'Desktop pet'),
-        clickThroughEnabled ? t('穿透开启', 'Click-through on') : t('正常交互', 'Interactive'),
+        petModel?.label ?? ti('settings.preview.window.desktop_pet'),
+        clickThroughEnabled
+          ? ti('settings.preview.window.click_through_on')
+          : ti('settings.preview.window.interactive'),
       ],
     },
     integrations: {
-      eyebrow: t('模块映射', 'Module Mapping'),
+      eyebrow: ti('settings.section_eyebrow.integrations'),
       glyph: 'integrations',
       description: descriptions.integrations,
       preview: [
-        draft.mcpServers.length ? t(`MCP ${draft.mcpServers.length} 个服务`, `MCP ${draft.mcpServers.length} server(s)`) : t('MCP 待配置', 'MCP pending'),
+        draft.mcpServers.length
+          ? ti('settings.preview.integrations.mcp_count', { count: draft.mcpServers.length })
+          : ti('settings.preview.integrations.mcp_pending'),
         draft.minecraftIntegrationEnabled || draft.factorioIntegrationEnabled
-          ? t('游戏模块已启用', 'Game modules enabled')
-          : t('游戏模块待命', 'Game modules idle'),
+          ? ti('settings.preview.integrations.games_enabled')
+          : ti('settings.preview.integrations.games_idle'),
       ],
     },
     tools: {
-      eyebrow: t('工具与搜索', 'Tools & Search'),
+      eyebrow: ti('settings.section_eyebrow.tools'),
       glyph: 'tools',
       description: descriptions.tools,
       preview: [
         draft.toolWebSearchEnabled
           ? `${getWebSearchProviderPreset(draft.toolWebSearchProviderId).label}`
-          : t('搜索已关闭', 'Search off'),
-        draft.toolWeatherEnabled ? t('天气开启', 'Weather on') : t('天气关闭', 'Weather off'),
+          : ti('settings.preview.tools.search_off'),
+        draft.toolWeatherEnabled
+          ? ti('settings.preview.tools.weather_on')
+          : ti('settings.preview.tools.weather_off'),
       ],
     },
     autonomy: {
-      eyebrow: t('自主行为', 'Autonomous Behavior'),
+      eyebrow: ti('settings.section_eyebrow.autonomy'),
       glyph: 'autonomy',
       description: descriptions.autonomy,
       preview: [
-        draft.autonomyEnabled ? t('自治引擎开启', 'Autonomy on') : t('自治引擎关闭', 'Autonomy off'),
+        draft.autonomyEnabled ? ti('settings.preview.autonomy.on') : ti('settings.preview.autonomy.off'),
         draft.autonomyEnabled && draft.autonomyDreamEnabled
-          ? t('记忆整理开启', 'Dream enabled')
-          : t('记忆整理关闭', 'Dream off'),
+          ? ti('settings.preview.autonomy.dream_on')
+          : ti('settings.preview.autonomy.dream_off'),
       ],
     },
   }

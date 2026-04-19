@@ -13,6 +13,7 @@ import {
   resolveLocalizedText,
   UI_LANGUAGE_OPTIONS,
 } from '../lib'
+import { pickTranslatedUiText } from '../lib/uiLanguage'
 import { MEMORY_EMBEDDING_MODEL_OPTIONS } from '../features/memory'
 import type { PetModelDefinition } from '../features/pet'
 import type { ReminderTaskDraftInput } from '../features/reminders'
@@ -231,6 +232,10 @@ export function SettingsDrawer({
     'zh-CN': zhCN,
     'en-US': enUS,
   })
+  const ti = (
+    key: Parameters<typeof pickTranslatedUiText>[1],
+    params?: Parameters<typeof pickTranslatedUiText>[2],
+  ) => pickTranslatedUiText(uiLanguage, key, params)
   const memorySearchModeOptions = getMemorySearchModeOptions(uiLanguage)
   const settingsSectionOptions = getSettingsSectionOptions(uiLanguage)
   const selectedMemorySearchMode = memorySearchModeOptions.find((option) => option.value === draft.memorySearchMode)
@@ -241,7 +246,8 @@ export function SettingsDrawer({
   const activeSectionLabel = settingsSectionOptions.find((section) => section.id === activeSectionId)?.label
     ?? settingsSectionOptions[0].label
   const { meta: settingsSectionMetaById } = buildSettingsSectionMeta({
-    t,
+    ti,
+    uiLanguage,
     draft,
     petModel,
     memories,
