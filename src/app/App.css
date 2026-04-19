@@ -85,6 +85,22 @@
     linear-gradient(180deg, rgba(6, 8, 15, 0.94) 0%, rgba(9, 12, 23, 0.94) 50%, rgba(4, 6, 12, 0.96) 100%);
 }
 
+/*
+ * When any scene is active, drop .companion-chat from its default 0.85
+ * opaque dark glass down to a thin tint so the scene gradient underneath
+ * is actually visible across the chat card. Message bubbles carry their
+ * own backgrounds so readability is preserved; the border + blur keep
+ * the card's physical shape. `:where()` keeps specificity at (0,2,0) so
+ * the override matches the scene-on-panel-window rules above, and the
+ * sibling .memory-card / .settings-drawer that share the original
+ * 0.85 rule are unaffected.
+ */
+.desktop-pet-root--panel:where(.panel-scene--morning, .panel-scene--noon, .panel-scene--afternoon, .panel-scene--dusk, .panel-scene--night) .companion-chat {
+  background: rgba(14, 18, 28, 0.35);
+  backdrop-filter: blur(12px);
+  transition: background 1.2s ease;
+}
+
 /* Ambient weather chip — compact info strip sitting in the panel toolbar.
  * Kept intentionally low-contrast so it reads as ambient info, not an
  * actionable control; hover lifts it slightly for the tooltip cue. */
