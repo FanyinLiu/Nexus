@@ -41,6 +41,19 @@ export function resolveExpressionSlot(
       return 'confused'
     case 'embarrassed':
       return 'embarrassed'
+    // New fine-grained moods reuse existing slots — the mood drives prompt
+    // tone + presence-line selection, while visually they map onto the
+    // closest existing expression until new Live2D art ships.
+    case 'excited':
+    case 'proud':
+    case 'playful':
+      return 'happy'
+    case 'affectionate':
+      return 'embarrassed'
+    case 'curious':
+      return 'thinking'
+    case 'worried':
+      return 'confused'
     default:
       return 'idle'
   }

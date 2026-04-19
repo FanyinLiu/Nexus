@@ -85,27 +85,51 @@ export function decayEmotion(state: EmotionState): EmotionState {
 // ── Mood mapping ────────────────────────────────────────────────────────────
 
 /**
- * Map the multi-dimensional emotion to a discrete PetMood for Live2D.
+ * Map the multi-dimensional emotion to a discrete PetMood for Live2D +
+ * prompt tone + presence-line selection.
  *
- * Order of checks matters — the most distinctive states are checked first so
- * stronger feelings dominate weaker ones (e.g., high concern wins over high
- * curiosity even if both are above their thresholds).
+ * Order of checks matters — the most distinctive combinations are matched
+ * first so stronger feelings dominate weaker ones (e.g., high concern wins
+ * over high curiosity even if both are above their thresholds).
  *
- * Available PetMoods: idle | thinking | happy | sleepy | surprised | confused | embarrassed
+ * Ordering layers, strongest → weakest:
+ *   1. Severe/overriding singles: worried (high concern), sleepy (low energy)
+ *   2. Multi-axis distinctive peaks: excited, playful, affectionate, proud
+ *   3. Warmth + concern pairs: embarrassed
+ *   4. Curiosity bursts vs sustained: surprised (burst) / curious (sustained)
+ *   5. Classic happy / thinking
+ *   6. Residual concern → confused
+ *   7. Default: idle
  */
 export function emotionToPetMood(state: EmotionState): PetMood {
   // Severe states first.
-  if (state.concern > 0.75) return 'confused'
+  if (state.concern > 0.8) return 'worried'
+  if (state.concern > 0.6 && state.energy < 0.55) return 'worried'
   if (state.energy < 0.2) return 'sleepy'
 
-  // Embarrassed = high warmth + high concern (flustered affection).
+  // Excited = full energy + strong curiosity. Most distinctive upward state.
+  if (state.energy > 0.8 && state.curiosity > 0.65) return 'excited'
+
+  // Playful = high energy + high warmth + calm (low concern). Bouncy, teasing.
+  if (state.energy > 0.7 && state.warmth > 0.7 && state.concern < 0.3) return 'playful'
+
+  // Affectionate = sustained warmth at a gentler energy level — softer than happy.
+  if (state.warmth > 0.8 && state.energy >= 0.4 && state.energy <= 0.7) return 'affectionate'
+
+  // Proud = task_completed lift — raised energy + warmth, concern fully relaxed.
+  if (state.energy > 0.65 && state.warmth > 0.6 && state.concern < 0.2) return 'proud'
+
+  // Embarrassed = high warmth + elevated concern (flustered affection).
   if (state.warmth > 0.7 && state.concern > 0.5) return 'embarrassed'
 
-  // Surprised = strong curiosity spike.
-  if (state.curiosity > 0.75) return 'surprised'
+  // Surprised = sharp curiosity spike with lifted energy (burst).
+  if (state.curiosity > 0.8 && state.energy > 0.6) return 'surprised'
+
+  // Curious = sustained high curiosity without the energy spike (attentive).
+  if (state.curiosity > 0.7) return 'curious'
 
   // Happy = warmth and energy together — low energy + warmth feels affectionate
-  // but tired, so we require both.
+  // but tired (covered by 'affectionate' above), so require both lifted here.
   if (state.warmth > 0.65 && state.energy > 0.5) return 'happy'
 
   // Thinking = curious but not energetic — mid-curiosity with low/mid energy.
@@ -152,14 +176,29 @@ export function classifyMessageSignals(text: string): EmotionSignal[] {
 export function formatEmotionForPrompt(state: EmotionState): string {
   const toneWords: string[] = []
 
-  if (state.energy > 0.7) toneWords.push('full of energy')
-  else if (state.energy < 0.3) toneWords.push('a little tired')
+  // Energy axis — three bands rather than two, so the prompt distinguishes
+  // 'bouncy' from 'tired' from 'calm neutral'.
+  if (state.energy > 0.8) toneWords.push('bouncing with energy')
+  else if (state.energy > 0.7) toneWords.push('full of energy')
+  else if (state.energy < 0.25) toneWords.push('sleepy and slow')
+  else if (state.energy < 0.35) toneWords.push('a little tired')
 
-  if (state.warmth > 0.7) toneWords.push('especially warm')
+  // Warmth axis — three bands, plus the distinctive "tender" intersection
+  // when warmth dominates energy (sustained-care feel).
+  if (state.warmth > 0.8) toneWords.push('especially affectionate')
+  else if (state.warmth > 0.65) toneWords.push('warm')
   else if (state.warmth < 0.3) toneWords.push('somewhat reserved')
 
-  if (state.curiosity > 0.7) toneWords.push('full of curiosity')
-  if (state.concern > 0.6) toneWords.push('a little worried')
+  if (state.curiosity > 0.8) toneWords.push('eyes lighting up with curiosity')
+  else if (state.curiosity > 0.65) toneWords.push('curious')
+
+  if (state.concern > 0.75) toneWords.push('genuinely worried')
+  else if (state.concern > 0.55) toneWords.push('a little concerned')
+
+  // Combined shade: post-success streak — the "proud" mood tone.
+  if (state.energy > 0.65 && state.warmth > 0.6 && state.concern < 0.2) {
+    toneWords.push('quietly proud of how things are going')
+  }
 
   if (toneWords.length === 0) return ''
   return `Current emotional state: ${toneWords.join(', ')}. Let this emotion come through naturally in your reply.`
