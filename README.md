@@ -36,6 +36,7 @@ The design goal is persistence of relationship, not just chat. A nightly **dream
 
 ## News
 
+- **2025.04.19** — **Autonomy Engine V2** is now default-on. The hand-written rule tree is replaced by a single LLM decision call gated by the tick loop, consuming a layered context snapshot and filtered through a persona guardrail. See [What's new in v0.2.5](#whats-new-in-v025--autonomy-engine-v2) below for architecture and migration notes.
 - **2025.04.16** — v0.2.4 released. Big voice/TTS reliability pass (tool-call TTS, markdown stripping, empty-stream detection, first-audio watchdog), Anthropic prompt caching wired on the system + tools prefix, wake-word gaps tightened, 20+ bug fixes. [Changelog →](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.4)
 - **2025.04.15** — Wake-word + VAD rewrite (Plan C): main-process Silero VAD + sherpa-onnx-node, single mic stream. Fixes the "only fires once" wake bug.
 - **2025.04.14** — TTS intermittency fixes: retry / per-segment events / sender teardown.
@@ -51,7 +52,7 @@ The design goal is persistence of relationship, not just chat. A nightly **dream
 
 - 🧠 **Memory that dreams.** Three-tier hot / warm / cold with hybrid BM25 + vector search. A nightly dream cycle clusters conversations into *narrative threads* so the companion's sense of you compounds over time instead of resetting each session.
 
-- 🤖 **Autonomous inner life.** Inner monologue, emotion model, relationship tracking, rhythm learning, intent prediction. It thinks while you're away and greets you when you come back — not scripted hellos, but observations based on what you've been doing.
+- 🤖 **Autonomous inner life (V2).** Single LLM decision call per tick, fed a layered snapshot (emotion · relationship · rhythm · desktop · recent chat) and filtered through a per-persona guardrail. No more formulaic template output — it writes in its own voice, and can also choose to stay silent. See [What's new in v0.2.5](#whats-new-in-v025--autonomy-engine-v2).
 
 - 🔧 **Built-in tools.** Web search, weather, reminders. Works with native function calling **and** a prompt-mode fallback for models that don't support `tools`.
 
@@ -66,6 +67,93 @@ The design goal is persistence of relationship, not just chat. A nightly **dream
 - 🌐 **Multilingual UI.** Simplified Chinese, Traditional Chinese, English, Japanese, Korean.
 
 - 💰 **Cost-aware.** Built-in budget metering + Anthropic prompt caching on the system + tools prefix (30-50% input token reduction on long sessions).
+
+## What's new in v0.2.5 — Autonomy Engine V2
+
+> **TL;DR** — The old rule-based decision tree (~900 lines of templates) has
+> been replaced by a single LLM call per tick, wrapped in a per-persona
+> guardrail. Proactive speech now sounds like the persona instead of like a
+> template. Feature flag was flipped on by default in this release.
+
+### Why we rewrote it
+
+The v1 autonomy pipeline was three pieces of hand-written logic bolted
+together:
+
+- `proactiveEngine.ts` — a decision tree over hard-coded templates
+- `innerMonologue.ts` — a separate LLM call for "what is the pet thinking?"
+- `intentPredictor.ts` — another LLM call for "what will the user say next?"
+
+Emotion, relationship, and rhythm were all tracked faithfully — but they
+barely flowed into the words that came out, because the output layer was a
+template picker, not a writer. Users reported the proactive lines felt
+"childish" and "formulaic" regardless of persona. That's what V2 fixes.
+
+### What V2 actually does
+
+```
+tick (eligible?) → contextGatherer → decisionEngine → personaGuardrail → delivery
+      │                 │                  │                │              │
+      └─ legacy gates   └─ pure signal    └─ one LLM       └─ forbidden   └─ speak via
+         (awake, VAD,      aggregator        call that        phrase +       the same
+          quiet hours,     (no IO, no        returns          density        streaming
+          cost limit)      React)            {speak, text,    checks, LLM    TTS path as
+                                             silence_reason}  judge option   manual chat
+```
+
+Key shifts from V1:
+
+| | V1 | V2 |
+|---|---|---|
+| Decision surface | Rule tree picks from templates | Single LLM call writes the line |
+| Context | Scattered reads inside the tree | One pure `contextGatherer` snapshot |
+| Persona voice | Prompt glue, no enforcement | Multi-file persona + guardrail layer |
+| Silence | "No rule fired" | First-class `silence_reason` output |
+| Cost | 2–3 LLM calls (monologue + intent + speak) | 1 LLM call, reuses primary or dedicated model |
+| Testability | React-entangled | Pure modules, tested in plain Node |
+
+### Persona files
+
+Per-persona config is now file-based instead of stuffed into a JSON field.
+Look at `src/features/autonomy/v2/personas/xinghui/` for the reference
+layout:
+
+```
+soul.md       — first-person backstory, voice, values
+style.json    — tone knobs (temperature hints, emoji policy, register)
+examples.md   — few-shot exemplars the decision prompt reads
+voice.json    — TTS voice id / provider overrides for this persona
+tools.json    — which tools the persona is allowed to call
+memory.md     — long-term facts the persona "remembers"
+```
+
+The guardrail reads `style.json`'s forbidden phrases + density caps and
+can optionally re-prompt an LLM judge if the output feels off-voice.
+Strictness is user-tunable (`autonomyPersonaStrictnessV2`: `loose | med | strict`).
+
+### Tuning
+
+Settings → **Autonomy**:
+
+- **Enable V2** (`autonomyEngineV2`) — on by default in this release. Toggle
+  off to fall back to the V1 tree (still shipped during the migration).
+- **Activity level** (`autonomyLevelV2`) — `off | low | med | high`. Controls
+  both tick density and how often the LLM is allowed to pick `speak`.
+- **Model** (`autonomyModelV2`) — leave empty to share the primary chat
+  provider, or pin a cheaper / faster model for the decision call.
+- **Strictness** (`autonomyPersonaStrictnessV2`) — `loose | med | strict`
+  for the guardrail.
+
+### What still lives on V1
+
+Emotion model, relationship tracker, rhythm learner, focus awareness, dream
+cycle, goal tracker — all unchanged and feeding into V2's context snapshot.
+The V1 decision path (`proactiveEngine.ts` + `innerMonologue.ts` +
+`intentPredictor.ts`) stays in the tree until it has been side-by-side
+validated; Phase 6 of the migration deletes it.
+
+See `src/features/autonomy/README.md` for the internal layering rules and
+`src/features/autonomy/v2/` for the source.
 
 ## Install
 
