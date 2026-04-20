@@ -12,7 +12,13 @@ import {
   clampPresenceIntervalMinutes,
   UI_LANGUAGE_OPTIONS,
 } from '../lib'
-import { pickTranslatedUiText } from '../lib/uiLanguage'
+import {
+  getDefaultCompanionName,
+  getDefaultUserName,
+  isLocaleDefaultCompanionName,
+  isLocaleDefaultUserName,
+  pickTranslatedUiText,
+} from '../lib/uiLanguage'
 import { MEMORY_EMBEDDING_MODEL_OPTIONS } from '../features/memory'
 import type { PetModelDefinition } from '../features/pet'
 import type { ReminderTaskDraftInput } from '../features/reminders'
@@ -376,12 +382,19 @@ export function SettingsDrawer({
               <label className="settings-drawer__language-control">
                 <select
                   value={draft.uiLanguage}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const nextLanguage = event.target.value as AppSettings['uiLanguage']
                     setDraft((prev) => ({
                       ...prev,
-                      uiLanguage: event.target.value as AppSettings['uiLanguage'],
+                      uiLanguage: nextLanguage,
+                      companionName: isLocaleDefaultCompanionName(prev.companionName)
+                        ? getDefaultCompanionName(nextLanguage)
+                        : prev.companionName,
+                      userName: isLocaleDefaultUserName(prev.userName)
+                        ? getDefaultUserName(nextLanguage)
+                        : prev.userName,
                     }))
-                  }
+                  }}
                 >
                   {UI_LANGUAGE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>

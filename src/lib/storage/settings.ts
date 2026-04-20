@@ -26,7 +26,12 @@ import {
   normalizeWebSearchProviderId,
   resolveWebSearchApiBaseUrl,
 } from '../webSearchProviders.ts'
-import { normalizeUiLanguage } from '../uiLanguage.ts'
+import {
+  detectPreferredUiLanguage,
+  getDefaultCompanionName,
+  getDefaultUserName,
+  normalizeUiLanguage,
+} from '../uiLanguage.ts'
 import {
   readJson,
   SETTINGS_STORAGE_KEY,
@@ -295,6 +300,10 @@ export function loadSettings(): AppSettings {
     ? migrateSettings(raw, storedVersion)
     : raw
   const stored = migrated as Partial<AppSettings>
+  const isFreshInstall = Object.keys(raw).length === 0
+  const resolvedUiLanguage = stored.uiLanguage != null
+    ? normalizeUiLanguage(stored.uiLanguage)
+    : (isFreshInstall ? detectPreferredUiLanguage() : normalizeUiLanguage(stored.uiLanguage))
   const voiceTriggerMode = resolveVoiceTriggerMode(stored)
   const inferredProviderId = stored.apiProviderId
     ?? inferApiProviderId(stored.apiBaseUrl ?? defaultSettings.apiBaseUrl)
@@ -348,8 +357,10 @@ export function loadSettings(): AppSettings {
   const loadedSettings: AppSettings = {
     ...defaultSettings,
     ...stored,
+    companionName: stored.companionName ?? getDefaultCompanionName(resolvedUiLanguage),
+    userName: stored.userName ?? getDefaultUserName(resolvedUiLanguage),
     settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
-    uiLanguage: normalizeUiLanguage(stored.uiLanguage),
+    uiLanguage: resolvedUiLanguage,
     themeId: resolveThemeId(stored.themeId),
     panelSceneMode: normalizePanelSceneMode(stored.panelSceneMode),
     ambientWeatherEnabled: stored.ambientWeatherEnabled === true,

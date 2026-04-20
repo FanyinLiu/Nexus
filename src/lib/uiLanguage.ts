@@ -86,3 +86,46 @@ export function pickTranslatedUiText(
 ) {
   return translate(key, params, normalizeUiLanguage(language))
 }
+
+type LocaleNameDefaults = { companionName: string; userName: string }
+
+const LOCALE_NAME_DEFAULTS: Record<UiLanguage, LocaleNameDefaults> = {
+  'zh-CN': { companionName: '星绘', userName: '主人' },
+  'zh-TW': { companionName: '星繪', userName: '主人' },
+  'en-US': { companionName: 'Nexus', userName: 'you' },
+  ja: { companionName: 'ネクサス', userName: 'ご主人さま' },
+  ko: { companionName: '넥서스', userName: '주인님' },
+}
+
+export function getDefaultCompanionName(language: UiLanguage): string {
+  return LOCALE_NAME_DEFAULTS[normalizeUiLanguage(language)].companionName
+}
+
+export function getDefaultUserName(language: UiLanguage): string {
+  return LOCALE_NAME_DEFAULTS[normalizeUiLanguage(language)].userName
+}
+
+export function isLocaleDefaultCompanionName(name: string): boolean {
+  return Object.values(LOCALE_NAME_DEFAULTS).some((d) => d.companionName === name)
+}
+
+export function isLocaleDefaultUserName(name: string): boolean {
+  return Object.values(LOCALE_NAME_DEFAULTS).some((d) => d.userName === name)
+}
+
+export function detectPreferredUiLanguage(): UiLanguage {
+  if (typeof navigator === 'undefined') return 'zh-CN'
+  const candidates = [
+    ...(Array.isArray(navigator.languages) ? navigator.languages : []),
+    navigator.language,
+  ].filter(Boolean) as string[]
+  for (const raw of candidates) {
+    const lower = raw.toLowerCase()
+    if (lower.startsWith('zh-tw') || lower.startsWith('zh-hk') || lower.startsWith('zh-hant')) return 'zh-TW'
+    if (lower.startsWith('zh')) return 'zh-CN'
+    if (lower.startsWith('ja')) return 'ja'
+    if (lower.startsWith('ko')) return 'ko'
+    if (lower.startsWith('en')) return 'en-US'
+  }
+  return 'zh-CN'
+}
