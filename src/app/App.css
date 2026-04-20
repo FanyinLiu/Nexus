@@ -5101,10 +5101,10 @@
 .weather-ambient {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: 2; /* above scene-backdrop (auto) and stage-backdrop (0) */
   pointer-events: none;
   overflow: hidden;
-  opacity: 0;
+  opacity: 1;
   animation: weather-ambient-fade-in 420ms ease forwards;
   --weather-tint: transparent;
   --weather-line-color: rgba(240, 246, 255, 0.85);
