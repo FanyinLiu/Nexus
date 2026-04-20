@@ -21,6 +21,7 @@ export function WeatherAmbient({ condition }: WeatherAmbientProps) {
   const snowFlakes = useMemo(() => makeIndexArray(22), [])
   const windStreaks = useMemo(() => makeIndexArray(14), [])
   const cloudBlobs = useMemo(() => makeIndexArray(3), [])
+  const dustMotes = useMemo(() => makeIndexArray(16), [])
 
   if (!condition) return null
 
@@ -33,6 +34,11 @@ export function WeatherAmbient({ condition }: WeatherAmbientProps) {
         <>
           <div className="weather-ambient__sun-glow" />
           <div className="weather-ambient__sun-rays" />
+          <div className="weather-ambient__dust">
+            {dustMotes.map((i) => (
+              <span key={i} className="weather-ambient__dust-mote" style={makeDustStyle(i)} />
+            ))}
+          </div>
         </>
       ) : null}
       {condition === 'cloudy' ? (
@@ -111,6 +117,22 @@ function makeWindStyle(i: number): React.CSSProperties {
   return {
     top: `${top}%`,
     width: `${length}px`,
+    animationDelay: `${delay}s`,
+    animationDuration: `${duration}s`,
+  }
+}
+
+function makeDustStyle(i: number): React.CSSProperties {
+  const left = ((i * 53) % 100)
+  const startY = 20 + ((i * 29) % 60)
+  const delay = ((i * 11) % 100) / 10
+  const duration = 8 + ((i * 19) % 80) / 10
+  const size = 2 + (i % 3)
+  return {
+    left: `${left}%`,
+    top: `${startY}%`,
+    width: `${size}px`,
+    height: `${size}px`,
     animationDelay: `${delay}s`,
     animationDuration: `${duration}s`,
   }

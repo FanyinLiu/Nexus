@@ -5218,6 +5218,30 @@
   to   { transform: rotate(360deg); }
 }
 
+.weather-ambient--clear .weather-ambient__dust {
+  position: absolute;
+  inset: 0;
+}
+
+.weather-ambient--clear .weather-ambient__dust-mote {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--weather-glow-color);
+  box-shadow: 0 0 8px var(--weather-glow-color);
+  opacity: 0.85;
+  animation-name: weather-dust-drift;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+  animation-direction: alternate;
+}
+
+@keyframes weather-dust-drift {
+  0%   { transform: translate3d(0, 0, 0); opacity: 0.2; }
+  30%  { opacity: 0.85; }
+  70%  { opacity: 0.85; }
+  100% { transform: translate3d(30px, -40px, 0); opacity: 0.2; }
+}
+
 /* ── Cloudy ─────────────────────────────────────────────────── */
 .weather-ambient--cloudy .weather-ambient__clouds {
   position: absolute;

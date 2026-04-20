@@ -5,6 +5,7 @@ import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type {
   AppSettings,
   PetSceneLocation,
+  PetWeatherPreview,
   PetWindowState,
   TranslationKey,
   UiLanguage,
@@ -29,6 +30,17 @@ const PET_SCENE_LOCATION_OPTIONS: Array<{ id: PetSceneLocation; labelKey: Transl
   { id: 'seaside', labelKey: 'settings.window.pet_scene.seaside' },
   { id: 'fields', labelKey: 'settings.window.pet_scene.fields' },
   { id: 'mountain', labelKey: 'settings.window.pet_scene.mountain' },
+]
+
+const PET_WEATHER_PREVIEW_OPTIONS: Array<{ id: PetWeatherPreview; labelKey: TranslationKey }> = [
+  { id: 'auto', labelKey: 'settings.window.pet_weather.auto' },
+  { id: 'clear', labelKey: 'settings.window.pet_weather.clear' },
+  { id: 'cloudy', labelKey: 'settings.window.pet_weather.cloudy' },
+  { id: 'fog', labelKey: 'settings.window.pet_weather.fog' },
+  { id: 'rain', labelKey: 'settings.window.pet_weather.rain' },
+  { id: 'snow', labelKey: 'settings.window.pet_weather.snow' },
+  { id: 'thunder', labelKey: 'settings.window.pet_weather.thunder' },
+  { id: 'wind', labelKey: 'settings.window.pet_weather.wind' },
 ]
 
 type WindowSectionProps = {
@@ -145,6 +157,27 @@ export const WindowSection = memo(function WindowSection({
       </label>
 
       <p className="settings-drawer__hint">{ti('settings.window.pet_scene_hint')}</p>
+
+      <label>
+        <span>{ti('settings.window.pet_weather_label')}</span>
+        <select
+          value={draft.petWeatherPreview}
+          onChange={(event) =>
+            setDraft((prev) => ({
+              ...prev,
+              petWeatherPreview: event.target.value as PetWeatherPreview,
+            }))
+          }
+        >
+          {PET_WEATHER_PREVIEW_OPTIONS.map((option) => (
+            <option key={option.id} value={option.id}>
+              {ti(option.labelKey)}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <p className="settings-drawer__hint">{ti('settings.window.pet_weather_hint')}</p>
 
       <label className="settings-toggle">
         <span>{ti('settings.window.ambient_weather_toggle')}</span>

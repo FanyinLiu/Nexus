@@ -93,6 +93,15 @@ export interface AppearanceSettings {
    * (14 time-of-day states, animated transitions) sit on top of it.
    */
   petSceneLocation: PetSceneLocation
+  /**
+   * Force a specific weather animation on the pet backdrop for testing /
+   * aesthetic pinning. 'auto' (default) uses the live weather condition
+   * classified from Open-Meteo. Other values hard-pin the WeatherAmbient
+   * layer regardless of real data — useful when the user wants rainy
+   * vibes all the time, or just to preview all 7 animations without
+   * waiting for real weather to change.
+   */
+  petWeatherPreview: PetWeatherPreview
 }
 
 export type PetSceneLocation =
@@ -102,6 +111,16 @@ export type PetSceneLocation =
   | 'seaside'
   | 'fields'
   | 'mountain'
+
+export type PetWeatherPreview =
+  | 'auto'
+  | 'clear'
+  | 'cloudy'
+  | 'fog'
+  | 'rain'
+  | 'snow'
+  | 'thunder'
+  | 'wind'
 
 export interface TextProviderSettings {
   apiProviderId: string

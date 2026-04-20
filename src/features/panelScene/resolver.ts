@@ -69,7 +69,7 @@ export function normalizePanelSceneMode(raw: unknown): PanelSceneMode {
   return 'auto'
 }
 
-import type { PetSceneLocation } from '../../types'
+import type { PetSceneLocation, PetWeatherPreview } from '../../types'
 
 export const PET_SCENE_LOCATIONS: readonly PetSceneLocation[] = [
   'off', 'city', 'countryside', 'seaside', 'fields', 'mountain',
@@ -80,4 +80,15 @@ export function normalizePetSceneLocation(raw: unknown): PetSceneLocation {
     return raw as PetSceneLocation
   }
   return 'off'
+}
+
+export const PET_WEATHER_PREVIEWS: readonly PetWeatherPreview[] = [
+  'auto', 'clear', 'cloudy', 'fog', 'rain', 'snow', 'thunder', 'wind',
+] as const
+
+export function normalizePetWeatherPreview(raw: unknown): PetWeatherPreview {
+  if (typeof raw === 'string' && (PET_WEATHER_PREVIEWS as readonly string[]).includes(raw)) {
+    return raw as PetWeatherPreview
+  }
+  return 'auto'
 }

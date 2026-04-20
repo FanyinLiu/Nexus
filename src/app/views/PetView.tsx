@@ -70,12 +70,12 @@ export function PetView({
     settings.ambientWeatherEnabled,
   )
   const weatherCondition = useMemo(
-    () => (
-      ambientWeather
-        ? classifyWeatherCondition(ambientWeather.weatherCode, ambientWeather.windSpeedKmh)
-        : null
-    ),
-    [ambientWeather],
+    () => {
+      if (settings.petWeatherPreview !== 'auto') return settings.petWeatherPreview
+      if (!ambientWeather) return null
+      return classifyWeatherCondition(ambientWeather.weatherCode, ambientWeather.windSpeedKmh)
+    },
+    [ambientWeather, settings.petWeatherPreview],
   )
   const voiceStateLabel = getVoiceStateLabel(voice.voiceState, ti)
   const petSignalLabel = voice.voiceState !== 'idle'

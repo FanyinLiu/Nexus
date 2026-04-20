@@ -1766,6 +1766,16 @@ export type TranslationKey =
   | 'settings.window.pet_scene.seaside'
   | 'settings.window.pet_scene.fields'
   | 'settings.window.pet_scene.mountain'
+  | 'settings.window.pet_weather_label'
+  | 'settings.window.pet_weather_hint'
+  | 'settings.window.pet_weather.auto'
+  | 'settings.window.pet_weather.clear'
+  | 'settings.window.pet_weather.cloudy'
+  | 'settings.window.pet_weather.fog'
+  | 'settings.window.pet_weather.rain'
+  | 'settings.window.pet_weather.snow'
+  | 'settings.window.pet_weather.thunder'
+  | 'settings.window.pet_weather.wind'
 
 export type TranslationPrimitive = string | number | boolean | null | undefined
 
