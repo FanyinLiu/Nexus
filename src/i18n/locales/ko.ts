@@ -1756,4 +1756,5 @@ export const koMessages: TranslationDictionary = {
   'file.picker.read_failed': '파일 읽기에 실패했어요. 잠시 후 다시 시도해 주세요.',
   'reminder.schedule.once': '1회성 알림',
   'reminder.schedule.every_minutes': '{minutes} 분마다',
+  'settings.language_menu.aria_label': 'UI 언어 변경',
 }

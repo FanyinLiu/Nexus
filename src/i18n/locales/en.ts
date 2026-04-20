@@ -1756,4 +1756,5 @@ export const enMessages: TranslationDictionary = {
   'file.picker.read_failed': 'Failed to read file. Please try again later.',
   'reminder.schedule.once': 'One-time reminder',
   'reminder.schedule.every_minutes': 'Every {minutes} min',
+  'settings.language_menu.aria_label': 'Change UI language',
 }

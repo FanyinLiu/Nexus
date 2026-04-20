@@ -1756,4 +1756,5 @@ export const jaMessages: TranslationDictionary = {
   'file.picker.read_failed': 'ファイルの読み込みに失敗しました。しばらくしてからお試しください。',
   'reminder.schedule.once': '1回きりのリマインダー',
   'reminder.schedule.every_minutes': '{minutes} 分ごと',
+  'settings.language_menu.aria_label': '表示言語を切り替える',
 }

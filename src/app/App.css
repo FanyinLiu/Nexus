@@ -2807,43 +2807,94 @@
 }
 
 .settings-drawer__language-control {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  min-width: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
 }
 
-.settings-drawer__language-control select {
-  width: auto;
-  min-width: 100px;
-  min-height: 36px;
-  padding: 0 28px 0 12px;
-  border-radius: 8px;
+.settings-drawer__language-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.05);
-  box-shadow: none;
-  font-size: 13px;
-  font-weight: 600;
-  accent-color: #4d9fff;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
 }
 
-.settings-drawer select,
-.settings-drawer__language-control select {
-  accent-color: #4d9fff;
+.settings-drawer__language-button:hover,
+.settings-drawer__language-button[aria-expanded="true"] {
+  background: rgba(77, 159, 255, 0.14);
+  border-color: rgba(77, 159, 255, 0.45);
+  color: #cfe3ff;
 }
 
-.settings-drawer select option:checked {
-  background: #4d9fff;
+.settings-drawer__language-button:focus-visible {
+  outline: 2px solid rgba(77, 159, 255, 0.6);
+  outline-offset: 2px;
+}
+
+.settings-drawer__language-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-drawer__language-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  min-width: 176px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(20, 24, 36, 0.96);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.settings-drawer__language-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.settings-drawer__language-menu-item:hover,
+.settings-drawer__language-menu-item:focus-visible {
+  background: rgba(255, 255, 255, 0.06);
+  outline: none;
+}
+
+.settings-drawer__language-menu-item--active {
+  background: rgba(77, 159, 255, 0.18);
   color: #fff;
 }
 
-.settings-drawer select option {
-  background: #1a1e2e;
-  color: rgba(255, 255, 255, 0.9);
+.settings-drawer__language-menu-native {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settings-drawer__language-menu-meta {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
 }
 
 .settings-drawer__toolbar .ghost-button {
@@ -3900,15 +3951,6 @@
 
   .settings-drawer__overview {
     padding: 2px 0 8px;
-  }
-
-  .settings-drawer__language-control {
-    flex: 1 1 auto;
-    justify-content: space-between;
-  }
-
-  .settings-drawer__language-control select {
-    min-width: 118px;
   }
 
   .settings-section-nav__button {

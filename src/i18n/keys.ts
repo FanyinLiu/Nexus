@@ -1753,4 +1753,5 @@ export const translationKeys: TranslationKey[] = [
   'file.picker.read_failed',
   'reminder.schedule.once',
   'reminder.schedule.every_minutes',
+  'settings.language_menu.aria_label',
 ]

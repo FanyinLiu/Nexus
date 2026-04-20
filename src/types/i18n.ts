@@ -1757,6 +1757,7 @@ export type TranslationKey =
   | 'file.picker.read_failed'
   | 'reminder.schedule.once'
   | 'reminder.schedule.every_minutes'
+  | 'settings.language_menu.aria_label'
 
 export type TranslationPrimitive = string | number | boolean | null | undefined
 

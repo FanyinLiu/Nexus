@@ -1756,4 +1756,5 @@ export const zhCNMessages: TranslationDictionary = {
   'file.picker.read_failed': '读取文件失败，请稍后再试。',
   'reminder.schedule.once': '一次性提醒',
   'reminder.schedule.every_minutes': '每 {minutes} 分钟',
+  'settings.language_menu.aria_label': '切换界面语言',
 }

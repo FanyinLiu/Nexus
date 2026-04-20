@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import {
   getMemorySearchModeOptions,
   getSettingsSectionOptions,
@@ -191,6 +191,25 @@ export function SettingsDrawer({
   const [draft, setDraft] = useState(settings)
   const [activeSectionId, setActiveSectionId] = useState<SettingsSectionId>('console')
   const [settingsView, setSettingsView] = useState<'home' | 'section'>('home')
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false)
+  const languageMenuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!languageMenuOpen) return undefined
+    function handlePointerDown(event: MouseEvent) {
+      if (!languageMenuRef.current) return
+      if (!languageMenuRef.current.contains(event.target as Node)) setLanguageMenuOpen(false)
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setLanguageMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [languageMenuOpen])
 
   const speechVoices = useSpeechVoiceManagement({
     draft,
@@ -379,30 +398,72 @@ export function SettingsDrawer({
             </div>
 
             <div className="settings-drawer__toolbar">
-              <label className="settings-drawer__language-control">
-                <select
-                  value={draft.uiLanguage}
-                  onChange={(event) => {
-                    const nextLanguage = event.target.value as AppSettings['uiLanguage']
-                    setDraft((prev) => ({
-                      ...prev,
-                      uiLanguage: nextLanguage,
-                      companionName: isLocaleDefaultCompanionName(prev.companionName)
-                        ? getDefaultCompanionName(nextLanguage)
-                        : prev.companionName,
-                      userName: isLocaleDefaultUserName(prev.userName)
-                        ? getDefaultUserName(nextLanguage)
-                        : prev.userName,
-                    }))
-                  }}
+              <div className="settings-drawer__language-control" ref={languageMenuRef}>
+                <button
+                  type="button"
+                  className="settings-drawer__language-button"
+                  aria-haspopup="menu"
+                  aria-expanded={languageMenuOpen}
+                  aria-label={ti('settings.language_menu.aria_label')}
+                  title={ti('settings.language_menu.aria_label')}
+                  onClick={() => setLanguageMenuOpen((open) => !open)}
                 >
-                  {UI_LANGUAGE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.nativeLabel}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  <svg
+                    className="settings-drawer__language-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M3 12h18" />
+                    <path d="M12 3c2.8 3.2 4.2 6.2 4.2 9s-1.4 5.8-4.2 9c-2.8-3.2-4.2-6.2-4.2-9S9.2 6.2 12 3z" />
+                  </svg>
+                </button>
+                {languageMenuOpen ? (
+                  <ul className="settings-drawer__language-menu" role="menu">
+                    {UI_LANGUAGE_OPTIONS.map((option) => {
+                      const isActive = option.value === draft.uiLanguage
+                      return (
+                        <li key={option.value} role="none">
+                          <button
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={isActive}
+                            className={
+                              'settings-drawer__language-menu-item'
+                              + (isActive ? ' settings-drawer__language-menu-item--active' : '')
+                            }
+                            onClick={() => {
+                              setDraft((prev) => ({
+                                ...prev,
+                                uiLanguage: option.value,
+                                companionName: isLocaleDefaultCompanionName(prev.companionName)
+                                  ? getDefaultCompanionName(option.value)
+                                  : prev.companionName,
+                                userName: isLocaleDefaultUserName(prev.userName)
+                                  ? getDefaultUserName(option.value)
+                                  : prev.userName,
+                              }))
+                              setLanguageMenuOpen(false)
+                            }}
+                          >
+                            <span className="settings-drawer__language-menu-native">
+                              {option.nativeLabel}
+                            </span>
+                            <span className="settings-drawer__language-menu-meta">
+                              {option.englishLabel}
+                            </span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : null}
+              </div>
               <button type="button" className="ghost-button" onClick={handleDismiss}>
                 {ti('common.close')}
               </button>

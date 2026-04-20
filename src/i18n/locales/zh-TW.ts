@@ -1756,4 +1756,5 @@ export const zhTWMessages: TranslationDictionary = {
   'file.picker.read_failed': '讀取檔案失敗，請稍後再試。',
   'reminder.schedule.once': '單次提醒',
   'reminder.schedule.every_minutes': '每 {minutes} 分鐘',
+  'settings.language_menu.aria_label': '切換介面語言',
 }
