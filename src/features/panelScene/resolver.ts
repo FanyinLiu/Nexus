@@ -83,7 +83,13 @@ export function normalizePetSceneLocation(raw: unknown): PetSceneLocation {
 }
 
 export const PET_WEATHER_PREVIEWS: readonly PetWeatherPreview[] = [
-  'auto', 'clear', 'cloudy', 'fog', 'rain', 'snow', 'thunder', 'wind',
+  'auto',
+  'clear', 'partly_cloudy', 'overcast',
+  'drizzle', 'rain', 'heavy_rain',
+  'thunder', 'storm',
+  'light_snow', 'snow', 'heavy_snow',
+  'fog',
+  'breeze', 'gale',
 ] as const
 
 export function normalizePetWeatherPreview(raw: unknown): PetWeatherPreview {

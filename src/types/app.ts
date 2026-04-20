@@ -115,12 +115,19 @@ export type PetSceneLocation =
 export type PetWeatherPreview =
   | 'auto'
   | 'clear'
-  | 'cloudy'
-  | 'fog'
+  | 'partly_cloudy'
+  | 'overcast'
+  | 'drizzle'
   | 'rain'
-  | 'snow'
+  | 'heavy_rain'
   | 'thunder'
-  | 'wind'
+  | 'storm'
+  | 'light_snow'
+  | 'snow'
+  | 'heavy_snow'
+  | 'fog'
+  | 'breeze'
+  | 'gale'
 
 export interface TextProviderSettings {
   apiProviderId: string

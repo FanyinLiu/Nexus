@@ -35,12 +35,19 @@ const PET_SCENE_LOCATION_OPTIONS: Array<{ id: PetSceneLocation; labelKey: Transl
 const PET_WEATHER_PREVIEW_OPTIONS: Array<{ id: PetWeatherPreview; labelKey: TranslationKey }> = [
   { id: 'auto', labelKey: 'settings.window.pet_weather.auto' },
   { id: 'clear', labelKey: 'settings.window.pet_weather.clear' },
-  { id: 'cloudy', labelKey: 'settings.window.pet_weather.cloudy' },
-  { id: 'fog', labelKey: 'settings.window.pet_weather.fog' },
+  { id: 'partly_cloudy', labelKey: 'settings.window.pet_weather.partly_cloudy' },
+  { id: 'overcast', labelKey: 'settings.window.pet_weather.overcast' },
+  { id: 'drizzle', labelKey: 'settings.window.pet_weather.drizzle' },
   { id: 'rain', labelKey: 'settings.window.pet_weather.rain' },
-  { id: 'snow', labelKey: 'settings.window.pet_weather.snow' },
+  { id: 'heavy_rain', labelKey: 'settings.window.pet_weather.heavy_rain' },
   { id: 'thunder', labelKey: 'settings.window.pet_weather.thunder' },
-  { id: 'wind', labelKey: 'settings.window.pet_weather.wind' },
+  { id: 'storm', labelKey: 'settings.window.pet_weather.storm' },
+  { id: 'light_snow', labelKey: 'settings.window.pet_weather.light_snow' },
+  { id: 'snow', labelKey: 'settings.window.pet_weather.snow' },
+  { id: 'heavy_snow', labelKey: 'settings.window.pet_weather.heavy_snow' },
+  { id: 'fog', labelKey: 'settings.window.pet_weather.fog' },
+  { id: 'breeze', labelKey: 'settings.window.pet_weather.breeze' },
+  { id: 'gale', labelKey: 'settings.window.pet_weather.gale' },
 ]
 
 type WindowSectionProps = {
