@@ -5558,14 +5558,16 @@
   );
 }
 .weather-ambient--drizzle .weather-ambient__raindrop {
-  width: 1.8px;
+  width: 2.5px;
+  box-shadow: 0 0 3px rgba(230, 240, 255, 0.35);
 }
 .weather-ambient--rain .weather-ambient__raindrop {
-  width: 2.5px;
+  width: 3.5px;
 }
 .weather-ambient--heavy_rain .weather-ambient__raindrop,
 .weather-ambient--storm .weather-ambient__raindrop {
-  width: 3px;
+  width: 4.5px;
+  box-shadow: 0 0 6px rgba(230, 240, 255, 0.55);
 }
 
 .weather-ambient__rain {
@@ -5576,14 +5578,15 @@
 .weather-ambient__raindrop {
   position: absolute;
   top: -30px;
-  width: 2.5px;
+  width: 3.5px;
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    var(--weather-line-color) 40%,
+    var(--weather-line-color) 35%,
     var(--weather-line-color) 100%
   );
   border-radius: 2px;
+  box-shadow: 0 0 4px rgba(230, 240, 255, 0.45);
   animation-name: weather-rain-fall;
   animation-iteration-count: infinite;
   animation-timing-function: linear;
@@ -5702,7 +5705,7 @@
   top: -12px;
   border-radius: 50%;
   background: var(--weather-line-color);
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
   animation-name: weather-snow-fall;
   animation-iteration-count: infinite;
   animation-timing-function: linear;
@@ -5771,6 +5774,7 @@
     transparent 100%
   );
   border-radius: 2px;
+  box-shadow: 0 0 4px rgba(230, 240, 255, 0.4);
   animation-name: weather-wind-streak;
   animation-iteration-count: infinite;
   animation-timing-function: ease-out;
