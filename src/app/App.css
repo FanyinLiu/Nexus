@@ -119,8 +119,12 @@
 
 .pet-window__mascot {
   position: relative;
-  width: min(100%, 360px);
-  height: min(calc(100vh - 20px), 560px);
+  /* Was capped at 360×560 so the pet stayed a fixed size regardless of
+   * window size. Since the Electron window is now resizable, let the
+   * character fill the whole pet stage so dragging the window edge
+   * scales the character too. */
+  width: 100%;
+  height: calc(100vh - 20px);
   margin: 0 auto;
   pointer-events: auto;
   transition:
