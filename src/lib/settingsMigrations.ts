@@ -13,7 +13,7 @@
 import type { UiLanguage } from '../types'
 import { normalizeUiLanguage } from './uiLanguage.ts'
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 3
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 4
 
 export interface SettingsMigration {
   toVersion: number
@@ -79,6 +79,20 @@ const migrations: SettingsMigration[] = [
       if (next.speechRate === 1 || next.speechRate === 1.0) {
         next.speechRate = 0.92
       }
+      return next
+    },
+  },
+  {
+    toVersion: 4,
+    description: 'Merge ambientWeatherLocation into toolWeatherDefaultLocation (single source of truth)',
+    migrate: (raw) => {
+      const next = { ...raw }
+      const tool = typeof next.toolWeatherDefaultLocation === 'string'
+        ? next.toolWeatherDefaultLocation.trim() : ''
+      const ambient = typeof next.ambientWeatherLocation === 'string'
+        ? next.ambientWeatherLocation.trim() : ''
+      if (!tool && ambient) next.toolWeatherDefaultLocation = ambient
+      delete next.ambientWeatherLocation
       return next
     },
   },

@@ -618,7 +618,7 @@ export const zhTWMessages: TranslationDictionary = {
   'settings.window.ambient_weather_toggle': '面板右上角顯示天氣',
   'settings.window.ambient_weather_location_label': '城市 / 地點',
   'settings.window.ambient_weather_location_placeholder': '例如 台北 / 東京 / Tokyo',
-  'settings.window.ambient_weather_hint': '天氣每 30 分鐘自動更新一次，資料來自 Nominatim + Open-Meteo，無需 API key。地點留空或網路異常時角標會自動隱藏。',
+  'settings.window.ambient_weather_hint': '地點和「工具 / 天氣」共用同一個欄位，在哪裡改都會同步。每 30 分鐘自動更新一次，資料來自 Nominatim + Open-Meteo，無需 API key。留空或網路異常時角標與背景天氣會自動隱藏。',
   'settings.voice.title': '語音總開關',
   'settings.voice.note': '連續語音會在說完後繼續監聽，更接近陪伴式對話。',
   'settings.voice.audio_smoke_test': '一鍵音訊自檢',

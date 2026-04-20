@@ -618,7 +618,7 @@ export const koMessages: TranslationDictionary = {
   'settings.window.ambient_weather_toggle': '패널 우상단에 날씨 표시',
   'settings.window.ambient_weather_location_label': '도시 / 지역',
   'settings.window.ambient_weather_location_placeholder': '예: 서울 / 도쿄 / Tokyo',
-  'settings.window.ambient_weather_hint': '날씨는 30분마다 Nominatim + Open-Meteo 에서 자동 갱신되며 API 키가 필요하지 않습니다. 지역이 비어 있거나 네트워크 오류 시 배지는 자동으로 숨겨집니다.',
+  'settings.window.ambient_weather_hint': '지역은 "도구 / 날씨" 와 같은 필드를 공유하며 어느 쪽에서 수정해도 동기화됩니다. 30분마다 Nominatim + Open-Meteo 에서 자동 갱신되며 API 키가 필요하지 않습니다. 비어 있거나 네트워크 오류 시 배지와 배경 날씨가 자동으로 숨겨집니다.',
   'settings.voice.title': 'Voice master controls',
   'settings.voice.note': 'Continuous voice keeps listening after each reply, which feels closer to a natural companion conversation.',
   'settings.voice.audio_smoke_test': 'Audio smoke test',

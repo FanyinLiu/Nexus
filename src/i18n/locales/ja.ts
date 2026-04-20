@@ -618,7 +618,7 @@ export const jaMessages: TranslationDictionary = {
   'settings.window.ambient_weather_toggle': 'パネル右上に天気を表示',
   'settings.window.ambient_weather_location_label': '都市 / 地点',
   'settings.window.ambient_weather_location_placeholder': '例：東京 / 大阪 / Tokyo',
-  'settings.window.ambient_weather_hint': '天気は 30 分ごとに Nominatim と Open-Meteo から自動更新されます（API キー不要）。地点が空欄の場合やネットワーク障害時はバッジは自動で非表示になります。',
+  'settings.window.ambient_weather_hint': '地点は「ツール / 天気」と同じフィールドを共有しており、どちらで編集しても同期されます。30 分ごとに Nominatim と Open-Meteo から自動更新されます（API キー不要）。地点が空欄の場合やネットワーク障害時はバッジも背景天気も自動で非表示になります。',
   'settings.voice.title': 'Voice master controls',
   'settings.voice.note': 'Continuous voice keeps listening after each reply, which feels closer to a natural companion conversation.',
   'settings.voice.audio_smoke_test': 'Audio smoke test',

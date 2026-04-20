@@ -61,7 +61,7 @@ export function PetView({
   ) => pickTranslatedUiText(settings.uiLanguage, key, params)
   const characterPreset = useMemo(() => resolveCharacterPreset(), [])
   const ambientWeather = useAmbientWeather(
-    settings.ambientWeatherLocation,
+    settings.toolWeatherDefaultLocation,
     settings.ambientWeatherEnabled,
   )
   const weatherCondition = useMemo(

@@ -618,7 +618,7 @@ export const enMessages: TranslationDictionary = {
   'settings.window.ambient_weather_toggle': 'Show weather in the panel corner',
   'settings.window.ambient_weather_location_label': 'City / place',
   'settings.window.ambient_weather_location_placeholder': 'e.g. Beijing / Tokyo / San Francisco',
-  'settings.window.ambient_weather_hint': 'Refreshes every 30 minutes via Nominatim + Open-Meteo — no API key required. The chip auto-hides when the location is empty or the network call fails.',
+  'settings.window.ambient_weather_hint': 'The location is shared with the weather tool — edits here sync both. Refreshes every 30 minutes via Nominatim + Open-Meteo, no API key required. The chip and ambient layer auto-hide when the location is empty or the network call fails.',
   'settings.voice.title': 'Voice master controls',
   'settings.voice.note': 'Continuous voice keeps listening after each reply, which feels closer to a natural companion conversation.',
   'settings.voice.audio_smoke_test': 'Audio smoke test',

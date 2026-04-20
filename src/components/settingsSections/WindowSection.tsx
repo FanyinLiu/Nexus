@@ -128,12 +128,12 @@ export const WindowSection = memo(function WindowSection({
         <label>
           <span>{ti('settings.window.ambient_weather_location_label')}</span>
           <input
-            value={draft.ambientWeatherLocation}
+            value={draft.toolWeatherDefaultLocation}
             placeholder={ti('settings.window.ambient_weather_location_placeholder')}
             onChange={(event) =>
               setDraft((prev) => ({
                 ...prev,
-                ambientWeatherLocation: event.target.value,
+                toolWeatherDefaultLocation: event.target.value,
               }))
             }
           />

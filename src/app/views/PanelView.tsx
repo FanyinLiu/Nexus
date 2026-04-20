@@ -78,7 +78,7 @@ export function PanelView({
   const panelSceneClassName = activePanelScene ? `panel-scene--${activePanelScene}` : ''
 
   const ambientWeather = useAmbientWeather(
-    settings.ambientWeatherLocation,
+    settings.toolWeatherDefaultLocation,
     settings.ambientWeatherEnabled,
   )
   const voiceStateLabel = getVoiceStateLabel(voice.voiceState, ti)
