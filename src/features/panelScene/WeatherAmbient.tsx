@@ -178,12 +178,19 @@ function makeRainStyle(i: number, condition: WeatherCondition): React.CSSPropert
       : 16
   const height = heightBase + (i % 5) * 3
   const opacity = 0.5 + ((i * 13) % 40) / 100
+  // Horizontal drift varied per-drop so sheets of rain look gusty,
+  // not like a uniform slanted curtain. Range ~15-42px.
+  const driftX = -(15 + ((i * 19) % 28))
+  // Tilt the drop slightly so long drops look angled, not vertical.
+  const tilt = ((i * 23) % 14) - 7
   return {
     left: `${left}%`,
     height: `${height}px`,
     opacity,
+    transform: `rotate(${tilt}deg)`,
     animationDelay: `${delay}s`,
     animationDuration: `${duration}s`,
+    ['--rain-drift-x' as string]: `${driftX}px`,
   }
 }
 
@@ -196,6 +203,13 @@ function makeSnowStyle(i: number, condition: WeatherCondition): React.CSSPropert
   const sizeBase = condition === 'heavy_snow' ? 4 : 3
   const size = sizeBase + (i % 5)
   const opacity = 0.7 + ((i * 11) % 30) / 100
+  // Zig-zag amplitude and bias varied per-flake so snow tumbles rather
+  // than all flakes tracing the same S-curve. Range ±8..40px.
+  const wobble = 8 + ((i * 41) % 32)
+  const drift = ((i * 53) % 30) - 15
+  // Three-phase path assigned by i%3 — each flake takes one of three
+  // shuffled animation patterns so they don't visually sync.
+  const variant = i % 3
   return {
     left: `${left}%`,
     width: `${size}px`,
@@ -203,6 +217,9 @@ function makeSnowStyle(i: number, condition: WeatherCondition): React.CSSPropert
     opacity,
     animationDelay: `${delay}s`,
     animationDuration: `${duration}s`,
+    animationName: `weather-snow-fall-${variant}`,
+    ['--snow-wobble' as string]: `${wobble}px`,
+    ['--snow-drift' as string]: `${drift}px`,
   }
 }
 
@@ -216,13 +233,20 @@ function makeWindStyle(i: number, condition: WeatherCondition): React.CSSPropert
   const thickness = condition === 'gale' ? 1.4 + (i % 3) * 0.8
     : 0.8 + (i % 3) * 0.4
   const opacity = 0.5 + ((i * 17) % 40) / 100
+  // Slight vertical rise/fall per streak so the whole line field looks
+  // gusty rather than perfectly horizontal stripes. ±6-14px range.
+  const verticalDrift = ((i * 29) % 26) - 13
+  // Streak tilt so some lines slant upward, some downward.
+  const tilt = ((i * 17) % 8) - 4
   return {
     top: `${top}%`,
     width: `${length}px`,
     height: `${thickness}px`,
     opacity,
+    transform: `rotate(${tilt}deg)`,
     animationDelay: `${delay}s`,
     animationDuration: `${duration}s`,
+    ['--wind-rise' as string]: `${verticalDrift}px`,
   }
 }
 
@@ -232,6 +256,10 @@ function makeDustStyle(i: number): React.CSSProperties {
   const delay = ((i * 11) % 100) / 10
   const duration = 7 + ((i * 19) % 80) / 10
   const size = 2 + (i % 4)
+  // Randomize drift direction per mote so they swirl in different
+  // directions instead of all drifting the same up-right path.
+  const driftX = ((i * 41) % 60) - 30
+  const driftY = -((i * 37) % 50) - 10
   return {
     left: `${left}%`,
     top: `${startY}%`,
@@ -239,5 +267,7 @@ function makeDustStyle(i: number): React.CSSProperties {
     height: `${size}px`,
     animationDelay: `${delay}s`,
     animationDuration: `${duration}s`,
+    ['--dust-drift-x' as string]: `${driftX}px`,
+    ['--dust-drift-y' as string]: `${driftY}px`,
   }
 }

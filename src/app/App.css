@@ -5206,7 +5206,7 @@
   0%   { transform: translate3d(0, 0, 0); opacity: 0.2; }
   30%  { opacity: 0.9; }
   70%  { opacity: 0.9; }
-  100% { transform: translate3d(30px, -40px, 0); opacity: 0.2; }
+  100% { transform: translate3d(var(--dust-drift-x, 30px), var(--dust-drift-y, -40px), 0); opacity: 0.2; }
 }
 
 /* ═══ Cloudy ═════════════════════════════════════════════════ */
@@ -5593,8 +5593,10 @@
 }
 
 @keyframes weather-rain-fall {
-  from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(-28px, 110vh, 0); }
+  /* Per-drop drift comes from --rain-drift-x inline style; fallback
+   * to -28px so a drop without the var still behaves. */
+  from { transform: translate3d(0, 0, 0) rotate(var(--rain-tilt, 0deg)); }
+  to   { transform: translate3d(var(--rain-drift-x, -28px), 110vh, 0) rotate(var(--rain-tilt, 0deg)); }
 }
 
 .weather-ambient__puddle-wash {
@@ -5706,11 +5708,33 @@
   border-radius: 50%;
   background: var(--weather-line-color);
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
-  animation-name: weather-snow-fall;
+  /* animation-name comes from inline style (snow-fall-0/1/2) so flakes
+   * don't all trace the same S-curve. */
   animation-iteration-count: infinite;
   animation-timing-function: linear;
 }
 
+@keyframes weather-snow-fall-0 {
+  0%   { transform: translate3d(0, 0, 0); }
+  25%  { transform: translate3d(var(--snow-wobble, 20px), 25vh, 0); }
+  50%  { transform: translate3d(calc(var(--snow-drift, 0px) - var(--snow-wobble, 20px) * 0.5), 50vh, 0); }
+  75%  { transform: translate3d(calc(var(--snow-wobble, 20px) * 0.6), 75vh, 0); }
+  100% { transform: translate3d(var(--snow-drift, -10px), 110vh, 0); }
+}
+@keyframes weather-snow-fall-1 {
+  0%   { transform: translate3d(0, 0, 0); }
+  30%  { transform: translate3d(calc(var(--snow-wobble, 20px) * -0.8), 30vh, 0); }
+  60%  { transform: translate3d(calc(var(--snow-wobble, 20px) * 0.7), 60vh, 0); }
+  100% { transform: translate3d(var(--snow-drift, 10px), 110vh, 0); }
+}
+@keyframes weather-snow-fall-2 {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
+  40%  { transform: translate3d(calc(var(--snow-wobble, 20px) * 0.9), 40vh, 0) rotate(180deg); }
+  70%  { transform: translate3d(calc(var(--snow-wobble, 20px) * -0.5), 70vh, 0) rotate(270deg); }
+  100% { transform: translate3d(var(--snow-drift, 0px), 110vh, 0) rotate(360deg); }
+}
+
+/* Legacy, referenced if no variant class set */
 @keyframes weather-snow-fall {
   0%   { transform: translate3d(0, 0, 0); }
   50%  { transform: translate3d(20px, 50vh, 0); }
@@ -5782,10 +5806,11 @@
 }
 
 @keyframes weather-wind-streak {
-  0%   { transform: translateX(0); opacity: 0; }
+  0%   { transform: translate(0, 0) rotate(var(--wind-tilt, 0deg)); opacity: 0; }
   15%  { opacity: 1; }
+  50%  { transform: translate(55vw, calc(var(--wind-rise, 0px) * 0.5)) rotate(var(--wind-tilt, 0deg)); }
   85%  { opacity: 1; }
-  100% { transform: translateX(115vw); opacity: 0; }
+  100% { transform: translate(115vw, var(--wind-rise, 0px)) rotate(var(--wind-tilt, 0deg)); opacity: 0; }
 }
 
 /* ── Reduced motion: freeze every animation, keep only tints ── */
