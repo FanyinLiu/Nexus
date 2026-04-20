@@ -17,6 +17,7 @@ import {
   saveMemories,
   saveTextFileWithFallback,
 } from '../lib'
+import { useTranslation } from '../i18n/useTranslation.ts'
 import type {
   AppSettings,
   DailyMemoryEntry,
@@ -29,6 +30,7 @@ type UseMemoryParams = {
 }
 
 export function useMemory({ settings }: UseMemoryParams) {
+  const { t } = useTranslation()
   const [memories, setMemories] = useState<MemoryItem[]>(() => loadMemories())
   const [dailyMemories, setDailyMemories] = useState<DailyMemoryStore>(() => loadDailyMemories())
   const memoriesRef = useRef(memories)
@@ -114,7 +116,7 @@ export function useMemory({ settings }: UseMemoryParams) {
   const updateMemory = useCallback((id: string, content: string) => {
     const normalizedContent = content.trim()
     if (!normalizedContent) {
-      throw new Error('记忆内容不能为空。')
+      throw new Error(t('memory.error.empty_content'))
     }
 
     setMemories((current) => {
@@ -130,7 +132,7 @@ export function useMemory({ settings }: UseMemoryParams) {
       memoriesRef.current = nextMemories
       return nextMemories
     })
-  }, [])
+  }, [t])
 
   const clearTodayDailyMemory = useCallback(() => {
     const nextDailyMemories = clearDailyMemoriesForDay(dailyMemoriesRef.current)
@@ -141,7 +143,7 @@ export function useMemory({ settings }: UseMemoryParams) {
   const updateDailyEntry = useCallback((id: string, day: string, content: string) => {
     const normalizedContent = content.trim()
     if (!normalizedContent) {
-      throw new Error('日志内容不能为空。')
+      throw new Error(t('memory.error.empty_log'))
     }
 
     setDailyMemories((current) => {
@@ -156,7 +158,7 @@ export function useMemory({ settings }: UseMemoryParams) {
       dailyMemoriesRef.current = nextStore
       return nextStore
     })
-  }, [])
+  }, [t])
 
   const removeDailyEntry = useCallback((id: string, day: string) => {
     setDailyMemories((current) => {
@@ -182,16 +184,16 @@ export function useMemory({ settings }: UseMemoryParams) {
     const exportContent = serializeMemoryArchive(memoriesRef.current, dailyMemoriesRef.current)
 
     return saveTextFileWithFallback({
-      title: '导出记忆库',
+      title: t('memory.export.title'),
       defaultFileName: `desktop-pet-memory-${fileNameDate}.json`,
       content: exportContent,
       filters: [{ name: 'JSON', extensions: ['json'] }],
     })
-  }, [])
+  }, [t])
 
   const importMemoryArchive = useCallback(async () => {
     const result = await openTextFileWithFallback({
-      title: '导入记忆库',
+      title: t('memory.import.title'),
       filters: [{ name: 'JSON', extensions: ['json'] }],
     })
 
@@ -208,9 +210,12 @@ export function useMemory({ settings }: UseMemoryParams) {
     return {
       canceled: false,
       filePath: result.filePath,
-      message: `已导入 ${importedArchive.memories.length} 条长期记忆，${Object.keys(importedArchive.dailyMemories).length} 天日记。`,
+      message: t('memory.import.success', {
+        memoryCount: importedArchive.memories.length,
+        dayCount: Object.keys(importedArchive.dailyMemories).length,
+      }),
     }
-  }, [])
+  }, [t])
 
   const clearMemoryArchive = useCallback(async () => {
     memoriesRef.current = []
@@ -220,9 +225,9 @@ export function useMemory({ settings }: UseMemoryParams) {
 
     return {
       canceled: false,
-      message: '长期记忆和每日日志都已清空。',
+      message: t('memory.clear.success'),
     }
-  }, [])
+  }, [t])
 
   // Memoize return so the outer `memory` object has a stable identity when
   // no observable state changed. Without this, every parent re-render hands

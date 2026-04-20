@@ -16,6 +16,7 @@ import {
 import { shouldRunReminderScheduler } from '../../features/reminders'
 import { useReminderScheduler } from '../../hooks'
 import { broadcastToChannels } from '../../lib/coreRuntime'
+import { useTranslation } from '../../i18n/useTranslation.ts'
 
 type ChatBridge = {
   pushCompanionNotice: (payload: {
@@ -61,11 +62,12 @@ export function useReminderController({
   debugConsole,
   reminderTaskStore,
 }: UseReminderControllerOptions) {
+  const { t } = useTranslation()
   const handleReminderTaskTrigger = useCallback(async (task: ReminderTask) => {
     const displayText = task.prompt.trim()
     const action = task.action
     const currentSettings = settingsRef.current
-    const defaultSpeechText = task.speechText?.trim() || `${task.title}提醒，${task.prompt.trim()}`
+    const defaultSpeechText = task.speechText?.trim() || t('chat.reminder_task.speech_fallback', { title: task.title, content: task.prompt.trim() })
 
     const actionLabel = action.kind === 'notice' ? 'notice' : action.kind === 'weather' ? 'weather' : action.kind === 'chat_action' ? 'chat_action' : 'search'
     debugConsole.appendDebugConsoleEvent({
@@ -78,7 +80,7 @@ export function useReminderController({
     try {
       if (action.kind === 'notice') {
         await chat.pushCompanionNotice({
-          chatContent: `【自动任务】${task.title}\n${displayText}`,
+          chatContent: t('chat.prefix.reminder_task', { title: task.title, content: displayText }),
           bubbleContent: displayText,
           speechContent: defaultSpeechText,
           autoHideMs: 16_000,
@@ -91,7 +93,7 @@ export function useReminderController({
           source: 'tool',
           title: 'Automated reminder dispatched',
           detail: deliveredCount > 0
-            ? `${task.title} / 本地 + 跨通道 ${deliveredCount}`
+            ? `${task.title} / local + ${deliveredCount} channel(s)`
             : `${task.title} / next run visible in task snapshot`,
           tone: 'success',
           relatedTaskId: task.id,
@@ -102,7 +104,7 @@ export function useReminderController({
       if (action.kind === 'weather') {
         const policy = resolveBuiltInToolPolicy('weather', currentSettings)
         if (!policy.enabled) {
-          chat.appendSystemMessage(`本地自动任务「${task.title}」没有执行：天气工具当前已关闭。`, 'error')
+          chat.appendSystemMessage(t('chat.reminder_task.weather_disabled', { title: task.title }), 'error')
           debugConsole.appendDebugConsoleEvent({
             source: 'tool',
             title: 'Automated task skipped',
@@ -123,7 +125,7 @@ export function useReminderController({
         )
 
         await chat.pushCompanionNotice({
-          chatContent: `【自动任务】${task.title}\n${result.assistantSummary}`,
+          chatContent: t('chat.prefix.reminder_task', { title: task.title, content: result.assistantSummary }),
           bubbleContent: result.assistantSummary,
           speechContent: task.speechText?.trim() || buildBuiltInToolSpeechSummary(result),
           autoHideMs: 18_000,
@@ -141,7 +143,7 @@ export function useReminderController({
 
       if (action.kind === 'chat_action') {
         await chat.sendMessage(
-          `【定时智能动作】${task.title}\n请执行以下任务：${action.instruction}`,
+          t('chat.prefix.scheduled_chat_action', { title: task.title, instruction: action.instruction }),
           { source: 'text' },
         )
         debugConsole.appendDebugConsoleEvent({
@@ -156,7 +158,7 @@ export function useReminderController({
 
       const policy = resolveBuiltInToolPolicy('web_search', currentSettings)
       if (!policy.enabled) {
-        chat.appendSystemMessage(`本地自动任务「${task.title}」没有执行：网页搜索工具当前已关闭。`, 'error')
+        chat.appendSystemMessage(t('chat.reminder_task.search_disabled', { title: task.title }), 'error')
         debugConsole.appendDebugConsoleEvent({
           source: 'tool',
           title: 'Automated task skipped',
@@ -178,7 +180,7 @@ export function useReminderController({
       )
 
       await chat.pushCompanionNotice({
-        chatContent: `【自动任务】${task.title}\n${result.assistantSummary}`,
+        chatContent: t('chat.prefix.reminder_task', { title: task.title, content: result.assistantSummary }),
         bubbleContent: result.assistantSummary,
         speechContent: task.speechText?.trim() || buildBuiltInToolSpeechSummary(result),
         autoHideMs: 18_000,
@@ -192,9 +194,9 @@ export function useReminderController({
         relatedTaskId: task.id,
       })
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '自动任务执行失败。'
-      chat.appendSystemMessage(`本地自动任务「${task.title}」执行失败：${errorMessage}`, 'error')
-      pet.updatePetStatus(`自动任务失败：${task.title}`, 3200)
+      const errorMessage = error instanceof Error ? error.message : t('chat.reminder_task.execution_failed')
+      chat.appendSystemMessage(t('chat.reminder_task.execution_failed_system', { title: task.title, error: errorMessage }), 'error')
+      pet.updatePetStatus(t('chat.reminder_task.execution_failed_pet', { title: task.title }), 3200)
       debugConsole.appendDebugConsoleEvent({
         source: 'tool',
         title: 'Automated task execution failed',
@@ -203,7 +205,7 @@ export function useReminderController({
         relatedTaskId: task.id,
       })
     }
-  }, [chat, debugConsole, pet, settingsRef])
+  }, [chat, debugConsole, pet, settingsRef, t])
 
   useReminderScheduler({
     enabled: shouldRunReminderScheduler(view, runtimeSnapshot),

@@ -137,6 +137,7 @@ export async function testSpeechInputReadinessRuntime(
       message: mapMicrophoneDiagnosticError(
         caught,
         isSenseVoiceSpeechInputProvider(providerId),
+        options.ti,
       ),
     }
   } finally {
@@ -280,7 +281,7 @@ export async function testSpeechOutputReadinessRuntime(
   if (options.options?.playSample) {
     await options.probeSpeechOutputPlaybackStart(
       options.draftSettings,
-      options.options.sampleText?.trim() || buildSpeechOutputSmokeText(options.draftSettings),
+      options.options.sampleText?.trim() || buildSpeechOutputSmokeText(options.draftSettings, options.ti),
     )
 
     return {
@@ -321,7 +322,7 @@ export async function runAudioSmokeTestRuntime(
   if (options.draftSettings.speechOutputEnabled) {
     const outputCheck = await options.testSpeechOutputReadiness(options.draftSettings, {
       playSample: true,
-      sampleText: buildSpeechOutputSmokeText(options.draftSettings),
+      sampleText: buildSpeechOutputSmokeText(options.draftSettings, options.ti),
     })
     if (!outputCheck.ok) {
       return {

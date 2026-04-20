@@ -63,6 +63,7 @@ import {
   loadSubagentTasks,
   saveSubagentTasks,
 } from '../../lib/storage'
+import { useTranslation } from '../../i18n/useTranslation.ts'
 
 const DEFAULT_PROFILE_ID = 'xinghui'
 
@@ -90,6 +91,7 @@ export type UseAutonomyV2EngineOptions = {
 }
 
 export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
+  const { t } = useTranslation()
   const personaRef = useRef<LoadedPersona | null>(null)
   const considerCounterRef = useRef(0)
   const lastUtteranceRef = useRef<{ text: string; at: string } | null>(null)
@@ -311,7 +313,7 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
         lastUtteranceRef.current = { text: outcome.result.text, at: now }
         try {
           await opts.pushCompanionNotice({
-            chatContent: `【自主】${outcome.result.text}`,
+            chatContent: t('chat.prefix.autonomous', { content: outcome.result.text }),
             bubbleContent: outcome.result.text,
             speechContent: outcome.result.text,
             autoHideMs: 12_000,
@@ -340,7 +342,7 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
         if (announcement) {
           lastUtteranceRef.current = { text: announcement, at: now }
           void opts.pushCompanionNotice({
-            chatContent: `【自主】${announcement}`,
+            chatContent: t('chat.prefix.autonomous', { content: announcement }),
             bubbleContent: announcement,
             speechContent: announcement,
             autoHideMs: 8_000,
@@ -378,7 +380,7 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
             // The user sees it in chat history; if they want it spoken,
             // that's a future polish knob.
             void opts.pushCompanionNotice({
-              chatContent: `【子代理】${summary}`,
+              chatContent: t('chat.prefix.subagent', { content: summary }),
               bubbleContent: summary,
               speechContent: '',
               autoHideMs: 18_000,
@@ -412,6 +414,7 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
     }
   }, [
     opts,
+    t,
   ])
 
   return {

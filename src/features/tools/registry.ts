@@ -1,3 +1,4 @@
+import { t } from '../../i18n/runtime.ts'
 import type { AppSettings, ExternalLinkResponse, WeatherLookupResponse, WebSearchResponse } from '../../types'
 import { buildBuiltInToolAssistantSummary } from './assistant.ts'
 import { resolveWeatherLocationFallback, rewriteSearchQuery } from './queryRewrite.ts'
@@ -6,7 +7,7 @@ import type { BuiltInToolPolicy, BuiltInToolResult, MatchedBuiltInTool } from '.
 export { extractLikelyWeatherLocation, extractSearchQuery, normalizeToolText } from './extractors.ts'
 
 function formatWebSearchSystemMessage(result: WebSearchResponse) {
-  return `已调用网页搜索：${result.query}`
+  return t('tools.call_done.web_search', { query: result.query })
 }
 
 function formatWebSearchDisplayContext(result: WebSearchResponse) {
@@ -66,7 +67,7 @@ function formatWebSearchPromptContext(result: WebSearchResponse) {
 }
 
 function formatWeatherSystemMessage(result: WeatherLookupResponse) {
-  return `已调用天气工具：${result.resolvedName}`
+  return t('tools.call_done.weather', { location: result.resolvedName })
 }
 
 function formatWeatherPromptContext(result: WeatherLookupResponse) {
@@ -81,7 +82,7 @@ function formatWeatherPromptContext(result: WeatherLookupResponse) {
 }
 
 function formatOpenLinkSystemMessage(result: ExternalLinkResponse) {
-  return `已调用打开链接工具：${result.url}`
+  return t('tools.call_done.open_external', { url: result.url })
 }
 
 function formatOpenLinkPromptContext(result: ExternalLinkResponse) {
@@ -107,7 +108,7 @@ export async function executeBuiltInTool(
 ): Promise<BuiltInToolResult> {
   if (tool.id === 'open_external') {
     if (!window.desktopPet?.openExternalLink) {
-      throw new Error('当前环境暂不支持打开外部链接。')
+      throw new Error(t('tools.error.open_external_unsupported'))
     }
 
     const result = await window.desktopPet.openExternalLink({
@@ -133,7 +134,7 @@ export async function executeBuiltInTool(
 
   if (tool.id === 'weather') {
     if (!window.desktopPet?.getWeather) {
-      throw new Error('当前环境暂不支持天气查询。')
+      throw new Error(t('tools.error.weather_unsupported'))
     }
 
     const weatherLocation = resolveWeatherLocationFallback(
@@ -163,7 +164,7 @@ export async function executeBuiltInTool(
   }
 
   if (!window.desktopPet?.searchWeb) {
-    throw new Error('当前环境暂不支持网页搜索。')
+    throw new Error(t('tools.error.web_search_unsupported'))
   }
 
   // Trust Tavily / Perplexity / etc. to handle semantic understanding — pass

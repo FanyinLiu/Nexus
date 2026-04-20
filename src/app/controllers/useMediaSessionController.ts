@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from '../../i18n/useTranslation.ts'
 import type { ChatMessageTone, MediaSessionSnapshot } from '../../types'
 
 type UseMediaSessionControllerOptions = {
@@ -10,6 +11,7 @@ export function useMediaSessionController({
   view,
   appendSystemMessage,
 }: UseMediaSessionControllerOptions) {
+  const { t } = useTranslation()
   const [mediaSession, setMediaSession] = useState<MediaSessionSnapshot | null>(null)
   const [musicActionBusy, setMusicActionBusy] = useState(false)
   const [dismissedMusicSessionKey, setDismissedMusicSessionKey] = useState('')
@@ -45,17 +47,17 @@ export function useMediaSessionController({
     try {
       const result = await window.desktopPet.controlSystemMediaSession({ action })
       if (result.ok !== true && result.message) {
-        appendSystemMessage(`音乐控制没有生效：${result.message}`, 'error')
+        appendSystemMessage(t('chat.media_session.control_noop', { reason: result.message }), 'error')
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '系统媒体控制失败。'
-      appendSystemMessage(`音乐控制失败：${errorMessage}`, 'error')
+      const errorMessage = error instanceof Error ? error.message : t('chat.media_session.control_failed_generic')
+      appendSystemMessage(t('chat.media_session.control_failed_system', { error: errorMessage }), 'error')
     } finally {
       const snapshot = await refreshMediaSession()
       setMediaSession(snapshot)
       setMusicActionBusy(false)
     }
-  }, [appendSystemMessage, refreshMediaSession])
+  }, [appendSystemMessage, refreshMediaSession, t])
 
   useEffect(() => {
     if (view !== 'pet' || !pollingActive) {

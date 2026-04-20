@@ -46,6 +46,7 @@ import { useTelegramBridge } from './useTelegramBridge'
 import { useDiscordBridge } from './useDiscordBridge'
 import { recordUsage } from '../../features/metering/contextMeter'
 import { openGoalsStore } from '../../features/agent/openGoalsStore'
+import { useTranslation } from '../../i18n/useTranslation.ts'
 import type { DailyMemoryStore, Goal, ReminderTask } from '../../types'
 
 type ChatBridge = {
@@ -97,6 +98,7 @@ export function useAutonomyController({
   chat,
   debugConsole,
 }: UseAutonomyControllerOptions) {
+  const { t } = useTranslation()
   const focusAwareness = useFocusAwareness({
     settingsRef,
     enabled: settings.autonomyEnabled && settings.autonomyFocusAwarenessEnabled,
@@ -199,7 +201,7 @@ export function useAutonomyController({
         decisionFeedbackRef.current = recordDecision(decisionFeedbackRef.current, decision.category)
         speakCooldownRef.current = recommendedInterval
         void chat.pushCompanionNotice({
-          chatContent: `【自主】${decision.text}`,
+          chatContent: t('chat.prefix.autonomous', { content: decision.text }),
           bubbleContent: decision.text,
           speechContent: decision.text,
           autoHideMs: 12_000,
@@ -216,7 +218,7 @@ export function useAutonomyController({
         decisionFeedbackRef.current = recordDecision(decisionFeedbackRef.current, 'brief')
         speakCooldownRef.current = Math.max(recommendedInterval, 10)
         void chat.pushCompanionNotice({
-          chatContent: `【早报】${decision.summary}`,
+          chatContent: t('chat.prefix.morning_brief', { content: decision.summary }),
           bubbleContent: decision.summary,
           speechContent: decision.summary,
           autoHideMs: 18_000,
@@ -238,7 +240,7 @@ export function useAutonomyController({
         decisionFeedbackRef.current = recordDecision(decisionFeedbackRef.current, 'suggest')
         speakCooldownRef.current = recommendedInterval
         void chat.pushCompanionNotice({
-          chatContent: `【建议】${decision.suggestion}`,
+          chatContent: t('chat.prefix.suggestion', { content: decision.suggestion }),
           bubbleContent: decision.suggestion,
           speechContent: decision.suggestion,
           autoHideMs: 10_000,
@@ -256,7 +258,7 @@ export function useAutonomyController({
       if (scheduled.decision.kind === 'speak' && canBroadcast('scheduled')) {
         markBroadcast('scheduled')
         void chat.pushCompanionNotice({
-          chatContent: `【计划】${scheduled.decision.text}`,
+          chatContent: t('chat.prefix.scheduled', { content: scheduled.decision.text }),
           bubbleContent: scheduled.decision.text,
           speechContent: scheduled.decision.text,
           autoHideMs: 12_000,
@@ -347,7 +349,7 @@ export function useAutonomyController({
                 markBroadcast('monologue')
                 lastProactiveCategoryRef.current = 'monologue'
                 void chat.pushCompanionNotice({
-                  chatContent: `【独白】${result.speech}`,
+                  chatContent: t('chat.prefix.monologue', { content: result.speech }),
                   bubbleContent: result.speech,
                   speechContent: result.speech,
                   autoHideMs: 10_000,
@@ -383,7 +385,7 @@ export function useAutonomyController({
         decisionFeedbackRef.current = recordDecision(decisionFeedbackRef.current, 'open_goal_followup')
         speakCooldownRef.current = recommendedInterval
         void chat.pushCompanionNotice({
-          chatContent: `【未完成】${nudgeText}`,
+          chatContent: t('chat.prefix.open_goal', { content: nudgeText }),
           bubbleContent: nudgeText,
           speechContent: nudgeText,
           autoHideMs: 14_000,
@@ -403,7 +405,7 @@ export function useAutonomyController({
 
     // Evaluate context triggers on each tick
     void evaluateTriggersRef.current()
-  }, [busyRef, chat, debugConsole, emotionState, focusAwareness.focusStateRef, goalsRef, memory.memoriesRef, messagesRef, relationshipState, reminderTasksRef, rhythmState, settingsRef, v2Engine])
+  }, [busyRef, chat, debugConsole, emotionState, focusAwareness.focusStateRef, goalsRef, memory.memoriesRef, messagesRef, relationshipState, reminderTasksRef, rhythmState, settingsRef, t, v2Engine])
 
   const autonomyTick = useAutonomyTick({
     settingsRef,
@@ -438,7 +440,7 @@ export function useAutonomyController({
 
     if (action.kind === 'notice' || action.kind === 'speak') {
       void chat.pushCompanionNotice({
-        chatContent: `【上下文触发】${task.name}\n${action.text}`,
+        chatContent: t('chat.prefix.context_trigger', { name: task.name, content: action.text }),
         bubbleContent: action.text,
         speechContent: action.text,
         autoHideMs: 14_000,
@@ -447,13 +449,13 @@ export function useAutonomyController({
       void runDreamRef.current()
     } else if (action.kind === 'web_search') {
       void chat.pushCompanionNotice({
-        chatContent: `【上下文触发 · 搜索】${task.name}\n搜索：${action.query}`,
-        bubbleContent: `搜索：${action.query}`,
-        speechContent: `正在搜索${action.query}`,
+        chatContent: t('chat.prefix.context_trigger_search', { name: task.name, query: action.query }),
+        bubbleContent: t('chat.autonomy.search_bubble', { query: action.query }),
+        speechContent: t('chat.autonomy.search_speech', { query: action.query }),
         autoHideMs: 10_000,
       })
     }
-  }, [chat, debugConsole])
+  }, [chat, debugConsole, t])
 
   const contextScheduler = useContextScheduler({
     settingsRef,
@@ -477,12 +479,12 @@ export function useAutonomyController({
     })
 
     void chat.pushCompanionNotice({
-      chatContent: `【通知 · ${message.channelName}】${message.title}\n${message.body}`,
-      bubbleContent: `${message.channelName}: ${message.title}`,
-      speechContent: `收到${message.channelName}的通知：${message.title}`,
+      chatContent: t('chat.prefix.notification', { channel: message.channelName, title: message.title, body: message.body }),
+      bubbleContent: t('chat.prefix.notification_bubble', { channel: message.channelName, title: message.title }),
+      speechContent: t('chat.prefix.notification_speech', { channel: message.channelName, title: message.title }),
       autoHideMs: 12_000,
     })
-  }, [chat, debugConsole, settingsRef])
+  }, [chat, debugConsole, settingsRef, t])
 
   const notificationBridge = useNotificationBridge({
     onNotification: handleNotification,

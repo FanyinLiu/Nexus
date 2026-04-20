@@ -4,6 +4,7 @@ import { useTelegramGateway, type TelegramIncoming } from '../../hooks/useTelegr
 import { rememberTelegramChatId } from '../../lib/coreRuntime'
 import { isActionAllowed } from '../../features/integrations/permissions'
 import { parseCsvIdSet } from './bridgeUtils'
+import { useTranslation } from '../../i18n/useTranslation.ts'
 
 type ChatBridge = {
   sendMessage?: (
@@ -33,6 +34,7 @@ export function useTelegramBridge({
   chat,
   debugConsole,
 }: UseTelegramBridgeOptions) {
+  const { t } = useTranslation()
   const lastTelegramChatRef = useRef<{ chatId: number; messageId: number } | null>(null)
   // Per-chatId tracking so concurrent Telegram chats don't overwrite each other.
   const telegramChatMapRef = useRef<Map<number, { chatId: number; messageId: number }>>(new Map())
@@ -49,7 +51,7 @@ export function useTelegramBridge({
     debugConsole.appendDebugConsoleEvent({
       source: 'autonomy',
       title: 'Telegram message',
-      detail: `[${msg.chatTitle}] ${msg.fromUser}${isOwner ? '（主人）' : ''}: ${msg.text}`,
+      detail: `[${msg.chatTitle}] ${msg.fromUser}${isOwner ? t('chat.bridge.owner_suffix') : ''}: ${msg.text}`,
     })
 
     // Forward to companion chat as a Telegram-sourced message.
@@ -67,7 +69,7 @@ export function useTelegramBridge({
     lastTelegramChatRef.current = chatEntry
     telegramChatMapRef.current.set(msg.chatId, chatEntry)
     rememberTelegramChatId(msg.chatId)
-  }, [chat, debugConsole, settingsRef])
+  }, [chat, debugConsole, settingsRef, t])
 
   const gateway = useTelegramGateway({
     settingsRef,

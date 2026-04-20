@@ -1,3 +1,4 @@
+import { t } from '../../i18n/runtime.ts'
 import type { AssistantReplyRunnerOptions } from './assistantReply'
 import type { UseChatContext } from './types'
 
@@ -59,12 +60,12 @@ export async function executeAssistantTurn(
   activeStreamAbortRef.current = null
 
   if (fromVoice) {
-    ctx.updateVoicePipeline('sending', '识别文本已进入聊天，正在请求大模型。', content)
-    ctx.appendVoiceTrace('请求大模型', `#${traceLabel} 已调用聊天接口，等待模型返回`)
+    ctx.updateVoicePipeline('sending', t('chat.turn.voice_sending_detail'), content)
+    ctx.appendVoiceTrace(t('chat.turn.voice_sending_label'), t('chat.turn.voice_sending_trace', { label: traceLabel }))
   }
 
   ctx.updatePetStatus(
-    fromVoice ? '我收到了，正在整理这句话的重点。' : '我在整理这条消息，马上回你。',
+    fromVoice ? t('chat.turn.voice_status') : t('chat.turn.text_status'),
   )
 
   let sendSucceeded = false

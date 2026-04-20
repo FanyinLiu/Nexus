@@ -1,3 +1,5 @@
+import { t } from '../i18n/runtime.ts'
+
 export function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
@@ -10,10 +12,10 @@ export function shorten(text: string, maxLength: number) {
 export function blobToBase64(blob: Blob) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
-    reader.onerror = () => reject(new Error('录音文件读取失败。'))
+    reader.onerror = () => reject(new Error(t('file.error.record_read_failed')))
     reader.onload = () => {
       if (typeof reader.result !== 'string') {
-        reject(new Error('录音文件读取失败。'))
+        reject(new Error(t('file.error.record_read_failed')))
         return
       }
 

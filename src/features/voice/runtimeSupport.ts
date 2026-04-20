@@ -1,4 +1,7 @@
-import type { AppSettings, AudioSynthesisRequest } from '../../types'
+import type { AppSettings, AudioSynthesisRequest, TranslationKey, TranslationParams } from '../../types'
+import { t } from '../../i18n/runtime.ts'
+
+type Translator = (key: TranslationKey, params?: TranslationParams) => string
 
 export const AUDIO_SMOKE_PLAYBACK_TIMEOUT_MS = 15_000
 
@@ -129,7 +132,7 @@ export async function requestVoiceInputStream(
 
       if (!track) {
         stream.getTracks().forEach((item) => item.stop())
-        lastError = new Error('已经拿到录音流，但没有发现可用的音频轨道。')
+        lastError = new Error(t('voice.mic.no_audio_track'))
         continue
       }
 
@@ -148,7 +151,7 @@ export async function requestVoiceInputStream(
   throw (
     lastError instanceof Error
       ? lastError
-      : new Error('无法打开麦克风，请检查系统权限、设备占用和输入设备状态。')
+      : new Error(t('voice.mic.open_failed_generic'))
   )
 }
 
@@ -224,21 +227,21 @@ export function calculateAudioRms(samples: ArrayLike<number>) {
   return Math.sqrt(total / samples.length)
 }
 
-export function mapMicrophoneDiagnosticError(error: unknown, localMode = false) {
+export function mapMicrophoneDiagnosticError(error: unknown, localMode = false, ti: Translator = t) {
   if (error instanceof DOMException) {
     switch (error.name) {
       case 'NotAllowedError':
       case 'PermissionDeniedError':
       case 'SecurityError':
-        return '没有拿到麦克风权限，请在系统和浏览器权限里允许 Nexus 使用麦克风。'
+        return ti('voice.mic.permission_denied')
       case 'NotFoundError':
       case 'DevicesNotFoundError':
-        return '没有检测到可用麦克风，请先连接或启用录音设备。'
+        return ti('voice.mic.not_found')
       case 'NotReadableError':
       case 'TrackStartError':
-        return '麦克风正在被其他应用独占，或者当前设备暂时无法读取。'
+        return ti('voice.mic.busy')
       case 'AbortError':
-        return '麦克风测试被中断，请再试一次。'
+        return ti('voice.mic.aborted')
       default:
         break
     }
@@ -248,17 +251,17 @@ export function mapMicrophoneDiagnosticError(error: unknown, localMode = false) 
     const message = error.message.trim()
     if (message) {
       return localMode
-        ? `本地语音识别链路自检失败：${message}`
-        : `语音输入链路自检失败：${message}`
+        ? ti('voice.mic.local_readiness_failed_with_detail', { detail: message })
+        : ti('voice.mic.readiness_failed_with_detail', { detail: message })
     }
   }
 
   return localMode
-    ? '本地语音识别链路自检失败，请检查麦克风权限和本地 Whisper 环境。'
-    : '语音输入链路自检失败，请检查麦克风权限。'
+    ? ti('voice.mic.local_readiness_failed_generic')
+    : ti('voice.mic.readiness_failed_generic')
 }
 
-export function buildSpeechOutputSmokeText(draftSettings: AppSettings) {
-  const companionName = draftSettings.companionName.trim() || '桌宠'
-  return `你好，我是${companionName}。这是一条语音链路自检播报。`
+export function buildSpeechOutputSmokeText(draftSettings: AppSettings, ti: Translator = t) {
+  const companionName = draftSettings.companionName.trim() || ti('voice.smoke.companion_fallback')
+  return ti('voice.smoke.output_text', { companionName })
 }

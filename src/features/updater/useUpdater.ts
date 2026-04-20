@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from '../../i18n/useTranslation.ts'
 import type { UpdaterEvent } from './types'
 
 type UpdaterState = {
@@ -16,6 +17,7 @@ export function useUpdater(): UpdaterState & {
   checkForUpdates: () => Promise<void>
   installAndRestart: () => Promise<void>
 } {
+  const { t } = useTranslation()
   const [state, setState] = useState<UpdaterState>({
     event: { type: 'idle' },
     busy: false,
@@ -78,7 +80,7 @@ export function useUpdater(): UpdaterState & {
         setState((prev) => ({
           ...prev,
           busy: false,
-          event: { type: 'error', message: result.reason ?? '更新检查失败' },
+          event: { type: 'error', message: result.reason ?? t('updater.error.check_failed') },
         }))
       } else if (!result.latestVersion || result.latestVersion === result.currentVersion) {
         setState((prev) => ({
@@ -99,7 +101,7 @@ export function useUpdater(): UpdaterState & {
         },
       }))
     }
-  }, [])
+  }, [t])
 
   const installAndRestart = useCallback(async () => {
     if (!window.desktopPet?.updaterInstall) return

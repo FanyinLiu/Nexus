@@ -9,6 +9,7 @@ import {
 } from '../../features/reminders/parseReminderIntent.ts'
 import { formatReminderScheduleSummary } from '../../features/reminders/schedule.ts'
 import { shorten } from '../../lib/common'
+import { t } from '../../i18n/runtime.ts'
 import type { AssistantRuntimeActivity, DebugConsoleEventDraft } from '../../types'
 import { formatReminderNextRunLabel } from './support'
 import type {
@@ -143,7 +144,7 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
 
     const maybeResumeVoice = () => {
       if (options.shouldResumeContinuousVoice) {
-        dependencies.ctx.scheduleVoiceRestart('本地任务已完成，你可以继续说。', 520, true)
+        dependencies.ctx.scheduleVoiceRestart(t('chat.reminder.voice_resume_hint'), 520, true)
       }
     }
 
@@ -161,17 +162,19 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
         await dependencies.pushCompanionNotice({
           chatContent: buildReminderTaskDigest(tasks),
           bubbleContent: taskCount
-            ? `现在有 ${taskCount} 个本地任务，已经列在聊天记录里了。`
-            : '本地任务中心还没有任务。',
+            ? t('chat.reminder.list.bubble_with_count', { count: taskCount })
+            : t('chat.reminder.list.bubble_empty'),
           speechContent: speakContentSafely(
             taskCount
-              ? `好的，现在有 ${taskCount} 个本地任务，已经列出来了。`
-              : '好的，本地任务中心还没有任务。',
+              ? t('chat.reminder.list.speech_with_count', { count: taskCount })
+              : t('chat.reminder.list.speech_empty'),
           ),
           autoHideMs: 14_000,
         })
 
-        finishVoiceTurn(taskCount ? `任务中心已列出：${taskCount} 个任务` : '任务中心为空')
+        finishVoiceTurn(taskCount
+          ? t('chat.reminder.list.trace_with_count', { count: taskCount })
+          : t('chat.reminder.list.trace_empty'))
         appendReminderDebugEvent(
           'Task center listed',
           taskCount ? `Current task count: ${taskCount}` : 'No saved tasks right now',
@@ -188,19 +191,19 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
         })
 
         const clarificationMessage = options.fromVoice
-          ? `我知道你想设置"${parsedIntent.draft.title}"的提醒，但时间还没说清楚。你可以补上，比如"五分钟后"或"今晚九点"。`
-          : `想创建"${parsedIntent.draft.title}"的提醒，还需要一个具体时间。你可以补上，比如"五分钟后"或"今晚九点"。`
+          ? t('chat.reminder.clarify_time.voice', { title: parsedIntent.draft.title })
+          : t('chat.reminder.clarify_time.text', { title: parsedIntent.draft.title })
 
         await dependencies.pushCompanionNotice({
           chatContent: clarificationMessage,
           bubbleContent: clarificationMessage,
           speechContent: speakContentSafely(
-            `好的，我知道你想设置${parsedIntent.draft.title}的提醒，但时间还没说清楚。你可以说五分钟后，或者今晚九点。`,
+            t('chat.reminder.clarify_time.speech', { title: parsedIntent.draft.title }),
           ),
           autoHideMs: 12_000,
         })
 
-        finishVoiceTurn(`等待补充提醒时间：${parsedIntent.draft.title}`)
+        finishVoiceTurn(t('chat.reminder.clarify_time.trace', { title: parsedIntent.draft.title }))
         appendReminderDebugEvent(
           'Waiting for reminder time',
           `${parsedIntent.draft.title} / ${shorten(parsedIntent.originalText, 36)}`,
@@ -220,19 +223,19 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
 
         const promptPreview = `${parsedIntent.draft.partialPrompt}...`
         const clarificationMessage = options.fromVoice
-          ? `我只听到了提醒内容的前半部分："${promptPreview}"。你可以把后面补上，比如"喝水"或"查天气"。`
-          : `提醒内容还不完整，目前只有"${promptPreview}"。你可以把后面补上，比如"喝水"或"查天气"。`
+          ? t('chat.reminder.clarify_prompt.voice', { preview: promptPreview })
+          : t('chat.reminder.clarify_prompt.text', { preview: promptPreview })
 
         await dependencies.pushCompanionNotice({
           chatContent: clarificationMessage,
           bubbleContent: clarificationMessage,
           speechContent: speakContentSafely(
-            `好的，我只听到了提醒内容的前半部分：${parsedIntent.draft.partialPrompt}。你可以把后面补上，比如喝水。`,
+            t('chat.reminder.clarify_prompt.speech', { partial: parsedIntent.draft.partialPrompt }),
           ),
           autoHideMs: 12_000,
         })
 
-        finishVoiceTurn(`等待补充提醒内容：${promptPreview}`)
+        finishVoiceTurn(t('chat.reminder.clarify_prompt.trace', { preview: promptPreview }))
         appendReminderDebugEvent(
           'Waiting for reminder content',
           `${promptPreview} / ${shorten(parsedIntent.originalText, 36)}`,
@@ -246,7 +249,7 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
         dependencies.clearPendingReminderDraft()
         const createdTask = dependencies.ctx.addReminderTask(parsedIntent.draft)
         if (!createdTask) {
-          throw new Error('创建本地任务失败。')
+          throw new Error(t('chat.reminder.create.failed'))
         }
 
         const scheduleSummary = formatReminderScheduleSummary(createdTask)
@@ -254,22 +257,22 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
 
         await dependencies.pushCompanionNotice({
           chatContent: [
-            `已创建本地任务：${createdTask.title}`,
-            `计划：${scheduleSummary}`,
-            nextRunLabel ? `首次执行：${nextRunLabel}` : '',
-            `内容：${createdTask.prompt}`,
+            t('chat.reminder.create.chat_title', { title: createdTask.title }),
+            t('chat.reminder.create.plan_line', { summary: scheduleSummary }),
+            nextRunLabel ? t('chat.reminder.create.first_run_line', { label: nextRunLabel }) : '',
+            t('chat.reminder.create.content_line', { content: createdTask.prompt }),
           ].filter(Boolean).join('\n'),
           bubbleContent: nextRunLabel
-            ? `已保存"${createdTask.title}"，首次执行时间：${nextRunLabel}。`
-            : `已保存"${createdTask.title}"。${scheduleSummary}。`,
+            ? t('chat.reminder.create.bubble_with_next', { title: createdTask.title, label: nextRunLabel })
+            : t('chat.reminder.create.bubble_without_next', { title: createdTask.title, summary: scheduleSummary }),
           speechContent: speakContentSafely(
             nextRunLabel
-              ? `好的，已保存${createdTask.title}，首次执行时间：${nextRunLabel}。`
-              : `好的，已保存${createdTask.title}。${scheduleSummary}。`,
+              ? t('chat.reminder.create.speech_with_next', { title: createdTask.title, label: nextRunLabel })
+              : t('chat.reminder.create.speech_without_next', { title: createdTask.title, summary: scheduleSummary }),
           ),
         })
 
-        finishVoiceTurn(`已创建任务：${createdTask.title}`)
+        finishVoiceTurn(t('chat.reminder.create.trace', { title: createdTask.title }))
         appendReminderDebugEvent(
           'Created local reminder',
           nextRunLabel
@@ -288,18 +291,18 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
       )
 
       if (!matchedTask) {
-        const missingTaskMessage = `没有找到匹配"${parsedIntent.targetText}"的本地任务。你可以先说"查看任务中心"看看有哪些任务。`
+        const missingTaskMessage = t('chat.reminder.not_found.chat', { target: parsedIntent.targetText })
 
         await dependencies.pushCompanionNotice({
           chatContent: missingTaskMessage,
           bubbleContent: missingTaskMessage,
           speechContent: speakContentSafely(
-            `好的，没有找到匹配${parsedIntent.targetText}的本地任务。`,
+            t('chat.reminder.not_found.speech', { target: parsedIntent.targetText }),
           ),
           autoHideMs: 10_000,
         })
 
-        finishVoiceTurn(`未找到任务：${parsedIntent.targetText}`)
+        finishVoiceTurn(t('chat.reminder.not_found.trace', { target: parsedIntent.targetText }))
         appendReminderDebugEvent('Matching task not found', parsedIntent.targetText, 'error')
         maybeResumeVoice()
         return true
@@ -309,12 +312,12 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
         const removedTask = dependencies.ctx.removeReminderTask(matchedTask.id) ?? matchedTask
 
         await dependencies.pushCompanionNotice({
-          chatContent: `已删除本地任务：${removedTask.title}`,
-          bubbleContent: `已删除"${removedTask.title}"。`,
-          speechContent: speakContentSafely(`好的，已删除${removedTask.title}。`),
+          chatContent: t('chat.reminder.remove.chat', { title: removedTask.title }),
+          bubbleContent: t('chat.reminder.remove.bubble', { title: removedTask.title }),
+          speechContent: speakContentSafely(t('chat.reminder.remove.speech', { title: removedTask.title })),
         })
 
-        finishVoiceTurn(`已删除任务：${removedTask.title}`)
+        finishVoiceTurn(t('chat.reminder.remove.trace', { title: removedTask.title }))
         appendReminderDebugEvent('Removed local reminder', removedTask.title, 'success', removedTask.id)
         maybeResumeVoice()
         return true
@@ -327,26 +330,28 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
           ...matchedTask,
           enabled: parsedIntent.enabled,
         }
-        const actionLabel = parsedIntent.enabled ? '已启用' : '已暂停'
+        const actionLabel = parsedIntent.enabled
+          ? t('chat.reminder.toggle.enabled_label')
+          : t('chat.reminder.toggle.paused_label')
         const nextRunLabel = formatReminderNextRunLabel(updatedTask.nextRunAt)
 
         await dependencies.pushCompanionNotice({
           chatContent: [
-            `${actionLabel}本地任务：${updatedTask.title}`,
-            `计划：${formatReminderScheduleSummary(updatedTask)}`,
-            nextRunLabel ? `下次执行：${nextRunLabel}` : '',
+            t('chat.reminder.toggle.chat_title', { action: actionLabel, title: updatedTask.title }),
+            t('chat.reminder.create.plan_line', { summary: formatReminderScheduleSummary(updatedTask) }),
+            nextRunLabel ? t('chat.reminder.toggle.next_run_line', { label: nextRunLabel }) : '',
           ].filter(Boolean).join('\n'),
           bubbleContent: nextRunLabel
-            ? `${actionLabel}"${updatedTask.title}"。下次执行：${nextRunLabel}。`
-            : `${actionLabel}"${updatedTask.title}"。`,
+            ? t('chat.reminder.toggle.bubble_with_next', { action: actionLabel, title: updatedTask.title, label: nextRunLabel })
+            : t('chat.reminder.toggle.bubble_without_next', { action: actionLabel, title: updatedTask.title }),
           speechContent: speakContentSafely(
             nextRunLabel
-              ? `好的，${actionLabel}${updatedTask.title}。下次执行：${nextRunLabel}。`
-              : `好的，${actionLabel}${updatedTask.title}。`,
+              ? t('chat.reminder.toggle.speech_with_next', { action: actionLabel, title: updatedTask.title, label: nextRunLabel })
+              : t('chat.reminder.toggle.speech_without_next', { action: actionLabel, title: updatedTask.title }),
           ),
         })
 
-        finishVoiceTurn(`${actionLabel}任务：${updatedTask.title}`)
+        finishVoiceTurn(t('chat.reminder.toggle.trace', { action: actionLabel, title: updatedTask.title }))
         appendReminderDebugEvent(
           parsedIntent.enabled ? 'Enabled local reminder' : 'Paused local reminder',
           nextRunLabel ? `${updatedTask.title} / Next run ${nextRunLabel}` : updatedTask.title,
@@ -366,22 +371,22 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
 
       await dependencies.pushCompanionNotice({
         chatContent: [
-          `已更新本地任务：${updatedTask.title}`,
-          `计划：${updatedSummary}`,
-          nextRunLabel ? `下次执行：${nextRunLabel}` : '',
-          `内容：${updatedTask.prompt}`,
+          t('chat.reminder.update.chat_title', { title: updatedTask.title }),
+          t('chat.reminder.create.plan_line', { summary: updatedSummary }),
+          nextRunLabel ? t('chat.reminder.toggle.next_run_line', { label: nextRunLabel }) : '',
+          t('chat.reminder.create.content_line', { content: updatedTask.prompt }),
         ].filter(Boolean).join('\n'),
         bubbleContent: nextRunLabel
-          ? `已更新"${updatedTask.title}"。下次执行：${nextRunLabel}。`
-          : `已更新"${updatedTask.title}"。${updatedSummary}。`,
+          ? t('chat.reminder.update.bubble_with_next', { title: updatedTask.title, label: nextRunLabel })
+          : t('chat.reminder.update.bubble_without_next', { title: updatedTask.title, summary: updatedSummary }),
         speechContent: speakContentSafely(
           nextRunLabel
-            ? `好的，已更新${updatedTask.title}。下次执行：${nextRunLabel}。`
-            : `好的，已更新${updatedTask.title}。`,
+            ? t('chat.reminder.update.speech_with_next', { title: updatedTask.title, label: nextRunLabel })
+            : t('chat.reminder.update.speech_without_next', { title: updatedTask.title }),
         ),
       })
 
-      finishVoiceTurn(`已更新任务：${updatedTask.title}`)
+      finishVoiceTurn(t('chat.reminder.update.trace', { title: updatedTask.title }))
       appendReminderDebugEvent(
         'Updated local reminder',
         nextRunLabel

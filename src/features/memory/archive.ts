@@ -1,5 +1,6 @@
 import type { DailyMemoryEntry, DailyMemoryStore, MemoryItem } from '../../types'
 import { createId } from '../../lib/index.ts'
+import { t } from '../../i18n/runtime.ts'
 
 type MemoryArchivePayload = {
   schema: 'nexus.memory-archive'
@@ -125,8 +126,8 @@ export function parseMemoryArchive(raw: string) {
   try {
     parsed = JSON.parse(raw)
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误'
-    throw new Error(`记忆库 JSON 解析失败: ${message}`)
+    const detail = error instanceof Error ? error.message : t('memory.error.json_parse_unknown')
+    throw new Error(t('memory.error.json_parse_failed', { detail }))
   }
 
   const rawMemories = Array.isArray(parsed)

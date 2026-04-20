@@ -1,3 +1,5 @@
+import { t } from '../../i18n/runtime.ts'
+
 export type AudioQueueSegment<TMeta = unknown> = {
   audioBase64: string
   mimeType: string
@@ -46,16 +48,18 @@ function formatAudioPlaybackStartError(error: unknown) {
       : String(error ?? '').trim()
 
   if (errorName === 'NotAllowedError') {
-    return '当前环境拦截了自动播放，请先确认系统输出设备可用，然后点一下桌宠窗口再重试。'
+    return t('voice.audio.playback_start_not_allowed')
   }
 
   if (errorName === 'NotSupportedError') {
-    return '当前音频格式没有被系统正常解码，请换一个音色或重启桌宠后再试。'
+    return t('voice.audio.playback_start_not_supported')
   }
 
   return errorMessage
-    ? `原始错误：${errorName ? `${errorName}: ${errorMessage}` : errorMessage}`
-    : '请检查系统音量、输出设备，或重启桌宠后再试。'
+    ? t('voice.audio.playback_start_original', {
+        detail: errorName ? `${errorName}: ${errorMessage}` : errorMessage,
+      })
+    : t('voice.audio.playback_start_generic')
 }
 
 export class AudioPlaybackQueue<TMeta = unknown> {
@@ -80,7 +84,7 @@ export class AudioPlaybackQueue<TMeta = unknown> {
 
   stopAndClear() {
     this.stopGeneration += 1
-    const stopError = new Error('语音播报已停止。')
+    const stopError = new Error(t('voice.audio.playback_stopped'))
 
     const currentAudio = this.currentAudio
     if (currentAudio) {
@@ -132,7 +136,7 @@ export class AudioPlaybackQueue<TMeta = unknown> {
           await this.playSegment(next, generation)
           next.resolve()
         } catch (error) {
-          const message = error instanceof Error ? error.message : '语音播放失败，请检查本地音频输出设备。'
+          const message = error instanceof Error ? error.message : t('voice.audio.playback_failed')
           const rejectError = error instanceof Error ? error : new Error(message)
           this.options.onSegmentError?.(next, message)
           next.reject(rejectError)
@@ -208,7 +212,7 @@ export class AudioPlaybackQueue<TMeta = unknown> {
         }
 
         if (generation !== this.stopGeneration) {
-          rejectWithError(new Error('语音播报已停止。'))
+          rejectWithError(new Error(t('voice.audio.playback_stopped')))
           return
         }
 
@@ -219,7 +223,7 @@ export class AudioPlaybackQueue<TMeta = unknown> {
           }
 
           void audio.play().catch((error) => {
-            rejectWithError(new Error(`音频播放启动失败。${formatAudioPlaybackStartError(error)}`))
+            rejectWithError(new Error(t('voice.audio.playback_start_failed', { detail: formatAudioPlaybackStartError(error) })))
           })
         }, AUDIO_PLAY_START_DELAY_MS)
       }
@@ -243,7 +247,7 @@ export class AudioPlaybackQueue<TMeta = unknown> {
 
       audio.onplay = () => {
         if (generation !== this.stopGeneration) {
-          rejectWithError(new Error('语音播报已停止。'))
+          rejectWithError(new Error(t('voice.audio.playback_stopped')))
           return
         }
 
@@ -257,7 +261,7 @@ export class AudioPlaybackQueue<TMeta = unknown> {
       }
 
       audio.onerror = () => {
-        rejectWithError(new Error('语音播放失败，请检查本地音频输出设备。'))
+        rejectWithError(new Error(t('voice.audio.playback_failed')))
       }
 
       if (audio.readyState >= AUDIO_READY_STATE_CURRENT_DATA) {

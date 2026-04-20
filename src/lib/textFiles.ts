@@ -1,3 +1,4 @@
+import { t } from '../i18n/runtime.ts'
 import type {
   FileDialogFilter,
   TextFileOpenRequest,
@@ -54,7 +55,7 @@ export function buildBrowserFilePickerTypes(filters?: FileDialogFilter[]): Brows
 
 function ensureBrowserFileApis() {
   if (typeof window === 'undefined' || typeof document === 'undefined' || typeof URL === 'undefined') {
-    throw new Error('当前环境不支持文本文件操作。')
+    throw new Error(t('file.error.not_supported'))
   }
 }
 
@@ -86,7 +87,7 @@ export async function saveTextFileWithFallback(payload: TextFileSaveRequest): Pr
 
   return {
     canceled: false,
-    message: `已下载 ${defaultFileName}`,
+    message: t('file.saved.downloaded', { fileName: defaultFileName }),
   }
 }
 

@@ -1,5 +1,6 @@
 import type { ChatMessage, ChatToolResult, WebSearchDisplay } from '../../types'
 import { createId } from '../../lib/index.ts'
+import { t } from '../../i18n/runtime.ts'
 
 type ChatArchiveMeta = {
   companionName: string
@@ -259,7 +260,7 @@ export function parseChatHistoryArchive(raw: string) {
   try {
     parsed = JSON.parse(raw)
   } catch {
-    throw new Error('聊天记录 JSON 解析失败，请检查文件内容。')
+    throw new Error(t('chat.archive.parse_failed'))
   }
 
   const rawMessages = Array.isArray(parsed)
@@ -271,7 +272,7 @@ export function parseChatHistoryArchive(raw: string) {
         : null
 
   if (!rawMessages) {
-    throw new Error('没有在文件里找到可导入的聊天消息列表。')
+    throw new Error(t('chat.archive.no_messages_field'))
   }
 
   const messages = rawMessages
@@ -279,7 +280,7 @@ export function parseChatHistoryArchive(raw: string) {
     .filter((item): item is ChatMessage => Boolean(item))
 
   if (!messages.length) {
-    throw new Error('导入文件里没有有效的聊天消息。')
+    throw new Error(t('chat.archive.no_valid_messages'))
   }
 
   return messages.sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt))

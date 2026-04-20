@@ -7,6 +7,7 @@
  */
 
 import type { MemoryItem } from '../../types'
+import { t } from '../../i18n/runtime.ts'
 
 // ── Types ──────────────────────────────────────────────────────��──────────
 
@@ -117,15 +118,15 @@ function buildThreadSummary(memories: MemoryItem[]): string {
  * Generate a title from the first and most recent memories.
  */
 function buildThreadTitle(memories: MemoryItem[]): string {
-  if (memories.length === 0) return '未命名'
+  if (memories.length === 0) return t('memory.title.unnamed')
   const first = memories[0]
   // Use the category + first few words
-  const prefix = first.category === 'project' ? '项目' :
-    first.category === 'goal' ? '目标' :
-    first.category === 'habit' ? '习惯' :
-    first.category === 'preference' ? '偏好' :
-    first.category === 'feedback' ? '反馈' :
-    '话题'
+  const prefix = first.category === 'project' ? t('memory.title.project') :
+    first.category === 'goal' ? t('memory.title.goal') :
+    first.category === 'habit' ? t('memory.title.habit') :
+    first.category === 'preference' ? t('memory.title.preference') :
+    first.category === 'feedback' ? t('memory.title.feedback') :
+    t('memory.title.topic')
   const words = first.content.slice(0, 30).replace(/\s+/g, ' ')
   return `${prefix}: ${words}`
 }

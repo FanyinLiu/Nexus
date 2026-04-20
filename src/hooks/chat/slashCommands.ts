@@ -1,5 +1,6 @@
 import { createId } from '../../lib'
 import { getCoreRuntime } from '../../lib/coreRuntime'
+import { t } from '../../i18n/runtime.ts'
 import type { ChatMessage } from '../../types'
 
 const CONVERSATION_ID = 'local-chat'
@@ -26,27 +27,29 @@ function runTodo(rest: string): string {
     const items = runtime.todoStore.list(CONVERSATION_ID)
     return items.length
       ? items.map((i) => `• [${i.status}] ${i.id}: ${i.text}`).join('\n')
-      : '本会话暂无待办项。'
+      : t('chat.slash.todo.empty')
   }
 
   if (sub === 'add') {
-    if (!subArg) return '用法：/todo add <任务描述>'
+    if (!subArg) return t('chat.slash.todo.usage_add')
     const item = runtime.todoStore.add(CONVERSATION_ID, subArg)
-    return `已添加 ${item.id}: ${item.text}`
+    return t('chat.slash.todo.added', { id: item.id, text: item.text })
   }
 
   if (sub === 'done') {
-    if (!subArg) return '用法：/todo done <id>'
+    if (!subArg) return t('chat.slash.todo.usage_done')
     const updated = runtime.todoStore.update(subArg, { status: 'completed' })
-    return updated ? `已标记完成：${updated.text}` : `未找到 id=${subArg}`
+    return updated
+      ? t('chat.slash.todo.marked_done', { text: updated.text })
+      : t('chat.slash.todo.not_found', { id: subArg })
   }
 
   if (sub === 'clear') {
     const removed = runtime.todoStore.clear(CONVERSATION_ID)
-    return `已清理 ${removed} 个待办项。`
+    return t('chat.slash.todo.cleared', { count: removed })
   }
 
-  return '用法：/todo add | list | done <id> | clear'
+  return t('chat.slash.todo.usage')
 }
 
 async function runNote(content: string): Promise<string> {

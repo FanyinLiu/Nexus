@@ -6,6 +6,7 @@
  */
 
 import type { Goal, GoalSubtask } from '../../types'
+import { t } from '../../i18n/runtime.ts'
 
 // ── Goal operations ─────────────────────────────────────────────────────────
 
@@ -136,19 +137,19 @@ export function evaluateGoalReminders(goals: Goal[]): GoalReminder | null {
 
 function buildGoalReminderText(goal: Goal, urgency: string, remainingSubtasks: number): string {
   const progressStr = goal.subtasks.length > 0
-    ? `（进度 ${goal.progress}%，还剩 ${remainingSubtasks} 个子任务）`
+    ? t('agent.goal.progress_suffix', { progress: goal.progress, remaining: remainingSubtasks })
     : ''
 
   if (urgency === 'high' && goal.deadline) {
     const deadlineDate = new Date(goal.deadline).toLocaleDateString('zh-CN')
-    return `目标「${goal.title}」截止日期是 ${deadlineDate}，需要抓紧了${progressStr}`
+    return t('agent.goal.deadline_warning', { title: goal.title, deadline: deadlineDate, progress: progressStr })
   }
 
   if (urgency === 'medium') {
-    return `目标「${goal.title}」有一阵没更新了${progressStr}，要继续推进吗？`
+    return t('agent.goal.stale_prompt', { title: goal.title, progress: progressStr })
   }
 
-  return `记得目标「${goal.title}」${progressStr}`
+  return t('agent.goal.remember', { title: goal.title, progress: progressStr })
 }
 
 /**

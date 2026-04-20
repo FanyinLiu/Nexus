@@ -4,6 +4,7 @@ import { useDiscordGateway, type DiscordIncoming } from '../../hooks/useDiscordG
 import { rememberDiscordChannelId } from '../../lib/coreRuntime'
 import { isActionAllowed } from '../../features/integrations/permissions'
 import { parseCsvIdSet } from './bridgeUtils'
+import { useTranslation } from '../../i18n/useTranslation.ts'
 
 type ChatBridge = {
   sendMessage?: (
@@ -33,6 +34,7 @@ export function useDiscordBridge({
   chat,
   debugConsole,
 }: UseDiscordBridgeOptions) {
+  const { t } = useTranslation()
   const lastDiscordChannelRef = useRef<{ channelId: string; messageId: string } | null>(null)
   // Per-channelId tracking so concurrent Discord channels don't overwrite each other.
   const discordChannelMapRef = useRef<Map<string, { channelId: string; messageId: string }>>(new Map())
@@ -48,7 +50,7 @@ export function useDiscordBridge({
     debugConsole.appendDebugConsoleEvent({
       source: 'autonomy',
       title: 'Discord message',
-      detail: `[${msg.channelName}] ${msg.fromUser}${isOwner ? '（主人）' : ''}: ${msg.text}`,
+      detail: `[${msg.channelName}] ${msg.fromUser}${isOwner ? t('chat.bridge.owner_suffix') : ''}: ${msg.text}`,
     })
 
     // Forward to companion chat as a Discord-sourced message.
@@ -66,7 +68,7 @@ export function useDiscordBridge({
     lastDiscordChannelRef.current = channelEntry
     discordChannelMapRef.current.set(msg.channelId, channelEntry)
     rememberDiscordChannelId(msg.channelId)
-  }, [chat, debugConsole, settingsRef])
+  }, [chat, debugConsole, settingsRef, t])
 
   const gateway = useDiscordGateway({
     settingsRef,

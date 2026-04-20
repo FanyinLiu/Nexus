@@ -1,4 +1,5 @@
 import { parseAssistantPerformanceContent } from '../../features/pet/performance'
+import { t } from '../../i18n/runtime.ts'
 import type { ChatMessage } from '../../types'
 
 export function formatReminderNextRunLabel(timestamp?: string) {
@@ -15,8 +16,9 @@ export function formatReminderNextRunLabel(timestamp?: string) {
   }).format(new Date(parsed))
 }
 
-export function getSpeechOutputErrorMessage(error: unknown, fallback = '语音播报失败') {
-  return error instanceof Error ? error.message : fallback
+export function getSpeechOutputErrorMessage(error: unknown, fallback?: string) {
+  if (error instanceof Error) return error.message
+  return fallback ?? t('voice.tts.playback_failed_fallback')
 }
 
 export function sanitizeLoadedMessages(messages: ChatMessage[]) {

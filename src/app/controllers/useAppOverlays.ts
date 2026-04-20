@@ -17,6 +17,7 @@ import {
   syncTextProviderProfiles,
 } from '../../lib'
 import { setSettingsSnapshot } from '../store/settingsStore'
+import { useTranslation } from '../../i18n/useTranslation.ts'
 import type {
   AppSettings,
   DebugConsoleEvent,
@@ -121,6 +122,7 @@ export function useAppOverlays({
   onUpdateNotificationChannel,
   onRemoveNotificationChannel,
 }: UseAppOverlaysOptions) {
+  const { t } = useTranslation()
   const onboardingPendingInitial = useMemo(() => !loadOnboardingCompleted(), [])
   const [onboardingPending, setOnboardingPending] = useState(onboardingPendingInitial)
   const [onboardingOpen, setOnboardingOpen] = useState(onboardingPendingInitial)
@@ -217,15 +219,15 @@ export function useAppOverlays({
           closeSettings: true,
         })
       } catch (error) {
-        const message = error instanceof Error ? error.message : '保存设置失败，请稍后重试。'
+        const message = error instanceof Error ? error.message : t('settings.save_failed_fallback')
         console.error('[Settings] save failed:', error)
         chat.setError(message)
-        chat.appendSystemMessage(`设置保存失败：${message}`, 'error')
+        chat.appendSystemMessage(t('settings.save_failed_system', { error: message }), 'error')
       }
     },
     onImportPetModel: async () => {
       if (!window.desktopPet?.importPetModel) {
-        throw new Error('当前环境暂不支持本地 Live2D 模型导入。')
+        throw new Error(t('settings.import_pet_model_unsupported'))
       }
 
       const result = await window.desktopPet.importPetModel()
@@ -244,7 +246,7 @@ export function useAppOverlays({
         if (!window.desktopPet?.testChatConnection) {
           return {
             ok: false,
-            message: '当前环境不支持连接测试。',
+            message: t('settings.test_connection.unsupported'),
           }
         }
 
@@ -266,12 +268,12 @@ export function useAppOverlays({
 
       return {
         ok: false,
-        message: '未知的连接测试类型。',
+        message: t('settings.test_connection.unknown_capability'),
       }
     },
     onLoadSpeechVoices: async (draftSettings) => {
       if (!window.desktopPet?.listSpeechVoices) {
-        throw new Error('当前环境不支持拉取在线音色列表。')
+        throw new Error(t('settings.list_speech_voices.unsupported'))
       }
 
       return window.desktopPet.listSpeechVoices({
@@ -282,7 +284,7 @@ export function useAppOverlays({
     },
     onPreviewSpeech: async (draftSettings, text) => {
       if (chat.busyRef.current || voice.voiceStateRef.current === 'processing') {
-        throw new Error('上一轮对话还在处理中，请稍后再试听。')
+        throw new Error(t('settings.preview.busy_error'))
       }
 
       voice.stopActiveSpeechOutput()
@@ -305,7 +307,7 @@ export function useAppOverlays({
       })
 
       return {
-        message: '已经开始试听当前音色和参数。',
+        message: t('settings.preview.started'),
       }
     },
     onRunAudioSmokeTest: async (draftSettings) => voice.runAudioSmokeTest(draftSettings),

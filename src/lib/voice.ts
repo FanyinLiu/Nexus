@@ -1,3 +1,5 @@
+import { t } from '../i18n/runtime.ts'
+
 export interface BrowserSpeechRecognitionAlternative {
   transcript: string
   confidence: number
@@ -119,7 +121,7 @@ export function speakText({
   onError,
 }: SpeakTextOptions) {
   if (!('speechSynthesis' in window)) {
-    onError?.('当前环境不支持语音播报。')
+    onError?.(t('voice.tts.browser_unsupported'))
     return null
   }
 
@@ -142,7 +144,7 @@ export function speakText({
 
   utterance.onstart = () => onStart?.()
   utterance.onend = () => onEnd?.()
-  utterance.onerror = () => onError?.('语音播报失败，请检查系统语音引擎。')
+  utterance.onerror = () => onError?.(t('voice.tts.browser_engine_failed'))
 
   window.setTimeout(() => {
     if (!('speechSynthesis' in window) || browserSpeechRequestId !== requestId) {

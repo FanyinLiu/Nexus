@@ -1,3 +1,4 @@
+import { t } from '../../i18n/runtime.ts'
 import type { FailoverDomain } from './runtime.ts'
 import {
   buildFailoverKey,
@@ -81,5 +82,5 @@ export async function executeWithFailover<T, R>(
     }
   }
 
-  throw new Error(errors.join('\n') || `${domain} 请求失败。`)
+  throw new Error(errors.join('\n') || t('failover.error.all_failed', { domain }))
 }

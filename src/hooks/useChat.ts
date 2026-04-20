@@ -9,6 +9,7 @@ import {
 } from '../lib'
 import { saveChatMessages } from '../lib/storage'
 import { getCoreRuntime } from '../lib/coreRuntime'
+import { useTranslation } from '../i18n/useTranslation.ts'
 import { parseChatHistoryArchive, serializeChatHistoryArchive } from '../features/chat'
 import {
   createDailyMemoryEntry,
@@ -47,6 +48,7 @@ export type { UseChatContext } from './chat'
 const MAX_CHAT_MESSAGES = 500
 
 export function useChat(ctx: UseChatContext) {
+  const { t } = useTranslation()
   // Each app launch opens a fresh chat bucket. Past sessions are persisted
   // by id and browsable from Settings → 聊天记录; the pane itself only
   // ever renders the current session. LLM context continuity across
@@ -352,9 +354,9 @@ export function useChat(ctx: UseChatContext) {
       await ctx.speakAssistantReply(speechContent, options.shouldResumeContinuousVoice ?? false)
     } catch (speechError) {
       const speechErrorMessage = getSpeechOutputErrorMessage(speechError)
-      setError(`内容已展示，但语音播报失败：${speechErrorMessage}`)
+      setError(t('chat.error.speech_with_detail', { error: speechErrorMessage }))
     }
-  }, [appendChatMessage, ctx, presentPetDialogBubble, setError])
+  }, [appendChatMessage, ctx, presentPetDialogBubble, setError, t])
 
   const canDeliverDeferredCompanionNotice = useCallback(() => (
     !busyRef.current
@@ -420,10 +422,10 @@ export function useChat(ctx: UseChatContext) {
     })
 
     if (options.fromVoice && options.traceLabel) {
-      ctx.appendVoiceTrace('语音播报失败', `#${options.traceLabel} ${shorten(speechErrorMessage, 48)}`, 'error')
+      ctx.appendVoiceTrace(t('chat.voice.playback_failed_label'), `#${options.traceLabel} ${shorten(speechErrorMessage, 48)}`, 'error')
     }
 
-    setError(options.fromVoice ? `模型已经回复，但语音播报失败：${speechErrorMessage}` : speechErrorMessage)
+    setError(options.fromVoice ? t('chat.error.playback_with_reply', { error: speechErrorMessage }) : speechErrorMessage)
     // Bus drives voiceState → 'idle' + restart_voice + setMood('idle')
     ctx.busEmit({
       type: 'tts:error',
@@ -431,7 +433,7 @@ export function useChat(ctx: UseChatContext) {
       speechGeneration: 0,
       shouldResumeContinuousVoice: options.shouldResumeContinuousVoice ?? false,
     })
-  }, [ctx, setError])
+  }, [ctx, setError, t])
 
   const syncAssistantActivity = useCallback(() => {
     setAssistantActivity(busyRef.current ? 'thinking' : 'idle')
@@ -487,16 +489,16 @@ export function useChat(ctx: UseChatContext) {
     })
 
     return saveTextFileWithFallback({
-      title: '导出聊天记录',
+      title: t('chat.export.title'),
       defaultFileName: `nexus-chat-history-${fileNameDate}.json`,
       content: exportContent,
       filters: [{ name: 'JSON', extensions: ['json'] }],
     })
-  }, [ctx.settingsRef])
+  }, [ctx.settingsRef, t])
 
   const importChatHistory = useCallback(async () => {
     const result = await openTextFileWithFallback({
-      title: '导入聊天记录',
+      title: t('chat.import.title'),
       filters: [{ name: 'JSON', extensions: ['json'] }],
     })
 
@@ -510,18 +512,18 @@ export function useChat(ctx: UseChatContext) {
     return {
       canceled: false,
       filePath: result.filePath,
-      message: `已导入 ${importedMessages.length} 条聊天消息。`,
+      message: t('chat.import.success', { count: importedMessages.length }),
     }
-  }, [replaceChatHistory])
+  }, [replaceChatHistory, t])
 
   const clearChatHistory = useCallback(async () => {
     replaceChatHistory([])
 
     return {
       canceled: false,
-      message: '聊天记录已清空。',
+      message: t('chat.clear.success'),
     }
-  }, [replaceChatHistory])
+  }, [replaceChatHistory, t])
 
   async function sendMessage(
     rawContent?: string,
@@ -544,8 +546,8 @@ export function useChat(ctx: UseChatContext) {
     if (!content && !attachedImage) {
       if (fromVoice) {
         logVoiceEvent('voice transcript was empty, nothing was sent', { traceId })
-        ctx.updateVoicePipeline('idle', '没有可发送的语音文本')
-        ctx.appendVoiceTrace('发送取消', `#${traceLabel} 识别文本为空`, 'error')
+        ctx.updateVoicePipeline('idle', t('chat.voice.empty_pipeline_detail'))
+        ctx.appendVoiceTrace(t('chat.voice.empty_label'), t('chat.voice.empty_trace', { label: traceLabel }), 'error')
       }
       return false
     }
@@ -563,10 +565,10 @@ export function useChat(ctx: UseChatContext) {
       if (fromVoice) {
         logVoiceEvent('assistant is busy, voice transcript was not sent', { traceId, content })
         ctx.fillComposerWithVoiceTranscript(content)
-        ctx.updateVoicePipeline('blocked_busy', '上一轮还在处理中，本句已放入输入框，可稍后发送。', content)
-        ctx.appendVoiceTrace('发送被拦截', `#${traceLabel} 上一轮还在处理中，本句已放入输入框`, 'error')
-        setError('上一轮回复还没完成，这句语音已放进输入框。')
-        ctx.updatePetStatus('上一句还没结束，这句先放进输入框。', 2_600)
+        ctx.updateVoicePipeline('blocked_busy', t('chat.voice.blocked_detail'), content)
+        ctx.appendVoiceTrace(t('chat.voice.blocked_label'), t('chat.voice.blocked_trace', { label: traceLabel }), 'error')
+        setError(t('chat.voice.blocked_error'))
+        ctx.updatePetStatus(t('chat.voice.blocked_pet_status'), 2_600)
       }
       return false
     }
@@ -580,8 +582,8 @@ export function useChat(ctx: UseChatContext) {
 
     if (ctx.voiceStateRef.current === 'speaking') {
       if (!ctx.canInterruptSpeech()) {
-        setError('当前关闭了语音打断，请等上一句播报结束后再发送。')
-        ctx.updatePetStatus('当前关闭了语音打断，请等我说完。', 3_000)
+        setError(t('chat.voice.no_interrupt_error'))
+        ctx.updatePetStatus(t('chat.voice.no_interrupt_pet_status'), 3_000)
         return false
       }
 
@@ -593,7 +595,7 @@ export function useChat(ctx: UseChatContext) {
     hidePetDialogBubble()
     ctx.markPresenceActivity()
     if (fromVoice) {
-      ctx.appendVoiceTrace('语音已发送', `#${traceLabel} 用户消息已写入聊天记录`)
+      ctx.appendVoiceTrace(t('chat.voice.sent_label'), t('chat.voice.sent_trace', { label: traceLabel }))
     }
 
     const userMessage: ChatMessage = {
@@ -649,7 +651,7 @@ export function useChat(ctx: UseChatContext) {
         })
         return true
       } catch (localIntentError) {
-        const errorMessage = localIntentError instanceof Error ? localIntentError.message : '本地任务处理失败'
+        const errorMessage = localIntentError instanceof Error ? localIntentError.message : t('chat.local_intent.failed')
         appendSystemMessage(errorMessage, 'error')
         setError(errorMessage)
         ctx.appendDebugConsoleEvent({
@@ -660,8 +662,8 @@ export function useChat(ctx: UseChatContext) {
         })
         ctx.updatePetStatus(errorMessage, 3_200)
         if (fromVoice) {
-          ctx.updateVoicePipeline('reply_failed', `本地任务处理失败：${shorten(errorMessage, 36)}`, content)
-          ctx.appendVoiceTrace('本地任务失败', `#${traceLabel} ${shorten(errorMessage, 40)}`, 'error')
+          ctx.updateVoicePipeline('reply_failed', t('chat.local_intent.voice_detail', { preview: shorten(errorMessage, 36) }), content)
+          ctx.appendVoiceTrace(t('chat.local_intent.voice_label'), t('chat.local_intent.voice_trace', { label: traceLabel, preview: shorten(errorMessage, 40) }), 'error')
         }
         return false
       }

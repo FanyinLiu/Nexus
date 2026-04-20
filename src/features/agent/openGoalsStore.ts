@@ -1,5 +1,6 @@
 import { OPEN_GOALS_STORAGE_KEY, createId, readJson, writeJsonDebounced } from '../../lib/storage/core'
 import { planStore } from '../plan/planStore'
+import { t } from '../../i18n/runtime.ts'
 import type { AgentStopReason } from './agentLoop'
 
 export type OpenGoalStatus = 'paused' | 'aborted'
@@ -147,24 +148,26 @@ class OpenGoalsStoreImpl {
       if (plan) {
         const total = plan.steps.length
         const completed = plan.steps.filter((s) => s.status === 'completed').length
-        if (total > 0) progressNote = `（做到第 ${completed}/${total} 步）`
+        if (total > 0) progressNote = t('agent.goal.progress_note', { done: completed, total })
       }
     }
-    const reason = goal.status === 'aborted' && goal.reason ? `当时停在：${goal.reason}。` : ''
+    const reason = goal.status === 'aborted' && goal.reason
+      ? t('agent.goal.stopped_reason', { reason: goal.reason })
+      : ''
 
     // Pick a template deterministically from goal.id + nudgeCount so the same
     // goal gets a different phrasing on each follow-up, but a single nudge
     // doesn't flicker between renders.
-    const templates: Array<(g: OpenGoal) => string> = [
-      (g) => `主人，上次你让我帮你「${g.goal}」${progressNote}。${reason}要不要继续？`,
-      (g) => `${reason}「${g.goal}」这件事还没收尾${progressNote}，现在方便接着弄吗？`,
-      (g) => `小提醒：之前的「${g.goal}」${progressNote}还停着。${reason}要不要我再跟进一下？`,
-      (g) => `主人，「${g.goal}」${progressNote}我先按下了暂停。${reason}要继续就告诉我一声。`,
-      (g) => `还记得「${g.goal}」吗${progressNote}？${reason}如果想继续，我随时接着跑。`,
-    ]
+    const nudgeKeys = [
+      'agent.goal.nudge.1',
+      'agent.goal.nudge.2',
+      'agent.goal.nudge.3',
+      'agent.goal.nudge.4',
+      'agent.goal.nudge.5',
+    ] as const
     const seed = hashString(goal.id) + goal.nudgeCount
-    const template = templates[seed % templates.length]
-    return template(goal)
+    const key = nudgeKeys[seed % nudgeKeys.length]
+    return t(key, { goal: goal.goal, progress: progressNote, reason })
   }
 
   subscribe(listener: OpenGoalListener): () => void {

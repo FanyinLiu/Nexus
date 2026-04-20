@@ -1,3 +1,4 @@
+import { t } from '../../i18n/runtime.ts'
 import type { VoicePipelineState, VoiceTraceEntry } from '../../types'
 import {
   readJson,
@@ -6,18 +7,20 @@ import {
   writeJsonDebounced,
 } from './core.ts'
 
-const defaultVoicePipelineState: VoicePipelineState = {
-  step: 'idle',
-  transcript: '',
-  detail: '等待语音输入',
-  updatedAt: '',
+function buildDefaultVoicePipelineState(): VoicePipelineState {
+  return {
+    step: 'idle',
+    transcript: '',
+    detail: t('settings.preview.console.waiting_for_voice'),
+    updatedAt: '',
+  }
 }
 
 const defaultVoiceTrace: VoiceTraceEntry[] = []
 
 export function loadVoicePipelineState(): VoicePipelineState {
   return {
-    ...defaultVoicePipelineState,
+    ...buildDefaultVoicePipelineState(),
     ...readJson<Partial<VoicePipelineState>>(VOICE_PIPELINE_STORAGE_KEY, {}),
   }
 }

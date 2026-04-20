@@ -24,6 +24,7 @@ import { toChatToolResult, type BuiltInToolResult } from '../../features/tools/t
 import { logVoiceEvent } from '../../features/voice/shared'
 import { shorten } from '../../lib/common'
 import { createId } from '../../lib'
+import { t } from '../../i18n/runtime.ts'
 import type {
   AppSettings,
   ChatMessage,
@@ -395,10 +396,10 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       } = extractExpressionOverrides(transformedAssistantText)
       const assistantPerformance = parseAssistantPerformanceContent(rawAssistantText)
       const assistantMessageContent = assistantPerformance.displayContent
-        || (assistantPerformance.stageDirections.length ? '（轻轻做了个动作）' : '……')
+        || (assistantPerformance.stageDirections.length ? t('chat.assistant.stage_direction_fallback') : t('chat.assistant.empty_speech_fallback'))
       const assistantReplyForStatus = assistantPerformance.spokenContent
         || assistantMessageContent
-        || '刚刚做了一个动作'
+        || t('chat.assistant.stage_status_fallback')
 
       if (!isLatestTurn()) {
         logVoiceEvent('assistant reply ignored because a newer turn is active', {
@@ -452,8 +453,8 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       }
 
       if (fromVoice) {
-        dependencies.ctx.updateVoicePipeline('reply_received', `模型已回复：${shorten(finalAssistantReplyForStatus, 36)}`, content)
-        dependencies.ctx.appendVoiceTrace('模型已返回', `#${traceLabel} ${shorten(finalAssistantReplyForStatus, 32)}`, 'success')
+        dependencies.ctx.updateVoicePipeline('reply_received', t('chat.assistant.voice_reply_received', { preview: shorten(finalAssistantReplyForStatus, 36) }), content)
+        dependencies.ctx.appendVoiceTrace(t('chat.assistant.voice_reply_label'), `#${traceLabel} ${shorten(finalAssistantReplyForStatus, 32)}`, 'success')
       }
 
       if (!assistantMessageContent && !chatToolResult && finalAssistantReplyForStatus) {
@@ -578,7 +579,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
 
       return true
     } catch (caught) {
-      const errorMessage = caught instanceof Error ? caught.message : '发送消息失败'
+      const errorMessage = caught instanceof Error ? caught.message : t('chat.assistant.send_failed_fallback')
       logVoiceEvent('assistant reply failed', {
         traceId: traceId || undefined,
         source,
@@ -587,22 +588,22 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       dependencies.ctx.setMood('confused')
       dependencies.presentPetDialogBubble(
         {
-          content: `这次处理失败了：${errorMessage}`,
+          content: t('chat.assistant.failure_bubble', { error: errorMessage }),
           streaming: false,
         },
         { autoHideMs: 9_000 },
       )
 
       if (fromVoice) {
-        dependencies.ctx.updateVoicePipeline('reply_failed', `本句发送失败：${shorten(errorMessage, 40)}`, content)
-        dependencies.ctx.appendVoiceTrace('模型请求失败', `#${traceLabel} ${shorten(errorMessage, 48)}`, 'error')
+        dependencies.ctx.updateVoicePipeline('reply_failed', t('chat.assistant.voice_send_failed_status', { preview: shorten(errorMessage, 40) }), content)
+        dependencies.ctx.appendVoiceTrace(t('chat.assistant.voice_request_failed_label'), `#${traceLabel} ${shorten(errorMessage, 48)}`, 'error')
         dependencies.appendSystemMessage(
-          `这句语音已经识别并进入聊天，但发送给大模型失败：${errorMessage}`,
+          t('chat.assistant.voice_send_failed_system', { error: errorMessage }),
           'error',
         )
       }
 
-      dependencies.setError(fromVoice ? `本句发送失败：${errorMessage}` : errorMessage)
+      dependencies.setError(fromVoice ? t('chat.assistant.voice_send_failed_summary', { error: errorMessage }) : errorMessage)
       // Bus drives voiceState → 'idle'
       dependencies.ctx.busEmit({
         type: 'session:aborted',
@@ -612,7 +613,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       if (shouldResumeContinuousVoice) {
         dependencies.ctx.clearPendingVoiceRestart()
         dependencies.ctx.resetNoSpeechRestartCount()
-        dependencies.ctx.updatePetStatus('本句发送失败，当前连续语音已暂停。', 3200)
+        dependencies.ctx.updatePetStatus(t('chat.assistant.voice_paused_pet_status'), 3200)
         // Longer delay so the user has time to read the error bubble before
         // the mic re-opens — otherwise the no-speech toast stacks on top of
         // the error and it looks like the UI is thrashing.
@@ -623,7 +624,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           delayMs: 3200,
         })
       } else if (fromVoice) {
-        dependencies.ctx.updatePetStatus('本句发送失败，请稍后再试。', 3200)
+        dependencies.ctx.updatePetStatus(t('chat.assistant.voice_retry_pet_status'), 3200)
       }
       window.setTimeout(() => dependencies.ctx.setMood('idle'), 2600)
       return false

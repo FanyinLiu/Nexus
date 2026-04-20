@@ -1,4 +1,5 @@
 import { clamp } from '../../lib/common'
+import { t } from '../../i18n/runtime.ts'
 
 type StreamAudioPlayerOptions = {
   initialBufferSeconds?: number
@@ -112,15 +113,15 @@ export class StreamAudioPlayer {
 
   appendPcmChunk(samples: Float32Array | number[], sampleRate: number, channels = 1) {
     if (this.stopped) {
-      return Promise.reject(new Error('语音播报已停止。'))
+      return Promise.reject(new Error(t('voice.audio.playback_stopped')))
     }
 
     if (!sampleRate || sampleRate <= 0) {
-      return Promise.reject(new Error('无效的音频采样率。'))
+      return Promise.reject(new Error(t('voice.audio.stream_invalid_sample_rate')))
     }
 
     if (channels !== 1) {
-      return Promise.reject(new Error('当前流式播放器仅支持单声道 PCM。'))
+      return Promise.reject(new Error(t('voice.audio.stream_mono_only')))
     }
 
     try {
@@ -179,7 +180,7 @@ export class StreamAudioPlayer {
       void context.resume().catch(() => undefined)
       return Promise.resolve()
     } catch (error) {
-      const message = error instanceof Error ? error.message : '流式音频播放失败。'
+      const message = error instanceof Error ? error.message : t('voice.audio.stream_playback_failed')
       this.options.onPlaybackError?.(message)
       return Promise.reject(error instanceof Error ? error : new Error(message))
     }
