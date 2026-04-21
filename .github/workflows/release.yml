@@ -154,11 +154,26 @@ jobs:
       - run: npm run build
         name: Vite build
 
-      # All three platforms now bundle the required sherpa models via
-      # extraResources so a fresh install has working wake-word detection
-      # and offline STT out of the box. `--skip-asr` skips the optional
-      # Paraformer model; the three required models (cn/en wake word,
-      # SenseVoice STT) plus Silero VAD still come down and get packed.
+      - name: Cache sherpa models
+        uses: actions/cache@v4
+        with:
+          path: |
+            sherpa-models
+            public/vendor/vad
+          key: sherpa-models-skip-asr-${{ hashFiles('electron/services/modelDefinitions.js') }}
+
+      - name: Cache electron-builder
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+          key: electron-builder-${{ matrix.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Download sherpa models
         run: node scripts/download-models.mjs --skip-asr
 
