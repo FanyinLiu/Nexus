@@ -23,9 +23,7 @@
 
 Nexus는 LLM 기반의 크로스 플랫폼 데스크톱 AI 동반자입니다. Live2D 캐릭터를 **연속 음성 대화**, **장기 기억**, **데스크톱 인지**, **자율 행동**, **MCP 스타일 툴 호출**과 결합 — 챗봇이 아니라 진짜로 당신을 알게 되는 존재를 목표로 설계되었습니다.
 
-Electron + React + TypeScript로 만든 로컬 우선 앱입니다. Windows / macOS / Linux 지원. 음성 프레임, 기억 항목, 툴 호출은 모두 사용자 컴퓨터에서 실행되며 — 컴퓨터를 떠나는 것은 LLM 호출뿐, 제공자도 사용자가 선택합니다. 18+ 채팅 제공자를 자유롭게 조합할 수 있고, 로컬 모델 + 로컬 ASR + 로컬 TTS로 완전히 오프라인 실행도 가능합니다.
-
-설계 목표는 단순한 채팅이 아닌 **관계의 지속**입니다. 야간 **꿈 사이클(dream cycle)**이 대화를 *내러티브 스레드*로 클러스터링하여 시스템 프롬프트에 되먹임되므로, 동반자가 "당신이 누구인지"에 대해 갖는 감각은 세션마다 리셋되지 않고 시간이 지날수록 축적됩니다.
+Electron + React + TypeScript로 구축, Windows / macOS / Linux 지원. 18+ LLM 제공자를 내장하며 완전 오프라인 또는 클라우드 모델로 동작합니다.
 
 ---
 
@@ -52,8 +50,6 @@ Electron + React + TypeScript로 만든 로컬 우선 앱입니다. Windows / ma
 - 💬 **폰에서도 연결** — Discord와 Telegram 게이트웨이, 채팅별 라우팅 지원. 휴대폰에서 동반자와 대화하고 음성으로 응답받기.
 
 - 🌐 **다국어 UI** — 간체 중국어, 번체 중국어, 영어, 일본어, 한국어.
-
-- 💰 **비용 인지** — 내장 예산 계측 + Anthropic 프롬프트 캐싱(시스템 + 툴 prefix에 와이어링, 긴 세션에서 입력 토큰 30-50% 감소).
 
 ---
 
@@ -121,6 +117,42 @@ VTube Studio를 통해 외부 Live2D 모델을 구동하는 WebSocket 브리지.
 | **STT** | GLM-ASR-Nano · Paraformer · SenseVoice · Zhipu GLM-ASR · Volcengine · OpenAI Whisper · ElevenLabs Scribe · Tencent ASR · Custom |
 | **TTS** | Edge TTS · MiniMax · Volcengine · DashScope Qwen3-TTS · OmniVoice · OpenAI TTS · ElevenLabs · Custom |
 | **웹 검색** | DuckDuckGo · Bing · Brave · Tavily · Exa · Firecrawl · Gemini Grounding · Perplexity |
+
+---
+
+## 추천 모델 구성
+
+> 이 추천은 **한국어 사용자**를 위한 것입니다. 다른 언어는 [English](../README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md)를 참조하세요.
+
+### 대화 모델 (LLM)
+
+| 용도 | 추천 제공자 | 추천 모델 | 설명 |
+|------|-----------|---------|------|
+| **일상 동반자 (추천)** | DeepSeek | `deepseek-chat` | 가성비 최고, 한국어 대응 양호, 장시간 대화에 최적 |
+| **종합 최강** | Anthropic | `claude-sonnet-4-6` | 한국어 자연스러움과 툴 호출 안정성 최고 |
+| **가성비** | OpenAI | `gpt-5.4-mini` | 빠르고 저렴, 한국어 표현도 자연스러움 |
+| **무료** | Google Gemini | `gemini-2.5-flash` | 무료 한도 넉넉, 한국어 대응 양호 |
+| **심층 추론** | DeepSeek | `deepseek-reasoner` | 복잡한 추론 · 수학 · 코드가 필요한 경우 |
+
+### 음성 입력 (STT)
+
+| 용도 | 추천 제공자 | 추천 모델 | 설명 |
+|------|-----------|---------|------|
+| **최고 정확도** | OpenAI | `whisper-large-v3` | 업계 표준, 한국어 인식 정확도 최고 수준 |
+| **가성비** | OpenAI | `gpt-4o-mini-transcribe` | 다국어 지원, 기존 OpenAI Key로 사용 가능 |
+| **고정밀 클라우드** | ElevenLabs Scribe | `scribe_v1` | 99개 언어 지원, 한국어 구두점 · 화자 감지 정확 |
+| **로컬 스트리밍** | Paraformer | `paraformer-trilingual` | 말하면서 실시간 변환, 저지연 |
+| **로컬 고속** | SenseVoice | `sensevoice-zh-en` | Whisper 대비 15배 빠름, 오프라인 |
+
+### 음성 출력 (TTS)
+
+| 용도 | 추천 제공자 | 보이스 | 설명 |
+|------|-----------|--------|------|
+| **무료 추천** | Edge TTS | 선히 (`ko-KR-SunHiNeural`) | Microsoft 무료, 자연스러운 한국어 여성 보이스, API Key 불필요 |
+| **무료 (남성)** | Edge TTS | 인준 (`ko-KR-InJoonNeural`) | 차분한 한국어 남성 보이스, 무료 |
+| **최고 품질** | ElevenLabs | 커스텀 `voice_id` | 세계 최고 수준 음성 합성, 보이스 클론 지원 |
+| **클라우드 범용** | OpenAI TTS | `nova` / `alloy` | 기존 OpenAI Key로 사용, `gpt-4o-mini-tts` 모델 |
+| **로컬 오프라인** | OmniVoice | 내장 보이스 | 완전 오프라인, 로컬 포트 8000, RTX 3060에서 동작 |
 
 ---
 
