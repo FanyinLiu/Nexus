@@ -148,9 +148,10 @@ VTube Studio를 통해 외부 Live2D 모델을 구동하는 WebSocket 브리지.
 
 | 용도 | 추천 제공자 | 보이스 | 설명 |
 |------|-----------|--------|------|
-| **클라우드 추천** | OpenAI TTS | `nova` / `alloy` | 한국어 자연스러움, 기존 OpenAI Key로 사용, `gpt-4o-mini-tts` 모델 |
-| **최고 품질** | ElevenLabs | 커스텀 `voice_id` | 세계 최고 수준 음성 합성, 보이스 클론 지원, 한국어 대응 |
-| **무료** | Edge TTS | Aria (`en-US-AriaNeural`) | Microsoft 무료, API Key 불필요 (한국어 보이스 미내장, 영어 보이스 사용) |
+| **무료 추천** | Edge TTS | 선히 (`ko-KR-SunHiNeural`) | Microsoft 무료, 자연스러운 한국어 여성 보이스, API Key 불필요 |
+| **무료 (남성)** | Edge TTS | 인준 (`ko-KR-InJoonNeural`) | 차분한 한국어 남성 보이스, 무료 |
+| **최고 품질** | ElevenLabs | 커스텀 `voice_id` | 세계 최고 수준 음성 합성, 보이스 클론 지원 |
+| **클라우드 범용** | OpenAI TTS | `nova` / `alloy` | 기존 OpenAI Key로 사용, `gpt-4o-mini-tts` 모델 |
 | **로컬 오프라인** | OmniVoice | 내장 보이스 | 완전 오프라인, 로컬 포트 8000, RTX 3060에서 동작 |
 
 ---

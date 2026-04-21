@@ -267,7 +267,7 @@ After first launch, open **Settings**:
 
 | Use case | Provider | Voice | Notes |
 |----------|----------|-------|-------|
-| **Free (recommended)** | Edge TTS | Aria (`en-US-AriaNeural`) | Microsoft free, natural American English female voice, no API key |
+| **Free (recommended)** | Edge TTS | Jenny (`en-US-JennyNeural`) | Microsoft free, warm American English female voice, no API key |
 | **Free (male)** | Edge TTS | Guy (`en-US-GuyNeural`) | Calm American English male voice, free |
 | **Best quality** | ElevenLabs | Custom `voice_id` | World-class speech synthesis, voice cloning supported |
 | **Cloud general** | OpenAI TTS | `nova` / `alloy` | Works with existing OpenAI key, `gpt-4o-mini-tts` model |

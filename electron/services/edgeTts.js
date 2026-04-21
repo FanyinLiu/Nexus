@@ -227,7 +227,6 @@ export async function synthesizeEdgeTts(text, options = {}) {
   })
 }
 
-/** List of commonly used Chinese and English voices */
 export const EDGE_TTS_VOICES = [
   { id: 'zh-CN-XiaoxiaoNeural', label: '晓晓（中文女，推荐）' },
   { id: 'zh-CN-XiaoyiNeural', label: '晓伊（中文女）' },
@@ -236,8 +235,13 @@ export const EDGE_TTS_VOICES = [
   { id: 'zh-CN-YunxiaNeural', label: '云夏（中文男少年）' },
   { id: 'zh-CN-YunyangNeural', label: '云扬（中文男，新闻风）' },
   { id: 'zh-CN-liaoning-XiaobeiNeural', label: '晓北（东北话女）' },
-  { id: 'zh-TW-HsiaoChenNeural', label: '曉臻（台湾女）' },
+  { id: 'zh-TW-HsiaoChenNeural', label: '曉臻（台灣女）' },
+  { id: 'zh-TW-YunJheNeural', label: '雲哲（台灣男）' },
+  { id: 'en-US-JennyNeural', label: 'Jenny (English Female)' },
   { id: 'en-US-AriaNeural', label: 'Aria (English Female)' },
   { id: 'en-US-GuyNeural', label: 'Guy (English Male)' },
   { id: 'ja-JP-NanamiNeural', label: 'Nanami (日本語女性)' },
+  { id: 'ja-JP-KeitaNeural', label: 'Keita (日本語男性)' },
+  { id: 'ko-KR-SunHiNeural', label: '선히 (한국어 여성)' },
+  { id: 'ko-KR-InJoonNeural', label: '인준 (한국어 남성)' },
 ]
