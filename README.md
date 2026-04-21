@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/FanyinLiu/Nexus/releases/latest/download/Nexus-Setup-0.2.7.exe"><img src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest/download/Nexus-Setup-0.2.9.exe"><img src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows"></a>
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS"></a>
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
@@ -36,6 +36,7 @@ The design goal is persistence of relationship, not just chat. A nightly **dream
 
 ## News
 
+- **2026.04.22** — **v0.2.9 released.** Emotional memory, 5-level relationship evolution (stranger → intimate), absence-aware reunions, cross-session memory persistence, weather & scene system overhaul (14 weather states, AI-generated scenes, continuous sunlight), Character Card v2/v3 import, VTube Studio WebSocket bridge, full 5-locale i18n, pet system enhancements (inline expressions, tap reactions, idle fidgets, drag-resize). [Changelog →](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.9)
 - **2026.04.19** — **v0.2.7 released.** Subagent dispatcher lands — the companion can now spawn a background research helper from autonomy ticks or chat tool calls, surfaced in the chat panel as a live status strip. Barge-in monitor hardened: any TTS reply (voice *or* typed-text) is interruptible, and the wake-word listener's mic is reused to avoid macOS contention. Fixes a render-storm bug that made long STT utterances stall the second turn, and the matching cross-window sync bug that made voice messages invisible to an open chat panel. [What's new in v0.2.7](#whats-new-in-v027) below.
 - **2025.04.19** — v0.2.5 released. Autonomy Engine V2 now default-on (LLM-driven decision + persona guardrail replacing the hand-written rule tree). Chat pane opens fresh each launch with past sessions browsable under Settings → 聊天记录. Voice/TTS reliability pass. New `system-dark` theme preset. [Changelog →](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.5)
 - **2025.04.16** — v0.2.4 released. Big voice/TTS reliability pass (tool-call TTS, markdown stripping, empty-stream detection, first-audio watchdog), Anthropic prompt caching wired on the system + tools prefix, wake-word gaps tightened, 20+ bug fixes. [Changelog →](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.4)
@@ -200,7 +201,7 @@ Grab the latest installer from the [releases page](https://github.com/FanyinLiu/
 
 | Platform | Asset |
 |---|---|
-| Windows | `Nexus-Setup-0.2.7.exe` (NSIS, unsigned — click *More info → Run anyway* on first launch) |
+| Windows | `Nexus-Setup-0.2.9.exe` (NSIS, unsigned — click *More info → Run anyway* on first launch) |
 | macOS | `.dmg` or `.zip` (unsigned — see macOS steps below) |
 | Linux | `.AppImage` / `.deb` / `.tar.gz` (AppImage: `chmod +x` then run) |
 
@@ -308,9 +309,18 @@ electron/
 
 ## Roadmap
 
-- [ ] **Phase 2-6**: Pipecat-style frame pipeline replacing the monolithic streaming TTS controller. Phase 1 (scaffolding) shipped in v0.2.4.
-- [ ] Chat pane per-session bucketing (history preserved in archive, pane opens fresh each launch).
-- [ ] First-party Claude Agent SDK integration for plan-mode / native function calling.
+### Planned
+
+- [ ] **Screen-aware proactive conversation** — periodically read screen context (foreground app, visible text) and initiate conversation about what the user is doing, not just respond when spoken to.
+- [ ] **Decision / Roleplay / Agent three-layer separation** — split intent classification (fast) from roleplay (persona-pure) from background agent tasks. Roleplay never sees tool metadata; agent results are "announced" by the character in its own voice.
+- [ ] **Character diary & autonomous timeline** — the companion auto-generates a first-person diary entry each day summarizing what happened; optionally posts "moments" to a browsable feed, creating a sense of independent life.
+- [ ] **Daily schedule & activity states** — the companion follows routines (work / eat / sleep / commute) that affect availability, tone, and energy. Late-night conversations feel different from morning ones.
+- [ ] **Mini mode / dock-edge hide** — drag the pet to the screen edge and it auto-hides with a peek-on-hover animation. "Always present, never intrusive."
+- [ ] **Webcam awareness** — use MediaPipe face mesh to detect fatigue signals (yawning, eye closure, frowning) and inject detected state into the companion's context so it can proactively react.
+
+### Ongoing
+
+- [ ] Pipecat-style frame pipeline replacing the monolithic streaming TTS controller (Phase 2-6; Phase 1 shipped in v0.2.4).
 - [ ] Auto-update infrastructure via electron-updater + signed binaries.
 - [ ] Mobile companion app (voice-only remote for the desktop instance).
 
