@@ -8,6 +8,8 @@ let _state = 'idle'
 let _sessionId = ''
 /** @type {((event: object) => void)|null} */
 let _eventCallback = null
+/** @type {Promise<any>|null} */
+let _startingSession = null
 
 const REALTIME_API_URL = 'wss://api.openai.com/v1/realtime'
 const CONNECTION_TIMEOUT_MS = 10_000
@@ -40,6 +42,9 @@ function decodeBase64ToFloat32(base64) {
 }
 
 export async function startSession(options) {
+  if (_startingSession) {
+    await _startingSession.catch(() => {})
+  }
   if (_ws) {
     await stopSession()
   }
@@ -62,7 +67,7 @@ export async function startSession(options) {
 
   emit({ type: 'state', state: _state, sessionId: _sessionId })
 
-  return new Promise((resolve, reject) => {
+  const sessionPromise = new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
       _state = 'error'
       emit({ type: 'state', state: _state, sessionId: _sessionId })
@@ -142,6 +147,8 @@ export async function startSession(options) {
       }
     })
   })
+  _startingSession = sessionPromise.finally(() => { _startingSession = null })
+  return sessionPromise
 }
 
 function handleServerEvent(msg) {
@@ -248,9 +255,12 @@ export async function stopSession() {
     const ws = _ws
     _ws = null
     await new Promise((resolve) => {
-      ws.on('close', resolve)
+      const fallback = setTimeout(resolve, 2_000)
+      ws.on('close', () => {
+        clearTimeout(fallback)
+        resolve()
+      })
       ws.close()
-      setTimeout(resolve, 2_000)
     })
   }
 

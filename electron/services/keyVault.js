@@ -49,7 +49,7 @@ async function loadVault() {
 
 async function persistVault() {
   const vaultPath = getVaultPath()
-  await fs.writeFile(vaultPath, JSON.stringify(vaultCache, null, 2), 'utf8')
+  await fs.writeFile(vaultPath, JSON.stringify(vaultCache, null, 2), { encoding: 'utf8', mode: 0o600 })
 }
 
 export function vaultStore(slot, plaintext) {

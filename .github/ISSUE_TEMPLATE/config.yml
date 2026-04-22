@@ -9,6 +9,9 @@ contact_links:
   - name: 💡 Ideas and feature brainstorming
     url: https://github.com/FanyinLiu/Nexus/discussions/categories/ideas
     about: For rough ideas you want community input on before filing as an issue.
+  - name: 🎨 Show and tell
+    url: https://github.com/FanyinLiu/Nexus/discussions/categories/show-and-tell
+    about: Share your setup, custom personas, or how you use Nexus.
   - name: 📣 Announcements and project updates
     url: https://github.com/FanyinLiu/Nexus/discussions/categories/announcements
     about: Read maintainer announcements.

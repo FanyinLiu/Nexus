@@ -31,6 +31,36 @@ import type {
 } from '../../types'
 import { UrlInput } from './UrlInput'
 
+function TuningSlider({ label, displayValue, hint, disabledHint, value, min, max, step, disabled, onChange }: {
+  label: string
+  displayValue: string
+  hint: string
+  disabledHint: string
+  value: number
+  min: number
+  max: number
+  step: number
+  disabled: boolean
+  onChange: (value: number) => void
+}) {
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(clampNumber(parseNumberInput(event.target.value, value), min, max))
+  }
+  return (
+    <div className={`settings-tts-tuning__item ${disabled ? 'is-disabled' : ''}`}>
+      <div className="settings-tts-tuning__header">
+        <strong>{label}</strong>
+        <span>{displayValue}</span>
+      </div>
+      <div className="settings-tts-tuning__controls">
+        <input className="settings-tts-tuning__range" type="range" min={min} max={max} step={step} value={value} disabled={disabled} onChange={handleChange} />
+        <input className="settings-tts-tuning__number" type="number" min={min} max={max} step={step} value={value} disabled={disabled} onChange={handleChange} />
+      </div>
+      <p className="settings-drawer__hint">{disabled ? disabledHint : hint}</p>
+    </div>
+  )
+}
+
 const speechOutputSelectOptions = SPEECH_OUTPUT_PROVIDERS
   .filter((p) => !p.hidden)
   .map((p) => ({ id: p.id, label: p.label }))
@@ -488,137 +518,36 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
         </div>
 
         <div className="settings-tts-tuning">
-          <div className={`settings-tts-tuning__item ${speechOutputAdjustmentSupport.rate ? '' : 'is-disabled'}`}>
-            <div className="settings-tts-tuning__header">
-              <strong>{ti('settings.speech_output.rate')}</strong>
-              <span>{formatTtsAdjustmentValue('rate', draft.speechRate)}</span>
-            </div>
-            <div className="settings-tts-tuning__controls">
-              <input
-                className="settings-tts-tuning__range"
-                type="range"
-                min="0.5"
-                max="2"
-                step="0.05"
-                value={draft.speechRate}
-                disabled={!speechOutputAdjustmentSupport.rate}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    speechRate: clampNumber(parseNumberInput(event.target.value, prev.speechRate), 0.5, 2),
-                  }))
-                }
-              />
-              <input
-                className="settings-tts-tuning__number"
-                type="number"
-                min="0.5"
-                max="2"
-                step="0.05"
-                value={draft.speechRate}
-                disabled={!speechOutputAdjustmentSupport.rate}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    speechRate: clampNumber(parseNumberInput(event.target.value, prev.speechRate), 0.5, 2),
-                  }))
-                }
-              />
-            </div>
-            <p className="settings-drawer__hint">
-              {speechOutputAdjustmentSupport.rate
-                ? ti('settings.speech_output.rate_hint')
-                : ti('settings.speech_output.rate_disabled_hint')}
-            </p>
-          </div>
-
-          <div className={`settings-tts-tuning__item ${speechOutputAdjustmentSupport.pitch ? '' : 'is-disabled'}`}>
-            <div className="settings-tts-tuning__header">
-              <strong>{ti('settings.speech_output.pitch')}</strong>
-              <span>{formatTtsAdjustmentValue('pitch', draft.speechPitch)}</span>
-            </div>
-            <div className="settings-tts-tuning__controls">
-              <input
-                className="settings-tts-tuning__range"
-                type="range"
-                min="0.5"
-                max="2"
-                step="0.05"
-                value={draft.speechPitch}
-                disabled={!speechOutputAdjustmentSupport.pitch}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    speechPitch: clampNumber(parseNumberInput(event.target.value, prev.speechPitch), 0.5, 2),
-                  }))
-                }
-              />
-              <input
-                className="settings-tts-tuning__number"
-                type="number"
-                min="0.5"
-                max="2"
-                step="0.05"
-                value={draft.speechPitch}
-                disabled={!speechOutputAdjustmentSupport.pitch}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    speechPitch: clampNumber(parseNumberInput(event.target.value, prev.speechPitch), 0.5, 2),
-                  }))
-                }
-              />
-            </div>
-            <p className="settings-drawer__hint">
-              {speechOutputAdjustmentSupport.pitch
-                ? ti('settings.speech_output.pitch_hint')
-                : ti('settings.speech_output.pitch_disabled_hint')}
-            </p>
-          </div>
-
-          <div className={`settings-tts-tuning__item ${speechOutputAdjustmentSupport.volume ? '' : 'is-disabled'}`}>
-            <div className="settings-tts-tuning__header">
-              <strong>{ti('settings.speech_output.volume')}</strong>
-              <span>{formatTtsAdjustmentValue('volume', draft.speechVolume)}</span>
-            </div>
-            <div className="settings-tts-tuning__controls">
-              <input
-                className="settings-tts-tuning__range"
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={draft.speechVolume}
-                disabled={!speechOutputAdjustmentSupport.volume}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    speechVolume: clampNumber(parseNumberInput(event.target.value, prev.speechVolume), 0, 1),
-                  }))
-                }
-              />
-              <input
-                className="settings-tts-tuning__number"
-                type="number"
-                min="0"
-                max="1"
-                step="0.05"
-                value={draft.speechVolume}
-                disabled={!speechOutputAdjustmentSupport.volume}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    speechVolume: clampNumber(parseNumberInput(event.target.value, prev.speechVolume), 0, 1),
-                  }))
-                }
-              />
-            </div>
-            <p className="settings-drawer__hint">
-              {speechOutputAdjustmentSupport.volume
-                ? ti('settings.speech_output.volume_hint')
-                : ti('settings.speech_output.volume_disabled_hint')}
-            </p>
-          </div>
+          <TuningSlider
+            label={ti('settings.speech_output.rate')}
+            displayValue={formatTtsAdjustmentValue('rate', draft.speechRate)}
+            hint={ti('settings.speech_output.rate_hint')}
+            disabledHint={ti('settings.speech_output.rate_disabled_hint')}
+            value={draft.speechRate}
+            min={0.5} max={2} step={0.05}
+            disabled={!speechOutputAdjustmentSupport.rate}
+            onChange={(v) => setDraft((prev) => ({ ...prev, speechRate: v }))}
+          />
+          <TuningSlider
+            label={ti('settings.speech_output.pitch')}
+            displayValue={formatTtsAdjustmentValue('pitch', draft.speechPitch)}
+            hint={ti('settings.speech_output.pitch_hint')}
+            disabledHint={ti('settings.speech_output.pitch_disabled_hint')}
+            value={draft.speechPitch}
+            min={0.5} max={2} step={0.05}
+            disabled={!speechOutputAdjustmentSupport.pitch}
+            onChange={(v) => setDraft((prev) => ({ ...prev, speechPitch: v }))}
+          />
+          <TuningSlider
+            label={ti('settings.speech_output.volume')}
+            displayValue={formatTtsAdjustmentValue('volume', draft.speechVolume)}
+            hint={ti('settings.speech_output.volume_hint')}
+            disabledHint={ti('settings.speech_output.volume_disabled_hint')}
+            value={draft.speechVolume}
+            min={0} max={1} step={0.05}
+            disabled={!speechOutputAdjustmentSupport.volume}
+            onChange={(v) => setDraft((prev) => ({ ...prev, speechVolume: v }))}
+          />
         </div>
       </div>
 

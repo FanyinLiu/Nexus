@@ -620,6 +620,10 @@ export function createPanelWindow() {
   win.on('hide', releaseDockForPanel)
 
   win.on('closed', () => {
+    if (panelBlurTimer) {
+      clearTimeout(panelBlurTimer)
+      panelBlurTimer = null
+    }
     releaseDockForPanel()
     panelWindow = null
   })

@@ -167,7 +167,7 @@ export async function ensureRendererServer() {
         if (filePath.endsWith('.html')) {
           headers['Content-Security-Policy'] = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'",
+            "script-src 'self' 'wasm-unsafe-eval'",
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob:",
             "font-src 'self' data:",

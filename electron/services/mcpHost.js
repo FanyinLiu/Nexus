@@ -296,12 +296,15 @@ class McpInstance {
     this.process = null
 
     await new Promise((resolve) => {
-      child.once('exit', resolve)
-      child.kill()
-      setTimeout(() => {
+      const killTimer = setTimeout(() => {
         try { child.kill('SIGKILL') } catch {}
         resolve()
       }, 3_000)
+      child.once('exit', () => {
+        clearTimeout(killTimer)
+        resolve()
+      })
+      child.kill()
     })
 
     this.state = 'stopped'

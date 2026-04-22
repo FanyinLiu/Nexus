@@ -96,10 +96,7 @@ export function PanelView({
   // re-seeded on every remount and ended up eating freshly appended
   // STT transcripts). Anything append()ed after boot — voice, text,
   // tool result, system notice — has a fresh id and passes through.
-  const visibleMessages = useMemo(
-    () => chat.messages.filter((m) => !chat.archivedMessageIds.has(m.id)),
-    [chat.messages, chat.archivedMessageIds],
-  )
+  const visibleMessages = chat.messages
   const chatMessageCount = visibleMessages.filter((message) => message.role !== 'system').length
   const welcomeTitle = `${timeGreeting}，${settings.userName}`
   const welcomeBody = memory.memories[0]?.content

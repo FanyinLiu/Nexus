@@ -429,7 +429,7 @@ export function trimRepeatedStreamingDelta(fullContent, incomingDelta) {
     return ''
   }
 
-  const maxOverlap = Math.min(fullContent.length, delta.length)
+  const maxOverlap = Math.min(fullContent.length, delta.length, 200)
   for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
     if (fullContent.endsWith(delta.slice(0, overlap))) {
       return delta.slice(overlap)

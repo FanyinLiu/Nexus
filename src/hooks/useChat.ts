@@ -47,6 +47,12 @@ export type { UseChatContext } from './chat'
 
 const MAX_CHAT_MESSAGES = 500
 
+function messagesSignature(msgs: ChatMessage[]): string {
+  if (!msgs.length) return '0:'
+  const last = msgs[msgs.length - 1]
+  return `${msgs.length}:${last.id}:${last.content.length}:${last.tone ?? ''}`
+}
+
 export function useChat(ctx: UseChatContext) {
   const { t } = useTranslation()
   // Each app launch opens a fresh chat bucket. Past sessions are persisted
@@ -57,11 +63,6 @@ export function useChat(ctx: UseChatContext) {
   const currentSessionIdRef = useRef<string>(createId('chat-session'))
   const currentSessionStartedAtRef = useRef<number>(Date.now())
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  // Retained for backwards compatibility with consumers that may still
-  // read these fields. archivedMessageIds is now an empty set — since
-  // the pane renders the current session only, nothing needs filtering.
-  const sessionStartAtRef = useRef<number>(currentSessionStartedAtRef.current)
-  const archivedMessageIdsRef = useRef<Set<string>>(new Set())
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setErrorRaw] = useState<string | null>(null)
@@ -134,7 +135,7 @@ export function useChat(ctx: UseChatContext) {
   // rewriting over its own in-flight additions).
   const applyRemoteMessages = useCallback((next: ChatMessage[]) => {
     messagesSaveSkipRef.current = true
-    lastSavedMessagesSignatureRef.current = JSON.stringify(next)
+    lastSavedMessagesSignatureRef.current = messagesSignature(next)
     setMessages(next)
     messagesRef.current = next
   }, [])
@@ -142,13 +143,13 @@ export function useChat(ctx: UseChatContext) {
   useEffect(() => {
     if (messagesSaveSkipRef.current) {
       messagesSaveSkipRef.current = false
-      lastSavedMessagesSignatureRef.current = JSON.stringify(messages)
+      lastSavedMessagesSignatureRef.current = messagesSignature(messages)
       return
     }
-    // Skip if the messages we're about to persist are byte-identical to
+    // Skip if the messages we're about to persist are structurally identical to
     // what we already persisted (typically because BroadcastChannel just
     // handed us the storage payload that WAS already saved elsewhere).
-    const signature = JSON.stringify(messages)
+    const signature = messagesSignature(messages)
     if (signature === lastSavedMessagesSignatureRef.current) {
       return
     }
@@ -715,8 +716,6 @@ export function useChat(ctx: UseChatContext) {
   // render storm. Stabilizing here cuts the cascade at its source.
   return useMemo(() => ({
     messages,
-    sessionStartAt: sessionStartAtRef.current,
-    archivedMessageIds: archivedMessageIdsRef.current,
     currentSessionId: currentSessionIdRef.current,
     input,
     busy,

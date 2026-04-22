@@ -356,7 +356,7 @@ app.on('window-all-closed', () => {
   closeRendererServer()
   for (const child of childServices) {
     if (child && !child.killed) {
-      try { process.kill(child.pid) } catch {}
+      try { if (child.pid) process.kill(child.pid) } catch {}
     }
   }
   if (process.platform !== 'darwin') {
