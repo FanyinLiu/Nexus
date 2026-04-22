@@ -1,4 +1,4 @@
-import { createEncryptionKey } from './crypto'
+import { createEncryptionKey } from './crypto.ts'
 
 let keyPromise: Promise<CryptoKey> | null = null
 

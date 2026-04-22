@@ -480,7 +480,7 @@ export async function stopAll() {
  * Supports quoted args with embedded spaces: `--root "F:\my data"` → ['--root', 'F:\\my data'].
  * Lines are joined first so a user can freely use newlines in the textarea.
  */
-function parseArgsString(raw) {
+export function parseArgsString(raw) {
   if (!raw) return []
   const flat = String(raw).replace(/\r?\n/g, ' ').trim()
   if (!flat) return []

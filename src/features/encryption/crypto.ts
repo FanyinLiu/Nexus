@@ -1,4 +1,4 @@
-import type { EncryptedPayload } from './types'
+import type { EncryptedPayload } from './types.ts'
 
 const TEXT_ENCODER = new TextEncoder()
 const TEXT_DECODER = new TextDecoder()

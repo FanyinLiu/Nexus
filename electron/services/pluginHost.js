@@ -1,8 +1,8 @@
 import { readFile, readdir, stat, writeFile } from 'node:fs/promises'
-import { createHash } from 'node:crypto'
 import path from 'node:path'
 import { app, dialog } from 'electron'
 import * as mcpHost from './mcpHost.js'
+import { hashCommand, isPluginCommandTrusted as _isPluginCommandTrusted } from './pluginHostUtils.js'
 
 const PLUGINS_DIR_NAME = 'plugins'
 const PLUGIN_MANIFEST_FILE = 'plugin.json'
@@ -16,12 +16,7 @@ const _plugins = new Map()
 let _approvedPlugins = new Map()
 let _approvedPluginsLoaded = false
 
-function hashCommand(command, args = []) {
-  return createHash('sha256')
-    .update([command, ...args].join('\0'))
-    .digest('hex')
-    .slice(0, 16)
-}
+// hashCommand is now imported from pluginHostUtils.js
 
 /**
  * @typedef {{
@@ -81,10 +76,7 @@ export function isPluginApproved(pluginId) {
 
 /** Check if a plugin's command still matches its approved hash. */
 function isPluginCommandTrusted(plugin) {
-  const storedHash = _approvedPlugins.get(plugin.id)
-  // Falsy covers undefined (not approved) and '' (migrated from old format, needs re-approval)
-  if (!storedHash) return false
-  return storedHash === hashCommand(plugin.command, plugin.args)
+  return _isPluginCommandTrusted(plugin, _approvedPlugins)
 }
 
 export async function approvePlugin(pluginId) {

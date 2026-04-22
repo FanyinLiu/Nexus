@@ -1,5 +1,5 @@
-import { decryptText, encryptText } from './crypto'
-import { getEncryptionKey } from './keyManager'
+import { decryptText, encryptText } from './crypto.ts'
+import { getEncryptionKey } from './keyManager.ts'
 
 export async function secureSave<T>(key: string, value: T) {
   if (typeof window === 'undefined') {

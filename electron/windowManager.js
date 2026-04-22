@@ -3,6 +3,7 @@ import nodeNet from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getPreloadPath, getRendererEntry } from './rendererServer.js'
+import { clampWindowPosition, getPanelWindowPosition, PANEL_WINDOW_GAP_PX } from './windowManagerHelpers.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -15,7 +16,6 @@ const RUNTIME_CLIENT_TTL_MS = 25_000
 // workArea bounds. Use a larger bottom margin on macOS to keep the pet's
 // action buttons (mic, menu) above the Dock hit region.
 const PET_WINDOW_SCREEN_MARGIN_PX = process.platform === 'darwin' ? 80 : 24
-const PANEL_WINDOW_GAP_PX = 28
 const PANEL_WINDOW_DEFAULT_WIDTH = 540
 const PANEL_WINDOW_DEFAULT_HEIGHT = 780
 const PANEL_WINDOW_MIN_WIDTH = 500
@@ -233,37 +233,8 @@ export function setLaunchOnStartupState(value) {
   return getLaunchOnStartupState()
 }
 
-function clampWindowPosition(width, height, preferredX, preferredY, workArea) {
-  const maxX = workArea.x + Math.max(workArea.width - width, 0)
-  const maxY = workArea.y + Math.max(workArea.height - height, 0)
-
-  return {
-    x: Math.min(Math.max(Math.round(preferredX), workArea.x), maxX),
-    y: Math.min(Math.max(Math.round(preferredY), workArea.y), maxY),
-  }
-}
-
-function getPanelWindowPosition(width, height, ownerBounds, workArea) {
-  if (!ownerBounds) {
-    return clampWindowPosition(
-      width,
-      height,
-      workArea.x + workArea.width - width - 72,
-      workArea.y + 72,
-      workArea,
-    )
-  }
-
-  const spaceLeft = ownerBounds.x - workArea.x
-  const spaceRight = workArea.x + workArea.width - (ownerBounds.x + ownerBounds.width)
-  const preferRight = spaceRight >= spaceLeft
-  const rightX = ownerBounds.x + ownerBounds.width + PANEL_WINDOW_GAP_PX
-  const leftX = ownerBounds.x - width - PANEL_WINDOW_GAP_PX
-  const preferredX = preferRight ? rightX : leftX
-  const preferredY = ownerBounds.y + ownerBounds.height - height
-
-  return clampWindowPosition(width, height, preferredX, preferredY, workArea)
-}
+// clampWindowPosition and getPanelWindowPosition are imported from
+// windowManagerHelpers.js — kept Electron-free for unit testing.
 
 function rememberPanelWindowBounds() {
   if (!panelWindow || panelWindow.isDestroyed() || panelWindowState.collapsed) return
