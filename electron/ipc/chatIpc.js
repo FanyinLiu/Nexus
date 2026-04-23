@@ -242,6 +242,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       }
     }
 
+    let streamError = null
     try {
       while (!streamCompleted) {
         const { done, value } = await reader.read()
@@ -262,14 +263,39 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       if (!streamCompleted && sseBuffer.trim()) {
         streamCompleted = processSseLine(sseBuffer)
       }
+    } catch (err) {
+      // Capture so we can still emit a `done:true` frame to the renderer
+      // (otherwise the UI's isStreaming flag stays stuck forever) and
+      // re-throw after the cleanup runs.
+      streamError = err
     } finally {
       activeChatStreamControllers.delete(requestId)
       reader.releaseLock()
+
+      // Always emit a terminal frame so the renderer's stream consumer
+      // resolves. Without this, mid-stream errors would leave `isStreaming`
+      // stuck and the user would think the assistant is still typing.
+      if (!event.sender.isDestroyed()) {
+        const terminalPayload = streamError
+          ? {
+              requestId,
+              delta: '',
+              done: true,
+              error: streamError instanceof Error ? streamError.message : String(streamError),
+            }
+          : { requestId, delta: '', done: true }
+        try {
+          event.sender.send('chat:stream-delta', terminalPayload)
+        } catch (sendErr) {
+          console.warn('[chat:stream] failed to emit terminal frame:', sendErr?.message)
+        }
+      }
     }
 
-    if (!event.sender.isDestroyed()) {
-      event.sender.send('chat:stream-delta', { requestId, delta: '', done: true })
-    }
+    // Re-surface the original error to the invoker promise so callers
+    // see the rejection just like before — the change above is purely
+    // additive on the streaming side.
+    if (streamError) throw streamError
 
     const content = extractChatResponseContent(requestSpec.protocol, { content: fullContent })
 
