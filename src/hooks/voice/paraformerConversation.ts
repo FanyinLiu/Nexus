@@ -124,6 +124,10 @@ export async function startParaformerConversation(
 
   params.clearParaformerConversationState()
 
+  // Hoisted to the outer function scope so the outer catch can destroy it
+  // if startParaformerStream throws before the session ref assignment.
+  let vadDetector: VoiceActivityDetector | null = null
+
   try {
     const traceId = createId('voice')
     const traceLabel = formatTraceLabel(traceId)
@@ -209,7 +213,6 @@ export async function startParaformerConversation(
     params.appendVoiceTrace('Start Paraformer recognition', `#${traceLabel} running Paraformer streaming transcription`)
 
     // ── Silero VAD for accurate speech boundary detection ──────────────
-    let vadDetector: VoiceActivityDetector | null = null
     try {
       vadDetector = await createVoiceActivityDetector({
         onSpeechStart: () => {
@@ -301,6 +304,14 @@ export async function startParaformerConversation(
     params.setSpeechLevelValue(0)
     params.paraformerSessionRef.current?.abort()
     params.paraformerSessionRef.current = null
+
+    // If startParaformerStream threw after createVoiceActivityDetector
+    // already started, the detector's mic + AudioContext would leak
+    // because the ref assignment hadn't happened yet.
+    if (vadDetector) {
+      void vadDetector.destroy().catch(() => undefined)
+      vadDetector = null
+    }
 
     const message = error instanceof Error
       ? error.message

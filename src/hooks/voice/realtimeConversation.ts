@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer'
 import { logVoiceEvent } from '../../features/voice/shared'
 import { useTranslation } from '../../i18n'
@@ -27,6 +27,7 @@ export function useRealtimeConversation(deps: RealtimeConversationDeps) {
   const streamRef = useRef<MediaStream | null>(null)
   const feedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const processorRef = useRef<ScriptProcessorNode | null>(null)
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const pendingSamplesRef = useRef<number[]>([])
   const responseTextRef = useRef('')
@@ -38,8 +39,14 @@ export function useRealtimeConversation(deps: RealtimeConversationDeps) {
     }
     pendingSamplesRef.current = []
 
-    processorRef.current?.disconnect()
-    processorRef.current = null
+    if (processorRef.current) {
+      processorRef.current.onaudioprocess = null
+      processorRef.current.disconnect()
+      processorRef.current = null
+    }
+
+    sourceRef.current?.disconnect()
+    sourceRef.current = null
 
     audioCtxRef.current?.close().catch(() => {})
     audioCtxRef.current = null
@@ -179,6 +186,7 @@ export function useRealtimeConversation(deps: RealtimeConversationDeps) {
       const audioCtx = new AudioContext({ sampleRate: MIC_SAMPLE_RATE })
       audioCtxRef.current = audioCtx
       const source = audioCtx.createMediaStreamSource(stream)
+      sourceRef.current = source
       const processor = audioCtx.createScriptProcessor(4096, 1, 1)
       processorRef.current = processor
 
@@ -218,6 +226,20 @@ export function useRealtimeConversation(deps: RealtimeConversationDeps) {
       throw err
     }
   }, [cleanup, stopRealtimeSession, deps, t])
+
+  // Unmount-safety: if the component holding this hook disappears while a
+  // realtime session is still active (page navigation, chat panel close),
+  // full teardown must run — otherwise the mic track stays live, the
+  // AudioContext stays open, and the feed setInterval keeps pinging IPC.
+  useEffect(() => {
+    return () => {
+      if (activeRef.current) {
+        activeRef.current = false
+        cleanup()
+        window.desktopPet?.realtimeStop?.().catch(() => {})
+      }
+    }
+  }, [cleanup])
 
   return {
     startRealtimeSession,

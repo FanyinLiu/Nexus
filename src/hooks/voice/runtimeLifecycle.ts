@@ -4,6 +4,7 @@ import type { ParaformerStreamSession } from '../../features/hearing/localParafo
 import type { SenseVoiceStreamSession } from '../../features/hearing/localSenseVoice.ts'
 import type { TencentAsrStreamSession } from '../../features/hearing/tencentAsr.ts'
 import type { BrowserSpeechRecognition } from '../../lib/voice'
+import { cancelPendingWakewordAck } from './wakewordIntegration.ts'
 
 export type CleanupVoiceRuntimeResourcesOptions = {
   clearPendingVoiceRestart: () => void
@@ -18,6 +19,8 @@ export type CleanupVoiceRuntimeResourcesOptions = {
   tencentAsrSessionRef: MutableRefObject<TencentAsrStreamSession | null>
   apiRecordingRef: MutableRefObject<import('./types').ApiRecordingSession | null>
   wakewordRuntimeRef: MutableRefObject<WakewordRuntimeController | null>
+  wakewordAcknowledgingRef: MutableRefObject<boolean>
+  wakewordAckTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>
 }
 
 export function cleanupVoiceRuntimeResources(
@@ -39,4 +42,8 @@ export function cleanupVoiceRuntimeResources(
   options.tencentAsrSessionRef.current = null
   options.wakewordRuntimeRef.current?.destroy()
   options.wakewordRuntimeRef.current = null
+  cancelPendingWakewordAck({
+    wakewordAcknowledgingRef: options.wakewordAcknowledgingRef,
+    wakewordAckTimerRef: options.wakewordAckTimerRef,
+  })
 }

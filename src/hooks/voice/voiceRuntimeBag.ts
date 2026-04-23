@@ -81,6 +81,7 @@ export type VoiceRefs = {
   speechInterruptMonitorRef: MutableRefObject<SpeechInterruptMonitorSession | null>
   wakewordRuntimeRef: MutableRefObject<WakewordRuntimeController | null>
   wakewordAcknowledgingRef: MutableRefObject<boolean>
+  wakewordAckTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>
   activeVoiceConversationOptionsRef: MutableRefObject<VoiceConversationOptions>
   assistantSpeechGenerationRef: MutableRefObject<number>
   interruptedSpeechGenerationRef: MutableRefObject<number | null>

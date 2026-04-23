@@ -122,10 +122,13 @@ export async function startSenseVoiceConversation(
 
   params.clearSenseVoiceConversationState()
 
+  // Hoisted so outer catch can abort a session that got assigned by
+  // startSenseVoiceStream before ref assignment completed.
+  let session: SenseVoiceStreamSession | null = null
+
   try {
     const traceId = createId('voice')
     const traceLabel = formatTraceLabel(traceId)
-    let session: SenseVoiceStreamSession | null = null
     let speechDetected = false
     let finalizing = false
     let lastSpeechAt = performance.now()
@@ -272,6 +275,9 @@ export async function startSenseVoiceConversation(
     params.setVoiceState('idle')
     params.setMood('idle')
     params.setSpeechLevelValue(0)
+    // Prefer the local session handle — the ref may not have been
+    // assigned yet when startSenseVoiceStream threw.
+    session?.abort()
     params.sensevoiceSessionRef.current?.abort()
     params.sensevoiceSessionRef.current = null
 

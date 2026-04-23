@@ -126,6 +126,9 @@ export function useVoice(ctx: UseVoiceContext) {
   ) => void>(() => undefined)
   const wakewordKeywordDetectedRef = useRef<(keyword: string) => void>(() => undefined)
   const wakewordAcknowledgingRef = useRef(false)
+  // Handle for the ACK → startVoiceConversation setTimeout. Kept so we
+  // can cancel it if the wakeword runtime is torn down mid-window.
+  const wakewordAckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const activeVoiceConversationOptionsRef = useRef<VoiceConversationOptions>({})
   const assistantSpeechGenerationRef = useRef(0)
   const interruptedSpeechGenerationRef = useRef<number | null>(null)
@@ -409,6 +412,7 @@ export function useVoice(ctx: UseVoiceContext) {
       speechInterruptMonitorRef,
       wakewordRuntimeRef,
       wakewordAcknowledgingRef,
+      wakewordAckTimerRef,
       activeVoiceConversationOptionsRef,
       assistantSpeechGenerationRef,
       interruptedSpeechGenerationRef,
@@ -457,6 +461,7 @@ export function useVoice(ctx: UseVoiceContext) {
     acknowledgeWakewordAndStartListeningRuntime({
       keyword,
       wakewordAcknowledgingRef,
+      wakewordAckTimerRef,
       showPetStatus,
       updateVoicePipeline,
       startVoiceConversation: (options) => {
@@ -634,6 +639,8 @@ export function useVoice(ctx: UseVoiceContext) {
         tencentAsrSessionRef,
         apiRecordingRef,
         wakewordRuntimeRef,
+        wakewordAcknowledgingRef,
+        wakewordAckTimerRef,
       })
     }
   }, [clearPendingVoiceRestart])

@@ -32,6 +32,7 @@ type ShowPetStatus = (
 export type AcknowledgeWakewordAndStartListeningRuntimeOptions = {
   keyword: string
   wakewordAcknowledgingRef: MutableRefObject<boolean>
+  wakewordAckTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>
   showPetStatus: ShowPetStatus
   updateVoicePipeline: (
     step: VoicePipelineState['step'],
@@ -138,10 +139,36 @@ export function acknowledgeWakewordAndStartListeningRuntime(
   options.showPetStatus(pickAckStatus(options.ti), 1_600, 1_000)
   options.updateVoicePipeline('recognized', options.ti('voice.pipeline.wake_word_detected', { keyword: options.keyword }))
 
-  window.setTimeout(() => {
+  // Clear any previous pending ack (defensive — shouldn't happen given the
+  // acknowledging ref guard above, but preserves the invariant that only one
+  // pending ack can be in flight).
+  if (options.wakewordAckTimerRef.current) {
+    clearTimeout(options.wakewordAckTimerRef.current)
+  }
+
+  options.wakewordAckTimerRef.current = setTimeout(() => {
+    options.wakewordAckTimerRef.current = null
     options.wakewordAcknowledgingRef.current = false
     options.startVoiceConversation({ wakewordTriggered: true })
   }, WAKEWORD_ACK_DELAY_MS)
+}
+
+/**
+ * Cancel any in-flight wakeword-ack → start-conversation timer.
+ *
+ * Called when the wakeword runtime is torn down (user turns voice off,
+ * component unmounts, etc.) — without this, the 30 ms delayed callback
+ * fires against stale refs and may spawn a VAD session after teardown.
+ */
+export function cancelPendingWakewordAck(options: {
+  wakewordAcknowledgingRef: MutableRefObject<boolean>
+  wakewordAckTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>
+}) {
+  if (options.wakewordAckTimerRef.current) {
+    clearTimeout(options.wakewordAckTimerRef.current)
+    options.wakewordAckTimerRef.current = null
+  }
+  options.wakewordAcknowledgingRef.current = false
 }
 
 export function handleWakewordRuntimeStateChangeRuntime(

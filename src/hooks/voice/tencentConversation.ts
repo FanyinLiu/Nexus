@@ -140,10 +140,13 @@ export async function startTencentConversation(
 
   params.clearTencentConversationState()
 
+  // Hoisted so outer catch can abort a session that got assigned before
+  // ref assignment completed.
+  let session: TencentAsrStreamSession | null = null
+
   try {
     const traceId = createId('voice')
     const traceLabel = formatTraceLabel(traceId)
-    let session: TencentAsrStreamSession | null = null
     let latestText = ''
     let speechDetected = false
     let finalizing = false
@@ -341,6 +344,9 @@ export async function startTencentConversation(
     params.setVoiceState('idle')
     params.setMood('idle')
     params.setSpeechLevelValue(0)
+    // Prefer the local session handle — the ref may not have been
+    // assigned yet when startTencentAsrStream threw.
+    session?.abort()
     params.tencentAsrSessionRef.current?.abort()
     params.tencentAsrSessionRef.current = null
 
