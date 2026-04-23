@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/FanyinLiu/Nexus/releases/latest/download/Nexus-Setup-0.2.9.exe"><img src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows"></a>
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS"></a>
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
@@ -36,6 +36,7 @@ The design goal is persistence of relationship, not just chat. A nightly **dream
 
 ## News
 
+- **2026.04.24** — **v0.3.0-beta.1 released.** Relationship + emotional memory deepens along three independent axes: (1) mood-aware memory recall via VAD projection, with empathy/repair/reinforce regulatory modes; (2) one-shot milestone instructions when the relationship crosses a stage threshold for the first time, plus richer reunion framing that weaves last-session topic + emotion back in; (3) the flat 0–100 score now rides on four named sub-dimensions — trust, vulnerability, playfulness, intellectual — that grow from different kinds of interaction. Electron 36 → 41, 93 new unit tests, and a five-agent main-process hardening pass. [Release notes](docs/RELEASE-NOTES-v0.3.0-beta.1.md) · [Pre-release install](https://github.com/FanyinLiu/Nexus/releases/tag/v0.3.0-beta.1).
 - **2026.04.22** — **v0.2.9 released.** Emotional memory + 5-level relationship evolution lands — the companion now remembers the *feel* of how you parted, notices when you've been away, and its tone shifts as your relationship progresses. Weather + scene system overhauled with 14 intensity-graded weather states, continuous sunlight, and AI-generated day/dusk/night scene variants. Character Card v2/v3 import (chub.ai / characterhub compatible) and VTube Studio WebSocket bridge for external Live2D models. [What's new in v0.2.9](#whats-new-in-v029) below.
 - **2026.04.19** — **v0.2.7 released.** Subagent dispatcher lands — the companion can now spawn a background research helper from autonomy ticks or chat tool calls, surfaced in the chat panel as a live status strip. Barge-in monitor hardened: any TTS reply (voice *or* typed-text) is interruptible, and the wake-word listener's mic is reused to avoid macOS contention. Fixes a render-storm bug that made long STT utterances stall the second turn, and the matching cross-window sync bug that made voice messages invisible to an open chat panel. [Full v0.2.7 release notes →](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.7)
 - **2025.04.19** — v0.2.5 released. Autonomy Engine V2 now default-on (LLM-driven decision + persona guardrail replacing the hand-written rule tree). Chat pane opens fresh each launch with past sessions browsable under Settings → 聊天记录. Voice/TTS reliability pass. New `system-dark` theme preset. [Changelog →](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.5)
@@ -77,6 +78,86 @@ The design goal is persistence of relationship, not just chat. A nightly **dream
 - 🌐 **Multilingual UI.** Simplified Chinese, Traditional Chinese, English, Japanese, Korean.
 
 - 💰 **Cost-aware.** Built-in budget metering + Anthropic prompt caching on the system + tools prefix (30-50% input token reduction on long sessions).
+
+## What's new in v0.3.0-beta.1
+
+> **Pre-release.** Relationship evolution + emotional memory deepens along
+> three independent axes. All backward-compatible — existing v0.2.9 data
+> picks up seamlessly. Full developer-facing notes live in
+> [docs/RELEASE-NOTES-v0.3.0-beta.1.md](docs/RELEASE-NOTES-v0.3.0-beta.1.md).
+
+### 💝 Emotional resonance recall
+
+Current mood influences which memories surface. VAD (valence / arousal)
+projection of the 4D emotion state, with **three regulatory modes**:
+
+- **Reinforce** (default) — match current mood + salience
+- **Empathy** (triggered by "陪陪我" / "listen to me" + elevated concern)
+  — match on tone *and* emotional weight, surface moments where she was
+  genuinely there
+- **Repair** (triggered by "算了 换个话题" / "move on" or sustained severe
+  distress) — surface distant, positive memories to help reframe
+
+A priming ring buffer (last-3 recall centroids) prevents whiplash between
+unrelated moods. Intensity gating means neutral-mood turns skip the
+feature entirely.
+
+### 🎯 Relationship milestones + richer reunion
+
+Crossing the 10 / 30 / 55 / 80 score thresholds fires a **one-shot,
+understated instruction** the turn you cross it — telling the model to
+*perform* the shift (use a name, tease gently, be quietly vulnerable)
+rather than *announce* it. No badges, no pop-ups.
+
+Reunions now use absence duration + last-session emotion + stored topic:
+a 2-day gap at friend+ gets a "weave it back in naturally" directive; a
+10-day gap at close_friend+ with high prior concern prompts a gentle
+"did it get better?" check-in.
+
+### 🌳 Four sub-dimensions under the flat score
+
+The existing 0–100 score is now a blend of four named dimensions, each
+growing from a different kind of interaction:
+
+| Dimension | Grows from |
+|---|---|
+| **Trust** | Bringing problems to her, accepting her help |
+| **Vulnerability** | Sharing feelings, personal history, expressed sadness (first-person only) |
+| **Playfulness** | Jokes, laughter, playful teasing |
+| **Intellectual** | Deep questions, debate, mutual teaching |
+
+Diminishing returns prevent runaway growth. A slow daily drift toward a
+low baseline means dimensions erode gently with prolonged absence. Each
+dimension, when notably high or low, feeds **specific** prompt guidance
+— high `trust` tells the companion to honor that reliance, low
+`playfulness` tells her not to force humor.
+
+### 🔩 Under the hood
+
+- **Electron 36 → 41** (Node 24 ABI, macOS 12 minimum).
+- **93 new tests** lift the suite from 486 to 665. Five previously
+  untested modules now covered — plugin message bus, encryption, MCP +
+  plugin host, window manager geometry, minecraft gateway.
+- **Main-process audit** from a five-agent review: CSP script-src
+  tightened (`unsafe-eval` removed), vault file written with 0o600,
+  child-process PID null-guard, timer-leak cleanup across `mcpHost` /
+  `realtimeVoice` / `windowManager.panelBlur`.
+- Shared `driftToward()` + `classifyByPatterns()` helpers in
+  `src/lib/common.ts` deduplicate decay-math and regex-classification
+  kernels across emotion + relationship code paths.
+- O(n²) overlap-search in `chatRuntime.trimRepeatedStreamingDelta` now
+  capped at 200 chars; `useChat` signature hash replaces per-turn
+  `JSON.stringify(messages)`; `SpeechOutputSection` extracts a shared
+  `TuningSlider` component (-100 lines of render duplication).
+
+### Bug found by the gateway test pass
+
+`minecraftGateway.connect()` never registers a WebSocket `message`
+listener — `handleWsMessage` is dead code, inbound server events
+silently drop. Flagged in the gateway-tests commit; fix queued for the
+next beta.
+
+---
 
 ## What's new in v0.2.9
 
@@ -186,7 +267,7 @@ Grab the latest installer from the [releases page](https://github.com/FanyinLiu/
 
 | Platform | Asset |
 |---|---|
-| Windows | `Nexus-Setup-0.2.9.exe` (NSIS, unsigned — click *More info → Run anyway* on first launch) |
+| Windows | `Nexus-Setup-<version>.exe` (NSIS, unsigned — click *More info → Run anyway* on first launch) |
 | macOS | `.dmg` or `.zip` (unsigned — see macOS steps below) |
 | Linux | `.AppImage` / `.deb` / `.tar.gz` (AppImage: `chmod +x` then run) |
 
