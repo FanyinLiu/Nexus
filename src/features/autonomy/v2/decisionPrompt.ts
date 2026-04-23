@@ -22,6 +22,7 @@ import {
   type DecisionPromptStrings,
   getDecisionPromptStrings,
 } from './prompts/index.ts'
+import { formatSubDimensionsForPrompt } from '../relationshipDimensions.ts'
 
 export interface DecisionPromptHints {
   /**
@@ -182,6 +183,13 @@ function formatContextSections(
       daysInteracted: context.daysInteracted,
     }),
   )
+
+  // Relationship sub-dimensions — surfaced only when notably high or low,
+  // and only once the user has produced signals worth reporting.
+  if (context.subDimensions) {
+    const dimText = formatSubDimensionsForPrompt(context.subDimensions, context.relationshipLevel)
+    if (dimText) sections.push(dimText)
+  }
 
   // ── Recent chat ──
   if (context.recentMessages.length) {

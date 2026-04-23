@@ -2,7 +2,9 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
+  classifyMessageSignals,
   createDefaultEmotionState,
+  decayEmotion,
   emotionToPetMood,
   formatEmotionForPrompt,
   type EmotionState,
@@ -99,4 +101,79 @@ test('formatEmotionForPrompt emits "quietly proud" for the proud shade', () => {
 
 test('formatEmotionForPrompt returns empty string at neutral baseline', () => {
   assert.equal(formatEmotionForPrompt(createDefaultEmotionState()), '')
+})
+
+// ── decayEmotion ───────────────────────────────────────────────────────────
+
+test('decayEmotion pulls elevated values toward baseline', () => {
+  const elevated: EmotionState = { energy: 0.9, warmth: 0.9, curiosity: 0.9, concern: 0.9 }
+  const decayed = decayEmotion(elevated)
+  assert.ok(decayed.energy < elevated.energy, `energy should decay, got ${decayed.energy}`)
+  assert.ok(decayed.warmth < elevated.warmth)
+  assert.ok(decayed.curiosity < elevated.curiosity)
+  assert.ok(decayed.concern < elevated.concern)
+})
+
+test('decayEmotion lifts below-baseline values back up toward baseline', () => {
+  const depleted: EmotionState = { energy: 0.05, warmth: 0.05, curiosity: 0.05, concern: 0.05 }
+  const recovered = decayEmotion(depleted)
+  assert.ok(recovered.energy > depleted.energy)
+  assert.ok(recovered.warmth > depleted.warmth)
+})
+
+test('decayEmotion at the decay baseline is a fixed point', () => {
+  // decayEmotion's BASELINE is {0.5, 0.5, 0.4, 0.15} (distinct from createDefault).
+  const baseline: EmotionState = { energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.15 }
+  const next = decayEmotion(baseline)
+  assert.ok(Math.abs(next.energy - baseline.energy) < 1e-9)
+  assert.ok(Math.abs(next.warmth - baseline.warmth) < 1e-9)
+  assert.ok(Math.abs(next.curiosity - baseline.curiosity) < 1e-9)
+  assert.ok(Math.abs(next.concern - baseline.concern) < 1e-9)
+})
+
+test('decayEmotion returns a fresh object (no mutation)', () => {
+  const original = createDefaultEmotionState()
+  const next = decayEmotion(original)
+  assert.notEqual(next, original, 'expected new reference')
+})
+
+// ── classifyMessageSignals ─────────────────────────────────────────────────
+
+test('classifyMessageSignals detects greetings (CN and EN)', () => {
+  assert.ok(classifyMessageSignals('你好呀').includes('user_greeting'))
+  assert.ok(classifyMessageSignals('Hello there').includes('user_greeting'))
+  assert.ok(classifyMessageSignals('hi!').includes('user_greeting'))
+})
+
+test('classifyMessageSignals detects question marks and question words', () => {
+  assert.ok(classifyMessageSignals('really?').includes('user_question'))
+  assert.ok(classifyMessageSignals('为什么会这样').includes('user_question'))
+  assert.ok(classifyMessageSignals('what time is it').includes('user_question'))
+  assert.ok(classifyMessageSignals('这是什么？').includes('user_question'))
+})
+
+test('classifyMessageSignals detects praise', () => {
+  assert.ok(classifyMessageSignals('谢谢你').includes('user_praise'))
+  assert.ok(classifyMessageSignals('thanks so much').includes('user_praise'))
+  assert.ok(classifyMessageSignals('awesome').includes('user_praise'))
+})
+
+test('classifyMessageSignals detects frustration', () => {
+  assert.ok(classifyMessageSignals('这个破 bug 真烦').includes('user_frustration'))
+  assert.ok(classifyMessageSignals('shit, not working').includes('user_frustration'))
+})
+
+test('classifyMessageSignals detects farewells', () => {
+  assert.ok(classifyMessageSignals('再见').includes('user_farewell'))
+  assert.ok(classifyMessageSignals('晚安').includes('user_farewell'))
+  assert.ok(classifyMessageSignals('goodbye bye').includes('user_farewell'))
+})
+
+test('classifyMessageSignals returns empty for neutral statements with no signal words', () => {
+  assert.deepEqual(classifyMessageSignals('今天下雨了'), [])
+  assert.deepEqual(classifyMessageSignals('the room was empty'), [])
+})
+
+test('classifyMessageSignals trims leading whitespace before anchor match', () => {
+  assert.ok(classifyMessageSignals('  hi').includes('user_greeting'))
 })

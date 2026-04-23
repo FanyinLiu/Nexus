@@ -11,7 +11,18 @@ import {
   markDailyInteraction,
   recordLevelMilestone,
 } from '../../features/autonomy/relationshipTracker'
-import { AUTONOMY_RELATIONSHIP_STORAGE_KEY, readJson, writeJson } from '../../lib/storage'
+import {
+  applyRelationshipSignals,
+  classifyRelationshipSignals,
+  createDefaultSubDimensions,
+  decaySubDimensions,
+} from '../../features/autonomy/relationshipDimensions.ts'
+import {
+  AUTONOMY_RELATIONSHIP_STORAGE_KEY,
+  readJson,
+  writeJson,
+  writeJsonDebounced,
+} from '../../lib/storage'
 
 export function useRelationshipState() {
   const relationshipRef = useRef<RelationshipState>(
@@ -24,8 +35,28 @@ export function useRelationshipState() {
     const today = new Date().toISOString().slice(0, 10)
     if (today === lastAbsenceCheckDateRef.current) return
     lastAbsenceCheckDateRef.current = today
-    relationshipRef.current = applyAbsenceDecay(relationshipRef.current)
+    const decayed = applyAbsenceDecay(relationshipRef.current)
+    relationshipRef.current = decayed.subDimensions
+      ? { ...decayed, subDimensions: decaySubDimensions(decayed.subDimensions) }
+      : decayed
     writeJson(AUTONOMY_RELATIONSHIP_STORAGE_KEY, relationshipRef.current)
+  }, [])
+
+  /**
+   * Classify the user message for relationship signals and apply them to
+   * sub-dimensions. Lazily initializes subDimensions on first use so
+   * pre-v0.3 stored state migrates transparently. Writes are debounced
+   * because active chat can fire several signals a minute.
+   */
+  const processMessage = useCallback((text: string) => {
+    if (!text) return
+    const signals = classifyRelationshipSignals(text)
+    if (signals.length === 0) return
+    const prev = relationshipRef.current
+    const baseDims = prev.subDimensions ?? createDefaultSubDimensions()
+    const nextDims = applyRelationshipSignals(baseDims, signals)
+    relationshipRef.current = { ...prev, subDimensions: nextDims }
+    writeJsonDebounced(AUTONOMY_RELATIONSHIP_STORAGE_KEY, relationshipRef.current)
   }, [])
 
   const markInteraction = useCallback(() => {
@@ -73,6 +104,7 @@ export function useRelationshipState() {
     decayOnTick,
     markInteraction,
     consumePendingMilestoneText,
+    processMessage,
     getRelationshipPrompt,
     updateSessionContext,
   }

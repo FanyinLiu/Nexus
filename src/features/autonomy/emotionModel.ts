@@ -11,6 +11,7 @@
  * Drives system prompt tone parameters and Live2D mood mapping.
  */
 
+import { classifyByPatterns, driftToward } from '../../lib/common.ts'
 import type { PetMood } from '../../types'
 
 export interface EmotionState {
@@ -74,12 +75,7 @@ export function applyEmotionSignal(state: EmotionState, signal: EmotionSignal): 
 
 /** Decay emotion state toward baseline (call once per tick). */
 export function decayEmotion(state: EmotionState): EmotionState {
-  return {
-    energy: state.energy + (BASELINE.energy - state.energy) * DECAY_RATE,
-    warmth: state.warmth + (BASELINE.warmth - state.warmth) * DECAY_RATE,
-    curiosity: state.curiosity + (BASELINE.curiosity - state.curiosity) * DECAY_RATE,
-    concern: state.concern + (BASELINE.concern - state.concern) * DECAY_RATE,
-  }
+  return driftToward(state, BASELINE, DECAY_RATE)
 }
 
 // ── Mood mapping ────────────────────────────────────────────────────────────
@@ -146,28 +142,17 @@ export function emotionToPetMood(state: EmotionState): PetMood {
 
 // ── Message signal classification ──────────────────────────────────────────
 
+const EMOTION_SIGNAL_PATTERNS: ReadonlyArray<{ signal: EmotionSignal; pattern: RegExp }> = [
+  { signal: 'user_greeting', pattern: /^(你好|早上好|嗨|hi|hello|hey|早|早安|午安)/i },
+  { signal: 'user_farewell', pattern: /(再见|拜拜|bye|晚安|下次见|回头见)/i },
+  { signal: 'user_question', pattern: /^(为什么|怎么|什么|哪|谁|how|what|why|where|when|who)|[?？]$/i },
+  { signal: 'user_praise', pattern: /(谢谢|棒|厉害|不错|好的|太好了|感谢|真棒|666|nice|great|awesome|thanks|thank you)/i },
+  { signal: 'user_frustration', pattern: /(烦|不行|错了|废物|垃圾|没用|bug|坏了|崩溃|shit|damn|frustrated)/i },
+]
+
 /** Classify a user message into emotion signals (simple heuristic, no LLM). */
 export function classifyMessageSignals(text: string): EmotionSignal[] {
-  const signals: EmotionSignal[] = []
-  const t = text.trim().toLowerCase()
-
-  if (/^(你好|早上好|嗨|hi|hello|hey|早|早安|午安)/.test(t)) {
-    signals.push('user_greeting')
-  }
-  if (/(再见|拜拜|bye|晚安|下次见|回头见)/.test(t)) {
-    signals.push('user_farewell')
-  }
-  if (/[?？]$/.test(t) || /^(为什么|怎么|什么|哪|谁|how|what|why|where|when|who)/.test(t)) {
-    signals.push('user_question')
-  }
-  if (/(谢谢|棒|厉害|不错|好的|太好了|感谢|真棒|666|nice|great|awesome|thanks|thank you)/i.test(t)) {
-    signals.push('user_praise')
-  }
-  if (/(烦|不行|错了|废物|垃圾|没用|bug|坏了|崩溃|shit|damn|frustrated)/i.test(t)) {
-    signals.push('user_frustration')
-  }
-
-  return signals
+  return classifyByPatterns(text.trim(), EMOTION_SIGNAL_PATTERNS)
 }
 
 // ── Prompt context ──────────────────────────────────────────────────────────

@@ -421,6 +421,7 @@ export function useAppController() {
       for (const signal of classifyMessageSignals(messageText)) {
         live.applyEmotionSignal(signal)
       }
+      live.processRelationshipMessage(messageText)
     }
 
     const emotion = live.emotionStateRef.current

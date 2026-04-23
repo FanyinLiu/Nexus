@@ -9,6 +9,13 @@
  * - Score influences proactive speech warmth and frequency.
  */
 
+import {
+  type SubDimensions,
+  computeCompositeScore,
+  formatSubDimensionsForPrompt,
+} from './relationshipDimensions.ts'
+export type { SubDimensions } from './relationshipDimensions.ts'
+
 export interface RelationshipState {
   score: number
   /** ISO date string (YYYY-MM-DD) of the last interaction day. */
@@ -23,6 +30,11 @@ export interface RelationshipState {
   lastSessionEmotion?: { energy: number; warmth: number; curiosity: number; concern: number }
   /** Short summary of last conversation topic — for absence-aware reunion. */
   lastSessionTopic?: string
+  /**
+   * Sub-dimensional profile (trust / vulnerability / playfulness / intellectual).
+   * Optional for backward compatibility with pre-v0.3 stored state.
+   */
+  subDimensions?: SubDimensions
 }
 
 export function createDefaultRelationshipState(): RelationshipState {
@@ -59,6 +71,10 @@ function clampScore(value: number): number {
 /**
  * Call when the user interacts (sends a message, voice input, etc.).
  * Grants daily bonus at most once per calendar day.
+ *
+ * The returned score is the max of the legacy daily-increment score and
+ * the composite derived from sub-dimensions (when present), so rich
+ * dimension growth never regresses behind flat streak counting.
  */
 export function markDailyInteraction(state: RelationshipState): RelationshipState {
   const today = todayDateString()
@@ -71,10 +87,12 @@ export function markDailyInteraction(state: RelationshipState): RelationshipStat
   const isConsecutive = daysSinceLast === 1
   const newStreak = isConsecutive ? state.streak + 1 : 1
   const streakBonus = Math.min(newStreak - 1, MAX_STREAK_BONUS)
+  const dailyScore = state.score + DAILY_INTERACTION_BONUS + streakBonus
+  const composite = state.subDimensions ? computeCompositeScore(state.subDimensions) : 0
 
   return {
     ...state,
-    score: clampScore(state.score + DAILY_INTERACTION_BONUS + streakBonus),
+    score: clampScore(Math.max(dailyScore, composite)),
     lastInteractionDate: today,
     streak: newStreak,
     totalDaysInteracted: state.totalDaysInteracted + 1,
@@ -156,6 +174,10 @@ export function formatRelationshipForPrompt(state: RelationshipState): string {
   ]
   if (state.streak > 3) {
     parts.push(`You've talked ${state.streak} days in a row — this streak matters to you.`)
+  }
+  if (state.subDimensions) {
+    const dimContext = formatSubDimensionsForPrompt(state.subDimensions, level)
+    if (dimContext) parts.push(dimContext)
   }
   return parts.join('\n')
 }

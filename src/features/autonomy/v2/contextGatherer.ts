@@ -142,6 +142,11 @@ export interface AutonomyContextV2 {
   daysInteracted: number
   /** Consecutive-day interaction streak. */
   streak: number
+  /**
+   * Sub-dimensional relationship profile (trust / vulnerability /
+   * playfulness / intellectual). Absent on fresh / pre-v0.3 state.
+   */
+  subDimensions?: import('../relationshipDimensions.ts').SubDimensions
 
   // ── Recent conversation ──
   /** Last N (user, assistant) messages, oldest first. */
@@ -342,6 +347,7 @@ export function gatherAutonomyContext(input: ContextGathererInput): AutonomyCont
     relationshipScore: input.relationship.score,
     daysInteracted: input.relationship.totalDaysInteracted,
     streak: input.relationship.streak,
+    subDimensions: input.relationship.subDimensions,
 
     recentMessages,
     topMemories,
