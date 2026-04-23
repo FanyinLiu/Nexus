@@ -123,3 +123,64 @@ export function checkUrlSafety(input, options = {}) {
 
   return { ok: true }
 }
+
+/**
+ * Permissive variant for chat / API base URLs.
+ *
+ * Real Nexus users run local LLMs (Ollama on 127.0.0.1, LM Studio on
+ * 192.168.x.x LAN, etc.) so the strict RFC1918 / loopback block in
+ * checkUrlSafety would break legitimate setups. Instead this only refuses
+ * URLs that have no plausible legitimate use:
+ *   - Cloud metadata IMDS (169.254.169.254 + named hosts)
+ *   - 0.0.0.0 / 0/8
+ *   - file:// / gopher:// / data:// schemes
+ *   - Malformed URLs
+ *
+ * The threat this closes: a renderer can't redirect chat requests to
+ * `http://169.254.169.254/latest/meta-data/iam/security-credentials/`
+ * to scrape AWS instance credentials. Loopback and LAN ranges stay
+ * usable for real local-provider workflows.
+ */
+const IMDS_BLOCK_IPV4_PATTERNS = [
+  /^169\.254\./,
+  /^0\./,
+]
+const IMDS_BLOCK_HOSTS = new Set([
+  '0.0.0.0',
+  'metadata.google.internal',
+  'metadata',
+  'metadata.azure.com',
+])
+
+export function checkChatBaseUrlSafety(input) {
+  if (typeof input !== 'string' || !input.trim()) {
+    return { ok: false, reason: 'empty URL' }
+  }
+
+  let parsed
+  try {
+    parsed = new URL(input)
+  } catch {
+    return { ok: false, reason: 'malformed URL' }
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return { ok: false, reason: `disallowed scheme: ${parsed.protocol}` }
+  }
+
+  const rawHost = parsed.hostname.toLowerCase()
+  const host = rawHost.startsWith('[') && rawHost.endsWith(']')
+    ? rawHost.slice(1, -1)
+    : rawHost
+
+  if (IMDS_BLOCK_HOSTS.has(host)) {
+    return { ok: false, reason: `blocked metadata host: ${host}` }
+  }
+  for (const pattern of IMDS_BLOCK_IPV4_PATTERNS) {
+    if (pattern.test(host)) {
+      return { ok: false, reason: `blocked metadata-range IP: ${host}` }
+    }
+  }
+
+  return { ok: true }
+}

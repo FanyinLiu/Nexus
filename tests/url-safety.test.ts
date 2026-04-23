@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 
-import { checkUrlSafety } from '../electron/services/urlSafety.js'
+import { checkChatBaseUrlSafety, checkUrlSafety } from '../electron/services/urlSafety.js'
 
 describe('checkUrlSafety scheme guard', () => {
   test('accepts https:// by default', () => {
@@ -109,5 +109,52 @@ describe('checkUrlSafety allowPrivate escape hatch', () => {
       checkUrlSafety('file:///tmp', { allowPrivate: true }).ok,
       false,
     )
+  })
+})
+
+describe('checkChatBaseUrlSafety (permissive — allows local LLM URLs)', () => {
+  test('allows loopback (Ollama on 127.0.0.1)', () => {
+    assert.equal(checkChatBaseUrlSafety('http://127.0.0.1:11434/v1').ok, true)
+  })
+
+  test('allows localhost', () => {
+    assert.equal(checkChatBaseUrlSafety('http://localhost:8080/v1').ok, true)
+  })
+
+  test('allows RFC1918 LAN (LM Studio on 192.168.x.x)', () => {
+    assert.equal(checkChatBaseUrlSafety('http://192.168.1.50:11434/v1').ok, true)
+    assert.equal(checkChatBaseUrlSafety('http://10.0.0.5:11434/v1').ok, true)
+  })
+
+  test('allows public hosts', () => {
+    assert.equal(checkChatBaseUrlSafety('https://api.openai.com/v1').ok, true)
+    assert.equal(checkChatBaseUrlSafety('https://api.anthropic.com/v1').ok, true)
+  })
+
+  test('blocks AWS IMDS', () => {
+    const r = checkChatBaseUrlSafety('http://169.254.169.254/latest/meta-data/')
+    assert.equal(r.ok, false)
+    assert.match(r.reason ?? '', /metadata-range/)
+  })
+
+  test('blocks GCP metadata host', () => {
+    assert.equal(checkChatBaseUrlSafety('http://metadata.google.internal/').ok, false)
+  })
+
+  test('blocks Azure metadata host', () => {
+    assert.equal(checkChatBaseUrlSafety('http://metadata.azure.com/').ok, false)
+  })
+
+  test('blocks 0.0.0.0', () => {
+    assert.equal(checkChatBaseUrlSafety('http://0.0.0.0/api').ok, false)
+  })
+
+  test('blocks file://', () => {
+    assert.equal(checkChatBaseUrlSafety('file:///etc/passwd').ok, false)
+  })
+
+  test('rejects malformed URLs', () => {
+    assert.equal(checkChatBaseUrlSafety('not-a-url').ok, false)
+    assert.equal(checkChatBaseUrlSafety('').ok, false)
   })
 })

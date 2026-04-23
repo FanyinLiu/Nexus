@@ -8,6 +8,7 @@ import {
   normalizeBaseUrl as _normalizeBaseUrl,
   shouldLabelAsConnectionFailure as _shouldLabelAsConnectionFailure,
 } from './netHelpers.js'
+import { checkChatBaseUrlSafety } from './services/urlSafety.js'
 
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
 
@@ -60,6 +61,16 @@ export async function performNetworkRequest(url, options = {}) {
     forceNativeFetch = false,
     ...rest
   } = options
+
+  // SSRF guard: refuse URLs that point at cloud-metadata IMDS endpoints
+  // before we hit the network. Loopback/LAN stay allowed — Nexus users
+  // run local LLMs that genuinely live there. The check is permissive
+  // by design; see checkChatBaseUrlSafety in urlSafety.js for the
+  // specific threats it closes (AWS/GCP/Azure metadata exfil).
+  const safety = checkChatBaseUrlSafety(url)
+  if (!safety.ok) {
+    throw new Error(`refusing to fetch from this URL: ${safety.reason}`)
+  }
 
   const abortController = signal ? null : new AbortController()
   const requestSignal = signal ?? abortController?.signal
