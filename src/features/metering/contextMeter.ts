@@ -31,6 +31,13 @@ export interface DailyMeterRecord {
   totalCostUsd: number
   callCount: number
   bySource: Record<MeterSource, { input: number; output: number; calls: number; costUsd: number }>
+  /**
+   * Per-model accumulation. Keys are the raw modelId strings passed to
+   * recordUsage. Optional for backward compatibility — records persisted
+   * before this field was added will be missing it; the loader normalises
+   * them to an empty object on read.
+   */
+  byModel?: Record<string, { input: number; output: number; calls: number; costUsd: number }>
 }
 
 export interface MeterSnapshot {
@@ -158,6 +165,7 @@ function loadDailyRecord(): DailyMeterRecord {
     if (parsed.date !== todayKey()) { _dailyCache = createDailyRecord(); return _dailyCache }
     _dailyCache = parsed
     if (typeof _dailyCache.totalCostUsd !== 'number') _dailyCache.totalCostUsd = 0
+    if (!_dailyCache.byModel) _dailyCache.byModel = {}
     return _dailyCache
   } catch {
     _dailyCache = createDailyRecord()
@@ -180,6 +188,7 @@ function createDailyRecord(): DailyMeterRecord {
       tool:               { input: 0, output: 0, calls: 0, costUsd: 0 },
       other:              { input: 0, output: 0, calls: 0, costUsd: 0 },
     },
+    byModel: {},
   }
 }
 
@@ -241,7 +250,50 @@ export function recordUsage(
   daily.bySource[source].calls++
   daily.bySource[source].costUsd += costUsd
 
+  if (options.modelId) {
+    if (!daily.byModel) daily.byModel = {}
+    if (!daily.byModel[options.modelId]) {
+      daily.byModel[options.modelId] = { input: 0, output: 0, calls: 0, costUsd: 0 }
+    }
+    daily.byModel[options.modelId].input += inputTokens
+    daily.byModel[options.modelId].output += outputTokens
+    daily.byModel[options.modelId].calls++
+    daily.byModel[options.modelId].costUsd += costUsd
+  }
+
   saveDailyRecord(daily)
+}
+
+// ── Historical range reader ───────────────────────────────────────────────
+
+/**
+ * Load the last `days` per-day records (most recent first), skipping days
+ * that have no entry. Used by the cost-history panel to draw a bar chart
+ * of recent spend.
+ */
+export function loadDailyRange(days: number): DailyMeterRecord[] {
+  if (days <= 0) return []
+  const out: DailyMeterRecord[] = []
+  const today = new Date()
+  today.setUTCHours(0, 0, 0, 0)
+
+  for (let i = 0; i < days; i++) {
+    const d = new Date(today)
+    d.setUTCDate(d.getUTCDate() - i)
+    const dateKey = d.toISOString().slice(0, 10)
+    try {
+      const raw = localStorage.getItem(dailyStorageKey(dateKey))
+      if (!raw) continue
+      const parsed = JSON.parse(raw) as DailyMeterRecord
+      if (typeof parsed.totalCostUsd !== 'number') parsed.totalCostUsd = 0
+      if (!parsed.byModel) parsed.byModel = {}
+      out.push(parsed)
+    } catch {
+      // Corrupt entry — skip it rather than fail the whole range read.
+    }
+  }
+
+  return out
 }
 
 /**
@@ -314,4 +366,13 @@ export function resetSession(): void {
   for (const key of Object.keys(_sessionBySource)) {
     delete _sessionBySource[key]
   }
+}
+
+/**
+ * Clear the module-scoped daily cache. Exported for tests; production
+ * code does not need this — the cache self-invalidates when the date
+ * rolls over.
+ */
+export function __resetDailyCache(): void {
+  _dailyCache = null
 }
