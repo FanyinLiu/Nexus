@@ -153,13 +153,69 @@ export function syncPetWindowState() {
   }
 }
 
-function sanitizePartialState(partialState) {
+// Per-key runtime-state schema. Each entry maps a key to the JS typeof
+// it must match. Anything not in this map (or that doesn't match the
+// declared type) is silently dropped from the renderer-supplied payload.
+//
+// Without this, `runtime-state:update` accepts any shape from the
+// renderer and spread-merges into shared main-process state — a hostile
+// page could pour in megabyte-scale strings or wrong-type values that
+// crash subscribers. The allowlist closes the door.
+const RUNTIME_STATE_SCHEMA = {
+  mood: 'string',
+  continuousVoiceActive: 'boolean',
+  panelSettingsOpen: 'boolean',
+  voiceState: 'string',
+  wakewordPhase: 'string',
+  wakewordActive: 'boolean',
+  wakewordAvailable: 'boolean',
+  wakewordWakeWord: 'string',
+  wakewordReason: 'string',
+  wakewordLastTriggeredAt: 'string',
+  wakewordError: 'string',
+  wakewordUpdatedAt: 'string',
+  assistantActivity: 'string',
+  searchInProgress: 'boolean',
+  ttsInProgress: 'boolean',
+  schedulerArmed: 'boolean',
+  schedulerNextRunAt: 'string',
+  activeTaskLabel: 'string',
+}
+
+const RUNTIME_STATE_STRING_MAX = 256
+
+// Per-key pet-window-state schema. Same allowlist pattern as the
+// runtime-state schema above, but for the smaller pet-window surface.
+const PET_WINDOW_STATE_SCHEMA = {
+  isPinned: 'boolean',
+  clickThrough: 'boolean',
+  petHotspotActive: 'boolean',
+}
+
+function sanitizeBySchema(partialState, schema, stringMax = RUNTIME_STATE_STRING_MAX) {
+  if (!partialState || typeof partialState !== 'object') return Object.create(null)
   const safe = Object.create(null)
   for (const [key, value] of Object.entries(partialState)) {
-    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue
-    safe[key] = value
+    const expected = schema[key]
+    if (!expected) continue                  // not in the allowlist
+    if (typeof value !== expected) continue  // wrong type
+    if (expected === 'string') {
+      // Trim and clamp to a sensible max so a renderer can't dump a
+      // multi-MB blob into shared state and re-broadcast it everywhere.
+      safe[key] = value.length > stringMax ? value.slice(0, stringMax) : value
+    } else {
+      safe[key] = value
+    }
   }
   return safe
+}
+
+function sanitizePartialState(partialState) {
+  return sanitizeBySchema(partialState, RUNTIME_STATE_SCHEMA)
+}
+
+function sanitizePetWindowPartial(partialState) {
+  return sanitizeBySchema(partialState, PET_WINDOW_STATE_SCHEMA)
 }
 
 export function updateRuntimeState(partialState, originWebContentsId = null) {
@@ -194,7 +250,7 @@ export function applyPetWindowState() {
 }
 
 export function updatePetWindowState(partialState = {}) {
-  const safe = sanitizePartialState(partialState)
+  const safe = sanitizePetWindowPartial(partialState)
   petWindowState = {
     ...petWindowState,
     ...safe,
