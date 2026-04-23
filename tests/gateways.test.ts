@@ -95,7 +95,7 @@ describe('minecraftGateway: WebSocket integration', () => {
 
     // The 'connected' event should be logged.
     const events = getRecentEvents(100)
-    const types = events.map((e: any) => e.type)
+    const types = events.map((e: { type: string }) => e.type)
     assert.ok(types.includes('connected'), `expected 'connected' in ${JSON.stringify(types)}`)
 
     // onEvent callback should have fired for the 'connected' event.
@@ -153,9 +153,13 @@ describe('minecraftGateway: WebSocket integration', () => {
     sendCommand('/say hi')
     await new Promise((r) => setTimeout(r, 100))
 
+    type McpWsMessage = {
+      header?: { messagePurpose?: string }
+      body?: { commandLine?: string; eventName?: string }
+    }
     const cmdMsg = received
-      .map((r) => JSON.parse(r))
-      .find((m: any) =>
+      .map((r) => JSON.parse(r) as McpWsMessage)
+      .find((m) =>
         m.header?.messagePurpose === 'commandRequest' &&
         m.body?.commandLine === '/say hi'
       )
@@ -180,10 +184,14 @@ describe('minecraftGateway: WebSocket integration', () => {
     await connect('127.0.0.1', port, 'SubUser')
     await connReady
 
+    type WsSubMessage = {
+      header?: { messagePurpose?: string }
+      body?: { eventName?: string }
+    }
     const subscriptions = received
-      .map((r) => JSON.parse(r))
-      .filter((m: any) => m.header?.messagePurpose === 'subscribe')
-      .map((m: any) => m.body?.eventName)
+      .map((r) => JSON.parse(r) as WsSubMessage)
+      .filter((m) => m.header?.messagePurpose === 'subscribe')
+      .map((m) => m.body?.eventName)
 
     const expected = [
       'PlayerMessage', 'PlayerJoin', 'PlayerLeave', 'PlayerDied',

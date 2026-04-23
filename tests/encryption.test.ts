@@ -2,7 +2,7 @@ import { webcrypto } from 'node:crypto'
 import { describe, it, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 
-if (!globalThis.crypto) globalThis.crypto = webcrypto as any
+if (!globalThis.crypto) globalThis.crypto = webcrypto as unknown as Crypto
 
 import { createEncryptionKey, encryptText, decryptText } from '../src/features/encryption/crypto.ts'
 import {
