@@ -90,13 +90,25 @@ jobs:
             gh release delete "$TAG" --repo "${{ github.repository }}" --yes --cleanup-tag=false
           fi
 
+          # SemVer convention: any tag containing '-' (e.g. v1.0.0-beta.1,
+          # v1.0.0-rc.2, v1.0.0-alpha.3) is a pre-release. electron-builder
+          # picks up on the pre-release identifier and publishes to the
+          # `beta.yml` channel instead of `latest.yml`, so stable users
+          # aren't auto-upgraded to unstable builds.
+          PRERELEASE_FLAG=""
+          if [[ "$TAG" == *-* ]]; then
+            PRERELEASE_FLAG="--prerelease"
+            echo "Tag '$TAG' looks like a pre-release — marking release as pre-release."
+          fi
+
           echo "Creating draft release $TAG"
           gh release create "$TAG" \
             --repo "${{ github.repository }}" \
             --title "$TAG" \
             --notes "## Nexus $TAG" \
             --target "${{ github.sha }}" \
-            --draft
+            --draft \
+            $PRERELEASE_FLAG
 
   build:
     needs: ensure-release
