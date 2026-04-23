@@ -39,6 +39,7 @@ export function PanelView({
   togglePanelCollapse,
   closePanel,
   subagentTasks,
+  cancelSubagentTask,
   settingsDrawer,
   onboardingGuide,
 }: PanelViewProps) {
@@ -363,7 +364,7 @@ export function PanelView({
 
             <ActivePlanStrip />
 
-            <SubagentTaskStrip tasks={subagentTasks} />
+            <SubagentTaskStrip tasks={subagentTasks} onCancel={cancelSubagentTask} />
 
             <section className="companion-chat">
 

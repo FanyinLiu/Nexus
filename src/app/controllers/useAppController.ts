@@ -466,6 +466,7 @@ export function useAppController() {
     petRuntimeContinuousVoiceActive,
     reminderTasks: reminderTaskStore.reminderTasks,
     debugConsoleEvents: debugConsole.debugConsoleEvents,
+    subagentTasks: autonomy.subagentTasks,
     loadPetModels,
     memory,
     chat: chatWithAutonomy,
@@ -552,6 +553,7 @@ export function useAppController() {
     notificationBridge: autonomy.notificationBridge,
     contextScheduler: autonomy.contextScheduler,
     subagentTasks: autonomy.subagentTasks,
+    cancelSubagentTask: autonomy.cancelSubagentTask,
   }), [
     settings,
     petModel,
@@ -570,6 +572,7 @@ export function useAppController() {
     autonomy.notificationBridge,
     autonomy.contextScheduler,
     autonomy.subagentTasks,
+    autonomy.cancelSubagentTask,
   ])
 
   return {

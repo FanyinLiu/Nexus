@@ -107,3 +107,70 @@ test('concurrency cap is clamped to the hard ceiling of 3', () => {
   const overflow = runtime.admitTask({ parentTurnId: 't', task: 'overflow', purpose: 'p' })
   assert.equal(overflow.ok, false)
 })
+
+// ── cancelTask ──────────────────────────────────────────────────────────────
+
+test('cancelTask moves a queued task to cancelled with a default reason', () => {
+  const runtime = createSubagentRuntime({ settings: freshSettings() })
+  const admit = runtime.admitTask({ parentTurnId: 't', task: 'research X', purpose: 'p' })
+  assert.equal(admit.ok, true)
+  if (!admit.ok) return
+
+  const result = runtime.cancelTask(admit.task.id)
+  assert.ok(result, 'expected cancelTask to return the updated task')
+  assert.equal(result!.status, 'cancelled')
+  assert.equal(result!.failureReason, 'cancelled by user')
+  assert.ok(result!.finishedAt, 'finishedAt should be set')
+})
+
+test('cancelTask honours an explicit reason string', () => {
+  const runtime = createSubagentRuntime({ settings: freshSettings() })
+  const admit = runtime.admitTask({ parentTurnId: 't', task: 'a', purpose: 'p' })
+  if (!admit.ok) throw new Error('admit failed')
+  runtime.startTask(admit.task.id)
+
+  const result = runtime.cancelTask(admit.task.id, 'budget exceeded by user')
+  assert.equal(result!.failureReason, 'budget exceeded by user')
+})
+
+test('cancelTask frees up concurrency capacity', () => {
+  const runtime = createSubagentRuntime({ settings: freshSettings({ maxConcurrent: 1 }) })
+  const first = runtime.admitTask({ parentTurnId: 't', task: 'a', purpose: 'p' })
+  assert.equal(first.ok, true)
+  if (!first.ok) return
+
+  const blocked = runtime.admitTask({ parentTurnId: 't', task: 'b', purpose: 'p' })
+  assert.equal(blocked.ok, false)
+
+  runtime.cancelTask(first.task.id)
+  const retry = runtime.admitTask({ parentTurnId: 't', task: 'c', purpose: 'p' })
+  assert.equal(retry.ok, true)
+})
+
+test('cancelTask is a no-op on already-completed tasks', () => {
+  const runtime = createSubagentRuntime({ settings: freshSettings() })
+  const admit = runtime.admitTask({ parentTurnId: 't', task: 'a', purpose: 'p' })
+  if (!admit.ok) throw new Error('admit failed')
+  runtime.startTask(admit.task.id)
+  runtime.completeTask(admit.task.id, 'done')
+
+  const result = runtime.cancelTask(admit.task.id)
+  assert.equal(result!.status, 'completed', 'completed task must not become cancelled')
+})
+
+test('cancelTask is a no-op on a previously failed task (preserves failureReason)', () => {
+  const runtime = createSubagentRuntime({ settings: freshSettings() })
+  const admit = runtime.admitTask({ parentTurnId: 't', task: 'a', purpose: 'p' })
+  if (!admit.ok) throw new Error('admit failed')
+  runtime.startTask(admit.task.id)
+  runtime.failTask(admit.task.id, 'LLM timed out')
+
+  const result = runtime.cancelTask(admit.task.id, 'user pressed cancel')
+  assert.equal(result!.status, 'failed')
+  assert.equal(result!.failureReason, 'LLM timed out')
+})
+
+test('cancelTask returns null for an unknown id', () => {
+  const runtime = createSubagentRuntime({ settings: freshSettings() })
+  assert.equal(runtime.cancelTask('does-not-exist'), null)
+})

@@ -6,10 +6,10 @@ const DEFAULT_PRICING: UsagePricing[] = [
   // Anthropic
   {
     providerId: 'anthropic',
-    modelId: 'claude-opus-4-6',
+    modelId: 'claude-opus-4-7',
     tier: 'heavy',
-    inputPricePerMTokens: 15,
-    outputPricePerMTokens: 75,
+    inputPricePerMTokens: 5,
+    outputPricePerMTokens: 25,
   },
   {
     providerId: 'anthropic',
@@ -25,20 +25,27 @@ const DEFAULT_PRICING: UsagePricing[] = [
     inputPricePerMTokens: 0.8,
     outputPricePerMTokens: 4,
   },
-  // OpenAI
+  // OpenAI — GPT-5.5 (2026-04-23, API rolling out) + 5.4 family (2026-03)
   {
     providerId: 'openai',
-    modelId: 'gpt-4o-mini',
-    tier: 'cheap',
-    inputPricePerMTokens: 0.15,
-    outputPricePerMTokens: 0.6,
+    modelId: 'gpt-5.5-pro',
+    tier: 'heavy',
+    inputPricePerMTokens: 30,
+    outputPricePerMTokens: 180,
   },
   {
     providerId: 'openai',
-    modelId: 'gpt-4o',
+    modelId: 'gpt-5.5',
+    tier: 'heavy',
+    inputPricePerMTokens: 5,
+    outputPricePerMTokens: 30,
+  },
+  {
+    providerId: 'openai',
+    modelId: 'gpt-5.4',
     tier: 'heavy',
     inputPricePerMTokens: 2.5,
-    outputPricePerMTokens: 10,
+    outputPricePerMTokens: 15,
   },
   // DeepSeek
   {
@@ -62,10 +69,15 @@ const DEFAULT_PRICING: UsagePricing[] = [
 // Longer patterns take priority over shorter ones.
 const FALLBACK_PRICING: Array<{ pattern: string; price: Pick<UsagePricing, 'inputPricePerMTokens' | 'outputPricePerMTokens' | 'tier'> }> = [
   // Anthropic — ordered longest-first so opus/sonnet/haiku don't clash
-  { pattern: 'claude-opus',      price: { tier: 'heavy',    inputPricePerMTokens: 15,   outputPricePerMTokens: 75   } },
+  // Opus 4.7 (2026-04) cut prices 3x from Opus 3 era — $5/$25 instead of $15/$75
+  { pattern: 'claude-opus',      price: { tier: 'heavy',    inputPricePerMTokens: 5,    outputPricePerMTokens: 25   } },
   { pattern: 'claude-sonnet',    price: { tier: 'standard', inputPricePerMTokens: 3,    outputPricePerMTokens: 15   } },
   { pattern: 'claude-haiku',     price: { tier: 'cheap',    inputPricePerMTokens: 0.8,  outputPricePerMTokens: 4    } },
-  // OpenAI
+  // OpenAI — longest-first so 5.5-pro / 5.5 / 5.4 don't collide with bare "gpt-5"
+  { pattern: 'gpt-5.5-pro',     price: { tier: 'heavy',    inputPricePerMTokens: 30,   outputPricePerMTokens: 180  } },
+  { pattern: 'gpt-5.5',         price: { tier: 'heavy',    inputPricePerMTokens: 5,    outputPricePerMTokens: 30   } },
+  { pattern: 'gpt-5.4',         price: { tier: 'heavy',    inputPricePerMTokens: 2.5,  outputPricePerMTokens: 15   } },
+  { pattern: 'gpt-5',           price: { tier: 'heavy',    inputPricePerMTokens: 2.5,  outputPricePerMTokens: 15   } },
   { pattern: 'gpt-4o-mini',     price: { tier: 'cheap',    inputPricePerMTokens: 0.15, outputPricePerMTokens: 0.6  } },
   { pattern: 'gpt-4o',          price: { tier: 'heavy',    inputPricePerMTokens: 2.5,  outputPricePerMTokens: 10   } },
   { pattern: 'gpt-4-turbo',     price: { tier: 'heavy',    inputPricePerMTokens: 10,   outputPricePerMTokens: 30   } },

@@ -44,6 +44,13 @@ export interface SubagentRuntime {
   recordUsage(id: string, promptTokens: number, completionTokens: number, costUsd: number): SubagentTask | null
   completeTask(id: string, summary: string): SubagentTask | null
   failTask(id: string, reason: string, status?: Extract<SubagentStatus, 'failed' | 'cancelled'>): SubagentTask | null
+  /**
+   * User-initiated cancellation. Marks the task `cancelled` (a terminal
+   * status) so future state transitions are no-ops. Caller is responsible
+   * for actually aborting any in-flight LLM stream — this just records
+   * the intent and unblocks `at_capacity` for the next admit.
+   */
+  cancelTask(id: string, reason?: string): SubagentTask | null
   isOverPerTaskBudget(id: string): boolean
   updateSettings(settings: SubagentSettings): void
 }
@@ -145,6 +152,19 @@ export function createSubagentRuntime(options: CreateRuntimeOptions): SubagentRu
         task.status = status
         task.finishedAt = now().toISOString()
         task.failureReason = reason
+      })
+    },
+
+    cancelTask(id, reason) {
+      return mutate(id, (task) => {
+        // Only meaningful for tasks still in flight. Already-terminal
+        // tasks (completed / failed / cancelled / rejected) are left
+        // alone — re-cancelling shouldn't rewrite their finishedAt or
+        // overwrite a real failure reason.
+        if (task.status !== 'queued' && task.status !== 'running') return
+        task.status = 'cancelled'
+        task.finishedAt = now().toISOString()
+        task.failureReason = reason ?? 'cancelled by user'
       })
     },
 

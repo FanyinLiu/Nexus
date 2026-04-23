@@ -13,6 +13,7 @@ import type {
   VoiceState,
   VoiceTraceEntry,
 } from '../../types'
+import type { SubagentTask } from '../../types/subagent'
 import {
   buildConsoleEventClusters,
   formatConsoleTimestamp,
@@ -25,6 +26,7 @@ import {
 import { CostHistoryPanel } from './CostHistoryPanel'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { StateTimelinePanel } from './StateTimelinePanel'
+import { SubagentHistoryPanel } from './SubagentHistoryPanel'
 import { UpdaterPanel } from './UpdaterPanel'
 import { AgentTracePanel } from '../AgentTracePanel'
 import { PlanPanel } from '../PlanPanel'
@@ -51,6 +53,9 @@ type ConsoleSectionProps = {
   emotionState?: EmotionSnapshot
   memoryCount?: number
   autonomyPhase?: string
+  /** Subagent task list for the recent-history panel. Optional so callers
+   * that don't yet thread it (existing tests, story setups) keep working. */
+  subagentTasks?: SubagentTask[]
 }
 
 export const ConsoleSection = memo(function ConsoleSection({
@@ -67,6 +72,7 @@ export const ConsoleSection = memo(function ConsoleSection({
   emotionState,
   memoryCount,
   autonomyPhase,
+  subagentTasks,
 }: ConsoleSectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const enabledReminderCount = reminderTasks.filter((task) => task.enabled).length
@@ -122,6 +128,7 @@ export const ConsoleSection = memo(function ConsoleSection({
       <DiagnosticsPanel />
       <StateTimelinePanel />
       <CostHistoryPanel />
+      <SubagentHistoryPanel tasks={subagentTasks ?? []} />
 
       <div className="settings-console-grid">
         <article className="settings-console-card settings-console-card--primary">

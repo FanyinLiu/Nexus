@@ -233,6 +233,7 @@ export function clearCompactionCache() {
 export function getModelTokenBudget(model: string): number {
   const normalized = model.toLowerCase()
 
+  if (normalized.includes('gpt-5')) return 500_000
   if (normalized.includes('gpt-4o') || normalized.includes('gpt-4-turbo')) return 60_000
   if (normalized.includes('gpt-4')) return 6_000
   if (normalized.includes('gpt-3.5')) return 12_000

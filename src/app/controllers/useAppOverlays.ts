@@ -41,6 +41,7 @@ type UseAppOverlaysOptions = {
   petRuntimeContinuousVoiceActive: boolean
   reminderTasks: ReminderTask[]
   debugConsoleEvents: DebugConsoleEvent[]
+  subagentTasks?: import('../../types/subagent').SubagentTask[]
   loadPetModels: () => Promise<PetModelDefinition[]>
   memory: Pick<
     MemoryController,
@@ -107,6 +108,7 @@ export function useAppOverlays({
   petRuntimeContinuousVoiceActive,
   reminderTasks,
   debugConsoleEvents,
+  subagentTasks,
   loadPetModels,
   memory,
   chat,
@@ -192,6 +194,7 @@ export function useAppOverlays({
     voicePipeline: voice.voicePipeline,
     voiceTrace: voice.voiceTrace,
     debugConsoleEvents,
+    subagentTasks,
     onClose: () => setSettingsOpen(false),
     onExportChatHistory: chat.exportChatHistory,
     onImportChatHistory: chat.importChatHistory,

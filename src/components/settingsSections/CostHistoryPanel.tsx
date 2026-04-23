@@ -5,7 +5,7 @@ import { type DailyMeterRecord, loadDailyRange } from '../../features/metering/c
  * Cost history visualisation:
  *   - Bar chart of last 30 days USD spend
  *   - Today's breakdown by source (chat/dream/tool/...)
- *   - Today's breakdown by model (OpenAI gpt-4o vs Claude Sonnet etc.)
+ *   - Today's breakdown by model (OpenAI gpt-5.4 vs Claude Sonnet etc.)
  *
  * Pure render — reads straight from the per-day localStorage keys via
  * loadDailyRange. Polls every 10s so a long chat session ticks the chart

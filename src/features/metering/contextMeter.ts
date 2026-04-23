@@ -85,13 +85,17 @@ const PRICING_TABLE: Array<{ pattern: string; price: ModelPrice }> = [
   // DeepSeek
   { pattern: 'deepseek-chat',        price: { inputPerM: 0.14,  outputPerM: 0.28  } },
   { pattern: 'deepseek-reasoner',    price: { inputPerM: 0.55,  outputPerM: 2.19  } },
-  // OpenAI
+  // OpenAI — longest-first; 5.5-pro / 5.5 / 5.4 distinct rates, bare gpt-5 falls back to 5.4 cost
+  { pattern: 'gpt-5.5-pro',         price: { inputPerM: 30.00, outputPerM: 180.00 } },
+  { pattern: 'gpt-5.5',             price: { inputPerM: 5.00,  outputPerM: 30.00  } },
+  { pattern: 'gpt-5.4',             price: { inputPerM: 2.50,  outputPerM: 15.00  } },
+  { pattern: 'gpt-5',               price: { inputPerM: 2.50,  outputPerM: 15.00  } },
   { pattern: 'gpt-4o-mini',         price: { inputPerM: 0.15,  outputPerM: 0.60  } },
   { pattern: 'gpt-4o',              price: { inputPerM: 2.50,  outputPerM: 10.00 } },
   { pattern: 'gpt-4-turbo',         price: { inputPerM: 10.00, outputPerM: 30.00 } },
   { pattern: 'gpt-3.5',             price: { inputPerM: 0.50,  outputPerM: 1.50  } },
-  // Anthropic Claude
-  { pattern: 'claude-opus',         price: { inputPerM: 15.00, outputPerM: 75.00 } },
+  // Anthropic Claude — Opus 4.7 (2026-04) cut prices 3x; was $15/$75
+  { pattern: 'claude-opus',         price: { inputPerM: 5.00,  outputPerM: 25.00 } },
   { pattern: 'claude-sonnet',       price: { inputPerM: 3.00,  outputPerM: 15.00 } },
   { pattern: 'claude-haiku',        price: { inputPerM: 0.80,  outputPerM: 4.00  } },
   // Google Gemini

@@ -416,12 +416,25 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
     t,
   ])
 
+  /**
+   * User-initiated cancellation. The runtime mutates the task state to
+   * `cancelled`; the dispatcher's in-flight LLM stream stops on next
+   * step via the budget gate. We don't synchronously kill the network
+   * request — that would require AbortController plumbing through the
+   * provider abstraction, which is a separate change. The "soft" stop
+   * here is enough for the user to feel the cancel land immediately.
+   */
+  const cancelSubagentTask = useCallback((id: string, reason?: string) => {
+    subagentRuntimeRef.current?.cancelTask(id, reason)
+  }, [])
+
   return {
     considerTick,
     reloadPersona,
     isPersonaLoaded: () => Boolean(personaRef.current?.present),
     /** Live snapshot of subagent tasks for the UI to subscribe to. */
     subagentTasks,
+    cancelSubagentTask,
   }
 }
 

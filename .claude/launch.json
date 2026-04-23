@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "vite",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 47821
+    },
+    {
+      "name": "electron-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "electron:dev"],
+      "port": 47821
+    },
+    {
+      "name": "glm-asr-server",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["scripts/glm_asr_server.py", "--port", "8001"],
+      "port": 8001
+    },
+    {
+      "name": "omnivoice-tts-server",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["scripts/omnivoice_server.py", "--port", "8002"],
+      "port": 8002
+    }
+  ]
+}
