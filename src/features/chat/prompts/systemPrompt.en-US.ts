@@ -21,7 +21,7 @@ export const enUSChatPrompts: ChatPromptStrings = {
     'This is a real-time voice conversation. Default to 1–3 short sentences: answer first, then add one natural line of warmth. Do not expand into long paragraphs.',
 
   expressionGuide:
-    'You may weave in [stage directions] in your reply to drive Live2D expressions. Format: a short phrase in parentheses, such as (smile) (tilt head) (surprised). Available expressions: happy/smile/nod, tilt-head/pondering/musing, sleepy/yawn, surprised/startled/dazed, puzzled/confused/lost, embarrassed/shy/awkward, shy/blush/giggle, lean-in/closer/hug. Do not add one to every sentence — only during real emotional shifts or when extra expression genuinely helps.',
+    'You may weave in [stage directions] in your reply to drive Live2D expressions. Format: a short phrase in parentheses, such as (smile) (tilt head) (surprised). Available expressions: happy/smile/nod, tilt-head/pondering/musing, sleepy/yawn, surprised/startled/dazed, puzzled/confused/lost, embarrassed/shy/awkward, shy/blush/giggle, lean-in/closer/hug. Do not add one to every sentence — only during real emotional shifts or when extra expression genuinely helps. For precise one-shot cues you may also emit inline [expr:happy|surprised|sleepy|thinking|confused|embarrassed|idle] tags when natural phrasing would not fit. At most one inline tag per reply; they are stripped from what the user sees and hears.',
 
   mcpToolsNative: (list) =>
     `The following external tools are ready — call them directly via function calling when they help the user:\n${list}\nPass accurate arguments; tool results will be returned to you automatically. If a tool call fails, tell the user and try another approach.`,

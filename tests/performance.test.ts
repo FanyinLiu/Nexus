@@ -3,7 +3,9 @@ import { test } from 'node:test'
 
 import {
   ExpressionOverrideStreamFilter,
+  PerformanceTagStreamFilter,
   extractExpressionOverrides,
+  extractPerformanceTags,
   parseAssistantPerformanceContent,
 } from '../src/features/pet/performance.ts'
 
@@ -127,4 +129,61 @@ test('ExpressionOverrideStreamFilter handles multiple tags in one stream', () =>
   const filter = new ExpressionOverrideStreamFilter()
   const out = filter.push('A[expr:happy]B') + filter.push('[expr:surprised]C') + filter.flush()
   assert.equal(out, 'ABC')
+})
+
+test('extractPerformanceTags routes expr/motion/tts into separate cue lists', () => {
+  const result = extractPerformanceTags('开始[motion:wave]工作[expr:happy]结果出来了[tts:excited]。')
+
+  assert.equal(result.content, '开始工作结果出来了。')
+  assert.equal(result.exprCues.length, 1)
+  assert.equal(result.exprCues[0]?.expressionSlot, 'happy')
+  assert.equal(result.motionCues.length, 1)
+  assert.equal(result.motionCues[0]?.gestureName, 'wave')
+  assert.equal(result.ttsCues.length, 1)
+  assert.equal(result.ttsCues[0]?.mode, 'excited')
+})
+
+test('extractPerformanceTags keeps unknown motion/tts values — validation happens at apply time', () => {
+  const result = extractPerformanceTags('试试[motion:mystery_dance]和[tts:nosuch]。')
+
+  assert.equal(result.content, '试试和。')
+  assert.equal(result.motionCues.length, 1)
+  assert.equal(result.motionCues[0]?.gestureName, 'mystery_dance')
+  assert.equal(result.ttsCues.length, 1)
+  assert.equal(result.ttsCues[0]?.mode, 'nosuch')
+})
+
+test('extractPerformanceTags still drops unknown expr slots silently', () => {
+  const result = extractPerformanceTags('嗯[expr:bogus]好。')
+
+  assert.equal(result.content, '嗯好。')
+  assert.equal(result.exprCues.length, 0)
+})
+
+test('PerformanceTagStreamFilter holds back partial [motion: prefix across deltas', () => {
+  const filter = new PerformanceTagStreamFilter()
+  const pieces = ['嗨', '[', 'mo', 'tion', ':wav', 'e]', '！']
+  let streamed = ''
+  for (const piece of pieces) {
+    streamed += filter.push(piece)
+  }
+  streamed += filter.flush()
+  assert.equal(streamed, '嗨！')
+})
+
+test('PerformanceTagStreamFilter holds back partial [tts: prefix across deltas', () => {
+  const filter = new PerformanceTagStreamFilter()
+  const pieces = ['哼', '[t', 'ts:whi', 'sper', ']', '嘘']
+  let streamed = ''
+  for (const piece of pieces) {
+    streamed += filter.push(piece)
+  }
+  streamed += filter.flush()
+  assert.equal(streamed, '哼嘘')
+})
+
+test('PerformanceTagStreamFilter releases a non-performance bracket like [NOTE]', () => {
+  const filter = new PerformanceTagStreamFilter()
+  const out = filter.push('查看[NOTE] 细节') + filter.flush()
+  assert.equal(out, '查看[NOTE] 细节')
 })

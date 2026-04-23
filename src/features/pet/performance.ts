@@ -626,71 +626,120 @@ export function parseAssistantPerformanceContent(content: string): ParsedAssista
   }
 }
 
-// ── Expression override tags ───────────────────────────────────────────────
+// ── Inline performance tags ────────────────────────────────────────────────
 //
-// LLMs can emit inline `[expr:name]` markers to request a one-shot
-// expression change for the current reply — SillyTavern-style. The
-// override is ephemeral: unlike setMood it doesn't persist into the
-// emotion model, it just queues a single performance cue that the Live2D
-// canvas plays for its default duration, then the pet falls back to
-// whatever mood the main emotion engine has decided.
+// LLMs can emit inline `[expr:name]`, `[motion:name]`, and `[tts:mode]`
+// markers to request one-shot performance cues for the current reply —
+// SillyTavern- / ChatdollKit-style. The override is ephemeral: unlike
+// setMood it doesn't persist into the emotion model, it just queues a
+// single cue that plays for its default duration, then the pet falls
+// back to whatever mood the main emotion engine has decided.
 //
-// Only the seven "speakable" moods are accepted (matching the PetMood
-// union). Slots like `listening` / `speaking` / `touchHead` are reserved
-// for voice and tap paths — firing them from chat output would confuse
-// the existing lifecycle wiring.
-const EXPRESSION_OVERRIDE_TAG_PATTERN = /\[expr\s*:\s*([a-zA-Z_-]+)\s*\]/giu
+// `expr` accepts the seven "speakable" PetMood slots. `motion` accepts
+// gesture names declared on the active pet model (validated at apply
+// time, not here). `tts` is parsed here but currently collected-and-
+// dropped — wiring will land when an emotion-aware TTS adapter does.
+const PERFORMANCE_TAG_PATTERN = /\[(expr|motion|tts)\s*:\s*([a-zA-Z_-]+)\s*\]/giu
 const EXPRESSION_OVERRIDE_DURATION_MS = 2_400
 const PUBLIC_EXPRESSION_SLOTS: ReadonlySet<PetExpressionSlot> = new Set([
   'idle', 'thinking', 'happy', 'sleepy', 'surprised', 'confused', 'embarrassed',
 ])
 
+const TAG_KEYS = ['expr', 'motion', 'tts'] as const
+
+export type MotionCue = {
+  gestureName: string
+  stageDirection: string
+}
+
+export type TtsCue = {
+  mode: string
+  stageDirection: string
+}
+
+export type ExtractedPerformanceTags = {
+  content: string
+  exprCues: PetPerformancePlan[]
+  motionCues: MotionCue[]
+  ttsCues: TtsCue[]
+}
+
 /**
- * Pull `[expr:name]` override tags out of raw LLM text. Returns the
- * stripped text (tags removed entirely, whether the slot was valid or
- * not, so no leakage into chat bubbles) plus one performance cue per
- * valid tag. Unknown slot names drop silently — we prefer quiet
- * no-ops to visible noise.
+ * Pull every `[expr|motion|tts:name]` tag out of raw LLM text. Returns
+ * the stripped text (tags removed entirely, whether the slot was valid
+ * or not, so no leakage into chat bubbles) plus per-kind cue lists.
+ * Unknown `expr` slot names drop silently — we prefer quiet no-ops to
+ * visible noise. Motion / tts values pass through as strings; the apply
+ * site decides whether the current model / tts adapter supports them.
+ */
+export function extractPerformanceTags(content: string): ExtractedPerformanceTags {
+  if (!content) return { content: '', exprCues: [], motionCues: [], ttsCues: [] }
+  const exprCues: PetPerformancePlan[] = []
+  const motionCues: MotionCue[] = []
+  const ttsCues: TtsCue[] = []
+  const cleaned = content.replace(PERFORMANCE_TAG_PATTERN, (_match, rawKind: string, rawValue: string) => {
+    const kind = String(rawKind ?? '').toLowerCase().trim()
+    const value = String(rawValue ?? '').toLowerCase().trim()
+    if (!value) return ''
+    if (kind === 'expr') {
+      const slot = value as PetExpressionSlot
+      if (PUBLIC_EXPRESSION_SLOTS.has(slot)) {
+        exprCues.push({
+          expressionSlot: slot,
+          durationMs: EXPRESSION_OVERRIDE_DURATION_MS,
+          stageDirection: `(expr:${slot})`,
+        })
+      }
+    } else if (kind === 'motion') {
+      motionCues.push({ gestureName: value, stageDirection: `(motion:${value})` })
+    } else if (kind === 'tts') {
+      ttsCues.push({ mode: value, stageDirection: `(tts:${value})` })
+    }
+    return ''
+  })
+  return { content: cleaned, exprCues, motionCues, ttsCues }
+}
+
+/**
+ * Backwards-compatible shim for call sites that only care about expr cues.
  */
 export function extractExpressionOverrides(content: string): {
   content: string
   cues: PetPerformancePlan[]
 } {
-  if (!content) return { content: '', cues: [] }
-  const cues: PetPerformancePlan[] = []
-  const cleaned = content.replace(EXPRESSION_OVERRIDE_TAG_PATTERN, (_match, rawSlot: string) => {
-    const slot = String(rawSlot ?? '').toLowerCase().trim() as PetExpressionSlot
-    if (PUBLIC_EXPRESSION_SLOTS.has(slot)) {
-      cues.push({
-        expressionSlot: slot,
-        durationMs: EXPRESSION_OVERRIDE_DURATION_MS,
-        stageDirection: `(expr:${slot})`,
-      })
-    }
-    return ''
-  })
-  return { content: cleaned, cues }
+  const { content: cleaned, exprCues } = extractPerformanceTags(content)
+  return { content: cleaned, cues: exprCues }
 }
 
 // Stateful prefix-match for the streaming filter. A buffer that starts with
-// `[` could still grow into a valid `[expr:name]` tag; until we know for
-// sure, we must hold it back from the UI bubble and TTS. Returns true while
-// the buffer remains a plausible prefix.
-function isExpressionTagPrefix(buffer: string): boolean {
-  return /^\[(?:e(?:x(?:p(?:r(?:\s*(?::(?:\s*(?:[a-zA-Z_-]+(?:\s*)?)?)?)?)?)?)?)?)?$/iu.test(buffer)
+// `[` could still grow into a valid performance tag; until we know for sure,
+// we must hold it back from the UI bubble and TTS. Returns true while the
+// buffer remains a plausible prefix of `[expr:`, `[motion:`, or `[tts:`.
+function isPerformanceTagPrefix(buffer: string): boolean {
+  if (!buffer.startsWith('[')) return false
+  if (buffer === '[') return true
+  const afterBracket = buffer.slice(1).toLowerCase()
+  for (const key of TAG_KEYS) {
+    if (key.startsWith(afterBracket)) return true
+    if (afterBracket.startsWith(key)) {
+      const rest = afterBracket.slice(key.length)
+      if (/^\s*(?::\s*[a-zA-Z_-]*\s*)?$/i.test(rest)) return true
+    }
+  }
+  return false
 }
 
 /**
- * Streaming companion to extractExpressionOverrides. The final reply gets
- * scrubbed by extractExpressionOverrides before it lands in chat history,
- * but streaming deltas are sent straight to the pet dialog bubble AND the
- * TTS pipeline — without this filter, `[expr:happy]` would flash on screen
- * and get pronounced character-by-character over the user's speakers.
+ * Streaming companion to extractPerformanceTags. The final reply gets
+ * scrubbed before it lands in chat history, but streaming deltas are
+ * sent straight to the pet dialog bubble AND the TTS pipeline —
+ * without this filter, `[expr:happy]` would flash on screen and get
+ * pronounced character-by-character over the user's speakers.
  *
  * Holds back any buffer suffix that could still grow into a tag, strips
  * completed tags, and passes everything else through verbatim.
  */
-export class ExpressionOverrideStreamFilter {
+export class PerformanceTagStreamFilter {
   private buffer = ''
 
   push(delta: string): string {
@@ -704,7 +753,7 @@ export class ExpressionOverrideStreamFilter {
   }
 
   private drain(forceFlush: boolean): string {
-    this.buffer = this.buffer.replace(EXPRESSION_OVERRIDE_TAG_PATTERN, '')
+    this.buffer = this.buffer.replace(PERFORMANCE_TAG_PATTERN, '')
 
     if (forceFlush) {
       const out = this.buffer
@@ -723,7 +772,7 @@ export class ExpressionOverrideStreamFilter {
     // A runaway suffix (no closing `]` after many chars) is almost certainly
     // not a tag — flush it so the bubble doesn't appear stuck.
     const MAX_SUFFIX_LOOKAHEAD = 64
-    if (suffix.length >= MAX_SUFFIX_LOOKAHEAD || !isExpressionTagPrefix(suffix)) {
+    if (suffix.length >= MAX_SUFFIX_LOOKAHEAD || !isPerformanceTagPrefix(suffix)) {
       const out = this.buffer
       this.buffer = ''
       return out
@@ -734,3 +783,8 @@ export class ExpressionOverrideStreamFilter {
     return out
   }
 }
+
+/**
+ * Backwards-compatible alias for the older class name.
+ */
+export { PerformanceTagStreamFilter as ExpressionOverrideStreamFilter }
