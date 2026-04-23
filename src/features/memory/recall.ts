@@ -88,6 +88,7 @@ function scoreItem<T extends {
   importance?: string
   emotionSnapshot?: MemoryItem['emotionSnapshot']
   emotionalValence?: MemoryItem['emotionalValence']
+  significance?: number
 }>(
   item: T,
   query: string,
@@ -103,9 +104,14 @@ function scoreItem<T extends {
   const recencyBoost = getRecencyBoost(item.createdAt)
   const categoryBoost = CATEGORY_WEIGHT[item.category ?? ''] ?? 0
 
-  // Decay-weighted importance boost (0–0.15 range)
+  // Decay-weighted importance boost (0–0.15 range). Significance amplifies
+  // the boost by up to 40% for memories formed under high emotional load —
+  // Lumen-style "peak moments resurface more readily" without altering
+  // the underlying decay curve.
   const decayBoost = 'importanceScore' in item
-    ? (getDecayedScore(item as unknown as MemoryItem) - 0.5) * 0.3
+    ? (getDecayedScore(item as unknown as MemoryItem) - 0.5)
+      * 0.3
+      * (1 + (item.significance ?? 0) * 0.4)
     : 0
 
   const emotionBoost = emotionContext

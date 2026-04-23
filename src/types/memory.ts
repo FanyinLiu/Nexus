@@ -34,6 +34,14 @@ export interface MemoryItem {
   emotionSnapshot?: { energy: number; warmth: number; curiosity: number; concern: number }
   /** Dominant emotional valence when this memory was formed. */
   emotionalValence?: EmotionalValence
+  /**
+   * Emotional-significance score computed from emotionSnapshot at write
+   * time (0–1). Multiplied into recall ranking so moments formed under
+   * extreme valence or high arousal resurface more readily — borrowed
+   * from Lumen's NPC-significance pattern. Does NOT feed back into decay,
+   * so pinned/high importance tiers keep their separate semantics.
+   */
+  significance?: number
 }
 
 export interface DailyMemoryEntry {

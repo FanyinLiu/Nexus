@@ -66,3 +66,39 @@ export function markRecalled(memories: MemoryItem[], recalledIds: Set<string>): 
     }
   })
 }
+
+// ── Emotional significance (Lumen borrow) ──────────────────────────────────
+//
+// Compute a 0–1 scalar describing how emotionally loaded a moment was
+// when a memory formed. Feeds ranking as a multiplier ONLY — decay and
+// pinned semantics stay untouched.
+
+const SIGNIFICANCE_RECALL_MULTIPLIER_MAX = 0.4
+type EmotionSnapshot = NonNullable<MemoryItem['emotionSnapshot']>
+
+export function computeMemorySignificance(emotion: EmotionSnapshot): number {
+  const { energy, warmth, curiosity, concern } = emotion
+  // Fold four axes into valence/arousal per the same heuristic used by
+  // inferValence in memory.ts — warm+energetic reads as positive, concern
+  // pulls negative, curiosity raises arousal alongside energy.
+  const valence = (warmth + 0.5 * energy + 0.3 * curiosity - concern) / 2
+  const arousal = (energy + curiosity) / 2
+
+  const valenceExtremity = Math.max(0, Math.abs(valence - 0.5) - 0.15)
+  const arousalBoost = Math.max(0, arousal - 0.6)
+  const concernSignal = concern > 0.6 ? 0.5 : 0
+
+  const raw = 0.35 * valenceExtremity + 0.45 * arousalBoost + 0.2 * concernSignal
+  return Math.max(0, Math.min(1, raw))
+}
+
+/**
+ * Ranking score = decayed importance × (1 + significance × 0.4). Lets
+ * emotionally significant memories resurface up to 40% more readily at
+ * equal importance.
+ */
+export function getRankingScore(memory: MemoryItem, now = Date.now()): number {
+  const decayed = getDecayedScore(memory, now)
+  const sig = memory.significance ?? 0
+  return decayed * (1 + sig * SIGNIFICANCE_RECALL_MULTIPLIER_MAX)
+}

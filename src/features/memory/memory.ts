@@ -8,6 +8,7 @@ import type {
   MemoryItem,
 } from '../../types'
 import type { EmotionState } from '../autonomy/emotionModel'
+import { computeMemorySignificance } from './decay.ts'
 import { createId } from '../../lib/index.ts'
 
 const longTermDuplicateThreshold = 0.72
@@ -154,6 +155,7 @@ export function extractMemoriesFromMessage(
         createdAt: new Date().toISOString(),
         emotionSnapshot: emotionState,
         emotionalValence: valence,
+        significance: emotionState ? computeMemorySignificance(emotionState) : undefined,
       }
     })
 }
