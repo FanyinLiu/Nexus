@@ -22,6 +22,7 @@ import {
   formatVoicePipelineStepLabel,
   formatVoiceStateLabel,
 } from '../settingsDrawerSupport'
+import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { UpdaterPanel } from './UpdaterPanel'
 import { AgentTracePanel } from '../AgentTracePanel'
 import { PlanPanel } from '../PlanPanel'
@@ -116,6 +117,7 @@ export const ConsoleSection = memo(function ConsoleSection({
       </div>
 
       <UpdaterPanel uiLanguage={uiLanguage} />
+      <DiagnosticsPanel />
 
       <div className="settings-console-grid">
         <article className="settings-console-card settings-console-card--primary">
