@@ -10,7 +10,7 @@ export type MemoryCategory =
   | 'project'
   | 'reference'
 
-export type MemoryImportance = 'low' | 'normal' | 'high' | 'pinned'
+export type MemoryImportance = 'low' | 'normal' | 'high' | 'pinned' | 'reflection'
 
 export type EmotionalValence = 'positive' | 'negative' | 'neutral' | 'mixed'
 
@@ -42,6 +42,14 @@ export interface MemoryItem {
    * so pinned/high importance tiers keep their separate semantics.
    */
   significance?: number
+  /**
+   * Only set on `importance === 'reflection'` entries. A short topic
+   * slug used to dedup — a newly generated reflection on the same topic
+   * supersedes the previous one rather than accumulating variants.
+   */
+  reflectionTopic?: string
+  /** Confidence 0–1 asserted by the generator. */
+  reflectionConfidence?: number
 }
 
 export interface DailyMemoryEntry {

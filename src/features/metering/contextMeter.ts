@@ -14,7 +14,7 @@ const METER_STORAGE_PREFIX = 'nexus:metering:day:'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-export type MeterSource = 'chat' | 'dream' | 'monologue' | 'skill_distillation' | 'tool' | 'other'
+export type MeterSource = 'chat' | 'dream' | 'monologue' | 'skill_distillation' | 'reflection' | 'tool' | 'other'
 
 export interface MeterEntry {
   source: MeterSource
@@ -189,6 +189,7 @@ function createDailyRecord(): DailyMeterRecord {
       dream:              { input: 0, output: 0, calls: 0, costUsd: 0 },
       monologue:          { input: 0, output: 0, calls: 0, costUsd: 0 },
       skill_distillation: { input: 0, output: 0, calls: 0, costUsd: 0 },
+      reflection:         { input: 0, output: 0, calls: 0, costUsd: 0 },
       tool:               { input: 0, output: 0, calls: 0, costUsd: 0 },
       other:              { input: 0, output: 0, calls: 0, costUsd: 0 },
     },

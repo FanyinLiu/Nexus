@@ -64,6 +64,7 @@ export function scoreContainment(left: string, right: string) {
 const IMPORTANCE_WEIGHTS: Record<MemoryImportance, number> = {
   pinned: 1.0,
   high: 0.85,
+  reflection: 0.6,
   normal: 0.5,
   low: 0.2,
 }

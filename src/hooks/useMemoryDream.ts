@@ -11,7 +11,18 @@ import { applyDecayBatch } from '../features/memory/decay'
 import { clusterMemories, findBestCluster } from '../features/memory/clustering'
 import { archiveMemories, identifyArchiveCandidates } from '../features/memory/coldArchive'
 import { rebuildNarrative } from '../features/memory/narrativeMemory'
+import {
+  buildReflectionPrompt,
+  extractReflectionsFromMemories,
+  mergeReflections,
+  parseReflectionResponse,
+  type ReflectionCandidate,
+} from '../features/memory/reflectionGenerator'
 import { recordUsage } from '../features/metering/contextMeter'
+import {
+  loadEmotionHistory,
+  loadRelationshipHistory,
+} from '../features/autonomy/stateTimeline'
 import {
   buildSkillDistillationPrompt,
   formatSkillAsMemory,
@@ -158,6 +169,55 @@ export function useMemoryDream({
         })
       }
 
+      // ── Reflection generation (N.E.K.O. borrow — observations about the user) ──
+      let reflectionCandidates: ReflectionCandidate[] = []
+      try {
+        const emotionSamples = loadEmotionHistory().slice(-20)
+        const relationshipSamples = loadRelationshipHistory().slice(-10)
+        const emotionTrend = summarizeEmotionTrend(emotionSamples)
+        const relationshipTrend = summarizeRelationshipTrend(relationshipSamples)
+        const existingReflections = extractReflectionsFromMemories(memoriesRef.current)
+
+        const reflectionPrompt = buildReflectionPrompt({
+          uiLanguage: settings.uiLanguage,
+          dailyEntries,
+          emotionTrend,
+          relationshipTrend,
+          existingReflections,
+        })
+
+        if (reflectionPrompt) {
+          const reflectionResponse = await window.desktopPet?.completeChat?.({
+            providerId: settings.apiProviderId,
+            baseUrl: settings.apiBaseUrl,
+            apiKey: settings.apiKey,
+            model: settings.model,
+            messages: [
+              { role: 'system', content: reflectionPrompt.system },
+              { role: 'user', content: reflectionPrompt.user },
+            ],
+            temperature: 0.4,
+            maxTokens: 600,
+          })
+
+          if (reflectionResponse?.content) {
+            recordUsage(
+              'reflection',
+              `${reflectionPrompt.system}\n${reflectionPrompt.user}`,
+              reflectionResponse.content,
+              { modelId: settings.model },
+            )
+            reflectionCandidates = parseReflectionResponse(reflectionResponse.content)
+          }
+        }
+      } catch (reflectionError) {
+        appendDebugConsoleEvent({
+          source: 'autonomy',
+          title: 'Reflection generation failed',
+          detail: reflectionError instanceof Error ? reflectionError.message : String(reflectionError),
+        })
+      }
+
       // ── Apply all memory mutations in a single setMemories to avoid stale refs ──
       let archivedCount = 0
       let clusterCount = 0
@@ -209,6 +269,11 @@ export function useMemoryDream({
               importance: 'normal' as const,
             })
           }
+        }
+
+        // 4b. Merge new reflections (dedup by topic, cap at 20)
+        if (reflectionCandidates.length > 0) {
+          updated = mergeReflections(updated, reflectionCandidates, now)
         }
 
         // 5. Apply importance decay
@@ -282,4 +347,31 @@ export function useMemoryDream({
     runDream,
     incrementSessionCount,
   }
+}
+
+// ── Trend summarizers (for reflection prompt) ──────────────────────────────
+
+type EmotionSample = ReturnType<typeof loadEmotionHistory>[number]
+type RelationshipSample = ReturnType<typeof loadRelationshipHistory>[number]
+
+function summarizeEmotionTrend(samples: EmotionSample[]): string | null {
+  if (samples.length < 3) return null
+  const first = samples[0]
+  const last = samples[samples.length - 1]
+  const deltas: string[] = []
+  for (const axis of ['energy', 'warmth', 'curiosity', 'concern'] as const) {
+    const diff = last[axis] - first[axis]
+    if (Math.abs(diff) >= 0.1) {
+      deltas.push(`${axis} ${diff > 0 ? 'rising' : 'falling'} (${first[axis].toFixed(2)} → ${last[axis].toFixed(2)})`)
+    }
+  }
+  return deltas.length ? deltas.join(', ') : 'stable across axes'
+}
+
+function summarizeRelationshipTrend(samples: RelationshipSample[]): string | null {
+  if (samples.length < 2) return null
+  const first = samples[0]
+  const last = samples[samples.length - 1]
+  const scoreDelta = last.score - first.score
+  return `score ${first.score} → ${last.score} (${scoreDelta >= 0 ? '+' : ''}${scoreDelta}), streak ${last.streak}d`
 }

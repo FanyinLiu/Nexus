@@ -19,6 +19,7 @@ const MS_PER_DAY = 86_400_000
 const IMPORTANCE_SEED: Record<MemoryImportance, number> = {
   pinned: 1.0,
   high: 0.8,
+  reflection: 0.6,
   normal: 0.5,
   low: 0.25,
 }
