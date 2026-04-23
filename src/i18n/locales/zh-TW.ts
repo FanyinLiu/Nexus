@@ -537,6 +537,7 @@ export const zhTWMessages: TranslationDictionary = {
   'onboarding.step.companion.description': '選角色、預設語音方式和開機行為，完成第一輪可日用設定。',
   'onboarding.finish_hint.missing_api_key': '你還沒有填寫文字模型介面金鑰。儲存後仍可先體驗介面、角色和語音鏈路，真正開始聊天前再補上即可。',
   'onboarding.finish_hint.default': '後續還可以在設定裡繼續細調工具權限、桌面上下文和記憶策略。',
+  'onboarding.first_greeting': '嗨 {userName}——我是 {companionName}。這是我們第一次見面。慢慢來，我會在這兒。想說的話，和我聊聊你今天的一點小事吧。',
   'onboarding.error.welcome.no_user_name': '先填一個你希望桌寵怎麼稱呼你。',
   'onboarding.error.welcome.no_companion_name': '先給桌寵起個名字。',
   'onboarding.error.text.no_api_base': '文字模型的介面位址還沒有填寫。',

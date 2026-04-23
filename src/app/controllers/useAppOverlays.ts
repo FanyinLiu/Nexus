@@ -18,6 +18,7 @@ import {
 } from '../../lib'
 import { setSettingsSnapshot } from '../store/settingsStore'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type {
   AppSettings,
   DebugConsoleEvent,
@@ -65,6 +66,7 @@ type UseAppOverlaysOptions = {
     | 'currentSessionId'
     | 'setError'
     | 'appendSystemMessage'
+    | 'appendChatMessage'
     | 'exportChatHistory'
     | 'importChatHistory'
     | 'clearChatHistory'
@@ -166,8 +168,36 @@ export function useAppOverlays({
       saveOnboardingCompleted(true)
       setOnboardingPending(false)
       setOnboardingOpen(false)
+
+      // First-meeting greeting — seed a short assistant message in the
+      // user's UI language so the chat doesn't open onto an empty screen.
+      // Only fires when no prior conversation exists (i.e. a genuine
+      // fresh-install finish, not a user re-running onboarding from
+      // Settings → Reset).
+      if (chat.messages.length === 0) {
+        try {
+          const greeting = pickTranslatedUiText(
+            finalSettings.uiLanguage,
+            'onboarding.first_greeting',
+            {
+              userName: finalSettings.userName || 'there',
+              companionName: finalSettings.companionName || 'Nexus',
+            },
+          )
+          chat.appendChatMessage({
+            id: `msg-onboarding-${Date.now()}`,
+            role: 'assistant',
+            content: greeting,
+            createdAt: new Date().toISOString(),
+          })
+        } catch (err) {
+          // Non-critical — swallow so a seeding failure doesn't break
+          // onboarding completion.
+          console.warn('[onboarding] failed to seed first greeting:', err)
+        }
+      }
     }
-  }, [onboardingPending, setSettings, setSettingsOpen])
+  }, [chat, onboardingPending, setSettings, setSettingsOpen])
 
   const chatMessageCount = useMemo(
     () => chat.messages.filter((message) => message.role !== 'system').length,

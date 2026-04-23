@@ -537,6 +537,7 @@ export const koMessages: TranslationDictionary = {
   'onboarding.step.companion.description': '캐릭터, 기본 음성 모드, 실행 동작을 선택해 일상 사용의 첫 설정을 마칩니다.',
   'onboarding.finish_hint.missing_api_key': '텍스트 모델 API 키를 아직 입력하지 않았습니다. 저장 후에도 UI, 캐릭터, 음성 파이프라인을 먼저 체험할 수 있습니다. 실제 대화를 시작하기 전에 채워 주세요.',
   'onboarding.finish_hint.default': '도구 권한, 데스크톱 컨텍스트, 기억 전략은 이후 설정에서 계속 조정할 수 있습니다.',
+  'onboarding.first_greeting': '안녕 {userName}, 나는 {companionName}이야. 우리가 처음 만나는 날이네 — 천천히 해도 돼. 괜찮다면 오늘 있었던 일, 조금 들려줄래?',
   'onboarding.error.welcome.no_user_name': '동반자가 당신을 뭐라고 부르길 바라는지 먼저 입력해 주세요.',
   'onboarding.error.welcome.no_companion_name': '먼저 동반자에게 이름을 지어 주세요.',
   'onboarding.error.text.no_api_base': '텍스트 모델의 API URL 이 아직 입력되지 않았습니다.',

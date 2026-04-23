@@ -537,6 +537,7 @@ export const enMessages: TranslationDictionary = {
   'onboarding.step.companion.description': 'Choose character, default voice mode, and startup behavior — one round of day-to-day configuration.',
   'onboarding.finish_hint.missing_api_key': 'You have not filled in the text model API key yet. You can still save and explore the UI, characters, and voice pipeline first; add the key before you actually start chatting.',
   'onboarding.finish_hint.default': 'You can keep tuning tool permissions, desktop context, and memory strategy in Settings later.',
+  'onboarding.first_greeting': 'Hi {userName} — I\'m {companionName}. First time meeting you. Take your time. If you feel like it, tell me one small thing about today.',
   'onboarding.error.welcome.no_user_name': 'Please fill in what you want the companion to call you.',
   'onboarding.error.welcome.no_companion_name': 'Please give the companion a name first.',
   'onboarding.error.text.no_api_base': 'The text model API base URL is not filled in yet.',

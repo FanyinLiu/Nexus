@@ -537,6 +537,7 @@ export const zhCNMessages: TranslationDictionary = {
   'onboarding.step.companion.description': '选角色、默认语音方式和开机行为，完成第一轮可日用配置。',
   'onboarding.finish_hint.missing_api_key': '你还没有填写文本模型接口密钥。保存后仍可先体验界面、角色和语音链路，真正开始聊天前再补上即可。',
   'onboarding.finish_hint.default': '后续还可以在设置里继续细调工具权限、桌面上下文和记忆策略。',
+  'onboarding.first_greeting': '嗨 {userName}——我是 {companionName}。这是我们第一次见面。慢慢来，我会在这儿。想说的话，和我讲讲你今天的一点小事吧。',
   'onboarding.error.welcome.no_user_name': '先填一个你希望桌宠怎么称呼你。',
   'onboarding.error.welcome.no_companion_name': '先给桌宠起个名字。',
   'onboarding.error.text.no_api_base': '文本模型的接口地址还没有填写。',

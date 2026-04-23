@@ -537,6 +537,7 @@ export const jaMessages: TranslationDictionary = {
   'onboarding.step.companion.description': 'キャラクター、既定の音声方式、起動時の挙動を決めて、日常使いの最初の一回分を整えます。',
   'onboarding.finish_hint.missing_api_key': 'テキストモデルの API キーがまだ未入力です。保存しても UI、キャラクター、音声パイプラインは試せます。実際に会話を始める前に補ってください。',
   'onboarding.finish_hint.default': 'ツール権限、デスクトップコンテキスト、記憶方針などは設定から引き続き調整できます。',
+  'onboarding.first_greeting': 'はじめまして、{userName}。わたしは {companionName}。初めて会う日だね——ゆっくりでいいよ。よかったら、今日のこと少しだけ聞かせて？',
   'onboarding.error.welcome.no_user_name': 'まず、パートナーに呼んでほしい名前を入れてね。',
   'onboarding.error.welcome.no_companion_name': 'まず、パートナーの名前を決めてね。',
   'onboarding.error.text.no_api_base': 'テキストモデルのエンドポイント URL がまだ未入力です。',

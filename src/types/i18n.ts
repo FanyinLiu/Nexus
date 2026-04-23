@@ -538,6 +538,7 @@ export type TranslationKey =
   | 'onboarding.step.companion.description'
   | 'onboarding.finish_hint.missing_api_key'
   | 'onboarding.finish_hint.default'
+  | 'onboarding.first_greeting'
   | 'onboarding.error.welcome.no_user_name'
   | 'onboarding.error.welcome.no_companion_name'
   | 'onboarding.error.text.no_api_base'
