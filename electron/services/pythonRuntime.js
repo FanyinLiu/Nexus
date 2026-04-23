@@ -12,9 +12,14 @@
  * If either check fails we mark the service as "disabled — requires Python"
  * and skip the spawn entirely. The renderer can query python:status to show
  * a friendly note in Settings instead of spinning forever.
+ *
+ * All probes run with `spawn` (async). The previous implementation used
+ * `spawnSync` inside `app.whenReady`, which stalled the main event loop
+ * for up to ~19 s on a fresh install (3 s binary probe + 8 s × 2 import
+ * probes), freezing every IPC and blocking first paint.
  */
 
-import { spawn, spawnSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 
 function resolveCandidateBinaries() {
   if (process.env.NEXUS_PYTHON) return [process.env.NEXUS_PYTHON]
@@ -22,50 +27,80 @@ function resolveCandidateBinaries() {
   return ['python3', 'python']
 }
 
-function probeBinary(binary) {
-  try {
-    const result = spawnSync(binary, ['--version'], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      windowsHide: true,
-      timeout: 3000,
-    })
-    if (result.status !== 0 && result.error) return null
-    const combined = `${result.stdout || ''}${result.stderr || ''}`.trim()
-    const match = /Python (\d+)\.(\d+)\.(\d+)/.exec(combined)
-    if (!match) return null
-    const [, maj, min, patch] = match
-    return {
-      binary,
-      version: `${maj}.${min}.${patch}`,
-      major: Number(maj),
-      minor: Number(min),
-      patch: Number(patch),
+/**
+ * Run `binary args...` with a hard timeout and return stdout/stderr/status
+ * without blocking the event loop. Resolves with a uniform shape even on
+ * error / timeout so the probe layer above can read the fields uniformly.
+ */
+function runAsync(binary, args, timeoutMs) {
+  return new Promise((resolve) => {
+    let child
+    try {
+      child = spawn(binary, args, {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true,
+      })
+    } catch (error) {
+      resolve({ status: null, stdout: '', stderr: String(error?.message ?? error), timedOut: false, spawnError: true })
+      return
     }
-  } catch {
-    return null
+
+    let stdout = ''
+    let stderr = ''
+    let timedOut = false
+    const timer = setTimeout(() => {
+      timedOut = true
+      try { child.kill() } catch {}
+    }, timeoutMs)
+
+    child.stdout?.on('data', (d) => { stdout += d.toString() })
+    child.stderr?.on('data', (d) => { stderr += d.toString() })
+    child.on('error', (err) => {
+      clearTimeout(timer)
+      resolve({ status: null, stdout, stderr: stderr || String(err?.message ?? err), timedOut, spawnError: true })
+    })
+    child.on('close', (status) => {
+      clearTimeout(timer)
+      resolve({ status, stdout, stderr, timedOut, spawnError: false })
+    })
+  })
+}
+
+async function probeBinary(binary) {
+  const result = await runAsync(binary, ['--version'], 3000)
+  if (result.spawnError || result.timedOut) return null
+  if (result.status !== 0 && !result.stdout && !result.stderr) return null
+  const combined = `${result.stdout}${result.stderr}`.trim()
+  const match = /Python (\d+)\.(\d+)\.(\d+)/.exec(combined)
+  if (!match) return null
+  const [, maj, min, patch] = match
+  return {
+    binary,
+    version: `${maj}.${min}.${patch}`,
+    major: Number(maj),
+    minor: Number(min),
+    patch: Number(patch),
   }
 }
 
-function probeImports(binary, modules) {
+async function probeImports(binary, modules) {
   if (!modules?.length) return { ok: true, missing: [] }
   const code = modules.map(m => `import ${m}`).join('\n')
-  try {
-    const result = spawnSync(binary, ['-c', code], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      windowsHide: true,
-      timeout: 8000,
-    })
-    if (result.status === 0) return { ok: true, missing: [] }
-    const stderr = String(result.stderr || '')
-    const missing = []
-    for (const mod of modules) {
-      const re = new RegExp(`No module named ['"]?${mod.replace(/\./g, '\\.')}['"]?`)
-      if (re.test(stderr)) missing.push(mod)
-    }
-    return { ok: false, missing: missing.length ? missing : ['unknown'], stderr }
-  } catch (error) {
-    return { ok: false, missing: ['unknown'], stderr: String(error?.message ?? error) }
+  const result = await runAsync(binary, ['-c', code], 8000)
+  if (result.spawnError) {
+    return { ok: false, missing: ['unknown'], stderr: result.stderr }
   }
+  if (result.timedOut) {
+    return { ok: false, missing: ['timeout'], stderr: `Import probe timed out after 8000 ms` }
+  }
+  if (result.status === 0) return { ok: true, missing: [] }
+  const stderr = result.stderr
+  const missing = []
+  for (const mod of modules) {
+    const re = new RegExp(`No module named ['"]?${mod.replace(/\./g, '\\.')}['"]?`)
+    if (re.test(stderr)) missing.push(mod)
+  }
+  return { ok: false, missing: missing.length ? missing : ['unknown'], stderr }
 }
 
 let _cachedStatus = null
@@ -74,8 +109,9 @@ let _inflightProbe = null
 async function computeStatus() {
   const candidates = resolveCandidateBinaries()
   let detected = null
+  // Candidate order matters (the first hit wins), so keep this serial.
   for (const candidate of candidates) {
-    detected = probeBinary(candidate)
+    detected = await probeBinary(candidate)
     if (detected) break
   }
 
@@ -97,11 +133,16 @@ async function computeStatus() {
   // stack — its runtime failure modes (wrong transformers version for the
   // GLM architecture) happen during model.from_pretrained() which we can't
   // cheaply probe without downloading weights.
+  //
+  // Parallelise the two import probes — they spawn independent python
+  // processes and benefit fully from concurrency.
   const omniVoiceModules = ['torch', 'torchaudio', 'transformers', 'fastapi', 'uvicorn', 'omnivoice']
   const glmAsrModules = ['torch', 'transformers', 'fastapi', 'uvicorn']
 
-  const omni = probeImports(detected.binary, omniVoiceModules)
-  const glm = probeImports(detected.binary, glmAsrModules)
+  const [omni, glm] = await Promise.all([
+    probeImports(detected.binary, omniVoiceModules),
+    probeImports(detected.binary, glmAsrModules),
+  ])
 
   return {
     pythonAvailable: true,

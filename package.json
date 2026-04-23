@@ -34,7 +34,7 @@
     "package:mac": "npm run build && electron-builder --mac",
     "prepackage:linux": "node scripts/download-models.mjs --skip-asr",
     "package:linux": "npm run build && electron-builder --linux",
-    "verify:release": "tsc --noEmit && npm run lint && npm test && npm run build",
+    "verify:release": "tsc -b --force && npm run lint && npm test && npm run build",
     "prerelease-check": "node scripts/prerelease-check.mjs"
   },
   "dependencies": {

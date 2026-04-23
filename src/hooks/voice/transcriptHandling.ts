@@ -47,6 +47,13 @@ export type HandleRecognizedVoiceTranscriptRuntimeOptions = {
     content: string,
     options?: { source?: 'text' | 'voice' | 'telegram' | 'discord'; traceId?: string },
   ) => Promise<boolean>
+  /**
+   * Reset the no-speech restart counter. Called from the wake_word_only /
+   * manual_confirm / hold_incomplete branches — STT succeeded (even if the
+   * content is held or wake-only), so the counter should not climb toward
+   * the give-up cap.
+   */
+  resetNoSpeechRestartCount: () => void
   ti: Translator
 }
 

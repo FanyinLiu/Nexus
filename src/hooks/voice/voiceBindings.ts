@@ -413,6 +413,7 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       shouldIgnoreRepeatedVoiceContent,
       rememberSubmittedVoiceContent,
       sendMessage: (content, sendOptions) => ctx.sendMessageRef.current(content, sendOptions),
+      resetNoSpeechRestartCount,
       ti,
     })
   }
