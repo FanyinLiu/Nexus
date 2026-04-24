@@ -43,7 +43,11 @@ function check(label, fn) {
 }
 
 function sh(cmd, opts = {}) {
-  return execSync(cmd, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts }).trim()
+  const out = execSync(cmd, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts })
+  // execSync returns null when stdout is ignored — the [9/9] verify:release
+  // step does that to suppress the long build log. Empty-string is the right
+  // value to feed back so callers can `.trim()` without a null crash.
+  return (out ?? '').trim()
 }
 
 // ── Parse and validate tag argument ────────────────────────────────────────
