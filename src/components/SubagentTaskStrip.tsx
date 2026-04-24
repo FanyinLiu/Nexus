@@ -41,7 +41,9 @@ function pickVisibleTasks(tasks: SubagentTask[]): SubagentTask[] {
   })
 }
 
-function describeStatus(task: SubagentTask, t: TranslateFn): { label: string; tone: 'progress' | 'error' | 'idle' } {
+type Tone = 'progress' | 'error' | 'idle'
+
+function describeStatus(task: SubagentTask, t: TranslateFn): { label: string; tone: Tone } {
   switch (task.status) {
     case 'queued':
       return { label: t('subagent.queued'), tone: 'progress' }
@@ -83,6 +85,12 @@ function formatCost(usd: number): string | null {
   return `$${usd.toFixed(3)}`
 }
 
+function toneClass(prefix: string, tone: Tone): string {
+  if (tone === 'error') return `${prefix} is-error`
+  if (tone === 'idle') return `${prefix} is-idle`
+  return prefix
+}
+
 export type SubagentTaskStripProps = {
   tasks?: SubagentTask[]
   /** User-initiated cancel callback. Called with the task id. */
@@ -98,103 +106,38 @@ export const SubagentTaskStrip = memo(function SubagentTaskStrip({
   if (!visible.length) return null
 
   return (
-    <div
-      className="subagent-task-strip"
-      style={{
-        display: 'grid',
-        gap: 6,
-        padding: '8px 12px',
-        borderRadius: 12,
-        background: 'rgba(15, 23, 42, 0.55)',
-        border: '1px solid rgba(148, 163, 184, 0.2)',
-        marginBottom: 8,
-      }}
-    >
+    <div className="subagent-task-strip">
       {visible.map((task) => {
         const status = describeStatus(task, t)
         const active = task.status === 'queued' || task.status === 'running'
         const elapsed = formatElapsed(task)
         const costLabel = formatCost(task.usage.costUsd)
-        const dotColor =
-          status.tone === 'error' ? '#f87171'
-          : status.tone === 'idle' ? '#94a3b8'
-          : '#60a5fa'
         return (
-          <div
-            key={task.id}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              fontSize: 12,
-              color: '#e2e8f0',
-              lineHeight: 1.4,
-            }}
-          >
+          <div key={task.id} className="subagent-task-strip__row">
             <span
               aria-hidden="true"
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                flexShrink: 0,
-                background: dotColor,
-                boxShadow: active ? '0 0 0 0 rgba(96, 165, 250, 0.6)' : 'none',
-                animation: active ? 'subagent-pulse 1.4s ease-out infinite' : undefined,
-              }}
+              className={`${toneClass('subagent-task-strip__dot', status.tone)}${active ? ' is-active' : ''}`}
             />
-            <span style={{ fontWeight: 600, flexShrink: 0 }}>{t('subagent.label')}</span>
-            <span
-              style={{
-                flex: 1,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-              title={task.task}
-            >
+            <span className="subagent-task-strip__label">{t('subagent.label')}</span>
+            <span className="subagent-task-strip__title" title={task.task}>
               {task.purpose || task.task}
             </span>
             {elapsed ? (
-              <span style={{ fontSize: 11, color: '#64748b', flexShrink: 0 }}>{elapsed}</span>
+              <span className="subagent-task-strip__meta">{elapsed}</span>
             ) : null}
             {costLabel ? (
-              <span style={{ fontSize: 11, color: '#64748b', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-                {costLabel}
-              </span>
+              <span className="subagent-task-strip__meta is-cost">{costLabel}</span>
             ) : null}
-            <span
-              style={{
-                fontSize: 11,
-                color: status.tone === 'error' ? '#fca5a5'
-                  : status.tone === 'idle' ? '#94a3b8'
-                  : '#94a3b8',
-                flexShrink: 0,
-              }}
-            >
+            <span className={toneClass('subagent-task-strip__status', status.tone)}>
               {status.label}
             </span>
             {active && onCancel ? (
               <button
                 type="button"
+                className="subagent-task-strip__cancel"
                 onClick={() => onCancel(task.id)}
                 title="Cancel"
                 aria-label="Cancel subagent task"
-                style={{
-                  flexShrink: 0,
-                  width: 20,
-                  height: 20,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 6,
-                  border: '1px solid rgba(148, 163, 184, 0.3)',
-                  background: 'transparent',
-                  color: '#94a3b8',
-                  cursor: 'pointer',
-                  fontSize: 11,
-                  lineHeight: 1,
-                }}
               >
                 ✕
               </button>
@@ -202,13 +145,6 @@ export const SubagentTaskStrip = memo(function SubagentTaskStrip({
           </div>
         )
       })}
-      <style>{`
-        @keyframes subagent-pulse {
-          0%   { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.6); }
-          70%  { box-shadow: 0 0 0 6px rgba(96, 165, 250, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0); }
-        }
-      `}</style>
     </div>
   )
 })

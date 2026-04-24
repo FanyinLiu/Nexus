@@ -6,6 +6,22 @@ function pickActivePlan(plans: Plan[]): Plan | undefined {
   return plans.find((p) => p.status === 'active')
 }
 
+const STEP_ICON: Record<Plan['steps'][number]['status'], string> = {
+  completed: '●',
+  in_progress: '◐',
+  failed: '✕',
+  skipped: '◌',
+  pending: '○',
+}
+
+const STEP_ICON_TONE: Record<Plan['steps'][number]['status'], string> = {
+  completed: 'is-completed',
+  in_progress: 'is-progress',
+  failed: 'is-failed',
+  skipped: 'is-skipped',
+  pending: 'is-pending',
+}
+
 export const ActivePlanStrip = memo(function ActivePlanStrip() {
   const { t } = useTranslation()
   const [activePlan, setActivePlan] = useState<Plan | undefined>(() =>
@@ -28,108 +44,46 @@ export const ActivePlanStrip = memo(function ActivePlanStrip() {
   const progressPct = total > 0 ? Math.round((completed / total) * 100) : 0
 
   return (
-    <div
-      className="active-plan-strip"
-      style={{
-        padding: '10px 14px',
-        borderRadius: 14,
-        background: 'rgba(15, 23, 42, 0.55)',
-        border: '1px solid rgba(148, 163, 184, 0.2)',
-        display: 'grid',
-        gap: 8,
-      }}
-    >
+    <div className="active-plan-strip">
       <button
         type="button"
+        className="active-plan-strip__header"
         onClick={() => setExpanded((v) => !v)}
-        style={{
-          all: 'unset',
-          cursor: 'pointer',
-          display: 'grid',
-          gap: 6,
-        }}
       >
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <span style={{ fontSize: 11, color: '#94a3b8', letterSpacing: 0.5 }}>
-            {t('plan_strip.executing')}
-          </span>
-          <span style={{ fontSize: 13, color: '#e2e8f0', flex: 1, fontWeight: 600 }}>
-            {activePlan.goal}
-          </span>
-          <span style={{ fontSize: 11, color: failed ? '#f87171' : '#64748b' }}>
+        <div className="active-plan-strip__title-row">
+          <span className="active-plan-strip__eyebrow">{t('plan_strip.executing')}</span>
+          <span className="active-plan-strip__goal">{activePlan.goal}</span>
+          <span className={`active-plan-strip__counter${failed ? ' is-failed' : ''}`}>
             {completed}/{total}
             {failed ? t('plan_strip.failed_suffix', { count: failed }) : ''}
           </span>
         </div>
-        <div
-          style={{
-            height: 4,
-            borderRadius: 2,
-            background: 'rgba(148, 163, 184, 0.18)',
-            overflow: 'hidden',
-          }}
-        >
+        <div className="active-plan-strip__progress">
           <div
-            style={{
-              width: `${progressPct}%`,
-              height: '100%',
-              background: failed ? '#f87171' : '#34d399',
-              transition: 'width 0.3s ease',
-            }}
+            className={`active-plan-strip__progress-fill${failed ? ' is-failed' : ''}`}
+            style={{ width: `${progressPct}%` }}
           />
         </div>
         {currentStep && !expanded ? (
-          <div style={{ fontSize: 11, color: '#cbd5e1' }}>
-            <span style={{ color: '#fbbf24', marginRight: 6 }}>◐</span>
+          <div className="active-plan-strip__current">
+            <span className="active-plan-strip__current-icon">◐</span>
             {currentStep.text}
           </div>
         ) : null}
       </button>
 
       {expanded ? (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 4 }}>
-          {activePlan.steps.map((step) => {
-            const icon =
-              step.status === 'completed'
-                ? '●'
-                : step.status === 'in_progress'
-                  ? '◐'
-                  : step.status === 'failed'
-                    ? '✕'
-                    : step.status === 'skipped'
-                      ? '◌'
-                      : '○'
-            const color =
-              step.status === 'completed'
-                ? '#34d399'
-                : step.status === 'in_progress'
-                  ? '#fbbf24'
-                  : step.status === 'failed'
-                    ? '#f87171'
-                    : '#94a3b8'
-            return (
-              <li
-                key={step.id}
-                style={{
-                  fontSize: 11,
-                  color: '#cbd5e1',
-                  display: 'flex',
-                  gap: 6,
-                  alignItems: 'flex-start',
-                }}
-              >
-                <span style={{ color, fontWeight: 700, minWidth: 12 }}>{icon}</span>
-                <span
-                  style={{
-                    flex: 1,
-                    textDecoration: step.status === 'skipped' ? 'line-through' : 'none',
-                  }}
-                >
-                  {step.text}
-                </span>
-              </li>
-            )
-          })}
+        <ul className="active-plan-strip__steps">
+          {activePlan.steps.map((step) => (
+            <li key={step.id} className="active-plan-strip__step">
+              <span className={`active-plan-strip__step-icon ${STEP_ICON_TONE[step.status]}`}>
+                {STEP_ICON[step.status]}
+              </span>
+              <span className={`active-plan-strip__step-text${step.status === 'skipped' ? ' is-skipped' : ''}`}>
+                {step.text}
+              </span>
+            </li>
+          ))}
         </ul>
       ) : null}
     </div>

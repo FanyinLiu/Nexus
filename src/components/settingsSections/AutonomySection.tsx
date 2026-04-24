@@ -1,5 +1,6 @@
 import { memo, type Dispatch, type SetStateAction, useCallback, useState } from 'react'
 import { parseNumberInput } from '../settingsDrawerSupport'
+import { NumberField, ToggleField } from '../settingsFields'
 import { clampPresenceIntervalMinutes } from '../../lib/settings'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { AppSettings, NotificationChannel, UiLanguage } from '../../types'
@@ -24,55 +25,6 @@ type AutonomySectionProps = {
 type TiFunction = (key: Parameters<typeof pickTranslatedUiText>[1]) => string
 
 // ── Helpers to reduce repetition in settings fields ──────────────────────────
-
-type NumberFieldProps = {
-  label: string
-  field: keyof AppSettings
-  min: number
-  max: number
-  step: number
-  draft: AppSettings
-  setDraft: Dispatch<SetStateAction<AppSettings>>
-}
-
-function NumberField({ label, field, min, max, step, draft, setDraft }: NumberFieldProps) {
-  return (
-    <label>
-      <span>{label}</span>
-      <input
-        type="number"
-        min={min}
-        max={max}
-        step={step}
-        value={draft[field] as number}
-        onChange={(e) => setDraft((prev) => ({
-          ...prev,
-          [field]: parseNumberInput(e.target.value, prev[field] as number),
-        }))}
-      />
-    </label>
-  )
-}
-
-type ToggleFieldProps = {
-  label: string
-  field: keyof AppSettings
-  draft: AppSettings
-  setDraft: Dispatch<SetStateAction<AppSettings>>
-}
-
-function ToggleField({ label, field, draft, setDraft }: ToggleFieldProps) {
-  return (
-    <label className="settings-toggle">
-      <span>{label}</span>
-      <input
-        type="checkbox"
-        checked={draft[field] as boolean}
-        onChange={(e) => setDraft((prev) => ({ ...prev, [field]: e.target.checked }))}
-      />
-    </label>
-  )
-}
 
 type SubsectionHeaderProps = {
   title: string
