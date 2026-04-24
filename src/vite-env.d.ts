@@ -591,6 +591,9 @@ declare global {
       stopNotificationBridge: () => Promise<void>
       subscribeNotifications: (listener: (message: import('./types').NotificationMessage) => void) => () => void
 
+      // Proactive OS-level notification ("[name] 在想你")
+      showProactiveNotification: (payload: { title: string; body: string }) => Promise<{ ok: boolean }>
+
       // Key vault (safeStorage encryption)
       vaultIsAvailable: () => Promise<boolean>
       vaultStore: (slot: string, plaintext: string) => Promise<void>

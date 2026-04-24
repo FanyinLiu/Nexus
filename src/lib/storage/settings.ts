@@ -135,6 +135,8 @@ const defaultSettings: AppSettings = {
   toolOpenExternalRequiresConfirmation: true,
   proactivePresenceEnabled: true,
   proactivePresenceIntervalMinutes: 25,
+  proactiveAwayNotificationsEnabled: true,
+  proactiveAwayNotificationThresholdMinutes: 240,
   launchOnStartup: false,
   mcpServers: [],
   minecraftIntegrationEnabled: false,

@@ -270,6 +270,9 @@ contextBridge.exposeInMainWorld('desktopPet', {
     return () => ipcRenderer.removeListener('notification:incoming', handler)
   },
 
+  // Proactive OS-level notification ("[name] 在想你")
+  showProactiveNotification: (payload) => ipcRenderer.invoke('proactive:show-notification', payload),
+
   // Key vault (safeStorage encryption)
   vaultIsAvailable: () => ipcRenderer.invoke('vault:is-available'),
   vaultStore: (slot, plaintext) => ipcRenderer.invoke('vault:store', slot, plaintext),

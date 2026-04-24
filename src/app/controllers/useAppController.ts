@@ -35,6 +35,7 @@ import { useMediaSessionController } from './useMediaSessionController'
 import { useReminderTaskStore } from './useReminderTaskStore'
 import { useSettingsSubscription } from './useSettingsSubscription'
 import { useWorkspaceRootBridge } from './useWorkspaceRootBridge'
+import { useAwayNotificationScheduler } from '../../hooks/useAwayNotificationScheduler'
 import { useMcpServerSync } from '../../hooks/useMcpServerSync'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
 import { AUTONOMY_GOALS_STORAGE_KEY, readJson, writeJson } from '../../lib/storage'
@@ -295,6 +296,12 @@ export function useAppController() {
   useEffect(() => {
     messagesRef.current = chat.messages
   }, [chat.messages])
+
+  useAwayNotificationScheduler({
+    settings,
+    messages: chat.messages,
+    panelOpen: !panelCollapsed,
+  })
 
   useEffect(() => {
     voiceStateRef.current = voice.voiceState

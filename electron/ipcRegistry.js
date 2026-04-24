@@ -15,6 +15,7 @@ import * as updaterIpc from './ipc/updaterIpc.js'
 import * as workspaceFsIpc from './ipc/workspaceFsIpc.js'
 import * as sherpaIpc from './ipc/sherpaIpc.js'
 import * as notificationIpc from './ipc/notificationIpc.js'
+import * as proactiveNotificationIpc from './ipc/proactiveNotificationIpc.js'
 import * as mcpIpc from './ipc/mcpIpc.js'
 
 const CHAT_REQUEST_TIMEOUT_MS = 25_000
@@ -81,6 +82,7 @@ export function registerIpc() {
   workspaceFsIpc.register()
   sherpaIpc.register()
   notificationIpc.register()
+  proactiveNotificationIpc.register()
   mcpIpc.register()
 
   // Load deferred modules when the renderer is ready (first IPC call will trigger it),

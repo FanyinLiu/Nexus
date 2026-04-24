@@ -295,6 +295,14 @@ export interface ToolSettings {
 export interface PresenceSettings {
   proactivePresenceEnabled: boolean
   proactivePresenceIntervalMinutes: number
+  /**
+   * OS-level "thinking of you" notification fires when the user has gone
+   * silent (no chat message sent) for at least N minutes. Uses the persona
+   * + relationship-type to pick varied phrasing. Quiet-hours window (23-08)
+   * is enforced inside the scheduler. Default on; users can disable.
+   */
+  proactiveAwayNotificationsEnabled: boolean
+  proactiveAwayNotificationThresholdMinutes: number
 }
 
 export interface McpServerConfig {

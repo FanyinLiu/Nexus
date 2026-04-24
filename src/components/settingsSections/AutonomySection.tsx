@@ -361,6 +361,38 @@ export const AutonomySection = memo(function AutonomySection({
         </label>
       )}
 
+      {/* ── Away "Thinking of you" notification ──────────────────────────── */}
+      <ToggleField
+        label={ti('settings.autonomy.away_notification.enable')}
+        field="proactiveAwayNotificationsEnabled"
+        {...fieldProps}
+      />
+      <p className="settings-drawer__hint">
+        {ti('settings.autonomy.away_notification.hint')}
+      </p>
+
+      {draft.proactiveAwayNotificationsEnabled && (
+        <label>
+          <span>{ti('settings.autonomy.away_notification.threshold')}</span>
+          <input
+            type="number"
+            min="60"
+            max="1440"
+            step="30"
+            value={draft.proactiveAwayNotificationThresholdMinutes}
+            onChange={(event) =>
+              setDraft((prev) => ({
+                ...prev,
+                proactiveAwayNotificationThresholdMinutes: Math.max(
+                  60,
+                  Math.min(1440, parseNumberInput(event.target.value, prev.proactiveAwayNotificationThresholdMinutes)),
+                ),
+              }))
+            }
+          />
+        </label>
+      )}
+
       {/* ── Tick Loop & Sleep ─────────────────────────────────────────────── */}
       {draft.autonomyEnabled && (
         <>
