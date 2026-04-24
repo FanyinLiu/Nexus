@@ -159,6 +159,8 @@ function formatWeatherForModel(result: Extract<BuiltInToolResult, { kind: 'weath
     current: result.result.currentSummary,
     today: result.result.todaySummary ?? '',
     tomorrow: result.result.tomorrowSummary ?? '',
+    dayAfter: result.result.dayAfterSummary ?? '',
+    upcomingHourly: result.result.upcomingHourly ?? '',
   })
 }
 

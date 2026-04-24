@@ -108,6 +108,11 @@ export interface WeatherLookupResponse {
   currentSummary: string
   todaySummary?: string
   tomorrowSummary?: string
+  /** Optional 3rd day summary (forecast_days=3 in the open-meteo call). */
+  dayAfterSummary?: string
+  /** Hourly-derived intra-day shift hint, e.g. "傍晚18点起可能有降水（概率70%）".
+   *  Empty string when the next 12 hours show no significant change. */
+  upcomingHourly?: string
   usedFallbackLocation?: boolean
   message: string
   // Structured fields for ambient weather UI (corner chip). The LLM-facing
@@ -115,9 +120,17 @@ export interface WeatherLookupResponse {
   // counterparts let non-LLM consumers render a compact widget without
   // parsing Chinese prose.
   currentTemperature?: number | null
+  /** Apparent / "feels-like" temperature in °C. */
+  currentApparentTemperature?: number | null
+  /** Relative humidity in %. */
+  currentHumidity?: number | null
+  /** Precipitation in mm over the last hour (open-meteo current.precipitation). */
+  currentPrecipitationMm?: number | null
   currentWeatherCode?: number | null
   currentConditionLabel?: string
   currentWindSpeedKmh?: number | null
+  /** True when the resolved location's local time is daytime. */
+  currentIsDay?: boolean
 }
 
 export interface ExternalLinkRequest {

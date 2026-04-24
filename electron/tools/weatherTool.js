@@ -110,6 +110,73 @@ function spokenPrecipitation(percent) {
   return `很可能会下雨，降水概率百分之${percent}`
 }
 
+function spokenHumidity(percent) {
+  if (!Number.isFinite(percent)) return ''
+  const rounded = Math.round(percent)
+  if (rounded < 30) return `空气干燥（湿度${rounded}%）`
+  if (rounded < 60) return `湿度${rounded}%`
+  if (rounded < 80) return `湿度偏高${rounded}%`
+  return `空气湿润（湿度${rounded}%）`
+}
+
+function spokenApparentDelta(actual, apparent) {
+  if (!Number.isFinite(actual) || !Number.isFinite(apparent)) return ''
+  const delta = apparent - actual
+  if (Math.abs(delta) < 1.5) return ''
+  // Feels-like only mentioned when meaningfully different from actual.
+  return `体感${spokenTemperature(apparent)}`
+}
+
+// Inspect the next 12 hours of hourly data and extract intra-day shifts —
+// the difference between "今天阵雨" (single daily code) and "傍晚 18 点起
+// 有阵雨" (intra-day precision).
+function summarizeUpcomingHourly(hourly, currentIsoTime) {
+  if (!hourly?.time?.length) return ''
+  const startMs = currentIsoTime ? Date.parse(currentIsoTime) : Date.now()
+  if (!Number.isFinite(startMs)) return ''
+  // Find first index at or after the current hour.
+  let startIdx = -1
+  for (let i = 0; i < hourly.time.length; i += 1) {
+    const ts = Date.parse(hourly.time[i])
+    if (Number.isFinite(ts) && ts >= startMs) { startIdx = i; break }
+  }
+  if (startIdx === -1) return ''
+
+  const PRECIP_PROB_THRESHOLD = 50
+  const nextHours = Math.min(12, hourly.time.length - startIdx)
+  let firstRainIdx = -1
+  let firstRainProb = 0
+  for (let offset = 0; offset < nextHours; offset += 1) {
+    const idx = startIdx + offset
+    const prob = Number(hourly.precipitation_probability?.[idx])
+    const code = Number(hourly.weather_code?.[idx])
+    const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95 && code <= 99)
+    if ((Number.isFinite(prob) && prob >= PRECIP_PROB_THRESHOLD) || isRainCode) {
+      firstRainIdx = offset
+      firstRainProb = Number.isFinite(prob) ? prob : firstRainProb
+      break
+    }
+  }
+  if (firstRainIdx === -1) return ''
+
+  const rainTimeMs = Date.parse(hourly.time[startIdx + firstRainIdx])
+  if (!Number.isFinite(rainTimeMs)) return ''
+  const rainHour = new Date(rainTimeMs).getHours()
+  const periodLabel = (
+    rainHour < 6 ? '凌晨'
+    : rainHour < 11 ? '上午'
+    : rainHour < 14 ? '中午'
+    : rainHour < 18 ? '下午'
+    : rainHour < 22 ? '傍晚'
+    : '深夜'
+  )
+  const probText = firstRainProb > 0 ? `（概率${Math.round(firstRainProb)}%）` : ''
+  if (firstRainIdx === 0) {
+    return `现在就在下雨${probText}`
+  }
+  return `${periodLabel}${rainHour}点起可能有降水${probText}`
+}
+
 function formatDailyWeatherSummary(label, daily, index) {
   if (!daily?.time?.[index]) {
     return ''
@@ -118,6 +185,7 @@ function formatDailyWeatherSummary(label, daily, index) {
   const min = daily.temperature_2m_min?.[index]
   const max = daily.temperature_2m_max?.[index]
   const precipitation = daily.precipitation_probability_max?.[index]
+  const precipitationSum = Number(daily.precipitation_sum?.[index])
   const weatherCode = daily.weather_code?.[index]
   const pieces = [
     label,
@@ -131,6 +199,11 @@ function formatDailyWeatherSummary(label, daily, index) {
   const precipitationText = spokenPrecipitation(precipitation)
   if (precipitationText) {
     pieces.push(precipitationText)
+  }
+  // Append exact mm only when there is actual rain expected — keeps the
+  // dry-day summary clean.
+  if (Number.isFinite(precipitationSum) && precipitationSum >= 0.5) {
+    pieces.push(`累计${precipitationSum.toFixed(1)}mm`)
   }
 
   return pieces.join('，')
@@ -587,9 +660,10 @@ export async function lookupWeatherByLocation(location, fallbackLocation = '') {
 
   const forecastResponse = await performNetworkRequest(
     `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}`
-      + '&current=temperature_2m,weather_code,wind_speed_10m'
-      + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max'
-      + '&timezone=auto&forecast_days=2',
+      + '&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m'
+      + '&hourly=temperature_2m,precipitation_probability,weather_code'
+      + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum'
+      + '&timezone=auto&forecast_days=3',
     {
       method: 'GET',
       timeoutMs: TOOL_WEATHER_TIMEOUT_MS,
@@ -606,13 +680,24 @@ export async function lookupWeatherByLocation(location, fallbackLocation = '') {
   const forecastData = await readJsonSafe(forecastResponse)
   const current = forecastData?.current ?? {}
   const daily = forecastData?.daily ?? {}
+  const hourly = forecastData?.hourly ?? {}
   const resolvedName = formatResolvedWeatherPlaceName(place)
   const currentTemperature = Number(current.temperature_2m)
+  const currentApparent = Number(current.apparent_temperature)
+  const currentHumidity = Number(current.relative_humidity_2m)
+  const currentPrecipitation = Number(current.precipitation)
   const currentWind = Number(current.wind_speed_10m)
+  const upcomingHourlyHint = summarizeUpcomingHourly(hourly, current.time)
   const currentSummary = [
     Number.isFinite(currentTemperature) ? `当前${spokenTemperature(currentTemperature)}` : '当前气温未知',
+    spokenApparentDelta(currentTemperature, currentApparent),
     getWeatherCodeDescription(current.weather_code),
+    Number.isFinite(currentPrecipitation) && currentPrecipitation > 0.1
+      ? `正在下雨（过去1小时${currentPrecipitation.toFixed(1)}mm）`
+      : '',
+    spokenHumidity(currentHumidity),
     spokenWindSpeed(currentWind),
+    upcomingHourlyHint,
   ]
     .filter(Boolean)
     .join('，')
@@ -624,14 +709,20 @@ export async function lookupWeatherByLocation(location, fallbackLocation = '') {
     currentSummary,
     todaySummary: formatDailyWeatherSummary('今天', daily, 0),
     tomorrowSummary: formatDailyWeatherSummary('明天', daily, 1),
+    dayAfterSummary: formatDailyWeatherSummary('后天', daily, 2),
+    upcomingHourly: upcomingHourlyHint || '',
     usedFallbackLocation,
     message: `已获取 ${resolvedName} 的天气。`,
     // Structured fields consumed by the ambient weather chip in the panel —
     // the LLM-facing summary strings above stay untouched so existing tool
     // calls keep returning exactly the text the model was trained on.
     currentTemperature: Number.isFinite(currentTemperature) ? currentTemperature : null,
+    currentApparentTemperature: Number.isFinite(currentApparent) ? currentApparent : null,
+    currentHumidity: Number.isFinite(currentHumidity) ? currentHumidity : null,
+    currentPrecipitationMm: Number.isFinite(currentPrecipitation) ? currentPrecipitation : null,
     currentWeatherCode: Number.isFinite(Number(current.weather_code)) ? Number(current.weather_code) : null,
     currentConditionLabel: getWeatherCodeDescription(current.weather_code),
     currentWindSpeedKmh: Number.isFinite(currentWind) ? currentWind : null,
+    currentIsDay: current.is_day === 1 || current.is_day === true,
   }
 }
