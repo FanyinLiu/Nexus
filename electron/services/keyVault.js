@@ -1,23 +1,12 @@
 import { app, safeStorage } from 'electron'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { createAsyncLock } from './asyncLock.js'
 
 const VAULT_FILE_NAME = 'vault.json'
 
 let vaultCache = null
-let _writeLock = null
-
-async function withVaultLock(fn) {
-  while (_writeLock) await _writeLock
-  let resolve
-  _writeLock = new Promise((r) => { resolve = r })
-  try {
-    return await fn()
-  } finally {
-    _writeLock = null
-    resolve()
-  }
-}
+const withVaultLock = createAsyncLock()
 
 function getVaultPath() {
   return path.join(app.getPath('userData'), VAULT_FILE_NAME)

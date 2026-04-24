@@ -25,25 +25,14 @@ import { BrowserWindow, app, dialog } from 'electron'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { hashMcpCommand } from './mcpApprovalsHash.js'
+import { createAsyncLock } from './asyncLock.js'
 
 export { hashMcpCommand }
 
 const APPROVALS_FILE_NAME = 'mcp-approvals.json'
 
 let _approvalsCache = null
-let _writeLock = null
-
-async function withWriteLock(fn) {
-  while (_writeLock) await _writeLock
-  let resolve
-  _writeLock = new Promise((r) => { resolve = r })
-  try {
-    return await fn()
-  } finally {
-    _writeLock = null
-    resolve()
-  }
-}
+const withWriteLock = createAsyncLock()
 
 function getApprovalsPath() {
   return path.join(app.getPath('userData'), APPROVALS_FILE_NAME)
