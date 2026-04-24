@@ -63,6 +63,7 @@ const defaultSettings: AppSettings = {
   userName: '主人',
   characterProfiles: [],
   activeCharacterProfileId: '',
+  companionRelationshipType: 'open_ended',
   apiBaseUrl: 'https://api.openai.com/v1',
   apiKey: '',
   model: 'gpt-4.1-mini',

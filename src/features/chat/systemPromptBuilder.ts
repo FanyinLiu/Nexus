@@ -150,6 +150,7 @@ export async function buildSystemPrompt(
   const prompts = getChatPromptStrings(settings.uiLanguage)
 
   const personaSection = soulContent || settings.systemPrompt
+  const relationshipTypeSection = prompts.relationshipTypeBias(settings.companionRelationshipType)
   const personaMemorySection = personaMemoryContent
     ? prompts.personaMemoryHeader(personaMemoryContent)
     : ''
@@ -238,6 +239,7 @@ export async function buildSystemPrompt(
 
   return [
     personaSection,
+    relationshipTypeSection,
     personaMemorySection,
     narrativeSection,
     relationshipSection,

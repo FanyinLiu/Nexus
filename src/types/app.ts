@@ -58,6 +58,12 @@ export interface CharacterProfile {
   speechOutputInstructions?: string
 }
 
+export type CompanionRelationshipType =
+  | 'open_ended'
+  | 'friend'
+  | 'mentor'
+  | 'quiet_companion'
+
 export interface IdentitySettings {
   companionName: string
   userName: string
@@ -65,6 +71,12 @@ export interface IdentitySettings {
   petModelId: string
   characterProfiles: CharacterProfile[]
   activeCharacterProfileId: string
+  /**
+   * Soft framing for how the companion should hold the relationship — biases
+   * the system prompt with a 1-line nudge. 'open_ended' (default) injects
+   * nothing, preserving existing behavior for upgraded installs.
+   */
+  companionRelationshipType: CompanionRelationshipType
 }
 
 export interface AppearanceSettings {

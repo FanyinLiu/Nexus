@@ -7,7 +7,7 @@
  * because the rest of the pipeline does regex matching on them.
  */
 
-import type { UiLanguage } from '../../../types'
+import type { CompanionRelationshipType, UiLanguage } from '../../../types'
 import { normalizeUiLanguage } from '../../../lib/uiLanguage.ts'
 import { zhCNChatPrompts } from './systemPrompt.zh-CN.ts'
 import { zhTWChatPrompts } from './systemPrompt.zh-TW.ts'
@@ -27,6 +27,9 @@ export interface ChatPromptStrings {
   /** Soft instruction for the 2nd/3rd assistant reply ever — ask one
    *  specific curious question rooted in a concrete persona detail. */
   firstImpressionGuide: string
+  /** One-line bias on relationship framing. Returns '' for 'open_ended' so
+   *  the prefix stays byte-stable for users who never picked a type. */
+  relationshipTypeBias: (type: CompanionRelationshipType) => string
   /** Native function-calling intro; `list` is the newline-joined `1. name: desc`. */
   mcpToolsNative: (list: string) => string
   /** Outer wrapper for skill guides. */
