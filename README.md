@@ -38,7 +38,8 @@ The design goal is persistence of relationship, not just chat. A nightly **dream
 
 ## News
 
-- **2026.04.24** — **v0.3.0-beta.1 released.** Three independent depth axes on the relationship system: mood-aware memory recall (VAD projection + empathy/repair/reinforce modes), one-shot level-up instructions with richer reunion framing, and four named sub-dimensions (trust / vulnerability / playfulness / intellectual) under the existing 0–100 score. Plus Electron 41 and a six-finding security hardening pass. [Release notes](docs/RELEASE-NOTES-v0.3.0-beta.1.md) · [Pre-release install](https://github.com/FanyinLiu/Nexus/releases/tag/v0.3.0-beta.1).
+- **2026.04.25** — **v0.3.0 stable released.** The narrative-companion release. Significance-weighted recall + dream-cycle reflections + callback queue + anniversary milestones; relationship type declaration (friend / mentor / quiet companion); "thinking of you" OS notification; idle-motion silent gestures; smooth 2-hour day↔dusk↔night blend with bolder color contrast; Liquid Glass UI re-skin; richer weather precision. [Release notes](docs/RELEASE-NOTES-v0.3.0.md) · [Install](https://github.com/FanyinLiu/Nexus/releases/tag/v0.3.0).
+- **2026.04.24** — v0.3.0-beta.1 / beta.2. Beta line for the relationship + memory work that landed in stable v0.3.0. [Notes beta.1](docs/RELEASE-NOTES-v0.3.0-beta.1.md) · [Notes beta.2](docs/RELEASE-NOTES-v0.3.0-beta.2.md).
 - **2026.04.22** — v0.2.9 released. Emotional memory + 5-level relationship baseline; weather + scene overhaul; Character Card v2/v3 import; VTube Studio bridge. [Tag](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.9)
 
 <details>
@@ -59,9 +60,9 @@ The design goal is persistence of relationship, not just chat. A nightly **dream
 
 The first three are the heart of the project. The rest is what keeps the companion practical day-to-day.
 
-- 💝 **Emotional memory + relationship arc.** The companion remembers the *feel* of how you parted, notices absences, and her tone shifts across a 5-level progression (stranger → acquaintance → friend → close friend → intimate). v0.3.0-beta.1 adds four named sub-dimensions — trust, vulnerability, playfulness, intellectual — that grow from different kinds of interaction.
+- 💝 **Emotional memory + relationship arc.** The companion remembers the *feel* of how you parted, notices absences, and her tone shifts across a 5-level progression (stranger → acquaintance → friend → close friend → intimate). Four named sub-dimensions — trust, vulnerability, playfulness, intellectual — grow from different kinds of interaction. New in v0.3.0: pick a *relationship type* (friend / mentor / quiet companion / open-ended) that biases tone.
 
-- 🧠 **Memory that dreams.** Three-tier hot / warm / cold with hybrid BM25 + vector search. A nightly dream cycle clusters conversations into *narrative threads* so the companion's sense of you compounds over time instead of resetting each session. Mood-aware recall (v0.3.0-beta.1) means the same memory feels different in different moods.
+- 🧠 **Memory that dreams.** Three-tier hot / warm / cold with hybrid BM25 + vector search. A nightly dream cycle clusters conversations into *narrative threads* + generates 1–3 short reflections about you, plus 0–2 callback memories queued for next conversation. The same memory also feels different in different moods (mood-aware recall).
 
 - 🤖 **Autonomous inner life (V2).** Single LLM decision call per tick, fed a layered snapshot (emotion · relationship · rhythm · desktop · recent chat) and filtered through a per-persona guardrail. No formulaic template output — she writes in her own voice, can choose to stay silent, and can dispatch a background research helper when a task would actually benefit from it.
 
@@ -71,7 +72,7 @@ The first three are the heart of the project. The rest is what keeps the compani
 
 - 🎭 **Character Card + VTube Studio bridge.** Import Character Card v2/v3 (chub.ai / characterhub compatible). Drive an external Live2D model via the VTube Studio plugin API while keeping Nexus's memory / autonomy stack.
 
-- 🧰 **Subagent dispatcher.** The companion can fire a bounded research loop behind the scenes — web search or MCP tools — and weave the summary into its next reply. Capacity + daily budget enforced; v0.3.0-beta.1 adds cancel + per-task progress + history.
+- 🧰 **Subagent dispatcher.** The companion can fire a bounded research loop behind the scenes — web search or MCP tools — and weave the summary into its next reply. Capacity + daily budget enforced, with cancel + per-task progress + history.
 
 - 🔧 **Built-in tools.** Web search, weather, reminders. Works with native function calling **and** a prompt-mode fallback for models that don't support `tools`.
 
@@ -87,14 +88,35 @@ The first three are the heart of the project. The rest is what keeps the compani
 
 - 💰 **Cost-aware.** Built-in budget metering + Anthropic prompt caching on the system + tools prefix (30-50% input token reduction on long sessions).
 
-- 🛠️ **Diagnostics built in (v0.3.0-beta.1).** JSONL log export, emotion + relationship timeline charts, 30-day cost history with per-source / per-model breakdown — all in Settings → Console.
+- 🛠️ **Diagnostics built in.** JSONL log export, emotion + relationship timeline charts, 30-day cost history with per-source / per-model breakdown — all in Settings → Console.
 
-## What's new in v0.3.0-beta.1
+## What's new in v0.3.0
 
-> **Pre-release.** Three independent depth axes on the relationship system,
-> all backward-compatible. Existing v0.2.9 data picks up seamlessly.
-> Full developer-facing notes live in
-> [docs/RELEASE-NOTES-v0.3.0-beta.1.md](docs/RELEASE-NOTES-v0.3.0-beta.1.md).
+> **Stable.** Cumulative changelog from `v0.2.9`: 100+ commits, ~12,000 LOC, +361
+> tests. Backward-compatible — pre-v0.3.0 stored state migrates transparently.
+> Full notes: [docs/RELEASE-NOTES-v0.3.0.md](docs/RELEASE-NOTES-v0.3.0.md).
+
+| Theme | What landed |
+|---|---|
+| **🧠 Memory does work** | Significance-weighted recall, dream-cycle reflections (1–3 short observations about you), callback queue (gently surfaces a past memory in the next chat), anniversary milestones at day-30 / 100 / 365. |
+| **💝 Relationship has shape** | Mood-aware recall (3 modes), 5-level milestones with first-time fire, four sub-dimensions, richer reunion framing. |
+| **🤝 Relationship has type** | Pick *open-ended* / *friend* / *mentor* / *quiet companion* in onboarding or settings — biases tone without overriding `SOUL.md`. |
+| **💭 "Thinking of you"** | OS-level notification fires after a long silence, phrased to match your relationship type. Quiet hours 23–08 hard-gated. |
+| **🎬 Alive in the corner** | Idle-motion silent gestures (4th autonomy V2 action), dynamic decision cadence, first-impression curious question on early replies. |
+| **🌅 Smooth scene** | 2-hour day↔dusk↔night blend windows with smoothstep easing; bolder color contrast — dawn pink, golden hour deep amber, deep night cool desat. |
+| **🪟 Liquid Glass UI** | Violet accent re-skin, cleaned-up toolbar, time-aware emoji greeting, panel size + position now persist across launches. |
+| **🌤️ Better weather** | Hourly forecast, feels-like + humidity, day-after-tomorrow lookahead. |
+| **🧹 Polish** | i18n.ts split (1842 → 588 lines), shared Settings field components, regex compile cache, async-lock dedup, build-size trim (~30–60 MB). |
+
+<details>
+<summary>Earlier beta line (folded into this stable)</summary>
+
+The beta line built the foundation that this stable polishes:
+
+- **v0.3.0-beta.1** — Three independent depth axes on the relationship system: mood-aware memory recall (VAD projection + empathy/repair/reinforce modes), one-shot level-up instructions, four sub-dimensions. [Notes](docs/RELEASE-NOTES-v0.3.0-beta.1.md)
+- **v0.3.0-beta.2** — Stability + retention pass: significance-weighted recall, dream-cycle reflections, callback queue, anniversary milestones, idle motion, dynamic cadence, Liquid Glass UI, weather precision, tray + dock icons, 7 security fixes. [Notes](docs/RELEASE-NOTES-v0.3.0-beta.2.md)
+
+</details>
 
 | Axis | What it does |
 |---|---|
