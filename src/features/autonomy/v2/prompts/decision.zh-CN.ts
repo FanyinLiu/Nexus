@@ -24,6 +24,12 @@ Valid shapes:
     now. The text field is exactly the words you say — no role labels,
     no markdown, no stage directions. Keep it short (1-3 sentences).`,
 
+  responseContractIdleMotion: `  {"action": "idle_motion", "motion": "wave|nod|shake|tilt|stretch|yawn"}
+
+    仅当用户已经空闲一段时间，且现在最自然的状态是**没有话要说，但需要一个微小的"我还在"信号**时使用。
+    不发文字、不出气泡、不出语音 —— 桌宠在角落做一个小动作（伸懒腰、打哈欠、歪头一下）。
+    每次最多一个动作；如果有任何想说话的理由，请用 speak 而不是这个。`,
+
   responseContractSpawn: `  {"action": "spawn", "task": "...", "purpose": "...", "announcement": "..."}
 
     Use this when the user would genuinely benefit from you doing

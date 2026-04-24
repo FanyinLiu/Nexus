@@ -24,6 +24,12 @@ Valid shapes:
     now. The text field is exactly the words you say — no role labels,
     no markdown, no stage directions. Keep it short (1-3 sentences).`,
 
+  responseContractIdleMotion: `  {"action": "idle_motion", "motion": "wave|nod|shake|tilt|stretch|yawn"}
+
+    ユーザーがしばらく操作していない、かつ今は**話すことはないけれど「ここにいるよ」という小さな仕草だけ伝えたい**ときにのみ使ってください。
+    テキストもバブルも音声も出さず、デスクトップの片隅で小さな動作（伸び、あくび、首をちょっと傾ける等）を一つ。
+    1 回につきモーションは一つだけ。話したい理由が少しでもあるなら speak を使ってください。`,
+
   responseContractSpawn: `  {"action": "spawn", "task": "...", "purpose": "...", "announcement": "..."}
 
     Use this when the user would genuinely benefit from you doing

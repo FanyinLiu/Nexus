@@ -263,3 +263,45 @@ test('runDecisionEngine treats unparseable response as silent with reason', asyn
   assert.equal(result.kind, 'silent')
   if (result.kind === 'silent') assert.equal(result.reason, 'unparseable_response')
 })
+
+// ── idle_motion action ──────────────────────────────────────────────────
+
+test('runDecisionEngine parses idle_motion action with motion value', async () => {
+  const chat: ChatCaller = async () => ({
+    content: '{"action":"idle_motion","motion":"stretch"}',
+  })
+  const result = await runDecisionEngine({
+    context: makeContext(),
+    persona: makePersona(),
+    config: BASE_CONFIG,
+    chat,
+  })
+  assert.equal(result.kind, 'idle_motion')
+  if (result.kind === 'idle_motion') {
+    assert.equal(result.motion, 'stretch')
+  }
+})
+
+test('runDecisionEngine: idle_motion without motion field falls back to silent', async () => {
+  const chat: ChatCaller = async () => ({
+    content: '{"action":"idle_motion"}',
+  })
+  const result = await runDecisionEngine({
+    context: makeContext(),
+    persona: makePersona(),
+    config: BASE_CONFIG,
+    chat,
+  })
+  assert.equal(result.kind, 'silent')
+  if (result.kind === 'silent') {
+    assert.equal(result.reason, 'idle_motion_missing_value')
+  }
+})
+
+test('buildDecisionPrompt: idle_motion contract appears only when allowIdleMotion true', () => {
+  const without = buildDecisionPrompt(makeContext(), makePersona())
+  assert.ok(!without[0].content.includes('idle_motion'))
+
+  const withFlag = buildDecisionPrompt(makeContext(), makePersona(), { allowIdleMotion: true })
+  assert.ok(withFlag[0].content.includes('idle_motion'))
+})

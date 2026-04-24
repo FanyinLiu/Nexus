@@ -57,20 +57,25 @@ export type UseAutonomyControllerOptions = {
   busyRef?: React.RefObject<boolean>
   chat: ChatBridge
   debugConsole: DebugConsoleBridge
+  /** Hand off a Live2D gesture to the pet layer for the silent
+   *  idle_motion decision-engine action. Optional — wiring is opt-in
+   *  from useAppController which knows about the cue queue. */
+  triggerIdleGesture?: (gestureName: string) => void
 }
 
-export function useAutonomyController({
-  settings,
-  settingsRef,
-  messagesRef,
-  memory,
-  reminderTasksRef,
-  goalsRef,
-  setGoals,
-  busyRef,
-  chat,
-  debugConsole,
-}: UseAutonomyControllerOptions) {
+export function useAutonomyController(opts: UseAutonomyControllerOptions) {
+  const {
+    settings,
+    settingsRef,
+    messagesRef,
+    memory,
+    reminderTasksRef,
+    goalsRef,
+    setGoals,
+    busyRef,
+    chat,
+    debugConsole,
+  } = opts
   const { t } = useTranslation()
   const focusAwareness = useFocusAwareness({
     settingsRef,
@@ -96,6 +101,7 @@ export function useAutonomyController({
     rhythmRef: rhythmState.rhythmRef,
     activeWindowTitleRef: lastActiveWindowTitleRef,
     pushCompanionNotice: chat.pushCompanionNotice,
+    triggerIdleGesture: opts.triggerIdleGesture,
     onDebugEvent: debugConsole.appendDebugConsoleEvent,
   })
   const handleAutonomyTick = useCallback((tickState: AutonomyTickState) => {

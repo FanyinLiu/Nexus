@@ -41,6 +41,15 @@ export type DecisionResult =
       announcement?: string
       rawResponse: string
     }
+  | {
+      /** Silent gesture — the companion does a tiny ambient motion (yawn /
+       * stretch / look around) without any text or TTS. Only enabled when
+       * the user has been idle long enough that a brief sign of life feels
+       * peripheral, not interruptive. */
+      kind: 'idle_motion'
+      motion: string
+      rawResponse: string
+    }
 
 export interface ChatCallerPayload {
   providerId: string
@@ -102,6 +111,7 @@ export function extractDecisionJson(raw: string): {
   task?: string
   purpose?: string
   announcement?: string
+  motion?: string
 } | null {
   if (!raw) return null
 
@@ -202,6 +212,18 @@ export async function runDecisionEngine(opts: RunDecisionOptions): Promise<Decis
       return { kind: 'silent', reason: 'empty_speak_text', rawResponse: response.content }
     }
     return { kind: 'speak', text, rawResponse: response.content }
+  }
+
+  if (parsed.action === 'idle_motion') {
+    const motion = String((parsed as { motion?: unknown }).motion ?? '').toLowerCase().trim()
+    if (!motion) {
+      return {
+        kind: 'silent',
+        reason: 'idle_motion_missing_value',
+        rawResponse: response.content,
+      }
+    }
+    return { kind: 'idle_motion', motion, rawResponse: response.content }
   }
 
   if (parsed.action === 'spawn') {

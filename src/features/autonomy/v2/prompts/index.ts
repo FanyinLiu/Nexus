@@ -19,6 +19,10 @@ import { koDecisionPrompts } from './decision.ko.ts'
 export interface DecisionPromptStrings {
   responseContractBase: string
   responseContractSpawn: string
+  /** Optional contract piece — surfaces the `idle_motion` action only
+   *  when the engine has decided this tick is idle enough that a silent
+   *  gesture would feel peripheral, not interruptive. */
+  responseContractIdleMotion: string
   responseContractTail: string
 
   identityFallback: string

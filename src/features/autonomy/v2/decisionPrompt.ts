@@ -67,6 +67,13 @@ export interface DecisionPromptHints {
     dailyBudgetRemainingUsd: number | null
   }
   /**
+   * When true the prompt exposes the `idle_motion` action — caller decides
+   * the threshold (typically idleSeconds ≥ 3 minutes AND user not in deep
+   * focus). When omitted/false the contract hides this action so the model
+   * never picks it during active conversation.
+   */
+  allowIdleMotion?: boolean
+  /**
    * Active UI language — selects which per-locale decision-prompt strings
    * to render. Defaults to zh-CN when omitted (matches the historical
    * behaviour before this prompt was localized).
@@ -84,9 +91,11 @@ export interface ChatMessage {
 function buildResponseContract(
   strings: DecisionPromptStrings,
   subagentAvailability: DecisionPromptHints['subagentAvailability'],
+  allowIdleMotion: boolean,
 ): string {
   const canSpawn = Boolean(subagentAvailability?.enabled)
   const parts = [strings.responseContractBase]
+  if (allowIdleMotion) parts.push(strings.responseContractIdleMotion)
   if (canSpawn) parts.push(strings.responseContractSpawn)
   parts.push(strings.responseContractTail)
   return parts.join('\n\n')
@@ -297,7 +306,7 @@ export function buildDecisionPrompt(
 
   const systemParts: string[] = [
     formatPersonaSystemPrompt(persona, strings),
-    buildResponseContract(strings, hints.subagentAvailability),
+    buildResponseContract(strings, hints.subagentAvailability, Boolean(hints.allowIdleMotion)),
   ]
   if (hints.forceSilent) {
     systemParts.push(strings.forceSilentOverride)

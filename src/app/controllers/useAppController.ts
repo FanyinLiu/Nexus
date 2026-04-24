@@ -369,6 +369,16 @@ export function useAppController() {
     busyRef,
     chat,
     debugConsole,
+    triggerIdleGesture: (gestureName: string) => {
+      // Silent ambient gesture from V2 idle_motion action — push into the
+      // shared performance-cue queue so the same Live2D layer that handles
+      // chat-driven motions plays it. No text, no TTS.
+      pet.queuePetPerformanceCue([{
+        gestureName,
+        durationMs: 1_600,
+        stageDirection: `(autonomy:idle_motion:${gestureName})`,
+      }])
+    },
   })
 
   // Install autonomy's emotion/relationship/rhythm prompt getters into the refs

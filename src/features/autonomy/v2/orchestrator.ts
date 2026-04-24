@@ -115,6 +115,14 @@ export async function runAutonomyDecision(
     return { result: first, telemetry }
   }
 
+  // Silent idle gestures bypass guardrail — no text or TTS reaches the
+  // user, so there's nothing for the persona judge to react to. The motion
+  // value itself is validated downstream by the Live2D apply site (unknown
+  // gesture names are silent no-ops).
+  if (first.kind === 'idle_motion') {
+    return { result: first, telemetry }
+  }
+
   const firstGuard = await guard(first)
   if (firstGuard.verdict === 'pass') {
     return { result: first, telemetry }

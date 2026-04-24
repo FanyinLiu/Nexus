@@ -82,6 +82,10 @@ export type UseAutonomyV2EngineOptions = {
     speechContent: string
     autoHideMs: number
   }) => Promise<void>
+  /** Fire-and-forget Live2D gesture (silent — no chat / no TTS). Used by
+   *  the idle_motion decision-engine action so the pet shows a peripheral
+   *  sign of life without interrupting. */
+  triggerIdleGesture?: (gestureName: string) => void
   onDebugEvent?: (event: {
     source: DebugConsoleEventSource
     title: string
@@ -284,6 +288,14 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
       dailyBudgetRemainingUsd,
     }
 
+    // Only invite the silent idle motion when the user has been idle for
+    // a while AND we're in awake phase — drowsy/sleeping/dreaming have
+    // their own ambient layer (the dream cycle), and a stretch in mid-
+    // conversation reads as glitchy. 3 minutes is the minimum gap before
+    // a passive sign-of-life feels peripheral instead of attention-grabbing.
+    const allowIdleMotion = tickState.phase === 'awake'
+      && tickState.idleSeconds >= 180
+
     inflightRef.current = true
     try {
       const outcome = await runAutonomyDecision({
@@ -292,7 +304,7 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
         decisionConfig: cfg.decisionConfig,
         chat,
         strictness: cfg.strictness,
-        hints: { subagentAvailability, uiLanguage: settings.uiLanguage },
+        hints: { subagentAvailability, allowIdleMotion, uiLanguage: settings.uiLanguage },
         onError: (error, origin) => {
           opts.onDebugEvent?.({
             source: 'autonomy',
@@ -307,6 +319,9 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
         if (outcome.result.kind === 'spawn') {
           return `spawn: ${outcome.result.task} (purpose: ${outcome.result.purpose})`
         }
+        if (outcome.result.kind === 'idle_motion') {
+          return `idle_motion: ${outcome.result.motion}`
+        }
         return `silent: ${outcome.result.reason ?? 'no_reason'}`
       })()
       opts.onDebugEvent?.({
@@ -317,7 +332,20 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
         detail: decisionDetail,
       })
 
-      if (outcome.result.kind === 'speak') {
+      if (outcome.result.kind === 'idle_motion') {
+        // Silent ambient gesture — no chat write, no TTS, no
+        // lastUtteranceRef bump (idle motion isn't an "utterance"). Just
+        // poke the Live2D layer if a handler was wired.
+        try {
+          opts.triggerIdleGesture?.(outcome.result.motion)
+        } catch (error) {
+          opts.onDebugEvent?.({
+            source: 'autonomy',
+            title: '[V2] idle gesture failed',
+            detail: error instanceof Error ? error.message : String(error),
+          })
+        }
+      } else if (outcome.result.kind === 'speak') {
         const now = new Date().toISOString()
         lastUtteranceRef.current = { text: outcome.result.text, at: now }
         try {

@@ -24,6 +24,14 @@ Valid shapes:
     now. The text field is exactly the words you say — no role labels,
     no markdown, no stage directions. Keep it short (1-3 sentences).`,
 
+  responseContractIdleMotion: `  {"action": "idle_motion", "motion": "wave|nod|shake|tilt|stretch|yawn"}
+
+    Use this ONLY when the user has been idle a while and the moment
+    calls for a tiny ambient sign-of-life — a stretch, a yawn, a small
+    head-tilt — without any text or speech. No bubble, no TTS, just the
+    pet visibly being alive in the corner. Pick at most one motion;
+    skip if there's any reason to actually speak instead.`,
+
   responseContractSpawn: `  {"action": "spawn", "task": "...", "purpose": "...", "announcement": "..."}
 
     Use this when the user would genuinely benefit from you doing
