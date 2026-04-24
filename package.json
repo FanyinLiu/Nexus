@@ -86,7 +86,13 @@
       "scripts/omnivoice_server.py",
       "scripts/glm_asr_server.py",
       "package.json",
-      "!node_modules/onnxruntime-node/bin/napi-v3/win32/arm64/**"
+      "!node_modules/onnxruntime-node/bin/napi-v3/win32/arm64/**",
+      "!**/*.map",
+      "!**/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.*",
+      "!**/onnxruntime-web/dist/ort-wasm-simd-threaded.jspi.*",
+      "!**/onnxruntime-web/dist/ort.training.wasm.min.*",
+      "!**/onnxruntime-web/dist/ort.webgl.*",
+      "!**/onnxruntime-web/dist/ort.webgpu.*"
     ],
     "asarUnpack": [
       "node_modules/sherpa-onnx-node/**",
