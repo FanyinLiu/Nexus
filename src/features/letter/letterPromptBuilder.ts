@@ -5,17 +5,13 @@
  * ChatMessage[] ready for any OpenAI-compatible / Anthropic chat
  * endpoint. The host layer handles the actual call + persistence.
  *
- * Schema borrowed from Reflection.app's weekly review (round-4
- * research): summary → suggestion → intention → experiment, plus
- * Rosebud's themes / wins / stressful framing as input data. The
- * persona voice anchor comes from the existing CharacterProfile soul
- * + signature phrases (Life Note's "mentor letter" pattern, but the
- * mentor is the user's own companion).
+ * Schema: greeting → summary → suggestion → intention → experiment →
+ * closing. Persona voice anchor reuses soul + signature phrases + tone
+ * from the CharacterProfile.
  *
- * The model is asked to emit a single JSON object so we can render
- * each section into the letter UI — same parser shape used by the V2
- * decision engine. Keeping the contract English across locales for
- * the same reason: changing keys breaks extraction.
+ * The model emits a single JSON object so each section can render
+ * separately. The contract keys themselves stay English across all
+ * locales — translating them would break the parser.
  */
 
 import type { UiLanguage } from '../../types'

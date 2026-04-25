@@ -41,7 +41,10 @@ import {
 } from '../../features/autonomy/v2/contextGatherer.ts'
 import type { ChatCaller } from '../../features/autonomy/v2/decisionEngine.ts'
 import { runAutonomyDecision } from '../../features/autonomy/v2/orchestrator.ts'
-import type { LoadedPersona } from '../../features/autonomy/v2/personaTypes.ts'
+import {
+  DEFAULT_PERSONA_PROFILE_ID,
+  type LoadedPersona,
+} from '../../features/autonomy/v2/personaTypes.ts'
 import {
   computeConsiderationCadence,
   resolveAutonomyV2Config,
@@ -64,7 +67,7 @@ import {
 } from '../../lib/storage'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 
-const DEFAULT_PROFILE_ID = 'xinghui'
+const DEFAULT_PROFILE_ID = DEFAULT_PERSONA_PROFILE_ID
 
 export type UseAutonomyV2EngineOptions = {
   settingsRef: React.RefObject<AppSettings>

@@ -2,17 +2,9 @@
  * Sunday letter — week-roll-up aggregator.
  *
  * Pure function that turns the past 7 days of memories + reflections
- * into a structured input for letter rendering. v0.4 sprint 1 #2.
- *
- * Gate borrowed from Life Note (round-4 research): if the user wasn't
- * active enough this week, skip the letter rather than fabricate one.
- * Section structure borrows Reflection.app's 4-field schema (summary
- * → suggestion → intention → experiment) plus Rosebud's themes / wins
- * / stressors / emotional landscape framing.
- *
- * The actual letter prose generation lives elsewhere (LLM-driven, in a
- * follow-up). This module only does the deterministic data slicing so
- * we can unit-test the gate + roll-up without an LLM.
+ * into a structured input for letter rendering. The gate skips the
+ * letter rather than fabricate one when the user wasn't active enough
+ * this week.
  */
 
 import type { MemoryItem } from '../../types'

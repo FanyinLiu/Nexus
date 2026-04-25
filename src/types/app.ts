@@ -311,6 +311,13 @@ export interface PresenceSettings {
    * inside the scheduler regardless of this flag.
    */
   proactiveBracketEnabled: boolean
+  /**
+   * Sunday letter — once-a-week persona-written letter generated in the
+   * 18-22 Sunday window when the user has been active at least 3 days.
+   * Independent toggle from the bracket so a user can keep brackets but
+   * skip the letter (or vice versa).
+   */
+  proactiveLetterEnabled: boolean
 }
 
 export interface McpServerConfig {

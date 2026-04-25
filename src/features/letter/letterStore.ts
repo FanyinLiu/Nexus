@@ -1,7 +1,7 @@
 /**
  * Persisted Sunday-letter store. Each generation lands as one
  * SavedLetter; the array is kept in localStorage and capped to
- * MAX_KEPT entries (~6 months of weekly letters) so a user's
+ * MAX_KEPT entries (~half a year of weekly letters) so a user's
  * letter shelf doesn't grow unbounded.
  */
 
@@ -23,7 +23,7 @@ export interface SavedLetter {
   themes: string[]
 }
 
-const MAX_KEPT = 32
+const MAX_KEPT = 26
 const EMPTY: SavedLetter[] = []
 
 export function loadLetters(): SavedLetter[] {

@@ -4,6 +4,9 @@
 // previous evening's gist back to the user. Mirrors the awayScheduler
 // pattern: pure function, unit-testable without IPC or storage.
 
+import { isSameLocalDay } from '../../lib/localDate.ts'
+import type { CompanionRelationshipType } from '../../types'
+
 export type BracketKind = 'morning' | 'evening'
 
 export type BracketDecision =
@@ -19,8 +22,6 @@ export type BracketDecision =
         | 'relationship_type_opted_out'
     }
 
-export type BracketRelationshipType = 'open_ended' | 'friend' | 'mentor' | 'quiet_companion'
-
 export interface BracketDecisionInput {
   enabled: boolean
   nowMs: number
@@ -33,17 +34,12 @@ export interface BracketDecisionInput {
   /** Minimum gap (hours) between morning and evening of the same day. */
   minGapHours?: number
   /** Quiet-companion default opts out; set to override per-relationship behaviour. */
-  relationshipType: BracketRelationshipType
+  relationshipType: CompanionRelationshipType
 }
 
 const DEFAULT_MORNING = { startHour: 7, endHour: 10 }
 const DEFAULT_EVENING = { startHour: 21, endHour: 23 }
 const DEFAULT_MIN_GAP_HOURS = 6
-
-function localDayKey(ms: number): string {
-  const d = new Date(ms)
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
-}
 
 function isInWindow(nowMs: number, window: { startHour: number; endHour: number }): boolean {
   const hour = new Date(nowMs).getHours()
@@ -51,8 +47,7 @@ function isInWindow(nowMs: number, window: { startHour: number; endHour: number 
 }
 
 function firedToday(nowMs: number, firedMs: number | null): boolean {
-  if (firedMs == null) return false
-  return localDayKey(nowMs) === localDayKey(firedMs)
+  return firedMs != null && isSameLocalDay(nowMs, firedMs)
 }
 
 export function decideBracket(input: BracketDecisionInput): BracketDecision {

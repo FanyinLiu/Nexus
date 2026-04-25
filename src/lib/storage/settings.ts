@@ -138,6 +138,7 @@ const defaultSettings: AppSettings = {
   proactiveAwayNotificationsEnabled: true,
   proactiveAwayNotificationThresholdMinutes: 240,
   proactiveBracketEnabled: true,
+  proactiveLetterEnabled: true,
   launchOnStartup: false,
   mcpServers: [],
   minecraftIntegrationEnabled: false,

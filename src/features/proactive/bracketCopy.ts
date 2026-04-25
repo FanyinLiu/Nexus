@@ -1,11 +1,6 @@
 // Phrasing for the daily morning/evening bracket — paired prompts that
-// bookend the day. Single-tone per locale for v1; relationship-type
-// splits can layer on later if the simple version feels uniform.
-//
-// Sources: morning callback shape borrows Kalon's "about last night X —
-// does it look different now?" pattern; evening question pair mirrors
-// Rosebud's verbatim "highlight + stressful" template; the go-deeper
-// fork is also Rosebud's. See round-4 research notes 2026-04-25.
+// bookend the day. Single-tone per locale; relationship-type splits
+// can layer on later if the simple version feels uniform.
 
 import type { UiLanguage } from '../../types'
 import { normalizeUiLanguage } from '../../lib/uiLanguage.ts'
@@ -169,8 +164,7 @@ export function pickMorningPrompt(input: PickMorningPromptInput): string {
     return t.morningCallback.replace('{topic}', input.previousEveningTopic.trim())
   }
   const rand = input.randomFn ?? Math.random
-  const idx = Math.floor(rand() * t.morningOpenQuestions.length)
-  return t.morningOpenQuestions[Math.min(idx, t.morningOpenQuestions.length - 1)]
+  return t.morningOpenQuestions[Math.floor(rand() * t.morningOpenQuestions.length)]
 }
 
 export function pickGoDeeperFollowup(
@@ -178,8 +172,7 @@ export function pickGoDeeperFollowup(
   randomFn: () => number = Math.random,
 ): string {
   const t = getBracketTemplates(uiLanguage)
-  const idx = Math.floor(randomFn() * t.eveningGoDeeperPool.length)
-  return t.eveningGoDeeperPool[Math.min(idx, t.eveningGoDeeperPool.length - 1)]
+  return t.eveningGoDeeperPool[Math.floor(randomFn() * t.eveningGoDeeperPool.length)]
 }
 
 export type BuildBracketNotificationInput = {

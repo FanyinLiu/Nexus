@@ -13,7 +13,10 @@ import {
   saveLetter,
   type SavedLetter,
 } from '../features/letter/letterStore.ts'
-import type { LoadedPersona } from '../features/autonomy/v2/personaTypes.ts'
+import {
+  DEFAULT_PERSONA_PROFILE_ID,
+  type LoadedPersona,
+} from '../features/autonomy/v2/personaTypes.ts'
 import type { AppSettings, ChatMessage, MemoryItem } from '../types'
 
 const POLL_INTERVAL_MS = 30 * 60_000
@@ -60,7 +63,7 @@ async function loadDefaultPersona(): Promise<LoadedPersona | null> {
   try {
     const desktopPet = window.desktopPet
     if (!desktopPet?.personaLoadProfile) return null
-    return await desktopPet.personaLoadProfile('xinghui')
+    return await desktopPet.personaLoadProfile(DEFAULT_PERSONA_PROFILE_ID)
   } catch {
     return null
   }
@@ -113,13 +116,13 @@ export function useLetterScheduler({
   }, [settings, messages, memories, panelOpen, onEvent])
 
   useEffect(() => {
-    if (!settings.proactiveBracketEnabled) return
+    if (!settings.proactiveLetterEnabled) return
     if (typeof window === 'undefined') return
 
     const tick = async () => {
       const live = liveRef.current
       const s = live.settings
-      if (!s.proactiveBracketEnabled) return
+      if (!s.proactiveLetterEnabled) return
       if (live.panelOpen) return
 
       const decision = decideLetter({
@@ -209,5 +212,5 @@ export function useLetterScheduler({
     void tick()
     const id = window.setInterval(() => { void tick() }, POLL_INTERVAL_MS)
     return () => window.clearInterval(id)
-  }, [settings.proactiveBracketEnabled])
+  }, [settings.proactiveLetterEnabled])
 }

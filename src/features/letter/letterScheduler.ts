@@ -10,6 +10,9 @@
  * decides "is now the moment to *try* generating one?".
  */
 
+import { isSameLocalWeek } from '../../lib/localDate.ts'
+import type { CompanionRelationshipType } from '../../types'
+
 export type LetterDecision =
   | { shouldFire: true; reason: 'fire' }
   | {
@@ -22,12 +25,6 @@ export type LetterDecision =
         | 'relationship_type_opted_out'
     }
 
-export type LetterRelationshipType =
-  | 'open_ended'
-  | 'friend'
-  | 'mentor'
-  | 'quiet_companion'
-
 export interface LetterDecisionInput {
   enabled: boolean
   nowMs: number
@@ -35,24 +32,11 @@ export interface LetterDecisionInput {
   lastFiredMs: number | null
   /** Inclusive start hour, exclusive end. Defaults to 18-22 local. */
   window?: { startHour: number; endHour: number }
-  relationshipType: LetterRelationshipType
+  relationshipType: CompanionRelationshipType
 }
 
 const DEFAULT_WINDOW = { startHour: 18, endHour: 22 }
 const SUNDAY = 0
-
-function isSameLocalWeek(aMs: number, bMs: number): boolean {
-  // Two timestamps are in the same "letter week" when the most recent
-  // Sunday (or the Sunday of the week containing them) is the same.
-  // Using local date math; week boundary is Sunday 00:00 local.
-  const sundayKeyOf = (ms: number) => {
-    const d = new Date(ms)
-    const offsetDays = d.getDay() // 0..6 with 0 == Sunday
-    const sunday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - offsetDays)
-    return `${sunday.getFullYear()}-${sunday.getMonth()}-${sunday.getDate()}`
-  }
-  return sundayKeyOf(aMs) === sundayKeyOf(bMs)
-}
 
 export function decideLetter(input: LetterDecisionInput): LetterDecision {
   if (!input.enabled) return { shouldFire: false, reason: 'disabled' }

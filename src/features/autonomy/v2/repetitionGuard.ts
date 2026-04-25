@@ -3,11 +3,10 @@
  * sameness in the companion's last few utterances and emits compact
  * "avoid X" hints the next decision prompt can inject for variety.
  *
- * Borrowed from x380kkm/Live2DPet's `_detectRepetition` (style buffer
- * pattern, round-4 research): cheap deterministic checks, no LLM call,
- * no chat history bloat. The hints are appended to the user message in
- * decisionPrompt — the model decides whether to obey, but at least it
- * sees the recent shape it's about to repeat.
+ * Cheap deterministic checks: no LLM call, no chat history bloat. The
+ * hints are appended to the user message in decisionPrompt; the model
+ * decides whether to obey, but at least it sees the recent shape it's
+ * about to repeat.
  *
  * Layered on top of personaGuardrail (which checks fidelity to the
  * character). This module checks fidelity to *variety* — making sure
