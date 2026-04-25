@@ -28,6 +28,7 @@ import {
   ConsoleSection,
   ContextSection,
   HistorySection,
+  LettersSection,
   IntegrationsSection,
   LorebooksSection,
   MemorySection,
@@ -569,6 +570,11 @@ export function SettingsDrawer({
 
         <LorebooksSection
           active={activeSectionId === 'lorebooks'}
+          uiLanguage={draft.uiLanguage}
+        />
+
+        <LettersSection
+          active={activeSectionId === 'letters'}
           uiLanguage={draft.uiLanguage}
         />
 

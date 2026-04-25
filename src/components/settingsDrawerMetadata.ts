@@ -44,6 +44,7 @@ export function buildSettingsSectionDescriptions(ti: Translator): SettingsSectio
     history: ti('settings.section_desc.history'),
     memory: ti('settings.section_desc.memory'),
     lorebooks: ti('settings.section_desc.lorebooks'),
+    letters: ti('settings.section_desc.letters'),
     voice: ti('settings.section_desc.voice'),
     window: ti('settings.section_desc.window'),
     integrations: ti('settings.section_desc.integrations'),
@@ -128,6 +129,15 @@ export function buildSettingsSectionMeta(input: BuildSettingsSectionMetaInput): 
       preview: [
         ti('settings.preview.lorebooks.tagline_1'),
         ti('settings.preview.lorebooks.tagline_2'),
+      ],
+    },
+    letters: {
+      eyebrow: ti('settings.section_eyebrow.memory'),
+      glyph: 'memory',
+      description: descriptions.letters,
+      preview: [
+        ti('settings.letters.title'),
+        ti('settings.letters.note'),
       ],
     },
     voice: {
