@@ -82,7 +82,9 @@ interface ModelPrice {
 }
 
 const PRICING_TABLE: Array<{ pattern: string; price: ModelPrice }> = [
-  // DeepSeek
+  // DeepSeek — longest-first so v4-pro / v4-flash beat the bare chat fallback
+  { pattern: 'deepseek-v4-pro',      price: { inputPerM: 0.145, outputPerM: 3.48  } },
+  { pattern: 'deepseek-v4-flash',    price: { inputPerM: 0.14,  outputPerM: 0.28  } },
   { pattern: 'deepseek-chat',        price: { inputPerM: 0.14,  outputPerM: 0.28  } },
   { pattern: 'deepseek-reasoner',    price: { inputPerM: 0.55,  outputPerM: 2.19  } },
   // OpenAI — longest-first; 5.5-pro / 5.5 / 5.4 distinct rates, bare gpt-5 falls back to 5.4 cost

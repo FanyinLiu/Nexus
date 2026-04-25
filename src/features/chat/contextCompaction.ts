@@ -240,6 +240,7 @@ export function getModelTokenBudget(model: string): number {
   if (normalized.includes('claude-3-5') || normalized.includes('claude-3.5')) return 80_000
   if (normalized.includes('claude-3') || normalized.includes('claude-4')) return 80_000
   if (normalized.includes('claude')) return 60_000
+  if (normalized.includes('deepseek-v4')) return 200_000
   if (normalized.includes('deepseek')) return 28_000
   if (normalized.includes('qwen')) return 28_000
   if (normalized.includes('gemma') || normalized.includes('llama')) return 6_000
