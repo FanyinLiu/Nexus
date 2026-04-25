@@ -83,6 +83,14 @@ export interface DecisionPromptStrings {
   retryTail: string
 
   finalQuestion: string
+
+  /** Variety hint injected when analyzeRecentReplies finds repetition. */
+  varietyHint: (params: {
+    avoidOpenings: string[]
+    avoidEndings: string[]
+    lengthMonotone: boolean
+    avoidPunctuation: string[]
+  }) => string
 }
 
 const REGISTRY: Record<UiLanguage, DecisionPromptStrings> = {

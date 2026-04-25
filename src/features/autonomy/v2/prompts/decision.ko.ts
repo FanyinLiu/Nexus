@@ -141,4 +141,13 @@ line commentary — will be discarded and treated as silent. So don't.`,
 
   finalQuestion:
     '위 상태를 바탕으로 지금 말을 걸겠습니까? response contract 에 따라 JSON 을 반환하세요.',
+
+  varietyHint: ({ avoidOpenings, avoidEndings, lengthMonotone, avoidPunctuation }) => {
+    const lines: string[] = ['## 반복을 피하기 위해, 다음 한마디에서는 피해주세요:']
+    if (avoidOpenings.length) lines.push(`- 같은 시작: ${avoidOpenings.map((s) => `"${s}"`).join(', ')}`)
+    if (avoidEndings.length) lines.push(`- 같은 끝맺음: ${avoidEndings.map((s) => `"${s}"`).join(', ')}`)
+    if (lengthMonotone) lines.push('- 최근 답변과 비슷한 길이 — 좀 더 길거나 짧게.')
+    if (avoidPunctuation.length) lines.push(`- 과도한 사용: ${avoidPunctuation.join(' ')}`)
+    return lines.join('\n')
+  },
 }

@@ -142,4 +142,13 @@ line commentary — will be discarded and treated as silent. So don't.`,
 
   finalQuestion:
     'Based on all of the above, would you speak up right now? Reply with JSON per the response contract.',
+
+  varietyHint: ({ avoidOpenings, avoidEndings, lengthMonotone, avoidPunctuation }) => {
+    const lines: string[] = ['## For variety, in your next reply avoid:']
+    if (avoidOpenings.length) lines.push(`- Repeated openings: ${avoidOpenings.map((s) => `"${s}"`).join(', ')}`)
+    if (avoidEndings.length) lines.push(`- Repeated endings: ${avoidEndings.map((s) => `"${s}"`).join(', ')}`)
+    if (lengthMonotone) lines.push('- Matching the length of the last few replies — go shorter or longer')
+    if (avoidPunctuation.length) lines.push(`- Overusing: ${avoidPunctuation.join(' ')}`)
+    return lines.join('\n')
+  },
 }

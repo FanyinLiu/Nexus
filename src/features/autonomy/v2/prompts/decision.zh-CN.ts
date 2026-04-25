@@ -131,4 +131,13 @@ line commentary — will be discarded and treated as silent. So don't.`,
   retryTail: '这次要么返回 silent，要么换一种表达，注意避开上一次的失误。',
 
   finalQuestion: '基于以上状态，你现在要说话吗？按 response contract 输出 JSON。',
+
+  varietyHint: ({ avoidOpenings, avoidEndings, lengthMonotone, avoidPunctuation }) => {
+    const lines: string[] = ['## 为了不重复，下一句尽量避免：']
+    if (avoidOpenings.length) lines.push(`- 重复开头：${avoidOpenings.map((s) => `「${s}」`).join('、')}`)
+    if (avoidEndings.length) lines.push(`- 重复结尾：${avoidEndings.map((s) => `「${s}」`).join('、')}`)
+    if (lengthMonotone) lines.push('- 句长不要再贴近最近几句，长一点或短一点都行')
+    if (avoidPunctuation.length) lines.push(`- 少用：${avoidPunctuation.join('、')}`)
+    return lines.join('\n')
+  },
 }

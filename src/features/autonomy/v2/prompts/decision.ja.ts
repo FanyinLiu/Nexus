@@ -141,4 +141,13 @@ line commentary — will be discarded and treated as silent. So don't.`,
 
   finalQuestion:
     '以上を踏まえて、今は話しかけますか？ response contract に従って JSON を返してください。',
+
+  varietyHint: ({ avoidOpenings, avoidEndings, lengthMonotone, avoidPunctuation }) => {
+    const lines: string[] = ['## 繰り返しを避けるため、次の一言では避けてください：']
+    if (avoidOpenings.length) lines.push(`- 同じ書き出し：${avoidOpenings.map((s) => `「${s}」`).join('、')}`)
+    if (avoidEndings.length) lines.push(`- 同じ語尾：${avoidEndings.map((s) => `「${s}」`).join('、')}`)
+    if (lengthMonotone) lines.push('- 直近と同じくらいの長さ。もう少し長く、または短くしてください。')
+    if (avoidPunctuation.length) lines.push(`- 多用：${avoidPunctuation.join('、')}`)
+    return lines.join('\n')
+  },
 }
