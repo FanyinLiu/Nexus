@@ -48,7 +48,11 @@ contextBridge.exposeInMainWorld('desktopPet', {
     const requestId = Date.now().toString(36) + Math.random().toString(36).slice(2)
     const handler = (_event, data) => {
       if (data.requestId === requestId) {
-        onDelta(data.delta, !!data.done)
+        // Third arg carries the incremental reasoning_content fragment for
+        // thinking-mode models (DeepSeek-R1, QwQ, …). Existing callers that
+        // ignore it keep working unchanged; UI that wants to show the trace
+        // can read it. The full trace is also returned on the resolved promise.
+        onDelta(data.delta, !!data.done, data.reasoning_delta || '')
       }
     }
     ipcRenderer.on('chat:stream-delta', handler)

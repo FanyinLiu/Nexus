@@ -5,8 +5,10 @@ import {
   chatProviderRequiresApiKey,
   extractChatResponseContent,
   extractChatResponseFinishReason,
+  extractChatResponseReasoning,
   extractChatResponseToolCalls,
   extractChatStreamingDeltaContent,
+  extractChatStreamingDeltaReasoning,
   extractChatStreamingDeltaToolCalls,
   isChatStreamingPayloadTerminal,
   normalizeChatProviderId,
@@ -106,6 +108,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     const content = extractChatResponseContent(requestSpec.protocol, data)
     const toolCalls = extractChatResponseToolCalls(requestSpec.protocol, data)
     const finishReason = extractChatResponseFinishReason(requestSpec.protocol, data)
+    const reasoning = extractChatResponseReasoning(requestSpec.protocol, data)
 
     if (!content && !toolCalls) {
       throw new Error('模型返回了空内容，请检查接口兼容性。')
@@ -117,12 +120,14 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       model: payload.model,
       contentLength: (content || '').length,
       toolCallCount: toolCalls?.length ?? 0,
+      reasoningLength: reasoning.length,
     })
 
     return {
       content: content || '',
       ...(toolCalls ? { tool_calls: toolCalls } : {}),
       ...(finishReason ? { finish_reason: finishReason } : {}),
+      ...(reasoning ? { reasoning_content: reasoning } : {}),
     }
   })
 
@@ -183,6 +188,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     }
 
     let fullContent = ''
+    let fullReasoning = ''
     const toolCallAccumulator = new Map()
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
@@ -233,6 +239,18 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
           fullContent += delta
           if (!event.sender.isDestroyed()) {
             event.sender.send('chat:stream-delta', { requestId, delta })
+          }
+        }
+
+        const reasoningDelta = extractChatStreamingDeltaReasoning(requestSpec.protocol, parsed)
+        if (reasoningDelta) {
+          fullReasoning += reasoningDelta
+          if (!event.sender.isDestroyed()) {
+            event.sender.send('chat:stream-delta', {
+              requestId,
+              delta: '',
+              reasoning_delta: reasoningDelta,
+            })
           }
         }
 
@@ -331,11 +349,13 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       model: chatPayload.model,
       contentLength: (content || '').length,
       toolCallCount: toolCalls?.length ?? 0,
+      reasoningLength: fullReasoning.length,
     })
 
     return {
       content: content || '',
       ...(toolCalls && toolCalls.length ? { tool_calls: toolCalls } : {}),
+      ...(fullReasoning ? { reasoning_content: fullReasoning } : {}),
     }
   })
 

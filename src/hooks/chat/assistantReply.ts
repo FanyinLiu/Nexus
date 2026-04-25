@@ -530,6 +530,9 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         role: 'assistant',
         content: finalAssistantMessageContent,
         createdAt: new Date().toISOString(),
+        ...(response.response.reasoning_content
+          ? { reasoning_content: response.response.reasoning_content }
+          : {}),
       }
 
       dependencies.appendChatMessage(assistantMessage)

@@ -84,12 +84,34 @@ The summary should be short (no more than 300 words) and written in the third pe
  *
  * @returns Compacted message array ready for LLM request.
  */
+// Map a ChatMessage to the slim shape we send to the LLM. Assistant messages
+// carry forward `reasoning_content` so thinking-mode models (DeepSeek-R1, QwQ,
+// Hunyuan-thinking) accept the follow-up turn — they reject any history whose
+// previous assistant message omits the reasoning trace they emitted.
+function toLlmMessage(m: ChatMessage): {
+  role: 'user' | 'assistant' | 'system'
+  content: ChatMessageContent
+  reasoning_content?: string
+} {
+  return {
+    role: m.role,
+    content: buildLlmContent(m),
+    ...(m.role === 'assistant' && m.reasoning_content
+      ? { reasoning_content: m.reasoning_content }
+      : {}),
+  }
+}
+
 export function compactMessagesForRequest(
   allMessages: ChatMessage[],
   maxMessages: number,
   tokenBudget: number,
 ): {
-  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: ChatMessageContent }>
+  messages: Array<{
+    role: 'user' | 'assistant' | 'system'
+    content: ChatMessageContent
+    reasoning_content?: string
+  }>
   compacted: boolean
   olderMessagesText: string | null
 } {
@@ -99,7 +121,7 @@ export function compactMessagesForRequest(
   // If within limits, no compaction needed
   if (userAssistantMessages.length <= maxMessages) {
     return {
-      messages: userAssistantMessages.map((m) => ({ role: m.role, content: buildLlmContent(m) })),
+      messages: userAssistantMessages.map(toLlmMessage),
       compacted: false,
       olderMessagesText: null,
     }
@@ -120,7 +142,7 @@ export function compactMessagesForRequest(
     const trimmedCount = Math.max(3, Math.floor(keepCount / 2))
     const trimmed = userAssistantMessages.slice(-trimmedCount)
     return {
-      messages: trimmed.map((m) => ({ role: m.role, content: buildLlmContent(m) })),
+      messages: trimmed.map(toLlmMessage),
       compacted: true,
       olderMessagesText: null,
     }
@@ -138,7 +160,7 @@ export function compactMessagesForRequest(
     : olderText
 
   return {
-    messages: recentMessages.map((m) => ({ role: m.role, content: buildLlmContent(m) })),
+    messages: recentMessages.map(toLlmMessage),
     compacted: true,
     olderMessagesText: truncatedOlderText,
   }

@@ -231,6 +231,10 @@ function normalizeMessage(value: unknown, index: number): ChatMessage | null {
     : new Date(createdAt).toISOString()
   const toolResult = normalizeToolResult(value.toolResult)
 
+  const reasoning = typeof value.reasoning_content === 'string' && value.reasoning_content
+    ? value.reasoning_content
+    : undefined
+
   return {
     id: typeof value.id === 'string' && value.id.trim() ? value.id : createId('msg'),
     role: value.role,
@@ -238,6 +242,7 @@ function normalizeMessage(value: unknown, index: number): ChatMessage | null {
     createdAt: normalizedCreatedAt,
     ...(isValidTone(value.tone) ? { tone: value.tone } : {}),
     ...(toolResult ? { toolResult } : {}),
+    ...(reasoning ? { reasoning_content: reasoning } : {}),
   }
 }
 

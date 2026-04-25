@@ -35,6 +35,14 @@ export interface ChatMessage {
    * builder folds these into multimodal `image_url` content parts.
    */
   images?: string[]
+  /**
+   * Reasoning trace from thinking-mode models (DeepSeek-R1, QwQ, Hunyuan-thinking,
+   * etc). Must be sent back on subsequent assistant turns or the upstream API
+   * rejects the request with "reasoning_content must be passed back".
+   * Not displayed to the user by default — internal record kept on the assistant
+   * message only.
+   */
+  reasoning_content?: string
 }
 
 export interface PetDialogBubbleState {
@@ -86,6 +94,12 @@ export interface ChatCompletionRequest {
     content: ChatMessageContent
     tool_calls?: ChatCompletionToolCall[]
     tool_call_id?: string
+    /**
+     * Echoed back to thinking-mode model APIs (DeepSeek-R1, QwQ, Hunyuan-thinking)
+     * which reject follow-up turns whose previous assistant message lacks the
+     * reasoning trace they emitted. OpenAI-compat protocol only.
+     */
+    reasoning_content?: string
   }>
   temperature?: number
   maxTokens?: number
@@ -96,4 +110,5 @@ export interface ChatCompletionResponse {
   content: string
   tool_calls?: ChatCompletionToolCall[]
   finish_reason?: string
+  reasoning_content?: string
 }

@@ -284,6 +284,27 @@ export function extractChatResponseContent(providerId, payload) {
 }
 
 /**
+ * Extract `reasoning_content` (chain-of-thought trace) from a non-streaming
+ * response. Thinking-mode models — DeepSeek-R1, QwQ, Hunyuan-thinking,
+ * Qwen-thinking and similar — emit this alongside `content`, and reject any
+ * follow-up turn whose previous assistant message omits it. Anthropic uses a
+ * different `thinking` content block that this branch does not yet support.
+ *
+ * Returns '' when the model didn't produce a reasoning trace, or for any
+ * provider/protocol that doesn't surface one.
+ */
+export function extractChatResponseReasoning(providerId, payload) {
+  if (getChatProviderProtocol(providerId) === 'anthropic') {
+    return ''
+  }
+
+  const value = payload?.choices?.[0]?.message?.reasoning_content
+    ?? payload?.message?.reasoning_content
+    ?? payload?.reasoning_content
+  return typeof value === 'string' ? value : ''
+}
+
+/**
  * Extract tool_calls from the LLM response (OpenAI format).
  * For Anthropic, converts tool_use content blocks to OpenAI tool_calls format.
  */
@@ -336,6 +357,24 @@ export function extractChatStreamingDeltaContent(providerId, payload) {
     ?? payload?.message?.content
     ?? '',
   )
+}
+
+/**
+ * Streaming counterpart to extractChatResponseReasoning. Pulls the
+ * incremental reasoning fragment from a single SSE delta. OpenAI-compat
+ * thinking models stream reasoning before content, on a separate
+ * `delta.reasoning_content` field; the caller accumulates these the same
+ * way it accumulates content deltas.
+ */
+export function extractChatStreamingDeltaReasoning(providerId, payload) {
+  if (getChatProviderProtocol(providerId) === 'anthropic') {
+    return ''
+  }
+
+  const value = payload?.choices?.[0]?.delta?.reasoning_content
+    ?? payload?.choices?.[0]?.message?.reasoning_content
+    ?? payload?.message?.reasoning_content
+  return typeof value === 'string' ? value : ''
 }
 
 /**
