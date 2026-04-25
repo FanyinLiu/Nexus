@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { t } from '../i18n/runtime.ts'
 import {
   buildPresenceMessage,
   type PetPerformanceCue,
@@ -37,8 +38,8 @@ const PROACTIVE_PRESENCE_RETRY_DELAY_MS = 60_000
 
 function getDefaultPetStatusText(continuousVoiceActive = false) {
   return continuousVoiceActive
-    ? '连续语音已开启，你停一下我就会接着回应。'
-    : '左键拖动，右键菜单，双击就能快速开口。'
+    ? t('pet.status.continuous_voice_hint')
+    : t('pet.status.default_hint')
 }
 
 type UsePetBehaviorContext = {

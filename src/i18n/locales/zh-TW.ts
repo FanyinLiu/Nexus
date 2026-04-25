@@ -472,6 +472,8 @@ export const zhTWMessages: TranslationDictionary = {
   'pet.status.thinking': '思考中',
   'pet.status.standby': '待命中',
   'pet.status.ready': '已就緒',
+  'pet.status.continuous_voice_hint': '連續語音已開啟，你停一下我就會接著回應。',
+  'pet.status.default_hint': '左鍵拖曳，右鍵選單，雙擊就能快速開口。',
   'pet.button.settings': '設定',
   'pet.button.chat': '對話',
   'pet.voice.continuous_on': '連續對話已開啟',

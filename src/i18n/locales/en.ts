@@ -472,6 +472,8 @@ export const enMessages: TranslationDictionary = {
   'pet.status.thinking': 'Thinking',
   'pet.status.standby': 'Standing by',
   'pet.status.ready': 'Ready',
+  'pet.status.continuous_voice_hint': 'Continuous voice is on — pause for a moment and I’ll pick it up.',
+  'pet.status.default_hint': 'Left-click to drag, right-click for the menu, double-click to start talking.',
   'pet.button.settings': 'Settings',
   'pet.button.chat': 'Chat',
   'pet.voice.continuous_on': 'Continuous conversation is on',

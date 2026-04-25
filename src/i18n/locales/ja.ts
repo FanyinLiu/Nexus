@@ -472,6 +472,8 @@ export const jaMessages: TranslationDictionary = {
   'pet.status.thinking': '思考中',
   'pet.status.standby': '待機中',
   'pet.status.ready': '準備完了',
+  'pet.status.continuous_voice_hint': '連続音声オン。少し止まればすぐ続きを返すよ。',
+  'pet.status.default_hint': '左クリックでドラッグ、右クリックでメニュー、ダブルクリックですぐ話しかけられるよ。',
   'pet.button.settings': '設定',
   'pet.button.chat': 'チャット',
   'pet.voice.continuous_on': '連続会話オン',

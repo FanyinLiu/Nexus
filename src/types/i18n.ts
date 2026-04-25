@@ -292,6 +292,8 @@ export type TranslationKey =
   | 'pet.status.thinking'
   | 'pet.status.standby'
   | 'pet.status.ready'
+  | 'pet.status.continuous_voice_hint'
+  | 'pet.status.default_hint'
   | 'pet.button.settings'
   | 'pet.button.chat'
   | 'pet.voice.continuous_on'

@@ -7,9 +7,9 @@ import {
   parseReminderScheduleOnly,
   type ParsedReminderIntent,
 } from '../../features/reminders/parseReminderIntent.ts'
-import { formatReminderScheduleSummary } from '../../features/reminders/schedule.ts'
+import { formatReminderScheduleSummaryForUi } from '../../features/reminders/schedule.ts'
 import { shorten } from '../../lib/common'
-import { t } from '../../i18n/runtime.ts'
+import { getLocale, t } from '../../i18n/runtime.ts'
 import type { AssistantRuntimeActivity, DebugConsoleEventDraft } from '../../types'
 import { formatReminderNextRunLabel } from './support'
 import type {
@@ -252,7 +252,7 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
           throw new Error(t('chat.reminder.create.failed'))
         }
 
-        const scheduleSummary = formatReminderScheduleSummary(createdTask)
+        const scheduleSummary = formatReminderScheduleSummaryForUi(createdTask, getLocale())
         const nextRunLabel = formatReminderNextRunLabel(createdTask.nextRunAt)
 
         await dependencies.pushCompanionNotice({
@@ -338,7 +338,7 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
         await dependencies.pushCompanionNotice({
           chatContent: [
             t('chat.reminder.toggle.chat_title', { action: actionLabel, title: updatedTask.title }),
-            t('chat.reminder.create.plan_line', { summary: formatReminderScheduleSummary(updatedTask) }),
+            t('chat.reminder.create.plan_line', { summary: formatReminderScheduleSummaryForUi(updatedTask, getLocale()) }),
             nextRunLabel ? t('chat.reminder.toggle.next_run_line', { label: nextRunLabel }) : '',
           ].filter(Boolean).join('\n'),
           bubbleContent: nextRunLabel
@@ -366,7 +366,7 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
         ...matchedTask,
         ...parsedIntent.updates,
       }
-      const updatedSummary = formatReminderScheduleSummary(updatedTask)
+      const updatedSummary = formatReminderScheduleSummaryForUi(updatedTask, getLocale())
       const nextRunLabel = formatReminderNextRunLabel(updatedTask.nextRunAt)
 
       await dependencies.pushCompanionNotice({

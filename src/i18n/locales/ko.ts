@@ -472,6 +472,8 @@ export const koMessages: TranslationDictionary = {
   'pet.status.thinking': '생각 중',
   'pet.status.standby': '대기 중',
   'pet.status.ready': '준비 완료',
+  'pet.status.continuous_voice_hint': '연속 음성 켜짐. 잠깐 멈추면 바로 이어서 대답할게.',
+  'pet.status.default_hint': '왼쪽 클릭으로 끌기, 오른쪽 클릭은 메뉴, 더블 클릭이면 바로 말 걸 수 있어.',
   'pet.button.settings': '설정',
   'pet.button.chat': '대화',
   'pet.voice.continuous_on': '연속 대화 켜짐',

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from '../../../i18n/useTranslation.ts'
 import type { ReminderTask } from '../../../types'
 import {
-  formatReminderScheduleSummary,
+  formatReminderScheduleSummaryForUi,
   type ReminderTaskDraftInput,
 } from '../schedule'
 
@@ -67,7 +67,7 @@ export function ReminderTaskManager({
   onRemoveTask,
   onToggleTask,
 }: ReminderTaskManagerProps) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const [editingId, setEditingId] = useState('')
   const [title, setTitle] = useState('')
   const [prompt, setPrompt] = useState('')
@@ -316,7 +316,7 @@ export function ReminderTaskManager({
               </div>
 
               <div className="reminder-task-card__meta">
-                <span>{t('reminder_mgr.schedule_prefix', { summary: formatReminderScheduleSummary(task) })}</span>
+                <span>{t('reminder_mgr.schedule_prefix', { summary: formatReminderScheduleSummaryForUi(task, locale) })}</span>
                 <span>{t('reminder_mgr.next_trigger', { time: formatDateTimeLabel(task.nextRunAt, unsetLabel) })}</span>
                 <span>{t('reminder_mgr.last_trigger', { time: formatDateTimeLabel(task.lastTriggeredAt, unsetLabel) })}</span>
               </div>
