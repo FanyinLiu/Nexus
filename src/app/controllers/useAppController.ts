@@ -37,6 +37,7 @@ import { useSettingsSubscription } from './useSettingsSubscription'
 import { useWorkspaceRootBridge } from './useWorkspaceRootBridge'
 import { useAwayNotificationScheduler } from '../../hooks/useAwayNotificationScheduler'
 import { useBracketScheduler } from '../../hooks/useBracketScheduler.ts'
+import { useLetterScheduler } from '../../hooks/useLetterScheduler.ts'
 import { useMcpServerSync } from '../../hooks/useMcpServerSync'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
 import { AUTONOMY_GOALS_STORAGE_KEY, readJson, writeJson } from '../../lib/storage'
@@ -306,6 +307,13 @@ export function useAppController() {
 
   useBracketScheduler({
     settings,
+    panelOpen: !panelCollapsed,
+  })
+
+  useLetterScheduler({
+    settings,
+    messages: chat.messages,
+    memories: memory.memories,
     panelOpen: !panelCollapsed,
   })
 
