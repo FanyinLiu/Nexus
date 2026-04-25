@@ -72,7 +72,7 @@ function normalizeReminderTaskAction(action: ReminderTaskAction | null | undefin
 function parseCronField(field: string, min: number, max: number) {
   const normalized = String(field ?? '').trim()
   if (!normalized) {
-    throw new Error('cron 字段不能为空。')
+    throw new Error('cron field cannot be empty.')
   }
 
   const allowed = new Set<number>()
@@ -115,13 +115,13 @@ function parseCronField(field: string, min: number, max: number) {
 
     const singleValue = Number(token)
     if (!Number.isInteger(singleValue) || singleValue < min || singleValue > max) {
-      throw new Error(`cron 字段超出范围：${token}`)
+      throw new Error(`cron field out of range: ${token}`)
     }
     allowed.add(singleValue)
   }
 
   if (!allowed.size) {
-    throw new Error('cron 字段没有可用取值。')
+    throw new Error('cron field resolved to no valid values.')
   }
 
   return allowed
@@ -134,7 +134,7 @@ function normalizeCronWeekday(day: number) {
 function parseCronExpression(expression: string) {
   const parts = String(expression ?? '').trim().split(/\s+/u)
   if (parts.length !== 5) {
-    throw new Error('cron 表达式需要 5 段：分 时 日 月 周。')
+    throw new Error('cron expression must have 5 fields: minute hour day month weekday.')
   }
 
   return {
@@ -168,7 +168,7 @@ function computeNextCronRun(expression: string, from = new Date()) {
     cursor.setMinutes(cursor.getMinutes() + 1)
   }
 
-  throw new Error('cron 表达式在未来一年内没有可命中的时间。')
+  throw new Error('cron expression has no matching time within the next year.')
 }
 
 function computeNextEveryRun(
@@ -190,7 +190,7 @@ function computeNextAtRun(
 ) {
   const targetAt = Date.parse(schedule.at)
   if (Number.isNaN(targetAt)) {
-    throw new Error('提醒时间格式无效。')
+    throw new Error('Invalid reminder time format.')
   }
 
   if (targetAt <= from.getTime()) {
