@@ -22,13 +22,20 @@ import { audit } from '../services/auditLog.js'
 // otherwise enumerate every stored API key in milliseconds via
 // retrieve-many. The limit is generous for legit settings hydration on
 // startup but kicks in fast enough to make brute exfil noisy.
-//
-// Strict rate-limit on bulk reads only — single retrieve(slot) requires
-// the renderer to know each slot name, which is itself a barrier.
 const BULK_OP_WINDOW_MS = 60_000
 const BULK_OP_MAX_PER_WINDOW = 6
 
+// Per-sender rate limit on single-slot retrieve. Closes the slow-burn
+// enumeration gap (one retrieve every 11s would otherwise drain every
+// known slot in a few minutes, evading the bulk limit). The legitimate
+// renderer never calls vaultRetrieve(slot) directly — settings hydration
+// always goes through vaultRetrieveMany — so a tight ceiling here costs
+// nothing and forces an attacker to trip the audit log loudly.
+const SINGLE_RETRIEVE_WINDOW_MS = 60_000
+const SINGLE_RETRIEVE_MAX_PER_WINDOW = 3
+
 const _bulkOpHistory = new WeakMap() // webContents → [timestamps]
+const _singleRetrieveHistory = new WeakMap() // webContents → [timestamps]
 
 function rateLimitBulkOp(event, opName) {
   const now = Date.now()
@@ -43,6 +50,21 @@ function rateLimitBulkOp(event, opName) {
   }
   recent.push(now)
   _bulkOpHistory.set(event.sender, recent)
+}
+
+function rateLimitSingleRetrieve(event, slotName) {
+  const now = Date.now()
+  const history = _singleRetrieveHistory.get(event.sender) ?? []
+  const recent = history.filter((t) => now - t < SINGLE_RETRIEVE_WINDOW_MS)
+  if (recent.length >= SINGLE_RETRIEVE_MAX_PER_WINDOW) {
+    audit('vault', 'retrieve-rate-limited', { slot: slotName, recentCount: recent.length })
+    throw new Error(
+      `vault retrieve rate-limited: more than ${SINGLE_RETRIEVE_MAX_PER_WINDOW} single retrievals in 60s `
+      + '— renderer should batch via vault:retrieve-many. Check the audit log for the slot list.',
+    )
+  }
+  recent.push(now)
+  _singleRetrieveHistory.set(event.sender, recent)
 }
 
 export function register() {
@@ -61,6 +83,7 @@ export function register() {
   ipcMain.handle('vault:retrieve', (event, slot) => {
     requireTrustedSender(event)
     const name = requireSlotName(slot)
+    rateLimitSingleRetrieve(event, name)
     audit('vault', 'retrieve', { slot: name })
     return vaultRetrieve(name)
   })
