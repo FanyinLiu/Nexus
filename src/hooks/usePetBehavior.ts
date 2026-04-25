@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '../i18n/runtime.ts'
+import { useTranslation } from '../i18n/useTranslation.ts'
 import {
   buildPresenceMessage,
   type PetPerformanceCue,
@@ -60,7 +61,15 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
   const [mood, setMood] = useState<PetMood>(() => loadPetRuntimeState().mood)
   const [gazeTarget, setGazeTarget] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [petPerformanceCue, setPetPerformanceCue] = useState<PetPerformanceCue | null>(null)
-  const [petStatusText, setPetStatusText] = useState(getDefaultPetStatusText())
+  const { locale } = useTranslation()
+  const [petStatusOverride, setPetStatusOverride] = useState<string | null>(null)
+  const petStatusText = useMemo(
+    () => petStatusOverride ?? getDefaultPetStatusText(ctx.continuousVoiceActiveRef.current),
+    // continuousVoiceActiveRef is a ref — memo refreshes on locale change or explicit override clear,
+    // matching the previous behaviour where continuous-voice flips only surfaced on the next override.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [petStatusOverride, locale],
+  )
   const [ambientPresence, setAmbientPresence] = useState<AmbientPresenceState | null>(() => loadAmbientPresence())
   const [mascotHovered, setMascotHovered] = useState(false)
   const [petTapActive, setPetTapActive] = useState(false)
@@ -151,16 +160,16 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
   }, [playNextPetPerformanceCue])
 
   const updatePetStatus = useCallback((text: string, duration = 2200) => {
-    setPetStatusText(text)
+    setPetStatusOverride(text)
 
     if (hoverTimerRef.current) {
       window.clearTimeout(hoverTimerRef.current)
     }
 
     hoverTimerRef.current = window.setTimeout(() => {
-      setPetStatusText(getDefaultPetStatusText(ctx.continuousVoiceActiveRef.current))
+      setPetStatusOverride(null)
     }, duration)
-  }, [ctx.continuousVoiceActiveRef])
+  }, [])
 
   const dismissAmbientPresence = useCallback(() => {
     setAmbientPresence(null)
