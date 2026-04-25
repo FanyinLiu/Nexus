@@ -21,6 +21,11 @@ export type BracketTemplates = {
   eveningGoDeeperPrompt: string
   /** Pool of follow-ups picked when the user opts into "go deeper". */
   eveningGoDeeperPool: string[]
+  /** OS-notification title for the morning ping. {companionName} interpolated. */
+  morningNotificationTitle: string
+  eveningNotificationTitle: string
+  /** Glue between the two evening questions in the notification body. */
+  eveningJoiner: string
 }
 
 const ZH_CN: BracketTemplates = {
@@ -41,6 +46,9 @@ const ZH_CN: BracketTemplates = {
     '这件事让你想到了之前的什么时候？',
     '你最希望明天它变成什么样？',
   ],
+  morningNotificationTitle: '{companionName} 早安',
+  eveningNotificationTitle: '{companionName} 等你回个话',
+  eveningJoiner: '\n',
 }
 
 const ZH_TW: BracketTemplates = {
@@ -61,6 +69,9 @@ const ZH_TW: BracketTemplates = {
     '這件事讓你想到了之前的什麼時候？',
     '你最希望明天它變成什麼樣？',
   ],
+  morningNotificationTitle: '{companionName} 早安',
+  eveningNotificationTitle: '{companionName} 等你回個話',
+  eveningJoiner: '\n',
 }
 
 const EN_US: BracketTemplates = {
@@ -81,6 +92,9 @@ const EN_US: BracketTemplates = {
     'What does this remind you of from before?',
     'How would you most like tomorrow to look?',
   ],
+  morningNotificationTitle: 'Good morning from {companionName}',
+  eveningNotificationTitle: '{companionName} is wrapping up the day',
+  eveningJoiner: '\n',
 }
 
 const JA: BracketTemplates = {
@@ -101,6 +115,9 @@ const JA: BracketTemplates = {
     '前にも似たことあった気がする？',
     '明日がどうなってたら、いちばん救われそう？',
   ],
+  morningNotificationTitle: '{companionName} からおはよう',
+  eveningNotificationTitle: '{companionName}、一日のしめに少しだけ',
+  eveningJoiner: '\n',
 }
 
 const KO: BracketTemplates = {
@@ -121,6 +138,9 @@ const KO: BracketTemplates = {
     '예전에 비슷한 일 있었어?',
     '내일은 어떻게 됐으면 좋겠어?',
   ],
+  morningNotificationTitle: '{companionName} 의 아침 인사',
+  eveningNotificationTitle: '{companionName}, 하루 마무리 잠깐만',
+  eveningJoiner: '\n',
 }
 
 const TEMPLATES: Record<UiLanguage, BracketTemplates> = {
@@ -160,4 +180,36 @@ export function pickGoDeeperFollowup(
   const t = getBracketTemplates(uiLanguage)
   const idx = Math.floor(randomFn() * t.eveningGoDeeperPool.length)
   return t.eveningGoDeeperPool[Math.min(idx, t.eveningGoDeeperPool.length - 1)]
+}
+
+export type BuildBracketNotificationInput = {
+  uiLanguage: UiLanguage
+  companionName: string
+  bracket: 'morning' | 'evening'
+  /** Used by the morning callback when present; ignored for evening. */
+  previousEveningTopic?: string | null
+  randomFn?: () => number
+}
+
+export function buildBracketNotification(
+  input: BuildBracketNotificationInput,
+): { title: string; body: string } {
+  const t = getBracketTemplates(input.uiLanguage)
+  const companionName = input.companionName?.trim() || 'Nexus'
+
+  if (input.bracket === 'morning') {
+    return {
+      title: t.morningNotificationTitle.replace('{companionName}', companionName),
+      body: pickMorningPrompt({
+        uiLanguage: input.uiLanguage,
+        previousEveningTopic: input.previousEveningTopic ?? null,
+        randomFn: input.randomFn,
+      }),
+    }
+  }
+
+  return {
+    title: t.eveningNotificationTitle.replace('{companionName}', companionName),
+    body: `${t.eveningHighlight}${t.eveningJoiner}${t.eveningStressful}`,
+  }
 }
