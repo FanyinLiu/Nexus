@@ -85,9 +85,17 @@ export function registerIpc() {
   proactiveNotificationIpc.register()
   mcpIpc.register()
 
-  // Load deferred modules when the renderer is ready (first IPC call will trigger it),
-  // but also kick off a background load after a short delay as a warm-up.
-  setTimeout(loadDeferredModules, 1_500)
+  // Kick off the deferred-module load immediately (no setTimeout). The
+  // load is async (Promise.all of dynamic imports) so the call returns
+  // instantly and the imports stream in the background while the
+  // window opens. The previous 1500 ms delay was a "give the eager
+  // handlers room to finish first" heuristic from the audit era —
+  // turned out the eager handlers all complete synchronously inside
+  // registerIpc(), so there's nothing to give room to. Removing the
+  // delay shrinks the "first IPC call before deferred handler is up"
+  // race window from ~1.5s + import-time to just import-time
+  // (typically < 200 ms on a warm cache).
+  void loadDeferredModules()
 
   app.once('before-quit', async () => {
     const [mcpHost, memoryVectorStore, minecraftGateway, factorioRcon, realtimeVoice, telegramGateway, discordGateway, notificationBridge] = await Promise.all([
