@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Menu, nativeImage, screen, shell, Tray } from 'electron'
+import { promises as fsp } from 'node:fs'
 import nodeNet from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -11,6 +12,59 @@ const __dirname = path.dirname(__filename)
 
 const isDev = !app.isPackaged
 const isSmokeTest = process.env.SMOKE_TEST === '1'
+
+// ── Renderer console capture (dev-only) ───────────────────────────────────
+//
+// In dev mode we tail every renderer console.* call into a JSONL file at
+// `<projectRoot>/.dev/runtime.log`. The file is truncated at startup so it
+// always reflects the current session. Read it with `Read` / `tail` to get
+// a complete view of voice / TTS / chat lifecycle without opening DevTools.
+// Disabled in packaged builds — there's no project root to write into and
+// the in-app DiagnosticsPanel ring buffer covers user-side bug reports.
+const RUNTIME_LOG_PATH = isDev
+  ? path.join(process.cwd(), '.dev', 'runtime.log')
+  : null
+let runtimeLogReadyPromise = null
+
+async function ensureRuntimeLogReady() {
+  if (!RUNTIME_LOG_PATH) return false
+  if (runtimeLogReadyPromise) return runtimeLogReadyPromise
+  runtimeLogReadyPromise = (async () => {
+    try {
+      await fsp.mkdir(path.dirname(RUNTIME_LOG_PATH), { recursive: true })
+      await fsp.writeFile(RUNTIME_LOG_PATH, '')
+      console.info(`[runtime-log] capturing renderer console to ${RUNTIME_LOG_PATH}`)
+      return true
+    } catch (err) {
+      console.warn('[runtime-log] init failed:', err?.message ?? err)
+      runtimeLogReadyPromise = null
+      return false
+    }
+  })()
+  return runtimeLogReadyPromise
+}
+
+function attachRendererLogCapture(webContents, label) {
+  if (!RUNTIME_LOG_PATH) return
+  webContents.on('console-message', async (details) => {
+    const ready = await ensureRuntimeLogReady()
+    if (!ready) return
+    const entry = {
+      ts: new Date().toISOString(),
+      win: label,
+      level: details.level,
+      msg: details.message,
+      src: details.sourceId
+        ? `${path.basename(details.sourceId)}:${details.lineNumber}`
+        : null,
+    }
+    try {
+      await fsp.appendFile(RUNTIME_LOG_PATH, `${JSON.stringify(entry)}\n`)
+    } catch {
+      // appendFile failure should never crash the main process; just drop.
+    }
+  })
+}
 
 const RUNTIME_CLIENT_TTL_MS = 25_000
 // macOS Dock overlaps transparent windows near the bottom edge even within
@@ -524,6 +578,11 @@ export function createMainWindow() {
     }
   })
 
+  // Tail every renderer console.* into <projectRoot>/.dev/runtime.log so a
+  // remote helper (or `tail -F`) can watch the lifecycle live without
+  // anyone opening DevTools. dev-only.
+  attachRendererLogCapture(win.webContents, 'pet')
+
   // F12 / Ctrl+Shift+I → open DevTools (dev builds only).
   if (!app.isPackaged) {
     win.webContents.on('before-input-event', (event, input) => {
@@ -625,6 +684,9 @@ export function createPanelWindow() {
       event.preventDefault()
     }
   })
+
+  // Mirror the pet-window log capture for the panel's renderer.
+  attachRendererLogCapture(win.webContents, 'panel')
 
   // F12 / Ctrl+Shift+I → open DevTools (dev builds only).
   if (!app.isPackaged) {
