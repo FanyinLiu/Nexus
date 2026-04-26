@@ -6,7 +6,14 @@ import { Worker } from 'node:worker_threads'
 import { Bm25Index } from './bm25Search.js'
 
 const STORE_FILENAME = 'memory-vectors.json'
-const SAVE_DEBOUNCE_MS = 2_000
+// 30s debounce: with MAX_ENTRIES=2000 the JSON file is up to ~60MB, so
+// rewriting on every 2-second tick during an active chat session is real
+// SSD wear + I/O contention. 30s is still fast enough for "the user
+// closes the app and last chat's memories are persisted" since the
+// `before-quit` handler in ipcRegistry.js calls terminate() → flush()
+// to drain any pending dirty state before exit. M1 tracker — proper
+// fix is incremental writes (append-only log + periodic compaction).
+const SAVE_DEBOUNCE_MS = 30_000
 const MAX_ENTRIES = 2000
 
 /** @type {Map<string, { content: string, embedding: number[], layer: string, updatedAt: string }>} */
