@@ -2,6 +2,7 @@ import { memo, type Dispatch, type SetStateAction, useCallback, useState } from 
 import { parseNumberInput } from '../settingsDrawerSupport'
 import { NumberField, ToggleField } from '../settingsFields'
 import { clampPresenceIntervalMinutes } from '../../lib/settings'
+import { humanizeError } from '../../lib/humanizeError'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { AppSettings, NotificationChannel, UiLanguage } from '../../types'
 
@@ -88,7 +89,7 @@ function NotificationChannelsPanel({
       })
       resetForm()
     } catch (err) {
-      setError(err instanceof Error ? err.message : ti('settings.autonomy.notifications.save_failed'))
+      setError(humanizeError(err, 'generic'))
     } finally {
       setSaving(false)
     }

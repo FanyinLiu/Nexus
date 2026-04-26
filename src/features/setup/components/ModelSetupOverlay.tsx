@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from '../../../i18n/useTranslation.ts'
+import { humanizeError } from '../../../lib/humanizeError.ts'
 
 type ModelEntry = {
   id: string
@@ -119,7 +120,7 @@ export function ModelSetupOverlay({ suppressed = false }: Props) {
         setErrorBanner(t('model_setup.partial_failure', { ids: failed.map(f => f.id).join(', ') }))
       }
     } catch (err) {
-      setErrorBanner(err instanceof Error ? err.message : String(err))
+      setErrorBanner(humanizeError(err, 'model'))
     } finally {
       setBusy(false)
     }
@@ -131,7 +132,7 @@ export function ModelSetupOverlay({ suppressed = false }: Props) {
       await window.desktopPet?.modelsDownload?.(modelId)
       await refreshInventory()
     } catch (err) {
-      setErrorBanner(err instanceof Error ? err.message : String(err))
+      setErrorBanner(humanizeError(err, 'model'))
     }
   }, [refreshInventory])
 

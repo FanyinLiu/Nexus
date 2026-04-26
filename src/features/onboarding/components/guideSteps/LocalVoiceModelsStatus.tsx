@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
+import { humanizeError } from '../../../../lib/humanizeError'
 import type { UiLanguage } from '../../../../types'
 
 // Mirror the bridge-side types locally. `ModelInventory` + co. are
@@ -94,7 +95,7 @@ export function LocalVoiceModelsStatus({ uiLanguage }: LocalVoiceModelsStatusPro
         setError(ti('onboarding.local_voice_models.partial_failure', { ids: failures.map((f) => f.id).join('、') }))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(humanizeError(err, 'model'))
     } finally {
       setDownloading(false)
       setProgressText(null)
