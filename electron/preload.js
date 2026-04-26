@@ -45,7 +45,14 @@ contextBridge.exposeInMainWorld('desktopPet', {
   openExternalLink: (payload) => ipcRenderer.invoke('tool:open-external', payload),
   completeChat: (payload) => ipcRenderer.invoke('chat:complete', payload),
   completeChatStream: (payload, onDelta) => {
-    const requestId = Date.now().toString(36) + Math.random().toString(36).slice(2)
+    // L6: cryptographically random ID instead of Date.now+Math.random.
+    // Math.random collisions are astronomically unlikely but not impossible
+    // when two streams open in the same ms — randomUUID gives us 122 bits
+    // of entropy with no realistic collision risk. Falls back to the old
+    // pattern if randomUUID isn't available (very old runtimes).
+    const requestId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+      ? crypto.randomUUID()
+      : Date.now().toString(36) + Math.random().toString(36).slice(2)
     const handler = (_event, data) => {
       if (data.requestId === requestId) {
         // Third arg carries the incremental reasoning_content fragment for

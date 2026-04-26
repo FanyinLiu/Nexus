@@ -313,17 +313,20 @@ export async function autoStartPlugins() {
 
   const autoStartable = plugins.filter((p) => p.enabled && p.autoStart && isPluginCommandTrusted(p))
 
-  const results = []
-  for (const plugin of autoStartable) {
+  // L3: parallelise plugin spawns. Each plugin spawn is independent
+  // (separate child process, separate IPC channel) so serial await
+  // was just N × spawnTime for no reason. Promise.all collapses to
+  // max(spawnTimes), meaningful when the user has 2+ plugins.
+  const results = await Promise.all(autoStartable.map(async (plugin) => {
     try {
       await startPlugin(plugin.id)
-      results.push({ id: plugin.id, ok: true })
       console.info(`[pluginHost] auto-started: ${plugin.name}`)
+      return { id: plugin.id, ok: true }
     } catch (err) {
-      results.push({ id: plugin.id, ok: false, error: err.message })
       console.warn(`[pluginHost] auto-start failed for ${plugin.name}:`, err.message)
+      return { id: plugin.id, ok: false, error: err.message }
     }
-  }
+  }))
 
   return results
 }
