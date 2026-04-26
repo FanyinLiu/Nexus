@@ -59,9 +59,9 @@ Electron + React + TypeScript로 구축, Windows / macOS / Linux 지원. 18+ LLM
 
 ---
 
-## 이번 업데이트 — v0.3.1-beta.3(사전 출시)
+## 이번 업데이트 — v0.3.1-beta.4(사전 출시)
 
-> **버그 수정 patch(새 기능 없음).** 주요 수정: dmg/exe 사용자의 Live2D 펫(CSP에 `unsafe-eval` 누락으로 pixi.js 렌더링 실패 — P0); thinking-mode 모델 다중 턴 대화(DeepSeek-R1 / QwQ / Hunyuan-thinking의 reasoning_content 전 경로 보존 + 이전 히스토리 폴백); TTS 재생 후 voiceState가 `speaking`에서 멈추는 3중 세이프티 넷; 멀티모달 이미지가 다음 턴에서 사라지는 문제; in-app 진단 패널의 자동 console 캡처 + dev 모드의 `.dev/runtime.log` tail. 자세한 내용은 [RELEASE-NOTES-v0.3.1-beta.3.md](RELEASE-NOTES-v0.3.1-beta.3.md)(영어)를 참조하세요.
+> **감사 + 다듬기 patch.** 메모리 스토어 compaction race 수정(데이터 손실 위험); MCP per-tool 승인(M2) + workspace:set-root 승인(M3); Settings에 「소개 + 도움말」 패널과 「주간 리캡」 패널 추가; 약 660개의 미번역 한국어 UI 보완; 웨이크워드 재시도 로그 중복 제거가 실제로 동작; 런타임 오류를 동료 목소리로 의역. 자세한 내용은 [RELEASE-NOTES-v0.3.1-beta.4.md](RELEASE-NOTES-v0.3.1-beta.4.md)(영어)를 참조하세요.
 
 ---
 

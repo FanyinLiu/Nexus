@@ -60,9 +60,9 @@ Electron + React + TypeScript で構築。Windows、macOS、Linux に対応。18
 
 ---
 
-## 今回のアップデート — v0.3.1-beta.3（プレリリース）
+## 今回のアップデート — v0.3.1-beta.4（プレリリース）
 
-> **バグ修正 patch（新機能なし）。** 主な修正：dmg/exe ユーザーの Live2D ペット（CSP に `unsafe-eval` が無く pixi.js のレンダリング失敗 — P0）／thinking-mode モデルの複数ターン対話（DeepSeek-R1 / QwQ / Hunyuan-thinking の reasoning_content を全経路で保持 + 旧履歴フォールバック）／TTS 終了後に voiceState が `speaking` で固まる三層セーフティネット／マルチモーダルで画像が次ターンで消える問題／in-app 診断パネルの自動 console 取り込み + dev モードで `.dev/runtime.log` に tail。詳細は [RELEASE-NOTES-v0.3.1-beta.3.md](RELEASE-NOTES-v0.3.1-beta.3.md)（英語）を参照してください。
+> **監査 + 仕上げ patch。** 記憶ストアの compaction race を修正（データ損失リスク）／MCP per-tool 承認（M2）+ workspace:set-root 承認（M3）／Settings に「About + ヘルプ」「Weekly Recap」パネルを追加／約 660 件の未翻訳日本語 UI を補完／ウェイクワードリトライのログ重複排除が実際に動作／ランタイムエラーを伴侶ボイスで言い換え。詳細は [RELEASE-NOTES-v0.3.1-beta.4.md](RELEASE-NOTES-v0.3.1-beta.4.md)（英語）を参照してください。
 
 ---
 
