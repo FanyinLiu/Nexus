@@ -7,12 +7,24 @@ surfaces that ran alongside the v0.3.0-beta.1 release. Scope:
 - Preload security boundary (`contextBridge.exposeInMainWorld` surface)
 - Startup sequencing (`app.whenReady` → window show)
 
-Of ~25 raw findings, the voice-hook fixes were addressed in two earlier
-batches (`8160a6f`, `ecddc40`), and **HIGH #1 (pythonRuntime
-`spawnSync` → async)** is fixed in the commit introducing this doc. The
-remaining findings are recorded here so we can prioritise them in a
-dedicated hardening milestone instead of trying to cram them all in
-ad-hoc.
+## Status — re-verified 2026-04-26
+
+Six of the seven HIGH items have been addressed in subsequent commits
+(beta.2 / beta.3 hardening pass). The remaining HIGH is `H4 vault
+retrieve user-consent gate`, where rate-limiting was added but the full
+per-call confirmation dialog is still missing.
+
+| ID | Status | Mitigation in code |
+|----|--------|--------------------|
+| H2 MCP arbitrary spawn | ✅ FIXED | `promptMcpApproval` in `mcpHost.js` |
+| H3 notification SSRF | ✅ FIXED | `checkUrlSafety` wired in `notificationBridge.js` |
+| H4 vault retrieve gate | 🟡 PARTIAL | Single-retrieve rate-limited; full per-call dialog still TODO |
+| H5 chat baseUrl SSRF | ✅ FIXED | `checkChatBaseUrlSafety` wired in `chatIpc.js:41` |
+| H6 runtime-state schema | ✅ FIXED | `sanitizeBySchema` with `RUNTIME_STATE_SCHEMA` |
+| H7 chat stream done:true | ✅ FIXED | try/catch/finally always emits terminal frame |
+
+The MEDIUM and LOW lists below have not been re-verified; treat them as
+"may be partially addressed" and re-check before scheduling work.
 
 Severity key: **🔴 HIGH** — real user-facing impact. **🟡 MEDIUM** —
 real bug but rare / small blast radius. **🟢 LOW** — polish / observability.
