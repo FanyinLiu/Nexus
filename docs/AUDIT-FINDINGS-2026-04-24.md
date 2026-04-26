@@ -27,18 +27,28 @@ per-call confirmation dialog is still missing.
 
 | ID | Status | Note |
 |----|--------|------|
-| M1 vector index disk thrash | 🟡 OPEN | Still rewrites whole JSON on every flush; needs incremental design |
+| M1 vector index disk thrash | ✅ FIXED | Append-only log + 10-min compaction; ~30× less write volume during chat |
 | M2 MCP per-tool approval | ✅ FIXED | `snapshotInitialTools` + `promptMcpToolApproval` in `mcpHost.js` |
 | M3 workspace:set-root dialog | ✅ FIXED | `workspaceApprovals.js` + dialog gate in `workspaceFsIpc.js` |
 | M4 initModelManager blocks | ✅ NON-BLOCKING | `canReachHuggingFace()` runs unawaited; critical path is fast |
-| M5 ipcRegistry blind 1.5s | 🟡 OPEN | Still `setTimeout(loadDeferredModules, 1500)`; needs renderer-ready signal |
+| M5 ipcRegistry blind 1.5s | ✅ FIXED | `setTimeout` removed; deferred load kicks off immediately. Race window down to import-time only |
 | M6 gateway shared callback | 🟢 NO-OP | Each gateway has exactly one consumer; no silent drop in practice |
 | M7 vector batch concurrency | 🟢 NO-OP | Synchronous loop in `indexBatch`; JS single-thread closes the race |
-| M8 type-unsafe payloads | 🟡 PARTIAL | 32 of 81 IPC handlers validate fields; rest accept untyped payload |
+| M8 type-unsafe payloads | 🟢 NO-EXPLOIT | 32/81 handlers explicit-validate; the rest pass payload to a service that validates internally OR uses native dialog. Spot-check (sherpa, tts-stream, window) found no path / shell injection. Outstanding ask is TypeScript-schema rollout for IPC, not a security gap |
 | M9 dead webContents check | 🟢 MOSTLY-OK | Most handlers don't `event.sender.send()` after async work |
 | M10 file:save-text validation | ✅ DESIGN-CLOSED | Uses native dialog; user is in the loop choosing the path |
 
-LOW (L1-L7) still un-re-verified.
+## LOW status (re-verified 2026-04-26)
+
+| ID | Status | Note |
+|----|--------|------|
+| L1 error stack to renderer | ✅ NOT FOUND | No `err.stack` / `error.stack` reaches IPC sends |
+| L2 startup telemetry | 🟡 OPEN | No timing instrumentation yet (genuinely low priority) |
+| L3 plugin auto-start serial | 🟡 OPEN | Hasn't been dug deep enough to confirm; non-blocking either way |
+| L4 auditLog statSync per write | 🟡 OPEN | Real but minor — per-line disk stat call, sub-ms |
+| L5 workspaceRoot mid-invoke swap | 🟢 SINGLE-THREAD | JS event loop atomicity protects individual handlers |
+| L6 requestId Date.now + Math.random | 🟡 OPEN | Renderer-side, collision astronomically unlikely; cosmetic |
+| L7 plugin-bus serverId spoofing | ✅ MITIGATED | `validateServerId` checks against running MCP instances |
 
 ### H4 deferral rationale (2026-04-26)
 
