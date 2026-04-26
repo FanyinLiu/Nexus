@@ -1,5 +1,93 @@
 # Changelog
 
+> Per-version detail lives in [`docs/RELEASE-NOTES-v*.md`](docs/). This file
+> is the high-level summary suitable for "what changed since last release"
+> at a glance. Beta versions are listed under their target stable release.
+
+## [0.3.1-beta.3] - 2026-04-26
+
+### Fixed
+- **Live2D in packaged builds** — the audit-pass CSP tightening dropped `'unsafe-eval'` from the renderer header CSP, which broke pixi.js shader compilation in production. Restored as `script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'` (renderer is sandboxed; risk is the meta-CSP in `index.html` already permitted it).
+- **Thinking-mode models multi-turn** — DeepSeek-R1, QwQ, Hunyuan-thinking and similar models now preserve their reasoning chains and multimodal images across turns instead of dropping context.
+- **TTS no longer wedges `voiceState`** — fixed a state-machine path that left the speaking flag stuck after a stream-end race.
+- **Wake word + AppleScript log noise** — wake-word retry warnings now dedup by error message; AppleScript -1743 latches on first hit and silently retries every 10 min.
+- **Workspace `set-root` security gate (audit M3)** — renderer-supplied workspace root requires native dialog approval; persisted (mode 0o600) so renderer's "restore last-set-root" doesn't re-prompt.
+- **MCP per-tool approval (audit M2)** — server's initial tool list is auto-snapshotted on first run; new tools that appear later (server update or tampering) trigger native approval prompt.
+- **PanelView lint warning** — destructured `chat` to satisfy `react-hooks/exhaustive-deps`.
+
+### Added
+- **In-app diagnostic surface** — renderer console capture into ring buffer + JSONL export panel + dev-only mirror to `.dev/runtime.log` so bug reports don't require DevTools.
+
+### Changed
+- **Hidden Minecraft + Factorio integrations from Settings UI** — IPC + gateway code retained, just not surfaced in the Integrations panel since they aren't a v0.3.x focus. Telegram + Discord remain visible.
+- **TTS wait timeout log level** — `console.warn` → `console.info` (the 12s unblock is by-design, not a failure).
+- **Memory vector index save debounce** — 2s → 30s. Stops rewriting the 60MB JSON on every chat tick. Flush-on-quit unchanged.
+- **i18n for ja + ko** — translated ~660 previously-English UI strings.
+- **Default chat models** — Anthropic Opus 4.6 → 4.7; Gemini 3.1 `-preview` → stable; OpenAI gpt-5.5 / gpt-5.5-pro added (default stays gpt-5.4 until 5.5 API fully GA).
+
+## [0.3.1-beta.2] - 2026-04-26
+
+Security-only patch. **No behavior changes.** Closes IPC surface attacks
+found in two-pass audit (2026-04-24 → 2026-04-26):
+- **H5 chat baseUrl SSRF** — `checkChatBaseUrlSafety` now blocks IMDS / 0.0.0.0 ranges in `chat:complete-stream`. Local-provider workflows (Ollama 127.0.0.1, LM Studio LAN) preserved.
+- **H4 vault enumeration** — single-retrieve rate limit (3/60s) on top of bulk limit (6/60s).
+- **H8 local-service probe** — pinned to loopback only.
+
+## [0.3.1-beta.1] - 2026-04-25
+
+Pure installer-size fix. **No behavior changes.** Cuts per-platform installer
+from **1.19–1.45 GB → ~250 MB** by excluding three pieces of bloat that
+slipped past `electron-builder`:
+- Unused FP32 model duplicate (~600 MB)
+- Git LFS residue
+- Unused vendor binaries
+
+## [0.3.0] - 2026-04-25
+
+**Stable release.** First non-prerelease build since v0.2.9. Cumulative:
+100+ commits, ~12,000 LOC delta, +361 unit tests (485 → 846).
+
+The narrative-companion release. The relationship is now something Nexus
+**remembers, holds shape on, and brings back to you**.
+
+### Added
+- **Significance-weighted recall** — memory ranking now blends recency, emotional weight, and topic centrality.
+- **Dream-cycle reflections** — companion runs an offline reflection pass between sessions, producing journal-like recap.
+- **Callback queue** — companion holds threads (unfinished questions, half-shared stories) and brings them back when topical.
+- **Anniversary milestones** — relationship dimension transitions trigger one-shot pacing prompts.
+- **Relationship type declaration** — friend / mentor / quiet companion paths shape system prompt + idle behavior.
+- **"Thinking of you" OS notification** — proactive ping respecting `NotificationPolicy` quiet hours.
+- **Idle-motion silent gestures** — Live2D micro-animations during long pauses.
+- **Smooth 2-hour day↔dusk↔night blend** — bolder color contrast, more readable in real lighting.
+- **Liquid Glass UI re-skin** — reduced visual chrome, more focus on the companion.
+- **Richer weather precision** — 14-state weather expanded with intensity gradients.
+
+## [0.3.0-beta.2] - 2026-04-24
+
+Stability + retention pass on top of beta.1. 45 commits, ~6,000 LOC delta,
++158 unit tests (665 → 823). Polish for: panel UI, autonomy decision engine,
+memory recall, weather precision, tray + dock visuals.
+
+## [0.3.0-beta.1] - 2026-04-24
+
+### Added
+- **Three-layer affective system** — every user message produces a specific emotional fingerprint; the 0–100 score is now the surface of a richer model.
+- **Relationship evolution + emotional memory** — themed beta line.
+- **93 new unit tests** (lifted suite into the 600s).
+- **Main-process audit pass** — first scan that produced the H1–H7 / M1–M10 / L1–L7 audit doc.
+
+### Changed
+- **Electron 36 → 41** (Node 24 ABI). ~30 smaller fixes alongside.
+
+## [0.2.9] - 2026-04-22
+
+### Added
+- **Emotional memory** — companion recalls how a previous interaction felt, not just what was said.
+- **5-level relationship baseline** — stranger / acquaintance / friend / close_friend / family.
+- **Weather + scene system overhaul** — 14 weather states integrated with 5 hand-crafted scenes, day/dusk/night variants.
+- **Character Card v2/v3 import** — accepts SillyTavern / RisuAI / chub.ai / characterhub PNGs.
+- **VTube Studio bridge** — WebSocket + auth handshake, lets users reuse existing VTS rigs.
+
 ## [0.2.8] - 2026-04-21
 
 ### Added
