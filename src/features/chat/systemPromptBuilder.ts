@@ -383,9 +383,18 @@ async function toRequestMessages(
   const augmentedMessages = contextMessages.slice()
   for (let i = augmentedMessages.length - 1; i >= 0; i -= 1) {
     if (augmentedMessages[i].role === 'user') {
+      const original = augmentedMessages[i].content
+      // Multimodal user turns carry an array of content parts (text + image_url).
+      // The previous template-string concat coerced the array to
+      // "[object Object],[object Object]", which dropped both the prompt and
+      // the images. Splice the reminder in as a leading text part instead so
+      // the image parts survive intact.
+      const nextContent: typeof original = Array.isArray(original)
+        ? [{ type: 'text', text: `${timeReminder}\n\n` }, ...original]
+        : `${timeReminder}\n\n${original}`
       augmentedMessages[i] = {
         ...augmentedMessages[i],
-        content: `${timeReminder}\n\n${augmentedMessages[i].content}`,
+        content: nextContent,
       }
       break
     }

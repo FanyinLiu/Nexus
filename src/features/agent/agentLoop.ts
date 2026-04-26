@@ -422,11 +422,15 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
       }
 
       // Some providers reject empty assistant messages on the next turn.
+      // Forward `reasoning_content` so thinking-mode providers don't reject
+      // the next round and so stripStaleLastAssistantWithoutReasoning() in
+      // contextCompaction doesn't drop this synthetic turn for missing trace.
       history.push({
         id: createId('msg'),
         role: 'assistant',
         content: lastResponseText || EMPTY_ASSISTANT_PLACEHOLDER,
         createdAt: new Date().toISOString(),
+        ...(response.reasoning_content ? { reasoning_content: response.reasoning_content } : {}),
       })
 
       const status = parseStatus(rawContent)
