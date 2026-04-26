@@ -23,8 +23,22 @@ per-call confirmation dialog is still missing.
 | H6 runtime-state schema | ✅ FIXED | `sanitizeBySchema` with `RUNTIME_STATE_SCHEMA` |
 | H7 chat stream done:true | ✅ FIXED | try/catch/finally always emits terminal frame |
 
-The MEDIUM and LOW lists below have not been re-verified; treat them as
-"may be partially addressed" and re-check before scheduling work.
+## MEDIUM status (re-verified 2026-04-26)
+
+| ID | Status | Note |
+|----|--------|------|
+| M1 vector index disk thrash | 🟡 OPEN | Still rewrites whole JSON on every flush; needs incremental design |
+| M2 MCP per-tool approval | ✅ FIXED | `snapshotInitialTools` + `promptMcpToolApproval` in `mcpHost.js` |
+| M3 workspace:set-root dialog | ✅ FIXED | `workspaceApprovals.js` + dialog gate in `workspaceFsIpc.js` |
+| M4 initModelManager blocks | ✅ NON-BLOCKING | `canReachHuggingFace()` runs unawaited; critical path is fast |
+| M5 ipcRegistry blind 1.5s | 🟡 OPEN | Still `setTimeout(loadDeferredModules, 1500)`; needs renderer-ready signal |
+| M6 gateway shared callback | 🟢 NO-OP | Each gateway has exactly one consumer; no silent drop in practice |
+| M7 vector batch concurrency | 🟢 NO-OP | Synchronous loop in `indexBatch`; JS single-thread closes the race |
+| M8 type-unsafe payloads | 🟡 PARTIAL | 32 of 81 IPC handlers validate fields; rest accept untyped payload |
+| M9 dead webContents check | 🟢 MOSTLY-OK | Most handlers don't `event.sender.send()` after async work |
+| M10 file:save-text validation | ✅ DESIGN-CLOSED | Uses native dialog; user is in the loop choosing the path |
+
+LOW (L1-L7) still un-re-verified.
 
 ### H4 deferral rationale (2026-04-26)
 
