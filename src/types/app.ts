@@ -303,6 +303,21 @@ export interface PresenceSettings {
    */
   proactiveAwayNotificationsEnabled: boolean
   proactiveAwayNotificationThresholdMinutes: number
+  /**
+   * Daily morning + evening "bracket" — paired prompts that bookend the
+   * day. Morning fires an open-question OS notification in the 7-10
+   * window; evening fires a highlight + stressful question pair in the
+   * 21-23 window. quiet_companion relationship type opts out by default
+   * inside the scheduler regardless of this flag.
+   */
+  proactiveBracketEnabled: boolean
+  /**
+   * Sunday letter — once-a-week persona-written letter generated in the
+   * 18-22 Sunday window when the user has been active at least 3 days.
+   * Independent toggle from the bracket so a user can keep brackets but
+   * skip the letter (or vice versa).
+   */
+  proactiveLetterEnabled: boolean
 }
 
 export interface McpServerConfig {

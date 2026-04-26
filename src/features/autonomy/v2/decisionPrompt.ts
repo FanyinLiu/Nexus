@@ -23,6 +23,7 @@ import {
   getDecisionPromptStrings,
 } from './prompts/index.ts'
 import { formatSubDimensionsForPrompt } from '../relationshipDimensions.ts'
+import { analyzeRecentReplies } from './repetitionGuard.ts'
 
 export interface DecisionPromptHints {
   /**
@@ -252,6 +253,18 @@ function formatContextSections(
       + `content: ${context.lastProactiveUtterance.text}\n`
       + strings.sectionLastUtteranceTail,
     )
+  }
+
+  // ── Variety hint ──
+  // Detects structural sameness (repeated openings, monotone length, etc.)
+  // across the last few assistant replies and asks the model to vary.
+  // Borrowed from x380kkm/Live2DPet's `_detectRepetition`.
+  const recentAssistantReplies = context.recentMessages
+    .filter((m) => m.role === 'assistant')
+    .map((m) => m.content)
+  const variety = analyzeRecentReplies(recentAssistantReplies)
+  if (variety) {
+    sections.push(strings.varietyHint(variety))
   }
 
   // ── Subagent capacity ──

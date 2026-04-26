@@ -73,6 +73,11 @@ export interface LoadedPersona {
   present: boolean
 }
 
+/** The persona profile loaded by autonomy + proactive features when the
+ *  user hasn't picked a different one. Lives here so all consumers stay
+ *  in sync when the default ever changes. */
+export const DEFAULT_PERSONA_PROFILE_ID = 'xinghui'
+
 export function createEmptyLoadedPersona(id: string, rootDir: string): LoadedPersona {
   return {
     id,

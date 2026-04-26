@@ -363,6 +363,7 @@ export type SettingsSectionId =
   | 'history'
   | 'memory'
   | 'lorebooks'
+  | 'letters'
   | 'voice'
   | 'window'
   | 'integrations'
@@ -379,6 +380,7 @@ const SETTINGS_SECTION_DESCRIPTION_KEY_MAP: Record<SettingsSectionId, Parameters
   // i18n entry lands so existing translations don't fall through to the
   // empty string fallback in pickTranslatedUiText.
   lorebooks: 'settings.section_desc.memory',
+  letters: 'settings.section_desc.letters',
   voice: 'settings.section_desc.voice',
   window: 'settings.section_desc.window',
   integrations: 'settings.section_desc.integrations',
@@ -393,6 +395,7 @@ const SETTINGS_SECTION_EYEBROW_KEY_MAP: Record<SettingsSectionId, Parameters<typ
   history: 'settings.section_eyebrow.history',
   memory: 'settings.section_eyebrow.memory',
   lorebooks: 'settings.section_eyebrow.memory',
+  letters: 'settings.section_eyebrow.memory',
   voice: 'settings.section_eyebrow.voice',
   window: 'settings.section_eyebrow.window',
   integrations: 'settings.section_eyebrow.integrations',
@@ -415,6 +418,7 @@ export function getSettingsSectionOptions(uiLanguage: UiLanguage): Array<{
     { id: 'voice', label: pickTranslatedUiText(uiLanguage, 'settings.section.voice') },
     { id: 'memory', label: pickTranslatedUiText(uiLanguage, 'settings.section.memory') },
     { id: 'lorebooks', label: uiLanguage === 'zh-CN' || uiLanguage === 'zh-TW' ? 'Lorebook' : 'Lorebooks' },
+    { id: 'letters', label: pickTranslatedUiText(uiLanguage, 'settings.section.letters') },
     { id: 'window', label: pickTranslatedUiText(uiLanguage, 'settings.section.window') },
     { id: 'tools', label: pickTranslatedUiText(uiLanguage, 'settings.section.tools') },
     { id: 'integrations', label: pickTranslatedUiText(uiLanguage, 'settings.section.integrations') },
