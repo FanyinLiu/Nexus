@@ -1872,4 +1872,18 @@ export const koMessages: TranslationDictionary = {
   'about.faq.a.6': '「설정 → 모델」에서 「Custom OpenAI Compatible」을 선택하고 엔드포인트를 로컬 서버로 설정 (예: Ollama는 http://127.0.0.1:11434/v1). 순수 로컬 서버의 경우 API 키는 비워둬도 돼요.',
   'about.credits.title': '사용한 오픈소스',
   'about.credits.intro': 'Nexus는 이 오픈소스 프로젝트들의 어깨 위에 서 있어요:',
+  // ── Weekly recap panel ────────────────────────────────────
+  'weekly_recap.title': '이번 주 그녀와',
+  'weekly_recap.subtitle': '지난 7일간의 로컬 전용 스냅샷. 어떤 것도 기기 밖으로 나가지 않아요.',
+  'weekly_recap.loading': '로딩 중…',
+  'weekly_recap.empty': '이번 주는 아직 대화하지 않았어요. 채팅 패널을 열고 "안녕"이라고 말해 보세요.',
+  'weekly_recap.metric.user_messages': '당신의 메시지',
+  'weekly_recap.metric.days_active': '방문한 날',
+  'weekly_recap.metric.score_delta': '친밀도 변화',
+  'weekly_recap.spark.energy': '에너지',
+  'weekly_recap.spark.warmth': '따뜻함',
+  'weekly_recap.vibe.energy': '에너지가 높은 한 주였어요 —— 추진력이 많았어요.',
+  'weekly_recap.vibe.warmth': '따뜻한 한 주였어요 —— 대화가 가깝게 느껴졌어요.',
+  'weekly_recap.vibe.curiosity': '호기심 많은 한 주였어요 —— 새로운 질문이 많았어요.',
+  'weekly_recap.vibe.concern': '무거운 한 주였어요 —— 그녀는 당신이 무언가를 안고 있다는 걸 알아챘어요.',
 }

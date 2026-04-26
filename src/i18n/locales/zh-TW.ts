@@ -1872,4 +1872,18 @@ export const zhTWMessages: TranslationDictionary = {
   'about.faq.a.6': '在「設定 → 模型」選「Custom OpenAI Compatible」，把 endpoint 設成你本地服務的位址（比如 Ollama 是 http://127.0.0.1:11434/v1）。本地服務 API key 留空就行。',
   'about.credits.title': '使用的開源專案',
   'about.credits.intro': 'Nexus 站在這些開源專案的肩膀上：',
+  // ── Weekly recap panel ────────────────────────────────────
+  'weekly_recap.title': '本週和她',
+  'weekly_recap.subtitle': '過去 7 天的本地快照。不上傳任何資料。',
+  'weekly_recap.loading': '載入中…',
+  'weekly_recap.empty': '本週還沒和她聊過。打開聊天面板說聲「嗨」吧。',
+  'weekly_recap.metric.user_messages': '你發的訊息',
+  'weekly_recap.metric.days_active': '你來的天數',
+  'weekly_recap.metric.score_delta': '親密度變化',
+  'weekly_recap.spark.energy': '活力',
+  'weekly_recap.spark.warmth': '溫暖度',
+  'weekly_recap.vibe.energy': '一個高能量的星期 —— 推進了很多事。',
+  'weekly_recap.vibe.warmth': '一個溫暖的星期 —— 對話感覺很近。',
+  'weekly_recap.vibe.curiosity': '一個好奇的星期 —— 出現了很多新問題。',
+  'weekly_recap.vibe.concern': '比較沉的一週 —— 她感覺到你心裡裝著事。',
 }

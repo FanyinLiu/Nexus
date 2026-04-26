@@ -1872,4 +1872,18 @@ export const zhCNMessages: TranslationDictionary = {
   'about.faq.a.6': '在「设置 → 模型」选「Custom OpenAI Compatible」，把 endpoint 设成你本地服务的地址（比如 Ollama 是 http://127.0.0.1:11434/v1）。本地服务 API key 留空就行。',
   'about.credits.title': '使用的开源项目',
   'about.credits.intro': 'Nexus 站在这些开源项目的肩膀上：',
+  // ── Weekly recap panel ────────────────────────────────────
+  'weekly_recap.title': '本周和她',
+  'weekly_recap.subtitle': '过去 7 天的本地快照。不上传任何数据。',
+  'weekly_recap.loading': '载入中…',
+  'weekly_recap.empty': '本周还没和她聊过。打开聊天面板说声"嗨"吧。',
+  'weekly_recap.metric.user_messages': '你发的消息',
+  'weekly_recap.metric.days_active': '你来的天数',
+  'weekly_recap.metric.score_delta': '亲密度变化',
+  'weekly_recap.spark.energy': '活力',
+  'weekly_recap.spark.warmth': '温暖度',
+  'weekly_recap.vibe.energy': '一个高能量的星期 —— 推进了很多事。',
+  'weekly_recap.vibe.warmth': '一个温暖的星期 —— 对话感觉很近。',
+  'weekly_recap.vibe.curiosity': '一个好奇的星期 —— 出现了很多新问题。',
+  'weekly_recap.vibe.concern': '比较沉的一周 —— 她感觉到你心里装着事。',
 }

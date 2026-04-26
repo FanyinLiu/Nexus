@@ -1872,4 +1872,18 @@ export const enMessages: TranslationDictionary = {
   'about.faq.a.6': 'In Settings → Model, pick "Custom OpenAI Compatible" and set the endpoint to your local server (e.g. http://127.0.0.1:11434/v1 for Ollama). API key can be left blank for purely local servers.',
   'about.credits.title': 'Built With',
   'about.credits.intro': 'Nexus stands on the shoulders of these open-source projects:',
+  // ── Weekly recap panel ────────────────────────────────────
+  'weekly_recap.title': 'This Week with Her',
+  'weekly_recap.subtitle': 'A local-only snapshot of the past 7 days. Nothing leaves your machine.',
+  'weekly_recap.loading': 'Loading…',
+  'weekly_recap.empty': 'You haven\'t chatted yet this week. Open the chat panel and say hi.',
+  'weekly_recap.metric.user_messages': 'messages from you',
+  'weekly_recap.metric.days_active': 'days you visited',
+  'weekly_recap.metric.score_delta': 'closeness change',
+  'weekly_recap.spark.energy': 'energy',
+  'weekly_recap.spark.warmth': 'warmth',
+  'weekly_recap.vibe.energy': 'It was a high-energy week — lots of momentum.',
+  'weekly_recap.vibe.warmth': 'A warm week — the conversations felt close.',
+  'weekly_recap.vibe.curiosity': 'A curious week — lots of new questions.',
+  'weekly_recap.vibe.concern': 'A heavier week — she noticed you were carrying things.',
 }

@@ -6439,3 +6439,108 @@
   color: rgba(255, 255, 255, 0.9);
   font-weight: 500;
 }
+
+/* ── Weekly recap panel ───────────────────────────────────────────── */
+
+.settings-weekly-recap {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(240, 107, 140, 0.15);
+  background: linear-gradient(135deg, rgba(240, 107, 140, 0.06), rgba(245, 160, 95, 0.04));
+}
+
+.settings-weekly-recap__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settings-weekly-recap__subtitle {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.settings-weekly-recap__loading,
+.settings-weekly-recap__empty {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
+.settings-weekly-recap__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+.settings-weekly-recap__metric {
+  display: grid;
+  gap: 4px;
+  text-align: center;
+  padding: 10px 8px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 10px;
+}
+
+.settings-weekly-recap__metric-value {
+  font-size: 22px;
+  font-weight: 600;
+  color: rgba(255, 220, 200, 0.95);
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-weekly-recap__metric-unit {
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.45);
+  margin-left: 2px;
+}
+
+.settings-weekly-recap__metric-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-weekly-recap__sparklines {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-weekly-recap__spark-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.settings-weekly-recap__spark-label {
+  width: 50px;
+  flex-shrink: 0;
+}
+
+.settings-weekly-recap__sparkline {
+  height: 24px;
+  flex: 1;
+}
+
+.settings-weekly-recap__sparkline--empty {
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+}
+
+.settings-weekly-recap__vibe {
+  margin: 0;
+  padding: 10px 12px;
+  background: rgba(240, 107, 140, 0.08);
+  border-left: 2px solid rgba(240, 107, 140, 0.5);
+  border-radius: 0 8px 8px 0;
+  font-size: 12.5px;
+  font-style: italic;
+  color: rgba(255, 230, 230, 0.85);
+  line-height: 1.5;
+}

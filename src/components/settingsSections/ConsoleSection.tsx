@@ -29,6 +29,7 @@ import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { StateTimelinePanel } from './StateTimelinePanel'
 import { SubagentHistoryPanel } from './SubagentHistoryPanel'
 import { UpdaterPanel } from './UpdaterPanel'
+import { WeeklyRecapPanel } from './WeeklyRecapPanel'
 import { AgentTracePanel } from '../AgentTracePanel'
 import { PlanPanel } from '../PlanPanel'
 
@@ -127,6 +128,7 @@ export const ConsoleSection = memo(function ConsoleSection({
 
       <UpdaterPanel uiLanguage={uiLanguage} />
       <AboutPanel uiLanguage={uiLanguage} />
+      <WeeklyRecapPanel uiLanguage={uiLanguage} />
       <DiagnosticsPanel />
       <StateTimelinePanel />
       <CostHistoryPanel />

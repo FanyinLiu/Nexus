@@ -1872,4 +1872,18 @@ export const jaMessages: TranslationDictionary = {
   'about.faq.a.6': '「設定 → モデル」で「Custom OpenAI Compatible」を選び、エンドポイントをローカルサーバーに設定（例：Ollama は http://127.0.0.1:11434/v1）。純粋なローカルサーバーの場合、API キーは空のままで OK。',
   'about.credits.title': '使用しているオープンソース',
   'about.credits.intro': 'Nexus はこれらのオープンソースプロジェクトの肩の上に立っています：',
+  // ── Weekly recap panel ────────────────────────────────────
+  'weekly_recap.title': '今週、彼女と',
+  'weekly_recap.subtitle': '過去 7 日間のローカル専用スナップショット。何もマシンから出ません。',
+  'weekly_recap.loading': '読込中…',
+  'weekly_recap.empty': '今週はまだ会話していません。チャットパネルを開いて「やあ」と言ってみて。',
+  'weekly_recap.metric.user_messages': 'あなたからのメッセージ',
+  'weekly_recap.metric.days_active': '訪れた日数',
+  'weekly_recap.metric.score_delta': '親密度の変化',
+  'weekly_recap.spark.energy': 'エネルギー',
+  'weekly_recap.spark.warmth': '温かさ',
+  'weekly_recap.vibe.energy': '高エネルギーの週でした —— 勢いがありました。',
+  'weekly_recap.vibe.warmth': '温かい週でした —— 会話が近く感じられました。',
+  'weekly_recap.vibe.curiosity': '好奇心の週でした —— 新しい質問がたくさんありました。',
+  'weekly_recap.vibe.concern': '重い週でした —— あなたが何かを抱えていることに気づいていました。',
 }
