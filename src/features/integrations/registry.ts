@@ -20,6 +20,13 @@ export interface IntegrationModuleDescriptor {
   designPattern: TranslationKey
   nextStep: TranslationKey
   references: string[]
+  /**
+   * If true, the module is excluded from both the inspectable and the
+   * roadmap UI surfaces. The IPC handlers and service code still run —
+   * this only hides the Settings card so the user doesn't see modules
+   * we're not actively shipping yet. Toggle to false to re-surface.
+   */
+  hidden?: boolean
 }
 
 const INTEGRATION_MODULES: IntegrationModuleDescriptor[] = [
@@ -51,6 +58,9 @@ const INTEGRATION_MODULES: IntegrationModuleDescriptor[] = [
       'stage-ui/src/stores/modules/gaming-module-factory.ts',
       'stage-pages/src/pages/settings/modules/gaming-minecraft.vue',
     ],
+    // Hidden from Settings UI for v0.3.x — not a focus, surface back when
+    // we're ready to invest in game integrations as a real feature.
+    hidden: true,
   },
   {
     id: 'factorio',
@@ -65,6 +75,7 @@ const INTEGRATION_MODULES: IntegrationModuleDescriptor[] = [
       'stage-pages/src/pages/settings/modules/gaming-factorio.vue',
       'stage-ui/src/components/modules/GamingModuleSettings.vue',
     ],
+    hidden: true,
   },
   {
     id: 'telegram',
@@ -166,9 +177,9 @@ export function listIntegrationModules() {
 }
 
 export function getInspectableIntegrationModules() {
-  return INTEGRATION_MODULES.filter((module) => module.inspectable)
+  return INTEGRATION_MODULES.filter((module) => module.inspectable && !module.hidden)
 }
 
 export function getRoadmapIntegrationModules() {
-  return INTEGRATION_MODULES.filter((module) => !module.inspectable)
+  return INTEGRATION_MODULES.filter((module) => !module.inspectable && !module.hidden)
 }

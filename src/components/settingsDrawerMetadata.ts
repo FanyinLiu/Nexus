@@ -162,9 +162,9 @@ export function buildSettingsSectionMeta(input: BuildSettingsSectionMetaInput): 
         draft.mcpServers.length
           ? ti('settings.preview.integrations.mcp_count', { count: draft.mcpServers.length })
           : ti('settings.preview.integrations.mcp_pending'),
-        draft.minecraftIntegrationEnabled || draft.factorioIntegrationEnabled
-          ? ti('settings.preview.integrations.games_enabled')
-          : ti('settings.preview.integrations.games_idle'),
+        // Game-module status preview removed — minecraft / factorio are
+        // hidden in v0.3.x (see registry.ts hidden flag). When games come
+        // back, restore the `games_enabled` / `games_idle` preview line.
       ],
     },
     tools: {
