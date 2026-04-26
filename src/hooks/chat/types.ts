@@ -112,6 +112,16 @@ export type UseChatContext = {
    * marks the milestone fired so it doesn't repeat.
    */
   consumeAnniversaryPromptText?: (uiLanguage: string) => string
+  /**
+   * Consume a one-shot "on this day" hint — checks if today is the
+   * calendar anniversary (year / half-year / month / week) of any
+   * notable past memory, and if so returns the prompt fragment asking
+   * the LLM to reference it. Caller supplies the active memories list
+   * so the controller doesn't need to keep its own ref. The call also
+   * marks the chosen memory fired in the lifetime ledger so it can't
+   * resurface day after day for the +/- tolerance window.
+   */
+  consumeOnThisDayPromptText?: (uiLanguage: string, memories: MemoryItem[]) => string
   reminderTasksRef: RefObject<ReminderTask[]>
   addReminderTask: (input: {
     title: string

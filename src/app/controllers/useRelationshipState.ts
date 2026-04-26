@@ -21,6 +21,13 @@ import {
   detectAnniversaryMilestones,
   markMilestoneFired,
 } from '../../features/autonomy/milestones.ts'
+import { findOnThisDayCandidate } from '../../features/memory/onThisDay.ts'
+import {
+  loadOnThisDayLedger,
+  recordOnThisDayFired,
+} from '../../features/memory/onThisDayLedger.ts'
+import { formatOnThisDayPromptHint } from '../../features/memory/onThisDayPrompt.ts'
+import type { MemoryItem } from '../../types'
 import { captureRelationshipSample } from '../../features/autonomy/stateTimeline.ts'
 import {
   AUTONOMY_RELATIONSHIP_STORAGE_KEY,
@@ -109,6 +116,24 @@ export function useRelationshipState() {
     return trigger.promptHint
   }, [])
 
+  /**
+   * "On this day" — distinct from days-30/100/365 above. This one matches
+   * a single past memory's createdAt against today's date (year /
+   * half-year / month / week anniversaries) and asks the LLM to weave it
+   * in if the moment fits. Lifetime ledger keeps each memory id from
+   * firing on consecutive days through the +/- tolerance window.
+   */
+  const consumeOnThisDayPromptText = useCallback((uiLanguage: string, memories: MemoryItem[]) => {
+    if (!memories.length) return ''
+    const nowMs = Date.now()
+    const ledger = loadOnThisDayLedger(nowMs)
+    const excludeIds = new Set(Object.keys(ledger))
+    const candidate = findOnThisDayCandidate(memories, nowMs, excludeIds)
+    if (!candidate) return ''
+    recordOnThisDayFired(candidate.memoryId, new Date(nowMs).toISOString())
+    return formatOnThisDayPromptHint(candidate, uiLanguage)
+  }, [])
+
   const getRelationshipPrompt = useCallback(() => {
     const state = relationshipRef.current
     const base = formatRelationshipForPrompt(state)
@@ -129,6 +154,7 @@ export function useRelationshipState() {
     markInteraction,
     consumePendingMilestoneText,
     consumeAnniversaryPromptText,
+    consumeOnThisDayPromptText,
     processMessage,
     getRelationshipPrompt,
     updateSessionContext,

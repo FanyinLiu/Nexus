@@ -95,6 +95,15 @@ export type AssistantReplyRequestOptions = {
    */
   anniversaryPromptText?: string
   /**
+   * One-shot "on this day" hint — if today is the calendar anniversary
+   * (year / half-year / month / week) of a notable past memory, this
+   * carries the prompt fragment that asks the LLM to weave the memory in
+   * if a moment fits. Distinct channel from `anniversaryPromptText`
+   * (which counts total days of interaction); this one is per-memory
+   * date arithmetic. Empty string when nothing is pending.
+   */
+  onThisDayPromptText?: string
+  /**
    * 用户作息节奏总结（来自 rhythmLearner.formatRhythmSummary）。
    * 互动次数 < 10 时该函数自动返回空字符串，避免噪声。
    */
@@ -216,6 +225,9 @@ export async function buildSystemPrompt(
   const milestoneSection = options.milestonePromptText ?? ''
   // 周年里程碑：仅在跨越 30/100/365 天那一轮注入。与 milestone 并列。
   const anniversarySection = options.anniversaryPromptText ?? ''
+  // "去年今天" 类回响：单条记忆的日期周年（一年/半年/一个月/一周）。
+  // 只在自然命中那一轮注入；ledger 保证每条记忆终生只 fire 一次。
+  const onThisDaySection = options.onThisDayPromptText ?? ''
   // 当前情绪状态：紧贴 header 的 tone 指令，让模型先读到"她现在感觉如何"。
   const emotionSection = options.emotionPromptText ?? ''
   // 用户作息感知：紧贴 emotion，让模型自然对比 header 里的 currentDateTime
@@ -245,6 +257,7 @@ export async function buildSystemPrompt(
     relationshipSection,
     milestoneSection,
     anniversarySection,
+    onThisDaySection,
     headerText,
     emotionSection,
     rhythmSection,

@@ -11,6 +11,7 @@ import type {
   AppSettings,
   ChatMessage,
   Goal,
+  MemoryItem,
   PanelWindowState,
   VoiceState,
   WindowView,
@@ -219,6 +220,7 @@ export function useAppController() {
   const emotionSnapshotGetterRef = useRef<() => { energy: number; warmth: number; curiosity: number; concern: number } | undefined>(() => undefined)
   const milestoneConsumerRef = useRef<() => string>(() => '')
   const anniversaryConsumerRef = useRef<(uiLanguage: string) => string>(() => '')
+  const onThisDayConsumerRef = useRef<(uiLanguage: string, memories: MemoryItem[]) => string>(() => '')
 
   const chat = useChat({
     settingsRef,
@@ -260,6 +262,7 @@ export function useAppController() {
     getEmotionSnapshot: () => emotionSnapshotGetterRef.current(),
     consumeMilestonePromptText: () => milestoneConsumerRef.current(),
     consumeAnniversaryPromptText: (uiLanguage: string) => anniversaryConsumerRef.current(uiLanguage),
+    consumeOnThisDayPromptText: (uiLanguage: string, memories: MemoryItem[]) => onThisDayConsumerRef.current(uiLanguage, memories),
     reminderTasksRef: reminderTaskStore.reminderTasksRef,
     addReminderTask: (input) => addReminderTaskFnRef.current?.(input) ?? null,
     updateReminderTask: (id, updates) => updateReminderTaskFnRef.current?.(id, updates) ?? null,
@@ -414,7 +417,8 @@ export function useAppController() {
     emotionSnapshotGetterRef.current = () => autonomy.emotionStateRef.current
     milestoneConsumerRef.current = autonomy.consumePendingMilestoneText
     anniversaryConsumerRef.current = autonomy.consumeAnniversaryPromptText
-  }, [autonomy.consumePendingMilestoneText, autonomy.consumeAnniversaryPromptText, autonomy.emotionStateRef, autonomy.getEmotionPrompt, autonomy.getRelationshipPrompt, autonomy.getRhythmPrompt])
+    onThisDayConsumerRef.current = autonomy.consumeOnThisDayPromptText
+  }, [autonomy.consumePendingMilestoneText, autonomy.consumeAnniversaryPromptText, autonomy.consumeOnThisDayPromptText, autonomy.emotionStateRef, autonomy.getEmotionPrompt, autonomy.getRelationshipPrompt, autonomy.getRhythmPrompt])
 
   // Wake autonomy when user sends a chat message.
   //
