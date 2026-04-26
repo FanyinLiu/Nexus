@@ -18,13 +18,38 @@ per-call confirmation dialog is still missing.
 |----|--------|--------------------|
 | H2 MCP arbitrary spawn | ✅ FIXED | `promptMcpApproval` in `mcpHost.js` |
 | H3 notification SSRF | ✅ FIXED | `checkUrlSafety` wired in `notificationBridge.js` |
-| H4 vault retrieve gate | 🟡 PARTIAL | Single-retrieve rate-limited; full per-call dialog still TODO |
+| H4 vault retrieve gate | 🟡 DEFERRED | Rate-limited (3/60s single, 6/60s bulk) + audit log + WeakMap-per-sender. Full opaque-handle refactor deferred to v1.0 — see note below |
 | H5 chat baseUrl SSRF | ✅ FIXED | `checkChatBaseUrlSafety` wired in `chatIpc.js:41` |
 | H6 runtime-state schema | ✅ FIXED | `sanitizeBySchema` with `RUNTIME_STATE_SCHEMA` |
 | H7 chat stream done:true | ✅ FIXED | try/catch/finally always emits terminal frame |
 
 The MEDIUM and LOW lists below have not been re-verified; treat them as
 "may be partially addressed" and re-check before scheduling work.
+
+### H4 deferral rationale (2026-04-26)
+
+The audit's recommended fix — return an opaque handle from `vault:retrieve`
+that resolves to plaintext only inside main-process outbound-request
+handlers — is a PR-sized refactor touching the vault IPC API plus every
+service that needs an API key (`chatRuntime`, every TTS provider, every
+STT provider, settings hydration). Estimated 1–2 days of careful work
+plus regression risk across the entire chat / voice surface.
+
+Current mitigations for the v0.3.x line are considered adequate:
+
+1. `requireTrustedSender(event)` rejects calls from unknown frames
+2. Single-retrieve rate limit: 3 / 60 s per webContents
+3. Bulk retrieve rate limit: 6 / 60 s per webContents
+4. Every retrieve writes to the audit log
+5. Renderer is sandboxed; CSP blocks inline scripts in production
+
+The realistic XSS threat (a malicious chat message rendering scripts in
+the chat panel) is closed by CSP — `script-src 'self' 'wasm-unsafe-eval'`
+in `rendererServer.js` rejects inline scripts entirely, so an exfil page
+can't even bootstrap the IPC call without a separate RCE.
+
+**Action**: keep current mitigations. Schedule the opaque-handle refactor
+for v1.0 stable. Track here, not as a release blocker for v0.3.x.
 
 Severity key: **🔴 HIGH** — real user-facing impact. **🟡 MEDIUM** —
 real bug but rare / small blast radius. **🟢 LOW** — polish / observability.
