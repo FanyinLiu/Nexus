@@ -7,6 +7,12 @@ const MAX_ROTATED_FILES = 3
 
 let logStream = null
 let logFilePath = ''
+// Tracked-in-memory file size — avoids the per-write statSync that was the
+// L4 audit finding. Initialised lazily on first audit() call from a single
+// statSync (cost amortised across the rest of process lifetime). Each
+// subsequent write increments this counter by the byte length of the
+// line we just wrote; rotation resets it to 0.
+let trackedSize = -1 // -1 = not yet initialised
 
 function getLogPath() {
   if (!logFilePath) {
@@ -25,28 +31,34 @@ function ensureStream() {
   return logStream
 }
 
-function rotateIfNeeded() {
+function initTrackedSize() {
   try {
     const stats = fs.statSync(getLogPath())
-    if (stats.size < MAX_LOG_SIZE) return
+    trackedSize = stats.size
+  } catch {
+    trackedSize = 0 // file doesn't exist yet
+  }
+}
 
-    // destroy() synchronously releases the fd, unlike end() which is async
-    if (logStream) {
-      logStream.destroy()
-      logStream = null
-    }
+function rotateNow() {
+  // destroy() synchronously releases the fd, unlike end() which is async
+  if (logStream) {
+    logStream.destroy()
+    logStream = null
+  }
 
-    // Prune the oldest rotated file before shifting
-    const oldest = `${getLogPath()}.${MAX_ROTATED_FILES}`
-    try { fs.unlinkSync(oldest) } catch { /* ok */ }
+  // Prune the oldest rotated file before shifting
+  const oldest = `${getLogPath()}.${MAX_ROTATED_FILES}`
+  try { fs.unlinkSync(oldest) } catch { /* ok */ }
 
-    for (let i = MAX_ROTATED_FILES - 1; i >= 1; i--) {
-      const from = `${getLogPath()}.${i}`
-      const to = `${getLogPath()}.${i + 1}`
-      try { fs.renameSync(from, to) } catch { /* ok */ }
-    }
-    try { fs.renameSync(getLogPath(), `${getLogPath()}.1`) } catch { /* ok */ }
-  } catch { /* file may not exist yet */ }
+  for (let i = MAX_ROTATED_FILES - 1; i >= 1; i--) {
+    const from = `${getLogPath()}.${i}`
+    const to = `${getLogPath()}.${i + 1}`
+    try { fs.renameSync(from, to) } catch { /* ok */ }
+  }
+  try { fs.renameSync(getLogPath(), `${getLogPath()}.1`) } catch { /* ok */ }
+
+  trackedSize = 0
 }
 
 /**
@@ -56,15 +68,28 @@ function rotateIfNeeded() {
  * @param {Record<string, unknown>} [details]
  */
 export function audit(category, action, details) {
-  rotateIfNeeded()
+  if (trackedSize < 0) initTrackedSize()
+
   const entry = {
     ts: new Date().toISOString(),
     cat: category,
     act: action,
     ...details,
   }
+  const line = JSON.stringify(entry) + '\n'
+  const lineBytes = Buffer.byteLength(line, 'utf8')
+
+  // Rotate before write if this entry would push us over the threshold,
+  // so the new line lands in the fresh empty file. Avoids per-write stat.
+  if (trackedSize + lineBytes >= MAX_LOG_SIZE) {
+    rotateNow()
+  }
+
   const stream = ensureStream()
-  if (stream) stream.write(JSON.stringify(entry) + '\n')
+  if (stream) {
+    stream.write(line)
+    trackedSize += lineBytes
+  }
 }
 
 export function closeAuditLog() {
