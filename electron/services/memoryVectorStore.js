@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, rename } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, rename, appendFile, stat, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { app } from 'electron'
@@ -6,24 +6,28 @@ import { Worker } from 'node:worker_threads'
 import { Bm25Index } from './bm25Search.js'
 
 const STORE_FILENAME = 'memory-vectors.json'
-// 30s debounce: with MAX_ENTRIES=2000 the JSON file is up to ~60MB, so
-// rewriting on every 2-second tick during an active chat session is real
-// SSD wear + I/O contention. 30s is still fast enough for "the user
-// closes the app and last chat's memories are persisted" since the
-// `before-quit` handler in ipcRegistry.js calls terminate() → flush()
-// to drain any pending dirty state before exit. M1 tracker — proper
-// fix is incremental writes (append-only log + periodic compaction).
-const SAVE_DEBOUNCE_MS = 30_000
+// Append-only log filename — same dir as snapshot, NDJSON one mutation per line.
+const LOG_FILENAME = 'memory-vectors.log'
+// Max entries kept in memory.
 const MAX_ENTRIES = 2000
+// Compaction threshold for the append-only log. When the log file exceeds
+// this size, we rewrite the snapshot and truncate the log. Sized to
+// roughly 100 mutations of typical embedding size (~50KB each).
+const LOG_COMPACT_THRESHOLD_BYTES = 5 * 1024 * 1024
+// Periodic compaction check — every 10 min while the app is up. Cheap
+// (just a stat call); only triggers a real rewrite if log > threshold.
+const COMPACTION_CHECK_INTERVAL_MS = 10 * 60 * 1000
 
 /** @type {Map<string, { content: string, embedding: number[], layer: string, updatedAt: string }>} */
 const _index = new Map()
 
 let _loaded = false
 let _loadPromise = null
-let _dirty = false
-let _saveTimer = null
 let _savePromise = null
+// Serialised tail-append for the log so concurrent writes don't interleave
+// JSON lines. Each mutation .then()'s onto this chain.
+let _logAppendChain = Promise.resolve()
+let _compactTimer = null
 
 // ── Worker thread for search ──
 
@@ -59,10 +63,73 @@ function getWorker() {
   return _worker
 }
 
-// ── Persistence ──
+// ── Persistence (snapshot + append-only log) ──
+//
+// The hot path during chat is one upsert per memory, each followed by a
+// snapshot rewrite of the full ~60MB JSON file. To avoid that I/O cost
+// we split persistence into two files:
+//
+//   - memory-vectors.json (canonical snapshot, periodic compaction only)
+//   - memory-vectors.log  (append-only NDJSON, one mutation per line)
+//
+// Mutation flow: in-memory Map updated immediately, plus one small
+// `appendFile` line. Reads always come from in-memory, so no read amp.
+// Compaction (snapshot rewrite + log truncate) runs every 10 min if
+// the log exceeds 5MB, plus unconditionally on terminate().
+//
+// On startup: load snapshot + replay log lines (idempotent ops, last
+// write wins). A corrupt log line is skipped with a warning, never
+// fatal — ensures a single bad write doesn't trash the whole memory.
 
 function getStorePath() {
   return path.join(app.getPath('userData'), STORE_FILENAME)
+}
+
+function getLogPath() {
+  return path.join(app.getPath('userData'), LOG_FILENAME)
+}
+
+function applyLogOp(op) {
+  if (!op || typeof op !== 'object') return
+  if (op.kind === 'upsert' && op.id && Array.isArray(op.entry?.embedding)) {
+    _index.delete(op.id)
+    _index.set(String(op.id), {
+      content: String(op.entry.content ?? ''),
+      embedding: op.entry.embedding,
+      layer: op.entry.layer ?? 'long_term',
+      updatedAt: op.entry.updatedAt ?? new Date().toISOString(),
+    })
+  } else if (op.kind === 'delete' && op.id) {
+    _index.delete(String(op.id))
+  } else if (op.kind === 'clearLayer' && op.layer) {
+    for (const [id, entry] of _index) {
+      if (entry.layer === op.layer) _index.delete(id)
+    }
+  }
+}
+
+async function replayLog() {
+  let raw
+  try {
+    raw = await readFile(getLogPath(), 'utf8')
+  } catch {
+    return 0 // no log file — nothing to replay
+  }
+  let applied = 0
+  let skipped = 0
+  for (const line of raw.split('\n')) {
+    if (!line) continue
+    try {
+      applyLogOp(JSON.parse(line))
+      applied++
+    } catch {
+      skipped++
+    }
+  }
+  if (skipped) {
+    console.warn(`[memoryVectorStore] log replay: skipped ${skipped} corrupt line(s)`)
+  }
+  return applied
 }
 
 async function ensureLoaded() {
@@ -87,22 +154,69 @@ async function ensureLoaded() {
         }
       }
 
-      console.info(`[memoryVectorStore] loaded ${_index.size} entries`)
+      console.info(`[memoryVectorStore] loaded ${_index.size} entries from snapshot`)
     } catch {
-      console.info('[memoryVectorStore] no existing store found, starting fresh')
+      console.info('[memoryVectorStore] no existing snapshot, starting fresh')
+    }
+
+    // Replay any pending mutations from the append-only log on top.
+    const replayed = await replayLog()
+    if (replayed) {
+      console.info(`[memoryVectorStore] replayed ${replayed} log entries on top of snapshot`)
     }
 
     _loaded = true
     _loadPromise = null
+
+    // Schedule periodic compaction once we're loaded. The check itself
+    // is cheap (one stat); a real rewrite only fires when log is large.
+    if (!_compactTimer) {
+      _compactTimer = setInterval(() => {
+        void compactIfNeeded().catch((err) => {
+          console.warn('[memoryVectorStore] periodic compact failed:', err?.message)
+        })
+      }, COMPACTION_CHECK_INTERVAL_MS)
+      // Don't keep the event loop alive just for this check.
+      if (typeof _compactTimer.unref === 'function') _compactTimer.unref()
+    }
   })()
 
   return _loadPromise
 }
 
-async function doSave() {
+/**
+ * Append one mutation to the log. Serialised through _logAppendChain so
+ * concurrent calls produce well-ordered, never-interleaved JSON lines.
+ * Errors are logged and swallowed — a missed log line is recoverable
+ * (in-memory state is the source of truth and the next compaction
+ * will snapshot everything).
+ */
+function appendLogOp(op) {
+  const line = JSON.stringify(op) + '\n'
+  _logAppendChain = _logAppendChain
+    .then(() => mkdir(path.dirname(getLogPath()), { recursive: true }))
+    .then(() => appendFile(getLogPath(), line, 'utf8'))
+    .catch((err) => {
+      console.warn('[memoryVectorStore] log append failed:', err?.message)
+    })
+  return _logAppendChain
+}
+
+/**
+ * Rewrite the snapshot from the current in-memory state and truncate the
+ * append-only log. This is the "compaction" step — turns log+snapshot
+ * back into a single canonical snapshot file. Drains pending log appends
+ * first so we don't truncate a line that's still being written.
+ */
+async function compactSnapshot() {
   if (_savePromise) return _savePromise
 
   _savePromise = (async () => {
+    // Wait for any in-flight log append to land before we snapshot —
+    // otherwise we'd write a snapshot that doesn't include the line
+    // we're about to truncate.
+    try { await _logAppendChain } catch {}
+
     try {
       const entries = [..._index.entries()].map(([id, entry]) => ({
         id,
@@ -116,29 +230,39 @@ async function doSave() {
       const tempPath = storePath + '.tmp'
       await writeFile(tempPath, JSON.stringify({ version: 1, entries }))
       await rename(tempPath, storePath)
+
+      // Truncate the log — its content is now reflected in the snapshot.
+      try {
+        await unlink(getLogPath())
+      } catch {
+        // Log might not exist (no mutations since last compact); ignore.
+      }
     } catch (err) {
-      console.error('[memoryVectorStore] save failed:', err.message)
-      _dirty = true
+      console.error('[memoryVectorStore] compaction failed:', err.message)
     } finally {
       _savePromise = null
-      // If writes arrived during this save, schedule another save
-      if (_dirty) scheduleSave()
     }
   })()
 
   return _savePromise
 }
 
-function scheduleSave() {
-  _dirty = true
-  if (_saveTimer) return
-
-  _saveTimer = setTimeout(async () => {
-    _saveTimer = null
-    if (!_dirty) return
-    _dirty = false
-    await doSave()
-  }, SAVE_DEBOUNCE_MS)
+/**
+ * Stat the log; if it exceeds the threshold, run a snapshot compaction.
+ * Called periodically and by terminate(). Cheap when no compaction is
+ * needed (one fs.stat).
+ */
+async function compactIfNeeded() {
+  let size = 0
+  try {
+    const s = await stat(getLogPath())
+    size = s.size
+  } catch {
+    return // no log → nothing to compact
+  }
+  if (size < LOG_COMPACT_THRESHOLD_BYTES) return
+  console.info(`[memoryVectorStore] log at ${(size / 1024 / 1024).toFixed(1)}MB — compacting`)
+  await compactSnapshot()
 }
 
 // ── Eviction ──
@@ -163,6 +287,9 @@ function upsertEntry(id, entry) {
   _index.set(id, entry)
   _bm25Dirty = true
   _snapshotDirty = true
+  // Append the mutation to the log so a crash before next compaction
+  // doesn't lose this entry.
+  appendLogOp({ kind: 'upsert', id, entry })
 }
 
 // ── Public API ──
@@ -178,7 +305,6 @@ export async function indexMemory(id, content, embedding, layer = 'long_term') {
   })
 
   evictExcess()
-  scheduleSave()
 }
 
 export async function indexBatch(items) {
@@ -196,7 +322,6 @@ export async function indexBatch(items) {
   }
 
   evictExcess()
-  scheduleSave()
 }
 
 /** @type {Array<{ id: string, content: string, embedding: number[], layer: string }> | null} */
@@ -347,7 +472,7 @@ export async function removeMemory(id) {
   if (deleted) {
     _bm25Dirty = true
     _snapshotDirty = true
-    scheduleSave()
+    appendLogOp({ kind: 'delete', id })
   }
   return deleted
 }
@@ -357,12 +482,14 @@ export async function removeMemories(ids) {
 
   let count = 0
   for (const id of ids) {
-    if (_index.delete(id)) count++
+    if (_index.delete(id)) {
+      count++
+      appendLogOp({ kind: 'delete', id })
+    }
   }
   if (count) {
     _bm25Dirty = true
     _snapshotDirty = true
-    scheduleSave()
   }
   return count
 }
@@ -380,7 +507,8 @@ export async function clearLayer(layer) {
   if (count) {
     _bm25Dirty = true
     _snapshotDirty = true
-    scheduleSave()
+    // Single op for the whole layer clear — replay reproduces the same effect.
+    appendLogOp({ kind: 'clearLayer', layer })
   }
   return count
 }
@@ -405,18 +533,18 @@ export async function getStats() {
 }
 
 export async function flush() {
-  if (!_dirty) return
-  if (_saveTimer) {
-    clearTimeout(_saveTimer)
-    _saveTimer = null
-  }
-  _dirty = false
-
-  // Use doSave() to avoid racing with a concurrent save
-  await doSave()
+  // Drain any in-flight log appends, then run a snapshot compaction.
+  // This collapses the log into the snapshot regardless of size — used
+  // before app exit to ensure the next launch needs no replay.
+  try { await _logAppendChain } catch {}
+  await compactSnapshot()
 }
 
 export async function terminate() {
+  if (_compactTimer) {
+    clearInterval(_compactTimer)
+    _compactTimer = null
+  }
   await flush()
   if (_worker) {
     await _worker.terminate()
