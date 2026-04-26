@@ -187,6 +187,11 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       model: currentSettings.model,
     })
 
+    // Holder visible to the outer catch so a thrown error can still finalize
+    // the streaming TTS controller (otherwise the speaking-state bus event
+    // never fires and voiceState wedges).
+    let streamingTtsControllerHolder: ReturnType<typeof dependencies.ctx.beginStreamingSpeechReply> = null
+
     try {
       // Built-in tool results now arrive via the tool-call loop callback
       // instead of running before the model call. The callback mutates
@@ -298,6 +303,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       const streamingTtsController = wantStreamingTts
         ? dependencies.ctx.beginStreamingSpeechReply(shouldResumeContinuousVoice)
         : null
+      streamingTtsControllerHolder = streamingTtsController
 
       let streamedReplyContent = ''
       // In prompt-mode MCP the model emits `<tool_call>...</tool_call>`
@@ -690,6 +696,16 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         source,
         error: errorMessage,
       })
+      // Streaming controller would otherwise sit in `finishRequested=false`
+      // forever — its onEnd never fires, the upstream voiceSessionMachine
+      // never sees `tts:completed`, and SPEAKING wedges. Calling finish()
+      // here triggers the early-return settle path with onEnd(), which
+      // emits tts:completed and unwedges voiceState.
+      if (streamingTtsControllerHolder) {
+        try { streamingTtsControllerHolder.finish() } catch (finishErr) {
+          console.warn('[assistantReply] streaming TTS finish() during error handler failed', finishErr)
+        }
+      }
       dependencies.ctx.setMood('confused')
       dependencies.presentPetDialogBubble(
         {

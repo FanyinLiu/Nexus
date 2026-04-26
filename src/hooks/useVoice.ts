@@ -281,6 +281,26 @@ export function useVoice(ctx: UseVoiceContext) {
     voiceStateRef.current = voiceState
   }, [voiceState])
 
+  // ── SPEAKING state safety net ─────────────────────────────────────────────
+  // Last-resort timeout: if we sit in `speaking` for 90 seconds without any
+  // event clearing it (TTS pipeline silently drops a callback, the upstream
+  // promise never resolves, etc.) force the bus through tts:completed so the
+  // UI's mic button + chat-busy guard unwedge. 90s comfortably exceeds any
+  // legitimate single TTS reply length we expect; longer voice replies are
+  // segmented and each segment refreshes the SPEAKING transition.
+  useEffect(() => {
+    if (voiceState !== 'speaking') return
+    const timer = window.setTimeout(() => {
+      console.warn('[useVoice] SPEAKING state stuck for 90s — forcing tts:completed safety net')
+      busEmit({
+        type: 'tts:completed',
+        speechGeneration: 0,
+        shouldResumeContinuousVoice: false,
+      })
+    }, 90_000)
+    return () => window.clearTimeout(timer)
+  }, [voiceState, busEmit])
+
   // ── Persistence ────────────────────────────────────────────────────────────
 
   const voicePipelineSaveSkipRef = useRef(true)

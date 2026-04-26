@@ -390,6 +390,12 @@ export function createStreamingSpeechOutputController(
         settled = true
         cleanup()
         resolveAllPlayed?.()
+        // Without this, callers awaiting `tts:completed` (voiceSessionMachine
+        // moves SPEAKING → IDLE on that event) hang forever whenever the
+        // stream is finished before any text arrived — the caller has no
+        // signal that the controller is done. The other settle paths
+        // (settleSuccess / fail) already emit; this branch was an oversight.
+        options?.onEnd?.()
         return
       }
 
