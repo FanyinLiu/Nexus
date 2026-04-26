@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { app } from 'electron'
 import { Worker } from 'node:worker_threads'
 import { Bm25Index } from './bm25Search.js'
+import { audit } from './auditLog.js'
 
 const STORE_FILENAME = 'memory-vectors.json'
 // Append-only log filename — same dir as snapshot, NDJSON one mutation per line.
@@ -141,12 +142,20 @@ async function replayLog() {
   const orphan = await replayLogFile(compactingPath)
   if (orphan.exists) {
     console.info(`[memoryVectorStore] replayed orphan compaction log: ${orphan.applied} ops`)
+    audit('memory', 'replay-orphan-log', {
+      applied: orphan.applied,
+      skipped: orphan.skipped,
+    })
     try { await unlink(compactingPath) } catch {}
   }
 
   const active = await replayLogFile(getLogPath())
   if (active.skipped) {
     console.warn(`[memoryVectorStore] log replay: skipped ${active.skipped} corrupt line(s)`)
+    audit('memory', 'replay-corrupt-lines', {
+      applied: active.applied,
+      skipped: active.skipped,
+    })
   }
   return orphan.applied + active.applied
 }
@@ -325,6 +334,12 @@ function evictExcess() {
   for (let i = 0; i < excess; i++) {
     const { value: key } = iter.next()
     _index.delete(key)
+    // Persist the eviction so it isn't undone by replayLog after a restart
+    // — the snapshot reflects the current _index, but the log file (which
+    // replay reads first if newer) might still hold the eviction's
+    // previous upsert and resurrect the entry, breaking the MAX_ENTRIES
+    // invariant until the next compaction.
+    appendLogOp({ kind: 'delete', id: key })
   }
 }
 

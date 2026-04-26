@@ -134,6 +134,26 @@ function lookupTranslation(key: TranslationKey, detail?: string): string {
 }
 
 /**
+ * Strip secrets and absolute paths from raw error text before it reaches
+ * the chat UI. ENOENT errors leak `'/Users/klein/.ssh/id_rsa'` verbatim,
+ * proxied 401 echoes can include `Authorization: Bearer sk-…` tails, and
+ * neither belongs in front of the user. Applied to the fallback branch
+ * (the path that surfaces unmatched raw text) and to any pattern that
+ * embeds the raw string via `withDetail: true`.
+ */
+function redactSensitive(raw: string): string {
+  return raw
+    // macOS / Linux home dirs
+    .replace(/\/Users\/[^/\s'"]+/g, '~')
+    .replace(/\/home\/[^/\s'"]+/g, '~')
+    // Windows user dirs
+    .replace(/[A-Z]:\\Users\\[^\\\s'"]+/gi, '~')
+    // OpenAI / Anthropic / generic bearer tokens
+    .replace(/sk-[A-Za-z0-9_-]{16,}/g, 'sk-***')
+    .replace(/Bearer\s+[A-Za-z0-9._~+/-]{16,}=*/gi, 'Bearer ***')
+}
+
+/**
  * Translate any error / string into a companion-voice user-facing message.
  * Falls back to a generic friendly wrapper around the raw text so users
  * never see naked stack traces.
@@ -151,11 +171,11 @@ export function humanizeError(error: unknown, context: HumanizeContext = 'generi
   const patterns = [...(CONTEXT_PATTERNS[context] ?? []), ...COMMON_PATTERNS]
   for (const pattern of patterns) {
     if (pattern.match.test(raw)) {
-      return lookupTranslation(pattern.key, pattern.withDetail ? raw : undefined)
+      return lookupTranslation(pattern.key, pattern.withDetail ? redactSensitive(raw) : undefined)
     }
   }
 
   // No pattern matched — generic wrapper that still includes the raw
   // text so power users / developers can debug, but framed friendly.
-  return lookupTranslation('humanize.fallback', raw)
+  return lookupTranslation('humanize.fallback', redactSensitive(raw))
 }
