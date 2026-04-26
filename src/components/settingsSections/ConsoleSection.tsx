@@ -23,6 +23,7 @@ import {
   formatVoicePipelineStepLabel,
   formatVoiceStateLabel,
 } from '../settingsDrawerSupport'
+import { AboutPanel } from './AboutPanel'
 import { CostHistoryPanel } from './CostHistoryPanel'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { StateTimelinePanel } from './StateTimelinePanel'
@@ -125,6 +126,7 @@ export const ConsoleSection = memo(function ConsoleSection({
       </div>
 
       <UpdaterPanel uiLanguage={uiLanguage} />
+      <AboutPanel uiLanguage={uiLanguage} />
       <DiagnosticsPanel />
       <StateTimelinePanel />
       <CostHistoryPanel />
