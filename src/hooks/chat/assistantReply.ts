@@ -594,7 +594,10 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
             new Promise<void>((resolve) => {
               window.setTimeout(() => {
                 ttsWaitTimedOut = true
-                console.warn('[Chat] TTS wait timeout — unblocking chat turn, voice continues in background')
+                // info, not warn — by design we unblock the chat turn after
+                // 12s and let voice continue in the background. This is the
+                // normal long-TTS path, not a failure.
+                console.info('[Chat] TTS wait timeout (expected) — unblocking chat turn, voice continues in background')
                 resolve()
               }, TTS_WAIT_TIMEOUT_MS)
             }),
