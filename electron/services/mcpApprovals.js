@@ -38,13 +38,36 @@ function getApprovalsPath() {
   return path.join(app.getPath('userData'), APPROVALS_FILE_NAME)
 }
 
+/**
+ * Migrate legacy `serverId → commandHash` (string) entries into the new
+ * `serverId → { commandHash, approvedTools }` shape. Idempotent — safe to
+ * call on already-migrated data.
+ */
+function migrateApprovalEntry(value) {
+  if (typeof value === 'string') {
+    return { commandHash: value, approvedTools: [] }
+  }
+  if (value && typeof value === 'object' && typeof value.commandHash === 'string') {
+    return {
+      commandHash: value.commandHash,
+      approvedTools: Array.isArray(value.approvedTools) ? value.approvedTools.map(String) : [],
+    }
+  }
+  return null
+}
+
 async function loadApprovals() {
   if (_approvalsCache) return _approvalsCache
   try {
     const raw = await fs.readFile(getApprovalsPath(), 'utf8')
     const parsed = JSON.parse(raw)
     if (parsed && typeof parsed === 'object') {
-      _approvalsCache = parsed
+      const normalised = {}
+      for (const [serverId, value] of Object.entries(parsed)) {
+        const entry = migrateApprovalEntry(value)
+        if (entry) normalised[serverId] = entry
+      }
+      _approvalsCache = normalised
       return _approvalsCache
     }
   } catch {
@@ -68,7 +91,7 @@ async function saveApprovals(approvals) {
  */
 export async function isMcpServerApproved(serverId, commandHash) {
   const approvals = await loadApprovals()
-  return approvals[serverId] === commandHash
+  return approvals[serverId]?.commandHash === commandHash
 }
 
 /**
@@ -78,7 +101,17 @@ export async function isMcpServerApproved(serverId, commandHash) {
 export async function recordMcpApproval(serverId, commandHash) {
   await withWriteLock(async () => {
     const approvals = await loadApprovals()
-    approvals[serverId] = commandHash
+    const existing = approvals[serverId]
+    approvals[serverId] = {
+      commandHash,
+      // Reset tool approvals when the command itself changes — a new
+      // command means new code, so the old "trusted tools" snapshot is
+      // no longer meaningful. If the command is unchanged but we're
+      // re-recording (idempotent), preserve the tool approvals.
+      approvedTools: existing?.commandHash === commandHash
+        ? (existing.approvedTools ?? [])
+        : [],
+    }
     await saveApprovals(approvals)
   })
 }
@@ -95,6 +128,101 @@ export async function revokeMcpApproval(serverId) {
       await saveApprovals(approvals)
     }
   })
+}
+
+/**
+ * Returns the list of tool names previously approved for this server.
+ * Used by mcpHost before each tool call. Empty array means either:
+ *   (a) The server is not approved at all, or
+ *   (b) The server is approved but no tools have been snapshotted yet
+ *       (caller should snapshot the discovered tool set on first run).
+ */
+export async function getApprovedToolsForServer(serverId) {
+  const approvals = await loadApprovals()
+  return approvals[serverId]?.approvedTools ?? []
+}
+
+/**
+ * Returns true if the given (serverId, toolName) is in the approved set.
+ */
+export async function isMcpToolApproved(serverId, toolName) {
+  const approved = await getApprovedToolsForServer(serverId)
+  return approved.includes(String(toolName))
+}
+
+/**
+ * Snapshot the entire current tool set for an already-approved server.
+ * Called by mcpHost right after `_discoverTools()` succeeds, IFF the
+ * approval entry has no tools recorded yet — this ensures the user
+ * isn't prompted for every tool the first time the server runs (the
+ * server itself was just user-approved, so trusting its initial tool
+ * advertisement is consistent with the H2 trust model).
+ */
+export async function snapshotInitialTools(serverId, toolNames) {
+  await withWriteLock(async () => {
+    const approvals = await loadApprovals()
+    const entry = approvals[serverId]
+    if (!entry) return // Not approved — nothing to snapshot onto.
+    if (entry.approvedTools && entry.approvedTools.length > 0) return // Already snapshotted.
+    entry.approvedTools = [...new Set(toolNames.map(String))]
+    await saveApprovals(approvals)
+  })
+}
+
+/**
+ * Add a single tool name to the approved set. Used after the user
+ * explicitly approves a previously-unknown tool through the dialog.
+ */
+export async function recordToolApproval(serverId, toolName) {
+  await withWriteLock(async () => {
+    const approvals = await loadApprovals()
+    const entry = approvals[serverId]
+    if (!entry) return
+    if (!entry.approvedTools) entry.approvedTools = []
+    const name = String(toolName)
+    if (!entry.approvedTools.includes(name)) {
+      entry.approvedTools.push(name)
+      await saveApprovals(approvals)
+    }
+  })
+}
+
+/**
+ * Native modal dialog for first-call approval of a tool name not in the
+ * snapshot. The expectation is this fires when an approved server starts
+ * advertising NEW tools after its initial approval — usually a server
+ * update. The dialog shows the tool name + description so the user can
+ * judge intent.
+ */
+export async function promptMcpToolApproval(serverId, toolName, toolDescription = '') {
+  const parent = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null
+
+  let result
+  try {
+    result = await dialog.showMessageBox(parent ?? undefined, {
+      type: 'warning',
+      title: 'Approve new MCP tool',
+      message: `MCP server "${serverId}" wants to expose a new tool: "${toolName}"`,
+      detail:
+        (toolDescription ? `Description (from server):\n  ${toolDescription}\n\n` : '')
+        + 'This tool was NOT in the set the server advertised when you first '
+        + 'approved it. That usually means the server has been updated. '
+        + 'Approve only if you intentionally updated this server. If you '
+        + 'didn\'t, this could indicate the server binary was tampered with.',
+      buttons: ['Reject', 'Approve'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    })
+  } catch (error) {
+    console.warn('[mcpApprovals] Failed to show tool approval dialog:', error?.message ?? error)
+    return false
+  }
+
+  if (result.response !== 1) return false
+
+  await recordToolApproval(serverId, toolName)
+  return true
 }
 
 /**

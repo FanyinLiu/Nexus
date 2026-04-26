@@ -4,8 +4,11 @@ import { unsubscribeAll } from './pluginMessageBus.js'
 import {
   hashMcpCommand,
   isMcpServerApproved,
+  isMcpToolApproved,
   promptMcpApproval,
+  promptMcpToolApproval,
   revokeMcpApproval,
+  snapshotInitialTools,
 } from './mcpApprovals.js'
 import { parseArgsString as parseArgsStringPure } from './mcpHostUtils.js'
 
@@ -155,6 +158,17 @@ class McpInstance {
       }
     }
     console.info(`[mcpHost:${this.id}] discovered ${this.tools.size} tool(s):`, [...this.tools.keys()])
+
+    // M2: snapshot the initial tool set so the user isn't prompted for
+    // every tool the first time the server runs. snapshotInitialTools is
+    // a no-op when an existing snapshot is already on file — only the
+    // first-ever run after server approval populates the trusted set.
+    // New tools showing up later will trigger the per-tool prompt below.
+    try {
+      await snapshotInitialTools(this.id, [...this.tools.keys()])
+    } catch (err) {
+      console.warn(`[mcpHost:${this.id}] failed to snapshot initial tools:`, err?.message)
+    }
   }
 
   _rejectAllPending(message) {
@@ -374,6 +388,20 @@ class McpInstance {
 
     if (!this.tools.has(name)) {
       throw new Error(`Unknown MCP tool: ${name} [${this.id}]`)
+    }
+
+    // M2: per-tool approval gate. The server itself is approved (H2), and
+    // its initial tool advertisement was auto-snapshotted in _discoverTools.
+    // A tool that isn't in that snapshot means the server has changed its
+    // tool surface since approval — usually a server update, occasionally
+    // a tampered binary. Either way, surface to the user before calling.
+    const toolApproved = await isMcpToolApproved(this.id, name)
+    if (!toolApproved) {
+      const toolMeta = this.tools.get(name)
+      const approved = await promptMcpToolApproval(this.id, name, toolMeta?.description ?? '')
+      if (!approved) {
+        throw new Error(`MCP tool [${this.id}/${name}] rejected by user`)
+      }
     }
 
     const start = Date.now()
