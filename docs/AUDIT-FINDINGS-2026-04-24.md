@@ -44,10 +44,10 @@ per-call confirmation dialog is still missing.
 |----|--------|------|
 | L1 error stack to renderer | ✅ NOT FOUND | No `err.stack` / `error.stack` reaches IPC sends |
 | L2 startup telemetry | 🟡 OPEN | No timing instrumentation yet (genuinely low priority) |
-| L3 plugin auto-start serial | 🟡 OPEN | Hasn't been dug deep enough to confirm; non-blocking either way |
-| L4 auditLog statSync per write | 🟡 OPEN | Real but minor — per-line disk stat call, sub-ms |
+| L3 plugin auto-start serial | ✅ FIXED | `Promise.all` instead of for-await; collapses N×spawn to max(spawns) |
+| L4 auditLog statSync per write | ✅ FIXED | In-memory size counter, single statSync at init |
 | L5 workspaceRoot mid-invoke swap | 🟢 SINGLE-THREAD | JS event loop atomicity protects individual handlers |
-| L6 requestId Date.now + Math.random | 🟡 OPEN | Renderer-side, collision astronomically unlikely; cosmetic |
+| L6 requestId Date.now + Math.random | ✅ FIXED | `crypto.randomUUID()` with legacy fallback in preload.js |
 | L7 plugin-bus serverId spoofing | ✅ MITIGATED | `validateServerId` checks against running MCP instances |
 
 ### H4 deferral rationale (2026-04-26)
