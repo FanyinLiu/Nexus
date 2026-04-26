@@ -50,6 +50,17 @@ let activeWindowContextCache = {
   pending: null,
 }
 
+// Permission-denied dedup for macOS osascript -1743 ("not authorized to send
+// Apple events to System Events"). Once we hit it, the context capture has
+// no chance of succeeding until the user grants Automation permission via
+// System Settings → Privacy & Security → Automation. Polling every few
+// seconds and logging each failure floods both stdout and the renderer
+// console; instead we log once, suppress further attempts for a long
+// re-check window, and try again after that to detect if permission was
+// granted in the meantime.
+const ACTIVE_WINDOW_PERMISSION_RECHECK_MS = 10 * 60 * 1000
+let activeWindowPermissionDeniedAt = 0
+
 function shortenContextValue(value, maxLength) {
   const normalized = String(value ?? '').trim()
   if (!normalized) return ''
@@ -98,6 +109,16 @@ function captureActiveWindowContextMac() {
     return Promise.resolve(activeWindowContextCache.value)
   }
 
+  // Permission denied earlier — don't even try until the recheck window
+  // elapses. Avoids the every-poll log spam that would otherwise drown
+  // dev / production logs while the user has the permission off.
+  if (
+    activeWindowPermissionDeniedAt
+    && now - activeWindowPermissionDeniedAt < ACTIVE_WINDOW_PERMISSION_RECHECK_MS
+  ) {
+    return Promise.resolve(null)
+  }
+
   if (activeWindowContextCache.pending) {
     return activeWindowContextCache.pending
   }
@@ -112,9 +133,32 @@ function captureActiveWindowContextMac() {
       },
       (error, stdout) => {
         if (error) {
-          console.warn('[desktop-context:mac] active window capture failed', error?.message)
+          const message = error?.message || ''
+          // -1743 = "not authorized to send Apple events". Latch the
+          // permission-denied state so we stop polling for the recheck window
+          // and only log once instead of every cache miss.
+          if (message.includes('-1743') || message.includes('not authorized')) {
+            const wasFirstHit = activeWindowPermissionDeniedAt === 0
+            activeWindowPermissionDeniedAt = Date.now()
+            if (wasFirstHit) {
+              console.warn(
+                '[desktop-context:mac] AppleScript permission denied (-1743). '
+                + 'Grant Nexus access in System Settings → Privacy & Security → Automation. '
+                + `Will silently retry in ${Math.round(ACTIVE_WINDOW_PERMISSION_RECHECK_MS / 60_000)} min.`,
+              )
+            }
+            resolve(null)
+            return
+          }
+          console.warn('[desktop-context:mac] active window capture failed', message)
           resolve(null)
           return
+        }
+
+        // Success — clear permission-denied latch (user must have granted it).
+        if (activeWindowPermissionDeniedAt) {
+          console.info('[desktop-context:mac] AppleScript permission restored')
+          activeWindowPermissionDeniedAt = 0
         }
 
         try {

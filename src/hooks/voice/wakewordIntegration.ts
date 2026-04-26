@@ -23,6 +23,19 @@ import type { VadConversationSession, VoiceConversationOptions } from './types'
 
 type BusEmit = (event: VoiceBusEvent) => void
 
+// Module-scope dedup for the "wake word listener error" log line.
+// The runtime's retry loop emits transient `phase: 'error'` states between
+// retries (see scheduleRetry → handleRecoverableError in wakewordRuntime),
+// and the previousState/nextState diff in this file occasionally fails to
+// suppress repeats — e.g. if the listener restart momentarily passes through
+// 'starting' before re-erroring, both phaseChanged and errorChanged see
+// "different from last seen" again and the warn fires every retry (~5s).
+//
+// This guard ensures one log line per distinct error message until either:
+//   (a) the error clears (state goes to listening / paused / cooldown), or
+//   (b) we transition to the terminal `unavailable` phase (logged separately).
+let _lastLoggedListenerError: string | null = null
+
 type ShowPetStatus = (
   message: string,
   duration?: number,
@@ -242,15 +255,28 @@ export function handleWakewordRuntimeStateChangeRuntime(
     && options.nextState.error
     && (phaseChanged || errorChanged)
   ) {
-    console.warn('[Voice] Wake word listener error:', options.nextState.error)
-    options.appendVoiceTrace('Wake word listener error', options.nextState.error, 'error')
-    options.showPetStatus(options.ti('voice.wakeword.listener_error_with_reason', { error: options.nextState.error }), 4_200, 4_500)
-    options.busEmit?.({
-      type: 'wake:error',
-      message: options.nextState.error,
-      reason: VoiceReasonCodes.WAKE_RUNTIME_ERROR,
-      meta: { retryCount: options.nextState.retryCount },
-    })
+    const message = options.nextState.error
+    // Suppress repeat logs / pet status / bus events for the same retrying
+    // error. Bus event still fires once per distinct error so subscribers
+    // get the signal — they just don't get spammed every 5s.
+    if (_lastLoggedListenerError !== message) {
+      _lastLoggedListenerError = message
+      console.warn('[Voice] Wake word listener error:', message)
+      options.appendVoiceTrace('Wake word listener error', message, 'error')
+      options.showPetStatus(options.ti('voice.wakeword.listener_error_with_reason', { error: message }), 4_200, 4_500)
+      options.busEmit?.({
+        type: 'wake:error',
+        message,
+        reason: VoiceReasonCodes.WAKE_RUNTIME_ERROR,
+        meta: { retryCount: options.nextState.retryCount },
+      })
+    }
+  } else if (
+    options.nextState.phase !== 'error'
+    && _lastLoggedListenerError !== null
+  ) {
+    // Recovery — clear the dedup so the next distinct failure can log again.
+    _lastLoggedListenerError = null
   }
 }
 
