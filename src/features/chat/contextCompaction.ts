@@ -84,15 +84,17 @@ The summary should be short (no more than 300 words) and written in the third pe
  *
  * @returns Compacted message array ready for LLM request.
  */
+type LlmMessage = {
+  role: 'user' | 'assistant' | 'system'
+  content: ChatMessageContent
+  reasoning_content?: string
+}
+
 // Map a ChatMessage to the slim shape we send to the LLM. Assistant messages
 // carry forward `reasoning_content` so thinking-mode models (DeepSeek-R1, QwQ,
 // Hunyuan-thinking) accept the follow-up turn — they reject any history whose
 // previous assistant message omits the reasoning trace they emitted.
-function toLlmMessage(m: ChatMessage): {
-  role: 'user' | 'assistant' | 'system'
-  content: ChatMessageContent
-  reasoning_content?: string
-} {
+function toLlmMessage(m: ChatMessage): LlmMessage {
   return {
     role: m.role,
     content: buildLlmContent(m),
@@ -100,6 +102,50 @@ function toLlmMessage(m: ChatMessage): {
       ? { reasoning_content: m.reasoning_content }
       : {}),
   }
+}
+
+/**
+ * Drop the most recent assistant message when it lacks a reasoning_content
+ * trace **but** earlier turns in the same conversation prove the user is in
+ * thinking-mode context (some assistant did emit a trace).
+ *
+ * The trigger: thinking-mode model APIs (DeepSeek-R1, Hunyuan-thinking, QwQ)
+ * reject the whole request with "reasoning_content must be passed back" when
+ * the most recent assistant in the history lacks the trace. This happens to
+ * any user whose chat history was built before reasoning_content support
+ * landed — those old assistant rows have no trace to send back, and even
+ * after the support is in place every follow-up turn keeps failing.
+ *
+ * The mitigation drops a single message: the orphaned assistant. The user
+ * loses one turn of replay context, but the next assistant turn is generated
+ * fresh (with a real trace), and from there the conversation self-heals.
+ *
+ * `data-driven`: we don't hard-code a list of thinking models. Presence of
+ * `reasoning_content` on any historical assistant turn is the signal that
+ * this conversation runs against an API that validates it. Non-thinking
+ * conversations never trigger the strip because the `hasAnyReasoning` guard
+ * is false.
+ */
+function stripStaleLastAssistantWithoutReasoning(messages: LlmMessage[]): LlmMessage[] {
+  const hasAnyReasoning = messages.some(
+    (m) => m.role === 'assistant' && m.reasoning_content,
+  )
+  if (!hasAnyReasoning) return messages
+
+  let lastAssistantIdx = -1
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (messages[i].role === 'assistant') {
+      lastAssistantIdx = i
+      break
+    }
+  }
+  if (lastAssistantIdx === -1) return messages
+  if (messages[lastAssistantIdx].reasoning_content) return messages
+
+  return [
+    ...messages.slice(0, lastAssistantIdx),
+    ...messages.slice(lastAssistantIdx + 1),
+  ]
 }
 
 export function compactMessagesForRequest(
@@ -121,7 +167,7 @@ export function compactMessagesForRequest(
   // If within limits, no compaction needed
   if (userAssistantMessages.length <= maxMessages) {
     return {
-      messages: userAssistantMessages.map(toLlmMessage),
+      messages: stripStaleLastAssistantWithoutReasoning(userAssistantMessages.map(toLlmMessage)),
       compacted: false,
       olderMessagesText: null,
     }
@@ -142,7 +188,7 @@ export function compactMessagesForRequest(
     const trimmedCount = Math.max(3, Math.floor(keepCount / 2))
     const trimmed = userAssistantMessages.slice(-trimmedCount)
     return {
-      messages: trimmed.map(toLlmMessage),
+      messages: stripStaleLastAssistantWithoutReasoning(trimmed.map(toLlmMessage)),
       compacted: true,
       olderMessagesText: null,
     }
@@ -160,7 +206,7 @@ export function compactMessagesForRequest(
     : olderText
 
   return {
-    messages: recentMessages.map(toLlmMessage),
+    messages: stripStaleLastAssistantWithoutReasoning(recentMessages.map(toLlmMessage)),
     compacted: true,
     olderMessagesText: truncatedOlderText,
   }

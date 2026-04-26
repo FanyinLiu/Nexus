@@ -354,11 +354,15 @@ export async function runToolCallLoop(
     // Build continuation messages: assistant message with tool_calls, then tool results.
     // For prompt-mode the assistant message replays the cleaned text + the
     // synthetic tool_calls so the model sees its own intent on the next turn.
+    // Forward `reasoning_content` for thinking-mode models that require it on
+    // every assistant turn — the second LLM call (after tool results) would
+    // otherwise be rejected with "reasoning_content must be passed back".
     const payload = await rebuildPayload()
     payload.messages.push({
       role: 'assistant',
       content: cleanedContent,
       tool_calls: toolCalls,
+      ...(response.reasoning_content ? { reasoning_content: response.reasoning_content } : {}),
     })
     for (const tr of toolResults) {
       payload.messages.push({
