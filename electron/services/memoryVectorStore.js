@@ -108,12 +108,12 @@ function applyLogOp(op) {
   }
 }
 
-async function replayLog() {
+async function replayLogFile(logPath) {
   let raw
   try {
-    raw = await readFile(getLogPath(), 'utf8')
+    raw = await readFile(logPath, 'utf8')
   } catch {
-    return 0 // no log file — nothing to replay
+    return { applied: 0, skipped: 0, exists: false }
   }
   let applied = 0
   let skipped = 0
@@ -126,10 +126,29 @@ async function replayLog() {
       skipped++
     }
   }
-  if (skipped) {
-    console.warn(`[memoryVectorStore] log replay: skipped ${skipped} corrupt line(s)`)
+  return { applied, skipped, exists: true }
+}
+
+async function replayLog() {
+  // Replay any orphaned compaction log first. compactSnapshot() renames
+  // the active log to <log>.compacting before writing the new snapshot,
+  // so a crash between rename and unlink leaves both files on disk. The
+  // .compacting file holds older mutations whose state may or may not
+  // have made it into the snapshot — replaying them is idempotent
+  // (applyLogOp on the same id is upsert), so we just replay both in
+  // chronological order: orphan first, active second.
+  const compactingPath = getLogPath() + '.compacting'
+  const orphan = await replayLogFile(compactingPath)
+  if (orphan.exists) {
+    console.info(`[memoryVectorStore] replayed orphan compaction log: ${orphan.applied} ops`)
+    try { await unlink(compactingPath) } catch {}
   }
-  return applied
+
+  const active = await replayLogFile(getLogPath())
+  if (active.skipped) {
+    console.warn(`[memoryVectorStore] log replay: skipped ${active.skipped} corrupt line(s)`)
+  }
+  return orphan.applied + active.applied
 }
 
 async function ensureLoaded() {
@@ -212,10 +231,33 @@ async function compactSnapshot() {
   if (_savePromise) return _savePromise
 
   _savePromise = (async () => {
-    // Wait for any in-flight log append to land before we snapshot —
-    // otherwise we'd write a snapshot that doesn't include the line
-    // we're about to truncate.
+    // Wait for any in-flight log append to land. Anything queued after
+    // the rename below opens a fresh log file at logPath because the
+    // old name no longer exists — those new lines are NOT covered by
+    // the snapshot we're about to write, but they survive on disk and
+    // get replayed on next load.
     try { await _logAppendChain } catch {}
+
+    const logPath = getLogPath()
+    const compactingPath = logPath + '.compacting'
+
+    // Atomically take ownership of the current log before snapshotting.
+    // Any concurrent appendLogOp that wins the race after this rename
+    // creates a fresh logPath file; the .compacting copy represents the
+    // exact mutations the snapshot we're about to write reflects, so
+    // truncating .compacting after a successful snapshot is safe.
+    let logTaken = false
+    try {
+      await rename(logPath, compactingPath)
+      logTaken = true
+    } catch (err) {
+      if (err?.code !== 'ENOENT') {
+        console.error('[memoryVectorStore] compaction rename failed:', err.message)
+        _savePromise = null
+        return
+      }
+      // No log existed (no mutations since last compact); nothing to take.
+    }
 
     try {
       const entries = [..._index.entries()].map(([id, entry]) => ({
@@ -231,14 +273,19 @@ async function compactSnapshot() {
       await writeFile(tempPath, JSON.stringify({ version: 1, entries }))
       await rename(tempPath, storePath)
 
-      // Truncate the log — its content is now reflected in the snapshot.
-      try {
-        await unlink(getLogPath())
-      } catch {
-        // Log might not exist (no mutations since last compact); ignore.
+      // Snapshot is durable; the renamed log copy is now redundant.
+      if (logTaken) {
+        try { await unlink(compactingPath) } catch {}
       }
     } catch (err) {
       console.error('[memoryVectorStore] compaction failed:', err.message)
+      // Snapshot did not durably land. Put the taken log back so the
+      // mutations it captured aren't stranded across a restart — replay
+      // on next load reapplies them on top of whatever snapshot was
+      // already on disk.
+      if (logTaken) {
+        try { await rename(compactingPath, logPath) } catch {}
+      }
     } finally {
       _savePromise = null
     }

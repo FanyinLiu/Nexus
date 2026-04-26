@@ -272,10 +272,19 @@ export function handleWakewordRuntimeStateChangeRuntime(
       })
     }
   } else if (
-    options.nextState.phase !== 'error'
-    && _lastLoggedListenerError !== null
+    _lastLoggedListenerError !== null
+    && (
+      options.nextState.phase === 'listening'
+      || options.nextState.phase === 'paused'
+      || options.nextState.phase === 'cooldown'
+      || options.nextState.phase === 'disabled'
+    )
   ) {
-    // Recovery — clear the dedup so the next distinct failure can log again.
+    // Real recovery — clear the dedup so the next distinct failure can log again.
+    // Intermediate retry phases (`starting` / `checking`) used to also clear
+    // here, which made dedup ineffective: the runtime cycles error → starting
+    // → checking → error every ~5s, and the starting/checking edges reset the
+    // latch each loop. Only count steady-state non-error phases as recovery.
     _lastLoggedListenerError = null
   }
 }
