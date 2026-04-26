@@ -121,6 +121,74 @@ export function createLogger(module: string): Logger {
   return makeLogger(module)
 }
 
+// ── Console capture ───────────────────────────────────────────────────────
+//
+// Every voice / TTS / chat lifecycle site in the codebase still uses
+// `console.info('[module] ...')` directly instead of going through this
+// logger, so the ring buffer would otherwise stay empty for the most
+// useful diagnostic signals. installConsoleCapture() monkey-patches
+// console.* once at app boot so those calls also land in the ring; the
+// DiagnosticsPanel "Copy to clipboard" button then surfaces them for bug
+// reports without anyone needing DevTools.
+
+let consoleCaptureInstalled = false
+
+function detectModuleFromArgs(args: unknown[]): string {
+  const first = args[0]
+  if (typeof first === 'string') {
+    // `[Chat] something happened` / `[TTS] controller settled` patterns.
+    const bracketed = /^\[([^\]]+)\]/.exec(first)
+    if (bracketed) return bracketed[1].toLowerCase().replace(/\s+/g, '_')
+  }
+  return 'console'
+}
+
+function stringifyConsoleArg(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (value instanceof Error) return value.stack ?? value.message
+  try { return JSON.stringify(value) } catch { return String(value) }
+}
+
+/**
+ * Patch the global `console` object so calls to `.log`/`.info`/`.warn`/
+ * `.error` also push a structured entry into the ring buffer. Idempotent —
+ * safe to call from multiple entry points; only installs once.
+ *
+ * The original console behaviour is preserved (we still call the underlying
+ * methods); we just shadow them. `consolePassthrough` here would create a
+ * recursion loop, so the captured entries are pushed directly to the ring
+ * with `consolePassthrough` virtually disabled for that path.
+ */
+export function installConsoleCapture(): void {
+  if (consoleCaptureInstalled) return
+  if (typeof globalThis.console === 'undefined') return
+  consoleCaptureInstalled = true
+
+  const original = {
+    log: globalThis.console.log.bind(globalThis.console),
+    info: globalThis.console.info.bind(globalThis.console),
+    warn: globalThis.console.warn.bind(globalThis.console),
+    error: globalThis.console.error.bind(globalThis.console),
+    debug: globalThis.console.debug.bind(globalThis.console),
+  }
+
+  function capture(level: LogLevel, args: unknown[]): void {
+    const module = detectModuleFromArgs(args)
+    const message = args.map(stringifyConsoleArg).join(' ')
+    // Push directly; bypassing pushEntry's console branch so we don't
+    // recurse through the patched console.
+    if (LEVEL_RANK[level] < LEVEL_RANK[minLevel]) return
+    ring.push({ ts: new Date().toISOString(), level, module, message })
+    if (ring.length > RING_CAPACITY) ring.shift()
+  }
+
+  globalThis.console.log = (...args) => { capture('info', args); original.log(...args) }
+  globalThis.console.info = (...args) => { capture('info', args); original.info(...args) }
+  globalThis.console.warn = (...args) => { capture('warn', args); original.warn(...args) }
+  globalThis.console.error = (...args) => { capture('error', args); original.error(...args) }
+  globalThis.console.debug = (...args) => { capture('debug', args); original.debug(...args) }
+}
+
 // ── Buffer access ─────────────────────────────────────────────────────────
 
 /**
