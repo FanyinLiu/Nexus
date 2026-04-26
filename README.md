@@ -38,7 +38,8 @@ The design goal is persistence of relationship, not just chat. A nightly **dream
 
 ## News
 
-- **2026.04.26** — **v0.3.1-beta.2** — security IPC hardening on top of beta.1. Closes chat baseUrl SSRF (H5), tightens vault enumeration limit (H4 mitigation), pins local-service probe to loopback (H8). No new features. Beta channel for validation. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.2.md).
+- **2026.04.26** — **v0.3.1-beta.3** — bug-fix patch. Live2D no longer broken in packaged builds (CSP `unsafe-eval` for pixi); thinking-mode models (DeepSeek-R1, QwQ, Hunyuan-thinking) now work in multi-turn; TTS no longer wedges voiceState on "speaking"; multimodal images preserved across turns; in-app diagnostic surface upgraded. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.3.md).
+- **2026.04.26** — v0.3.1-beta.2 — security IPC hardening on top of beta.1. Closes chat baseUrl SSRF (H5), tightens vault enumeration limit (H4 mitigation), pins local-service probe to loopback (H8). [Notes](docs/RELEASE-NOTES-v0.3.1-beta.2.md).
 - **2026.04.25** — v0.3.1-beta.1. Pure installer-size fix on top of stable v0.3.0 (1.2 GB → ~250 MB by excluding unused FP32 model + git-LFS residue). [Notes](docs/RELEASE-NOTES-v0.3.1-beta.1.md).
 - **2026.04.25** — **v0.3.0 stable released.** The narrative-companion release. Significance-weighted recall + dream-cycle reflections + callback queue + anniversary milestones; relationship type declaration (friend / mentor / quiet companion); "thinking of you" OS notification; idle-motion silent gestures; smooth 2-hour day↔dusk↔night blend with bolder color contrast; Liquid Glass UI re-skin; richer weather precision. [Release notes](docs/RELEASE-NOTES-v0.3.0.md) · [Install](https://github.com/FanyinLiu/Nexus/releases/tag/v0.3.0).
 - **2026.04.24** — v0.3.0-beta.1 / beta.2. Beta line for the relationship + memory work that landed in stable v0.3.0. [Notes beta.1](docs/RELEASE-NOTES-v0.3.0-beta.1.md) · [Notes beta.2](docs/RELEASE-NOTES-v0.3.0-beta.2.md).

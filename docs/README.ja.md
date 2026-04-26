@@ -60,9 +60,9 @@ Electron + React + TypeScript で構築。Windows、macOS、Linux に対応。18
 
 ---
 
-## 今回のアップデート — v0.3.1-beta.2（プレリリース）
+## 今回のアップデート — v0.3.1-beta.3（プレリリース）
 
-> **セキュリティ修正 patch（新機能なし）。** chat baseUrl SSRF（H5）の遮断、vault 列挙上限の引き締め（H4 緩和）、ローカルサービス探査を loopback に固定（H8）。Beta チャンネルで実環境検証を行い、ローカル provider（Ollama / LM Studio）／診断パネル等の正規ユースケースに影響しないことを確認後、stable v0.3.1 に昇格します。詳細は [RELEASE-NOTES-v0.3.1-beta.2.md](RELEASE-NOTES-v0.3.1-beta.2.md)（英語）を参照してください。
+> **バグ修正 patch（新機能なし）。** 主な修正：dmg/exe ユーザーの Live2D ペット（CSP に `unsafe-eval` が無く pixi.js のレンダリング失敗 — P0）／thinking-mode モデルの複数ターン対話（DeepSeek-R1 / QwQ / Hunyuan-thinking の reasoning_content を全経路で保持 + 旧履歴フォールバック）／TTS 終了後に voiceState が `speaking` で固まる三層セーフティネット／マルチモーダルで画像が次ターンで消える問題／in-app 診断パネルの自動 console 取り込み + dev モードで `.dev/runtime.log` に tail。詳細は [RELEASE-NOTES-v0.3.1-beta.3.md](RELEASE-NOTES-v0.3.1-beta.3.md)（英語）を参照してください。
 
 ---
 

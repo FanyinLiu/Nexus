@@ -59,9 +59,9 @@ Electron + React + TypeScript로 구축, Windows / macOS / Linux 지원. 18+ LLM
 
 ---
 
-## 이번 업데이트 — v0.3.1-beta.2(사전 출시)
+## 이번 업데이트 — v0.3.1-beta.3(사전 출시)
 
-> **보안 수정 patch(새 기능 없음).** chat baseUrl SSRF(H5) 차단, vault 열거 상한 강화(H4 완화), 로컬 서비스 탐색을 loopback으로 고정(H8). Beta 채널에서 실환경 검증을 거쳐 로컬 provider(Ollama / LM Studio) · 진단 패널 등 정상 사용 사례에 영향이 없음을 확인한 뒤 stable v0.3.1로 승격합니다. 자세한 내용은 [RELEASE-NOTES-v0.3.1-beta.2.md](RELEASE-NOTES-v0.3.1-beta.2.md)(영어)를 참조하세요.
+> **버그 수정 patch(새 기능 없음).** 주요 수정: dmg/exe 사용자의 Live2D 펫(CSP에 `unsafe-eval` 누락으로 pixi.js 렌더링 실패 — P0); thinking-mode 모델 다중 턴 대화(DeepSeek-R1 / QwQ / Hunyuan-thinking의 reasoning_content 전 경로 보존 + 이전 히스토리 폴백); TTS 재생 후 voiceState가 `speaking`에서 멈추는 3중 세이프티 넷; 멀티모달 이미지가 다음 턴에서 사라지는 문제; in-app 진단 패널의 자동 console 캡처 + dev 모드의 `.dev/runtime.log` tail. 자세한 내용은 [RELEASE-NOTES-v0.3.1-beta.3.md](RELEASE-NOTES-v0.3.1-beta.3.md)(영어)를 참조하세요.
 
 ---
 
