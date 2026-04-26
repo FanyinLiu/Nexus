@@ -165,9 +165,19 @@ export async function ensureRendererServer() {
           'Content-Type': getRendererContentType(filePath),
         }
         if (filePath.endsWith('.html')) {
+          // `'unsafe-eval'` is required by pixi.js's runtime shader path that
+          // the Live2D Cubism SDK relies on. Without it the packaged dmg/exe
+          // build renders an empty pet — the dev `index.html` `<meta>` CSP
+          // already grants this, which is why the Vite path looked fine
+          // while the packaged path silently broke. Defense layers that
+          // don't depend on script-src (contextIsolation, sandbox, IPC
+          // trusted-sender checks, schema allowlists) all stay in place;
+          // this only relaxes script execution within the already-sandboxed
+          // renderer. `wasm-unsafe-eval` is kept so the ORT WASM bundles
+          // for wakeword / VAD continue to load.
           headers['Content-Security-Policy'] = [
             "default-src 'self'",
-            "script-src 'self' 'wasm-unsafe-eval'",
+            "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'",
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob:",
             "font-src 'self' data:",
