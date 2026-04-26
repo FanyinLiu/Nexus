@@ -298,11 +298,14 @@ export function PanelView({
     return () => window.cancelAnimationFrame(frameId)
   }, [visibleMessages])
 
+  // Destructure stable refs so the deps array doesn't need the parent `chat`
+  // object, which would force the effect to re-run on every chat update.
+  const { pendingImage, setPendingImage } = chat
   useEffect(() => {
-    if (!visionEnabled && chat.pendingImage) {
-      chat.setPendingImage(null)
+    if (!visionEnabled && pendingImage) {
+      setPendingImage(null)
     }
-  }, [visionEnabled, chat.pendingImage, chat.setPendingImage])
+  }, [visionEnabled, pendingImage, setPendingImage])
 
   return (
     <div className={`desktop-pet-root desktop-pet-root--panel ${characterPreset.themeClassName} ${panelCollapsed ? 'desktop-pet-root--panel-collapsed' : ''}`}>
