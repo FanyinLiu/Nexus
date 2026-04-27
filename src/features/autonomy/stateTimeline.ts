@@ -4,7 +4,7 @@
  * The autonomy store keeps the *current* emotion and relationship state
  * only — there's no way to answer "how has she felt this week?" without
  * a history. This module samples each state on meaningful changes and
- * persists the last N samples per series to localStorage.
+ * persists samples per series to localStorage.
  *
  * Design notes:
  *
@@ -18,9 +18,16 @@
  *    every HEARTBEAT_MS so the chart shows that a quiet day *was* quiet
  *    rather than going blank.
  *
- *  - **Capacity.** 200 emotion samples covers ~weeks of active use at
- *    the dedup rate; 100 relationship samples is more than enough
- *    (score moves once per day at most).
+ *  - **Retention by time window, not count.** v0.4 rebalanced this to
+ *    support affect-dynamics monthly / annual reports. Samples are kept
+ *    for up to 365 days and pruned by age on every write. Hard count
+ *    caps still apply as a runaway-write safety belt (~36k emotion /
+ *    1k relationship) but the time window is the primary gate.
+ *
+ *  - **Footprint.** ~150 bytes per emotion sample × 30-50 samples/day
+ *    × 365 days = 1-3 MB / year in localStorage. The Settings timeline
+ *    panel reads only the recent slice (last 14 days) for charting;
+ *    yearbook / annual report consumers read the full window on demand.
  */
 
 import {
@@ -33,8 +40,9 @@ import type { EmotionState } from './emotionModel'
 import type { RelationshipLevel, RelationshipState } from './relationshipTracker'
 import { getRelationshipLevel } from './relationshipTracker.ts'
 
-const EMOTION_CAPACITY = 200
-const RELATIONSHIP_CAPACITY = 100
+const RETENTION_MS = 365 * 24 * 60 * 60 * 1000  // hard 1-year window
+const EMOTION_HARD_CAP = 36_000   // safety belt: ~100/day × 365 days
+const RELATIONSHIP_HARD_CAP = 1_500
 const EMOTION_CHANGE_THRESHOLD = 0.06 // any axis moving by ≥6% triggers a sample
 const EMOTION_HEARTBEAT_MS = 6 * 60 * 60 * 1000 // 6h idle heartbeat
 const RELATIONSHIP_SCORE_THRESHOLD = 1 // integer score; any tick-level delta
@@ -118,6 +126,38 @@ export function shouldCaptureRelationshipSample(
   return false
 }
 
+// ── Retention helpers ────────────────────────────────────────────────────
+
+/**
+ * Drop samples older than RETENTION_MS, then enforce the hard count cap
+ * as a final safety net. Returns the same array (mutated) for chaining
+ * on the write path. Pure relative to the system clock; pass `nowMs`
+ * explicitly so tests can pin behaviour.
+ */
+function pruneByAge<T extends { ts: string }>(
+  history: T[],
+  hardCap: number,
+  nowMs: number,
+): T[] {
+  const cutoffMs = nowMs - RETENTION_MS
+  let firstKeep = 0
+  while (firstKeep < history.length) {
+    const t = Date.parse(history[firstKeep].ts)
+    if (Number.isFinite(t) && t < cutoffMs) {
+      firstKeep += 1
+    } else {
+      break
+    }
+  }
+  if (firstKeep > 0) {
+    history.splice(0, firstKeep)
+  }
+  if (history.length > hardCap) {
+    history.splice(0, history.length - hardCap)
+  }
+  return history
+}
+
 // ── Capture (public) ──────────────────────────────────────────────────────
 
 export function captureEmotionSample(
@@ -138,9 +178,7 @@ export function captureEmotionSample(
     concern: state.concern,
   }
   history.push(sample)
-  if (history.length > EMOTION_CAPACITY) {
-    history.splice(0, history.length - EMOTION_CAPACITY)
-  }
+  pruneByAge(history, EMOTION_HARD_CAP, now.getTime())
   writeJsonDebounced(AUTONOMY_EMOTION_HISTORY_STORAGE_KEY, history)
   return sample
 }
@@ -163,9 +201,7 @@ export function captureRelationshipSample(
     daysInteracted: state.totalDaysInteracted,
   }
   history.push(sample)
-  if (history.length > RELATIONSHIP_CAPACITY) {
-    history.splice(0, history.length - RELATIONSHIP_CAPACITY)
-  }
+  pruneByAge(history, RELATIONSHIP_HARD_CAP, now.getTime())
   writeJsonDebounced(AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY, history)
   return sample
 }

@@ -9,7 +9,48 @@ import {
   formatEmotionForPrompt,
 } from '../../features/autonomy/emotionModel'
 import { captureEmotionSample } from '../../features/autonomy/stateTimeline.ts'
+import {
+  captureUserAffectSample,
+  textSignalToVAD,
+  voiceEmotionToVAD,
+} from '../../features/autonomy/userAffectTimeline.ts'
 import { AUTONOMY_EMOTION_STORAGE_KEY, readJson, writeJson } from '../../lib/storage'
+
+/**
+ * Map an emotion-model signal to a user-affect sample, or `null` if the
+ * signal describes Nexus's own state rather than the user's.
+ * Voice prosody signals are higher-confidence than text-classified ones
+ * because SenseVoice's emotion tag is the model's own forced choice
+ * over the audio; the text signals are surface-level regex hits.
+ */
+function projectSignalToUserAffect(
+  signal: EmotionSignal,
+): { valence: number; arousal: number; source: 'voice_prosody' | 'text_signal'; confidence: number } | null {
+  switch (signal) {
+    case 'voice_emotion_happy':
+    case 'voice_emotion_sad':
+    case 'voice_emotion_angry':
+    case 'voice_emotion_fearful':
+    case 'voice_emotion_disgusted':
+    case 'voice_emotion_surprised': {
+      const label = signal.replace('voice_emotion_', '') as
+        | 'happy' | 'sad' | 'angry' | 'fearful' | 'disgusted' | 'surprised'
+      return { ...voiceEmotionToVAD(label), source: 'voice_prosody', confidence: 0.6 }
+    }
+    case 'user_praise':
+      return { ...textSignalToVAD('praise'), source: 'text_signal', confidence: 0.7 }
+    case 'user_frustration':
+      return { ...textSignalToVAD('frustration'), source: 'text_signal', confidence: 0.7 }
+    case 'user_greeting':
+      return { ...textSignalToVAD('greeting'), source: 'text_signal', confidence: 0.5 }
+    case 'user_farewell':
+      return { ...textSignalToVAD('farewell'), source: 'text_signal', confidence: 0.5 }
+    case 'user_question':
+      return { ...textSignalToVAD('question'), source: 'text_signal', confidence: 0.4 }
+    default:
+      return null
+  }
+}
 
 // Persist after every mutation. Emotion state was previously memory-only — an
 // app restart reset the companion to neutral defaults, which the user could
@@ -55,6 +96,22 @@ export function useEmotionState() {
     const before = emotionStateRef.current
     emotionStateRef.current = applySignal(before, signal)
     if (emotionStateRef.current !== before) persist()
+    // Mirror eligible signals into the user-affect timeline. Voice prosody
+    // (high-confidence inference of the user's mood) and text-classified
+    // signals (lower-confidence regex hits on the user's words) both go
+    // here; companion-internal signals (long_idle, morning, late_night,
+    // task_completed, error_occurred, user_returned) describe Nexus's own
+    // state and don't belong in the user series.
+    const projection = projectSignalToUserAffect(signal)
+    if (projection) {
+      captureUserAffectSample({
+        valence: projection.valence,
+        arousal: projection.arousal,
+        source: projection.source,
+        confidence: projection.confidence,
+        note: signal,
+      })
+    }
   }, [])
 
   const getEmotionMood = useCallback(() => emotionToPetMood(emotionStateRef.current), [])
