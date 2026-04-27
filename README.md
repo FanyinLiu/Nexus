@@ -2,9 +2,9 @@
 
 <h1 align="center">Nexus</h1>
 
-<p align="center"><b>A local-first desktop AI companion that remembers you across sessions — including how the conversation ended last time.</b></p>
+<p align="center"><b>A desktop AI companion that gives the relationship a shape.</b></p>
 
-<p align="center">Persistent emotion, multi-day memory, a 5-level relationship that evolves through trust, vulnerability, playfulness, and intellectual depth — wrapped around a Live2D character with continuous voice chat and autonomous behaviour.</p>
+<p align="center">Not "smarter chat." Not "more like a human." A specific bet: that what people want from a long-running companion is the year laid down as something they can hold — a callback that lands on the right day, a Sunday letter that names what the week actually was, a trace of how their mood and hers moved together. Local-first, single-author, slow on purpose.</p>
 
 <p align="center">
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/github/v/release/FanyinLiu/Nexus?style=flat-square&color=blue&label=release" alt="Release"></a>
@@ -28,15 +28,31 @@
 
 ---
 
-## Introduction
+## Why Nexus
 
-Nexus is a cross-platform desktop AI companion powered by LLMs. It pairs a Live2D character with **continuous voice conversation**, **long-term memory**, **desktop awareness**, **autonomous behavior**, and **MCP-style tool calling** — designed to feel less like a chatbot and more like someone who actually gets to know you.
+Most AI companions chase one of three commodities: smarter responses (foundation-model arms race), more human voice (Sesame, eleven), or more aggressive engagement (the Replika / Character.AI playbook). Nexus is none of them. It chases something the others can't easily copy because it's downstream of patience: **the shape of a relationship over time, made visible**.
 
-The project is built as a local-first Electron app. Every voice frame, every memory entry, and every tool call runs on your own machine; the LLM calls themselves are the only thing that leaves your computer, and you pick the provider. You can mix and match 18+ chat providers, swap STT / TTS engines, even run fully offline with a local model + local ASR + local TTS.
+Concretely, this means seven rituals — built on top of one another, not as a feature checklist:
 
-The design goal is persistence of relationship, not just chat. A nightly **dream cycle** clusters your conversations into *narrative threads* that feed back into the system prompt, so the companion's sense of "who you are" compounds over time instead of resetting every session.
+1. **Significance-weighted memory** — not everything is remembered equally; the companion's recall is tilted toward what mattered.
+2. **Nightly dream cycle** — overnight, conversations cluster into narrative threads and 1–3 short reflections about you. The next morning's "who you are" is updated, not reset.
+3. **Callback queue** — a memory queued from yesterday quietly resurfaces when today's conversation has room for it.
+4. **Anniversary callbacks** — day-30 / 100 / 365 milestones; "on this day" matches against past memory dates so a year later, that one thing you said comes back gently.
+5. **Morning + evening bracket** — a soft check-in at the start of the day and a callback to it that night. Optional, never pushy.
+6. **Sunday letter** — every week, she writes you a short letter naming what the week actually was. Not a digest. A letter.
+7. **Background errand** — you can hand her a task during the day; she works on it overnight while you sleep, and delivers the result at the morning bracket.
+
+Around these sit the boring infrastructure: 5-locale UI, 18+ LLM providers, multi-engine STT / TTS with failover, Live2D, VTube Studio bridge, MCP tools, IPC security audited end-to-end. None of that is the product. The product is what those seven rituals add up to over a year of use, and what you can hold afterwards.
+
+This is also a single-author project, on purpose. The trade-off is real: slower than a funded team, no roadmap pressure, no quarterly OKRs. The upside is that every ritual is hand-shaped — the kind of attention you can't get from a startup that needs to grow 30% MoM. **What's coming next is depth, not breadth**: a long-form affect-dynamics record (your baseline mood, how it moved this month, where the two of you synchronized), grounded in published affect science (Russell's circumplex, Kuppens on emotional inertia, Welivita's empathy-intent taxonomy). Read on if that sounds right; otherwise the [release notes](docs/RELEASE-NOTES-v0.3.0.md) are an honest map of what's actually shipped.
+
+## Local-first, by default
+
+Every voice frame, every memory entry, every tool call runs on your own machine. The LLM calls themselves are the only thing that leaves your computer, and you pick the provider. You can mix and match 18+ chat providers, swap STT / TTS engines, even run fully offline with a local model + local ASR + local TTS. Nothing about Nexus assumes you trust a cloud — and there is no cloud account to make.
 
 ## News
+
+> **Where we are right now.** v0.3.1-beta.4 is shipped (security + bug-fix). v0.4 is in active development — five rituals already merged on `main` (early/late bracket, Sunday letter, on-this-day callback, voice-prosody emotion loop, background errand). Next is multi-day Arc + Future-self capsule + an affect-dynamics record. v0.4.0 stable will land when the seven rituals are coherent enough to call the year-shaped artifact done. No timeline pressure — slow on purpose.
 
 - **2026.04.26** — **v0.3.1-beta.4** — audit + polish patch. Memory-store data-loss race fixed (compaction rename pattern); MCP per-tool approval (M2) + workspace:set-root approval (M3); About + Weekly Recap Settings panels; ~660 ja/ko strings translated; wake-word retry log dedup actually works now; humanized error messages. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.4.md).
 - **2026.04.26** — v0.3.1-beta.3 — bug-fix patch. Live2D no longer broken in packaged builds (CSP `unsafe-eval` for pixi); thinking-mode models (DeepSeek-R1, QwQ, Hunyuan-thinking) now work in multi-turn; TTS no longer wedges voiceState on "speaking"; multimodal images preserved across turns; in-app diagnostic surface upgraded. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.3.md).
@@ -62,13 +78,13 @@ The design goal is persistence of relationship, not just chat. A nightly **dream
 
 ## Highlights
 
-The first three are the heart of the project. The rest is what keeps the companion practical day-to-day.
+The first three are the load-bearing structure that the seven rituals stand on. Everything below them is the practical day-to-day surface — voice, scene, integrations — that keeps the project usable while the depth accumulates.
 
-- 💝 **Emotional memory + relationship arc.** The companion remembers the *feel* of how you parted, notices absences, and her tone shifts across a 5-level progression (stranger → acquaintance → friend → close friend → intimate). Four named sub-dimensions — trust, vulnerability, playfulness, intellectual — grow from different kinds of interaction. New in v0.3.0: pick a *relationship type* (friend / mentor / quiet companion / open-ended) that biases tone.
+- 💝 **A relationship that has a shape, not just a length.** Five levels (stranger → acquaintance → friend → close friend → intimate) with one-shot milestone instructions on each crossing. Four named sub-dimensions — trust, vulnerability, playfulness, intellectual — grow from different kinds of interaction. Pick a *relationship type* (friend / mentor / quiet companion / open-ended) and her tone biases without overriding her persona file. The shape is the product; the level number is just legible scaffolding.
 
-- 🧠 **Memory that dreams.** Three-tier hot / warm / cold with hybrid BM25 + vector search. A nightly dream cycle clusters conversations into *narrative threads* + generates 1–3 short reflections about you, plus 0–2 callback memories queued for next conversation. The same memory also feels different in different moods (mood-aware recall).
+- 🧠 **Memory that dreams, not just stores.** Three-tier hot / warm / cold with hybrid BM25 + vector search. A nightly dream cycle clusters the day into narrative threads, generates 1–3 short reflections about you, and queues 0–2 callbacks for next conversation. Mood-aware recall means the same memory feels different in different moods. v0.4 adds long-form affect dynamics so your baseline + monthly change + her co-regulation with you become readable artifacts, not just internal numbers.
 
-- 🤖 **Autonomous inner life (V2).** Single LLM decision call per tick, fed a layered snapshot (emotion · relationship · rhythm · desktop · recent chat) and filtered through a per-persona guardrail. No formulaic template output — she writes in her own voice, can choose to stay silent, and can dispatch a background research helper when a task would actually benefit from it.
+- 🤖 **An inner life with restraint.** Single LLM decision call per tick, fed a layered snapshot (emotion · relationship · rhythm · desktop · recent chat) and filtered through a per-persona guardrail. She can choose to stay silent, dispatch a background research helper for tasks that would benefit from one, or run an overnight errand you handed her at lunch. The autonomy is real; it's just bounded by manual approval and budget gates so it stays trustworthy.
 
 - 🎙️ **Always-on wake word + continuous voice chat.** sherpa-onnx keyword spotter beside a main-process Silero VAD over one shared mic stream. Multi-engine STT/TTS with failover, sentence-immediate streaming TTS (first audio at the first comma), 6-second first-audio watchdog, echo-cancelled self-interrupt so the pet never wakes itself up.
 
