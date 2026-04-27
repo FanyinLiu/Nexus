@@ -5,6 +5,11 @@ import {
 } from '../features/proactive/bracketScheduler.ts'
 import { buildBracketNotification } from '../features/proactive/bracketCopy.ts'
 import {
+  findUndeliveredErrands,
+  markDelivered,
+} from '../features/agent/errandStore.ts'
+import { buildErrandDeliveryBody } from '../features/agent/errandDelivery.ts'
+import {
   PROACTIVE_BRACKET_STATE_STORAGE_KEY,
   readJson,
   writeJson,
@@ -79,12 +84,34 @@ export function useBracketScheduler({
 
       if (!decision.shouldFire) return
 
-      const notification = buildBracketNotification({
+      // Morning bracket gets the "here's what I researched overnight"
+      // delivery if there's an undelivered completed errand. Evening
+      // bracket runs unchanged. We only deliver one errand per morning
+      // — the others wait for the next day, otherwise the user gets a
+      // wall of text on heavy-queue mornings.
+      let notification = buildBracketNotification({
         uiLanguage: s.uiLanguage,
         companionName: s.companionName,
         bracket: decision.bracket,
         previousEveningTopic: null,
       })
+      let deliveredErrandId: string | null = null
+      if (decision.bracket === 'morning') {
+        const undelivered = findUndeliveredErrands()
+        if (undelivered.length > 0) {
+          const next = undelivered[0]
+          notification = {
+            title: notification.title,
+            body: buildErrandDeliveryBody({
+              uiLanguage: s.uiLanguage,
+              companionName: s.companionName,
+              prompt: next.prompt,
+              result: next.result ?? '',
+            }),
+          }
+          deliveredErrandId = next.id
+        }
+      }
 
       try {
         await window.desktopPet?.showProactiveNotification?.(notification)
@@ -92,6 +119,9 @@ export function useBracketScheduler({
           PROACTIVE_BRACKET_STATE_STORAGE_KEY,
           recordFire(state, decision.bracket, Date.now()),
         )
+        if (deliveredErrandId) {
+          markDelivered(deliveredErrandId)
+        }
       } catch (err) {
         console.warn('[bracket] fire failed:', err)
       }

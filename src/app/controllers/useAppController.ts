@@ -39,6 +39,7 @@ import { useSettingsSubscription } from './useSettingsSubscription'
 import { useWorkspaceRootBridge } from './useWorkspaceRootBridge'
 import { useAwayNotificationScheduler } from '../../hooks/useAwayNotificationScheduler'
 import { useBracketScheduler } from '../../hooks/useBracketScheduler.ts'
+import { useErrandScheduler } from '../../hooks/useErrandScheduler.ts'
 import { useLetterScheduler } from '../../hooks/useLetterScheduler.ts'
 import { useMcpServerSync } from '../../hooks/useMcpServerSync'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
@@ -326,6 +327,8 @@ export function useAppController() {
     memories: memory.memories,
     panelOpen: !panelCollapsed,
   })
+
+  useErrandScheduler({ settings })
 
   useEffect(() => {
     voiceStateRef.current = voice.voiceState
