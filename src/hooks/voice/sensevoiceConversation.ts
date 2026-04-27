@@ -17,6 +17,7 @@ import type {
   PetMood,
   TranslationKey,
   TranslationParams,
+  VoiceEmotionLabel,
   VoicePipelineState,
   VoiceState,
 } from '../../types'
@@ -80,6 +81,13 @@ export type StartSenseVoiceConversationOptions = {
     errorCode?: string,
   ) => void
   shouldAutoRestartVoice: () => boolean
+  /**
+   * Optional. Called once with the SenseVoice prosody emotion label
+   * (HAPPY / SAD / etc.) right before the transcript is forwarded
+   * downstream — so the emotion model registers "she heard the user
+   * sound X" before the assistant turn runs.
+   */
+  applyVoiceEmotion?: (label: VoiceEmotionLabel) => void
   ti: Translator
 }
 
@@ -181,6 +189,19 @@ export async function startSenseVoiceConversation(
         if (!transcript) {
           params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
           return
+        }
+
+        // Feed the prosody emotion to the emotion model **before** the
+        // transcript runs through assistantReply, so the system prompt
+        // built for this turn sees the updated emotion state. NEUTRAL /
+        // EMO_UNKNOWN already mapped to null upstream; only meaningful
+        // labels reach this branch.
+        if (stopResult.voiceEmotion && params.applyVoiceEmotion) {
+          try {
+            params.applyVoiceEmotion(stopResult.voiceEmotion)
+          } catch (err) {
+            console.warn('[SenseVoice] applyVoiceEmotion failed:', err)
+          }
         }
 
         params.appendVoiceTrace('SenseVoice recognition complete', `#${traceLabel} received final text`)

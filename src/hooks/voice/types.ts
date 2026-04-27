@@ -3,6 +3,7 @@ import type {
   AppSettings,
   PetMood,
   TtsStreamEvent,
+  VoiceEmotionLabel,
   VoiceTraceEntry,
   VoicePipelineState,
   VoiceState,
@@ -115,6 +116,13 @@ export type UseVoiceContext = {
     (content: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord'; traceId?: string }) => Promise<boolean>
   >
   appendSystemMessage: (content: string, tone?: 'neutral' | 'error') => void
+  /**
+   * Optional hook that converts a SenseVoice prosody emotion label into
+   * an emotion-model signal and applies it. Called by the SenseVoice
+   * conversation runner after it receives the final transcript.
+   * Implementations should swallow unknown labels and never throw.
+   */
+  applyVoiceEmotion?: (label: VoiceEmotionLabel) => void
 }
 
 export type UseVoiceSnapshot = {

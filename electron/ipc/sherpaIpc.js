@@ -121,8 +121,10 @@ export function register() {
 
   ipcMain.handle('sensevoice:finish', (event) => {
     requireTrustedSender(event)
-    const text = sherpaSenseVoiceService.finishStream()
-    return { text }
+    const result = sherpaSenseVoiceService.finishStream()
+    // Backwards-compat shape: callers used `result.text`. New `voiceEmotion`
+    // field is opt-in — older renderers ignore it harmlessly.
+    return { text: result.text, voiceEmotion: result.voiceEmotion }
   })
 
   ipcMain.handle('sensevoice:abort', (event) => {
@@ -134,12 +136,12 @@ export function register() {
   ipcMain.handle('sensevoice:transcribe', (event, payload) => {
     requireTrustedSender(event)
     const { samples, sampleRate } = payload
-    if (!samples || !samples.length) return { text: '' }
-    if (!Array.isArray(samples) && !(samples instanceof Float32Array)) return { text: '' }
-    if (samples.length > 320000) return { text: '' }
+    if (!samples || !samples.length) return { text: '', voiceEmotion: null }
+    if (!Array.isArray(samples) && !(samples instanceof Float32Array)) return { text: '', voiceEmotion: null }
+    if (samples.length > 320000) return { text: '', voiceEmotion: null }
     const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
-    const text = sherpaSenseVoiceService.transcribe(float32, sampleRate || 16000)
-    return { text }
+    const result = sherpaSenseVoiceService.transcribe(float32, sampleRate || 16000)
+    return { text: result.text, voiceEmotion: result.voiceEmotion }
   })
 
   // ── Paraformer streaming ASR ──

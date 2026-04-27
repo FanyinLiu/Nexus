@@ -199,6 +199,20 @@ export type TtsStreamEvent = TtsStreamChunkEvent | TtsStreamEndEvent | TtsStream
 
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking'
 
+/**
+ * Prosody-based emotion label produced by SenseVoice ASR's inline tags
+ * (`<|HAPPY|>` / `<|SAD|>` / ...). NEUTRAL and EMO_UNKNOWN map to `null`
+ * upstream and never become a label here, so consumers don't need to
+ * treat them specially.
+ */
+export type VoiceEmotionLabel =
+  | 'happy'
+  | 'sad'
+  | 'angry'
+  | 'fearful'
+  | 'disgusted'
+  | 'surprised'
+
 export type WakewordModelKind = 'zh' | 'en' | null
 
 export type WakewordRuntimePhase =

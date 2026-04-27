@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
 import type { PetModelDefinition } from './features/pet'
+import type { VoiceEmotionLabel } from './types'
 import type {
   AudioSynthesisRequest,
   AudioSynthesisResponse,
@@ -516,11 +517,11 @@ declare global {
       sensevoiceFeed: (
         payload: { samples: number[] | Float32Array },
       ) => Promise<{ ok: boolean }>
-      sensevoiceFinish: () => Promise<{ text: string }>
+      sensevoiceFinish: () => Promise<{ text: string; voiceEmotion: VoiceEmotionLabel | null }>
       sensevoiceAbort: () => Promise<{ ok: boolean }>
       sensevoiceTranscribe: (
         payload: { samples: number[] | Float32Array; sampleRate?: number },
-      ) => Promise<{ text: string }>
+      ) => Promise<{ text: string; voiceEmotion: VoiceEmotionLabel | null }>
 
       // Paraformer streaming ASR (sherpa-onnx OnlineRecognizer)
       paraformerStatus: () => Promise<{ installed: boolean; modelFound: boolean; modelsDir: string; currentModelId: string | null }>

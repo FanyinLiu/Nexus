@@ -13,6 +13,7 @@ import type {
   Goal,
   MemoryItem,
   PanelWindowState,
+  VoiceEmotionLabel,
   VoiceState,
   WindowView,
 } from '../../types'
@@ -42,7 +43,7 @@ import { useLetterScheduler } from '../../hooks/useLetterScheduler.ts'
 import { useMcpServerSync } from '../../hooks/useMcpServerSync'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
 import { AUTONOMY_GOALS_STORAGE_KEY, readJson, writeJson } from '../../lib/storage'
-import { classifyMessageSignals } from '../../features/autonomy/emotionModel'
+import { classifyMessageSignals, voiceEmotionToSignal } from '../../features/autonomy/emotionModel'
 
 type ChatController = ReturnType<typeof useChat>
 type ReminderTaskStore = ReturnType<typeof useReminderTaskStore>
@@ -187,6 +188,8 @@ export function useAppController() {
     )
   }, [])
 
+  const voiceEmotionApplyRef = useRef<(label: VoiceEmotionLabel) => void>(() => {})
+
   const voice = useVoice({
     settings,
     settingsRef,
@@ -206,6 +209,10 @@ export function useAppController() {
     setSettings,
     sendMessageRef,
     appendSystemMessage: (content, tone) => appendSystemMessageRef.current(content, tone),
+    // Forward to the autonomy emotion model. Wired through a ref because
+    // autonomy is created later in this hook and we need to keep useVoice's
+    // ctx referentially stable.
+    applyVoiceEmotion: (label: VoiceEmotionLabel) => voiceEmotionApplyRef.current(label),
   })
 
   // Ref bridge for emotion/relationship/rhythm prompt getters:
@@ -418,7 +425,16 @@ export function useAppController() {
     milestoneConsumerRef.current = autonomy.consumePendingMilestoneText
     anniversaryConsumerRef.current = autonomy.consumeAnniversaryPromptText
     onThisDayConsumerRef.current = autonomy.consumeOnThisDayPromptText
-  }, [autonomy.consumePendingMilestoneText, autonomy.consumeAnniversaryPromptText, autonomy.consumeOnThisDayPromptText, autonomy.emotionStateRef, autonomy.getEmotionPrompt, autonomy.getRelationshipPrompt, autonomy.getRhythmPrompt])
+    // SenseVoice prosody → emotion model: voice ctx forwards labels here.
+    voiceEmotionApplyRef.current = (label: VoiceEmotionLabel) => {
+      autonomy.applyEmotionSignal(voiceEmotionToSignal(label))
+    }
+    // The deps list pulls each consumed property of `autonomy` rather than
+    // the object itself — autonomy is rebuilt every render in
+    // useAutonomyController, so depending on the parent re-runs this effect
+    // unnecessarily.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autonomy.applyEmotionSignal, autonomy.consumePendingMilestoneText, autonomy.consumeAnniversaryPromptText, autonomy.consumeOnThisDayPromptText, autonomy.emotionStateRef, autonomy.getEmotionPrompt, autonomy.getRelationshipPrompt, autonomy.getRhythmPrompt])
 
   // Wake autonomy when user sends a chat message.
   //

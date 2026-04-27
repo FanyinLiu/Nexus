@@ -21,6 +21,35 @@ try {
 
 const SAMPLE_RATE = 16000
 
+// SenseVoice emits inline tags like `<|zh|><|HAPPY|><|Speech|><|woitn|>...`.
+// We strip every tag from the user-facing text but first capture the
+// emotion tag so downstream layers can feed it into the emotion model.
+// The model's documented label set is HAPPY / SAD / ANGRY / NEUTRAL /
+// FEARFUL / DISGUSTED / SURPRISED / EMO_UNKNOWN. NEUTRAL and EMO_UNKNOWN
+// don't carry useful signal — return null so the caller skips them.
+const SENSEVOICE_EMOTION_TAG_PATTERN = /<\|(HAPPY|SAD|ANGRY|FEARFUL|DISGUSTED|SURPRISED|NEUTRAL|EMO_UNKNOWN)\|>/i
+const VOICE_EMOTION_BY_TAG = {
+  HAPPY: 'happy',
+  SAD: 'sad',
+  ANGRY: 'angry',
+  FEARFUL: 'fearful',
+  DISGUSTED: 'disgusted',
+  SURPRISED: 'surprised',
+  NEUTRAL: null,
+  EMO_UNKNOWN: null,
+}
+
+function parseSenseVoiceOutput(raw) {
+  if (!raw) return { text: '', voiceEmotion: null }
+  let voiceEmotion = null
+  const match = SENSEVOICE_EMOTION_TAG_PATTERN.exec(raw)
+  if (match) {
+    voiceEmotion = VOICE_EMOTION_BY_TAG[match[1].toUpperCase()] ?? null
+  }
+  const text = raw.replace(/<\|[^|]*\|>/g, '').trim()
+  return { text, voiceEmotion }
+}
+
 // SenseVoice model directory candidates
 const SENSEVOICE_CANDIDATES = [
   {
@@ -138,9 +167,9 @@ class SherpaSenseVoiceService {
     return null
   }
 
-  /** Process all accumulated audio and return final text. */
+  /** Process all accumulated audio and return final text + voice emotion. */
   finishStream() {
-    if (!this.recognizer || !this._audioBuffer.length) return ''
+    if (!this.recognizer || !this._audioBuffer.length) return { text: '', voiceEmotion: null }
 
     // Concatenate all audio chunks
     const fullAudio = new Float32Array(this._totalSamples)
@@ -158,18 +187,17 @@ class SherpaSenseVoiceService {
       stream.acceptWaveform({ samples: fullAudio, sampleRate: SAMPLE_RATE })
       this.recognizer.decode(stream)
       const result = stream.result
-      const text = (result.text || '').trim()
-      // SenseVoice may include tags like <|zh|><|EMO_UNKNOWN|><|Speech|>
-      return text.replace(/<\|[^|]*\|>/g, '').trim()
+      const raw = (result.text || '').trim()
+      return parseSenseVoiceOutput(raw)
     } catch (error) {
       console.error('[SenseVoice] Recognition error:', error)
-      return ''
+      return { text: '', voiceEmotion: null }
     }
   }
 
   /** Transcribe a complete audio buffer at once (one-shot API). */
   transcribe(samples, sampleRate = SAMPLE_RATE) {
-    if (!this.init()) return ''
+    if (!this.init()) return { text: '', voiceEmotion: null }
     const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
 
     try {
@@ -177,11 +205,11 @@ class SherpaSenseVoiceService {
       stream.acceptWaveform({ samples: float32, sampleRate })
       this.recognizer.decode(stream)
       const result = stream.result
-      const text = (result.text || '').trim()
-      return text.replace(/<\|[^|]*\|>/g, '').trim()
+      const raw = (result.text || '').trim()
+      return parseSenseVoiceOutput(raw)
     } catch (error) {
       console.error('[SenseVoice] Transcribe error:', error)
-      return ''
+      return { text: '', voiceEmotion: null }
     }
   }
 

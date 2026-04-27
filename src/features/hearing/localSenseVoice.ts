@@ -9,7 +9,7 @@
  */
 
 import { requestVoiceInputStream } from '../voice/runtimeSupport.ts'
-import type { TranslationKey, TranslationParams } from '../../types'
+import type { TranslationKey, TranslationParams, VoiceEmotionLabel } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
 
@@ -25,6 +25,13 @@ export type SenseVoiceStreamStopResult = {
   text: string
   audioSamples: Float32Array | null
   sampleRate: number
+  /**
+   * Prosody-based emotion label parsed from SenseVoice's inline tag (e.g.
+   * `<|HAPPY|>`). `null` when the model emitted NEUTRAL / EMO_UNKNOWN or
+   * no tag at all — consumers feed this into emotionResonance only when
+   * non-null so a misread doesn't shove the model.
+   */
+  voiceEmotion: VoiceEmotionLabel | null
 }
 
 export type SenseVoiceStreamSession = {
@@ -195,6 +202,7 @@ export async function startSenseVoiceStream(
           text: '',
           audioSamples: buildRecordedAudioSamples(),
           sampleRate: audioContext.sampleRate,
+          voiceEmotion: null,
         }
       }
 
@@ -203,9 +211,11 @@ export async function startSenseVoiceStream(
       await pushChain.catch(() => undefined)
 
       let text = ''
+      let voiceEmotion: VoiceEmotionLabel | null = null
       try {
         const result = await api.sensevoiceFinish()
         text = (result.text || '').trim()
+        voiceEmotion = result.voiceEmotion ?? null
       } catch {
         // fall through with empty text
       } finally {
@@ -216,6 +226,7 @@ export async function startSenseVoiceStream(
         text,
         audioSamples: buildRecordedAudioSamples(),
         sampleRate: audioContext.sampleRate,
+        voiceEmotion,
       }
     },
 

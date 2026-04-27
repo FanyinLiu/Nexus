@@ -130,6 +130,7 @@ export function createVoiceConversationStarters(bag: VoiceRuntimeBag): VoiceEngi
       handleRecognizedVoiceTranscript: bindings.handleRecognizedVoiceTranscript,
       handleVoiceListeningFailure: bindings.handleVoiceListeningFailure,
       shouldAutoRestartVoice: bindings.shouldAutoRestartVoice,
+      applyVoiceEmotion: ctx.applyVoiceEmotion,
       ti: hookCallbacks.ti,
     })
   }

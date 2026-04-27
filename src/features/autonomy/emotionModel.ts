@@ -39,6 +39,17 @@ export type EmotionSignal =
   | 'task_completed'
   | 'morning'
   | 'late_night'
+  // Prosody-based signals from SenseVoice's inline emotion tag. Smaller
+  // deltas than text-classified signals because voice emotion detection
+  // is noisier — a single misread shouldn't shove the model around. The
+  // model still takes the hint that "she heard the user sound tired"
+  // even if the magnitude is gentle.
+  | 'voice_emotion_happy'
+  | 'voice_emotion_sad'
+  | 'voice_emotion_angry'
+  | 'voice_emotion_fearful'
+  | 'voice_emotion_disgusted'
+  | 'voice_emotion_surprised'
 
 const SIGNAL_DELTAS: Record<EmotionSignal, Partial<EmotionState>> = {
   user_greeting:     { energy: 0.1, warmth: 0.15, curiosity: 0.05 },
@@ -52,6 +63,12 @@ const SIGNAL_DELTAS: Record<EmotionSignal, Partial<EmotionState>> = {
   task_completed:    { energy: 0.1, warmth: 0.05, concern: -0.1 },
   morning:           { energy: 0.1, curiosity: 0.05 },
   late_night:        { energy: -0.2, concern: 0.1 },
+  voice_emotion_happy:     { energy: 0.05, warmth: 0.08 },
+  voice_emotion_sad:       { concern: 0.12, warmth: 0.06, energy: -0.04 },
+  voice_emotion_angry:     { concern: 0.10, energy: -0.04 },
+  voice_emotion_fearful:   { concern: 0.14, warmth: 0.04, energy: -0.05 },
+  voice_emotion_disgusted: { concern: 0.06, warmth: -0.03 },
+  voice_emotion_surprised: { curiosity: 0.10, energy: 0.05 },
 }
 
 /** Natural decay per tick — emotions drift toward neutral baseline. */
@@ -153,6 +170,24 @@ const EMOTION_SIGNAL_PATTERNS: ReadonlyArray<{ signal: EmotionSignal; pattern: R
 /** Classify a user message into emotion signals (simple heuristic, no LLM). */
 export function classifyMessageSignals(text: string): EmotionSignal[] {
   return classifyByPatterns(text.trim(), EMOTION_SIGNAL_PATTERNS)
+}
+
+/**
+ * Map a SenseVoice prosody label to its emotion-model signal counterpart.
+ * Returns `null` for labels that don't correspond to a defined signal —
+ * NEUTRAL / EMO_UNKNOWN never reach this point because the parser
+ * returns `null` for them, but the type-narrow helps consumers.
+ */
+import type { VoiceEmotionLabel } from '../../types'
+export function voiceEmotionToSignal(label: VoiceEmotionLabel): EmotionSignal {
+  switch (label) {
+    case 'happy': return 'voice_emotion_happy'
+    case 'sad': return 'voice_emotion_sad'
+    case 'angry': return 'voice_emotion_angry'
+    case 'fearful': return 'voice_emotion_fearful'
+    case 'disgusted': return 'voice_emotion_disgusted'
+    case 'surprised': return 'voice_emotion_surprised'
+  }
 }
 
 // ── Prompt context ──────────────────────────────────────────────────────────
