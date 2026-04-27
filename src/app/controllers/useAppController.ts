@@ -40,6 +40,7 @@ import { useWorkspaceRootBridge } from './useWorkspaceRootBridge'
 import { useAwayNotificationScheduler } from '../../hooks/useAwayNotificationScheduler'
 import { useBracketScheduler } from '../../hooks/useBracketScheduler.ts'
 import { useErrandScheduler } from '../../hooks/useErrandScheduler.ts'
+import { useFutureCapsuleScheduler } from '../../hooks/useFutureCapsuleScheduler.ts'
 import { useLetterScheduler } from '../../hooks/useLetterScheduler.ts'
 import { useMcpServerSync } from '../../hooks/useMcpServerSync'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
@@ -329,6 +330,8 @@ export function useAppController() {
   })
 
   useErrandScheduler({ settings })
+
+  useFutureCapsuleScheduler({ settings })
 
   useEffect(() => {
     voiceStateRef.current = voice.voiceState

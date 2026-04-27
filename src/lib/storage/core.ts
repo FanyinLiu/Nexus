@@ -55,6 +55,7 @@ export const MEMORY_ON_THIS_DAY_FIRED_STORAGE_KEY = 'nexus:memory:on-this-day-fi
 export const ERRAND_STORE_STORAGE_KEY = 'nexus:agent:errands'
 export const ERRAND_RUNNER_STATE_STORAGE_KEY = 'nexus:agent:errand-runner-state'
 export const USER_AFFECT_HISTORY_STORAGE_KEY = 'nexus:autonomy:user-affect-history'
+export const FUTURE_CAPSULE_STORE_STORAGE_KEY = 'nexus:capsule:future-self'
 
 export function readJson<T>(key: string, fallback: T): T {
   try {
