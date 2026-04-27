@@ -136,3 +136,103 @@ test('dedups active day keys when caller passes the same date twice', () => {
   // Only 2 distinct days → below threshold → skip
   assert.equal(out.shouldFire, false)
 })
+
+// ── affectShape attachment ────────────────────────────────────────────────
+
+test('affectShape: omitted when sample count is below the min-samples gate', () => {
+  const out = aggregateSundayLetter({
+    nowMs: NOW,
+    recentMemories: [memory({ id: 'a', content: 'thing', significance: 0.5 })],
+    activeDayKeys: ['d1', 'd2', 'd3'],
+    affectThisWeek: {
+      n: 3,  // below the 6-sample gate
+      baselineValence: 0.4,
+      baselineArousal: 0.5,
+      variability: 0.1,
+      inertia: 0.2,
+      windowStart: '2026-04-19T00:00:00Z',
+      windowEnd: '2026-04-26T20:00:00Z',
+    },
+  })
+  assert.equal(out.shouldFire, true)
+  if (out.shouldFire !== true) return
+  assert.equal(out.affectShape, undefined)
+})
+
+test('affectShape: attached when sample count crosses the gate', () => {
+  const out = aggregateSundayLetter({
+    nowMs: NOW,
+    recentMemories: [memory({ id: 'a', content: 'thing', significance: 0.5 })],
+    activeDayKeys: ['d1', 'd2', 'd3'],
+    affectThisWeek: {
+      n: 12,
+      baselineValence: 0.42,
+      baselineArousal: 0.55,
+      variability: 0.18,
+      inertia: 0.31,
+      windowStart: '2026-04-19T00:00:00Z',
+      windowEnd: '2026-04-26T20:00:00Z',
+    },
+  })
+  assert.equal(out.shouldFire, true)
+  if (out.shouldFire !== true || !out.affectShape) {
+    assert.fail('expected affectShape to be attached')
+    return
+  }
+  assert.equal(out.affectShape.n, 12)
+  assert.equal(out.affectShape.baselineValence, 0.42)
+  assert.equal(out.affectShape.variability, 0.18)
+  assert.equal(out.affectShape.inertia, 0.31)
+  assert.equal(out.affectShape.shiftFromPrior, null)
+})
+
+test('affectShape: omitted when baseline is null even with enough samples', () => {
+  const out = aggregateSundayLetter({
+    nowMs: NOW,
+    recentMemories: [memory({ id: 'a', content: 'thing', significance: 0.5 })],
+    activeDayKeys: ['d1', 'd2', 'd3'],
+    affectThisWeek: {
+      n: 12,
+      baselineValence: null,
+      baselineArousal: null,
+      variability: null,
+      inertia: null,
+      windowStart: '2026-04-19T00:00:00Z',
+      windowEnd: '2026-04-26T20:00:00Z',
+    },
+  })
+  assert.equal(out.shouldFire, true)
+  if (out.shouldFire !== true) return
+  assert.equal(out.affectShape, undefined)
+})
+
+test('affectShape: passes through prior-window shift when supplied', () => {
+  const out = aggregateSundayLetter({
+    nowMs: NOW,
+    recentMemories: [memory({ id: 'a', content: 'thing', significance: 0.5 })],
+    activeDayKeys: ['d1', 'd2', 'd3'],
+    affectThisWeek: {
+      n: 12,
+      baselineValence: 0.55,
+      baselineArousal: 0.5,
+      variability: 0.18,
+      inertia: 0.42,
+      windowStart: '2026-04-19T00:00:00Z',
+      windowEnd: '2026-04-26T20:00:00Z',
+    },
+    affectShift: {
+      baselineValenceDelta: 0.13,
+      baselineArousalDelta: 0.05,
+      valenceShiftIsNotable: true,
+      variabilityRoseSharply: false,
+      inertiaIsHigh: true,
+    },
+  })
+  assert.equal(out.shouldFire, true)
+  if (out.shouldFire !== true || !out.affectShape) {
+    assert.fail('expected affectShape with shift')
+    return
+  }
+  assert.equal(out.affectShape.shiftFromPrior?.valenceShiftIsNotable, true)
+  assert.equal(out.affectShape.shiftFromPrior?.inertiaIsHigh, true)
+})

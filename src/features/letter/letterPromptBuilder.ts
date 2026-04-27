@@ -16,7 +16,7 @@
 
 import type { UiLanguage } from '../../types'
 import type { LoadedPersona } from '../autonomy/v2/personaTypes.ts'
-import type { SundayLetterDataReady } from './aggregator.ts'
+import type { AffectShape, SundayLetterDataReady } from './aggregator.ts'
 import {
   type LetterPromptStrings,
   getLetterPromptStrings,
@@ -41,6 +41,68 @@ function formatHighlightList(highlights: SundayLetterDataReady['highlights']): s
 
 function formatStressorList(stressors: SundayLetterDataReady['stressors']): string {
   return stressors.map((s, i) => `${i + 1}. ${s.content}`).join('\n')
+}
+
+/**
+ * Render the user's weekly affect shape as a short bulleted summary the
+ * letter model can lean on. We deliberately use plain numeric prose
+ * ("baseline valence: 0.42") rather than fixed labels — the model
+ * weaves it into companion-voice phrasing in `summary` / `intention`,
+ * and labels imposed here would push everyone's letters toward a
+ * uniform vocabulary.
+ *
+ * The header / framing is localized; the numbers are universal.
+ */
+function formatAffectShapeSection(shape: AffectShape, uiLanguage?: UiLanguage): string {
+  const lines: string[] = []
+  const HEADER: Record<string, string> = {
+    'en-US': "How the user's mood moved this week (descriptive, not diagnostic)",
+    'zh-CN': '本周用户心情走向（描述性数据，**不是诊断**）',
+    'zh-TW': '本週用戶心情走向（描述性資料，**不是診斷**）',
+    'ja': '今週のユーザーの感情の動き（記述的、診断ではありません）',
+    'ko': '이번 주 사용자 감정 흐름(서술적, 진단 아님)',
+  }
+  const FOOTER: Record<string, string> = {
+    'en-US':
+      'Use this softly in `summary` or `intention` — one short observation if natural; '
+      + 'don\'t lecture, don\'t medicalize. Skip mentioning if the data feels uncertain '
+      + 'or the rest of the letter doesn\'t lead there.',
+    'zh-CN':
+      '可以**轻轻地**用在 `summary` 或 `intention` 段——一句自然的观察就够，不要说教，不要医学化。'
+      + '如果不自然，跳过即可。',
+    'zh-TW':
+      '可以**輕輕地**用在 `summary` 或 `intention` 段——一句自然的觀察就夠，不要說教，不要醫學化。'
+      + '如果不自然，跳過即可。',
+    'ja':
+      '`summary` か `intention` に **そっと** 一言織り込む程度で。説教調にしない、医療的に語らない。'
+      + '不自然なら触れない。',
+    'ko':
+      '`summary` 또는 `intention`에 **가볍게** 한 마디만. 설교조로 말하지 말고 의학적으로 접근하지 말 것. '
+      + '자연스럽지 않으면 건너뛰세요.',
+  }
+  const langKey = uiLanguage ?? 'en-US'
+  lines.push(`【${HEADER[langKey] ?? HEADER['en-US']}】`)
+  lines.push(`- samples_this_week: ${shape.n}`)
+  lines.push(`- baseline_valence: ${shape.baselineValence.toFixed(2)} (range -1..1, positive = pleasant)`)
+  if (shape.variability != null) {
+    lines.push(`- variability: ${shape.variability.toFixed(2)} (higher = more swings)`)
+  }
+  if (shape.inertia != null) {
+    lines.push(`- inertia: ${shape.inertia.toFixed(2)} (Kuppens lag-1 autocorr; ≥0.4 = sticky)`)
+  }
+  if (shape.shiftFromPrior) {
+    const s = shape.shiftFromPrior
+    if (s.baselineValenceDelta != null) {
+      const dir = s.baselineValenceDelta > 0 ? 'up' : 'down'
+      lines.push(`- baseline_shift_vs_prior_4w: ${s.baselineValenceDelta.toFixed(2)} (${dir})`)
+    }
+    if (s.valenceShiftIsNotable) lines.push('- shift_is_notable: true')
+    if (s.variabilityRoseSharply) lines.push('- variability_spiked: true')
+    if (s.inertiaIsHigh) lines.push('- inertia_high_flag: true')
+  }
+  lines.push('')
+  lines.push(FOOTER[langKey] ?? FOOTER['en-US'])
+  return lines.join('\n')
 }
 
 function formatPersonaAnchor(persona: LoadedPersona, strings: LetterPromptStrings): string {
@@ -99,6 +161,10 @@ export function buildLetterPrompt(
       `${strings.sectionMilestonesHeader}\n`
       + input.data.milestonesNotedThisWeek.map((m) => `- ${m}`).join('\n'),
     )
+  }
+
+  if (input.data.affectShape) {
+    dataParts.push(formatAffectShapeSection(input.data.affectShape, input.uiLanguage))
   }
 
   dataParts.push(strings.finalInstruction)

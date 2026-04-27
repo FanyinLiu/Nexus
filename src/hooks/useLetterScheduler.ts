@@ -5,6 +5,11 @@ import {
   type SundayLetterDataReady,
 } from '../features/letter/aggregator.ts'
 import {
+  compareAffectSnapshots,
+  computeAffectSnapshot,
+} from '../features/autonomy/affectDynamics.ts'
+import { loadUserAffectWindow } from '../features/autonomy/userAffectTimeline.ts'
+import {
   buildLetterPrompt,
   parseLetterResponse,
 } from '../features/letter/letterPromptBuilder.ts'
@@ -134,10 +139,25 @@ export function useLetterScheduler({
       if (!decision.shouldFire) return
 
       const windowStartMs = Date.now() - WEEK_MS
+      // Pull the past-week / prior-4-week affect snapshots so the letter
+      // prompt can reference how the user's mood actually moved this
+      // week (Russell circumplex valence + Kuppens inertia). The
+      // aggregator gates on min-samples; if the timeline is too sparse
+      // the affectShape simply isn't attached and the letter falls back
+      // to memory-only.
+      const affectThisWeek = computeAffectSnapshot(loadUserAffectWindow(7))
+      const priorFourWeek = computeAffectSnapshot(
+        loadUserAffectWindow(35).filter((s) => Date.parse(s.ts) < windowStartMs),
+      )
+      const affectShift = affectThisWeek.n > 0 && priorFourWeek.n > 0
+        ? compareAffectSnapshots(priorFourWeek, affectThisWeek)
+        : undefined
       const aggregate = aggregateSundayLetter({
         nowMs: Date.now(),
         recentMemories: recentMemoriesIn(live.memories, windowStartMs),
         activeDayKeys: activeDayKeysFromMessages(live.messages, windowStartMs),
+        affectThisWeek,
+        affectShift,
       })
       if (!aggregate.shouldFire) {
         live.onEvent?.({
