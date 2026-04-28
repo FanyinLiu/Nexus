@@ -27,6 +27,8 @@ import {
   ChatSection,
   ConsoleSection,
   ContextSection,
+  ErrandsSection,
+  FutureCapsuleSection,
   HistorySection,
   LettersSection,
   IntegrationsSection,
@@ -575,6 +577,16 @@ export function SettingsDrawer({
 
         <LettersSection
           active={activeSectionId === 'letters'}
+          uiLanguage={draft.uiLanguage}
+        />
+
+        <FutureCapsuleSection
+          active={activeSectionId === 'capsule'}
+          uiLanguage={draft.uiLanguage}
+        />
+
+        <ErrandsSection
+          active={activeSectionId === 'errands'}
           uiLanguage={draft.uiLanguage}
         />
 
