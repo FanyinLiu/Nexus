@@ -116,6 +116,13 @@ export type AssistantReplyRequestOptions = {
    */
   affectGuidancePromptText?: string
   /**
+   * Repair guidance fired only on the turn after a rupture (criticism /
+   * contempt) is detected in the user's latest message — Gottman M1.7
+   * Phase 1. Empty string when nothing fires. See ruptureDetection.ts +
+   * repairGuidance.ts.
+   */
+  repairGuidancePromptText?: string
+  /**
    * Fired whenever a built-in tool call (web_search / weather /
    * open_external) produces a successful BuiltInToolResult during the
    * tool-call loop. Host code (useChat / assistantReply) uses this to
@@ -243,6 +250,9 @@ export async function buildSystemPrompt(
   // 用户 14 天 affect snapshot 推导的 guidance（stuck-low / volatile / steady-warm）。
   // 紧贴 rhythm —— 同样是"用户当下的 long-window 状态"维度。
   const affectGuidanceSection = options.affectGuidancePromptText ?? ''
+  // 单条用户消息触发的 Gottman 修复指引（criticism / contempt）。
+  // 紧跟 affectGuidance —— 长期 affect 之后是这一刻发生了什么。
+  const repairGuidanceSection = options.repairGuidancePromptText ?? ''
 
   const desktopContextSection = settings.contextAwarenessEnabled
     ? formatDesktopContext(options.desktopContext)
@@ -272,6 +282,7 @@ export async function buildSystemPrompt(
     emotionSection,
     rhythmSection,
     affectGuidanceSection,
+    repairGuidanceSection,
     responseStyleSection,
     expressionGuideSection,
     firstImpressionSection,
