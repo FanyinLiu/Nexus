@@ -31,32 +31,39 @@ counts as "deployed."
 
 **Scope:**
 - Detection: pattern + LLM-tagged classification of crisis utterances.
-- Response path: graceful refusal + locale-appropriate hotline list
-  (988 US, 116-123 EU, 13-11-14 AU, 1393 CN, 0570-064-556 JP).
+- Response path: **hybrid** — companion stays in character with a
+  reframed empathic message, and a separate non-persona hotline panel
+  slides in over the conversation. Legally the panel is "non-AI
+  resource clearly displayed"; emotionally the relationship continuity
+  is preserved (decided 2026-04-28; Klein chose the hybrid over either
+  full break-character or full in-character).
+- Hotline catalogue keyed by `i18n.locale`:
+  988 (en-US), 1393 / 12320 (zh-CN), 1995 / 1925 (zh-TW), 0570-064-556
+  (ja), 1393 / 1577-0199 (ko), 116-123 (en-EU fallback).
 - Disclosure: periodic in-conversation reminder + onboarding consent.
 - Documentation in README so a regulator can locate the path.
 
 Estimate: 2-3 weeks. **Highest priority** — has a hard August deadline.
 
-### 1.2 Code signing + notarisation
+### 1.2 Code signing + notarisation — **deferred**
 
-Every release ships unsigned with `xattr -dr` and SmartScreen workarounds
-in the notes. Fine for power users, locks out everyone else.
+**Decision 2026-04-28:** Not signing. Klein declined the ~$220/year
+recurring cost (Apple Developer ~$99 + Azure Trusted Signing ~$120).
+"No commercialisation" extends to "no recurring infra spend right now."
 
-**Scope:**
-- macOS: `notarytool` (replaces dead `altool`); requires Apple Developer
-  Programme membership (~$99/year).
-- Windows: **Azure Trusted Signing** (~$120/year; GA, accepts
-  self-employed individuals in US/CA/EU/UK as of 2026). EV certs no
-  longer bypass SmartScreen first-download since 2024.
-- Linux: detached GPG signature + SHA-256 alongside AppImage / deb.
+This is reversible — if a future month brings a strong reason (mass
+adoption, EU enforcement actually citing unsigned distribution), revisit.
+Until then:
 
-Estimate: 1-2 weeks real-time, gated on Apple Developer enrolment.
+**What we do instead — improve the unsigned-install path:**
+- README per locale: clear "first-launch warning is expected, here's
+  why and how to bypass" section (xattr -dr on macOS, SmartScreen
+  "More info → Run anyway" on Windows). Currently buried.
+- Linux: add detached GPG signature + SHA-256 alongside AppImage / deb.
+  This is free and orthogonal to platform code-signing.
+- Release notes: keep the install workaround visible at the top.
 
-**Open question:** ~$220/year recurring is a real cost. "No
-commercialisation" was Klein's stance — does that include "no recurring
-infra cost"? If yes, ship unsigned indefinitely with a clearer
-unsigned-build install guide; if no, enrol.
+Estimate: ~1 day for docs + GPG, no recurring cost.
 
 ## Tier 2 — Quality polish (worth doing while around)
 
@@ -75,7 +82,19 @@ correlates with post-fire valence lift on Klein's actual use data.
 - Persist to localStorage; classifier reads at injection time.
 - Stays silent: no UI, no notification.
 
-Estimate: 3-4 days.
+**Escape hatch (decided 2026-04-28):** No "reset emotional tuning"
+button (would violate the silent-emotion principle — user is recipient,
+not debugger). Instead:
+- **14-day decay**: every two weeks the persisted tuned threshold is
+  re-blended toward the factory default by 5% weight. A wrongly-tuned
+  state self-corrects to mid-zone within ~6 months without any user
+  action.
+- **Hidden hard reset**: piggyback on the existing onboarding-redo flow
+  — when the user re-runs onboarding, clear the guidance telemetry +
+  tuned thresholds. Not surfaced in settings, not in user docs.
+
+Estimate: 3-4 days for the tuner + decay; another 0.5 day to wire the
+onboarding-redo telemetry clear.
 
 ### 2.2 TTS engine upgrade — local low-latency
 
@@ -93,9 +112,19 @@ local option.
 - Wire as new `tts.providerId = 'voxtral-local' | 'kyutai-local'`;
   keep Sherpa as fallback.
 - Update model-download script + asar-unpack patterns.
-- Opt-in flag for two patches; default-flip later if it sticks.
 
-Estimate: 1-2 weeks.
+**Rollout cadence (decided 2026-04-28):**
+- **v0.3.2** — new engine ships, settings toggle present, default OFF.
+  Existing users keep Sherpa.
+- **v0.3.3** — release notes announce "next patch will flip the default"
+  and link the toggle. Two-week soak window.
+- **v0.3.4** — flip default to the new engine. Toggle stays so anyone
+  unhappy with the change can revert.
+
+Voice is core sensory continuity for the companion — no overnight
+default change.
+
+Estimate: 1-2 weeks for the engine; rollout spans three patch versions.
 
 ### 2.3 Minimal MCP client
 
@@ -149,12 +178,19 @@ phase.
   re-mounting the letters / capsule / arc / mood-map UIs Klein
   intentionally pulled from the drawer in v0.3.1.
 
-## Open questions for Klein
+## Decisions log
 
-1. **Code-signing budget** (Tier 1.2). $220/year vs ship unsigned forever.
-2. **Crisis-response tone** (Tier 1.1). Companion breaks character to
-   refer to hotline, or stays in character with the resource embedded?
-3. **TTS default flip** (Tier 2.2). Opt-in for two patches then flip, or
-   never flip and just expose?
-4. **Self-tuning escape hatch** (Tier 2.1). If the auto-tuner converges
-   somewhere wrong, how does Klein reset?
+All four open questions resolved 2026-04-28:
+
+1. **Code signing** — deferred indefinitely. No $220/year right now.
+   Improve the unsigned-install README + add Linux GPG signatures
+   instead. Reversible if reasons change. (See 1.2.)
+2. **Crisis-response tone** — hybrid. Persona stays in character with an
+   empathic reframing; a separate hotline panel slides over the
+   conversation. (See 1.1.)
+3. **TTS default flip** — three-version rollout. v0.3.2 opt-in →
+   v0.3.3 announce → v0.3.4 flip default. Toggle stays for opt-out.
+   (See 2.2.)
+4. **Self-tune escape hatch** — no settings button. 14-day decay toward
+   factory defaults at 5%/cycle for slow self-correction; piggyback
+   onboarding-redo for hard reset. (See 2.1.)
