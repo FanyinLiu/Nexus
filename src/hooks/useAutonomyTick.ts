@@ -57,9 +57,18 @@ export function useAutonomyTick({
       autonomyStateRef.current = nextState
       setAutonomyState(nextState)
 
-      // Fire the proactive decision callback
+      // Fire the proactive decision callback. The signature is
+      // `(state) => void`, but real implementations may run async work
+      // and accidentally return a Promise. Catch both the sync throw
+      // and any rejected promise so a callback hiccup doesn't leave an
+      // unhandled rejection.
       try {
-        onTickRef.current(nextState)
+        const result = onTickRef.current(nextState)
+        if (result && typeof (result as Promise<unknown>).then === 'function') {
+          (result as Promise<unknown>).catch((err) => {
+            console.warn('[Autonomy] tick callback rejected:', err)
+          })
+        }
       } catch (error) {
         console.warn('[Autonomy] tick callback error:', error)
       }

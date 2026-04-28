@@ -158,7 +158,12 @@ export function useReminderScheduler({
             tone: 'success',
             relatedTaskId: task.id,
           })
-          void Promise.resolve(onTriggerRef.current(task))
+          // Wrap in catch so an onTrigger that throws (sync) or returns
+          // a rejected promise doesn't surface as an unhandled rejection
+          // and doesn't take down the rest of the tick loop.
+          Promise.resolve(onTriggerRef.current(task)).catch((err) => {
+            console.warn('[reminder] onTrigger failed:', err)
+          })
         }
       }
     }, delayMs)
