@@ -67,6 +67,13 @@ async function exportYearbook(uiLanguage: UiLanguage): Promise<void> {
 
 type MoodMapPanelProps = {
   uiLanguage: UiLanguage
+  /**
+   * Whether the parent settings section is currently the active tab.
+   * Polling for affect-history refresh is gated on this so a hidden
+   * panel doesn't churn `loadUserAffectWindow` + `useMemo` recomputes
+   * every 30s in the background.
+   */
+  active?: boolean
 }
 
 const COPY = {
@@ -190,19 +197,20 @@ function pick(field: { [key: string]: string }, uiLanguage: UiLanguage): string 
 
 const WINDOW_DAYS = 30
 
-export const MoodMapPanel = memo(function MoodMapPanel({ uiLanguage }: MoodMapPanelProps) {
+export const MoodMapPanel = memo(function MoodMapPanel({ uiLanguage, active = true }: MoodMapPanelProps) {
   const [samples, setSamples] = useState<UserAffectSample[]>(() =>
     loadUserAffectWindow(WINDOW_DAYS),
   )
   const [companionSamples, setCompanionSamples] = useState(() => loadEmotionHistory())
 
   useEffect(() => {
+    if (!active) return
     const timer = window.setInterval(() => {
       setSamples(loadUserAffectWindow(WINDOW_DAYS))
       setCompanionSamples(loadEmotionHistory())
     }, 30_000)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [active])
 
   const handleRefresh = () => {
     setSamples(loadUserAffectWindow(WINDOW_DAYS))

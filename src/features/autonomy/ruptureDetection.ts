@@ -252,7 +252,10 @@ export function detectRupture(
   }
 
   // Precedence: contempt > criticism > defensiveness > stonewalling.
-  if (contemptFires && contempt.score >= criticism.score) {
+  // Contempt always wins when it fires — Gottman's most-corrosive horseman
+  // warrants the most-conservative repair posture even if a criticism
+  // pattern happens to score higher in the same message.
+  if (contemptFires) {
     return { kind: 'contempt', score: contempt.score, signals: contempt.signals }
   }
   if (criticismFires) {

@@ -58,6 +58,8 @@ const VALID_KINDS: ReadonlySet<string> = new Set<GuidanceKind>([
   'affect:steady-warm',
   'rupture:criticism',
   'rupture:contempt',
+  'rupture:defensiveness',
+  'rupture:stonewalling',
 ])
 
 function isValidKind(s: unknown): s is GuidanceKind {

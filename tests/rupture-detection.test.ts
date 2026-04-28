@@ -32,6 +32,16 @@ test('detect: contempt wins over criticism on tie', () => {
   assert.equal(out.kind, 'contempt')
 })
 
+test('detect: contempt wins over criticism even when criticism scores higher', () => {
+  // Criticism stacks two patterns (you're so X + why are you so) → score 4.
+  // Contempt fires at score 2 (what a joke). Per the documented "contempt
+  // is most corrosive" precedence, contempt MUST win regardless of
+  // magnitude — the repair posture is more conservative and that's what
+  // the user needs.
+  const out = detectRupture("why are you so stupid, what a joke", 'en-US')
+  assert.equal(out.kind, 'contempt')
+})
+
 test('detect: contempt — "haha right" mockery', () => {
   const out = detectRupture("haha right, sure", 'en-US')
   assert.equal(out.kind, 'contempt')

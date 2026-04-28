@@ -132,7 +132,7 @@ export const ConsoleSection = memo(function ConsoleSection({
       <WeeklyRecapPanel uiLanguage={uiLanguage} />
       <DiagnosticsPanel />
       <StateTimelinePanel />
-      <MoodMapPanel uiLanguage={uiLanguage} />
+      <MoodMapPanel uiLanguage={uiLanguage} active={active} />
       <CostHistoryPanel />
       <SubagentHistoryPanel tasks={subagentTasks ?? []} />
 
