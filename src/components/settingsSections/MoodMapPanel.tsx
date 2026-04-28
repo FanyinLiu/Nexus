@@ -17,7 +17,28 @@ import {
   computeCoRegulationSnapshot,
   type CoRegulationSnapshot,
 } from '../../features/autonomy/coregulation'
+import { aggregateYearbook } from '../../features/yearbook/yearbookAggregator'
+import { buildYearbookFilename, renderYearbookHtml } from '../../features/yearbook/yearbookRender'
+import { loadLetters } from '../../features/letter/letterStore'
+import { loadUserAffectHistory } from '../../features/autonomy/userAffectTimeline'
+import { saveTextFileWithFallback } from '../../lib/textFiles'
 import type { UiLanguage } from '../../types'
+
+async function exportYearbook(uiLanguage: UiLanguage): Promise<void> {
+  const userAll = loadUserAffectHistory()
+  const companionAll = loadEmotionHistory()
+  const letters = loadLetters()
+  const snapshot = aggregateYearbook(userAll, companionAll, letters, new Date())
+  const html = renderYearbookHtml(snapshot, uiLanguage)
+  try {
+    await saveTextFileWithFallback({
+      content: html,
+      defaultFileName: buildYearbookFilename(uiLanguage),
+    })
+  } catch (err) {
+    console.warn('[yearbook] save failed:', err)
+  }
+}
 
 /**
  * Monthly mood map.
@@ -100,6 +121,13 @@ const COPY = {
     'zh-TW': '重新整理',
     'ja': '更新',
     'ko': '새로고침',
+  },
+  exportYearbook: {
+    'en-US': 'Export 12-month yearbook',
+    'zh-CN': '导出 12 个月纪念册',
+    'zh-TW': '匯出 12 個月紀念冊',
+    'ja': '12 か月の年鑑をエクスポート',
+    'ko': '12개월 연감 내보내기',
   },
   valence: {
     'en-US': 'Valence',
@@ -202,6 +230,13 @@ export const MoodMapPanel = memo(function MoodMapPanel({ uiLanguage }: MoodMapPa
       <div className="settings-diagnostics-panel__actions">
         <button type="button" className="ghost-button" onClick={handleRefresh}>
           {pick(COPY.refresh, uiLanguage)}
+        </button>
+        <button
+          type="button"
+          className="ghost-button"
+          onClick={() => void exportYearbook(uiLanguage)}
+        >
+          {pick(COPY.exportYearbook, uiLanguage)}
         </button>
       </div>
     </section>
