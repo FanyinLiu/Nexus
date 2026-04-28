@@ -37,13 +37,39 @@ const MIN_CHAIN_LENGTH = 2
 
 // ── Persistence ─────────────────────────────────���─────────────────────────
 
+function isValidThread(t: unknown): t is NarrativeThread {
+  if (!t || typeof t !== 'object') return false
+  const obj = t as Record<string, unknown>
+  return (
+    typeof obj.id === 'string'
+    && typeof obj.title === 'string'
+    && Array.isArray(obj.memoryIds)
+    && obj.memoryIds.every((id) => typeof id === 'string')
+    && typeof obj.summary === 'string'
+    && typeof obj.startedAt === 'string'
+    && typeof obj.lastUpdatedAt === 'string'
+    && typeof obj.dreamTouchCount === 'number'
+    && Number.isFinite(obj.dreamTouchCount)
+  )
+}
+
 export function loadNarrative(): NarrativeSnapshot {
+  // Defensive parse: corrupt or cross-version data must not crash the
+  // formatter downstream. Threads are filtered per-field; a single bad
+  // entry is dropped rather than nuking the whole snapshot.
+  const empty: NarrativeSnapshot = { threads: [], generatedAt: '' }
   try {
     const raw = localStorage.getItem(NARRATIVE_STORAGE_KEY)
-    if (!raw) return { threads: [], generatedAt: '' }
-    return JSON.parse(raw)
+    if (!raw) return empty
+    const parsed: unknown = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return empty
+    const obj = parsed as Record<string, unknown>
+    const threadsRaw = Array.isArray(obj.threads) ? obj.threads : []
+    const threads = threadsRaw.filter(isValidThread)
+    const generatedAt = typeof obj.generatedAt === 'string' ? obj.generatedAt : ''
+    return { threads, generatedAt }
   } catch {
-    return { threads: [], generatedAt: '' }
+    return empty
   }
 }
 

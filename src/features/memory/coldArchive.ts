@@ -15,12 +15,31 @@ const ARCHIVE_STORAGE_KEY = 'nexus:memory:archive'
 
 // ── Persistence ───────────────────────────────────────────────────────────
 
+function isValidArchivedMemory(item: unknown): item is ArchivedMemory {
+  if (!item || typeof item !== 'object') return false
+  const obj = item as Record<string, unknown>
+  return (
+    typeof obj.id === 'string' && obj.id.length > 0
+    && typeof obj.content === 'string'
+    && typeof obj.category === 'string'
+    && typeof obj.source === 'string'
+    && typeof obj.createdAt === 'string'
+    && typeof obj.archivedAt === 'string'
+    && typeof obj.finalScore === 'number'
+    && Number.isFinite(obj.finalScore)
+  )
+}
+
 export function loadArchive(): ArchivedMemory[] {
+  // Defensive parse: searchArchive / restoreFromArchive both walk these
+  // entries blindly, so a corrupted item would crash on missing fields.
+  // Filter per-record rather than fail-closed on the whole list.
   try {
     const raw = localStorage.getItem(ARCHIVE_STORAGE_KEY)
     if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : []
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(isValidArchivedMemory)
   } catch {
     return []
   }
