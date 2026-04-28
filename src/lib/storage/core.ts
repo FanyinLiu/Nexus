@@ -54,6 +54,7 @@ export const USER_AFFECT_HISTORY_STORAGE_KEY = 'nexus:autonomy:user-affect-histo
 export const FUTURE_CAPSULE_STORE_STORAGE_KEY = 'nexus:capsule:future-self'
 export const OPEN_ARC_STORE_STORAGE_KEY = 'nexus:arc:open-threads'
 export const GUIDANCE_TELEMETRY_STORAGE_KEY = 'nexus:autonomy:guidance-telemetry'
+export const GUIDANCE_ANALYSIS_STORAGE_KEY = 'nexus:autonomy:guidance-analysis'
 
 /**
  * One-shot cleanup of localStorage entries whose owning module was deleted

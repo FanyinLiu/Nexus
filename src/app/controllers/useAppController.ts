@@ -43,6 +43,7 @@ import { useErrandScheduler } from '../../hooks/useErrandScheduler.ts'
 import { useFutureCapsuleScheduler } from '../../hooks/useFutureCapsuleScheduler.ts'
 import { useLetterScheduler } from '../../hooks/useLetterScheduler.ts'
 import { useOpenArcScheduler } from '../../hooks/useOpenArcScheduler.ts'
+import { useGuidanceAnalysisScheduler } from '../../hooks/useGuidanceAnalysisScheduler.ts'
 import { loadUserAffectWindow } from '../../features/autonomy/userAffectTimeline.ts'
 import { computeAffectSnapshot } from '../../features/autonomy/affectDynamics.ts'
 import { buildAffectGuidance, classifyAffectGuidance } from '../../features/autonomy/affectGuidance.ts'
@@ -368,6 +369,8 @@ export function useAppController() {
   useFutureCapsuleScheduler({ settings })
 
   useOpenArcScheduler({ settings })
+
+  useGuidanceAnalysisScheduler()
 
   useEffect(() => {
     voiceStateRef.current = voice.voiceState

@@ -19,10 +19,12 @@
  */
 
 import {
+  GUIDANCE_ANALYSIS_STORAGE_KEY,
   GUIDANCE_TELEMETRY_STORAGE_KEY,
   readJson,
   writeJson,
 } from '../../lib/storage/core.ts'
+import type { GuidanceAnalysisReport } from './guidanceAnalysis.ts'
 
 export type GuidanceKind =
   | 'affect:stuck-low'
@@ -110,4 +112,22 @@ export function recordGuidanceFired(input: RecordGuidanceFiredInput): void {
 /** Test-only reset. */
 export function __resetGuidanceTelemetry(): void {
   writeJson(GUIDANCE_TELEMETRY_STORAGE_KEY, [])
+}
+
+// ── Latest analysis report (written by the weekly scheduler) ─────────────
+
+export function loadGuidanceAnalysis(): GuidanceAnalysisReport | null {
+  const raw = readJson<GuidanceAnalysisReport | null>(GUIDANCE_ANALYSIS_STORAGE_KEY, null)
+  if (!raw || typeof raw !== 'object') return null
+  if (typeof raw.generatedAt !== 'string') return null
+  return raw
+}
+
+export function saveGuidanceAnalysis(report: GuidanceAnalysisReport): void {
+  if (typeof window === 'undefined') return
+  try {
+    writeJson(GUIDANCE_ANALYSIS_STORAGE_KEY, report)
+  } catch {
+    // best-effort; analysis is silent telemetry, must never break chat
+  }
 }
