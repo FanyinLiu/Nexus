@@ -53,6 +53,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@stryker-mutator/core": "^9.6.1",
     "@tailwindcss/vite": "^4.2.4",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
