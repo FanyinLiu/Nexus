@@ -26,7 +26,6 @@ import {
 import { AboutPanel } from './AboutPanel'
 import { CostHistoryPanel } from './CostHistoryPanel'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
-import { MoodMapPanel } from './MoodMapPanel'
 import { StateTimelinePanel } from './StateTimelinePanel'
 import { SubagentHistoryPanel } from './SubagentHistoryPanel'
 import { UpdaterPanel } from './UpdaterPanel'
@@ -132,7 +131,6 @@ export const ConsoleSection = memo(function ConsoleSection({
       <WeeklyRecapPanel uiLanguage={uiLanguage} />
       <DiagnosticsPanel />
       <StateTimelinePanel />
-      <MoodMapPanel uiLanguage={uiLanguage} active={active} />
       <CostHistoryPanel />
       <SubagentHistoryPanel tasks={subagentTasks ?? []} />
 
