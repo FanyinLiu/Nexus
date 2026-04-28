@@ -11,6 +11,7 @@ import { saveChatMessages } from '../lib/storage'
 import { getCoreRuntime } from '../lib/coreRuntime'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import { parseChatHistoryArchive, serializeChatHistoryArchive } from '../features/chat'
+import { clearCompactionCache } from '../features/chat/contextCompaction'
 import {
   createDailyMemoryEntry,
   extractMemoriesFromMessage,
@@ -519,6 +520,12 @@ export function useChat(ctx: UseChatContext) {
 
   const clearChatHistory = useCallback(async () => {
     replaceChatHistory([])
+    // Invalidate the older-message LLM-summary cache — its key is
+    // hashOlderText(...) of the prior conversation tail, but on a hard
+    // clear the next compaction is logically a fresh start, and we
+    // don't want a stale summary leaking in if the user's first new
+    // message happens to produce the same hash window.
+    clearCompactionCache()
 
     return {
       canceled: false,
