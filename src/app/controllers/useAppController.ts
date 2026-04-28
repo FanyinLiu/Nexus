@@ -48,7 +48,7 @@ import { computeAffectSnapshot } from '../../features/autonomy/affectDynamics.ts
 import { buildAffectGuidance } from '../../features/autonomy/affectGuidance.ts'
 import { useMcpServerSync } from '../../hooks/useMcpServerSync'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
-import { AUTONOMY_GOALS_STORAGE_KEY, readJson, writeJson } from '../../lib/storage'
+import { AUTONOMY_GOALS_STORAGE_KEY, pruneLegacyStorageKeys, readJson, writeJson } from '../../lib/storage'
 import { classifyMessageSignals, voiceEmotionToSignal } from '../../features/autonomy/emotionModel'
 
 type ChatController = ReturnType<typeof useChat>
@@ -66,6 +66,9 @@ export function useAppController() {
     void getWindowView().then((resolved) => {
       if (resolved !== view) setView(resolved)
     })
+    // Sweep dead localStorage entries from the 3048bbd prune (scheduler /
+    // session-store / skills / agent-memory). Idempotent — no-op once gone.
+    pruneLegacyStorageKeys()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [panelWindowState, setPanelWindowState] = useState<PanelWindowState>({ collapsed: false })
   const [isPinned, setIsPinned] = useState(() => loadPetWindowPreferences().isPinned)

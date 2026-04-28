@@ -42,10 +42,6 @@ export const LETTER_STORE_STORAGE_KEY = 'nexus:letters'
 export const AUTH_PROFILES_STORAGE_KEY = 'nexus:auth-profiles'
 export const COST_ENTRIES_STORAGE_KEY = 'nexus:cost-entries'
 export const BUDGET_CONFIG_STORAGE_KEY = 'nexus:budget-config'
-export const SCHEDULED_JOBS_STORAGE_KEY = 'nexus:scheduled-jobs'
-export const SESSION_STORE_STORAGE_KEY = 'nexus:session-store'
-export const SKILLS_STORAGE_KEY = 'nexus:skills'
-export const AGENT_MEMORY_STORAGE_KEY = 'nexus:agent-memory'
 export const PLAN_STORE_STORAGE_KEY = 'nexus:plans'
 export const OPEN_GOALS_STORAGE_KEY = 'nexus:open-goals'
 export const AGENT_TRACE_STORAGE_KEY = 'nexus:agent-traces'
@@ -57,6 +53,33 @@ export const ERRAND_RUNNER_STATE_STORAGE_KEY = 'nexus:agent:errand-runner-state'
 export const USER_AFFECT_HISTORY_STORAGE_KEY = 'nexus:autonomy:user-affect-history'
 export const FUTURE_CAPSULE_STORE_STORAGE_KEY = 'nexus:capsule:future-self'
 export const OPEN_ARC_STORE_STORAGE_KEY = 'nexus:arc:open-threads'
+
+/**
+ * One-shot cleanup of localStorage entries whose owning module was deleted
+ * in commit 3048bbd (2026-04-16 dead-tree prune): the old core/scheduler,
+ * core/sessions/CurationEngine, core/skills/SkillLearner, and core/agent
+ * AgentRuntime trees. The constants were left behind by oversight; this
+ * function removes any stale data from existing user storage. Idempotent —
+ * safe to call on every startup; no-op once the keys are absent.
+ */
+const LEGACY_DEAD_STORAGE_KEYS: ReadonlyArray<string> = [
+  'nexus:scheduled-jobs',
+  'nexus:session-store',
+  'nexus:skills',
+  'nexus:agent-memory',
+]
+
+export function pruneLegacyStorageKeys(): void {
+  if (typeof window === 'undefined') return
+  for (const key of LEGACY_DEAD_STORAGE_KEYS) {
+    try {
+      window.localStorage.removeItem(key)
+    } catch {
+      // localStorage unavailable (private mode, quota exceeded). Silently
+      // skip — this is best-effort cleanup, not a correctness requirement.
+    }
+  }
+}
 
 export function readJson<T>(key: string, fallback: T): T {
   try {
