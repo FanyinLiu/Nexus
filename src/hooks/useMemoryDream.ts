@@ -223,94 +223,101 @@ export function useMemoryDream({
         })
       }
 
-      // ── Apply all memory mutations in a single setMemories to avoid stale refs ──
-      let archivedCount = 0
-      let clusterCount = 0
-      let finalMemories: MemoryItem[] = []
+      // ── Apply all memory mutations ──
+      // Side effects (archiveMemories writes to storage, clusterMemories
+      // is heavy compute) must NOT live inside the setMemories updater
+      // — React StrictMode runs the updater twice for purity checks,
+      // which would archive the same memories twice and double-write the
+      // archive store. Compute against a snapshot of the current memories
+      // ref OUTSIDE the updater, then setMemories with the final array.
+      const snapshot = memoriesRef.current
+      let updated = [...snapshot]
 
-      setMemories((prevMemories) => {
-        let updated = [...prevMemories]
+      // 1. Prune
+      const prunedIds = ops.pruneIds.filter((id) => updated.some((m) => m.id === id))
+      if (prunedIds.length > 0) {
+        const pruneSet = new Set(prunedIds)
+        updated = updated.filter((m) => !pruneSet.has(m.id))
+      }
 
-        // 1. Prune
-        const prunedIds = ops.pruneIds.filter((id) => updated.some((m) => m.id === id))
-        if (prunedIds.length > 0) {
-          const pruneSet = new Set(prunedIds)
-          updated = updated.filter((m) => !pruneSet.has(m.id))
+      // 2. Update — link to pruned IDs (these are merges)
+      for (const upd of ops.updates) {
+        const idx = updated.findIndex((m) => m.id === upd.id)
+        if (idx >= 0) {
+          const existing = updated[idx]
+          const mergedRelated = [...new Set([...(existing.relatedIds ?? []), ...prunedIds])]
+          updated[idx] = { ...existing, content: upd.content, lastUsedAt: now, relatedIds: mergedRelated.length ? mergedRelated : undefined }
         }
+      }
 
-        // 2. Update — link to pruned IDs (these are merges)
-        for (const upd of ops.updates) {
-          const idx = updated.findIndex((m) => m.id === upd.id)
-          if (idx >= 0) {
-            const existing = updated[idx]
-            const mergedRelated = [...new Set([...(existing.relatedIds ?? []), ...prunedIds])]
-            updated[idx] = { ...existing, content: upd.content, lastUsedAt: now, relatedIds: mergedRelated.length ? mergedRelated : undefined }
-          }
-        }
+      // 3. Add new memories from dream
+      for (const newMem of ops.newMemories) {
+        updated.push({
+          id: crypto.randomUUID().slice(0, 8),
+          content: newMem.content,
+          category: (newMem.category as MemoryItem['category']) || 'reference',
+          source: 'dream',
+          createdAt: now,
+          importance: (newMem.importance as MemoryItem['importance']) || 'normal',
+          relatedIds: prunedIds.length ? prunedIds : undefined,
+        })
+      }
 
-        // 3. Add new memories from dream
-        for (const newMem of ops.newMemories) {
+      // 4. Add distilled skills
+      if (distilledSkills.length > 0) {
+        const skillNow = new Date().toISOString()
+        for (const skill of distilledSkills) {
           updated.push({
             id: crypto.randomUUID().slice(0, 8),
-            content: newMem.content,
-            category: (newMem.category as MemoryItem['category']) || 'reference',
-            source: 'dream',
-            createdAt: now,
-            importance: (newMem.importance as MemoryItem['importance']) || 'normal',
-            relatedIds: prunedIds.length ? prunedIds : undefined,
+            content: skill.content,
+            category: 'reference' as const,
+            source: 'dream' as const,
+            createdAt: skillNow,
+            importance: 'normal' as const,
           })
         }
+      }
 
-        // 4. Add distilled skills
-        if (distilledSkills.length > 0) {
-          const skillNow = new Date().toISOString()
-          for (const skill of distilledSkills) {
-            updated.push({
-              id: crypto.randomUUID().slice(0, 8),
-              content: skill.content,
-              category: 'reference' as const,
-              source: 'dream' as const,
-              createdAt: skillNow,
-              importance: 'normal' as const,
-            })
-          }
+      // 4b. Merge new reflections (dedup by topic, cap at 20)
+      if (reflectionCandidates.length > 0) {
+        updated = mergeReflections(updated, reflectionCandidates, now)
+      }
+
+      // 5. Apply importance decay
+      updated = applyDecayBatch(updated)
+
+      // 6. Semantic clustering + cold archiving (side-effecting; must
+      // run exactly once)
+      const clusters = clusterMemories(updated)
+      const clusterCount = clusters.length
+
+      const clusterIdMap = new Map<string, string>()
+      for (const cluster of clusters) {
+        for (const memberId of cluster.memberIds) {
+          clusterIdMap.set(memberId, cluster.id)
         }
-
-        // 4b. Merge new reflections (dedup by topic, cap at 20)
-        if (reflectionCandidates.length > 0) {
-          updated = mergeReflections(updated, reflectionCandidates, now)
+      }
+      for (const m of updated) {
+        if (!clusterIdMap.has(m.id)) {
+          const bestId = findBestCluster(m, clusters)
+          if (bestId) clusterIdMap.set(m.id, bestId)
         }
+      }
 
-        // 5. Apply importance decay
-        updated = applyDecayBatch(updated)
+      let archivedCount = 0
+      const candidates = identifyArchiveCandidates(updated)
+      if (candidates.length > 0) {
+        const { active } = archiveMemories(updated, candidates, clusterIdMap)
+        archivedCount = candidates.length
+        updated = active
+      }
 
-        // 6. Semantic clustering + cold archiving
-        const clusters = clusterMemories(updated)
-        clusterCount = clusters.length
+      const finalMemories: MemoryItem[] = updated
 
-        const clusterIdMap = new Map<string, string>()
-        for (const cluster of clusters) {
-          for (const memberId of cluster.memberIds) {
-            clusterIdMap.set(memberId, cluster.id)
-          }
-        }
-        for (const m of updated) {
-          if (!clusterIdMap.has(m.id)) {
-            const bestId = findBestCluster(m, clusters)
-            if (bestId) clusterIdMap.set(m.id, bestId)
-          }
-        }
-
-        const candidates = identifyArchiveCandidates(updated)
-        if (candidates.length > 0) {
-          const { active } = archiveMemories(updated, candidates, clusterIdMap)
-          archivedCount = candidates.length
-          updated = active
-        }
-
-        finalMemories = updated
-        return updated
-      })
+      // Pure replacement: updater closes over `finalMemories` (already
+      // computed) so a double-run produces identical output without any
+      // duplicate side-effect.
+      setMemories(() => finalMemories)
 
       // ── Rebuild narrative threads from the actual updated memories ──
       const narrativeSnapshot = rebuildNarrative(finalMemories)
