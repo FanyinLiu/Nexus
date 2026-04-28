@@ -94,6 +94,38 @@ export function readJson<T>(key: string, fallback: T): T {
   }
 }
 
+/**
+ * Like readJson, but pipes the parsed value through a validator before
+ * returning. Use this for any new consumer where a corrupt or cross-
+ * version blob could crash downstream code (memory loaders, scheduler
+ * state stores, anything that walks fields without `?.`-guarding each).
+ *
+ * The validator should narrow `unknown → T | null`. Returning null
+ * (or any thrown error) makes readJsonValidated fall back. Per-record
+ * filtering (where each entry is independently validated) is the
+ * caller's responsibility — see openArcStore.loadOpenArcs for the
+ * pattern.
+ *
+ * Existing readJson<T>-cast call sites stay as-is; migrate one at a
+ * time when the caller's shape is the next failure surface.
+ */
+export function readJsonValidated<T>(
+  key: string,
+  fallback: T,
+  validate: (parsed: unknown) => T | null,
+): T {
+  try {
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return fallback
+    const parsed: unknown = JSON.parse(raw)
+    const validated = validate(parsed)
+    return validated ?? fallback
+  } catch (err) {
+    console.error(`[storage] Failed to parse stored data for key "${key}":`, err)
+    return fallback
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Cross-window sync via BroadcastChannel
 // ---------------------------------------------------------------------------
