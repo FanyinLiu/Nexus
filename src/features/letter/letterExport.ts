@@ -19,6 +19,10 @@
 
 import type { SavedLetter } from './letterStore.ts'
 import type { UiLanguage } from '../../types'
+import {
+  ARTIFACT_SANS_FONT_STACK,
+  ARTIFACT_SERIF_FONT_STACK,
+} from '../../lib/artifactStyles.ts'
 
 interface LocaleStrings {
   /** Header label rendered above the date. */
@@ -99,10 +103,7 @@ const STYLES = `
     margin: 0;
     background: #f5f3ee;
     color: #2a2a2a;
-    font-family: 'Iowan Old Style', 'Apple Garamond', 'Baskerville',
-      'Times New Roman', 'Georgia', 'PingFang SC', 'Hiragino Sans',
-      'Hiragino Mincho ProN', 'Noto Serif CJK SC', 'Noto Serif CJK TC',
-      'Noto Serif KR', serif;
+    font-family: ${ARTIFACT_SERIF_FONT_STACK};
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -125,7 +126,7 @@ const STYLES = `
     text-transform: uppercase;
     letter-spacing: 0.18em;
     color: rgba(0, 0, 0, 0.45);
-    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    font-family: ${ARTIFACT_SANS_FONT_STACK};
     margin-bottom: 14px;
   }
   header .date {
@@ -157,7 +158,7 @@ const STYLES = `
     text-align: center;
     font-size: 12px;
     color: rgba(0, 0, 0, 0.4);
-    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    font-family: ${ARTIFACT_SANS_FONT_STACK};
   }
   @media print {
     body { background: #fffdf9; }

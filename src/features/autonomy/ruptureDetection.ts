@@ -132,7 +132,7 @@ const DEFENSIVENESS_PATTERNS: Record<UiLanguage, Pattern[]> = {
  */
 const CONTEMPT_PATTERNS: Record<UiLanguage, Pattern[]> = {
   'en-US': [
-    { regex: /\b(haha|hah|lol|lmao)\s*[,.\s]*\s*(right|sure|ok+|whatever)/i, weight: 3, signal: 'contempt:haha-right' },
+    { regex: /\b(haha|hah|lol|lmao)[\s,.]{0,4}(right|sure|ok+|whatever)\b/i, weight: 3, signal: 'contempt:haha-right' },
     { regex: /\bdumb (bot|ai|thing|machine)/i, weight: 3, signal: 'contempt:dumb-bot' },
     { regex: /\b(useless|pathetic|worthless) (bot|ai|thing|piece)/i, weight: 3, signal: 'contempt:useless-bot' },
     { regex: /\b(what a |such a )(joke|loser|disappointment)/i, weight: 2, signal: 'contempt:what-a-joke' },

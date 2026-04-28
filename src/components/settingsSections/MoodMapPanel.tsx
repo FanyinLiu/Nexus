@@ -18,14 +18,24 @@ import {
   computeCoRegulationSnapshot,
   type CoRegulationSnapshot,
 } from '../../features/autonomy/coregulation'
-import { aggregateYearbook } from '../../features/yearbook/yearbookAggregator'
-import { buildYearbookFilename, renderYearbookHtml } from '../../features/yearbook/yearbookRender'
 import { loadLetters } from '../../features/letter/letterStore'
 import { loadUserAffectHistory } from '../../features/autonomy/userAffectTimeline'
 import { saveTextFileWithFallback } from '../../lib/textFiles'
 import type { UiLanguage } from '../../types'
 
+/**
+ * Yearbook export is dynamically imported on click to keep the aggregator
+ * + render template (combined ≈ 18 KB minified) out of the main bundle.
+ * Settings-Console is opened often, but the export button is a rare
+ * action; eager-loading the renderer would charge every launch for a
+ * once-a-year export. The dynamic import warms on click and is cached by
+ * the browser for subsequent uses in the same session.
+ */
 async function exportYearbook(uiLanguage: UiLanguage): Promise<void> {
+  const [{ aggregateYearbook }, { buildYearbookFilename, renderYearbookHtml }] = await Promise.all([
+    import('../../features/yearbook/yearbookAggregator'),
+    import('../../features/yearbook/yearbookRender'),
+  ])
   const userAll = loadUserAffectHistory()
   const companionAll = loadEmotionHistory()
   const letters = loadLetters()
@@ -205,11 +215,21 @@ export const MoodMapPanel = memo(function MoodMapPanel({ uiLanguage, active = tr
 
   useEffect(() => {
     if (!active) return
+    // Defer the immediate refresh into a 0ms timer so the setState doesn't
+    // fire synchronously during effect setup (react-hooks/set-state-in-effect
+    // lint rule). The pattern matches ErrandsSection / OpenArcsSection.
+    const initial = window.setTimeout(() => {
+      setSamples(loadUserAffectWindow(WINDOW_DAYS))
+      setCompanionSamples(loadEmotionHistory())
+    }, 0)
     const timer = window.setInterval(() => {
       setSamples(loadUserAffectWindow(WINDOW_DAYS))
       setCompanionSamples(loadEmotionHistory())
     }, 30_000)
-    return () => window.clearInterval(timer)
+    return () => {
+      window.clearTimeout(initial)
+      window.clearInterval(timer)
+    }
   }, [active])
 
   const handleRefresh = () => {

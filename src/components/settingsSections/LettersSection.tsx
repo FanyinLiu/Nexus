@@ -1,11 +1,16 @@
 import { memo, useEffect, useState } from 'react'
 import { loadLetters, type SavedLetter } from '../../features/letter/letterStore'
-import { buildLetterFilename, renderLetterHtml } from '../../features/letter/letterExport'
 import { saveTextFileWithFallback } from '../../lib/textFiles'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { UiLanguage } from '../../types'
 
+/**
+ * Lazy-load the export renderer on click — keeps the HTML template (and
+ * its inlined font / CSS strings) out of the main bundle for users who
+ * never export.
+ */
 async function exportLetterToFile(letter: SavedLetter): Promise<void> {
+  const { buildLetterFilename, renderLetterHtml } = await import('../../features/letter/letterExport')
   const html = renderLetterHtml(letter)
   const filename = buildLetterFilename(letter)
   try {
