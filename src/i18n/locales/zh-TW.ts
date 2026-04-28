@@ -1052,6 +1052,8 @@ export const zhTWMessages: TranslationDictionary = {
   'settings.letters.note': '每週日傍晚生成一封——本週聊得不到三天就跳過，不會硬寫。',
   'settings.letters.empty_state': '下個週日會出現第一封信。',
   'settings.letters.expand': '展開',
+  'settings.letters.export': '保存',
+  'settings.letters.export_title': '把這封信匯出為獨立的 HTML 檔案',
   'settings.letters.collapse': '收起',
   'settings.letters.themes_label': '話題：',
   'settings.letters.active_days_label': '本週活躍 {n} 天',

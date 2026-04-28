@@ -929,6 +929,8 @@ export const zhCNMessages: TranslationDictionary = {
   'settings.letters.note': '每周日傍晚生成一封——本周聊得不到三天就跳过，不会硬写。',
   'settings.letters.empty_state': '下个周日会出现第一封信。',
   'settings.letters.expand': '展开',
+  'settings.letters.export': '保存',
+  'settings.letters.export_title': '把这封信导出为独立的 HTML 文件',
   'settings.letters.collapse': '收起',
   'settings.letters.themes_label': '话题：',
   'settings.letters.active_days_label': '本周活跃 {n} 天',

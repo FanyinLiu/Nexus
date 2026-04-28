@@ -586,6 +586,8 @@ export type SettingsTranslationKey =
   | 'settings.letters.empty_state'
   | 'settings.letters.expand'
   | 'settings.letters.collapse'
+  | 'settings.letters.export'
+  | 'settings.letters.export_title'
   | 'settings.letters.themes_label'
   | 'settings.letters.active_days_label'
   | 'settings.autonomy.title'

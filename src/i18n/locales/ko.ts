@@ -1052,6 +1052,8 @@ export const koMessages: TranslationDictionary = {
   'settings.letters.note': '매주 일요일 저녁에 한 통씩 — 그 주에 3일 미만 대화했다면 억지로 쓰지 않아요.',
   'settings.letters.empty_state': '첫 편지는 다음 주 일요일에 도착해요.',
   'settings.letters.expand': '펼치기',
+  'settings.letters.export': '저장',
+  'settings.letters.export_title': '이 편지를 단독 HTML 파일로 내보내기',
   'settings.letters.collapse': '접기',
   'settings.letters.themes_label': '주제: ',
   'settings.letters.active_days_label': '이번 주 활성 {n} 일',

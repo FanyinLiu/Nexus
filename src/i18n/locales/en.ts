@@ -1053,6 +1053,8 @@ export const enMessages: TranslationDictionary = {
   'settings.letters.empty_state': 'Your first letter will arrive next Sunday.',
   'settings.letters.expand': 'Read',
   'settings.letters.collapse': 'Close',
+  'settings.letters.export': 'Save',
+  'settings.letters.export_title': 'Export this letter as a self-contained HTML file',
   'settings.letters.themes_label': 'Themes: ',
   'settings.letters.active_days_label': '{n} active days this week',
   'provider.stt.local-sensevoice.label': '[Local] SenseVoice high-accuracy recognition',

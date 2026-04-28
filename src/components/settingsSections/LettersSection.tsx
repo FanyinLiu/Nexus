@@ -1,7 +1,22 @@
 import { memo, useEffect, useState } from 'react'
 import { loadLetters, type SavedLetter } from '../../features/letter/letterStore'
+import { buildLetterFilename, renderLetterHtml } from '../../features/letter/letterExport'
+import { saveTextFileWithFallback } from '../../lib/textFiles'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { UiLanguage } from '../../types'
+
+async function exportLetterToFile(letter: SavedLetter): Promise<void> {
+  const html = renderLetterHtml(letter)
+  const filename = buildLetterFilename(letter)
+  try {
+    await saveTextFileWithFallback({
+      content: html,
+      defaultFileName: filename,
+    })
+  } catch (err) {
+    console.warn('[letter-export] save failed:', err)
+  }
+}
 
 type LettersSectionProps = {
   active: boolean
@@ -60,9 +75,19 @@ function LetterCard({
     >
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
         <strong style={{ fontSize: '1.05rem' }}>{formatLetterDate(letter.letterDate, uiLanguage)}</strong>
-        <button type="button" className="ghost-button" onClick={onToggle}>
-          {expanded ? ti('settings.letters.collapse') : ti('settings.letters.expand')}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={() => void exportLetterToFile(letter)}
+            title={ti('settings.letters.export_title')}
+          >
+            {ti('settings.letters.export')}
+          </button>
+          <button type="button" className="ghost-button" onClick={onToggle}>
+            {expanded ? ti('settings.letters.collapse') : ti('settings.letters.expand')}
+          </button>
+        </div>
       </div>
 
       <div style={{ fontSize: '0.85rem', opacity: 0.75, display: 'flex', gap: 12, flexWrap: 'wrap' }}>

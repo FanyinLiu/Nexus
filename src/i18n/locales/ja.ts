@@ -1052,6 +1052,8 @@ export const jaMessages: TranslationDictionary = {
   'settings.letters.note': '毎週日曜の夕方に 1 通だけ。今週 3 日に満たないときは無理に書きません。',
   'settings.letters.empty_state': '最初の手紙は次の日曜に届きます。',
   'settings.letters.expand': '開く',
+  'settings.letters.export': '保存',
+  'settings.letters.export_title': 'この手紙を単体の HTML ファイルとしてエクスポート',
   'settings.letters.collapse': '閉じる',
   'settings.letters.themes_label': 'テーマ：',
   'settings.letters.active_days_label': '今週は {n} 日話した',
