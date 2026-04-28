@@ -44,7 +44,20 @@ export class AudioPlayerSink extends FrameProcessor {
           // of letting it leak into the next turn's playback.
           return
         }
-        this.getPlayer().appendPcmChunk(frame.samples, frame.sampleRate, frame.channels)
+        // appendPcmChunk returns a Promise on the real player that can
+        // reject if the player was torn down between the turn-id check
+        // and the call (e.g. a barge-in landed). Catch the rejection so
+        // it doesn't surface as an unhandled promise. Test fakes may
+        // return undefined synchronously — handle both.
+        {
+          const result = this.getPlayer()
+            .appendPcmChunk(frame.samples, frame.sampleRate, frame.channels)
+          if (result && typeof (result as Promise<unknown>).catch === 'function') {
+            (result as Promise<unknown>).catch((err) => {
+              console.warn('[audio-sink] appendPcmChunk rejected:', err)
+            })
+          }
+        }
         await this.pushDownstream(frame)
         return
 

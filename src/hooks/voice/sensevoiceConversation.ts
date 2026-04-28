@@ -232,6 +232,10 @@ export async function startSenseVoiceConversation(
 
     params.appendVoiceTrace('Start SenseVoice recognition', `#${traceLabel} using SenseVoice offline transcription`)
 
+    // Snapshot the ref before awaiting so we can detect a concurrent
+    // start path (e.g. wake-word retry) that wrote a different session
+    // during our await window.
+    const refBeforeAwait = params.sensevoiceSessionRef.current
     session = await startSenseVoiceStream({
       onActivity: (rms) => {
         if (!session || params.sensevoiceSessionRef.current !== session || finalizing) return
@@ -269,6 +273,14 @@ export async function startSenseVoiceConversation(
         params.handleVoiceListeningFailure(message)
       },
     }, params.ti)
+
+    // If another start path wrote a different session into the ref
+    // while we were awaiting startSenseVoiceStream, the in-flight one
+    // wins. Abort our just-started session rather than clobber.
+    if (params.sensevoiceSessionRef.current !== refBeforeAwait) {
+      try { session.abort() } catch { /* best-effort */ }
+      return
+    }
 
     params.sensevoiceSessionRef.current = session
     params.sensevoiceConversationRef.current = {

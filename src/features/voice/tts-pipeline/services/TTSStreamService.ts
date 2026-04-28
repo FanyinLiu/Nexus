@@ -173,13 +173,21 @@ export class TTSStreamService extends FrameProcessor {
         event.channels,
         this.segmentIndex,
       )
-      void this.pushDownstream(frame)
+      // Catch downstream errors so a sink throw (e.g. AudioPlayerSink
+      // rejected after teardown) doesn't surface as an unhandled
+      // promise rejection. The frame's loss is acceptable; the chat
+      // path already proceeds even when audio fails.
+      this.pushDownstream(frame).catch((err) => {
+        console.warn('[tts-stream] downstream rejected:', err)
+      })
       return
     }
 
     if (event.type === 'error') {
       const frame = createErrorFrame(this.activeTurnId, event.message)
-      void this.pushDownstream(frame)
+      this.pushDownstream(frame).catch((err) => {
+        console.warn('[tts-stream] downstream rejected on error frame:', err)
+      })
     }
     // 'end' events come from the main process once its whole chain has
     // drained. We don't emit a downstream frame for them — AudioPlayerSink
