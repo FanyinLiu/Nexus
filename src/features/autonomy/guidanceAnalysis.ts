@@ -83,28 +83,51 @@ function meanOrNull(xs: number[]): number | null {
   return sum / xs.length
 }
 
+interface ParsedSample {
+  ms: number
+  valence: number
+}
+
 /**
- * Pull all affect samples that fall in [centerMs - windowMs, centerMs).
- * The center sample itself (timestamps within ±5s of fire) is excluded
- * from both pre and post to avoid the in-the-moment sample dominating.
+ * Find the index of the first ParsedSample with `ms >= target` in a
+ * sorted array. Standard lower-bound binary search.
  */
+function lowerBoundMs(sorted: ReadonlyArray<ParsedSample>, target: number): number {
+  let lo = 0
+  let hi = sorted.length
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1
+    if (sorted[mid].ms < target) lo = mid + 1
+    else hi = mid
+  }
+  return lo
+}
+
+/**
+ * Pull all valences from samples whose timestamps fall in the half-open
+ * window. Uses binary-search bracketing of the sorted ParsedSample
+ * array, so cost per fire is O(log n + window-size) rather than O(n).
+ * The center sample (timestamps within ±5s of fire) is excluded.
+ */
+const PROXIMITY_MS = 5_000
+
 function valencesInWindow(
-  samples: ReadonlyArray<UserAffectSample>,
+  sorted: ReadonlyArray<ParsedSample>,
   centerMs: number,
   windowMs: number,
   side: 'before' | 'after',
 ): number[] {
+  const lo = side === 'before' ? centerMs - windowMs : centerMs + 1
+  const hi = side === 'before' ? centerMs : centerMs + windowMs + 1
+  const startIdx = lowerBoundMs(sorted, lo)
+  const endIdx = lowerBoundMs(sorted, hi)
   const result: number[] = []
-  const proximityMs = 5_000  // ±5s around fire counts as "in the moment"
-  for (const s of samples) {
-    const t = Date.parse(s.ts)
-    if (!Number.isFinite(t)) continue
-    if (Math.abs(t - centerMs) <= proximityMs) continue
-    if (side === 'before' && t >= centerMs - windowMs && t < centerMs) {
-      result.push(s.valence)
-    } else if (side === 'after' && t > centerMs && t <= centerMs + windowMs) {
-      result.push(s.valence)
-    }
+  for (let i = startIdx; i < endIdx; i += 1) {
+    const s = sorted[i]
+    if (Math.abs(s.ms - centerMs) <= PROXIMITY_MS) continue
+    if (side === 'before' && s.ms >= centerMs) continue
+    if (side === 'after' && s.ms <= centerMs) continue
+    result.push(s.valence)
   }
   return result
 }
@@ -127,6 +150,16 @@ export function analyzeGuidance(
     return Number.isFinite(ts) && ts >= cutoffMs && ts <= now.getTime()
   })
 
+  // Pre-parse and sort affect samples once. Each fire then binary-searches
+  // its before/after windows in O(log n) instead of repeating Date.parse +
+  // full-array scan O(n) per fire.
+  const sorted: ParsedSample[] = []
+  for (const s of affectSamples) {
+    const t = Date.parse(s.ts)
+    if (Number.isFinite(t)) sorted.push({ ms: t, valence: s.valence })
+  }
+  sorted.sort((a, b) => a.ms - b.ms)
+
   const byKindAcc = new Map<GuidanceKind, {
     fireCount: number
     beforeMeans: number[]
@@ -137,8 +170,8 @@ export function analyzeGuidance(
   for (const fire of inWindow) {
     const fireMs = Date.parse(fire.ts)
     if (!Number.isFinite(fireMs)) continue
-    const beforeValences = valencesInWindow(affectSamples, fireMs, perFireMs, 'before')
-    const afterValences = valencesInWindow(affectSamples, fireMs, perFireMs, 'after')
+    const beforeValences = valencesInWindow(sorted, fireMs, perFireMs, 'before')
+    const afterValences = valencesInWindow(sorted, fireMs, perFireMs, 'after')
 
     const before = meanOrNull(beforeValences)
     const after = meanOrNull(afterValences)

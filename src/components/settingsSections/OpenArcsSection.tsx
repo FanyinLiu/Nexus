@@ -122,7 +122,10 @@ function pick(field: { [key: string]: string }, uiLanguage: UiLanguage): string 
 function fillTemplate(tpl: string, vars: Record<string, string | number>): string {
   let out = tpl
   for (const [k, v] of Object.entries(vars)) {
-    out = out.replace(`{${k}}`, String(v))
+    // Function-form replacement so `$&`, `$$`, `$\``, `$'` in the value
+    // aren't interpreted as backreference / placeholder syntax.
+    const value = String(v)
+    out = out.replace(`{${k}}`, () => value)
   }
   return out
 }

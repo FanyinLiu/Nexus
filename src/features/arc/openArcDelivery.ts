@@ -86,9 +86,13 @@ export function buildArcCheckIn(input: BuildArcCheckInInput): BuildArcCheckInOut
         ? pickLocale(DAY5_BODY, uiLanguage)
         : pickLocale(LATE_BODY, uiLanguage)
 
+  // Use function-form replacement so `$&`, `$$`, `$\``, `$'` in user-typed
+  // theme aren't interpreted as JS regex backreference / placeholder
+  // syntax. fast-check found a counter-example with theme="$& " that
+  // silently corrupted to "{theme} ".
   const body = template
-    .replace('{companion}', companion)
-    .replace('{theme}', theme)
+    .replace('{companion}', () => companion)
+    .replace('{theme}', () => theme)
 
   const title = pickLocale(TITLE, uiLanguage)
   return { title, body }
