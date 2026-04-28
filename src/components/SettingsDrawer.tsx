@@ -27,11 +27,7 @@ import {
   ChatSection,
   ConsoleSection,
   ContextSection,
-  ErrandsSection,
-  FutureCapsuleSection,
   HistorySection,
-  LettersSection,
-  OpenArcsSection,
   IntegrationsSection,
   LorebooksSection,
   MemorySection,
@@ -573,26 +569,6 @@ export function SettingsDrawer({
 
         <LorebooksSection
           active={activeSectionId === 'lorebooks'}
-          uiLanguage={draft.uiLanguage}
-        />
-
-        <LettersSection
-          active={activeSectionId === 'letters'}
-          uiLanguage={draft.uiLanguage}
-        />
-
-        <FutureCapsuleSection
-          active={activeSectionId === 'capsule'}
-          uiLanguage={draft.uiLanguage}
-        />
-
-        <ErrandsSection
-          active={activeSectionId === 'errands'}
-          uiLanguage={draft.uiLanguage}
-        />
-
-        <OpenArcsSection
-          active={activeSectionId === 'arcs'}
           uiLanguage={draft.uiLanguage}
         />
 

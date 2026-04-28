@@ -363,10 +363,6 @@ export type SettingsSectionId =
   | 'history'
   | 'memory'
   | 'lorebooks'
-  | 'letters'
-  | 'capsule'
-  | 'errands'
-  | 'arcs'
   | 'voice'
   | 'window'
   | 'integrations'
@@ -380,10 +376,6 @@ const SETTINGS_SECTION_DESCRIPTION_KEY_MAP: Record<SettingsSectionId, Parameters
   history: 'settings.section_desc.history',
   memory: 'settings.section_desc.memory',
   lorebooks: 'settings.section_desc.lorebooks',
-  letters: 'settings.section_desc.letters',
-  capsule: 'settings.section_desc.capsule',
-  errands: 'settings.section_desc.errands',
-  arcs: 'settings.section_desc.arcs',
   voice: 'settings.section_desc.voice',
   window: 'settings.section_desc.window',
   integrations: 'settings.section_desc.integrations',
@@ -398,10 +390,6 @@ const SETTINGS_SECTION_EYEBROW_KEY_MAP: Record<SettingsSectionId, Parameters<typ
   history: 'settings.section_eyebrow.history',
   memory: 'settings.section_eyebrow.memory',
   lorebooks: 'settings.section_eyebrow.lorebooks',
-  letters: 'settings.section_eyebrow.memory',
-  capsule: 'settings.section_eyebrow.memory',
-  errands: 'settings.section_eyebrow.autonomy',
-  arcs: 'settings.section_eyebrow.memory',
   voice: 'settings.section_eyebrow.voice',
   window: 'settings.section_eyebrow.window',
   integrations: 'settings.section_eyebrow.integrations',
@@ -424,10 +412,6 @@ export function getSettingsSectionOptions(uiLanguage: UiLanguage): Array<{
     { id: 'voice', label: pickTranslatedUiText(uiLanguage, 'settings.section.voice') },
     { id: 'memory', label: pickTranslatedUiText(uiLanguage, 'settings.section.memory') },
     { id: 'lorebooks', label: uiLanguage === 'zh-CN' || uiLanguage === 'zh-TW' ? 'Lorebook' : 'Lorebooks' },
-    { id: 'letters', label: pickTranslatedUiText(uiLanguage, 'settings.section.letters') },
-    { id: 'capsule', label: pickTranslatedUiText(uiLanguage, 'settings.section.capsule') },
-    { id: 'errands', label: pickTranslatedUiText(uiLanguage, 'settings.section.errands') },
-    { id: 'arcs', label: pickTranslatedUiText(uiLanguage, 'settings.section.arcs') },
     { id: 'window', label: pickTranslatedUiText(uiLanguage, 'settings.section.window') },
     { id: 'tools', label: pickTranslatedUiText(uiLanguage, 'settings.section.tools') },
     { id: 'integrations', label: pickTranslatedUiText(uiLanguage, 'settings.section.integrations') },
