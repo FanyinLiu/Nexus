@@ -49,11 +49,24 @@ export async function startRecordingSession(
   options: StartRecordingSessionOptions,
 ) {
   const stream = (await requestVoiceInputStream({ purpose: 'stt' })).stream
-  const mimeType = pickRecordingMimeType()
-  const mediaRecorder = mimeType
-    ? new MediaRecorder(stream, { mimeType })
-    : new MediaRecorder(stream)
-  const audioContext = new AudioContext()
+  // From here on, any throw must release the mic stream — without this,
+  // a MediaRecorder constructor failure (unsupported mimeType in some
+  // browsers) leaks the active mic permission until tab close.
+  let mediaRecorder: MediaRecorder
+  let audioContext: AudioContext | null = null
+  try {
+    const mimeType = pickRecordingMimeType()
+    mediaRecorder = mimeType
+      ? new MediaRecorder(stream, { mimeType })
+      : new MediaRecorder(stream)
+    audioContext = new AudioContext()
+  } catch (err) {
+    for (const track of stream.getTracks()) track.stop()
+    if (audioContext) {
+      void (audioContext as AudioContext).close().catch(() => undefined)
+    }
+    throw err
+  }
   const analyser = audioContext.createAnalyser()
   analyser.fftSize = 2048
 

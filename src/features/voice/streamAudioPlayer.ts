@@ -99,6 +99,7 @@ export class StreamAudioPlayer {
   private stopped = false
   private pendingSources = 0
   private drainResolvers: Array<() => void> = []
+  private drainTailTimers: number[] = []
   private endTimerId: number | null = null
   private levelFrameId: number | null = null
   private playbackEndedNotified = false
@@ -196,7 +197,12 @@ export class StreamAudioPlayer {
       // audio in the output pipeline. Add a small buffer to avoid cutting off the tail.
       const DRAIN_TAIL_MS = 30
       return new Promise<void>((resolve) => {
-        window.setTimeout(resolve, DRAIN_TAIL_MS)
+        // Track the timer so stopAndClear can cancel it. Without this,
+        // a stop during the drain tail would still resolve waitForDrain
+        // late (the resolve is harmless, but the resolved promise then
+        // races against the now-stopped pipeline state).
+        const id = window.setTimeout(resolve, DRAIN_TAIL_MS)
+        this.drainTailTimers.push(id)
       })
     }
 
@@ -218,6 +224,11 @@ export class StreamAudioPlayer {
     this.clearEndTimer()
     this.stopLevelLoop()
     this.options.onLevel?.(0)
+    // Cancel any pending drain-tail timers and resolve their promises
+    // immediately, so callers awaiting waitForDrain don't hang for the
+    // 30ms tail when the pipeline was already stopped.
+    for (const id of this.drainTailTimers) window.clearTimeout(id)
+    this.drainTailTimers.length = 0
     this.resolveDrainResolvers()
 
     const sources = Array.from(this.activeSources)
