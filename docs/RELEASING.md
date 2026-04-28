@@ -102,20 +102,67 @@ Work through the matching column when preparing a release.
 
 ## `npm run prerelease-check -- <tag>`
 
-Run before every tag push. Asserts:
+Run before every tag push. Organised into 6 stages (A–F); HARD-fails
+exit non-zero with a specific diagnostic. Some checks are warn-only
+(coverage, license, AI disclosure) — they don't block the tag but
+should be reviewed manually.
 
-1. `<tag>` matches `v\d+\.\d+\.\d+(-\w+\.\d+)?` (semver shape, with optional pre-release).
+Flags:
+- `--quick` skips slow stages (smoke, coverage, benchmarks). Use when
+  iterating; the full check runs before the actual tag push.
+- `--skip=B,C` skips specific stages.
+- `--only=A` runs only specific stages.
+
+### Stage A — Process / version (7 checks)
+1. Tag matches `v\d+\.\d+\.\d+(-\w+\.\d+)?`.
 2. `package.json.version === <tag>.slice(1)`.
-3. `<tag>` does not exist locally (`git tag -l`).
-4. `<tag>` does not exist on `origin` (`git ls-remote --tags`).
-5. Working tree is clean (no uncommitted or untracked files).
-6. `HEAD` matches `origin/main` (after a fresh `git fetch`).
-7. CI on the current `HEAD` commit is `success` (skips if no run exists yet —
-   the script will tell you to push first and re-run).
-8. Runs `npm run verify:release` — tsc, lint, test, build.
+3. Local tag absent.
+4. Remote tag absent on origin.
+5. Working tree clean.
+6. `HEAD === origin/main` (after fetch).
+7. CI on HEAD success.
 
-Exits non-zero with a specific diagnostic on any failure. Never prints "OK"
-if anything is ambiguous.
+### Stage B — Code quality (5 checks)
+1. `npm run verify:release` (tsc + lint + test + build).
+2. `npm run smoke` — Electron actually launches + renderer loads.
+3. Coverage ≥ 80% lines (warn).
+4. `dist/assets/app-runtime-*.js` ≤ 1700 KB.
+5. Benchmarks complete without crash (warn).
+
+### Stage C — Security (6 checks)
+1. `npm audit --omit=dev`: 0 critical + 0 high.
+2. `electron/windowManager.js` enforces `contextIsolation: true`,
+   `sandbox: true`, `nodeIntegration: false`, `webSecurity: true`.
+3. Electron version ≥ 41.3 (current stable; bump floor with new security minor).
+4. `electron-updater` ≥ 6.6.
+5. No API-key / token patterns committed (OpenAI, Google, AWS, Slack, GitHub).
+6. CSP header injected in `electron/rendererServer.js`.
+
+### Stage D — Asset integrity (3 checks)
+1. 5-locale presence (`en-US`/`zh-CN`/`zh-TW`/`ja`/`ko`) in every prose
+   module that ships UI strings (heuristic: each locale key referenced
+   ≥ 1× per file).
+2. `sherpa-models` referenced in `build.{mac,win,linux}.extraResources`.
+3. `dist/index.html` + `app-runtime-*.js` + `ort-wasm-simd*.wasm` present.
+
+### Stage E — Docs + compliance (5–8 checks)
+1. `docs/RELEASE-NOTES-<tag>.md` exists.
+2. README.md mentions tag (stable only).
+3. `docs/README.{zh-CN,zh-TW,ja,ko}.md` each mention tag (stable only).
+4. No GPL/AGPL/SSPL in production deps (warn — `license-checker`).
+5. README mentions "AI" (EU AI Act Aug-2026 transparency duty; warn).
+
+### Stage F — Privacy + governance (1–3 checks)
+1. No suspicious telemetry hosts hardcoded in `src/` / `electron/`
+   (Sentry, Mixpanel, GA, Datadog, Amplitude, Segment, Logflare).
+2. Audit-findings doc still tracks H4 deferral (warn).
+3. Stable release notes mention unsigned-build caveats (xattr/SmartScreen)
+   (stable only; warn).
+
+A passing check prints `OK` and (when relevant) a metric in dim text.
+A failed check prints `FAIL` with a one-line diagnostic; the script
+exits 1 after listing every blocker. Warn-only checks print `WARN`
+and continue.
 
 ---
 
