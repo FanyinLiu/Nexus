@@ -277,14 +277,19 @@ export function useAppController() {
     getRhythmPromptText: () => rhythmPromptGetterRef.current(),
     // Affect guidance has no hook-ordering dependency on autonomy — the data
     // sources (userAffectTimeline + affectDynamics) are pure modules. Compute
-    // on demand each turn over the last 14 days; returns '' when nothing
-    // notable applies.
+    // on demand each turn: 14-day window establishes the trait-level baseline
+    // (M1.4 stuck-low / volatile / steady-warm); 3-day window is the
+    // state-level recent reading the classifier compares against to detect a
+    // recent-drop (M1.5). Returns '' when nothing notable applies.
     getAffectGuidancePromptText: () => {
-      const samples = loadUserAffectWindow(14)
-      const snapshot = computeAffectSnapshot(samples)
+      const longSamples = loadUserAffectWindow(14)
+      const recentSamples = loadUserAffectWindow(3)
+      const snapshot = computeAffectSnapshot(longSamples)
+      const recentSnapshot = computeAffectSnapshot(recentSamples)
       return buildAffectGuidance({
         uiLanguage: settingsRef.current.uiLanguage,
         snapshot,
+        recentSnapshot,
       })
     },
     getEmotionSnapshot: () => emotionSnapshotGetterRef.current(),
