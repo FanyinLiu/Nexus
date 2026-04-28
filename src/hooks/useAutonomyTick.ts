@@ -63,7 +63,10 @@ export function useAutonomyTick({
       // and any rejected promise so a callback hiccup doesn't leave an
       // unhandled rejection.
       try {
-        const result = onTickRef.current(nextState)
+        // Callback is typed `(state) => void`, but real impls may
+        // accidentally return a Promise. Cast through `unknown` to
+        // sidestep the TS truthiness check on `void`, then duck-type.
+        const result: unknown = onTickRef.current(nextState)
         if (result && typeof (result as Promise<unknown>).then === 'function') {
           (result as Promise<unknown>).catch((err) => {
             console.warn('[Autonomy] tick callback rejected:', err)

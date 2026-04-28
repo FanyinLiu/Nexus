@@ -54,8 +54,9 @@ export async function startRecordingSession(
   // browsers) leaks the active mic permission until tab close.
   let mediaRecorder: MediaRecorder
   let audioContext: AudioContext | null = null
+  let mimeType: string | null = null
   try {
-    const mimeType = pickRecordingMimeType()
+    mimeType = pickRecordingMimeType()
     mediaRecorder = mimeType
       ? new MediaRecorder(stream, { mimeType })
       : new MediaRecorder(stream)
