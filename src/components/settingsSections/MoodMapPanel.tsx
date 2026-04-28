@@ -42,6 +42,7 @@ async function exportYearbook(uiLanguage: UiLanguage): Promise<void> {
   const html = renderYearbookHtml(snapshot, uiLanguage)
   try {
     await saveTextFileWithFallback({
+      title: 'Save yearbook',
       content: html,
       defaultFileName: buildYearbookFilename(uiLanguage),
     })

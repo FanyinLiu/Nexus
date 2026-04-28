@@ -10,6 +10,7 @@ async function exportLetterToFile(letter: SavedLetter): Promise<void> {
   const filename = buildLetterFilename(letter)
   try {
     await saveTextFileWithFallback({
+      title: 'Save letter',
       content: html,
       defaultFileName: filename,
     })
