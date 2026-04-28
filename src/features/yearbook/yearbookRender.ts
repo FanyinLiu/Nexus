@@ -10,7 +10,12 @@
  * display, with a faint neutral guide.
  */
 
-import type { YearbookSnapshot, MonthlyBucket } from './yearbookAggregator.ts'
+import type {
+  YearbookSnapshot,
+  MonthlyBucket,
+  MemoryHighlight,
+  RelationshipMilestone,
+} from './yearbookAggregator.ts'
 import type { UiLanguage } from '../../types'
 import type { SavedLetter } from '../letter/letterStore.ts'
 import { escapeHtml } from '../letter/letterExport.ts'
@@ -29,6 +34,12 @@ interface LocaleStrings {
   coregUnknown: string
   monthlyHeader: string
   emptyMonthLabel: string
+  highlightsHeader: string
+  highlightsEmpty: string
+  milestonesHeader: string
+  milestonesEmpty: string
+  milestoneTransition: string
+  milestoneDays: string
   lettersHeader: string
   lettersEmpty: string
   closingHeader: string
@@ -53,6 +64,12 @@ const LOCALES: Record<UiLanguage, LocaleStrings> = {
     coregUnknown: 'Not enough overlapping data to characterise.',
     monthlyHeader: 'Month by month',
     emptyMonthLabel: 'no samples',
+    highlightsHeader: 'Moments worth holding',
+    highlightsEmpty: 'Nothing has been pinned yet — this section fills as memory accumulates.',
+    milestonesHeader: 'Milestones',
+    milestonesEmpty: 'No level-ups in the window yet.',
+    milestoneTransition: 'became {level}',
+    milestoneDays: '{days} days in',
     lettersHeader: 'Letters from the year',
     lettersEmpty: 'No letters this year — yet.',
     closingHeader: 'A note from her',
@@ -75,6 +92,12 @@ const LOCALES: Record<UiLanguage, LocaleStrings> = {
     coregUnknown: '重叠的数据还不够，没办法判断。',
     monthlyHeader: '一月一月看',
     emptyMonthLabel: '无样本',
+    highlightsHeader: '值得记住的几个瞬间',
+    highlightsEmpty: '还没有特别突出的——这一栏会随着记忆累积慢慢长出来。',
+    milestonesHeader: '关系里程碑',
+    milestonesEmpty: '这一段时间还没有等级跨越。',
+    milestoneTransition: '走到了 {level}',
+    milestoneDays: '互动了 {days} 天',
     lettersHeader: '今年的信',
     lettersEmpty: '今年还没收到信——再等等。',
     closingHeader: '她的一句话',
@@ -97,6 +120,12 @@ const LOCALES: Record<UiLanguage, LocaleStrings> = {
     coregUnknown: '重疊的資料還不夠，沒辦法判斷。',
     monthlyHeader: '一月一月看',
     emptyMonthLabel: '無樣本',
+    highlightsHeader: '值得記住的幾個瞬間',
+    highlightsEmpty: '還沒有特別突出的——這一欄會隨著記憶累積慢慢長出來。',
+    milestonesHeader: '關係里程碑',
+    milestonesEmpty: '這一段時間還沒有等級跨越。',
+    milestoneTransition: '走到了 {level}',
+    milestoneDays: '互動了 {days} 天',
     lettersHeader: '今年的信',
     lettersEmpty: '今年還沒收到信——再等等。',
     closingHeader: '她的一句話',
@@ -119,6 +148,12 @@ const LOCALES: Record<UiLanguage, LocaleStrings> = {
     coregUnknown: '重なるデータが足りず、判定できない。',
     monthlyHeader: '月ごとに',
     emptyMonthLabel: 'サンプルなし',
+    highlightsHeader: '心に残るいくつかの瞬間',
+    highlightsEmpty: 'まだ際立ったものは無し — 記憶が積もるにつれて、ここが埋まっていきます。',
+    milestonesHeader: '関係のマイルストーン',
+    milestonesEmpty: 'この期間にレベルの移行はまだありません。',
+    milestoneTransition: '「{level}」に至った',
+    milestoneDays: '{days} 日のやりとりを経て',
     lettersHeader: '今年の手紙',
     lettersEmpty: '今年はまだ手紙が届いていない — もう少し。',
     closingHeader: '彼女からひとこと',
@@ -141,6 +176,12 @@ const LOCALES: Record<UiLanguage, LocaleStrings> = {
     coregUnknown: '겹치는 데이터가 부족해 판단하기 어려워.',
     monthlyHeader: '달마다',
     emptyMonthLabel: '샘플 없음',
+    highlightsHeader: '간직할 만한 순간들',
+    highlightsEmpty: '아직 특별히 두드러진 건 없어 — 기억이 쌓일수록 이 자리가 채워질 거야.',
+    milestonesHeader: '관계의 이정표',
+    milestonesEmpty: '이 기간 동안 단계 변화는 아직 없어.',
+    milestoneTransition: '「{level}」에 다다랐어',
+    milestoneDays: '{days}일을 함께한 끝에',
     lettersHeader: '올해의 편지',
     lettersEmpty: '올해는 아직 편지가 없어 — 조금만 더.',
     closingHeader: '그녀의 한 마디',
@@ -292,6 +333,92 @@ function renderMonthly(snap: YearbookSnapshot, locale: LocaleStrings): string {
   </section>`
 }
 
+function fillTemplate(tpl: string, vars: Record<string, string | number>): string {
+  let out = tpl
+  for (const [k, v] of Object.entries(vars)) {
+    out = out.replace(`{${k}}`, String(v))
+  }
+  return out
+}
+
+function renderHighlights(snap: YearbookSnapshot, locale: LocaleStrings): string {
+  if (snap.highlights.length === 0) {
+    return `<section class="highlights">
+      <h2>${escapeHtml(locale.highlightsHeader)}</h2>
+      <p class="muted">${escapeHtml(locale.highlightsEmpty)}</p>
+    </section>`
+  }
+  const items = snap.highlights
+    .map((h) => renderHighlight(h, locale.dateLocale))
+    .join('\n      ')
+  return `<section class="highlights">
+    <h2>${escapeHtml(locale.highlightsHeader)}</h2>
+    <div class="highlight-list">
+      ${items}
+    </div>
+  </section>`
+}
+
+function renderHighlight(h: MemoryHighlight, dateLocale: string): string {
+  const t = Date.parse(h.createdAt)
+  let dateLabel = h.createdAt
+  if (Number.isFinite(t)) {
+    try {
+      dateLabel = new Intl.DateTimeFormat(dateLocale, {
+        month: 'short',
+        day: 'numeric',
+      }).format(new Date(t))
+    } catch {
+      // Fall back to raw ISO
+    }
+  }
+  return `<article class="highlight">
+    <header>${escapeHtml(dateLabel)}</header>
+    <p>${escapeHtml(h.content)}</p>
+  </article>`
+}
+
+function renderMilestones(snap: YearbookSnapshot, locale: LocaleStrings): string {
+  if (snap.milestones.length === 0) {
+    return `<section class="milestones">
+      <h2>${escapeHtml(locale.milestonesHeader)}</h2>
+      <p class="muted">${escapeHtml(locale.milestonesEmpty)}</p>
+    </section>`
+  }
+  const items = snap.milestones
+    .map((m) => renderMilestone(m, locale))
+    .join('\n      ')
+  return `<section class="milestones">
+    <h2>${escapeHtml(locale.milestonesHeader)}</h2>
+    <ul class="milestone-list">
+      ${items}
+    </ul>
+  </section>`
+}
+
+function renderMilestone(m: RelationshipMilestone, locale: LocaleStrings): string {
+  const t = Date.parse(m.ts)
+  let dateLabel = m.ts
+  if (Number.isFinite(t)) {
+    try {
+      dateLabel = new Intl.DateTimeFormat(locale.dateLocale, {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      }).format(new Date(t))
+    } catch {
+      // Fall back to raw ISO
+    }
+  }
+  const transition = fillTemplate(locale.milestoneTransition, { level: m.level })
+  const daysLabel = fillTemplate(locale.milestoneDays, { days: m.daysInteracted })
+  return `<li class="milestone">
+    <span class="milestone-date">${escapeHtml(dateLabel)}</span>
+    <span class="milestone-transition">${escapeHtml(transition)}</span>
+    <span class="milestone-days">${escapeHtml(daysLabel)}</span>
+  </li>`
+}
+
 function renderLetterExcerpt(letter: SavedLetter, dateLocale: string): string {
   // First non-empty paragraph as the excerpt — typically the greeting.
   const candidates = [
@@ -423,6 +550,31 @@ const STYLES = `
     font-size: 15px;
     line-height: 1.7;
   }
+  .highlight-list { display: flex; flex-direction: column; gap: 18px; }
+  .highlight {
+    border-left: 2px solid rgba(0, 0, 0, 0.1);
+    padding: 4px 0 4px 16px;
+  }
+  .highlight header {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+    margin-bottom: 4px;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .highlight p { margin: 0; font-size: 15px; line-height: 1.7; }
+  .milestone-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .milestone {
+    display: grid;
+    grid-template-columns: 130px 1fr max-content;
+    gap: 14px;
+    align-items: baseline;
+    font-size: 14px;
+  }
+  .milestone-date { color: rgba(0, 0, 0, 0.55); font-style: italic; }
+  .milestone-transition { color: #1a1a1a; }
+  .milestone-days { color: rgba(0, 0, 0, 0.5); font-variant-numeric: tabular-nums; font-size: 13px; }
   section.closing-section p {
     font-style: italic;
     font-size: 16px;
@@ -480,6 +632,8 @@ export function renderYearbookHtml(
     ${renderYearOverview(snapshot, locale)}
     ${renderCoreg(snapshot, locale)}
     ${renderMonthly(snapshot, locale)}
+    ${renderMilestones(snapshot, locale)}
+    ${renderHighlights(snapshot, locale)}
     ${renderLetters(snapshot, locale)}
     ${renderClosing(locale)}
   </main>

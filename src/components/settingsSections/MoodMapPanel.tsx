@@ -11,7 +11,8 @@ import {
   binSamplesByDay,
   type DailyAffectBin,
 } from '../../features/autonomy/moodMapBinning'
-import { loadEmotionHistory } from '../../features/autonomy/stateTimeline'
+import { loadEmotionHistory, loadRelationshipHistory } from '../../features/autonomy/stateTimeline'
+import { loadMemories } from '../../lib/storage/memory'
 import {
   classifyCoRegulation,
   computeCoRegulationSnapshot,
@@ -28,7 +29,16 @@ async function exportYearbook(uiLanguage: UiLanguage): Promise<void> {
   const userAll = loadUserAffectHistory()
   const companionAll = loadEmotionHistory()
   const letters = loadLetters()
-  const snapshot = aggregateYearbook(userAll, companionAll, letters, new Date())
+  const memories = loadMemories()
+  const relationshipHistory = loadRelationshipHistory()
+  const snapshot = aggregateYearbook(
+    userAll,
+    companionAll,
+    letters,
+    memories,
+    relationshipHistory,
+    new Date(),
+  )
   const html = renderYearbookHtml(snapshot, uiLanguage)
   try {
     await saveTextFileWithFallback({

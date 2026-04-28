@@ -14,8 +14,12 @@
  */
 
 import type { UserAffectSample } from '../autonomy/userAffectTimeline.ts'
-import type { EmotionSample } from '../autonomy/stateTimeline.ts'
+import type {
+  EmotionSample,
+  RelationshipSample,
+} from '../autonomy/stateTimeline.ts'
 import type { SavedLetter } from '../letter/letterStore.ts'
+import type { MemoryItem } from '../../types'
 import {
   computeAffectSnapshot,
   type AffectSnapshot,
@@ -59,6 +63,32 @@ export interface YearbookSnapshot {
   months: ReadonlyArray<MonthlyBucket>
   /** Letters that fall within the window, chronological (oldest → newest). */
   letters: ReadonlyArray<SavedLetter>
+  /** Top memory highlights from the window, ranked descending by score. */
+  highlights: ReadonlyArray<MemoryHighlight>
+  /** Relationship level-ups that happened inside the window. */
+  milestones: ReadonlyArray<RelationshipMilestone>
+}
+
+export interface MemoryHighlight {
+  id: string
+  content: string
+  /** ISO timestamp the memory was created. */
+  createdAt: string
+  /** Categorical importance bucket. */
+  importance: string
+  /** Computed ranking score (recall + importance + emotional significance). */
+  score: number
+}
+
+export interface RelationshipMilestone {
+  /** ISO timestamp of the level-up. */
+  ts: string
+  /** Level entered (e.g. 'familiar', 'close'). */
+  level: string
+  /** Level the relationship was at just before this transition. */
+  fromLevel: string
+  /** Days of interaction at the moment of the level-up. */
+  daysInteracted: number
 }
 
 function localMonthKey(iso: string): string | null {
@@ -106,10 +136,89 @@ function filterByYear<T extends { ts?: string; createdAt?: string; letterDate?: 
   })
 }
 
+/**
+ * Score a memory as a "yearbook highlight". Combines:
+ *   - importance bucket (pinned > high > reflection > normal > low)
+ *   - recall count (often-recalled memories were load-bearing)
+ *   - emotional significance score (already on the memory)
+ *
+ * Result is purely for ranking — magnitudes don't carry meaning across
+ * users. Top N by this score becomes the year's highlights.
+ */
+const IMPORTANCE_WEIGHT: Record<string, number> = {
+  pinned: 5,
+  high: 3,
+  reflection: 2.5,
+  normal: 1,
+  low: 0.3,
+}
+
+export function scoreMemoryForHighlight(memory: MemoryItem): number {
+  const importanceWeight = IMPORTANCE_WEIGHT[memory.importance ?? 'normal'] ?? 1
+  const importanceScore = Number.isFinite(memory.importanceScore ?? NaN)
+    ? memory.importanceScore!
+    : 0
+  const recall = Math.min(memory.recallCount ?? 0, 10) / 10  // cap at 10 recalls
+  const significance = Number.isFinite(memory.significance ?? NaN)
+    ? memory.significance!
+    : 0
+  return importanceWeight + importanceScore + recall + significance
+}
+
+const MAX_HIGHLIGHTS = 8
+const HIGHLIGHT_PREVIEW_CHARS = 200
+
+function pickHighlights(
+  memories: ReadonlyArray<MemoryItem>,
+  now: Date,
+): MemoryHighlight[] {
+  const inWindow = filterByYear(memories, now, (m) => m.createdAt)
+  const scored = inWindow.map((m) => ({ memory: m, score: scoreMemoryForHighlight(m) }))
+  scored.sort((a, b) => b.score - a.score)
+  return scored.slice(0, MAX_HIGHLIGHTS).map(({ memory, score }) => ({
+    id: memory.id,
+    content: memory.content.length > HIGHLIGHT_PREVIEW_CHARS
+      ? memory.content.slice(0, HIGHLIGHT_PREVIEW_CHARS - 1).trimEnd() + '…'
+      : memory.content,
+    createdAt: memory.createdAt,
+    importance: memory.importance ?? 'normal',
+    score,
+  }))
+}
+
+/**
+ * Walk the relationship history chronologically, emitting one milestone
+ * each time the level changes. Within-level score wiggles are ignored.
+ */
+function pickMilestones(
+  samples: ReadonlyArray<RelationshipSample>,
+  now: Date,
+): RelationshipMilestone[] {
+  const inWindow = filterByYear(samples, now, (s) => s.ts)
+    .slice()
+    .sort((a, b) => a.ts.localeCompare(b.ts))
+  const milestones: RelationshipMilestone[] = []
+  let lastLevel: string | null = null
+  for (const s of inWindow) {
+    if (lastLevel != null && s.level !== lastLevel) {
+      milestones.push({
+        ts: s.ts,
+        level: s.level,
+        fromLevel: lastLevel,
+        daysInteracted: s.daysInteracted,
+      })
+    }
+    lastLevel = s.level
+  }
+  return milestones
+}
+
 export function aggregateYearbook(
   userSamples: ReadonlyArray<UserAffectSample>,
   companionSamples: ReadonlyArray<EmotionSample>,
   letters: ReadonlyArray<SavedLetter>,
+  memories: ReadonlyArray<MemoryItem> = [],
+  relationshipHistory: ReadonlyArray<RelationshipSample> = [],
   now: Date = new Date(),
 ): YearbookSnapshot {
   const yearUser = filterByYear(userSamples, now, (s) => s.ts)
@@ -152,5 +261,7 @@ export function aggregateYearbook(
     coregKind,
     months,
     letters: yearLetters,
+    highlights: pickHighlights(memories, now),
+    milestones: pickMilestones(relationshipHistory, now),
   }
 }
