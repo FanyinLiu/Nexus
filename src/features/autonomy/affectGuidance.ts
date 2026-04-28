@@ -187,5 +187,12 @@ export function buildAffectGuidance(input: BuildAffectGuidanceInput): string {
       return pickLocale(STEADY_WARM_PROSE, input.uiLanguage)
     case 'none':
       return ''
+    default: {
+      // Exhaustiveness guard — adding a new AffectGuidanceState without
+      // a switch arm becomes a compile error here.
+      const _exhaustive: never = state
+      void _exhaustive
+      return ''
+    }
   }
 }

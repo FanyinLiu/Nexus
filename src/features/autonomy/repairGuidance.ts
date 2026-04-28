@@ -105,5 +105,12 @@ export function buildRepairGuidance(input: BuildRepairGuidanceInput): string {
       return pickLocale(STONEWALLING_PROSE, input.uiLanguage)
     case null:
       return ''
+    default: {
+      // Exhaustiveness guard — adding a new RuptureKind without a switch
+      // arm becomes a compile error here.
+      const _exhaustive: never = input.ruptureKind
+      void _exhaustive
+      return ''
+    }
   }
 }

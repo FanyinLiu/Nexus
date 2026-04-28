@@ -32,32 +32,35 @@ import type { UiLanguage } from '../../types'
  * the browser for subsequent uses in the same session.
  */
 async function exportYearbook(uiLanguage: UiLanguage): Promise<void> {
-  const [{ aggregateYearbook }, { buildYearbookFilename, renderYearbookHtml }] = await Promise.all([
-    import('../../features/yearbook/yearbookAggregator'),
-    import('../../features/yearbook/yearbookRender'),
-  ])
-  const userAll = loadUserAffectHistory()
-  const companionAll = loadEmotionHistory()
-  const letters = loadLetters()
-  const memories = loadMemories()
-  const relationshipHistory = loadRelationshipHistory()
-  const snapshot = aggregateYearbook(
-    userAll,
-    companionAll,
-    letters,
-    memories,
-    relationshipHistory,
-    new Date(),
-  )
-  const html = renderYearbookHtml(snapshot, uiLanguage)
   try {
+    const [{ aggregateYearbook }, { buildYearbookFilename, renderYearbookHtml }] = await Promise.all([
+      import('../../features/yearbook/yearbookAggregator'),
+      import('../../features/yearbook/yearbookRender'),
+    ])
+    const userAll = loadUserAffectHistory()
+    const companionAll = loadEmotionHistory()
+    const letters = loadLetters()
+    const memories = loadMemories()
+    const relationshipHistory = loadRelationshipHistory()
+    const snapshot = aggregateYearbook(
+      userAll,
+      companionAll,
+      letters,
+      memories,
+      relationshipHistory,
+      new Date(),
+    )
+    const html = renderYearbookHtml(snapshot, uiLanguage)
     await saveTextFileWithFallback({
       title: 'Save yearbook',
       content: html,
       defaultFileName: buildYearbookFilename(uiLanguage),
     })
   } catch (err) {
-    console.warn('[yearbook] save failed:', err)
+    // Wraps both chunk-load failure (offline / cache poisoning) and the
+    // save-dialog rejection. Either way, button click should not become
+    // an unhandled promise.
+    console.warn('[yearbook] failed:', err)
   }
 }
 
@@ -297,13 +300,18 @@ function MoodChart({ bins, uiLanguage }: { bins: DailyAffectBin[]; uiLanguage: U
   const lastDay = bins[bins.length - 1].day
   const firstMs = Date.parse(firstDay)
   const lastMs = Date.parse(lastDay)
-  const span = Math.max(lastMs - firstMs, 1)
+  // Defensive: if either end is NaN, fall back to a unit-span placeholder
+  // so projectX returns deterministic finite values instead of poisoning
+  // the SVG path with `NaN,NaN`.
+  const safeFirstMs = Number.isFinite(firstMs) ? firstMs : 0
+  const safeLastMs = Number.isFinite(lastMs) ? lastMs : safeFirstMs + 1
+  const span = Math.max(safeLastMs - safeFirstMs, 1)
   const innerWidth = CHART_WIDTH - 2 * PAD_X
   const innerHeight = CHART_HEIGHT - 2 * PAD_Y
 
   function projectX(day: string): number {
     const t = Date.parse(day)
-    const ratio = Number.isFinite(t) ? (t - firstMs) / span : 0
+    const ratio = Number.isFinite(t) ? (t - safeFirstMs) / span : 0
     return PAD_X + ratio * innerWidth
   }
 

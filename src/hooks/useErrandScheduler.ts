@@ -15,6 +15,16 @@ import type { AppSettings, MemoryRecallContext } from '../types'
 const POLL_INTERVAL_MS = 5 * 60 * 1000  // 5 min — gentle on CPU and on the LLM bill
 
 /**
+ * Module-level lock so a slow-running errand (60 s+ agent loop) doesn't
+ * let the next 5-min tick start a *second* errand in parallel against
+ * the same stale runner-state snapshot. `findRunnableErrand` already
+ * skips errands in 'running' status, so the same errand can't be picked
+ * twice — but a different queued errand could, bypassing the nightly
+ * budget cap. The lock fixes that.
+ */
+let runningTick = false
+
+/**
  * Errand mode is the only place we run the agent loop without a recall
  * context. The user's prompt is the goal; we don't try to weave in
  * past memory because errands are task-shaped (research, summarize,
@@ -58,6 +68,7 @@ export function useErrandScheduler({ settings }: UseErrandSchedulerOptions) {
 
     const tick = async () => {
       if (stopped) return
+      if (runningTick) return  // already running an errand from a prior tick
 
       const errand = findRunnableErrand()
       if (!errand) return
@@ -76,22 +87,31 @@ export function useErrandScheduler({ settings }: UseErrandSchedulerOptions) {
         memoryContext: EMPTY_MEMORY,
       })
 
+      runningTick = true
       try {
-        await runErrand(errand, {
-          executeTurn: executor,
-          uiLanguage: s.uiLanguage,
-        })
-      } catch (err) {
-        // runErrand catches its own agent-loop errors and writes them to
-        // the store; this catches an outer surprise (executor build failure
-        // etc.) so the scheduler stays alive.
-        console.warn('[errand] run failed unexpectedly:', err)
-      }
+        try {
+          await runErrand(errand, {
+            executeTurn: executor,
+            uiLanguage: s.uiLanguage,
+          })
+        } catch (err) {
+          // runErrand catches its own agent-loop errors and writes them to
+          // the store; this catches an outer surprise (executor build
+          // failure etc.) so the scheduler stays alive.
+          console.warn('[errand] run failed unexpectedly:', err)
+        }
 
-      if (stopped) return
-      writeErrandRunnerState(
-        recordRun(state, decision.nightAnchor, new Date().toISOString()),
-      )
+        if (stopped) return
+        // Re-read the runner state inside the lock so any concurrent
+        // writes outside the scheduler (none today, defensive) don't get
+        // overwritten by our stale snapshot. Then record this run.
+        const fresh = readErrandRunnerState()
+        writeErrandRunnerState(
+          recordRun(fresh, decision.nightAnchor, new Date().toISOString()),
+        )
+      } finally {
+        runningTick = false
+      }
     }
 
     void tick()

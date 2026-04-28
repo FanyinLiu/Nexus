@@ -86,7 +86,14 @@ function persist(errands: ErrandRecord[]): void {
   // Newest first, capped. delivered/completed/failed older than the cap
   // get dropped; queued/running entries are never automatically dropped
   // because losing them would surprise the user.
-  const sorted = [...errands].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+  // NaN-safe comparator: a malformed createdAt sorts to the end rather
+  // than producing nondeterministic ordering (NaN - n is NaN, which JS's
+  // sort treats as 0, causing unstable swaps).
+  const sortKey = (s: string): number => {
+    const t = Date.parse(s)
+    return Number.isFinite(t) ? t : -Infinity
+  }
+  const sorted = [...errands].sort((a, b) => sortKey(b.createdAt) - sortKey(a.createdAt))
   writeJson(ERRAND_STORE_STORAGE_KEY, sorted.slice(0, MAX_KEPT))
 }
 

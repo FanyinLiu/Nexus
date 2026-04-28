@@ -255,6 +255,13 @@ function renderMonthStrip(month: MonthlyBucket): string {
   }
   const firstMs = Date.parse(month.bins[0].day)
   const lastMs = Date.parse(month.bins[month.bins.length - 1].day)
+  // Defensive guard: a malformed day key would propagate NaN through
+  // every projectX call and emit `NaN,NaN` SVG paths. binSamplesByDay
+  // produces stable YYYY-MM-DD keys today, but the guard makes the
+  // rendering total under any future bin shape.
+  if (!Number.isFinite(firstMs) || !Number.isFinite(lastMs)) {
+    return `<svg viewBox="0 0 ${STRIP_W} ${STRIP_H}" class="strip-empty" role="img" aria-label="empty"></svg>`
+  }
   const span = Math.max(lastMs - firstMs, 1)
   const innerW = STRIP_W - 2 * STRIP_PAD_X
   const innerH = STRIP_H - 2 * STRIP_PAD_Y

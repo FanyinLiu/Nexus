@@ -6,7 +6,6 @@ import {
   type ErrandRecord,
   type ErrandStatus,
 } from '../../features/agent/errandStore'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { UiLanguage } from '../../types'
 
 interface ErrandsSectionProps {
@@ -101,9 +100,10 @@ export const ErrandsSection = memo(function ErrandsSection({
     refresh()
   }
 
-  const ti = (key: string) =>
-    pickTranslatedUiText(uiLanguage, `settings.errands.${key}` as never, undefined)
-  void ti  // 5-locale i18n key path is not yet wired; use COPY directly for now
+  // 5-locale strings come from the inline COPY table below; not wired
+  // through pickTranslatedUiText yet. If a future iteration centralises
+  // the keys, restore a `ti` helper here that returns proper i18n keys
+  // (NOT `as never` — declare the key shape in src/types/i18nKeys/settings.ts).
 
   const grouped: Partial<Record<ErrandStatus, ErrandRecord[]>> = {}
   for (const e of errands) {

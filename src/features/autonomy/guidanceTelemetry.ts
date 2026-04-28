@@ -49,7 +49,19 @@ export interface GuidanceTelemetryEntry {
   beforeValence: number | null
 }
 
-const MAX_KEPT = 500
+/**
+ * Hard cap on stored entries — a runaway-write safety belt only. The
+ * primary retention is time-based (see RETENTION_MS) so a sustained
+ * single-state pattern can't push older cross-kind data out of the buffer
+ * before the analysis pass has a chance to read it. 5000 covers ~13
+ * months of dense conversation at the worst end (~1 fire / 5 messages).
+ */
+const HARD_CAP = 5000
+/**
+ * 1-year time-based retention. Matches the userAffectTimeline window so
+ * the analysis pass has a comparable horizon on both sides of the join.
+ */
+const RETENTION_MS = 365 * 24 * 60 * 60 * 1000
 
 const VALID_KINDS: ReadonlySet<string> = new Set<GuidanceKind>([
   'affect:stuck-low',
@@ -94,15 +106,23 @@ export interface RecordGuidanceFiredInput {
 export function recordGuidanceFired(input: RecordGuidanceFiredInput): void {
   if (typeof window === 'undefined') return
   const entries = loadGuidanceTelemetry()
-  const ts = (input.now ?? new Date()).toISOString()
+  const now = input.now ?? new Date()
+  const ts = now.toISOString()
   const next: GuidanceTelemetryEntry = {
     ts,
     kind: input.kind,
     beforeValence: input.beforeValence,
   }
-  // Append + cap. Drop oldest first when over budget.
-  const merged = [...entries, next]
-  const capped = merged.length > MAX_KEPT ? merged.slice(merged.length - MAX_KEPT) : merged
+  // Time-based prune first (drop anything older than 1 year), then
+  // hard-cap as a safety belt. Time-based is primary so a sustained
+  // single-state pattern can't evict cross-kind data within the window.
+  const cutoffMs = now.getTime() - RETENTION_MS
+  const fresh = entries.filter((e) => {
+    const t = Date.parse(e.ts)
+    return Number.isFinite(t) && t >= cutoffMs
+  })
+  const merged = [...fresh, next]
+  const capped = merged.length > HARD_CAP ? merged.slice(merged.length - HARD_CAP) : merged
   try {
     writeJson(GUIDANCE_TELEMETRY_STORAGE_KEY, capped)
   } catch {

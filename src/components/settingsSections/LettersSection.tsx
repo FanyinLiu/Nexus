@@ -10,17 +10,22 @@ import type { UiLanguage } from '../../types'
  * never export.
  */
 async function exportLetterToFile(letter: SavedLetter): Promise<void> {
-  const { buildLetterFilename, renderLetterHtml } = await import('../../features/letter/letterExport')
-  const html = renderLetterHtml(letter)
-  const filename = buildLetterFilename(letter)
   try {
+    const { buildLetterFilename, renderLetterHtml } = await import(
+      '../../features/letter/letterExport'
+    )
+    const html = renderLetterHtml(letter)
+    const filename = buildLetterFilename(letter)
     await saveTextFileWithFallback({
       title: 'Save letter',
       content: html,
       defaultFileName: filename,
     })
   } catch (err) {
-    console.warn('[letter-export] save failed:', err)
+    // Wraps both chunk-load failure (offline / cache poisoning) and the
+    // save-dialog rejection. Either way, button click should not become
+    // an unhandled promise.
+    console.warn('[letter-export] failed:', err)
   }
 }
 
