@@ -132,3 +132,130 @@ test('build: unknown locale falls back to en-US', () => {
   const out = buildRepairGuidance({ uiLanguage: 'eo' as never, ruptureKind: 'contempt' })
   assert.match(out, /contempt|conservative/i)
 })
+
+// ── M1.7 phase 2: defensiveness ──────────────────────────────────────────
+
+test('detect: defensiveness — "I never said" pattern', () => {
+  const out = detectRupture("I never said that — that's not what I meant", 'en-US')
+  assert.equal(out.kind, 'defensiveness')
+})
+
+test('detect: defensiveness — "you\'re misunderstanding" pattern', () => {
+  const out = detectRupture("you're misunderstanding me again", 'en-US')
+  assert.equal(out.kind, 'defensiveness')
+})
+
+test('detect: defensiveness — soft signal alone (I\'m just) does not fire', () => {
+  // weight 1 only → score 1 < threshold 2.
+  const out = detectRupture("I'm just thinking out loud", 'en-US')
+  assert.equal(out.kind, null)
+})
+
+test('detect: defensiveness — zh-CN "我没说"', () => {
+  const out = detectRupture("我又没说那个，你误会了", 'zh-CN')
+  assert.equal(out.kind, 'defensiveness')
+})
+
+test('detect: defensiveness — ja "誤解"', () => {
+  const out = detectRupture("そんなこと言ってない、誤解してる", 'ja')
+  assert.equal(out.kind, 'defensiveness')
+})
+
+test('detect: criticism takes precedence over defensiveness on multi-fire', () => {
+  // "you always" (criticism 2) + "I never said" (defensiveness 2) — criticism wins.
+  const out = detectRupture("you always do that — I never said anything like that", 'en-US')
+  assert.equal(out.kind, 'criticism')
+})
+
+// ── M1.7 phase 2: stonewalling ───────────────────────────────────────────
+
+test('detect: stonewalling — short reply after rich priors', () => {
+  const priorUserMessages = [
+    'I had a really long day at work today and the meeting ran way over schedule',
+    'She mentioned the deadline again, which I think is unrealistic given the scope',
+    'Anyway, I think I just need to step back and figure out the next move carefully',
+  ]
+  const out = detectRupture('ok', 'en-US', { priorUserMessages })
+  assert.equal(out.kind, 'stonewalling')
+})
+
+test('detect: stonewalling — does not fire when prior messages were also short', () => {
+  const priorUserMessages = ['ok', 'sure', 'yep']
+  const out = detectRupture('hmm', 'en-US', { priorUserMessages })
+  assert.equal(out.kind, null)
+})
+
+test('detect: stonewalling — does not fire when latest is not very short', () => {
+  const priorUserMessages = [
+    'I had a really long day at work today and meetings ran over schedule',
+    'She mentioned the deadline again, I think it is unrealistic given the scope',
+    'Anyway I think I just need to step back and figure out the next move carefully',
+  ]
+  const out = detectRupture('let me think about it for a bit longer', 'en-US', {
+    priorUserMessages,
+  })
+  assert.equal(out.kind, null)
+})
+
+test('detect: stonewalling — too few priors → no fire', () => {
+  const out = detectRupture('ok', 'en-US', { priorUserMessages: ['hello there how are you'] })
+  assert.equal(out.kind, null)
+})
+
+test('detect: stonewalling — no priors at all → no fire', () => {
+  const out = detectRupture('ok', 'en-US')
+  assert.equal(out.kind, null)
+})
+
+test('detect: criticism takes precedence over stonewalling', () => {
+  // Latest is short AND a criticism pattern hit — criticism wins.
+  const priorUserMessages = [
+    'I had a really long day at work today and meetings ran over schedule',
+    'She mentioned the deadline again, I think it is unrealistic given the scope',
+    'Anyway I think I just need to step back and figure out the next move carefully',
+  ]
+  const out = detectRupture("you're so dumb", 'en-US', { priorUserMessages })
+  assert.equal(out.kind, 'criticism')
+})
+
+// ── phase 2 prose ────────────────────────────────────────────────────────
+
+test('build: defensiveness produces distinct prose, asks to drop the prior point', () => {
+  const out = buildRepairGuidance({ uiLanguage: 'en-US', ruptureKind: 'defensiveness' })
+  assert.match(out, /<rupture_repair>/)
+  assert.match(out, /[Dd]rop the prior point/)
+  // Forbids the "what I meant was" pattern explicitly
+  assert.match(out, /what I meant was/i)
+})
+
+test('build: stonewalling prose explicitly forbids "is everything okay"', () => {
+  const out = buildRepairGuidance({ uiLanguage: 'en-US', ruptureKind: 'stonewalling' })
+  assert.match(out, /<rupture_repair>/)
+  assert.match(out, /is everything okay/i)
+  // Asks to match the new shorter register
+  assert.match(out, /shorter register|shorter|do not produce a long/i)
+})
+
+test('build: each of 5 locales produces non-empty distinct prose for defensiveness', () => {
+  const locales = ['en-US', 'zh-CN', 'zh-TW', 'ja', 'ko'] as const
+  const bodies = locales.map((l) =>
+    buildRepairGuidance({ uiLanguage: l, ruptureKind: 'defensiveness' }),
+  )
+  for (const b of bodies) assert.ok(b.length > 0)
+  assert.equal(new Set(bodies).size, locales.length)
+})
+
+test('build: each of 5 locales produces non-empty distinct prose for stonewalling', () => {
+  const locales = ['en-US', 'zh-CN', 'zh-TW', 'ja', 'ko'] as const
+  const bodies = locales.map((l) =>
+    buildRepairGuidance({ uiLanguage: l, ruptureKind: 'stonewalling' }),
+  )
+  for (const b of bodies) assert.ok(b.length > 0)
+  assert.equal(new Set(bodies).size, locales.length)
+})
+
+test('build: all four kinds produce mutually-distinct prose for the same locale', () => {
+  const kinds = ['criticism', 'contempt', 'defensiveness', 'stonewalling'] as const
+  const bodies = kinds.map((k) => buildRepairGuidance({ uiLanguage: 'en-US', ruptureKind: k }))
+  assert.equal(new Set(bodies).size, kinds.length)
+})

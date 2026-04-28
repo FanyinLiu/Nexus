@@ -405,14 +405,25 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           relationshipPromptText: dependencies.ctx.getRelationshipPromptText?.(),
           rhythmPromptText: dependencies.ctx.getRhythmPromptText?.(),
           affectGuidancePromptText: dependencies.ctx.getAffectGuidancePromptText?.(),
-          // Gottman rupture/repair (M1.7). Detect on the latest user
-          // message; inject repair posture for THIS turn when the score
-          // crosses the conservative threshold. Empty string when no
-          // rupture — filter(Boolean) drops it. Silent telemetry on fire.
+          // Gottman rupture/repair (M1.7 phase 1: criticism / contempt
+          // from single-message regex; phase 2: defensiveness via
+          // single-message regex + stonewalling via brevity-drop against
+          // the last few user messages). Empty string when no rupture —
+          // filter(Boolean) drops it. Silent telemetry on fire.
           repairGuidancePromptText: (() => {
-            const lastUser = [...nextMessages].reverse().find((m) => m.role === 'user')
+            const userMessages = nextMessages.filter((m) => m.role === 'user')
+            const lastUser = userMessages[userMessages.length - 1]
             if (!lastUser?.content) return ''
-            const result = detectRupture(lastUser.content, currentSettings.uiLanguage)
+            // Prior 3 user messages (newest of the priors last) — used by
+            // stonewalling detection to compare brevity against a richer
+            // baseline.
+            const priorUserMessages = userMessages
+              .slice(0, -1)
+              .slice(-3)
+              .map((m) => m.content)
+            const result = detectRupture(lastUser.content, currentSettings.uiLanguage, {
+              priorUserMessages,
+            })
             if (result.kind !== null) {
               recordGuidanceFired({
                 kind: `rupture:${result.kind}` as const,

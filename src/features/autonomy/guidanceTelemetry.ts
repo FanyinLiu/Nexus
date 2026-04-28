@@ -31,6 +31,8 @@ export type GuidanceKind =
   | 'affect:steady-warm'
   | 'rupture:criticism'
   | 'rupture:contempt'
+  | 'rupture:defensiveness'
+  | 'rupture:stonewalling'
 
 export interface GuidanceTelemetryEntry {
   /** ISO timestamp the guidance was injected into the prompt. */
