@@ -230,14 +230,18 @@ test('tts:completed without resume schedules no restart', () => {
   assert.equal(countEffect(result.effects, 'restart_voice'), 0)
 })
 
-test('tts:interrupted drops to IDLE with no effects', () => {
+test('tts:interrupted drops to IDLE and resets mood (parity with tts:completed/error)', () => {
+  // Audit fix: previously this transition emitted no effects, leaving the
+  // pet's mood stuck on whatever it was during SPEAKING (e.g. "happy").
+  // Now matches the tts:completed and tts:error transitions which both
+  // dispatch set_mood: idle.
   const initial = withState(createInitialVoiceSessionState(), VoiceSessionStates.SPEAKING)
   const result = reduceVoiceSession(initial, {
     type: 'tts:interrupted',
     speechGeneration: 1,
   })
   assert.equal(result.state.state, VoiceSessionStates.IDLE)
-  assert.deepEqual(result.effects, [])
+  assert.deepEqual(result.effects, [{ type: 'set_mood', mood: 'idle' }])
 })
 
 test('tts:error with resume schedules restart_voice at the 200ms delay', () => {

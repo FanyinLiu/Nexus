@@ -91,7 +91,11 @@ export function formatOnThisDayPromptHint(
   uiLanguage: string,
 ): string {
   const copy = pickCopy(uiLanguage)
-  const intro = copy.intro[candidate.gap].replace('{snippet}', trimSnippet(candidate.content))
+  // Function-form replacement: trimSnippet returns user memory content,
+  // which can contain `$&` / `$$` / `$\`` / `$'` — those would be parsed
+  // as JS replacement-string placeholders if passed as a string arg.
+  const snippet = trimSnippet(candidate.content)
+  const intro = copy.intro[candidate.gap].replace('{snippet}', () => snippet)
   const recall = `If you reference it, emit \`[recall:${candidate.memoryId}]\` inline once.`
   return `${intro} ${copy.guidance} ${recall}`
 }

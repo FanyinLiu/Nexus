@@ -54,27 +54,35 @@ export function useNotificationBridge({
       .finally(() => setChannelsLoading(false))
   }, [])
 
+  // Functional setState + ref read of latest channels avoids the
+  // capture-then-await-then-write race where two rapid edits both
+  // computed `next` from the same stale `channels` snapshot. The IPC
+  // call still receives the post-merge list because it reads from the
+  // latest state via the ref.
+  const channelsRef = useRef(channels)
+  useEffect(() => { channelsRef.current = channels }, [channels])
+
   const addChannel = useCallback(async (draft: Omit<NotificationChannel, 'id'>) => {
     const newChannel: NotificationChannel = {
       ...draft,
       id: crypto.randomUUID().slice(0, 8),
     }
-    const next = [...channels, newChannel]
+    const next = [...channelsRef.current, newChannel]
     await window.desktopPet?.setNotificationChannels?.(next)
     setChannels(next)
-  }, [channels])
+  }, [])
 
   const updateChannel = useCallback(async (id: string, patch: Partial<NotificationChannel>) => {
-    const next = channels.map((ch) => ch.id === id ? { ...ch, ...patch } : ch)
+    const next = channelsRef.current.map((ch) => ch.id === id ? { ...ch, ...patch } : ch)
     await window.desktopPet?.setNotificationChannels?.(next)
     setChannels(next)
-  }, [channels])
+  }, [])
 
   const removeChannel = useCallback(async (id: string) => {
-    const next = channels.filter((ch) => ch.id !== id)
+    const next = channelsRef.current.filter((ch) => ch.id !== id)
     await window.desktopPet?.setNotificationChannels?.(next)
     setChannels(next)
-  }, [channels])
+  }, [])
 
   // ── Bridge lifecycle ───────────────────────────────────────────────────────
 

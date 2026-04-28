@@ -66,6 +66,13 @@ export function evaluateCondition(
 
     case 'idle_threshold':
       return snapshot.idleSeconds >= condition.seconds
+    default: {
+      // Exhaustiveness guard — adding a new ContextTriggerCondition.kind
+      // without an arm becomes a compile error here.
+      const _exhaustive: never = condition
+      void _exhaustive
+      return false
+    }
   }
 }
 

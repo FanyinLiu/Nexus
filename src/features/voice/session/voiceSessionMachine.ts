@@ -161,10 +161,12 @@ export function reduceVoiceSession(
     case 'tts:interrupted':
       // tts:interrupted can reach us from SPEAKING (caller aborted before
       // barge-in was observed) or BARGE_IN (VAD already noticed the user
-      // talking). Either way the TTS is down — drop to IDLE.
+      // talking). Either way the TTS is down — drop to IDLE and reset
+      // the pet mood (parity with tts:completed / tts:error; otherwise
+      // a barge-in leaves the avatar stuck on the "happy/talking" mood).
       return {
         state: { ...current, state: VoiceSessionStates.IDLE },
-        effects: [],
+        effects: [{ type: 'set_mood', mood: 'idle' }],
       }
 
     case 'tts:error': {

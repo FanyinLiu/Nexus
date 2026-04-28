@@ -88,8 +88,14 @@ function EmotionChart({ samples }: { samples: EmotionSample[] }) {
     )
   }
 
-  const firstTs = Date.parse(samples[0].ts)
-  const lastTs = Date.parse(samples[samples.length - 1].ts)
+  const firstTsRaw = Date.parse(samples[0].ts)
+  const lastTsRaw = Date.parse(samples[samples.length - 1].ts)
+  // Defensive: a malformed sample timestamp would propagate NaN through
+  // every projectX call and emit `NaN,NaN` SVG paths. Falls back to a
+  // unit-span placeholder so the chart degrades to overlapping points
+  // instead of disappearing.
+  const firstTs = Number.isFinite(firstTsRaw) ? firstTsRaw : 0
+  const lastTs = Number.isFinite(lastTsRaw) ? lastTsRaw : firstTs + 1
   const span = Math.max(lastTs - firstTs, 1)
   const innerWidth = EMOTION_CHART_WIDTH - 2 * EMOTION_PAD_X
   const innerHeight = EMOTION_CHART_HEIGHT - 2 * EMOTION_PAD_Y
@@ -178,8 +184,10 @@ function RelationshipChart({ samples }: { samples: RelationshipSample[] }) {
     )
   }
 
-  const firstTs = Date.parse(samples[0].ts)
-  const lastTs = Date.parse(samples[samples.length - 1].ts)
+  const firstTsRaw = Date.parse(samples[0].ts)
+  const lastTsRaw = Date.parse(samples[samples.length - 1].ts)
+  const firstTs = Number.isFinite(firstTsRaw) ? firstTsRaw : 0
+  const lastTs = Number.isFinite(lastTsRaw) ? lastTsRaw : firstTs + 1
   const span = Math.max(lastTs - firstTs, 1)
   const innerWidth = REL_CHART_WIDTH - 2 * REL_PAD_X
   const innerHeight = REL_CHART_HEIGHT - 2 * REL_PAD_Y

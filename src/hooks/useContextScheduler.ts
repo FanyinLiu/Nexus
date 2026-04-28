@@ -97,6 +97,10 @@ export function useContextScheduler({
     const triggered = findTriggeredTasks(tasksRef.current, snapshot)
 
     if (triggered.length > 0) {
+      // Side-effect (onActionRef) must happen OUTSIDE the setState
+      // updater — React StrictMode runs the updater twice for purity
+      // checks, which would double-fire actions. Pure updater first,
+      // then dispatch actions once after.
       setTasks((prev) => {
         const next = [...prev]
         for (const task of triggered) {
@@ -104,10 +108,12 @@ export function useContextScheduler({
           if (idx >= 0) {
             next[idx] = markTaskTriggered(next[idx])
           }
-          onActionRef.current(task.action, task)
         }
         return next
       })
+      for (const task of triggered) {
+        onActionRef.current(task.action, task)
+      }
     }
   }, [settingsRef, focusStateRef, idleSecondsRef])
 

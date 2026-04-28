@@ -27,15 +27,19 @@ export const LorebooksSection = memo(function LorebooksSection({
   const [entries, setEntries] = useState<LorebookEntry[]>(() => cloneEntries(loadLorebookEntries()))
   const [draftKeywords, setDraftKeywords] = useState<Record<string, string>>({})
 
-  const persist = useCallback((next: LorebookEntry[]) => {
-    setEntries(cloneEntries(next))
-    saveLorebookEntries(next)
-  }, [])
-
+  // Functional setState in every mutator so two rapid edits across
+  // different rows can't both compute their `next` array from the same
+  // pre-edit snapshot of `entries`. The previous closure-over-`entries`
+  // pattern dropped the first edit when a second one fired before the
+  // first re-render landed.
   const updateEntry = useCallback((id: string, patch: Partial<LorebookEntry>) => {
     const now = new Date().toISOString()
-    persist(entries.map((entry) => (entry.id === id ? { ...entry, ...patch, updatedAt: now } : entry)))
-  }, [entries, persist])
+    setEntries((current) => {
+      const next = current.map((entry) => (entry.id === id ? { ...entry, ...patch, updatedAt: now } : entry))
+      saveLorebookEntries(next)
+      return cloneEntries(next)
+    })
+  }, [])
 
   const addEntry = useCallback(() => {
     const now = new Date().toISOString()
@@ -49,12 +53,20 @@ export const LorebooksSection = memo(function LorebooksSection({
       createdAt: now,
       updatedAt: now,
     }
-    persist([fresh, ...entries])
-  }, [entries, persist])
+    setEntries((current) => {
+      const next = [fresh, ...current]
+      saveLorebookEntries(next)
+      return cloneEntries(next)
+    })
+  }, [])
 
   const removeEntry = useCallback((id: string) => {
-    persist(entries.filter((entry) => entry.id !== id))
-  }, [entries, persist])
+    setEntries((current) => {
+      const next = current.filter((entry) => entry.id !== id)
+      saveLorebookEntries(next)
+      return cloneEntries(next)
+    })
+  }, [])
 
   const totalEnabled = useMemo(
     () => entries.filter((entry) => entry.enabled && entry.keywords.length > 0 && entry.content.trim()).length,

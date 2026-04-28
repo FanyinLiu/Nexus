@@ -66,6 +66,12 @@ export const UpdaterPanel = memo(function UpdaterPanel({ uiLanguage }: UpdaterPa
       statusText = `${ti('settings.updater.error_prefix')}${event.message}`
       statusTone = 'error'
       break
+    default:
+      // Defensive fallback if a new event.type is added without a switch
+      // arm — better than ReferenceError on the unset `statusText` below.
+      statusText = ti('settings.updater.idle')
+      statusTone = 'idle'
+      break
   }
 
   const showInstallButton = event.type === 'downloaded'

@@ -115,9 +115,13 @@ export function useBracketScheduler({
 
       try {
         await window.desktopPet?.showProactiveNotification?.(notification)
+        // Re-read state inside the lock so a concurrent write outside
+        // the scheduler doesn't get clobbered by our pre-await snapshot
+        // (matches the useErrandScheduler fix from this audit cycle).
+        const fresh = readBracketState()
         writeJson(
           PROACTIVE_BRACKET_STATE_STORAGE_KEY,
-          recordFire(state, decision.bracket, Date.now()),
+          recordFire(fresh, decision.bracket, Date.now()),
         )
         if (deliveredErrandId) {
           markDelivered(deliveredErrandId)
