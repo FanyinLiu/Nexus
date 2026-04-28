@@ -45,7 +45,8 @@ import { useLetterScheduler } from '../../hooks/useLetterScheduler.ts'
 import { useOpenArcScheduler } from '../../hooks/useOpenArcScheduler.ts'
 import { loadUserAffectWindow } from '../../features/autonomy/userAffectTimeline.ts'
 import { computeAffectSnapshot } from '../../features/autonomy/affectDynamics.ts'
-import { buildAffectGuidance } from '../../features/autonomy/affectGuidance.ts'
+import { buildAffectGuidance, classifyAffectGuidance } from '../../features/autonomy/affectGuidance.ts'
+import { recordGuidanceFired } from '../../features/autonomy/guidanceTelemetry.ts'
 import { useMcpServerSync } from '../../hooks/useMcpServerSync'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
 import { AUTONOMY_GOALS_STORAGE_KEY, pruneLegacyStorageKeys, readJson, writeJson } from '../../lib/storage'
@@ -280,12 +281,21 @@ export function useAppController() {
     // on demand each turn: 14-day window establishes the trait-level baseline
     // (M1.4 stuck-low / volatile / steady-warm); 3-day window is the
     // state-level recent reading the classifier compares against to detect a
-    // recent-drop (M1.5). Returns '' when nothing notable applies.
+    // recent-drop (M1.5). Returns '' when nothing notable applies. Silent
+    // telemetry: when a non-'none' state fires, record it for later threshold
+    // analysis — never user-facing (see feedback_nexus_silent_emotion).
     getAffectGuidancePromptText: () => {
       const longSamples = loadUserAffectWindow(14)
       const recentSamples = loadUserAffectWindow(3)
       const snapshot = computeAffectSnapshot(longSamples)
       const recentSnapshot = computeAffectSnapshot(recentSamples)
+      const state = classifyAffectGuidance({ snapshot, recentSnapshot })
+      if (state !== 'none') {
+        recordGuidanceFired({
+          kind: `affect:${state}` as const,
+          beforeValence: snapshot.baselineValence,
+        })
+      }
       return buildAffectGuidance({
         uiLanguage: settingsRef.current.uiLanguage,
         snapshot,

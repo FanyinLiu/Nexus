@@ -9,6 +9,7 @@ import { loadSubagentSettings } from '../../lib/storage'
 import { buildSpawnSubagentDescriptor } from '../../features/autonomy/subagents/spawnSubagentTool'
 import { detectRupture } from '../../features/autonomy/ruptureDetection'
 import { buildRepairGuidance } from '../../features/autonomy/repairGuidance'
+import { recordGuidanceFired } from '../../features/autonomy/guidanceTelemetry'
 import { recordUsage } from '../../features/metering/contextMeter'
 import { formatGameContext, loadGameContext } from '../../features/context/gameContext'
 import {
@@ -407,11 +408,17 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           // Gottman rupture/repair (M1.7). Detect on the latest user
           // message; inject repair posture for THIS turn when the score
           // crosses the conservative threshold. Empty string when no
-          // rupture — filter(Boolean) drops it.
+          // rupture — filter(Boolean) drops it. Silent telemetry on fire.
           repairGuidancePromptText: (() => {
             const lastUser = [...nextMessages].reverse().find((m) => m.role === 'user')
             if (!lastUser?.content) return ''
             const result = detectRupture(lastUser.content, currentSettings.uiLanguage)
+            if (result.kind !== null) {
+              recordGuidanceFired({
+                kind: `rupture:${result.kind}` as const,
+                beforeValence: null,
+              })
+            }
             return buildRepairGuidance({
               uiLanguage: currentSettings.uiLanguage,
               ruptureKind: result.kind,
