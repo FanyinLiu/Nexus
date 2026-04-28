@@ -109,6 +109,13 @@ export type AssistantReplyRequestOptions = {
    */
   rhythmPromptText?: string
   /**
+   * Affect-aware guidance for the current turn — derived from the user's
+   * last 14 days of VAD samples (Kuppens 2015 dynamics). Empty string when
+   * the snapshot doesn't trigger any state. See `affectGuidance.ts` for the
+   * classifier and 5-locale prose.
+   */
+  affectGuidancePromptText?: string
+  /**
    * Fired whenever a built-in tool call (web_search / weather /
    * open_external) produces a successful BuiltInToolResult during the
    * tool-call loop. Host code (useChat / assistantReply) uses this to
@@ -233,6 +240,9 @@ export async function buildSystemPrompt(
   // 用户作息感知：紧贴 emotion，让模型自然对比 header 里的 currentDateTime
   // —— "现在是不是用户的活跃时段"是 rhythm 学习的核心价值。
   const rhythmSection = options.rhythmPromptText ?? ''
+  // 用户 14 天 affect snapshot 推导的 guidance（stuck-low / volatile / steady-warm）。
+  // 紧贴 rhythm —— 同样是"用户当下的 long-window 状态"维度。
+  const affectGuidanceSection = options.affectGuidancePromptText ?? ''
 
   const desktopContextSection = settings.contextAwarenessEnabled
     ? formatDesktopContext(options.desktopContext)
@@ -261,6 +271,7 @@ export async function buildSystemPrompt(
     headerText,
     emotionSection,
     rhythmSection,
+    affectGuidanceSection,
     responseStyleSection,
     expressionGuideSection,
     firstImpressionSection,

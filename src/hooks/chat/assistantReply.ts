@@ -136,6 +136,7 @@ type AssistantReplyRunnerDependencies = {
     | 'getEmotionSnapshot'
     | 'getRelationshipPromptText'
     | 'getRhythmPromptText'
+    | 'getAffectGuidancePromptText'
     | 'loadDesktopContextSnapshot'
     | 'queuePetPerformanceCue'
     | 'resetNoSpeechRestartCount'
@@ -400,6 +401,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           emotionPromptText: dependencies.ctx.getEmotionPromptText?.(),
           relationshipPromptText: dependencies.ctx.getRelationshipPromptText?.(),
           rhythmPromptText: dependencies.ctx.getRhythmPromptText?.(),
+          affectGuidancePromptText: dependencies.ctx.getAffectGuidancePromptText?.(),
           milestonePromptText: dependencies.ctx.consumeMilestonePromptText?.(),
           anniversaryPromptText: dependencies.ctx.consumeAnniversaryPromptText?.(currentSettings.uiLanguage),
           onThisDayPromptText: dependencies.ctx.consumeOnThisDayPromptText?.(currentSettings.uiLanguage, nextMemories),

@@ -98,6 +98,13 @@ export type UseChatContext = {
    * tolerant of being unset.
    */
   getRhythmPromptText?: () => string
+  /**
+   * Get an affect-shaped guidance fragment for this turn — derived from the
+   * user's last 14 days of affect samples (Kuppens 2015 dynamics: baseline,
+   * variability, inertia). Returns '' when nothing notable applies. Same ref-
+   * wrapper pattern as the other getters; callers tolerate it being unset.
+   */
+  getAffectGuidancePromptText?: () => string
   getEmotionSnapshot?: () => { energy: number; warmth: number; curiosity: number; concern: number } | undefined
   /**
    * Consume a one-shot milestone instruction (fires only on the turn a

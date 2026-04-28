@@ -42,6 +42,9 @@ import { useBracketScheduler } from '../../hooks/useBracketScheduler.ts'
 import { useErrandScheduler } from '../../hooks/useErrandScheduler.ts'
 import { useFutureCapsuleScheduler } from '../../hooks/useFutureCapsuleScheduler.ts'
 import { useLetterScheduler } from '../../hooks/useLetterScheduler.ts'
+import { loadUserAffectWindow } from '../../features/autonomy/userAffectTimeline.ts'
+import { computeAffectSnapshot } from '../../features/autonomy/affectDynamics.ts'
+import { buildAffectGuidance } from '../../features/autonomy/affectGuidance.ts'
 import { useMcpServerSync } from '../../hooks/useMcpServerSync'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
 import { AUTONOMY_GOALS_STORAGE_KEY, readJson, writeJson } from '../../lib/storage'
@@ -268,6 +271,18 @@ export function useAppController() {
     getEmotionPromptText: () => emotionPromptGetterRef.current(),
     getRelationshipPromptText: () => relationshipPromptGetterRef.current(),
     getRhythmPromptText: () => rhythmPromptGetterRef.current(),
+    // Affect guidance has no hook-ordering dependency on autonomy — the data
+    // sources (userAffectTimeline + affectDynamics) are pure modules. Compute
+    // on demand each turn over the last 14 days; returns '' when nothing
+    // notable applies.
+    getAffectGuidancePromptText: () => {
+      const samples = loadUserAffectWindow(14)
+      const snapshot = computeAffectSnapshot(samples)
+      return buildAffectGuidance({
+        uiLanguage: settingsRef.current.uiLanguage,
+        snapshot,
+      })
+    },
     getEmotionSnapshot: () => emotionSnapshotGetterRef.current(),
     consumeMilestonePromptText: () => milestoneConsumerRef.current(),
     consumeAnniversaryPromptText: (uiLanguage: string) => anniversaryConsumerRef.current(uiLanguage),
