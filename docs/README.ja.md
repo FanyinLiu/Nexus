@@ -60,13 +60,34 @@ Electron + React + TypeScript で構築。Windows、macOS、Linux に対応。18
 
 ---
 
-## 今回のアップデート — v0.3.1-beta.4（プレリリース）
+## 今回のアップデート — v0.3.1（安定版、2026-04-28）
 
-> **監査 + 仕上げ patch。** 記憶ストアの compaction race を修正（データ損失リスク）／MCP per-tool 承認（M2）+ workspace:set-root 承認（M3）／Settings に「About + ヘルプ」「Weekly Recap」パネルを追加／約 660 件の未翻訳日本語 UI を補完／ウェイクワードリトライのログ重複排除が実際に動作／ランタイムエラーを伴侶ボイスで言い換え。詳細は [RELEASE-NOTES-v0.3.1-beta.4.md](RELEASE-NOTES-v0.3.1-beta.4.md)（英語）を参照してください。
+> **感情の主線 + セキュリティ監査の累積リリース。** v0.3.0 以来 92 commit、4 ヶ月の検証期間、beta.1 → beta.5 が各々一つのクラスの問題を閉じてきました。詳細は [RELEASE-NOTES-v0.3.1.md](RELEASE-NOTES-v0.3.1.md)（英語）を参照。
+
+| テーマ | 内容 |
+|---|---|
+| **🧠 コンパニオンの語気が適応する** | 14 日の長窓口 + 3 日の短窓口の感情ベースラインが毎ターンのプロンプトに注入される：停滞気味なら助言を控えて受け止め優先；急な落ち込みならテンポを落とす；揺れが大きい日は方向誘導しない；安定して温かい日はリズムに合わせる。Russell 1980 + Kuppens 2015 + Trull 2008。 |
+| **💔 Gottman 関係破綻の四騎士 / 修復** | 批判 / 軽蔑 / 防衛 / 沈黙の四つを自動検出；次のターンで soft start-up + accept influence の修復姿勢を注入。**全工程は静かに変わるのみ — 「あなたのこの状態を見ている」と告げるバッジは一切出ない**。 |
+| **🔒 critical CVE 2 件をクリア** | `pixi-live2d-display` が `gh-pages`（プロトタイプ汚染）を runtime deps に誤って入れていた；`npm overrides` で CVE 修正版に強制アップグレード。 |
+| **🛡️ IPC 監査 6/7 HIGH を解消** | H2/H3/H5/H6/H7/H8 + M1/M2/M3/M5 + L3/L4/L6 全て修正、H4 は設計上 v1.0 に deferred。 |
+| **🐛 30+ 静的バグ修正** | 4 ラウンドの audit + 並列 agent によるスキャン；template-replace `$&` 解析漏れ、並行レース、StrictMode 純粋化、NaN ガード、async leak、storage 検証。 |
+| **🚦 リリース前チェックを 26 項目に拡張** | `prerelease-check.mjs` を 8 項目から 6 stage / 26 check に拡張：プロセス / コード品質 / セキュリティ / 資産 / ドキュメント遵守 / プライバシー統治。 |
+| **🧹 UI 整理** | 手紙 / タイムカプセル / 小さな用事 / 開いたままの糸 / ムードマップの 5 つの settings パネルを引き出しから外しました（基盤の scheduler は動き続けています）。「コンパニオンの感情適応はユーザーが感じるもので、設定するものではない」。 |
+
+<details>
+<summary>この安定版が含む v0.3.1-beta 系列</summary>
+
+- **beta.1** — インストーラー縮小（1.2 GB → 250 MB）
+- **beta.2** — IPC セキュリティ強化（H5 / H8 / H4 緩和）
+- **beta.3** — Live2D / thinking-mode / TTS / マルチモーダルの 4 つの回帰修正
+- **beta.4** — 監査 + 仕上げ（compaction race、ja/ko 翻訳）
+- **beta.5** — 感情主線 M1.4-1.7 + 多日 Arc + yearbook エクスポート
+
+</details>
 
 ---
 
-## 現在の安定版 — v0.3.0
+## 一つ前の安定版 — v0.3.0
 
 > **安定版リリース。** v0.2.9 → v0.3.0 累計 100+ commit、約 12,000 行差分、
 > +361 ユニットテスト。すべての変更は後方互換、旧データは自動マイグレートされます。

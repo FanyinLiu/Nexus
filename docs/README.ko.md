@@ -59,13 +59,34 @@ Electron + React + TypeScript로 구축, Windows / macOS / Linux 지원. 18+ LLM
 
 ---
 
-## 이번 업데이트 — v0.3.1-beta.4(사전 출시)
+## 이번 업데이트 — v0.3.1(안정 버전, 2026-04-28)
 
-> **감사 + 다듬기 patch.** 메모리 스토어 compaction race 수정(데이터 손실 위험); MCP per-tool 승인(M2) + workspace:set-root 승인(M3); Settings에 「소개 + 도움말」 패널과 「주간 리캡」 패널 추가; 약 660개의 미번역 한국어 UI 보완; 웨이크워드 재시도 로그 중복 제거가 실제로 동작; 런타임 오류를 동료 목소리로 의역. 자세한 내용은 [RELEASE-NOTES-v0.3.1-beta.4.md](RELEASE-NOTES-v0.3.1-beta.4.md)(영어)를 참조하세요.
+> **감정 메인라인 + 보안 감사 누적 릴리스.** v0.3.0 이후 92개 commit, 4개월 검증 기간, beta.1 → beta.5가 각각 한 가지 부류의 문제를 닫아왔습니다. 자세한 내용은 [RELEASE-NOTES-v0.3.1.md](RELEASE-NOTES-v0.3.1.md)(영어)를 참조하세요.
+
+| 주제 | 내용 |
+|---|---|
+| **🧠 동반자의 어조가 적응한다** | 14일 장 윈도우 + 3일 단 윈도우의 감정 기준선이 매 응답의 system prompt에 주입돼: 정체된 저조 상태일 때는 제안 줄이고 받아주기 우선; 급격한 하강일 땐 호흡을 늦추고; 변동이 클 땐 화제를 끌어가지 않고; 안정·따뜻할 땐 그 호흡에 맞춰. Russell 1980 + Kuppens 2015 + Trull 2008. |
+| **💔 Gottman 결렬 / 회복** | 비판 / 경멸 / 방어 / 침묵의 네 가지 Horsemen을 자동 감지; 다음 턴에 soft start-up + accept influence 회복 자세를 주입. **전 과정이 조용히 바뀔 뿐 — "이 상태를 봤어요" 같은 알림은 절대 띄우지 않음**. |
+| **🔒 critical CVE 2건 해소** | `pixi-live2d-display`가 `gh-pages`(프로토타입 오염)를 runtime deps에 잘못 포함시킨 문제; `npm overrides`로 CVE 픽스 버전으로 강제 업그레이드. |
+| **🛡️ IPC 감사 6/7 HIGH 종료** | H2/H3/H5/H6/H7/H8 + M1/M2/M3/M5 + L3/L4/L6 모두 수정, H4는 설계상 v1.0으로 deferred. |
+| **🐛 30+ 정적 버그 수정** | 4라운드 audit + 병렬 agent 정적 스캔; template-replace `$&` 누수, 동시성 레이스, StrictMode 순수성, NaN 가드, async leak, storage 검증. |
+| **🚦 릴리스 전 검사를 26항목으로 확장** | `prerelease-check.mjs`를 8항목에서 6 stage / 26 check로 확장: 프로세스 / 코드 품질 / 보안 / 자산 / 문서 준수 / 프라이버시 거버넌스. |
+| **🧹 UI 정리** | 편지 / 타임캡슐 / 심부름 / 열어둔 실 / 무드 맵 5개 settings 패널을 서랍에서 거두었습니다(기반 scheduler는 계속 동작). "동반자의 감정 적응은 사용자가 느끼는 것이지, 설정하는 것이 아니다." |
+
+<details>
+<summary>이 안정 버전이 포함하는 v0.3.1-beta 라인</summary>
+
+- **beta.1** — 설치 패키지 축소(1.2 GB → 250 MB)
+- **beta.2** — IPC 보안 강화(H5 / H8 / H4 완화)
+- **beta.3** — Live2D / thinking-mode / TTS / 멀티모달 4건 회귀 수정
+- **beta.4** — 감사 + 다듬기(compaction race, ja/ko 번역)
+- **beta.5** — 감정 메인라인 M1.4-1.7 + 다일 Arc + yearbook 내보내기
+
+</details>
 
 ---
 
-## 현재 안정 버전 — v0.3.0
+## 이전 안정 버전 — v0.3.0
 
 > **안정 버전 출시.** v0.2.9 → v0.3.0 누적 100+ commit, 약 12,000 라인 변경,
 > +361 유닛 테스트. 모든 변경은 하위 호환 — 기존 데이터는 자동 마이그레이션됩니다.
