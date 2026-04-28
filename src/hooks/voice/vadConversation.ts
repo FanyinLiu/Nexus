@@ -395,6 +395,25 @@ export async function startVadConversation(
       await session.detector.start()
     }
   } catch (error) {
+    // Partial-init cleanup: anything we wired up before throwing must
+    // be torn down here, otherwise mainVad / detector / timers / the
+    // session ref leak. Iterate every possible state.
+    if (session) {
+      session.cancelled = true
+      if (session.noSpeechTimer != null) {
+        window.clearTimeout(session.noSpeechTimer)
+        session.noSpeechTimer = null
+      }
+      if (session.maxDurationTimer != null) {
+        window.clearTimeout(session.maxDurationTimer)
+        session.maxDurationTimer = null
+      }
+      try { await session.tearDown() } catch { /* best-effort */ }
+      if (params.vadSessionRef.current === session) {
+        params.vadSessionRef.current = null
+      }
+    }
+
     params.setVoiceState('idle')
     params.setMood('idle')
     params.setSpeechLevelValue(0)
