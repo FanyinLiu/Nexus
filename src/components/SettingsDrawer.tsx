@@ -31,6 +31,7 @@ import {
   FutureCapsuleSection,
   HistorySection,
   LettersSection,
+  OpenArcsSection,
   IntegrationsSection,
   LorebooksSection,
   MemorySection,
@@ -587,6 +588,11 @@ export function SettingsDrawer({
 
         <ErrandsSection
           active={activeSectionId === 'errands'}
+          uiLanguage={draft.uiLanguage}
+        />
+
+        <OpenArcsSection
+          active={activeSectionId === 'arcs'}
           uiLanguage={draft.uiLanguage}
         />
 

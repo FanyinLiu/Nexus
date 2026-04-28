@@ -366,6 +366,7 @@ export type SettingsSectionId =
   | 'letters'
   | 'capsule'
   | 'errands'
+  | 'arcs'
   | 'voice'
   | 'window'
   | 'integrations'
@@ -385,6 +386,7 @@ const SETTINGS_SECTION_DESCRIPTION_KEY_MAP: Record<SettingsSectionId, Parameters
   letters: 'settings.section_desc.letters',
   capsule: 'settings.section_desc.capsule',
   errands: 'settings.section_desc.errands',
+  arcs: 'settings.section_desc.arcs',
   voice: 'settings.section_desc.voice',
   window: 'settings.section_desc.window',
   integrations: 'settings.section_desc.integrations',
@@ -402,6 +404,7 @@ const SETTINGS_SECTION_EYEBROW_KEY_MAP: Record<SettingsSectionId, Parameters<typ
   letters: 'settings.section_eyebrow.memory',
   capsule: 'settings.section_eyebrow.memory',
   errands: 'settings.section_eyebrow.autonomy',
+  arcs: 'settings.section_eyebrow.memory',
   voice: 'settings.section_eyebrow.voice',
   window: 'settings.section_eyebrow.window',
   integrations: 'settings.section_eyebrow.integrations',
@@ -427,6 +430,7 @@ export function getSettingsSectionOptions(uiLanguage: UiLanguage): Array<{
     { id: 'letters', label: pickTranslatedUiText(uiLanguage, 'settings.section.letters') },
     { id: 'capsule', label: pickTranslatedUiText(uiLanguage, 'settings.section.capsule') },
     { id: 'errands', label: pickTranslatedUiText(uiLanguage, 'settings.section.errands') },
+    { id: 'arcs', label: pickTranslatedUiText(uiLanguage, 'settings.section.arcs') },
     { id: 'window', label: pickTranslatedUiText(uiLanguage, 'settings.section.window') },
     { id: 'tools', label: pickTranslatedUiText(uiLanguage, 'settings.section.tools') },
     { id: 'integrations', label: pickTranslatedUiText(uiLanguage, 'settings.section.integrations') },
