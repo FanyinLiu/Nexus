@@ -11,6 +11,12 @@ import {
   binSamplesByDay,
   type DailyAffectBin,
 } from '../../features/autonomy/moodMapBinning'
+import { loadEmotionHistory } from '../../features/autonomy/stateTimeline'
+import {
+  classifyCoRegulation,
+  computeCoRegulationSnapshot,
+  type CoRegulationSnapshot,
+} from '../../features/autonomy/coregulation'
 import type { UiLanguage } from '../../types'
 
 /**
@@ -109,6 +115,34 @@ const COPY = {
     'ja': '覚醒度',
     'ko': '각성도',
   },
+  coregLabel: {
+    'en-US': 'Co-regulation',
+    'zh-CN': '协同调节',
+    'zh-TW': '協同調節',
+    'ja': '共調整',
+    'ko': '공동 조절',
+  },
+  coregCoRegulating: {
+    'en-US': 'co-regulating — she\'s been warmer when you\'re down',
+    'zh-CN': '协同模式——你低落的日子她更温',
+    'zh-TW': '協同模式——你低落的日子她更溫',
+    'ja': '共調整 — あなたが沈む日に彼女は温かくなっている',
+    'ko': '공동 조절 — 네가 가라앉은 날 그녀가 더 따뜻해져',
+  },
+  coregMirroring: {
+    'en-US': 'mirroring — her warmth has been tracking your valence',
+    'zh-CN': '镜像模式——她的温度跟着你的状态走',
+    'zh-TW': '鏡像模式——她的溫度跟著你的狀態走',
+    'ja': '鏡映 — 彼女の温度はあなたの感情と一緒に動いている',
+    'ko': '거울 모드 — 그녀의 따뜻함이 너의 상태를 따라 움직여',
+  },
+  coregFlat: {
+    'en-US': 'flat — no clear coupling either way',
+    'zh-CN': '平稳——两边没有明显耦合',
+    'zh-TW': '平穩——兩邊沒有明顯耦合',
+    'ja': 'フラット — 明確な連動は見られない',
+    'ko': '평탄 — 양쪽에 뚜렷한 연동이 없어',
+  },
 }
 
 function pick(field: { [key: string]: string }, uiLanguage: UiLanguage): string {
@@ -121,18 +155,27 @@ export const MoodMapPanel = memo(function MoodMapPanel({ uiLanguage }: MoodMapPa
   const [samples, setSamples] = useState<UserAffectSample[]>(() =>
     loadUserAffectWindow(WINDOW_DAYS),
   )
+  const [companionSamples, setCompanionSamples] = useState(() => loadEmotionHistory())
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       setSamples(loadUserAffectWindow(WINDOW_DAYS))
+      setCompanionSamples(loadEmotionHistory())
     }, 30_000)
     return () => window.clearInterval(timer)
   }, [])
 
-  const handleRefresh = () => setSamples(loadUserAffectWindow(WINDOW_DAYS))
+  const handleRefresh = () => {
+    setSamples(loadUserAffectWindow(WINDOW_DAYS))
+    setCompanionSamples(loadEmotionHistory())
+  }
 
   const bins = useMemo(() => binSamplesByDay(samples), [samples])
   const snapshot = useMemo(() => computeAffectSnapshot(samples), [samples])
+  const coreg = useMemo(
+    () => computeCoRegulationSnapshot(samples, companionSamples),
+    [samples, companionSamples],
+  )
 
   return (
     <section className="settings-diagnostics-panel">
@@ -154,6 +197,7 @@ export const MoodMapPanel = memo(function MoodMapPanel({ uiLanguage }: MoodMapPa
       )}
 
       <SnapshotLine snapshot={snapshot} uiLanguage={uiLanguage} />
+      <CoRegulationLine snapshot={coreg} uiLanguage={uiLanguage} />
 
       <div className="settings-diagnostics-panel__actions">
         <button type="button" className="ghost-button" onClick={handleRefresh}>
@@ -297,6 +341,28 @@ function SnapshotLine({
   return (
     <p className="settings-drawer__hint" style={{ marginTop: 8 }}>
       {parts.join(' · ')}
+    </p>
+  )
+}
+
+function CoRegulationLine({
+  snapshot,
+  uiLanguage,
+}: {
+  snapshot: CoRegulationSnapshot
+  uiLanguage: UiLanguage
+}) {
+  const kind = classifyCoRegulation(snapshot)
+  if (kind === 'unknown') return null
+  const labelMap = {
+    'co-regulating': COPY.coregCoRegulating,
+    'mirroring': COPY.coregMirroring,
+    'flat': COPY.coregFlat,
+  } as const
+  const label = pick(labelMap[kind], uiLanguage)
+  return (
+    <p className="settings-drawer__hint" style={{ marginTop: 4 }}>
+      {pick(COPY.coregLabel, uiLanguage)}: {label}
     </p>
   )
 }
