@@ -662,6 +662,13 @@ export type TranslationKey =
   | 'onboarding.ai_disclosure.bullet_not_clinical'
   | 'onboarding.ai_disclosure.bullet_panel'
   | 'onboarding.ai_disclosure.continue_note'
+  | 'chat.failover.no_api_base'
+  | 'chat.failover.no_api_key'
+  | 'voice.vad.unavailable'
+  | 'voice.vad.start_failed'
+  | 'tools.circuit.open'
+  | 'tools.circuit.opened_during_retry'
+  | 'settings.integrations.mcp_name_placeholder'
 
 export type TranslationPrimitive = string | number | boolean | null | undefined
 

@@ -318,7 +318,7 @@ export const IntegrationsSection = memo(function IntegrationsSection({
           <span>{ti('settings.integrations.mcp.server_label')}</span>
           <input
             value={server.label}
-            placeholder="My MCP Server"
+            placeholder={ti('settings.integrations.mcp_name_placeholder')}
             onChange={(event) => updateMcpServer(server.id, { label: event.target.value })}
           />
         </label>

@@ -7,6 +7,8 @@
  *   - half-open: Cooldown elapsed — next call is a probe; success → closed, failure → open.
  */
 
+import { t } from '../../i18n/runtime.ts'
+
 const CONSECUTIVE_FAILURE_THRESHOLD = 3
 const OPEN_COOLDOWN_MS = 30_000
 const DEFAULT_TIMEOUT_MS = 15_000
@@ -91,7 +93,7 @@ export async function executeWithProtection<T>(
   options?: ToolCallOptions,
 ): Promise<T> {
   if (!isCallAllowed(toolId)) {
-    throw new Error(`Tool "${toolId}" circuit is open — ${CONSECUTIVE_FAILURE_THRESHOLD} consecutive failures, cooling down`)
+    throw new Error(t('tools.circuit.open', { toolId }))
   }
 
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS
@@ -105,7 +107,7 @@ export async function executeWithProtection<T>(
 
       // Re-check circuit before retry (may have opened from parallel calls)
       if (!isCallAllowed(toolId)) {
-        throw new Error(`Tool "${toolId}" circuit opened during retry`)
+        throw new Error(t('tools.circuit.opened_during_retry', { toolId }))
       }
     }
 

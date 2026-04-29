@@ -23,6 +23,7 @@ import type {
 } from '../../types'
 import { apiProviderRequiresApiKey, getApiProviderPreset } from '../../lib/apiProviders'
 import { getCoreRuntime } from '../../lib/coreRuntime'
+import { t } from '../../i18n/runtime.ts'
 import { executeWithFailover, type FailoverCandidate } from '../failover/orchestrator.ts'
 import {
   buildChatRequestPayload,
@@ -119,7 +120,7 @@ export async function executeChatRequestWithFailover(
   }
 
   if (!settings.apiBaseUrl || !settings.model) {
-    throw new Error('Please fill in the API Base URL and model name in settings first.')
+    throw new Error(t('chat.failover.no_api_base'))
   }
 
   const hasAnyActiveAuthProfile = getCoreRuntime()
@@ -131,7 +132,7 @@ export async function executeChatRequestWithFailover(
     && !settings.apiKey.trim()
     && !hasAnyActiveAuthProfile
   ) {
-    throw new Error('Please fill in the API key for the current text provider in settings first.')
+    throw new Error(t('chat.failover.no_api_key'))
   }
 
   const candidates = buildChatFailoverCandidates(settings)

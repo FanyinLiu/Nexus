@@ -11,6 +11,7 @@
 // always-on wakeword listener is running, so KWS and VAD consume byte-
 // identical audio taken from the same renderer ScriptProcessor.
 
+import { t } from '../../i18n/runtime.ts'
 import type { VadSensitivity } from '../../types'
 
 type VoiceActivityCallbacks = {
@@ -71,7 +72,7 @@ export async function createMainProcessVadController(
 ): Promise<MainProcessVadController> {
   const api = window.desktopPet
   if (!api?.vadStart || !api.vadFeed || !api.vadStop) {
-    throw new Error('Main-process VAD is not available in this environment.')
+    throw new Error(t('voice.vad.unavailable'))
   }
 
   const preset = VAD_PRESETS[sensitivity]
@@ -82,7 +83,7 @@ export async function createMainProcessVadController(
     maxSpeechDuration: preset.maxSpeechDuration,
   })
   if (!startResult?.ok) {
-    throw new Error(startResult?.reason || 'Failed to start main-process VAD.')
+    throw new Error(startResult?.reason || t('voice.vad.start_failed'))
   }
 
   let destroyed = false
