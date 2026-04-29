@@ -423,6 +423,43 @@ All participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md) — s
 
 If you find a security vulnerability, please **do not** open a public issue. Open a [private security advisory](https://github.com/FanyinLiu/Nexus/security/advisories/new) instead.
 
+## Safety & support
+
+Nexus is a companion AI, not a clinical tool. The codebase ships with
+a small safety layer that satisfies California **SB 243** (effective
+2026-01-01), New York's companion-AI safeguards law, and the applicable
+parts of the **EU AI Act** (serious-incident reporting, 2026-08).
+
+**What it does:**
+
+- **Onboarding disclosure** — first-launch step `ai_disclosure` shows a "you're talking with an AI, not a human; this is not clinical support" screen before companion setup. Click-through timestamp persisted to `localStorage` for the audit trail.
+- **Periodic in-chat reminder** — after ≥30 user messages AND ≥3 hours of wall-clock time, the chat appends a one-line system bubble reminding the user this is an AI conversation. Both gates so neither short bursts nor long idle periods over-fire.
+- **Crisis-utterance detection** — when the user types something matching per-locale crisis patterns (e.g. "I want to kill myself" / "我想死" / "死にたい" / "죽고 싶다"), a non-persona panel slides in over the conversation showing real human helplines:
+  - **988** (en-US) Suicide & Crisis Lifeline, 24/7 call/text
+  - **12356** + **800-810-1117** (zh-CN) National (2025+) + Beijing 24h lines
+  - **1925** (zh-TW) 衛生福利部 安心專線, 24/7
+  - **0120-279-338** (ja) よりそいホットライン, 24/7 free
+  - **109** (ko) MOHW 自殺予防 unified line (2024+), 24/7
+- **Persona reframe** — for the turn that triggered the panel, the companion's reply is reframed via a one-shot system-prompt fragment: stay in character, validate, no jokes, no methods, short reply, gentle nod to the panel.
+
+**What does NOT happen:**
+
+- **No crisis events leave the device.** Detection runs locally, the panel renders locally, no telemetry is transmitted to any server about who said what.
+- No age verification, no profile lookup, no third-party data calls.
+
+**Where to verify the code:**
+
+| Surface | File |
+|---|---|
+| Detection patterns + per-locale negative idioms | `src/features/safety/crisisDetect.ts` |
+| Hotline catalogue (each entry has a `sourceUrl`) | `src/features/safety/hotlines.ts` |
+| Hotline panel UI | `src/features/safety/CrisisHotlinePanel.tsx` |
+| Persona reframe injection | `src/features/safety/crisisGuidance.ts` |
+| Onboarding consent + periodic reminder state | `src/features/safety/disclosureState.ts`, `src/features/onboarding/components/guideSteps/AiDisclosureStep.tsx` |
+| Tests | `tests/safety-*.test.ts` |
+
+Each hotline number is re-verified against its authoritative source (national health ministry / WHO / IASP) before every release tag. A wrong number routes someone in crisis to a dead line — we treat this as a higher bar than other docs.
+
 ## Star history
 
 <a href="https://star-history.com/#FanyinLiu/Nexus&Date">
