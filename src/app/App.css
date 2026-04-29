@@ -6544,3 +6544,131 @@
   color: rgba(255, 230, 230, 0.85);
   line-height: 1.5;
 }
+
+/* ───────────────────────────────────────────────────────────────────
+   Crisis hotline panel (src/features/safety/CrisisHotlinePanel.tsx).
+   Non-persona surface that slides over the conversation when a
+   crisis utterance is detected. Visually distinct from chat bubbles
+   so the user reads it as system information, not the companion.
+   ─────────────────────────────────────────────────────────────────── */
+.crisis-hotline-panel {
+  margin: 0 0 12px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 14px;
+  background: linear-gradient(
+    180deg,
+    rgba(245, 158, 11, 0.10),
+    rgba(245, 158, 11, 0.04)
+  );
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.18);
+  animation: crisis-hotline-slide-in 240ms ease-out;
+}
+
+@keyframes crisis-hotline-slide-in {
+  from {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.crisis-hotline-panel__inner {
+  position: relative;
+  padding: 18px 22px 16px;
+}
+
+.crisis-hotline-panel__dismiss {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.crisis-hotline-panel__dismiss:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.crisis-hotline-panel__title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 240, 220, 0.96);
+}
+
+.crisis-hotline-panel__body {
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: rgba(255, 240, 220, 0.82);
+}
+
+.crisis-hotline-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.crisis-hotline-panel__item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.crisis-hotline-panel__item-name {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.78);
+  margin-bottom: 2px;
+}
+
+.crisis-hotline-panel__item-phone {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: rgba(255, 255, 255, 0.96);
+  font-variant-numeric: tabular-nums;
+}
+
+.crisis-hotline-panel__item-hours {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 2px;
+}
+
+.crisis-hotline-panel__item-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.crisis-hotline-panel__action {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: rgba(255, 240, 220, 0.96);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.crisis-hotline-panel__action:hover {
+  background: rgba(245, 158, 11, 0.28);
+}

@@ -8,4 +8,10 @@
 
 export { detectCrisisSignal } from './crisisDetect.ts'
 export { HOTLINES, primaryHotline } from './hotlines.ts'
+export {
+  presentCrisis,
+  dismissCrisis,
+  useCrisisPanelState,
+} from './crisisPanelState.ts'
+export { CrisisHotlinePanel } from './CrisisHotlinePanel.tsx'
 export type { CrisisSeverity, CrisisSignal, Hotline } from './types.ts'

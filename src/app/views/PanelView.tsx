@@ -12,6 +12,7 @@ import {
 import { getLiveTranscriptLabel, getTimeGreeting, getTimeGreetingEmoji, getVoiceStateLabel } from '../appSupport'
 import { ActivePlanStrip, MessageBubble, SubagentTaskStrip } from '../../components'
 import { resolveCharacterPreset } from '../../features/character/presets'
+import { CrisisHotlinePanel } from '../../features/safety/CrisisHotlinePanel'
 import { useAmbientWeather } from '../../hooks/useAmbientWeather'
 import { shorten } from '../../lib'
 import { modelSupportsVision } from '../../lib/modelCapabilities'
@@ -380,6 +381,8 @@ export function PanelView({
             <SubagentTaskStrip tasks={subagentTasks} onCancel={cancelSubagentTask} />
 
             <section className="companion-chat">
+
+              <CrisisHotlinePanel locale={settings.uiLanguage} />
 
               <div ref={messageListRef} className="message-list companion-chat__messages" aria-live="polite" aria-label={ti('panel.messages.aria_label')}>
                 {visibleMessages.length ? (

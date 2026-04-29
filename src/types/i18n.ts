@@ -647,6 +647,13 @@ export type TranslationKey =
   | 'file.picker.read_failed'
   | 'reminder.schedule.once'
   | 'reminder.schedule.every_minutes'
+  | 'safety.crisis.title'
+  | 'safety.crisis.body'
+  | 'safety.crisis.cta_call'
+  | 'safety.crisis.cta_text'
+  | 'safety.crisis.cta_chat'
+  | 'safety.crisis.dismiss_aria'
+  | 'safety.crisis.aria_label'
 
 export type TranslationPrimitive = string | number | boolean | null | undefined
 

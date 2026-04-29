@@ -19,6 +19,8 @@ import {
   mergeMemories,
 } from '../features/memory'
 import { formatTraceLabel, logVoiceEvent } from '../features/voice'
+import { detectCrisisSignal } from '../features/safety'
+import { presentCrisis } from '../features/safety/crisisPanelState.ts'
 import {
   createAssistantReplyRunner,
   createLocalReminderActionRunner,
@@ -604,6 +606,15 @@ export function useChat(ctx: UseChatContext) {
     ctx.markPresenceActivity()
     if (fromVoice) {
       ctx.appendVoiceTrace(t('chat.voice.sent_label'), t('chat.voice.sent_trace', { label: traceLabel }))
+    }
+
+    // Surface the non-persona hotline panel when the user's message
+    // hits a crisis pattern. The persona's empathic reframe runs in
+    // the reply path (Tier 1.1 chunk D); this is the regulatory-
+    // required separate channel showing real-world resources.
+    const crisisSignal = detectCrisisSignal(content, currentSettings.uiLanguage)
+    if (crisisSignal) {
+      presentCrisis(crisisSignal)
     }
 
     const userMessage: ChatMessage = {
