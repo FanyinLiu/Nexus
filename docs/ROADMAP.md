@@ -37,9 +37,13 @@ counts as "deployed."
   resource clearly displayed"; emotionally the relationship continuity
   is preserved (decided 2026-04-28; Klein chose the hybrid over either
   full break-character or full in-character).
-- Hotline catalogue keyed by `i18n.locale`:
-  988 (en-US), 1393 / 12320 (zh-CN), 1995 / 1925 (zh-TW), 0570-064-556
-  (ja), 1393 / 1577-0199 (ko), 116-123 (en-EU fallback).
+- Hotline catalogue keyed by `i18n.locale` (verified 2026-04-28; see
+  `src/features/safety/hotlines.ts` for sourceUrls):
+  988 (en-US, 24/7 call+text), 12356 / 800-810-1117 (zh-CN, the
+  former is the new national unified line opened 2025-01),
+  1925 (zh-TW 24/7 安心專線), 0120-279-338 よりそいホットライン
+  (ja, 24/7 free), 109 (ko, unified 2024-01 from 1393 / 1577-0199),
+  116 123 Samaritans (en-EU fallback).
 - Disclosure: periodic in-conversation reminder + onboarding consent.
 - Documentation in README so a regulator can locate the path.
 
