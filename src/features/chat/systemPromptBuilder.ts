@@ -123,6 +123,15 @@ export type AssistantReplyRequestOptions = {
    */
   repairGuidancePromptText?: string
   /**
+   * Crisis-response posture for the upcoming reply, fired only on the
+   * turn the user's message matched a crisis-utterance pattern (see
+   * features/safety/crisisDetect.ts). Asks the model to stay in
+   * character but shift to validating empathy, no minimisation, no
+   * jokes — while the parallel CrisisHotlinePanel surfaces the real
+   * hotline. Empty string when no signal fired. Tier 1.1 chunk D.
+   */
+  crisisGuidancePromptText?: string
+  /**
    * Fired whenever a built-in tool call (web_search / weather /
    * open_external) produces a successful BuiltInToolResult during the
    * tool-call loop. Host code (useChat / assistantReply) uses this to
@@ -253,6 +262,11 @@ export async function buildSystemPrompt(
   // 单条用户消息触发的 Gottman 修复指引（criticism / contempt）。
   // 紧跟 affectGuidance —— 长期 affect 之后是这一刻发生了什么。
   const repairGuidanceSection = options.repairGuidancePromptText ?? ''
+  // Crisis-response posture for this turn only (Tier 1.1 chunk D).
+  // Sits last among the user-state sections so it is the most-recent
+  // instruction the model reads before the response-style guidance —
+  // gives it priority over playful tone hints when both apply.
+  const crisisGuidanceSection = options.crisisGuidancePromptText ?? ''
 
   const desktopContextSection = settings.contextAwarenessEnabled
     ? formatDesktopContext(options.desktopContext)
@@ -283,6 +297,7 @@ export async function buildSystemPrompt(
     rhythmSection,
     affectGuidanceSection,
     repairGuidanceSection,
+    crisisGuidanceSection,
     responseStyleSection,
     expressionGuideSection,
     firstImpressionSection,

@@ -7,6 +7,7 @@
 // reaching into specific files, so the internal layout can move.
 
 export { detectCrisisSignal } from './crisisDetect.ts'
+export { buildCrisisGuidance } from './crisisGuidance.ts'
 export { HOTLINES, primaryHotline } from './hotlines.ts'
 export {
   presentCrisis,

@@ -9,6 +9,8 @@ import { loadSubagentSettings } from '../../lib/storage'
 import { buildSpawnSubagentDescriptor } from '../../features/autonomy/subagents/spawnSubagentTool'
 import { detectRupture } from '../../features/autonomy/ruptureDetection'
 import { buildRepairGuidance } from '../../features/autonomy/repairGuidance'
+import { detectCrisisSignal } from '../../features/safety'
+import { buildCrisisGuidance } from '../../features/safety/crisisGuidance.ts'
 import { recordGuidanceFired } from '../../features/autonomy/guidanceTelemetry'
 import { recordUsage } from '../../features/metering/contextMeter'
 import { formatGameContext, loadGameContext } from '../../features/context/gameContext'
@@ -434,6 +436,22 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
               uiLanguage: currentSettings.uiLanguage,
               ruptureKind: result.kind,
             })
+          })(),
+          // Crisis-response posture (Tier 1.1 chunk D). Re-runs the
+          // detector on the last user message — the detector is pure
+          // and microsecond-cheap, so re-running here keeps this
+          // layer free of the upstream useChat state coupling. Empty
+          // string when no signal — filter(Boolean) drops the
+          // section in the prompt builder.
+          crisisGuidancePromptText: (() => {
+            const lastUser = [...nextMessages]
+              .reverse()
+              .find((m) => m.role === 'user')
+            if (!lastUser?.content || typeof lastUser.content !== 'string') {
+              return ''
+            }
+            const signal = detectCrisisSignal(lastUser.content, currentSettings.uiLanguage)
+            return buildCrisisGuidance({ signal, uiLanguage: currentSettings.uiLanguage })
           })(),
           milestonePromptText: dependencies.ctx.consumeMilestonePromptText?.(),
           anniversaryPromptText: dependencies.ctx.consumeAnniversaryPromptText?.(currentSettings.uiLanguage),
