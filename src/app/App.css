@@ -50,30 +50,34 @@
  * Kept intentionally low-contrast so it reads as ambient info, not an
  * actionable control; hover lifts it slightly for the tooltip cue. */
 .ambient-weather-chip {
+  /* Two-row layout: row 1 = condition + temp (inline), row 2 = full
+   * resolved place name. Vertical so the long location string
+   * (中国 · 广东省 · 深圳市) reads cleanly without horizontal-truncating
+   * the toolbar. */
   display: inline-flex;
-  /* Center vertically — `baseline` makes mixed font-size spans look skewed
-   * inside the pill. */
-  align-items: center;
-  gap: 8px;
-  /* Match the ghost-button vertical footprint so the toolbar reads as one
-   * aligned row. .ghost-button is min-height: 36px with 8px vertical pad. */
-  min-height: 36px;
-  padding: 0 14px;
-  border-radius: 999px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 14px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 12.5px;
   color: rgba(255, 255, 255, 0.78);
-  line-height: 1;
-  white-space: nowrap;
+  line-height: 1.25;
   cursor: default;
   transition: background 0.2s ease, color 0.2s ease;
-  /* Keep the chip from punching through a narrow panel; the place name is
-   * the part most likely to blow out, so we let it truncate individually
-   * while the condition + temp stay pinned at their intrinsic width. */
   max-width: 240px;
   min-width: 0;
   overflow: hidden;
+}
+
+.ambient-weather-chip__top {
+  /* Inline row inside the column-stacked chip: condition + temperature. */
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
 }
 
 .ambient-weather-chip:hover {
@@ -94,18 +98,16 @@
 }
 
 .ambient-weather-chip__place {
-  font-size: 11px;
+  /* Sits on row 2 below the condition+temp inline row. Reads as a
+   * subtle metadata caption — full resolved name shown so the user
+   * sees country / province / city in context. */
+  font-size: 10.5px;
   color: rgba(255, 255, 255, 0.5);
-  /* Truncate a long city name (e.g. "北京市朝阳区") instead of pushing the
-   * rest of the header row past the panel edge. The full name stays in the
-   * native tooltip. */
-  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  /* Subtle visual divider — a thin dot before the place name groups it as
-   * "metadata" relative to the condition+temp pair. */
-  padding-left: 8px;
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+  letter-spacing: 0.1px;
 }
 
 .eyebrow {

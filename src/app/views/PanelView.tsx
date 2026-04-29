@@ -351,19 +351,17 @@ export function PanelView({
                     className="ambient-weather-chip"
                     title={ambientWeather.fullSummary || ambientWeather.resolvedName}
                   >
-                    <span className="ambient-weather-chip__condition">
-                      {ambientWeather.conditionLabel || ti('panel.weather.fallback_label')}
-                    </span>
-                    {ambientWeather.temperatureC !== null ? (
-                      <span className="ambient-weather-chip__temp">
-                        {Math.round(ambientWeather.temperatureC)}°
+                    <span className="ambient-weather-chip__top">
+                      <span className="ambient-weather-chip__condition">
+                        {ambientWeather.conditionLabel || ti('panel.weather.fallback_label')}
                       </span>
-                    ) : null}
-                    {/* Show only the rightmost geo segment (city) — full
-                        "中国 · 广东省 · 深圳市" overflows the toolbar at 460px
-                        and pushes the action buttons off the right edge.
-                        Hover title still shows the full location. */}
-                    <span className="ambient-weather-chip__place">{ambientWeather.resolvedName.split(/\s*·\s*|\s*,\s*/).pop() || ambientWeather.resolvedName}</span>
+                      {ambientWeather.temperatureC !== null ? (
+                        <span className="ambient-weather-chip__temp">
+                          {Math.round(ambientWeather.temperatureC)}°
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="ambient-weather-chip__place">{ambientWeather.resolvedName}</span>
                   </span>
                 ) : null}
               </div>
