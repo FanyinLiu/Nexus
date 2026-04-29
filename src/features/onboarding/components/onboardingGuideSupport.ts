@@ -10,6 +10,10 @@ const ONBOARDING_STEP_KEYS: Array<{
   titleKey: TranslationKey
   descriptionKey: TranslationKey
 }> = [
+  // SB 243 / NY companion-AI / EU AI Act require an initial "clear
+  // and conspicuous" disclosure before chat begins. Step 0 is the
+  // place where the user can't have skipped it accidentally.
+  { id: 'ai_disclosure', titleKey: 'onboarding.step.ai_disclosure.title', descriptionKey: 'onboarding.step.ai_disclosure.description' },
   { id: 'welcome', titleKey: 'onboarding.step.welcome.title', descriptionKey: 'onboarding.step.welcome.description' },
   { id: 'text', titleKey: 'onboarding.step.text.title', descriptionKey: 'onboarding.step.text.description' },
   { id: 'voice', titleKey: 'onboarding.step.voice.title', descriptionKey: 'onboarding.step.voice.description' },

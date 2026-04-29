@@ -1,3 +1,4 @@
+export * from './AiDisclosureStep'
 export * from './CompanionStep'
 export * from './LocalVoiceModelsStatus'
 export * from './TextStep'

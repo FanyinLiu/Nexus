@@ -21,6 +21,7 @@ import {
 import { formatTraceLabel, logVoiceEvent } from '../features/voice'
 import { detectCrisisSignal } from '../features/safety'
 import { presentCrisis } from '../features/safety/crisisPanelState.ts'
+import { noteUserMessageAndCheckReminder } from '../features/safety/disclosureState.ts'
 import {
   createAssistantReplyRunner,
   createLocalReminderActionRunner,
@@ -644,6 +645,14 @@ export function useChat(ctx: UseChatContext) {
     ctx.memoriesRef.current = nextMemories
     ctx.setMemories(nextMemories)
     setMessages(nextMessages)
+
+    // Periodic AI-disclosure reminder (Tier 1.1 chunk E). Fires every
+    // 30 user messages AND every 3 hours of wall-clock since the last
+    // reminder, whichever comes second. The check is gated on having
+    // ack'd the onboarding disclosure step.
+    if (noteUserMessageAndCheckReminder()) {
+      appendSystemMessage(t('safety.disclosure.periodic_reminder'))
+    }
 
     if (!rawContent) {
       inputRef.current = ''

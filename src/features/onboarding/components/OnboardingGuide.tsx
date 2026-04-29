@@ -19,11 +19,13 @@ import { switchTextProvider } from '../../../lib/textProviderProfiles'
 import type { AppSettings, WindowView } from '../../../types'
 import type { PetModelDefinition } from '../../pet'
 import {
+  AiDisclosureStep,
   CompanionStep,
   TextStep,
   VoiceStep,
   WelcomeStep,
 } from './guideSteps'
+import { recordDisclosureAck } from '../../safety/disclosureState'
 import {
   buildOnboardingSteps,
   getOnboardingFinishHint,
@@ -132,6 +134,11 @@ export function OnboardingGuide({
 
     try {
       await onSave(sanitizeOnboardingSettings(draft, settings))
+      // Reaching the finish step implies the user clicked through the
+      // ai_disclosure step at the start. Record the consent timestamp
+      // for SB 243 / NY / EU AI Act compliance audit. Idempotent —
+      // re-running onboarding does not overwrite the earlier ack.
+      recordDisclosureAck()
       onDismiss()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : ti('onboarding.save_failed'))
@@ -142,6 +149,8 @@ export function OnboardingGuide({
 
   function renderStepContent() {
     switch (step.id) {
+      case 'ai_disclosure':
+        return <AiDisclosureStep draft={draft} />
       case 'welcome':
         return (
           <WelcomeStep

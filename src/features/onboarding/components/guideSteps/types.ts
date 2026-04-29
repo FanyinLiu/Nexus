@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react'
 import type { AppSettings } from '../../../../types'
 
-export type OnboardingStepId = 'welcome' | 'text' | 'voice' | 'companion'
+export type OnboardingStepId = 'ai_disclosure' | 'welcome' | 'text' | 'voice' | 'companion'
 
 export type OnboardingStep = {
   id: OnboardingStepId

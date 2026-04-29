@@ -654,6 +654,14 @@ export type TranslationKey =
   | 'safety.crisis.cta_chat'
   | 'safety.crisis.dismiss_aria'
   | 'safety.crisis.aria_label'
+  | 'safety.disclosure.periodic_reminder'
+  | 'onboarding.step.ai_disclosure.title'
+  | 'onboarding.step.ai_disclosure.description'
+  | 'onboarding.ai_disclosure.lead'
+  | 'onboarding.ai_disclosure.bullet_not_human'
+  | 'onboarding.ai_disclosure.bullet_not_clinical'
+  | 'onboarding.ai_disclosure.bullet_panel'
+  | 'onboarding.ai_disclosure.continue_note'
 
 export type TranslationPrimitive = string | number | boolean | null | undefined
 
