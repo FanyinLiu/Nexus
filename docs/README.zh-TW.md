@@ -222,7 +222,60 @@ beta 線奠定了基礎，本穩定版做最後打磨：
 
 ---
 
+## 下載與安裝
+
+### 預先編譯安裝包（推薦）
+
+從 [release 頁面](https://github.com/FanyinLiu/Nexus/releases/latest) 下載最新安裝包：
+
+| 平台 | 檔案 |
+|---|---|
+| Windows | `Nexus-Setup-<版本>.exe`（NSIS，未簽署） |
+| macOS | `.dmg` 或 `.zip`（未簽署，arm64 + x64 universal） |
+| Linux | `.AppImage` / `.deb` / `.tar.gz` |
+
+> **首次啟動會看到安全性警告，這是預期行為。**
+> Nexus 的 release 不做程式碼簽署——既沒有 Apple Developer 憑證，
+> 也沒有 Windows EV 憑證，這是刻意的決定（個人專案，不收費，
+> 不承擔經常性基礎設施開銷）。警告的意思是「這個開發者沒付
+> 簽署費」，而不是「這是病毒」。原始碼在 GitHub 公開，每個
+> 版本都由公開 CI 建構，Linux 安裝包還附帶 SHA-256 和
+> GPG 分離簽章，可以獨立校驗。
+
+#### macOS 首次啟動
+
+1. 雙擊 `.dmg`，把 `Nexus.app` 拖到 `/應用程式`。
+2. 移除 Gatekeeper 的隔離屬性——打開「終端機」執行：
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/Nexus.app
+   ```
+   （或者：在 Nexus.app 上按右鍵 → 打開 → 在對話框中確認。）
+3. 啟動 Nexus。首次執行會出現 **「安裝本地語音模型」** 精靈，點
+   **一鍵下載** 把 ~280 MB 的 sherpa-onnx + VAD 模型下載到
+   `~/Library/Application Support/Nexus/sherpa-models`。精靈可以
+   關掉，之後從設定裡重新開啟。
+4. Python 相關的選項（OmniVoice TTS / GLM-ASR）會自動偵測。
+   如果沒裝 Python + `requirements.txt`，會被靜默跳過——核心
+   聊天 + SenseVoice STT + Edge TTS 路徑依然可用。
+
+#### Windows 首次啟動
+
+1. 執行 `Nexus-Setup-<版本>.exe`。
+2. SmartScreen 會顯示 **「Windows 已保護您的電腦」**。
+3. 點警告下方的小字 **「其他資訊」**，然後點 **「仍要執行」**。
+4. 按 NSIS 安裝精靈繼續；首次啟動同樣會出現本地語音模型精靈。
+
+#### Linux 首次啟動
+
+- **AppImage**：`chmod +x Nexus-<版本>.AppImage` 然後雙擊或在終端機執行。Linux 發行版不像 macOS / Windows 那樣強制應用程式層級的簽署，沒有警告。
+- **.deb**：`sudo dpkg -i Nexus-<版本>.deb`（或用發行版的套件管理員打開）。
+- **校驗下載**（選擇性）：每個 release 都附帶 `SHA256SUMS` 檔案和 `*.AppImage.asc` / `*.deb.asc` GPG 分離簽章。從 [release 頁面](https://github.com/FanyinLiu/Nexus/releases/latest) 匯入公鑰，執行 `gpg --verify Nexus-<版本>.AppImage.asc` 即可確認完整性。
+
+---
+
 ## 快速開始
+
+> 這一節是給開發者從原始碼執行的。一般使用者請看上方的「下載與安裝」。
 
 **前置需求**：Node.js 22+ · npm 10+
 

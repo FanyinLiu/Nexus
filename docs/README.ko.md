@@ -220,7 +220,64 @@ VTube Studio를 통해 외부 Live2D 모델을 구동하는 WebSocket 브리지.
 
 ---
 
+## 다운로드 및 설치
+
+### 사전 빌드된 설치 프로그램(권장)
+
+[release 페이지](https://github.com/FanyinLiu/Nexus/releases/latest) 에서 최신 설치 프로그램을 다운로드하세요:
+
+| 플랫폼 | 파일 |
+|---|---|
+| Windows | `Nexus-Setup-<버전>.exe`(NSIS, 미서명) |
+| macOS | `.dmg` 또는 `.zip`(미서명, arm64 + x64 유니버설) |
+| Linux | `.AppImage` / `.deb` / `.tar.gz` |
+
+> **첫 실행 시 보안 경고가 표시되며, 이는 정상입니다.**
+> Nexus 릴리스에는 코드 서명이 없습니다 — Apple Developer 인증서도,
+> Windows EV 인증서도 사용하지 않습니다. 의도적인 결정입니다(개인
+> 프로젝트라 유료화하지 않으며, 정기 인프라 비용을 부담하지 않는
+> 방침). 경고는 "이 개발자는 서명 비용을 내지 않았다"는 뜻이며,
+> "이것은 악성 소프트웨어다"라는 뜻이 아닙니다. 소스 코드는
+> GitHub에 공개되어 있고, 모든 릴리스는 공개 CI에서 빌드되며,
+> Linux 아티팩트에는 SHA-256과 GPG 분리 서명이 함께 제공되어
+> 독립적으로 검증할 수 있습니다.
+
+#### macOS 첫 실행
+
+1. `.dmg` 를 열고 `Nexus.app` 을 `/Applications` 로 드래그합니다.
+2. Gatekeeper 격리 속성을 제거 — "터미널"을 열어 실행:
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/Nexus.app
+   ```
+   (또는: Nexus.app 을 우클릭 → 열기 → 대화상자에서 확인.)
+3. Nexus 를 실행합니다. 처음 실행 시 **"로컬 음성 모델 설치"**
+   마법사가 표시됩니다. **"원클릭 다운로드"** 를 클릭해 ~280 MB 의
+   sherpa-onnx + VAD 모델을
+   `~/Library/Application Support/Nexus/sherpa-models` 로
+   다운로드합니다. 마법사는 닫을 수 있고, 나중에 설정에서 다시 열 수 있습니다.
+4. Python 기반 옵션(OmniVoice TTS / GLM-ASR)은 자동으로 감지됩니다.
+   Python + `requirements.txt` 가 설치되어 있지 않으면 조용히
+   건너뜁니다 — 핵심 채팅 + SenseVoice STT + Edge TTS 스택은
+   여전히 동작합니다.
+
+#### Windows 첫 실행
+
+1. `Nexus-Setup-<버전>.exe` 를 실행합니다.
+2. SmartScreen 이 **"Windows에서 PC를 보호했습니다"** 를 표시합니다.
+3. 경고 아래의 작은 글씨 **"추가 정보"** 를 클릭한 다음, **"실행"** 을 클릭합니다.
+4. NSIS 설치 마법사를 평소대로 진행하세요. 첫 실행 시 macOS 와 마찬가지로 로컬 음성 모델 마법사가 표시됩니다.
+
+#### Linux 첫 실행
+
+- **AppImage**: `chmod +x Nexus-<버전>.AppImage` 후 더블클릭하거나 터미널에서 실행. Linux 배포판은 macOS / Windows 처럼 앱 수준 서명을 강제하지 않으므로 경고가 없습니다.
+- **.deb**: `sudo dpkg -i Nexus-<버전>.deb` (또는 배포판의 패키지 매니저로 열기).
+- **다운로드 검증**(선택): 모든 릴리스에는 `SHA256SUMS` 파일과 `*.AppImage.asc` / `*.deb.asc` GPG 분리 서명이 함께 제공됩니다. [release 페이지](https://github.com/FanyinLiu/Nexus/releases/latest) 에서 공개 키를 가져와 `gpg --verify Nexus-<버전>.AppImage.asc` 로 무결성을 확인할 수 있습니다.
+
+---
+
 ## 빠른 시작
+
+> 이 섹션은 개발자가 소스 코드에서 실행하는 방법입니다. 일반 사용자는 위의 "다운로드 및 설치"를 참조하세요.
 
 **요구 사항**: Node.js 22+ · npm 10+
 

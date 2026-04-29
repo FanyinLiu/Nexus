@@ -214,11 +214,20 @@ Grab the latest installer from the [releases page](https://github.com/FanyinLiu/
 
 | Platform | Asset |
 |---|---|
-| Windows | `Nexus-Setup-<version>.exe` (NSIS, unsigned — click *More info → Run anyway* on first launch) |
-| macOS | `.dmg` or `.zip` (unsigned — see macOS steps below) |
-| Linux | `.AppImage` / `.deb` / `.tar.gz` (AppImage: `chmod +x` then run) |
+| Windows | `Nexus-Setup-<version>.exe` (NSIS, unsigned) |
+| macOS | `.dmg` or `.zip` (unsigned, universal arm64 + x64) |
+| Linux | `.AppImage` / `.deb` / `.tar.gz` |
 
-**macOS first launch (unsigned build)**
+> **First launch will show a security warning. This is expected.**
+> Nexus releases aren't code-signed — there's no Apple Developer
+> certificate or Windows EV cert behind them, by design (no
+> commercialisation, no recurring infra spend). The warning means
+> "this developer hasn't paid for a signature," not "this is
+> malware." Source code is on GitHub, every release ships from
+> public CI, and SHA-256 + GPG signatures are published alongside
+> the Linux artifacts so you can verify the bytes you downloaded.
+
+#### macOS first launch
 
 1. Open the `.dmg` and drag `Nexus.app` into `/Applications`.
 2. Remove Gatekeeper's quarantine flag — open Terminal and run:
@@ -233,6 +242,19 @@ Grab the latest installer from the [releases page](https://github.com/FanyinLiu/
 4. Python-based options (OmniVoice TTS / GLM-ASR) are detected automatically.
    If you haven't installed Python + `requirements.txt`, they're silently
    skipped — the core chat + SenseVoice STT + Edge TTS stack still works.
+
+#### Windows first launch
+
+1. Run `Nexus-Setup-<version>.exe`.
+2. SmartScreen shows **"Windows protected your PC."**
+3. Click **More info** (small text under the warning), then **Run anyway**.
+4. Continue the NSIS installer normally; the local-voice wizard runs on first launch the same way as macOS.
+
+#### Linux first launch
+
+- **AppImage**: `chmod +x Nexus-<version>.AppImage` then double-click or run from terminal. No signing warning — Linux distros don't enforce app-level signatures the way macOS / Windows do.
+- **.deb**: `sudo dpkg -i Nexus-<version>.deb` (or open in your distro's package manager).
+- **Verify the download** (optional): each release ships a `SHA256SUMS` file and a `*.AppImage.asc` / `*.deb.asc` GPG detached signature. Import the public key published on the [release page](https://github.com/FanyinLiu/Nexus/releases/latest) and run `gpg --verify Nexus-<version>.AppImage.asc` to confirm authenticity.
 
 After the wizard, a 4-step onboarding guide walks you through: persona, main
 chat model, voice stack, companion preferences. You can skip any step and

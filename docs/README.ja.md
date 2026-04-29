@@ -221,7 +221,63 @@ VTube Studio 経由で外部 Live2D モデルを駆動する WebSocket ブリッ
 
 ---
 
+## ダウンロードとインストール
+
+### ビルド済みインストーラー（推奨）
+
+[release ページ](https://github.com/FanyinLiu/Nexus/releases/latest) から最新インストーラーをダウンロード：
+
+| プラットフォーム | ファイル |
+|---|---|
+| Windows | `Nexus-Setup-<バージョン>.exe`（NSIS、未署名） |
+| macOS | `.dmg` または `.zip`（未署名、arm64 + x64 ユニバーサル） |
+| Linux | `.AppImage` / `.deb` / `.tar.gz` |
+
+> **初回起動時にセキュリティ警告が表示されますが、これは想定内です。**
+> Nexus のリリースはコード署名されていません——Apple Developer
+> 証明書も Windows EV 証明書も使っていません。これは意図的な
+> 選択です（個人プロジェクトなので、有料化せず、継続的な
+> インフラコストも背負わない方針）。警告の意味は「この開発者は
+> 署名料を支払っていない」であって、「これはマルウェアだ」では
+> ありません。ソースコードは GitHub で公開、各リリースは公開
+> CI からビルドされており、Linux のアーティファクトには
+> SHA-256 と GPG 分離署名が付属しているため、独立に検証できます。
+
+#### macOS 初回起動
+
+1. `.dmg` を開いて `Nexus.app` を `/Applications` にドラッグ。
+2. Gatekeeper の隔離属性を解除——「ターミナル」を開いて実行：
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/Nexus.app
+   ```
+   （あるいは：Nexus.app を右クリック → 開く → ダイアログで確認。）
+3. Nexus を起動。初回実行時に **「ローカル音声モデルのインストール」**
+   ウィザードが表示されます。**「ワンクリックダウンロード」** をクリックして
+   ~280 MB の sherpa-onnx + VAD モデルを
+   `~/Library/Application Support/Nexus/sherpa-models` にダウンロード。
+   ウィザードは閉じても、後で設定から再度開けます。
+4. Python 系のオプション（OmniVoice TTS / GLM-ASR）は自動検出されます。
+   Python + `requirements.txt` を未インストールなら静かにスキップ——
+   コアのチャット + SenseVoice STT + Edge TTS スタックは引き続き動作します。
+
+#### Windows 初回起動
+
+1. `Nexus-Setup-<バージョン>.exe` を実行。
+2. SmartScreen が **「Windows によって PC が保護されました」** と表示。
+3. 警告の下にある **「詳細情報」** をクリック、続けて **「実行」** をクリック。
+4. NSIS インストーラーを通常通り進めてください。初回起動時にローカル音声モデル ウィザードが macOS と同じように表示されます。
+
+#### Linux 初回起動
+
+- **AppImage**：`chmod +x Nexus-<バージョン>.AppImage` してダブルクリックまたはターミナルで実行。Linux ディストリは macOS / Windows のようなアプリレベルの署名を強制しないため、警告は出ません。
+- **.deb**：`sudo dpkg -i Nexus-<バージョン>.deb`（または、ディストロのパッケージマネージャーで開く）。
+- **ダウンロード検証**（オプション）：各リリースには `SHA256SUMS` ファイルと `*.AppImage.asc` / `*.deb.asc` GPG 分離署名が付属しています。[release ページ](https://github.com/FanyinLiu/Nexus/releases/latest) で公開された公開鍵をインポートし、`gpg --verify Nexus-<バージョン>.AppImage.asc` で完全性を確認できます。
+
+---
+
 ## クイックスタート
+
+> このセクションは開発者がソースから実行するためのものです。一般ユーザーは上の「ダウンロードとインストール」を参照してください。
 
 **必要環境**：Node.js 22+ · npm 10+
 

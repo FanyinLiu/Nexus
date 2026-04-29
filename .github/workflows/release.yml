@@ -146,6 +146,8 @@ jobs:
               release/*.AppImage
               release/*.deb
               release/*.tar.gz
+              release/SHA256SUMS
+              release/*.asc
               release/latest-linux*.yml
 
     runs-on: ${{ matrix.os }}
@@ -199,6 +201,53 @@ jobs:
       - name: List built artifacts
         shell: bash
         run: ls -lh release/ || true
+
+      - name: Generate SHA256SUMS (Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          cd release
+          # Hash every Linux artifact in one canonical file. Users can
+          # then run `sha256sum -c SHA256SUMS` after downloading.
+          sha256sum *.AppImage *.deb *.tar.gz > SHA256SUMS
+          echo "::group::SHA256SUMS contents"
+          cat SHA256SUMS
+          echo "::endgroup::"
+
+      - name: GPG-sign Linux artifacts (if key configured)
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        shell: bash
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "::warning::GPG_PRIVATE_KEY secret not set — Linux artifacts will ship without GPG signatures (SHA256SUMS still produced)."
+            echo "To enable detached signing:"
+            echo "  1. Generate a key: gpg --full-generate-key (RSA 4096, no expiry, name=Nexus Releases)"
+            echo "  2. Export private: gpg --export-secret-keys --armor <KEY_ID> > key.asc"
+            echo "  3. Add repo secrets: GPG_PRIVATE_KEY = file contents; GPG_PASSPHRASE = passphrase"
+            echo "  4. Publish public key alongside the README so users can import + verify."
+            exit 0
+          fi
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          KEY_ID=$(gpg --list-secret-keys --keyid-format=long --with-colons | awk -F: '/^sec:/ { print $5; exit }')
+          if [ -z "$KEY_ID" ]; then
+            echo "::error::Failed to extract key ID from imported GPG key"
+            exit 1
+          fi
+          echo "Signing with key $KEY_ID"
+          cd release
+          for f in *.AppImage *.deb *.tar.gz SHA256SUMS; do
+            [ -f "$f" ] || continue
+            echo "Signing $f"
+            echo "$GPG_PASSPHRASE" | gpg --batch --pinentry-mode loopback \
+              --passphrase-fd 0 --local-user "$KEY_ID" \
+              --detach-sign --armor "$f"
+          done
+          echo "::group::Signature files produced"
+          ls -la *.asc
+          echo "::endgroup::"
 
       - name: Upload assets to release
         env:
