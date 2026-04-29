@@ -313,6 +313,10 @@
   display: inline-flex;
   align-items: center;
   font-size: 13px;
+  /* Prevent 2-char CJK labels (设置 / 折叠 / 关闭 / 等) from wrapping
+   * character-by-character when the host flex row narrows. The whole
+   * button width adapts to the text instead. */
+  white-space: nowrap;
 }
 
 .primary-button {
@@ -6552,15 +6556,20 @@
    so the user reads it as system information, not the companion.
    ─────────────────────────────────────────────────────────────────── */
 .crisis-hotline-panel {
-  margin: 0 0 12px;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  /* Renders as the first child of .companion-chat__messages (the
+     scrollable conversation area), in normal block flow above the
+     bubbles. Sits inside Liquid Glass where the ambient bg is
+     rgba(255,255,255,~0.04) — translucent amber disappears, so we
+     use an opaque warm dark fill plus an amber edge ring + outer
+     shadow to lift it off the conversation. */
+  margin: 0 0 14px;
+  border: 2px solid #f59e0b;
   border-radius: 14px;
-  background: linear-gradient(
-    180deg,
-    rgba(245, 158, 11, 0.10),
-    rgba(245, 158, 11, 0.04)
-  );
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.18);
+  background:
+    linear-gradient(180deg, #3a2400 0%, #2b1a00 100%);
+  box-shadow:
+    0 0 0 1px rgba(245, 158, 11, 0.35),
+    0 14px 36px rgba(0, 0, 0, 0.55);
   animation: crisis-hotline-slide-in 240ms ease-out;
 }
 
@@ -6602,16 +6611,17 @@
 
 .crisis-hotline-panel__title {
   margin: 0 0 6px;
-  font-size: 15px;
-  font-weight: 600;
-  color: rgba(255, 240, 220, 0.96);
+  font-size: 16px;
+  font-weight: 700;
+  color: #fef3c7;
+  letter-spacing: 0.2px;
 }
 
 .crisis-hotline-panel__body {
   margin: 0 0 14px;
-  font-size: 13.5px;
+  font-size: 14px;
   line-height: 1.55;
-  color: rgba(255, 240, 220, 0.82);
+  color: rgba(254, 243, 199, 0.92);
 }
 
 .crisis-hotline-panel__list {
@@ -6626,28 +6636,28 @@
 .crisis-hotline-panel__item {
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
 .crisis-hotline-panel__item-name {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(254, 243, 199, 0.85);
   margin-bottom: 2px;
 }
 
 .crisis-hotline-panel__item-phone {
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  color: rgba(255, 255, 255, 0.96);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #ffffff;
   font-variant-numeric: tabular-nums;
 }
 
 .crisis-hotline-panel__item-hours {
-  font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+  color: rgba(254, 243, 199, 0.65);
   margin-top: 2px;
 }
 
@@ -6659,16 +6669,27 @@
 }
 
 .crisis-hotline-panel__action {
-  padding: 6px 12px;
+  padding: 7px 14px;
   border-radius: 999px;
-  background: rgba(245, 158, 11, 0.18);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  color: rgba(255, 240, 220, 0.96);
-  font-size: 12.5px;
-  font-weight: 500;
+  background: #f59e0b;
+  border: 1px solid #f59e0b;
+  color: #1a0d00;
+  font-size: 13px;
+  font-weight: 600;
   text-decoration: none;
 }
 
 .crisis-hotline-panel__action:hover {
-  background: rgba(245, 158, 11, 0.28);
+  background: #fbbf24;
+  border-color: #fbbf24;
+}
+
+.crisis-hotline-panel__dismiss {
+  /* Override base — make the × clearly visible against the dark warm fill. */
+  color: rgba(254, 243, 199, 0.7);
+}
+
+.crisis-hotline-panel__dismiss:hover {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fef3c7;
 }

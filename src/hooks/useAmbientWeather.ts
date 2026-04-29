@@ -23,8 +23,16 @@ export type AmbientWeatherSnapshot = {
 // city while the next fetch is in flight).
 type TaggedSnapshot = AmbientWeatherSnapshot & { forLocation: string }
 
-const POLL_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes
+// Open-Meteo refreshes its `current=` payload roughly every 15 minutes,
+// so polling faster than that just burns network without seeing newer
+// data. Aligning to 15 min keeps us on the freshest cycle.
+const POLL_INTERVAL_MS = 15 * 60 * 1000
 const FIRST_FETCH_DELAY_MS = 3_000       // let the UI settle before the first call
+// Window-focus refresh: when the user comes back to Nexus we kick a
+// fresh fetch — but only if the existing snapshot is stale enough to
+// be worth the call. Two minutes balances "feels live when I switch
+// back" against "don't refetch every alt-tab".
+const FOCUS_REFRESH_MIN_AGE_MS = 2 * 60 * 1000
 
 /**
  * Poll the existing weather tool IPC (`window.desktopPet.getWeather`) at a
@@ -52,6 +60,7 @@ export function useAmbientWeather(
     let disposed = false
     let firstFetchTimer: number | null = null
     let pollTimer: number | null = null
+    let lastFetchedAt = 0
 
     const runFetch = async () => {
       if (disposed) return
@@ -64,6 +73,8 @@ export function useAmbientWeather(
         const temperature = typeof typed.currentTemperature === 'number'
           ? typed.currentTemperature
           : null
+        const fetchedAt = Date.now()
+        lastFetchedAt = fetchedAt
         setTaggedSnapshot({
           forLocation: trimmedLocation,
           resolvedName: typed.resolvedName || trimmedLocation,
@@ -72,7 +83,7 @@ export function useAmbientWeather(
           fullSummary: typed.currentSummary ?? '',
           weatherCode: typeof typed.currentWeatherCode === 'number' ? typed.currentWeatherCode : null,
           windSpeedKmh: typeof typed.currentWindSpeedKmh === 'number' ? typed.currentWindSpeedKmh : null,
-          fetchedAt: Date.now(),
+          fetchedAt,
         })
       } catch (err) {
         // Fail quiet — the chip just stays on the last successful snapshot
@@ -90,10 +101,23 @@ export function useAmbientWeather(
       void runFetch()
     }, POLL_INTERVAL_MS)
 
+    // Window-focus refresh — fires when Nexus regains foreground, but
+    // only if the snapshot is older than FOCUS_REFRESH_MIN_AGE_MS so
+    // alt-tabbing rapidly doesn't blast the API.
+    const handleFocus = () => {
+      if (disposed) return
+      const age = lastFetchedAt === 0 ? Infinity : Date.now() - lastFetchedAt
+      if (age >= FOCUS_REFRESH_MIN_AGE_MS) {
+        void runFetch()
+      }
+    }
+    window.addEventListener('focus', handleFocus)
+
     return () => {
       disposed = true
       if (firstFetchTimer !== null) window.clearTimeout(firstFetchTimer)
       if (pollTimer !== null) window.clearInterval(pollTimer)
+      window.removeEventListener('focus', handleFocus)
     }
   }, [enabled, trimmedLocation])
 

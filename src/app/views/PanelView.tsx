@@ -359,7 +359,11 @@ export function PanelView({
                         {Math.round(ambientWeather.temperatureC)}°
                       </span>
                     ) : null}
-                    <span className="ambient-weather-chip__place">{ambientWeather.resolvedName}</span>
+                    {/* Show only the rightmost geo segment (city) — full
+                        "中国 · 广东省 · 深圳市" overflows the toolbar at 460px
+                        and pushes the action buttons off the right edge.
+                        Hover title still shows the full location. */}
+                    <span className="ambient-weather-chip__place">{ambientWeather.resolvedName.split(/\s*·\s*|\s*,\s*/).pop() || ambientWeather.resolvedName}</span>
                   </span>
                 ) : null}
               </div>
@@ -382,9 +386,8 @@ export function PanelView({
 
             <section className="companion-chat">
 
-              <CrisisHotlinePanel locale={settings.uiLanguage} />
-
               <div ref={messageListRef} className="message-list companion-chat__messages" aria-live="polite" aria-label={ti('panel.messages.aria_label')}>
+                <CrisisHotlinePanel locale={settings.uiLanguage} />
                 {visibleMessages.length ? (
                   <>
                     {!showAllMessages && visibleMessages.length > MESSAGE_PAGE_SIZE && (
@@ -460,7 +463,7 @@ export function PanelView({
 
                 <textarea
                   ref={composerTextareaRef}
-                  rows={5}
+                  rows={3}
                   value={chat.input}
                   placeholder={ti('panel.composer.placeholder', { companionName: settings.companionName })}
                   onChange={(event) => chat.setInput(event.target.value)}
