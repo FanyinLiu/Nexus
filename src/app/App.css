@@ -4564,6 +4564,107 @@
   color: rgba(255, 255, 255, 0.55);
 }
 
+.onboarding-readiness {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.onboarding-readiness--ready {
+  border-color: rgba(74, 222, 128, 0.26);
+}
+
+.onboarding-readiness--warning {
+  border-color: rgba(251, 191, 36, 0.28);
+}
+
+.onboarding-readiness--blocked {
+  border-color: rgba(248, 113, 113, 0.32);
+}
+
+.onboarding-readiness__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.onboarding-readiness__header strong {
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.onboarding-readiness__status {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.onboarding-readiness__status--ready {
+  background: rgba(74, 222, 128, 0.14);
+  color: #bbf7d0;
+}
+
+.onboarding-readiness__status--warning {
+  background: rgba(251, 191, 36, 0.14);
+  color: #fde68a;
+}
+
+.onboarding-readiness__status--blocked {
+  background: rgba(248, 113, 113, 0.14);
+  color: #fecaca;
+}
+
+.onboarding-readiness p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.onboarding-readiness__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.onboarding-readiness__item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.onboarding-readiness__dot {
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.onboarding-readiness__item--ready .onboarding-readiness__dot {
+  background: #4ade80;
+}
+
+.onboarding-readiness__item--warning .onboarding-readiness__dot {
+  background: #fbbf24;
+}
+
+.onboarding-readiness__item--blocked .onboarding-readiness__dot {
+  background: #f87171;
+}
+
 .onboarding-toggle input {
   width: 18px;
   height: 18px;

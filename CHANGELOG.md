@@ -28,6 +28,9 @@
   abilities, not the core product identity.
 
 ### Added
+- **Companion wake-up checklist** — onboarding now summarizes identity, text
+  model, character model, and speech readiness before the desktop companion
+  starts.
 - **Notification bridge utility tests** — RSS interval migration/defaulting and
   webhook request-size constants are covered by focused unit tests.
 
