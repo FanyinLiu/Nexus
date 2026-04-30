@@ -320,7 +320,6 @@ export function useAppController() {
   // between useAutonomyController, useChat, and these setters — hence the
   // ref-mutation-through-effect pattern is intentional.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/immutability
     setErrorRef.current = chat.setError
     setInputFnRef.current = chat.setInput
     appendSystemMessageRef.current = chat.appendSystemMessage

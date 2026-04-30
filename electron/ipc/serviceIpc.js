@@ -2,8 +2,21 @@ import { BrowserWindow, ipcMain } from 'electron'
 import * as tencentAsr from '../services/tencentAsr.js'
 import * as minecraftGateway from '../services/minecraftGateway.js'
 import * as factorioRcon from '../services/factorioRcon.js'
-import * as realtimeVoice from '../services/realtimeVoice.js'
 import { requireTrustedSender } from './validate.js'
+
+const realtimeVoiceEnabled = process.env.NEXUS_ENABLE_REALTIME_VOICE === '1'
+let realtimeVoicePromise = null
+
+function loadRealtimeVoice() {
+  if (!realtimeVoiceEnabled) return Promise.resolve(null)
+  if (!realtimeVoicePromise) {
+    realtimeVoicePromise = import('../services/realtimeVoice.js').catch((err) => {
+      realtimeVoicePromise = null
+      throw err
+    })
+  }
+  return realtimeVoicePromise
+}
 
 export function register() {
   // ── Tencent Cloud Real-Time ASR ──
@@ -121,42 +134,54 @@ export function register() {
     return factorioRcon.getGameContext()
   })
 
-  // ── Realtime Voice (OpenAI Realtime API) ──
+  if (realtimeVoiceEnabled) {
+    // ── Realtime Voice (OpenAI Realtime API) ──
 
-  realtimeVoice.onRealtimeEvent((event) => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send('realtime:event', event)
-    }
-  })
+    loadRealtimeVoice().then((realtimeVoice) => {
+      realtimeVoice?.onRealtimeEvent((event) => {
+        for (const win of BrowserWindow.getAllWindows()) {
+          win.webContents.send('realtime:event', event)
+        }
+      })
+    }).catch((err) => {
+      console.warn('[realtime] failed to initialize:', err?.message ?? err)
+    })
 
-  ipcMain.handle('realtime:start', (event, payload) => {
-    requireTrustedSender(event)
-    return realtimeVoice.startSession(payload)
-  })
-  ipcMain.handle('realtime:stop', (event) => {
-    requireTrustedSender(event)
-    return realtimeVoice.stopSession()
-  })
-  ipcMain.handle('realtime:feed', (event, payload) => {
-    requireTrustedSender(event)
-    const samples = payload.samples
-    if (samples && !(Array.isArray(samples) || samples instanceof Float32Array)) return { ok: true }
-    if (samples && samples.length > 320000) return { ok: true }
-    realtimeVoice.feedAudio(samples)
-    return { ok: true }
-  })
-  ipcMain.handle('realtime:interrupt', (event) => {
-    requireTrustedSender(event)
-    realtimeVoice.interrupt()
-    return { ok: true }
-  })
-  ipcMain.handle('realtime:send-text', (event, payload) => {
-    requireTrustedSender(event)
-    realtimeVoice.sendTextMessage(payload.text)
-    return { ok: true }
-  })
-  ipcMain.handle('realtime:state', (event) => {
-    requireTrustedSender(event)
-    return realtimeVoice.getState()
-  })
+    ipcMain.handle('realtime:start', async (event, payload) => {
+      requireTrustedSender(event)
+      const realtimeVoice = await loadRealtimeVoice()
+      return realtimeVoice.startSession(payload)
+    })
+    ipcMain.handle('realtime:stop', async (event) => {
+      requireTrustedSender(event)
+      const realtimeVoice = await loadRealtimeVoice()
+      return realtimeVoice.stopSession()
+    })
+    ipcMain.handle('realtime:feed', async (event, payload) => {
+      requireTrustedSender(event)
+      const samples = payload.samples
+      if (samples && !(Array.isArray(samples) || samples instanceof Float32Array)) return { ok: true }
+      if (samples && samples.length > 320000) return { ok: true }
+      const realtimeVoice = await loadRealtimeVoice()
+      realtimeVoice.feedAudio(samples)
+      return { ok: true }
+    })
+    ipcMain.handle('realtime:interrupt', async (event) => {
+      requireTrustedSender(event)
+      const realtimeVoice = await loadRealtimeVoice()
+      realtimeVoice.interrupt()
+      return { ok: true }
+    })
+    ipcMain.handle('realtime:send-text', async (event, payload) => {
+      requireTrustedSender(event)
+      const realtimeVoice = await loadRealtimeVoice()
+      realtimeVoice.sendTextMessage(payload.text)
+      return { ok: true }
+    })
+    ipcMain.handle('realtime:state', async (event) => {
+      requireTrustedSender(event)
+      const realtimeVoice = await loadRealtimeVoice()
+      return realtimeVoice.getState()
+    })
+  }
 }

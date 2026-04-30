@@ -12,6 +12,9 @@ const __dirname = path.dirname(__filename)
 
 const isDev = !app.isPackaged
 const isSmokeTest = process.env.SMOKE_TEST === '1'
+const SMOKE_RENDERER_TIMEOUT_MS = 15_000
+const SMOKE_SUCCESS_GRACE_MS = 1_200
+const SMOKE_FORCE_EXIT_GRACE_MS = 3_000
 
 // ── Renderer console capture (dev-only) ───────────────────────────────────
 //
@@ -599,10 +602,42 @@ export function createMainWindow() {
   win.loadURL(getRendererEntry('pet'))
 
   if (isSmokeTest) {
+    let smokeDone = false
+    let forceExitTimer = null
+    const watchdog = setTimeout(() => {
+      finishSmoke(1, `renderer did not finish loading within ${SMOKE_RENDERER_TIMEOUT_MS}ms`)
+    }, SMOKE_RENDERER_TIMEOUT_MS)
+
+    const finishSmoke = (exitCode, reason) => {
+      if (smokeDone) return
+      smokeDone = true
+      clearTimeout(watchdog)
+      if (forceExitTimer) clearTimeout(forceExitTimer)
+      process.exitCode = exitCode
+      if (exitCode === 0) {
+        console.info('[smoke] renderer loaded; quitting')
+      } else {
+        console.error(`[smoke] ${reason}`)
+      }
+      forceExitTimer = setTimeout(() => app.exit(exitCode), SMOKE_FORCE_EXIT_GRACE_MS)
+      forceExitTimer.unref?.()
+      app.quit()
+    }
+
     win.webContents.once('did-finish-load', () => {
       setTimeout(() => {
-        app.quit()
-      }, 1200)
+        finishSmoke(0, 'renderer loaded')
+      }, SMOKE_SUCCESS_GRACE_MS)
+    })
+
+    win.webContents.once('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      if (isMainFrame === false) return
+      finishSmoke(1, `renderer failed to load ${validatedURL || ''}: ${errorCode} ${errorDescription}`.trim())
+    })
+
+    win.once('closed', () => {
+      clearTimeout(watchdog)
+      if (forceExitTimer) clearTimeout(forceExitTimer)
     })
   }
 

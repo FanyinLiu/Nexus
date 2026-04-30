@@ -23,6 +23,7 @@ const CONNECTION_TEST_TIMEOUT_MS = 12_000
 const AUDIO_TRANSCRIBE_TIMEOUT_MS = 20_000
 const AUDIO_SYNTH_TIMEOUT_MS = 25_000
 const AUDIO_VOICE_LIST_TIMEOUT_MS = 15_000
+const realtimeVoiceEnabled = process.env.NEXUS_ENABLE_REALTIME_VOICE === '1'
 
 const activeChatStreamControllers = new Map()
 
@@ -103,7 +104,7 @@ export function registerIpc() {
       import('./services/memoryVectorStore.js').catch(() => null),
       import('./services/minecraftGateway.js').catch(() => null),
       import('./services/factorioRcon.js').catch(() => null),
-      import('./services/realtimeVoice.js').catch(() => null),
+      realtimeVoiceEnabled ? import('./services/realtimeVoice.js').catch(() => null) : null,
       import('./services/telegramGateway.js').catch(() => null),
       import('./services/discordGateway.js').catch(() => null),
       import('./services/notificationBridge.js').catch(() => null),

@@ -1,20 +1,111 @@
-# Nexus Roadmap — post-v0.3.1
+# Nexus Roadmap — companion-first stewardship
 
-> Last updated 2026-04-28, after v0.3.1 stable.
+> Last updated 2026-04-30. Steward: Codex, under Klein's product direction.
 
 ## Posture
 
-**Polish phase, six months, no commercialisation.**
+**AI desktop companion first.**
 
-Nexus is a personal-use desktop companion that happens to be open-source.
-There is no "winning the market" story to attach to the next six months —
-the goal is straightforwardly to make the existing surface more reliable,
-keep it shippable as the regulatory floor rises, and clean up structural
-debt accumulated through five betas. No new feature lines.
+Nexus is not trying to become a generic local AI workbench. The product
+center is a local-first AI desktop companion: visible, voice-capable,
+emotionally continuous, respectful of attention, and able to remember the
+relationship over time. Productivity features, tools, game bridges, and
+knowledge work are valuable only when they strengthen that companion
+experience.
 
-This roadmap is short on purpose. If something belongs on it that isn't
-listed, add it; if something below stops mattering, delete it. Don't grow
-this file to feel productive.
+For the next phase, prioritize:
+
+1. Presence: Live2D behavior, pet window polish, mood, gestures, and desktop
+   interaction.
+2. Natural conversation: low-latency voice, interruption, wake word, VAD,
+   TTS, and clear failure recovery.
+3. Long-term continuity: memory, relationship state, milestones, and user
+   control over what is remembered.
+4. Safe autonomy: proactive care that is useful, quiet, auditable, and easy
+   to disable.
+5. Maintenance discipline: every new surface must be testable, gated, and
+   shippable across supported platforms.
+
+## Companion roadmap
+
+### Phase 1 — Stewardship baseline
+
+Make the project easy to maintain before adding more personality surface.
+
+- Keep `npm run lint`, `npm test`, and `npm run build` green before release
+  work.
+- Keep smoke tests bounded so GUI failures become visible diagnostics instead
+  of hangs.
+- Keep `CHANGELOG.md`, release notes, and this roadmap current.
+- Preserve user-owned local edits during maintenance; never sweep unrelated
+  work into commits.
+- Hide dormant or high-complexity feature lines behind explicit gates.
+
+### Phase 2 — First-run companion setup
+
+The first launch should help the user make Nexus feel alive without reading
+developer docs.
+
+- Detect microphone, screen recording, notification, and local model readiness.
+- Offer three simple modes: light companion, standard companion, high-quality
+  voice.
+- Test chat, TTS, ASR/VAD, Live2D, and permissions from one guided screen.
+- Provide direct repair actions or plain-language fix steps when a capability
+  fails.
+- Keep advanced provider and model settings available, but not required for
+  the happy path.
+
+### Phase 3 — Pet presence and interaction
+
+Make the visible companion feel intentional instead of decorative.
+
+- Mood-driven Live2D expression and motion mapping.
+- Click, drag, idle, edge, and focus reactions.
+- Quiet state display: listening, thinking, resting, focused, speaking.
+- Proactive pings that respect focus, quiet hours, and relationship context.
+- Performance-budget checks so animation never makes the app feel heavy.
+
+### Phase 4 — Memory and relationship legibility
+
+Make memory powerful, user-owned, and emotionally coherent.
+
+- Memory browser for facts, preferences, relationship milestones, events, and
+  reflections.
+- Edit, forget, pin, and source-trace important memories.
+- Short-term "recent thoughts" lane for inner monologue and proactive context.
+- Relationship and emotion state injected into the main chat prompt when
+  appropriate, not only displayed through UI effects.
+- Guardrails for sensitive memory, crisis handling, and AI disclosure.
+
+### Phase 5 — Voice naturalness
+
+Voice is the main sensory continuity channel for the companion.
+
+- Reduce first-audio latency and keep local low-latency TTS on the roadmap.
+- Support interruption without the companion hearing its own playback.
+- Add a voice diagnostics panel for mic level, VAD, ASR, TTS, and timing.
+- Move high-frequency audio paths toward typed chunks or stream-oriented IPC.
+- Bind voice presets to companion personas.
+
+### Phase 6 — Persona and character system
+
+Let users shape a companion without editing source files.
+
+- Character card import/export.
+- Persona versioning: tone, boundaries, relationship mode, and prompt rules.
+- Live2D expression mapping editor.
+- Voice and appearance presets per companion.
+- Multiple companion profiles only after the single-companion flow is clean.
+
+### Phase 7 — Tools as companion abilities
+
+Tools are not the product center; they are companion abilities.
+
+- Permission tiers for read-only, network, file write, app control, and command
+  execution.
+- Per-tool risk labels, approvals, and logs.
+- MCP and plugin surfaces remain opt-in and scoped.
+- Game/chat bridges stay experimental until they serve the main companion loop.
 
 ## Tier 1 — Compliance & distribution (must-do)
 
@@ -130,7 +221,7 @@ default change.
 
 Estimate: 1-2 weeks for the engine; rollout spans three patch versions.
 
-### 2.3 Minimal MCP client
+### 2.3 Minimal MCP client — gated companion ability
 
 Open-LLM-VTuber and SillyTavern both speak MCP now; it's becoming the
 standard way to give a chat companion access to tools. Nexus has an MCP
@@ -142,8 +233,24 @@ beyond the bare host.
   a config file path.
 - Surface available tools alongside built-in tools in the prompt.
 - Keep the per-tool approval gate from the v0.3.0 audit (M2).
+- Keep it behind an explicit setting and present it as "abilities" rather
+  than a generic workbench/plugin marketplace.
 
 Estimate: 1 week.
+
+## Experimental surfaces
+
+These features can stay in the codebase, but should not dominate onboarding
+or the main settings flow until they are reliable and clearly companion-led.
+
+- Realtime OpenAI voice.
+- Minecraft / Factorio gateways.
+- Telegram / Discord bridges.
+- Broad MCP/plugin execution.
+- Long-running autonomous tasks.
+
+Every experimental surface needs: an explicit enable switch, a visible risk or
+capability description, tests for lifecycle cleanup, and a clean failure mode.
 
 ## Tier 3 — Structural debt (opportunistic)
 
@@ -171,18 +278,21 @@ local-model paths gates ~250 KB gzip off first paint.
 Listed so future contributors don't pile feature work onto a polish
 phase.
 
-- New narrative-ritual features (Listen Mode, multi-day Arc deepening,
-  yearbook variants, etc. were considered and explicitly held).
+- Generic "AI workbench" parity with Jan, AnythingLLM, Msty, or Open WebUI.
 - Group / multi-character rooms.
-- VRM / 3D pipeline.
+- VRM / 3D pipeline before the Live2D companion loop is polished.
 - NSFW / dating-sim mechanics.
 - Subscription / paid tier.
 - Cloud sync / account system.
-- Memory legibility UI ("what I remember about you" panel) — would mean
-  re-mounting the letters / capsule / arc / mood-map UIs Klein
-  intentionally pulled from the drawer in v0.3.1.
+- Tool marketplaces or arbitrary automation that bypasses companion safety
+  and permission gates.
 
 ## Decisions log
+
+New decision 2026-04-30:
+
+0. **Product center** — AI desktop companion first. Productivity, knowledge,
+   tools, and game bridges are supporting abilities, not the core identity.
 
 All four open questions resolved 2026-04-28:
 

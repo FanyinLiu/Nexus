@@ -12,11 +12,7 @@ import { net } from 'electron'
 import { createServer } from 'node:http'
 import { randomUUID } from 'node:crypto'
 import { checkUrlSafety } from './urlSafety.js'
-
-// Channel polling intervals are clamped — too-fast = abuse, too-slow =
-// unusable. 60 s and 24 h match the values an honest user would pick.
-const MIN_RSS_INTERVAL_SEC = 60
-const MAX_RSS_INTERVAL_SEC = 24 * 60 * 60
+import { sanitizeNotificationChannels, WEBHOOK_MAX_BODY_BYTES } from './notificationBridgeUtils.js'
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -230,7 +226,7 @@ function startRssTimer(channel) {
 
   if (!channel.enabled || channel.kind !== 'rss') return
 
-  const intervalMs = Math.max(1, channel.checkIntervalMinutes) * 60_000
+  const intervalMs = channel.checkIntervalMinutes * 60_000
 
   // Immediate first poll
   pollRssChannel(channel).catch(() => {})
@@ -294,8 +290,23 @@ function startWebhookServer() {
     }
 
     let body = ''
-    req.on('data', (chunk) => { body += chunk })
+    let bodyBytes = 0
+    let bodyTooLarge = false
+
+    req.on('data', (chunk) => {
+      if (bodyTooLarge) return
+      bodyBytes += Buffer.isBuffer(chunk) ? chunk.length : Buffer.byteLength(String(chunk))
+      if (bodyBytes > WEBHOOK_MAX_BODY_BYTES) {
+        bodyTooLarge = true
+        res.writeHead(413, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Request body too large' }))
+        req.destroy()
+        return
+      }
+      body += chunk
+    })
     req.on('end', () => {
+      if (bodyTooLarge) return
       try {
         const payload = JSON.parse(body)
         const title = String(payload.title ?? '')
@@ -371,7 +382,7 @@ export function getChannels() {
  * @param {NotificationChannel[]} channels
  */
 export function setChannels(channels) {
-  _channels = sanitizeChannels(Array.isArray(channels) ? channels : [])
+  _channels = sanitizeNotificationChannels(Array.isArray(channels) ? channels : [])
 
   // Restart all RSS timers if the bridge is running
   if (_running) {
@@ -382,60 +393,6 @@ export function setChannels(channels) {
       }
     }
   }
-}
-
-/**
- * Per-channel input validation. Drops items that don't match the expected
- * shape; clamps polling intervals; refuses RSS URLs that fail the SSRF
- * guard. Logs each rejection so the user can see why something disappeared.
- */
-function sanitizeChannels(channels) {
-  const out = []
-  for (const raw of channels) {
-    if (!raw || typeof raw !== 'object') continue
-
-    const kind = raw.kind === 'rss' || raw.kind === 'webhook' ? raw.kind : null
-    if (!kind) {
-      console.warn('[notification-bridge] dropped channel: invalid kind', raw?.kind)
-      continue
-    }
-
-    const id = String(raw.id ?? '').trim()
-    const name = String(raw.name ?? '').trim()
-    const enabled = Boolean(raw.enabled)
-    if (!id || !name) {
-      console.warn('[notification-bridge] dropped channel: missing id/name')
-      continue
-    }
-
-    const config = raw.config && typeof raw.config === 'object' ? raw.config : {}
-
-    if (kind === 'rss') {
-      const url = String(config.url ?? '').trim()
-      const safety = checkUrlSafety(url)
-      if (!safety.ok) {
-        console.warn(`[notification-bridge] dropped RSS channel "${name}": ${safety.reason}`)
-        continue
-      }
-      const intervalSec = Math.min(
-        MAX_RSS_INTERVAL_SEC,
-        Math.max(
-          MIN_RSS_INTERVAL_SEC,
-          Number.isFinite(config.intervalSec) ? Math.floor(config.intervalSec) : 300,
-        ),
-      )
-      out.push({
-        ...raw,
-        id, name, kind, enabled,
-        config: { ...config, url, intervalSec },
-      })
-    } else {
-      // webhook: nothing to fetch from the renderer's URL — local server
-      // accepts inbound POSTs only. No SSRF risk; just keep the entry.
-      out.push({ ...raw, id, name, kind, enabled, config })
-    }
-  }
-  return out
 }
 
 /** Start the bridge (RSS polling + webhook server). */

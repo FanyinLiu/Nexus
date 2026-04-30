@@ -4,6 +4,33 @@
 > is the high-level summary suitable for "what changed since last release"
 > at a glance. Beta versions are listed under their target stable release.
 
+## [Unreleased] - 2026-04-30
+
+### Fixed
+- **Notification bridge RSS intervals** — RSS channels now normalize
+  `checkIntervalMinutes` and legacy `config.intervalSec` through one path,
+  clamped to 5-1440 minutes so stale or malformed channel data cannot create
+  `NaN` timers or abusive polling intervals.
+- **Notification bridge webhook body cap** — local webhook POST bodies are now
+  capped at 64 KB and return 413 when exceeded.
+- **Gateway tests in restricted environments** — WebSocket integration tests
+  now skip cleanly when the local test server cannot bind in a sandbox instead
+  of hanging the suite.
+- **Smoke lifecycle** — renderer smoke now has an application-level watchdog
+  and records load failures instead of waiting forever for `did-finish-load`.
+- **Lint cleanup** — removed a stale `eslint-disable` from the app controller.
+
+### Changed
+- **Realtime voice surface gated** — dormant OpenAI realtime voice preload/IPC
+  APIs are hidden unless `NEXUS_ENABLE_REALTIME_VOICE=1` is set.
+- **Roadmap posture** — Nexus is now documented as an AI desktop companion
+  first. Tools, knowledge, game bridges, and automation are supporting
+  abilities, not the core product identity.
+
+### Added
+- **Notification bridge utility tests** — RSS interval migration/defaulting and
+  webhook request-size constants are covered by focused unit tests.
+
 ## [0.3.1-beta.3] - 2026-04-26
 
 ### Fixed

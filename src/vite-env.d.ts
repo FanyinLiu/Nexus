@@ -572,13 +572,13 @@ declare global {
       vadStop: () => Promise<{ ok: boolean }>
 
       // Realtime Voice (OpenAI Realtime API)
-      realtimeStart: (payload: RealtimeSessionOptions) => Promise<{ sessionId: string }>
-      realtimeStop: () => Promise<void>
-      realtimeFeed: (payload: { samples: number[] | Float32Array }) => Promise<{ ok: boolean }>
-      realtimeInterrupt: () => Promise<{ ok: boolean }>
-      realtimeSendText: (payload: { text: string }) => Promise<{ ok: boolean }>
-      realtimeState: () => Promise<{ state: 'idle' | 'connecting' | 'active' | 'error'; sessionId: string }>
-      subscribeRealtimeEvent: (listener: (event: RealtimeEvent) => void) => () => void
+      realtimeStart?: (payload: RealtimeSessionOptions) => Promise<{ sessionId: string }>
+      realtimeStop?: () => Promise<void>
+      realtimeFeed?: (payload: { samples: number[] | Float32Array }) => Promise<{ ok: boolean }>
+      realtimeInterrupt?: () => Promise<{ ok: boolean }>
+      realtimeSendText?: (payload: { text: string }) => Promise<{ ok: boolean }>
+      realtimeState?: () => Promise<{ state: 'idle' | 'connecting' | 'active' | 'error'; sessionId: string }>
+      subscribeRealtimeEvent?: (listener: (event: RealtimeEvent) => void) => () => void
 
       // Autonomy: system idle & power events
       /** Returns system idle time in seconds. */

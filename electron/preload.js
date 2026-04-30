@@ -1,5 +1,24 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
+const realtimeVoiceEnabled = process.env.NEXUS_ENABLE_REALTIME_VOICE === '1'
+
+const realtimeVoiceApi = realtimeVoiceEnabled
+  ? {
+      // Realtime Voice (OpenAI Realtime API)
+      realtimeStart: (payload) => ipcRenderer.invoke('realtime:start', payload),
+      realtimeStop: () => ipcRenderer.invoke('realtime:stop'),
+      realtimeFeed: (payload) => ipcRenderer.invoke('realtime:feed', payload),
+      realtimeInterrupt: () => ipcRenderer.invoke('realtime:interrupt'),
+      realtimeSendText: (payload) => ipcRenderer.invoke('realtime:send-text', payload),
+      realtimeState: () => ipcRenderer.invoke('realtime:state'),
+      subscribeRealtimeEvent: (listener) => {
+        const handler = (_event, payload) => listener(payload)
+        ipcRenderer.on('realtime:event', handler)
+        return () => ipcRenderer.removeListener('realtime:event', handler)
+      },
+    }
+  : {}
+
 contextBridge.exposeInMainWorld('desktopPet', {
   updatePetWindowState: (state) => ipcRenderer.invoke('pet-window:update-state', state),
   getPetWindowState: () => ipcRenderer.invoke('pet-window:get-state'),
@@ -247,18 +266,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   workspaceGlob: (payload) => ipcRenderer.invoke('workspace:glob', payload),
   workspaceGrep: (payload) => ipcRenderer.invoke('workspace:grep', payload),
 
-  // Realtime Voice (OpenAI Realtime API)
-  realtimeStart: (payload) => ipcRenderer.invoke('realtime:start', payload),
-  realtimeStop: () => ipcRenderer.invoke('realtime:stop'),
-  realtimeFeed: (payload) => ipcRenderer.invoke('realtime:feed', payload),
-  realtimeInterrupt: () => ipcRenderer.invoke('realtime:interrupt'),
-  realtimeSendText: (payload) => ipcRenderer.invoke('realtime:send-text', payload),
-  realtimeState: () => ipcRenderer.invoke('realtime:state'),
-  subscribeRealtimeEvent: (listener) => {
-    const handler = (_event, payload) => listener(payload)
-    ipcRenderer.on('realtime:event', handler)
-    return () => ipcRenderer.removeListener('realtime:event', handler)
-  },
+  ...realtimeVoiceApi,
 
   // Auto-updater (electron-updater + GitHub Releases)
   updaterCheck: () => ipcRenderer.invoke('updater:check'),
