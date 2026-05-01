@@ -7,6 +7,8 @@
 ## [Unreleased] - 2026-04-30
 
 ### Fixed
+- **Onboarding Edge TTS validation** — the voice setup step no longer blocks
+  keyless Edge TTS because an API endpoint field is intentionally hidden.
 - **Notification bridge RSS intervals** — RSS channels now normalize
   `checkIntervalMinutes` and legacy `config.intervalSec` through one path,
   clamped to 5-1440 minutes so stale or malformed channel data cannot create

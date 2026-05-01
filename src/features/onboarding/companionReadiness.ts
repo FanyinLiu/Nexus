@@ -31,6 +31,7 @@ export type CompanionReadinessInput = {
   speechOutputEnabled: boolean
   speechOutputProviderId: string
   speechOutputApiBaseUrl: string
+  speechOutputRequiresApiBaseUrl: boolean
   continuousVoiceModeEnabled: boolean
 }
 
@@ -131,7 +132,7 @@ function buildVoiceItem(input: CompanionReadinessInput): CompanionReadinessItem 
   const speechOutputMissing = input.speechOutputEnabled
     && (
       !hasValue(input.speechOutputProviderId)
-      || !hasValue(input.speechOutputApiBaseUrl)
+      || (input.speechOutputRequiresApiBaseUrl && !hasValue(input.speechOutputApiBaseUrl))
     )
 
   if (speechInputMissing || speechOutputMissing) {

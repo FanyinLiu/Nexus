@@ -21,6 +21,7 @@ const baseInput: CompanionReadinessInput = {
   speechOutputEnabled: false,
   speechOutputProviderId: '',
   speechOutputApiBaseUrl: '',
+  speechOutputRequiresApiBaseUrl: true,
   continuousVoiceModeEnabled: false,
 }
 
@@ -65,12 +66,29 @@ test('warns when a keyed text provider has no api key yet', () => {
   assert.equal(itemStatus({ ...baseInput, textProviderRequiresApiKey: true }, 'text'), 'warning')
 })
 
-test('allows local speech input without an input api base url', () => {
+test('allows local speech input and keyless speech output without api base urls', () => {
   const input = readinessInputWithLocalVoice()
   const readiness = buildCompanionReadiness(input)
 
   assert.equal(readiness.status, 'ready')
   assert.equal(itemStatus(input, 'voice'), 'ready')
+})
+
+test('blocks remote speech output when it requires an api base url', () => {
+  const readiness = buildCompanionReadiness({
+    ...baseInput,
+    speechOutputEnabled: true,
+    speechOutputProviderId: 'openai-tts',
+    speechOutputRequiresApiBaseUrl: true,
+  })
+
+  assert.equal(readiness.status, 'blocked')
+  assert.equal(itemStatus({
+    ...baseInput,
+    speechOutputEnabled: true,
+    speechOutputProviderId: 'openai-tts',
+    speechOutputRequiresApiBaseUrl: true,
+  }, 'voice'), 'blocked')
 })
 
 test('warns when continuous voice is enabled without both sides of speech', () => {
@@ -94,7 +112,7 @@ function readinessInputWithLocalVoice(): CompanionReadinessInput {
     speechInputUsesLocalRuntime: true,
     speechOutputEnabled: true,
     speechOutputProviderId: 'edge-tts',
-    speechOutputApiBaseUrl: 'http://localhost:8787',
+    speechOutputRequiresApiBaseUrl: false,
     continuousVoiceModeEnabled: true,
   }
 }

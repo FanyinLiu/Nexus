@@ -1,5 +1,8 @@
 import { apiProviderRequiresApiKey } from '../../../../lib/apiProviders'
-import { isSenseVoiceSpeechInputProvider } from '../../../../lib/audioProviders'
+import {
+  isSenseVoiceSpeechInputProvider,
+  isSpeechOutputKeyless,
+} from '../../../../lib/audioProviders'
 import { RELATIONSHIP_OPTIONS } from '../../../../lib/relationshipTypes'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
 import type { AppSettings } from '../../../../types'
@@ -42,6 +45,7 @@ export function CompanionStep({
     speechOutputEnabled: draft.speechOutputEnabled,
     speechOutputProviderId: draft.speechOutputProviderId,
     speechOutputApiBaseUrl: draft.speechOutputApiBaseUrl,
+    speechOutputRequiresApiBaseUrl: !isSpeechOutputKeyless(draft.speechOutputProviderId),
     continuousVoiceModeEnabled: draft.continuousVoiceModeEnabled,
   })
   const readinessStatusKey: Record<CompanionReadinessStatus, Parameters<typeof pickTranslatedUiText>[1]> = {
