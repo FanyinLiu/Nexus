@@ -53,20 +53,37 @@ function resolveSafe(relPath) {
   }
 
   // Resolve symlinks to detect escapes via symlink targets.
-  // Only check if the path already exists on disk (new files are fine).
+  // For new files, resolve the nearest existing ancestor so a path like
+  // `link-to-outside/new.txt` cannot write through an in-workspace symlink.
   try {
-    const real = fs.realpathSync(absolute)
-    const realRel = path.relative(workspaceRoot, real)
+    const realRoot = fs.realpathSync(workspaceRoot)
+    const real = realpathExistingAncestor(absolute)
+    const realRel = path.relative(realRoot, real)
     if (realRel.startsWith('..') || path.isAbsolute(realRel)) {
       throw new Error(`Path "${relPath}" resolves via symlink outside the workspace root`)
     }
   } catch (err) {
-    // ENOENT means the target doesn't exist yet (e.g. a new file write) — that's fine.
+    // ENOENT on the root means the workspace has not been created yet. Keep
+    // the lexical boundary check above, and mkdir/write will create it later.
     // Re-throw anything else (including our own escape error).
     if (err.code !== 'ENOENT') throw err
   }
 
   return absolute
+}
+
+function realpathExistingAncestor(absolutePath) {
+  let current = absolutePath
+  while (true) {
+    try {
+      return fs.realpathSync(current)
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err
+      const parent = path.dirname(current)
+      if (parent === current) throw err
+      current = parent
+    }
+  }
 }
 
 export async function readWorkspaceFile(relPath) {
@@ -92,7 +109,7 @@ export async function writeWorkspaceFile(relPath, content) {
   if (typeof content !== 'string') {
     throw new Error('Content must be a string')
   }
-  if (content.length > WRITE_LIMIT_BYTES) {
+  if (Buffer.byteLength(content, 'utf8') > WRITE_LIMIT_BYTES) {
     throw new Error(`Content exceeds ${WRITE_LIMIT_BYTES} byte write limit`)
   }
   const abs = resolveSafe(relPath)
@@ -120,7 +137,7 @@ export async function editWorkspaceFile(relPath, oldString, newString) {
     )
   }
   const updated = original.replace(oldString, newString)
-  if (updated.length > WRITE_LIMIT_BYTES) {
+  if (Buffer.byteLength(updated, 'utf8') > WRITE_LIMIT_BYTES) {
     throw new Error(`Resulting file exceeds ${WRITE_LIMIT_BYTES} byte write limit`)
   }
   await writeFile(abs, updated, 'utf8')
