@@ -70,7 +70,6 @@ Every voice frame, every memory entry, every tool call runs on your own machine.
 |---|---|---|
 | 2026-04-28 | **v0.3.1 stable** | Emotion-line guidance, IPC hardening, 30+ static fixes, CVE cleanup. [Release notes](docs/RELEASE-NOTES-v0.3.1.md) · [Install](https://github.com/FanyinLiu/Nexus/releases/tag/v0.3.1) |
 | 2026-04-25 | **v0.3.0 stable** | Narrative companion foundation: dream cycle, callback queue, anniversary milestones, relationship type, scene/UI refresh. [Release notes](docs/RELEASE-NOTES-v0.3.0.md) |
-| 2026-04-22 | v0.2.9 | Emotional memory baseline, Character Card import, VTube Studio bridge, weather/scene overhaul. [Tag](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.9) |
 
 <details>
 <summary>Recent beta and older release notes</summary>
@@ -81,15 +80,8 @@ Every voice frame, every memory entry, every tool call runs on your own machine.
 - **2026.04.26** — v0.3.1-beta.2 — chat baseUrl SSRF fix, vault enumeration mitigation, loopback probe hardening. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.2.md)
 - **2026.04.25** — v0.3.1-beta.1 — installer size cut from ~1.2 GB to ~250 MB. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.1.md)
 - **2026.04.24** — v0.3.0-beta.1 / beta.2 — beta line for the relationship + memory work. [Notes beta.1](docs/RELEASE-NOTES-v0.3.0-beta.1.md) · [Notes beta.2](docs/RELEASE-NOTES-v0.3.0-beta.2.md)
-
-- **2026.04.19** — v0.2.7. Barge-in hardening; render-storm fixes. [Notes](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.7)
-- **2025.04.19** — v0.2.5. Autonomy Engine V2 default-on; voice/TTS reliability pass. [Notes](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.5)
-- **2025.04.16** — v0.2.4. Voice/TTS reliability + Anthropic prompt caching + 20+ bug fixes. [Notes](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.4)
-- **2025.04.15** — Wake-word + VAD rewrite (Plan C): main-process Silero VAD + sherpa-onnx-node, single mic stream.
-- **2025.04.14** — TTS intermittency fixes: retry / per-segment events / sender teardown.
-- **2025.04.12** — Speech-interrupt architecture: echo-cancelled mic + TTS-aware dynamic threshold.
-- **2025.04.10** — Hybrid memory landed: three-tier hot / warm / cold + BM25 + local vector search.
-- **2025.04.01** — v0.1 opened. First playable build.
+- **2026.04.22** — v0.2.9 — emotional-memory baseline, Character Card import, VTube Studio bridge, weather/scene overhaul. [Notes](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.9)
+- Earlier history lives in [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases).
 
 </details>
 
@@ -117,7 +109,7 @@ Every voice frame, every memory entry, every tool call runs on your own machine.
 | **💔 Gottman repair** | Auto-detects the four Horsemen (criticism / contempt / defensiveness / stonewalling) and the next turn injects soft start-up + accept-influence repair posture. **Changes silently — no "I noticed you're feeling…" prompt.** |
 | **🔒 Two critical CVEs cleared** | `pixi-live2d-display` accidentally pulled `gh-pages` (prototype pollution) into runtime deps; `npm overrides` forces upgrade to clean versions. |
 | **🛡️ IPC audit 6/7 HIGH closed** | H2 / H3 / H5 / H6 / H7 / H8 + M1 / M2 / M3 / M5 + L3 / L4 / L6 all fixed; H4 deferred by design to v1.0. |
-| **🐛 30+ static-bug fixes** | Four audit rounds + parallel agent static scans: template-replace `$&` hole, race conditions, StrictMode purity, NaN guards, async leaks, storage validation. |
+| **🐛 30+ static-bug fixes** | Four audit rounds + parallel static scans: template-replace `$&` hole, race conditions, StrictMode purity, NaN guards, async leaks, storage validation. |
 | **🚦 Release-gate expanded to 26 checks** | `prerelease-check.mjs` from 8 → 26 across 6 stages: process / code quality / security / assets / docs compliance / privacy governance. |
 | **🧹 UI prune** | Letters / Time-capsule / Small-things / Loose-threads / Mood-map — five settings panels withdrawn from the drawer (the underlying schedulers still run). The companion's emotional adaptation should be felt, not configured. |
 
@@ -159,22 +151,6 @@ Every voice frame, every memory entry, every tool call runs on your own machine.
 </details>
 
 ---
-
-<details>
-<summary>What's new in v0.2.9</summary>
-
-The headline of v0.2.9 was the **emotional memory + 5-level relationship baseline** that v0.3.0-beta.1 now extends.
-
-- **Emotional memory + relationship arc** — companion remembers the *feel* of how you parted; 5-level progression (stranger → acquaintance → friend → close friend → intimate); per-persona `memory.md` files survive switches.
-- **Weather + scene overhaul** — 14 intensity-graded weather states, continuous 24h sunlight filter, 15 AI-generated day/dusk/night scene variants.
-- **Character Card v2/v3 import + VTube Studio bridge** — chub.ai / characterhub compatible; drive external Live2D models via the VTS plugin API.
-- **Pet polish** — inline `[expr:name]` mid-sentence expression tags; 13 fine-grained mood states; per-model weighted idle fidgets; mouse-drag resize.
-- **Render / sync fixes** — cross-window save loop, runtime-state self-feed render storm, TTS-timeout cascade, wake-word transient errors all fixed.
-- **Internal** — Autonomy V1 deleted; CI caches sherpa models + electron-builder; sherpa bundled into Mac/Linux installers.
-
-Full notes on the [v0.2.9 release page](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.9).
-
-</details>
 
 ## Install
 
@@ -334,7 +310,7 @@ Higher-level layout:
 ```
 src/
 ├── app/            # Top-level views, controllers, overlays
-├── features/       # Voice, chat, autonomy, tools, memory, agent
+├── features/       # Voice, chat, autonomy, tools, memory, background tasks
 ├── hooks/          # React hooks (voice / chat / reminders)
 ├── components/     # Reusable UI
 ├── lib/            # Storage, runtime bridges, plain helpers
@@ -351,7 +327,7 @@ electron/
 These are promising directions, not active commitments. The current project phase is stabilization, documentation, and packaging polish.
 
 - [ ] **Screen-aware proactive conversation** — periodically read screen context (foreground app, visible text) and initiate conversation about what the user is doing, not just respond when spoken to.
-- [ ] **Decision / Roleplay / Agent three-layer separation** — split intent classification (fast) from roleplay (persona-pure) from background agent tasks. Roleplay never sees tool metadata; agent results are "announced" by the character in its own voice.
+- [ ] **Decision / roleplay / background-task separation** — split intent classification (fast) from roleplay (persona-pure) from task execution. Roleplay never sees tool metadata; task results are "announced" by the character in its own voice.
 - [ ] **Character diary & autonomous timeline** — the companion auto-generates a first-person diary entry each day summarizing what happened; optionally posts "moments" to a browsable feed, creating a sense of independent life.
 - [ ] **Daily schedule & activity states** — the companion follows routines (work / eat / sleep / commute) that affect availability, tone, and energy. Late-night conversations feel different from morning ones.
 - [ ] **Mini mode / dock-edge hide** — drag the pet to the screen edge and it auto-hides with a peek-on-hover animation. "Always present, never intrusive."
