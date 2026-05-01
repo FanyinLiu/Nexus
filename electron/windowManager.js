@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { getPreloadPath, getRendererEntry } from './rendererServer.js'
 import { clampWindowPosition, getPanelWindowPosition, PANEL_WINDOW_GAP_PX } from './windowManagerHelpers.js'
 import { getSavedBounds, trackWindow } from './services/windowBoundsStore.js'
+import { isAllowedRendererNavigation, normalizeExternalWindowOpenUrl } from './windowNavigation.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -250,6 +251,10 @@ const PET_WINDOW_STATE_SCHEMA = {
   petHotspotActive: 'boolean',
 }
 
+const PANEL_WINDOW_STATE_SCHEMA = {
+  collapsed: 'boolean',
+}
+
 function sanitizeBySchema(partialState, schema, stringMax = RUNTIME_STATE_STRING_MAX) {
   if (!partialState || typeof partialState !== 'object') return Object.create(null)
   const safe = Object.create(null)
@@ -274,6 +279,10 @@ function sanitizePartialState(partialState) {
 
 function sanitizePetWindowPartial(partialState) {
   return sanitizeBySchema(partialState, PET_WINDOW_STATE_SCHEMA)
+}
+
+function sanitizePanelWindowPartial(partialState) {
+  return sanitizeBySchema(partialState, PANEL_WINDOW_STATE_SCHEMA)
 }
 
 export function updateRuntimeState(partialState, originWebContentsId = null) {
@@ -390,7 +399,7 @@ function getExpandedPanelBounds() {
 }
 
 export function updatePanelWindowState(partialState = {}) {
-  const safe = sanitizePartialState(partialState)
+  const safe = sanitizePanelWindowPartial(partialState)
   panelWindowState = {
     ...panelWindowState,
     ...safe,
@@ -443,6 +452,35 @@ export function updatePanelWindowState(partialState = {}) {
 
   emitPanelWindowState()
   return panelWindowState
+}
+
+function openExternalUrlFromWindow(url, label) {
+  try {
+    const safeUrl = normalizeExternalWindowOpenUrl(url)
+    shell.openExternal(safeUrl).catch((err) => {
+      console.warn(`[security] failed to open ${label} external URL:`, err?.message ?? err)
+    })
+  } catch (err) {
+    console.warn(`[security] blocked ${label} external URL:`, url, err?.message ?? err)
+  }
+}
+
+function attachNavigationGuards(win, label, view) {
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    openExternalUrlFromWindow(url, label)
+    return { action: 'deny' }
+  })
+
+  // Prevent the renderer from navigating away from the app origin.
+  // If an attacker manages to redirect the webContents, the preload bridge
+  // would be exposed to an untrusted page.
+  win.webContents.on('will-navigate', (event, url) => {
+    const allowed = getRendererEntry(view)
+    if (!isAllowedRendererNavigation(url, allowed)) {
+      console.warn(`[security] blocked ${label} navigation to`, url)
+      event.preventDefault()
+    }
+  })
 }
 
 export function moveMainWindowBy(deltaX, deltaY) {
@@ -525,26 +563,7 @@ export function createMainWindow() {
 
   win.setAlwaysOnTop(true, process.platform === 'darwin' ? 'floating' : 'screen-saver')
 
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    try {
-      const parsed = new URL(url)
-      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
-        shell.openExternal(url)
-      }
-    } catch { /* ignore malformed URLs */ }
-    return { action: 'deny' }
-  })
-
-  // Prevent the renderer from navigating away from the app origin.
-  // If an attacker manages to redirect the webContents, the preload bridge
-  // would be exposed to an untrusted page.
-  win.webContents.on('will-navigate', (event, url) => {
-    const allowed = getRendererEntry()
-    if (!url.startsWith(allowed)) {
-      console.warn('[security] blocked main-window navigation to', url)
-      event.preventDefault()
-    }
-  })
+  attachNavigationGuards(win, 'main-window', 'pet')
 
   win.on('closed', () => {
     mainWindow = null
@@ -702,23 +721,7 @@ export function createPanelWindow() {
     },
   })
 
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    try {
-      const parsed = new URL(url)
-      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
-        shell.openExternal(url)
-      }
-    } catch { /* ignore malformed URLs */ }
-    return { action: 'deny' }
-  })
-
-  win.webContents.on('will-navigate', (event, url) => {
-    const allowed = getRendererEntry()
-    if (!url.startsWith(allowed)) {
-      console.warn('[security] blocked panel-window navigation to', url)
-      event.preventDefault()
-    }
-  })
+  attachNavigationGuards(win, 'panel-window', 'panel')
 
   // Mirror the pet-window log capture for the panel's renderer.
   attachRendererLogCapture(win.webContents, 'panel')
