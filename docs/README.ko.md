@@ -2,28 +2,49 @@
 
 <h1 align="center">Nexus</h1>
 
-<h3 align="center">당신의 바탕화면에 사는 AI 동반자 — 기억하고, 꿈꾸고, 함께합니다.</h3>
+<p align="center"><b>기억, 음성, Live2D, 장기 관계 상태를 갖춘 로컬 우선 데스크톱 AI 동반자.</b></p>
+
+<p align="center">Nexus가 중시하는 것은 연속성입니다. 동반자는 중요한 일을 기억하고, 관계가 어떻게 변하는지 알아차리며, 데스크톱 펫으로 곁에 있고, 작은 백그라운드 작업도 도울 수 있습니다. 모델 호출은 사용자가 선택한 provider를 사용하고, 기억·음성 오케스트레이션·도구·안전 상태는 내 컴퓨터에 남습니다.</p>
 
 <p align="center">
-  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/github/v/release/FanyinLiu/Nexus?style=flat-square&color=blue" alt="Release"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/github/v/release/FanyinLiu/Nexus?style=flat-square&color=blue&label=release" alt="Release"></a>
   <a href="https://github.com/FanyinLiu/Nexus/blob/main/LICENSE"><img src="https://img.shields.io/github/license/FanyinLiu/Nexus?style=flat-square" alt="License"></a>
-  <a href="https://github.com/FanyinLiu/Nexus/stargazers"><img src="https://img.shields.io/github/stars/FanyinLiu/Nexus?style=flat-square" alt="Stars"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/stargazers"><img src="https://img.shields.io/github/stars/FanyinLiu/Nexus?style=flat-square&logo=github" alt="Stars"></a>
   <a href="https://github.com/FanyinLiu/Nexus"><img src="https://img.shields.io/github/last-commit/FanyinLiu/Nexus?style=flat-square" alt="Last Commit"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/FanyinLiu/Nexus/ci.yml?branch=main&style=flat-square&label=ci" alt="CI"></a>
 </p>
 
 <p align="center">
   <a href="../README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ja.md">日本語</a> · <b>한국어</b>
 </p>
 
+<p align="center">
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
+</p>
+
+> **현재 릴리스:** v0.3.1 안정 버전(2026-04-28). Nexus는 지금도 일상적으로 사용할 수 있지만, 빠르게 다듬고 있는 개인 프로젝트입니다. 패키징, 선택형 로컬 음성 모델, provider 설정에는 아직 거친 부분이 남아 있을 수 있습니다.
+
 ---
 
-> **참고**: Nexus는 활발히 개발 중입니다. 일부 기능은 안정화되었고, 일부는 아직 다듬는 중입니다. 피드백과 기여를 환영합니다!
+## 문서 안내
 
-## Nexus란?
+| 원하는 것 | 이동할 곳 |
+|---|---|
+| 앱 설치 | [최신 릴리스 다운로드](https://github.com/FanyinLiu/Nexus/releases/latest) |
+| 제품 이해 | [왜 Nexus인가](#왜-nexus인가) · [주요 기능](#주요-기능) |
+| 소스에서 실행 | [빠른 시작](#빠른-시작) |
+| 모델 설정 | [추천 모델 구성](#추천-모델-구성) · [지원 제공자](#지원-제공자) |
+| 안전/개인정보 확인 | [안전 및 지원](#안전-및-지원) |
 
-Nexus는 LLM 기반의 크로스 플랫폼 데스크톱 AI 동반자입니다. Live2D 캐릭터를 **연속 음성 대화**, **장기 기억**, **데스크톱 인지**, **자율 행동**, **MCP 스타일 툴 호출**과 결합 — 챗봇이 아니라 진짜로 당신을 알게 되는 존재를 목표로 설계되었습니다.
+## 왜 Nexus인가?
 
-Electron + React + TypeScript로 구축, Windows / macOS / Linux 지원. 18+ LLM 제공자를 내장하며 완전 오프라인 또는 클라우드 모델로 동작합니다.
+대부분의 AI 동반자는 모델 성능, 음성의 현실감, 상호작용 빈도를 경쟁합니다. Nexus가 묻는 질문은 조금 다릅니다. **오래 지속되는 동반자는 무엇을 기억해야 하며, 그 기록은 시간이 지나며 존재감을 어떻게 바꾸어야 할까요?**
+
+답은 하나의 기능이 아니라 누적되는 작은 의식들입니다. 적절한 순간에 조용히 돌아오는 오래된 기억, 한 주에 실제로 무슨 일이 있었는지 적어 주는 편지, 알맞은 감정의 무게로 다시 떠오르는 회상, 침묵이 더 나을 때는 침묵할 수 있는 동반자.
+
+그 주변에는 5개 언어 UI, 18+ LLM provider, 다중 엔진 STT/TTS와 페일오버, Live2D, VTube Studio 브리지, MCP 도구, 로컬 Webhook/RSS 알림, 강화된 Electron IPC 경계가 있습니다. 엔지니어링 시스템은 기반입니다. 진짜 제품은 이 능력들이 몇 달의 사용 속에서 쌓아 올리는 관계감입니다.
 
 ---
 
@@ -61,7 +82,7 @@ Electron + React + TypeScript로 구축, Windows / macOS / Linux 지원. 18+ LLM
 
 ## 이번 업데이트 — v0.3.1(안정 버전, 2026-04-28)
 
-> **감정 메인라인 + 보안 감사 누적 릴리스.** v0.3.0 이후 92개 commit, 4개월 검증 기간, beta.1 → beta.5가 각각 한 가지 부류의 문제를 닫아왔습니다. 자세한 내용은 [RELEASE-NOTES-v0.3.1.md](RELEASE-NOTES-v0.3.1.md)(영어)를 참조하세요.
+> **감정 메인라인 + 보안 감사 누적 릴리스.** v0.3.0 이후 92개 commit. beta.1 → beta.5가 안정 버전 전까지 각각 한 부류의 문제를 닫았습니다. 자세한 내용은 [RELEASE-NOTES-v0.3.1.md](RELEASE-NOTES-v0.3.1.md)(영어)를 참조하세요.
 
 | 주제 | 내용 |
 |---|---|

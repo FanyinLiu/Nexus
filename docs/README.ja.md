@@ -2,29 +2,49 @@
 
 <h1 align="center">Nexus</h1>
 
-<h3 align="center">あなたのデスクトップに住む AI コンパニオン——記憶し、夢を見て、寄り添います。</h3>
+<p align="center"><b>記憶、音声、Live2D、長期的な関係状態を備えたローカルファーストのデスクトップ AI コンパニオン。</b></p>
+
+<p align="center">Nexus が重視するのは連続性です。コンパニオンは大切だったことを覚え、関係の変化に気づき、デスクトップペットとしてそこにいて、小さなバックグラウンド作業も手伝えます。モデル呼び出しはあなたが選んだ provider を使い、記憶・音声オーケストレーション・ツール・安全状態は手元のマシンに残ります。</p>
 
 <p align="center">
-  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/github/v/release/FanyinLiu/Nexus?style=flat-square&color=blue" alt="Release"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/github/v/release/FanyinLiu/Nexus?style=flat-square&color=blue&label=release" alt="Release"></a>
   <a href="https://github.com/FanyinLiu/Nexus/blob/main/LICENSE"><img src="https://img.shields.io/github/license/FanyinLiu/Nexus?style=flat-square" alt="License"></a>
-  <a href="https://github.com/FanyinLiu/Nexus/stargazers"><img src="https://img.shields.io/github/stars/FanyinLiu/Nexus?style=flat-square" alt="Stars"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/stargazers"><img src="https://img.shields.io/github/stars/FanyinLiu/Nexus?style=flat-square&logo=github" alt="Stars"></a>
   <a href="https://github.com/FanyinLiu/Nexus"><img src="https://img.shields.io/github/last-commit/FanyinLiu/Nexus?style=flat-square" alt="Last Commit"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/FanyinLiu/Nexus/ci.yml?branch=main&style=flat-square&label=ci" alt="CI"></a>
 </p>
 
 <p align="center">
   <a href="../README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <b>日本語</b> · <a href="README.ko.md">한국어</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
+</p>
+
+> **現在のリリース：** v0.3.1 安定版（2026-04-28）。Nexus は今すぐ日常利用できますが、まだ高速に磨いている個人プロジェクトです。パッケージング、任意のローカル音声モデル、provider 設定には粗い部分が残る可能性があります。
+
 ---
 
-> **注意**：Nexus は活発に開発中です。一部の機能は安定していますが、まだ磨き上げ中のものもあります。フィードバックやコントリビューションを歓迎します！
+## 読む順番
 
-## Nexus とは？
+| 目的 | 参照先 |
+|---|---|
+| アプリをインストール | [最新リリースをダウンロード](https://github.com/FanyinLiu/Nexus/releases/latest) |
+| プロダクトを理解 | [なぜ Nexus なのか](#なぜ-nexus-なのか) · [機能](#機能) |
+| ソースから実行 | [クイックスタート](#クイックスタート) |
+| モデルを設定 | [おすすめモデル構成](#おすすめモデル構成) · [対応プロバイダー](#対応プロバイダー) |
+| 安全性とプライバシーを確認 | [セーフティとサポート](#セーフティとサポート) |
 
-Nexus は LLM を搭載したクロスプラットフォームのデスクトップ AI コンパニオンです。Live2D キャラクターに音声会話、長期記憶、デスクトップ認識、自律行動、ツール呼び出しを組み合わせ——チャットボットではなく、あなたを本当に理解してくれる存在を目指して設計されています。
+## なぜ Nexus なのか？
 
-Electron + React + TypeScript で構築。Windows、macOS、Linux に対応。18 以上の LLM プロバイダーを内蔵し、完全オフラインまたはクラウドモデルで動作します。
+多くの AI コンパニオンは、モデル性能、音声のリアルさ、エンゲージメント頻度を競っています。Nexus が向き合う問いは少し違います。**長く続くコンパニオンは何を覚えるべきで、その履歴は時間とともに存在感をどう変えるべきか？**
 
+答えは単一機能ではなく、積み重なる小さな儀式です。ちょうどよいタイミングで戻ってくる古い記憶、週に一度「実際に何があったか」を書く手紙、正しい感情の重みで差し出される回想、沈黙がふさわしいときには沈黙できるコンパニオン。
+
+その周囲に、5 言語 UI、18+ LLM provider、マルチエンジン STT/TTS とフェイルオーバー、Live2D、VTube Studio ブリッジ、MCP ツール、ローカル Webhook/RSS 通知、強化された Electron IPC 境界があります。工学的な仕組みは土台です。本当のプロダクトは、それらが数か月の使用で積み上げる関係の感覚です。
 
 ---
 
@@ -62,7 +82,7 @@ Electron + React + TypeScript で構築。Windows、macOS、Linux に対応。18
 
 ## 今回のアップデート — v0.3.1（安定版、2026-04-28）
 
-> **感情の主線 + セキュリティ監査の累積リリース。** v0.3.0 以来 92 commit、4 ヶ月の検証期間、beta.1 → beta.5 が各々一つのクラスの問題を閉じてきました。詳細は [RELEASE-NOTES-v0.3.1.md](RELEASE-NOTES-v0.3.1.md)（英語）を参照。
+> **感情の主線 + セキュリティ監査の累積リリース。** v0.3.0 以来 92 commit。beta.1 → beta.5 が安定版までにそれぞれ一つの問題領域を閉じました。詳細は [RELEASE-NOTES-v0.3.1.md](RELEASE-NOTES-v0.3.1.md)（英語）を参照。
 
 | テーマ | 内容 |
 |---|---|
