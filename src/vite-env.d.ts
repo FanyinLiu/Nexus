@@ -587,6 +587,12 @@ declare global {
 
       // Autonomy: notification bridge
       getNotificationChannels: () => Promise<import('./types').NotificationChannel[]>
+      getNotificationWebhookInfo: () => Promise<{
+        url: string
+        token: string
+        authHeader: string
+        maxBodyBytes: number
+      }>
       setNotificationChannels: (channels: import('./types').NotificationChannel[]) => Promise<void>
       startNotificationBridge: () => Promise<void>
       stopNotificationBridge: () => Promise<void>

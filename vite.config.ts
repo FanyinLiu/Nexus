@@ -32,6 +32,10 @@ function resolveManualChunk(id: string) {
     return 'tesseract-vendor'
   }
 
+  if (normalizedId.includes('/src/i18n/')) {
+    return 'i18n-runtime'
+  }
+
   // ── feature runtime chunks ─────────────────────────────────────
   if (normalizedId.includes('/src/features/hearing/')) {
     return 'hearing-runtime'
@@ -43,6 +47,30 @@ function resolveManualChunk(id: string) {
 
   if (normalizedId.includes('/src/features/autonomy/')) {
     return 'autonomy-runtime'
+  }
+
+  if (
+    normalizedId.includes('/src/app/controllers/useAutonomy')
+    || normalizedId.includes('/src/app/controllers/useEmotionState.ts')
+    || normalizedId.includes('/src/app/controllers/useRelationshipState.ts')
+    || normalizedId.includes('/src/app/controllers/useRhythmState.ts')
+    || normalizedId.includes('/src/hooks/useAutonomyTick.ts')
+    || normalizedId.includes('/src/hooks/useMemoryDream.ts')
+  ) {
+    return 'autonomy-runtime'
+  }
+
+  if (
+    normalizedId.includes('/src/hooks/useAwayNotificationScheduler.ts')
+    || normalizedId.includes('/src/hooks/useBracketScheduler.ts')
+    || normalizedId.includes('/src/hooks/useErrandScheduler.ts')
+    || normalizedId.includes('/src/hooks/useFutureCapsuleScheduler.ts')
+    || normalizedId.includes('/src/hooks/useGuidanceAnalysisScheduler.ts')
+    || normalizedId.includes('/src/hooks/useLetterScheduler.ts')
+    || normalizedId.includes('/src/hooks/useOpenArcScheduler.ts')
+    || normalizedId.includes('/src/hooks/useReminderScheduler.ts')
+  ) {
+    return 'scheduler-runtime'
   }
 
   // ── app runtime chunks ─────────────────────────────────────────
@@ -86,6 +114,24 @@ function resolveManualChunk(id: string) {
   return undefined
 }
 
+const chunkGroups = [
+  { name: 'react-vendor', test: (id: string) => resolveManualChunk(id) === 'react-vendor', priority: 100 },
+  { name: 'transformers-vendor', test: (id: string) => resolveManualChunk(id) === 'transformers-vendor', priority: 100 },
+  { name: 'ort-vendor', test: (id: string) => resolveManualChunk(id) === 'ort-vendor', priority: 100 },
+  { name: 'chinese-vendor', test: (id: string) => resolveManualChunk(id) === 'chinese-vendor', priority: 100 },
+  { name: 'voice-vendor', test: (id: string) => resolveManualChunk(id) === 'voice-vendor', priority: 100 },
+  { name: 'tesseract-vendor', test: (id: string) => resolveManualChunk(id) === 'tesseract-vendor', priority: 100 },
+  { name: 'i18n-runtime', test: (id: string) => resolveManualChunk(id) === 'i18n-runtime', priority: 90 },
+  { name: 'hearing-runtime', test: (id: string) => resolveManualChunk(id) === 'hearing-runtime', priority: 70 },
+  { name: 'vision-runtime', test: (id: string) => resolveManualChunk(id) === 'vision-runtime', priority: 70 },
+  { name: 'autonomy-runtime', test: (id: string) => resolveManualChunk(id) === 'autonomy-runtime', priority: 70 },
+  { name: 'scheduler-runtime', test: (id: string) => resolveManualChunk(id) === 'scheduler-runtime', priority: 60 },
+  { name: 'voice-runtime', test: (id: string) => resolveManualChunk(id) === 'voice-runtime', priority: 60 },
+  { name: 'assistant-runtime', test: (id: string) => resolveManualChunk(id) === 'assistant-runtime', priority: 60 },
+  { name: 'app-runtime', test: (id: string) => resolveManualChunk(id) === 'app-runtime', priority: 40 },
+  { name: 'settings-ui', test: (id: string) => resolveManualChunk(id) === 'settings-ui', priority: 30 },
+]
+
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
@@ -96,9 +142,11 @@ export default defineConfig({
     cssCodeSplit: true,
     // Remaining large chunks are optional local-ML runtimes that stay lazy.
     chunkSizeWarningLimit: 950,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: resolveManualChunk,
+        codeSplitting: {
+          groups: chunkGroups,
+        },
       },
     },
   },

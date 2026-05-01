@@ -8,9 +8,11 @@
  * Incoming notifications are forwarded to the renderer via a callback.
  */
 
-import { net } from 'electron'
+import { app, net } from 'electron'
 import { createServer } from 'node:http'
 import { randomUUID } from 'node:crypto'
+import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import path from 'node:path'
 import { checkUrlSafety } from './urlSafety.js'
 import { sanitizeNotificationChannels, WEBHOOK_MAX_BODY_BYTES } from './notificationBridgeUtils.js'
 
@@ -37,17 +39,71 @@ let _running = false
 let _onNotification = null
 
 const WEBHOOK_PORT = 47830
+const WEBHOOK_TOKEN_FILE = 'notification-webhook-token.txt'
 
 /** @type {string} */
 let _webhookToken = ''
+/** @type {Promise<string> | null} */
+let _webhookTokenPromise = null
 
 /**
  * Set a bearer token for webhook authentication.
- * If empty, all requests are allowed (backward compat).
+ * Empty values are ignored; webhook auth should not fall back to open access.
  * @param {string} token
  */
 export function setWebhookToken(token) {
-  _webhookToken = String(token ?? '').trim()
+  const normalized = String(token ?? '').trim()
+  if (normalized) {
+    _webhookToken = normalized
+  }
+}
+
+function getWebhookTokenPath() {
+  return path.join(app.getPath('userData'), WEBHOOK_TOKEN_FILE)
+}
+
+function createWebhookToken() {
+  return `nexus_${randomUUID().replaceAll('-', '')}${randomUUID().replaceAll('-', '')}`
+}
+
+async function ensureWebhookToken() {
+  if (_webhookToken) return _webhookToken
+  if (_webhookTokenPromise) return _webhookTokenPromise
+
+  _webhookTokenPromise = (async () => {
+    const tokenPath = getWebhookTokenPath()
+    try {
+      const stored = (await readFile(tokenPath, 'utf8')).trim()
+      if (stored) {
+        _webhookToken = stored
+        return _webhookToken
+      }
+    } catch (err) {
+      if (err?.code !== 'ENOENT') {
+        console.warn('[notification-bridge] failed to read webhook token:', err?.message ?? err)
+      }
+    }
+
+    const generated = createWebhookToken()
+    await mkdir(path.dirname(tokenPath), { recursive: true })
+    await writeFile(tokenPath, `${generated}\n`, { encoding: 'utf8', mode: 0o600 })
+    _webhookToken = generated
+    return _webhookToken
+  })().finally(() => {
+    _webhookTokenPromise = null
+  })
+
+  return _webhookTokenPromise
+}
+
+export async function getWebhookInfo() {
+  const token = await ensureWebhookToken()
+  return {
+    url: `http://127.0.0.1:${WEBHOOK_PORT}/webhook`,
+    token,
+    authHeader: `Bearer ${token}`,
+    maxBodyBytes: WEBHOOK_MAX_BODY_BYTES,
+  }
 }
 
 // ── RSS helpers ──────────────────────────────────────────────────────────────
@@ -272,15 +328,12 @@ function startWebhookServer() {
       return
     }
 
-    // Bearer token check (if configured)
-    if (_webhookToken) {
-      const authHeader = String(req.headers['authorization'] ?? '')
-      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
-      if (token !== _webhookToken) {
-        res.writeHead(401, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ error: 'Unauthorized' }))
-        return
-      }
+    const authHeader = String(req.headers.authorization ?? '')
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
+    if (!_webhookToken || token !== _webhookToken) {
+      res.writeHead(401, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Unauthorized' }))
+      return
     }
 
     if (req.method !== 'POST' || req.url !== '/webhook') {
@@ -396,8 +449,9 @@ export function setChannels(channels) {
 }
 
 /** Start the bridge (RSS polling + webhook server). */
-export function start() {
+export async function start() {
   if (_running) return
+  await ensureWebhookToken()
   _running = true
 
   // Start RSS polling for all enabled RSS channels

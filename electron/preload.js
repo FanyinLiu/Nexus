@@ -280,6 +280,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
 
   // Notification bridge (RSS + webhook)
   getNotificationChannels: () => ipcRenderer.invoke('notification:get-channels'),
+  getNotificationWebhookInfo: () => ipcRenderer.invoke('notification:webhook-info'),
   setNotificationChannels: (channels) => ipcRenderer.invoke('notification:set-channels', channels),
   startNotificationBridge: () => ipcRenderer.invoke('notification:start'),
   stopNotificationBridge: () => ipcRenderer.invoke('notification:stop'),

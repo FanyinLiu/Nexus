@@ -15,6 +15,11 @@ export function register() {
     return notificationBridge.getChannels()
   })
 
+  ipcMain.handle('notification:webhook-info', async (event) => {
+    requireTrustedSender(event)
+    return notificationBridge.getWebhookInfo()
+  })
+
   ipcMain.handle('notification:set-channels', (event, channels) => {
     requireTrustedSender(event)
     if (!Array.isArray(channels)) {
@@ -23,9 +28,9 @@ export function register() {
     notificationBridge.setChannels(channels)
   })
 
-  ipcMain.handle('notification:start', (event) => {
+  ipcMain.handle('notification:start', async (event) => {
     requireTrustedSender(event)
-    notificationBridge.start()
+    await notificationBridge.start()
   })
 
   ipcMain.handle('notification:stop', (event) => {
