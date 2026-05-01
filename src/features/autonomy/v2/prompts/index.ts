@@ -18,7 +18,6 @@ import { koDecisionPrompts } from './decision.ko.ts'
 
 export interface DecisionPromptStrings {
   responseContractBase: string
-  responseContractSpawn: string
   /** Optional contract piece — surfaces the `idle_motion` action only
    *  when the engine has decided this tick is idle enough that a silent
    *  gesture would feel peripheral, not interruptive. */
@@ -69,12 +68,6 @@ export interface DecisionPromptStrings {
 
   sectionLastUtteranceHeader: string
   sectionLastUtteranceTail: string
-
-  sectionSubagentHeader: string
-  subagentCapacityLine: (active: number, max: number) => string
-  subagentBudgetLine: (remainingUsd: number | null) => string
-  subagentCautionNearCapacity: string
-  subagentCautionLowBudget: string
 
   forceSilentOverride: string
 

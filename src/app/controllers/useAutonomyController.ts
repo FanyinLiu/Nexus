@@ -254,8 +254,6 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     rhythmRef: rhythmState.rhythmRef,
     getRhythmPrompt: rhythmState.getRhythmPrompt,
     setGoals,
-    subagentTasks: v2Engine.subagentTasks,
-    cancelSubagentTask: v2Engine.cancelSubagentTask,
   }), [
     focusAwareness,
     autonomyTick,
@@ -281,7 +279,5 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     rhythmState.rhythmRef,
     rhythmState.getRhythmPrompt,
     setGoals,
-    v2Engine.subagentTasks,
-    v2Engine.cancelSubagentTask,
   ])
 }

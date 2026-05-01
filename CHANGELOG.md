@@ -29,6 +29,13 @@
   first. Tools, knowledge, game bridges, and automation are supporting
   abilities, not the core product identity.
 
+### Removed
+- **Subagent dispatcher** — removed the background research helper agent,
+  including the `spawn_subagent` chat tool, Autonomy V2 `spawn` decision,
+  status strip, history panel, storage model, and runtime tests. The companion
+  keeps normal MCP/web/weather/reminder tools, but no longer launches a
+  separate helper loop.
+
 ### Added
 - **Companion wake-up checklist** — onboarding now summarizes identity, text
   model, character model, and speech readiness before the desktop companion

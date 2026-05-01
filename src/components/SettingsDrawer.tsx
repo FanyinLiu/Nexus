@@ -78,7 +78,6 @@ export type SettingsDrawerProps = {
   voicePipeline: VoicePipelineState
   voiceTrace: VoiceTraceEntry[]
   debugConsoleEvents: DebugConsoleEvent[]
-  subagentTasks?: import('../types/subagent').SubagentTask[]
   onClose: () => void
   onSave: (settings: AppSettings) => void
   onExportChatHistory: () => Promise<{
@@ -160,7 +159,6 @@ export function SettingsDrawer({
   voicePipeline,
   voiceTrace,
   debugConsoleEvents,
-  subagentTasks,
   onClose,
   onSave,
   onExportChatHistory,
@@ -527,7 +525,6 @@ export function SettingsDrawer({
           voicePipeline={voicePipeline}
           voiceState={voiceState}
           voiceTrace={voiceTrace}
-          subagentTasks={subagentTasks}
         />
 
         <ModelSection
@@ -708,4 +705,3 @@ export function SettingsDrawer({
     </div>
   )
 }
-

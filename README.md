@@ -24,7 +24,7 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **Current release:** v0.3.1 stable (2026-04-28). Nexus is usable today, but still a fast-moving solo project. Expect sharp edges around packaging, optional local voice models, and provider setup.
+> **Current release:** v0.3.1 stable (2026-04-28). Nexus is usable today, but still a fast-moving solo project. Packaging, optional local voice models, and provider setup may still need a little manual care.
 
 ---
 
@@ -82,7 +82,7 @@ Every voice frame, every memory entry, every tool call runs on your own machine.
 - **2026.04.25** — v0.3.1-beta.1 — installer size cut from ~1.2 GB to ~250 MB. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.1.md)
 - **2026.04.24** — v0.3.0-beta.1 / beta.2 — beta line for the relationship + memory work. [Notes beta.1](docs/RELEASE-NOTES-v0.3.0-beta.1.md) · [Notes beta.2](docs/RELEASE-NOTES-v0.3.0-beta.2.md)
 
-- **2026.04.19** — v0.2.7. Subagent dispatcher; barge-in hardening; render-storm fixes. [Notes](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.7)
+- **2026.04.19** — v0.2.7. Barge-in hardening; render-storm fixes. [Notes](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.7)
 - **2025.04.19** — v0.2.5. Autonomy Engine V2 default-on; voice/TTS reliability pass. [Notes](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.5)
 - **2025.04.16** — v0.2.4. Voice/TTS reliability + Anthropic prompt caching + 20+ bug fixes. [Notes](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.4)
 - **2025.04.15** — Wake-word + VAD rewrite (Plan C): main-process Silero VAD + sherpa-onnx-node, single mic stream.
