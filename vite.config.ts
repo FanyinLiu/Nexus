@@ -32,6 +32,22 @@ function resolveManualChunk(id: string) {
     return 'tesseract-vendor'
   }
 
+  if (normalizedId.includes('/src/i18n/locales/en.ts')) {
+    return 'locale-en-US'
+  }
+
+  if (normalizedId.includes('/src/i18n/locales/ja.ts')) {
+    return 'locale-ja'
+  }
+
+  if (normalizedId.includes('/src/i18n/locales/ko.ts')) {
+    return 'locale-ko'
+  }
+
+  if (normalizedId.includes('/src/i18n/locales/zh-TW.ts')) {
+    return 'locale-zh-TW'
+  }
+
   if (normalizedId.includes('/src/i18n/')) {
     return 'i18n-runtime'
   }
@@ -121,6 +137,10 @@ const chunkGroups = [
   { name: 'chinese-vendor', test: (id: string) => resolveManualChunk(id) === 'chinese-vendor', priority: 100 },
   { name: 'voice-vendor', test: (id: string) => resolveManualChunk(id) === 'voice-vendor', priority: 100 },
   { name: 'tesseract-vendor', test: (id: string) => resolveManualChunk(id) === 'tesseract-vendor', priority: 100 },
+  { name: 'locale-en-US', test: (id: string) => resolveManualChunk(id) === 'locale-en-US', priority: 95 },
+  { name: 'locale-ja', test: (id: string) => resolveManualChunk(id) === 'locale-ja', priority: 95 },
+  { name: 'locale-ko', test: (id: string) => resolveManualChunk(id) === 'locale-ko', priority: 95 },
+  { name: 'locale-zh-TW', test: (id: string) => resolveManualChunk(id) === 'locale-zh-TW', priority: 95 },
   { name: 'i18n-runtime', test: (id: string) => resolveManualChunk(id) === 'i18n-runtime', priority: 90 },
   { name: 'hearing-runtime', test: (id: string) => resolveManualChunk(id) === 'hearing-runtime', priority: 70 },
   { name: 'vision-runtime', test: (id: string) => resolveManualChunk(id) === 'vision-runtime', priority: 70 },
