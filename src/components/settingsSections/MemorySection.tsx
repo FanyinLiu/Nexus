@@ -11,17 +11,11 @@ import type {
   MemorySearchMode,
   UiLanguage,
 } from '../../types'
-import type { TranslationKey } from '../../types/i18n'
 
 type MemorySearchModeOption = {
   value: MemorySearchMode
   label: string
   hint: string
-}
-
-type EmbeddingModelOption = {
-  value: string
-  hint?: TranslationKey
 }
 
 type StatusMessage = {
@@ -38,7 +32,6 @@ type MemorySectionProps = {
   uiLanguage: UiLanguage
   memorySearchModeOptions: MemorySearchModeOption[]
   selectedMemorySearchMode: MemorySearchModeOption
-  selectedMemoryEmbeddingModel?: EmbeddingModelOption
   exportingMemoryArchive: boolean
   importingMemoryArchive: boolean
   clearingMemoryArchive: boolean
@@ -64,7 +57,6 @@ export const MemorySection = memo(function MemorySection({
   uiLanguage,
   memorySearchModeOptions,
   selectedMemorySearchMode,
-  selectedMemoryEmbeddingModel,
   exportingMemoryArchive,
   importingMemoryArchive,
   clearingMemoryArchive,
@@ -81,6 +73,9 @@ export const MemorySection = memo(function MemorySection({
   onRemoveDailyEntry,
 }: MemorySectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
+  const selectedMemoryEmbeddingModel = MEMORY_EMBEDDING_MODEL_OPTIONS.find((option) => (
+    option.value === draft.memoryEmbeddingModel
+  ))
 
   return (
     <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>

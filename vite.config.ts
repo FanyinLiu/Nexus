@@ -2,6 +2,46 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+const settingsSectionChunks = [
+  {
+    name: 'settings-section-console',
+    files: [
+      '/src/components/settingsSections/ConsoleSection.tsx',
+      '/src/components/settingsSections/AboutPanel.tsx',
+      '/src/components/settingsSections/CostHistoryPanel.tsx',
+      '/src/components/settingsSections/DiagnosticsPanel.tsx',
+      '/src/components/settingsSections/StateTimelinePanel.tsx',
+      '/src/components/settingsSections/UpdaterPanel.tsx',
+      '/src/components/settingsSections/WeeklyRecapPanel.tsx',
+      '/src/components/settingsSections/ContextSection.tsx',
+    ],
+  },
+  {
+    name: 'settings-section-voice',
+    files: [
+      '/src/components/settingsSections/VoiceSection.tsx',
+      '/src/components/settingsSections/SpeechInputSection.tsx',
+      '/src/components/settingsSections/SpeechOutputSection.tsx',
+    ],
+  },
+  { name: 'settings-section-model', files: ['/src/components/settingsSections/ModelSection.tsx'] },
+  { name: 'settings-section-chat', files: ['/src/components/settingsSections/ChatSection.tsx'] },
+  { name: 'settings-section-history', files: ['/src/components/settingsSections/HistorySection.tsx'] },
+  { name: 'settings-section-memory', files: ['/src/components/settingsSections/MemorySection.tsx'] },
+  { name: 'settings-section-lorebooks', files: ['/src/components/settingsSections/LorebooksSection.tsx'] },
+  { name: 'settings-section-window', files: ['/src/components/settingsSections/WindowSection.tsx'] },
+  { name: 'settings-section-integrations', files: ['/src/components/settingsSections/IntegrationsSection.tsx'] },
+  { name: 'settings-section-tools', files: ['/src/components/settingsSections/ToolsSection.tsx'] },
+  { name: 'settings-section-autonomy', files: ['/src/components/settingsSections/AutonomySection.tsx'] },
+  { name: 'settings-section-shared', files: ['/src/components/settingsSections/UrlInput.tsx'] },
+]
+
+function resolveSettingsSectionChunk(normalizedId: string) {
+  return settingsSectionChunks.find((chunk) => (
+    chunk.files.some((file) => normalizedId.includes(file))
+  ))?.name
+}
+
 function resolveManualChunk(id: string) {
   const normalizedId = id.replace(/\\/g, '/')
 
@@ -122,8 +162,17 @@ function resolveManualChunk(id: string) {
   }
 
   // ── UI chunks ──────────────────────────────────────────────────
-  if (normalizedId.includes('/src/components/settingsSections/')
-    || normalizedId.includes('/src/components/SettingsDrawer')) {
+  const settingsSectionChunk = resolveSettingsSectionChunk(normalizedId)
+  if (settingsSectionChunk) {
+    return settingsSectionChunk
+  }
+
+  if (
+    normalizedId.includes('/src/components/SettingsDrawer')
+    || normalizedId.includes('/src/components/settingsSectionLoaders.ts')
+    || normalizedId.includes('/src/components/settingsDrawer')
+    || normalizedId.includes('/src/components/settingsFields.tsx')
+  ) {
     return 'settings-ui'
   }
 
@@ -150,6 +199,11 @@ const chunkGroups = [
   { name: 'assistant-runtime', test: (id: string) => resolveManualChunk(id) === 'assistant-runtime', priority: 60 },
   { name: 'app-runtime', test: (id: string) => resolveManualChunk(id) === 'app-runtime', priority: 40 },
   { name: 'settings-ui', test: (id: string) => resolveManualChunk(id) === 'settings-ui', priority: 30 },
+  ...settingsSectionChunks.map((chunk) => ({
+    name: chunk.name,
+    test: (id: string) => resolveManualChunk(id) === chunk.name,
+    priority: 25,
+  })),
 ]
 
 // https://vite.dev/config/

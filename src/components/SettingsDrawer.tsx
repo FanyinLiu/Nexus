@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react'
+﻿import { Suspense, useEffect, useRef, useState } from 'react'
 import {
   getMemorySearchModeOptions,
   getSettingsSectionOptions,
@@ -19,7 +19,6 @@ import {
   isLocaleDefaultUserName,
   pickTranslatedUiText,
 } from '../lib/uiLanguage'
-import { MEMORY_EMBEDDING_MODEL_OPTIONS } from '../features/memory'
 import type { PetModelDefinition } from '../features/pet'
 import type { ReminderTaskDraftInput } from '../features/reminders'
 import {
@@ -37,7 +36,8 @@ import {
   ToolsSection,
   VoiceSection,
   WindowSection,
-} from './settingsSections'
+  preloadSettingsSection,
+} from './settingsSectionLoaders'
 import {
   useConnectionTests,
   useSpeechVoiceManagement,
@@ -140,6 +140,19 @@ export type SettingsDrawerProps = {
   onAddNotificationChannel?: (draft: Omit<import('../types').NotificationChannel, 'id'>) => Promise<void>
   onUpdateNotificationChannel?: (id: string, patch: Partial<import('../types').NotificationChannel>) => Promise<void>
   onRemoveNotificationChannel?: (id: string) => Promise<void>
+}
+
+function renderSettingsSectionFallback(label: string) {
+  return (
+    <section className="settings-section is-active" aria-busy="true" aria-live="polite">
+      <div className="settings-section__title-row">
+        <div>
+          <h4>{label}</h4>
+          <p className="settings-drawer__hint">...</p>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 export function SettingsDrawer({
@@ -260,9 +273,6 @@ export function SettingsDrawer({
   const settingsSectionOptions = getSettingsSectionOptions(uiLanguage)
   const selectedMemorySearchMode = memorySearchModeOptions.find((option) => option.value === draft.memorySearchMode)
     ?? memorySearchModeOptions[1]
-  const selectedMemoryEmbeddingModel = MEMORY_EMBEDDING_MODEL_OPTIONS.find((option) => (
-    option.value === draft.memoryEmbeddingModel
-  ))
   const activeSectionLabel = settingsSectionOptions.find((section) => section.id === activeSectionId)?.label
     ?? settingsSectionOptions[0].label
   const { meta: settingsSectionMetaById } = buildSettingsSectionMeta({
@@ -369,12 +379,210 @@ export function SettingsDrawer({
   }
 
   function handleOpenSettingsSection(sectionId: SettingsSectionId) {
+    preloadSettingsSection(sectionId)
     setActiveSectionId(sectionId)
     setSettingsView('section')
   }
 
   function handleReturnToSettingsHome() {
     setSettingsView('home')
+  }
+
+  function renderActiveSettingsSection() {
+    switch (activeSectionId) {
+      case 'model':
+        return (
+          <ModelSection
+            active
+            draft={draft}
+            setDraft={setDraft}
+            testingTarget={connectionTests.testingTarget}
+            textProvider={textProvider}
+            uiLanguage={uiLanguage}
+            onApplyTextProviderPreset={applyTextProviderPreset}
+            onRunTextConnectionTest={() => void connectionTests.runConnectionTest('text')}
+            renderTextTestResult={() => connectionTests.renderTestResult('text')}
+          />
+        )
+      case 'chat':
+        return (
+          <ChatSection
+            active
+            draft={draft}
+            setDraft={setDraft}
+            petModelPresets={petModelPresets}
+            importingPetModel={petModel_.importingPetModel}
+            petModelStatus={petModel_.petModelStatus}
+            onImportPetModel={() => void petModel_.handleImportPetModel()}
+          />
+        )
+      case 'history':
+        return (
+          <HistorySection
+            active
+            uiLanguage={draft.uiLanguage}
+            chatMessageCount={chatMessageCount}
+            chatBusy={chatBusy}
+            exportingChatHistory={chatHistory.exportingChatHistory}
+            importingChatHistory={chatHistory.importingChatHistory}
+            clearingChatHistory={chatHistory.clearingChatHistory}
+            chatHistoryStatus={chatHistory.chatHistoryStatus}
+            currentSessionId={currentChatSessionId}
+            onExportChatHistory={() => void chatHistory.handleExportChatHistory()}
+            onImportChatHistory={() => void chatHistory.handleImportChatHistory()}
+            onClearChatHistory={() => void chatHistory.handleClearChatHistory()}
+          />
+        )
+      case 'memory':
+        return (
+          <MemorySection
+            active
+            draft={draft}
+            setDraft={setDraft}
+            memories={memories}
+            dailyMemoryEntries={dailyMemoryEntries}
+            uiLanguage={uiLanguage}
+            memorySearchModeOptions={memorySearchModeOptions}
+            selectedMemorySearchMode={selectedMemorySearchMode}
+            exportingMemoryArchive={memoryArchive.exportingMemoryArchive}
+            importingMemoryArchive={memoryArchive.importingMemoryArchive}
+            clearingMemoryArchive={memoryArchive.clearingMemoryArchive}
+            chatBusy={chatBusy}
+            memoryArchiveStatus={memoryArchive.memoryArchiveStatus}
+            onExportMemoryArchive={() => void memoryArchive.handleExportMemoryArchive()}
+            onImportMemoryArchive={() => void memoryArchive.handleImportMemoryArchive()}
+            onClearMemoryArchive={() => void memoryArchive.handleClearMemoryArchive()}
+            onAddManualMemory={onAddManualMemory}
+            onUpdateMemory={onUpdateMemory}
+            onRemoveMemory={onRemoveMemory}
+            onClearDailyMemory={onClearDailyMemory}
+            onUpdateDailyEntry={onUpdateDailyEntry}
+            onRemoveDailyEntry={onRemoveDailyEntry}
+          />
+        )
+      case 'lorebooks':
+        return (
+          <LorebooksSection
+            active
+            uiLanguage={draft.uiLanguage}
+          />
+        )
+      case 'voice':
+        return (
+          <>
+            <VoiceSection
+              active
+              audioSmokeStatus={speechVoices.audioSmokeStatus}
+              draft={draft}
+              onRunAudioSmokeTest={() => void speechVoices.handleRunAudioSmokeTest()}
+              previewingSpeech={speechVoices.previewingSpeech}
+              runningAudioSmoke={speechVoices.runningAudioSmoke}
+              setDraft={setDraft}
+              testingTarget={connectionTests.testingTarget}
+              uiLanguage={uiLanguage}
+            />
+
+            <SpeechInputSection
+              active
+              draft={draft}
+              setDraft={setDraft}
+              testingTarget={connectionTests.testingTarget}
+              onRunSpeechInputConnectionTest={() => void connectionTests.runConnectionTest('speech-input')}
+              renderSpeechInputTestResult={() => connectionTests.renderTestResult('speech-input')}
+            />
+
+            <SpeechOutputSection
+              active
+              draft={draft}
+              setDraft={setDraft}
+              speechVoiceOptions={speechVoices.speechVoiceOptions}
+              speechVoiceStatus={speechVoices.speechVoiceStatus}
+              loadingSpeechVoices={speechVoices.loadingSpeechVoices}
+              speechPreviewText={speechVoices.speechPreviewText}
+              setSpeechPreviewText={speechVoices.setSpeechPreviewText}
+              speechPreviewStatus={speechVoices.speechPreviewStatus}
+              previewingSpeech={speechVoices.previewingSpeech}
+              testingTarget={connectionTests.testingTarget}
+              onApplySpeechOutputPreset={applySpeechOutputPreset}
+              onLoadSpeechVoices={() => void speechVoices.handleLoadSpeechVoices()}
+              onPreviewSpeech={() => void speechVoices.handlePreviewSpeech()}
+              onRunSpeechOutputConnectionTest={() => void connectionTests.runConnectionTest('speech-output')}
+              renderSpeechOutputTestResult={() => connectionTests.renderTestResult('speech-output')}
+            />
+          </>
+        )
+      case 'window':
+        return (
+          <WindowSection
+            active
+            draft={draft}
+            petWindowState={windowState.petWindowState}
+            setDraft={setDraft}
+            uiLanguage={uiLanguage}
+            updateWindowState={windowState.updateWindowState}
+            windowStatusMessage={windowState.windowStatusMessage}
+          />
+        )
+      case 'integrations':
+        return (
+          <IntegrationsSection
+            active
+            draft={draft}
+            setDraft={setDraft}
+            uiLanguage={uiLanguage}
+          />
+        )
+      case 'autonomy':
+        return (
+          <AutonomySection
+            active
+            draft={draft}
+            setDraft={setDraft}
+            uiLanguage={uiLanguage}
+            channels={notificationChannels}
+            channelsLoading={notificationChannelsLoading}
+            onAddChannel={onAddNotificationChannel}
+            onUpdateChannel={onUpdateNotificationChannel}
+            onRemoveChannel={onRemoveNotificationChannel}
+          />
+        )
+      case 'tools':
+        return (
+          <ToolsSection
+            active
+            draft={draft}
+            setDraft={setDraft}
+          />
+        )
+      case 'console':
+      default:
+        return (
+          <>
+            <ConsoleSection
+              active
+              continuousVoiceActive={continuousVoiceActive}
+              debugConsoleEvents={debugConsoleEvents}
+              liveTranscript={liveTranscript}
+              onClearDebugConsole={onClearDebugConsole}
+              reminderTasks={reminderTasks}
+              speechLevel={speechLevel}
+              uiLanguage={uiLanguage}
+              voicePipeline={voicePipeline}
+              voiceState={voiceState}
+              voiceTrace={voiceTrace}
+            />
+
+            <ContextSection
+              active
+              reminderTasks={reminderTasks}
+              uiLanguage={uiLanguage}
+              onAddReminderTask={onAddReminderTask}
+              onUpdateReminderTask={onUpdateReminderTask}
+              onRemoveReminderTask={onRemoveReminderTask}
+            />
+          </>
+        )
+    }
   }
 
   if (!open) return null
@@ -480,6 +688,8 @@ export function SettingsDrawer({
                   type="button"
                   className="settings-home-card"
                   data-section={card.key}
+                  onFocus={() => preloadSettingsSection(card.sectionId)}
+                  onPointerEnter={() => preloadSettingsSection(card.sectionId)}
                   onClick={() => handleOpenSettingsSection(card.sectionId)}
                 >
                   <span className="settings-home-card__glyph" aria-hidden="true">
@@ -512,172 +722,9 @@ export function SettingsDrawer({
               </div>
 
               <div className="settings-drawer__content settings-drawer__sections">
-
-        <ConsoleSection
-          active={activeSectionId === 'console'}
-          continuousVoiceActive={continuousVoiceActive}
-          debugConsoleEvents={debugConsoleEvents}
-          liveTranscript={liveTranscript}
-          onClearDebugConsole={onClearDebugConsole}
-          reminderTasks={reminderTasks}
-          speechLevel={speechLevel}
-          uiLanguage={uiLanguage}
-          voicePipeline={voicePipeline}
-          voiceState={voiceState}
-          voiceTrace={voiceTrace}
-        />
-
-        <ModelSection
-          active={activeSectionId === 'model'}
-          draft={draft}
-          setDraft={setDraft}
-          testingTarget={connectionTests.testingTarget}
-          textProvider={textProvider}
-          uiLanguage={uiLanguage}
-          onApplyTextProviderPreset={applyTextProviderPreset}
-          onRunTextConnectionTest={() => void connectionTests.runConnectionTest('text')}
-          renderTextTestResult={() => connectionTests.renderTestResult('text')}
-        />
-
-        <ChatSection
-          active={activeSectionId === 'chat'}
-          draft={draft}
-          setDraft={setDraft}
-          petModelPresets={petModelPresets}
-          importingPetModel={petModel_.importingPetModel}
-          petModelStatus={petModel_.petModelStatus}
-          onImportPetModel={() => void petModel_.handleImportPetModel()}
-        />
-
-        <HistorySection
-          active={activeSectionId === 'history'}
-          uiLanguage={draft.uiLanguage}
-          chatMessageCount={chatMessageCount}
-          chatBusy={chatBusy}
-          exportingChatHistory={chatHistory.exportingChatHistory}
-          importingChatHistory={chatHistory.importingChatHistory}
-          clearingChatHistory={chatHistory.clearingChatHistory}
-          chatHistoryStatus={chatHistory.chatHistoryStatus}
-          currentSessionId={currentChatSessionId}
-          onExportChatHistory={() => void chatHistory.handleExportChatHistory()}
-          onImportChatHistory={() => void chatHistory.handleImportChatHistory()}
-          onClearChatHistory={() => void chatHistory.handleClearChatHistory()}
-        />
-
-        <LorebooksSection
-          active={activeSectionId === 'lorebooks'}
-          uiLanguage={draft.uiLanguage}
-        />
-
-        <MemorySection
-          active={activeSectionId === 'memory'}
-          draft={draft}
-          setDraft={setDraft}
-          memories={memories}
-          dailyMemoryEntries={dailyMemoryEntries}
-          uiLanguage={uiLanguage}
-          memorySearchModeOptions={memorySearchModeOptions}
-          selectedMemorySearchMode={selectedMemorySearchMode}
-          selectedMemoryEmbeddingModel={selectedMemoryEmbeddingModel}
-          exportingMemoryArchive={memoryArchive.exportingMemoryArchive}
-          importingMemoryArchive={memoryArchive.importingMemoryArchive}
-          clearingMemoryArchive={memoryArchive.clearingMemoryArchive}
-          chatBusy={chatBusy}
-          memoryArchiveStatus={memoryArchive.memoryArchiveStatus}
-          onExportMemoryArchive={() => void memoryArchive.handleExportMemoryArchive()}
-          onImportMemoryArchive={() => void memoryArchive.handleImportMemoryArchive()}
-          onClearMemoryArchive={() => void memoryArchive.handleClearMemoryArchive()}
-          onAddManualMemory={onAddManualMemory}
-          onUpdateMemory={onUpdateMemory}
-          onRemoveMemory={onRemoveMemory}
-          onClearDailyMemory={onClearDailyMemory}
-          onUpdateDailyEntry={onUpdateDailyEntry}
-          onRemoveDailyEntry={onRemoveDailyEntry}
-        />
-
-        <VoiceSection
-          active={activeSectionId === 'voice'}
-          audioSmokeStatus={speechVoices.audioSmokeStatus}
-          draft={draft}
-          onRunAudioSmokeTest={() => void speechVoices.handleRunAudioSmokeTest()}
-          previewingSpeech={speechVoices.previewingSpeech}
-          runningAudioSmoke={speechVoices.runningAudioSmoke}
-          setDraft={setDraft}
-          testingTarget={connectionTests.testingTarget}
-          uiLanguage={uiLanguage}
-        />
-
-        <SpeechInputSection
-          active={activeSectionId === 'voice'}
-          draft={draft}
-          setDraft={setDraft}
-          testingTarget={connectionTests.testingTarget}
-          onRunSpeechInputConnectionTest={() => void connectionTests.runConnectionTest('speech-input')}
-          renderSpeechInputTestResult={() => connectionTests.renderTestResult('speech-input')}
-        />
-
-        <SpeechOutputSection
-          active={activeSectionId === 'voice'}
-          draft={draft}
-          setDraft={setDraft}
-          speechVoiceOptions={speechVoices.speechVoiceOptions}
-          speechVoiceStatus={speechVoices.speechVoiceStatus}
-          loadingSpeechVoices={speechVoices.loadingSpeechVoices}
-          speechPreviewText={speechVoices.speechPreviewText}
-          setSpeechPreviewText={speechVoices.setSpeechPreviewText}
-          speechPreviewStatus={speechVoices.speechPreviewStatus}
-          previewingSpeech={speechVoices.previewingSpeech}
-          testingTarget={connectionTests.testingTarget}
-          onApplySpeechOutputPreset={applySpeechOutputPreset}
-          onLoadSpeechVoices={() => void speechVoices.handleLoadSpeechVoices()}
-          onPreviewSpeech={() => void speechVoices.handlePreviewSpeech()}
-          onRunSpeechOutputConnectionTest={() => void connectionTests.runConnectionTest('speech-output')}
-          renderSpeechOutputTestResult={() => connectionTests.renderTestResult('speech-output')}
-        />
-
-        <WindowSection
-          active={activeSectionId === 'window'}
-          draft={draft}
-          petWindowState={windowState.petWindowState}
-          setDraft={setDraft}
-          uiLanguage={uiLanguage}
-          updateWindowState={windowState.updateWindowState}
-          windowStatusMessage={windowState.windowStatusMessage}
-        />
-
-        <IntegrationsSection
-          active={activeSectionId === 'integrations'}
-          draft={draft}
-          setDraft={setDraft}
-          uiLanguage={uiLanguage}
-        />
-
-        <AutonomySection
-          active={activeSectionId === 'autonomy'}
-          draft={draft}
-          setDraft={setDraft}
-          uiLanguage={uiLanguage}
-          channels={notificationChannels}
-          channelsLoading={notificationChannelsLoading}
-          onAddChannel={onAddNotificationChannel}
-          onUpdateChannel={onUpdateNotificationChannel}
-          onRemoveChannel={onRemoveNotificationChannel}
-        />
-
-        <ToolsSection
-          active={activeSectionId === 'tools'}
-          draft={draft}
-          setDraft={setDraft}
-        />
-
-        <ContextSection
-          active={activeSectionId === 'console'}
-          reminderTasks={reminderTasks}
-          uiLanguage={uiLanguage}
-          onAddReminderTask={onAddReminderTask}
-          onUpdateReminderTask={onUpdateReminderTask}
-          onRemoveReminderTask={onRemoveReminderTask}
-        />
+                <Suspense fallback={renderSettingsSectionFallback(activeSectionLabel)}>
+                  {renderActiveSettingsSection()}
+                </Suspense>
               </div>
             </div>
           )}
