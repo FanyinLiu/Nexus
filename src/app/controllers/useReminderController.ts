@@ -14,7 +14,7 @@ import {
   toChatToolResult,
 } from '../../features/tools'
 import { shouldRunReminderScheduler } from '../../features/reminders'
-import { useReminderScheduler } from '../../hooks'
+import { useReminderScheduler } from '../../hooks/useReminderScheduler'
 import { broadcastToChannels } from '../../lib/coreRuntime'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 

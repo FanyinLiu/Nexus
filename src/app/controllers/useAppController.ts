@@ -17,14 +17,12 @@ import type {
   VoiceState,
   WindowView,
 } from '../../types'
-import {
-  useChat,
-  useDesktopContext,
-  useGameIntegration,
-  useMemory,
-  usePetBehavior,
-  useVoice,
-} from '../../hooks'
+import { useChat } from '../../hooks/useChat'
+import { useDesktopContext } from '../../hooks/useDesktopContext'
+import { useGameIntegration } from '../../hooks/useGameIntegration'
+import { useMemory } from '../../hooks/useMemory'
+import { usePetBehavior } from '../../hooks/usePetBehavior'
+import { useVoice } from '../../hooks/useVoice'
 import { useReminderController } from './useReminderController'
 import { getSettingsSnapshot } from '../store/settingsStore'
 import { useAppOverlays } from './useAppOverlays'

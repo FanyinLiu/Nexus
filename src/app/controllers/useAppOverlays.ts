@@ -26,10 +26,10 @@ import type {
   ReminderTask,
 } from '../../types'
 
-type MemoryController = ReturnType<typeof import('../../hooks').useMemory>
-type ChatController = ReturnType<typeof import('../../hooks').useChat>
-type PetController = ReturnType<typeof import('../../hooks').usePetBehavior>
-type VoiceController = ReturnType<typeof import('../../hooks').useVoice>
+type MemoryController = ReturnType<typeof import('../../hooks/useMemory').useMemory>
+type ChatController = ReturnType<typeof import('../../hooks/useChat').useChat>
+type PetController = ReturnType<typeof import('../../hooks/usePetBehavior').usePetBehavior>
+type VoiceController = ReturnType<typeof import('../../hooks/useVoice').useVoice>
 type ReminderTaskStore = ReturnType<typeof import('./useReminderTaskStore').useReminderTaskStore>
 
 type UseAppOverlaysOptions = {
