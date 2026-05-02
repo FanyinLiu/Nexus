@@ -2,6 +2,12 @@ import { memo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { MemoryPanel } from '../../features/memory/components'
 import { MEMORY_EMBEDDING_MODEL_OPTIONS, SCREEN_VLM_MODEL_OPTIONS } from '../../features/memory/constants'
+import {
+  getPlatformDependencyHint,
+  isDesktopContextActiveWindowAvailable,
+  isDesktopContextClipboardAvailable,
+  isDesktopContextScreenshotAvailable,
+} from '../../lib/platformProfile'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import { NumberField, TextField, ToggleField } from '../settingsFields'
 import type {
@@ -9,6 +15,7 @@ import type {
   DailyMemoryEntry,
   MemoryItem,
   MemorySearchMode,
+  PlatformProfile,
   UiLanguage,
 } from '../../types'
 
@@ -26,6 +33,7 @@ type StatusMessage = {
 type MemorySectionProps = {
   active: boolean
   draft: AppSettings
+  platformProfile: PlatformProfile
   setDraft: Dispatch<SetStateAction<AppSettings>>
   memories: MemoryItem[]
   dailyMemoryEntries: DailyMemoryEntry[]
@@ -51,6 +59,7 @@ type MemorySectionProps = {
 export const MemorySection = memo(function MemorySection({
   active,
   draft,
+  platformProfile,
   setDraft,
   memories,
   dailyMemoryEntries,
@@ -73,6 +82,40 @@ export const MemorySection = memo(function MemorySection({
   onRemoveDailyEntry,
 }: MemorySectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
+  const tiParam = (
+    key: Parameters<typeof pickTranslatedUiText>[1],
+    params: Parameters<typeof pickTranslatedUiText>[2],
+  ) => pickTranslatedUiText(uiLanguage, key, params)
+  const formatPlatformHint = (reason: string | null) => {
+    if (!reason) return null
+    if (reason === 'unsupported') return ti('settings.platform.unsupported')
+    if (reason === 'unavailable') return ti('settings.platform.unavailable')
+    return tiParam('settings.platform.unavailable_dependency', { dependency: reason })
+  }
+  const activeWindowContextAvailable = isDesktopContextActiveWindowAvailable(platformProfile)
+  const clipboardContextAvailable = isDesktopContextClipboardAvailable(platformProfile)
+  const screenContextAvailable = isDesktopContextScreenshotAvailable(platformProfile)
+  const contextAwarenessAvailable = activeWindowContextAvailable
+    || clipboardContextAvailable
+    || screenContextAvailable
+  const activeWindowPlatformHint = formatPlatformHint(getPlatformDependencyHint(
+    platformProfile,
+    platformProfile.desktopContext.activeWindowSupported,
+    platformProfile.desktopContext.activeWindowAvailable,
+    platformProfile.desktopContext.activeWindowDependencyHint,
+  ))
+  const clipboardPlatformHint = formatPlatformHint(getPlatformDependencyHint(
+    platformProfile,
+    platformProfile.desktopContext.clipboardSupported,
+    platformProfile.desktopContext.clipboardAvailable,
+    null,
+  ))
+  const screenPlatformHint = formatPlatformHint(getPlatformDependencyHint(
+    platformProfile,
+    platformProfile.desktopContext.screenshotSupported,
+    platformProfile.desktopContext.screenshotAvailable,
+    platformProfile.desktopContext.screenshotDependencyHint,
+  ))
   const selectedMemoryEmbeddingModel = MEMORY_EMBEDDING_MODEL_OPTIONS.find((option) => (
     option.value === draft.memoryEmbeddingModel
   ))
@@ -91,30 +134,49 @@ export const MemorySection = memo(function MemorySection({
       <ToggleField
         label={ti('settings.memory.context.enable')}
         field="contextAwarenessEnabled"
+        disabled={!contextAwarenessAvailable}
         draft={draft}
         setDraft={setDraft}
       />
       <ToggleField
         label={ti('settings.memory.context.clipboard')}
         field="clipboardContextEnabled"
-        disabled={!draft.contextAwarenessEnabled}
+        disabled={!draft.contextAwarenessEnabled || !clipboardContextAvailable}
         draft={draft}
         setDraft={setDraft}
       />
       <ToggleField
         label={ti('settings.memory.context.active_window')}
         field="activeWindowContextEnabled"
-        disabled={!draft.contextAwarenessEnabled}
+        disabled={!draft.contextAwarenessEnabled || !activeWindowContextAvailable}
         draft={draft}
         setDraft={setDraft}
       />
       <ToggleField
         label={ti('settings.memory.context.screen_ocr')}
         field="screenContextEnabled"
-        disabled={!draft.contextAwarenessEnabled}
+        disabled={!draft.contextAwarenessEnabled || !screenContextAvailable}
         draft={draft}
         setDraft={setDraft}
       />
+
+      {clipboardPlatformHint ? (
+        <p className="settings-drawer__hint">
+          {ti('settings.memory.context.clipboard')}: {clipboardPlatformHint}
+        </p>
+      ) : null}
+
+      {activeWindowPlatformHint ? (
+        <p className="settings-drawer__hint">
+          {ti('settings.memory.context.active_window')}: {activeWindowPlatformHint}
+        </p>
+      ) : null}
+
+      {screenPlatformHint ? (
+        <p className="settings-drawer__hint">
+          {ti('settings.memory.context.screen_ocr')}: {screenPlatformHint}
+        </p>
+      ) : null}
 
       {draft.contextAwarenessEnabled && draft.screenContextEnabled ? (
         <>

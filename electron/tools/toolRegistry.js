@@ -2,6 +2,7 @@ import { BrowserWindow, dialog, shell } from 'electron'
 import { searchWeb } from './webSearch.js'
 import { lookupWeatherByLocation } from './weatherTool.js'
 import { normalizeExternalUrl } from './toolRegistryUtils.js'
+import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
 
 export function normalizeRendererToolPolicy(policy) {
   if (!policy || typeof policy !== 'object') {
@@ -56,6 +57,7 @@ export const BUILT_IN_TOOL_REGISTRY = Object.freeze({
     id: 'web_search',
     label: '网页搜索',
     riskLevel: 'low',
+    secretFields: ['apiKey'],
     handler: (payload) => searchWeb(payload),
   },
   weather_lookup: {
@@ -87,7 +89,13 @@ export async function invokeRegisteredTool(event, toolId, payload = {}) {
     sourceWindow: sourceWindow?.id ?? null,
   })
 
-  return toolDefinition.handler(payload, {
+  const resolvedPayload = await resolveVaultRefsForSender(
+    event.sender,
+    payload,
+    toolDefinition.secretFields ?? [],
+  )
+
+  return toolDefinition.handler(resolvedPayload, {
     sourceWindow,
     policy,
   })

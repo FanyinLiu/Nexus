@@ -3,9 +3,18 @@ import type { Dispatch, SetStateAction } from 'react'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type {
   AppSettings,
+  PlatformProfile,
   ServiceConnectionCapability,
   UiLanguage,
 } from '../../types'
+import {
+  getPlatformDependencyHint,
+  isVoiceContinuousAvailable,
+  isVoiceSpeechInputAvailable,
+  isVoiceSpeechOutputAvailable,
+  isVoiceVadAvailable,
+  isVoiceWakewordAvailable,
+} from '../../lib/platformProfile'
 import {
   getVoiceTriggerModeOptions,
   type ConnectionResult,
@@ -30,6 +39,7 @@ type VoiceSectionProps = {
   previewingSpeech: boolean
   runningAudioSmoke: boolean
   setDraft: Dispatch<SetStateAction<AppSettings>>
+  platformProfile: PlatformProfile
   testingTarget: ServiceConnectionCapability | null
   uiLanguage: UiLanguage
 }
@@ -42,10 +52,32 @@ export const VoiceSection = memo(function VoiceSection({
   previewingSpeech,
   runningAudioSmoke,
   setDraft,
+  platformProfile,
   testingTarget,
   uiLanguage,
 }: VoiceSectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
+  const tiParam = (
+    key: Parameters<typeof pickTranslatedUiText>[1],
+    params: Parameters<typeof pickTranslatedUiText>[2],
+  ) => pickTranslatedUiText(uiLanguage, key, params)
+  const formatPlatformHint = (reason: string | null) => {
+    if (!reason) return null
+    if (reason === 'unsupported') return ti('settings.platform.unsupported')
+    if (reason === 'unavailable') return ti('settings.platform.unavailable')
+    return tiParam('settings.platform.unavailable_dependency', { dependency: reason })
+  }
+  const speechInputAvailable = isVoiceSpeechInputAvailable(platformProfile)
+  const speechOutputAvailable = isVoiceSpeechOutputAvailable(platformProfile)
+  const continuousVoiceAvailable = isVoiceContinuousAvailable(platformProfile)
+  const vadAvailable = isVoiceVadAvailable(platformProfile)
+  const wakewordAvailable = isVoiceWakewordAvailable(platformProfile)
+  const voicePlatformHint = formatPlatformHint(getPlatformDependencyHint(
+    platformProfile,
+    platformProfile.voice.speechInputSupported || platformProfile.voice.speechOutputSupported,
+    platformProfile.voice.speechInputAvailable || platformProfile.voice.speechOutputAvailable,
+    platformProfile.voice.dependencyHint,
+  ))
   const voiceTriggerModeOptions = getVoiceTriggerModeOptions(uiLanguage)
   const selectedVoiceTriggerMode = voiceTriggerModeOptions.find((option) => option.value === draft.voiceTriggerMode)
     ?? voiceTriggerModeOptions[0]
@@ -61,11 +93,15 @@ export const VoiceSection = memo(function VoiceSection({
           type="button"
           className="ghost-button"
           onClick={onRunAudioSmokeTest}
-          disabled={runningAudioSmoke || previewingSpeech || testingTarget !== null}
+          disabled={runningAudioSmoke || previewingSpeech || testingTarget !== null || !speechOutputAvailable}
         >
           {runningAudioSmoke ? ti('settings.voice.checking') : ti('settings.voice.audio_smoke_test')}
         </button>
       </div>
+
+      {voicePlatformHint ? (
+        <p className="settings-drawer__hint">{voicePlatformHint}</p>
+      ) : null}
 
       {audioSmokeStatus ? (
         <div className={audioSmokeStatus.ok ? 'settings-test-result is-success' : 'settings-test-result is-error'}>
@@ -78,6 +114,7 @@ export const VoiceSection = memo(function VoiceSection({
         <input
           type="checkbox"
           checked={draft.speechInputEnabled}
+          disabled={!speechInputAvailable}
           onChange={(event) =>
             setDraft((prev) => ({ ...prev, speechInputEnabled: event.target.checked }))
           }
@@ -89,6 +126,7 @@ export const VoiceSection = memo(function VoiceSection({
         <input
           type="checkbox"
           checked={draft.speechOutputEnabled}
+          disabled={!speechOutputAvailable}
           onChange={(event) =>
             setDraft((prev) => ({ ...prev, speechOutputEnabled: event.target.checked }))
           }
@@ -100,6 +138,7 @@ export const VoiceSection = memo(function VoiceSection({
         <input
           type="checkbox"
           checked={draft.continuousVoiceModeEnabled}
+          disabled={!continuousVoiceAvailable}
           onChange={(event) =>
             setDraft((prev) => ({
               ...prev,
@@ -114,6 +153,7 @@ export const VoiceSection = memo(function VoiceSection({
         <input
           type="checkbox"
           checked={draft.voiceActivityDetectionEnabled}
+          disabled={!vadAvailable}
           onChange={(event) =>
             setDraft((prev) => ({
               ...prev,
@@ -147,6 +187,7 @@ export const VoiceSection = memo(function VoiceSection({
         <input
           type="checkbox"
           checked={draft.voiceInterruptionEnabled}
+          disabled={!speechInputAvailable || !speechOutputAvailable}
           onChange={(event) =>
             setDraft((prev) => ({
               ...prev,
@@ -163,6 +204,7 @@ export const VoiceSection = memo(function VoiceSection({
         <input
           type="checkbox"
           checked={draft.speechInputFailoverEnabled}
+          disabled={!speechInputAvailable}
           onChange={(event) =>
             setDraft((prev) => ({
               ...prev,
@@ -177,6 +219,7 @@ export const VoiceSection = memo(function VoiceSection({
         <input
           type="checkbox"
           checked={draft.speechOutputFailoverEnabled}
+          disabled={!speechOutputAvailable}
           onChange={(event) =>
             setDraft((prev) => ({
               ...prev,
@@ -191,6 +234,7 @@ export const VoiceSection = memo(function VoiceSection({
         <input
           type="checkbox"
           checked={draft.wakewordAlwaysOn}
+          disabled={!wakewordAvailable}
           onChange={(event) =>
             setDraft((prev) => ({
               ...prev,
@@ -209,6 +253,7 @@ export const VoiceSection = memo(function VoiceSection({
           max={120}
           step={1}
           value={Math.round(draft.wakewordSessionIdleTimeoutMs / 1000)}
+          disabled={!wakewordAvailable}
           onChange={(event) => {
             const seconds = Number(event.target.value)
             if (!Number.isFinite(seconds)) return
@@ -226,6 +271,7 @@ export const VoiceSection = memo(function VoiceSection({
         <span>{ti('settings.voice.trigger_mode')}</span>
         <select
           value={draft.voiceTriggerMode}
+          disabled={!wakewordAvailable}
           onChange={(event) => {
             const nextMode = event.target.value as AppSettings['voiceTriggerMode']
             setDraft((prev) => ({
@@ -248,6 +294,7 @@ export const VoiceSection = memo(function VoiceSection({
         <input
           value={draft.wakeWord}
           placeholder={ti('settings.voice.wake_word_placeholder')}
+          disabled={!wakewordAvailable}
           onChange={(event) =>
             setDraft((prev) => ({
               ...prev,

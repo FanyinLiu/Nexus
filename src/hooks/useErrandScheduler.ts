@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { createChatAgentExecutor } from '../features/agent/agentLoop'
 import {
   decideErrandRun,
   recordRun,
@@ -7,9 +6,8 @@ import {
 import { findRunnableErrand } from '../features/agent/errandStore'
 import {
   readErrandRunnerState,
-  runErrand,
   writeErrandRunnerState,
-} from '../features/agent/errandRunner'
+} from '../features/agent/errandRunnerState'
 import type { AppSettings, MemoryRecallContext } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000  // 5 min — gentle on CPU and on the LLM bill
@@ -81,25 +79,25 @@ export function useErrandScheduler({ settings }: UseErrandSchedulerOptions) {
       })
       if (!decision.shouldRun) return
 
-      const { settings: s } = liveRef.current
-      const executor = createChatAgentExecutor({
-        settings: s,
-        memoryContext: EMPTY_MEMORY,
-      })
-
       runningTick = true
       try {
-        try {
-          await runErrand(errand, {
-            executeTurn: executor,
-            uiLanguage: s.uiLanguage,
-          })
-        } catch (err) {
-          // runErrand catches its own agent-loop errors and writes them to
-          // the store; this catches an outer surprise (executor build
-          // failure etc.) so the scheduler stays alive.
-          console.warn('[errand] run failed unexpectedly:', err)
-        }
+        const { settings: s } = liveRef.current
+        const [
+          { createChatAgentExecutor },
+          { runErrand },
+        ] = await Promise.all([
+          import('../features/agent/agentLoop.ts'),
+          import('../features/agent/errandRunner.ts'),
+        ])
+        const executor = createChatAgentExecutor({
+          settings: s,
+          memoryContext: EMPTY_MEMORY,
+        })
+
+        await runErrand(errand, {
+          executeTurn: executor,
+          uiLanguage: s.uiLanguage,
+        })
 
         if (stopped) return
         // Re-read the runner state inside the lock so any concurrent
@@ -109,6 +107,10 @@ export function useErrandScheduler({ settings }: UseErrandSchedulerOptions) {
         writeErrandRunnerState(
           recordRun(fresh, decision.nightAnchor, new Date().toISOString()),
         )
+      } catch (err) {
+        // Keep the scheduler alive if dynamic import / executor build /
+        // outer orchestration throws.
+        console.warn('[errand] scheduler tick failed:', err)
       } finally {
         runningTick = false
       }

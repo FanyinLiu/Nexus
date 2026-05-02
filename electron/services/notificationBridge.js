@@ -13,7 +13,7 @@ import { createServer } from 'node:http'
 import { randomUUID } from 'node:crypto'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
-import { checkUrlSafety } from './urlSafety.js'
+import { checkUrlSafetyWithDns } from './urlSafety.js'
 import { sanitizeNotificationChannels, WEBHOOK_MAX_BODY_BYTES } from './notificationBridgeUtils.js'
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -40,6 +40,7 @@ let _onNotification = null
 
 const WEBHOOK_PORT = 47830
 const WEBHOOK_TOKEN_FILE = 'notification-webhook-token.txt'
+const RSS_MAX_REDIRECTS = 5
 
 /** @type {string} */
 let _webhookToken = ''
@@ -104,6 +105,36 @@ export async function getWebhookInfo() {
     authHeader: `Bearer ${token}`,
     maxBodyBytes: WEBHOOK_MAX_BODY_BYTES,
   }
+}
+
+async function fetchRssWithSafety(rawUrl) {
+  let currentUrl = String(rawUrl ?? '').trim()
+
+  for (let redirectCount = 0; redirectCount <= RSS_MAX_REDIRECTS; redirectCount += 1) {
+    const safety = await checkUrlSafetyWithDns(currentUrl, { allowHttp: true })
+    if (!safety.ok) {
+      throw new Error(safety.reason)
+    }
+
+    const response = await net.fetch(currentUrl, {
+      method: 'GET',
+      redirect: 'manual',
+      headers: { 'User-Agent': 'Nexus/1.0 Notification Bridge' },
+    })
+
+    if (![301, 302, 303, 307, 308].includes(response.status)) {
+      return response
+    }
+
+    const location = String(response.headers.get('location') ?? '').trim()
+    if (!location) {
+      throw new Error(`redirect (${response.status}) missing Location header`)
+    }
+
+    currentUrl = new URL(location, currentUrl).toString()
+  }
+
+  throw new Error(`too many redirects (>${RSS_MAX_REDIRECTS})`)
 }
 
 // ── RSS helpers ──────────────────────────────────────────────────────────────
@@ -214,20 +245,8 @@ async function pollRssChannel(channel) {
     return
   }
 
-  // SSRF guard: refuse to fetch private/loopback/IMDS URLs even though
-  // setChannels already filters at write time — defense in depth covers
-  // the case where stale channels predate the validation rules.
-  const safety = checkUrlSafety(feedUrl)
-  if (!safety.ok) {
-    console.warn(`[notification-bridge] RSS channel "${channel.name}" rejected: ${safety.reason}`)
-    return
-  }
-
   try {
-    const resp = await net.fetch(feedUrl, {
-      method: 'GET',
-      headers: { 'User-Agent': 'Nexus/1.0 Notification Bridge' },
-    })
+    const resp = await fetchRssWithSafety(feedUrl)
 
     if (!resp.ok) {
       console.warn(`[notification-bridge] RSS fetch failed for "${channel.name}": ${resp.status}`)

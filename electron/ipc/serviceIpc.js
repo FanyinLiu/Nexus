@@ -3,6 +3,14 @@ import * as tencentAsr from '../services/tencentAsr.js'
 import * as minecraftGateway from '../services/minecraftGateway.js'
 import * as factorioRcon from '../services/factorioRcon.js'
 import { requireTrustedSender } from './validate.js'
+import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
+import {
+  validateGameCommandPayload,
+  validateGameConnectPayload,
+  validateRealtimeSendTextPayload,
+  validateRealtimeStartPayload,
+  validateTencentAsrConnectPayload,
+} from './payloadSchemas.js'
 
 const realtimeVoiceEnabled = process.env.NEXUS_ENABLE_REALTIME_VOICE === '1'
 let realtimeVoicePromise = null
@@ -18,17 +26,33 @@ function loadRealtimeVoice() {
   return realtimeVoicePromise
 }
 
+function parseTencentAsrApiKey(apiKey) {
+  const parts = String(apiKey ?? '').split(':')
+  if (parts.length < 3) return null
+  const appId = parts[0].trim()
+  const secretId = parts[1].trim()
+  const secretKey = parts.slice(2).join(':').trim()
+  if (!appId || !secretId || !secretKey) return null
+  return { appId, secretId, secretKey }
+}
+
 export function register() {
   // ── Tencent Cloud Real-Time ASR ──
 
   ipcMain.handle('tencent-asr:connect', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateTencentAsrConnectPayload(payload)
+    const requestPayload = await resolveVaultRefsForSender(event.sender, payload, ['apiKey'])
+    const parsedCredentials = parseTencentAsrApiKey(requestPayload?.apiKey)
+    const appId = String(parsedCredentials?.appId ?? requestPayload?.appId ?? '').trim()
+    const secretId = String(parsedCredentials?.secretId ?? requestPayload?.secretId ?? '').trim()
+    const secretKey = String(parsedCredentials?.secretKey ?? requestPayload?.secretKey ?? '').trim()
     await tencentAsr.connect({
-      appId: String(payload?.appId ?? '').trim(),
-      secretId: String(payload?.secretId ?? '').trim(),
-      secretKey: String(payload?.secretKey ?? '').trim(),
-      engineModelType: String(payload?.engineModelType ?? '16k_zh').trim(),
-      hotwordList: String(payload?.hotwordList ?? '').trim(),
+      appId,
+      secretId,
+      secretKey,
+      engineModelType: String(requestPayload?.engineModelType ?? '16k_zh').trim(),
+      hotwordList: String(requestPayload?.hotwordList ?? '').trim(),
     })
     return tencentAsr.getStatus()
   })
@@ -71,6 +95,7 @@ export function register() {
 
   ipcMain.handle('minecraft:connect', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateGameConnectPayload('minecraft:connect', payload)
     const address = String(payload?.address ?? '').trim()
     const port = Number(payload?.port ?? 19131)
     const username = String(payload?.username ?? '').trim()
@@ -86,6 +111,7 @@ export function register() {
 
   ipcMain.handle('minecraft:send-command', (event, payload) => {
     requireTrustedSender(event)
+    payload = validateGameCommandPayload('minecraft:send-command', payload)
     minecraftGateway.sendCommand(String(payload?.command ?? ''))
     return { ok: true }
   })
@@ -104,6 +130,7 @@ export function register() {
 
   ipcMain.handle('factorio:connect', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateGameConnectPayload('factorio:connect', payload)
     const address = String(payload?.address ?? '').trim()
     const port = Number(payload?.port ?? 34197)
     const password = String(payload?.password ?? '').trim()
@@ -119,6 +146,7 @@ export function register() {
 
   ipcMain.handle('factorio:execute', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateGameCommandPayload('factorio:execute', payload)
     const command = String(payload?.command ?? '')
     const response = await factorioRcon.execute(command)
     return { response }
@@ -149,6 +177,7 @@ export function register() {
 
     ipcMain.handle('realtime:start', async (event, payload) => {
       requireTrustedSender(event)
+      payload = validateRealtimeStartPayload(payload)
       const realtimeVoice = await loadRealtimeVoice()
       return realtimeVoice.startSession(payload)
     })
@@ -174,6 +203,7 @@ export function register() {
     })
     ipcMain.handle('realtime:send-text', async (event, payload) => {
       requireTrustedSender(event)
+      payload = validateRealtimeSendTextPayload(payload)
       const realtimeVoice = await loadRealtimeVoice()
       realtimeVoice.sendTextMessage(payload.text)
       return { ok: true }

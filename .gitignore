@@ -29,6 +29,7 @@ stryker.log
 *.sw?
 tmp-debug/
 release/
+release-smoke/
 resources/local-speech/
 sherpa-models/*
 !sherpa-models/README.md
@@ -55,4 +56,3 @@ public/vendor/
 # Design-source PNGs (downsampled into public/ tray + dock icons; the
 # downsampled outputs are committed, the source is kept locally only)
 jimeng-*.png
-ChatGPT Image*.png

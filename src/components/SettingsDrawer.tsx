@@ -53,6 +53,7 @@ import type {
   DailyMemoryEntry,
   DebugConsoleEvent,
   MemoryItem,
+  PlatformProfile,
   ReminderTask,
   ServiceConnectionCapability,
   SpeechVoiceListResponse,
@@ -64,6 +65,7 @@ import type {
 export type SettingsDrawerProps = {
   open: boolean
   settings: AppSettings
+  platformProfile: PlatformProfile
   chatMessageCount: number
   chatBusy: boolean
   currentChatSessionId?: string
@@ -158,6 +160,7 @@ function renderSettingsSectionFallback(label: string) {
 export function SettingsDrawer({
   open,
   settings,
+  platformProfile,
   chatMessageCount,
   chatBusy,
   currentChatSessionId,
@@ -321,19 +324,38 @@ export function SettingsDrawer({
    
   useEffect(() => {
     if (!open) return
+    const incomingKeyValues = {
+      apiKey: settings.apiKey,
+      speechInputApiKey: settings.speechInputApiKey,
+      speechOutputApiKey: settings.speechOutputApiKey,
+      toolWebSearchApiKey: settings.toolWebSearchApiKey,
+      screenVlmApiKey: settings.screenVlmApiKey,
+      telegramBotToken: settings.telegramBotToken,
+      discordBotToken: settings.discordBotToken,
+    } as const
+    const keyFields = Object.keys(incomingKeyValues) as Array<keyof typeof incomingKeyValues>
+
     setDraft((current) => {
-      const keyFields = ['apiKey', 'speechInputApiKey', 'speechOutputApiKey', 'toolWebSearchApiKey'] as const
       let changed = false
       const patch = { ...current }
       for (const field of keyFields) {
-        if (!current[field] && settings[field]) {
-          ;(patch as Record<string, unknown>)[field] = settings[field]
+        if (!current[field] && incomingKeyValues[field]) {
+          ;(patch as Record<string, unknown>)[field] = incomingKeyValues[field]
           changed = true
         }
       }
       return changed ? patch : current
     })
-  }, [open, settings.apiKey, settings.speechOutputApiKey, settings.speechInputApiKey, settings.toolWebSearchApiKey]) // eslint-disable-line react-hooks/exhaustive-deps -- only sync specific vault keys, not full settings
+  }, [
+    open,
+    settings.apiKey,
+    settings.speechOutputApiKey,
+    settings.speechInputApiKey,
+    settings.toolWebSearchApiKey,
+    settings.screenVlmApiKey,
+    settings.telegramBotToken,
+    settings.discordBotToken,
+  ])
 
    
   useEffect(() => {
@@ -438,6 +460,7 @@ export function SettingsDrawer({
           <MemorySection
             active
             draft={draft}
+            platformProfile={platformProfile}
             setDraft={setDraft}
             memories={memories}
             dailyMemoryEntries={dailyMemoryEntries}
@@ -478,6 +501,7 @@ export function SettingsDrawer({
               previewingSpeech={speechVoices.previewingSpeech}
               runningAudioSmoke={speechVoices.runningAudioSmoke}
               setDraft={setDraft}
+              platformProfile={platformProfile}
               testingTarget={connectionTests.testingTarget}
               uiLanguage={uiLanguage}
             />
@@ -485,6 +509,7 @@ export function SettingsDrawer({
             <SpeechInputSection
               active
               draft={draft}
+              platformProfile={platformProfile}
               setDraft={setDraft}
               testingTarget={connectionTests.testingTarget}
               onRunSpeechInputConnectionTest={() => void connectionTests.runConnectionTest('speech-input')}
@@ -521,6 +546,7 @@ export function SettingsDrawer({
             uiLanguage={uiLanguage}
             updateWindowState={windowState.updateWindowState}
             windowStatusMessage={windowState.windowStatusMessage}
+            launchOnStartupSupported={platformProfile.startup.supported}
           />
         )
       case 'integrations':

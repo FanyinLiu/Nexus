@@ -20,6 +20,7 @@ import type {
   MediaSessionControlRequest,
   MediaSessionControlResponse,
   MediaSessionSnapshot,
+  PlatformProfile,
   TextFileOpenRequest,
   TextFileOpenResponse,
   TextFileSaveRequest,
@@ -235,6 +236,7 @@ declare global {
       updateRuntimeState: (state: Partial<RuntimeStateSnapshot>) => Promise<void>
       getLaunchOnStartup: () => Promise<boolean>
       setLaunchOnStartup: (value: boolean) => Promise<boolean>
+      getPlatformProfile: () => Promise<PlatformProfile>
       listPetModels: () => Promise<PetModelDefinition[]>
       importPetModel: () => Promise<{
         model: PetModelDefinition
@@ -279,7 +281,7 @@ declare global {
       controlSystemMediaSession: (payload: MediaSessionControlRequest) => Promise<MediaSessionControlResponse>
 
       // Tencent Cloud Real-Time ASR
-      tencentAsrConnect: (payload: { appId: string; secretId: string; secretKey: string; engineModelType?: string; hotwordList?: string }) => Promise<{ state: string }>
+      tencentAsrConnect: (payload: { apiKey?: string; appId: string; secretId: string; secretKey: string; engineModelType?: string; hotwordList?: string }) => Promise<{ state: string }>
       tencentAsrDisconnect: () => Promise<{ ok: boolean }>
       tencentAsrFeed: (payload: { samples: number[] | Float32Array; sampleRate?: number }) => Promise<{ ok: boolean }>
       tencentAsrFinish: () => Promise<{ text: string }>

@@ -8,6 +8,7 @@
 
 import type { Dispatch, SetStateAction } from 'react'
 import { parseNumberInput } from './settingsDrawerSupport'
+import { displaySecretInputValue } from '../lib/keyVaultBridge'
 import type { AppSettings } from '../types'
 
 type FieldShared = {
@@ -82,12 +83,17 @@ type TextFieldProps = FieldShared & {
 }
 
 export function TextField({ label, field, placeholder, type = 'text', draft, setDraft }: TextFieldProps) {
+  const rawValue = draft[field] as string
+  const inputValue = type === 'password'
+    ? displaySecretInputValue(rawValue)
+    : rawValue
+
   return (
     <label>
       <span>{label}</span>
       <input
         type={type}
-        value={draft[field] as string}
+        value={inputValue}
         placeholder={placeholder}
         onChange={(e) => setDraft((prev) => ({ ...prev, [field]: e.target.value }))}
       />

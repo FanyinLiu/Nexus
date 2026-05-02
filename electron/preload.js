@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   updateRuntimeState: (state) => ipcRenderer.invoke('runtime-state:update', state),
   getLaunchOnStartup: () => ipcRenderer.invoke('app:get-launch-on-startup'),
   setLaunchOnStartup: (value) => ipcRenderer.invoke('app:set-launch-on-startup', value),
+  getPlatformProfile: () => ipcRenderer.invoke('app:get-platform-profile'),
   listPetModels: () => ipcRenderer.invoke('pet-model:list'),
   importPetModel: () => ipcRenderer.invoke('pet-model:import'),
   showConfirmDialog: (message) => ipcRenderer.invoke('dialog:confirm', message),

@@ -4,6 +4,7 @@ import {
   resolveWebSearchApiBaseUrl,
   WEB_SEARCH_PROVIDER_PRESETS,
 } from '../../lib/webSearchProviders'
+import { displaySecretInputValue } from '../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import { ToggleField } from '../settingsFields'
 import type { AppSettings } from '../../types'
@@ -23,6 +24,7 @@ export const ToolsSection = memo(function ToolsSection({
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
   const webSearchProvider = getWebSearchProviderPreset(draft.toolWebSearchProviderId)
+  const webSearchApiKeyInputValue = displaySecretInputValue(draft.toolWebSearchApiKey)
 
   function applyWebSearchProviderPreset(providerId: string) {
     const preset = getWebSearchProviderPreset(providerId)
@@ -136,7 +138,7 @@ export const ToolsSection = memo(function ToolsSection({
         <span>{ti('settings.tools.api_key')}</span>
         <input
           type="password"
-          value={draft.toolWebSearchApiKey}
+          value={webSearchApiKeyInputValue}
           onChange={(event) =>
             setDraft((prev) => ({
               ...prev,

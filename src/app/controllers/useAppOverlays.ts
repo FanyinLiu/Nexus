@@ -23,6 +23,7 @@ import type {
   AppSettings,
   DebugConsoleEvent,
   NotificationChannel,
+  PlatformProfile,
   ReminderTask,
 } from '../../types'
 
@@ -35,6 +36,7 @@ type ReminderTaskStore = ReturnType<typeof import('./useReminderTaskStore').useR
 type UseAppOverlaysOptions = {
   view: 'pet' | 'panel'
   settings: AppSettings
+  platformProfile: PlatformProfile
   setSettings: Dispatch<SetStateAction<AppSettings>>
   settingsOpen: boolean
   setSettingsOpen: Dispatch<SetStateAction<boolean>>
@@ -102,6 +104,7 @@ type UseAppOverlaysOptions = {
 export function useAppOverlays({
   view,
   settings,
+  platformProfile,
   setSettings,
   settingsOpen,
   setSettingsOpen,
@@ -136,9 +139,16 @@ export function useAppOverlays({
       completeOnboarding?: boolean
     },
   ) => {
-    const launchOnStartup = await window.desktopPet?.setLaunchOnStartup?.(
-      nextSettings.launchOnStartup,
-    ).catch(() => nextSettings.launchOnStartup) ?? nextSettings.launchOnStartup
+    const launchOnStartupRequested = platformProfile.startup.supported
+      ? nextSettings.launchOnStartup
+      : false
+    const launchOnStartup = platformProfile.startup.supported
+      ? (
+          await window.desktopPet?.setLaunchOnStartup?.(launchOnStartupRequested)
+            .catch(() => launchOnStartupRequested)
+          ?? launchOnStartupRequested
+        )
+      : false
 
     const normalizedSpeechOutputApiBaseUrl = normalizeSpeechOutputApiBaseUrl(
       nextSettings.speechOutputProviderId,
@@ -195,7 +205,7 @@ export function useAppOverlays({
         }
       }
     }
-  }, [chat, onboardingPending, setSettings, setSettingsOpen])
+  }, [chat, onboardingPending, platformProfile.startup.supported, setSettings, setSettingsOpen])
 
   const chatMessageCount = useMemo(
     () => chat.messages.filter((message) => message.role !== 'system').length,
@@ -342,12 +352,14 @@ export function useAppOverlays({
     },
     onRunAudioSmokeTest: async (draftSettings) => voice.runAudioSmokeTest(draftSettings),
     onClearDebugConsole: clearDebugConsoleEvents,
+    platformProfile,
   }
 
   const onboardingGuideProps: OnboardingGuideProps = {
     open: onboardingOpen,
     view,
     settings,
+    platformProfile,
     petModelPresets,
     onDismiss: () => setOnboardingOpen(false),
     onSave: async (nextSettings) => {

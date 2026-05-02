@@ -13,6 +13,7 @@ import type {
   Goal,
   MemoryItem,
   PanelWindowState,
+  PlatformProfile,
   VoiceEmotionLabel,
   VoiceState,
   WindowView,
@@ -28,6 +29,7 @@ import { getSettingsSnapshot } from '../store/settingsStore'
 import { useAppOverlays } from './useAppOverlays'
 import { useAutonomyController } from './useAutonomyController'
 import { useBudgetConfigSync } from './useBudgetConfigSync'
+import { useBackgroundSchedulers } from './useBackgroundSchedulers'
 import { useDebugConsole } from './useDebugConsole'
 import { useDesktopBridge } from './useDesktopBridge'
 import { useIntegrationWhitelists } from './useIntegrationWhitelists'
@@ -35,13 +37,6 @@ import { useMediaSessionController } from './useMediaSessionController'
 import { useReminderTaskStore } from './useReminderTaskStore'
 import { useSettingsSubscription } from './useSettingsSubscription'
 import { useWorkspaceRootBridge } from './useWorkspaceRootBridge'
-import { useAwayNotificationScheduler } from '../../hooks/useAwayNotificationScheduler'
-import { useBracketScheduler } from '../../hooks/useBracketScheduler.ts'
-import { useErrandScheduler } from '../../hooks/useErrandScheduler.ts'
-import { useFutureCapsuleScheduler } from '../../hooks/useFutureCapsuleScheduler.ts'
-import { useLetterScheduler } from '../../hooks/useLetterScheduler.ts'
-import { useOpenArcScheduler } from '../../hooks/useOpenArcScheduler.ts'
-import { useGuidanceAnalysisScheduler } from '../../hooks/useGuidanceAnalysisScheduler.ts'
 import { loadUserAffectWindow } from '../../features/autonomy/userAffectTimeline.ts'
 import { computeAffectSnapshot } from '../../features/autonomy/affectDynamics.ts'
 import { buildAffectGuidance, classifyAffectGuidance } from '../../features/autonomy/affectGuidance.ts'
@@ -101,11 +96,12 @@ export function useAppController() {
   const setInputFnRef = useRef<ChatController['setInput']>(() => {})
   const appendSystemMessageRef = useRef<ChatController['appendSystemMessage']>(() => {})
   const sendMessageRef = useRef<ChatController['sendMessage']>(async () => false)
+  const platformProfileRef = useRef<PlatformProfile | null>(null)
 
   const reminderTaskStore = useReminderTaskStore()
   const debugConsole = useDebugConsole()
   const memory = useMemory({ settings })
-  const desktopContext = useDesktopContext({ settingsRef })
+  const desktopContext = useDesktopContext({ settingsRef, platformProfileRef })
   useGameIntegration({ settingsRef })
   const pet = usePetBehavior({
     settingsRef,
@@ -343,31 +339,12 @@ export function useAppController() {
     messagesRef.current = chat.messages
   }, [chat.messages])
 
-  useAwayNotificationScheduler({
-    settings,
-    messages: chat.messages,
-    panelOpen: !panelCollapsed,
-  })
-
-  useBracketScheduler({
-    settings,
-    panelOpen: !panelCollapsed,
-  })
-
-  useLetterScheduler({
+  useBackgroundSchedulers({
     settings,
     messages: chat.messages,
     memories: memory.memories,
-    panelOpen: !panelCollapsed,
+    panelCollapsed,
   })
-
-  useErrandScheduler({ settings })
-
-  useFutureCapsuleScheduler({ settings })
-
-  useOpenArcScheduler({ settings })
-
-  useGuidanceAnalysisScheduler()
 
   useEffect(() => {
     voiceStateRef.current = voice.voiceState
@@ -385,6 +362,7 @@ export function useAppController() {
 
   const {
     runtimeSnapshot,
+    platformProfile,
     petRuntimeContinuousVoiceActive,
     remotePanelSettingsOpen,
     petModelPresets,
@@ -413,6 +391,10 @@ export function useAppController() {
   })
 
   useEffect(() => {
+    platformProfileRef.current = platformProfile
+  }, [platformProfile])
+
+  useEffect(() => {
     continuousVoiceActiveRef.current = (
       voice.continuousVoiceActive
       || (view === 'panel' && petRuntimeContinuousVoiceActive && !voice.continuousVoiceActive)
@@ -434,6 +416,7 @@ export function useAppController() {
   const autonomy = useAutonomyController({
     settings,
     settingsRef,
+    platformProfile,
     messagesRef,
     memory,
     reminderTasksRef: reminderTaskStore.reminderTasksRef,
@@ -549,12 +532,14 @@ export function useAppController() {
 
   const mediaSessionController = useMediaSessionController({
     view,
+    platformProfile,
     appendSystemMessage: chat.appendSystemMessage,
   })
 
   const { overlays } = useAppOverlays({
     view,
     settings,
+    platformProfile,
     setSettings,
     settingsOpen,
     setSettingsOpen,

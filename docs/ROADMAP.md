@@ -1,6 +1,6 @@
 # Nexus Roadmap — companion-first stewardship
 
-> Last updated 2026-04-30. Steward: Codex, under Klein's product direction.
+> Last updated 2026-04-30. Stewardship follows Klein's product direction.
 
 ## Posture
 

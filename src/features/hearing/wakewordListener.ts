@@ -23,6 +23,8 @@ export type WakewordListenerCallbacks = {
 export type WakewordListenerOptions = {
   wakeWord?: string
   ti?: Translator
+  requestInputStream?: typeof requestVoiceInputStream
+  AudioContextCtor?: typeof AudioContext
 }
 
 export type WakewordFrameSubscriber = (samples: Float32Array, sampleRate: number) => void
@@ -47,6 +49,8 @@ export async function startWakewordListener(
   const wakewordApi = api
 
   const wakeWord = options.wakeWord?.trim() || ''
+  const requestInputStream = options.requestInputStream ?? requestVoiceInputStream
+  const AudioContextCtor = options.AudioContextCtor ?? AudioContext
   await wakewordApi.kwsStart({ wakeWord })
   callbacks.onStatusChange?.(true)
 
@@ -109,7 +113,7 @@ export async function startWakewordListener(
   }
 
   async function acquireMicAndWire() {
-    const microphone = await requestVoiceInputStream({
+    const microphone = await requestInputStream({
       preferredSampleRate: KWS_SAMPLE_RATE,
       purpose: 'wakeword',
     })
@@ -132,7 +136,7 @@ export async function startWakewordListener(
       }
     }
 
-    audioContext = new AudioContext({ sampleRate: KWS_SAMPLE_RATE })
+    audioContext = new AudioContextCtor({ sampleRate: KWS_SAMPLE_RATE })
     await audioContext.resume().catch(() => undefined)
 
     // Auto-resume if Chromium suspends the context (background tab

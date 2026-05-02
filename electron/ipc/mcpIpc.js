@@ -1,6 +1,11 @@
 import { ipcMain } from 'electron'
 import * as mcpHost from '../services/mcpHost.js'
 import { requireString, requireObject, requireTrustedSender } from './validate.js'
+import {
+  validateMcpCallToolPayload,
+  validateMcpIdPayload,
+  validateMcpSyncServersPayload,
+} from './payloadSchemas.js'
 
 // Only the MCP Host (multi-server) read/invoke handlers are live — lifecycle
 // handlers (start/stop/restart) are driven through plugin:* in pluginIpc.js.
@@ -10,18 +15,21 @@ import { requireString, requireObject, requireTrustedSender } from './validate.j
 export function register() {
   ipcMain.handle('mcp:status', (event, payload) => {
     requireTrustedSender(event)
+    payload = validateMcpIdPayload('mcp:status', payload)
     const id = payload?.id ? String(payload.id).trim() : null
     return id ? mcpHost.getStatus(id) : mcpHost.getAllStatuses()
   })
 
   ipcMain.handle('mcp:list-tools', (event, payload) => {
     requireTrustedSender(event)
+    payload = validateMcpIdPayload('mcp:list-tools', payload)
     const id = payload?.id ? String(payload.id).trim() : null
     return id ? mcpHost.listTools(id) : mcpHost.listAllTools()
   })
 
   ipcMain.handle('mcp:call-tool', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateMcpCallToolPayload(payload)
     requireObject(payload, 'payload')
     const name = requireString(payload.name, 'name')
     const toolArgs = payload.arguments ?? {}
@@ -33,6 +41,7 @@ export function register() {
 
   ipcMain.handle('mcp:sync-servers', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateMcpSyncServersPayload(payload)
     const desired = Array.isArray(payload?.servers) ? payload.servers : []
     return mcpHost.syncFromSettings(desired)
   })

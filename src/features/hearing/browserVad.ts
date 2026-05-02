@@ -34,6 +34,11 @@ export type VoiceActivityDetector = {
   destroy: () => Promise<void>
 }
 
+type VoiceActivityDetectorOptions = {
+  sharedStream?: MediaStream
+  vadModule?: VadModule
+}
+
 type VadPreset = {
   positiveSpeechThreshold: number
   negativeSpeechThreshold: number
@@ -67,7 +72,11 @@ const VAD_PRESETS: Record<VadSensitivity, VadPreset> = {
 }
 
 function resolvePublicAssetPath(relativePath: string) {
-  const baseUrl = new URL(import.meta.env.BASE_URL, window.location.href)
+  const basePath = import.meta.env?.BASE_URL ?? '/'
+  const currentHref = typeof window !== 'undefined'
+    ? window.location.href
+    : 'http://localhost/'
+  const baseUrl = new URL(basePath, currentHref)
   return new URL(relativePath.replace(/^\.\//, ''), baseUrl).toString()
 }
 
@@ -95,12 +104,12 @@ async function getVadModule() {
 export async function createVoiceActivityDetector(
   callbacks: VoiceActivityDetectorCallbacks,
   sensitivity: VadSensitivity = 'medium',
-  options: { sharedStream?: MediaStream } = {},
+  options: VoiceActivityDetectorOptions = {},
 ): Promise<VoiceActivityDetector> {
   const preset = VAD_PRESETS[sensitivity]
   const sharedStream = options.sharedStream ?? null
   const createDetector = async (processorType: 'auto' | 'ScriptProcessor'): Promise<MicVadInstance> => {
-    const { MicVAD } = await getVadModule()
+    const { MicVAD } = options.vadModule ?? await getVadModule()
 
     return MicVAD.new({
       model: 'v5',

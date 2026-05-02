@@ -191,6 +191,22 @@ stage('B', 'Code quality', () => {
       }
     })
 
+    check('B', `Packaged smoke (electron-builder --dir + SMOKE_TEST)`, () => {
+      try {
+        sh('npm run package:dir:smoke', {
+          stdio: ['ignore', 'ignore', 'pipe'],
+          timeout: 420_000,
+          env: {
+            ...process.env,
+            CSC_IDENTITY_AUTO_DISCOVERY: 'false',
+          },
+        })
+      } catch (err) {
+        const detail = err.stderr?.toString()?.split('\n').slice(-8).join('\n') || err.message
+        throw new Error(`packaged smoke failed:\n       ${detail.replace(/\n/g, '\n       ')}`)
+      }
+    })
+
     check('B', 'Coverage ≥ 80% lines', () => {
       let out
       try {

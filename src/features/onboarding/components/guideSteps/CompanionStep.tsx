@@ -18,6 +18,7 @@ type CompanionStepProps = {
   setDraft: OnboardingDraftSetter
   petModelPresets: PetModelDefinition[]
   selectedPetModel: PetModelDefinition | undefined
+  launchOnStartupSupported: boolean
   finishHint: string
 }
 
@@ -26,6 +27,7 @@ export function CompanionStep({
   setDraft,
   petModelPresets,
   selectedPetModel,
+  launchOnStartupSupported,
   finishHint,
 }: CompanionStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
@@ -128,6 +130,7 @@ export function CompanionStep({
           <input
             type="checkbox"
             checked={draft.launchOnStartup}
+            disabled={!launchOnStartupSupported}
             onChange={(event) => setDraft((current) => ({
               ...current,
               launchOnStartup: event.target.checked,
