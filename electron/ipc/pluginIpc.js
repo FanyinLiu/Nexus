@@ -4,6 +4,11 @@ import * as mcpHost from '../services/mcpHost.js'
 import * as messageBus from '../services/pluginMessageBus.js'
 import { requireTrustedSender } from './validate.js'
 import { audit } from '../services/auditLog.js'
+import {
+  validatePluginBusRecentPayload,
+  validatePluginBusTopicPayload,
+  validatePluginIdPayload,
+} from './payloadSchemas.js'
 
 export function register() {
   ipcMain.handle('plugin:scan', async (event) => {
@@ -18,6 +23,7 @@ export function register() {
 
   ipcMain.handle('plugin:start', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validatePluginIdPayload('plugin:start', payload)
     const id = String(payload?.id ?? '')
     audit('plugin', 'start', { id })
     return pluginHost.startPlugin(id)
@@ -25,6 +31,7 @@ export function register() {
 
   ipcMain.handle('plugin:stop', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validatePluginIdPayload('plugin:stop', payload)
     const id = String(payload?.id ?? '')
     audit('plugin', 'stop', { id })
     await pluginHost.stopPlugin(id)
@@ -33,6 +40,7 @@ export function register() {
 
   ipcMain.handle('plugin:restart', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validatePluginIdPayload('plugin:restart', payload)
     const id = String(payload?.id ?? '')
     audit('plugin', 'restart', { id })
     return pluginHost.restartPlugin(id)
@@ -40,6 +48,7 @@ export function register() {
 
   ipcMain.handle('plugin:enable', (event, payload) => {
     requireTrustedSender(event)
+    payload = validatePluginIdPayload('plugin:enable', payload)
     const id = String(payload?.id ?? '')
     audit('plugin', 'enable', { id })
     return pluginHost.enablePlugin(id)
@@ -47,6 +56,7 @@ export function register() {
 
   ipcMain.handle('plugin:disable', (event, payload) => {
     requireTrustedSender(event)
+    payload = validatePluginIdPayload('plugin:disable', payload)
     const id = String(payload?.id ?? '')
     audit('plugin', 'disable', { id })
     return pluginHost.disablePlugin(id)
@@ -54,6 +64,7 @@ export function register() {
 
   ipcMain.handle('plugin:status', (event, payload) => {
     requireTrustedSender(event)
+    payload = validatePluginIdPayload('plugin:status', payload)
     return pluginHost.getPluginStatus(String(payload?.id ?? ''))
   })
 
@@ -64,6 +75,7 @@ export function register() {
 
   ipcMain.handle('plugin:approve', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validatePluginIdPayload('plugin:approve', payload)
     const pluginId = String(payload?.id ?? '')
     audit('plugin', 'approve', { id: pluginId })
     await pluginHost.approvePlugin(pluginId)
@@ -72,6 +84,7 @@ export function register() {
 
   ipcMain.handle('plugin:revoke', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validatePluginIdPayload('plugin:revoke', payload)
     const pluginId = String(payload?.id ?? '')
     audit('plugin', 'revoke', { id: pluginId })
     await pluginHost.revokePluginApproval(pluginId)
@@ -89,6 +102,7 @@ export function register() {
 
   ipcMain.handle('plugin-bus:publish', (event, payload) => {
     requireTrustedSender(event)
+    payload = validatePluginBusTopicPayload('plugin-bus:publish', payload)
     const { serverId, topic, data } = payload ?? {}
     if (!validateServerId(serverId) || !topic) return { delivered: 0 }
     return { delivered: messageBus.publish(String(serverId), String(topic), data) }
@@ -96,6 +110,7 @@ export function register() {
 
   ipcMain.handle('plugin-bus:subscribe', (event, payload) => {
     requireTrustedSender(event)
+    payload = validatePluginBusTopicPayload('plugin-bus:subscribe', payload)
     const { serverId, topic } = payload ?? {}
     if (!validateServerId(serverId) || !topic) return { accepted: false }
     return { accepted: messageBus.subscribe(String(serverId), String(topic)) }
@@ -103,6 +118,7 @@ export function register() {
 
   ipcMain.handle('plugin-bus:unsubscribe', (event, payload) => {
     requireTrustedSender(event)
+    payload = validatePluginBusTopicPayload('plugin-bus:unsubscribe', payload)
     const { serverId, topic } = payload ?? {}
     if (!validateServerId(serverId) || !topic) return
     messageBus.unsubscribe(String(serverId), String(topic))
@@ -115,6 +131,7 @@ export function register() {
 
   ipcMain.handle('plugin-bus:recent', (event, payload) => {
     requireTrustedSender(event)
+    payload = validatePluginBusRecentPayload(payload)
     return messageBus.getRecentMessages(payload?.limit ?? 20)
   })
 

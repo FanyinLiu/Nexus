@@ -196,7 +196,7 @@ export async function buildSystemPrompt(
   // prefix stays byte-stable across requests and the Anthropic prompt cache
   // (see electron/chatRuntime.js `cache_control: ephemeral`) can actually hit.
   // It is injected into the final user message as a <system-reminder> block
-  // below — the Claude Code-style pattern that keeps time-sensitive context
+  // below — a cache-friendly pattern that keeps time-sensitive context
   // fresh without invalidating the cached prefix.
 
   const headerText = prompts.headerLines({

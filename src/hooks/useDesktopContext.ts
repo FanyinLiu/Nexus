@@ -3,13 +3,19 @@ import {
   buildDesktopContextRequest,
 } from '../features/context'
 import { analyzeScreenWithVlm, disposeScreenOcrWorker, enqueueScreenOcr } from '../features/vision'
-import type { AppSettings, DesktopContextSnapshot } from '../types'
+import {
+  isDesktopContextActiveWindowAvailable,
+  isDesktopContextClipboardAvailable,
+  isDesktopContextScreenshotAvailable,
+} from '../lib/platformProfile'
+import type { AppSettings, DesktopContextSnapshot, PlatformProfile } from '../types'
 
 type UseDesktopContextParams = {
   settingsRef: React.RefObject<AppSettings>
+  platformProfileRef?: React.RefObject<PlatformProfile | null>
 }
 
-export function useDesktopContext({ settingsRef }: UseDesktopContextParams) {
+export function useDesktopContext({ settingsRef, platformProfileRef }: UseDesktopContextParams) {
   useEffect(() => {
     return () => {
       void disposeScreenOcrWorker()
@@ -20,9 +26,13 @@ export function useDesktopContext({ settingsRef }: UseDesktopContextParams) {
     const currentSettings = settingsRef.current
     if (!currentSettings.contextAwarenessEnabled) return null
 
+    const platformProfile = platformProfileRef?.current ?? null
     const includeActiveWindow = currentSettings.activeWindowContextEnabled
+      && isDesktopContextActiveWindowAvailable(platformProfile)
     const includeClipboard = currentSettings.clipboardContextEnabled
+      && isDesktopContextClipboardAvailable(platformProfile)
     const includeScreenshot = currentSettings.screenContextEnabled
+      && isDesktopContextScreenshotAvailable(platformProfile)
 
     if (!includeActiveWindow && !includeClipboard && !includeScreenshot) {
       return null
@@ -40,9 +50,9 @@ export function useDesktopContext({ settingsRef }: UseDesktopContextParams) {
           includeScreenshot,
         }),
         policy: {
-          activeWindow: currentSettings.activeWindowContextEnabled,
-          clipboard: currentSettings.clipboardContextEnabled,
-          screenshot: currentSettings.screenContextEnabled,
+          activeWindow: includeActiveWindow,
+          clipboard: includeClipboard,
+          screenshot: includeScreenshot,
         },
       }
       const snapshot = await window.desktopPet.getDesktopContext(desktopContextRequest)
@@ -103,7 +113,7 @@ export function useDesktopContext({ settingsRef }: UseDesktopContextParams) {
     } catch {
       return null
     }
-  }, [settingsRef])
+  }, [platformProfileRef, settingsRef])
 
   return {
     loadDesktopContextSnapshot,

@@ -23,10 +23,6 @@ import type {
 } from '../../types'
 import { executeFsTool, isFsToolName } from '../agent/fsTools.ts'
 import {
-  executeSpawnSubagentTool,
-  SPAWN_SUBAGENT_TOOL_NAME,
-} from '../autonomy/subagents/spawnSubagentTool.ts'
-import {
   executeBuiltInToolByName,
   isBuiltInToolName,
   type BuiltInToolExecutionCallbacks,
@@ -171,15 +167,6 @@ async function executeMcpToolCall(
   builtInCallbacks: BuiltInToolExecutionCallbacks,
 ): Promise<string> {
   const toolName = toolCall.function.name
-
-  // spawn_subagent short-circuits before built-ins — it doesn't produce a
-  // rich BuiltInToolResult card, just a research summary string for the
-  // main LLM to consume. Runs its own bounded LLM loop inside the
-  // dispatcher; can take 10-30s to settle.
-  if (toolName === SPAWN_SUBAGENT_TOOL_NAME) {
-    const parentTurnId = toolCall.id || `chat-${Date.now()}`
-    return executeSpawnSubagentTool(toolCall.function.arguments || '', parentTurnId)
-  }
 
   // Built-in tools (web_search / weather / open_external) parse their own
   // arguments, enforce policy, and apply pre/post hooks inside the executor,

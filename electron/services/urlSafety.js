@@ -1,29 +1,3 @@
-/**
- * URL safety helpers for IPC handlers that fetch renderer-supplied URLs.
- *
- * Threat model: a renderer (XSS, hostile plugin page, compromised webview)
- * can call IPC handlers that hit `net.fetch` from the main process, which
- * runs with Node-level privileges and bypasses any renderer CSP. Without
- * filtering, the renderer can:
- *
- *   - SSRF to internal services (`http://127.0.0.1:11434/...`)
- *   - SSRF to cloud metadata IMDS (`http://169.254.169.254/...`)
- *   - SSRF to RFC1918 LAN (`http://192.168.x.x/...`)
- *   - Exfil via `http://attacker.com/?data=...`
- *   - Bypass scheme restrictions (`file://`, `gopher://`, etc.)
- *
- * This helper enforces:
- *   - https-only by default
- *   - blocklist of unspeakable hostnames + IPv4/IPv6 ranges
- *
- * Hostname-vs-IP: we do NOT resolve DNS here. A renderer-supplied
- * hostname could resolve at fetch-time to an internal IP (DNS rebinding).
- * Callers that REALLY care about that should resolve and re-check
- * before fetch. For now we rely on the host blocklist + the fact that
- * most attackers won't bother running a custom-DNS-rebinding domain
- * just to hit a Nexus user's localhost.
- */
-
 const PRIVATE_IPV4_PATTERNS = [
   // 10.0.0.0/8
   /^10\./,
@@ -59,6 +33,42 @@ const BLOCKED_IPV6_PATTERNS = [
   /^fe[89ab]/i,
 ]
 
+function normalizeHost(rawHost) {
+  const normalized = String(rawHost ?? '').trim().toLowerCase()
+  const bracketStripped = normalized.startsWith('[') && normalized.endsWith(']')
+    ? normalized.slice(1, -1)
+    : normalized
+  return bracketStripped.split('%')[0]
+}
+
+function isPrivateIpv4(host) {
+  for (const pattern of PRIVATE_IPV4_PATTERNS) {
+    if (pattern.test(host)) return true
+  }
+  return false
+}
+
+function isPrivateIpv6(host) {
+  for (const pattern of BLOCKED_IPV6_PATTERNS) {
+    if (pattern.test(host)) return true
+  }
+  return false
+}
+
+export function isPrivateOrLoopbackHost(hostname) {
+  const host = normalizeHost(hostname)
+  if (!host) return true
+  if (BLOCKED_HOSTS.has(host)) return true
+  if (host.startsWith('::ffff:')) return true
+
+  const mappedIpv4 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(host)
+  if (mappedIpv4 && isPrivateIpv4(mappedIpv4[1])) return true
+
+  if (isPrivateIpv4(host)) return true
+  if (isPrivateIpv6(host)) return true
+  return false
+}
+
 /**
  * Strict URL safety check. Returns { ok: true } when the URL is safe to
  * fetch from the main process, or { ok: false, reason } describing why
@@ -93,31 +103,73 @@ export function checkUrlSafety(input, options = {}) {
     return { ok: true }
   }
 
-  // URL.hostname keeps the surrounding brackets on IPv6 literals
-  // (`https://[::1]/` → `[::1]`); strip them so the prefix checks below
-  // match the bare address.
-  const rawHost = parsed.hostname.toLowerCase()
-  const host = rawHost.startsWith('[') && rawHost.endsWith(']')
-    ? rawHost.slice(1, -1)
-    : rawHost
-
-  // Hostname blocklist
+  const host = normalizeHost(parsed.hostname)
   if (BLOCKED_HOSTS.has(host)) {
     return { ok: false, reason: `disallowed host: ${host}` }
   }
+  if (host.startsWith('::ffff:')) {
+    return { ok: false, reason: `private/loopback IPv6: ${host}` }
+  }
 
-  // IPv4 literal in private/loopback/link-local range
-  for (const pattern of PRIVATE_IPV4_PATTERNS) {
-    if (pattern.test(host)) {
-      return { ok: false, reason: `private/loopback IPv4: ${host}` }
+  const mappedIpv4 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(host)
+  if (mappedIpv4 && isPrivateIpv4(mappedIpv4[1])) {
+    return { ok: false, reason: `private/loopback IPv4: ${mappedIpv4[1]}` }
+  }
+
+  if (isPrivateIpv4(host)) {
+    return { ok: false, reason: `private/loopback IPv4: ${host}` }
+  }
+
+  if (isPrivateIpv6(host)) {
+    return { ok: false, reason: `private/loopback IPv6: ${host}` }
+  }
+
+  return { ok: true }
+}
+
+/**
+ * Strict URL safety check + DNS resolution re-check for hostname inputs.
+ *
+ * Use this for untrusted fetch targets (RSS feeds, result-page previews)
+ * where redirect/DNS tricks could otherwise bypass literal-host checks.
+ *
+ * @param {string} input
+ * @param {object} options
+ * @param {boolean} [options.allowHttp=false]
+ * @param {boolean} [options.allowPrivate=false]
+ * @param {(hostname: string, options: { all: true, verbatim: true }) => Promise<Array<{ address: string, family: number }>>} [options.lookupFn]
+ */
+export async function checkUrlSafetyWithDns(input, options = {}) {
+  const base = checkUrlSafety(input, options)
+  if (!base.ok || options.allowPrivate) return base
+
+  const parsed = new URL(input)
+  const host = normalizeHost(parsed.hostname)
+
+  // Literal IPs are already covered by the lexical checks above.
+  if (isIP(host) !== 0 || /^::ffff:\d+\.\d+\.\d+\.\d+$/i.test(host)) {
+    return base
+  }
+
+  const lookupFn = options.lookupFn ?? dnsLookup
+  let records
+  try {
+    records = await lookupFn(host, { all: true, verbatim: true })
+  } catch (error) {
+    return {
+      ok: false,
+      reason: `dns lookup failed for ${host}: ${error?.code ?? error?.message ?? 'unknown error'}`,
     }
   }
 
-  // IPv6 literal — bracket-stripped above; check loopback / unique-local /
-  // link-local ranges via regex.
-  for (const pattern of BLOCKED_IPV6_PATTERNS) {
-    if (pattern.test(host)) {
-      return { ok: false, reason: `private/loopback IPv6: ${host}` }
+  if (!Array.isArray(records) || records.length === 0) {
+    return { ok: false, reason: `dns lookup returned no addresses for ${host}` }
+  }
+
+  for (const record of records) {
+    const address = normalizeHost(record?.address)
+    if (isPrivateOrLoopbackHost(address)) {
+      return { ok: false, reason: `dns resolved to private/loopback address: ${address}` }
     }
   }
 
@@ -184,3 +236,5 @@ export function checkChatBaseUrlSafety(input) {
 
   return { ok: true }
 }
+import { lookup as dnsLookup } from 'node:dns/promises'
+import { isIP } from 'node:net'

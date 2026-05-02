@@ -84,6 +84,13 @@ export async function confirmBuiltInToolExecution(tool: MatchedBuiltInTool, poli
     return true
   }
 
+  // External-link confirmation is enforced in the Electron main process
+  // immediately before shell.openExternal. Keeping it there avoids trusting
+  // renderer-only state for a medium-risk action.
+  if (tool.id === 'open_external' && window.desktopPet?.openExternalLink) {
+    return true
+  }
+
   // Use main-process dialog via IPC if available (reliable in all Electron modes)
   if (window.desktopPet?.showConfirmDialog) {
     try {

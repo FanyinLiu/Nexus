@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import * as discordGateway from '../services/discordGateway.js'
 import { requireTrustedSender, requireString } from './validate.js'
+import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
 
 export function register() {
   // Forward incoming Discord messages to all renderer windows
@@ -12,7 +13,8 @@ export function register() {
 
   ipcMain.handle('discord:connect', async (event, payload) => {
     requireTrustedSender(event)
-    const botToken = requireString(payload?.botToken, 'botToken')
+    const requestPayload = await resolveVaultRefsForSender(event.sender, payload, ['botToken'])
+    const botToken = requireString(requestPayload?.botToken, 'botToken')
     const allowedChannelIds = Array.isArray(payload?.allowedChannelIds)
       ? payload.allowedChannelIds.filter((id) => typeof id === 'string' && id.length > 0)
       : []

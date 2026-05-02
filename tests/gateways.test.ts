@@ -57,25 +57,43 @@ describe('minecraftGateway: default state', () => {
 // ── WebSocket integration tests ────────────────────────────────────────────
 
 describe('minecraftGateway: WebSocket integration', () => {
-  let wss: InstanceType<typeof WebSocketServer>
+  let wss: InstanceType<typeof WebSocketServer> | null = null
   let port: number
+  let serverUnavailableReason = ''
+
+  function requireServer(t: { skip: (message?: string) => void }) {
+    if (!wss) {
+      t.skip(serverUnavailableReason || 'WebSocket server unavailable')
+      return false
+    }
+    return true
+  }
 
   before(async () => {
     await disconnect()
     wss = await new Promise((resolve) => {
-      const server = new WebSocketServer({ port: 0 })
-      server.on('listening', () => resolve(server))
+      const server = new WebSocketServer({ port: 0 }, () => resolve(server))
+      server.once('error', (error) => {
+        serverUnavailableReason = `WebSocket server unavailable: ${error.message}`
+        resolve(null)
+      })
     })
+    if (!wss) return
     const addr = wss.address()
     port = typeof addr === 'object' ? addr.port : 0
   })
 
   after(async () => {
     await disconnect()
+    if (!wss) return
+    for (const client of wss.clients) {
+      client.close()
+    }
     await new Promise<void>((resolve) => wss.close(() => resolve()))
   })
 
-  test('connect sets state to connected and populates status', async () => {
+  test('connect sets state to connected and populates status', async (t) => {
+    if (!requireServer(t)) return
     const captured: object[] = []
     onEvent((e) => captured.push(e))
 
@@ -100,7 +118,8 @@ describe('minecraftGateway: WebSocket integration', () => {
     await disconnect()
   })
 
-  test('connect throws when already connected', async () => {
+  test('connect throws when already connected', async (t) => {
+    if (!requireServer(t)) return
     await connect('127.0.0.1', port, 'User1')
     await assert.rejects(
       () => connect('127.0.0.1', port, 'User2'),
@@ -109,7 +128,8 @@ describe('minecraftGateway: WebSocket integration', () => {
     await disconnect()
   })
 
-  test('disconnect sets state back to disconnected', async () => {
+  test('disconnect sets state back to disconnected', async (t) => {
+    if (!requireServer(t)) return
     await connect('127.0.0.1', port, 'DiscoUser')
     assert.equal(getStatus().state, 'connected')
 
@@ -118,7 +138,8 @@ describe('minecraftGateway: WebSocket integration', () => {
     assert.equal(getStatus().address, null)
   })
 
-  test('getGameContext returns context when connected', async () => {
+  test('getGameContext returns context when connected', async (t) => {
+    if (!requireServer(t)) return
     await connect('127.0.0.1', port, 'CtxUser')
 
     const ctx = getGameContext()
@@ -133,7 +154,8 @@ describe('minecraftGateway: WebSocket integration', () => {
     assert.equal(getGameContext(), null)
   })
 
-  test('sendCommand sends valid JSON to server', async () => {
+  test('sendCommand sends valid JSON to server', async (t) => {
+    if (!requireServer(t)) return
     const received: string[] = []
     const connReady = new Promise<void>((resolve) => {
       wss.once('connection', (ws) => {
@@ -166,7 +188,8 @@ describe('minecraftGateway: WebSocket integration', () => {
     await disconnect()
   })
 
-  test('connect sends subscription messages for all tracked events', async () => {
+  test('connect sends subscription messages for all tracked events', async (t) => {
+    if (!requireServer(t)) return
     const received: string[] = []
     const connReady = new Promise<void>((resolve) => {
       wss.once('connection', (ws) => {
@@ -199,7 +222,8 @@ describe('minecraftGateway: WebSocket integration', () => {
     await disconnect()
   })
 
-  test('getRecentEvents respects limit parameter', async () => {
+  test('getRecentEvents respects limit parameter', async (t) => {
+    if (!requireServer(t)) return
     await connect('127.0.0.1', port, 'LimitUser')
     // There should be at least a 'connected' event.
     const limited = getRecentEvents(1)
@@ -207,7 +231,8 @@ describe('minecraftGateway: WebSocket integration', () => {
     await disconnect()
   })
 
-  test('server-sent event messages land in the event log', async () => {
+  test('server-sent event messages land in the event log', async (t) => {
+    if (!requireServer(t)) return
     // Regression guard: a previous version of connect() never attached a
     // 'message' event listener, so handleWsMessage was dead code.
     const received: Array<{ type: string }> = []

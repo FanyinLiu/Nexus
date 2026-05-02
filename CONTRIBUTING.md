@@ -102,7 +102,7 @@ npm run verify:release         # lint + test + build (run this before opening a 
 
 ```
 Nexus/
-├── electron/              Main process — window manager, IPC, services (voice, MCP, subagent)
+├── electron/              Main process — window manager, IPC, services (voice, MCP)
 ├── src/                   Renderer — React app, Live2D, hooks, stores
 │   ├── app/               App shell, controllers, desktop bridge
 │   ├── features/          Feature modules (voice, chat, memory, autonomy)

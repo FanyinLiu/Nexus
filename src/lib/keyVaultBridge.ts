@@ -10,12 +10,15 @@ const SETTINGS_KEY_FIELDS: readonly (keyof AppSettings)[] = [
   'speechInputApiKey',
   'speechOutputApiKey',
   'toolWebSearchApiKey',
+  'screenVlmApiKey',
   'telegramBotToken',
   'discordBotToken',
 ] as const
 
 const VAULT_SLOT_PREFIX = 'settings:'
 const PROFILE_SLOT_PREFIX = 'profile:'
+// Mirror electron/services/vaultRefs.js.
+export const VAULT_REF_PREFIX = 'nexus-vault-ref:'
 
 function settingsSlot(field: string) {
   return `${VAULT_SLOT_PREFIX}${field}`
@@ -23,6 +26,19 @@ function settingsSlot(field: string) {
 
 function profileSlot(category: string, providerId: string) {
   return `${PROFILE_SLOT_PREFIX}${category}:${providerId}:apiKey`
+}
+
+export function isVaultRefString(value: unknown): boolean {
+  return typeof value === 'string' && value.startsWith(VAULT_REF_PREFIX)
+}
+
+/**
+ * Secret input fields should keep the underlying vault ref in state, but
+ * never render the opaque token string back to users.
+ */
+export function displaySecretInputValue(value: unknown): string {
+  if (isVaultRefString(value)) return ''
+  return typeof value === 'string' ? value : ''
 }
 
 function isDesktopEnvironment(): boolean {
@@ -42,7 +58,7 @@ export async function migrateKeysToVault(settings: AppSettings): Promise<AppSett
 
   for (const field of SETTINGS_KEY_FIELDS) {
     const value = settings[field]
-    if (typeof value === 'string' && value && value !== '') {
+    if (typeof value === 'string' && value && value !== '' && !isVaultRefString(value)) {
       entries[settingsSlot(field)] = value
     }
   }
@@ -102,7 +118,7 @@ export async function dehydrateSettingsKeys(settings: AppSettings): Promise<AppS
     // Only write non-empty keys to vault.
     // If a key field is empty (already stripped), skip it to avoid
     // deleting the existing vault slot on restart.
-    if (typeof value === 'string' && value !== '') {
+    if (typeof value === 'string' && value !== '' && !isVaultRefString(value)) {
       entries[settingsSlot(field)] = value
     }
   }
@@ -138,7 +154,7 @@ function collectProfileKeys(
   profiles: Record<string, { apiKey?: string }>,
 ) {
   for (const [providerId, profile] of Object.entries(profiles)) {
-    if (profile.apiKey) {
+    if (profile.apiKey && !isVaultRefString(profile.apiKey)) {
       entries[profileSlot(category, providerId)] = profile.apiKey
     }
   }

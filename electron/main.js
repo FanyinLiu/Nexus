@@ -7,12 +7,13 @@ import net from 'node:net'
 
 import { initPetModelService, isPathInsideRoot, getImportedPetModelsRoot, IMPORTED_PET_MODELS_ROUTE } from './services/petModelService.js'
 import { initRendererServer, ensureRendererServer, getRendererServerUrl, closeRendererServer } from './rendererServer.js'
-import { mainWindow, panelWindow, panelSection, createMainWindow, createApplicationMenu, createTray, applyPetWindowState } from './windowManager.js'
+import { mainWindow, panelWindow, panelSection, createMainWindow, createApplicationMenu, createTray, applyPetWindowState, hasSystemTray } from './windowManager.js'
 import { registerIpc } from './ipcRegistry.js'
 import { autoStartPlugins } from './services/pluginHost.js'
 import { initAutoUpdater } from './services/updaterService.js'
 import { closeAuditLog } from './services/auditLog.js'
 import { runMacPermissionChecks } from './services/macPermissions.js'
+import { runWindowsPermissionChecks } from './services/windowsPermissions.js'
 import { initModelManager } from './services/modelManager.js'
 import { ensurePythonRuntimeStatus, getPythonRuntimeStatus } from './services/pythonRuntime.js'
 
@@ -68,10 +69,48 @@ const isDev = !app.isPackaged
 const useDevServer = process.env.DESKTOP_PET_USE_DEV_SERVER === '1'
 const devServerUrl = 'http://127.0.0.1:47821'
 const hasSingleInstanceLock = app.requestSingleInstanceLock()
+const WINDOWS_APP_USER_MODEL_ID = 'ai.factory.desktoppet'
+const LOGIN_LAUNCH_ARG = '--launch-at-login'
+const isLinuxWaylandSession = process.platform === 'linux'
+  && String(process.env.XDG_SESSION_TYPE ?? '').trim().toLowerCase() === 'wayland'
+const linuxHasX11Display = String(process.env.DISPLAY ?? '').trim().length > 0
+const linuxWaylandOptIn = process.env.NEXUS_LINUX_USE_WAYLAND === '1'
+const LINUX_WM_CLASS = String(process.env.NEXUS_LINUX_WM_CLASS ?? 'Nexus').trim() || 'Nexus'
+
+// Tray-style lifecycle: allow window `close` handlers to hide windows during
+// normal operation, but still let windows actually close when the app is
+// explicitly quitting.
+app.on('before-quit', () => {
+  app.isQuitting = true
+})
+
+// Keep Windows taskbar identity stable so window/taskbar/tray icon grouping
+// uses the app's own model id instead of Electron defaults.
+if (process.platform === 'win32') {
+  try {
+    app.setAppUserModelId(WINDOWS_APP_USER_MODEL_ID)
+  } catch (err) {
+    console.warn('[windows] Failed to set AppUserModelId:', err?.message)
+  }
+}
 
 // ── Chromium flags ──
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
+
+if (process.platform === 'linux' && LINUX_WM_CLASS) {
+  // Keep runtime WM_CLASS aligned with desktop entry so dock/taskbar grouping
+  // uses a single icon entry instead of spawning duplicates.
+  app.commandLine.appendSwitch('class', LINUX_WM_CLASS)
+}
+
+if (isLinuxWaylandSession && linuxHasX11Display && !linuxWaylandOptIn) {
+  // The companion relies on APIs that still vary across Wayland compositors
+  // (skipTaskbar, programmatic move/focus). Prefer XWayland by default so
+  // Linux behavior stays closer to macOS/Windows unless explicitly overridden.
+  app.commandLine.appendSwitch('ozone-platform', 'x11')
+  console.info('[linux] Wayland session detected; forcing XWayland for window-behavior parity. Set NEXUS_LINUX_USE_WAYLAND=1 to opt in to native Wayland.')
+}
 
 // On macOS, transparent BrowserWindows + WebGL trigger a SharedImageManager
 // mailbox race in the Skia renderer path. Disabling UseSkiaRenderer falls back
@@ -252,6 +291,21 @@ function registerMediaPermissionHandlers() {
   })
 }
 
+function detectLaunchAtLogin() {
+  if (process.argv.includes(LOGIN_LAUNCH_ARG)) {
+    return true
+  }
+  if (process.platform !== 'darwin') {
+    return false
+  }
+  try {
+    const loginItem = app.getLoginItemSettings()
+    return loginItem?.wasOpenedAtLogin === true || loginItem?.wasOpenedAsHidden === true
+  } catch {
+    return false
+  }
+}
+
 // ── Initialize service modules ──
 
 initPetModelService({
@@ -289,15 +343,21 @@ app.whenReady()
     }
 
     createApplicationMenu()
-    createMainWindow()
-    applyPetWindowState()
     createTray()
+    const launchAtLogin = detectLaunchAtLogin()
+    const startHidden = launchAtLogin && hasSystemTray()
+    if (startHidden) {
+      console.info('[startup] login launch detected; starting hidden in tray mode.')
+    }
+    createMainWindow({ showOnReady: !startHidden })
+    applyPetWindowState()
     initAutoUpdater({
       getWindows: () => [mainWindow, panelWindow].filter(Boolean),
     })
     // macOS 隐私权限自检:未授权时主动弹 OS 对话框,已拒绝时弹 Electron 对话框
     // 引导用户打开系统设置。非阻塞,失败不影响其他启动流程。
     runMacPermissionChecks().catch((err) => console.warn('[mac-perm] auto-check error:', err?.message))
+    runWindowsPermissionChecks().catch((err) => console.warn('[windows-perm] auto-check error:', err?.message))
     autoStartPlugins().catch((err) => console.warn('[pluginHost] auto-start error:', err.message))
 
     // Probe Python + dependencies before attempting to spawn the optional
@@ -353,17 +413,21 @@ app.on('second-instance', () => {
 })
 
 app.on('window-all-closed', () => {
+  // Keep the process alive in tray mode so behavior matches companion apps:
+  // explicit quit from tray/menu. On Linux, keep alive only when a tray icon
+  // is actually available to avoid a headless process with no way back.
+  if (process.platform === 'darwin' || hasSystemTray()) {
+    return
+  }
+  app.quit()
+})
+
+app.on('will-quit', () => {
   closeRendererServer()
   for (const child of childServices) {
     if (child && !child.killed) {
       try { if (child.pid) process.kill(child.pid) } catch {}
     }
   }
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-app.on('will-quit', () => {
   closeAuditLog()
 })

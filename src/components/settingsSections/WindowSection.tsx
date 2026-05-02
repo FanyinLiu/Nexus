@@ -61,6 +61,7 @@ type WindowSectionProps = {
   active: boolean
   draft: AppSettings
   petWindowState: PetWindowState
+  launchOnStartupSupported: boolean
   setDraft: Dispatch<SetStateAction<AppSettings>>
   uiLanguage: UiLanguage
   updateWindowState: (partial: Partial<PetWindowState>) => Promise<void> | void
@@ -71,6 +72,7 @@ export const WindowSection = memo(function WindowSection({
   active,
   draft,
   petWindowState,
+  launchOnStartupSupported,
   setDraft,
   uiLanguage,
   updateWindowState,
@@ -97,6 +99,7 @@ export const WindowSection = memo(function WindowSection({
         field="launchOnStartup"
         draft={draft}
         setDraft={setDraft}
+        disabled={!launchOnStartupSupported}
       />
 
       <p className="settings-drawer__hint">{ti('settings.window.launch_note')}</p>

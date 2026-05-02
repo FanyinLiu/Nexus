@@ -1,17 +1,22 @@
+import fs, { promises as fsp } from 'node:fs'
 import { app, BrowserWindow, Menu, nativeImage, screen, shell, Tray } from 'electron'
-import { promises as fsp } from 'node:fs'
 import nodeNet from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getPreloadPath, getRendererEntry } from './rendererServer.js'
+import { buildPlatformProfile } from './platformProfile.js'
 import { clampWindowPosition, getPanelWindowPosition, PANEL_WINDOW_GAP_PX } from './windowManagerHelpers.js'
 import { getSavedBounds, trackWindow } from './services/windowBoundsStore.js'
+import { isAllowedRendererNavigation, normalizeExternalWindowOpenUrl } from './windowNavigation.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const isDev = !app.isPackaged
 const isSmokeTest = process.env.SMOKE_TEST === '1'
+const SMOKE_RENDERER_TIMEOUT_MS = 15_000
+const SMOKE_SUCCESS_GRACE_MS = 1_200
+const SMOKE_FORCE_EXIT_GRACE_MS = 3_000
 
 // ── Renderer console capture (dev-only) ───────────────────────────────────
 //
@@ -77,6 +82,14 @@ const PANEL_WINDOW_MIN_WIDTH = 400
 const PANEL_WINDOW_MIN_HEIGHT = 540
 const PANEL_WINDOW_COLLAPSED_WIDTH = 380
 const PANEL_WINDOW_COLLAPSED_HEIGHT = 92
+const PET_ALWAYS_ON_TOP_LEVEL = 'floating'
+const WINDOWS_APP_USER_MODEL_ID = 'ai.factory.desktoppet'
+const WINDOWS_TRAY_GUID = '4cf28656-71be-4e31-8f33-b83f76e8db10'
+const WINDOWS_LOGIN_ITEM_ARGS = ['--launch-at-login']
+const LINUX_AUTOSTART_FILENAME = 'nexus-autostart.desktop'
+const LINUX_AUTOSTART_ARG = '--launch-at-login'
+const WINDOWS_APP_ICON_FILE = 'nexus.ico'
+const DEFAULT_APP_ICON_FILE = 'nexus-256.png'
 
 export let mainWindow = null
 export let panelWindow = null
@@ -124,12 +137,95 @@ export let petWindowState = {
 
 export let panelSection = 'chat'
 
-export function getPetIconPath() {
-  const ext = process.platform === 'win32' ? 'ico' : 'png'
-  const name = ext === 'png' ? 'nexus-256' : 'nexus'
-  return isDev
-    ? path.join(__dirname, '..', 'public', `${name}.${ext}`)
-    : path.join(__dirname, '..', 'dist', `${name}.${ext}`)
+function getAppIconFilename(platform = process.platform) {
+  return platform === 'win32' ? WINDOWS_APP_ICON_FILE : DEFAULT_APP_ICON_FILE
+}
+
+function getAppIconPathCandidates(platform = process.platform) {
+  const filename = getAppIconFilename(platform)
+  const candidates = []
+
+  if (app.isPackaged && process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, filename))
+    candidates.push(path.join(process.resourcesPath, 'app.asar.unpacked', 'dist', filename))
+  }
+
+  candidates.push(path.join(__dirname, '..', 'dist', filename))
+  candidates.push(path.join(__dirname, '..', 'public', filename))
+
+  // On Windows, an executable path can be used as icon source by some shell
+  // surfaces (taskbar relaunch metadata). Keep it as a last-resort fallback.
+  if (platform === 'win32') {
+    candidates.push(process.execPath)
+  }
+
+  const uniqueCandidates = new Set()
+  for (const candidate of candidates) {
+    const normalized = String(candidate ?? '').trim()
+    if (!normalized || uniqueCandidates.has(normalized)) continue
+    uniqueCandidates.add(normalized)
+  }
+  return [...uniqueCandidates]
+}
+
+function pickExistingIconPath(candidates) {
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) return candidate
+    } catch {
+      // Ignore invalid candidates.
+    }
+  }
+  return null
+}
+
+export function getPetIconPath(platform = process.platform) {
+  const candidates = getAppIconPathCandidates(platform)
+  const existing = pickExistingIconPath(candidates)
+  return existing ?? candidates[0] ?? path.join(__dirname, '..', 'public', getAppIconFilename(platform))
+}
+
+function getPetIconCandidates(platform = process.platform) {
+  return getAppIconPathCandidates(platform)
+}
+
+function createNativeImageFromCandidates(candidates) {
+  for (const candidate of candidates) {
+    const image = nativeImage.createFromPath(candidate)
+    if (!image.isEmpty()) {
+      return image
+    }
+  }
+  return null
+}
+
+function applyWindowIcon(win) {
+  if (!win || win.isDestroyed()) return
+  if (process.platform !== 'win32' && process.platform !== 'linux') return
+  try {
+    win.setIcon(getPetIconPath(process.platform))
+  } catch (err) {
+    console.warn('[window] Failed to set window icon:', err?.message)
+  }
+}
+
+export function hasSystemTray() {
+  return Boolean(tray && !tray.isDestroyed?.())
+}
+
+function applyWindowsAppDetails(win) {
+  if (process.platform !== 'win32' || !win || win.isDestroyed()) return
+  try {
+    win.setAppDetails({
+      appId: WINDOWS_APP_USER_MODEL_ID,
+      appIconPath: getPetIconPath(),
+      appIconIndex: 0,
+      relaunchCommand: process.execPath,
+      relaunchDisplayName: app.name || 'Nexus',
+    })
+  } catch (err) {
+    console.warn('[windows] Failed to set window app details:', err?.message)
+  }
 }
 
 // macOS dock visibility is reference-counted so we can toggle on/off as the
@@ -221,6 +317,8 @@ const RUNTIME_STATE_SCHEMA = {
   continuousVoiceActive: 'boolean',
   panelSettingsOpen: 'boolean',
   voiceState: 'string',
+  hearingEngine: 'string',
+  hearingPhase: 'string',
   wakewordPhase: 'string',
   wakewordActive: 'boolean',
   wakewordAvailable: 'boolean',
@@ -245,6 +343,10 @@ const PET_WINDOW_STATE_SCHEMA = {
   isPinned: 'boolean',
   clickThrough: 'boolean',
   petHotspotActive: 'boolean',
+}
+
+const PANEL_WINDOW_STATE_SCHEMA = {
+  collapsed: 'boolean',
 }
 
 function sanitizeBySchema(partialState, schema, stringMax = RUNTIME_STATE_STRING_MAX) {
@@ -273,6 +375,10 @@ function sanitizePetWindowPartial(partialState) {
   return sanitizeBySchema(partialState, PET_WINDOW_STATE_SCHEMA)
 }
 
+function sanitizePanelWindowPartial(partialState) {
+  return sanitizeBySchema(partialState, PANEL_WINDOW_STATE_SCHEMA)
+}
+
 export function updateRuntimeState(partialState, originWebContentsId = null) {
   const safe = sanitizePartialState(partialState)
   runtimeState = {
@@ -297,7 +403,7 @@ export function updateHeartbeat(view, originWebContentsId = null) {
 export function applyPetWindowState() {
   if (!mainWindow || mainWindow.isDestroyed()) return
 
-  mainWindow.setAlwaysOnTop(Boolean(petWindowState.isPinned), process.platform === 'darwin' ? 'floating' : 'screen-saver')
+  mainWindow.setAlwaysOnTop(Boolean(petWindowState.isPinned), PET_ALWAYS_ON_TOP_LEVEL)
   mainWindow.setIgnoreMouseEvents(
     Boolean(petWindowState.clickThrough) && !Boolean(petWindowState.petHotspotActive),
     { forward: true },
@@ -316,13 +422,104 @@ export function updatePetWindowState(partialState = {}) {
   return petWindowState
 }
 
+function escapeDesktopExecToken(token) {
+  return String(token ?? '')
+    .replaceAll('\\', '\\\\')
+    .replaceAll('"', '\\"')
+    .replaceAll('`', '\\`')
+    .replaceAll('$', '\\$')
+}
+
+function quoteDesktopExecToken(token) {
+  return `"${escapeDesktopExecToken(token)}"`
+}
+
+function getWindowsLoginItemOptions() {
+  if (process.platform !== 'win32') return {}
+  return {
+    path: process.execPath,
+    args: WINDOWS_LOGIN_ITEM_ARGS,
+  }
+}
+
+function getLinuxAutostartDesktopPath() {
+  const xdgConfigHome = String(process.env.XDG_CONFIG_HOME ?? '').trim()
+  const configHome = xdgConfigHome || path.join(app.getPath('home'), '.config')
+  return path.join(configHome, 'autostart', LINUX_AUTOSTART_FILENAME)
+}
+
+function buildLinuxAutostartDesktopEntry() {
+  const appName = String(app.name || 'Nexus').trim() || 'Nexus'
+  const execPath = process.execPath
+  const execLine = `${quoteDesktopExecToken(execPath)} ${quoteDesktopExecToken(LINUX_AUTOSTART_ARG)}`
+  const iconPath = getPetIconPath('linux')
+  return [
+    '[Desktop Entry]',
+    'Type=Application',
+    'Version=1.0',
+    `Name=${appName}`,
+    'Comment=Nexus desktop companion',
+    `Exec=${execLine}`,
+    `Icon=${iconPath}`,
+    'Terminal=false',
+    'StartupNotify=true',
+    'StartupWMClass=Nexus',
+    'X-GNOME-Autostart-enabled=true',
+    '',
+  ].join('\n')
+}
+
+function getLinuxLaunchOnStartupState() {
+  const autostartFile = getLinuxAutostartDesktopPath()
+  try {
+    const content = fs.readFileSync(autostartFile, 'utf8')
+    if (!content || !content.includes('[Desktop Entry]')) return false
+    if (/^\s*Hidden\s*=\s*true\s*$/im.test(content)) return false
+    return true
+  } catch {
+    return false
+  }
+}
+
+function setLinuxLaunchOnStartupState(value) {
+  const autostartFile = getLinuxAutostartDesktopPath()
+  if (value) {
+    try {
+      fs.mkdirSync(path.dirname(autostartFile), { recursive: true, mode: 0o700 })
+      fs.writeFileSync(autostartFile, buildLinuxAutostartDesktopEntry(), { encoding: 'utf8', mode: 0o644 })
+    } catch {
+      return false
+    }
+    return getLinuxLaunchOnStartupState()
+  }
+
+  try {
+    fs.unlinkSync(autostartFile)
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      return false
+    }
+  }
+  return false
+}
+
 export function getLaunchOnStartupState() {
   if (!app.isPackaged) {
     return false
   }
 
+  if (process.platform === 'linux') {
+    return getLinuxLaunchOnStartupState()
+  }
+
   try {
-    return Boolean(app.getLoginItemSettings().openAtLogin)
+    const exact = app.getLoginItemSettings(getWindowsLoginItemOptions())
+    if (exact?.openAtLogin === true) return true
+    if (process.platform === 'win32') {
+      const fallback = app.getLoginItemSettings()
+      return Boolean(fallback?.openAtLogin || fallback?.executableWillLaunchAtLogin)
+    }
+    return false
   } catch {
     return false
   }
@@ -333,15 +530,30 @@ export function setLaunchOnStartupState(value) {
     return false
   }
 
+  if (process.platform === 'linux') {
+    return setLinuxLaunchOnStartupState(Boolean(value))
+  }
+
   try {
     app.setLoginItemSettings({
       openAtLogin: Boolean(value),
+      ...getWindowsLoginItemOptions(),
     })
   } catch {
     return false
   }
 
   return getLaunchOnStartupState()
+}
+
+export function getPlatformProfile() {
+  const trayActive = hasSystemTray()
+  return buildPlatformProfile({
+    platform: process.platform,
+    packaged: app.isPackaged,
+    trayActive,
+    launchOnStartupEnabled: getLaunchOnStartupState(),
+  })
 }
 
 // clampWindowPosition and getPanelWindowPosition are imported from
@@ -387,7 +599,7 @@ function getExpandedPanelBounds() {
 }
 
 export function updatePanelWindowState(partialState = {}) {
-  const safe = sanitizePartialState(partialState)
+  const safe = sanitizePanelWindowPartial(partialState)
   panelWindowState = {
     ...panelWindowState,
     ...safe,
@@ -442,6 +654,35 @@ export function updatePanelWindowState(partialState = {}) {
   return panelWindowState
 }
 
+function openExternalUrlFromWindow(url, label) {
+  try {
+    const safeUrl = normalizeExternalWindowOpenUrl(url)
+    shell.openExternal(safeUrl).catch((err) => {
+      console.warn(`[security] failed to open ${label} external URL:`, err?.message ?? err)
+    })
+  } catch (err) {
+    console.warn(`[security] blocked ${label} external URL:`, url, err?.message ?? err)
+  }
+}
+
+function attachNavigationGuards(win, label, view) {
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    openExternalUrlFromWindow(url, label)
+    return { action: 'deny' }
+  })
+
+  // Prevent the renderer from navigating away from the app origin.
+  // If an attacker manages to redirect the webContents, the preload bridge
+  // would be exposed to an untrusted page.
+  win.webContents.on('will-navigate', (event, url) => {
+    const allowed = getRendererEntry(view)
+    if (!isAllowedRendererNavigation(url, allowed)) {
+      console.warn(`[security] blocked ${label} navigation to`, url)
+      event.preventDefault()
+    }
+  })
+}
+
 export function moveMainWindowBy(deltaX, deltaY) {
   if (!mainWindow || mainWindow.isDestroyed()) return
 
@@ -475,7 +716,7 @@ export function dragWindowBy(event, delta) {
   sourceWindow.setPosition(nextPosition.x, nextPosition.y)
 }
 
-export function createMainWindow() {
+export function createMainWindow({ showOnReady = true } = {}) {
   const { workArea } = screen.getPrimaryDisplay()
   const saved = getSavedBounds('pet')
   const width = saved?.width ?? 420
@@ -520,27 +761,17 @@ export function createMainWindow() {
     },
   })
 
-  win.setAlwaysOnTop(true, process.platform === 'darwin' ? 'floating' : 'screen-saver')
+  applyWindowsAppDetails(win)
+  applyWindowIcon(win)
+  win.setAlwaysOnTop(true, PET_ALWAYS_ON_TOP_LEVEL)
 
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    try {
-      const parsed = new URL(url)
-      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
-        shell.openExternal(url)
-      }
-    } catch { /* ignore malformed URLs */ }
-    return { action: 'deny' }
-  })
+  attachNavigationGuards(win, 'main-window', 'pet')
 
-  // Prevent the renderer from navigating away from the app origin.
-  // If an attacker manages to redirect the webContents, the preload bridge
-  // would be exposed to an untrusted page.
-  win.webContents.on('will-navigate', (event, url) => {
-    const allowed = getRendererEntry()
-    if (!url.startsWith(allowed)) {
-      console.warn('[security] blocked main-window navigation to', url)
-      event.preventDefault()
-    }
+  win.on('close', (event) => {
+    const canHideToBackground = process.platform === 'darwin' || hasSystemTray()
+    if (app.isQuitting || !canHideToBackground) return
+    event.preventDefault()
+    win.hide()
   })
 
   win.on('closed', () => {
@@ -550,19 +781,27 @@ export function createMainWindow() {
   win.webContents.on('did-finish-load', () => {
     const bounds = win.getBounds()
     console.log('[pet-window] position on show:', bounds)
-    // On macOS the pet should follow the user across Spaces and stay visible
-    // even when another app enters fullscreen mode — otherwise switching to a
-    // fullscreen Safari/Chrome hides the companion entirely.
+    // Keep the companion visible across workspaces where the platform supports
+    // it. macOS uses visibleOnFullScreen; Linux maps to the same API without
+    // that option. Windows does not support this API.
     if (process.platform === 'darwin') {
       try {
         win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
       } catch (err) {
         console.warn('[pet-window] setVisibleOnAllWorkspaces failed:', err?.message)
       }
+    } else if (process.platform === 'linux') {
+      try {
+        win.setVisibleOnAllWorkspaces(true)
+      } catch (err) {
+        console.warn('[pet-window:linux] setVisibleOnAllWorkspaces failed:', err?.message)
+      }
     }
-    win.show()
-    win.focus()
-    win.moveTop()
+    if (showOnReady) {
+      win.show()
+      win.focus()
+      win.moveTop()
+    }
     syncRuntimeState()
     syncPetWindowState()
   })
@@ -599,10 +838,42 @@ export function createMainWindow() {
   win.loadURL(getRendererEntry('pet'))
 
   if (isSmokeTest) {
+    let smokeDone = false
+    let forceExitTimer = null
+    const watchdog = setTimeout(() => {
+      finishSmoke(1, `renderer did not finish loading within ${SMOKE_RENDERER_TIMEOUT_MS}ms`)
+    }, SMOKE_RENDERER_TIMEOUT_MS)
+
+    const finishSmoke = (exitCode, reason) => {
+      if (smokeDone) return
+      smokeDone = true
+      clearTimeout(watchdog)
+      if (forceExitTimer) clearTimeout(forceExitTimer)
+      process.exitCode = exitCode
+      if (exitCode === 0) {
+        console.info('[smoke] renderer loaded; quitting')
+      } else {
+        console.error(`[smoke] ${reason}`)
+      }
+      forceExitTimer = setTimeout(() => app.exit(exitCode), SMOKE_FORCE_EXIT_GRACE_MS)
+      forceExitTimer.unref?.()
+      app.quit()
+    }
+
     win.webContents.once('did-finish-load', () => {
       setTimeout(() => {
-        app.quit()
-      }, 1200)
+        finishSmoke(0, 'renderer loaded')
+      }, SMOKE_SUCCESS_GRACE_MS)
+    })
+
+    win.webContents.once('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      if (isMainFrame === false) return
+      finishSmoke(1, `renderer failed to load ${validatedURL || ''}: ${errorCode} ${errorDescription}`.trim())
+    })
+
+    win.once('closed', () => {
+      clearTimeout(watchdog)
+      if (forceExitTimer) clearTimeout(forceExitTimer)
     })
   }
 
@@ -667,23 +938,9 @@ export function createPanelWindow() {
     },
   })
 
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    try {
-      const parsed = new URL(url)
-      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
-        shell.openExternal(url)
-      }
-    } catch { /* ignore malformed URLs */ }
-    return { action: 'deny' }
-  })
-
-  win.webContents.on('will-navigate', (event, url) => {
-    const allowed = getRendererEntry()
-    if (!url.startsWith(allowed)) {
-      console.warn('[security] blocked panel-window navigation to', url)
-      event.preventDefault()
-    }
-  })
+  applyWindowsAppDetails(win)
+  applyWindowIcon(win)
+  attachNavigationGuards(win, 'panel-window', 'panel')
 
   // Mirror the pet-window log capture for the panel's renderer.
   attachRendererLogCapture(win.webContents, 'panel')
@@ -719,6 +976,13 @@ export function createPanelWindow() {
 
   win.on('show', holdDock)
   win.on('hide', releaseDockForPanel)
+
+  win.on('close', (event) => {
+    const canHideToBackground = process.platform === 'darwin' || hasSystemTray()
+    if (app.isQuitting || !canHideToBackground) return
+    event.preventDefault()
+    win.hide()
+  })
 
   win.on('closed', () => {
     if (panelBlurTimer) {
@@ -849,39 +1113,73 @@ export function showPetContextMenu(sourceWindow = mainWindow) {
 }
 
 export function createApplicationMenu() {
-  if (process.platform !== 'darwin') {
-    // On Windows/Linux the tray context menu is sufficient.
-    Menu.setApplicationMenu(null)
+  if (process.platform === 'darwin') {
+    const template = [
+      {
+        label: app.name,
+        submenu: [
+          { label: `关于 ${app.name}`, role: 'about' },
+          { type: 'separator' },
+          { label: '隐藏', role: 'hide' },
+          { label: '隐藏其他', role: 'hideOthers' },
+          { label: '显示全部', role: 'unhide' },
+          { type: 'separator' },
+          { label: '退出', role: 'quit' },
+        ],
+      },
+      {
+        label: '编辑',
+        submenu: [
+          { label: '撤销', role: 'undo' },
+          { label: '重做', role: 'redo' },
+          { type: 'separator' },
+          { label: '剪切', role: 'cut' },
+          { label: '复制', role: 'copy' },
+          { label: '粘贴', role: 'paste' },
+          { label: '全选', role: 'selectAll' },
+        ],
+      },
+    ]
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template))
     return
   }
 
   const template = [
     {
-      label: app.name,
+      label: 'Nexus',
       submenu: [
-        { label: `关于 ${app.name}`, role: 'about' },
-        { type: 'separator' },
-        { label: '隐藏', role: 'hide' },
-        { label: '隐藏其他', role: 'hideOthers' },
-        { label: '显示全部', role: 'unhide' },
+        {
+          label: '显示桌宠',
+          click: () => {
+            if (!mainWindow || mainWindow.isDestroyed()) {
+              createMainWindow()
+              return
+            }
+            mainWindow.show()
+            mainWindow.focus()
+            mainWindow.moveTop()
+          },
+        },
+        {
+          label: '打开面板',
+          click: () => {
+            showPanelWindow('chat')
+          },
+        },
+        {
+          label: '设置',
+          click: () => {
+            showPanelWindow('settings')
+          },
+        },
         { type: 'separator' },
         { label: '退出', role: 'quit' },
       ],
     },
-    {
-      label: '编辑',
-      submenu: [
-        { label: '撤销', role: 'undo' },
-        { label: '重做', role: 'redo' },
-        { type: 'separator' },
-        { label: '剪切', role: 'cut' },
-        { label: '复制', role: 'copy' },
-        { label: '粘贴', role: 'paste' },
-        { label: '全选', role: 'selectAll' },
-      ],
-    },
+    { role: 'editMenu' },
+    { role: 'viewMenu' },
+    { role: 'windowMenu' },
   ]
-
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
@@ -925,21 +1223,22 @@ export function createTray() {
         tray = null
         return
       }
+    } else if (process.platform === 'win32') {
+      // Windows: keep tray and taskbar/window icon visually in sync by
+      // preferring the same multi-size .ico source.
+      const trayCandidates = getPetIconCandidates('win32')
+      const trayImage = createNativeImageFromCandidates(trayCandidates)
+      const fallbackIcon = trayImage ?? nativeImage.createFromPath(getPetIconPath('win32'))
+      tray = new Tray(fallbackIcon, WINDOWS_TRAY_GUID)
     } else {
-      // Windows / Linux: prefer the monochrome 22×22 tray silhouette over
-      // the full-colour app icon so it reads cleanly at taskbar sizes.
-      // Falls back to the app icon if the tray asset is missing from the
-      // build (e.g. truncated `dist/`).
+      // Linux: prefer the monochrome tray silhouette for desktop panels.
       const trayCandidates = [
         path.join(__dirname, '..', 'public', 'nexus-tray.png'),
         path.join(__dirname, '..', 'dist', 'nexus-tray.png'),
+        ...getPetIconCandidates('linux'),
       ]
-      let trayImage = null
-      for (const candidate of trayCandidates) {
-        const img = nativeImage.createFromPath(candidate)
-        if (!img.isEmpty()) { trayImage = img; break }
-      }
-      tray = new Tray(trayImage ?? nativeImage.createFromPath(getPetIconPath()))
+      const trayImage = createNativeImageFromCandidates(trayCandidates)
+      tray = new Tray(trayImage ?? nativeImage.createFromPath(getPetIconPath('linux')))
     }
   } catch (err) {
     console.warn('[tray] failed to create system tray:', err?.message)

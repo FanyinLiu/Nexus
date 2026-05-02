@@ -134,3 +134,76 @@ test('runtime short-circuits to unavailable when retryMaxAttempts is exhausted',
   )
   runtime.destroy()
 })
+
+test('runtime keeps the wakeword listener alive while suspended and unmutes on resume', async () => {
+  const detected: string[] = []
+  const stops: string[] = []
+  let callbacks: Parameters<NonNullable<Parameters<typeof createWakewordRuntime>[0]['startListener']>>[0] | null = null
+  const listener = {
+    stop: () => { stops.push('stop') },
+    subscribeFrames: () => () => undefined,
+  }
+
+  const runtime = createWakewordRuntime({
+    checkAvailability: async () => ({
+      installed: true,
+      modelFound: true,
+      modelKind: 'zh',
+      modelsDir: '',
+      reason: '',
+    }),
+    startListener: async (nextCallbacks) => {
+      callbacks = nextCallbacks
+      return listener
+    },
+    onKeywordDetected: (keyword) => { detected.push(keyword) },
+  })
+
+  await runtime.update({ enabled: true, wakeWord: '小猫', suspended: false })
+  assert.equal(runtime.getState().phase, 'listening')
+
+  await runtime.update({ enabled: true, wakeWord: '小猫', suspended: true, suspendReason: 'voice turn' })
+  assert.equal(runtime.getState().phase, 'paused')
+  assert.equal(stops.length, 0)
+
+  callbacks?.onKeywordDetected('小猫')
+  assert.deepEqual(detected, [], 'stale wake hits must be swallowed while suspended')
+
+  await runtime.update({ enabled: true, wakeWord: '小猫', suspended: false })
+  assert.equal(runtime.getState().phase, 'listening')
+  assert.equal(stops.length, 0)
+
+  callbacks?.onKeywordDetected('小猫')
+  assert.deepEqual(detected, ['小猫'])
+  runtime.destroy()
+  assert.deepEqual(stops, ['stop'])
+})
+
+test('runtime schedules retry when availability status check throws', async () => {
+  const phases: string[] = []
+  const timers: Array<{ callback: () => void; delayMs: number }> = []
+
+  const runtime = createWakewordRuntime({
+    checkAvailability: async () => {
+      throw new Error('status bridge failed')
+    },
+    onStateChange: (next) => { phases.push(next.phase) },
+    setTimeoutFn: (callback, delayMs) => {
+      timers.push({ callback, delayMs })
+      return timers.length
+    },
+    clearTimeoutFn: () => undefined,
+    retryBaseMs: 250,
+    retryMaxMs: 1_000,
+  })
+
+  await runtime.update({ enabled: true, wakeWord: '小猫', suspended: false })
+
+  assert.equal(timers.length, 1)
+  assert.equal(timers[0].delayMs, 250)
+  assert.equal(runtime.getState().phase, 'error')
+  assert.equal(runtime.getState().retryCount, 1)
+  assert.match(runtime.getState().error, /status bridge failed/)
+  assert.ok(phases.includes('checking'))
+  runtime.destroy()
+})

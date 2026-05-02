@@ -1,4 +1,7 @@
-import { isSenseVoiceSpeechInputProvider } from '../../../lib/audioProviders'
+import {
+  isSenseVoiceSpeechInputProvider,
+  isSpeechOutputKeyless,
+} from '../../../lib/audioProviders'
 import { pickTranslatedUiText } from '../../../lib/uiLanguage'
 import type { AppSettings, TranslationKey, UiLanguage } from '../../../types'
 import type { OnboardingStep, OnboardingStepId } from './guideSteps'
@@ -72,7 +75,10 @@ export function getOnboardingStepError(
 
     if (draft.speechOutputEnabled) {
       if (!draft.speechOutputProviderId.trim()) return ti('onboarding.error.voice.no_output_provider')
-      if (!draft.speechOutputApiBaseUrl.trim()) {
+      if (
+        !isSpeechOutputKeyless(draft.speechOutputProviderId)
+        && !draft.speechOutputApiBaseUrl.trim()
+      ) {
         return ti('onboarding.error.voice.no_output_api_base')
       }
     }

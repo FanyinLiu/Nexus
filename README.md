@@ -2,9 +2,9 @@
 
 <h1 align="center">Nexus</h1>
 
-<p align="center"><b>A desktop AI companion that gives the relationship a shape.</b></p>
+<p align="center"><b>A local-first desktop AI companion with memory, voice, Live2D, and long-running relationship state.</b></p>
 
-<p align="center">Not "smarter chat." Not "more like a human." A specific bet: that what people want from a long-running companion is the year laid down as something they can hold — a callback that lands on the right day, a Sunday letter that names what the week actually was, a trace of how their mood and hers moved together. Local-first, single-author, slow on purpose.</p>
+<p align="center">Nexus is built around continuity: the companion remembers what mattered, notices how the relationship changes, speaks through a desktop pet, and can help with small background tasks. Model calls use the provider you choose; memory, voice orchestration, tools, and safety state stay on your machine.</p>
 
 <p align="center">
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/github/v/release/FanyinLiu/Nexus?style=flat-square&color=blue&label=release" alt="Release"></a>
@@ -24,15 +24,27 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> Nexus is under active development. Some features are stable, others are still being polished. Feedback and issue reports are welcome.
+> **Current release:** v0.3.1 stable (2026-04-28). Nexus is usable today, but still a fast-moving solo project. Packaging, optional local voice models, and provider setup may still need a little manual care.
 
 ---
 
+## Quick start
+
+| Need | Go here |
+|---|---|
+| Install the app | [Download the latest release](https://github.com/FanyinLiu/Nexus/releases/latest) |
+| Understand the product | [Why Nexus](#why-nexus) · [Core features](#core-features) |
+| Build from source | [Build from source](#build-from-source) |
+| Configure providers | [Configure](#configure) · [Supported providers](#supported-providers) |
+| Check safety/privacy behavior | [Safety & support](#safety--support) |
+
 ## Why Nexus
 
-Most AI companions chase one of three commodities: smarter responses (foundation-model arms race), more human voice (Sesame, eleven), or more aggressive engagement (the Replika / Character.AI playbook). Nexus is none of them. It chases something the others can't easily copy because it's downstream of patience: **the shape of a relationship over time, made visible**.
+Most AI companions compete on model quality, voice realism, or engagement loops. Nexus is aimed at a different problem: **what should a long-running companion remember, and how should that history change its presence over time?**
 
-Concretely, this means seven rituals — built on top of one another, not as a feature checklist:
+The answer is not one feature. It is a set of small rituals that accumulate: a callback that arrives at the right moment, a weekly letter that names what actually happened, a memory that comes back with the right emotional weight, a companion that can stay silent when silence is better.
+
+Concretely, Nexus is built around seven rituals:
 
 1. **Significance-weighted memory** — not everything is remembered equally; the companion's recall is tilted toward what mattered.
 2. **Nightly dream cycle** — overnight, conversations cluster into narrative threads and 1–3 short reflections about you. The next morning's "who you are" is updated, not reset.
@@ -42,9 +54,9 @@ Concretely, this means seven rituals — built on top of one another, not as a f
 6. **Sunday letter** — every week, she writes you a short letter naming what the week actually was. Not a digest. A letter.
 7. **Background errand** — you can hand her a task during the day; she works on it overnight while you sleep, and delivers the result at the morning bracket.
 
-Around these sit the boring infrastructure: 5-locale UI, 18+ LLM providers, multi-engine STT / TTS with failover, Live2D, VTube Studio bridge, MCP tools, IPC security audited end-to-end. None of that is the product. The product is what those seven rituals add up to over a year of use, and what you can hold afterwards.
+Around them sit the practical systems: 5-locale UI, 18+ LLM providers, multi-engine STT/TTS with failover, Live2D, VTube Studio bridge, MCP tools, local webhook/RSS notifications, and hardened Electron IPC boundaries. Those systems matter because they keep the companion usable day after day; the product is what the rituals add up to over months of use.
 
-This is also a single-author project, on purpose. The trade-off is real: slower than a funded team, no roadmap pressure, no quarterly OKRs. The upside is that every ritual is hand-shaped — the kind of attention you can't get from a startup that needs to grow 30% MoM. **What's coming next is depth, not breadth**: a long-form affect-dynamics record (your baseline mood, how it moved this month, where the two of you synchronized), grounded in published affect science (Russell's circumplex, Kuppens on emotional inertia, Welivita's empathy-intent taxonomy). Read on if that sounds right; otherwise the [release notes](docs/RELEASE-NOTES-v0.3.0.md) are an honest map of what's actually shipped.
+This is also a single-author project, on purpose. The trade-off is real: slower than a funded team, no roadmap pressure, no quarterly OKRs. The upside is that every ritual is hand-shaped — the kind of attention you can't get from a startup that needs to grow 30% MoM. **v0.3.1 just landed the depth bet**: a long-form affect-dynamics layer (your baseline mood, how it moved this month, where you and she synchronized) grounded in published affect science — Russell's circumplex, Kuppens on emotional inertia, Gottman repair — all running silently behind her tone. The current phase is polish, not new ground; v0.4 is not in active development. Read on if that sounds right; otherwise the [release notes](docs/RELEASE-NOTES-v0.3.1.md) are an honest map of what's actually shipped.
 
 ## Local-first, by default
 
@@ -52,71 +64,71 @@ Every voice frame, every memory entry, every tool call runs on your own machine.
 
 ## News
 
-> **Where we are right now.** v0.3.1 stable is out (2026-04-28). The companion's tone now adapts to long-window mood patterns and acute emotional shifts (M1.4-M1.7) — silently, no badges or settings to fiddle. Two critical CVEs cleared, 6/7 HIGH + all MEDIUM IPC audit items closed, four rounds of static-bug fixes, dependency hygiene tightened. Next: a polish phase. v0.4 is **not** in active development — the ground needs to settle before more ground gets broken.
+> **v0.3.1 stable is out.** The release brings affect-dynamics guidance, security hardening, dependency cleanup, and a larger release gate. The next phase is polish and stabilization rather than a new feature push.
 
-- **2026.04.28** — **v0.3.1 stable released.** Cumulative on top of v0.3.0. Headline: emotion-line guidance shapes every reply (Russell circumplex + Kuppens dynamics + Trull EMA + Mikulincer secure-attachment + Gottman repair, all running silently). IPC security hardening (H2/H3/H5/H6/H7/H8 + M1/M2/M3/M5 + L3/L4/L6 closed). 30+ static-bug fixes across four audit rounds. Two critical CVE clears (`gh-pages` prototype pollution). Release-gate expanded to 26 checks across 6 stages. [Release notes](docs/RELEASE-NOTES-v0.3.1.md) · [Install](https://github.com/FanyinLiu/Nexus/releases/tag/v0.3.1).
-- **2026.04.27** — v0.3.1-beta.5 — emotion line + narrative artefacts. M1.4-1.7 + M2.2-2.4 + M3 multi-day arcs. Pre-stable; superseded by v0.3.1. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.5.md).
-- **2026.04.26** — v0.3.1-beta.4 — audit + polish patch. Memory-store data-loss race fixed (compaction rename pattern); MCP per-tool approval (M2) + workspace:set-root approval (M3); About + Weekly Recap Settings panels; ~660 ja/ko strings translated; wake-word retry log dedup actually works now; humanized error messages. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.4.md).
-- **2026.04.26** — v0.3.1-beta.3 — bug-fix patch. Live2D no longer broken in packaged builds (CSP `unsafe-eval` for pixi); thinking-mode models (DeepSeek-R1, QwQ, Hunyuan-thinking) now work in multi-turn; TTS no longer wedges voiceState on "speaking"; multimodal images preserved across turns; in-app diagnostic surface upgraded. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.3.md).
-- **2026.04.26** — v0.3.1-beta.2 — security IPC hardening on top of beta.1. Closes chat baseUrl SSRF (H5), tightens vault enumeration limit (H4 mitigation), pins local-service probe to loopback (H8). [Notes](docs/RELEASE-NOTES-v0.3.1-beta.2.md).
-- **2026.04.25** — v0.3.1-beta.1. Pure installer-size fix on top of stable v0.3.0 (1.2 GB → ~250 MB by excluding unused FP32 model + git-LFS residue). [Notes](docs/RELEASE-NOTES-v0.3.1-beta.1.md).
-- **2026.04.25** — **v0.3.0 stable released.** The narrative-companion release. Significance-weighted recall + dream-cycle reflections + callback queue + anniversary milestones; relationship type declaration (friend / mentor / quiet companion); "thinking of you" OS notification; idle-motion silent gestures; smooth 2-hour day↔dusk↔night blend with bolder color contrast; Liquid Glass UI re-skin; richer weather precision. [Release notes](docs/RELEASE-NOTES-v0.3.0.md) · [Install](https://github.com/FanyinLiu/Nexus/releases/tag/v0.3.0).
-- **2026.04.24** — v0.3.0-beta.1 / beta.2. Beta line for the relationship + memory work that landed in stable v0.3.0. [Notes beta.1](docs/RELEASE-NOTES-v0.3.0-beta.1.md) · [Notes beta.2](docs/RELEASE-NOTES-v0.3.0-beta.2.md).
-- **2026.04.22** — v0.2.9 released. Emotional memory + 5-level relationship baseline; weather + scene overhaul; Character Card v2/v3 import; VTube Studio bridge. [Tag](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.9)
+| Date | Release | Notes |
+|---|---|---|
+| 2026-04-28 | **v0.3.1 stable** | Emotion-line guidance, IPC hardening, 30+ static fixes, CVE cleanup. [Release notes](docs/RELEASE-NOTES-v0.3.1.md) · [Install](https://github.com/FanyinLiu/Nexus/releases/tag/v0.3.1) |
+| 2026-04-25 | **v0.3.0 stable** | Narrative companion foundation: dream cycle, callback queue, anniversary milestones, relationship type, scene/UI refresh. [Release notes](docs/RELEASE-NOTES-v0.3.0.md) |
 
 <details>
-<summary>Older releases</summary>
+<summary>Recent beta and older release notes</summary>
 
-- **2026.04.19** — v0.2.7. Subagent dispatcher; barge-in hardening; render-storm fixes. [Notes](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.7)
-- **2025.04.19** — v0.2.5. Autonomy Engine V2 default-on; voice/TTS reliability pass. [Notes](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.5)
-- **2025.04.16** — v0.2.4. Voice/TTS reliability + Anthropic prompt caching + 20+ bug fixes. [Notes](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.4)
-- **2025.04.15** — Wake-word + VAD rewrite (Plan C): main-process Silero VAD + sherpa-onnx-node, single mic stream.
-- **2025.04.14** — TTS intermittency fixes: retry / per-segment events / sender teardown.
-- **2025.04.12** — Speech-interrupt architecture: echo-cancelled mic + TTS-aware dynamic threshold.
-- **2025.04.10** — Hybrid memory landed: three-tier hot / warm / cold + BM25 + local vector search.
-- **2025.04.01** — v0.1 opened. First playable build.
+- **2026.04.27** — v0.3.1-beta.5 — emotion line + narrative artefacts. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.5.md)
+- **2026.04.26** — v0.3.1-beta.4 — memory-store race fix, MCP/workspace approvals, ja/ko strings, humanized errors. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.4.md)
+- **2026.04.26** — v0.3.1-beta.3 — Live2D packaged-build fix, thinking-mode multi-turn, TTS state fixes. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.3.md)
+- **2026.04.26** — v0.3.1-beta.2 — chat baseUrl SSRF fix, vault enumeration mitigation, loopback probe hardening. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.2.md)
+- **2026.04.25** — v0.3.1-beta.1 — installer size cut from ~1.2 GB to ~250 MB. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.1.md)
+- **2026.04.24** — v0.3.0-beta.1 / beta.2 — beta line for the relationship + memory work. [Notes beta.1](docs/RELEASE-NOTES-v0.3.0-beta.1.md) · [Notes beta.2](docs/RELEASE-NOTES-v0.3.0-beta.2.md)
+- **2026.04.22** — v0.2.9 — emotional-memory baseline, Character Card import, VTube Studio bridge, weather/scene overhaul. [Notes](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.9)
+- Earlier history lives in [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases).
 
 </details>
 
-## Highlights
+## Core features
 
-The first three are the load-bearing structure that the seven rituals stand on. Everything below them is the practical day-to-day surface — voice, scene, integrations — that keeps the project usable while the depth accumulates.
+| Area | What Nexus does |
+|---|---|
+| **Relationship state** | Tracks five relationship levels plus trust, vulnerability, playfulness, and intellectual rapport. Milestones shape tone without showing gamified pop-ups. |
+| **Memory system** | Uses hot/warm/cold memory, hybrid search, significance weighting, nightly reflection, callback queues, anniversaries, and "on this day" recall. |
+| **Affect dynamics** | v0.3.1 adds long-window mood baselines and short-window shifts, so replies adapt to stuck-low, volatile, warm-stable, or acute-drop patterns without announcing it. |
+| **Voice** | Wake word, VAD, continuous conversation, interrupt handling, multi-engine STT/TTS, streaming TTS, and local/offline voice options. |
+| **Desktop pet** | Live2D/Pixi renderer, weather-aware scenes, day/dusk/night transitions, expression tags, idle gestures, and VTube Studio bridge support. |
+| **Autonomy** | Bounded proactive ticks, silent idle motion, background errand delivery, reminders, and tool use with approval/budget gates. |
+| **Tools & integrations** | Web search, weather, reminders, MCP, local webhook/RSS notifications, Discord, Telegram, and desktop context from foreground window/clipboard/OCR. |
+| **Privacy & safety** | Local-first storage, encrypted key vault, hardened Electron IPC, crisis-resource panel, AI disclosure, and no Nexus cloud account. |
+| **Operations** | Provider failover, cost metering, JSONL logs, diagnostics panel, release checks, and multilingual UI in zh-CN, zh-TW, en-US, ja, ko. |
 
-- 💝 **A relationship that has a shape, not just a length.** Five levels (stranger → acquaintance → friend → close friend → intimate) with one-shot milestone instructions on each crossing. Four named sub-dimensions — trust, vulnerability, playfulness, intellectual — grow from different kinds of interaction. Pick a *relationship type* (friend / mentor / quiet companion / open-ended) and her tone biases without overriding her persona file. The shape is the product; the level number is just legible scaffolding.
+## What's new in v0.3.1 (stable, 2026-04-28)
 
-- 🧠 **Memory that dreams, not just stores.** Three-tier hot / warm / cold with hybrid BM25 + vector search. A nightly dream cycle clusters the day into narrative threads, generates 1–3 short reflections about you, and queues 0–2 callbacks for next conversation. Mood-aware recall means the same memory feels different in different moods. v0.4 adds long-form affect dynamics so your baseline + monthly change + her co-regulation with you become readable artifacts, not just internal numbers.
+> **Emotion mainline + security audit cumulative release.** 92 commits since v0.3.0; beta.1 → beta.5 each closed one class of issue before the stable tag. Full notes: [docs/RELEASE-NOTES-v0.3.1.md](docs/RELEASE-NOTES-v0.3.1.md).
 
-- 🤖 **An inner life with restraint.** Single LLM decision call per tick, fed a layered snapshot (emotion · relationship · rhythm · desktop · recent chat) and filtered through a per-persona guardrail. She can choose to stay silent, dispatch a background research helper for tasks that would benefit from one, or run an overnight errand you handed her at lunch. The autonomy is real; it's just bounded by manual approval and budget gates so it stays trustworthy.
+| Theme | What landed |
+|---|---|
+| **🧠 Tone now adapts** | A 14-day long-window + 3-day short-window mood baseline feeds every reply: when you're stuck low she gives less advice and more presence; acute drops slow her cadence; high volatility means she stops pushing topics; warm-and-stable means she follows your lead. Russell 1980 + Kuppens 2015 + Trull 2008. |
+| **💔 Gottman repair** | Auto-detects the four Horsemen (criticism / contempt / defensiveness / stonewalling) and the next turn injects soft start-up + accept-influence repair posture. **Changes silently — no "I noticed you're feeling…" prompt.** |
+| **🔒 Two critical CVEs cleared** | `pixi-live2d-display` accidentally pulled `gh-pages` (prototype pollution) into runtime deps; `npm overrides` forces upgrade to clean versions. |
+| **🛡️ IPC audit 6/7 HIGH closed** | H2 / H3 / H5 / H6 / H7 / H8 + M1 / M2 / M3 / M5 + L3 / L4 / L6 all fixed; H4 deferred by design to v1.0. |
+| **🐛 30+ static-bug fixes** | Four audit rounds + parallel static scans: template-replace `$&` hole, race conditions, StrictMode purity, NaN guards, async leaks, storage validation. |
+| **🚦 Release-gate expanded to 26 checks** | `prerelease-check.mjs` from 8 → 26 across 6 stages: process / code quality / security / assets / docs compliance / privacy governance. |
+| **🧹 UI prune** | Letters / Time-capsule / Small-things / Loose-threads / Mood-map — five settings panels withdrawn from the drawer (the underlying schedulers still run). The companion's emotional adaptation should be felt, not configured. |
 
-- 🎙️ **Always-on wake word + continuous voice chat.** sherpa-onnx keyword spotter beside a main-process Silero VAD over one shared mic stream. Multi-engine STT/TTS with failover, sentence-immediate streaming TTS (first audio at the first comma), 6-second first-audio watchdog, echo-cancelled self-interrupt so the pet never wakes itself up.
+<details>
+<summary>v0.3.1-beta line folded into this stable</summary>
 
-- 🌤️ **Living scene.** 14 intensity-graded weather states, continuous 24h sunlight filter, 15 AI-generated day / dusk / night scene variants. Atmospheric depth, not a static wallpaper.
+- **beta.1** — Installer-size fix (1.2 GB → ~250 MB by excluding unused FP32 model + git-LFS residue). [Notes](docs/RELEASE-NOTES-v0.3.1-beta.1.md)
+- **beta.2** — IPC security hardening: chat baseUrl SSRF (H5), vault enumeration mitigation (H4), local-service probe pinned to loopback (H8). [Notes](docs/RELEASE-NOTES-v0.3.1-beta.2.md)
+- **beta.3** — Live2D in packaged builds; thinking-mode multi-turn; TTS no longer wedges; multimodal images preserved across turns. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.3.md)
+- **beta.4** — Memory-store compaction race fixed; MCP per-tool approval (M2); workspace:set-root approval (M3); ~660 ja/ko strings translated. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.4.md)
+- **beta.5** — Emotion mainline M1.4-1.7 + multi-day arcs (M3) + yearbook export. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.5.md)
 
-- 🎭 **Character Card + VTube Studio bridge.** Import Character Card v2/v3 (chub.ai / characterhub compatible). Drive an external Live2D model via the VTube Studio plugin API while keeping Nexus's memory / autonomy stack.
+</details>
 
-- 🧰 **Subagent dispatcher.** The companion can fire a bounded research loop behind the scenes — web search or MCP tools — and weave the summary into its next reply. Capacity + daily budget enforced, with cancel + per-task progress + history.
+---
 
-- 🔧 **Built-in tools.** Web search, weather, reminders. Works with native function calling **and** a prompt-mode fallback for models that don't support `tools`.
+## Previous stable — v0.3.0
 
-- 🖥️ **Desktop awareness.** Foreground window title, clipboard, and (optionally) screen OCR. Context triggers let her react to what you're actually doing.
-
-- 🔔 **Notification bridge.** Local webhook server + RSS polling — push external notifications into the companion conversation.
-
-- 💬 **Phone reachable.** Discord and Telegram gateways with per-chat routing. Talk to your companion from your phone, have her respond in her own voice.
-
-- 🌐 **Multilingual UI.** Simplified Chinese, Traditional Chinese, English, Japanese, Korean.
-
-- 🔄 **Provider failover.** Chain multiple LLM / STT / TTS providers. When one goes down, Nexus switches without tearing the conversation down.
-
-- 💰 **Cost-aware.** Built-in budget metering + Anthropic prompt caching on the system + tools prefix (30-50% input token reduction on long sessions).
-
-- 🛠️ **Diagnostics built in.** JSONL log export, emotion + relationship timeline charts, 30-day cost history with per-source / per-model breakdown — all in Settings → Console.
-
-## What's new in v0.3.0
-
-> **Stable.** Cumulative changelog from `v0.2.9`: 100+ commits, ~12,000 LOC, +361
-> tests. Backward-compatible — pre-v0.3.0 stored state migrates transparently.
-> Full notes: [docs/RELEASE-NOTES-v0.3.0.md](docs/RELEASE-NOTES-v0.3.0.md).
+> **Stable.** Cumulative changelog from `v0.2.9`: 100+ commits, ~12,000 LOC, +361 tests. Backward-compatible — pre-v0.3.0 stored state migrates transparently. Full notes: [docs/RELEASE-NOTES-v0.3.0.md](docs/RELEASE-NOTES-v0.3.0.md).
 
 | Theme | What landed |
 |---|---|
@@ -131,80 +143,14 @@ The first three are the load-bearing structure that the seven rituals stand on. 
 | **🧹 Polish** | i18n.ts split (1842 → 588 lines), shared Settings field components, regex compile cache, async-lock dedup, build-size trim (~30–60 MB). |
 
 <details>
-<summary>Earlier beta line (folded into this stable)</summary>
+<summary>v0.3.0-beta line folded into v0.3.0 stable</summary>
 
-The beta line built the foundation that this stable polishes:
-
-- **v0.3.0-beta.1** — Three independent depth axes on the relationship system: mood-aware memory recall (VAD projection + empathy/repair/reinforce modes), one-shot level-up instructions, four sub-dimensions. [Notes](docs/RELEASE-NOTES-v0.3.0-beta.1.md)
+- **v0.3.0-beta.1** — Three independent depth axes on the relationship system: mood-aware memory recall (VAD projection + empathy / repair / reinforce modes), one-shot level-up instructions, four sub-dimensions. [Notes](docs/RELEASE-NOTES-v0.3.0-beta.1.md)
 - **v0.3.0-beta.2** — Stability + retention pass: significance-weighted recall, dream-cycle reflections, callback queue, anniversary milestones, idle motion, dynamic cadence, Liquid Glass UI, weather precision, tray + dock icons, 7 security fixes. [Notes](docs/RELEASE-NOTES-v0.3.0-beta.2.md)
 
 </details>
 
-| Axis | What it does |
-|---|---|
-| **💝 Emotional resonance recall** | The same memory feels different in different moods. Three regulatory modes (match / empathy / repair) decide whether to mirror the user's current mood or surface something to help reframe. |
-| **🎯 Relationship milestones + reunion** | Crossing the 10 / 30 / 55 / 80 score thresholds fires a one-shot, understated instruction the turn you cross it. Reunions reference your last topic + how the conversation ended. |
-| **🌳 Four sub-dimensions** | The flat 0–100 score now decomposes into trust / vulnerability / playfulness / intellectual, each growing from a different kind of interaction and feeding specific prompt guidance. |
-
-<details>
-<summary>Full breakdown of v0.3.0-beta.1 changes</summary>
-
-### 💝 Emotional resonance recall
-
-Current mood influences which memories surface. VAD (valence / arousal) projection of the 4D emotion state, with **three regulatory modes**:
-
-- **Reinforce** (default) — match current mood + salience
-- **Empathy** (triggered by "陪陪我" / "listen to me" + elevated concern) — match on tone *and* emotional weight, surface moments where she was genuinely there
-- **Repair** (triggered by "算了 换个话题" / "move on" or sustained severe distress) — surface distant, positive memories to help reframe
-
-A priming ring buffer (last-3 recall centroids) prevents whiplash between unrelated moods. Intensity gating means neutral-mood turns skip the feature entirely.
-
-### 🎯 Relationship milestones + richer reunion
-
-Crossing the 10 / 30 / 55 / 80 score thresholds fires a **one-shot, understated instruction** the turn you cross it — telling the model to *perform* the shift (use a name, tease gently, be quietly vulnerable) rather than *announce* it. No badges, no pop-ups.
-
-Reunions now use absence duration + last-session emotion + stored topic: a 2-day gap at friend+ gets a "weave it back in naturally" directive; a 10-day gap at close_friend+ with high prior concern prompts a gentle "did it get better?" check-in.
-
-### 🌳 Four sub-dimensions under the flat score
-
-The existing 0–100 score is now a blend of four named dimensions, each growing from a different kind of interaction:
-
-| Dimension | Grows from |
-|---|---|
-| **Trust** | Bringing problems to her, accepting her help |
-| **Vulnerability** | Sharing feelings, personal history, expressed sadness (first-person only) |
-| **Playfulness** | Jokes, laughter, playful teasing |
-| **Intellectual** | Deep questions, debate, mutual teaching |
-
-Diminishing returns prevent runaway growth. A slow daily drift toward a low baseline means dimensions erode gently with prolonged absence. Each dimension, when notably high or low, feeds **specific** prompt guidance — high `trust` tells the companion to honor that reliance, low `playfulness` tells her not to force humor.
-
-### 🔩 Under the hood
-
-- **Electron 36 → 41** (Node 24 ABI, macOS 12 minimum).
-- **93 new tests** lift the suite from 486 to 665. Five previously untested modules now covered — plugin message bus, encryption, MCP + plugin host, window manager geometry, minecraft gateway.
-- **Main-process audit** from a five-agent review: CSP script-src tightened (`unsafe-eval` removed), vault file written with 0o600, child-process PID null-guard, timer-leak cleanup across `mcpHost` / `realtimeVoice` / `windowManager.panelBlur`.
-- Shared `driftToward()` + `classifyByPatterns()` helpers in `src/lib/common.ts` deduplicate decay-math and regex-classification kernels across emotion + relationship code paths.
-- O(n²) overlap-search in `chatRuntime.trimRepeatedStreamingDelta` now capped at 200 chars; `useChat` signature hash replaces per-turn `JSON.stringify(messages)`; `SpeechOutputSection` extracts a shared `TuningSlider` component (-100 lines of render duplication).
-
-</details>
-
 ---
-
-<details>
-<summary>What's new in v0.2.9</summary>
-
-The headline of v0.2.9 was the **emotional memory + 5-level relationship baseline** that v0.3.0-beta.1 now extends.
-
-- **Emotional memory + relationship arc** — companion remembers the *feel* of how you parted; 5-level progression (stranger → acquaintance → friend → close friend → intimate); per-persona `memory.md` files survive switches.
-- **Weather + scene overhaul** — 14 intensity-graded weather states, continuous 24h sunlight filter, 15 AI-generated day/dusk/night scene variants.
-- **Character Card v2/v3 import + VTube Studio bridge** — chub.ai / characterhub compatible; drive external Live2D models via the VTS plugin API.
-- **Pet polish** — inline `[expr:name]` mid-sentence expression tags; 13 fine-grained mood states; per-model weighted idle fidgets; mouse-drag resize.
-- **Render / sync fixes** — cross-window save loop, runtime-state self-feed render storm, TTS-timeout cascade, wake-word transient errors all fixed.
-- **Internal** — Autonomy V1 deleted; CI caches sherpa models + electron-builder; sherpa bundled into Mac/Linux installers.
-
-Full notes on the [v0.2.9 release page](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.9).
-
-</details>
 
 ## Install
 
@@ -296,12 +242,12 @@ Production installers end up in `release/`. Signing is off by default (unsigned 
 
 After first launch, open **Settings**:
 
-- **Chat** — pick a provider, paste your API key, choose a model. Supports chained failover (primary + N fallbacks).
+- **Chat** — pick a provider, paste your API key, choose a model, and configure provider failover.
 - **Voice input** — choose STT engine (local SenseVoice or sherpa runs fully offline; cloud options include Zhipu GLM-ASR, Volcengine, OpenAI Whisper, ElevenLabs, Tencent). Set wake word + VAD sensitivity here.
 - **Voice output** — pick a TTS (Edge TTS is free and fast; MiniMax / Volcengine / DashScope for natural voices; OmniVoice for on-device). Streaming enabled by default.
-- **Memory** — dream cycle cadence, recall depth, embedding model.
-- **Autonomy** — emotion / relationship / rhythm tuning, proactive greeting thresholds.
-- **Integrations** — Telegram / Discord bot tokens, notification webhook port.
+- **Memory & autonomy** — configure recall depth, local embeddings, relationship type, proactive behavior, and background task budgets.
+- **Integrations** — Telegram / Discord bot tokens, notification webhook/RSS channels, MCP servers, and desktop context.
+- **Diagnostics** — export logs, inspect runtime state, review cost history, and run voice/provider checks.
 
 ## Supported providers
 
@@ -364,7 +310,7 @@ Higher-level layout:
 ```
 src/
 ├── app/            # Top-level views, controllers, overlays
-├── features/       # Voice, chat, autonomy, tools, memory, agent
+├── features/       # Voice, chat, autonomy, tools, memory, background tasks
 ├── hooks/          # React hooks (voice / chat / reminders)
 ├── components/     # Reusable UI
 ├── lib/            # Storage, runtime bridges, plain helpers
@@ -376,18 +322,18 @@ electron/
 └── sherpa*.js      # On-device voice engines
 ```
 
-## Roadmap
+## Future directions
 
-### Planned
+These are promising directions, not active commitments. The current project phase is stabilization, documentation, and packaging polish.
 
 - [ ] **Screen-aware proactive conversation** — periodically read screen context (foreground app, visible text) and initiate conversation about what the user is doing, not just respond when spoken to.
-- [ ] **Decision / Roleplay / Agent three-layer separation** — split intent classification (fast) from roleplay (persona-pure) from background agent tasks. Roleplay never sees tool metadata; agent results are "announced" by the character in its own voice.
+- [ ] **Decision / roleplay / background-task separation** — split intent classification (fast) from roleplay (persona-pure) from task execution. Roleplay never sees tool metadata; task results are "announced" by the character in its own voice.
 - [ ] **Character diary & autonomous timeline** — the companion auto-generates a first-person diary entry each day summarizing what happened; optionally posts "moments" to a browsable feed, creating a sense of independent life.
 - [ ] **Daily schedule & activity states** — the companion follows routines (work / eat / sleep / commute) that affect availability, tone, and energy. Late-night conversations feel different from morning ones.
 - [ ] **Mini mode / dock-edge hide** — drag the pet to the screen edge and it auto-hides with a peek-on-hover animation. "Always present, never intrusive."
 - [ ] **Webcam awareness** — use MediaPipe face mesh to detect fatigue signals (yawning, eye closure, frowning) and inject detected state into the companion's context so it can proactively react.
 
-### Ongoing
+### Ongoing maintenance
 
 - [ ] Pipecat-style frame pipeline replacing the monolithic streaming TTS controller (Phase 2-6; Phase 1 shipped in v0.2.4).
 - [ ] Auto-update infrastructure via electron-updater + signed binaries.

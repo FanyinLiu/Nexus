@@ -9,6 +9,7 @@ import {
   updateCurrentSpeechInputProviderProfile,
   updateCurrentSpeechOutputProviderProfile,
 } from '../../../../lib/speechProviderProfiles'
+import { displaySecretInputValue } from '../../../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
 import type { AppSettings, SpeechVoiceOption, TranslationKey } from '../../../../types'
 import { LocalVoiceModelsStatus } from './LocalVoiceModelsStatus'
@@ -123,7 +124,7 @@ export function VoiceStep({
                 <span>{ti('onboarding.voice.input_api_key')}</span>
                 <input
                   type="password"
-                  value={draft.speechInputApiKey}
+                  value={displaySecretInputValue(draft.speechInputApiKey)}
                   onChange={(event) => setDraft((current) => updateCurrentSpeechInputProviderProfile(
                     current,
                     {
@@ -219,7 +220,7 @@ export function VoiceStep({
                 <span>{isVolcengineSpeechOutput ? ti('onboarding.voice.output_api_key_volcano') : ti('onboarding.voice.output_api_key')}</span>
                 <input
                   type="password"
-                  value={draft.speechOutputApiKey}
+                  value={displaySecretInputValue(draft.speechOutputApiKey)}
                   onChange={(event) => setDraft((current) => updateCurrentSpeechOutputProviderProfile(
                     current,
                     {

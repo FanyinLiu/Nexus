@@ -30,25 +30,6 @@ Valid shapes:
     不发文字、不出气泡、不出语音 —— 桌宠在角落做一个小动作（伸懒腰、打哈欠、歪头一下）。
     每次最多一个动作；如果有任何想说话的理由，请用 speak 而不是这个。`,
 
-  responseContractSpawn: `  {"action": "spawn", "task": "...", "purpose": "...", "announcement": "..."}
-
-    Use this when the user would genuinely benefit from you doing
-    something behind the scenes — looking a fact up, checking a site,
-    summarising a doc they mentioned. A background helper agent runs
-    the task and returns a summary to the chat when done.
-
-    - task: a clear natural-language instruction for the helper. Be
-      specific ("查今晚北京天气，含温度和降水概率"), not vague ("帮我查东西").
-    - purpose: one short sentence the user sees, explaining why you're
-      doing this now. Stay in character.
-    - announcement: OPTIONAL. If you want to verbally acknowledge it
-      ("让我查查" / "等我一下"), put it here — it will be spoken in your
-      voice. Omit when silent dispatch feels more natural. Keep it short.
-
-    Only spawn when the task clearly helps. Don't spawn to fill air, don't
-    spawn when you can just answer from context, don't spawn for things the
-    user can answer faster themselves.`,
-
   responseContractTail: `Anything else in the response — reasoning, apology, self-narration, multi-
 line commentary — will be discarded and treated as silent. So don't.`,
 
@@ -114,13 +95,6 @@ line commentary — will be discarded and treated as silent. So don't.`,
 
   sectionLastUtteranceHeader: '## 你上次主动说话',
   sectionLastUtteranceTail: '不要立刻重复同类话题 — 主人可能还没消化。',
-
-  sectionSubagentHeader: '## 后台任务状态',
-  subagentCapacityLine: (active, max) => `后台子代理占用：${active}/${max}`,
-  subagentBudgetLine: (remaining) =>
-    remaining !== null ? `今日剩余预算：$${remaining.toFixed(2)}` : '今日预算：未设置上限',
-  subagentCautionNearCapacity: '接近并发上限，只在明确受益时才 spawn。',
-  subagentCautionLowBudget: '预算吃紧，除非高价值任务否则别 spawn。',
 
   forceSilentOverride:
     '# Override\n\n当前 tick 被上游强制静默。无论你怎么想都必须返回 {"action": "silent"}。',

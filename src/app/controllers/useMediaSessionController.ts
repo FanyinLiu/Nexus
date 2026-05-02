@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
-import type { ChatMessageTone, MediaSessionSnapshot } from '../../types'
+import { isMediaSessionAvailable } from '../../lib/platformProfile'
+import type { ChatMessageTone, MediaSessionSnapshot, PlatformProfile } from '../../types'
 
 type UseMediaSessionControllerOptions = {
   view: 'pet' | 'panel'
+  platformProfile: PlatformProfile
   appendSystemMessage: (content: string, tone?: ChatMessageTone) => void
 }
 
 export function useMediaSessionController({
   view,
+  platformProfile,
   appendSystemMessage,
 }: UseMediaSessionControllerOptions) {
   const { t } = useTranslation()
@@ -16,9 +19,10 @@ export function useMediaSessionController({
   const [musicActionBusy, setMusicActionBusy] = useState(false)
   const [dismissedMusicSessionKey, setDismissedMusicSessionKey] = useState('')
   const [pollingActive, setPollingActive] = useState(false)
+  const mediaSessionAvailable = isMediaSessionAvailable(platformProfile)
 
   const refreshMediaSession = useCallback(async () => {
-    if (!window.desktopPet?.getSystemMediaSession) {
+    if (!mediaSessionAvailable || !window.desktopPet?.getSystemMediaSession) {
       return null
     }
 
@@ -32,12 +36,12 @@ export function useMediaSessionController({
     } catch {
       return null
     }
-  }, [])
+  }, [mediaSessionAvailable])
 
   const handleMediaSessionControl = useCallback(async (
     action: 'play' | 'pause' | 'toggle' | 'next' | 'previous',
   ) => {
-    if (!window.desktopPet?.controlSystemMediaSession) {
+    if (!mediaSessionAvailable || !window.desktopPet?.controlSystemMediaSession) {
       return
     }
 
@@ -57,10 +61,10 @@ export function useMediaSessionController({
       setMediaSession(snapshot)
       setMusicActionBusy(false)
     }
-  }, [appendSystemMessage, refreshMediaSession, t])
+  }, [appendSystemMessage, mediaSessionAvailable, refreshMediaSession, t])
 
   useEffect(() => {
-    if (view !== 'pet' || !pollingActive) {
+    if (view !== 'pet' || !pollingActive || !mediaSessionAvailable) {
       setMediaSession(null)
       return
     }
@@ -95,7 +99,7 @@ export function useMediaSessionController({
         window.clearTimeout(timerId)
       }
     }
-  }, [refreshMediaSession, view, pollingActive])
+  }, [refreshMediaSession, view, pollingActive, mediaSessionAvailable])
 
   useEffect(() => {
     if (mediaSession?.sessionKey || !dismissedMusicSessionKey) {
@@ -119,9 +123,13 @@ export function useMediaSessionController({
   }, [mediaSession])
 
   const startMediaPolling = useCallback(() => {
+    if (!mediaSessionAvailable) {
+      return
+    }
+
     setDismissedMusicSessionKey('')
     setPollingActive(true)
-  }, [])
+  }, [mediaSessionAvailable])
 
   return {
     mediaSession,

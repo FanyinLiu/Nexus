@@ -1,4 +1,4 @@
-import { memo, type Dispatch, type SetStateAction, useCallback, useState } from 'react'
+import { memo, type Dispatch, type SetStateAction, useCallback, useEffect, useState } from 'react'
 import { parseNumberInput } from '../settingsDrawerSupport'
 import { NumberField, ToggleField } from '../settingsFields'
 import { clampPresenceIntervalMinutes } from '../../lib/settings'
@@ -24,6 +24,12 @@ type AutonomySectionProps = {
 } & Partial<ChannelManagerProps>
 
 type TiFunction = (key: Parameters<typeof pickTranslatedUiText>[1]) => string
+
+type WebhookInfo = {
+  url: string
+  authHeader: string
+  maxBodyBytes: number
+}
 
 // ── Helpers to reduce repetition in settings fields ──────────────────────────
 
@@ -59,6 +65,7 @@ function NotificationChannelsPanel({
   const [rssInterval, setRssInterval] = useState(30)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [webhookInfo, setWebhookInfo] = useState<WebhookInfo | null>(null)
 
   const resetForm = useCallback(() => {
     setAddMode(false)
@@ -95,6 +102,24 @@ function NotificationChannelsPanel({
     }
   }, [rssUrl, rssName, rssInterval, onAddChannel, resetForm, ti])
 
+  useEffect(() => {
+    let cancelled = false
+    const getWebhookInfo = window.desktopPet?.getNotificationWebhookInfo
+    if (!getWebhookInfo) return undefined
+
+    getWebhookInfo()
+      .then((info) => {
+        if (!cancelled) setWebhookInfo(info)
+      })
+      .catch(() => {
+        if (!cancelled) setWebhookInfo(null)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   if (channelsLoading) {
     return <p className="settings-drawer__hint">{ti('settings.autonomy.notifications.loading')}</p>
   }
@@ -126,8 +151,21 @@ function NotificationChannelsPanel({
           background: 'var(--input-bg, #1a1a1a)',
           userSelect: 'all',
         }}>
-          POST http://127.0.0.1:47830/webhook
+          POST {webhookInfo?.url ?? 'http://127.0.0.1:47830/webhook'}
         </code>
+        {webhookInfo?.authHeader ? (
+          <code style={{
+            display: 'block',
+            fontSize: 12,
+            marginTop: 4,
+            padding: '4px 8px',
+            borderRadius: 4,
+            background: 'var(--input-bg, #1a1a1a)',
+            userSelect: 'all',
+          }}>
+            Authorization: {webhookInfo.authHeader}
+          </code>
+        ) : null}
         <p className="settings-drawer__hint" style={{ marginTop: 2 }}>
           {ti('settings.autonomy.notifications.webhook_hint')}
         </p>

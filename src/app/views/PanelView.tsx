@@ -10,7 +10,8 @@ import {
   type ReactNode,
 } from 'react'
 import { getLiveTranscriptLabel, getTimeGreeting, getTimeGreetingEmoji, getVoiceStateLabel } from '../appSupport'
-import { ActivePlanStrip, MessageBubble, SubagentTaskStrip } from '../../components'
+import { ActivePlanStrip } from '../../components/ActivePlanStrip'
+import { MessageBubble } from '../../components/MessageBubble'
 import { resolveCharacterPreset } from '../../features/character/presets'
 import { CrisisHotlinePanel } from '../../features/safety/CrisisHotlinePanel'
 import { useAmbientWeather } from '../../hooks/useAmbientWeather'
@@ -40,8 +41,6 @@ export function PanelView({
   openSettingsPanel,
   togglePanelCollapse,
   closePanel,
-  subagentTasks,
-  cancelSubagentTask,
   settingsDrawer,
   onboardingGuide,
 }: PanelViewProps) {
@@ -379,8 +378,6 @@ export function PanelView({
             </div>
 
             <ActivePlanStrip />
-
-            <SubagentTaskStrip tasks={subagentTasks} onCancel={cancelSubagentTask} />
 
             <section className="companion-chat">
 

@@ -5,8 +5,6 @@ import { requestAssistantReplyStreaming } from '../../features/chat/runtime'
 import type { AssistantReplyRequestOptions } from '../../features/chat/systemPromptBuilder'
 import { selectTriggeredLorebookEntriesWithSemantic } from '../../features/chat/lorebookInjection'
 import { loadLorebookEntries } from '../../lib/storage/lorebooks'
-import { loadSubagentSettings } from '../../lib/storage'
-import { buildSpawnSubagentDescriptor } from '../../features/autonomy/subagents/spawnSubagentTool'
 import { detectRupture } from '../../features/autonomy/ruptureDetection'
 import { buildRepairGuidance } from '../../features/autonomy/repairGuidance'
 import { detectCrisisSignal } from '../../features/safety'
@@ -50,14 +48,6 @@ import type { UseChatContext } from './types'
 async function loadAvailableTools(settings: AppSettings) {
   const builtInDescriptors = buildBuiltInToolDescriptors(settings)
 
-  // Subagent tool: only exposed to the chat LLM when the user has opted in
-  // under Settings → Subagents. The backing dispatcher is registered by
-  // useAutonomyV2Engine at mount time, so hiding this descriptor when the
-  // feature is off keeps the LLM from being tempted to call into a no-op.
-  const subagentDescriptor = loadSubagentSettings().enabled
-    ? buildSpawnSubagentDescriptor()
-    : null
-
   let mcpDescriptors: ReturnType<typeof buildBuiltInToolDescriptors> = []
   try {
     const tools = await window.desktopPet?.mcpListTools?.()
@@ -78,7 +68,6 @@ async function loadAvailableTools(settings: AppSettings) {
       }
 
       const reservedNames = new Set(builtInDescriptors.map((t) => t.name))
-      if (subagentDescriptor) reservedNames.add(subagentDescriptor.name)
       mcpDescriptors = tools
         .filter((tool) => !reservedNames.has(tool.name))
         .map((tool) => ({
@@ -95,7 +84,6 @@ async function loadAvailableTools(settings: AppSettings) {
 
   const combined = [
     ...builtInDescriptors,
-    ...(subagentDescriptor ? [subagentDescriptor] : []),
     ...mcpDescriptors,
   ]
   return combined.length ? combined : undefined

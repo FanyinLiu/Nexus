@@ -98,7 +98,7 @@ export const API_PROVIDER_PRESETS: ApiProviderPreset[] = [
     baseUrl: 'https://api.moonshot.ai/anthropic',
     defaultModel: 'kimi-k2.6',
     models: ['kimi-k2.6', 'kimi-k2.5', 'kimi-k2-thinking'],
-    notes: 'Moonshot Anthropic-messages endpoint — use this when driving Claude Code or Anthropic SDK clients against Kimi.',
+    notes: 'Moonshot Anthropic-messages endpoint — use this for Anthropic-compatible clients against Kimi.',
     protocol: 'anthropic',
     requiresApiKey: true,
   },

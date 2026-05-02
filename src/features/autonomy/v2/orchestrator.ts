@@ -97,17 +97,6 @@ export async function runAutonomyDecision(
     return outcome
   }
 
-  // Spawn decisions only have their (optional) announcement guarded — the
-  // task itself is dispatcher-internal. If the announcement fails, strip
-  // it and let the spawn proceed silently rather than retrying or killing
-  // the whole decision. The reasoning: the model already judged the task
-  // worth doing; the phrasing of the pre-speech is the only thing that
-  // drifted, and silent dispatch is strictly better than not dispatching.
-  const stripSpawnAnnouncement = (result: DecisionResult): DecisionResult => {
-    if (result.kind !== 'spawn' || !result.announcement) return result
-    return { ...result, announcement: undefined }
-  }
-
   // ── First attempt ──
   const first = await attempt(opts.hints)
   if (first.kind === 'silent') {
@@ -126,12 +115,6 @@ export async function runAutonomyDecision(
   const firstGuard = await guard(first)
   if (firstGuard.verdict === 'pass') {
     return { result: first, telemetry }
-  }
-
-  // ── Spawn: strip announcement and pass through, no retry ──
-  if (first.kind === 'spawn') {
-    telemetry.finalReason = `spawn_announcement_dropped:${firstGuard.reason ?? 'unknown'}`
-    return { result: stripSpawnAnnouncement(first), telemetry }
   }
 
   // ── Retry path (speak only) ──
@@ -160,12 +143,6 @@ export async function runAutonomyDecision(
   const retryGuard = await guard(retry)
   if (retryGuard.verdict === 'pass') {
     return { result: retry, telemetry }
-  }
-
-  // Spawn on retry too — strip announcement and proceed.
-  if (retry.kind === 'spawn') {
-    telemetry.finalReason = `spawn_announcement_dropped:${retryGuard.reason ?? 'unknown'}`
-    return { result: stripSpawnAnnouncement(retry), telemetry }
   }
 
   // ── Give up ──

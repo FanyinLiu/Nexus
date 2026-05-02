@@ -6,10 +6,19 @@ import {
 } from '../services/workspaceApprovals.js'
 import { requireTrustedSender, requireString } from './validate.js'
 import { audit } from '../services/auditLog.js'
+import {
+  validateWorkspaceEditPayload,
+  validateWorkspaceGlobPayload,
+  validateWorkspaceGrepPayload,
+  validateWorkspacePathPayload,
+  validateWorkspaceRootPayload,
+  validateWorkspaceWritePayload,
+} from './payloadSchemas.js'
 
 export function register() {
   ipcMain.handle('workspace:set-root', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateWorkspaceRootPayload(payload)
     const root = String(payload?.root ?? '')
 
     // Empty / cleared root: always allowed (renderer is unsetting). All
@@ -53,12 +62,14 @@ export function register() {
 
   ipcMain.handle('workspace:read', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateWorkspacePathPayload('workspace:read', payload)
     const filePath = requireString(payload?.path, 'payload.path')
     return workspaceFs.readWorkspaceFile(filePath)
   })
 
   ipcMain.handle('workspace:write', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateWorkspaceWritePayload(payload)
     const filePath = requireString(payload?.path, 'payload.path')
     audit('workspace', 'write', { path: filePath })
     return workspaceFs.writeWorkspaceFile(
@@ -69,6 +80,7 @@ export function register() {
 
   ipcMain.handle('workspace:edit', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateWorkspaceEditPayload(payload)
     const filePath = String(payload?.path ?? '')
     audit('workspace', 'edit', { path: filePath })
     return workspaceFs.editWorkspaceFile(
@@ -80,11 +92,13 @@ export function register() {
 
   ipcMain.handle('workspace:glob', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateWorkspaceGlobPayload(payload)
     return workspaceFs.globWorkspace(String(payload?.pattern ?? ''))
   })
 
   ipcMain.handle('workspace:grep', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateWorkspaceGrepPayload(payload)
     return workspaceFs.grepWorkspace(String(payload?.query ?? ''), {
       caseSensitive: Boolean(payload?.caseSensitive),
       maxResults: payload?.maxResults,

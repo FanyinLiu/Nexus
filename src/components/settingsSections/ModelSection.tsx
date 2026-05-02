@@ -6,6 +6,7 @@ import {
   removeAuthProfileFromRuntime,
   upsertAuthProfileInRuntime,
 } from '../../lib/coreRuntime'
+import { displaySecretInputValue } from '../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { AppSettings, ServiceConnectionCapability } from '../../types'
 import type { UiLanguage } from '../../types'
@@ -42,6 +43,7 @@ export const ModelSection = memo(function ModelSection({
 
   const currentPreset = getApiProviderPreset(draft.apiProviderId)
   const hasModelOptions = currentPreset.models.length > 0
+  const modelApiKeyInputValue = displaySecretInputValue(draft.apiKey)
 
   const [extraKeysText, setExtraKeysText] = useState('')
   const [extraKeysProviderId, setExtraKeysProviderId] = useState<string | null>(null)
@@ -148,7 +150,7 @@ export const ModelSection = memo(function ModelSection({
         <span>{ti('settings.model.api_key')}</span>
         <input
           type="password"
-          value={draft.apiKey}
+          value={modelApiKeyInputValue}
           onChange={(event) =>
             setDraft((prev) => ({ ...prev, apiKey: event.target.value }))
           }

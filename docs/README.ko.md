@@ -2,28 +2,49 @@
 
 <h1 align="center">Nexus</h1>
 
-<h3 align="center">당신의 바탕화면에 사는 AI 동반자 — 기억하고, 꿈꾸고, 함께합니다.</h3>
+<p align="center"><b>기억, 음성, Live2D, 장기 관계 상태를 갖춘 로컬 우선 데스크톱 AI 동반자.</b></p>
+
+<p align="center">Nexus가 중시하는 것은 연속성입니다. 동반자는 중요한 일을 기억하고, 관계가 어떻게 변하는지 알아차리며, 데스크톱 펫으로 곁에 있고, 작은 백그라운드 작업도 도울 수 있습니다. 모델 호출은 사용자가 선택한 provider를 사용하고, 기억·음성 오케스트레이션·도구·안전 상태는 내 컴퓨터에 남습니다.</p>
 
 <p align="center">
-  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/github/v/release/FanyinLiu/Nexus?style=flat-square&color=blue" alt="Release"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/github/v/release/FanyinLiu/Nexus?style=flat-square&color=blue&label=release" alt="Release"></a>
   <a href="https://github.com/FanyinLiu/Nexus/blob/main/LICENSE"><img src="https://img.shields.io/github/license/FanyinLiu/Nexus?style=flat-square" alt="License"></a>
-  <a href="https://github.com/FanyinLiu/Nexus/stargazers"><img src="https://img.shields.io/github/stars/FanyinLiu/Nexus?style=flat-square" alt="Stars"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/stargazers"><img src="https://img.shields.io/github/stars/FanyinLiu/Nexus?style=flat-square&logo=github" alt="Stars"></a>
   <a href="https://github.com/FanyinLiu/Nexus"><img src="https://img.shields.io/github/last-commit/FanyinLiu/Nexus?style=flat-square" alt="Last Commit"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/FanyinLiu/Nexus/ci.yml?branch=main&style=flat-square&label=ci" alt="CI"></a>
 </p>
 
 <p align="center">
   <a href="../README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ja.md">日本語</a> · <b>한국어</b>
 </p>
 
+<p align="center">
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS"></a>
+  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
+</p>
+
+> **현재 릴리스:** v0.3.1 안정 버전(2026-04-28). Nexus는 지금도 일상적으로 사용할 수 있지만, 빠르게 다듬고 있는 개인 프로젝트입니다. 패키징, 선택형 로컬 음성 모델, provider 설정에는 아직 약간의 수동 처리가 필요한 부분이 남아 있을 수 있습니다.
+
 ---
 
-> **참고**: Nexus는 활발히 개발 중입니다. 일부 기능은 안정화되었고, 일부는 아직 다듬는 중입니다. 피드백과 기여를 환영합니다!
+## 문서 안내
 
-## Nexus란?
+| 원하는 것 | 이동할 곳 |
+|---|---|
+| 앱 설치 | [최신 릴리스 다운로드](https://github.com/FanyinLiu/Nexus/releases/latest) |
+| 제품 이해 | [왜 Nexus인가](#왜-nexus인가) · [주요 기능](#주요-기능) |
+| 소스에서 실행 | [빠른 시작](#빠른-시작) |
+| 모델 설정 | [추천 모델 구성](#추천-모델-구성) · [지원 제공자](#지원-제공자) |
+| 안전/개인정보 확인 | [안전 및 지원](#안전-및-지원) |
 
-Nexus는 LLM 기반의 크로스 플랫폼 데스크톱 AI 동반자입니다. Live2D 캐릭터를 **연속 음성 대화**, **장기 기억**, **데스크톱 인지**, **자율 행동**, **MCP 스타일 툴 호출**과 결합 — 챗봇이 아니라 진짜로 당신을 알게 되는 존재를 목표로 설계되었습니다.
+## 왜 Nexus인가?
 
-Electron + React + TypeScript로 구축, Windows / macOS / Linux 지원. 18+ LLM 제공자를 내장하며 완전 오프라인 또는 클라우드 모델로 동작합니다.
+대부분의 AI 동반자는 모델 성능, 음성의 현실감, 상호작용 빈도를 경쟁합니다. Nexus가 묻는 질문은 조금 다릅니다. **오래 지속되는 동반자는 무엇을 기억해야 하며, 그 기록은 시간이 지나며 존재감을 어떻게 바꾸어야 할까요?**
+
+답은 하나의 기능이 아니라 누적되는 작은 의식들입니다. 적절한 순간에 조용히 돌아오는 오래된 기억, 한 주에 실제로 무슨 일이 있었는지 적어 주는 편지, 알맞은 감정의 무게로 다시 떠오르는 회상, 침묵이 더 나을 때는 침묵할 수 있는 동반자.
+
+그 주변에는 5개 언어 UI, 18+ LLM provider, 다중 엔진 STT/TTS와 페일오버, Live2D, VTube Studio 브리지, MCP 도구, 로컬 Webhook/RSS 알림, 강화된 Electron IPC 경계가 있습니다. 엔지니어링 시스템은 기반입니다. 진짜 제품은 이 능력들이 몇 달의 사용 속에서 쌓아 올리는 관계감입니다.
 
 ---
 
@@ -35,15 +56,13 @@ Electron + React + TypeScript로 구축, Windows / macOS / Linux 지원. 18+ LLM
 
 - 🧠 **꿈꾸는 기억** — 핫 / 웜 / 콜드 3단계 구조에 BM25 + 벡터 하이브리드 검색. 야간 꿈 사이클이 대화를 *내러티브 스레드*로 클러스터링하여, 세션마다 리셋되는 대신 시간이 지날수록 당신에 대한 이해가 쌓여 갑니다.
 
-- 💝 **감정 메모리 + 관계 아크 (v0.2.9)** — 동반자가 이별 시의 *감정 톤*을 기억하여, 말한 내용뿐 아니라 감정까지 기억합니다. 5단계 관계 진화(낯선 사람 → 아는 사이 → 친구 → 가까운 친구 → 친밀)가 톤, 어휘, 행동 경계에 영향. 메모리가 페르소나별 `memory.md` 파일에 영속화되어, 페르소나 전환 시 관계 컨텍스트가 유실되지 않습니다.
+- 💝 **감정 메모리 + 관계 아크** — 동반자가 이별 시의 *감정 톤*을 기억하여, 말한 내용뿐 아니라 감정까지 기억합니다. 5단계 관계 진화(낯선 사람 → 아는 사이 → 친구 → 가까운 친구 → 친밀)가 톤, 어휘, 행동 경계에 영향. 메모리가 페르소나별 `memory.md` 파일에 영속화되어, 페르소나 전환 시 관계 컨텍스트가 유실되지 않습니다.
 
-- 🎭 **캐릭터 카드 + VTube Studio 브리지 (v0.2.9)** — Character Card v2/v3 포맷 임포트(chub.ai / characterhub 호환). VTube Studio WebSocket 플러그인 API로 외부 Live2D 모델을 구동하면서 Nexus의 기억 / 자율 행동 스택은 유지.
+- 🎭 **캐릭터 카드 + VTube Studio 브리지** — Character Card v2/v3 포맷 임포트(chub.ai / characterhub 호환). VTube Studio WebSocket 플러그인 API로 외부 Live2D 모델을 구동하면서 Nexus의 기억 / 자율 행동 스택은 유지.
 
-- 🌤️ **살아 있는 장면 (v0.2.9)** — 14단계 날씨 상태, 24시간 연속 햇빛 필터, 15장의 AI 생성 낮/황혼/밤 장면 변형. 분위기 있는 깊이감, 정적인 배경화면이 아닙니다.
+- 🌤️ **살아 있는 장면** — 14단계 날씨 상태, 24시간 연속 햇빛 필터, 15장의 AI 생성 낮/황혼/밤 장면 변형. 분위기 있는 깊이감, 정적인 배경화면이 아닙니다.
 
-- 🤖 **자율적 내면 생활 (V2)** — tick마다 한 번의 LLM 판단 호출, 계층적 스냅샷(감정 · 관계 · 리듬 · 데스크톱 · 최근 대화) 입력, 페르소나 가드레일을 통과한 출력. 템플릿 같은 발화는 더 이상 없고 — 캐릭터의 목소리로 말하거나, 침묵을 선택할 수 있으며 — v0.2.7부터 백그라운드 조사 서브에이전트를 파견할 수도 있습니다.
-
-- 🧰 **서브에이전트 디스패처 (v0.2.7)** — 동반자가 뒤에서 제한된 조사 루프(Web 검색 / MCP 툴)를 실행하고 요약을 다음 응답에 엮어 넣을 수 있습니다. 동시 실행 수 + 일일 예산으로 제어; 옵트인, `설정`에서 활성화.
+- 🤖 **자율적 내면 생활 (V2)** — tick마다 한 번의 LLM 판단 호출, 계층적 스냅샷(감정 · 관계 · 리듬 · 데스크톱 · 최근 대화) 입력, 페르소나 가드레일을 통과한 출력. 템플릿 같은 발화는 더 이상 없고 — 캐릭터의 목소리로 말하거나, 침묵을 선택할 수 있습니다.
 
 - 🔧 **내장 툴** — 웹 검색, 날씨, 알림. 네이티브 함수 호출과 `tools`를 지원하지 않는 모델용 프롬프트 모드 폴백 **모두** 작동.
 
@@ -61,7 +80,7 @@ Electron + React + TypeScript로 구축, Windows / macOS / Linux 지원. 18+ LLM
 
 ## 이번 업데이트 — v0.3.1(안정 버전, 2026-04-28)
 
-> **감정 메인라인 + 보안 감사 누적 릴리스.** v0.3.0 이후 92개 commit, 4개월 검증 기간, beta.1 → beta.5가 각각 한 가지 부류의 문제를 닫아왔습니다. 자세한 내용은 [RELEASE-NOTES-v0.3.1.md](RELEASE-NOTES-v0.3.1.md)(영어)를 참조하세요.
+> **감정 메인라인 + 보안 감사 누적 릴리스.** v0.3.0 이후 92개 commit. beta.1 → beta.5가 안정 버전 전까지 각각 한 부류의 문제를 닫았습니다. 자세한 내용은 [RELEASE-NOTES-v0.3.1.md](RELEASE-NOTES-v0.3.1.md)(영어)를 참조하세요.
 
 | 주제 | 내용 |
 |---|---|
@@ -69,7 +88,7 @@ Electron + React + TypeScript로 구축, Windows / macOS / Linux 지원. 18+ LLM
 | **💔 Gottman 결렬 / 회복** | 비판 / 경멸 / 방어 / 침묵의 네 가지 Horsemen을 자동 감지; 다음 턴에 soft start-up + accept influence 회복 자세를 주입. **전 과정이 조용히 바뀔 뿐 — "이 상태를 봤어요" 같은 알림은 절대 띄우지 않음**. |
 | **🔒 critical CVE 2건 해소** | `pixi-live2d-display`가 `gh-pages`(프로토타입 오염)를 runtime deps에 잘못 포함시킨 문제; `npm overrides`로 CVE 픽스 버전으로 강제 업그레이드. |
 | **🛡️ IPC 감사 6/7 HIGH 종료** | H2/H3/H5/H6/H7/H8 + M1/M2/M3/M5 + L3/L4/L6 모두 수정, H4는 설계상 v1.0으로 deferred. |
-| **🐛 30+ 정적 버그 수정** | 4라운드 audit + 병렬 agent 정적 스캔; template-replace `$&` 누수, 동시성 레이스, StrictMode 순수성, NaN 가드, async leak, storage 검증. |
+| **🐛 30+ 정적 버그 수정** | 4라운드 audit + 병렬 정적 스캔; template-replace `$&` 누수, 동시성 레이스, StrictMode 순수성, NaN 가드, async leak, storage 검증. |
 | **🚦 릴리스 전 검사를 26항목으로 확장** | `prerelease-check.mjs`를 8항목에서 6 stage / 26 check로 확장: 프로세스 / 코드 품질 / 보안 / 자산 / 문서 준수 / 프라이버시 거버넌스. |
 | **🧹 UI 정리** | 편지 / 타임캡슐 / 심부름 / 열어둔 실 / 무드 맵 5개 settings 패널을 서랍에서 거두었습니다(기반 scheduler는 계속 동작). "동반자의 감정 적응은 사용자가 느끼는 것이지, 설정하는 것이 아니다." |
 
@@ -117,59 +136,9 @@ Electron + React + TypeScript로 구축, Windows / macOS / Linux 지원. 18+ LLM
 
 ---
 
-## 지난 업데이트 — v0.2.9
+## 이전 버전 기록
 
-> 감정 메모리와 관계 진화가 헤드라인 — 동반자가 관계의 발전을 추적하고 각 대화의 감정적 맥락을 기억하게 되었습니다. 날씨 & 장면 시스템을 처음부터 재구축(14가지 날씨 상태 + AI 생성 장면). 캐릭터 카드 임포트, VTube Studio 브리지, 완전한 5개 언어 i18n.
->
-> 이 섹션은 **릴리스마다 새 버전의 내용으로 교체됩니다**. 이전 내용은 [Releases](https://github.com/FanyinLiu/Nexus/releases)에서 확인하세요.
-
-### 🧠 감정 메모리 & 관계 진화 — 헤드라인
-
-동반자가 세션을 넘어 감정적 맥락을 이어갑니다. 지난번 따뜻하게 헤어졌다면 따뜻하게 맞이하고, 피곤했다면 상태를 걱정합니다. 5단계 관계 스테이지 — 낯선 사람 → 지인 → 친구 → 절친 → 친밀 — 이 동반자의 어조, 말투, 행동 경계에 영향을 줍니다. 진행은 암묵적이며, 축적된 상호작용에 의해 구동되고, 눈에 보이는 미터는 없습니다.
-
-부재 인식: 동반자는 당신이 얼마나 떠나 있었는지 알아챕니다. 짧은 부재에는 부드러운 환영을, 긴 부재에는 진심 어린 호기심("어디 갔었어?")을 보입니다. 대화 기억은 페르소나별 `memory.md` 파일에 영속화되어 세션 간에 유실되지 않습니다.
-
-### 🌦️ 날씨 & 장면 시스템 재구축
-
-기존 날씨 위젯을 완전한 대기 시스템으로 교체했습니다:
-
-- **14가지 강도 등급 날씨 상태**, 풀 씬 시각 효과 포함 — 하늘 색조, 고밀도 파티클 레이어, 빛나는 비와 눈.
-- **연속 햇빛 시스템**, 밝기 / 채도 / 색상 필터 적용. 진짜 밤, 세밀한 낮 단계 — 단순한 "낮"과 "밤"이 아닙니다.
-- **15장의 AI 생성 애니메 장면**(5개 장소 × 낮 / 황혼 / 밤), 시각적 일관성을 위해 수동 프롬프트.
-- **14 상태 펫 시간 미리보기**, 현재 시각에 고정하여 각 날씨 외관 확인 가능.
-- **다국어 날씨 위치 파싱**, Nominatim 지오코딩 지원 — 어떤 언어로든 도시명 입력 가능.
-
-### 📇 캐릭터 카드 임포트
-
-Character Card v2 / v3 포맷(PNG 내장 + JSON) 임포트 지원 — chub.ai, characterhub 등 커뮤니티 카드와 호환. 설정 → 캐릭터에서 `.png` 카드 파일을 드롭하면 페르소나 정보가 자동으로 채워집니다.
-
-### 🎭 VTube Studio 브리지
-
-VTube Studio를 통해 외부 Live2D 모델을 구동하는 WebSocket 브리지. 동반자의 감정 상태가 VTS 모델의 표정과 모션에 실시간 동기화됩니다.
-
-### 🌐 완전한 i18n
-
-모든 UI 서페이스가 5개 언어(EN / ZH-CN / ZH-TW / JA / KO)의 완전한 번역을 지원: 설정, 채팅, 온보딩, 음성 스택, 시스템 프롬프트, 에러 메시지, 데이터 레지스트리. 설정에 지구본 아이콘 + 팝오버 언어 전환기.
-
-### 🐾 펫 시스템 강화
-
-- **인라인 표정 오버라이드**: 동반자가 응답에 `[expr:name]` 태그를 써서 발화 중간에 특정 Live2D 표정을 트리거.
-- **탭 존 반응 풀 확장** — 캐릭터를 톡톡 쳤을 때 더 다양한 반응.
-- **모델별 가중치 아이들 피젯** — 캐릭터마다 다른 느낌의 대기 애니메이션.
-- **마우스 드래그 리사이즈** — 펫 캐릭터 창 크기 조절.
-- **13가지 세분화된 펫 무드 상태** — 표정 선택을 구동.
-
-### 🔧 기타 개선 및 버그 수정
-
-- Lorebook 시맨틱 하이브리드 검색(키워드 매칭 위에 벡터 검색 추가).
-- LLM 응답에 대한 사용자 설정 가능 정규식 변환.
-- 온보딩 음성 단계에 로컬 음성 모델 헬스 스트립 추가.
-- Sherpa 모델을 Mac + Linux 인스톨러에 번들.
-- 크로스 윈도우 BroadcastChannel 동기화 저장 루프 및 메시지 덮어쓰기 수정.
-- 런타임 상태 브리지 셀프 피딩 렌더 스톰 수정.
-- TTS 타임아웃 렌더 스톰 수정.
-- 웨이크 워드의 일시적 디바이스 에러가 영구적으로 취급되는 문제 수정.
-- Autonomy V1 코드 삭제(Phase 6 클린업).
+README에는 현재 안정 버전과 직전 안정 버전의 핵심만 남깁니다. v0.2.9, v0.2.7, v0.2.5 같은 이전 기록은 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)를 확인하세요.
 
 ---
 
@@ -314,7 +283,7 @@ npm run package:win     # 또는 package:mac / package:linux
 ### 예정
 
 - [ ] **화면 인식 능동 대화** — 화면 컨텍스트(포그라운드 앱, 표시된 텍스트)를 주기적으로 읽어 사용자가 하고 있는 작업에 관한 대화를 먼저 시작합니다. 말을 걸어야만 반응하는 것이 아닙니다.
-- [ ] **Decision / Roleplay / Agent 3계층 분리** — 의도 분류(빠름), 롤플레이(페르소나 순수), 백그라운드 Agent 작업을 분리. 롤플레이 계층은 도구 메타데이터를 전혀 보지 않으며, Agent 결과는 캐릭터가 자기 목소리로 "전달"합니다.
+- [ ] **Decision / Roleplay / 백그라운드 작업 분리** — 의도 분류(빠름), 롤플레이(페르소나 순수), 백그라운드 작업 실행을 분리. 롤플레이 계층은 도구 메타데이터를 전혀 보지 않으며, 작업 결과는 캐릭터가 자기 목소리로 "전달"합니다.
 - [ ] **캐릭터 일기 & 자율 타임라인** — 동반자가 매일 1인칭 일기를 자동 생성하여 그날 있었던 일을 기록. 선택적으로 열람 가능한 피드에 "일상"을 게시하여 독립적인 삶의 느낌을 연출합니다.
 - [ ] **일과 스케줄 & 활동 상태** — 동반자가 일과(일 / 식사 / 수면 / 출근)를 따르며 가용성, 톤, 에너지에 영향. 심야 대화와 아침 대화의 분위기가 달라집니다.
 - [ ] **미니 모드 / 도크 가장자리 숨기기** — 펫을 화면 가장자리로 드래그하면 자동으로 숨고, 호버 시 쏙 얼굴을 내미는 애니메이션. "항상 곁에 있지만 방해하지 않습니다."

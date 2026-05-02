@@ -1,5 +1,24 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
+const realtimeVoiceEnabled = process.env.NEXUS_ENABLE_REALTIME_VOICE === '1'
+
+const realtimeVoiceApi = realtimeVoiceEnabled
+  ? {
+      // Realtime Voice (OpenAI Realtime API)
+      realtimeStart: (payload) => ipcRenderer.invoke('realtime:start', payload),
+      realtimeStop: () => ipcRenderer.invoke('realtime:stop'),
+      realtimeFeed: (payload) => ipcRenderer.invoke('realtime:feed', payload),
+      realtimeInterrupt: () => ipcRenderer.invoke('realtime:interrupt'),
+      realtimeSendText: (payload) => ipcRenderer.invoke('realtime:send-text', payload),
+      realtimeState: () => ipcRenderer.invoke('realtime:state'),
+      subscribeRealtimeEvent: (listener) => {
+        const handler = (_event, payload) => listener(payload)
+        ipcRenderer.on('realtime:event', handler)
+        return () => ipcRenderer.removeListener('realtime:event', handler)
+      },
+    }
+  : {}
+
 contextBridge.exposeInMainWorld('desktopPet', {
   updatePetWindowState: (state) => ipcRenderer.invoke('pet-window:update-state', state),
   getPetWindowState: () => ipcRenderer.invoke('pet-window:get-state'),
@@ -35,6 +54,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   updateRuntimeState: (state) => ipcRenderer.invoke('runtime-state:update', state),
   getLaunchOnStartup: () => ipcRenderer.invoke('app:get-launch-on-startup'),
   setLaunchOnStartup: (value) => ipcRenderer.invoke('app:set-launch-on-startup', value),
+  getPlatformProfile: () => ipcRenderer.invoke('app:get-platform-profile'),
   listPetModels: () => ipcRenderer.invoke('pet-model:list'),
   importPetModel: () => ipcRenderer.invoke('pet-model:import'),
   showConfirmDialog: (message) => ipcRenderer.invoke('dialog:confirm', message),
@@ -247,18 +267,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   workspaceGlob: (payload) => ipcRenderer.invoke('workspace:glob', payload),
   workspaceGrep: (payload) => ipcRenderer.invoke('workspace:grep', payload),
 
-  // Realtime Voice (OpenAI Realtime API)
-  realtimeStart: (payload) => ipcRenderer.invoke('realtime:start', payload),
-  realtimeStop: () => ipcRenderer.invoke('realtime:stop'),
-  realtimeFeed: (payload) => ipcRenderer.invoke('realtime:feed', payload),
-  realtimeInterrupt: () => ipcRenderer.invoke('realtime:interrupt'),
-  realtimeSendText: (payload) => ipcRenderer.invoke('realtime:send-text', payload),
-  realtimeState: () => ipcRenderer.invoke('realtime:state'),
-  subscribeRealtimeEvent: (listener) => {
-    const handler = (_event, payload) => listener(payload)
-    ipcRenderer.on('realtime:event', handler)
-    return () => ipcRenderer.removeListener('realtime:event', handler)
-  },
+  ...realtimeVoiceApi,
 
   // Auto-updater (electron-updater + GitHub Releases)
   updaterCheck: () => ipcRenderer.invoke('updater:check'),
@@ -272,6 +281,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
 
   // Notification bridge (RSS + webhook)
   getNotificationChannels: () => ipcRenderer.invoke('notification:get-channels'),
+  getNotificationWebhookInfo: () => ipcRenderer.invoke('notification:webhook-info'),
   setNotificationChannels: (channels) => ipcRenderer.invoke('notification:set-channels', channels),
   startNotificationBridge: () => ipcRenderer.invoke('notification:start'),
   stopNotificationBridge: () => ipcRenderer.invoke('notification:stop'),
