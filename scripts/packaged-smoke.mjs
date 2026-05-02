@@ -122,16 +122,23 @@ function findPackagedExecutable() {
   return null
 }
 
+function getAppArgs() {
+  if (process.platform === 'linux' && process.env.CI === 'true') {
+    return ['--no-sandbox']
+  }
+  return []
+}
+
 function runSmoke(executable) {
   return new Promise((resolve, reject) => {
     let command = executable
-    let args = []
+    let args = getAppArgs()
 
     if (process.platform === 'linux' && !process.env.DISPLAY) {
       const xvfbRun = findCommand('xvfb-run')
       if (xvfbRun) {
         command = xvfbRun
-        args = ['-a', executable]
+        args = ['-a', executable, ...args]
       }
     }
 

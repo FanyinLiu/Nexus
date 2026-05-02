@@ -11,15 +11,18 @@ import {
 
 test('isExecutableOnPath finds executable files on PATH', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'nexus-platform-profile-'))
-  const executable = path.join(directory, 'playerctl')
+  const executableName = process.platform === 'win32' ? 'playerctl.cmd' : 'playerctl'
+  const executable = path.join(directory, executableName)
 
   try {
-    await writeFile(executable, '#!/bin/sh\nexit 0\n')
-    await chmod(executable, 0o755)
+    await writeFile(executable, process.platform === 'win32' ? '@echo off\r\nexit /b 0\r\n' : '#!/bin/sh\nexit 0\n')
+    if (process.platform !== 'win32') {
+      await chmod(executable, 0o755)
+    }
 
     assert.equal(isExecutableOnPath('playerctl', {
-      env: { PATH: directory },
-      platform: 'linux',
+      env: { PATH: directory, PATHEXT: '.CMD;.EXE' },
+      platform: process.platform,
     }), true)
   } finally {
     await rm(directory, { recursive: true, force: true })
