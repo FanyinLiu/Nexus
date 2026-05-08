@@ -1,4 +1,5 @@
 import { API_PROVIDER_PRESETS, getApiProviderPreset } from '../../../../lib/apiProviders'
+import { displaySecretInputValue } from '../../../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
 import type { AppSettings } from '../../../../types'
 import type { OnboardingDraftSetter } from './types'
@@ -86,7 +87,7 @@ export function TextStep({
         <span>{ti('onboarding.text.api_key_label')}</span>
         <input
           type="password"
-          value={draft.apiKey}
+          value={displaySecretInputValue(draft.apiKey)}
           onChange={(event) => setDraft((current) => ({
             ...current,
             apiKey: event.target.value,

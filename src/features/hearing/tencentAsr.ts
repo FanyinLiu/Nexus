@@ -6,6 +6,7 @@
  */
 
 import { requestVoiceInputStream } from '../voice/runtimeSupport.ts'
+import { isVaultRefString } from '../../lib/keyVaultBridge.ts'
 import type { TranslationKey, TranslationParams } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
@@ -21,6 +22,7 @@ export type TencentAsrCallbacks = {
 }
 
 export type TencentAsrConnectOptions = {
+  apiKey?: string
   appId: string
   secretId: string
   secretKey: string
@@ -50,9 +52,21 @@ function createInputAudioContext(sampleRate?: number) {
 }
 
 export function parseTencentCredentials(apiKey: string): TencentAsrConnectOptions | null {
-  const parts = apiKey.split(':')
+  const normalized = apiKey.trim()
+  if (!normalized) return null
+  if (isVaultRefString(normalized)) {
+    return {
+      apiKey: normalized,
+      appId: '',
+      secretId: '',
+      secretKey: '',
+    }
+  }
+
+  const parts = normalized.split(':')
   if (parts.length < 3) return null
   return {
+    apiKey: normalized,
     appId: parts[0].trim(),
     secretId: parts[1].trim(),
     secretKey: parts.slice(2).join(':').trim(),
@@ -85,6 +99,7 @@ export async function startTencentAsrStream(
   // Connect to Tencent Cloud ASR (each connection is a new session)
   try {
     await api.tencentAsrConnect({
+      apiKey: credentials.apiKey,
       appId: credentials.appId,
       secretId: credentials.secretId,
       secretKey: credentials.secretKey,

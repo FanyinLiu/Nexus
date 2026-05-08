@@ -77,20 +77,17 @@ export const LorebooksSection = memo(function LorebooksSection({
     <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
       <div className="settings-section__title-row">
         <div>
-          <h4>{ti('settings.lorebooks.title')}</h4>
+          <h4>{ti('settings.lorebooks.entries_title')}</h4>
           <p className="settings-drawer__hint">
-            {ti('settings.lorebooks.note')}
+            {ti('settings.lorebooks.entries_note')}
           </p>
         </div>
         <div className="settings-page__meta">
           <span>{ti('settings.lorebooks.count_summary', { total: entries.length, enabled: totalEnabled })}</span>
+          <button type="button" className="ghost-button" onClick={addEntry}>
+            {ti('settings.lorebooks.add_entry')}
+          </button>
         </div>
-      </div>
-
-      <div className="settings-section__title-row">
-        <button type="button" className="ghost-button" onClick={addEntry}>
-          {ti('settings.lorebooks.add_entry')}
-        </button>
       </div>
 
       {entries.length === 0 ? (

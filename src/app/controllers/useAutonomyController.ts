@@ -8,6 +8,7 @@ import type {
   DebugConsoleEventSource,
   MemoryItem,
   NotificationMessage,
+  PlatformProfile,
 } from '../../types'
 import { useFocusAwareness } from '../../hooks/useFocusAwareness'
 import { useAutonomyTick } from '../../hooks/useAutonomyTick'
@@ -21,6 +22,7 @@ import { useAutonomyV2Engine } from './useAutonomyV2Engine'
 import { useTelegramBridge } from './useTelegramBridge'
 import { useDiscordBridge } from './useDiscordBridge'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile'
 import type { DailyMemoryStore, Goal, ReminderTask } from '../../types'
 
 type ChatBridge = {
@@ -44,6 +46,7 @@ type DebugConsoleBridge = {
 export type UseAutonomyControllerOptions = {
   settings: AppSettings
   settingsRef: React.RefObject<AppSettings>
+  platformProfile: PlatformProfile
   messagesRef: React.RefObject<ChatMessage[]>
   memory: {
     memoriesRef: React.RefObject<MemoryItem[]>
@@ -67,6 +70,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   const {
     settings,
     settingsRef,
+    platformProfile,
     messagesRef,
     memory,
     reminderTasksRef,
@@ -108,7 +112,10 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     const currentSettings = settingsRef.current
     if (!currentSettings.autonomyEnabled || currentSettings.autonomyLevelV2 === 'off') return
 
-    if (currentSettings.activeWindowContextEnabled) {
+    if (
+      currentSettings.activeWindowContextEnabled
+      && isDesktopContextActiveWindowAvailable(platformProfile)
+    ) {
       void window.desktopPet?.getDesktopContext?.({ includeActiveWindow: true })
         .then((ctx) => { lastActiveWindowTitleRef.current = ctx?.activeWindowTitle ?? null })
         .catch(() => { lastActiveWindowTitleRef.current = null })
@@ -123,7 +130,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     }
     void evaluateTriggersRef.current()
     void v2Engine.considerTick(tickState)
-  }, [emotionState, relationshipState, rhythmState, settingsRef, v2Engine])
+  }, [emotionState, platformProfile, relationshipState, rhythmState, settingsRef, v2Engine])
 
   const autonomyTick = useAutonomyTick({
     settingsRef,
@@ -177,6 +184,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
 
   const contextScheduler = useContextScheduler({
     settingsRef,
+    platformProfile,
     focusStateRef: focusAwareness.focusStateRef,
     idleSecondsRef: focusAwareness.idleSecondsRef,
     onAction: handleContextAction,
@@ -254,8 +262,6 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     rhythmRef: rhythmState.rhythmRef,
     getRhythmPrompt: rhythmState.getRhythmPrompt,
     setGoals,
-    subagentTasks: v2Engine.subagentTasks,
-    cancelSubagentTask: v2Engine.cancelSubagentTask,
   }), [
     focusAwareness,
     autonomyTick,
@@ -281,7 +287,5 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     rhythmState.rhythmRef,
     rhythmState.getRhythmPrompt,
     setGoals,
-    v2Engine.subagentTasks,
-    v2Engine.cancelSubagentTask,
   ])
 }

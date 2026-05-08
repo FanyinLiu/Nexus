@@ -2,6 +2,7 @@
 import {
   getMemorySearchModeOptions,
   getSettingsSectionOptions,
+  normalizeSettingsSectionId,
   type ConnectionResult,
   type SettingsSectionId,
 } from './settingsDrawerSupport'
@@ -19,14 +20,12 @@ import {
   isLocaleDefaultUserName,
   pickTranslatedUiText,
 } from '../lib/uiLanguage'
-import { MEMORY_EMBEDDING_MODEL_OPTIONS } from '../features/memory'
 import type { PetModelDefinition } from '../features/pet'
 import type { ReminderTaskDraftInput } from '../features/reminders'
 import {
   AutonomySection,
   ChatSection,
   ConsoleSection,
-  ContextSection,
   HistorySection,
   IntegrationsSection,
   LorebooksSection,
@@ -53,9 +52,11 @@ import type {
   DailyMemoryEntry,
   DebugConsoleEvent,
   MemoryItem,
+  PlatformProfile,
   ReminderTask,
   ServiceConnectionCapability,
   SpeechVoiceListResponse,
+  ThemeId,
   VoicePipelineState,
   VoiceState,
   VoiceTraceEntry,
@@ -64,6 +65,7 @@ import type {
 export type SettingsDrawerProps = {
   open: boolean
   settings: AppSettings
+  platformProfile: PlatformProfile
   chatMessageCount: number
   chatBusy: boolean
   currentChatSessionId?: string
@@ -78,7 +80,6 @@ export type SettingsDrawerProps = {
   voicePipeline: VoicePipelineState
   voiceTrace: VoiceTraceEntry[]
   debugConsoleEvents: DebugConsoleEvent[]
-  subagentTasks?: import('../types/subagent').SubagentTask[]
   onClose: () => void
   onSave: (settings: AppSettings) => void
   onExportChatHistory: () => Promise<{
@@ -143,9 +144,26 @@ export type SettingsDrawerProps = {
   onRemoveNotificationChannel?: (id: string) => Promise<void>
 }
 
+const SETTINGS_APPEARANCE_OPTIONS: Array<{
+  id: ThemeId
+  labelKey: Parameters<typeof pickTranslatedUiText>[1]
+  tone: 'night' | 'day' | 'warm-day'
+}> = [
+  { id: 'system-dark', labelKey: 'settings.appearance.night', tone: 'night' },
+  { id: 'system-day', labelKey: 'settings.appearance.day', tone: 'day' },
+  { id: 'warm-day', labelKey: 'settings.appearance.warm_day', tone: 'warm-day' },
+]
+
+function getSettingsThemeTone(themeId: ThemeId): 'night' | 'day' | 'warm-day' {
+  if (themeId === 'warm-day') return 'warm-day'
+  if (themeId === 'system-day' || themeId === 'editorial') return 'day'
+  return 'night'
+}
+
 export function SettingsDrawer({
   open,
   settings,
+  platformProfile,
   chatMessageCount,
   chatBusy,
   currentChatSessionId,
@@ -160,7 +178,6 @@ export function SettingsDrawer({
   voicePipeline,
   voiceTrace,
   debugConsoleEvents,
-  subagentTasks,
   onClose,
   onSave,
   onExportChatHistory,
@@ -175,9 +192,6 @@ export function SettingsDrawer({
   onClearDailyMemory,
   onUpdateDailyEntry,
   onRemoveDailyEntry,
-  onAddReminderTask,
-  onUpdateReminderTask,
-  onRemoveReminderTask,
   onImportPetModel,
   onTestConnection,
   onLoadSpeechVoices,
@@ -195,6 +209,8 @@ export function SettingsDrawer({
   const [settingsView, setSettingsView] = useState<'home' | 'section'>('home')
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false)
   const languageMenuRef = useRef<HTMLDivElement | null>(null)
+  const drawerBodyRef = useRef<HTMLDivElement | null>(null)
+  const settingsSectionsRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!languageMenuOpen) return undefined
@@ -262,10 +278,8 @@ export function SettingsDrawer({
   const settingsSectionOptions = getSettingsSectionOptions(uiLanguage)
   const selectedMemorySearchMode = memorySearchModeOptions.find((option) => option.value === draft.memorySearchMode)
     ?? memorySearchModeOptions[1]
-  const selectedMemoryEmbeddingModel = MEMORY_EMBEDDING_MODEL_OPTIONS.find((option) => (
-    option.value === draft.memoryEmbeddingModel
-  ))
   const activeSectionLabel = settingsSectionOptions.find((section) => section.id === activeSectionId)?.label
+    ?? settingsSectionOptions.find((section) => section.id === normalizeSettingsSectionId(activeSectionId))?.label
     ?? settingsSectionOptions[0].label
   const { meta: settingsSectionMetaById } = buildSettingsSectionMeta({
     ti,
@@ -295,12 +309,21 @@ export function SettingsDrawer({
   })
   const activeSectionMeta = settingsSectionMetaById[activeSectionId]
   const activeSectionDescription = activeSectionMeta.description
+  const settingsThemeTone = getSettingsThemeTone(draft.themeId)
+  const settingsBackdropClassName = [
+    'settings-backdrop',
+    settingsThemeTone === 'night' ? 'settings-backdrop--night' : 'settings-backdrop--day',
+    settingsThemeTone === 'warm-day' ? 'settings-backdrop--warm-day' : '',
+  ].filter(Boolean).join(' ')
+  const settingsDrawerClassName = [
+    'settings-drawer',
+    settingsThemeTone === 'night' ? 'settings-drawer--night' : 'settings-drawer--day',
+    settingsThemeTone === 'warm-day' ? 'settings-drawer--warm-day' : '',
+  ].filter(Boolean).join(' ')
   // Sync draft from external settings ONLY when the drawer opens,
   // not while the user is actively editing.
-   
   useEffect(() => {
     if (open) {
-      console.info('[SettingsDrawer] SYNC draft from settings, provider:', settings.speechOutputProviderId)
       setDraft(settings)
       speechVoices.syncPreviewText(settings.companionName)
       setSettingsView('home')
@@ -310,24 +333,41 @@ export function SettingsDrawer({
 
   // Re-sync API keys when vault hydration completes after drawer is already open.
   // This handles the race where settings are loaded with empty keys before vault decrypts them.
-   
   useEffect(() => {
     if (!open) return
+    const incomingKeyValues = {
+      apiKey: settings.apiKey,
+      speechInputApiKey: settings.speechInputApiKey,
+      speechOutputApiKey: settings.speechOutputApiKey,
+      toolWebSearchApiKey: settings.toolWebSearchApiKey,
+      screenVlmApiKey: settings.screenVlmApiKey,
+      telegramBotToken: settings.telegramBotToken,
+      discordBotToken: settings.discordBotToken,
+    } as const
+    const keyFields = Object.keys(incomingKeyValues) as Array<keyof typeof incomingKeyValues>
+
     setDraft((current) => {
-      const keyFields = ['apiKey', 'speechInputApiKey', 'speechOutputApiKey', 'toolWebSearchApiKey'] as const
       let changed = false
       const patch = { ...current }
       for (const field of keyFields) {
-        if (!current[field] && settings[field]) {
-          ;(patch as Record<string, unknown>)[field] = settings[field]
+        if (!current[field] && incomingKeyValues[field]) {
+          ;(patch as Record<string, unknown>)[field] = incomingKeyValues[field]
           changed = true
         }
       }
       return changed ? patch : current
     })
-  }, [open, settings.apiKey, settings.speechOutputApiKey, settings.speechInputApiKey, settings.toolWebSearchApiKey]) // eslint-disable-line react-hooks/exhaustive-deps -- only sync specific vault keys, not full settings
+  }, [
+    open,
+    settings.apiKey,
+    settings.speechOutputApiKey,
+    settings.speechInputApiKey,
+    settings.toolWebSearchApiKey,
+    settings.screenVlmApiKey,
+    settings.telegramBotToken,
+    settings.discordBotToken,
+  ])
 
-   
   useEffect(() => {
     if (!petModelPresets.length) return
 
@@ -356,11 +396,8 @@ export function SettingsDrawer({
   }
 
   function applySpeechOutputPreset(providerId: string) {
-    console.info('[SettingsDrawer] applySpeechOutputPreset:', providerId)
     setDraft((prev) => {
-      const next = switchSpeechOutputProvider(prev, providerId)
-      console.info('[SettingsDrawer] draft updated: prev provider:', prev.speechOutputProviderId, '→ next:', next.speechOutputProviderId)
-      return next
+      return switchSpeechOutputProvider(prev, providerId)
     })
     speechVoices.applySpeechOutputPreset(providerId)
   }
@@ -371,7 +408,7 @@ export function SettingsDrawer({
   }
 
   function handleOpenSettingsSection(sectionId: SettingsSectionId) {
-    setActiveSectionId(sectionId)
+    setActiveSectionId(normalizeSettingsSectionId(sectionId))
     setSettingsView('section')
   }
 
@@ -379,12 +416,211 @@ export function SettingsDrawer({
     setSettingsView('home')
   }
 
+  useEffect(() => {
+    if (!open) return undefined
+    const frame = window.requestAnimationFrame(() => {
+      drawerBodyRef.current?.scrollTo({ top: 0 })
+      settingsSectionsRef.current?.scrollTo({ top: 0 })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [activeSectionId, open, settingsView])
+
+  function renderActiveSettingsSection() {
+    switch (activeSectionId) {
+      case 'model':
+        return (
+          <ModelSection
+            active
+            draft={draft}
+            setDraft={setDraft}
+            testingTarget={connectionTests.testingTarget}
+            textProvider={textProvider}
+            uiLanguage={uiLanguage}
+            onApplyTextProviderPreset={applyTextProviderPreset}
+            onRunTextConnectionTest={() => void connectionTests.runConnectionTest('text')}
+            renderTextTestResult={() => connectionTests.renderTestResult('text')}
+          />
+        )
+      case 'chat':
+        return (
+          <ChatSection
+            active
+            draft={draft}
+            setDraft={setDraft}
+            petModelPresets={petModelPresets}
+            importingPetModel={petModel_.importingPetModel}
+            petModelStatus={petModel_.petModelStatus}
+            onImportPetModel={() => void petModel_.handleImportPetModel()}
+          />
+        )
+      case 'history':
+        return (
+          <HistorySection
+            active
+            uiLanguage={draft.uiLanguage}
+            chatMessageCount={chatMessageCount}
+            chatBusy={chatBusy}
+            exportingChatHistory={chatHistory.exportingChatHistory}
+            importingChatHistory={chatHistory.importingChatHistory}
+            clearingChatHistory={chatHistory.clearingChatHistory}
+            chatHistoryStatus={chatHistory.chatHistoryStatus}
+            currentSessionId={currentChatSessionId}
+            onExportChatHistory={() => void chatHistory.handleExportChatHistory()}
+            onImportChatHistory={() => void chatHistory.handleImportChatHistory()}
+            onClearChatHistory={() => void chatHistory.handleClearChatHistory()}
+          />
+        )
+      case 'memory':
+        return (
+          <MemorySection
+            active
+            draft={draft}
+            platformProfile={platformProfile}
+            setDraft={setDraft}
+            memories={memories}
+            dailyMemoryEntries={dailyMemoryEntries}
+            uiLanguage={uiLanguage}
+            memorySearchModeOptions={memorySearchModeOptions}
+            selectedMemorySearchMode={selectedMemorySearchMode}
+            exportingMemoryArchive={memoryArchive.exportingMemoryArchive}
+            importingMemoryArchive={memoryArchive.importingMemoryArchive}
+            clearingMemoryArchive={memoryArchive.clearingMemoryArchive}
+            chatBusy={chatBusy}
+            memoryArchiveStatus={memoryArchive.memoryArchiveStatus}
+            onExportMemoryArchive={() => void memoryArchive.handleExportMemoryArchive()}
+            onImportMemoryArchive={() => void memoryArchive.handleImportMemoryArchive()}
+            onClearMemoryArchive={() => void memoryArchive.handleClearMemoryArchive()}
+            onAddManualMemory={onAddManualMemory}
+            onUpdateMemory={onUpdateMemory}
+            onRemoveMemory={onRemoveMemory}
+            onClearDailyMemory={onClearDailyMemory}
+            onUpdateDailyEntry={onUpdateDailyEntry}
+            onRemoveDailyEntry={onRemoveDailyEntry}
+          />
+        )
+      case 'lorebooks':
+        return (
+          <LorebooksSection
+            active
+            uiLanguage={draft.uiLanguage}
+          />
+        )
+      case 'voice':
+        return (
+          <>
+            <VoiceSection
+              active
+              audioSmokeStatus={speechVoices.audioSmokeStatus}
+              draft={draft}
+              onRunAudioSmokeTest={() => void speechVoices.handleRunAudioSmokeTest()}
+              previewingSpeech={speechVoices.previewingSpeech}
+              runningAudioSmoke={speechVoices.runningAudioSmoke}
+              setDraft={setDraft}
+              platformProfile={platformProfile}
+              testingTarget={connectionTests.testingTarget}
+              uiLanguage={uiLanguage}
+            />
+
+            <SpeechInputSection
+              active
+              draft={draft}
+              platformProfile={platformProfile}
+              setDraft={setDraft}
+              testingTarget={connectionTests.testingTarget}
+              onRunSpeechInputConnectionTest={() => void connectionTests.runConnectionTest('speech-input')}
+              renderSpeechInputTestResult={() => connectionTests.renderTestResult('speech-input')}
+            />
+
+            <SpeechOutputSection
+              active
+              draft={draft}
+              setDraft={setDraft}
+              speechVoiceOptions={speechVoices.speechVoiceOptions}
+              speechVoiceStatus={speechVoices.speechVoiceStatus}
+              loadingSpeechVoices={speechVoices.loadingSpeechVoices}
+              speechPreviewText={speechVoices.speechPreviewText}
+              setSpeechPreviewText={speechVoices.setSpeechPreviewText}
+              speechPreviewStatus={speechVoices.speechPreviewStatus}
+              previewingSpeech={speechVoices.previewingSpeech}
+              testingTarget={connectionTests.testingTarget}
+              onApplySpeechOutputPreset={applySpeechOutputPreset}
+              onLoadSpeechVoices={() => void speechVoices.handleLoadSpeechVoices()}
+              onPreviewSpeech={() => void speechVoices.handlePreviewSpeech()}
+              onRunSpeechOutputConnectionTest={() => void connectionTests.runConnectionTest('speech-output')}
+              renderSpeechOutputTestResult={() => connectionTests.renderTestResult('speech-output')}
+            />
+          </>
+        )
+      case 'window':
+        return (
+          <WindowSection
+            active
+            draft={draft}
+            petWindowState={windowState.petWindowState}
+            setDraft={setDraft}
+            uiLanguage={uiLanguage}
+            updateWindowState={windowState.updateWindowState}
+            windowStatusMessage={windowState.windowStatusMessage}
+            launchOnStartupSupported={platformProfile.startup.supported}
+          />
+        )
+      case 'integrations':
+        return (
+          <IntegrationsSection
+            active
+            draft={draft}
+            setDraft={setDraft}
+            uiLanguage={uiLanguage}
+          />
+        )
+      case 'autonomy':
+        return (
+          <AutonomySection
+            active
+            draft={draft}
+            setDraft={setDraft}
+            uiLanguage={uiLanguage}
+            channels={notificationChannels}
+            channelsLoading={notificationChannelsLoading}
+            onAddChannel={onAddNotificationChannel}
+            onUpdateChannel={onUpdateNotificationChannel}
+            onRemoveChannel={onRemoveNotificationChannel}
+          />
+        )
+      case 'tools':
+        return (
+          <ToolsSection
+            active
+            draft={draft}
+            setDraft={setDraft}
+          />
+        )
+      case 'console':
+      default:
+        return (
+          <ConsoleSection
+            active
+            continuousVoiceActive={continuousVoiceActive}
+            debugConsoleEvents={debugConsoleEvents}
+            liveTranscript={liveTranscript}
+            onClearDebugConsole={onClearDebugConsole}
+            reminderTasks={reminderTasks}
+            speechLevel={speechLevel}
+            uiLanguage={uiLanguage}
+            voicePipeline={voicePipeline}
+            voiceState={voiceState}
+            voiceTrace={voiceTrace}
+          />
+        )
+    }
+  }
+
   if (!open) return null
 
   return (
-    <div className="settings-backdrop" onClick={handleDismiss}>
+    <div className={settingsBackdropClassName} onClick={handleDismiss}>
       <aside
-        className="settings-drawer"
+        className={settingsDrawerClassName}
         role="dialog"
         aria-modal="true"
         aria-label={ti('settings.panel', { name: settings.companionName })}
@@ -456,9 +692,11 @@ export function SettingsDrawer({
                             <span className="settings-drawer__language-menu-native">
                               {option.nativeLabel}
                             </span>
-                            <span className="settings-drawer__language-menu-meta">
-                              {option.englishLabel}
-                            </span>
+                            {option.nativeLabel !== option.englishLabel ? (
+                              <span className="settings-drawer__language-menu-meta">
+                                {option.englishLabel}
+                              </span>
+                            ) : null}
                           </button>
                         </li>
                       )
@@ -473,9 +711,33 @@ export function SettingsDrawer({
           </div>
         </div>
 
-        <div className="settings-drawer__body">
+        <div className="settings-drawer__body" ref={drawerBodyRef}>
           {settingsView === 'home' ? (
             <div className="settings-home">
+              <div className="settings-appearance-switch" role="group" aria-label={ti('settings.appearance.label')}>
+                <span className="settings-appearance-switch__label">{ti('settings.appearance.label')}</span>
+                <div className="settings-appearance-switch__control">
+                  {SETTINGS_APPEARANCE_OPTIONS.map((option) => {
+                    const isActive = option.tone === settingsThemeTone
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`settings-appearance-switch__option ${isActive ? 'is-active' : ''}`}
+                        aria-pressed={isActive}
+                        onClick={() => {
+                          setDraft((prev) => ({
+                            ...prev,
+                            themeId: option.id,
+                          }))
+                        }}
+                      >
+                        {ti(option.labelKey)}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
               {settingsHomeCards.map((card) => (
                 <button
                   key={card.key}
@@ -489,16 +751,11 @@ export function SettingsDrawer({
                   </span>
                   <span className="settings-home-card__label">{card.title}</span>
                   <span className="settings-home-card__value">{card.preview[0] ?? ''}</span>
-                  <span className="settings-home-card__chevron" aria-hidden="true">
-                    <svg width="8" height="13" viewBox="0 0 8 13" fill="none">
-                      <path d="M1 1l5.5 5.5L1 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
                 </button>
               ))}
             </div>
           ) : (
-            <div className="settings-page">
+            <div className="settings-page" data-section={activeSectionId}>
               <div className="settings-page__header">
                 <button type="button" className="settings-page__back" onClick={handleReturnToSettingsHome}>
                   <span aria-hidden="true">{'<'}</span>
@@ -506,181 +763,22 @@ export function SettingsDrawer({
                 </button>
 
                 <div className="settings-page__headline">
-                  <p className="eyebrow">{activeSectionMeta.eyebrow}</p>
+                  {activeSectionMeta.eyebrow ? (
+                    <p className="eyebrow">{activeSectionMeta.eyebrow}</p>
+                  ) : null}
                   <h4>{activeSectionLabel}</h4>
-                  <p className="settings-section__note">{activeSectionDescription}</p>
+                  {activeSectionDescription ? (
+                    <p className="settings-section__note">{activeSectionDescription}</p>
+                  ) : null}
                 </div>
 
+                <span className="settings-page__mark" aria-hidden="true">
+                  {renderSettingsCardIcon(activeSectionMeta.glyph)}
+                </span>
               </div>
 
-              <div className="settings-drawer__content settings-drawer__sections">
-
-        <ConsoleSection
-          active={activeSectionId === 'console'}
-          continuousVoiceActive={continuousVoiceActive}
-          debugConsoleEvents={debugConsoleEvents}
-          liveTranscript={liveTranscript}
-          onClearDebugConsole={onClearDebugConsole}
-          reminderTasks={reminderTasks}
-          speechLevel={speechLevel}
-          uiLanguage={uiLanguage}
-          voicePipeline={voicePipeline}
-          voiceState={voiceState}
-          voiceTrace={voiceTrace}
-          subagentTasks={subagentTasks}
-        />
-
-        <ModelSection
-          active={activeSectionId === 'model'}
-          draft={draft}
-          setDraft={setDraft}
-          testingTarget={connectionTests.testingTarget}
-          textProvider={textProvider}
-          uiLanguage={uiLanguage}
-          onApplyTextProviderPreset={applyTextProviderPreset}
-          onRunTextConnectionTest={() => void connectionTests.runConnectionTest('text')}
-          renderTextTestResult={() => connectionTests.renderTestResult('text')}
-        />
-
-        <ChatSection
-          active={activeSectionId === 'chat'}
-          draft={draft}
-          setDraft={setDraft}
-          petModelPresets={petModelPresets}
-          importingPetModel={petModel_.importingPetModel}
-          petModelStatus={petModel_.petModelStatus}
-          onImportPetModel={() => void petModel_.handleImportPetModel()}
-        />
-
-        <HistorySection
-          active={activeSectionId === 'history'}
-          uiLanguage={draft.uiLanguage}
-          chatMessageCount={chatMessageCount}
-          chatBusy={chatBusy}
-          exportingChatHistory={chatHistory.exportingChatHistory}
-          importingChatHistory={chatHistory.importingChatHistory}
-          clearingChatHistory={chatHistory.clearingChatHistory}
-          chatHistoryStatus={chatHistory.chatHistoryStatus}
-          currentSessionId={currentChatSessionId}
-          onExportChatHistory={() => void chatHistory.handleExportChatHistory()}
-          onImportChatHistory={() => void chatHistory.handleImportChatHistory()}
-          onClearChatHistory={() => void chatHistory.handleClearChatHistory()}
-        />
-
-        <LorebooksSection
-          active={activeSectionId === 'lorebooks'}
-          uiLanguage={draft.uiLanguage}
-        />
-
-        <MemorySection
-          active={activeSectionId === 'memory'}
-          draft={draft}
-          setDraft={setDraft}
-          memories={memories}
-          dailyMemoryEntries={dailyMemoryEntries}
-          uiLanguage={uiLanguage}
-          memorySearchModeOptions={memorySearchModeOptions}
-          selectedMemorySearchMode={selectedMemorySearchMode}
-          selectedMemoryEmbeddingModel={selectedMemoryEmbeddingModel}
-          exportingMemoryArchive={memoryArchive.exportingMemoryArchive}
-          importingMemoryArchive={memoryArchive.importingMemoryArchive}
-          clearingMemoryArchive={memoryArchive.clearingMemoryArchive}
-          chatBusy={chatBusy}
-          memoryArchiveStatus={memoryArchive.memoryArchiveStatus}
-          onExportMemoryArchive={() => void memoryArchive.handleExportMemoryArchive()}
-          onImportMemoryArchive={() => void memoryArchive.handleImportMemoryArchive()}
-          onClearMemoryArchive={() => void memoryArchive.handleClearMemoryArchive()}
-          onAddManualMemory={onAddManualMemory}
-          onUpdateMemory={onUpdateMemory}
-          onRemoveMemory={onRemoveMemory}
-          onClearDailyMemory={onClearDailyMemory}
-          onUpdateDailyEntry={onUpdateDailyEntry}
-          onRemoveDailyEntry={onRemoveDailyEntry}
-        />
-
-        <VoiceSection
-          active={activeSectionId === 'voice'}
-          audioSmokeStatus={speechVoices.audioSmokeStatus}
-          draft={draft}
-          onRunAudioSmokeTest={() => void speechVoices.handleRunAudioSmokeTest()}
-          previewingSpeech={speechVoices.previewingSpeech}
-          runningAudioSmoke={speechVoices.runningAudioSmoke}
-          setDraft={setDraft}
-          testingTarget={connectionTests.testingTarget}
-          uiLanguage={uiLanguage}
-        />
-
-        <SpeechInputSection
-          active={activeSectionId === 'voice'}
-          draft={draft}
-          setDraft={setDraft}
-          testingTarget={connectionTests.testingTarget}
-          onRunSpeechInputConnectionTest={() => void connectionTests.runConnectionTest('speech-input')}
-          renderSpeechInputTestResult={() => connectionTests.renderTestResult('speech-input')}
-        />
-
-        <SpeechOutputSection
-          active={activeSectionId === 'voice'}
-          draft={draft}
-          setDraft={setDraft}
-          speechVoiceOptions={speechVoices.speechVoiceOptions}
-          speechVoiceStatus={speechVoices.speechVoiceStatus}
-          loadingSpeechVoices={speechVoices.loadingSpeechVoices}
-          speechPreviewText={speechVoices.speechPreviewText}
-          setSpeechPreviewText={speechVoices.setSpeechPreviewText}
-          speechPreviewStatus={speechVoices.speechPreviewStatus}
-          previewingSpeech={speechVoices.previewingSpeech}
-          testingTarget={connectionTests.testingTarget}
-          onApplySpeechOutputPreset={applySpeechOutputPreset}
-          onLoadSpeechVoices={() => void speechVoices.handleLoadSpeechVoices()}
-          onPreviewSpeech={() => void speechVoices.handlePreviewSpeech()}
-          onRunSpeechOutputConnectionTest={() => void connectionTests.runConnectionTest('speech-output')}
-          renderSpeechOutputTestResult={() => connectionTests.renderTestResult('speech-output')}
-        />
-
-        <WindowSection
-          active={activeSectionId === 'window'}
-          draft={draft}
-          petWindowState={windowState.petWindowState}
-          setDraft={setDraft}
-          uiLanguage={uiLanguage}
-          updateWindowState={windowState.updateWindowState}
-          windowStatusMessage={windowState.windowStatusMessage}
-        />
-
-        <IntegrationsSection
-          active={activeSectionId === 'integrations'}
-          draft={draft}
-          setDraft={setDraft}
-          uiLanguage={uiLanguage}
-        />
-
-        <AutonomySection
-          active={activeSectionId === 'autonomy'}
-          draft={draft}
-          setDraft={setDraft}
-          uiLanguage={uiLanguage}
-          channels={notificationChannels}
-          channelsLoading={notificationChannelsLoading}
-          onAddChannel={onAddNotificationChannel}
-          onUpdateChannel={onUpdateNotificationChannel}
-          onRemoveChannel={onRemoveNotificationChannel}
-        />
-
-        <ToolsSection
-          active={activeSectionId === 'tools'}
-          draft={draft}
-          setDraft={setDraft}
-        />
-
-        <ContextSection
-          active={activeSectionId === 'console'}
-          reminderTasks={reminderTasks}
-          uiLanguage={uiLanguage}
-          onAddReminderTask={onAddReminderTask}
-          onUpdateReminderTask={onUpdateReminderTask}
-          onRemoveReminderTask={onRemoveReminderTask}
-        />
+              <div className="settings-drawer__content settings-drawer__sections" ref={settingsSectionsRef}>
+                {renderActiveSettingsSection()}
               </div>
             </div>
           )}
@@ -708,4 +806,3 @@ export function SettingsDrawer({
     </div>
   )
 }
-

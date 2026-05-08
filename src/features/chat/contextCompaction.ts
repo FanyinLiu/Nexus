@@ -308,7 +308,12 @@ export function getModelTokenBudget(model: string): number {
   if (normalized.includes('claude-3-5') || normalized.includes('claude-3.5')) return 80_000
   if (normalized.includes('claude-3') || normalized.includes('claude-4')) return 80_000
   if (normalized.includes('claude')) return 60_000
-  if (normalized.includes('deepseek-v4')) return 200_000
+  if (normalized.includes('deepseek-v4') || normalized.includes('deepseek-chat') || normalized.includes('deepseek-reasoner')) return 200_000
+  if (normalized.includes('grok-4.3') || normalized.includes('grok-4.20')) return 200_000
+  if (normalized.includes('gemini-3') || normalized.includes('gemini-2.5')) return 200_000
+  if (normalized.includes('qwen3.6') || normalized.includes('qwen3.5') || normalized.includes('qwen3-coder')) return 200_000
+  if (normalized.includes('kimi-k2') || normalized.includes('mistral-medium-3-5') || normalized.includes('magistral') || normalized.includes('devstral')) return 200_000
+  if (normalized.includes('minimax-m2') || normalized.includes('glm-5') || normalized.includes('glm-4.7') || normalized.includes('seed-2')) return 200_000
   if (normalized.includes('deepseek')) return 28_000
   if (normalized.includes('qwen')) return 28_000
   if (normalized.includes('gemma') || normalized.includes('llama')) return 6_000

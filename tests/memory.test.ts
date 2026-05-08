@@ -74,6 +74,8 @@ test('extracts memories from user messages with self-referential patterns', () =
   assert.ok(memories.length >= 1, `expected at least 1 memory, got ${memories.length}`)
   assert.ok(memories.every((m) => m.id.startsWith('memory-')))
   assert.ok(memories.every((m) => m.source === 'chat'))
+  assert.ok(memories.every((m) => m.enabled === true))
+  assert.ok(memories.every((m) => m.kind))
 })
 
 test('ignores assistant messages', () => {
@@ -158,6 +160,16 @@ test('ranks relevant memories higher', () => {
   const ranked = rankMemories(memories, 'What is your cat name')
   // m3 mentions 'cat' and 'name'; m1 mentions 'cats' (partial); m2 is irrelevant
   assert.notEqual(ranked[0].id, 'm2')
+})
+
+test('rankMemories ignores disabled memories', () => {
+  const memories: MemoryItem[] = [
+    { id: 'm1', content: 'My cat is named Mimi', category: 'profile', source: 'chat', createdAt: '2026-01-01T00:00:00Z', enabled: false },
+    { id: 'm2', content: 'I live in Beijing city', category: 'profile', source: 'chat', createdAt: '2026-01-01T00:00:00Z' },
+  ]
+
+  const ranked = rankMemories(memories, 'cat name')
+  assert.equal(ranked.some((memory) => memory.id === 'm1'), false)
 })
 
 // ── getLocalDayKey ──

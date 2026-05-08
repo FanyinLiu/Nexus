@@ -21,7 +21,7 @@ import type {
   ChatMessage,
   MemoryRecallContext,
 } from '../../types'
-import { apiProviderRequiresApiKey, getApiProviderPreset } from '../../lib/apiProviders'
+import { apiProviderRequiresApiKey, getApiProviderPreset } from '../models/index.ts'
 import { getCoreRuntime } from '../../lib/coreRuntime'
 import { t } from '../../i18n/runtime.ts'
 import { executeWithFailover, type FailoverCandidate } from '../failover/orchestrator.ts'

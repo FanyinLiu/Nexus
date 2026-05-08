@@ -148,10 +148,10 @@ export function buildSettingsSectionMeta(input: BuildSettingsSectionMetaInput): 
       glyph: 'window',
       description: descriptions.window,
       preview: [
-        petModel?.label ? ti(petModel.label as TranslationKey) : ti('settings.preview.window.desktop_pet'),
         clickThroughEnabled
           ? ti('settings.preview.window.click_through_on')
           : ti('settings.preview.window.interactive'),
+        petModel?.label ? ti(petModel.label as TranslationKey) : ti('settings.preview.window.desktop_pet'),
       ],
     },
     integrations: {

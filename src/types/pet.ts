@@ -40,3 +40,20 @@ export type PetMood =
   | 'playful'      // high energy + high warmth + low concern — bouncy/teasing
 
 export type PetTouchZone = 'head' | 'face' | 'body'
+
+export type CompanionPresencePhase =
+  | 'online'
+  | 'thinking'
+  | 'speaking'
+  | 'listening'
+  | 'resting'
+  | 'waiting'
+  | 'error'
+
+export interface CompanionPresenceState {
+  phase: CompanionPresencePhase
+  mood: PetMood
+  activeTaskLabel?: string
+  reason?: string
+  updatedAt: string
+}

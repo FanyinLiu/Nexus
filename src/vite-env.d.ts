@@ -9,6 +9,7 @@ import type {
   AudioTranscriptionResponse,
   ChatCompletionRequest,
   ChatCompletionResponse,
+  ChatModelListRequest,
   DesktopContextRequest,
   DesktopContextSnapshot,
   ExternalLinkRequest,
@@ -20,12 +21,14 @@ import type {
   MediaSessionControlRequest,
   MediaSessionControlResponse,
   MediaSessionSnapshot,
+  PlatformProfile,
   TextFileOpenRequest,
   TextFileOpenResponse,
   TextFileSaveRequest,
   TextFileSaveResponse,
   PanelWindowState,
   PetWindowState,
+  ProviderHealthResult,
   ServiceConnectionRequest,
   ServiceConnectionResponse,
   WeatherLookupRequest,
@@ -235,6 +238,7 @@ declare global {
       updateRuntimeState: (state: Partial<RuntimeStateSnapshot>) => Promise<void>
       getLaunchOnStartup: () => Promise<boolean>
       setLaunchOnStartup: (value: boolean) => Promise<boolean>
+      getPlatformProfile: () => Promise<PlatformProfile>
       listPetModels: () => Promise<PetModelDefinition[]>
       importPetModel: () => Promise<{
         model: PetModelDefinition
@@ -257,6 +261,7 @@ declare global {
         apiKey: string
         model?: string
       }) => Promise<ServiceConnectionResponse>
+      listChatModels: (payload: ChatModelListRequest) => Promise<ProviderHealthResult>
       testServiceConnection: (payload: ServiceConnectionRequest) => Promise<ServiceConnectionResponse>
       probeLocalServices: (
         payload: LocalServiceProbeRequest[],
@@ -279,7 +284,7 @@ declare global {
       controlSystemMediaSession: (payload: MediaSessionControlRequest) => Promise<MediaSessionControlResponse>
 
       // Tencent Cloud Real-Time ASR
-      tencentAsrConnect: (payload: { appId: string; secretId: string; secretKey: string; engineModelType?: string; hotwordList?: string }) => Promise<{ state: string }>
+      tencentAsrConnect: (payload: { apiKey?: string; appId: string; secretId: string; secretKey: string; engineModelType?: string; hotwordList?: string }) => Promise<{ state: string }>
       tencentAsrDisconnect: () => Promise<{ ok: boolean }>
       tencentAsrFeed: (payload: { samples: number[] | Float32Array; sampleRate?: number }) => Promise<{ ok: boolean }>
       tencentAsrFinish: () => Promise<{ text: string }>
@@ -572,13 +577,13 @@ declare global {
       vadStop: () => Promise<{ ok: boolean }>
 
       // Realtime Voice (OpenAI Realtime API)
-      realtimeStart: (payload: RealtimeSessionOptions) => Promise<{ sessionId: string }>
-      realtimeStop: () => Promise<void>
-      realtimeFeed: (payload: { samples: number[] | Float32Array }) => Promise<{ ok: boolean }>
-      realtimeInterrupt: () => Promise<{ ok: boolean }>
-      realtimeSendText: (payload: { text: string }) => Promise<{ ok: boolean }>
-      realtimeState: () => Promise<{ state: 'idle' | 'connecting' | 'active' | 'error'; sessionId: string }>
-      subscribeRealtimeEvent: (listener: (event: RealtimeEvent) => void) => () => void
+      realtimeStart?: (payload: RealtimeSessionOptions) => Promise<{ sessionId: string }>
+      realtimeStop?: () => Promise<void>
+      realtimeFeed?: (payload: { samples: number[] | Float32Array }) => Promise<{ ok: boolean }>
+      realtimeInterrupt?: () => Promise<{ ok: boolean }>
+      realtimeSendText?: (payload: { text: string }) => Promise<{ ok: boolean }>
+      realtimeState?: () => Promise<{ state: 'idle' | 'connecting' | 'active' | 'error'; sessionId: string }>
+      subscribeRealtimeEvent?: (listener: (event: RealtimeEvent) => void) => () => void
 
       // Autonomy: system idle & power events
       /** Returns system idle time in seconds. */
@@ -587,6 +592,12 @@ declare global {
 
       // Autonomy: notification bridge
       getNotificationChannels: () => Promise<import('./types').NotificationChannel[]>
+      getNotificationWebhookInfo: () => Promise<{
+        url: string
+        token: string
+        authHeader: string
+        maxBodyBytes: number
+      }>
       setNotificationChannels: (channels: import('./types').NotificationChannel[]) => Promise<void>
       startNotificationBridge: () => Promise<void>
       stopNotificationBridge: () => Promise<void>

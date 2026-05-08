@@ -77,35 +77,23 @@ export const HistorySection = memo(function HistorySection({
 
   return (
     <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
-      <div className="settings-section__title-row">
-        <div>
-          <h4>{ti('settings.history.title')}</h4>
-          <p className="settings-drawer__hint">
-            {ti('settings.history.note')}
-          </p>
+      <div className="settings-control-grid">
+        <div className="settings-metric-card">
+          <span>{ti('settings.history.message_count')}</span>
+          <strong>{chatMessageCount}</strong>
+        </div>
+
+        <div className="settings-metric-card">
+          <span>{ti('settings.history.current_status')}</span>
+          <strong>{chatBusy ? ti('settings.history.replying') : ti('settings.history.idle')}</strong>
         </div>
       </div>
 
-      <div className="settings-grid">
-        <label>
-          <span>{ti('settings.history.message_count')}</span>
-          <input value={String(chatMessageCount)} readOnly />
-        </label>
-
-        <label>
-          <span>{ti('settings.history.current_status')}</span>
-          <input
-            value={chatBusy ? ti('settings.history.replying') : ti('settings.history.idle')}
-            readOnly
-          />
-        </label>
-      </div>
-
-      <p className="settings-drawer__hint">
+      <p className="settings-mini-group__note">
         {ti('settings.history.hint')}
       </p>
 
-      <div className="settings-section__title-row">
+      <div className="settings-action-row">
         <button
           type="button"
           className="ghost-button"
@@ -146,7 +134,7 @@ export const HistorySection = memo(function HistorySection({
         </div>
       ) : null}
 
-      <div className="settings-section__title-row" style={{ marginTop: 24 }}>
+      <div className="settings-section__title-row settings-section__title-row--compact">
         <div>
           <h4>{ti('settings.history.archived_title')}</h4>
           <p className="settings-drawer__hint">

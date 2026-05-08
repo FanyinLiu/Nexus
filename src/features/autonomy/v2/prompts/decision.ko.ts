@@ -30,27 +30,6 @@ Valid shapes:
     텍스트도, 말풍선도, TTS도 없이, 데스크톱 한쪽에서 작은 동작 하나(기지개, 하품, 살짝 고개 갸우뚱)만.
     한 번에 모션 하나만. 말하고 싶은 이유가 조금이라도 있다면 speak를 사용하세요.`,
 
-  responseContractSpawn: `  {"action": "spawn", "task": "...", "purpose": "...", "announcement": "..."}
-
-    Use this when the user would genuinely benefit from you doing
-    something behind the scenes — looking a fact up, checking a site,
-    summarising a doc they mentioned. A background helper agent runs
-    the task and returns a summary to the chat when done.
-
-    - task: a clear natural-language instruction for the helper. Be
-      specific ("오늘 밤 서울 날씨를 기온과 강수 확률 포함해서 확인"), not
-      vague ("뭐 좀 알아봐").
-    - purpose: one short sentence the user sees, explaining why you're
-      doing this now. Stay in character.
-    - announcement: OPTIONAL. If you want to verbally acknowledge it
-      ("잠깐 찾아볼게요" / "조금만 기다려주세요"), put it here — it will be
-      spoken in your voice. Omit when silent dispatch feels more natural.
-      Keep it short.
-
-    Only spawn when the task clearly helps. Don't spawn to fill air, don't
-    spawn when you can just answer from context, don't spawn for things the
-    user can answer faster themselves.`,
-
   responseContractTail: `Anything else in the response — reasoning, apology, self-narration, multi-
 line commentary — will be discarded and treated as silent. So don't.`,
 
@@ -120,15 +99,6 @@ line commentary — will be discarded and treated as silent. So don't.`,
   sectionLastUtteranceHeader: '## 지난번 당신이 자발적으로 말했을 때',
   sectionLastUtteranceTail:
     '같은 주제를 곧바로 다시 꺼내지 마세요 — 주인이 아직 소화하지 못했을 수 있습니다.',
-
-  sectionSubagentHeader: '## 백그라운드 작업 상태',
-  subagentCapacityLine: (active, max) => `백그라운드 서브에이전트 점유: ${active}/${max}`,
-  subagentBudgetLine: (remaining) =>
-    remaining !== null ? `오늘 남은 예산: $${remaining.toFixed(2)}` : '오늘 예산: 상한 없음',
-  subagentCautionNearCapacity:
-    '동시 실행 한도에 가깝습니다. 분명한 이득이 있을 때만 spawn 하세요.',
-  subagentCautionLowBudget:
-    '예산이 빠듯합니다. 가치 있는 작업이 아니면 spawn 하지 마세요.',
 
   forceSilentOverride:
     '# Override\n\n이번 tick 은 상류에서 강제로 silent 처리되었습니다. 어떻게 판단하든 반드시 {"action": "silent"} 를 반환하세요.',

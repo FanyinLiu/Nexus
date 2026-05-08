@@ -2,12 +2,15 @@ import assert from 'node:assert/strict'
 import { before, describe, test } from 'node:test'
 
 import { humanizeError } from '../src/lib/humanizeError.ts'
-import { setLocale } from '../src/i18n/runtime.ts'
+import { ensureLocaleLoaded, setLocale } from '../src/i18n/runtime.ts'
 
 // Force English so the regex assertions below are deterministic. The
 // production code path picks the user's actual locale; this test just
 // verifies the dispatcher logic + fallbacks regardless of language.
-before(() => { setLocale('en-US') })
+before(async () => {
+  await ensureLocaleLoaded('en-US')
+  setLocale('en-US')
+})
 
 describe('humanizeError — common patterns', () => {
   test('401 errors become friendly auth-failed message', () => {

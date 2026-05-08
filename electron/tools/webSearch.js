@@ -1,6 +1,7 @@
 import { performNetworkRequest, readJsonSafe, extractResponseErrorMessage, readTextSafe } from '../net.js'
 import { collectSearchContentBodyLines, extractPagePreviewFromHtml } from '../searchContentExtract.js'
 import { tryLookupLyricsSearch } from '../lyricsSearch.js'
+import { checkUrlSafetyWithDns } from '../services/urlSafety.js'
 import {
   buildAnswerDisplaySummary,
   buildSearchPlanSignals,
@@ -15,6 +16,7 @@ import {
 import { runWebSearchWithProviders } from '../webSearchRuntime.js'
 
 const TOOL_SEARCH_TIMEOUT_MS = 12_000
+const SEARCH_PREVIEW_MAX_REDIRECTS = 4
 
 function decodeXmlEntities(value) {
   return String(value ?? '')
@@ -258,20 +260,38 @@ function isValidHttpUrl(urlString) {
   }
 }
 
-function isInternalUrl(urlString) {
-  try {
-    const url = new URL(urlString)
-    const hostname = url.hostname.toLowerCase()
-    const blockedHostnames = [
-      'localhost', '127.0.0.1', '0.0.0.0',
-      '::1', '10.', '192.168.', '172.16.', '172.17.', '172.18.', '172.19.',
-      '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.',
-      '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.'
-    ]
-    return blockedHostnames.some(h => hostname === h || hostname.startsWith(h))
-  } catch {
-    return true
+async function fetchSearchPreviewResponse(rawUrl) {
+  let currentUrl = String(rawUrl ?? '').trim()
+
+  for (let redirectCount = 0; redirectCount <= SEARCH_PREVIEW_MAX_REDIRECTS; redirectCount += 1) {
+    const safety = await checkUrlSafetyWithDns(currentUrl, { allowHttp: true })
+    if (!safety.ok) {
+      throw new Error(safety.reason)
+    }
+
+    const response = await performNetworkRequest(currentUrl, {
+      method: 'GET',
+      redirect: 'manual',
+      timeoutMs: Math.min(TOOL_SEARCH_TIMEOUT_MS, 5000),
+      timeoutMessage: '正文抓取超时。',
+      headers: {
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+      },
+    })
+
+    if (![301, 302, 303, 307, 308].includes(response.status)) {
+      return response
+    }
+
+    const location = String(response.headers.get('location') ?? '').trim()
+    if (!location) {
+      throw new Error(`redirect (${response.status}) missing Location header`)
+    }
+
+    currentUrl = new URL(location, currentUrl).toString()
   }
+
+  throw new Error(`too many redirects (>${SEARCH_PREVIEW_MAX_REDIRECTS})`)
 }
 
 function rerankSearchItems(items, query, options = {}) {
@@ -290,19 +310,12 @@ function rerankSearchItems(items, query, options = {}) {
 
 
 async function fetchSearchPreviewForItem(item, query) {
-  if (!isValidHttpUrl(item.url) || isInternalUrl(item.url)) {
+  if (!isValidHttpUrl(item.url)) {
     return item
   }
 
   try {
-    const response = await performNetworkRequest(item.url, {
-      method: 'GET',
-      timeoutMs: Math.min(TOOL_SEARCH_TIMEOUT_MS, 5000),
-      timeoutMessage: '正文抓取超时。',
-      headers: {
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-      },
-    })
+    const response = await fetchSearchPreviewResponse(item.url)
 
     if (!response.ok) {
       return item

@@ -13,7 +13,6 @@ import type {
   VoiceState,
   VoiceTraceEntry,
 } from '../../types'
-import type { SubagentTask } from '../../types/subagent'
 import {
   buildConsoleEventClusters,
   formatConsoleTimestamp,
@@ -27,7 +26,6 @@ import { AboutPanel } from './AboutPanel'
 import { CostHistoryPanel } from './CostHistoryPanel'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { StateTimelinePanel } from './StateTimelinePanel'
-import { SubagentHistoryPanel } from './SubagentHistoryPanel'
 import { UpdaterPanel } from './UpdaterPanel'
 import { WeeklyRecapPanel } from './WeeklyRecapPanel'
 import { AgentTracePanel } from '../AgentTracePanel'
@@ -55,9 +53,6 @@ type ConsoleSectionProps = {
   emotionState?: EmotionSnapshot
   memoryCount?: number
   autonomyPhase?: string
-  /** Subagent task list for the recent-history panel. Optional so callers
-   * that don't yet thread it (existing tests, story setups) keep working. */
-  subagentTasks?: SubagentTask[]
 }
 
 export const ConsoleSection = memo(function ConsoleSection({
@@ -74,7 +69,6 @@ export const ConsoleSection = memo(function ConsoleSection({
   emotionState,
   memoryCount,
   autonomyPhase,
-  subagentTasks,
 }: ConsoleSectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const enabledReminderCount = reminderTasks.filter((task) => task.enabled).length
@@ -111,29 +105,6 @@ export const ConsoleSection = memo(function ConsoleSection({
   else if (budgetSnapshot.shouldDowngrade) budgetCapNote = ` · ${ti('settings.console.downgraded')}`
   return (
     <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
-      <div className="settings-section__title-row">
-        <div>
-          <h4>{ti('settings.console.title')}</h4>
-          <p className="settings-drawer__hint">{ti('settings.console.note')}</p>
-        </div>
-        <button
-          type="button"
-          className="ghost-button"
-          onClick={onClearDebugConsole}
-          disabled={!debugConsoleEvents.length}
-        >
-          {ti('settings.console.clear')}
-        </button>
-      </div>
-
-      <UpdaterPanel uiLanguage={uiLanguage} />
-      <AboutPanel uiLanguage={uiLanguage} />
-      <WeeklyRecapPanel uiLanguage={uiLanguage} />
-      <DiagnosticsPanel />
-      <StateTimelinePanel />
-      <CostHistoryPanel />
-      <SubagentHistoryPanel tasks={subagentTasks ?? []} />
-
       <div className="settings-console-grid">
         <article className="settings-console-card settings-console-card--primary">
           <div className="settings-console-card__header">
@@ -204,9 +175,34 @@ export const ConsoleSection = memo(function ConsoleSection({
         </article>
       </div>
 
+      <UpdaterPanel uiLanguage={uiLanguage} />
+
       {/* ── Collapsible detail sections ──────────────────────────────────── */}
       <div className="settings-console-sections">
-        <details className="settings-console-section" open>
+        <details className="settings-console-section">
+          <summary className="settings-console-section__header">
+            <div>
+              <h5>{ti('settings.console.about_recap')}</h5>
+              <p className="settings-section__note">{ti('settings.console.about_recap_note')}</p>
+            </div>
+          </summary>
+          <AboutPanel uiLanguage={uiLanguage} />
+          <WeeklyRecapPanel uiLanguage={uiLanguage} />
+        </details>
+
+        <details className="settings-console-section settings-console-advanced-debug">
+          <summary className="settings-console-section__header">
+            <div>
+              <h5>{ti('settings.console.advanced_diagnostics')}</h5>
+              <p className="settings-section__note">{ti('settings.console.advanced_diagnostics_note')}</p>
+            </div>
+          </summary>
+          <DiagnosticsPanel />
+          <StateTimelinePanel />
+          <CostHistoryPanel />
+        </details>
+
+        <details className="settings-console-section">
           <summary className="settings-console-section__header">
             <div>
               <h5>{ti('settings.console.recent_voice_turns')}</h5>
@@ -233,7 +229,7 @@ export const ConsoleSection = memo(function ConsoleSection({
           </div>
         </details>
 
-        <details className="settings-console-section" open>
+        <details className="settings-console-section">
           <summary className="settings-console-section__header">
             <div>
               <h5>{ti('settings.console.event_summaries')}</h5>
@@ -241,6 +237,17 @@ export const ConsoleSection = memo(function ConsoleSection({
             </div>
             <span className="settings-console-section__meta">{consoleEventClusters.length || 0} {ti('settings.console.groups')}</span>
           </summary>
+          {debugConsoleEvents.length > 0 ? (
+            <div className="settings-console-section__actions">
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={onClearDebugConsole}
+              >
+                {ti('settings.console.clear')}
+              </button>
+            </div>
+          ) : null}
           <div className="settings-console-list">
             {consoleEventClusters.length ? consoleEventClusters.map((cluster) => (
               <article

@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getAnalyticsConsent, track } from '../../features/analytics'
 import {
   AVAILABLE_LOCALES,
   I18nContext,
+  ensureLocaleLoaded,
+  isLocaleLoaded,
   normalizeLocale,
   setLocale as setGlobalLocale,
   t,
@@ -18,9 +20,28 @@ export function I18nProvider({ children }: I18nProviderProps) {
   const localeHydratedRef = useRef(false)
   const [locale, setLocaleState] = useState<AppLocale>(() => {
     const normalizedLocale = normalizeLocale(getSettingsSnapshot().uiLanguage)
-    setGlobalLocale(normalizedLocale)
-    return normalizedLocale
+    if (isLocaleLoaded(normalizedLocale)) {
+      setGlobalLocale(normalizedLocale)
+      return normalizedLocale
+    }
+
+    setGlobalLocale('zh-CN')
+    return 'zh-CN'
   })
+
+  const requestLocale = useCallback((nextLocale: AppLocale) => {
+    const normalizedLocale = normalizeLocale(nextLocale)
+    void ensureLocaleLoaded(normalizedLocale)
+      .then(() => {
+        setGlobalLocale(normalizedLocale)
+        setLocaleState((currentLocale) => (
+          currentLocale === normalizedLocale ? currentLocale : normalizedLocale
+        ))
+      })
+      .catch((error) => {
+        console.error('[i18n] Failed to load locale:', normalizedLocale, error)
+      })
+  }, [])
 
   useEffect(() => {
     setGlobalLocale(locale)
@@ -48,23 +69,19 @@ export function I18nProvider({ children }: I18nProviderProps) {
   useEffect(() => {
     return subscribeToSettings((settings) => {
       const nextLocale = normalizeLocale(settings.uiLanguage)
-      setGlobalLocale(nextLocale)
-      setLocaleState((currentLocale) => (
-        currentLocale === nextLocale ? currentLocale : nextLocale
-      ))
+      requestLocale(nextLocale)
     })
-  }, [])
+  }, [requestLocale])
 
   const value = useMemo<I18nContextValue>(() => ({
     locale,
     setLocale: (nextLocale) => {
       const normalizedLocale = normalizeLocale(nextLocale)
-      setGlobalLocale(normalizedLocale)
-      setLocaleState(normalizedLocale)
+      requestLocale(normalizedLocale)
     },
     t: (key, params) => t(key, params, locale),
     availableLocales: AVAILABLE_LOCALES,
-  }), [locale])
+  }), [locale, requestLocale])
 
   return (
     <I18nContext.Provider value={value}>

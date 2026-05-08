@@ -28,3 +28,4 @@ export type {
   BackgroundTaskStatus,
   BackgroundTaskListener,
 } from './backgroundTaskStore'
+export { agentTraceToTaskRunLog } from '../tasks/index.ts'

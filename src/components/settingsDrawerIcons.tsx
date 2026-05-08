@@ -5,7 +5,7 @@ export function renderSettingsCardIcon(iconKey: string): ReactNode {
     case 'console':
       return (
         <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M4 8a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Zm6.3 3.3a1 1 0 0 0-1.4 1.4L12.2 16l-3.3 3.3a1 1 0 0 0 1.4 1.4l4-4a1 1 0 0 0 0-1.4l-4-4ZM16 19a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-6Z" />
+          <path fill="currentColor" d="M16 4a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm5.74 8.88-6.6 7.44a1.25 1.25 0 0 1-1.83.05l-3.1-3.1a1.25 1.25 0 1 1 1.76-1.77l2.16 2.16 5.74-6.47a1.25 1.25 0 0 1 1.87 1.66Z" />
         </svg>
       )
     case 'model':

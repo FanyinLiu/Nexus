@@ -17,8 +17,13 @@ import {
   switchSpeechInputProvider,
   updateCurrentSpeechInputProviderProfile,
 } from '../../lib/speechProviderProfiles'
+import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge'
+import {
+  getPlatformDependencyHint,
+  isVoiceSpeechInputAvailable,
+} from '../../lib/platformProfile'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
-import type { AppSettings, ServiceConnectionCapability, TranslationKey } from '../../types'
+import type { AppSettings, PlatformProfile, ServiceConnectionCapability, TranslationKey } from '../../types'
 import { UrlInput } from './UrlInput'
 
 const speechInputSelectOptions = SPEECH_INPUT_PROVIDERS
@@ -28,6 +33,7 @@ const speechInputSelectOptions = SPEECH_INPUT_PROVIDERS
 type SpeechInputSectionProps = {
   active: boolean
   draft: AppSettings
+  platformProfile: PlatformProfile
   setDraft: Dispatch<SetStateAction<AppSettings>>
   testingTarget: ServiceConnectionCapability | null
   onRunSpeechInputConnectionTest: () => void
@@ -37,6 +43,7 @@ type SpeechInputSectionProps = {
 export const SpeechInputSection = memo(function SpeechInputSection({
   active,
   draft,
+  platformProfile,
   setDraft,
   testingTarget,
   onRunSpeechInputConnectionTest,
@@ -44,6 +51,24 @@ export const SpeechInputSection = memo(function SpeechInputSection({
 }: SpeechInputSectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
+  const tiParam = (
+    key: Parameters<typeof pickTranslatedUiText>[1],
+    params: Parameters<typeof pickTranslatedUiText>[2],
+  ) => pickTranslatedUiText(draft.uiLanguage, key, params)
+  const speechInputAvailable = isVoiceSpeechInputAvailable(platformProfile)
+  const speechInputPlatformReason = getPlatformDependencyHint(
+    platformProfile,
+    platformProfile.voice.speechInputSupported,
+    platformProfile.voice.speechInputAvailable,
+    platformProfile.voice.dependencyHint,
+  )
+  const speechInputPlatformHint = speechInputPlatformReason === 'unsupported'
+    ? ti('settings.platform.unsupported')
+    : speechInputPlatformReason === 'unavailable'
+      ? ti('settings.platform.unavailable')
+      : speechInputPlatformReason
+        ? tiParam('settings.platform.unavailable_dependency', { dependency: speechInputPlatformReason })
+        : null
   const speechInputProvider = getSpeechInputProviderPreset(draft.speechInputProviderId)
   const speechInputModelOptions = getSpeechInputModelOptions(draft.speechInputProviderId)
   const isSenseVoiceSpeechInput = isSenseVoiceSpeechInputProvider(draft.speechInputProviderId)
@@ -51,7 +76,11 @@ export const SpeechInputSection = memo(function SpeechInputSection({
   const isVolcengineSpeechInput = isVolcengineSpeechInputProvider(draft.speechInputProviderId)
   const showSpeechInputBaseUrl = !isLocalSpeechInput || !!speechInputProvider.baseUrl
   const showSpeechInputCredentials = !isLocalSpeechInput
-  const speechInputVolcengineCredentials = parseVolcengineCredentialParts(draft.speechInputApiKey)
+  const speechInputApiKeyIsVaultRef = isVaultRefString(draft.speechInputApiKey)
+  const speechInputApiKeyInputValue = displaySecretInputValue(draft.speechInputApiKey)
+  const speechInputVolcengineCredentials = speechInputApiKeyIsVaultRef
+    ? ({ appId: '', accessToken: '' } satisfies VolcengineCredentialParts)
+    : parseVolcengineCredentialParts(draft.speechInputApiKey)
   const speechInputModelLabel = isSenseVoiceSpeechInput
     ? ti('settings.speech_input.sense_voice_model')
     : ti('settings.speech_input.model')
@@ -88,13 +117,17 @@ export const SpeechInputSection = memo(function SpeechInputSection({
           type="button"
           className="ghost-button"
           onClick={onRunSpeechInputConnectionTest}
-          disabled={testingTarget === 'speech-input'}
+          disabled={testingTarget === 'speech-input' || !speechInputAvailable}
         >
           {testingTarget === 'speech-input'
             ? ti('settings.speech_input.testing')
             : ti('settings.speech_input.test')}
         </button>
       </div>
+
+      {speechInputPlatformHint ? (
+        <p className="settings-drawer__hint">{speechInputPlatformHint}</p>
+      ) : null}
 
       <label>
         <span>{ti('settings.speech_input.provider')}</span>
@@ -139,6 +172,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
               <span>{ti('settings.speech_input.volcengine_app_id')}</span>
               <input
                 value={speechInputVolcengineCredentials.appId}
+                placeholder={speechInputApiKeyIsVaultRef ? '********' : undefined}
                 onChange={(event) =>
                   updateSpeechInputVolcengineCredential({
                     appId: event.target.value,
@@ -152,6 +186,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
               <input
                 type="password"
                 value={speechInputVolcengineCredentials.accessToken}
+                placeholder={speechInputApiKeyIsVaultRef ? '********' : undefined}
                 onChange={(event) =>
                   updateSpeechInputVolcengineCredential({
                     accessToken: event.target.value,
@@ -170,7 +205,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
           <span>{ti('settings.speech_input.api_key')}</span>
           <input
             type="password"
-            value={draft.speechInputApiKey}
+            value={speechInputApiKeyInputValue}
             onChange={(event) =>
               setDraft((prev) => updateCurrentSpeechInputProviderProfile(prev, {
                 apiKey: event.target.value,

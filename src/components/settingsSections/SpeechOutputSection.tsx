@@ -22,6 +22,7 @@ import {
 } from '../../lib/audioProviders'
 import { SPEECH_OUTPUT_PROVIDERS } from '../../lib/providerCatalog'
 import { updateCurrentSpeechOutputProviderProfile } from '../../lib/speechProviderProfiles'
+import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type {
   AppSettings,
@@ -128,7 +129,11 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
   const isEdgeTtsSpeechOutput = isEdgeTtsSpeechOutputProvider(draft.speechOutputProviderId)
   const hideApiCredentials = isSpeechOutputKeyless(draft.speechOutputProviderId)
   const showCustomVoiceInput = supportsCustomSpeechOutputVoiceId(draft.speechOutputProviderId)
-  const speechOutputVolcengineCredentials = parseVolcengineCredentialParts(draft.speechOutputApiKey)
+  const speechOutputApiKeyIsVaultRef = isVaultRefString(draft.speechOutputApiKey)
+  const speechOutputApiKeyInputValue = displaySecretInputValue(draft.speechOutputApiKey)
+  const speechOutputVolcengineCredentials = speechOutputApiKeyIsVaultRef
+    ? ({ appId: '', accessToken: '' } satisfies VolcengineCredentialParts)
+    : parseVolcengineCredentialParts(draft.speechOutputApiKey)
   const speechOutputModelLabel = isVolcengineSpeechOutput
     ? ti('settings.speech_output.cluster')
     : ti('settings.speech_output.model')
@@ -213,6 +218,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
               <span>{ti('settings.speech_output.volcengine_app_id')}</span>
               <input
                 value={speechOutputVolcengineCredentials.appId}
+                placeholder={speechOutputApiKeyIsVaultRef ? '********' : undefined}
                 onChange={(event) =>
                   updateSpeechOutputVolcengineCredential({
                     appId: event.target.value,
@@ -226,6 +232,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
               <input
                 type="password"
                 value={speechOutputVolcengineCredentials.accessToken}
+                placeholder={speechOutputApiKeyIsVaultRef ? '********' : undefined}
                 onChange={(event) =>
                   updateSpeechOutputVolcengineCredential({
                     accessToken: event.target.value,
@@ -244,7 +251,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
           <span>{ti('settings.speech_output.api_key')}</span>
           <input
             type="password"
-            value={draft.speechOutputApiKey}
+            value={speechOutputApiKeyInputValue}
             onChange={(event) =>
               setDraft((prev) => updateCurrentSpeechOutputProviderProfile(prev, {
                 apiKey: event.target.value,

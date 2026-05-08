@@ -16,6 +16,7 @@ import {
   dragWindowBy,
   getViewKind,
   probeLocalServiceTarget,
+  getPlatformProfile,
 } from '../windowManager.js'
 import {
   listAvailablePetModels,
@@ -36,6 +37,19 @@ import {
 } from '../mediaSessionRuntime.js'
 import { inspectIntegrationRuntime } from '../integrationRuntime.js'
 import { requireTrustedSender } from './validate.js'
+import {
+  validateDesktopContextRequestPayload,
+  validateExternalLinkToolPayload,
+  validateMediaSessionControlPayload,
+  validateOpenPanelPayload,
+  validatePanelWindowStatePayload,
+  validatePetWindowStatePayload,
+  validateRuntimeHeartbeatPayload,
+  validateRuntimeStateUpdatePayload,
+  validateWeatherToolPayload,
+  validateWebSearchToolPayload,
+  validateWindowDragPayload,
+} from './payloadSchemas.js'
 
 export function register() {
   ipcMain.handle('pet-window:get-state', (event) => {
@@ -45,11 +59,13 @@ export function register() {
 
   ipcMain.handle('pet-window:update-state', (event, state) => {
     requireTrustedSender(event)
+    state = validatePetWindowStatePayload(state)
     return updatePetWindowState(state)
   })
 
   ipcMain.handle('window:open-panel', (event, section) => {
     requireTrustedSender(event)
+    section = validateOpenPanelPayload(section)
     showPanelWindow(section)
   })
 
@@ -71,11 +87,13 @@ export function register() {
 
   ipcMain.handle('panel-window:set-state', (event, state) => {
     requireTrustedSender(event)
+    state = validatePanelWindowStatePayload(state)
     return updatePanelWindowState(state)
   })
 
   ipcMain.handle('window:drag-by', (event, delta) => {
     requireTrustedSender(event)
+    delta = validateWindowDragPayload(delta)
     dragWindowBy(event, delta)
   })
 
@@ -91,7 +109,8 @@ export function register() {
 
   ipcMain.handle('runtime-state:heartbeat', (event, payload) => {
     requireTrustedSender(event)
-    const view = payload?.view === 'panel' ? 'panel' : 'pet'
+    payload = validateRuntimeHeartbeatPayload(payload)
+    const view = payload.view
     // Pass the sender's webContents id so syncRuntimeState skips rebroadcasting
     // to this exact window — origin already has the new state and bouncing it
     // back to React causes the self-feeding render loop (see windowManager
@@ -102,6 +121,7 @@ export function register() {
 
   ipcMain.handle('runtime-state:update', (event, partialState) => {
     requireTrustedSender(event)
+    partialState = validateRuntimeStateUpdatePayload(partialState)
     updateRuntimeState(partialState, event.sender.id)
   })
 
@@ -113,6 +133,11 @@ export function register() {
   ipcMain.handle('app:set-launch-on-startup', (event, value) => {
     requireTrustedSender(event)
     return setLaunchOnStartupState(Boolean(value))
+  })
+
+  ipcMain.handle('app:get-platform-profile', (event) => {
+    requireTrustedSender(event)
+    return getPlatformProfile()
   })
 
   ipcMain.handle('pet-model:list', async (event) => {
@@ -152,21 +177,25 @@ export function register() {
 
   ipcMain.handle('tool:web-search', async (event, payload = {}) => {
     requireTrustedSender(event)
+    payload = validateWebSearchToolPayload(payload)
     return invokeRegisteredTool(event, 'web_search', payload)
   })
 
   ipcMain.handle('tool:get-weather', async (event, payload = {}) => {
     requireTrustedSender(event)
+    payload = validateWeatherToolPayload(payload)
     return invokeRegisteredTool(event, 'weather_lookup', payload)
   })
 
   ipcMain.handle('tool:open-external', async (event, payload = {}) => {
     requireTrustedSender(event)
+    payload = validateExternalLinkToolPayload(payload)
     return invokeRegisteredTool(event, 'open_external_link', payload)
   })
 
   ipcMain.handle('desktop-context:get', async (event, request = {}) => {
     requireTrustedSender(event)
+    request = validateDesktopContextRequestPayload(request)
     const contextPolicy = normalizeDesktopContextPolicy(request?.policy)
     const snapshot = {
       capturedAt: new Date().toISOString(),
@@ -214,7 +243,8 @@ export function register() {
 
   ipcMain.handle('media-session:control', async (event, payload = {}) => {
     requireTrustedSender(event)
-    return controlSystemMediaSession(payload?.action)
+    payload = validateMediaSessionControlPayload(payload)
+    return controlSystemMediaSession(payload.action)
   })
 
   ipcMain.handle('doctor:probe-local-services', async (event, payload) => {

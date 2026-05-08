@@ -1,7 +1,6 @@
 # Create (or refresh) a desktop shortcut that launches Nexus from the
-# source tree via scripts/launch-nexus.ps1. Run once — the shortcut then
-# survives across code changes; no further reinstallation needed when
-# commits land.
+# source tree without showing a terminal window. Run once; the shortcut
+# then survives across code changes.
 #
 # Usage: right-click this file in File Explorer -> "Run with PowerShell",
 # or run in a terminal:
@@ -11,6 +10,7 @@ $ErrorActionPreference = 'Stop'
 
 $ShortcutPath = Join-Path $env:USERPROFILE 'Desktop\Nexus (latest).lnk'
 $LauncherScript = 'F:\nexus\scripts\launch-nexus.ps1'
+$HiddenLauncherScript = 'F:\nexus\scripts\launch-nexus-hidden.vbs'
 $ProjectRoot = 'F:\nexus'
 
 # Prefer the same icon electron-builder ships with, if it exists; fall
@@ -33,16 +33,26 @@ foreach ($candidate in $IconCandidates) {
 
 $WshShell = New-Object -ComObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
-$Shortcut.TargetPath = 'powershell.exe'
-$Shortcut.Arguments = "-ExecutionPolicy Bypass -File `"$LauncherScript`""
+if (Test-Path $HiddenLauncherScript) {
+  $Shortcut.TargetPath = 'wscript.exe'
+  $Shortcut.Arguments = "`"$HiddenLauncherScript`""
+} else {
+  $Shortcut.TargetPath = 'powershell.exe'
+  $Shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$LauncherScript`""
+}
 $Shortcut.WorkingDirectory = $ProjectRoot
-$Shortcut.Description = 'Launch Nexus from the latest source (auto-build + electron)'
+$Shortcut.Description = 'Launch Nexus from the latest source without a terminal window'
 if ($IconLocation) {
   $Shortcut.IconLocation = $IconLocation
 }
 $Shortcut.Save()
 
 Write-Host "Created shortcut: $ShortcutPath" -ForegroundColor Green
+if (Test-Path $HiddenLauncherScript) {
+  Write-Host "Launcher: hidden window via $HiddenLauncherScript"
+} else {
+  Write-Host 'Hidden launcher missing; shortcut falls back to visible PowerShell.'
+}
 if ($IconLocation) {
   Write-Host "Using icon: $IconLocation"
 } else {

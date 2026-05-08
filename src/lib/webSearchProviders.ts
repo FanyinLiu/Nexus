@@ -1,9 +1,10 @@
-import type { WebSearchProviderId } from '../types'
+import type { TranslationKey, WebSearchProviderId } from '../types'
 
 export type WebSearchProviderPreset = {
   id: WebSearchProviderId
   label: string
   description: string
+  descriptionKey: TranslationKey
   baseUrl: string
   requiresApiKey: boolean
   supportsBaseUrlOverride: boolean
@@ -15,6 +16,7 @@ export const WEB_SEARCH_PROVIDER_PRESETS: WebSearchProviderPreset[] = [
     id: 'bing',
     label: 'Bing RSS',
     description: 'Keyless fallback search based on Bing RSS feeds.',
+    descriptionKey: 'settings.tools.provider.bing.description',
     baseUrl: '',
     requiresApiKey: false,
     supportsBaseUrlOverride: false,
@@ -23,6 +25,7 @@ export const WEB_SEARCH_PROVIDER_PRESETS: WebSearchProviderPreset[] = [
     id: 'duckduckgo',
     label: 'DuckDuckGo HTML',
     description: 'Keyless search using DuckDuckGo HTML results.',
+    descriptionKey: 'settings.tools.provider.duckduckgo.description',
     baseUrl: '',
     requiresApiKey: false,
     supportsBaseUrlOverride: false,
@@ -31,6 +34,7 @@ export const WEB_SEARCH_PROVIDER_PRESETS: WebSearchProviderPreset[] = [
     id: 'brave',
     label: 'Brave Search',
     description: 'High-quality general web search with an API key.',
+    descriptionKey: 'settings.tools.provider.brave.description',
     baseUrl: 'https://api.search.brave.com/res/v1/web/search',
     requiresApiKey: true,
     supportsBaseUrlOverride: true,
@@ -40,6 +44,7 @@ export const WEB_SEARCH_PROVIDER_PRESETS: WebSearchProviderPreset[] = [
     id: 'tavily',
     label: 'Tavily',
     description: 'Search-oriented answer engine with built-in summaries.',
+    descriptionKey: 'settings.tools.provider.tavily.description',
     baseUrl: 'https://api.tavily.com',
     requiresApiKey: true,
     supportsBaseUrlOverride: true,
@@ -49,6 +54,7 @@ export const WEB_SEARCH_PROVIDER_PRESETS: WebSearchProviderPreset[] = [
     id: 'exa',
     label: 'Exa',
     description: 'Neural web search with highlights and summaries.',
+    descriptionKey: 'settings.tools.provider.exa.description',
     baseUrl: 'https://api.exa.ai',
     requiresApiKey: true,
     supportsBaseUrlOverride: true,
@@ -58,6 +64,7 @@ export const WEB_SEARCH_PROVIDER_PRESETS: WebSearchProviderPreset[] = [
     id: 'firecrawl',
     label: 'Firecrawl',
     description: 'Search plus scrape-ready results that fit the current content display pipeline.',
+    descriptionKey: 'settings.tools.provider.firecrawl.description',
     baseUrl: 'https://api.firecrawl.dev',
     requiresApiKey: true,
     supportsBaseUrlOverride: true,
@@ -67,6 +74,7 @@ export const WEB_SEARCH_PROVIDER_PRESETS: WebSearchProviderPreset[] = [
     id: 'gemini',
     label: 'Gemini Grounding',
     description: 'Google Search grounding through Gemini, returning answer-first results with citations.',
+    descriptionKey: 'settings.tools.provider.gemini.description',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
     requiresApiKey: true,
     supportsBaseUrlOverride: true,
@@ -76,6 +84,7 @@ export const WEB_SEARCH_PROVIDER_PRESETS: WebSearchProviderPreset[] = [
     id: 'perplexity',
     label: 'Perplexity',
     description: 'Perplexity search with direct Search API or OpenRouter-compatible fallback.',
+    descriptionKey: 'settings.tools.provider.perplexity.description',
     baseUrl: 'https://api.perplexity.ai',
     requiresApiKey: true,
     supportsBaseUrlOverride: true,

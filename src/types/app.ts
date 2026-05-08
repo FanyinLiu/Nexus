@@ -1,7 +1,7 @@
 import type { AutonomySettings } from './autonomy'
 import type { AppLocale } from './i18n'
 import type { MemorySearchMode } from './memory'
-import type { PetMood } from './pet'
+import type { CompanionPresenceState, PetMood } from './pet'
 import type { ThemeId } from './theme'
 import type { WebSearchProviderId } from './tools'
 import type {
@@ -48,6 +48,8 @@ export interface CharacterProfile {
   id: string
   label: string
   companionName: string
+  userName?: string
+  companionRelationshipType?: CompanionRelationshipType
   systemPrompt: string
   petModelId: string
   speechOutputProviderId?: string
@@ -395,6 +397,55 @@ export interface PanelWindowState {
 
 export type WindowView = 'pet' | 'panel'
 
+export type StartupMechanism = 'login_item' | 'xdg_autostart' | 'unsupported'
+export type MediaSessionBackend = 'playerctl' | 'osascript' | 'windows_media_session' | 'unsupported'
+
+export interface PlatformProfile {
+  platform: string
+  packaged: boolean
+  startup: {
+    supported: boolean
+    enabled: boolean
+    requiresPackagedBuild: boolean
+    mechanism: StartupMechanism
+  }
+  tray: {
+    active: boolean
+    hideToBackgroundOnClose: boolean
+  }
+  window: {
+    supportsVisibleOnAllWorkspaces: boolean
+    usesTaskbarIcon: boolean
+    supportsTransparentOverlay: boolean
+  }
+  mediaSession: {
+    supported: boolean
+    available: boolean
+    backend: MediaSessionBackend
+    dependencyHint: string | null
+  }
+  desktopContext: {
+    activeWindowSupported: boolean
+    activeWindowAvailable: boolean
+    activeWindowDependencyHint: string | null
+    screenshotSupported: boolean
+    screenshotAvailable: boolean
+    screenshotDependencyHint: string | null
+    clipboardSupported: boolean
+    clipboardAvailable: boolean
+  }
+  voice: {
+    speechInputSupported: boolean
+    speechInputAvailable: boolean
+    speechOutputSupported: boolean
+    speechOutputAvailable: boolean
+    continuousVoiceSupported: boolean
+    vadSupported: boolean
+    wakewordSupported: boolean
+    dependencyHint: string | null
+  }
+}
+
 export interface RuntimeStateSnapshot {
   mood: PetMood
   continuousVoiceActive?: boolean
@@ -416,6 +467,7 @@ export interface RuntimeStateSnapshot {
   schedulerArmed?: boolean
   schedulerNextRunAt?: string
   activeTaskLabel?: string
+  companionPresence?: CompanionPresenceState
   petOnline?: boolean
   panelOnline?: boolean
   petLastSeenAt?: string

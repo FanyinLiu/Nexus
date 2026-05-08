@@ -1,0 +1,3646 @@
+/* Nexus settings day/night theme overrides and responsive patches. */
+.settings-backdrop--night {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(16px);
+}
+
+.settings-drawer--night {
+  color-scheme: dark;
+}
+
+.settings-backdrop--day {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(88, 166, 255, 0.18), transparent 32%),
+    radial-gradient(circle at 86% 12%, rgba(52, 199, 89, 0.12), transparent 30%),
+    rgba(236, 241, 247, 0.78);
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.settings-drawer--day {
+  --settings-surface: rgba(255, 255, 255, 0.9);
+  --settings-surface-strong: rgba(255, 255, 255, 0.96);
+  --settings-surface-soft: rgba(245, 248, 252, 0.86);
+  --settings-border: rgba(28, 42, 60, 0.1);
+  --settings-border-strong: rgba(28, 42, 60, 0.16);
+  --settings-shadow: 0 22px 70px rgba(72, 92, 120, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 251, 255, 0.9)),
+    #f6f9fd;
+  border-color: rgba(28, 42, 60, 0.1);
+  box-shadow:
+    0 28px 86px rgba(65, 83, 110, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-drawer__header {
+  border-bottom-color: rgba(28, 42, 60, 0.08);
+}
+
+.settings-drawer--day .settings-drawer__window-title-name {
+  color: #121820;
+}
+
+.settings-drawer--day .settings-drawer__window-title-label {
+  color: rgba(23, 32, 42, 0.66);
+}
+
+.settings-drawer--day .settings-drawer__language-button,
+.settings-drawer--day .settings-drawer__toolbar .ghost-button,
+.settings-drawer--day .settings-section .ghost-button,
+.settings-drawer--day .settings-drawer__actions .ghost-button {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(23, 32, 42, 0.76);
+  box-shadow: 0 4px 14px rgba(65, 83, 110, 0.1);
+}
+
+.settings-drawer--day .settings-drawer__language-button:hover,
+.settings-drawer--day .settings-drawer__language-button[aria-expanded="true"],
+.settings-drawer--day .settings-drawer__toolbar .ghost-button:hover,
+.settings-drawer--day .settings-section .ghost-button:hover,
+.settings-drawer--day .settings-drawer__actions .ghost-button:hover {
+  border-color: rgba(52, 120, 246, 0.28);
+  background: rgba(52, 120, 246, 0.08);
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-drawer__language-menu {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 42px rgba(65, 83, 110, 0.18);
+}
+
+.settings-drawer--day .settings-drawer__language-menu-item {
+  color: rgba(23, 32, 42, 0.82);
+}
+
+.settings-drawer--day .settings-drawer__language-menu-item:hover,
+.settings-drawer--day .settings-drawer__language-menu-item:focus-visible,
+.settings-drawer--day .settings-drawer__language-menu-item--active {
+  background: rgba(52, 120, 246, 0.09);
+  color: #121820;
+}
+
+.settings-drawer--day .settings-drawer__language-menu-meta,
+.settings-drawer--day .settings-drawer__hint,
+.settings-drawer--day .settings-section__note,
+.settings-drawer--day .eyebrow {
+  color: rgba(23, 32, 42, 0.66);
+}
+
+.settings-drawer--day .settings-appearance-switch,
+.settings-drawer--day .settings-drawer__content,
+.settings-drawer--day .settings-section,
+.settings-drawer--day .settings-drawer__card {
+  border-color: rgba(28, 42, 60, 0.09);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 10px 28px rgba(65, 83, 110, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.settings-drawer--day .settings-appearance-switch__label {
+  color: rgba(23, 32, 42, 0.68);
+}
+
+.settings-drawer--day .settings-appearance-switch__control {
+  background: rgba(28, 42, 60, 0.07);
+}
+
+.settings-drawer--day .settings-appearance-switch__option {
+  color: rgba(23, 32, 42, 0.58);
+}
+
+.settings-drawer--day .settings-appearance-switch__option:hover {
+  color: rgba(23, 32, 42, 0.82);
+}
+
+.settings-drawer--day .settings-appearance-switch__option:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.86),
+    0 0 0 4px rgba(52, 120, 246, 0.32);
+}
+
+.settings-drawer--day .settings-appearance-switch__option.is-active {
+  background: #3478f6;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(52, 120, 246, 0.26);
+}
+
+.settings-drawer--day .settings-appearance-switch__option.is-active:focus-visible {
+  box-shadow:
+    0 8px 18px rgba(52, 120, 246, 0.26),
+    0 0 0 2px rgba(255, 255, 255, 0.86),
+    0 0 0 4px rgba(52, 120, 246, 0.32);
+}
+
+.settings-drawer--day .settings-page__headline h4,
+.settings-drawer--day .settings-section h4,
+.settings-drawer--day .settings-section h5,
+.settings-drawer--day .settings-choice-card__header strong,
+.settings-drawer--day .settings-drawer__card strong {
+  color: #17202a;
+}
+
+.settings-drawer--day label span {
+  color: rgba(23, 32, 42, 0.72);
+}
+
+.settings-drawer--day .settings-choice-card {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  color: #17202a;
+  box-shadow:
+    0 8px 22px rgba(65, 83, 110, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.settings-drawer--day .settings-choice-card:hover {
+  border-color: rgba(52, 120, 246, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 26px rgba(65, 83, 110, 0.1);
+}
+
+.settings-drawer--day .settings-choice-card.is-active {
+  border-color: rgba(52, 120, 246, 0.36);
+  background: rgba(52, 120, 246, 0.07);
+  box-shadow:
+    inset 2px 0 0 #3478f6,
+    0 10px 26px rgba(52, 120, 246, 0.12);
+}
+
+.settings-drawer--day .settings-choice-card:focus-visible {
+  outline-color: rgba(52, 120, 246, 0.34);
+}
+
+.settings-drawer--day .settings-choice-card__badge {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(23, 32, 42, 0.66);
+}
+
+.settings-drawer--day .settings-choice-card__meta,
+.settings-drawer--day .settings-choice-card__description {
+  color: rgba(23, 32, 42, 0.68);
+}
+
+.settings-drawer--day .settings-model-current {
+  border-color: rgba(52, 120, 246, 0.18);
+  background: rgba(52, 120, 246, 0.07);
+}
+
+.settings-drawer--day .settings-model-current span {
+  color: rgba(23, 32, 42, 0.62);
+}
+
+.settings-drawer--day .settings-model-current strong {
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-model-catalog,
+.settings-drawer--day .settings-model-catalog__panel,
+.settings-drawer--day .settings-model-tab {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow:
+    0 8px 22px rgba(65, 83, 110, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.settings-drawer--day .settings-model-tab.is-active {
+  border-color: rgba(52, 120, 246, 0.34);
+  background: rgba(52, 120, 246, 0.07);
+  box-shadow:
+    inset 2px 0 0 #3478f6,
+    0 10px 26px rgba(52, 120, 246, 0.12);
+}
+
+.settings-drawer--day .settings-model-catalog__header h5,
+.settings-drawer--day .settings-model-catalog__panel-head strong,
+.settings-drawer--day .settings-model-tab__title {
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-model-catalog__header p,
+.settings-drawer--day .settings-model-catalog__panel-head span,
+.settings-drawer--day .settings-model-catalog__panel-head p,
+.settings-drawer--day .settings-model-tab__meta {
+  color: rgba(23, 32, 42, 0.66);
+}
+
+.settings-drawer--day .settings-model-scope-switch,
+.settings-drawer--day .settings-model-chip {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.76);
+  color: rgba(23, 32, 42, 0.7);
+}
+
+.settings-drawer--day .settings-model-scope-switch button {
+  color: rgba(23, 32, 42, 0.62);
+}
+
+.settings-drawer--day .settings-model-scope-switch button:hover {
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-model-scope-switch button.is-active {
+  background: rgba(52, 120, 246, 0.14);
+  color: #0f3f91;
+  box-shadow: 0 8px 18px rgba(52, 120, 246, 0.12);
+}
+
+.settings-drawer--day .settings-model-chip:hover {
+  border-color: rgba(52, 120, 246, 0.28);
+  background: rgba(52, 120, 246, 0.08);
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-model-chip.is-active {
+  border-color: rgba(52, 120, 246, 0.42);
+  background: rgba(52, 120, 246, 0.14);
+  color: #0f3f91;
+}
+
+.settings-drawer--day .settings-model-status {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  color: rgba(23, 32, 42, 0.66);
+}
+
+.settings-drawer--day .settings-model-status.is-current {
+  border-color: rgba(52, 120, 246, 0.32);
+  background: rgba(52, 120, 246, 0.12);
+  color: #0f3f91;
+}
+
+.settings-drawer--day .settings-model-status.is-available {
+  border-color: rgba(16, 143, 111, 0.22);
+  background: rgba(16, 143, 111, 0.08);
+  color: #0d715a;
+}
+
+.settings-drawer--day .settings-model-status.is-missing {
+  border-color: rgba(191, 112, 24, 0.24);
+  background: rgba(191, 112, 24, 0.08);
+  color: #8a4f12;
+}
+
+.settings-drawer--day .settings-window-group {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow:
+    0 8px 22px rgba(65, 83, 110, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.settings-drawer--day .settings-window-group__head h5 {
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-window-group__head span {
+  color: rgba(23, 32, 42, 0.62);
+}
+
+.settings-drawer--day .settings-toggle {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-toggle:hover {
+  border-color: rgba(52, 120, 246, 0.2);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.settings-drawer--day .settings-toggle input {
+  background: rgba(23, 32, 42, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(23, 32, 42, 0.08);
+}
+
+.settings-drawer--day .settings-toggle input::after {
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(40, 55, 80, 0.22);
+}
+
+.settings-drawer--day .settings-toggle input:checked {
+  background: linear-gradient(135deg, #3478f6, #5e9cff);
+  box-shadow: none;
+}
+
+.settings-drawer--day .settings-toggle input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.settings-drawer--day .settings-inline-note,
+.settings-drawer--day .settings-test-result {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.68);
+  color: rgba(23, 32, 42, 0.68);
+}
+
+.settings-drawer--day .settings-drawer__actions {
+  border-top-color: rgba(28, 42, 60, 0.08);
+}
+
+.settings-drawer--day .settings-drawer__actions .primary-button {
+  background: linear-gradient(135deg, #3478f6, #5e9cff);
+  border-color: rgba(52, 120, 246, 0.28);
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(52, 120, 246, 0.24);
+}
+
+.settings-drawer--day .settings-diagnostics-panel .primary-button {
+  background: linear-gradient(135deg, #3478f6, #5e9cff);
+  border-color: rgba(52, 120, 246, 0.28);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(52, 120, 246, 0.2);
+}
+
+.settings-drawer--day summary.settings-console-section__header:focus-visible {
+  outline-color: rgba(52, 120, 246, 0.38);
+}
+
+.settings-drawer--day input:not([type='checkbox']):not([type='range']),
+.settings-drawer--day select,
+.settings-drawer--day textarea {
+  color-scheme: light;
+  border-color: rgba(28, 42, 60, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  color: #17202a;
+}
+
+.settings-drawer--day input[readonly]:not([type='checkbox']):not([type='range']) {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.58);
+  color: rgba(23, 32, 42, 0.72);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.72);
+}
+
+.settings-drawer--day .settings-section .memory-card {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.76);
+  color: #17202a;
+  box-shadow:
+    0 8px 22px rgba(65, 83, 110, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.settings-drawer--day .memory-card__header h3,
+.settings-drawer--day .memory-card .eyebrow,
+.settings-drawer--day .memory-pill p,
+.settings-drawer--day .memory-card__daily h4 {
+  color: #17202a;
+}
+
+.settings-drawer--day .memory-card__hint,
+.settings-drawer--day .memory-empty,
+.settings-drawer--day .memory-preview__empty {
+  color: rgba(23, 32, 42, 0.72);
+}
+
+.settings-drawer--day .memory-pill__category,
+.settings-drawer--day .memory-count {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(23, 32, 42, 0.72);
+}
+
+.settings-drawer--day .memory-card__composer textarea {
+  border-color: rgba(28, 42, 60, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  color: #17202a;
+}
+
+.settings-drawer--day .memory-pill {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 4px 14px rgba(65, 83, 110, 0.06);
+}
+
+.settings-drawer--day .memory-pill.is-disabled p {
+  color: rgba(23, 32, 42, 0.5);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.5);
+}
+
+.settings-drawer--day .settings-summary-chip {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(23, 32, 42, 0.74);
+}
+
+.settings-drawer--day .settings-page__meta span,
+.settings-drawer--day .settings-console-badge,
+.settings-drawer--day .settings-console-list__badge {
+  border-color: rgba(28, 42, 60, 0.12);
+  background: rgba(255, 255, 255, 0.74);
+  color: rgba(23, 32, 42, 0.68);
+}
+
+.settings-drawer--day .settings-console-card,
+.settings-drawer--day .settings-console-section,
+.settings-drawer--day .settings-console-list__item,
+.settings-drawer--day .settings-diagnostics-panel {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow:
+    0 8px 22px rgba(65, 83, 110, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.settings-drawer--day .settings-console-card--primary {
+  background:
+    radial-gradient(circle at top left, rgba(52, 120, 246, 0.12), transparent 48%),
+    rgba(255, 255, 255, 0.82);
+}
+
+.settings-drawer--day .settings-console-card__headline strong,
+.settings-drawer--day .settings-console-list__item strong,
+.settings-drawer--day .settings-console-section__header h5,
+.settings-drawer--day .settings-diagnostics-panel__header h4,
+.settings-drawer--day .settings-timeline-chart strong,
+.settings-drawer--day .settings-cost-breakdown strong {
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-console-card__headline span,
+.settings-drawer--day .settings-console-card p,
+.settings-drawer--day .settings-console-list__item p,
+.settings-drawer--day .settings-console-section__meta,
+.settings-drawer--day .settings-console-card__meta,
+.settings-drawer--day .settings-console-list__meta,
+.settings-drawer--day .settings-console-list__secondary,
+.settings-drawer--day .settings-diagnostics-panel__header p,
+.settings-drawer--day .settings-diagnostics-panel__feedback,
+.settings-drawer--day .settings-console-list__empty,
+.settings-drawer--day .settings-timeline-placeholder,
+.settings-drawer--day .settings-timeline-legend,
+.settings-drawer--day .settings-cost-breakdown__empty,
+.settings-drawer--day .settings-cost-breakdown__table td {
+  color: rgba(23, 32, 42, 0.74);
+}
+
+.settings-drawer--day .settings-timeline-placeholder,
+.settings-drawer--day .settings-timeline-chart__svg {
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.settings-drawer--day .settings-timeline-placeholder strong,
+.settings-drawer--day .settings-cost-breakdown__table td:first-child {
+  color: rgba(23, 32, 42, 0.82);
+}
+
+.settings-page__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-content: flex-start;
+  justify-content: flex-start;
+}
+
+.settings-page__meta span {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.settings-page {
+  display: grid;
+  gap: 16px;
+  padding: 2px 2px 6px 0;
+}
+
+.settings-page__header {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 2px 0 10px;
+  background: linear-gradient(180deg, rgba(14, 18, 28, 0.98) 76%, rgba(14, 18, 28, 0));
+}
+
+.settings-drawer--day .settings-page__header {
+  background: linear-gradient(180deg, rgba(248, 251, 255, 0.98) 76%, rgba(248, 251, 255, 0));
+}
+
+.settings-page__header .settings-page__meta {
+  grid-column: 1 / -1;
+}
+
+.settings-page__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.settings-page__back:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(168, 139, 255, 0.25);
+  transform: translateX(-2px);
+}
+
+.settings-drawer--day .settings-page__back {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(23, 32, 42, 0.76);
+  box-shadow: 0 4px 14px rgba(65, 83, 110, 0.1);
+}
+
+.settings-drawer--day .settings-page__back:hover {
+  border-color: rgba(52, 120, 246, 0.28);
+  background: rgba(52, 120, 246, 0.08);
+  color: #17202a;
+}
+
+.settings-page__back span:first-child {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.settings-page__headline {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-page__headline h4 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(28px, 2.8vw, 34px);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.settings-page__header--compact {
+  grid-template-columns: auto;
+  align-items: center;
+  padding: 0 0 10px;
+}
+
+.settings-page__meta {
+  max-width: 100%;
+}
+
+.settings-page__spotlight {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 18px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  animation: sectionFadeIn 0.3s ease both;
+}
+
+.settings-page__spotlight-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-page__spotlight-copy strong {
+  color: #ffffff;
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.settings-page__spotlight-copy p:last-child {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.settings-page__spotlight-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.settings-page__spotlight-tags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.settings-drawer__content {
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+}
+
+
+@media (max-width: 980px) {
+  .settings-page__header,
+  .settings-page__spotlight {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-page__spotlight-tags {
+    justify-content: flex-start;
+  }
+
+  .settings-page__meta {
+    justify-content: flex-start;
+    max-width: none;
+  }
+
+  .settings-page__back {
+    width: fit-content;
+  }
+}
+
+@media (max-width: 720px) {
+  .settings-home {
+    gap: 14px;
+  }
+
+  .settings-drawer__content {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 560px) {
+  .settings-drawer__content {
+    border-radius: 24px;
+  }
+
+  .settings-page__headline h4 {
+    font-size: 22px;
+  }
+
+  .settings-page {
+    gap: 12px;
+  }
+}
+
+/* ── First-launch model setup overlay ──────────────────────────────── */
+
+.model-setup-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 16, 24, 0.62);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 24px;
+}
+
+.model-setup-card {
+  width: min(720px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  background: #fff;
+  color: #1a1f29;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.model-setup-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.model-setup-card__header h2 {
+  margin: 4px 0 6px;
+  font-size: 20px;
+}
+
+.model-setup-card__copy {
+  margin: 0;
+  color: #5d6575;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.model-setup-card__path {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  background: #f0f2f5;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #394150;
+  word-break: break-all;
+}
+
+.model-setup__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.model-setup__list h3 {
+  margin: 8px 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #5d6575;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.model-setup__optional-title {
+  margin-top: 14px;
+}
+
+.model-setup__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 12px;
+  row-gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid #e3e6ec;
+  border-radius: 10px;
+  background: #fcfcfd;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.model-setup__row[data-state='active'] {
+  border-color: #4e7cff;
+  background: #f5f8ff;
+}
+
+.model-setup__row[data-state='done'] {
+  border-color: #2c9a5a;
+  background: #f3faf5;
+}
+
+.model-setup__row[data-state='error'] {
+  border-color: #d95555;
+  background: #fff5f5;
+}
+
+.model-setup__row-main {
+  min-width: 0;
+}
+
+.model-setup__row-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.model-setup__size {
+  font-size: 11px;
+  color: #7b8392;
+  padding: 1px 6px;
+  background: #eef0f4;
+  border-radius: 4px;
+}
+
+.model-setup__tag {
+  font-size: 11px;
+  color: #4e7cff;
+  border: 1px solid rgba(78, 124, 255, 0.35);
+  padding: 0 6px;
+  border-radius: 4px;
+}
+
+.model-setup__row-desc {
+  margin-top: 4px;
+  color: #5d6575;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.model-setup__row-status {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #4c5361;
+}
+
+.model-setup__row-status--ok {
+  color: #2c9a5a;
+}
+
+.model-setup__row-status--error {
+  color: #c24141;
+}
+
+.model-setup__row-status--pending {
+  color: #8a93a3;
+}
+
+.model-setup__row-file {
+  color: #8a93a3;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.model-setup__row-action {
+  display: flex;
+  align-items: center;
+}
+
+.model-setup__inline-btn {
+  appearance: none;
+  border: 1px solid #d0d5de;
+  background: #fff;
+  color: #1a1f29;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.model-setup__inline-btn:hover:not(:disabled) {
+  background: #f5f7fb;
+  border-color: #4e7cff;
+  color: #4e7cff;
+}
+
+.model-setup__inline-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.model-setup__progress {
+  grid-column: 1 / -1;
+  height: 4px;
+  background: #eef0f4;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.model-setup__progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4e7cff, #7ba4ff);
+  transition: width 0.2s ease;
+}
+
+.model-setup__hint {
+  padding: 10px 14px;
+  background: #fff8e6;
+  border: 1px solid #f5d974;
+  border-radius: 8px;
+  color: #76591a;
+  font-size: 12px;
+}
+
+.model-setup__error {
+  padding: 10px 14px;
+  background: #fff0f0;
+  border: 1px solid #f4b5b5;
+  border-radius: 8px;
+  color: #a33030;
+  font-size: 13px;
+}
+
+.model-setup__python {
+  padding: 12px 14px;
+  border: 1px dashed #d0d5de;
+  border-radius: 8px;
+  background: #fafbfc;
+  font-size: 12px;
+  color: #4c5361;
+}
+
+.model-setup__python strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #1a1f29;
+  font-size: 13px;
+}
+
+.model-setup__python-note {
+  margin-top: 6px;
+  color: #5d6575;
+  line-height: 1.5;
+}
+
+.model-setup__python-note code {
+  background: #eef0f4;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.model-setup-card__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 6px;
+  border-top: 1px solid #eef0f4;
+}
+
+@media (prefers-color-scheme: dark) {
+  .model-setup-card {
+    background: #1d2230;
+    color: #e6e9f0;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  }
+  .model-setup-card__copy,
+  .model-setup__row-desc,
+  .model-setup__row-status,
+  .model-setup__python {
+    color: #a2a9b8;
+  }
+  .model-setup__row {
+    background: #242a3a;
+    border-color: #2f3649;
+  }
+  .model-setup__row[data-state='active'] {
+    background: #1f2640;
+    border-color: #6d8fff;
+  }
+  .model-setup__row[data-state='done'] {
+    background: #1e2e28;
+    border-color: #2c9a5a;
+  }
+  .model-setup__row[data-state='error'] {
+    background: #30222a;
+    border-color: #d95555;
+  }
+  .model-setup-card__path,
+  .model-setup__size,
+  .model-setup__row-file,
+  .model-setup__python-note code {
+    background: #2a3145;
+    color: #d1d6e0;
+  }
+  .model-setup__hint {
+    background: #3a301a;
+    border-color: #806a2e;
+    color: #f0d988;
+  }
+  .model-setup__error {
+    background: #3a2122;
+    border-color: #a34444;
+    color: #f0b3b3;
+  }
+  .model-setup__inline-btn {
+    background: #2a3145;
+    color: #e6e9f0;
+    border-color: #404a63;
+  }
+  .model-setup-card__actions {
+    border-color: #2f3649;
+  }
+}
+
+/* ============================================================
+   Weather ambient layer — animated overlay matching the scene's
+   visual weight. Each condition paints a full-scene sky-tint +
+   heavy particle field + accent effects so the weather reads as
+   "this is a rainy scene", not "a few drops are falling".
+   ============================================================ */
+.weather-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 1;
+  animation: weather-ambient-fade-in 600ms ease forwards;
+  --weather-tint: transparent;
+  --weather-line-color: rgba(240, 246, 255, 0.85);
+  --weather-glow-color: rgba(255, 220, 150, 0.45);
+  --weather-sky-tint: transparent;
+  --weather-sky-blend: multiply;
+}
+
+@keyframes weather-ambient-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.weather-ambient__sky-tint {
+  position: absolute;
+  inset: 0;
+  background: var(--weather-sky-tint);
+  mix-blend-mode: var(--weather-sky-blend);
+  transition: background 1.2s ease;
+  pointer-events: none;
+}
+
+.weather-ambient__tint {
+  position: absolute;
+  inset: 0;
+  background: var(--weather-tint);
+  transition: background 1.2s ease;
+}
+
+/* ── Time-of-day tint layer ─────────────────────────────────── */
+.weather-ambient--day {
+  --weather-line-color: rgba(255, 255, 255, 0.8);
+  --weather-glow-color: rgba(255, 220, 150, 0.45);
+  --weather-tint: transparent;
+}
+.weather-ambient--dusk {
+  --weather-line-color: rgba(255, 205, 180, 0.75);
+  --weather-glow-color: rgba(255, 150, 100, 0.4);
+  --weather-tint: radial-gradient(
+    ellipse at 50% 100%,
+    rgba(200, 80, 120, 0.14),
+    rgba(60, 40, 80, 0.08) 60%,
+    transparent 90%
+  );
+}
+.weather-ambient--night {
+  --weather-line-color: rgba(190, 210, 255, 0.7);
+  --weather-glow-color: rgba(150, 180, 255, 0.35);
+  --weather-tint: linear-gradient(
+    180deg,
+    rgba(10, 18, 40, 0.2) 0%,
+    rgba(15, 20, 40, 0.12) 100%
+  );
+}
+
+/* ═══ Clear / Sunny ═══════════════════════════════════════════ */
+.weather-ambient--clear {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(255, 230, 170, 0.4) 0%,
+    rgba(255, 215, 150, 0.28) 50%,
+    rgba(255, 205, 140, 0.18) 100%
+  );
+  --weather-sky-blend: screen;
+}
+.weather-ambient--clear.weather-ambient--night {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(140, 170, 220, 0.35) 0%,
+    rgba(120, 150, 210, 0.22) 50%,
+    rgba(100, 130, 190, 0.14) 100%
+  );
+}
+
+.weather-ambient--clear .weather-ambient__dust {
+  position: absolute;
+  inset: 0;
+}
+
+.weather-ambient--clear .weather-ambient__dust-mote {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--weather-glow-color);
+  box-shadow: 0 0 6px var(--weather-glow-color);
+  animation-name: weather-dust-drift;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+  animation-direction: alternate;
+}
+
+@keyframes weather-dust-drift {
+  0%   { transform: translate3d(0, 0, 0); opacity: 0.1; }
+  40%  { opacity: 0.7; }
+  60%  { opacity: 0.7; }
+  100% { transform: translate3d(var(--dust-drift-x, 25px), var(--dust-drift-y, -30px), 0); opacity: 0.1; }
+}
+
+/* ═══ Partly cloudy ═══════════════════════════════════════════
+   Clouds restricted to upper 35% — below is clear sky. */
+.weather-ambient--partly_cloudy {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(200, 215, 235, 0.2) 0%,
+    rgba(210, 222, 240, 0.1) 35%,
+    transparent 50%
+  );
+  --weather-sky-blend: screen;
+}
+.weather-ambient--partly_cloudy.weather-ambient--night {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(85, 105, 140, 0.3) 0%,
+    rgba(75, 90, 125, 0.15) 35%,
+    transparent 50%
+  );
+}
+
+.weather-ambient--partly_cloudy .weather-ambient__clouds--upper {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 40%;
+  overflow: hidden;
+  mask-image: linear-gradient(180deg, black 50%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, black 50%, transparent 100%);
+}
+.weather-ambient--partly_cloudy .weather-ambient__cloud {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(24px);
+  background: rgba(252, 253, 255, 0.55);
+  animation: weather-cloud-drift 100s linear infinite;
+}
+.weather-ambient--partly_cloudy.weather-ambient--night .weather-ambient__cloud {
+  background: rgba(165, 180, 210, 0.4);
+}
+.weather-ambient--partly_cloudy .weather-ambient__cloud--1 {
+  top: 10%; left: -15%; width: 240px; height: 100px;
+  animation-delay: -20s; animation-duration: 110s;
+}
+.weather-ambient--partly_cloudy .weather-ambient__cloud--2 {
+  top: 30%; left: -30%; width: 320px; height: 130px;
+  animation-delay: -55s; animation-duration: 140s; opacity: 0.75;
+}
+.weather-ambient--partly_cloudy .weather-ambient__cloud--3 {
+  top: 50%; left: -20%; width: 200px; height: 90px;
+  animation-delay: -80s; animation-duration: 120s; opacity: 0.6;
+}
+.weather-ambient--partly_cloudy .weather-ambient__cloud--4 {
+  top: 20%; left: -40%; width: 280px; height: 110px;
+  animation-delay: -40s; animation-duration: 130s; opacity: 0.5;
+}
+
+@keyframes weather-cloud-drift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(150vw); }
+}
+
+/* ═══ Overcast (阴天) ═════════════════════════════════════════
+   No moving clouds — overcast is uniform light suppression from
+   above, like a dimmer switch. Top-heavy gradient + brightness
+   reduction on the scene. Visually still, not drifting. */
+.weather-ambient--overcast {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(110, 125, 150, 0.75) 0%,
+    rgba(130, 145, 170, 0.55) 40%,
+    rgba(155, 168, 190, 0.3) 100%
+  );
+  --weather-sky-blend: multiply;
+}
+.weather-ambient--overcast.weather-ambient--night {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(35, 45, 70, 0.8) 0%,
+    rgba(50, 65, 90, 0.6) 40%,
+    rgba(70, 85, 110, 0.35) 100%
+  );
+}
+
+/* ═══ Fog (雾天) ══════════════════════════════════════════════
+   Ground-level phenomenon — only covers bottom 55%, fades upward.
+   Horizontal drift retained but confined to lower portion. */
+.weather-ambient--fog {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(210, 215, 225, 0.35) 0%,
+    rgba(215, 220, 230, 0.5) 50%,
+    rgba(225, 230, 240, 0.65) 100%
+  );
+  --weather-sky-blend: normal;
+}
+.weather-ambient--fog.weather-ambient--night {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(80, 95, 120, 0.4) 0%,
+    rgba(90, 105, 130, 0.55) 50%,
+    rgba(105, 120, 145, 0.7) 100%
+  );
+}
+
+.weather-ambient--fog .weather-ambient__fog {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 60%;
+  overflow: hidden;
+  mask-image: linear-gradient(180deg, transparent 0%, black 35%, black 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 35%, black 100%);
+}
+
+.weather-ambient--fog .weather-ambient__fog-a,
+.weather-ambient--fog .weather-ambient__fog-b,
+.weather-ambient--fog .weather-ambient__fog-c {
+  position: absolute;
+  left: -50%;
+  width: 200%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at 50% 80%,
+    rgba(225, 230, 240, 0.55) 0%,
+    rgba(225, 230, 240, 0.35) 40%,
+    transparent 70%
+  );
+  filter: blur(30px);
+}
+
+.weather-ambient--fog .weather-ambient__fog-a {
+  animation: weather-fog-drift-a 45s ease-in-out infinite alternate;
+}
+.weather-ambient--fog .weather-ambient__fog-b {
+  animation: weather-fog-drift-b 65s ease-in-out infinite alternate;
+  opacity: 0.7;
+  filter: blur(40px);
+}
+.weather-ambient--fog .weather-ambient__fog-c {
+  animation: weather-fog-drift-a 85s ease-in-out infinite alternate-reverse;
+  opacity: 0.5;
+  filter: blur(50px);
+}
+
+.weather-ambient--fog.weather-ambient--night .weather-ambient__fog-a,
+.weather-ambient--fog.weather-ambient--night .weather-ambient__fog-b,
+.weather-ambient--fog.weather-ambient--night .weather-ambient__fog-c {
+  background: radial-gradient(
+    ellipse at 50% 80%,
+    rgba(120, 135, 160, 0.6) 0%,
+    rgba(120, 135, 160, 0.35) 40%,
+    transparent 70%
+  );
+}
+
+@keyframes weather-fog-drift-a {
+  from { transform: translateX(-20%); }
+  to   { transform: translateX(20%); }
+}
+@keyframes weather-fog-drift-b {
+  from { transform: translateX(25%); }
+  to   { transform: translateX(-25%); }
+}
+
+/* ═══ Drizzle / Rain / Heavy Rain / Thunder / Storm ═══════════ */
+.weather-ambient--drizzle {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(140, 155, 175, 0.5) 0%,
+    rgba(165, 178, 200, 0.35) 50%,
+    rgba(190, 200, 218, 0.18) 100%
+  );
+  --weather-sky-blend: multiply;
+}
+.weather-ambient--rain {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(60, 75, 100, 0.82) 0%,
+    rgba(80, 95, 120, 0.6) 50%,
+    rgba(100, 115, 140, 0.32) 100%
+  );
+  --weather-sky-blend: multiply;
+}
+.weather-ambient--heavy_rain {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(35, 50, 75, 0.9) 0%,
+    rgba(55, 70, 95, 0.72) 50%,
+    rgba(75, 90, 115, 0.48) 100%
+  );
+  --weather-sky-blend: multiply;
+}
+.weather-ambient--thunder {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(28, 33, 52, 0.88) 0%,
+    rgba(48, 53, 78, 0.7) 50%,
+    rgba(68, 78, 102, 0.38) 100%
+  );
+  --weather-sky-blend: multiply;
+}
+.weather-ambient--storm {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(15, 20, 35, 0.94) 0%,
+    rgba(28, 33, 52, 0.8) 50%,
+    rgba(48, 53, 78, 0.52) 100%
+  );
+  --weather-sky-blend: multiply;
+}
+.weather-ambient--drizzle.weather-ambient--night,
+.weather-ambient--rain.weather-ambient--night,
+.weather-ambient--heavy_rain.weather-ambient--night,
+.weather-ambient--thunder.weather-ambient--night,
+.weather-ambient--storm.weather-ambient--night {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(15, 22, 40, 0.92) 0%,
+    rgba(22, 30, 50, 0.74) 50%,
+    rgba(30, 38, 60, 0.45) 100%
+  );
+}
+
+.weather-ambient--drizzle .weather-ambient__raindrop {
+  width: 1.5px;
+  height: 8px;
+  opacity: 0.4;
+  box-shadow: none;
+}
+.weather-ambient--rain .weather-ambient__raindrop {
+  width: 2.5px;
+}
+.weather-ambient--heavy_rain .weather-ambient__raindrop,
+.weather-ambient--storm .weather-ambient__raindrop {
+  width: 3.5px;
+  box-shadow: 0 0 5px rgba(230, 240, 255, 0.45);
+}
+.weather-ambient--thunder .weather-ambient__raindrop {
+  width: 3px;
+}
+
+/* Drizzle mist — subtle ground-level haze that separates drizzle
+   from regular rain visually. */
+.weather-ambient__drizzle-mist {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 35%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(200, 210, 225, 0.2) 50%,
+    rgba(200, 210, 225, 0.35) 100%
+  );
+  pointer-events: none;
+}
+.weather-ambient--night .weather-ambient__drizzle-mist {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(80, 95, 120, 0.2) 50%,
+    rgba(80, 95, 120, 0.3) 100%
+  );
+}
+
+.weather-ambient__rain {
+  position: absolute;
+  inset: 0;
+}
+
+.weather-ambient__raindrop {
+  position: absolute;
+  top: -30px;
+  width: 2.5px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--weather-line-color) 40%,
+    var(--weather-line-color) 100%
+  );
+  border-radius: 1px;
+  animation-name: weather-rain-fall;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+@keyframes weather-rain-fall {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(var(--rain-drift-x, -22px), 110vh, 0); }
+}
+
+.weather-ambient__puddle-wash {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 20%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(90, 110, 140, 0.15) 60%,
+    rgba(110, 130, 160, 0.25) 100%
+  );
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.weather-ambient--thunder .weather-ambient__flash,
+.weather-ambient--storm .weather-ambient__flash {
+  position: absolute;
+  inset: 0;
+  background: rgba(235, 240, 255, 0.95);
+  opacity: 0;
+  mix-blend-mode: screen;
+  animation: weather-thunder-flash 7s linear infinite;
+}
+
+.weather-ambient--storm .weather-ambient__flash {
+  animation: weather-storm-flash 4.5s linear infinite;
+}
+
+@keyframes weather-thunder-flash {
+  0%, 88%, 92%, 100% { opacity: 0; }
+  89%, 89.5%          { opacity: 0.7; }
+  90%                 { opacity: 0.12; }
+  90.5%, 91%          { opacity: 0.9; }
+  91.5%               { opacity: 0; }
+}
+
+@keyframes weather-storm-flash {
+  0%, 72%, 78%, 84%, 100% { opacity: 0; }
+  74%, 74.5%               { opacity: 0.8; }
+  75%                      { opacity: 0.2; }
+  75.5%, 76%               { opacity: 1; }
+  76.5%                    { opacity: 0.08; }
+  80%, 80.5%               { opacity: 0.55; }
+  81%                      { opacity: 0.08; }
+  81.5%                    { opacity: 0.7; }
+  82%                      { opacity: 0; }
+}
+
+/* ═══ Light Snow / Snow / Heavy Snow ═══════════════════════ */
+.weather-ambient--light_snow {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(225, 232, 245, 0.45) 0%,
+    rgba(235, 242, 250, 0.28) 50%,
+    rgba(245, 250, 255, 0.12) 100%
+  );
+  --weather-sky-blend: screen;
+}
+.weather-ambient--snow {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(210, 220, 240, 0.65) 0%,
+    rgba(220, 230, 245, 0.45) 50%,
+    rgba(235, 240, 250, 0.22) 100%
+  );
+  --weather-sky-blend: screen;
+}
+.weather-ambient--heavy_snow {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(195, 210, 232, 0.78) 0%,
+    rgba(215, 225, 240, 0.6) 50%,
+    rgba(230, 238, 250, 0.38) 100%
+  );
+  --weather-sky-blend: screen;
+}
+.weather-ambient--light_snow.weather-ambient--night,
+.weather-ambient--snow.weather-ambient--night,
+.weather-ambient--heavy_snow.weather-ambient--night {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(60, 75, 110, 0.65) 0%,
+    rgba(80, 100, 140, 0.45) 50%,
+    rgba(100, 120, 160, 0.25) 100%
+  );
+}
+.weather-ambient--heavy_snow .weather-ambient__snow-drift {
+  height: 18%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(245, 250, 255, 0.35) 50%,
+    rgba(245, 250, 255, 0.6) 100%
+  );
+}
+
+.weather-ambient__snow {
+  position: absolute;
+  inset: 0;
+}
+
+.weather-ambient__snowflake {
+  position: absolute;
+  top: -12px;
+  border-radius: 50%;
+  background: var(--weather-line-color);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+@keyframes weather-snow-fall-0 {
+  0%   { transform: translate3d(0, 0, 0); }
+  25%  { transform: translate3d(var(--snow-wobble, 20px), 25vh, 0); }
+  50%  { transform: translate3d(calc(var(--snow-drift, 0px) - var(--snow-wobble, 20px) * 0.5), 50vh, 0); }
+  75%  { transform: translate3d(calc(var(--snow-wobble, 20px) * 0.6), 75vh, 0); }
+  100% { transform: translate3d(var(--snow-drift, -10px), 110vh, 0); }
+}
+@keyframes weather-snow-fall-1 {
+  0%   { transform: translate3d(0, 0, 0); }
+  30%  { transform: translate3d(calc(var(--snow-wobble, 20px) * -0.8), 30vh, 0); }
+  60%  { transform: translate3d(calc(var(--snow-wobble, 20px) * 0.7), 60vh, 0); }
+  100% { transform: translate3d(var(--snow-drift, 10px), 110vh, 0); }
+}
+@keyframes weather-snow-fall-2 {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
+  40%  { transform: translate3d(calc(var(--snow-wobble, 20px) * 0.9), 40vh, 0) rotate(180deg); }
+  70%  { transform: translate3d(calc(var(--snow-wobble, 20px) * -0.5), 70vh, 0) rotate(270deg); }
+  100% { transform: translate3d(var(--snow-drift, 0px), 110vh, 0) rotate(360deg); }
+}
+
+.weather-ambient__snow-drift {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 12%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(240, 245, 255, 0.22) 60%,
+    rgba(240, 245, 255, 0.4) 100%
+  );
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* ═══ Breeze / Gale ═══════════════════════════════════════ */
+.weather-ambient--breeze {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(200, 218, 235, 0.18) 0%,
+    rgba(210, 225, 238, 0.08) 100%
+  );
+  --weather-sky-blend: screen;
+}
+.weather-ambient--gale {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(165, 185, 212, 0.35) 0%,
+    rgba(180, 198, 222, 0.18) 100%
+  );
+  --weather-sky-blend: screen;
+}
+.weather-ambient--breeze.weather-ambient--night,
+.weather-ambient--gale.weather-ambient--night {
+  --weather-sky-tint: linear-gradient(
+    180deg,
+    rgba(55, 75, 115, 0.35) 0%,
+    rgba(70, 90, 135, 0.18) 100%
+  );
+}
+
+.weather-ambient__wind {
+  position: absolute;
+  inset: 0;
+}
+
+.weather-ambient__wind-streak {
+  position: absolute;
+  left: -100px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--weather-line-color) 40%,
+    var(--weather-line-color) 60%,
+    transparent 100%
+  );
+  border-radius: 1px;
+  animation-name: weather-wind-streak;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-out;
+  transform: translateX(0);
+}
+
+@keyframes weather-wind-streak {
+  0%   { transform: translate(0, 0); opacity: 0; }
+  10%  { opacity: 0.8; }
+  50%  { transform: translate(50vw, calc(var(--wind-rise, 0px) * 0.5)); }
+  90%  { opacity: 0.8; }
+  100% { transform: translate(110vw, var(--wind-rise, 0px)); opacity: 0; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .weather-ambient *,
+  .weather-ambient {
+    animation: none !important;
+    transition: none !important;
+  }
+  .weather-ambient__raindrop,
+  .weather-ambient__snowflake,
+  .weather-ambient__wind-streak,
+  .weather-ambient__flash,
+  .weather-ambient__dust-mote {
+    display: none;
+  }
+}
+
+/* ============================================================
+   3-layer pet-stage backdrop
+   (1) SceneBackdrop — static SVG silhouette per location
+   (2) WeatherAmbient — animated weather particles (already above)
+   (3) SunlightTint — 14 time-of-day palettes + subtle wash
+   All three sit inside .pet-window__stage-shell, behind .orbit
+   rings and the Live2D character.
+   ============================================================ */
+
+/* Time-of-day layer applies an inline `filter: brightness() saturate()
+ * hue-rotate()` computed per the clock (see SunlightTint.tsx). The
+ * inline value changes every 60 seconds; this transition smooths the
+ * step so the scene glides rather than snaps. */
+.scene-sunlight {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: filter 2s ease;
+}
+
+/* Scene backdrop shell — full-fill the stage. Stacks 3 variants
+ * (day / dusk / night) with opacity crossfade so the transition
+ * between time bands is a gentle fade, not a cut. */
+.scene-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.scene-backdrop__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
+  /* Inline-styled opacity ramps via the 1-minute blend sampler; this
+     transition smooths the steps between samples (≤60s) so even slow
+     transitions render perceptibly continuous. */
+  transition: opacity 60s linear;
+}
+
+.scene-backdrop__art.is-active {
+  opacity: 1;
+}
+
+/* Reduced motion: disable transition smoothing on brightness — still
+   shows the correct level, just snaps between minute samples. */
+@media (prefers-reduced-motion: reduce) {
+  .scene-sunlight {
+    transition: none !important;
+  }
+}
+
+/* ── ActivePlanStrip ─────────────────────────────────────────────────── */
+
+.active-plan-strip {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  display: grid;
+  gap: 8px;
+}
+
+.active-plan-strip__header {
+  all: unset;
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+}
+
+.active-plan-strip__title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.active-plan-strip__eyebrow {
+  font-size: 11px;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+
+.active-plan-strip__goal {
+  font-size: 13px;
+  color: #e2e8f0;
+  flex: 1;
+  font-weight: 600;
+}
+
+.active-plan-strip__counter {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.active-plan-strip__counter.is-failed {
+  color: #f87171;
+}
+
+.active-plan-strip__progress {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+}
+
+.active-plan-strip__progress-fill {
+  height: 100%;
+  background: #34d399;
+  transition: width 0.3s ease;
+}
+
+.active-plan-strip__progress-fill.is-failed {
+  background: #f87171;
+}
+
+.active-plan-strip__current {
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.active-plan-strip__current-icon {
+  color: #fbbf24;
+  margin-right: 6px;
+}
+
+.active-plan-strip__steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.active-plan-strip__step {
+  font-size: 11px;
+  color: #cbd5e1;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.active-plan-strip__step-icon {
+  font-weight: 700;
+  min-width: 12px;
+}
+
+.active-plan-strip__step-icon.is-completed { color: #34d399; }
+.active-plan-strip__step-icon.is-progress  { color: #fbbf24; }
+.active-plan-strip__step-icon.is-failed    { color: #f87171; }
+.active-plan-strip__step-icon.is-pending,
+.active-plan-strip__step-icon.is-skipped   { color: #94a3b8; }
+
+.active-plan-strip__step-text {
+  flex: 1;
+}
+
+.active-plan-strip__step-text.is-skipped {
+  text-decoration: line-through;
+}
+
+/* ── About / Help panel ────────────────────────────────────────────── */
+
+.settings-about-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(120, 160, 230, 0.18);
+  background: rgba(20, 24, 36, 0.4);
+}
+
+.settings-about-panel__header {
+  display: grid;
+  gap: 4px;
+}
+
+.settings-about-panel__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.settings-about-panel__tagline {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.settings-about-panel__version {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.settings-about-panel__version code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+  font-size: 11px;
+}
+
+.settings-about-panel__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-about-panel__link {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(120, 160, 230, 0.12);
+  color: rgba(180, 210, 255, 0.95);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.settings-about-panel__link:hover {
+  background: rgba(120, 160, 230, 0.22);
+}
+
+.settings-about-panel__faq {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-about-panel__section-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.settings-about-panel__faq-item {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+}
+
+.settings-about-panel__faq-question {
+  cursor: pointer;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  list-style: none;
+  user-select: none;
+}
+
+.settings-about-panel__faq-question::before {
+  content: '› ';
+  display: inline-block;
+  transition: transform 0.15s;
+}
+
+.settings-about-panel__faq-item[open] .settings-about-panel__faq-question::before {
+  transform: rotate(90deg);
+}
+
+.settings-about-panel__faq-answer {
+  margin: 8px 0 0;
+  padding-left: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.5;
+}
+
+.settings-about-panel__credits-intro {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.settings-about-panel__credits-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.7;
+}
+
+.settings-about-panel__credits-list strong {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+/* ── Weekly recap panel ───────────────────────────────────────────── */
+
+.settings-weekly-recap {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(240, 107, 140, 0.15);
+  background: linear-gradient(135deg, rgba(240, 107, 140, 0.06), rgba(245, 160, 95, 0.04));
+}
+
+.settings-weekly-recap__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settings-weekly-recap__subtitle {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.settings-weekly-recap__loading,
+.settings-weekly-recap__empty {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
+.settings-weekly-recap__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+.settings-weekly-recap__metric {
+  display: grid;
+  gap: 4px;
+  text-align: center;
+  padding: 10px 8px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 10px;
+}
+
+.settings-weekly-recap__metric-value {
+  font-size: 22px;
+  font-weight: 600;
+  color: rgba(255, 220, 200, 0.95);
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-weekly-recap__metric-unit {
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.45);
+  margin-left: 2px;
+}
+
+.settings-weekly-recap__metric-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-weekly-recap__sparklines {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-weekly-recap__spark-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.settings-weekly-recap__spark-label {
+  width: 50px;
+  flex-shrink: 0;
+}
+
+.settings-weekly-recap__sparkline {
+  height: 24px;
+  flex: 1;
+}
+
+.settings-weekly-recap__sparkline--empty {
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+}
+
+.settings-weekly-recap__vibe {
+  margin: 0;
+  padding: 10px 12px;
+  background: rgba(240, 107, 140, 0.08);
+  border-left: 2px solid rgba(240, 107, 140, 0.5);
+  border-radius: 0 8px 8px 0;
+  font-size: 12.5px;
+  font-style: italic;
+  color: rgba(255, 230, 230, 0.85);
+  line-height: 1.5;
+}
+
+.settings-drawer--day .settings-about-panel {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow:
+    0 8px 22px rgba(65, 83, 110, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.settings-drawer--day .settings-about-panel__title,
+.settings-drawer--day .settings-about-panel__section-title,
+.settings-drawer--day .settings-about-panel__faq-question,
+.settings-drawer--day .settings-about-panel__credits-list strong,
+.settings-drawer--day .settings-weekly-recap__title {
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-about-panel__tagline,
+.settings-drawer--day .settings-about-panel__version,
+.settings-drawer--day .settings-about-panel__faq-answer,
+.settings-drawer--day .settings-about-panel__credits-intro,
+.settings-drawer--day .settings-about-panel__credits-list,
+.settings-drawer--day .settings-weekly-recap__subtitle,
+.settings-drawer--day .settings-weekly-recap__loading,
+.settings-drawer--day .settings-weekly-recap__empty,
+.settings-drawer--day .settings-weekly-recap__metric-label,
+.settings-drawer--day .settings-weekly-recap__spark-row {
+  color: rgba(23, 32, 42, 0.74);
+}
+
+.settings-drawer--day .settings-about-panel__version code,
+.settings-drawer--day .settings-about-panel__faq-item,
+.settings-drawer--day .settings-weekly-recap__metric {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(28, 42, 60, 0.08);
+}
+
+.settings-drawer--day .settings-about-panel__link {
+  background: rgba(52, 120, 246, 0.1);
+  color: #245fc8;
+}
+
+.settings-drawer--day .settings-about-panel__link:hover {
+  background: rgba(52, 120, 246, 0.16);
+}
+
+.settings-drawer--day .settings-weekly-recap {
+  border-color: rgba(214, 94, 126, 0.18);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 242, 246, 0.8));
+  box-shadow:
+    0 8px 22px rgba(110, 65, 83, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.settings-drawer--day .settings-weekly-recap__metric-value {
+  color: #b84967;
+}
+
+.settings-drawer--day .settings-weekly-recap__metric-unit,
+.settings-drawer--day .settings-weekly-recap__sparkline--empty {
+  color: rgba(23, 32, 42, 0.42);
+}
+
+.settings-drawer--day .settings-weekly-recap__vibe {
+  background: rgba(214, 94, 126, 0.08);
+  color: rgba(23, 32, 42, 0.78);
+}
+
+.settings-backdrop--day {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(93, 161, 255, 0.14), transparent 34%),
+    radial-gradient(circle at 86% 12%, rgba(74, 222, 128, 0.08), transparent 30%),
+    rgba(6, 10, 18, 0.5);
+  backdrop-filter: blur(16px) saturate(1.06);
+}
+
+.settings-drawer--day {
+  --settings-surface: rgba(27, 34, 48, 0.84);
+  --settings-surface-strong: rgba(34, 42, 58, 0.9);
+  --settings-surface-soft: rgba(255, 255, 255, 0.055);
+  --settings-border: rgba(255, 255, 255, 0.09);
+  --settings-border-strong: rgba(255, 255, 255, 0.13);
+  --settings-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+  color-scheme: dark;
+  background:
+    linear-gradient(180deg, rgba(22, 29, 43, 0.96), rgba(13, 18, 29, 0.94)),
+    rgba(14, 18, 28, 0.94);
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.settings-drawer--day .settings-drawer__header,
+.settings-drawer--day .settings-drawer__actions {
+  border-color: rgba(255, 255, 255, 0.075);
+}
+
+.settings-drawer--day .settings-drawer__window-title-name,
+.settings-drawer--day .settings-page__headline h4,
+.settings-drawer--day .settings-section h4,
+.settings-drawer--day .settings-section h5,
+.settings-drawer--day .settings-choice-card__header strong,
+.settings-drawer--day .settings-drawer__card strong,
+.settings-drawer--day .settings-model-current strong,
+.settings-drawer--day .settings-model-catalog__header h5,
+.settings-drawer--day .settings-model-catalog__panel-head strong,
+.settings-drawer--day .settings-model-tab__title,
+.settings-drawer--day .settings-window-group__head h5,
+.settings-drawer--day .settings-console-card__headline strong,
+.settings-drawer--day .settings-console-list__item strong,
+.settings-drawer--day .settings-console-section__header h5,
+.settings-drawer--day .settings-diagnostics-panel__header h4,
+.settings-drawer--day .settings-timeline-chart strong,
+.settings-drawer--day .settings-cost-breakdown strong,
+.settings-drawer--day .settings-about-panel__title,
+.settings-drawer--day .settings-about-panel__section-title,
+.settings-drawer--day .settings-about-panel__faq-question,
+.settings-drawer--day .settings-about-panel__credits-list strong,
+.settings-drawer--day .settings-weekly-recap__title,
+.settings-drawer--day .memory-card__header h3,
+.settings-drawer--day .memory-card .eyebrow,
+.settings-drawer--day .memory-pill p,
+.settings-drawer--day .memory-card__daily h4 {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.settings-drawer--day .settings-drawer__window-title-label,
+.settings-drawer--day .settings-drawer__language-menu-meta,
+.settings-drawer--day .settings-drawer__hint,
+.settings-drawer--day .settings-section__note,
+.settings-drawer--day .eyebrow,
+.settings-drawer--day .settings-choice-card__meta,
+.settings-drawer--day .settings-choice-card__description,
+.settings-drawer--day .settings-model-current span,
+.settings-drawer--day .settings-model-catalog__header p,
+.settings-drawer--day .settings-model-catalog__panel-head span,
+.settings-drawer--day .settings-model-catalog__panel-head p,
+.settings-drawer--day .settings-model-tab__meta,
+.settings-drawer--day .settings-window-group__head span,
+.settings-drawer--day .settings-inline-note,
+.settings-drawer--day .settings-test-result,
+.settings-drawer--day .settings-console-card__headline span,
+.settings-drawer--day .settings-console-card p,
+.settings-drawer--day .settings-console-list__item p,
+.settings-drawer--day .settings-console-section__meta,
+.settings-drawer--day .settings-console-card__meta,
+.settings-drawer--day .settings-console-list__meta,
+.settings-drawer--day .settings-console-list__secondary,
+.settings-drawer--day .settings-diagnostics-panel__header p,
+.settings-drawer--day .settings-diagnostics-panel__feedback,
+.settings-drawer--day .settings-console-list__empty,
+.settings-drawer--day .settings-timeline-placeholder,
+.settings-drawer--day .settings-timeline-legend,
+.settings-drawer--day .settings-cost-breakdown__empty,
+.settings-drawer--day .settings-cost-breakdown__table td,
+.settings-drawer--day .settings-about-panel__tagline,
+.settings-drawer--day .settings-about-panel__version,
+.settings-drawer--day .settings-about-panel__faq-answer,
+.settings-drawer--day .settings-about-panel__credits-intro,
+.settings-drawer--day .settings-about-panel__credits-list,
+.settings-drawer--day .settings-weekly-recap__subtitle,
+.settings-drawer--day .settings-weekly-recap__loading,
+.settings-drawer--day .settings-weekly-recap__empty,
+.settings-drawer--day .settings-weekly-recap__metric-label,
+.settings-drawer--day .settings-weekly-recap__spark-row,
+.settings-drawer--day .memory-card__hint,
+.settings-drawer--day .memory-empty,
+.settings-drawer--day .memory-preview__empty,
+.settings-drawer--day label span {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.settings-drawer--day .settings-drawer__language-button,
+.settings-drawer--day .settings-drawer__toolbar .ghost-button,
+.settings-drawer--day .settings-section .ghost-button,
+.settings-drawer--day .settings-drawer__actions .ghost-button,
+.settings-drawer--day .settings-appearance-switch,
+.settings-drawer--day .settings-drawer__content,
+.settings-drawer--day .settings-section,
+.settings-drawer--day .settings-drawer__card,
+.settings-drawer--day .settings-choice-card,
+.settings-drawer--day .settings-model-catalog,
+.settings-drawer--day .settings-model-catalog__panel,
+.settings-drawer--day .settings-model-tab,
+.settings-drawer--day .settings-model-scope-switch,
+.settings-drawer--day .settings-model-chip,
+.settings-drawer--day .settings-model-status,
+.settings-drawer--day .settings-window-group,
+.settings-drawer--day .settings-toggle,
+.settings-drawer--day .settings-inline-note,
+.settings-drawer--day .settings-test-result,
+.settings-drawer--day .settings-section .memory-card,
+.settings-drawer--day .memory-pill__category,
+.settings-drawer--day .memory-count,
+.settings-drawer--day .memory-pill,
+.settings-drawer--day .settings-summary-chip,
+.settings-drawer--day .settings-page__meta span,
+.settings-drawer--day .settings-console-badge,
+.settings-drawer--day .settings-console-list__badge,
+.settings-drawer--day .settings-console-card,
+.settings-drawer--day .settings-console-section,
+.settings-drawer--day .settings-console-list__item,
+.settings-drawer--day .settings-diagnostics-panel,
+.settings-drawer--day .settings-about-panel__version code,
+.settings-drawer--day .settings-about-panel__faq-item,
+.settings-drawer--day .settings-weekly-recap__metric {
+  border-color: rgba(255, 255, 255, 0.085);
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.settings-drawer--day .settings-console-card--primary {
+  background:
+    linear-gradient(135deg, rgba(93, 161, 255, 0.14), transparent 48%),
+    rgba(255, 255, 255, 0.06);
+}
+
+.settings-drawer--day .settings-choice-card:hover,
+.settings-drawer--day .settings-model-chip:hover,
+.settings-drawer--day .settings-toggle:hover,
+.settings-drawer--day .settings-drawer__language-button:hover,
+.settings-drawer--day .settings-drawer__language-button[aria-expanded="true"],
+.settings-drawer--day .settings-drawer__toolbar .ghost-button:hover,
+.settings-drawer--day .settings-section .ghost-button:hover,
+.settings-drawer--day .settings-drawer__actions .ghost-button:hover {
+  border-color: rgba(93, 161, 255, 0.24);
+  background: rgba(93, 161, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.settings-drawer--day .settings-appearance-switch__control {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.settings-drawer--day .settings-appearance-switch__label,
+.settings-drawer--day .settings-appearance-switch__option,
+.settings-drawer--day .settings-model-scope-switch button {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-drawer--day .settings-appearance-switch__option:hover,
+.settings-drawer--day .settings-model-scope-switch button:hover {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.settings-drawer--day .settings-appearance-switch__option.is-active,
+.settings-drawer--day .settings-model-scope-switch button.is-active,
+.settings-drawer--day .settings-model-chip.is-active,
+.settings-drawer--day .settings-model-status.is-current {
+  border-color: rgba(93, 161, 255, 0.34);
+  background: rgba(93, 161, 255, 0.18);
+  color: rgba(238, 247, 255, 0.95);
+  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.16);
+}
+
+.settings-drawer--day .settings-choice-card.is-active,
+.settings-drawer--day .settings-model-tab.is-active {
+  border-color: rgba(93, 161, 255, 0.36);
+  background: rgba(93, 161, 255, 0.12);
+  box-shadow:
+    inset 2px 0 0 rgba(93, 161, 255, 0.78),
+    0 10px 24px rgba(59, 130, 246, 0.12);
+}
+
+.settings-drawer--day .settings-model-status.is-available {
+  border-color: rgba(74, 222, 128, 0.28);
+  background: rgba(74, 222, 128, 0.1);
+  color: rgba(196, 255, 218, 0.9);
+}
+
+.settings-drawer--day .settings-model-status.is-missing {
+  border-color: rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.1);
+  color: rgba(255, 229, 167, 0.9);
+}
+
+.settings-drawer--day .settings-toggle input {
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.settings-drawer--day .settings-toggle input::after {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+}
+
+.settings-drawer--day .settings-toggle input:checked {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(96, 165, 250, 0.95));
+}
+
+.settings-drawer--day input:not([type='checkbox']):not([type='range']),
+.settings-drawer--day select,
+.settings-drawer--day textarea,
+.settings-drawer--day input[readonly]:not([type='checkbox']):not([type='range']),
+.settings-drawer--day .memory-card__composer textarea {
+  color-scheme: dark;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.86);
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.86);
+}
+
+.settings-drawer--day .settings-drawer__language-menu {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(21, 28, 42, 0.96);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32);
+}
+
+.settings-drawer--day .settings-drawer__language-menu-item {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.settings-drawer--day .settings-drawer__language-menu-item:hover,
+.settings-drawer--day .settings-drawer__language-menu-item:focus-visible,
+.settings-drawer--day .settings-drawer__language-menu-item--active {
+  background: rgba(93, 161, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.settings-drawer--day .settings-page__header {
+  border-color: rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(23, 30, 44, 0.96), rgba(14, 19, 30, 0.92)),
+    rgba(14, 18, 28, 0.92);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.settings-drawer--day .settings-page__back,
+.settings-drawer--day .settings-about-panel__link {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.settings-drawer--day .settings-page__back:hover,
+.settings-drawer--day .settings-about-panel__link:hover {
+  border-color: rgba(93, 161, 255, 0.24);
+  background: rgba(93, 161, 255, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.settings-drawer--day .settings-timeline-placeholder,
+.settings-drawer--day .settings-timeline-chart__svg,
+.settings-drawer--day .settings-weekly-recap,
+.settings-drawer--day .settings-weekly-recap__vibe {
+  border-color: rgba(255, 255, 255, 0.085);
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.settings-drawer--day .settings-weekly-recap__metric-value {
+  color: rgba(255, 196, 214, 0.95);
+}
+
+/* ───────────────────────────────────────────────────────────────────
+   Crisis hotline panel (src/features/safety/CrisisHotlinePanel.tsx).
+   Non-persona surface that slides over the conversation when a
+   crisis utterance is detected. Visually distinct from chat bubbles
+   so the user reads it as system information, not the companion.
+   ─────────────────────────────────────────────────────────────────── */
+.crisis-hotline-panel {
+  /* Renders as the first child of .companion-chat__messages (the
+     scrollable conversation area), in normal block flow above the
+     bubbles. Sits inside Liquid Glass where the ambient bg is
+     rgba(255,255,255,~0.04) — translucent amber disappears, so we
+     use an opaque warm dark fill plus an amber edge ring + outer
+     shadow to lift it off the conversation. */
+  margin: 0 0 14px;
+  border: 2px solid #f59e0b;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, #3a2400 0%, #2b1a00 100%);
+  box-shadow:
+    0 0 0 1px rgba(245, 158, 11, 0.35),
+    0 14px 36px rgba(0, 0, 0, 0.55);
+  animation: crisis-hotline-slide-in 240ms ease-out;
+}
+
+@keyframes crisis-hotline-slide-in {
+  from {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.crisis-hotline-panel__inner {
+  position: relative;
+  padding: 18px 22px 16px;
+}
+
+.crisis-hotline-panel__dismiss {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.crisis-hotline-panel__dismiss:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.crisis-hotline-panel__title {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fef3c7;
+  letter-spacing: 0.2px;
+}
+
+.crisis-hotline-panel__body {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(254, 243, 199, 0.92);
+}
+
+.crisis-hotline-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.crisis-hotline-panel__item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.crisis-hotline-panel__item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(254, 243, 199, 0.85);
+  margin-bottom: 2px;
+}
+
+.crisis-hotline-panel__item-phone {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+
+.crisis-hotline-panel__item-hours {
+  font-size: 12px;
+  color: rgba(254, 243, 199, 0.65);
+  margin-top: 2px;
+}
+
+.crisis-hotline-panel__item-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.crisis-hotline-panel__action {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: #f59e0b;
+  border: 1px solid #f59e0b;
+  color: #1a0d00;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.crisis-hotline-panel__action:hover {
+  background: #fbbf24;
+  border-color: #fbbf24;
+}
+
+.crisis-hotline-panel__dismiss {
+  /* Override base — make the × clearly visible against the dark warm fill. */
+  color: rgba(254, 243, 199, 0.7);
+}
+
+.crisis-hotline-panel__dismiss:hover {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fef3c7;
+}
+
+/* Nexus settings consolidation overrides.
+   Keep these late so they win over earlier preview-era experiments. */
+.settings-model-connection,
+.settings-model-advanced {
+  display: grid;
+  gap: 12px;
+  padding: 13px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.settings-model-advanced summary {
+  cursor: pointer;
+  list-style: none;
+  color: var(--text-h);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.settings-model-advanced summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-model-advanced summary::after {
+  content: '›';
+  float: right;
+  color: rgba(255, 255, 255, 0.45);
+  transition: transform 0.16s ease;
+}
+
+.settings-model-advanced[open] summary::after {
+  transform: rotate(90deg);
+}
+
+.settings-model-custom-entry {
+  display: grid;
+  gap: 7px;
+}
+
+.settings-model-scope-switch {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.panel-window--companion .companion-chat,
+.settings-drawer {
+  border-radius: 22px;
+}
+
+.panel-window--companion .companion-chat {
+  border-color: rgba(255, 255, 255, 0.09);
+  background:
+    linear-gradient(180deg, rgba(21, 27, 40, 0.94), rgba(14, 18, 29, 0.94)),
+    rgba(14, 18, 29, 0.94);
+}
+
+.panel-window--companion .companion-chat__messages,
+.panel-window--companion .composer textarea {
+  border-radius: 16px;
+  border-color: rgba(255, 255, 255, 0.075);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.panel-window--companion .composer textarea:focus {
+  border-color: rgba(93, 161, 255, 0.42);
+  box-shadow: 0 0 0 3px rgba(93, 161, 255, 0.13);
+}
+
+.settings-backdrop--day {
+  background: rgba(230, 237, 247, 0.78);
+  backdrop-filter: blur(18px) saturate(1.04);
+}
+
+.settings-drawer--day {
+  color-scheme: light;
+  --settings-surface: rgba(255, 255, 255, 0.9);
+  --settings-surface-strong: rgba(255, 255, 255, 0.97);
+  --settings-surface-soft: rgba(246, 249, 253, 0.9);
+  --settings-border: rgba(30, 42, 58, 0.1);
+  --settings-border-strong: rgba(30, 42, 58, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(247, 250, 254, 0.94)),
+    #f7f9fc;
+  border-color: rgba(30, 42, 58, 0.1);
+  box-shadow:
+    0 28px 86px rgba(65, 83, 110, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-drawer__header,
+.settings-drawer--day .settings-drawer__actions,
+.settings-drawer--day .settings-page__header {
+  border-color: rgba(30, 42, 58, 0.08);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.settings-drawer--day .settings-appearance-switch,
+.settings-drawer--day .settings-drawer__content,
+.settings-drawer--day .settings-section,
+.settings-drawer--day .settings-drawer__card,
+.settings-drawer--day .settings-choice-card,
+.settings-drawer--day .settings-model-current,
+.settings-drawer--day .settings-model-catalog,
+.settings-drawer--day .settings-model-catalog__panel,
+.settings-drawer--day .settings-model-tab,
+.settings-drawer--day .settings-model-scope-switch,
+.settings-drawer--day .settings-model-chip,
+.settings-drawer--day .settings-model-status,
+.settings-drawer--day .settings-model-connection,
+.settings-drawer--day .settings-model-advanced,
+.settings-drawer--day .settings-window-group,
+.settings-drawer--day .settings-toggle,
+.settings-drawer--day .settings-inline-note,
+.settings-drawer--day .settings-test-result,
+.settings-drawer--day .settings-console-card,
+.settings-drawer--day .settings-console-section,
+.settings-drawer--day .settings-console-list__item,
+.settings-drawer--day .settings-diagnostics-panel,
+.settings-drawer--day .settings-summary-chip,
+.settings-drawer--day .settings-page__meta span {
+  border-color: rgba(30, 42, 58, 0.1);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow:
+    0 8px 22px rgba(65, 83, 110, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-choice-card:hover,
+.settings-drawer--day .settings-model-chip:hover,
+.settings-drawer--day .settings-toggle:hover {
+  border-color: rgba(52, 120, 246, 0.2);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.settings-drawer--day .settings-window-summary span,
+.settings-drawer--day .settings-character-summary span,
+.settings-drawer--day .settings-memory-summary span,
+.settings-drawer--day .settings-lorebook-summary span {
+  border-color: rgba(30, 42, 58, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  color: rgba(23, 32, 42, 0.68);
+  box-shadow:
+    0 6px 16px rgba(65, 83, 110, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.settings-drawer--day .settings-lorebook-empty,
+.settings-drawer--day .settings-lorebook-embedded,
+.settings-drawer--day .settings-lorebook-trigger-preview,
+.settings-drawer--day .settings-lorebook-entry,
+.settings-drawer--day .settings-lorebook-entry__hint,
+.settings-drawer--day .settings-lorebook-details {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 6px 16px rgba(65, 83, 110, 0.06);
+}
+
+.settings-drawer--day .settings-lorebook-entry {
+  background:
+    linear-gradient(135deg, rgba(52, 120, 246, 0.08), transparent 58%),
+    rgba(255, 255, 255, 0.74);
+}
+
+.settings-drawer--day .settings-lorebook-empty strong,
+.settings-drawer--day .settings-lorebook-trigger-preview__head h5,
+.settings-drawer--day .settings-lorebook-trigger-preview__result strong,
+.settings-drawer--day .settings-lorebook-trigger-preview__result li span,
+.settings-drawer--day .settings-lorebook-entry__hint strong,
+.settings-drawer--day .settings-lorebook-details__summary h5 {
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-lorebook-empty p,
+.settings-drawer--day .settings-lorebook-trigger-preview__head p,
+.settings-drawer--day .settings-lorebook-trigger-preview__result p,
+.settings-drawer--day .settings-lorebook-trigger-preview__result small,
+.settings-drawer--day .settings-lorebook-entry__hint p,
+.settings-drawer--day .settings-lorebook-field span,
+.settings-drawer--day .settings-lorebook-details__summary p {
+  color: rgba(23, 32, 42, 0.64);
+}
+
+.settings-drawer--day .settings-lorebook-trigger-preview {
+  border-color: rgba(52, 120, 246, 0.14);
+  background:
+    linear-gradient(135deg, rgba(52, 120, 246, 0.08), rgba(255, 255, 255, 0.74));
+}
+
+.settings-drawer--day .settings-lorebook-trigger-preview input {
+  border-color: rgba(30, 42, 58, 0.12);
+  background: rgba(255, 255, 255, 0.86);
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-lorebook-trigger-preview__result li {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.settings-drawer--day .settings-lorebook-entry__enable {
+  color: rgba(23, 32, 42, 0.72);
+}
+
+.settings-drawer--day .settings-lorebook-entry__status,
+.settings-drawer--day .settings-lorebook-details__summary > span {
+  border-color: rgba(30, 42, 58, 0.1);
+  background: rgba(255, 255, 255, 0.74);
+  color: rgba(23, 32, 42, 0.64);
+}
+
+.settings-drawer--day .settings-lorebook-entry__status.is-ready {
+  border-color: rgba(28, 153, 96, 0.18);
+  background: rgba(223, 250, 237, 0.86);
+  color: #24704b;
+}
+
+.settings-drawer--day .settings-memory-details {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 6px 16px rgba(65, 83, 110, 0.06);
+}
+
+.settings-drawer--day .settings-memory-details__summary h5 {
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-memory-details__summary p {
+  color: rgba(23, 32, 42, 0.68);
+}
+
+.settings-drawer--day .settings-memory-details__summary > span {
+  border-color: rgba(30, 42, 58, 0.1);
+  background: rgba(255, 255, 255, 0.74);
+  color: rgba(23, 32, 42, 0.68);
+}
+
+.settings-drawer--day .settings-choice-card__label-input {
+  border-color: rgba(30, 42, 58, 0.1);
+  background: rgba(255, 255, 255, 0.78);
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-inline-delete {
+  border-color: rgba(30, 42, 58, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(23, 32, 42, 0.55);
+}
+
+.settings-drawer--day .settings-inline-delete:hover {
+  border-color: rgba(210, 72, 72, 0.22);
+  background: rgba(255, 235, 235, 0.9);
+  color: #9f2d2d;
+}
+
+.settings-drawer--day .settings-drawer__window-title-name,
+.settings-drawer--day .settings-section h4,
+.settings-drawer--day .settings-section h5,
+.settings-drawer--day .settings-choice-card__header strong,
+.settings-drawer--day .settings-drawer__card strong,
+.settings-drawer--day .settings-model-current strong,
+.settings-drawer--day .settings-model-catalog__header h5,
+.settings-drawer--day .settings-model-catalog__panel-head strong,
+.settings-drawer--day .settings-model-tab__title,
+.settings-drawer--day .settings-window-group__head h5,
+.settings-drawer--day .settings-console-card__headline strong,
+.settings-drawer--day .settings-console-list__item strong,
+.settings-drawer--day .settings-console-section__header h5,
+.settings-drawer--day .settings-diagnostics-panel__header h4,
+.settings-drawer--day .settings-model-advanced summary {
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-drawer__window-title-label,
+.settings-drawer--day .settings-drawer__hint,
+.settings-drawer--day .settings-section__note,
+.settings-drawer--day .settings-choice-card__description,
+.settings-drawer--day .settings-model-current span,
+.settings-drawer--day .settings-model-catalog__header p,
+.settings-drawer--day .settings-model-catalog__panel-head span,
+.settings-drawer--day .settings-model-catalog__panel-head p,
+.settings-drawer--day .settings-model-tab__meta,
+.settings-drawer--day .settings-window-group__head span,
+.settings-drawer--day .settings-console-card p,
+.settings-drawer--day .settings-console-card__meta,
+.settings-drawer--day .settings-console-section__meta,
+.settings-drawer--day label span {
+  color: rgba(23, 32, 42, 0.66);
+}
+
+.settings-drawer--day .settings-appearance-switch__label,
+.settings-drawer--day .settings-appearance-switch__option,
+.settings-drawer--day .settings-model-scope-switch button {
+  color: rgba(23, 32, 42, 0.62);
+}
+
+.settings-drawer--day .settings-appearance-switch__option:hover,
+.settings-drawer--day .settings-model-scope-switch button:hover {
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-appearance-switch__option.is-active,
+.settings-drawer--day .settings-model-scope-switch button.is-active,
+.settings-drawer--day .settings-model-chip.is-active,
+.settings-drawer--day .settings-model-status.is-current {
+  border-color: rgba(52, 120, 246, 0.34);
+  background: rgba(52, 120, 246, 0.14);
+  color: #0f3f91;
+  box-shadow: 0 8px 18px rgba(52, 120, 246, 0.14);
+}
+
+.settings-drawer--day .settings-choice-card.is-active,
+.settings-drawer--day .settings-model-tab.is-active {
+  border-color: rgba(52, 120, 246, 0.34);
+  background: rgba(52, 120, 246, 0.08);
+  box-shadow:
+    inset 2px 0 0 #3478f6,
+    0 10px 24px rgba(52, 120, 246, 0.12);
+}
+
+.settings-drawer--day .settings-model-status.is-available {
+  border-color: rgba(16, 143, 111, 0.22);
+  background: rgba(16, 143, 111, 0.08);
+  color: #0d715a;
+}
+
+.settings-drawer--day .settings-model-status.is-missing {
+  border-color: rgba(191, 112, 24, 0.24);
+  background: rgba(191, 112, 24, 0.08);
+  color: #8a4f12;
+}
+
+.settings-drawer--day input:not([type='checkbox']):not([type='range']),
+.settings-drawer--day select,
+.settings-drawer--day textarea {
+  color-scheme: light;
+  border-color: rgba(30, 42, 58, 0.12);
+  background: rgba(255, 255, 255, 0.82);
+  color: #17202a;
+  -webkit-text-fill-color: #17202a;
+}
+
+.settings-drawer--day input::placeholder,
+.settings-drawer--day textarea::placeholder {
+  color: rgba(23, 32, 42, 0.38);
+}
+
+.settings-drawer--day .settings-drawer__language-button,
+.settings-drawer--day .settings-drawer__toolbar .ghost-button,
+.settings-drawer--day .settings-section .ghost-button,
+.settings-drawer--day .settings-drawer__actions .ghost-button,
+.settings-drawer--day .settings-page__back {
+  border-color: rgba(30, 42, 58, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(23, 32, 42, 0.78);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.78);
+  box-shadow: 0 6px 16px rgba(65, 83, 110, 0.08);
+}
+
+.settings-drawer--day .settings-drawer__language-button:hover,
+.settings-drawer--day .settings-drawer__language-button[aria-expanded="true"],
+.settings-drawer--day .settings-drawer__toolbar .ghost-button:hover,
+.settings-drawer--day .settings-section .ghost-button:hover,
+.settings-drawer--day .settings-drawer__actions .ghost-button:hover,
+.settings-drawer--day .settings-page__back:hover {
+  border-color: rgba(52, 120, 246, 0.22);
+  background: rgba(52, 120, 246, 0.09);
+  color: #17202a;
+  -webkit-text-fill-color: #17202a;
+}
+
+.settings-drawer--day .settings-drawer__language-menu {
+  border-color: rgba(30, 42, 58, 0.12);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 18px 42px rgba(65, 83, 110, 0.18);
+}
+
+.settings-drawer--day .settings-drawer__language-menu-item {
+  color: rgba(23, 32, 42, 0.82);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.82);
+}
+
+.settings-drawer--day .settings-drawer__language-menu-item:hover,
+.settings-drawer--day .settings-drawer__language-menu-item:focus-visible,
+.settings-drawer--day .settings-drawer__language-menu-item--active {
+  background: rgba(52, 120, 246, 0.09);
+  color: #17202a;
+  -webkit-text-fill-color: #17202a;
+}
+
+.settings-drawer--day .settings-drawer__actions .primary-button,
+.settings-drawer--day .settings-section .primary-button {
+  background: linear-gradient(135deg, #3478f6, #5e9cff);
+  border-color: rgba(52, 120, 246, 0.28);
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(52, 120, 246, 0.22);
+}
+
+.settings-drawer--day .settings-context-overview,
+.settings-drawer--day .settings-context-empty,
+.settings-drawer--day .settings-context-overview__stats span {
+  border-color: rgba(30, 42, 58, 0.1);
+  background: rgba(255, 255, 255, 0.68);
+  color: rgba(23, 32, 42, 0.66);
+  box-shadow:
+    0 8px 22px rgba(65, 83, 110, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.settings-drawer--day .settings-context-overview__main strong,
+.settings-drawer--day .settings-context-overview__stats strong,
+.settings-drawer--day .settings-context-block-title h5,
+.settings-drawer--day .settings-context-empty strong {
+  color: #17202a;
+}
+
+.settings-drawer--day .settings-context-overview__eyebrow,
+.settings-drawer--day .settings-context-template-row > span,
+.settings-drawer--day .settings-context-overview__main p,
+.settings-drawer--day .settings-context-block-title p,
+.settings-drawer--day .settings-context-empty p {
+  color: rgba(23, 32, 42, 0.62);
+}
+
+.settings-model-catalog__panel-head {
+  gap: 10px;
+}
+
+.settings-model-catalog__panel-head > .ghost-button {
+  align-self: flex-start;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.settings-model-capabilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.settings-model-capabilities span,
+.settings-model-chip__meta {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(246, 248, 252, 0.72);
+}
+
+.settings-model-capabilities span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.settings-model-health {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(246, 248, 252, 0.78);
+}
+
+.settings-model-health strong {
+  color: rgba(246, 248, 252, 0.92);
+  font-size: 12px;
+}
+
+.settings-model-health span,
+.settings-model-health em {
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.45;
+}
+
+.settings-model-health em {
+  color: rgba(246, 248, 252, 0.58);
+}
+
+.settings-model-health.is-success {
+  border-color: rgba(53, 197, 139, 0.18);
+  background: rgba(53, 197, 139, 0.08);
+}
+
+.settings-model-health.is-error {
+  border-color: rgba(255, 145, 77, 0.2);
+  background: rgba(255, 145, 77, 0.08);
+}
+
+.settings-model-chip {
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+  text-align: left;
+}
+
+.settings-model-chip__id {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.settings-model-chip__meta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.settings-voice-flow {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.settings-voice-flow h5,
+.settings-voice-flow p {
+  margin: 0;
+}
+
+.settings-voice-flow h5 {
+  color: rgba(246, 248, 252, 0.94);
+  font-size: 14px;
+}
+
+.settings-voice-flow p {
+  margin-top: 4px;
+  color: rgba(246, 248, 252, 0.58);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.settings-voice-flow__steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.settings-voice-flow__steps span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(246, 248, 252, 0.76);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.settings-voice-flow__steps b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(168, 139, 255, 0.16);
+  color: rgba(246, 248, 252, 0.9);
+  font-size: 11px;
+}
+
+.settings-voice-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.settings-voice-card {
+  align-content: start;
+}
+
+.settings-voice-card:nth-child(3) {
+  grid-column: 2;
+}
+
+.settings-test-result--compact {
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.settings-voice-advanced {
+  margin-top: 0;
+}
+
+.settings-tool-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-tool-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), transparent 58%),
+    rgba(255, 255, 255, 0.035);
+}
+
+.settings-tool-card.is-enabled {
+  border-color: rgba(168, 139, 255, 0.16);
+  background:
+    linear-gradient(135deg, rgba(168, 139, 255, 0.11), transparent 58%),
+    rgba(255, 255, 255, 0.045);
+}
+
+.settings-tool-card__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-tool-card__copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.settings-tool-card__copy h5 {
+  margin: 0;
+  color: rgba(246, 248, 252, 0.82);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.settings-tool-card__copy p {
+  margin: 0;
+  color: rgba(246, 248, 252, 0.55);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settings-tool-switch {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.settings-tool-switch input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.settings-tool-switch span {
+  position: relative;
+  display: block;
+  width: 46px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.settings-tool-switch span::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.22);
+  transition: transform 0.16s ease;
+  content: "";
+}
+
+.settings-tool-switch input:checked + span {
+  background: #8f6dff;
+  box-shadow: 0 0 0 1px rgba(168, 139, 255, 0.24), 0 8px 22px rgba(168, 139, 255, 0.22);
+}
+
+.settings-tool-switch input:checked + span::after {
+  transform: translateX(18px);
+}
+
+.settings-tool-switch input:focus-visible + span {
+  outline: 2px solid rgba(168, 139, 255, 0.55);
+  outline-offset: 3px;
+}
+
+.settings-tool-card__body {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.settings-tool-card__inline-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.settings-tool-card__inline-toggle span {
+  color: rgba(246, 248, 252, 0.76);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.settings-drawer--day .settings-model-capabilities span,
+.settings-drawer--day .settings-model-chip__meta {
+  border-color: rgba(30, 42, 58, 0.08);
+  background: rgba(52, 120, 246, 0.07);
+  color: rgba(23, 32, 42, 0.64);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.64);
+}
+
+.settings-drawer--day .settings-model-health {
+  border-color: rgba(30, 42, 58, 0.1);
+  background: rgba(255, 255, 255, 0.64);
+  color: rgba(23, 32, 42, 0.72);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.72);
+}
+
+.settings-drawer--day .settings-model-health strong {
+  color: rgba(23, 32, 42, 0.88);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.88);
+}
+
+.settings-drawer--day .settings-model-health em {
+  color: rgba(23, 32, 42, 0.56);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.56);
+}
+
+.settings-drawer--day .settings-model-health.is-success {
+  border-color: rgba(18, 141, 104, 0.16);
+  background: rgba(18, 141, 104, 0.07);
+}
+
+.settings-drawer--day .settings-model-health.is-error {
+  border-color: rgba(191, 112, 24, 0.18);
+  background: rgba(191, 112, 24, 0.07);
+}
+
+.settings-drawer--day .settings-voice-flow {
+  border-color: rgba(30, 42, 58, 0.1);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.settings-drawer--day .settings-voice-flow h5 {
+  color: rgba(23, 32, 42, 0.9);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.9);
+}
+
+.settings-drawer--day .settings-voice-flow p {
+  color: rgba(23, 32, 42, 0.6);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.6);
+}
+
+.settings-drawer--day .settings-voice-flow__steps span {
+  border-color: rgba(30, 42, 58, 0.08);
+  background: rgba(52, 120, 246, 0.07);
+  color: rgba(23, 32, 42, 0.72);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.72);
+}
+
+.settings-drawer--day .settings-voice-flow__steps b {
+  background: rgba(52, 120, 246, 0.13);
+  color: rgba(23, 32, 42, 0.8);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.8);
+}
+
+.settings-drawer--day .settings-tool-card {
+  border-color: rgba(30, 42, 58, 0.1);
+  background:
+    linear-gradient(135deg, rgba(52, 120, 246, 0.06), transparent 58%),
+    rgba(255, 255, 255, 0.74);
+}
+
+.settings-drawer--day .settings-tool-card.is-enabled {
+  border-color: rgba(52, 120, 246, 0.18);
+  background:
+    linear-gradient(135deg, rgba(52, 120, 246, 0.1), transparent 58%),
+    rgba(255, 255, 255, 0.84);
+}
+
+.settings-drawer--day .settings-tool-card__copy h5 {
+  color: rgba(23, 32, 42, 0.78);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.78);
+}
+
+.settings-drawer--day .settings-tool-card__copy p {
+  color: rgba(23, 32, 42, 0.58);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.58);
+}
+
+.settings-drawer--day .settings-tool-switch span {
+  background: rgba(30, 42, 58, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(30, 42, 58, 0.08);
+}
+
+.settings-drawer--day .settings-tool-switch input:checked + span {
+  background: #3478f6;
+  box-shadow: 0 0 0 1px rgba(52, 120, 246, 0.18), 0 8px 18px rgba(52, 120, 246, 0.2);
+}
+
+.settings-drawer--day .settings-tool-card__body,
+.settings-drawer--day .settings-tool-card__inline-toggle {
+  border-color: rgba(30, 42, 58, 0.08);
+}
+
+.settings-drawer--day .settings-tool-card__inline-toggle {
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.settings-drawer--day .settings-tool-card__inline-toggle span {
+  color: rgba(23, 32, 42, 0.72);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.72);
+}
+
+@media (max-width: 740px) {
+  .settings-voice-flow__steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-voice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-voice-card:nth-child(3) {
+    grid-column: auto;
+  }
+
+  .settings-model-scope-switch {
+    grid-template-columns: repeat(5, max-content);
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────
+   Canonical settings themes.
+   These overrides isolate the previewed settings theme from the page theme, so
+   warm-day globals cannot leak orange buttons into night settings.
+   ─────────────────────────────────────────────────────────────────── */
+.settings-backdrop--night {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(16px);
+}
+
+.settings-backdrop--day {
+  background: rgba(244, 247, 250, 0.5);
+}
+
+.settings-backdrop--warm-day {
+  background: rgba(247, 241, 232, 0.18);
+  backdrop-filter: blur(3px) saturate(1.04);
+}
+
+.settings-drawer--night {
+  --settings-surface: rgba(16, 19, 29, 0.96);
+  --settings-surface-strong: rgba(24, 27, 39, 0.98);
+  --settings-surface-soft: rgba(255, 255, 255, 0.03);
+  --settings-border: rgba(255, 255, 255, 0.065);
+  --settings-border-strong: rgba(255, 255, 255, 0.14);
+  --settings-shadow: 0 18px 54px rgba(0, 0, 0, 0.42);
+  --settings-shadow-soft: 0 6px 20px rgba(0, 0, 0, 0.2);
+  --settings-accent: #8fa8ff;
+  color-scheme: dark;
+}
+
+.settings-drawer--night .settings-drawer__window-title-name,
+.settings-drawer--night .settings-home-card__label,
+.settings-drawer--night .settings-page__headline h4,
+.settings-drawer--night .settings-section__title-row h4,
+.settings-drawer--night .settings-section__title-row h5 {
+  color: rgba(255, 255, 255, 0.9);
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.9);
+}
+
+.settings-drawer--night .settings-drawer__window-title-label,
+.settings-drawer--night .settings-home-card__value,
+.settings-drawer--night .settings-section__note,
+.settings-drawer--night .settings-page__headline .settings-section__note,
+.settings-drawer--night .settings-drawer__hint,
+.settings-drawer--night label span,
+.settings-drawer--night .eyebrow,
+.settings-drawer--night .settings-appearance-switch__label,
+.settings-drawer--night .settings-appearance-switch__option {
+  color: rgba(255, 255, 255, 0.58);
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.58);
+}
+
+.settings-drawer--night .settings-home-card__glyph,
+.settings-drawer--night .settings-page__mark,
+.settings-drawer--night .settings-drawer__language-icon {
+  color: rgba(185, 202, 255, 0.86);
+  -webkit-text-fill-color: rgba(185, 202, 255, 0.86);
+}
+
+.settings-drawer--day {
+  --settings-surface: rgba(255, 255, 255, 0.96);
+  --settings-surface-strong: rgba(255, 255, 255, 0.98);
+  --settings-surface-soft: rgba(245, 247, 250, 0.82);
+  --settings-border: rgba(28, 42, 60, 0.09);
+  --settings-border-strong: rgba(28, 42, 60, 0.16);
+  --settings-shadow: 0 18px 54px rgba(28, 42, 60, 0.14);
+  --settings-shadow-soft: 0 6px 18px rgba(28, 42, 60, 0.08);
+  --settings-accent: #3478f6;
+  border-color: var(--settings-border);
+  background: var(--settings-surface);
+  color: rgba(23, 32, 42, 0.9);
+  box-shadow: var(--settings-shadow);
+}
+
+.settings-drawer--warm-day {
+  --settings-surface: rgba(255, 252, 247, 0.97);
+  --settings-surface-strong: rgba(255, 253, 249, 0.98);
+  --settings-surface-soft: rgba(246, 239, 229, 0.78);
+  --settings-border: rgba(72, 53, 40, 0.1);
+  --settings-border-strong: rgba(72, 53, 40, 0.17);
+  --settings-shadow: 0 18px 52px rgba(72, 53, 40, 0.13);
+  --settings-shadow-soft: 0 6px 18px rgba(72, 53, 40, 0.08);
+  --settings-accent: #c76645;
+  background: var(--settings-surface);
+  color: rgba(36, 27, 22, 0.9);
+}
+
+.settings-drawer--day .settings-drawer__window-title-name,
+.settings-drawer--day .settings-home-card__label,
+.settings-drawer--day .settings-page__headline h4,
+.settings-drawer--day .settings-section__title-row h4,
+.settings-drawer--day .settings-section__title-row h5 {
+  color: rgba(23, 32, 42, 0.9);
+}
+
+.settings-drawer--warm-day .settings-drawer__window-title-name,
+.settings-drawer--warm-day .settings-home-card__label,
+.settings-drawer--warm-day .settings-page__headline h4,
+.settings-drawer--warm-day .settings-section__title-row h4,
+.settings-drawer--warm-day .settings-section__title-row h5 {
+  color: rgba(36, 27, 22, 0.91);
+}
+
+.settings-drawer--day .settings-drawer__window-title-label,
+.settings-drawer--day .settings-home-card__value,
+.settings-drawer--day .settings-section__note,
+.settings-drawer--day .settings-page__headline .settings-section__note,
+.settings-drawer--day .settings-drawer__hint,
+.settings-drawer--day label span,
+.settings-drawer--day .eyebrow {
+  color: rgba(23, 32, 42, 0.54);
+}
+
+.settings-drawer--warm-day .settings-drawer__window-title-label,
+.settings-drawer--warm-day .settings-home-card__value,
+.settings-drawer--warm-day .settings-section__note,
+.settings-drawer--warm-day .settings-page__headline .settings-section__note,
+.settings-drawer--warm-day .settings-drawer__hint,
+.settings-drawer--warm-day label span,
+.settings-drawer--warm-day .eyebrow {
+  color: rgba(78, 64, 54, 0.58);
+}
+
+.settings-drawer--night .ghost-button,
+html[data-theme='warm-day'] .settings-drawer--night .ghost-button,
+html[data-theme='system-day'] .settings-drawer--night .ghost-button {
+  border-color: rgba(255, 255, 255, 0.075);
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(255, 255, 255, 0.78);
+  box-shadow: none;
+}
+
+.settings-drawer--night .primary-button,
+html[data-theme='warm-day'] .settings-drawer--night .primary-button,
+html[data-theme='system-day'] .settings-drawer--night .primary-button {
+  border-color: rgba(143, 168, 255, 0.28);
+  background: rgba(143, 168, 255, 0.86);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(80, 102, 190, 0.22);
+}
+
+.settings-drawer--day .primary-button,
+html[data-theme='warm-day'] .settings-drawer--day .primary-button,
+html[data-theme='system-day'] .settings-drawer--day .primary-button {
+  border-color: rgba(52, 120, 246, 0.24);
+  background: #3478f6;
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(52, 120, 246, 0.16);
+}
+
+.settings-drawer--warm-day .primary-button,
+html[data-theme='warm-day'] .settings-drawer--warm-day .primary-button,
+html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
+  border-color: rgba(199, 102, 69, 0.28);
+  background: #c76645;
+  color: #fffaf4;
+  box-shadow: 0 10px 24px rgba(199, 102, 69, 0.18);
+}
+
+.settings-drawer--day .settings-drawer__language-button,
+.settings-drawer--day .settings-drawer__toolbar .ghost-button,
+.settings-drawer--day .settings-drawer__actions .ghost-button {
+  border-color: var(--settings-border);
+  background: rgba(255, 255, 255, 0.58);
+  color: rgba(23, 32, 42, 0.72);
+  box-shadow: none;
+}
+
+.settings-drawer--warm-day .settings-drawer__language-button,
+.settings-drawer--warm-day .settings-drawer__toolbar .ghost-button,
+.settings-drawer--warm-day .settings-drawer__actions .ghost-button {
+  border-color: var(--settings-border);
+  background: rgba(255, 252, 247, 0.72);
+  color: rgba(72, 53, 40, 0.76);
+  box-shadow: none;
+}
+
+.settings-drawer--day .settings-drawer__language-menu,
+.settings-drawer--warm-day .settings-drawer__language-menu {
+  border-color: var(--settings-border);
+  background: var(--settings-surface);
+  box-shadow: 0 14px 34px rgba(72, 53, 40, 0.14);
+}
+
+.settings-drawer--day .settings-drawer__language-menu-item {
+  color: rgba(23, 32, 42, 0.82);
+}
+
+.settings-drawer--day .settings-drawer__language-menu-meta {
+  color: rgba(23, 32, 42, 0.48);
+}
+
+.settings-drawer--warm-day .settings-drawer__language-menu-item,
+.settings-drawer--warm-day .settings-drawer__language-menu-meta {
+  color: rgba(72, 53, 40, 0.78);
+}
+
+.settings-drawer--night .settings-appearance-switch__option.is-active {
+  background: color-mix(in srgb, var(--settings-accent) 18%, rgba(255, 255, 255, 0.08));
+  color: rgba(255, 255, 255, 0.94);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--settings-accent) 42%, transparent);
+}
+
+.settings-drawer--day .settings-appearance-switch__control,
+.settings-drawer--warm-day .settings-appearance-switch__control {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.settings-drawer--day .settings-appearance-switch__label,
+.settings-drawer--day .settings-appearance-switch__option {
+  color: rgba(23, 32, 42, 0.58);
+}
+
+.settings-drawer--warm-day .settings-appearance-switch__label,
+.settings-drawer--warm-day .settings-appearance-switch__option {
+  color: rgba(72, 53, 40, 0.58);
+}
+
+.settings-drawer--day .settings-appearance-switch__option.is-active {
+  background: color-mix(in srgb, var(--settings-accent) 12%, rgba(255, 255, 255, 0.88));
+  color: rgba(23, 32, 42, 0.9);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--settings-accent) 28%, transparent);
+}
+
+.settings-drawer--warm-day .settings-appearance-switch__option.is-active {
+  background: color-mix(in srgb, var(--settings-accent) 12%, rgba(255, 253, 249, 0.9));
+  color: rgba(36, 27, 22, 0.9);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--settings-accent) 30%, transparent);
+}
+
+.settings-appearance-switch__option:focus-visible,
+.settings-drawer__language-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--settings-accent) 58%, transparent);
+  outline-offset: 2px;
+}

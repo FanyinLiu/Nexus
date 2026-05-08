@@ -1,3 +1,8 @@
+import type {
+  DiscoveredModel,
+  ProviderHealthStatus,
+} from './model'
+
 export type VoiceTriggerMode = 'direct_send' | 'wake_word' | 'manual_confirm'
 
 export type VadSensitivity = 'low' | 'medium' | 'high'
@@ -28,6 +33,17 @@ export interface ServiceConnectionRequest {
 export interface ServiceConnectionResponse {
   ok: boolean
   message: string
+  status?: ProviderHealthStatus
+  recommendation?: string
+  discoveredModels?: DiscoveredModel[]
+  checkedAt?: string
+}
+
+export interface ChatModelListRequest {
+  providerId: string
+  baseUrl: string
+  apiKey: string
+  model?: string
 }
 
 export interface LocalServiceProbeRequest {

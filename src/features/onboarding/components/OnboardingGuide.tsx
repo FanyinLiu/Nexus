@@ -16,7 +16,7 @@ import {
   switchSpeechOutputProvider,
 } from '../../../lib/speechProviderProfiles'
 import { switchTextProvider } from '../../../lib/textProviderProfiles'
-import type { AppSettings, WindowView } from '../../../types'
+import type { AppSettings, PlatformProfile, WindowView } from '../../../types'
 import type { PetModelDefinition } from '../../pet'
 import {
   AiDisclosureStep,
@@ -38,6 +38,7 @@ export type OnboardingGuideProps = {
   open: boolean
   view: WindowView
   settings: AppSettings
+  platformProfile: PlatformProfile
   petModelPresets: PetModelDefinition[]
   onDismiss: () => void
   onSave: (settings: AppSettings) => Promise<void>
@@ -47,6 +48,7 @@ export function OnboardingGuide({
   open,
   view,
   settings,
+  platformProfile,
   petModelPresets,
   onDismiss,
   onSave,
@@ -190,6 +192,7 @@ export function OnboardingGuide({
             setDraft={setDraft}
             petModelPresets={petModelPresets}
             selectedPetModel={selectedPetModel}
+            launchOnStartupSupported={platformProfile.startup.supported}
             finishHint={finishHint}
           />
         )

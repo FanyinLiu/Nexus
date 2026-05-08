@@ -35,10 +35,18 @@ import {
   mapLanguageToDashScopeType,
 } from '../services/ttsService.js'
 import { requireTrustedSender, requireString } from './validate.js'
+import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
+import {
+  validateAudioSynthesisPayload,
+  validateAudioTranscriptionPayload,
+  validateSpeechVoiceListPayload,
+} from './payloadSchemas.js'
 
 export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT_MS }) {
   ipcMain.handle('audio:list-voices', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateSpeechVoiceListPayload(payload)
+    payload = await resolveVaultRefsForSender(event.sender, payload, ['apiKey'])
     const baseUrl = normalizeBaseUrl(payload.baseUrl)
 
     if (!baseUrl) {
@@ -133,6 +141,8 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
 
   ipcMain.handle('audio:transcribe', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateAudioTranscriptionPayload(payload)
+    payload = await resolveVaultRefsForSender(event.sender, payload, ['apiKey'])
     requireString(payload?.audioBase64, 'payload.audioBase64')
 
     if (payload.audioBase64.length > 50_000_000) {
@@ -322,6 +332,8 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
 
   ipcMain.handle('audio:synthesize', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateAudioSynthesisPayload(payload)
+    payload = await resolveVaultRefsForSender(event.sender, payload, ['apiKey'])
     const content = String(payload.text ?? '').trim()
 
     if (!content) {

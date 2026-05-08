@@ -10,7 +10,10 @@ import {
   type ReactNode,
 } from 'react'
 import { getVoiceStateLabel, pickHoverReaction } from '../appSupport'
-import { MusicPopupCard, PetControlIcon, PetDialogBubble, PetThoughtBubble } from '../../components'
+import { MusicPopupCard } from '../../components/MusicPopupCard'
+import { PetControlIcon } from '../../components/PetControlIcon'
+import { PetDialogBubble } from '../../components/PetDialogBubble'
+import { PetThoughtBubble } from '../../components/PetThoughtBubble'
 import { resolveCharacterPreset } from '../../features/character/presets'
 import {
   classifyWeatherCondition,

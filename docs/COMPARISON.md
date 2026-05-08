@@ -32,7 +32,7 @@ If a row says "removed", "WIP", or "roadmap", the project once had or is plannin
 | persona-engine | OpenAI-compatible (Ollama, Groq, OpenAI) | Kokoro + espeak fallback | Whisper.NET (**dual-model** for interrupt detection) | ✗ | ✗ | ✓ window OCR (experimental) |
 | ZerolanLiveRobot | multi-provider HTTP pipeline (ZerolanCore + others) | with emotion synthesis | VAD + microphone | ✓ short-term context + **vector DB long-term** | ✓ browser / screenshot / Minecraft | ✓ OCR + screen understanding |
 | Soul of Waifu | CharAI / Mistral / OpenAI / OpenRouter / GGUF | ElevenLabs | Faster-Whisper + Silero VAD | **Vector RAG + auto-summary + Tavern V2 cards** | not documented | roadmap |
-| Elaina Desktop | configurable | GPT-SoVITS | **Picovoice wake word** | not documented | Claude computer-use API | ✓ screen + clipboard |
+| Elaina Desktop | configurable | GPT-SoVITS | **Picovoice wake word** | not documented | computer-use API | ✓ screen + clipboard |
 | Live2DPet | OpenAI-compat (Grok / GPT-5 / Gemini) | **VOICEVOX only** | ✗ | visual keyframe memory | ✗ (web search deprecated) | ✓ **core feature**: periodic screenshot |
 | **Nexus** | OpenAI-compat + **provider profiles + failover chain** | **streaming sentence-immediate** chunker | ✓ + **echo-cancelled self-interrupt** | ✓ **3-tier hot/warm/cold + dream cycle + narrative threads** | ✓ **native + prompt-mode** | ✓ desktop context (clipboard, foreground window, OCR) |
 

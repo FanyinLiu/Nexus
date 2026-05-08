@@ -18,10 +18,10 @@ electron/
 src/
   app/          App composition, providers, top-level controllers, stores, views
   components/   Shared UI components and settings sections
-  features/     Domain modules (voice, tools, memory, pet, reminders, ...)
+  features/     Domain modules (models, voice, tools, tasks, memory, pet, ...)
   hooks/        React-facing composition hooks built on top of features
   i18n/         Locale runtime, dictionaries, translation hook, OpenCC adapter
-  lib/          Pure utilities, provider registries, persistence helpers
+  lib/          Pure utilities, compatibility exports, persistence helpers
   styles/       Global styles and token CSS
   types/        Domain type definitions
 ```
@@ -73,15 +73,15 @@ analytics/
 character/
 chat/
 context/
-doctor/
-encryption/
 failover/
 integrations/
 intent/
 memory/
+models/
 onboarding/
 pet/
 reminders/
+tasks/
 themes/
 tools/
 voice/
@@ -105,9 +105,10 @@ voice/
 
 - Pure utility layer.
 - No React dependency.
-- Safe home for provider registries, storage helpers, normalization helpers,
-  and generic algorithms.
-- Should not re-export feature runtime logic.
+- Safe home for storage helpers, normalization helpers, and generic algorithms.
+- May keep compatibility exports while modules migrate into `features/`.
+- New domain code should import from the owning feature module, not from a
+  legacy `lib` wrapper.
 
 ### `src/types/`
 
@@ -152,6 +153,8 @@ Feature-specific public surfaces also exist, for example:
 
 ```text
 src/features/voice/index.ts
+src/features/models/index.ts
+src/features/tasks/index.ts
 src/features/tools/index.ts
 src/features/memory/index.ts
 src/features/pet/index.ts
@@ -179,6 +182,22 @@ User speech
   -> rendered panel/pet UI
 ```
 
+### Model center flow
+
+```text
+settings ModelSection / onboarding
+  -> features/models provider catalog + discovery helpers
+  -> Electron chat:list-models / chat:test-connection
+  -> discovered model + provider health metadata
+  -> persisted text provider profile
+  -> features/chat runtime
+```
+
+The model center owns provider grouping, provider/model capability metadata,
+preset model discovery, provider credential status, and UI-independent model
+catalog state resolution. `src/lib/apiProviders.ts` remains a compatibility
+export only; new code should import from `src/features/models`.
+
 ### Desktop context flow
 
 ```text
@@ -204,7 +223,8 @@ hooks/useReminderScheduler
 ### Voice
 
 - `features/voice/` owns session state machines, text cleanup, VAD helpers,
-  wake word runtime, streaming TTS helpers, and local STT adapters.
+  wake word runtime, streaming TTS helpers, local STT adapters, speech provider
+  settings views, and speech service connection request builders.
 - `hooks/useVoice.ts` is the React orchestration seam for the voice runtime.
 
 ### Tools
@@ -212,6 +232,13 @@ hooks/useReminderScheduler
 - `features/tools/` owns tool intent planning, permission policy, tool routing,
   result formatting, and search/weather/open-external capabilities.
 - App-level code should talk to the tool module through its public exports.
+
+### Tasks
+
+- `features/tasks/` owns the common task-log shape used by tools, agent traces,
+  background jobs, MCP actions, and future safety confirmations.
+- Agent-specific traces may adapt into `TaskRunLog`, but new audit surfaces
+  should avoid depending on `features/agent/` directly.
 
 ### Memory
 

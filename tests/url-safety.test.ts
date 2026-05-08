@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 
-import { checkChatBaseUrlSafety, checkUrlSafety } from '../electron/services/urlSafety.js'
+import { checkChatBaseUrlSafety, checkUrlSafety, checkUrlSafetyWithDns } from '../electron/services/urlSafety.js'
 
 describe('checkUrlSafety scheme guard', () => {
   test('accepts https:// by default', () => {
@@ -92,6 +92,10 @@ describe('checkUrlSafety private-IP blocklist', () => {
     assert.equal(checkUrlSafety('https://[fd00::1]/api').ok, false)
   })
 
+  test('rejects IPv4-mapped loopback IPv6', () => {
+    assert.equal(checkUrlSafety('https://[::ffff:127.0.0.1]/api').ok, false)
+  })
+
   test('accepts public IPv4', () => {
     assert.equal(checkUrlSafety('https://1.1.1.1/api').ok, true)
     assert.equal(checkUrlSafety('https://8.8.8.8/api').ok, true)
@@ -109,6 +113,31 @@ describe('checkUrlSafety allowPrivate escape hatch', () => {
       checkUrlSafety('file:///tmp', { allowPrivate: true }).ok,
       false,
     )
+  })
+})
+
+describe('checkUrlSafetyWithDns', () => {
+  test('rejects hostnames that resolve to private IPs', async () => {
+    const result = await checkUrlSafetyWithDns('https://safe.example.com/feed.xml', {
+      lookupFn: async () => [{ address: '127.0.0.1', family: 4 }],
+    })
+    assert.equal(result.ok, false)
+    assert.match(result.reason ?? '', /resolved to private\/loopback/i)
+  })
+
+  test('accepts hostnames that resolve to public IPs', async () => {
+    const result = await checkUrlSafetyWithDns('https://safe.example.com/feed.xml', {
+      lookupFn: async () => [{ address: '8.8.8.8', family: 4 }],
+    })
+    assert.equal(result.ok, true)
+  })
+
+  test('fails closed when DNS lookup throws', async () => {
+    const result = await checkUrlSafetyWithDns('https://safe.example.com/feed.xml', {
+      lookupFn: async () => { throw new Error('dns failed') },
+    })
+    assert.equal(result.ok, false)
+    assert.match(result.reason ?? '', /dns lookup failed/i)
   })
 })
 

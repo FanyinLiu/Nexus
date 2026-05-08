@@ -79,7 +79,10 @@ export function useRealtimeConversation(deps: RealtimeConversationDeps) {
 
     const settings = deps.settingsRef.current
     const dp = window.desktopPet
-    if (!dp?.realtimeStart) {
+    const realtimeStart = dp?.realtimeStart
+    const realtimeFeed = dp?.realtimeFeed
+    const subscribeRealtimeEvent = dp?.subscribeRealtimeEvent
+    if (!realtimeStart || !realtimeFeed || !subscribeRealtimeEvent) {
       activeRef.current = false
       throw new Error('Realtime API not available')
     }
@@ -95,7 +98,7 @@ export function useRealtimeConversation(deps: RealtimeConversationDeps) {
     })
     playerRef.current = player
 
-    const unsub = dp.subscribeRealtimeEvent((event) => {
+    const unsub = subscribeRealtimeEvent((event) => {
       if (!activeRef.current) return
 
       switch (event.type) {
@@ -203,11 +206,11 @@ export function useRealtimeConversation(deps: RealtimeConversationDeps) {
         const samples = pendingSamplesRef.current
         if (samples.length > 0) {
           pendingSamplesRef.current = []
-          dp.realtimeFeed({ samples }).catch(() => {})
+          realtimeFeed({ samples }).catch(() => {})
         }
       }, FEED_INTERVAL_MS)
 
-      await dp.realtimeStart({
+      await realtimeStart({
         apiKey: settings.apiKey,
         baseUrl: settings.apiBaseUrl.replace(/\/v1\/?$/i, '/v1/realtime'),
         model: settings.model,

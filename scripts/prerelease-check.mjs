@@ -173,7 +173,7 @@ stage('A', 'Process & version', () => {
 // ════════════════════════════════════════════════════════════════════════════
 
 stage('B', 'Code quality', () => {
-  check('B', `verify:release ${COLOR.dim('(tsc + lint + test + build)')}`, () => {
+  check('B', `verify:release ${COLOR.dim('(tsc + lint + test + build + distribution audit)')}`, () => {
     try {
       sh('npm run verify:release', { stdio: ['ignore', 'ignore', 'pipe'] })
     } catch (err) {
@@ -188,6 +188,22 @@ stage('B', 'Code quality', () => {
         sh('npm run smoke', { stdio: ['ignore', 'ignore', 'pipe'], timeout: 90_000 })
       } catch (err) {
         throw new Error(`smoke failed: ${err.message?.split('\n')[0]}`)
+      }
+    })
+
+    check('B', `Packaged smoke (electron-builder --dir + SMOKE_TEST)`, () => {
+      try {
+        sh('npm run package:dir:smoke', {
+          stdio: ['ignore', 'ignore', 'pipe'],
+          timeout: 420_000,
+          env: {
+            ...process.env,
+            CSC_IDENTITY_AUTO_DISCOVERY: 'false',
+          },
+        })
+      } catch (err) {
+        const detail = err.stderr?.toString()?.split('\n').slice(-8).join('\n') || err.message
+        throw new Error(`packaged smoke failed:\n       ${detail.replace(/\n/g, '\n       ')}`)
       }
     })
 

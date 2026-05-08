@@ -11,7 +11,7 @@ import {
 import { RELATIONSHIP_OPTIONS } from '../../lib/relationshipTypes'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import { loadLorebookEntries, saveLorebookEntries } from '../../lib/storage/lorebooks'
-import { TextField, TextareaField } from '../settingsFields'
+import { TextField } from '../settingsFields'
 import type { AppSettings, CharacterProfile } from '../../types'
 import type { TranslationKey } from '../../types/i18n'
 
@@ -43,6 +43,9 @@ export const ChatSection = memo(function ChatSection({
     pickTranslatedUiText(draft.uiLanguage, key, params)
 
   const petModel = petModelPresets.find((preset) => preset.id === draft.petModelId) ?? petModelPresets[0]
+  const translatePetText = (value: string | undefined) => value
+    ? ti(value as TranslationKey)
+    : ''
 
   function handleCreateProfile() {
     const profile = createCharacterProfile(draft, draft.companionName)
@@ -139,15 +142,6 @@ export const ChatSection = memo(function ChatSection({
 
   return (
     <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
-      <div className="settings-section__title-row">
-        <div>
-          <h4>{ti('settings.chat.title')}</h4>
-          <p className="settings-drawer__hint">
-            {ti('settings.chat.note')}
-          </p>
-        </div>
-      </div>
-
       {profileCount > 0 ? (
         <div className="settings-drawer__card">
           <div className="settings-section__title-row">
@@ -179,7 +173,7 @@ export const ChatSection = memo(function ChatSection({
                       <strong>{profile.label || profile.companionName}</strong>
                     </span>
                     <span className="settings-choice-card__description">
-                      {profileModel?.label ?? profile.petModelId}
+                      {translatePetText(profileModel?.label) || profile.petModelId}
                       {profile.speechOutputVoice ? ` · ${profile.speechOutputVoice}` : ''}
                     </span>
                   </button>
@@ -206,24 +200,27 @@ export const ChatSection = memo(function ChatSection({
         </div>
       ) : null}
 
-      <TextField
-        label={ti('settings.chat.companion_name')}
-        field="companionName"
-        draft={draft}
-        setDraft={setDraft}
-      />
+      <div className="settings-control-grid settings-chat-identity-grid">
+        <TextField
+          label={ti('settings.chat.companion_name')}
+          field="companionName"
+          draft={draft}
+          setDraft={setDraft}
+        />
 
-      <TextField
-        label={ti('settings.chat.user_name')}
-        field="userName"
-        draft={draft}
-        setDraft={setDraft}
-      />
+        <TextField
+          label={ti('settings.chat.user_name')}
+          field="userName"
+          draft={draft}
+          setDraft={setDraft}
+        />
+      </div>
 
-      <div className="onboarding-relationship">
-        <span className="onboarding-relationship__label">
-          {ti('settings.chat.relationship_type_label')}
-        </span>
+      <div className="settings-mini-group settings-chat-relationship-card">
+        <div className="settings-mini-group__head">
+          <h5>{ti('settings.chat.relationship_type_label')}</h5>
+          <span>{ti('settings.chat.relationship_type_hint')}</span>
+        </div>
         <div className="onboarding-relationship__options">
           {RELATIONSHIP_OPTIONS.map((opt) => {
             const isActive = draft.companionRelationshipType === opt.value
@@ -242,25 +239,28 @@ export const ChatSection = memo(function ChatSection({
             )
           })}
         </div>
-        <small className="onboarding-relationship__hint">
-          {ti('settings.chat.relationship_type_hint')}
-        </small>
       </div>
 
-      <TextareaField
-        label={ti('settings.chat.system_prompt')}
-        field="systemPrompt"
-        rows={6}
-        draft={draft}
-        setDraft={setDraft}
-      />
+      <div className="settings-mini-group">
+        <div className="settings-mini-group__head">
+          <h5>{ti('settings.chat.system_prompt')}</h5>
+          <span>{ti('settings.chat.system_prompt_hint')}</span>
+        </div>
+        <textarea
+          aria-label={ti('settings.chat.system_prompt')}
+          rows={4}
+          value={draft.systemPrompt}
+          onChange={(event) =>
+            setDraft((prev) => ({ ...prev, systemPrompt: event.target.value }))
+          }
+        />
+      </div>
 
-      <p className="settings-drawer__hint">
-        {ti('settings.chat.system_prompt_hint')}
-      </p>
-
-      <div className="settings-choice-field settings-choice-field--pet-model">
-        <span className="settings-choice-field__label">{ti('settings.chat.live2d_model')}</span>
+      <div className="settings-mini-group settings-choice-field settings-choice-field--pet-model">
+        <div className="settings-mini-group__head">
+          <h5>{ti('settings.chat.live2d_model')}</h5>
+          <span>{translatePetText(petModel?.description)}</span>
+        </div>
         <div className="settings-choice-grid" role="list">
           {petModelPresets.map((preset) => {
             const selected = draft.petModelId === preset.id
@@ -287,15 +287,13 @@ export const ChatSection = memo(function ChatSection({
         </div>
       </div>
 
-      <div className="settings-drawer__card">
-        <div className="settings-section__title-row">
+      <details className="settings-mini-group settings-chat-advanced-card">
+        <summary className="settings-mini-group__head">
           <div>
             <h5>{ti('settings.chat.character_voice')}</h5>
-            <p className="settings-drawer__hint">
-              {ti('settings.chat.character_voice_hint')}
-            </p>
+            <span>{ti('settings.chat.character_voice_hint')}</span>
           </div>
-        </div>
+        </summary>
 
         <label>
           <span>{ti('settings.chat.voice_id')}</span>
@@ -319,17 +317,15 @@ export const ChatSection = memo(function ChatSection({
             }
           />
         </label>
-      </div>
+      </details>
 
-      <div className="settings-drawer__card">
-        <div className="settings-section__title-row">
+      <details className="settings-mini-group settings-chat-advanced-card">
+        <summary className="settings-mini-group__head">
           <div>
             <h5>{ti('settings.chat.vts_title')}</h5>
-            <p className="settings-drawer__hint">
-              {ti('settings.chat.vts_hint')}
-            </p>
+            <span>{ti('settings.chat.vts_hint')}</span>
           </div>
-        </div>
+        </summary>
         <label className="settings-toggle">
           <span>{ti('settings.chat.vts_enabled')}</span>
           <input
@@ -349,10 +345,10 @@ export const ChatSection = memo(function ChatSection({
               onChange={(event) =>
                 setDraft((prev) => ({ ...prev, vtsPort: Number(event.target.value) || 8001 }))
               }
-            />
-          </label>
-        ) : null}
-      </div>
+              />
+            </label>
+          ) : null}
+      </details>
 
       <div className="settings-inline-row">
         <button
@@ -399,9 +395,7 @@ export const ChatSection = memo(function ChatSection({
         </button>
       </div>
 
-      <p className="settings-drawer__hint">
-        {petModel?.description ?? ''}
-        {' '}
+      <p className="settings-mini-group__note">
         {ti('settings.chat.model_import_hint')}
       </p>
 
