@@ -1,7 +1,8 @@
-﻿import { Suspense, useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import {
   getMemorySearchModeOptions,
   getSettingsSectionOptions,
+  normalizeSettingsSectionId,
   type ConnectionResult,
   type SettingsSectionId,
 } from './settingsDrawerSupport'
@@ -25,7 +26,6 @@ import {
   AutonomySection,
   ChatSection,
   ConsoleSection,
-  ContextSection,
   HistorySection,
   IntegrationsSection,
   LorebooksSection,
@@ -36,8 +36,7 @@ import {
   ToolsSection,
   VoiceSection,
   WindowSection,
-  preloadSettingsSection,
-} from './settingsSectionLoaders'
+} from './settingsSections'
 import {
   useConnectionTests,
   useSpeechVoiceManagement,
@@ -57,6 +56,7 @@ import type {
   ReminderTask,
   ServiceConnectionCapability,
   SpeechVoiceListResponse,
+  ThemeId,
   VoicePipelineState,
   VoiceState,
   VoiceTraceEntry,
@@ -144,17 +144,20 @@ export type SettingsDrawerProps = {
   onRemoveNotificationChannel?: (id: string) => Promise<void>
 }
 
-function renderSettingsSectionFallback(label: string) {
-  return (
-    <section className="settings-section is-active" aria-busy="true" aria-live="polite">
-      <div className="settings-section__title-row">
-        <div>
-          <h4>{label}</h4>
-          <p className="settings-drawer__hint">...</p>
-        </div>
-      </div>
-    </section>
-  )
+const SETTINGS_APPEARANCE_OPTIONS: Array<{
+  id: ThemeId
+  labelKey: Parameters<typeof pickTranslatedUiText>[1]
+  tone: 'night' | 'day' | 'warm-day'
+}> = [
+  { id: 'system-dark', labelKey: 'settings.appearance.night', tone: 'night' },
+  { id: 'system-day', labelKey: 'settings.appearance.day', tone: 'day' },
+  { id: 'warm-day', labelKey: 'settings.appearance.warm_day', tone: 'warm-day' },
+]
+
+function getSettingsThemeTone(themeId: ThemeId): 'night' | 'day' | 'warm-day' {
+  if (themeId === 'warm-day') return 'warm-day'
+  if (themeId === 'system-day' || themeId === 'editorial') return 'day'
+  return 'night'
 }
 
 export function SettingsDrawer({
@@ -189,9 +192,6 @@ export function SettingsDrawer({
   onClearDailyMemory,
   onUpdateDailyEntry,
   onRemoveDailyEntry,
-  onAddReminderTask,
-  onUpdateReminderTask,
-  onRemoveReminderTask,
   onImportPetModel,
   onTestConnection,
   onLoadSpeechVoices,
@@ -209,6 +209,8 @@ export function SettingsDrawer({
   const [settingsView, setSettingsView] = useState<'home' | 'section'>('home')
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false)
   const languageMenuRef = useRef<HTMLDivElement | null>(null)
+  const drawerBodyRef = useRef<HTMLDivElement | null>(null)
+  const settingsSectionsRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!languageMenuOpen) return undefined
@@ -277,6 +279,7 @@ export function SettingsDrawer({
   const selectedMemorySearchMode = memorySearchModeOptions.find((option) => option.value === draft.memorySearchMode)
     ?? memorySearchModeOptions[1]
   const activeSectionLabel = settingsSectionOptions.find((section) => section.id === activeSectionId)?.label
+    ?? settingsSectionOptions.find((section) => section.id === normalizeSettingsSectionId(activeSectionId))?.label
     ?? settingsSectionOptions[0].label
   const { meta: settingsSectionMetaById } = buildSettingsSectionMeta({
     ti,
@@ -306,12 +309,21 @@ export function SettingsDrawer({
   })
   const activeSectionMeta = settingsSectionMetaById[activeSectionId]
   const activeSectionDescription = activeSectionMeta.description
+  const settingsThemeTone = getSettingsThemeTone(draft.themeId)
+  const settingsBackdropClassName = [
+    'settings-backdrop',
+    settingsThemeTone === 'night' ? 'settings-backdrop--night' : 'settings-backdrop--day',
+    settingsThemeTone === 'warm-day' ? 'settings-backdrop--warm-day' : '',
+  ].filter(Boolean).join(' ')
+  const settingsDrawerClassName = [
+    'settings-drawer',
+    settingsThemeTone === 'night' ? 'settings-drawer--night' : 'settings-drawer--day',
+    settingsThemeTone === 'warm-day' ? 'settings-drawer--warm-day' : '',
+  ].filter(Boolean).join(' ')
   // Sync draft from external settings ONLY when the drawer opens,
   // not while the user is actively editing.
-   
   useEffect(() => {
     if (open) {
-      console.info('[SettingsDrawer] SYNC draft from settings, provider:', settings.speechOutputProviderId)
       setDraft(settings)
       speechVoices.syncPreviewText(settings.companionName)
       setSettingsView('home')
@@ -321,7 +333,6 @@ export function SettingsDrawer({
 
   // Re-sync API keys when vault hydration completes after drawer is already open.
   // This handles the race where settings are loaded with empty keys before vault decrypts them.
-   
   useEffect(() => {
     if (!open) return
     const incomingKeyValues = {
@@ -357,7 +368,6 @@ export function SettingsDrawer({
     settings.discordBotToken,
   ])
 
-   
   useEffect(() => {
     if (!petModelPresets.length) return
 
@@ -386,11 +396,8 @@ export function SettingsDrawer({
   }
 
   function applySpeechOutputPreset(providerId: string) {
-    console.info('[SettingsDrawer] applySpeechOutputPreset:', providerId)
     setDraft((prev) => {
-      const next = switchSpeechOutputProvider(prev, providerId)
-      console.info('[SettingsDrawer] draft updated: prev provider:', prev.speechOutputProviderId, '→ next:', next.speechOutputProviderId)
-      return next
+      return switchSpeechOutputProvider(prev, providerId)
     })
     speechVoices.applySpeechOutputPreset(providerId)
   }
@@ -401,14 +408,22 @@ export function SettingsDrawer({
   }
 
   function handleOpenSettingsSection(sectionId: SettingsSectionId) {
-    preloadSettingsSection(sectionId)
-    setActiveSectionId(sectionId)
+    setActiveSectionId(normalizeSettingsSectionId(sectionId))
     setSettingsView('section')
   }
 
   function handleReturnToSettingsHome() {
     setSettingsView('home')
   }
+
+  useEffect(() => {
+    if (!open) return undefined
+    const frame = window.requestAnimationFrame(() => {
+      drawerBodyRef.current?.scrollTo({ top: 0 })
+      settingsSectionsRef.current?.scrollTo({ top: 0 })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [activeSectionId, open, settingsView])
 
   function renderActiveSettingsSection() {
     switch (activeSectionId) {
@@ -583,30 +598,19 @@ export function SettingsDrawer({
       case 'console':
       default:
         return (
-          <>
-            <ConsoleSection
-              active
-              continuousVoiceActive={continuousVoiceActive}
-              debugConsoleEvents={debugConsoleEvents}
-              liveTranscript={liveTranscript}
-              onClearDebugConsole={onClearDebugConsole}
-              reminderTasks={reminderTasks}
-              speechLevel={speechLevel}
-              uiLanguage={uiLanguage}
-              voicePipeline={voicePipeline}
-              voiceState={voiceState}
-              voiceTrace={voiceTrace}
-            />
-
-            <ContextSection
-              active
-              reminderTasks={reminderTasks}
-              uiLanguage={uiLanguage}
-              onAddReminderTask={onAddReminderTask}
-              onUpdateReminderTask={onUpdateReminderTask}
-              onRemoveReminderTask={onRemoveReminderTask}
-            />
-          </>
+          <ConsoleSection
+            active
+            continuousVoiceActive={continuousVoiceActive}
+            debugConsoleEvents={debugConsoleEvents}
+            liveTranscript={liveTranscript}
+            onClearDebugConsole={onClearDebugConsole}
+            reminderTasks={reminderTasks}
+            speechLevel={speechLevel}
+            uiLanguage={uiLanguage}
+            voicePipeline={voicePipeline}
+            voiceState={voiceState}
+            voiceTrace={voiceTrace}
+          />
         )
     }
   }
@@ -614,9 +618,9 @@ export function SettingsDrawer({
   if (!open) return null
 
   return (
-    <div className="settings-backdrop" onClick={handleDismiss}>
+    <div className={settingsBackdropClassName} onClick={handleDismiss}>
       <aside
-        className="settings-drawer"
+        className={settingsDrawerClassName}
         role="dialog"
         aria-modal="true"
         aria-label={ti('settings.panel', { name: settings.companionName })}
@@ -688,9 +692,11 @@ export function SettingsDrawer({
                             <span className="settings-drawer__language-menu-native">
                               {option.nativeLabel}
                             </span>
-                            <span className="settings-drawer__language-menu-meta">
-                              {option.englishLabel}
-                            </span>
+                            {option.nativeLabel !== option.englishLabel ? (
+                              <span className="settings-drawer__language-menu-meta">
+                                {option.englishLabel}
+                              </span>
+                            ) : null}
                           </button>
                         </li>
                       )
@@ -705,17 +711,39 @@ export function SettingsDrawer({
           </div>
         </div>
 
-        <div className="settings-drawer__body">
+        <div className="settings-drawer__body" ref={drawerBodyRef}>
           {settingsView === 'home' ? (
             <div className="settings-home">
+              <div className="settings-appearance-switch" role="group" aria-label={ti('settings.appearance.label')}>
+                <span className="settings-appearance-switch__label">{ti('settings.appearance.label')}</span>
+                <div className="settings-appearance-switch__control">
+                  {SETTINGS_APPEARANCE_OPTIONS.map((option) => {
+                    const isActive = option.tone === settingsThemeTone
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`settings-appearance-switch__option ${isActive ? 'is-active' : ''}`}
+                        aria-pressed={isActive}
+                        onClick={() => {
+                          setDraft((prev) => ({
+                            ...prev,
+                            themeId: option.id,
+                          }))
+                        }}
+                      >
+                        {ti(option.labelKey)}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
               {settingsHomeCards.map((card) => (
                 <button
                   key={card.key}
                   type="button"
                   className="settings-home-card"
                   data-section={card.key}
-                  onFocus={() => preloadSettingsSection(card.sectionId)}
-                  onPointerEnter={() => preloadSettingsSection(card.sectionId)}
                   onClick={() => handleOpenSettingsSection(card.sectionId)}
                 >
                   <span className="settings-home-card__glyph" aria-hidden="true">
@@ -723,16 +751,11 @@ export function SettingsDrawer({
                   </span>
                   <span className="settings-home-card__label">{card.title}</span>
                   <span className="settings-home-card__value">{card.preview[0] ?? ''}</span>
-                  <span className="settings-home-card__chevron" aria-hidden="true">
-                    <svg width="8" height="13" viewBox="0 0 8 13" fill="none">
-                      <path d="M1 1l5.5 5.5L1 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
                 </button>
               ))}
             </div>
           ) : (
-            <div className="settings-page">
+            <div className="settings-page" data-section={activeSectionId}>
               <div className="settings-page__header">
                 <button type="button" className="settings-page__back" onClick={handleReturnToSettingsHome}>
                   <span aria-hidden="true">{'<'}</span>
@@ -740,17 +763,22 @@ export function SettingsDrawer({
                 </button>
 
                 <div className="settings-page__headline">
-                  <p className="eyebrow">{activeSectionMeta.eyebrow}</p>
+                  {activeSectionMeta.eyebrow ? (
+                    <p className="eyebrow">{activeSectionMeta.eyebrow}</p>
+                  ) : null}
                   <h4>{activeSectionLabel}</h4>
-                  <p className="settings-section__note">{activeSectionDescription}</p>
+                  {activeSectionDescription ? (
+                    <p className="settings-section__note">{activeSectionDescription}</p>
+                  ) : null}
                 </div>
 
+                <span className="settings-page__mark" aria-hidden="true">
+                  {renderSettingsCardIcon(activeSectionMeta.glyph)}
+                </span>
               </div>
 
-              <div className="settings-drawer__content settings-drawer__sections">
-                <Suspense fallback={renderSettingsSectionFallback(activeSectionLabel)}>
-                  {renderActiveSettingsSection()}
-                </Suspense>
+              <div className="settings-drawer__content settings-drawer__sections" ref={settingsSectionsRef}>
+                {renderActiveSettingsSection()}
               </div>
             </div>
           )}

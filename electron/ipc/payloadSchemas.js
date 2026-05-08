@@ -242,6 +242,16 @@ const serviceConnectionTestSchema = {
   },
 }
 
+const chatModelListSchema = {
+  type: 'object',
+  fields: {
+    providerId: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
+    baseUrl: { type: 'string', maxLength: URL_TEXT_MAX },
+    apiKey: { type: 'string', maxLength: SECRET_TEXT_MAX },
+    model: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
+  },
+}
+
 const webSearchRequestSchema = {
   type: 'object',
   fields: {
@@ -611,6 +621,10 @@ export function validateChatCompletionPayload(channel, payload) {
 
 export function validateChatAbortStreamPayload(payload) {
   return validateIpcPayload('chat:abort-stream', payload, chatAbortStreamSchema)
+}
+
+export function validateChatModelListPayload(payload) {
+  return validateIpcPayload('chat:list-models', payload, chatModelListSchema)
 }
 
 export function validateServiceConnectionTestPayload(payload) {

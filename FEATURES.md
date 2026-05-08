@@ -1,6 +1,20 @@
 # Nexus — Feature Inventory
 
-> Electron + React + TypeScript desktop AI companion with Live2D avatar.
+> Electron + React + TypeScript desktop AI companion with a minimal default avatar and optional Live2D path.
+> This file is a broad capability inventory, not the Phase 1 build scope.
+> For the active MVP scope, see
+> [Nexus 升级整合计划](docs/NEXUS_UPGRADE_INTEGRATION_PLAN.md).
+
+## Phase Scope
+
+| Stage | Status | Capabilities |
+|---|---|---|
+| Phase 1 必需 | Active MVP scope | 桌面常驻小窗口、二次元极简头像、Ollama / DeepSeek、简单文本对话 |
+| 后续核心 | Planned integration | 轻量桌宠互动、基础语音、可控记忆、授权任务助手 |
+| 高级/实验 | Keep gated | 完整 Live2D、完整 Agent、MCP、插件、多平台网关、游戏集成 |
+
+Read the inventory below as modules that may be reused or reintroduced by
+phase. Do not treat every listed feature as something Phase 1 must ship.
 
 ---
 
@@ -8,7 +22,8 @@
 
 | Feature | Description |
 |---|---|
-| Live2D Avatar | Desktop pet with idle animation choreography, lip-sync, mood expressions, stage directions in chat |
+| Minimal Avatar | Phase 1 static companion avatar with lightweight status states |
+| Optional Live2D Avatar | Desktop pet with idle animation choreography, lip-sync, mood expressions, stage directions in chat |
 | Character Profiles | Multiple persona presets — each with name, system prompt, model, voice |
 | SOUL.md Persona | File-based identity system (`userData/persona/SOUL.md`), hot-reload, overrides `systemPrompt` |
 | Persona MEMORY.md | Companion-side persistent memory file injected alongside SOUL.md |
@@ -224,9 +239,9 @@
 
 | Feature | Description |
 |---|---|
-| Settings Drawer | 13 sections: Chat, Model, Speech In, Speech Out, Voice, Clone, Memory, Context, Autonomy, Integrations, History, Window, Console |
+| Settings Drawer | 8 user-facing entries: Model, Desktop, Character, Self-check, Chat History, Voice, Memory, Tools |
 | Provider Choice Grid | Visual grid selector for providers (text, STT, TTS) |
-| Integration Inspector | Real-time status cards for MCP, Minecraft, Factorio, Telegram, Discord |
+| Tool Settings | Web search, weather, and safe tool controls stay behind the Tools entry |
 | Debug Console | Runtime event log with source filtering |
 | Onboarding | First-run setup flow |
 | Pet Window | Pin, click-through, drag, system tray menu |
@@ -249,4 +264,4 @@
 | Feature Modules | 21 |
 | React Hooks | 32+ |
 | Preload API Methods | 120+ |
-| Settings Sections | 13 |
+| Settings Sections | 12 |

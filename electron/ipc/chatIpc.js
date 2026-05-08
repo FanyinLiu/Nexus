@@ -1,7 +1,9 @@
 import { ipcMain } from 'electron'
 import {
   buildChatConnectionTestRequest,
+  buildChatModelListRequest,
   buildChatRequest,
+  buildDiscoveredChatModels,
   chatProviderRequiresApiKey,
   extractChatResponseContent,
   extractChatResponseFinishReason,
@@ -10,8 +12,11 @@ import {
   extractChatStreamingDeltaContent,
   extractChatStreamingDeltaReasoning,
   extractChatStreamingDeltaToolCalls,
+  getChatConnectionTestPreflightFailure,
   isChatStreamingPayloadTerminal,
   normalizeChatProviderId,
+  summarizeChatConnectionTestFailure,
+  summarizeChatConnectionTestSuccess,
   trimRepeatedStreamingDelta as trimChatStreamingDelta,
 } from '../chatRuntime.js'
 import {
@@ -35,6 +40,7 @@ import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
 import {
   validateChatAbortStreamPayload,
   validateChatCompletionPayload,
+  validateChatModelListPayload,
   validateServiceConnectionTestPayload,
 } from './payloadSchemas.js'
 
@@ -407,6 +413,14 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       }
     }
 
+    const preflightFailure = getChatConnectionTestPreflightFailure({
+      providerId,
+      apiKey: requestPayload.apiKey,
+    })
+    if (preflightFailure) {
+      return preflightFailure
+    }
+
     const requestSpec = buildChatConnectionTestRequest({
       providerId,
       baseUrl,
@@ -424,43 +438,139 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       const data = await response.json().catch(() => ({}))
 
       if (response.ok) {
-        const firstModels = requestSpec.successKind === 'model_list' && Array.isArray(data?.data)
-          ? data.data.slice(0, 3).map((item) => item?.id).filter(Boolean)
-          : []
-
-        let message
-        if (requestSpec.successKind === 'message') {
-          message = '连接成功，已收到模型响应。'
-        } else if (firstModels.length) {
-          message = `连接成功，可用模型示例：${firstModels.join(', ')}`
-        } else {
-          message = '连接成功，接口已正常响应。'
-        }
-
-        return { ok: true, message }
+        return summarizeChatConnectionTestSuccess({
+          providerId,
+          successKind: requestSpec.successKind,
+          data,
+          model: requestPayload.model,
+        })
       }
 
-      if (response.status === 401) {
-        return {
-          ok: false,
-          message: requestPayload.apiKey || !chatProviderRequiresApiKey(providerId)
-            ? 'URL 可访问，但 API Key 无效或已失效。'
-            : 'URL 可访问，但还没有填写 API Key。',
-        }
-      }
-
+      return summarizeChatConnectionTestFailure({
+        providerId,
+        status: response.status,
+        data,
+        hasApiKey: Boolean(String(requestPayload.apiKey ?? '').trim()),
+        model: requestPayload.model,
+      })
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
       return {
         ok: false,
-        message:
-          data?.error?.message
-          ?? data?.message
-          ?? `接口返回异常状态：${response.status}`,
+        status: 'unreachable',
+        message: formatConnectionFailureMessage(reason),
+        recommendation: '检查 API Base URL、网络代理和本地服务是否正在运行。',
+        checkedAt: new Date().toISOString(),
+      }
+    }
+  })
+
+  ipcMain.handle('chat:list-models', async (event, payload) => {
+    requireTrustedSender(event)
+    payload = validateChatModelListPayload(payload)
+    const requestPayload = await resolveVaultRefsForSender(event.sender, payload, ['apiKey'])
+    const baseUrl = normalizeBaseUrl(requestPayload.baseUrl)
+    const providerId = normalizeChatProviderId(requestPayload.providerId, baseUrl)
+
+    if (!baseUrl) {
+      return {
+        ok: false,
+        providerId,
+        status: 'misconfigured',
+        message: '请先填写 API Base URL。',
+        recommendation: '本地 Ollama 默认使用 http://127.0.0.1:11434/v1。',
+        checkedAt: new Date().toISOString(),
+        discoveredModels: [],
+      }
+    }
+
+    const safety = checkChatBaseUrlSafety(baseUrl)
+    if (!safety.ok) {
+      return {
+        ok: false,
+        providerId,
+        status: 'misconfigured',
+        message: `API Base URL 被拒绝（${safety.reason}）。`,
+        recommendation: '请使用合法的 https/http 模型接口地址；本地服务使用 127.0.0.1 或 localhost。',
+        checkedAt: new Date().toISOString(),
+        discoveredModels: [],
+      }
+    }
+
+    const preflightFailure = getChatConnectionTestPreflightFailure({
+      providerId,
+      apiKey: requestPayload.apiKey,
+    })
+    if (preflightFailure) {
+      return {
+        ...preflightFailure,
+        providerId,
+        status: 'needs_key',
+        recommendation: '填写该 provider 的 API Key 后再刷新模型列表。',
+        checkedAt: new Date().toISOString(),
+        discoveredModels: [],
+      }
+    }
+
+    const requestSpec = buildChatModelListRequest({
+      providerId,
+      baseUrl,
+      apiKey: requestPayload.apiKey,
+      model: requestPayload.model,
+    })
+
+    try {
+      const response = await performNetworkRequest(requestSpec.endpoint, {
+        ...requestSpec.request,
+        timeoutMs: CONNECTION_TEST_TIMEOUT_MS,
+        timeoutMessage: '模型列表读取超时，请检查 URL、网络、代理或服务状态。',
+      })
+      const data = await response.json().catch(() => ({}))
+      const discoveredModels = buildDiscoveredChatModels({ providerId, data })
+
+      if (response.ok) {
+        return {
+          ok: discoveredModels.length > 0,
+          providerId,
+          status: discoveredModels.length > 0 ? 'ready' : 'model_missing',
+          message: discoveredModels.length > 0
+            ? `已发现 ${discoveredModels.length} 个可用模型。`
+            : '已连接，但没有发现可用模型。',
+          recommendation: discoveredModels.length > 0
+            ? ''
+            : providerId === 'ollama'
+              ? '运行 ollama pull qwen3:8b，或在 Ollama 中安装任意聊天模型后刷新。'
+              : '检查该服务商是否开放 /models 接口；也可以手动填写模型 ID。',
+          discoveredModels,
+          checkedAt: new Date().toISOString(),
+        }
+      }
+
+      const failure = summarizeChatConnectionTestFailure({
+        providerId,
+        status: response.status,
+        data,
+        hasApiKey: Boolean(String(requestPayload.apiKey ?? '').trim()),
+        model: requestPayload.model,
+      })
+
+      return {
+        ...failure,
+        providerId,
+        discoveredModels,
       }
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
       return {
         ok: false,
+        providerId,
+        status: 'unreachable',
         message: formatConnectionFailureMessage(reason),
+        recommendation: providerId === 'ollama'
+          ? '确认 Ollama 已启动，并且 Nexus 预览地址仍是 47821，不是 11434/v1。'
+          : '检查 API Base URL、网络代理和服务商状态。',
+        discoveredModels: [],
+        checkedAt: new Date().toISOString(),
       }
     }
   })

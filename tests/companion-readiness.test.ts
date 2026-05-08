@@ -41,7 +41,6 @@ test('marks a text-only companion as ready when the core identity and text model
       ['identity', 'ready'],
       ['text', 'ready'],
       ['pet', 'ready'],
-      ['voice', 'ready'],
     ],
   )
 })

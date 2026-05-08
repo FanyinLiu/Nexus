@@ -9,6 +9,7 @@ import type {
   AudioTranscriptionResponse,
   ChatCompletionRequest,
   ChatCompletionResponse,
+  ChatModelListRequest,
   DesktopContextRequest,
   DesktopContextSnapshot,
   ExternalLinkRequest,
@@ -27,6 +28,7 @@ import type {
   TextFileSaveResponse,
   PanelWindowState,
   PetWindowState,
+  ProviderHealthResult,
   ServiceConnectionRequest,
   ServiceConnectionResponse,
   WeatherLookupRequest,
@@ -259,6 +261,7 @@ declare global {
         apiKey: string
         model?: string
       }) => Promise<ServiceConnectionResponse>
+      listChatModels: (payload: ChatModelListRequest) => Promise<ProviderHealthResult>
       testServiceConnection: (payload: ServiceConnectionRequest) => Promise<ServiceConnectionResponse>
       probeLocalServices: (
         payload: LocalServiceProbeRequest[],

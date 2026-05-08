@@ -91,6 +91,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
     })
   },
   testChatConnection: (payload) => ipcRenderer.invoke('chat:test-connection', payload),
+  listChatModels: (payload) => ipcRenderer.invoke('chat:list-models', payload),
   testServiceConnection: (payload) => ipcRenderer.invoke('service:test-connection', payload),
   probeLocalServices: (payload) => ipcRenderer.invoke('doctor:probe-local-services', payload),
   inspectIntegrations: (payload) => ipcRenderer.invoke('integrations:inspect', payload),

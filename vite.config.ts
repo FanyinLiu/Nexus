@@ -13,7 +13,6 @@ const settingsSectionChunks = [
       '/src/components/settingsSections/StateTimelinePanel.tsx',
       '/src/components/settingsSections/UpdaterPanel.tsx',
       '/src/components/settingsSections/WeeklyRecapPanel.tsx',
-      '/src/components/settingsSections/ContextSection.tsx',
     ],
   },
   {
@@ -26,6 +25,7 @@ const settingsSectionChunks = [
   },
   { name: 'settings-section-model', files: ['/src/components/settingsSections/ModelSection.tsx'] },
   { name: 'settings-section-chat', files: ['/src/components/settingsSections/ChatSection.tsx'] },
+  { name: 'settings-section-context', files: ['/src/components/settingsSections/ContextSection.tsx'] },
   { name: 'settings-section-history', files: ['/src/components/settingsSections/HistorySection.tsx'] },
   { name: 'settings-section-memory', files: ['/src/components/settingsSections/MemorySection.tsx'] },
   { name: 'settings-section-lorebooks', files: ['/src/components/settingsSections/LorebooksSection.tsx'] },

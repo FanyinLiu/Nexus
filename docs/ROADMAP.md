@@ -1,45 +1,46 @@
-# Nexus Roadmap — companion-first stewardship
+# Nexus Roadmap — companion-first phases
 
-> Last updated 2026-04-30. Stewardship follows Klein's product direction.
+> Last updated 2026-05-07. Stewardship follows Klein's product direction.
+> For the short-term MVP and Chinese execution plan, see
+> [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md). When planning
+> near-term work, Phase 1 in that document is the active scope.
 
 ## Posture
 
 **AI desktop companion first.**
 
 Nexus is not trying to become a generic local AI workbench. The product
-center is a local-first AI desktop companion: visible, voice-capable,
-emotionally continuous, respectful of attention, and able to remember the
-relationship over time. Productivity features, tools, game bridges, and
-knowledge work are valuable only when they strengthen that companion
-experience.
+center is a local-first AI desktop companion: visible, lightweight, respectful
+of attention, and able to grow toward voice, memory, and autonomy after the
+minimum desktop companion loop is stable. Productivity features, tools, game
+bridges, and knowledge work are valuable only when they strengthen that
+companion experience.
 
-For the next phase, prioritize:
+For the active Phase 1 path, prioritize:
 
-1. Presence: Live2D behavior, pet window polish, mood, gestures, and desktop
-   interaction.
-2. Natural conversation: low-latency voice, interruption, wake word, VAD,
-   TTS, and clear failure recovery.
-3. Long-term continuity: memory, relationship state, milestones, and user
-   control over what is remembered.
-4. Safe autonomy: proactive care that is useful, quiet, auditable, and easy
-   to disable.
-5. Maintenance discipline: every new surface must be testable, gated, and
+1. Presence: a small always-on desktop window and a minimal anime-style avatar.
+2. Text conversation: a stable Ollama / DeepSeek path with clear errors.
+3. First-run clarity: onboarding and settings should expose only the Phase 1
+   route by default.
+4. Maintenance discipline: advanced voice, memory, tools, integrations, and
+   autonomy stay gated until the minimum loop is solid.
+5. Verification: every new surface must be checkable, gated, and
    shippable across supported platforms.
 
 ## Companion roadmap
 
-### Phase 1 — Stewardship baseline
+### Phase 1 — Minimal desktop companion
 
-Make the project easy to maintain before adding more personality surface.
+Make the smallest usable Nexus experience work end to end.
 
-- Keep `npm run lint`, `npm test`, and `npm run build` green before release
-  work.
-- Keep smoke tests bounded so GUI failures become visible diagnostics instead
-  of hangs.
-- Keep `CHANGELOG.md`, release notes, and this roadmap current.
-- Preserve user-owned local edits during maintenance; never sweep unrelated
-  work into commits.
-- Hide dormant or high-complexity feature lines behind explicit gates.
+- Launch a small always-on desktop companion window.
+- Use the default `nexus-mini` static avatar; keep full Live2D optional.
+- Support Ollama (`http://127.0.0.1:11434/v1`, `qwen3:8b`) and DeepSeek
+  (`deepseek-v4-flash`) for simple text chat.
+- Keep onboarding focused on text model, identity, and window basics.
+- Provide a startup self-check panel and `npm run doctor` so startup, preview,
+  model, and API mistakes are visible without digging through logs.
+- Hide dormant or high-complexity feature lines behind explicit advanced gates.
 
 ### Phase 2 — First-run companion setup
 

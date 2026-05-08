@@ -33,9 +33,21 @@ function normalizeMemory(value: unknown, index: number): MemoryItem | null {
     || category === 'goal'
     || category === 'habit'
     || category === 'manual'
+    || category === 'feedback'
+    || category === 'project'
+    || category === 'reference'
   )
     ? category
     : 'manual'
+  const rawKind = value.kind
+  const normalizedKind = (
+    rawKind === 'preference'
+    || rawKind === 'fact'
+    || rawKind === 'relationship'
+    || rawKind === 'knowledge'
+  )
+    ? rawKind
+    : undefined
   const createdAt = String(value.createdAt ?? '').trim()
   const normalizedCreatedAt = Number.isNaN(Date.parse(createdAt))
     ? new Date(Date.now() + index).toISOString()
@@ -48,6 +60,9 @@ function normalizeMemory(value: unknown, index: number): MemoryItem | null {
     id: typeof value.id === 'string' && value.id.trim() ? value.id : createId('memory'),
     content,
     category: normalizedCategory,
+    ...(normalizedKind ? { kind: normalizedKind } : {}),
+    enabled: typeof value.enabled === 'boolean' ? value.enabled : true,
+    ...(typeof value.sourceRef === 'string' && value.sourceRef.trim() ? { sourceRef: value.sourceRef.trim() } : {}),
     source: typeof value.source === 'string' && value.source.trim() ? value.source : 'import',
     createdAt: normalizedCreatedAt,
     ...(lastUsedAt ? { lastUsedAt } : {}),

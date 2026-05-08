@@ -86,10 +86,11 @@ const PRICING_TABLE: Array<{ pattern: string; price: ModelPrice }> = [
   { pattern: 'deepseek-v4-pro',      price: { inputPerM: 0.145, outputPerM: 3.48  } },
   { pattern: 'deepseek-v4-flash',    price: { inputPerM: 0.14,  outputPerM: 0.28  } },
   { pattern: 'deepseek-chat',        price: { inputPerM: 0.14,  outputPerM: 0.28  } },
-  { pattern: 'deepseek-reasoner',    price: { inputPerM: 0.55,  outputPerM: 2.19  } },
-  // OpenAI — longest-first; 5.5-pro / 5.5 / 5.4 distinct rates, bare gpt-5 falls back to 5.4 cost
-  { pattern: 'gpt-5.5-pro',         price: { inputPerM: 30.00, outputPerM: 180.00 } },
+  { pattern: 'deepseek-reasoner',    price: { inputPerM: 0.14,  outputPerM: 0.28  } },
+  // OpenAI — longest-first; 5.5 / 5.4 distinct rates, bare gpt-5 falls back to 5.4 cost
   { pattern: 'gpt-5.5',             price: { inputPerM: 5.00,  outputPerM: 30.00  } },
+  { pattern: 'gpt-5.4-mini',        price: { inputPerM: 0.75,  outputPerM: 4.50  } },
+  { pattern: 'gpt-5.4-nano',        price: { inputPerM: 0.20,  outputPerM: 1.25  } },
   { pattern: 'gpt-5.4',             price: { inputPerM: 2.50,  outputPerM: 15.00  } },
   { pattern: 'gpt-5',               price: { inputPerM: 2.50,  outputPerM: 15.00  } },
   { pattern: 'gpt-4o-mini',         price: { inputPerM: 0.15,  outputPerM: 0.60  } },

@@ -1,7 +1,7 @@
 import type { AutonomySettings } from './autonomy'
 import type { AppLocale } from './i18n'
 import type { MemorySearchMode } from './memory'
-import type { PetMood } from './pet'
+import type { CompanionPresenceState, PetMood } from './pet'
 import type { ThemeId } from './theme'
 import type { WebSearchProviderId } from './tools'
 import type {
@@ -48,6 +48,8 @@ export interface CharacterProfile {
   id: string
   label: string
   companionName: string
+  userName?: string
+  companionRelationshipType?: CompanionRelationshipType
   systemPrompt: string
   petModelId: string
   speechOutputProviderId?: string
@@ -465,6 +467,7 @@ export interface RuntimeStateSnapshot {
   schedulerArmed?: boolean
   schedulerNextRunAt?: string
   activeTaskLabel?: string
+  companionPresence?: CompanionPresenceState
   petOnline?: boolean
   panelOnline?: boolean
   petLastSeenAt?: string

@@ -3,7 +3,6 @@ import { parseNumberInput } from '../settingsDrawerSupport'
 import { TextField, ToggleField } from '../settingsFields'
 import {
   getInspectableIntegrationModules,
-  getRoadmapIntegrationModules,
   type IntegrationModuleDescriptor,
 } from '../../features/integrations/registry'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
@@ -26,7 +25,6 @@ type IntegrationsSectionProps = {
 type IntegrationPanelId = InspectableIntegrationModuleId
 
 const inspectableModules = getInspectableIntegrationModules()
-const roadmapModules = getRoadmapIntegrationModules()
 
 export const IntegrationsSection = memo(function IntegrationsSection({
   active,
@@ -237,32 +235,6 @@ export const IntegrationsSection = memo(function IntegrationsSection({
     )
   }
 
-  function renderRoadmapCard(descriptor: IntegrationModuleDescriptor) {
-    return (
-      <article key={descriptor.id} className="settings-drawer__card">
-        <div className="settings-section__title-row">
-          <div>
-            <h5>{ti(descriptor.title)}</h5>
-            <p className="settings-drawer__hint">{ti(descriptor.summary)}</p>
-          </div>
-          <div className="settings-page__meta">
-            <span>{ti(descriptor.badge)}</span>
-          </div>
-        </div>
-
-        <p className="settings-inline-note">
-          {ti(descriptor.designPattern)}
-        </p>
-        <p className="settings-inline-note">
-          {ti(descriptor.nextStep)}
-        </p>
-        <p className="settings-inline-note">
-          {`${ti('settings.integrations.design_refs')}: ${descriptor.references.join(' / ')}`}
-        </p>
-      </article>
-    )
-  }
-
   function updateMcpServer(serverId: string, patch: Partial<McpServerConfig>) {
     setDraft((prev) => ({
       ...prev,
@@ -363,7 +335,7 @@ export const IntegrationsSection = memo(function IntegrationsSection({
               <p className="settings-drawer__hint">{ti('settings.integrations.mcp.note')}</p>
             </div>
             <div className="settings-page__meta">
-              <span>{`${draft.mcpServers.length} server(s)`}</span>
+              <span>{ti('settings.integrations.mcp.server_count', { count: String(draft.mcpServers.length) })}</span>
               <span>{ti('settings.integrations.structure_aligned')}</span>
             </div>
           </div>
@@ -656,15 +628,6 @@ export const IntegrationsSection = memo(function IntegrationsSection({
       {activePanelId === 'factorio' ? renderGamePanel('factorio') : null}
       {activePanelId === 'telegram' ? renderTelegramPanel() : null}
       {activePanelId === 'discord' ? renderDiscordPanel() : null}
-
-      <div className="settings-section__title-row">
-        <div>
-          <h4>{ti('settings.integrations.next_modules')}</h4>
-          <p className="settings-drawer__hint">{ti('settings.integrations.next_modules_note')}</p>
-        </div>
-      </div>
-
-      {roadmapModules.map((descriptor) => renderRoadmapCard(descriptor))}
     </section>
   )
 })

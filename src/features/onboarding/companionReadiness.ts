@@ -151,11 +151,16 @@ function buildVoiceItem(input: CompanionReadinessInput): CompanionReadinessItem 
 }
 
 export function buildCompanionReadiness(input: CompanionReadinessInput): CompanionReadinessSummary {
+  const voiceConfigured = (
+    input.speechInputEnabled
+    || input.speechOutputEnabled
+    || input.continuousVoiceModeEnabled
+  )
   const items = [
     buildIdentityItem(input),
     buildTextItem(input),
     buildPetItem(input),
-    buildVoiceItem(input),
+    ...(voiceConfigured ? [buildVoiceItem(input)] : []),
   ]
   const status = getOverallStatus(items)
 

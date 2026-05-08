@@ -16,7 +16,7 @@ import type {
   MemoryRecallContext,
 } from '../../types'
 import { buildLorebookSection } from './lorebookInjection'
-import { getApiProviderPreset } from '../../lib/apiProviders'
+import { getApiProviderPreset } from '../models/index.ts'
 import { formatDesktopContext } from '../context/desktopContext'
 import { formatNarrativeForPrompt } from '../memory/narrativeMemory'
 import { getChatPromptStrings } from './prompts/index.ts'

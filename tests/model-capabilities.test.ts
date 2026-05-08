@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { modelSupportsVision } from '../src/lib/modelCapabilities.ts'
+import {
+  estimateModelContextWindowTokens,
+  modelSupportsSpeech,
+  modelSupportsVision,
+} from '../src/lib/modelCapabilities.ts'
 
 test('modelSupportsVision: known multimodal families', () => {
   for (const id of [
@@ -40,9 +44,9 @@ test('modelSupportsVision: known multimodal families', () => {
 
 test('modelSupportsVision: text-only models', () => {
   for (const id of [
-    'deepseek-chat',
+    'deepseek-v4-flash',
+    'deepseek-v4-pro',
     'deepseek-coder',
-    'deepseek-reasoner',
     'llama-3.1-70b',
     'llama-3-8b',
     'mistral-7b',
@@ -64,4 +68,23 @@ test('modelSupportsVision: empty / nullish', () => {
   assert.equal(modelSupportsVision(null), false)
   assert.equal(modelSupportsVision(undefined), false)
   assert.equal(modelSupportsVision('   '), false)
+})
+
+test('modelSupportsSpeech: detects voice and realtime model ids', () => {
+  assert.equal(modelSupportsSpeech('gpt-4o-mini-tts'), true)
+  assert.equal(modelSupportsSpeech('gpt-realtime'), true)
+  assert.equal(modelSupportsSpeech('deepseek-v4-flash'), false)
+})
+
+test('estimateModelContextWindowTokens: returns useful coarse buckets', () => {
+  assert.equal(estimateModelContextWindowTokens('deepseek-v4-flash'), 1_000_000)
+  assert.equal(estimateModelContextWindowTokens('gpt-5.4-mini'), 400_000)
+  assert.equal(estimateModelContextWindowTokens('grok-4.3'), 1_000_000)
+  assert.equal(estimateModelContextWindowTokens('grok-4.20-0309-reasoning'), 2_000_000)
+  assert.equal(estimateModelContextWindowTokens('claude-sonnet-4-6'), 200_000)
+  assert.equal(estimateModelContextWindowTokens('deepseek-v4-pro'), 1_000_000)
+  assert.equal(estimateModelContextWindowTokens('mistral-medium-3-5'), 256_000)
+  assert.equal(estimateModelContextWindowTokens('moonshotai/Kimi-K2.6'), 256_000)
+  assert.equal(estimateModelContextWindowTokens('MiniMaxAI/MiniMax-M2.7'), 200_000)
+  assert.equal(estimateModelContextWindowTokens('unknown-model'), null)
 })

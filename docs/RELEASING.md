@@ -28,6 +28,21 @@ git push origin vX.Y.Z-beta.N
 gh run watch --repo FanyinLiu/Nexus
 ```
 
+## Distribution posture
+
+Nexus is distributed as a desktop app, not as an npm-installed end-user app.
+
+- **Normal users** install `.dmg`, `.exe`, `.AppImage`, or `.deb` from GitHub
+  Releases and receive updates through `electron-updater`.
+- **npm** is the developer path: `npm install`, `npm run electron:dev`,
+  `npm run doctor`, packaging scripts, and release checks.
+- There is no npm installer in the current release plan. Keep the
+  end-user path focused on desktop installers and automatic updates.
+
+Run `npm run distribution:audit` whenever changing packaging, update metadata,
+release workflow, installer docs, or npm scripts. `npm run verify:release`
+already includes that audit.
+
 ---
 
 ## Flow
@@ -73,12 +88,16 @@ minimum, but **multiple days of actual conversation** is the expectation, not
 2. **Never reuse a tag.** GitHub rejects re-uploads to an already-published
    release. Always bump the suffix (`beta.1 → beta.2`) if you need another
    attempt.
-3. **Never skip the beta stage.** Even for "small" features.
-4. **Never bypass `prerelease-check`.** The script is load-bearing — it
+3. **Never delete and rebuild a published release.** If a release is already
+   public, use a new version tag. The workflow is allowed to continue an
+   existing draft only.
+4. **Never skip the beta stage.** Even for "small" features.
+5. **Never bypass `prerelease-check`.** The script is load-bearing — it
    catches the mistakes the release workflow can't recover from.
-5. **Before every push**, run `npm run verify:release`. CI runs the same
-   four steps (tsc → lint → test → build). Missing any step locally means
-   discovering the failure in CI, which wastes ~5 minutes per round-trip.
+6. **Before every push**, run `npm run verify:release`. CI runs the same
+   core steps plus the distribution audit (tsc → lint → test → build →
+   distribution:audit). Missing any step locally means discovering the failure
+   in CI, which wastes ~5 minutes per round-trip.
 
 ---
 
@@ -123,7 +142,7 @@ Flags:
 7. CI on HEAD success.
 
 ### Stage B — Code quality (5 checks)
-1. `npm run verify:release` (tsc + lint + test + build).
+1. `npm run verify:release` (tsc + lint + test + build + distribution audit).
 2. `npm run smoke` — Electron actually launches + renderer loads.
 3. Coverage ≥ 80% lines (warn).
 4. `dist/assets/app-runtime-*.js` ≤ 1700 KB.
@@ -200,9 +219,9 @@ not the underlying `X.Y.Z`.
 ## Emergency: the release workflow failed
 
 1. **`ensure-release` failed** (usually: tag already belongs to a published
-   release) → investigate via `gh release view <tag>`. If the release is
-   legitimate and the job was spurious, nothing to do. If the release is a
-   mistake, you may need to burn this tag and use the next suffix.
+   release) → investigate via `gh release view <tag>`. Do not delete the
+   published release. If the release is legitimate, nothing to do; if it was a
+   mistake, burn this tag and use the next suffix.
 2. **One platform build failed** → `workflow_dispatch` the Release workflow
    with the same tag input. `ensure-release` sees the existing draft and
    appends assets; `--clobber` flag is set so asset name collisions are safe

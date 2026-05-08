@@ -5,12 +5,19 @@ import {
   extractLikelyWeatherLocation,
   extractSearchQuery,
 } from '../src/features/tools/extractors.ts'
+import { resolveBuiltInToolPermissionLevel } from '../src/features/tools/permissions.ts'
 import { executeBuiltInTool } from '../src/features/tools/registry.ts'
 
 test('does not treat conversational fragments as weather follow-up locations', () => {
   assert.equal(extractLikelyWeatherLocation('么样'), '')
   assert.equal(extractLikelyWeatherLocation('早上'), '')
   assert.equal(extractLikelyWeatherLocation('今天做了啥'), '')
+})
+
+test('tool permission level maps policy to audit-ready risk tiers', () => {
+  assert.equal(resolveBuiltInToolPermissionLevel({ enabled: true, requiresConfirmation: false }), 'safe')
+  assert.equal(resolveBuiltInToolPermissionLevel({ enabled: true, requiresConfirmation: true }), 'confirm')
+  assert.equal(resolveBuiltInToolPermissionLevel({ enabled: false, requiresConfirmation: true }), 'restricted')
 })
 
 test('still extracts a city from short weather follow-ups', () => {

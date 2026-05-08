@@ -6,6 +6,10 @@ import {
   requestVoiceInputStream,
 } from '../../features/voice/runtimeSupport'
 import {
+  buildSpeechInputServiceConnectionRequest,
+  buildSpeechOutputServiceConnectionRequest,
+} from '../../features/voice/providerSettings.ts'
+import {
   isSenseVoiceSpeechInputProvider,
 } from '../../lib/audioProviders'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
@@ -164,13 +168,9 @@ export async function testSpeechInputConnectionRuntime(
     }
   }
 
-  const remoteSpeechCheck = await window.desktopPet.testServiceConnection({
-    capability: 'speech-input',
-    providerId: options.draftSettings.speechInputProviderId,
-    baseUrl: options.draftSettings.speechInputApiBaseUrl,
-    apiKey: options.draftSettings.speechInputApiKey,
-    model: options.draftSettings.speechInputModel,
-  })
+  const remoteSpeechCheck = await window.desktopPet.testServiceConnection(
+    buildSpeechInputServiceConnectionRequest(options.draftSettings),
+  )
 
   if (!remoteSpeechCheck.ok) {
     return remoteSpeechCheck
@@ -264,15 +264,9 @@ export async function testSpeechOutputReadinessRuntime(
     }
   }
 
-  const remoteSpeechCheck = await window.desktopPet.testServiceConnection({
-    capability: 'speech-output',
-    providerId: options.draftSettings.speechOutputProviderId,
-    baseUrl: options.draftSettings.speechOutputApiBaseUrl,
-    apiKey: options.draftSettings.speechOutputApiKey,
-    model: options.draftSettings.speechOutputModel,
-    // Voice cloning disabled — always use the provider's configured voice.
-    voice: options.draftSettings.speechOutputVoice,
-  })
+  const remoteSpeechCheck = await window.desktopPet.testServiceConnection(
+    buildSpeechOutputServiceConnectionRequest(options.draftSettings),
+  )
 
   if (!remoteSpeechCheck.ok) {
     return remoteSpeechCheck

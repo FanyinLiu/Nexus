@@ -1,0 +1,230 @@
+/* Nexus settings home control-center layout. */
+.settings-home {
+  display: grid;
+  gap: 18px;
+  padding: 4px 2px 6px 0;
+}
+
+.settings-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.settings-appearance-switch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 44px;
+  padding: 7px 10px 7px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.settings-appearance-switch__label {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-appearance-switch__control {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.settings-appearance-switch__option {
+  min-width: 54px;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
+  font-weight: 650;
+  outline: none;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.settings-appearance-switch__option:hover {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.settings-appearance-switch__option:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(14, 18, 28, 0.96),
+    0 0 0 4px rgba(168, 139, 255, 0.5);
+}
+
+.settings-appearance-switch__option.is-active {
+  background: #ffffff;
+  color: #121820;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.settings-appearance-switch__option.is-active:focus-visible {
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.2),
+    0 0 0 2px rgba(14, 18, 28, 0.96),
+    0 0 0 4px rgba(168, 139, 255, 0.5);
+}
+
+/* ───────────────────────────────────────────────────────────────────
+   Canonical settings home list.
+   The current home uses one row per setting, with the state on the right and
+   the icon after it. Keep it list-like, not card-within-card.
+   ─────────────────────────────────────────────────────────────────── */
+.settings-home,
+.settings-drawer--day .settings-home,
+.settings-drawer--warm-day .settings-home {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  align-content: start;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-appearance-switch {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 3px 8px 7px;
+  border: 0;
+  background: transparent;
+}
+
+.settings-appearance-switch__label {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
+  font-weight: 520;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-appearance-switch__control {
+  justify-self: end;
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(44px, auto));
+  gap: 3px;
+  padding: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.settings-appearance-switch__option {
+  min-height: 25px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.54);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 520;
+  cursor: pointer;
+}
+
+.settings-home-card,
+.settings-home-card:hover,
+.settings-home-card:nth-child(even),
+.settings-home-card:nth-child(even):hover,
+.settings-drawer--day .settings-home-card,
+.settings-drawer--day .settings-home-card:hover,
+.settings-drawer--day .settings-home-card:nth-child(even),
+.settings-drawer--day .settings-home-card:nth-child(even):hover,
+.settings-drawer--warm-day .settings-home-card,
+.settings-drawer--warm-day .settings-home-card:hover,
+.settings-drawer--warm-day .settings-home-card:nth-child(even),
+.settings-drawer--warm-day .settings-home-card:nth-child(even):hover {
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(46px, max-content) 18px;
+  grid-template-rows: 1fr;
+  align-items: center;
+  column-gap: 7px;
+  min-height: 36px;
+  padding: 5px 4px;
+  border: 0;
+  border-right: 0;
+  border-bottom: 1px solid var(--settings-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.settings-home-card::before,
+.settings-home-card::after,
+.settings-home-card + .settings-home-card::before {
+  display: none;
+}
+
+.settings-home-card:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.settings-home-card__label {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 570;
+  text-align: left;
+}
+
+.settings-home-card__value {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  max-width: 94px;
+  margin-top: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-home-card__glyph {
+  position: static;
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+  opacity: 0.12;
+}
+
+.settings-home-card__glyph svg {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-home-card:last-child,
+.settings-home-card:last-child:hover {
+  border-bottom: 0;
+}

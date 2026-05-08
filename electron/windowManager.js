@@ -76,6 +76,10 @@ const RUNTIME_CLIENT_TTL_MS = 25_000
 // workArea bounds. Use a larger bottom margin on macOS to keep the pet's
 // action buttons (mic, menu) above the Dock hit region.
 const PET_WINDOW_SCREEN_MARGIN_PX = process.platform === 'darwin' ? 80 : 24
+const PET_WINDOW_DEFAULT_WIDTH = 320
+const PET_WINDOW_DEFAULT_HEIGHT = 460
+const PET_WINDOW_MIN_WIDTH = 260
+const PET_WINDOW_MIN_HEIGHT = 340
 const PANEL_WINDOW_DEFAULT_WIDTH = 460
 const PANEL_WINDOW_DEFAULT_HEIGHT = 660
 const PANEL_WINDOW_MIN_WIDTH = 400
@@ -719,8 +723,8 @@ export function dragWindowBy(event, delta) {
 export function createMainWindow({ showOnReady = true } = {}) {
   const { workArea } = screen.getPrimaryDisplay()
   const saved = getSavedBounds('pet')
-  const width = saved?.width ?? 420
-  const height = saved?.height ?? 620
+  const width = saved?.width ?? PET_WINDOW_DEFAULT_WIDTH
+  const height = saved?.height ?? PET_WINDOW_DEFAULT_HEIGHT
   const { x, y } = saved
     ? clampWindowPosition(width, height, saved.x, saved.y, workArea)
     : clampWindowPosition(
@@ -743,8 +747,8 @@ export function createMainWindow({ showOnReady = true } = {}) {
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: true,
-    minWidth: 280,
-    minHeight: 400,
+    minWidth: PET_WINDOW_MIN_WIDTH,
+    minHeight: PET_WINDOW_MIN_HEIGHT,
     maxWidth: 1400,
     maxHeight: 1400,
     maximizable: false,

@@ -12,6 +12,8 @@ export type MemoryCategory =
 
 export type MemoryImportance = 'low' | 'normal' | 'high' | 'pinned' | 'reflection'
 
+export type MemoryKind = 'preference' | 'fact' | 'relationship' | 'knowledge'
+
 export type EmotionalValence = 'positive' | 'negative' | 'neutral' | 'mixed'
 
 export interface MemoryItem {
@@ -19,6 +21,9 @@ export interface MemoryItem {
   content: string
   category: MemoryCategory
   source: string
+  kind?: MemoryKind
+  enabled?: boolean
+  sourceRef?: string
   createdAt: string
   lastUsedAt?: string
   importance?: MemoryImportance

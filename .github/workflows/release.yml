@@ -6,17 +6,17 @@ name: Release Build
 #    Creates a GitHub Release for the tag if one doesn't already exist,
 #    then builds + uploads installers for all three platforms in parallel.
 #
-#  - Manual (`workflow_dispatch` with a `tag` input): lets you re-build
-#    installers for an already-published tag without deleting or re-pushing
-#    it. Useful when a platform build failed and you want to backfill its
-#    asset — e.g. the macOS .dmg for a version tagged on Windows.
+#  - Manual (`workflow_dispatch` with a `tag` input): lets you continue an
+#    existing draft release after a platform build failed. Published releases
+#    are immutable in this project; never delete and rebuild one in place.
 #
 # The release is held in **draft** state while the platform jobs run
 # because GitHub marks a published release as immutable — you can't add
 # new assets after it's out. The flow:
 #
-#   ensure-release → creates (or rewinds an existing published release
-#                   into) a draft so asset uploads aren't blocked.
+#   ensure-release → creates a draft release, or reuses an existing draft.
+#                    If the tag already has a published release, the workflow
+#                    fails and asks for a new version tag.
 #   build (×3)    → builds Windows / macOS / Linux installers and
 #                   uploads them to the draft. `gh release upload
 #                   --clobber` overwrites any name collision, so retries
@@ -74,11 +74,10 @@ jobs:
           TAG: ${{ steps.resolve.outputs.tag }}
         shell: bash
         run: |
-          # GitHub marks a published release as immutable — a second
-          # attempt to upload would fail with "Cannot upload assets to an
-          # immutable release". If we find a published release for this
-          # tag, tear it down first so we can rebuild from scratch and
-          # publish atomically at the end.
+          # GitHub marks a published release as immutable. If this tag already
+          # has a published release, stop here instead of deleting it. Reusing
+          # a published version breaks update semantics and can strand users
+          # on mismatched latest.yml metadata.
           existing_json=$(gh release view "$TAG" --repo "${{ github.repository }}" --json isDraft,name,body 2>/dev/null || echo "")
           if [ -n "$existing_json" ]; then
             is_draft=$(echo "$existing_json" | jq -r '.isDraft')
@@ -86,8 +85,8 @@ jobs:
               echo "Draft release $TAG already exists — will append assets to it."
               exit 0
             fi
-            echo "Published release $TAG exists but is immutable; recreating as draft."
-            gh release delete "$TAG" --repo "${{ github.repository }}" --yes --cleanup-tag=false
+            echo "::error::Published release $TAG already exists. Do not rebuild or delete published releases; bump to a new tag instead."
+            exit 1
           fi
 
           # SemVer convention: any tag containing '-' (e.g. v1.0.0-beta.1,

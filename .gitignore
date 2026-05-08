@@ -28,6 +28,9 @@ stryker.log
 *.sln
 *.sw?
 tmp-debug/
+output/
+.playwright-cli/
+docs/ui-preview/
 release/
 release-smoke/
 resources/local-speech/

@@ -60,11 +60,15 @@ export function useAppController() {
   useEffect(() => {
     void getWindowView().then((resolved) => {
       if (resolved !== view) setView(resolved)
+      if (resolved === 'panel' && getInitialPanelSection() === 'settings') {
+        setSettingsOpen(true)
+      }
     })
     // Sweep dead localStorage entries from the 3048bbd prune (scheduler /
     // session-store / skills / agent-memory). Idempotent — no-op once gone.
     pruneLegacyStorageKeys()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const [panelWindowState, setPanelWindowState] = useState<PanelWindowState>({ collapsed: false })
   const [isPinned, setIsPinned] = useState(() => loadPetWindowPreferences().isPinned)
   const [clickThrough, setClickThrough] = useState(() => loadPetWindowPreferences().clickThrough)

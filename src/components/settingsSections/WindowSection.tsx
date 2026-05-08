@@ -82,131 +82,136 @@ export const WindowSection = memo(function WindowSection({
 
   return (
     <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
-      <div className="settings-section__title-row">
-        <div>
-          <h4>{ti('settings.window.title')}</h4>
-          <p className="settings-drawer__hint">{ti('settings.window.note')}</p>
+      {windowStatusMessage ? (
+        <p className="settings-section__note">
+          {windowStatusMessage}
+        </p>
+      ) : null}
+
+      <div className="settings-control-grid">
+        <div className="settings-control-card">
+          <ToggleField
+            label={ti('settings.window.launch_on_startup')}
+            field="launchOnStartup"
+            draft={draft}
+            setDraft={setDraft}
+            disabled={!launchOnStartupSupported}
+          />
+          <p>{ti('settings.window.launch_note')}</p>
         </div>
-        {windowStatusMessage ? (
-          <p className="settings-section__note">
-            {windowStatusMessage}
-          </p>
-        ) : null}
+
+        <div className="settings-control-card">
+          <label className="settings-toggle">
+            <span>{petWindowState.isPinned ? ti('settings.window.pinned_on_top') : ti('settings.window.free_window')}</span>
+            <input
+              type="checkbox"
+              checked={petWindowState.isPinned}
+              onChange={() => void updateWindowState({ isPinned: !petWindowState.isPinned })}
+            />
+          </label>
+          <p>{ti('settings.window.pinned_note')}</p>
+        </div>
+
+        <div className="settings-control-card">
+          <label className="settings-toggle">
+            <span>{petWindowState.clickThrough ? ti('settings.window.click_through_enabled') : ti('settings.window.interactive')}</span>
+            <input
+              type="checkbox"
+              checked={petWindowState.clickThrough}
+              onChange={() => void updateWindowState({ clickThrough: !petWindowState.clickThrough })}
+            />
+          </label>
+          <p>{ti('settings.window.click_through_note')}</p>
+        </div>
       </div>
 
-      <ToggleField
-        label={ti('settings.window.launch_on_startup')}
-        field="launchOnStartup"
-        draft={draft}
-        setDraft={setDraft}
-        disabled={!launchOnStartupSupported}
-      />
+      <div className="settings-mini-group">
+        <div className="settings-mini-group__head">
+          <h5>{ti('settings.window.group_scene')}</h5>
+          <span>{ti('settings.window.group_scene_hint')}</span>
+        </div>
 
-      <p className="settings-drawer__hint">{ti('settings.window.launch_note')}</p>
+        <label>
+          <span>{ti('settings.window.pet_scene_label')}</span>
+          <select
+            value={draft.petSceneLocation}
+            onChange={(event) =>
+              setDraft((prev) => ({
+                ...prev,
+                petSceneLocation: event.target.value as PetSceneLocation,
+              }))
+            }
+          >
+            {PET_SCENE_LOCATION_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {ti(option.labelKey)}
+              </option>
+            ))}
+          </select>
+        </label>
 
-      <label className="settings-toggle">
-        <span>{petWindowState.isPinned ? ti('settings.window.pinned_on_top') : ti('settings.window.free_window')}</span>
-        <input
-          type="checkbox"
-          checked={petWindowState.isPinned}
-          onChange={() => void updateWindowState({ isPinned: !petWindowState.isPinned })}
-        />
-      </label>
+        <label>
+          <span>{ti('settings.window.pet_weather_label')}</span>
+          <select
+            value={draft.petWeatherPreview}
+            onChange={(event) =>
+              setDraft((prev) => ({
+                ...prev,
+                petWeatherPreview: event.target.value as PetWeatherPreview,
+              }))
+            }
+          >
+            {PET_WEATHER_PREVIEW_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {ti(option.labelKey)}
+              </option>
+            ))}
+          </select>
+        </label>
 
-      <p className="settings-drawer__hint">{ti('settings.window.pinned_note')}</p>
+        <label>
+          <span>{ti('settings.window.pet_time_label')}</span>
+          <select
+            value={draft.petTimePreview}
+            onChange={(event) =>
+              setDraft((prev) => ({
+                ...prev,
+                petTimePreview: event.target.value as PetTimePreview,
+              }))
+            }
+          >
+            {PET_TIME_PREVIEW_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {ti(option.labelKey)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
-      <label className="settings-toggle">
-        <span>{petWindowState.clickThrough ? ti('settings.window.click_through_enabled') : ti('settings.window.interactive')}</span>
-        <input
-          type="checkbox"
-          checked={petWindowState.clickThrough}
-          onChange={() => void updateWindowState({ clickThrough: !petWindowState.clickThrough })}
-        />
-      </label>
+      <div className="settings-mini-group">
+        <div className="settings-mini-group__head">
+          <h5>{ti('settings.window.group_weather')}</h5>
+          <span>{ti('settings.window.group_weather_hint')}</span>
+        </div>
 
-      <p className="settings-drawer__hint">{ti('settings.window.click_through_note')}</p>
-
-      <label>
-        <span>{ti('settings.window.pet_scene_label')}</span>
-        <select
-          value={draft.petSceneLocation}
-          onChange={(event) =>
-            setDraft((prev) => ({
-              ...prev,
-              petSceneLocation: event.target.value as PetSceneLocation,
-            }))
-          }
-        >
-          {PET_SCENE_LOCATION_OPTIONS.map((option) => (
-            <option key={option.id} value={option.id}>
-              {ti(option.labelKey)}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <p className="settings-drawer__hint">{ti('settings.window.pet_scene_hint')}</p>
-
-      <label>
-        <span>{ti('settings.window.pet_weather_label')}</span>
-        <select
-          value={draft.petWeatherPreview}
-          onChange={(event) =>
-            setDraft((prev) => ({
-              ...prev,
-              petWeatherPreview: event.target.value as PetWeatherPreview,
-            }))
-          }
-        >
-          {PET_WEATHER_PREVIEW_OPTIONS.map((option) => (
-            <option key={option.id} value={option.id}>
-              {ti(option.labelKey)}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <p className="settings-drawer__hint">{ti('settings.window.pet_weather_hint')}</p>
-
-      <label>
-        <span>{ti('settings.window.pet_time_label')}</span>
-        <select
-          value={draft.petTimePreview}
-          onChange={(event) =>
-            setDraft((prev) => ({
-              ...prev,
-              petTimePreview: event.target.value as PetTimePreview,
-            }))
-          }
-        >
-          {PET_TIME_PREVIEW_OPTIONS.map((option) => (
-            <option key={option.id} value={option.id}>
-              {ti(option.labelKey)}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <p className="settings-drawer__hint">{ti('settings.window.pet_time_hint')}</p>
-
-      <ToggleField
-        label={ti('settings.window.ambient_weather_toggle')}
-        field="ambientWeatherEnabled"
-        draft={draft}
-        setDraft={setDraft}
-      />
-
-      {draft.ambientWeatherEnabled ? (
-        <TextField
-          label={ti('settings.window.ambient_weather_location_label')}
-          field="toolWeatherDefaultLocation"
-          placeholder={ti('settings.window.ambient_weather_location_placeholder')}
+        <ToggleField
+          label={ti('settings.window.ambient_weather_toggle')}
+          field="ambientWeatherEnabled"
           draft={draft}
           setDraft={setDraft}
         />
-      ) : null}
 
-      <p className="settings-drawer__hint">{ti('settings.window.ambient_weather_hint')}</p>
+        {draft.ambientWeatherEnabled ? (
+          <TextField
+            label={ti('settings.window.ambient_weather_location_label')}
+            field="toolWeatherDefaultLocation"
+            placeholder={ti('settings.window.ambient_weather_location_placeholder')}
+            draft={draft}
+            setDraft={setDraft}
+          />
+        ) : null}
+      </div>
     </section>
   )
 })

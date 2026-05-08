@@ -86,8 +86,8 @@ export const VoiceSection = memo(function VoiceSection({
     <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
       <div className="settings-section__title-row">
         <div>
-          <h4>{ti('settings.voice.title')}</h4>
-          <p className="settings-drawer__hint">{ti('settings.voice.note')}</p>
+          <h4>{ti('settings.voice.loop_title')}</h4>
+          <p className="settings-drawer__hint">{ti('settings.voice.loop_hint')}</p>
         </div>
         <button
           type="button"
@@ -109,59 +109,73 @@ export const VoiceSection = memo(function VoiceSection({
         </div>
       ) : null}
 
-      <label className="settings-toggle">
-        <span>{ti('settings.voice.enable_input')}</span>
-        <input
-          type="checkbox"
-          checked={draft.speechInputEnabled}
-          disabled={!speechInputAvailable}
-          onChange={(event) =>
-            setDraft((prev) => ({ ...prev, speechInputEnabled: event.target.checked }))
-          }
-        />
-      </label>
+      <div className="settings-control-grid settings-voice-control-grid">
+        <div className="settings-control-card">
+          <label className="settings-toggle">
+            <span>{ti('settings.voice.enable_input')}</span>
+            <input
+              type="checkbox"
+              checked={draft.speechInputEnabled}
+              disabled={!speechInputAvailable}
+              onChange={(event) =>
+                setDraft((prev) => ({ ...prev, speechInputEnabled: event.target.checked }))
+              }
+            />
+          </label>
+          <p>{speechInputAvailable ? ti('settings.voice.status_input_ready') : ti('settings.voice.status_input_unavailable')}</p>
+        </div>
 
-      <label className="settings-toggle">
-        <span>{ti('settings.voice.enable_output')}</span>
-        <input
-          type="checkbox"
-          checked={draft.speechOutputEnabled}
-          disabled={!speechOutputAvailable}
-          onChange={(event) =>
-            setDraft((prev) => ({ ...prev, speechOutputEnabled: event.target.checked }))
-          }
-        />
-      </label>
+        <div className="settings-control-card">
+          <label className="settings-toggle">
+            <span>{ti('settings.voice.enable_output')}</span>
+            <input
+              type="checkbox"
+              checked={draft.speechOutputEnabled}
+              disabled={!speechOutputAvailable}
+              onChange={(event) =>
+                setDraft((prev) => ({ ...prev, speechOutputEnabled: event.target.checked }))
+              }
+            />
+          </label>
+          <p>{speechOutputAvailable ? ti('settings.voice.status_output_ready') : ti('settings.voice.status_output_unavailable')}</p>
+        </div>
 
-      <label className="settings-toggle">
-        <span>{ti('settings.voice.enable_continuous')}</span>
-        <input
-          type="checkbox"
-          checked={draft.continuousVoiceModeEnabled}
-          disabled={!continuousVoiceAvailable}
-          onChange={(event) =>
-            setDraft((prev) => ({
-              ...prev,
-              continuousVoiceModeEnabled: event.target.checked,
-            }))
-          }
-        />
-      </label>
+        <div className="settings-control-card">
+          <label className="settings-toggle">
+            <span>{ti('settings.voice.enable_continuous')}</span>
+            <input
+              type="checkbox"
+              checked={draft.continuousVoiceModeEnabled}
+              disabled={!continuousVoiceAvailable}
+              onChange={(event) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  continuousVoiceModeEnabled: event.target.checked,
+                }))
+              }
+            />
+          </label>
+          <p>{draft.continuousVoiceModeEnabled ? ti('settings.voice.status_continuous_on') : ti('settings.voice.status_continuous_off')}</p>
+        </div>
 
-      <label className="settings-toggle">
-        <span>{ti('settings.voice.enable_vad')}</span>
-        <input
-          type="checkbox"
-          checked={draft.voiceActivityDetectionEnabled}
-          disabled={!vadAvailable}
-          onChange={(event) =>
-            setDraft((prev) => ({
-              ...prev,
-              voiceActivityDetectionEnabled: event.target.checked,
-            }))
-          }
-        />
-      </label>
+        <div className="settings-control-card">
+          <label className="settings-toggle">
+            <span>{ti('settings.voice.enable_vad')}</span>
+            <input
+              type="checkbox"
+              checked={draft.voiceActivityDetectionEnabled}
+              disabled={!vadAvailable}
+              onChange={(event) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  voiceActivityDetectionEnabled: event.target.checked,
+                }))
+              }
+            />
+          </label>
+          <p>{draft.voiceActivityDetectionEnabled ? ti('settings.voice.status_on') : ti('settings.voice.status_off')}</p>
+        </div>
+      </div>
 
       {draft.voiceActivityDetectionEnabled && (
         <label>
@@ -182,150 +196,152 @@ export const VoiceSection = memo(function VoiceSection({
         </label>
       )}
 
-      <label className="settings-toggle">
-        <span>{ti('settings.voice.allow_interruption')}</span>
-        <input
-          type="checkbox"
-          checked={draft.voiceInterruptionEnabled}
-          disabled={!speechInputAvailable || !speechOutputAvailable}
-          onChange={(event) =>
-            setDraft((prev) => ({
-              ...prev,
-              voiceInterruptionEnabled: event.target.checked,
-            }))
-          }
-        />
-      </label>
+      <details className="settings-mini-group settings-voice-advanced-card">
+        <summary className="settings-mini-group__head">
+          <div>
+            <h5>{ti('settings.voice.advanced_title')}</h5>
+            <span>{ti('settings.voice.advanced_hint')}</span>
+          </div>
+        </summary>
 
-      <p className="settings-drawer__hint">{ti('settings.voice.interrupt_hint')}</p>
+        <label className="settings-toggle">
+          <span>{ti('settings.voice.allow_interruption')}</span>
+          <input
+            type="checkbox"
+            checked={draft.voiceInterruptionEnabled}
+            disabled={!speechInputAvailable || !speechOutputAvailable}
+            onChange={(event) =>
+              setDraft((prev) => ({
+                ...prev,
+                voiceInterruptionEnabled: event.target.checked,
+              }))
+            }
+          />
+        </label>
 
-      <label className="settings-toggle">
-        <span>{ti('settings.voice.enable_stt_failover')}</span>
-        <input
-          type="checkbox"
-          checked={draft.speechInputFailoverEnabled}
-          disabled={!speechInputAvailable}
-          onChange={(event) =>
-            setDraft((prev) => ({
-              ...prev,
-              speechInputFailoverEnabled: event.target.checked,
-            }))
-          }
-        />
-      </label>
+        <p className="settings-mini-group__note">{ti('settings.voice.interrupt_hint')}</p>
 
-      <label className="settings-toggle">
-        <span>{ti('settings.voice.enable_tts_failover')}</span>
-        <input
-          type="checkbox"
-          checked={draft.speechOutputFailoverEnabled}
-          disabled={!speechOutputAvailable}
-          onChange={(event) =>
-            setDraft((prev) => ({
-              ...prev,
-              speechOutputFailoverEnabled: event.target.checked,
-            }))
-          }
-        />
-      </label>
+        <label className="settings-toggle">
+          <span>{ti('settings.voice.enable_stt_failover')}</span>
+          <input
+            type="checkbox"
+            checked={draft.speechInputFailoverEnabled}
+            disabled={!speechInputAvailable}
+            onChange={(event) =>
+              setDraft((prev) => ({
+                ...prev,
+                speechInputFailoverEnabled: event.target.checked,
+              }))
+            }
+          />
+        </label>
 
-      <label className="settings-toggle">
-        <span>{ti('settings.voice.always_on_wakeword')}</span>
-        <input
-          type="checkbox"
-          checked={draft.wakewordAlwaysOn}
-          disabled={!wakewordAvailable}
-          onChange={(event) =>
-            setDraft((prev) => ({
-              ...prev,
-              wakewordAlwaysOn: event.target.checked,
-            }))
-          }
-        />
-      </label>
-      <p className="settings-drawer__hint">{ti('settings.voice.always_on_wakeword_hint')}</p>
+        <label className="settings-toggle">
+          <span>{ti('settings.voice.enable_tts_failover')}</span>
+          <input
+            type="checkbox"
+            checked={draft.speechOutputFailoverEnabled}
+            disabled={!speechOutputAvailable}
+            onChange={(event) =>
+              setDraft((prev) => ({
+                ...prev,
+                speechOutputFailoverEnabled: event.target.checked,
+              }))
+            }
+          />
+        </label>
 
-      <label>
-        <span>{ti('settings.voice.session_idle_timeout')}</span>
-        <input
-          type="number"
-          min={3}
-          max={120}
-          step={1}
-          value={Math.round(draft.wakewordSessionIdleTimeoutMs / 1000)}
-          disabled={!wakewordAvailable}
-          onChange={(event) => {
-            const seconds = Number(event.target.value)
-            if (!Number.isFinite(seconds)) return
-            const clamped = Math.max(3, Math.min(120, Math.round(seconds)))
-            setDraft((prev) => ({
-              ...prev,
-              wakewordSessionIdleTimeoutMs: clamped * 1000,
-            }))
-          }}
-        />
-      </label>
-      <p className="settings-drawer__hint">{ti('settings.voice.session_idle_timeout_hint')}</p>
+        <label className="settings-toggle">
+          <span>{ti('settings.voice.always_on_wakeword')}</span>
+          <input
+            type="checkbox"
+            checked={draft.wakewordAlwaysOn}
+            disabled={!wakewordAvailable}
+            onChange={(event) =>
+              setDraft((prev) => ({
+                ...prev,
+                wakewordAlwaysOn: event.target.checked,
+              }))
+            }
+          />
+        </label>
+        <p className="settings-mini-group__note">{ti('settings.voice.always_on_wakeword_hint')}</p>
 
-      <label>
-        <span>{ti('settings.voice.trigger_mode')}</span>
-        <select
-          value={draft.voiceTriggerMode}
-          disabled={!wakewordAvailable}
-          onChange={(event) => {
-            const nextMode = event.target.value as AppSettings['voiceTriggerMode']
-            setDraft((prev) => ({
-              ...prev,
-              voiceTriggerMode: nextMode,
-              wakeWordEnabled: nextMode === 'wake_word',
-            }))
-          }}
-        >
-          {voiceTriggerModeOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
+        <label>
+          <span>{ti('settings.voice.session_idle_timeout')}</span>
+          <input
+            type="number"
+            min={3}
+            max={120}
+            step={1}
+            value={Math.round(draft.wakewordSessionIdleTimeoutMs / 1000)}
+            disabled={!wakewordAvailable}
+            onChange={(event) => {
+              const seconds = Number(event.target.value)
+              if (!Number.isFinite(seconds)) return
+              const clamped = Math.max(3, Math.min(120, Math.round(seconds)))
+              setDraft((prev) => ({
+                ...prev,
+                wakewordSessionIdleTimeoutMs: clamped * 1000,
+              }))
+            }}
+          />
+        </label>
+        <p className="settings-mini-group__note">{ti('settings.voice.session_idle_timeout_hint')}</p>
 
-      <label>
-        <span>{ti('settings.voice.wake_word')}</span>
-        <input
-          value={draft.wakeWord}
-          placeholder={ti('settings.voice.wake_word_placeholder')}
-          disabled={!wakewordAvailable}
-          onChange={(event) =>
-            setDraft((prev) => ({
-              ...prev,
-              wakeWord: event.target.value,
-            }))
-          }
-        />
-      </label>
+        <label>
+          <span>{ti('settings.voice.trigger_mode')}</span>
+          <select
+            value={draft.voiceTriggerMode}
+            disabled={!wakewordAvailable}
+            onChange={(event) => {
+              const nextMode = event.target.value as AppSettings['voiceTriggerMode']
+              setDraft((prev) => ({
+                ...prev,
+                voiceTriggerMode: nextMode,
+                wakeWordEnabled: nextMode === 'wake_word',
+              }))
+            }}
+          >
+            {voiceTriggerModeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
 
-      {draft.voiceTriggerMode === 'wake_word' && !isWakeWordSupported(draft.wakeWord) ? (
-        <div
-          className="settings-test-result is-error"
-          style={{ fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}
-        >
-          {ti('settings.voice.wake_word_chinese_only')}
-        </div>
-      ) : null}
+        <label>
+          <span>{ti('settings.voice.wake_word')}</span>
+          <input
+            value={draft.wakeWord}
+            placeholder={ti('settings.voice.wake_word_placeholder')}
+            disabled={!wakewordAvailable}
+            onChange={(event) =>
+              setDraft((prev) => ({
+                ...prev,
+                wakeWord: event.target.value,
+              }))
+            }
+          />
+        </label>
 
-      <p className="settings-drawer__hint">
-        {selectedVoiceTriggerMode.hint.trim()}
-        {draft.voiceTriggerMode === 'wake_word'
-          ? ti('settings.voice.wake_word_note_suffix')
-          : ''}
-      </p>
+        {draft.voiceTriggerMode === 'wake_word' && !isWakeWordSupported(draft.wakeWord) ? (
+          <div
+            className="settings-test-result is-error"
+            style={{ fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}
+          >
+            {ti('settings.voice.wake_word_chinese_only')}
+          </div>
+        ) : null}
 
-
-      <p className="settings-drawer__hint">
-        {draft.voiceActivityDetectionEnabled
-          ? ti('settings.voice.vad_enabled_note')
-          : ti('settings.voice.vad_legacy_note')}
-      </p>
+        <p className="settings-mini-group__note">
+          {selectedVoiceTriggerMode.hint.trim()}
+          {draft.voiceTriggerMode === 'wake_word'
+            ? ti('settings.voice.wake_word_note_suffix')
+            : ''}
+        </p>
+      </details>
 
     </section>
   )

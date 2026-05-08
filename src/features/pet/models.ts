@@ -164,7 +164,7 @@ const DEFAULT_RIG_PARAMS = {
   breath: 'ParamBreath',
 } as const
 
-export const DEFAULT_PET_MODEL_ID = 'mao'
+export const DEFAULT_PET_MODEL_ID = 'nexus-mini'
 
 // Gesture names surfaced to the LLM via system prompt. Per-model coverage
 // lives in motionGroups.gestures; unknown names fall through to no-op.
@@ -172,6 +172,37 @@ export const PUBLIC_GESTURE_NAMES = ['wave', 'nod', 'shake', 'tilt', 'point'] as
 export type PublicGestureName = (typeof PUBLIC_GESTURE_NAMES)[number]
 
 export const PET_MODEL_PRESETS: PetModelDefinition[] = [
+  {
+    id: 'nexus-mini',
+    label: 'pet.model.nexus-mini.label' satisfies TranslationKey,
+    description: 'pet.model.nexus-mini.description' satisfies TranslationKey,
+    modelPath: '',
+    fallbackImagePath: '',
+    motionGroups: {},
+    expressionMap: {
+      idle: 'idle',
+      listening: 'listening',
+      thinking: 'thinking',
+      sleepy: 'sleepy',
+      speaking: 'speaking',
+      happy: 'happy',
+      surprised: 'surprised',
+      confused: 'confused',
+      embarrassed: 'embarrassed',
+      touchBody: 'happy',
+      touchFace: 'embarrassed',
+      touchHead: 'surprised',
+    },
+    layout: {
+      widthRatio: 0.68,
+      heightRatio: 0.76,
+      minWidth: 180,
+      minHeight: 240,
+      anchorX: 0.5,
+      anchorY: 0,
+      yOffsetRatio: 0.02,
+    },
+  },
   {
     id: 'mao',
     label: 'pet.model.mao.label' satisfies TranslationKey,

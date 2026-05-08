@@ -25,14 +25,7 @@ const DEFAULT_PRICING: UsagePricing[] = [
     inputPricePerMTokens: 0.8,
     outputPricePerMTokens: 4,
   },
-  // OpenAI — GPT-5.5 (GA on the API since 2026-04-24) + 5.4 family (2026-03)
-  {
-    providerId: 'openai',
-    modelId: 'gpt-5.5-pro',
-    tier: 'heavy',
-    inputPricePerMTokens: 30,
-    outputPricePerMTokens: 180,
-  },
+  // OpenAI — GPT-5.5 + 5.4 family.
   {
     providerId: 'openai',
     modelId: 'gpt-5.5',
@@ -47,7 +40,21 @@ const DEFAULT_PRICING: UsagePricing[] = [
     inputPricePerMTokens: 2.5,
     outputPricePerMTokens: 15,
   },
-  // DeepSeek — stable V3.2 chat/reasoner + V4 preview family (2026-04-24)
+  {
+    providerId: 'openai',
+    modelId: 'gpt-5.4-mini',
+    tier: 'standard',
+    inputPricePerMTokens: 0.75,
+    outputPricePerMTokens: 4.5,
+  },
+  {
+    providerId: 'openai',
+    modelId: 'gpt-5.4-nano',
+    tier: 'cheap',
+    inputPricePerMTokens: 0.2,
+    outputPricePerMTokens: 1.25,
+  },
+  // DeepSeek — V4 family first; chat/reasoner aliases stay for legacy settings until 2026-07-24.
   {
     providerId: 'deepseek',
     modelId: 'deepseek-chat',
@@ -58,9 +65,9 @@ const DEFAULT_PRICING: UsagePricing[] = [
   {
     providerId: 'deepseek',
     modelId: 'deepseek-reasoner',
-    tier: 'standard',
-    inputPricePerMTokens: 0.55,
-    outputPricePerMTokens: 2.19,
+    tier: 'cheap',
+    inputPricePerMTokens: 0.14,
+    outputPricePerMTokens: 0.28,
   },
   {
     providerId: 'deepseek',
@@ -87,9 +94,10 @@ const FALLBACK_PRICING: Array<{ pattern: string; price: Pick<UsagePricing, 'inpu
   { pattern: 'claude-opus',      price: { tier: 'heavy',    inputPricePerMTokens: 5,    outputPricePerMTokens: 25   } },
   { pattern: 'claude-sonnet',    price: { tier: 'standard', inputPricePerMTokens: 3,    outputPricePerMTokens: 15   } },
   { pattern: 'claude-haiku',     price: { tier: 'cheap',    inputPricePerMTokens: 0.8,  outputPricePerMTokens: 4    } },
-  // OpenAI — longest-first so 5.5-pro / 5.5 / 5.4 don't collide with bare "gpt-5"
-  { pattern: 'gpt-5.5-pro',     price: { tier: 'heavy',    inputPricePerMTokens: 30,   outputPricePerMTokens: 180  } },
+  // OpenAI — longest-first so 5.5 / 5.4 variants don't collide with bare "gpt-5"
   { pattern: 'gpt-5.5',         price: { tier: 'heavy',    inputPricePerMTokens: 5,    outputPricePerMTokens: 30   } },
+  { pattern: 'gpt-5.4-mini',    price: { tier: 'standard', inputPricePerMTokens: 0.75, outputPricePerMTokens: 4.5  } },
+  { pattern: 'gpt-5.4-nano',    price: { tier: 'cheap',    inputPricePerMTokens: 0.2,  outputPricePerMTokens: 1.25 } },
   { pattern: 'gpt-5.4',         price: { tier: 'heavy',    inputPricePerMTokens: 2.5,  outputPricePerMTokens: 15   } },
   { pattern: 'gpt-5',           price: { tier: 'heavy',    inputPricePerMTokens: 2.5,  outputPricePerMTokens: 15   } },
   { pattern: 'gpt-4o-mini',     price: { tier: 'cheap',    inputPricePerMTokens: 0.15, outputPricePerMTokens: 0.6  } },
@@ -100,7 +108,7 @@ const FALLBACK_PRICING: Array<{ pattern: string; price: Pick<UsagePricing, 'inpu
   { pattern: 'deepseek-v4-pro',   price: { tier: 'heavy',    inputPricePerMTokens: 0.145, outputPricePerMTokens: 3.48 } },
   { pattern: 'deepseek-v4-flash', price: { tier: 'cheap',    inputPricePerMTokens: 0.14,  outputPricePerMTokens: 0.28 } },
   { pattern: 'deepseek-chat',   price: { tier: 'cheap',    inputPricePerMTokens: 0.14, outputPricePerMTokens: 0.28 } },
-  { pattern: 'deepseek-reasoner', price: { tier: 'standard', inputPricePerMTokens: 0.55, outputPricePerMTokens: 2.19 } },
+  { pattern: 'deepseek-reasoner', price: { tier: 'cheap',    inputPricePerMTokens: 0.14, outputPricePerMTokens: 0.28 } },
   // Google Gemini
   { pattern: 'gemini-1.5-pro',  price: { tier: 'heavy',    inputPricePerMTokens: 3.5,  outputPricePerMTokens: 10.5 } },
   { pattern: 'gemini-1.5-flash', price: { tier: 'cheap',   inputPricePerMTokens: 0.075, outputPricePerMTokens: 0.30 } },

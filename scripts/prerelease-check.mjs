@@ -173,7 +173,7 @@ stage('A', 'Process & version', () => {
 // ════════════════════════════════════════════════════════════════════════════
 
 stage('B', 'Code quality', () => {
-  check('B', `verify:release ${COLOR.dim('(tsc + lint + test + build)')}`, () => {
+  check('B', `verify:release ${COLOR.dim('(tsc + lint + test + build + distribution audit)')}`, () => {
     try {
       sh('npm run verify:release', { stdio: ['ignore', 'ignore', 'pipe'] })
     } catch (err) {

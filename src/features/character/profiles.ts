@@ -8,6 +8,8 @@ export function createCharacterProfile(
     id: `char-${crypto.randomUUID().slice(0, 8)}`,
     label: label || settings.companionName,
     companionName: settings.companionName,
+    userName: settings.userName,
+    companionRelationshipType: settings.companionRelationshipType,
     systemPrompt: settings.systemPrompt,
     petModelId: settings.petModelId,
     speechOutputProviderId: settings.speechOutputProviderId,
@@ -26,6 +28,8 @@ export function applyCharacterProfile(
   return {
     ...settings,
     companionName: profile.companionName,
+    userName: profile.userName ?? settings.userName,
+    companionRelationshipType: profile.companionRelationshipType ?? settings.companionRelationshipType,
     systemPrompt: profile.systemPrompt,
     petModelId: profile.petModelId,
     activeCharacterProfileId: profile.id,
@@ -68,6 +72,8 @@ export function syncCurrentToProfile(
   const updatedProfile: CharacterProfile = {
     ...profile,
     companionName: settings.companionName,
+    userName: settings.userName,
+    companionRelationshipType: settings.companionRelationshipType,
     systemPrompt: settings.systemPrompt,
     petModelId: settings.petModelId,
     speechOutputProviderId: settings.speechOutputProviderId,

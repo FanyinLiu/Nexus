@@ -3,11 +3,17 @@ import { test } from 'node:test'
 
 import {
   buildChatConnectionTestRequest,
+  buildChatModelListRequest,
   buildChatRequest,
+  buildDiscoveredChatModels,
   chatProviderRequiresApiKey,
+  extractChatModelEntries,
   extractChatResponseContent,
   extractChatStreamingDeltaContent,
+  getChatConnectionTestPreflightFailure,
   normalizeChatProviderId,
+  summarizeChatConnectionTestFailure,
+  summarizeChatConnectionTestSuccess,
 } from '../electron/chatRuntime.js'
 
 test('ollama is inferred from the default local port and does not require an API key', () => {
@@ -72,6 +78,102 @@ test('anthropic connection tests use a lightweight messages probe', () => {
   assert.equal(request.endpoint, 'https://api.anthropic.com/v1/messages')
   assert.equal(request.request.method, 'POST')
   assert.equal(request.successKind, 'message')
+})
+
+test('ollama connection test reports a missing configured model clearly', () => {
+  const result = summarizeChatConnectionTestSuccess({
+    providerId: 'ollama',
+    successKind: 'model_list',
+    model: 'qwen3:8b',
+    data: {
+      data: [
+        { id: 'llama3.2:3b' },
+      ],
+    },
+  })
+
+  assert.equal(result.ok, false)
+  assert.match(result.message, /ollama pull qwen3:8b/i)
+})
+
+test('ollama connection test reports an empty local model list clearly', () => {
+  const result = summarizeChatConnectionTestSuccess({
+    providerId: 'ollama',
+    successKind: 'model_list',
+    model: 'qwen3:8b',
+    data: { data: [] },
+  })
+
+  assert.equal(result.ok, false)
+  assert.match(result.message, /还没有发现可用模型/)
+  assert.equal(result.status, 'model_missing')
+})
+
+test('ollama model discovery accepts OpenAI-compatible and native Ollama shapes', () => {
+  assert.deepEqual(
+    extractChatModelEntries({ data: [{ id: 'qwen3:8b' }] }).map((entry) => entry.id),
+    ['qwen3:8b'],
+  )
+  assert.deepEqual(
+    extractChatModelEntries({ models: [{ name: 'llama3.2:3b', size: 123 }] }).map((entry) => entry.id),
+    ['llama3.2:3b'],
+  )
+
+  const models = buildDiscoveredChatModels({
+    providerId: 'ollama',
+    data: { data: [{ id: 'qwen3:8b' }] },
+  })
+
+  assert.equal(models[0]?.source, 'ollama')
+  assert.equal(models[0]?.capabilities.runLocation, 'local')
+  assert.equal(models[0]?.capabilities.requiresApiKey, false)
+})
+
+test('buildChatModelListRequest uses provider-aware model-list endpoints', () => {
+  assert.equal(
+    buildChatModelListRequest({
+      providerId: 'ollama',
+      baseUrl: 'http://127.0.0.1:11434/v1',
+      apiKey: '',
+    }).endpoint,
+    'http://127.0.0.1:11434/v1/models',
+  )
+
+  assert.equal(
+    buildChatModelListRequest({
+      providerId: 'anthropic',
+      baseUrl: 'https://api.anthropic.com/v1',
+      apiKey: 'test',
+    }).endpoint,
+    'https://api.anthropic.com/v1/models',
+  )
+})
+
+test('deepseek connection test asks for an API key before probing the network', () => {
+  const result = getChatConnectionTestPreflightFailure({
+    providerId: 'deepseek',
+    apiKey: '',
+  })
+
+  assert.equal(result?.ok, false)
+  assert.match(result?.message ?? '', /DeepSeek API.*API Key/)
+})
+
+test('deepseek connection test reports model mismatches with a recommended fallback', () => {
+  const result = summarizeChatConnectionTestFailure({
+    providerId: 'deepseek',
+    status: 400,
+    hasApiKey: true,
+    model: 'not-a-real-model',
+    data: {
+      error: {
+        message: 'model not found',
+      },
+    },
+  })
+
+  assert.equal(result.ok, false)
+  assert.match(result.message, /deepseek-v4-flash/)
 })
 
 test('extractChatResponseContent handles anthropic text blocks', () => {

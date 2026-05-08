@@ -13,6 +13,15 @@ import { getLiveTranscriptLabel, getTimeGreeting, getTimeGreetingEmoji, getVoice
 import { ActivePlanStrip } from '../../components/ActivePlanStrip'
 import { MessageBubble } from '../../components/MessageBubble'
 import { resolveCharacterPreset } from '../../features/character/presets'
+import {
+  classifyWeatherCondition,
+  getTimeOfDayBand,
+  getTimeOfDayBlend,
+  PET_TIME_PREVIEW_BANDS,
+  SceneBackdrop,
+  SunlightTint,
+  WeatherAmbient,
+} from '../../features/panelScene'
 import { CrisisHotlinePanel } from '../../features/safety/CrisisHotlinePanel'
 import { useAmbientWeather } from '../../hooks/useAmbientWeather'
 import { shorten } from '../../lib'
@@ -62,6 +71,29 @@ export function PanelView({
     settings.toolWeatherDefaultLocation,
     settings.ambientWeatherEnabled,
   )
+  const weatherCondition = useMemo(
+    () => {
+      if (settings.petWeatherPreview !== 'auto') return settings.petWeatherPreview
+      if (!ambientWeather) return null
+      return classifyWeatherCondition(ambientWeather.weatherCode, ambientWeather.windSpeedKmh)
+    },
+    [ambientWeather, settings.petWeatherPreview],
+  )
+  const [autoTimeBand, setAutoTimeBand] = useState(() => getTimeOfDayBand())
+  const [autoTimeBlend, setAutoTimeBlend] = useState(() => getTimeOfDayBlend())
+  useEffect(() => {
+    const update = () => {
+      setAutoTimeBand(getTimeOfDayBand())
+      setAutoTimeBlend(getTimeOfDayBlend())
+    }
+    const intervalId = window.setInterval(update, 60 * 1000)
+    return () => window.clearInterval(intervalId)
+  }, [])
+  const timeBand = settings.petTimePreview !== 'auto'
+    ? PET_TIME_PREVIEW_BANDS[settings.petTimePreview]
+    : autoTimeBand
+  const timeBlend = settings.petTimePreview !== 'auto' ? undefined : autoTimeBlend
+  const panelSceneLocation = settings.petSceneLocation === 'off' ? 'fields' : settings.petSceneLocation
   const voiceStateLabel = getVoiceStateLabel(voice.voiceState, ti)
   const nextSchedulerStatusLabel = runtimeSnapshot.schedulerArmed
     ? runtimeSnapshot.activeTaskLabel
@@ -283,6 +315,10 @@ export function PanelView({
   }
 
   useEffect(() => {
+    if (visibleMessages.length === 0) {
+      return undefined
+    }
+
     const frameId = window.requestAnimationFrame(() => {
       const messageList = messageListRef.current
       if (!messageList) {
@@ -309,6 +345,13 @@ export function PanelView({
 
   return (
     <div className={`desktop-pet-root desktop-pet-root--panel ${characterPreset.themeClassName} ${panelCollapsed ? 'desktop-pet-root--panel-collapsed' : ''}`}>
+      <div className="panel-scene-layer" aria-hidden="true">
+        <SunlightTint timePreview={settings.petTimePreview}>
+          <SceneBackdrop location={panelSceneLocation} timeBand={timeBand} timeBlend={timeBlend} />
+          <WeatherAmbient condition={weatherCondition} />
+        </SunlightTint>
+        <div className="panel-scene-layer__veil" />
+      </div>
       <section className={`panel-window panel-window--simple panel-window--companion ${panelCollapsed ? 'is-collapsed' : ''}`}>
         {panelCollapsed ? (
           <>

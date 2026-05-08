@@ -1,9 +1,10 @@
-# Desktop launcher for Nexus that always runs the latest source tree.
+# Visible debug launcher for Nexus that always runs the latest source tree.
 #
 # The NSIS-installed exe bundles a frozen renderer from whichever commit
 # was last packaged — changes landed in git afterwards never reach it.
-# This script replaces that shortcut with a "build-then-run" flow so that
-# double-clicking the icon always picks up the latest commit.
+# scripts/install-desktop-shortcut.ps1 points the shortcut at
+# launch-nexus-hidden.vbs, which runs this script without a terminal window.
+# Run this .ps1 directly only when you want to see build and Electron logs.
 #
 # Trade-off: adds ~15-30 s of `tsc -b && vite build` on every launch.
 # Skip this script and keep the NSIS shortcut when you want fast cold

@@ -1,10 +1,10 @@
 import {
   type ReminderTaskDraftInput,
-} from '../features/reminders/schedule'
+} from '../features/reminders/schedule.ts'
 import {
   pickTranslatedUiText,
-} from '../lib/uiLanguage'
-import type { TranslationKey } from '../types/i18n'
+} from '../lib/uiLanguage.ts'
+import type { TranslationKey } from '../types/i18n.ts'
 import type {
   DebugConsoleEvent,
   MemorySearchMode,
@@ -15,7 +15,7 @@ import type {
   VoicePipelineState,
   VoiceState,
   VoiceTriggerMode,
-} from '../types'
+} from '../types/index.ts'
 
 const VOICE_STATE_KEY: Record<VoiceState, TranslationKey> = {
   idle: 'voice_state.idle',
@@ -408,17 +408,20 @@ export function getSettingsSectionOptions(uiLanguage: UiLanguage): Array<{
 }> {
   return [
     { id: 'model', label: pickTranslatedUiText(uiLanguage, 'settings.section.model') },
+    { id: 'window', label: pickTranslatedUiText(uiLanguage, 'settings.section.window') },
     { id: 'chat', label: pickTranslatedUiText(uiLanguage, 'settings.section.chat') },
+    { id: 'console', label: pickTranslatedUiText(uiLanguage, 'settings.section.console') },
+    { id: 'history', label: pickTranslatedUiText(uiLanguage, 'settings.section.history') },
     { id: 'voice', label: pickTranslatedUiText(uiLanguage, 'settings.section.voice') },
     { id: 'memory', label: pickTranslatedUiText(uiLanguage, 'settings.section.memory') },
-    { id: 'lorebooks', label: uiLanguage === 'zh-CN' || uiLanguage === 'zh-TW' ? 'Lorebook' : 'Lorebooks' },
-    { id: 'window', label: pickTranslatedUiText(uiLanguage, 'settings.section.window') },
     { id: 'tools', label: pickTranslatedUiText(uiLanguage, 'settings.section.tools') },
-    { id: 'integrations', label: pickTranslatedUiText(uiLanguage, 'settings.section.integrations') },
-    { id: 'history', label: pickTranslatedUiText(uiLanguage, 'settings.section.history') },
-    { id: 'autonomy', label: pickTranslatedUiText(uiLanguage, 'settings.section.autonomy') },
-    { id: 'console', label: pickTranslatedUiText(uiLanguage, 'settings.section.console') },
   ]
+}
+
+export function normalizeSettingsSectionId(sectionId: SettingsSectionId): SettingsSectionId {
+  if (sectionId === 'lorebooks') return 'memory'
+  if (sectionId === 'integrations' || sectionId === 'autonomy') return 'tools'
+  return sectionId
 }
 
 export function getSettingsSectionDescription(sectionId: SettingsSectionId, uiLanguage: UiLanguage) {

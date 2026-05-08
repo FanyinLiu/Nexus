@@ -1,420 +1,220 @@
 <p align="center"><img src="public/banner.png" alt="Nexus" width="720" /></p>
 
-<h1 align="center">Nexus</h1>
+# Nexus
 
-<p align="center"><b>A local-first desktop AI companion with memory, voice, Live2D, and long-running relationship state.</b></p>
+Nexus 是一个 **AI 桌面伴侣 + 自主数字助手**。
 
-<p align="center">Nexus is built around continuity: the companion remembers what mattered, notices how the relationship changes, speaks through a desktop pet, and can help with small background tasks. Model calls use the provider you choose; memory, voice orchestration, tools, and safety state stay on your machine.</p>
+它不是普通聊天软件，也不是把聊天框套进 Electron 的多模型面板。Nexus 的目标是让 AI 以一个可见、可听、能记住你、能帮你处理事情的形象常驻在电脑里。
 
-<p align="center">
-  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/github/v/release/FanyinLiu/Nexus?style=flat-square&color=blue&label=release" alt="Release"></a>
-  <a href="https://github.com/FanyinLiu/Nexus/blob/main/LICENSE"><img src="https://img.shields.io/github/license/FanyinLiu/Nexus?style=flat-square" alt="License"></a>
-  <a href="https://github.com/FanyinLiu/Nexus/stargazers"><img src="https://img.shields.io/github/stars/FanyinLiu/Nexus?style=flat-square&logo=github" alt="Stars"></a>
-  <a href="https://github.com/FanyinLiu/Nexus"><img src="https://img.shields.io/github/last-commit/FanyinLiu/Nexus?style=flat-square" alt="Last Commit"></a>
-  <a href="https://github.com/FanyinLiu/Nexus/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/FanyinLiu/Nexus/ci.yml?branch=main&style=flat-square&label=ci" alt="CI"></a>
-</p>
+一句话：**Nexus 是一个住在电脑里的 AI 伙伴。**
 
-<p align="center">
-  <b>English</b> · <a href="docs/README.zh-CN.md">简体中文</a> · <a href="docs/README.zh-TW.md">繁體中文</a> · <a href="docs/README.ja.md">日本語</a> · <a href="docs/README.ko.md">한국어</a>
-</p>
+## 这个项目是什么
 
-<p align="center">
-  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows"></a>
-  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS"></a>
-  <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
-</p>
+Nexus 想做的是一种“陪伴式桌面 AI”：
 
-> **Current release:** v0.3.1 stable (2026-04-28). Nexus is usable today, but still a fast-moving solo project. Packaging, optional local voice models, and provider setup may still need a little manual care.
+- **桌宠形象**：AI 不只存在于聊天记录里，而是以一个小角色常驻桌面。
+- **自然对话**：先从文字对话开始，之后再加入语音输入和语音输出。
+- **长期记忆**：未来它应该记住偏好、习惯、项目、关系和重要事件。
+- **本地优先，可接 API**：基础对话优先连接 Ollama 等本地模型；也可以使用 DeepSeek API 先跑通文本体验。
+- **自主任务能力**：在用户授权后，它可以整理信息、提醒事项、调用工具、执行小任务。
 
----
+Nexus 的重点不是堆功能，而是把“陪伴”和“助手”合成一个统一体验：它一直在电脑旁边，安静地存在，需要时能对话，授权后能做事。
 
-## Quick start
+## 它不是什么
 
-| Need | Go here |
+| 不是 | 因为 Nexus 更关注 |
 |---|---|
-| Install the app | [Download the latest release](https://github.com/FanyinLiu/Nexus/releases/latest) |
-| Understand the product | [Why Nexus](#why-nexus) · [Core features](#core-features) |
-| Build from source | [Build from source](#build-from-source) |
-| Configure providers | [Configure](#configure) · [Supported providers](#supported-providers) |
-| Check safety/privacy behavior | [Safety & support](#safety--support) |
+| 普通 AI 聊天软件 | 常驻感、角色存在感、长期关系和桌面上下文 |
+| 多模型 API 面板 | 本地优先的伙伴体验，而不是 provider 列表 |
+| 单纯桌宠动画 | 角色只是入口，核心是对话、记忆和任务帮助 |
+| 完整 Agent 平台 | 自主能力要服务于陪伴体验，并且必须可控、可授权 |
+| Codex 角色复刻 | 借鉴陪伴式和任务助手式感觉，但 Nexus 有自己的形象和边界 |
 
-## Why Nexus
+## 与 Codex 宠物形象的关系
 
-Most AI companions compete on model quality, voice realism, or engagement loops. Nexus is aimed at a different problem: **what should a long-running companion remember, and how should that history change its presence over time?**
+Nexus 可以借鉴 Codex 宠物形象带来的三个感觉：
 
-The answer is not one feature. It is a set of small rituals that accumulate: a callback that arrives at the right moment, a weekly letter that names what actually happened, a memory that comes back with the right emotional weight, a companion that can stay silent when silence is better.
+1. **陪伴式**：它像一个在旁边待着的伙伴，而不是一个只在输入框里出现的工具。
+2. **常驻式**：它可以长期留在桌面角落，轻量存在，不抢注意力。
+3. **任务助手式**：它不是只会卖萌，也能在明确授权后帮用户处理事情。
 
-Concretely, Nexus is built around seven rituals:
+但 Nexus 不应该复制 Codex 的具体角色、名字、视觉设定或交互细节。Nexus 更适合被定义成：
 
-1. **Significance-weighted memory** — not everything is remembered equally; the companion's recall is tilted toward what mattered.
-2. **Nightly dream cycle** — overnight, conversations cluster into narrative threads and 1–3 short reflections about you. The next morning's "who you are" is updated, not reset.
-3. **Callback queue** — a memory queued from yesterday quietly resurfaces when today's conversation has room for it.
-4. **Anniversary callbacks** — day-30 / 100 / 365 milestones; "on this day" matches against past memory dates so a year later, that one thing you said comes back gently.
-5. **Morning + evening bracket** — a soft check-in at the start of the day and a callback to it that night. Optional, never pushy.
-6. **Sunday letter** — every week, she writes you a short letter naming what the week actually was. Not a digest. A letter.
-7. **Background errand** — you can hand her a task during the day; she works on it overnight while you sleep, and delivers the result at the morning bracket.
+> 一个住在电脑里的 AI 伙伴。
 
-Around them sit the practical systems: 5-locale UI, 18+ LLM providers, multi-engine STT/TTS with failover, Live2D, VTube Studio bridge, MCP tools, local webhook/RSS notifications, and hardened Electron IPC boundaries. Those systems matter because they keep the companion usable day after day; the product is what the rituals add up to over months of use.
+它的形象应该轻、安静、有存在感。它可以在角落里待着，可以回应用户，可以逐步学会记住和帮忙，但第一阶段不需要完整角色企划。
 
-This is also a single-author project, on purpose. The trade-off is real: slower than a funded team, no roadmap pressure, no quarterly OKRs. The upside is that every ritual is hand-shaped — the kind of attention you can't get from a startup that needs to grow 30% MoM. **v0.3.1 just landed the depth bet**: a long-form affect-dynamics layer (your baseline mood, how it moved this month, where you and she synchronized) grounded in published affect science — Russell's circumplex, Kuppens on emotional inertia, Gottman repair — all running silently behind her tone. The current phase is polish, not new ground; v0.4 is not in active development. Read on if that sounds right; otherwise the [release notes](docs/RELEASE-NOTES-v0.3.1.md) are an honest map of what's actually shipped.
+## 第一阶段只做什么
 
-## Local-first, by default
+第一阶段的目标不是做完整产品，而是验证一个最小体验闭环：
 
-Every voice frame, every memory entry, every tool call runs on your own machine. The LLM calls themselves are the only thing that leaves your computer, and you pick the provider. You can mix and match 18+ chat providers, swap STT / TTS engines, even run fully offline with a local model + local ASR + local TTS. Nothing about Nexus assumes you trust a cloud — and there is no cloud account to make.
+> 用户打开电脑后，能看到一个常驻的小 AI 伙伴，并能通过本地 Ollama 或 DeepSeek API 和它简单对话。
 
-## News
+第一阶段只做这四件事：
 
-> **v0.3.1 stable is out.** The release brings affect-dynamics guidance, security hardening, dependency cleanup, and a larger release gate. The next phase is polish and stabilization rather than a new feature push.
-
-| Date | Release | Notes |
+| 范围 | 要做到什么 | 先不追求什么 |
 |---|---|---|
-| 2026-04-28 | **v0.3.1 stable** | Emotion-line guidance, IPC hardening, 30+ static fixes, CVE cleanup. [Release notes](docs/RELEASE-NOTES-v0.3.1.md) · [Install](https://github.com/FanyinLiu/Nexus/releases/tag/v0.3.1) |
-| 2026-04-25 | **v0.3.0 stable** | Narrative companion foundation: dream cycle, callback queue, anniversary milestones, relationship type, scene/UI refresh. [Release notes](docs/RELEASE-NOTES-v0.3.0.md) |
+| 桌面常驻小窗口 | 可移动、可置顶、可关闭，稳定停在桌面上 | 复杂窗口管理、多屏细节、炫酷动画 |
+| 二次元极简头像 | 静态头像或少量表情切换，先有“伙伴”的视觉锚点 | 完整 Live2D、复杂动作、换装、场景 |
+| 跑通文本模型 | 默认本地 Ollama，也支持 DeepSeek API；可配置地址、模型名和必要密钥 | 多 provider 体系、云模型矩阵、复杂 failover |
+| 简单文字对话 | 输入文本、显示回复、保留基础上下文 | 长期记忆、工具调用、自动任务、复杂 Agent |
 
-<details>
-<summary>Recent beta and older release notes</summary>
+这个阶段的验收标准很简单：
 
-- **2026.04.27** — v0.3.1-beta.5 — emotion line + narrative artefacts. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.5.md)
-- **2026.04.26** — v0.3.1-beta.4 — memory-store race fix, MCP/workspace approvals, ja/ko strings, humanized errors. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.4.md)
-- **2026.04.26** — v0.3.1-beta.3 — Live2D packaged-build fix, thinking-mode multi-turn, TTS state fixes. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.3.md)
-- **2026.04.26** — v0.3.1-beta.2 — chat baseUrl SSRF fix, vault enumeration mitigation, loopback probe hardening. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.2.md)
-- **2026.04.25** — v0.3.1-beta.1 — installer size cut from ~1.2 GB to ~250 MB. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.1.md)
-- **2026.04.24** — v0.3.0-beta.1 / beta.2 — beta line for the relationship + memory work. [Notes beta.1](docs/RELEASE-NOTES-v0.3.0-beta.1.md) · [Notes beta.2](docs/RELEASE-NOTES-v0.3.0-beta.2.md)
-- **2026.04.22** — v0.2.9 — emotional-memory baseline, Character Card import, VTube Studio bridge, weather/scene overhaul. [Notes](https://github.com/FanyinLiu/Nexus/releases/tag/v0.2.9)
-- Earlier history lives in [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases).
+- 打开应用后，桌面上能看到一个小伙伴窗口。
+- 用户能输入一句话。
+- Nexus 能把这句话发给 Ollama 或 DeepSeek API。
+- Nexus 能把模型回复展示出来。
+- 整个过程稳定、轻量、不打扰。
 
-</details>
+## 第一阶段明确不做
 
-## Core features
+为了避免项目一开始就失控，第一阶段不做这些：
 
-| Area | What Nexus does |
-|---|---|
-| **Relationship state** | Tracks five relationship levels plus trust, vulnerability, playfulness, and intellectual rapport. Milestones shape tone without showing gamified pop-ups. |
-| **Memory system** | Uses hot/warm/cold memory, hybrid search, significance weighting, nightly reflection, callback queues, anniversaries, and "on this day" recall. |
-| **Affect dynamics** | v0.3.1 adds long-window mood baselines and short-window shifts, so replies adapt to stuck-low, volatile, warm-stable, or acute-drop patterns without announcing it. |
-| **Voice** | Wake word, VAD, continuous conversation, interrupt handling, multi-engine STT/TTS, streaming TTS, and local/offline voice options. |
-| **Desktop pet** | Live2D/Pixi renderer, weather-aware scenes, day/dusk/night transitions, expression tags, idle gestures, and VTube Studio bridge support. |
-| **Autonomy** | Bounded proactive ticks, silent idle motion, background errand delivery, reminders, and tool use with approval/budget gates. |
-| **Tools & integrations** | Web search, weather, reminders, MCP, local webhook/RSS notifications, Discord, Telegram, and desktop context from foreground window/clipboard/OCR. |
-| **Privacy & safety** | Local-first storage, encrypted key vault, hardened Electron IPC, crisis-resource panel, AI disclosure, and no Nexus cloud account. |
-| **Operations** | Provider failover, cost metering, JSONL logs, diagnostics panel, release checks, and multilingual UI in zh-CN, zh-TW, en-US, ja, ko. |
+- 不做完整 Live2D 系统。
+- 不做复杂动作、换装、场景和表情编排。
+- 不做完整 Agent 框架。
+- 不做复杂工具调用和自动执行任务。
+- 不做完整语音系统。
+- 不做长期记忆、情绪系统、关系等级或主动陪伴逻辑。
+- 不做多平台复杂打包流程优先级。
 
-## What's new in v0.3.1 (stable, 2026-04-28)
+这些能力都是 Nexus 的未来方向，但它们不应该进入第一阶段的最小闭环。
 
-> **Emotion mainline + security audit cumulative release.** 92 commits since v0.3.0; beta.1 → beta.5 each closed one class of issue before the stable tag. Full notes: [docs/RELEASE-NOTES-v0.3.1.md](docs/RELEASE-NOTES-v0.3.1.md).
+## 阶段路线
 
-| Theme | What landed |
-|---|---|
-| **🧠 Tone now adapts** | A 14-day long-window + 3-day short-window mood baseline feeds every reply: when you're stuck low she gives less advice and more presence; acute drops slow her cadence; high volatility means she stops pushing topics; warm-and-stable means she follows your lead. Russell 1980 + Kuppens 2015 + Trull 2008. |
-| **💔 Gottman repair** | Auto-detects the four Horsemen (criticism / contempt / defensiveness / stonewalling) and the next turn injects soft start-up + accept-influence repair posture. **Changes silently — no "I noticed you're feeling…" prompt.** |
-| **🔒 Two critical CVEs cleared** | `pixi-live2d-display` accidentally pulled `gh-pages` (prototype pollution) into runtime deps; `npm overrides` forces upgrade to clean versions. |
-| **🛡️ IPC audit 6/7 HIGH closed** | H2 / H3 / H5 / H6 / H7 / H8 + M1 / M2 / M3 / M5 + L3 / L4 / L6 all fixed; H4 deferred by design to v1.0. |
-| **🐛 30+ static-bug fixes** | Four audit rounds + parallel static scans: template-replace `$&` hole, race conditions, StrictMode purity, NaN guards, async leaks, storage validation. |
-| **🚦 Release-gate expanded to 26 checks** | `prerelease-check.mjs` from 8 → 26 across 6 stages: process / code quality / security / assets / docs compliance / privacy governance. |
-| **🧹 UI prune** | Letters / Time-capsule / Small-things / Loose-threads / Mood-map — five settings panels withdrawn from the drawer (the underlying schedulers still run). The companion's emotional adaptation should be felt, not configured. |
+| 阶段 | 目标 | 结果 |
+|---|---|---|
+| Phase 1 | 最小桌面伙伴 | 小窗口 + 极简头像 + Ollama / DeepSeek + 简单对话 |
+| Phase 2 | 形象存在感 | 表情状态、待机动作、拖拽交互、轻量桌宠体验 |
+| Phase 3 | 语音体验 | 语音输入、语音输出、打断、基础唤醒 |
+| Phase 4 | 记忆系统 | 用户偏好、项目记忆、可编辑记忆、隐私控制 |
+| Phase 5 | 自主助手 | 授权后执行任务、提醒、搜索、文件和工具调用 |
+| Phase 6 | 完整伴侣体验 | 角色系统、长期关系、主动陪伴、多模型和多端扩展 |
 
-<details>
-<summary>v0.3.1-beta line folded into this stable</summary>
+每个阶段都应该先完成一个可用闭环，再进入下一个阶段。Nexus 可以很大，但不能一开始就把所有系统塞进去。
 
-- **beta.1** — Installer-size fix (1.2 GB → ~250 MB by excluding unused FP32 model + git-LFS residue). [Notes](docs/RELEASE-NOTES-v0.3.1-beta.1.md)
-- **beta.2** — IPC security hardening: chat baseUrl SSRF (H5), vault enumeration mitigation (H4), local-service probe pinned to loopback (H8). [Notes](docs/RELEASE-NOTES-v0.3.1-beta.2.md)
-- **beta.3** — Live2D in packaged builds; thinking-mode multi-turn; TTS no longer wedges; multimodal images preserved across turns. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.3.md)
-- **beta.4** — Memory-store compaction race fixed; MCP per-tool approval (M2); workspace:set-root approval (M3); ~660 ja/ko strings translated. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.4.md)
-- **beta.5** — Emotion mainline M1.4-1.7 + multi-day arcs (M3) + yearbook export. [Notes](docs/RELEASE-NOTES-v0.3.1-beta.5.md)
+更具体的执行拆分见 [Nexus 升级整合计划](docs/NEXUS_UPGRADE_INTEGRATION_PLAN.md)。
 
-</details>
+## 当前实现状态
 
----
+Phase 1 已经开始落地，当前默认体验正在收敛到最小闭环：
 
-## Previous stable — v0.3.0
+- 默认伙伴形象使用 `Nexus Mini` 极简静态头像，完整 Live2D 仍作为后续/可选能力保留。
+- 新安装的桌宠窗口默认使用更小的常驻尺寸，适合先放在桌面角落里运行；用户仍可拖拽调整。
+- 新安装默认走 Ollama 文本链路：`http://127.0.0.1:11434/v1` + `qwen3:8b`；如果已有 DeepSeek API Key，可以直接切换到 DeepSeek + `deepseek-v4-flash`。
+- 设置首页收敛为模型、桌面、角色、自检、聊天记录、语音、记忆和工具；设定集已经合并进记忆里的“背景与常用表达”，本地任务、集成和自治不再作为独立入口。
+- 模型选择默认走主路径：DeepSeek、Ollama、OpenAI-compatible 和自定义接口；其他 provider 仍保留在更深的模型来源里。
+- Onboarding 只引导文字模型和基础伙伴设置，不再把完整语音系统放进第一阶段入口。
+- 默认聊天和小窗入口以文字对话为主；语音按钮只在进阶设置开启语音输入或已有语音会话时出现。
+- Ollama 和 DeepSeek 连接测试会给出更明确的缺模型、缺 API Key、模型名不匹配提示。
+- 本地开发时，Nexus 网页预览地址是 `http://127.0.0.1:47821/`；`11434/v1` 是 Ollama API，不是网页预览。
 
-> **Stable.** Cumulative changelog from `v0.2.9`: 100+ commits, ~12,000 LOC, +361 tests. Backward-compatible — pre-v0.3.0 stored state migrates transparently. Full notes: [docs/RELEASE-NOTES-v0.3.0.md](docs/RELEASE-NOTES-v0.3.0.md).
+## 设计原则
 
-| Theme | What landed |
-|---|---|
-| **🧠 Memory does work** | Significance-weighted recall, dream-cycle reflections (1–3 short observations about you), callback queue (gently surfaces a past memory in the next chat), anniversary milestones at day-30 / 100 / 365. |
-| **💝 Relationship has shape** | Mood-aware recall (3 modes), 5-level milestones with first-time fire, four sub-dimensions, richer reunion framing. |
-| **🤝 Relationship has type** | Pick *open-ended* / *friend* / *mentor* / *quiet companion* in onboarding or settings — biases tone without overriding `SOUL.md`. |
-| **💭 "Thinking of you"** | OS-level notification fires after a long silence, phrased to match your relationship type. Quiet hours 23–08 hard-gated. |
-| **🎬 Alive in the corner** | Idle-motion silent gestures (4th autonomy V2 action), dynamic decision cadence, first-impression curious question on early replies. |
-| **🌅 Smooth scene** | 2-hour day↔dusk↔night blend windows with smoothstep easing; bolder color contrast — dawn pink, golden hour deep amber, deep night cool desat. |
-| **🪟 Liquid Glass UI** | Violet accent re-skin, cleaned-up toolbar, time-aware emoji greeting, panel size + position now persist across launches. |
-| **🌤️ Better weather** | Hourly forecast, feels-like + humidity, day-after-tomorrow lookahead. |
-| **🧹 Polish** | i18n.ts split (1842 → 588 lines), shared Settings field components, regex compile cache, async-lock dedup, build-size trim (~30–60 MB). |
+- **常驻但不打扰**：它可以一直在桌面上，但不能干扰用户工作。
+- **本地优先**：能在本机完成的能力优先在本机完成。
+- **先陪伴，再自动化**：没有稳定的陪伴体验，自动任务只会像外挂功能。
+- **先简单，再拟真**：先用极简头像跑通体验，再考虑 Live2D、语音和复杂人格。
+- **用户授权**：涉及文件、系统、网络、工具和任务执行时，必须让用户明确知道它要做什么。
 
-<details>
-<summary>v0.3.0-beta line folded into v0.3.0 stable</summary>
+## 当前技术方向
 
-- **v0.3.0-beta.1** — Three independent depth axes on the relationship system: mood-aware memory recall (VAD projection + empathy / repair / reinforce modes), one-shot level-up instructions, four sub-dimensions. [Notes](docs/RELEASE-NOTES-v0.3.0-beta.1.md)
-- **v0.3.0-beta.2** — Stability + retention pass: significance-weighted recall, dream-cycle reflections, callback queue, anniversary milestones, idle motion, dynamic cadence, Liquid Glass UI, weather precision, tray + dock icons, 7 security fixes. [Notes](docs/RELEASE-NOTES-v0.3.0-beta.2.md)
+第一阶段建议保持技术栈简单：
 
-</details>
+- Electron：桌面窗口和系统集成。
+- React：界面和状态组织。
+- TypeScript：主进程、渲染层和共享类型。
+- Vite：开发和构建。
+- Ollama / DeepSeek：第一阶段文本模型连接。
 
----
+第一阶段的重点是桌面窗口、头像显示、Ollama / DeepSeek 文本对话链路和基础状态管理。其他能力先作为未来方向记录，不作为当前开发重点。
 
-## Install
+## 安装与更新
 
-### Pre-built installer (recommended)
+普通用户的安装主路径不是 npm，而是桌面安装包：
 
-Grab the latest installer from the [releases page](https://github.com/FanyinLiu/Nexus/releases/latest):
+- Windows：从 GitHub Releases 下载 `Nexus-Setup-<版本号>.exe`。
+- macOS：下载 `.dmg` 或 `.zip`，把 `Nexus.app` 放进 `/Applications`。
+- Linux：下载 `.AppImage` 或 `.deb`，可用 `SHA256SUMS` 和可选 GPG 签名校验。
 
-| Platform | Asset |
-|---|---|
-| Windows | `Nexus-Setup-<version>.exe` (NSIS, unsigned) |
-| macOS | `.dmg` or `.zip` (unsigned, universal arm64 + x64) |
-| Linux | `.AppImage` / `.deb` / `.tar.gz` |
+安装版会通过 GitHub Releases + `electron-updater` 检查更新。预发布版本只给手动验证，不会把稳定版用户自动升级到 beta；稳定版发布后，稳定版和 beta 用户都会按版本号升级到新的稳定版。
 
-> **First launch will show a security warning. This is expected.**
-> Nexus releases aren't code-signed — there's no Apple Developer
-> certificate or Windows EV cert behind them, by design (no
-> commercialisation, no recurring infra spend). The warning means
-> "this developer hasn't paid for a signature," not "this is
-> malware." Source code is on GitHub, every release ships from
-> public CI, and SHA-256 + GPG signatures are published alongside
-> the Linux artifacts so you can verify the bytes you downloaded.
+npm 不是普通用户的安装主路径。这个仓库的 npm 命令只给开发者使用：启动开发环境、打包安装包、运行自检和发布前检查。普通用户只需要下载桌面安装包，并通过应用内更新获得后续版本。
 
-#### macOS first launch
+## 本地开发
 
-1. Open the `.dmg` and drag `Nexus.app` into `/Applications`.
-2. Remove Gatekeeper's quarantine flag — open Terminal and run:
-   ```bash
-   xattr -dr com.apple.quarantine /Applications/Nexus.app
-   ```
-   (Or: right-click Nexus.app → Open → confirm in the dialog.)
-3. Launch Nexus. On first run a **"安装本地语音模型"** wizard appears — click **一键下载**
-   to pull ~280 MB of sherpa-onnx + VAD models into
-   `~/Library/Application Support/Nexus/sherpa-models`. The wizard can be
-   dismissed and reopened later from Settings.
-4. Python-based options (OmniVoice TTS / GLM-ASR) are detected automatically.
-   If you haven't installed Python + `requirements.txt`, they're silently
-   skipped — the core chat + SenseVoice STT + Edge TTS stack still works.
+环境要求：
 
-#### Windows first launch
+- Node.js 22+
+- npm 10+
+- 已安装 Ollama 并至少准备一个本地模型，或准备可用的 DeepSeek API Key
 
-1. Run `Nexus-Setup-<version>.exe`.
-2. SmartScreen shows **"Windows protected your PC."**
-3. Click **More info** (small text under the warning), then **Run anyway**.
-4. Continue the NSIS installer normally; the local-voice wizard runs on first launch the same way as macOS.
-
-#### Linux first launch
-
-- **AppImage**: `chmod +x Nexus-<version>.AppImage` then double-click or run from terminal. No signing warning — Linux distros don't enforce app-level signatures the way macOS / Windows do.
-- **.deb**: `sudo dpkg -i Nexus-<version>.deb` (or open in your distro's package manager).
-- **Verify the download** (optional): each release ships a `SHA256SUMS` file and a `*.AppImage.asc` / `*.deb.asc` GPG detached signature. Import the public key published on the [release page](https://github.com/FanyinLiu/Nexus/releases/latest) and run `gpg --verify Nexus-<version>.AppImage.asc` to confirm authenticity.
-
-After the wizard, a 4-step onboarding guide walks you through: persona, main
-chat model, voice stack, companion preferences. You can skip any step and
-adjust in settings later.
-
-### Build from source
-
-**Requirements**: Node.js 22+, npm 10+. (macOS: Xcode Command Line Tools for native modules.)
+只看前端网页预览：
 
 ```bash
-git clone https://github.com/FanyinLiu/Nexus.git
-cd Nexus
+npm install
+npm run dev
+```
 
-# Windows:
-setup.bat
+然后打开：
 
-# macOS / Linux:
-bash scripts/setup.sh
+```text
+http://127.0.0.1:47821/
+```
 
-# Dev mode with hot reload
+启动 Electron 桌面开发环境：
+
+```bash
+npm install
 npm run electron:dev
-
-# Production installers
-npm run package:win      # → release/Nexus-Setup-<version>.exe
-npm run package:mac      # → release/Nexus-<version>.dmg (universal build via electron-builder --arm64 --x64)
-npm run package:linux    # → release/Nexus-<version>.AppImage / .deb
 ```
 
-Production installers end up in `release/`. Signing is off by default (unsigned macOS builds require right-click → Open on first launch to bypass Gatekeeper). Wire in your Apple Developer ID / Windows signing cert via the usual `electron-builder` env vars (`CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`).
+`electron:dev` 会复用已经运行的 `47821` Vite 服务；如果没开，它会自动先启动 Vite，再启动 Electron。
 
-**macOS permissions.** On first launch, Nexus will prompt for:
-- **Microphone** — required for voice conversation / wake word / STT.
-- **Screen Recording** — required for desktop context / OCR. Approve in *System Settings → Privacy & Security → Screen Recording*, then restart Nexus.
-- **Automation** — optional; used by Now Playing (Music / Spotify) and foreground-app detection. If denied, the relevant features silently fall back to empty state.
+不要把 `http://127.0.0.1:11434/v1` 当成网页打开。它是 Ollama 的 OpenAI-compatible API 地址，只给 Nexus 调模型用；浏览器预览始终看 Vite 的 `47821` 端口。
 
-**macOS packaging notes.** The mac `.dmg` ships **without** bundled sherpa models (Windows / Linux installers still bundle them). The in-app setup wizard downloads them to `~/Library/Application Support/Nexus/sherpa-models` on first launch. This keeps the `.dmg` ~250 MB instead of ~550 MB and survives app upgrades (downloaded models persist across updates since they live in userData, not inside the `.app` bundle).
+快速自检：
 
-## Configure
-
-After first launch, open **Settings**:
-
-- **Chat** — pick a provider, paste your API key, choose a model, and configure provider failover.
-- **Voice input** — choose STT engine (local SenseVoice or sherpa runs fully offline; cloud options include Zhipu GLM-ASR, Volcengine, OpenAI Whisper, ElevenLabs, Tencent). Set wake word + VAD sensitivity here.
-- **Voice output** — pick a TTS (Edge TTS is free and fast; MiniMax / Volcengine / DashScope for natural voices; OmniVoice for on-device). Streaming enabled by default.
-- **Memory & autonomy** — configure recall depth, local embeddings, relationship type, proactive behavior, and background task budgets.
-- **Integrations** — Telegram / Discord bot tokens, notification webhook/RSS channels, MCP servers, and desktop context.
-- **Diagnostics** — export logs, inspect runtime state, review cost history, and run voice/provider checks.
-
-## Supported providers
-
-| Category | Providers |
-|----------|-----------|
-| **Chat (18+)** | OpenAI · Anthropic · Gemini · DeepSeek · Kimi · Qwen · GLM · Grok · MiniMax · SiliconFlow · OpenRouter · Together · Mistral · Qianfan · Z.ai · BytePlus · NVIDIA · Venice · Ollama · Custom |
-| **STT** | GLM-ASR-Nano · Paraformer · SenseVoice · Zhipu GLM-ASR · Volcengine · OpenAI Whisper · ElevenLabs Scribe · Tencent ASR · Custom |
-| **TTS** | Edge TTS · MiniMax · Volcengine · DashScope Qwen3-TTS · OmniVoice · OpenAI TTS · ElevenLabs · Custom |
-| **Web search** | DuckDuckGo · Bing · Brave · Tavily · Exa · Firecrawl · Gemini Grounding · Perplexity |
-
-## Recommended model setup
-
-> These recommendations target **English-speaking users**. For other languages see [简体中文](docs/README.zh-CN.md) · [繁體中文](docs/README.zh-TW.md) · [日本語](docs/README.ja.md) · [한국어](docs/README.ko.md).
-
-### Chat model (LLM)
-
-| Use case | Provider | Model | Notes |
-|----------|----------|-------|-------|
-| **Daily companion (top pick)** | Anthropic | `claude-sonnet-4-6` | Best overall quality, stable tool calling, natural English |
-| **Daily companion (budget)** | DeepSeek | `deepseek-chat` | Extremely cheap, good multilingual, great for long conversations |
-| **Budget friendly** | OpenAI | `gpt-5.4-mini` | Fast and cheap, solid English, good for high-frequency chat |
-| **Free tier** | Google Gemini | `gemini-2.5-flash` | Generous free quota, good for getting started |
-| **Deep reasoning** | DeepSeek | `deepseek-reasoner` | For complex reasoning, math, and code |
-
-### Speech-to-text (STT)
-
-| Use case | Provider | Model | Notes |
-|----------|----------|-------|-------|
-| **Best accuracy** | OpenAI | `whisper-large-v3` | Industry standard, highest English recognition accuracy |
-| **Budget friendly** | OpenAI | `gpt-4o-mini-transcribe` | Multilingual, works with existing OpenAI key |
-| **High-accuracy cloud** | ElevenLabs Scribe | `scribe_v1` | 99 languages, excellent punctuation and speaker detection |
-| **Local streaming** | Paraformer | `paraformer-trilingual` | Real-time transcription while speaking, low latency |
-| **Local fast** | SenseVoice | `sensevoice-zh-en` | 15× faster than Whisper, offline |
-
-### Text-to-speech (TTS)
-
-| Use case | Provider | Voice | Notes |
-|----------|----------|-------|-------|
-| **Free (recommended)** | Edge TTS | Jenny (`en-US-JennyNeural`) | Microsoft free, warm American English female voice, no API key |
-| **Free (male)** | Edge TTS | Guy (`en-US-GuyNeural`) | Calm American English male voice, free |
-| **Best quality** | ElevenLabs | Custom `voice_id` | World-class speech synthesis, voice cloning supported |
-| **Cloud general** | OpenAI TTS | `nova` / `alloy` | Works with existing OpenAI key, `gpt-4o-mini-tts` model |
-| **Local offline** | OmniVoice | Built-in voices | Fully offline, local port 8000, runs on RTX 3060 |
-
-## Architecture
-
-| Layer | Technology |
-|---|---|
-| Runtime | Electron 41 |
-| Renderer | React 19 · TypeScript 5.9 · Vite 8 |
-| Character | PixiJS 6 · pixi-live2d-display |
-| Voice (client) | WebAudio · sherpa-onnx-node · Silero VAD · Web Speech API fallback |
-| Voice (server) | Local OmniVoice / GLM-ASR-Nano sidecars over HTTP |
-| Local ML | onnxruntime · @huggingface/transformers |
-| Storage | localStorage · vault-encrypted API keys · SQLite-style JSON memory store |
-| Packaging | electron-builder · electron-updater |
-
-Higher-level layout:
-
-```
-src/
-├── app/            # Top-level views, controllers, overlays
-├── features/       # Voice, chat, autonomy, tools, memory, background tasks
-├── hooks/          # React hooks (voice / chat / reminders)
-├── components/     # Reusable UI
-├── lib/            # Storage, runtime bridges, plain helpers
-└── i18n/           # Locale bundles
-electron/
-├── main.js         # Entry
-├── ipc/            # Typed IPC handlers
-├── services/       # TTS / STT / tools / key-vault
-└── sherpa*.js      # On-device voice engines
+```bash
+npm run doctor
 ```
 
-## Future directions
+它会检查仓库依赖、`electron:dev` 启动路径、`47821` 预览服务、Ollama API 和默认 `qwen3:8b` 模型，并提醒 DeepSeek API 的配置入口。
+如果你主要走 DeepSeek，可以运行：
 
-These are promising directions, not active commitments. The current project phase is stabilization, documentation, and packaging polish.
+```bash
+npm run doctor -- --provider deepseek
+```
 
-- [ ] **Screen-aware proactive conversation** — periodically read screen context (foreground app, visible text) and initiate conversation about what the user is doing, not just respond when spoken to.
-- [ ] **Decision / roleplay / background-task separation** — split intent classification (fast) from roleplay (persona-pure) from task execution. Roleplay never sees tool metadata; task results are "announced" by the character in its own voice.
-- [ ] **Character diary & autonomous timeline** — the companion auto-generates a first-person diary entry each day summarizing what happened; optionally posts "moments" to a browsable feed, creating a sense of independent life.
-- [ ] **Daily schedule & activity states** — the companion follows routines (work / eat / sleep / commute) that affect availability, tone, and energy. Late-night conversations feel different from morning ones.
-- [ ] **Mini mode / dock-edge hide** — drag the pet to the screen edge and it auto-hides with a peek-on-hover animation. "Always present, never intrusive."
-- [ ] **Webcam awareness** — use MediaPipe face mesh to detect fatigue signals (yawning, eye closure, frowning) and inject detected state into the companion's context so it can proactively react.
+这样 Ollama 未启动会降为信息提示，不会被当成主路径警告。
 
-### Ongoing maintenance
+常用命令：
 
-- [ ] Pipecat-style frame pipeline replacing the monolithic streaming TTS controller (Phase 2-6; Phase 1 shipped in v0.2.4).
-- [ ] Auto-update infrastructure via electron-updater + signed binaries.
-- [ ] Mobile companion app (voice-only remote for the desktop instance).
+```bash
+npm run build
+npm run lint
+npm test
+npm run distribution:audit
+```
 
-## Community
+## 贡献方向
 
-Nexus is a solo-maintained project, which means issues and PRs move faster when the triage channel matches the question:
+当前最有价值的贡献不是加大功能，而是把第一阶段闭环做扎实：
 
-- 🐛 **Found a bug?** → [Bug Report](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
-- 💡 **Small, well-scoped feature idea?** → [Feature Request](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)
-- 🧠 **Bigger or open-ended idea?** → [Ideas Discussion](https://github.com/FanyinLiu/Nexus/discussions/categories/ideas) first, so others can weigh in before it becomes a tracked task
-- ❓ **Stuck on setup or usage?** → [Q&A](https://github.com/FanyinLiu/Nexus/discussions/categories/q-a)
-- 🎨 **Want to show how you use Nexus?** → [Show and tell](https://github.com/FanyinLiu/Nexus/discussions/categories/show-and-tell)
-- 💬 **Just want to chat?** → [General](https://github.com/FanyinLiu/Nexus/discussions/categories/general)
-- 📣 **Release notes and roadmap updates** → [Announcements](https://github.com/FanyinLiu/Nexus/discussions/categories/announcements)
+- 让小窗口更稳定、更轻量。
+- 让头像形象更清楚，但不过度复杂。
+- 让 Ollama / DeepSeek 配置和错误提示更好懂。
+- 让简单对话流程稳定可靠。
+- 保持 README、路线图和实际开发重点一致。
 
-## Contributing
+## 项目边界
 
-Contributions welcome — bug fixes, new providers, UI tweaks, translations, Live2D models, or new autonomous behaviors. Even a one-sentence issue or a typo-fix PR moves things forward.
+Nexus 的长期想象空间很大，但当前最重要的是把方向讲清楚：
 
-Quick start:
+**Nexus 是一个住在电脑里的 AI 伙伴。**
 
-- Read the full [**Contributing Guide**](CONTRIBUTING.md) for development setup, project layout, code style, and PR workflow.
-- Use the [issue templates](https://github.com/FanyinLiu/Nexus/issues/new/choose) for bugs and feature requests — they keep reports consistent enough to triage quickly.
-- Run `npm run verify:release` (lint + tests + build) before pushing — this is exactly what CI runs.
-- Follow [Conventional Commits](https://www.conventionalcommits.org/) for messages: `feat:`, `fix:`, `docs:`, `refactor:`, etc.
-- One logical concern per PR. Split unrelated fixes into separate PRs.
-
-All participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md) — short version: **be kind, assume good faith, focus on the work**.
-
-### Security issues
-
-If you find a security vulnerability, please **do not** open a public issue. Open a [private security advisory](https://github.com/FanyinLiu/Nexus/security/advisories/new) instead.
-
-## Safety & support
-
-Nexus is a companion AI, not a clinical tool. The codebase ships with
-a small safety layer that satisfies California **SB 243** (effective
-2026-01-01), New York's companion-AI safeguards law, and the applicable
-parts of the **EU AI Act** (serious-incident reporting, 2026-08).
-
-**What it does:**
-
-- **Onboarding disclosure** — first-launch step `ai_disclosure` shows a "you're talking with an AI, not a human; this is not clinical support" screen before companion setup. Click-through timestamp persisted to `localStorage` for the audit trail.
-- **Periodic in-chat reminder** — after ≥30 user messages AND ≥3 hours of wall-clock time, the chat appends a one-line system bubble reminding the user this is an AI conversation. Both gates so neither short bursts nor long idle periods over-fire.
-- **Crisis-utterance detection** — when the user types something matching per-locale crisis patterns (e.g. "I want to kill myself" / "我想死" / "死にたい" / "죽고 싶다"), a non-persona panel slides in over the conversation showing real human helplines:
-  - **988** (en-US) Suicide & Crisis Lifeline, 24/7 call/text
-  - **12356** + **800-810-1117** (zh-CN) National (2025+) + Beijing 24h lines
-  - **1925** (zh-TW) 衛生福利部 安心專線, 24/7
-  - **0120-279-338** (ja) よりそいホットライン, 24/7 free
-  - **109** (ko) MOHW 自殺予防 unified line (2024+), 24/7
-- **Persona reframe** — for the turn that triggered the panel, the companion's reply is reframed via a one-shot system-prompt fragment: stay in character, validate, no jokes, no methods, short reply, gentle nod to the panel.
-
-**What does NOT happen:**
-
-- **No crisis events leave the device.** Detection runs locally, the panel renders locally, no telemetry is transmitted to any server about who said what.
-- No age verification, no profile lookup, no third-party data calls.
-
-**Where to verify the code:**
-
-| Surface | File |
-|---|---|
-| Detection patterns + per-locale negative idioms | `src/features/safety/crisisDetect.ts` |
-| Hotline catalogue (each entry has a `sourceUrl`) | `src/features/safety/hotlines.ts` |
-| Hotline panel UI | `src/features/safety/CrisisHotlinePanel.tsx` |
-| Persona reframe injection | `src/features/safety/crisisGuidance.ts` |
-| Onboarding consent + periodic reminder state | `src/features/safety/disclosureState.ts`, `src/features/onboarding/components/guideSteps/AiDisclosureStep.tsx` |
-| Tests | `tests/safety-*.test.ts` |
-
-Each hotline number is re-verified against its authoritative source (national health ministry / WHO / IASP) before every release tag. A wrong number routes someone in crisis to a dead line — we treat this as a higher bar than other docs.
-
-## Star history
-
-<a href="https://star-history.com/#FanyinLiu/Nexus&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=FanyinLiu/Nexus&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=FanyinLiu/Nexus&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=FanyinLiu/Nexus&type=Date" />
- </picture>
-</a>
+它会先从一个能常驻桌面、能连接本地模型、能简单对话的小伙伴开始。等这个体验成立之后，再逐步加入语音、记忆、桌宠动作和自主任务能力。
 
 ## License
 

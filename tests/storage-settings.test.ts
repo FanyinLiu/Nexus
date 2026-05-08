@@ -40,6 +40,21 @@ beforeEach(() => {
   })
 })
 
+test('fresh settings start with the Phase 1 Ollama text path', () => {
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'ollama')
+  assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
+  assert.equal(settings.model, 'qwen3:8b')
+  assert.equal(settings.petModelId, 'nexus-mini')
+  assert.equal(settings.apiKey, '')
+  assert.equal(settings.chatFailoverEnabled, false)
+  assert.equal(settings.speechInputEnabled, false)
+  assert.equal(settings.speechOutputEnabled, false)
+  assert.equal(settings.toolWebSearchEnabled, false)
+  assert.equal(settings.proactivePresenceEnabled, false)
+})
+
 test('preserves volcengine-tts selection without migration', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({

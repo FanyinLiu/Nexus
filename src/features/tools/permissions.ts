@@ -1,4 +1,5 @@
 import { loadSettings } from '../../lib/index.ts'
+import type { ToolPermissionLevel } from '../../types'
 import type { BuiltInToolId, BuiltInToolPolicy, MatchedBuiltInTool } from './toolTypes'
 
 type ToolPolicySettingsKeys = {
@@ -65,6 +66,11 @@ export function resolveBuiltInToolPolicy(toolId: BuiltInToolId, settings?: unkno
       defaults.requiresConfirmation,
     ),
   }
+}
+
+export function resolveBuiltInToolPermissionLevel(policy: BuiltInToolPolicy): ToolPermissionLevel {
+  if (!policy.enabled) return 'restricted'
+  return policy.requiresConfirmation ? 'confirm' : 'safe'
 }
 
 function buildConfirmationMessage(tool: MatchedBuiltInTool) {

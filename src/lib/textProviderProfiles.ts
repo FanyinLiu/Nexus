@@ -1,4 +1,4 @@
-import { getApiProviderPreset } from './apiProviders.ts'
+import { getApiProviderPreset } from '../features/models/index.ts'
 import type { AppSettings, TextProviderProfile } from '../types'
 
 type PartialTextProviderProfile = Partial<TextProviderProfile> | null | undefined

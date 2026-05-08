@@ -312,15 +312,6 @@ export const AutonomySection = memo(function AutonomySection({
     <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
 
       {/* ── Master switch ────────────────────────────────────────────────── */}
-      <div className="settings-section__title-row">
-        <div>
-          <h4>{ti('settings.autonomy.title')}</h4>
-          <p className="settings-drawer__hint">
-            {ti('settings.autonomy.hint')}
-          </p>
-        </div>
-      </div>
-
       <ToggleField label={ti('settings.autonomy.enable')} field="autonomyEnabled" {...fieldProps} />
 
       {/* ── Proactive Presence (basic fallback) ──────────────────────────── */}

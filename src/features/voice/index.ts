@@ -1,6 +1,7 @@
 export * from './audioQueue'
 export * from './autoRestartPolicy'
 export * from './lipSync'
+export * from './providerSettings'
 export * from './runtimeSupport'
 export * from './sessionMachine'
 export * from './shared'
