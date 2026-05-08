@@ -142,7 +142,7 @@ export const API_PROVIDER_PRESETS: ApiProviderPreset[] = [
     baseUrl: 'https://api.moonshot.cn/v1',
     defaultModel: 'kimi-k2.6',
     models: ['kimi-k2.6', 'kimi-k2.5', 'kimi-k2-thinking', 'kimi-k2-turbo-preview'],
-    notes: 'OpenAI-compatible Moonshot endpoint. K2.6 is the current flagship shown by Moonshot; K2.5 remains the stable documented multimodal path. Use the `-anthropic` preset below for Claude-messages mode.',
+    notes: 'OpenAI-compatible Moonshot endpoint. K2.6 is the current flagship shown by Moonshot; K2.5 remains the stable documented multimodal path. Use the `-anthropic` preset below for Anthropic-style messages mode.',
     protocol: 'openai-compatible',
     requiresApiKey: true,
   },

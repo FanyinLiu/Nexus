@@ -425,9 +425,8 @@ async function toRequestMessages(
   }
 
   // Inject current time as a <system-reminder> prefix on the most recent user
-  // message so the cached system prefix stays byte-stable. Mirrors the Claude
-  // Code pattern for time updates and mode transitions. Only the last user
-  // turn carries the reminder — earlier turns keep their historical content
+  // message so the cached system prefix stays byte-stable. Only the last user
+  // turn carries the reminder; earlier turns keep their historical content
   // so conversation replay remains coherent.
   const timeReminder = formatCurrentTimeReminder(settings)
   const augmentedMessages = contextMessages.slice()

@@ -97,7 +97,7 @@ const PRICING_TABLE: Array<{ pattern: string; price: ModelPrice }> = [
   { pattern: 'gpt-4o',              price: { inputPerM: 2.50,  outputPerM: 10.00 } },
   { pattern: 'gpt-4-turbo',         price: { inputPerM: 10.00, outputPerM: 30.00 } },
   { pattern: 'gpt-3.5',             price: { inputPerM: 0.50,  outputPerM: 1.50  } },
-  // Anthropic Claude — Opus 4.7 (2026-04) cut prices 3x; was $15/$75
+  // Anthropic model family pricing.
   { pattern: 'claude-opus',         price: { inputPerM: 5.00,  outputPerM: 25.00 } },
   { pattern: 'claude-sonnet',       price: { inputPerM: 3.00,  outputPerM: 15.00 } },
   { pattern: 'claude-haiku',        price: { inputPerM: 0.80,  outputPerM: 4.00  } },

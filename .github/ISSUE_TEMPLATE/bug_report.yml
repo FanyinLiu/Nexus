@@ -76,7 +76,7 @@ body:
     attributes:
       label: LLM / STT / TTS providers in use
       description: If the bug relates to voice or chat, list which providers were active.
-      placeholder: "LLM: Anthropic claude-sonnet-4-6 | STT: sherpa-onnx local | TTS: edge-tts"
+      placeholder: "LLM: DeepSeek deepseek-v4-flash | STT: sherpa-onnx local | TTS: edge-tts"
 
   - type: textarea
     id: logs
