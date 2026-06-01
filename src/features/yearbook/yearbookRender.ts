@@ -38,6 +38,8 @@ interface LocaleStrings {
   coregUnknown: string
   monthlyHeader: string
   emptyMonthLabel: string
+  monthStripEmptyLabel: string
+  monthStripTrendLabel: string
   highlightsHeader: string
   highlightsEmpty: string
   milestonesHeader: string
@@ -68,6 +70,8 @@ const LOCALES: Record<UiLanguage, LocaleStrings> = {
     coregUnknown: 'Not enough overlapping data to characterise.',
     monthlyHeader: 'Month by month',
     emptyMonthLabel: 'no samples',
+    monthStripEmptyLabel: 'No samples in this month',
+    monthStripTrendLabel: 'Monthly valence trend',
     highlightsHeader: 'Moments worth holding',
     highlightsEmpty: 'Nothing has been pinned yet — this section fills as memory accumulates.',
     milestonesHeader: 'Milestones',
@@ -96,6 +100,8 @@ const LOCALES: Record<UiLanguage, LocaleStrings> = {
     coregUnknown: '重叠的数据还不够，没办法判断。',
     monthlyHeader: '一月一月看',
     emptyMonthLabel: '无样本',
+    monthStripEmptyLabel: '本月无样本',
+    monthStripTrendLabel: '月度效价走势',
     highlightsHeader: '值得记住的几个瞬间',
     highlightsEmpty: '还没有特别突出的——这一栏会随着记忆累积慢慢长出来。',
     milestonesHeader: '关系里程碑',
@@ -124,6 +130,8 @@ const LOCALES: Record<UiLanguage, LocaleStrings> = {
     coregUnknown: '重疊的資料還不夠，沒辦法判斷。',
     monthlyHeader: '一月一月看',
     emptyMonthLabel: '無樣本',
+    monthStripEmptyLabel: '本月無樣本',
+    monthStripTrendLabel: '月度效價走勢',
     highlightsHeader: '值得記住的幾個瞬間',
     highlightsEmpty: '還沒有特別突出的——這一欄會隨著記憶累積慢慢長出來。',
     milestonesHeader: '關係里程碑',
@@ -152,6 +160,8 @@ const LOCALES: Record<UiLanguage, LocaleStrings> = {
     coregUnknown: '重なるデータが足りず、判定できない。',
     monthlyHeader: '月ごとに',
     emptyMonthLabel: 'サンプルなし',
+    monthStripEmptyLabel: 'この月のサンプルはありません',
+    monthStripTrendLabel: '月別の感情価の推移',
     highlightsHeader: '心に残るいくつかの瞬間',
     highlightsEmpty: 'まだ際立ったものは無し — 記憶が積もるにつれて、ここが埋まっていきます。',
     milestonesHeader: '関係のマイルストーン',
@@ -180,6 +190,8 @@ const LOCALES: Record<UiLanguage, LocaleStrings> = {
     coregUnknown: '겹치는 데이터가 부족해 판단하기 어려워.',
     monthlyHeader: '달마다',
     emptyMonthLabel: '샘플 없음',
+    monthStripEmptyLabel: '이 달에는 샘플이 없습니다',
+    monthStripTrendLabel: '월별 정서가 추이',
     highlightsHeader: '간직할 만한 순간들',
     highlightsEmpty: '아직 특별히 두드러진 건 없어 — 기억이 쌓일수록 이 자리가 채워질 거야.',
     milestonesHeader: '관계의 이정표',
@@ -249,9 +261,10 @@ const STRIP_H = 60
 const STRIP_PAD_X = 8
 const STRIP_PAD_Y = 8
 
-function renderMonthStrip(month: MonthlyBucket): string {
+function renderMonthStrip(month: MonthlyBucket, locale: LocaleStrings): string {
+  const emptyLabel = escapeHtml(locale.monthStripEmptyLabel)
   if (month.bins.length < 2) {
-    return `<svg viewBox="0 0 ${STRIP_W} ${STRIP_H}" class="strip-empty" role="img" aria-label="empty"></svg>`
+    return `<svg viewBox="0 0 ${STRIP_W} ${STRIP_H}" class="strip-empty" role="img" aria-label="${emptyLabel}"></svg>`
   }
   const firstMs = Date.parse(month.bins[0].day)
   const lastMs = Date.parse(month.bins[month.bins.length - 1].day)
@@ -260,7 +273,7 @@ function renderMonthStrip(month: MonthlyBucket): string {
   // produces stable YYYY-MM-DD keys today, but the guard makes the
   // rendering total under any future bin shape.
   if (!Number.isFinite(firstMs) || !Number.isFinite(lastMs)) {
-    return `<svg viewBox="0 0 ${STRIP_W} ${STRIP_H}" class="strip-empty" role="img" aria-label="empty"></svg>`
+    return `<svg viewBox="0 0 ${STRIP_W} ${STRIP_H}" class="strip-empty" role="img" aria-label="${emptyLabel}"></svg>`
   }
   const span = Math.max(lastMs - firstMs, 1)
   const innerW = STRIP_W - 2 * STRIP_PAD_X
@@ -281,7 +294,7 @@ function renderMonthStrip(month: MonthlyBucket): string {
     .map((b, i) => `${i === 0 ? 'M' : 'L'}${x(b.day).toFixed(1)},${y(b.valence).toFixed(1)}`)
     .join(' ')
 
-  return `<svg viewBox="0 0 ${STRIP_W} ${STRIP_H}" class="strip" role="img" aria-label="month">
+  return `<svg viewBox="0 0 ${STRIP_W} ${STRIP_H}" class="strip" role="img" aria-label="${escapeHtml(locale.monthStripTrendLabel)}">
     <line x1="${STRIP_PAD_X}" x2="${STRIP_W - STRIP_PAD_X}" y1="${neutral}" y2="${neutral}" stroke="rgba(0,0,0,0.1)" stroke-dasharray="2 3"/>
     <path d="${path}" stroke="#5a8a6a" stroke-width="1.4" fill="none"/>
   </svg>`
@@ -331,7 +344,7 @@ function renderMonthly(snap: YearbookSnapshot, locale: LocaleStrings): string {
         : `<span class="muted">${escapeHtml(locale.emptyMonthLabel)}</span>`
       return `<div class="month-row">
         <div class="month-label">${escapeHtml(monthLabel)}</div>
-        <div class="month-strip">${renderMonthStrip(m)}</div>
+        <div class="month-strip">${renderMonthStrip(m, locale)}</div>
         <div class="month-stat">${baselineText}</div>
       </div>`
     })
@@ -472,6 +485,9 @@ function renderClosing(locale: LocaleStrings): string {
 
 const STYLES = `
   :root { color-scheme: light; }
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
   body {
     margin: 0;
     background: #f5f3ee;
@@ -479,13 +495,14 @@ const STYLES = `
     font-family: ${ARTIFACT_SERIF_FONT_STACK};
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    overflow-wrap: anywhere;
   }
   main {
-    max-width: 720px;
+    width: min(100% - 32px, 720px);
     margin: 64px auto;
-    padding: 60px 64px;
+    padding: clamp(28px, 8vw, 60px) clamp(20px, 8vw, 64px);
     background: #fffdf9;
-    border-radius: 4px;
+    border-radius: 8px;
     box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
   }
   header.title-page {
@@ -497,7 +514,7 @@ const STYLES = `
   header.title-page .eyebrow {
     font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 0.2em;
+    letter-spacing: 0;
     color: rgba(0, 0, 0, 0.45);
     font-family: ${ARTIFACT_SANS_FONT_STACK};
     margin-bottom: 18px;
@@ -513,7 +530,7 @@ const STYLES = `
     font-style: italic;
     color: rgba(0, 0, 0, 0.6);
   }
-  section { margin: 48px 0; }
+  section { margin: 48px 0; min-width: 0; }
   section h2 {
     font-size: 19px;
     font-weight: 500;
@@ -521,17 +538,18 @@ const STYLES = `
     padding-bottom: 8px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     color: #1a1a1a;
+    overflow-wrap: anywhere;
   }
   section.overview dl {
     display: grid;
     grid-template-columns: max-content 1fr;
     gap: 6px 18px;
     margin: 0;
-    font-size: 15px;
+    font-size: 14px;
   }
   section.overview dt { color: rgba(0, 0, 0, 0.55); }
   section.overview dd { margin: 0; font-variant-numeric: tabular-nums; }
-  section.coreg p { font-size: 16px; line-height: 1.7; margin: 0; }
+  section.coreg p { font-size: 16px; line-height: 1.7; margin: 0; overflow-wrap: anywhere; }
   .month-list { display: flex; flex-direction: column; gap: 6px; }
   .month-row {
     display: grid;
@@ -539,32 +557,39 @@ const STYLES = `
     align-items: center;
     gap: 14px;
     font-size: 14px;
+    min-width: 0;
   }
-  .month-label { color: rgba(0, 0, 0, 0.6); }
-  .month-stat { text-align: right; font-variant-numeric: tabular-nums; color: rgba(0, 0, 0, 0.7); }
-  .strip, .strip-empty { display: block; width: 100%; height: 38px; }
-  .strip-empty { background: rgba(0, 0, 0, 0.025); border-radius: 2px; }
+  .month-label { color: rgba(0, 0, 0, 0.6); overflow-wrap: anywhere; }
+  .month-stat { text-align: right; font-variant-numeric: tabular-nums; color: rgba(0, 0, 0, 0.7); overflow-wrap: anywhere; }
+  .strip, .strip-empty { display: block; width: 100%; min-width: 0; height: 40px; }
+  .strip-empty { background: rgba(0, 0, 0, 0.025); border-radius: 8px; }
   .muted { color: rgba(0, 0, 0, 0.35); font-style: italic; }
   .letter-list { display: flex; flex-direction: column; gap: 24px; }
   .letter-excerpt {
     border-left: 2px solid rgba(0, 0, 0, 0.1);
     padding: 4px 0 4px 16px;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .letter-excerpt header {
     font-size: 13px;
     color: rgba(0, 0, 0, 0.5);
     margin-bottom: 6px;
     font-style: italic;
+    overflow-wrap: anywhere;
   }
   .letter-excerpt p {
     margin: 0;
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1.7;
+    overflow-wrap: anywhere;
   }
   .highlight-list { display: flex; flex-direction: column; gap: 18px; }
   .highlight {
     border-left: 2px solid rgba(0, 0, 0, 0.1);
     padding: 4px 0 4px 16px;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .highlight header {
     font-size: 12px;
@@ -572,9 +597,10 @@ const STYLES = `
     margin-bottom: 4px;
     font-style: italic;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
   }
-  .highlight p { margin: 0; font-size: 15px; line-height: 1.7; }
+  .highlight p { margin: 0; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
   .milestone-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
   .milestone {
     display: grid;
@@ -582,25 +608,44 @@ const STYLES = `
     gap: 14px;
     align-items: baseline;
     font-size: 14px;
+    min-width: 0;
   }
-  .milestone-date { color: rgba(0, 0, 0, 0.55); font-style: italic; }
-  .milestone-transition { color: #1a1a1a; }
-  .milestone-days { color: rgba(0, 0, 0, 0.5); font-variant-numeric: tabular-nums; font-size: 13px; }
+  .milestone-date { color: rgba(0, 0, 0, 0.55); font-style: italic; overflow-wrap: anywhere; }
+  .milestone-transition { color: #1a1a1a; overflow-wrap: anywhere; }
+  .milestone-days { color: rgba(0, 0, 0, 0.5); font-variant-numeric: tabular-nums; font-size: 13px; overflow-wrap: anywhere; }
   section.closing-section p {
     font-style: italic;
     font-size: 16px;
     line-height: 1.7;
     color: rgba(0, 0, 0, 0.7);
     margin: 0;
+    overflow-wrap: anywhere;
   }
   footer {
-    max-width: 720px;
+    width: min(100% - 32px, 720px);
     margin: 0 auto 64px;
-    padding: 20px 64px;
+    padding: 20px clamp(20px, 8vw, 64px);
     text-align: center;
     font-size: 12px;
     color: rgba(0, 0, 0, 0.4);
     font-family: ${ARTIFACT_SANS_FONT_STACK};
+  }
+  @media (max-width: 520px) {
+    main { margin: 24px auto; }
+    section { margin: 36px 0; }
+    .month-row {
+      grid-template-columns: minmax(0, 1fr);
+      align-items: start;
+      gap: 6px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .month-stat { text-align: left; }
+    .milestone {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 4px;
+    }
+    footer { margin-bottom: 24px; }
   }
   @media print {
     body { background: #fffdf9; }

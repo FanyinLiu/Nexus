@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 import type { WeatherCondition, TimeOfDayBand } from './weatherCondition.ts'
 import { getTimeOfDayBand } from './weatherCondition.ts'
 
@@ -29,6 +30,7 @@ const WIND_COUNT = {
 
 export function WeatherAmbient({ condition }: WeatherAmbientProps) {
   const [band, setBand] = useState<TimeOfDayBand>(() => getTimeOfDayBand())
+  const prefersReducedMotion = usePrefersReducedMotion()
 
   useEffect(() => {
     const update = () => setBand(getTimeOfDayBand())
@@ -76,6 +78,7 @@ export function WeatherAmbient({ condition }: WeatherAmbientProps) {
   if (!condition) return null
 
   const rootClass = `weather-ambient weather-ambient--${condition} weather-ambient--${band}`
+  const renderMotionLayers = !prefersReducedMotion
   const isRainy = condition === 'drizzle' || condition === 'rain'
     || condition === 'heavy_rain' || condition === 'thunder' || condition === 'storm'
   const isSnowy = condition === 'light_snow' || condition === 'snow' || condition === 'heavy_snow'
@@ -87,7 +90,7 @@ export function WeatherAmbient({ condition }: WeatherAmbientProps) {
       <div className="weather-ambient__sky-tint" />
       <div className="weather-ambient__tint" />
 
-      {condition === 'clear' ? (
+      {condition === 'clear' && renderMotionLayers ? (
         <div className="weather-ambient__dust">
           {dustMotes.map((i) => (
             <span key={i} className="weather-ambient__dust-mote" style={makeDustStyle(i)} />
@@ -95,7 +98,7 @@ export function WeatherAmbient({ condition }: WeatherAmbientProps) {
         </div>
       ) : null}
 
-      {condition === 'partly_cloudy' ? (
+      {condition === 'partly_cloudy' && renderMotionLayers ? (
         <div className="weather-ambient__clouds weather-ambient__clouds--upper">
           {cloudBlobs.map((i) => (
             <span key={i} className={`weather-ambient__cloud weather-ambient__cloud--${i + 1}`} />
@@ -103,7 +106,7 @@ export function WeatherAmbient({ condition }: WeatherAmbientProps) {
         </div>
       ) : null}
 
-      {condition === 'fog' ? (
+      {condition === 'fog' && renderMotionLayers ? (
         <div className="weather-ambient__fog">
           <div className="weather-ambient__fog-a" />
           <div className="weather-ambient__fog-b" />
@@ -111,11 +114,11 @@ export function WeatherAmbient({ condition }: WeatherAmbientProps) {
         </div>
       ) : null}
 
-      {condition === 'drizzle' ? (
+      {condition === 'drizzle' && renderMotionLayers ? (
         <div className="weather-ambient__drizzle-mist" />
       ) : null}
 
-      {isRainy ? (
+      {isRainy && renderMotionLayers ? (
         <>
           <div className="weather-ambient__rain">
             {rainDrops.map((i) => (
@@ -126,9 +129,9 @@ export function WeatherAmbient({ condition }: WeatherAmbientProps) {
         </>
       ) : null}
 
-      {isStormy ? <div className="weather-ambient__flash" /> : null}
+      {isStormy && renderMotionLayers ? <div className="weather-ambient__flash" /> : null}
 
-      {isSnowy ? (
+      {isSnowy && renderMotionLayers ? (
         <>
           <div className="weather-ambient__snow">
             {snowFlakes.map((i) => (
@@ -139,7 +142,7 @@ export function WeatherAmbient({ condition }: WeatherAmbientProps) {
         </>
       ) : null}
 
-      {isWindy ? (
+      {isWindy && renderMotionLayers ? (
         <div className="weather-ambient__wind">
           {windStreaks.map((i) => (
             <span key={i} className="weather-ambient__wind-streak" style={makeWindStyle(i, condition)} />

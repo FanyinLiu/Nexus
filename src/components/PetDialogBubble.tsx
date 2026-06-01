@@ -8,13 +8,13 @@ type PetDialogBubbleProps = {
   assistantName?: string
 }
 
-function formatBubbleTimestamp(createdAt?: string) {
+function formatBubbleTimestamp(createdAt: string | undefined, locale: string) {
   const timestamp = Date.parse(createdAt ?? '')
   if (Number.isNaN(timestamp)) {
     return ''
   }
 
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(locale, {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(timestamp))
@@ -60,10 +60,10 @@ function shouldPreferToolOnlyContent(bubble: PetDialogBubbleState) {
 }
 
 export function PetDialogBubble({ bubble, assistantName }: PetDialogBubbleProps) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const resolvedAssistantName = assistantName ?? t('pet_bubble.assistant_default')
   const showTextContent = Boolean(bubble.content.trim()) && !shouldPreferToolOnlyContent(bubble)
-  const timestampLabel = formatBubbleTimestamp(bubble.createdAt)
+  const timestampLabel = formatBubbleTimestamp(bubble.createdAt, locale)
 
   const metaLabel = bubble.streaming
     ? t('pet_bubble.streaming_label')

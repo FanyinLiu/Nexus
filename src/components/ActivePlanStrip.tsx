@@ -6,15 +6,7 @@ function pickActivePlan(plans: Plan[]): Plan | undefined {
   return plans.find((p) => p.status === 'active')
 }
 
-const STEP_ICON: Record<Plan['steps'][number]['status'], string> = {
-  completed: '●',
-  in_progress: '◐',
-  failed: '✕',
-  skipped: '◌',
-  pending: '○',
-}
-
-const STEP_ICON_TONE: Record<Plan['steps'][number]['status'], string> = {
+const STEP_MARKER_TONE: Record<Plan['steps'][number]['status'], string> = {
   completed: 'is-completed',
   in_progress: 'is-progress',
   failed: 'is-failed',
@@ -42,12 +34,19 @@ export const ActivePlanStrip = memo(function ActivePlanStrip() {
     activePlan.steps.find((s) => s.status === 'in_progress')
     ?? activePlan.steps.find((s) => s.status === 'pending')
   const progressPct = total > 0 ? Math.round((completed / total) * 100) : 0
+  const failedLabel = failed ? t('plan_strip.failed_suffix', { count: failed }) : ''
+  const headerLabel = `${t('plan_strip.executing')}: ${activePlan.goal} (${completed}/${total}${failedLabel})`
+  const stepsId = `active-plan-strip-steps-${encodeURIComponent(activePlan.id)}`
 
   return (
     <div className="active-plan-strip">
       <button
         type="button"
         className="active-plan-strip__header"
+        aria-expanded={expanded}
+        aria-controls={stepsId}
+        aria-label={headerLabel}
+        title={headerLabel}
         onClick={() => setExpanded((v) => !v)}
       >
         <div className="active-plan-strip__title-row">
@@ -55,37 +54,33 @@ export const ActivePlanStrip = memo(function ActivePlanStrip() {
           <span className="active-plan-strip__goal">{activePlan.goal}</span>
           <span className={`active-plan-strip__counter${failed ? ' is-failed' : ''}`}>
             {completed}/{total}
-            {failed ? t('plan_strip.failed_suffix', { count: failed }) : ''}
+            {failedLabel}
           </span>
         </div>
-        <div className="active-plan-strip__progress">
-          <div
-            className={`active-plan-strip__progress-fill${failed ? ' is-failed' : ''}`}
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
+        <progress
+          className={`active-plan-strip__progress${failed ? ' is-failed' : ''}`}
+          value={progressPct}
+          max={100}
+          aria-hidden="true"
+        />
         {currentStep && !expanded ? (
           <div className="active-plan-strip__current">
-            <span className="active-plan-strip__current-icon">◐</span>
+            <span className="active-plan-strip__current-icon is-progress" aria-hidden="true" />
             {currentStep.text}
           </div>
         ) : null}
       </button>
 
-      {expanded ? (
-        <ul className="active-plan-strip__steps">
-          {activePlan.steps.map((step) => (
-            <li key={step.id} className="active-plan-strip__step">
-              <span className={`active-plan-strip__step-icon ${STEP_ICON_TONE[step.status]}`}>
-                {STEP_ICON[step.status]}
-              </span>
-              <span className={`active-plan-strip__step-text${step.status === 'skipped' ? ' is-skipped' : ''}`}>
-                {step.text}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <ul id={stepsId} className="active-plan-strip__steps" hidden={!expanded}>
+        {activePlan.steps.map((step) => (
+          <li key={step.id} className="active-plan-strip__step">
+            <span className={`active-plan-strip__step-icon ${STEP_MARKER_TONE[step.status]}`} aria-hidden="true" />
+            <span className={`active-plan-strip__step-text${step.status === 'skipped' ? ' is-skipped' : ''}`}>
+              {step.text}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 })

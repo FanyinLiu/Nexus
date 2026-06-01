@@ -19,7 +19,7 @@
   min-height: 44px;
   padding: 7px 10px 7px 14px;
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 18px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.045);
   color: rgba(255, 255, 255, 0.92);
 }
@@ -37,20 +37,25 @@
   display: flex;
   gap: 2px;
   padding: 3px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.08);
 }
 
 .settings-appearance-switch__option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 54px;
-  min-height: 30px;
+  min-height: 40px;
   padding: 0 12px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   background: transparent;
   color: rgba(255, 255, 255, 0.58);
   font-size: 13px;
   font-weight: 650;
+  line-height: 1.25;
+  cursor: pointer;
   outline: none;
   transition:
     background 0.14s ease,
@@ -124,17 +129,20 @@
 .settings-appearance-switch__control {
   justify-self: end;
   display: inline-grid;
-  grid-template-columns: repeat(3, minmax(44px, auto));
-  gap: 3px;
-  padding: 3px;
+  grid-template-columns: repeat(3, minmax(58px, auto));
+  gap: 4px;
+  padding: 4px;
   border: 0;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.025);
 }
 
 .settings-appearance-switch__option {
-  min-height: 25px;
-  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -159,12 +167,12 @@
 .settings-drawer--warm-day .settings-home-card:nth-child(even):hover {
   isolation: isolate;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(46px, max-content) 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(64px, min(58%, 220px)) 18px;
   grid-template-rows: 1fr;
   align-items: center;
   column-gap: 7px;
-  min-height: 36px;
-  padding: 5px 4px;
+  min-height: 40px;
+  padding: 6px 4px;
   border: 0;
   border-right: 0;
   border-bottom: 1px solid var(--settings-border);
@@ -189,23 +197,30 @@
   grid-row: 1;
   justify-self: start;
   min-width: 0;
-  font-size: 13.5px;
+  overflow: hidden;
+  font-size: 14px;
   font-weight: 570;
   text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .settings-home-card__value {
   grid-column: 2;
   grid-row: 1;
   justify-self: end;
-  max-width: 94px;
+  width: 100%;
+  max-width: 220px;
   margin-top: 0;
   overflow: hidden;
   font-size: 12px;
-  line-height: 1.2;
+  line-height: 1.25;
   text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
 }
 
 .settings-home-card__glyph {
@@ -227,4 +242,90 @@
 .settings-home-card:last-child,
 .settings-home-card:last-child:hover {
   border-bottom: 0;
+}
+
+/* Compact, uniform home rows for the floating settings panel. */
+.settings-drawer .settings-home {
+  gap: 2px;
+}
+
+.settings-drawer .settings-appearance-switch {
+  min-height: 44px;
+  padding: 4px 4px 4px 12px;
+  border: 1px solid var(--settings-border);
+  border-radius: 8px;
+  background: var(--settings-surface-soft);
+}
+
+.settings-drawer .settings-appearance-switch__control {
+  gap: 3px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.settings-drawer .settings-appearance-switch__option {
+  min-width: 60px;
+  min-height: 40px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.settings-drawer .settings-home-card,
+.settings-drawer .settings-home-card:hover,
+.settings-drawer .settings-home-card:nth-child(even),
+.settings-drawer .settings-home-card:nth-child(even):hover {
+  grid-template-columns: minmax(92px, 0.42fr) minmax(0, 1fr) 20px;
+  column-gap: 8px;
+  min-height: 44px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--settings-border);
+  border-radius: 8px;
+  background: var(--settings-surface-soft);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.settings-drawer .settings-home-card:hover,
+.settings-drawer .settings-home-card:nth-child(even):hover {
+  border-color: color-mix(in srgb, var(--settings-accent) 24%, var(--settings-border));
+  background: color-mix(in srgb, var(--settings-accent) 8%, var(--settings-surface-soft));
+}
+
+.settings-drawer .settings-home-card:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--settings-accent) 42%, transparent);
+  outline-offset: 2px;
+}
+
+.settings-drawer .settings-home-card__label {
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.settings-drawer .settings-home-card__value {
+  display: block;
+  max-width: none;
+  font-size: 12px;
+  font-weight: 560;
+  line-height: 1.35;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  -webkit-line-clamp: unset;
+}
+
+.settings-drawer .settings-home-card__glyph {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--settings-accent);
+  opacity: 0.58;
+}
+
+.settings-drawer .settings-home-card__glyph svg {
+  width: 16px;
+  height: 16px;
 }

@@ -29,7 +29,7 @@ function toDateTimeLocalValue(value?: string) {
   return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16)
 }
 
-function formatDateTimeLabel(value: string | undefined, unsetLabel: string) {
+function formatDateTimeLabel(value: string | undefined, unsetLabel: string, locale: string) {
   if (!value) {
     return unsetLabel
   }
@@ -39,7 +39,7 @@ function formatDateTimeLabel(value: string | undefined, unsetLabel: string) {
     return value
   }
 
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(locale, {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -275,6 +275,7 @@ export function ReminderTaskManager({
           type="button"
           className="ghost-button"
           onClick={resetForm}
+          title={t('reminder_mgr.clear_form')}
         >
           {t('reminder_mgr.clear_form')}
         </button>
@@ -282,6 +283,7 @@ export function ReminderTaskManager({
           type="button"
           className="primary-button"
           onClick={handleSave}
+          title={saveLabel}
         >
           {saveLabel}
         </button>
@@ -292,7 +294,14 @@ export function ReminderTaskManager({
       </p>
 
       {formError ? (
-        <div className="settings-inline-note reminder-task-manager__status">{formError}</div>
+        <div
+          className="settings-inline-note reminder-task-manager__status"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+        >
+          {formError}
+        </div>
       ) : null}
 
       {emptyState ? (
@@ -317,8 +326,8 @@ export function ReminderTaskManager({
 
               <div className="reminder-task-card__meta">
                 <span>{t('reminder_mgr.schedule_prefix', { summary: formatReminderScheduleSummaryForUi(task, locale) })}</span>
-                <span>{t('reminder_mgr.next_trigger', { time: formatDateTimeLabel(task.nextRunAt, unsetLabel) })}</span>
-                <span>{t('reminder_mgr.last_trigger', { time: formatDateTimeLabel(task.lastTriggeredAt, unsetLabel) })}</span>
+                <span>{t('reminder_mgr.next_trigger', { time: formatDateTimeLabel(task.nextRunAt, unsetLabel, locale) })}</span>
+                <span>{t('reminder_mgr.last_trigger', { time: formatDateTimeLabel(task.lastTriggeredAt, unsetLabel, locale) })}</span>
               </div>
 
               <div className="reminder-task-card__actions">
@@ -326,13 +335,16 @@ export function ReminderTaskManager({
                   type="button"
                   className="ghost-button"
                   onClick={() => loadTaskIntoForm(task)}
+                  title={t('reminder_mgr.edit')}
                 >
                   {t('reminder_mgr.edit')}
                 </button>
                 <button
                   type="button"
                   className="ghost-button"
+                  aria-pressed={task.enabled}
                   onClick={() => onToggleTask(task.id, !task.enabled)}
+                  title={task.enabled ? t('reminder_mgr.pause') : t('reminder_mgr.enable')}
                 >
                   {task.enabled ? t('reminder_mgr.pause') : t('reminder_mgr.enable')}
                 </button>
@@ -340,6 +352,7 @@ export function ReminderTaskManager({
                   type="button"
                   className="ghost-button"
                   onClick={() => onRemoveTask(task.id)}
+                  title={t('reminder_mgr.delete')}
                 >
                   {t('reminder_mgr.delete')}
                 </button>
