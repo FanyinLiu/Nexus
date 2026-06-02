@@ -9563,3 +9563,23 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
     margin-block: 0;
   }
 }
+
+/* Day-theme subpages need stronger body text than the home overview because
+   most notes sit on bright cards at 12px. */
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-section__note,
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-page__headline .settings-section__note,
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-drawer__hint,
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-mini-group__note,
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-control-card > p,
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-section p:not([class]) {
+  color: rgba(23, 32, 42, 0.7);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.7);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='console'] .settings-console-card__headline span,
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='console'] .settings-console-card p,
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='console'] .settings-console-card__meta,
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='console'] .settings-console-card__meta span {
+  color: rgba(23, 32, 42, 0.7);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.7);
+}

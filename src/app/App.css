@@ -5258,8 +5258,10 @@ html[data-theme='warm-day'] .panel-window--companion .empty-chat__prompt {
 
 .panel-window--companion .companion-chat__messages:has(> .empty-chat--nexus):not(:has(> .crisis-hotline-panel)) {
   display: grid;
-  align-items: center;
-  align-content: center;
+  align-items: start;
+  align-content: start;
+  justify-items: stretch;
+  padding-top: clamp(20px, 5vh, 42px);
 }
 
 .panel-window--companion .empty-chat--nexus,
