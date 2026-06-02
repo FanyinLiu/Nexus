@@ -4649,6 +4649,10 @@ summary.settings-console-section__header:focus-visible {
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 6px;
+  padding-bottom: 88px;
+  scroll-padding-bottom: 88px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 52px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 52px), transparent);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.15) rgba(255, 255, 255, 0.04);
@@ -5086,8 +5090,17 @@ summary.settings-console-section__header:focus-visible {
 .onboarding-card__actions {
   display: flex;
   justify-content: flex-end;
+  position: relative;
+  z-index: 2;
   gap: 10px;
   flex-wrap: wrap;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(14, 18, 28, 0),
+      rgba(14, 18, 28, 0.96) 34%
+    );
+  box-shadow: 0 -14px 22px rgba(14, 18, 28, 0.78);
   -webkit-app-region: no-drag;
 }
 
@@ -5177,6 +5190,12 @@ summary.settings-console-section__header:focus-visible {
 
   .empty-chat__visual {
     min-height: 180px;
+  }
+}
+
+@media (min-width: 390px) and (max-width: 620px) {
+  .onboarding-relationship__options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -5754,8 +5773,22 @@ summary.settings-console-section__header:focus-visible {
   max-height: none;
   overflow-y: auto;
   padding-right: 2px;
-  padding-bottom: 16px;
-  scroll-padding-bottom: 16px;
+  padding-bottom: 88px;
+  scroll-padding-bottom: 88px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+}
+
+.settings-drawer--section .settings-drawer__actions {
+  position: relative;
+  z-index: 2;
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--settings-surface) 0%, transparent),
+      var(--settings-surface) 34%
+    );
+  box-shadow: 0 -14px 22px color-mix(in srgb, var(--settings-surface) 72%, transparent);
 }
 
 .settings-drawer__body,

@@ -7896,8 +7896,18 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-drawer__content.settings-drawer__sections {
   gap: 8px;
-  padding-bottom: 72px;
-  scroll-padding-bottom: 72px;
+  padding-bottom: 88px;
+  scroll-padding-bottom: 88px;
+}
+
+.settings-drawer--section .settings-drawer__actions {
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--settings-surface) 0%, transparent),
+      var(--settings-surface) 34%
+    );
+  box-shadow: 0 -14px 22px color-mix(in srgb, var(--settings-surface) 72%, transparent);
 }
 
 .settings-page[data-section] .settings-mini-group__head h5,
@@ -8489,6 +8499,10 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .onboarding-card__body {
   padding-right: 4px;
+  padding-bottom: 88px;
+  scroll-padding-bottom: 88px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 52px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 52px), transparent);
 }
 
 .onboarding-section {
@@ -8681,8 +8695,17 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .onboarding-card__actions {
+  position: relative;
+  z-index: 2;
   gap: 8px;
   padding-top: 2px;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(14, 18, 28, 0),
+      rgba(14, 18, 28, 0.96) 34%
+    );
+  box-shadow: 0 -14px 22px rgba(14, 18, 28, 0.78);
 }
 
 @media (max-width: 620px) {
@@ -8742,6 +8765,12 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
   .onboarding-section {
     padding: 10px;
+  }
+}
+
+@media (min-width: 390px) and (max-width: 620px) {
+  .onboarding-relationship__options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

@@ -3496,6 +3496,10 @@
 
 .onboarding-card__body {
   padding-right: 4px;
+  padding-bottom: 88px;
+  scroll-padding-bottom: 88px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 52px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 52px), transparent);
 }
 
 .onboarding-section {
@@ -3650,8 +3654,17 @@
 }
 
 .onboarding-card__actions {
+  position: relative;
+  z-index: 2;
   gap: 8px;
   padding-top: 2px;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(14, 18, 28, 0),
+      rgba(14, 18, 28, 0.96) 34%
+    );
+  box-shadow: 0 -14px 22px rgba(14, 18, 28, 0.78);
 }
 
 @media (max-width: 720px) {
@@ -3784,6 +3797,12 @@
 
   .empty-chat__visual {
     min-height: 180px;
+  }
+}
+
+@media (min-width: 390px) and (max-width: 620px) {
+  .onboarding-relationship__options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
