@@ -6138,7 +6138,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer .settings-page[data-section] .settings-memory-recall-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .settings-page[data-section] .settings-memory-recall-grid > .settings-memory-field {
@@ -6147,10 +6147,17 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-memory-recall-grid > .settings-memory-field > label {
-  grid-template-columns: minmax(0, 1fr) 58px;
+  grid-template-columns: minmax(118px, 0.44fr) minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.settings-page[data-section] .settings-memory-recall-grid > .settings-memory-field > label > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .settings-drawer .settings-page[data-section] .settings-memory-recall-grid input:not([type='checkbox']):not([type='range']) {
@@ -7976,8 +7983,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section='lorebooks'] .settings-lorebook-check,
 .settings-page[data-section='lorebooks'] .settings-lorebook-priority,
 .settings-page[data-section='lorebooks'] .settings-lorebook-item__delete {
-  height: var(--settings-child-control-height);
-  min-height: var(--settings-child-control-height);
+  height: 58px;
+  min-height: 58px;
   border-radius: 8px;
 }
 
@@ -7988,8 +7995,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section='lorebooks'] .settings-lorebook-priority {
   grid-template-columns: minmax(0, 1fr) 54px;
-  gap: 6px;
-  padding: 0 0 0 10px;
+  gap: 8px;
+  padding: 0 10px;
 }
 
 .settings-page[data-section='lorebooks'] .settings-lorebook-priority > span {
@@ -8000,11 +8007,11 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-drawer .settings-page[data-section='lorebooks'] .settings-lorebook-priority input:not([type='checkbox']):not([type='range']) {
   width: 54px;
-  height: 100%;
-  min-height: 0;
+  height: var(--settings-child-control-height);
+  min-height: var(--settings-child-control-height);
   padding: 0 6px;
-  border-width: 0 0 0 1px;
-  border-radius: 0 8px 8px 0;
+  border: 1px solid var(--settings-border);
+  border-radius: 8px;
   background: var(--settings-surface);
   font-size: 13px;
   line-height: 1.25;
@@ -8013,9 +8020,9 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer .settings-page[data-section='lorebooks'] .settings-lorebook-item__delete.settings-danger-button {
-  width: var(--settings-child-control-height);
-  min-width: var(--settings-child-control-height);
-  height: var(--settings-child-control-height);
+  width: 58px;
+  min-width: 58px;
+  height: 58px;
   padding: 0;
 }
 
@@ -8890,8 +8897,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   line-height: 1.25;
 }
 
-/* Memory page: direct config fields should match the compact child-page form
-   rows used by tools, voice, and window. Keep nested recall grids untouched. */
+/* Memory page: direct config and recall fields should match the compact
+   child-page form rows used by tools, voice, and window. */
 .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > label.settings-memory-field,
 .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) {
   align-items: center;
@@ -8901,7 +8908,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > label.settings-memory-field,
 .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) > label {
-  grid-template-columns: minmax(94px, 0.42fr) minmax(0, 1fr);
+  grid-template-columns: minmax(118px, 0.44fr) minmax(0, 1fr);
   align-items: center;
   gap: 8px;
 }
@@ -8915,7 +8922,9 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-width: 0;
   font-size: 13px;
   line-height: 1.3;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > label.settings-memory-field > select,
@@ -9238,6 +9247,41 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   margin: 0;
 }
 
+/* Model advanced fields expose long tier and budget labels; keep them on the
+   same compact single-line rhythm as memory, voice, and autonomy fields. */
+.settings-drawer .settings-page[data-section='model'] .settings-model-advanced__field-grid {
+  grid-template-columns: 1fr;
+}
+
+.settings-drawer .settings-page[data-section='model'] .settings-model-advanced__field-grid:has(input[type='number']) {
+  grid-template-columns: 1fr;
+}
+
+.settings-drawer .settings-page[data-section='model'] .settings-model-advanced__field:has(> input):not(:has(> small)),
+.settings-drawer .settings-page[data-section='model'] .settings-model-advanced__field-grid:has(input[type='number']) .settings-model-advanced__field:has(> input) {
+  grid-template-columns: minmax(142px, 0.48fr) minmax(0, 1fr);
+  align-items: center;
+  min-height: 58px;
+  padding: 8px 10px;
+}
+
+.settings-drawer .settings-page[data-section='model'] .settings-model-advanced__field > span {
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-drawer .settings-page[data-section='model'] .settings-model-advanced__field > input:not([type='checkbox']):not([type='range']) {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--settings-child-control-height);
+  height: var(--settings-child-control-height);
+  margin: 0;
+}
+
 /* Window page: keep scene/weather selects as compact rows so this dense subpage
    uses the same option rhythm as the rest of the child settings pages. */
 .settings-drawer .settings-page[data-section='window'] .settings-window-section {
@@ -9389,7 +9433,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 @media (min-width: 390px) {
   .settings-page[data-section='lorebooks'] .settings-lorebook-item__toolbar {
-    grid-template-columns: minmax(0, 1fr) minmax(132px, 0.82fr) var(--settings-child-control-height);
+    grid-template-columns: minmax(0, 1fr) minmax(132px, 0.82fr) 58px;
     grid-template-areas:
       "label label label"
       "enabled priority delete";
@@ -9399,9 +9443,9 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   .settings-page[data-section='lorebooks'] .settings-lorebook-priority {
     box-sizing: border-box;
     grid-template-columns: minmax(0, 1fr) 54px;
-    height: var(--settings-child-control-height);
+    height: 58px;
     min-width: 132px;
-    min-height: var(--settings-child-control-height);
+    min-height: 58px;
     font-size: 13px;
     line-height: 1.25;
   }
