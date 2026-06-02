@@ -9220,10 +9220,14 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-drawer .settings-page[data-section='voice'] .settings-voice-advanced-card:not([open]) > summary.settings-mini-group__head > div > span,
 .settings-drawer .settings-page[data-section='chat'] .settings-chat-advanced-card:not([open]):not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card) > summary.settings-mini-group__head > div > span {
-  display: block;
+  display: -webkit-box;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   line-height: 1.35;
 }
 
