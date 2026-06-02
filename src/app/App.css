@@ -1708,6 +1708,7 @@
 }
 
 .music-popup-card__cover--placeholder {
+  box-sizing: border-box;
   position: relative;
   width: 100%;
   height: 100%;
@@ -1779,12 +1780,14 @@
 }
 
 .music-popup-card__eyebrow {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
   min-width: 0;
   max-width: 100%;
   gap: 10px;
+  padding-right: 48px;
 }
 
 .music-popup-card__source {
@@ -1964,6 +1967,13 @@
 
 .music-popup-card__control--primary:hover:not(:disabled) {
   background: linear-gradient(135deg, #B896FF, #9B82F0);
+}
+
+.music-popup-card__dismiss,
+.music-popup-card__control,
+.crisis-hotline-panel__dismiss {
+  font-size: 13px;
+  line-height: 1;
 }
 
 @keyframes music-popup-card-enter {
@@ -3425,6 +3435,225 @@
   -webkit-app-region: no-drag;
 }
 
+/* First-run onboarding loads before the settings drawer CSS, so its compact
+   control rhythm needs to live in the main app stylesheet too. */
+.onboarding-card {
+  --onboarding-control-height: 40px;
+  gap: 10px;
+  padding: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.onboarding-card__header {
+  gap: 10px;
+}
+
+.onboarding-card__header h2 {
+  font-size: 20px;
+  font-weight: 720;
+  line-height: 1.18;
+}
+
+.onboarding-card__copy {
+  margin-top: 4px;
+  max-width: 62ch;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.onboarding-card .eyebrow {
+  margin-bottom: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.onboarding-stepper {
+  grid-template-columns: repeat(auto-fit, minmax(106px, 1fr));
+  gap: 8px;
+}
+
+.onboarding-stepper__item {
+  min-height: 58px;
+  align-content: start;
+  gap: 6px;
+  padding: 10px;
+}
+
+.onboarding-stepper__item span {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.onboarding-stepper__item strong {
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.onboarding-card__body {
+  padding-right: 4px;
+}
+
+.onboarding-section {
+  gap: 12px;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.onboarding-section__intro {
+  gap: 4px;
+}
+
+.onboarding-section__intro strong {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.onboarding-section__intro p,
+.onboarding-tip,
+.onboarding-summary p,
+.ai-disclosure-step__lead,
+.ai-disclosure-step__continue-note {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.onboarding-grid {
+  gap: 10px;
+}
+
+.ai-disclosure-step {
+  gap: 8px;
+}
+
+.ai-disclosure-step__bullets {
+  gap: 6px;
+}
+
+.ai-disclosure-step__bullets li {
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.onboarding-section label {
+  min-width: 0;
+  gap: 6px;
+}
+
+.onboarding-section label span,
+.onboarding-relationship__label {
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.onboarding-section input,
+.onboarding-section select {
+  min-height: var(--onboarding-control-height);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.onboarding-section input {
+  padding: 0 10px;
+}
+
+.onboarding-section select {
+  appearance: none;
+  padding: 0 34px 0 10px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.58) 50%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.58) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 13px) 50%;
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px;
+}
+
+.onboarding-toggle {
+  min-height: var(--onboarding-control-height);
+  grid-template-columns: minmax(0, 1fr) var(--onboarding-switch-width);
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.onboarding-toggle input {
+  height: var(--onboarding-switch-height);
+  min-height: var(--onboarding-switch-height);
+}
+
+.onboarding-subsection,
+.onboarding-summary,
+.onboarding-readiness {
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.onboarding-subsection strong,
+.onboarding-summary strong,
+.onboarding-readiness__header strong {
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.onboarding-readiness p,
+.onboarding-readiness__item,
+.onboarding-relationship__hint {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.onboarding-readiness__status {
+  padding: 3px 8px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.onboarding-local-models__item {
+  min-height: var(--onboarding-control-height);
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.onboarding-relationship__options {
+  gap: 8px;
+}
+
+.onboarding-relationship__chip {
+  min-height: var(--onboarding-control-height);
+  padding: 0 10px;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.onboarding-card .ghost-button,
+.onboarding-card .primary-button {
+  min-height: var(--onboarding-control-height);
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.onboarding-card__actions {
+  gap: 8px;
+  padding-top: 2px;
+}
+
 @media (max-width: 720px) {
   .pet-window__stage-shell {
     --pet-control-rail-width: 72px;
@@ -3505,6 +3734,7 @@
   .onboarding-stepper {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+    grid-auto-rows: 72px;
     gap: 8px;
   }
 
@@ -3518,13 +3748,30 @@
 
   .onboarding-card__actions .ghost-button,
   .onboarding-card__actions .primary-button {
-    width: 100%;
+    width: auto;
+    min-width: 0;
   }
 
   .onboarding-stepper__item {
     width: auto;
-    min-height: 78px;
+    height: 72px;
+    min-height: 0;
     min-width: 0;
+    align-content: center;
+    padding: 9px;
+  }
+
+  .onboarding-stepper__item strong {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .onboarding-card__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
   }
 
   .panel-window__header-actions--hero {
@@ -3543,21 +3790,23 @@
 @media (max-width: 620px) {
   .onboarding-card--pet .onboarding-stepper {
     grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+    grid-auto-rows: 72px;
   }
 
   .onboarding-card--pet .onboarding-stepper__item {
     width: auto;
-    min-height: 84px;
+    height: 72px;
+    min-height: 0;
   }
 
   .onboarding-card--pet .onboarding-card__header h2 {
-    font-size: 22px;
-    line-height: 1.08;
+    font-size: 20px;
+    line-height: 1.18;
   }
 
   .onboarding-card--pet .onboarding-card__copy {
-    font-size: 13px;
-    line-height: 1.6;
+    font-size: 12px;
+    line-height: 1.45;
   }
 }
 
@@ -5206,6 +5455,7 @@ html[data-theme='warm-day'] .panel-window--companion .empty-chat__prompt {
 }
 
 .crisis-hotline-panel__action {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5272,6 +5522,7 @@ html[data-theme='warm-day'] .panel-window--companion .empty-chat__prompt {
 }
 
 .model-setup-card {
+  box-sizing: border-box;
   width: min(720px, 100%);
   max-height: 92vh;
   display: flex;

@@ -3754,6 +3754,18 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   padding: 9px 11px;
 }
 
+.settings-drawer .settings-test-result,
+.settings-drawer .settings-inline-note,
+.settings-page[data-section] .settings-test-result,
+.settings-page[data-section] .settings-inline-note {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .settings-page[data-section] .settings-model-advanced:not([open]) {
   min-height: 40px;
   align-content: center;
@@ -8635,6 +8647,38 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   .onboarding-card__header,
   .onboarding-card__actions {
     gap: 8px;
+  }
+
+  .onboarding-stepper,
+  .onboarding-card--pet .onboarding-stepper {
+    grid-auto-rows: 72px;
+  }
+
+  .onboarding-stepper__item,
+  .onboarding-card--pet .onboarding-stepper__item {
+    height: 72px;
+    min-height: 0;
+    align-content: center;
+    padding: 9px;
+  }
+
+  .onboarding-stepper__item strong {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .onboarding-card__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+  }
+
+  .onboarding-card__actions .ghost-button,
+  .onboarding-card__actions .primary-button {
+    width: auto;
+    min-width: 0;
   }
 
   .onboarding-card__header h2,

@@ -3653,7 +3653,13 @@ summary.settings-console-section__header:focus-visible {
 
 .settings-inline-note,
 .settings-test-result {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   padding: 14px 16px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .settings-test-result.is-success {
