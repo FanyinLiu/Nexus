@@ -5829,6 +5829,53 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   line-height: 1.25;
 }
 
+.settings-drawer .settings-page[data-section] .settings-community-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+
+.settings-drawer .settings-page[data-section] .settings-community-links__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-community-links {
+  border-color: rgba(28, 42, 60, 0.1);
+  background: rgba(248, 251, 255, 0.58);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-community-links__label {
+  color: rgba(23, 32, 42, 0.62);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.62);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-community-links a {
+  border-color: rgba(28, 42, 60, 0.11);
+  background: rgba(255, 255, 255, 0.74);
+  color: rgba(23, 32, 42, 0.8);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.8);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-community-links a svg {
+  color: rgba(34, 78, 142, 0.42);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-community-links a:hover {
+  border-color: rgba(52, 113, 232, 0.22);
+  background: rgba(52, 113, 232, 0.08);
+  color: rgba(23, 32, 42, 0.92);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.92);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-community-links a:hover svg {
+  color: rgba(52, 113, 232, 0.72);
+}
+
 .settings-page[data-section] .settings-chat-identity-grid {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 158px), 1fr));
 }
