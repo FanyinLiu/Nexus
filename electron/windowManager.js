@@ -6,17 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { getPreloadPath, getRendererEntry } from './rendererServer.js'
 import { buildPlatformProfile } from './platformProfile.js'
 import { clampWindowPosition, getPanelWindowPosition, PANEL_WINDOW_GAP_PX } from './windowManagerHelpers.js'
-import {
-  configurePetLocomotion,
-  notePetDrag,
-  setPetFreeMode,
-  startPetLocomotion,
-  stopPetLocomotion,
-} from './petLocomotion.js'
-
-// Re-export the locomotion lifecycle/control so existing importers of
-// windowManager keep working now that the controller lives in its own module.
-export { setPetFreeMode, startPetLocomotion, stopPetLocomotion } from './petLocomotion.js'
+import { createPetLocomotion } from './petLocomotion.js'
 import { getSavedBounds, trackWindow } from './services/windowBoundsStore.js'
 import { getSavedPetPref, savePetPref } from './services/petPrefsStore.js'
 import { isAllowedRendererNavigation, normalizeExternalWindowOpenUrl } from './windowNavigation.js'
@@ -155,7 +145,7 @@ export let petWindowState = {
 }
 
 // Wire the extracted locomotion controller to this module's pet-window state.
-configurePetLocomotion({
+const petLoco = createPetLocomotion({
   getWin: () => mainWindow,
   getState: () => petWindowState,
   patchState: (patch) => {
@@ -736,7 +726,7 @@ export function moveMainWindowBy(deltaX, deltaY) {
 export function dragWindowBy(event, delta) {
   const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
   if (!sourceWindow || sourceWindow.isDestroyed()) return
-  if (sourceWindow === mainWindow) notePetDrag(delta)
+  if (sourceWindow === mainWindow) petLoco.noteDrag(delta)
 
   const bounds = sourceWindow.getBounds()
   const display = screen.getDisplayMatching(bounds)
@@ -809,7 +799,7 @@ export function createMainWindow({ showOnReady = true } = {}) {
   })
 
   win.on('closed', () => {
-    stopPetLocomotion()
+    petLoco.stop()
     mainWindow = null
   })
 
@@ -839,7 +829,7 @@ export function createMainWindow({ showOnReady = true } = {}) {
     }
     syncRuntimeState()
     syncPetWindowState()
-    startPetLocomotion()
+    petLoco.start()
   })
 
   win.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
@@ -1133,7 +1123,7 @@ export function showPetContextMenu(sourceWindow = mainWindow) {
         ? '固定模式（带背景 · 待原地）'
         : '自由模式（满屏走 · 无背景）',
       click: () => {
-        setPetFreeMode(!petWindowState.freeMode)
+        petLoco.setFreeMode(!petWindowState.freeMode)
       },
     },
     {
