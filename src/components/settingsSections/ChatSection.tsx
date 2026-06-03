@@ -1,5 +1,5 @@
 import { memo, useState } from 'react'
-import type { Dispatch, KeyboardEvent as ReactKeyboardEvent, SetStateAction } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import type {
   CodexPetGalleryCatalogResult,
   PetModelDefinition,
@@ -26,6 +26,11 @@ import {
 } from '../../lib/uiLanguage'
 import { loadLorebookEntries, saveLorebookEntries } from '../../lib/storage/lorebooks'
 import { TextField } from '../settingsFields'
+import {
+  getChoiceRadioId,
+  getChoiceTabIndex,
+  handleChoiceRadioKeyDown,
+} from '../choiceRadioNav'
 import type { AppSettings, CharacterProfile, CompanionRelationshipType } from '../../types'
 import type { TranslationKey } from '../../types/i18n'
 
@@ -199,64 +204,6 @@ const SPRITE_PREVIEW_STATE_LABELS: Record<SpritePetAnimationState, Record<AppSet
 
 function getSpritePreviewStateLabel(state: SpritePetAnimationState, uiLanguage: AppSettings['uiLanguage']) {
   return SPRITE_PREVIEW_STATE_LABELS[state][uiLanguage]
-}
-
-function getChoiceRadioId(groupId: string, optionId: string) {
-  return `${groupId}-${encodeURIComponent(optionId)}`
-}
-
-function getChoiceTabIndex<T extends string>(
-  optionId: T,
-  selectedId: string | undefined,
-  optionIds: readonly T[],
-) {
-  const tabStopId = selectedId && optionIds.includes(selectedId as T)
-    ? selectedId
-    : optionIds[0]
-  return optionId === tabStopId ? 0 : -1
-}
-
-function focusChoiceRadio(groupId: string, optionId: string) {
-  window.requestAnimationFrame(() => {
-    document.getElementById(getChoiceRadioId(groupId, optionId))?.focus()
-  })
-}
-
-function handleChoiceRadioKeyDown<T extends string>(
-  event: ReactKeyboardEvent<HTMLButtonElement>,
-  optionIds: readonly T[],
-  currentId: T,
-  groupId: string,
-  onSelect: (optionId: T) => void,
-) {
-  if (optionIds.length === 0) return
-
-  const currentIndex = Math.max(optionIds.indexOf(currentId), 0)
-  let nextIndex: number | null = null
-
-  switch (event.key) {
-    case 'ArrowRight':
-    case 'ArrowDown':
-      nextIndex = (currentIndex + 1) % optionIds.length
-      break
-    case 'ArrowLeft':
-    case 'ArrowUp':
-      nextIndex = (currentIndex - 1 + optionIds.length) % optionIds.length
-      break
-    case 'Home':
-      nextIndex = 0
-      break
-    case 'End':
-      nextIndex = optionIds.length - 1
-      break
-    default:
-      return
-  }
-
-  event.preventDefault()
-  const nextId = optionIds[nextIndex]
-  onSelect(nextId)
-  focusChoiceRadio(groupId, nextId)
 }
 
 export const ChatSection = memo(function ChatSection({

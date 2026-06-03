@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { parseNumberInput } from '../settingsDrawerSupport'
 import { TextField, ToggleField } from '../settingsFields'
+import { getRovingNextIndex } from '../choiceRadioNav'
 import {
   getInspectableIntegrationModules,
   type IntegrationModuleDescriptor,
@@ -279,19 +280,11 @@ export const IntegrationsSection = memo(function IntegrationsSection({
     const currentIndex = inspectablePanelIds.indexOf(panelId)
     if (currentIndex < 0) return
 
-    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-      event.preventDefault()
-      selectModuleTab(inspectablePanelIds[(currentIndex + 1) % inspectablePanelIds.length])
-    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-      event.preventDefault()
-      selectModuleTab(inspectablePanelIds[(currentIndex - 1 + inspectablePanelIds.length) % inspectablePanelIds.length])
-    } else if (event.key === 'Home') {
-      event.preventDefault()
-      selectModuleTab(inspectablePanelIds[0])
-    } else if (event.key === 'End') {
-      event.preventDefault()
-      selectModuleTab(inspectablePanelIds[inspectablePanelIds.length - 1])
-    }
+    const nextIndex = getRovingNextIndex(event.key, currentIndex, inspectablePanelIds.length)
+    if (nextIndex === null) return
+
+    event.preventDefault()
+    selectModuleTab(inspectablePanelIds[nextIndex])
   }
 
   function updateMcpServer(serverId: string, patch: Partial<McpServerConfig>) {

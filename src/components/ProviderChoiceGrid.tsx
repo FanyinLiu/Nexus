@@ -1,5 +1,9 @@
 import { memo } from 'react'
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
+import {
+  getChoiceRadioId,
+  getChoiceTabIndex,
+  handleChoiceRadioKeyDown,
+} from './choiceRadioNav'
 
 export type ProviderChoiceItem = {
   id: string
@@ -15,22 +19,7 @@ type ProviderChoiceGridProps = {
   variant?: 'compact' | 'default'
 }
 
-function getProviderChoiceId(itemId: string) {
-  return `provider-choice-${encodeURIComponent(itemId)}`
-}
-
-function getProviderChoiceTabIndex(itemId: string, selectedId: string, items: ProviderChoiceItem[]) {
-  const tabStopId = items.some((item) => item.id === selectedId)
-    ? selectedId
-    : items[0]?.id
-  return itemId === tabStopId ? 0 : -1
-}
-
-function focusProviderChoice(itemId: string) {
-  window.requestAnimationFrame(() => {
-    document.getElementById(getProviderChoiceId(itemId))?.focus()
-  })
-}
+const PROVIDER_CHOICE_GROUP_ID = 'provider-choice'
 
 export const ProviderChoiceGrid = memo(function ProviderChoiceGrid({
   items,
@@ -45,39 +34,7 @@ export const ProviderChoiceGrid = memo(function ProviderChoiceGrid({
   const cardClass = variant === 'compact'
     ? 'settings-choice-card settings-choice-card--compact'
     : 'settings-choice-card'
-
-  function handleChoiceKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, currentId: string) {
-    if (!items.length) return
-
-    const currentIndex = Math.max(items.findIndex((item) => item.id === currentId), 0)
-    let nextIndex: number | null = null
-
-    switch (event.key) {
-      case 'ArrowRight':
-      case 'ArrowDown':
-        nextIndex = (currentIndex + 1) % items.length
-        break
-      case 'ArrowLeft':
-      case 'ArrowUp':
-        nextIndex = (currentIndex - 1 + items.length) % items.length
-        break
-      case 'Home':
-        nextIndex = 0
-        break
-      case 'End':
-        nextIndex = items.length - 1
-        break
-      default:
-        return
-    }
-
-    event.preventDefault()
-    const nextId = items[nextIndex]?.id
-    if (!nextId) return
-
-    onSelect(nextId)
-    focusProviderChoice(nextId)
-  }
+  const itemIds = items.map((item) => item.id)
 
   return (
     <div className={gridClass} role="radiogroup" aria-label={ariaLabel}>
@@ -86,15 +43,15 @@ export const ProviderChoiceGrid = memo(function ProviderChoiceGrid({
 
         return (
           <button
-            id={getProviderChoiceId(item.id)}
+            id={getChoiceRadioId(PROVIDER_CHOICE_GROUP_ID, item.id)}
             key={item.id}
             type="button"
             className={`${cardClass} ${selected ? 'is-active' : ''}`}
             role="radio"
             aria-checked={selected}
-            tabIndex={getProviderChoiceTabIndex(item.id, selectedId, items)}
+            tabIndex={getChoiceTabIndex(item.id, selectedId, itemIds)}
             onClick={() => onSelect(item.id)}
-            onKeyDown={(event) => handleChoiceKeyDown(event, item.id)}
+            onKeyDown={(event) => handleChoiceRadioKeyDown(event, itemIds, item.id, PROVIDER_CHOICE_GROUP_ID, onSelect)}
           >
             <span className="settings-choice-card__header">
               <strong>{item.label}</strong>
