@@ -18,6 +18,7 @@ import {
 // windowManager keep working now that the controller lives in its own module.
 export { setPetFreeMode, startPetLocomotion, stopPetLocomotion } from './petLocomotion.js'
 import { getSavedBounds, trackWindow } from './services/windowBoundsStore.js'
+import { getSavedPetPref, savePetPref } from './services/petPrefsStore.js'
 import { isAllowedRendererNavigation, normalizeExternalWindowOpenUrl } from './windowNavigation.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -149,7 +150,7 @@ export let petWindowState = {
   clickThrough: false,
   petHotspotActive: false,
   locomotionActivity: 'idle',
-  freeMode: true,
+  freeMode: getSavedPetPref('freeMode') ?? true,
   roamCapable: true,
 }
 
@@ -159,6 +160,7 @@ configurePetLocomotion({
   getState: () => petWindowState,
   patchState: (patch) => {
     petWindowState = { ...petWindowState, ...patch }
+    if ('freeMode' in patch) savePetPref('freeMode', patch.freeMode)
     syncPetWindowState()
   },
 })
