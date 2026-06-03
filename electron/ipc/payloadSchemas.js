@@ -25,6 +25,7 @@ const petWindowStateSchema = {
     isPinned: optionalBoolean,
     clickThrough: optionalBoolean,
     petHotspotActive: optionalBoolean,
+    roamCapable: optionalBoolean,
   },
 }
 
