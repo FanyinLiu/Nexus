@@ -2244,10 +2244,20 @@
   align-items: flex-end;
   gap: 8px;
   pointer-events: none;
+  transition: opacity 0.2s ease;
 }
 
 .pet-window__controls-island > * {
   pointer-events: auto;
+}
+
+/* Free-mode roaming: tuck the controls away until the pet is hovered. */
+.pet-window__controls-island.is-tucked {
+  opacity: 0;
+}
+
+.pet-window__controls-island.is-tucked > * {
+  pointer-events: none;
 }
 
 /* ── Expanded panel (floats above anchors) ── */

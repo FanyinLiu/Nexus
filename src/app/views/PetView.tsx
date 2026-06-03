@@ -502,7 +502,7 @@ export function PetView({
             </div>
 
             <div
-              className="pet-window__controls-island"
+              className={`pet-window__controls-island ${petFreeMode && isSpriteAvatar && !pet.petHotspotActive ? 'is-tucked' : ''}`}
               onPointerEnter={handleRailEnter}
               onPointerLeave={handleRailLeave}
             >
