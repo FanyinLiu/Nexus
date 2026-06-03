@@ -8,6 +8,7 @@ import {
 } from '../../lib/coreRuntime'
 import { displaySecretInputValue } from '../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { getLocalizedApiProviderNote } from '../../features/models/providerNotes'
 import type { AppSettings, ServiceConnectionCapability } from '../../types'
 import type { UiLanguage } from '../../types'
 import anthropicLogo from '../../assets/provider-logos/anthropic.svg'
@@ -33,6 +34,7 @@ import { UrlInput } from './UrlInput'
 type ModelProviderBrand = {
   id: string
   label: string
+  fallbackGlyph?: string
   labelKey?: Parameters<typeof pickTranslatedUiText>[1]
   logoSrc?: string
   providerIds: string[]
@@ -42,7 +44,13 @@ const MODEL_PROVIDER_BRANDS: ModelProviderBrand[] = [
   { id: 'deepseek', label: 'DeepSeek', logoSrc: deepseekLogo, providerIds: ['deepseek'] },
   { id: 'ollama', label: 'Ollama', logoSrc: ollamaLogo, providerIds: ['ollama'] },
   { id: 'openai', label: 'OpenAI', logoSrc: openaiLogo, providerIds: ['openai'] },
-  { id: 'custom', label: 'OpenAI Compatible', labelKey: 'settings.model.brand.openai_compatible', providerIds: ['custom'] },
+  {
+    id: 'custom',
+    label: 'OpenAI Compatible',
+    fallbackGlyph: 'AI',
+    labelKey: 'settings.model.brand.openai_compatible',
+    providerIds: ['custom'],
+  },
   { id: 'anthropic', label: 'Anthropic', logoSrc: anthropicLogo, providerIds: ['anthropic'] },
   { id: 'gemini', label: 'Google Gemini', logoSrc: geminiLogo, providerIds: ['gemini'] },
   { id: 'xai', label: 'xAI Grok', logoSrc: xaiLogo, providerIds: ['xai'] },
@@ -60,16 +68,16 @@ const MODEL_PROVIDER_BRANDS: ModelProviderBrand[] = [
   { id: 'venice', label: 'Venice', logoSrc: veniceLogo, providerIds: ['venice'] },
 ]
 
+function getModelProviderFallbackGlyph(label: string) {
+  const glyph = label.match(/[A-Za-z0-9]/g)?.slice(0, 2).join('').toUpperCase()
+  return glyph || label.trim().slice(0, 1) || 'AI'
+}
+
 type ModelSectionProps = {
   active: boolean
   draft: AppSettings
   setDraft: Dispatch<SetStateAction<AppSettings>>
   testingTarget: ServiceConnectionCapability | null
-  textProvider: {
-    notes: string
-    baseUrl?: string
-    defaultModel?: string
-  }
   uiLanguage: UiLanguage
   onApplyTextProviderPreset: (providerId: string) => void
   onRunTextConnectionTest: () => void
@@ -81,7 +89,6 @@ export const ModelSection = memo(function ModelSection({
   draft,
   setDraft,
   testingTarget,
-  textProvider,
   uiLanguage,
   onApplyTextProviderPreset,
   onRunTextConnectionTest,
@@ -164,12 +171,16 @@ export const ModelSection = memo(function ModelSection({
   const currentBrandProviders = currentBrand.providerIds
     .map((providerId) => providerById.get(providerId))
     .filter((provider): provider is typeof API_PROVIDER_PRESETS[number] => Boolean(provider))
+  const backToProviderListLabel = ti('settings.model.back_to_provider_list')
+  const textConnectionTestLabel = testingTarget === 'text'
+    ? ti('settings.model.testing')
+    : ti('settings.model.test_endpoint')
 
   return (
-    <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
+    <section className={`settings-section settings-model-section ${active ? 'is-active' : 'is-hidden'}`}>
       {!detailsOpen ? (
         <>
-          <div className="settings-section__title-row">
+          <div className="settings-section__title-row settings-model-source-head">
             <div>
               <h4>{ti('settings.model.provider_list_title')}</h4>
               <p className="settings-drawer__hint">
@@ -188,6 +199,9 @@ export const ModelSection = memo(function ModelSection({
                   type="button"
                   className={`settings-model-source-card${selected ? ' is-selected' : ''}`}
                   data-brand={brand.id}
+                  aria-current={selected ? 'true' : undefined}
+                  aria-label={brandLabel}
+                  title={brandLabel}
                   onClick={() => {
                     const providerId = brand.providerIds.includes(draft.apiProviderId)
                       ? draft.apiProviderId
@@ -204,9 +218,27 @@ export const ModelSection = memo(function ModelSection({
                       aria-hidden="true"
                       loading="lazy"
                     />
-                  ) : null}
+                  ) : (
+                    <span className="settings-model-source-card__logoFallback" aria-hidden="true">
+                      {brand.fallbackGlyph ?? getModelProviderFallbackGlyph(brandLabel)}
+                    </span>
+                  )}
                   <span className="settings-model-source-card__name">{brandLabel}</span>
-                  <span className="settings-model-source-card__chevron" aria-hidden="true">›</span>
+                  <svg
+                    className="settings-model-source-card__chevron"
+                    aria-hidden="true"
+                    focusable="false"
+                    viewBox="0 0 16 16"
+                  >
+                    <path
+                      d="M6 3.5 10.5 8 6 12.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.6"
+                    />
+                  </svg>
                 </button>
               )
             })}
@@ -215,22 +247,28 @@ export const ModelSection = memo(function ModelSection({
       ) : (
         <>
           <div className="settings-model-detail-card" data-brand={currentBrand.id}>
-            {currentBrand.logoSrc ? (
-              <img
-                className="settings-model-detail-card__logo"
-                src={currentBrand.logoSrc}
-                alt=""
-                aria-hidden="true"
-                loading="lazy"
-              />
-            ) : null}
+            <div className="settings-model-detail-brand">
+              {currentBrand.logoSrc ? (
+                <img
+                  className="settings-model-detail-card__logo"
+                  src={currentBrand.logoSrc}
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                />
+              ) : (
+                <span className="settings-model-detail-card__logoFallback" aria-hidden="true">
+                  {currentBrand.fallbackGlyph ?? getModelProviderFallbackGlyph(currentBrandLabel)}
+                </span>
+              )}
 
-            <div className="settings-model-detail-head">
-              <div className="settings-model-detail-title">
-                <h4>{currentBrandLabel}</h4>
-                {draft.model ? (
-                  <span>{draft.model}</span>
-                ) : null}
+              <div className="settings-model-detail-head">
+                <div className="settings-model-detail-title">
+                  <h4>{currentBrandLabel}</h4>
+                  {draft.model ? (
+                    <span>{draft.model}</span>
+                  ) : null}
+                </div>
               </div>
             </div>
 
@@ -238,19 +276,21 @@ export const ModelSection = memo(function ModelSection({
               <button
                 type="button"
                 className="ghost-button"
+                aria-label={backToProviderListLabel}
+                title={backToProviderListLabel}
                 onClick={() => setDetailsOpen(false)}
               >
-                {ti('settings.model.back_to_provider_list')}
+                {backToProviderListLabel}
               </button>
               <button
                 type="button"
                 className="ghost-button settings-model-test-button"
+                aria-label={textConnectionTestLabel}
+                title={textConnectionTestLabel}
                 onClick={onRunTextConnectionTest}
                 disabled={testingTarget === 'text'}
               >
-                {testingTarget === 'text'
-                  ? ti('settings.model.testing')
-                  : ti('settings.model.test_endpoint')}
+                {textConnectionTestLabel}
               </button>
             </div>
 
@@ -274,6 +314,7 @@ export const ModelSection = memo(function ModelSection({
               <label>
                 <span>{ti('settings.model.endpoint_url')}</span>
                 <UrlInput
+                  uiLanguage={draft.uiLanguage}
                   value={draft.apiBaseUrl}
                   onChange={(event) =>
                     setDraft((prev) => ({ ...prev, apiBaseUrl: event.target.value }))
@@ -328,35 +369,28 @@ export const ModelSection = memo(function ModelSection({
             <details className="settings-model-advanced">
               <summary>{ti('settings.model.advanced_settings')}</summary>
               <div className="settings-model-advanced__body">
-                <p className="settings-drawer__hint">
-                  {textProvider.notes}
-                  {textProvider.baseUrl
-                    ? ` ${ti('settings.model.default_endpoint')}${textProvider.baseUrl}`
-                    : ''}
-                  {textProvider.defaultModel
-                    ? `${ti('settings.model.recommended_model')}${textProvider.defaultModel}`
-                    : ''}
+                <p className="settings-drawer__hint settings-model-advanced__provider-note">
+                  {getLocalizedApiProviderNote(currentPreset, uiLanguage)}
                 </p>
 
-                <label className="settings-toggle">
-                  <span>{ti('settings.model.failover_toggle')}</span>
-                  <input
-                    type="checkbox"
-                    checked={draft.chatFailoverEnabled}
-                    onChange={(event) =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        chatFailoverEnabled: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
+                <div className="settings-control-card settings-model-advanced__control">
+                  <label className="settings-toggle">
+                    <span>{ti('settings.model.failover_toggle')}</span>
+                    <input
+                      type="checkbox"
+                      checked={draft.chatFailoverEnabled}
+                      onChange={(event) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          chatFailoverEnabled: event.target.checked,
+                        }))
+                      }
+                    />
+                  </label>
+                  <p>{ti('settings.model.failover_hint')}</p>
+                </div>
 
-                <p className="settings-drawer__hint">
-                  {ti('settings.model.failover_hint')}
-                </p>
-
-                <label>
+                <label className="settings-control-card settings-model-advanced__field">
                   <span>{ti('settings.model.extra_keys')}</span>
                   <textarea
                     rows={3}
@@ -365,118 +399,123 @@ export const ModelSection = memo(function ModelSection({
                     onChange={(event) => setExtraKeysText(event.target.value)}
                     onBlur={commitExtraKeys}
                   />
-                </label>
-                <p className="settings-drawer__hint">
-                  {ti('settings.model.extra_keys_hint')}
-                </p>
-
-                <label className="settings-toggle">
-                  <span>{ti('settings.model.smart_routing_toggle')}</span>
-                  <input
-                    type="checkbox"
-                    checked={draft.smartModelRoutingEnabled}
-                    onChange={(event) =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        smartModelRoutingEnabled: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-                <p className="settings-drawer__hint">
-                  {ti('settings.model.smart_routing_hint')}
-                </p>
-
-                <label>
-                  <span>{ti('settings.model.tier_cheap')}</span>
-                  <input
-                    value={draft.modelCheap}
-                    placeholder={currentPreset.defaultModel ?? ''}
-                    onChange={(event) =>
-                      setDraft((prev) => ({ ...prev, modelCheap: event.target.value }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>{ti('settings.model.tier_standard')}</span>
-                  <input
-                    value={draft.modelStandard}
-                    placeholder={draft.model}
-                    onChange={(event) =>
-                      setDraft((prev) => ({ ...prev, modelStandard: event.target.value }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>{ti('settings.model.tier_heavy')}</span>
-                  <input
-                    value={draft.modelHeavy}
-                    placeholder={currentPreset.defaultModel ?? ''}
-                    onChange={(event) =>
-                      setDraft((prev) => ({ ...prev, modelHeavy: event.target.value }))
-                    }
-                  />
+                  <small>{ti('settings.model.extra_keys_hint')}</small>
                 </label>
 
-                <label>
-                  <span>{ti('settings.model.budget_daily')}</span>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={draft.budgetDailyCapUsd || ''}
-                    onChange={(event) =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        budgetDailyCapUsd: Number(event.target.value) || 0,
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>{ti('settings.model.budget_monthly')}</span>
-                  <input
-                    type="number"
-                    step="1"
-                    min="0"
-                    value={draft.budgetMonthlyCapUsd || ''}
-                    onChange={(event) =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        budgetMonthlyCapUsd: Number(event.target.value) || 0,
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>{ti('settings.model.budget_downgrade_ratio')}</span>
-                  <input
-                    type="number"
-                    step="0.05"
-                    min="0"
-                    max="1"
-                    value={draft.budgetDowngradeRatio}
-                    onChange={(event) =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        budgetDowngradeRatio: Number(event.target.value) || 0,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="settings-toggle">
-                  <span>{ti('settings.model.budget_hard_stop')}</span>
-                  <input
-                    type="checkbox"
-                    checked={draft.budgetHardStopEnabled}
-                    onChange={(event) =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        budgetHardStopEnabled: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
+                <div className="settings-control-card settings-model-advanced__control">
+                  <label className="settings-toggle">
+                    <span>{ti('settings.model.smart_routing_toggle')}</span>
+                    <input
+                      type="checkbox"
+                      checked={draft.smartModelRoutingEnabled}
+                      onChange={(event) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          smartModelRoutingEnabled: event.target.checked,
+                        }))
+                      }
+                    />
+                  </label>
+                  <p>{ti('settings.model.smart_routing_hint')}</p>
+                </div>
+
+                <div className="settings-model-advanced__field-grid">
+                  <label className="settings-control-card settings-model-advanced__field">
+                    <span>{ti('settings.model.tier_cheap')}</span>
+                    <input
+                      value={draft.modelCheap}
+                      placeholder={currentPreset.defaultModel ?? ''}
+                      onChange={(event) =>
+                        setDraft((prev) => ({ ...prev, modelCheap: event.target.value }))
+                      }
+                    />
+                  </label>
+                  <label className="settings-control-card settings-model-advanced__field">
+                    <span>{ti('settings.model.tier_standard')}</span>
+                    <input
+                      value={draft.modelStandard}
+                      placeholder={draft.model}
+                      onChange={(event) =>
+                        setDraft((prev) => ({ ...prev, modelStandard: event.target.value }))
+                      }
+                    />
+                  </label>
+                  <label className="settings-control-card settings-model-advanced__field">
+                    <span>{ti('settings.model.tier_heavy')}</span>
+                    <input
+                      value={draft.modelHeavy}
+                      placeholder={currentPreset.defaultModel ?? ''}
+                      onChange={(event) =>
+                        setDraft((prev) => ({ ...prev, modelHeavy: event.target.value }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                <div className="settings-model-advanced__field-grid">
+                  <label className="settings-control-card settings-model-advanced__field">
+                    <span>{ti('settings.model.budget_daily')}</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={draft.budgetDailyCapUsd || ''}
+                      onChange={(event) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          budgetDailyCapUsd: Number(event.target.value) || 0,
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="settings-control-card settings-model-advanced__field">
+                    <span>{ti('settings.model.budget_monthly')}</span>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={draft.budgetMonthlyCapUsd || ''}
+                      onChange={(event) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          budgetMonthlyCapUsd: Number(event.target.value) || 0,
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="settings-control-card settings-model-advanced__field">
+                    <span>{ti('settings.model.budget_downgrade_ratio')}</span>
+                    <input
+                      type="number"
+                      step="0.05"
+                      min="0"
+                      max="1"
+                      value={draft.budgetDowngradeRatio}
+                      onChange={(event) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          budgetDowngradeRatio: Number(event.target.value) || 0,
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                <div className="settings-control-card settings-model-advanced__control">
+                  <label className="settings-toggle">
+                    <span>{ti('settings.model.budget_hard_stop')}</span>
+                    <input
+                      type="checkbox"
+                      checked={draft.budgetHardStopEnabled}
+                      onChange={(event) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          budgetHardStopEnabled: event.target.checked,
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
               </div>
             </details>
           </div>

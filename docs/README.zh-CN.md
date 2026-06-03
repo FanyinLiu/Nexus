@@ -24,9 +24,22 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **当前版本：** v0.3.1 稳定版（2026-04-28）。Nexus 现在已经可日常使用，但仍是快速迭代中的个人项目；打包、本地语音模型和 provider 配置上，可能还有一些不够顺滑、需要手动处理的地方。
+> **当前版本：** v0.3.2 稳定版。Nexus 现在已经可日常使用，但仍是快速迭代中的个人项目；打包、本地语音模型和 provider 配置上，可能还有一些不够顺滑、需要手动处理的地方。
 
 > **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前短期开发以根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 为准：Phase 1 只收敛桌面常驻小窗口、极简头像、Ollama / DeepSeek 文本模型和简单对话。
+
+---
+
+## 本次更新 — v0.3.2
+
+> **Codex 兼容桌宠、社区导入和宠物制作工具。** 完整说明见 [RELEASE-NOTES-v0.3.2.md](RELEASE-NOTES-v0.3.2.md)（英文）。
+
+| 主题 | 落地内容 |
+|---|---|
+| **Codex 兼容 Sprite 宠物** | Nexus 可以读取 `8x9` / `1536x1872` / `192x208` 的 `pet.json + spritesheet` 包，并在桌面小窗里播放 idle、waving、review 等动作。 |
+| **社区宠物导入** | 设置页新增用户主动选择的社区入口，可从支持的 gallery 页面、slug、ZIP 下载地址导入并校验宠物包。 |
+| **宠物制作链路** | 支持从图片或 creator kit 制作、预览、组装、导出、安装 Codex 兼容宠物，并保留 clean-room 来源记录。 |
+| **安全加固** | 远程下载加入超时、DNS / 私网检查和流式大小上限；ZIP 解压限制输出大小；生产和完整依赖审计均为 0 漏洞。 |
 
 ---
 

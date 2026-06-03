@@ -145,8 +145,15 @@ export function useAppController() {
 
   const openSettingsPanel = useCallback(() => {
     if (view === 'pet') {
-      const pending = window.desktopPet?.openPanel?.('settings')
-      pending?.catch(() => undefined)
+      const openPanel = window.desktopPet?.openPanel
+      if (openPanel) {
+        void openPanel('settings').catch(() => {
+          setSettingsOpen(true)
+        })
+        return
+      }
+
+      setSettingsOpen(true)
       return
     }
 
@@ -162,13 +169,33 @@ export function useAppController() {
       return
     }
 
-    const pending = window.desktopPet?.openPanel?.('chat')
-    pending?.catch(() => undefined)
-  }, [view])
+    const openPanel = window.desktopPet?.openPanel
+    if (openPanel) {
+      void openPanel('chat').catch(() => {
+        setSettingsOpen(false)
+        void applyPanelWindowState({ collapsed: false })
+        setView('panel')
+      })
+      return
+    }
+
+    setSettingsOpen(false)
+    void applyPanelWindowState({ collapsed: false })
+    setView('panel')
+  }, [applyPanelWindowState, view])
 
   const closePanel = useCallback(() => {
-    const pending = window.desktopPet?.closePanel?.()
-    pending?.catch(() => undefined)
+    const closePanelWindow = window.desktopPet?.closePanel
+    if (closePanelWindow) {
+      void closePanelWindow().catch(() => {
+        setSettingsOpen(false)
+        setView('pet')
+      })
+      return
+    }
+
+    setSettingsOpen(false)
+    setView('pet')
   }, [])
 
   const openPetMenu = useCallback(() => {
@@ -579,7 +606,7 @@ export function useAppController() {
     mediaSession: mediaSessionController.mediaSession,
     musicActionBusy: mediaSessionController.musicActionBusy,
     dismissedMusicSessionKey: mediaSessionController.dismissedMusicSessionKey,
-    remotePanelSettingsOpen,
+    remotePanelSettingsOpen: remotePanelSettingsOpen || (view === 'pet' && settingsOpen),
     openSettingsPanel,
     openChatPanelForVoice,
     openPetMenu,
@@ -605,6 +632,8 @@ export function useAppController() {
     mediaSessionController.musicActionBusy,
     mediaSessionController.dismissedMusicSessionKey,
     remotePanelSettingsOpen,
+    settingsOpen,
+    view,
     openSettingsPanel,
     openChatPanelForVoice,
     openPetMenu,

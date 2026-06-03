@@ -25,6 +25,7 @@ import {
 import { AboutPanel } from './AboutPanel'
 import { CostHistoryPanel } from './CostHistoryPanel'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
+import { MoodMapPanel } from './MoodMapPanel'
 import { StateTimelinePanel } from './StateTimelinePanel'
 import { UpdaterPanel } from './UpdaterPanel'
 import { WeeklyRecapPanel } from './WeeklyRecapPanel'
@@ -197,9 +198,10 @@ export const ConsoleSection = memo(function ConsoleSection({
               <p className="settings-section__note">{ti('settings.console.advanced_diagnostics_note')}</p>
             </div>
           </summary>
-          <DiagnosticsPanel />
-          <StateTimelinePanel />
-          <CostHistoryPanel />
+          <DiagnosticsPanel uiLanguage={uiLanguage} />
+          <MoodMapPanel uiLanguage={uiLanguage} active={active} />
+          <StateTimelinePanel uiLanguage={uiLanguage} active={active} />
+          <CostHistoryPanel uiLanguage={uiLanguage} />
         </details>
 
         <details className="settings-console-section">
@@ -393,10 +395,23 @@ function ObservabilityPanel({
         { label: ti('settings.console.emotion.warmth'), value: emotionState.warmth },
         { label: ti('settings.console.emotion.curiosity'), value: emotionState.curiosity },
         { label: ti('settings.console.emotion.concern'), value: emotionState.concern },
-      ]
+      ].map((bar) => ({
+        ...bar,
+        percentage: Math.round(Math.max(0, Math.min(1, bar.value)) * 100),
+      }))
     : null
 
   const formatTokens = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
+  const formatTokenTotal = (count: number) => (
+    pickTranslatedUiText(uiLanguage, 'settings.console.token_total_count', { count: formatTokens(count) })
+  )
+  const activeMemoryText = typeof memoryCount === 'number'
+    ? `${memoryCount} ${ti('settings.console.memory_active_suffix')}`
+    : ti('settings.console.memory_no_active')
+  const normalizedAutonomyPhase = autonomyPhase?.trim()
+  const autonomyPhaseLabel = normalizedAutonomyPhase && normalizedAutonomyPhase.toLowerCase() !== 'idle'
+    ? normalizedAutonomyPhase
+    : ti('voice_state.idle')
 
   return (
     <section className="settings-console-section">
@@ -405,30 +420,26 @@ function ObservabilityPanel({
           <h5>{ti('settings.console.dashboard_title')}</h5>
           <p className="settings-section__note">{ti('settings.console.dashboard_subtitle')}</p>
         </div>
-        <span className="settings-console-section__meta">{autonomyPhase ?? 'idle'}</span>
+        <span className="settings-console-section__meta">{autonomyPhaseLabel}</span>
       </div>
 
-      <div className="settings-console-grid" style={{ marginBottom: 12 }}>
+      <div className="settings-console-grid settings-console-grid--spaced">
         {emotionBars && (
           <article className="settings-console-card">
             <div className="settings-console-card__header">
               <span className="settings-console-badge">{ti('settings.console.emotion_badge')}</span>
             </div>
             {emotionBars.map((bar) => (
-              <div key={bar.label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <span style={{ width: 32, fontSize: 12, opacity: 0.7 }}>{bar.label}</span>
-                <div style={{ flex: 1, height: 6, background: 'var(--color-border, #333)', borderRadius: 3 }}>
-                  <div
-                    style={{
-                      width: `${Math.round(bar.value * 100)}%`,
-                      height: '100%',
-                      background: 'var(--color-accent, #6cf)',
-                      borderRadius: 3,
-                      transition: 'width 0.3s',
-                    }}
-                  />
-                </div>
-                <span style={{ width: 28, fontSize: 11, textAlign: 'right', opacity: 0.6 }}>{Math.round(bar.value * 100)}%</span>
+              <div key={bar.label} className="settings-console-emotion">
+                <span className="settings-console-emotion__label">{bar.label}</span>
+                <meter
+                  className="settings-console-emotion__meter"
+                  min={0}
+                  max={100}
+                  value={bar.percentage}
+                  aria-label={bar.label}
+                />
+                <span className="settings-console-emotion__value">{bar.percentage}%</span>
               </div>
             ))}
           </article>
@@ -439,7 +450,7 @@ function ObservabilityPanel({
             <span className="settings-console-badge">{ti('settings.console.memory_badge')}</span>
           </div>
           <div className="settings-console-card__headline">
-            <strong>{memoryCount ?? '—'} {ti('settings.console.memory_active_suffix')}</strong>
+            <strong>{activeMemoryText}</strong>
           </div>
           <p>{ti('settings.console.memory_archived')} {archiveStats.count} · {ti('settings.console.memory_narratives')} {narrative.threads.length}</p>
         </article>
@@ -449,10 +460,10 @@ function ObservabilityPanel({
             <span className="settings-console-badge">{ti('settings.console.token_badge')}</span>
           </div>
           <div className="settings-console-card__headline">
-            <strong>{ti('settings.console.token_today')} {formatTokens(meter.daily.totalInputTokens + meter.daily.totalOutputTokens)} tokens</strong>
+            <strong>{ti('settings.console.token_today')} {formatTokenTotal(meter.daily.totalInputTokens + meter.daily.totalOutputTokens)}</strong>
           </div>
           <p>
-            {ti('settings.console.token_session')} {formatTokens(meter.session.totalInputTokens + meter.session.totalOutputTokens)} ·
+            {ti('settings.console.token_session')} {formatTokens(meter.session.totalInputTokens + meter.session.totalOutputTokens)} ·{' '}
             {meter.daily.callCount} {ti('settings.console.token_calls_suffix')}
           </p>
           <div className="settings-console-card__meta">

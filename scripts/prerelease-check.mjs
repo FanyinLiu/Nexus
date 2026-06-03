@@ -90,7 +90,12 @@ if (!tag) {
 }
 
 const SEMVER_TAG = /^v(\d+)\.(\d+)\.(\d+)(-[a-z]+\.\d+)?$/
-const isStable = SEMVER_TAG.test(tag) && !tag.includes('-')
+if (!SEMVER_TAG.test(tag)) {
+  console.error(COLOR.red(`Invalid release tag '${tag}'. Expected v<major>.<minor>.<patch> or v<major>.<minor>.<patch>-<pre>.<n>.`))
+  process.exit(2)
+}
+
+const isStable = !tag.includes('-')
 
 console.log(COLOR.bold(`Pre-release check: ${tag}`) + COLOR.dim(`  ${isStable ? '(stable)' : '(beta)'}${quick ? ' [quick]' : ''}`))
 console.log()

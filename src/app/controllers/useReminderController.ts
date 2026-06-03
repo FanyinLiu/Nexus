@@ -62,7 +62,7 @@ export function useReminderController({
   debugConsole,
   reminderTaskStore,
 }: UseReminderControllerOptions) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const handleReminderTaskTrigger = useCallback(async (task: ReminderTask) => {
     const displayText = task.prompt.trim()
     const action = task.action
@@ -211,6 +211,7 @@ export function useReminderController({
     enabled: shouldRunReminderScheduler(view, runtimeSnapshot),
     tasks: reminderTaskStore.reminderTasks,
     setTasks: reminderTaskStore.setReminderTasks,
+    locale,
     onTrigger: handleReminderTaskTrigger,
     onEvent: debugConsole.appendDebugConsoleEvent,
   })

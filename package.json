@@ -22,6 +22,19 @@
     "lint": "eslint .",
     "i18n:audit": "node scripts/i18n-audit.mjs",
     "distribution:audit": "node scripts/distribution-audit.mjs",
+    "pet:validate": "node scripts/validate-sprite-pet.mjs",
+    "pet:make": "node scripts/make-sprite-pet.mjs",
+    "pet:create-kit": "node scripts/create-sprite-pet-creator-kit.mjs",
+    "pet:assemble-kit": "node scripts/assemble-sprite-pet-creator-kit.mjs",
+    "pet:audit": "node scripts/audit-sprite-pet-visual.mjs",
+    "pet:generate-codex-style": "node scripts/generate-virtual-swordsman-pet.mjs",
+    "pet:generate-swordsman": "node scripts/generate-virtual-swordsman-pet.mjs",
+    "pet:import": "node scripts/import-sprite-pet.mjs",
+    "pet:import-gallery": "node scripts/import-codex-pet-gallery.mjs",
+    "pet:preview": "node scripts/preview-sprite-pet.mjs",
+    "pet:scaffold": "node scripts/scaffold-sprite-pet.mjs",
+    "pet:install-codex": "node scripts/install-codex-pet.mjs",
+    "pet:export-runtime": "node scripts/export-sprite-pet-runtime.mjs",
     "test": "node --experimental-strip-types --test \"tests/*.test.ts\"",
     "preview": "vite preview",
     "start:app": "npm run build && electron .",
@@ -49,11 +62,13 @@
     "pinyin-pro": "^3.28.1",
     "pixi-live2d-display": "^0.4.0",
     "pixi.js": "^6.5.10",
+    "protobufjs": "^7.6.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "sharp": "^0.34.5",
     "sherpa-onnx-node": "^1.12.39",
     "tesseract.js": "^7.0.0",
-    "ws": "^8.20.0"
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
@@ -81,7 +96,16 @@
     "wait-on": "^8.0.3"
   },
   "overrides": {
-    "gh-pages": "^6.3.0"
+    "axios": "^1.16.1",
+    "fast-uri": "^3.1.2",
+    "gh-pages": "^6.3.0",
+    "ip-address": "^10.2.0",
+    "minimatch@10.2.4": {
+      "brace-expansion": "^5.0.6"
+    },
+    "protobufjs": "^7.6.1",
+    "qs": "^6.15.2",
+    "tmp": "^0.2.7"
   },
   "build": {
     "appId": "ai.factory.desktoppet",

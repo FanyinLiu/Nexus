@@ -1,6 +1,10 @@
 /// <reference types="vite/client" />
 
-import type { PetModelDefinition } from './features/pet'
+import type {
+  CodexPetGalleryCatalogResult,
+  PetModelDefinition,
+  SpritePetCreatorKitInspection,
+} from './features/pet'
 import type { VoiceEmotionLabel } from './types'
 import type {
   AudioSynthesisRequest,
@@ -243,6 +247,62 @@ declare global {
       importPetModel: () => Promise<{
         model: PetModelDefinition
         message: string
+      } | null>
+      importCodexPetGallery: (input: string) => Promise<{
+        model: PetModelDefinition
+        message: string
+      }>
+      listCodexPetGallery: (payload?: { query?: string; limit?: number }) => Promise<CodexPetGalleryCatalogResult>
+      createCodexPetCreatorKit: (payload: {
+        id?: string
+        displayName?: string
+        description?: string
+        concept?: string
+        styleNotes?: string
+      }) => Promise<{
+        id: string
+        displayName: string
+        directoryPath: string
+        sourceRowsDirectory?: string
+        message: string
+      }>
+      inspectCodexPetCreatorKit: (payload?: { kitDirectory?: string }) => Promise<SpritePetCreatorKitInspection | null>
+      assembleCodexPetCreatorKit: (payload?: { kitDirectory?: string }) => Promise<{
+        model: PetModelDefinition
+        message: string
+        packageDirectory?: string
+        manifestPath?: string
+        spritesheetPath?: string
+        reportPath?: string
+        visualAuditPath?: string
+        archivePath?: string
+      } | null>
+      installCodexPetCreatorKitToCodex: (payload: {
+        kitDirectory: string
+        manifestPath: string
+      }) => Promise<{
+        ok: boolean
+        id: string
+        directoryPath: string
+        manifestPath: string
+        message: string
+      }>
+      openCodexPetCreatorKitPath: (payload: {
+        kitDirectory: string
+        targetPath: string
+        mode?: 'open' | 'reveal'
+      }) => Promise<{
+        ok: boolean
+        message: string
+      }>
+      createSpritePetFromImage: () => Promise<{
+        model: PetModelDefinition
+        message: string
+        packageDirectory?: string
+        manifestPath?: string
+        spritesheetPath?: string
+        visualAuditPath?: string
+        archivePath?: string
       } | null>
       showConfirmDialog: (message: string) => Promise<boolean>
       saveTextFile: (payload: TextFileSaveRequest) => Promise<TextFileSaveResponse>

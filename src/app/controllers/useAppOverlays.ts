@@ -17,6 +17,7 @@ import {
   syncTextProviderProfiles,
 } from '../../lib'
 import { setSettingsSnapshot } from '../store/settingsStore'
+import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type {
@@ -271,6 +272,100 @@ export function useAppOverlays({
       }
 
       const result = await window.desktopPet.importPetModel()
+      if (!result) {
+        return null
+      }
+
+      const refreshedModels = await loadPetModels()
+      return {
+        ...result,
+        model: refreshedModels.find((model) => model.id === result.model.id) ?? result.model,
+      }
+    },
+    onImportCodexPetGallery: async (input) => {
+      if (!window.desktopPet?.importCodexPetGallery) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      const result = await window.desktopPet.importCodexPetGallery(input)
+      const refreshedModels = await loadPetModels()
+      return {
+        ...result,
+        model: refreshedModels.find((model) => model.id === result.model.id) ?? result.model,
+      }
+    },
+    onSelectImportedPetModel: async (petModelId) => {
+      await commitSettingsUpdate((current) => {
+        if (current.petModelId === petModelId) {
+          return current
+        }
+
+        return {
+          ...current,
+          petModelId,
+        }
+      }, setSettings)
+    },
+    onListCodexPetGallery: async (query = '') => {
+      if (!window.desktopPet?.listCodexPetGallery) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      return window.desktopPet.listCodexPetGallery({
+        query,
+        limit: 12,
+      })
+    },
+    onCreateCodexPetCreatorKit: async (payload) => {
+      if (!window.desktopPet?.createCodexPetCreatorKit) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      return window.desktopPet.createCodexPetCreatorKit(payload)
+    },
+    onInspectCodexPetCreatorKit: async (payload) => {
+      if (!window.desktopPet?.inspectCodexPetCreatorKit) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      return window.desktopPet.inspectCodexPetCreatorKit(payload)
+    },
+    onAssembleCodexPetCreatorKit: async (payload) => {
+      if (!window.desktopPet?.assembleCodexPetCreatorKit) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      const result = await window.desktopPet.assembleCodexPetCreatorKit(payload)
+      if (!result) {
+        return null
+      }
+
+      const refreshedModels = await loadPetModels()
+      return {
+        ...result,
+        model: refreshedModels.find((model) => model.id === result.model.id) ?? result.model,
+      }
+    },
+    onInstallCodexPetCreatorKitToCodex: async (payload) => {
+      if (!window.desktopPet?.installCodexPetCreatorKitToCodex) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      return window.desktopPet.installCodexPetCreatorKitToCodex(payload)
+    },
+    onOpenCodexPetCreatorKitPath: async (payload) => {
+      if (!window.desktopPet?.openCodexPetCreatorKitPath) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      return window.desktopPet.openCodexPetCreatorKitPath(payload)
+    },
+    onCreateSpritePetFromImage: async () => {
+      if (!window.desktopPet?.createSpritePetFromImage) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      const result = await window.desktopPet.createSpritePetFromImage()
       if (!result) {
         return null
       }

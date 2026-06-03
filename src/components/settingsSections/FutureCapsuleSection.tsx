@@ -116,6 +116,7 @@ export const FutureCapsuleSection = memo(function FutureCapsuleSection({
         <input
           className="settings-errands__textarea"
           type="text"
+          aria-label={`${pick(COPY.title, uiLanguage)}: ${pick(COPY.titlePlaceholder, uiLanguage)}`}
           placeholder={pick(COPY.titlePlaceholder, uiLanguage)}
           value={draftTitle}
           onChange={(e) => setDraftTitle(e.target.value)}
@@ -123,6 +124,7 @@ export const FutureCapsuleSection = memo(function FutureCapsuleSection({
         <textarea
           className="settings-errands__textarea"
           rows={3}
+          aria-label={`${pick(COPY.title, uiLanguage)}: ${pick(COPY.messagePlaceholder, uiLanguage)}`}
           placeholder={pick(COPY.messagePlaceholder, uiLanguage)}
           value={draftMessage}
           onChange={(e) => setDraftMessage(e.target.value)}

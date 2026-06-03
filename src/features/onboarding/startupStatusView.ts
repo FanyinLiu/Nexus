@@ -130,7 +130,7 @@ function resolveModelStatus(settings: StartupStatusSettings): StartupStatusItem 
 }
 
 function resolveAvatarStatus(petModel: PetModelDefinition | undefined): StartupStatusItem {
-  const staticAvatarReady = petModel?.id === 'nexus-mini' || !petModel?.modelPath.trim()
+  const staticAvatarReady = !petModel?.modelPath.trim()
 
   return {
     id: 'avatar',

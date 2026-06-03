@@ -24,9 +24,22 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **현재 릴리스:** v0.3.1 안정 버전(2026-04-28). Nexus는 지금도 일상적으로 사용할 수 있지만, 빠르게 다듬고 있는 개인 프로젝트입니다. 패키징, 선택형 로컬 음성 모델, provider 설정에는 아직 약간의 수동 처리가 필요한 부분이 남아 있을 수 있습니다.
+> **현재 릴리스:** v0.3.2 안정 버전. Nexus는 지금도 일상적으로 사용할 수 있지만, 빠르게 다듬고 있는 개인 프로젝트입니다. 패키징, 선택형 로컬 음성 모델, provider 설정에는 아직 약간의 수동 처리가 필요한 부분이 남아 있을 수 있습니다.
 
 > **개발 범위 안내:** 이 다국어 README는 장기 기능 목록을 보존합니다. 단기 개발 기준은 루트 [README](../README.md)와 [Nexus 업그레이드 통합 계획](NEXUS_UPGRADE_INTEGRATION_PLAN.md)입니다. Phase 1은 상주하는 작은 데스크톱 창, 미니멀 아바타, Ollama / DeepSeek 텍스트 모델, 간단한 대화에만 집중합니다.
+
+---
+
+## 이번 업데이트 — v0.3.2
+
+> **Codex 호환 데스크톱 펫, 커뮤니티 가져오기, 펫 제작 도구.** 자세한 내용은 [RELEASE-NOTES-v0.3.2.md](RELEASE-NOTES-v0.3.2.md)(영어)를 참조하세요.
+
+| 주제 | 내용 |
+|---|---|
+| **Codex 호환 Sprite 펫** | Nexus는 `8x9` / `1536x1872` / `192x208` 규격의 `pet.json + spritesheet` 패키지를 읽고, 데스크톱 작은 창에서 idle, waving, review 같은 동작을 재생할 수 있습니다. |
+| **커뮤니티 펫 가져오기** | 설정 화면에 사용자가 직접 선택하는 커뮤니티 진입점을 추가해, 지원되는 gallery 페이지, slug, ZIP 다운로드 URL에서 검증 후 가져올 수 있습니다. |
+| **펫 제작 흐름** | 이미지나 creator kit에서 Codex 호환 펫을 만들고, 미리 보고, 조립하고, 내보내고, 설치할 수 있습니다. clean-room 출처 기록도 남깁니다. |
+| **보안 강화** | 원격 다운로드에 타임아웃, DNS / 사설 네트워크 검사, 스트리밍 크기 제한을 추가했습니다. ZIP 해제 출력 크기도 제한하며, production audit과 full audit 모두 0건입니다. |
 
 ---
 

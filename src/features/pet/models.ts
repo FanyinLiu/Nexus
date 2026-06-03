@@ -1,4 +1,5 @@
 import type { TranslationKey } from '../../types/i18n'
+import type { SpritePetAtlasDefinition } from './spriteAtlas'
 
 /**
  * One entry in a model's idle fidget pool. When the pet is in `idle` mood
@@ -59,6 +60,7 @@ export interface PetModelDefinition {
   description: string
   modelPath: string
   fallbackImagePath: string
+  spriteAtlas?: SpritePetAtlasDefinition
   motionGroups: {
     idle?: string
     interaction?: string
@@ -164,7 +166,7 @@ const DEFAULT_RIG_PARAMS = {
   breath: 'ParamBreath',
 } as const
 
-export const DEFAULT_PET_MODEL_ID = 'nexus-mini'
+export const DEFAULT_PET_MODEL_ID = 'qiyi'
 
 // Gesture names surfaced to the LLM via system prompt. Per-model coverage
 // lives in motionGroups.gestures; unknown names fall through to no-op.
@@ -173,11 +175,14 @@ export type PublicGestureName = (typeof PUBLIC_GESTURE_NAMES)[number]
 
 export const PET_MODEL_PRESETS: PetModelDefinition[] = [
   {
-    id: 'nexus-mini',
-    label: 'pet.model.nexus-mini.label' satisfies TranslationKey,
-    description: 'pet.model.nexus-mini.description' satisfies TranslationKey,
+    id: 'qiyi',
+    label: '七一',
+    description: '一个红白墨色的小助手，动作更顺，适合陪你写中文口播、做文件和处理代码。',
     modelPath: '',
     fallbackImagePath: '',
+    spriteAtlas: {
+      imagePath: './pets/qiyi/spritesheet.webp',
+    },
     motionGroups: {},
     expressionMap: {
       idle: 'idle',

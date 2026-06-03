@@ -5,7 +5,16 @@ import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
 import net from 'node:net'
 
-import { initPetModelService, isPathInsideRoot, getImportedPetModelsRoot, IMPORTED_PET_MODELS_ROUTE } from './services/petModelService.js'
+import {
+  initPetModelService,
+  isPathInsideRoot,
+  getImportedPetModelsRoot,
+  getImportedSpritePetModelsRoot,
+  getCodexCustomSpritePetModelsRoot,
+  IMPORTED_PET_MODELS_ROUTE,
+  IMPORTED_SPRITE_PET_MODELS_ROUTE,
+  CODEX_CUSTOM_SPRITE_PET_MODELS_ROUTE,
+} from './services/petModelService.js'
 import { initRendererServer, ensureRendererServer, getRendererServerUrl, closeRendererServer } from './rendererServer.js'
 import { mainWindow, panelWindow, panelSection, createMainWindow, createApplicationMenu, createTray, applyPetWindowState, hasSystemTray } from './windowManager.js'
 import { registerIpc } from './ipcRegistry.js'
@@ -322,8 +331,12 @@ initRendererServer({
   devServerUrl,
   getPanelSection: () => panelSection,
   getImportedPetModelsRoot,
+  getImportedSpritePetModelsRoot,
+  getCodexCustomSpritePetModelsRoot,
   isPathInsideRoot,
   importedPetModelsRoute: IMPORTED_PET_MODELS_ROUTE,
+  importedSpritePetModelsRoute: IMPORTED_SPRITE_PET_MODELS_ROUTE,
+  codexCustomSpritePetModelsRoute: CODEX_CUSTOM_SPRITE_PET_MODELS_ROUTE,
 })
 
 // ── App lifecycle ──

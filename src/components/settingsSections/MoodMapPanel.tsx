@@ -335,6 +335,10 @@ function MoodChart({ bins, uiLanguage }: { bins: DailyAffectBin[]; uiLanguage: U
 
   // Reference line at neutral valence (0.5 normalized).
   const neutralY = PAD_Y + 0.5 * innerHeight
+  const chartTitleId = 'mood-map-chart-title'
+  const chartDescriptionId = 'mood-map-chart-description'
+  const latestBin = bins[bins.length - 1]
+  const chartDescription = `${bins.length} days from ${firstDay} to ${lastDay}. Latest valence ${latestBin.valence.toFixed(2)}, latest arousal ${latestBin.arousal.toFixed(2)}.`
 
   return (
     <div className="settings-timeline-chart">
@@ -343,8 +347,10 @@ function MoodChart({ bins, uiLanguage }: { bins: DailyAffectBin[]; uiLanguage: U
         className="settings-timeline-chart__svg"
         preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label="Mood map"
+        aria-labelledby={`${chartTitleId} ${chartDescriptionId}`}
       >
+        <title id={chartTitleId}>{pick(COPY.title, uiLanguage)}</title>
+        <desc id={chartDescriptionId}>{chartDescription}</desc>
         {/* gridlines at 0.25, 0.75 normalized */}
         {[0.25, 0.75].map((v) => (
           <line
@@ -378,11 +384,11 @@ function MoodChart({ bins, uiLanguage }: { bins: DailyAffectBin[]; uiLanguage: U
       </svg>
       <div className="settings-timeline-legend">
         <span className="settings-timeline-legend__item">
-          <span className="settings-timeline-legend__swatch" style={{ background: VALENCE_COLOR }} />
+          <span className="settings-timeline-legend__swatch settings-timeline-legend__swatch--valence" />
           {pick(COPY.valence, uiLanguage)}
         </span>
         <span className="settings-timeline-legend__item">
-          <span className="settings-timeline-legend__swatch" style={{ background: AROUSAL_COLOR }} />
+          <span className="settings-timeline-legend__swatch settings-timeline-legend__swatch--arousal" />
           {pick(COPY.arousal, uiLanguage)}
         </span>
         <span className="settings-timeline-legend__range">
@@ -421,7 +427,7 @@ function SnapshotLine({
   }
   parts.push(`${snapshot.n} ${pick(COPY.samples, uiLanguage)}`)
   return (
-    <p className="settings-drawer__hint" style={{ marginTop: 8 }}>
+    <p className="settings-drawer__hint settings-mood-map-summary">
       {parts.join(' · ')}
     </p>
   )
@@ -443,7 +449,7 @@ function CoRegulationLine({
   } as const
   const label = pick(labelMap[kind], uiLanguage)
   return (
-    <p className="settings-drawer__hint" style={{ marginTop: 4 }}>
+    <p className="settings-drawer__hint settings-mood-map-summary settings-mood-map-summary--coregulation">
       {pick(COPY.coregLabel, uiLanguage)}: {label}
     </p>
   )

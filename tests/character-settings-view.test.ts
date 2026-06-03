@@ -16,7 +16,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
     characterProfiles: [],
     companionName: '星绘',
     companionRelationshipType: 'friend',
-    petModelId: 'nexus-mini',
+    petModelId: 'original-virtual-swordsman',
     speechOutputApiBaseUrl: '',
     speechOutputApiKey: '',
     speechOutputInstructions: 'gentle',
@@ -68,7 +68,7 @@ test('syncCurrentToProfile writes current companion identity back to the active 
     characterProfiles: [profile],
     companionName: '星绘',
     companionRelationshipType: 'mentor',
-    petModelId: 'nexus-mini',
+    petModelId: 'original-virtual-swordsman',
     systemPrompt: 'new',
     userName: '主人',
   }))
@@ -76,7 +76,7 @@ test('syncCurrentToProfile writes current companion identity back to the active 
   assert.equal(synced.characterProfiles[0]?.companionName, '星绘')
   assert.equal(synced.characterProfiles[0]?.userName, '主人')
   assert.equal(synced.characterProfiles[0]?.companionRelationshipType, 'mentor')
-  assert.equal(synced.characterProfiles[0]?.petModelId, 'nexus-mini')
+  assert.equal(synced.characterProfiles[0]?.petModelId, 'original-virtual-swordsman')
 })
 
 test('resolveCharacterSettingsSummary exposes compact labels for the settings page', () => {
@@ -87,7 +87,7 @@ test('resolveCharacterSettingsSummary exposes compact labels for the settings pa
         id: 'char-a',
         label: '夜间伙伴',
         companionName: '星绘',
-        petModelId: 'nexus-mini',
+        petModelId: 'original-virtual-swordsman',
         systemPrompt: 'warm',
       }],
       companionName: ' 星绘 ',
@@ -101,6 +101,6 @@ test('resolveCharacterSettingsSummary exposes compact labels for the settings pa
   assert.equal(summary.companionName, '星绘')
   assert.equal(summary.userName, '主人')
   assert.equal(summary.relationshipLabelKey, 'onboarding.companion.relationship_quiet_companion')
-  assert.equal(summary.petModelLabel, 'pet.model.nexus-mini.label')
+  assert.equal(summary.petModelLabel, '七一')
   assert.equal(summary.profileCount, 1)
 })

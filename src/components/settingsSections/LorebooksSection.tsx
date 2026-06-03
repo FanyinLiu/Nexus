@@ -1,4 +1,5 @@
 import { memo, useCallback, useMemo, useState } from 'react'
+import { PetControlIcon } from '../PetControlIcon'
 import { loadLorebookEntries, saveLorebookEntries } from '../../lib/storage/lorebooks'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { LorebookEntry, UiLanguage } from '../../types'
@@ -74,15 +75,15 @@ export const LorebooksSection = memo(function LorebooksSection({
   )
 
   return (
-    <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
-      <div className="settings-section__title-row">
-        <div>
+    <section className={`settings-section settings-lorebook-section ${active ? 'is-active' : 'is-hidden'}`}>
+      <div className="settings-section__title-row settings-lorebook-section__head">
+        <div className="settings-lorebook-section__intro">
           <h4>{ti('settings.lorebooks.entries_title')}</h4>
           <p className="settings-drawer__hint">
             {ti('settings.lorebooks.entries_note')}
           </p>
         </div>
-        <div className="settings-page__meta">
+        <div className="settings-page__meta settings-lorebook-section__actions">
           <span>{ti('settings.lorebooks.count_summary', { total: entries.length, enabled: totalEnabled })}</span>
           <button type="button" className="ghost-button" onClick={addEntry}>
             {ti('settings.lorebooks.add_entry')}
@@ -91,53 +92,55 @@ export const LorebooksSection = memo(function LorebooksSection({
       </div>
 
       {entries.length === 0 ? (
-        <p className="settings-drawer__hint">{ti('settings.lorebooks.empty_state')}</p>
+        <p className="settings-lorebook-empty">{ti('settings.lorebooks.empty_state')}</p>
       ) : (
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <ul className="settings-lorebook-list">
           {entries.map((entry) => {
             const draft = draftKeywords[entry.id] ?? entry.keywords.join('，')
+            const entryLabel = entry.label || ti('settings.lorebooks.label_placeholder')
+            const deleteLabel = `${ti('settings.lorebooks.delete')}: ${entryLabel}`
+
             return (
-              <li
-                key={entry.id}
-                style={{
-                  border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
-                  borderRadius: 8,
-                  padding: 12,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 10,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <li key={entry.id} className="settings-lorebook-item">
+                <div className="settings-lorebook-item__toolbar">
+                  <label className="settings-toggle settings-lorebook-check">
+                    <span>{ti('settings.lorebooks.enabled')}</span>
                     <input
                       type="checkbox"
                       checked={entry.enabled}
                       onChange={(event) => updateEntry(entry.id, { enabled: event.target.checked })}
                     />
-                    <span>{ti('settings.lorebooks.enabled')}</span>
                   </label>
-                  <input
-                    value={entry.label}
-                    placeholder={ti('settings.lorebooks.label_placeholder')}
-                    onChange={(event) => updateEntry(entry.id, { label: event.target.value })}
-                    style={{ flex: 1 }}
-                  />
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <label className="settings-lorebook-field settings-lorebook-title-field">
+                    <span>{ti('settings.lorebooks.label_label')}</span>
+                    <input
+                      className="settings-lorebook-item__label"
+                      value={entry.label}
+                      placeholder={ti('settings.lorebooks.label_placeholder')}
+                      aria-label={ti('settings.lorebooks.label_placeholder')}
+                      onChange={(event) => updateEntry(entry.id, { label: event.target.value })}
+                    />
+                  </label>
+                  <label className="settings-lorebook-priority">
                     <span>{ti('settings.lorebooks.priority')}</span>
                     <input
                       type="number"
                       value={entry.priority}
                       onChange={(event) => updateEntry(entry.id, { priority: Number(event.target.value) || 0 })}
-                      style={{ width: 64 }}
                     />
                   </label>
-                  <button type="button" className="settings-danger-button" onClick={() => removeEntry(entry.id)}>
-                    {ti('settings.lorebooks.delete')}
+                  <button
+                    type="button"
+                    className="settings-danger-button settings-lorebook-item__delete"
+                    onClick={() => removeEntry(entry.id)}
+                    aria-label={deleteLabel}
+                    title={deleteLabel}
+                  >
+                    <PetControlIcon name="trash" />
                   </button>
                 </div>
 
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label className="settings-lorebook-field settings-lorebook-keywords-field">
                   <span>{ti('settings.lorebooks.keywords_label')}</span>
                   <input
                     value={draft}
@@ -158,7 +161,7 @@ export const LorebooksSection = memo(function LorebooksSection({
                   />
                 </label>
 
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label className="settings-lorebook-field settings-lorebook-content-field">
                   <span>{ti('settings.lorebooks.content_label')}</span>
                   <textarea
                     rows={4}

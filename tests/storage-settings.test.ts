@@ -46,7 +46,7 @@ test('fresh settings start with the Phase 1 Ollama text path', () => {
   assert.equal(settings.apiProviderId, 'ollama')
   assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
   assert.equal(settings.model, 'qwen3:8b')
-  assert.equal(settings.petModelId, 'nexus-mini')
+  assert.equal(settings.petModelId, 'qiyi')
   assert.equal(settings.apiKey, '')
   assert.equal(settings.chatFailoverEnabled, false)
   assert.equal(settings.speechInputEnabled, false)

@@ -359,7 +359,12 @@ export function useVoice(ctx: UseVoiceContext) {
     detail: string,
     tone: VoiceTraceEntry['tone'] = 'info',
   ) => {
-    const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+    const timestamp = new Intl.DateTimeFormat(ctx.settingsRef.current.uiLanguage, {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(new Date())
     const entry: VoiceTraceEntry = {
       id: createId('voice-trace'),
       title,
@@ -369,7 +374,7 @@ export function useVoice(ctx: UseVoiceContext) {
     }
 
     setVoiceTrace((current) => [entry, ...current].slice(0, MAX_VOICE_TRACE_ENTRIES))
-  }, [])
+  }, [ctx.settingsRef])
 
   const showPetStatus = useCallback((
     message: string,

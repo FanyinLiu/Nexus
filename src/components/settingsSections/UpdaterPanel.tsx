@@ -116,12 +116,12 @@ export const UpdaterPanel = memo(function UpdaterPanel({ uiLanguage }: UpdaterPa
       </p>
 
       {progressPercent !== null ? (
-        <div className="settings-updater-panel__progress" aria-hidden="true">
-          <div
-            className="settings-updater-panel__progress-bar"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
+        <progress
+          className="settings-updater-panel__progress"
+          value={progressPercent}
+          max={100}
+          aria-label={ti('settings.updater.downloading')}
+        />
       ) : null}
     </section>
   )

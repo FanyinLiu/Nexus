@@ -72,6 +72,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     let response
     try {
       response = await performNetworkRequest(requestSpec.endpoint, {
+        allowPrivateNetwork: true,
         method: 'POST',
         headers: requestSpec.headers,
         body: requestSpec.body,
@@ -174,6 +175,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     let response
     try {
       response = await performNetworkRequest(requestSpec.endpoint, {
+        allowPrivateNetwork: true,
         method: 'POST',
         headers: requestSpec.headers,
         body: requestSpec.body,
@@ -430,6 +432,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
 
     try {
       const response = await performNetworkRequest(requestSpec.endpoint, {
+        allowPrivateNetwork: true,
         ...requestSpec.request,
         timeoutMs: CONNECTION_TEST_TIMEOUT_MS,
         timeoutMessage: '模型接口测试超时，请检查 URL、网络、代理或服务状态。',
@@ -521,6 +524,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
 
     try {
       const response = await performNetworkRequest(requestSpec.endpoint, {
+        allowPrivateNetwork: true,
         ...requestSpec.request,
         timeoutMs: CONNECTION_TEST_TIMEOUT_MS,
         timeoutMessage: '模型列表读取超时，请检查 URL、网络、代理或服务状态。',

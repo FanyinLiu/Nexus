@@ -6,6 +6,17 @@ import { fileURLToPath } from 'node:url'
 import { getPreloadPath, getRendererEntry } from './rendererServer.js'
 import { buildPlatformProfile } from './platformProfile.js'
 import { clampWindowPosition, getPanelWindowPosition, PANEL_WINDOW_GAP_PX } from './windowManagerHelpers.js'
+import {
+  configurePetLocomotion,
+  notePetDrag,
+  setPetFreeMode,
+  startPetLocomotion,
+  stopPetLocomotion,
+} from './petLocomotion.js'
+
+// Re-export the locomotion lifecycle/control so existing importers of
+// windowManager keep working now that the controller lives in its own module.
+export { setPetFreeMode, startPetLocomotion, stopPetLocomotion } from './petLocomotion.js'
 import { getSavedBounds, trackWindow } from './services/windowBoundsStore.js'
 import { isAllowedRendererNavigation, normalizeExternalWindowOpenUrl } from './windowNavigation.js'
 
@@ -137,7 +148,20 @@ export let petWindowState = {
   isPinned: true,
   clickThrough: false,
   petHotspotActive: false,
+  locomotionActivity: 'idle',
+  freeMode: true,
+  roamCapable: true,
 }
+
+// Wire the extracted locomotion controller to this module's pet-window state.
+configurePetLocomotion({
+  getWin: () => mainWindow,
+  getState: () => petWindowState,
+  patchState: (patch) => {
+    petWindowState = { ...petWindowState, ...patch }
+    syncPetWindowState()
+  },
+})
 
 export let panelSection = 'chat'
 
@@ -347,6 +371,9 @@ const PET_WINDOW_STATE_SCHEMA = {
   isPinned: 'boolean',
   clickThrough: 'boolean',
   petHotspotActive: 'boolean',
+  locomotionActivity: 'string',
+  freeMode: 'boolean',
+  roamCapable: 'boolean',
 }
 
 const PANEL_WINDOW_STATE_SCHEMA = {
@@ -707,6 +734,7 @@ export function moveMainWindowBy(deltaX, deltaY) {
 export function dragWindowBy(event, delta) {
   const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
   if (!sourceWindow || sourceWindow.isDestroyed()) return
+  if (sourceWindow === mainWindow) notePetDrag(delta)
 
   const bounds = sourceWindow.getBounds()
   const display = screen.getDisplayMatching(bounds)
@@ -779,6 +807,7 @@ export function createMainWindow({ showOnReady = true } = {}) {
   })
 
   win.on('closed', () => {
+    stopPetLocomotion()
     mainWindow = null
   })
 
@@ -808,6 +837,7 @@ export function createMainWindow({ showOnReady = true } = {}) {
     }
     syncRuntimeState()
     syncPetWindowState()
+    startPetLocomotion()
   })
 
   win.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
@@ -1094,6 +1124,14 @@ export function showPetContextMenu(sourceWindow = mainWindow) {
         const nextX = workArea.x + Math.round((workArea.width - bounds.width) / 2)
         const nextY = workArea.y + Math.round((workArea.height - bounds.height) / 2)
         mainWindow.setPosition(nextX, nextY)
+      },
+    },
+    {
+      label: petWindowState.freeMode
+        ? '固定模式（带背景 · 待原地）'
+        : '自由模式（满屏走 · 无背景）',
+      click: () => {
+        setPetFreeMode(!petWindowState.freeMode)
       },
     },
     {

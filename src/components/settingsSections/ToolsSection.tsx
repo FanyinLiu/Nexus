@@ -40,7 +40,7 @@ export const ToolsSection = memo(function ToolsSection({
   }
 
   return (
-    <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
+    <section className={`settings-section settings-tools-section ${active ? 'is-active' : 'is-hidden'}`}>
       <div className="settings-control-grid">
         <div className="settings-control-card">
           <ToggleField
@@ -80,6 +80,7 @@ export const ToolsSection = memo(function ToolsSection({
             draft={draft}
             setDraft={setDraft}
           />
+          <p>{ti('settings.tools.confirm_before_open_hint')}</p>
         </div>
       </div>
 
@@ -89,7 +90,7 @@ export const ToolsSection = memo(function ToolsSection({
           <span>{ti('settings.tools.backend_hint')}</span>
         </div>
 
-        <label>
+        <label className="settings-control-card settings-tools-field">
           <span>{ti('settings.tools.search_provider')}</span>
           <select
             value={draft.toolWebSearchProviderId}
@@ -104,16 +105,17 @@ export const ToolsSection = memo(function ToolsSection({
           </select>
         </label>
 
-        <p className="settings-mini-group__note">
+        <p className="settings-mini-group__note settings-tools-note">
           {ti(webSearchProvider.descriptionKey)}
           {webSearchProvider.baseUrl
             ? ` ${ti('settings.tools.default_url')}${webSearchProvider.baseUrl}`
             : ''}
         </p>
 
-        <label>
+        <label className="settings-control-card settings-tools-field">
           <span>{ti('settings.tools.api_base_url')}</span>
           <UrlInput
+            uiLanguage={draft.uiLanguage}
             value={draft.toolWebSearchApiBaseUrl}
             onChange={(event) =>
               setDraft((prev) => ({
@@ -126,7 +128,7 @@ export const ToolsSection = memo(function ToolsSection({
           />
         </label>
 
-        <label>
+        <label className="settings-control-card settings-tools-field">
           <span>{ti('settings.tools.api_key')}</span>
           <input
             type="password"
@@ -142,24 +144,26 @@ export const ToolsSection = memo(function ToolsSection({
           />
         </label>
 
-        <label className="settings-toggle">
-          <span>{ti('settings.tools.fallback_bing')}</span>
-          <input
-            type="checkbox"
-            checked={draft.toolWebSearchFallbackToBing}
-            onChange={(event) =>
-              setDraft((prev) => ({
-                ...prev,
-                toolWebSearchFallbackToBing: event.target.checked,
-              }))
-            }
-            disabled={!draft.toolWebSearchEnabled}
-          />
-        </label>
+        <div className="settings-control-card settings-tools-control">
+          <label className="settings-toggle">
+            <span>{ti('settings.tools.fallback_bing')}</span>
+            <input
+              type="checkbox"
+              checked={draft.toolWebSearchFallbackToBing}
+              onChange={(event) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  toolWebSearchFallbackToBing: event.target.checked,
+                }))
+              }
+              disabled={!draft.toolWebSearchEnabled}
+            />
+          </label>
+        </div>
       </div>
 
       <div className="settings-mini-group">
-        <label>
+        <label className="settings-control-card settings-tools-field">
           <span>{ti('settings.tools.weather_location')}</span>
           <input
             value={draft.toolWeatherDefaultLocation}
@@ -173,7 +177,7 @@ export const ToolsSection = memo(function ToolsSection({
             disabled={!draft.toolWeatherEnabled}
           />
         </label>
-        <p className="settings-mini-group__note">
+        <p className="settings-mini-group__note settings-tools-note">
           {ti('settings.tools.weather_location_hint')}
         </p>
       </div>

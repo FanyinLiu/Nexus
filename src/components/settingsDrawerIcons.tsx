@@ -26,6 +26,12 @@ export function renderSettingsCardIcon(iconKey: string): ReactNode {
           <path fill="currentColor" d="M16 4C9.37 4 4 9.37 4 16s5.37 12 12 12 12-5.37 12-12S22.63 4 16 4Zm1 5a1 1 0 1 0-2 0v7a1 1 0 0 0 .45.83l4 2.67a1 1 0 0 0 1.1-1.67L17 15.56V9Z" />
         </svg>
       )
+    case 'letters':
+      return (
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path fill="currentColor" d="M7 5.5A3.5 3.5 0 0 0 3.5 9v14A3.5 3.5 0 0 0 7 26.5h18a3.5 3.5 0 0 0 3.5-3.5V9A3.5 3.5 0 0 0 25 5.5H7Zm-.55 4.12a1 1 0 0 1 1.4-.18L16 15.56l8.15-6.12a1 1 0 1 1 1.2 1.6l-8.75 6.56a1 1 0 0 1-1.2 0l-8.75-6.56a1 1 0 0 1-.2-1.42Z" />
+        </svg>
+      )
     case 'memory':
       return (
         <svg viewBox="0 0 32 32" aria-hidden="true">

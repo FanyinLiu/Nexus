@@ -1,22 +1,19 @@
 import { API_PROVIDER_PRESETS, getApiProviderPreset } from '../../../../lib/apiProviders'
 import { displaySecretInputValue } from '../../../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
+import { getLocalizedApiProviderNote } from '../../../models/providerNotes'
 import type { AppSettings } from '../../../../types'
 import type { OnboardingDraftSetter } from './types'
 
 type TextStepProps = {
   draft: AppSettings
   setDraft: OnboardingDraftSetter
-  textProvider: {
-    notes: string
-  }
   onApplyTextProviderPreset: (providerId: string) => void
 }
 
 export function TextStep({
   draft,
   setDraft,
-  textProvider,
   onApplyTextProviderPreset,
 }: TextStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
@@ -40,7 +37,7 @@ export function TextStep({
         </select>
       </label>
 
-      <p className="onboarding-tip">{textProvider.notes}</p>
+      <p className="onboarding-tip">{getLocalizedApiProviderNote(currentPreset, draft.uiLanguage)}</p>
 
       <div className="onboarding-grid onboarding-grid--two">
         <label>

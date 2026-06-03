@@ -24,9 +24,22 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **目前版本：** v0.3.1 穩定版（2026-04-28）。Nexus 現在已可日常使用，但仍是快速迭代中的個人專案；打包、本地語音模型和 provider 設定上，可能還有一些不夠順滑、需要手動處理的地方。
+> **目前版本：** v0.3.2 穩定版。Nexus 現在已可日常使用，但仍是快速迭代中的個人專案；打包、本地語音模型和 provider 設定上，可能還有一些不夠順滑、需要手動處理的地方。
 
 > **開發範圍提示：** 這份多語 README 保留的是長期能力清單。當前短期開發以根目錄 [README](../README.md) 和 [Nexus 升級整合計畫](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 為準：Phase 1 只收斂桌面常駐小視窗、極簡頭像、Ollama / DeepSeek 文字模型和簡單對話。
+
+---
+
+## 本次更新 — v0.3.2
+
+> **Codex 相容桌寵、社群匯入與寵物製作工具。** 完整說明見 [RELEASE-NOTES-v0.3.2.md](RELEASE-NOTES-v0.3.2.md)（英文）。
+
+| 主題 | 落地內容 |
+|---|---|
+| **Codex 相容 Sprite 寵物** | Nexus 可以讀取 `8x9` / `1536x1872` / `192x208` 的 `pet.json + spritesheet` 套件，並在桌面小視窗播放 idle、waving、review 等動作。 |
+| **社群寵物匯入** | 設定頁新增使用者主動選擇的社群入口，可從支援的 gallery 頁面、slug、ZIP 下載網址匯入並驗證寵物套件。 |
+| **寵物製作鏈路** | 支援從圖片或 creator kit 製作、預覽、組裝、匯出、安裝 Codex 相容寵物，並保留 clean-room 來源記錄。 |
+| **安全加固** | 遠端下載加入逾時、DNS / 私網檢查和串流大小上限；ZIP 解壓限制輸出大小；生產與完整依賴審計均為 0 漏洞。 |
 
 ---
 

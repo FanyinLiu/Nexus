@@ -81,9 +81,9 @@ export const WindowSection = memo(function WindowSection({
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
 
   return (
-    <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
+    <section className={`settings-section settings-window-section ${active ? 'is-active' : 'is-hidden'}`}>
       {windowStatusMessage ? (
-        <p className="settings-section__note">
+        <p className="settings-section__note settings-window-note" role="status" aria-live="polite" aria-atomic="true">
           {windowStatusMessage}
         </p>
       ) : null}
@@ -125,13 +125,13 @@ export const WindowSection = memo(function WindowSection({
         </div>
       </div>
 
-      <div className="settings-mini-group">
-        <div className="settings-mini-group__head">
+      <div className="settings-mini-group settings-window-group">
+        <div className="settings-mini-group__head settings-window-group__head">
           <h5>{ti('settings.window.group_scene')}</h5>
           <span>{ti('settings.window.group_scene_hint')}</span>
         </div>
 
-        <label>
+        <label className="settings-control-card settings-window-field">
           <span>{ti('settings.window.pet_scene_label')}</span>
           <select
             value={draft.petSceneLocation}
@@ -150,7 +150,7 @@ export const WindowSection = memo(function WindowSection({
           </select>
         </label>
 
-        <label>
+        <label className="settings-control-card settings-window-field">
           <span>{ti('settings.window.pet_weather_label')}</span>
           <select
             value={draft.petWeatherPreview}
@@ -169,7 +169,7 @@ export const WindowSection = memo(function WindowSection({
           </select>
         </label>
 
-        <label>
+        <label className="settings-control-card settings-window-field">
           <span>{ti('settings.window.pet_time_label')}</span>
           <select
             value={draft.petTimePreview}
@@ -189,27 +189,31 @@ export const WindowSection = memo(function WindowSection({
         </label>
       </div>
 
-      <div className="settings-mini-group">
-        <div className="settings-mini-group__head">
+      <div className="settings-mini-group settings-window-group">
+        <div className="settings-mini-group__head settings-window-group__head">
           <h5>{ti('settings.window.group_weather')}</h5>
           <span>{ti('settings.window.group_weather_hint')}</span>
         </div>
 
-        <ToggleField
-          label={ti('settings.window.ambient_weather_toggle')}
-          field="ambientWeatherEnabled"
-          draft={draft}
-          setDraft={setDraft}
-        />
-
-        {draft.ambientWeatherEnabled ? (
-          <TextField
-            label={ti('settings.window.ambient_weather_location_label')}
-            field="toolWeatherDefaultLocation"
-            placeholder={ti('settings.window.ambient_weather_location_placeholder')}
+        <div className="settings-control-card settings-window-control">
+          <ToggleField
+            label={ti('settings.window.ambient_weather_toggle')}
+            field="ambientWeatherEnabled"
             draft={draft}
             setDraft={setDraft}
           />
+        </div>
+
+        {draft.ambientWeatherEnabled ? (
+          <div className="settings-control-card settings-window-field">
+            <TextField
+              label={ti('settings.window.ambient_weather_location_label')}
+              field="toolWeatherDefaultLocation"
+              placeholder={ti('settings.window.ambient_weather_location_placeholder')}
+              draft={draft}
+              setDraft={setDraft}
+            />
+          </div>
         ) : null}
       </div>
     </section>

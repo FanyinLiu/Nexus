@@ -361,6 +361,7 @@ export type SettingsSectionId =
   | 'model'
   | 'chat'
   | 'history'
+  | 'letters'
   | 'memory'
   | 'lorebooks'
   | 'voice'
@@ -374,6 +375,7 @@ const SETTINGS_SECTION_DESCRIPTION_KEY_MAP: Record<SettingsSectionId, Parameters
   model: 'settings.section_desc.model',
   chat: 'settings.section_desc.chat',
   history: 'settings.section_desc.history',
+  letters: 'settings.section_desc.letters',
   memory: 'settings.section_desc.memory',
   lorebooks: 'settings.section_desc.lorebooks',
   voice: 'settings.section_desc.voice',
@@ -388,6 +390,7 @@ const SETTINGS_SECTION_EYEBROW_KEY_MAP: Record<SettingsSectionId, Parameters<typ
   model: 'settings.section_eyebrow.model',
   chat: 'settings.section_eyebrow.chat',
   history: 'settings.section_eyebrow.history',
+  letters: 'settings.section_eyebrow.letters',
   memory: 'settings.section_eyebrow.memory',
   lorebooks: 'settings.section_eyebrow.lorebooks',
   voice: 'settings.section_eyebrow.voice',
@@ -412,15 +415,17 @@ export function getSettingsSectionOptions(uiLanguage: UiLanguage): Array<{
     { id: 'chat', label: pickTranslatedUiText(uiLanguage, 'settings.section.chat') },
     { id: 'console', label: pickTranslatedUiText(uiLanguage, 'settings.section.console') },
     { id: 'history', label: pickTranslatedUiText(uiLanguage, 'settings.section.history') },
+    { id: 'letters', label: pickTranslatedUiText(uiLanguage, 'settings.section.letters') },
     { id: 'voice', label: pickTranslatedUiText(uiLanguage, 'settings.section.voice') },
     { id: 'memory', label: pickTranslatedUiText(uiLanguage, 'settings.section.memory') },
+    { id: 'lorebooks', label: pickTranslatedUiText(uiLanguage, 'settings.lorebooks.title') },
+    { id: 'autonomy', label: pickTranslatedUiText(uiLanguage, 'settings.section.autonomy') },
     { id: 'tools', label: pickTranslatedUiText(uiLanguage, 'settings.section.tools') },
   ]
 }
 
 export function normalizeSettingsSectionId(sectionId: SettingsSectionId): SettingsSectionId {
-  if (sectionId === 'lorebooks') return 'memory'
-  if (sectionId === 'integrations' || sectionId === 'autonomy') return 'tools'
+  if (sectionId === 'integrations') return 'tools'
   return sectionId
 }
 

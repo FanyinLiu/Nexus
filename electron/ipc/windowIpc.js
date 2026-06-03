@@ -21,6 +21,14 @@ import {
 import {
   listAvailablePetModels,
   importPetModelFromDialog,
+  importSpritePetModelFromCodexGallery,
+  listCodexPetGalleryCatalog,
+  createSpritePetCreatorKitFromPayload,
+  inspectSpritePetCreatorKitFromDialog,
+  assembleSpritePetCreatorKitFromDialog,
+  installSpritePetCreatorKitPackageToCodex,
+  openSpritePetCreatorKitPathFromPayload,
+  createSpritePetModelFromImageDialog,
   saveTextFileFromDialog,
   openTextFileFromDialog,
 } from '../services/petModelService.js'
@@ -148,6 +156,46 @@ export function register() {
   ipcMain.handle('pet-model:import', async (event) => {
     requireTrustedSender(event)
     return importPetModelFromDialog()
+  })
+
+  ipcMain.handle('pet-model:import-codex-gallery', async (event, input) => {
+    requireTrustedSender(event)
+    return importSpritePetModelFromCodexGallery(input)
+  })
+
+  ipcMain.handle('pet-model:list-codex-gallery', async (event, payload = {}) => {
+    requireTrustedSender(event)
+    return listCodexPetGalleryCatalog(payload)
+  })
+
+  ipcMain.handle('pet-model:create-creator-kit', async (event, payload = {}) => {
+    requireTrustedSender(event)
+    return createSpritePetCreatorKitFromPayload(payload)
+  })
+
+  ipcMain.handle('pet-model:inspect-creator-kit', async (event, payload = {}) => {
+    requireTrustedSender(event)
+    return inspectSpritePetCreatorKitFromDialog(payload)
+  })
+
+  ipcMain.handle('pet-model:assemble-creator-kit', async (event, payload = {}) => {
+    requireTrustedSender(event)
+    return assembleSpritePetCreatorKitFromDialog(payload)
+  })
+
+  ipcMain.handle('pet-model:install-creator-kit-codex', async (event, payload = {}) => {
+    requireTrustedSender(event)
+    return installSpritePetCreatorKitPackageToCodex(payload)
+  })
+
+  ipcMain.handle('pet-model:open-creator-kit-path', async (event, payload = {}) => {
+    requireTrustedSender(event)
+    return openSpritePetCreatorKitPathFromPayload(payload)
+  })
+
+  ipcMain.handle('pet-model:create-from-image', async (event) => {
+    requireTrustedSender(event)
+    return createSpritePetModelFromImageDialog()
   })
 
   ipcMain.handle('dialog:confirm', async (event, message) => {

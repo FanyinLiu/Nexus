@@ -82,6 +82,13 @@ check('release workflow builds and uploads updater metadata', () => {
   }
 })
 
+check('release workflow runs the pre-release gate before packaging', () => {
+  assert(releaseWorkflow.includes('preflight:'), 'release workflow missing preflight job')
+  assert(releaseWorkflow.includes('npm run prerelease-check --'), 'release workflow must run prerelease-check')
+  assert(releaseWorkflow.includes('--skip=A --quick'), 'release workflow should use the tag-safe prerelease-check mode')
+  assert(releaseWorkflow.includes('needs: [ensure-release, preflight]'), 'build job must depend on preflight')
+})
+
 check('release workflow refuses to mutate published releases', () => {
   assert(!releaseWorkflow.includes('gh release delete'), 'release workflow must not delete published releases')
   assert(

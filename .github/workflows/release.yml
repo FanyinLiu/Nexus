@@ -17,6 +17,8 @@ name: Release Build
 #   ensure-release → creates a draft release, or reuses an existing draft.
 #                    If the tag already has a published release, the workflow
 #                    fails and asks for a new version tag.
+#   preflight     → runs the tag-safe pre-release gate before any platform
+#                   installer is built or uploaded.
 #   build (×3)    → builds Windows / macOS / Linux installers and
 #                   uploads them to the draft. `gh release upload
 #                   --clobber` overwrites any name collision, so retries
@@ -109,8 +111,27 @@ jobs:
             --draft \
             $PRERELEASE_FLAG
 
-  build:
+  preflight:
     needs: ensure-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.ensure-release.outputs.tag }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run tag-safe pre-release gate
+        run: npm run prerelease-check -- ${{ needs.ensure-release.outputs.tag }} --skip=A --quick
+
+  build:
+    needs: [ensure-release, preflight]
     strategy:
       fail-fast: false
       matrix:

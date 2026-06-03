@@ -209,6 +209,7 @@ export const OpenArcsSection = memo(function OpenArcsSection({
         <input
           className="settings-errands__textarea"
           type="text"
+          aria-label={`${pick(COPY.title, uiLanguage)}: ${pick(COPY.themePlaceholder, uiLanguage)}`}
           placeholder={pick(COPY.themePlaceholder, uiLanguage)}
           value={draftTheme}
           onChange={(e) => setDraftTheme(e.target.value)}
@@ -264,6 +265,7 @@ export const OpenArcsSection = memo(function OpenArcsSection({
                     <textarea
                       className="settings-errands__textarea"
                       rows={2}
+                      aria-label={`${pick(COPY.resolve, uiLanguage)}: ${pick(COPY.closingNotePlaceholder, uiLanguage)}`}
                       placeholder={pick(COPY.closingNotePlaceholder, uiLanguage)}
                       value={closingNote}
                       onChange={(e) => setClosingNote(e.target.value)}
@@ -298,7 +300,7 @@ export const OpenArcsSection = memo(function OpenArcsSection({
               </div>
               <p className="settings-errands__prompt">{a.theme}</p>
               {a.closingNote ? (
-                <p className="settings-errands__title" style={{ opacity: 0.7 }}>
+                <p className="settings-errands__title settings-errands__title--muted">
                   — {a.closingNote}
                 </p>
               ) : null}

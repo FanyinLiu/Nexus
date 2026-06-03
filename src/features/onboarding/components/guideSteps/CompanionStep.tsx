@@ -4,7 +4,10 @@ import {
   isSpeechOutputKeyless,
 } from '../../../../lib/audioProviders'
 import { RELATIONSHIP_OPTIONS } from '../../../../lib/relationshipTypes'
-import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
+import {
+  pickTranslatedUiText,
+  pickTranslatedUiTextOrFallback,
+} from '../../../../lib/uiLanguage'
 import type { AppSettings } from '../../../../types'
 import {
   buildCompanionReadiness,
@@ -32,6 +35,7 @@ export function CompanionStep({
 }: CompanionStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
+  const translatePetText = (value: string | undefined) => pickTranslatedUiTextOrFallback(draft.uiLanguage, value)
   const readiness = buildCompanionReadiness({
     userName: draft.userName,
     companionName: draft.companionName,
@@ -69,10 +73,10 @@ export function CompanionStep({
           disabled={!petModelPresets.length}
         >
           {petModelPresets.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.label}
-            </option>
-          ))}
+                <option key={model.id} value={model.id}>
+              {translatePetText(model.label)}
+                </option>
+              ))}
         </select>
       </label>
 
@@ -80,7 +84,7 @@ export function CompanionStep({
         <strong>{ti('onboarding.companion.current_label')}</strong>
         <p>
           {selectedPetModel
-            ? `${selectedPetModel.label} · ${selectedPetModel.description}`
+            ? `${translatePetText(selectedPetModel.label)} · ${translatePetText(selectedPetModel.description)}`
             : ti('onboarding.companion.no_models')}
         </p>
       </div>

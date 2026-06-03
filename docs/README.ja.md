@@ -24,9 +24,22 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **現在のリリース：** v0.3.1 安定版（2026-04-28）。Nexus は今すぐ日常利用できますが、まだ高速に磨いている個人プロジェクトです。パッケージング、任意のローカル音声モデル、provider 設定では、少し手作業が必要な場面が残る可能性があります。
+> **現在のリリース：** v0.3.2 安定版。Nexus は今すぐ日常利用できますが、まだ高速に磨いている個人プロジェクトです。パッケージング、任意のローカル音声モデル、provider 設定では、少し手作業が必要な場面が残る可能性があります。
 
 > **開発スコープの注記：** この多言語 README は長期的な機能一覧を残しています。短期開発はルートの [README](../README.md) と [Nexus アップグレード統合計画](NEXUS_UPGRADE_INTEGRATION_PLAN.md) を基準にしてください。Phase 1 は常駐する小さなデスクトップウィンドウ、ミニマルなアバター、Ollama / DeepSeek のテキストモデル、シンプルな会話だけに絞ります。
+
+---
+
+## 今回のアップデート — v0.3.2
+
+> **Codex 互換デスクトップペット、コミュニティ取り込み、ペット制作ツール。** 詳細は [RELEASE-NOTES-v0.3.2.md](RELEASE-NOTES-v0.3.2.md)（英語）を参照してください。
+
+| テーマ | 内容 |
+|---|---|
+| **Codex 互換 Sprite ペット** | Nexus は `8x9` / `1536x1872` / `192x208` の `pet.json + spritesheet` パッケージを読み込み、デスクトップの小窓で idle、waving、review などの動きを再生できます。 |
+| **コミュニティペットの取り込み** | 設定画面にユーザー選択型のコミュニティ入口を追加し、対応 gallery ページ、slug、ZIP ダウンロード URL から検証付きで取り込めます。 |
+| **ペット制作フロー** | 画像または creator kit から Codex 互換ペットを作成、プレビュー、組み立て、エクスポート、インストールできます。clean-room の出所記録も残します。 |
+| **セキュリティ強化** | リモートダウンロードにタイムアウト、DNS / プライベートネットワーク検査、ストリーミングサイズ上限を追加。ZIP 展開の出力サイズも制限し、production と full audit はどちらも 0 件です。 |
 
 ---
 

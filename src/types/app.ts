@@ -389,6 +389,9 @@ export interface PetWindowPreferences {
 
 export interface PetWindowState extends PetWindowPreferences {
   petHotspotActive: boolean
+  locomotionActivity?: string
+  freeMode?: boolean
+  roamCapable?: boolean
 }
 
 export interface PanelWindowState {

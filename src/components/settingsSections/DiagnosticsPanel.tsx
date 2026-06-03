@@ -1,5 +1,11 @@
 import { memo, useCallback, useState } from 'react'
 import { clearLogs, exportLogs, getLogEntries } from '../../lib/logger'
+import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import type { UiLanguage } from '../../types'
+
+type DiagnosticsPanelProps = {
+  uiLanguage: UiLanguage
+}
 
 /**
  * Minimal diagnostics panel: exports the in-memory ring buffer as a
@@ -7,12 +13,15 @@ import { clearLogs, exportLogs, getLogEntries } from '../../lib/logger'
  * button. Designed to sit below the updater panel inside the
  * Console / debug settings section.
  *
- * No localisation wrapper — this surface is developer-facing (matches
- * the Updater panel's English-only "check for updates" text in the
- * other locales). If full i18n is needed later, mirror UpdaterPanel.
+ * Localized because this panel is exposed inside the same settings surface
+ * as updater and cost diagnostics.
  */
-export const DiagnosticsPanel = memo(function DiagnosticsPanel() {
+export const DiagnosticsPanel = memo(function DiagnosticsPanel({ uiLanguage }: DiagnosticsPanelProps) {
   const [feedback, setFeedback] = useState<string | null>(null)
+  const ti = useCallback((
+    key: Parameters<typeof pickTranslatedUiText>[1],
+    params?: Parameters<typeof pickTranslatedUiText>[2],
+  ) => pickTranslatedUiText(uiLanguage, key, params), [uiLanguage])
 
   const showFeedback = useCallback((text: string) => {
     setFeedback(text)
@@ -22,7 +31,7 @@ export const DiagnosticsPanel = memo(function DiagnosticsPanel() {
   const handleExport = useCallback(() => {
     const jsonl = exportLogs()
     if (!jsonl) {
-      showFeedback('No log entries captured yet.')
+      showFeedback(ti('settings.console.diagnostics.no_logs'))
       return
     }
 
@@ -37,47 +46,46 @@ export const DiagnosticsPanel = memo(function DiagnosticsPanel() {
     document.body.removeChild(anchor)
     URL.revokeObjectURL(url)
 
-    showFeedback(`Exported ${getLogEntries().length} log entries.`)
-  }, [showFeedback])
+    showFeedback(ti('settings.console.diagnostics.exported', { count: getLogEntries().length }))
+  }, [showFeedback, ti])
 
   const handleCopy = useCallback(async () => {
     const jsonl = exportLogs()
     if (!jsonl) {
-      showFeedback('No log entries captured yet.')
+      showFeedback(ti('settings.console.diagnostics.no_logs'))
       return
     }
 
     try {
       await navigator.clipboard.writeText(jsonl)
-      showFeedback(`Copied ${getLogEntries().length} log entries.`)
+      showFeedback(ti('settings.console.diagnostics.copied', { count: getLogEntries().length }))
     } catch (err) {
-      showFeedback(`Copy failed: ${err instanceof Error ? err.message : String(err)}`)
+      showFeedback(ti('settings.console.diagnostics.copy_failed', {
+        message: err instanceof Error ? err.message : String(err),
+      }))
     }
-  }, [showFeedback])
+  }, [showFeedback, ti])
 
   const handleClear = useCallback(() => {
     clearLogs()
-    showFeedback('Log ring buffer cleared.')
-  }, [showFeedback])
+    showFeedback(ti('settings.console.diagnostics.cleared'))
+  }, [showFeedback, ti])
 
   return (
     <section className="settings-diagnostics-panel">
       <header className="settings-diagnostics-panel__header">
-        <h4>Diagnostics</h4>
-        <p>
-          Export the in-memory log ring (most recent ~500 entries) for
-          bug reports.
-        </p>
+        <h4>{ti('settings.console.diagnostics.title')}</h4>
+        <p>{ti('settings.console.diagnostics.description')}</p>
       </header>
       <div className="settings-diagnostics-panel__actions">
         <button type="button" className="primary-button" onClick={handleExport}>
-          Download logs (.jsonl)
+          {ti('settings.console.diagnostics.download_logs')}
         </button>
         <button type="button" className="ghost-button" onClick={handleCopy}>
-          Copy to clipboard
+          {ti('settings.console.diagnostics.copy_logs')}
         </button>
         <button type="button" className="ghost-button" onClick={handleClear}>
-          Clear ring
+          {ti('settings.console.diagnostics.clear_logs')}
         </button>
       </div>
       {feedback ? (

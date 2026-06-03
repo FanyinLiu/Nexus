@@ -1,4 +1,11 @@
-import { memo, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
+import {
+  memo,
+  useEffect,
+  useState,
+  type Dispatch,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type SetStateAction,
+} from 'react'
 import { parseNumberInput } from '../settingsDrawerSupport'
 import { TextField, ToggleField } from '../settingsFields'
 import {
@@ -25,6 +32,17 @@ type IntegrationsSectionProps = {
 type IntegrationPanelId = InspectableIntegrationModuleId
 
 const inspectableModules = getInspectableIntegrationModules()
+const inspectablePanelIds = inspectableModules
+  .map((module) => module.panelId)
+  .filter((panelId): panelId is IntegrationPanelId => Boolean(panelId))
+
+function getIntegrationTabId(panelId: IntegrationPanelId): string {
+  return `settings-integrations-tab-${panelId}`
+}
+
+function getIntegrationPanelId(panelId: IntegrationPanelId): string {
+  return `settings-integrations-panel-${panelId}`
+}
 
 export const IntegrationsSection = memo(function IntegrationsSection({
   active,
@@ -212,17 +230,25 @@ export const IntegrationsSection = memo(function IntegrationsSection({
   function renderModuleSelectorCard(
     descriptor: IntegrationModuleDescriptor,
   ) {
-    const selected = activePanelId === descriptor.panelId
-    const runtime = descriptor.panelId ? getModuleRuntime(descriptor.panelId) : null
+    if (!descriptor.panelId) return null
+
+    const panelId = descriptor.panelId
+    const selected = activePanelId === panelId
+    const runtime = getModuleRuntime(panelId)
     const badge = runtime ? getStatusLabel(runtime.status) : ti(descriptor.badge)
 
     return (
       <button
         key={descriptor.id}
         type="button"
+        id={getIntegrationTabId(panelId)}
+        role="tab"
         className={`settings-choice-card ${selected ? 'is-active' : ''}`}
-        aria-pressed={selected}
-        onClick={() => descriptor.panelId && setActivePanelId(descriptor.panelId)}
+        aria-selected={selected}
+        aria-controls={getIntegrationPanelId(panelId)}
+        tabIndex={selected ? 0 : -1}
+        onClick={() => setActivePanelId(panelId)}
+        onKeyDown={(event) => handleModuleTabKeyDown(event, panelId)}
       >
         <span className="settings-choice-card__header">
           <strong>{ti(descriptor.title)}</strong>
@@ -233,6 +259,39 @@ export const IntegrationsSection = memo(function IntegrationsSection({
         </span>
       </button>
     )
+  }
+
+  function focusModuleTab(panelId: IntegrationPanelId) {
+    window.requestAnimationFrame(() => {
+      document.getElementById(getIntegrationTabId(panelId))?.focus()
+    })
+  }
+
+  function selectModuleTab(panelId: IntegrationPanelId) {
+    setActivePanelId(panelId)
+    focusModuleTab(panelId)
+  }
+
+  function handleModuleTabKeyDown(
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    panelId: IntegrationPanelId,
+  ) {
+    const currentIndex = inspectablePanelIds.indexOf(panelId)
+    if (currentIndex < 0) return
+
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault()
+      selectModuleTab(inspectablePanelIds[(currentIndex + 1) % inspectablePanelIds.length])
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      selectModuleTab(inspectablePanelIds[(currentIndex - 1 + inspectablePanelIds.length) % inspectablePanelIds.length])
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      selectModuleTab(inspectablePanelIds[0])
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      selectModuleTab(inspectablePanelIds[inspectablePanelIds.length - 1])
+    }
   }
 
   function updateMcpServer(serverId: string, patch: Partial<McpServerConfig>) {
@@ -342,7 +401,7 @@ export const IntegrationsSection = memo(function IntegrationsSection({
 
           <button
             type="button"
-            className="settings-action-button"
+            className="primary-button"
             onClick={addMcpServer}
           >
             {ti('settings.integrations.mcp.add_server')}
@@ -617,17 +676,32 @@ export const IntegrationsSection = memo(function IntegrationsSection({
         </div>
 
         {inspectionError ? (
-          <div className="settings-test-result is-error">{inspectionError}</div>
+          <div
+            className="settings-test-result is-error"
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+          >
+            {inspectionError}
+          </div>
         ) : null}
 
         <p className="settings-inline-note">{ti('settings.integrations.probe_note')}</p>
       </div>
 
-      {activePanelId === 'mcp' ? renderMcpPanel() : null}
-      {activePanelId === 'minecraft' ? renderGamePanel('minecraft') : null}
-      {activePanelId === 'factorio' ? renderGamePanel('factorio') : null}
-      {activePanelId === 'telegram' ? renderTelegramPanel() : null}
-      {activePanelId === 'discord' ? renderDiscordPanel() : null}
+      <div
+        id={getIntegrationPanelId(activePanelId)}
+        className="settings-integration-panel"
+        role="tabpanel"
+        aria-labelledby={getIntegrationTabId(activePanelId)}
+        tabIndex={0}
+      >
+        {activePanelId === 'mcp' ? renderMcpPanel() : null}
+        {activePanelId === 'minecraft' ? renderGamePanel('minecraft') : null}
+        {activePanelId === 'factorio' ? renderGamePanel('factorio') : null}
+        {activePanelId === 'telegram' ? renderTelegramPanel() : null}
+        {activePanelId === 'discord' ? renderDiscordPanel() : null}
+      </div>
     </section>
   )
 })

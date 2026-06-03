@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap'
 import {
   apiProviderRequiresApiKey,
-  getApiProviderPreset,
 } from '../../../lib/apiProviders'
 import {
   getFallbackSpeechOutputVoices,
@@ -57,6 +57,8 @@ export function OnboardingGuide({
   const [draft, setDraft] = useState(settings)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const dialogRef = useRef<HTMLElement | null>(null)
+  useModalFocusTrap(dialogRef, open)
   const ti = (
     key: Parameters<typeof pickTranslatedUiText>[1],
     params?: Parameters<typeof pickTranslatedUiText>[2],
@@ -65,7 +67,6 @@ export function OnboardingGuide({
   const onboardingSteps = useMemo(() => buildOnboardingSteps(draft.uiLanguage), [draft.uiLanguage])
   const step = onboardingSteps[stepIndex] ?? onboardingSteps[0]
   const lastStepIndex = onboardingSteps.length - 1
-  const textProvider = getApiProviderPreset(draft.apiProviderId)
   const speechInputProvider = getSpeechInputProviderPreset(draft.speechInputProviderId)
   const speechOutputProvider = getSpeechOutputProviderPreset(draft.speechOutputProviderId)
   const speechInputModelOptions = getSpeechInputModelOptions(draft.speechInputProviderId)
@@ -86,7 +87,25 @@ export function OnboardingGuide({
     setStepIndex(0)
     setSaving(false)
     setError(null)
+    window.requestAnimationFrame(() => {
+      dialogRef.current?.focus()
+    })
   }, [open, settings])
+
+  useEffect(() => {
+    if (!open || saving) return undefined
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onDismiss()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onDismiss, open, saving])
 
   useEffect(() => {
     if (!petModelPresets.length) return
@@ -165,7 +184,6 @@ export function OnboardingGuide({
           <TextStep
             draft={draft}
             setDraft={setDraft}
-            textProvider={textProvider}
             onApplyTextProviderPreset={applyTextProviderPreset}
           />
         )
@@ -205,12 +223,20 @@ export function OnboardingGuide({
 
   return (
     <div className={`onboarding-backdrop onboarding-backdrop--${view}`}>
-      <section className={`onboarding-card onboarding-card--${view}`}>
+      <section
+        ref={dialogRef}
+        className={`onboarding-card onboarding-card--${view}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="onboarding-dialog-title"
+        aria-describedby="onboarding-dialog-description"
+        tabIndex={-1}
+      >
         <div className="onboarding-card__header">
           <div>
             <p className="eyebrow">{ti('onboarding.eyebrow')}</p>
-            <h2>{ti('onboarding.title')}</h2>
-            <p className="onboarding-card__copy">
+            <h2 id="onboarding-dialog-title">{ti('onboarding.title')}</h2>
+            <p id="onboarding-dialog-description" className="onboarding-card__copy">
               {ti('onboarding.body')}
             </p>
           </div>
@@ -226,12 +252,14 @@ export function OnboardingGuide({
               key={item.id}
               type="button"
               className={`onboarding-stepper__item ${index === stepIndex ? 'is-active' : ''} ${index < stepIndex ? 'is-complete' : ''}`}
+              aria-current={index === stepIndex ? 'step' : undefined}
               onClick={() => {
                 if (index > stepIndex) return
                 setStepIndex(index)
                 setError(null)
               }}
               disabled={index > stepIndex || saving}
+              title={item.title}
             >
               <span>{index + 1}</span>
               <strong>{item.title}</strong>
@@ -248,7 +276,16 @@ export function OnboardingGuide({
 
             {renderStepContent()}
 
-            {error ? <div className="settings-test-result is-error">{error}</div> : null}
+            {error ? (
+              <div
+                className="settings-test-result is-error"
+                role="alert"
+                aria-live="assertive"
+                aria-atomic="true"
+              >
+                {error}
+              </div>
+            ) : null}
           </div>
         </div>
 

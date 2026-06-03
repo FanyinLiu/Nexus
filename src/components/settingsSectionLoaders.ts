@@ -7,6 +7,7 @@ const loadConsoleSection = () => import('./settingsSections/ConsoleSection')
 const loadContextSection = () => import('./settingsSections/ContextSection')
 const loadHistorySection = () => import('./settingsSections/HistorySection')
 const loadIntegrationsSection = () => import('./settingsSections/IntegrationsSection')
+const loadLettersSection = () => import('./settingsSections/LettersSection')
 const loadLorebooksSection = () => import('./settingsSections/LorebooksSection')
 const loadMemorySection = () => import('./settingsSections/MemorySection')
 const loadModelSection = () => import('./settingsSections/ModelSection')
@@ -22,6 +23,7 @@ export const ConsoleSection = lazy(async () => ({ default: (await loadConsoleSec
 export const ContextSection = lazy(async () => ({ default: (await loadContextSection()).ContextSection }))
 export const HistorySection = lazy(async () => ({ default: (await loadHistorySection()).HistorySection }))
 export const IntegrationsSection = lazy(async () => ({ default: (await loadIntegrationsSection()).IntegrationsSection }))
+export const LettersSection = lazy(async () => ({ default: (await loadLettersSection()).LettersSection }))
 export const LorebooksSection = lazy(async () => ({ default: (await loadLorebooksSection()).LorebooksSection }))
 export const MemorySection = lazy(async () => ({ default: (await loadMemorySection()).MemorySection }))
 export const ModelSection = lazy(async () => ({ default: (await loadModelSection()).ModelSection }))
@@ -37,6 +39,7 @@ const sectionPreloaders: Record<SettingsSectionId, Array<() => Promise<unknown>>
   console: [loadConsoleSection, loadContextSection],
   history: [loadHistorySection],
   integrations: [loadIntegrationsSection],
+  letters: [loadLettersSection],
   lorebooks: [loadLorebooksSection],
   memory: [loadMemorySection],
   model: [loadModelSection],

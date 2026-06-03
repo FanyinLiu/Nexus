@@ -1,4 +1,4 @@
-import { AVAILABLE_LOCALES, normalizeLocale, t as translate } from '../i18n/index.ts'
+import { AVAILABLE_LOCALES, hasKey, normalizeLocale, t as translate } from '../i18n/index.ts'
 import type { TranslationKey, TranslationParams, UiLanguage } from '../types'
 
 export type LocalizedText = {
@@ -85,6 +85,22 @@ export function pickTranslatedUiText(
   params?: TranslationParams,
 ) {
   return translate(key, params, normalizeUiLanguage(language))
+}
+
+export function pickTranslatedUiTextOrFallback(language: UiLanguage, value: string | undefined) {
+  const text = value?.trim()
+  if (!text) {
+    return ''
+  }
+
+  const normalizedLocale = normalizeUiLanguage(language)
+  if (!text.includes('.')) {
+    return text
+  }
+
+  return hasKey(text as TranslationKey, normalizedLocale)
+    ? pickTranslatedUiText(language, text as Parameters<typeof pickTranslatedUiText>[1])
+    : text
 }
 
 type LocaleNameDefaults = { companionName: string; userName: string }

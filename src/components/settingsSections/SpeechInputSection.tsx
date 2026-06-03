@@ -105,7 +105,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
   }
 
   return (
-    <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
+    <section className={`settings-section settings-speech-config-section ${active ? 'is-active' : 'is-hidden'}`}>
       <div className="settings-section__title-row">
         <div>
           <h4>{ti('settings.speech_input.title')}</h4>
@@ -126,10 +126,12 @@ export const SpeechInputSection = memo(function SpeechInputSection({
       </div>
 
       {speechInputPlatformHint ? (
-        <p className="settings-drawer__hint">{speechInputPlatformHint}</p>
+        <p className="settings-drawer__hint settings-speech-config-note">
+          {speechInputPlatformHint}
+        </p>
       ) : null}
 
-      <label>
+      <label className="settings-control-card settings-speech-config-field">
         <span>{ti('settings.speech_input.provider')}</span>
         <select
           value={draft.speechInputProviderId}
@@ -141,7 +143,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
         </select>
       </label>
 
-      <p className="settings-drawer__hint">
+      <p className="settings-drawer__hint settings-speech-config-note">
         {ti(speechInputProvider.notes as TranslationKey)}
         {speechInputProvider.baseUrl
           ? ` ${ti('settings.speech_input.default_endpoint')}${speechInputProvider.baseUrl}`
@@ -152,9 +154,10 @@ export const SpeechInputSection = memo(function SpeechInputSection({
       </p>
 
       {showSpeechInputBaseUrl ? (
-        <label>
+        <label className="settings-control-card settings-speech-config-field">
           <span>{ti('settings.speech_input.endpoint_url')}</span>
           <UrlInput
+            uiLanguage={draft.uiLanguage}
             value={draft.speechInputApiBaseUrl}
             onChange={(event) =>
               setDraft((prev) => updateCurrentSpeechInputProviderProfile(prev, {
@@ -168,7 +171,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
       {showSpeechInputCredentials && isVolcengineSpeechInput ? (
         <>
           <div className="settings-grid settings-grid--two">
-            <label>
+            <label className="settings-control-card settings-speech-config-field">
               <span>{ti('settings.speech_input.volcengine_app_id')}</span>
               <input
                 value={speechInputVolcengineCredentials.appId}
@@ -181,7 +184,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
               />
             </label>
 
-            <label>
+            <label className="settings-control-card settings-speech-config-field">
               <span>{ti('settings.speech_input.volcengine_token')}</span>
               <input
                 type="password"
@@ -196,12 +199,12 @@ export const SpeechInputSection = memo(function SpeechInputSection({
             </label>
           </div>
 
-          <p className="settings-drawer__hint">
+          <p className="settings-drawer__hint settings-speech-config-note">
             {ti('settings.speech_input.volcengine_credential_hint')}
           </p>
         </>
       ) : showSpeechInputCredentials ? (
-        <label>
+        <label className="settings-control-card settings-speech-config-field">
           <span>{ti('settings.speech_input.api_key')}</span>
           <input
             type="password"
@@ -215,7 +218,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
         </label>
       ) : null}
 
-      <label>
+      <label className="settings-control-card settings-speech-config-field">
         <span>{speechInputModelLabel}</span>
         {speechInputModelOptions.length ? (
           <select
@@ -245,10 +248,12 @@ export const SpeechInputSection = memo(function SpeechInputSection({
       </label>
 
       {speechInputModelHint ? (
-        <p className="settings-drawer__hint">{speechInputModelHint}</p>
+        <p className="settings-drawer__hint settings-speech-config-note">
+          {speechInputModelHint}
+        </p>
       ) : null}
 
-      <label>
+      <label className="settings-control-card settings-speech-config-field">
         <span>{ti('settings.speech_input.recognition_lang')}</span>
         <input
           value={draft.speechRecognitionLang}
@@ -262,7 +267,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
       </label>
 
       {draft.speechInputProviderId === 'zhipu-stt' ? (
-        <label>
+        <label className="settings-control-card settings-speech-config-field">
           <span>{ti('settings.speech_input.hotwords')}</span>
           <input
             value={draft.speechInputHotwords}

@@ -2,13 +2,13 @@ import { parseAssistantPerformanceContent } from '../../features/pet/performance
 import { t } from '../../i18n/runtime.ts'
 import type { ChatMessage } from '../../types'
 
-export function formatReminderNextRunLabel(timestamp?: string) {
+export function formatReminderNextRunLabel(timestamp: string | undefined, locale: string) {
   const parsed = Date.parse(timestamp ?? '')
   if (Number.isNaN(parsed)) {
     return ''
   }
 
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(locale, {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',

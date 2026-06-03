@@ -1,4 +1,8 @@
-﻿import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import '../app/styles/settings.css'
+import '../app/styles/settings-home.css'
+import '../app/styles/settings-themes.css'
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap'
 import {
   getMemorySearchModeOptions,
   getSettingsSectionOptions,
@@ -7,7 +11,6 @@ import {
   type SettingsSectionId,
 } from './settingsDrawerSupport'
 import {
-  getApiProviderPreset,
   switchSpeechOutputProvider,
   switchTextProvider,
   clampPresenceIntervalMinutes,
@@ -20,7 +23,11 @@ import {
   isLocaleDefaultUserName,
   pickTranslatedUiText,
 } from '../lib/uiLanguage'
-import type { PetModelDefinition } from '../features/pet'
+import type {
+  CodexPetGalleryCatalogResult,
+  PetModelDefinition,
+  SpritePetCreatorKitInspection,
+} from '../features/pet'
 import type { ReminderTaskDraftInput } from '../features/reminders'
 import {
   AutonomySection,
@@ -28,6 +35,7 @@ import {
   ConsoleSection,
   HistorySection,
   IntegrationsSection,
+  LettersSection,
   LorebooksSection,
   MemorySection,
   ModelSection,
@@ -45,6 +53,7 @@ import {
   useWindowStateSync,
   usePetModelImport,
 } from './settingsDrawerHooks'
+import { PetControlIcon } from './PetControlIcon'
 import { renderSettingsCardIcon } from './settingsDrawerIcons'
 import { buildSettingsSectionMeta } from './settingsDrawerMetadata'
 import type {
@@ -126,6 +135,60 @@ export type SettingsDrawerProps = {
     model: PetModelDefinition
     message: string
   } | null>
+  onSelectImportedPetModel?: (petModelId: string) => Promise<void> | void
+  onImportCodexPetGallery?: (input: string) => Promise<{
+    model: PetModelDefinition
+    message: string
+  }>
+  onListCodexPetGallery?: (query?: string) => Promise<CodexPetGalleryCatalogResult>
+  onCreateCodexPetCreatorKit?: (payload: {
+    displayName?: string
+    concept?: string
+  }) => Promise<{
+    id: string
+    displayName: string
+    directoryPath: string
+    sourceRowsDirectory?: string
+    message: string
+  }>
+  onInspectCodexPetCreatorKit?: (payload?: { kitDirectory?: string }) => Promise<SpritePetCreatorKitInspection | null>
+  onAssembleCodexPetCreatorKit?: (payload?: { kitDirectory?: string }) => Promise<{
+    model: PetModelDefinition
+    message: string
+    packageDirectory?: string
+    manifestPath?: string
+    spritesheetPath?: string
+    reportPath?: string
+    visualAuditPath?: string
+    archivePath?: string
+  } | null>
+  onInstallCodexPetCreatorKitToCodex?: (payload: {
+    kitDirectory: string
+    manifestPath: string
+  }) => Promise<{
+    ok: boolean
+    id: string
+    directoryPath: string
+    manifestPath: string
+    message: string
+  }>
+  onOpenCodexPetCreatorKitPath?: (payload: {
+    kitDirectory: string
+    targetPath: string
+    mode?: 'open' | 'reveal'
+  }) => Promise<{
+    ok: boolean
+    message: string
+  }>
+  onCreateSpritePetFromImage?: () => Promise<{
+    model: PetModelDefinition
+    message: string
+    packageDirectory?: string
+    manifestPath?: string
+    spritesheetPath?: string
+    visualAuditPath?: string
+    archivePath?: string
+  } | null>
   onTestConnection: (
     capability: ServiceConnectionCapability,
     settings: AppSettings,
@@ -193,6 +256,15 @@ export function SettingsDrawer({
   onUpdateDailyEntry,
   onRemoveDailyEntry,
   onImportPetModel,
+  onImportCodexPetGallery,
+  onSelectImportedPetModel,
+  onListCodexPetGallery,
+  onCreateCodexPetCreatorKit,
+  onInspectCodexPetCreatorKit,
+  onAssembleCodexPetCreatorKit,
+  onInstallCodexPetCreatorKitToCodex,
+  onOpenCodexPetCreatorKitPath,
+  onCreateSpritePetFromImage,
   onTestConnection,
   onLoadSpeechVoices,
   onPreviewSpeech,
@@ -208,9 +280,63 @@ export function SettingsDrawer({
   const [activeSectionId, setActiveSectionId] = useState<SettingsSectionId>('console')
   const [settingsView, setSettingsView] = useState<'home' | 'section'>('home')
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false)
+  const selectedLanguageIndex = Math.max(
+    0,
+    UI_LANGUAGE_OPTIONS.findIndex((option) => option.value === draft.uiLanguage),
+  )
+  const languageMenuId = 'settings-language-menu'
+  const settingsDialogRef = useRef<HTMLElement | null>(null)
+  const languageButtonRef = useRef<HTMLButtonElement | null>(null)
   const languageMenuRef = useRef<HTMLDivElement | null>(null)
+  const languageOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const appearanceOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
   const drawerBodyRef = useRef<HTMLDivElement | null>(null)
   const settingsSectionsRef = useRef<HTMLDivElement | null>(null)
+  useModalFocusTrap(settingsDialogRef, open)
+
+  function focusLanguageOption(index: number) {
+    window.requestAnimationFrame(() => {
+      languageOptionRefs.current[index]?.focus()
+    })
+  }
+
+  function openLanguageMenuAt(index: number) {
+    setLanguageMenuOpen(true)
+    focusLanguageOption(index)
+  }
+
+  function handleLanguageButtonKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      openLanguageMenuAt(selectedLanguageIndex)
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      openLanguageMenuAt(UI_LANGUAGE_OPTIONS.length - 1)
+    }
+  }
+
+  function handleLanguageMenuItemKeyDown(
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      focusLanguageOption((index + 1) % UI_LANGUAGE_OPTIONS.length)
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      focusLanguageOption((index - 1 + UI_LANGUAGE_OPTIONS.length) % UI_LANGUAGE_OPTIONS.length)
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      focusLanguageOption(0)
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      focusLanguageOption(UI_LANGUAGE_OPTIONS.length - 1)
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      setLanguageMenuOpen(false)
+      languageButtonRef.current?.focus()
+    }
+  }
 
   useEffect(() => {
     if (!languageMenuOpen) return undefined
@@ -228,6 +354,14 @@ export function SettingsDrawer({
       document.removeEventListener('keydown', handleKey)
     }
   }, [languageMenuOpen])
+
+  useEffect(() => {
+    if (!open) return
+
+    window.requestAnimationFrame(() => {
+      settingsDialogRef.current?.focus()
+    })
+  }, [open])
 
   const speechVoices = useSpeechVoiceManagement({
     draft,
@@ -263,10 +397,18 @@ export function SettingsDrawer({
 
   const petModel_ = usePetModelImport({
     onImportPetModel,
+    onImportCodexPetGallery,
+    onListCodexPetGallery,
+    onCreateCodexPetCreatorKit,
+    onInspectCodexPetCreatorKit,
+    onAssembleCodexPetCreatorKit,
+    onInstallCodexPetCreatorKitToCodex,
+    onOpenCodexPetCreatorKitPath,
+    onCreateSpritePetFromImage,
+    onSelectImportedPetModel,
     setDraft,
   })
 
-  const textProvider = getApiProviderPreset(draft.apiProviderId)
   const petModel = petModelPresets.find((preset) => preset.id === draft.petModelId) ?? petModelPresets[0]
 
   const uiLanguage = draft.uiLanguage
@@ -310,6 +452,10 @@ export function SettingsDrawer({
   const activeSectionMeta = settingsSectionMetaById[activeSectionId]
   const activeSectionDescription = activeSectionMeta.description
   const settingsThemeTone = getSettingsThemeTone(draft.themeId)
+  const selectedAppearanceIndex = Math.max(
+    0,
+    SETTINGS_APPEARANCE_OPTIONS.findIndex((option) => option.tone === settingsThemeTone),
+  )
   const settingsBackdropClassName = [
     'settings-backdrop',
     settingsThemeTone === 'night' ? 'settings-backdrop--night' : 'settings-backdrop--day',
@@ -317,6 +463,7 @@ export function SettingsDrawer({
   ].filter(Boolean).join(' ')
   const settingsDrawerClassName = [
     'settings-drawer',
+    settingsView === 'home' ? 'settings-drawer--home' : 'settings-drawer--section',
     settingsThemeTone === 'night' ? 'settings-drawer--night' : 'settings-drawer--day',
     settingsThemeTone === 'warm-day' ? 'settings-drawer--warm-day' : '',
   ].filter(Boolean).join(' ')
@@ -402,6 +549,52 @@ export function SettingsDrawer({
     speechVoices.applySpeechOutputPreset(providerId)
   }
 
+  function focusAppearanceOption(index: number) {
+    window.requestAnimationFrame(() => {
+      appearanceOptionRefs.current[index]?.focus()
+    })
+  }
+
+  function selectAppearanceOption(index: number) {
+    const option = SETTINGS_APPEARANCE_OPTIONS[index]
+    if (!option) return
+
+    setDraft((prev) => ({
+      ...prev,
+      themeId: option.id,
+    }))
+  }
+
+  function handleAppearanceOptionKeyDown(
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) {
+    let nextIndex: number | null = null
+
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        nextIndex = (index + 1) % SETTINGS_APPEARANCE_OPTIONS.length
+        break
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        nextIndex = (index - 1 + SETTINGS_APPEARANCE_OPTIONS.length) % SETTINGS_APPEARANCE_OPTIONS.length
+        break
+      case 'Home':
+        nextIndex = 0
+        break
+      case 'End':
+        nextIndex = SETTINGS_APPEARANCE_OPTIONS.length - 1
+        break
+      default:
+        return
+    }
+
+    event.preventDefault()
+    selectAppearanceOption(nextIndex)
+    focusAppearanceOption(nextIndex)
+  }
+
   function handleDismiss() {
     windowState.rollbackWindowState()
     onClose()
@@ -434,7 +627,6 @@ export function SettingsDrawer({
             draft={draft}
             setDraft={setDraft}
             testingTarget={connectionTests.testingTarget}
-            textProvider={textProvider}
             uiLanguage={uiLanguage}
             onApplyTextProviderPreset={applyTextProviderPreset}
             onRunTextConnectionTest={() => void connectionTests.runConnectionTest('text')}
@@ -450,7 +642,27 @@ export function SettingsDrawer({
             petModelPresets={petModelPresets}
             importingPetModel={petModel_.importingPetModel}
             petModelStatus={petModel_.petModelStatus}
+            codexPetCatalog={petModel_.codexPetCatalog}
+            codexPetCatalogLoading={petModel_.codexPetCatalogLoading}
+            codexPetCatalogStatus={petModel_.codexPetCatalogStatus}
+            creatingCreatorKit={petModel_.creatingCreatorKit}
+            inspectingCreatorKit={petModel_.inspectingCreatorKit}
+            creatorKitInspection={petModel_.creatorKitInspection}
+            assemblingCreatorKit={petModel_.assemblingCreatorKit}
+            lastCreatorKitDirectory={petModel_.lastCreatorKitDirectory}
+            lastCreatorKitSourceRowsDirectory={petModel_.lastCreatorKitSourceRowsDirectory}
+            assembledCreatorKitPackage={petModel_.assembledCreatorKitPackage}
+            generatedSpritePetPackage={petModel_.generatedSpritePetPackage}
             onImportPetModel={() => void petModel_.handleImportPetModel()}
+            onImportCodexPetGallery={(input) => void petModel_.handleImportCodexPetGallery(input)}
+            onLoadCodexPetGallery={(query) => void petModel_.handleLoadCodexPetGallery(query)}
+            onCreateCodexPetCreatorKit={(payload) => void petModel_.handleCreateCodexPetCreatorKit(payload)}
+            onInspectCodexPetCreatorKit={() => void petModel_.handleInspectCodexPetCreatorKit()}
+            onAssembleCodexPetCreatorKit={() => void petModel_.handleAssembleCodexPetCreatorKit()}
+            onInstallCodexPetCreatorKitToCodex={() => void petModel_.handleInstallCodexPetCreatorKitToCodex()}
+            onInstallGeneratedSpritePetPackageToCodex={() => void petModel_.handleInstallGeneratedSpritePetPackageToCodex()}
+            onOpenCodexPetCreatorKitPath={(payload) => void petModel_.handleOpenCodexPetCreatorKitPath(payload)}
+            onCreateSpritePetFromImage={() => void petModel_.handleCreateSpritePetFromImage()}
           />
         )
       case 'history':
@@ -468,6 +680,13 @@ export function SettingsDrawer({
             onExportChatHistory={() => void chatHistory.handleExportChatHistory()}
             onImportChatHistory={() => void chatHistory.handleImportChatHistory()}
             onClearChatHistory={() => void chatHistory.handleClearChatHistory()}
+          />
+        )
+      case 'letters':
+        return (
+          <LettersSection
+            active
+            uiLanguage={draft.uiLanguage}
           />
         )
       case 'memory':
@@ -620,10 +839,12 @@ export function SettingsDrawer({
   return (
     <div className={settingsBackdropClassName} onClick={handleDismiss}>
       <aside
+        ref={settingsDialogRef}
         className={settingsDrawerClassName}
         role="dialog"
         aria-modal="true"
         aria-label={ti('settings.panel', { name: settings.companionName })}
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="settings-drawer__header">
@@ -638,13 +859,16 @@ export function SettingsDrawer({
             <div className="settings-drawer__toolbar">
               <div className="settings-drawer__language-control" ref={languageMenuRef}>
                 <button
+                  ref={languageButtonRef}
                   type="button"
                   className="settings-drawer__language-button"
                   aria-haspopup="menu"
                   aria-expanded={languageMenuOpen}
+                  aria-controls={languageMenuId}
                   aria-label={ti('settings.language_menu.aria_label')}
                   title={ti('settings.language_menu.aria_label')}
                   onClick={() => setLanguageMenuOpen((open) => !open)}
+                  onKeyDown={handleLanguageButtonKeyDown}
                 >
                   <svg
                     className="settings-drawer__language-icon"
@@ -662,12 +886,20 @@ export function SettingsDrawer({
                   </svg>
                 </button>
                 {languageMenuOpen ? (
-                  <ul className="settings-drawer__language-menu" role="menu">
-                    {UI_LANGUAGE_OPTIONS.map((option) => {
+                  <ul
+                    id={languageMenuId}
+                    className="settings-drawer__language-menu"
+                    role="menu"
+                    aria-label={ti('settings.language_menu.aria_label')}
+                  >
+                    {UI_LANGUAGE_OPTIONS.map((option, optionIndex) => {
                       const isActive = option.value === draft.uiLanguage
                       return (
                         <li key={option.value} role="none">
                           <button
+                            ref={(node) => {
+                              languageOptionRefs.current[optionIndex] = node
+                            }}
                             type="button"
                             role="menuitemradio"
                             aria-checked={isActive}
@@ -688,6 +920,7 @@ export function SettingsDrawer({
                               }))
                               setLanguageMenuOpen(false)
                             }}
+                            onKeyDown={(event) => handleLanguageMenuItemKeyDown(event, optionIndex)}
                           >
                             <span className="settings-drawer__language-menu-native">
                               {option.nativeLabel}
@@ -704,8 +937,14 @@ export function SettingsDrawer({
                   </ul>
                 ) : null}
               </div>
-              <button type="button" className="ghost-button" onClick={handleDismiss}>
-                {ti('common.close')}
+              <button
+                type="button"
+                className="settings-drawer__icon-button settings-drawer__icon-button--danger"
+                onClick={handleDismiss}
+                aria-label={ti('common.close')}
+                title={ti('common.close')}
+              >
+                <PetControlIcon name="close" />
               </button>
             </div>
           </div>
@@ -714,51 +953,69 @@ export function SettingsDrawer({
         <div className="settings-drawer__body" ref={drawerBodyRef}>
           {settingsView === 'home' ? (
             <div className="settings-home">
-              <div className="settings-appearance-switch" role="group" aria-label={ti('settings.appearance.label')}>
+              <div className="settings-appearance-switch" role="radiogroup" aria-label={ti('settings.appearance.label')}>
                 <span className="settings-appearance-switch__label">{ti('settings.appearance.label')}</span>
                 <div className="settings-appearance-switch__control">
-                  {SETTINGS_APPEARANCE_OPTIONS.map((option) => {
+                  {SETTINGS_APPEARANCE_OPTIONS.map((option, optionIndex) => {
                     const isActive = option.tone === settingsThemeTone
+                    const optionLabel = ti(option.labelKey)
+                    const optionTitle = `${ti('settings.appearance.label')}: ${optionLabel}`
+
                     return (
                       <button
+                        ref={(node) => {
+                          appearanceOptionRefs.current[optionIndex] = node
+                        }}
                         key={option.id}
                         type="button"
                         className={`settings-appearance-switch__option ${isActive ? 'is-active' : ''}`}
-                        aria-pressed={isActive}
-                        onClick={() => {
-                          setDraft((prev) => ({
-                            ...prev,
-                            themeId: option.id,
-                          }))
-                        }}
+                        role="radio"
+                        aria-checked={isActive}
+                        tabIndex={optionIndex === selectedAppearanceIndex ? 0 : -1}
+                        title={optionTitle}
+                        onClick={() => selectAppearanceOption(optionIndex)}
+                        onKeyDown={(event) => handleAppearanceOptionKeyDown(event, optionIndex)}
                       >
-                        {ti(option.labelKey)}
+                        {optionLabel}
                       </button>
                     )
                   })}
                 </div>
               </div>
-              {settingsHomeCards.map((card) => (
-                <button
-                  key={card.key}
-                  type="button"
-                  className="settings-home-card"
-                  data-section={card.key}
-                  onClick={() => handleOpenSettingsSection(card.sectionId)}
-                >
-                  <span className="settings-home-card__glyph" aria-hidden="true">
-                    {renderSettingsCardIcon(card.glyph)}
-                  </span>
-                  <span className="settings-home-card__label">{card.title}</span>
-                  <span className="settings-home-card__value">{card.preview[0] ?? ''}</span>
-                </button>
-              ))}
+              {settingsHomeCards.map((card) => {
+                const previewText = card.preview.filter(Boolean).join(' / ')
+                const cardLabel = previewText ? `${card.title}: ${previewText}` : card.title
+
+                return (
+                  <button
+                    key={card.key}
+                    type="button"
+                    className="settings-home-card"
+                    data-section={card.key}
+                    aria-label={cardLabel}
+                    title={cardLabel}
+                    onClick={() => handleOpenSettingsSection(card.sectionId)}
+                  >
+                    <span className="settings-home-card__glyph" aria-hidden="true">
+                      {renderSettingsCardIcon(card.glyph)}
+                    </span>
+                    <span className="settings-home-card__label">{card.title}</span>
+                    <span className="settings-home-card__value">{card.preview[0] ?? ''}</span>
+                  </button>
+                )
+              })}
             </div>
           ) : (
             <div className="settings-page" data-section={activeSectionId}>
               <div className="settings-page__header">
-                <button type="button" className="settings-page__back" onClick={handleReturnToSettingsHome}>
-                  <span aria-hidden="true">{'<'}</span>
+                <button
+                  type="button"
+                  className="settings-page__back"
+                  onClick={handleReturnToSettingsHome}
+                  aria-label={ti('settings.page.back')}
+                  title={ti('settings.page.back')}
+                >
+                  <PetControlIcon name="back" />
                   <span>{ti('settings.page.back')}</span>
                 </button>
 
@@ -785,12 +1042,20 @@ export function SettingsDrawer({
         </div>
 
       <div className="settings-drawer__actions">
-        <button type="button" className="ghost-button" onClick={handleDismiss}>
+        <button
+          type="button"
+          className="ghost-button"
+          onClick={handleDismiss}
+          aria-label={ti('common.cancel')}
+          title={ti('common.cancel')}
+        >
           {ti('common.cancel')}
         </button>
         <button
           type="button"
           className="primary-button"
+          aria-label={ti('settings.save')}
+          title={ti('settings.save')}
           onClick={() =>
             onSave({
               ...draft,
