@@ -130,6 +130,7 @@ async function runSpeechInputConnectionSmokeTest(payload, baseUrl) {
   }
 
   const response = await performNetworkRequest(endpoint, {
+    allowPrivateNetwork: true,
     method: 'POST',
     headers,
     body,

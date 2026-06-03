@@ -34,6 +34,122 @@ function extractTextFromContent(content) {
   return ''
 }
 
+function hasNonEmptyString(value) {
+  return String(value ?? '').trim().length > 0
+}
+
+function modelSupportsVision(model) {
+  const id = String(model ?? '').trim()
+  if (!id) return false
+  return [
+    /gpt-4o(?!-mini-tts|-mini-transcribe|-transcribe)/i,
+    /gpt-4\.1/i,
+    /gpt-4-vision/i,
+    /gpt-4-turbo/i,
+    /gpt-5/i,
+    /\bo3\b|\bo4\b/i,
+    /claude-3/i,
+    /claude-4/i,
+    /claude-5/i,
+    /claude-(opus|sonnet|haiku)/i,
+    /gemini/i,
+    /qwen.*-vl/i,
+    /qwen2(\.5)?-vl/i,
+    /\bvl-/i,
+    /-vl\b/i,
+    /\bvision\b/i,
+    /pixtral/i,
+    /llava/i,
+    /llama-?\d+(\.\d+)?-vision/i,
+    /minicpm-?v/i,
+    /moondream/i,
+    /internvl/i,
+    /cogvlm/i,
+    /yi-vl/i,
+    /glm-4v/i,
+    /step-1v/i,
+  ].some((pattern) => pattern.test(id))
+}
+
+function modelSupportsSpeech(model) {
+  const id = String(model ?? '').trim().toLowerCase()
+  return Boolean(id && /realtime|audio|voice|tts|transcribe|speech/.test(id))
+}
+
+function estimateModelContextWindowTokens(model) {
+  const id = String(model ?? '').trim().toLowerCase()
+  if (!id) return null
+  if (/2m|2000k|grok-4\.20|grok-4-1-fast|grok-4-fast/.test(id)) return 2_000_000
+  if (/gpt-5\.4-mini/.test(id)) return 400_000
+  if (/gpt-5\.4-nano/.test(id)) return 128_000
+  if (/qwen3\.6-max/.test(id)) return 256_000
+  if (/1m|1000k|grok-4\.3|gpt-5\.5|gpt-5\.4|gemini-(3|2\.5)|deepseek-v4|deepseek-chat|deepseek-reasoner|qwen3\.6|qwen3\.5-(plus|flash)|qwen3-coder-(plus|flash)/.test(id)) return 1_000_000
+  if (/260k|256k|250k|qwen3-max|qwen3-(235b|next|32b|30b|14b|8b|4b|1\.7b|0\.6b)|kimi-k2|moonshotai\/kimi-k2|doubao-seed-2|seed-2|dola-seed-2|mistral-(large|medium-3-5)|magistral|devstral/.test(id)) return 256_000
+  if (/200k|claude|sonnet|opus|haiku|minimax-m2|glm-5|glm-4\.7/.test(id)) return 200_000
+  if (/128k|qwen3|max|gpt-5|gpt-4\.1|o3|o4|ernie-5|llama-3\.3|nemotron/.test(id)) return 128_000
+  if (/64k/.test(id)) return 64_000
+  if (/32k|codestral|qwen.*coder|coder/.test(id)) return 32_000
+  if (/16k|llama-3|mistral-small/.test(id)) return 16_000
+  if (/8k|qwen3:8b|qwen2|llama|mistral-7b/.test(id)) return 8_000
+  return null
+}
+
+function getProviderRunLocation(providerId) {
+  const normalized = normalizeChatProviderId(providerId)
+  if (normalized === 'ollama') return 'local'
+  if (normalized === 'custom') return 'custom'
+  return 'cloud'
+}
+
+function buildDiscoveredModel(providerId, entry) {
+  const id = String(entry?.id ?? entry?.name ?? entry?.model ?? '').trim()
+  if (!id) return null
+  const normalizedProviderId = normalizeChatProviderId(providerId)
+
+  return {
+    id,
+    label: id,
+    providerId: normalizedProviderId,
+    source: normalizedProviderId === 'ollama' ? 'ollama' : 'preset',
+    sizeBytes: typeof entry?.size === 'number' ? entry.size : null,
+    modifiedAt: typeof entry?.modified_at === 'string' ? entry.modified_at : null,
+    family: typeof entry?.details?.family === 'string' ? entry.details.family : null,
+    capabilities: {
+      runLocation: getProviderRunLocation(normalizedProviderId),
+      supportsTools: true,
+      supportsVision: modelSupportsVision(id),
+      supportsSpeech: modelSupportsSpeech(id),
+      contextWindowTokens: estimateModelContextWindowTokens(id),
+      requiresApiKey: chatProviderRequiresApiKey(normalizedProviderId),
+    },
+  }
+}
+
+export function extractChatModelEntries(data) {
+  if (Array.isArray(data?.data)) {
+    return data.data
+      .map((item) => ({ ...item, id: String(item?.id ?? '').trim() }))
+      .filter((item) => item.id)
+  }
+
+  if (Array.isArray(data?.models)) {
+    return data.models
+      .map((item) => ({
+        ...item,
+        id: String(item?.name ?? item?.model ?? item?.id ?? '').trim(),
+      }))
+      .filter((item) => item.id)
+  }
+
+  return []
+}
+
+export function buildDiscoveredChatModels({ providerId, data }) {
+  return extractChatModelEntries(data)
+    .map((entry) => buildDiscoveredModel(providerId, entry))
+    .filter(Boolean)
+}
+
 const CHAT_PROVIDER_PROTOCOLS = Object.freeze({
   anthropic: 'anthropic',
   minimax: 'anthropic',
@@ -100,6 +216,25 @@ export function getChatProviderProtocol(providerId, baseUrl = '') {
 export function chatProviderRequiresApiKey(providerId) {
   const normalized = normalizeChatProviderId(providerId)
   return CHAT_PROVIDER_API_KEY_POLICY[normalized] ?? true
+}
+
+export function getChatConnectionTestPreflightFailure({ providerId, apiKey }) {
+  const normalizedProviderId = normalizeChatProviderId(providerId)
+  if (!chatProviderRequiresApiKey(normalizedProviderId) || hasNonEmptyString(apiKey)) {
+    return null
+  }
+
+  if (normalizedProviderId === 'deepseek') {
+    return {
+      ok: false,
+      message: 'DeepSeek API 需要先填写 API Key。请在模型设置里选择 DeepSeek，并填入 DeepSeek 控制台生成的 API Key。',
+    }
+  }
+
+  return {
+    ok: false,
+    message: '请先填写 API Key。',
+  }
 }
 
 function buildChatAuthorizationHeaders(providerId, apiKey, baseUrl = '') {
@@ -270,6 +405,164 @@ export function buildChatConnectionTestRequest(payload) {
   }
 }
 
+export function buildChatModelListRequest(payload) {
+  const providerId = normalizeChatProviderId(payload?.providerId, payload?.baseUrl)
+  const baseUrl = normalizeBaseUrl(payload?.baseUrl)
+  const protocol = getChatProviderProtocol(providerId, baseUrl)
+
+  return {
+    providerId,
+    protocol,
+    endpoint: protocol === 'anthropic'
+      ? resolveAnthropicEndpoint(baseUrl, '/v1/models')
+      : `${baseUrl}/models`,
+    request: {
+      method: 'GET',
+      headers: buildChatAuthorizationHeaders(providerId, payload?.apiKey, baseUrl),
+    },
+  }
+}
+
+export function summarizeChatConnectionTestSuccess({ providerId, successKind, data, model }) {
+  const checkedAt = new Date().toISOString()
+  if (successKind === 'message') {
+    return {
+      ok: true,
+      status: 'ready',
+      message: '连接成功，已收到模型响应。',
+      checkedAt,
+    }
+  }
+
+  const discoveredModels = buildDiscoveredChatModels({ providerId, data })
+  const modelIds = discoveredModels.map((item) => item.id)
+  const requestedModel = String(model ?? '').trim()
+  const normalizedProviderId = normalizeChatProviderId(providerId)
+
+  if (normalizedProviderId === 'ollama') {
+    if (!modelIds.length) {
+      return {
+        ok: false,
+        status: 'model_missing',
+        message: 'Ollama 已连接，但还没有发现可用模型。请先运行：ollama pull qwen3:8b。',
+        recommendation: '运行 ollama pull qwen3:8b，或在 Ollama 中安装任意可用聊天模型后刷新。',
+        discoveredModels,
+        checkedAt,
+      }
+    }
+
+    if (requestedModel && !modelIds.includes(requestedModel)) {
+      return {
+        ok: false,
+        status: 'model_missing',
+        message: `Ollama 已连接，但没有找到模型「${requestedModel}」。请先运行：ollama pull ${requestedModel}，或在设置里填写已安装模型。`,
+        recommendation: `运行 ollama pull ${requestedModel}，或在模型列表里选择已安装模型。`,
+        discoveredModels,
+        checkedAt,
+      }
+    }
+  }
+
+  if (modelIds.length) {
+    return {
+      ok: true,
+      status: 'ready',
+      message: `连接成功，可用模型示例：${modelIds.slice(0, 3).join(', ')}`,
+      discoveredModels,
+      checkedAt,
+    }
+  }
+
+  return {
+    ok: true,
+    status: 'ready',
+    message: '连接成功，接口已正常响应。',
+    discoveredModels,
+    checkedAt,
+  }
+}
+
+function extractConnectionFailureMessage(data) {
+  const value = data?.error?.message
+    ?? data?.error
+    ?? data?.message
+  if (typeof value === 'string') {
+    return value.trim()
+  }
+  return ''
+}
+
+export function summarizeChatConnectionTestFailure({ providerId, status, data, hasApiKey, model }) {
+  const checkedAt = new Date().toISOString()
+  const normalizedProviderId = normalizeChatProviderId(providerId)
+  const rawMessage = extractConnectionFailureMessage(data)
+  const requestedModel = String(model ?? '').trim()
+
+  if (status === 401) {
+    if (normalizedProviderId === 'deepseek') {
+      return {
+        ok: false,
+        status: 'needs_key',
+        message: hasApiKey
+          ? 'DeepSeek API Key 无效或已失效，请检查 DeepSeek 控制台中的 Key。'
+          : 'DeepSeek API 需要先填写 API Key。请在模型设置里选择 DeepSeek，并填入 DeepSeek 控制台生成的 API Key。',
+        recommendation: '打开 DeepSeek 控制台重新生成 API Key，并确认当前账号余额与模型权限。',
+        checkedAt,
+      }
+    }
+
+    return {
+      ok: false,
+      status: 'needs_key',
+      message: hasApiKey
+        ? 'URL 可访问，但 API Key 无效或已失效。'
+        : 'URL 可访问，但还没有填写 API Key。',
+      recommendation: '检查 API Key 是否填入、是否过期，以及当前 provider 是否要求 Bearer token。',
+      checkedAt,
+    }
+  }
+
+  if (normalizedProviderId === 'deepseek') {
+    if (status === 402 || status === 403) {
+      return {
+        ok: false,
+        status: 'needs_key',
+        message: rawMessage || 'DeepSeek API 返回权限或余额限制，请检查账号余额、模型权限和 API Key 状态。',
+        recommendation: '检查 DeepSeek 账号余额、模型权限和 API Key 状态。',
+        checkedAt,
+      }
+    }
+
+    if (status === 404) {
+      return {
+        ok: false,
+        status: 'misconfigured',
+        message: 'DeepSeek API 地址或模型名不匹配。建议 Base URL 使用 https://api.deepseek.com，模型先用 deepseek-v4-flash。',
+        recommendation: 'Base URL 改为 https://api.deepseek.com，模型先用 deepseek-v4-flash。',
+        checkedAt,
+      }
+    }
+
+    if (requestedModel && /model|模型|not found|does not exist/i.test(rawMessage)) {
+      return {
+        ok: false,
+        status: 'model_missing',
+        message: `DeepSeek 没有接受当前模型「${requestedModel}」。建议先改成 deepseek-v4-flash，再重新测试。`,
+        recommendation: '模型先改成 deepseek-v4-flash；如果需要更强推理，再切 deepseek-v4-pro。',
+        checkedAt,
+      }
+    }
+  }
+
+  return {
+    ok: false,
+    status: status >= 500 ? 'unreachable' : 'error',
+    message: rawMessage || `接口返回异常状态：${status}`,
+    recommendation: '检查 API Base URL、网络代理、模型名和服务商状态。',
+    checkedAt,
+  }
+}
+
 export function extractChatResponseContent(providerId, payload) {
   if (getChatProviderProtocol(providerId) === 'anthropic') {
     return extractTextFromContent(payload?.content)
@@ -392,8 +685,8 @@ export function extractChatStreamingDeltaToolCalls(providerId, payload) {
       && payload?.content_block?.type === 'tool_use'
     ) {
       // Validate each field the same way the OpenAI branch does. Anthropic
-      // generally sends id + name on the start event, but some proxies
-      // (minimax's /anthropic adapter, self-hosted Claude gateways) have
+      // generally sends id + name on the start event, but some compatible
+      // Anthropic-style gateways have
       // been observed dropping one or the other — passing `undefined`
       // through would create a malformed tool_call the accumulator can't
       // serialise cleanly.

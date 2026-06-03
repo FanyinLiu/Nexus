@@ -12,6 +12,7 @@
 
 import { memo, useCallback } from 'react'
 
+import { PetControlIcon } from '../../components/PetControlIcon'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import type { AppLocale } from '../../types/i18n.ts'
 import { useCrisisPanelState, dismissCrisis } from './crisisPanelState.ts'
@@ -67,9 +68,10 @@ function CrisisHotlinePanelInner({ locale }: Props) {
           type="button"
           className="crisis-hotline-panel__dismiss"
           aria-label={t('safety.crisis.dismiss_aria')}
+          title={t('safety.crisis.dismiss_aria')}
           onClick={handleDismiss}
         >
-          ×
+          <PetControlIcon name="close" className="crisis-hotline-panel__dismissIcon" />
         </button>
 
         <h2 className="crisis-hotline-panel__title">

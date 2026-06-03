@@ -12,14 +12,7 @@
 
 import { runAgentLoop, type AgentExecuteTurn } from './agentLoop.ts'
 import { updateErrand, type ErrandRecord } from './errandStore.ts'
-import {
-  ERRAND_RUNNER_STATE_STORAGE_KEY,
-  readJson,
-  writeJson,
-} from '../../lib/storage'
-import {
-  type ErrandRunnerState,
-} from './errandPolicy.ts'
+export { readErrandRunnerState, writeErrandRunnerState } from './errandRunnerState.ts'
 import type { UiLanguage } from '../../types'
 
 export interface RunErrandDeps {
@@ -74,23 +67,4 @@ export async function runErrand(
       error: err instanceof Error ? err.message : String(err),
     }) ?? running
   }
-}
-
-// ── Runner state persistence ─────────────────────────────────────────────
-
-export function readErrandRunnerState(): ErrandRunnerState {
-  const raw = readJson<unknown>(ERRAND_RUNNER_STATE_STORAGE_KEY, {})
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
-  const obj = raw as Record<string, unknown>
-  const state: ErrandRunnerState = {}
-  if (typeof obj.lastRunAt === 'string') state.lastRunAt = obj.lastRunAt
-  if (typeof obj.nightStartedAt === 'string') state.nightStartedAt = obj.nightStartedAt
-  if (typeof obj.ranThisNight === 'number' && Number.isFinite(obj.ranThisNight)) {
-    state.ranThisNight = obj.ranThisNight
-  }
-  return state
-}
-
-export function writeErrandRunnerState(state: ErrandRunnerState): void {
-  writeJson(ERRAND_RUNNER_STATE_STORAGE_KEY, state)
 }

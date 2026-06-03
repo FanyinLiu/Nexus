@@ -8,7 +8,10 @@ import {
   normalizeBaseUrl as _normalizeBaseUrl,
   shouldLabelAsConnectionFailure as _shouldLabelAsConnectionFailure,
 } from './netHelpers.js'
-import { checkChatBaseUrlSafety } from './services/urlSafety.js'
+import {
+  checkChatBaseUrlSafety,
+  checkUrlSafetyWithDns,
+} from './services/urlSafety.js'
 
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
 
@@ -54,6 +57,7 @@ export async function withRequestTimeout(
 
 export async function performNetworkRequest(url, options = {}) {
   const {
+    allowPrivateNetwork = false,
     body,
     timeoutMs = CONNECTION_TEST_TIMEOUT_MS,
     timeoutMessage = '请求超时，请检查网络、代理或服务状态。',
@@ -62,12 +66,13 @@ export async function performNetworkRequest(url, options = {}) {
     ...rest
   } = options
 
-  // SSRF guard: refuse URLs that point at cloud-metadata IMDS endpoints
-  // before we hit the network. Loopback/LAN stay allowed — Nexus users
-  // run local LLMs that genuinely live there. The check is permissive
-  // by design; see checkChatBaseUrlSafety in urlSafety.js for the
-  // specific threats it closes (AWS/GCP/Azure metadata exfil).
-  const safety = checkChatBaseUrlSafety(url)
+  // SSRF guard: strict by default for tools, provider-returned download URLs,
+  // and other main-process fetches. User-configured model / voice provider
+  // base URLs can opt into loopback/LAN with allowPrivateNetwork after their
+  // caller has already validated that address as a chat/API base URL.
+  const safety = allowPrivateNetwork
+    ? checkChatBaseUrlSafety(url)
+    : await checkUrlSafetyWithDns(url, { allowHttp: true })
   if (!safety.ok) {
     throw new Error(`refusing to fetch from this URL: ${safety.reason}`)
   }
@@ -108,6 +113,45 @@ export async function performNetworkRequest(url, options = {}) {
     timeoutMessage,
     abortController,
   )
+}
+
+export async function readResponseBufferWithLimit(response, options = {}) {
+  const maxBytes = Number.parseInt(String(options.maxBytes ?? 16 * 1024 * 1024), 10) || 16 * 1024 * 1024
+  const label = String(options.label ?? 'response body')
+  const contentLength = Number.parseInt(response.headers.get('content-length') ?? '0', 10)
+
+  if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+    throw new Error(`${label} 太大：${contentLength} bytes。`)
+  }
+
+  const reader = response.body?.getReader?.()
+  if (!reader) {
+    const buffer = Buffer.from(await response.arrayBuffer())
+    if (buffer.length > maxBytes) {
+      throw new Error(`${label} 太大：${buffer.length} bytes。`)
+    }
+    return buffer
+  }
+
+  const chunks = []
+  let totalBytes = 0
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) {
+      break
+    }
+
+    const chunk = Buffer.from(value)
+    totalBytes += chunk.length
+    if (totalBytes > maxBytes) {
+      await reader.cancel?.().catch(() => undefined)
+      throw new Error(`${label} 太大：超过 ${maxBytes} bytes。`)
+    }
+    chunks.push(chunk)
+  }
+
+  return Buffer.concat(chunks, totalBytes)
 }
 
 /**

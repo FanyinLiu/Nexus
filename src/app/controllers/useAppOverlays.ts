@@ -17,24 +17,27 @@ import {
   syncTextProviderProfiles,
 } from '../../lib'
 import { setSettingsSnapshot } from '../store/settingsStore'
+import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type {
   AppSettings,
   DebugConsoleEvent,
   NotificationChannel,
+  PlatformProfile,
   ReminderTask,
 } from '../../types'
 
-type MemoryController = ReturnType<typeof import('../../hooks').useMemory>
-type ChatController = ReturnType<typeof import('../../hooks').useChat>
-type PetController = ReturnType<typeof import('../../hooks').usePetBehavior>
-type VoiceController = ReturnType<typeof import('../../hooks').useVoice>
+type MemoryController = ReturnType<typeof import('../../hooks/useMemory').useMemory>
+type ChatController = ReturnType<typeof import('../../hooks/useChat').useChat>
+type PetController = ReturnType<typeof import('../../hooks/usePetBehavior').usePetBehavior>
+type VoiceController = ReturnType<typeof import('../../hooks/useVoice').useVoice>
 type ReminderTaskStore = ReturnType<typeof import('./useReminderTaskStore').useReminderTaskStore>
 
 type UseAppOverlaysOptions = {
   view: 'pet' | 'panel'
   settings: AppSettings
+  platformProfile: PlatformProfile
   setSettings: Dispatch<SetStateAction<AppSettings>>
   settingsOpen: boolean
   setSettingsOpen: Dispatch<SetStateAction<boolean>>
@@ -42,7 +45,6 @@ type UseAppOverlaysOptions = {
   petRuntimeContinuousVoiceActive: boolean
   reminderTasks: ReminderTask[]
   debugConsoleEvents: DebugConsoleEvent[]
-  subagentTasks?: import('../../types/subagent').SubagentTask[]
   loadPetModels: () => Promise<PetModelDefinition[]>
   memory: Pick<
     MemoryController,
@@ -103,6 +105,7 @@ type UseAppOverlaysOptions = {
 export function useAppOverlays({
   view,
   settings,
+  platformProfile,
   setSettings,
   settingsOpen,
   setSettingsOpen,
@@ -110,7 +113,6 @@ export function useAppOverlays({
   petRuntimeContinuousVoiceActive,
   reminderTasks,
   debugConsoleEvents,
-  subagentTasks,
   loadPetModels,
   memory,
   chat,
@@ -138,9 +140,16 @@ export function useAppOverlays({
       completeOnboarding?: boolean
     },
   ) => {
-    const launchOnStartup = await window.desktopPet?.setLaunchOnStartup?.(
-      nextSettings.launchOnStartup,
-    ).catch(() => nextSettings.launchOnStartup) ?? nextSettings.launchOnStartup
+    const launchOnStartupRequested = platformProfile.startup.supported
+      ? nextSettings.launchOnStartup
+      : false
+    const launchOnStartup = platformProfile.startup.supported
+      ? (
+          await window.desktopPet?.setLaunchOnStartup?.(launchOnStartupRequested)
+            .catch(() => launchOnStartupRequested)
+          ?? launchOnStartupRequested
+        )
+      : false
 
     const normalizedSpeechOutputApiBaseUrl = normalizeSpeechOutputApiBaseUrl(
       nextSettings.speechOutputProviderId,
@@ -197,7 +206,7 @@ export function useAppOverlays({
         }
       }
     }
-  }, [chat, onboardingPending, setSettings, setSettingsOpen])
+  }, [chat, onboardingPending, platformProfile.startup.supported, setSettings, setSettingsOpen])
 
   const chatMessageCount = useMemo(
     () => chat.messages.filter((message) => message.role !== 'system').length,
@@ -224,7 +233,6 @@ export function useAppOverlays({
     voicePipeline: voice.voicePipeline,
     voiceTrace: voice.voiceTrace,
     debugConsoleEvents,
-    subagentTasks,
     onClose: () => setSettingsOpen(false),
     onExportChatHistory: chat.exportChatHistory,
     onImportChatHistory: chat.importChatHistory,
@@ -264,6 +272,100 @@ export function useAppOverlays({
       }
 
       const result = await window.desktopPet.importPetModel()
+      if (!result) {
+        return null
+      }
+
+      const refreshedModels = await loadPetModels()
+      return {
+        ...result,
+        model: refreshedModels.find((model) => model.id === result.model.id) ?? result.model,
+      }
+    },
+    onImportCodexPetGallery: async (input) => {
+      if (!window.desktopPet?.importCodexPetGallery) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      const result = await window.desktopPet.importCodexPetGallery(input)
+      const refreshedModels = await loadPetModels()
+      return {
+        ...result,
+        model: refreshedModels.find((model) => model.id === result.model.id) ?? result.model,
+      }
+    },
+    onSelectImportedPetModel: async (petModelId) => {
+      await commitSettingsUpdate((current) => {
+        if (current.petModelId === petModelId) {
+          return current
+        }
+
+        return {
+          ...current,
+          petModelId,
+        }
+      }, setSettings)
+    },
+    onListCodexPetGallery: async (query = '') => {
+      if (!window.desktopPet?.listCodexPetGallery) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      return window.desktopPet.listCodexPetGallery({
+        query,
+        limit: 12,
+      })
+    },
+    onCreateCodexPetCreatorKit: async (payload) => {
+      if (!window.desktopPet?.createCodexPetCreatorKit) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      return window.desktopPet.createCodexPetCreatorKit(payload)
+    },
+    onInspectCodexPetCreatorKit: async (payload) => {
+      if (!window.desktopPet?.inspectCodexPetCreatorKit) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      return window.desktopPet.inspectCodexPetCreatorKit(payload)
+    },
+    onAssembleCodexPetCreatorKit: async (payload) => {
+      if (!window.desktopPet?.assembleCodexPetCreatorKit) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      const result = await window.desktopPet.assembleCodexPetCreatorKit(payload)
+      if (!result) {
+        return null
+      }
+
+      const refreshedModels = await loadPetModels()
+      return {
+        ...result,
+        model: refreshedModels.find((model) => model.id === result.model.id) ?? result.model,
+      }
+    },
+    onInstallCodexPetCreatorKitToCodex: async (payload) => {
+      if (!window.desktopPet?.installCodexPetCreatorKitToCodex) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      return window.desktopPet.installCodexPetCreatorKitToCodex(payload)
+    },
+    onOpenCodexPetCreatorKitPath: async (payload) => {
+      if (!window.desktopPet?.openCodexPetCreatorKitPath) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      return window.desktopPet.openCodexPetCreatorKitPath(payload)
+    },
+    onCreateSpritePetFromImage: async () => {
+      if (!window.desktopPet?.createSpritePetFromImage) {
+        throw new Error(t('settings.import_pet_model_unsupported'))
+      }
+
+      const result = await window.desktopPet.createSpritePetFromImage()
       if (!result) {
         return null
       }
@@ -345,12 +447,14 @@ export function useAppOverlays({
     },
     onRunAudioSmokeTest: async (draftSettings) => voice.runAudioSmokeTest(draftSettings),
     onClearDebugConsole: clearDebugConsoleEvents,
+    platformProfile,
   }
 
   const onboardingGuideProps: OnboardingGuideProps = {
     open: onboardingOpen,
     view,
     settings,
+    platformProfile,
     petModelPresets,
     onDismiss: () => setOnboardingOpen(false),
     onSave: async (nextSettings) => {

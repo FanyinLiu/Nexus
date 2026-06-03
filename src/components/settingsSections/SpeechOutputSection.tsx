@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import type { Dispatch, ReactNode, SetStateAction } from 'react'
+import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from 'react'
 import {
   buildVolcengineCredential,
   clampNumber,
@@ -22,6 +22,7 @@ import {
 } from '../../lib/audioProviders'
 import { SPEECH_OUTPUT_PROVIDERS } from '../../lib/providerCatalog'
 import { updateCurrentSpeechOutputProviderProfile } from '../../lib/speechProviderProfiles'
+import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type {
   AppSettings,
@@ -46,6 +47,11 @@ function TuningSlider({ label, displayValue, hint, disabledHint, value, min, max
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onChange(clampNumber(parseNumberInput(event.target.value, value), min, max))
   }
+  const rangeProgress = max > min ? clampNumber(((value - min) / (max - min)) * 100, 0, 100) : 0
+  const rangeStyle = {
+    '--settings-tts-range-progress': `${rangeProgress}%`,
+  } as CSSProperties
+
   return (
     <div className={`settings-tts-tuning__item ${disabled ? 'is-disabled' : ''}`}>
       <div className="settings-tts-tuning__header">
@@ -53,8 +59,29 @@ function TuningSlider({ label, displayValue, hint, disabledHint, value, min, max
         <span>{displayValue}</span>
       </div>
       <div className="settings-tts-tuning__controls">
-        <input className="settings-tts-tuning__range" type="range" min={min} max={max} step={step} value={value} disabled={disabled} onChange={handleChange} />
-        <input className="settings-tts-tuning__number" type="number" min={min} max={max} step={step} value={value} disabled={disabled} onChange={handleChange} />
+        <input
+          className="settings-tts-tuning__range"
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          disabled={disabled}
+          aria-label={label}
+          style={rangeStyle}
+          onChange={handleChange}
+        />
+        <input
+          className="settings-tts-tuning__number"
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          disabled={disabled}
+          aria-label={label}
+          onChange={handleChange}
+        />
       </div>
       <p className="settings-drawer__hint">{disabled ? disabledHint : hint}</p>
     </div>
@@ -128,7 +155,11 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
   const isEdgeTtsSpeechOutput = isEdgeTtsSpeechOutputProvider(draft.speechOutputProviderId)
   const hideApiCredentials = isSpeechOutputKeyless(draft.speechOutputProviderId)
   const showCustomVoiceInput = supportsCustomSpeechOutputVoiceId(draft.speechOutputProviderId)
-  const speechOutputVolcengineCredentials = parseVolcengineCredentialParts(draft.speechOutputApiKey)
+  const speechOutputApiKeyIsVaultRef = isVaultRefString(draft.speechOutputApiKey)
+  const speechOutputApiKeyInputValue = displaySecretInputValue(draft.speechOutputApiKey)
+  const speechOutputVolcengineCredentials = speechOutputApiKeyIsVaultRef
+    ? ({ appId: '', accessToken: '' } satisfies VolcengineCredentialParts)
+    : parseVolcengineCredentialParts(draft.speechOutputApiKey)
   const speechOutputModelLabel = isVolcengineSpeechOutput
     ? ti('settings.speech_output.cluster')
     : ti('settings.speech_output.model')
@@ -149,7 +180,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
   }
 
   return (
-    <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
+    <section className={`settings-section settings-speech-config-section ${active ? 'is-active' : 'is-hidden'}`}>
       <div className="settings-section__title-row">
         <div>
           <h4>{ti('settings.speech_output.title')}</h4>
@@ -169,7 +200,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
         </button>
       </div>
 
-      <label>
+      <label className="settings-control-card settings-speech-config-field">
         <span>{ti('settings.speech_output.provider')}</span>
         <select
           value={draft.speechOutputProviderId}
@@ -182,7 +213,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
       </label>
 
 
-      <p className="settings-drawer__hint">
+      <p className="settings-drawer__hint settings-speech-config-note">
         {ti(speechOutputProvider.notes as TranslationKey)}
         {speechOutputProvider.baseUrl
           ? ` ${ti('settings.speech_output.default_endpoint')}${speechOutputProvider.baseUrl}`
@@ -193,9 +224,10 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
       </p>
 
       {!isEdgeTtsSpeechOutput ? (
-        <label>
+        <label className="settings-control-card settings-speech-config-field">
           <span>{ti('settings.speech_output.endpoint_url')}</span>
           <UrlInput
+            uiLanguage={draft.uiLanguage}
             value={draft.speechOutputApiBaseUrl}
             onChange={(event) =>
               setDraft((prev) => updateCurrentSpeechOutputProviderProfile(prev, {
@@ -209,10 +241,11 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
       {isVolcengineSpeechOutput ? (
         <>
           <div className="settings-grid settings-grid--two">
-            <label>
+            <label className="settings-control-card settings-speech-config-field">
               <span>{ti('settings.speech_output.volcengine_app_id')}</span>
               <input
                 value={speechOutputVolcengineCredentials.appId}
+                placeholder={speechOutputApiKeyIsVaultRef ? '********' : undefined}
                 onChange={(event) =>
                   updateSpeechOutputVolcengineCredential({
                     appId: event.target.value,
@@ -221,11 +254,12 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
               />
             </label>
 
-            <label>
+            <label className="settings-control-card settings-speech-config-field">
               <span>{ti('settings.speech_output.volcengine_token')}</span>
               <input
                 type="password"
                 value={speechOutputVolcengineCredentials.accessToken}
+                placeholder={speechOutputApiKeyIsVaultRef ? '********' : undefined}
                 onChange={(event) =>
                   updateSpeechOutputVolcengineCredential({
                     accessToken: event.target.value,
@@ -235,16 +269,16 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
             </label>
           </div>
 
-          <p className="settings-drawer__hint">
+          <p className="settings-drawer__hint settings-speech-config-note">
             {ti('settings.speech_output.volcengine_credential_hint')}
           </p>
         </>
       ) : !hideApiCredentials ? (
-        <label>
+        <label className="settings-control-card settings-speech-config-field">
           <span>{ti('settings.speech_output.api_key')}</span>
           <input
             type="password"
-            value={draft.speechOutputApiKey}
+            value={speechOutputApiKeyInputValue}
             onChange={(event) =>
               setDraft((prev) => updateCurrentSpeechOutputProviderProfile(prev, {
                 apiKey: event.target.value,
@@ -255,7 +289,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
       ) : null}
 
       {speechOutputModelOptions.length || speechOutputProvider.defaultModel ? (
-        <label>
+        <label className="settings-control-card settings-speech-config-field">
           <span>{speechOutputModelLabel}</span>
           {speechOutputModelOptions.length ? (
             <select
@@ -286,7 +320,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
       ) : null}
 
       {isVolcengineSpeechOutput ? (
-        <p className="settings-drawer__hint">
+        <p className="settings-drawer__hint settings-speech-config-note">
           {ti('settings.speech_output.volcengine_cluster_hint')}
         </p>
       ) : null}
@@ -311,7 +345,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
             </button>
           </div>
 
-          <label>
+          <label className="settings-control-card settings-speech-config-field">
             <span>{ti('settings.speech_output.minimax_voices_label')}</span>
             <select
               value={speechVoiceOptions.some((voice) => voice.id === draft.speechOutputVoice)
@@ -341,7 +375,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
           </label>
 
           {speechVoiceOptions.length ? (
-            <p className="settings-drawer__hint">
+            <p className="settings-drawer__hint settings-speech-config-note">
               {(() => {
                 const current = speechVoiceOptions.find((voice) => voice.id === draft.speechOutputVoice)
                 return current
@@ -355,7 +389,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
 
       {isEdgeTtsSpeechOutput ? (
         <>
-          <label>
+          <label className="settings-control-card settings-speech-config-field">
             <span>{speechOutputVoiceLabel}</span>
             {speechVoiceOptions.length ? (
               <select
@@ -382,7 +416,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
               />
             )}
           </label>
-          <p className="settings-drawer__hint">
+          <p className="settings-drawer__hint settings-speech-config-note">
             {ti('settings.speech_output.edge_tts_hint')}
           </p>
         </>
@@ -390,7 +424,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
 
       {!isMiniMaxSpeechOutput && !isEdgeTtsSpeechOutput && speechVoiceOptions.length ? (
         <>
-          <label>
+          <label className="settings-control-card settings-speech-config-field">
             <span>{isVolcengineSpeechOutput
               ? ti('settings.speech_output.volcengine_voices_label')
               : speechOutputVoiceLabel}</span>
@@ -421,7 +455,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
             </select>
           </label>
 
-          <p className="settings-drawer__hint">
+          <p className="settings-drawer__hint settings-speech-config-note">
             {(() => {
               const current = speechVoiceOptions.find((voice) => voice.id === draft.speechOutputVoice)
               return current
@@ -433,7 +467,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
       ) : null}
 
       {showCustomVoiceInput && !isEdgeTtsSpeechOutput ? (
-        <label>
+        <label className="settings-control-card settings-speech-config-field">
           <span>{speechOutputVoiceLabel}</span>
           <input
             value={draft.speechOutputVoice}
@@ -447,14 +481,19 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
       ) : null}
 
       {speechVoiceStatus ? (
-        <div className={speechVoiceStatus.ok ? 'settings-test-result is-success' : 'settings-test-result is-error'}>
+        <div
+          className={speechVoiceStatus.ok ? 'settings-test-result is-success' : 'settings-test-result is-error'}
+          role={speechVoiceStatus.ok ? 'status' : 'alert'}
+          aria-live={speechVoiceStatus.ok ? 'polite' : 'assertive'}
+          aria-atomic="true"
+        >
           {speechVoiceStatus.message}
         </div>
       ) : null}
 
       {speechOutputStyleOptions.length ? (
         <>
-          <label>
+          <label className="settings-control-card settings-speech-config-field">
             <span>{ti('settings.speech_output.style')}</span>
             <select
               value={speechOutputStyleOptions.some((opt) => opt.value === draft.speechOutputInstructions)
@@ -471,7 +510,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
               ))}
             </select>
           </label>
-          <p className="settings-drawer__hint">
+          <p className="settings-drawer__hint settings-speech-config-note">
             {(() => {
               const currentStyle = speechOutputStyleOptions.find((opt) => opt.value === draft.speechOutputInstructions)
               return currentStyle?.description
@@ -482,7 +521,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
         </>
       ) : null}
 
-      <label>
+      <label className="settings-control-card settings-speech-config-field">
         <span>{ti('settings.speech_output.speech_lang')}</span>
         <input
           value={draft.speechSynthesisLang}
@@ -496,7 +535,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
       </label>
 
       <div className="settings-drawer__card">
-        <div className="settings-section__title-row">
+        <div className="settings-section__title-row settings-speech-tuning-head">
           <div>
             <h5>{ti('settings.speech_output.tuning_title')}</h5>
             <p className="settings-drawer__hint">{ti(speechOutputAdjustmentSupport.note as TranslationKey)}</p>
@@ -551,7 +590,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
         </div>
       </div>
 
-      <label>
+      <label className="settings-control-card settings-speech-config-field">
         <span>{ti('settings.speech_output.preview_text')}</span>
         <textarea
           rows={3}
@@ -562,7 +601,7 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
 
       <button
         type="button"
-        className="ghost-button"
+        className="ghost-button settings-speech-preview-button"
         onClick={onPreviewSpeech}
         disabled={previewingSpeech}
       >
@@ -572,7 +611,12 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
       </button>
 
       {speechPreviewStatus ? (
-        <div className={speechPreviewStatus.ok ? 'settings-test-result is-success' : 'settings-test-result is-error'}>
+        <div
+          className={speechPreviewStatus.ok ? 'settings-test-result is-success' : 'settings-test-result is-error'}
+          role={speechPreviewStatus.ok ? 'status' : 'alert'}
+          aria-live={speechPreviewStatus.ok ? 'polite' : 'assertive'}
+          aria-atomic="true"
+        >
           {speechPreviewStatus.message}
         </div>
       ) : null}

@@ -72,21 +72,13 @@ function LetterCard({
       letter.content.closing,
     ]
     : [letter.content.greeting]
+  const bodyId = `settings-letter-card-body-${encodeURIComponent(letter.id)}`
 
   return (
-    <li
-      style={{
-        border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
-        borderRadius: 10,
-        padding: 16,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-        <strong style={{ fontSize: '1.05rem' }}>{formatLetterDate(letter.letterDate, uiLanguage)}</strong>
-        <div style={{ display: 'flex', gap: 8 }}>
+    <li className="settings-letter-card">
+      <div className="settings-letter-card__header">
+        <strong className="settings-letter-card__date">{formatLetterDate(letter.letterDate, uiLanguage)}</strong>
+        <div className="settings-letter-card__actions">
           <button
             type="button"
             className="ghost-button"
@@ -95,22 +87,28 @@ function LetterCard({
           >
             {ti('settings.letters.export')}
           </button>
-          <button type="button" className="ghost-button" onClick={onToggle}>
+          <button
+            type="button"
+            className="ghost-button"
+            aria-expanded={expanded}
+            aria-controls={bodyId}
+            onClick={onToggle}
+          >
             {expanded ? ti('settings.letters.collapse') : ti('settings.letters.expand')}
           </button>
         </div>
       </div>
 
-      <div style={{ fontSize: '0.85rem', opacity: 0.75, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="settings-letter-card__meta">
         <span>{ti('settings.letters.active_days_label', { n: letter.weekDayCount })}</span>
         {letter.themes.length ? (
           <span>{ti('settings.letters.themes_label')}{letter.themes.join(', ')}</span>
         ) : null}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, lineHeight: 1.6 }}>
+      <div id={bodyId} className="settings-letter-card__body">
         {paragraphs.map((p, i) => (
-          <p key={i} style={{ margin: 0 }}>{p}</p>
+          <p key={i}>{p}</p>
         ))}
       </div>
     </li>
@@ -139,29 +137,32 @@ export const LettersSection = memo(function LettersSection({
   }, [active])
 
   return (
-    <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
-      <div className="settings-section__title-row">
-        <div>
-          <h4>{ti('settings.letters.title')}</h4>
-          <p className="settings-drawer__hint">{ti('settings.letters.note')}</p>
+    <section className={`settings-section settings-letter-section ${active ? 'is-active' : 'is-hidden'}`}>
+      <div className="settings-mini-group settings-letter-group">
+        <div className="settings-mini-group__head settings-letter-group__head">
+          <h5>{ti('settings.section_eyebrow.letters')}</h5>
+          <span>{ti('settings.letters.note')}</span>
         </div>
-      </div>
 
-      {letters.length === 0 ? (
-        <p className="settings-drawer__hint">{ti('settings.letters.empty_state')}</p>
-      ) : (
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {letters.map((letter) => (
-            <LetterCard
-              key={letter.id}
-              letter={letter}
-              uiLanguage={uiLanguage}
-              expanded={expandedId === letter.id}
-              onToggle={() => setExpandedId((current) => (current === letter.id ? null : letter.id))}
-            />
-          ))}
-        </ul>
-      )}
+        {letters.length === 0 ? (
+          <div className="settings-letter-empty" role="status">
+            <strong>{ti('settings.letters.empty_state')}</strong>
+            <span className="settings-letter-empty__label">{ti('settings.letters.empty_hint')}</span>
+          </div>
+        ) : (
+          <ul className="settings-letter-list">
+            {letters.map((letter) => (
+              <LetterCard
+                key={letter.id}
+                letter={letter}
+                uiLanguage={uiLanguage}
+                expanded={expandedId === letter.id}
+                onToggle={() => setExpandedId((current) => (current === letter.id ? null : letter.id))}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   )
 })

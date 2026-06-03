@@ -99,6 +99,9 @@ const STYLES = `
   :root {
     color-scheme: light;
   }
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
   body {
     margin: 0;
     background: #f5f3ee;
@@ -106,13 +109,14 @@ const STYLES = `
     font-family: ${ARTIFACT_SERIF_FONT_STACK};
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    overflow-wrap: anywhere;
   }
   main {
-    max-width: 620px;
+    width: min(100% - 32px, 620px);
     margin: 64px auto;
-    padding: 56px 60px;
+    padding: clamp(28px, 8vw, 56px) clamp(20px, 8vw, 60px);
     background: #fffdf9;
-    border-radius: 4px;
+    border-radius: 8px;
     box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
   }
   header {
@@ -124,22 +128,25 @@ const STYLES = `
   header .eyebrow {
     font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 0.18em;
+    letter-spacing: 0;
     color: rgba(0, 0, 0, 0.45);
     font-family: ${ARTIFACT_SANS_FONT_STACK};
     margin-bottom: 14px;
   }
   header .date {
-    font-size: 17px;
+    font-size: 16px;
     color: rgba(0, 0, 0, 0.7);
     font-style: italic;
   }
   .body {
-    font-size: 17px;
+    font-size: 16px;
     line-height: 1.75;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .body p {
     margin: 0 0 1.4em 0;
+    overflow-wrap: anywhere;
   }
   .body p:last-child {
     margin-bottom: 0;
@@ -152,13 +159,17 @@ const STYLES = `
     color: rgba(0, 0, 0, 0.7);
   }
   footer {
-    max-width: 620px;
+    width: min(100% - 32px, 620px);
     margin: 0 auto 64px;
-    padding: 20px 60px;
+    padding: 20px clamp(20px, 8vw, 60px);
     text-align: center;
     font-size: 12px;
     color: rgba(0, 0, 0, 0.4);
     font-family: ${ARTIFACT_SANS_FONT_STACK};
+  }
+  @media (max-width: 420px) {
+    main { margin: 24px auto; }
+    footer { margin-bottom: 24px; }
   }
   @media print {
     body { background: #fffdf9; }

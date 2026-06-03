@@ -48,6 +48,9 @@ export function useConnectionTests({
 
     return createElement('div', {
       className: result.ok ? 'settings-test-result is-success' : 'settings-test-result is-error',
+      role: result.ok ? 'status' : 'alert',
+      'aria-live': result.ok ? 'polite' : 'assertive',
+      'aria-atomic': 'true',
     }, result.message)
   }
 

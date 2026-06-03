@@ -30,27 +30,6 @@ Valid shapes:
     テキストもバブルも音声も出さず、デスクトップの片隅で小さな動作（伸び、あくび、首をちょっと傾ける等）を一つ。
     1 回につきモーションは一つだけ。話したい理由が少しでもあるなら speak を使ってください。`,
 
-  responseContractSpawn: `  {"action": "spawn", "task": "...", "purpose": "...", "announcement": "..."}
-
-    Use this when the user would genuinely benefit from you doing
-    something behind the scenes — looking a fact up, checking a site,
-    summarising a doc they mentioned. A background helper agent runs
-    the task and returns a summary to the chat when done.
-
-    - task: a clear natural-language instruction for the helper. Be
-      specific ("今夜の東京の天気を気温と降水確率込みで調べる"), not vague
-      ("何か調べて").
-    - purpose: one short sentence the user sees, explaining why you're
-      doing this now. Stay in character.
-    - announcement: OPTIONAL. If you want to verbally acknowledge it
-      ("調べてみるね" / "ちょっと待ってね"), put it here — it will be spoken
-      in your voice. Omit when silent dispatch feels more natural. Keep
-      it short.
-
-    Only spawn when the task clearly helps. Don't spawn to fill air, don't
-    spawn when you can just answer from context, don't spawn for things the
-    user can answer faster themselves.`,
-
   responseContractTail: `Anything else in the response — reasoning, apology, self-narration, multi-
 line commentary — will be discarded and treated as silent. So don't.`,
 
@@ -120,15 +99,6 @@ line commentary — will be discarded and treated as silent. So don't.`,
   sectionLastUtteranceHeader: '## あなたが前回自発的に話したとき',
   sectionLastUtteranceTail:
     '同じ話題をすぐ蒸し返さないでください —— ご主人さまはまだ消化できていないかもしれません。',
-
-  sectionSubagentHeader: '## バックグラウンドタスクの状況',
-  subagentCapacityLine: (active, max) => `バックグラウンドサブエージェント：${active}/${max}`,
-  subagentBudgetLine: (remaining) =>
-    remaining !== null ? `本日の残り予算：$${remaining.toFixed(2)}` : '本日の予算：上限なし',
-  subagentCautionNearCapacity:
-    '同時実行数の上限が近いです。明確にメリットがある場合のみ spawn してください。',
-  subagentCautionLowBudget:
-    '予算が厳しいです。価値の高いタスクでなければ spawn しないでください。',
 
   forceSilentOverride:
     '# Override\n\n今回の tick は上流から強制的に silent にされています。何を考えたとしても、必ず {"action": "silent"} を返してください。',

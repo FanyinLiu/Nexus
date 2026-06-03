@@ -1,8 +1,4 @@
-import { enMessages } from './locales/en.ts'
-import { jaMessages } from './locales/ja.ts'
-import { koMessages } from './locales/ko.ts'
 import { zhCNMessages } from './locales/zh-CN.ts'
-import { zhTWMessages } from './locales/zh-TW.ts'
 import { toTraditional } from './opencc.ts'
 import type {
   AppLocale,
@@ -21,15 +17,20 @@ export const AVAILABLE_LOCALES: AppLocale[] = [
   'ko',
 ]
 
-const dictionaries: Record<AppLocale, TranslationDictionary> = {
+const dictionaries: Partial<Record<AppLocale, TranslationDictionary>> = {
   'zh-CN': zhCNMessages,
-  'zh-TW': zhTWMessages,
-  'en-US': enMessages,
-  ja: jaMessages,
-  ko: koMessages,
 }
 
 let currentLocale: AppLocale = DEFAULT_LOCALE
+const pendingLoads: Partial<Record<AppLocale, Promise<TranslationDictionary>>> = {}
+
+const localeLoaders: Record<AppLocale, () => Promise<TranslationDictionary>> = {
+  'zh-CN': async () => zhCNMessages,
+  'zh-TW': async () => (await import('./locales/zh-TW.ts')).zhTWMessages,
+  'en-US': async () => (await import('./locales/en.ts')).enMessages,
+  ja: async () => (await import('./locales/ja.ts')).jaMessages,
+  ko: async () => (await import('./locales/ko.ts')).koMessages,
+}
 
 function interpolateMessage(template: string, params?: TranslationParams) {
   if (!params) {
@@ -40,16 +41,16 @@ function interpolateMessage(template: string, params?: TranslationParams) {
 }
 
 function resolveMessage(locale: AppLocale, key: TranslationKey) {
-  const message = dictionaries[locale][key]
+  const message = dictionaries[locale]?.[key]
   if (message) {
     return message
   }
 
   if (locale === 'zh-TW') {
-    return toTraditional(dictionaries['zh-CN'][key] ?? key)
+    return toTraditional(zhCNMessages[key] ?? key)
   }
 
-  return dictionaries[DEFAULT_LOCALE][key] ?? key
+  return zhCNMessages[key] ?? key
 }
 
 export function normalizeLocale(value: unknown): AppLocale {
@@ -75,12 +76,35 @@ export function setLocale(locale: AppLocale) {
 }
 
 export function getDictionary(locale: AppLocale = currentLocale) {
-  return dictionaries[normalizeLocale(locale)]
+  return dictionaries[normalizeLocale(locale)] ?? zhCNMessages
 }
 
 export function hasKey(key: TranslationKey, locale: AppLocale = currentLocale) {
   const normalizedLocale = normalizeLocale(locale)
-  return key in dictionaries[normalizedLocale] || key in dictionaries[DEFAULT_LOCALE]
+  return key in (dictionaries[normalizedLocale] ?? {}) || key in zhCNMessages
+}
+
+export function isLocaleLoaded(locale: AppLocale) {
+  return Boolean(dictionaries[normalizeLocale(locale)])
+}
+
+export async function ensureLocaleLoaded(locale: AppLocale) {
+  const normalizedLocale = normalizeLocale(locale)
+  const existing = dictionaries[normalizedLocale]
+  if (existing) {
+    return existing
+  }
+
+  pendingLoads[normalizedLocale] ??= localeLoaders[normalizedLocale]()
+    .then((dictionary) => {
+      dictionaries[normalizedLocale] = dictionary
+      return dictionary
+    })
+    .finally(() => {
+      delete pendingLoads[normalizedLocale]
+    })
+
+  return pendingLoads[normalizedLocale]
 }
 
 export function t(

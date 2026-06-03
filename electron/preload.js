@@ -1,5 +1,24 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
+const realtimeVoiceEnabled = process.env.NEXUS_ENABLE_REALTIME_VOICE === '1'
+
+const realtimeVoiceApi = realtimeVoiceEnabled
+  ? {
+      // Realtime Voice (OpenAI Realtime API)
+      realtimeStart: (payload) => ipcRenderer.invoke('realtime:start', payload),
+      realtimeStop: () => ipcRenderer.invoke('realtime:stop'),
+      realtimeFeed: (payload) => ipcRenderer.invoke('realtime:feed', payload),
+      realtimeInterrupt: () => ipcRenderer.invoke('realtime:interrupt'),
+      realtimeSendText: (payload) => ipcRenderer.invoke('realtime:send-text', payload),
+      realtimeState: () => ipcRenderer.invoke('realtime:state'),
+      subscribeRealtimeEvent: (listener) => {
+        const handler = (_event, payload) => listener(payload)
+        ipcRenderer.on('realtime:event', handler)
+        return () => ipcRenderer.removeListener('realtime:event', handler)
+      },
+    }
+  : {}
+
 contextBridge.exposeInMainWorld('desktopPet', {
   updatePetWindowState: (state) => ipcRenderer.invoke('pet-window:update-state', state),
   getPetWindowState: () => ipcRenderer.invoke('pet-window:get-state'),
@@ -35,8 +54,17 @@ contextBridge.exposeInMainWorld('desktopPet', {
   updateRuntimeState: (state) => ipcRenderer.invoke('runtime-state:update', state),
   getLaunchOnStartup: () => ipcRenderer.invoke('app:get-launch-on-startup'),
   setLaunchOnStartup: (value) => ipcRenderer.invoke('app:set-launch-on-startup', value),
+  getPlatformProfile: () => ipcRenderer.invoke('app:get-platform-profile'),
   listPetModels: () => ipcRenderer.invoke('pet-model:list'),
   importPetModel: () => ipcRenderer.invoke('pet-model:import'),
+  importCodexPetGallery: (input) => ipcRenderer.invoke('pet-model:import-codex-gallery', input),
+  listCodexPetGallery: (payload) => ipcRenderer.invoke('pet-model:list-codex-gallery', payload),
+  createCodexPetCreatorKit: (payload) => ipcRenderer.invoke('pet-model:create-creator-kit', payload),
+  inspectCodexPetCreatorKit: (payload) => ipcRenderer.invoke('pet-model:inspect-creator-kit', payload),
+  assembleCodexPetCreatorKit: (payload) => ipcRenderer.invoke('pet-model:assemble-creator-kit', payload),
+  installCodexPetCreatorKitToCodex: (payload) => ipcRenderer.invoke('pet-model:install-creator-kit-codex', payload),
+  openCodexPetCreatorKitPath: (payload) => ipcRenderer.invoke('pet-model:open-creator-kit-path', payload),
+  createSpritePetFromImage: () => ipcRenderer.invoke('pet-model:create-from-image'),
   showConfirmDialog: (message) => ipcRenderer.invoke('dialog:confirm', message),
   saveTextFile: (payload) => ipcRenderer.invoke('file:save-text', payload),
   openTextFile: (payload) => ipcRenderer.invoke('file:open-text', payload),
@@ -71,6 +99,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
     })
   },
   testChatConnection: (payload) => ipcRenderer.invoke('chat:test-connection', payload),
+  listChatModels: (payload) => ipcRenderer.invoke('chat:list-models', payload),
   testServiceConnection: (payload) => ipcRenderer.invoke('service:test-connection', payload),
   probeLocalServices: (payload) => ipcRenderer.invoke('doctor:probe-local-services', payload),
   inspectIntegrations: (payload) => ipcRenderer.invoke('integrations:inspect', payload),
@@ -247,18 +276,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   workspaceGlob: (payload) => ipcRenderer.invoke('workspace:glob', payload),
   workspaceGrep: (payload) => ipcRenderer.invoke('workspace:grep', payload),
 
-  // Realtime Voice (OpenAI Realtime API)
-  realtimeStart: (payload) => ipcRenderer.invoke('realtime:start', payload),
-  realtimeStop: () => ipcRenderer.invoke('realtime:stop'),
-  realtimeFeed: (payload) => ipcRenderer.invoke('realtime:feed', payload),
-  realtimeInterrupt: () => ipcRenderer.invoke('realtime:interrupt'),
-  realtimeSendText: (payload) => ipcRenderer.invoke('realtime:send-text', payload),
-  realtimeState: () => ipcRenderer.invoke('realtime:state'),
-  subscribeRealtimeEvent: (listener) => {
-    const handler = (_event, payload) => listener(payload)
-    ipcRenderer.on('realtime:event', handler)
-    return () => ipcRenderer.removeListener('realtime:event', handler)
-  },
+  ...realtimeVoiceApi,
 
   // Auto-updater (electron-updater + GitHub Releases)
   updaterCheck: () => ipcRenderer.invoke('updater:check'),
@@ -272,6 +290,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
 
   // Notification bridge (RSS + webhook)
   getNotificationChannels: () => ipcRenderer.invoke('notification:get-channels'),
+  getNotificationWebhookInfo: () => ipcRenderer.invoke('notification:webhook-info'),
   setNotificationChannels: (channels) => ipcRenderer.invoke('notification:set-channels', channels),
   startNotificationBridge: () => ipcRenderer.invoke('notification:start'),
   stopNotificationBridge: () => ipcRenderer.invoke('notification:stop'),

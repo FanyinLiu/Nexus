@@ -22,7 +22,7 @@ export interface ChatPromptStrings {
   headerLines: (params: { companionName: string; userName: string }) => string
   /** Voice-profile style nudge (1-3 sentences). */
   responseStyleVoice: string
-  /** Live2D stage-direction guide. */
+  /** Avatar stage-direction guide. */
   expressionGuide: string
   /** Soft instruction for the 2nd/3rd assistant reply ever — ask one
    *  specific curious question rooted in a concrete persona detail. */

@@ -1,3 +1,7 @@
 export * from './models'
+export * from './codexPetGallery'
+export * from './spritePetCreatorKit'
 export * from './performance'
 export * from './presence'
+export * from './spriteAtlas'
+export * from './spriteRuntime'

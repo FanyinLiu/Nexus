@@ -112,6 +112,9 @@ echo "  安装完成！"
 echo "============================================"
 echo
 echo "  启动开发模式:    npm run electron:dev"
+echo "  快速自检:        npm run doctor"
+echo "  网页预览地址:    http://127.0.0.1:47821/"
+echo "  Ollama API:      http://127.0.0.1:11434/v1  (不是网页预览)"
 echo "  打包 macOS:      npm run package:mac"
 echo "  打包 Linux:      npm run package:linux"
 echo

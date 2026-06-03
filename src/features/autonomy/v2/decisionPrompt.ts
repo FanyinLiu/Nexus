@@ -10,6 +10,8 @@
  *   {"action": "silent"}
  * or
  *   {"action": "speak", "text": "..."}
+ * or, when idle gestures are enabled,
+ *   {"action": "idle_motion", "motion": "wave|nod|shake|tilt|stretch|yawn"}
  *
  * Any deviation is treated as silent by the parser — we'd rather miss a
  * tick than let free-form reasoning leak into the user's Live2D bubble.
@@ -54,20 +56,6 @@ export interface DecisionPromptHints {
     rejectedText: string
   }
   /**
-   * Runtime availability of the subagent dispatcher. When provided, the
-   * prompt exposes the `spawn` action so the companion can dispatch a
-   * background helper agent (e.g. to look something up). When omitted or
-   * `enabled: false` the `spawn` action is hidden from the contract — the
-   * model only sees `silent` / `speak`.
-   */
-  subagentAvailability?: {
-    enabled: boolean
-    activeCount: number
-    maxConcurrent: number
-    /** null means "no daily budget configured" (treat as unlimited). */
-    dailyBudgetRemainingUsd: number | null
-  }
-  /**
    * When true the prompt exposes the `idle_motion` action — caller decides
    * the threshold (typically idleSeconds ≥ 3 minutes AND user not in deep
    * focus). When omitted/false the contract hides this action so the model
@@ -91,13 +79,10 @@ export interface ChatMessage {
 
 function buildResponseContract(
   strings: DecisionPromptStrings,
-  subagentAvailability: DecisionPromptHints['subagentAvailability'],
   allowIdleMotion: boolean,
 ): string {
-  const canSpawn = Boolean(subagentAvailability?.enabled)
   const parts = [strings.responseContractBase]
   if (allowIdleMotion) parts.push(strings.responseContractIdleMotion)
-  if (canSpawn) parts.push(strings.responseContractSpawn)
   parts.push(strings.responseContractTail)
   return parts.join('\n\n')
 }
@@ -350,24 +335,6 @@ function formatContextSections(
     sections.push(strings.varietyHint(variety))
   }
 
-  // ── Subagent capacity ──
-  if (hints.subagentAvailability?.enabled) {
-    const a = hints.subagentAvailability
-    const capacityLine = strings.subagentCapacityLine(a.activeCount, a.maxConcurrent)
-    const budgetLine = strings.subagentBudgetLine(a.dailyBudgetRemainingUsd)
-    const nearCapacity = a.activeCount >= a.maxConcurrent - 1
-    const lowBudget = a.dailyBudgetRemainingUsd !== null && a.dailyBudgetRemainingUsd < 0.05
-    const cautions: string[] = []
-    if (nearCapacity) cautions.push(strings.subagentCautionNearCapacity)
-    if (lowBudget) cautions.push(strings.subagentCautionLowBudget)
-    sections.push(
-      `${strings.sectionSubagentHeader}\n`
-      + capacityLine + '\n'
-      + budgetLine
-      + (cautions.length ? '\n' + cautions.join(' ') : ''),
-    )
-  }
-
   return sections.join('\n\n')
 }
 
@@ -402,7 +369,7 @@ export function buildDecisionPrompt(
 
   const systemParts: string[] = [
     formatPersonaSystemPrompt(persona, strings),
-    buildResponseContract(strings, hints.subagentAvailability, Boolean(hints.allowIdleMotion)),
+    buildResponseContract(strings, Boolean(hints.allowIdleMotion)),
     formatEmpathyIntentGuide(hints.uiLanguage),
   ]
   if (hints.forceSilent) {

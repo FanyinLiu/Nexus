@@ -1,6 +1,10 @@
 /// <reference types="vite/client" />
 
-import type { PetModelDefinition } from './features/pet'
+import type {
+  CodexPetGalleryCatalogResult,
+  PetModelDefinition,
+  SpritePetCreatorKitInspection,
+} from './features/pet'
 import type { VoiceEmotionLabel } from './types'
 import type {
   AudioSynthesisRequest,
@@ -9,6 +13,7 @@ import type {
   AudioTranscriptionResponse,
   ChatCompletionRequest,
   ChatCompletionResponse,
+  ChatModelListRequest,
   DesktopContextRequest,
   DesktopContextSnapshot,
   ExternalLinkRequest,
@@ -20,12 +25,14 @@ import type {
   MediaSessionControlRequest,
   MediaSessionControlResponse,
   MediaSessionSnapshot,
+  PlatformProfile,
   TextFileOpenRequest,
   TextFileOpenResponse,
   TextFileSaveRequest,
   TextFileSaveResponse,
   PanelWindowState,
   PetWindowState,
+  ProviderHealthResult,
   ServiceConnectionRequest,
   ServiceConnectionResponse,
   WeatherLookupRequest,
@@ -235,10 +242,67 @@ declare global {
       updateRuntimeState: (state: Partial<RuntimeStateSnapshot>) => Promise<void>
       getLaunchOnStartup: () => Promise<boolean>
       setLaunchOnStartup: (value: boolean) => Promise<boolean>
+      getPlatformProfile: () => Promise<PlatformProfile>
       listPetModels: () => Promise<PetModelDefinition[]>
       importPetModel: () => Promise<{
         model: PetModelDefinition
         message: string
+      } | null>
+      importCodexPetGallery: (input: string) => Promise<{
+        model: PetModelDefinition
+        message: string
+      }>
+      listCodexPetGallery: (payload?: { query?: string; limit?: number }) => Promise<CodexPetGalleryCatalogResult>
+      createCodexPetCreatorKit: (payload: {
+        id?: string
+        displayName?: string
+        description?: string
+        concept?: string
+        styleNotes?: string
+      }) => Promise<{
+        id: string
+        displayName: string
+        directoryPath: string
+        sourceRowsDirectory?: string
+        message: string
+      }>
+      inspectCodexPetCreatorKit: (payload?: { kitDirectory?: string }) => Promise<SpritePetCreatorKitInspection | null>
+      assembleCodexPetCreatorKit: (payload?: { kitDirectory?: string }) => Promise<{
+        model: PetModelDefinition
+        message: string
+        packageDirectory?: string
+        manifestPath?: string
+        spritesheetPath?: string
+        reportPath?: string
+        visualAuditPath?: string
+        archivePath?: string
+      } | null>
+      installCodexPetCreatorKitToCodex: (payload: {
+        kitDirectory: string
+        manifestPath: string
+      }) => Promise<{
+        ok: boolean
+        id: string
+        directoryPath: string
+        manifestPath: string
+        message: string
+      }>
+      openCodexPetCreatorKitPath: (payload: {
+        kitDirectory: string
+        targetPath: string
+        mode?: 'open' | 'reveal'
+      }) => Promise<{
+        ok: boolean
+        message: string
+      }>
+      createSpritePetFromImage: () => Promise<{
+        model: PetModelDefinition
+        message: string
+        packageDirectory?: string
+        manifestPath?: string
+        spritesheetPath?: string
+        visualAuditPath?: string
+        archivePath?: string
       } | null>
       showConfirmDialog: (message: string) => Promise<boolean>
       saveTextFile: (payload: TextFileSaveRequest) => Promise<TextFileSaveResponse>
@@ -257,6 +321,7 @@ declare global {
         apiKey: string
         model?: string
       }) => Promise<ServiceConnectionResponse>
+      listChatModels: (payload: ChatModelListRequest) => Promise<ProviderHealthResult>
       testServiceConnection: (payload: ServiceConnectionRequest) => Promise<ServiceConnectionResponse>
       probeLocalServices: (
         payload: LocalServiceProbeRequest[],
@@ -279,7 +344,7 @@ declare global {
       controlSystemMediaSession: (payload: MediaSessionControlRequest) => Promise<MediaSessionControlResponse>
 
       // Tencent Cloud Real-Time ASR
-      tencentAsrConnect: (payload: { appId: string; secretId: string; secretKey: string; engineModelType?: string; hotwordList?: string }) => Promise<{ state: string }>
+      tencentAsrConnect: (payload: { apiKey?: string; appId: string; secretId: string; secretKey: string; engineModelType?: string; hotwordList?: string }) => Promise<{ state: string }>
       tencentAsrDisconnect: () => Promise<{ ok: boolean }>
       tencentAsrFeed: (payload: { samples: number[] | Float32Array; sampleRate?: number }) => Promise<{ ok: boolean }>
       tencentAsrFinish: () => Promise<{ text: string }>
@@ -572,13 +637,13 @@ declare global {
       vadStop: () => Promise<{ ok: boolean }>
 
       // Realtime Voice (OpenAI Realtime API)
-      realtimeStart: (payload: RealtimeSessionOptions) => Promise<{ sessionId: string }>
-      realtimeStop: () => Promise<void>
-      realtimeFeed: (payload: { samples: number[] | Float32Array }) => Promise<{ ok: boolean }>
-      realtimeInterrupt: () => Promise<{ ok: boolean }>
-      realtimeSendText: (payload: { text: string }) => Promise<{ ok: boolean }>
-      realtimeState: () => Promise<{ state: 'idle' | 'connecting' | 'active' | 'error'; sessionId: string }>
-      subscribeRealtimeEvent: (listener: (event: RealtimeEvent) => void) => () => void
+      realtimeStart?: (payload: RealtimeSessionOptions) => Promise<{ sessionId: string }>
+      realtimeStop?: () => Promise<void>
+      realtimeFeed?: (payload: { samples: number[] | Float32Array }) => Promise<{ ok: boolean }>
+      realtimeInterrupt?: () => Promise<{ ok: boolean }>
+      realtimeSendText?: (payload: { text: string }) => Promise<{ ok: boolean }>
+      realtimeState?: () => Promise<{ state: 'idle' | 'connecting' | 'active' | 'error'; sessionId: string }>
+      subscribeRealtimeEvent?: (listener: (event: RealtimeEvent) => void) => () => void
 
       // Autonomy: system idle & power events
       /** Returns system idle time in seconds. */
@@ -587,6 +652,12 @@ declare global {
 
       // Autonomy: notification bridge
       getNotificationChannels: () => Promise<import('./types').NotificationChannel[]>
+      getNotificationWebhookInfo: () => Promise<{
+        url: string
+        token: string
+        authHeader: string
+        maxBodyBytes: number
+      }>
       setNotificationChannels: (channels: import('./types').NotificationChannel[]) => Promise<void>
       startNotificationBridge: () => Promise<void>
       stopNotificationBridge: () => Promise<void>

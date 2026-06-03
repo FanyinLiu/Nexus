@@ -1,15 +1,18 @@
 import { memo, useEffect, useMemo, useState } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { agentTraceStore, type AgentTrace } from '../features/agent/agentTraceStore'
 import {
   backgroundTaskStore,
   type BackgroundTask,
   type BackgroundTaskStatus,
 } from '../features/agent/backgroundTaskStore'
-import type { AgentStep, AgentStepType, AgentStopReason } from '../features/agent/agentLoop'
+import type { AgentStep } from '../features/agent/agentLoop'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import type { TranslationKey } from '../types/i18n'
 
 type TraceStatusFilter = 'all' | 'running' | 'done' | 'error'
+
+const TRACE_FILTER_OPTIONS: TraceStatusFilter[] = ['all', 'running', 'done', 'error']
 
 // Module-level label keys — resolved to text at render time via
 // useTranslation so the filter row and status badges actually track the
@@ -20,6 +23,49 @@ const TRACE_FILTER_LABEL_KEY: Record<TraceStatusFilter, TranslationKey> = {
   running: 'agent_trace.filter.running',
   done: 'agent_trace.filter.done',
   error: 'agent_trace.filter.error',
+}
+
+function getTraceFilterRadioId(filter: TraceStatusFilter): string {
+  return `settings-agent-trace-filter-${filter}`
+}
+
+function focusTraceFilterRadio(filter: TraceStatusFilter) {
+  window.requestAnimationFrame(() => {
+    document.getElementById(getTraceFilterRadioId(filter))?.focus()
+  })
+}
+
+function handleTraceFilterKeyDown(
+  event: ReactKeyboardEvent<HTMLButtonElement>,
+  currentFilter: TraceStatusFilter,
+  onSelect: (filter: TraceStatusFilter) => void,
+) {
+  const currentIndex = Math.max(TRACE_FILTER_OPTIONS.indexOf(currentFilter), 0)
+  let nextIndex: number | null = null
+
+  switch (event.key) {
+    case 'ArrowRight':
+    case 'ArrowDown':
+      nextIndex = (currentIndex + 1) % TRACE_FILTER_OPTIONS.length
+      break
+    case 'ArrowLeft':
+    case 'ArrowUp':
+      nextIndex = (currentIndex - 1 + TRACE_FILTER_OPTIONS.length) % TRACE_FILTER_OPTIONS.length
+      break
+    case 'Home':
+      nextIndex = 0
+      break
+    case 'End':
+      nextIndex = TRACE_FILTER_OPTIONS.length - 1
+      break
+    default:
+      return
+  }
+
+  event.preventDefault()
+  const nextFilter = TRACE_FILTER_OPTIONS[nextIndex]
+  onSelect(nextFilter)
+  focusTraceFilterRadio(nextFilter)
 }
 
 const TASK_STATUS_LABEL_KEY: Record<BackgroundTaskStatus, TranslationKey> = {
@@ -49,51 +95,8 @@ function traceHasError(trace: AgentTrace): boolean {
   return trace.steps.some(isErrorStep)
 }
 
-function statusColorFor(status: AgentStopReason | undefined): string {
-  switch (status) {
-    case 'done': return '#34d399'
-    case 'aborted':
-    case 'error': return '#f87171'
-    case 'max_iterations':
-    case 'cost_cap': return '#fbbf24'
-    default: return '#94a3b8'
-  }
-}
-
-const STEP_GLYPH: Record<AgentStepType, string> = {
-  start: '▶',
-  thinking: '…',
-  tool_round: '⚙',
-  plan_created: '📋',
-  plan_step_done: '✓',
-  reflect: '↺',
-  continue: '→',
-  done: '●',
-  abort: '✕',
-}
-
-const STEP_COLOR: Record<AgentStepType, string> = {
-  start: '#60a5fa',
-  thinking: '#94a3b8',
-  tool_round: '#fbbf24',
-  plan_created: '#a78bfa',
-  plan_step_done: '#34d399',
-  reflect: '#cbd5e1',
-  continue: '#94a3b8',
-  done: '#34d399',
-  abort: '#f87171',
-}
-
-const TASK_STATUS_COLOR: Record<BackgroundTaskStatus, string> = {
-  running: '#fbbf24',
-  completed: '#34d399',
-  failed: '#f87171',
-  cancelled: '#94a3b8',
-  orphaned: '#a78bfa',
-}
-
-function formatTime(ts: number): string {
-  return new Intl.DateTimeFormat('zh-CN', {
+function formatTime(ts: number, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
@@ -111,32 +114,21 @@ function formatDuration(start: number, end: number | undefined, inProgressLabel:
 
 const StepRow = memo(function StepRow({ step }: { step: AgentStep }) {
   return (
-    <li
-      style={{
-        display: 'flex',
-        gap: 8,
-        padding: '4px 0',
-        fontSize: 11,
-        color: '#cbd5e1',
-        alignItems: 'flex-start',
-      }}
-    >
-      <span style={{ color: STEP_COLOR[step.type], fontWeight: 700, minWidth: 16 }}>
-        {STEP_GLYPH[step.type]}
-      </span>
-      <span style={{ color: '#64748b', minWidth: 18 }}>#{step.iteration}</span>
-      <span style={{ flex: 1 }}>
-        <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{step.type}</span>
+    <li className="settings-agent-step" data-step-type={step.type}>
+      <span className="settings-agent-step__glyph" aria-hidden="true" />
+      <span className="settings-agent-step__iteration">#{step.iteration}</span>
+      <span className="settings-agent-step__body">
+        <span className="settings-agent-step__type">{step.type}</span>
         {step.toolCallNames?.length ? (
-          <span style={{ color: '#fbbf24', marginLeft: 6 }}>
+          <span className="settings-agent-step__tools">
             [{step.toolCallNames.join(', ')}]
           </span>
         ) : null}
         {step.reason ? (
-          <span style={{ color: '#f87171', marginLeft: 6 }}>{step.reason}</span>
+          <span className="settings-agent-step__reason">{step.reason}</span>
         ) : null}
         {step.content ? (
-          <div style={{ marginTop: 2, color: '#94a3b8', whiteSpace: 'pre-wrap' }}>
+          <div className="settings-agent-step__content">
             {step.content.length > 200 ? `${step.content.slice(0, 200)}…` : step.content}
           </div>
         ) : null}
@@ -146,13 +138,15 @@ const StepRow = memo(function StepRow({ step }: { step: AgentStep }) {
 })
 
 const TraceCard = memo(function TraceCard({ trace }: { trace: AgentTrace }) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const hasError = traceHasError(trace)
   // Errors auto-expand so users see what broke without an extra click.
   const [expanded, setExpanded] = useState(hasError)
   const [errorsOnly, setErrorsOnly] = useState(false)
   const [search, setSearch] = useState('')
-  const statusColor = statusColorFor(trace.status)
+  const traceStatus = trace.status ?? 'running'
+  const toggleStepsLabel = expanded ? t('agent_trace.collapse_steps') : t('agent_trace.expand_steps')
+  const detailsId = `settings-agent-trace-details-${encodeURIComponent(trace.id)}`
 
   const filteredSteps = useMemo(() => {
     let steps = trace.steps
@@ -168,81 +162,49 @@ const TraceCard = memo(function TraceCard({ trace }: { trace: AgentTrace }) {
   }, [trace.steps, errorsOnly, search])
 
   return (
-    <div
-      style={{
-        padding: '10px 12px',
-        borderRadius: 10,
-        background: 'rgba(15, 23, 42, 0.55)',
-        border: `1px solid ${hasError ? 'rgba(248, 113, 113, 0.3)' : 'rgba(148, 163, 184, 0.18)'}`,
-        marginBottom: 8,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
-        <div style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#e2e8f0' }}>
+    <article className="settings-agent-card" data-status={traceStatus} data-error={hasError ? 'true' : undefined}>
+      <div className="settings-agent-card__header">
+        <strong className="settings-agent-card__goal">
           {trace.goal}
-        </div>
-        <div style={{ fontSize: 10, color: statusColor, fontWeight: 600 }}>
-          {trace.status ?? 'running'}
-        </div>
+        </strong>
+        <span className="settings-agent-card__status">{traceStatus}</span>
       </div>
-      <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>
-        {formatTime(trace.startedAt)} · {formatDuration(trace.startedAt, trace.endedAt, t('agent_trace.in_progress'))} · {trace.steps.length} {t('agent_trace.steps_suffix')}
+      <div className="settings-agent-card__meta">
+        {formatTime(trace.startedAt, locale)} · {formatDuration(trace.startedAt, trace.endedAt, t('agent_trace.in_progress'))} · {trace.steps.length} {t('agent_trace.steps_suffix')}
       </div>
       <button
+        type="button"
+        className="settings-agent-card__toggle"
+        aria-expanded={expanded}
+        aria-controls={detailsId}
+        title={toggleStepsLabel}
         onClick={() => setExpanded(!expanded)}
-        style={{
-          marginTop: 6,
-          padding: '2px 8px',
-          fontSize: 10,
-          background: 'transparent',
-          color: '#60a5fa',
-          border: '1px solid rgba(96, 165, 250, 0.3)',
-          borderRadius: 4,
-          cursor: 'pointer',
-        }}
       >
-        {expanded ? t('agent_trace.collapse_steps') : t('agent_trace.expand_steps')}
+        {toggleStepsLabel}
       </button>
-      {expanded && (
-        <>
-          <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
+      {expanded ? (
+        <div id={detailsId}>
+          <div className="settings-agent-card__filters">
             <input
               type="text"
+              className="settings-agent-card__search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('agent_trace.search_placeholder')}
-              style={{
-                flex: 1,
-                fontSize: 11,
-                padding: '3px 8px',
-                background: 'rgba(15, 23, 42, 0.6)',
-                color: '#e2e8f0',
-                border: '1px solid rgba(148, 163, 184, 0.25)',
-                borderRadius: 4,
-                outline: 'none',
-              }}
+              aria-label={t('agent_trace.search_placeholder')}
             />
-            <label style={{ display: 'flex', gap: 4, fontSize: 10, color: '#94a3b8', cursor: 'pointer' }}>
+            <label className="settings-agent-card__check">
               <input
                 type="checkbox"
                 checked={errorsOnly}
                 onChange={(e) => setErrorsOnly(e.target.checked)}
-                style={{ margin: 0 }}
               />
               {t('agent_trace.errors_only')}
             </label>
           </div>
-          <ul
-            style={{
-              listStyle: 'none',
-              padding: 0,
-              margin: '8px 0 0 0',
-              maxHeight: 240,
-              overflowY: 'auto',
-            }}
-          >
+          <ul className="settings-agent-card__steps">
             {filteredSteps.length === 0 ? (
-              <li style={{ fontSize: 11, color: '#64748b', padding: '4px 0' }}>
+              <li className="settings-agent-panel__empty settings-agent-panel__empty--compact">
                 {t('agent_trace.no_matching_steps')}
               </li>
             ) : (
@@ -251,75 +213,53 @@ const TraceCard = memo(function TraceCard({ trace }: { trace: AgentTrace }) {
               ))
             )}
           </ul>
-        </>
-      )}
-    </div>
+        </div>
+      ) : null}
+    </article>
   )
 })
 
 const TaskRow = memo(function TaskRow({ task }: { task: BackgroundTask }) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   return (
-    <div
-      style={{
-        padding: '8px 12px',
-        borderRadius: 8,
-        background: 'rgba(15, 23, 42, 0.45)',
-        border: `1px solid ${TASK_STATUS_COLOR[task.status]}33`,
-        marginBottom: 6,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
-        <div style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#e2e8f0' }}>
+    <article className="settings-agent-task" data-status={task.status}>
+      <div className="settings-agent-task__header">
+        <strong className="settings-agent-task__label">
           {task.label}
-        </div>
-        <div style={{ fontSize: 10, color: TASK_STATUS_COLOR[task.status], fontWeight: 600 }}>
+        </strong>
+        <span className="settings-agent-task__status">
           {t(TASK_STATUS_LABEL_KEY[task.status])}
-        </div>
+        </span>
       </div>
-      <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>
-        {formatTime(task.startedAt)} · {formatDuration(task.startedAt, task.endedAt, t('agent_trace.in_progress'))}
+      <div className="settings-agent-task__meta">
+        {formatTime(task.startedAt, locale)} · {formatDuration(task.startedAt, task.endedAt, t('agent_trace.in_progress'))}
       </div>
       {task.summary && (
-        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, whiteSpace: 'pre-wrap' }}>
+        <p className="settings-agent-task__summary">
           {task.summary.length > 160 ? `${task.summary.slice(0, 160)}…` : task.summary}
-        </div>
+        </p>
       )}
-      <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+      <div className="settings-agent-task__actions">
         {task.status === 'running' && (
           <button
+            type="button"
+            className="settings-agent-task__button settings-agent-task__button--danger"
             onClick={() => backgroundTaskStore.cancel(task.id)}
-            style={{
-              padding: '2px 8px',
-              fontSize: 10,
-              background: 'transparent',
-              color: '#f87171',
-              border: '1px solid rgba(248, 113, 113, 0.3)',
-              borderRadius: 4,
-              cursor: 'pointer',
-            }}
           >
             {t('agent_trace.cancel')}
           </button>
         )}
         {task.status !== 'running' && (
           <button
+            type="button"
+            className="settings-agent-task__button"
             onClick={() => backgroundTaskStore.remove(task.id)}
-            style={{
-              padding: '2px 8px',
-              fontSize: 10,
-              background: 'transparent',
-              color: '#64748b',
-              border: '1px solid rgba(148, 163, 184, 0.25)',
-              borderRadius: 4,
-              cursor: 'pointer',
-            }}
           >
             {t('agent_trace.remove')}
           </button>
         )}
       </div>
-    </div>
+    </article>
   )
 })
 
@@ -345,53 +285,46 @@ export const AgentTracePanel = memo(function AgentTracePanel() {
 
   if (traces.length === 0 && tasks.length === 0) {
     return (
-      <div style={{ padding: 16, color: '#64748b', fontSize: 12 }}>
+      <p className="settings-agent-panel__empty">
         {t('agent_trace.empty_state')}
-      </div>
+      </p>
     )
   }
 
   return (
-    <div style={{ padding: 12, maxHeight: '60vh', overflowY: 'auto' }}>
+    <div className="settings-agent-panel">
       {tasks.length > 0 && (
-        <section>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 6, letterSpacing: 0.5 }}>
+        <section className="settings-agent-panel__section">
+          <div className="settings-agent-panel__section-title">
             {t('agent_trace.background_tasks')}
           </div>
           {tasks.map((task) => <TaskRow key={task.id} task={task} />)}
         </section>
       )}
       {traces.length > 0 && (
-        <section style={{ marginTop: tasks.length > 0 ? 12 : 0 }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 8,
-              marginBottom: 6,
-            }}
-          >
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: 0.5 }}>
+        <section className="settings-agent-panel__section">
+          <div className="settings-agent-panel__section-header">
+            <div className="settings-agent-panel__section-title">
               {t('agent_trace.recent_traces')}
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {(Object.keys(TRACE_FILTER_LABEL_KEY) as TraceStatusFilter[]).map((key) => {
+            <div
+              className="settings-agent-panel__filter-row"
+              role="radiogroup"
+              aria-label={t('agent_trace.recent_traces')}
+            >
+              {TRACE_FILTER_OPTIONS.map((key) => {
                 const isActive = filter === key
                 return (
                   <button
+                    id={getTraceFilterRadioId(key)}
                     key={key}
                     type="button"
+                    className="settings-agent-panel__filter"
+                    role="radio"
+                    aria-checked={isActive}
+                    tabIndex={isActive ? 0 : -1}
                     onClick={() => setFilter(key)}
-                    style={{
-                      padding: '2px 8px',
-                      fontSize: 10,
-                      background: isActive ? 'rgba(96, 165, 250, 0.18)' : 'transparent',
-                      color: isActive ? '#60a5fa' : '#94a3b8',
-                      border: `1px solid ${isActive ? 'rgba(96, 165, 250, 0.4)' : 'rgba(148, 163, 184, 0.2)'}`,
-                      borderRadius: 4,
-                      cursor: 'pointer',
-                    }}
+                    onKeyDown={(event) => handleTraceFilterKeyDown(event, key, setFilter)}
                   >
                     {t(TRACE_FILTER_LABEL_KEY[key])}
                   </button>
@@ -400,9 +333,9 @@ export const AgentTracePanel = memo(function AgentTracePanel() {
             </div>
           </div>
           {filteredTraces.length === 0 ? (
-            <div style={{ fontSize: 11, color: '#64748b', padding: '4px 0' }}>
+            <p className="settings-agent-panel__empty settings-agent-panel__empty--compact">
               {t('agent_trace.no_matching_traces', { filter: t(TRACE_FILTER_LABEL_KEY[filter]) })}
-            </div>
+            </p>
           ) : (
             filteredTraces.map((trace) => <TraceCard key={trace.id} trace={trace} />)
           )}

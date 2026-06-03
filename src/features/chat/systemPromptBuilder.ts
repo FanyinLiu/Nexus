@@ -16,7 +16,7 @@ import type {
   MemoryRecallContext,
 } from '../../types'
 import { buildLorebookSection } from './lorebookInjection'
-import { getApiProviderPreset } from '../../lib/apiProviders'
+import { getApiProviderPreset } from '../models/index.ts'
 import { formatDesktopContext } from '../context/desktopContext'
 import { formatNarrativeForPrompt } from '../memory/narrativeMemory'
 import { getChatPromptStrings } from './prompts/index.ts'
@@ -196,7 +196,7 @@ export async function buildSystemPrompt(
   // prefix stays byte-stable across requests and the Anthropic prompt cache
   // (see electron/chatRuntime.js `cache_control: ephemeral`) can actually hit.
   // It is injected into the final user message as a <system-reminder> block
-  // below — the Claude Code-style pattern that keeps time-sensitive context
+  // below — a cache-friendly pattern that keeps time-sensitive context
   // fresh without invalidating the cached prefix.
 
   const headerText = prompts.headerLines({
@@ -425,9 +425,8 @@ async function toRequestMessages(
   }
 
   // Inject current time as a <system-reminder> prefix on the most recent user
-  // message so the cached system prefix stays byte-stable. Mirrors the Claude
-  // Code pattern for time updates and mode transitions. Only the last user
-  // turn carries the reminder — earlier turns keep their historical content
+  // message so the cached system prefix stays byte-stable. Only the last user
+  // turn carries the reminder; earlier turns keep their historical content
   // so conversation replay remains coherent.
   const timeReminder = formatCurrentTimeReminder(settings)
   const augmentedMessages = contextMessages.slice()

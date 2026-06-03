@@ -1,9 +1,16 @@
-import { memo, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
+import {
+  memo,
+  useEffect,
+  useState,
+  type Dispatch,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type SetStateAction,
+} from 'react'
 import { parseNumberInput } from '../settingsDrawerSupport'
 import { TextField, ToggleField } from '../settingsFields'
+import { getRovingNextIndex } from '../choiceRadioNav'
 import {
   getInspectableIntegrationModules,
-  getRoadmapIntegrationModules,
   type IntegrationModuleDescriptor,
 } from '../../features/integrations/registry'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
@@ -26,7 +33,17 @@ type IntegrationsSectionProps = {
 type IntegrationPanelId = InspectableIntegrationModuleId
 
 const inspectableModules = getInspectableIntegrationModules()
-const roadmapModules = getRoadmapIntegrationModules()
+const inspectablePanelIds = inspectableModules
+  .map((module) => module.panelId)
+  .filter((panelId): panelId is IntegrationPanelId => Boolean(panelId))
+
+function getIntegrationTabId(panelId: IntegrationPanelId): string {
+  return `settings-integrations-tab-${panelId}`
+}
+
+function getIntegrationPanelId(panelId: IntegrationPanelId): string {
+  return `settings-integrations-panel-${panelId}`
+}
 
 export const IntegrationsSection = memo(function IntegrationsSection({
   active,
@@ -214,17 +231,25 @@ export const IntegrationsSection = memo(function IntegrationsSection({
   function renderModuleSelectorCard(
     descriptor: IntegrationModuleDescriptor,
   ) {
-    const selected = activePanelId === descriptor.panelId
-    const runtime = descriptor.panelId ? getModuleRuntime(descriptor.panelId) : null
+    if (!descriptor.panelId) return null
+
+    const panelId = descriptor.panelId
+    const selected = activePanelId === panelId
+    const runtime = getModuleRuntime(panelId)
     const badge = runtime ? getStatusLabel(runtime.status) : ti(descriptor.badge)
 
     return (
       <button
         key={descriptor.id}
         type="button"
+        id={getIntegrationTabId(panelId)}
+        role="tab"
         className={`settings-choice-card ${selected ? 'is-active' : ''}`}
-        aria-pressed={selected}
-        onClick={() => descriptor.panelId && setActivePanelId(descriptor.panelId)}
+        aria-selected={selected}
+        aria-controls={getIntegrationPanelId(panelId)}
+        tabIndex={selected ? 0 : -1}
+        onClick={() => setActivePanelId(panelId)}
+        onKeyDown={(event) => handleModuleTabKeyDown(event, panelId)}
       >
         <span className="settings-choice-card__header">
           <strong>{ti(descriptor.title)}</strong>
@@ -237,30 +262,29 @@ export const IntegrationsSection = memo(function IntegrationsSection({
     )
   }
 
-  function renderRoadmapCard(descriptor: IntegrationModuleDescriptor) {
-    return (
-      <article key={descriptor.id} className="settings-drawer__card">
-        <div className="settings-section__title-row">
-          <div>
-            <h5>{ti(descriptor.title)}</h5>
-            <p className="settings-drawer__hint">{ti(descriptor.summary)}</p>
-          </div>
-          <div className="settings-page__meta">
-            <span>{ti(descriptor.badge)}</span>
-          </div>
-        </div>
+  function focusModuleTab(panelId: IntegrationPanelId) {
+    window.requestAnimationFrame(() => {
+      document.getElementById(getIntegrationTabId(panelId))?.focus()
+    })
+  }
 
-        <p className="settings-inline-note">
-          {ti(descriptor.designPattern)}
-        </p>
-        <p className="settings-inline-note">
-          {ti(descriptor.nextStep)}
-        </p>
-        <p className="settings-inline-note">
-          {`${ti('settings.integrations.design_refs')}: ${descriptor.references.join(' / ')}`}
-        </p>
-      </article>
-    )
+  function selectModuleTab(panelId: IntegrationPanelId) {
+    setActivePanelId(panelId)
+    focusModuleTab(panelId)
+  }
+
+  function handleModuleTabKeyDown(
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    panelId: IntegrationPanelId,
+  ) {
+    const currentIndex = inspectablePanelIds.indexOf(panelId)
+    if (currentIndex < 0) return
+
+    const nextIndex = getRovingNextIndex(event.key, currentIndex, inspectablePanelIds.length)
+    if (nextIndex === null) return
+
+    event.preventDefault()
+    selectModuleTab(inspectablePanelIds[nextIndex])
   }
 
   function updateMcpServer(serverId: string, patch: Partial<McpServerConfig>) {
@@ -363,14 +387,14 @@ export const IntegrationsSection = memo(function IntegrationsSection({
               <p className="settings-drawer__hint">{ti('settings.integrations.mcp.note')}</p>
             </div>
             <div className="settings-page__meta">
-              <span>{`${draft.mcpServers.length} server(s)`}</span>
+              <span>{ti('settings.integrations.mcp.server_count', { count: String(draft.mcpServers.length) })}</span>
               <span>{ti('settings.integrations.structure_aligned')}</span>
             </div>
           </div>
 
           <button
             type="button"
-            className="settings-action-button"
+            className="primary-button"
             onClick={addMcpServer}
           >
             {ti('settings.integrations.mcp.add_server')}
@@ -645,26 +669,32 @@ export const IntegrationsSection = memo(function IntegrationsSection({
         </div>
 
         {inspectionError ? (
-          <div className="settings-test-result is-error">{inspectionError}</div>
+          <div
+            className="settings-test-result is-error"
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+          >
+            {inspectionError}
+          </div>
         ) : null}
 
         <p className="settings-inline-note">{ti('settings.integrations.probe_note')}</p>
       </div>
 
-      {activePanelId === 'mcp' ? renderMcpPanel() : null}
-      {activePanelId === 'minecraft' ? renderGamePanel('minecraft') : null}
-      {activePanelId === 'factorio' ? renderGamePanel('factorio') : null}
-      {activePanelId === 'telegram' ? renderTelegramPanel() : null}
-      {activePanelId === 'discord' ? renderDiscordPanel() : null}
-
-      <div className="settings-section__title-row">
-        <div>
-          <h4>{ti('settings.integrations.next_modules')}</h4>
-          <p className="settings-drawer__hint">{ti('settings.integrations.next_modules_note')}</p>
-        </div>
+      <div
+        id={getIntegrationPanelId(activePanelId)}
+        className="settings-integration-panel"
+        role="tabpanel"
+        aria-labelledby={getIntegrationTabId(activePanelId)}
+        tabIndex={0}
+      >
+        {activePanelId === 'mcp' ? renderMcpPanel() : null}
+        {activePanelId === 'minecraft' ? renderGamePanel('minecraft') : null}
+        {activePanelId === 'factorio' ? renderGamePanel('factorio') : null}
+        {activePanelId === 'telegram' ? renderTelegramPanel() : null}
+        {activePanelId === 'discord' ? renderDiscordPanel() : null}
       </div>
-
-      {roadmapModules.map((descriptor) => renderRoadmapCard(descriptor))}
     </section>
   )
 })

@@ -2,9 +2,11 @@ import type { SettingsSectionId } from './settingsDrawerSupport'
 import type { PetModelDefinition } from '../features/pet'
 import { getWebSearchProviderPreset } from '../lib/webSearchProviders'
 import { getApiProviderPreset } from '../lib'
-import { pickTranslatedUiText } from '../lib/uiLanguage'
+import {
+  pickTranslatedUiText,
+  pickTranslatedUiTextOrFallback,
+} from '../lib/uiLanguage'
 import type { AppSettings, DailyMemoryEntry, DebugConsoleEvent, MemoryItem, UiLanguage } from '../types'
-import type { TranslationKey } from '../types/i18n'
 
 export type SettingsSectionDescriptionMap = Record<SettingsSectionId, string>
 
@@ -42,6 +44,7 @@ export function buildSettingsSectionDescriptions(ti: Translator): SettingsSectio
     model: ti('settings.section_desc.model'),
     chat: ti('settings.section_desc.chat'),
     history: ti('settings.section_desc.history'),
+    letters: ti('settings.section_desc.letters'),
     memory: ti('settings.section_desc.memory'),
     lorebooks: ti('settings.section_desc.lorebooks'),
     voice: ti('settings.section_desc.voice'),
@@ -58,6 +61,7 @@ export function buildSettingsSectionMeta(input: BuildSettingsSectionMetaInput): 
 } {
   const {
     ti,
+    uiLanguage,
     draft,
     petModel,
     memories,
@@ -97,7 +101,7 @@ export function buildSettingsSectionMeta(input: BuildSettingsSectionMetaInput): 
       description: descriptions.chat,
       preview: [
         draft.companionName || ti('settings.preview.chat.unnamed'),
-        petModel?.label ? ti(petModel.label as TranslationKey) : ti('settings.preview.chat.no_live2d'),
+        petModel?.label ? pickTranslatedUiTextOrFallback(uiLanguage, petModel.label) : ti('settings.preview.chat.no_live2d'),
         draft.characterProfiles.length
           ? ti('settings.preview.chat.profile_count', { count: draft.characterProfiles.length })
           : '',
@@ -110,6 +114,15 @@ export function buildSettingsSectionMeta(input: BuildSettingsSectionMetaInput): 
       preview: [
         `${chatMessageCount} ${ti('settings.preview.metrics.messages')}`,
         ti('settings.preview.history.actions'),
+      ],
+    },
+    letters: {
+      eyebrow: ti('settings.section_eyebrow.letters'),
+      glyph: 'letters',
+      description: descriptions.letters,
+      preview: [
+        ti('settings.letters.empty_state'),
+        ti('settings.letters.note'),
       ],
     },
     memory: {
@@ -148,10 +161,10 @@ export function buildSettingsSectionMeta(input: BuildSettingsSectionMetaInput): 
       glyph: 'window',
       description: descriptions.window,
       preview: [
-        petModel?.label ? ti(petModel.label as TranslationKey) : ti('settings.preview.window.desktop_pet'),
         clickThroughEnabled
           ? ti('settings.preview.window.click_through_on')
           : ti('settings.preview.window.interactive'),
+        petModel?.label ? pickTranslatedUiTextOrFallback(uiLanguage, petModel.label) : ti('settings.preview.window.desktop_pet'),
       ],
     },
     integrations: {

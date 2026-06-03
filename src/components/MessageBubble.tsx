@@ -9,13 +9,13 @@ type MessageBubbleProps = {
   assistantName?: string
 }
 
-function formatMessageTimestamp(createdAt: string) {
+function formatMessageTimestamp(createdAt: string, locale: string) {
   const timestamp = Date.parse(createdAt)
   if (Number.isNaN(timestamp)) {
     return ''
   }
 
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(locale, {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(timestamp))
@@ -57,14 +57,14 @@ function renderLinkedContent(content: string) {
 }
 
 export const MessageBubble = memo(function MessageBubble({ message, assistantName }: MessageBubbleProps) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const resolvedAssistantName = assistantName ?? t('message_bubble.role.assistant_default')
   const speakerLabel = message.role === 'assistant'
     ? resolvedAssistantName
     : message.role === 'system'
       ? t('message_bubble.role.system')
       : t('message_bubble.role.user')
-  const timestampLabel = formatMessageTimestamp(message.createdAt)
+  const timestampLabel = formatMessageTimestamp(message.createdAt, locale)
 
   const bubbleClassName = [
     'message-bubble',

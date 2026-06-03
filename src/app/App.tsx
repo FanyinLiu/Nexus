@@ -23,28 +23,20 @@ class AppErrorBoundary extends Component<
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 32, fontFamily: 'system-ui', color: '#333' }}>
-          <h2 style={{ margin: '0 0 12px' }}>{translate('app.error_boundary.title')}</h2>
-          <p style={{ margin: '0 0 16px', color: '#666' }}>
-            {translate('app.error_boundary.body')}
-          </p>
-          <pre style={{ fontSize: 12, color: '#999', whiteSpace: 'pre-wrap' }}>
-            {this.state.error.message}
-          </pre>
-          <button
-            type="button"
-            style={{
-              marginTop: 16,
-              padding: '8px 20px',
-              border: '1px solid #ccc',
-              borderRadius: 6,
-              background: '#fff',
-              cursor: 'pointer',
-            }}
-            onClick={() => window.location.reload()}
-          >
-            {translate('app.error_boundary.reload')}
-          </button>
+        <div className="app-error-fallback" role="alert">
+          <div className="app-error-fallback__card">
+            <span className="app-error-fallback__eyebrow">Nexus</span>
+            <h1>{translate('app.error_boundary.title')}</h1>
+            <p>{translate('app.error_boundary.body')}</p>
+            <pre className="app-error-fallback__detail">{this.state.error.message}</pre>
+            <button
+              type="button"
+              className="app-error-fallback__button"
+              onClick={() => window.location.reload()}
+            >
+              {translate('app.error_boundary.reload')}
+            </button>
+          </div>
         </div>
       )
     }
@@ -65,17 +57,17 @@ const OnboardingGuide = lazy(async () => {
 function App() {
   const controller = useAppController()
 
-  const onboardingGuide = (
+  const onboardingGuide = controller.overlays.onboardingGuideProps.open ? (
     <Suspense fallback={null}>
       <OnboardingGuide {...controller.overlays.onboardingGuideProps} />
     </Suspense>
-  )
+  ) : null
 
-  const settingsDrawer = (
+  const settingsDrawer = controller.overlays.settingsDrawerProps.open ? (
     <Suspense fallback={null}>
       <SettingsDrawer {...controller.overlays.settingsDrawerProps} />
     </Suspense>
-  )
+  ) : null
 
   if (controller.view === 'pet') {
     return (
@@ -84,6 +76,7 @@ function App() {
           {...controller.petView}
           onboardingGuide={onboardingGuide}
         />
+        {settingsDrawer}
         <ModelSetupOverlay suppressed />
       </AppErrorBoundary>
     )

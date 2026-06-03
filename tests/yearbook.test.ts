@@ -163,6 +163,21 @@ test('render: empty months use the empty-month label', () => {
   assert.match(html, /no samples/)
 })
 
+test('render: monthly SVG aria labels are localized', () => {
+  const now = new Date(2026, 3, 27)
+  const samples = [
+    userSample('2026-04-01T08:00:00Z', -0.2),
+    userSample('2026-04-03T08:00:00Z', 0.4),
+  ]
+  const empty = renderYearbookHtml(aggregateYearbook([], [], [], [], [], now), 'zh-CN')
+  const populated = renderYearbookHtml(aggregateYearbook(samples, [], [], [], [], now), 'ja')
+
+  assert.match(empty, /aria-label="本月无样本"/)
+  assert.match(populated, /aria-label="月別の感情価の推移"/)
+  assert.doesNotMatch(empty, /aria-label="empty"/)
+  assert.doesNotMatch(populated, /aria-label="month"/)
+})
+
 test('render: letters appear chronologically with date headers', () => {
   const now = new Date(2026, 3, 27)
   const letters: SavedLetter[] = [

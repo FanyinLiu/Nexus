@@ -192,6 +192,9 @@ export async function stopPlugin(pluginId) {
 export async function restartPlugin(pluginId) {
   const plugin = _plugins.get(pluginId)
   if (!plugin) throw new Error(`Plugin not found: ${pluginId}`)
+  if (!plugin.enabled) throw new Error(`Plugin is disabled: ${pluginId}`)
+  if (!_approvedPlugins.has(pluginId)) throw new Error(`Plugin not approved: ${pluginId}. Approve it in settings first.`)
+  if (!isPluginCommandTrusted(plugin)) throw new Error(`Plugin "${pluginId}" command has changed since approval. Re-approve it in settings.`)
 
   const mcpServerId = `plugin:${pluginId}`
   await mcpHost.restart(mcpServerId, plugin.command, plugin.args)

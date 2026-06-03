@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap'
 import { useTranslation } from '../../../i18n/useTranslation.ts'
 import { humanizeError } from '../../../lib/humanizeError.ts'
 
@@ -70,6 +71,7 @@ export function ModelSetupOverlay({ suppressed = false }: Props) {
   } | null>(null)
   const [errorBanner, setErrorBanner] = useState<string | null>(null)
 
+  const dialogRef = useRef<HTMLElement | null>(null)
   const refreshInventoryRef = useRef<() => Promise<void>>(() => Promise.resolve())
 
   const refreshInventory = useCallback(async () => {
@@ -141,6 +143,32 @@ export function ModelSetupOverlay({ suppressed = false }: Props) {
     setDismissed(true)
   }, [])
 
+  const overlayVisible = !suppressed && !dismissed && Boolean(inventory) && inventory?.ready === false
+  useModalFocusTrap(dialogRef, overlayVisible)
+
+  useEffect(() => {
+    if (!overlayVisible) return
+
+    window.requestAnimationFrame(() => {
+      dialogRef.current?.focus()
+    })
+  }, [overlayVisible])
+
+  useEffect(() => {
+    if (!overlayVisible || busy) return undefined
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        handleDismiss()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [busy, handleDismiss, overlayVisible])
+
   if (suppressed) return null
   if (dismissed) return null
   if (!inventory) return null
@@ -148,6 +176,18 @@ export function ModelSetupOverlay({ suppressed = false }: Props) {
 
   const requiredModels = inventory.models.filter(m => m.required)
   const optionalModels = inventory.models.filter(m => !m.required)
+  const modelSetupDescription = t('model_setup.body_prefix', { path: inventory.primaryDir })
+  const modelPathIndex = modelSetupDescription.indexOf(inventory.primaryDir)
+  const modelDescriptionBeforePath = modelPathIndex >= 0
+    ? modelSetupDescription.slice(0, modelPathIndex)
+    : ''
+  const modelDescriptionAfterPath = modelPathIndex >= 0
+    ? modelSetupDescription.slice(modelPathIndex + inventory.primaryDir.length)
+    : ''
+  const pathTrailingPunctuation = modelDescriptionAfterPath.match(/^[。．.,，、]/)?.[0] ?? ''
+  const modelDescriptionAfterStyledPath = pathTrailingPunctuation
+    ? modelDescriptionAfterPath.slice(pathTrailingPunctuation.length)
+    : modelDescriptionAfterPath
 
   const renderRow = (model: ModelEntry) => {
     const p = progress[model.id]
@@ -167,12 +207,12 @@ export function ModelSetupOverlay({ suppressed = false }: Props) {
           {model.present ? (
             <div className="model-setup__row-status model-setup__row-status--ok">{t('model_setup.installed')}</div>
           ) : isActive ? (
-            <div className="model-setup__row-status">
+            <div className="model-setup__row-status" role="status" aria-live="polite" aria-atomic="true">
               {pct !== null ? `${pct}% · ${formatBytes(p.downloaded)} / ${formatBytes(p.total)}` : t('model_setup.downloading')}
               {p?.fileName ? <span className="model-setup__row-file"> · {p.fileName}</span> : null}
             </div>
           ) : hasError ? (
-            <div className="model-setup__row-status model-setup__row-status--error">
+            <div className="model-setup__row-status model-setup__row-status--error" role="alert" aria-live="assertive" aria-atomic="true">
               {p?.message ? t('model_setup.failed_with_message', { message: p.message }) : t('model_setup.failed')}
             </div>
           ) : (
@@ -194,23 +234,42 @@ export function ModelSetupOverlay({ suppressed = false }: Props) {
         </div>
 
         {pct !== null && isActive ? (
-          <div className="model-setup__progress">
-            <div className="model-setup__progress-bar" style={{ width: `${pct}%` }} />
-          </div>
+          <progress
+            className="model-setup__progress"
+            value={pct}
+            max={100}
+            aria-label={`${model.label} ${t('model_setup.downloading')}`}
+          />
         ) : null}
       </div>
     )
   }
 
   return (
-    <div className="model-setup-backdrop" role="dialog" aria-modal="true">
-      <section className="model-setup-card">
+    <div className="model-setup-backdrop">
+      <section
+        ref={dialogRef}
+        className="model-setup-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="model-setup-title"
+        aria-describedby="model-setup-description"
+        tabIndex={-1}
+      >
         <header className="model-setup-card__header">
           <div>
             <p className="eyebrow">{t('model_setup.eyebrow')}</p>
-            <h2>{t('model_setup.title')}</h2>
-            <p className="model-setup-card__copy">
-              {t('model_setup.body_prefix', { path: inventory.primaryDir })}
+            <h2 id="model-setup-title">{t('model_setup.title')}</h2>
+            <p id="model-setup-description" className="model-setup-card__copy">
+              {modelPathIndex >= 0 ? (
+                <>
+                  {modelDescriptionBeforePath}
+                  <span className="model-setup-card__path">
+                    {inventory.primaryDir}{pathTrailingPunctuation}
+                  </span>
+                  {modelDescriptionAfterStyledPath}
+                </>
+              ) : modelSetupDescription}
             </p>
           </div>
           <button className="ghost-button" type="button" onClick={handleDismiss} disabled={busy}>
@@ -225,7 +284,9 @@ export function ModelSetupOverlay({ suppressed = false }: Props) {
         ) : null}
 
         {errorBanner ? (
-          <div className="model-setup__error">{errorBanner}</div>
+          <div className="model-setup__error" role="alert" aria-live="assertive" aria-atomic="true">
+            {errorBanner}
+          </div>
         ) : null}
 
         <div className="model-setup__list">

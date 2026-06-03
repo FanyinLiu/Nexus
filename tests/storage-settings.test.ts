@@ -40,6 +40,21 @@ beforeEach(() => {
   })
 })
 
+test('fresh settings start with the Phase 1 Ollama text path', () => {
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'ollama')
+  assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
+  assert.equal(settings.model, 'qwen3:8b')
+  assert.equal(settings.petModelId, 'qiyi')
+  assert.equal(settings.apiKey, '')
+  assert.equal(settings.chatFailoverEnabled, false)
+  assert.equal(settings.speechInputEnabled, false)
+  assert.equal(settings.speechOutputEnabled, false)
+  assert.equal(settings.toolWebSearchEnabled, false)
+  assert.equal(settings.proactivePresenceEnabled, false)
+})
+
 test('preserves volcengine-tts selection without migration', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({
@@ -185,6 +200,46 @@ test('commitSettingsUpdate stores secret settings in vault and persists stripped
     'settings:speechOutputApiKey': 'tts-secret',
   })
   assert.equal(appliedSettings?.speechOutputApiKey, 'tts-secret')
+  assert.equal(
+    JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}').speechOutputApiKey,
+    '',
+  )
+})
+
+test('commitSettingsUpdate does not re-store vault refs as plaintext secrets', async () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      speechOutputApiKey: '',
+    }),
+  })
+
+  let storedVaultEntries: Record<string, string> | null = null
+
+  Object.defineProperty(globalThis, 'window', {
+    value: {
+      localStorage,
+      dispatchEvent: () => true,
+      desktopPet: {
+        vaultStore: async () => {},
+        vaultStoreMany: async (entries: Record<string, string>) => {
+          storedVaultEntries = entries
+        },
+        vaultRetrieveMany: async () => ({}),
+      },
+    },
+    configurable: true,
+    writable: true,
+  })
+
+  await commitSettingsUpdate(
+    (current) => ({
+      ...current,
+      speechOutputApiKey: 'nexus-vault-ref:already-issued',
+    }),
+    () => {},
+  )
+
+  assert.deepEqual(storedVaultEntries, null)
   assert.equal(
     JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}').speechOutputApiKey,
     '',

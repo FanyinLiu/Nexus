@@ -1,4 +1,5 @@
 import type { PetThoughtBubbleState } from '../types'
+import { PetControlIcon } from './PetControlIcon'
 
 type PetThoughtBubbleProps = {
   bubble: PetThoughtBubbleState
@@ -13,7 +14,7 @@ export function PetThoughtBubble({ bubble }: PetThoughtBubbleProps) {
 
   return (
     <aside className={`pet-thought-bubble ${intensityClass}`} aria-live="polite">
-      <span className="pet-thought-bubble__icon" aria-hidden="true">💭</span>
+      <PetControlIcon name="thought" className="pet-thought-bubble__icon" />
       <span className="pet-thought-bubble__text">{bubble.thought}</span>
     </aside>
   )

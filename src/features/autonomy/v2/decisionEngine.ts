@@ -32,16 +32,6 @@ export type DecisionResult =
   | { kind: 'silent'; reason?: string; rawResponse?: string }
   | { kind: 'speak'; text: string; rawResponse: string }
   | {
-      kind: 'spawn'
-      /** Natural-language instruction passed to the subagent dispatcher. */
-      task: string
-      /** Short user-visible rationale — why spawning now. */
-      purpose: string
-      /** Optional in-character line the companion says while the subagent runs. */
-      announcement?: string
-      rawResponse: string
-    }
-  | {
       /** Silent gesture — the companion does a tiny ambient motion (yawn /
        * stretch / look around) without any text or TTS. Only enabled when
        * the user has been idle long enough that a brief sign of life feels
@@ -108,9 +98,6 @@ export interface RunDecisionOptions {
 export function extractDecisionJson(raw: string): {
   action: string
   text?: string
-  task?: string
-  purpose?: string
-  announcement?: string
   motion?: string
 } | null {
   if (!raw) return null
@@ -224,30 +211,6 @@ export async function runDecisionEngine(opts: RunDecisionOptions): Promise<Decis
       }
     }
     return { kind: 'idle_motion', motion, rawResponse: response.content }
-  }
-
-  if (parsed.action === 'spawn') {
-    const task = String(parsed.task ?? '').trim()
-    const purpose = String(parsed.purpose ?? '').trim()
-    if (!task || !purpose) {
-      // Spawn requires both task and purpose — without them the dispatcher
-      // has nothing to run and the UI has nothing to show. Treat as silent
-      // rather than fire a malformed subagent.
-      return {
-        kind: 'silent',
-        reason: 'spawn_missing_required_fields',
-        rawResponse: response.content,
-      }
-    }
-    const announcementRaw = String(parsed.announcement ?? '').trim()
-    const announcement = announcementRaw || undefined
-    return {
-      kind: 'spawn',
-      task,
-      purpose,
-      announcement,
-      rawResponse: response.content,
-    }
   }
 
   // Unknown action value — safest is silent.

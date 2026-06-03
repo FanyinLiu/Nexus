@@ -2,6 +2,7 @@ import {
   performNetworkRequest,
   performNetworkRequestWithRetry,
   readJsonSafe,
+  readResponseBufferWithLimit,
   extractResponseErrorMessage,
   normalizeLanguageCode,
   audioFormatToMimeType,
@@ -105,6 +106,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
     }
 
     const response = await performNetworkRequestWithRetry(endpoint, {
+      allowPrivateNetwork: true,
       method: 'POST',
       headers,
       body: requestBody,
@@ -117,7 +119,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
       throw new Error(await extractResponseErrorMessage(response, '语音播报请求失败（状态码：' + response.status + '）'))
     }
 
-    const pcmBuffer = Buffer.from(await response.arrayBuffer())
+    const pcmBuffer = await readResponseBufferWithLimit(response, { label: '语音音频' })
     return { pcmBuffer, pcmSampleRate: 24000 }
   }
 
@@ -138,6 +140,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
     }
 
     const response = await performNetworkRequestWithRetry(endpoint, {
+      allowPrivateNetwork: true,
       method: 'POST',
       headers,
       body: requestBody,
@@ -150,7 +153,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
       throw new Error(await extractResponseErrorMessage(response, '语音播报请求失败（状态码：' + response.status + '）'))
     }
 
-    const pcmBuffer = Buffer.from(await response.arrayBuffer())
+    const pcmBuffer = await readResponseBufferWithLimit(response, { label: '语音音频' })
     return { pcmBuffer, pcmSampleRate: 16000 }
   }
 

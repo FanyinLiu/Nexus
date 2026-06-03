@@ -10,17 +10,18 @@ type UseReminderSchedulerOptions = {
   enabled: boolean
   tasks: ReminderTask[]
   setTasks: Dispatch<SetStateAction<ReminderTask[]>>
+  locale: string
   onTrigger: (task: ReminderTask) => void | Promise<void>
   onEvent?: (event: DebugConsoleEventDraft) => void
 }
 
-function formatSchedulerTime(value?: string) {
+function formatSchedulerTime(value: string | undefined, locale: string) {
   const timestamp = Date.parse(value ?? '')
   if (Number.isNaN(timestamp)) {
     return 'none'
   }
 
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(locale, {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -32,6 +33,7 @@ export function useReminderScheduler({
   enabled,
   tasks,
   setTasks,
+  locale,
   onTrigger,
   onEvent,
 }: UseReminderSchedulerOptions) {
@@ -123,7 +125,7 @@ export function useReminderScheduler({
       onEventRef.current?.({
         source: 'scheduler',
         title: 'Next reminder scheduled',
-        detail: `${nextTask.task.title} / ${formatSchedulerTime(nextTask.task.nextRunAt)}`,
+        detail: `${nextTask.task.title} / ${formatSchedulerTime(nextTask.task.nextRunAt, locale)}`,
         tone: 'info',
         relatedTaskId: nextTask.task.id,
       })
@@ -154,7 +156,7 @@ export function useReminderScheduler({
           onEventRef.current?.({
             source: 'scheduler',
             title: 'Reminder trigger time reached',
-            detail: `${task.title} / ${formatSchedulerTime(task.nextRunAt)}`,
+            detail: `${task.title} / ${formatSchedulerTime(task.nextRunAt, locale)}`,
             tone: 'success',
             relatedTaskId: task.id,
           })
@@ -169,5 +171,5 @@ export function useReminderScheduler({
     }, delayMs)
 
     return clearTimer
-  }, [enabled, setTasks, tasks])
+  }, [enabled, locale, setTasks, tasks])
 }

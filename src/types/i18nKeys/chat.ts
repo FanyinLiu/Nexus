@@ -109,7 +109,6 @@ export type ChatTranslationKey =
   | 'chat.prefix.notification'
   | 'chat.prefix.notification_bubble'
   | 'chat.prefix.notification_speech'
-  | 'chat.prefix.subagent'
   | 'chat.prefix.scheduled_chat_action'
   | 'chat.autonomy.search_bubble'
   | 'chat.autonomy.search_speech'

@@ -10,13 +10,24 @@ import {
   type ReactNode,
 } from 'react'
 import { getLiveTranscriptLabel, getTimeGreeting, getTimeGreetingEmoji, getVoiceStateLabel } from '../appSupport'
-import { ActivePlanStrip, MessageBubble, SubagentTaskStrip } from '../../components'
+import { ActivePlanStrip } from '../../components/ActivePlanStrip'
+import { MessageBubble } from '../../components/MessageBubble'
 import { resolveCharacterPreset } from '../../features/character/presets'
+import {
+  classifyWeatherCondition,
+  getTimeOfDayBand,
+  getTimeOfDayBlend,
+  PET_TIME_PREVIEW_BANDS,
+  SceneBackdrop,
+  SunlightTint,
+  WeatherAmbient,
+} from '../../features/panelScene'
 import { CrisisHotlinePanel } from '../../features/safety/CrisisHotlinePanel'
 import { useAmbientWeather } from '../../hooks/useAmbientWeather'
 import { shorten } from '../../lib'
 import { modelSupportsVision } from '../../lib/modelCapabilities'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { PetControlIcon, type PetControlIconName } from '../../components/PetControlIcon'
 import type { UseAppControllerResult } from '../controllers/useAppController'
 
 // Maximum number of messages rendered at once. Older messages are hidden
@@ -26,6 +37,27 @@ const MESSAGE_PAGE_SIZE = 100
 type PanelViewProps = UseAppControllerResult['panelView'] & {
   settingsDrawer: ReactNode
   onboardingGuide: ReactNode
+}
+
+type PanelToolbarButtonProps = {
+  icon: PetControlIconName
+  label: string
+  onClick: () => void
+  tone?: 'default' | 'danger'
+}
+
+function PanelToolbarButton({ icon, label, onClick, tone = 'default' }: PanelToolbarButtonProps) {
+  return (
+    <button
+      className={`panel-window__icon-button${tone === 'danger' ? ' panel-window__icon-button--danger' : ''}`}
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+    >
+      <PetControlIcon name={icon} />
+    </button>
+  )
 }
 
 export function PanelView({
@@ -40,8 +72,6 @@ export function PanelView({
   openSettingsPanel,
   togglePanelCollapse,
   closePanel,
-  subagentTasks,
-  cancelSubagentTask,
   settingsDrawer,
   onboardingGuide,
 }: PanelViewProps) {
@@ -63,6 +93,29 @@ export function PanelView({
     settings.toolWeatherDefaultLocation,
     settings.ambientWeatherEnabled,
   )
+  const weatherCondition = useMemo(
+    () => {
+      if (settings.petWeatherPreview !== 'auto') return settings.petWeatherPreview
+      if (!ambientWeather) return null
+      return classifyWeatherCondition(ambientWeather.weatherCode, ambientWeather.windSpeedKmh)
+    },
+    [ambientWeather, settings.petWeatherPreview],
+  )
+  const [autoTimeBand, setAutoTimeBand] = useState(() => getTimeOfDayBand())
+  const [autoTimeBlend, setAutoTimeBlend] = useState(() => getTimeOfDayBlend())
+  useEffect(() => {
+    const update = () => {
+      setAutoTimeBand(getTimeOfDayBand())
+      setAutoTimeBlend(getTimeOfDayBlend())
+    }
+    const intervalId = window.setInterval(update, 60 * 1000)
+    return () => window.clearInterval(intervalId)
+  }, [])
+  const timeBand = settings.petTimePreview !== 'auto'
+    ? PET_TIME_PREVIEW_BANDS[settings.petTimePreview]
+    : autoTimeBand
+  const timeBlend = settings.petTimePreview !== 'auto' ? undefined : autoTimeBlend
+  const panelSceneLocation = settings.petSceneLocation === 'off' ? 'fields' : settings.petSceneLocation
   const voiceStateLabel = getVoiceStateLabel(voice.voiceState, ti)
   const nextSchedulerStatusLabel = runtimeSnapshot.schedulerArmed
     ? runtimeSnapshot.activeTaskLabel
@@ -102,6 +155,8 @@ export function PanelView({
   // STT transcripts). Anything append()ed after boot — voice, text,
   // tool result, system notice — has a fresh id and passes through.
   const visibleMessages = chat.messages
+  const hiddenMessageCount = Math.max(0, visibleMessages.length - MESSAGE_PAGE_SIZE)
+  const loadEarlierLabel = ti('panel.messages.load_earlier', { count: hiddenMessageCount })
   const chatMessageCount = visibleMessages.filter((message) => message.role !== 'system').length
   const welcomeTitle = `${timeGreeting}，${settings.userName}`
   const welcomeBody = memory.memories[0]?.content
@@ -161,6 +216,10 @@ export function PanelView({
     && voice.voiceState !== 'speaking'
     && (chat.busy || voice.voiceState === 'processing')
   )
+  const sendButtonLabel = chat.busy
+    ? ti('panel.composer.send_busy', { companionName: settings.companionName })
+    : ti('panel.composer.send_message')
+  const composerPlaceholder = ti('panel.composer.placeholder', { companionName: settings.companionName })
 
   function handleApplyQuickPrompt(prompt: string) {
     chat.setInput(prompt)
@@ -284,6 +343,10 @@ export function PanelView({
   }
 
   useEffect(() => {
+    if (visibleMessages.length === 0) {
+      return undefined
+    }
+
     const frameId = window.requestAnimationFrame(() => {
       const messageList = messageListRef.current
       if (!messageList) {
@@ -310,6 +373,13 @@ export function PanelView({
 
   return (
     <div className={`desktop-pet-root desktop-pet-root--panel ${characterPreset.themeClassName} ${panelCollapsed ? 'desktop-pet-root--panel-collapsed' : ''}`}>
+      <div className="panel-scene-layer" aria-hidden="true">
+        <SunlightTint timePreview={settings.petTimePreview}>
+          <SceneBackdrop location={panelSceneLocation} timeBand={timeBand} timeBlend={timeBlend} />
+          <WeatherAmbient condition={weatherCondition} />
+        </SunlightTint>
+        <div className="panel-scene-layer__veil" />
+      </div>
       <section className={`panel-window panel-window--simple panel-window--companion ${panelCollapsed ? 'is-collapsed' : ''}`}>
         {panelCollapsed ? (
           <>
@@ -322,15 +392,22 @@ export function PanelView({
 
               <div className="panel-window__header-actions panel-window__header-actions--simple">
                 <span className={`connection-dot ${runtimeSnapshot.petOnline || runtimeSnapshot.panelOnline ? 'is-online' : ''}`} title={companionStatusChipLabel} />
-                <button className="ghost-button" type="button" onClick={togglePanelCollapse}>
-                  {ti('panel.button.expand')}
-                </button>
-                <button className="ghost-button" type="button" onClick={openSettingsPanel}>
-                  {ti('panel.button.settings')}
-                </button>
-                <button className="ghost-button" type="button" onClick={closePanel}>
-                  {ti('panel.button.close')}
-                </button>
+                <PanelToolbarButton
+                  icon="expand"
+                  label={ti('panel.button.expand')}
+                  onClick={togglePanelCollapse}
+                />
+                <PanelToolbarButton
+                  icon="settings"
+                  label={ti('panel.button.settings')}
+                  onClick={openSettingsPanel}
+                />
+                <PanelToolbarButton
+                  icon="close"
+                  label={ti('panel.button.close')}
+                  onClick={closePanel}
+                  tone="danger"
+                />
               </div>
             </div>
 
@@ -341,9 +418,6 @@ export function PanelView({
           </>
         ) : (
           <div className="panel-window__shell">
-            <div className="panel-window__ambient panel-window__ambient--primary" aria-hidden="true" />
-            <div className="panel-window__ambient panel-window__ambient--secondary" aria-hidden="true" />
-
             <div className="companion-chat__toolbar">
               <div className="companion-chat__toolbar-left">
                 {ambientWeather ? (
@@ -366,21 +440,26 @@ export function PanelView({
                 ) : null}
               </div>
               <div className="panel-window__header-actions panel-window__header-actions--hero">
-                <button className="ghost-button" type="button" onClick={openSettingsPanel}>
-                  {ti('panel.button.settings')}
-                </button>
-                <button className="ghost-button" type="button" onClick={togglePanelCollapse}>
-                  {ti('panel.button.collapse')}
-                </button>
-                <button className="ghost-button" type="button" onClick={closePanel}>
-                  {ti('panel.button.close')}
-                </button>
+                <PanelToolbarButton
+                  icon="settings"
+                  label={ti('panel.button.settings')}
+                  onClick={openSettingsPanel}
+                />
+                <PanelToolbarButton
+                  icon="collapse"
+                  label={ti('panel.button.collapse')}
+                  onClick={togglePanelCollapse}
+                />
+                <PanelToolbarButton
+                  icon="close"
+                  label={ti('panel.button.close')}
+                  onClick={closePanel}
+                  tone="danger"
+                />
               </div>
             </div>
 
             <ActivePlanStrip />
-
-            <SubagentTaskStrip tasks={subagentTasks} onCancel={cancelSubagentTask} />
 
             <section className="companion-chat">
 
@@ -388,14 +467,16 @@ export function PanelView({
                 <CrisisHotlinePanel locale={settings.uiLanguage} />
                 {visibleMessages.length ? (
                   <>
-                    {!showAllMessages && visibleMessages.length > MESSAGE_PAGE_SIZE && (
+                    {!showAllMessages && hiddenMessageCount > 0 && (
                       <div className="message-list__load-earlier">
                         <button
                           className="ghost-button"
                           type="button"
                           onClick={() => setShowAllMessages(true)}
+                          aria-label={loadEarlierLabel}
+                          title={loadEarlierLabel}
                         >
-                          {ti('panel.messages.load_earlier', { count: visibleMessages.length - MESSAGE_PAGE_SIZE })}
+                          {loadEarlierLabel}
                         </button>
                       </div>
                     )}
@@ -418,24 +499,33 @@ export function PanelView({
                       </strong>
                       <p>{welcomeBody} <span className="empty-chat__sparkle" aria-hidden="true">✨</span></p>
                       <div className="empty-chat__prompt-grid">
-                        {panelQuickPrompts.map((item) => (
-                          <button
-                            key={item.label}
-                            className="empty-chat__prompt"
-                            type="button"
-                            onClick={() => handleApplyQuickPrompt(item.prompt)}
-                          >
-                            <span>{item.label}</span>
-                            <small>{item.prompt}</small>
-                          </button>
-                        ))}
+                        {panelQuickPrompts.map((item) => {
+                          const quickPromptLabel = `${item.label}: ${item.prompt}`
+                          return (
+                            <button
+                              key={item.label}
+                              className="empty-chat__prompt"
+                              type="button"
+                              onClick={() => handleApplyQuickPrompt(item.prompt)}
+                              aria-label={quickPromptLabel}
+                              title={quickPromptLabel}
+                            >
+                              <span>{item.label}</span>
+                              <small>{item.prompt}</small>
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {chat.error ? <div className="error-banner">{chat.error}</div> : null}
+              {chat.error ? (
+                <div className="error-banner" role="alert" aria-live="assertive" aria-atomic="true">
+                  {chat.error}
+                </div>
+              ) : null}
 
               <div className="composer composer--minimal companion-chat__composer">
                 {visionEnabled && chat.pendingImage ? (
@@ -452,8 +542,9 @@ export function PanelView({
                         className="composer__attachment-remove"
                         onClick={clearPendingImage}
                         aria-label={ti('panel.composer.remove_image')}
+                        title={ti('panel.composer.remove_image')}
                       >
-                        ×
+                        <PetControlIcon name="close" className="composer__attachment-remove-icon" />
                       </button>
                     </div>
                   </div>
@@ -463,7 +554,8 @@ export function PanelView({
                   ref={composerTextareaRef}
                   rows={3}
                   value={chat.input}
-                  placeholder={ti('panel.composer.placeholder', { companionName: settings.companionName })}
+                  placeholder={composerPlaceholder}
+                  aria-label={composerPlaceholder}
                   onChange={(event) => chat.setInput(event.target.value)}
                   onKeyDown={handleComposerKeyDown}
                   onPaste={handleComposerPaste}
@@ -476,7 +568,8 @@ export function PanelView({
                     ref={fileInputRef}
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/gif"
-                    style={{ display: 'none' }}
+                    className="composer__file-input"
+                    aria-label={ti('panel.composer.attach_title')}
                     onChange={handleFilePickerChange}
                   />
                 ) : null}
@@ -493,9 +586,11 @@ export function PanelView({
                       className="ghost-button"
                       type="button"
                       onClick={openFilePicker}
+                      aria-label={ti('panel.composer.attach_title')}
                       title={ti('panel.composer.attach_title')}
                     >
-                      {ti('panel.composer.image_button')}
+                      <PetControlIcon name="image" className="composer__action-icon" />
+                      <span>{ti('panel.composer.image_button')}</span>
                     </button>
                   ) : null}
                   <button
@@ -503,17 +598,22 @@ export function PanelView({
                     type="button"
                     onClick={voice.toggleVoiceConversation}
                     disabled={voiceActionDisabled}
+                    aria-label={voiceActionLabel}
+                    title={voiceActionLabel}
                   >
-                    {voiceActionLabel}
+                    <PetControlIcon name="mic" className="composer__action-icon" />
+                    <span>{voiceActionLabel}</span>
                   </button>
                   <button
                     className="primary-button"
                     type="button"
                     onClick={() => void chat.sendMessage()}
                     disabled={chat.busy || (!chat.input.trim() && !chat.pendingImage)}
-                    aria-label={chat.busy ? ti('panel.composer.send_busy', { companionName: settings.companionName }) : ti('panel.composer.send_message')}
+                    aria-label={sendButtonLabel}
+                    title={sendButtonLabel}
                   >
-                    {chat.busy ? `${ti('panel.composer.send_busy', { companionName: settings.companionName })}...` : ti('panel.composer.send')}
+                    <PetControlIcon name="send" className="composer__action-icon" />
+                    <span>{chat.busy ? `${sendButtonLabel}...` : ti('panel.composer.send')}</span>
                   </button>
                 </div>
               </div>

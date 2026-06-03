@@ -1,7 +1,7 @@
 {
   "name": "nexus",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Nexus desktop AI companion built with Electron, React, and TypeScript.",
   "author": {
     "name": "FanyinLiu",
@@ -14,27 +14,44 @@
     "download-models": "node scripts/download-models.mjs",
     "download-models:all": "node scripts/download-models.mjs",
     "download-models:lite": "node scripts/download-models.mjs --skip-asr",
+    "doctor": "node scripts/nexus-doctor.mjs",
     "setup": "npm install && npm run build && node scripts/download-models.mjs",
     "dev": "vite",
-    "electron:dev": "concurrently -k \"vite\" \"wait-on http://127.0.0.1:47821 && cross-env DESKTOP_PET_USE_DEV_SERVER=1 electron .\"",
+    "electron:dev": "node scripts/electron-dev.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "i18n:audit": "node scripts/i18n-audit.mjs",
+    "distribution:audit": "node scripts/distribution-audit.mjs",
+    "pet:validate": "node scripts/validate-sprite-pet.mjs",
+    "pet:make": "node scripts/make-sprite-pet.mjs",
+    "pet:create-kit": "node scripts/create-sprite-pet-creator-kit.mjs",
+    "pet:assemble-kit": "node scripts/assemble-sprite-pet-creator-kit.mjs",
+    "pet:audit": "node scripts/audit-sprite-pet-visual.mjs",
+    "pet:generate-codex-style": "node scripts/generate-virtual-swordsman-pet.mjs",
+    "pet:generate-swordsman": "node scripts/generate-virtual-swordsman-pet.mjs",
+    "pet:import": "node scripts/import-sprite-pet.mjs",
+    "pet:import-gallery": "node scripts/import-codex-pet-gallery.mjs",
+    "pet:preview": "node scripts/preview-sprite-pet.mjs",
+    "pet:scaffold": "node scripts/scaffold-sprite-pet.mjs",
+    "pet:install-codex": "node scripts/install-codex-pet.mjs",
+    "pet:export-runtime": "node scripts/export-sprite-pet-runtime.mjs",
     "test": "node --experimental-strip-types --test \"tests/*.test.ts\"",
     "preview": "vite preview",
     "start:app": "npm run build && electron .",
     "smoke": "npm run build && cross-env SMOKE_TEST=1 electron .",
-    "smoke:packaged": "cross-env SMOKE_TEST=1 electron .",
+    "smoke:packaged": "node scripts/packaged-smoke.mjs",
     "package": "npm run package:win",
-    "package:dir": "npm run build && electron-builder --dir --config.win.signAndEditExecutable=false",
+    "package:dir": "npm run build && electron-builder --dir",
+    "package:dir:smoke": "node -e \"require('fs').rmSync('release-smoke',{recursive:true,force:true})\" && npm run build && cross-env PACKAGED_SMOKE_RELEASE_DIR=release-smoke electron-builder --dir --publish never --config scripts/electron-builder.smoke.cjs && cross-env PACKAGED_SMOKE_RELEASE_DIR=release-smoke npm run smoke:packaged",
     "prepackage:win": "node scripts/download-models.mjs --skip-asr",
-    "package:win": "npm run build && electron-builder --win nsis --config.win.signAndEditExecutable=false",
+    "package:win": "npm run build && electron-builder --win nsis",
     "prepackage:win:signed": "node scripts/download-models.mjs --skip-asr",
     "package:win:signed": "npm run build && electron-builder --win nsis",
     "prepackage:mac": "node scripts/download-models.mjs --skip-asr",
     "package:mac": "npm run build && electron-builder --mac",
     "prepackage:linux": "node scripts/download-models.mjs --skip-asr",
     "package:linux": "npm run build && electron-builder --linux",
-    "verify:release": "tsc -b --force && npm run lint && npm test && npm run build",
+    "verify:release": "tsc -b --force && npm run lint && npm test && npm run build && npm run distribution:audit",
     "prerelease-check": "node scripts/prerelease-check.mjs"
   },
   "dependencies": {
@@ -45,11 +62,13 @@
     "pinyin-pro": "^3.28.1",
     "pixi-live2d-display": "^0.4.0",
     "pixi.js": "^6.5.10",
+    "protobufjs": "^7.6.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "sharp": "^0.34.5",
     "sherpa-onnx-node": "^1.12.39",
     "tesseract.js": "^7.0.0",
-    "ws": "^8.20.0"
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
@@ -77,7 +96,16 @@
     "wait-on": "^8.0.3"
   },
   "overrides": {
-    "gh-pages": "^6.3.0"
+    "axios": "^1.16.1",
+    "fast-uri": "^3.1.2",
+    "gh-pages": "^6.3.0",
+    "ip-address": "^10.2.0",
+    "minimatch@10.2.4": {
+      "brace-expansion": "^5.0.6"
+    },
+    "protobufjs": "^7.6.1",
+    "qs": "^6.15.2",
+    "tmp": "^0.2.7"
   },
   "build": {
     "appId": "ai.factory.desktoppet",
@@ -102,6 +130,8 @@
     ],
     "asarUnpack": [
       "node_modules/sherpa-onnx-node/**",
+      "node_modules/sharp/**",
+      "node_modules/@img/**",
       "scripts/omnivoice_server.py",
       "scripts/glm_asr_server.py"
     ],

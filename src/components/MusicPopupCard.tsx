@@ -1,15 +1,18 @@
-import type { MediaSessionControlRequest, MediaSessionSnapshot } from '../types'
+import { pickTranslatedUiText } from '../lib/uiLanguage'
+import type { MediaSessionControlRequest, MediaSessionSnapshot, UiLanguage } from '../types'
+import { PetControlIcon } from './PetControlIcon'
 
 type MusicPopupCardProps = {
   session: MediaSessionSnapshot
+  uiLanguage: UiLanguage
   busy?: boolean
   onControl: (action: MediaSessionControlRequest['action']) => void
   onDismiss: () => void
 }
 
-function resolveSourceLabel(sourceAppUserModelId?: string) {
+function resolveSourceLabel(sourceAppUserModelId: string | undefined, systemMediaLabel: string) {
   const normalized = String(sourceAppUserModelId ?? '').toLowerCase()
-  if (!normalized) return 'System media'
+  if (!normalized) return systemMediaLabel
   if (normalized.includes('qqmusic')) return 'QQ Music'
   if (normalized.includes('cloudmusic')) return 'NetEase Music'
   if (normalized.includes('spotify')) return 'Spotify'
@@ -20,7 +23,7 @@ function resolveSourceLabel(sourceAppUserModelId?: string) {
   if (normalized.includes('foobar')) return 'foobar2000'
   if (normalized.includes('musicbee')) return 'MusicBee'
   if (normalized.includes('vlc')) return 'VLC'
-  return 'System media'
+  return systemMediaLabel
 }
 
 function formatSeconds(value?: number) {
@@ -42,24 +45,28 @@ function getProgressPercent(session: MediaSessionSnapshot) {
 
 export function MusicPopupCard({
   session,
+  uiLanguage,
   busy = false,
   onControl,
   onDismiss,
 }: MusicPopupCardProps) {
-  const title = session.title?.trim() || 'Now playing'
-  const artist = session.artist?.trim() || session.albumTitle?.trim() || 'Unknown artist'
-  const sourceLabel = resolveSourceLabel(session.sourceAppUserModelId)
+  const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
+  const title = session.title?.trim() || ti('music_popup.now_playing')
+  const artist = session.artist?.trim() || session.albumTitle?.trim() || ti('music_popup.unknown_artist')
+  const sourceLabel = resolveSourceLabel(session.sourceAppUserModelId, ti('music_popup.source.system'))
   const progressPercent = getProgressPercent(session)
+  const playbackActionLabel = session.isPlaying ? ti('music_popup.pause_action') : ti('music_popup.resume_action')
 
   return (
-    <aside className="music-popup-card" aria-label="Current music card">
+    <aside className="music-popup-card" aria-label={ti('music_popup.aria_label')}>
       <button
         type="button"
         className="music-popup-card__dismiss"
         onClick={onDismiss}
-        aria-label="Close current music card"
+        aria-label={ti('music_popup.close')}
+        title={ti('music_popup.close')}
       >
-        x
+        <PetControlIcon name="close" className="music-popup-card__dismissIcon" />
       </button>
 
       <div className="music-popup-card__coverShell">
@@ -72,7 +79,7 @@ export function MusicPopupCard({
         ) : (
           <div className="music-popup-card__cover music-popup-card__cover--placeholder">
             <div className="music-popup-card__coverGlow" aria-hidden="true" />
-            <span className="music-popup-card__coverTag">MUSIC</span>
+            <span className="music-popup-card__coverTag">{ti('music_popup.tag')}</span>
             <strong>{title.slice(0, 18)}</strong>
           </div>
         )}
@@ -84,7 +91,7 @@ export function MusicPopupCard({
         <div className="music-popup-card__eyebrow">
           <span className="music-popup-card__source">{sourceLabel}</span>
           <span className={`music-popup-card__state ${session.isPlaying ? 'is-playing' : ''}`}>
-            {session.isPlaying ? 'Playing' : 'Paused'}
+            {session.isPlaying ? ti('music_popup.state.playing') : ti('music_popup.state.paused')}
           </span>
         </div>
 
@@ -94,12 +101,12 @@ export function MusicPopupCard({
         </div>
 
         <div className="music-popup-card__progress">
-          <div className="music-popup-card__progressBar" aria-hidden="true">
-            <span
-              className="music-popup-card__progressValue"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
+          <progress
+            className="music-popup-card__progressBar"
+            value={progressPercent}
+            max={100}
+            aria-label={ti('music_popup.progress')}
+          />
           <div className="music-popup-card__progressMeta">
             <span>{formatSeconds(session.positionSeconds)}</span>
             <span>{formatSeconds(session.durationSeconds)}</span>
@@ -112,27 +119,33 @@ export function MusicPopupCard({
             className="music-popup-card__control"
             onClick={() => onControl('previous')}
             disabled={busy || !session.supports?.previous}
-            aria-label="Previous track"
+            aria-label={ti('music_popup.previous')}
+            title={ti('music_popup.previous')}
           >
-            Prev
+            <PetControlIcon name="skip-back" className="music-popup-card__controlIcon" />
           </button>
           <button
             type="button"
             className="music-popup-card__control music-popup-card__control--primary"
             onClick={() => onControl('toggle')}
             disabled={busy || !session.supports?.toggle}
-            aria-label={session.isPlaying ? 'Pause playback' : 'Resume playback'}
+            aria-label={playbackActionLabel}
+            title={playbackActionLabel}
           >
-            {session.isPlaying ? 'Pause' : 'Play'}
+            <PetControlIcon
+              name={session.isPlaying ? 'pause' : 'play'}
+              className="music-popup-card__controlIcon"
+            />
           </button>
           <button
             type="button"
             className="music-popup-card__control"
             onClick={() => onControl('next')}
             disabled={busy || !session.supports?.next}
-            aria-label="Next track"
+            aria-label={ti('music_popup.next')}
+            title={ti('music_popup.next')}
           >
-            Next
+            <PetControlIcon name="skip-forward" className="music-popup-card__controlIcon" />
           </button>
         </div>
       </div>

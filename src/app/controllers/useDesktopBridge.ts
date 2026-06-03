@@ -29,6 +29,7 @@ import type {
   AppSettings,
   DebugConsoleEvent,
   PanelWindowState,
+  PlatformProfile,
   ReminderTask,
   RuntimeStateSnapshot,
 } from '../../types'
@@ -59,6 +60,121 @@ const DEFAULT_RUNTIME_SNAPSHOT: RuntimeStateSnapshot = {
   petLastSeenAt: '',
   panelLastSeenAt: '',
   updatedAt: '',
+}
+
+const DEFAULT_PLATFORM_PROFILE: PlatformProfile = {
+  platform: 'unknown',
+  packaged: false,
+  startup: {
+    supported: false,
+    enabled: false,
+    requiresPackagedBuild: true,
+    mechanism: 'unsupported',
+  },
+  tray: {
+    active: false,
+    hideToBackgroundOnClose: false,
+  },
+  window: {
+    supportsVisibleOnAllWorkspaces: false,
+    usesTaskbarIcon: false,
+    supportsTransparentOverlay: true,
+  },
+  mediaSession: {
+    supported: false,
+    available: false,
+    backend: 'unsupported',
+    dependencyHint: null,
+  },
+  desktopContext: {
+    activeWindowSupported: false,
+    activeWindowAvailable: false,
+    activeWindowDependencyHint: null,
+    screenshotSupported: true,
+    screenshotAvailable: true,
+    screenshotDependencyHint: null,
+    clipboardSupported: true,
+    clipboardAvailable: true,
+  },
+  voice: {
+    speechInputSupported: false,
+    speechInputAvailable: false,
+    speechOutputSupported: false,
+    speechOutputAvailable: false,
+    continuousVoiceSupported: false,
+    vadSupported: false,
+    wakewordSupported: false,
+    dependencyHint: null,
+  },
+}
+
+function normalizePlatformProfile(input: Partial<PlatformProfile> | null | undefined): PlatformProfile {
+  if (!input || typeof input !== 'object') {
+    return DEFAULT_PLATFORM_PROFILE
+  }
+
+  const platform = input.platform ?? DEFAULT_PLATFORM_PROFILE.platform
+  const desktopPlatform = platform === 'darwin' || platform === 'win32' || platform === 'linux'
+  const mediaSession: Partial<PlatformProfile['mediaSession']> = input.mediaSession ?? {}
+  const desktopContext: Partial<PlatformProfile['desktopContext']> = input.desktopContext ?? {}
+  const voice: Partial<PlatformProfile['voice']> = input.voice ?? {}
+  const mediaSessionSupported = mediaSession.supported ?? DEFAULT_PLATFORM_PROFILE.mediaSession.supported
+  const activeWindowSupported = desktopContext.activeWindowSupported
+    ?? DEFAULT_PLATFORM_PROFILE.desktopContext.activeWindowSupported
+  const screenshotSupported = desktopContext.screenshotSupported
+    ?? DEFAULT_PLATFORM_PROFILE.desktopContext.screenshotSupported
+  const clipboardSupported = desktopContext.clipboardSupported
+    ?? DEFAULT_PLATFORM_PROFILE.desktopContext.clipboardSupported
+  const speechInputSupported = voice.speechInputSupported ?? desktopPlatform
+  const speechOutputSupported = voice.speechOutputSupported ?? desktopPlatform
+  const continuousVoiceSupported = voice.continuousVoiceSupported ?? speechInputSupported
+  const vadSupported = voice.vadSupported ?? speechInputSupported
+  const wakewordSupported = voice.wakewordSupported ?? speechInputSupported
+
+  return {
+    ...DEFAULT_PLATFORM_PROFILE,
+    ...input,
+    platform,
+    startup: {
+      ...DEFAULT_PLATFORM_PROFILE.startup,
+      ...(input.startup ?? {}),
+    },
+    tray: {
+      ...DEFAULT_PLATFORM_PROFILE.tray,
+      ...(input.tray ?? {}),
+    },
+    window: {
+      ...DEFAULT_PLATFORM_PROFILE.window,
+      ...(input.window ?? {}),
+    },
+    mediaSession: {
+      ...DEFAULT_PLATFORM_PROFILE.mediaSession,
+      ...mediaSession,
+      supported: mediaSessionSupported,
+      available: mediaSession.available ?? mediaSessionSupported,
+    },
+    desktopContext: {
+      ...DEFAULT_PLATFORM_PROFILE.desktopContext,
+      ...desktopContext,
+      activeWindowSupported,
+      activeWindowAvailable: desktopContext.activeWindowAvailable ?? activeWindowSupported,
+      screenshotSupported,
+      screenshotAvailable: desktopContext.screenshotAvailable ?? screenshotSupported,
+      clipboardSupported,
+      clipboardAvailable: desktopContext.clipboardAvailable ?? clipboardSupported,
+    },
+    voice: {
+      ...DEFAULT_PLATFORM_PROFILE.voice,
+      ...voice,
+      speechInputSupported,
+      speechInputAvailable: voice.speechInputAvailable ?? speechInputSupported,
+      speechOutputSupported,
+      speechOutputAvailable: voice.speechOutputAvailable ?? speechOutputSupported,
+      continuousVoiceSupported,
+      vadSupported,
+      wakewordSupported,
+    },
+  }
 }
 
 type MemoryController = ReturnType<typeof import('../../hooks/useMemory').useMemory>
@@ -134,6 +250,7 @@ export function useDesktopBridge({
   const [discoveredPetModels, setDiscoveredPetModels] = useState<PetModelDefinition[]>([])
   const [petRuntimeContinuousVoiceActive, setPetRuntimeContinuousVoiceActive] = useState(false)
   const [remotePanelSettingsOpen, setRemotePanelSettingsOpen] = useState(false)
+  const [platformProfile, setPlatformProfile] = useState<PlatformProfile>(DEFAULT_PLATFORM_PROFILE)
   const [runtimeSnapshot, setRuntimeSnapshotState] = useState<RuntimeStateSnapshot>(
     DEFAULT_RUNTIME_SNAPSHOT,
   )
@@ -146,6 +263,13 @@ export function useDesktopBridge({
   useEffect(() => {
     savePetWindowPreferences({ isPinned, clickThrough })
   }, [clickThrough, isPinned])
+
+  useEffect(() => {
+    const pending = window.desktopPet?.getPlatformProfile?.()
+    pending?.then((profile) => {
+      setPlatformProfile(normalizePlatformProfile(profile))
+    }).catch(() => undefined)
+  }, [])
 
   useEffect(() => {
     const pending = window.desktopPet?.getLaunchOnStartup?.()
@@ -502,6 +626,7 @@ export function useDesktopBridge({
 
   return {
     runtimeSnapshot,
+    platformProfile,
     petRuntimeContinuousVoiceActive,
     remotePanelSettingsOpen,
     petModelPresets,

@@ -96,5 +96,8 @@ echo
 echo "  下一步："
 echo "    1. 重开一个终端窗口，或执行：source \"$RC\""
 echo "    2. 验证：echo \$NEXUS_PYTHON"
-echo "    3. 重启：npm run electron:dev"
+echo "    3. 自检：npm run doctor"
+echo "    4. 重启：npm run electron:dev"
+echo "       网页预览看：http://127.0.0.1:47821/"
+echo "       Ollama API 是：http://127.0.0.1:11434/v1，不是网页预览"
 echo

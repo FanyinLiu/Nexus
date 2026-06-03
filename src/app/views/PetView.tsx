@@ -10,7 +10,10 @@ import {
   type ReactNode,
 } from 'react'
 import { getVoiceStateLabel, pickHoverReaction } from '../appSupport'
-import { MusicPopupCard, PetControlIcon, PetDialogBubble, PetThoughtBubble } from '../../components'
+import { MusicPopupCard } from '../../components/MusicPopupCard'
+import { PetControlIcon } from '../../components/PetControlIcon'
+import { PetDialogBubble } from '../../components/PetDialogBubble'
+import { PetThoughtBubble } from '../../components/PetThoughtBubble'
 import { resolveCharacterPreset } from '../../features/character/presets'
 import {
   classifyWeatherCondition,
@@ -23,10 +26,21 @@ import {
 } from '../../features/panelScene'
 import { useAmbientWeather } from '../../hooks/useAmbientWeather'
 import { clamp } from '../../lib'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import {
+  pickTranslatedUiText,
+  pickTranslatedUiTextOrFallback,
+} from '../../lib/uiLanguage'
 import type { PetTouchZone } from '../../types'
 import { useVTSBridge } from '../../features/pet/vts/useVTSBridge'
 import { resolveExpressionSlot } from '../../features/pet/components/live2d/expressions'
+import {
+  SpritePetCanvas,
+} from '../../features/pet/components/SpritePetCanvas'
+import {
+  getSpritePetDebugImagePathFromSearch,
+  getSpritePetDebugStateFromSearch,
+} from '../../features/pet/spriteDebug'
+import type { SpritePetAnimationState } from '../../features/pet/spriteAtlas'
 import type { UseAppControllerResult } from '../controllers/useAppController'
 
 const Live2DCanvas = lazy(async () => {
@@ -36,6 +50,27 @@ const Live2DCanvas = lazy(async () => {
 
 type PetViewProps = UseAppControllerResult['petView'] & {
   onboardingGuide: ReactNode
+}
+
+const WAVE_SHAPE = [0.6, 0.9, 1.0, 0.9, 0.6] as const
+const MIC_BAR_SCALE_STEPS = 10
+const RAIL_COLLAPSE_DELAY_MS = 4200
+
+// Maps the coarse pet-window `locomotionActivity` (driven by the main-process
+// roam / edge-peek / gesture controller) onto existing sprite rows — no new art.
+const PET_LOCOMOTION_SPRITE_STATE: Record<string, SpritePetAnimationState> = {
+  'walk-left': 'running-left',
+  'walk-right': 'running-right',
+  peek: 'waiting',
+  wave: 'waving',
+  jump: 'jumping',
+}
+
+function getMicBarScaleClass(speechLevel: number, weight: number): string {
+  const safeSpeechLevel = Number.isFinite(speechLevel) ? clamp(speechLevel, 0, 1) : 0
+  const scale = 0.3 + safeSpeechLevel * 0.7 * weight
+  const scaleStep = clamp(Math.round(scale * MIC_BAR_SCALE_STEPS), 0, MIC_BAR_SCALE_STEPS)
+  return `mic-btn__bar--scale-${scaleStep}`
 }
 
 export function PetView({
@@ -108,6 +143,62 @@ export function PetView({
   )
   const [autoTimeBand, setAutoTimeBand] = useState(() => getTimeOfDayBand())
   const [autoTimeBlend, setAutoTimeBlend] = useState(() => getTimeOfDayBlend())
+  const [spriteDebugState, setSpriteDebugState] = useState<SpritePetAnimationState | null>(
+    () => getSpritePetDebugStateFromSearch(window.location.search),
+  )
+  const [spriteDebugImagePath, setSpriteDebugImagePath] = useState<string | null>(
+    () => getSpritePetDebugImagePathFromSearch(window.location.search),
+  )
+  const [spriteDragState, setSpriteDragState] = useState<SpritePetAnimationState | null>(null)
+
+  // Desktop roam / edge-peek / spontaneous gestures: the main process moves the
+  // pet window and broadcasts `locomotionActivity`; we map it onto a sprite row.
+  // Real activity (talking / listening / touch) takes priority, so the pet
+  // animates its action instead of "walking" while the window happens to move.
+  const [petLocomotion, setPetLocomotion] = useState<string>('idle')
+  const [petFreeMode, setPetFreeMode] = useState(false)
+  useEffect(() => {
+    const apply = (state: { locomotionActivity?: string; freeMode?: boolean }) => {
+      setPetLocomotion(state?.locomotionActivity ?? 'idle')
+      setPetFreeMode(Boolean(state?.freeMode))
+    }
+    void window.desktopPet?.getPetWindowState?.()?.then(apply).catch(() => undefined)
+    return window.desktopPet?.subscribePetWindowState?.(apply)
+  }, [])
+  const petLocomotionBusy =
+    voice.voiceState === 'speaking' ||
+    voice.voiceState === 'listening' ||
+    voice.voiceState === 'processing' ||
+    chat.busy ||
+    (pet.petTapActive && Boolean(pet.petTouchZone))
+  const petLocomotionOverride: SpritePetAnimationState | null = petLocomotionBusy
+    ? null
+    : PET_LOCOMOTION_SPRITE_STATE[petLocomotion] ?? null
+
+  // Only sprite avatars can roam — Live2D models have no walk frames, so tell
+  // the main-process controller not to move the window for them.
+  const isSpriteAvatar = Boolean(petModel.spriteAtlas)
+  useEffect(() => {
+    const pending = window.desktopPet?.updatePetWindowState?.({ roamCapable: isSpriteAvatar })
+    pending?.catch(() => undefined)
+  }, [isSpriteAvatar])
+
+  const spritePetLabel = pickTranslatedUiTextOrFallback(settings.uiLanguage, petModel.label)
+
+  useEffect(() => {
+    const updateDebugState = () => {
+      setSpriteDebugState(getSpritePetDebugStateFromSearch(window.location.search))
+      setSpriteDebugImagePath(getSpritePetDebugImagePathFromSearch(window.location.search))
+    }
+
+    window.addEventListener('popstate', updateDebugState)
+    window.addEventListener('hashchange', updateDebugState)
+    return () => {
+      window.removeEventListener('popstate', updateDebugState)
+      window.removeEventListener('hashchange', updateDebugState)
+    }
+  }, [])
+
   useEffect(() => {
     const update = () => {
       setAutoTimeBand(getTimeOfDayBand())
@@ -123,11 +214,25 @@ export function PetView({
     : autoTimeBand
   const timeBlend = settings.petTimePreview !== 'auto' ? undefined : autoTimeBlend
   const voiceStateLabel = getVoiceStateLabel(voice.voiceState, ti)
-  const petSignalLabel = voice.voiceState !== 'idle'
+  const petStageStatusLabel = voice.voiceState !== 'idle'
     ? voiceStateLabel
-    : settings.continuousVoiceModeEnabled
-      ? ti('pet.chip.standby')
-      : ti('pet.chip.voice')
+    : chat.busy
+      ? ti('pet.status.thinking')
+      : settings.continuousVoiceModeEnabled
+        ? ti('pet.status.standby')
+        : ti('pet.status.ready')
+  const voiceActionLabel = voice.continuousVoiceActive
+    ? ti('panel.voice.stop_continuous')
+    : voice.voiceState === 'speaking'
+      ? ti('panel.voice.barge_in')
+      : voice.voiceState === 'listening'
+        ? ti('panel.voice.stop')
+        : settings.continuousVoiceModeEnabled
+          ? ti('panel.voice.start_continuous')
+          : ti('panel.voice.start')
+  const voiceModeLabel = settings.continuousVoiceModeEnabled ? ti('pet.voice.continuous_on') : ti('pet.voice.single')
+  const pinButtonLabel = isPinned ? ti('pet.window.pinned') : ti('pet.window.pin')
+  const clickThroughButtonLabel = clickThrough ? ti('pet.window.click_through') : ti('pet.window.interactive')
   const activeMediaSessionKey = mediaSession?.sessionKey
     ?? [mediaSession?.sourceAppUserModelId, mediaSession?.title, mediaSession?.artist]
       .filter((value): value is string => Boolean(value))
@@ -174,10 +279,9 @@ export function PetView({
     : voice.voiceState === 'processing' ? 'thinking'
     : 'speaking'
 
-  const WAVE_SHAPE = [0.6, 0.9, 1.0, 0.9, 0.6]
-
   const [railExpanded, setRailExpanded] = useState(false)
   const railCollapseTimerRef = useRef<number | null>(null)
+  const railToggleLabel = railExpanded ? ti('pet.rail.collapse') : ti('pet.rail.expand')
 
   const clearRailTimer = useCallback(() => {
     if (railCollapseTimerRef.current) {
@@ -190,7 +294,7 @@ export function PetView({
     clearRailTimer()
     railCollapseTimerRef.current = window.setTimeout(() => {
       setRailExpanded(false)
-    }, 1500)
+    }, RAIL_COLLAPSE_DELAY_MS)
   }, [clearRailTimer])
 
   function handleRailToggle() {
@@ -280,12 +384,16 @@ export function PetView({
     const deltaY = event.screenY - dragStateRef.current.y
     if (deltaX || deltaY) {
       void window.desktopPet?.dragBy({ x: deltaX, y: deltaY })
+      if (Math.abs(deltaX) > 1) {
+        setSpriteDragState(deltaX > 0 ? 'running-right' : 'running-left')
+      }
       dragStateRef.current = { x: event.screenX, y: event.screenY }
     }
   }
 
   function handleMascotPointerUp() {
     dragStateRef.current = null
+    setSpriteDragState(null)
   }
 
   function handleMascotPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -339,21 +447,24 @@ export function PetView({
             openPetMenu()
           }}
         >
-          <div className="pet-window__stage-shell">
-            <div className="pet-window__stage-backdrop" aria-hidden="true" />
-            <SunlightTint timePreview={settings.petTimePreview}>
-              <SceneBackdrop location={settings.petSceneLocation} timeBand={timeBand} timeBlend={timeBlend} />
-              <WeatherAmbient condition={weatherCondition} />
-            </SunlightTint>
-            <div className="pet-window__stage-orbit pet-window__stage-orbit--large" aria-hidden="true" />
-            <div className="pet-window__stage-orbit pet-window__stage-orbit--small" aria-hidden="true" />
+            <div className="pet-window__stage-shell">
+              {(!petFreeMode || !isSpriteAvatar) && (
+                <>
+                  <div className="pet-window__stage-backdrop" aria-hidden="true" />
+                  <SunlightTint timePreview={settings.petTimePreview}>
+                    <SceneBackdrop location={settings.petSceneLocation} timeBand={timeBand} timeBlend={timeBlend} />
+                    <WeatherAmbient condition={weatherCondition} />
+                  </SunlightTint>
+                </>
+              )}
 
-            {/* stage-copy removed to avoid blocking Live2D character */}
+              {/* stage-copy removed to avoid blocking Live2D character */}
 
             {shouldShowMusicPopup && visibleMediaSession ? (
               <div className="pet-window__music-layer">
                 <MusicPopupCard
                   session={visibleMediaSession}
+                  uiLanguage={settings.uiLanguage}
                   busy={musicActionBusy}
                   onControl={handleMediaSessionControl}
                   onDismiss={dismissCurrentMediaSession}
@@ -383,35 +494,46 @@ export function PetView({
                 : settings.continuousVoiceModeEnabled ? 'is-armed'
                 : ''
               }`}
-              title={
-                voice.voiceState !== 'idle' ? voiceStateLabel
-                : chat.busy ? ti('pet.status.thinking')
-                : settings.continuousVoiceModeEnabled ? ti('pet.status.standby')
-                : ti('pet.status.ready')
-              }
+              role="status"
+              aria-label={petStageStatusLabel}
+              title={petStageStatusLabel}
             >
               <span className="pet-window__status-dot" aria-hidden="true" />
             </div>
 
             <div
-              className="pet-window__controls-island"
+              className={`pet-window__controls-island ${petFreeMode && isSpriteAvatar && !pet.petHotspotActive ? 'is-tucked' : ''}`}
               onPointerEnter={handleRailEnter}
               onPointerLeave={handleRailLeave}
             >
               {railExpanded ? (
-                <div className="pet-window__island-panel">
+                <div className="pet-window__island-panel" id="pet-window-control-island">
                   <div className="pet-window__island-grid">
-                    <button className="pet-window__island-btn" type="button" onClick={openSettingsPanel} title={ti('pet.button.settings')}>
+                    <button
+                      className="pet-window__island-btn"
+                      type="button"
+                      onClick={openSettingsPanel}
+                      aria-label={ti('pet.button.settings')}
+                      title={ti('pet.button.settings')}
+                    >
                       <PetControlIcon name="tuning" className="pet-window__island-btn-icon" />
                     </button>
-                    <button className="pet-window__island-btn" type="button" onClick={openChatPanelForVoice} title={ti('pet.button.chat')}>
+                    <button
+                      className="pet-window__island-btn"
+                      type="button"
+                      onClick={openChatPanelForVoice}
+                      aria-label={ti('pet.button.chat')}
+                      title={ti('pet.button.chat')}
+                    >
                       <PetControlIcon name="chat" className="pet-window__island-btn-icon" />
                     </button>
                     <button
                       className={`pet-window__island-btn ${settings.continuousVoiceModeEnabled ? 'is-active' : ''}`}
                       type="button"
                       onClick={toggleContinuousVoiceMode}
-                      title={settings.continuousVoiceModeEnabled ? ti('pet.voice.continuous_on') : ti('pet.voice.single')}
+                      aria-label={voiceModeLabel}
+                      aria-pressed={settings.continuousVoiceModeEnabled}
+                      title={voiceModeLabel}
                     >
                       <PetControlIcon name={settings.continuousVoiceModeEnabled ? 'continuous' : 'single-shot'} className="pet-window__island-btn-icon" />
                     </button>
@@ -419,7 +541,9 @@ export function PetView({
                       className={`pet-window__island-btn ${isPinned ? 'is-active' : ''}`}
                       type="button"
                       onClick={togglePinned}
-                      title={isPinned ? ti('pet.window.pinned') : ti('pet.window.pin')}
+                      aria-label={pinButtonLabel}
+                      aria-pressed={isPinned}
+                      title={pinButtonLabel}
                     >
                       <PetControlIcon name="pin" className="pet-window__island-btn-icon" />
                     </button>
@@ -427,7 +551,9 @@ export function PetView({
                       className={`pet-window__island-btn ${clickThrough ? 'is-active' : ''}`}
                       type="button"
                       onClick={toggleClickThrough}
-                      title={clickThrough ? ti('pet.window.click_through') : ti('pet.window.interactive')}
+                      aria-label={clickThroughButtonLabel}
+                      aria-pressed={clickThrough}
+                      title={clickThroughButtonLabel}
                     >
                       <PetControlIcon name="pointer" className="pet-window__island-btn-icon" />
                     </button>
@@ -440,7 +566,10 @@ export function PetView({
                   className={`pet-window__anchor-btn pet-window__anchor-btn--expand ${railExpanded ? 'is-open' : ''}`}
                   type="button"
                   onClick={handleRailToggle}
-                  title={railExpanded ? ti('pet.rail.collapse') : ti('pet.rail.expand')}
+                  aria-controls="pet-window-control-island"
+                  aria-expanded={railExpanded}
+                  aria-label={railToggleLabel}
+                  title={railToggleLabel}
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true" className="pet-window__anchor-icon">
                     <path fill="currentColor" d="M4 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5Zm10 0a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V5ZM4 15a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4Zm10 0a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-4Z" />
@@ -452,8 +581,8 @@ export function PetView({
                   type="button"
                   onClick={voice.toggleVoiceConversation}
                   disabled={voiceActionDisabled}
-                  title={petSignalLabel}
-                  aria-label={voice.voiceState !== 'idle' ? 'Stop voice input' : 'Start voice input'}
+                  title={voiceActionLabel}
+                  aria-label={voiceActionLabel}
                   aria-pressed={voice.voiceState !== 'idle'}
                 >
                   {micDisplayState === 'idle' ? (
@@ -471,8 +600,7 @@ export function PetView({
                       {WAVE_SHAPE.map((weight, i) => (
                         <span
                           key={i}
-                          className="mic-btn__bar"
-                          style={{ '--bar-scale': 0.3 + voice.speechLevel * 0.7 * weight } as React.CSSProperties}
+                          className={`mic-btn__bar ${getMicBarScaleClass(voice.speechLevel, weight)}`}
                         />
                       ))}
                     </div>
@@ -505,8 +633,27 @@ export function PetView({
               >
                 {vtsActive ? (
                   <div className="pet-window__vts-indicator">
-                    VTS: {vtsBridge.modelName || 'Connected'}
+                    VTS: {vtsBridge.modelName || ti('pet.vts.connected')}
                   </div>
+                ) : petModel.spriteAtlas ? (
+                  <SpritePetCanvas
+                    atlas={
+                      spriteDebugImagePath
+                        ? { ...petModel.spriteAtlas, imagePath: spriteDebugImagePath }
+                        : petModel.spriteAtlas
+                    }
+                    mood={pet.mood}
+                    touchZone={pet.petTapActive ? pet.petTouchZone : null}
+                    isListening={voice.voiceState === 'listening'}
+                    isSpeaking={voice.voiceState === 'speaking'}
+                    isBusy={chat.busy || voice.voiceState === 'processing'}
+                    speechLevel={voice.speechLevel}
+                    gazeTarget={pet.gazeTarget}
+                    performanceCue={pet.petPerformanceCue}
+                    overrideState={spriteDebugState ?? spriteDragState ?? petLocomotionOverride}
+                    placement="pet-stage"
+                    label={spritePetLabel}
+                  />
                 ) : (
                   <Suspense fallback={null}>
                     <Live2DCanvas

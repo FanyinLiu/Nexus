@@ -1,13 +1,12 @@
 import { ipcMain } from 'electron'
 import {
   vaultStore,
-  vaultRetrieve,
   vaultDelete,
   vaultListSlots,
   vaultStoreMany,
-  vaultRetrieveMany,
   vaultIsAvailable,
 } from '../services/keyVault.js'
+import { issueVaultRefForSender } from '../services/vaultRefs.js'
 import {
   requireTrustedSender,
   requireSlotName,
@@ -84,8 +83,8 @@ export function register() {
     requireTrustedSender(event)
     const name = requireSlotName(slot)
     rateLimitSingleRetrieve(event, name)
-    audit('vault', 'retrieve', { slot: name })
-    return vaultRetrieve(name)
+    audit('vault', 'issue-ref', { slot: name })
+    return issueVaultRefForSender(event.sender, name)
   })
 
   ipcMain.handle('vault:delete', (event, slot) => {
@@ -116,7 +115,12 @@ export function register() {
     requireTrustedSender(event)
     rateLimitBulkOp(event, 'retrieve-many')
     const names = requireSlotNames(slots)
-    audit('vault', 'retrieve-many', { slots: names })
-    return vaultRetrieveMany(names)
+    audit('vault', 'issue-ref-many', { slots: names })
+    /** @type {Record<string, string>} */
+    const refs = {}
+    for (const name of names) {
+      refs[name] = issueVaultRefForSender(event.sender, name)
+    }
+    return refs
   })
 }

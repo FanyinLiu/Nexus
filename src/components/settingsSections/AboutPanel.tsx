@@ -7,6 +7,16 @@ type AboutPanelProps = {
   uiLanguage: UiLanguage
 }
 
+const CREDIT_ITEMS = [
+  { name: 'Electron', descriptionKey: 'about.credits.item.electron' },
+  { name: 'React 19', descriptionKey: 'about.credits.item.react' },
+  { name: 'Vite', descriptionKey: 'about.credits.item.vite' },
+  { name: 'pixi.js + pixi-live2d-display', descriptionKey: 'about.credits.item.pixi' },
+  { name: 'sherpa-onnx', descriptionKey: 'about.credits.item.sherpa' },
+  { name: 'Silero VAD', descriptionKey: 'about.credits.item.silero' },
+  { name: 'Hugging Face Transformers.js', descriptionKey: 'about.credits.item.transformers' },
+] as const
+
 /**
  * About / Help panel — sits next to the updater in Console settings.
  *
@@ -97,13 +107,12 @@ export const AboutPanel = memo(function AboutPanel({ uiLanguage }: AboutPanelPro
         <h5 className="settings-about-panel__section-title">{ti('about.credits.title')}</h5>
         <p className="settings-about-panel__credits-intro">{ti('about.credits.intro')}</p>
         <ul className="settings-about-panel__credits-list">
-          <li><strong>Electron</strong> — desktop runtime</li>
-          <li><strong>React 19</strong> — UI framework</li>
-          <li><strong>Vite</strong> — build tool</li>
-          <li><strong>pixi.js + pixi-live2d-display</strong> — Live2D rendering</li>
-          <li><strong>sherpa-onnx</strong> — local STT + wake-word</li>
-          <li><strong>Silero VAD</strong> — voice activity detection</li>
-          <li><strong>Hugging Face Transformers.js</strong> — local embeddings</li>
+          {CREDIT_ITEMS.map((item) => (
+            <li key={item.name}>
+              <strong>{item.name}</strong>
+              <span>{ti(item.descriptionKey)}</span>
+            </li>
+          ))}
         </ul>
       </div>
     </section>

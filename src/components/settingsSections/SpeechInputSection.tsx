@@ -17,8 +17,13 @@ import {
   switchSpeechInputProvider,
   updateCurrentSpeechInputProviderProfile,
 } from '../../lib/speechProviderProfiles'
+import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge'
+import {
+  getPlatformDependencyHint,
+  isVoiceSpeechInputAvailable,
+} from '../../lib/platformProfile'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
-import type { AppSettings, ServiceConnectionCapability, TranslationKey } from '../../types'
+import type { AppSettings, PlatformProfile, ServiceConnectionCapability, TranslationKey } from '../../types'
 import { UrlInput } from './UrlInput'
 
 const speechInputSelectOptions = SPEECH_INPUT_PROVIDERS
@@ -28,6 +33,7 @@ const speechInputSelectOptions = SPEECH_INPUT_PROVIDERS
 type SpeechInputSectionProps = {
   active: boolean
   draft: AppSettings
+  platformProfile: PlatformProfile
   setDraft: Dispatch<SetStateAction<AppSettings>>
   testingTarget: ServiceConnectionCapability | null
   onRunSpeechInputConnectionTest: () => void
@@ -37,6 +43,7 @@ type SpeechInputSectionProps = {
 export const SpeechInputSection = memo(function SpeechInputSection({
   active,
   draft,
+  platformProfile,
   setDraft,
   testingTarget,
   onRunSpeechInputConnectionTest,
@@ -44,6 +51,24 @@ export const SpeechInputSection = memo(function SpeechInputSection({
 }: SpeechInputSectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
+  const tiParam = (
+    key: Parameters<typeof pickTranslatedUiText>[1],
+    params: Parameters<typeof pickTranslatedUiText>[2],
+  ) => pickTranslatedUiText(draft.uiLanguage, key, params)
+  const speechInputAvailable = isVoiceSpeechInputAvailable(platformProfile)
+  const speechInputPlatformReason = getPlatformDependencyHint(
+    platformProfile,
+    platformProfile.voice.speechInputSupported,
+    platformProfile.voice.speechInputAvailable,
+    platformProfile.voice.dependencyHint,
+  )
+  const speechInputPlatformHint = speechInputPlatformReason === 'unsupported'
+    ? ti('settings.platform.unsupported')
+    : speechInputPlatformReason === 'unavailable'
+      ? ti('settings.platform.unavailable')
+      : speechInputPlatformReason
+        ? tiParam('settings.platform.unavailable_dependency', { dependency: speechInputPlatformReason })
+        : null
   const speechInputProvider = getSpeechInputProviderPreset(draft.speechInputProviderId)
   const speechInputModelOptions = getSpeechInputModelOptions(draft.speechInputProviderId)
   const isSenseVoiceSpeechInput = isSenseVoiceSpeechInputProvider(draft.speechInputProviderId)
@@ -51,7 +76,11 @@ export const SpeechInputSection = memo(function SpeechInputSection({
   const isVolcengineSpeechInput = isVolcengineSpeechInputProvider(draft.speechInputProviderId)
   const showSpeechInputBaseUrl = !isLocalSpeechInput || !!speechInputProvider.baseUrl
   const showSpeechInputCredentials = !isLocalSpeechInput
-  const speechInputVolcengineCredentials = parseVolcengineCredentialParts(draft.speechInputApiKey)
+  const speechInputApiKeyIsVaultRef = isVaultRefString(draft.speechInputApiKey)
+  const speechInputApiKeyInputValue = displaySecretInputValue(draft.speechInputApiKey)
+  const speechInputVolcengineCredentials = speechInputApiKeyIsVaultRef
+    ? ({ appId: '', accessToken: '' } satisfies VolcengineCredentialParts)
+    : parseVolcengineCredentialParts(draft.speechInputApiKey)
   const speechInputModelLabel = isSenseVoiceSpeechInput
     ? ti('settings.speech_input.sense_voice_model')
     : ti('settings.speech_input.model')
@@ -76,7 +105,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
   }
 
   return (
-    <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
+    <section className={`settings-section settings-speech-config-section ${active ? 'is-active' : 'is-hidden'}`}>
       <div className="settings-section__title-row">
         <div>
           <h4>{ti('settings.speech_input.title')}</h4>
@@ -88,7 +117,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
           type="button"
           className="ghost-button"
           onClick={onRunSpeechInputConnectionTest}
-          disabled={testingTarget === 'speech-input'}
+          disabled={testingTarget === 'speech-input' || !speechInputAvailable}
         >
           {testingTarget === 'speech-input'
             ? ti('settings.speech_input.testing')
@@ -96,7 +125,13 @@ export const SpeechInputSection = memo(function SpeechInputSection({
         </button>
       </div>
 
-      <label>
+      {speechInputPlatformHint ? (
+        <p className="settings-drawer__hint settings-speech-config-note">
+          {speechInputPlatformHint}
+        </p>
+      ) : null}
+
+      <label className="settings-control-card settings-speech-config-field">
         <span>{ti('settings.speech_input.provider')}</span>
         <select
           value={draft.speechInputProviderId}
@@ -108,7 +143,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
         </select>
       </label>
 
-      <p className="settings-drawer__hint">
+      <p className="settings-drawer__hint settings-speech-config-note">
         {ti(speechInputProvider.notes as TranslationKey)}
         {speechInputProvider.baseUrl
           ? ` ${ti('settings.speech_input.default_endpoint')}${speechInputProvider.baseUrl}`
@@ -119,9 +154,10 @@ export const SpeechInputSection = memo(function SpeechInputSection({
       </p>
 
       {showSpeechInputBaseUrl ? (
-        <label>
+        <label className="settings-control-card settings-speech-config-field">
           <span>{ti('settings.speech_input.endpoint_url')}</span>
           <UrlInput
+            uiLanguage={draft.uiLanguage}
             value={draft.speechInputApiBaseUrl}
             onChange={(event) =>
               setDraft((prev) => updateCurrentSpeechInputProviderProfile(prev, {
@@ -135,10 +171,11 @@ export const SpeechInputSection = memo(function SpeechInputSection({
       {showSpeechInputCredentials && isVolcengineSpeechInput ? (
         <>
           <div className="settings-grid settings-grid--two">
-            <label>
+            <label className="settings-control-card settings-speech-config-field">
               <span>{ti('settings.speech_input.volcengine_app_id')}</span>
               <input
                 value={speechInputVolcengineCredentials.appId}
+                placeholder={speechInputApiKeyIsVaultRef ? '********' : undefined}
                 onChange={(event) =>
                   updateSpeechInputVolcengineCredential({
                     appId: event.target.value,
@@ -147,11 +184,12 @@ export const SpeechInputSection = memo(function SpeechInputSection({
               />
             </label>
 
-            <label>
+            <label className="settings-control-card settings-speech-config-field">
               <span>{ti('settings.speech_input.volcengine_token')}</span>
               <input
                 type="password"
                 value={speechInputVolcengineCredentials.accessToken}
+                placeholder={speechInputApiKeyIsVaultRef ? '********' : undefined}
                 onChange={(event) =>
                   updateSpeechInputVolcengineCredential({
                     accessToken: event.target.value,
@@ -161,16 +199,16 @@ export const SpeechInputSection = memo(function SpeechInputSection({
             </label>
           </div>
 
-          <p className="settings-drawer__hint">
+          <p className="settings-drawer__hint settings-speech-config-note">
             {ti('settings.speech_input.volcengine_credential_hint')}
           </p>
         </>
       ) : showSpeechInputCredentials ? (
-        <label>
+        <label className="settings-control-card settings-speech-config-field">
           <span>{ti('settings.speech_input.api_key')}</span>
           <input
             type="password"
-            value={draft.speechInputApiKey}
+            value={speechInputApiKeyInputValue}
             onChange={(event) =>
               setDraft((prev) => updateCurrentSpeechInputProviderProfile(prev, {
                 apiKey: event.target.value,
@@ -180,7 +218,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
         </label>
       ) : null}
 
-      <label>
+      <label className="settings-control-card settings-speech-config-field">
         <span>{speechInputModelLabel}</span>
         {speechInputModelOptions.length ? (
           <select
@@ -210,10 +248,12 @@ export const SpeechInputSection = memo(function SpeechInputSection({
       </label>
 
       {speechInputModelHint ? (
-        <p className="settings-drawer__hint">{speechInputModelHint}</p>
+        <p className="settings-drawer__hint settings-speech-config-note">
+          {speechInputModelHint}
+        </p>
       ) : null}
 
-      <label>
+      <label className="settings-control-card settings-speech-config-field">
         <span>{ti('settings.speech_input.recognition_lang')}</span>
         <input
           value={draft.speechRecognitionLang}
@@ -227,7 +267,7 @@ export const SpeechInputSection = memo(function SpeechInputSection({
       </label>
 
       {draft.speechInputProviderId === 'zhipu-stt' ? (
-        <label>
+        <label className="settings-control-card settings-speech-config-field">
           <span>{ti('settings.speech_input.hotwords')}</span>
           <input
             value={draft.speechInputHotwords}

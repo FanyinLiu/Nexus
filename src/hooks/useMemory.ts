@@ -156,6 +156,22 @@ export function useMemory({ settings }: UseMemoryParams) {
     })
   }, [t])
 
+  const setMemoryEnabled = useCallback((id: string, enabled: boolean) => {
+    setMemories((current) => {
+      const nextMemories = current.map((memory) => (
+        memory.id === id
+          ? {
+              ...memory,
+              enabled,
+              lastUsedAt: new Date().toISOString(),
+            }
+          : memory
+      ))
+      memoriesRef.current = nextMemories
+      return nextMemories
+    })
+  }, [])
+
   const clearTodayDailyMemory = useCallback(() => {
     const nextDailyMemories = clearDailyMemoriesForDay(dailyMemoriesRef.current)
     dailyMemoriesRef.current = nextDailyMemories
@@ -269,6 +285,7 @@ export function useMemory({ settings }: UseMemoryParams) {
     addManualMemory,
     removeMemory,
     updateMemory,
+    setMemoryEnabled,
     clearTodayDailyMemory,
     updateDailyEntry,
     removeDailyEntry,
@@ -285,6 +302,7 @@ export function useMemory({ settings }: UseMemoryParams) {
     addManualMemory,
     removeMemory,
     updateMemory,
+    setMemoryEnabled,
     clearTodayDailyMemory,
     updateDailyEntry,
     removeDailyEntry,

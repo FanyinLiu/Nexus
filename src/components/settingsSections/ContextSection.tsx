@@ -554,7 +554,12 @@ export const ContextSection = memo(function ContextSection({
       </div>
 
       {reminderStatus ? (
-        <div className={`settings-status ${reminderStatus.ok ? 'is-success' : 'is-error'}`}>
+        <div
+          className={`settings-status ${reminderStatus.ok ? 'is-success' : 'is-error'}`}
+          role={reminderStatus.ok ? 'status' : 'alert'}
+          aria-live={reminderStatus.ok ? 'polite' : 'assertive'}
+          aria-atomic="true"
+        >
           {reminderStatus.message}
         </div>
       ) : null}

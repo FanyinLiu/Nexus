@@ -1,6 +1,18 @@
+import { apiProviderRequiresApiKey } from '../../../../lib/apiProviders'
+import {
+  isSenseVoiceSpeechInputProvider,
+  isSpeechOutputKeyless,
+} from '../../../../lib/audioProviders'
 import { RELATIONSHIP_OPTIONS } from '../../../../lib/relationshipTypes'
-import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
+import {
+  pickTranslatedUiText,
+  pickTranslatedUiTextOrFallback,
+} from '../../../../lib/uiLanguage'
 import type { AppSettings } from '../../../../types'
+import {
+  buildCompanionReadiness,
+  type CompanionReadinessStatus,
+} from '../../companionReadiness'
 import type { PetModelDefinition } from '../../../pet'
 import type { OnboardingDraftSetter } from './types'
 
@@ -9,6 +21,7 @@ type CompanionStepProps = {
   setDraft: OnboardingDraftSetter
   petModelPresets: PetModelDefinition[]
   selectedPetModel: PetModelDefinition | undefined
+  launchOnStartupSupported: boolean
   finishHint: string
 }
 
@@ -17,10 +30,36 @@ export function CompanionStep({
   setDraft,
   petModelPresets,
   selectedPetModel,
+  launchOnStartupSupported,
   finishHint,
 }: CompanionStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
+  const translatePetText = (value: string | undefined) => pickTranslatedUiTextOrFallback(draft.uiLanguage, value)
+  const readiness = buildCompanionReadiness({
+    userName: draft.userName,
+    companionName: draft.companionName,
+    apiBaseUrl: draft.apiBaseUrl,
+    apiKey: draft.apiKey,
+    model: draft.model,
+    textProviderRequiresApiKey: apiProviderRequiresApiKey(draft.apiProviderId),
+    petModelAvailable: Boolean(selectedPetModel),
+    speechInputEnabled: draft.speechInputEnabled,
+    speechInputProviderId: draft.speechInputProviderId,
+    speechInputApiBaseUrl: draft.speechInputApiBaseUrl,
+    speechInputUsesLocalRuntime: isSenseVoiceSpeechInputProvider(draft.speechInputProviderId),
+    speechOutputEnabled: draft.speechOutputEnabled,
+    speechOutputProviderId: draft.speechOutputProviderId,
+    speechOutputApiBaseUrl: draft.speechOutputApiBaseUrl,
+    speechOutputRequiresApiBaseUrl: !isSpeechOutputKeyless(draft.speechOutputProviderId),
+    continuousVoiceModeEnabled: draft.continuousVoiceModeEnabled,
+  })
+  const readinessStatusKey: Record<CompanionReadinessStatus, Parameters<typeof pickTranslatedUiText>[1]> = {
+    ready: 'onboarding.readiness.ready',
+    warning: 'onboarding.readiness.warning',
+    blocked: 'onboarding.readiness.blocked',
+  }
+
   return (
     <div className="onboarding-grid onboarding-grid--stack">
       <label>
@@ -34,10 +73,10 @@ export function CompanionStep({
           disabled={!petModelPresets.length}
         >
           {petModelPresets.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.label}
-            </option>
-          ))}
+                <option key={model.id} value={model.id}>
+              {translatePetText(model.label)}
+                </option>
+              ))}
         </select>
       </label>
 
@@ -45,7 +84,7 @@ export function CompanionStep({
         <strong>{ti('onboarding.companion.current_label')}</strong>
         <p>
           {selectedPetModel
-            ? `${selectedPetModel.label} · ${selectedPetModel.description}`
+            ? `${translatePetText(selectedPetModel.label)} · ${translatePetText(selectedPetModel.description)}`
             : ti('onboarding.companion.no_models')}
         </p>
       </div>
@@ -95,12 +134,34 @@ export function CompanionStep({
           <input
             type="checkbox"
             checked={draft.launchOnStartup}
+            disabled={!launchOnStartupSupported}
             onChange={(event) => setDraft((current) => ({
               ...current,
               launchOnStartup: event.target.checked,
             }))}
           />
         </label>
+      </div>
+
+      <div className={`onboarding-readiness onboarding-readiness--${readiness.status}`}>
+        <div className="onboarding-readiness__header">
+          <strong>{ti('onboarding.readiness.title')}</strong>
+          <span className={`onboarding-readiness__status onboarding-readiness__status--${readiness.status}`}>
+            {ti(readinessStatusKey[readiness.status])}
+          </span>
+        </div>
+        <p>{ti(readiness.summaryKey)}</p>
+        <ul className="onboarding-readiness__list">
+          {readiness.items.map((item) => (
+            <li
+              key={item.id}
+              className={`onboarding-readiness__item onboarding-readiness__item--${item.status}`}
+            >
+              <span className="onboarding-readiness__dot" aria-hidden="true" />
+              <span>{ti(item.messageKey)}</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <p className="onboarding-tip onboarding-tip--strong">{finishHint}</p>

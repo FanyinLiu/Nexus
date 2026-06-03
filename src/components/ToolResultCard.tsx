@@ -43,7 +43,7 @@ function formatUrlHost(url: string) {
   }
 }
 
-function formatPublishedAt(publishedAt?: string) {
+function formatPublishedAt(publishedAt: string | undefined, locale: string) {
   if (!publishedAt) {
     return ''
   }
@@ -53,7 +53,7 @@ function formatPublishedAt(publishedAt?: string) {
     return publishedAt
   }
 
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(locale, {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -198,7 +198,7 @@ function renderKeywordRow(keywords: string[] | undefined) {
   )
 }
 
-function renderPreviewPanels(panels: WebSearchDisplayPanel[], limit: number) {
+function renderPreviewPanels(panels: WebSearchDisplayPanel[], limit: number, locale: string) {
   const visiblePanels = panels.slice(0, limit)
   if (!visiblePanels.length) {
     return null
@@ -210,7 +210,7 @@ function renderPreviewPanels(panels: WebSearchDisplayPanel[], limit: number) {
         <article key={panel.url} className="tool-result-card__previewItem">
           <div className="tool-result-card__previewMeta">
             <span>{panel.host}</span>
-            {panel.publishedAt ? <span>{formatPublishedAt(panel.publishedAt)}</span> : null}
+            {panel.publishedAt ? <span>{formatPublishedAt(panel.publishedAt, locale)}</span> : null}
           </div>
           <strong className="tool-result-card__previewHeading">{panel.title}</strong>
           <p className="tool-result-card__previewBody">{panel.body}</p>
@@ -238,6 +238,7 @@ function renderBodyLinePreview(lines: string[], limit: number) {
 function renderStructuredSearchBody(
   display: WebSearchDisplay,
   variant: 'chat' | 'pet',
+  locale: string,
 ) {
   const panelLimit = variant === 'pet' ? 2 : 3
   const sourceLimit = variant === 'pet' ? 2 : 3
@@ -260,15 +261,15 @@ function renderStructuredSearchBody(
   return (
     <>
       {display.summary ? <p className="tool-result-card__summary">{display.summary}</p> : null}
-      {display.panels?.length ? renderPreviewPanels(display.panels, panelLimit) : null}
+      {display.panels?.length ? renderPreviewPanels(display.panels, panelLimit, locale) : null}
       {variant === 'chat' ? renderSourceList(sources, sourceLimit) : null}
     </>
   )
 }
 
-function renderPetSearchBody(result: WebSearchResponse) {
+function renderPetSearchBody(result: WebSearchResponse, locale: string) {
   if (result.display) {
-    return renderStructuredSearchBody(result.display, 'pet')
+    return renderStructuredSearchBody(result.display, 'pet', locale)
   }
 
   if (isLyricsSearchQuery(result.query)) {
@@ -288,22 +289,22 @@ function renderPetSearchBody(result: WebSearchResponse) {
       return renderBodyLinePreview(previewLines, 4)
     }
 
-    return renderPreviewPanels(panels, 2)
+    return renderPreviewPanels(panels, 2, locale)
   }
 
   const fallbackPreview = getBestPreviewText(result.items[0], 220)
   return fallbackPreview ? <p className="tool-result-card__summary">{fallbackPreview}</p> : null
 }
 
-function renderChatSearchBody(result: WebSearchResponse) {
+function renderChatSearchBody(result: WebSearchResponse, locale: string) {
   if (result.display) {
-    return renderStructuredSearchBody(result.display, 'chat')
+    return renderStructuredSearchBody(result.display, 'chat', locale)
   }
 
   return (
     <div className="tool-result-card__list">
       {result.items.map((item, index) => {
-        const publishedAt = formatPublishedAt(item.publishedAt)
+        const publishedAt = formatPublishedAt(item.publishedAt, locale)
         const preview = getBestPreviewText(item, 220)
 
         return (
@@ -382,7 +383,7 @@ function renderSearchMeta(result: WebSearchResponse, t: TranslateFn) {
 }
 
 export const ToolResultCard = memo(function ToolResultCard({ toolResult, variant = 'chat' }: ToolResultCardProps) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const className = `tool-result-card tool-result-card--${toolResult.kind} tool-result-card--${variant}`
 
   if (toolResult.kind === 'weather') {
@@ -435,8 +436,8 @@ export const ToolResultCard = memo(function ToolResultCard({ toolResult, variant
       <strong className="tool-result-card__title">{getSearchTitle(toolResult.result)}</strong>
       {renderSearchMeta(toolResult.result, t)}
       {variant === 'pet'
-        ? renderPetSearchBody(toolResult.result)
-        : renderChatSearchBody(toolResult.result)}
+        ? renderPetSearchBody(toolResult.result, locale)
+        : renderChatSearchBody(toolResult.result, locale)}
     </section>
   )
 })

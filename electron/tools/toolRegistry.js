@@ -1,24 +1,8 @@
-import { BrowserWindow, shell } from 'electron'
+import { BrowserWindow, dialog, shell } from 'electron'
 import { searchWeb } from './webSearch.js'
 import { lookupWeatherByLocation } from './weatherTool.js'
-
-function normalizeExternalUrl(rawUrl) {
-  const trimmed = String(rawUrl ?? '').trim()
-  if (!trimmed) {
-    throw new Error('链接不能为空。')
-  }
-
-  const normalized = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)
-    ? trimmed
-    : `https://${trimmed}`
-  const targetUrl = new URL(normalized)
-
-  if (!['http:', 'https:'].includes(targetUrl.protocol)) {
-    throw new Error('目前只支持打开 http 或 https 链接。')
-  }
-
-  return targetUrl.toString()
-}
+import { normalizeExternalUrl } from './toolRegistryUtils.js'
+import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
 
 export function normalizeRendererToolPolicy(policy) {
   if (!policy || typeof policy !== 'object') {
@@ -44,8 +28,22 @@ function assertRendererToolAllowed(toolDefinition, payload) {
   return policy
 }
 
-async function openExternalLinkWithShell(payload) {
+async function openExternalLinkWithShell(payload, context = {}) {
   const url = normalizeExternalUrl(payload?.url)
+  const dialogOptions = {
+    type: 'question',
+    buttons: ['打开', '取消'],
+    defaultId: 1,
+    cancelId: 1,
+    message: '即将打开外部链接',
+    detail: url,
+  }
+  const { response } = context.sourceWindow
+    ? await dialog.showMessageBox(context.sourceWindow, dialogOptions)
+    : await dialog.showMessageBox(dialogOptions)
+  if (response !== 0) {
+    throw new Error('已取消打开外部链接。')
+  }
   await shell.openExternal(url)
   return {
     ok: true,
@@ -59,6 +57,7 @@ export const BUILT_IN_TOOL_REGISTRY = Object.freeze({
     id: 'web_search',
     label: '网页搜索',
     riskLevel: 'low',
+    secretFields: ['apiKey'],
     handler: (payload) => searchWeb(payload),
   },
   weather_lookup: {
@@ -71,7 +70,7 @@ export const BUILT_IN_TOOL_REGISTRY = Object.freeze({
     id: 'open_external_link',
     label: '打开外部链接',
     riskLevel: 'medium',
-    handler: (payload) => openExternalLinkWithShell(payload),
+    handler: (payload, context) => openExternalLinkWithShell(payload, context),
   },
 })
 
@@ -90,7 +89,13 @@ export async function invokeRegisteredTool(event, toolId, payload = {}) {
     sourceWindow: sourceWindow?.id ?? null,
   })
 
-  return toolDefinition.handler(payload, {
+  const resolvedPayload = await resolveVaultRefsForSender(
+    event.sender,
+    payload,
+    toolDefinition.secretFields ?? [],
+  )
+
+  return toolDefinition.handler(resolvedPayload, {
     sourceWindow,
     policy,
   })

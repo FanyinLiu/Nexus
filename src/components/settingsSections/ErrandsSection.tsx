@@ -122,6 +122,7 @@ export const ErrandsSection = memo(function ErrandsSection({
         <textarea
           className="settings-errands__textarea"
           rows={2}
+          aria-label={`${pick(COPY.title, uiLanguage)}: ${pick(COPY.inputPlaceholder, uiLanguage)}`}
           placeholder={pick(COPY.inputPlaceholder, uiLanguage)}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -162,7 +163,7 @@ export const ErrandsSection = memo(function ErrandsSection({
                   </details>
                 ) : null}
                 {errand.error ? (
-                  <p className="settings-errands__error">
+                  <p className="settings-errands__error" role="alert" aria-live="assertive" aria-atomic="true">
                     <strong>{pick(COPY.error, uiLanguage)}:</strong> {errand.error}
                   </p>
                 ) : null}

@@ -1,4 +1,5 @@
 import type { TranslationKey } from '../../types/i18n'
+import type { SpritePetAtlasDefinition } from './spriteAtlas'
 
 /**
  * One entry in a model's idle fidget pool. When the pet is in `idle` mood
@@ -59,6 +60,7 @@ export interface PetModelDefinition {
   description: string
   modelPath: string
   fallbackImagePath: string
+  spriteAtlas?: SpritePetAtlasDefinition
   motionGroups: {
     idle?: string
     interaction?: string
@@ -164,7 +166,7 @@ const DEFAULT_RIG_PARAMS = {
   breath: 'ParamBreath',
 } as const
 
-export const DEFAULT_PET_MODEL_ID = 'mao'
+export const DEFAULT_PET_MODEL_ID = 'qiyi'
 
 // Gesture names surfaced to the LLM via system prompt. Per-model coverage
 // lives in motionGroups.gestures; unknown names fall through to no-op.
@@ -172,6 +174,40 @@ export const PUBLIC_GESTURE_NAMES = ['wave', 'nod', 'shake', 'tilt', 'point'] as
 export type PublicGestureName = (typeof PUBLIC_GESTURE_NAMES)[number]
 
 export const PET_MODEL_PRESETS: PetModelDefinition[] = [
+  {
+    id: 'qiyi',
+    label: '七一',
+    description: '一个红白墨色的小助手，动作更顺，适合陪你写中文口播、做文件和处理代码。',
+    modelPath: '',
+    fallbackImagePath: '',
+    spriteAtlas: {
+      imagePath: './pets/qiyi/spritesheet.webp',
+    },
+    motionGroups: {},
+    expressionMap: {
+      idle: 'idle',
+      listening: 'listening',
+      thinking: 'thinking',
+      sleepy: 'sleepy',
+      speaking: 'speaking',
+      happy: 'happy',
+      surprised: 'surprised',
+      confused: 'confused',
+      embarrassed: 'embarrassed',
+      touchBody: 'happy',
+      touchFace: 'embarrassed',
+      touchHead: 'surprised',
+    },
+    layout: {
+      widthRatio: 0.68,
+      heightRatio: 0.76,
+      minWidth: 180,
+      minHeight: 240,
+      anchorX: 0.5,
+      anchorY: 0,
+      yOffsetRatio: 0.02,
+    },
+  },
   {
     id: 'mao',
     label: 'pet.model.mao.label' satisfies TranslationKey,

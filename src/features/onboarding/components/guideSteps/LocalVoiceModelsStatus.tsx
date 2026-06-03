@@ -121,23 +121,33 @@ export function LocalVoiceModelsStatus({ uiLanguage }: LocalVoiceModelsStatusPro
   }
 
   return (
-    <div className="onboarding-subsection">
+    <div className="onboarding-subsection onboarding-local-models">
       <strong>{ti('onboarding.local_voice_models.missing_heading')}</strong>
       <p className="onboarding-tip">
         {ti('onboarding.local_voice_models.missing_note', { count: missing.length })}
       </p>
-      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.7, color: 'rgba(255,255,255,0.7)' }}>
+      <ul className="onboarding-local-models__list">
         {missing.map((m) => (
-          <li key={m.id}>
-            {m.label}
-            <span style={{ color: 'rgba(255,255,255,0.4)' }}> · {m.sizeLabel}</span>
+          <li className="onboarding-local-models__item" key={m.id}>
+            <span className="onboarding-local-models__dot" aria-hidden="true" />
+            <span className="onboarding-local-models__label">{m.label}</span>
+            <span className="onboarding-local-models__size">{m.sizeLabel}</span>
           </li>
         ))}
       </ul>
       {progressText ? (
         <p className="onboarding-tip">{ti('onboarding.local_voice_models.downloading_prefix', { detail: progressText })}</p>
       ) : null}
-      {error ? <p className="settings-test-result is-error">{error}</p> : null}
+      {error ? (
+        <p
+          className="settings-test-result is-error"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+        >
+          {error}
+        </p>
+      ) : null}
       <button
         className="primary-button"
         type="button"

@@ -8,6 +8,34 @@ export type WebSearchProviderId =
   | 'gemini'
   | 'perplexity'
 
+export type ToolPermissionLevel = 'safe' | 'confirm' | 'restricted'
+
+export type TaskRunStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+
+export interface TaskRunLogStep {
+  id: string
+  label: string
+  toolId?: string
+  permissionLevel: ToolPermissionLevel
+  status: TaskRunStatus
+  startedAt?: string
+  finishedAt?: string
+  message?: string
+  reversible?: boolean
+  confirmedAt?: string
+}
+
+export interface TaskRunLog {
+  id: string
+  goal: string
+  status: TaskRunStatus
+  steps: TaskRunLogStep[]
+  createdAt: string
+  updatedAt: string
+  resultSummary?: string
+  failureReason?: string
+}
+
 export interface WebSearchRequest {
   query: string
   limit?: number

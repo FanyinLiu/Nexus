@@ -225,6 +225,7 @@ async function performVolcengineSpeechOutputAttempt({
   timeoutMessage = '语音播报响应超时，请检查网络、代理或当前语音服务状态。',
 }) {
   const response = await performNetworkRequest(`${baseUrl}/v1/tts`, {
+    allowPrivateNetwork: true,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

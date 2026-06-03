@@ -36,6 +36,11 @@ const SCENE_IMAGES: Record<Exclude<PetSceneLocation, 'off'>, SceneVariants> = {
   mountain: { day: mountainDay, dusk: mountainDusk, night: mountainNight },
 }
 
+function getOpacityClass(opacity: number) {
+  const percent = Math.round(Math.min(1, Math.max(0, opacity)) * 100)
+  return `scene-backdrop__art--opacity-${percent}`
+}
+
 /**
  * Bottom layer of the 3-layer pet stage. Each scene ships three
  * hand-prompted variants — day / dusk / night — and we swap between
@@ -63,22 +68,19 @@ export function SceneBackdrop({ location, timeBand, timeBlend }: SceneBackdropPr
   return (
     <div className={`scene-backdrop scene-backdrop--${location}`} aria-hidden="true">
       <img
-        className="scene-backdrop__art scene-backdrop__art--day"
-        style={{ opacity: opacities.day }}
+        className={`scene-backdrop__art scene-backdrop__art--day ${getOpacityClass(opacities.day)}`}
         src={variants.day}
         alt=""
         draggable={false}
       />
       <img
-        className="scene-backdrop__art scene-backdrop__art--dusk"
-        style={{ opacity: opacities.dusk }}
+        className={`scene-backdrop__art scene-backdrop__art--dusk ${getOpacityClass(opacities.dusk)}`}
         src={variants.dusk}
         alt=""
         draggable={false}
       />
       <img
-        className="scene-backdrop__art scene-backdrop__art--night"
-        style={{ opacity: opacities.night }}
+        className={`scene-backdrop__art scene-backdrop__art--night ${getOpacityClass(opacities.night)}`}
         src={variants.night}
         alt=""
         draggable={false}

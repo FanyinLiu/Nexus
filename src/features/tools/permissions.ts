@@ -1,4 +1,5 @@
 import { loadSettings } from '../../lib/index.ts'
+import type { ToolPermissionLevel } from '../../types'
 import type { BuiltInToolId, BuiltInToolPolicy, MatchedBuiltInTool } from './toolTypes'
 
 type ToolPolicySettingsKeys = {
@@ -67,6 +68,11 @@ export function resolveBuiltInToolPolicy(toolId: BuiltInToolId, settings?: unkno
   }
 }
 
+export function resolveBuiltInToolPermissionLevel(policy: BuiltInToolPolicy): ToolPermissionLevel {
+  if (!policy.enabled) return 'restricted'
+  return policy.requiresConfirmation ? 'confirm' : 'safe'
+}
+
 function buildConfirmationMessage(tool: MatchedBuiltInTool) {
   if (tool.id === 'open_external') {
     return `\u5373\u5c06\u6253\u5f00\u5916\u90e8\u94fe\u63a5\uff1a\n${tool.url}\n\n\u786e\u5b9a\u7ee7\u7eed\u5417\uff1f`
@@ -81,6 +87,13 @@ function buildConfirmationMessage(tool: MatchedBuiltInTool) {
 
 export async function confirmBuiltInToolExecution(tool: MatchedBuiltInTool, policy: BuiltInToolPolicy): Promise<boolean> {
   if (!policy.requiresConfirmation) {
+    return true
+  }
+
+  // External-link confirmation is enforced in the Electron main process
+  // immediately before shell.openExternal. Keeping it there avoids trusting
+  // renderer-only state for a medium-risk action.
+  if (tool.id === 'open_external' && window.desktopPet?.openExternalLink) {
     return true
   }
 

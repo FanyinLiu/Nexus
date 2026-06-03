@@ -70,184 +70,161 @@ export const HistorySection = memo(function HistorySection({
   )
 
   const handleRemove = (id: string) => {
+    if (!window.confirm(ti('settings.history.delete_confirm'))) return
     removeChatSession(id)
     setRefreshKey((v) => v + 1)
     if (expandedId === id) setExpandedId(null)
   }
 
   return (
-    <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
-      <div className="settings-section__title-row">
-        <div>
-          <h4>{ti('settings.history.title')}</h4>
-          <p className="settings-drawer__hint">
-            {ti('settings.history.note')}
-          </p>
+    <section className={`settings-section settings-history-section ${active ? 'is-active' : 'is-hidden'}`}>
+      <div className="settings-mini-group settings-history-group">
+        <div className="settings-control-grid settings-history-summary-grid">
+          <div className="settings-metric-card">
+            <span>{ti('settings.history.message_count')}</span>
+            <strong>{chatMessageCount}</strong>
+          </div>
+
+          <div className="settings-metric-card">
+            <span>{ti('settings.history.current_status')}</span>
+            <strong>{chatBusy ? ti('settings.history.replying') : ti('settings.history.idle')}</strong>
+          </div>
         </div>
-      </div>
 
-      <div className="settings-grid">
-        <label>
-          <span>{ti('settings.history.message_count')}</span>
-          <input value={String(chatMessageCount)} readOnly />
-        </label>
+        <p className="settings-mini-group__note settings-history-note">
+          {ti('settings.history.hint')}
+        </p>
 
-        <label>
-          <span>{ti('settings.history.current_status')}</span>
-          <input
-            value={chatBusy ? ti('settings.history.replying') : ti('settings.history.idle')}
-            readOnly
-          />
-        </label>
-      </div>
+        <div className="settings-action-row settings-history-actions">
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={onExportChatHistory}
+            disabled={exportingChatHistory}
+          >
+            {exportingChatHistory
+              ? ti('settings.history.exporting')
+              : ti('settings.history.export')}
+          </button>
 
-      <p className="settings-drawer__hint">
-        {ti('settings.history.hint')}
-      </p>
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={onImportChatHistory}
+            disabled={importingChatHistory || chatBusy}
+          >
+            {importingChatHistory
+              ? ti('settings.history.importing')
+              : ti('settings.history.import')}
+          </button>
 
-      <div className="settings-section__title-row">
-        <button
-          type="button"
-          className="ghost-button"
-          onClick={onExportChatHistory}
-          disabled={exportingChatHistory}
-        >
-          {exportingChatHistory
-            ? ti('settings.history.exporting')
-            : ti('settings.history.export')}
-        </button>
-
-        <button
-          type="button"
-          className="ghost-button"
-          onClick={onImportChatHistory}
-          disabled={importingChatHistory || chatBusy}
-        >
-          {importingChatHistory
-            ? ti('settings.history.importing')
-            : ti('settings.history.import')}
-        </button>
-
-        <button
-          type="button"
-          className="ghost-button"
-          onClick={onClearChatHistory}
-          disabled={clearingChatHistory || chatBusy || !chatMessageCount}
-        >
-          {clearingChatHistory
-            ? ti('settings.history.clearing')
-            : ti('settings.history.clear')}
-        </button>
-      </div>
-
-      {chatHistoryStatus ? (
-        <div className={chatHistoryStatus.ok ? 'settings-test-result is-success' : 'settings-test-result is-error'}>
-          {chatHistoryStatus.message}
+          <button
+            type="button"
+            className="settings-danger-button settings-history-clear-button"
+            onClick={onClearChatHistory}
+            disabled={clearingChatHistory || chatBusy || !chatMessageCount}
+          >
+            {clearingChatHistory
+              ? ti('settings.history.clearing')
+              : ti('settings.history.clear')}
+          </button>
         </div>
-      ) : null}
 
-      <div className="settings-section__title-row" style={{ marginTop: 24 }}>
-        <div>
-          <h4>{ti('settings.history.archived_title')}</h4>
-          <p className="settings-drawer__hint">
+        {chatHistoryStatus ? (
+          <div
+            className={chatHistoryStatus.ok ? 'settings-test-result is-success' : 'settings-test-result is-error'}
+            role={chatHistoryStatus.ok ? 'status' : 'alert'}
+            aria-live={chatHistoryStatus.ok ? 'polite' : 'assertive'}
+            aria-atomic="true"
+          >
+            {chatHistoryStatus.message}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="settings-mini-group settings-history-group">
+        <div className="settings-mini-group__head settings-history-group__head">
+          <h5>{ti('settings.history.archived_title')}</h5>
+          <span>
             {ti('settings.history.archived_note')}
-          </p>
+          </span>
         </div>
+
+        {archivedSessions.length === 0 ? (
+          <p className="settings-history-empty">{ti('settings.history.archived_empty')}</p>
+        ) : (
+          <ul className="settings-history-list">
+            {archivedSessions.map((session) => {
+              const isExpanded = expandedId === session.id
+              const sessionTitle = session.title ?? ti('settings.history.untitled_session')
+              const messagesId = `settings-history-messages-${encodeURIComponent(session.id)}`
+              const expandLabel = `${isExpanded ? ti('settings.history.collapse') : ti('settings.history.expand')}: ${sessionTitle}`
+              const deleteLabel = `${ti('settings.history.delete')}: ${sessionTitle}`
+
+              return (
+                <li
+                  key={session.id}
+                  className="settings-history-item"
+                >
+                  <div className="settings-history-item__header">
+                    <div className="settings-history-item__main">
+                      <div className="settings-history-item__title">
+                        {sessionTitle}
+                      </div>
+                      <div className="settings-history-item__meta">
+                        {formatTimestamp(session.lastActiveAt)} · {session.messages.length} {ti('settings.history.message_count_suffix')}
+                      </div>
+                    </div>
+                    <div className="settings-history-item__actions">
+                      <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={() => setExpandedId(isExpanded ? null : session.id)}
+                        aria-expanded={isExpanded}
+                        aria-controls={messagesId}
+                        aria-label={expandLabel}
+                        title={expandLabel}
+                      >
+                        {isExpanded ? ti('settings.history.collapse') : ti('settings.history.expand')}
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost-button settings-history-item__delete"
+                        onClick={() => handleRemove(session.id)}
+                        aria-label={deleteLabel}
+                        title={deleteLabel}
+                      >
+                        {ti('settings.history.delete')}
+                      </button>
+                    </div>
+                  </div>
+
+                  {isExpanded ? (
+                    <div id={messagesId} className="settings-history-messages">
+                      {session.messages.length === 0 ? (
+                        <div className="settings-history-messages__empty">{ti('settings.history.empty_messages')}</div>
+                      ) : (
+                        session.messages.map((msg) => (
+                          <div key={msg.id} className="settings-history-message">
+                            <span className="settings-history-message__role">
+                              {msg.role === 'user'
+                                ? ti('settings.history.role.user')
+                                : msg.role === 'assistant'
+                                  ? ti('settings.history.role.assistant')
+                                  : msg.role}
+                            </span>
+                            <span className="settings-history-message__content">{msg.content}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  ) : null}
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </div>
-
-      {archivedSessions.length === 0 ? (
-        <p className="settings-drawer__hint">{ti('settings.history.archived_empty')}</p>
-      ) : (
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-          {archivedSessions.map((session) => {
-            const isExpanded = expandedId === session.id
-            return (
-              <li
-                key={session.id}
-                style={{
-                  border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
-                  borderRadius: 8,
-                  padding: 12,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8,
-                  // Without min-width:0 the flex column refuses to shrink
-                  // narrower than its longest unbroken child — a single
-                  // pasted URL inside an expanded session used to push the
-                  // whole li past the drawer's right edge.
-                  minWidth: 0,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {session.title ?? ti('settings.history.untitled_session')}
-                    </div>
-                    <div style={{ fontSize: 12, opacity: 0.65 }}>
-                      {formatTimestamp(session.lastActiveAt)} · {session.messages.length} {ti('settings.history.message_count_suffix')}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={() => setExpandedId(isExpanded ? null : session.id)}
-                  >
-                    {isExpanded ? ti('settings.history.collapse') : ti('settings.history.expand')}
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={() => handleRemove(session.id)}
-                  >
-                    {ti('settings.history.delete')}
-                  </button>
-                </div>
-
-                {isExpanded ? (
-                  <div
-                    style={{
-                      maxHeight: 320,
-                      overflowY: 'auto',
-                      overflowX: 'hidden',
-                      padding: 8,
-                      background: 'var(--surface-sunken, rgba(0,0,0,0.15))',
-                      borderRadius: 6,
-                      fontSize: 13,
-                      lineHeight: 1.5,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 6,
-                      // Long unbroken tokens (URLs, base64, stack frames)
-                      // inside historic messages used to push this block
-                      // past the drawer; force wrapping at any boundary.
-                      minWidth: 0,
-                      wordBreak: 'break-word',
-                      overflowWrap: 'anywhere',
-                    }}
-                  >
-                    {session.messages.length === 0 ? (
-                      <div style={{ opacity: 0.5 }}>{ti('settings.history.empty_messages')}</div>
-                    ) : (
-                      session.messages.map((msg) => (
-                        <div key={msg.id} style={{ minWidth: 0, maxWidth: '100%' }}>
-                          <span style={{ opacity: 0.6, marginRight: 6 }}>
-                            {msg.role === 'user'
-                              ? ti('settings.history.role.user')
-                              : msg.role === 'assistant'
-                                ? ti('settings.history.role.assistant')
-                                : msg.role}
-                          </span>
-                          <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                ) : null}
-              </li>
-            )
-          })}
-        </ul>
-      )}
     </section>
   )
 })

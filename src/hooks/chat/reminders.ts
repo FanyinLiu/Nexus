@@ -252,8 +252,9 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
           throw new Error(t('chat.reminder.create.failed'))
         }
 
-        const scheduleSummary = formatReminderScheduleSummaryForUi(createdTask, getLocale())
-        const nextRunLabel = formatReminderNextRunLabel(createdTask.nextRunAt)
+        const locale = getLocale()
+        const scheduleSummary = formatReminderScheduleSummaryForUi(createdTask, locale)
+        const nextRunLabel = formatReminderNextRunLabel(createdTask.nextRunAt, locale)
 
         await dependencies.pushCompanionNotice({
           chatContent: [
@@ -333,12 +334,13 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
         const actionLabel = parsedIntent.enabled
           ? t('chat.reminder.toggle.enabled_label')
           : t('chat.reminder.toggle.paused_label')
-        const nextRunLabel = formatReminderNextRunLabel(updatedTask.nextRunAt)
+        const locale = getLocale()
+        const nextRunLabel = formatReminderNextRunLabel(updatedTask.nextRunAt, locale)
 
         await dependencies.pushCompanionNotice({
           chatContent: [
             t('chat.reminder.toggle.chat_title', { action: actionLabel, title: updatedTask.title }),
-            t('chat.reminder.create.plan_line', { summary: formatReminderScheduleSummaryForUi(updatedTask, getLocale()) }),
+            t('chat.reminder.create.plan_line', { summary: formatReminderScheduleSummaryForUi(updatedTask, locale) }),
             nextRunLabel ? t('chat.reminder.toggle.next_run_line', { label: nextRunLabel }) : '',
           ].filter(Boolean).join('\n'),
           bubbleContent: nextRunLabel
@@ -366,8 +368,9 @@ export function createLocalReminderActionRunner(dependencies: LocalReminderActio
         ...matchedTask,
         ...parsedIntent.updates,
       }
-      const updatedSummary = formatReminderScheduleSummaryForUi(updatedTask, getLocale())
-      const nextRunLabel = formatReminderNextRunLabel(updatedTask.nextRunAt)
+      const locale = getLocale()
+      const updatedSummary = formatReminderScheduleSummaryForUi(updatedTask, locale)
+      const nextRunLabel = formatReminderNextRunLabel(updatedTask.nextRunAt, locale)
 
       await dependencies.pushCompanionNotice({
         chatContent: [

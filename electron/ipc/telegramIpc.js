@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import * as telegramGateway from '../services/telegramGateway.js'
 import { requireTrustedSender, requireString } from './validate.js'
+import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
 
 export function register() {
   // Forward incoming Telegram messages to all renderer windows
@@ -12,7 +13,8 @@ export function register() {
 
   ipcMain.handle('telegram:connect', async (event, payload) => {
     requireTrustedSender(event)
-    const botToken = requireString(payload?.botToken, 'botToken')
+    const requestPayload = await resolveVaultRefsForSender(event.sender, payload, ['botToken'])
+    const botToken = requireString(requestPayload?.botToken, 'botToken')
     const allowedChatIds = Array.isArray(payload?.allowedChatIds)
       ? payload.allowedChatIds.filter((id) => typeof id === 'number')
       : []

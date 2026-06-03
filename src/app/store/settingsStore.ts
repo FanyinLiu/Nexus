@@ -7,6 +7,7 @@ import {
 import {
   dehydrateSettingsKeys,
   hydrateSettingsKeys,
+  isVaultRefString,
   migrateKeysToVault,
 } from '../../lib/keyVaultBridge.ts'
 import type { AppSettings } from '../../types/index.ts'
@@ -39,12 +40,19 @@ export async function initializeSettingsWithVault(): Promise<AppSettings> {
   if (!vaultMigrationDone) {
     vaultMigrationDone = true
 
-    const hasPlaintextKeys = Boolean(
-      settings.apiKey
-      || settings.speechInputApiKey
-      || settings.speechOutputApiKey
-      || settings.toolWebSearchApiKey,
-    )
+    const hasPlaintextKeys = [
+      settings.apiKey,
+      settings.speechInputApiKey,
+      settings.speechOutputApiKey,
+      settings.toolWebSearchApiKey,
+      settings.screenVlmApiKey,
+      settings.telegramBotToken,
+      settings.discordBotToken,
+    ].some((value) => {
+      if (typeof value !== 'string') return false
+      const normalized = value.trim()
+      return normalized !== '' && !isVaultRefString(normalized)
+    })
 
     if (hasPlaintextKeys) {
       settings = await migrateKeysToVault(settings)

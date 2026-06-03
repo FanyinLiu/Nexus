@@ -13,7 +13,6 @@ import type {
   VoiceState,
   VoiceTraceEntry,
 } from '../../types'
-import type { SubagentTask } from '../../types/subagent'
 import {
   buildConsoleEventClusters,
   formatConsoleTimestamp,
@@ -26,8 +25,8 @@ import {
 import { AboutPanel } from './AboutPanel'
 import { CostHistoryPanel } from './CostHistoryPanel'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
+import { MoodMapPanel } from './MoodMapPanel'
 import { StateTimelinePanel } from './StateTimelinePanel'
-import { SubagentHistoryPanel } from './SubagentHistoryPanel'
 import { UpdaterPanel } from './UpdaterPanel'
 import { WeeklyRecapPanel } from './WeeklyRecapPanel'
 import { AgentTracePanel } from '../AgentTracePanel'
@@ -55,9 +54,6 @@ type ConsoleSectionProps = {
   emotionState?: EmotionSnapshot
   memoryCount?: number
   autonomyPhase?: string
-  /** Subagent task list for the recent-history panel. Optional so callers
-   * that don't yet thread it (existing tests, story setups) keep working. */
-  subagentTasks?: SubagentTask[]
 }
 
 export const ConsoleSection = memo(function ConsoleSection({
@@ -74,7 +70,6 @@ export const ConsoleSection = memo(function ConsoleSection({
   emotionState,
   memoryCount,
   autonomyPhase,
-  subagentTasks,
 }: ConsoleSectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const enabledReminderCount = reminderTasks.filter((task) => task.enabled).length
@@ -111,29 +106,6 @@ export const ConsoleSection = memo(function ConsoleSection({
   else if (budgetSnapshot.shouldDowngrade) budgetCapNote = ` · ${ti('settings.console.downgraded')}`
   return (
     <section className={`settings-section ${active ? 'is-active' : 'is-hidden'}`}>
-      <div className="settings-section__title-row">
-        <div>
-          <h4>{ti('settings.console.title')}</h4>
-          <p className="settings-drawer__hint">{ti('settings.console.note')}</p>
-        </div>
-        <button
-          type="button"
-          className="ghost-button"
-          onClick={onClearDebugConsole}
-          disabled={!debugConsoleEvents.length}
-        >
-          {ti('settings.console.clear')}
-        </button>
-      </div>
-
-      <UpdaterPanel uiLanguage={uiLanguage} />
-      <AboutPanel uiLanguage={uiLanguage} />
-      <WeeklyRecapPanel uiLanguage={uiLanguage} />
-      <DiagnosticsPanel />
-      <StateTimelinePanel />
-      <CostHistoryPanel />
-      <SubagentHistoryPanel tasks={subagentTasks ?? []} />
-
       <div className="settings-console-grid">
         <article className="settings-console-card settings-console-card--primary">
           <div className="settings-console-card__header">
@@ -204,9 +176,35 @@ export const ConsoleSection = memo(function ConsoleSection({
         </article>
       </div>
 
+      <UpdaterPanel uiLanguage={uiLanguage} />
+
       {/* ── Collapsible detail sections ──────────────────────────────────── */}
       <div className="settings-console-sections">
-        <details className="settings-console-section" open>
+        <details className="settings-console-section">
+          <summary className="settings-console-section__header">
+            <div>
+              <h5>{ti('settings.console.about_recap')}</h5>
+              <p className="settings-section__note">{ti('settings.console.about_recap_note')}</p>
+            </div>
+          </summary>
+          <AboutPanel uiLanguage={uiLanguage} />
+          <WeeklyRecapPanel uiLanguage={uiLanguage} />
+        </details>
+
+        <details className="settings-console-section settings-console-advanced-debug">
+          <summary className="settings-console-section__header">
+            <div>
+              <h5>{ti('settings.console.advanced_diagnostics')}</h5>
+              <p className="settings-section__note">{ti('settings.console.advanced_diagnostics_note')}</p>
+            </div>
+          </summary>
+          <DiagnosticsPanel uiLanguage={uiLanguage} />
+          <MoodMapPanel uiLanguage={uiLanguage} active={active} />
+          <StateTimelinePanel uiLanguage={uiLanguage} active={active} />
+          <CostHistoryPanel uiLanguage={uiLanguage} />
+        </details>
+
+        <details className="settings-console-section">
           <summary className="settings-console-section__header">
             <div>
               <h5>{ti('settings.console.recent_voice_turns')}</h5>
@@ -233,7 +231,7 @@ export const ConsoleSection = memo(function ConsoleSection({
           </div>
         </details>
 
-        <details className="settings-console-section" open>
+        <details className="settings-console-section">
           <summary className="settings-console-section__header">
             <div>
               <h5>{ti('settings.console.event_summaries')}</h5>
@@ -241,6 +239,17 @@ export const ConsoleSection = memo(function ConsoleSection({
             </div>
             <span className="settings-console-section__meta">{consoleEventClusters.length || 0} {ti('settings.console.groups')}</span>
           </summary>
+          {debugConsoleEvents.length > 0 ? (
+            <div className="settings-console-section__actions">
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={onClearDebugConsole}
+              >
+                {ti('settings.console.clear')}
+              </button>
+            </div>
+          ) : null}
           <div className="settings-console-list">
             {consoleEventClusters.length ? consoleEventClusters.map((cluster) => (
               <article
@@ -386,10 +395,23 @@ function ObservabilityPanel({
         { label: ti('settings.console.emotion.warmth'), value: emotionState.warmth },
         { label: ti('settings.console.emotion.curiosity'), value: emotionState.curiosity },
         { label: ti('settings.console.emotion.concern'), value: emotionState.concern },
-      ]
+      ].map((bar) => ({
+        ...bar,
+        percentage: Math.round(Math.max(0, Math.min(1, bar.value)) * 100),
+      }))
     : null
 
   const formatTokens = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
+  const formatTokenTotal = (count: number) => (
+    pickTranslatedUiText(uiLanguage, 'settings.console.token_total_count', { count: formatTokens(count) })
+  )
+  const activeMemoryText = typeof memoryCount === 'number'
+    ? `${memoryCount} ${ti('settings.console.memory_active_suffix')}`
+    : ti('settings.console.memory_no_active')
+  const normalizedAutonomyPhase = autonomyPhase?.trim()
+  const autonomyPhaseLabel = normalizedAutonomyPhase && normalizedAutonomyPhase.toLowerCase() !== 'idle'
+    ? normalizedAutonomyPhase
+    : ti('voice_state.idle')
 
   return (
     <section className="settings-console-section">
@@ -398,30 +420,26 @@ function ObservabilityPanel({
           <h5>{ti('settings.console.dashboard_title')}</h5>
           <p className="settings-section__note">{ti('settings.console.dashboard_subtitle')}</p>
         </div>
-        <span className="settings-console-section__meta">{autonomyPhase ?? 'idle'}</span>
+        <span className="settings-console-section__meta">{autonomyPhaseLabel}</span>
       </div>
 
-      <div className="settings-console-grid" style={{ marginBottom: 12 }}>
+      <div className="settings-console-grid settings-console-grid--spaced">
         {emotionBars && (
           <article className="settings-console-card">
             <div className="settings-console-card__header">
               <span className="settings-console-badge">{ti('settings.console.emotion_badge')}</span>
             </div>
             {emotionBars.map((bar) => (
-              <div key={bar.label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <span style={{ width: 32, fontSize: 12, opacity: 0.7 }}>{bar.label}</span>
-                <div style={{ flex: 1, height: 6, background: 'var(--color-border, #333)', borderRadius: 3 }}>
-                  <div
-                    style={{
-                      width: `${Math.round(bar.value * 100)}%`,
-                      height: '100%',
-                      background: 'var(--color-accent, #6cf)',
-                      borderRadius: 3,
-                      transition: 'width 0.3s',
-                    }}
-                  />
-                </div>
-                <span style={{ width: 28, fontSize: 11, textAlign: 'right', opacity: 0.6 }}>{Math.round(bar.value * 100)}%</span>
+              <div key={bar.label} className="settings-console-emotion">
+                <span className="settings-console-emotion__label">{bar.label}</span>
+                <meter
+                  className="settings-console-emotion__meter"
+                  min={0}
+                  max={100}
+                  value={bar.percentage}
+                  aria-label={bar.label}
+                />
+                <span className="settings-console-emotion__value">{bar.percentage}%</span>
               </div>
             ))}
           </article>
@@ -432,7 +450,7 @@ function ObservabilityPanel({
             <span className="settings-console-badge">{ti('settings.console.memory_badge')}</span>
           </div>
           <div className="settings-console-card__headline">
-            <strong>{memoryCount ?? '—'} {ti('settings.console.memory_active_suffix')}</strong>
+            <strong>{activeMemoryText}</strong>
           </div>
           <p>{ti('settings.console.memory_archived')} {archiveStats.count} · {ti('settings.console.memory_narratives')} {narrative.threads.length}</p>
         </article>
@@ -442,10 +460,10 @@ function ObservabilityPanel({
             <span className="settings-console-badge">{ti('settings.console.token_badge')}</span>
           </div>
           <div className="settings-console-card__headline">
-            <strong>{ti('settings.console.token_today')} {formatTokens(meter.daily.totalInputTokens + meter.daily.totalOutputTokens)} tokens</strong>
+            <strong>{ti('settings.console.token_today')} {formatTokenTotal(meter.daily.totalInputTokens + meter.daily.totalOutputTokens)}</strong>
           </div>
           <p>
-            {ti('settings.console.token_session')} {formatTokens(meter.session.totalInputTokens + meter.session.totalOutputTokens)} ·
+            {ti('settings.console.token_session')} {formatTokens(meter.session.totalInputTokens + meter.session.totalOutputTokens)} ·{' '}
             {meter.daily.callCount} {ti('settings.console.token_calls_suffix')}
           </p>
           <div className="settings-console-card__meta">

@@ -1,5 +1,7 @@
 export type ThemeId =
   | 'nexus-default'
+  | 'system-day'
+  | 'warm-day'
   | 'soft'
   | 'high-contrast'
   | 'editorial'

@@ -6,6 +6,7 @@ import type {
   MemoryCategory,
   MemoryImportance,
   MemoryItem,
+  MemoryKind,
 } from '../../types'
 import type { EmotionState } from '../autonomy/emotionModel'
 import { computeMemorySignificance } from './decay.ts'
@@ -123,6 +124,13 @@ function inferCategory(content: string): MemoryCategory {
   return 'profile'
 }
 
+export function inferMemoryKind(category: MemoryCategory): MemoryKind {
+  if (category === 'preference' || category === 'habit') return 'preference'
+  if (category === 'goal' || category === 'project' || category === 'reference') return 'fact'
+  if (category === 'feedback' || category === 'manual') return 'relationship'
+  return 'fact'
+}
+
 function splitMessageSegments(content: string) {
   return content
     .split(/[。！？!?;\n]/)
@@ -151,6 +159,8 @@ export function extractMemoriesFromMessage(
         id: createId('memory'),
         content: segment,
         category,
+        kind: inferMemoryKind(category),
+        enabled: true,
         source: 'chat',
         importance: inferImportance(segment, category),
         createdAt: new Date().toISOString(),
@@ -184,6 +194,8 @@ export function createManualMemory(content: string): MemoryItem {
     id: createId('memory'),
     content: content.trim(),
     category: 'manual',
+    kind: 'relationship',
+    enabled: true,
     source: 'manual',
     importance: 'high',
     createdAt: new Date().toISOString(),
@@ -227,6 +239,7 @@ export function mergeMemories(existing: MemoryItem[], incoming: MemoryItem[]) {
 export function rankMemories(memories: MemoryItem[], query: string) {
   const nowMs = Date.now()
   return [...memories]
+    .filter((memory) => memory.enabled !== false)
     .map((memory) => {
       const relevance = scoreLexicalSimilarity(memory.content, query)
       const retention = computeMemoryRetentionScore(memory, nowMs)

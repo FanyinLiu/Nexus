@@ -59,11 +59,11 @@
   --color-shadow: rgba(0, 0, 0, 0.08);
   --color-shadow-accent: rgba(50, 50, 50, 0.12);
 
-  /* Radius — generous & soft */
+  /* Radius — compact and consistent with Nexus surfaces */
   --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
   --radius-pill: 999px;
 
   /* Shadows — colored & layered */
@@ -87,7 +87,7 @@
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.55;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   color-scheme: light dark;
   color: var(--color-text-primary);
   background: transparent;
@@ -133,7 +133,7 @@ h1, h2 {
 h1 {
   font-size: 34px;
   margin: 0;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 h2 {
@@ -214,4 +214,16 @@ button, input, textarea, select {
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
+  }
 }

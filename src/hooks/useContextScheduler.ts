@@ -9,15 +9,21 @@ import {
   readJson,
   writeJson,
 } from '../lib/storage'
+import {
+  isDesktopContextActiveWindowAvailable,
+  isDesktopContextClipboardAvailable,
+} from '../lib/platformProfile'
 import type {
   AppSettings,
   AutonomousAction,
   ContextTriggeredTask,
   FocusState,
+  PlatformProfile,
 } from '../types'
 
 export type UseContextSchedulerOptions = {
   settingsRef: React.RefObject<AppSettings>
+  platformProfile?: PlatformProfile
   focusStateRef: React.RefObject<FocusState>
   idleSecondsRef: React.RefObject<number>
   onAction: (action: AutonomousAction, task: ContextTriggeredTask) => void
@@ -25,6 +31,7 @@ export type UseContextSchedulerOptions = {
 
 export function useContextScheduler({
   settingsRef,
+  platformProfile,
   focusStateRef,
   idleSecondsRef,
   onAction,
@@ -61,7 +68,9 @@ export function useContextScheduler({
 
     try {
       const needsWindow = settings.activeWindowContextEnabled
+        && isDesktopContextActiveWindowAvailable(platformProfile)
       const needsClipboard = settings.clipboardContextEnabled
+        && isDesktopContextClipboardAvailable(platformProfile)
       if (needsWindow || needsClipboard) {
         const ctx = await window.desktopPet?.getDesktopContext?.({
           includeActiveWindow: needsWindow,
@@ -115,7 +124,7 @@ export function useContextScheduler({
         onActionRef.current(task.action, task)
       }
     }
-  }, [settingsRef, focusStateRef, idleSecondsRef])
+  }, [settingsRef, focusStateRef, idleSecondsRef, platformProfile])
 
   const addTask = useCallback((task: ContextTriggeredTask) => {
     setTasks((prev) => [...prev, task])

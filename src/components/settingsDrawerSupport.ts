@@ -1,10 +1,10 @@
 import {
   type ReminderTaskDraftInput,
-} from '../features/reminders/schedule'
+} from '../features/reminders/schedule.ts'
 import {
   pickTranslatedUiText,
-} from '../lib/uiLanguage'
-import type { TranslationKey } from '../types/i18n'
+} from '../lib/uiLanguage.ts'
+import type { TranslationKey } from '../types/i18n.ts'
 import type {
   DebugConsoleEvent,
   MemorySearchMode,
@@ -15,7 +15,7 @@ import type {
   VoicePipelineState,
   VoiceState,
   VoiceTriggerMode,
-} from '../types'
+} from '../types/index.ts'
 
 const VOICE_STATE_KEY: Record<VoiceState, TranslationKey> = {
   idle: 'voice_state.idle',
@@ -361,6 +361,7 @@ export type SettingsSectionId =
   | 'model'
   | 'chat'
   | 'history'
+  | 'letters'
   | 'memory'
   | 'lorebooks'
   | 'voice'
@@ -374,6 +375,7 @@ const SETTINGS_SECTION_DESCRIPTION_KEY_MAP: Record<SettingsSectionId, Parameters
   model: 'settings.section_desc.model',
   chat: 'settings.section_desc.chat',
   history: 'settings.section_desc.history',
+  letters: 'settings.section_desc.letters',
   memory: 'settings.section_desc.memory',
   lorebooks: 'settings.section_desc.lorebooks',
   voice: 'settings.section_desc.voice',
@@ -388,6 +390,7 @@ const SETTINGS_SECTION_EYEBROW_KEY_MAP: Record<SettingsSectionId, Parameters<typ
   model: 'settings.section_eyebrow.model',
   chat: 'settings.section_eyebrow.chat',
   history: 'settings.section_eyebrow.history',
+  letters: 'settings.section_eyebrow.letters',
   memory: 'settings.section_eyebrow.memory',
   lorebooks: 'settings.section_eyebrow.lorebooks',
   voice: 'settings.section_eyebrow.voice',
@@ -408,17 +411,22 @@ export function getSettingsSectionOptions(uiLanguage: UiLanguage): Array<{
 }> {
   return [
     { id: 'model', label: pickTranslatedUiText(uiLanguage, 'settings.section.model') },
+    { id: 'window', label: pickTranslatedUiText(uiLanguage, 'settings.section.window') },
     { id: 'chat', label: pickTranslatedUiText(uiLanguage, 'settings.section.chat') },
+    { id: 'console', label: pickTranslatedUiText(uiLanguage, 'settings.section.console') },
+    { id: 'history', label: pickTranslatedUiText(uiLanguage, 'settings.section.history') },
+    { id: 'letters', label: pickTranslatedUiText(uiLanguage, 'settings.section.letters') },
     { id: 'voice', label: pickTranslatedUiText(uiLanguage, 'settings.section.voice') },
     { id: 'memory', label: pickTranslatedUiText(uiLanguage, 'settings.section.memory') },
-    { id: 'lorebooks', label: uiLanguage === 'zh-CN' || uiLanguage === 'zh-TW' ? 'Lorebook' : 'Lorebooks' },
-    { id: 'window', label: pickTranslatedUiText(uiLanguage, 'settings.section.window') },
-    { id: 'tools', label: pickTranslatedUiText(uiLanguage, 'settings.section.tools') },
-    { id: 'integrations', label: pickTranslatedUiText(uiLanguage, 'settings.section.integrations') },
-    { id: 'history', label: pickTranslatedUiText(uiLanguage, 'settings.section.history') },
+    { id: 'lorebooks', label: pickTranslatedUiText(uiLanguage, 'settings.lorebooks.title') },
     { id: 'autonomy', label: pickTranslatedUiText(uiLanguage, 'settings.section.autonomy') },
-    { id: 'console', label: pickTranslatedUiText(uiLanguage, 'settings.section.console') },
+    { id: 'tools', label: pickTranslatedUiText(uiLanguage, 'settings.section.tools') },
   ]
+}
+
+export function normalizeSettingsSectionId(sectionId: SettingsSectionId): SettingsSectionId {
+  if (sectionId === 'integrations') return 'tools'
+  return sectionId
 }
 
 export function getSettingsSectionDescription(sectionId: SettingsSectionId, uiLanguage: UiLanguage) {
