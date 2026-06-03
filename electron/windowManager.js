@@ -135,25 +135,70 @@ export let panelWindowState = {
 
 let panelWindowExpandedBounds = null
 
-export let petWindowState = {
-  isPinned: true,
-  clickThrough: false,
-  petHotspotActive: false,
-  locomotionActivity: 'idle',
-  freeMode: getSavedPetPref('freeMode') ?? true,
-  roamCapable: true,
+// --- Pet instances (primary + clones) ----------------------------------
+// Each pet window owns its own state + locomotion controller, so several
+// pets can roam the desktop independently. The primary instance's window is
+// `mainWindow`; clones are spawned/dismissed from the pet context menu.
+const petInstances = new Map() // win.webContents.id -> { id, win, state, loco }
+
+function makePetWindowState() {
+  return {
+    isPinned: true,
+    clickThrough: false,
+    petHotspotActive: false,
+    locomotionActivity: 'idle',
+    freeMode: getSavedPetPref('freeMode') ?? true,
+    roamCapable: true,
+  }
 }
 
-// Wire the extracted locomotion controller to this module's pet-window state.
-const petLoco = createPetLocomotion({
-  getWin: () => mainWindow,
-  getState: () => petWindowState,
-  patchState: (patch) => {
-    petWindowState = { ...petWindowState, ...patch }
-    if ('freeMode' in patch) savePetPref('freeMode', patch.freeMode)
-    syncPetWindowState()
-  },
-})
+function registerPetInstance(win) {
+  const id = win.webContents.id
+  const inst = { id, win, state: makePetWindowState(), loco: null }
+  inst.loco = createPetLocomotion({
+    getWin: () => inst.win,
+    getState: () => inst.state,
+    patchState: (patch) => {
+      inst.state = { ...inst.state, ...patch }
+      if ('freeMode' in patch) savePetPref('freeMode', patch.freeMode)
+      syncPetInstance(inst)
+    },
+  })
+  petInstances.set(id, inst)
+  return inst
+}
+
+function destroyPetInstance(inst) {
+  if (!inst) return
+  inst.loco.stop()
+  petInstances.delete(inst.id)
+}
+
+function petInstanceForEvent(event) {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  return win ? petInstances.get(win.webContents.id) ?? null : null
+}
+
+// Send one instance its own state; the primary also mirrors to the panel
+// window so the settings UI tracks the main pet.
+function syncPetInstance(inst) {
+  if (inst.win && !inst.win.isDestroyed()) {
+    inst.win.webContents.send('pet-window:state-changed', inst.state)
+  }
+  if (inst.win === mainWindow && panelWindow && !panelWindow.isDestroyed()) {
+    panelWindow.webContents.send('pet-window:state-changed', inst.state)
+  }
+}
+
+function applyPetInstance(inst) {
+  const { win, state } = inst
+  if (!win || win.isDestroyed()) return
+  win.setAlwaysOnTop(Boolean(state.isPinned), PET_ALWAYS_ON_TOP_LEVEL)
+  win.setIgnoreMouseEvents(
+    Boolean(state.clickThrough) && !Boolean(state.petHotspotActive),
+    { forward: true },
+  )
+}
 
 export let panelSection = 'chat'
 
@@ -318,10 +363,7 @@ export function syncRuntimeState(originWebContentsId = null) {
 }
 
 export function syncPetWindowState() {
-  for (const win of [mainWindow, panelWindow]) {
-    if (!win || win.isDestroyed()) continue
-    win.webContents.send('pet-window:state-changed', petWindowState)
-  }
+  for (const inst of petInstances.values()) syncPetInstance(inst)
 }
 
 // Per-key runtime-state schema. Each entry maps a key to the JS typeof
@@ -424,25 +466,22 @@ export function updateHeartbeat(view, originWebContentsId = null) {
 }
 
 export function applyPetWindowState() {
-  if (!mainWindow || mainWindow.isDestroyed()) return
-
-  mainWindow.setAlwaysOnTop(Boolean(petWindowState.isPinned), PET_ALWAYS_ON_TOP_LEVEL)
-  mainWindow.setIgnoreMouseEvents(
-    Boolean(petWindowState.clickThrough) && !Boolean(petWindowState.petHotspotActive),
-    { forward: true },
-  )
+  for (const inst of petInstances.values()) applyPetInstance(inst)
 }
 
-export function updatePetWindowState(partialState = {}) {
-  const safe = sanitizePetWindowPartial(partialState)
-  petWindowState = {
-    ...petWindowState,
-    ...safe,
-  }
+export function getPetWindowStateForEvent(event) {
+  const inst = petInstanceForEvent(event)
+  return inst ? inst.state : makePetWindowState()
+}
 
-  applyPetWindowState()
-  syncPetWindowState()
-  return petWindowState
+export function updatePetWindowStateForEvent(event, partialState = {}) {
+  const inst = petInstanceForEvent(event)
+  if (!inst) return null
+  const safe = sanitizePetWindowPartial(partialState)
+  inst.state = { ...inst.state, ...safe }
+  applyPetInstance(inst)
+  syncPetInstance(inst)
+  return inst.state
 }
 
 function escapeDesktopExecToken(token) {
@@ -726,7 +765,8 @@ export function moveMainWindowBy(deltaX, deltaY) {
 export function dragWindowBy(event, delta) {
   const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
   if (!sourceWindow || sourceWindow.isDestroyed()) return
-  if (sourceWindow === mainWindow) petLoco.noteDrag(delta)
+  const dragInst = petInstances.get(sourceWindow.webContents.id)
+  if (dragInst) dragInst.loco.noteDrag(delta)
 
   const bounds = sourceWindow.getBounds()
   const display = screen.getDisplayMatching(bounds)
@@ -791,6 +831,8 @@ export function createMainWindow({ showOnReady = true } = {}) {
 
   attachNavigationGuards(win, 'main-window', 'pet')
 
+  const inst = registerPetInstance(win)
+
   win.on('close', (event) => {
     const canHideToBackground = process.platform === 'darwin' || hasSystemTray()
     if (app.isQuitting || !canHideToBackground) return
@@ -799,7 +841,7 @@ export function createMainWindow({ showOnReady = true } = {}) {
   })
 
   win.on('closed', () => {
-    petLoco.stop()
+    destroyPetInstance(inst)
     mainWindow = null
   })
 
@@ -829,7 +871,7 @@ export function createMainWindow({ showOnReady = true } = {}) {
     }
     syncRuntimeState()
     syncPetWindowState()
-    petLoco.start()
+    inst.loco.start()
   })
 
   win.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
@@ -1094,6 +1136,8 @@ export function showPanelWindow(section = 'chat') {
 export function showPetContextMenu(sourceWindow = mainWindow) {
   if (!sourceWindow || sourceWindow.isDestroyed()) return
 
+  const inst = petInstances.get(sourceWindow.webContents.id) ?? null
+
   const menu = Menu.buildFromTemplate([
     {
       label: '对话',
@@ -1119,11 +1163,11 @@ export function showPetContextMenu(sourceWindow = mainWindow) {
       },
     },
     {
-      label: petWindowState.freeMode
+      label: inst?.state.freeMode
         ? '固定模式（带背景 · 待原地）'
         : '自由模式（满屏走 · 无背景）',
       click: () => {
-        petLoco.setFreeMode(!petWindowState.freeMode)
+        if (inst) inst.loco.setFreeMode(!inst.state.freeMode)
       },
     },
     {

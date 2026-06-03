@@ -2,12 +2,12 @@ import { BrowserWindow, dialog, ipcMain } from 'electron'
 import {
   mainWindow,
   panelWindow,
-  petWindowState,
+  getPetWindowStateForEvent,
   panelWindowState,
   buildRuntimeStateSnapshot,
   updateHeartbeat,
   updateRuntimeState,
-  updatePetWindowState,
+  updatePetWindowStateForEvent,
   updatePanelWindowState,
   showPanelWindow,
   showPetContextMenu,
@@ -62,13 +62,13 @@ import {
 export function register() {
   ipcMain.handle('pet-window:get-state', (event) => {
     requireTrustedSender(event)
-    return petWindowState
+    return getPetWindowStateForEvent(event)
   })
 
   ipcMain.handle('pet-window:update-state', (event, state) => {
     requireTrustedSender(event)
     state = validatePetWindowStatePayload(state)
-    return updatePetWindowState(state)
+    return updatePetWindowStateForEvent(event, state)
   })
 
   ipcMain.handle('window:open-panel', (event, section) => {
