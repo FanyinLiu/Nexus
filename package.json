@@ -130,6 +130,8 @@
     ],
     "asarUnpack": [
       "node_modules/sherpa-onnx-node/**",
+      "node_modules/sharp/**",
+      "node_modules/@img/**",
       "scripts/omnivoice_server.py",
       "scripts/glm_asr_server.py"
     ],
