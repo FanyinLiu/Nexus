@@ -11,6 +11,7 @@ import {
   extractChatResponseContent,
   extractChatStreamingDeltaContent,
   getChatConnectionTestPreflightFailure,
+  getChatProviderProtocol,
   normalizeChatProviderId,
   summarizeChatConnectionTestFailure,
   summarizeChatConnectionTestSuccess,
@@ -25,8 +26,14 @@ test('provider base URLs map to the correct Nexus provider ids', () => {
   assert.equal(normalizeChatProviderId('', 'https://qianfan.baidubce.com/v2'), 'qianfan')
   assert.equal(normalizeChatProviderId('', 'https://open.bigmodel.cn/api/paas/v4'), 'zai')
   assert.equal(normalizeChatProviderId('', 'https://ark.ap-southeast.bytepluses.com/api/v3'), 'byteplus')
+  assert.equal(normalizeChatProviderId('', 'https://ark.ap-southeast.bytepluses.com/api/coding/v3'), 'byteplus-coding')
+  assert.equal(normalizeChatProviderId('', 'https://ark.cn-beijing.volces.com/api/v3'), 'doubao')
+  assert.equal(normalizeChatProviderId('', 'https://ark.cn-beijing.volces.com/api/coding/v3'), 'doubao-coding')
   assert.equal(normalizeChatProviderId('', 'https://integrate.api.nvidia.com/v1'), 'nvidia')
   assert.equal(normalizeChatProviderId('', 'https://api.venice.ai/api/v1'), 'venice')
+  assert.equal(normalizeChatProviderId('', 'https://api.moonshot.ai/v1'), 'moonshot-global')
+  assert.equal(normalizeChatProviderId('', 'https://api.moonshot.ai/anthropic'), 'kimi-coding-global')
+  assert.equal(normalizeChatProviderId('', 'https://api.minimax.io/anthropic'), 'minimax-global')
   assert.equal(chatProviderRequiresApiKey('qianfan'), true)
 })
 
@@ -65,6 +72,66 @@ test('minimax anthropic-compatible base URL receives the v1/messages suffix', ()
   })
 
   assert.equal(request.endpoint, 'https://api.minimaxi.com/anthropic/v1/messages')
+})
+
+test('coding-plan anthropic-compatible providers use Anthropic messages protocol', () => {
+  const minimaxRequest = buildChatRequest({
+    providerId: 'minimax-coding',
+    baseUrl: 'https://api.minimaxi.com/anthropic',
+    apiKey: 'test-key',
+    model: 'MiniMax-M2.7',
+    messages: [{ role: 'user', content: 'Ping' }],
+  })
+  const kimiRequest = buildChatRequest({
+    providerId: 'kimi-coding-global',
+    baseUrl: 'https://api.moonshot.ai/anthropic',
+    apiKey: 'test-key',
+    model: 'kimi-k2.6',
+    messages: [{ role: 'user', content: 'Ping' }],
+  })
+
+  assert.equal(minimaxRequest.protocol, 'anthropic')
+  assert.equal(minimaxRequest.endpoint, 'https://api.minimaxi.com/anthropic/v1/messages')
+  assert.equal(kimiRequest.protocol, 'anthropic')
+  assert.equal(kimiRequest.endpoint, 'https://api.moonshot.ai/anthropic/v1/messages')
+})
+
+test('anthropic-compatible base URL infers messages protocol for custom providers', () => {
+  assert.equal(getChatProviderProtocol('custom', 'https://api.example.test/anthropic'), 'anthropic')
+
+  const request = buildChatRequest({
+    providerId: 'custom',
+    baseUrl: 'https://api.example.test/anthropic',
+    apiKey: 'test-key',
+    model: 'compatible-model',
+    messages: [{ role: 'user', content: 'Ping' }],
+  })
+
+  assert.equal(request.endpoint, 'https://api.example.test/anthropic/v1/messages')
+})
+
+test('deepseek v4 requests disable default thinking for chat compatibility', () => {
+  const request = buildChatRequest({
+    providerId: 'deepseek',
+    baseUrl: 'https://api.deepseek.com',
+    apiKey: 'test-key',
+    model: 'deepseek-v4-flash',
+    messages: [{ role: 'user', content: 'Ping' }],
+  })
+
+  assert.deepEqual(JSON.parse(request.body).thinking, { type: 'disabled' })
+})
+
+test('claude opus 4.8 requests omit non-default sampling parameters', () => {
+  const request = buildChatRequest({
+    providerId: 'anthropic',
+    baseUrl: 'https://api.anthropic.com',
+    apiKey: 'test-key',
+    model: 'claude-opus-4-8',
+    messages: [{ role: 'user', content: 'Ping' }],
+  })
+
+  assert.equal(Object.hasOwn(JSON.parse(request.body), 'temperature'), false)
 })
 
 test('anthropic connection tests use a lightweight messages probe', () => {
