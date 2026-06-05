@@ -220,8 +220,16 @@ export async function resolveMacNotificationDb(options = {}) {
   )
 }
 
+function resolveSqliteCommand(sqlitePath) {
+  if (/\.(?:cjs|mjs|js)$/iu.test(sqlitePath)) {
+    return { executable: process.execPath, args: [sqlitePath] }
+  }
+  return { executable: sqlitePath, args: [] }
+}
+
 async function runSqliteJson(sqlitePath, dbPath, sql) {
-  const { stdout } = await execFileAsync(sqlitePath, ['-json', dbPath, sql], {
+  const command = resolveSqliteCommand(sqlitePath)
+  const { stdout } = await execFileAsync(command.executable, [...command.args, '-json', dbPath, sql], {
     maxBuffer: 10 * 1024 * 1024,
   })
   const trimmed = stdout.trim()

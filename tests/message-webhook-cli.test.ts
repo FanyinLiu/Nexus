@@ -100,7 +100,12 @@ test('message webhook cli resolves default token candidates for each platform', 
     env: { APPDATA: 'C:\\Users\\test\\AppData\\Roaming' },
   })
 
-  assert.ok(macCandidates.some((candidate) => candidate.includes('Application Support/Nexus/notification-webhook-token.txt')))
+  assert.ok(macCandidates.some((candidate) => candidate.includes(path.join(
+    'Library',
+    'Application Support',
+    'Nexus',
+    'notification-webhook-token.txt',
+  ))))
   assert.ok(winCandidates.some((candidate) => candidate.includes('Nexus')))
 })
 
