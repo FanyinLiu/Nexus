@@ -51,8 +51,6 @@ export async function startWakewordListener(
   const wakeWord = options.wakeWord?.trim() || ''
   const requestInputStream = options.requestInputStream ?? requestVoiceInputStream
   const AudioContextCtor = options.AudioContextCtor ?? AudioContext
-  await wakewordApi.kwsStart({ wakeWord })
-  callbacks.onStatusChange?.(true)
 
   let stream: MediaStream | null = null
   let audioContext: AudioContext | null = null
@@ -60,6 +58,7 @@ export async function startWakewordListener(
   let processor: ScriptProcessorNode | null = null
   let output: GainNode | null = null
   let destroyed = false
+  let kwsStarted = false
   let feedInflight = false
 
   const frameSubscribers = new Set<WakewordFrameSubscriber>()
@@ -136,6 +135,10 @@ export async function startWakewordListener(
       }
     }
 
+    await wakewordApi.kwsStart({ wakeWord })
+    kwsStarted = true
+    callbacks.onStatusChange?.(true)
+
     audioContext = new AudioContextCtor({ sampleRate: KWS_SAMPLE_RATE })
     await audioContext.resume().catch(() => undefined)
 
@@ -167,8 +170,7 @@ export async function startWakewordListener(
   try {
     await acquireMicAndWire()
   } catch (error) {
-    callbacks.onStatusChange?.(false)
-    wakewordApi.kwsStop().catch(() => undefined)
+    teardown()
     throw error
   }
 
@@ -196,8 +198,11 @@ export async function startWakewordListener(
       void audioContext.close().catch(() => undefined)
       audioContext = null
     }
-    wakewordApi.kwsStop().catch(() => undefined)
-    callbacks.onStatusChange?.(false)
+    if (kwsStarted) {
+      kwsStarted = false
+      wakewordApi.kwsStop().catch(() => undefined)
+      callbacks.onStatusChange?.(false)
+    }
   }
 
   return {

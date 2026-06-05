@@ -451,50 +451,51 @@ export const AutonomySection = memo(function AutonomySection({
             </AutonomyControlCard>
           </div>
 
-          {/* ── Notification Bridge ─────────────────────────────────────────── */}
-          <div className="settings-mini-group settings-autonomy-group">
-            <SubsectionHeader
-              title={ti('settings.autonomy.notifications.title')}
-              hint={ti('settings.autonomy.notifications.hint')}
-            />
-
-            <AutonomyControlCard>
-              <ToggleField label={ti('settings.autonomy.notifications.enable')} field="autonomyNotificationsEnabled" {...fieldProps} />
-            </AutonomyControlCard>
-
-            {draft.autonomyNotificationsEnabled && (
-              <div className="settings-grid settings-grid--two settings-autonomy-field-grid">
-                <AutonomyFieldCard>
-                  <ToggleField
-                    label={ti('settings.autonomy.notifications.message_announce')}
-                    field="autonomyNotificationMessageAnnouncementsEnabled"
-                    {...fieldProps}
-                  />
-                </AutonomyFieldCard>
-                <AutonomyFieldCard>
-                  <ToggleField
-                    label={ti('settings.autonomy.notifications.message_preview')}
-                    field="autonomyNotificationMessagePreviewEnabled"
-                    disabled={!draft.autonomyNotificationMessageAnnouncementsEnabled}
-                    {...fieldProps}
-                  />
-                </AutonomyFieldCard>
-              </div>
-            )}
-
-            {draft.autonomyNotificationsEnabled && hasChannelProps && (
-              <NotificationChannelsPanel
-                channels={channels}
-                channelsLoading={channelsLoading ?? true}
-                onAddChannel={onAddChannel}
-                onUpdateChannel={onUpdateChannel}
-                onRemoveChannel={onRemoveChannel}
-                ti={ti}
-              />
-            )}
-          </div>
         </>
       )}
+
+      {/* ── Notification Bridge ─────────────────────────────────────────── */}
+      <div className="settings-mini-group settings-autonomy-group">
+        <SubsectionHeader
+          title={ti('settings.autonomy.notifications.title')}
+          hint={ti('settings.autonomy.notifications.hint')}
+        />
+
+        <AutonomyControlCard>
+          <ToggleField label={ti('settings.autonomy.notifications.enable')} field="autonomyNotificationsEnabled" {...fieldProps} />
+        </AutonomyControlCard>
+
+        {draft.autonomyNotificationsEnabled && (
+          <div className="settings-grid settings-grid--two settings-autonomy-field-grid">
+            <AutonomyFieldCard>
+              <ToggleField
+                label={ti('settings.autonomy.notifications.message_announce')}
+                field="autonomyNotificationMessageAnnouncementsEnabled"
+                {...fieldProps}
+              />
+            </AutonomyFieldCard>
+            <AutonomyFieldCard>
+              <ToggleField
+                label={ti('settings.autonomy.notifications.message_preview')}
+                field="autonomyNotificationMessagePreviewEnabled"
+                disabled={!draft.autonomyNotificationMessageAnnouncementsEnabled}
+                {...fieldProps}
+              />
+            </AutonomyFieldCard>
+          </div>
+        )}
+
+        {draft.autonomyNotificationsEnabled && hasChannelProps && (
+          <NotificationChannelsPanel
+            channels={channels}
+            channelsLoading={channelsLoading ?? true}
+            onAddChannel={onAddChannel}
+            onUpdateChannel={onUpdateChannel}
+            onRemoveChannel={onRemoveChannel}
+            ti={ti}
+          />
+        )}
+      </div>
     </section>
   )
 })

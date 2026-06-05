@@ -25,6 +25,7 @@ import { useTranslation } from '../../i18n/useTranslation.ts'
 import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile'
 import type { DailyMemoryStore, Goal, ReminderTask } from '../../types'
 import { buildLocalMessagingAnnouncementContent } from './localMessagingAnnouncement'
+import { isNotificationBridgeEnabled } from './notificationBridgeActivation'
 
 type ChatBridge = {
   pushCompanionNotice: (payload: {
@@ -198,7 +199,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
 
   const handleNotification = useCallback((message: NotificationMessage) => {
     const currentSettings = settingsRef.current
-    if (!currentSettings.autonomyEnabled || !currentSettings.autonomyNotificationsEnabled) return
+    if (!isNotificationBridgeEnabled(currentSettings)) return
 
     if (message.kind === 'message') {
       const announcement = buildLocalMessagingAnnouncementContent(message, currentSettings, t)
@@ -233,7 +234,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
 
   const notificationBridge = useNotificationBridge({
     onNotification: handleNotification,
-    enabled: settings.autonomyEnabled && settings.autonomyNotificationsEnabled,
+    enabled: isNotificationBridgeEnabled(settings),
   })
 
   const { gateway: telegramGateway, replyTo: replyToTelegram } = useTelegramBridge({

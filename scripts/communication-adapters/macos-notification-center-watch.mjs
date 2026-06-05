@@ -227,11 +227,39 @@ function resolveSqliteCommand(sqlitePath) {
   return { executable: sqlitePath, args: [] }
 }
 
+function isNotificationCenterDbPath(dbPath) {
+  return /(?:NotificationCenter|group\.com\.apple\.(?:usernoted|UserNotifications))/u.test(String(dbPath ?? ''))
+}
+
+function normalizeSqliteError(error, dbPath) {
+  const message = error instanceof Error
+    ? error.message
+    : String(error ?? '')
+  if (
+    isNotificationCenterDbPath(dbPath)
+    && /(?:authorization denied|operation not permitted|permission denied)/iu.test(message)
+  ) {
+    return new Error(
+      `Cannot read macOS Notification Center database at ${dbPath}. `
+        + 'Grant Full Disk Access to the process running this adapter '
+        + '(Terminal, Codex, or the automation host), then retry. '
+        + `sqlite error: ${message}`,
+    )
+  }
+  return error
+}
+
 async function runSqliteJson(sqlitePath, dbPath, sql) {
   const command = resolveSqliteCommand(sqlitePath)
-  const { stdout } = await execFileAsync(command.executable, [...command.args, '-json', dbPath, sql], {
-    maxBuffer: 10 * 1024 * 1024,
-  })
+  let stdout = ''
+  try {
+    const result = await execFileAsync(command.executable, [...command.args, '-json', dbPath, sql], {
+      maxBuffer: 10 * 1024 * 1024,
+    })
+    stdout = result.stdout
+  } catch (error) {
+    throw normalizeSqliteError(error, dbPath)
+  }
   const trimmed = stdout.trim()
   return trimmed ? JSON.parse(trimmed) : []
 }

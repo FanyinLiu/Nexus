@@ -299,6 +299,51 @@ test('macOS notification center watcher dry-runs one poll and persists dedupe st
   })
 })
 
+test('macOS notification center watcher explains Notification Center privacy denial', async () => {
+  await withTempDirectory(async (directoryPath) => {
+    const fakeSqlitePath = path.join(directoryPath, 'fake-sqlite-denied.mjs')
+    const dbPath = path.join(
+      directoryPath,
+      'Library',
+      'Group Containers',
+      'group.com.apple.usernoted',
+      'db2',
+      'db',
+    )
+
+    await fs.mkdir(path.dirname(dbPath), { recursive: true })
+    await fs.writeFile(dbPath, '')
+    await fs.writeFile(fakeSqlitePath, [
+      '#!/usr/bin/env node',
+      "console.error('Error: unable to open database: authorization denied')",
+      'process.exit(1)',
+      '',
+    ].join('\n'))
+    await fs.chmod(fakeSqlitePath, 0o755)
+
+    const args = [
+      'scripts/communication-adapters/macos-notification-center-watch.mjs',
+      '--db',
+      dbPath,
+      '--sqlite',
+      fakeSqlitePath,
+      '--once',
+      '--dry-run',
+    ]
+
+    await assert.rejects(
+      execFileAsync(process.execPath, args, { cwd: process.cwd() }),
+      (error: unknown) => {
+        const stderr = (error as { stderr?: string }).stderr ?? ''
+        assert.match(stderr, /Full Disk Access/)
+        assert.match(stderr, /Terminal, Codex, or the automation host/)
+        assert.match(stderr, /authorization denied/)
+        return true
+      },
+    )
+  })
+})
+
 test('package config ships message webhook cli and adapters', async () => {
   const pkg = JSON.parse(await fs.readFile('package.json', 'utf8')) as {
     scripts?: Record<string, string>
