@@ -198,3 +198,29 @@ test('extractChatStreamingDeltaContent reads anthropic text deltas', () => {
 
   assert.equal(delta, 'Hello')
 })
+
+test('extractChatStreamingDeltaContent preserves OpenAI-compatible delta whitespace', () => {
+  const delta = extractChatStreamingDeltaContent('deepseek', {
+    choices: [
+      {
+        delta: {
+          content: ' stream path',
+        },
+      },
+    ],
+  })
+
+  assert.equal(delta, ' stream path')
+})
+
+test('extractChatStreamingDeltaContent preserves anthropic delta whitespace', () => {
+  const delta = extractChatStreamingDeltaContent('anthropic', {
+    type: 'content_block_delta',
+    delta: {
+      type: 'text_delta',
+      text: ' hello world ',
+    },
+  })
+
+  assert.equal(delta, ' hello world ')
+})

@@ -6,13 +6,15 @@ function stripAnthropicVersionSuffix(baseUrl) {
   return normalizeBaseUrl(baseUrl).replace(/\/v1$/iu, '')
 }
 
-function extractTextFromContent(content) {
+function extractTextFromContent(content, { trim = true } = {}) {
+  const normalize = (text) => trim ? text.trim() : text
+
   if (typeof content === 'string') {
-    return content.trim()
+    return normalize(content)
   }
 
   if (Array.isArray(content)) {
-    return content
+    const text = content
       .map((part) => {
         if (typeof part === 'string') return part
         if (typeof part?.text === 'string') return part.text
@@ -20,15 +22,15 @@ function extractTextFromContent(content) {
         return ''
       })
       .join('\n')
-      .trim()
+    return normalize(text)
   }
 
   if (typeof content?.text === 'string') {
-    return content.text.trim()
+    return normalize(content.text)
   }
 
   if (typeof content?.delta?.text === 'string') {
-    return content.delta.text.trim()
+    return normalize(content.delta.text)
   }
 
   return ''
@@ -641,6 +643,7 @@ export function extractChatStreamingDeltaContent(providerId, payload) {
       payload?.delta?.text
       ?? payload?.content_block?.text
       ?? '',
+      { trim: false },
     )
   }
 
@@ -649,6 +652,7 @@ export function extractChatStreamingDeltaContent(providerId, payload) {
     ?? payload?.choices?.[0]?.message?.content
     ?? payload?.message?.content
     ?? '',
+    { trim: false },
   )
 }
 
