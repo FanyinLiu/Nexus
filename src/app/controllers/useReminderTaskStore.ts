@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createId,
   loadReminderTasks,
+  onStorageChange,
+  REMINDER_TASKS_STORAGE_KEY,
   saveReminderTasks,
 } from '../../lib'
 import {
@@ -15,14 +17,45 @@ import type { ReminderTask } from '../../types'
 export function useReminderTaskStore() {
   const [reminderTasks, setReminderTasks] = useState<ReminderTask[]>(() => loadReminderTasks())
   const reminderTasksRef = useRef(reminderTasks)
+  const reminderTasksSaveSkipRef = useRef(true)
+  const lastSavedReminderTasksSignatureRef = useRef('')
+
+  const applyRemoteReminderTasks = useCallback((nextTasks: ReminderTask[]) => {
+    const signature = JSON.stringify(nextTasks)
+    if (signature === JSON.stringify(reminderTasksRef.current)) {
+      return
+    }
+    reminderTasksSaveSkipRef.current = true
+    lastSavedReminderTasksSignatureRef.current = signature
+    reminderTasksRef.current = nextTasks
+    setReminderTasks(nextTasks)
+  }, [])
 
   useEffect(() => {
     reminderTasksRef.current = reminderTasks
   }, [reminderTasks])
 
   useEffect(() => {
+    const signature = JSON.stringify(reminderTasks)
+    if (reminderTasksSaveSkipRef.current) {
+      reminderTasksSaveSkipRef.current = false
+      lastSavedReminderTasksSignatureRef.current = signature
+      return
+    }
+    if (signature === lastSavedReminderTasksSignatureRef.current) {
+      return
+    }
+    lastSavedReminderTasksSignatureRef.current = signature
     saveReminderTasks(reminderTasks)
   }, [reminderTasks])
+
+  useEffect(() => {
+    const unsubscribe = onStorageChange(
+      REMINDER_TASKS_STORAGE_KEY,
+      () => applyRemoteReminderTasks(loadReminderTasks()),
+    )
+    return unsubscribe
+  }, [applyRemoteReminderTasks])
 
   const addReminderTask = useCallback((input: ReminderTaskDraftInput) => {
     const result = addReminderTaskToCollection(reminderTasksRef.current, createId, input)
