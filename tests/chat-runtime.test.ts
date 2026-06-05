@@ -79,7 +79,7 @@ test('coding-plan anthropic-compatible providers use Anthropic messages protocol
     providerId: 'minimax-coding',
     baseUrl: 'https://api.minimaxi.com/anthropic',
     apiKey: 'test-key',
-    model: 'MiniMax-M2.7',
+    model: 'MiniMax-M3',
     messages: [{ role: 'user', content: 'Ping' }],
   })
   const kimiRequest = buildChatRequest({
@@ -92,6 +92,7 @@ test('coding-plan anthropic-compatible providers use Anthropic messages protocol
 
   assert.equal(minimaxRequest.protocol, 'anthropic')
   assert.equal(minimaxRequest.endpoint, 'https://api.minimaxi.com/anthropic/v1/messages')
+  assert.deepEqual(JSON.parse(minimaxRequest.body).thinking, { type: 'disabled' })
   assert.equal(kimiRequest.protocol, 'anthropic')
   assert.equal(kimiRequest.endpoint, 'https://api.moonshot.ai/anthropic/v1/messages')
 })

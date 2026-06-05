@@ -89,6 +89,7 @@ test('estimateModelContextWindowTokens: returns useful coarse buckets', () => {
   assert.equal(estimateModelContextWindowTokens('qwen3.6-plus'), 1_000_000)
   assert.equal(estimateModelContextWindowTokens('mistral-medium-3-5'), 256_000)
   assert.equal(estimateModelContextWindowTokens('moonshotai/Kimi-K2.6'), 256_000)
+  assert.equal(estimateModelContextWindowTokens('MiniMax-M3'), 1_000_000)
   assert.equal(estimateModelContextWindowTokens('MiniMaxAI/MiniMax-M2.7'), 200_000)
   assert.equal(estimateModelContextWindowTokens('unknown-model'), null)
 })
