@@ -24,13 +24,15 @@ import { useDiscordBridge } from './useDiscordBridge'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile'
 import type { DailyMemoryStore, Goal, ReminderTask } from '../../types'
+import { buildLocalMessagingAnnouncementContent } from './localMessagingAnnouncement'
 
 type ChatBridge = {
   pushCompanionNotice: (payload: {
     chatContent: string
-    bubbleContent: string
-    speechContent: string
-    autoHideMs: number
+    bubbleContent?: string
+    speechContent?: string
+    dedupeKey?: string
+    autoHideMs?: number
   }) => Promise<void>
   sendMessage?: (text?: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord'; traceId?: string }) => Promise<unknown>
 }
@@ -197,6 +199,23 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   const handleNotification = useCallback((message: NotificationMessage) => {
     const currentSettings = settingsRef.current
     if (!currentSettings.autonomyEnabled || !currentSettings.autonomyNotificationsEnabled) return
+
+    if (message.kind === 'message') {
+      const announcement = buildLocalMessagingAnnouncementContent(message, currentSettings, t)
+      debugConsole.appendDebugConsoleEvent({
+        source: 'autonomy',
+        title: 'External message received',
+        detail: `[${message.sourceName || message.channelName}] ${message.sender || message.title}`,
+      })
+
+      if (announcement) {
+        void chat.pushCompanionNotice({
+          ...announcement,
+          autoHideMs: 12_000,
+        })
+      }
+      return
+    }
 
     debugConsole.appendDebugConsoleEvent({
       source: 'autonomy',

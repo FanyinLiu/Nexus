@@ -150,6 +150,7 @@ export type CompanionNoticePayload = {
   chatContent: string
   bubbleContent?: string
   speechContent?: string
+  dedupeKey?: string
   autoHideMs?: number
   toolResult?: ChatToolResult
   shouldResumeContinuousVoice?: boolean

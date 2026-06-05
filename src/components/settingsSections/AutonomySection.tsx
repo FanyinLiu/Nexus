@@ -462,6 +462,26 @@ export const AutonomySection = memo(function AutonomySection({
               <ToggleField label={ti('settings.autonomy.notifications.enable')} field="autonomyNotificationsEnabled" {...fieldProps} />
             </AutonomyControlCard>
 
+            {draft.autonomyNotificationsEnabled && (
+              <div className="settings-grid settings-grid--two settings-autonomy-field-grid">
+                <AutonomyFieldCard>
+                  <ToggleField
+                    label={ti('settings.autonomy.notifications.message_announce')}
+                    field="autonomyNotificationMessageAnnouncementsEnabled"
+                    {...fieldProps}
+                  />
+                </AutonomyFieldCard>
+                <AutonomyFieldCard>
+                  <ToggleField
+                    label={ti('settings.autonomy.notifications.message_preview')}
+                    field="autonomyNotificationMessagePreviewEnabled"
+                    disabled={!draft.autonomyNotificationMessageAnnouncementsEnabled}
+                    {...fieldProps}
+                  />
+                </AutonomyFieldCard>
+              </div>
+            )}
+
             {draft.autonomyNotificationsEnabled && hasChannelProps && (
               <NotificationChannelsPanel
                 channels={channels}

@@ -4,9 +4,17 @@ import { useTelegramGateway, type TelegramIncoming } from '../../hooks/useTelegr
 import { rememberTelegramChatId } from '../../lib/coreRuntime'
 import { isActionAllowed } from '../../features/integrations/permissions'
 import { parseCsvIdSet } from './bridgeUtils'
+import { buildTelegramAnnouncementContent } from './telegramAnnouncement'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 
 type ChatBridge = {
+  pushCompanionNotice?: (payload: {
+    chatContent: string
+    bubbleContent?: string
+    speechContent?: string
+    dedupeKey?: string
+    autoHideMs?: number
+  }) => Promise<void>
   sendMessage?: (
     text?: string,
     options?: { source?: 'text' | 'voice' | 'telegram' | 'discord'; traceId?: string },
@@ -53,6 +61,19 @@ export function useTelegramBridge({
       title: 'Telegram message',
       detail: `[${msg.chatTitle}] ${msg.fromUser}${isOwner ? t('chat.bridge.owner_suffix') : ''}: ${msg.text}`,
     })
+
+    const announcement = buildTelegramAnnouncementContent(msg, settingsRef.current, t)
+    if (announcement && chat.pushCompanionNotice) {
+      debugConsole.appendDebugConsoleEvent({
+        source: 'autonomy',
+        title: 'Telegram announcement',
+        detail: announcement.speechContent,
+      })
+      void chat.pushCompanionNotice({
+        ...announcement,
+        autoHideMs: 10_000,
+      })
+    }
 
     // Forward to companion chat as a Telegram-sourced message.
     // Owner-match → prefix without a name so the system prompt treats it as
