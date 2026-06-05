@@ -44,6 +44,30 @@ function hasNonEmptyString(value) {
   return String(value ?? '').trim().length > 0
 }
 
+function isMiniMaxTokenPlanProvider(providerId) {
+  const normalizedProviderId = normalizeChatProviderId(providerId)
+  return normalizedProviderId === 'minimax-coding'
+    || normalizedProviderId === 'minimax-coding-global'
+}
+
+function formatInvalidChatApiKeyMessage(providerId) {
+  const label = isMiniMaxTokenPlanProvider(providerId)
+    ? 'MiniMax Token Plan API Key'
+    : 'API Key'
+  return `${label} 格式无效：包含中文、换行、空格或其他不能用于 HTTP Header 的字符。请只填写服务商控制台生成的原始 Key，不要包含套餐说明、模型名或备注。`
+}
+
+function normalizeChatApiKeyForHeader(providerId, apiKey) {
+  const value = String(apiKey ?? '').trim()
+  if (!value) return ''
+
+  if (/[^\x21-\x7E]/u.test(value)) {
+    throw new Error(formatInvalidChatApiKeyMessage(providerId))
+  }
+
+  return value
+}
+
 function modelSupportsVision(model) {
   const id = String(model ?? '').trim()
   if (!id) return false
@@ -245,7 +269,21 @@ export function chatProviderRequiresApiKey(providerId) {
 
 export function getChatConnectionTestPreflightFailure({ providerId, apiKey }) {
   const normalizedProviderId = normalizeChatProviderId(providerId)
-  if (!chatProviderRequiresApiKey(normalizedProviderId) || hasNonEmptyString(apiKey)) {
+  if (!chatProviderRequiresApiKey(normalizedProviderId)) {
+    return null
+  }
+
+  if (hasNonEmptyString(apiKey)) {
+    try {
+      normalizeChatApiKeyForHeader(normalizedProviderId, apiKey)
+    } catch (error) {
+      return {
+        ok: false,
+        status: 'needs_key',
+        message: error instanceof Error ? error.message : formatInvalidChatApiKeyMessage(normalizedProviderId),
+        recommendation: '重新复制服务商控制台里的原始 API Key，只保留 Key 本身。',
+      }
+    }
     return null
   }
 
@@ -265,17 +303,18 @@ export function getChatConnectionTestPreflightFailure({ providerId, apiKey }) {
 function buildChatAuthorizationHeaders(providerId, apiKey, baseUrl = '') {
   const normalizedProviderId = normalizeChatProviderId(providerId)
   const protocol = getChatProviderProtocol(normalizedProviderId, baseUrl)
+  const apiKeyHeaderValue = normalizeChatApiKeyForHeader(normalizedProviderId, apiKey)
 
   if (protocol === 'anthropic') {
     return {
-      ...(apiKey ? { 'x-api-key': apiKey } : {}),
+      ...(apiKeyHeaderValue ? { 'x-api-key': apiKeyHeaderValue } : {}),
       'anthropic-version': '2023-06-01',
     }
   }
 
-  return apiKey
+  return apiKeyHeaderValue
     ? {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKeyHeaderValue}`,
       }
     : {}
 }

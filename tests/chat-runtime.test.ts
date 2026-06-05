@@ -97,6 +97,35 @@ test('coding-plan anthropic-compatible providers use Anthropic messages protocol
   assert.equal(kimiRequest.endpoint, 'https://api.moonshot.ai/anthropic/v1/messages')
 })
 
+test('chat auth headers trim keys and reject pasted non-header text', () => {
+  const trimmedRequest = buildChatRequest({
+    providerId: 'minimax-coding',
+    baseUrl: 'https://api.minimaxi.com/anthropic',
+    apiKey: '  test-key  ',
+    model: 'MiniMax-M3',
+    messages: [{ role: 'user', content: 'Ping' }],
+  })
+  assert.equal(trimmedRequest.headers['x-api-key'], 'test-key')
+
+  assert.throws(
+    () => buildChatRequest({
+      providerId: 'minimax-coding',
+      baseUrl: 'https://api.minimaxi.com/anthropic',
+      apiKey: 'test-key 模型说明',
+      model: 'MiniMax-M3',
+      messages: [{ role: 'user', content: 'Ping' }],
+    }),
+    /MiniMax Token Plan API Key 格式无效/,
+  )
+
+  const preflight = getChatConnectionTestPreflightFailure({
+    providerId: 'minimax-coding',
+    apiKey: 'test-key 模型说明',
+  })
+  assert.equal(preflight?.ok, false)
+  assert.match(preflight?.message ?? '', /MiniMax Token Plan API Key 格式无效/)
+})
+
 test('anthropic-compatible base URL infers messages protocol for custom providers', () => {
   assert.equal(getChatProviderProtocol('custom', 'https://api.example.test/anthropic'), 'anthropic')
 
