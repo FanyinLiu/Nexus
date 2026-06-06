@@ -4,9 +4,17 @@ import { useDiscordGateway, type DiscordIncoming } from '../../hooks/useDiscordG
 import { rememberDiscordChannelId } from '../../lib/coreRuntime'
 import { isActionAllowed } from '../../features/integrations/permissions'
 import { parseCsvIdSet } from './bridgeUtils'
+import { buildMessagingAnnouncementContent, getDiscordAnnouncementSettings } from './messagingAnnouncement'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 
 type ChatBridge = {
+  pushCompanionNotice?: (payload: {
+    chatContent: string
+    bubbleContent?: string
+    speechContent?: string
+    dedupeKey?: string
+    autoHideMs?: number
+  }) => Promise<void>
   sendMessage?: (
     text?: string,
     options?: { source?: 'text' | 'voice' | 'telegram' | 'discord'; traceId?: string },
@@ -52,6 +60,31 @@ export function useDiscordBridge({
       title: 'Discord message',
       detail: `[${msg.channelName}] ${msg.fromUser}${isOwner ? t('chat.bridge.owner_suffix') : ''}: ${msg.text}`,
     })
+
+    const announcement = buildMessagingAnnouncementContent(
+      {
+        sourceId: 'discord',
+        sourceName: 'Discord',
+        targetId: msg.channelId,
+        messageId: msg.messageId,
+        sender: msg.fromUser,
+        fallbackTitle: msg.channelName,
+        text: msg.text,
+      },
+      getDiscordAnnouncementSettings(settingsRef.current),
+      t,
+    )
+    if (announcement && chat.pushCompanionNotice) {
+      debugConsole.appendDebugConsoleEvent({
+        source: 'autonomy',
+        title: 'Discord announcement',
+        detail: announcement.speechContent,
+      })
+      void chat.pushCompanionNotice({
+        ...announcement,
+        autoHideMs: 10_000,
+      })
+    }
 
     // Forward to companion chat as a Discord-sourced message.
     // Owner-match → prefix without a name so the system prompt treats it as

@@ -21,6 +21,7 @@ import {
   isZhipuSpeechInputProvider,
   isOpenAiCompatibleSpeechOutputProvider,
   parseVolcengineSpeechCredentials,
+  assertSpeechOutputCredentials,
 } from './ttsProviders.js'
 import {
   buildAuthorizationHeaders,
@@ -80,6 +81,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
   const volume = Number.isFinite(payload.volume) ? payload.volume : 1
 
   if (!baseUrl) throw new Error('请先填写语音输出 API Base URL。')
+  assertSpeechOutputCredentials(payload.providerId, payload.apiKey)
 
   // OpenAI-compatible: request raw PCM for streaming
   if (isOpenAiCompatibleSpeechOutputProvider(payload.providerId)) {
@@ -323,6 +325,7 @@ export {
   isVolcengineSpeechInputProvider,
   isOpenAiCompatibleSpeechInputProvider,
   isZhipuSpeechInputProvider,
+  assertSpeechOutputCredentials,
   resolveSpeechOutputBaseUrl,
   resolveSpeechOutputTimeoutMs,
   resolveSpeechOutputTimeoutMessage,

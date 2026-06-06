@@ -230,11 +230,14 @@ test('startWakewordListener drops frames while a kwsFeed call is in flight', asy
   }
 })
 
-test('startWakewordListener stops KWS when microphone acquisition fails', async () => {
+test('startWakewordListener does not start KWS when microphone acquisition fails', async () => {
   const statuses: boolean[] = []
+  let kwsStartCount = 0
   let kwsStopCount = 0
   const restoreWindow = installDesktopPet({
-    kwsStart: async () => undefined,
+    kwsStart: async () => {
+      kwsStartCount += 1
+    },
     kwsFeed: async () => ({}),
     kwsStop: async () => {
       kwsStopCount += 1
@@ -255,7 +258,50 @@ test('startWakewordListener stops KWS when microphone acquisition fails', async 
       /microphone unavailable/,
     )
 
+    assert.deepEqual(statuses, [])
+    assert.equal(kwsStartCount, 0)
+    assert.equal(kwsStopCount, 0)
+  } finally {
+    restoreWindow()
+  }
+})
+
+test('startWakewordListener releases the acquired microphone when audio setup fails', async () => {
+  const statuses: boolean[] = []
+  let kwsStopCount = 0
+  const stream = createStream()
+  const restoreWindow = installDesktopPet({
+    kwsStart: async () => undefined,
+    kwsFeed: async () => ({}),
+    kwsStop: async () => {
+      kwsStopCount += 1
+    },
+  })
+
+  class ThrowingAudioContext {
+    constructor() {
+      throw new Error('audio context failed')
+    }
+  }
+
+  try {
+    await assert.rejects(
+      startWakewordListener({
+        onKeywordDetected: () => undefined,
+        onStatusChange: (active) => statuses.push(active),
+      }, {
+        requestInputStream: async () => ({
+          stream,
+          profileId: 'raw',
+          trackSettings: null,
+        }),
+        AudioContextCtor: ThrowingAudioContext as unknown as typeof AudioContext,
+      }),
+      /audio context failed/,
+    )
+
     assert.deepEqual(statuses, [true, false])
+    assert.equal(stream.track.stopped, true)
     assert.equal(kwsStopCount, 1)
   } finally {
     restoreWindow()

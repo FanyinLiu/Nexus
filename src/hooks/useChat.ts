@@ -312,7 +312,7 @@ export function useChat(ctx: UseChatContext) {
     // the label-free core text — so 【早报】X and 【自主】X collapse to
     // one entry instead of bypassing the gate through their prefix.
     const DEDUPE_WINDOW_MS = 10 * 60_000
-    const dedupeKey = bubbleContent || speechContent || chatContent
+    const dedupeKey = options.dedupeKey?.trim() || bubbleContent || speechContent || chatContent
     if (dedupeKey) {
       const now = Date.now()
       const recent = recentCompanionNoticesRef.current

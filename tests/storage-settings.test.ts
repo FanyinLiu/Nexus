@@ -53,6 +53,12 @@ test('fresh settings start with the Phase 1 Ollama text path', () => {
   assert.equal(settings.speechOutputEnabled, false)
   assert.equal(settings.toolWebSearchEnabled, false)
   assert.equal(settings.proactivePresenceEnabled, false)
+  assert.equal(settings.telegramAnnounceIncomingEnabled, false)
+  assert.equal(settings.telegramAnnounceMessagePreview, false)
+  assert.equal(settings.discordAnnounceIncomingEnabled, false)
+  assert.equal(settings.discordAnnounceMessagePreview, false)
+  assert.equal(settings.autonomyNotificationMessageAnnouncementsEnabled, false)
+  assert.equal(settings.autonomyNotificationMessagePreviewEnabled, false)
 })
 
 test('preserves volcengine-tts selection without migration', () => {

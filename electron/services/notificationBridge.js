@@ -14,7 +14,11 @@ import { randomUUID } from 'node:crypto'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { checkUrlSafetyWithDns } from './urlSafety.js'
-import { sanitizeNotificationChannels, WEBHOOK_MAX_BODY_BYTES } from './notificationBridgeUtils.js'
+import {
+  normalizeWebhookPayload,
+  sanitizeNotificationChannels,
+  WEBHOOK_MAX_BODY_BYTES,
+} from './notificationBridgeUtils.js'
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -381,28 +385,36 @@ function startWebhookServer() {
       if (bodyTooLarge) return
       try {
         const payload = JSON.parse(body)
-        const title = String(payload.title ?? '')
-        const msgBody = String(payload.body ?? '')
-        const source = String(payload.source ?? 'webhook')
+        const normalized = normalizeWebhookPayload(payload)
 
-        if (!title && !msgBody) {
+        if (!normalized.ok) {
           res.writeHead(400, { 'Content-Type': 'application/json' })
-          res.end(JSON.stringify({ error: 'title or body required' }))
+          res.end(JSON.stringify({ error: normalized.error }))
           return
         }
 
         // Find the first enabled webhook channel, or create a synthetic reference
         const webhookChannel = _channels.find((ch) => ch.kind === 'webhook' && ch.enabled)
+        const normalizedMessage = normalized.message
+        const isMessagingPayload = normalizedMessage.kind === 'message'
 
         /** @type {NotificationMessage} */
         const message = {
           id: randomUUID().slice(0, 12),
           channelId: webhookChannel?.id ?? 'webhook',
-          channelName: webhookChannel?.name ?? source,
-          title: title || source,
-          body: msgBody.slice(0, 500),
+          channelName: isMessagingPayload
+            ? normalizedMessage.sourceName
+            : (webhookChannel?.name ?? normalizedMessage.sourceName),
+          title: normalizedMessage.title,
+          body: normalizedMessage.body,
           receivedAt: new Date().toISOString(),
           read: false,
+          kind: normalizedMessage.kind,
+          sourceId: normalizedMessage.sourceId,
+          sourceName: normalizedMessage.sourceName,
+          conversationId: normalizedMessage.conversationId,
+          messageId: normalizedMessage.messageId,
+          sender: normalizedMessage.sender,
         }
 
         _onNotification?.(message)
