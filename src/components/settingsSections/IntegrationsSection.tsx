@@ -570,6 +570,21 @@ export const IntegrationsSection = memo(function IntegrationsSection({
             setDraft={setDraft}
           />
 
+          <ToggleField
+            label={ti('settings.integrations.telegram.announce_incoming')}
+            field="telegramAnnounceIncomingEnabled"
+            draft={draft}
+            setDraft={setDraft}
+          />
+
+          <ToggleField
+            label={ti('settings.integrations.telegram.announce_preview')}
+            field="telegramAnnounceMessagePreview"
+            disabled={!draft.telegramAnnounceIncomingEnabled}
+            draft={draft}
+            setDraft={setDraft}
+          />
+
           <p className="settings-inline-note">
             {ti('settings.integrations.telegram.help')}
           </p>
@@ -624,6 +639,21 @@ export const IntegrationsSection = memo(function IntegrationsSection({
             label={ti('settings.integrations.discord.owner_users')}
             field="ownerDiscordUserIds"
             placeholder="1234567890123456789"
+            draft={draft}
+            setDraft={setDraft}
+          />
+
+          <ToggleField
+            label={ti('settings.integrations.discord.announce_incoming')}
+            field="discordAnnounceIncomingEnabled"
+            draft={draft}
+            setDraft={setDraft}
+          />
+
+          <ToggleField
+            label={ti('settings.integrations.discord.announce_preview')}
+            field="discordAnnounceMessagePreview"
+            disabled={!draft.discordAnnounceIncomingEnabled}
             draft={draft}
             setDraft={setDraft}
           />

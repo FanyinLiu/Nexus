@@ -77,3 +77,36 @@ export function parseVolcengineSpeechCredentials(apiKey) {
     accessToken: tokenParts.join(separator).trim(),
   }
 }
+
+export function getSpeechOutputCredentialError(providerId, apiKey) {
+  const normalizedKey = String(apiKey ?? '').trim()
+
+  if (
+    isEdgeTtsSpeechOutputProvider(providerId)
+    || isOmniVoiceSpeechOutputProvider(providerId)
+    || providerId === SPEECH_PROVIDER_IDS.customOpenaiTTS
+  ) {
+    return ''
+  }
+
+  if (isVolcengineSpeechOutputProvider(providerId)) {
+    const credentials = parseVolcengineSpeechCredentials(normalizedKey)
+    return credentials.appId && credentials.accessToken
+      ? ''
+      : '火山语音合成请在 API Key 一栏填写 APP_ID:ACCESS_TOKEN。'
+  }
+
+  if (!normalizedKey) {
+    if (isMiniMaxSpeechOutputProvider(providerId)) return 'MiniMax 语音合成请先填写 API Key。'
+    if (isDashScopeSpeechOutputProvider(providerId)) return '百炼语音合成请先填写 API Key。'
+    if (isElevenLabsProvider(providerId)) return 'ElevenLabs 语音合成请先填写 API Key。'
+    if (isOpenAiCompatibleSpeechOutputProvider(providerId)) return 'OpenAI 语音合成请先填写 API Key。'
+  }
+
+  return ''
+}
+
+export function assertSpeechOutputCredentials(providerId, apiKey) {
+  const error = getSpeechOutputCredentialError(providerId, apiKey)
+  if (error) throw new Error(error)
+}

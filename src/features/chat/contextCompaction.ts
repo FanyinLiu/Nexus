@@ -313,6 +313,7 @@ export function getModelTokenBudget(model: string): number {
   if (normalized.includes('gemini-3') || normalized.includes('gemini-2.5')) return 200_000
   if (normalized.includes('qwen3.6') || normalized.includes('qwen3.5') || normalized.includes('qwen3-coder')) return 200_000
   if (normalized.includes('kimi-k2') || normalized.includes('mistral-medium-3-5') || normalized.includes('magistral') || normalized.includes('devstral')) return 200_000
+  if (normalized.includes('minimax-m3')) return 500_000
   if (normalized.includes('minimax-m2') || normalized.includes('glm-5') || normalized.includes('glm-4.7') || normalized.includes('seed-2')) return 200_000
   if (normalized.includes('deepseek')) return 28_000
   if (normalized.includes('qwen')) return 28_000

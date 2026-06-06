@@ -15,6 +15,7 @@
     "download-models:all": "node scripts/download-models.mjs",
     "download-models:lite": "node scripts/download-models.mjs --skip-asr",
     "doctor": "node scripts/nexus-doctor.mjs",
+    "message:send": "node scripts/send-message-webhook.mjs",
     "setup": "npm install && npm run build && node scripts/download-models.mjs",
     "dev": "vite",
     "electron:dev": "node scripts/electron-dev.mjs",
@@ -119,6 +120,8 @@
       "electron/**/*",
       "scripts/omnivoice_server.py",
       "scripts/glm_asr_server.py",
+      "scripts/send-message-webhook.mjs",
+      "scripts/communication-adapters/**/*",
       "package.json",
       "!node_modules/onnxruntime-node/bin/napi-v3/win32/arm64/**",
       "!**/*.map",
@@ -133,7 +136,9 @@
       "node_modules/sharp/**",
       "node_modules/@img/**",
       "scripts/omnivoice_server.py",
-      "scripts/glm_asr_server.py"
+      "scripts/glm_asr_server.py",
+      "scripts/send-message-webhook.mjs",
+      "scripts/communication-adapters/**/*"
     ],
     "icon": "public/nexus-256.png",
     "win": {

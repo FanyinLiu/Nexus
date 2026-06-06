@@ -157,6 +157,12 @@ type AssistantReplyRunnerDependencies = {
   onMemoryRecalled?: (recalledIds: string[]) => void
 }
 
+function isSpeechAuthFailure(error: unknown): boolean {
+  const message = getSpeechOutputErrorMessage(error)
+  return /(api\s*key|api\s*secret|authorization|bearer|credential|unauthori[sz]ed|\b401\b|\b403\b|鉴权|认证|授权|登录|login)/i
+    .test(message)
+}
+
 export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDependencies) {
   return async function runAssistantReplyTurn(options: AssistantReplyRunnerOptions) {
     const {
@@ -631,11 +637,12 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         // Don't block the chat turn on TTS completion — let voice play in background.
         // This prevents the "回复中..." hang when TTS streams get stuck.
         const TTS_WAIT_TIMEOUT_MS = 12_000
+        let ttsWaitTimeoutId: number | null = null
         try {
           await Promise.race([
             streamingSpeechController.waitForCompletion(),
             new Promise<void>((resolve) => {
-              window.setTimeout(() => {
+              ttsWaitTimeoutId = window.setTimeout(() => {
                 ttsWaitTimedOut = true
                 // info, not warn — by design we unblock the chat turn after
                 // 12s and let voice continue in the background. This is the
@@ -657,12 +664,22 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           }
         } catch (speechError) {
           if (!streamingSpeechController.hasStarted()) {
-            shouldFallbackToDirectSpeech = true
-            logVoiceEvent('streaming speech failed before playback, falling back to direct speech', {
-              traceId: traceId || undefined,
-              source,
-              error: getSpeechOutputErrorMessage(speechError),
-            })
+            if (isSpeechAuthFailure(speechError)) {
+              dependencies.handleSpeechPlaybackFailure(speechError, {
+                traceId,
+                traceLabel,
+                source,
+                fromVoice,
+                shouldResumeContinuousVoice,
+              })
+            } else {
+              shouldFallbackToDirectSpeech = true
+              logVoiceEvent('streaming speech failed before playback, falling back to direct speech', {
+                traceId: traceId || undefined,
+                source,
+                error: getSpeechOutputErrorMessage(speechError),
+              })
+            }
           } else {
             dependencies.handleSpeechPlaybackFailure(speechError, {
               traceId,
@@ -671,6 +688,10 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
               fromVoice,
               shouldResumeContinuousVoice,
             })
+          }
+        } finally {
+          if (ttsWaitTimeoutId !== null) {
+            window.clearTimeout(ttsWaitTimeoutId)
           }
         }
       }

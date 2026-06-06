@@ -4,10 +4,37 @@ export const MIN_RSS_INTERVAL_MINUTES = 5
 export const MAX_RSS_INTERVAL_MINUTES = 24 * 60
 export const DEFAULT_RSS_INTERVAL_MINUTES = 30
 export const WEBHOOK_MAX_BODY_BYTES = 64 * 1024
+export const WEBHOOK_MAX_BODY_CHARS = 500
+export const WEBHOOK_MAX_TITLE_CHARS = 160
+export const WEBHOOK_MAX_META_CHARS = 120
+
+const WEBHOOK_MESSAGE_KINDS = new Set(['message', 'chat', 'chat_message'])
 
 function coerceFiniteNumber(value) {
   const number = Number(value)
   return Number.isFinite(number) ? number : null
+}
+
+function coerceWebhookString(value) {
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  return ''
+}
+
+function normalizeWebhookString(value, maxChars) {
+  return coerceWebhookString(value)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxChars)
+}
+
+function pickWebhookString(payload, keys, maxChars) {
+  for (const key of keys) {
+    if (!Object.prototype.hasOwnProperty.call(payload, key)) continue
+    const value = normalizeWebhookString(payload[key], maxChars)
+    if (value) return value
+  }
+  return ''
 }
 
 export function normalizeRssIntervalMinutes(value) {
@@ -31,6 +58,74 @@ function resolveRssIntervalMinutes(raw, config) {
   }
 
   return DEFAULT_RSS_INTERVAL_MINUTES
+}
+
+export function normalizeWebhookPayload(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return { ok: false, error: 'JSON object body required' }
+  }
+
+  const rawKind = pickWebhookString(payload, ['kind', 'type'], 32).toLowerCase()
+  const kind = WEBHOOK_MESSAGE_KINDS.has(rawKind) ? 'message' : 'notification'
+  const sourceName = pickWebhookString(
+    payload,
+    ['sourceName', 'source', 'app', 'application'],
+    WEBHOOK_MAX_META_CHARS,
+  ) || 'webhook'
+  const sourceId = pickWebhookString(payload, ['sourceId'], WEBHOOK_MAX_META_CHARS) || sourceName
+  const title = pickWebhookString(
+    payload,
+    ['title', 'conversationTitle', 'chatTitle', 'roomName', 'channelName'],
+    WEBHOOK_MAX_TITLE_CHARS,
+  )
+  const body = pickWebhookString(payload, ['body', 'text', 'message'], WEBHOOK_MAX_BODY_CHARS)
+
+  if (!title && !body) {
+    return { ok: false, error: 'title or body required' }
+  }
+
+  if (kind !== 'message') {
+    return {
+      ok: true,
+      message: {
+        kind,
+        sourceId,
+        sourceName,
+        title: title || sourceName,
+        body,
+      },
+    }
+  }
+
+  const sender = pickWebhookString(
+    payload,
+    ['sender', 'fromUser', 'from', 'author'],
+    WEBHOOK_MAX_META_CHARS,
+  )
+  const conversationId = pickWebhookString(
+    payload,
+    ['conversationId', 'chatId', 'roomId', 'channelId', 'threadId'],
+    WEBHOOK_MAX_META_CHARS,
+  ) || title || sourceId
+  const messageId = pickWebhookString(
+    payload,
+    ['messageId', 'id', 'eventId'],
+    WEBHOOK_MAX_META_CHARS,
+  )
+
+  return {
+    ok: true,
+    message: {
+      kind,
+      sourceId,
+      sourceName,
+      conversationId,
+      messageId,
+      sender,
+      title: title || sender || sourceName,
+      body,
+    },
+  }
 }
 
 /**

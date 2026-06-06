@@ -5,6 +5,7 @@ import {
   MAX_RSS_INTERVAL_MINUTES,
   MIN_RSS_INTERVAL_MINUTES,
   WEBHOOK_MAX_BODY_BYTES,
+  normalizeWebhookPayload,
   normalizeRssIntervalMinutes,
   sanitizeNotificationChannels,
 } from '../electron/services/notificationBridgeUtils.js'
@@ -64,4 +65,38 @@ test('notification bridge defaults missing RSS intervals and exposes body cap', 
   assert.equal(channel.checkIntervalMinutes, DEFAULT_RSS_INTERVAL_MINUTES)
   assert.equal(channel.config.intervalSec, DEFAULT_RSS_INTERVAL_MINUTES * 60)
   assert.equal(WEBHOOK_MAX_BODY_BYTES, 64 * 1024)
+})
+
+test('notification bridge normalizes explicit chat message webhook payloads', () => {
+  const result = normalizeWebhookPayload({
+    kind: 'message',
+    source: '微信',
+    chatTitle: '项目群',
+    sender: ' 张三 ',
+    text: '  晚上同步一下\n\n进展 ',
+    conversationId: 'room-1',
+    messageId: 'msg-1',
+  })
+
+  assert.equal(result.ok, true)
+  assert.equal(result.message.kind, 'message')
+  assert.equal(result.message.sourceName, '微信')
+  assert.equal(result.message.title, '项目群')
+  assert.equal(result.message.sender, '张三')
+  assert.equal(result.message.body, '晚上同步一下 进展')
+  assert.equal(result.message.conversationId, 'room-1')
+  assert.equal(result.message.messageId, 'msg-1')
+})
+
+test('notification bridge keeps ordinary webhook payloads as notifications', () => {
+  const result = normalizeWebhookPayload({
+    source: 'CI',
+    title: 'Build finished',
+    body: 'green',
+  })
+
+  assert.equal(result.ok, true)
+  assert.equal(result.message.kind, 'notification')
+  assert.equal(result.message.sourceName, 'CI')
+  assert.equal(result.message.title, 'Build finished')
 })

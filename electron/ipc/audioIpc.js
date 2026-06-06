@@ -26,6 +26,7 @@ import {
   resolveSpeechOutputBaseUrl,
   resolveSpeechOutputTimeoutMs,
   resolveSpeechOutputTimeoutMessage,
+  assertSpeechOutputCredentials,
   toSpeechVoiceOption,
   extractMiniMaxVoiceOptions,
   buildOpenAiCompatibleSpeechRequestPayload,
@@ -62,6 +63,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         message: '当前语音提供商暂未内置音色列表接口。',
       }
     }
+    assertSpeechOutputCredentials(payload.providerId, payload.apiKey)
 
     const request = isMiniMaxSpeechOutputProvider(payload.providerId)
       ? {
@@ -351,6 +353,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
     if (!baseUrl) {
       throw new Error('请先填写语音输出 API Base URL。')
     }
+    assertSpeechOutputCredentials(payload.providerId, payload.apiKey)
 
     let endpoint = ''
     let requestBody = ''

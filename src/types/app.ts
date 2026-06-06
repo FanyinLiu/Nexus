@@ -353,11 +353,15 @@ export interface IntegrationSettings {
   telegramBotToken: string
   telegramAllowedChatIds: string
   ownerTelegramChatIds: string
+  telegramAnnounceIncomingEnabled: boolean
+  telegramAnnounceMessagePreview: boolean
   telegramPermissionMode: IntegrationPermissionMode
   discordIntegrationEnabled: boolean
   discordBotToken: string
   discordAllowedChannelIds: string
   ownerDiscordUserIds: string
+  discordAnnounceIncomingEnabled: boolean
+  discordAnnounceMessagePreview: boolean
   discordPermissionMode: IntegrationPermissionMode
   mcpPermissionMode: IntegrationPermissionMode
 }

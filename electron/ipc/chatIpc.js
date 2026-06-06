@@ -44,6 +44,14 @@ import {
   validateServiceConnectionTestPayload,
 } from './payloadSchemas.js'
 
+function formatEmptyChatContentMessage({ reasoningLength = 0, finishReason = '' } = {}) {
+  const details = []
+  if (reasoningLength > 0) details.push(`reasoningLength=${reasoningLength}`)
+  if (finishReason) details.push(`finishReason=${finishReason}`)
+  const suffix = details.length ? `（${details.join('，')}）` : ''
+  return `模型返回了空内容${suffix}，请检查接口兼容性或关闭该模型的 Thinking。`
+}
+
 export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS, CONNECTION_TEST_TIMEOUT_MS }) {
   ipcMain.handle('chat:complete', async (event, payload) => {
     requireTrustedSender(event)
@@ -126,7 +134,10 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     const reasoning = extractChatResponseReasoning(requestSpec.protocol, data)
 
     if (!content && !toolCalls) {
-      throw new Error('模型返回了空内容，请检查接口兼容性。')
+      throw new Error(formatEmptyChatContentMessage({
+        reasoningLength: reasoning.length,
+        finishReason,
+      }))
     }
 
     console.info('[chat:complete] success', {
@@ -207,6 +218,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
 
     let fullContent = ''
     let fullReasoning = ''
+    let finishReason = null
     const toolCallAccumulator = new Map()
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
@@ -251,6 +263,8 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       }
 
       try {
+        finishReason = extractChatResponseFinishReason(requestSpec.protocol, parsed) ?? finishReason
+
         const rawDelta = extractChatStreamingDeltaContent(requestSpec.protocol, parsed)
         const delta = trimChatStreamingDelta(fullContent, rawDelta)
         if (delta) {
@@ -359,7 +373,10 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       : null
 
     if (!content && !(toolCalls && toolCalls.length)) {
-      throw new Error('模型返回了空内容，请检查接口兼容性。')
+      throw new Error(formatEmptyChatContentMessage({
+        reasoningLength: fullReasoning.length,
+        finishReason,
+      }))
     }
 
     console.info('[chat:stream] success', {
@@ -373,6 +390,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     return {
       content: content || '',
       ...(toolCalls && toolCalls.length ? { tool_calls: toolCalls } : {}),
+      ...(finishReason ? { finish_reason: finishReason } : {}),
       ...(fullReasoning ? { reasoning_content: fullReasoning } : {}),
     }
   })

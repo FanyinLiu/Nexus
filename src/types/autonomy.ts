@@ -89,6 +89,12 @@ export interface NotificationMessage {
   body: string
   receivedAt: string
   read: boolean
+  kind?: 'notification' | 'message'
+  sourceId?: string
+  sourceName?: string
+  conversationId?: string
+  messageId?: string
+  sender?: string
 }
 
 // ── Goal tracking ────────────────────────────────────────────────────────────
@@ -128,6 +134,8 @@ export interface AutonomySettings {
   autonomyIdleThresholdSeconds: number
   autonomyContextTriggersEnabled: boolean
   autonomyNotificationsEnabled: boolean
+  autonomyNotificationMessageAnnouncementsEnabled: boolean
+  autonomyNotificationMessagePreviewEnabled: boolean
   autonomyQuietHoursStart: number
   autonomyQuietHoursEnd: number
   autonomyCostLimitDailyTicks: number

@@ -6,13 +6,19 @@ function stripAnthropicVersionSuffix(baseUrl) {
   return normalizeBaseUrl(baseUrl).replace(/\/v1$/iu, '')
 }
 
-function extractTextFromContent(content) {
+function isAnthropicCompatibleBaseUrl(baseUrl) {
+  return /\/anthropic(?:\/v1)?$/iu.test(normalizeBaseUrl(baseUrl))
+}
+
+function extractTextFromContent(content, { trim = true } = {}) {
+  const normalize = (text) => trim ? text.trim() : text
+
   if (typeof content === 'string') {
-    return content.trim()
+    return normalize(content)
   }
 
   if (Array.isArray(content)) {
-    return content
+    const text = content
       .map((part) => {
         if (typeof part === 'string') return part
         if (typeof part?.text === 'string') return part.text
@@ -20,15 +26,15 @@ function extractTextFromContent(content) {
         return ''
       })
       .join('\n')
-      .trim()
+    return normalize(text)
   }
 
   if (typeof content?.text === 'string') {
-    return content.text.trim()
+    return normalize(content.text)
   }
 
   if (typeof content?.delta?.text === 'string') {
-    return content.delta.text.trim()
+    return normalize(content.delta.text)
   }
 
   return ''
@@ -36,6 +42,30 @@ function extractTextFromContent(content) {
 
 function hasNonEmptyString(value) {
   return String(value ?? '').trim().length > 0
+}
+
+function isMiniMaxTokenPlanProvider(providerId) {
+  const normalizedProviderId = normalizeChatProviderId(providerId)
+  return normalizedProviderId === 'minimax-coding'
+    || normalizedProviderId === 'minimax-coding-global'
+}
+
+function formatInvalidChatApiKeyMessage(providerId) {
+  const label = isMiniMaxTokenPlanProvider(providerId)
+    ? 'MiniMax Token Plan API Key'
+    : 'API Key'
+  return `${label} 格式无效：包含中文、换行、空格或其他不能用于 HTTP Header 的字符。请只填写服务商控制台生成的原始 Key，不要包含套餐说明、模型名或备注。`
+}
+
+function normalizeChatApiKeyForHeader(providerId, apiKey) {
+  const value = String(apiKey ?? '').trim()
+  if (!value) return ''
+
+  if (/[^\x21-\x7E]/u.test(value)) {
+    throw new Error(formatInvalidChatApiKeyMessage(providerId))
+  }
+
+  return value
 }
 
 function modelSupportsVision(model) {
@@ -83,8 +113,8 @@ function estimateModelContextWindowTokens(model) {
   if (/gpt-5\.4-mini/.test(id)) return 400_000
   if (/gpt-5\.4-nano/.test(id)) return 128_000
   if (/qwen3\.6-max/.test(id)) return 256_000
-  if (/1m|1000k|grok-4\.3|gpt-5\.5|gpt-5\.4|gemini-(3|2\.5)|deepseek-v4|deepseek-chat|deepseek-reasoner|qwen3\.6|qwen3\.5-(plus|flash)|qwen3-coder-(plus|flash)/.test(id)) return 1_000_000
-  if (/260k|256k|250k|qwen3-max|qwen3-(235b|next|32b|30b|14b|8b|4b|1\.7b|0\.6b)|kimi-k2|moonshotai\/kimi-k2|doubao-seed-2|seed-2|dola-seed-2|mistral-(large|medium-3-5)|magistral|devstral/.test(id)) return 256_000
+  if (/1m|1000k|minimax-m3|grok-4\.3|gpt-5\.5|gpt-5\.4|gemini-(3|2\.5)|deepseek-v4|deepseek-chat|deepseek-reasoner|qwen3\.7|qwen3\.6|qwen3\.5-(plus|flash)|qwen3-coder-(plus|flash)|claude-opus-4-8|claude-opus-4-7|claude-sonnet-4-6/.test(id)) return 1_000_000
+  if (/260k|256k|250k|grok-build|qwen3-max|qwen3-(235b|next|32b|30b|14b|8b|4b|1\.7b|0\.6b)|qwen3\.5-\d|kimi-k2|moonshotai\/kimi-k2|doubao-seed-2|seed-2|dola-seed-2|mistral-(large|medium-3-5)|mistral-small-2603|magistral|devstral/.test(id)) return 256_000
   if (/200k|claude|sonnet|opus|haiku|minimax-m2|glm-5|glm-4\.7/.test(id)) return 200_000
   if (/128k|qwen3|max|gpt-5|gpt-4\.1|o3|o4|ernie-5|llama-3\.3|nemotron/.test(id)) return 128_000
   if (/64k/.test(id)) return 64_000
@@ -152,7 +182,12 @@ export function buildDiscoveredChatModels({ providerId, data }) {
 
 const CHAT_PROVIDER_PROTOCOLS = Object.freeze({
   anthropic: 'anthropic',
+  'kimi-coding': 'anthropic',
+  'kimi-coding-global': 'anthropic',
   minimax: 'anthropic',
+  'minimax-global': 'anthropic',
+  'minimax-coding': 'anthropic',
+  'minimax-coding-global': 'anthropic',
 })
 
 const CHAT_PROVIDER_API_KEY_POLICY = Object.freeze({
@@ -172,7 +207,10 @@ export function normalizeChatProviderId(providerId, baseUrl = '') {
   }
 
   if (normalized.includes('api.anthropic.com')) return 'anthropic'
-  if (normalized.includes('api.minimax.io/anthropic') || normalized.includes('api.minimaxi.com/anthropic')) {
+  if (normalized.includes('api.minimax.io/anthropic')) {
+    return 'minimax-global'
+  }
+  if (normalized.includes('api.minimaxi.com/anthropic')) {
     return 'minimax'
   }
   if (normalized.includes('openrouter.ai')) return 'openrouter'
@@ -180,7 +218,11 @@ export function normalizeChatProviderId(providerId, baseUrl = '') {
   if (normalized.includes('api.mistral.ai')) return 'mistral'
   if (normalized.includes('api.groq.com')) return 'groq'
   if (normalized.includes('api.deepseek.com')) return 'deepseek'
-  if (normalized.includes('api.moonshot.ai') || normalized.includes('api.moonshot.cn')) return 'moonshot'
+  if (normalized.includes('api.moonshot.ai/anthropic')) return 'kimi-coding-global'
+  if (normalized.includes('api.moonshot.cn/anthropic')) return 'kimi-coding'
+  if (normalized.includes('api.moonshot.ai')) return 'moonshot-global'
+  if (normalized.includes('api.moonshot.cn')) return 'moonshot'
+  if (normalized.includes('coding.dashscope.aliyuncs.com')) return 'modelstudio-coding'
   if (normalized.includes('dashscope.aliyuncs.com')) return 'dashscope'
   if (normalized.includes('api.siliconflow.com') || normalized.includes('api.siliconflow.cn')) {
     return 'siliconflow'
@@ -188,6 +230,9 @@ export function normalizeChatProviderId(providerId, baseUrl = '') {
   if (normalized.includes('api.x.ai')) return 'xai'
   if (normalized.includes('qianfan.baidubce.com')) return 'qianfan'
   if (normalized.includes('api.z.ai') || normalized.includes('open.bigmodel.cn')) return 'zai'
+  if (normalized.includes('ark.cn-beijing.volces.com/api/coding')) return 'doubao-coding'
+  if (normalized.includes('ark.cn-beijing.volces.com')) return 'doubao'
+  if (normalized.includes('bytepluses.com/api/coding')) return 'byteplus-coding'
   if (normalized.includes('bytepluses.com')) return 'byteplus'
   if (normalized.includes('integrate.api.nvidia.com')) return 'nvidia'
   if (normalized.includes('api.venice.ai')) return 'venice'
@@ -200,6 +245,10 @@ export function getChatProviderProtocol(providerId, baseUrl = '') {
   const explicit = String(providerId ?? '').trim().toLowerCase()
   if (explicit === 'anthropic' || explicit === 'openai-compatible') {
     return explicit
+  }
+
+  if (isAnthropicCompatibleBaseUrl(baseUrl)) {
+    return 'anthropic'
   }
 
   const normalizedProviderId = normalizeChatProviderId(providerId, baseUrl)
@@ -220,7 +269,21 @@ export function chatProviderRequiresApiKey(providerId) {
 
 export function getChatConnectionTestPreflightFailure({ providerId, apiKey }) {
   const normalizedProviderId = normalizeChatProviderId(providerId)
-  if (!chatProviderRequiresApiKey(normalizedProviderId) || hasNonEmptyString(apiKey)) {
+  if (!chatProviderRequiresApiKey(normalizedProviderId)) {
+    return null
+  }
+
+  if (hasNonEmptyString(apiKey)) {
+    try {
+      normalizeChatApiKeyForHeader(normalizedProviderId, apiKey)
+    } catch (error) {
+      return {
+        ok: false,
+        status: 'needs_key',
+        message: error instanceof Error ? error.message : formatInvalidChatApiKeyMessage(normalizedProviderId),
+        recommendation: '重新复制服务商控制台里的原始 API Key，只保留 Key 本身。',
+      }
+    }
     return null
   }
 
@@ -240,17 +303,18 @@ export function getChatConnectionTestPreflightFailure({ providerId, apiKey }) {
 function buildChatAuthorizationHeaders(providerId, apiKey, baseUrl = '') {
   const normalizedProviderId = normalizeChatProviderId(providerId)
   const protocol = getChatProviderProtocol(normalizedProviderId, baseUrl)
+  const apiKeyHeaderValue = normalizeChatApiKeyForHeader(normalizedProviderId, apiKey)
 
   if (protocol === 'anthropic') {
     return {
-      ...(apiKey ? { 'x-api-key': apiKey } : {}),
+      ...(apiKeyHeaderValue ? { 'x-api-key': apiKeyHeaderValue } : {}),
       'anthropic-version': '2023-06-01',
     }
   }
 
-  return apiKey
+  return apiKeyHeaderValue
     ? {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKeyHeaderValue}`,
       }
     : {}
 }
@@ -287,6 +351,31 @@ function splitSystemMessages(messages) {
 function resolveAnthropicEndpoint(baseUrl, suffix) {
   const normalized = stripAnthropicVersionSuffix(baseUrl)
   return `${normalized}${suffix}`
+}
+
+function shouldOmitAnthropicTemperature(model) {
+  const id = String(model ?? '').trim().toLowerCase()
+  return /^claude-opus-4-[78](?:\b|$)/u.test(id)
+}
+
+function shouldDisableOpenAiCompatibleThinking(providerId, model) {
+  const normalizedProviderId = normalizeChatProviderId(providerId)
+  const id = String(model ?? '').trim().toLowerCase()
+  return normalizedProviderId === 'deepseek' && /^deepseek-v4-(?:flash|pro)(?:\b|$)/u.test(id)
+}
+
+function shouldDisableAnthropicThinking(providerId, model) {
+  const normalizedProviderId = normalizeChatProviderId(providerId)
+  const id = String(model ?? '').trim().toLowerCase()
+  return (
+    (
+      normalizedProviderId === 'minimax'
+      || normalizedProviderId === 'minimax-global'
+      || normalizedProviderId === 'minimax-coding'
+      || normalizedProviderId === 'minimax-coding-global'
+    )
+    && /^minimax-m3(?:\b|$)/u.test(id)
+  )
 }
 
 export function buildChatRequest(payload, options = {}) {
@@ -330,10 +419,15 @@ export function buildChatRequest(payload, options = {}) {
         model: payload?.model,
         messages: normalizedMessages.messages,
         max_tokens: payload?.maxTokens ?? 500,
-        temperature: payload?.temperature ?? 0.8,
+        ...(
+          shouldOmitAnthropicTemperature(payload?.model)
+            ? {}
+            : { temperature: payload?.temperature ?? 0.8 }
+        ),
         ...(systemBlocks ? { system: systemBlocks } : {}),
         ...(stream ? { stream: true } : {}),
         ...(anthropicTools ? { tools: anthropicTools } : {}),
+        ...(shouldDisableAnthropicThinking(providerId, payload?.model) ? { thinking: { type: 'disabled' } } : {}),
       }),
     }
   }
@@ -341,6 +435,18 @@ export function buildChatRequest(payload, options = {}) {
   const tools = Array.isArray(payload?.tools) && payload.tools.length > 0
     ? payload.tools
     : undefined
+  const openAiBody = {
+    model: payload?.model,
+    messages: payload?.messages,
+    temperature: payload?.temperature ?? 0.8,
+    max_tokens: payload?.maxTokens ?? 500,
+    ...(stream ? { stream: true } : {}),
+    ...(tools ? { tools } : {}),
+  }
+
+  if (shouldDisableOpenAiCompatibleThinking(providerId, payload?.model)) {
+    openAiBody.thinking = { type: 'disabled' }
+  }
 
   return {
     providerId,
@@ -350,14 +456,7 @@ export function buildChatRequest(payload, options = {}) {
       'Content-Type': 'application/json',
       ...buildChatAuthorizationHeaders(providerId, payload?.apiKey, baseUrl),
     },
-    body: JSON.stringify({
-      model: payload?.model,
-      messages: payload?.messages,
-      temperature: payload?.temperature ?? 0.8,
-      max_tokens: payload?.maxTokens ?? 500,
-      ...(stream ? { stream: true } : {}),
-      ...(tools ? { tools } : {}),
-    }),
+    body: JSON.stringify(openAiBody),
   }
 }
 
@@ -382,6 +481,7 @@ export function buildChatConnectionTestRequest(payload) {
           model: payload?.model,
           max_tokens: 1,
           temperature: 0,
+          ...(shouldDisableAnthropicThinking(providerId, payload?.model) ? { thinking: { type: 'disabled' } } : {}),
           messages: [
             {
               role: 'user',
@@ -641,6 +741,7 @@ export function extractChatStreamingDeltaContent(providerId, payload) {
       payload?.delta?.text
       ?? payload?.content_block?.text
       ?? '',
+      { trim: false },
     )
   }
 
@@ -649,6 +750,7 @@ export function extractChatStreamingDeltaContent(providerId, payload) {
     ?? payload?.choices?.[0]?.message?.content
     ?? payload?.message?.content
     ?? '',
+    { trim: false },
   )
 }
 
