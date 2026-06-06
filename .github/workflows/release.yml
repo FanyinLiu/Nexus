@@ -70,6 +70,10 @@ jobs:
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve.outputs.tag }}
+
       - name: Ensure draft release exists
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -102,11 +106,18 @@ jobs:
             echo "Tag '$TAG' looks like a pre-release — marking release as pre-release."
           fi
 
+          notes_file="docs/RELEASE-NOTES-${TAG}.md"
+          notes_args=(--notes "## Nexus $TAG")
+          if [ -f "$notes_file" ]; then
+            echo "Using release notes from $notes_file"
+            notes_args=(--notes-file "$notes_file")
+          fi
+
           echo "Creating draft release $TAG"
           gh release create "$TAG" \
             --repo "${{ github.repository }}" \
             --title "$TAG" \
-            --notes "## Nexus $TAG" \
+            "${notes_args[@]}" \
             --target "${{ github.sha }}" \
             --draft \
             $PRERELEASE_FLAG
