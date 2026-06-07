@@ -209,8 +209,11 @@ export class CostTracker {
     const threshold = downgradeThresholdRatio ?? 0.8
     const shouldDowngrade = dailyRatio >= threshold || monthlyRatio >= threshold
 
-    const exceededDaily = dailyCapUsd !== undefined && dailyUsed >= dailyCapUsd
-    const exceededMonthly = monthlyCapUsd !== undefined && monthlyUsed >= monthlyCapUsd
+    // A cap of 0 (the default) or undefined means "no limit" — mirror the
+    // dailyRatio/monthlyRatio guards above, so an enabled hardStop with an
+    // unset cap doesn't treat every request as already over budget.
+    const exceededDaily = !!dailyCapUsd && dailyUsed >= dailyCapUsd
+    const exceededMonthly = !!monthlyCapUsd && monthlyUsed >= monthlyCapUsd
     const shouldHardStop = Boolean(hardStop) && (exceededDaily || exceededMonthly)
 
     return {
