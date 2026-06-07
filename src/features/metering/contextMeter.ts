@@ -138,8 +138,18 @@ const _sessionBySource: Record<string, { input: number; output: number; calls: n
 
 let _dailyCache: DailyMeterRecord | null = null
 
+function localDateKey(d: Date): string {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10)
+  // Local-time day key so usage aggregation lines up with CostTracker (which
+  // uses local-midnight day/month boundaries) and the user's own "today",
+  // instead of drifting by the machine's UTC offset (was toISOString()).
+  return localDateKey(new Date())
 }
 
 function dailyStorageKey(date: string): string {
@@ -283,12 +293,12 @@ export function loadDailyRange(days: number): DailyMeterRecord[] {
   if (days <= 0) return []
   const out: DailyMeterRecord[] = []
   const today = new Date()
-  today.setUTCHours(0, 0, 0, 0)
+  today.setHours(0, 0, 0, 0)
 
   for (let i = 0; i < days; i++) {
     const d = new Date(today)
-    d.setUTCDate(d.getUTCDate() - i)
-    const dateKey = d.toISOString().slice(0, 10)
+    d.setDate(d.getDate() - i)
+    const dateKey = localDateKey(d)
     try {
       const raw = localStorage.getItem(dailyStorageKey(dateKey))
       if (!raw) continue
