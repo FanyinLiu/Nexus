@@ -198,7 +198,15 @@ export function onStorageChange(
 // ---------------------------------------------------------------------------
 
 export function writeJson<T>(key: string, value: T): void {
-  window.localStorage.setItem(key, JSON.stringify(value))
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  } catch (err) {
+    // Quota exceeded / storage unavailable (e.g. private mode): best-effort.
+    // Keep the in-memory cache + broadcast so the session stays consistent,
+    // but never let a failed persist throw — it would crash callers on the
+    // startup-init path (loadMemories / settings rewrite-on-load, etc.).
+    console.error(`[storage] writeJson failed for "${key}":`, err)
+  }
   memoryCache.set(key, value)
   broadcastWrite(key, value)
 }

@@ -122,33 +122,36 @@ export function extractDecisionJson(raw: string): {
     } catch { /* fall through */ }
   }
 
-  // Last resort: find the first `{...}` balanced block and try to parse.
-  const start = trimmed.indexOf('{')
-  if (start === -1) return null
-
-  let depth = 0
-  let inString = false
-  let escape = false
-  for (let i = start; i < trimmed.length; i += 1) {
-    const ch = trimmed[i]
-    if (escape) { escape = false; continue }
-    if (ch === '\\') { escape = true; continue }
-    if (ch === '"') { inString = !inString; continue }
-    if (inString) continue
-    if (ch === '{') depth += 1
-    else if (ch === '}') {
-      depth -= 1
-      if (depth === 0) {
-        const candidate = trimmed.slice(start, i + 1)
-        try {
-          const parsed = JSON.parse(candidate)
-          if (parsed && typeof parsed === 'object' && typeof parsed.action === 'string') {
-            return parsed
-          }
-        } catch { /* parsing failed — give up */ }
-        return null
+  // Last resort: scan every balanced `{...}` block and try each until one
+  // parses into a decision. A model may emit prose containing braces (e.g.
+  // "{soft tone}") before the real JSON, so don't give up on the first block.
+  let blockStart = trimmed.indexOf('{')
+  while (blockStart !== -1) {
+    let depth = 0
+    let inString = false
+    let escape = false
+    for (let i = blockStart; i < trimmed.length; i += 1) {
+      const ch = trimmed[i]
+      if (escape) { escape = false; continue }
+      if (ch === '\\') { escape = true; continue }
+      if (ch === '"') { inString = !inString; continue }
+      if (inString) continue
+      if (ch === '{') depth += 1
+      else if (ch === '}') {
+        depth -= 1
+        if (depth === 0) {
+          const candidate = trimmed.slice(blockStart, i + 1)
+          try {
+            const parsed = JSON.parse(candidate)
+            if (parsed && typeof parsed === 'object' && typeof parsed.action === 'string') {
+              return parsed
+            }
+          } catch { /* not valid JSON — fall through to the next block */ }
+          break
+        }
       }
     }
+    blockStart = trimmed.indexOf('{', blockStart + 1)
   }
   return null
 }

@@ -452,6 +452,9 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       const response = await performNetworkRequest(requestSpec.endpoint, {
         allowPrivateNetwork: true,
         ...requestSpec.request,
+        // Re-check every redirect hop so a poisoned 30x can't reach IMDS/private
+        // hosts past the first-hop SSRF check (non-streaming probe — safe to follow).
+        followRedirectsSafely: true,
         timeoutMs: CONNECTION_TEST_TIMEOUT_MS,
         timeoutMessage: '模型接口测试超时，请检查 URL、网络、代理或服务状态。',
       })
@@ -544,6 +547,9 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       const response = await performNetworkRequest(requestSpec.endpoint, {
         allowPrivateNetwork: true,
         ...requestSpec.request,
+        // Re-check every redirect hop (see chat:test-connection) — model-list is
+        // a non-streaming GET, safe to follow with per-hop SSRF revalidation.
+        followRedirectsSafely: true,
         timeoutMs: CONNECTION_TEST_TIMEOUT_MS,
         timeoutMessage: '模型列表读取超时，请检查 URL、网络、代理或服务状态。',
       })

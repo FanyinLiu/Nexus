@@ -90,6 +90,9 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         method: request.method,
         headers: request.headers,
         ...(request.body ? { body: request.body } : {}),
+        // Re-check every redirect hop (see chat:* GET probes) — non-streaming
+        // voice-list, safe to follow with per-hop SSRF revalidation.
+        followRedirectsSafely: true,
         timeoutMs: AUDIO_VOICE_LIST_TIMEOUT_MS,
         timeoutMessage: '音色列表拉取超时，请检查网络或稍后重试。',
       })
