@@ -382,10 +382,27 @@ export async function startVadConversation(
       }
 
       // Only the legacy MicVAD exposes a pause() that flushes the current
-      // speech segment via submitUserSpeechOnPause. The frame-driver path
-      // doesn't open its own mic; just force-tear down the session here.
+      // speech segment via submitUserSpeechOnPause. The frame-driver has no
+      // mic of its own, but its main-process VAD can flush the in-flight
+      // segment over IPC — route that through the normal speech-end path
+      // (transcribe + tear down) instead of dropping a long utterance.
       if (session.detector) {
         void session.detector.pause().catch(() => undefined)
+      } else if (session.frameDriver) {
+        void session.frameDriver.flush().then((flushed) => {
+          if (
+            flushed
+            || params.vadSessionRef.current !== session
+            || session.cancelled
+          ) {
+            return
+          }
+          // Nothing buffered to flush — recover state like the no-speech
+          // branch so the session doesn't hang stuck in LISTENING.
+          console.warn('[VAD] destroy source: maxDurationTimer (frame-driver flush empty)')
+          void params.destroyVadSession(session)
+          params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
+        })
       } else {
         void params.destroyVadSession(session)
       }

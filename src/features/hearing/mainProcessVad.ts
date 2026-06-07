@@ -24,6 +24,7 @@ type VoiceActivityCallbacks = {
 
 export type MainProcessVadController = {
   pushSamples: (samples: Float32Array) => void
+  flush: () => Promise<boolean>
   destroy: () => Promise<void>
 }
 
@@ -71,7 +72,7 @@ export async function createMainProcessVadController(
   sensitivity: VadSensitivity = 'medium',
 ): Promise<MainProcessVadController> {
   const api = window.desktopPet
-  if (!api?.vadStart || !api.vadFeed || !api.vadStop) {
+  if (!api?.vadStart || !api.vadFeed || !api.vadStop || !api.vadFlush) {
     throw new Error(t('voice.vad.unavailable'))
   }
 
@@ -140,6 +141,27 @@ export async function createMainProcessVadController(
       // don't want downstream code mutating our copy while IPC is pending.
       const copy = new Float32Array(samples)
       feedChain = feedChain.then(() => sendChunk(copy)).catch(() => undefined)
+    },
+    async flush() {
+      if (destroyed) return false
+      // Let any in-flight vad:feed land first so the buffer is complete,
+      // then force the main-process VAD to emit its current segment.
+      await feedChain.catch(() => undefined)
+      if (destroyed) return false
+      try {
+        const result = await api!.vadFlush()
+        const segments = result?.segments ?? []
+        if (segments.length > 0) {
+          const first = segments[0]
+          const audio = first instanceof Float32Array ? first : new Float32Array(first)
+          // Route through the normal end-of-speech path (transcribe + finish).
+          void callbacks.onSpeechEnd(audio)
+          return true
+        }
+      } catch (error) {
+        console.error('[MainVAD] vad:flush error', error)
+      }
+      return false
     },
     async destroy() {
       if (destroyed) return
