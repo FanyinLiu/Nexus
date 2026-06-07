@@ -201,7 +201,7 @@ export const ConsoleSection = memo(function ConsoleSection({
           <DiagnosticsPanel uiLanguage={uiLanguage} />
           <MoodMapPanel uiLanguage={uiLanguage} active={active} />
           <StateTimelinePanel uiLanguage={uiLanguage} active={active} />
-          <CostHistoryPanel uiLanguage={uiLanguage} />
+          <CostHistoryPanel uiLanguage={uiLanguage} active={active} />
         </details>
 
         <details className="settings-console-section">

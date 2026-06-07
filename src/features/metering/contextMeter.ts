@@ -320,48 +320,9 @@ export function getMeterSnapshot(): MeterSnapshot {
   }
 }
 
-/**
- * Check whether daily or monthly USD budget is exceeded.
- *
- * Pass limits in USD (0 or undefined = no cap).
- */
-export function checkBudget(options: {
-  dailyCapUsd?: number
-  monthlyCapUsd?: number
-}): {
-  dailyExceeded: boolean
-  monthlyExceeded: boolean
-  dailyUsedUsd: number
-  monthlyUsedUsd: number
-  dailyCapUsd?: number
-  monthlyCapUsd?: number
-} {
-  const daily = loadDailyRecord()
-  const dailyUsedUsd = daily.totalCostUsd
-
-  // Monthly: sum all per-day keys that share the current YYYY-MM prefix.
-  const monthPrefix = todayKey().slice(0, 7) // "YYYY-MM"
-  let monthlyUsedUsd = 0
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    if (!key || !key.startsWith(METER_STORAGE_PREFIX)) continue
-    const dateStr = key.slice(METER_STORAGE_PREFIX.length)
-    if (!dateStr.startsWith(monthPrefix)) continue
-    try {
-      const record = JSON.parse(localStorage.getItem(key)!) as DailyMeterRecord
-      monthlyUsedUsd += record.totalCostUsd || 0
-    } catch { /* corrupt entry, skip */ }
-  }
-
-  return {
-    dailyExceeded: !!options.dailyCapUsd && dailyUsedUsd >= options.dailyCapUsd,
-    monthlyExceeded: !!options.monthlyCapUsd && monthlyUsedUsd >= options.monthlyCapUsd,
-    dailyUsedUsd,
-    monthlyUsedUsd,
-    dailyCapUsd: options.dailyCapUsd,
-    monthlyCapUsd: options.monthlyCapUsd,
-  }
-}
+// Budget enforcement lives in src/core/budget/CostTracker.ts; contextMeter is
+// display-only (ConsoleSection / CostHistoryPanel). The old checkBudget() here
+// had no callers and scanned the whole localStorage — removed.
 
 /**
  * Reset session counters (e.g. on app restart).

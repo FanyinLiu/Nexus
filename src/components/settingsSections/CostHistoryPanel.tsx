@@ -5,6 +5,7 @@ import type { TranslationParams, UiLanguage } from '../../types'
 
 type CostHistoryPanelProps = {
   uiLanguage: UiLanguage
+  active?: boolean
 }
 
 type ConsoleTextKey = Parameters<typeof pickTranslatedUiText>[1]
@@ -20,14 +21,22 @@ type ConsoleTranslator = (key: ConsoleTextKey, params?: TranslationParams) => st
  * loadDailyRange. Polls every 10s so a long chat session ticks the chart
  * forward without manual refresh.
  */
-export const CostHistoryPanel = memo(function CostHistoryPanel({ uiLanguage }: CostHistoryPanelProps) {
+export const CostHistoryPanel = memo(function CostHistoryPanel({ uiLanguage, active = true }: CostHistoryPanelProps) {
   const [range, setRange] = useState<DailyMeterRecord[]>(() => loadDailyRange(30))
   const ti = (key: ConsoleTextKey, params?: TranslationParams) => pickTranslatedUiText(uiLanguage, key, params)
 
   useEffect(() => {
+    // Only poll while this panel is the active console tab (matches the
+    // MoodMap / StateTimeline sibling panels); avoids a 10s localStorage
+    // read loop running whenever the settings drawer is mounted.
+    if (!active) return
+    const initial = window.setTimeout(() => setRange(loadDailyRange(30)), 0)
     const timer = window.setInterval(() => setRange(loadDailyRange(30)), 10_000)
-    return () => window.clearInterval(timer)
-  }, [])
+    return () => {
+      window.clearTimeout(initial)
+      window.clearInterval(timer)
+    }
+  }, [active])
 
   const stats = useMemo(() => {
     const total = range.reduce((acc, r) => acc + r.totalCostUsd, 0)
