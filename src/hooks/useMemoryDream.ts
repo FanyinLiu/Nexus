@@ -35,6 +35,8 @@ import {
 } from '../features/autonomy/skillDistillation'
 import {
   AUTONOMY_DREAM_LOG_STORAGE_KEY,
+  MEMORY_STORAGE_KEY,
+  normalizeMemoryItemsForStorage,
   readJson,
   writeJson,
 } from '../lib/storage'
@@ -313,6 +315,15 @@ export function useMemoryDream({
       }
 
       const finalMemories: MemoryItem[] = updated
+
+      // When archiveMemories ran, persist the active set synchronously in the
+      // same call stack as that archive write — otherwise a crash between the
+      // (synchronous) archive write and the (debounced) active-store save would
+      // leave the archived items in BOTH stores (resurfacing as duplicates on
+      // restart). The setMemories below still drives the UI + normal save.
+      if (candidates.length > 0) {
+        writeJson(MEMORY_STORAGE_KEY, normalizeMemoryItemsForStorage(finalMemories))
+      }
 
       // Pure replacement: updater closes over `finalMemories` (already
       // computed) so a double-run produces identical output without any

@@ -86,6 +86,7 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
   const considerCounterRef = useRef(0)
   const lastUtteranceRef = useRef<{ text: string; at: string } | null>(null)
   const inflightRef = useRef(false)
+  const loadedPersonaProfileIdRef = useRef<string | null>(null)
 
   // Load persona on mount. Single shot for now — editing persona files
   // on disk won't hot-reload until the user restarts Nexus. We expose
@@ -101,13 +102,23 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
       // engine keeps real soul/examples content instead of an empty persona.
       const activeId = opts.settingsRef.current?.activeCharacterProfileId?.trim()
       const profileId = activeId || DEFAULT_PROFILE_ID
+      // Skip the disk re-read when the active profile is unchanged and already
+      // loaded: the controller re-renders (and re-runs this effect) every tick,
+      // and reloading the 6 persona files via IPC each tick is wasteful. A
+      // failed/empty load leaves loadedPersonaProfileIdRef null so the next tick
+      // retries (preserving the implicit self-heal on a transient IPC failure).
+      if (profileId === loadedPersonaProfileIdRef.current && personaRef.current?.present) {
+        return
+      }
       let loaded = await desktopPet.personaLoadProfile(profileId)
       if (!loaded?.present && profileId !== DEFAULT_PROFILE_ID) {
         loaded = await desktopPet.personaLoadProfile(DEFAULT_PROFILE_ID)
       }
       personaRef.current = loaded
+      loadedPersonaProfileIdRef.current = loaded?.present ? profileId : null
     } catch (error) {
       personaRef.current = null
+      loadedPersonaProfileIdRef.current = null
       opts.onDebugEvent?.({
         source: 'autonomy',
         title: '[V2] persona load failed',
