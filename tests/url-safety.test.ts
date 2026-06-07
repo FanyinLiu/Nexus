@@ -75,6 +75,21 @@ describe('checkUrlSafety private-IP blocklist', () => {
     assert.equal(checkUrlSafety('https://169.254.169.254/latest/meta-data/').ok, false)
   })
 
+  test('rejects reserved and special-use IPv4 ranges', () => {
+    for (const url of [
+      'https://100.64.0.1/',
+      'https://192.0.0.8/',
+      'https://192.0.2.10/',
+      'https://198.18.0.1/',
+      'https://198.51.100.20/',
+      'https://203.0.113.30/',
+      'https://224.0.0.1/',
+      'https://240.0.0.1/',
+    ]) {
+      assert.equal(checkUrlSafety(url).ok, false, url)
+    }
+  })
+
   test('rejects GCP metadata host', () => {
     assert.equal(checkUrlSafety('https://metadata.google.internal/').ok, false)
   })

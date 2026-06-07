@@ -15,9 +15,9 @@ import {
 export { advanceSpritePetAnimationCursor }
 
 export const SPRITE_PET_INITIAL_CURSOR: SpritePetAnimationCursor = {
-  state: 'waving',
+  state: 'idle',
   frameIndex: 0,
-  loopsRemaining: SPRITE_PET_ACTIVE_LOOP_COUNT,
+  loopsRemaining: 0,
   requestKey: 'initial',
 }
 

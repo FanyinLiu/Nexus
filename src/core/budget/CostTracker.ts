@@ -1,6 +1,6 @@
-import type { ProviderId } from '../routing/types'
-import type { BudgetConfig, BudgetStatus, CostEntry, CostEntryKind } from './types'
-import { UsagePricingTable } from './UsagePricing'
+import type { ProviderId } from '../routing/types.ts'
+import type { BudgetConfig, BudgetStatus, CostEntry, CostEntryKind } from './types.ts'
+import { UsagePricingTable } from './UsagePricing.ts'
 
 export type RecordUsageInput = {
   providerId: ProviderId
@@ -28,6 +28,92 @@ export type RecordAuxiliaryInput = {
   timestamp?: number
 }
 
+const MODEL_TIERS = new Set<CostEntry['tier']>(['cheap', 'standard', 'heavy'])
+const COST_ENTRY_KINDS = new Set<CostEntryKind>(['chat', 'tts', 'stt', 'embedding'])
+
+function normalizeNonNegativeNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? value
+    : undefined
+}
+
+function normalizeNonNegativeInteger(value: unknown): number {
+  const normalized = normalizeNonNegativeNumber(value)
+  return normalized === undefined ? 0 : Math.floor(normalized)
+}
+
+function normalizeOptionalText(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+function normalizeTier(value: unknown): CostEntry['tier'] | null {
+  return MODEL_TIERS.has(value as CostEntry['tier'])
+    ? value as CostEntry['tier']
+    : null
+}
+
+function normalizeKind(value: unknown): CostEntryKind {
+  return COST_ENTRY_KINDS.has(value as CostEntryKind)
+    ? value as CostEntryKind
+    : 'chat'
+}
+
+function cloneEntry(entry: CostEntry): CostEntry {
+  return { ...entry }
+}
+
+function cloneConfig(config: BudgetConfig): BudgetConfig {
+  return { ...config }
+}
+
+export function normalizeBudgetConfig(value: unknown): BudgetConfig {
+  if (!value || typeof value !== 'object') return {}
+  const raw = value as Partial<BudgetConfig>
+  const config: BudgetConfig = {}
+  const dailyCapUsd = normalizeNonNegativeNumber(raw.dailyCapUsd)
+  if (dailyCapUsd !== undefined) config.dailyCapUsd = dailyCapUsd
+  const monthlyCapUsd = normalizeNonNegativeNumber(raw.monthlyCapUsd)
+  if (monthlyCapUsd !== undefined) config.monthlyCapUsd = monthlyCapUsd
+  const ratio = normalizeNonNegativeNumber(raw.downgradeThresholdRatio)
+  if (ratio !== undefined) config.downgradeThresholdRatio = Math.min(1, ratio)
+  if (typeof raw.hardStop === 'boolean') config.hardStop = raw.hardStop
+  return config
+}
+
+export function normalizeCostEntry(value: unknown): CostEntry | null {
+  if (!value || typeof value !== 'object') return null
+  const raw = value as Partial<CostEntry>
+  const id = normalizeOptionalText(raw.id)
+  const providerId = normalizeOptionalText(raw.providerId)
+  const modelId = normalizeOptionalText(raw.modelId)
+  const timestamp = normalizeNonNegativeNumber(raw.timestamp)
+  const costUsd = normalizeNonNegativeNumber(raw.costUsd)
+  const tier = normalizeTier(raw.tier)
+  if (!id || !providerId || !modelId || timestamp === undefined || costUsd === undefined || !tier) {
+    return null
+  }
+  const kind = normalizeKind(raw.kind)
+  const units = normalizeNonNegativeNumber(raw.units)
+  return {
+    id,
+    timestamp,
+    providerId,
+    modelId,
+    tier: kind === 'chat' ? tier : 'cheap',
+    inputTokens: kind === 'chat' ? normalizeNonNegativeInteger(raw.inputTokens) : 0,
+    outputTokens: kind === 'chat' ? normalizeNonNegativeInteger(raw.outputTokens) : 0,
+    costUsd,
+    ...(normalizeOptionalText(raw.conversationId) ? { conversationId: normalizeOptionalText(raw.conversationId) } : {}),
+    kind,
+    ...(kind !== 'chat' && units !== undefined ? { units } : {}),
+  }
+}
+
+export function normalizeCostEntries(value: unknown): CostEntry[] {
+  if (!Array.isArray(value)) return []
+  return value.map(normalizeCostEntry).filter((entry): entry is CostEntry => Boolean(entry))
+}
+
 export class CostTracker {
   private readonly entries: CostEntry[] = []
   private readonly pricing: UsagePricingTable
@@ -35,56 +121,70 @@ export class CostTracker {
 
   constructor(options?: { pricing?: UsagePricingTable; config?: BudgetConfig }) {
     this.pricing = options?.pricing ?? new UsagePricingTable()
-    this.config = options?.config ?? {}
+    this.config = normalizeBudgetConfig(options?.config ?? {})
   }
 
   setConfig(config: BudgetConfig): void {
-    this.config = config
+    this.config = normalizeBudgetConfig(config)
   }
 
   getConfig(): BudgetConfig {
-    return this.config
+    return cloneConfig(this.config)
   }
 
   record(input: RecordUsageInput): CostEntry {
+    const providerId = input.providerId.trim()
+    const modelId = input.modelId.trim()
+    const tier = normalizeTier(input.tier)
+    if (!providerId || !modelId || !tier) {
+      throw new Error('CostTracker.record requires providerId, modelId and a valid tier')
+    }
+    const inputTokens = normalizeNonNegativeInteger(input.inputTokens)
+    const outputTokens = normalizeNonNegativeInteger(input.outputTokens)
     const costUsd = this.pricing.computeCost(
-      input.providerId,
-      input.modelId,
-      input.inputTokens,
-      input.outputTokens,
+      providerId,
+      modelId,
+      inputTokens,
+      outputTokens,
     )
     const entry: CostEntry = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      timestamp: input.timestamp ?? Date.now(),
-      providerId: input.providerId,
-      modelId: input.modelId,
-      tier: input.tier,
-      inputTokens: input.inputTokens,
-      outputTokens: input.outputTokens,
+      timestamp: normalizeNonNegativeNumber(input.timestamp) ?? Date.now(),
+      providerId,
+      modelId,
+      tier,
+      inputTokens,
+      outputTokens,
       costUsd,
-      conversationId: input.conversationId,
+      ...(normalizeOptionalText(input.conversationId) ? { conversationId: normalizeOptionalText(input.conversationId) } : {}),
       kind: 'chat',
     }
     this.entries.push(entry)
-    return entry
+    return cloneEntry(entry)
   }
 
   recordAuxiliary(input: RecordAuxiliaryInput): CostEntry {
+    const providerId = input.providerId.trim()
+    const modelId = input.modelId.trim()
+    const kind = normalizeKind(input.kind)
+    if (!providerId || !modelId || kind === 'chat') {
+      throw new Error('CostTracker.recordAuxiliary requires a non-chat kind, providerId and modelId')
+    }
     const entry: CostEntry = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      timestamp: input.timestamp ?? Date.now(),
-      providerId: input.providerId,
-      modelId: input.modelId,
+      timestamp: normalizeNonNegativeNumber(input.timestamp) ?? Date.now(),
+      providerId,
+      modelId,
       tier: 'cheap',
       inputTokens: 0,
       outputTokens: 0,
-      costUsd: input.costUsd,
-      conversationId: input.conversationId,
-      kind: input.kind,
-      units: input.units,
+      costUsd: normalizeNonNegativeNumber(input.costUsd) ?? 0,
+      ...(normalizeOptionalText(input.conversationId) ? { conversationId: normalizeOptionalText(input.conversationId) } : {}),
+      kind,
+      units: normalizeNonNegativeNumber(input.units) ?? 0,
     }
     this.entries.push(entry)
-    return entry
+    return cloneEntry(entry)
   }
 
   totalForDay(day: Date = new Date()): number {
@@ -109,8 +209,11 @@ export class CostTracker {
     const threshold = downgradeThresholdRatio ?? 0.8
     const shouldDowngrade = dailyRatio >= threshold || monthlyRatio >= threshold
 
-    const exceededDaily = dailyCapUsd !== undefined && dailyUsed >= dailyCapUsd
-    const exceededMonthly = monthlyCapUsd !== undefined && monthlyUsed >= monthlyCapUsd
+    // A cap of 0 (the default) or undefined means "no limit" — mirror the
+    // dailyRatio/monthlyRatio guards above, so an enabled hardStop with an
+    // unset cap doesn't treat every request as already over budget.
+    const exceededDaily = !!dailyCapUsd && dailyUsed >= dailyCapUsd
+    const exceededMonthly = !!monthlyCapUsd && monthlyUsed >= monthlyCapUsd
     const shouldHardStop = Boolean(hardStop) && (exceededDaily || exceededMonthly)
 
     return {
@@ -124,11 +227,16 @@ export class CostTracker {
   }
 
   listEntries(): CostEntry[] {
-    return this.entries.slice()
+    return this.entries.map(cloneEntry)
   }
 
   clear(): void {
     this.entries.length = 0
+  }
+
+  restore(entries: CostEntry[]): void {
+    this.entries.length = 0
+    this.entries.push(...normalizeCostEntries(entries).map(cloneEntry))
   }
 
   private sumCostInRange(startMs: number, endMs: number): number {

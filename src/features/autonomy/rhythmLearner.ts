@@ -32,6 +32,41 @@ export function createDefaultRhythmProfile(): RhythmProfile {
   }
 }
 
+export function normalizeRhythmProfile(value: unknown): RhythmProfile {
+  const fallback = createDefaultRhythmProfile()
+  if (!value || typeof value !== 'object') return fallback
+  const obj = value as Record<string, unknown>
+  const slots = Array.from({ length: SLOT_COUNT }, (_, index) => (
+    normalizeSlot(Array.isArray(obj.slots) ? obj.slots[index] : undefined)
+  ))
+  return {
+    slots,
+    lastDecayDate: normalizeDecayDate(obj.lastDecayDate, fallback.lastDecayDate),
+    totalInteractions: normalizeInteractionCount(
+      obj.totalInteractions,
+      slots.reduce((sum, count) => sum + count, 0),
+    ),
+  }
+}
+
+function normalizeSlot(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 0
+  return Math.max(0, Math.min(10_000, value))
+}
+
+function normalizeDecayDate(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') return fallback
+  const trimmed = value.trim()
+  return Number.isFinite(Date.parse(trimmed)) ? trimmed : fallback
+}
+
+function normalizeInteractionCount(value: unknown, derivedTotal: number): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.max(0, Math.round(value))
+  }
+  return Math.max(0, Math.round(derivedTotal))
+}
+
 /** Record an interaction at the current hour. */
 export function recordInteraction(profile: RhythmProfile): RhythmProfile {
   const hour = new Date().getHours()

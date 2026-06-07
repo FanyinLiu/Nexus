@@ -166,7 +166,7 @@ const DEFAULT_RIG_PARAMS = {
   breath: 'ParamBreath',
 } as const
 
-export const DEFAULT_PET_MODEL_ID = 'qiyi'
+export const DEFAULT_PET_MODEL_ID = 'codex'
 
 // Gesture names surfaced to the LLM via system prompt. Per-model coverage
 // lives in motionGroups.gestures; unknown names fall through to no-op.
@@ -175,13 +175,55 @@ export type PublicGestureName = (typeof PUBLIC_GESTURE_NAMES)[number]
 
 export const PET_MODEL_PRESETS: PetModelDefinition[] = [
   {
+    id: 'codex',
+    label: 'pet.model.codex.label' satisfies TranslationKey,
+    description: 'pet.model.codex.description' satisfies TranslationKey,
+    modelPath: '',
+    fallbackImagePath: '',
+    spriteAtlas: {
+      imagePath: './pets/codex/spritesheet.webp',
+      imageRendering: 'pixelated',
+      stageSize: 'clamp(88px, 15vmin, 126px)',
+      stageMinSize: '88px',
+      stageMaxSize: '126px',
+      stageMarginBottom: 'clamp(52px, 9vh, 80px)',
+      previewSize: '6.2rem',
+      previewMinSize: '6.2rem',
+    },
+    motionGroups: {},
+    expressionMap: {
+      idle: 'idle',
+      listening: 'listening',
+      thinking: 'thinking',
+      sleepy: 'sleepy',
+      speaking: 'speaking',
+      happy: 'happy',
+      surprised: 'surprised',
+      confused: 'confused',
+      embarrassed: 'embarrassed',
+      touchBody: 'happy',
+      touchFace: 'embarrassed',
+      touchHead: 'surprised',
+    },
+    layout: {
+      widthRatio: 0.6,
+      heightRatio: 0.68,
+      minWidth: 140,
+      minHeight: 190,
+      anchorX: 0.5,
+      anchorY: 0,
+      yOffsetRatio: 0.02,
+    },
+  },
+  {
     id: 'qiyi',
-    label: '七一',
-    description: '一个红白墨色的小助手，动作更顺，适合陪你写中文口播、做文件和处理代码。',
+    label: 'pet.model.qiyi.label' satisfies TranslationKey,
+    description: 'pet.model.qiyi.description' satisfies TranslationKey,
     modelPath: '',
     fallbackImagePath: '',
     spriteAtlas: {
       imagePath: './pets/qiyi/spritesheet.webp',
+      imageRendering: 'auto',
     },
     motionGroups: {},
     expressionMap: {

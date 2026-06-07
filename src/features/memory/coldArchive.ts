@@ -6,28 +6,92 @@
  * be searched but are not included in regular recall context.
  */
 
-import type { ArchivedMemory, MemoryItem } from '../../types'
-import { getDecayedScore } from './decay'
+import type { ArchivedMemory, MemoryCategory, MemoryImportance, MemoryItem } from '../../types/memory.ts'
+import { getDecayedScore } from './decay.ts'
 
 const ARCHIVE_SCORE_THRESHOLD = 0.15
 const MAX_ARCHIVED = 500
-const ARCHIVE_STORAGE_KEY = 'nexus:memory:archive'
+export const ARCHIVE_STORAGE_KEY = 'nexus:memory:archive'
+const VALID_CATEGORIES = new Set<MemoryCategory>([
+  'profile',
+  'preference',
+  'goal',
+  'habit',
+  'manual',
+  'feedback',
+  'project',
+  'reference',
+])
+const VALID_IMPORTANCE = new Set<MemoryImportance>(['low', 'normal', 'high', 'pinned', 'reflection'])
 
 // ── Persistence ───────────────────────────────────────────────────────────
 
-function isValidArchivedMemory(item: unknown): item is ArchivedMemory {
-  if (!item || typeof item !== 'object') return false
+function getArchiveStorage(): Storage | null {
+  if (typeof localStorage !== 'undefined') return localStorage
+  if (typeof window !== 'undefined') return window.localStorage
+  return null
+}
+
+function isValidIsoTimestamp(value: string): boolean {
+  return Number.isFinite(Date.parse(value))
+}
+
+function normalizeText(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed ? trimmed : null
+}
+
+function normalizeArchivedMemory(item: unknown): ArchivedMemory | null {
+  if (!item || typeof item !== 'object') return null
   const obj = item as Record<string, unknown>
-  return (
-    typeof obj.id === 'string' && obj.id.length > 0
-    && typeof obj.content === 'string'
-    && typeof obj.category === 'string'
-    && typeof obj.source === 'string'
-    && typeof obj.createdAt === 'string'
-    && typeof obj.archivedAt === 'string'
-    && typeof obj.finalScore === 'number'
-    && Number.isFinite(obj.finalScore)
-  )
+  const id = normalizeText(obj.id)
+  const content = normalizeText(obj.content)
+  const source = normalizeText(obj.source)
+  const createdAt = normalizeText(obj.createdAt)
+  const archivedAt = normalizeText(obj.archivedAt)
+  if (!id || !content || !source) return null
+  if (!createdAt || !isValidIsoTimestamp(createdAt)) return null
+  if (!archivedAt || !isValidIsoTimestamp(archivedAt)) return null
+  if (typeof obj.category !== 'string' || !VALID_CATEGORIES.has(obj.category as MemoryCategory)) return null
+  if (typeof obj.finalScore !== 'number' || !Number.isFinite(obj.finalScore)) return null
+
+  const importance = typeof obj.importance === 'string' && VALID_IMPORTANCE.has(obj.importance as MemoryImportance)
+    ? obj.importance as MemoryImportance
+    : undefined
+  const clusterId = normalizeText(obj.clusterId)
+  return {
+    id,
+    content,
+    category: obj.category as MemoryCategory,
+    source,
+    createdAt,
+    archivedAt,
+    finalScore: Math.max(0, obj.finalScore),
+    ...(importance ? { importance } : {}),
+    ...(clusterId ? { clusterId } : {}),
+  }
+}
+
+function sortDedupeAndCap(archive: ArchivedMemory[]): ArchivedMemory[] {
+  const sorted = [...archive].sort((a, b) => Date.parse(b.archivedAt) - Date.parse(a.archivedAt))
+  const seenIds = new Set<string>()
+  const out: ArchivedMemory[] = []
+  for (const entry of sorted) {
+    if (seenIds.has(entry.id)) continue
+    seenIds.add(entry.id)
+    out.push(entry)
+    if (out.length >= MAX_ARCHIVED) break
+  }
+  return out
+}
+
+function writeArchive(archive: ArchivedMemory[]): void {
+  try {
+    getArchiveStorage()?.setItem(ARCHIVE_STORAGE_KEY, JSON.stringify(archive))
+  } catch {
+    // Memory archive is best-effort; active memories remain intact.
+  }
 }
 
 export function loadArchive(): ArchivedMemory[] {
@@ -35,18 +99,30 @@ export function loadArchive(): ArchivedMemory[] {
   // entries blindly, so a corrupted item would crash on missing fields.
   // Filter per-record rather than fail-closed on the whole list.
   try {
-    const raw = localStorage.getItem(ARCHIVE_STORAGE_KEY)
+    const raw = getArchiveStorage()?.getItem(ARCHIVE_STORAGE_KEY)
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter(isValidArchivedMemory)
+    if (!Array.isArray(parsed)) {
+      writeArchive([])
+      return []
+    }
+    const normalized = sortDedupeAndCap(
+      parsed.map(normalizeArchivedMemory).filter((item): item is ArchivedMemory => Boolean(item)),
+    )
+    if (JSON.stringify(normalized) !== JSON.stringify(parsed)) {
+      writeArchive(normalized)
+    }
+    return normalized
   } catch {
+    writeArchive([])
     return []
   }
 }
 
 export function saveArchive(archive: ArchivedMemory[]): void {
-  localStorage.setItem(ARCHIVE_STORAGE_KEY, JSON.stringify(archive.slice(0, MAX_ARCHIVED)))
+  writeArchive(sortDedupeAndCap(
+    archive.map(normalizeArchivedMemory).filter((item): item is ArchivedMemory => Boolean(item)),
+  ))
 }
 
 // ── Archive Operations ────────────────────────────────────────────────────
@@ -96,7 +172,7 @@ export function archiveMemories(
   const existing = loadArchive()
   const combined = [...newlyArchived, ...existing]
   const truncated = combined.length > MAX_ARCHIVED
-  const merged = combined.slice(0, MAX_ARCHIVED)
+  const merged = sortDedupeAndCap(combined)
   saveArchive(merged)
   if (truncated) {
     console.warn(`[coldArchive] Archive truncated: ${combined.length} → ${MAX_ARCHIVED} (dropped ${combined.length - MAX_ARCHIVED} oldest)`)
@@ -110,10 +186,11 @@ export function archiveMemories(
  */
 export function searchArchive(query: string, limit = 10): ArchivedMemory[] {
   const archive = loadArchive()
-  const q = query.toLowerCase()
+  const q = query.trim().toLowerCase()
+  if (!q || !Number.isFinite(limit) || limit <= 0) return []
   return archive
     .filter((m) => m.content.toLowerCase().includes(q))
-    .slice(0, limit)
+    .slice(0, Math.floor(limit))
 }
 
 /**

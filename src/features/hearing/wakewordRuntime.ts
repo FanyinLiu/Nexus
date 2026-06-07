@@ -547,14 +547,22 @@ export function createWakewordRuntime(
     },
     stop() {
       generation += 1
+      config = normalizeWakewordRuntimeConfig({
+        enabled: false,
+        wakeWord: '',
+        suspended: false,
+        suspendReason: '',
+      })
       clearRetryTimer()
       clearCooldownTimer()
       micReleased = false
       stopListener()
       emitState({
+        ...buildBaseStatePatch(config),
         phase: 'disabled',
         active: false,
         available: false,
+        modelKind: null,
         reason: '',
         error: '',
         retryCount: 0,

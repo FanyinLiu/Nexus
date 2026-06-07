@@ -5,6 +5,7 @@ import {
   extractLikelyWeatherLocation,
   extractSearchQuery,
 } from '../src/features/tools/extractors.ts'
+import { executeBuiltInToolByName } from '../src/features/tools/builtInToolExecutor.ts'
 import { resolveBuiltInToolPermissionLevel } from '../src/features/tools/permissions.ts'
 import { executeBuiltInTool } from '../src/features/tools/registry.ts'
 
@@ -79,4 +80,58 @@ test('registry forwards structured search rewrite fields into desktop search pay
   assert.deepEqual(captured[0]?.strictTerms, ['小米', 'su7'])
   assert.deepEqual(captured[0]?.phraseTerms, ['小米 SU7'])
   assert.deepEqual(captured[0]?.softTerms, ['小米', 'su7', '官网', 'official', '官方网站'])
+})
+
+test('built-in web_search clamps model-supplied result limits before IPC', async () => {
+  const captured: Array<Record<string, unknown>> = []
+  globalThis.window = {
+    desktopPet: {
+      searchWeb: async (payload: Record<string, unknown>) => {
+        captured.push(payload)
+        return {
+          query: String(payload.query ?? ''),
+          items: [],
+          message: 'ok',
+        }
+      },
+    },
+  } as typeof globalThis.window
+
+  const response = await executeBuiltInToolByName(
+    'web_search',
+    JSON.stringify({ query: 'nexus desktop', limit: 10_000 }),
+    { toolWebSearchEnabled: true },
+  )
+
+  assert.equal(captured[0]?.limit, 20)
+  assert.match(response, /"tool":"web_search"/)
+})
+
+test('built-in open_external rejects private and reserved URL targets before IPC', async () => {
+  const opened: string[] = []
+  globalThis.window = {
+    desktopPet: {
+      openExternalLink: async (payload: { url: string }) => {
+        opened.push(payload.url)
+        return { ok: true, url: payload.url, message: 'opened' }
+      },
+    },
+  } as typeof globalThis.window
+
+  for (const url of [
+    'http://127.0.0.1:11434',
+    'http://100.64.0.1',
+    'http://198.18.0.1',
+    'http://203.0.113.10',
+    'http://224.0.0.1',
+  ]) {
+    const response = await executeBuiltInToolByName(
+      'open_external',
+      JSON.stringify({ url }),
+      { toolOpenExternalEnabled: true, toolOpenExternalRequiresConfirmation: false },
+    )
+    assert.match(response, /private or reserved IP addresses/, url)
+  }
+
+  assert.deepEqual(opened, [])
 })

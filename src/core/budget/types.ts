@@ -1,4 +1,4 @@
-import type { ModelTier, ProviderId } from '../routing/types'
+import type { ModelTier, ProviderId } from '../routing/types.ts'
 
 export type UsagePricing = {
   providerId: ProviderId

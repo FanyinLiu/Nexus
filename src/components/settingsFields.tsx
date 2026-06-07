@@ -101,24 +101,3 @@ export function TextField({ label, field, placeholder, type = 'text', draft, set
   )
 }
 
-// ── Textarea (multi-line input) ─────────────────────────────────────────────
-
-type TextareaFieldProps = FieldShared & {
-  field: StringFieldKey
-  rows?: number
-  placeholder?: string
-}
-
-export function TextareaField({ label, field, rows = 4, placeholder, draft, setDraft }: TextareaFieldProps) {
-  return (
-    <label>
-      <span>{label}</span>
-      <textarea
-        rows={rows}
-        value={draft[field] as string}
-        placeholder={placeholder}
-        onChange={(e) => setDraft((prev) => ({ ...prev, [field]: e.target.value }))}
-      />
-    </label>
-  )
-}

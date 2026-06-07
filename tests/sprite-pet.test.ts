@@ -239,11 +239,11 @@ test('portable sprite runtime resolves atlas coordinates for any renderer', () =
   assert.equal(renderFrame.backgroundSize, '800% 900%')
 })
 
-test('sprite runtime initial cursor plays the clean-room hello animation', () => {
+test('sprite runtime initial cursor starts from the Codex-compatible idle pose', () => {
   assert.deepEqual(SPRITE_PET_INITIAL_CURSOR, {
-    state: 'waving',
+    state: 'idle',
     frameIndex: 0,
-    loopsRemaining: 3,
+    loopsRemaining: 0,
     requestKey: 'initial',
   })
 })
@@ -354,5 +354,13 @@ test('discovered bundled sprite packages merge without duplicating built-in pres
   const presets = getPetModelPresets([discoveredDefault, discoveredExtra])
 
   assert.equal(presets.filter((preset) => preset.id === DEFAULT_PET_MODEL_ID).length, 1)
+  assert.equal(
+    presets.find((preset) => preset.id === DEFAULT_PET_MODEL_ID)?.spriteAtlas?.stageMaxSize,
+    '126px',
+  )
   assert.equal(presets.some((preset) => preset.id === 'sprite-extra'), true)
+  assert.equal(
+    presets.find((preset) => preset.id === 'qiyi')?.spriteAtlas?.imageRendering,
+    'auto',
+  )
 })

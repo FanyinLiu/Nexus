@@ -99,6 +99,39 @@ test('fetchCodexPetGalleryCatalog uses the caller-provided fetcher for all commu
   assert.equal(catalog.pets[0].slug, 'fleta')
 })
 
+test('fetchCodexPetGalleryCatalog reports the browsable pet count, not the sum of sites self-declared totals', async () => {
+  // Coding Pets self-declares 29 pets ("29/29") but only ships one importable
+  // card here. The merged totalCount must reflect what the user can actually
+  // reach (1), not the unreachable 29.
+  const codingPetsHtml = `
+    <main>
+      <span>29/29</span>
+      <article aria-label="View Bytecap">
+        <h3>
+          <a href="/pets/bytecap-wes" aria-label="View Bytecap Codex pet page">
+            Bytecap<span class="sr-only"> Codex pet page</span>
+          </a>
+        </h3>
+        <p class="pet-description">A tiny mushroom cap pet with a keyboard-key face.</p>
+        <a href="https://precious-ptarmigan-848.convex.cloud/api/storage/zip-bytecap" aria-label="Download Bytecap ZIP">
+          <span>Download ZIP</span>
+        </a>
+      </article>
+    </main>
+  `
+  const fixtures = new Map([
+    [CODING_PETS_GALLERY_HOME_URL, codingPetsHtml],
+    [OPENPETS_CATALOG_URL, '{"pets":[]}'],
+  ])
+  const catalog = await fetchCodexPetGalleryCatalog({
+    limit: 10,
+    fetchText: async (url: string) => fixtures.get(url) ?? '',
+  })
+
+  assert.equal(catalog.pets.length, 1)
+  assert.equal(catalog.totalCount, 1)
+})
+
 test('parses Coding Pets ZIP gallery cards into importable catalog items', () => {
   const catalog = parseCodingPetsCatalog(`
     <main>

@@ -21,6 +21,10 @@ export type VoiceResumeSnapshot = {
 
 type Listener = (snapshot: VoiceResumeSnapshot | null) => void
 
+function cloneSnapshot(snapshot: VoiceResumeSnapshot): VoiceResumeSnapshot {
+  return { ...snapshot }
+}
+
 class VoiceResumeStoreImpl {
   private originalText = ''
   private playedChars = 0
@@ -30,6 +34,7 @@ class VoiceResumeStoreImpl {
   setActiveText(text: string): void {
     this.originalText = text ?? ''
     this.playedChars = 0
+    if (this.pending) this.setPending(null)
   }
 
   recordChunkPlayed(chunkText: string): void {
@@ -70,11 +75,11 @@ class VoiceResumeStoreImpl {
   popPendingResume(): VoiceResumeSnapshot | null {
     const snapshot = this.pending
     if (snapshot) this.setPending(null)
-    return snapshot
+    return snapshot ? cloneSnapshot(snapshot) : null
   }
 
   peekPendingResume(): VoiceResumeSnapshot | null {
-    return this.pending
+    return this.pending ? cloneSnapshot(this.pending) : null
   }
 
   clear(): void {
@@ -85,17 +90,17 @@ class VoiceResumeStoreImpl {
 
   subscribe(listener: Listener): () => void {
     this.listeners.add(listener)
-    listener(this.pending)
+    listener(this.pending ? cloneSnapshot(this.pending) : null)
     return () => {
       this.listeners.delete(listener)
     }
   }
 
   private setPending(next: VoiceResumeSnapshot | null): void {
-    this.pending = next
+    this.pending = next ? cloneSnapshot(next) : null
     for (const listener of this.listeners) {
       try {
-        listener(next)
+        listener(this.pending ? cloneSnapshot(this.pending) : null)
       } catch {
         // listener errors must not break the store
       }

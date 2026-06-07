@@ -33,18 +33,25 @@ function hasSecretValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0
 }
 
+function normalizeString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
 export function resolveProviderConnectionRequest(
   provider: ApiProviderPreset,
   settings: ModelConnectionSettings,
 ): ChatModelListRequest {
   const profile = settings.textProviderProfiles[provider.id]
   const current = provider.id === settings.apiProviderId
+  const baseUrl = current ? settings.apiBaseUrl : profile?.apiBaseUrl
+  const apiKey = current ? settings.apiKey : profile?.apiKey
+  const model = current ? settings.model : profile?.model
 
   return {
     providerId: provider.id,
-    baseUrl: current ? settings.apiBaseUrl : profile?.apiBaseUrl || provider.baseUrl,
-    apiKey: current ? settings.apiKey : profile?.apiKey || '',
-    model: current ? settings.model : profile?.model || provider.defaultModel,
+    baseUrl: normalizeString(baseUrl) || provider.baseUrl,
+    apiKey: normalizeString(apiKey),
+    model: normalizeString(model) || provider.defaultModel,
   }
 }
 

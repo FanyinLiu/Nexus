@@ -94,7 +94,18 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
     try {
       const desktopPet = window.desktopPet
       if (!desktopPet?.personaLoadProfile) return
-      personaRef.current = await desktopPet.personaLoadProfile(DEFAULT_PROFILE_ID)
+      // Load the persona for the user's active character profile (set when a
+      // Character Card is imported or a profile is switched). Empty id falls
+      // back to the default. If the active profile has no persona files on
+      // disk (e.g. a chat-only profile), fall back to the default so the
+      // engine keeps real soul/examples content instead of an empty persona.
+      const activeId = opts.settingsRef.current?.activeCharacterProfileId?.trim()
+      const profileId = activeId || DEFAULT_PROFILE_ID
+      let loaded = await desktopPet.personaLoadProfile(profileId)
+      if (!loaded?.present && profileId !== DEFAULT_PROFILE_ID) {
+        loaded = await desktopPet.personaLoadProfile(DEFAULT_PROFILE_ID)
+      }
+      personaRef.current = loaded
     } catch (error) {
       personaRef.current = null
       opts.onDebugEvent?.({

@@ -8,16 +8,24 @@
 // back to the model so it can narrate the outcome.
 
 import type { AppSettings } from '../../types'
-import { isBuiltInToolName, type BuiltInToolName } from './builtInToolSchemas'
-import { runPostToolHooks, runPreToolHooks } from './hooks'
-import { confirmBuiltInToolExecution, resolveBuiltInToolPolicy } from './permissions'
-import { executeBuiltInTool, isBuiltInToolAvailable } from './registry'
+import { isBuiltInToolName, type BuiltInToolName } from './builtInToolSchemas.ts'
+import { runPostToolHooks, runPreToolHooks } from './hooks.ts'
+import { confirmBuiltInToolExecution, resolveBuiltInToolPolicy } from './permissions.ts'
+import { executeBuiltInTool, isBuiltInToolAvailable } from './registry.ts'
 import type { BuiltInToolResult, MatchedBuiltInTool } from './toolTypes'
 
 export { isBuiltInToolName }
 export type { BuiltInToolName }
 
 const DEFAULT_WEB_SEARCH_LIMIT = 5
+const MAX_WEB_SEARCH_LIMIT = 20
+const BLOCKED_PRIVATE_HOSTS = new Set([
+  'localhost',
+  '0.0.0.0',
+  'metadata',
+  'metadata.google.internal',
+  'metadata.azure.com',
+])
 
 /**
  * Check whether a URL points to a private/reserved IP range that should
@@ -33,26 +41,40 @@ function isPrivateUrl(url: string): boolean {
 
   const hostname = parsed.hostname.toLowerCase()
 
-  // IPv6 loopback
-  if (hostname === '[::1]' || hostname === '::1') return true
-
-  // Well-known private hostnames
-  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') return true
-
   // Strip surrounding brackets for IPv6
   const bare = hostname.startsWith('[') ? hostname.slice(1, -1) : hostname
+  const host = bare.split('%')[0]
+
+  if (!host) return true
+
+  // Well-known local / cloud metadata hostnames.
+  if (BLOCKED_PRIVATE_HOSTS.has(host)) return true
 
   // Check IPv4 private/reserved ranges
-  const ipv4Match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(bare)
+  const ipv4Match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host)
   if (ipv4Match) {
-    const [, a, b] = ipv4Match.map(Number)
+    const [, a, b, c, d] = ipv4Match.map(Number)
+    if ([a, b, c, d].some((part) => part < 0 || part > 255)) return true
     if (a === 10) return true                                     // 10.0.0.0/8
+    if (a === 100 && b >= 64 && b <= 127) return true             // 100.64.0.0/10
     if (a === 172 && b >= 16 && b <= 31) return true              // 172.16.0.0/12
     if (a === 192 && b === 168) return true                       // 192.168.0.0/16
+    if (a === 192 && b === 0 && (c === 0 || c === 2)) return true  // special-use / docs
+    if (a === 198 && (b === 18 || b === 19)) return true          // benchmark
+    if (a === 198 && b === 51 && c === 100) return true           // documentation
+    if (a === 203 && b === 0 && c === 113) return true            // documentation
+    if (a >= 224) return true                                     // multicast/reserved
     if (a === 169 && b === 254) return true                       // 169.254.0.0/16 (link-local / AWS metadata)
     if (a === 127) return true                                    // 127.0.0.0/8
     if (a === 0) return true                                      // 0.0.0.0/8
   }
+
+  if (host.startsWith('::ffff:')) return true
+
+  // IPv6 loopback, unique-local fc00::/7, and link-local fe80::/10.
+  if (host === '::1') return true
+  if (/^f[cd][0-9a-f:]/iu.test(host)) return true
+  if (/^fe[89ab][0-9a-f:]/iu.test(host)) return true
 
   return false
 }
@@ -79,6 +101,13 @@ function parseArgs(raw: string): Record<string, unknown> {
   }
 }
 
+function normalizeWebSearchLimit(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return DEFAULT_WEB_SEARCH_LIMIT
+  }
+  return Math.min(Math.floor(value), MAX_WEB_SEARCH_LIMIT)
+}
+
 function buildMatchedTool(
   name: BuiltInToolName,
   rawArgs: string,
@@ -91,7 +120,7 @@ function buildMatchedTool(
     if (!query) {
       return { error: 'web_search requires a non-empty `query` string argument.' }
     }
-    const limit = typeof args.limit === 'number' && args.limit > 0 ? Math.floor(args.limit) : DEFAULT_WEB_SEARCH_LIMIT
+    const limit = normalizeWebSearchLimit(args.limit)
     return {
       tool: {
         id: 'web_search',

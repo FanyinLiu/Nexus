@@ -33,7 +33,6 @@ import type {
   ReminderTask,
   RuntimeStateSnapshot,
 } from '../../types'
-import { setRuntimeSnapshot as persistRuntimeSnapshot } from '../store/runtimeStore'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
 
 const DEFAULT_RUNTIME_SNAPSHOT: RuntimeStateSnapshot = {
@@ -407,7 +406,6 @@ export function useDesktopBridge({
     const setMood = pet.setMood
     const applyRuntimeState = (state: RuntimeStateSnapshot) => {
       setRuntimeSnapshotState(state)
-      persistRuntimeSnapshot(state)
 
       if (state.mood) {
         setMood(state.mood)

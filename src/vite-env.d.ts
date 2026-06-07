@@ -308,7 +308,7 @@ declare global {
       saveTextFile: (payload: TextFileSaveRequest) => Promise<TextFileSaveResponse>
       openTextFile: (payload: TextFileOpenRequest) => Promise<TextFileOpenResponse>
       searchWeb: (payload: WebSearchRequest) => Promise<WebSearchResponse>
-      getWeather: (payload: WeatherLookupRequest) => Promise<WeatherLookupResponse>
+      getWeather: (payload: WeatherLookupRequest) => Promise<WeatherLookupResponse | null>
       openExternalLink: (payload: ExternalLinkRequest) => Promise<ExternalLinkResponse>
       completeChat: (payload: ChatCompletionRequest) => Promise<ChatCompletionResponse>
       completeChatStream: (
@@ -398,6 +398,23 @@ declare global {
       pluginDir: () => Promise<string>
       pluginApprove: (payload: { id: string }) => Promise<PluginStatus | null>
       pluginRevoke: (payload: { id: string }) => Promise<PluginStatus | null>
+
+      // Plugin Message Bus
+      pluginBusPublish: (payload: { serverId: string; topic: string; data?: unknown }) => Promise<{ delivered: number }>
+      pluginBusSubscribe: (payload: { serverId: string; topic: string }) => Promise<{ accepted: boolean }>
+      pluginBusUnsubscribe: (payload: { serverId: string; topic: string }) => Promise<void>
+      pluginBusSubscriptions: () => Promise<Record<string, string[]>>
+      pluginBusRecent: (payload?: { limit?: number }) => Promise<Array<{
+        topic: string
+        payload: unknown
+        from: string
+        timestamp: string
+      }>>
+      pluginBusStats: () => Promise<{
+        topicCount: number
+        totalSubscriptions: number
+        recentMessageCount: number
+      }>
 
       // Memory Vector Store
       memoryVectorIndex: (payload: {
@@ -597,14 +614,6 @@ declare global {
       paraformerFinish: () => Promise<{ text: string }>
       paraformerAbort: () => Promise<{ ok: boolean }>
 
-      // Sherpa-onnx streaming ASR
-      sherpaStatus: () => Promise<{ installed: boolean; modelFound: boolean; modelsDir: string }>
-      sherpaStart: (payload?: { modelId?: string }) => Promise<{ ok: boolean; sampleRate: number }>
-      sherpaFeed: (
-        payload: { samples: number[] | Float32Array; sampleRate?: number },
-      ) => Promise<{ partial: string | null; endpoint: string | null }>
-      sherpaFinish: () => Promise<{ text: string }>
-      sherpaAbort: () => Promise<{ ok: boolean }>
       kwsStatus: (payload?: { wakeWord?: string }) => Promise<{
         installed: boolean
         modelFound: boolean

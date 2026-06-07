@@ -15,10 +15,10 @@ import type {
   LorebookEntry,
   MemoryRecallContext,
 } from '../../types'
-import { buildLorebookSection } from './lorebookInjection'
+import { buildLorebookSection } from './lorebookInjection.ts'
 import { getApiProviderPreset } from '../models/index.ts'
-import { formatDesktopContext } from '../context/desktopContext'
-import { formatNarrativeForPrompt } from '../memory/narrativeMemory'
+import { formatDesktopContext } from '../context/desktopContext.ts'
+import { formatNarrativeForPrompt } from '../memory/narrativeMemory.ts'
 import { getChatPromptStrings } from './prompts/index.ts'
 import type { BuiltInToolResult } from '../tools/toolTypes'
 import {
@@ -28,14 +28,14 @@ import {
   getMessageText,
   getModelTokenBudget,
   summarizeOlderMessages,
-} from './contextCompaction'
-import { buildHotTierMemorySections, buildSemanticMemorySection } from './memoryInjection'
-import { buildPromptModeInstructions } from './promptModeMcp'
+} from './contextCompaction.ts'
+import { buildHotTierMemorySections, buildSemanticMemorySection } from './memoryInjection.ts'
+import { buildPromptModeInstructions } from './promptModeMcp.ts'
 import {
   buildToolDefinitions,
   selectRelevantTools,
   type McpToolDescriptor,
-} from './toolCallLoop'
+} from './toolCallLoop.ts'
 
 /**
  * Tool delivery mode policy:

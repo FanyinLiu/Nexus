@@ -22,13 +22,15 @@ import {
   SunlightTint,
   WeatherAmbient,
 } from '../../features/panelScene'
-import { CrisisHotlinePanel } from '../../features/safety/CrisisHotlinePanel'
+import { CrisisHotlinePanel, useCrisisPanelState } from '../../features/safety'
+import type { CrisisSignal } from '../../features/safety'
 import { useAmbientWeather } from '../../hooks/useAmbientWeather'
 import { shorten } from '../../lib'
 import { modelSupportsVision } from '../../lib/modelCapabilities'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import { PetControlIcon, type PetControlIconName } from '../../components/PetControlIcon'
 import type { UseAppControllerResult } from '../controllers/useAppController'
+import type { NotificationMessage } from '../../types'
 
 // Maximum number of messages rendered at once. Older messages are hidden
 // behind a "load earlier" button to keep the DOM lean on long conversations.
@@ -37,6 +39,15 @@ const MESSAGE_PAGE_SIZE = 100
 type PanelViewProps = UseAppControllerResult['panelView'] & {
   settingsDrawer: ReactNode
   onboardingGuide: ReactNode
+  replyToTelegram?: (text: string, conversationId?: number | string, messageId?: number | string) => Promise<void> | void
+  replyToDiscord?: (text: string, conversationId?: string, messageId?: string) => Promise<void> | void
+}
+
+type NotificationReplyTarget = {
+  source: 'telegram' | 'discord'
+  conversationId?: string
+  messageId?: string
+  notificationMessageId: string
 }
 
 type PanelToolbarButtonProps = {
@@ -68,17 +79,23 @@ export function PanelView({
   chat,
   runtimeSnapshot,
   petRuntimeContinuousVoiceActive,
+  notificationBridge,
   panelCollapsed,
   openSettingsPanel,
   togglePanelCollapse,
   closePanel,
   settingsDrawer,
   onboardingGuide,
+  replyToTelegram,
+  replyToDiscord,
 }: PanelViewProps) {
   const messageListRef = useRef<HTMLDivElement | null>(null)
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const lastCrisisSignalRef = useRef<CrisisSignal | null>(null)
   const [showAllMessages, setShowAllMessages] = useState(false)
+  const [activeNotificationReply, setActiveNotificationReply] = useState<NotificationReplyTarget | null>(null)
+  const crisisSignal = useCrisisPanelState()
 
   const ti = (
     key: Parameters<typeof pickTranslatedUiText>[1],
@@ -176,9 +193,184 @@ export function PanelView({
       ? assistantActivityLabel
       : nextSchedulerStatusLabel
         ? nextSchedulerStatusLabel
-        : pet.ambientPresence?.text
-          ? shorten(pet.ambientPresence.text, 64)
-          : ti(characterPreset.motionLabel)
+    : pet.ambientPresence?.text
+      ? shorten(pet.ambientPresence.text, 64)
+      : ti(characterPreset.motionLabel)
+
+  const unreadNotifications = useMemo(() => {
+    if (!notificationBridge) return []
+    return [...notificationBridge.messages]
+      .filter((message) => !message.read && !message.snoozedUntil)
+      .slice(0, 3)
+  }, [notificationBridge])
+
+  const pendingNotificationCount = unreadNotifications.length
+  const unreadNotificationCountLabel = ti('panel.notification.unread_count', {
+    count: pendingNotificationCount,
+  })
+  const collapsedUnreadLabel = pendingNotificationCount > 0
+    ? `${unreadNotificationCountLabel} · ${ti('panel.notification.compact_label')}`
+    : null
+
+  const hasUnreadNotifications = pendingNotificationCount > 0
+
+  function getNotificationSummary(message: NotificationMessage): string {
+    const rawSummary = message.summary || message.body || ''
+    return shorten(rawSummary || ti('panel.notification.no_preview'), 120)
+  }
+
+  function formatNotificationPriority(message: NotificationMessage): string {
+    if (message.importance === 'critical' || message.isImportant) return '!!!'
+    if (message.importance === 'high') return '!!'
+    return ''
+  }
+
+  function formatNotificationTime(timestamp: string): string {
+    const date = new Date(timestamp)
+    if (Number.isNaN(date.valueOf())) return ''
+    return date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  async function handleMarkAllRead() {
+    await notificationBridge?.markAllRead()
+  }
+
+  async function handleClearNotifications() {
+    await notificationBridge?.clearMessages()
+  }
+
+  function handleMarkNotificationRead(messageId: string) {
+    notificationBridge?.markRead(messageId)
+  }
+
+  function getNotificationSourceLabel(message: NotificationMessage): string {
+    if (message.sender) {
+      return `${message.sender} · ${message.sourceName || message.channelName || message.title || message.sourceId || ''}`.trim()
+    }
+    return message.sourceName || message.channelName || message.title || 'Unknown source'
+  }
+
+  function getNotificationReplySource(message: NotificationMessage): 'telegram' | 'discord' | null {
+    const raw = (message.sourceId || message.sourceName || '').trim().toLowerCase()
+    if (raw === 'telegram') return 'telegram'
+    if (raw === 'discord') return 'discord'
+    if (raw === 'tg') return 'telegram'
+    return null
+  }
+
+  function canReplyToNotification(message: NotificationMessage) {
+    if (message.kind !== 'message') {
+      return false
+    }
+
+    const source = getNotificationReplySource(message)
+    if (source === 'telegram') {
+      return Boolean(replyToTelegram)
+    }
+    if (source === 'discord') {
+      return Boolean(replyToDiscord)
+    }
+    return false
+  }
+
+  async function handleSendNotificationReply(message: NotificationReplyTarget, text: string) {
+    const trimmed = text.trim()
+    if (!trimmed) {
+      return
+    }
+
+    const source = message.source
+    if (source === 'telegram' && replyToTelegram) {
+      await replyToTelegram(trimmed, message.conversationId ?? undefined, message.messageId ?? undefined)
+      handleMarkNotificationRead(message.notificationMessageId)
+      setActiveNotificationReply(null)
+      chat.setInput('')
+      return
+    }
+    if (source === 'discord' && replyToDiscord) {
+      await replyToDiscord(trimmed, message.conversationId ?? undefined, message.messageId ?? undefined)
+      handleMarkNotificationRead(message.notificationMessageId)
+      setActiveNotificationReply(null)
+      chat.setInput('')
+      return
+    }
+
+    chat.setError(ti('panel.notification.reply_not_supported'))
+  }
+
+  function handleReplyToNotification(message: NotificationMessage) {
+    const source = getNotificationReplySource(message)
+    if (!source) return
+
+    const conversationId = message.conversationId?.trim() || undefined
+    const messageId = message.messageId?.trim() || undefined
+    setActiveNotificationReply({
+      source,
+      conversationId,
+      messageId,
+      notificationMessageId: message.id,
+    })
+
+    const sourceName = getNotificationSourceLabel(message)
+    const mention = sourceName
+      ? `${ti('panel.notification.reply_to', { source: sourceName })}：`
+      : ti('panel.notification.reply')
+    chat.setInput(`${mention} `)
+
+    window.requestAnimationFrame(() => {
+      const composer = composerTextareaRef.current
+      if (!composer) {
+        return
+      }
+      composer.focus()
+      const cursorPosition = composer.value.length
+      composer.setSelectionRange(cursorPosition, cursorPosition)
+    })
+  }
+
+  function handleCancelNotificationReply() {
+    setActiveNotificationReply(null)
+  }
+
+  function handleNotificationDraft(message: NotificationMessage) {
+    const sourceName = getNotificationSourceLabel(message)
+    const summary = getNotificationSummary(message)
+    chat.setInput(`${ti('panel.notification.draft_reply', { source: sourceName })}${summary}`)
+
+    window.requestAnimationFrame(() => {
+      const composer = composerTextareaRef.current
+      if (!composer) {
+        return
+      }
+      composer.focus()
+      const cursorPosition = composer.value.length
+      composer.setSelectionRange(cursorPosition, cursorPosition)
+    })
+  }
+
+  function handleMarkImportant(messageId: string) {
+    notificationBridge?.markImportant?.(messageId)
+  }
+
+  function handleSnoozeNotification(messageId: string, delayMinutes: number) {
+    notificationBridge?.snoozeMessage?.(messageId, delayMinutes)
+    notificationBridge?.markRead(messageId)
+  }
+
+  function isNotificationReplying() {
+    return activeNotificationReply !== null
+  }
+
+  function getNotificationTitle(message: { sender?: string; channelName: string; title: string }): string {
+    if (message.sender) {
+      return `${message.sender} · ${message.title}`
+    }
+
+    return message.title || message.channelName
+  }
   const panelQuickPrompts = useMemo(() => ([
     {
       label: memory.memories[0]?.content
@@ -218,8 +410,28 @@ export function PanelView({
   )
   const sendButtonLabel = chat.busy
     ? ti('panel.composer.send_busy', { companionName: settings.companionName })
-    : ti('panel.composer.send_message')
+    : isNotificationReplying()
+      ? ti('panel.notification.send_reply')
+      : ti('panel.composer.send_message')
+  const notificationReplyHintLabel = activeNotificationReply
+    ? ti('panel.notification.replying_to')
+    : null
   const composerPlaceholder = ti('panel.composer.placeholder', { companionName: settings.companionName })
+
+  const hasNotificationReply = isNotificationReplying() && Boolean(activeNotificationReply)
+  const canSendNotificationReply = hasNotificationReply
+    && !chat.busy
+    && Boolean(chat.input.trim())
+    && !chat.pendingImage
+
+  async function handleComposerSend() {
+    if (hasNotificationReply && activeNotificationReply) {
+      await handleSendNotificationReply(activeNotificationReply, chat.input)
+      return
+    }
+
+    await chat.sendMessage()
+  }
 
   function handleApplyQuickPrompt(prompt: string) {
     chat.setInput(prompt)
@@ -244,7 +456,7 @@ export function PanelView({
     }
 
     event.preventDefault()
-    void chat.sendMessage()
+    void handleComposerSend()
   }
 
   // ── Image attach helpers ────────────────────────────────────────────────
@@ -343,7 +555,14 @@ export function PanelView({
   }
 
   useEffect(() => {
-    if (visibleMessages.length === 0) {
+    const crisisBecameVisible = Boolean(crisisSignal && lastCrisisSignalRef.current !== crisisSignal)
+    lastCrisisSignalRef.current = crisisSignal
+
+    if (crisisSignal && !crisisBecameVisible) {
+      return undefined
+    }
+
+    if (visibleMessages.length === 0 && !crisisBecameVisible) {
       return undefined
     }
 
@@ -354,13 +573,13 @@ export function PanelView({
       }
 
       messageList.scrollTo({
-        top: messageList.scrollHeight,
-        behavior: 'smooth',
+        top: crisisBecameVisible ? 0 : messageList.scrollHeight,
+        behavior: crisisBecameVisible ? 'auto' : 'smooth',
       })
     })
 
     return () => window.cancelAnimationFrame(frameId)
-  }, [visibleMessages])
+  }, [crisisSignal, visibleMessages])
 
   // Destructure stable refs so the deps array doesn't need the parent `chat`
   // object, which would force the effect to re-run on every chat update.
@@ -371,8 +590,10 @@ export function PanelView({
     }
   }, [visionEnabled, pendingImage, setPendingImage])
 
+  const hasModalOverlay = Boolean(settingsDrawer) || Boolean(onboardingGuide)
+
   return (
-    <div className={`desktop-pet-root desktop-pet-root--panel ${characterPreset.themeClassName} ${panelCollapsed ? 'desktop-pet-root--panel-collapsed' : ''}`}>
+    <div className={`desktop-pet-root desktop-pet-root--panel ${characterPreset.themeClassName} ${panelCollapsed ? 'desktop-pet-root--panel-collapsed' : ''} ${hasModalOverlay ? 'desktop-pet-root--panel-modal-open' : ''}`}>
       <div className="panel-scene-layer" aria-hidden="true">
         <SunlightTint timePreview={settings.petTimePreview}>
           <SceneBackdrop location={panelSceneLocation} timeBand={timeBand} timeBlend={timeBlend} />
@@ -380,7 +601,11 @@ export function PanelView({
         </SunlightTint>
         <div className="panel-scene-layer__veil" />
       </div>
-      <section className={`panel-window panel-window--simple panel-window--companion ${panelCollapsed ? 'is-collapsed' : ''}`}>
+      <section
+        className={`panel-window panel-window--simple panel-window--companion ${panelCollapsed ? 'is-collapsed' : ''}`}
+        aria-hidden={hasModalOverlay ? true : undefined}
+        inert={hasModalOverlay ? true : undefined}
+      >
         {panelCollapsed ? (
           <>
             <div className="panel-window__simple-header">
@@ -411,9 +636,9 @@ export function PanelView({
               </div>
             </div>
 
-            <div className="panel-window__collapsed-bar">
+              <div className="panel-window__collapsed-bar">
               <span>{ti('panel.collapsed.session_count', { count: chatMessageCount })}</span>
-              <span>{chat.error ? shorten(chat.error, 26) : liveStatusLine}</span>
+              <span>{chat.error ? shorten(chat.error, 26) : collapsedUnreadLabel ?? liveStatusLine}</span>
             </div>
           </>
         ) : (
@@ -458,6 +683,106 @@ export function PanelView({
                 />
               </div>
             </div>
+
+            {notificationBridge ? (
+              <section className="panel-notification-summary" aria-live="polite">
+                <div className="panel-notification-summary__header">
+                  <div>
+                    <p className="panel-notification-summary__title">
+                      {ti('panel.notification.title')}
+                    </p>
+                    <p className="panel-notification-summary__hint">
+                      {hasUnreadNotifications ? unreadNotificationCountLabel : ti('panel.notification.none')}
+                    </p>
+                  </div>
+                  <div className="panel-notification-summary__actions">
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      onClick={handleMarkAllRead}
+                      disabled={!hasUnreadNotifications}
+                    >
+                      {ti('panel.notification.mark_all_read')}
+                    </button>
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      onClick={handleClearNotifications}
+                      disabled={!notificationBridge.messages.length}
+                    >
+                      {ti('panel.notification.clear')}
+                    </button>
+                  </div>
+                </div>
+
+                {hasUnreadNotifications ? (
+                  <ul className="panel-notification-summary__list">
+                    {unreadNotifications.map((message) => (
+                      <li key={message.id} className="panel-notification-summary__item">
+                        <p className="panel-notification-summary__item-title">
+                          <span className="panel-notification-summary__item-priority">{formatNotificationPriority(message)}</span>
+                          <strong>{getNotificationTitle(message)}</strong>
+                          <small>{formatNotificationTime(message.receivedAt)}</small>
+                        </p>
+                        <p className="panel-notification-summary__item-body">
+                          {getNotificationSummary(message)}
+                        </p>
+                        <div className="panel-notification-summary__item-actions">
+                          <button
+                            type="button"
+                            className="ghost-button ghost-button--compact"
+                            onClick={() => handleNotificationDraft(message)}
+                          >
+                            {ti('panel.notification.draft_reply')}
+                          </button>
+                          <button
+                            type="button"
+                            className="ghost-button ghost-button--compact"
+                            onClick={() => handleMarkImportant(message.id)}
+                          >
+                            {message.isImportant ? ti('panel.notification.unmark_important') : ti('panel.notification.mark_important')}
+                          </button>
+                          <button
+                            type="button"
+                            className="ghost-button ghost-button--compact"
+                            onClick={() => handleSnoozeNotification(message.id, 10)}
+                            title={ti('panel.notification.snooze_10m')}
+                          >
+                            {ti('panel.notification.snooze_10m')}
+                          </button>
+                          <button
+                            type="button"
+                            className="ghost-button ghost-button--compact"
+                            onClick={() => handleSnoozeNotification(message.id, 30)}
+                            title={ti('panel.notification.snooze_30m')}
+                          >
+                            {ti('panel.notification.snooze_30m')}
+                          </button>
+                          {canReplyToNotification(message) ? (
+                            <button
+                              type="button"
+                              className="ghost-button ghost-button--compact"
+                              onClick={() => handleReplyToNotification(message)}
+                            >
+                              {ti('panel.notification.reply')}
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            className="ghost-button ghost-button--compact"
+                            onClick={() => handleMarkNotificationRead(message.id)}
+                          >
+                            {ti('panel.notification.mark_read')}
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="panel-notification-summary__empty">{ti('panel.notification.summary_empty')}</p>
+                )}
+              </section>
+            ) : null}
 
             <ActivePlanStrip />
 
@@ -576,6 +901,18 @@ export function PanelView({
 
                 <div className="companion-chat__composer-meta">
                   <div className="composer__hint">
+                    {activeNotificationReply ? (
+                      <span className="composer__hint-note">
+                        {notificationReplyHintLabel}
+                        <button
+                          type="button"
+                          className="ghost-button ghost-button--compact composer__hint-action"
+                          onClick={handleCancelNotificationReply}
+                        >
+                          {ti('common.cancel')}
+                        </button>
+                      </span>
+                    ) : null}
                     {ti('panel.composer.enter_hint')}
                   </div>
                 </div>
@@ -607,13 +944,19 @@ export function PanelView({
                   <button
                     className="primary-button"
                     type="button"
-                    onClick={() => void chat.sendMessage()}
-                    disabled={chat.busy || (!chat.input.trim() && !chat.pendingImage)}
+                    onClick={() => void handleComposerSend()}
+                    disabled={hasNotificationReply ? !canSendNotificationReply : (chat.busy || (!chat.input.trim() && !chat.pendingImage))}
                     aria-label={sendButtonLabel}
                     title={sendButtonLabel}
                   >
                     <PetControlIcon name="send" className="composer__action-icon" />
-                    <span>{chat.busy ? `${sendButtonLabel}...` : ti('panel.composer.send')}</span>
+                    <span>
+                      {chat.busy
+                        ? `${sendButtonLabel}...`
+                        : hasNotificationReply
+                          ? ti('panel.notification.send_reply')
+                          : ti('panel.composer.send')}
+                    </span>
                   </button>
                 </div>
               </div>

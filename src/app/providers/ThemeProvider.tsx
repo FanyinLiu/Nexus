@@ -57,6 +57,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   const value = useMemo<ThemeContextValue>(() => ({
     themeId,
+    previewTheme: (nextThemeId) => {
+      setThemeId(normalizeThemeId(nextThemeId))
+    },
     setTheme: (nextThemeId) => {
       const normalizedThemeId = normalizeThemeId(nextThemeId)
       setThemeId(normalizedThemeId)

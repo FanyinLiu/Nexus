@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolExecutor } from '../../tools/types'
+import type { ToolDefinition, ToolExecutor } from '../../tools/types.ts'
 
 export type TodoStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 

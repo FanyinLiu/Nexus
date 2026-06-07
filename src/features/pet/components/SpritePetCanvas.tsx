@@ -155,15 +155,24 @@ export function SpritePetCanvas({
   const resolvedImagePath = useMemo(() => resolveAssetPath(atlas.imagePath), [atlas.imagePath])
   const clampedSpeechLevel = Math.max(0, Math.min(1, speechLevel))
 
-  const style = {
+  const style: CSSProperties & Record<string, string> = {
     '--sprite-pet-aspect': renderFrame.aspectRatio,
     '--sprite-pet-gaze-x': `${Math.max(-1, Math.min(1, gazeTarget.x)) * 5}px`,
     '--sprite-pet-gaze-y': `${Math.max(-1, Math.min(1, gazeTarget.y)) * -4}px`,
     '--sprite-pet-speech-scale': String(1 + clampedSpeechLevel * 0.035),
+    '--sprite-pet-image-rendering': atlas.imageRendering ?? 'pixelated',
     backgroundImage: `url("${resolvedImagePath}")`,
     backgroundPosition: renderFrame.backgroundPosition,
     backgroundSize: renderFrame.backgroundSize,
-  } satisfies CSSProperties & Record<string, string>
+  }
+
+  if (atlas.stageSize) style['--sprite-pet-stage-size'] = atlas.stageSize
+  if (atlas.stageMinSize) style['--sprite-pet-stage-min-size'] = atlas.stageMinSize
+  if (atlas.stageMaxSize) style['--sprite-pet-stage-max-size'] = atlas.stageMaxSize
+  if (atlas.stageMarginBottom) style['--sprite-pet-stage-margin-bottom'] = atlas.stageMarginBottom
+  if (atlas.previewSize) style['--sprite-pet-preview-size'] = atlas.previewSize
+  if (atlas.previewMinSize) style['--sprite-pet-preview-min-size'] = atlas.previewMinSize
+  if (atlas.previewMaxSize) style['--sprite-pet-preview-max-size'] = atlas.previewMaxSize
 
   return (
     <div className={`sprite-pet-shell sprite-pet-shell--${placement}`}>

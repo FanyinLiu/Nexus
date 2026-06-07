@@ -447,6 +447,10 @@ export function useAppOverlays({
     },
     onRunAudioSmokeTest: async (draftSettings) => voice.runAudioSmokeTest(draftSettings),
     onClearDebugConsole: clearDebugConsoleEvents,
+    onOpenOnboardingGuide: () => {
+      setSettingsOpen(false)
+      setOnboardingOpen(true)
+    },
     platformProfile,
   }
 

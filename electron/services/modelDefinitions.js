@@ -65,7 +65,7 @@ export const MODEL_CATALOG = [
     kind: 'standalone',
     checkFile: 'silero_vad_v5.onnx',
     standalone: {
-      // Downloads land under sherpa-models/_standalone/ regardless of source.
+      // In-app downloads land under userData/sherpa-models/.
       // Runtime code also probes legacy bundled locations via modelPaths.js.
       dest: 'silero_vad_v5.onnx',
       urls: [

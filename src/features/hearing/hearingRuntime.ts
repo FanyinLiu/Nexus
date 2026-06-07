@@ -114,13 +114,25 @@ export class HearingRuntime {
   // ── Mutations ─────────────────────────────────────────────────────────
 
   setPhase(phase: HearingPhase) {
-    if (this._phase === phase) return
+    const nextEngine = phase === 'idle' ? 'none' : this._engine
+    const nextSpeechLevel = phase === 'idle' ? 0 : this._speechLevel
+    if (
+      this._phase === phase
+      && this._engine === nextEngine
+      && this._speechLevel === nextSpeechLevel
+    ) return
     this._phase = phase
+    this._engine = nextEngine
+    this._speechLevel = nextSpeechLevel
     this.notify()
   }
 
   /** Activate a specific STT engine. Clears any previously active engine. */
   activateEngine(engine: HearingEngineId) {
+    if (engine === 'none') {
+      this.clearEngine()
+      return
+    }
     if (this._engine === engine) return
     this._engine = engine
     this.notify()
@@ -181,6 +193,7 @@ export class HearingRuntime {
     this._sensevoiceSession = null
     this._paraformerSession?.abort()
     this._paraformerSession = null
+    this._tencentAsrSession?.abort()
     this._tencentAsrSession = null
     this._vadDetector?.destroy().catch(() => undefined)
     this._vadDetector = null
@@ -191,6 +204,8 @@ export class HearingRuntime {
     this._vadActive = false
     this._wakewordListening = false
     this._speechLevel = 0
+    this._snapshot = null
+    this.notify()
     this._listeners.clear()
     this._snapshot = null
   }

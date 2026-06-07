@@ -11,6 +11,7 @@
 import fs from 'node:fs'
 import { app, BrowserWindow } from 'electron'
 import { MODEL_CATALOG } from './modelDefinitions.js'
+import { createAsyncLock } from './asyncLock.js'
 import {
   downloadModel as downloadModelCore,
   checkModelPresence,
@@ -68,11 +69,16 @@ export function getInventory() {
 }
 
 // Serialize downloads so two simultaneous wizard clicks don't race.
-let _activeDownload = null
+const withDownloadLock = createAsyncLock()
 
 async function _downloadOne(modelId) {
   const model = MODEL_CATALOG.find(m => m.id === modelId)
   if (!model) throw new Error(`Unknown model id: ${modelId}`)
+
+  if (checkModelPresence(model, getModelsRoots()).present) {
+    broadcast(PROGRESS_CHANNEL, { modelId, phase: 'installed' })
+    return
+  }
 
   const modelsRoot = ensureUserModelsRoot()
 
@@ -96,11 +102,7 @@ async function _downloadOne(modelId) {
 }
 
 export async function downloadModel(modelId) {
-  if (_activeDownload) {
-    await _activeDownload.catch(() => {})
-  }
-  _activeDownload = _downloadOne(modelId).finally(() => { _activeDownload = null })
-  return _activeDownload
+  return withDownloadLock(() => _downloadOne(modelId))
 }
 
 export async function downloadMissingRequired() {

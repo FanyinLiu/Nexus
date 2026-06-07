@@ -1,12 +1,14 @@
-﻿import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+﻿import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import '../app/styles/settings.css'
 import '../app/styles/settings-home.css'
 import '../app/styles/settings-themes.css'
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap'
 import {
   getMemorySearchModeOptions,
+  getSettingsThemeTone,
   getSettingsSectionOptions,
   normalizeSettingsSectionId,
+  SETTINGS_APPEARANCE_OPTIONS,
   type ConnectionResult,
   type SettingsSectionId,
 } from './settingsDrawerSupport'
@@ -23,12 +25,14 @@ import {
   isLocaleDefaultUserName,
   pickTranslatedUiText,
 } from '../lib/uiLanguage'
+import { ensureLocaleLoaded, isLocaleLoaded } from '../i18n'
 import type {
   CodexPetGalleryCatalogResult,
   PetModelDefinition,
   SpritePetCreatorKitInspection,
 } from '../features/pet'
 import type { ReminderTaskDraftInput } from '../features/reminders'
+import { useTheme } from '../features/themes'
 import {
   AutonomySection,
   ChatSection,
@@ -65,7 +69,6 @@ import type {
   ReminderTask,
   ServiceConnectionCapability,
   SpeechVoiceListResponse,
-  ThemeId,
   VoicePipelineState,
   VoiceState,
   VoiceTraceEntry,
@@ -199,28 +202,13 @@ export type SettingsDrawerProps = {
   }>
   onRunAudioSmokeTest: (settings: AppSettings) => Promise<ConnectionResult>
   onClearDebugConsole: () => void
+  onOpenOnboardingGuide: () => void
   // Notification channels (optional — only present when autonomy is wired)
   notificationChannels?: import('../types').NotificationChannel[]
   notificationChannelsLoading?: boolean
   onAddNotificationChannel?: (draft: Omit<import('../types').NotificationChannel, 'id'>) => Promise<void>
   onUpdateNotificationChannel?: (id: string, patch: Partial<import('../types').NotificationChannel>) => Promise<void>
   onRemoveNotificationChannel?: (id: string) => Promise<void>
-}
-
-const SETTINGS_APPEARANCE_OPTIONS: Array<{
-  id: ThemeId
-  labelKey: Parameters<typeof pickTranslatedUiText>[1]
-  tone: 'night' | 'day' | 'warm-day'
-}> = [
-  { id: 'system-dark', labelKey: 'settings.appearance.night', tone: 'night' },
-  { id: 'system-day', labelKey: 'settings.appearance.day', tone: 'day' },
-  { id: 'warm-day', labelKey: 'settings.appearance.warm_day', tone: 'warm-day' },
-]
-
-function getSettingsThemeTone(themeId: ThemeId): 'night' | 'day' | 'warm-day' {
-  if (themeId === 'warm-day') return 'warm-day'
-  if (themeId === 'system-day' || themeId === 'editorial') return 'day'
-  return 'night'
 }
 
 export function SettingsDrawer({
@@ -270,6 +258,7 @@ export function SettingsDrawer({
   onPreviewSpeech,
   onRunAudioSmokeTest,
   onClearDebugConsole,
+  onOpenOnboardingGuide,
   notificationChannels,
   notificationChannelsLoading,
   onAddNotificationChannel,
@@ -280,6 +269,8 @@ export function SettingsDrawer({
   const [activeSectionId, setActiveSectionId] = useState<SettingsSectionId>('console')
   const [settingsView, setSettingsView] = useState<'home' | 'section'>('home')
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false)
+  const [, setLocaleLoadTick] = useState(0)
+  const themePreview = useTheme()
   const selectedLanguageIndex = Math.max(
     0,
     UI_LANGUAGE_OPTIONS.findIndex((option) => option.value === draft.uiLanguage),
@@ -290,6 +281,7 @@ export function SettingsDrawer({
   const languageMenuRef = useRef<HTMLDivElement | null>(null)
   const languageOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
   const appearanceOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const initialThemeIdRef = useRef(settings.themeId)
   const drawerBodyRef = useRef<HTMLDivElement | null>(null)
   const settingsSectionsRef = useRef<HTMLDivElement | null>(null)
   useModalFocusTrap(settingsDialogRef, open)
@@ -336,6 +328,35 @@ export function SettingsDrawer({
       setLanguageMenuOpen(false)
       languageButtonRef.current?.focus()
     }
+  }
+
+  function applyDraftLanguage(nextLanguage: AppSettings['uiLanguage']) {
+    setDraft((prev) => ({
+      ...prev,
+      uiLanguage: nextLanguage,
+      companionName: isLocaleDefaultCompanionName(prev.companionName)
+        ? getDefaultCompanionName(nextLanguage)
+        : prev.companionName,
+      userName: isLocaleDefaultUserName(prev.userName)
+        ? getDefaultUserName(nextLanguage)
+        : prev.userName,
+    }))
+    setLocaleLoadTick((tick) => tick + 1)
+  }
+
+  function handleSelectLanguage(nextLanguage: AppSettings['uiLanguage']) {
+    setLanguageMenuOpen(false)
+    if (isLocaleLoaded(nextLanguage)) {
+      applyDraftLanguage(nextLanguage)
+      return
+    }
+
+    void ensureLocaleLoaded(nextLanguage)
+      .then(() => applyDraftLanguage(nextLanguage))
+      .catch((error) => {
+        console.error('[settings] Failed to load locale:', nextLanguage, error)
+        applyDraftLanguage(nextLanguage)
+      })
   }
 
   useEffect(() => {
@@ -471,12 +492,34 @@ export function SettingsDrawer({
   // not while the user is actively editing.
   useEffect(() => {
     if (open) {
+      initialThemeIdRef.current = settings.themeId
       setDraft(settings)
+      themePreview.previewTheme(settings.themeId)
       speechVoices.syncPreviewText(settings.companionName)
       setSettingsView('home')
+    } else {
+      themePreview.previewTheme(settings.themeId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only fire on open transition, not settings changes
   }, [open])
+
+  useEffect(() => {
+    if (!open || isLocaleLoaded(draft.uiLanguage)) return
+    let canceled = false
+    void ensureLocaleLoaded(draft.uiLanguage)
+      .then(() => {
+        if (!canceled) {
+          setLocaleLoadTick((tick) => tick + 1)
+        }
+      })
+      .catch((error) => {
+        console.error('[settings] Failed to load locale:', draft.uiLanguage, error)
+      })
+
+    return () => {
+      canceled = true
+    }
+  }, [draft.uiLanguage, open])
 
   // Re-sync API keys when vault hydration completes after drawer is already open.
   // This handles the race where settings are loaded with empty keys before vault decrypts them.
@@ -563,6 +606,7 @@ export function SettingsDrawer({
       ...prev,
       themeId: option.id,
     }))
+    themePreview.previewTheme(option.id)
   }
 
   function handleAppearanceOptionKeyDown(
@@ -596,6 +640,7 @@ export function SettingsDrawer({
   }
 
   function handleDismiss() {
+    themePreview.previewTheme(initialThemeIdRef.current)
     windowState.rollbackWindowState()
     onClose()
   }
@@ -603,6 +648,12 @@ export function SettingsDrawer({
   function handleOpenSettingsSection(sectionId: SettingsSectionId) {
     setActiveSectionId(normalizeSettingsSectionId(sectionId))
     setSettingsView('section')
+  }
+
+  function handleOpenOnboardingGuide() {
+    themePreview.previewTheme(initialThemeIdRef.current)
+    windowState.rollbackWindowState()
+    onOpenOnboardingGuide()
   }
 
   function handleReturnToSettingsHome() {
@@ -819,6 +870,8 @@ export function SettingsDrawer({
         return (
           <ConsoleSection
             active
+            draft={draft}
+            petModel={petModel}
             continuousVoiceActive={continuousVoiceActive}
             debugConsoleEvents={debugConsoleEvents}
             liveTranscript={liveTranscript}
@@ -843,7 +896,7 @@ export function SettingsDrawer({
         className={settingsDrawerClassName}
         role="dialog"
         aria-modal="true"
-        aria-label={ti('settings.panel', { name: settings.companionName })}
+        aria-label={ti('settings.panel', { name: draft.companionName })}
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
@@ -908,17 +961,7 @@ export function SettingsDrawer({
                               + (isActive ? ' settings-drawer__language-menu-item--active' : '')
                             }
                             onClick={() => {
-                              setDraft((prev) => ({
-                                ...prev,
-                                uiLanguage: option.value,
-                                companionName: isLocaleDefaultCompanionName(prev.companionName)
-                                  ? getDefaultCompanionName(option.value)
-                                  : prev.companionName,
-                                userName: isLocaleDefaultUserName(prev.userName)
-                                  ? getDefaultUserName(option.value)
-                                  : prev.userName,
-                              }))
-                              setLanguageMenuOpen(false)
+                              handleSelectLanguage(option.value)
                             }}
                             onKeyDown={(event) => handleLanguageMenuItemKeyDown(event, optionIndex)}
                           >
@@ -960,6 +1003,10 @@ export function SettingsDrawer({
                     const isActive = option.tone === settingsThemeTone
                     const optionLabel = ti(option.labelKey)
                     const optionTitle = `${ti('settings.appearance.label')}: ${optionLabel}`
+                    const optionStyle = {
+                      '--settings-theme-swatch-surface': option.swatch.surface,
+                      '--settings-theme-swatch-accent': option.swatch.accent,
+                    } as CSSProperties
 
                     return (
                       <button
@@ -971,17 +1018,34 @@ export function SettingsDrawer({
                         className={`settings-appearance-switch__option ${isActive ? 'is-active' : ''}`}
                         role="radio"
                         aria-checked={isActive}
+                        aria-label={optionTitle}
                         tabIndex={optionIndex === selectedAppearanceIndex ? 0 : -1}
                         title={optionTitle}
+                        style={optionStyle}
                         onClick={() => selectAppearanceOption(optionIndex)}
                         onKeyDown={(event) => handleAppearanceOptionKeyDown(event, optionIndex)}
                       >
-                        {optionLabel}
+                        <span className="settings-appearance-switch__swatch" aria-hidden="true" />
+                        <span className="settings-appearance-switch__option-label">{optionLabel}</span>
                       </button>
                     )
                   })}
                 </div>
               </div>
+              <button
+                type="button"
+                className="settings-home-card settings-home-card--action"
+                data-section="onboarding"
+                aria-label={ti('settings.home.onboarding.aria_label')}
+                title={ti('settings.home.onboarding.aria_label')}
+                onClick={handleOpenOnboardingGuide}
+              >
+                <span className="settings-home-card__glyph" aria-hidden="true">
+                  {renderSettingsCardIcon('onboarding')}
+                </span>
+                <span className="settings-home-card__label">{ti('settings.home.onboarding.title')}</span>
+                <span className="settings-home-card__value">{ti('settings.home.onboarding.value')}</span>
+              </button>
               {settingsHomeCards.map((card) => {
                 const previewText = card.preview.filter(Boolean).join(' / ')
                 const cardLabel = previewText ? `${card.title}: ${previewText}` : card.title

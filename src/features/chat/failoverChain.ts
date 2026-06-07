@@ -22,13 +22,13 @@ import type {
   MemoryRecallContext,
 } from '../../types'
 import { apiProviderRequiresApiKey, getApiProviderPreset } from '../models/index.ts'
-import { getCoreRuntime } from '../../lib/coreRuntime'
+import { getCoreRuntime } from '../../lib/coreRuntime.ts'
 import { t } from '../../i18n/runtime.ts'
 import { executeWithFailover, type FailoverCandidate } from '../failover/orchestrator.ts'
 import {
   buildChatRequestPayload,
   type AssistantReplyRequestOptions,
-} from './systemPromptBuilder'
+} from './systemPromptBuilder.ts'
 
 type ChatCandidatePayload = {
   settings: AppSettings
@@ -46,14 +46,14 @@ export type AssistantReplyRuntimeResult = {
   requestPayload?: ChatCompletionRequest
 }
 
-function buildChatFailoverCandidates(settings: AppSettings): FailoverCandidate<ChatCandidatePayload>[] {
+export function buildChatFailoverCandidates(settings: AppSettings): FailoverCandidate<ChatCandidatePayload>[] {
   const { authStore } = getCoreRuntime()
   const candidates: FailoverCandidate<ChatCandidatePayload>[] = []
   const seenKeys = new Set<string>()
 
   const primaryAuthProfiles = authStore
     .list(settings.apiProviderId)
-    .filter((p) => p.status !== 'failed')
+    .filter((p) => p.status === 'active')
 
   for (const profile of primaryAuthProfiles) {
     const key = profile.apiKey.trim()
@@ -70,11 +70,14 @@ function buildChatFailoverCandidates(settings: AppSettings): FailoverCandidate<C
   }
 
   const primaryKey = settings.apiKey.trim()
-  if (!primaryKey || !seenKeys.has(primaryKey)) {
+  if (
+    !apiProviderRequiresApiKey(settings.apiProviderId)
+    || (primaryKey && !seenKeys.has(primaryKey))
+  ) {
     candidates.push({
       id: settings.apiProviderId,
       identity: `${settings.apiProviderId}|${settings.apiBaseUrl}|${settings.model}`,
-      payload: { settings },
+      payload: { settings: primaryKey === settings.apiKey ? settings : { ...settings, apiKey: primaryKey } },
     })
     if (primaryKey) seenKeys.add(primaryKey)
   }
@@ -115,10 +118,6 @@ export async function executeChatRequestWithFailover(
   options: AssistantReplyRequestOptions,
   execute: (payload: ChatCompletionRequest) => Promise<ChatCompletionResponse>,
 ) {
-  if (!window.desktopPet?.completeChat) {
-    throw new Error('Desktop pet client is not wired up in the current environment.')
-  }
-
   if (!settings.apiBaseUrl || !settings.model) {
     throw new Error(t('chat.failover.no_api_base'))
   }
@@ -136,7 +135,8 @@ export async function executeChatRequestWithFailover(
   }
 
   const candidates = buildChatFailoverCandidates(settings)
-  const { authStore } = getCoreRuntime()
+  const runtime = getCoreRuntime()
+  const { authStore } = runtime
 
   // Capture the first successfully built payload so callers can use it for
   // cost accounting (system prompt length, tool schemas, message images, etc.)
@@ -156,7 +156,10 @@ export async function executeChatRequestWithFailover(
       if (event.type === 'success') {
         const hit = candidates.find((c) => c.id === event.candidateId)
         const authId = hit?.payload.authProfileId
-        if (authId) authStore.recordSuccess(authId)
+        if (authId) {
+          authStore.recordSuccess(authId)
+          runtime.persistAuthProfiles()
+        }
       } else if (event.type === 'failure' && event.eligible) {
         const hit = candidates.find((c) => c.id === event.candidateId)
         const authId = hit?.payload.authProfileId
@@ -166,6 +169,7 @@ export async function executeChatRequestWithFailover(
             : /unauthori[sz]ed|invalid.*key|401|403/i.test(event.error) ? 'auth'
             : 'other'
           authStore.recordFailure(authId, reason)
+          runtime.persistAuthProfiles()
         }
       }
     },

@@ -217,9 +217,9 @@ export const SPRITE_PET_ANIMATIONS = Object.fromEntries(
 )
 
 export const SPRITE_PET_INITIAL_CURSOR = {
-  state: 'waving',
+  state: 'idle',
   frameIndex: 0,
-  loopsRemaining: SPRITE_PET_ACTIVE_LOOP_COUNT,
+  loopsRemaining: 0,
   requestKey: 'initial',
 }
 
@@ -501,6 +501,7 @@ export type SpritePetAtlasDefinition = {
   rows?: number
   cellWidth?: number
   cellHeight?: number
+  imageRendering?: 'pixelated' | 'auto'
 }
 
 export type SpritePetRenderFrame = {

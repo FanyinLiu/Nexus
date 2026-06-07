@@ -1,5 +1,10 @@
-import { OPEN_GOALS_STORAGE_KEY, createId, readJson, writeJsonDebounced } from '../../lib/storage/core'
-import { planStore } from '../plan/planStore'
+import {
+  OPEN_GOALS_STORAGE_KEY,
+  createId,
+  readJsonValidated,
+  writeJsonDebounced,
+} from '../../lib/storage/core.ts'
+import { planStore } from '../plan/planStore.ts'
 import { t } from '../../i18n/runtime.ts'
 import type { AgentStopReason } from './agentLoop'
 
@@ -24,6 +29,38 @@ export type OpenGoalListener = (goals: OpenGoal[]) => void
 const NUDGE_BACKOFF_MS = 30 * 60 * 1000
 const MAX_NUDGES_PER_GOAL = 3
 const MAX_OPEN_GOALS = 50
+const OPEN_GOAL_STATUSES = new Set<OpenGoalStatus>(['paused', 'aborted'])
+
+function cloneOpenGoal(goal: OpenGoal): OpenGoal {
+  return { ...goal }
+}
+
+function normalizeOptionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+function normalizeOpenGoal(value: unknown): OpenGoal | null {
+  if (!value || typeof value !== 'object') return null
+  const goal = value as Partial<OpenGoal>
+  if (typeof goal.id !== 'string' || typeof goal.goal !== 'string') return null
+  if (!OPEN_GOAL_STATUSES.has(goal.status as OpenGoalStatus)) return null
+  if (typeof goal.createdAt !== 'number' || !Number.isFinite(goal.createdAt)) return null
+  if (typeof goal.updatedAt !== 'number' || !Number.isFinite(goal.updatedAt)) return null
+  const lastNudgedAt = normalizeOptionalNumber(goal.lastNudgedAt)
+  return {
+    id: goal.id,
+    goal: goal.goal,
+    status: goal.status as OpenGoalStatus,
+    iterations: normalizeOptionalNumber(goal.iterations) ?? 0,
+    createdAt: goal.createdAt,
+    updatedAt: goal.updatedAt,
+    nudgeCount: Math.max(0, Math.floor(normalizeOptionalNumber(goal.nudgeCount) ?? 0)),
+    ...(typeof goal.reason === 'string' ? { reason: goal.reason } : {}),
+    ...(typeof goal.planId === 'string' ? { planId: goal.planId } : {}),
+    ...(typeof goal.lastResponse === 'string' ? { lastResponse: goal.lastResponse } : {}),
+    ...(lastNudgedAt !== undefined ? { lastNudgedAt } : {}),
+  }
+}
 
 function hashString(input: string): number {
   let hash = 0
@@ -40,18 +77,23 @@ class OpenGoalsStoreImpl {
 
   hydrate(): void {
     if (this.hydrated) return
-    this.goals = readJson<OpenGoal[]>(OPEN_GOALS_STORAGE_KEY, [])
+    this.goals = readJsonValidated<OpenGoal[]>(OPEN_GOALS_STORAGE_KEY, [], (parsed) => (
+      Array.isArray(parsed)
+        ? parsed.map(normalizeOpenGoal).filter((goal): goal is OpenGoal => Boolean(goal))
+        : null
+    ))
     this.hydrated = true
   }
 
   list(): OpenGoal[] {
     this.hydrate()
-    return [...this.goals]
+    return this.goals.map(cloneOpenGoal)
   }
 
   get(id: string): OpenGoal | undefined {
     this.hydrate()
-    return this.goals.find((g) => g.id === id)
+    const goal = this.goals.find((g) => g.id === id)
+    return goal ? cloneOpenGoal(goal) : undefined
   }
 
   add(input: {
@@ -81,7 +123,7 @@ class OpenGoalsStoreImpl {
       this.goals = this.goals.slice(0, MAX_OPEN_GOALS)
     }
     this.persist()
-    return entry
+    return cloneOpenGoal(entry)
   }
 
   recordFromAgentResult(input: {
@@ -138,7 +180,7 @@ class OpenGoalsStoreImpl {
       return true
     })
     if (!eligible.length) return undefined
-    return [...eligible].sort((a, b) => a.createdAt - b.createdAt)[0]
+    return cloneOpenGoal([...eligible].sort((a, b) => a.createdAt - b.createdAt)[0])
   }
 
   buildNudgeText(goal: OpenGoal): string {

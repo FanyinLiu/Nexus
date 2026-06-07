@@ -101,6 +101,6 @@ test('resolveCharacterSettingsSummary exposes compact labels for the settings pa
   assert.equal(summary.companionName, '星绘')
   assert.equal(summary.userName, '主人')
   assert.equal(summary.relationshipLabelKey, 'onboarding.companion.relationship_quiet_companion')
-  assert.equal(summary.petModelLabel, '七一')
+  assert.equal(summary.petModelLabel, '像素终端宠')
   assert.equal(summary.profileCount, 1)
 })

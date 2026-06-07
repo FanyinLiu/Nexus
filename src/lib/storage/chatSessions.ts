@@ -3,8 +3,10 @@ import {
   CHAT_SESSIONS_STORAGE_KEY,
   CHAT_STORAGE_KEY,
   readJson,
+  writeJson,
   writeJsonDebounced,
 } from './core.ts'
+import { normalizeChatMessagesForStorage } from './chat.ts'
 
 export interface ChatSession {
   id: string
@@ -17,15 +19,6 @@ export interface ChatSession {
 const MAX_SESSIONS = 30
 const MAX_MESSAGES_PER_SESSION = 500
 
-function stripImages(messages: ChatMessage[]): ChatMessage[] {
-  return messages.map((message) => {
-    if (!message.images?.length) return message
-    const copy: ChatMessage = { ...message }
-    delete copy.images
-    return copy
-  })
-}
-
 function capMessages(messages: ChatMessage[]): ChatMessage[] {
   if (messages.length <= MAX_MESSAGES_PER_SESSION) return messages
   return messages.slice(-MAX_MESSAGES_PER_SESSION)
@@ -36,8 +29,80 @@ function sortByActivityDesc(sessions: ChatSession[]): ChatSession[] {
 }
 
 function dropOldestBeyondCap(sessions: ChatSession[]): ChatSession[] {
-  if (sessions.length <= MAX_SESSIONS) return sessions
-  return sortByActivityDesc(sessions).slice(0, MAX_SESSIONS)
+  const newestFirst = sortByActivityDesc(sessions)
+  const seen = new Set<string>()
+  const deduped: ChatSession[] = []
+  for (const session of newestFirst) {
+    if (seen.has(session.id)) continue
+    seen.add(session.id)
+    deduped.push(session)
+    if (deduped.length >= MAX_SESSIONS) break
+  }
+  return deduped
+}
+
+function normalizeTimestamp(value: unknown, fallback: number): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, Math.round(value))
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return fallback
+}
+
+function normalizeTitle(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.replace(/\s+/g, ' ').trim()
+  return trimmed ? trimmed.slice(0, 80) : undefined
+}
+
+function latestMessageTimestamp(messages: ChatMessage[], fallback: number): number {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const parsed = Date.parse(messages[i]!.createdAt)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return fallback
+}
+
+function firstMessageTimestamp(messages: ChatMessage[], fallback: number): number {
+  for (const message of messages) {
+    const parsed = Date.parse(message.createdAt)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return fallback
+}
+
+function normalizeChatSession(value: unknown, index: number): ChatSession | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const obj = value as Record<string, unknown>
+  const messages = normalizeChatMessagesForStorage(obj.messages, MAX_MESSAGES_PER_SESSION)
+  const nowish = latestMessageTimestamp(messages, 0)
+  const id = typeof obj.id === 'string' && obj.id.trim()
+    ? obj.id.trim()
+    : `chat-session-recovered-${index}-${nowish}`
+  const lastActiveAt = normalizeTimestamp(obj.lastActiveAt, nowish)
+  const startedAt = Math.min(
+    normalizeTimestamp(obj.startedAt, firstMessageTimestamp(messages, lastActiveAt)),
+    lastActiveAt,
+  )
+  const title = normalizeTitle(obj.title) ?? inferSessionTitle(messages)
+
+  return {
+    id,
+    startedAt,
+    lastActiveAt,
+    ...(title ? { title } : {}),
+    messages: capMessages(messages),
+  }
+}
+
+export function normalizeChatSessionsForStorage(raw: unknown): ChatSession[] {
+  if (!Array.isArray(raw)) return []
+  return dropOldestBeyondCap(
+    raw
+      .map(normalizeChatSession)
+      .filter((session): session is ChatSession => Boolean(session)),
+  )
 }
 
 // One-shot: if the new key is empty but the legacy flat `nexus:chat` array
@@ -49,17 +114,17 @@ function migrateLegacyFlatChat(): ChatSession | null {
   try {
     const legacyRaw = window.localStorage.getItem(CHAT_STORAGE_KEY)
     if (!legacyRaw) return null
-    const legacy = JSON.parse(legacyRaw) as ChatMessage[]
-    if (!Array.isArray(legacy) || legacy.length === 0) return null
+    const legacy = normalizeChatMessagesForStorage(JSON.parse(legacyRaw), MAX_MESSAGES_PER_SESSION)
+    if (legacy.length === 0) return null
 
     const first = legacy[0]
     const last = legacy[legacy.length - 1]
     return {
       id: `chat-session-legacy-${first?.id ?? 'root'}`,
-      startedAt: typeof first?.createdAt === 'number' ? first.createdAt : Date.now(),
-      lastActiveAt: typeof last?.createdAt === 'number' ? last.createdAt : Date.now(),
+      startedAt: first ? Date.parse(first.createdAt) : Date.now(),
+      lastActiveAt: last ? Date.parse(last.createdAt) : Date.now(),
       title: inferSessionTitle(legacy),
-      messages: capMessages(stripImages(legacy)),
+      messages: legacy,
     }
   } catch (err) {
     console.error('[chatSessions] legacy migration failed:', err)
@@ -75,8 +140,14 @@ export function inferSessionTitle(messages: ChatMessage[]): string | undefined {
 }
 
 export function loadChatSessions(): ChatSession[] {
-  const stored = readJson<ChatSession[]>(CHAT_SESSIONS_STORAGE_KEY, [])
-  if (stored.length > 0) return sortByActivityDesc(stored)
+  const raw = readJson<unknown>(CHAT_SESSIONS_STORAGE_KEY, [])
+  const stored = normalizeChatSessionsForStorage(raw)
+  if (stored.length > 0) {
+    if (JSON.stringify(stored) !== JSON.stringify(raw)) {
+      writeJson(CHAT_SESSIONS_STORAGE_KEY, stored)
+    }
+    return stored
+  }
 
   const migrated = migrateLegacyFlatChat()
   if (!migrated) return []
@@ -86,12 +157,7 @@ export function loadChatSessions(): ChatSession[] {
 }
 
 export function saveChatSessions(sessions: ChatSession[]): void {
-  const sanitized = sessions.map((session) => ({
-    ...session,
-    messages: capMessages(stripImages(session.messages)),
-  }))
-  const capped = dropOldestBeyondCap(sanitized)
-  writeJsonDebounced(CHAT_SESSIONS_STORAGE_KEY, capped)
+  writeJsonDebounced(CHAT_SESSIONS_STORAGE_KEY, normalizeChatSessionsForStorage(sessions))
 }
 
 export function getChatSession(id: string): ChatSession | null {

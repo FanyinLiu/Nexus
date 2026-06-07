@@ -135,4 +135,39 @@ describe('AI disclosure state', () => {
     assert.equal(disclosure.hasAcknowledgedDisclosure(), false)
     assert.equal(disclosure.__test_getState().userMessagesSinceReminder, 0)
   })
+
+  test('normalizes malformed persisted state before reminder decisions', () => {
+    ms.setItem('nexus:safety:disclosure', JSON.stringify({
+      acknowledgedAt: '2026-04-28T10:00:00Z',
+      lastReminderAt: 'bad-date',
+      userMessagesSinceReminder: '29.9',
+      extra: true,
+    }))
+
+    const fired = disclosure.noteUserMessageAndCheckReminder(
+      new Date('2026-04-28T14:00:00Z'),
+    )
+
+    assert.equal(fired, true)
+    assert.deepEqual(disclosure.__test_getState(), {
+      acknowledgedAt: '2026-04-28T10:00:00.000Z',
+      lastReminderAt: '2026-04-28T14:00:00.000Z',
+      userMessagesSinceReminder: 0,
+    })
+  })
+
+  test('drops counters when disclosure ack is malformed', () => {
+    ms.setItem('nexus:safety:disclosure', JSON.stringify({
+      acknowledgedAt: 'yes',
+      lastReminderAt: '2026-04-28T13:00:00Z',
+      userMessagesSinceReminder: 50,
+    }))
+
+    assert.equal(disclosure.hasAcknowledgedDisclosure(), false)
+    assert.deepEqual(JSON.parse(ms.getItem('nexus:safety:disclosure') ?? '{}'), {
+      acknowledgedAt: null,
+      lastReminderAt: null,
+      userMessagesSinceReminder: 0,
+    })
+  })
 })

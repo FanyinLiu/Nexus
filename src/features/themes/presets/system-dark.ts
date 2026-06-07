@@ -1,4 +1,4 @@
-import { systemDarkThemeTokens } from '../tokens'
+import { systemDarkThemeTokens } from '../tokens.ts'
 import type { ThemeDefinition } from '../../../types/theme'
 
 export const systemDarkTheme: ThemeDefinition = {

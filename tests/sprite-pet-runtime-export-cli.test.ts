@@ -262,9 +262,9 @@ test('exported sprite runtime can be imported outside Nexus source', async () =>
     }
 
     assert.deepEqual(runtime.SPRITE_PET_INITIAL_CURSOR, {
-      state: 'waving',
+      state: 'idle',
       frameIndex: 0,
-      loopsRemaining: 3,
+      loopsRemaining: 0,
       requestKey: 'initial',
     })
     assert.equal(runtime.mapSpritePetSignalsToState({ isListening: true }), 'waiting')
@@ -334,8 +334,8 @@ test('exported sprite runtime can be consumed as a local package', async () => {
     })
 
     assert.deepEqual(JSON.parse(stdout), {
-      state: 'waving',
-      row: 3,
+      state: 'idle',
+      row: 0,
       size: '800% 900%',
     })
   })

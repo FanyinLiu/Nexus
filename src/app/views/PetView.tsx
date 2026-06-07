@@ -91,6 +91,7 @@ export function PetView({
   togglePinned,
   toggleClickThrough,
   toggleContinuousVoiceMode,
+  notificationUnreadCount,
   handleMediaSessionControl,
   dismissCurrentMediaSession,
   onboardingGuide,
@@ -171,6 +172,23 @@ export function PetView({
     voice.voiceState === 'processing' ||
     chat.busy ||
     (pet.petTapActive && Boolean(pet.petTouchZone))
+  const voiceStateLabel = getVoiceStateLabel(voice.voiceState, ti)
+  const petStageStatusLabel = voice.voiceState !== 'idle'
+    ? voiceStateLabel
+    : chat.busy
+      ? ti('pet.status.thinking')
+      : settings.continuousVoiceModeEnabled
+        ? ti('pet.status.standby')
+        : ti('pet.status.ready')
+
+  const notificationUnreadBadge = notificationUnreadCount > 99 ? '99+' : String(notificationUnreadCount)
+  const hasUnreadNotifications = notificationUnreadCount > 0
+  const notificationStatusText = hasUnreadNotifications
+    ? ti('pet.notification.unread_badge', { count: notificationUnreadBadge })
+    : ''
+  const petStageStatusLabelWithNotifications = hasUnreadNotifications
+    ? `${petStageStatusLabel} · ${notificationStatusText}`
+    : petStageStatusLabel
   const petLocomotionOverride: SpritePetAnimationState | null = petLocomotionBusy
     ? null
     : PET_LOCOMOTION_SPRITE_STATE[petLocomotion] ?? null
@@ -213,14 +231,6 @@ export function PetView({
     ? PET_TIME_PREVIEW_BANDS[settings.petTimePreview]
     : autoTimeBand
   const timeBlend = settings.petTimePreview !== 'auto' ? undefined : autoTimeBlend
-  const voiceStateLabel = getVoiceStateLabel(voice.voiceState, ti)
-  const petStageStatusLabel = voice.voiceState !== 'idle'
-    ? voiceStateLabel
-    : chat.busy
-      ? ti('pet.status.thinking')
-      : settings.continuousVoiceModeEnabled
-        ? ti('pet.status.standby')
-        : ti('pet.status.ready')
   const voiceActionLabel = voice.continuousVoiceActive
     ? ti('panel.voice.stop_continuous')
     : voice.voiceState === 'speaking'
@@ -430,9 +440,15 @@ export function PetView({
     }
   }, [])
 
+  const hasModalOverlay = Boolean(onboardingGuide)
+
   return (
-    <div className={`desktop-pet-root desktop-pet-root--pet ${characterPreset.themeClassName}`}>
-      <section className="pet-window">
+    <div className={`desktop-pet-root desktop-pet-root--pet ${characterPreset.themeClassName} ${hasModalOverlay ? 'desktop-pet-root--pet-modal-open' : ''}`}>
+      <section
+        className="pet-window"
+        aria-hidden={hasModalOverlay ? true : undefined}
+        inert={hasModalOverlay ? true : undefined}
+      >
         <div
           ref={interactiveZoneRef}
           className="pet-window__interactive-zone"
@@ -492,13 +508,19 @@ export function PetView({
                 voice.voiceState !== 'idle' ? 'is-active'
                 : chat.busy ? 'is-busy'
                 : settings.continuousVoiceModeEnabled ? 'is-armed'
+                : hasUnreadNotifications ? 'is-notify'
                 : ''
               }`}
               role="status"
-              aria-label={petStageStatusLabel}
-              title={petStageStatusLabel}
+              aria-label={petStageStatusLabelWithNotifications}
+              title={petStageStatusLabelWithNotifications}
             >
               <span className="pet-window__status-dot" aria-hidden="true" />
+              {hasUnreadNotifications ? (
+                <span className="pet-window__notification-badge" aria-hidden="true">
+                  {notificationUnreadBadge}
+                </span>
+              ) : null}
             </div>
 
             <div

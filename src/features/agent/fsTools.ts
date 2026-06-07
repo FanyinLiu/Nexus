@@ -118,6 +118,9 @@ const FS_PATH_TRAVERSAL_RE = /(?:^|[\\/])\.\.(?:[\\/]|$)/
 const FS_GREP_QUERY_MAX_LENGTH = 500
 
 function validateFsPath(p: string): void {
+  if (!p.trim()) {
+    throw new Error('Path must be a non-empty workspace-relative path')
+  }
   if (FS_PATH_TRAVERSAL_RE.test(p)) {
     throw new Error(`Path "${p}" contains disallowed ".." traversal segments`)
   }

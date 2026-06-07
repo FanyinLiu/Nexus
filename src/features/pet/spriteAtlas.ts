@@ -31,6 +31,14 @@ export interface SpritePetAtlasDefinition {
   rows?: number
   cellWidth?: number
   cellHeight?: number
+  imageRendering?: 'pixelated' | 'auto'
+  stageSize?: string
+  stageMinSize?: string
+  stageMaxSize?: string
+  stageMarginBottom?: string
+  previewSize?: string
+  previewMinSize?: string
+  previewMaxSize?: string
 }
 
 export type SpritePetFrame = {

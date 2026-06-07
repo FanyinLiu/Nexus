@@ -14,6 +14,7 @@ import {
 } from './services/urlSafety.js'
 
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
+const MAX_SAFE_REDIRECTS = 5
 
 // Re-export pure helpers so existing import sites (e.g. ipcRegistry, chatIpc,
 // ttsService, sttService) keep working without touching every call site.
@@ -63,56 +64,84 @@ export async function performNetworkRequest(url, options = {}) {
     timeoutMessage = '请求超时，请检查网络、代理或服务状态。',
     signal,
     forceNativeFetch = false,
+    followRedirectsSafely = false,
     ...rest
   } = options
-
-  // SSRF guard: strict by default for tools, provider-returned download URLs,
-  // and other main-process fetches. User-configured model / voice provider
-  // base URLs can opt into loopback/LAN with allowPrivateNetwork after their
-  // caller has already validated that address as a chat/API base URL.
-  const safety = allowPrivateNetwork
-    ? checkChatBaseUrlSafety(url)
-    : await checkUrlSafetyWithDns(url, { allowHttp: true })
-  if (!safety.ok) {
-    throw new Error(`refusing to fetch from this URL: ${safety.reason}`)
-  }
 
   const abortController = signal ? null : new AbortController()
   const requestSignal = signal ?? abortController?.signal
 
-  // Use Node's native fetch for FormData bodies, Buffer/Uint8Array bodies, and
-  // localhost/loopback URLs — Electron's net.fetch (Chromium network stack)
-  // rejects Buffer/Uint8Array multipart bodies with ERR_INVALID_ARGUMENT on
-  // certain request combinations. Any non-loopback POST that hand-builds a
-  // multipart Buffer (e.g. Zhipu/OpenAI-compatible STT through audioIpc.js)
-  // must bypass Chromium too, not just loopback URLs.
-  //
-  // `forceNativeFetch: true` is an explicit opt-in for endpoints whose TLS
-  // certificates validate fine against the OS trust store (confirmed via
-  // `curl`) but fail inside Chromium's bundled CA verifier with
-  // ERR_CERT_DATE_INVALID. Electron pins its own Chromium-vendored root
-  // bundle, so when an upstream CA rotates (Let's Encrypt is the typical
-  // offender) requests through net.fetch can fail on the same machine where
-  // every other tool succeeds. Routing the request through Node's undici
-  // fetch picks up Node's OpenSSL + the OS/NSS trust store, which restores
-  // the working cert path without weakening verification anywhere else.
-  const isBinaryBody =
-    body instanceof Uint8Array ||
-    (typeof Buffer !== 'undefined' && Buffer.isBuffer?.(body))
-  const loopback = isLoopbackUrl(url)
-  const useNativeFetch = forceNativeFetch || body instanceof FormData || isBinaryBody || loopback
-  const targetUrl = loopback ? canonicalizeLoopbackUrl(url) : url
+  // Validate one hop's URL against the SSRF guard, then fetch it. Strict by
+  // default for tools, provider-returned download URLs, and other main-process
+  // fetches. User-configured model / voice provider base URLs can opt into
+  // loopback/LAN with allowPrivateNetwork after their caller has already
+  // validated that address as a chat/API base URL.
+  const fetchValidatedHop = async (hopUrl, redirectMode) => {
+    const safety = allowPrivateNetwork
+      ? checkChatBaseUrlSafety(hopUrl)
+      : await checkUrlSafetyWithDns(hopUrl, { allowHttp: true })
+    if (!safety.ok) {
+      throw new Error(`refusing to fetch from this URL: ${safety.reason}`)
+    }
 
-  return withRequestTimeout(
-    () => (useNativeFetch ? fetch : net.fetch)(targetUrl, {
-      ...rest,
-      signal: requestSignal,
-      ...(body != null ? { body } : {}),
-    }),
-    timeoutMs,
-    timeoutMessage,
-    abortController,
-  )
+    // Use Node's native fetch for FormData bodies, Buffer/Uint8Array bodies, and
+    // localhost/loopback URLs — Electron's net.fetch (Chromium network stack)
+    // rejects Buffer/Uint8Array multipart bodies with ERR_INVALID_ARGUMENT on
+    // certain request combinations. Any non-loopback POST that hand-builds a
+    // multipart Buffer (e.g. Zhipu/OpenAI-compatible STT through audioIpc.js)
+    // must bypass Chromium too, not just loopback URLs.
+    //
+    // `forceNativeFetch: true` is an explicit opt-in for endpoints whose TLS
+    // certificates validate fine against the OS trust store (confirmed via
+    // `curl`) but fail inside Chromium's bundled CA verifier with
+    // ERR_CERT_DATE_INVALID. Electron pins its own Chromium-vendored root
+    // bundle, so when an upstream CA rotates (Let's Encrypt is the typical
+    // offender) requests through net.fetch can fail on the same machine where
+    // every other tool succeeds. Routing the request through Node's undici
+    // fetch picks up Node's OpenSSL + the OS/NSS trust store, which restores
+    // the working cert path without weakening verification anywhere else.
+    const isBinaryBody =
+      body instanceof Uint8Array ||
+      (typeof Buffer !== 'undefined' && Buffer.isBuffer?.(body))
+    const loopback = isLoopbackUrl(hopUrl)
+    const useNativeFetch = forceNativeFetch || body instanceof FormData || isBinaryBody || loopback
+    const targetUrl = loopback ? canonicalizeLoopbackUrl(hopUrl) : hopUrl
+
+    return withRequestTimeout(
+      () => (useNativeFetch ? fetch : net.fetch)(targetUrl, {
+        ...rest,
+        ...(redirectMode ? { redirect: redirectMode } : {}),
+        signal: requestSignal,
+        ...(body != null ? { body } : {}),
+      }),
+      timeoutMs,
+      timeoutMessage,
+      abortController,
+    )
+  }
+
+  // Default: let the network stack follow redirects (unchanged behaviour).
+  if (!followRedirectsSafely) {
+    return fetchValidatedHop(url, undefined)
+  }
+
+  // SSRF-safe redirect following for downloads of provider/remote-returned
+  // URLs: re-run the safety check on every hop including redirect targets, so a
+  // poisoned 30x to 169.254.169.254 or a private host can't slip past the
+  // first-hop check. Mirrors fetchRssWithSafety in notificationBridge.js.
+  let currentUrl = url
+  for (let hop = 0; hop <= MAX_SAFE_REDIRECTS; hop += 1) {
+    const response = await fetchValidatedHop(currentUrl, 'manual')
+    if (![301, 302, 303, 307, 308].includes(response.status)) {
+      return response
+    }
+    const location = String(response.headers.get('location') ?? '').trim()
+    if (!location) {
+      throw new Error(`redirect (${response.status}) missing Location header`)
+    }
+    currentUrl = new URL(location, currentUrl).toString()
+  }
+  throw new Error(`too many redirects (>${MAX_SAFE_REDIRECTS})`)
 }
 
 export async function readResponseBufferWithLimit(response, options = {}) {

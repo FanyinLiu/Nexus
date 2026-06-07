@@ -54,6 +54,7 @@ test('sprite pet discovery keeps unprefixed bundled ids stable', async () => {
     assert.equal(models.length, 1)
     assert.equal(models[0]?.id, 'nexus-mini')
     assert.equal(models[0]?.spriteAtlas?.imagePath, './pets/nexus-mini/spritesheet.png')
+    assert.equal(models[0]?.spriteAtlas?.imageRendering, 'pixelated')
   })
 })
 

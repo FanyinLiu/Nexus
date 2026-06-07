@@ -10,11 +10,13 @@ import {
   createDefaultSubDimensions,
   decaySubDimensions,
   formatSubDimensionsForPrompt,
+  normalizeSubDimensions,
 } from '../src/features/autonomy/relationshipDimensions.ts'
 import {
   createDefaultRelationshipState,
   formatRelationshipForPrompt,
   markDailyInteraction,
+  normalizeRelationshipState,
 } from '../src/features/autonomy/relationshipTracker.ts'
 
 describe('classifyRelationshipSignals', () => {
@@ -324,6 +326,72 @@ describe('formatSubDimensionsForPrompt', () => {
 })
 
 describe('backward compatibility', () => {
+  test('normalizeSubDimensions clamps persisted values and falls back per-axis', () => {
+    assert.deepEqual(normalizeSubDimensions({
+      trust: 2,
+      vulnerability: -1,
+      playfulness: 'bad',
+      intellectual: Number.NaN,
+    }), {
+      trust: 1,
+      vulnerability: 0,
+      playfulness: 0.1,
+      intellectual: 0.1,
+    })
+    assert.equal(normalizeSubDimensions(null), undefined)
+  })
+
+  test('normalizeRelationshipState sanitizes current relationship persistence', () => {
+    const state = normalizeRelationshipState({
+      score: 120.4,
+      lastInteractionDate: ' not-a-date ',
+      streak: -4,
+      totalDaysInteracted: 12.6,
+      levelReachedAt: {
+        stranger: '2026-06-01T00:00:00.000Z',
+        friend: 'bad',
+        intimate: '2026-06-03',
+      },
+      lastSessionEmotion: {
+        energy: 2,
+        warmth: -1,
+        curiosity: 0.4,
+        concern: Number.NaN,
+      },
+      lastSessionTopic: ` ${'topic '.repeat(30)} `,
+      subDimensions: {
+        trust: 2,
+        vulnerability: 0.4,
+        playfulness: -1,
+        intellectual: 'bad',
+      },
+      firedMilestoneKeys: [' days-30 ', 'days-30', '', 7, 'days-100'],
+    })
+
+    assert.equal(state.score, 100)
+    assert.equal(state.lastInteractionDate, '')
+    assert.equal(state.streak, 0)
+    assert.equal(state.totalDaysInteracted, 13)
+    assert.deepEqual(state.levelReachedAt, {
+      stranger: '2026-06-01T00:00:00.000Z',
+      intimate: '2026-06-03',
+    })
+    assert.deepEqual(state.lastSessionEmotion, {
+      energy: 1,
+      warmth: 0,
+      curiosity: 0.4,
+      concern: 0.2,
+    })
+    assert.equal(state.lastSessionTopic?.length, 80)
+    assert.deepEqual(state.subDimensions, {
+      trust: 1,
+      vulnerability: 0.4,
+      playfulness: 0,
+      intellectual: 0.1,
+    })
+    assert.deepEqual(state.firedMilestoneKeys, ['days-30', 'days-100'])
+  })
+
   test('formatRelationshipForPrompt tolerates missing subDimensions', () => {
     const state = { ...createDefaultRelationshipState(), score: 40 }
     const text = formatRelationshipForPrompt(state)

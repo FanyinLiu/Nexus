@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
 import {
   mainWindow,
   panelWindow,
@@ -59,7 +59,30 @@ import {
   validateWindowDragPayload,
 } from './payloadSchemas.js'
 
+const POWER_EVENT_CHANNEL = 'app:power-event'
+const POWER_EVENT_KINDS = ['suspend', 'resume', 'lock-screen', 'unlock-screen', 'shutdown']
+let powerEventForwardingRegistered = false
+
+function broadcastPowerEvent(kind) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win || win.isDestroyed?.()) continue
+    win.webContents.send(POWER_EVENT_CHANNEL, { kind })
+  }
+}
+
+function registerPowerEventForwarding() {
+  if (powerEventForwardingRegistered) return
+  powerEventForwardingRegistered = true
+  for (const kind of POWER_EVENT_KINDS) {
+    powerMonitor.on(kind, () => {
+      broadcastPowerEvent(kind)
+    })
+  }
+}
+
 export function register() {
+  registerPowerEventForwarding()
+
   ipcMain.handle('pet-window:get-state', (event) => {
     requireTrustedSender(event)
     return getPetWindowStateForEvent(event)
@@ -148,6 +171,11 @@ export function register() {
     return getPlatformProfile()
   })
 
+  ipcMain.handle('app:get-system-idle-time', (event) => {
+    requireTrustedSender(event)
+    return Math.max(0, powerMonitor.getSystemIdleTime())
+  })
+
   ipcMain.handle('pet-model:list', async (event) => {
     requireTrustedSender(event)
     return listAvailablePetModels()
@@ -232,6 +260,13 @@ export function register() {
   ipcMain.handle('tool:get-weather', async (event, payload = {}) => {
     requireTrustedSender(event)
     payload = validateWeatherToolPayload(payload)
+    if (payload.quiet) {
+      try {
+        return await invokeRegisteredTool(event, 'weather_lookup', payload)
+      } catch {
+        return null
+      }
+    }
     return invokeRegisteredTool(event, 'weather_lookup', payload)
   })
 

@@ -13,6 +13,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
+import { shouldPresentCrisisPanel } from '../src/features/safety/crisisPanelState.ts'
 import { detectCrisisSignal } from '../src/features/safety/crisisDetect.ts'
 import type { CrisisSeverity } from '../src/features/safety/types.ts'
 import type { AppLocale } from '../src/types/i18n.ts'
@@ -164,4 +165,23 @@ test('detectCrisisSignal: returns highest-priority match when multiple apply', (
   const signal = detectCrisisSignal('I want to kill myself, I want to die', 'en-US')
   assert.ok(signal)
   assert.equal(signal.severity, 'high')
+})
+
+test('shouldPresentCrisisPanel: only medium and high signals render the hotline panel', () => {
+  assert.equal(shouldPresentCrisisPanel(null), false)
+  assert.equal(shouldPresentCrisisPanel({
+    severity: 'low',
+    matchedPhrase: "I can't go on",
+    locale: 'en-US',
+  }), false)
+  assert.equal(shouldPresentCrisisPanel({
+    severity: 'medium',
+    matchedPhrase: 'I want to die',
+    locale: 'en-US',
+  }), true)
+  assert.equal(shouldPresentCrisisPanel({
+    severity: 'high',
+    matchedPhrase: 'I want to kill myself',
+    locale: 'en-US',
+  }), true)
 })

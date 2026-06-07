@@ -1,15 +1,62 @@
-import fs, { promises as fsp } from 'node:fs'
+import { promises as fsp } from 'node:fs'
 import { app, BrowserWindow, Menu, nativeImage, screen, shell, Tray } from 'electron'
 import nodeNet from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getPreloadPath, getRendererEntry } from './rendererServer.js'
 import { buildPlatformProfile } from './platformProfile.js'
-import { clampWindowPosition, getPanelWindowPosition, PANEL_WINDOW_GAP_PX } from './windowManagerHelpers.js'
-import { createPetLocomotion } from './petLocomotion.js'
+import { clampWindowPosition, getPanelWindowPosition } from './windowManagerHelpers.js'
+import {
+  applyWindowIcon,
+  applyWindowsAppDetails,
+  createNativeImageFromCandidates,
+  getPetIconCandidates,
+  getPetIconPath,
+} from './windowAssets.js'
+import {
+  getLaunchOnStartupState,
+  setLaunchOnStartupState,
+} from './launchOnStartup.js'
+import {
+  sanitizeRuntimeStatePatch,
+} from './windowStateSanitizers.js'
 import { getSavedBounds, trackWindow } from './services/windowBoundsStore.js'
-import { getSavedPetPref, savePetPref } from './services/petPrefsStore.js'
 import { isAllowedRendererNavigation, normalizeExternalWindowOpenUrl } from './windowNavigation.js'
+import {
+  applyPetWindowInstances,
+  configurePetWindowInstances,
+  destroyPetInstance,
+  getPetInstanceCount,
+  getPetInstanceForWindow,
+  getPetWindowStateForEvent,
+  registerPetInstance,
+  syncPetInstance,
+  syncPetWindowInstances,
+  updatePetWindowStateForEvent,
+} from './petWindowInstances.js'
+import {
+  configurePanelWindowController,
+  emitPanelWindowState,
+  getPanelWindowCreationState,
+  isPanelWindowTrackable,
+  panelWindowState,
+  rememberPanelWindowBounds,
+  updatePanelWindowState,
+} from './panelWindowController.js'
+
+export {
+  getLaunchOnStartupState,
+  setLaunchOnStartupState,
+} from './launchOnStartup.js'
+export { getPetIconPath } from './windowAssets.js'
+export {
+  getPetWindowStateForEvent,
+  updatePetWindowStateForEvent,
+} from './petWindowInstances.js'
+export {
+  panelWindowState,
+  updatePanelWindowState,
+} from './panelWindowController.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -82,20 +129,8 @@ const PET_WINDOW_DEFAULT_WIDTH = 320
 const PET_WINDOW_DEFAULT_HEIGHT = 460
 const PET_WINDOW_MIN_WIDTH = 260
 const PET_WINDOW_MIN_HEIGHT = 340
-const PANEL_WINDOW_DEFAULT_WIDTH = 460
-const PANEL_WINDOW_DEFAULT_HEIGHT = 660
-const PANEL_WINDOW_MIN_WIDTH = 400
-const PANEL_WINDOW_MIN_HEIGHT = 540
-const PANEL_WINDOW_COLLAPSED_WIDTH = 380
-const PANEL_WINDOW_COLLAPSED_HEIGHT = 92
 const PET_ALWAYS_ON_TOP_LEVEL = 'floating'
-const WINDOWS_APP_USER_MODEL_ID = 'ai.factory.desktoppet'
 const WINDOWS_TRAY_GUID = '4cf28656-71be-4e31-8f33-b83f76e8db10'
-const WINDOWS_LOGIN_ITEM_ARGS = ['--launch-at-login']
-const LINUX_AUTOSTART_FILENAME = 'nexus-autostart.desktop'
-const LINUX_AUTOSTART_ARG = '--launch-at-login'
-const WINDOWS_APP_ICON_FILE = 'nexus.ico'
-const DEFAULT_APP_ICON_FILE = 'nexus-256.png'
 
 export let mainWindow = null
 export let panelWindow = null
@@ -129,168 +164,20 @@ export let runtimeClientHeartbeat = {
   panel: 0,
 }
 
-export let panelWindowState = {
-  collapsed: false,
-}
-
-let panelWindowExpandedBounds = null
-
-// --- Pet instances (primary + clones) ----------------------------------
-// Each pet window owns its own state + locomotion controller, so several
-// pets can roam the desktop independently. The primary instance's window is
-// `mainWindow`; clones are spawned/dismissed from the pet context menu.
-const petInstances = new Map() // win.webContents.id -> { id, win, state, loco }
-
-function makePetWindowState() {
-  return {
-    isPinned: true,
-    clickThrough: false,
-    petHotspotActive: false,
-    locomotionActivity: 'idle',
-    freeMode: getSavedPetPref('freeMode') ?? true,
-    roamCapable: true,
-  }
-}
-
-function registerPetInstance(win) {
-  const id = win.webContents.id
-  const inst = { id, win, state: makePetWindowState(), loco: null }
-  inst.loco = createPetLocomotion({
-    getWin: () => inst.win,
-    getState: () => inst.state,
-    patchState: (patch) => {
-      inst.state = { ...inst.state, ...patch }
-      if ('freeMode' in patch) savePetPref('freeMode', patch.freeMode)
-      syncPetInstance(inst)
-    },
-  })
-  petInstances.set(id, inst)
-  return inst
-}
-
-function destroyPetInstance(inst) {
-  if (!inst) return
-  inst.loco.stop()
-  petInstances.delete(inst.id)
-}
-
-function petInstanceForEvent(event) {
-  const win = BrowserWindow.fromWebContents(event.sender)
-  return win ? petInstances.get(win.webContents.id) ?? null : null
-}
-
-// Send one instance its own state; the primary also mirrors to the panel
-// window so the settings UI tracks the main pet.
-function syncPetInstance(inst) {
-  if (inst.win && !inst.win.isDestroyed()) {
-    inst.win.webContents.send('pet-window:state-changed', inst.state)
-  }
-  if (inst.win === mainWindow && panelWindow && !panelWindow.isDestroyed()) {
-    panelWindow.webContents.send('pet-window:state-changed', inst.state)
-  }
-}
-
-function applyPetInstance(inst) {
-  const { win, state } = inst
-  if (!win || win.isDestroyed()) return
-  win.setAlwaysOnTop(Boolean(state.isPinned), PET_ALWAYS_ON_TOP_LEVEL)
-  win.setIgnoreMouseEvents(
-    Boolean(state.clickThrough) && !Boolean(state.petHotspotActive),
-    { forward: true },
-  )
-}
+configurePetWindowInstances({
+  getMainWindow: () => mainWindow,
+  getPanelWindow: () => panelWindow,
+  alwaysOnTopLevel: PET_ALWAYS_ON_TOP_LEVEL,
+})
+configurePanelWindowController({
+  getMainWindow: () => mainWindow,
+  getPanelWindow: () => panelWindow,
+})
 
 export let panelSection = 'chat'
 
-function getAppIconFilename(platform = process.platform) {
-  return platform === 'win32' ? WINDOWS_APP_ICON_FILE : DEFAULT_APP_ICON_FILE
-}
-
-function getAppIconPathCandidates(platform = process.platform) {
-  const filename = getAppIconFilename(platform)
-  const candidates = []
-
-  if (app.isPackaged && process.resourcesPath) {
-    candidates.push(path.join(process.resourcesPath, filename))
-    candidates.push(path.join(process.resourcesPath, 'app.asar.unpacked', 'dist', filename))
-  }
-
-  candidates.push(path.join(__dirname, '..', 'dist', filename))
-  candidates.push(path.join(__dirname, '..', 'public', filename))
-
-  // On Windows, an executable path can be used as icon source by some shell
-  // surfaces (taskbar relaunch metadata). Keep it as a last-resort fallback.
-  if (platform === 'win32') {
-    candidates.push(process.execPath)
-  }
-
-  const uniqueCandidates = new Set()
-  for (const candidate of candidates) {
-    const normalized = String(candidate ?? '').trim()
-    if (!normalized || uniqueCandidates.has(normalized)) continue
-    uniqueCandidates.add(normalized)
-  }
-  return [...uniqueCandidates]
-}
-
-function pickExistingIconPath(candidates) {
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate)) return candidate
-    } catch {
-      // Ignore invalid candidates.
-    }
-  }
-  return null
-}
-
-export function getPetIconPath(platform = process.platform) {
-  const candidates = getAppIconPathCandidates(platform)
-  const existing = pickExistingIconPath(candidates)
-  return existing ?? candidates[0] ?? path.join(__dirname, '..', 'public', getAppIconFilename(platform))
-}
-
-function getPetIconCandidates(platform = process.platform) {
-  return getAppIconPathCandidates(platform)
-}
-
-function createNativeImageFromCandidates(candidates) {
-  for (const candidate of candidates) {
-    const image = nativeImage.createFromPath(candidate)
-    if (!image.isEmpty()) {
-      return image
-    }
-  }
-  return null
-}
-
-function applyWindowIcon(win) {
-  if (!win || win.isDestroyed()) return
-  if (process.platform !== 'win32' && process.platform !== 'linux') return
-  try {
-    win.setIcon(getPetIconPath(process.platform))
-  } catch (err) {
-    console.warn('[window] Failed to set window icon:', err?.message)
-  }
-}
-
 export function hasSystemTray() {
   return Boolean(tray && !tray.isDestroyed?.())
-}
-
-function applyWindowsAppDetails(win) {
-  if (process.platform !== 'win32' || !win || win.isDestroyed()) return
-  try {
-    win.setAppDetails({
-      appId: WINDOWS_APP_USER_MODEL_ID,
-      appIconPath: getPetIconPath(),
-      appIconIndex: 0,
-      relaunchCommand: process.execPath,
-      relaunchDisplayName: app.name || 'Nexus',
-    })
-  } catch (err) {
-    console.warn('[windows] Failed to set window app details:', err?.message)
-  }
 }
 
 // macOS dock visibility is reference-counted so we can toggle on/off as the
@@ -363,89 +250,11 @@ export function syncRuntimeState(originWebContentsId = null) {
 }
 
 export function syncPetWindowState() {
-  for (const inst of petInstances.values()) syncPetInstance(inst)
-}
-
-// Per-key runtime-state schema. Each entry maps a key to the JS typeof
-// it must match. Anything not in this map (or that doesn't match the
-// declared type) is silently dropped from the renderer-supplied payload.
-//
-// Without this, `runtime-state:update` accepts any shape from the
-// renderer and spread-merges into shared main-process state — a hostile
-// page could pour in megabyte-scale strings or wrong-type values that
-// crash subscribers. The allowlist closes the door.
-const RUNTIME_STATE_SCHEMA = {
-  mood: 'string',
-  continuousVoiceActive: 'boolean',
-  panelSettingsOpen: 'boolean',
-  voiceState: 'string',
-  hearingEngine: 'string',
-  hearingPhase: 'string',
-  wakewordPhase: 'string',
-  wakewordActive: 'boolean',
-  wakewordAvailable: 'boolean',
-  wakewordWakeWord: 'string',
-  wakewordReason: 'string',
-  wakewordLastTriggeredAt: 'string',
-  wakewordError: 'string',
-  wakewordUpdatedAt: 'string',
-  assistantActivity: 'string',
-  searchInProgress: 'boolean',
-  ttsInProgress: 'boolean',
-  schedulerArmed: 'boolean',
-  schedulerNextRunAt: 'string',
-  activeTaskLabel: 'string',
-}
-
-const RUNTIME_STATE_STRING_MAX = 256
-
-// Per-key pet-window-state schema. Same allowlist pattern as the
-// runtime-state schema above, but for the smaller pet-window surface.
-const PET_WINDOW_STATE_SCHEMA = {
-  isPinned: 'boolean',
-  clickThrough: 'boolean',
-  petHotspotActive: 'boolean',
-  locomotionActivity: 'string',
-  freeMode: 'boolean',
-  roamCapable: 'boolean',
-}
-
-const PANEL_WINDOW_STATE_SCHEMA = {
-  collapsed: 'boolean',
-}
-
-function sanitizeBySchema(partialState, schema, stringMax = RUNTIME_STATE_STRING_MAX) {
-  if (!partialState || typeof partialState !== 'object') return Object.create(null)
-  const safe = Object.create(null)
-  for (const [key, value] of Object.entries(partialState)) {
-    const expected = schema[key]
-    if (!expected) continue                  // not in the allowlist
-    if (typeof value !== expected) continue  // wrong type
-    if (expected === 'string') {
-      // Trim and clamp to a sensible max so a renderer can't dump a
-      // multi-MB blob into shared state and re-broadcast it everywhere.
-      safe[key] = value.length > stringMax ? value.slice(0, stringMax) : value
-    } else {
-      safe[key] = value
-    }
-  }
-  return safe
-}
-
-function sanitizePartialState(partialState) {
-  return sanitizeBySchema(partialState, RUNTIME_STATE_SCHEMA)
-}
-
-function sanitizePetWindowPartial(partialState) {
-  return sanitizeBySchema(partialState, PET_WINDOW_STATE_SCHEMA)
-}
-
-function sanitizePanelWindowPartial(partialState) {
-  return sanitizeBySchema(partialState, PANEL_WINDOW_STATE_SCHEMA)
+  syncPetWindowInstances()
 }
 
 export function updateRuntimeState(partialState, originWebContentsId = null) {
-  const safe = sanitizePartialState(partialState)
+  const safe = sanitizeRuntimeStatePatch(partialState)
   runtimeState = {
     ...runtimeState,
     ...safe,
@@ -466,147 +275,9 @@ export function updateHeartbeat(view, originWebContentsId = null) {
 }
 
 export function applyPetWindowState() {
-  for (const inst of petInstances.values()) applyPetInstance(inst)
+  applyPetWindowInstances()
 }
 
-export function getPetWindowStateForEvent(event) {
-  const inst = petInstanceForEvent(event)
-  return inst ? inst.state : makePetWindowState()
-}
-
-export function updatePetWindowStateForEvent(event, partialState = {}) {
-  const inst = petInstanceForEvent(event)
-  if (!inst) return null
-  const safe = sanitizePetWindowPartial(partialState)
-  inst.state = { ...inst.state, ...safe }
-  applyPetInstance(inst)
-  syncPetInstance(inst)
-  return inst.state
-}
-
-function escapeDesktopExecToken(token) {
-  return String(token ?? '')
-    .replaceAll('\\', '\\\\')
-    .replaceAll('"', '\\"')
-    .replaceAll('`', '\\`')
-    .replaceAll('$', '\\$')
-}
-
-function quoteDesktopExecToken(token) {
-  return `"${escapeDesktopExecToken(token)}"`
-}
-
-function getWindowsLoginItemOptions() {
-  if (process.platform !== 'win32') return {}
-  return {
-    path: process.execPath,
-    args: WINDOWS_LOGIN_ITEM_ARGS,
-  }
-}
-
-function getLinuxAutostartDesktopPath() {
-  const xdgConfigHome = String(process.env.XDG_CONFIG_HOME ?? '').trim()
-  const configHome = xdgConfigHome || path.join(app.getPath('home'), '.config')
-  return path.join(configHome, 'autostart', LINUX_AUTOSTART_FILENAME)
-}
-
-function buildLinuxAutostartDesktopEntry() {
-  const appName = String(app.name || 'Nexus').trim() || 'Nexus'
-  const execPath = process.execPath
-  const execLine = `${quoteDesktopExecToken(execPath)} ${quoteDesktopExecToken(LINUX_AUTOSTART_ARG)}`
-  const iconPath = getPetIconPath('linux')
-  return [
-    '[Desktop Entry]',
-    'Type=Application',
-    'Version=1.0',
-    `Name=${appName}`,
-    'Comment=Nexus desktop companion',
-    `Exec=${execLine}`,
-    `Icon=${iconPath}`,
-    'Terminal=false',
-    'StartupNotify=true',
-    'StartupWMClass=Nexus',
-    'X-GNOME-Autostart-enabled=true',
-    '',
-  ].join('\n')
-}
-
-function getLinuxLaunchOnStartupState() {
-  const autostartFile = getLinuxAutostartDesktopPath()
-  try {
-    const content = fs.readFileSync(autostartFile, 'utf8')
-    if (!content || !content.includes('[Desktop Entry]')) return false
-    if (/^\s*Hidden\s*=\s*true\s*$/im.test(content)) return false
-    return true
-  } catch {
-    return false
-  }
-}
-
-function setLinuxLaunchOnStartupState(value) {
-  const autostartFile = getLinuxAutostartDesktopPath()
-  if (value) {
-    try {
-      fs.mkdirSync(path.dirname(autostartFile), { recursive: true, mode: 0o700 })
-      fs.writeFileSync(autostartFile, buildLinuxAutostartDesktopEntry(), { encoding: 'utf8', mode: 0o644 })
-    } catch {
-      return false
-    }
-    return getLinuxLaunchOnStartupState()
-  }
-
-  try {
-    fs.unlinkSync(autostartFile)
-  } catch (error) {
-    if (error?.code !== 'ENOENT') {
-      return false
-    }
-  }
-  return false
-}
-
-export function getLaunchOnStartupState() {
-  if (!app.isPackaged) {
-    return false
-  }
-
-  if (process.platform === 'linux') {
-    return getLinuxLaunchOnStartupState()
-  }
-
-  try {
-    const exact = app.getLoginItemSettings(getWindowsLoginItemOptions())
-    if (exact?.openAtLogin === true) return true
-    if (process.platform === 'win32') {
-      const fallback = app.getLoginItemSettings()
-      return Boolean(fallback?.openAtLogin || fallback?.executableWillLaunchAtLogin)
-    }
-    return false
-  } catch {
-    return false
-  }
-}
-
-export function setLaunchOnStartupState(value) {
-  if (!app.isPackaged) {
-    return false
-  }
-
-  if (process.platform === 'linux') {
-    return setLinuxLaunchOnStartupState(Boolean(value))
-  }
-
-  try {
-    app.setLoginItemSettings({
-      openAtLogin: Boolean(value),
-      ...getWindowsLoginItemOptions(),
-    })
-  } catch {
-    return false
-  }
-
-  return getLaunchOnStartupState()
-}
 
 export function getPlatformProfile() {
   const trayActive = hasSystemTray()
@@ -616,104 +287,6 @@ export function getPlatformProfile() {
     trayActive,
     launchOnStartupEnabled: getLaunchOnStartupState(),
   })
-}
-
-// clampWindowPosition and getPanelWindowPosition are imported from
-// windowManagerHelpers.js — kept Electron-free for unit testing.
-
-function rememberPanelWindowBounds() {
-  if (!panelWindow || panelWindow.isDestroyed() || panelWindowState.collapsed) return
-  panelWindowExpandedBounds = panelWindow.getBounds()
-}
-
-function emitPanelWindowState() {
-  if (!panelWindow || panelWindow.isDestroyed()) return
-  panelWindow.webContents.send('panel-window:state-changed', panelWindowState)
-}
-
-function getExpandedPanelBounds() {
-  if (panelWindowExpandedBounds) {
-    return {
-      width: Math.max(panelWindowExpandedBounds.width, PANEL_WINDOW_MIN_WIDTH),
-      height: Math.max(panelWindowExpandedBounds.height, PANEL_WINDOW_MIN_HEIGHT),
-      x: panelWindowExpandedBounds.x,
-      y: panelWindowExpandedBounds.y,
-    }
-  }
-
-  const ownerBounds = mainWindow?.getBounds()
-  const { workArea } = ownerBounds
-    ? screen.getDisplayMatching(ownerBounds)
-    : screen.getPrimaryDisplay()
-  const position = getPanelWindowPosition(
-    PANEL_WINDOW_DEFAULT_WIDTH,
-    PANEL_WINDOW_DEFAULT_HEIGHT,
-    ownerBounds,
-    workArea,
-  )
-
-  return {
-    width: PANEL_WINDOW_DEFAULT_WIDTH,
-    height: PANEL_WINDOW_DEFAULT_HEIGHT,
-    x: position.x,
-    y: position.y,
-  }
-}
-
-export function updatePanelWindowState(partialState = {}) {
-  const safe = sanitizePanelWindowPartial(partialState)
-  panelWindowState = {
-    ...panelWindowState,
-    ...safe,
-  }
-
-  if (!panelWindow || panelWindow.isDestroyed()) {
-    return panelWindowState
-  }
-
-  if (panelWindowState.collapsed) {
-    panelWindowExpandedBounds = panelWindow.getBounds()
-    const currentBounds = panelWindow.getBounds()
-    const { workArea } = screen.getDisplayMatching(currentBounds)
-    const nextPosition = clampWindowPosition(
-      PANEL_WINDOW_COLLAPSED_WIDTH,
-      PANEL_WINDOW_COLLAPSED_HEIGHT,
-      currentBounds.x,
-      currentBounds.y + Math.max(currentBounds.height - PANEL_WINDOW_COLLAPSED_HEIGHT, 0),
-      workArea,
-    )
-
-    panelWindow.setResizable(false)
-    panelWindow.setMinimumSize(PANEL_WINDOW_COLLAPSED_WIDTH, PANEL_WINDOW_COLLAPSED_HEIGHT)
-    panelWindow.setBounds({
-      x: nextPosition.x,
-      y: nextPosition.y,
-      width: PANEL_WINDOW_COLLAPSED_WIDTH,
-      height: PANEL_WINDOW_COLLAPSED_HEIGHT,
-    }, true)
-  } else {
-    const expandedBounds = getExpandedPanelBounds()
-    const { workArea } = screen.getDisplayMatching(expandedBounds)
-    const nextPosition = clampWindowPosition(
-      expandedBounds.width,
-      expandedBounds.height,
-      expandedBounds.x,
-      expandedBounds.y,
-      workArea,
-    )
-
-    panelWindow.setResizable(true)
-    panelWindow.setMinimumSize(PANEL_WINDOW_MIN_WIDTH, PANEL_WINDOW_MIN_HEIGHT)
-    panelWindow.setBounds({
-      x: nextPosition.x,
-      y: nextPosition.y,
-      width: expandedBounds.width,
-      height: expandedBounds.height,
-    }, true)
-  }
-
-  emitPanelWindowState()
-  return panelWindowState
 }
 
 function openExternalUrlFromWindow(url, label) {
@@ -765,7 +338,7 @@ export function moveMainWindowBy(deltaX, deltaY) {
 export function dragWindowBy(event, delta) {
   const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
   if (!sourceWindow || sourceWindow.isDestroyed()) return
-  const dragInst = petInstances.get(sourceWindow.webContents.id)
+  const dragInst = getPetInstanceForWindow(sourceWindow)
   if (dragInst) dragInst.loco.noteDrag(delta)
 
   const bounds = sourceWindow.getBounds()
@@ -963,7 +536,7 @@ const PET_CLONE_SPAWN_OFFSET_PX = 48
 // and roam independently; they're ephemeral (no saved bounds, destroyed on
 // close) and never replace the primary `mainWindow`.
 function spawnPetClone(sourceWindow = mainWindow) {
-  if (petInstances.size >= MAX_PET_INSTANCES) return null
+  if (getPetInstanceCount() >= MAX_PET_INSTANCES) return null
   const base = sourceWindow && !sourceWindow.isDestroyed() ? sourceWindow : mainWindow
   if (!base || base.isDestroyed()) return null
 
@@ -1026,28 +599,15 @@ export function createPanelWindow() {
     return panelWindow
   }
 
-  const ownerBounds = mainWindow?.getBounds()
-  const savedPanel = panelWindowState.collapsed ? null : getSavedBounds('panel')
-  const width = panelWindowState.collapsed
-    ? PANEL_WINDOW_COLLAPSED_WIDTH
-    : (savedPanel?.width ?? PANEL_WINDOW_DEFAULT_WIDTH)
-  const height = panelWindowState.collapsed
-    ? PANEL_WINDOW_COLLAPSED_HEIGHT
-    : (savedPanel?.height ?? PANEL_WINDOW_DEFAULT_HEIGHT)
-  const { workArea } = ownerBounds
-    ? screen.getDisplayMatching(ownerBounds)
-    : screen.getPrimaryDisplay()
-  const { x, y } = panelWindowState.collapsed
-    ? clampWindowPosition(
-        width,
-        height,
-        (panelWindowExpandedBounds?.x ?? ownerBounds?.x ?? workArea.x + workArea.width - width - 72),
-        (panelWindowExpandedBounds?.y ?? ownerBounds?.y ?? workArea.y + 72) + Math.max((panelWindowExpandedBounds?.height ?? height) - height, 0),
-        workArea,
-      )
-    : savedPanel
-      ? clampWindowPosition(width, height, savedPanel.x, savedPanel.y, workArea)
-      : getPanelWindowPosition(width, height, ownerBounds, workArea)
+  const {
+    width,
+    height,
+    x,
+    y,
+    resizable,
+    minWidth,
+    minHeight,
+  } = getPanelWindowCreationState()
 
   const win = new BrowserWindow({
     width,
@@ -1060,9 +620,9 @@ export function createPanelWindow() {
     hasShadow: true,
     alwaysOnTop: false,
     skipTaskbar: false,
-    resizable: !panelWindowState.collapsed,
-    minWidth: panelWindowState.collapsed ? PANEL_WINDOW_COLLAPSED_WIDTH : PANEL_WINDOW_MIN_WIDTH,
-    minHeight: panelWindowState.collapsed ? PANEL_WINDOW_COLLAPSED_HEIGHT : PANEL_WINDOW_MIN_HEIGHT,
+    resizable,
+    minWidth,
+    minHeight,
     maximizable: false,
     minimizable: true,
     fullscreenable: false,
@@ -1166,7 +726,7 @@ export function createPanelWindow() {
   win.loadURL(getRendererEntry('panel'))
 
   panelWindow = win
-  trackWindow(win, 'panel', { isTrackable: () => !panelWindowState.collapsed })
+  trackWindow(win, 'panel', { isTrackable: isPanelWindowTrackable })
   return win
 }
 
@@ -1207,7 +767,7 @@ export function showPanelWindow(section = 'chat') {
 export function showPetContextMenu(sourceWindow = mainWindow) {
   if (!sourceWindow || sourceWindow.isDestroyed()) return
 
-  const inst = petInstances.get(sourceWindow.webContents.id) ?? null
+  const inst = getPetInstanceForWindow(sourceWindow)
 
   const menu = Menu.buildFromTemplate([
     {
@@ -1242,8 +802,8 @@ export function showPetContextMenu(sourceWindow = mainWindow) {
       },
     },
     {
-      label: petInstances.size < MAX_PET_INSTANCES ? '分身一只' : '分身已满',
-      enabled: petInstances.size < MAX_PET_INSTANCES,
+      label: getPetInstanceCount() < MAX_PET_INSTANCES ? '分身一只' : '分身已满',
+      enabled: getPetInstanceCount() < MAX_PET_INSTANCES,
       click: () => {
         spawnPetClone(sourceWindow)
       },

@@ -17,6 +17,10 @@ import {
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
   validateServiceConnectionTestPayload,
+  validateSkillIdPayload,
+  validateSkillSavePayload,
+  validateSkillSearchPayload,
+  validateWorkspaceEditPayload,
   validateWebSearchToolPayload,
   validateWorkspaceGrepPayload,
   validateWorkspaceWritePayload,
@@ -277,8 +281,18 @@ test('IPC memory and workspace schemas reject malformed storage payloads', () =>
   )
 
   assert.deepEqual(
-    validateWorkspaceWritePayload({ path: 'notes/a.md', content: 'body' }),
+    validateWorkspaceWritePayload({ path: ' notes/a.md ', content: 'body' }),
     { path: 'notes/a.md', content: 'body' },
+  )
+
+  assert.throws(
+    () => validateWorkspaceWritePayload({ path: '   ', content: 'body' }),
+    /Invalid IPC payload for workspace:write: payload\.path must be a non-empty string/,
+  )
+
+  assert.throws(
+    () => validateWorkspaceEditPayload({ path: 'notes/a.md', oldString: '', newString: 'body' }),
+    /Invalid IPC payload for workspace:edit: payload\.oldString must be a non-empty string/,
   )
 
   assert.throws(
@@ -320,5 +334,72 @@ test('IPC MCP and plugin schemas bound command and plugin surfaces', () => {
   assert.throws(
     () => validatePluginBusRecentPayload({ limit: 500 }),
     /payload\.limit must be <= 200/,
+  )
+})
+
+test('IPC skill schemas bound persisted skill payloads and file ids', () => {
+  assert.deepEqual(
+    validateSkillSavePayload({
+      id: ' skill-1 ',
+      title: ' Research workflow ',
+      trigger: ' research, summarize ',
+      summary: ' Summarize source-backed findings. ',
+      content: ' # Steps\nUse sources. ',
+      ignored: true,
+    }),
+    {
+      id: 'skill-1',
+      title: 'Research workflow',
+      trigger: 'research, summarize',
+      summary: 'Summarize source-backed findings.',
+      content: '# Steps\nUse sources.',
+    },
+  )
+
+  assert.throws(
+    () => validateSkillSavePayload({
+      id: '../outside',
+      title: 'Research workflow',
+      trigger: 'research',
+      summary: 'summary',
+      content: 'body',
+    }),
+    /Invalid IPC payload for skill:save: payload\.id has an invalid format/,
+  )
+
+  assert.throws(
+    () => validateSkillSavePayload({
+      id: 'skill-1',
+      title: 'Research workflow',
+      trigger: 'research',
+      summary: 'summary',
+      content: '   ',
+    }),
+    /Invalid IPC payload for skill:save: payload\.content must be a non-empty string/,
+  )
+
+  assert.deepEqual(validateSkillSearchPayload({ query: '  research workflow ', limit: 2 }), {
+    query: 'research workflow',
+    limit: 2,
+  })
+  assert.throws(
+    () => validateSkillSearchPayload({ query: 'research', limit: 2.5 }),
+    /Invalid IPC payload for skill:search: payload\.limit must be an integer/,
+  )
+  assert.throws(
+    () => validateSkillSearchPayload({ query: 'research', limit: 50 }),
+    /Invalid IPC payload for skill:search: payload\.limit must be <= 20/,
+  )
+
+  assert.deepEqual(validateSkillIdPayload('skill:get', { id: ' auto-ab12-cd34 ', ignored: true }), {
+    id: 'auto-ab12-cd34',
+  })
+  assert.throws(
+    () => validateSkillIdPayload('skill:remove', { id: '' }),
+    /Invalid IPC payload for skill:remove: payload\.id must be a non-empty string/,
+  )
+  assert.throws(
+    () => validateSkillIdPayload('skill:mark-used', { id: '.hidden' }),
+    /Invalid IPC payload for skill:mark-used: payload\.id has an invalid format/,
   )
 })

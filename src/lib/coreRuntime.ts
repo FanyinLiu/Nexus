@@ -1,15 +1,31 @@
 import {
   AuthProfileStore,
+} from '../core/routing/AuthProfileStore.ts'
+import type {
+  AuthProfile,
+} from '../core/routing/types.ts'
+import type {
+  BudgetConfig,
+  CostEntry,
+} from '../core/budget/types.ts'
+import {
   CostTracker,
-  InMemoryMemoryBackend,
-  SessionStore,
-  SkillRegistry,
-  TodoStore,
+} from '../core/budget/CostTracker.ts'
+import {
   UsagePricingTable,
-  type AuthProfile,
-  type BudgetConfig,
-  type CostEntry,
-} from '../core'
+} from '../core/budget/UsagePricing.ts'
+import {
+  InMemoryMemoryBackend,
+} from '../core/agent/tools/MemoryTool.ts'
+import {
+  TodoStore,
+} from '../core/agent/tools/TodoTool.ts'
+import {
+  SessionStore,
+} from '../core/sessions/SessionStore.ts'
+import {
+  SkillRegistry,
+} from '../core/skills/SkillRegistry.ts'
 import {
   loadAuthProfileSnapshot,
   loadBudgetConfig,
@@ -17,7 +33,7 @@ import {
   persistAuthProfileSnapshot,
   persistBudgetConfig,
   persistCostEntries,
-} from './storage'
+} from './storage/index.ts'
 
 export type CoreRuntime = {
   authStore: AuthProfileStore
@@ -43,17 +59,7 @@ export function getCoreRuntime(): CoreRuntime {
   authStore.restore(snapshot)
 
   const costTracker = new CostTracker({ pricing, config: loadBudgetConfig() })
-  for (const entry of loadCostEntries()) {
-    costTracker.record({
-      providerId: entry.providerId,
-      modelId: entry.modelId,
-      tier: entry.tier,
-      inputTokens: entry.inputTokens,
-      outputTokens: entry.outputTokens,
-      conversationId: entry.conversationId,
-      timestamp: entry.timestamp,
-    })
-  }
+  costTracker.restore(loadCostEntries())
 
   const sessionStore = new SessionStore()
 
@@ -91,15 +97,28 @@ export function getCoreRuntime(): CoreRuntime {
 
 export function recordCostEntry(entry: CostEntry): void {
   const runtime = getCoreRuntime()
-  runtime.costTracker.record({
-    providerId: entry.providerId,
-    modelId: entry.modelId,
-    tier: entry.tier,
-    inputTokens: entry.inputTokens,
-    outputTokens: entry.outputTokens,
-    conversationId: entry.conversationId,
-    timestamp: entry.timestamp,
-  })
+  const kind = entry.kind ?? 'chat'
+  if (kind === 'chat') {
+    runtime.costTracker.record({
+      providerId: entry.providerId,
+      modelId: entry.modelId,
+      tier: entry.tier,
+      inputTokens: entry.inputTokens,
+      outputTokens: entry.outputTokens,
+      conversationId: entry.conversationId,
+      timestamp: entry.timestamp,
+    })
+  } else {
+    runtime.costTracker.recordAuxiliary({
+      kind,
+      providerId: entry.providerId,
+      modelId: entry.modelId,
+      units: entry.units ?? 0,
+      costUsd: entry.costUsd,
+      conversationId: entry.conversationId,
+      timestamp: entry.timestamp,
+    })
+  }
   runtime.persistBudget()
 }
 

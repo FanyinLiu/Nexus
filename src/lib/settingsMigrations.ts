@@ -13,7 +13,7 @@
 import type { UiLanguage } from '../types'
 import { normalizeUiLanguage } from './uiLanguage.ts'
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 4
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 5
 
 export interface SettingsMigration {
   toVersion: number
@@ -93,6 +93,17 @@ const migrations: SettingsMigration[] = [
         ? next.ambientWeatherLocation.trim() : ''
       if (!tool && ambient) next.toolWeatherDefaultLocation = ambient
       delete next.ambientWeatherLocation
+      return next
+    },
+  },
+  {
+    toVersion: 5,
+    description: 'Move users still on the old qiyi default pet to the Codex sprite pet',
+    migrate: (raw) => {
+      const next = { ...raw }
+      if (next.petModelId === 'qiyi') {
+        next.petModelId = 'codex'
+      }
       return next
     },
   },

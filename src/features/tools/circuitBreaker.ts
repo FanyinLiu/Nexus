@@ -22,6 +22,7 @@ type ToolCircuit = {
   state: CircuitState
   consecutiveFailures: number
   lastFailureAt: number
+  halfOpenProbeInFlight: boolean
 }
 
 const _circuits = new Map<string, ToolCircuit>()
@@ -29,7 +30,12 @@ const _circuits = new Map<string, ToolCircuit>()
 function getCircuit(toolId: string): ToolCircuit {
   let circuit = _circuits.get(toolId)
   if (!circuit) {
-    circuit = { state: 'closed', consecutiveFailures: 0, lastFailureAt: 0 }
+    circuit = {
+      state: 'closed',
+      consecutiveFailures: 0,
+      lastFailureAt: 0,
+      halfOpenProbeInFlight: false,
+    }
     _circuits.set(toolId, circuit)
   }
   return circuit
@@ -39,14 +45,23 @@ function recordSuccess(toolId: string) {
   const circuit = getCircuit(toolId)
   circuit.state = 'closed'
   circuit.consecutiveFailures = 0
+  circuit.halfOpenProbeInFlight = false
 }
 
 function recordFailure(toolId: string) {
   const circuit = getCircuit(toolId)
   circuit.consecutiveFailures++
   circuit.lastFailureAt = Date.now()
+  circuit.halfOpenProbeInFlight = false
   if (circuit.consecutiveFailures >= CONSECUTIVE_FAILURE_THRESHOLD) {
     circuit.state = 'open'
+  }
+}
+
+function releaseHalfOpenProbe(toolId: string) {
+  const circuit = getCircuit(toolId)
+  if (circuit.state === 'half-open') {
+    circuit.halfOpenProbeInFlight = false
   }
 }
 
@@ -56,11 +71,16 @@ function isCallAllowed(toolId: string): boolean {
   if (circuit.state === 'open') {
     if (Date.now() - circuit.lastFailureAt >= OPEN_COOLDOWN_MS) {
       circuit.state = 'half-open'
+      circuit.halfOpenProbeInFlight = true
       return true
     }
     return false
   }
-  // half-open — allow the probe call
+  if (circuit.halfOpenProbeInFlight) {
+    return false
+  }
+  // half-open — allow exactly one recovery probe at a time.
+  circuit.halfOpenProbeInFlight = true
   return true
 }
 
@@ -77,6 +97,13 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
       (err) => { clearTimeout(timer); reject(err) },
     )
   })
+}
+
+function isNonRetriableCallerError(error: Error): boolean {
+  return (
+    error.message.includes('Invalid')
+    || error.message.includes('not available')
+  )
 }
 
 /**
@@ -118,9 +145,11 @@ export async function executeWithProtection<T>(
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err))
 
-      // Don't retry on argument / validation errors
-      if (lastError.message.includes('Invalid') || lastError.message.includes('not available')) {
-        recordFailure(toolId)
+      // Don't retry or trip the tool circuit on caller-side argument /
+      // availability errors. The circuit is for tool/runtime health, not for
+      // penalizing a single malformed model-emitted call.
+      if (isNonRetriableCallerError(lastError)) {
+        releaseHalfOpenProbe(toolId)
         throw lastError
       }
 

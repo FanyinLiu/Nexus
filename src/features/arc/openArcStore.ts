@@ -56,47 +56,33 @@ export interface OpenArcRecord {
 
 const MAX_KEPT = 200
 const AUTO_DROP_DAYS = 7
+const DEFAULT_CHECK_IN_DAYS = [3, 5]
 
 function isValidStatus(s: unknown): s is OpenArcStatus {
   return s === 'open' || s === 'resolved' || s === 'dropped'
 }
 
-export function loadOpenArcs(): OpenArcRecord[] {
-  const raw = readJson<unknown>(OPEN_ARC_STORE_STORAGE_KEY, [])
-  if (!Array.isArray(raw)) return []
-  const out: OpenArcRecord[] = []
-  for (const item of raw) {
-    if (!item || typeof item !== 'object') continue
-    const obj = item as Record<string, unknown>
-    if (typeof obj.id !== 'string' || !obj.id) continue
-    if (typeof obj.theme !== 'string' || !obj.theme) continue
-    if (typeof obj.startedAt !== 'string') continue
-    if (!isValidStatus(obj.status)) continue
-    const checkInDays = Array.isArray(obj.checkInDays)
-      ? obj.checkInDays.filter((d): d is number => typeof d === 'number' && Number.isFinite(d) && d > 0)
-      : [3, 5]
-    const checkInsFired = Array.isArray(obj.checkInsFired)
-      ? obj.checkInsFired.filter((t): t is string => typeof t === 'string')
-      : []
-    out.push({
-      id: obj.id,
-      theme: obj.theme,
-      startedAt: obj.startedAt,
-      checkInDays,
-      status: obj.status,
-      checkInsFired,
-      ...(typeof obj.resolvedAt === 'string' ? { resolvedAt: obj.resolvedAt } : {}),
-      ...(typeof obj.closingNote === 'string' ? { closingNote: obj.closingNote } : {}),
-      ...(typeof obj.droppedAt === 'string' ? { droppedAt: obj.droppedAt } : {}),
-    })
-  }
-  return out
+function isValidIsoTimestamp(value: string): boolean {
+  return Number.isFinite(Date.parse(value))
 }
 
-function persist(arcs: OpenArcRecord[]): void {
-  // Sort: open first (oldest at top so check-ins prefer older threads),
-  // then resolved/dropped (newest closed at top). Pruning prefers to drop
-  // the oldest closed entries.
+function normalizeCheckInDays(value: unknown): number[] {
+  if (!Array.isArray(value)) return [...DEFAULT_CHECK_IN_DAYS]
+  const days = [...new Set(value
+    .filter((day): day is number => typeof day === 'number' && Number.isFinite(day) && day > 0)
+    .map((day) => Math.floor(day))
+    .filter((day) => day > 0))]
+    .sort((a, b) => a - b)
+  return days.length ? days : [...DEFAULT_CHECK_IN_DAYS]
+}
+
+function normalizeCheckInsFired(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && isValidIsoTimestamp(item))
+    : []
+}
+
+function sortAndCap(arcs: OpenArcRecord[]): OpenArcRecord[] {
   const open = arcs.filter((a) => a.status === 'open')
     .sort((a, b) => a.startedAt.localeCompare(b.startedAt))
   const closed = arcs.filter((a) => a.status !== 'open')
@@ -105,8 +91,57 @@ function persist(arcs: OpenArcRecord[]): void {
       const bTs = b.resolvedAt ?? b.droppedAt ?? b.startedAt
       return bTs.localeCompare(aTs)
     })
-  const all = [...open, ...closed].slice(0, MAX_KEPT)
-  writeJson(OPEN_ARC_STORE_STORAGE_KEY, all)
+  return [...open, ...closed].slice(0, MAX_KEPT)
+}
+
+function normalizeOpenArc(item: unknown): OpenArcRecord | null {
+  if (!item || typeof item !== 'object') return null
+  const obj = item as Record<string, unknown>
+  if (typeof obj.id !== 'string' || !obj.id) return null
+  if (typeof obj.theme !== 'string') return null
+  const theme = obj.theme.trim()
+  if (!theme) return null
+  if (typeof obj.startedAt !== 'string' || !isValidIsoTimestamp(obj.startedAt)) return null
+  if (!isValidStatus(obj.status)) return null
+  const resolvedAt = typeof obj.resolvedAt === 'string' && isValidIsoTimestamp(obj.resolvedAt)
+    ? obj.resolvedAt
+    : undefined
+  const droppedAt = typeof obj.droppedAt === 'string' && isValidIsoTimestamp(obj.droppedAt)
+    ? obj.droppedAt
+    : undefined
+  const closingNote = typeof obj.closingNote === 'string' ? obj.closingNote.trim() : ''
+  return {
+    id: obj.id,
+    theme,
+    startedAt: obj.startedAt,
+    checkInDays: normalizeCheckInDays(obj.checkInDays),
+    status: obj.status,
+    checkInsFired: normalizeCheckInsFired(obj.checkInsFired),
+    ...(resolvedAt ? { resolvedAt } : {}),
+    ...(closingNote ? { closingNote } : {}),
+    ...(droppedAt ? { droppedAt } : {}),
+  }
+}
+
+export function loadOpenArcs(): OpenArcRecord[] {
+  const raw = readJson<unknown>(OPEN_ARC_STORE_STORAGE_KEY, [])
+  if (!Array.isArray(raw)) {
+    persist([])
+    return []
+  }
+  const out = raw.map(normalizeOpenArc).filter((item): item is OpenArcRecord => Boolean(item))
+  const normalized = sortAndCap(out)
+  if (JSON.stringify(normalized) !== JSON.stringify(raw)) {
+    writeJson(OPEN_ARC_STORE_STORAGE_KEY, normalized)
+  }
+  return normalized
+}
+
+function persist(arcs: OpenArcRecord[]): void {
+  // Sort: open first (oldest at top so check-ins prefer older threads),
+  // then resolved/dropped (newest closed at top). Pruning prefers to drop
+  // the oldest closed entries.
+  writeJson(OPEN_ARC_STORE_STORAGE_KEY, sortAndCap(arcs))
 }
 
 export interface OpenArcInput {
@@ -119,8 +154,8 @@ export function openArc(input: OpenArcInput, now: Date = new Date()): OpenArcRec
   const theme = input.theme.trim()
   if (!theme) return null
   const checkInDays = input.checkInDays?.length
-    ? input.checkInDays.filter((d) => Number.isFinite(d) && d > 0).sort((a, b) => a - b)
-    : [3, 5]
+    ? normalizeCheckInDays(input.checkInDays)
+    : [...DEFAULT_CHECK_IN_DAYS]
   const arc: OpenArcRecord = {
     id: createId('arc'),
     theme,

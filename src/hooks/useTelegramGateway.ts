@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { parseTelegramChatIdList } from '../features/integrations/allowlists.ts'
 import type { AppSettings } from '../types'
 
 export type TelegramStatus = {
@@ -62,10 +63,7 @@ export function useTelegramGateway({
     const botToken = settings.telegramBotToken?.trim()
     if (!botToken) return
 
-    const allowedChatIds = settings.telegramAllowedChatIds
-      .split(',')
-      .map((s) => Number(s.trim()))
-      .filter((n) => Number.isFinite(n) && n !== 0)
+    const allowedChatIds = parseTelegramChatIdList(settings.telegramAllowedChatIds)
 
     window.desktopPet?.telegramConnect?.({ botToken, allowedChatIds })
       .then((s) => {

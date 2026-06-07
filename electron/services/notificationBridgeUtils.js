@@ -7,8 +7,73 @@ export const WEBHOOK_MAX_BODY_BYTES = 64 * 1024
 export const WEBHOOK_MAX_BODY_CHARS = 500
 export const WEBHOOK_MAX_TITLE_CHARS = 160
 export const WEBHOOK_MAX_META_CHARS = 120
+export const NOTIFICATION_SUMMARY_MAX_CHARS = 150
+export const WEBHOOK_MAX_SUMMARY_CHARS = 180
 
 const WEBHOOK_MESSAGE_KINDS = new Set(['message', 'chat', 'chat_message'])
+
+const HIGH_PRIORITY_PATTERNS = [
+  /urgent/i,
+  /important/i,
+  /asap/i,
+  /\bnow\b/i,
+  /立即\b/i,
+  /紧急\b/i,
+  /重要\b/i,
+  /\b(1[0-9]\s*hour|today|before|deadline)\b/i,
+]
+
+const CRITICAL_PRIORITY_PATTERNS = [
+  /critical/i,
+  /critical urgency/i,
+  /火警/i,
+  /立刻\b/i,
+  /马上/i,
+  /\b(alert|emergency)\b/i,
+]
+
+function collapseWhitespace(value) {
+  return String(value ?? '').replace(/\s+/g, ' ').trim()
+}
+
+function clampText(value, maxChars) {
+  const text = collapseWhitespace(value)
+  return text.length <= maxChars ? text : `${text.slice(0, Math.max(0, maxChars - 3))}...`
+}
+
+export function inferNotificationPriority(message) {
+  const haystack = [
+    message?.title,
+    message?.sender,
+    message?.body,
+    message?.sourceName,
+    message?.sourceId,
+  ]
+    .map(collapseWhitespace)
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  if (CRITICAL_PRIORITY_PATTERNS.some((pattern) => pattern.test(haystack))) return 'critical'
+  if (HIGH_PRIORITY_PATTERNS.some((pattern) => pattern.test(haystack))) return 'high'
+  return 'normal'
+}
+
+export function summarizeNotificationMessagePayload(message) {
+  if (!message || typeof message !== 'object') {
+    return { summary: '', importance: 'normal' }
+  }
+
+  const title = clampText(message.title, WEBHOOK_MAX_SUMMARY_CHARS)
+  const body = clampText(message.body, NOTIFICATION_SUMMARY_MAX_CHARS)
+  const sender = clampText(message.sender || message.sourceName || 'Unknown', 48)
+  const tail = body || 'No message preview'
+  const combined = `${title ? `${title} - ` : ''}${sender}: ${tail}`
+  return {
+    summary: clampText(combined, 200),
+    importance: inferNotificationPriority(message),
+  }
+}
 
 function coerceFiniteNumber(value) {
   const number = Number(value)
@@ -85,6 +150,13 @@ export function normalizeWebhookPayload(payload) {
   }
 
   if (kind !== 'message') {
+    const summary = summarizeNotificationMessagePayload({
+      title: title || sourceName,
+      body,
+      sender: '',
+      sourceName,
+      sourceId,
+    })
     return {
       ok: true,
       message: {
@@ -93,6 +165,8 @@ export function normalizeWebhookPayload(payload) {
         sourceName,
         title: title || sourceName,
         body,
+        summary: summary.summary,
+        importance: summary.importance,
       },
     }
   }
@@ -112,6 +186,13 @@ export function normalizeWebhookPayload(payload) {
     ['messageId', 'id', 'eventId'],
     WEBHOOK_MAX_META_CHARS,
   )
+  const summary = summarizeNotificationMessagePayload({
+    title: title || sender || sourceName,
+    body,
+    sender,
+    sourceName,
+    sourceId,
+  })
 
   return {
     ok: true,
@@ -124,6 +205,8 @@ export function normalizeWebhookPayload(payload) {
       sender,
       title: title || sender || sourceName,
       body,
+      summary: summary.summary,
+      importance: summary.importance,
     },
   }
 }

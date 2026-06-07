@@ -9,6 +9,7 @@ import {
   formatMilestoneForPrompt,
   formatRelationshipForPrompt,
   markDailyInteraction,
+  normalizeRelationshipState,
   recordLevelMilestone,
 } from '../../features/autonomy/relationshipTracker'
 import {
@@ -36,10 +37,20 @@ import {
   writeJsonDebounced,
 } from '../../lib/storage'
 
-export function useRelationshipState() {
-  const relationshipRef = useRef<RelationshipState>(
-    readJson<RelationshipState>(AUTONOMY_RELATIONSHIP_STORAGE_KEY, createDefaultRelationshipState()),
+function loadInitialRelationshipState(): RelationshipState {
+  const raw = readJson<unknown>(
+    AUTONOMY_RELATIONSHIP_STORAGE_KEY,
+    createDefaultRelationshipState(),
   )
+  const normalized = normalizeRelationshipState(raw)
+  if (JSON.stringify(normalized) !== JSON.stringify(raw)) {
+    writeJson(AUTONOMY_RELATIONSHIP_STORAGE_KEY, normalized)
+  }
+  return normalized
+}
+
+export function useRelationshipState() {
+  const relationshipRef = useRef<RelationshipState>(loadInitialRelationshipState())
   const lastAbsenceCheckDateRef = useRef<string>('')
   const pendingMilestoneRef = useRef<RelationshipMilestone | null>(null)
 

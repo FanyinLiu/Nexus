@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import {
-  type BracketKind,
   decideBracket,
 } from '../features/proactive/bracketScheduler.ts'
 import { buildBracketNotification } from '../features/proactive/bracketCopy.ts'
@@ -11,32 +10,13 @@ import {
 import { buildErrandDeliveryBody } from '../features/agent/errandDelivery.ts'
 import {
   PROACTIVE_BRACKET_STATE_STORAGE_KEY,
-  readJson,
+  loadBracketState,
+  recordBracketFire,
   writeJson,
 } from '../lib/storage'
 import type { AppSettings } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60_000
-
-type BracketState = {
-  lastMorningFiredMs: number | null
-  lastEveningFiredMs: number | null
-}
-
-const EMPTY_STATE: BracketState = {
-  lastMorningFiredMs: null,
-  lastEveningFiredMs: null,
-}
-
-function readBracketState(): BracketState {
-  return readJson<BracketState>(PROACTIVE_BRACKET_STATE_STORAGE_KEY, EMPTY_STATE)
-}
-
-function recordFire(state: BracketState, bracket: BracketKind, nowMs: number): BracketState {
-  return bracket === 'morning'
-    ? { ...state, lastMorningFiredMs: nowMs }
-    : { ...state, lastEveningFiredMs: nowMs }
-}
 
 type UseBracketSchedulerOptions = {
   settings: AppSettings
@@ -73,7 +53,7 @@ export function useBracketScheduler({
       if (!s.proactiveBracketEnabled) return
       if (open) return
 
-      const state = readBracketState()
+      const state = loadBracketState()
       const decision = decideBracket({
         enabled: true,
         nowMs: Date.now(),
@@ -118,10 +98,10 @@ export function useBracketScheduler({
         // Re-read state inside the lock so a concurrent write outside
         // the scheduler doesn't get clobbered by our pre-await snapshot
         // (matches the useErrandScheduler fix from this audit cycle).
-        const fresh = readBracketState()
+        const fresh = loadBracketState()
         writeJson(
           PROACTIVE_BRACKET_STATE_STORAGE_KEY,
-          recordFire(fresh, decision.bracket, Date.now()),
+          recordBracketFire(fresh, decision.bracket, Date.now()),
         )
         if (deliveredErrandId) {
           markDelivered(deliveredErrandId)

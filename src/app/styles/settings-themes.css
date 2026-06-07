@@ -3548,14 +3548,13 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer--night .settings-appearance-switch__option.is-active {
-  background: color-mix(in srgb, var(--settings-accent) 18%, rgba(255, 255, 255, 0.08));
-  color: rgba(255, 255, 255, 0.94);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--settings-accent) 42%, transparent);
+  background: color-mix(in srgb, var(--settings-accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--settings-accent) 34%, transparent);
 }
 
 .settings-drawer--day .settings-appearance-switch__control,
 .settings-drawer--warm-day .settings-appearance-switch__control {
-  background: rgba(255, 255, 255, 0.28);
+  background: transparent;
 }
 
 .settings-drawer--day .settings-appearance-switch__label,
@@ -3569,13 +3568,13 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer--day .settings-appearance-switch__option.is-active {
-  background: color-mix(in srgb, var(--settings-accent) 12%, rgba(255, 255, 255, 0.88));
+  background: color-mix(in srgb, var(--settings-accent) 12%, transparent);
   color: rgba(23, 32, 42, 0.9);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--settings-accent) 28%, transparent);
 }
 
 .settings-drawer--warm-day .settings-appearance-switch__option.is-active {
-  background: color-mix(in srgb, var(--settings-accent) 12%, rgba(255, 253, 249, 0.9));
+  background: color-mix(in srgb, var(--settings-accent) 12%, transparent);
   color: rgba(36, 27, 22, 0.9);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--settings-accent) 30%, transparent);
 }
@@ -4054,7 +4053,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-toggle {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) var(--settings-toggle-width);
   min-height: 44px;
   gap: 10px;
   align-items: center;
@@ -5844,6 +5843,24 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   white-space: nowrap;
 }
 
+@media (max-width: 430px) {
+  .settings-drawer .settings-page[data-section='chat'] .settings-community-links {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-drawer .settings-page[data-section='chat'] .settings-community-links a {
+    align-items: flex-start;
+    min-height: 44px;
+    padding-block: 8px;
+  }
+
+  .settings-drawer .settings-page[data-section='chat'] .settings-community-links__text {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
 .settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-community-links {
   border-color: rgba(28, 42, 60, 0.1);
   background: rgba(248, 251, 255, 0.58);
@@ -6526,7 +6543,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-window-section > .settings-control-grid > .settings-control-card:not(.settings-window-field):not(.settings-window-control) > .settings-toggle {
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) var(--settings-toggle-width);
   min-height: var(--settings-child-control-height);
   gap: 7px;
 }
@@ -6870,6 +6887,11 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   overflow-wrap: anywhere;
 }
 
+.settings-page[data-section] .settings-model-advanced__field > small.settings-model-advanced__error {
+  color: rgba(255, 145, 77, 0.95);
+  font-weight: 650;
+}
+
 .settings-page[data-section] .settings-model-advanced__field > input,
 .settings-page[data-section] .settings-model-advanced__field > textarea {
   width: 100%;
@@ -6888,7 +6910,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-toggle {
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) var(--settings-toggle-width);
   min-height: 44px;
   padding: 10px 12px;
   border-radius: 8px;
@@ -7055,7 +7077,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-voice-control > .settings-toggle {
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) var(--settings-toggle-width);
   min-height: var(--settings-child-control-height);
   gap: 7px;
 }
@@ -7097,7 +7119,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-tools-section > .settings-control-grid > .settings-control-card > .settings-toggle {
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) var(--settings-toggle-width);
   min-height: var(--settings-child-control-height);
   gap: 7px;
 }
@@ -7141,7 +7163,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-memory-section > .settings-memory-group:first-of-type > .settings-memory-control:nth-of-type(n + 2):nth-of-type(-n + 5) > .settings-toggle {
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) var(--settings-toggle-width);
   min-height: var(--settings-child-control-height);
   gap: 7px;
 }
@@ -8239,7 +8261,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-autonomy-control > .settings-toggle,
 .settings-page[data-section] .settings-model-advanced__control > .settings-toggle,
 .settings-page[data-section] .settings-mini-group:not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card) > .settings-toggle {
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) var(--settings-toggle-width);
   gap: 10px;
   min-height: var(--settings-child-control-height);
 }
@@ -8433,6 +8455,10 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   width: 100%;
 }
 
+.panel-window--companion .companion-chat__messages:has(> .crisis-hotline-panel) > .empty-chat--nexus {
+  display: none;
+}
+
 /* Onboarding sub-flow final pass: align nested steps with the settings child-page scale. */
 .onboarding-card {
   --onboarding-control-height: 40px;
@@ -8533,6 +8559,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .onboarding-grid {
   gap: 10px;
+  min-width: 0;
 }
 
 .ai-disclosure-step {
@@ -8556,13 +8583,19 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .onboarding-section label span,
 .onboarding-relationship__label {
+  min-width: 0;
   font-size: 13px;
   font-weight: 650;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .onboarding-section input,
 .onboarding-section select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: var(--onboarding-control-height);
   font-size: 13px;
   line-height: 1.25;
@@ -8774,6 +8807,132 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   }
 }
 
+@media (max-width: 360px), (max-width: 620px) and (max-height: 620px) {
+  .onboarding-card {
+    grid-template-rows: auto auto minmax(120px, 1fr) auto;
+    gap: 8px;
+  }
+
+  .onboarding-card__header h2,
+  .onboarding-card--pet .onboarding-card__header h2 {
+    font-size: 18px;
+    line-height: 1.18;
+  }
+
+  .onboarding-card__copy,
+  .onboarding-card--pet .onboarding-card__copy {
+    line-height: 1.4;
+  }
+
+  .onboarding-stepper,
+  .onboarding-card--pet .onboarding-stepper {
+    display: flex;
+    grid-template-columns: none;
+    grid-auto-rows: auto;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 2px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+  }
+
+  .onboarding-stepper__item,
+  .onboarding-card--pet .onboarding-stepper__item {
+    flex: 0 0 min(116px, calc(50% - 4px));
+    width: auto;
+    height: 64px;
+    min-height: 64px;
+    align-content: center;
+    padding: 8px;
+    scroll-snap-align: start;
+  }
+
+  .onboarding-card__body {
+    padding-bottom: 64px;
+    scroll-padding-bottom: 64px;
+  }
+}
+
+@media (max-width: 430px) and (max-height: 640px) {
+  .onboarding-card {
+    grid-template-rows: auto auto minmax(180px, 1fr) auto;
+    gap: 6px;
+  }
+
+  .onboarding-card__header {
+    align-items: center;
+    gap: 8px;
+  }
+
+  .onboarding-card__header > div {
+    min-width: 0;
+  }
+
+  .onboarding-card .eyebrow,
+  .onboarding-card__copy {
+    display: none;
+  }
+
+  .onboarding-card__header h2,
+  .onboarding-card--pet .onboarding-card__header h2 {
+    overflow: visible;
+    overflow-wrap: anywhere;
+    font-size: 16px;
+    line-height: 1.18;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .onboarding-stepper,
+  .onboarding-card--pet .onboarding-stepper {
+    gap: 6px;
+  }
+
+  .onboarding-stepper__item,
+  .onboarding-card--pet .onboarding-stepper__item {
+    grid-template-columns: auto minmax(0, 1fr);
+    flex-basis: min(104px, calc(50% - 3px));
+    height: 48px;
+    min-height: 48px;
+    align-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .onboarding-stepper__item span {
+    width: 22px;
+    height: 22px;
+  }
+
+  .onboarding-stepper__item strong {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .onboarding-section {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .onboarding-section__intro {
+    gap: 3px;
+  }
+
+  .onboarding-section__intro p {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-height: 1.45;
+  }
+}
+
 .music-popup-card__dismiss,
 .music-popup-card__control,
 .crisis-hotline-panel__dismiss {
@@ -8784,7 +8943,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 /* Child settings pages share one compact title bar. */
 .settings-page[data-section] .settings-page__header {
   grid-template-areas: "back headline";
-  grid-template-columns: var(--settings-child-control-height, 40px) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   padding: 0 0 8px;
@@ -8795,23 +8954,24 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-page__back {
   position: relative;
-  width: var(--settings-child-control-height, 40px);
+  width: auto;
   min-width: var(--settings-child-control-height, 40px);
   height: var(--settings-child-control-height, 40px);
   min-height: var(--settings-child-control-height, 40px);
-  padding: 0;
+  padding: 0 12px 0 10px;
   justify-content: center;
   border-radius: 8px;
   box-shadow: none;
 }
 
 .settings-page[data-section] .settings-page__back span {
-  position: absolute;
-  width: 1px;
-  height: 1px;
+  position: static;
+  width: auto;
+  height: auto;
   overflow: hidden;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
+  clip: auto;
+  clip-path: none;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -8942,6 +9102,17 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   text-overflow: ellipsis;
 }
 
+@media (max-width: 430px) {
+  .settings-drawer .settings-page[data-section='console'] details.settings-console-section:not([open]) > summary.settings-console-section__header {
+    height: auto;
+    min-height: 84px;
+  }
+
+  .settings-drawer .settings-page[data-section='console'] details.settings-console-section:not([open]) > summary.settings-console-section__header p {
+    -webkit-line-clamp: 3;
+  }
+}
+
 .settings-page[data-section] button.settings-choice-card,
 .settings-page[data-section] .settings-choice-card__body {
   gap: 4px;
@@ -8963,11 +9134,11 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer .settings-page[data-section] .settings-model-source-card__name {
-  overflow: hidden;
-  overflow-wrap: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
   line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .settings-drawer .settings-page[data-section] .settings-model-source-card__chevron {
@@ -9059,6 +9230,30 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   margin: 0;
 }
 
+@media (max-width: 430px) {
+  .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > label.settings-memory-field,
+  .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])),
+  .settings-drawer .settings-page[data-section='memory'] .settings-memory-recall-grid > .settings-memory-field {
+    min-height: 72px;
+  }
+
+  .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > label.settings-memory-field,
+  .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) > label,
+  .settings-drawer .settings-page[data-section='memory'] .settings-memory-recall-grid > .settings-memory-field > label {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 7px;
+  }
+
+  .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > label.settings-memory-field > span,
+  .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) > label > span,
+  .settings-drawer .settings-page[data-section='memory'] .settings-memory-recall-grid > .settings-memory-field > label > span {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
 /* About is nested inside a console accordion here, so keep the outer card as the only shell. */
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel {
   gap: 10px;
@@ -9111,14 +9306,14 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer .settings-page[data-section] .settings-toggle:not(.settings-lorebook-check) {
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) var(--settings-toggle-width);
   gap: 10px;
 }
 
 .settings-drawer .settings-page[data-section] .settings-tools-section > .settings-control-grid > .settings-control-card > .settings-toggle,
 .settings-drawer .settings-page[data-section] .settings-memory-section > .settings-memory-group:first-of-type > .settings-memory-control:nth-of-type(n + 2):nth-of-type(-n + 5) > .settings-toggle,
 .settings-drawer .settings-page[data-section] .settings-autonomy-group > .settings-autonomy-control > .settings-toggle {
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) var(--settings-toggle-width);
   gap: 10px;
 }
 
@@ -9308,6 +9503,21 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-height: 1.35;
+}
+
+@media (max-width: 430px) {
+  .settings-drawer .settings-page[data-section='chat'] .settings-chat-advanced-card:not([open]):not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card) {
+    min-height: 92px;
+  }
+
+  .settings-drawer .settings-page[data-section='chat'] .settings-chat-advanced-card:not([open]):not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card) > summary.settings-mini-group__head {
+    min-height: 76px;
+    align-items: flex-start;
+  }
+
+  .settings-drawer .settings-page[data-section='chat'] .settings-chat-advanced-card:not([open]):not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card) > summary.settings-mini-group__head > div > span {
+    -webkit-line-clamp: 4;
+  }
 }
 
 /* Chat identity uses short text inputs; keep them in the same compact row
@@ -9534,6 +9744,23 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   margin: 0;
 }
 
+@media (max-width: 430px) {
+  .settings-drawer .settings-page[data-section='voice'] .settings-voice-loop-card > label.settings-voice-field,
+  .settings-drawer .settings-page[data-section='voice'] .settings-speech-config-section label.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)) {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 7px;
+    min-height: 72px;
+  }
+
+  .settings-drawer .settings-page[data-section='voice'] .settings-voice-loop-card > label.settings-voice-field > span,
+  .settings-drawer .settings-page[data-section='voice'] .settings-speech-config-section label.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)) > span {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
 /* Lorebook entries: short text fields should read like compact form rows, not
    full text-area cards. This keeps the editable entry visible above the footer. */
 .settings-drawer .settings-page[data-section='lorebooks'] .settings-lorebook-title-field,
@@ -9590,6 +9817,147 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
     height: var(--settings-child-control-height);
     min-height: var(--settings-child-control-height);
     margin-block: 0;
+  }
+}
+
+@media (max-width: 430px) {
+  .settings-page[data-section] .settings-page__headline .settings-section__note {
+    -webkit-line-clamp: 3;
+  }
+
+  .settings-page[data-section='lorebooks'] .settings-lorebook-item__toolbar {
+    grid-template-columns: minmax(0, 1fr) var(--settings-child-control-height);
+    grid-template-areas:
+      "label label"
+      "enabled delete"
+      "priority priority";
+  }
+
+  .settings-page[data-section='lorebooks'] .settings-lorebook-priority {
+    min-width: 0;
+  }
+
+  .settings-page[data-section='lorebooks'] .settings-lorebook-priority > span {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
+@media (max-height: 420px) {
+  .settings-drawer--section {
+    gap: 6px;
+    padding-block: 10px;
+  }
+
+  .settings-drawer--section .settings-drawer__header {
+    padding-bottom: 4px;
+  }
+
+  .settings-drawer--section .settings-drawer__body {
+    max-height: none;
+  }
+
+  .settings-page[data-section] .settings-page__header {
+    gap: 6px;
+    padding-bottom: 4px;
+  }
+
+  .settings-page[data-section] .settings-page__headline .settings-section__note {
+    display: none;
+  }
+
+  .settings-drawer--section .settings-drawer__actions {
+    padding-top: 4px;
+  }
+}
+
+@media (max-width: 300px) and (max-height: 480px) {
+  .settings-backdrop {
+    padding: 8px;
+  }
+
+  .settings-drawer {
+    box-sizing: border-box;
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    height: calc(100vh - 16px);
+    max-height: calc(100vh - 16px);
+  }
+
+  .settings-drawer,
+  .settings-drawer *,
+  .settings-drawer *::before,
+  .settings-drawer *::after {
+    box-sizing: border-box;
+  }
+
+  .settings-drawer > *,
+  .settings-drawer__header,
+  .settings-drawer__header-main,
+  .settings-drawer__body,
+  .settings-drawer__actions,
+  .settings-home,
+  .settings-appearance-switch,
+  .settings-home-card {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .settings-drawer--section {
+    --settings-child-control-height: 34px;
+  }
+
+  .settings-page[data-section] {
+    gap: 4px;
+  }
+
+  .settings-page[data-section] .settings-page__header {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 6px;
+    padding-bottom: 2px;
+  }
+
+  .settings-page[data-section] .settings-page__back {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+  }
+
+  .settings-page[data-section] .settings-page__back svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .settings-page[data-section] .settings-page__back span {
+    display: none;
+  }
+
+  .settings-page[data-section] .settings-page__headline {
+    gap: 0;
+  }
+
+  .settings-page[data-section] .settings-page__headline .eyebrow,
+  .settings-page[data-section] .settings-page__mark {
+    display: none;
+  }
+
+  .settings-page[data-section] .settings-page__headline h4 {
+    overflow: hidden;
+    font-size: 16px;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .settings-drawer .settings-page[data-section='console'] .settings-console-sections > section.settings-console-section > .settings-console-section__header p {
+    display: -webkit-box;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 }
 

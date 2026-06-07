@@ -1,4 +1,4 @@
-import { track } from '../../features/analytics'
+import { trackWithConsent } from '../../features/analytics/index.ts'
 import { ensureLocaleLoaded, normalizeLocale, setLocale } from '../../i18n/runtime.ts'
 import { getSettingsSnapshot } from '../store/settingsStore.ts'
 
@@ -11,7 +11,7 @@ export async function initApp() {
       await ensureLocaleLoaded(startupLocale)
       setLocale(startupLocale)
 
-      await track('app.bootstrap', {
+      await trackWithConsent('app.bootstrap', {
         source: 'initApp',
       })
     })

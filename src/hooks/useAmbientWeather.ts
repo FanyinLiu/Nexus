@@ -22,6 +22,11 @@ export type AmbientWeatherSnapshot = {
 // location setting (rather than flashing yesterday's weather for the wrong
 // city while the next fetch is in flight).
 type TaggedSnapshot = AmbientWeatherSnapshot & { forLocation: string }
+type AmbientWeatherCacheEntry = {
+  snapshot: TaggedSnapshot | null
+  fetchedAt: number
+  pending: Promise<TaggedSnapshot | null> | null
+}
 
 // Open-Meteo refreshes its `current=` payload roughly every 15 minutes,
 // so polling faster than that just burns network without seeing newer
@@ -33,6 +38,93 @@ const FIRST_FETCH_DELAY_MS = 3_000       // let the UI settle before the first c
 // be worth the call. Two minutes balances "feels live when I switch
 // back" against "don't refetch every alt-tab".
 const FOCUS_REFRESH_MIN_AGE_MS = 2 * 60 * 1000
+export const AMBIENT_WEATHER_SHARED_CACHE_TTL_MS = FOCUS_REFRESH_MIN_AGE_MS
+
+const ambientWeatherCache = new Map<string, AmbientWeatherCacheEntry>()
+
+function normalizeAmbientWeatherLocation(location: string) {
+  return String(location ?? '').trim()
+}
+
+function buildAmbientWeatherSnapshot(
+  response: WeatherLookupResponse,
+  location: string,
+  fetchedAt: number,
+): TaggedSnapshot {
+  const temperature = typeof response.currentTemperature === 'number'
+    ? response.currentTemperature
+    : null
+  return {
+    forLocation: location,
+    resolvedName: response.resolvedName || location,
+    temperatureC: temperature,
+    conditionLabel: response.currentConditionLabel ?? '',
+    fullSummary: response.currentSummary ?? '',
+    weatherCode: typeof response.currentWeatherCode === 'number' ? response.currentWeatherCode : null,
+    windSpeedKmh: typeof response.currentWindSpeedKmh === 'number' ? response.currentWindSpeedKmh : null,
+    fetchedAt,
+  }
+}
+
+type AmbientWeatherLoadOptions = {
+  now?: () => number
+}
+
+export async function loadAmbientWeatherSnapshot(
+  location: string,
+  options: AmbientWeatherLoadOptions = {},
+): Promise<TaggedSnapshot | null> {
+  const normalizedLocation = normalizeAmbientWeatherLocation(location)
+  if (!normalizedLocation) return null
+
+  const now = options.now ?? Date.now
+  const currentTime = now()
+  const cached = ambientWeatherCache.get(normalizedLocation)
+  if (cached?.pending) {
+    return cached.pending
+  }
+  if (
+    cached
+    && currentTime - cached.fetchedAt < AMBIENT_WEATHER_SHARED_CACHE_TTL_MS
+  ) {
+    return cached.snapshot
+  }
+
+  const pending = (async () => {
+    const previousSnapshot = cached?.snapshot ?? null
+    const fetchedAt = now()
+    try {
+      const response = await window.desktopPet?.getWeather?.({ location: normalizedLocation, quiet: true })
+      const snapshot = response
+        ? buildAmbientWeatherSnapshot(response as WeatherLookupResponse, normalizedLocation, fetchedAt)
+        : previousSnapshot
+      ambientWeatherCache.set(normalizedLocation, {
+        snapshot,
+        fetchedAt,
+        pending: null,
+      })
+      return snapshot
+    } catch {
+      ambientWeatherCache.set(normalizedLocation, {
+        snapshot: previousSnapshot,
+        fetchedAt,
+        pending: null,
+      })
+      return previousSnapshot
+    }
+  })()
+
+  ambientWeatherCache.set(normalizedLocation, {
+    snapshot: cached?.snapshot ?? null,
+    fetchedAt: cached?.fetchedAt ?? 0,
+    pending,
+  })
+  return pending
+}
+
+export function __test_resetAmbientWeatherCache() {
+  ambientWeatherCache.clear()
+}
 
 /**
  * Poll the existing weather tool IPC (`window.desktopPet.getWeather`) at a
@@ -52,7 +144,7 @@ export function useAmbientWeather(
   // Track in-flight requests so rapid setting edits don't race each other.
   const requestIdRef = useRef(0)
 
-  const trimmedLocation = location.trim()
+  const trimmedLocation = normalizeAmbientWeatherLocation(location)
 
   useEffect(() => {
     if (!enabled || !trimmedLocation) return
@@ -65,32 +157,11 @@ export function useAmbientWeather(
     const runFetch = async () => {
       if (disposed) return
       const requestId = ++requestIdRef.current
-      try {
-        const response = await window.desktopPet?.getWeather?.({ location: trimmedLocation })
-        if (disposed || requestId !== requestIdRef.current) return
-        if (!response) return
-        const typed = response as WeatherLookupResponse
-        const temperature = typeof typed.currentTemperature === 'number'
-          ? typed.currentTemperature
-          : null
-        const fetchedAt = Date.now()
-        lastFetchedAt = fetchedAt
-        setTaggedSnapshot({
-          forLocation: trimmedLocation,
-          resolvedName: typed.resolvedName || trimmedLocation,
-          temperatureC: temperature,
-          conditionLabel: typed.currentConditionLabel ?? '',
-          fullSummary: typed.currentSummary ?? '',
-          weatherCode: typeof typed.currentWeatherCode === 'number' ? typed.currentWeatherCode : null,
-          windSpeedKmh: typeof typed.currentWindSpeedKmh === 'number' ? typed.currentWindSpeedKmh : null,
-          fetchedAt,
-        })
-      } catch (err) {
-        // Fail quiet — the chip just stays on the last successful snapshot
-        // or stays hidden if we never got one. A toast here would be worse
-        // than the missing info.
-        console.warn('[ambient-weather] fetch failed:', err)
-      }
+      const snapshot = await loadAmbientWeatherSnapshot(trimmedLocation)
+      if (disposed || requestId !== requestIdRef.current) return
+      if (!snapshot) return
+      lastFetchedAt = snapshot.fetchedAt
+      setTaggedSnapshot(snapshot)
     }
 
     firstFetchTimer = window.setTimeout(() => {

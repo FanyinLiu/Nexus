@@ -4,11 +4,45 @@ import { describe, test } from 'node:test'
 import {
   type EmotionSample,
   type RelationshipSample,
+  __resetStateTimelineCaches,
+  captureEmotionSample,
+  captureRelationshipSample,
+  loadEmotionHistory,
+  loadRelationshipHistory,
   shouldCaptureEmotionSample,
   shouldCaptureRelationshipSample,
 } from '../src/features/autonomy/stateTimeline.ts'
 import { createDefaultRelationshipState } from '../src/features/autonomy/relationshipTracker.ts'
 import { createDefaultEmotionState } from '../src/features/autonomy/emotionModel.ts'
+import {
+  AUTONOMY_EMOTION_HISTORY_STORAGE_KEY,
+  AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY,
+} from '../src/lib/storage/core.ts'
+
+function createLocalStorageMock(initial: Record<string, string> = {}) {
+  const store = new Map(Object.entries(initial))
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, String(value)) },
+    removeItem: (key: string) => { store.delete(key) },
+    clear: () => { store.clear() },
+  }
+}
+
+function installStorage(initial: Record<string, string> = {}) {
+  const localStorage = createLocalStorageMock(initial)
+  Object.defineProperty(globalThis, 'window', {
+    value: {
+      localStorage,
+      setTimeout: globalThis.setTimeout.bind(globalThis),
+      clearTimeout: globalThis.clearTimeout.bind(globalThis),
+    },
+    configurable: true,
+    writable: true,
+  })
+  __resetStateTimelineCaches()
+  return localStorage
+}
 
 describe('shouldCaptureEmotionSample', () => {
   const nowMs = new Date('2026-04-24T12:00:00Z').getTime()
@@ -127,5 +161,110 @@ describe('shouldCaptureRelationshipSample', () => {
     }
     const next = { ...defaultState, score: 10, streak: 1, totalDaysInteracted: 1 }
     assert.equal(shouldCaptureRelationshipSample(next, last), false)
+  })
+})
+
+describe('state timeline persistence', () => {
+  test('loadEmotionHistory compacts malformed samples and normalizes values', () => {
+    const storage = installStorage({
+      [AUTONOMY_EMOTION_HISTORY_STORAGE_KEY]: JSON.stringify([
+        {
+          ts: '2026-06-03T00:00:00.000Z',
+          energy: 2,
+          warmth: -1,
+          curiosity: 0.4,
+          concern: 0.5,
+        },
+        {
+          ts: '2026-06-01T00:00:00.000Z',
+          energy: 0.2,
+          warmth: 0.3,
+          curiosity: 0.4,
+          concern: 0.5,
+        },
+        { ts: 'not-a-date', energy: 0.2, warmth: 0.3, curiosity: 0.4, concern: 0.5 },
+        { ts: '2026-06-02T00:00:00.000Z', energy: null, warmth: 0.3, curiosity: 0.4, concern: 0.5 },
+      ]),
+    })
+
+    const samples = loadEmotionHistory()
+
+    assert.deepEqual(samples.map((sample) => sample.ts), [
+      '2026-06-01T00:00:00.000Z',
+      '2026-06-03T00:00:00.000Z',
+    ])
+    assert.equal(samples[1]?.energy, 1)
+    assert.equal(samples[1]?.warmth, 0)
+    assert.deepEqual(JSON.parse(storage.getItem(AUTONOMY_EMOTION_HISTORY_STORAGE_KEY) ?? '[]'), samples)
+  })
+
+  test('loadRelationshipHistory compacts malformed samples and derives levels from score', () => {
+    const storage = installStorage({
+      [AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY]: JSON.stringify([
+        {
+          ts: '2026-06-03T00:00:00.000Z',
+          score: 82.7,
+          level: 'stranger',
+          streak: -5,
+          daysInteracted: 7.4,
+        },
+        {
+          ts: '2026-06-01T00:00:00.000Z',
+          score: 29.6,
+          level: 'intimate',
+          streak: 2,
+          daysInteracted: 3,
+        },
+        { ts: 'nope', score: 10, level: 'acquaintance', streak: 1, daysInteracted: 1 },
+        { ts: '2026-06-02T00:00:00.000Z', score: null, level: 'friend', streak: 1, daysInteracted: 1 },
+      ]),
+    })
+
+    const samples = loadRelationshipHistory()
+
+    assert.deepEqual(samples.map((sample) => sample.ts), [
+      '2026-06-01T00:00:00.000Z',
+      '2026-06-03T00:00:00.000Z',
+    ])
+    assert.equal(samples[0]?.score, 30)
+    assert.equal(samples[0]?.level, 'friend')
+    assert.equal(samples[1]?.score, 83)
+    assert.equal(samples[1]?.level, 'intimate')
+    assert.equal(samples[1]?.streak, 0)
+    assert.equal(samples[1]?.daysInteracted, 7)
+    assert.deepEqual(JSON.parse(storage.getItem(AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY) ?? '[]'), samples)
+  })
+
+  test('capture functions clamp live state before appending samples', () => {
+    installStorage()
+
+    const emotion = captureEmotionSample(
+      { energy: 2, warmth: -1, curiosity: Number.NaN, concern: 0.6 },
+      new Date('2026-06-04T00:00:00.000Z'),
+    )
+    const relationship = captureRelationshipSample(
+      {
+        ...createDefaultRelationshipState(),
+        score: 200,
+        streak: 2.4,
+        totalDaysInteracted: -10,
+      },
+      new Date('2026-06-04T00:00:00.000Z'),
+    )
+
+    assert.deepEqual(emotion, {
+      ts: '2026-06-04T00:00:00.000Z',
+      energy: 1,
+      warmth: 0,
+      curiosity: 0,
+      concern: 0.6,
+    })
+    assert.deepEqual(relationship, {
+      ts: '2026-06-04T00:00:00.000Z',
+      score: 100,
+      level: 'intimate',
+      streak: 2,
+      daysInteracted: 0,
+    })
   })
 })

@@ -46,7 +46,7 @@ test('fresh settings start with the Phase 1 Ollama text path', () => {
   assert.equal(settings.apiProviderId, 'ollama')
   assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
   assert.equal(settings.model, 'qwen3:8b')
-  assert.equal(settings.petModelId, 'qiyi')
+  assert.equal(settings.petModelId, 'codex')
   assert.equal(settings.apiKey, '')
   assert.equal(settings.chatFailoverEnabled, false)
   assert.equal(settings.speechInputEnabled, false)
@@ -59,6 +59,159 @@ test('fresh settings start with the Phase 1 Ollama text path', () => {
   assert.equal(settings.discordAnnounceMessagePreview, false)
   assert.equal(settings.autonomyNotificationMessageAnnouncementsEnabled, false)
   assert.equal(settings.autonomyNotificationMessagePreviewEnabled, false)
+})
+
+test('infers global and Token Plan text providers from stored base URLs', () => {
+  const cases = [
+    {
+      apiBaseUrl: 'https://api.moonshot.ai/v1',
+      model: 'kimi-k2.6',
+      expectedProviderId: 'moonshot-global',
+    },
+    {
+      apiBaseUrl: 'https://api.moonshot.ai/anthropic',
+      model: 'kimi-k2.6',
+      expectedProviderId: 'kimi-coding-global',
+    },
+    {
+      apiBaseUrl: 'https://api.minimax.io/anthropic',
+      model: 'MiniMax-M3',
+      expectedProviderId: 'minimax-coding-global',
+    },
+    {
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+      model: 'MiniMax-M3',
+      expectedProviderId: 'minimax-coding',
+    },
+    {
+      apiBaseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+      model: 'qwen3.6-plus',
+      expectedProviderId: 'dashscope-global',
+    },
+    {
+      apiBaseUrl: 'https://api.siliconflow.com/v1',
+      model: 'deepseek-ai/DeepSeek-V4-Flash',
+      expectedProviderId: 'siliconflow-global',
+    },
+  ]
+
+  for (const item of cases) {
+    const localStorage = createLocalStorageMock({
+      [SETTINGS_STORAGE_KEY]: JSON.stringify({
+        apiBaseUrl: item.apiBaseUrl,
+        model: item.model,
+      }),
+    })
+
+    Object.defineProperty(globalThis, 'window', {
+      value: { localStorage },
+      configurable: true,
+      writable: true,
+    })
+
+    const settings = loadSettings()
+
+    assert.equal(settings.apiProviderId, item.expectedProviderId)
+    assert.equal(settings.apiBaseUrl, item.apiBaseUrl)
+    assert.equal(settings.model, item.model)
+  }
+})
+
+test('drops text model API keys that cannot be sent in headers', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      apiProviderId: 'minimax-coding',
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+      apiKey: 'sk-main 套餐说明',
+      model: 'MiniMax-M3',
+      textProviderProfiles: {
+        'minimax-coding': {
+          apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+          apiKey: 'sk-profile\nnext-line',
+          model: 'MiniMax-M3',
+        },
+        deepseek: {
+          apiBaseUrl: 'https://api.deepseek.com',
+          apiKey: '  sk-valid  ',
+          model: 'deepseek-v4-flash',
+        },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.apiKey, '')
+  assert.equal(settings.textProviderProfiles['minimax-coding']?.apiKey, '')
+  assert.equal(settings.textProviderProfiles.deepseek?.apiKey, 'sk-valid')
+})
+
+test('ignores malformed root settings values and falls back to defaults', () => {
+  for (const storedValue of ['null', '[]', '"legacy"', '42']) {
+    const localStorage = createLocalStorageMock({
+      [SETTINGS_STORAGE_KEY]: storedValue,
+    })
+
+    Object.defineProperty(globalThis, 'window', {
+      value: { localStorage },
+      configurable: true,
+      writable: true,
+    })
+
+    const settings = loadSettings()
+
+    assert.equal(settings.settingsSchemaVersion, 5)
+    assert.equal(settings.apiProviderId, 'ollama')
+    assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
+    assert.equal(settings.model, 'qwen3:8b')
+    assert.equal(settings.petModelId, 'codex')
+    assert.deepEqual(settings.characterProfiles, [])
+    assert.deepEqual(settings.mcpServers, [])
+  }
+})
+
+test('migrates the old qiyi default pet to the Codex sprite pet', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 4,
+      petModelId: 'qiyi',
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.petModelId, 'codex')
+})
+
+test('preserves a non-default pet choice during the Codex pet migration', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 4,
+      petModelId: 'mao',
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.petModelId, 'mao')
 })
 
 test('preserves volcengine-tts selection without migration', () => {

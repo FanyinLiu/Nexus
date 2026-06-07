@@ -5,6 +5,9 @@
 > [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md). When planning
 > near-term work, Phase 1 in that document is the active scope.
 
+For the execution order and concrete acceptance metrics, use
+[EXECUTABLE_OPTIMIZATION_TASKS](EXECUTABLE_OPTIMIZATION_TASKS.md).
+
 ## Posture
 
 **AI desktop companion first.**

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { parseDiscordChannelIdList } from '../features/integrations/allowlists.ts'
 import type { AppSettings } from '../types'
 
 export type DiscordStatus = {
@@ -65,10 +66,7 @@ export function useDiscordGateway({
     const botToken = settings.discordBotToken?.trim()
     if (!botToken) return
 
-    const allowedChannelIds = settings.discordAllowedChannelIds
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
+    const allowedChannelIds = parseDiscordChannelIdList(settings.discordAllowedChannelIds)
 
     window.desktopPet?.discordConnect?.({ botToken, allowedChannelIds })
       .then((s) => {

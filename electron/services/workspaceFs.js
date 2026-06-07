@@ -12,7 +12,7 @@
  *   - Glob/grep walk caps at 5000 visited entries to bound runtime.
  */
 
-import { readFile, writeFile, mkdir, stat, readdir, lstat, realpath } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, stat, readdir, lstat, open } from 'node:fs/promises'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -45,7 +45,10 @@ function resolveSafe(relPath) {
   if (typeof relPath !== 'string') {
     throw new Error('Path must be a string')
   }
-  const normalized = relPath.replace(/^[/\\]+/, '')
+  const normalized = relPath.replace(/^[/\\]+/, '').trim()
+  if (!normalized) {
+    throw new Error('Path must be a non-empty workspace-relative path')
+  }
   const absolute = path.resolve(workspaceRoot, normalized)
   const rel = path.relative(workspaceRoot, absolute)
   if (rel.startsWith('..') || path.isAbsolute(rel)) {
@@ -93,10 +96,18 @@ export async function readWorkspaceFile(relPath) {
     throw new Error(`Not a file: ${relPath}`)
   }
   if (info.size > READ_LIMIT_BYTES) {
-    const buffer = await readFile(abs)
+    const file = await open(abs, 'r')
+    let buffer
+    try {
+      buffer = Buffer.alloc(READ_LIMIT_BYTES)
+      const result = await file.read(buffer, 0, READ_LIMIT_BYTES, 0)
+      buffer = buffer.subarray(0, result.bytesRead)
+    } finally {
+      await file.close()
+    }
     return {
       path: relPath,
-      content: buffer.subarray(0, READ_LIMIT_BYTES).toString('utf8'),
+      content: buffer.toString('utf8'),
       truncated: true,
       bytes: info.size,
     }
@@ -121,6 +132,9 @@ export async function writeWorkspaceFile(relPath, content) {
 export async function editWorkspaceFile(relPath, oldString, newString) {
   if (typeof oldString !== 'string' || typeof newString !== 'string') {
     throw new Error('oldString and newString must be strings')
+  }
+  if (oldString.length === 0) {
+    throw new Error('oldString must be non-empty')
   }
   if (oldString === newString) {
     throw new Error('oldString and newString are identical')

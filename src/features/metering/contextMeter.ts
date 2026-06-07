@@ -138,8 +138,18 @@ const _sessionBySource: Record<string, { input: number; output: number; calls: n
 
 let _dailyCache: DailyMeterRecord | null = null
 
+function localDateKey(d: Date): string {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10)
+  // Local-time day key so usage aggregation lines up with CostTracker (which
+  // uses local-midnight day/month boundaries) and the user's own "today",
+  // instead of drifting by the machine's UTC offset (was toISOString()).
+  return localDateKey(new Date())
 }
 
 function dailyStorageKey(date: string): string {
@@ -283,12 +293,12 @@ export function loadDailyRange(days: number): DailyMeterRecord[] {
   if (days <= 0) return []
   const out: DailyMeterRecord[] = []
   const today = new Date()
-  today.setUTCHours(0, 0, 0, 0)
+  today.setHours(0, 0, 0, 0)
 
   for (let i = 0; i < days; i++) {
     const d = new Date(today)
-    d.setUTCDate(d.getUTCDate() - i)
-    const dateKey = d.toISOString().slice(0, 10)
+    d.setDate(d.getDate() - i)
+    const dateKey = localDateKey(d)
     try {
       const raw = localStorage.getItem(dailyStorageKey(dateKey))
       if (!raw) continue
@@ -320,48 +330,9 @@ export function getMeterSnapshot(): MeterSnapshot {
   }
 }
 
-/**
- * Check whether daily or monthly USD budget is exceeded.
- *
- * Pass limits in USD (0 or undefined = no cap).
- */
-export function checkBudget(options: {
-  dailyCapUsd?: number
-  monthlyCapUsd?: number
-}): {
-  dailyExceeded: boolean
-  monthlyExceeded: boolean
-  dailyUsedUsd: number
-  monthlyUsedUsd: number
-  dailyCapUsd?: number
-  monthlyCapUsd?: number
-} {
-  const daily = loadDailyRecord()
-  const dailyUsedUsd = daily.totalCostUsd
-
-  // Monthly: sum all per-day keys that share the current YYYY-MM prefix.
-  const monthPrefix = todayKey().slice(0, 7) // "YYYY-MM"
-  let monthlyUsedUsd = 0
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    if (!key || !key.startsWith(METER_STORAGE_PREFIX)) continue
-    const dateStr = key.slice(METER_STORAGE_PREFIX.length)
-    if (!dateStr.startsWith(monthPrefix)) continue
-    try {
-      const record = JSON.parse(localStorage.getItem(key)!) as DailyMeterRecord
-      monthlyUsedUsd += record.totalCostUsd || 0
-    } catch { /* corrupt entry, skip */ }
-  }
-
-  return {
-    dailyExceeded: !!options.dailyCapUsd && dailyUsedUsd >= options.dailyCapUsd,
-    monthlyExceeded: !!options.monthlyCapUsd && monthlyUsedUsd >= options.monthlyCapUsd,
-    dailyUsedUsd,
-    monthlyUsedUsd,
-    dailyCapUsd: options.dailyCapUsd,
-    monthlyCapUsd: options.monthlyCapUsd,
-  }
-}
+// Budget enforcement lives in src/core/budget/CostTracker.ts; contextMeter is
+// display-only (ConsoleSection / CostHistoryPanel). The old checkBudget() here
+// had no callers and scanned the whole localStorage — removed.
 
 /**
  * Reset session counters (e.g. on app restart).

@@ -58,6 +58,7 @@ export function OnboardingGuide({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const dialogRef = useRef<HTMLElement | null>(null)
+  const stepperItemRefs = useRef<Array<HTMLButtonElement | null>>([])
   useModalFocusTrap(dialogRef, open)
   const ti = (
     key: Parameters<typeof pickTranslatedUiText>[1],
@@ -119,6 +120,17 @@ export function OnboardingGuide({
           }
     ))
   }, [petModelPresets])
+
+  useEffect(() => {
+    if (!open) return
+
+    window.requestAnimationFrame(() => {
+      stepperItemRefs.current[stepIndex]?.scrollIntoView({
+        block: 'nearest',
+        inline: 'nearest',
+      })
+    })
+  }, [open, stepIndex])
 
   function applyTextProviderPreset(providerId: string) {
     setDraft((current) => switchTextProvider(current, providerId))
@@ -250,6 +262,9 @@ export function OnboardingGuide({
           {onboardingSteps.map((item, index) => (
             <button
               key={item.id}
+              ref={(node) => {
+                stepperItemRefs.current[index] = node
+              }}
               type="button"
               className={`onboarding-stepper__item ${index === stepIndex ? 'is-active' : ''} ${index < stepIndex ? 'is-complete' : ''}`}
               aria-current={index === stepIndex ? 'step' : undefined}

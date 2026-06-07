@@ -16,7 +16,6 @@ let rendererServerStartupPromise = null
 let _isDev = false
 let _useDevServer = false
 let _devServerUrl = 'http://127.0.0.1:47821'
-let _panelSection = 'chat'
 let _getImportedPetModelsRoot = () => ''
 let _getImportedSpritePetModelsRoot = () => ''
 let _getCodexCustomSpritePetModelsRoot = () => ''
@@ -41,7 +40,6 @@ export function initRendererServer({
   _isDev = isDev
   _useDevServer = useDevServer
   _devServerUrl = devServerUrl
-  _panelSection = null
   _getPanelSection = getPanelSection
   _getImportedPetModelsRoot = getImportedPetModelsRoot
   _getImportedSpritePetModelsRoot = getImportedSpritePetModelsRoot
@@ -221,6 +219,7 @@ export async function ensureRendererServer() {
             "font-src 'self' data:",
             "connect-src 'self' https: http:",
             "media-src 'self' blob:",
+            "worker-src 'self' blob:",
             "object-src 'none'",
             "base-uri 'self'",
             "form-action 'self'",

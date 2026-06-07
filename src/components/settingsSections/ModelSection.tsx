@@ -6,9 +6,10 @@ import {
   removeAuthProfileFromRuntime,
   upsertAuthProfileInRuntime,
 } from '../../lib/coreRuntime'
-import { displaySecretInputValue } from '../../lib/keyVaultBridge'
+import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import { getLocalizedApiProviderNote } from '../../features/models/providerNotes'
+import { isHttpHeaderSafeCredential } from '../../core/routing/AuthProfileStore'
 import type { AppSettings, ServiceConnectionCapability } from '../../types'
 import type { UiLanguage } from '../../types'
 import anthropicLogo from '../../assets/provider-logos/anthropic.svg'
@@ -54,10 +55,30 @@ const MODEL_PROVIDER_BRANDS: ModelProviderBrand[] = [
   { id: 'anthropic', label: 'Anthropic', logoSrc: anthropicLogo, providerIds: ['anthropic'] },
   { id: 'gemini', label: 'Google Gemini', logoSrc: geminiLogo, providerIds: ['gemini'] },
   { id: 'xai', label: 'xAI Grok', logoSrc: xaiLogo, providerIds: ['xai'] },
-  { id: 'moonshot', label: 'Moonshot Kimi', logoSrc: moonshotLogo, providerIds: ['moonshot', 'kimi-coding'] },
-  { id: 'minimax', label: 'MiniMax', logoSrc: minimaxLogo, providerIds: ['minimax', 'minimax-coding'] },
-  { id: 'qwen', label: 'Qwen', logoSrc: qwenLogo, providerIds: ['dashscope', 'modelstudio-coding'] },
-  { id: 'siliconflow', label: 'SiliconFlow', logoSrc: siliconflowLogo, providerIds: ['siliconflow'] },
+  {
+    id: 'moonshot',
+    label: 'Moonshot Kimi',
+    logoSrc: moonshotLogo,
+    providerIds: ['moonshot', 'moonshot-global', 'kimi-coding', 'kimi-coding-global'],
+  },
+  {
+    id: 'minimax',
+    label: 'MiniMax',
+    logoSrc: minimaxLogo,
+    providerIds: ['minimax', 'minimax-global', 'minimax-coding', 'minimax-coding-global'],
+  },
+  {
+    id: 'qwen',
+    label: 'Qwen',
+    logoSrc: qwenLogo,
+    providerIds: ['dashscope', 'dashscope-global', 'modelstudio-coding'],
+  },
+  {
+    id: 'siliconflow',
+    label: 'SiliconFlow',
+    logoSrc: siliconflowLogo,
+    providerIds: ['siliconflow', 'siliconflow-global'],
+  },
   { id: 'openrouter', label: 'OpenRouter', logoSrc: openrouterLogo, providerIds: ['openrouter'] },
   { id: 'together', label: 'Together AI', logoSrc: togetherLogo, providerIds: ['together'] },
   { id: 'mistral', label: 'Mistral', logoSrc: mistralLogo, providerIds: ['mistral'] },
@@ -99,10 +120,17 @@ export const ModelSection = memo(function ModelSection({
   const currentPreset = getApiProviderPreset(draft.apiProviderId)
   const hasModelOptions = currentPreset.models.length > 0
   const modelApiKeyInputValue = displaySecretInputValue(draft.apiKey)
+  const apiKeyError = currentPreset.requiresApiKey
+    && draft.apiKey
+    && !isVaultRefString(draft.apiKey)
+    && !isHttpHeaderSafeCredential(draft.apiKey)
+    ? ti('settings.model.extra_keys_error')
+    : ''
   const [detailsOpen, setDetailsOpen] = useState(false)
 
   const [extraKeysText, setExtraKeysText] = useState('')
   const [extraKeysProviderId, setExtraKeysProviderId] = useState<string | null>(null)
+  const [extraKeysError, setExtraKeysError] = useState('')
   // Reset the textarea whenever the selected provider changes. Done during
   // render via the prev-prop pattern to avoid set-state-in-effect churn.
   if (draft.apiProviderId !== extraKeysProviderId) {
@@ -113,6 +141,7 @@ export const ModelSection = memo(function ModelSection({
       .filter((k) => k && k.trim().length > 0)
     setExtraKeysProviderId(draft.apiProviderId)
     setExtraKeysText(existing.join('\n'))
+    setExtraKeysError('')
   }
 
   const commitExtraKeys = () => {
@@ -122,6 +151,11 @@ export const ModelSection = memo(function ModelSection({
       .split(/\r?\n/)
       .map((k) => k.trim())
       .filter((k) => k.length > 0)
+    const invalidKey = nextKeys.find((key) => !isHttpHeaderSafeCredential(key))
+    if (invalidKey) {
+      setExtraKeysError(ti('settings.model.extra_keys_error'))
+      return
+    }
     const nextSet = new Set(nextKeys)
     for (const profile of existingProfiles) {
       if (!nextSet.has(profile.apiKey)) {
@@ -140,6 +174,7 @@ export const ModelSection = memo(function ModelSection({
         failureCount: 0,
       })
     })
+    setExtraKeysError('')
   }
 
   const providerById = useMemo(() => {
@@ -282,16 +317,16 @@ export const ModelSection = memo(function ModelSection({
               >
                 {backToProviderListLabel}
               </button>
-              <button
-                type="button"
-                className="ghost-button settings-model-test-button"
-                aria-label={textConnectionTestLabel}
-                title={textConnectionTestLabel}
-                onClick={onRunTextConnectionTest}
-                disabled={testingTarget === 'text'}
-              >
-                {textConnectionTestLabel}
-              </button>
+                <button
+                  type="button"
+                  className="ghost-button settings-model-test-button"
+                  aria-label={textConnectionTestLabel}
+                  title={textConnectionTestLabel}
+                  onClick={onRunTextConnectionTest}
+                  disabled={testingTarget === 'text' || Boolean(apiKeyError)}
+                >
+                  {textConnectionTestLabel}
+                </button>
             </div>
 
             <div className="settings-model-detail-fields">
@@ -330,7 +365,18 @@ export const ModelSection = memo(function ModelSection({
                   onChange={(event) =>
                     setDraft((prev) => ({ ...prev, apiKey: event.target.value }))
                   }
+                  onBlur={(event) => {
+                    const nextValue = event.target.value.trim()
+                    if (nextValue !== event.target.value) {
+                      setDraft((prev) => ({ ...prev, apiKey: nextValue }))
+                    }
+                  }}
                 />
+                {apiKeyError ? (
+                  <small className="settings-model-advanced__error" role="alert">
+                    {apiKeyError}
+                  </small>
+                ) : null}
               </label>
 
               <label>
@@ -396,9 +442,17 @@ export const ModelSection = memo(function ModelSection({
                     rows={3}
                     placeholder={'sk-extra-key-1\nsk-extra-key-2'}
                     value={extraKeysText}
-                    onChange={(event) => setExtraKeysText(event.target.value)}
+                    onChange={(event) => {
+                      setExtraKeysText(event.target.value)
+                      if (extraKeysError) setExtraKeysError('')
+                    }}
                     onBlur={commitExtraKeys}
                   />
+                  {extraKeysError ? (
+                    <small className="settings-model-advanced__error" role="alert">
+                      {extraKeysError}
+                    </small>
+                  ) : null}
                   <small>{ti('settings.model.extra_keys_hint')}</small>
                 </label>
 

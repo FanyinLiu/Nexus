@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, rm, symlink, readFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, symlink, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, test } from 'node:test'
 
 import {
+  editWorkspaceFile,
+  readWorkspaceFile,
   setWorkspaceRoot,
   writeWorkspaceFile,
 } from '../electron/services/workspaceFs.js'
@@ -55,6 +57,49 @@ describe('workspaceFs', () => {
         () => writeWorkspaceFile('large.txt', oversized),
         /Content exceeds 1048576 byte write limit/,
       )
+    })
+  })
+
+  test('large reads return only the bounded prefix and report original byte size', async () => {
+    await withWorkspace(async (root) => {
+      await writeWorkspaceFile('seed.txt', 'ok')
+      const content = 'a'.repeat(300 * 1024)
+      await writeFile(path.join(root, 'large.log'), content, 'utf8')
+
+      const result = await readWorkspaceFile('large.log')
+
+      assert.equal(result.truncated, true)
+      assert.equal(result.bytes, Buffer.byteLength(content, 'utf8'))
+      assert.equal(Buffer.byteLength(result.content, 'utf8'), 256 * 1024)
+      assert.equal(result.content, 'a'.repeat(256 * 1024))
+    })
+  })
+
+  test('empty paths are rejected before touching the workspace root', async () => {
+    await withWorkspace(async (root) => {
+      await assert.rejects(
+        () => writeWorkspaceFile('', 'content'),
+        /non-empty workspace-relative path/,
+      )
+
+      await assert.rejects(
+        () => readFile(root, 'utf8'),
+        /ENOENT/,
+      )
+    })
+  })
+
+  test('edit rejects an empty oldString instead of doing an ambiguous replacement', async () => {
+    await withWorkspace(async () => {
+      await writeWorkspaceFile('note.txt', 'hello')
+
+      await assert.rejects(
+        () => editWorkspaceFile('note.txt', '', 'prefix'),
+        /oldString must be non-empty/,
+      )
+
+      const result = await readWorkspaceFile('note.txt')
+      assert.equal(result.content, 'hello')
     })
   })
 })

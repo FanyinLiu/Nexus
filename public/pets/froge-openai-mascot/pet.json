@@ -1,6 +1,0 @@
-{
-  "id": "froge-openai-mascot",
-  "displayName": "Froge",
-  "description": "Community sprite pet package used for compatibility testing.",
-  "spritesheetPath": "spritesheet.webp"
-}

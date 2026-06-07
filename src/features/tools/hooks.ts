@@ -51,35 +51,9 @@ export type ToolHookEntry = {
 
 const _hooks: ToolHookEntry[] = []
 
-/** Listeners notified whenever a hook fires (for debug console). */
-const _listeners: Array<(entry: ToolHookEntry, context: PreToolHookContext | PostToolHookContext) => void> = []
-
 export function registerToolHook(entry: ToolHookEntry) {
   _hooks.push(entry)
   _hooks.sort((a, b) => b.priority - a.priority)
-}
-
-export function unregisterToolHook(hookId: string) {
-  const index = _hooks.findIndex((h) => h.id === hookId)
-  if (index !== -1) _hooks.splice(index, 1)
-}
-
-export function clearToolHooks() {
-  _hooks.length = 0
-}
-
-export function listToolHooks(): ReadonlyArray<ToolHookEntry> {
-  return _hooks
-}
-
-export function onToolHookFired(
-  listener: (entry: ToolHookEntry, context: PreToolHookContext | PostToolHookContext) => void,
-) {
-  _listeners.push(listener)
-  return () => {
-    const idx = _listeners.indexOf(listener)
-    if (idx !== -1) _listeners.splice(idx, 1)
-  }
 }
 
 // ── Pattern matching ──
@@ -112,7 +86,6 @@ export async function runPreToolHooks(
 
     try {
       await entry.handler(context)
-      for (const listener of _listeners) listener(entry, context)
     } catch (err) {
       console.warn(`[ToolHook] pre-hook "${entry.id}" threw:`, err)
     }
@@ -143,7 +116,6 @@ export async function runPostToolHooks(
 
     try {
       await entry.handler(context)
-      for (const listener of _listeners) listener(entry, context)
     } catch (err) {
       console.warn(`[ToolHook] post-hook "${entry.id}" threw:`, err)
     }

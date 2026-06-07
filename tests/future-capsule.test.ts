@@ -5,6 +5,31 @@ import {
   buildFutureCapsuleDelivery,
   daysBetween,
 } from '../src/features/futureCapsule/futureCapsuleDelivery.ts'
+import {
+  enqueueFutureCapsule,
+  loadFutureCapsules,
+} from '../src/features/futureCapsule/futureCapsuleStore.ts'
+import { FUTURE_CAPSULE_STORE_STORAGE_KEY } from '../src/lib/storage/core.ts'
+
+function createLocalStorageMock(initial: Record<string, string> = {}) {
+  const store = new Map(Object.entries(initial))
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, String(value)) },
+    removeItem: (key: string) => { store.delete(key) },
+    clear: () => { store.clear() },
+  }
+}
+
+function installStorage(initial: Record<string, string> = {}) {
+  Object.defineProperty(globalThis, 'window', {
+    value: {
+      localStorage: createLocalStorageMock(initial),
+    },
+    configurable: true,
+    writable: true,
+  })
+}
 
 // ── daysBetween ──────────────────────────────────────────────────────────
 
@@ -129,4 +154,54 @@ test('buildFutureCapsuleDelivery: returns a localized title label', () => {
     now: new Date('2026-04-30T12:00:00Z'),
   })
   assert.match(result.title, /过去的你/)
+})
+
+// ── future capsule store ────────────────────────────────────────────────────
+
+test('loadFutureCapsules compacts malformed stored capsules and trims text fields', () => {
+  installStorage()
+  const live = {
+    id: 'capsule-live',
+    message: '  remember this  ',
+    createdAt: '2026-04-01T00:00:00.000Z',
+    scheduledFor: '2026-06-04',
+    status: 'pending',
+    title: '  launch week  ',
+  }
+  window.localStorage.setItem(FUTURE_CAPSULE_STORE_STORAGE_KEY, JSON.stringify([
+    live,
+    { ...live, id: 'bad-date', scheduledFor: '2026-13-99' },
+    { ...live, id: 'bad-created', createdAt: 'not-a-date' },
+    { ...live, id: 'blank-message', message: '   ' },
+    { ...live, id: 'bad-status', status: 'queued' },
+  ]))
+
+  const capsules = loadFutureCapsules()
+
+  assert.deepEqual(capsules, [{
+    id: 'capsule-live',
+    message: 'remember this',
+    createdAt: '2026-04-01T00:00:00.000Z',
+    scheduledFor: '2026-06-04',
+    status: 'pending',
+    title: 'launch week',
+  }])
+  assert.deepEqual(
+    JSON.parse(window.localStorage.getItem(FUTURE_CAPSULE_STORE_STORAGE_KEY) ?? '[]'),
+    capsules,
+  )
+})
+
+test('enqueueFutureCapsule rejects invalid calendar dates', () => {
+  installStorage()
+
+  assert.equal(enqueueFutureCapsule({
+    message: 'invalid month',
+    scheduledFor: '2026-13-01',
+  }), null)
+  assert.equal(enqueueFutureCapsule({
+    message: 'invalid day',
+    scheduledFor: '2026-02-30',
+  }), null)
+  assert.equal(loadFutureCapsules().length, 0)
 })

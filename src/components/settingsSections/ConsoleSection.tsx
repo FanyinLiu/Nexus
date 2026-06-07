@@ -5,7 +5,9 @@ import { getArchiveStats } from '../../features/memory/coldArchive'
 import { loadNarrative } from '../../features/memory/narrativeMemory'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import { getCoreRuntime } from '../../lib/coreRuntime'
+import type { PetModelDefinition } from '../../features/pet'
 import type {
+  AppSettings,
   DebugConsoleEvent,
   ReminderTask,
   UiLanguage,
@@ -25,6 +27,7 @@ import {
 import { AboutPanel } from './AboutPanel'
 import { CostHistoryPanel } from './CostHistoryPanel'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
+import { StartupStatusPanel } from './StartupStatusPanel'
 import { MoodMapPanel } from './MoodMapPanel'
 import { StateTimelinePanel } from './StateTimelinePanel'
 import { UpdaterPanel } from './UpdaterPanel'
@@ -48,6 +51,8 @@ type ConsoleSectionProps = {
   reminderTasks: ReminderTask[]
   speechLevel: number
   uiLanguage: UiLanguage
+  draft: AppSettings
+  petModel: PetModelDefinition | undefined
   voicePipeline: VoicePipelineState
   voiceState: VoiceState
   voiceTrace: VoiceTraceEntry[]
@@ -64,6 +69,8 @@ export const ConsoleSection = memo(function ConsoleSection({
   reminderTasks,
   speechLevel,
   uiLanguage,
+  draft,
+  petModel,
   voicePipeline,
   voiceState,
   voiceTrace,
@@ -199,9 +206,10 @@ export const ConsoleSection = memo(function ConsoleSection({
             </div>
           </summary>
           <DiagnosticsPanel uiLanguage={uiLanguage} />
+          <StartupStatusPanel draft={draft} petModel={petModel} uiLanguage={uiLanguage} />
           <MoodMapPanel uiLanguage={uiLanguage} active={active} />
           <StateTimelinePanel uiLanguage={uiLanguage} active={active} />
-          <CostHistoryPanel uiLanguage={uiLanguage} />
+          <CostHistoryPanel uiLanguage={uiLanguage} active={active} />
         </details>
 
         <details className="settings-console-section">

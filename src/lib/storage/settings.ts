@@ -27,6 +27,7 @@ import {
   syncSpeechProviderProfiles,
 } from '../speechProviderProfiles.ts'
 import {
+  normalizeTextProviderApiKey,
   readStoredTextProviderProfiles,
   syncTextProviderProfiles,
 } from '../textProviderProfiles.ts'
@@ -311,9 +312,25 @@ function resolveThemeId(storedThemeId: unknown): AppSettings['themeId'] {
   }
 }
 
+function readStoredSettingsRecord(): Record<string, unknown> {
+  const raw = readJson<unknown>(SETTINGS_STORAGE_KEY, {})
+  if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
+    return raw as Record<string, unknown>
+  }
+  return {}
+}
+
+function readStoredSchemaVersion(raw: Record<string, unknown>): number {
+  const version = raw.settingsSchemaVersion
+  if (typeof version !== 'number' || !Number.isFinite(version)) {
+    return 0
+  }
+  return Math.max(0, Math.floor(version))
+}
+
 export function loadSettings(): AppSettings {
-  const raw = readJson<Record<string, unknown>>(SETTINGS_STORAGE_KEY, {})
-  const storedVersion = typeof raw.settingsSchemaVersion === 'number' ? raw.settingsSchemaVersion : 0
+  const raw = readStoredSettingsRecord()
+  const storedVersion = readStoredSchemaVersion(raw)
   const migrated = storedVersion < CURRENT_SETTINGS_SCHEMA_VERSION
     ? migrateSettings(raw, storedVersion)
     : raw
@@ -324,7 +341,10 @@ export function loadSettings(): AppSettings {
     : (isFreshInstall ? detectPreferredUiLanguage() : normalizeUiLanguage(stored.uiLanguage))
   const voiceTriggerMode = resolveVoiceTriggerMode(stored)
   const inferredProviderId = stored.apiProviderId
-    ?? inferApiProviderId(stored.apiBaseUrl ?? defaultSettings.apiBaseUrl)
+    ?? inferApiProviderId(
+      stored.apiBaseUrl ?? defaultSettings.apiBaseUrl,
+      stored.model ?? defaultSettings.model,
+    )
   const storedSpeechOutputProviderProfiles = readStoredSpeechOutputProviderProfiles(
     stored.speechOutputProviderProfiles,
   )
@@ -390,6 +410,7 @@ export function loadSettings(): AppSettings {
     vtsEnabled: stored.vtsEnabled === true,
     vtsPort: Number.isFinite(Number(stored.vtsPort)) ? Number(stored.vtsPort) : 8001,
     apiProviderId: inferredProviderId,
+    apiKey: normalizeTextProviderApiKey(stored.apiKey ?? defaultSettings.apiKey),
     speechInputProviderId: effectiveSpeechInputProviderId,
     speechInputApiBaseUrl,
     speechInputApiKey: hasLocalSpeechInputProvider || migrateLegacySpeechInputProvider
@@ -520,6 +541,7 @@ export function saveSettings(settings: AppSettings, options?: { silent?: boolean
   const persistedSettings = {
     ...nextSettings,
     settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+    apiKey: normalizeTextProviderApiKey(nextSettings.apiKey),
     speechOutputApiBaseUrl: normalizeSpeechOutputApiBaseUrl(
       nextSettings.speechOutputProviderId,
       nextSettings.speechOutputApiBaseUrl,

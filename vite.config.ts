@@ -180,7 +180,15 @@ function resolveManualChunk(id: string) {
 }
 
 const chunkGroups = [
-  { name: 'react-vendor', test: (id: string) => resolveManualChunk(id) === 'react-vendor', priority: 100 },
+  {
+    name: 'react-vendor',
+    // Pin the Vite/rolldown module-preload helper (__vite_preload, imported by
+    // every eager chunk) into the always-eager react-vendor chunk. Otherwise it
+    // gets parked in transformers-vendor, which then gets force-preloaded on
+    // first paint even though transformers is only ever loaded lazily.
+    test: (id: string) => id.includes('vite/preload-helper') || resolveManualChunk(id) === 'react-vendor',
+    priority: 100,
+  },
   { name: 'transformers-vendor', test: (id: string) => resolveManualChunk(id) === 'transformers-vendor', priority: 100 },
   { name: 'ort-vendor', test: (id: string) => resolveManualChunk(id) === 'ort-vendor', priority: 100 },
   { name: 'chinese-vendor', test: (id: string) => resolveManualChunk(id) === 'chinese-vendor', priority: 100 },

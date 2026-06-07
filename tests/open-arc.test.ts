@@ -5,9 +5,34 @@ import {
   decideNextCheckIn,
 } from '../src/features/arc/openArcPolicy.ts'
 import { buildArcCheckIn } from '../src/features/arc/openArcDelivery.ts'
-import type { OpenArcRecord } from '../src/features/arc/openArcStore.ts'
+import {
+  loadOpenArcs,
+  openArc,
+  type OpenArcRecord,
+} from '../src/features/arc/openArcStore.ts'
+import { OPEN_ARC_STORE_STORAGE_KEY } from '../src/lib/storage/core.ts'
 
 const DAY_MS = 24 * 60 * 60 * 1000
+
+function createLocalStorageMock(initial: Record<string, string> = {}) {
+  const store = new Map(Object.entries(initial))
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, String(value)) },
+    removeItem: (key: string) => { store.delete(key) },
+    clear: () => { store.clear() },
+  }
+}
+
+function installStorage(initial: Record<string, string> = {}) {
+  Object.defineProperty(globalThis, 'window', {
+    value: {
+      localStorage: createLocalStorageMock(initial),
+    },
+    configurable: true,
+    writable: true,
+  })
+}
 
 function arc(overrides: Partial<OpenArcRecord> = {}): OpenArcRecord {
   return {
@@ -215,4 +240,51 @@ test('buildArcCheckIn: title is localized', () => {
   })
   assert.match(en.title, /thread/i)
   assert.match(zh.title, /线/)
+})
+
+// ── open arc store ──────────────────────────────────────────────────────────
+
+test('loadOpenArcs compacts malformed stored arcs and normalizes runtime fields', () => {
+  installStorage()
+  const live = {
+    id: 'arc-live',
+    theme: '  launch follow-up  ',
+    startedAt: '2026-06-01T00:00:00.000Z',
+    checkInDays: [5.9, 3, 3, Number.NaN, -1],
+    status: 'open',
+    checkInsFired: ['2026-06-04T00:00:00.000Z', 'not-a-date'],
+    closingNote: '   ',
+  }
+  window.localStorage.setItem(OPEN_ARC_STORE_STORAGE_KEY, JSON.stringify([
+    live,
+    { ...live, id: 'bad-started', startedAt: 'not-a-date' },
+    { ...live, id: 'bad-status', status: 'pending' },
+    { ...live, id: 'blank-theme', theme: '   ' },
+  ]))
+
+  const arcs = loadOpenArcs()
+
+  assert.deepEqual(arcs, [{
+    id: 'arc-live',
+    theme: 'launch follow-up',
+    startedAt: '2026-06-01T00:00:00.000Z',
+    checkInDays: [3, 5],
+    status: 'open',
+    checkInsFired: ['2026-06-04T00:00:00.000Z'],
+  }])
+  assert.deepEqual(
+    JSON.parse(window.localStorage.getItem(OPEN_ARC_STORE_STORAGE_KEY) ?? '[]'),
+    arcs,
+  )
+})
+
+test('openArc falls back to default check-in days when custom days normalize empty', () => {
+  installStorage()
+  const opened = openArc({
+    theme: 'keep an eye on launch',
+    checkInDays: [Number.NaN, 0, -1],
+  }, new Date('2026-06-01T00:00:00.000Z'))
+
+  assert.deepEqual(opened?.checkInDays, [3, 5])
+  assert.deepEqual(loadOpenArcs()[0]?.checkInDays, [3, 5])
 })

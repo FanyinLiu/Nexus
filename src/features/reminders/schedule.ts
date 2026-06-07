@@ -69,6 +69,11 @@ function normalizeReminderTaskAction(action: ReminderTaskAction | null | undefin
   }
 }
 
+function normalizeRequiredTextUpdate(value: unknown, fallback: string) {
+  if (typeof value !== 'string') return fallback
+  return value.trim() || fallback
+}
+
 function parseCronField(field: string, min: number, max: number) {
   const normalized = String(field ?? '').trim()
   if (!normalized) {
@@ -78,11 +83,28 @@ function parseCronField(field: string, min: number, max: number) {
   const allowed = new Set<number>()
 
   const addRange = (start: number, end: number, step = 1) => {
-    const safeStep = Math.max(1, step)
-    for (let value = start; value <= end; value += safeStep) {
+    for (let value = start; value <= end; value += step) {
       if (value >= min && value <= max) {
         allowed.add(value)
       }
+    }
+  }
+
+  const assertRange = (start: number, end: number, token: string) => {
+    if (
+      !Number.isInteger(start)
+      || !Number.isInteger(end)
+      || start < min
+      || end > max
+      || start > end
+    ) {
+      throw new Error(`cron field out of range: ${token}`)
+    }
+  }
+
+  const assertStep = (step: number, token: string) => {
+    if (!Number.isInteger(step) || step < 1) {
+      throw new Error(`cron field step must be at least 1: ${token}`)
     }
   }
 
@@ -97,19 +119,29 @@ function parseCronField(field: string, min: number, max: number) {
 
     const stepMatch = token.match(/^\*\/(\d{1,3})$/u)
     if (stepMatch) {
-      addRange(min, max, Number(stepMatch[1]))
+      const step = Number(stepMatch[1])
+      assertStep(step, token)
+      addRange(min, max, step)
       continue
     }
 
     const rangeStepMatch = token.match(/^(\d{1,2})-(\d{1,2})\/(\d{1,3})$/u)
     if (rangeStepMatch) {
-      addRange(Number(rangeStepMatch[1]), Number(rangeStepMatch[2]), Number(rangeStepMatch[3]))
+      const start = Number(rangeStepMatch[1])
+      const end = Number(rangeStepMatch[2])
+      const step = Number(rangeStepMatch[3])
+      assertRange(start, end, token)
+      assertStep(step, token)
+      addRange(start, end, step)
       continue
     }
 
     const rangeMatch = token.match(/^(\d{1,2})-(\d{1,2})$/u)
     if (rangeMatch) {
-      addRange(Number(rangeMatch[1]), Number(rangeMatch[2]))
+      const start = Number(rangeMatch[1])
+      const end = Number(rangeMatch[2])
+      assertRange(start, end, token)
+      addRange(start, end)
       continue
     }
 
@@ -272,7 +304,11 @@ export function updateReminderTask(
   const nextTask: ReminderTask = {
     ...task,
     ...updates,
-    speechText: updates.speechText?.trim() || undefined,
+    title: normalizeRequiredTextUpdate(updates.title, task.title),
+    prompt: normalizeRequiredTextUpdate(updates.prompt, task.prompt),
+    speechText: typeof updates.speechText === 'string'
+      ? updates.speechText.trim() || undefined
+      : task.speechText,
     action: normalizeReminderTaskAction(updates.action ?? task.action),
     updatedAt: now.toISOString(),
   }

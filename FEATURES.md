@@ -4,6 +4,8 @@
 > This file is a broad capability inventory, not the Phase 1 build scope.
 > For the active MVP scope, see
 > [Nexus 升级整合计划](docs/NEXUS_UPGRADE_INTEGRATION_PLAN.md).
+> For concrete milestones and acceptance criteria, see
+> [可执行优化任务清单](docs/EXECUTABLE_OPTIMIZATION_TASKS.md).
 
 ## Phase Scope
 

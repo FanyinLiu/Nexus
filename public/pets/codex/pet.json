@@ -1,0 +1,6 @@
+{
+  "id": "codex",
+  "displayName": "Codex",
+  "description": "A public Codex-style terminal companion packaged as a clean-room sprite pet.",
+  "spritesheetPath": "spritesheet.webp"
+}

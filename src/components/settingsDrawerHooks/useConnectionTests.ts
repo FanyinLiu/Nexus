@@ -51,7 +51,19 @@ export function useConnectionTests({
       role: result.ok ? 'status' : 'alert',
       'aria-live': result.ok ? 'polite' : 'assertive',
       'aria-atomic': 'true',
-    }, result.message)
+    }, [
+      createElement('p', { key: 'message' }, result.message),
+      result.recommendation ? (
+        createElement(
+          'p',
+          {
+            key: 'recommendation',
+            className: 'settings-test-result__recommendation',
+          },
+          result.recommendation,
+        )
+      ) : null,
+    ])
   }
 
   function resetConnectionTests() {
