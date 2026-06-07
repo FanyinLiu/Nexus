@@ -319,6 +319,10 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       stopActiveSpeechOutput,
       onInterrupted: () => {
         logVoiceEvent('assistant speech interrupted by user speech')
+        // Arm the same 200ms echo cooldown the manual-interrupt path arms
+        // (runtimeSupport.ts), so the forced VAD restart after a barge-in
+        // doesn't immediately re-trigger on the assistant's own tail audio.
+        refs.voiceEchoCooldownUntilRef.current = Date.now() + 200
         // dispatchVoiceSessionAndSync now auto-emits tts:interrupted to the
         // VoiceBus, so the explicit voiceBus.emit is no longer needed.
         dispatchVoiceSessionAndSync({ type: 'tts_interrupted' })

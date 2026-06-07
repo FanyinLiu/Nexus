@@ -17,9 +17,11 @@ const HIGH_PRIORITY_PATTERNS = [
   /important/i,
   /asap/i,
   /\bnow\b/i,
-  /立即\b/i,
-  /紧急\b/i,
-  /重要\b/i,
+  // No trailing \b — JS word boundaries don't fire between CJK chars, so it
+  // would make these never match inside Chinese text (e.g. "立即处理").
+  /立即/i,
+  /紧急/i,
+  /重要/i,
   /\b(1[0-9]\s*hour|today|before|deadline)\b/i,
 ]
 
@@ -27,7 +29,7 @@ const CRITICAL_PRIORITY_PATTERNS = [
   /critical/i,
   /critical urgency/i,
   /火警/i,
-  /立刻\b/i,
+  /立刻/i,
   /马上/i,
   /\b(alert|emergency)\b/i,
 ]

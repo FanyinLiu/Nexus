@@ -95,13 +95,21 @@ export function applyPetWindowInstances() {
   for (const inst of petInstances.values()) applyPetInstance(inst)
 }
 
+// Panel / non-pet windows have no instance of their own, so their state
+// reads/writes (e.g. the settings always-on-top / click-through toggles, sent
+// from the panel) must target the main pet — otherwise they silently no-op.
+function mainPetInstance() {
+  const mainWindow = getMainWindow()
+  return mainWindow ? getPetInstanceForWindow(mainWindow) : null
+}
+
 export function getPetWindowStateForEvent(event) {
-  const inst = petInstanceForEvent(event)
+  const inst = petInstanceForEvent(event) ?? mainPetInstance()
   return inst ? inst.state : makePetWindowState()
 }
 
 export function updatePetWindowStateForEvent(event, partialState = {}) {
-  const inst = petInstanceForEvent(event)
+  const inst = petInstanceForEvent(event) ?? mainPetInstance()
   if (!inst) return null
   const safe = sanitizePetWindowStatePatch(partialState)
   inst.state = { ...inst.state, ...safe }
