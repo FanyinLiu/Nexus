@@ -96,6 +96,7 @@ async function fetchText(url) {
   const response = await performNetworkRequest(url, {
     timeoutMs: PET_GALLERY_REQUEST_TIMEOUT_MS,
     timeoutMessage: `请求 ${url} 超时。`,
+    followRedirectsSafely: true,
   })
   if (!response.ok) {
     throw new Error(`请求 ${url} 失败：${response.status} ${response.statusText}`)
@@ -110,6 +111,7 @@ async function fetchBytes(url, options = {}) {
   const response = await performNetworkRequest(url, {
     timeoutMs: PET_GALLERY_REQUEST_TIMEOUT_MS,
     timeoutMessage: `请求 ${url} 超时。`,
+    followRedirectsSafely: true,
   })
   if (!response.ok) {
     throw new Error(`请求 ${url} 失败：${response.status} ${response.statusText}`)
