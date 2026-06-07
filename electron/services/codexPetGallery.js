@@ -554,10 +554,6 @@ function mergeCatalogs(catalogs) {
   const pets = []
   const seen = new Set()
   const queues = catalogs.map((catalog) => [...catalog.pets])
-  const totalCount = catalogs.reduce(
-    (sum, catalog) => sum + (catalog.totalCount || catalog.pets.length),
-    0,
-  )
 
   while (queues.some((queue) => queue.length > 0)) {
     for (const queue of queues) {
@@ -576,7 +572,11 @@ function mergeCatalogs(catalogs) {
 
   return {
     sourceUrl: CODEX_PET_GALLERY_HOME_URL,
-    totalCount,
+    // Report the count of pets actually browsable here (post-dedup), not the
+    // sum of each source's self-declared site totals — we only fetch a page
+    // from each, so those totals are unreachable and the UI count would
+    // otherwise claim thousands of searchable pets when only these exist.
+    totalCount: pets.length,
     pets,
   }
 }
