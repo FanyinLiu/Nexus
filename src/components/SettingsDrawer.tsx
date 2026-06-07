@@ -870,6 +870,8 @@ export function SettingsDrawer({
         return (
           <ConsoleSection
             active
+            draft={draft}
+            petModel={petModel}
             continuousVoiceActive={continuousVoiceActive}
             debugConsoleEvents={debugConsoleEvents}
             liveTranscript={liveTranscript}
