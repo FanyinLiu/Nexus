@@ -1,14 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createId,
-  inferSessionTitle,
   openTextFileWithFallback,
   saveTextFileWithFallback,
   shorten,
-  upsertChatSession,
 } from '../lib'
-import { saveChatMessages } from '../lib/storage'
-import { getCoreRuntime } from '../lib/coreRuntime'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import { parseChatHistoryArchive, serializeChatHistoryArchive } from '../features/chat'
 import { clearCompactionCache } from '../features/chat/contextCompaction'
@@ -19,8 +15,12 @@ import {
   mergeMemories,
 } from '../features/memory'
 import { formatTraceLabel, logVoiceEvent } from '../features/voice'
-import { detectCrisisSignal } from '../features/safety'
-import { presentCrisis } from '../features/safety/crisisPanelState.ts'
+import {
+  classifyCrisisSecondPass,
+  detectCrisisSignal,
+  presentCrisis,
+  shouldPresentCrisisPanel,
+} from '../features/safety'
 import { noteUserMessageAndCheckReminder } from '../features/safety/disclosureState.ts'
 import {
   createAssistantReplyRunner,
@@ -38,6 +38,7 @@ import {
   type PendingReminderDraftInput,
   type UseChatContext,
 } from './chat'
+import { useChatPersistence } from './chat/useChatPersistence.ts'
 import type {
   AssistantRuntimeActivity,
   ChatMessage,
@@ -51,21 +52,8 @@ export type { UseChatContext } from './chat'
 
 const MAX_CHAT_MESSAGES = 500
 
-function messagesSignature(msgs: ChatMessage[]): string {
-  if (!msgs.length) return '0:'
-  const last = msgs[msgs.length - 1]
-  return `${msgs.length}:${last.id}:${last.content.length}:${last.tone ?? ''}`
-}
-
 export function useChat(ctx: UseChatContext) {
   const { t } = useTranslation()
-  // Each app launch opens a fresh chat bucket. Past sessions are persisted
-  // by id and browsable from Settings → 聊天记录; the pane itself only
-  // ever renders the current session. LLM context continuity across
-  // launches is handled by the memory + dream system, not by dragging
-  // raw message history forward.
-  const currentSessionIdRef = useRef<string>(createId('chat-session'))
-  const currentSessionStartedAtRef = useRef<number>(Date.now())
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
@@ -101,7 +89,14 @@ export function useChat(ctx: UseChatContext) {
   const deferredCompanionNoticesRef = useRef<CompanionNoticePayload[]>([])
   const flushingDeferredCompanionNoticesRef = useRef(false)
   const recentCompanionNoticesRef = useRef<Map<string, number>>(new Map())
-  const messagesSaveSkipRef = useRef(true)
+
+  const {
+    applyRemoteMessages: applyRemoteMessagesToState,
+    currentSessionIdRef,
+  } = useChatPersistence({
+    messages,
+    setMessages,
+  })
 
   useEffect(() => {
     messagesRef.current = messages
@@ -121,79 +116,15 @@ export function useChat(ctx: UseChatContext) {
     setAssistantActivity(busy ? 'thinking' : 'idle')
   }, [busy])
 
-  const sessionIdRef = useRef<string | null>(null)
-  const mirroredMessageIdsRef = useRef<Set<string>>(new Set())
-  // Fingerprint of the last messages payload we *persisted*. Used by the
-  // save effect below to skip rewriting when the current `messages` state
-  // came in via cross-window BroadcastChannel sync (useDesktopBridge calls
-  // `applyRemoteMessages` below). Without this guard, the save effect in
-  // the receiving window re-broadcasts the same content and triggers a
-  // cross-window ping-pong that can even clobber the sender's newer state
-  // mid-turn.
-  const lastSavedMessagesSignatureRef = useRef<string>('')
-
   // Called by useDesktopBridge when a BroadcastChannel message says another
   // window wrote the chat-messages storage key. Replaces local messages
   // state AND primes the save-effect guards so the replacement doesn't
   // immediately re-broadcast (which would kick the originating window into
   // rewriting over its own in-flight additions).
   const applyRemoteMessages = useCallback((next: ChatMessage[]) => {
-    messagesSaveSkipRef.current = true
-    lastSavedMessagesSignatureRef.current = messagesSignature(next)
-    setMessages(next)
     messagesRef.current = next
-  }, [])
-
-  useEffect(() => {
-    if (messagesSaveSkipRef.current) {
-      messagesSaveSkipRef.current = false
-      lastSavedMessagesSignatureRef.current = messagesSignature(messages)
-      return
-    }
-    // Skip if the messages we're about to persist are structurally identical to
-    // what we already persisted (typically because BroadcastChannel just
-    // handed us the storage payload that WAS already saved elsewhere).
-    const signature = messagesSignature(messages)
-    if (signature === lastSavedMessagesSignatureRef.current) {
-      return
-    }
-    lastSavedMessagesSignatureRef.current = signature
-    // Cross-window sync. Voice turns run entirely inside the pet window —
-    // STT → sendMessage → setMessages all happen there, never touching the
-    // chat panel's React state. The panel listens for BroadcastChannel
-    // updates on CHAT_STORAGE_KEY (see useDesktopBridge) and reloads its
-    // message list from storage, so we need to actually write that key.
-    // Without this, the pet window's voice turns are invisible to an open
-    // chat panel.
-    saveChatMessages(messages)
-    upsertChatSession({
-      id: currentSessionIdRef.current,
-      startedAt: currentSessionStartedAtRef.current,
-      lastActiveAt: Date.now(),
-      title: inferSessionTitle(messages),
-      messages,
-    })
-
-    const { sessionStore } = getCoreRuntime()
-    if (!sessionIdRef.current) {
-      const session = sessionStore.createSession('local-chat', 'Companion chat')
-      sessionIdRef.current = session.id
-    }
-    const mirrored = mirroredMessageIdsRef.current
-    for (const msg of messages) {
-      if (mirrored.has(msg.id)) continue
-      if (msg.role !== 'user' && msg.role !== 'assistant') {
-        mirrored.add(msg.id)
-        continue
-      }
-      sessionStore.appendMessage(sessionIdRef.current!, {
-        role: msg.role,
-        content: msg.content,
-        timestamp: Date.parse(msg.createdAt) || Date.now(),
-      })
-      mirrored.add(msg.id)
-    }
-  }, [messages])
+    applyRemoteMessagesToState(next)
+  }, [applyRemoteMessagesToState])
 
   const clearPetDialogHideTimer = useCallback(() => {
     if (petDialogHideTimerRef.current) {
@@ -609,12 +540,33 @@ export function useChat(ctx: UseChatContext) {
       ctx.appendVoiceTrace(t('chat.voice.sent_label'), t('chat.voice.sent_trace', { label: traceLabel }))
     }
 
-    // Surface the non-persona hotline panel when the user's message
-    // hits a crisis pattern. The persona's empathic reframe runs in
-    // the reply path (Tier 1.1 chunk D); this is the regulatory-
-    // required separate channel showing real-world resources.
-    const crisisSignal = detectCrisisSignal(content, currentSettings.uiLanguage)
-    if (crisisSignal) {
+    // Surface the non-persona hotline panel only for medium/high crisis
+    // signals. Low signals still soften the persona reply in the reply path
+    // without interrupting the conversation with a hotline panel.
+    const patternCrisisSignal = detectCrisisSignal(content, currentSettings.uiLanguage)
+    const crisisSignal = await classifyCrisisSecondPass({
+      locale: currentSettings.uiLanguage,
+      text: content,
+      patternSignal: patternCrisisSignal,
+      runner: patternCrisisSignal
+        ? async ({ system, user }) => {
+          const response = await window.desktopPet?.completeChat?.({
+            providerId: currentSettings.apiProviderId,
+            baseUrl: currentSettings.apiBaseUrl,
+            apiKey: currentSettings.apiKey,
+            model: currentSettings.model,
+            messages: [
+              { role: 'system', content: system },
+              { role: 'user', content: user },
+            ],
+            temperature: 0,
+            maxTokens: 120,
+          })
+          return response?.content ?? null
+        }
+        : undefined,
+    })
+    if (shouldPresentCrisisPanel(crisisSignal)) {
       presentCrisis(crisisSignal)
     }
 

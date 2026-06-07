@@ -2,14 +2,8 @@ import { PromptModeStreamFilter } from '../../features/chat/promptModeMcp'
 import { applyChatOutputTransforms } from '../../features/chat/chatOutputTransforms'
 import { selectToolDeliveryMode } from '../../features/chat/systemPromptBuilder'
 import { requestAssistantReplyStreaming } from '../../features/chat/runtime'
-import type { AssistantReplyRequestOptions } from '../../features/chat/systemPromptBuilder'
 import { selectTriggeredLorebookEntriesWithSemantic } from '../../features/chat/lorebookInjection'
 import { loadLorebookEntries } from '../../lib/storage/lorebooks'
-import { detectRupture } from '../../features/autonomy/ruptureDetection'
-import { buildRepairGuidance } from '../../features/autonomy/repairGuidance'
-import { detectCrisisSignal } from '../../features/safety'
-import { buildCrisisGuidance } from '../../features/safety/crisisGuidance.ts'
-import { recordGuidanceFired } from '../../features/autonomy/guidanceTelemetry'
 import { recordUsage } from '../../features/metering/contextMeter'
 import { formatGameContext, loadGameContext } from '../../features/context/gameContext'
 import {
@@ -26,9 +20,7 @@ import {
 } from '../../features/pet/performance'
 import {
   consumeCallback,
-  loadCallbackQueue,
 } from '../../features/memory/callbackStore'
-import { buildBuiltInToolDescriptors } from '../../features/tools/builtInToolSchemas'
 import { toChatToolResult, type BuiltInToolResult } from '../../features/tools/toolTypes.ts'
 import { logVoiceEvent } from '../../features/voice/shared'
 import { shorten } from '../../lib/common'
@@ -44,50 +36,12 @@ import type {
 import { getSpeechOutputErrorMessage } from './support'
 import { bindStreamingAbort, type AbortSetter } from './streamAbort'
 import type { UseChatContext } from './types'
-
-async function loadAvailableTools(settings: AppSettings) {
-  const builtInDescriptors = buildBuiltInToolDescriptors(settings)
-
-  let mcpDescriptors: ReturnType<typeof buildBuiltInToolDescriptors> = []
-  try {
-    const tools = await window.desktopPet?.mcpListTools?.()
-    if (Array.isArray(tools) && tools.length) {
-      const pluginSkillGuides = new Map<string, string>()
-      try {
-        const plugins = await window.desktopPet?.pluginList?.()
-        if (Array.isArray(plugins)) {
-          for (const plugin of plugins) {
-            if (plugin.running && plugin.skillGuide) {
-              const pluginServerId = `plugin:${plugin.id}`
-              pluginSkillGuides.set(pluginServerId, plugin.skillGuide)
-            }
-          }
-        }
-      } catch {
-        // Plugin list unavailable — proceed without skill guides
-      }
-
-      const reservedNames = new Set(builtInDescriptors.map((t) => t.name))
-      mcpDescriptors = tools
-        .filter((tool) => !reservedNames.has(tool.name))
-        .map((tool) => ({
-          name: tool.name,
-          description: tool.description,
-          serverId: tool.serverId ?? '',
-          inputSchema: tool.inputSchema,
-          skillGuide: pluginSkillGuides.get(tool.serverId ?? '') || '',
-        }))
-    }
-  } catch {
-    // MCP bridge unavailable — proceed with built-ins only
-  }
-
-  const combined = [
-    ...builtInDescriptors,
-    ...mcpDescriptors,
-  ]
-  return combined.length ? combined : undefined
-}
+import {
+  buildCrisisGuidancePromptText,
+  buildPendingCallbackHints,
+  buildRepairGuidancePromptText,
+  loadAvailableTools,
+} from './assistantPromptContext.ts'
 
 type SpeechPlaybackFailureOptions = {
   traceId?: string
@@ -320,29 +274,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       // TTS channel.
       const expressionOverrideStreamFilter = new PerformanceTagStreamFilter()
 
-      // Resolve queued callbacks into memory snippets for the system prompt.
-      // Stale ids (memory was archived between dream and now) silently drop.
-      const pendingCallbackHints = (() => {
-        const queue = loadCallbackQueue()
-        if (!queue.length) return undefined
-        const memoriesById = new Map(nextMemories.map((m) => [m.id, m]))
-        const nowMs = Date.now()
-        const resolved: NonNullable<AssistantReplyRequestOptions['pendingCallbacks']> = []
-        for (const entry of queue) {
-          const memory = memoriesById.get(entry.memoryId)
-          if (!memory) continue
-          const queuedMs = Date.parse(memory.createdAt)
-          const daysAgo = Number.isFinite(queuedMs)
-            ? Math.max(0, (nowMs - queuedMs) / (24 * 60 * 60 * 1000))
-            : 0
-          resolved.push({
-            memoryId: entry.memoryId,
-            content: memory.content.slice(0, 240),
-            daysAgo,
-          })
-        }
-        return resolved.length ? resolved : undefined
-      })()
+      const pendingCallbackHints = buildPendingCallbackHints(nextMemories)
       const request = bindStreamingAbort(
         requestAssistantReplyStreaming(
         currentSettings,
@@ -406,47 +338,20 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           // single-message regex + stonewalling via brevity-drop against
           // the last few user messages). Empty string when no rupture —
           // filter(Boolean) drops it. Silent telemetry on fire.
-          repairGuidancePromptText: (() => {
-            const userMessages = nextMessages.filter((m) => m.role === 'user')
-            const lastUser = userMessages[userMessages.length - 1]
-            if (!lastUser?.content) return ''
-            // Prior 3 user messages (newest of the priors last) — used by
-            // stonewalling detection to compare brevity against a richer
-            // baseline.
-            const priorUserMessages = userMessages
-              .slice(0, -1)
-              .slice(-3)
-              .map((m) => m.content)
-            const result = detectRupture(lastUser.content, currentSettings.uiLanguage, {
-              priorUserMessages,
-            })
-            if (result.kind !== null) {
-              recordGuidanceFired({
-                kind: `rupture:${result.kind}` as const,
-                beforeValence: null,
-              })
-            }
-            return buildRepairGuidance({
-              uiLanguage: currentSettings.uiLanguage,
-              ruptureKind: result.kind,
-            })
-          })(),
+          repairGuidancePromptText: buildRepairGuidancePromptText({
+            nextMessages,
+            currentSettings,
+          }),
           // Crisis-response posture (Tier 1.1 chunk D). Re-runs the
           // detector on the last user message — the detector is pure
           // and microsecond-cheap, so re-running here keeps this
           // layer free of the upstream useChat state coupling. Empty
           // string when no signal — filter(Boolean) drops the
           // section in the prompt builder.
-          crisisGuidancePromptText: (() => {
-            const lastUser = [...nextMessages]
-              .reverse()
-              .find((m) => m.role === 'user')
-            if (!lastUser?.content || typeof lastUser.content !== 'string') {
-              return ''
-            }
-            const signal = detectCrisisSignal(lastUser.content, currentSettings.uiLanguage)
-            return buildCrisisGuidance({ signal, uiLanguage: currentSettings.uiLanguage })
-          })(),
+          crisisGuidancePromptText: buildCrisisGuidancePromptText({
+            nextMessages,
+            currentSettings,
+          }),
           milestonePromptText: dependencies.ctx.consumeMilestonePromptText?.(),
           anniversaryPromptText: dependencies.ctx.consumeAnniversaryPromptText?.(currentSettings.uiLanguage),
           onThisDayPromptText: dependencies.ctx.consumeOnThisDayPromptText?.(currentSettings.uiLanguage, nextMemories),

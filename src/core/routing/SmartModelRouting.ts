@@ -1,4 +1,4 @@
-import type { ModelTier, RoutingRequest, RoutingResult, SmartModelRoutingConfig } from './types'
+import type { ModelTier, RoutingRequest, RoutingResult, SmartModelRoutingConfig } from './types.ts'
 
 const REASONING_KEYWORDS = [
   'reason',

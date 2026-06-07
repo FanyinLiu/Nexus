@@ -1,4 +1,4 @@
-import type { Skill, SkillId, SkillMatchContext, SkillMatchResult } from './types'
+import type { Skill, SkillId, SkillMatchContext, SkillMatchResult } from './types.ts'
 
 export type SkillBackend = {
   load(): Promise<Skill[]>

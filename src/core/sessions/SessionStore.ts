@@ -5,7 +5,7 @@ import type {
   SessionSearchHit,
   SessionSearchOptions,
   StoredMessage,
-} from './types'
+} from './types.ts'
 
 type MessageIndex = {
   messageKey: string
@@ -47,6 +47,28 @@ const STOPWORDS = new Set([
   '你们',
 ])
 
+function cloneSessionRecord(record: SessionRecord): SessionRecord {
+  return {
+    ...record,
+    tags: record.tags ? [...record.tags] : undefined,
+  }
+}
+
+function cloneStoredMessage(message: StoredMessage): StoredMessage {
+  return { ...message }
+}
+
+function normalizeSearchLimit(limit: number | undefined): number | undefined {
+  if (limit === undefined) return undefined
+  if (!Number.isFinite(limit) || limit <= 0) return undefined
+  return Math.floor(limit)
+}
+
+function normalizeMinScore(minScore: number | undefined): number {
+  if (minScore === undefined || !Number.isFinite(minScore)) return 1
+  return Math.max(1, Math.floor(minScore))
+}
+
 export class SessionStore {
   private readonly sessions = new Map<SessionId, SessionRecord>()
   private readonly messages = new Map<string, StoredMessage>()
@@ -65,17 +87,20 @@ export class SessionStore {
       messageCount: 0,
     }
     this.sessions.set(id, record)
-    return record
+    return cloneSessionRecord(record)
   }
 
   getSession(id: SessionId): SessionRecord | undefined {
-    return this.sessions.get(id)
+    const session = this.sessions.get(id)
+    return session ? cloneSessionRecord(session) : undefined
   }
 
   listSessions(conversationId?: string): SessionRecord[] {
     const all = Array.from(this.sessions.values())
     const filtered = conversationId ? all.filter((s) => s.conversationId === conversationId) : all
-    return filtered.sort((a, b) => b.updatedAt - a.updatedAt)
+    return filtered
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .map(cloneSessionRecord)
   }
 
   appendMessage(sessionId: SessionId, message: SessionMessage): StoredMessage {
@@ -88,7 +113,7 @@ export class SessionStore {
     session.messageCount += 1
     session.updatedAt = Date.now()
     this.indexMessage(key, stored)
-    return stored
+    return cloneStoredMessage(stored)
   }
 
   getMessages(sessionId: SessionId): StoredMessage[] {
@@ -97,7 +122,7 @@ export class SessionStore {
     const result: StoredMessage[] = []
     for (let i = 0; i < session.messageCount; i += 1) {
       const entry = this.messages.get(composeKey(sessionId, i))
-      if (entry) result.push(entry)
+      if (entry) result.push(cloneStoredMessage(entry))
     }
     return result
   }
@@ -126,7 +151,8 @@ export class SessionStore {
       }
     }
 
-    const minScore = options.minScore ?? 1
+    const minScore = normalizeMinScore(options.minScore)
+    const limit = normalizeSearchLimit(options.limit)
     const hits: SessionSearchHit[] = []
     for (const [key, score] of scores.entries()) {
       if (score < minScore) continue
@@ -142,7 +168,7 @@ export class SessionStore {
       })
     }
     hits.sort((a, b) => b.score - a.score || b.timestamp - a.timestamp)
-    return options.limit ? hits.slice(0, options.limit) : hits
+    return limit ? hits.slice(0, limit) : hits
   }
 
   private indexMessage(key: string, message: StoredMessage): void {

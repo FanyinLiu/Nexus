@@ -1,5 +1,5 @@
-import type { ModelTier, ProviderId } from '../routing/types'
-import type { UsagePricing } from './types'
+import type { ModelTier, ProviderId } from '../routing/types.ts'
+import type { UsagePricing } from './types.ts'
 
 // Prices in USD per 1 million tokens (input / output).
 const DEFAULT_PRICING: UsagePricing[] = [
@@ -122,20 +122,24 @@ export class UsagePricingTable {
 
   constructor(initial: UsagePricing[] = DEFAULT_PRICING) {
     for (const entry of initial) {
-      this.entries.set(keyOf(entry.providerId, entry.modelId), entry)
+      const normalized = normalizeUsagePricing(entry)
+      if (normalized) this.entries.set(keyOf(normalized.providerId, normalized.modelId), normalized)
     }
   }
 
   get(providerId: ProviderId, modelId: string): UsagePricing | undefined {
-    return this.entries.get(keyOf(providerId, modelId))
+    const entry = this.entries.get(keyOf(providerId, modelId))
+    return entry ? { ...entry } : undefined
   }
 
   set(entry: UsagePricing): void {
-    this.entries.set(keyOf(entry.providerId, entry.modelId), entry)
+    const normalized = normalizeUsagePricing(entry)
+    if (!normalized) throw new Error('UsagePricingTable.set requires valid providerId, modelId, tier and non-negative prices')
+    this.entries.set(keyOf(normalized.providerId, normalized.modelId), normalized)
   }
 
   list(): UsagePricing[] {
-    return Array.from(this.entries.values())
+    return Array.from(this.entries.values()).map((entry) => ({ ...entry }))
   }
 
   listByTier(tier: ModelTier): UsagePricing[] {
@@ -173,9 +177,27 @@ export class UsagePricingTable {
 }
 
 function price(inputPerM: number, outputPerM: number, inputTokens: number, outputTokens: number): number {
-  return (inputTokens / 1_000_000) * inputPerM + (outputTokens / 1_000_000) * outputPerM
+  const safeInput = Number.isFinite(inputTokens) && inputTokens > 0 ? Math.floor(inputTokens) : 0
+  const safeOutput = Number.isFinite(outputTokens) && outputTokens > 0 ? Math.floor(outputTokens) : 0
+  return (safeInput / 1_000_000) * inputPerM + (safeOutput / 1_000_000) * outputPerM
 }
 
 function keyOf(providerId: ProviderId, modelId: string): string {
-  return `${providerId}::${modelId}`
+  return `${providerId.trim()}::${modelId.trim()}`
+}
+
+function normalizeUsagePricing(value: UsagePricing): UsagePricing | null {
+  const providerId = value.providerId.trim()
+  const modelId = value.modelId.trim()
+  const validTier = value.tier === 'cheap' || value.tier === 'standard' || value.tier === 'heavy'
+  if (!providerId || !modelId || !validTier) return null
+  if (!Number.isFinite(value.inputPricePerMTokens) || value.inputPricePerMTokens < 0) return null
+  if (!Number.isFinite(value.outputPricePerMTokens) || value.outputPricePerMTokens < 0) return null
+  return {
+    providerId,
+    modelId,
+    tier: value.tier,
+    inputPricePerMTokens: value.inputPricePerMTokens,
+    outputPricePerMTokens: value.outputPricePerMTokens,
+  }
 }

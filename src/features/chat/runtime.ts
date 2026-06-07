@@ -21,25 +21,25 @@ import type {
   ChatMessage,
   MemoryRecallContext,
 } from '../../types'
-import type { ModelTier } from '../../core'
-import { pickTier } from '../../core'
-import { getCoreRuntime, recordCostEntry } from '../../lib/coreRuntime'
+import type { ModelTier } from '../../core/routing/types.ts'
+import { pickTier } from '../../core/routing/SmartModelRouting.ts'
+import { getCoreRuntime, recordCostEntry } from '../../lib/coreRuntime.ts'
 import {
   executeChatRequestWithFailover,
   type AssistantReplyRuntimeResult,
-} from './failoverChain'
+} from './failoverChain.ts'
 import {
   buildChatRequestPayload,
   selectToolDeliveryMode,
   type AssistantReplyRequestOptions,
-} from './systemPromptBuilder'
+} from './systemPromptBuilder.ts'
 import {
   estimateChatMessagesTokens,
   estimateTokensFromMessages,
   estimateTokensFromText,
   estimateToolSchemasTokens,
-} from './tokenEstimate'
-import { runToolCallLoop } from './toolCallLoop'
+} from './tokenEstimate.ts'
+import { runToolCallLoop } from './toolCallLoop.ts'
 
 export type { AssistantReplyRuntimeResult } from './failoverChain'
 export type { AssistantReplyRequestOptions } from './systemPromptBuilder'

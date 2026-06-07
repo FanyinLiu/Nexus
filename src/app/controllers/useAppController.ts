@@ -43,7 +43,12 @@ import { buildAffectGuidance, classifyAffectGuidance } from '../../features/auto
 import { recordGuidanceFired } from '../../features/autonomy/guidanceTelemetry.ts'
 import { useMcpServerSync } from '../../hooks/useMcpServerSync'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
-import { AUTONOMY_GOALS_STORAGE_KEY, pruneLegacyStorageKeys, readJson, writeJson } from '../../lib/storage'
+import {
+  loadAutonomyGoals,
+  normalizeAutonomyGoals,
+  pruneLegacyStorageKeys,
+  saveAutonomyGoals,
+} from '../../lib/storage'
 import { classifyMessageSignals, voiceEmotionToSignal } from '../../features/autonomy/emotionModel'
 
 type ChatController = ReturnType<typeof useChat>
@@ -79,11 +84,15 @@ export function useAppController() {
   useWorkspaceRootBridge(settings, (msg) => setErrorRef.current?.(msg))
   useMcpServerSync(settings.mcpServers)
 
-  const [goals, setGoals] = useState<Goal[]>(() => readJson<Goal[]>(AUTONOMY_GOALS_STORAGE_KEY, []))
+  const [goals, setGoals] = useState<Goal[]>(() => loadAutonomyGoals())
   const goalsRef = useRef(goals)
   useEffect(() => {
-    goalsRef.current = goals
-    writeJson(AUTONOMY_GOALS_STORAGE_KEY, goals)
+    const normalized = normalizeAutonomyGoals(goals)
+    goalsRef.current = normalized
+    saveAutonomyGoals(normalized)
+    if (JSON.stringify(normalized) !== JSON.stringify(goals)) {
+      setGoals(normalized)
+    }
   }, [goals])
 
   const settingsRef = useRef(settings)
@@ -665,6 +674,8 @@ export function useAppController() {
     focusState: autonomy.focusAwareness.focusState,
     notificationBridge: autonomy.notificationBridge,
     contextScheduler: autonomy.contextScheduler,
+    replyToTelegram: autonomy.replyToTelegram,
+    replyToDiscord: autonomy.replyToDiscord,
   }), [
     settings,
     petModel,
@@ -682,6 +693,8 @@ export function useAppController() {
     autonomy.focusAwareness.focusState,
     autonomy.notificationBridge,
     autonomy.contextScheduler,
+    autonomy.replyToTelegram,
+    autonomy.replyToDiscord,
   ])
 
   return {

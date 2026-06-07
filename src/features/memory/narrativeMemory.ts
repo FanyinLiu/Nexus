@@ -6,7 +6,7 @@
  * of shared history with the user beyond individual facts.
  */
 
-import type { MemoryItem } from '../../types'
+import type { MemoryItem } from '../../types/memory.ts'
 import { t } from '../../i18n/runtime.ts'
 
 // ── Types ──────────────────────────────────────────────────────��──────────
@@ -31,26 +31,86 @@ export interface NarrativeSnapshot {
   generatedAt: string
 }
 
-const NARRATIVE_STORAGE_KEY = 'nexus:memory:narrative'
+export const NARRATIVE_STORAGE_KEY = 'nexus:memory:narrative'
 const MAX_THREADS = 15
 const MIN_CHAIN_LENGTH = 2
 
 // ── Persistence ─────────────────────────────────���─────────────────────────
 
-function isValidThread(t: unknown): t is NarrativeThread {
-  if (!t || typeof t !== 'object') return false
-  const obj = t as Record<string, unknown>
-  return (
-    typeof obj.id === 'string'
-    && typeof obj.title === 'string'
-    && Array.isArray(obj.memoryIds)
-    && obj.memoryIds.every((id) => typeof id === 'string')
-    && typeof obj.summary === 'string'
-    && typeof obj.startedAt === 'string'
-    && typeof obj.lastUpdatedAt === 'string'
-    && typeof obj.dreamTouchCount === 'number'
-    && Number.isFinite(obj.dreamTouchCount)
-  )
+function getNarrativeStorage(): Storage | null {
+  if (typeof localStorage !== 'undefined') return localStorage
+  if (typeof window !== 'undefined') return window.localStorage
+  return null
+}
+
+function isValidIsoTimestamp(value: string): boolean {
+  return Number.isFinite(Date.parse(value))
+}
+
+function normalizeText(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed ? trimmed : null
+}
+
+function normalizeMemoryIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const ids = new Set<string>()
+  for (const id of value) {
+    const normalized = normalizeText(id)
+    if (normalized) ids.add(normalized)
+  }
+  return [...ids]
+}
+
+function normalizeThread(value: unknown): NarrativeThread | null {
+  if (!value || typeof value !== 'object') return null
+  const obj = value as Record<string, unknown>
+  const id = normalizeText(obj.id)
+  const title = normalizeText(obj.title)
+  const summary = normalizeText(obj.summary)
+  const startedAt = normalizeText(obj.startedAt)
+  const lastUpdatedAt = normalizeText(obj.lastUpdatedAt)
+  const memoryIds = normalizeMemoryIds(obj.memoryIds)
+  if (!id || !title || !summary) return null
+  if (memoryIds.length < MIN_CHAIN_LENGTH) return null
+  if (!startedAt || !isValidIsoTimestamp(startedAt)) return null
+  if (!lastUpdatedAt || !isValidIsoTimestamp(lastUpdatedAt)) return null
+  const dreamTouchCount = typeof obj.dreamTouchCount === 'number' && Number.isFinite(obj.dreamTouchCount)
+    ? Math.max(0, Math.floor(obj.dreamTouchCount))
+    : 0
+  return {
+    id,
+    title,
+    memoryIds,
+    summary,
+    startedAt,
+    lastUpdatedAt,
+    dreamTouchCount,
+  }
+}
+
+function normalizeSnapshot(value: unknown): NarrativeSnapshot {
+  if (!value || typeof value !== 'object') return { threads: [], generatedAt: '' }
+  const obj = value as Record<string, unknown>
+  const generatedAt = typeof obj.generatedAt === 'string' && isValidIsoTimestamp(obj.generatedAt)
+    ? obj.generatedAt
+    : ''
+  const rawThreads = Array.isArray(obj.threads) ? obj.threads : []
+  const threads = rawThreads
+    .map(normalizeThread)
+    .filter((thread): thread is NarrativeThread => Boolean(thread))
+    .sort((a, b) => Date.parse(b.lastUpdatedAt) - Date.parse(a.lastUpdatedAt))
+    .slice(0, MAX_THREADS)
+  return { threads, generatedAt }
+}
+
+function writeNarrative(snapshot: NarrativeSnapshot): void {
+  try {
+    getNarrativeStorage()?.setItem(NARRATIVE_STORAGE_KEY, JSON.stringify(snapshot))
+  } catch {
+    // localStorage can be unavailable in sandboxed renderers; narrative context is best-effort.
+  }
 }
 
 export function loadNarrative(): NarrativeSnapshot {
@@ -59,22 +119,22 @@ export function loadNarrative(): NarrativeSnapshot {
   // entry is dropped rather than nuking the whole snapshot.
   const empty: NarrativeSnapshot = { threads: [], generatedAt: '' }
   try {
-    const raw = localStorage.getItem(NARRATIVE_STORAGE_KEY)
+    const raw = getNarrativeStorage()?.getItem(NARRATIVE_STORAGE_KEY)
     if (!raw) return empty
     const parsed: unknown = JSON.parse(raw)
-    if (!parsed || typeof parsed !== 'object') return empty
-    const obj = parsed as Record<string, unknown>
-    const threadsRaw = Array.isArray(obj.threads) ? obj.threads : []
-    const threads = threadsRaw.filter(isValidThread)
-    const generatedAt = typeof obj.generatedAt === 'string' ? obj.generatedAt : ''
-    return { threads, generatedAt }
+    const normalized = normalizeSnapshot(parsed)
+    if (JSON.stringify(normalized) !== JSON.stringify(parsed)) {
+      writeNarrative(normalized)
+    }
+    return normalized
   } catch {
+    writeNarrative(empty)
     return empty
   }
 }
 
 export function saveNarrative(snapshot: NarrativeSnapshot): void {
-  localStorage.setItem(NARRATIVE_STORAGE_KEY, JSON.stringify(snapshot))
+  writeNarrative(normalizeSnapshot(snapshot))
 }
 
 // ── Thread extraction ─────────────────────────────────────────────────────
@@ -226,7 +286,9 @@ export function formatNarrativeForPrompt(maxThreads = 5): string {
 }
 
 function timeSince(isoDate: string): string {
-  const ms = Date.now() - Date.parse(isoDate)
+  const timestamp = Date.parse(isoDate)
+  if (!Number.isFinite(timestamp)) return 'today'
+  const ms = Math.max(0, Date.now() - timestamp)
   const days = Math.floor(ms / 86_400_000)
   if (days < 1) return 'today'
   if (days < 7) return `${days} days`

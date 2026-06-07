@@ -1,3 +1,3 @@
-export * from './ocrWorker'
-export * from './captureQueue'
-export * from './vlmAnalysis'
+export * from './ocrWorker.ts'
+export * from './captureQueue.ts'
+export * from './vlmAnalysis.ts'

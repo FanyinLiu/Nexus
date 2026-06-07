@@ -146,6 +146,9 @@ export async function executeBuiltInTool(
       fallbackLocation: settings?.toolWeatherDefaultLocation,
       policy,
     })
+    if (!result) {
+      throw new Error(t('tools.error.weather_unsupported'))
+    }
     const assistantSummary = buildBuiltInToolAssistantSummary({
       kind: 'weather',
       systemMessage: '',

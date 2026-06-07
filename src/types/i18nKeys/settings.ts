@@ -472,6 +472,7 @@ export type SettingsTranslationKey =
   | 'settings.model.failover_hint'
   | 'settings.model.extra_keys'
   | 'settings.model.extra_keys_hint'
+  | 'settings.model.extra_keys_error'
   | 'settings.model.smart_routing_toggle'
   | 'settings.model.smart_routing_hint'
   | 'settings.model.tier_cheap'

@@ -1,10 +1,10 @@
 import {
   AGENT_TRACE_STORAGE_KEY,
   createId,
-  readJson,
+  readJsonValidated,
   writeJsonDebounced,
-} from '../../lib/storage/core'
-import type { AgentStep, AgentStopReason } from './agentLoop'
+} from '../../lib/storage/core.ts'
+import type { AgentStep, AgentStopReason, AgentStepType } from './agentLoop.ts'
 
 export type AgentTrace = {
   id: string
@@ -20,6 +20,87 @@ export type AgentTrace = {
 export type AgentTraceListener = (traces: AgentTrace[]) => void
 
 const MAX_TRACES = 20
+const AGENT_STEP_TYPES = new Set<AgentStepType>([
+  'start',
+  'thinking',
+  'tool_round',
+  'plan_created',
+  'plan_step_done',
+  'reflect',
+  'continue',
+  'done',
+  'abort',
+])
+const AGENT_STOP_REASONS = new Set<AgentStopReason>([
+  'done',
+  'aborted',
+  'max_iterations',
+  'cost_cap',
+  'error',
+])
+
+function cloneStep(step: AgentStep): AgentStep {
+  return {
+    ...step,
+    ...(step.toolCallNames ? { toolCallNames: [...step.toolCallNames] } : {}),
+  }
+}
+
+function cloneTrace(trace: AgentTrace): AgentTrace {
+  return {
+    ...trace,
+    steps: trace.steps.map(cloneStep),
+  }
+}
+
+function normalizeAgentStep(value: unknown): AgentStep | null {
+  if (!value || typeof value !== 'object') return null
+  const step = value as Partial<AgentStep>
+  if (typeof step.iteration !== 'number' || !Number.isFinite(step.iteration)) return null
+  if (!AGENT_STEP_TYPES.has(step.type as AgentStepType)) return null
+  if (typeof step.timestamp !== 'number' || !Number.isFinite(step.timestamp)) return null
+  return {
+    iteration: step.iteration,
+    type: step.type as AgentStepType,
+    timestamp: step.timestamp,
+    ...(typeof step.content === 'string' ? { content: step.content } : {}),
+    ...(Array.isArray(step.toolCallNames)
+      ? { toolCallNames: step.toolCallNames.filter((name): name is string => typeof name === 'string') }
+      : {}),
+    ...(typeof step.reason === 'string' ? { reason: step.reason } : {}),
+  }
+}
+
+function normalizeAgentTrace(value: unknown): AgentTrace | null {
+  if (!value || typeof value !== 'object') return null
+  const trace = value as Partial<AgentTrace>
+  if (typeof trace.id !== 'string' || typeof trace.goal !== 'string') return null
+  if (typeof trace.startedAt !== 'number' || !Number.isFinite(trace.startedAt)) return null
+  const steps = Array.isArray(trace.steps)
+    ? trace.steps.map(normalizeAgentStep).filter((step): step is AgentStep => Boolean(step))
+    : []
+  const status = AGENT_STOP_REASONS.has(trace.status as AgentStopReason)
+    ? trace.status as AgentStopReason
+    : undefined
+  const endedAt = typeof trace.endedAt === 'number' && Number.isFinite(trace.endedAt)
+    ? trace.endedAt
+    : undefined
+
+  return {
+    id: trace.id,
+    goal: trace.goal,
+    startedAt: trace.startedAt,
+    // A trace persisted without terminal status means the app exited or
+    // reloaded while the loop was in flight. There is no live runner after
+    // hydrate, so surface it as aborted instead of leaving the UI "running"
+    // forever.
+    status: status ?? 'aborted',
+    endedAt: endedAt ?? Date.now(),
+    steps,
+    ...(typeof trace.finalResponse === 'string' ? { finalResponse: trace.finalResponse } : {}),
+    ...(typeof trace.planId === 'string' ? { planId: trace.planId } : {}),
+  }
+}
 
 class AgentTraceStoreImpl {
   private traces: AgentTrace[] = []
@@ -28,18 +109,23 @@ class AgentTraceStoreImpl {
 
   hydrate(): void {
     if (this.hydrated) return
-    this.traces = readJson<AgentTrace[]>(AGENT_TRACE_STORAGE_KEY, [])
+    this.traces = readJsonValidated<AgentTrace[]>(AGENT_TRACE_STORAGE_KEY, [], (parsed) => (
+      Array.isArray(parsed)
+        ? parsed.map(normalizeAgentTrace).filter((trace): trace is AgentTrace => Boolean(trace))
+        : null
+    ))
     this.hydrated = true
   }
 
   list(): AgentTrace[] {
     this.hydrate()
-    return [...this.traces]
+    return this.traces.map(cloneTrace)
   }
 
   get(id: string): AgentTrace | undefined {
     this.hydrate()
-    return this.traces.find((t) => t.id === id)
+    const trace = this.traces.find((t) => t.id === id)
+    return trace ? cloneTrace(trace) : undefined
   }
 
   start(goal: string): AgentTrace {
@@ -53,7 +139,7 @@ class AgentTraceStoreImpl {
     this.traces.unshift(trace)
     while (this.traces.length > MAX_TRACES) this.traces.pop()
     this.persist()
-    return trace
+    return cloneTrace(trace)
   }
 
   appendStep(traceId: string, step: AgentStep): void {
@@ -62,7 +148,7 @@ class AgentTraceStoreImpl {
     if (idx < 0) return
     const next: AgentTrace = {
       ...this.traces[idx],
-      steps: [...this.traces[idx].steps, step],
+      steps: [...this.traces[idx].steps, cloneStep(step)],
     }
     this.traces[idx] = next
     this.persist()

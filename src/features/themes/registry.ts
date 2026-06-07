@@ -1,10 +1,10 @@
-import { softTheme } from './presets/soft'
-import { editorialTheme } from './presets/editorial'
-import { highContrastTheme } from './presets/high-contrast'
-import { nexusDefaultTheme } from './presets/nexus-default'
-import { systemDarkTheme } from './presets/system-dark'
-import { systemDayTheme } from './presets/system-day'
-import { warmDayTheme } from './presets/warm-day'
+import { softTheme } from './presets/soft.ts'
+import { editorialTheme } from './presets/editorial.ts'
+import { highContrastTheme } from './presets/high-contrast.ts'
+import { nexusDefaultTheme } from './presets/nexus-default.ts'
+import { systemDarkTheme } from './presets/system-dark.ts'
+import { systemDayTheme } from './presets/system-day.ts'
+import { warmDayTheme } from './presets/warm-day.ts'
 import type { ThemeDefinition, ThemeId } from '../../types/theme'
 
 const themeMap: Record<ThemeId, ThemeDefinition> = {
@@ -17,16 +17,24 @@ const themeMap: Record<ThemeId, ThemeDefinition> = {
   'system-dark': systemDarkTheme,
 }
 
-export const themeRegistry = Object.values(themeMap)
+function cloneThemeDefinition(theme: ThemeDefinition): ThemeDefinition {
+  return {
+    ...theme,
+    tokens: { ...theme.tokens },
+  }
+}
+
+export const themeRegistry = Object.freeze(Object.values(themeMap).map(cloneThemeDefinition))
 
 export function listThemes() {
-  return themeRegistry
+  return themeRegistry.map(cloneThemeDefinition)
 }
 
 export function getTheme(themeId: ThemeId) {
-  return themeMap[themeId] ?? null
+  const theme = themeMap[themeId]
+  return theme ? cloneThemeDefinition(theme) : null
 }
 
 export function resolveTheme(themeId: ThemeId) {
-  return getTheme(themeId) ?? nexusDefaultTheme
+  return getTheme(themeId) ?? cloneThemeDefinition(nexusDefaultTheme)
 }

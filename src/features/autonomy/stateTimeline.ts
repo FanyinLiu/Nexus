@@ -34,6 +34,7 @@ import {
   AUTONOMY_EMOTION_HISTORY_STORAGE_KEY,
   AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY,
   readJson,
+  writeJson,
   writeJsonDebounced,
 } from '../../lib/storage/core.ts'
 import type { EmotionState } from './emotionModel'
@@ -46,6 +47,12 @@ const RELATIONSHIP_HARD_CAP = 1_500
 const EMOTION_CHANGE_THRESHOLD = 0.06 // any axis moving by ≥6% triggers a sample
 const EMOTION_HEARTBEAT_MS = 6 * 60 * 60 * 1000 // 6h idle heartbeat
 const RELATIONSHIP_SCORE_THRESHOLD = 1 // integer score; any tick-level delta
+const RELATIONSHIP_LEVEL_SEED: RelationshipState = {
+  score: 0,
+  lastInteractionDate: '',
+  streak: 0,
+  totalDaysInteracted: 0,
+}
 
 export interface EmotionSample {
   ts: string
@@ -70,22 +77,118 @@ let relationshipHistoryCache: RelationshipSample[] | null = null
 
 function loadEmotionHistoryInternal(): EmotionSample[] {
   if (!emotionHistoryCache) {
-    emotionHistoryCache = readJson<EmotionSample[]>(
+    const raw = readJson<unknown>(
       AUTONOMY_EMOTION_HISTORY_STORAGE_KEY,
       [],
     )
+    emotionHistoryCache = normalizeEmotionHistory(raw)
+    if (JSON.stringify(emotionHistoryCache) !== JSON.stringify(raw)) {
+      writeJson(AUTONOMY_EMOTION_HISTORY_STORAGE_KEY, emotionHistoryCache)
+    }
   }
   return emotionHistoryCache
 }
 
 function loadRelationshipHistoryInternal(): RelationshipSample[] {
   if (!relationshipHistoryCache) {
-    relationshipHistoryCache = readJson<RelationshipSample[]>(
+    const raw = readJson<unknown>(
       AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY,
       [],
     )
+    relationshipHistoryCache = normalizeRelationshipHistory(raw)
+    if (JSON.stringify(relationshipHistoryCache) !== JSON.stringify(raw)) {
+      writeJson(AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY, relationshipHistoryCache)
+    }
   }
   return relationshipHistoryCache
+}
+
+function finiteNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value))
+}
+
+function clampFinite(value: unknown, min: number, max: number): number | null {
+  const numeric = finiteNumber(value)
+  return numeric === null ? null : clamp(numeric, min, max)
+}
+
+function clampFiniteForSample(value: number, min: number, max: number): number {
+  return Number.isFinite(value) ? clamp(value, min, max) : min
+}
+
+function nonNegativeInteger(value: unknown): number | null {
+  const numeric = finiteNumber(value)
+  return numeric === null ? null : Math.max(0, Math.round(numeric))
+}
+
+function scoreToRelationshipLevel(score: number): RelationshipLevel {
+  return getRelationshipLevel({ ...RELATIONSHIP_LEVEL_SEED, score })
+}
+
+function normalizeEmotionSample(value: unknown): EmotionSample | null {
+  if (!value || typeof value !== 'object') return null
+  const obj = value as Record<string, unknown>
+  if (typeof obj.ts !== 'string' || !Number.isFinite(Date.parse(obj.ts))) return null
+
+  const energy = clampFinite(obj.energy, 0, 1)
+  const warmth = clampFinite(obj.warmth, 0, 1)
+  const curiosity = clampFinite(obj.curiosity, 0, 1)
+  const concern = clampFinite(obj.concern, 0, 1)
+  if (energy === null || warmth === null || curiosity === null || concern === null) {
+    return null
+  }
+
+  return { ts: obj.ts, energy, warmth, curiosity, concern }
+}
+
+function normalizeEmotionHistory(raw: unknown): EmotionSample[] {
+  if (!Array.isArray(raw)) return []
+  const normalized = raw
+    .map(normalizeEmotionSample)
+    .filter((sample): sample is EmotionSample => Boolean(sample))
+    .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))
+  if (normalized.length > EMOTION_HARD_CAP) {
+    normalized.splice(0, normalized.length - EMOTION_HARD_CAP)
+  }
+  return normalized
+}
+
+function normalizeRelationshipSample(value: unknown): RelationshipSample | null {
+  if (!value || typeof value !== 'object') return null
+  const obj = value as Record<string, unknown>
+  if (typeof obj.ts !== 'string' || !Number.isFinite(Date.parse(obj.ts))) return null
+
+  const rawScore = clampFinite(obj.score, 0, 100)
+  const streak = nonNegativeInteger(obj.streak)
+  const daysInteracted = nonNegativeInteger(obj.daysInteracted)
+  if (rawScore === null || streak === null || daysInteracted === null) {
+    return null
+  }
+
+  const score = Math.round(rawScore)
+  return {
+    ts: obj.ts,
+    score,
+    level: scoreToRelationshipLevel(score),
+    streak,
+    daysInteracted,
+  }
+}
+
+function normalizeRelationshipHistory(raw: unknown): RelationshipSample[] {
+  if (!Array.isArray(raw)) return []
+  const normalized = raw
+    .map(normalizeRelationshipSample)
+    .filter((sample): sample is RelationshipSample => Boolean(sample))
+    .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))
+  if (normalized.length > RELATIONSHIP_HARD_CAP) {
+    normalized.splice(0, normalized.length - RELATIONSHIP_HARD_CAP)
+  }
+  return normalized
 }
 
 // ── Sampling decisions (pure) ────────────────────────────────────────────
@@ -166,16 +269,22 @@ export function captureEmotionSample(
 ): EmotionSample | null {
   const history = loadEmotionHistoryInternal()
   const last = history.length > 0 ? history[history.length - 1] : undefined
-  if (!shouldCaptureEmotionSample(state, last, now.getTime())) {
+  const nextState: EmotionState = {
+    energy: clampFiniteForSample(state.energy, 0, 1),
+    warmth: clampFiniteForSample(state.warmth, 0, 1),
+    curiosity: clampFiniteForSample(state.curiosity, 0, 1),
+    concern: clampFiniteForSample(state.concern, 0, 1),
+  }
+  if (!shouldCaptureEmotionSample(nextState, last, now.getTime())) {
     return null
   }
 
   const sample: EmotionSample = {
     ts: now.toISOString(),
-    energy: state.energy,
-    warmth: state.warmth,
-    curiosity: state.curiosity,
-    concern: state.concern,
+    energy: nextState.energy,
+    warmth: nextState.warmth,
+    curiosity: nextState.curiosity,
+    concern: nextState.concern,
   }
   history.push(sample)
   pruneByAge(history, EMOTION_HARD_CAP, now.getTime())
@@ -189,16 +298,27 @@ export function captureRelationshipSample(
 ): RelationshipSample | null {
   const history = loadRelationshipHistoryInternal()
   const last = history.length > 0 ? history[history.length - 1] : undefined
-  if (!shouldCaptureRelationshipSample(state, last)) {
+  const score = Math.round(clampFiniteForSample(state.score, 0, 100))
+  const samplingState: RelationshipState = {
+    ...state,
+    score,
+    streak: Math.max(0, Math.round(clampFiniteForSample(state.streak, 0, Number.MAX_SAFE_INTEGER))),
+    totalDaysInteracted: Math.max(0, Math.round(clampFiniteForSample(
+      state.totalDaysInteracted,
+      0,
+      Number.MAX_SAFE_INTEGER,
+    ))),
+  }
+  if (!shouldCaptureRelationshipSample(samplingState, last)) {
     return null
   }
 
   const sample: RelationshipSample = {
     ts: now.toISOString(),
-    score: state.score,
-    level: getRelationshipLevel(state),
-    streak: state.streak,
-    daysInteracted: state.totalDaysInteracted,
+    score,
+    level: getRelationshipLevel(samplingState),
+    streak: samplingState.streak,
+    daysInteracted: samplingState.totalDaysInteracted,
   }
   history.push(sample)
   pruneByAge(history, RELATIONSHIP_HARD_CAP, now.getTime())

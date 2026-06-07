@@ -3,7 +3,7 @@ import type { AppSettings, DebugConsoleEventSource } from '../../types'
 import { useDiscordGateway, type DiscordIncoming } from '../../hooks/useDiscordGateway'
 import { rememberDiscordChannelId } from '../../lib/coreRuntime'
 import { isActionAllowed } from '../../features/integrations/permissions'
-import { parseCsvIdSet } from './bridgeUtils'
+import { parseCsvIdSet, resolveBridgeReplyTarget } from './bridgeUtils'
 import { buildMessagingAnnouncementContent, getDiscordAnnouncementSettings } from './messagingAnnouncement'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 
@@ -115,10 +115,12 @@ export function useDiscordBridge({
 
   // Send a reply back to a Discord channel. If channelId is provided, replies
   // to that specific channel; otherwise falls back to the most recent incoming.
-  const replyTo = useCallback(async (text: string, channelId?: string) => {
-    const target = channelId != null
-      ? discordChannelMapRef.current.get(channelId) ?? lastDiscordChannelRef.current
-      : lastDiscordChannelRef.current
+  const replyTo = useCallback(async (text: string, channelId?: string, messageId?: string) => {
+    const target = resolveBridgeReplyTarget(
+      discordChannelMapRef.current,
+      lastDiscordChannelRef.current,
+      channelId,
+    )
     if (!target || !discordSendMessageRef.current) return
     if (!isActionAllowed(settingsRef.current, 'discord', 'send')) {
       debugConsole.appendDebugConsoleEvent({
@@ -128,7 +130,7 @@ export function useDiscordBridge({
       })
       return
     }
-    await discordSendMessageRef.current(target.channelId, text)
+    await discordSendMessageRef.current(target.channelId, text, messageId)
   }, [debugConsole, settingsRef])
 
   return { gateway, replyTo }

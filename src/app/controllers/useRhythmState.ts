@@ -4,15 +4,23 @@ import {
   applyWeeklyDecay,
   createDefaultRhythmProfile,
   formatRhythmSummary,
+  normalizeRhythmProfile,
   recordInteraction,
   shouldAllowProactiveSpeech,
 } from '../../features/autonomy/rhythmLearner'
 import { AUTONOMY_RHYTHM_STORAGE_KEY, readJson, writeJson } from '../../lib/storage'
 
+function loadInitialRhythmProfile(): RhythmProfile {
+  const raw = readJson<unknown>(AUTONOMY_RHYTHM_STORAGE_KEY, createDefaultRhythmProfile())
+  const normalized = normalizeRhythmProfile(raw)
+  if (JSON.stringify(normalized) !== JSON.stringify(raw)) {
+    writeJson(AUTONOMY_RHYTHM_STORAGE_KEY, normalized)
+  }
+  return normalized
+}
+
 export function useRhythmState() {
-  const rhythmRef = useRef<RhythmProfile>(
-    readJson<RhythmProfile>(AUTONOMY_RHYTHM_STORAGE_KEY, createDefaultRhythmProfile()),
-  )
+  const rhythmRef = useRef<RhythmProfile>(loadInitialRhythmProfile())
 
   const decayOnTick = useCallback(() => {
     const before = rhythmRef.current

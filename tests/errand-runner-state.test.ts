@@ -6,8 +6,10 @@ import {
 } from '../src/lib/storage.ts'
 import {
   readErrandRunnerState,
+  normalizeErrandRunnerState,
   writeErrandRunnerState,
 } from '../src/features/agent/errandRunnerState.ts'
+import type { ErrandRunnerState } from '../src/features/agent/errandPolicy.ts'
 
 type LocalStorageMock = {
   getItem: (key: string) => string | null
@@ -56,6 +58,7 @@ test('readErrandRunnerState: returns empty object for non-object payloads', () =
   })
 
   assert.deepEqual(readErrandRunnerState(), {})
+  assert.deepEqual(JSON.parse(localStorage.getItem(ERRAND_RUNNER_STATE_STORAGE_KEY) ?? '{}'), {})
 })
 
 test('readErrandRunnerState: keeps valid timestamps and run count', () => {
@@ -79,6 +82,17 @@ test('readErrandRunnerState: keeps valid timestamps and run count', () => {
   })
 })
 
+test('normalizeErrandRunnerState: accepts numeric run counts but keeps timestamps ISO-only', () => {
+  assert.deepEqual(normalizeErrandRunnerState({
+    lastRunAt: Date.parse('2026-05-01T05:10:00Z'),
+    nightStartedAt: '2026-04-30T22:00:00Z',
+    ranThisNight: '2.9',
+  }), {
+    nightStartedAt: '2026-04-30T22:00:00.000Z',
+    ranThisNight: 2,
+  })
+})
+
 test('readErrandRunnerState: drops invalid timestamps and clamps run count', () => {
   const localStorage = createLocalStorageMock({
     [ERRAND_RUNNER_STATE_STORAGE_KEY]: JSON.stringify({
@@ -94,6 +108,9 @@ test('readErrandRunnerState: drops invalid timestamps and clamps run count', () 
   })
 
   assert.deepEqual(readErrandRunnerState(), {
+    ranThisNight: 0,
+  })
+  assert.deepEqual(JSON.parse(localStorage.getItem(ERRAND_RUNNER_STATE_STORAGE_KEY) ?? '{}'), {
     ranThisNight: 0,
   })
 })
@@ -118,6 +135,28 @@ test('writeErrandRunnerState: persists payload under errand runner key', () => {
       nightStartedAt: '2026-04-30T22:00:00.000Z',
       lastRunAt: '2026-05-01T05:10:00.000Z',
       ranThisNight: 2,
+    },
+  )
+})
+
+test('writeErrandRunnerState: normalizes payload before persisting', () => {
+  const localStorage = createLocalStorageMock()
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  writeErrandRunnerState({
+    nightStartedAt: 'bad',
+    lastRunAt: '2026-05-01T05:10:00Z',
+    ranThisNight: Number.NaN,
+  } as ErrandRunnerState)
+
+  assert.deepEqual(
+    JSON.parse(localStorage.getItem(ERRAND_RUNNER_STATE_STORAGE_KEY) ?? '{}'),
+    {
+      lastRunAt: '2026-05-01T05:10:00.000Z',
     },
   )
 })

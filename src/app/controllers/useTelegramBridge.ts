@@ -3,7 +3,7 @@ import type { AppSettings, DebugConsoleEventSource } from '../../types'
 import { useTelegramGateway, type TelegramIncoming } from '../../hooks/useTelegramGateway'
 import { rememberTelegramChatId } from '../../lib/coreRuntime'
 import { isActionAllowed } from '../../features/integrations/permissions'
-import { parseCsvIdSet } from './bridgeUtils'
+import { parseCsvIdSet, resolveBridgeReplyTarget } from './bridgeUtils'
 import { buildTelegramAnnouncementContent } from './telegramAnnouncement'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 
@@ -104,10 +104,23 @@ export function useTelegramBridge({
 
   // Send a reply back to a Telegram chat. If chatId is provided, replies to
   // that specific chat; otherwise falls back to the most recent incoming chat.
-  const replyTo = useCallback(async (text: string, chatId?: number) => {
-    const target = chatId != null
-      ? telegramChatMapRef.current.get(chatId) ?? lastTelegramChatRef.current
-      : lastTelegramChatRef.current
+  const replyTo = useCallback(async (
+    text: string,
+    chatId?: number | string,
+    messageId?: number | string,
+  ) => {
+    const resolvedChatId = chatId === undefined
+      ? undefined
+      : typeof chatId === 'number' ? chatId : Number.parseInt(chatId, 10)
+    const resolvedMessageId = messageId === undefined
+      ? undefined
+      : typeof messageId === 'number' ? messageId : Number.parseInt(messageId, 10)
+
+    const target = resolveBridgeReplyTarget(
+      telegramChatMapRef.current,
+      lastTelegramChatRef.current,
+      Number.isFinite(resolvedChatId) ? resolvedChatId : undefined,
+    )
     if (!target || !telegramSendMessageRef.current) return
     if (!isActionAllowed(settingsRef.current, 'telegram', 'send')) {
       debugConsole.appendDebugConsoleEvent({
@@ -117,7 +130,11 @@ export function useTelegramBridge({
       })
       return
     }
-    await telegramSendMessageRef.current(target.chatId, text)
+    await telegramSendMessageRef.current(
+      target.chatId,
+      text,
+      Number.isFinite(resolvedMessageId) ? resolvedMessageId : target.messageId,
+    )
   }, [debugConsole, settingsRef])
 
   return { gateway, replyTo }

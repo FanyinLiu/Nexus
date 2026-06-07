@@ -7,6 +7,7 @@ import {
   decayEmotion,
   emotionToPetMood,
   formatEmotionForPrompt,
+  normalizeEmotionState,
 } from '../../features/autonomy/emotionModel'
 import { captureEmotionSample } from '../../features/autonomy/stateTimeline.ts'
 import {
@@ -57,10 +58,17 @@ function projectSignalToUserAffect(
 // feel as "伙伴感假 / 跨 session 不连贯" (it forgets how it felt about yesterday).
 // Reads/writes are localStorage-cheap; no need to debounce because mutations
 // happen at tick cadence, not in hot loops.
+function loadInitialEmotionState(): EmotionState {
+  const raw = readJson<unknown>(AUTONOMY_EMOTION_STORAGE_KEY, createDefaultEmotionState())
+  const normalized = normalizeEmotionState(raw)
+  if (JSON.stringify(normalized) !== JSON.stringify(raw)) {
+    writeJson(AUTONOMY_EMOTION_STORAGE_KEY, normalized)
+  }
+  return normalized
+}
+
 export function useEmotionState() {
-  const emotionStateRef = useRef<EmotionState>(
-    readJson<EmotionState>(AUTONOMY_EMOTION_STORAGE_KEY, createDefaultEmotionState()),
-  )
+  const emotionStateRef = useRef<EmotionState>(loadInitialEmotionState())
   const lastTimeSignalHourRef = useRef<number>(-1)
 
   const persist = () => {

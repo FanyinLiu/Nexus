@@ -34,6 +34,7 @@ export interface ThemeDefinition {
 export interface ThemeContextValue {
   themeId: ThemeId
   setTheme: (themeId: ThemeId) => void
+  previewTheme: (themeId: ThemeId) => void
   theme: ThemeDefinition
   availableThemes: ThemeDefinition[]
 }

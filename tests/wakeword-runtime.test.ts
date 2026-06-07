@@ -179,6 +179,54 @@ test('runtime keeps the wakeword listener alive while suspended and unmutes on r
   assert.deepEqual(stops, ['stop'])
 })
 
+test('runtime stop publishes a fully disabled snapshot and tears down the listener', async () => {
+  const stops: string[] = []
+  const states: Array<{ phase: string; enabled: boolean; wakeWord: string }> = []
+  const listener = {
+    stop: () => { stops.push('stop') },
+    subscribeFrames: () => () => undefined,
+  }
+
+  const runtime = createWakewordRuntime({
+    checkAvailability: async () => ({
+      installed: true,
+      modelFound: true,
+      modelKind: 'zh',
+      modelsDir: '',
+      reason: '',
+    }),
+    startListener: async () => listener,
+    onStateChange: (next) => {
+      states.push({
+        phase: next.phase,
+        enabled: next.enabled,
+        wakeWord: next.wakeWord,
+      })
+    },
+  })
+
+  await runtime.update({ enabled: true, wakeWord: '小猫', suspended: false })
+  assert.equal(runtime.getState().phase, 'listening')
+
+  runtime.stop()
+
+  const snapshot = runtime.getState()
+  assert.equal(snapshot.phase, 'disabled')
+  assert.equal(snapshot.enabled, false)
+  assert.equal(snapshot.wakeWord, '')
+  assert.equal(snapshot.active, false)
+  assert.equal(snapshot.available, false)
+  assert.equal(snapshot.suspended, false)
+  assert.equal(snapshot.retryCount, 0)
+  assert.deepEqual(stops, ['stop'])
+  assert.deepEqual(states.at(-1), {
+    phase: 'disabled',
+    enabled: false,
+    wakeWord: '',
+  })
+  runtime.destroy()
+})
+
 test('runtime schedules retry when availability status check throws', async () => {
   const phases: string[] = []
   const timers: Array<{ callback: () => void; delayMs: number }> = []

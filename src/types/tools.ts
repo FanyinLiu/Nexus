@@ -123,6 +123,7 @@ export interface WebSearchResponse {
 export interface WeatherLookupRequest {
   location: string
   fallbackLocation?: string
+  quiet?: boolean
   policy?: {
     enabled?: boolean
     requiresConfirmation?: boolean

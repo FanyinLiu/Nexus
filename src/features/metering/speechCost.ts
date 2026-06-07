@@ -1,9 +1,9 @@
-import { getCoreRuntime } from '../../lib/coreRuntime'
-import type { CostTracker } from '../../core/budget/CostTracker'
+import { getCoreRuntime } from '../../lib/coreRuntime.ts'
+import type { CoreRuntime } from '../../lib/coreRuntime.ts'
 
-function safeCostTracker(): CostTracker | undefined {
+function safeCoreRuntime(): CoreRuntime | undefined {
   try {
-    return getCoreRuntime().costTracker
+    return getCoreRuntime()
   } catch {
     // CoreRuntime is not initialized in early-boot or test contexts.
     return undefined
@@ -42,6 +42,41 @@ function lookupSttRate(modelId: string): number {
   return 0
 }
 
+function normalizeMeteringId(value: string): string {
+  return String(value ?? '').trim()
+}
+
+function recordAuxiliaryUsage(input: {
+  kind: 'tts' | 'stt' | 'embedding'
+  providerId: string
+  modelId: string
+  fallbackModelId: string
+  units: number
+  costUsd: number
+}): void {
+  const providerId = normalizeMeteringId(input.providerId)
+  if (!providerId) return
+
+  const modelId = normalizeMeteringId(input.modelId)
+    || providerId
+    || input.fallbackModelId
+  const runtime = safeCoreRuntime()
+  if (!runtime) return
+
+  try {
+    runtime.costTracker.recordAuxiliary({
+      kind: input.kind,
+      providerId,
+      modelId,
+      units: input.units,
+      costUsd: input.costUsd,
+    })
+    runtime.persistBudget()
+  } catch (error) {
+    console.warn('[metering] Failed to record auxiliary usage:', error instanceof Error ? error.message : error)
+  }
+}
+
 export function recordTtsUsage(input: {
   providerId: string
   modelId: string
@@ -49,14 +84,14 @@ export function recordTtsUsage(input: {
 }): void {
   const chars = input.text.length
   if (!chars) return
-  const ratePerMillion = lookupTtsRate(input.modelId)
+  const modelId = normalizeMeteringId(input.modelId) || normalizeMeteringId(input.providerId) || 'tts'
+  const ratePerMillion = lookupTtsRate(modelId)
   const costUsd = (chars / 1_000_000) * ratePerMillion
-  const tracker = safeCostTracker()
-  if (!tracker) return
-  tracker.recordAuxiliary({
+  recordAuxiliaryUsage({
     kind: 'tts',
     providerId: input.providerId,
-    modelId: input.modelId,
+    modelId,
+    fallbackModelId: 'tts',
     units: chars,
     costUsd,
   })
@@ -74,14 +109,14 @@ export function recordSttUsage(input: {
     seconds = Math.max(1, Math.round(input.transcriptChars / 15))
   }
   if (!seconds) return
-  const ratePerMinute = lookupSttRate(input.modelId)
+  const modelId = normalizeMeteringId(input.modelId) || normalizeMeteringId(input.providerId) || 'stt'
+  const ratePerMinute = lookupSttRate(modelId)
   const costUsd = (seconds / 60) * ratePerMinute
-  const tracker = safeCostTracker()
-  if (!tracker) return
-  tracker.recordAuxiliary({
+  recordAuxiliaryUsage({
     kind: 'stt',
     providerId: input.providerId,
-    modelId: input.modelId,
+    modelId,
+    fallbackModelId: 'stt',
     units: seconds,
     costUsd,
   })
@@ -96,12 +131,12 @@ export function recordEmbeddingUsage(input: {
   // OpenAI text-embedding-3-small rate as a conservative default.
   const ratePerMillion = 0.1
   const costUsd = (input.tokens / 1_000_000) * ratePerMillion
-  const tracker = safeCostTracker()
-  if (!tracker) return
-  tracker.recordAuxiliary({
+  const modelId = normalizeMeteringId(input.modelId) || normalizeMeteringId(input.providerId) || 'embedding'
+  recordAuxiliaryUsage({
     kind: 'embedding',
     providerId: input.providerId,
-    modelId: input.modelId,
+    modelId,
+    fallbackModelId: 'embedding',
     units: input.tokens,
     costUsd,
   })

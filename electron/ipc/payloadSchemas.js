@@ -1,4 +1,14 @@
 import { validateIpcPayload } from './schemaValidator.js'
+export {
+  validateDesktopContextRequestPayload,
+  validateMediaSessionControlPayload,
+  validateOpenPanelPayload,
+  validatePanelWindowStatePayload,
+  validatePetWindowStatePayload,
+  validateRuntimeHeartbeatPayload,
+  validateRuntimeStateUpdatePayload,
+  validateWindowDragPayload,
+} from './windowPayloadSchemas.js'
 
 const SHORT_TEXT_MAX = 256
 const URL_TEXT_MAX = 2_048
@@ -8,6 +18,7 @@ const AUDIO_BASE64_MAX = 50_000_000
 const PATH_TEXT_MAX = 4_096
 const WORKSPACE_WRITE_TEXT_MAX = 1_048_576
 const CHAT_MESSAGE_TEXT_MAX = 200_000
+const SAFE_SKILL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
 const optionalBoolean = { type: 'boolean', optional: true }
 const optionalShortString = {
@@ -15,116 +26,6 @@ const optionalShortString = {
   optional: true,
   maxLength: SHORT_TEXT_MAX,
   clamp: true,
-}
-
-const petWindowStateSchema = {
-  type: 'object',
-  optional: true,
-  default: {},
-  fields: {
-    isPinned: optionalBoolean,
-    clickThrough: optionalBoolean,
-    petHotspotActive: optionalBoolean,
-    roamCapable: optionalBoolean,
-  },
-}
-
-const panelWindowStateSchema = {
-  type: 'object',
-  optional: true,
-  default: {},
-  fields: {
-    collapsed: optionalBoolean,
-  },
-}
-
-const panelSectionSchema = {
-  type: 'enum',
-  optional: true,
-  default: 'chat',
-  values: ['chat', 'settings'],
-}
-
-const dragDeltaSchema = {
-  type: 'object',
-  fields: {
-    x: { type: 'number', min: -10_000, max: 10_000 },
-    y: { type: 'number', min: -10_000, max: 10_000 },
-  },
-}
-
-const runtimeHeartbeatSchema = {
-  type: 'object',
-  optional: true,
-  default: { view: 'pet' },
-  fields: {
-    view: {
-      type: 'enum',
-      optional: true,
-      default: 'pet',
-      values: ['pet', 'panel'],
-    },
-  },
-}
-
-const runtimeStateUpdateSchema = {
-  type: 'object',
-  optional: true,
-  default: {},
-  fields: {
-    mood: optionalShortString,
-    continuousVoiceActive: optionalBoolean,
-    panelSettingsOpen: optionalBoolean,
-    voiceState: optionalShortString,
-    hearingEngine: optionalShortString,
-    hearingPhase: optionalShortString,
-    wakewordPhase: optionalShortString,
-    wakewordActive: optionalBoolean,
-    wakewordAvailable: optionalBoolean,
-    wakewordWakeWord: optionalShortString,
-    wakewordReason: optionalShortString,
-    wakewordLastTriggeredAt: optionalShortString,
-    wakewordError: optionalShortString,
-    wakewordUpdatedAt: optionalShortString,
-    assistantActivity: optionalShortString,
-    searchInProgress: optionalBoolean,
-    ttsInProgress: optionalBoolean,
-    schedulerArmed: optionalBoolean,
-    schedulerNextRunAt: optionalShortString,
-    activeTaskLabel: optionalShortString,
-  },
-}
-
-const desktopContextPolicySchema = {
-  type: 'object',
-  optional: true,
-  fields: {
-    activeWindow: optionalBoolean,
-    clipboard: optionalBoolean,
-    screenshot: optionalBoolean,
-  },
-}
-
-const desktopContextRequestSchema = {
-  type: 'object',
-  optional: true,
-  default: {},
-  fields: {
-    includeActiveWindow: optionalBoolean,
-    includeClipboard: optionalBoolean,
-    includeScreenshot: optionalBoolean,
-    policy: desktopContextPolicySchema,
-  },
-}
-
-const mediaSessionControlSchema = {
-  type: 'object',
-  fields: {
-    action: {
-      type: 'enum',
-      values: ['play', 'pause', 'toggle', 'next', 'previous'],
-    },
-  },
 }
 
 const rendererToolPolicySchema = {
@@ -280,6 +181,7 @@ const weatherLookupRequestSchema = {
   fields: {
     location: { type: 'string', maxLength: SHORT_TEXT_MAX },
     fallbackLocation: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
+    quiet: optionalBoolean,
     policy: rendererToolPolicySchema,
   },
 }
@@ -362,6 +264,40 @@ const memoryRemoveSchema = {
   },
 }
 
+const skillIdFieldSchema = {
+  type: 'string',
+  maxLength: SHORT_TEXT_MAX,
+  trim: true,
+  allowEmpty: false,
+  pattern: SAFE_SKILL_ID_PATTERN,
+}
+
+const skillSaveSchema = {
+  type: 'object',
+  fields: {
+    id: skillIdFieldSchema,
+    title: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
+    trigger: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
+    summary: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
+    content: { type: 'string', maxLength: BODY_TEXT_MAX, trim: true, allowEmpty: false },
+  },
+}
+
+const skillSearchSchema = {
+  type: 'object',
+  fields: {
+    query: { type: 'string', maxLength: 2_000, trim: true, allowEmpty: false },
+    limit: { type: 'number', optional: true, integer: true, min: 1, max: 20 },
+  },
+}
+
+const skillIdSchema = {
+  type: 'object',
+  fields: {
+    id: skillIdFieldSchema,
+  },
+}
+
 const workspaceRootSchema = {
   type: 'object',
   optional: true,
@@ -374,14 +310,14 @@ const workspaceRootSchema = {
 const workspacePathSchema = {
   type: 'object',
   fields: {
-    path: { type: 'string', maxLength: PATH_TEXT_MAX },
+    path: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },
   },
 }
 
 const workspaceWriteSchema = {
   type: 'object',
   fields: {
-    path: { type: 'string', maxLength: PATH_TEXT_MAX },
+    path: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },
     content: { type: 'string', maxLength: WORKSPACE_WRITE_TEXT_MAX },
   },
 }
@@ -389,8 +325,8 @@ const workspaceWriteSchema = {
 const workspaceEditSchema = {
   type: 'object',
   fields: {
-    path: { type: 'string', maxLength: PATH_TEXT_MAX },
-    oldString: { type: 'string', maxLength: WORKSPACE_WRITE_TEXT_MAX },
+    path: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },
+    oldString: { type: 'string', maxLength: WORKSPACE_WRITE_TEXT_MAX, allowEmpty: false },
     newString: { type: 'string', maxLength: WORKSPACE_WRITE_TEXT_MAX },
   },
 }
@@ -572,38 +508,6 @@ const audioSynthesisSchema = {
   },
 }
 
-export function validatePetWindowStatePayload(payload) {
-  return validateIpcPayload('pet-window:update-state', payload, petWindowStateSchema)
-}
-
-export function validatePanelWindowStatePayload(payload) {
-  return validateIpcPayload('panel-window:set-state', payload, panelWindowStateSchema)
-}
-
-export function validateOpenPanelPayload(payload) {
-  return validateIpcPayload('window:open-panel', payload, panelSectionSchema)
-}
-
-export function validateWindowDragPayload(payload) {
-  return validateIpcPayload('window:drag-by', payload, dragDeltaSchema)
-}
-
-export function validateRuntimeHeartbeatPayload(payload) {
-  return validateIpcPayload('runtime-state:heartbeat', payload, runtimeHeartbeatSchema)
-}
-
-export function validateRuntimeStateUpdatePayload(payload) {
-  return validateIpcPayload('runtime-state:update', payload, runtimeStateUpdateSchema)
-}
-
-export function validateDesktopContextRequestPayload(payload) {
-  return validateIpcPayload('desktop-context:get', payload, desktopContextRequestSchema)
-}
-
-export function validateMediaSessionControlPayload(payload) {
-  return validateIpcPayload('media-session:control', payload, mediaSessionControlSchema)
-}
-
 export function validateSpeechVoiceListPayload(payload) {
   return validateIpcPayload('audio:list-voices', payload, speechVoiceListSchema)
 }
@@ -666,6 +570,18 @@ export function validateMemoryHybridSearchPayload(payload) {
 
 export function validateMemoryRemovePayload(payload) {
   return validateIpcPayload('memory:vector-remove', payload, memoryRemoveSchema)
+}
+
+export function validateSkillSavePayload(payload) {
+  return validateIpcPayload('skill:save', payload, skillSaveSchema)
+}
+
+export function validateSkillSearchPayload(payload) {
+  return validateIpcPayload('skill:search', payload, skillSearchSchema)
+}
+
+export function validateSkillIdPayload(channel, payload) {
+  return validateIpcPayload(channel, payload, skillIdSchema)
 }
 
 export function validateWorkspaceRootPayload(payload) {

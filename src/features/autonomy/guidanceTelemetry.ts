@@ -78,22 +78,112 @@ function isValidKind(s: unknown): s is GuidanceKind {
   return typeof s === 'string' && VALID_KINDS.has(s)
 }
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function normalizeIso(value: unknown, options: { allowFuture?: boolean; nowMs?: number } = {}): string | null {
+  if (typeof value !== 'string' && typeof value !== 'number') return null
+  const parsed = typeof value === 'number' ? value : Date.parse(value)
+  if (!Number.isFinite(parsed)) return null
+  const nowMs = options.nowMs ?? Date.now()
+  if (!options.allowFuture && parsed > nowMs) return null
+  return new Date(parsed).toISOString()
+}
+
+function normalizeNullableFiniteNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function normalizeNonNegativeInteger(value: unknown): number {
+  const numeric = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numeric)) return 0
+  return Math.max(0, Math.floor(numeric))
+}
+
+function normalizePositiveNumber(value: unknown, fallback: number): number {
+  const numeric = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numeric) || numeric <= 0) return fallback
+  return numeric
+}
+
+function hasChanged(normalized: unknown, raw: unknown): boolean {
+  return JSON.stringify(normalized) !== JSON.stringify(raw)
+}
+
+function writeJsonBestEffort<T>(key: string, value: T): void {
+  try {
+    writeJson(key, value)
+  } catch {
+    // Silent telemetry failures must never break chat or scheduling.
+  }
+}
+
+function normalizeGuidanceTelemetryEntry(raw: unknown, nowMs: number): GuidanceTelemetryEntry | null {
+  if (!isObject(raw)) return null
+  if (!isValidKind(raw.kind)) return null
+  const ts = normalizeIso(raw.ts, { nowMs })
+  if (!ts) return null
+  return {
+    ts,
+    kind: raw.kind,
+    beforeValence: normalizeNullableFiniteNumber(raw.beforeValence),
+  }
+}
+
+export function normalizeGuidanceTelemetry(raw: unknown, nowMs = Date.now()): GuidanceTelemetryEntry[] {
+  if (!Array.isArray(raw)) return []
+  const cutoffMs = nowMs - RETENTION_MS
+  const entries = raw
+    .map((item) => normalizeGuidanceTelemetryEntry(item, nowMs))
+    .filter((entry): entry is GuidanceTelemetryEntry => Boolean(entry))
+    .filter((entry) => Date.parse(entry.ts) >= cutoffMs)
+  return entries.length > HARD_CAP ? entries.slice(entries.length - HARD_CAP) : entries
+}
+
+function normalizeGuidanceKindReport(raw: unknown): GuidanceAnalysisReport['byKind'][number] | null {
+  if (!isObject(raw)) return null
+  if (!isValidKind(raw.kind)) return null
+  return {
+    kind: raw.kind,
+    fireCount: normalizeNonNegativeInteger(raw.fireCount),
+    meanValenceBefore: normalizeNullableFiniteNumber(raw.meanValenceBefore),
+    meanValenceAfter: normalizeNullableFiniteNumber(raw.meanValenceAfter),
+    valenceDelta: normalizeNullableFiniteNumber(raw.valenceDelta),
+    pairedFires: normalizeNonNegativeInteger(raw.pairedFires),
+  }
+}
+
+export function normalizeGuidanceAnalysisReport(raw: unknown, nowMs = Date.now()): GuidanceAnalysisReport | null {
+  if (!isObject(raw)) return null
+  const generatedAt = normalizeIso(raw.generatedAt, { nowMs })
+  if (!generatedAt) return null
+  const byKind = Array.isArray(raw.byKind)
+    ? raw.byKind
+      .map(normalizeGuidanceKindReport)
+      .filter((item): item is GuidanceAnalysisReport['byKind'][number] => Boolean(item))
+      .sort((a, b) => a.kind.localeCompare(b.kind))
+    : []
+  const bestPerformingKind = isValidKind(raw.bestPerformingKind) ? raw.bestPerformingKind : null
+  const weakestKind = isValidKind(raw.weakestKind) ? raw.weakestKind : null
+
+  return {
+    generatedAt,
+    windowDays: normalizePositiveNumber(raw.windowDays, 365),
+    perFireWindowHours: normalizePositiveNumber(raw.perFireWindowHours, 24),
+    byKind,
+    bestPerformingKind,
+    weakestKind: weakestKind === bestPerformingKind ? null : weakestKind,
+  }
+}
+
 export function loadGuidanceTelemetry(): GuidanceTelemetryEntry[] {
   const raw = readJson<unknown>(GUIDANCE_TELEMETRY_STORAGE_KEY, [])
-  if (!Array.isArray(raw)) return []
-  const out: GuidanceTelemetryEntry[] = []
-  for (const item of raw) {
-    if (!item || typeof item !== 'object') continue
-    const obj = item as Record<string, unknown>
-    if (typeof obj.ts !== 'string') continue
-    if (!isValidKind(obj.kind)) continue
-    const beforeValence =
-      typeof obj.beforeValence === 'number' && Number.isFinite(obj.beforeValence)
-        ? obj.beforeValence
-        : null
-    out.push({ ts: obj.ts, kind: obj.kind, beforeValence })
+  const normalized = normalizeGuidanceTelemetry(raw)
+  if (hasChanged(normalized, raw)) {
+    writeJsonBestEffort(GUIDANCE_TELEMETRY_STORAGE_KEY, normalized)
   }
-  return out
+  return normalized
 }
 
 export interface RecordGuidanceFiredInput {
@@ -105,13 +195,16 @@ export interface RecordGuidanceFiredInput {
 
 export function recordGuidanceFired(input: RecordGuidanceFiredInput): void {
   if (typeof window === 'undefined') return
+  if (!isValidKind(input.kind)) return
   const entries = loadGuidanceTelemetry()
   const now = input.now ?? new Date()
-  const ts = now.toISOString()
+  const nowMs = now.getTime()
+  if (!Number.isFinite(nowMs)) return
+  const ts = new Date(nowMs).toISOString()
   const next: GuidanceTelemetryEntry = {
     ts,
     kind: input.kind,
-    beforeValence: input.beforeValence,
+    beforeValence: normalizeNullableFiniteNumber(input.beforeValence),
   }
   // Time-based prune first (drop anything older than 1 year), then
   // hard-cap as a safety belt. Time-based is primary so a sustained
@@ -123,12 +216,7 @@ export function recordGuidanceFired(input: RecordGuidanceFiredInput): void {
   })
   const merged = [...fresh, next]
   const capped = merged.length > HARD_CAP ? merged.slice(merged.length - HARD_CAP) : merged
-  try {
-    writeJson(GUIDANCE_TELEMETRY_STORAGE_KEY, capped)
-  } catch {
-    // Best-effort; quota errors etc. are silently swallowed — telemetry
-    // failures must never break the chat path.
-  }
+  writeJsonBestEffort(GUIDANCE_TELEMETRY_STORAGE_KEY, capped)
 }
 
 /** Test-only reset. */
@@ -139,17 +227,19 @@ export function __resetGuidanceTelemetry(): void {
 // ── Latest analysis report (written by the weekly scheduler) ─────────────
 
 export function loadGuidanceAnalysis(): GuidanceAnalysisReport | null {
-  const raw = readJson<GuidanceAnalysisReport | null>(GUIDANCE_ANALYSIS_STORAGE_KEY, null)
-  if (!raw || typeof raw !== 'object') return null
-  if (typeof raw.generatedAt !== 'string') return null
-  return raw
+  const raw = readJson<unknown>(GUIDANCE_ANALYSIS_STORAGE_KEY, null)
+  const normalized = normalizeGuidanceAnalysisReport(raw)
+  if (raw !== null && normalized === null) {
+    writeJsonBestEffort(GUIDANCE_ANALYSIS_STORAGE_KEY, null)
+    return null
+  }
+  if (normalized && hasChanged(normalized, raw)) {
+    writeJsonBestEffort(GUIDANCE_ANALYSIS_STORAGE_KEY, normalized)
+  }
+  return normalized
 }
 
 export function saveGuidanceAnalysis(report: GuidanceAnalysisReport): void {
   if (typeof window === 'undefined') return
-  try {
-    writeJson(GUIDANCE_ANALYSIS_STORAGE_KEY, report)
-  } catch {
-    // best-effort; analysis is silent telemetry, must never break chat
-  }
+  writeJsonBestEffort(GUIDANCE_ANALYSIS_STORAGE_KEY, normalizeGuidanceAnalysisReport(report) ?? null)
 }

@@ -1,12 +1,20 @@
-import type { AuthProfile, AuthProfileSnapshot } from '../../core'
+import {
+  normalizeAuthProfileSnapshot,
+} from '../../core/routing/AuthProfileStore.ts'
+import type { AuthProfile, AuthProfileSnapshot } from '../../core/routing/types.ts'
 import { AUTH_PROFILES_STORAGE_KEY, readJson, writeJson } from './core.ts'
 
 export function loadAuthProfileSnapshot(): AuthProfileSnapshot {
-  return readJson<AuthProfileSnapshot>(AUTH_PROFILES_STORAGE_KEY, { profiles: [] })
+  const raw = readJson<unknown>(AUTH_PROFILES_STORAGE_KEY, { profiles: [] })
+  const normalized = normalizeAuthProfileSnapshot(raw)
+  if (JSON.stringify(raw) !== JSON.stringify(normalized)) {
+    writeJson(AUTH_PROFILES_STORAGE_KEY, normalized)
+  }
+  return normalized
 }
 
 export function persistAuthProfileSnapshot(snapshot: AuthProfileSnapshot): void {
-  writeJson(AUTH_PROFILES_STORAGE_KEY, snapshot)
+  writeJson(AUTH_PROFILES_STORAGE_KEY, normalizeAuthProfileSnapshot(snapshot))
 }
 
 export function upsertStoredAuthProfile(profile: AuthProfile): void {

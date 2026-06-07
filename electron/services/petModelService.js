@@ -14,7 +14,6 @@ import {
   extractSpritePetZipArchive,
   isPathInsideRoot,
   isSpritePetManifest,
-  readJsonFile,
   readSpritePetPackage,
 } from './spritePetPackage.js'
 import {
@@ -59,28 +58,36 @@ import {
   normalizeAssetRelativePath,
   slugifyPetModelId,
 } from './petModelPaths.js'
+import {
+  buildCodexCustomSpritePetAssetUrl,
+  buildImportedPetModelUrl,
+  buildImportedSpritePetAssetUrl,
+  configurePetModelUrlBuilders,
+  CODEX_CUSTOM_SPRITE_PET_MODELS_ROUTE,
+  IMPORTED_PET_MODELS_ROUTE,
+  IMPORTED_SPRITE_PET_MODELS_ROUTE,
+} from './petModelUrlBuilders.js'
+import {
+  listPetModelsFromRoot,
+  readAndValidateLive2dModelFile,
+} from './live2dModelDiscoveryService.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const IMPORTED_PET_MODEL_DESCRIPTION = '已导入到应用本地目录的 Live2D 模型，可直接切换。'
-const IMPORTED_PET_MODELS_ROUTE = '/__imported_live2d__'
 const BUNDLED_SPRITE_PET_MODEL_DESCRIPTION = '内置 Sprite 宠物包，可直接切换。'
 const CODEX_CUSTOM_SPRITE_PET_MODEL_DESCRIPTION = 'Codex 自定义 Sprite 宠物包，来自本机 Codex pets 目录。'
 const IMPORTED_SPRITE_PET_MODEL_DESCRIPTION = '已导入到应用本地目录的 Sprite 宠物包，可直接切换。'
-const IMPORTED_SPRITE_PET_MODELS_ROUTE = '/__imported_sprite_pets__'
-const CODEX_CUSTOM_SPRITE_PET_MODELS_ROUTE = '/__codex_sprite_pets__'
 const AUTO_DISCOVERED_PET_MODEL_DESCRIPTION = '自动发现的 Live2D 模型，可继续细调动作和表情映射。'
-const DEFAULT_PET_MODEL_FALLBACK_IMAGE_PATH = ''
 const PET_GALLERY_REQUEST_TIMEOUT_MS = 20_000
 
-let _getRendererServerUrl = () => null
 let _getPanelWindow = () => null
 let _getMainWindow = () => null
 
 export function initPetModelService({ isDev, useDevServer, getRendererServerUrl, getPanelWindow, getMainWindow }) {
   configurePetModelPaths({ isDev, useDevServer })
-  _getRendererServerUrl = getRendererServerUrl
+  configurePetModelUrlBuilders({ getRendererServerUrl })
   _getPanelWindow = getPanelWindow
   _getMainWindow = getMainWindow
 }
@@ -111,64 +118,6 @@ async function fetchBytes(url, options = {}) {
   return readResponseBufferWithLimit(response, { maxBytes, label })
 }
 
-function getPathSegment(segments, indexFromEnd) {
-  return segments[segments.length - indexFromEnd] ?? ''
-}
-
-function pickDiscoveredModelName(relativeModelPath) {
-  const withoutExtension = relativeModelPath.replace(/\.model3\.json$/i, '')
-  const segments = withoutExtension.split('/').filter(Boolean)
-  const fileName = getPathSegment(segments, 1) || 'Live2D'
-  const folderName = getPathSegment(segments, 2) || fileName
-
-  if (/^model\d*$/i.test(fileName)) {
-    return folderName
-  }
-
-  if (fileName.toLowerCase() === folderName.toLowerCase()) {
-    return folderName
-  }
-
-  return fileName
-}
-
-function formatDiscoveredModelLabel(name) {
-  const rawName = String(name ?? '').trim()
-
-  if (!rawName) {
-    return 'Live2D Model'
-  }
-
-  if (/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/.test(rawName)) {
-    return rawName
-  }
-
-  return rawName
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/\b\w/g, (character) => character.toUpperCase())
-}
-
-async function collectLive2dModelFiles(directoryPath) {
-  const entries = await fs.readdir(directoryPath, { withFileTypes: true })
-  const modelFiles = []
-
-  for (const entry of entries) {
-    const entryPath = path.join(directoryPath, entry.name)
-
-    if (entry.isDirectory()) {
-      modelFiles.push(...await collectLive2dModelFiles(entryPath))
-      continue
-    }
-
-    if (/\.model3\.json$/i.test(entry.name)) {
-      modelFiles.push(entryPath)
-    }
-  }
-
-  return modelFiles
-}
-
 async function pathExists(targetPath) {
   try {
     await fs.access(targetPath)
@@ -179,105 +128,7 @@ async function pathExists(targetPath) {
 }
 
 async function readAndValidateJsonFile(filePath) {
-  return readJsonFile(filePath)
-}
-
-function buildImportedPetModelUrl(relativeModelPath) {
-  const normalizedRelativePath = relativeModelPath.split(path.sep).join('/')
-  const rendererServerUrl = _getRendererServerUrl()
-
-  if (!rendererServerUrl) {
-    return `${IMPORTED_PET_MODELS_ROUTE}/${normalizedRelativePath}`
-  }
-
-  return new URL(`${IMPORTED_PET_MODELS_ROUTE}/${normalizedRelativePath}`, rendererServerUrl).toString()
-}
-
-function buildImportedSpritePetAssetUrl(relativeAssetPath) {
-  const normalizedRelativePath = relativeAssetPath.split(path.sep).join('/')
-  const rendererServerUrl = _getRendererServerUrl()
-
-  if (!rendererServerUrl) {
-    return `${IMPORTED_SPRITE_PET_MODELS_ROUTE}/${normalizedRelativePath}`
-  }
-
-  return new URL(`${IMPORTED_SPRITE_PET_MODELS_ROUTE}/${normalizedRelativePath}`, rendererServerUrl).toString()
-}
-
-function buildCodexCustomSpritePetAssetUrl(relativeAssetPath) {
-  const normalizedRelativePath = relativeAssetPath.split(path.sep).join('/')
-  const rendererServerUrl = _getRendererServerUrl()
-
-  if (!rendererServerUrl) {
-    return `${CODEX_CUSTOM_SPRITE_PET_MODELS_ROUTE}/${normalizedRelativePath}`
-  }
-
-  return new URL(`${CODEX_CUSTOM_SPRITE_PET_MODELS_ROUTE}/${normalizedRelativePath}`, rendererServerUrl).toString()
-}
-
-async function listPetModelsFromRoot({
-  rootPath,
-  description,
-  idPrefix = '',
-  modelPathBuilder,
-}) {
-  let modelFiles = []
-
-  try {
-    modelFiles = await collectLive2dModelFiles(rootPath)
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return []
-    }
-
-    console.error(`Failed to scan Live2D models in ${rootPath}:`, error)
-    return []
-  }
-
-  const discoveredModels = []
-  const usedIds = new Set()
-
-  for (const modelFilePath of modelFiles.sort()) {
-    const relativeModelPath = normalizeAssetRelativePath(rootPath, modelFilePath)
-
-    try {
-      await readAndValidateJsonFile(modelFilePath)
-    } catch (error) {
-      console.warn(`Skipping invalid Live2D model definition: ${relativeModelPath}`, error)
-      continue
-    }
-
-    const modelName = pickDiscoveredModelName(relativeModelPath)
-    const label = formatDiscoveredModelLabel(modelName)
-    const baseId = idPrefix
-      ? `${idPrefix}-${slugifyPetModelId(relativeModelPath)}`
-      : slugifyPetModelId(modelName)
-    let modelId = baseId
-    let collisionIndex = 2
-
-    while (usedIds.has(modelId)) {
-      modelId = `${baseId}-${collisionIndex}`
-      collisionIndex += 1
-    }
-
-    usedIds.add(modelId)
-    discoveredModels.push({
-      id: modelId,
-      label,
-      description,
-      modelPath: modelPathBuilder(relativeModelPath),
-      fallbackImagePath: DEFAULT_PET_MODEL_FALLBACK_IMAGE_PATH,
-      motionGroups: {},
-      expressionMap: {},
-      mouthParams: {},
-    })
-  }
-
-  return discoveredModels.sort((left, right) => (
-    left.label.localeCompare(right.label, 'zh-Hans-CN', {
-      sensitivity: 'base',
-    })
-  ))
+  return readAndValidateLive2dModelFile(filePath)
 }
 
 async function listBundledPetModels() {

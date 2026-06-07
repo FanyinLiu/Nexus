@@ -98,6 +98,7 @@ export async function listSpritePetModelsFromRoot({
           rows: SPRITE_PET_ROWS,
           cellWidth: SPRITE_PET_CELL_WIDTH,
           cellHeight: SPRITE_PET_CELL_HEIGHT,
+          imageRendering: 'pixelated',
         },
         motionGroups: {},
         expressionMap: {},

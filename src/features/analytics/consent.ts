@@ -5,7 +5,11 @@ export function getAnalyticsConsent() {
     return false
   }
 
-  return window.localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY) === 'granted'
+  try {
+    return window.localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY) === 'granted'
+  } catch {
+    return false
+  }
 }
 
 export function setAnalyticsConsent(granted: boolean) {
@@ -13,10 +17,14 @@ export function setAnalyticsConsent(granted: boolean) {
     return
   }
 
-  if (granted) {
-    window.localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, 'granted')
-    return
-  }
+  try {
+    if (granted) {
+      window.localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, 'granted')
+      return
+    }
 
-  window.localStorage.removeItem(ANALYTICS_CONSENT_STORAGE_KEY)
+    window.localStorage.removeItem(ANALYTICS_CONSENT_STORAGE_KEY)
+  } catch {
+    // Analytics consent is best-effort; private-mode storage failures must not break the app.
+  }
 }

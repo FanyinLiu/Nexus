@@ -52,6 +52,26 @@ test('resolveProviderConnectionRequest uses the active draft for the selected pr
   })
 })
 
+test('resolveProviderConnectionRequest normalizes active draft values before IPC', () => {
+  const request = resolveProviderConnectionRequest(
+    getApiProviderPreset('deepseek'),
+    {
+      ...baseConnectionSettings,
+      apiProviderId: 'deepseek',
+      apiBaseUrl: '   ',
+      apiKey: '  current-key  ',
+      model: '   ',
+    },
+  )
+
+  assert.deepEqual(request, {
+    providerId: 'deepseek',
+    baseUrl: 'https://api.deepseek.com',
+    apiKey: 'current-key',
+    model: 'deepseek-v4-flash',
+  })
+})
+
 test('resolveProviderConnectionRequest uses stored profiles for inactive providers', () => {
   const request = resolveProviderConnectionRequest(
     getApiProviderPreset('openai'),
@@ -63,6 +83,29 @@ test('resolveProviderConnectionRequest uses stored profiles for inactive provide
     baseUrl: 'https://proxy.example.test/v1',
     apiKey: 'stored-key',
     model: 'gpt-5.4-mini',
+  })
+})
+
+test('resolveProviderConnectionRequest normalizes stored provider profiles', () => {
+  const request = resolveProviderConnectionRequest(
+    getApiProviderPreset('openai'),
+    {
+      ...baseConnectionSettings,
+      textProviderProfiles: {
+        openai: {
+          apiBaseUrl: '  https://proxy.example.test/v1/  ',
+          apiKey: '  stored-key  ',
+          model: '   ',
+        },
+      },
+    },
+  )
+
+  assert.deepEqual(request, {
+    providerId: 'openai',
+    baseUrl: 'https://proxy.example.test/v1/',
+    apiKey: 'stored-key',
+    model: 'gpt-5.5',
   })
 })
 

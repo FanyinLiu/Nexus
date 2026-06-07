@@ -24,8 +24,8 @@ function generateSkillId(query: string) {
  */
 export function shouldGenerateSkill(context: SkillGenerationContext): boolean {
   if (!context.settings.autoSkillGenerationEnabled) return false
-  if (context.toolCallNames.length < MIN_TOOL_CALLS) return false
-  if (context.assistantReply.length < MIN_REPLY_LENGTH) return false
+  if (context.toolCallNames.filter((name) => name.trim().length > 0).length < MIN_TOOL_CALLS) return false
+  if (context.assistantReply.trim().length < MIN_REPLY_LENGTH) return false
   return true
 }
 
@@ -34,6 +34,7 @@ export function shouldGenerateSkill(context: SkillGenerationContext): boolean {
  * Uses the LLM to summarize the pattern into a reusable skill guide.
  */
 export async function generateAndSaveSkill(context: SkillGenerationContext): Promise<boolean> {
+  if (!shouldGenerateSkill(context)) return false
   if (!window.desktopPet?.completeChat || !window.desktopPet?.skillSave) return false
 
   const { userQuery, assistantReply, toolCallNames, settings } = context

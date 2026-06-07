@@ -1,10 +1,16 @@
 import { getApiProviderPreset } from '../features/models/index.ts'
+import { isHttpHeaderSafeCredential } from '../core/routing/AuthProfileStore.ts'
 import type { AppSettings, TextProviderProfile } from '../types'
 
 type PartialTextProviderProfile = Partial<TextProviderProfile> | null | undefined
 
 function normalizeString(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
+}
+
+export function normalizeTextProviderApiKey(value: unknown) {
+  const apiKey = normalizeString(value)
+  return apiKey && isHttpHeaderSafeCredential(apiKey) ? apiKey : ''
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -19,7 +25,7 @@ export function resolveTextProviderProfile(
 
   return {
     apiBaseUrl: normalizeString(profile?.apiBaseUrl) || preset.baseUrl || '',
-    apiKey: normalizeString(profile?.apiKey),
+    apiKey: normalizeTextProviderApiKey(profile?.apiKey),
     model: normalizeString(profile?.model) || preset.defaultModel || '',
   }
 }

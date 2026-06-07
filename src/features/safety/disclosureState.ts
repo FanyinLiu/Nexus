@@ -35,12 +35,52 @@ const DEFAULT_STATE: DisclosureState = {
   userMessagesSinceReminder: 0,
 }
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function normalizeIso(value: unknown): string | null {
+  if (value == null) return null
+  if (typeof value !== 'string' && typeof value !== 'number') return null
+  const parsed = typeof value === 'number' ? value : Date.parse(value)
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null
+}
+
+function normalizeMessageCount(value: unknown): number {
+  const count = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(count)) return 0
+  return Math.max(0, Math.floor(count))
+}
+
+function hasChanged(normalized: unknown, raw: unknown): boolean {
+  return JSON.stringify(normalized) !== JSON.stringify(raw)
+}
+
+export function normalizeDisclosureState(raw: unknown): DisclosureState {
+  if (!isObject(raw)) return DEFAULT_STATE
+
+  const acknowledgedAt = normalizeIso(raw.acknowledgedAt)
+  const lastReminderAt = normalizeIso(raw.lastReminderAt)
+  return {
+    acknowledgedAt,
+    lastReminderAt: acknowledgedAt ? lastReminderAt : null,
+    userMessagesSinceReminder: acknowledgedAt
+      ? normalizeMessageCount(raw.userMessagesSinceReminder)
+      : 0,
+  }
+}
+
 function loadState(): DisclosureState {
-  return readJson<DisclosureState>(STORAGE_KEY, DEFAULT_STATE)
+  const raw = readJson<unknown>(STORAGE_KEY, DEFAULT_STATE)
+  const normalized = normalizeDisclosureState(raw)
+  if (hasChanged(normalized, raw)) {
+    saveState(normalized)
+  }
+  return normalized
 }
 
 function saveState(state: DisclosureState): void {
-  writeJson(STORAGE_KEY, state)
+  writeJson(STORAGE_KEY, normalizeDisclosureState(state))
 }
 
 /**

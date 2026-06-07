@@ -50,6 +50,9 @@ function validateNumberSchema(value, schema, path) {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw schemaError(path, 'must be a finite number')
   }
+  if (schema.integer && !Number.isInteger(value)) {
+    throw schemaError(path, 'must be an integer')
+  }
   if (schema.min !== undefined && value < schema.min) {
     throw schemaError(path, `must be >= ${schema.min}`)
   }

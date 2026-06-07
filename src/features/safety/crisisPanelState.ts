@@ -19,13 +19,17 @@ function notify(): void {
   }
 }
 
+export function shouldPresentCrisisPanel(signal: CrisisSignal | null): signal is CrisisSignal {
+  return signal?.severity === 'medium' || signal?.severity === 'high'
+}
+
 /**
- * Surface the crisis hotline panel for the given signal. Replaces any
- * already-visible panel — the more recent signal wins on the
- * assumption that the user's latest message is the more relevant
- * context.
+ * Surface the crisis hotline panel for medium/high signals. Low
+ * signals still soften the persona reply, but intentionally do not
+ * render the non-persona hotline panel.
  */
 export function presentCrisis(signal: CrisisSignal): void {
+  if (!shouldPresentCrisisPanel(signal)) return
   currentSignal = signal
   notify()
 }

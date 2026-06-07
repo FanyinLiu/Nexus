@@ -64,11 +64,20 @@ function recentMemoriesIn(memories: MemoryItem[], windowStartMs: number): Memory
   })
 }
 
-async function loadDefaultPersona(): Promise<LoadedPersona | null> {
+async function loadActivePersona(settings: AppSettings): Promise<LoadedPersona | null> {
   try {
     const desktopPet = window.desktopPet
     if (!desktopPet?.personaLoadProfile) return null
-    return await desktopPet.personaLoadProfile(DEFAULT_PERSONA_PROFILE_ID)
+    // Honour the user's active character profile (a Character-Card import sets
+    // activeCharacterProfileId to the card's persona id). Empty -> default;
+    // fall back to the default if the active profile has no persona files.
+    const activeId = settings.activeCharacterProfileId?.trim()
+    const profileId = activeId || DEFAULT_PERSONA_PROFILE_ID
+    const loaded = await desktopPet.personaLoadProfile(profileId)
+    if (!loaded?.present && profileId !== DEFAULT_PERSONA_PROFILE_ID) {
+      return await desktopPet.personaLoadProfile(DEFAULT_PERSONA_PROFILE_ID)
+    }
+    return loaded
   } catch {
     return null
   }
@@ -168,7 +177,7 @@ export function useLetterScheduler({
         return
       }
 
-      const persona = await loadDefaultPersona()
+      const persona = await loadActivePersona(s)
       if (!persona) {
         live.onEvent?.({
           title: '[letter] skipped',

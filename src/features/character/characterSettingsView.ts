@@ -1,5 +1,6 @@
 import type { PetModelDefinition } from '../pet/models.ts'
 import { RELATIONSHIP_OPTIONS } from '../../lib/relationshipTypes.ts'
+import { pickTranslatedUiTextOrFallback } from '../../lib/uiLanguage.ts'
 import type {
   AppSettings,
   CompanionRelationshipType,
@@ -13,6 +14,7 @@ type CharacterSettingsInput = Pick<
   | 'companionName'
   | 'companionRelationshipType'
   | 'petModelId'
+  | 'uiLanguage'
   | 'userName'
 >
 
@@ -43,7 +45,10 @@ export function resolveCharacterSettingsSummary(
   return {
     activeProfileLabel: activeProfile?.label || activeProfile?.companionName || '',
     companionName: settings.companionName.trim(),
-    petModelLabel: petModel?.label || settings.petModelId,
+    petModelLabel: pickTranslatedUiTextOrFallback(
+      settings.uiLanguage ?? 'en-US',
+      petModel?.label,
+    ) || settings.petModelId,
     profileCount: settings.characterProfiles.length,
     relationshipLabelKey: getRelationshipLabelKey(settings.companionRelationshipType),
     userName: settings.userName.trim(),

@@ -14,12 +14,32 @@ export type UseNotificationBridgeOptions = {
   enabled: boolean
 }
 
+function clearExpiredSnoozes(
+  messages: NotificationMessage[],
+  now: number,
+) {
+  return messages.map((message) => {
+    if (!message.snoozedUntil) return message
+
+    const expiredAt = Date.parse(message.snoozedUntil)
+    if (Number.isNaN(expiredAt) || expiredAt <= now) {
+      return { ...message, snoozedUntil: undefined }
+    }
+
+    return message
+  })
+}
+
 export function useNotificationBridge({
   onNotification,
   enabled,
 }: UseNotificationBridgeOptions) {
   const [messages, setMessages] = useState<NotificationMessage[]>(
-    () => readJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, []),
+    () => {
+      const initialMessages = readJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, [])
+      const now = Date.now()
+      return clearExpiredSnoozes(initialMessages, now)
+    },
   )
   const onNotificationRef = useRef(onNotification)
 
@@ -31,6 +51,24 @@ export function useNotificationBridge({
   useEffect(() => {
     writeJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, messages)
   }, [messages])
+
+  // Clean up expired snoozes so "later" notifications reappear automatically.
+  const pruneExpiredSnoozes = useCallback(() => {
+    const now = Date.now()
+    setMessages((prev) => {
+      let changed = false
+      const next = clearExpiredSnoozes(prev, now)
+      changed = next.some((message, index) => message !== prev[index])
+
+      if (!changed) return prev
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
+    const intervalId = window.setInterval(pruneExpiredSnoozes, 30_000)
+    return () => { window.clearInterval(intervalId) }
+  }, [pruneExpiredSnoozes])
 
   // ── Channel management (via IPC to main process) ───────────────────────────
 
@@ -128,6 +166,21 @@ export function useNotificationBridge({
     setMessages((prev) => prev.map((m) => ({ ...m, read: true })))
   }, [])
 
+  const markImportant = useCallback((messageId: string) => {
+    setMessages((prev) => prev.map((message) => {
+      if (message.id !== messageId) return message
+      return { ...message, isImportant: !message.isImportant }
+    }))
+  }, [])
+
+  const snoozeMessage = useCallback((messageId: string, delayMinutes: number) => {
+    const snoozedUntil = new Date(Date.now() + delayMinutes * 60_000).toISOString()
+    setMessages((prev) => prev.map((message) => {
+      if (message.id !== messageId) return message
+      return { ...message, snoozedUntil }
+    }))
+  }, [])
+
   const clearMessages = useCallback(() => {
     setMessages([])
   }, [])
@@ -138,6 +191,9 @@ export function useNotificationBridge({
     unreadCount,
     markRead,
     markAllRead,
+    markImportant,
+    snoozeMessage,
+    pruneExpiredSnoozes,
     clearMessages,
     // Channels
     channels,

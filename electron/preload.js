@@ -55,6 +55,12 @@ contextBridge.exposeInMainWorld('desktopPet', {
   getLaunchOnStartup: () => ipcRenderer.invoke('app:get-launch-on-startup'),
   setLaunchOnStartup: (value) => ipcRenderer.invoke('app:set-launch-on-startup', value),
   getPlatformProfile: () => ipcRenderer.invoke('app:get-platform-profile'),
+  getSystemIdleTime: () => ipcRenderer.invoke('app:get-system-idle-time'),
+  subscribePowerEvents: (listener) => {
+    const handler = (_event, payload) => listener(payload)
+    ipcRenderer.on('app:power-event', handler)
+    return () => ipcRenderer.removeListener('app:power-event', handler)
+  },
   listPetModels: () => ipcRenderer.invoke('pet-model:list'),
   importPetModel: () => ipcRenderer.invoke('pet-model:import'),
   importCodexPetGallery: (input) => ipcRenderer.invoke('pet-model:import-codex-gallery', input),

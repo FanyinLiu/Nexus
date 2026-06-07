@@ -21,6 +21,7 @@ import type {
   ChatCompletionToolCall,
   ChatCompletionToolDefinition,
 } from '../../types'
+import { t } from '../../i18n/runtime.ts'
 import { executeFsTool, isFsToolName } from '../agent/fsTools.ts'
 import {
   executeBuiltInToolByName,
@@ -49,6 +50,7 @@ export type McpToolDescriptor = {
 const MAX_TOOL_DEFINITIONS_PER_REQUEST = 12
 const MAX_TOOL_RESULT_CHARS = 8000
 export const MAX_TOOL_CALL_ROUNDS = 5
+export const MAX_TOOL_CALLS_PER_ROUND = 8
 
 /**
  * Select the most relevant tools for the current query.
@@ -302,6 +304,60 @@ function resolveResponseToolCalls(
   }
 }
 
+function buildToolCallLimitResponse(
+  response: ChatCompletionResponse,
+  cleanedContent: string,
+): ChatCompletionResponse {
+  const prefix = cleanedContent.trim()
+  const limitMessage = t('chat.tool_call_limit', { rounds: MAX_TOOL_CALL_ROUNDS })
+  return {
+    ...response,
+    content: prefix ? `${prefix}\n\n${limitMessage}` : limitMessage,
+    tool_calls: undefined,
+    finish_reason: 'tool_call_limit',
+  }
+}
+
+function buildSkippedToolCallsNote(skippedCount: number): string {
+  return `[Nexus skipped ${skippedCount} excessive tool call${skippedCount === 1 ? '' : 's'} from this model response to keep execution bounded. If more tool work is still needed, request the remaining tools in a later round.]`
+}
+
+function stableStringifyJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringifyJson(item)).join(',')}]`
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableStringifyJson(record[key])}`)
+      .join(',')}}`
+  }
+  return JSON.stringify(value) ?? 'undefined'
+}
+
+function normalizeToolArgumentsForSignature(rawArgs: string) {
+  const normalized = String(rawArgs ?? '').trim()
+  if (!normalized) return '{}'
+  try {
+    return stableStringifyJson(JSON.parse(normalized))
+  } catch {
+    return normalized
+  }
+}
+
+function buildToolCallSignature(toolCall: ChatCompletionToolCall) {
+  return `${toolCall.function.name}:${normalizeToolArgumentsForSignature(toolCall.function.arguments || '')}`
+}
+
+function buildDuplicateToolCallResult(toolCall: ChatCompletionToolCall) {
+  return JSON.stringify({
+    tool: toolCall.function.name,
+    skipped: true,
+    reason: 'Duplicate tool call skipped because the same tool and arguments already ran in this response loop.',
+  })
+}
+
 export async function runToolCallLoop(
   initialResponse: ChatCompletionResponse,
   rebuildPayload: () => Promise<ChatCompletionRequest>,
@@ -315,6 +371,7 @@ export async function runToolCallLoop(
   }
   let response = initialResponse
   let round = 0
+  const executedToolCallSignatures = new Set<string>()
 
   while (round < MAX_TOOL_CALL_ROUNDS) {
     const resolved = resolveResponseToolCalls(response, promptModeEnabled)
@@ -329,13 +386,28 @@ export async function runToolCallLoop(
 
     round++
     const { toolCalls, cleanedContent, usedPromptMode } = resolved
+    const executableToolCalls = toolCalls.slice(0, MAX_TOOL_CALLS_PER_ROUND)
+    const skippedToolCallCount = Math.max(0, toolCalls.length - executableToolCalls.length)
+    const assistantContent = skippedToolCallCount > 0
+      ? [cleanedContent, buildSkippedToolCallsNote(skippedToolCallCount)].filter(Boolean).join('\n\n')
+      : cleanedContent
 
     // Execute all tool calls in parallel
     const toolResults = await Promise.all(
-      toolCalls.map(async (tc) => ({
-        id: tc.id,
-        result: await executeMcpToolCall(tc, settings, builtInCallbacks),
-      })),
+      executableToolCalls.map(async (tc) => {
+        const signature = buildToolCallSignature(tc)
+        if (executedToolCallSignatures.has(signature)) {
+          return {
+            id: tc.id,
+            result: buildDuplicateToolCallResult(tc),
+          }
+        }
+        executedToolCallSignatures.add(signature)
+        return {
+          id: tc.id,
+          result: await executeMcpToolCall(tc, settings, builtInCallbacks),
+        }
+      }),
     )
 
     // Build continuation messages: assistant message with tool_calls, then tool results.
@@ -347,8 +419,8 @@ export async function runToolCallLoop(
     const payload = await rebuildPayload()
     payload.messages.push({
       role: 'assistant',
-      content: cleanedContent,
-      tool_calls: toolCalls,
+      content: assistantContent,
+      tool_calls: executableToolCalls,
       ...(response.reasoning_content ? { reasoning_content: response.reasoning_content } : {}),
     })
     for (const tr of toolResults) {
@@ -365,6 +437,11 @@ export async function runToolCallLoop(
     void usedPromptMode
 
     response = await executeContinuation(payload)
+  }
+
+  const overLimit = resolveResponseToolCalls(response, promptModeEnabled)
+  if (overLimit.toolCalls.length) {
+    response = buildToolCallLimitResponse(response, overLimit.cleanedContent)
   }
 
   // Final pass: ensure prompt-mode markers in the terminal response are also

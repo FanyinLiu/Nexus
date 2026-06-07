@@ -24,7 +24,7 @@ import {
   readJson,
   writeJson,
   createId,
-} from '../../lib/storage'
+} from '../../lib/storage/core.ts'
 
 export type ErrandStatus = 'queued' | 'running' | 'completed' | 'failed' | 'delivered'
 
@@ -53,6 +53,53 @@ export interface ErrandRecord {
 }
 
 const MAX_KEPT = 50
+const ERRAND_STATUSES = new Set<ErrandStatus>([
+  'queued',
+  'running',
+  'completed',
+  'failed',
+  'delivered',
+])
+
+function isValidTimestamp(value: string): boolean {
+  return Number.isFinite(Date.parse(value))
+}
+
+function normalizeIterationsUsed(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : undefined
+}
+
+function normalizeErrandPatch(patch: Partial<ErrandRecord>): Partial<ErrandRecord> {
+  const next: Partial<ErrandRecord> = {}
+  if (typeof patch.prompt === 'string' && patch.prompt.trim()) {
+    next.prompt = patch.prompt.trim()
+  }
+  if (ERRAND_STATUSES.has(patch.status as ErrandStatus)) {
+    next.status = patch.status as ErrandStatus
+  }
+  if (typeof patch.startedAt === 'string' && isValidTimestamp(patch.startedAt)) {
+    next.startedAt = patch.startedAt
+  }
+  if (typeof patch.completedAt === 'string' && isValidTimestamp(patch.completedAt)) {
+    next.completedAt = patch.completedAt
+  }
+  if (typeof patch.deliveredAt === 'string' && isValidTimestamp(patch.deliveredAt)) {
+    next.deliveredAt = patch.deliveredAt
+  }
+  if (typeof patch.result === 'string') {
+    next.result = patch.result
+  }
+  if (typeof patch.error === 'string') {
+    next.error = patch.error
+  }
+  const iterationsUsed = normalizeIterationsUsed(patch.iterationsUsed)
+  if (iterationsUsed !== undefined) {
+    next.iterationsUsed = iterationsUsed
+  }
+  return next
+}
 
 export function loadErrands(): ErrandRecord[] {
   const raw = readJson<unknown>(ERRAND_STORE_STORAGE_KEY, [])
@@ -64,8 +111,9 @@ export function loadErrands(): ErrandRecord[] {
     if (typeof obj.id !== 'string' || !obj.id) continue
     if (typeof obj.prompt !== 'string' || !obj.prompt) continue
     if (typeof obj.status !== 'string') continue
-    if (!['queued', 'running', 'completed', 'failed', 'delivered'].includes(obj.status)) continue
+    if (!ERRAND_STATUSES.has(obj.status as ErrandStatus)) continue
     if (typeof obj.createdAt !== 'string') continue
+    const iterationsUsed = normalizeIterationsUsed(obj.iterationsUsed)
     out.push({
       id: obj.id,
       prompt: obj.prompt,
@@ -76,7 +124,7 @@ export function loadErrands(): ErrandRecord[] {
       ...(typeof obj.deliveredAt === 'string' ? { deliveredAt: obj.deliveredAt } : {}),
       ...(typeof obj.result === 'string' ? { result: obj.result } : {}),
       ...(typeof obj.error === 'string' ? { error: obj.error } : {}),
-      ...(typeof obj.iterationsUsed === 'number' ? { iterationsUsed: obj.iterationsUsed } : {}),
+      ...(iterationsUsed !== undefined ? { iterationsUsed } : {}),
     })
   }
   return out
@@ -118,7 +166,12 @@ export function updateErrand(id: string, patch: Partial<ErrandRecord>): ErrandRe
   const all = loadErrands()
   const idx = all.findIndex((e) => e.id === id)
   if (idx === -1) return null
-  const next: ErrandRecord = { ...all[idx], ...patch, id: all[idx].id, createdAt: all[idx].createdAt }
+  const next: ErrandRecord = {
+    ...all[idx],
+    ...normalizeErrandPatch(patch),
+    id: all[idx].id,
+    createdAt: all[idx].createdAt,
+  }
   all[idx] = next
   persist(all)
   return next

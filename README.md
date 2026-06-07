@@ -92,7 +92,8 @@ Nexus 的形象应该服务于三个感觉：
 
 每个阶段都应该先完成一个可用闭环，再进入下一个阶段。Nexus 可以很大，但不能一开始就把所有系统塞进去。
 
-更具体的执行拆分见 [Nexus 升级整合计划](docs/NEXUS_UPGRADE_INTEGRATION_PLAN.md)。
+更具体的执行拆分见 [Nexus 升级整合计划](docs/NEXUS_UPGRADE_INTEGRATION_PLAN.md)，可执行任务表见
+[EXECUTABLE_OPTIMIZATION_TASKS](docs/EXECUTABLE_OPTIMIZATION_TASKS.md)。
 
 ## 当前实现状态
 

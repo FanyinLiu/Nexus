@@ -31,6 +31,10 @@ export interface CrisisSignal {
   matchedPhrase: string
   /** The locale whose pattern set produced the match. */
   locale: AppLocale
+  /** Optional source marker for multi-pass detection. */
+  source?: 'pattern' | 'llm'
+  /** Short rationale from a second-pass classifier; never shown directly to the user. */
+  classificationReason?: string
 }
 
 export interface Hotline {

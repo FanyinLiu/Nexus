@@ -47,46 +47,79 @@ export interface FutureCapsuleRecord {
 }
 
 const MAX_KEPT = 200
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/u
 
 function isValidStatus(s: unknown): s is FutureCapsuleStatus {
   return s === 'pending' || s === 'delivered'
 }
 
+function isValidIsoTimestamp(value: string): boolean {
+  return Number.isFinite(Date.parse(value))
+}
+
+function isValidLocalDate(value: string): boolean {
+  if (!ISO_DATE_RE.test(value)) return false
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return (
+    date.getUTCFullYear() === year
+    && date.getUTCMonth() === month - 1
+    && date.getUTCDate() === day
+  )
+}
+
+function sortAndCap(capsules: FutureCapsuleRecord[]): FutureCapsuleRecord[] {
+  const pending = capsules.filter((c) => c.status === 'pending')
+    .sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor))
+  const delivered = capsules.filter((c) => c.status === 'delivered')
+    .sort((a, b) => (b.deliveredAt ?? '').localeCompare(a.deliveredAt ?? ''))
+  return [...pending, ...delivered].slice(0, MAX_KEPT)
+}
+
+function normalizeFutureCapsule(item: unknown): FutureCapsuleRecord | null {
+  if (!item || typeof item !== 'object') return null
+  const obj = item as Record<string, unknown>
+  if (typeof obj.id !== 'string' || !obj.id) return null
+  if (typeof obj.message !== 'string') return null
+  const message = obj.message.trim()
+  if (!message) return null
+  if (typeof obj.createdAt !== 'string' || !isValidIsoTimestamp(obj.createdAt)) return null
+  if (typeof obj.scheduledFor !== 'string' || !isValidLocalDate(obj.scheduledFor)) return null
+  if (!isValidStatus(obj.status)) return null
+  const deliveredAt = typeof obj.deliveredAt === 'string' && isValidIsoTimestamp(obj.deliveredAt)
+    ? obj.deliveredAt
+    : undefined
+  const title = typeof obj.title === 'string' ? obj.title.trim() : ''
+  return {
+    id: obj.id,
+    message,
+    createdAt: obj.createdAt,
+    scheduledFor: obj.scheduledFor,
+    status: obj.status,
+    ...(deliveredAt ? { deliveredAt } : {}),
+    ...(title ? { title } : {}),
+  }
+}
+
 export function loadFutureCapsules(): FutureCapsuleRecord[] {
   const raw = readJson<unknown>(FUTURE_CAPSULE_STORE_STORAGE_KEY, [])
-  if (!Array.isArray(raw)) return []
-  const out: FutureCapsuleRecord[] = []
-  for (const item of raw) {
-    if (!item || typeof item !== 'object') continue
-    const obj = item as Record<string, unknown>
-    if (typeof obj.id !== 'string' || !obj.id) continue
-    if (typeof obj.message !== 'string' || !obj.message) continue
-    if (typeof obj.createdAt !== 'string') continue
-    if (typeof obj.scheduledFor !== 'string') continue
-    if (!isValidStatus(obj.status)) continue
-    out.push({
-      id: obj.id,
-      message: obj.message,
-      createdAt: obj.createdAt,
-      scheduledFor: obj.scheduledFor,
-      status: obj.status,
-      ...(typeof obj.deliveredAt === 'string' ? { deliveredAt: obj.deliveredAt } : {}),
-      ...(typeof obj.title === 'string' ? { title: obj.title } : {}),
-    })
+  if (!Array.isArray(raw)) {
+    persist([])
+    return []
   }
-  return out
+  const out = raw.map(normalizeFutureCapsule).filter((item): item is FutureCapsuleRecord => Boolean(item))
+  const normalized = sortAndCap(out)
+  if (JSON.stringify(normalized) !== JSON.stringify(raw)) {
+    writeJson(FUTURE_CAPSULE_STORE_STORAGE_KEY, normalized)
+  }
+  return normalized
 }
 
 function persist(capsules: FutureCapsuleRecord[]): void {
   // Sort: pending first (earliest scheduled at top), then delivered
   // (newest first). Pruning prefers to drop the oldest delivered ones
   // since they've already served their purpose.
-  const pending = capsules.filter((c) => c.status === 'pending')
-    .sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor))
-  const delivered = capsules.filter((c) => c.status === 'delivered')
-    .sort((a, b) => (b.deliveredAt ?? '').localeCompare(a.deliveredAt ?? ''))
-  const all = [...pending, ...delivered].slice(0, MAX_KEPT)
-  writeJson(FUTURE_CAPSULE_STORE_STORAGE_KEY, all)
+  writeJson(FUTURE_CAPSULE_STORE_STORAGE_KEY, sortAndCap(capsules))
 }
 
 export interface EnqueueFutureCapsuleInput {
@@ -99,7 +132,7 @@ export interface EnqueueFutureCapsuleInput {
 export function enqueueFutureCapsule(input: EnqueueFutureCapsuleInput): FutureCapsuleRecord | null {
   const message = input.message.trim()
   if (!message) return null
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.scheduledFor)) return null
+  if (!isValidLocalDate(input.scheduledFor)) return null
 
   // Reject capsules scheduled in the past — there's nothing to deliver.
   // Today's date is allowed; the scheduler will pick it up next tick.

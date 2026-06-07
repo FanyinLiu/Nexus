@@ -26,6 +26,7 @@
 import {
   USER_AFFECT_HISTORY_STORAGE_KEY,
   readJson,
+  writeJson,
   writeJsonDebounced,
 } from '../../lib/storage/core.ts'
 import type { VoiceEmotionLabel } from '../../types'
@@ -59,9 +60,55 @@ let cache: UserAffectSample[] | null = null
 
 function loadInternal(): UserAffectSample[] {
   if (!cache) {
-    cache = readJson<UserAffectSample[]>(USER_AFFECT_HISTORY_STORAGE_KEY, [])
+    const raw = readJson<unknown>(USER_AFFECT_HISTORY_STORAGE_KEY, [])
+    cache = normalizeHistory(raw)
+    if (JSON.stringify(cache) !== JSON.stringify(raw)) {
+      writeJson(USER_AFFECT_HISTORY_STORAGE_KEY, cache)
+    }
   }
   return cache
+}
+
+function isValidSource(value: unknown): value is UserAffectSource {
+  return value === 'voice_prosody' || value === 'text_signal' || value === 'relationship'
+}
+
+function normalizeOptionalText(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return trimmed ? trimmed.slice(0, 120) : undefined
+}
+
+function normalizeSample(value: unknown): UserAffectSample | null {
+  if (!value || typeof value !== 'object') return null
+  const obj = value as Record<string, unknown>
+  if (typeof obj.ts !== 'string' || !Number.isFinite(Date.parse(obj.ts))) return null
+  if (!isValidSource(obj.source)) return null
+  const valence = typeof obj.valence === 'number' ? clamp(obj.valence, -1, 1) : null
+  const arousal = typeof obj.arousal === 'number' ? clamp(obj.arousal, 0, 1) : null
+  const confidence = typeof obj.confidence === 'number' ? clamp(obj.confidence, 0, 1) : null
+  if (valence === null || arousal === null || confidence === null) return null
+  const note = normalizeOptionalText(obj.note)
+  return {
+    ts: obj.ts,
+    valence,
+    arousal,
+    source: obj.source,
+    confidence,
+    ...(note ? { note } : {}),
+  }
+}
+
+function normalizeHistory(raw: unknown): UserAffectSample[] {
+  if (!Array.isArray(raw)) return []
+  const normalized = raw
+    .map(normalizeSample)
+    .filter((sample): sample is UserAffectSample => Boolean(sample))
+    .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))
+  if (normalized.length > HARD_CAP) {
+    normalized.splice(0, normalized.length - HARD_CAP)
+  }
+  return normalized
 }
 
 function pruneByAge(history: UserAffectSample[], nowMs: number): UserAffectSample[] {

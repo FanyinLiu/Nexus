@@ -69,6 +69,12 @@ export function renderSettingsCardIcon(iconKey: string): ReactNode {
           <path fill="currentColor" d="M16 3a1 1 0 0 1 .87.5l2.5 4.33 4.96 1.17a1 1 0 0 1 .58 1.62L21.5 14.5l.78 5.13a1 1 0 0 1-1.45 1.05L16 18l-4.83 2.68a1 1 0 0 1-1.45-1.05l.78-5.13-3.41-3.88a1 1 0 0 1 .58-1.62l4.96-1.17 2.5-4.33A1 1 0 0 1 16 3ZM8 24a1 1 0 1 0 0 2h16a1 1 0 1 0 0-2H8Zm2 4a1 1 0 1 0 0 2h12a1 1 0 1 0 0-2H10Z" />
         </svg>
       )
+    case 'onboarding':
+      return (
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path fill="currentColor" d="M8 5a3 3 0 0 0-3 3v16a3 3 0 0 0 3 3h16a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H8Zm0 3h16v3H8V8Zm0 6h7v10H8V14Zm10 0h6v2h-6v-2Zm0 4h6v2h-6v-2Zm0 4h4v2h-4v-2Z" />
+        </svg>
+      )
     default:
       return null
   }

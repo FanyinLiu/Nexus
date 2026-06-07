@@ -85,7 +85,7 @@ export function Live2DCanvas({
     }
 
     window.__desktopPetLive2DDebug = nextState
-    console.warn(
+    console.debug(
       `[Live2D] ${nextState.phase ?? 'unknown-phase'}${nextState.error ? `: ${nextState.error}` : ''}`,
     )
   }

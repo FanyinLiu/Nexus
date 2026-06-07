@@ -32,6 +32,24 @@ export function createDefaultSubDimensions(): SubDimensions {
   return { trust: 0.1, vulnerability: 0.05, playfulness: 0.1, intellectual: 0.1 }
 }
 
+export function normalizeSubDimensions(value: unknown): SubDimensions | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const fallback = createDefaultSubDimensions()
+  const obj = value as Partial<Record<keyof SubDimensions, unknown>>
+  return {
+    trust: normalizeDimensionValue(obj.trust, fallback.trust),
+    vulnerability: normalizeDimensionValue(obj.vulnerability, fallback.vulnerability),
+    playfulness: normalizeDimensionValue(obj.playfulness, fallback.playfulness),
+    intellectual: normalizeDimensionValue(obj.intellectual, fallback.intellectual),
+  }
+}
+
+function normalizeDimensionValue(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? clamp(value, 0, 1)
+    : fallback
+}
+
 // ── Signal classification ──────────────────────────────────────────────────
 
 export type RelationshipSignal =

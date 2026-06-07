@@ -11,6 +11,16 @@ import {
 } from '../src/features/failover/runtime.ts'
 import { executeWithFailover } from '../src/features/failover/orchestrator.ts'
 import type { FailoverEvent } from '../src/features/failover/orchestrator.ts'
+import {
+  buildChatFailoverCandidates,
+  executeChatRequestWithFailover,
+} from '../src/features/chat/failoverChain.ts'
+import { getCoreRuntime } from '../src/lib/coreRuntime.ts'
+import { loadSettings } from '../src/lib/storage.ts'
+import { AUTH_PROFILES_STORAGE_KEY } from '../src/lib/storage/core.ts'
+import type { AppSettings } from '../src/types/app.ts'
+import type { ChatCompletionRequest, ChatMessage } from '../src/types/chat.ts'
+import type { MemoryRecallContext } from '../src/types/memory.ts'
 
 // Mock localStorage for runtime.ts
 beforeEach(() => {
@@ -27,6 +37,209 @@ beforeEach(() => {
     configurable: true,
     writable: true,
   })
+  getCoreRuntime().authStore.restore({ profiles: [] })
+})
+
+function makeChatSettings(overrides: Partial<AppSettings> = {}): AppSettings {
+  return {
+    ...loadSettings(),
+    apiProviderId: 'deepseek',
+    apiBaseUrl: 'https://api.deepseek.com',
+    apiKey: 'primary-key',
+    model: 'deepseek-v4-flash',
+    chatFailoverEnabled: false,
+    ...overrides,
+  }
+}
+
+// ── chat failover candidate construction ──
+
+test('chat failover does not append an empty-key default candidate when auth profiles exist', () => {
+  const runtime = getCoreRuntime()
+  runtime.authStore.register({
+    id: 'deepseek-a',
+    providerId: 'deepseek',
+    apiKey: 'profile-key',
+  })
+
+  const candidates = buildChatFailoverCandidates(makeChatSettings({ apiKey: '' }))
+
+  assert.deepEqual(candidates.map((candidate) => candidate.id), ['deepseek#deepseek-a'])
+  assert.deepEqual(
+    candidates.map((candidate) => candidate.payload.settings.apiKey),
+    ['profile-key'],
+  )
+})
+
+test('chat failover keeps a non-empty default key and deduplicates profile keys', () => {
+  const runtime = getCoreRuntime()
+  runtime.authStore.register({
+    id: 'deepseek-a',
+    providerId: 'deepseek',
+    apiKey: 'same-key',
+  })
+  runtime.authStore.register({
+    id: 'deepseek-b',
+    providerId: 'deepseek',
+    apiKey: 'same-key',
+  })
+
+  const candidates = buildChatFailoverCandidates(makeChatSettings({ apiKey: '  primary-key  ' }))
+
+  assert.deepEqual(candidates.map((candidate) => candidate.id), [
+    'deepseek#deepseek-a',
+    'deepseek',
+  ])
+  assert.deepEqual(
+    candidates.map((candidate) => candidate.payload.settings.apiKey),
+    ['same-key', 'primary-key'],
+  )
+})
+
+test('chat failover excludes auth profiles that are in cooldown', () => {
+  const runtime = getCoreRuntime()
+  runtime.authStore.register({
+    id: 'cooling',
+    providerId: 'deepseek',
+    apiKey: 'cooldown-key',
+  })
+  runtime.authStore.setStatus('cooling', 'cooldown')
+
+  const candidates = buildChatFailoverCandidates(makeChatSettings({ apiKey: 'primary-key' }))
+
+  assert.deepEqual(candidates.map((candidate) => candidate.id), ['deepseek'])
+  assert.deepEqual(
+    candidates.map((candidate) => candidate.payload.settings.apiKey),
+    ['primary-key'],
+  )
+})
+
+test('chat failover keeps empty-key default candidates for keyless providers', () => {
+  const candidates = buildChatFailoverCandidates(makeChatSettings({
+    apiProviderId: 'ollama',
+    apiBaseUrl: 'http://127.0.0.1:11434/v1',
+    apiKey: '',
+    model: 'qwen3:8b',
+  }))
+
+  assert.deepEqual(candidates.map((candidate) => candidate.id), ['ollama'])
+  assert.equal(candidates[0]?.payload.settings.apiKey, '')
+})
+
+test('chat failover returns the request payload built for the winning candidate', async () => {
+  Object.assign(globalThis.window, {
+    desktopPet: {
+      completeChat: async () => ({ content: '' }),
+      personaLoadSoul: async () => '',
+      personaLoadMemory: async () => '',
+    },
+  })
+
+  const history: ChatMessage[] = [{
+    id: 'user-1',
+    role: 'user',
+    content: 'hello nexus',
+    createdAt: '2026-06-04T12:00:00.000Z',
+  }]
+  const memoryContext: MemoryRecallContext = {
+    longTerm: [],
+    daily: [],
+    semantic: [],
+    searchModeUsed: 'keyword',
+    vectorSearchAvailable: false,
+  }
+  let executedPayload: ChatCompletionRequest | undefined
+
+  const result = await executeChatRequestWithFailover(
+    makeChatSettings({ chatFailoverEnabled: false }),
+    history,
+    memoryContext,
+    {},
+    async (payload) => {
+      executedPayload = payload
+      return { content: 'ok' }
+    },
+  )
+
+  assert.equal(result.providerId, 'deepseek')
+  assert.equal(result.response.content, 'ok')
+  assert.equal(result.requestPayload, executedPayload)
+  assert.equal(executedPayload?.providerId, 'deepseek')
+  assert.equal(executedPayload?.messages.at(-1)?.role, 'user')
+  assert.match(String(executedPayload?.messages.at(-1)?.content), /hello nexus/)
+})
+
+test('chat failover runs through the injected executor without requiring completeChat bridge', async () => {
+  Object.assign(globalThis.window, {
+    desktopPet: {
+      completeChatStream: async () => ({ content: 'stream-ok' }),
+    },
+  })
+
+  const history: ChatMessage[] = [{
+    id: 'user-1',
+    role: 'user',
+    content: 'hello streaming nexus',
+    createdAt: '2026-06-04T12:00:00.000Z',
+  }]
+  const memoryContext: MemoryRecallContext = {
+    longTerm: [],
+    daily: [],
+    semantic: [],
+    searchModeUsed: 'keyword',
+    vectorSearchAvailable: false,
+  }
+
+  const result = await executeChatRequestWithFailover(
+    makeChatSettings({ chatFailoverEnabled: false }),
+    history,
+    memoryContext,
+    {},
+    async () => ({ content: 'ok' }),
+  )
+
+  assert.equal(result.response.content, 'ok')
+  assert.equal(result.providerId, 'deepseek')
+  assert.equal(result.usedFallback, false)
+})
+
+test('chat failover persists auth profile success state after a profile candidate wins', async () => {
+  const runtime = getCoreRuntime()
+  runtime.authStore.register({
+    id: 'deepseek-profile',
+    providerId: 'deepseek',
+    apiKey: 'profile-key',
+  })
+  Object.assign(globalThis.window, {
+    desktopPet: {
+      personaLoadSoul: async () => '',
+      personaLoadMemory: async () => '',
+    },
+  })
+
+  await executeChatRequestWithFailover(
+    makeChatSettings({ apiKey: '' }),
+    [{
+      id: 'user-1',
+      role: 'user',
+      content: 'hello persisted profile',
+      createdAt: '2026-06-04T12:00:00.000Z',
+    }],
+    {
+      longTerm: [],
+      daily: [],
+      semantic: [],
+      searchModeUsed: 'keyword',
+      vectorSearchAvailable: false,
+    },
+    {},
+    async () => ({ content: 'ok' }),
+  )
+
+  const persisted = JSON.parse(window.localStorage.getItem(AUTH_PROFILES_STORAGE_KEY) ?? '{}')
+  assert.equal(persisted.profiles?.[0]?.id, 'deepseek-profile')
+  assert.equal(persisted.profiles?.[0]?.successCount, 1)
+  assert.equal(persisted.profiles?.[0]?.status, 'active')
 })
 
 // ── buildFailoverKey ──

@@ -4,7 +4,11 @@ import {
 import {
   pickTranslatedUiText,
 } from '../lib/uiLanguage.ts'
+import {
+  resolveTheme,
+} from '../features/themes/registry.ts'
 import type { TranslationKey } from '../types/i18n.ts'
+import type { ThemeId } from '../types/theme.ts'
 import type {
   DebugConsoleEvent,
   MemorySearchMode,
@@ -61,6 +65,45 @@ const MEMORY_SEARCH_MODE_KEYS: Record<MemorySearchMode, { label: TranslationKey;
   keyword: { label: 'memory_search.keyword.label', hint: 'memory_search.keyword.hint' },
   hybrid: { label: 'memory_search.hybrid.label', hint: 'memory_search.hybrid.hint' },
   vector: { label: 'memory_search.vector.label', hint: 'memory_search.vector.hint' },
+}
+
+export type SettingsAppearanceTone = 'night' | 'day' | 'warm-day'
+
+const THEME_TONE_BY_ID: Record<ThemeId, SettingsAppearanceTone> = {
+  'nexus-default': 'day',
+  soft: 'day',
+  'high-contrast': 'day',
+  editorial: 'day',
+  'system-day': 'day',
+  'warm-day': 'warm-day',
+  'system-dark': 'night',
+}
+
+function buildAppearanceOption(
+  id: ThemeId,
+  labelKey: TranslationKey,
+  tone: SettingsAppearanceTone,
+) {
+  const theme = resolveTheme(id)
+  return {
+    id,
+    labelKey,
+    tone,
+    swatch: {
+      surface: theme.tokens.surfaceElevated,
+      accent: theme.tokens.accent,
+    },
+  }
+}
+
+export const SETTINGS_APPEARANCE_OPTIONS = [
+  buildAppearanceOption('system-dark', 'settings.appearance.night', 'night'),
+  buildAppearanceOption('system-day', 'settings.appearance.day', 'day'),
+  buildAppearanceOption('warm-day', 'settings.appearance.warm_day', 'warm-day'),
+]
+
+export function getSettingsThemeTone(themeId: ThemeId): SettingsAppearanceTone {
+  return THEME_TONE_BY_ID[themeId] ?? 'night'
 }
 
 export function parseNumberInput(value: string, fallback: number) {
@@ -235,6 +278,7 @@ export function buildConsoleEventClusters(events: DebugConsoleEvent[]) {
 export type ConnectionResult = {
   ok: boolean
   message: string
+  recommendation?: string
 }
 
 type LabeledOption<T> = {

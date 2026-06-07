@@ -44,3 +44,14 @@ test('primaryHotline returns the first list entry per locale', () => {
     assert.deepEqual(primary, HOTLINES[locale][0])
   }
 })
+
+test('HOTLINES[en-US]: primary entry preserves the official 988 call text and chat route', () => {
+  const primary = primaryHotline('en-US')
+  assert.ok(primary)
+  assert.equal(primary.name, '988 Suicide & Crisis Lifeline')
+  assert.equal(primary.phone, '988')
+  assert.equal(primary.url, 'https://chat.988lifeline.org/')
+  assert.equal(primary.sourceUrl, 'https://988lifeline.org/')
+  assert.match(primary.hoursLabel, /24\/7/i)
+  assert.match(primary.hoursLabel, /call or text/i)
+})

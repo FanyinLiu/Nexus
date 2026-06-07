@@ -221,6 +221,7 @@ export async function ensureRendererServer() {
             "font-src 'self' data:",
             "connect-src 'self' https: http:",
             "media-src 'self' blob:",
+            "worker-src 'self' blob:",
             "object-src 'none'",
             "base-uri 'self'",
             "form-action 'self'",

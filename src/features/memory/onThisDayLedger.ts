@@ -24,13 +24,20 @@ interface Ledger {
 
 const LEDGER_RETENTION_MS = 400 * 24 * 60 * 60 * 1000  // ~13 months — longer than the year window
 
-function pruneStale(ledger: Ledger, nowMs: number): Ledger {
+function hasChanged(normalized: unknown, raw: unknown): boolean {
+  return JSON.stringify(normalized) !== JSON.stringify(raw)
+}
+
+export function normalizeOnThisDayLedger(raw: unknown, nowMs: number = Date.now()): Ledger {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
   const next: Ledger = {}
-  for (const [id, ts] of Object.entries(ledger)) {
-    const fired = Date.parse(ts)
+  for (const [rawId, rawTs] of Object.entries(raw as Record<string, unknown>)) {
+    const id = rawId.trim()
+    if (!id || (typeof rawTs !== 'string' && typeof rawTs !== 'number')) continue
+    const fired = typeof rawTs === 'number' ? rawTs : Date.parse(rawTs)
     if (!Number.isFinite(fired)) continue
-    if (nowMs - fired < LEDGER_RETENTION_MS) {
-      next[id] = ts
+    if (fired <= nowMs && nowMs - fired < LEDGER_RETENTION_MS) {
+      next[id] = new Date(fired).toISOString()
     }
   }
   return next
@@ -38,23 +45,23 @@ function pruneStale(ledger: Ledger, nowMs: number): Ledger {
 
 export function loadOnThisDayLedger(nowMs: number = Date.now()): Ledger {
   const raw = readJson<unknown>(MEMORY_ON_THIS_DAY_FIRED_STORAGE_KEY, {})
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
-  const safe: Ledger = {}
-  for (const [id, ts] of Object.entries(raw as Record<string, unknown>)) {
-    if (typeof id === 'string' && id && typeof ts === 'string' && ts) {
-      safe[id] = ts
-    }
+  const normalized = normalizeOnThisDayLedger(raw, nowMs)
+  if (hasChanged(normalized, raw)) {
+    writeJson(MEMORY_ON_THIS_DAY_FIRED_STORAGE_KEY, normalized)
   }
-  return pruneStale(safe, nowMs)
+  return normalized
 }
 
 export function recordOnThisDayFired(
   memoryId: string,
   nowIso: string = new Date().toISOString(),
 ): void {
+  const id = memoryId.trim()
+  if (!id) return
   const nowMs = Date.parse(nowIso)
-  const ledger = loadOnThisDayLedger(Number.isFinite(nowMs) ? nowMs : Date.now())
-  ledger[memoryId] = nowIso
+  if (!Number.isFinite(nowMs)) return
+  const ledger = loadOnThisDayLedger(nowMs)
+  ledger[id] = new Date(nowMs).toISOString()
   writeJson(MEMORY_ON_THIS_DAY_FIRED_STORAGE_KEY, ledger)
 }
 

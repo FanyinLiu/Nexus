@@ -34,6 +34,10 @@ test('provider base URLs map to the correct Nexus provider ids', () => {
   assert.equal(normalizeChatProviderId('', 'https://api.moonshot.ai/v1'), 'moonshot-global')
   assert.equal(normalizeChatProviderId('', 'https://api.moonshot.ai/anthropic'), 'kimi-coding-global')
   assert.equal(normalizeChatProviderId('', 'https://api.minimax.io/anthropic'), 'minimax-global')
+  assert.equal(normalizeChatProviderId('', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1'), 'dashscope-global')
+  assert.equal(normalizeChatProviderId('', 'https://dashscope.aliyuncs.com/compatible-mode/v1'), 'dashscope')
+  assert.equal(normalizeChatProviderId('', 'https://api.siliconflow.com/v1'), 'siliconflow-global')
+  assert.equal(normalizeChatProviderId('', 'https://api.siliconflow.cn/v1'), 'siliconflow')
   assert.equal(chatProviderRequiresApiKey('qianfan'), true)
 })
 

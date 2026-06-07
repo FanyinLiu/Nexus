@@ -87,8 +87,12 @@ export interface NotificationMessage {
   channelName: string
   title: string
   body: string
+  summary?: string
+  importance?: 'low' | 'normal' | 'high' | 'critical'
   receivedAt: string
   read: boolean
+  snoozedUntil?: string
+  isImportant?: boolean
   kind?: 'notification' | 'message'
   sourceId?: string
   sourceName?: string

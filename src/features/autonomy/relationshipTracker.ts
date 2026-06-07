@@ -13,7 +13,9 @@ import {
   type SubDimensions,
   computeCompositeScore,
   formatSubDimensionsForPrompt,
+  normalizeSubDimensions,
 } from './relationshipDimensions.ts'
+import { normalizeEmotionState } from './emotionModel.ts'
 export type { SubDimensions } from './relationshipDimensions.ts'
 
 export interface RelationshipState {
@@ -53,6 +55,40 @@ export function createDefaultRelationshipState(): RelationshipState {
   }
 }
 
+export function normalizeRelationshipState(value: unknown): RelationshipState {
+  const fallback = createDefaultRelationshipState()
+  if (!value || typeof value !== 'object') return fallback
+
+  const obj = value as Record<string, unknown>
+  const score = normalizeScore(obj.score, fallback.score)
+  const state: RelationshipState = {
+    score,
+    lastInteractionDate: normalizeDateString(obj.lastInteractionDate),
+    streak: normalizeNonNegativeInteger(obj.streak, fallback.streak),
+    totalDaysInteracted: normalizeNonNegativeInteger(
+      obj.totalDaysInteracted,
+      fallback.totalDaysInteracted,
+    ),
+  }
+
+  const levelReachedAt = normalizeLevelReachedAt(obj.levelReachedAt)
+  if (levelReachedAt) state.levelReachedAt = levelReachedAt
+
+  const lastSessionEmotion = normalizeOptionalEmotion(obj.lastSessionEmotion)
+  if (lastSessionEmotion) state.lastSessionEmotion = lastSessionEmotion
+
+  const lastSessionTopic = normalizeOptionalTopic(obj.lastSessionTopic)
+  if (lastSessionTopic) state.lastSessionTopic = lastSessionTopic
+
+  const subDimensions = normalizeSubDimensions(obj.subDimensions)
+  if (subDimensions) state.subDimensions = subDimensions
+
+  const firedMilestoneKeys = normalizeStringList(obj.firedMilestoneKeys, 100)
+  if (firedMilestoneKeys) state.firedMilestoneKeys = firedMilestoneKeys
+
+  return state
+}
+
 const MAX_SCORE = 100
 const MIN_SCORE = 0
 const DAILY_INTERACTION_BONUS = 1
@@ -62,6 +98,61 @@ const ABSENCE_PENALTY_PER_DAY = 2
 
 function todayDateString(): string {
   return new Date().toISOString().slice(0, 10)
+}
+
+function normalizeScore(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
+  return clampScore(Math.round(value))
+}
+
+function normalizeNonNegativeInteger(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
+  return Math.max(0, Math.round(value))
+}
+
+function normalizeDateString(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  return Number.isFinite(Date.parse(trimmed)) ? trimmed : ''
+}
+
+function normalizeOptionalTopic(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const normalized = value.replace(/\s+/g, ' ').trim().slice(0, 80)
+  return normalized || undefined
+}
+
+function normalizeOptionalEmotion(value: unknown): RelationshipState['lastSessionEmotion'] {
+  if (!value || typeof value !== 'object') return undefined
+  return normalizeEmotionState(value)
+}
+
+function normalizeLevelReachedAt(
+  value: unknown,
+): Partial<Record<RelationshipLevel, string>> | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const obj = value as Partial<Record<RelationshipLevel, unknown>>
+  const next: Partial<Record<RelationshipLevel, string>> = {}
+  for (const level of RELATIONSHIP_LEVELS) {
+    const date = normalizeDateString(obj[level])
+    if (date) next[level] = date
+  }
+  return Object.keys(next).length > 0 ? next : undefined
+}
+
+function normalizeStringList(value: unknown, limit: number): string[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const item of value) {
+    if (typeof item !== 'string') continue
+    const trimmed = item.trim().slice(0, 80)
+    if (!trimmed || seen.has(trimmed)) continue
+    seen.add(trimmed)
+    out.push(trimmed)
+    if (out.length >= limit) break
+  }
+  return out.length > 0 ? out : undefined
 }
 
 function daysBetween(dateA: string, dateB: string): number {
@@ -131,6 +222,13 @@ export function applyAbsenceDecay(state: RelationshipState): RelationshipState {
 // ── Relationship level ─────────────────────────────────────────────────────
 
 export type RelationshipLevel = 'stranger' | 'acquaintance' | 'friend' | 'close_friend' | 'intimate'
+const RELATIONSHIP_LEVELS: ReadonlyArray<RelationshipLevel> = [
+  'stranger',
+  'acquaintance',
+  'friend',
+  'close_friend',
+  'intimate',
+]
 
 export function getRelationshipLevel(state: RelationshipState): RelationshipLevel {
   if (state.score >= 80) return 'intimate'

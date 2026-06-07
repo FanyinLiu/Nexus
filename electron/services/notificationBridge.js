@@ -15,6 +15,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { checkUrlSafetyWithDns } from './urlSafety.js'
 import {
+  summarizeNotificationMessagePayload,
   normalizeWebhookPayload,
   sanitizeNotificationChannels,
   WEBHOOK_MAX_BODY_BYTES,
@@ -282,6 +283,12 @@ async function pollRssChannel(channel) {
         channelName: channel.name,
         title: item.title || '(no title)',
         body: body.slice(0, 500),
+        ...summarizeNotificationMessagePayload({
+          title: item.title || '(no title)',
+          body: body,
+          sourceName: channel.name,
+          sourceId: channel.id,
+        }),
         receivedAt: now,
         read: false,
       }

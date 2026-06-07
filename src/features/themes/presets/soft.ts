@@ -1,4 +1,4 @@
-import { defaultThemeTokens } from '../tokens'
+import { defaultThemeTokens } from '../tokens.ts'
 import type { ThemeDefinition } from '../../../types/theme'
 
 export const softTheme: ThemeDefinition = {

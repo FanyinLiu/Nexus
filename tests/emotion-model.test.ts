@@ -7,6 +7,7 @@ import {
   decayEmotion,
   emotionToPetMood,
   formatEmotionForPrompt,
+  normalizeEmotionState,
   type EmotionState,
 } from '../src/features/autonomy/emotionModel.ts'
 
@@ -15,6 +16,21 @@ import {
 function withState(overrides: Partial<EmotionState>): EmotionState {
   return { ...createDefaultEmotionState(), ...overrides }
 }
+
+test('normalizeEmotionState clamps persisted values and falls back per-axis', () => {
+  assert.deepEqual(normalizeEmotionState({
+    energy: 2,
+    warmth: -1,
+    curiosity: 'bad',
+    concern: Number.NaN,
+  }), {
+    energy: 1,
+    warmth: 0,
+    curiosity: 0.5,
+    concern: 0.2,
+  })
+  assert.deepEqual(normalizeEmotionState(null), createDefaultEmotionState())
+})
 
 // ── Original 7 moods ───────────────────────────────────────────────────────
 

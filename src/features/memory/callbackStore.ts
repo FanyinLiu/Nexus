@@ -41,23 +41,53 @@ function isLive(entry: PendingCallback, nowMs: number): boolean {
 
 export function loadCallbackQueue(): PendingCallback[] {
   const raw = readJson<unknown>(MEMORY_CALLBACK_QUEUE_STORAGE_KEY, [])
-  if (!Array.isArray(raw)) return []
+  if (!Array.isArray(raw)) {
+    persist([])
+    return []
+  }
   const nowMs = Date.now()
   const valid: PendingCallback[] = []
+  const seenMemoryIds = new Set<string>()
+  let dirty = raw.length > MAX_PENDING
   for (const item of raw) {
-    if (!item || typeof item !== 'object') continue
+    if (!item || typeof item !== 'object') {
+      dirty = true
+      continue
+    }
     const obj = item as Record<string, unknown>
-    if (typeof obj.memoryId !== 'string' || !obj.memoryId) continue
-    if (typeof obj.queuedAt !== 'string') continue
-    if (typeof obj.expiresAt !== 'string') continue
+    if (typeof obj.memoryId !== 'string' || !obj.memoryId) {
+      dirty = true
+      continue
+    }
+    if (typeof obj.queuedAt !== 'string') {
+      dirty = true
+      continue
+    }
+    if (typeof obj.expiresAt !== 'string') {
+      dirty = true
+      continue
+    }
     const entry: PendingCallback = {
       memoryId: obj.memoryId,
       queuedAt: obj.queuedAt,
       expiresAt: obj.expiresAt,
     }
-    if (isLive(entry, nowMs)) valid.push(entry)
+    if (seenMemoryIds.has(entry.memoryId)) {
+      dirty = true
+      continue
+    }
+    seenMemoryIds.add(entry.memoryId)
+    if (isLive(entry, nowMs)) {
+      valid.push(entry)
+    } else {
+      dirty = true
+    }
   }
-  return valid
+  const compacted = valid.slice(0, MAX_PENDING)
+  if (dirty || compacted.length !== raw.length) {
+    persist(compacted)
+  }
+  return compacted
 }
 
 function persist(queue: PendingCallback[]): void {

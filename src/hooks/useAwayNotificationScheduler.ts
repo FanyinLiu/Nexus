@@ -2,9 +2,8 @@ import { useEffect, useRef } from 'react'
 import { decideAwayNotification } from '../features/proactive/awayScheduler.ts'
 import { pickAwayNotificationCopy } from '../features/proactive/awayNotificationCopy.ts'
 import {
-  PROACTIVE_AWAY_LAST_FIRED_STORAGE_KEY,
-  readJson,
-  writeJson,
+  loadAwayLastFiredMs,
+  saveAwayLastFiredMs,
 } from '../lib/storage'
 import type { AppSettings, ChatMessage } from '../types'
 
@@ -57,7 +56,7 @@ export function useAwayNotificationScheduler({
       if (open) return
 
       const lastUserActivityMs = findLastUserMessageMs(msgs)
-      const lastFiredMs = readJson<number | null>(PROACTIVE_AWAY_LAST_FIRED_STORAGE_KEY, null)
+      const lastFiredMs = loadAwayLastFiredMs()
       const decision = decideAwayNotification({
         enabled: true,
         nowMs: Date.now(),
@@ -79,7 +78,7 @@ export function useAwayNotificationScheduler({
           title: copy.title,
           body: copy.body,
         })
-        writeJson(PROACTIVE_AWAY_LAST_FIRED_STORAGE_KEY, Date.now())
+        saveAwayLastFiredMs(Date.now())
       } catch (err) {
         console.warn('[awayNotification] fire failed:', err)
       }

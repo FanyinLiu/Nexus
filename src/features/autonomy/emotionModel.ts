@@ -25,6 +25,24 @@ export function createDefaultEmotionState(): EmotionState {
   return { energy: 0.5, warmth: 0.6, curiosity: 0.5, concern: 0.2 }
 }
 
+export function normalizeEmotionState(value: unknown): EmotionState {
+  const fallback = createDefaultEmotionState()
+  if (!value || typeof value !== 'object') return fallback
+  const obj = value as Partial<Record<keyof EmotionState, unknown>>
+  return {
+    energy: normalizeEmotionAxis(obj.energy, fallback.energy),
+    warmth: normalizeEmotionAxis(obj.warmth, fallback.warmth),
+    curiosity: normalizeEmotionAxis(obj.curiosity, fallback.curiosity),
+    concern: normalizeEmotionAxis(obj.concern, fallback.concern),
+  }
+}
+
+function normalizeEmotionAxis(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? clamp(value)
+    : fallback
+}
+
 // ── Update signals ──────────────────────────────────────────────────────────
 
 export type EmotionSignal =
