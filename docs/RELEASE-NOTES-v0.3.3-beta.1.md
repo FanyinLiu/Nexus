@@ -1,6 +1,6 @@
-# Nexus v0.3.3
+# Nexus v0.3.3-beta.1
 
-> **Maintenance & polish release.** `v0.3.3` is a reliability, behaviour-polish, and slimming release on top of `v0.3.2`. It makes imported character cards actually drive chat, adds a cloud→local voice-recognition fallback, fixes a cluster of voice/notification/persona bugs, changes a couple of pet defaults for the better, and removes ~2,500 lines of dead/dormant code. No major new feature surface — the bigger autonomy work is tracked separately for v0.4.
+> **Beta — maintenance & polish.** First beta of the `v0.3.3` line on top of `v0.3.2`: a reliability, behaviour-polish, and slimming release. It makes imported character cards actually drive chat, adds a cloud→local voice-recognition fallback, fixes a cluster of voice/notification/persona bugs, changes a couple of pet defaults for the better, and removes ~2,500 lines of dead/dormant code. No major new feature surface — the bigger autonomy work is tracked separately for v0.4. As a pre-release it is for manual validation only; stable users are not auto-upgraded.
 
 ## What changes for users
 
@@ -40,7 +40,13 @@
 - **~2,500 lines of dead/dormant code removed:** orphaned test-only modules and barrels, the dormant realtime-voice backend (gated behind an off-by-default flag), the unused agent-workspace fs-tools stack, a dead inter-plugin delivery path, and duplicate/stub files.
 - Dropped the unused `protobufjs` dependency.
 
-## Notes & known limitations
+## Known issues
 
-- **Unsigned distribution (macOS arm64).** First launch needs the usual right-click → Open, and granting Microphone / Screen Recording happens per the in-app prompts. This is unchanged in `v0.3.3`.
+- **Screen Recording permission on the unsigned build.** Because the app isn’t code-signed, macOS TCC may not list Nexus under System Settings → Privacy → Screen Recording until it actually requests capture. The default-off “desktop awareness” (screen OCR) is the only thing that requests it; turn that on (or use right-click → Open + remove the quarantine attribute) to get the prompt. Microphone behaves the same. Deferred to a future signed build.
+- **Deferred internal cleanup (no user impact):** ~291 unused i18n keys and a small tail of dead exports are not yet pruned; planned for a follow-up.
+
+## Notes & limitations
+
+- **Unsigned distribution (macOS arm64).** First launch needs the usual right-click → Open; granting Microphone / Screen Recording follows the in-app prompts. Unchanged in `v0.3.3`.
 - The “Codex pet” gallery/import/creator feature keeps its name — it integrates with the external `codex-pet.org` / `CodexPets.net` community ecosystem and is not Nexus-branded.
+- This is a **pre-release**: download manually from GitHub Releases for validation. Stable users are not auto-upgraded.
