@@ -12,6 +12,7 @@ export type TelegramAnnouncementMessage = {
   chatTitle: string
   fromUser: string
   text: string
+  media?: string | null
   messageId: number
 }
 
@@ -54,6 +55,7 @@ export function buildTelegramAnnouncementContent(
       sender: message.fromUser,
       fallbackTitle: message.chatTitle,
       text: message.text,
+      media: message.media,
     },
     getTelegramAnnouncementSettings(settings),
     t,

@@ -3,8 +3,8 @@ import type { AppSettings, DebugConsoleEventSource } from '../../types'
 import { useTelegramGateway, type TelegramIncoming } from '../../hooks/useTelegramGateway'
 import { rememberTelegramChatId } from '../../lib/coreRuntime'
 import { isActionAllowed } from '../../features/integrations/permissions'
-import { parseCsvIdSet, resolveBridgeReplyTarget } from './bridgeUtils'
-import { buildTelegramAnnouncementContent } from './telegramAnnouncement'
+import { resolveBridgeReplyTarget } from './bridgeUtils'
+import { routeTelegramMessage } from './telegramMessageRouter'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 
 type ChatBridge = {
@@ -53,42 +53,11 @@ export function useTelegramBridge({
   const telegramSendMessageRef = useRef<(chatId: number, text: string, replyTo?: number) => Promise<void>>(undefined)
 
   const handleTelegramMessage = useCallback((msg: TelegramIncoming) => {
-    const ownerChatIds = parseCsvIdSet(settingsRef.current.ownerTelegramChatIds)
-    // Default: until the master explicitly declares their own chatId(s),
-    // every incoming Telegram message is treated as an external contact
-    // (named bridge prefix). Only chatIds that match the configured owner
-    // list are promoted to "master via Telegram".
-    const isOwner = ownerChatIds.has(String(msg.chatId))
-
-    debugConsole.appendDebugConsoleEvent({
-      source: 'autonomy',
-      title: 'Telegram message',
-      detail: `[${msg.chatTitle}] ${msg.fromUser}${isOwner ? t('chat.bridge.owner_suffix') : ''}: ${msg.text}`,
+    routeTelegramMessage(msg, settingsRef.current, t, {
+      appendDebugConsoleEvent: debugConsole.appendDebugConsoleEvent,
+      pushCompanionNotice: chat.pushCompanionNotice,
+      sendMessage: chat.sendMessage,
     })
-
-    const announcement = buildTelegramAnnouncementContent(msg, settingsRef.current, t)
-    if (announcement && chat.pushCompanionNotice) {
-      debugConsole.appendDebugConsoleEvent({
-        source: 'autonomy',
-        title: 'Telegram announcement',
-        detail: announcement.speechContent,
-      })
-      void chat.pushCompanionNotice({
-        ...announcement,
-        autoHideMs: 10_000,
-      })
-    }
-
-    // Forward to companion chat as a Telegram-sourced message.
-    // Owner-match → prefix without a name so the system prompt treats it as
-    // the master speaking via Telegram. Otherwise keep the named prefix so
-    // the model responds to the external contact directly.
-    if (chat.sendMessage) {
-      const prefixedText = isOwner
-        ? `【Telegram】${msg.text}`
-        : `【Telegram · ${msg.fromUser}】${msg.text}`
-      void chat.sendMessage(prefixedText, { source: 'telegram' })
-    }
 
     const chatEntry = { chatId: msg.chatId, messageId: msg.messageId }
     lastTelegramChatRef.current = chatEntry

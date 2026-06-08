@@ -12,6 +12,11 @@ import {
   getDiscordAnnouncementSettings,
 } from '../src/app/controllers/messagingAnnouncement.ts'
 import { buildLocalMessagingAnnouncementContent } from '../src/app/controllers/localMessagingAnnouncement.ts'
+import {
+  routeTelegramMessage,
+  type TelegramRouteDeps,
+} from '../src/app/controllers/telegramMessageRouter.ts'
+import type { TelegramIncoming } from '../src/hooks/useTelegramGateway.ts'
 import type { TranslationKey } from '../src/types/i18n.ts'
 
 const message: TelegramAnnouncementMessage = {
@@ -185,4 +190,107 @@ test('local webhook messages use source, sender, preview, and provided message i
   assert.ok(result)
   assert.equal(result.dedupeKey, 'message:wecom:room-2:msg-4')
   assert.equal(result.speechContent, 'chat.bridge.messaging_announcement_speech_preview|企业微信|李四|麻烦看下发布清单 谢谢')
+})
+
+test('telegram media announcement stays generic and never leaks content even with preview on', () => {
+  const result = buildTelegramAnnouncementContent(
+    { ...message, text: '', media: 'photo' },
+    {
+      telegramAnnounceIncomingEnabled: true,
+      telegramAnnounceMessagePreview: true,
+    },
+    t,
+  )
+
+  assert.ok(result)
+  assert.equal(result.dedupeKey, 'message:telegram:42:1001')
+  assert.equal(result.speechContent, 'chat.bridge.messaging_announcement_speech_media|Klein|')
+  assert.equal(result.chatContent.startsWith('chat.bridge.messaging_announcement_chat_media'), true)
+})
+
+// ── routeTelegramMessage: the IPC → bridge → announce/forward seam ────────────
+
+function makeIncoming(overrides: Partial<TelegramIncoming> = {}): TelegramIncoming {
+  return {
+    chatId: 42,
+    chatTitle: 'Product chat',
+    fromUser: 'Klein',
+    text: 'please check the release gate before shipping',
+    media: null,
+    messageId: 1001,
+    timestamp: new Date(0).toISOString(),
+    ...overrides,
+  }
+}
+
+function makeDeps() {
+  const notices: Array<{ chatContent: string; speechContent?: string; autoHideMs?: number }> = []
+  const sends: Array<{ text?: string; options?: { source?: string } }> = []
+  const debug: Array<{ title: string; detail: string }> = []
+  const deps: TelegramRouteDeps = {
+    appendDebugConsoleEvent: (event) => { debug.push({ title: event.title, detail: event.detail }) },
+    pushCompanionNotice: async (payload) => { notices.push(payload) },
+    sendMessage: async (text, options) => { sends.push({ text, options }); return undefined },
+  }
+  return { notices, sends, debug, deps }
+}
+
+test('routeTelegramMessage announces and forwards a text message', () => {
+  const { notices, sends, debug, deps } = makeDeps()
+  const out = routeTelegramMessage(
+    makeIncoming(),
+    { ownerTelegramChatIds: '', telegramAnnounceIncomingEnabled: true, telegramAnnounceMessagePreview: false },
+    t,
+    deps,
+  )
+
+  assert.equal(out.isOwner, false)
+  assert.equal(notices.length, 1)
+  assert.equal(notices[0].speechContent, 'chat.bridge.messaging_announcement_speech|Klein|')
+  assert.equal(notices[0].autoHideMs, 10_000)
+  assert.equal(sends.length, 1)
+  assert.equal(sends[0].text, '【Telegram · Klein】please check the release gate before shipping')
+  assert.equal(sends[0].options?.source, 'telegram')
+  assert.deepEqual(debug.map((d) => d.title), ['Telegram message', 'Telegram announcement'])
+})
+
+test('routeTelegramMessage stays silent when announce is off but still forwards to chat', () => {
+  const { notices, sends, deps } = makeDeps()
+  routeTelegramMessage(
+    makeIncoming(),
+    { ownerTelegramChatIds: '', telegramAnnounceIncomingEnabled: false, telegramAnnounceMessagePreview: false },
+    t,
+    deps,
+  )
+
+  assert.equal(notices.length, 0)
+  assert.equal(sends.length, 1)
+})
+
+test('routeTelegramMessage announces media generically and does NOT forward it to chat', () => {
+  const { notices, sends, deps } = makeDeps()
+  routeTelegramMessage(
+    makeIncoming({ text: '', media: 'sticker' }),
+    { ownerTelegramChatIds: '', telegramAnnounceIncomingEnabled: true, telegramAnnounceMessagePreview: true },
+    t,
+    deps,
+  )
+
+  assert.equal(notices.length, 1)
+  assert.equal(notices[0].speechContent, 'chat.bridge.messaging_announcement_speech_media|Klein|')
+  assert.equal(sends.length, 0)
+})
+
+test('routeTelegramMessage promotes an owner chat to an unnamed master prefix', () => {
+  const { sends, debug, deps } = makeDeps()
+  const out = routeTelegramMessage(
+    makeIncoming(),
+    { ownerTelegramChatIds: '42', telegramAnnounceIncomingEnabled: true, telegramAnnounceMessagePreview: false },
+    t,
+    deps,
+  )
+
+  assert.equal(out.isOwner, true)
+  assert.equal(sends[0].text, '【Telegram】please check the release gate before shipping')
+  assert.ok(debug[0].detail.includes('chat.bridge.owner_suffix'))
 })
