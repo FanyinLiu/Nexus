@@ -52,6 +52,7 @@ export { getPetIconPath } from './windowAssets.js'
 export {
   getPetWindowStateForEvent,
   updatePetWindowStateForEvent,
+  setPetFreeModeForEvent,
 } from './petWindowInstances.js'
 export {
   panelWindowState,

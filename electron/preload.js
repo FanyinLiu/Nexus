@@ -22,6 +22,7 @@ const realtimeVoiceApi = realtimeVoiceEnabled
 contextBridge.exposeInMainWorld('desktopPet', {
   updatePetWindowState: (state) => ipcRenderer.invoke('pet-window:update-state', state),
   getPetWindowState: () => ipcRenderer.invoke('pet-window:get-state'),
+  setPetFreeMode: (freeMode) => ipcRenderer.invoke('pet-window:set-free-mode', { freeMode }),
   subscribePetWindowState: (listener) => {
     const handler = (_event, state) => listener(state)
     ipcRenderer.on('pet-window:state-changed', handler)

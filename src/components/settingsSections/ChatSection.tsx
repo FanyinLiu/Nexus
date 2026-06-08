@@ -27,6 +27,7 @@ import type { AppSettings, CharacterProfile, CompanionRelationshipType } from '.
 import { CharacterProfilePanel } from './chat/CharacterProfilePanel'
 import { RelationshipPanel } from './chat/RelationshipPanel'
 import { PetModelPicker } from './chat/PetModelPicker'
+import { PetMotionModeToggle } from './chat/PetMotionModeToggle'
 import { CodexPetGalleryPanel } from './chat/CodexPetGalleryPanel'
 import { SpriteCreatorKitPanel } from './chat/SpriteCreatorKitPanel'
 
@@ -344,6 +345,8 @@ export const ChatSection = memo(function ChatSection({
         translatePetText={translatePetText}
         onSelectPetModel={selectPetModelById}
       />
+
+      <PetMotionModeToggle isSpriteAvatar={Boolean(petModel?.spriteAtlas)} ti={ti} />
 
       <details className="settings-mini-group settings-chat-advanced-card">
         <summary className="settings-mini-group__head">

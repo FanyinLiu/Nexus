@@ -1555,6 +1555,9 @@ export const jaMessages: TranslationDictionary = {
   'settings.window.synced': 'デスクトップの挙動を同期しました',
   'settings.window.sync_failed': 'デスクトップ同期に失敗しました。再試行してください',
   'settings.pet.import_error': 'ローカル Live2D モデルのインポートに失敗しました。後ほど再度お試しください。',
+  'settings.pet.free_mode': '自由モード（画面内を歩く・背景なし）',
+  'settings.pet.free_mode_hint':
+    'スプライトのペットのみ。オンにすると背景が透明になり画面内を自由に歩き回ります。オフ（既定）はその場に留まり、シーン背景を表示します。',
   'theme.nexus-default': 'Nexus デフォルトテーマ',
   'theme.soft': 'ソフトテーマ',
   'theme.high-contrast': 'ハイコントラストテーマ',

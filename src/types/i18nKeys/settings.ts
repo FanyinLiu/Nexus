@@ -724,6 +724,8 @@ export type SettingsTranslationKey =
   | 'settings.window.synced'
   | 'settings.window.sync_failed'
   | 'settings.pet.import_error'
+  | 'settings.pet.free_mode'
+  | 'settings.pet.free_mode_hint'
   | 'settings.save_failed_fallback'
   | 'settings.save_failed_system'
   | 'settings.import_pet_model_unsupported'

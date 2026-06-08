@@ -1555,6 +1555,9 @@ export const koMessages: TranslationDictionary = {
   'settings.window.synced': '데스크톱 동작이 동기화되었습니다',
   'settings.window.sync_failed': '데스크톱 동기화에 실패했습니다. 다시 시도해 주세요',
   'settings.pet.import_error': '로컬 Live2D 모델 가져오기에 실패했습니다. 나중에 다시 시도해 주세요.',
+  'settings.pet.free_mode': '자유 모드(화면을 돌아다님 · 배경 없음)',
+  'settings.pet.free_mode_hint':
+    '스프라이트 펫에만 적용됩니다. 켜면 배경이 투명해지고 캐릭터가 화면 전체를 자유롭게 돌아다닙니다. 끄면(기본값) 제자리에 머물며 장면 배경을 표시합니다.',
   'theme.nexus-default': 'Nexus 기본 테마',
   'theme.soft': '소프트 테마',
   'theme.high-contrast': '고대비 테마',

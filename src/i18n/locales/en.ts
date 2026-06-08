@@ -1555,6 +1555,9 @@ export const enMessages: TranslationDictionary = {
   'settings.window.synced': 'Desktop behavior synced',
   'settings.window.sync_failed': 'Desktop sync failed, please retry',
   'settings.pet.import_error': 'Failed to import local avatar model. Please try again later.',
+  'settings.pet.free_mode': 'Free roam (no backdrop)',
+  'settings.pet.free_mode_hint':
+    'Sprite pets only. On: the character roams your whole desktop with a transparent background. Off (default): stays put and shows the scene backdrop.',
   'theme.nexus-default': 'Nexus Default Theme',
   'theme.soft': 'Soft Theme',
   'theme.high-contrast': 'High Contrast Theme',

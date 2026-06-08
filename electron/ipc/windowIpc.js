@@ -8,6 +8,7 @@ import {
   updateHeartbeat,
   updateRuntimeState,
   updatePetWindowStateForEvent,
+  setPetFreeModeForEvent,
   updatePanelWindowState,
   showPanelWindow,
   showPetContextMenu,
@@ -92,6 +93,11 @@ export function register() {
     requireTrustedSender(event)
     state = validatePetWindowStatePayload(state)
     return updatePetWindowStateForEvent(event, state)
+  })
+
+  ipcMain.handle('pet-window:set-free-mode', (event, payload) => {
+    requireTrustedSender(event)
+    return setPetFreeModeForEvent(event, Boolean(payload?.freeMode))
   })
 
   ipcMain.handle('window:open-panel', (event, section) => {

@@ -1555,6 +1555,9 @@ export const zhCNMessages: TranslationDictionary = {
   'settings.window.synced': '桌面行为已同步',
   'settings.window.sync_failed': '桌面行为同步失败，请重试',
   'settings.pet.import_error': '导入本地形象模型失败，请稍后再试。',
+  'settings.pet.free_mode': '自由模式（满屏走 · 无背景）',
+  'settings.pet.free_mode_hint':
+    '仅像素桌宠。开启后角色满屏自由走动、背景透明；关闭（默认）则待在原地、显示场景背景。',
   'theme.nexus-default': 'Nexus 默认主题',
   'theme.soft': '柔和主题',
   'theme.high-contrast': '高对比主题',

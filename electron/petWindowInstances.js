@@ -25,7 +25,11 @@ export function makePetWindowState() {
     clickThrough: false,
     petHotspotActive: false,
     locomotionActivity: 'idle',
-    freeMode: getSavedPetPref('freeMode') ?? true,
+    // Default to fixed mode (keeps the scene backdrop) — free mode / no-backdrop
+    // roaming is opt-in via the settings toggle or the right-click menu, not the
+    // out-of-box default. Users who explicitly chose free mode keep it (saved in
+    // pet-prefs.json); only the unset default changed.
+    freeMode: getSavedPetPref('freeMode') ?? false,
     roamCapable: true,
   }
 }
@@ -115,5 +119,15 @@ export function updatePetWindowStateForEvent(event, partialState = {}) {
   inst.state = { ...inst.state, ...safe }
   applyPetInstance(inst)
   syncPetInstance(inst)
+  return inst.state
+}
+
+// Toggle free mode through the locomotion controller (not a raw state patch),
+// so it persists to pet-prefs.json and resets locomotion exactly the way the
+// right-click context-menu toggle does. Used by the settings-page toggle.
+export function setPetFreeModeForEvent(event, freeMode) {
+  const inst = petInstanceForEvent(event) ?? mainPetInstance()
+  if (!inst) return null
+  inst.loco.setFreeMode(Boolean(freeMode))
   return inst.state
 }

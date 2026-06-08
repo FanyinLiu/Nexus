@@ -222,6 +222,7 @@ declare global {
     desktopPet?: {
       updatePetWindowState: (state: Partial<PetWindowState>) => Promise<PetWindowState>
       getPetWindowState: () => Promise<PetWindowState>
+      setPetFreeMode: (freeMode: boolean) => Promise<PetWindowState | null>
       subscribePetWindowState: (listener: (state: PetWindowState) => void) => () => void
       dragBy: (delta: { x: number; y: number }) => Promise<void>
       openPanel: (section?: 'chat' | 'settings') => Promise<void>

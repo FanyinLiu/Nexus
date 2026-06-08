@@ -1608,6 +1608,8 @@ export const translationKeys: TranslationKey[] = [
   'settings.window.synced',
   'settings.window.sync_failed',
   'settings.pet.import_error',
+  'settings.pet.free_mode',
+  'settings.pet.free_mode_hint',
   'theme.nexus-default',
   'theme.soft',
   'theme.high-contrast',
