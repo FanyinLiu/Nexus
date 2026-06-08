@@ -4,6 +4,7 @@ import {
   encodeVadAudioToWavBlob,
 } from '../../features/hearing/browserVad.ts'
 import { createMainProcessVadController } from '../../features/hearing/mainProcessVad.ts'
+import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
 import type { VoiceBusEvent } from '../../features/voice/busEvents'
 import { formatTraceLabel } from '../../features/voice/shared'
@@ -223,20 +224,40 @@ export async function startVadConversation(
       )
 
       const audioBlob = encodeVadAudioToWavBlob(audio)
-      const transcript = (
-        await window.desktopPet!.transcribeAudio({
-          providerId: params.currentSettings.speechInputProviderId,
-          baseUrl: params.currentSettings.speechInputApiBaseUrl,
-          apiKey: params.currentSettings.speechInputApiKey,
-          model: params.currentSettings.speechInputModel,
-          traceId,
-          language: params.currentSettings.speechRecognitionLang,
-          hotwords: params.currentSettings.speechInputHotwords,
-          audioBase64: await blobToBase64(audioBlob),
-          mimeType: 'audio/wav',
-          fileName: 'speech.wav',
-        })
-      ).text.trim()
+      let transcript = ''
+      try {
+        transcript = (
+          await window.desktopPet!.transcribeAudio({
+            providerId: params.currentSettings.speechInputProviderId,
+            baseUrl: params.currentSettings.speechInputApiBaseUrl,
+            apiKey: params.currentSettings.speechInputApiKey,
+            model: params.currentSettings.speechInputModel,
+            traceId,
+            language: params.currentSettings.speechRecognitionLang,
+            hotwords: params.currentSettings.speechInputHotwords,
+            audioBase64: await blobToBase64(audioBlob),
+            mimeType: 'audio/wav',
+            fileName: 'speech.wav',
+          })
+        ).text.trim()
+      } catch (cloudError) {
+        // Cloud ASR failed — when the user enabled failover and the local
+        // sherpa SenseVoice model is installed, retry fully offline. The VAD
+        // path still holds the raw 16kHz samples, so hand them straight to the
+        // one-shot local transcribe (which lazy-loads the model on first use).
+        const status = params.currentSettings.speechInputFailoverEnabled
+          ? await checkSenseVoiceAvailability().catch(() => null)
+          : null
+        if (!status?.installed || !status.modelFound || !window.desktopPet?.sensevoiceTranscribe) {
+          throw cloudError
+        }
+        params.appendVoiceTrace(
+          'STT failover',
+          `#${formatTraceLabel(traceId)} cloud transcription failed, falling back to local SenseVoice`,
+        )
+        const local = await window.desktopPet.sensevoiceTranscribe({ samples: audio, sampleRate: 16_000 })
+        transcript = (local.text ?? '').trim()
+      }
 
       await session.tearDown().catch(() => undefined)
 
