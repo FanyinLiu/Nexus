@@ -26,6 +26,17 @@ function clearMeter(): void {
   meter.__resetDailyCache()
 }
 
+// Mirror contextMeter's local date key. loadDailyRange enumerates day keys in
+// LOCAL time (since 5b09d0b, to line up with the user's own "today"), so tests
+// must write/read local-date keys too — toISOString() is UTC and drifts a day
+// off in non-UTC zones, which made these assertions flaky by time-of-day.
+function localDateKey(d: Date): string {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 describe('loadDailyRange', () => {
   beforeEach(clearMeter)
 
@@ -38,10 +49,10 @@ describe('loadDailyRange', () => {
 
     // Simulate a previous day's record by writing directly.
     const yesterday = new Date()
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1)
-    const yesterdayKey = `nexus:metering:day:${yesterday.toISOString().slice(0, 10)}`
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayKey = `nexus:metering:day:${localDateKey(yesterday)}`
     localStorage.setItem(yesterdayKey, JSON.stringify({
-      date: yesterday.toISOString().slice(0, 10),
+      date: localDateKey(yesterday),
       totalInputTokens: 100,
       totalOutputTokens: 50,
       totalCostUsd: 0.001,
@@ -52,12 +63,12 @@ describe('loadDailyRange', () => {
     const range = meter.loadDailyRange(7)
     assert.ok(range.length >= 2, `expected ≥2 days, got ${range.length}`)
     // Index 0 is today; index 1 should be yesterday.
-    assert.equal(range[0].date, new Date().toISOString().slice(0, 10))
-    assert.equal(range[1].date, yesterday.toISOString().slice(0, 10))
+    assert.equal(range[0].date, localDateKey(new Date()))
+    assert.equal(range[1].date, localDateKey(yesterday))
   })
 
   test('normalises legacy records missing byModel', () => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = localDateKey(new Date())
     // Legacy shape: no byModel field.
     localStorage.setItem(`nexus:metering:day:${today}`, JSON.stringify({
       date: today,
@@ -80,7 +91,7 @@ describe('loadDailyRange', () => {
   })
 
   test('skips corrupt entries silently', () => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = localDateKey(new Date())
     localStorage.setItem(`nexus:metering:day:${today}`, '{not valid json')
     assert.deepEqual(meter.loadDailyRange(1), [])
   })
