@@ -41,6 +41,32 @@ public/live2d/<你的模型目录>/
 
 这意味着很多模型即使没有手工微调，也能先跑起来。
 
+## 命名与顺序约定（决定“能不能自动对上”）
+
+自动推断**不是语义识别，靠的是约定**。模型按下面来做，开箱即用的程度最高：
+
+- **表情按“声明顺序”映射到情绪槽**（不是按名字）。`FileReferences.Expressions` 的顺序对应：
+
+  | 序号 | 情绪槽 |
+  |---|---|
+  | 0 | idle（默认 / 待机脸） |
+  | 1 | listening（聆听） |
+  | 2 | thinking（思考） |
+  | 3 | sleepy（困倦） |
+  | 4 | speaking（说话） |
+  | 5 | happy（开心，同时用作 touchBody） |
+  | 6 | touchFace（摸脸） |
+  | 7 | touchHead（摸头） |
+
+  顺序不对不会报错，但情绪会“错位”（会动，但表情对不上）。所以**请按这个顺序声明表情**。
+
+- **`surprised` / `confused` / `embarrassed` 没有位置默认**：想要这三个表情，必须在 `models.ts` 的 preset 里手写 `expressionMap`（运行时会保留它们）。
+- **动作组按名字模糊匹配**：待机用 `Idle` / `idle` / `Main`，交互用 `TapBody` / `Tap` / `Touch` / `Action`；都没有就用声明的第一个组。
+- **命名手势不会自动填**：`wave` / `nod` / `shake` / `tilt` / `point`（聊天里的 `[motion:wave]` 之类）只有在 preset 的 `motionGroups.gestures` 里手动映射后才会动，否则静默忽略。
+- **标准 Cubism 参数即可用**：`ParamAngleX/Y/Z`（头部跟随）、`LipSync` 组的嘴型参数、`EyeBlink` 组的眨眼，命名标准就自动生效；非标准参数需在 preset 里写 `rigParams` / `mouthParams`。
+
+> 一句话：动作和基础表情能“继承”，靠的是 **标准命名 + 正确的表情顺序** 这套约定，不是逐个模型去识别。命名规整的模型基本不用改代码；要精细控制再去 `models.ts` 加 preset。
+
 ## 什么时候需要手动加预设
 
 如果你遇到这些情况，再去手动写 preset 会更合适：
