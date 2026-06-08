@@ -8,6 +8,8 @@ export type MessagingAnnouncementMessage = {
   sender: string
   fallbackTitle: string
   text: string
+  /** Non-text message kind (photo/voice/...); when set, a generic media announce is built. */
+  media?: string | null
 }
 
 export type MessagingAnnouncementContent = {
@@ -58,6 +60,20 @@ export function buildMessagingAnnouncementContent(
 
   const source = shorten(message.sourceName || message.sourceId, MAX_SENDER_CHARS)
   const sender = getMessagingAnnouncementSender(message)
+  const dedupeKey = `message:${message.sourceId}:${message.targetId}:${message.messageId}`
+
+  // Media-only messages (no text) announce generically and never read content,
+  // regardless of the preview toggle — there is nothing to preview.
+  if (message.media) {
+    const params = { source, sender }
+    return {
+      chatContent: t('chat.bridge.messaging_announcement_chat_media', params),
+      bubbleContent: t('chat.bridge.messaging_announcement_bubble_media', params),
+      speechContent: t('chat.bridge.messaging_announcement_speech_media', params),
+      dedupeKey,
+    }
+  }
+
   const preview = settings.announceMessagePreview
     ? getMessagingAnnouncementPreview(message.text)
     : ''
@@ -84,7 +100,7 @@ export function buildMessagingAnnouncementContent(
         : 'chat.bridge.messaging_announcement_speech',
       params,
     ),
-    dedupeKey: `message:${message.sourceId}:${message.targetId}:${message.messageId}`,
+    dedupeKey,
   }
 }
 

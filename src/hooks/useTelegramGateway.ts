@@ -12,6 +12,8 @@ export type TelegramIncoming = {
   chatTitle: string
   fromUser: string
   text: string
+  /** Non-text message kind (photo/voice/sticker/...), or null for a text message. */
+  media?: string | null
   messageId: number
   timestamp: string
 }

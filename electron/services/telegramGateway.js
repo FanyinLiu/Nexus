@@ -26,11 +26,29 @@ let _pollAbort = null
 let _lastError = null
 
 /**
- * @typedef {{ chatId: number, chatTitle: string, fromUser: string, text: string, messageId: number, timestamp: string }} TelegramIncomingMessage
+ * @typedef {{ chatId: number, chatTitle: string, fromUser: string, text: string, media: string|null, messageId: number, timestamp: string }} TelegramIncomingMessage
  */
 
 /** @type {((msg: TelegramIncomingMessage) => void)|null} */
 let _onMessage = null
+
+// Non-text message payload keys we recognise, in priority order. A message that
+// carries one of these (and no text) is forwarded as a generic media message.
+const MEDIA_KINDS = [
+  'photo', 'video', 'animation', 'sticker', 'voice', 'audio',
+  'document', 'video_note', 'location', 'venue', 'contact', 'poll', 'dice',
+]
+
+/**
+ * @param {Record<string, unknown>} message
+ * @returns {string|null} the media kind, or null for service/unsupported messages
+ */
+function detectMediaKind(message) {
+  for (const kind of MEDIA_KINDS) {
+    if (message[kind] != null) return kind
+  }
+  return null
+}
 
 // ── Telegram API helpers ─────────────────────────────────────────────────────
 
@@ -95,7 +113,8 @@ async function pollOnce() {
 
       const from = /** @type {Record<string, unknown>|undefined} */ (message.from)
       const text = /** @type {string|undefined} */ (message.text)
-      if (!text) continue // Skip non-text messages for now
+      const media = text ? null : detectMediaKind(message)
+      if (!text && !media) continue // Skip service/unsupported messages
 
       const incoming = {
         chatId,
@@ -103,7 +122,8 @@ async function pollOnce() {
         fromUser: from
           ? String(from.first_name ?? '') + (from.last_name ? ` ${from.last_name}` : '')
           : 'Unknown',
-        text,
+        text: text ?? '',
+        media,
         messageId: /** @type {number} */ (message.message_id),
         timestamp: new Date(/** @type {number} */ (message.date) * 1000).toISOString(),
       }
