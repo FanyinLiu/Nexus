@@ -1,6 +1,6 @@
 {
   "id": "codex",
-  "displayName": "Codex",
-  "description": "A public Codex-style terminal companion packaged as a clean-room sprite pet.",
+  "displayName": "Pip",
+  "description": "Pip — a clean-room pixel terminal companion, the default sample sprite pet.",
   "spritesheetPath": "spritesheet.webp"
 }
