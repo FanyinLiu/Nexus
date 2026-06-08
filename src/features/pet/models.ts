@@ -380,6 +380,11 @@ export function buildRuntimePetModelDefinition(
       gestures: modelDefinition.motionGroups.gestures,
     },
     expressionMap: {
+      // Preserve authored slots that have no positional default — surprised /
+      // confused / embarrassed aren't covered by the positional rebuild below,
+      // so without this spread they'd be silently dropped (and fall back to the
+      // idle face at lookup time) even when a preset like `mao` supplies them.
+      ...modelDefinition.expressionMap,
       idle: pickExpression(expressions, 0, modelDefinition.expressionMap.idle),
       listening: pickExpression(expressions, 1, modelDefinition.expressionMap.listening),
       thinking: pickExpression(expressions, 2, modelDefinition.expressionMap.thinking),
