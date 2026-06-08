@@ -313,6 +313,24 @@ export const ChatSection = memo(function ChatSection({
             setDraft((prev) => ({ ...prev, systemPrompt: event.target.value }))
           }
         />
+        <div className="settings-control-card settings-chat-advanced-control">
+          <label className="settings-toggle">
+            <span>{ti('settings.chat.profile_persona_in_chat')}</span>
+            <input
+              type="checkbox"
+              checked={draft.profilePersonaInChatEnabled}
+              onChange={(event) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  profilePersonaInChatEnabled: event.target.checked,
+                }))
+              }
+            />
+          </label>
+          <p className="settings-drawer__hint">
+            {ti('settings.chat.profile_persona_in_chat_hint')}
+          </p>
+        </div>
       </div>
 
       <PetModelPicker

@@ -74,6 +74,14 @@ export interface IdentitySettings {
   characterProfiles: CharacterProfile[]
   activeCharacterProfileId: string
   /**
+   * When true, the active character profile's per-file persona (soul.md /
+   * memory.md) drives chat replies — the same persona the autonomy engine
+   * already loads — instead of only the global SOUL.md. Lets an imported
+   * Character Card actually shape the conversation. Off by default (gradual
+   * rollout): changing the persona prefix invalidates the cached system prompt.
+   */
+  profilePersonaInChatEnabled: boolean
+  /**
    * Soft framing for how the companion should hold the relationship — biases
    * the system prompt with a 1-line nudge. 'open_ended' (default) injects
    * nothing, preserving existing behavior for upgraded installs.

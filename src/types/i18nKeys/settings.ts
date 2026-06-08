@@ -544,6 +544,8 @@ export type SettingsTranslationKey =
   | 'settings.chat.relationship_type_hint'
   | 'settings.chat.system_prompt'
   | 'settings.chat.system_prompt_hint'
+  | 'settings.chat.profile_persona_in_chat'
+  | 'settings.chat.profile_persona_in_chat_hint'
   | 'settings.chat.live2d_model'
   | 'settings.chat.character_voice'
   | 'settings.chat.character_voice_hint'

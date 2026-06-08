@@ -1016,6 +1016,9 @@ export const zhTWMessages: TranslationDictionary = {
   'settings.chat.relationship_type_hint': '決定她和你保持怎樣的距離，不改變基礎能力。',
   'settings.chat.system_prompt': '性格與說話方式',
   'settings.chat.system_prompt_hint': '影響她的回覆語氣、邊界和陪伴感。',
+  'settings.chat.profile_persona_in_chat': '匯入的角色驅動聊天',
+  'settings.chat.profile_persona_in_chat_hint':
+    '讓目前檔案的人設（靈魂與記憶）參與回覆，而不只是上面的全域性格——匯入的角色卡才能真正影響對話。',
   'settings.chat.live2d_model': '夥伴形象',
   'settings.chat.character_voice': '專屬語音',
   'settings.chat.character_voice_hint': '只改音色和朗讀風格；提供商配置在「語音輸出」選項卡。',

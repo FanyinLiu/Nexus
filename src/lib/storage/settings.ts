@@ -64,6 +64,7 @@ const defaultSettings: AppSettings = {
   userName: '主人',
   characterProfiles: [],
   activeCharacterProfileId: '',
+  profilePersonaInChatEnabled: false,
   companionRelationshipType: 'open_ended',
   apiBaseUrl: 'http://127.0.0.1:11434/v1',
   apiKey: '',

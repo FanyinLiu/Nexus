@@ -16,6 +16,7 @@ import type {
   MemoryRecallContext,
 } from '../../types'
 import { buildLorebookSection } from './lorebookInjection.ts'
+import { DEFAULT_PERSONA_PROFILE_ID, type LoadedPersona } from '../autonomy/v2/personaTypes.ts'
 import { getApiProviderPreset } from '../models/index.ts'
 import { formatDesktopContext } from '../context/desktopContext.ts'
 import { formatNarrativeForPrompt } from '../memory/narrativeMemory.ts'
@@ -160,6 +161,35 @@ export type AssistantReplyRequestOptions = {
   firstImpression?: boolean
 }
 
+/**
+ * When `profilePersonaInChatEnabled` is on, load the active character
+ * profile's per-file persona (the same one the autonomy engine uses) so an
+ * imported Character Card can actually drive chat. Mirrors the resolution in
+ * useAutonomyV2Engine: active id → default fallback when the active profile
+ * has no persona files. Returns null when the flag is off, the bridge is
+ * unavailable, nothing is present, or loading fails — callers then keep the
+ * existing global-SOUL.md behaviour.
+ */
+export async function loadActiveProfilePersona(
+  settings: AppSettings,
+): Promise<LoadedPersona | null> {
+  if (!settings.profilePersonaInChatEnabled) return null
+  const load = window.desktopPet?.personaLoadProfile
+  if (!load) return null
+  try {
+    const activeId = settings.activeCharacterProfileId?.trim()
+    const profileId = activeId || DEFAULT_PERSONA_PROFILE_ID
+    let loaded = await load(profileId)
+    if (!loaded?.present && profileId !== DEFAULT_PERSONA_PROFILE_ID) {
+      loaded = await load(DEFAULT_PERSONA_PROFILE_ID)
+    }
+    return loaded?.present ? loaded : null
+  } catch (err) {
+    console.warn('[runtime] Per-profile persona load failed, using global SOUL.md:', err)
+    return null
+  }
+}
+
 export async function buildSystemPrompt(
   settings: AppSettings,
   memoryContext: MemoryRecallContext,
@@ -179,12 +209,18 @@ export async function buildSystemPrompt(
     console.warn('[runtime] Persona file loading failed, using settings fallback:', err)
   }
 
+  // Per-profile persona (imported card / switched profile) takes precedence
+  // over the global SOUL.md when the feature is enabled. soul.md carries the
+  // card's full identity (description/personality/scenario/system instructions).
+  const profilePersona = await loadActiveProfilePersona(settings)
+
   const prompts = getChatPromptStrings(settings.uiLanguage)
 
-  const personaSection = soulContent || settings.systemPrompt
+  const personaSection = profilePersona?.soul || soulContent || settings.systemPrompt
   const relationshipTypeSection = prompts.relationshipTypeBias(settings.companionRelationshipType)
-  const personaMemorySection = personaMemoryContent
-    ? prompts.personaMemoryHeader(personaMemoryContent)
+  const effectivePersonaMemory = profilePersona?.memory || personaMemoryContent
+  const personaMemorySection = effectivePersonaMemory
+    ? prompts.personaMemoryHeader(effectivePersonaMemory)
     : ''
 
   // Narrative threads: shared history clusters built by the dream cycle.
