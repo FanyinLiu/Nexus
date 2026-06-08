@@ -22,7 +22,6 @@ import type {
   ChatCompletionToolDefinition,
 } from '../../types'
 import { t } from '../../i18n/runtime.ts'
-import { executeFsTool, isFsToolName } from '../agent/fsTools.ts'
 import {
   executeBuiltInToolByName,
   isBuiltInToolName,
@@ -196,21 +195,6 @@ async function executeMcpToolCall(
     return JSON.stringify({ blocked: true, reason: preResult.blockReason || 'Blocked by hook' })
   }
   const finalArgs = toolDescriptor.arguments ?? args
-
-  // Built-in fs tools bypass MCP entirely.
-  if (isFsToolName(toolName)) {
-    const startMs = Date.now()
-    try {
-      const result = await executeFsTool(toolName, finalArgs)
-      const resultStr = truncateToolResult(JSON.stringify(result))
-      void runPostToolHooks(toolName, toolDescriptor, result, Date.now() - startMs)
-      return resultStr
-    } catch (err) {
-      const errorResult = { error: err instanceof Error ? err.message : String(err) }
-      void runPostToolHooks(toolName, toolDescriptor, errorResult, Date.now() - startMs)
-      return JSON.stringify(errorResult)
-    }
-  }
 
   if (!window.desktopPet?.mcpCallTool) {
     return JSON.stringify({ error: 'MCP tool calling not available' })

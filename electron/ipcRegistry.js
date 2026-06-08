@@ -12,7 +12,6 @@ import * as discordIpc from './ipc/discordIpc.js'
 import * as vaultIpc from './ipc/vaultIpc.js'
 import * as personaIpc from './ipc/personaIpc.js'
 import * as updaterIpc from './ipc/updaterIpc.js'
-import * as workspaceFsIpc from './ipc/workspaceFsIpc.js'
 import * as sherpaIpc from './ipc/sherpaIpc.js'
 import * as notificationIpc from './ipc/notificationIpc.js'
 import * as proactiveNotificationIpc from './ipc/proactiveNotificationIpc.js'
@@ -80,7 +79,6 @@ export function registerIpc() {
   vaultIpc.register()
   personaIpc.register()
   updaterIpc.register()
-  workspaceFsIpc.register()
   sherpaIpc.register()
   notificationIpc.register()
   proactiveNotificationIpc.register()

@@ -179,7 +179,6 @@ const defaultSettings: AppSettings = {
   budgetMonthlyCapUsd: 0,
   budgetHardStopEnabled: false,
   budgetDowngradeRatio: 0.8,
-  agentWorkspaceRoot: '',
   agentMaxIterations: 8,
   chatOutputTransforms: [],
   // Autonomy defaults — all off so existing users see no behavior change
@@ -520,7 +519,6 @@ export function loadSettings(): AppSettings {
     discordAnnounceMessagePreview: Boolean(stored.discordAnnounceMessagePreview ?? defaultSettings.discordAnnounceMessagePreview),
     discordPermissionMode: readPermissionMode(stored.discordPermissionMode, defaultSettings.discordPermissionMode),
     mcpPermissionMode: readPermissionMode(stored.mcpPermissionMode, defaultSettings.mcpPermissionMode),
-    agentWorkspaceRoot: String(stored.agentWorkspaceRoot ?? defaultSettings.agentWorkspaceRoot).trim(),
     agentMaxIterations: clampInteger(
       stored.agentMaxIterations ?? defaultSettings.agentMaxIterations,
       defaultSettings.agentMaxIterations,

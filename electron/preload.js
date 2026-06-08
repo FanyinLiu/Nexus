@@ -274,15 +274,6 @@ contextBridge.exposeInMainWorld('desktopPet', {
   personaProfileDir: (profileId) => ipcRenderer.invoke('persona:profile-dir', { profileId }),
   personaImportCard: () => ipcRenderer.invoke('persona:import-card'),
 
-  // Sandboxed workspace fs (agent loop tools)
-  workspaceSetRoot: (payload) => ipcRenderer.invoke('workspace:set-root', payload),
-  workspaceGetRoot: () => ipcRenderer.invoke('workspace:get-root'),
-  workspaceRead: (payload) => ipcRenderer.invoke('workspace:read', payload),
-  workspaceWrite: (payload) => ipcRenderer.invoke('workspace:write', payload),
-  workspaceEdit: (payload) => ipcRenderer.invoke('workspace:edit', payload),
-  workspaceGlob: (payload) => ipcRenderer.invoke('workspace:glob', payload),
-  workspaceGrep: (payload) => ipcRenderer.invoke('workspace:grep', payload),
-
   ...realtimeVoiceApi,
 
   // Auto-updater (electron-updater + GitHub Releases)

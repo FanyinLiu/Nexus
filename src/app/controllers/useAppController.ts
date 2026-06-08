@@ -36,7 +36,6 @@ import { useIntegrationWhitelists } from './useIntegrationWhitelists'
 import { useMediaSessionController } from './useMediaSessionController'
 import { useReminderTaskStore } from './useReminderTaskStore'
 import { useSettingsSubscription } from './useSettingsSubscription'
-import { useWorkspaceRootBridge } from './useWorkspaceRootBridge'
 import { loadUserAffectWindow } from '../../features/autonomy/userAffectTimeline.ts'
 import { computeAffectSnapshot } from '../../features/autonomy/affectDynamics.ts'
 import { buildAffectGuidance, classifyAffectGuidance } from '../../features/autonomy/affectGuidance.ts'
@@ -81,7 +80,6 @@ export function useAppController() {
   useSettingsSubscription(setSettings)
   useBudgetConfigSync(settings)
   useIntegrationWhitelists(settings)
-  useWorkspaceRootBridge(settings, (msg) => setErrorRef.current?.(msg))
   useMcpServerSync(settings.mcpServers)
 
   const [goals, setGoals] = useState<Goal[]>(() => loadAutonomyGoals())

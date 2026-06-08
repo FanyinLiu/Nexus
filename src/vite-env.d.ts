@@ -577,15 +577,6 @@ declare global {
         }>
       } | null>
 
-      // Sandboxed workspace fs (agent loop tools)
-      workspaceSetRoot: (payload: { root: string }) => Promise<{ ok: boolean; root: string }>
-      workspaceGetRoot: () => Promise<{ root: string }>
-      workspaceRead: (payload: { path: string }) => Promise<{ path: string; content: string; truncated: boolean; bytes: number }>
-      workspaceWrite: (payload: { path: string; content: string }) => Promise<{ path: string; bytes: number }>
-      workspaceEdit: (payload: { path: string; oldString: string; newString: string }) => Promise<{ path: string; bytes: number; occurrences: number }>
-      workspaceGlob: (payload: { pattern: string }) => Promise<{ pattern: string; matches: string[]; totalMatched: number; visited: number; hitLimit: boolean }>
-      workspaceGrep: (payload: { query: string; caseSensitive?: boolean; maxResults?: number }) => Promise<{ query: string; matches: Array<{ path: string; line: number; text: string }>; visited: number; hitLimit: boolean }>
-
       // Model manager (first-launch setup wizard)
       modelsGetInventory: () => Promise<ModelInventory>
       modelsDownload: (modelId: string) => Promise<ModelInventory>

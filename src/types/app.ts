@@ -183,11 +183,6 @@ export interface TextProviderSettings {
   budgetMonthlyCapUsd: number
   budgetHardStopEnabled: boolean
   budgetDowngradeRatio: number
-  /**
-   * Absolute path that the agent loop's built-in fs tools (Read/Edit/Glob/
-   * Grep) are sandboxed to. Empty string disables the fs tools entirely.
-   */
-  agentWorkspaceRoot: string
   /** Maximum agent loop iterations before forced abort. */
   agentMaxIterations: number
   /**

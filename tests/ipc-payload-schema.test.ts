@@ -20,10 +20,7 @@ import {
   validateSkillIdPayload,
   validateSkillSavePayload,
   validateSkillSearchPayload,
-  validateWorkspaceEditPayload,
   validateWebSearchToolPayload,
-  validateWorkspaceGrepPayload,
-  validateWorkspaceWritePayload,
   validateWindowDragPayload,
 } from '../electron/ipc/payloadSchemas.js'
 
@@ -278,26 +275,6 @@ test('IPC memory and workspace schemas reject malformed storage payloads', () =>
       embedding: [Number.NaN],
     }),
     /payload\.embedding\[0\] must be a finite number/,
-  )
-
-  assert.deepEqual(
-    validateWorkspaceWritePayload({ path: ' notes/a.md ', content: 'body' }),
-    { path: 'notes/a.md', content: 'body' },
-  )
-
-  assert.throws(
-    () => validateWorkspaceWritePayload({ path: '   ', content: 'body' }),
-    /Invalid IPC payload for workspace:write: payload\.path must be a non-empty string/,
-  )
-
-  assert.throws(
-    () => validateWorkspaceEditPayload({ path: 'notes/a.md', oldString: '', newString: 'body' }),
-    /Invalid IPC payload for workspace:edit: payload\.oldString must be a non-empty string/,
-  )
-
-  assert.throws(
-    () => validateWorkspaceGrepPayload({ query: 'x', maxResults: 500 }),
-    /payload\.maxResults must be <= 200/,
   )
 })
 

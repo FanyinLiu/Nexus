@@ -16,7 +16,6 @@ const SECRET_TEXT_MAX = 20_000
 const BODY_TEXT_MAX = 20_000
 const AUDIO_BASE64_MAX = 50_000_000
 const PATH_TEXT_MAX = 4_096
-const WORKSPACE_WRITE_TEXT_MAX = 1_048_576
 const CHAT_MESSAGE_TEXT_MAX = 200_000
 const SAFE_SKILL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
@@ -298,55 +297,6 @@ const skillIdSchema = {
   },
 }
 
-const workspaceRootSchema = {
-  type: 'object',
-  optional: true,
-  default: {},
-  fields: {
-    root: { type: 'string', optional: true, maxLength: PATH_TEXT_MAX },
-  },
-}
-
-const workspacePathSchema = {
-  type: 'object',
-  fields: {
-    path: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },
-  },
-}
-
-const workspaceWriteSchema = {
-  type: 'object',
-  fields: {
-    path: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },
-    content: { type: 'string', maxLength: WORKSPACE_WRITE_TEXT_MAX },
-  },
-}
-
-const workspaceEditSchema = {
-  type: 'object',
-  fields: {
-    path: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },
-    oldString: { type: 'string', maxLength: WORKSPACE_WRITE_TEXT_MAX, allowEmpty: false },
-    newString: { type: 'string', maxLength: WORKSPACE_WRITE_TEXT_MAX },
-  },
-}
-
-const workspaceGlobSchema = {
-  type: 'object',
-  fields: {
-    pattern: { type: 'string', maxLength: 1_000 },
-  },
-}
-
-const workspaceGrepSchema = {
-  type: 'object',
-  fields: {
-    query: { type: 'string', maxLength: 1_000 },
-    caseSensitive: optionalBoolean,
-    maxResults: { type: 'number', optional: true, min: 1, max: 200 },
-  },
-}
-
 const mcpIdSchema = {
   type: 'object',
   optional: true,
@@ -582,30 +532,6 @@ export function validateSkillSearchPayload(payload) {
 
 export function validateSkillIdPayload(channel, payload) {
   return validateIpcPayload(channel, payload, skillIdSchema)
-}
-
-export function validateWorkspaceRootPayload(payload) {
-  return validateIpcPayload('workspace:set-root', payload, workspaceRootSchema)
-}
-
-export function validateWorkspacePathPayload(channel, payload) {
-  return validateIpcPayload(channel, payload, workspacePathSchema)
-}
-
-export function validateWorkspaceWritePayload(payload) {
-  return validateIpcPayload('workspace:write', payload, workspaceWriteSchema)
-}
-
-export function validateWorkspaceEditPayload(payload) {
-  return validateIpcPayload('workspace:edit', payload, workspaceEditSchema)
-}
-
-export function validateWorkspaceGlobPayload(payload) {
-  return validateIpcPayload('workspace:glob', payload, workspaceGlobSchema)
-}
-
-export function validateWorkspaceGrepPayload(payload) {
-  return validateIpcPayload('workspace:grep', payload, workspaceGrepSchema)
 }
 
 export function validateMcpIdPayload(channel, payload) {
