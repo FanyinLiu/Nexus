@@ -26,7 +26,6 @@ import {
   applyPetWindowInstances,
   configurePetWindowInstances,
   destroyPetInstance,
-  getPetInstanceCount,
   getPetInstanceForWindow,
   getPetWindowStateForEvent,
   registerPetInstance,
@@ -530,71 +529,6 @@ export function createMainWindow({ showOnReady = true } = {}) {
   return win
 }
 
-const MAX_PET_INSTANCES = 6
-const PET_CLONE_SPAWN_OFFSET_PX = 48
-
-// Spawn a clone pet window near `sourceWindow`. Clones share the active avatar
-// and roam independently; they're ephemeral (no saved bounds, destroyed on
-// close) and never replace the primary `mainWindow`.
-function spawnPetClone(sourceWindow = mainWindow) {
-  if (getPetInstanceCount() >= MAX_PET_INSTANCES) return null
-  const base = sourceWindow && !sourceWindow.isDestroyed() ? sourceWindow : mainWindow
-  if (!base || base.isDestroyed()) return null
-
-  const b = base.getBounds()
-  const { workArea } = screen.getDisplayMatching(b)
-  const { x, y } = clampWindowPosition(
-    b.width,
-    b.height,
-    b.x + PET_CLONE_SPAWN_OFFSET_PX,
-    b.y + PET_CLONE_SPAWN_OFFSET_PX,
-    workArea,
-  )
-
-  const win = new BrowserWindow(petWindowConstructorOptions({ x, y, width: b.width, height: b.height }))
-  applyWindowsAppDetails(win)
-  applyWindowIcon(win)
-  win.setAlwaysOnTop(true, PET_ALWAYS_ON_TOP_LEVEL)
-  attachNavigationGuards(win, 'pet-clone', 'pet')
-
-  const inst = registerPetInstance(win)
-
-  win.on('closed', () => {
-    destroyPetInstance(inst)
-  })
-
-  win.webContents.on('did-finish-load', () => {
-    if (process.platform === 'darwin') {
-      try {
-        win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-      } catch (err) {
-        console.warn('[pet-clone] setVisibleOnAllWorkspaces failed:', err?.message)
-      }
-    } else if (process.platform === 'linux') {
-      try {
-        win.setVisibleOnAllWorkspaces(true)
-      } catch (err) {
-        console.warn('[pet-clone:linux] setVisibleOnAllWorkspaces failed:', err?.message)
-      }
-    }
-    win.show()
-    syncPetInstance(inst)
-    inst.loco.start()
-  })
-
-  attachRendererLogCapture(win.webContents, 'pet-clone')
-  win.loadURL(getRendererEntry('pet'))
-  return inst
-}
-
-// Dismiss a clone (the primary is never dismissable). Closing the window
-// triggers destroyPetInstance via its 'closed' handler.
-function dismissPetClone(targetWindow) {
-  if (!targetWindow || targetWindow.isDestroyed()) return
-  if (targetWindow === mainWindow) return
-  targetWindow.close()
-}
-
 export function createPanelWindow() {
   if (panelWindow && !panelWindow.isDestroyed()) {
     return panelWindow
@@ -802,21 +736,6 @@ export function showPetContextMenu(sourceWindow = mainWindow) {
         if (inst) inst.loco.setFreeMode(!inst.state.freeMode)
       },
     },
-    {
-      label: getPetInstanceCount() < MAX_PET_INSTANCES ? '分身一只' : '分身已满',
-      enabled: getPetInstanceCount() < MAX_PET_INSTANCES,
-      click: () => {
-        spawnPetClone(sourceWindow)
-      },
-    },
-    ...(inst && sourceWindow !== mainWindow
-      ? [{
-          label: '收回这只',
-          click: () => {
-            dismissPetClone(sourceWindow)
-          },
-        }]
-      : []),
     {
       type: 'separator',
     },

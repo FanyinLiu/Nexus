@@ -56,10 +56,6 @@ export function destroyPetInstance(inst) {
   petInstances.delete(inst.id)
 }
 
-export function getPetInstanceCount() {
-  return petInstances.size
-}
-
 export function getPetInstanceForWindow(win) {
   if (!win || win.isDestroyed()) return null
   return petInstances.get(win.webContents.id) ?? null
