@@ -17,17 +17,6 @@ const _subscriptions = new Map()
 const _recentMessages = []
 const MAX_RECENT = 50
 
-/** @type {((msg: { topic: string, payload: unknown, from: string, to: string }) => void) | null} */
-let _onDeliver = null
-
-/**
- * Register a callback that is invoked whenever a message is delivered.
- * Used by the IPC layer to forward messages to plugin processes.
- */
-export function onDeliver(callback) {
-  _onDeliver = callback
-}
-
 function isValidTopic(topic) {
   return typeof topic === 'string' && TOPIC_PATTERN.test(topic)
 }
@@ -80,10 +69,16 @@ export function unsubscribeAll(serverId) {
 
 /**
  * Publish a message to a topic.
+ *
+ * NOTE: inter-plugin push delivery is intentionally not wired — there is no
+ * transport to forward a message into a subscribing plugin process, and wiring
+ * one naively would let any plugin eavesdrop any topic. This records the
+ * message for observability only (recent/stats); subscribe()/listSubscriptions()
+ * still track interest. Returns 0 because nothing is pushed to subscribers.
  * @param {string} fromServerId - Publishing server ID
  * @param {string} topic - Topic name
  * @param {unknown} payload - Message payload (must be JSON-serializable)
- * @returns {number} Number of subscribers the message was delivered to
+ * @returns {number} Always 0 (no push delivery)
  */
 export function publish(fromServerId, topic, payload) {
   if (!isValidTopic(topic)) return 0
@@ -95,19 +90,7 @@ export function publish(fromServerId, topic, payload) {
     _recentMessages.splice(0, _recentMessages.length - MAX_RECENT)
   }
 
-  const subscribers = _subscriptions.get(topic)
-  if (!subscribers || subscribers.size === 0) return 0
-
-  let delivered = 0
-  for (const subscriberId of subscribers) {
-    if (subscriberId === fromServerId) continue // don't echo back to sender
-    if (_onDeliver) {
-      _onDeliver({ topic, payload, from: fromServerId, to: subscriberId })
-      delivered++
-    }
-  }
-
-  return delivered
+  return 0
 }
 
 /**

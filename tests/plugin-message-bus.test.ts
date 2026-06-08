@@ -9,18 +9,16 @@ import {
   listSubscriptions,
   getRecentMessages,
   getStats,
-  onDeliver,
 } from '../electron/services/pluginMessageBus.js'
 
 // The module holds global mutable state with no reset().
-// Clean up subscriptions + delivery callback between tests.
+// Clean up subscriptions between tests.
 // _recentMessages accumulates — tests that inspect it use relative checks.
 
 beforeEach(() => {
   unsubscribeAll('server-a')
   unsubscribeAll('server-b')
   unsubscribeAll('server-c')
-  onDeliver(null as unknown as () => void)
 })
 
 // ── subscribe / unsubscribe / unsubscribeAll ──────────────────────────────
@@ -72,30 +70,20 @@ describe('unsubscribeAll', () => {
 // ── publish ───────────────────────────────────────────────────────────────
 
 describe('publish', () => {
-  it('delivers to subscribers and returns the count', () => {
-    const delivered: string[] = []
-    onDeliver((msg) => delivered.push(msg.to))
-
+  it('records the message for observability but does not push (returns 0)', () => {
     subscribe('server-a', 'news.update')
     subscribe('server-b', 'news.update')
 
+    // Inter-plugin push delivery is intentionally not wired; publish records
+    // the message (recent/stats) and reports 0 delivered.
     const count = publish('server-c', 'news.update', { text: 'hi' })
-    assert.equal(count, 2)
-    assert.deepEqual(delivered.sort(), ['server-a', 'server-b'])
-  })
-
-  it('does not echo back to the sender', () => {
-    const delivered: string[] = []
-    onDeliver((msg) => delivered.push(msg.to))
-
-    subscribe('server-a', 'echo.test')
-    const count = publish('server-a', 'echo.test', null)
     assert.equal(count, 0)
-    assert.equal(delivered.length, 0)
+    const recent = getRecentMessages(1)
+    assert.equal(recent[0].topic, 'news.update')
+    assert.equal(recent[0].from, 'server-c')
   })
 
   it('returns 0 for a topic with no subscribers', () => {
-    onDeliver(() => {})
     assert.equal(publish('server-a', 'empty.topic', null), 0)
   })
 
@@ -161,30 +149,5 @@ describe('getStats', () => {
     assert.equal(after.topicCount - before.topicCount, 2)
     assert.equal(after.totalSubscriptions - before.totalSubscriptions, 3)
     assert.equal(after.recentMessageCount - before.recentMessageCount, 1)
-  })
-})
-
-// ── onDeliver ─────────────────────────────────────────────────────────────
-
-describe('onDeliver', () => {
-  it('callback receives topic, payload, from, and to', () => {
-    let captured: { topic: string; payload: unknown; from: string; to: string } | null = null
-    onDeliver((msg) => { captured = msg })
-
-    subscribe('server-b', 'cb.test')
-    publish('server-a', 'cb.test', 42)
-
-    assert.ok(captured)
-    assert.equal(captured!.topic, 'cb.test')
-    assert.equal(captured!.payload, 42)
-    assert.equal(captured!.from, 'server-a')
-    assert.equal(captured!.to, 'server-b')
-  })
-
-  it('no delivery when callback is not set', () => {
-    subscribe('server-b', 'no.cb')
-    // onDeliver was reset to null in beforeEach
-    const count = publish('server-a', 'no.cb', null)
-    assert.equal(count, 0)
   })
 })
