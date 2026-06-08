@@ -1606,8 +1606,6 @@ export const zhTWMessages: TranslationDictionary = {
   'voice.provider.vad.silero_fallback': 'Silero VAD 啟動失敗，已自動切換到相容錄音模式。',
   'voice.provider.vad.silero_fallback_detail': '{fallback} 原始錯誤：{original}',
   'voice.provider.vad.input_not_enabled': '請先在設定中啟用語音輸入。',
-  'voice.realtime.error_prefix': '即時語音發生錯誤：{message}',
-  'voice.realtime.connected': '即時語音已連接',
   'voice.streaming_tts.first_audio_timeout': '串流 TTS 超過 6 秒仍未產出音訊。',
   'voice.status.continuous_tencent_start': '騰訊雲即時辨識已啟用，開始說話吧。',
   'voice.status.tencent_listening': '我在聽，騰訊雲正在即時辨識你說的話。',

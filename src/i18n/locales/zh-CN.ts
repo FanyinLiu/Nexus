@@ -1606,8 +1606,6 @@ export const zhCNMessages: TranslationDictionary = {
   'voice.provider.vad.silero_fallback': 'Silero VAD 启动失败，已自动切换到兼容录音模式。',
   'voice.provider.vad.silero_fallback_detail': '{fallback} 原始错误：{original}',
   'voice.provider.vad.input_not_enabled': '请先在设置中启用语音输入。',
-  'voice.realtime.error_prefix': '实时语音出错：{message}',
-  'voice.realtime.connected': '实时语音已连接',
   'voice.streaming_tts.first_audio_timeout': '流式 TTS 超过 6 秒仍未产出音频。',
   'voice.status.continuous_tencent_start': '腾讯云实时识别已开启，开始说话吧。',
   'voice.status.tencent_listening': '我在听，腾讯云正在实时识别你说的话。',

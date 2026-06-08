@@ -395,27 +395,6 @@ const tencentAsrConnectSchema = {
   },
 }
 
-const realtimeStartSchema = {
-  type: 'object',
-  optional: true,
-  default: {},
-  unknown: 'preserve',
-  fields: {
-    providerId: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
-    baseUrl: { type: 'string', optional: true, maxLength: URL_TEXT_MAX },
-    apiKey: { type: 'string', optional: true, maxLength: SECRET_TEXT_MAX },
-    model: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
-    voice: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
-  },
-}
-
-const realtimeSendTextSchema = {
-  type: 'object',
-  fields: {
-    text: { type: 'string', maxLength: BODY_TEXT_MAX },
-  },
-}
-
 const speechVoiceListSchema = {
   type: 'object',
   fields: {
@@ -568,12 +547,4 @@ export function validateGameCommandPayload(channel, payload) {
 
 export function validateTencentAsrConnectPayload(payload) {
   return validateIpcPayload('tencent-asr:connect', payload, tencentAsrConnectSchema)
-}
-
-export function validateRealtimeStartPayload(payload) {
-  return validateIpcPayload('realtime:start', payload, realtimeStartSchema)
-}
-
-export function validateRealtimeSendTextPayload(payload) {
-  return validateIpcPayload('realtime:send-text', payload, realtimeSendTextSchema)
 }

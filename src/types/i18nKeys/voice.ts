@@ -39,8 +39,6 @@ export type VoiceTranslationKey =
   | 'voice.provider.vad.silero_fallback'
   | 'voice.provider.vad.silero_fallback_detail'
   | 'voice.provider.vad.input_not_enabled'
-  | 'voice.realtime.error_prefix'
-  | 'voice.realtime.connected'
   | 'voice.streaming_tts.first_audio_timeout'
   | 'voice.status.continuous_tencent_start'
   | 'voice.status.tencent_listening'

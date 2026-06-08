@@ -1,24 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
-const realtimeVoiceEnabled = process.env.NEXUS_ENABLE_REALTIME_VOICE === '1'
-
-const realtimeVoiceApi = realtimeVoiceEnabled
-  ? {
-      // Realtime Voice (OpenAI Realtime API)
-      realtimeStart: (payload) => ipcRenderer.invoke('realtime:start', payload),
-      realtimeStop: () => ipcRenderer.invoke('realtime:stop'),
-      realtimeFeed: (payload) => ipcRenderer.invoke('realtime:feed', payload),
-      realtimeInterrupt: () => ipcRenderer.invoke('realtime:interrupt'),
-      realtimeSendText: (payload) => ipcRenderer.invoke('realtime:send-text', payload),
-      realtimeState: () => ipcRenderer.invoke('realtime:state'),
-      subscribeRealtimeEvent: (listener) => {
-        const handler = (_event, payload) => listener(payload)
-        ipcRenderer.on('realtime:event', handler)
-        return () => ipcRenderer.removeListener('realtime:event', handler)
-      },
-    }
-  : {}
-
 contextBridge.exposeInMainWorld('desktopPet', {
   updatePetWindowState: (state) => ipcRenderer.invoke('pet-window:update-state', state),
   getPetWindowState: () => ipcRenderer.invoke('pet-window:get-state'),
@@ -273,8 +254,6 @@ contextBridge.exposeInMainWorld('desktopPet', {
   personaLoadProfile: (profileId) => ipcRenderer.invoke('persona:load-profile', { profileId }),
   personaProfileDir: (profileId) => ipcRenderer.invoke('persona:profile-dir', { profileId }),
   personaImportCard: () => ipcRenderer.invoke('persona:import-card'),
-
-  ...realtimeVoiceApi,
 
   // Auto-updater (electron-updater + GitHub Releases)
   updaterCheck: () => ipcRenderer.invoke('updater:check'),

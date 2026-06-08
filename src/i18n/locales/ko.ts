@@ -1606,8 +1606,6 @@ export const koMessages: TranslationDictionary = {
   'voice.provider.vad.silero_fallback': 'Silero VAD 시작에 실패하여 호환 녹음 모드로 자동 전환했습니다.',
   'voice.provider.vad.silero_fallback_detail': '{fallback} 원본 오류: {original}',
   'voice.provider.vad.input_not_enabled': '먼저 설정에서 음성 입력을 활성화해 주세요.',
-  'voice.realtime.error_prefix': '실시간 음성 오류: {message}',
-  'voice.realtime.connected': '실시간 음성이 연결되었습니다',
   'voice.streaming_tts.first_audio_timeout': '스트리밍 TTS 가 6 초가 지나도 오디오를 출력하지 않았습니다.',
   'voice.status.continuous_tencent_start': 'Tencent Cloud 실시간 인식이 켜졌습니다. 말씀하세요.',
   'voice.status.tencent_listening': '듣고 있어요. Tencent Cloud 가 실시간으로 받아쓰고 있습니다.',

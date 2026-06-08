@@ -158,16 +158,6 @@ type McpHostStatus = {
   restartCount: number
 }
 
-type RealtimeSessionOptions = {
-  apiKey: string
-  baseUrl?: string
-  model?: string
-  voice?: string
-  systemPrompt?: string
-  temperature?: number
-  maxResponseTokens?: number
-}
-
 type ModelCatalogEntry = {
   id: string
   label: string
@@ -205,17 +195,6 @@ type ModelProgressEvent = {
   totalFiles?: number
   message?: string
 }
-
-type RealtimeEvent =
-  | { type: 'state'; state: 'idle' | 'connecting' | 'active' | 'error'; sessionId: string }
-  | { type: 'user_speech_started'; sessionId: string }
-  | { type: 'user_speech_stopped'; sessionId: string }
-  | { type: 'user_transcript'; sessionId: string; text: string }
-  | { type: 'audio'; sessionId: string; samples: number[]; sampleRate: number; channels: number }
-  | { type: 'response_transcript_delta'; sessionId: string; delta: string }
-  | { type: 'response_transcript_done'; sessionId: string; text: string }
-  | { type: 'response_done'; sessionId: string }
-  | { type: 'error'; sessionId: string; message: string }
 
 declare global {
   interface Window {
@@ -636,15 +615,6 @@ declare global {
       }>
       vadFlush: () => Promise<{ segments: Float32Array[] }>
       vadStop: () => Promise<{ ok: boolean }>
-
-      // Realtime Voice (OpenAI Realtime API)
-      realtimeStart?: (payload: RealtimeSessionOptions) => Promise<{ sessionId: string }>
-      realtimeStop?: () => Promise<void>
-      realtimeFeed?: (payload: { samples: number[] | Float32Array }) => Promise<{ ok: boolean }>
-      realtimeInterrupt?: () => Promise<{ ok: boolean }>
-      realtimeSendText?: (payload: { text: string }) => Promise<{ ok: boolean }>
-      realtimeState?: () => Promise<{ state: 'idle' | 'connecting' | 'active' | 'error'; sessionId: string }>
-      subscribeRealtimeEvent?: (listener: (event: RealtimeEvent) => void) => () => void
 
       // Autonomy: system idle & power events
       /** Returns system idle time in seconds. */

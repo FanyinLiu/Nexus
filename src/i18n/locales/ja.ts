@@ -1606,8 +1606,6 @@ export const jaMessages: TranslationDictionary = {
   'voice.provider.vad.silero_fallback': 'Silero VAD の起動に失敗しました。互換録音モードへ自動切り替えしました。',
   'voice.provider.vad.silero_fallback_detail': '{fallback} 元のエラー: {original}',
   'voice.provider.vad.input_not_enabled': '先に設定で音声入力を有効にしてください。',
-  'voice.realtime.error_prefix': 'リアルタイム音声エラー: {message}',
-  'voice.realtime.connected': 'リアルタイム音声に接続しました',
   'voice.streaming_tts.first_audio_timeout': 'ストリーミング TTS が 6 秒経っても音声を出力しませんでした。',
   'voice.status.continuous_tencent_start': 'Tencent Cloud リアルタイム認識をオンにしました。どうぞ話してください。',
   'voice.status.tencent_listening': '聴いています。Tencent Cloud がリアルタイムに文字起こししています。',

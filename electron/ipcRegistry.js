@@ -22,7 +22,6 @@ const CONNECTION_TEST_TIMEOUT_MS = 12_000
 const AUDIO_TRANSCRIBE_TIMEOUT_MS = 20_000
 const AUDIO_SYNTH_TIMEOUT_MS = 25_000
 const AUDIO_VOICE_LIST_TIMEOUT_MS = 15_000
-const realtimeVoiceEnabled = process.env.NEXUS_ENABLE_REALTIME_VOICE === '1'
 
 const activeChatStreamControllers = new Map()
 
@@ -97,12 +96,11 @@ export function registerIpc() {
   void loadDeferredModules()
 
   app.once('before-quit', async () => {
-    const [mcpHost, memoryVectorStore, minecraftGateway, factorioRcon, realtimeVoice, telegramGateway, discordGateway, notificationBridge] = await Promise.all([
+    const [mcpHost, memoryVectorStore, minecraftGateway, factorioRcon, telegramGateway, discordGateway, notificationBridge] = await Promise.all([
       import('./services/mcpHost.js').catch(() => null),
       import('./services/memoryVectorStore.js').catch(() => null),
       import('./services/minecraftGateway.js').catch(() => null),
       import('./services/factorioRcon.js').catch(() => null),
-      realtimeVoiceEnabled ? import('./services/realtimeVoice.js').catch(() => null) : null,
       import('./services/telegramGateway.js').catch(() => null),
       import('./services/discordGateway.js').catch(() => null),
       import('./services/notificationBridge.js').catch(() => null),
@@ -112,7 +110,6 @@ export function registerIpc() {
       memoryVectorStore?.terminate().catch(() => {}),
       minecraftGateway?.disconnect().catch(() => {}),
       factorioRcon?.disconnect().catch(() => {}),
-      realtimeVoice?.stopSession().catch(() => {}),
       telegramGateway?.disconnect().catch(() => {}),
       discordGateway?.disconnect().catch(() => {}),
       notificationBridge?.stop(),

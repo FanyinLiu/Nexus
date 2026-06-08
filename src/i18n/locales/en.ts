@@ -1606,8 +1606,6 @@ export const enMessages: TranslationDictionary = {
   'voice.provider.vad.silero_fallback': 'Silero VAD failed to start — switched to compatibility recording mode.',
   'voice.provider.vad.silero_fallback_detail': '{fallback} Original error: {original}',
   'voice.provider.vad.input_not_enabled': 'Please enable speech input in settings first.',
-  'voice.realtime.error_prefix': 'Realtime voice error: {message}',
-  'voice.realtime.connected': 'Realtime voice connected',
   'voice.streaming_tts.first_audio_timeout': 'Streaming TTS did not produce audio within 6 seconds.',
   'voice.status.continuous_tencent_start': 'Tencent Cloud live recognition is on — go ahead and speak.',
   'voice.status.tencent_listening': "I'm listening — Tencent Cloud is transcribing in real time.",
