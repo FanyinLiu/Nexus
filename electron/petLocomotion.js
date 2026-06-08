@@ -143,6 +143,11 @@ export function createPetLocomotion({ getWin, getState, patchState }) {
   function petLocoTick() {
     const win = getWin()
     if (!win || win.isDestroyed()) return
+    // Hidden companion (window hidden / app hidden / minimised): do no
+    // main-process work — no bounds reads, setPosition, display lookups, or
+    // cursor polling — until it's shown again. Was running ~22 ticks/sec per
+    // window even while invisible (N× with clones).
+    if (!win.isVisible()) return
     const state = getState()
     if (!state.freeMode || !state.roamCapable) {
       // Fixed mode, or a non-sprite avatar (Live2D has no walk frames) — stay put.
