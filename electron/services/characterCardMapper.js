@@ -14,6 +14,7 @@ export function mapCardToPersona(card) {
   if (data.post_history_instructions?.trim()) {
     soulSections.push(`## Post-History Instructions\n${data.post_history_instructions.trim()}`)
   }
+  const soulMarkdown = soulSections.join('\n\n')
 
   // ── memory.md ──
   const memory = data.creator_notes?.trim() ?? ''
@@ -34,7 +35,7 @@ export function mapCardToPersona(card) {
   return {
     profileId,
     files: {
-      'soul.md': soulSections.join('\n\n'),
+      'soul.md': soulMarkdown,
       'memory.md': memory,
       'examples.md': examplesMd,
       'style.json': JSON.stringify(style, null, 2),
@@ -45,7 +46,11 @@ export function mapCardToPersona(card) {
       id: profileId,
       label: name,
       companionName: name,
-      systemPrompt: `[Character card: ${name}]`,
+      // The card's assembled identity — same content as soul.md — so an
+      // imported card actually drives chat via settings.systemPrompt even when
+      // the per-profile chat persona flag is off (was a "[Character card: X]"
+      // placeholder that leaked into the prompt as literal text).
+      systemPrompt: soulMarkdown,
       petModelId: '',
     },
     greeting,
