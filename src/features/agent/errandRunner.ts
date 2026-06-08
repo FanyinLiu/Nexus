@@ -12,7 +12,6 @@
 
 import { runAgentLoop, type AgentExecuteTurn } from './agentLoop.ts'
 import { updateErrand, type ErrandRecord } from './errandStore.ts'
-export { readErrandRunnerState, writeErrandRunnerState } from './errandRunnerState.ts'
 import type { UiLanguage } from '../../types'
 
 export interface RunErrandDeps {

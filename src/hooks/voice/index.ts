@@ -1,5 +1,4 @@
 export * from './constants'
-export * from './browserRecognition'
 export * from './conversationEntrypoints'
 export * from './continuousVoice'
 export * from './diagnostics'
