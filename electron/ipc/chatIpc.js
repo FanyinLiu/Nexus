@@ -22,6 +22,7 @@ import {
 import {
   normalizeBaseUrl,
   performNetworkRequest,
+  performNetworkRequestWithRetry,
   formatConnectionFailureMessage,
 } from '../net.js'
 import {
@@ -79,13 +80,20 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
 
     let response
     try {
-      response = await performNetworkRequest(requestSpec.endpoint, {
+      // Bounded retry on transient 429/5xx/network blips before surfacing a
+      // failure (the higher-level key/provider failover then takes over). One
+      // retry keeps an interactive turn from stalling. Non-streaming, so the
+      // wrapper's body-drain-and-retry is safe.
+      response = await performNetworkRequestWithRetry(requestSpec.endpoint, {
         allowPrivateNetwork: true,
         method: 'POST',
         headers: requestSpec.headers,
         body: requestSpec.body,
         timeoutMs: CHAT_REQUEST_TIMEOUT_MS,
         timeoutMessage: '模型响应超时，请检查网络、代理或当前模型服务状态。',
+        maxAttempts: 2,
+        onRetry: ({ attempt, reason }) =>
+          console.warn('[chat:complete] transient failure, retrying', { attempt, reason }),
       })
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
@@ -185,7 +193,11 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
 
     let response
     try {
-      response = await performNetworkRequest(requestSpec.endpoint, {
+      // The retry wrapper only re-issues on a non-ok status (known at header
+      // time) or an initial connection error — never once a 200 body has begun
+      // streaming — so there's no risk of duplicate partial output. An aborted
+      // signal still bubbles immediately.
+      response = await performNetworkRequestWithRetry(requestSpec.endpoint, {
         allowPrivateNetwork: true,
         method: 'POST',
         headers: requestSpec.headers,
@@ -193,6 +205,9 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         signal: abortController.signal,
         timeoutMs: CHAT_REQUEST_TIMEOUT_MS,
         timeoutMessage: '模型响应超时，请检查网络、代理或当前模型服务状态。',
+        maxAttempts: 2,
+        onRetry: ({ attempt, reason }) =>
+          console.warn('[chat:stream] transient failure, retrying', { attempt, reason }),
       })
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
