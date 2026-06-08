@@ -51,32 +51,8 @@ declare global {
   }
 }
 
-const BROWSER_SPEECH_START_DELAY_MS = 32
-let browserSpeechRequestId = 0
-
 export function getSpeechRecognitionCtor() {
   return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null
-}
-
-export function isBrowserSpeechRecognitionSupported() {
-  return Boolean(getSpeechRecognitionCtor())
-}
-
-function findMatchingVoice(lang: string) {
-  const voices = window.speechSynthesis.getVoices()
-  const normalized = lang.toLowerCase()
-
-  return voices.find((voice) => voice.lang.toLowerCase() === normalized)
-    ?? voices.find((voice) => voice.lang.toLowerCase().startsWith(normalized.split('-')[0]))
-    ?? null
-}
-
-function findVoiceById(voiceId?: string) {
-  const normalized = String(voiceId ?? '').trim()
-  if (!normalized) return null
-
-  const voices = window.speechSynthesis.getVoices()
-  return voices.find((voice) => voice.voiceURI === normalized || voice.name === normalized) ?? null
 }
 
 export function getAvailableSpeechSynthesisVoices() {
@@ -91,71 +67,9 @@ export function getAvailableSpeechSynthesisVoices() {
   }))
 }
 
-type SpeakTextOptions = {
-  text: string
-  lang: string
-  rate: number
-  pitch: number
-  volume: number
-  voiceId?: string
-  onStart?: () => void
-  onEnd?: () => void
-  onError?: (message: string) => void
-}
-
 export function stopSpeaking() {
   if (!('speechSynthesis' in window)) return
-  browserSpeechRequestId += 1
   window.speechSynthesis.cancel()
-}
-
-export function speakText({
-  text,
-  lang,
-  rate,
-  pitch,
-  volume,
-  voiceId,
-  onStart,
-  onEnd,
-  onError,
-}: SpeakTextOptions) {
-  if (!('speechSynthesis' in window)) {
-    onError?.(t('voice.tts.browser_unsupported'))
-    return null
-  }
-
-  const content = text.trim()
-  if (!content) return null
-
-  stopSpeaking()
-  const requestId = browserSpeechRequestId
-
-  const utterance = new SpeechSynthesisUtterance(content)
-  utterance.lang = lang
-  utterance.rate = rate
-  utterance.pitch = pitch
-  utterance.volume = volume
-
-  const matchedVoice = findVoiceById(voiceId) ?? findMatchingVoice(lang)
-  if (matchedVoice) {
-    utterance.voice = matchedVoice
-  }
-
-  utterance.onstart = () => onStart?.()
-  utterance.onend = () => onEnd?.()
-  utterance.onerror = () => onError?.(t('voice.tts.browser_engine_failed'))
-
-  window.setTimeout(() => {
-    if (!('speechSynthesis' in window) || browserSpeechRequestId !== requestId) {
-      return
-    }
-
-    window.speechSynthesis.resume()
-    window.speechSynthesis.speak(utterance)
-  }, BROWSER_SPEECH_START_DELAY_MS)
-
-  return utterance
 }
 
 export function mapSpeechError(error: string) {
