@@ -32,6 +32,8 @@ type DebugConsoleBridge = {
 export type UseTelegramBridgeOptions = {
   settingsRef: React.RefObject<AppSettings>
   enabled: boolean
+  botToken: string
+  allowedChatIds: string
   chat: ChatBridge
   debugConsole: DebugConsoleBridge
 }
@@ -39,6 +41,8 @@ export type UseTelegramBridgeOptions = {
 export function useTelegramBridge({
   settingsRef,
   enabled,
+  botToken,
+  allowedChatIds,
   chat,
   debugConsole,
 }: UseTelegramBridgeOptions) {
@@ -93,7 +97,8 @@ export function useTelegramBridge({
   }, [chat, debugConsole, settingsRef, t])
 
   const gateway = useTelegramGateway({
-    settingsRef,
+    botToken,
+    allowedChatIds,
     onMessage: handleTelegramMessage,
     enabled,
   })

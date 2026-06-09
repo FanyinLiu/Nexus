@@ -525,6 +525,59 @@ export function loadSettings(): AppSettings {
       1,
       32,
     ),
+    // Autonomy numerics drive background timers/budgets — a corrupt or
+    // cross-version stored value (0, negative, NaN, string) must not survive:
+    // a 0 interval becomes a 0ms busy-loop, a negative cap silently kills
+    // autonomy, a non-numeric quiet-hour disables night suppression. Bounds
+    // mirror the AutonomySection UI NumberFields exactly.
+    autonomyTickIntervalSeconds: clampInteger(
+      stored.autonomyTickIntervalSeconds ?? defaultSettings.autonomyTickIntervalSeconds,
+      defaultSettings.autonomyTickIntervalSeconds,
+      10,
+      300,
+    ),
+    autonomySleepAfterIdleMinutes: clampInteger(
+      stored.autonomySleepAfterIdleMinutes ?? defaultSettings.autonomySleepAfterIdleMinutes,
+      defaultSettings.autonomySleepAfterIdleMinutes,
+      5,
+      120,
+    ),
+    autonomyIdleThresholdSeconds: clampInteger(
+      stored.autonomyIdleThresholdSeconds ?? defaultSettings.autonomyIdleThresholdSeconds,
+      defaultSettings.autonomyIdleThresholdSeconds,
+      60,
+      1800,
+    ),
+    autonomyCostLimitDailyTicks: clampInteger(
+      stored.autonomyCostLimitDailyTicks ?? defaultSettings.autonomyCostLimitDailyTicks,
+      defaultSettings.autonomyCostLimitDailyTicks,
+      10,
+      1000,
+    ),
+    autonomyQuietHoursStart: clampInteger(
+      stored.autonomyQuietHoursStart ?? defaultSettings.autonomyQuietHoursStart,
+      defaultSettings.autonomyQuietHoursStart,
+      0,
+      23,
+    ),
+    autonomyQuietHoursEnd: clampInteger(
+      stored.autonomyQuietHoursEnd ?? defaultSettings.autonomyQuietHoursEnd,
+      defaultSettings.autonomyQuietHoursEnd,
+      0,
+      23,
+    ),
+    autonomyDreamIntervalHours: clampInteger(
+      stored.autonomyDreamIntervalHours ?? defaultSettings.autonomyDreamIntervalHours,
+      defaultSettings.autonomyDreamIntervalHours,
+      1,
+      168,
+    ),
+    autonomyDreamMinSessions: clampInteger(
+      stored.autonomyDreamMinSessions ?? defaultSettings.autonomyDreamMinSessions,
+      defaultSettings.autonomyDreamMinSessions,
+      1,
+      50,
+    ),
     textProviderProfiles: readStoredTextProviderProfiles(stored.textProviderProfiles),
     speechInputProviderProfiles: readStoredSpeechInputProviderProfiles(stored.speechInputProviderProfiles),
     speechOutputProviderProfiles: storedSpeechOutputProviderProfiles,

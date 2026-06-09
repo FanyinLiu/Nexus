@@ -3,6 +3,7 @@ import { beforeEach, test } from 'node:test'
 
 import { loadSettings, SETTINGS_STORAGE_KEY } from '../src/lib/storage.ts'
 import { commitSettingsUpdate } from '../src/app/store/commitSettingsUpdate.ts'
+import { CURRENT_SETTINGS_SCHEMA_VERSION } from '../src/lib/settingsMigrations.ts'
 
 type LocalStorageMock = {
   getItem: (key: string) => string | null
@@ -59,6 +60,53 @@ test('fresh settings start with the Phase 1 Ollama text path', () => {
   assert.equal(settings.discordAnnounceMessagePreview, false)
   assert.equal(settings.autonomyNotificationMessageAnnouncementsEnabled, false)
   assert.equal(settings.autonomyNotificationMessagePreviewEnabled, false)
+})
+
+test('clamps out-of-range autonomy numerics on load (no 0ms busy-loop, no negative cost cap)', () => {
+  window.localStorage.setItem(
+    SETTINGS_STORAGE_KEY,
+    JSON.stringify({
+      settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+      autonomyTickIntervalSeconds: 0,
+      autonomySleepAfterIdleMinutes: 0,
+      autonomyIdleThresholdSeconds: 0,
+      autonomyCostLimitDailyTicks: -5,
+      autonomyQuietHoursStart: 99,
+      autonomyQuietHoursEnd: -1,
+      autonomyDreamIntervalHours: 0,
+      autonomyDreamMinSessions: 0,
+    }),
+  )
+
+  const settings = loadSettings()
+
+  // 0 would become a 0ms setInterval busy-loop; floored to the UI minimum.
+  assert.equal(settings.autonomyTickIntervalSeconds, 10)
+  assert.equal(settings.autonomySleepAfterIdleMinutes, 5)
+  assert.equal(settings.autonomyIdleThresholdSeconds, 60)
+  // Negative would make shouldTick always-false (autonomy silently dead).
+  assert.equal(settings.autonomyCostLimitDailyTicks, 10)
+  // Quiet-hours must stay within 0..23 or night suppression breaks.
+  assert.equal(settings.autonomyQuietHoursStart, 23)
+  assert.equal(settings.autonomyQuietHoursEnd, 0)
+  assert.equal(settings.autonomyDreamIntervalHours, 1)
+  assert.equal(settings.autonomyDreamMinSessions, 1)
+})
+
+test('falls back to defaults for non-finite autonomy numerics', () => {
+  window.localStorage.setItem(
+    SETTINGS_STORAGE_KEY,
+    JSON.stringify({
+      settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+      autonomyTickIntervalSeconds: 'not-a-number',
+      autonomyCostLimitDailyTicks: null,
+    }),
+  )
+
+  const settings = loadSettings()
+
+  assert.equal(settings.autonomyTickIntervalSeconds, 30)
+  assert.equal(settings.autonomyCostLimitDailyTicks, 100)
 })
 
 test('infers global and Token Plan text providers from stored base URLs', () => {

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { parseTelegramChatIdList } from '../features/integrations/allowlists.ts'
-import type { AppSettings } from '../types'
 
 export type TelegramStatus = {
   state: 'disconnected' | 'connecting' | 'connected' | 'error'
@@ -18,13 +17,15 @@ export type TelegramIncoming = {
 }
 
 export type UseTelegramGatewayOptions = {
-  settingsRef: React.RefObject<AppSettings>
+  botToken: string
+  allowedChatIds: string
   onMessage: (msg: TelegramIncoming) => void
   enabled: boolean
 }
 
 export function useTelegramGateway({
-  settingsRef,
+  botToken,
+  allowedChatIds,
   onMessage,
   enabled,
 }: UseTelegramGatewayOptions) {
@@ -52,20 +53,21 @@ export function useTelegramGateway({
     onMessageRef.current = onMessage
   }, [onMessage])
 
-  // Connect/disconnect based on enabled toggle
+  // Connect/disconnect on enable toggle AND on credential changes, so editing
+  // the bot token or allow-list while enabled re-applies to the live connection
+  // (reconnect = disconnect-then-connect) instead of keeping stale credentials.
   useEffect(() => {
     if (!enabled) {
       void window.desktopPet?.telegramDisconnect?.()
       return
     }
 
-    const settings = settingsRef.current
-    const botToken = settings.telegramBotToken?.trim()
-    if (!botToken) return
+    const token = botToken?.trim()
+    if (!token) return
 
-    const allowedChatIds = parseTelegramChatIdList(settings.telegramAllowedChatIds)
+    const allowed = parseTelegramChatIdList(allowedChatIds)
 
-    window.desktopPet?.telegramConnect?.({ botToken, allowedChatIds })
+    window.desktopPet?.telegramConnect?.({ botToken: token, allowedChatIds: allowed })
       .then((s) => {
         setStatus({
           state: s.state as TelegramStatus['state'],
@@ -84,7 +86,7 @@ export function useTelegramGateway({
     return () => {
       void window.desktopPet?.telegramDisconnect?.()
     }
-  }, [enabled, settingsRef])
+  }, [enabled, botToken, allowedChatIds])
 
   // Subscribe to incoming messages
   useEffect(() => {

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { parseDiscordChannelIdList } from '../features/integrations/allowlists.ts'
-import type { AppSettings } from '../types'
 
 export type DiscordStatus = {
   state: 'disconnected' | 'connecting' | 'connected' | 'error'
@@ -21,13 +20,15 @@ export type DiscordIncoming = {
 }
 
 export type UseDiscordGatewayOptions = {
-  settingsRef: React.RefObject<AppSettings>
+  botToken: string
+  allowedChannelIds: string
   onMessage: (msg: DiscordIncoming) => void
   enabled: boolean
 }
 
 export function useDiscordGateway({
-  settingsRef,
+  botToken,
+  allowedChannelIds,
   onMessage,
   enabled,
 }: UseDiscordGatewayOptions) {
@@ -55,20 +56,21 @@ export function useDiscordGateway({
     onMessageRef.current = onMessage
   }, [onMessage])
 
-  // Connect/disconnect based on enabled toggle
+  // Connect/disconnect on enable toggle AND on credential changes, so editing
+  // the bot token or allow-list while enabled re-applies to the live connection
+  // (reconnect = disconnect-then-connect) instead of keeping stale credentials.
   useEffect(() => {
     if (!enabled) {
       void window.desktopPet?.discordDisconnect?.()
       return
     }
 
-    const settings = settingsRef.current
-    const botToken = settings.discordBotToken?.trim()
-    if (!botToken) return
+    const token = botToken?.trim()
+    if (!token) return
 
-    const allowedChannelIds = parseDiscordChannelIdList(settings.discordAllowedChannelIds)
+    const allowed = parseDiscordChannelIdList(allowedChannelIds)
 
-    window.desktopPet?.discordConnect?.({ botToken, allowedChannelIds })
+    window.desktopPet?.discordConnect?.({ botToken: token, allowedChannelIds: allowed })
       .then((s) => {
         setStatus({
           state: s.state as DiscordStatus['state'],
@@ -87,7 +89,7 @@ export function useDiscordGateway({
     return () => {
       void window.desktopPet?.discordDisconnect?.()
     }
-  }, [enabled, settingsRef])
+  }, [enabled, botToken, allowedChannelIds])
 
   // Subscribe to incoming messages
   useEffect(() => {

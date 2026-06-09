@@ -240,6 +240,8 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   const { gateway: telegramGateway, replyTo: replyToTelegram } = useTelegramBridge({
     settingsRef,
     enabled: settings.telegramIntegrationEnabled,
+    botToken: settings.telegramBotToken,
+    allowedChatIds: settings.telegramAllowedChatIds,
     chat,
     debugConsole,
   })
@@ -247,6 +249,8 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   const { gateway: discordGateway, replyTo: replyToDiscord } = useDiscordBridge({
     settingsRef,
     enabled: settings.discordIntegrationEnabled,
+    botToken: settings.discordBotToken,
+    allowedChannelIds: settings.discordAllowedChannelIds,
     chat,
     debugConsole,
   })

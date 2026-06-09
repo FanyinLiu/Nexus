@@ -32,6 +32,8 @@ type DebugConsoleBridge = {
 export type UseDiscordBridgeOptions = {
   settingsRef: React.RefObject<AppSettings>
   enabled: boolean
+  botToken: string
+  allowedChannelIds: string
   chat: ChatBridge
   debugConsole: DebugConsoleBridge
 }
@@ -39,6 +41,8 @@ export type UseDiscordBridgeOptions = {
 export function useDiscordBridge({
   settingsRef,
   enabled,
+  botToken,
+  allowedChannelIds,
   chat,
   debugConsole,
 }: UseDiscordBridgeOptions) {
@@ -104,7 +108,8 @@ export function useDiscordBridge({
   }, [chat, debugConsole, settingsRef, t])
 
   const gateway = useDiscordGateway({
-    settingsRef,
+    botToken,
+    allowedChannelIds,
     onMessage: handleDiscordMessage,
     enabled,
   })

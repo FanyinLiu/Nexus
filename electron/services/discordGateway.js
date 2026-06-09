@@ -154,6 +154,7 @@ function handleGatewayMessage(raw) {
   switch (op) {
     case 10: {
       // Hello — start heartbeating
+      if (!d || typeof d.heartbeat_interval !== 'number') return
       _heartbeatInterval = d.heartbeat_interval
       clearTimers()
       // Send first heartbeat after jitter
@@ -212,6 +213,7 @@ function handleGatewayMessage(raw) {
 
 function handleDispatch(eventName, data) {
   if (eventName === 'READY') {
+    if (!data) return
     _state = 'connected'
     _reconnectAttempt = 0
     _sessionId = data.session_id
@@ -230,6 +232,7 @@ function handleDispatch(eventName, data) {
   }
 
   if (eventName === 'MESSAGE_CREATE') {
+    if (!data) return
     // Ignore messages from the bot itself
     if (data.author?.id === _botId) return
     // Ignore bot messages
@@ -272,7 +275,13 @@ async function connectGateway(gatewayUrl) {
     })
 
     ws.on('message', (raw) => {
-      handleGatewayMessage(String(raw))
+      try {
+        handleGatewayMessage(String(raw))
+      } catch (err) {
+        // A malformed/unexpected gateway frame must never reach the global
+        // uncaughtException handler (which exits the whole app). Drop it.
+        console.error('[discord] Dropping malformed gateway frame:', err?.message ?? err)
+      }
     })
 
     ws.on('close', (code, reason) => {
