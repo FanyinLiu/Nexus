@@ -73,6 +73,48 @@ describe('humanizeError — context-specific', () => {
   })
 })
 
+// These are the EXACT strings electron/ipc/chatIpc.js throws on a failed chat
+// send. assistantReply.ts now routes the caught error through
+// humanizeError(caught, 'chat') for every user-facing surface, so this block
+// is the contract: if the backend copy changes in a way that stops matching,
+// the user goes back to seeing raw provider text and these tests catch it.
+describe('humanizeError — real chat-send backend strings', () => {
+  test('401 auth message (contains "API Key") → bad-key advice, key text dropped', () => {
+    const out = humanizeError('模型接口鉴权失败，请检查 API Key 是否有效。', 'chat')
+    assert.match(out, /(API key|Settings)/i)
+    assert.doesNotMatch(out, /鉴权失败/)
+  })
+
+  test('missing-key 401 message also maps to bad-key advice', () => {
+    const out = humanizeError('还没有填写 API Key，所以现在还不能对话。请先在设置里填入可用的 API Key。', 'chat')
+    assert.match(out, /(API key|Settings)/i)
+  })
+
+  test('404 status-code fallback → "check URL / model" advice', () => {
+    const out = humanizeError('模型请求失败（状态码：404）', 'chat')
+    assert.match(out, /(URL|model|address)/i)
+    assert.doesNotMatch(out, /状态码/)
+  })
+
+  test('429 status-code fallback → rate-limit advice', () => {
+    const out = humanizeError('模型请求失败（状态码：429）', 'chat')
+    assert.match(out, /(too many|wait|moment)/i)
+  })
+
+  test('connection-failure wrapper → reachability advice, raw host dropped', () => {
+    const out = humanizeError('模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：ECONNREFUSED 127.0.0.1:11434', 'chat')
+    assert.match(out, /(reach|connect|server)/i)
+    assert.doesNotMatch(out, /ECONNREFUSED/)
+  })
+
+  test('unmatched chat error redacts an API secret in the fallback', () => {
+    const out = humanizeError(new Error('upstream blew up token sk-ABCDEF1234567890XYZ tail'), 'chat')
+    assert.match(out, /Something went wrong/)
+    assert.match(out, /sk-\*\*\*/)
+    assert.doesNotMatch(out, /sk-ABCDEF1234567890XYZ/)
+  })
+})
+
 describe('humanizeError — fallbacks', () => {
   test('unknown error wrapped friendly with raw text in parens', () => {
     const out = humanizeError(new Error('Some weird internal thing happened'))

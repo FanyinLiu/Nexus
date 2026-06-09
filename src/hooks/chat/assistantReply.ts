@@ -24,6 +24,7 @@ import {
 import { toChatToolResult, type BuiltInToolResult } from '../../features/tools/toolTypes.ts'
 import { logVoiceEvent } from '../../features/voice/shared'
 import { shorten } from '../../lib/common'
+import { humanizeError } from '../../lib/humanizeError'
 import { createId } from '../../lib'
 import { t } from '../../i18n/runtime.ts'
 import type {
@@ -662,7 +663,13 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
 
       return true
     } catch (caught) {
+      // errorMessage = raw provider/runtime text, kept for diagnostic surfaces
+      // (logs, voice trace, bus abort reason). friendlyMessage = the same error
+      // mapped to localized, actionable companion copy with secrets redacted —
+      // used for everything the end user actually reads. Mid-chat 404/429/5xx/
+      // ECONNREFUSED previously surfaced the raw provider string here.
       const errorMessage = caught instanceof Error ? caught.message : t('chat.assistant.send_failed_fallback')
+      const friendlyMessage = humanizeError(caught, 'chat')
       logVoiceEvent('assistant reply failed', {
         traceId: traceId || undefined,
         source,
@@ -681,22 +688,22 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       dependencies.ctx.setMood('confused')
       dependencies.presentPetDialogBubble(
         {
-          content: t('chat.assistant.failure_bubble', { error: errorMessage }),
+          content: t('chat.assistant.failure_bubble', { error: friendlyMessage }),
           streaming: false,
         },
         { autoHideMs: 9_000 },
       )
 
       if (fromVoice) {
-        dependencies.ctx.updateVoicePipeline('reply_failed', t('chat.assistant.voice_send_failed_status', { preview: shorten(errorMessage, 40) }), content)
+        dependencies.ctx.updateVoicePipeline('reply_failed', t('chat.assistant.voice_send_failed_status', { preview: shorten(friendlyMessage, 40) }), content)
         dependencies.ctx.appendVoiceTrace(t('chat.assistant.voice_request_failed_label'), `#${traceLabel} ${shorten(errorMessage, 48)}`, 'error')
         dependencies.appendSystemMessage(
-          t('chat.assistant.voice_send_failed_system', { error: errorMessage }),
+          t('chat.assistant.voice_send_failed_system', { error: friendlyMessage }),
           'error',
         )
       }
 
-      dependencies.setError(fromVoice ? t('chat.assistant.voice_send_failed_summary', { error: errorMessage }) : errorMessage)
+      dependencies.setError(fromVoice ? t('chat.assistant.voice_send_failed_summary', { error: friendlyMessage }) : friendlyMessage)
       // Bus drives voiceState → 'idle'
       dependencies.ctx.busEmit({
         type: 'session:aborted',
