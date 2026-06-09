@@ -717,6 +717,20 @@ export function getOnboardingTextProviderOptions(): ApiProviderPreset[] {
   return [...featured, ...presets.filter((preset) => !featuredIds.has(preset.id))]
 }
 
+/**
+ * The first-run picker options narrowed to one region (the onboarding region
+ * tabs: 国内 / 海外 / 本地). Keeps the first-success ordering within the region,
+ * and always keeps the currently-selected provider visible even if it belongs
+ * to another region — so the <select>'s value never points at a hidden option.
+ */
+export function getOnboardingTextProviderOptionsByRegion(
+  region: ApiProviderPreset['region'],
+  selectedProviderId?: string,
+): ApiProviderPreset[] {
+  const scoped = getOnboardingTextProviderOptions().filter((preset) => preset.region === region)
+  return includeSelectedTextProvider(scoped, selectedProviderId)
+}
+
 function includeSelectedTextProvider(
   providers: ApiProviderPreset[],
   selectedProviderId?: string,

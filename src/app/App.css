@@ -3253,6 +3253,33 @@
   cursor: default;
 }
 
+.onboarding-region-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.onboarding-region-tabs__tab {
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.onboarding-region-tabs__tab.is-active {
+  border-color: rgba(168, 139, 255, 0.3);
+  background: rgba(168, 139, 255, 0.08);
+  color: #ffffff;
+}
+
+.onboarding-region-tabs__tab:focus-visible {
+  outline: 2px solid rgba(168, 139, 255, 0.62);
+  outline-offset: 2px;
+}
+
 .onboarding-card__body {
   min-height: 0;
   overflow-y: auto;
