@@ -570,11 +570,15 @@ export async function syncFromSettings(desired) {
     const target = desiredById.get(id)
     const shouldBeRunning = target?.enabled && target?.command
     if (!shouldBeRunning) {
-      if (instance.state === 'running' || instance.state === 'starting') {
-        await instance.stop().catch((err) => {
-          console.warn(`[mcpHost:sync] stop ${id} failed:`, err?.message)
-        })
-      }
+      // Always stop(), regardless of state. A crashed instance may be sitting
+      // in 'stopped' with a pending restart timer; stop() is the only thing
+      // that clears restartTimer + sets intentionallyStopped, so skipping it
+      // here would let an orphaned timer revive a server the user just
+      // removed/disabled (leaking an untracked child on removal). stop() is
+      // idempotent and a no-op kill when there is no live process.
+      await instance.stop().catch((err) => {
+        console.warn(`[mcpHost:sync] stop ${id} failed:`, err?.message)
+      })
       if (!target) {
         // Drop the persisted approval — if the user re-adds this server
         // later, they should be re-prompted in case the new command differs.

@@ -54,9 +54,26 @@ function encodePacket(id, type, body) {
   return packet
 }
 
+// Generous upper bound for a single RCON frame; real responses are a few KB.
+const MAX_RCON_PACKET_SIZE = 4 * 1024 * 1024
+
 function drainReadBuffer() {
   while (_readBuffer.length >= 12) {
     const size = _readBuffer.readInt32LE(0)
+
+    // `size` is a signed Int32 read straight off the (cleartext, possibly
+    // hostile or MITM'd) wire. A negative or absurd value would make
+    // totalPacketLength <= 0 and spin this loop forever on the MAIN thread,
+    // freezing the whole app. Treat an out-of-range size as a fatal protocol
+    // error: drop the buffer and destroy the socket (its 'close' handler
+    // rejects all pending requests and resets state).
+    if (size < 10 || size > MAX_RCON_PACKET_SIZE) {
+      console.error(`[factorio-rcon] invalid packet size ${size}; dropping connection`)
+      _readBuffer = Buffer.alloc(0)
+      _socket?.destroy()
+      return
+    }
+
     const totalPacketLength = 4 + size
 
     if (_readBuffer.length < totalPacketLength) break

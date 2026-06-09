@@ -132,6 +132,10 @@ export async function connect(address, port, username) {
     ws.addEventListener('close', (event) => {
       clearTimeout(timeoutId)
       const wasConnected = _state === 'connected'
+      // Capture this BEFORE overwriting _state below — otherwise the reject
+      // branch is statically dead and a close-before-open leaves connect()'s
+      // promise forever unsettled (the renderer IPC invoke hangs with no error).
+      const wasConnecting = _state === 'connecting'
       _ws = null
       _state = 'disconnected'
       console.info(`[minecraft] ws closed (code=${event.code})`)
@@ -139,7 +143,7 @@ export async function connect(address, port, username) {
 
       if (wasConnected && !_intentionallyClosed) {
         scheduleReconnect()
-      } else if (_state === 'connecting') {
+      } else if (wasConnecting) {
         reject(new Error(`WebSocket closed during handshake (code=${event.code})`))
       }
     })

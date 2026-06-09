@@ -134,10 +134,6 @@ interface StorageSyncMessage {
   timestamp: number
 }
 
-// In-memory cache: keeps the latest known value per key so incoming sync
-// messages can update it before consumers next call readJson.
-const memoryCache = new Map<string, unknown>()
-
 // Subscriber registry: key → set of callbacks
 const subscribers = new Map<string, Set<(value: unknown) => void>>()
 
@@ -161,8 +157,6 @@ if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
   syncChannel.onmessage = (event: MessageEvent<StorageSyncMessage>) => {
     const { key, value } = event.data
     if (typeof key !== 'string') return
-    // Update local cache so the next readJson call sees the fresh value.
-    memoryCache.set(key, value)
     notifySubscribers(key, value)
   }
 }
@@ -202,12 +196,11 @@ export function writeJson<T>(key: string, value: T): void {
     window.localStorage.setItem(key, JSON.stringify(value))
   } catch (err) {
     // Quota exceeded / storage unavailable (e.g. private mode): best-effort.
-    // Keep the in-memory cache + broadcast so the session stays consistent,
-    // but never let a failed persist throw — it would crash callers on the
-    // startup-init path (loadMemories / settings rewrite-on-load, etc.).
+    // The broadcast still fires so other windows stay consistent, but never let
+    // a failed persist throw — it would crash callers on the startup-init path
+    // (loadMemories / settings rewrite-on-load, etc.).
     console.error(`[storage] writeJson failed for "${key}":`, err)
   }
-  memoryCache.set(key, value)
   broadcastWrite(key, value)
 }
 

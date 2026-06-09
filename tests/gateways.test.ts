@@ -6,6 +6,7 @@
  * without an Electron runtime.
  */
 import assert from 'node:assert/strict'
+import net from 'node:net'
 import { describe, test, before, after } from 'node:test'
 import { WebSocketServer } from 'ws'
 
@@ -260,5 +261,31 @@ describe('minecraftGateway: WebSocket integration', () => {
 
     unsubscribe()
     await disconnect()
+  })
+
+  test('connect rejects (does not hang) when the socket closes before the WS opens', async () => {
+    // Regression guard for the close-before-open hang: a raw TCP server that
+    // accepts then immediately destroys the connection, so the WebSocket
+    // upgrade never completes and 'close' fires while still 'connecting'.
+    // Before the fix, connect()'s promise was never settled (renderer hangs).
+    const rawServer = net.createServer((socket) => socket.destroy())
+    const rawPort: number = await new Promise((resolve) => {
+      rawServer.listen(0, '127.0.0.1', () => {
+        const addr = rawServer.address()
+        resolve(typeof addr === 'object' && addr ? addr.port : 0)
+      })
+    })
+
+    try {
+      const outcome = await Promise.race([
+        connect('127.0.0.1', rawPort, 'HangUser').then(() => 'resolved', () => 'rejected'),
+        new Promise((r) => setTimeout(() => r('hung'), 4000)),
+      ])
+      assert.equal(outcome, 'rejected')
+      assert.equal(getStatus().state, 'disconnected')
+    } finally {
+      await disconnect()
+      await new Promise<void>((resolve) => rawServer.close(() => resolve()))
+    }
   })
 })

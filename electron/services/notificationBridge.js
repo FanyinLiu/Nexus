@@ -52,18 +52,6 @@ let _webhookToken = ''
 /** @type {Promise<string> | null} */
 let _webhookTokenPromise = null
 
-/**
- * Set a bearer token for webhook authentication.
- * Empty values are ignored; webhook auth should not fall back to open access.
- * @param {string} token
- */
-export function setWebhookToken(token) {
-  const normalized = String(token ?? '').trim()
-  if (normalized) {
-    _webhookToken = normalized
-  }
-}
-
 function getWebhookTokenPath() {
   return path.join(app.getPath('userData'), WEBHOOK_TOKEN_FILE)
 }
