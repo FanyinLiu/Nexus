@@ -6,6 +6,7 @@ import {
   getApiProviderPreset,
   getCommonTextProviderOptions,
   getOnboardingTextProviderOptions,
+  getOnboardingTextProviderOptionsByRegion,
   getProviderModelCapability,
   getProviderPresetModels,
   getTextProviderCatalogOptions,
@@ -58,6 +59,27 @@ test('onboarding picker leads with the first-success providers, then the full ca
   // Nothing hidden, nothing duplicated — still the full catalog.
   assert.equal(options.length, getTextProviderPresets().length)
   assert.equal(new Set(ids).size, ids.length)
+})
+
+test('onboarding region tabs filter by region, keep first-success order, and keep the selection visible', () => {
+  const china = getOnboardingTextProviderOptionsByRegion('china')
+  assert.equal(china.every((provider) => provider.region === 'china'), true)
+  assert.equal(china[0]?.id, 'minimax-coding') // first-success china member leads
+  assert.ok(china.findIndex((p) => p.id === 'deepseek') < china.findIndex((p) => p.id === 'moonshot'))
+
+  const global = getOnboardingTextProviderOptionsByRegion('global')
+  assert.equal(global.every((provider) => provider.region === 'global'), true)
+  assert.equal(global[0]?.id, 'openai') // first-success global member leads
+  assert.ok(global.findIndex((p) => p.id === 'gemini') < global.findIndex((p) => p.id === 'xai'))
+
+  const local = getOnboardingTextProviderOptionsByRegion('custom')
+  assert.ok(local.some((provider) => provider.id === 'ollama'))
+  assert.equal(local.every((provider) => provider.region === 'custom'), true)
+
+  // A selection from another region is prepended so the <select> value stays valid.
+  const chinaWithGlobalPick = getOnboardingTextProviderOptionsByRegion('china', 'openai')
+  assert.equal(chinaWithGlobalPick[0]?.id, 'openai')
+  assert.equal(chinaWithGlobalPick.slice(1).every((provider) => provider.region === 'china'), true)
 })
 
 test('provider model capabilities expose local/cloud, key and context metadata', () => {
