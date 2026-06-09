@@ -647,6 +647,18 @@ export const API_PROVIDER_PRESETS: ApiProviderPreset[] = [
 
 export const COMMON_TEXT_PROVIDER_IDS = ['deepseek', 'ollama', 'openai', 'custom'] as const
 
+// The providers that get a brand-new user to a working chat fastest, in
+// recommended try-order. Surfaced first in the first-run provider picker so
+// the 30-entry catalog doesn't bury the on-ramp. MiniMax Token Plan leads as
+// the cheapest coding-plan entry point, then the mainstream cloud providers.
+export const FIRST_SUCCESS_PROVIDER_IDS = [
+  'minimax-coding',
+  'deepseek',
+  'openai',
+  'gemini',
+  'anthropic',
+] as const
+
 export type CommonTextProviderId = typeof COMMON_TEXT_PROVIDER_IDS[number]
 export type TextProviderCatalogScope = 'common' | 'china' | 'global' | 'local' | 'all'
 
@@ -687,6 +699,22 @@ export function getCommonTextProviderOptions(options: {
     ...commonProviders,
     ...(selectedProvider && !isCommonTextProviderId(selectedProvider.id) ? [selectedProvider] : []),
   ]
+}
+
+/**
+ * Provider presets ordered for the first-run picker: the recommended
+ * first-success providers up top (in recommended order), then every other
+ * preset in catalog order. Deduped, and always returns the full catalog so
+ * nothing the user might want is hidden.
+ */
+export function getOnboardingTextProviderOptions(): ApiProviderPreset[] {
+  const presets = getTextProviderPresets()
+  const byId = new Map(presets.map((preset) => [preset.id, preset]))
+  const featured = FIRST_SUCCESS_PROVIDER_IDS
+    .map((id) => byId.get(id))
+    .filter((preset): preset is ApiProviderPreset => Boolean(preset))
+  const featuredIds = new Set(featured.map((preset) => preset.id))
+  return [...featured, ...presets.filter((preset) => !featuredIds.has(preset.id))]
 }
 
 function includeSelectedTextProvider(

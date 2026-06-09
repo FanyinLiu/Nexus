@@ -2,11 +2,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  FIRST_SUCCESS_PROVIDER_IDS,
   getApiProviderPreset,
   getCommonTextProviderOptions,
+  getOnboardingTextProviderOptions,
   getProviderModelCapability,
   getProviderPresetModels,
   getTextProviderCatalogOptions,
+  getTextProviderPresets,
   inferApiProviderId,
   isCommonTextProviderId,
 } from '../src/features/models/index.ts'
@@ -41,6 +44,20 @@ test('model catalog scopes keep the selected provider visible', () => {
   assert.ok(getTextProviderCatalogOptions('local').some((provider) => provider.id === 'custom'))
   assert.equal(getTextProviderCatalogOptions('china').every((provider) => provider.region === 'china'), true)
   assert.equal(getTextProviderCatalogOptions('global').every((provider) => provider.region === 'global'), true)
+})
+
+test('onboarding picker leads with the first-success providers, then the full catalog', () => {
+  const options = getOnboardingTextProviderOptions()
+  const ids = options.map((provider) => provider.id)
+
+  // The recommended five lead, in recommended order, and each resolved to a
+  // real preset (a typo'd id would shorten this slice and trip the assert).
+  assert.deepEqual(ids.slice(0, FIRST_SUCCESS_PROVIDER_IDS.length), [...FIRST_SUCCESS_PROVIDER_IDS])
+  // MiniMax Token Plan specifically leads the picker.
+  assert.equal(ids[0], 'minimax-coding')
+  // Nothing hidden, nothing duplicated — still the full catalog.
+  assert.equal(options.length, getTextProviderPresets().length)
+  assert.equal(new Set(ids).size, ids.length)
 })
 
 test('provider model capabilities expose local/cloud, key and context metadata', () => {
