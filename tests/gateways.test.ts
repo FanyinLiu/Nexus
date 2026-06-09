@@ -288,4 +288,38 @@ describe('minecraftGateway: WebSocket integration', () => {
       await new Promise<void>((resolve) => rawServer.close(() => resolve()))
     }
   })
+
+  test('connect rejects when the WS fires "error" without a "close" (handshake error path)', async () => {
+    // On some platforms a failed handshake emits only 'error' and no timely
+    // 'close', so the close-only reject path would hang until the 8s timeout.
+    // The raw-socket test above can't force that ordering deterministically, so
+    // stub the global WebSocket to fire 'error' (and never 'close') instead.
+    const RealWebSocket = globalThis.WebSocket
+    class ErroringWebSocket {
+      listeners: Record<string, Array<(ev: unknown) => void>> = {}
+      constructor() {
+        setTimeout(() => this.emit('error', { message: 'simulated handshake error' }), 5)
+      }
+      addEventListener(type: string, cb: (ev: unknown) => void) {
+        (this.listeners[type] ??= []).push(cb)
+      }
+      emit(type: string, ev: unknown) {
+        for (const cb of this.listeners[type] ?? []) cb(ev)
+      }
+      close() {}
+    }
+    ;(globalThis as { WebSocket: unknown }).WebSocket = ErroringWebSocket
+
+    try {
+      const outcome = await Promise.race([
+        connect('127.0.0.1', 65000, 'ErrUser').then(() => 'resolved', () => 'rejected'),
+        new Promise((r) => setTimeout(() => r('hung'), 2000)),
+      ])
+      assert.equal(outcome, 'rejected')
+      assert.equal(getStatus().state, 'disconnected')
+    } finally {
+      ;(globalThis as { WebSocket: unknown }).WebSocket = RealWebSocket
+      await disconnect()
+    }
+  })
 })

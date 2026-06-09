@@ -127,6 +127,18 @@ export async function connect(address, port, username) {
 
     ws.addEventListener('error', (event) => {
       console.error('[minecraft] ws error:', event.message ?? 'unknown')
+      // A handshake-phase failure (e.g. the peer destroys the socket before the
+      // WS upgrade completes) fires 'error' WITHOUT a timely 'close' on some
+      // platforms — which would otherwise leave connect()'s promise unsettled
+      // until the 8s timeout (the renderer IPC invoke hangs that whole time).
+      // Reject now, and flip _state to 'disconnected' so the later 'close'
+      // handler sees wasConnecting=false and never double-settles the promise.
+      if (_state === 'connecting') {
+        clearTimeout(timeoutId)
+        _state = 'disconnected'
+        try { ws.close() } catch {}
+        reject(new Error(`WebSocket error during handshake: ${event.message ?? 'network error'}`))
+      }
     })
 
     ws.addEventListener('close', (event) => {
