@@ -1,4 +1,4 @@
-import { API_PROVIDER_PRESETS, getApiProviderPreset } from '../../../../lib/apiProviders'
+import { getApiProviderPreset, getOnboardingTextProviderOptions } from '../../../../lib/apiProviders'
 import { displaySecretInputValue } from '../../../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
 import { getLocalizedApiProviderNote } from '../../../models/providerNotes'
@@ -29,7 +29,7 @@ export function TextStep({
           value={draft.apiProviderId}
           onChange={(event) => onApplyTextProviderPreset(event.target.value)}
         >
-          {API_PROVIDER_PRESETS.map((provider) => (
+          {getOnboardingTextProviderOptions().map((provider) => (
             <option key={provider.id} value={provider.id}>
               {provider.label}
             </option>
