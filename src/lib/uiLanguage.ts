@@ -1,4 +1,4 @@
-import { AVAILABLE_LOCALES, hasKey, normalizeLocale, t as translate } from '../i18n/index.ts'
+import { AVAILABLE_LOCALES, hasKey, normalizeLocale, t as translate } from '../i18n/runtime.ts'
 import type { TranslationKey, TranslationParams, UiLanguage } from '../types'
 
 export type LocalizedText = {
