@@ -3,7 +3,7 @@ import {
   modelSupportsSpeech,
   modelSupportsVision,
 } from '../../lib/modelCapabilities.ts'
-import { isChineseUiLanguage, normalizeUiLanguage } from '../../lib/uiLanguage.ts'
+import { normalizeUiLanguage } from '../../lib/uiLanguage.ts'
 import type { UiLanguage } from '../../types/i18n.ts'
 import type {
   DiscoveredModel,
@@ -721,11 +721,13 @@ export function getOnboardingTextProviderOptions(): ApiProviderPreset[] {
 
 /**
  * Which region tab the first-run picker should open on when the user hasn't
- * picked one: Chinese UIs land on 国内, everyone else on 海外. Single source
- * of truth for the heuristic so the component never re-implements it.
+ * picked one: zh-CN lands on 国内, everyone else (including zh-TW — the
+ * mainland-provider tab mostly needs +86 phone numbers / mainland payment)
+ * on 海外. Single source of truth for the heuristic so the component never
+ * re-implements it.
  */
 export function getDefaultOnboardingRegion(uiLanguage: UiLanguage): ApiProviderPreset['region'] {
-  return isChineseUiLanguage(normalizeUiLanguage(uiLanguage)) ? 'china' : 'global'
+  return normalizeUiLanguage(uiLanguage) === 'zh-CN' ? 'china' : 'global'
 }
 
 /**

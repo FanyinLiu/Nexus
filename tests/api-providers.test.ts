@@ -85,7 +85,8 @@ test('onboarding region tabs filter by region, keep first-success order, and kee
 
 test('default onboarding region tab follows the UI language', () => {
   assert.equal(getDefaultOnboardingRegion('zh-CN'), 'china')
-  assert.equal(getDefaultOnboardingRegion('zh-TW'), 'china')
+  // zh-TW deliberately lands on 海外 — the 国内 tab is mainland-oriented.
+  assert.equal(getDefaultOnboardingRegion('zh-TW'), 'global')
   assert.equal(getDefaultOnboardingRegion('en-US'), 'global')
   assert.equal(getDefaultOnboardingRegion('ja'), 'global')
   assert.equal(getDefaultOnboardingRegion('ko'), 'global')
