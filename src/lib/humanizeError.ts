@@ -52,12 +52,18 @@ const COMMON_PATTERNS: KnownPattern[] = [
   // 连接失败/超时: electron/ipc/chatIpc.js throws its own Chinese copy for
   // connection and timeout failures; without these the most common real-world
   // failures fall through to the generic fallback instead of targeted advice.
+  // 超时 must outrank 连接失败: backend timeouts reach the renderer wrapped as
+  // `模型接口连接失败…原始错误：模型响应超时…` (net.js rejects inside chatIpc's
+  // catch), and first-match-wins would otherwise classify every timeout as a
+  // connection failure.
+  { match: /ETIMEDOUT|timeout|timed out|超时|逾時/i, key: 'humanize.timeout' },
   { match: /ECONNREFUSED|connection refused|连接失败/i, key: 'humanize.connection_refused' },
   { match: /ENOTFOUND|getaddrinfo|dns/i, key: 'humanize.dns_failed' },
-  { match: /ETIMEDOUT|timeout|timed out|超时|逾時/i, key: 'humanize.timeout' },
   // 'terminated' / 'other side closed' are undici's wording for a connection
-  // dropped mid-stream — the usual shape of a mid-reply provider hiccup.
-  { match: /ECONNRESET|socket hang up|terminated|other side closed/i, key: 'humanize.connection_dropped' },
+  // dropped mid-stream. 'terminated' is anchored to the end of the text so a
+  // provider response body that merely contains the word (e.g. "account has
+  // been terminated") isn't misread as a transient drop.
+  { match: /ECONNRESET|socket hang up|terminated\s*$|other side closed/i, key: 'humanize.connection_dropped' },
   { match: /AbortError|abort|aborted|cancel/i, key: 'humanize.aborted' },
   { match: /fetch.{0,10}failed|network/i, key: 'humanize.network_generic' },
 ]
@@ -163,8 +169,10 @@ function redactSensitive(raw: string): string {
     .replace(/\bxai-[A-Za-z0-9_-]{16,}/g, 'xai-***')
     // JWTs (MiniMax and other providers hand these out as API keys)
     .replace(/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}/g, 'jwt***')
-    // Secrets passed as query/body parameters, echoed back in error text
-    .replace(/\b(api[-_]?key|access[-_]?token|apikey|token|secret)=[^&\s'"]+/gi, '$1=***')
+    // Secrets passed as query/body parameters, echoed back in error text.
+    // Suffix-based (any param name ending in key/token/secret) because \b
+    // fails after '_' — client_secret= / refresh_token= must be caught too.
+    .replace(/([A-Za-z0-9_-]*(?:key|token|secret))=[^&\s'"]+/gi, '$1=***')
 }
 
 /**

@@ -132,6 +132,25 @@ describe('humanizeError — real chat-send backend strings', () => {
     assert.doesNotMatch(out, /Something went wrong/)
   })
 
+  test('the REAL chat-send timeout shape (wrapped in the 连接失败 copy) still maps to timeout advice', () => {
+    // net.js rejects with the timeout copy INSIDE chatIpc's catch, so the
+    // renderer always receives it wrapped — the timeout pattern must outrank
+    // the connection-failure pattern for this, the most common failure shape.
+    const out = humanizeError(
+      '模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：模型响应超时，请检查网络、代理或当前模型服务状态。',
+      'chat',
+    )
+    assert.match(out, /(too long|faster)/i)
+    assert.doesNotMatch(out, /reach the server/i)
+  })
+
+  test('a provider body merely containing "terminated" is not misread as a dropped connection', () => {
+    const out = humanizeError(new Error('Your account has been terminated for violating our usage policies.'), 'chat')
+    assert.doesNotMatch(out, /dropped/i)
+    // The real (redacted) reason stays visible via the fallback.
+    assert.match(out, /terminated for violating/)
+  })
+
   test('backend connection-failure copy maps to reachability advice even without an ASCII errno', () => {
     const out = humanizeError('模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：terminated', 'chat')
     assert.match(out, /(reach|connect|server)/i)
@@ -199,6 +218,20 @@ describe('humanizeError — secret redaction in the fallback path', () => {
       input: 'proxy refused https://klein:hunter2@my-proxy.example.com:8443 upstream',
       leaked: /hunter2/,
       redacted: /\*\*\*:\*\*\*@my-proxy\.example\.com/,
+    },
+    {
+      // \b fails after '_', so snake_case OAuth param names need the
+      // suffix-based rule — these two leaked before it.
+      name: 'client_secret parameter',
+      input: 'oauth exchange rejected: client_secret=sup3rs3cr3tvalue at provider',
+      leaked: /sup3rs3cr3tvalue/,
+      redacted: /client_secret=\*\*\*/,
+    },
+    {
+      name: 'refresh_token parameter',
+      input: 'grant rejected upstream refresh_token=1Gx9wq8Zr2 here',
+      leaked: /1Gx9wq8Zr2/,
+      redacted: /refresh_token=\*\*\*/,
     },
   ]
 
