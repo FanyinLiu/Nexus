@@ -629,6 +629,7 @@ export const jaMessages: TranslationDictionary = {
   'onboarding.welcome.companion_name_placeholder': '例：ノヴァ',
   'onboarding.welcome.language_label': '表示言語',
   'onboarding.text.provider_label': 'テキストモデルプロバイダー',
+  'onboarding.text.region_filter_label': 'プロバイダーの地域',
   'onboarding.text.api_base_label': 'エンドポイント URL',
   'onboarding.text.model_label': 'モデル名',
   'onboarding.text.model_custom_suffix': '（カスタム）',

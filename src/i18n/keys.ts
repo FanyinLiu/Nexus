@@ -691,6 +691,7 @@ export const translationKeys: TranslationKey[] = [
   'onboarding.welcome.companion_name_label',
   'onboarding.welcome.companion_name_placeholder',
   'onboarding.text.provider_label',
+  'onboarding.text.region_filter_label',
   'onboarding.text.api_base_label',
   'onboarding.text.model_label',
   'onboarding.text.model_custom_suffix',

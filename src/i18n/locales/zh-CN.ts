@@ -629,6 +629,7 @@ export const zhCNMessages: TranslationDictionary = {
   'onboarding.welcome.companion_name_placeholder': '比如：星绘',
   'onboarding.welcome.language_label': '界面语言',
   'onboarding.text.provider_label': '文本模型提供商',
+  'onboarding.text.region_filter_label': '服务商地区',
   'onboarding.text.api_base_label': '接口地址',
   'onboarding.text.model_label': '模型名',
   'onboarding.text.model_custom_suffix': '(自定义)',

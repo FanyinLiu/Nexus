@@ -3,6 +3,7 @@ import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap'
 import {
   apiProviderRequiresApiKey,
 } from '../../../lib/apiProviders'
+import type { ApiProviderPreset } from '../../../lib/apiProviders'
 import {
   getFallbackSpeechOutputVoices,
   getSpeechInputModelOptions,
@@ -57,6 +58,10 @@ export function OnboardingGuide({
   const [draft, setDraft] = useState(settings)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Lives here (not in TextStep) because inactive steps unmount: the picked
+  // tab must survive Next/Back. null = untouched, TextStep derives the
+  // language default.
+  const [textProviderRegion, setTextProviderRegion] = useState<ApiProviderPreset['region'] | null>(null)
   const dialogRef = useRef<HTMLElement | null>(null)
   const stepperItemRefs = useRef<Array<HTMLButtonElement | null>>([])
   useModalFocusTrap(dialogRef, open)
@@ -197,6 +202,8 @@ export function OnboardingGuide({
             draft={draft}
             setDraft={setDraft}
             onApplyTextProviderPreset={applyTextProviderPreset}
+            regionTab={textProviderRegion}
+            onRegionTabChange={setTextProviderRegion}
           />
         )
       case 'voice':
