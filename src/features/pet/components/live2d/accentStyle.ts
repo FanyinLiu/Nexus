@@ -5,8 +5,8 @@
 // pure — they take inputs and return updated visual state with no side
 // effects.
 
-import type { PetPerformanceAccent, PetPerformanceCue } from '../../performance'
-import { clamp } from '../../../../lib/common'
+import type { PetPerformanceAccent, PetPerformanceCue } from '../../performance.ts'
+import { clamp } from '../../../../lib/common.ts'
 
 export const PERFORMANCE_ACCENT_WINDOW_MS = 1_150
 

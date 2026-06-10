@@ -1,4 +1,4 @@
-import { clamp } from '../../lib/common'
+import { clamp } from '../../lib/common.ts'
 import { t } from '../../i18n/runtime.ts'
 
 type StreamAudioPlayerOptions = {

@@ -1,22 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion'
-import type { PetMood, PetTouchZone } from '../../../types'
-import type { GazeTarget } from './live2d/types'
-import type { PetPerformanceCue } from '../performance'
+import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion.ts'
+import type { PetMood, PetTouchZone } from '../../../types/index.ts'
+import type { GazeTarget } from './live2d/types.ts'
+import type { PetPerformanceCue } from '../performance.ts'
 import {
   SPRITE_PET_ACTIVE_LOOP_COUNT,
   mapPetInputsToSpriteState,
   type SpritePetAnimationState,
   type SpritePetAtlasDefinition,
-} from '../spriteAtlas'
+} from '../spriteAtlas.ts'
 import {
   SPRITE_PET_INITIAL_CURSOR,
   advanceSpritePetAnimationCursor,
   applySpritePetStateRequest,
   createSpritePetRequestKey,
   resolveSpritePetRenderFrame,
-} from '../spriteRuntime'
+} from '../spriteRuntime.ts'
 
 type SpritePetCanvasProps = {
   atlas: SpritePetAtlasDefinition

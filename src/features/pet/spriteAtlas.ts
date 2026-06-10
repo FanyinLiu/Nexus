@@ -1,6 +1,6 @@
-import type { PetMood, PetTouchZone } from '../../types'
-import type { PetExpressionSlot } from './models'
-import type { PetPerformanceCue } from './performance'
+import type { PetMood, PetTouchZone } from '../../types/index.ts'
+import type { PetExpressionSlot } from './models.ts'
+import type { PetPerformanceCue } from './performance.ts'
 
 export const SPRITE_PET_COLUMNS = 8
 export const SPRITE_PET_ROWS = 9

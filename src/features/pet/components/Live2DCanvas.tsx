@@ -1,26 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Live2DModel as Live2DModelType } from 'pixi-live2d-display/cubism4'
-import type { PetMood, PetTouchZone } from '../../../types'
+import type { PetMood, PetTouchZone } from '../../../types/index.ts'
 import {
   buildRuntimePetModelDefinition,
   type CubismModelFile,
   type PetModelDefinition,
   type PetExpressionSlot,
-} from '../models'
-import type { PetPerformanceCue } from '../performance'
-import { createBlinkState } from './live2d/blink'
-import { resolveExpressionSlot, resolveGestureGroup, resolveMotionGroup } from './live2d/expressions'
-import { applyLive2DFrame, type FrameRenderState } from './live2d/frameRender'
-import { layoutLive2DModel, MIN_CANVAS_HEIGHT, MIN_CANVAS_WIDTH } from './live2d/layout'
-import { clamp } from '../../../lib/common'
+} from '../models.ts'
+import type { PetPerformanceCue } from '../performance.ts'
+import { createBlinkState } from './live2d/blink.ts'
+import { resolveExpressionSlot, resolveGestureGroup, resolveMotionGroup } from './live2d/expressions.ts'
+import { applyLive2DFrame, type FrameRenderState } from './live2d/frameRender.ts'
+import { layoutLive2DModel, MIN_CANVAS_HEIGHT, MIN_CANVAS_WIDTH } from './live2d/layout.ts'
+import { clamp } from '../../../lib/common.ts'
 import {
   resolveAssetPath,
   type GazeTarget,
   type Live2DModelHandle,
   type MotionPreloadValue,
   type PixiApplication,
-} from './live2d/types'
-import { ensureLive2DVendorScripts } from './live2d/vendor'
+} from './live2d/types.ts'
+import { ensureLive2DVendorScripts } from './live2d/vendor.ts'
 
 const MODEL_LOAD_TIMEOUT_MS = 15_000
 const MOTION_TRIGGER_COOLDOWN_MS = 1500

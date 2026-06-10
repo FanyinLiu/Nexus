@@ -1,5 +1,5 @@
-import { shorten } from '../lib/common'
-import { pickTranslatedUiText } from '../lib/uiLanguage'
+import { shorten } from '../lib/common.ts'
+import { pickTranslatedUiText } from '../lib/uiLanguage.ts'
 import type {
   AppSettings,
   MemoryItem,
@@ -8,7 +8,7 @@ import type {
   UiLanguage,
   VoiceState,
   WindowView,
-} from '../types'
+} from '../types/index.ts'
 
 type Translator = (
   key: TranslationKey,

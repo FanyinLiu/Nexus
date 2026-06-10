@@ -16,8 +16,8 @@
  * recall, Gross emotion regulation, Neely (1977) spreading activation.
  */
 
-import type { EmotionState } from '../autonomy/emotionModel'
-import type { EmotionalValence } from '../../types'
+import type { EmotionState } from '../autonomy/emotionModel.ts'
+import type { EmotionalValence } from '../../types/index.ts'
 
 export const MAX_EMOTION_BOOST = 0.15
 

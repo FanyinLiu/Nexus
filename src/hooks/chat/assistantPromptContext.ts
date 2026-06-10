@@ -1,17 +1,17 @@
-import type { AssistantReplyRequestOptions } from '../../features/chat/systemPromptBuilder'
-import { buildBuiltInToolDescriptors } from '../../features/tools/builtInToolSchemas'
-import { detectRupture } from '../../features/autonomy/ruptureDetection'
-import { buildRepairGuidance } from '../../features/autonomy/repairGuidance'
-import { recordGuidanceFired } from '../../features/autonomy/guidanceTelemetry'
-import { detectCrisisSignal } from '../../features/safety'
+import type { AssistantReplyRequestOptions } from '../../features/chat/systemPromptBuilder.ts'
+import { buildBuiltInToolDescriptors } from '../../features/tools/builtInToolSchemas.ts'
+import { detectRupture } from '../../features/autonomy/ruptureDetection.ts'
+import { buildRepairGuidance } from '../../features/autonomy/repairGuidance.ts'
+import { recordGuidanceFired } from '../../features/autonomy/guidanceTelemetry.ts'
+import { detectCrisisSignal } from '../../features/safety/crisisDetect.ts'
 import { getRememberedCrisisSignal } from '../../features/safety/crisisSecondPass.ts'
 import { buildCrisisGuidance } from '../../features/safety/crisisGuidance.ts'
-import { loadCallbackQueue } from '../../features/memory/callbackStore'
+import { loadCallbackQueue } from '../../features/memory/callbackStore.ts'
 import type {
   AppSettings,
   ChatMessage,
   MemoryItem,
-} from '../../types'
+} from '../../types/index.ts'
 
 export async function loadAvailableTools(settings: AppSettings) {
   const builtInDescriptors = buildBuiltInToolDescriptors(settings)

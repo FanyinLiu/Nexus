@@ -1,34 +1,34 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
-import { AudioPlaybackQueue } from '../../features/voice/audioQueue'
+import { AudioPlaybackQueue } from '../../features/voice/audioQueue.ts'
 import {
   createSpeechLevelController,
   type SpeechLevelController,
-} from '../../features/voice/lipSync'
+} from '../../features/voice/lipSync.ts'
 import {
   createVoiceSessionState,
   reduceVoiceSessionState,
   type VoiceSessionEvent,
   type VoiceSessionState,
   type VoiceSessionTransport,
-} from '../../features/voice/sessionMachine'
-import { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer'
-import { clamp } from '../../lib/common'
-import { stopSpeaking as stopBrowserSpeaking } from '../../lib/voice'
-import { createId } from '../../lib'
-import type { VoiceBusEvent } from '../../features/voice/busEvents'
-import type { TranslationKey, TranslationParams, VoiceState } from '../../types'
+} from '../../features/voice/sessionMachine.ts'
+import { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer.ts'
+import { clamp } from '../../lib/common.ts'
+import { stopSpeaking as stopBrowserSpeaking } from '../../lib/voice.ts'
+import { createId } from '../../lib/index.ts'
+import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
+import type { TranslationKey, TranslationParams, VoiceState } from '../../types/index.ts'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
-import { cleanupApiRecordingSession } from './recordingSession'
-import type { ParaformerConversationState } from './paraformerConversation'
-import type { SenseVoiceConversationState } from './sensevoiceConversation'
-import type { TencentConversationState } from './tencentConversation'
+import { cleanupApiRecordingSession } from './recordingSession.ts'
+import type { ParaformerConversationState } from './paraformerConversation.ts'
+import type { SenseVoiceConversationState } from './sensevoiceConversation.ts'
+import type { TencentConversationState } from './tencentConversation.ts'
 import type {
   ApiRecordingSession,
   SpeechSegmentMeta,
   StreamingSpeechOutputController,
   VadConversationSession,
-} from './types'
+} from './types.ts'
 
 type ShowPetStatus = (
   message: string,

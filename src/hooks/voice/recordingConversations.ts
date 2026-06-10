@@ -1,13 +1,13 @@
 import type { MutableRefObject } from 'react'
-import { formatTraceLabel } from '../../features/voice/shared'
+import { formatTraceLabel } from '../../features/voice/shared.ts'
 import type {
   VoiceSessionEvent,
   VoiceSessionTransport,
-} from '../../features/voice/sessionMachine'
-import { blobToBase64 } from '../../lib/common'
-import { createId } from '../../lib'
-import { recordSttUsage } from '../../features/metering/speechCost'
-import { mapSpeechError } from '../../lib/voice'
+} from '../../features/voice/sessionMachine.ts'
+import { blobToBase64 } from '../../lib/common.ts'
+import { createId } from '../../lib/index.ts'
+import { recordSttUsage } from '../../features/metering/speechCost.ts'
+import { mapSpeechError } from '../../lib/voice.ts'
 import type {
   AppSettings,
   AudioTranscriptionRequest,
@@ -16,18 +16,18 @@ import type {
   TranslationParams,
   VoicePipelineState,
   VoiceState,
-} from '../../types'
+} from '../../types/index.ts'
 import {
   API_RECORDING_MAX_DURATION_MS,
   API_RECORDING_MAX_IDLE_MS,
   API_RECORDING_RMS_THRESHOLD,
   API_RECORDING_SILENCE_MS,
-} from './constants'
-import { startRecordingSession } from './recordingSession'
+} from './constants.ts'
+import { startRecordingSession } from './recordingSession.ts'
 import type {
   ApiRecordingSession,
   VoiceConversationOptions,
-} from './types'
+} from './types.ts'
 
 type ShowPetStatus = (
   message: string,

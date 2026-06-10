@@ -1,13 +1,13 @@
 import type { MutableRefObject } from 'react'
 import { normalizeRecognizedVoiceTranscript, resolveVoiceTranscriptDecision } from '../../features/hearing/core.ts'
 import { applyVoiceHotwordCorrections } from '../../features/hearing/hotwordCorrection.ts'
-import { formatTraceLabel, logVoiceEvent } from '../../features/voice/shared'
-import type { VoiceSessionEvent } from '../../features/voice/sessionMachine'
-import { shorten } from '../../lib/common'
-import { createId } from '../../lib'
-import type { HearingConfig } from '../../features/hearing/config'
-import type { PetMood, TranslationKey, TranslationParams, VoicePipelineState, VoiceTraceEntry } from '../../types'
-import type { VoiceConversationOptions } from './types'
+import { formatTraceLabel, logVoiceEvent } from '../../features/voice/shared.ts'
+import type { VoiceSessionEvent } from '../../features/voice/sessionMachine.ts'
+import { shorten } from '../../lib/common.ts'
+import { createId } from '../../lib/index.ts'
+import type { HearingConfig } from '../../features/hearing/config.ts'
+import type { PetMood, TranslationKey, TranslationParams, VoicePipelineState, VoiceTraceEntry } from '../../types/index.ts'
+import type { VoiceConversationOptions } from './types.ts'
 
 type ShowPetStatus = (
   message: string,

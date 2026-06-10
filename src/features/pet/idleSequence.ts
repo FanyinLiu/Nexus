@@ -11,9 +11,9 @@
  * (blink, happy, thinking, sleepy) the old sequence targeted.
  */
 
-import type { PetPerformanceCue, PetPerformancePlan } from './performance'
-import type { IdleFidgetDefinition } from './models'
-import { createId } from '../../lib/storage'
+import type { PetPerformanceCue, PetPerformancePlan } from './performance.ts'
+import type { IdleFidgetDefinition } from './models.ts'
+import { createId } from '../../lib/storage.ts'
 
 export const IDLE_TICK_MS = 3_000
 /** Per-tick probability that we actually emit a fidget. Keeps the pet quiet

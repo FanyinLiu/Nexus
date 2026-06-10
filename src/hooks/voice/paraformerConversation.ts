@@ -8,14 +8,14 @@ import {
   startParaformerStream,
   type ParaformerStreamSession,
 } from '../../features/hearing/localParaformer.ts'
-import { formatTraceLabel } from '../../features/voice/shared'
+import { formatTraceLabel } from '../../features/voice/shared.ts'
 import type {
   VoiceSessionEvent,
   VoiceSessionTransport,
-} from '../../features/voice/sessionMachine'
-import { clamp } from '../../lib/common'
-import { createId } from '../../lib'
-import { mapSpeechError } from '../../lib/voice'
+} from '../../features/voice/sessionMachine.ts'
+import { clamp } from '../../lib/common.ts'
+import { createId } from '../../lib/index.ts'
+import { mapSpeechError } from '../../lib/voice.ts'
 import type {
   AppSettings,
   PetMood,
@@ -23,12 +23,12 @@ import type {
   TranslationParams,
   VoicePipelineState,
   VoiceState,
-} from '../../types'
+} from '../../types/index.ts'
 import {
   API_RECORDING_MAX_DURATION_MS,
   SHERPA_STREAM_MAX_IDLE_MS,
-} from './constants'
-import type { VoiceConversationOptions } from './types'
+} from './constants.ts'
+import type { VoiceConversationOptions } from './types.ts'
 
 type ShowPetStatus = (
   message: string,

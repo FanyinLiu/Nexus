@@ -5,15 +5,15 @@ import {
   startTencentAsrStream,
   type TencentAsrStreamSession,
 } from '../../features/hearing/tencentAsr.ts'
-import { formatTraceLabel } from '../../features/voice/shared'
+import { formatTraceLabel } from '../../features/voice/shared.ts'
 import type {
   VoiceSessionEvent,
   VoiceSessionState,
   VoiceSessionTransport,
-} from '../../features/voice/sessionMachine'
-import { clamp } from '../../lib/common'
-import { createId } from '../../lib'
-import { mapSpeechError } from '../../lib/voice'
+} from '../../features/voice/sessionMachine.ts'
+import { clamp } from '../../lib/common.ts'
+import { createId } from '../../lib/index.ts'
+import { mapSpeechError } from '../../lib/voice.ts'
 import type {
   AppSettings,
   PetMood,
@@ -21,15 +21,15 @@ import type {
   TranslationParams,
   VoicePipelineState,
   VoiceState,
-} from '../../types'
+} from '../../types/index.ts'
 import {
   API_RECORDING_MAX_DURATION_MS,
   SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD,
   SHERPA_STREAM_MAX_IDLE_MS,
   SHERPA_STREAM_SILENCE_FINISH_MS,
-} from './constants'
-import { createAdaptiveRmsGate } from './support'
-import type { VoiceConversationOptions } from './types'
+} from './constants.ts'
+import { createAdaptiveRmsGate } from './support.ts'
+import type { VoiceConversationOptions } from './types.ts'
 
 type ShowPetStatus = (
   message: string,

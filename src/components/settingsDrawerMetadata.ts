@@ -1,12 +1,12 @@
-import type { SettingsSectionId } from './settingsDrawerSupport'
-import type { PetModelDefinition } from '../features/pet'
-import { getWebSearchProviderPreset } from '../lib/webSearchProviders'
-import { getApiProviderPreset } from '../lib'
+import type { SettingsSectionId } from './settingsDrawerSupport.ts'
+import type { PetModelDefinition } from '../features/pet/index.ts'
+import { getWebSearchProviderPreset } from '../lib/webSearchProviders.ts'
+import { getApiProviderPreset } from '../lib/index.ts'
 import {
   pickTranslatedUiText,
   pickTranslatedUiTextOrFallback,
-} from '../lib/uiLanguage'
-import type { AppSettings, DailyMemoryEntry, DebugConsoleEvent, MemoryItem, UiLanguage } from '../types'
+} from '../lib/uiLanguage.ts'
+import type { AppSettings, DailyMemoryEntry, DebugConsoleEvent, MemoryItem, UiLanguage } from '../types/index.ts'
 
 export type SettingsSectionDescriptionMap = Record<SettingsSectionId, string>
 

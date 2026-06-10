@@ -11,7 +11,7 @@ import {
   markDailyInteraction,
   normalizeRelationshipState,
   recordLevelMilestone,
-} from '../../features/autonomy/relationshipTracker'
+} from '../../features/autonomy/relationshipTracker.ts'
 import {
   applyRelationshipSignals,
   classifyRelationshipSignals,
@@ -28,14 +28,14 @@ import {
   recordOnThisDayFired,
 } from '../../features/memory/onThisDayLedger.ts'
 import { formatOnThisDayPromptHint } from '../../features/memory/onThisDayPrompt.ts'
-import type { MemoryItem } from '../../types'
+import type { MemoryItem } from '../../types/index.ts'
 import { captureRelationshipSample } from '../../features/autonomy/stateTimeline.ts'
 import {
   AUTONOMY_RELATIONSHIP_STORAGE_KEY,
   readJson,
   writeJson,
   writeJsonDebounced,
-} from '../../lib/storage'
+} from '../../lib/storage.ts'
 
 function loadInitialRelationshipState(): RelationshipState {
   const raw = readJson<unknown>(

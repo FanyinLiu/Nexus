@@ -1,6 +1,6 @@
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
-import type { AppSettings, ChatMessage, MemoryItem, PetMood, PresenceCategory, TranslationKey } from '../../types'
-import { shorten } from '../../lib/common'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
+import type { AppSettings, ChatMessage, MemoryItem, PetMood, PresenceCategory, TranslationKey } from '../../types/index.ts'
+import { shorten } from '../../lib/common.ts'
 
 type Translator = (key: TranslationKey, params?: Parameters<typeof pickTranslatedUiText>[2]) => string
 

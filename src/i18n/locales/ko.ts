@@ -1,4 +1,4 @@
-import type { TranslationDictionary } from '../../types/i18n'
+import type { TranslationDictionary } from '../../types/i18n.ts'
 
 export const koMessages: TranslationDictionary = {
   'common.ok': '확인',

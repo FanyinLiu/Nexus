@@ -1,11 +1,11 @@
-import type { VoiceBusEvent } from '../../features/voice/busEvents'
-import type { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer'
-import { prepareTextForTts } from '../../features/voice/text'
-import { shorten } from '../../lib/common'
+import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
+import type { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer.ts'
+import { prepareTextForTts } from '../../features/voice/text.ts'
+import { shorten } from '../../lib/common.ts'
 import { executeWithFailover, type FailoverCandidate } from '../../features/failover/orchestrator.ts'
-import type { AppSettings, TranslationKey, TranslationParams, VoiceTraceEntry } from '../../types'
-import { createStreamingSpeechOutputController } from './streamingSpeechOutput'
-import type { StreamingSpeechOutputController } from './types'
+import type { AppSettings, TranslationKey, TranslationParams, VoiceTraceEntry } from '../../types/index.ts'
+import { createStreamingSpeechOutputController } from './streamingSpeechOutput.ts'
+import type { StreamingSpeechOutputController } from './types.ts'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
 

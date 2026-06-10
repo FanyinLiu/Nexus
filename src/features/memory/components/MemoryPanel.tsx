@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { pickTranslatedUiText } from '../../../lib/uiLanguage'
+import { pickTranslatedUiText } from '../../../lib/uiLanguage.ts'
 import type {
   DailyMemoryEntry,
   MemoryItem,
   MemorySearchMode,
   TranslationKey,
   UiLanguage,
-} from '../../../types'
+} from '../../../types/index.ts'
 
 type MemoryPanelProps = {
   assistantName: string

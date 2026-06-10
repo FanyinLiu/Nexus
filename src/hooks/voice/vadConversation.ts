@@ -6,17 +6,17 @@ import {
 import { createMainProcessVadController } from '../../features/hearing/mainProcessVad.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
-import type { VoiceBusEvent } from '../../features/voice/busEvents'
-import { formatTraceLabel } from '../../features/voice/shared'
+import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
+import { formatTraceLabel } from '../../features/voice/shared.ts'
 import type {
   VoiceSessionEvent,
   VoiceSessionTransport,
-} from '../../features/voice/sessionMachine'
-import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes'
-import { blobToBase64 } from '../../lib/common'
-import { createId } from '../../lib'
-import { recordSttUsage } from '../../features/metering/speechCost'
-import { mapSpeechError } from '../../lib/voice'
+} from '../../features/voice/sessionMachine.ts'
+import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes.ts'
+import { blobToBase64 } from '../../lib/common.ts'
+import { createId } from '../../lib/index.ts'
+import { recordSttUsage } from '../../features/metering/speechCost.ts'
+import { mapSpeechError } from '../../lib/voice.ts'
 import type {
   AppSettings,
   PetMood,
@@ -24,15 +24,15 @@ import type {
   TranslationParams,
   VoicePipelineState,
   VoiceState,
-} from '../../types'
+} from '../../types/index.ts'
 import {
   API_RECORDING_MAX_DURATION_MS,
   API_RECORDING_MAX_IDLE_MS,
-} from './constants'
+} from './constants.ts'
 import type {
   VadConversationSession,
   VoiceConversationOptions,
-} from './types'
+} from './types.ts'
 
 type ShowPetStatus = (
   message: string,

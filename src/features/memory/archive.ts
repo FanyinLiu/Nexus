@@ -1,4 +1,4 @@
-import type { DailyMemoryEntry, DailyMemoryStore, MemoryItem } from '../../types'
+import type { DailyMemoryEntry, DailyMemoryStore, MemoryItem } from '../../types/index.ts'
 import { createId } from '../../lib/index.ts'
 import { t } from '../../i18n/runtime.ts'
 

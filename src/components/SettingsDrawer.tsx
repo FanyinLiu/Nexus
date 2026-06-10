@@ -2,7 +2,7 @@
 import '../app/styles/settings.css'
 import '../app/styles/settings-home.css'
 import '../app/styles/settings-themes.css'
-import { useModalFocusTrap } from '../hooks/useModalFocusTrap'
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap.ts'
 import {
   getMemorySearchModeOptions,
   getSettingsThemeTone,
@@ -11,28 +11,28 @@ import {
   SETTINGS_APPEARANCE_OPTIONS,
   type ConnectionResult,
   type SettingsSectionId,
-} from './settingsDrawerSupport'
+} from './settingsDrawerSupport.ts'
 import {
   switchSpeechOutputProvider,
   switchTextProvider,
   clampPresenceIntervalMinutes,
   UI_LANGUAGE_OPTIONS,
-} from '../lib'
+} from '../lib/index.ts'
 import {
   getDefaultCompanionName,
   getDefaultUserName,
   isLocaleDefaultCompanionName,
   isLocaleDefaultUserName,
   pickTranslatedUiText,
-} from '../lib/uiLanguage'
-import { ensureLocaleLoaded, isLocaleLoaded } from '../i18n'
+} from '../lib/uiLanguage.ts'
+import { ensureLocaleLoaded, isLocaleLoaded } from '../i18n/index.ts'
 import type {
   CodexPetGalleryCatalogResult,
   PetModelDefinition,
   SpritePetCreatorKitInspection,
-} from '../features/pet'
-import type { ReminderTaskDraftInput } from '../features/reminders'
-import { useTheme } from '../features/themes'
+} from '../features/pet/index.ts'
+import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
+import { useTheme } from '../features/themes/index.ts'
 import {
   AutonomySection,
   ChatSection,
@@ -48,7 +48,7 @@ import {
   ToolsSection,
   VoiceSection,
   WindowSection,
-} from './settingsSections'
+} from './settingsSections/index.ts'
 import {
   useConnectionTests,
   useSpeechVoiceManagement,
@@ -56,10 +56,10 @@ import {
   useMemoryArchiveActions,
   useWindowStateSync,
   usePetModelImport,
-} from './settingsDrawerHooks'
-import { PetControlIcon } from './PetControlIcon'
-import { renderSettingsCardIcon } from './settingsDrawerIcons'
-import { buildSettingsSectionMeta } from './settingsDrawerMetadata'
+} from './settingsDrawerHooks/index.ts'
+import { PetControlIcon } from './PetControlIcon.tsx'
+import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
+import { buildSettingsSectionMeta } from './settingsDrawerMetadata.ts'
 import type {
   AppSettings,
   DailyMemoryEntry,
@@ -72,7 +72,7 @@ import type {
   VoicePipelineState,
   VoiceState,
   VoiceTraceEntry,
-} from '../types'
+} from '../types/index.ts'
 
 export type SettingsDrawerProps = {
   open: boolean

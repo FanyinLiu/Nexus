@@ -5,23 +5,23 @@ import type {
   MemoryRecallContext,
   MemorySearchMode,
   MemorySemanticMatch,
-} from '../../types'
-import type { EmotionState } from '../autonomy/emotionModel'
+} from '../../types/index.ts'
+import type { EmotionState } from '../autonomy/emotionModel.ts'
 import {
   getRecentDailyEntries,
   rankDailyEntries,
   rankMemories,
   scoreLexicalSimilarity,
-} from './memory'
-import { cosineSimilarity, embedMemorySearchText } from './vectorSearch'
-import { getDecayedScore } from './decay'
+} from './memory.ts'
+import { cosineSimilarity, embedMemorySearchText } from './vectorSearch.ts'
+import { getDecayedScore } from './decay.ts'
 import {
   computeEmotionResonance,
   detectRegulatoryMode,
   projectToVA,
   recordPrimingCentroid,
   type RegulatoryMode,
-} from './emotionResonance'
+} from './emotionResonance.ts'
 
 type BuildMemoryRecallContextParams = {
   query: string

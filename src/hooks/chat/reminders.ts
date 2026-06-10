@@ -8,16 +8,16 @@ import {
   type ParsedReminderIntent,
 } from '../../features/reminders/parseReminderIntent.ts'
 import { formatReminderScheduleSummaryForUi } from '../../features/reminders/schedule.ts'
-import { shorten } from '../../lib/common'
+import { shorten } from '../../lib/common.ts'
 import { getLocale, t } from '../../i18n/runtime.ts'
-import type { AssistantRuntimeActivity, DebugConsoleEventDraft } from '../../types'
-import { formatReminderNextRunLabel } from './support'
+import type { AssistantRuntimeActivity, DebugConsoleEventDraft } from '../../types/index.ts'
+import { formatReminderNextRunLabel } from './support.ts'
 import type {
   CompanionNoticePayload,
   PendingReminderDraft,
   PendingReminderDraftInput,
   UseChatContext,
-} from './types'
+} from './types.ts'
 
 export type ResolvedReminderIntent = {
   intent: ParsedReminderIntent | null

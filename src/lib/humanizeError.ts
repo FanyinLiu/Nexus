@@ -1,5 +1,5 @@
 import { t } from '../i18n/runtime.ts'
-import type { TranslationKey } from '../types/i18n'
+import type { TranslationKey } from '../types/i18n.ts'
 
 /**
  * humanizeError — translate raw runtime errors into companion-voice

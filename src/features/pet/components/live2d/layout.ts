@@ -3,9 +3,9 @@
 // the renderer dimensions, and the placement context (pet stage vs panel
 // card).  Live2DCanvas calls this from a useCallback wrapper.
 
-import type { PetModelDefinition } from '../../models'
-import { clamp } from '../../../../lib/common'
-import type { Live2DModelHandle, PixiApplication } from './types'
+import type { PetModelDefinition } from '../../models.ts'
+import { clamp } from '../../../../lib/common.ts'
+import type { Live2DModelHandle, PixiApplication } from './types.ts'
 
 export const MIN_CANVAS_WIDTH = 280
 export const MIN_CANVAS_HEIGHT = 360

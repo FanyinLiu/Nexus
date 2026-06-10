@@ -7,19 +7,19 @@
 // reads from the supplied refs, and pushes the resulting values into the
 // model's coreModel via addParameterValueById.
 
-import type { PetExpressionSlot, PetModelDefinition } from '../../models'
-import type { PetPerformanceCue } from '../../performance'
+import type { PetExpressionSlot, PetModelDefinition } from '../../models.ts'
+import type { PetPerformanceCue } from '../../performance.ts'
 import {
   applyAccentStyle,
   resolvePerformanceAccentWindowMs,
-} from './accentStyle'
-import { updateBlink, type BlinkState } from './blink'
-import { clamp } from '../../../../lib/common'
+} from './accentStyle.ts'
+import { updateBlink, type BlinkState } from './blink.ts'
+import { clamp } from '../../../../lib/common.ts'
 import type {
   CubismCoreModel,
   GazeTarget,
   Live2DInternalModel,
-} from './types'
+} from './types.ts'
 
 function addParameterValue(
   coreModel: CubismCoreModel | undefined,

@@ -1,7 +1,7 @@
-import type { ChatTranslationKey } from './i18nKeys/chat'
-import type { ProviderTranslationKey } from './i18nKeys/provider'
-import type { SettingsTranslationKey } from './i18nKeys/settings'
-import type { VoiceTranslationKey } from './i18nKeys/voice'
+import type { ChatTranslationKey } from './i18nKeys/chat.ts'
+import type { ProviderTranslationKey } from './i18nKeys/provider.ts'
+import type { SettingsTranslationKey } from './i18nKeys/settings.ts'
+import type { VoiceTranslationKey } from './i18nKeys/voice.ts'
 
 export type AppLocale = 'zh-CN' | 'zh-TW' | 'en-US' | 'ja' | 'ko'
 export type UiLanguage = AppLocale

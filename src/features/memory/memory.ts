@@ -7,8 +7,8 @@ import type {
   MemoryImportance,
   MemoryItem,
   MemoryKind,
-} from '../../types'
-import type { EmotionState } from '../autonomy/emotionModel'
+} from '../../types/index.ts'
+import type { EmotionState } from '../autonomy/emotionModel.ts'
 import { computeMemorySignificance } from './decay.ts'
 import { createId } from '../../lib/index.ts'
 

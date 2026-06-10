@@ -1,4 +1,4 @@
-import type { AmbientPresenceState, PresenceCategory, PresenceHistoryItem } from '../../types'
+import type { AmbientPresenceState, PresenceCategory, PresenceHistoryItem } from '../../types/index.ts'
 import {
   AMBIENT_PRESENCE_STORAGE_KEY,
   LAST_PROACTIVE_PRESENCE_AT_STORAGE_KEY,

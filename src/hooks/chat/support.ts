@@ -1,6 +1,6 @@
-import { parseAssistantPerformanceContent } from '../../features/pet/performance'
+import { parseAssistantPerformanceContent } from '../../features/pet/performance.ts'
 import { t } from '../../i18n/runtime.ts'
-import type { ChatMessage } from '../../types'
+import type { ChatMessage } from '../../types/index.ts'
 
 export function formatReminderNextRunLabel(timestamp: string | undefined, locale: string) {
   const parsed = Date.parse(timestamp ?? '')

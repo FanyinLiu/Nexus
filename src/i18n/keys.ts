@@ -1,4 +1,4 @@
-import type { TranslationKey } from '../types/i18n'
+import type { TranslationKey } from '../types/i18n.ts'
 
 export const translationKeys: TranslationKey[] = [
   'common.ok',

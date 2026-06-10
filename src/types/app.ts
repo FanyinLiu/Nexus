@@ -1,16 +1,16 @@
-import type { AutonomySettings } from './autonomy'
-import type { AppLocale } from './i18n'
-import type { MemorySearchMode } from './memory'
-import type { CompanionPresenceState, PetMood } from './pet'
-import type { ThemeId } from './theme'
-import type { WebSearchProviderId } from './tools'
+import type { AutonomySettings } from './autonomy.ts'
+import type { AppLocale } from './i18n.ts'
+import type { MemorySearchMode } from './memory.ts'
+import type { CompanionPresenceState, PetMood } from './pet.ts'
+import type { ThemeId } from './theme.ts'
+import type { WebSearchProviderId } from './tools.ts'
 import type {
   AssistantRuntimeActivity,
   VadSensitivity,
   VoiceState,
   VoiceTriggerMode,
   WakewordRuntimePhase,
-} from './voice'
+} from './voice.ts'
 
 export type AppBootstrapStatus = 'idle' | 'initializing' | 'ready' | 'error'
 

@@ -1,31 +1,31 @@
-import { PromptModeStreamFilter } from '../../features/chat/promptModeMcp'
-import { applyChatOutputTransforms } from '../../features/chat/chatOutputTransforms'
-import { selectToolDeliveryMode } from '../../features/chat/systemPromptBuilder'
-import { requestAssistantReplyStreaming } from '../../features/chat/runtime'
-import { selectTriggeredLorebookEntriesWithSemantic } from '../../features/chat/lorebookInjection'
-import { loadLorebookEntries } from '../../lib/storage/lorebooks'
-import { recordUsage } from '../../features/metering/contextMeter'
-import { formatGameContext, loadGameContext } from '../../features/context/gameContext'
+import { PromptModeStreamFilter } from '../../features/chat/promptModeMcp.ts'
+import { applyChatOutputTransforms } from '../../features/chat/chatOutputTransforms.ts'
+import { selectToolDeliveryMode } from '../../features/chat/systemPromptBuilder.ts'
+import { requestAssistantReplyStreaming } from '../../features/chat/runtime.ts'
+import { selectTriggeredLorebookEntriesWithSemantic } from '../../features/chat/lorebookInjection.ts'
+import { loadLorebookEntries } from '../../lib/storage/lorebooks.ts'
+import { recordUsage } from '../../features/metering/contextMeter.ts'
+import { formatGameContext, loadGameContext } from '../../features/context/gameContext.ts'
 import {
   createDailyMemoryEntry,
-} from '../../features/memory/memory'
-import { buildMemoryRecallContext } from '../../features/memory/recall'
-import { loadRelevantSkills, shouldGenerateSkill, generateAndSaveSkill } from '../../features/skills/autoSkillGenerator'
-import { matchCoreSkills } from '../../lib/coreRuntime'
-import { PUBLIC_GESTURE_NAMES } from '../../features/pet/models'
+} from '../../features/memory/memory.ts'
+import { buildMemoryRecallContext } from '../../features/memory/recall.ts'
+import { loadRelevantSkills, shouldGenerateSkill, generateAndSaveSkill } from '../../features/skills/autoSkillGenerator.ts'
+import { matchCoreSkills } from '../../lib/coreRuntime.ts'
+import { PUBLIC_GESTURE_NAMES } from '../../features/pet/models.ts'
 import {
   PerformanceTagStreamFilter,
   extractPerformanceTags,
   parseAssistantPerformanceContent,
-} from '../../features/pet/performance'
+} from '../../features/pet/performance.ts'
 import {
   consumeCallback,
-} from '../../features/memory/callbackStore'
+} from '../../features/memory/callbackStore.ts'
 import { toChatToolResult, type BuiltInToolResult } from '../../features/tools/toolTypes.ts'
-import { logVoiceEvent } from '../../features/voice/shared'
-import { shorten } from '../../lib/common'
-import { humanizeError } from '../../lib/humanizeError'
-import { createId } from '../../lib'
+import { logVoiceEvent } from '../../features/voice/shared.ts'
+import { shorten } from '../../lib/common.ts'
+import { humanizeError } from '../../lib/humanizeError.ts'
+import { createId } from '../../lib/index.ts'
 import { t } from '../../i18n/runtime.ts'
 import type {
   AppSettings,
@@ -33,10 +33,10 @@ import type {
   DailyMemoryStore,
   MemoryItem,
   PetDialogBubbleState,
-} from '../../types'
-import { getSpeechOutputErrorMessage } from './support'
-import { bindStreamingAbort, type AbortSetter } from './streamAbort'
-import type { UseChatContext } from './types'
+} from '../../types/index.ts'
+import { getSpeechOutputErrorMessage } from './support.ts'
+import { bindStreamingAbort, type AbortSetter } from './streamAbort.ts'
+import type { UseChatContext } from './types.ts'
 import {
   buildCrisisGuidancePromptText,
   buildPendingCallbackHints,
@@ -110,6 +110,12 @@ type AssistantReplyRunnerDependencies = {
   setActiveStreamAbort: AbortSetter
   /** Called after memory recall to update importance scores via decay feedback. */
   onMemoryRecalled?: (recalledIds: string[]) => void
+  /**
+   * Streaming request entry point. Injectable so tests can drive the failure
+   * wiring in the catch block below; production omits it and gets the real
+   * runtime import.
+   */
+  requestStreaming?: typeof requestAssistantReplyStreaming
 }
 
 function isSpeechAuthFailure(error: unknown): boolean {
@@ -276,8 +282,9 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       const expressionOverrideStreamFilter = new PerformanceTagStreamFilter()
 
       const pendingCallbackHints = buildPendingCallbackHints(nextMemories)
+      const requestStreaming = dependencies.requestStreaming ?? requestAssistantReplyStreaming
       const request = bindStreamingAbort(
-        requestAssistantReplyStreaming(
+        requestStreaming(
         currentSettings,
         nextMessages,
         memoryContext,

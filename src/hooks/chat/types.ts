@@ -1,5 +1,5 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react'
-import type { PetPerformanceCue } from '../../features/pet/performance'
+import type { PetPerformanceCue } from '../../features/pet/performance.ts'
 import type {
   AssistantRuntimeActivity,
   AppSettings,
@@ -17,7 +17,7 @@ import type {
   ReminderTask,
   VoicePipelineState,
   VoiceState,
-} from '../../types'
+} from '../../types/index.ts'
 
 export type PendingReminderDraft =
   | {

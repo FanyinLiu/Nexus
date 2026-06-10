@@ -3,7 +3,7 @@
 // returns the current eye-open level (1 = fully open, 0 = fully closed) which
 // the canvas applies to the rig parameters.
 
-import { clamp } from '../../../../lib/common'
+import { clamp } from '../../../../lib/common.ts'
 
 const BLINK_CLOSE_MS = 88
 const BLINK_OPEN_MS = 136

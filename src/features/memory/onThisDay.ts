@@ -19,7 +19,7 @@
  * consumer hook.
  */
 
-import type { MemoryItem } from '../../types'
+import type { MemoryItem } from '../../types/index.ts'
 
 export type OnThisDayGap = 'year' | 'half-year' | 'month' | 'week'
 

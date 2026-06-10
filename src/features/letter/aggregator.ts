@@ -14,8 +14,8 @@
  * memory-only structure.
  */
 
-import type { MemoryItem } from '../../types'
-import type { AffectSnapshot, AffectShift } from '../autonomy/affectDynamics'
+import type { MemoryItem } from '../../types/index.ts'
+import type { AffectSnapshot, AffectShift } from '../autonomy/affectDynamics.ts'
 
 export interface AggregateLetterInput {
   nowMs: number

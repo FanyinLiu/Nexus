@@ -2,26 +2,26 @@ import { memo, useEffect, useMemo, useState } from 'react'
 import {
   loadUserAffectWindow,
   type UserAffectSample,
-} from '../../features/autonomy/userAffectTimeline'
+} from '../../features/autonomy/userAffectTimeline.ts'
 import {
   computeAffectSnapshot,
   type AffectSnapshot,
-} from '../../features/autonomy/affectDynamics'
+} from '../../features/autonomy/affectDynamics.ts'
 import {
   binSamplesByDay,
   type DailyAffectBin,
-} from '../../features/autonomy/moodMapBinning'
-import { loadEmotionHistory, loadRelationshipHistory } from '../../features/autonomy/stateTimeline'
-import { loadMemories } from '../../lib/storage/memory'
+} from '../../features/autonomy/moodMapBinning.ts'
+import { loadEmotionHistory, loadRelationshipHistory } from '../../features/autonomy/stateTimeline.ts'
+import { loadMemories } from '../../lib/storage/memory.ts'
 import {
   classifyCoRegulation,
   computeCoRegulationSnapshot,
   type CoRegulationSnapshot,
-} from '../../features/autonomy/coregulation'
-import { loadLetters } from '../../features/letter/letterStore'
-import { loadUserAffectHistory } from '../../features/autonomy/userAffectTimeline'
-import { saveTextFileWithFallback } from '../../lib/textFiles'
-import type { UiLanguage } from '../../types'
+} from '../../features/autonomy/coregulation.ts'
+import { loadLetters } from '../../features/letter/letterStore.ts'
+import { loadUserAffectHistory } from '../../features/autonomy/userAffectTimeline.ts'
+import { saveTextFileWithFallback } from '../../lib/textFiles.ts'
+import type { UiLanguage } from '../../types/index.ts'
 
 /**
  * Yearbook export is dynamically imported on click to keep the aggregator

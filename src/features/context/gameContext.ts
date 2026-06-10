@@ -1,4 +1,4 @@
-import { shorten } from '../../lib/common'
+import { shorten } from '../../lib/common.ts'
 
 type GameContextSnapshot = {
   game: string

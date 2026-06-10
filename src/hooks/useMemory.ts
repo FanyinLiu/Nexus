@@ -8,8 +8,8 @@ import {
   parseMemoryArchive,
   serializeMemoryArchive,
   warmupMemoryVectorModel,
-} from '../features/memory'
-import { formatMemoriesForPersonaFile } from '../features/memory/memoryPersistence'
+} from '../features/memory/index.ts'
+import { formatMemoriesForPersonaFile } from '../features/memory/memoryPersistence.ts'
 import {
   loadDailyMemories,
   loadMemories,
@@ -17,14 +17,14 @@ import {
   saveDailyMemories,
   saveMemories,
   saveTextFileWithFallback,
-} from '../lib'
+} from '../lib/index.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import type {
   AppSettings,
   DailyMemoryEntry,
   DailyMemoryStore,
   MemoryItem,
-} from '../types'
+} from '../types/index.ts'
 
 type UseMemoryParams = {
   settings: AppSettings

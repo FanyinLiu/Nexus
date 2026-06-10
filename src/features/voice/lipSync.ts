@@ -1,4 +1,4 @@
-import { clamp } from '../../lib/common'
+import { clamp } from '../../lib/common.ts'
 
 export type SpeechLevelControllerOptions = {
   onLevelChange: (level: number) => void

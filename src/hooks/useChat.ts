@@ -4,23 +4,23 @@ import {
   openTextFileWithFallback,
   saveTextFileWithFallback,
   shorten,
-} from '../lib'
+} from '../lib/index.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
-import { parseChatHistoryArchive, serializeChatHistoryArchive } from '../features/chat'
-import { clearCompactionCache } from '../features/chat/contextCompaction'
+import { parseChatHistoryArchive, serializeChatHistoryArchive } from '../features/chat/index.ts'
+import { clearCompactionCache } from '../features/chat/contextCompaction.ts'
 import {
   createDailyMemoryEntry,
   extractMemoriesFromMessage,
   markRecalled,
   mergeMemories,
-} from '../features/memory'
-import { formatTraceLabel, logVoiceEvent } from '../features/voice'
+} from '../features/memory/index.ts'
+import { formatTraceLabel, logVoiceEvent } from '../features/voice/index.ts'
 import {
   classifyCrisisSecondPass,
   detectCrisisSignal,
   presentCrisis,
   shouldPresentCrisisPanel,
-} from '../features/safety'
+} from '../features/safety/index.ts'
 import { noteUserMessageAndCheckReminder } from '../features/safety/disclosureState.ts'
 import {
   createAssistantReplyRunner,
@@ -37,7 +37,7 @@ import {
   type PendingReminderDraft,
   type PendingReminderDraftInput,
   type UseChatContext,
-} from './chat'
+} from './chat/index.ts'
 import { useChatPersistence } from './chat/useChatPersistence.ts'
 import type {
   AssistantRuntimeActivity,
@@ -46,9 +46,9 @@ import type {
   DailyMemoryEntry,
   PetDialogBubbleState,
   PetThoughtBubbleState,
-} from '../types'
+} from '../types/index.ts'
 
-export type { UseChatContext } from './chat'
+export type { UseChatContext } from './chat/index.ts'
 
 const MAX_CHAT_MESSAGES = 500
 
