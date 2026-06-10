@@ -322,4 +322,79 @@ describe('minecraftGateway: WebSocket integration', () => {
       await disconnect()
     }
   })
+
+  // Fully scriptable stub: tests drive 'open'/'error'/'close' by hand to pin
+  // down event orderings the real-server tests can't reproduce.
+  class ScriptedWebSocket {
+    static instances: ScriptedWebSocket[] = []
+    listeners: Record<string, Array<(ev: unknown) => void>> = {}
+    constructor() {
+      ScriptedWebSocket.instances.push(this)
+    }
+    addEventListener(type: string, cb: (ev: unknown) => void) {
+      (this.listeners[type] ??= []).push(cb)
+    }
+    emit(type: string, ev: unknown) {
+      for (const cb of this.listeners[type] ?? []) cb(ev)
+    }
+    send() {}
+    close() {
+      // Async close ack so disconnect()'s once-listener resolves promptly.
+      setTimeout(() => this.emit('close', { code: 1000 }), 1)
+    }
+  }
+
+  test('a WS "error" on an already-open session does not tear it down (close handler owns that)', async () => {
+    const RealWebSocket = globalThis.WebSocket
+    ;(globalThis as { WebSocket: unknown }).WebSocket = ScriptedWebSocket
+    ScriptedWebSocket.instances = []
+
+    try {
+      const pending = connect('127.0.0.1', 65001, 'LiveUser')
+      const socket = ScriptedWebSocket.instances[0]
+      socket.emit('open', {})
+      await pending
+      assert.equal(getStatus().state, 'connected')
+
+      // Transient error mid-session: the handshake-error reject path must not
+      // fire (it would close the socket with _state pre-set to 'disconnected',
+      // so the eventual 'close' would skip scheduleReconnect entirely).
+      socket.emit('error', { message: 'mid-session blip' })
+      assert.equal(getStatus().state, 'connected')
+    } finally {
+      await disconnect()
+      ;(globalThis as { WebSocket: unknown }).WebSocket = RealWebSocket
+    }
+  })
+
+  test('a stale socket\'s late "close" does not clobber a newer connect attempt', async () => {
+    const RealWebSocket = globalThis.WebSocket
+    ;(globalThis as { WebSocket: unknown }).WebSocket = ScriptedWebSocket
+    ScriptedWebSocket.instances = []
+
+    try {
+      // Attempt #1 fails during handshake; its socket is closed by the error
+      // path but (as the fix's comment notes) the 'close' event may lag.
+      const first = connect('127.0.0.1', 65002, 'RetryUser')
+      const staleSocket = ScriptedWebSocket.instances[0]
+      staleSocket.emit('error', { message: 'handshake refused' })
+      await assert.rejects(first, /handshake/)
+
+      // Attempt #2 succeeds.
+      const second = connect('127.0.0.1', 65002, 'RetryUser')
+      const liveSocket = ScriptedWebSocket.instances[1]
+      liveSocket.emit('open', {})
+      await second
+      assert.equal(getStatus().state, 'connected')
+
+      // Attempt #1's socket finally emits its close — it must not flip the
+      // live session to 'disconnected' or schedule a spurious reconnect.
+      staleSocket.emit('close', { code: 1006 })
+      assert.equal(getStatus().state, 'connected')
+      assert.equal(getStatus().reconnectCount, 0)
+    } finally {
+      await disconnect()
+      ;(globalThis as { WebSocket: unknown }).WebSocket = RealWebSocket
+    }
+  })
 })

@@ -4,6 +4,12 @@ import nodeNet from 'node:net'
 let _state = 'disconnected'
 /** @type {WebSocket|null} */
 let _ws = null
+// Bumped on every connect() so a socket's late 'open'/'error'/'close' events
+// can tell whether they still own the module-global state. Without this, a
+// stale 'close' from an errored/timed-out handshake lands after a retry has
+// begun and clobbers the NEW attempt (flips _state mid-handshake, or tears
+// down a healthy session and schedules a spurious reconnect).
+let _connectGeneration = 0
 /** @type {ReturnType<typeof setTimeout>|null} */
 let _reconnectTimer = null
 let _reconnectCount = 0
@@ -88,13 +94,21 @@ export async function connect(address, port, username) {
   _config = { address, port, username }
   _intentionallyClosed = false
   _state = 'connecting'
+  const generation = ++_connectGeneration
 
   const wsUrl = `ws://${address}:${port}`
   console.info('[minecraft] connecting to', wsUrl)
 
   return new Promise((resolve, reject) => {
+    // Stale handlers still settle their own promise (settling twice is a
+    // no-op, but never settling leaks a forever-pending IPC invoke) — they
+    // just must not touch the module globals a newer attempt now owns.
+    const isCurrentAttempt = () => generation === _connectGeneration
+
     const timeoutId = setTimeout(() => {
-      _state = 'disconnected'
+      if (isCurrentAttempt()) {
+        _state = 'disconnected'
+      }
       try { ws.close() } catch {}
       reject(new Error(`Connection to ${wsUrl} timed out after ${CONNECTION_TIMEOUT_MS / 1000}s`))
     }, CONNECTION_TIMEOUT_MS)
@@ -111,6 +125,12 @@ export async function connect(address, port, username) {
 
     ws.addEventListener('open', () => {
       clearTimeout(timeoutId)
+      if (!isCurrentAttempt()) {
+        // A newer connect() owns the gateway — abandon this socket.
+        try { ws.close() } catch {}
+        reject(new Error('Superseded by a newer connection attempt'))
+        return
+      }
       _ws = ws
       _state = 'connected'
       _reconnectCount = 0
@@ -127,15 +147,22 @@ export async function connect(address, port, username) {
 
     ws.addEventListener('error', (event) => {
       console.error('[minecraft] ws error:', event.message ?? 'unknown')
+      if (!isCurrentAttempt()) {
+        try { ws.close() } catch {}
+        reject(new Error(`WebSocket error during handshake: ${event.message ?? 'network error'}`))
+        return
+      }
       // A handshake-phase failure (e.g. the peer destroys the socket before the
       // WS upgrade completes) fires 'error' WITHOUT a timely 'close' on some
       // platforms — which would otherwise leave connect()'s promise unsettled
       // until the 8s timeout (the renderer IPC invoke hangs that whole time).
       // Reject now, and flip _state to 'disconnected' so the later 'close'
       // handler sees wasConnecting=false and never double-settles the promise.
+      // An 'error' on an already-open session is left to the 'close' handler.
       if (_state === 'connecting') {
         clearTimeout(timeoutId)
         _state = 'disconnected'
+        pushEvent('error', `WebSocket error during handshake: ${event.message ?? 'network error'}`)
         try { ws.close() } catch {}
         reject(new Error(`WebSocket error during handshake: ${event.message ?? 'network error'}`))
       }
@@ -143,6 +170,12 @@ export async function connect(address, port, username) {
 
     ws.addEventListener('close', (event) => {
       clearTimeout(timeoutId)
+      if (!isCurrentAttempt()) {
+        // Late close from an abandoned socket — settle our own promise and
+        // leave the newer attempt's state alone.
+        reject(new Error(`WebSocket closed during handshake (code=${event.code})`))
+        return
+      }
       const wasConnected = _state === 'connected'
       // Capture this BEFORE overwriting _state below — otherwise the reject
       // branch is statically dead and a close-before-open leaves connect()'s
