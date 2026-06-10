@@ -397,4 +397,39 @@ describe('minecraftGateway: WebSocket integration', () => {
       ;(globalThis as { WebSocket: unknown }).WebSocket = RealWebSocket
     }
   })
+
+  test('a pending auto-reconnect stands down after a successful manual reconnect', async () => {
+    const RealWebSocket = globalThis.WebSocket
+    ;(globalThis as { WebSocket: unknown }).WebSocket = ScriptedWebSocket
+    ScriptedWebSocket.instances = []
+
+    try {
+      const first = connect('127.0.0.1', 65003, 'ReconUser')
+      ScriptedWebSocket.instances[0].emit('open', {})
+      await first
+
+      // Unintentional drop arms the auto-reconnect timer (3s backoff).
+      ScriptedWebSocket.instances[0].emit('close', { code: 1006 })
+      assert.equal(getStatus().state, 'disconnected')
+      assert.equal(getStatus().reconnectCount, 1)
+
+      // Manual reconnect lands before the timer fires.
+      const second = connect('127.0.0.1', 65003, 'ReconUser')
+      ScriptedWebSocket.instances[1].emit('open', {})
+      await second
+      assert.equal(getStatus().state, 'connected')
+
+      // Let the old retry window pass: the cancelled/stood-down retry chain
+      // must not re-enter connect() against the healthy session (that loop
+      // used to climb reconnectCount and eventually flip the live session
+      // to 'disconnected' via the give-up branch).
+      await new Promise((resolve) => setTimeout(resolve, 3300))
+      assert.equal(getStatus().state, 'connected')
+      assert.equal(getStatus().reconnectCount, 0)
+      assert.equal(ScriptedWebSocket.instances.length, 2)
+    } finally {
+      await disconnect()
+      ;(globalThis as { WebSocket: unknown }).WebSocket = RealWebSocket
+    }
+  })
 })

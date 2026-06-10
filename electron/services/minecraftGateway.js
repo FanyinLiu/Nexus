@@ -47,6 +47,10 @@ function clearReconnectTimer() {
 
 function scheduleReconnect() {
   if (_intentionallyClosed || !_config) return
+  // A newer attempt owns the gateway (e.g. the user reconnected while a
+  // failed retry was still settling) — the retry chain stands down instead
+  // of spinning against, and eventually tearing down, a healthy session.
+  if (_state === 'connecting' || _state === 'connected') return
   if (_reconnectCount >= MAX_RECONNECT_ATTEMPTS) {
     console.warn('[minecraft] max reconnect attempts reached')
     _state = 'disconnected'
@@ -90,6 +94,9 @@ export async function connect(address, port, username) {
   if (_state === 'connecting' || _state === 'connected') {
     throw new Error(`Minecraft gateway is already ${_state}`)
   }
+
+  // A manual connect supersedes any pending auto-reconnect.
+  clearReconnectTimer()
 
   _config = { address, port, username }
   _intentionallyClosed = false
@@ -148,6 +155,7 @@ export async function connect(address, port, username) {
     ws.addEventListener('error', (event) => {
       console.error('[minecraft] ws error:', event.message ?? 'unknown')
       if (!isCurrentAttempt()) {
+        clearTimeout(timeoutId)
         try { ws.close() } catch {}
         reject(new Error(`WebSocket error during handshake: ${event.message ?? 'network error'}`))
         return
