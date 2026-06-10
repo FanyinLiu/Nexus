@@ -187,12 +187,17 @@ describe('humanizeError — failover aggregate errors', () => {
   })
 })
 
+// Built at runtime so the test source never contains a contiguous
+// Google-key-shaped literal — GitHub secret scanning (and the AIza rule in
+// scripts/prerelease-check.mjs) pattern-match the joined 39-char form.
+const FAKE_GOOGLE_KEY = ['AIza', 'Sy' + 'Fake'.repeat(8) + '0'].join('')
+
 describe('humanizeError — secret redaction in the fallback path', () => {
   const cases: Array<{ name: string; input: string; leaked: RegExp; redacted: RegExp }> = [
     {
       name: 'Google AIza key (Gemini)',
-      input: 'bad upstream cfg AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY end',
-      leaked: /AIzaSyD-9tSrke72PouQMnMX/,
+      input: `bad upstream cfg ${FAKE_GOOGLE_KEY} end`,
+      leaked: /Fake/,
       redacted: /AIza\*\*\*/,
     },
     {
