@@ -629,6 +629,7 @@ export const enMessages: TranslationDictionary = {
   'onboarding.welcome.companion_name_placeholder': 'e.g. Nova',
   'onboarding.welcome.language_label': 'Interface language',
   'onboarding.text.provider_label': 'Text model provider',
+  'onboarding.text.region_filter_label': 'Provider region',
   'onboarding.text.api_base_label': 'API base URL',
   'onboarding.text.model_label': 'Model name',
   'onboarding.text.model_custom_suffix': '(custom)',

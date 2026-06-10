@@ -5,6 +5,7 @@ import {
   FIRST_SUCCESS_PROVIDER_IDS,
   getApiProviderPreset,
   getCommonTextProviderOptions,
+  getDefaultOnboardingRegion,
   getOnboardingTextProviderOptions,
   getOnboardingTextProviderOptionsByRegion,
   getProviderModelCapability,
@@ -80,6 +81,14 @@ test('onboarding region tabs filter by region, keep first-success order, and kee
   const chinaWithGlobalPick = getOnboardingTextProviderOptionsByRegion('china', 'openai')
   assert.equal(chinaWithGlobalPick[0]?.id, 'openai')
   assert.equal(chinaWithGlobalPick.slice(1).every((provider) => provider.region === 'china'), true)
+})
+
+test('default onboarding region tab follows the UI language', () => {
+  assert.equal(getDefaultOnboardingRegion('zh-CN'), 'china')
+  assert.equal(getDefaultOnboardingRegion('zh-TW'), 'china')
+  assert.equal(getDefaultOnboardingRegion('en-US'), 'global')
+  assert.equal(getDefaultOnboardingRegion('ja'), 'global')
+  assert.equal(getDefaultOnboardingRegion('ko'), 'global')
 })
 
 test('provider model capabilities expose local/cloud, key and context metadata', () => {

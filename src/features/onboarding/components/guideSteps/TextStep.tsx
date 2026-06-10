@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { getApiProviderPreset, getOnboardingTextProviderOptionsByRegion } from '../../../../lib/apiProviders'
+import { useMemo } from 'react'
+import { getApiProviderPreset, getDefaultOnboardingRegion, getOnboardingTextProviderOptionsByRegion } from '../../../../lib/apiProviders'
 import type { ApiProviderPreset } from '../../../../lib/apiProviders'
 import { displaySecretInputValue } from '../../../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
@@ -11,6 +11,14 @@ type TextStepProps = {
   draft: AppSettings
   setDraft: OnboardingDraftSetter
   onApplyTextProviderPreset: (providerId: string) => void
+  /**
+   * Lifted to OnboardingGuide so the choice survives leaving and re-entering
+   * this step (the guide unmounts inactive steps). null = the user hasn't
+   * picked a tab yet; we fall back to the uiLanguage default, which keeps
+   * tracking the language chosen on the welcome step until first click.
+   */
+  regionTab: ApiProviderPreset['region'] | null
+  onRegionTabChange: (region: ApiProviderPreset['region']) => void
 }
 
 // 国内 / 海外 / 本地 — the region field partitions every preset with no overlap,
@@ -26,17 +34,16 @@ export function TextStep({
   draft,
   setDraft,
   onApplyTextProviderPreset,
+  regionTab,
+  onRegionTabChange,
 }: TextStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
   const currentPreset = getApiProviderPreset(draft.apiProviderId)
   const hasModelOptions = currentPreset.models.length > 0
 
-  // Region-aware default: Chinese UIs open on 国内, everyone else on 海外. The
-  // currently-selected provider stays visible regardless of the active tab.
-  const [region, setRegion] = useState<ApiProviderPreset['region']>(
-    String(draft.uiLanguage).startsWith('zh') ? 'china' : 'global',
-  )
+  // The currently-selected provider stays visible regardless of the active tab.
+  const region = regionTab ?? getDefaultOnboardingRegion(draft.uiLanguage)
   const providerOptions = useMemo(
     () => getOnboardingTextProviderOptionsByRegion(region, draft.apiProviderId),
     [region, draft.apiProviderId],
@@ -44,14 +51,14 @@ export function TextStep({
 
   return (
     <div className="onboarding-grid onboarding-grid--stack">
-      <div className="onboarding-region-tabs" role="group" aria-label={ti('onboarding.text.provider_label')}>
+      <div className="onboarding-region-tabs" role="group" aria-label={ti('onboarding.text.region_filter_label')}>
         {REGION_TABS.map((tab) => (
           <button
             key={tab.region}
             type="button"
             className={`onboarding-region-tabs__tab${region === tab.region ? ' is-active' : ''}`}
             aria-pressed={region === tab.region}
-            onClick={() => setRegion(tab.region)}
+            onClick={() => onRegionTabChange(tab.region)}
           >
             {ti(tab.labelKey)}
           </button>

@@ -629,6 +629,7 @@ export const koMessages: TranslationDictionary = {
   'onboarding.welcome.companion_name_placeholder': '예: 노바',
   'onboarding.welcome.language_label': '인터페이스 언어',
   'onboarding.text.provider_label': '텍스트 모델 공급자',
+  'onboarding.text.region_filter_label': '제공업체 지역',
   'onboarding.text.api_base_label': 'API URL',
   'onboarding.text.model_label': '모델 이름',
   'onboarding.text.model_custom_suffix': '(사용자 정의)',
