@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { before, describe, test } from 'node:test'
 
 import { humanizeError } from '../src/lib/humanizeError.ts'
@@ -75,10 +76,28 @@ describe('humanizeError — context-specific', () => {
 
 // These are the EXACT strings electron/ipc/chatIpc.js throws on a failed chat
 // send. assistantReply.ts now routes the caught error through
-// humanizeError(caught, 'chat') for every user-facing surface, so this block
-// is the contract: if the backend copy changes in a way that stops matching,
-// the user goes back to seeing raw provider text and these tests catch it.
+// humanizeError(caught, 'chat') for every user-facing surface. Two layers
+// keep this honest: the source-pinning test below asserts the literals still
+// exist in chatIpc.js (so rewording the backend copy fails HERE, not silently
+// in front of the user), and the mapping tests assert each pinned string
+// resolves to the right advice.
 describe('humanizeError — real chat-send backend strings', () => {
+  test('pinned backend strings still exist in chatIpc.js source', () => {
+    // chatIpc.js imports 'electron' so it can't be imported under node:test —
+    // pin the copy at the source-text level instead.
+    const source = readFileSync(new URL('../electron/ipc/chatIpc.js', import.meta.url), 'utf8')
+    const pinned = [
+      '模型接口鉴权失败，请检查 API Key 是否有效。',
+      '还没有填写 API Key，所以现在还不能对话。请先在设置里填入可用的 API Key。',
+      '模型请求失败（状态码：',
+      '模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：',
+      '模型响应超时，请检查网络、代理或当前模型服务状态。',
+    ]
+    for (const literal of pinned) {
+      assert.ok(source.includes(literal), `chatIpc.js no longer contains pinned copy: ${literal}`)
+    }
+  })
+
   test('401 auth message (contains "API Key") → bad-key advice, key text dropped', () => {
     const out = humanizeError('模型接口鉴权失败，请检查 API Key 是否有效。', 'chat')
     assert.match(out, /(API key|Settings)/i)
@@ -107,12 +126,89 @@ describe('humanizeError — real chat-send backend strings', () => {
     assert.doesNotMatch(out, /ECONNREFUSED/)
   })
 
+  test('backend timeout copy maps to the dedicated timeout advice, not the generic fallback', () => {
+    const out = humanizeError('模型响应超时，请检查网络、代理或当前模型服务状态。', 'chat')
+    assert.match(out, /(too long|faster|try)/i)
+    assert.doesNotMatch(out, /Something went wrong/)
+  })
+
+  test('backend connection-failure copy maps to reachability advice even without an ASCII errno', () => {
+    const out = humanizeError('模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：terminated', 'chat')
+    assert.match(out, /(reach|connect|server)/i)
+    assert.doesNotMatch(out, /Something went wrong/)
+  })
+
+  test('undici mid-stream drop ("other side closed") maps to connection-dropped advice', () => {
+    const out = humanizeError(new Error('fetch failed: other side closed'), 'chat')
+    assert.match(out, /(dropped|connection|try again)/i)
+  })
+
   test('unmatched chat error redacts an API secret in the fallback', () => {
     const out = humanizeError(new Error('upstream blew up token sk-ABCDEF1234567890XYZ tail'), 'chat')
     assert.match(out, /Something went wrong/)
     assert.match(out, /sk-\*\*\*/)
     assert.doesNotMatch(out, /sk-ABCDEF1234567890XYZ/)
   })
+})
+
+describe('humanizeError — failover aggregate errors', () => {
+  test('multi-candidate aggregate is classified by the FIRST line, not a later candidate', () => {
+    // Primary failed with a rate limit; a secondary candidate's message
+    // mentions "API Key". The advice must describe the primary failure —
+    // before the fix this returned bad-key advice ("check your API key").
+    const aggregate = 'openai: 模型请求失败（状态码：429）\ndeepseek: 还没有填写 API Key，所以现在还不能对话。'
+    const out = humanizeError(new Error(aggregate), 'chat')
+    assert.match(out, /(too many|wait|moment)/i)
+    assert.doesNotMatch(out, /API key/i)
+  })
+
+  test('single-line errors are unaffected by the first-line rule', () => {
+    const out = humanizeError('还没有填写 API Key，所以现在还不能对话。', 'chat')
+    assert.match(out, /(API key|Settings)/i)
+  })
+})
+
+describe('humanizeError — secret redaction in the fallback path', () => {
+  const cases: Array<{ name: string; input: string; leaked: RegExp; redacted: RegExp }> = [
+    {
+      name: 'Google AIza key (Gemini)',
+      input: 'bad upstream cfg AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY end',
+      leaked: /AIzaSyD-9tSrke72PouQMnMX/,
+      redacted: /AIza\*\*\*/,
+    },
+    {
+      name: 'JWT api key (MiniMax-style)',
+      input: 'upstream rejected eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJrbGVpbiJ9.c2lnbmF0dXJlLXBhcnQ tail',
+      leaked: /eyJhbGciOiJSUzI1NiIs/,
+      redacted: /jwt\*\*\*/,
+    },
+    {
+      name: 'xAI key',
+      input: 'provider said: invalid credential xai-AbCd1234EfGh5678IjKl in request',
+      leaked: /xai-AbCd1234EfGh5678IjKl/,
+      redacted: /xai-\*\*\*/,
+    },
+    {
+      name: 'api_key query parameter',
+      input: 'request rejected for /v1/chat?api_key=9f8e7d6c5b4a3210 upstream',
+      leaked: /9f8e7d6c5b4a3210/,
+      redacted: /api_key=\*\*\*/,
+    },
+    {
+      name: 'URL userinfo credentials',
+      input: 'proxy refused https://klein:hunter2@my-proxy.example.com:8443 upstream',
+      leaked: /hunter2/,
+      redacted: /\*\*\*:\*\*\*@my-proxy\.example\.com/,
+    },
+  ]
+
+  for (const { name, input, leaked, redacted } of cases) {
+    test(`${name} never reaches the user verbatim`, () => {
+      const out = humanizeError(new Error(input), 'chat')
+      assert.doesNotMatch(out, leaked)
+      assert.match(out, redacted)
+    })
+  }
 })
 
 describe('humanizeError — fallbacks', () => {

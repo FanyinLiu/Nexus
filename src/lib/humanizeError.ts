@@ -49,10 +49,15 @@ const COMMON_PATTERNS: KnownPattern[] = [
   { match: /\b(404|not\s*found)/i, key: 'humanize.not_found' },
   { match: /\b(429|rate.?limit|quota.?exceed)/i, key: 'humanize.rate_limited' },
   { match: /\b5\d{2}\b|server.?error|internal.?error/i, key: 'humanize.server_error' },
-  { match: /ECONNREFUSED|connection refused/i, key: 'humanize.connection_refused' },
+  // 连接失败/超时: electron/ipc/chatIpc.js throws its own Chinese copy for
+  // connection and timeout failures; without these the most common real-world
+  // failures fall through to the generic fallback instead of targeted advice.
+  { match: /ECONNREFUSED|connection refused|连接失败/i, key: 'humanize.connection_refused' },
   { match: /ENOTFOUND|getaddrinfo|dns/i, key: 'humanize.dns_failed' },
-  { match: /ETIMEDOUT|timeout|timed out/i, key: 'humanize.timeout' },
-  { match: /ECONNRESET|socket hang up/i, key: 'humanize.connection_dropped' },
+  { match: /ETIMEDOUT|timeout|timed out|超时|逾時/i, key: 'humanize.timeout' },
+  // 'terminated' / 'other side closed' are undici's wording for a connection
+  // dropped mid-stream — the usual shape of a mid-reply provider hiccup.
+  { match: /ECONNRESET|socket hang up|terminated|other side closed/i, key: 'humanize.connection_dropped' },
   { match: /AbortError|abort|aborted|cancel/i, key: 'humanize.aborted' },
   { match: /fetch.{0,10}failed|network/i, key: 'humanize.network_generic' },
 ]
@@ -148,9 +153,18 @@ function redactSensitive(raw: string): string {
     .replace(/\/home\/[^/\s'"]+/g, '~')
     // Windows user dirs
     .replace(/[A-Z]:\\Users\\[^\\\s'"]+/gi, '~')
+    // URL userinfo credentials (authenticated proxies / custom base URLs)
+    .replace(/(\w+:\/\/)[^/\s:@]+:[^/\s@]+@/g, '$1***:***@')
     // OpenAI / Anthropic / generic bearer tokens
     .replace(/sk-[A-Za-z0-9_-]{16,}/g, 'sk-***')
     .replace(/Bearer\s+[A-Za-z0-9._~+/-]{16,}=*/gi, 'Bearer ***')
+    // Google AIza keys (Gemini), xAI keys
+    .replace(/AIza[0-9A-Za-z_-]{30,}/g, 'AIza***')
+    .replace(/\bxai-[A-Za-z0-9_-]{16,}/g, 'xai-***')
+    // JWTs (MiniMax and other providers hand these out as API keys)
+    .replace(/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}/g, 'jwt***')
+    // Secrets passed as query/body parameters, echoed back in error text
+    .replace(/\b(api[-_]?key|access[-_]?token|apikey|token|secret)=[^&\s'"]+/gi, '$1=***')
 }
 
 /**
@@ -167,10 +181,18 @@ export function humanizeError(error: unknown, context: HumanizeContext = 'generi
     return lookupTranslation('humanize.fallback', '—')
   }
 
+  // Failover aggregates join one "candidateId: message" line per failed
+  // candidate. Classify on the first line (the primary provider's failure)
+  // only — matching across the whole blob lets a secondary candidate's
+  // wording (e.g. "API key") shadow what actually went wrong first.
+  const classifyTarget = raw.includes('\n')
+    ? (raw.split('\n').find((line) => line.trim()) ?? raw)
+    : raw
+
   // Context-specific patterns first (more specific), then common.
   const patterns = [...(CONTEXT_PATTERNS[context] ?? []), ...COMMON_PATTERNS]
   for (const pattern of patterns) {
-    if (pattern.match.test(raw)) {
+    if (pattern.match.test(classifyTarget)) {
       return lookupTranslation(pattern.key, pattern.withDetail ? redactSensitive(raw) : undefined)
     }
   }
