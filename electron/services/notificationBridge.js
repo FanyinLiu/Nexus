@@ -15,9 +15,11 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { checkUrlSafetyWithDns } from './urlSafety.js'
 import {
+  createAuthFailureLimiter,
   summarizeNotificationMessagePayload,
   normalizeWebhookPayload,
   sanitizeNotificationChannels,
+  verifyWebhookAuth,
   WEBHOOK_MAX_BODY_BYTES,
 } from './notificationBridgeUtils.js'
 
@@ -334,21 +336,22 @@ function stopAllRssTimers() {
 function startWebhookServer() {
   if (_webhookServer) return
 
-  _webhookServer = createServer((req, res) => {
-    // CORS headers — restrict to localhost only
-    res.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1')
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  // No CORS headers on purpose: legitimate callers are scripts/adapters, not
+  // browser pages. Without Access-Control-* headers a browser preflight (the
+  // Authorization header forces one) fails, which shuts the door ClawJacked
+  // walked through — web pages can always reach 127.0.0.1, so this server
+  // must not invite them in.
+  const authLimiter = createAuthFailureLimiter()
 
-    if (req.method === 'OPTIONS') {
-      res.writeHead(204)
-      res.end()
+  _webhookServer = createServer((req, res) => {
+    if (authLimiter.isBlocked()) {
+      res.writeHead(429, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Too many failed attempts, cool down' }))
       return
     }
 
-    const authHeader = String(req.headers.authorization ?? '')
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
-    if (!_webhookToken || token !== _webhookToken) {
+    if (!verifyWebhookAuth(req.headers.authorization, _webhookToken)) {
+      authLimiter.recordFailure()
       res.writeHead(401, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ error: 'Unauthorized' }))
       return
