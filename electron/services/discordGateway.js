@@ -403,6 +403,53 @@ export async function sendMessage(channelId, text, options = {}) {
   await apiCall(`/channels/${channelId}/messages`, { method: 'POST', body })
 }
 
+const DISCORD_AUDIO_EXT_BY_MIME = {
+  'audio/mpeg': 'mp3',
+  'audio/mp3': 'mp3',
+  'audio/ogg': 'ogg',
+  'audio/mp4': 'm4a',
+  'audio/m4a': 'm4a',
+  'audio/x-m4a': 'm4a',
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+}
+
+/**
+ * Send an audio file to a Discord channel as a playable attachment.
+ * (A true voice-message bubble would additionally need OGG/Opus plus the
+ * IS_VOICE_MESSAGE flag with waveform metadata — a plain attachment plays
+ * inline in every client and accepts any common container.)
+ * @param {string} channelId
+ * @param {Buffer} audio
+ * @param {string} mimeType
+ * @param {{ replyToMessageId?: string }} [options]
+ */
+export async function sendAudioAttachment(channelId, audio, mimeType, options = {}) {
+  if (_state !== 'connected') throw new Error('Discord gateway not connected')
+
+  const ext = DISCORD_AUDIO_EXT_BY_MIME[String(mimeType).toLowerCase().split(';')[0].trim()] ?? 'mp3'
+  const fileName = `voice-reply.${ext}`
+
+  const payload = { attachments: [{ id: 0, filename: fileName }] }
+  if (options.replyToMessageId) {
+    payload.message_reference = { message_id: options.replyToMessageId }
+  }
+
+  const form = new FormData()
+  form.append('payload_json', JSON.stringify(payload))
+  form.append('files[0]', new Blob([audio], { type: mimeType }), fileName)
+
+  const resp = await net.fetch(`${DISCORD_API_BASE}/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bot ${_botToken}` },
+    body: form,
+  })
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '')
+    throw new Error(`Discord API ${resp.status}: ${text}`)
+  }
+}
+
 export function getStatus() {
   return {
     state: _state,

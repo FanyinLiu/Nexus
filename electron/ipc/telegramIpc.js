@@ -41,6 +41,21 @@ export function register() {
     return { ok: true }
   })
 
+  ipcMain.handle('telegram:send-voice', async (event, payload) => {
+    requireTrustedSender(event)
+    const chatId = Number(payload?.chatId)
+    if (!Number.isFinite(chatId)) throw new Error('chatId must be a number')
+    const audioBase64 = requireString(payload?.audioBase64, 'audioBase64')
+    // Telegram caps bot uploads at 50 MB; base64 inflates by ~4/3.
+    if (audioBase64.length > 50_000_000) throw new Error('audio payload too large')
+    const mimeType = requireString(payload?.mimeType, 'mimeType')
+    const audio = Buffer.from(audioBase64, 'base64')
+    await telegramGateway.sendVoice(chatId, audio, mimeType, {
+      replyToMessageId: payload?.replyToMessageId ?? undefined,
+    })
+    return { ok: true }
+  })
+
   ipcMain.handle('telegram:status', (event) => {
     requireTrustedSender(event)
     return telegramGateway.getStatus()

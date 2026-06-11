@@ -178,6 +178,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   telegramConnect: (payload) => ipcRenderer.invoke('telegram:connect', payload),
   telegramDisconnect: () => ipcRenderer.invoke('telegram:disconnect'),
   telegramSendMessage: (payload) => ipcRenderer.invoke('telegram:send-message', payload),
+  telegramSendVoice: (payload) => ipcRenderer.invoke('telegram:send-voice', payload),
   telegramStatus: () => ipcRenderer.invoke('telegram:status'),
   subscribeTelegramMessage: (listener) => {
     const handler = (_event, msg) => listener(msg)
@@ -189,6 +190,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   discordConnect: (payload) => ipcRenderer.invoke('discord:connect', payload),
   discordDisconnect: () => ipcRenderer.invoke('discord:disconnect'),
   discordSendMessage: (payload) => ipcRenderer.invoke('discord:send-message', payload),
+  discordSendVoice: (payload) => ipcRenderer.invoke('discord:send-voice', payload),
   discordStatus: () => ipcRenderer.invoke('discord:status'),
   subscribeDiscordMessage: (listener) => {
     const handler = (_event, msg) => listener(msg)

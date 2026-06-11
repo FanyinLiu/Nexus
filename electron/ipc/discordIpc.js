@@ -39,6 +39,20 @@ export function register() {
     return { ok: true }
   })
 
+  ipcMain.handle('discord:send-voice', async (event, payload) => {
+    requireTrustedSender(event)
+    const channelId = requireString(payload?.channelId, 'channelId')
+    const audioBase64 = requireString(payload?.audioBase64, 'audioBase64')
+    // Discord caps non-Nitro uploads at 25 MB; base64 inflates by ~4/3.
+    if (audioBase64.length > 34_000_000) throw new Error('audio payload too large')
+    const mimeType = requireString(payload?.mimeType, 'mimeType')
+    const audio = Buffer.from(audioBase64, 'base64')
+    await discordGateway.sendAudioAttachment(channelId, audio, mimeType, {
+      replyToMessageId: payload?.replyToMessageId ?? undefined,
+    })
+    return { ok: true }
+  })
+
   ipcMain.handle('discord:status', (event) => {
     requireTrustedSender(event)
     return discordGateway.getStatus()
