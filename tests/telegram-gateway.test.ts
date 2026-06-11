@@ -21,7 +21,12 @@ type RecordedRequest = { method: string; url: string; contentType: string; body:
 
 let server: Server
 let baseUrl = ''
-let pendingUpdates: Array<Record<string, unknown>> = []
+// Offset-based store with REAL Telegram redelivery semantics: getUpdates
+// returns every update with update_id >= offset, repeatedly, until the
+// client confirms by polling with a higher offset. (A destructive queue
+// here was a mock-fidelity bug: a stale aborted request could consume a
+// batch that the real API would simply redeliver to the next poll.)
+let pendingUpdates: Array<{ update_id: number } & Record<string, unknown>> = []
 let receivedOffsets: number[] = []
 let sendMessageCalls: Array<Record<string, unknown>> = []
 let sendVoiceCalls: RecordedRequest[] = []
@@ -51,8 +56,9 @@ before(async () => {
       }
       if (url === `/bot${BOT_TOKEN}/getUpdates`) {
         const params = JSON.parse(body.toString() || '{}')
-        receivedOffsets.push(Number(params.offset ?? -1))
-        const batch = pendingUpdates.splice(0)
+        const offset = Number(params.offset ?? 0)
+        receivedOffsets.push(offset)
+        const batch = pendingUpdates.filter((u) => u.update_id >= offset)
         if (batch.length === 0) {
           // Empty long-poll: delay a little so the poll loop doesn't spin hot.
           await new Promise((r) => setTimeout(r, 30))
