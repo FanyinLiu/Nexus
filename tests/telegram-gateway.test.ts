@@ -258,3 +258,26 @@ describe('telegramGateway against a mock Bot API', () => {
     gateway.onMessage(null)
   })
 })
+
+describe('telegramGateway poll-loop generation', () => {
+  test('rapid disconnect/reconnect cycles never leak a batch-stealing orphan loop', async () => {
+    const gateway = await loadGateway()
+    const received: unknown[] = []
+    gateway.onMessage((msg: unknown) => received.push(msg))
+
+    // Hammer the lifecycle: every cycle leaves an in-flight long-poll behind;
+    // before the generation token one of these could survive, outlive its
+    // disconnect and swallow the next cycle's batch while the allowlist was
+    // mid-reset. Five cycles each must deliver exactly their own message.
+    for (let cycle = 0; cycle < 5; cycle += 1) {
+      pendingUpdates.push(makeUpdate(500 + cycle))
+      await gateway.connect(BOT_TOKEN, [42])
+      await waitFor(() => received.length >= cycle + 1)
+      assert.equal(gateway.getStatus().updateOffset, 500 + cycle + 1)
+      await gateway.disconnect()
+    }
+    assert.equal(received.length, 5)
+
+    gateway.onMessage(null)
+  })
+})
