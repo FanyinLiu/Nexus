@@ -45,6 +45,10 @@ const MEDIA_KINDS = [
  * @param {Record<string, unknown>} message
  * @returns {string|null} the media kind, or null for service/unsupported messages
  */
+// Telegram voice notes are tiny (~1 MB/min of Opus); anything bigger than
+// this is not a voice note worth transcribing inline.
+const VOICE_DOWNLOAD_MAX_BYTES = 15 * 1024 * 1024
+
 function detectMediaKind(message) {
   for (const kind of MEDIA_KINDS) {
     if (message[kind] != null) return kind
@@ -129,6 +133,32 @@ async function pollOnce() {
         media,
         messageId: /** @type {number} */ (message.message_id),
         timestamp: new Date(/** @type {number} */ (message.date) * 1000).toISOString(),
+        voiceBase64: /** @type {string|null} */ (null),
+        voiceMimeType: /** @type {string|null} */ (null),
+      }
+
+      if (media === 'voice') {
+        // Fetch the voice note so the renderer can transcribe it into the
+        // companion chat. Best-effort: a failed download degrades to the
+        // announce-only behaviour the bridge always had for media.
+        const voice = /** @type {Record<string, unknown>|undefined} */ (message.voice)
+        const fileSize = Number(voice?.file_size ?? 0)
+        if (voice?.file_id && fileSize > 0 && fileSize <= VOICE_DOWNLOAD_MAX_BYTES) {
+          try {
+            const file = /** @type {Record<string, unknown>} */ (
+              await apiCall('getFile', { file_id: voice.file_id })
+            )
+            if (file?.file_path) {
+              const resp = await net.fetch(`https://api.telegram.org/file/bot${_botToken}/${file.file_path}`)
+              if (resp.ok) {
+                incoming.voiceBase64 = Buffer.from(await resp.arrayBuffer()).toString('base64')
+                incoming.voiceMimeType = String(voice.mime_type ?? 'audio/ogg')
+              }
+            }
+          } catch (err) {
+            console.warn('[telegram] voice download failed:', err.message)
+          }
+        }
       }
 
       _onMessage?.(incoming)

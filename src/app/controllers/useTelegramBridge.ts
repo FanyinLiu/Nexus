@@ -9,6 +9,7 @@ import {
   createBridgeForwardQueue,
   decideBridgeAutoReply,
   isTelegramVoiceCompatibleMime,
+  parseCsvIdSet,
   resolveBridgeReplyTarget,
 } from './bridgeUtils'
 import { routeTelegramMessage } from './telegramMessageRouter'
@@ -46,7 +47,40 @@ export type UseTelegramBridgeOptions = {
   debugConsole: DebugConsoleBridge
 }
 
-type TelegramChatEntry = { chatId: number; messageId: number; isOwner: boolean }
+type TelegramChatEntry = { chatId: number; messageId: number; isOwner: boolean; wasVoice: boolean }
+
+/**
+ * Transcribe a Telegram voice note with the user's configured STT provider.
+ * Cloud/API providers only — the transcription IPC posts the compressed blob
+ * as multipart, which the local sherpa recognizers (PCM-stream based) can't
+ * take. Returns null when transcription is unavailable or comes back empty,
+ * in which case the caller falls back to announce-only.
+ */
+async function transcribeTelegramVoice(
+  msg: TelegramIncoming,
+  settings: AppSettings,
+): Promise<string | null> {
+  const transcribe = window.desktopPet?.transcribeAudio
+  if (!transcribe || !msg.voiceBase64) return null
+  if (!settings.speechInputApiBaseUrl?.trim()) return null
+  try {
+    const result = await transcribe({
+      providerId: settings.speechInputProviderId,
+      baseUrl: settings.speechInputApiBaseUrl,
+      apiKey: settings.speechInputApiKey,
+      model: settings.speechInputModel,
+      language: settings.speechRecognitionLang,
+      hotwords: settings.speechInputHotwords,
+      audioBase64: msg.voiceBase64,
+      mimeType: msg.voiceMimeType ?? 'audio/ogg',
+      fileName: 'telegram-voice.ogg',
+    })
+    const text = result.text?.trim()
+    return text || null
+  } catch {
+    return null
+  }
+}
 
 export function useTelegramBridge({
   settingsRef,
@@ -94,16 +128,40 @@ export function useTelegramBridge({
   }, [busyRef, debugConsole])
 
   const handleTelegramMessage = useCallback((msg: TelegramIncoming) => {
-    const { isOwner } = routeTelegramMessage(msg, settingsRef.current, t, {
+    const routeDeps = {
       appendDebugConsoleEvent: debugConsole.appendDebugConsoleEvent,
       pushCompanionNotice: chat.pushCompanionNotice,
-      sendMessage: async (text) => {
+      sendMessage: async (text?: string) => {
         if (text) forwardQueueRef.current?.push(text)
         return undefined
       },
-    })
+    }
 
-    const chatEntry: TelegramChatEntry = { chatId: msg.chatId, messageId: msg.messageId, isOwner }
+    const wasVoice = msg.media === 'voice'
+    let isOwner: boolean
+    if (wasVoice && msg.voiceBase64) {
+      // Voice note: transcribe first so it reaches the companion as text.
+      // Route async; on transcription failure fall back to the original
+      // announce-only routing for media messages.
+      isOwner = parseCsvIdSet(settingsRef.current.ownerTelegramChatIds).has(String(msg.chatId))
+      void (async () => {
+        const transcript = await transcribeTelegramVoice(msg, settingsRef.current)
+        if (transcript) {
+          routeTelegramMessage({ ...msg, text: transcript, media: null }, settingsRef.current, t, routeDeps)
+        } else {
+          debugConsole.appendDebugConsoleEvent({
+            source: 'autonomy',
+            title: 'Telegram voice not transcribed',
+            detail: 'no API STT configured or transcription failed — announced only',
+          })
+          routeTelegramMessage(msg, settingsRef.current, t, routeDeps)
+        }
+      })()
+    } else {
+      isOwner = routeTelegramMessage(msg, settingsRef.current, t, routeDeps).isOwner
+    }
+
+    const chatEntry: TelegramChatEntry = { chatId: msg.chatId, messageId: msg.messageId, isOwner, wasVoice }
     lastTelegramChatRef.current = chatEntry
     telegramChatMapRef.current.set(msg.chatId, chatEntry)
     rememberTelegramChatId(msg.chatId)
@@ -202,7 +260,10 @@ export function useTelegramBridge({
       return
     }
 
-    if (!settings.telegramVoiceReplyEnabled) return
+    const voiceMode = settings.telegramVoiceReplyMode
+    if (voiceMode === 'off') return
+    // 'inbound': mirror the user's modality — only answer voice with voice.
+    if (voiceMode === 'inbound' && !target!.wasVoice) return
     const spoken = payload.spokenText.trim()
     if (!spoken) return
     try {

@@ -360,8 +360,11 @@ export interface IntegrationSettings {
   telegramAnnounceMessagePreview: boolean
   /** Route completed companion replies back to the owner's Telegram chat. */
   telegramAutoReplyEnabled: boolean
-  /** Additionally send the reply as a TTS voice note (mp3/ogg/m4a providers only). */
-  telegramVoiceReplyEnabled: boolean
+  /**
+   * Send replies as TTS voice notes (mp3/ogg/m4a providers only).
+   * 'inbound' mirrors the user: voice notes get voice back, text gets text.
+   */
+  telegramVoiceReplyMode: 'off' | 'always' | 'inbound'
   telegramPermissionMode: IntegrationPermissionMode
   discordIntegrationEnabled: boolean
   discordBotToken: string

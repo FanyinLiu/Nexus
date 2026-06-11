@@ -592,13 +592,21 @@ export const IntegrationsSection = memo(function IntegrationsSection({
             setDraft={setDraft}
           />
 
-          <ToggleField
-            label={ti('settings.integrations.telegram.voice_reply')}
-            field="telegramVoiceReplyEnabled"
-            disabled={!draft.telegramAutoReplyEnabled}
-            draft={draft}
-            setDraft={setDraft}
-          />
+          <label>
+            <span>{ti('settings.integrations.telegram.voice_reply_mode')}</span>
+            <select
+              value={draft.telegramVoiceReplyMode}
+              disabled={!draft.telegramAutoReplyEnabled}
+              onChange={(event) => {
+                const value = event.target.value as AppSettings['telegramVoiceReplyMode']
+                setDraft((prev) => ({ ...prev, telegramVoiceReplyMode: value }))
+              }}
+            >
+              <option value="off">{ti('settings.integrations.telegram.voice_reply_mode.off')}</option>
+              <option value="always">{ti('settings.integrations.telegram.voice_reply_mode.always')}</option>
+              <option value="inbound">{ti('settings.integrations.telegram.voice_reply_mode.inbound')}</option>
+            </select>
+          </label>
 
           <p className="settings-inline-note">
             {ti('settings.integrations.telegram.help')}
