@@ -86,6 +86,7 @@ type AssistantReplyRunnerDependencies = {
     | 'getRhythmPromptText'
     | 'getAffectGuidancePromptText'
     | 'loadDesktopContextSnapshot'
+    | 'onAssistantReplyDelivered'
     | 'queuePetPerformanceCue'
     | 'resetNoSpeechRestartCount'
     | 'setMood'
@@ -504,6 +505,17 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       }
 
       dependencies.appendChatMessage(assistantMessage)
+      try {
+        // Bridge listeners (Telegram/Discord auto-reply) hang off this; their
+        // failures must never break the chat turn itself.
+        dependencies.ctx.onAssistantReplyDelivered?.({
+          source,
+          displayText: finalAssistantMessageContent,
+          spokenText: assistantSpeechOutput,
+        })
+      } catch (listenerError) {
+        console.warn('[chat] onAssistantReplyDelivered listener failed:', listenerError)
+      }
       dependencies.ctx.appendDailyMemoryEntries(
         [createDailyMemoryEntry(assistantMessage, fromVoice ? 'voice' : 'chat')].filter(
           (entry): entry is NonNullable<ReturnType<typeof createDailyMemoryEntry>> => Boolean(entry),

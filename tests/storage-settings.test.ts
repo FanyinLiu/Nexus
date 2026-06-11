@@ -56,8 +56,14 @@ test('fresh settings start with the Phase 1 Ollama text path', () => {
   assert.equal(settings.proactivePresenceEnabled, false)
   assert.equal(settings.telegramAnnounceIncomingEnabled, false)
   assert.equal(settings.telegramAnnounceMessagePreview, false)
+  // Auto-reply defaults on (inbound is already owner+allowlist gated);
+  // voice replies stay opt-in.
+  assert.equal(settings.telegramAutoReplyEnabled, true)
+  assert.equal(settings.telegramVoiceReplyEnabled, false)
   assert.equal(settings.discordAnnounceIncomingEnabled, false)
   assert.equal(settings.discordAnnounceMessagePreview, false)
+  assert.equal(settings.discordAutoReplyEnabled, true)
+  assert.equal(settings.discordVoiceReplyEnabled, false)
   assert.equal(settings.autonomyNotificationMessageAnnouncementsEnabled, false)
   assert.equal(settings.autonomyNotificationMessagePreviewEnabled, false)
 })

@@ -39,8 +39,8 @@ const MESSAGE_PAGE_SIZE = 100
 type PanelViewProps = UseAppControllerResult['panelView'] & {
   settingsDrawer: ReactNode
   onboardingGuide: ReactNode
-  replyToTelegram?: (text: string, conversationId?: number | string, messageId?: number | string) => Promise<void> | void
-  replyToDiscord?: (text: string, conversationId?: string, messageId?: string) => Promise<void> | void
+  replyToTelegram?: (text: string, conversationId?: number | string, messageId?: number | string) => Promise<boolean> | boolean
+  replyToDiscord?: (text: string, conversationId?: string, messageId?: string) => Promise<boolean> | boolean
 }
 
 type NotificationReplyTarget = {
@@ -284,14 +284,25 @@ export function PanelView({
 
     const source = message.source
     if (source === 'telegram' && replyToTelegram) {
-      await replyToTelegram(trimmed, message.conversationId ?? undefined, message.messageId ?? undefined)
+      // replyTo reports whether the message actually went out (permission
+      // gate, missing target and API failures all return false) — only a
+      // real send may mark the notification read and clear the composer.
+      const sent = await replyToTelegram(trimmed, message.conversationId ?? undefined, message.messageId ?? undefined)
+      if (!sent) {
+        chat.setError(ti('panel.notification.reply_failed'))
+        return
+      }
       handleMarkNotificationRead(message.notificationMessageId)
       setActiveNotificationReply(null)
       chat.setInput('')
       return
     }
     if (source === 'discord' && replyToDiscord) {
-      await replyToDiscord(trimmed, message.conversationId ?? undefined, message.messageId ?? undefined)
+      const sent = await replyToDiscord(trimmed, message.conversationId ?? undefined, message.messageId ?? undefined)
+      if (!sent) {
+        chat.setError(ti('panel.notification.reply_failed'))
+        return
+      }
       handleMarkNotificationRead(message.notificationMessageId)
       setActiveNotificationReply(null)
       chat.setInput('')

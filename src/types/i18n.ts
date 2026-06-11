@@ -365,6 +365,7 @@ export type TranslationKey =
   | 'panel.notification.replying_to'
   | 'panel.notification.send_reply'
   | 'panel.notification.reply_not_supported'
+  | 'panel.notification.reply_failed'
   | 'panel.notification.draft_reply'
   | 'panel.notification.mark_important'
   | 'panel.notification.unmark_important'

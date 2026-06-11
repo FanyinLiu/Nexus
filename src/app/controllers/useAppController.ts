@@ -19,6 +19,7 @@ import type {
   WindowView,
 } from '../../types'
 import { useChat } from '../../hooks/useChat'
+import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
 import { useDesktopContext } from '../../hooks/useDesktopContext'
 import { useGameIntegration } from '../../hooks/useGameIntegration'
 import { useMemory } from '../../hooks/useMemory'
@@ -271,6 +272,10 @@ export function useAppController() {
   const milestoneConsumerRef = useRef<() => string>(() => '')
   const anniversaryConsumerRef = useRef<(uiLanguage: string) => string>(() => '')
   const onThisDayConsumerRef = useRef<(uiLanguage: string, memories: MemoryItem[]) => string>(() => '')
+  // Same ref-wrapper dance for the reverse direction: the messaging bridges
+  // (created inside useAutonomyController) want to hear about completed
+  // assistant replies so they can route them back to Telegram/Discord.
+  const assistantReplyDeliveredRef = useRef<((payload: AssistantReplyDeliveredPayload) => void) | null>(null)
 
   const chat = useChat({
     settingsRef,
@@ -336,6 +341,7 @@ export function useAppController() {
       })
     },
     getEmotionSnapshot: () => emotionSnapshotGetterRef.current(),
+    onAssistantReplyDelivered: (payload) => assistantReplyDeliveredRef.current?.(payload),
     consumeMilestonePromptText: () => milestoneConsumerRef.current(),
     consumeAnniversaryPromptText: (uiLanguage: string) => anniversaryConsumerRef.current(uiLanguage),
     consumeOnThisDayPromptText: (uiLanguage: string, memories: MemoryItem[]) => onThisDayConsumerRef.current(uiLanguage, memories),
@@ -463,6 +469,7 @@ export function useAppController() {
     busyRef,
     chat,
     debugConsole,
+    assistantReplyDeliveredRef,
     triggerIdleGesture: (gestureName: string) => {
       // Silent ambient gesture from V2 idle_motion action — push into the
       // shared performance-cue queue so the same Live2D layer that handles

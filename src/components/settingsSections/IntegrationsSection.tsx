@@ -585,6 +585,21 @@ export const IntegrationsSection = memo(function IntegrationsSection({
             setDraft={setDraft}
           />
 
+          <ToggleField
+            label={ti('settings.integrations.telegram.auto_reply')}
+            field="telegramAutoReplyEnabled"
+            draft={draft}
+            setDraft={setDraft}
+          />
+
+          <ToggleField
+            label={ti('settings.integrations.telegram.voice_reply')}
+            field="telegramVoiceReplyEnabled"
+            disabled={!draft.telegramAutoReplyEnabled}
+            draft={draft}
+            setDraft={setDraft}
+          />
+
           <p className="settings-inline-note">
             {ti('settings.integrations.telegram.help')}
           </p>
@@ -654,6 +669,21 @@ export const IntegrationsSection = memo(function IntegrationsSection({
             label={ti('settings.integrations.discord.announce_preview')}
             field="discordAnnounceMessagePreview"
             disabled={!draft.discordAnnounceIncomingEnabled}
+            draft={draft}
+            setDraft={setDraft}
+          />
+
+          <ToggleField
+            label={ti('settings.integrations.discord.auto_reply')}
+            field="discordAutoReplyEnabled"
+            draft={draft}
+            setDraft={setDraft}
+          />
+
+          <ToggleField
+            label={ti('settings.integrations.discord.voice_reply')}
+            field="discordVoiceReplyEnabled"
+            disabled={!draft.discordAutoReplyEnabled}
             draft={draft}
             setDraft={setDraft}
           />

@@ -358,6 +358,10 @@ export interface IntegrationSettings {
   ownerTelegramChatIds: string
   telegramAnnounceIncomingEnabled: boolean
   telegramAnnounceMessagePreview: boolean
+  /** Route completed companion replies back to the owner's Telegram chat. */
+  telegramAutoReplyEnabled: boolean
+  /** Additionally send the reply as a TTS voice note (mp3/ogg/m4a providers only). */
+  telegramVoiceReplyEnabled: boolean
   telegramPermissionMode: IntegrationPermissionMode
   discordIntegrationEnabled: boolean
   discordBotToken: string
@@ -365,6 +369,10 @@ export interface IntegrationSettings {
   ownerDiscordUserIds: string
   discordAnnounceIncomingEnabled: boolean
   discordAnnounceMessagePreview: boolean
+  /** Route completed companion replies back to the owner's Discord channel. */
+  discordAutoReplyEnabled: boolean
+  /** Additionally send the reply as a TTS audio attachment. */
+  discordVoiceReplyEnabled: boolean
   discordPermissionMode: IntegrationPermissionMode
   mcpPermissionMode: IntegrationPermissionMode
 }
