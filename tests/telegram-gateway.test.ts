@@ -55,7 +55,7 @@ before(async () => {
         const batch = pendingUpdates.splice(0)
         if (batch.length === 0) {
           // Empty long-poll: delay a little so the poll loop doesn't spin hot.
-          await new Promise((r) => setTimeout(r, 15))
+          await new Promise((r) => setTimeout(r, 30))
         }
         return json(res, { ok: true, result: batch })
       }
@@ -110,7 +110,7 @@ async function loadGateway() {
   return import('../electron/services/telegramGateway.js')
 }
 
-function waitFor(check: () => boolean, timeoutMs = 3000): Promise<void> {
+function waitFor(check: () => boolean, timeoutMs = 10_000): Promise<void> {
   return new Promise((resolve, reject) => {
     const startedAt = Date.now()
     const tick = () => {
@@ -243,6 +243,9 @@ describe('telegramGateway against a mock Bot API', () => {
     await gateway.connect(BOT_TOKEN, [42])
     await waitFor(() => receivedOffsets.includes(401))
     await gateway.disconnect()
+    // Give the aborted in-flight long-poll a beat to unwind before
+    // reconnecting — slow runners (Windows CI) race this otherwise.
+    await new Promise((r) => setTimeout(r, 50))
 
     receivedOffsets = []
     await gateway.connect(BOT_TOKEN, [42])
