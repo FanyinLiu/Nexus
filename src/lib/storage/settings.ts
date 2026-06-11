@@ -159,6 +159,11 @@ const defaultSettings: AppSettings = {
   ownerTelegramChatIds: '',
   telegramAnnounceIncomingEnabled: false,
   telegramAnnounceMessagePreview: false,
+  // On by default: inbound is already gated by the deny-by-default allowlist
+  // plus the owner list, and a bridge you can talk to but that never answers
+  // is the bug this feature exists to fix. Voice replies stay opt-in.
+  telegramAutoReplyEnabled: true,
+  telegramVoiceReplyEnabled: false,
   telegramPermissionMode: 'confirm',
   discordIntegrationEnabled: false,
   discordBotToken: '',
@@ -166,6 +171,8 @@ const defaultSettings: AppSettings = {
   ownerDiscordUserIds: '',
   discordAnnounceIncomingEnabled: false,
   discordAnnounceMessagePreview: false,
+  discordAutoReplyEnabled: true,
+  discordVoiceReplyEnabled: false,
   discordPermissionMode: 'confirm',
   mcpPermissionMode: 'auto',
   textProviderProfiles: {},
@@ -510,6 +517,8 @@ export function loadSettings(): AppSettings {
     ownerTelegramChatIds: String(stored.ownerTelegramChatIds ?? defaultSettings.ownerTelegramChatIds).trim(),
     telegramAnnounceIncomingEnabled: Boolean(stored.telegramAnnounceIncomingEnabled ?? defaultSettings.telegramAnnounceIncomingEnabled),
     telegramAnnounceMessagePreview: Boolean(stored.telegramAnnounceMessagePreview ?? defaultSettings.telegramAnnounceMessagePreview),
+    telegramAutoReplyEnabled: Boolean(stored.telegramAutoReplyEnabled ?? defaultSettings.telegramAutoReplyEnabled),
+    telegramVoiceReplyEnabled: Boolean(stored.telegramVoiceReplyEnabled ?? defaultSettings.telegramVoiceReplyEnabled),
     telegramPermissionMode: readPermissionMode(stored.telegramPermissionMode, defaultSettings.telegramPermissionMode),
     discordIntegrationEnabled: Boolean(stored.discordIntegrationEnabled ?? defaultSettings.discordIntegrationEnabled),
     discordBotToken: String(stored.discordBotToken ?? defaultSettings.discordBotToken).trim(),
@@ -517,6 +526,8 @@ export function loadSettings(): AppSettings {
     ownerDiscordUserIds: String(stored.ownerDiscordUserIds ?? defaultSettings.ownerDiscordUserIds).trim(),
     discordAnnounceIncomingEnabled: Boolean(stored.discordAnnounceIncomingEnabled ?? defaultSettings.discordAnnounceIncomingEnabled),
     discordAnnounceMessagePreview: Boolean(stored.discordAnnounceMessagePreview ?? defaultSettings.discordAnnounceMessagePreview),
+    discordAutoReplyEnabled: Boolean(stored.discordAutoReplyEnabled ?? defaultSettings.discordAutoReplyEnabled),
+    discordVoiceReplyEnabled: Boolean(stored.discordVoiceReplyEnabled ?? defaultSettings.discordVoiceReplyEnabled),
     discordPermissionMode: readPermissionMode(stored.discordPermissionMode, defaultSettings.discordPermissionMode),
     mcpPermissionMode: readPermissionMode(stored.mcpPermissionMode, defaultSettings.mcpPermissionMode),
     agentMaxIterations: clampInteger(

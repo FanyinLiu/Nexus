@@ -19,6 +19,14 @@ import type {
   VoiceState,
 } from '../../types/index.ts'
 
+export type AssistantReplyDeliveredPayload = {
+  source: 'text' | 'voice' | 'telegram' | 'discord'
+  /** The chat-visible reply text (stage directions already stripped). */
+  displayText: string
+  /** The speakable reply text — what TTS would say; used for voice replies. */
+  spokenText: string
+}
+
 export type PendingReminderDraft =
   | {
       kind: 'missing_time'
@@ -129,6 +137,16 @@ export type UseChatContext = {
    * resurface day after day for the +/- tolerance window.
    */
   consumeOnThisDayPromptText?: (uiLanguage: string, memories: MemoryItem[]) => string
+  /**
+   * Notified after an assistant reply is committed to the chat history,
+   * with the source of the user turn that triggered it. Lets the messaging
+   * bridges route companion replies back to the originating Telegram chat /
+   * Discord channel. Same ref-wrapper pattern as the getters above — the
+   * wiring lives in useAppController to break the useChat ->
+   * useAutonomyController hook ordering cycle; callers tolerate it being
+   * unset, and listener errors must never break the chat turn.
+   */
+  onAssistantReplyDelivered?: (payload: AssistantReplyDeliveredPayload) => void
   reminderTasksRef: RefObject<ReminderTask[]>
   addReminderTask: (input: {
     title: string

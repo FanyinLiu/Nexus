@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { AppSettings, DebugConsoleEventSource } from '../../types'
+import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
 import { useDiscordGateway, type DiscordIncoming } from '../../hooks/useDiscordGateway'
 import { rememberDiscordChannelId } from '../../lib/coreRuntime'
 import { isActionAllowed } from '../../features/integrations/permissions'
-import { parseCsvIdSet, resolveBridgeReplyTarget } from './bridgeUtils'
+import {
+  type BridgeForwardQueue,
+  createBridgeForwardQueue,
+  decideBridgeAutoReply,
+  parseCsvIdSet,
+  resolveBridgeReplyTarget,
+} from './bridgeUtils'
 import { buildMessagingAnnouncementContent, getDiscordAnnouncementSettings } from './messagingAnnouncement'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 
@@ -35,8 +42,11 @@ export type UseDiscordBridgeOptions = {
   botToken: string
   allowedChannelIds: string
   chat: ChatBridge
+  busyRef: React.RefObject<boolean>
   debugConsole: DebugConsoleBridge
 }
+
+type DiscordChannelEntry = { channelId: string; messageId: string; isOwner: boolean }
 
 export function useDiscordBridge({
   settingsRef,
@@ -44,13 +54,43 @@ export function useDiscordBridge({
   botToken,
   allowedChannelIds,
   chat,
+  busyRef,
   debugConsole,
 }: UseDiscordBridgeOptions) {
   const { t } = useTranslation()
-  const lastDiscordChannelRef = useRef<{ channelId: string; messageId: string } | null>(null)
+  const lastDiscordChannelRef = useRef<DiscordChannelEntry | null>(null)
   // Per-channelId tracking so concurrent Discord channels don't overwrite each other.
-  const discordChannelMapRef = useRef<Map<string, { channelId: string; messageId: string }>>(new Map())
+  const discordChannelMapRef = useRef<Map<string, DiscordChannelEntry>>(new Map())
   const discordSendMessageRef = useRef<(channelId: string, text: string, replyTo?: string) => Promise<void>>(undefined)
+  const chatRef = useRef(chat)
+  useEffect(() => { chatRef.current = chat }, [chat])
+
+  // Retry bridge messages that arrive while the assistant is mid-reply
+  // instead of silently dropping them (same rationale as the Telegram queue).
+  // Created in an effect — not useMemo — because the queue closes over refs,
+  // which render-phase code is not allowed to touch.
+  const forwardQueueRef = useRef<BridgeForwardQueue | null>(null)
+  useEffect(() => {
+    const queue = createBridgeForwardQueue({
+      send: async (text) => {
+        const result = await chatRef.current.sendMessage?.(text, { source: 'discord' })
+        return result !== false
+      },
+      isBusy: () => Boolean(busyRef.current),
+      onDrop: (text, reason) => {
+        debugConsole.appendDebugConsoleEvent({
+          source: 'autonomy',
+          title: 'Discord message dropped',
+          detail: `${reason}: ${text.slice(0, 120)}`,
+        })
+      },
+    })
+    forwardQueueRef.current = queue
+    return () => {
+      queue.dispose()
+      forwardQueueRef.current = null
+    }
+  }, [busyRef, debugConsole])
 
   const handleDiscordMessage = useCallback((msg: DiscordIncoming) => {
     const ownerUserIds = parseCsvIdSet(settingsRef.current.ownerDiscordUserIds)
@@ -98,10 +138,10 @@ export function useDiscordBridge({
       const prefixedText = isOwner
         ? `【Discord】${msg.text}`
         : `【Discord · ${msg.fromUser}】${msg.text}`
-      void chat.sendMessage(prefixedText, { source: 'discord' })
+      forwardQueueRef.current?.push(prefixedText)
     }
 
-    const channelEntry = { channelId: msg.channelId, messageId: msg.messageId }
+    const channelEntry: DiscordChannelEntry = { channelId: msg.channelId, messageId: msg.messageId, isOwner }
     lastDiscordChannelRef.current = channelEntry
     discordChannelMapRef.current.set(msg.channelId, channelEntry)
     rememberDiscordChannelId(msg.channelId)
@@ -120,23 +160,101 @@ export function useDiscordBridge({
 
   // Send a reply back to a Discord channel. If channelId is provided, replies
   // to that specific channel; otherwise falls back to the most recent incoming.
-  const replyTo = useCallback(async (text: string, channelId?: string, messageId?: string) => {
+  // Returns true only when the message actually went out.
+  const replyTo = useCallback(async (text: string, channelId?: string, messageId?: string): Promise<boolean> => {
     const target = resolveBridgeReplyTarget(
       discordChannelMapRef.current,
       lastDiscordChannelRef.current,
       channelId,
     )
-    if (!target || !discordSendMessageRef.current) return
+    if (!target || !discordSendMessageRef.current) return false
     if (!isActionAllowed(settingsRef.current, 'discord', 'send')) {
       debugConsole.appendDebugConsoleEvent({
         source: 'autonomy',
         title: 'Discord reply blocked',
         detail: `permission mode "${settingsRef.current.discordPermissionMode}" does not allow sending messages`,
       })
-      return
+      return false
     }
-    await discordSendMessageRef.current(target.channelId, text, messageId)
+    try {
+      await discordSendMessageRef.current(target.channelId, text, messageId)
+      return true
+    } catch (error) {
+      debugConsole.appendDebugConsoleEvent({
+        source: 'autonomy',
+        title: 'Discord reply failed',
+        detail: error instanceof Error ? error.message : String(error),
+      })
+      return false
+    }
   }, [debugConsole, settingsRef])
 
-  return { gateway, replyTo }
+  // Route a completed companion reply back to the channel that triggered it.
+  // Text first; the audio attachment is best-effort on top.
+  const deliverAssistantReply = useCallback(async (payload: AssistantReplyDeliveredPayload) => {
+    const settings = settingsRef.current
+    const target = lastDiscordChannelRef.current
+    const decision = decideBridgeAutoReply({
+      autoReplyEnabled: settings.discordAutoReplyEnabled,
+      permissionMode: settings.discordPermissionMode,
+      target,
+    })
+    if (decision.kind === 'skip') {
+      if (decision.reason !== 'disabled') {
+        debugConsole.appendDebugConsoleEvent({
+          source: 'autonomy',
+          title: 'Discord auto-reply skipped',
+          detail: decision.reason,
+        })
+      }
+      return
+    }
+
+    const text = payload.displayText.trim()
+    if (!text || !discordSendMessageRef.current) return
+    try {
+      await discordSendMessageRef.current(target!.channelId, text)
+    } catch (error) {
+      debugConsole.appendDebugConsoleEvent({
+        source: 'autonomy',
+        title: 'Discord auto-reply failed',
+        detail: error instanceof Error ? error.message : String(error),
+      })
+      return
+    }
+
+    if (!settings.discordVoiceReplyEnabled) return
+    const spoken = payload.spokenText.trim()
+    if (!spoken) return
+    try {
+      const synthesize = window.desktopPet?.synthesizeAudio
+      const sendVoice = window.desktopPet?.discordSendVoice
+      if (!synthesize || !sendVoice) return
+      const audio = await synthesize({
+        providerId: settings.speechOutputProviderId,
+        baseUrl: settings.speechOutputApiBaseUrl,
+        apiKey: settings.speechOutputApiKey,
+        model: settings.speechOutputModel,
+        voice: settings.speechOutputVoice,
+        text: spoken,
+        ...(settings.speechSynthesisLang ? { language: settings.speechSynthesisLang } : {}),
+        ...(typeof settings.speechRate === 'number' ? { rate: settings.speechRate } : {}),
+      })
+      // Discord renders any common audio container as a playable attachment,
+      // so unlike Telegram there is no format gate here.
+      await sendVoice({
+        channelId: target!.channelId,
+        audioBase64: audio.audioBase64,
+        mimeType: audio.mimeType,
+      })
+    } catch (error) {
+      debugConsole.appendDebugConsoleEvent({
+        source: 'autonomy',
+        title: 'Discord voice reply failed',
+        detail: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }, [debugConsole, settingsRef])
+
+  return { gateway, replyTo, deliverAssistantReply }
 }

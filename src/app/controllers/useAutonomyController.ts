@@ -21,6 +21,7 @@ import { useRhythmState } from './useRhythmState'
 import { useAutonomyV2Engine } from './useAutonomyV2Engine'
 import { useTelegramBridge } from './useTelegramBridge'
 import { useDiscordBridge } from './useDiscordBridge'
+import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile'
 import type { DailyMemoryStore, Goal, ReminderTask } from '../../types'
@@ -63,6 +64,12 @@ export type UseAutonomyControllerOptions = {
   busyRef?: React.RefObject<boolean>
   chat: ChatBridge
   debugConsole: DebugConsoleBridge
+  /**
+   * Slot the bridges install their assistant-reply listener into. useChat
+   * fires it (via useAppController's ref wrapper) after every committed
+   * assistant reply so telegram/discord replies can be routed back out.
+   */
+  assistantReplyDeliveredRef?: React.MutableRefObject<((payload: AssistantReplyDeliveredPayload) => void) | null>
   /** Hand off a Live2D gesture to the pet layer for the silent
    *  idle_motion decision-engine action. Optional — wiring is opt-in
    *  from useAppController which knows about the cue queue. */
@@ -82,8 +89,13 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     busyRef,
     chat,
     debugConsole,
+    assistantReplyDeliveredRef,
   } = opts
   const { t } = useTranslation()
+  // Bridges need a concrete busy ref; fall back to a never-busy one when the
+  // caller doesn't provide it (tests / storybook-style harnesses).
+  const fallbackBusyRef = useRef(false)
+  const bridgeBusyRef = busyRef ?? fallbackBusyRef
   const focusAwareness = useFocusAwareness({
     settingsRef,
     enabled: settings.autonomyEnabled && settings.autonomyFocusAwarenessEnabled,
@@ -237,23 +249,44 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     enabled: isNotificationBridgeEnabled(settings),
   })
 
-  const { gateway: telegramGateway, replyTo: replyToTelegram } = useTelegramBridge({
+  const {
+    gateway: telegramGateway,
+    replyTo: replyToTelegram,
+    deliverAssistantReply: deliverTelegramReply,
+  } = useTelegramBridge({
     settingsRef,
     enabled: settings.telegramIntegrationEnabled,
     botToken: settings.telegramBotToken,
     allowedChatIds: settings.telegramAllowedChatIds,
     chat,
+    busyRef: bridgeBusyRef,
     debugConsole,
   })
 
-  const { gateway: discordGateway, replyTo: replyToDiscord } = useDiscordBridge({
+  const {
+    gateway: discordGateway,
+    replyTo: replyToDiscord,
+    deliverAssistantReply: deliverDiscordReply,
+  } = useDiscordBridge({
     settingsRef,
     enabled: settings.discordIntegrationEnabled,
     botToken: settings.discordBotToken,
     allowedChannelIds: settings.discordAllowedChannelIds,
     chat,
+    busyRef: bridgeBusyRef,
     debugConsole,
   })
+
+  // Install the assistant-reply dispatcher: a reply whose triggering user
+  // turn came from a bridge goes back out through that same bridge.
+  useEffect(() => {
+    if (!assistantReplyDeliveredRef) return
+    assistantReplyDeliveredRef.current = (payload) => {
+      if (payload.source === 'telegram') void deliverTelegramReply(payload)
+      else if (payload.source === 'discord') void deliverDiscordReply(payload)
+    }
+    return () => { assistantReplyDeliveredRef.current = null }
+  }, [assistantReplyDeliveredRef, deliverDiscordReply, deliverTelegramReply])
 
   /** Mark daily interaction — grants relationship score bonus and records rhythm. */
   const markInteraction = useCallback(() => {
