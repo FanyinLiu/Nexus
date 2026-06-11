@@ -164,7 +164,10 @@ export async function connect(botToken, allowedChatIds = []) {
   _botToken = botToken.trim()
   _allowedChatIds = new Set(allowedChatIds)
   _lastError = null
-  _updateOffset = 0
+  // _updateOffset is intentionally NOT reset here: resetting it to 0 made
+  // every reconnect replay the previous unconfirmed getUpdates batch, so a
+  // flaky network turned old messages into duplicate companion turns. The
+  // offset only advances (line ~102), which is exactly Telegram's contract.
 
   try {
     // Verify the token by calling getMe
@@ -215,6 +218,48 @@ export async function sendMessage(chatId, text, options = {}) {
   }
 
   await apiCall('sendMessage', params)
+}
+
+/** Container formats Telegram renders as a voice bubble (Bot API sendVoice). */
+const TELEGRAM_VOICE_EXT_BY_MIME = {
+  'audio/mpeg': 'mp3',
+  'audio/mp3': 'mp3',
+  'audio/ogg': 'ogg',
+  'audio/mp4': 'm4a',
+  'audio/m4a': 'm4a',
+  'audio/x-m4a': 'm4a',
+}
+
+/**
+ * Send a voice note to a Telegram chat. Telegram only renders OGG/Opus,
+ * MP3 and M4A uploads as voice bubbles; callers must pre-filter other
+ * containers (this throws for them so a bug can't silently send garbage).
+ * @param {number} chatId
+ * @param {Buffer} audio
+ * @param {string} mimeType
+ * @param {{ replyToMessageId?: number }} [options]
+ */
+export async function sendVoice(chatId, audio, mimeType, options = {}) {
+  if (_state !== 'connected') throw new Error('Telegram gateway not connected')
+
+  const ext = TELEGRAM_VOICE_EXT_BY_MIME[String(mimeType).toLowerCase().split(';')[0].trim()]
+  if (!ext) throw new Error(`Telegram voice notes do not support ${mimeType}`)
+
+  const form = new FormData()
+  form.append('chat_id', String(chatId))
+  if (options.replyToMessageId) {
+    form.append('reply_parameters', JSON.stringify({ message_id: options.replyToMessageId }))
+  }
+  form.append('voice', new Blob([audio], { type: mimeType }), `voice-reply.${ext}`)
+
+  const resp = await net.fetch(`https://api.telegram.org/bot${_botToken}/sendVoice`, {
+    method: 'POST',
+    body: form,
+  })
+  const json = await resp.json()
+  if (!json.ok) {
+    throw new Error(`Telegram API error: ${json.description ?? JSON.stringify(json)}`)
+  }
 }
 
 export function getStatus() {
