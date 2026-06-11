@@ -8,6 +8,8 @@
 
 import { net } from 'electron'
 
+import { isAllowedSender } from './allowlistPolicy.js'
+
 /** @type {'disconnected'|'connecting'|'connected'|'error'} */
 let _state = 'disconnected'
 /** @type {string|null} */
@@ -105,8 +107,9 @@ async function pollOnce() {
       const chat = /** @type {Record<string, unknown>} */ (message.chat)
       const chatId = /** @type {number} */ (chat.id)
 
-      // Security: only process messages from allowed chat IDs
-      if (_allowedChatIds.size > 0 && !_allowedChatIds.has(chatId)) {
+      // Security: only process messages from allowed chat IDs.
+      // Deny-by-default: an empty allowlist accepts nobody.
+      if (!isAllowedSender(_allowedChatIds, chatId)) {
         console.info(`[telegram] Ignoring message from unauthorized chat ${chatId}`)
         continue
       }

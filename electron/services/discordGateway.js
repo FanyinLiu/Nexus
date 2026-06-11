@@ -9,6 +9,8 @@
 import { net } from 'electron'
 import WebSocket from 'ws'
 
+import { isAllowedSender } from './allowlistPolicy.js'
+
 /** @type {'disconnected'|'connecting'|'connected'|'error'} */
 let _state = 'disconnected'
 /** @type {string|null} */
@@ -239,8 +241,9 @@ function handleDispatch(eventName, data) {
     if (data.author?.bot) return
 
     const channelId = data.channel_id
-    // Security: only process messages from allowed channel IDs
-    if (_allowedChannelIds.size > 0 && !_allowedChannelIds.has(channelId)) {
+    // Security: only process messages from allowed channel IDs.
+    // Deny-by-default: an empty allowlist accepts nobody.
+    if (!isAllowedSender(_allowedChannelIds, channelId)) {
       return
     }
 
