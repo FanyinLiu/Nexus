@@ -39,6 +39,8 @@ import {
   formatVolcengineSpeechOutputCombo,
   synthesizeVolcengineSpeechOutputWithFallback,
 } from './ttsVolcengine.js'
+import { synthesizeLocalTts } from './localTts.js'
+import { float32ToInt16PcmBuffer } from './audioEncoding.js'
 
 // FNV-1a 32-bit hash of the requestId, clamped to non-zero positive int32 so
 // it's safe to pass straight into torch.manual_seed on the Python server.
@@ -72,6 +74,14 @@ async function synthesizeRemoteTts(sessionPayload, text) {
   const payload = { ...sessionPayload, text }
   const content = text.trim()
   if (!content) throw new Error('没有可播报的文本内容。')
+
+  // Local sherpa VITS: no base URL, no credentials, returns PCM directly.
+  if (payload.providerId === 'local-tts') {
+    const speed = Number.isFinite(payload.rate) ? payload.rate : 1
+    const { samples, sampleRate } = await synthesizeLocalTts(content, { speed })
+    return { pcmBuffer: float32ToInt16PcmBuffer(samples), pcmSampleRate: sampleRate }
+  }
+
   const synthTimeoutMs = resolveSpeechOutputTimeoutMs()
   const synthTimeoutMessage = resolveSpeechOutputTimeoutMessage()
 

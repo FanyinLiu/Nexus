@@ -210,6 +210,7 @@ export type SpeechOutputProtocol =
   | 'dashscope'
   | 'elevenlabs'
   | 'edge-tts'
+  | 'local-vits'
 
 export type SpeechOutputProviderEntry = {
   id: string
@@ -443,6 +444,23 @@ export const SPEECH_OUTPUT_PROVIDERS: SpeechOutputProviderEntry[] = [
       { id: 'ko-KR-InJoonNeural', label: 'provider.tts.edge-tts.voice.ko-KR-InJoonNeural.label', description: 'provider.tts.edge-tts.voice.ko-KR-InJoonNeural.description' },
     ],
     adjustmentSupport: { rate: true, pitch: true, volume: true, note: 'provider.tts.edge-tts.adjustment.note' },
+  },
+  {
+    id: 'local-tts',
+    label: 'provider.tts.local-tts.label',
+    baseUrl: '',
+    defaultModel: '',
+    defaultVoice: '',
+    notes: 'provider.tts.local-tts.notes',
+    protocol: 'local-vits',
+    kind: 'local',
+    hidden: false,
+    supportsStreaming: true,
+    supportsCustomVoiceId: false,
+    styleOptions: [],
+    modelOptions: [],
+    fallbackVoiceOptions: [],
+    adjustmentSupport: { rate: true, pitch: false, volume: false, note: 'provider.tts.local-tts.adjustment.note' },
   },
   {
     id: 'omnivoice-tts',

@@ -87,6 +87,17 @@ export const MODEL_CATALOG = [
     files: ['encoder.int8.onnx', 'decoder.int8.onnx', 'tokens.txt'],
     purpose: '边说边出字幕的流式 ASR；不装也能用默认的 SenseVoice',
   },
+  {
+    id: 'tts-melo-zh-en',
+    label: '本地语音合成 MeloTTS 中英（可选）',
+    sizeLabel: '~165 MB',
+    required: false,
+    kind: 'archive',
+    directory: 'vits-melo-tts-zh_en',
+    checkFile: 'model.onnx',
+    githubArchive: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-melo-tts-zh_en.tar.bz2',
+    purpose: '免费离线语音合成（语音输出选「本地 TTS」时使用），无需 API Key',
+  },
 ]
 
 export const REQUIRED_MODEL_IDS = MODEL_CATALOG.filter(m => m.required).map(m => m.id)

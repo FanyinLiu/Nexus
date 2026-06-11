@@ -35,6 +35,8 @@ import {
   mapLanguageToMiniMaxBoost,
   mapLanguageToDashScopeType,
 } from '../services/ttsService.js'
+import { synthesizeLocalTts } from '../services/localTts.js'
+import { encodeWavFromFloat32 } from '../services/audioEncoding.js'
 import { requireTrustedSender, requireString } from './validate.js'
 import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
 import {
@@ -343,6 +345,16 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
 
     if (!content) {
       throw new Error('没有可播报的文本内容。')
+    }
+
+    // Local sherpa VITS: no base URL, no credentials; WAV out.
+    if (payload.providerId === 'local-tts') {
+      const speed = Number.isFinite(payload.rate) ? payload.rate : 1
+      const { samples, sampleRate } = await synthesizeLocalTts(content, { speed })
+      return {
+        audioBase64: encodeWavFromFloat32(samples, sampleRate).toString('base64'),
+        mimeType: 'audio/wav',
+      }
     }
 
     const synthTimeoutMs = resolveSpeechOutputTimeoutMs(payload.providerId, content, payload.model)
