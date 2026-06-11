@@ -163,7 +163,7 @@ const defaultSettings: AppSettings = {
   // plus the owner list, and a bridge you can talk to but that never answers
   // is the bug this feature exists to fix. Voice replies stay opt-in.
   telegramAutoReplyEnabled: true,
-  telegramVoiceReplyEnabled: false,
+  telegramVoiceReplyMode: 'off',
   telegramPermissionMode: 'confirm',
   discordIntegrationEnabled: false,
   discordBotToken: '',
@@ -220,6 +220,16 @@ function readPermissionMode(
     return value as import('../../types').IntegrationPermissionMode
   }
   return fallback
+}
+
+function readTelegramVoiceReplyMode(
+  stored: Record<string, unknown>,
+): AppSettings['telegramVoiceReplyMode'] {
+  const value = stored.telegramVoiceReplyMode
+  if (value === 'off' || value === 'always' || value === 'inbound') return value
+  // Pre-mode builds stored a boolean toggle; carry the choice over.
+  if (stored.telegramVoiceReplyEnabled === true) return 'always'
+  return defaultSettings.telegramVoiceReplyMode
 }
 
 function clampInteger(value: number, fallback: number, min: number, max: number) {
@@ -518,7 +528,7 @@ export function loadSettings(): AppSettings {
     telegramAnnounceIncomingEnabled: Boolean(stored.telegramAnnounceIncomingEnabled ?? defaultSettings.telegramAnnounceIncomingEnabled),
     telegramAnnounceMessagePreview: Boolean(stored.telegramAnnounceMessagePreview ?? defaultSettings.telegramAnnounceMessagePreview),
     telegramAutoReplyEnabled: Boolean(stored.telegramAutoReplyEnabled ?? defaultSettings.telegramAutoReplyEnabled),
-    telegramVoiceReplyEnabled: Boolean(stored.telegramVoiceReplyEnabled ?? defaultSettings.telegramVoiceReplyEnabled),
+    telegramVoiceReplyMode: readTelegramVoiceReplyMode(stored),
     telegramPermissionMode: readPermissionMode(stored.telegramPermissionMode, defaultSettings.telegramPermissionMode),
     discordIntegrationEnabled: Boolean(stored.discordIntegrationEnabled ?? defaultSettings.discordIntegrationEnabled),
     discordBotToken: String(stored.discordBotToken ?? defaultSettings.discordBotToken).trim(),

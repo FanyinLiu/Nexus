@@ -16,6 +16,9 @@ export type TelegramIncoming = {
   media?: string | null
   messageId: number
   timestamp: string
+  /** Voice-note audio (downloaded by the gateway) for STT, when media === 'voice'. */
+  voiceBase64?: string | null
+  voiceMimeType?: string | null
 }
 
 export type UseTelegramGatewayOptions = {
