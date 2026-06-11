@@ -237,21 +237,22 @@ describe('telegramGateway against a mock Bot API', () => {
 
   test('reconnect keeps the update offset (no replay of confirmed batches)', async () => {
     const gateway = await loadGateway()
-    gateway.onMessage(() => {})
+    const received: unknown[] = []
+    gateway.onMessage((msg: unknown) => received.push(msg))
 
     pendingUpdates.push(makeUpdate(400))
     await gateway.connect(BOT_TOKEN, [42])
-    await waitFor(() => receivedOffsets.includes(401))
-    await gateway.disconnect()
-    // Give the aborted in-flight long-poll a beat to unwind before
-    // reconnecting — slow runners (Windows CI) race this otherwise.
-    await new Promise((r) => setTimeout(r, 50))
+    // Offset advances synchronously while the batch is processed, before
+    // onMessage fires — so once the message arrives the offset is final.
+    // (Deliberately NOT waiting for the next live poll: that wait was
+    // unfixably flaky on loaded Windows runners.)
+    await waitFor(() => received.length >= 1)
+    assert.equal(gateway.getStatus().updateOffset, 401)
 
-    receivedOffsets = []
+    await gateway.disconnect()
     await gateway.connect(BOT_TOKEN, [42])
-    await waitFor(() => receivedOffsets.length >= 1)
-    // Before the fix this was 0 again, replaying the previous batch.
-    assert.equal(receivedOffsets[0], 401)
+    // Before the fix connect() reset this to 0, replaying the old batch.
+    assert.equal(gateway.getStatus().updateOffset, 401)
 
     await gateway.disconnect()
     gateway.onMessage(null)
