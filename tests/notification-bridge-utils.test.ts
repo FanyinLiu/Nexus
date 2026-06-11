@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { describe, test } from 'node:test'
 import {
   DEFAULT_RSS_INTERVAL_MINUTES,
   MAX_RSS_INTERVAL_MINUTES,
@@ -99,4 +99,44 @@ test('notification bridge keeps ordinary webhook payloads as notifications', () 
   assert.equal(result.message.kind, 'notification')
   assert.equal(result.message.sourceName, 'CI')
   assert.equal(result.message.title, 'Build finished')
+})
+
+// ── Webhook auth hardening (ClawJacked-informed) ─────────────────────────────
+
+import { verifyWebhookAuth, createAuthFailureLimiter } from '../electron/services/notificationBridgeUtils.js'
+
+describe('verifyWebhookAuth', () => {
+  test('accepts the exact bearer token', () => {
+    assert.equal(verifyWebhookAuth('Bearer secret-token-123', 'secret-token-123'), true)
+  })
+
+  test('rejects wrong, malformed and missing headers', () => {
+    assert.equal(verifyWebhookAuth('Bearer wrong', 'secret-token-123'), false)
+    assert.equal(verifyWebhookAuth('secret-token-123', 'secret-token-123'), false)
+    assert.equal(verifyWebhookAuth(undefined, 'secret-token-123'), false)
+    assert.equal(verifyWebhookAuth('Bearer ', 'secret-token-123'), false)
+  })
+
+  test('an unset server token authorizes nobody', () => {
+    assert.equal(verifyWebhookAuth('Bearer anything', null), false)
+    assert.equal(verifyWebhookAuth('Bearer ', ''), false)
+  })
+})
+
+describe('createAuthFailureLimiter', () => {
+  test('blocks after maxFailures inside the window and recovers after it', () => {
+    let nowMs = 1_000_000
+    const limiter = createAuthFailureLimiter({ maxFailures: 3, windowMs: 60_000, now: () => nowMs })
+
+    assert.equal(limiter.isBlocked(), false)
+    limiter.recordFailure()
+    limiter.recordFailure()
+    assert.equal(limiter.isBlocked(), false)
+    limiter.recordFailure()
+    assert.equal(limiter.isBlocked(), true)
+
+    // Window slides: old failures expire, the door reopens.
+    nowMs += 61_000
+    assert.equal(limiter.isBlocked(), false)
+  })
 })

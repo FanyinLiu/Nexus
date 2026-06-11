@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'node:crypto'
+
 import { checkUrlSafety } from './urlSafety.js'
 
 export const MIN_RSS_INTERVAL_MINUTES = 5
@@ -268,4 +270,52 @@ export function sanitizeNotificationChannels(channels) {
     }
   }
   return out
+}
+
+// ── Webhook auth (ClawJacked-informed) ───────────────────────────────────────
+//
+// "Localhost" is not a trust boundary: any web page open in any browser can
+// fire requests at 127.0.0.1, so the bearer check must hold up against a
+// browser-resident brute forcer. Constant-time comparison plus a failure
+// rate limiter that exempts nobody (everything that reaches this server IS
+// local by definition).
+
+
+/**
+ * @param {unknown} authHeader  raw Authorization header value
+ * @param {string|null} expectedToken
+ * @returns {boolean}
+ */
+export function verifyWebhookAuth(authHeader, expectedToken) {
+  if (!expectedToken) return false
+  const header = String(authHeader ?? '')
+  if (!header.startsWith('Bearer ')) return false
+  const presented = Buffer.from(header.slice(7).trim())
+  const expected = Buffer.from(expectedToken)
+  // Length is not secret (the token format is fixed); the contents are.
+  if (presented.length !== expected.length) return false
+  return timingSafeEqual(presented, expected)
+}
+
+/**
+ * Sliding-window failure limiter for the webhook bearer check.
+ * @param {{ maxFailures?: number, windowMs?: number, now?: () => number }} [options]
+ */
+export function createAuthFailureLimiter(options = {}) {
+  const maxFailures = options.maxFailures ?? 10
+  const windowMs = options.windowMs ?? 60_000
+  const now = options.now ?? (() => Date.now())
+  /** @type {number[]} */
+  let failures = []
+
+  return {
+    isBlocked() {
+      const cutoff = now() - windowMs
+      failures = failures.filter((t) => t > cutoff)
+      return failures.length >= maxFailures
+    },
+    recordFailure() {
+      failures.push(now())
+    },
+  }
 }
