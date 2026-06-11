@@ -208,10 +208,10 @@ phase. Do not treat every listed feature as something Phase 1 must ship.
 
 | Feature | Description |
 |---|---|
-| Telegram Bot | Long-polling via Bot API getUpdates; bidirectional messaging |
-| Discord Bot | WebSocket Gateway (heartbeat, identify, resume, reconnect); REST API for sending |
+| Telegram Bot | Long-polling via Bot API getUpdates; incoming messages + manual sends |
+| Discord Bot | WebSocket Gateway (heartbeat, identify, resume, reconnect); REST API for manual sends |
 | Message Forwarding | Incoming messages routed to companion chat as sourced messages |
-| Reply Routing | Companion replies sent back to originating chat/channel |
+| Reply Routing | Manual replies from the panel to the originating chat; automatic companion reply routing is planned |
 | Channel Filtering | Allowed chat/channel ID lists |
 | Permission Modes | Per-gateway read-only / confirm / auto trust levels |
 
