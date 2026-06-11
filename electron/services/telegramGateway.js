@@ -6,9 +6,26 @@
  * via a callback. The renderer can send replies back through sendMessage.
  */
 
-import { net } from 'electron'
+import { createRequire } from 'node:module'
 
 import { isAllowedSender } from './allowlistPolicy.js'
+
+// Electron's net.fetch when running inside the app; plain global fetch under
+// node:test (requiring 'electron' outside the runtime yields the binary path
+// string, not the API). This is what makes the gateway loadable in tests.
+const require = createRequire(import.meta.url)
+let _electronNet = null
+try {
+  const electron = require('electron')
+  if (typeof electron?.net?.fetch === 'function') _electronNet = electron.net
+} catch {
+  // plain node — fall through to global fetch
+}
+const doFetch = (...args) => (_electronNet ? _electronNet.fetch(...args) : globalThis.fetch(...args))
+
+// Configurable for tests and for users behind networks where
+// api.telegram.org needs a reverse proxy.
+const TELEGRAM_API_BASE = (process.env.NEXUS_TELEGRAM_API_BASE ?? 'https://api.telegram.org').replace(/\/+$/, '')
 
 /** @type {'disconnected'|'connecting'|'connected'|'error'} */
 let _state = 'disconnected'
@@ -67,10 +84,10 @@ function detectMediaKind(message) {
 async function apiCall(method, params, signal) {
   if (!_botToken) throw new Error('Bot token not set')
 
-  const url = `https://api.telegram.org/bot${_botToken}/${method}`
+  const url = `${TELEGRAM_API_BASE}/bot${_botToken}/${method}`
   const body = params ? JSON.stringify(params) : undefined
 
-  const resp = await net.fetch(url, {
+  const resp = await doFetch(url, {
     method: body ? 'POST' : 'GET',
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body,
@@ -149,7 +166,7 @@ async function pollOnce() {
               await apiCall('getFile', { file_id: voice.file_id })
             )
             if (file?.file_path) {
-              const resp = await net.fetch(`https://api.telegram.org/file/bot${_botToken}/${file.file_path}`)
+              const resp = await doFetch(`${TELEGRAM_API_BASE}/file/bot${_botToken}/${file.file_path}`)
               if (resp.ok) {
                 incoming.voiceBase64 = Buffer.from(await resp.arrayBuffer()).toString('base64')
                 incoming.voiceMimeType = String(voice.mime_type ?? 'audio/ogg')
@@ -282,7 +299,7 @@ export async function sendVoice(chatId, audio, mimeType, options = {}) {
   }
   form.append('voice', new Blob([audio], { type: mimeType }), `voice-reply.${ext}`)
 
-  const resp = await net.fetch(`https://api.telegram.org/bot${_botToken}/sendVoice`, {
+  const resp = await doFetch(`${TELEGRAM_API_BASE}/bot${_botToken}/sendVoice`, {
     method: 'POST',
     body: form,
   })

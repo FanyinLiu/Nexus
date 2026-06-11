@@ -1,9 +1,11 @@
 /**
  * Unit tests for gateway modules.
  *
- * Only minecraftGateway is testable in plain Node.js — discordGateway and
- * telegramGateway import `{ net } from 'electron'` and cannot be loaded
- * without an Electron runtime.
+ * minecraftGateway is tested here. telegramGateway now loads under plain
+ * Node too (electron net.fetch is optional) and has its own protocol-level
+ * suite in telegram-gateway.test.ts. discordGateway still imports
+ * `{ net } from 'electron'` at the top level and cannot be loaded without
+ * an Electron runtime.
  */
 import assert from 'node:assert/strict'
 import net from 'node:net'
