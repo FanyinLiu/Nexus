@@ -315,6 +315,9 @@ export function getStatus() {
     botUsername: _botUsername,
     allowedChatIds: [..._allowedChatIds],
     lastError: _lastError,
+    // Diagnostic: the next getUpdates offset. Confirms batches and lets
+    // tests assert offset retention without racing the poll loop.
+    updateOffset: _updateOffset,
   }
 }
 
