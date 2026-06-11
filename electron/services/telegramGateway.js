@@ -41,6 +41,15 @@ let _updateOffset = 0
 let _polling = false
 /** @type {AbortController|null} */
 let _pollAbort = null
+// Poll-loop generation token (same pattern as minecraftGateway's connect
+// generation): _pollAbort is overwritten every iteration, so disconnect()
+// can only abort the LATEST in-flight request — an earlier iteration's
+// fetch survives, keeps looping, and the 3s error backoff can even revive
+// a loop across a disconnect/connect boundary. Such an orphan loop then
+// races the new connection's first poll and can swallow a batch while the
+// allowlist is mid-reset (messages silently dropped). Every loop carries
+// its generation; bumping the counter strands all older loops for good.
+let _pollGeneration = 0
 /** @type {string|null} */
 let _lastError = null
 
@@ -103,8 +112,8 @@ async function apiCall(method, params, signal) {
 
 // ── Polling loop ─────────────────────────────────────────────────��───────────
 
-async function pollOnce() {
-  if (!_polling || !_botToken) return
+async function pollOnce(generation) {
+  if (generation !== _pollGeneration || !_polling || !_botToken) return
 
   _pollAbort = new AbortController()
   const timeout = 30 // long-poll timeout in seconds
@@ -182,16 +191,18 @@ async function pollOnce() {
     }
   } catch (err) {
     if (err?.name === 'AbortError') return // intentional stop
+    if (generation !== _pollGeneration) return // stale loop — stand down
     console.error('[telegram] Poll error:', err.message)
     _lastError = err.message
     // Brief pause before retry to avoid hammering on transient errors
     await new Promise((r) => setTimeout(r, 3000))
   }
 
-  // Schedule next poll
-  if (_polling) {
+  // Schedule next poll — only if this loop is still the current generation
+  // (the backoff above may have slept across a disconnect/reconnect).
+  if (_polling && generation === _pollGeneration) {
     // Use setImmediate-style to avoid call stack growth
-    setTimeout(pollOnce, 0)
+    setTimeout(() => pollOnce(generation), 0)
   }
 }
 
@@ -222,9 +233,11 @@ export async function connect(botToken, allowedChatIds = []) {
     _botUsername = String(me.username ?? '')
     _state = 'connected'
     _polling = true
+    _pollGeneration += 1
     console.info(`[telegram] Connected as @${_botUsername}`)
     // Start polling (fire and forget)
-    setTimeout(pollOnce, 0)
+    const generation = _pollGeneration
+    setTimeout(() => pollOnce(generation), 0)
   } catch (err) {
     _state = 'error'
     _lastError = err.message
@@ -235,6 +248,7 @@ export async function connect(botToken, allowedChatIds = []) {
 
 export async function disconnect() {
   _polling = false
+  _pollGeneration += 1 // strand every live poll loop, not just the abortable one
   _pollAbort?.abort()
   _pollAbort = null
   _state = 'disconnected'
