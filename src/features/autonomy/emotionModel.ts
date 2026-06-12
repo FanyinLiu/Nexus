@@ -74,6 +74,10 @@ export type EmotionSignal =
   // observation was derived from that very timeline).
   | 'user_low_mood_observed'
   | 'missed_message_noticed'
+  // Idle-arc signals (resolved by resolveIdleArcSignals below): winding
+  // down, starting to miss the user, and the warm spike of reunion.
+  | 'long_absence'
+  | 'reunion'
 
 const SIGNAL_DELTAS: Record<EmotionSignal, Partial<EmotionState>> = {
   user_greeting:     { energy: 0.1, warmth: 0.15, curiosity: 0.05 },
@@ -91,6 +95,12 @@ const SIGNAL_DELTAS: Record<EmotionSignal, Partial<EmotionState>> = {
   // Someone tried to reach the user while they were away. A small flicker
   // of attentiveness — enough to color tone, not enough to dominate.
   missed_message_noticed: { concern: 0.05, curiosity: 0.05 },
+  // 4+ hours away: she starts to wonder where you are. Once per absence.
+  long_absence:      { concern: 0.12, energy: -0.1 },
+  // You're back after a long absence — a genuine warm spike, the emotional
+  // truth behind "你回来了！". Big enough to read as 'especially
+  // affectionate' in the prompt tone for a little while.
+  reunion:           { warmth: 0.25, energy: 0.2, curiosity: 0.05 },
   task_completed:    { energy: 0.1, warmth: 0.05, concern: -0.1 },
   morning:           { energy: 0.1, curiosity: 0.05 },
   late_night:        { energy: -0.2, concern: 0.1 },
@@ -111,6 +121,61 @@ function clamp(value: number): number {
 }
 
 /** Apply a signal to the emotion state. */
+export const LONG_IDLE_THRESHOLD_SECONDS = 600
+export const LONG_ABSENCE_THRESHOLD_SECONDS = 4 * 60 * 60
+
+export type IdleArcTracker = {
+  longIdleFired: boolean
+  longAbsenceFired: boolean
+  /** Peak idle seconds seen in the current episode (for reunion detection). */
+  peakIdleSeconds: number
+}
+
+export function createIdleArcTracker(): IdleArcTracker {
+  return { longIdleFired: false, longAbsenceFired: false, peakIdleSeconds: 0 }
+}
+
+/**
+ * Resolve which idle-arc signals fire on this tick. Pure: the caller owns
+ * the tracker. Fixes the original always-on bug where long_idle re-applied
+ * every tick during idleness — −0.15 energy every ~6 s pinned the state to
+ * the floor within a minute, which the 2%/tick decay could never recover.
+ * Each phase of the arc now fires exactly once per idle episode:
+ *   10 min  → long_idle      (winding down)
+ *    4 h    → long_absence   (starting to miss you)
+ *   return  → reunion        (only after a long absence)
+ */
+export function resolveIdleArcSignals(
+  tracker: IdleArcTracker,
+  idleSeconds: number,
+): { signals: EmotionSignal[]; tracker: IdleArcTracker } {
+  const signals: EmotionSignal[] = []
+  const next = { ...tracker }
+
+  if (idleSeconds > LONG_IDLE_THRESHOLD_SECONDS) {
+    next.peakIdleSeconds = Math.max(next.peakIdleSeconds, idleSeconds)
+    if (!next.longIdleFired) {
+      next.longIdleFired = true
+      signals.push('long_idle')
+    }
+    if (!next.longAbsenceFired && idleSeconds >= LONG_ABSENCE_THRESHOLD_SECONDS) {
+      next.longAbsenceFired = true
+      signals.push('long_absence')
+    }
+    return { signals, tracker: next }
+  }
+
+  // Idle episode over. Reunion only when the absence was long enough to
+  // have been missed — short coffee breaks come and go silently.
+  if (next.peakIdleSeconds >= LONG_ABSENCE_THRESHOLD_SECONDS) {
+    signals.push('reunion')
+  }
+  return {
+    signals,
+    tracker: createIdleArcTracker(),
+  }
+}
+
 export function applyEmotionSignal(state: EmotionState, signal: EmotionSignal): EmotionState {
   const deltas = SIGNAL_DELTAS[signal]
   return {

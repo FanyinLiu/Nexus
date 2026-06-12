@@ -3,6 +3,9 @@ import { test } from 'node:test'
 
 import {
   applyEmotionSignal,
+  LONG_ABSENCE_THRESHOLD_SECONDS,
+  resolveIdleArcSignals,
+  createIdleArcTracker,
   classifyMessageSignals,
   createDefaultEmotionState,
   decayEmotion,
@@ -219,4 +222,48 @@ test('error_occurred leaves her a little concerned (the long-orphaned signal)', 
   const next = applyEmotionSignal(base, 'error_occurred')
   assert.ok(next.concern > base.concern)
   assert.ok(next.energy < base.energy)
+})
+
+// ── Idle arc: wind down once, miss you at 4h, warm reunion ───────────────────
+
+test('long_idle fires exactly once per idle episode (was: every tick, pinning energy to 0)', () => {
+  let tracker = createIdleArcTracker()
+  const first = resolveIdleArcSignals(tracker, 700)
+  tracker = first.tracker
+  assert.deepEqual(first.signals, ['long_idle'])
+  // ...the same idle episode keeps ticking — no more signals
+  for (const idle of [800, 1200, 3600]) {
+    const r = resolveIdleArcSignals(tracker, idle)
+    tracker = r.tracker
+    assert.deepEqual(r.signals, [])
+  }
+})
+
+test('crossing 4h adds long_absence once; returning fires reunion and resets', () => {
+  let tracker = createIdleArcTracker()
+  tracker = resolveIdleArcSignals(tracker, 700).tracker
+  const absence = resolveIdleArcSignals(tracker, LONG_ABSENCE_THRESHOLD_SECONDS + 5)
+  tracker = absence.tracker
+  assert.deepEqual(absence.signals, ['long_absence'])
+  assert.deepEqual(resolveIdleArcSignals(tracker, LONG_ABSENCE_THRESHOLD_SECONDS + 600).signals, [])
+  tracker = resolveIdleArcSignals(tracker, LONG_ABSENCE_THRESHOLD_SECONDS + 600).tracker
+
+  const back = resolveIdleArcSignals(tracker, 5)
+  assert.deepEqual(back.signals, ['reunion'])
+  // tracker reset: a fresh short idle later fires long_idle again
+  assert.deepEqual(resolveIdleArcSignals(back.tracker, 700).signals, ['long_idle'])
+})
+
+test('a short coffee break ends silently — no reunion theatre', () => {
+  let tracker = createIdleArcTracker()
+  tracker = resolveIdleArcSignals(tracker, 900).tracker  // 15 min idle
+  const back = resolveIdleArcSignals(tracker, 3)
+  assert.deepEqual(back.signals, [])
+})
+
+test('reunion is a genuine warm spike', () => {
+  const base = createDefaultEmotionState()
+  const next = applyEmotionSignal(base, 'reunion')
+  assert.ok(next.warmth >= base.warmth + 0.2)
+  assert.ok(next.energy >= base.energy + 0.15)
 })
