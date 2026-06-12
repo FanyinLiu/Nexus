@@ -1,4 +1,3 @@
-import type { ToolDefinition, ToolExecutor } from '../../tools/types.ts'
 
 export type TodoStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 
@@ -9,15 +8,6 @@ export type TodoItem = {
   status: TodoStatus
   createdAt: number
   updatedAt: number
-}
-
-export type TodoAction = 'add' | 'update' | 'list' | 'remove' | 'clear'
-
-export type TodoArgs = {
-  action: TodoAction
-  id?: string
-  text?: string
-  status?: TodoStatus
 }
 
 export class TodoStore {
@@ -66,53 +56,5 @@ export class TodoStore {
       }
     }
     return removed
-  }
-}
-
-export const todoTool: ToolDefinition = {
-  id: 'agent.todo',
-  displayName: 'Todo',
-  description:
-    'Track multi-step plans across turns. Actions: add, update, list, remove, clear. Use this when a task has 3+ discrete steps.',
-  parameterSchema: {
-    type: 'object',
-    required: ['action'],
-    properties: {
-      action: { type: 'string', enum: ['add', 'update', 'list', 'remove', 'clear'] },
-      id: { type: 'string' },
-      text: { type: 'string' },
-      status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'cancelled'] },
-    },
-  },
-  requiresApproval: false,
-  source: 'builtin',
-}
-
-export function createTodoExecutor(store: TodoStore): ToolExecutor {
-  return async (args, context) => {
-    const parsed = args as TodoArgs
-    if (!parsed?.action) throw new Error('todo: `action` is required')
-    switch (parsed.action) {
-      case 'add': {
-        if (!parsed.text) throw new Error('todo add: `text` is required')
-        return store.add(context.conversationId, parsed.text)
-      }
-      case 'update': {
-        if (!parsed.id) throw new Error('todo update: `id` is required')
-        const updated = store.update(parsed.id, { text: parsed.text, status: parsed.status })
-        if (!updated) throw new Error(`todo ${parsed.id} not found`)
-        return updated
-      }
-      case 'list':
-        return store.list(context.conversationId)
-      case 'remove': {
-        if (!parsed.id) throw new Error('todo remove: `id` is required')
-        return { removed: store.remove(parsed.id) }
-      }
-      case 'clear':
-        return { removed: store.clear(context.conversationId) }
-      default:
-        throw new Error(`todo: unknown action ${String(parsed.action)}`)
-    }
   }
 }
