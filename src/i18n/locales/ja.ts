@@ -913,6 +913,7 @@ export const jaMessages: TranslationDictionary = {
   'settings.tools.provider.firecrawl.description': '検索とスクレイピングを組み合わせ、現在の表示パイプラインに合います。',
   'settings.tools.provider.gemini.description': 'Gemini 経由の Google Search grounding で、回答と引用を返します。',
   'settings.tools.provider.perplexity.description': 'Perplexity 検索。直接 Search API または OpenRouter 互換フォールバックを使えます。',
+  'settings.tools.provider.minimax.description': 'MiniMax Token Plan のウェブ検索——MiniMax コーディング/チャット プランと同じキーを使用（通常のモデルキーは不可）。既定は中国エンドポイント。',
   'settings.tools.default_url': 'デフォルト URL: ',
   'settings.tools.api_base_url': 'API ベース URL',
   'settings.tools.not_required': 'このプロバイダーでは不要',

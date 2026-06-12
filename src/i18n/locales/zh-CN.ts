@@ -1084,6 +1084,7 @@ export const zhCNMessages: TranslationDictionary = {
   'settings.tools.provider.firecrawl.description': '搜索加抓取，适合把网页内容接入当前展示流程。',
   'settings.tools.provider.gemini.description': '通过 Gemini 使用 Google 搜索 grounding，返回答案和引用。',
   'settings.tools.provider.perplexity.description': 'Perplexity 搜索，可走直接 Search API 或 OpenRouter 兼容回退。',
+  'settings.tools.provider.minimax.description': 'MiniMax Token Plan 联网搜索——和 MiniMax 编程/对话套餐用同一个 Key（普通模型 Key 不行），默认国内端点。',
   'settings.tools.default_url': '默认地址：',
   'settings.tools.api_base_url': '接口地址',
   'settings.tools.not_required': '当前服务商不需要填写',

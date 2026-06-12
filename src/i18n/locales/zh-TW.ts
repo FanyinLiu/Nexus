@@ -913,6 +913,7 @@ export const zhTWMessages: TranslationDictionary = {
   'settings.tools.provider.firecrawl.description': '搜尋加抓取，適合把網頁內容接入目前展示流程。',
   'settings.tools.provider.gemini.description': '透過 Gemini 使用 Google 搜尋 grounding，返回答案和引用。',
   'settings.tools.provider.perplexity.description': 'Perplexity 搜尋，可走直接 Search API 或 OpenRouter 相容回退。',
+  'settings.tools.provider.minimax.description': 'MiniMax Token Plan 聯網搜尋——和 MiniMax 編程/對話方案用同一個 Key（一般模型 Key 不行），預設中國端點。',
   'settings.tools.default_url': '預設地址：',
   'settings.tools.api_base_url': '介面地址',
   'settings.tools.not_required': '目前服務商不需要填寫',

@@ -913,6 +913,7 @@ export const enMessages: TranslationDictionary = {
   'settings.tools.provider.firecrawl.description': 'Search plus scrape-ready results that fit the current content display pipeline.',
   'settings.tools.provider.gemini.description': 'Google Search grounding through Gemini, returning answer-first results with citations.',
   'settings.tools.provider.perplexity.description': 'Perplexity search with direct Search API or OpenRouter-compatible fallback.',
+  'settings.tools.provider.minimax.description': 'MiniMax Token Plan web search — same key as the MiniMax coding/chat plan (ordinary model keys are not accepted); CN endpoint by default.',
   'settings.tools.default_url': 'Default URL: ',
   'settings.tools.api_base_url': 'API base URL',
   'settings.tools.not_required': 'Not required for this provider',

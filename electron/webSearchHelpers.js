@@ -9,6 +9,9 @@ export const DEFAULT_GEMINI_SEARCH_MODEL = 'gemini-2.5-flash'
 export const DEFAULT_PERPLEXITY_BASE_URL = 'https://api.perplexity.ai'
 export const DEFAULT_PERPLEXITY_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
 export const DEFAULT_PERPLEXITY_MODEL = 'perplexity/sonar-pro'
+// CN endpoint is the default (matches the first-success provider audience);
+// global users override the base URL to https://api.minimax.io
+export const DEFAULT_MINIMAX_SEARCH_BASE_URL = 'https://api.minimaxi.com'
 
 export const WEB_SEARCH_PROVIDER_METADATA = Object.freeze({
   bing: {
@@ -49,6 +52,11 @@ export const WEB_SEARCH_PROVIDER_METADATA = Object.freeze({
   perplexity: {
     id: 'perplexity',
     label: 'Perplexity',
+    requiresApiKey: true,
+  },
+  minimax: {
+    id: 'minimax',
+    label: 'MiniMax Search',
     requiresApiKey: true,
   },
 })
@@ -164,6 +172,8 @@ export function normalizeWebSearchProviderId(value) {
       return 'gemini'
     case 'perplexity':
       return 'perplexity'
+    case 'minimax':
+      return 'minimax'
     case 'bing':
       return 'bing'
     default:
@@ -211,6 +221,10 @@ export function resolveBraveEndpoint(baseUrl) {
 
 export function resolveTavilyEndpoint(baseUrl) {
   return resolveEndpointWithSuffix(baseUrl, DEFAULT_TAVILY_BASE_URL)
+}
+
+export function resolveMiniMaxSearchEndpoint(baseUrl) {
+  return resolveEndpointWithSuffix(baseUrl, DEFAULT_MINIMAX_SEARCH_BASE_URL, '/v1/coding_plan/search')
 }
 
 export function resolveExaEndpoint(baseUrl) {
