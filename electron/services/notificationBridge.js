@@ -383,42 +383,16 @@ function startWebhookServer() {
       if (bodyTooLarge) return
       try {
         const payload = JSON.parse(body)
-        const normalized = normalizeWebhookPayload(payload)
+        const result = ingestNotificationPayload(payload)
 
-        if (!normalized.ok) {
+        if (!result.ok) {
           res.writeHead(400, { 'Content-Type': 'application/json' })
-          res.end(JSON.stringify({ error: normalized.error }))
+          res.end(JSON.stringify({ error: result.error }))
           return
         }
 
-        // Find the first enabled webhook channel, or create a synthetic reference
-        const webhookChannel = _channels.find((ch) => ch.kind === 'webhook' && ch.enabled)
-        const normalizedMessage = normalized.message
-        const isMessagingPayload = normalizedMessage.kind === 'message'
-
-        /** @type {NotificationMessage} */
-        const message = {
-          id: randomUUID().slice(0, 12),
-          channelId: webhookChannel?.id ?? 'webhook',
-          channelName: isMessagingPayload
-            ? normalizedMessage.sourceName
-            : (webhookChannel?.name ?? normalizedMessage.sourceName),
-          title: normalizedMessage.title,
-          body: normalizedMessage.body,
-          receivedAt: new Date().toISOString(),
-          read: false,
-          kind: normalizedMessage.kind,
-          sourceId: normalizedMessage.sourceId,
-          sourceName: normalizedMessage.sourceName,
-          conversationId: normalizedMessage.conversationId,
-          messageId: normalizedMessage.messageId,
-          sender: normalizedMessage.sender,
-        }
-
-        _onNotification?.(message)
-
         res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ ok: true, id: message.id }))
+        res.end(JSON.stringify({ ok: true, id: result.id }))
       } catch {
         res.writeHead(400, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify({ error: 'Invalid JSON body' }))
@@ -452,6 +426,48 @@ function stopWebhookServer() {
  */
 export function onNotification(callback) {
   _onNotification = callback
+}
+
+/**
+ * Shared ingest entry for message/notification payloads. The webhook server
+ * and the in-app macOS Notification Center watcher both funnel through here,
+ * so everything downstream (inbox, announce, chat injection) treats every
+ * source identically.
+ * @param {unknown} payload
+ * @returns {{ ok: true, id: string } | { ok: false, error: string }}
+ */
+export function ingestNotificationPayload(payload) {
+  const normalized = normalizeWebhookPayload(payload)
+  if (!normalized.ok) {
+    return { ok: false, error: normalized.error }
+  }
+
+  // Find the first enabled webhook channel, or create a synthetic reference
+  const webhookChannel = _channels.find((ch) => ch.kind === 'webhook' && ch.enabled)
+  const normalizedMessage = normalized.message
+  const isMessagingPayload = normalizedMessage.kind === 'message'
+
+  /** @type {NotificationMessage} */
+  const message = {
+    id: randomUUID().slice(0, 12),
+    channelId: webhookChannel?.id ?? 'webhook',
+    channelName: isMessagingPayload
+      ? normalizedMessage.sourceName
+      : (webhookChannel?.name ?? normalizedMessage.sourceName),
+    title: normalizedMessage.title,
+    body: normalizedMessage.body,
+    receivedAt: new Date().toISOString(),
+    read: false,
+    kind: normalizedMessage.kind,
+    sourceId: normalizedMessage.sourceId,
+    sourceName: normalizedMessage.sourceName,
+    conversationId: normalizedMessage.conversationId,
+    messageId: normalizedMessage.messageId,
+    sender: normalizedMessage.sender,
+  }
+
+  _onNotification?.(message)
+  return { ok: true, id: message.id }
 }
 
 /** @returns {NotificationChannel[]} */

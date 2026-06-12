@@ -420,6 +420,17 @@ export function macNotificationRowToMessage(row) {
   }
 }
 
+/**
+ * Classify sqlite/file errors from reading the Notification Center DB:
+ * a missing Full Disk Access grant has a fixed shape across macOS versions.
+ */
+export function classifyMacWatcherError(message) {
+  if (/(?:authorization denied|operation not permitted|permission denied|unable to open database)/iu.test(String(message ?? ''))) {
+    return 'needs-permission'
+  }
+  return 'error'
+}
+
 export function matchesCommunicationFilter(message, pattern = DEFAULT_COMMUNICATION_APP_PATTERN) {
   const regex = new RegExp(pattern, 'iu')
   return regex.test([

@@ -346,7 +346,7 @@ export function useChat(ctx: UseChatContext) {
   const handleSpeechPlaybackFailure = useCallback((speechError: unknown, options: {
     traceId?: string
     traceLabel?: string
-    source: 'text' | 'voice' | 'telegram' | 'discord'
+    source: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'
     fromVoice: boolean
     shouldResumeContinuousVoice: boolean
   }) => {
@@ -470,7 +470,7 @@ export function useChat(ctx: UseChatContext) {
   async function sendMessage(
     rawContent?: string,
     options?: {
-      source?: 'text' | 'voice' | 'telegram' | 'discord'
+      source?: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'
       traceId?: string
     },
   ) {

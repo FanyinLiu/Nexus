@@ -202,6 +202,11 @@ const defaultSettings: AppSettings = {
   autonomyNotificationsEnabled: false,
   autonomyNotificationMessageAnnouncementsEnabled: false,
   autonomyNotificationMessagePreviewEnabled: false,
+  // Chat injection rides the same opt-in chain as the bridge itself
+  // (autonomyNotificationsEnabled), so it can default on.
+  autonomyNotificationMessagesToChatEnabled: true,
+  macosMessageWatcherEnabled: false,
+  macosMessageWatcherApps: '',
   autonomyQuietHoursStart: 23,
   autonomyQuietHoursEnd: 7,
   autonomyCostLimitDailyTicks: 100,

@@ -1,5 +1,6 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import * as notificationBridge from '../services/notificationBridge.js'
+import * as macWatcher from '../services/macNotificationWatcher.js'
 import { requireTrustedSender } from './validate.js'
 
 export function register() {
@@ -8,6 +9,29 @@ export function register() {
     for (const win of BrowserWindow.getAllWindows()) {
       win.webContents.send('notification:incoming', msg)
     }
+  })
+
+  // Surface macOS notification-watcher status changes (running / needs
+  // Full Disk Access / error) to the settings UI.
+  macWatcher.onWatcherStatusChange((status) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send('notification:watcher-status', status)
+    }
+  })
+
+  ipcMain.handle('notification:watcher-set', async (event, payload) => {
+    requireTrustedSender(event)
+    const enabled = Boolean(payload?.enabled)
+    if (!enabled) return macWatcher.stopWatcher()
+    const appsPattern = typeof payload?.appsPattern === 'string' ? payload.appsPattern : ''
+    // Restart so a pattern change takes effect immediately.
+    macWatcher.stopWatcher()
+    return macWatcher.startWatcher({ appsPattern })
+  })
+
+  ipcMain.handle('notification:watcher-status', (event) => {
+    requireTrustedSender(event)
+    return macWatcher.getWatcherStatus()
   })
 
   ipcMain.handle('notification:get-channels', (event) => {

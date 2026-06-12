@@ -91,6 +91,12 @@ type FactorioGameContext = {
   recentCommands: { command: string; response: string; timestamp: string }[]
 } | null
 
+type NotificationWatcherStatus = {
+  status: 'stopped' | 'running' | 'needs-permission' | 'unsupported' | 'error'
+  lastError: string | null
+  platformSupported: boolean
+}
+
 type PairingRequest = {
   senderId: string
   name: string
@@ -647,6 +653,9 @@ declare global {
       setNotificationChannels: (channels: import('./types').NotificationChannel[]) => Promise<void>
       startNotificationBridge: () => Promise<void>
       stopNotificationBridge: () => Promise<void>
+      notificationWatcherSet: (payload: { enabled: boolean; appsPattern?: string }) => Promise<NotificationWatcherStatus>
+      notificationWatcherStatus: () => Promise<NotificationWatcherStatus>
+      subscribeNotificationWatcherStatus: (listener: (status: NotificationWatcherStatus) => void) => () => void
       subscribeNotifications: (listener: (message: import('./types').NotificationMessage) => void) => () => void
 
       // Proactive OS-level notification ("[name] 在想你")

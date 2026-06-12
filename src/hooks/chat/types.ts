@@ -20,7 +20,7 @@ import type {
 } from '../../types/index.ts'
 
 export type AssistantReplyDeliveredPayload = {
-  source: 'text' | 'voice' | 'telegram' | 'discord'
+  source: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'
   /** The chat-visible reply text (stage directions already stripped). */
   displayText: string
   /** The speakable reply text — what TTS would say; used for voice replies. */

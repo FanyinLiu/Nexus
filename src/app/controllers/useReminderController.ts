@@ -27,7 +27,7 @@ type ChatBridge = {
     toolResult?: ReturnType<typeof toChatToolResult>
   }) => Promise<void>
   appendSystemMessage: (content: string, tone?: ChatMessageTone) => void
-  sendMessage: (text: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord' }) => Promise<unknown>
+  sendMessage: (text: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord' | 'notification' }) => Promise<unknown>
 }
 
 type PetBridge = {

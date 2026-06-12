@@ -287,6 +287,13 @@ contextBridge.exposeInMainWorld('desktopPet', {
   setNotificationChannels: (channels) => ipcRenderer.invoke('notification:set-channels', channels),
   startNotificationBridge: () => ipcRenderer.invoke('notification:start'),
   stopNotificationBridge: () => ipcRenderer.invoke('notification:stop'),
+  notificationWatcherSet: (payload) => ipcRenderer.invoke('notification:watcher-set', payload),
+  notificationWatcherStatus: () => ipcRenderer.invoke('notification:watcher-status'),
+  subscribeNotificationWatcherStatus: (listener) => {
+    const handler = (_event, status) => listener(status)
+    ipcRenderer.on('notification:watcher-status', handler)
+    return () => ipcRenderer.removeListener('notification:watcher-status', handler)
+  },
   subscribeNotifications: (listener) => {
     const handler = (_event, msg) => listener(msg)
     ipcRenderer.on('notification:incoming', handler)

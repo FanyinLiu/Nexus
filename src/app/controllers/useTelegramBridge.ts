@@ -25,7 +25,7 @@ type ChatBridge = {
   }) => Promise<void>
   sendMessage?: (
     text?: string,
-    options?: { source?: 'text' | 'voice' | 'telegram' | 'discord'; traceId?: string },
+    options?: { source?: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'; traceId?: string },
   ) => Promise<unknown>
 }
 
