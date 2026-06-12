@@ -359,3 +359,33 @@ test('package config ships message webhook cli and adapters', async () => {
   assert.ok(pkg.build?.asarUnpack?.includes('scripts/send-message-webhook.mjs'))
   assert.ok(pkg.build?.asarUnpack?.includes('scripts/communication-adapters/**/*'))
 })
+
+// ── In-app watcher additions ─────────────────────────────────────────────────
+
+import {
+  classifyMacWatcherError,
+  DEFAULT_COMMUNICATION_APP_PATTERN,
+  matchesCommunicationFilter,
+} from '../scripts/communication-adapters/macos-notification-center-watch.mjs'
+
+test('classifyMacWatcherError maps Full Disk Access denials to needs-permission', () => {
+  assert.equal(classifyMacWatcherError('SQLITE_AUTH: authorization denied'), 'needs-permission')
+  assert.equal(classifyMacWatcherError('EPERM: operation not permitted, open ...'), 'needs-permission')
+  assert.equal(classifyMacWatcherError('unable to open database file'), 'needs-permission')
+  assert.equal(classifyMacWatcherError('database disk image is malformed'), 'error')
+  assert.equal(classifyMacWatcherError(undefined), 'error')
+})
+
+test('default communication pattern matches the major messengers', () => {
+  for (const source of ['微信', 'WeChat', 'QQ', '钉钉', '飞书', 'Telegram', 'Slack', 'com.tencent.xinWeChat']) {
+    assert.equal(
+      matchesCommunicationFilter({ source, sender: 'x', chatTitle: 'x', text: 'hello' }, DEFAULT_COMMUNICATION_APP_PATTERN),
+      true,
+      `expected pattern to match ${source}`,
+    )
+  }
+  assert.equal(
+    matchesCommunicationFilter({ source: 'Finder', sender: '', chatTitle: '', text: 'disk ejected' }, DEFAULT_COMMUNICATION_APP_PATTERN),
+    false,
+  )
+})

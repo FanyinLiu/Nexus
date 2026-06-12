@@ -47,7 +47,7 @@ import {
 type SpeechPlaybackFailureOptions = {
   traceId?: string
   traceLabel?: string
-  source: 'text' | 'voice' | 'telegram' | 'discord'
+  source: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'
   fromVoice: boolean
   shouldResumeContinuousVoice: boolean
 }
@@ -58,7 +58,7 @@ export type AssistantReplyRunnerOptions = {
   nextMemories: MemoryItem[]
   nextDailyMemories: DailyMemoryStore
   content: string
-  source: 'text' | 'voice' | 'telegram' | 'discord'
+  source: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'
   fromVoice: boolean
   traceId: string
   traceLabel: string

@@ -26,6 +26,13 @@ type AutonomySectionProps = {
 
 type TiFunction = (key: Parameters<typeof pickTranslatedUiText>[1]) => string
 
+// Mirrors the preload bridge shape (vite-env.d.ts is module-scoped).
+type NotificationWatcherStatus = {
+  status: 'stopped' | 'running' | 'needs-permission' | 'unsupported' | 'error'
+  lastError: string | null
+  platformSupported: boolean
+}
+
 type WebhookInfo = {
   url: string
   authHeader: string
@@ -264,6 +271,98 @@ function NotificationChannelsPanel({
 
 // ── Main section ─────────────────────────────────────────────────────────────
 
+function MacMessageWatcherCard({ draft, setDraft, ti }: {
+  draft: AppSettings
+  setDraft: Dispatch<SetStateAction<AppSettings>>
+  ti: TiFunction
+}) {
+  const [watcherStatus, setWatcherStatus] = useState<NotificationWatcherStatus | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void window.desktopPet?.notificationWatcherStatus?.().then((status) => {
+      if (!cancelled) setWatcherStatus(status)
+    }).catch(() => {})
+    const unsubscribe = window.desktopPet?.subscribeNotificationWatcherStatus?.((status) => {
+      setWatcherStatus(status)
+    })
+    return () => {
+      cancelled = true
+      unsubscribe?.()
+    }
+  }, [])
+
+  const platformSupported = watcherStatus?.platformSupported !== false
+  const statusKey = watcherStatus?.status ?? 'stopped'
+  const statusLabel = ti(
+    statusKey === 'running' ? 'settings.autonomy.watcher.status.running'
+      : statusKey === 'needs-permission' ? 'settings.autonomy.watcher.status.needs_permission'
+        : statusKey === 'error' ? 'settings.autonomy.watcher.status.error'
+          : statusKey === 'unsupported' ? 'settings.autonomy.watcher.status.unsupported'
+            : 'settings.autonomy.watcher.status.stopped',
+  )
+
+  return (
+    <div className="settings-drawer__card">
+      <div className="settings-section__title-row">
+        <div>
+          <h5>{ti('settings.autonomy.watcher.title')}</h5>
+          <p className="settings-drawer__hint">{ti('settings.autonomy.watcher.hint')}</p>
+        </div>
+        <div className="settings-page__meta">
+          <span>{statusLabel}</span>
+        </div>
+      </div>
+
+      <ToggleField
+        label={ti('settings.autonomy.watcher.enable')}
+        field="macosMessageWatcherEnabled"
+        disabled={!platformSupported}
+        draft={draft}
+        setDraft={setDraft}
+      />
+
+      {draft.macosMessageWatcherEnabled && statusKey === 'needs-permission' ? (
+        <div className="settings-stack">
+          <p className="settings-inline-note">{ti('settings.autonomy.watcher.permission_note')}</p>
+          <div className="settings-action-row">
+            <button
+              type="button"
+              onClick={() => {
+                void window.desktopPet?.openExternalLink?.({
+                  url: 'x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles',
+                })
+              }}
+            >
+              {ti('settings.autonomy.watcher.open_permission')}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <label>
+        <span>{ti('settings.autonomy.watcher.apps_label')}</span>
+        <input
+          type="text"
+          value={draft.macosMessageWatcherApps}
+          placeholder={'微信|WeChat|QQ|钉钉|飞书|Telegram|Slack'}
+          onChange={(event) => {
+            const value = event.target.value
+            setDraft((prev) => ({ ...prev, macosMessageWatcherApps: value }))
+          }}
+        />
+      </label>
+
+      <ToggleField
+        label={ti('settings.autonomy.watcher.to_chat')}
+        field="autonomyNotificationMessagesToChatEnabled"
+        draft={draft}
+        setDraft={setDraft}
+      />
+    </div>
+  )
+}
+
 export const AutonomySection = memo(function AutonomySection({
   active,
   draft,
@@ -483,6 +582,10 @@ export const AutonomySection = memo(function AutonomySection({
               />
             </AutonomyFieldCard>
           </div>
+        )}
+
+        {draft.autonomyNotificationsEnabled && (
+          <MacMessageWatcherCard draft={draft} setDraft={setDraft} ti={ti} />
         )}
 
         {draft.autonomyNotificationsEnabled && hasChannelProps && (

@@ -22,6 +22,7 @@ import { useAutonomyV2Engine } from './useAutonomyV2Engine'
 import { useTelegramBridge } from './useTelegramBridge'
 import { useDiscordBridge } from './useDiscordBridge'
 import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
+import { type BridgeForwardQueue, createBridgeForwardQueue } from './bridgeUtils'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile'
 import type { DailyMemoryStore, Goal, ReminderTask } from '../../types'
@@ -36,7 +37,7 @@ type ChatBridge = {
     dedupeKey?: string
     autoHideMs?: number
   }) => Promise<void>
-  sendMessage?: (text?: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord'; traceId?: string }) => Promise<unknown>
+  sendMessage?: (text?: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'; traceId?: string }) => Promise<unknown>
 }
 
 type DebugConsoleBridge = {
@@ -209,6 +210,36 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     evaluateTriggersRef.current = contextScheduler.evaluateTriggers
   }, [contextScheduler.evaluateTriggers])
 
+  // Forward desktop messages into the companion chat with the same
+  // busy-aware retry queue the bot bridges use. Burst dedupe: one chat
+  // injection per conversation per window, so ten rapid WeChat pings
+  // become one companion reaction instead of ten LLM turns.
+  const notificationChatQueueRef = useRef<BridgeForwardQueue | null>(null)
+  const notificationConversationSeenRef = useRef<Map<string, number>>(new Map())
+  const chatNotifyRef = useRef(chat)
+  useEffect(() => { chatNotifyRef.current = chat }, [chat])
+  useEffect(() => {
+    const queue = createBridgeForwardQueue({
+      send: async (text) => {
+        const result = await chatNotifyRef.current.sendMessage?.(text, { source: 'notification' })
+        return result !== false
+      },
+      isBusy: () => Boolean(bridgeBusyRef.current),
+      onDrop: (text, reason) => {
+        debugConsole.appendDebugConsoleEvent({
+          source: 'autonomy',
+          title: 'Desktop message dropped',
+          detail: `${reason}: ${text.slice(0, 120)}`,
+        })
+      },
+    })
+    notificationChatQueueRef.current = queue
+    return () => {
+      queue.dispose()
+      notificationChatQueueRef.current = null
+    }
+  }, [bridgeBusyRef, debugConsole])
+
   const handleNotification = useCallback((message: NotificationMessage) => {
     const currentSettings = settingsRef.current
     if (!isNotificationBridgeEnabled(currentSettings)) return
@@ -226,6 +257,30 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
           ...announcement,
           autoHideMs: 12_000,
         })
+      }
+
+      // Into the conversation (the actual "companion knows about all your
+      // messages" behaviour). Privacy follows the announce model: content
+      // only when the preview opt-in is on, otherwise source + sender only.
+      if (currentSettings.autonomyNotificationMessagesToChatEnabled && chat.sendMessage) {
+        const conversationKey = message.conversationId
+          || `${message.sourceName ?? message.channelName}:${message.sender ?? message.title}`
+        const now = Date.now()
+        const seen = notificationConversationSeenRef.current
+        const last = seen.get(conversationKey) ?? 0
+        if (now - last >= 60_000) {
+          seen.set(conversationKey, now)
+          if (seen.size > 100) {
+            const oldest = [...seen.entries()].sort((a, b) => a[1] - b[1])[0]
+            if (oldest) seen.delete(oldest[0])
+          }
+          const sourceLabel = message.sourceName || message.channelName
+          const senderLabel = message.sender || message.title
+          const prefixedText = currentSettings.autonomyNotificationMessagePreviewEnabled && message.body
+            ? `【${sourceLabel} · ${senderLabel}】${message.body}`
+            : t('chat.prefix.desktop_message', { source: sourceLabel, sender: senderLabel })
+          notificationChatQueueRef.current?.push(prefixedText)
+        }
       }
       return
     }
@@ -248,6 +303,19 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     onNotification: handleNotification,
     enabled: isNotificationBridgeEnabled(settings),
   })
+
+  // Keep the in-app macOS Notification Center watcher in sync with settings.
+  // It rides the same master switch as the rest of the notification bridge.
+  // Captured as locals so the effect deps are exactly the fields that matter
+  // (resubscribing on every settings change would restart the watcher).
+  const macWatcherEnabled = isNotificationBridgeEnabled(settings) && settings.macosMessageWatcherEnabled
+  const macWatcherApps = settings.macosMessageWatcherApps
+  useEffect(() => {
+    void window.desktopPet?.notificationWatcherSet?.({
+      enabled: macWatcherEnabled,
+      appsPattern: macWatcherApps,
+    })
+  }, [macWatcherEnabled, macWatcherApps])
 
   const {
     gateway: telegramGateway,

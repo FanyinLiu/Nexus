@@ -113,7 +113,7 @@ export type UseVoiceContext = {
   setInput: (input: string) => void
   setSettings: Dispatch<SetStateAction<AppSettings>>
   sendMessageRef: RefObject<
-    (content: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord'; traceId?: string }) => Promise<boolean>
+    (content: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'; traceId?: string }) => Promise<boolean>
   >
   appendSystemMessage: (content: string, tone?: 'neutral' | 'error') => void
   /**

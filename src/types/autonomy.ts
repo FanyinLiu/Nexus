@@ -140,6 +140,12 @@ export interface AutonomySettings {
   autonomyNotificationsEnabled: boolean
   autonomyNotificationMessageAnnouncementsEnabled: boolean
   autonomyNotificationMessagePreviewEnabled: boolean
+  /** Forward kind==='message' notifications into the companion chat. */
+  autonomyNotificationMessagesToChatEnabled: boolean
+  /** In-app macOS Notification Center watcher (all-apps message awareness). */
+  macosMessageWatcherEnabled: boolean
+  /** Regex/keyword filter for which apps count as messengers; '' = built-in default. */
+  macosMessageWatcherApps: string
   autonomyQuietHoursStart: number
   autonomyQuietHoursEnd: number
   autonomyCostLimitDailyTicks: number

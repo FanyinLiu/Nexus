@@ -100,6 +100,7 @@ export type ChatTranslationKey =
   | 'chat.prefix.context_trigger'
   | 'chat.prefix.context_trigger_search'
   | 'chat.prefix.notification'
+  | 'chat.prefix.desktop_message'
   | 'chat.prefix.notification_bubble'
   | 'chat.prefix.notification_speech'
   | 'chat.bridge.messaging_announcement_chat'

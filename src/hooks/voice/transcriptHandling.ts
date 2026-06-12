@@ -45,7 +45,7 @@ export type HandleRecognizedVoiceTranscriptRuntimeOptions = {
   rememberSubmittedVoiceContent: (content: string) => void
   sendMessage: (
     content: string,
-    options?: { source?: 'text' | 'voice' | 'telegram' | 'discord'; traceId?: string },
+    options?: { source?: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'; traceId?: string },
   ) => Promise<boolean>
   /**
    * Reset the no-speech restart counter. Called from the wake_word_only /

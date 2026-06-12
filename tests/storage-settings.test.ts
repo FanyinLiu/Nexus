@@ -66,6 +66,11 @@ test('fresh settings start with the Phase 1 Ollama text path', () => {
   assert.equal(settings.discordVoiceReplyEnabled, false)
   assert.equal(settings.autonomyNotificationMessageAnnouncementsEnabled, false)
   assert.equal(settings.autonomyNotificationMessagePreviewEnabled, false)
+  // Desktop message awareness: chat injection rides the bridge master
+  // switch so it defaults on; the macOS watcher itself stays opt-in.
+  assert.equal(settings.autonomyNotificationMessagesToChatEnabled, true)
+  assert.equal(settings.macosMessageWatcherEnabled, false)
+  assert.equal(settings.macosMessageWatcherApps, '')
 })
 
 test('clamps out-of-range autonomy numerics on load (no 0ms busy-loop, no negative cost cap)', () => {
