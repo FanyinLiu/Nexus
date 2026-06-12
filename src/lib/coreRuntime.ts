@@ -1,6 +1,9 @@
 import {
   AuthProfileStore,
 } from '../core/routing/AuthProfileStore.ts'
+import { isActionAllowed } from '../features/integrations/permissions.ts'
+import { parseDiscordChannelIdList, parseTelegramChatIdList } from '../features/integrations/allowlists.ts'
+import type { AppSettings } from '../types/index.ts'
 import type {
   AuthProfile,
 } from '../core/routing/types.ts'
@@ -245,13 +248,23 @@ export type BroadcastResult = {
   error?: string
 }
 
-export async function broadcastToChannels(text: string): Promise<BroadcastResult[]> {
+/**
+ * Broadcast a reminder/notice to the master's own bridge chats.
+ *
+ * Hardened (bridge plan Phase 2 #3): this used to message EVERY remembered
+ * inbound sender with no permission check — private reminders could leak to
+ * any allowlisted contact. Targets are now the owner's Telegram chats and
+ * the allowlisted Discord channels only, and each channel passes through
+ * the same isActionAllowed('send') gate as every other outbound path.
+ */
+export async function broadcastToChannels(text: string, settings: AppSettings): Promise<BroadcastResult[]> {
   const bridge = typeof window !== 'undefined' ? window.desktopPet : undefined
   const results: BroadcastResult[] = []
   if (!bridge) return results
 
-  if (bridge.telegramSendMessage) {
-    for (const chatId of knownTelegramChatIds) {
+  if (bridge.telegramSendMessage && isActionAllowed(settings, 'telegram', 'send')) {
+    const ownerChatIds = parseTelegramChatIdList(settings.ownerTelegramChatIds)
+    for (const chatId of ownerChatIds) {
       try {
         await bridge.telegramSendMessage({ chatId, text })
         results.push({ channelId: 'telegram', target: String(chatId), ok: true })
@@ -266,8 +279,10 @@ export async function broadcastToChannels(text: string): Promise<BroadcastResult
     }
   }
 
-  if (bridge.discordSendMessage) {
+  if (bridge.discordSendMessage && isActionAllowed(settings, 'discord', 'send')) {
+    const allowedChannels = new Set(parseDiscordChannelIdList(settings.discordAllowedChannelIds))
     for (const channelId of knownDiscordChannelIds) {
+      if (!allowedChannels.has(channelId)) continue
       try {
         await bridge.discordSendMessage({ channelId, text })
         results.push({ channelId: 'discord', target: channelId, ok: true })
