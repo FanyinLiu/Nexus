@@ -87,6 +87,7 @@ export function useReminderController({
         })
         const broadcastResults = await broadcastToChannels(
           `${task.title}\n${displayText}`,
+          settingsRef.current,
         )
         const deliveredCount = broadcastResults.filter((r) => r.ok).length
         debugConsole.appendDebugConsoleEvent({
