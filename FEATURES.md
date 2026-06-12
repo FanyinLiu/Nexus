@@ -1,6 +1,6 @@
 # Nexus — Feature Inventory
 
-> Electron + React + TypeScript desktop AI companion with a minimal default avatar and optional Live2D path.
+> Electron + React + TypeScript desktop AI companion. Live2D character by default, lightweight sprite pets as the alternative path.
 > This file is a broad capability inventory, not the Phase 1 build scope.
 > For the active MVP scope, see
 > [Nexus 升级整合计划](docs/NEXUS_UPGRADE_INTEGRATION_PLAN.md).

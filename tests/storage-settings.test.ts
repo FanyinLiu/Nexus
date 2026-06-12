@@ -47,7 +47,7 @@ test('fresh settings start with the Phase 1 Ollama text path', () => {
   assert.equal(settings.apiProviderId, 'ollama')
   assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
   assert.equal(settings.model, 'qwen3:8b')
-  assert.equal(settings.petModelId, 'codex')
+  assert.equal(settings.petModelId, 'mao')
   assert.equal(settings.apiKey, '')
   assert.equal(settings.chatFailoverEnabled, false)
   assert.equal(settings.speechInputEnabled, false)
@@ -229,7 +229,7 @@ test('ignores malformed root settings values and falls back to defaults', () => 
     assert.equal(settings.apiProviderId, 'ollama')
     assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
     assert.equal(settings.model, 'qwen3:8b')
-    assert.equal(settings.petModelId, 'codex')
+    assert.equal(settings.petModelId, 'mao')
     assert.deepEqual(settings.characterProfiles, [])
     assert.deepEqual(settings.mcpServers, [])
   }

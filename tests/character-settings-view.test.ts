@@ -101,6 +101,7 @@ test('resolveCharacterSettingsSummary exposes compact labels for the settings pa
   assert.equal(summary.companionName, '星绘')
   assert.equal(summary.userName, '主人')
   assert.equal(summary.relationshipLabelKey, 'onboarding.companion.relationship_quiet_companion')
-  assert.equal(summary.petModelLabel, 'Pip')
+  // Unknown petModelId falls back to the default preset — Live2D 星绘 now.
+  assert.equal(summary.petModelLabel, 'Mao 魔法少女')
   assert.equal(summary.profileCount, 1)
 })

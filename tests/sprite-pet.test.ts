@@ -24,7 +24,6 @@ import {
   resolveSpritePetRenderFrame,
 } from '../src/features/pet/spriteRuntime.ts'
 import {
-  DEFAULT_PET_MODEL_ID,
   getPetModelPresets,
   type PetModelDefinition,
 } from '../src/features/pet/models.ts'
@@ -326,8 +325,10 @@ test('sprite pet state mapper follows voice, work, and touch signals', () => {
 })
 
 test('discovered bundled sprite packages merge without duplicating built-in presets', () => {
+  // The merge-dedup semantics under test concern sprite built-ins; use the
+  // codex preset explicitly (the default model is Live2D now).
   const discoveredDefault: PetModelDefinition = {
-    id: DEFAULT_PET_MODEL_ID,
+    id: 'codex',
     label: 'Nexus Mini',
     description: 'Discovered from public/pets/nexus-mini/pet.json',
     modelPath: '',
@@ -353,9 +354,9 @@ test('discovered bundled sprite packages merge without duplicating built-in pres
 
   const presets = getPetModelPresets([discoveredDefault, discoveredExtra])
 
-  assert.equal(presets.filter((preset) => preset.id === DEFAULT_PET_MODEL_ID).length, 1)
+  assert.equal(presets.filter((preset) => preset.id === 'codex').length, 1)
   assert.equal(
-    presets.find((preset) => preset.id === DEFAULT_PET_MODEL_ID)?.spriteAtlas?.stageMaxSize,
+    presets.find((preset) => preset.id === 'codex')?.spriteAtlas?.stageMaxSize,
     '126px',
   )
   assert.equal(presets.some((preset) => preset.id === 'sprite-extra'), true)

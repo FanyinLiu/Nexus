@@ -202,7 +202,7 @@ export const koMessages: TranslationDictionary = {
   'settings.startup_status.model.deepseek_missing_key': 'DeepSeek는 API Key가 필요합니다. 첫 모델은 deepseek-v4-flash를 사용하세요.',
   'settings.startup_status.model.non_common': '현재 제공자는 {provider}입니다. 사용할 수 있지만 자주 쓰는 모델은 Ollama와 DeepSeek를 우선합니다.',
   'settings.startup_status.avatar.label': '파트너 아바타',
-  'settings.startup_status.avatar.nexus_mini': '최소 아바타가 준비되어 데스크톱 동반자 경험에 적합합니다.',
+  'settings.startup_status.avatar.nexus_mini': '기본 아바타 준비 완료.',
   'settings.startup_status.avatar.custom': '고급 또는 Live2D 아바타가 활성화되어 있으며 선택 옵션으로 사용할 수 있습니다.',
   'settings.startup_status.voice.label': '음성 범위',
   'settings.startup_status.voice.text_only': '음성이 꺼져 있어 현재는 텍스트 대화에 집중합니다.',
