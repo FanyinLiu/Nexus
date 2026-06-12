@@ -744,6 +744,36 @@ export function getOnboardingTextProviderOptionsByRegion(
   return includeSelectedTextProvider(scoped, selectedProviderId)
 }
 
+/**
+ * Brand-level region helpers for the settings provider grid. A brand (e.g.
+ * MiniMax) can span regions via its preset variants, so the grid shows it
+ * under every region it serves and picks the matching variant on click.
+ */
+export function brandMatchesRegion(
+  providerIds: string[],
+  region: ApiProviderPreset['region'],
+): boolean {
+  return providerIds.some((id) => API_PROVIDER_PRESETS.find((p) => p.id === id)?.region === region)
+}
+
+/**
+ * Resolve which preset a brand click should select under a region tab:
+ * keep the current selection when it already belongs to this brand AND
+ * region, otherwise the brand's first preset in the region, otherwise the
+ * brand's first preset (region-less escape hatch).
+ */
+export function pickBrandProviderForRegion(
+  providerIds: string[],
+  region: ApiProviderPreset['region'],
+  currentProviderId?: string,
+): string {
+  const regionOf = (id: string) => API_PROVIDER_PRESETS.find((p) => p.id === id)?.region
+  if (currentProviderId && providerIds.includes(currentProviderId) && regionOf(currentProviderId) === region) {
+    return currentProviderId
+  }
+  return providerIds.find((id) => regionOf(id) === region) ?? providerIds[0]
+}
+
 function includeSelectedTextProvider(
   providers: ApiProviderPreset[],
   selectedProviderId?: string,

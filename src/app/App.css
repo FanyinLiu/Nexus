@@ -3275,6 +3275,29 @@
   color: #ffffff;
 }
 
+/* The onboarding palette above assumes the dark backdrop. Inside the settings
+   drawer/page the tabs follow the settings theme variables instead, so they
+   stay legible in both light and night themes. */
+.settings-drawer .onboarding-region-tabs,
+.settings-page .onboarding-region-tabs {
+  margin-bottom: 10px;
+}
+
+.settings-drawer .onboarding-region-tabs__tab,
+.settings-page .onboarding-region-tabs__tab {
+  border-color: var(--settings-border, rgba(28, 42, 60, 0.14));
+  background: transparent;
+  color: inherit;
+}
+
+.settings-drawer .onboarding-region-tabs__tab.is-active,
+.settings-page .onboarding-region-tabs__tab.is-active {
+  border-color: color-mix(in srgb, var(--settings-accent, #3478f6) 45%, transparent);
+  background: color-mix(in srgb, var(--settings-accent, #3478f6) 12%, transparent);
+  color: inherit;
+  font-weight: 600;
+}
+
 .onboarding-region-tabs__tab:focus-visible {
   outline: 2px solid rgba(168, 139, 255, 0.62);
   outline-offset: 2px;

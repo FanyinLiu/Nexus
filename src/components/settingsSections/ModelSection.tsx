@@ -9,6 +9,12 @@ import {
 import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import { getLocalizedApiProviderNote } from '../../features/models/providerNotes'
+import {
+  brandMatchesRegion,
+  getDefaultOnboardingRegion,
+  pickBrandProviderForRegion,
+  type ApiProviderPreset,
+} from '../../features/models/providerCatalog'
 import { isHttpHeaderSafeCredential } from '../../core/routing/AuthProfileStore'
 import type { AppSettings, ServiceConnectionCapability } from '../../types'
 import type { UiLanguage } from '../../types'
@@ -127,6 +133,10 @@ export const ModelSection = memo(function ModelSection({
     ? ti('settings.model.extra_keys_error')
     : ''
   const [detailsOpen, setDetailsOpen] = useState(false)
+  // 国内 / 海外 / 本地 segmented filter over the brand grid. Defaults to the
+  // current provider's region so opening settings always lands on the tab
+  // that contains your selection; falls back to the UI-language heuristic.
+  const [regionTab, setRegionTab] = useState<ApiProviderPreset['region'] | null>(null)
 
   const [extraKeysText, setExtraKeysText] = useState('')
   const [extraKeysProviderId, setExtraKeysProviderId] = useState<string | null>(null)
@@ -200,6 +210,13 @@ export const ModelSection = memo(function ModelSection({
     return [...knownBrands, ...extraBrands]
   }, [providerById])
 
+  const activeRegion = regionTab
+    ?? API_PROVIDER_PRESETS.find((preset) => preset.id === draft.apiProviderId)?.region
+    ?? getDefaultOnboardingRegion(uiLanguage)
+  const regionBrands = providerBrands.filter((brand) =>
+    brandMatchesRegion(brand.providerIds, activeRegion)
+    || brand.providerIds.includes(draft.apiProviderId))
+
   const currentBrand = providerBrands.find((brand) => brand.providerIds.includes(draft.apiProviderId))
     ?? providerBrands[0]
   const currentBrandLabel = currentBrand.labelKey ? ti(currentBrand.labelKey) : currentBrand.label
@@ -224,8 +241,26 @@ export const ModelSection = memo(function ModelSection({
             </div>
           </div>
 
+          <div className="onboarding-region-tabs" role="group" aria-label={ti('onboarding.text.region_filter_label')}>
+            {([
+              { region: 'china', labelKey: 'settings.model.provider_group.china' },
+              { region: 'global', labelKey: 'settings.model.provider_group.global' },
+              { region: 'custom', labelKey: 'settings.model.provider_group.local' },
+            ] as const).map((tab) => (
+              <button
+                key={tab.region}
+                type="button"
+                className={`onboarding-region-tabs__tab${activeRegion === tab.region ? ' is-active' : ''}`}
+                aria-pressed={activeRegion === tab.region}
+                onClick={() => setRegionTab(tab.region)}
+              >
+                {ti(tab.labelKey)}
+              </button>
+            ))}
+          </div>
+
           <div className="settings-model-source-grid">
-            {providerBrands.map((brand) => {
+            {regionBrands.map((brand) => {
               const selected = brand.providerIds.includes(draft.apiProviderId)
               const brandLabel = brand.labelKey ? ti(brand.labelKey) : brand.label
               return (
@@ -238,10 +273,9 @@ export const ModelSection = memo(function ModelSection({
                   aria-label={brandLabel}
                   title={brandLabel}
                   onClick={() => {
-                    const providerId = brand.providerIds.includes(draft.apiProviderId)
-                      ? draft.apiProviderId
-                      : brand.providerIds[0]
-                    onApplyTextProviderPreset(providerId)
+                    onApplyTextProviderPreset(
+                      pickBrandProviderForRegion(brand.providerIds, activeRegion, draft.apiProviderId),
+                    )
                     setDetailsOpen(true)
                   }}
                 >
