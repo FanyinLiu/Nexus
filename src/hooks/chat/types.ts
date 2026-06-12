@@ -138,6 +138,13 @@ export type UseChatContext = {
    */
   consumeOnThisDayPromptText?: (uiLanguage: string, memories: MemoryItem[]) => string
   /**
+   * Consume the one due message follow-up ("张三 messaged you while you were
+   * away — ask once, gently") as a prompt fragment. One-shot: the entry is
+   * marked fired on consumption. Same ref-wrapper pattern as the consumers
+   * above. Returns '' when nothing is due.
+   */
+  consumeMessageFollowUpPromptText?: () => string
+  /**
    * Notified after an assistant reply is committed to the chat history,
    * with the source of the user turn that triggered it. Lets the messaging
    * bridges route companion replies back to the originating Telegram chat /
