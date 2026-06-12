@@ -88,6 +88,7 @@ type AssistantReplyRunnerDependencies = {
     | 'getAffectGuidancePromptText'
     | 'loadDesktopContextSnapshot'
     | 'onAssistantReplyDelivered'
+    | 'onAssistantReplyFailed'
     | 'queuePetPerformanceCue'
     | 'resetNoSpeechRestartCount'
     | 'setMood'
@@ -690,6 +691,12 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       // used for everything the end user actually reads. Mid-chat 404/429/5xx/
       // ECONNREFUSED previously surfaced the raw provider string here.
       const errorMessage = caught instanceof Error ? caught.message : t('chat.assistant.send_failed_fallback')
+      try {
+        // She noticed something went wrong — error_occurred emotion signal.
+        dependencies.ctx.onAssistantReplyFailed?.()
+      } catch {
+        // never mask the original failure
+      }
       const friendlyMessage = humanizeError(caught, 'chat')
       logVoiceEvent('assistant reply failed', {
         traceId: traceId || undefined,

@@ -68,6 +68,12 @@ export type EmotionSignal =
   | 'voice_emotion_fearful'
   | 'voice_emotion_disgusted'
   | 'voice_emotion_surprised'
+  // Companion-side empathy/awareness signals. These describe what SHE
+  // noticed about the user's world, so they must never be projected back
+  // into the user-affect timeline (that would be a feedback loop: the
+  // observation was derived from that very timeline).
+  | 'user_low_mood_observed'
+  | 'missed_message_noticed'
 
 const SIGNAL_DELTAS: Record<EmotionSignal, Partial<EmotionState>> = {
   user_greeting:     { energy: 0.1, warmth: 0.15, curiosity: 0.05 },
@@ -78,6 +84,13 @@ const SIGNAL_DELTAS: Record<EmotionSignal, Partial<EmotionState>> = {
   long_idle:         { energy: -0.15, curiosity: -0.1 },
   user_returned:     { energy: 0.15, warmth: 0.1, curiosity: 0.1 },
   error_occurred:    { concern: 0.2, energy: -0.05 },
+  // Empathy: the user's 14-day affect window reads stuck-low / recent-drop.
+  // She genuinely worries and softens — gated by a long cooldown upstream
+  // so repeated classification can't ratchet concern every turn.
+  user_low_mood_observed: { concern: 0.15, warmth: 0.1, energy: -0.05 },
+  // Someone tried to reach the user while they were away. A small flicker
+  // of attentiveness — enough to color tone, not enough to dominate.
+  missed_message_noticed: { concern: 0.05, curiosity: 0.05 },
   task_completed:    { energy: 0.1, warmth: 0.05, concern: -0.1 },
   morning:           { energy: 0.1, curiosity: 0.05 },
   late_night:        { energy: -0.2, concern: 0.1 },

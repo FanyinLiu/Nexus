@@ -241,6 +241,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     }
   }, [bridgeBusyRef, debugConsole])
 
+  const applyEmotionSignalStable = emotionState.applyEmotionSignal
   const handleNotification = useCallback((message: NotificationMessage) => {
     const currentSettings = settingsRef.current
     if (!isNotificationBridgeEnabled(currentSettings)) return
@@ -266,6 +267,9 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
       // next conversation may carry one gentle "处理了吗" via the one-shot
       // prompt channel.
       if (focusAwareness.focusStateRef.current !== 'active') {
+        // A flicker of attentiveness: she noticed someone tried to reach
+        // the user. Tiny delta — colors tone, never dominates.
+        applyEmotionSignalStable('missed_message_noticed')
         recordMessageFollowUp({
           conversationKey: message.conversationId
             || `${message.sourceName ?? message.channelName}:${message.sender ?? message.title}`,
@@ -315,7 +319,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
       speechContent: t('chat.prefix.notification_speech', { channel: message.channelName, title: message.title }),
       autoHideMs: 12_000,
     })
-  }, [chat, debugConsole, focusAwareness.focusStateRef, settingsRef, t])
+  }, [applyEmotionSignalStable, chat, debugConsole, focusAwareness.focusStateRef, settingsRef, t])
 
   const notificationBridge = useNotificationBridge({
     onNotification: handleNotification,

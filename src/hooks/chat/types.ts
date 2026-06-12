@@ -154,6 +154,13 @@ export type UseChatContext = {
    * unset, and listener errors must never break the chat turn.
    */
   onAssistantReplyDelivered?: (payload: AssistantReplyDeliveredPayload) => void
+  /**
+   * Notified when an assistant turn fails (LLM error / aborted send surfaced
+   * to the user). Feeds the companion's error_occurred emotion signal — a
+   * failure should leave her a little concerned, silently. Same ref-wrapper
+   * pattern; listener errors must never mask the original failure.
+   */
+  onAssistantReplyFailed?: () => void
   reminderTasksRef: RefObject<ReminderTask[]>
   addReminderTask: (input: {
     title: string
