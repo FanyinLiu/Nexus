@@ -273,6 +273,11 @@ export function useAppController() {
   const anniversaryConsumerRef = useRef<(uiLanguage: string) => string>(() => '')
   const onThisDayConsumerRef = useRef<(uiLanguage: string, memories: MemoryItem[]) => string>(() => '')
   const messageFollowUpConsumerRef = useRef<() => string>(() => '')
+  const assistantReplyFailedRef = useRef<(() => void) | null>(null)
+  const emotionSignalApplyRef = useRef<((signal: import('../../features/autonomy/emotionModel.ts').EmotionSignal) => void) | null>(null)
+  // Empathy cooldown: the affect classifier runs every turn; without a gate
+  // a stuck-low week would ratchet concern on every single reply.
+  const lastEmpathySignalAtRef = useRef(0)
   // Same ref-wrapper dance for the reverse direction: the messaging bridges
   // (created inside useAutonomyController) want to hear about completed
   // assistant replies so they can route them back to Telegram/Discord.
@@ -334,6 +339,17 @@ export function useAppController() {
           kind: `affect:${state}` as const,
           beforeValence: snapshot.baselineValence,
         })
+        // Empathy loop: a low-mood read doesn't just instruct the reply —
+        // it nudges her actual emotion (concern up, warmth up), so the
+        // softness is felt, not performed. 6 h cooldown; positive states
+        // deliberately excluded this iteration (restraint first).
+        if (state === 'stuck-low' || state === 'recent-drop') {
+          const now = Date.now()
+          if (now - lastEmpathySignalAtRef.current > 6 * 60 * 60 * 1000) {
+            lastEmpathySignalAtRef.current = now
+            emotionSignalApplyRef.current?.('user_low_mood_observed')
+          }
+        }
       }
       return buildAffectGuidance({
         uiLanguage: settingsRef.current.uiLanguage,
@@ -343,6 +359,7 @@ export function useAppController() {
     },
     getEmotionSnapshot: () => emotionSnapshotGetterRef.current(),
     onAssistantReplyDelivered: (payload) => assistantReplyDeliveredRef.current?.(payload),
+    onAssistantReplyFailed: () => assistantReplyFailedRef.current?.(),
     consumeMilestonePromptText: () => milestoneConsumerRef.current(),
     consumeAnniversaryPromptText: (uiLanguage: string) => anniversaryConsumerRef.current(uiLanguage),
     consumeOnThisDayPromptText: (uiLanguage: string, memories: MemoryItem[]) => onThisDayConsumerRef.current(uiLanguage, memories),
@@ -498,6 +515,8 @@ export function useAppController() {
     anniversaryConsumerRef.current = autonomy.consumeAnniversaryPromptText
     onThisDayConsumerRef.current = autonomy.consumeOnThisDayPromptText
     messageFollowUpConsumerRef.current = autonomy.consumeMessageFollowUpPromptText
+    assistantReplyFailedRef.current = () => autonomy.applyEmotionSignal('error_occurred')
+    emotionSignalApplyRef.current = autonomy.applyEmotionSignal
     // SenseVoice prosody → emotion model: voice ctx forwards labels here.
     voiceEmotionApplyRef.current = (label: VoiceEmotionLabel) => {
       autonomy.applyEmotionSignal(voiceEmotionToSignal(label))

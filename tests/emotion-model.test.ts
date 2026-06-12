@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
+  applyEmotionSignal,
   classifyMessageSignals,
   createDefaultEmotionState,
   decayEmotion,
@@ -192,4 +193,30 @@ test('classifyMessageSignals returns empty for neutral statements with no signal
 
 test('classifyMessageSignals trims leading whitespace before anchor match', () => {
   assert.ok(classifyMessageSignals('  hi').includes('user_greeting'))
+})
+
+// ── Companion-side empathy/awareness signals (emotion-loop polish) ──────────
+
+test('user_low_mood_observed raises concern and warmth, lowers energy', () => {
+  const base = createDefaultEmotionState()
+  const next = applyEmotionSignal(base, 'user_low_mood_observed')
+  assert.ok(next.concern > base.concern)
+  assert.ok(next.warmth > base.warmth)
+  assert.ok(next.energy < base.energy)
+})
+
+test('missed_message_noticed is a small attentiveness flicker, not a mood swing', () => {
+  const base = createDefaultEmotionState()
+  const next = applyEmotionSignal(base, 'missed_message_noticed')
+  assert.ok(next.concern - base.concern <= 0.05 + 1e-9)
+  assert.ok(next.curiosity - base.curiosity <= 0.05 + 1e-9)
+  assert.equal(next.warmth, base.warmth)
+  assert.equal(next.energy, base.energy)
+})
+
+test('error_occurred leaves her a little concerned (the long-orphaned signal)', () => {
+  const base = createDefaultEmotionState()
+  const next = applyEmotionSignal(base, 'error_occurred')
+  assert.ok(next.concern > base.concern)
+  assert.ok(next.energy < base.energy)
 })

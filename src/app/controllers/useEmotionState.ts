@@ -36,12 +36,12 @@ function projectSignalToUserAffect(
     case 'voice_emotion_surprised': {
       const label = signal.replace('voice_emotion_', '') as
         | 'happy' | 'sad' | 'angry' | 'fearful' | 'disgusted' | 'surprised'
-      return { ...voiceEmotionToVAD(label), source: 'voice_prosody', confidence: 0.6 }
+      return { ...voiceEmotionToVAD(label), source: 'voice_prosody', confidence: 0.75 }
     }
     case 'user_praise':
-      return { ...textSignalToVAD('praise'), source: 'text_signal', confidence: 0.7 }
+      return { ...textSignalToVAD('praise'), source: 'text_signal', confidence: 0.6 }
     case 'user_frustration':
-      return { ...textSignalToVAD('frustration'), source: 'text_signal', confidence: 0.7 }
+      return { ...textSignalToVAD('frustration'), source: 'text_signal', confidence: 0.6 }
     case 'user_greeting':
       return { ...textSignalToVAD('greeting'), source: 'text_signal', confidence: 0.5 }
     case 'user_farewell':
