@@ -1,4 +1,3 @@
-import type { ToolDefinition, ToolExecutor } from '../../tools/types.ts'
 
 export type MemoryScope = 'global' | 'conversation' | 'user'
 
@@ -11,18 +10,6 @@ export type MemoryEntry = {
   tags?: string[]
   createdAt: number
   updatedAt: number
-}
-
-export type MemoryAction = 'write' | 'read' | 'search' | 'delete' | 'list'
-
-export type MemoryArgs = {
-  action: MemoryAction
-  scope?: MemoryScope
-  key?: string
-  value?: string
-  query?: string
-  tags?: string[]
-  limit?: number
 }
 
 export type MemoryBackend = {
@@ -101,77 +88,4 @@ export class InMemoryMemoryBackend implements MemoryBackend {
 
 function composeKey(scope: MemoryScope, ownerId: string, key: string): string {
   return `${scope}::${ownerId}::${key}`
-}
-
-export const memoryTool: ToolDefinition = {
-  id: 'agent.memory',
-  displayName: 'Memory',
-  description:
-    'Persist or retrieve long-term memory across conversations. Actions: write, read, search, delete, list. Scopes: global, conversation, user.',
-  parameterSchema: {
-    type: 'object',
-    required: ['action'],
-    properties: {
-      action: { type: 'string', enum: ['write', 'read', 'search', 'delete', 'list'] },
-      scope: { type: 'string', enum: ['global', 'conversation', 'user'] },
-      key: { type: 'string' },
-      value: { type: 'string' },
-      query: { type: 'string' },
-      tags: { type: 'array', items: { type: 'string' } },
-      limit: { type: 'number' },
-    },
-  },
-  requiresApproval: false,
-  source: 'builtin',
-}
-
-export function createMemoryExecutor(backend: MemoryBackend): ToolExecutor {
-  return async (args, context) => {
-    const parsed = args as MemoryArgs
-    const scope: MemoryScope = parsed.scope ?? 'conversation'
-    const ownerId = resolveOwnerId(scope, context.conversationId, context.userId)
-
-    switch (parsed.action) {
-      case 'write': {
-        if (!parsed.key || parsed.value === undefined) {
-          throw new Error('memory write: `key` and `value` required')
-        }
-        return backend.write({
-          scope,
-          ownerId,
-          key: parsed.key,
-          value: parsed.value,
-          tags: parsed.tags,
-        })
-      }
-      case 'read': {
-        if (!parsed.key) throw new Error('memory read: `key` required')
-        const entry = await backend.read(scope, ownerId, parsed.key)
-        if (!entry) throw new Error(`memory: key "${parsed.key}" not found in ${scope}`)
-        return entry
-      }
-      case 'search': {
-        if (!parsed.query) throw new Error('memory search: `query` required')
-        return backend.search(parsed.query, {
-          scope,
-          ownerId: scope === 'global' ? undefined : ownerId,
-          limit: parsed.limit,
-        })
-      }
-      case 'delete': {
-        if (!parsed.key) throw new Error('memory delete: `key` required')
-        return { deleted: await backend.delete(scope, ownerId, parsed.key) }
-      }
-      case 'list':
-        return backend.list(scope, ownerId)
-      default:
-        throw new Error(`memory: unknown action ${String(parsed.action)}`)
-    }
-  }
-}
-
-function resolveOwnerId(scope: MemoryScope, conversationId: string, userId: string): string {
-  if (scope === 'global') return 'global'
-  if (scope === 'user') return userId
-  return conversationId
 }
