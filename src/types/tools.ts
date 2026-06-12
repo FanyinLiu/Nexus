@@ -7,6 +7,7 @@ export type WebSearchProviderId =
   | 'firecrawl'
   | 'gemini'
   | 'perplexity'
+  | 'minimax'
 
 export type ToolPermissionLevel = 'safe' | 'confirm' | 'restricted'
 

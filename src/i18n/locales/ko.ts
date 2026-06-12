@@ -913,6 +913,7 @@ export const koMessages: TranslationDictionary = {
   'settings.tools.provider.firecrawl.description': '검색과 스크래핑을 결합해 현재 콘텐츠 표시 흐름에 맞습니다.',
   'settings.tools.provider.gemini.description': 'Gemini 를 통해 Google Search grounding 을 사용하고 답변과 출처를 반환합니다.',
   'settings.tools.provider.perplexity.description': 'Perplexity 검색으로 직접 Search API 또는 OpenRouter 호환 대체 경로를 사용할 수 있습니다.',
+  'settings.tools.provider.minimax.description': 'MiniMax Token Plan 웹 검색 — MiniMax 코딩/채팅 플랜과 같은 키 사용(일반 모델 키는 불가). 기본은 중국 엔드포인트.',
   'settings.tools.default_url': '기본 URL: ',
   'settings.tools.api_base_url': 'API 기본 URL',
   'settings.tools.not_required': '이 공급자에는 필요 없음',

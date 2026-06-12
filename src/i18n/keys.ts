@@ -1033,6 +1033,7 @@ export const translationKeys: TranslationKey[] = [
   'settings.tools.provider.firecrawl.description',
   'settings.tools.provider.gemini.description',
   'settings.tools.provider.perplexity.description',
+  'settings.tools.provider.minimax.description',
   'settings.tools.default_url',
   'settings.tools.api_base_url',
   'settings.tools.not_required',

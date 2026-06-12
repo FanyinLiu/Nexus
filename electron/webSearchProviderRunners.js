@@ -23,6 +23,7 @@ import {
   resolvePerplexitySearchEndpoint,
   resolveSearchFreshness,
   resolveSearchRecency,
+  resolveMiniMaxSearchEndpoint,
   resolveTavilyEndpoint,
 } from './webSearchHelpers.js'
 
@@ -417,6 +418,51 @@ async function searchWithPerplexity(request, helpers) {
   }
 }
 
+// MiniMax Token Plan search (coding_plan/search). Wire contract per the
+// production OpenClaw integration: body is { q }, results in `organic`
+// [{ title, link, snippet, date }], errors via base_resp.status_code !== 0
+// (the same MiniMax envelope idiom the TTS path already handles). Note:
+// only Token Plan (coding plan) keys are accepted, not ordinary model keys.
+async function searchWithMiniMax(request, helpers) {
+  const apiKey = requireSearchApiKey(request.apiKey, 'MiniMax Search')
+
+  const data = await fetchSearchJson(helpers, resolveMiniMaxSearchEndpoint(request.baseUrl), {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ q: request.query }),
+  }, 'MiniMax Search')
+
+  if (data?.base_resp?.status_code && data.base_resp.status_code !== 0) {
+    throw new Error(`MiniMax Search failed (${data.base_resp.status_code}): ${data.base_resp.status_msg ?? 'unknown error'}`)
+  }
+
+  const items = (Array.isArray(data?.organic) ? data.organic : [])
+    .slice(0, clampResultCount(request.limit, 10))
+    .map((item) => ({
+      title: normalizeWhitespace(item?.title ?? ''),
+      url: String(item?.link ?? '').trim(),
+      snippet: normalizeWhitespace(item?.snippet ?? ''),
+      publishedAt: normalizeWhitespace(item?.date ?? '') || undefined,
+    }))
+    .filter((item) => item.title && item.url)
+
+  const related = (Array.isArray(data?.related_searches) ? data.related_searches : [])
+    .map((entry) => normalizeWhitespace(entry?.query ?? ''))
+    .filter(Boolean)
+
+  return {
+    items,
+    rewrittenQueries: [request.query, ...related.slice(0, 3)],
+    answer: '',
+    matchConfidence: items.length ? 'high' : 'low',
+    matchScore: items.length ? 15 : 0,
+  }
+}
+
 export const SEARCH_PROVIDER_RUNNERS = {
   bing: searchWithBing,
   duckduckgo: searchWithDuckDuckGo,
@@ -426,4 +472,5 @@ export const SEARCH_PROVIDER_RUNNERS = {
   firecrawl: searchWithFirecrawl,
   gemini: searchWithGemini,
   perplexity: searchWithPerplexity,
+  minimax: searchWithMiniMax,
 }

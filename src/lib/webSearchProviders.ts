@@ -90,6 +90,16 @@ export const WEB_SEARCH_PROVIDER_PRESETS: WebSearchProviderPreset[] = [
     supportsBaseUrlOverride: true,
     apiKeyPlaceholder: 'Perplexity API Key',
   },
+  {
+    id: 'minimax',
+    label: 'MiniMax Search',
+    description: 'MiniMax Token Plan search — the same key as the MiniMax coding/chat plan; CN endpoint by default.',
+    descriptionKey: 'settings.tools.provider.minimax.description',
+    baseUrl: 'https://api.minimaxi.com',
+    requiresApiKey: true,
+    supportsBaseUrlOverride: true,
+    apiKeyPlaceholder: 'MiniMax Token Plan API Key',
+  },
 ]
 
 export function normalizeWebSearchProviderId(value: string | null | undefined): WebSearchProviderId {
@@ -108,6 +118,8 @@ export function normalizeWebSearchProviderId(value: string | null | undefined): 
       return 'gemini'
     case 'perplexity':
       return 'perplexity'
+    case 'minimax':
+      return 'minimax'
     case 'bing':
       return 'bing'
     default:
