@@ -11,6 +11,24 @@ export function register() {
     }
   })
 
+  // Forward pairing requests so the settings UI can show approve/dismiss
+  telegramGateway.onPairingRequest((request) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send('telegram:pairing-request', request)
+    }
+  })
+
+  ipcMain.handle('telegram:pairing-list', (event) => {
+    requireTrustedSender(event)
+    return telegramGateway.listPairingRequests()
+  })
+
+  ipcMain.handle('telegram:pairing-resolve', (event, payload) => {
+    requireTrustedSender(event)
+    const senderId = requireString(payload?.senderId, 'senderId')
+    return { removed: telegramGateway.resolvePairingRequest(senderId) }
+  })
+
   ipcMain.handle('telegram:connect', async (event, payload) => {
     requireTrustedSender(event)
     const requestPayload = await resolveVaultRefsForSender(event.sender, payload, ['botToken'])

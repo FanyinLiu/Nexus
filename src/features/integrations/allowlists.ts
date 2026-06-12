@@ -45,3 +45,16 @@ export function parseDiscordChannelIdList(raw: unknown): string[] {
     (value) => value,
   )
 }
+
+/**
+ * Append an ID to a comma-separated allowlist, deduplicating and keeping the
+ * existing entries' order. Used by the pairing-approval flow.
+ */
+export function appendIdToCsvList(csv: unknown, id: string): string {
+  const existing = typeof csv === 'string'
+    ? csv.split(',').map((piece) => piece.trim()).filter(Boolean)
+    : []
+  const trimmed = id.trim()
+  if (!trimmed || existing.includes(trimmed)) return existing.join(', ')
+  return [...existing, trimmed].join(', ')
+}

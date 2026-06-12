@@ -9,6 +9,7 @@
 import { createRequire } from 'node:module'
 
 import { isAllowedSender } from './allowlistPolicy.js'
+import { createPairingManager } from './pairingManager.js'
 
 // Electron's net.fetch when running inside the app; plain global fetch under
 // node:test (requiring 'electron' outside the runtime yields the binary path
@@ -59,6 +60,14 @@ let _lastError = null
 
 /** @type {((msg: TelegramIncomingMessage) => void)|null} */
 let _onMessage = null
+/** @type {((request: { senderId: string, name: string, code: string }) => void)|null} */
+let _onPairingRequest = null
+const _pairing = createPairingManager()
+
+const PAIRING_REPLY = (code) =>
+  `Nexus pairing code 配对码: ${code}\n` +
+  'Approve this chat in Nexus → Settings → Integrations to start talking.\n' +
+  '在 Nexus 的 设置 → 集成 里批准这个对话即可开始聊天（1 小时内有效）。'
 
 // Non-text message payload keys we recognise, in priority order. A message that
 // carries one of these (and no text) is forwarded as a generic media message.
@@ -138,9 +147,26 @@ async function pollOnce(generation) {
       const chatId = /** @type {number} */ (chat.id)
 
       // Security: only process messages from allowed chat IDs.
-      // Deny-by-default: an empty allowlist accepts nobody.
+      // Deny-by-default: an empty allowlist accepts nobody — but a stranger's
+      // FIRST message starts the pairing flow (code sent back, desktop
+      // approves). Repeats and overflow stay silent.
       if (!isAllowedSender(_allowedChatIds, chatId)) {
-        console.info(`[telegram] Ignoring message from unauthorized chat ${chatId}`)
+        const fromUnauthorized = /** @type {Record<string, unknown>|undefined} */ (message.from)
+        const senderName = fromUnauthorized
+          ? String(fromUnauthorized.first_name ?? '') + (fromUnauthorized.last_name ? ` ${fromUnauthorized.last_name}` : '')
+          : String(chat.title ?? chatId)
+        const pairing = _pairing.requestPairing(String(chatId), senderName)
+        if (pairing.kind === 'created') {
+          console.info(`[telegram] Pairing request from chat ${chatId}`)
+          _onPairingRequest?.({ senderId: String(chatId), name: senderName, code: pairing.code })
+          try {
+            await apiCall('sendMessage', { chat_id: chatId, text: PAIRING_REPLY(pairing.code) })
+          } catch (err) {
+            console.warn('[telegram] pairing reply failed:', err.message)
+          }
+        } else {
+          console.info(`[telegram] Ignoring message from unauthorized chat ${chatId} (pairing ${pairing.kind})`)
+        }
         continue
       }
 
@@ -341,4 +367,18 @@ export function getStatus() {
  */
 export function onMessage(callback) {
   _onMessage = callback
+}
+
+/** @param {((request: { senderId: string, name: string, code: string }) => void)|null} cb */
+export function onPairingRequest(cb) {
+  _onPairingRequest = cb
+}
+
+export function listPairingRequests() {
+  return _pairing.list()
+}
+
+/** @param {string} senderId */
+export function resolvePairingRequest(senderId) {
+  return _pairing.resolve(senderId)
 }

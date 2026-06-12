@@ -179,6 +179,13 @@ contextBridge.exposeInMainWorld('desktopPet', {
   telegramDisconnect: () => ipcRenderer.invoke('telegram:disconnect'),
   telegramSendMessage: (payload) => ipcRenderer.invoke('telegram:send-message', payload),
   telegramSendVoice: (payload) => ipcRenderer.invoke('telegram:send-voice', payload),
+  telegramPairingList: () => ipcRenderer.invoke('telegram:pairing-list'),
+  telegramPairingResolve: (payload) => ipcRenderer.invoke('telegram:pairing-resolve', payload),
+  subscribeTelegramPairing: (listener) => {
+    const handler = (_event, request) => listener(request)
+    ipcRenderer.on('telegram:pairing-request', handler)
+    return () => ipcRenderer.removeListener('telegram:pairing-request', handler)
+  },
   telegramStatus: () => ipcRenderer.invoke('telegram:status'),
   subscribeTelegramMessage: (listener) => {
     const handler = (_event, msg) => listener(msg)
@@ -191,6 +198,13 @@ contextBridge.exposeInMainWorld('desktopPet', {
   discordDisconnect: () => ipcRenderer.invoke('discord:disconnect'),
   discordSendMessage: (payload) => ipcRenderer.invoke('discord:send-message', payload),
   discordSendVoice: (payload) => ipcRenderer.invoke('discord:send-voice', payload),
+  discordPairingList: () => ipcRenderer.invoke('discord:pairing-list'),
+  discordPairingResolve: (payload) => ipcRenderer.invoke('discord:pairing-resolve', payload),
+  subscribeDiscordPairing: (listener) => {
+    const handler = (_event, request) => listener(request)
+    ipcRenderer.on('discord:pairing-request', handler)
+    return () => ipcRenderer.removeListener('discord:pairing-request', handler)
+  },
   discordStatus: () => ipcRenderer.invoke('discord:status'),
   subscribeDiscordMessage: (listener) => {
     const handler = (_event, msg) => listener(msg)

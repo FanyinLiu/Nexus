@@ -13,6 +13,7 @@ import {
   getInspectableIntegrationModules,
   type IntegrationModuleDescriptor,
 } from '../../features/integrations/registry'
+import { appendIdToCsvList } from '../../features/integrations/allowlists.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type {
   AppSettings,
@@ -31,6 +32,15 @@ type IntegrationsSectionProps = {
 }
 
 type IntegrationPanelId = InspectableIntegrationModuleId
+
+// Mirrors the PairingRequest shape the preload bridge returns (vite-env.d.ts
+// is module-scoped, so its declarations aren't ambient here).
+type PairingRequest = {
+  senderId: string
+  name: string
+  code: string
+  createdAt: number
+}
 
 const inspectableModules = getInspectableIntegrationModules()
 const inspectablePanelIds = inspectableModules
@@ -55,6 +65,99 @@ export const IntegrationsSection = memo(function IntegrationsSection({
   const [inspection, setInspection] = useState<IntegrationInspectResponse | null>(null)
   const [inspectionLoading, setInspectionLoading] = useState(false)
   const [inspectionError, setInspectionError] = useState('')
+  const [telegramPairing, setTelegramPairing] = useState<PairingRequest[]>([])
+  const [discordPairing, setDiscordPairing] = useState<PairingRequest[]>([])
+
+  // Pairing requests: load the pending list when the section opens and keep
+  // it live while open (strangers messaging the bot push new entries).
+  useEffect(() => {
+    if (!active) return
+    let cancelled = false
+    void window.desktopPet?.telegramPairingList?.().then((list) => {
+      if (!cancelled) setTelegramPairing(list)
+    }).catch(() => {})
+    void window.desktopPet?.discordPairingList?.().then((list) => {
+      if (!cancelled) setDiscordPairing(list)
+    }).catch(() => {})
+    const unsubscribeTelegram = window.desktopPet?.subscribeTelegramPairing?.((request) => {
+      setTelegramPairing((prev) => [...prev.filter((r) => r.senderId !== request.senderId), request])
+    })
+    const unsubscribeDiscord = window.desktopPet?.subscribeDiscordPairing?.((request) => {
+      setDiscordPairing((prev) => [...prev.filter((r) => r.senderId !== request.senderId), request])
+    })
+    return () => {
+      cancelled = true
+      unsubscribeTelegram?.()
+      unsubscribeDiscord?.()
+    }
+  }, [active])
+
+  function dismissPairing(channel: 'telegram' | 'discord', request: PairingRequest) {
+    if (channel === 'telegram') {
+      setTelegramPairing((prev) => prev.filter((r) => r.senderId !== request.senderId))
+      void window.desktopPet?.telegramPairingResolve?.({ senderId: request.senderId })
+    } else {
+      setDiscordPairing((prev) => prev.filter((r) => r.senderId !== request.senderId))
+      void window.desktopPet?.discordPairingResolve?.({ senderId: request.senderId })
+    }
+  }
+
+  function approvePairing(channel: 'telegram' | 'discord', request: PairingRequest) {
+    if (channel === 'telegram') {
+      // Positive chat IDs are 1:1 private chats — promote those to owner so
+      // the companion treats them as the master. Group chats (negative IDs)
+      // only enter the allowlist; anyone in the group could be speaking.
+      const isPrivateChat = Number(request.senderId) > 0
+      setDraft((prev) => ({
+        ...prev,
+        telegramAllowedChatIds: appendIdToCsvList(prev.telegramAllowedChatIds, request.senderId),
+        ...(isPrivateChat
+          ? { ownerTelegramChatIds: appendIdToCsvList(prev.ownerTelegramChatIds, request.senderId) }
+          : {}),
+      }))
+    } else {
+      // Discord pairing is per-channel; owner identity is a user ID with
+      // different semantics, so approval only fills the allowlist.
+      setDraft((prev) => ({
+        ...prev,
+        discordAllowedChannelIds: appendIdToCsvList(prev.discordAllowedChannelIds, request.senderId),
+      }))
+    }
+    dismissPairing(channel, request)
+  }
+
+  function renderPairingCard(channel: 'telegram' | 'discord', requests: PairingRequest[]) {
+    return (
+      <div className="settings-drawer__card">
+        <div className="settings-section__title-row">
+          <div>
+            <h5>{ti('settings.integrations.pairing.title')}</h5>
+            <p className="settings-drawer__hint">{ti('settings.integrations.pairing.hint')}</p>
+          </div>
+        </div>
+
+        {requests.length === 0 ? (
+          <p className="settings-inline-note">{ti('settings.integrations.pairing.empty')}</p>
+        ) : (
+          requests.map((request) => (
+            <div className="settings-stack" key={request.senderId}>
+              <p className="settings-inline-note">
+                {`${request.name || request.senderId} · ${request.senderId} · ${ti('settings.integrations.pairing.code')} ${request.code}`}
+              </p>
+              <div className="settings-action-row">
+                <button type="button" onClick={() => approvePairing(channel, request)}>
+                  {ti('settings.integrations.pairing.approve')}
+                </button>
+                <button type="button" onClick={() => dismissPairing(channel, request)}>
+                  {ti('settings.integrations.pairing.dismiss')}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    )
+  }
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1], params?: Record<string, string>) => (
     pickTranslatedUiText(uiLanguage, key, params)
   )
@@ -613,6 +716,8 @@ export const IntegrationsSection = memo(function IntegrationsSection({
           </p>
         </div>
 
+        {renderPairingCard('telegram', telegramPairing)}
+
         {renderRuntimeBlock('telegram')}
       </>
     )
@@ -700,6 +805,8 @@ export const IntegrationsSection = memo(function IntegrationsSection({
             {ti('settings.integrations.discord.help')}
           </p>
         </div>
+
+        {renderPairingCard('discord', discordPairing)}
 
         {renderRuntimeBlock('discord')}
       </>

@@ -10,6 +10,7 @@ import { net } from 'electron'
 import WebSocket from 'ws'
 
 import { isAllowedSender } from './allowlistPolicy.js'
+import { createPairingManager } from './pairingManager.js'
 
 /** @type {'disconnected'|'connecting'|'connected'|'error'} */
 let _state = 'disconnected'
@@ -54,6 +55,14 @@ const RECONNECT_MAX_MS = 60_000
 
 /** @type {((msg: DiscordIncomingMessage) => void)|null} */
 let _onMessage = null
+/** @type {((request: { senderId: string, name: string, code: string }) => void)|null} */
+let _onPairingRequest = null
+const _pairing = createPairingManager()
+
+const PAIRING_REPLY = (code) =>
+  `Nexus pairing code 配对码: ${code}\n` +
+  'Approve this channel in Nexus → Settings → Integrations to start talking.\n' +
+  '在 Nexus 的 设置 → 集成 里批准这个频道即可开始聊天（1 小时内有效）。'
 
 // ── Discord REST API helpers ────────────────────────────────────────────────
 
@@ -242,8 +251,18 @@ function handleDispatch(eventName, data) {
 
     const channelId = data.channel_id
     // Security: only process messages from allowed channel IDs.
-    // Deny-by-default: an empty allowlist accepts nobody.
+    // Deny-by-default: an empty allowlist accepts nobody — but a stranger's
+    // FIRST message starts the pairing flow (code sent back, desktop
+    // approves). Repeats and overflow stay silent.
     if (!isAllowedSender(_allowedChannelIds, channelId)) {
+      const senderName = String(data.author?.username ?? channelId)
+      const pairing = _pairing.requestPairing(String(channelId), senderName)
+      if (pairing.kind === 'created') {
+        console.info(`[discord] Pairing request from channel ${channelId}`)
+        _onPairingRequest?.({ senderId: String(channelId), name: senderName, code: pairing.code })
+        apiCall(`/channels/${channelId}/messages`, { method: 'POST', body: { content: PAIRING_REPLY(pairing.code) } })
+          .catch((err) => console.warn('[discord] pairing reply failed:', err.message))
+      }
       return
     }
 
@@ -465,4 +484,18 @@ export function getStatus() {
  */
 export function onMessage(callback) {
   _onMessage = callback
+}
+
+/** @param {((request: { senderId: string, name: string, code: string }) => void)|null} cb */
+export function onPairingRequest(cb) {
+  _onPairingRequest = cb
+}
+
+export function listPairingRequests() {
+  return _pairing.list()
+}
+
+/** @param {string} senderId */
+export function resolvePairingRequest(senderId) {
+  return _pairing.resolve(senderId)
 }
