@@ -2011,7 +2011,7 @@ export const koMessages: TranslationDictionary = {
   'settings.autonomy.triggers.hint': '데스크톱 활동에 따라 알림이나 동작을 자동 실행합니다.',
   'settings.autonomy.triggers.enable': '컨텍스트 트리거 활성화',
   'settings.autonomy.watcher.title': '데스크톱 메시지 감지(macOS)',
-  'settings.autonomy.watcher.hint': '시스템 알림 센터를 읽어 WeChat/QQ/메일 등 모든 앱의 메시지를 컴패니언이 인지합니다. Nexus에 "전체 디스크 접근" 권한이 필요합니다.',
+  'settings.autonomy.watcher.hint': '시스템 알림 센터를 읽어 WeChat/QQ/메일 등 모든 앱의 메시지를 컴패니언이 인지합니다. 이 토글 하나면 됩니다(알림 마스터 스위치도 자동으로 켜짐). 처음 사용 시 시스템 설정에서 Nexus에 "전체 디스크 접근" 권한을 부여하세요.',
   'settings.autonomy.watcher.enable': '모든 앱 메시지 감지 켜기',
   'settings.autonomy.watcher.apps_label': '대상 앱(키워드, | 구분, 비워두면 기본 목록)',
   'settings.autonomy.watcher.to_chat': '수신 메시지를 대화로(프라이버시는 위의 "내용 읽기" 설정을 따름)',

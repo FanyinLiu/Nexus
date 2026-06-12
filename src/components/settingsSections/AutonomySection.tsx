@@ -314,13 +314,26 @@ function MacMessageWatcherCard({ draft, setDraft, ti }: {
         </div>
       </div>
 
-      <ToggleField
-        label={ti('settings.autonomy.watcher.enable')}
-        field="macosMessageWatcherEnabled"
-        disabled={!platformSupported}
-        draft={draft}
-        setDraft={setDraft}
-      />
+      {/* The one toggle. Turning it on auto-raises the notification master
+          switch so message awareness is a single flip + the macOS Full Disk
+          Access grant — nothing else to configure. Turning it off leaves the
+          master alone (webhook/RSS may still want it). */}
+      <label className="settings-toggle">
+        <span>{ti('settings.autonomy.watcher.enable')}</span>
+        <input
+          type="checkbox"
+          checked={draft.macosMessageWatcherEnabled}
+          disabled={!platformSupported}
+          onChange={(e) => {
+            const enabled = e.target.checked
+            setDraft((prev) => ({
+              ...prev,
+              macosMessageWatcherEnabled: enabled,
+              autonomyNotificationsEnabled: enabled ? true : prev.autonomyNotificationsEnabled,
+            }))
+          }}
+        />
+      </label>
 
       {draft.macosMessageWatcherEnabled && statusKey === 'needs-permission' ? (
         <div className="settings-stack">
@@ -340,25 +353,31 @@ function MacMessageWatcherCard({ draft, setDraft, ti }: {
         </div>
       ) : null}
 
-      <label>
-        <span>{ti('settings.autonomy.watcher.apps_label')}</span>
-        <input
-          type="text"
-          value={draft.macosMessageWatcherApps}
-          placeholder={'微信|WeChat|QQ|钉钉|飞书|Telegram|Slack'}
-          onChange={(event) => {
-            const value = event.target.value
-            setDraft((prev) => ({ ...prev, macosMessageWatcherApps: value }))
-          }}
-        />
-      </label>
+      {/* Optional knobs stay hidden until the feature is on, so an off card
+          is just the single toggle + its hint. */}
+      {draft.macosMessageWatcherEnabled ? (
+        <>
+          <label>
+            <span>{ti('settings.autonomy.watcher.apps_label')}</span>
+            <input
+              type="text"
+              value={draft.macosMessageWatcherApps}
+              placeholder={'微信|WeChat|QQ|钉钉|飞书|Telegram|Slack'}
+              onChange={(event) => {
+                const value = event.target.value
+                setDraft((prev) => ({ ...prev, macosMessageWatcherApps: value }))
+              }}
+            />
+          </label>
 
-      <ToggleField
-        label={ti('settings.autonomy.watcher.to_chat')}
-        field="autonomyNotificationMessagesToChatEnabled"
-        draft={draft}
-        setDraft={setDraft}
-      />
+          <ToggleField
+            label={ti('settings.autonomy.watcher.to_chat')}
+            field="autonomyNotificationMessagesToChatEnabled"
+            draft={draft}
+            setDraft={setDraft}
+          />
+        </>
+      ) : null}
     </div>
   )
 }
@@ -560,6 +579,10 @@ export const AutonomySection = memo(function AutonomySection({
           hint={ti('settings.autonomy.notifications.hint')}
         />
 
+        {/* Message awareness — the one toggle most users want. Always
+            visible; flipping it on raises the master switch below. */}
+        <MacMessageWatcherCard draft={draft} setDraft={setDraft} ti={ti} />
+
         <AutonomyControlCard>
           <ToggleField label={ti('settings.autonomy.notifications.enable')} field="autonomyNotificationsEnabled" {...fieldProps} />
         </AutonomyControlCard>
@@ -582,10 +605,6 @@ export const AutonomySection = memo(function AutonomySection({
               />
             </AutonomyFieldCard>
           </div>
-        )}
-
-        {draft.autonomyNotificationsEnabled && (
-          <MacMessageWatcherCard draft={draft} setDraft={setDraft} ti={ti} />
         )}
 
         {draft.autonomyNotificationsEnabled && hasChannelProps && (

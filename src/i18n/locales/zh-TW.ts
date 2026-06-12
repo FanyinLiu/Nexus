@@ -2011,7 +2011,7 @@ export const zhTWMessages: TranslationDictionary = {
   'settings.autonomy.triggers.hint': '根據桌面活動自動觸發提醒或動作。',
   'settings.autonomy.triggers.enable': '啟用上下文觸發器',
   'settings.autonomy.watcher.title': '桌面訊息感知（macOS）',
-  'settings.autonomy.watcher.hint': '讀取系統通知中心，讓伴侶知道微信/QQ/郵件等所有應用的來信。需要授予 Nexus「完整磁碟取用」權限。',
+  'settings.autonomy.watcher.hint': '讀取系統通知中心，讓伴侶知道微信/QQ/郵件等所有應用的來信。開啟這一個開關即可（會自動開啟通知總開關）；首次使用需在系統設定裡授予 Nexus「完整磁碟取用」權限。',
   'settings.autonomy.watcher.enable': '開啟全部應用的訊息感知',
   'settings.autonomy.watcher.apps_label': '關注哪些應用（關鍵字，| 分隔；留空用內建清單）',
   'settings.autonomy.watcher.to_chat': '來信進入伴侶對話（隱私跟隨上方「朗讀訊息內容」開關）',
