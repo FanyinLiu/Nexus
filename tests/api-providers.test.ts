@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 
 import {
   FIRST_SUCCESS_PROVIDER_IDS,
+  brandMatchesRegion,
+  pickBrandProviderForRegion,
   getApiProviderPreset,
   getCommonTextProviderOptions,
   getDefaultOnboardingRegion,
@@ -174,4 +176,28 @@ test('provider URL inference distinguishes China and global text endpoints', () 
   assert.equal(inferApiProviderId('https://dashscope.aliyuncs.com/compatible-mode/v1'), 'dashscope')
   assert.equal(inferApiProviderId('https://api.siliconflow.com/v1'), 'siliconflow-global')
   assert.equal(inferApiProviderId('https://api.siliconflow.cn/v1'), 'siliconflow')
+})
+
+// ── Brand-level region helpers (ModelSection grid) ───────────────────────────
+
+test('brandMatchesRegion spans every region a brand serves', () => {
+  const minimaxIds = ['minimax', 'minimax-global', 'minimax-coding', 'minimax-coding-global']
+  assert.equal(brandMatchesRegion(minimaxIds, 'china'), true)
+  assert.equal(brandMatchesRegion(minimaxIds, 'global'), true)
+  assert.equal(brandMatchesRegion(['ollama'], 'custom'), true)
+  assert.equal(brandMatchesRegion(['ollama'], 'china'), false)
+  assert.equal(brandMatchesRegion(['openai'], 'global'), true)
+  assert.equal(brandMatchesRegion(['openai'], 'china'), false)
+})
+
+test('pickBrandProviderForRegion keeps a matching current selection, else picks the region variant', () => {
+  const minimaxIds = ['minimax', 'minimax-global', 'minimax-coding', 'minimax-coding-global']
+  // current selection already in brand+region → kept
+  assert.equal(pickBrandProviderForRegion(minimaxIds, 'china', 'minimax-coding'), 'minimax-coding')
+  // current selection in brand but wrong region → region's first variant
+  assert.equal(pickBrandProviderForRegion(minimaxIds, 'global', 'minimax-coding'), 'minimax-global')
+  // no current selection → region's first variant
+  assert.equal(pickBrandProviderForRegion(minimaxIds, 'china'), 'minimax')
+  // brand has nothing in the region → first preset escape hatch
+  assert.equal(pickBrandProviderForRegion(['ollama'], 'china'), 'ollama')
 })
