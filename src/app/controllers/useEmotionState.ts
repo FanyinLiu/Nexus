@@ -8,6 +8,8 @@ import {
   emotionToPetMood,
   formatEmotionForPrompt,
   normalizeEmotionState,
+  createIdleArcTracker,
+  resolveIdleArcSignals,
 } from '../../features/autonomy/emotionModel'
 import { captureEmotionSample } from '../../features/autonomy/stateTimeline.ts'
 import {
@@ -70,6 +72,7 @@ function loadInitialEmotionState(): EmotionState {
 export function useEmotionState() {
   const emotionStateRef = useRef<EmotionState>(loadInitialEmotionState())
   const lastTimeSignalHourRef = useRef<number>(-1)
+  const idleArcTrackerRef = useRef(createIdleArcTracker())
 
   const persist = () => {
     writeJson(AUTONOMY_EMOTION_STORAGE_KEY, emotionStateRef.current)
@@ -93,8 +96,10 @@ export function useEmotionState() {
       }
     }
 
-    if (idleSeconds > 600) {
-      emotionStateRef.current = applySignal(emotionStateRef.current, 'long_idle')
+    const idleArc = resolveIdleArcSignals(idleArcTrackerRef.current, idleSeconds)
+    idleArcTrackerRef.current = idleArc.tracker
+    for (const signal of idleArc.signals) {
+      emotionStateRef.current = applySignal(emotionStateRef.current, signal)
     }
 
     if (emotionStateRef.current !== before) persist()
