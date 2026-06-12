@@ -80,6 +80,7 @@ type AssistantReplyRunnerDependencies = {
     | 'consumeMilestonePromptText'
     | 'consumeAnniversaryPromptText'
     | 'consumeOnThisDayPromptText'
+    | 'consumeMessageFollowUpPromptText'
     | 'getEmotionPromptText'
     | 'getEmotionSnapshot'
     | 'getRelationshipPromptText'
@@ -364,6 +365,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           milestonePromptText: dependencies.ctx.consumeMilestonePromptText?.(),
           anniversaryPromptText: dependencies.ctx.consumeAnniversaryPromptText?.(currentSettings.uiLanguage),
           onThisDayPromptText: dependencies.ctx.consumeOnThisDayPromptText?.(currentSettings.uiLanguage, nextMemories),
+          messageFollowUpPromptText: dependencies.ctx.consumeMessageFollowUpPromptText?.(),
           pendingCallbacks: pendingCallbackHints,
           // First-impression hint — fires only on the upcoming 2nd or 3rd
           // assistant reply ever. Counts existing assistant messages in

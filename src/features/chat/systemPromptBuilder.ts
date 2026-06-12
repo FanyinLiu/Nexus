@@ -105,6 +105,12 @@ export type AssistantReplyRequestOptions = {
    */
   onThisDayPromptText?: string
   /**
+   * One-shot follow-up on a message that arrived while the user was away
+   * ("张三 messaged on 微信 — ask once whether they handled it"). Distinct
+   * channel from callbacks: transient (24 h), never memory-backed.
+   */
+  messageFollowUpPromptText?: string
+  /**
    * 用户作息节奏总结（来自 rhythmLearner.formatRhythmSummary）。
    * 互动次数 < 10 时该函数自动返回空字符串，避免噪声。
    */
@@ -287,6 +293,9 @@ export async function buildSystemPrompt(
   // "去年今天" 类回响：单条记忆的日期周年（一年/半年/一个月/一周）。
   // 只在自然命中那一轮注入；ledger 保证每条记忆终生只 fire 一次。
   const onThisDaySection = options.onThisDayPromptText ?? ''
+  // 来信跟进：用户离开时收到的消息，下次对话温柔带一句"处理了吗"。
+  // 一次性消费，与 onThisDay 同族（"值得被提起的时刻"）。
+  const messageFollowUpSection = options.messageFollowUpPromptText ?? ''
   // 当前情绪状态：紧贴 header 的 tone 指令，让模型先读到"她现在感觉如何"。
   const emotionSection = options.emotionPromptText ?? ''
   // 用户作息感知：紧贴 emotion，让模型自然对比 header 里的 currentDateTime
@@ -328,6 +337,7 @@ export async function buildSystemPrompt(
     milestoneSection,
     anniversarySection,
     onThisDaySection,
+    messageFollowUpSection,
     headerText,
     emotionSection,
     rhythmSection,

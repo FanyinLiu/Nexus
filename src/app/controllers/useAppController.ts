@@ -272,6 +272,7 @@ export function useAppController() {
   const milestoneConsumerRef = useRef<() => string>(() => '')
   const anniversaryConsumerRef = useRef<(uiLanguage: string) => string>(() => '')
   const onThisDayConsumerRef = useRef<(uiLanguage: string, memories: MemoryItem[]) => string>(() => '')
+  const messageFollowUpConsumerRef = useRef<() => string>(() => '')
   // Same ref-wrapper dance for the reverse direction: the messaging bridges
   // (created inside useAutonomyController) want to hear about completed
   // assistant replies so they can route them back to Telegram/Discord.
@@ -345,6 +346,7 @@ export function useAppController() {
     consumeMilestonePromptText: () => milestoneConsumerRef.current(),
     consumeAnniversaryPromptText: (uiLanguage: string) => anniversaryConsumerRef.current(uiLanguage),
     consumeOnThisDayPromptText: (uiLanguage: string, memories: MemoryItem[]) => onThisDayConsumerRef.current(uiLanguage, memories),
+    consumeMessageFollowUpPromptText: () => messageFollowUpConsumerRef.current(),
     reminderTasksRef: reminderTaskStore.reminderTasksRef,
     addReminderTask: (input) => addReminderTaskFnRef.current?.(input) ?? null,
     updateReminderTask: (id, updates) => updateReminderTaskFnRef.current?.(id, updates) ?? null,
@@ -495,6 +497,7 @@ export function useAppController() {
     milestoneConsumerRef.current = autonomy.consumePendingMilestoneText
     anniversaryConsumerRef.current = autonomy.consumeAnniversaryPromptText
     onThisDayConsumerRef.current = autonomy.consumeOnThisDayPromptText
+    messageFollowUpConsumerRef.current = autonomy.consumeMessageFollowUpPromptText
     // SenseVoice prosody → emotion model: voice ctx forwards labels here.
     voiceEmotionApplyRef.current = (label: VoiceEmotionLabel) => {
       autonomy.applyEmotionSignal(voiceEmotionToSignal(label))
@@ -504,7 +507,7 @@ export function useAppController() {
     // useAutonomyController, so depending on the parent re-runs this effect
     // unnecessarily.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autonomy.applyEmotionSignal, autonomy.consumePendingMilestoneText, autonomy.consumeAnniversaryPromptText, autonomy.consumeOnThisDayPromptText, autonomy.emotionStateRef, autonomy.getEmotionPrompt, autonomy.getRelationshipPrompt, autonomy.getRhythmPrompt])
+  }, [autonomy.applyEmotionSignal, autonomy.consumePendingMilestoneText, autonomy.consumeAnniversaryPromptText, autonomy.consumeOnThisDayPromptText, autonomy.consumeMessageFollowUpPromptText, autonomy.emotionStateRef, autonomy.getEmotionPrompt, autonomy.getRelationshipPrompt, autonomy.getRhythmPrompt])
 
   // Wake autonomy when user sends a chat message.
   //

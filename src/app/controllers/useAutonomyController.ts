@@ -23,6 +23,7 @@ import { useTelegramBridge } from './useTelegramBridge'
 import { useDiscordBridge } from './useDiscordBridge'
 import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
 import { type BridgeForwardQueue, createBridgeForwardQueue } from './bridgeUtils'
+import { consumeMessageFollowUpPromptText, recordMessageFollowUp } from '../../lib/storage/messageFollowUps.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile'
 import type { DailyMemoryStore, Goal, ReminderTask } from '../../types'
@@ -259,6 +260,23 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
         })
       }
 
+      // Follow-up candidate: only messages that arrived while the user was
+      // away/idle/locked — if they were active they almost certainly saw the
+      // banner themselves (prefer missing a follow-up over nagging). The
+      // next conversation may carry one gentle "处理了吗" via the one-shot
+      // prompt channel.
+      if (focusAwareness.focusStateRef.current !== 'active') {
+        recordMessageFollowUp({
+          conversationKey: message.conversationId
+            || `${message.sourceName ?? message.channelName}:${message.sender ?? message.title}`,
+          sourceLabel: message.sourceName || message.channelName,
+          senderLabel: message.sender || message.title,
+          ...(currentSettings.autonomyNotificationMessagePreviewEnabled && message.body
+            ? { topicHint: message.body.slice(0, 80) }
+            : {}),
+        })
+      }
+
       // Into the conversation (the actual "companion knows about all your
       // messages" behaviour). Privacy follows the announce model: content
       // only when the preview opt-in is on, otherwise source + sender only.
@@ -297,7 +315,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
       speechContent: t('chat.prefix.notification_speech', { channel: message.channelName, title: message.title }),
       autoHideMs: 12_000,
     })
-  }, [chat, debugConsole, settingsRef, t])
+  }, [chat, debugConsole, focusAwareness.focusStateRef, settingsRef, t])
 
   const notificationBridge = useNotificationBridge({
     onNotification: handleNotification,
@@ -382,6 +400,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     consumePendingMilestoneText: relationshipState.consumePendingMilestoneText,
     consumeAnniversaryPromptText: relationshipState.consumeAnniversaryPromptText,
     consumeOnThisDayPromptText: relationshipState.consumeOnThisDayPromptText,
+    consumeMessageFollowUpPromptText,
     processRelationshipMessage: relationshipState.processMessage,
     updateSessionContext: relationshipState.updateSessionContext,
     rhythmRef: rhythmState.rhythmRef,
