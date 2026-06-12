@@ -91,6 +91,13 @@ type FactorioGameContext = {
   recentCommands: { command: string; response: string; timestamp: string }[]
 } | null
 
+type PairingRequest = {
+  senderId: string
+  name: string
+  code: string
+  createdAt: number
+}
+
 type TelegramGatewayStatus = {
   state: 'disconnected' | 'connecting' | 'connected' | 'error'
   botUsername: string | null
@@ -351,6 +358,9 @@ declare global {
       telegramDisconnect: () => Promise<{ ok: boolean }>
       telegramSendMessage: (payload: { chatId: number; text: string; replyToMessageId?: number; parseMode?: string }) => Promise<{ ok: boolean }>
       telegramSendVoice: (payload: { chatId: number; audioBase64: string; mimeType: string; replyToMessageId?: number }) => Promise<{ ok: boolean }>
+      telegramPairingList: () => Promise<PairingRequest[]>
+      telegramPairingResolve: (payload: { senderId: string }) => Promise<{ removed: boolean }>
+      subscribeTelegramPairing: (listener: (request: PairingRequest) => void) => () => void
       telegramStatus: () => Promise<TelegramGatewayStatus>
       subscribeTelegramMessage: (listener: (msg: TelegramIncomingMessage) => void) => () => void
 
@@ -359,6 +369,9 @@ declare global {
       discordDisconnect: () => Promise<{ ok: boolean }>
       discordSendMessage: (payload: { channelId: string; text: string; replyToMessageId?: string }) => Promise<{ ok: boolean }>
       discordSendVoice: (payload: { channelId: string; audioBase64: string; mimeType: string; replyToMessageId?: string }) => Promise<{ ok: boolean }>
+      discordPairingList: () => Promise<PairingRequest[]>
+      discordPairingResolve: (payload: { senderId: string }) => Promise<{ removed: boolean }>
+      subscribeDiscordPairing: (listener: (request: PairingRequest) => void) => () => void
       discordStatus: () => Promise<DiscordGatewayStatus>
       subscribeDiscordMessage: (listener: (msg: DiscordIncomingMessage) => void) => () => void
 

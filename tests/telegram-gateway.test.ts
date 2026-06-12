@@ -287,3 +287,45 @@ describe('telegramGateway poll-loop generation', () => {
     gateway.onMessage(null)
   })
 })
+
+describe('telegramGateway pairing flow', () => {
+  test('a stranger gets ONE pairing code; repeats are silent; resolve clears it', async () => {
+    const gateway = await loadGateway()
+    // The pairing manager is a module singleton — earlier tests' strangers
+    // (e.g. the deny-by-default test's chat 777) may have left entries.
+    for (const leftover of gateway.listPairingRequests()) {
+      gateway.resolvePairingRequest(leftover.senderId)
+    }
+    const received: unknown[] = []
+    const pairingEvents: Array<{ senderId: string; code: string }> = []
+    gateway.onMessage((msg: unknown) => received.push(msg))
+    gateway.onPairingRequest((req: { senderId: string; code: string }) => pairingEvents.push(req))
+
+    pendingUpdates.push(makeUpdate(600, { chat: { id: 888, first_name: 'Stranger' }, from: { first_name: 'Stranger' } }))
+    pendingUpdates.push(makeUpdate(601, { chat: { id: 888, first_name: 'Stranger' }, from: { first_name: 'Stranger' } }))
+    await gateway.connect(BOT_TOKEN, [42])
+
+    await waitFor(() => pairingEvents.length >= 1)
+    await waitFor(() => sendMessageCalls.some((call) => call.chat_id === 888))
+    // Exactly one code reply for two stranger messages, sent back to them.
+    // (Filter to this test's stranger: an in-flight reply to an earlier
+    // test's stranger can land after beforeEach cleared the arrays.)
+    const pairingReplies = sendMessageCalls.filter((call) => call.chat_id === 888)
+    assert.equal(pairingEvents.length, 1)
+    assert.equal(pairingEvents[0].senderId, '888')
+    assert.match(pairingEvents[0].code, /^\d{6}$/)
+    assert.equal(pairingReplies.length, 1)
+    assert.match(String(pairingReplies[0].text), new RegExp(pairingEvents[0].code))
+    // Stranger messages never reach the conversation.
+    assert.equal(received.length, 0)
+
+    const listed = gateway.listPairingRequests()
+    assert.deepEqual(listed.map((r) => r.senderId), ['888'])
+    assert.equal(gateway.resolvePairingRequest('888'), true)
+    assert.equal(gateway.listPairingRequests().length, 0)
+
+    await gateway.disconnect()
+    gateway.onMessage(null)
+    gateway.onPairingRequest(null)
+  })
+})

@@ -11,6 +11,24 @@ export function register() {
     }
   })
 
+  // Forward pairing requests so the settings UI can show approve/dismiss
+  discordGateway.onPairingRequest((request) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send('discord:pairing-request', request)
+    }
+  })
+
+  ipcMain.handle('discord:pairing-list', (event) => {
+    requireTrustedSender(event)
+    return discordGateway.listPairingRequests()
+  })
+
+  ipcMain.handle('discord:pairing-resolve', (event, payload) => {
+    requireTrustedSender(event)
+    const senderId = requireString(payload?.senderId, 'senderId')
+    return { removed: discordGateway.resolvePairingRequest(senderId) }
+  })
+
   ipcMain.handle('discord:connect', async (event, payload) => {
     requireTrustedSender(event)
     const requestPayload = await resolveVaultRefsForSender(event.sender, payload, ['botToken'])
