@@ -1,4 +1,5 @@
 import type { PetModelDefinition } from '../pet/models.ts'
+import { PET_MODEL_PRESETS } from '../pet/models.ts'
 import {
   getApiProviderPreset,
   isCommonTextProviderId,
@@ -130,13 +131,16 @@ function resolveModelStatus(settings: StartupStatusSettings): StartupStatusItem 
 }
 
 function resolveAvatarStatus(petModel: PetModelDefinition | undefined): StartupStatusItem {
-  const staticAvatarReady = !petModel?.modelPath.trim()
+  // Built-in presets (Live2D 星绘 included — it is the default now) are
+  // always ready; only imported/external models warrant the "custom model,
+  // verify it loads" warning.
+  const isBuiltIn = !petModel || PET_MODEL_PRESETS.some((preset) => preset.id === petModel.id)
 
   return {
     id: 'avatar',
     labelKey: 'settings.startup_status.avatar.label',
-    status: staticAvatarReady ? 'ok' : 'warning',
-    detailKey: staticAvatarReady
+    status: isBuiltIn ? 'ok' : 'warning',
+    detailKey: isBuiltIn
       ? 'settings.startup_status.avatar.nexus_mini'
       : 'settings.startup_status.avatar.custom',
   }

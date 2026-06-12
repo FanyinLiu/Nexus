@@ -202,7 +202,7 @@ export const zhCNMessages: TranslationDictionary = {
   'settings.startup_status.model.deepseek_missing_key': 'DeepSeek 需要先填写接口密钥，模型默认用 deepseek-v4-flash。',
   'settings.startup_status.model.non_common': '当前使用 {provider}。可以继续用；常用模型优先推荐 Ollama 和 DeepSeek。',
   'settings.startup_status.avatar.label': '伙伴形象',
-  'settings.startup_status.avatar.nexus_mini': '极简头像已准备好，适合先跑通桌面陪伴体验。',
+  'settings.startup_status.avatar.nexus_mini': '内置形象已就绪。',
   'settings.startup_status.avatar.custom': '正在使用高级 / Live2D 形象。它会保留为可选形象。',
   'settings.startup_status.voice.label': '语音范围',
   'settings.startup_status.voice.text_only': '语音保持关闭，当前先专注文字对话。',

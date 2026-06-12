@@ -202,7 +202,7 @@ export const enMessages: TranslationDictionary = {
   'settings.startup_status.model.deepseek_missing_key': 'DeepSeek needs an API key before chat can run. Use deepseek-v4-flash as the first model.',
   'settings.startup_status.model.non_common': 'Current provider is {provider}. It can still work; common models recommend Ollama and DeepSeek first.',
   'settings.startup_status.avatar.label': 'Companion avatar',
-  'settings.startup_status.avatar.nexus_mini': 'The minimal avatar is ready for the desktop companion experience.',
+  'settings.startup_status.avatar.nexus_mini': 'Built-in avatar ready.',
   'settings.startup_status.avatar.custom': 'An advanced or Live2D avatar is active and remains available as an option.',
   'settings.startup_status.voice.label': 'Voice scope',
   'settings.startup_status.voice.text_only': 'Voice is off, so the current setup stays focused on text chat.',

@@ -202,7 +202,7 @@ export const jaMessages: TranslationDictionary = {
   'settings.startup_status.model.deepseek_missing_key': 'DeepSeek は API Key が必要です。最初のモデルは deepseek-v4-flash を使ってください。',
   'settings.startup_status.model.non_common': '現在のプロバイダーは {provider} です。利用できますが、よく使うモデルでは Ollama と DeepSeek を優先します。',
   'settings.startup_status.avatar.label': 'パートナーアバター',
-  'settings.startup_status.avatar.nexus_mini': '最小アバターは準備済みで、デスクトップ陪伴体験に合っています。',
+  'settings.startup_status.avatar.nexus_mini': '内蔵アバターは準備完了。',
   'settings.startup_status.avatar.custom': '高度なアバターまたは Live2D が有効です。任意の形象として利用できます。',
   'settings.startup_status.voice.label': '音声範囲',
   'settings.startup_status.voice.text_only': '音声はオフです。現在はテキスト会話に集中します。',
