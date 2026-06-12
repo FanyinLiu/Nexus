@@ -2011,7 +2011,7 @@ export const enMessages: TranslationDictionary = {
   'settings.autonomy.triggers.hint': 'Fires reminders or actions based on desktop activity.',
   'settings.autonomy.triggers.enable': 'Enable context triggers',
   'settings.autonomy.watcher.title': 'Desktop message awareness (macOS)',
-  'settings.autonomy.watcher.hint': 'Reads the system Notification Center so the companion notices messages from every app (WeChat/QQ/mail/...). Requires granting Nexus Full Disk Access.',
+  'settings.autonomy.watcher.hint': 'Reads the system Notification Center so the companion notices messages from every app (WeChat/QQ/mail/...). This one toggle is all it takes (it auto-enables the notifications master switch); first use needs Full Disk Access granted to Nexus in System Settings.',
   'settings.autonomy.watcher.enable': 'Enable all-apps message awareness',
   'settings.autonomy.watcher.apps_label': 'Which apps to watch (keywords, | separated; empty = built-in list)',
   'settings.autonomy.watcher.to_chat': 'Messages enter the companion chat (privacy follows the content-preview toggle above)',

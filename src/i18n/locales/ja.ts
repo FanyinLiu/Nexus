@@ -2011,7 +2011,7 @@ export const jaMessages: TranslationDictionary = {
   'settings.autonomy.triggers.hint': 'デスクトップ操作に基づいて通知やアクションを自動実行します。',
   'settings.autonomy.triggers.enable': 'コンテキストトリガーを有効にする',
   'settings.autonomy.watcher.title': 'デスクトップメッセージ感知（macOS）',
-  'settings.autonomy.watcher.hint': 'システムの通知センターを読み取り、WeChat/QQ/メールなどあらゆるアプリの新着をコンパニオンが把握します。Nexus に「フルディスクアクセス」権限が必要です。',
+  'settings.autonomy.watcher.hint': 'システムの通知センターを読み取り、WeChat/QQ/メールなどあらゆるアプリの新着をコンパニオンが把握します。このトグル一つで有効化（通知マスタースイッチも自動でオン）。初回はシステム設定で Nexus に「フルディスクアクセス」権限を付与してください。',
   'settings.autonomy.watcher.enable': 'すべてのアプリのメッセージ感知を有効化',
   'settings.autonomy.watcher.apps_label': '対象アプリ（キーワード、| 区切り。空欄で内蔵リスト）',
   'settings.autonomy.watcher.to_chat': '受信メッセージを会話へ（プライバシーは上の「内容を読み上げ」設定に従う）',
