@@ -278,6 +278,7 @@ export function useAppController() {
   // Empathy cooldown: the affect classifier runs every turn; without a gate
   // a stuck-low week would ratchet concern on every single reply.
   const lastEmpathySignalAtRef = useRef(0)
+  const lastMoodSignalAtRef = useRef(0)
   // Same ref-wrapper dance for the reverse direction: the messaging bridges
   // (created inside useAutonomyController) want to hear about completed
   // assistant replies so they can route them back to Telegram/Discord.
@@ -360,6 +361,15 @@ export function useAppController() {
     getEmotionSnapshot: () => emotionSnapshotGetterRef.current(),
     onAssistantReplyDelivered: (payload) => assistantReplyDeliveredRef.current?.(payload),
     onAssistantReplyFailed: () => assistantReplyFailedRef.current?.(),
+    onUserMoodSignal: (signal) => {
+      // Per-message LLM mood reads during a long emotional conversation
+      // would ratchet the same signal every turn; one nudge per 5 minutes
+      // is enough for tone to follow.
+      const now = Date.now()
+      if (now - lastMoodSignalAtRef.current < 5 * 60 * 1000) return
+      lastMoodSignalAtRef.current = now
+      emotionSignalApplyRef.current?.(signal)
+    },
     consumeMilestonePromptText: () => milestoneConsumerRef.current(),
     consumeAnniversaryPromptText: (uiLanguage: string) => anniversaryConsumerRef.current(uiLanguage),
     consumeOnThisDayPromptText: (uiLanguage: string, memories: MemoryItem[]) => onThisDayConsumerRef.current(uiLanguage, memories),

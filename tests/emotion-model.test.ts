@@ -3,6 +3,8 @@ import { test } from 'node:test'
 
 import {
   applyEmotionSignal,
+  userMoodReadToEmotionSignal,
+  userMoodReadToVAD,
   LONG_ABSENCE_THRESHOLD_SECONDS,
   resolveIdleArcSignals,
   createIdleArcTracker,
@@ -266,4 +268,22 @@ test('reunion is a genuine warm spike', () => {
   const next = applyEmotionSignal(base, 'reunion')
   assert.ok(next.warmth >= base.warmth + 0.2)
   assert.ok(next.energy >= base.energy + 0.15)
+})
+
+// ── LLM mood reads → VAD + empathy signal ────────────────────────────────────
+
+test('userMoodReadToVAD scales valence by intensity', () => {
+  const mild = userMoodReadToVAD('sad', 0)
+  const strong = userMoodReadToVAD('sad', 9)
+  assert.ok(strong.valence < mild.valence)
+  assert.ok(strong.valence >= -1 && mild.valence < 0)
+})
+
+test('userMoodReadToEmotionSignal maps clear reads and stays silent on mild/neutral ones', () => {
+  assert.equal(userMoodReadToEmotionSignal('sad', 7), 'user_low_mood_observed')
+  assert.equal(userMoodReadToEmotionSignal('angry', 5), 'user_frustration')
+  assert.equal(userMoodReadToEmotionSignal('happy', 6), 'user_mood_uplift_observed')
+  assert.equal(userMoodReadToEmotionSignal('sad', 3), null)
+  assert.equal(userMoodReadToEmotionSignal('neutral', 9), null)
+  assert.equal(userMoodReadToEmotionSignal('calm', 9), null)
 })

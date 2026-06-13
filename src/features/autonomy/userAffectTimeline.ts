@@ -35,7 +35,7 @@ const RETENTION_MS = 365 * 24 * 60 * 60 * 1000  // 1-year window
 const HARD_CAP = 36_000   // safety belt: ~100/day × 365 days
 const DEDUP_MS = 30_000   // collapse rapid-fire samples (typing bursts) into one
 
-export type UserAffectSource = 'voice_prosody' | 'text_signal' | 'relationship'
+export type UserAffectSource = 'voice_prosody' | 'text_signal' | 'relationship' | 'llm_read'
 
 export interface UserAffectSample {
   ts: string
@@ -70,7 +70,7 @@ function loadInternal(): UserAffectSample[] {
 }
 
 function isValidSource(value: unknown): value is UserAffectSource {
-  return value === 'voice_prosody' || value === 'text_signal' || value === 'relationship'
+  return value === 'voice_prosody' || value === 'text_signal' || value === 'relationship' || value === 'llm_read'
 }
 
 function normalizeOptionalText(value: unknown): string | undefined {

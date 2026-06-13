@@ -78,6 +78,8 @@ export type EmotionSignal =
   // down, starting to miss the user, and the warm spike of reunion.
   | 'long_absence'
   | 'reunion'
+  // The LLM read the user's mood as clearly positive (deep-emotion channel).
+  | 'user_mood_uplift_observed'
 
 const SIGNAL_DELTAS: Record<EmotionSignal, Partial<EmotionState>> = {
   user_greeting:     { energy: 0.1, warmth: 0.15, curiosity: 0.05 },
@@ -101,6 +103,7 @@ const SIGNAL_DELTAS: Record<EmotionSignal, Partial<EmotionState>> = {
   // truth behind "你回来了！". Big enough to read as 'especially
   // affectionate' in the prompt tone for a little while.
   reunion:           { warmth: 0.25, energy: 0.2, curiosity: 0.05 },
+  user_mood_uplift_observed: { warmth: 0.1, energy: 0.08 },
   task_completed:    { energy: 0.1, warmth: 0.05, concern: -0.1 },
   morning:           { energy: 0.1, curiosity: 0.05 },
   late_night:        { energy: -0.2, concern: 0.1 },
@@ -121,6 +124,59 @@ function clamp(value: number): number {
 }
 
 /** Apply a signal to the emotion state. */
+// ── LLM mood reads (deep-emotion channel) ────────────────────────────────────
+//
+// The reply model appends an invisible [mood:<word>-<0-9>] tag — its read of
+// the USER's emotional state with the full conversation in view. This is the
+// channel regex keywords can never reach ("我今天被裁了" has no sad keyword).
+// Two consumers: a VAD sample for the user-affect timeline, and (for clear
+// reads) a companion empathy signal.
+
+import type { UserMoodWord } from '../pet/performance.ts'
+
+const MOOD_READ_VAD: Record<UserMoodWord, { valence: number; arousal: number }> = {
+  happy:      { valence: 0.6,  arousal: 0.5 },
+  excited:    { valence: 0.7,  arousal: 0.8 },
+  calm:       { valence: 0.3,  arousal: 0.2 },
+  neutral:    { valence: 0,    arousal: 0.3 },
+  tired:      { valence: -0.2, arousal: 0.15 },
+  sad:        { valence: -0.6, arousal: 0.25 },
+  anxious:    { valence: -0.4, arousal: 0.7 },
+  frustrated: { valence: -0.5, arousal: 0.65 },
+  angry:      { valence: -0.7, arousal: 0.8 },
+}
+
+/** Intensity (0-9) scales the valence magnitude; arousal shifts mildly. */
+export function userMoodReadToVAD(mood: UserMoodWord, intensity: number): { valence: number; arousal: number } {
+  const base = MOOD_READ_VAD[mood]
+  const scale = 0.4 + 0.6 * (Math.min(9, Math.max(0, intensity)) / 9)
+  return {
+    valence: Math.max(-1, Math.min(1, base.valence * scale)),
+    arousal: Math.max(0, Math.min(1, base.arousal * (0.7 + 0.3 * scale))),
+  }
+}
+
+/**
+ * Map a clear mood read to a companion empathy signal; mild/neutral reads
+ * return null (the VAD sample still lands — restraint on the emotion side).
+ */
+export function userMoodReadToEmotionSignal(mood: UserMoodWord, intensity: number): EmotionSignal | null {
+  if (intensity < 4) return null
+  switch (mood) {
+    case 'sad':
+    case 'anxious':
+      return 'user_low_mood_observed'
+    case 'frustrated':
+    case 'angry':
+      return 'user_frustration'
+    case 'happy':
+    case 'excited':
+      return 'user_mood_uplift_observed'
+    default:
+      return null
+  }
+}
+
 export const LONG_IDLE_THRESHOLD_SECONDS = 600
 export const LONG_ABSENCE_THRESHOLD_SECONDS = 4 * 60 * 60
 

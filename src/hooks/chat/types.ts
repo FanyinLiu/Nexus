@@ -161,6 +161,12 @@ export type UseChatContext = {
    * pattern; listener errors must never mask the original failure.
    */
   onAssistantReplyFailed?: () => void
+  /**
+   * The reply model's invisible [mood:...] read of the user mapped to a
+   * companion empathy signal. Wired (ref-wrapper) to applyEmotionSignal
+   * with a short cooldown upstream.
+   */
+  onUserMoodSignal?: (signal: import('../../features/autonomy/emotionModel.ts').EmotionSignal) => void
   reminderTasksRef: RefObject<ReminderTask[]>
   addReminderTask: (input: {
     title: string
