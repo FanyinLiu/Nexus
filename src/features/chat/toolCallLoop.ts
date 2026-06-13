@@ -288,6 +288,45 @@ function resolveResponseToolCalls(
   }
 }
 
+// Model-facing directive (English, like the other built-in tool messages) used
+// when the tool-call budget is exhausted: force a plain-language reply instead
+// of another tool request.
+const TOOL_BUDGET_FINAL_ANSWER_DIRECTIVE =
+  'You have used all available tool calls for this turn. Do not request any more tools. '
+  + 'Reply to the user now, in natural language and in your normal voice: answer with what you have '
+  + 'learned so far, or — if you are missing one essential detail (such as which city) — simply ask the '
+  + 'user for it. Do not mention tools, rounds, or limits.'
+
+/**
+ * Last-ditch graceful answer when the loop hits MAX_TOOL_CALL_ROUNDS. Re-sends
+ * the most recent continuation payload (which carries the latest tool results)
+ * with the tool definitions removed and a directive appended, so the model has
+ * no choice but to respond in text. Returns null on any failure so the caller
+ * can fall back to the plain limit message.
+ */
+async function requestFinalAnswerWithoutTools(
+  basePayload: ChatCompletionRequest | null,
+  executeContinuation: (payload: ChatCompletionRequest) => Promise<ChatCompletionResponse>,
+  promptModeEnabled: boolean,
+): Promise<ChatCompletionResponse | null> {
+  if (!basePayload) return null
+  const payload: ChatCompletionRequest = {
+    ...basePayload,
+    messages: [...basePayload.messages, { role: 'system', content: TOOL_BUDGET_FINAL_ANSWER_DIRECTIVE }],
+    tools: undefined,
+  }
+  try {
+    const final = await executeContinuation(payload)
+    const resolved = resolveResponseToolCalls(final, promptModeEnabled)
+    const content = resolved.cleanedContent.trim()
+    if (!content) return null
+    return { ...final, content, tool_calls: undefined, finish_reason: 'stop' }
+  } catch (err) {
+    console.warn('[toolCallLoop] final no-tools answer failed; using limit message', err)
+    return null
+  }
+}
+
 function buildToolCallLimitResponse(
   response: ChatCompletionResponse,
   cleanedContent: string,
@@ -355,6 +394,7 @@ export async function runToolCallLoop(
   }
   let response = initialResponse
   let round = 0
+  let lastContinuationPayload: ChatCompletionRequest | null = null
   const executedToolCallSignatures = new Set<string>()
 
   while (round < MAX_TOOL_CALL_ROUNDS) {
@@ -420,12 +460,22 @@ export async function runToolCallLoop(
     // becomes the new `response`).
     void usedPromptMode
 
+    lastContinuationPayload = payload
     response = await executeContinuation(payload)
   }
 
   const overLimit = resolveResponseToolCalls(response, promptModeEnabled)
   if (overLimit.toolCalls.length) {
-    response = buildToolCallLimitResponse(response, overLimit.cleanedContent)
+    // The model still wants tools after the round budget. Rather than dump a
+    // robotic "I stopped to avoid a loop" message, make ONE final call with the
+    // tools removed so the model must reply in natural language — answering with
+    // what it has, or asking the user for the one missing detail (e.g. a city).
+    const finalAnswer = await requestFinalAnswerWithoutTools(
+      lastContinuationPayload,
+      executeContinuation,
+      promptModeEnabled,
+    )
+    response = finalAnswer ?? buildToolCallLimitResponse(response, overLimit.cleanedContent)
   }
 
   // Final pass: ensure prompt-mode markers in the terminal response are also

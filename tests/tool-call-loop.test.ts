@@ -35,7 +35,7 @@ beforeEach(() => {
   })
 })
 
-test('runToolCallLoop returns a displayable response when the model exceeds the tool round limit', async () => {
+test('runToolCallLoop falls back to the limit message when even the final tool-free answer is empty', async () => {
   const continuationPayloads: ChatCompletionRequest[] = []
   const initialResponse: ChatCompletionResponse = {
     content: '',
@@ -52,6 +52,7 @@ test('runToolCallLoop returns a displayable response when the model exceeds the 
     }),
     async (payload) => {
       continuationPayloads.push(payload)
+      // Model never yields a text reply, even on the final tools-stripped call.
       return {
         content: '',
         tool_calls: [makeToolCall(`call-${continuationPayloads.length}`)],
@@ -59,10 +60,47 @@ test('runToolCallLoop returns a displayable response when the model exceeds the 
     },
   )
 
-  assert.equal(continuationPayloads.length, MAX_TOOL_CALL_ROUNDS)
+  // MAX rounds in the loop, plus one final tools-removed answer attempt.
+  assert.equal(continuationPayloads.length, MAX_TOOL_CALL_ROUNDS + 1)
+  assert.equal(continuationPayloads.at(-1)?.tools, undefined)
   assert.equal(result.tool_calls, undefined)
   assert.equal(result.finish_reason, 'tool_call_limit')
   assert.match(result.content, new RegExp(String(MAX_TOOL_CALL_ROUNDS)))
+})
+
+test('runToolCallLoop makes one final tool-free answer when the round limit is hit', async () => {
+  const continuationPayloads: ChatCompletionRequest[] = []
+  const finalText = '明天想看哪个城市的天气呀～'
+
+  const result = await runToolCallLoop(
+    { content: '', tool_calls: [makeToolCall('call-0')] },
+    async () => ({
+      baseUrl: 'https://example.test',
+      apiKey: 'test-key',
+      model: 'test-model',
+      messages: [{ role: 'user', content: '帮我看看明天的天气' }],
+      tools: [{
+        type: 'function',
+        function: { name: 'sample_tool', description: 'x', parameters: { type: 'object' } },
+      }],
+    }),
+    async (payload) => {
+      continuationPayloads.push(payload)
+      // The final answer call appends a system directive and removes the tools.
+      if (payload.messages.at(-1)?.role === 'system') {
+        return { content: finalText }
+      }
+      return { content: '', tool_calls: [makeToolCall(`call-${continuationPayloads.length}`)] }
+    },
+  )
+
+  assert.equal(continuationPayloads.length, MAX_TOOL_CALL_ROUNDS + 1)
+  assert.equal(result.content, finalText)
+  assert.equal(result.tool_calls, undefined)
+  assert.equal(result.finish_reason, 'stop')
+  const finalPayload = continuationPayloads.at(-1)
+  assert.equal(finalPayload?.tools, undefined)
+  assert.equal(finalPayload?.messages.at(-1)?.role, 'system')
 })
 
 test('runToolCallLoop bounds tool calls per round before executing them', async () => {

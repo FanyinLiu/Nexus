@@ -135,7 +135,10 @@ function buildMatchedTool(
     const fallback = String(settings?.toolWeatherDefaultLocation ?? '').trim()
     const location = rawLocation || fallback
     if (!location) {
-      return { error: 'weather requires a `location` argument or a configured default location.' }
+      return {
+        error: 'No location was given and no default city is configured. Do not retry this tool — '
+          + 'instead, ask the user which city they want the weather for.',
+      }
     }
     return {
       tool: {
