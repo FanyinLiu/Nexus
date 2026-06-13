@@ -36,15 +36,9 @@ The spritesheet must be PNG or WebP, transparent where unused, and exactly `1536
 
 ## Easy Creator Flow
 
-Most users should not have to learn the atlas details first. Start from one character image:
+Most users should not have to learn the atlas details first. Start from one character image: in the app, use Settings -> Companion -> Avatar -> `Make pet from image/atlas`. Nexus creates the local package, validates it, and switches the active avatar to the generated Sprite pet. If the selected image already looks like a full Codex `8x9` atlas, Nexus detects that automatically. A valid native `1536x1872` Codex atlas is preserved instead of being reanimated from a single frame; a scaled AI-style atlas is split into rows and cells before packaging.
 
-```bash
-npm run pet:make -- ./my-character.png --id my-pet --display-name "My Pet"
-```
-
-In the app, use Settings -> Companion -> Avatar -> `Make pet from image/atlas` for the same starter flow. Nexus creates the local package, validates it, and switches the active avatar to the generated Sprite pet. If the selected image already looks like a full Codex `8x9` atlas, Nexus detects that automatically. A valid native `1536x1872` Codex atlas is preserved instead of being reanimated from a single frame; a scaled AI-style atlas is split into rows and cells before packaging.
-
-This writes a ready-to-import package under `output/pets/my-pet/`:
+This produces a ready-to-import package:
 
 - `pet.json`
 - `spritesheet.png`
@@ -53,11 +47,7 @@ This writes a ready-to-import package under `output/pets/my-pet/`:
 
 The maker removes a simple solid background, creates the required `8x9` atlas, fills unused cells transparently, applies starter row motion, validates the result with the same parser Nexus uses in the app, and writes a shareable `.codex-pet.zip`. After the app flow finishes, the settings panel shows the generated package with actions to open the folder, reveal the ZIP, or install the pet into `${CODEX_HOME:-$HOME/.codex}/pets/`. It does not add speed lines, glow, stars, floor shadows, checkmarks, detached props, or other decorative effects. Start from art that already looks like a Codex digital pet: compact silhouette, thick dark outline, limited palette, flat shading, and a transparent or clean chroma-key background.
 
-For better motion, generate or draw a source image that is already an `8x9` action sheet and let the maker package it. The settings UI detects this automatically; the CLI accepts an explicit layout flag:
-
-```bash
-npm run pet:make -- ./my-8x9-sheet.png --source-layout atlas --id my-pet
-```
+For better motion, generate or draw a source image that is already an `8x9` action sheet and let the maker package it. The settings UI detects this automatically.
 
 The user-facing product flow should be:
 
