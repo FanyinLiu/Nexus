@@ -11,6 +11,8 @@ import {
   classifyMessageSignals,
   createDefaultEmotionState,
   resolveProactiveLean,
+  combineVoiceInstructions,
+  emotionToVoiceStyle,
   relationshipLevelToCloseness,
   decayEmotion,
   emotionToPetMood,
@@ -23,6 +25,10 @@ import {
 // baseline so each test reads as a delta rather than a wall of numbers.
 function withState(overrides: Partial<EmotionState>): EmotionState {
   return { ...createDefaultEmotionState(), ...overrides }
+}
+
+function formatVoiceStyle(overrides: Partial<EmotionState>): string {
+  return emotionToVoiceStyle(withState(overrides))
 }
 
 test('normalizeEmotionState clamps persisted values and falls back per-axis', () => {
@@ -347,4 +353,38 @@ test('formatEmotionForPrompt defaults to established when closeness omitted', ()
 
 test('a flat state still produces no emotion section regardless of stage', () => {
   assert.equal(formatEmotionForPrompt(withState({ energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 }), 'close'), '')
+})
+
+// ── Emotion → voice (movement 1) ─────────────────────────────────────────────
+
+test('emotionToVoiceStyle: voice matches the avatar mood, neutral is silent', () => {
+  // affectionate (sustained high warmth, moderate energy) → tender voice
+  assert.match(formatVoiceStyle({ warmth: 0.85, energy: 0.5 }), /warm|tender/i)
+  // worried (high concern) → gentle/concerned voice
+  assert.match(formatVoiceStyle({ concern: 0.85, energy: 0.4 }), /gentle|concern/i)
+  // sleepy (very low energy) → slow/soft
+  assert.match(formatVoiceStyle({ energy: 0.12 }), /slow|soft|drowsy/i)
+  // neutral middling → no override (her natural voice)
+  assert.equal(formatVoiceStyle({ energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 }), '')
+})
+
+test('every PetMood the emotion model can produce has a voice style entry', () => {
+  // Sweep a spread of states; none should throw or return undefined.
+  const states = [
+    { energy: 0.9, curiosity: 0.8 }, { energy: 0.7, warmth: 0.75, concern: 0.1 },
+    { warmth: 0.85, energy: 0.5 }, { energy: 0.7, warmth: 0.65, concern: 0.1 },
+    { curiosity: 0.85, energy: 0.7 }, { curiosity: 0.75, energy: 0.4 },
+    { warmth: 0.75, concern: 0.6 }, { concern: 0.85, energy: 0.4 },
+    { energy: 0.12 }, { energy: 0.5 },
+  ]
+  for (const s of states) {
+    assert.equal(typeof emotionToVoiceStyle(withState(s)), 'string')
+  }
+})
+
+test('combineVoiceInstructions: base leads, emotion colours, blanks drop', () => {
+  assert.equal(combineVoiceInstructions('Always speak slowly.', 'Speak warmly.'), 'Always speak slowly. Speak warmly.')
+  assert.equal(combineVoiceInstructions('', 'Speak warmly.'), 'Speak warmly.')
+  assert.equal(combineVoiceInstructions('Base only.', ''), 'Base only.')
+  assert.equal(combineVoiceInstructions(undefined, ''), '')
 })

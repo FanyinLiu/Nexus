@@ -123,6 +123,13 @@ export type UseVoiceContext = {
    * Implementations should swallow unknown labels and never throw.
    */
   applyVoiceEmotion?: (label: VoiceEmotionLabel) => void
+  /**
+   * Returns a TTS style instruction for how she should sound right now,
+   * derived from her live emotion (''=neutral, no override). Wired through a
+   * ref because autonomy — which owns the emotion state — is created after
+   * useVoice. Combined into speechOutputInstructions at the speak entry.
+   */
+  getEmotionVoiceStyle?: () => string
 }
 
 export type UseVoiceSnapshot = {

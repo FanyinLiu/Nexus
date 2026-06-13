@@ -405,6 +405,50 @@ export function relationshipLevelToCloseness(
   return 'established'
 }
 
+// ── Emotion → voice ──────────────────────────────────────────────────────────
+//
+// The felt emotion already drives her text and behaviour; this is the channel
+// it never reached — her actual voice. It reuses emotionToPetMood so the voice
+// and the face express the SAME mood (she sounds the way she looks), and turns
+// each mood into a TTS style instruction. Lands on instruction-aware providers
+// (OpenAI gpt-4o-mini-tts and compatibles via speechOutputInstructions); a
+// harmless no-op on providers that ignore instructions. 'idle' returns '' —
+// her natural voice, no override.
+
+const VOICE_STYLE_BY_MOOD: Record<PetMood, string> = {
+  idle: '',
+  thinking: 'Speak thoughtfully and unhurried, as if turning it over.',
+  happy: 'Speak with a light, happy lilt.',
+  sleepy: 'Speak slowly and softly, a little drowsy.',
+  surprised: 'Speak with a small, surprised brightness.',
+  confused: 'Speak a little hesitantly, thinking it through.',
+  embarrassed: 'Speak a touch shyly, softer than usual.',
+  excited: 'Speak brightly and with bouncy energy, a little quicker.',
+  affectionate: 'Speak warmly and tenderly — close, soft, unhurried.',
+  proud: 'Speak with a quiet, pleased warmth.',
+  curious: 'Speak with a curious, interested lift.',
+  worried: 'Speak gently and with care, a little concerned.',
+  playful: 'Speak with a playful, teasing lightness.',
+}
+
+/**
+ * A TTS style instruction for how she should sound right now, derived from her
+ * current emotion. Empty string when neutral (no override). Same mood source
+ * as the avatar, so voice and expression stay in sync.
+ */
+export function emotionToVoiceStyle(state: EmotionState): string {
+  return VOICE_STYLE_BY_MOOD[emotionToPetMood(state)]
+}
+
+/**
+ * Combine the user's configured TTS instructions with the live emotion style.
+ * Base instructions lead (a user who wrote "always speak slowly" keeps that);
+ * the emotion clause follows so it colours, not overrides.
+ */
+export function combineVoiceInstructions(base: string | undefined, emotionStyle: string): string {
+  return [base?.trim(), emotionStyle.trim()].filter(Boolean).join(' ')
+}
+
 // ── Emotion-driven proactivity ───────────────────────────────────────────────
 //
 // The autonomy decision engine used to see emotion as a bare number line

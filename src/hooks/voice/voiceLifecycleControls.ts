@@ -13,6 +13,8 @@ import {
 } from './conversationEntrypoints'
 import { scheduleVoiceRestart as scheduleContinuousVoiceRestart } from './continuousVoice'
 import { speakAssistantReplyRuntime, beginStreamingSpeechReplyRuntime } from './speechReply'
+import { combineVoiceInstructions } from '../../features/autonomy/emotionModel.ts'
+import type { AppSettings } from '../../types'
 import type { StreamingSpeechOutputController } from './types'
 import type { VoiceConversationOptions } from './types'
 import { expectHolderValue, type VoiceLifecycle, type VoiceRuntimeBag } from './voiceRuntimeBag'
@@ -37,6 +39,18 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
     enginesHolder,
     'createVoiceLifecycleControls: engines must be built first',
   )
+
+  // Her live emotion → her TTS voice style, folded into the settings the speak
+  // runtimes consume. Lands on instruction-aware providers; no-op elsewhere.
+  function settingsWithEmotionVoice(): AppSettings {
+    const base = ctx.settingsRef.current
+    const emotionStyle = ctx.getEmotionVoiceStyle?.() ?? ''
+    if (!emotionStyle) return base
+    return {
+      ...base,
+      speechOutputInstructions: combineVoiceInstructions(base.speechOutputInstructions, emotionStyle),
+    }
+  }
 
   // ── scheduleVoiceRestart (calls startVoiceConversation, hoisted below) ──
   function scheduleVoiceRestart(
@@ -66,7 +80,7 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       text,
       speechGeneration: ++refs.assistantSpeechGenerationRef.current,
       shouldResumeContinuousVoice,
-      currentSettings: ctx.settingsRef.current,
+      currentSettings: settingsWithEmotionVoice(),
       startSpeechOutput: bindings.startSpeechOutput,
       setMood: ctx.setMood,
       setError: ctx.setError,
@@ -90,7 +104,7 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
     return beginStreamingSpeechReplyRuntime({
       speechGeneration: ++refs.assistantSpeechGenerationRef.current,
       shouldResumeContinuousVoice,
-      currentSettings: ctx.settingsRef.current,
+      currentSettings: settingsWithEmotionVoice(),
       setMood: ctx.setMood,
       setError: ctx.setError,
       busEmit: hookCallbacks.busEmit,
