@@ -1,4 +1,4 @@
-import type { TranslationKey, WebSearchProviderId } from '../types'
+import type { AppSettings, TranslationKey, WebSearchProviderId } from '../types'
 
 export type WebSearchProviderPreset = {
   id: WebSearchProviderId
@@ -131,6 +131,20 @@ export function getWebSearchProviderPreset(value: string | null | undefined) {
   const providerId = normalizeWebSearchProviderId(value)
   return WEB_SEARCH_PROVIDER_PRESETS.find((provider) => provider.id === providerId)
     ?? WEB_SEARCH_PROVIDER_PRESETS[0]
+}
+
+// MiniMax Search uses the Token Plan key — the same key as the MiniMax
+// coding/chat plan. If the user already configured a MiniMax text provider but
+// left the search key blank, reuse that key so they don't paste it twice.
+export function resolveWebSearchApiKey(
+  settings: Partial<Pick<AppSettings, 'toolWebSearchProviderId' | 'toolWebSearchApiKey' | 'textProviderProfiles'>> | null | undefined,
+): string {
+  const direct = String(settings?.toolWebSearchApiKey ?? '').trim()
+  if (direct) return direct
+  if (normalizeWebSearchProviderId(settings?.toolWebSearchProviderId) === 'minimax') {
+    return String(settings?.textProviderProfiles?.minimax?.apiKey ?? '').trim()
+  }
+  return ''
 }
 
 export function resolveWebSearchApiBaseUrl(
