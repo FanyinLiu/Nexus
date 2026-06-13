@@ -298,60 +298,6 @@ const SPARKLE_STAGE_PATTERN = buildKeywordPattern([
   '\u661f\u661f\u773c',
 ])
 
-const SILENT_STAGE_PATTERN = buildKeywordPattern([
-  '\u64cd\u4f5c\u97f3\u6548',
-  '\u97f3\u6548',
-  '\u63d0\u793a\u97f3',
-  '\u7cfb\u7edf\u63d0\u793a',
-  '\u8f7b\u54cd',
-  '\u6ef4\u7684\u4e00\u58f0',
-  '\u54d4\u54da',
-  '\u54d2',
-  '\u952e\u76d8\u58f0',
-  '\u6572\u51fb\u58f0',
-  '\u811a\u6b65\u58f0',
-  '\u5f39\u51fa\u63d0\u793a',
-])
-
-const GENERIC_STAGE_DIRECTION_PATTERN = buildKeywordPattern([
-  '\u8f7b\u8f7b',
-  '\u5fae\u5fae',
-  '\u6162\u6162',
-  '\u60c5\u4e0d\u81ea\u7981',
-  '\u6447\u5934',
-  '\u70b9\u5934',
-  '\u6b6a\u5934',
-  '\u504f\u5934',
-  '\u7728\u773c',
-  '\u770b\u7740',
-  '\u671b\u7740',
-  '\u51dd\u89c6',
-  '\u4fef\u4e0b\u8eab',
-  '\u51d1\u8fc7\u6765',
-  '\u9760\u8fd1',
-  '\u62ac\u7738',
-  '\u4f4e\u5934',
-  '\u57cb\u5934',
-  '\u6296\u4e86\u6296',
-  '\u7b11\u4e86\u7b11',
-  '\u8f7b\u7b11',
-  '\u82e6\u7b11',
-  '\u5077\u7b11',
-  '\u53f9\u6c14',
-  '\u987f\u4e86\u987f',
-  '\u505c\u987f',
-  '\u6c89\u9ed8',
-  '\u5b89\u9759',
-  '\u5c0f\u58f0',
-  '\u8f7b\u58f0',
-  '\u67d4\u58f0',
-  '\u55c5\u8bed',
-  '\u5450\u5450',
-  '\u5634\u89d2',
-  '\u773c\u795e',
-  '\u52a8\u4f5c',
-])
-
 function resolveAccentStyle(stageDirection: string): PetPerformanceAccent | undefined {
   if (SPARKLE_STAGE_PATTERN.test(stageDirection)) return 'sparkle'
   if (PEEK_STAGE_PATTERN.test(stageDirection)) return 'peek'
@@ -492,14 +438,6 @@ function resolvePerformancePlan(stageDirection: string) {
   } satisfies PetPerformancePlan
 }
 
-function shouldTreatAsSilentStageDirection(stageDirection: string) {
-  return SILENT_STAGE_PATTERN.test(stageDirection)
-}
-
-function shouldTreatAsGenericStageDirection(stageDirection: string) {
-  return GENERIC_STAGE_DIRECTION_PATTERN.test(stageDirection)
-}
-
 function normalizeDisplayContent(content: string) {
   return content
     .replace(/[ \t]+\n/gu, '\n')
@@ -560,7 +498,30 @@ function extractPresentationSections(content: string): ExtractedPresentationSect
   }
 }
 
-function extractRecognizedStageDirections(content: string) {
+// A bracketed aside that carries a label or note ("语音播报：…", "注：…") is
+// structured content, not a stage direction — a colon is the tell. We leave
+// those alone so the labeled display/spoken sections keep working and genuine
+// notes stay visible and spoken.
+function isStructuredBracket(inner: string) {
+  return /[：:]/u.test(inner)
+}
+
+type StageDirectionSplit = {
+  keptContent: string
+  strippedContent: string
+  cue: PetPerformancePlan | null
+  cues: PetPerformancePlan[]
+  stageDirections: string[]
+}
+
+// Treat every short bracketed aside (（…）, (...), 【…】) as a stage direction by
+// SHAPE, not by a recognised-keyword whitelist. That is what lets a novel cue
+// the model invents — （眼睛亮了）, （耳朵动了动） — be handled the same as known
+// ones: KEPT in the displayed reply (the bubble styles it as an aside), STRIPPED
+// from speech (she never reads an aside aloud), and — when we recognise it —
+// driving her avatar. Nothing leaks as raw text, nothing gets spoken, and no one
+// has to add phrases to a list one-by-one.
+function extractStageDirections(content: string): StageDirectionSplit {
   const matches: ExtractedStageDirection[] = []
 
   STAGE_DIRECTION_GLOBAL_PATTERN.lastIndex = 0
@@ -570,66 +531,94 @@ function extractRecognizedStageDirections(content: string) {
     const fullMatch = match[0]
     const matchIndex = match.index ?? -1
 
-    if (!rawStageDirection || !fullMatch || matchIndex < 0) {
-      continue
-    }
-
-    const plan = resolvePerformancePlan(rawStageDirection)
-    if (
-      !plan
-      && !shouldTreatAsSilentStageDirection(rawStageDirection)
-      && !shouldTreatAsGenericStageDirection(rawStageDirection)
-    ) {
+    if (!rawStageDirection || !fullMatch || matchIndex < 0 || isStructuredBracket(rawStageDirection)) {
       continue
     }
 
     matches.push({
-      plan,
+      plan: resolvePerformancePlan(rawStageDirection),
       stageDirection: rawStageDirection,
       start: matchIndex,
       end: matchIndex + fullMatch.length,
     })
   }
 
+  // Speech never reads asides aloud — drop every detected stage direction.
   let cursor = 0
-  const visibleSegments: string[] = []
+  const spokenSegments: string[] = []
 
   for (const match of matches) {
     if (match.start > cursor) {
-      visibleSegments.push(content.slice(cursor, match.start))
+      spokenSegments.push(content.slice(cursor, match.start))
     }
     cursor = match.end
   }
 
   if (cursor < content.length) {
-    visibleSegments.push(content.slice(cursor))
+    spokenSegments.push(content.slice(cursor))
   }
 
-  const cleanedContent = normalizeDisplayContent(visibleSegments.join(''))
   const cues = matches
     .map((match) => match.plan)
     .filter((plan): plan is PetPerformancePlan => Boolean(plan))
     .slice(0, MAX_PERFORMANCE_CUES)
 
   return {
-    cleanedContent,
+    keptContent: normalizeDisplayContent(content),
+    strippedContent: normalizeDisplayContent(spokenSegments.join('')),
     cue: cues[0] ?? null,
     cues,
     stageDirections: matches.map((match) => match.stageDirection),
   }
 }
 
+export type DisplaySegment = { stage: boolean; text: string }
+
+// Split displayed assistant text into normal spans and stage-direction spans so
+// the bubble can render the asides in a muted, intentional style instead of
+// letting them read like leaked text. Uses the SAME shape rule as the speech
+// strip, so display and voice always agree on what counts as an aside.
+export function segmentStageDirections(content: string): DisplaySegment[] {
+  const segments: DisplaySegment[] = []
+
+  STAGE_DIRECTION_GLOBAL_PATTERN.lastIndex = 0
+
+  let cursor = 0
+  for (const match of content.matchAll(STAGE_DIRECTION_GLOBAL_PATTERN)) {
+    const inner = match[1]?.trim()
+    const fullMatch = match[0]
+    const matchIndex = match.index ?? -1
+
+    if (!inner || !fullMatch || matchIndex < 0 || isStructuredBracket(inner)) {
+      continue
+    }
+
+    if (matchIndex > cursor) {
+      segments.push({ stage: false, text: content.slice(cursor, matchIndex) })
+    }
+    segments.push({ stage: true, text: fullMatch })
+    cursor = matchIndex + fullMatch.length
+  }
+
+  if (cursor < content.length) {
+    segments.push({ stage: false, text: content.slice(cursor) })
+  }
+
+  return segments
+}
+
 export function parseAssistantPerformanceContent(content: string): ParsedAssistantPerformance {
   const trimmedContent = stripHiddenReasoning(content.trim())
-  const { cleanedContent, cue, cues, stageDirections } = extractRecognizedStageDirections(trimmedContent)
-  const presentationSections = extractPresentationSections(cleanedContent)
+  const { keptContent, strippedContent, cue, cues, stageDirections } = extractStageDirections(trimmedContent)
+  const displaySections = extractPresentationSections(keptContent)
+  const spokenSections = extractPresentationSections(strippedContent)
 
   return {
     cue,
     cues,
-    displayContent: presentationSections.displayContent,
+    displayContent: displaySections.displayContent,
     stageDirections,
-    spokenContent: presentationSections.spokenContent,
+    spokenContent: spokenSections.spokenContent,
   }
 }
 
@@ -840,3 +829,65 @@ export class PerformanceTagStreamFilter {
  * Backwards-compatible alias for the older class name.
  */
 export { PerformanceTagStreamFilter as ExpressionOverrideStreamFilter }
+
+const STAGE_DIRECTION_OPEN_CHARS = '[（(【'
+
+/**
+ * Streaming counterpart of the speech-side aside strip: removes complete
+ * bracketed stage directions from the TTS delta stream and holds back a
+ * trailing partial "（…" until it closes (or clearly isn't an aside), so the
+ * voice never speaks an aside even mid-stream. Display keeps the asides; only
+ * this speech stream drops them. Mirrors PerformanceTagStreamFilter.
+ */
+export class StageDirectionStreamFilter {
+  private buffer = ''
+
+  push(delta: string): string {
+    if (!delta) return ''
+    this.buffer += delta
+    return this.drain(false)
+  }
+
+  flush(): string {
+    return this.drain(true)
+  }
+
+  private drain(forceFlush: boolean): string {
+    STAGE_DIRECTION_GLOBAL_PATTERN.lastIndex = 0
+    this.buffer = this.buffer.replace(
+      STAGE_DIRECTION_GLOBAL_PATTERN,
+      (full: string, inner: string) => (isStructuredBracket(inner.trim()) ? full : ''),
+    )
+
+    if (forceFlush) {
+      const out = this.buffer
+      this.buffer = ''
+      return out
+    }
+
+    let lastOpenIdx = -1
+    for (const ch of STAGE_DIRECTION_OPEN_CHARS) {
+      lastOpenIdx = Math.max(lastOpenIdx, this.buffer.lastIndexOf(ch))
+    }
+    if (lastOpenIdx === -1) {
+      const out = this.buffer
+      this.buffer = ''
+      return out
+    }
+
+    // A runaway open bracket (no close after more than a stage direction's worth
+    // of text) is almost certainly not an aside — release it so speech doesn't
+    // stall waiting for a close that never comes.
+    const suffix = this.buffer.slice(lastOpenIdx)
+    const MAX_SUFFIX_LOOKAHEAD = 40
+    if (suffix.length >= MAX_SUFFIX_LOOKAHEAD) {
+      const out = this.buffer
+      this.buffer = ''
+      return out
+    }
+
+    const out = this.buffer.slice(0, lastOpenIdx)
+    this.buffer = suffix
+    return out
+  }
+}

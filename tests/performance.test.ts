@@ -4,17 +4,19 @@ import { test } from 'node:test'
 import {
   ExpressionOverrideStreamFilter,
   PerformanceTagStreamFilter,
+  StageDirectionStreamFilter,
   extractExpressionOverrides,
   extractPerformanceTags,
   parseAssistantPerformanceContent,
+  segmentStageDirections,
 } from '../src/features/pet/performance.ts'
 
-test('removes recognized task and silent stage directions from spoken content', () => {
+test('keeps stage directions in display but strips them from spoken content', () => {
   const parsed = parseAssistantPerformanceContent(
     '（开心地整理资料）已经生成《StackChan组装要点.txt》放在桌面啦～（操作音效）',
   )
 
-  assert.equal(parsed.displayContent, '已经生成《StackChan组装要点.txt》放在桌面啦～')
+  assert.equal(parsed.displayContent, '（开心地整理资料）已经生成《StackChan组装要点.txt》放在桌面啦～（操作音效）')
   assert.equal(parsed.spokenContent, '已经生成《StackChan组装要点.txt》放在桌面啦～')
   assert.deepEqual(parsed.stageDirections, ['开心地整理资料', '操作音效'])
   assert.equal(parsed.cues.length, 1)
@@ -26,7 +28,7 @@ test('removes recognized task and silent stage directions from spoken content', 
 test('keeps multiple recognized performance cues in reply order', () => {
   const parsed = parseAssistantPerformanceContent('（查找资料）（轻轻点头）我找到了。')
 
-  assert.equal(parsed.displayContent, '我找到了。')
+  assert.equal(parsed.displayContent, '（查找资料）（轻轻点头）我找到了。')
   assert.equal(parsed.spokenContent, '我找到了。')
   assert.equal(parsed.cues.length, 2)
   assert.equal(parsed.cues[0]?.accentStyle, 'search')
@@ -49,33 +51,69 @@ test('treats writing and delivery as distinct sequential task cues', () => {
   assert.equal(parsed.cues[1]?.motionSlot, 'touchBody')
 })
 
-test('preserves unknown bracket text in spoken content', () => {
+test('keeps an unrecognized aside visible but never speaks it', () => {
+  // An aside the vocabulary does not know — no cue to drive — must still read as
+  // an intentional aside (kept in display) and must never be spoken aloud. This
+  // is what stops novel stage directions from leaking on users we never see.
   const parsed = parseAssistantPerformanceContent('（突然蹦出一只企鹅）你好呀')
 
   assert.equal(parsed.displayContent, '（突然蹦出一只企鹅）你好呀')
-  assert.equal(parsed.spokenContent, '（突然蹦出一只企鹅）你好呀')
+  assert.equal(parsed.spokenContent, '你好呀')
   assert.equal(parsed.cues.length, 0)
   assert.equal(parsed.cue, null)
-  assert.deepEqual(parsed.stageDirections, [])
+  assert.deepEqual(parsed.stageDirections, ['突然蹦出一只企鹅'])
 })
 
-test('strips bright-eyes stage directions and brightens her expression', () => {
+test('a bright-eyes aside stays visible, drives a happy face, and is not spoken', () => {
   const parsed = parseAssistantPerformanceContent('（眼睛亮了）这算不算变相表白呀？')
 
-  assert.equal(parsed.displayContent, '这算不算变相表白呀？')
+  assert.equal(parsed.displayContent, '（眼睛亮了）这算不算变相表白呀？')
   assert.equal(parsed.spokenContent, '这算不算变相表白呀？')
   assert.deepEqual(parsed.stageDirections, ['眼睛亮了'])
   assert.equal(parsed.cues.length, 1)
   assert.equal(parsed.cues[0]?.expressionSlot, 'happy')
 })
 
+test('a labeled bracket with a colon is content, not a stage direction', () => {
+  const parsed = parseAssistantPerformanceContent('明天放假（注：周一照常）记得哦')
+
+  assert.equal(parsed.displayContent, '明天放假（注：周一照常）记得哦')
+  assert.equal(parsed.spokenContent, '明天放假（注：周一照常）记得哦')
+  assert.deepEqual(parsed.stageDirections, [])
+})
+
 test('allows silent-only stage directions without forcing spoken fallback text', () => {
   const parsed = parseAssistantPerformanceContent('（操作音效）')
 
-  assert.equal(parsed.displayContent, '')
+  assert.equal(parsed.displayContent, '（操作音效）')
   assert.equal(parsed.spokenContent, '')
   assert.equal(parsed.cue, null)
   assert.deepEqual(parsed.stageDirections, ['操作音效'])
+})
+
+test('segmentStageDirections marks asides for styling and leaves notes as text', () => {
+  const segments = segmentStageDirections('（眼睛亮了）你好呀（注：稍后）')
+
+  assert.deepEqual(segments, [
+    { stage: true, text: '（眼睛亮了）' },
+    { stage: false, text: '你好呀（注：稍后）' },
+  ])
+})
+
+test('StageDirectionStreamFilter strips complete asides from the speech stream', () => {
+  const filter = new StageDirectionStreamFilter()
+  const spoken = filter.push('（眼睛亮了）你好') + filter.push('呀') + filter.flush()
+
+  assert.equal(spoken, '你好呀')
+})
+
+test('StageDirectionStreamFilter holds a partial aside back until it closes', () => {
+  const filter = new StageDirectionStreamFilter()
+
+  // The half-open "（眼睛" must not reach TTS as raw text mid-stream.
+  assert.equal(filter.push('好的（眼睛'), '好的')
+  assert.equal(filter.push('亮了）继续'), '继续')
+  assert.equal(filter.flush(), '')
 })
 
 test('extractExpressionOverrides strips [expr:name] tags and emits matching cues', () => {

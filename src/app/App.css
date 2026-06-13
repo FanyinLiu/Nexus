@@ -882,6 +882,12 @@
   opacity: 0.7;
 }
 
+/* Her stage directions — （眼睛亮了）— read as quiet script asides, not speech. */
+.message-bubble__stage {
+  opacity: 0.55;
+  font-style: italic;
+}
+
 .tool-result-card {
   box-sizing: border-box;
   display: grid;
