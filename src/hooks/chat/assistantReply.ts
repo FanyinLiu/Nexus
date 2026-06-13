@@ -12,6 +12,8 @@ import {
 import { buildMemoryRecallContext } from '../../features/memory/recall.ts'
 import { loadRelevantSkills, shouldGenerateSkill, generateAndSaveSkill } from '../../features/skills/autoSkillGenerator.ts'
 import { matchCoreSkills } from '../../lib/coreRuntime.ts'
+import { captureUserAffectSample } from '../../features/autonomy/userAffectTimeline.ts'
+import { userMoodReadToEmotionSignal, userMoodReadToVAD } from '../../features/autonomy/emotionModel.ts'
 import { PUBLIC_GESTURE_NAMES } from '../../features/pet/models.ts'
 import {
   PerformanceTagStreamFilter,
@@ -89,6 +91,7 @@ type AssistantReplyRunnerDependencies = {
     | 'loadDesktopContextSnapshot'
     | 'onAssistantReplyDelivered'
     | 'onAssistantReplyFailed'
+    | 'onUserMoodSignal'
     | 'queuePetPerformanceCue'
     | 'resetNoSpeechRestartCount'
     | 'setMood'
@@ -444,6 +447,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         exprCues: inlineExpressionOverrideCues,
         motionCues: inlineMotionCues,
         recallCues: inlineRecallCues,
+        moodCues: inlineMoodCues,
       } = extractPerformanceTags(transformedAssistantText)
       const GESTURE_CUE_DURATION_MS = 1_600
       const PUBLIC_GESTURE_SET = new Set<string>(PUBLIC_GESTURE_NAMES)
@@ -465,6 +469,25 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         }
         if (recalledIds.size && dependencies.onMemoryRecalled) {
           dependencies.onMemoryRecalled([...recalledIds])
+        }
+      }
+      // The model's invisible [mood:...] read of the user — the deep-emotion
+      // channel. One read per reply: a VAD sample for the user-affect
+      // timeline (confidence 0.8: full-context inference beats regex), plus
+      // a companion empathy signal for clear reads. Best-effort: an emotion
+      // bookkeeping failure must never affect the reply.
+      if (inlineMoodCues.length) {
+        try {
+          const moodRead = inlineMoodCues[0]
+          captureUserAffectSample({
+            ...userMoodReadToVAD(moodRead.mood, moodRead.intensity),
+            source: 'llm_read',
+            confidence: 0.8,
+          })
+          const moodSignal = userMoodReadToEmotionSignal(moodRead.mood, moodRead.intensity)
+          if (moodSignal) dependencies.ctx.onUserMoodSignal?.(moodSignal)
+        } catch (moodError) {
+          console.warn('[chat] mood-read bookkeeping failed:', moodError)
         }
       }
       const assistantPerformance = parseAssistantPerformanceContent(rawAssistantText)

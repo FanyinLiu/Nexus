@@ -231,3 +231,30 @@ test('PerformanceTagStreamFilter holds back partial [recall: prefix across delta
   streamed += filter.flush()
   assert.equal(streamed, 'Hey  good day')
 })
+
+// ── [mood:...] — the LLM's read of the USER's emotion ───────────────────────
+
+test('extractPerformanceTags parses mood reads with and without intensity', () => {
+  const out = extractPerformanceTags('好呀，我陪你聊聊。[mood:sad-7]')
+  assert.equal(out.content, '好呀，我陪你聊聊。')
+  assert.deepEqual(out.moodCues, [{ mood: 'sad', intensity: 7, stageDirection: '(mood:sad-7)' }])
+
+  const bare = extractPerformanceTags('hello [mood:happy] there')
+  assert.deepEqual(bare.moodCues[0], { mood: 'happy', intensity: 5, stageDirection: '(mood:happy)' })
+})
+
+test('unknown mood words and out-of-range intensities are dropped (tag still stripped)', () => {
+  const out = extractPerformanceTags('ok [mood:melancholy-3] [mood:sad-12]')
+  assert.equal(out.moodCues.length, 0)
+  assert.doesNotMatch(out.content, /mood/)
+})
+
+test('streaming filter never flashes a partial [mood: tag', () => {
+  const filter = new PerformanceTagStreamFilter()
+  let visible = ''
+  for (const chunk of ['今天辛苦了。', '[mo', 'od:tir', 'ed-6]']) {
+    visible += filter.push(chunk)
+  }
+  visible += filter.flush()
+  assert.equal(visible, '今天辛苦了。')
+})

@@ -645,13 +645,13 @@ export function parseAssistantPerformanceContent(content: string): ParsedAssista
 // time, not here). `tts` is parsed here but currently collected-and-
 // dropped — wiring will land when an emotion-aware TTS adapter does.
 // `recall` value is a memory id (alphanumeric + hyphen).
-const PERFORMANCE_TAG_PATTERN = /\[(expr|motion|tts|recall)\s*:\s*([a-zA-Z0-9_-]+)\s*\]/giu
+const PERFORMANCE_TAG_PATTERN = /\[(expr|motion|tts|recall|mood)\s*:\s*([a-zA-Z0-9_-]+)\s*\]/giu
 const EXPRESSION_OVERRIDE_DURATION_MS = 2_400
 const PUBLIC_EXPRESSION_SLOTS: ReadonlySet<PetExpressionSlot> = new Set([
   'idle', 'thinking', 'happy', 'sleepy', 'surprised', 'confused', 'embarrassed',
 ])
 
-const TAG_KEYS = ['expr', 'motion', 'tts', 'recall'] as const
+const TAG_KEYS = ['expr', 'motion', 'tts', 'recall', 'mood'] as const
 
 export type MotionCue = {
   gestureName: string
@@ -668,12 +668,27 @@ export type RecallCue = {
   stageDirection: string
 }
 
+/**
+ * `[mood:<word>-<0-9>]` — the model's read of the USER's emotional state,
+ * appended invisibly at the end of a reply (the deep-emotion channel that
+ * regex keyword matching can never reach: "我今天被裁了" carries no sad
+ * keyword). Intensity defaults to 5 when omitted. Unknown words drop.
+ */
+export type MoodReadCue = { mood: UserMoodWord; intensity: number; stageDirection: string }
+
+export const USER_MOOD_WORDS = [
+  'happy', 'excited', 'calm', 'neutral', 'tired', 'sad', 'anxious', 'frustrated', 'angry',
+] as const
+export type UserMoodWord = (typeof USER_MOOD_WORDS)[number]
+const USER_MOOD_WORD_SET = new Set<string>(USER_MOOD_WORDS)
+
 export type ExtractedPerformanceTags = {
   content: string
   exprCues: PetPerformancePlan[]
   motionCues: MotionCue[]
   ttsCues: TtsCue[]
   recallCues: RecallCue[]
+  moodCues: MoodReadCue[]
 }
 
 /**
@@ -686,12 +701,13 @@ export type ExtractedPerformanceTags = {
  */
 export function extractPerformanceTags(content: string): ExtractedPerformanceTags {
   if (!content) {
-    return { content: '', exprCues: [], motionCues: [], ttsCues: [], recallCues: [] }
+    return { content: '', exprCues: [], motionCues: [], ttsCues: [], recallCues: [], moodCues: [] }
   }
   const exprCues: PetPerformancePlan[] = []
   const motionCues: MotionCue[] = []
   const ttsCues: TtsCue[] = []
   const recallCues: RecallCue[] = []
+  const moodCues: MoodReadCue[] = []
   const cleaned = content.replace(PERFORMANCE_TAG_PATTERN, (_match, rawKind: string, rawValue: string) => {
     const kind = String(rawKind ?? '').toLowerCase().trim()
     // Note: only lower-case for kind. Memory ids preserve original case for
@@ -714,10 +730,23 @@ export function extractPerformanceTags(content: string): ExtractedPerformanceTag
       ttsCues.push({ mode: lowerValue, stageDirection: `(tts:${lowerValue})` })
     } else if (kind === 'recall') {
       recallCues.push({ memoryId: rawTrimmed, stageDirection: `(recall:${rawTrimmed})` })
+    } else if (kind === 'mood') {
+      // `sad-7` → word + intensity; bare `sad` → intensity 5.
+      const dash = lowerValue.lastIndexOf('-')
+      const maybeIntensity = dash >= 0 ? Number(lowerValue.slice(dash + 1)) : NaN
+      const hasIntensity = dash >= 0 && Number.isInteger(maybeIntensity) && maybeIntensity >= 0 && maybeIntensity <= 9
+      const word = hasIntensity ? lowerValue.slice(0, dash) : lowerValue
+      if (USER_MOOD_WORD_SET.has(word)) {
+        moodCues.push({
+          mood: word as UserMoodWord,
+          intensity: hasIntensity ? maybeIntensity : 5,
+          stageDirection: `(mood:${lowerValue})`,
+        })
+      }
     }
     return ''
   })
-  return { content: cleaned, exprCues, motionCues, ttsCues, recallCues }
+  return { content: cleaned, exprCues, motionCues, ttsCues, recallCues, moodCues }
 }
 
 /**
@@ -743,7 +772,7 @@ function isPerformanceTagPrefix(buffer: string): boolean {
     if (key.startsWith(afterBracket)) return true
     if (afterBracket.startsWith(key)) {
       const rest = afterBracket.slice(key.length)
-      if (/^\s*(?::\s*[a-zA-Z_-]*\s*)?$/i.test(rest)) return true
+      if (/^\s*(?::\s*[a-zA-Z0-9_-]*\s*)?$/i.test(rest)) return true
     }
   }
   return false
