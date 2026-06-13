@@ -2,6 +2,7 @@ import { t } from '../../i18n/runtime.ts'
 import type { AppSettings, ExternalLinkResponse, WeatherLookupResponse, WebSearchResponse } from '../../types'
 import { buildBuiltInToolAssistantSummary } from './assistant.ts'
 import { resolveWeatherLocationFallback, rewriteSearchQuery } from './queryRewrite.ts'
+import { resolveWebSearchApiKey } from '../../lib/webSearchProviders.ts'
 import type { BuiltInToolPolicy, BuiltInToolResult, MatchedBuiltInTool } from './toolTypes'
 
 export { extractLikelyWeatherLocation, extractSearchQuery, normalizeToolText } from './extractors.ts'
@@ -181,7 +182,7 @@ export async function executeBuiltInTool(
     limit: tool.limit,
     providerId: settings?.toolWebSearchProviderId,
     baseUrl: settings?.toolWebSearchApiBaseUrl,
-    apiKey: settings?.toolWebSearchApiKey,
+    apiKey: resolveWebSearchApiKey(settings),
     displayQuery: tool.query,
     keywords: tool.keywords?.length ? tool.keywords : searchMetadata.keywords,
     candidateQueries: tool.candidateQueries?.length
