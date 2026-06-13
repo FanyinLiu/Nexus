@@ -24,6 +24,8 @@ import { useDiscordBridge } from './useDiscordBridge'
 import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
 import { type BridgeForwardQueue, createBridgeForwardQueue } from './bridgeUtils'
 import { consumeMessageFollowUpPromptText, recordMessageFollowUp } from '../../lib/storage/messageFollowUps.ts'
+import { relationshipLevelToCloseness } from '../../features/autonomy/emotionModel.ts'
+import { getRelationshipLevel } from '../../features/autonomy/relationshipTracker.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile'
 import type { DailyMemoryStore, Goal, ReminderTask } from '../../types'
@@ -384,6 +386,16 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     rhythmState.recordInteractionInRhythm()
   }, [relationshipState, rhythmState])
 
+  // The same felt emotion expresses differently by relationship stage:
+  // reserved while still getting to know each other, open once close. Inject
+  // the live closeness so the emotion prompt is stage-aware.
+  const getEmotionPrompt = useCallback(
+    () => emotionState.getEmotionPrompt(
+      relationshipLevelToCloseness(getRelationshipLevel(relationshipState.relationshipRef.current)),
+    ),
+    [emotionState, relationshipState],
+  )
+
   return useMemo(() => ({
     focusAwareness,
     autonomyTick,
@@ -397,7 +409,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     applyEmotionSignal: emotionState.applyEmotionSignal,
     emotionStateRef: emotionState.emotionStateRef,
     getEmotionMood: emotionState.getEmotionMood,
-    getEmotionPrompt: emotionState.getEmotionPrompt,
+    getEmotionPrompt,
     markInteraction,
     relationshipRef: relationshipState.relationshipRef,
     getRelationshipPrompt: relationshipState.getRelationshipPrompt,
@@ -423,7 +435,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     emotionState.applyEmotionSignal,
     emotionState.emotionStateRef,
     emotionState.getEmotionMood,
-    emotionState.getEmotionPrompt,
+    getEmotionPrompt,
     markInteraction,
     relationshipState.relationshipRef,
     relationshipState.getRelationshipPrompt,
