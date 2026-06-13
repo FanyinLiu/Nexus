@@ -11,6 +11,7 @@ import {
   classifyMessageSignals,
   createDefaultEmotionState,
   resolveProactiveLean,
+  relationshipLevelToCloseness,
   decayEmotion,
   emotionToPetMood,
   formatEmotionForPrompt,
@@ -310,4 +311,40 @@ test('resolveProactiveLean: tender and not flat → reach out warmly', () => {
 
 test('resolveProactiveLean: a calm middling state stays neutral (no extra prompt line)', () => {
   assert.equal(resolveProactiveLean(withState({ energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 })), 'neutral')
+})
+
+// ── Tone modulated by relationship stage ─────────────────────────────────────
+
+test('relationshipLevelToCloseness maps the 5 levels into 3 bands', () => {
+  assert.equal(relationshipLevelToCloseness('stranger'), 'early')
+  assert.equal(relationshipLevelToCloseness('acquaintance'), 'early')
+  assert.equal(relationshipLevelToCloseness('friend'), 'established')
+  assert.equal(relationshipLevelToCloseness('close_friend'), 'close')
+  assert.equal(relationshipLevelToCloseness('intimate'), 'close')
+})
+
+test('formatEmotionForPrompt: same felt state, stage shapes how openly it shows', () => {
+  const warm = withState({ warmth: 0.85, energy: 0.5 })
+  const early = formatEmotionForPrompt(warm, 'early')
+  const established = formatEmotionForPrompt(warm, 'established')
+  const close = formatEmotionForPrompt(warm, 'close')
+
+  // The felt tone words are identical across stages...
+  for (const out of [early, established, close]) {
+    assert.match(out, /especially affectionate/)
+  }
+  // ...only the closing guidance differs.
+  assert.match(early, /light and unimposing/)
+  assert.match(close, /openly and directly/)
+  // 'established' (friend) is the natural default — no stage clause.
+  assert.doesNotMatch(established, /unimposing|openly and directly/)
+})
+
+test('formatEmotionForPrompt defaults to established when closeness omitted', () => {
+  const out = formatEmotionForPrompt(withState({ warmth: 0.85 }))
+  assert.doesNotMatch(out, /unimposing|openly and directly/)
+})
+
+test('a flat state still produces no emotion section regardless of stage', () => {
+  assert.equal(formatEmotionForPrompt(withState({ energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 }), 'close'), '')
 })

@@ -345,7 +345,20 @@ export function voiceEmotionToSignal(label: VoiceEmotionLabel): EmotionSignal {
 // ── Prompt context ──────────────────────────────────────────────────────────
 
 /** Format emotion state as a tone guide for the LLM system prompt. */
-export function formatEmotionForPrompt(state: EmotionState): string {
+/**
+ * How far the relationship has grown, in three bands. The same felt emotion
+ * should express differently by stage: reserved while still getting to know
+ * each other, open and direct once close. emotionModel owns this coarse enum
+ * so it stays free of the relationship module (which already imports from
+ * here — a `RelationshipLevel` import back would be a cycle); the caller maps
+ * the 5-level relationship to one of these three.
+ */
+export type RelationshipCloseness = 'early' | 'established' | 'close'
+
+export function formatEmotionForPrompt(
+  state: EmotionState,
+  closeness: RelationshipCloseness = 'established',
+): string {
   const toneWords: string[] = []
 
   // Energy axis — three bands rather than two, so the prompt distinguishes
@@ -373,7 +386,23 @@ export function formatEmotionForPrompt(state: EmotionState): string {
   }
 
   if (toneWords.length === 0) return ''
-  return `Current emotional state: ${toneWords.join(', ')}. Let this emotion come through naturally in your reply.`
+  // The felt state is the same; the relationship stage shapes how openly it
+  // shows. 'established' (friend) is the natural default — no extra clause.
+  const stageClause = closeness === 'early'
+    ? ' Since you are still early in getting to know each other, keep how it shows light and unimposing.'
+    : closeness === 'close'
+      ? ' You two are close now, so you can let it show openly and directly.'
+      : ''
+  return `Current emotional state: ${toneWords.join(', ')}. Let this emotion come through naturally in your reply.${stageClause}`
+}
+
+/** Map the 5-level relationship to the 3-band closeness emotionModel uses. */
+export function relationshipLevelToCloseness(
+  level: 'stranger' | 'acquaintance' | 'friend' | 'close_friend' | 'intimate',
+): RelationshipCloseness {
+  if (level === 'stranger' || level === 'acquaintance') return 'early'
+  if (level === 'close_friend' || level === 'intimate') return 'close'
+  return 'established'
 }
 
 // ── Emotion-driven proactivity ───────────────────────────────────────────────

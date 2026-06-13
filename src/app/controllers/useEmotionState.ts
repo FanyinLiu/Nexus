@@ -10,6 +10,7 @@ import {
   normalizeEmotionState,
   createIdleArcTracker,
   resolveIdleArcSignals,
+  type RelationshipCloseness,
 } from '../../features/autonomy/emotionModel'
 import { captureEmotionSample } from '../../features/autonomy/stateTimeline.ts'
 import {
@@ -128,7 +129,12 @@ export function useEmotionState() {
   }, [])
 
   const getEmotionMood = useCallback(() => emotionToPetMood(emotionStateRef.current), [])
-  const getEmotionPrompt = useCallback(() => formatEmotionForPrompt(emotionStateRef.current), [])
+  // closeness is injected by useAutonomyController (which holds the live
+  // relationship level); defaults to 'established' when called bare.
+  const getEmotionPrompt = useCallback(
+    (closeness?: RelationshipCloseness) => formatEmotionForPrompt(emotionStateRef.current, closeness),
+    [],
+  )
 
   return {
     emotionStateRef,
