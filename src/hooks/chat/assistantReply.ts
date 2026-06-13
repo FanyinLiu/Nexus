@@ -17,6 +17,7 @@ import { userMoodReadToEmotionSignal, userMoodReadToVAD } from '../../features/a
 import { PUBLIC_GESTURE_NAMES } from '../../features/pet/models.ts'
 import {
   PerformanceTagStreamFilter,
+  StageDirectionStreamFilter,
   extractPerformanceTags,
   parseAssistantPerformanceContent,
 } from '../../features/pet/performance.ts'
@@ -286,6 +287,11 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       // in the bubble and get pronounced character-by-character over the
       // TTS channel.
       const expressionOverrideStreamFilter = new PerformanceTagStreamFilter()
+      // The bubble keeps her parenthetical asides (（眼睛亮了）) so they read as
+      // intentional stage directions, but she should never SPEAK them. This twin
+      // strips them from the TTS stream only, mid-stream, so voice and display
+      // diverge exactly where they should.
+      const stageDirectionSpeechFilter = new StageDirectionStreamFilter()
 
       const pendingCallbackHints = buildPendingCallbackHints(nextMemories)
       const requestStreaming = dependencies.requestStreaming ?? requestAssistantReplyStreaming
@@ -317,7 +323,11 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
             }
 
             if (streamingTtsController) {
-              streamingTtsController.pushDelta(visibleDelta)
+              const spokenDelta = stageDirectionSpeechFilter.push(visibleDelta)
+                + (done ? stageDirectionSpeechFilter.flush() : '')
+              if (spokenDelta) {
+                streamingTtsController.pushDelta(spokenDelta)
+              }
             }
           }
 

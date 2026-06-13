@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from '../i18n/useTranslation.ts'
+import { segmentStageDirections } from '../features/pet/performance.ts'
 import type { ChatMessage } from '../types'
 import { ToolResultCard } from './ToolResultCard'
 
@@ -56,6 +57,27 @@ function renderLinkedContent(content: string) {
   return parts.length ? parts : content
 }
 
+// Her parenthetical stage directions — （眼睛亮了）, （歪头）— are kept in the
+// reply so they read as intentional asides rather than getting stripped, but we
+// render them muted/italic so they look like script directions instead of
+// leaked text. Recognized ones also drive her avatar; this is just the visual.
+function renderAssistantContent(content: string) {
+  const segments = segmentStageDirections(content)
+  if (!segments.some((segment) => segment.stage)) {
+    return renderLinkedContent(content)
+  }
+
+  return segments.map((segment, index) =>
+    segment.stage ? (
+      <span key={`stage-${index}`} className="message-bubble__stage">
+        {segment.text}
+      </span>
+    ) : (
+      <span key={`text-${index}`}>{renderLinkedContent(segment.text)}</span>
+    ),
+  )
+}
+
 export const MessageBubble = memo(function MessageBubble({ message, assistantName }: MessageBubbleProps) {
   const { t, locale } = useTranslation()
   const resolvedAssistantName = assistantName ?? t('message_bubble.role.assistant_default')
@@ -96,7 +118,13 @@ export const MessageBubble = memo(function MessageBubble({ message, assistantNam
             ))}
           </div>
         ) : null}
-        {message.content ? <div>{renderLinkedContent(message.content)}</div> : null}
+        {message.content ? (
+          <div>
+            {message.role === 'assistant'
+              ? renderAssistantContent(message.content)
+              : renderLinkedContent(message.content)}
+          </div>
+        ) : null}
         {message.toolResult ? <ToolResultCard toolResult={message.toolResult} /> : null}
       </div>
     </article>
