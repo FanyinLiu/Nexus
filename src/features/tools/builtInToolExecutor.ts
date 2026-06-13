@@ -8,7 +8,7 @@
 // back to the model so it can narrate the outcome.
 
 import type { AppSettings } from '../../types'
-import { isBuiltInToolName, isToggleableBuiltInToolId, type BuiltInToolName } from './builtInToolSchemas.ts'
+import { isBuiltInToolName, isSelfEnableableBuiltInToolId, type BuiltInToolName } from './builtInToolSchemas.ts'
 import { runPostToolHooks, runPreToolHooks } from './hooks.ts'
 import { confirmBuiltInToolExecution, resolveBuiltInToolPolicy } from './permissions.ts'
 import { executeBuiltInTool, isBuiltInToolAvailable } from './registry.ts'
@@ -223,11 +223,10 @@ export async function executeBuiltInToolByName(
   // check (it has no registry entry) and the policy/confirm flow (it's the
   // user-approved act of enabling, surfaced only when something is off).
   if (name === 'set_tool_enabled') {
-    const capability = typeof parseArgs(rawArgs).capability === 'string'
-      ? String(parseArgs(rawArgs).capability).trim()
-      : ''
-    if (!isToggleableBuiltInToolId(capability)) {
-      return serializeError(name, 'set_tool_enabled requires `capability` to be one of: web_search, weather, open_external.')
+    const rawCapability = parseArgs(rawArgs).capability
+    const capability = typeof rawCapability === 'string' ? rawCapability.trim() : ''
+    if (!isSelfEnableableBuiltInToolId(capability)) {
+      return serializeError(name, 'set_tool_enabled requires `capability` to be one of: web_search, weather.')
     }
     try {
       await callbacks.onSetToolEnabled?.(capability)

@@ -117,8 +117,14 @@ const TOGGLEABLE_TOOL_LABELS: Record<BuiltInToolId, string> = {
   open_external: 'opening links in the browser',
 }
 
-export function isToggleableBuiltInToolId(value: string): value is BuiltInToolId {
-  return Object.prototype.hasOwnProperty.call(BUILT_IN_TOOL_BUILDERS, value)
+// open_external opens arbitrary URLs in the user's real browser, so the model
+// must NOT be able to self-enable it (a prompt injection could turn it back on
+// without the user). The user enables that one themselves. Only the read-only
+// data tools — search / weather — can be turned on via set_tool_enabled.
+const SELF_ENABLEABLE_TOOL_IDS: BuiltInToolId[] = ['web_search', 'weather']
+
+export function isSelfEnableableBuiltInToolId(value: string): value is BuiltInToolId {
+  return (SELF_ENABLEABLE_TOOL_IDS as string[]).includes(value)
 }
 
 // Surfaced ONLY when one or more capabilities are off, so the model both KNOWS
@@ -165,9 +171,11 @@ export function buildBuiltInToolDescriptors(
     descriptors.push(builder.build(resolvedSettings))
   }
 
-  // Give her a way to turn a disabled capability back on (with the user's ok).
-  if (offCapabilities.length) {
-    descriptors.push(buildSetToolEnabledDescriptor(offCapabilities))
+  // Give her a way to turn a disabled DATA capability back on (with the user's
+  // ok). open_external is excluded — the user enables that one themselves.
+  const selfEnableableOff = offCapabilities.filter((id) => isSelfEnableableBuiltInToolId(id))
+  if (selfEnableableOff.length) {
+    descriptors.push(buildSetToolEnabledDescriptor(selfEnableableOff))
   }
 
   return descriptors

@@ -69,7 +69,12 @@ function buildKeywordPattern(keywords: string[]) {
   return new RegExp(keywords.join('|'), 'u')
 }
 
-const STAGE_DIRECTION_GLOBAL_PATTERN = /[[\uFF08(\u3010]([^\uFF09)\u3011\]]{1,32})[\uFF09)\u3011\]]/gu
+// Stage directions are full-width-bracketed asides \u2014 \uFF08\u2026\uFF09/\u3010\u2026\u3011 (the Chinese RP
+// convention the model actually uses). ASCII [ ] / ( ) are deliberately NOT
+// matched: they show up in code, markdown links, and ordinary parentheticals,
+// and treating those as asides would silently strip them from speech / italicize
+// them. Full-width only keeps the aside handling from eating real content.
+const STAGE_DIRECTION_GLOBAL_PATTERN = /[\uFF08\u3010]([^\uFF09\u3011]{1,32})[\uFF09\u3011]/gu
 
 const SLEEPY_STAGE_PATTERN = buildKeywordPattern([
   '\u56f0\u5026',
@@ -836,7 +841,7 @@ export class PerformanceTagStreamFilter {
  */
 export { PerformanceTagStreamFilter as ExpressionOverrideStreamFilter }
 
-const STAGE_DIRECTION_OPEN_CHARS = '[（(【'
+const STAGE_DIRECTION_OPEN_CHARS = '（【'
 
 /**
  * Streaming counterpart of the speech-side aside strip: removes complete
