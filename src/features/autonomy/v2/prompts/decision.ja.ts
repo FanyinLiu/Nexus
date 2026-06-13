@@ -87,6 +87,14 @@ line commentary — will be discarded and treated as silent. So don't.`,
     + `感情: ${emotionLine}\n`
     + `関係: ${relLine} (score ${relScore}/100, 連続 ${streak} 日, 累計 ${daysInteracted} 日)`,
 
+  proactiveLean: {
+    check_in_gently: '→ 傾向：今日は少し相手のことが気がかり。タイミングが自然なら、そっと様子を尋ねてもいい——やわらかく、問い詰めない。',
+    rest_quiet: '→ 傾向：今はあまり元気がなく、静かにしていたい。このティックは、本当に必要な用がない限り黙っているほうへ。',
+    playful_share: '→ 傾向：軽やかで好奇心がある。自然なきっかけがあれば、ちょっとお茶目に共有したり、小さな思いつきを言ってもいい。',
+    reach_out_warmly: '→ 傾向：胸が温かい。もし声をかけるなら、その近しさをにじませて——より近く、よりやわらかく。',
+    neutral: '',
+  },
+
   sectionRecentChatHeader: '## 最近の会話（古い順）',
   recentChatUserLabel: 'ご主人さま',
   recentChatAssistantLabel: 'あなた',

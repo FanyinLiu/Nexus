@@ -84,6 +84,14 @@ line commentary — will be discarded and treated as silent. So don't.`,
     + `情緒: ${emotionLine}\n`
     + `關係: ${relLine} (score ${relScore}/100, 連 ${streak} 天互動, 累計 ${daysInteracted} 天)`,
 
+  proactiveLean: {
+    check_in_gently: '→ 傾向：今天有點惦記對方。如果時機自然，可以輕輕確認一句他還好嗎——要柔，別追問。',
+    rest_quiet: '→ 傾向：這會兒沒什麼精神，更想安靜待著。這一拍傾向於不出聲，除非真有需要你的事。',
+    playful_share: '→ 傾向：狀態輕快又好奇。如果有自然的由頭，可以俏皮地分享一點，或提個小想法。',
+    reach_out_warmly: '→ 傾向：心裡暖暖的。如果開口，就讓這份親近透出來——更近、更軟一些。',
+    neutral: '',
+  },
+
   sectionRecentChatHeader: '## 最近對話（最舊在前）',
   recentChatUserLabel: '主人',
   recentChatAssistantLabel: '你',

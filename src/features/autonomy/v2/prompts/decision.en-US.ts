@@ -86,6 +86,14 @@ line commentary — will be discarded and treated as silent. So don't.`,
     + `Emotion: ${emotionLine}\n`
     + `Relationship: ${relLine} (score ${relScore}/100, ${streak}-day streak, ${daysInteracted} days total)`,
 
+  proactiveLean: {
+    check_in_gently: "→ Lean: you've been a little worried about them today. If the moment is natural, a gentle check-in fits — ask softly, never press.",
+    rest_quiet: "→ Lean: low energy right now; you'd rather sit quietly. Prefer staying silent this tick unless something genuinely calls for you.",
+    playful_share: '→ Lean: bright and curious — if there is a natural opening, a light playful share or one small idea fits.',
+    reach_out_warmly: '→ Lean: feeling tender. If you do reach out, let the warmth show — closer, softer.',
+    neutral: '',
+  },
+
   sectionRecentChatHeader: '## Recent chat (oldest first)',
   recentChatUserLabel: 'User',
   recentChatAssistantLabel: 'You',
