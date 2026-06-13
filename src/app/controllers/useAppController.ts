@@ -49,7 +49,8 @@ import {
   pruneLegacyStorageKeys,
   saveAutonomyGoals,
 } from '../../lib/storage'
-import { classifyMessageSignals, emotionToVoiceStyle, voiceEmotionToSignal } from '../../features/autonomy/emotionModel'
+import { classifyMessageSignals, voiceEmotionToSignal } from '../../features/autonomy/emotionModel'
+import type { EmotionState as AppEmotionState } from '../../features/autonomy/emotionModel'
 
 type ChatController = ReturnType<typeof useChat>
 type ReminderTaskStore = ReturnType<typeof useReminderTaskStore>
@@ -233,7 +234,7 @@ export function useAppController() {
   }, [])
 
   const voiceEmotionApplyRef = useRef<(label: VoiceEmotionLabel) => void>(() => {})
-  const emotionVoiceStyleRef = useRef<() => string>(() => '')
+  const emotionVoiceSnapshotRef = useRef<() => AppEmotionState | undefined>(() => undefined)
 
   const voice = useVoice({
     settings,
@@ -258,7 +259,7 @@ export function useAppController() {
     // autonomy is created later in this hook and we need to keep useVoice's
     // ctx referentially stable.
     applyVoiceEmotion: (label: VoiceEmotionLabel) => voiceEmotionApplyRef.current(label),
-    getEmotionVoiceStyle: () => emotionVoiceStyleRef.current(),
+    getEmotionSnapshot: () => emotionVoiceSnapshotRef.current(),
   })
 
   // Ref bridge for emotion/relationship/rhythm prompt getters:
@@ -533,8 +534,8 @@ export function useAppController() {
     voiceEmotionApplyRef.current = (label: VoiceEmotionLabel) => {
       autonomy.applyEmotionSignal(voiceEmotionToSignal(label))
     }
-    // Her live emotion → her TTS voice style (consumed at the speak entry).
-    emotionVoiceStyleRef.current = () => emotionToVoiceStyle(autonomy.emotionStateRef.current)
+    // Her live emotion → her voice (style + pace, derived at the speak entry).
+    emotionVoiceSnapshotRef.current = () => autonomy.emotionStateRef.current
     // The deps list pulls each consumed property of `autonomy` rather than
     // the object itself — autonomy is rebuilt every render in
     // useAutonomyController, so depending on the parent re-runs this effect

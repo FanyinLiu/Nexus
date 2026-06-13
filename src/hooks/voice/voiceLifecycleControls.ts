@@ -13,7 +13,7 @@ import {
 } from './conversationEntrypoints'
 import { scheduleVoiceRestart as scheduleContinuousVoiceRestart } from './continuousVoice'
 import { speakAssistantReplyRuntime, beginStreamingSpeechReplyRuntime } from './speechReply'
-import { combineVoiceInstructions } from '../../features/autonomy/emotionModel.ts'
+import { combineVoiceInstructions, emotionToVoiceRate, emotionToVoiceStyle } from '../../features/autonomy/emotionModel.ts'
 import type { AppSettings } from '../../types'
 import type { StreamingSpeechOutputController } from './types'
 import type { VoiceConversationOptions } from './types'
@@ -40,15 +40,21 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
     'createVoiceLifecycleControls: engines must be built first',
   )
 
-  // Her live emotion → her TTS voice style, folded into the settings the speak
-  // runtimes consume. Lands on instruction-aware providers; no-op elsewhere.
+  // Her live emotion → her voice, folded into the settings the speak runtimes
+  // consume: a style instruction (instruction-aware providers) AND a pace
+  // nudge (universal — every provider honours rate). Same mood source as the
+  // avatar, so voice and expression agree.
   function settingsWithEmotionVoice(): AppSettings {
     const base = ctx.settingsRef.current
-    const emotionStyle = ctx.getEmotionVoiceStyle?.() ?? ''
-    if (!emotionStyle) return base
+    const snapshot = ctx.getEmotionSnapshot?.()
+    if (!snapshot) return base
+    const emotionStyle = emotionToVoiceStyle(snapshot)
+    const emotionRate = emotionToVoiceRate(snapshot, base.speechRate)
+    if (!emotionStyle && emotionRate === base.speechRate) return base
     return {
       ...base,
       speechOutputInstructions: combineVoiceInstructions(base.speechOutputInstructions, emotionStyle),
+      speechRate: emotionRate,
     }
   }
 

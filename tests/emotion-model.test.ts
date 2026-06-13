@@ -12,6 +12,7 @@ import {
   createDefaultEmotionState,
   resolveProactiveLean,
   combineVoiceInstructions,
+  emotionToVoiceRate,
   emotionToVoiceStyle,
   relationshipLevelToCloseness,
   decayEmotion,
@@ -387,4 +388,25 @@ test('combineVoiceInstructions: base leads, emotion colours, blanks drop', () =>
   assert.equal(combineVoiceInstructions('', 'Speak warmly.'), 'Speak warmly.')
   assert.equal(combineVoiceInstructions('Base only.', ''), 'Base only.')
   assert.equal(combineVoiceInstructions(undefined, ''), '')
+})
+
+// ── Emotion → voice pace (movement 2, universal across providers) ────────────
+
+test('emotionToVoiceRate: excited speaks quicker, sleepy slower, neutral unchanged', () => {
+  const base = 1.0
+  assert.ok(emotionToVoiceRate(withState({ energy: 0.9, curiosity: 0.8 }), base) > base) // excited → faster
+  assert.ok(emotionToVoiceRate(withState({ energy: 0.12 }), base) < base) // sleepy → slower
+  assert.equal(emotionToVoiceRate(withState({ energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 }), base), base) // idle → unchanged
+})
+
+test('emotionToVoiceRate scales the user base rate and clamps to 0.5–2.0', () => {
+  // A user who set a slow base stays proportionally slow.
+  assert.ok(emotionToVoiceRate(withState({ energy: 0.12 }), 0.92) < 0.92)
+  // Extreme base stays inside provider-safe band.
+  assert.ok(emotionToVoiceRate(withState({ energy: 0.9, curiosity: 0.8 }), 2.0) <= 2.0)
+  assert.ok(emotionToVoiceRate(withState({ energy: 0.12 }), 0.5) >= 0.5)
+})
+
+test('emotionToVoiceRate tolerates a non-finite base rate', () => {
+  assert.equal(typeof emotionToVoiceRate(withState({ energy: 0.5 }), Number.NaN), 'number')
 })
