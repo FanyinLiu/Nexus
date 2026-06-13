@@ -8,7 +8,7 @@
 // back to the model so it can narrate the outcome.
 
 import type { AppSettings } from '../../types'
-import { isBuiltInToolName, type BuiltInToolName } from './builtInToolSchemas.ts'
+import { isBuiltInToolName, isToggleableBuiltInToolId, type BuiltInToolName } from './builtInToolSchemas.ts'
 import { runPostToolHooks, runPreToolHooks } from './hooks.ts'
 import { confirmBuiltInToolExecution, resolveBuiltInToolPolicy } from './permissions.ts'
 import { executeBuiltInTool, isBuiltInToolAvailable } from './registry.ts'
@@ -83,6 +83,9 @@ export type BuiltInToolExecutionCallbacks = {
   /** Fired when the tool produced a successful BuiltInToolResult so the host
    * can append a chat card / dialog bubble. Not called on failure. */
   onBuiltInToolResult?: (result: BuiltInToolResult) => void
+  /** Flip a built-in capability's enabled setting on (used by set_tool_enabled
+   * so the companion can turn a disabled tool back on with the user's ok). */
+  onSetToolEnabled?: (capability: BuiltInToolName) => Promise<void> | void
 }
 
 function serializeError(kind: BuiltInToolName, reason: string) {
@@ -216,6 +219,29 @@ export async function executeBuiltInToolByName(
   settings: Partial<AppSettings> | null | undefined,
   callbacks: BuiltInToolExecutionCallbacks = {},
 ): Promise<string> {
+  // Meta-tool: turn a disabled capability back on. Handled before the registry
+  // check (it has no registry entry) and the policy/confirm flow (it's the
+  // user-approved act of enabling, surfaced only when something is off).
+  if (name === 'set_tool_enabled') {
+    const capability = typeof parseArgs(rawArgs).capability === 'string'
+      ? String(parseArgs(rawArgs).capability).trim()
+      : ''
+    if (!isToggleableBuiltInToolId(capability)) {
+      return serializeError(name, 'set_tool_enabled requires `capability` to be one of: web_search, weather, open_external.')
+    }
+    try {
+      await callbacks.onSetToolEnabled?.(capability)
+      return JSON.stringify({
+        tool: 'set_tool_enabled',
+        capability,
+        enabled: true,
+        note: 'Enabled. It becomes available on your NEXT reply — tell the user it is on and ask them to repeat the request.',
+      })
+    } catch (err) {
+      return serializeError(name, err instanceof Error ? err.message : String(err))
+    }
+  }
+
   if (!isBuiltInToolAvailable(name)) {
     return serializeError(name, `${name} is not available in this environment.`)
   }

@@ -159,6 +159,7 @@ export async function requestAssistantReply(
       promptModeEnabled: selectToolDeliveryMode(effectiveSettings) === 'prompt',
       settings: effectiveSettings,
       onBuiltInToolResult: options.onBuiltInToolResult,
+      onSetToolEnabled: options.onSetToolEnabled,
     },
   )
 
@@ -222,6 +223,7 @@ export function requestAssistantReplyStreaming(
         promptModeEnabled: selectToolDeliveryMode(effectiveSettings) === 'prompt',
         settings: effectiveSettings,
         onBuiltInToolResult: options.onBuiltInToolResult,
+        onSetToolEnabled: options.onSetToolEnabled,
       },
     )
 

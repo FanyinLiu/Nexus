@@ -15,7 +15,7 @@ import type { AppSettings } from '../../types'
 import type { McpToolDescriptor } from '../chat/toolCallLoop'
 import type { BuiltInToolId } from './toolTypes'
 
-export const BUILT_IN_TOOL_NAMES = ['web_search', 'weather', 'open_external'] as const
+export const BUILT_IN_TOOL_NAMES = ['web_search', 'weather', 'open_external', 'set_tool_enabled'] as const
 export type BuiltInToolName = (typeof BUILT_IN_TOOL_NAMES)[number]
 
 export function isBuiltInToolName(name: string): name is BuiltInToolName {
@@ -111,18 +111,63 @@ const BUILT_IN_TOOL_BUILDERS: Record<BuiltInToolId, { enabledKey: keyof AppSetti
   },
 }
 
+const TOGGLEABLE_TOOL_LABELS: Record<BuiltInToolId, string> = {
+  web_search: 'web search',
+  weather: 'weather lookup',
+  open_external: 'opening links in the browser',
+}
+
+export function isToggleableBuiltInToolId(value: string): value is BuiltInToolId {
+  return Object.prototype.hasOwnProperty.call(BUILT_IN_TOOL_BUILDERS, value)
+}
+
+// Surfaced ONLY when one or more capabilities are off, so the model both KNOWS
+// what's disabled (named in the description) and can turn it on after the user
+// agrees. The flip takes effect on the next turn (the tool list is rebuilt from
+// settings per turn), which the description tells the model to explain.
+function buildSetToolEnabledDescriptor(offCapabilities: BuiltInToolId[]): McpToolDescriptor {
+  const list = offCapabilities.map((id) => `"${id}" (${TOGGLEABLE_TOOL_LABELS[id]})`).join(', ')
+  return {
+    name: 'set_tool_enabled',
+    description:
+      `Some of your capabilities are currently turned OFF in settings: ${list}. `
+      + 'If the user asks for something that needs one of these, tell them it is off and ask whether to turn it on. '
+      + 'Only after they agree, call this with that capability. It takes effect on your NEXT reply, so let the user '
+      + 'know it is enabled and to ask again.',
+    serverId: BUILT_IN_TOOL_SERVER_ID,
+    alwaysInclude: true,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        capability: {
+          type: 'string',
+          enum: [...offCapabilities],
+          description: 'Which capability to turn on.',
+        },
+      },
+      required: ['capability'],
+    },
+  }
+}
+
 export function buildBuiltInToolDescriptors(
   settings: Partial<AppSettings> | null | undefined,
 ): McpToolDescriptor[] {
   const resolvedSettings = (settings ?? {}) as Partial<AppSettings>
   const descriptors: McpToolDescriptor[] = []
+  const offCapabilities: BuiltInToolId[] = []
 
-  for (const { enabledKey, build } of Object.values(BUILT_IN_TOOL_BUILDERS)) {
-    const enabled = resolvedSettings[enabledKey]
-    if (enabled === false) {
+  for (const [id, builder] of Object.entries(BUILT_IN_TOOL_BUILDERS) as [BuiltInToolId, (typeof BUILT_IN_TOOL_BUILDERS)[BuiltInToolId]][]) {
+    if (resolvedSettings[builder.enabledKey] === false) {
+      offCapabilities.push(id)
       continue
     }
-    descriptors.push(build(resolvedSettings))
+    descriptors.push(builder.build(resolvedSettings))
+  }
+
+  // Give her a way to turn a disabled capability back on (with the user's ok).
+  if (offCapabilities.length) {
+    descriptors.push(buildSetToolEnabledDescriptor(offCapabilities))
   }
 
   return descriptors
