@@ -11,12 +11,15 @@ import {
   segmentStageDirections,
 } from '../src/features/pet/performance.ts'
 
-test('keeps stage directions in display but strips them from spoken content', () => {
+test('strips recognized asides from display, keeps unrecognized ones, speaks neither', () => {
   const parsed = parseAssistantPerformanceContent(
     '（开心地整理资料）已经生成《StackChan组装要点.txt》放在桌面啦～（操作音效）',
   )
 
-  assert.equal(parsed.displayContent, '（开心地整理资料）已经生成《StackChan组装要点.txt》放在桌面啦～（操作音效）')
+  // 开心地整理资料 is a recognized expression — gone from display (drives her
+  // face). 操作音效 isn't recognized, so it stays as a styled aside. Neither is
+  // spoken.
+  assert.equal(parsed.displayContent, '已经生成《StackChan组装要点.txt》放在桌面啦～（操作音效）')
   assert.equal(parsed.spokenContent, '已经生成《StackChan组装要点.txt》放在桌面啦～')
   assert.deepEqual(parsed.stageDirections, ['开心地整理资料', '操作音效'])
   assert.equal(parsed.cues.length, 1)
@@ -28,7 +31,8 @@ test('keeps stage directions in display but strips them from spoken content', ()
 test('keeps multiple recognized performance cues in reply order', () => {
   const parsed = parseAssistantPerformanceContent('（查找资料）（轻轻点头）我找到了。')
 
-  assert.equal(parsed.displayContent, '（查找资料）（轻轻点头）我找到了。')
+  // Both are recognized expressions — stripped from display, driving her avatar.
+  assert.equal(parsed.displayContent, '我找到了。')
   assert.equal(parsed.spokenContent, '我找到了。')
   assert.equal(parsed.cues.length, 2)
   assert.equal(parsed.cues[0]?.accentStyle, 'search')
@@ -64,10 +68,10 @@ test('keeps an unrecognized aside visible but never speaks it', () => {
   assert.deepEqual(parsed.stageDirections, ['突然蹦出一只企鹅'])
 })
 
-test('a bright-eyes aside stays visible, drives a happy face, and is not spoken', () => {
+test('（眼睛亮了）is just an expression — drives a happy face, shown and spoken nowhere', () => {
   const parsed = parseAssistantPerformanceContent('（眼睛亮了）这算不算变相表白呀？')
 
-  assert.equal(parsed.displayContent, '（眼睛亮了）这算不算变相表白呀？')
+  assert.equal(parsed.displayContent, '这算不算变相表白呀？')
   assert.equal(parsed.spokenContent, '这算不算变相表白呀？')
   assert.deepEqual(parsed.stageDirections, ['眼睛亮了'])
   assert.equal(parsed.cues.length, 1)
@@ -91,13 +95,21 @@ test('allows silent-only stage directions without forcing spoken fallback text',
   assert.deepEqual(parsed.stageDirections, ['操作音效'])
 })
 
-test('segmentStageDirections marks asides for styling and leaves notes as text', () => {
-  const segments = segmentStageDirections('（眼睛亮了）你好呀（注：稍后）')
+test('segmentStageDirections styles unrecognized asides and leaves notes as text', () => {
+  const segments = segmentStageDirections('（突然蹦出一只企鹅）你好呀（注：稍后）')
 
   assert.deepEqual(segments, [
-    { stage: true, text: '（眼睛亮了）' },
+    { stage: true, text: '（突然蹦出一只企鹅）' },
     { stage: false, text: '你好呀（注：稍后）' },
   ])
+})
+
+test('segmentStageDirections never styles a recognized expression as an aside', () => {
+  // Recognized asides are stripped from display upstream; the renderer agrees by
+  // not treating them as visible asides either.
+  const segments = segmentStageDirections('（眼睛亮了）你好呀')
+
+  assert.deepEqual(segments, [{ stage: false, text: '（眼睛亮了）你好呀' }])
 })
 
 test('StageDirectionStreamFilter strips complete asides from the speech stream', () => {

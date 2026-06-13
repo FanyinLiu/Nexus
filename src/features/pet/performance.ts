@@ -514,13 +514,17 @@ type StageDirectionSplit = {
   stageDirections: string[]
 }
 
-// Treat every short bracketed aside (（…）, (...), 【…】) as a stage direction by
-// SHAPE, not by a recognised-keyword whitelist. That is what lets a novel cue
-// the model invents — （眼睛亮了）, （耳朵动了动） — be handled the same as known
-// ones: KEPT in the displayed reply (the bubble styles it as an aside), STRIPPED
-// from speech (she never reads an aside aloud), and — when we recognise it —
-// driving her avatar. Nothing leaks as raw text, nothing gets spoken, and no one
-// has to add phrases to a list one-by-one.
+// Detect short bracketed asides (（…）, (...), 【…】) by SHAPE, not by a keyword
+// whitelist — except colon brackets (注：/语音播报：), which are structured
+// content and left alone. Then split two ways:
+//   • RECOGNISED asides (we have a face cue) are "just an expression": they drive
+//     her avatar and are stripped from BOTH display and speech, exactly like
+//     before. （眼睛亮了） brightens her face; it is not shown and not spoken.
+//   • UNRECOGNISED asides (no cue) are kept in the displayed reply so the bubble
+//     can style them as intentional script asides instead of letting them read
+//     like leaked text — but they are still stripped from speech.
+// Either way nothing leaks as raw text and nothing gets spoken, and a novel cue
+// the model invents is handled by shape without anyone editing a list.
 function extractStageDirections(content: string): StageDirectionSplit {
   const matches: ExtractedStageDirection[] = []
 
@@ -543,41 +547,43 @@ function extractStageDirections(content: string): StageDirectionSplit {
     })
   }
 
-  // Speech never reads asides aloud — drop every detected stage direction.
-  let cursor = 0
-  const spokenSegments: string[] = []
-
-  for (const match of matches) {
-    if (match.start > cursor) {
-      spokenSegments.push(content.slice(cursor, match.start))
-    }
-    cursor = match.end
-  }
-
-  if (cursor < content.length) {
-    spokenSegments.push(content.slice(cursor))
-  }
-
-  const cues = matches
-    .map((match) => match.plan)
-    .filter((plan): plan is PetPerformancePlan => Boolean(plan))
-    .slice(0, MAX_PERFORMANCE_CUES)
-
   return {
-    keptContent: normalizeDisplayContent(content),
-    strippedContent: normalizeDisplayContent(spokenSegments.join('')),
-    cue: cues[0] ?? null,
-    cues,
+    // Display keeps unrecognised asides (for styling), strips recognised ones.
+    keptContent: normalizeDisplayContent(removeMatches(content, matches.filter((match) => match.plan))),
+    // Speech reads no aside aloud — strip them all.
+    strippedContent: normalizeDisplayContent(removeMatches(content, matches)),
+    cue: matches.find((match) => match.plan)?.plan ?? null,
+    cues: matches
+      .map((match) => match.plan)
+      .filter((plan): plan is PetPerformancePlan => Boolean(plan))
+      .slice(0, MAX_PERFORMANCE_CUES),
     stageDirections: matches.map((match) => match.stageDirection),
   }
+}
+
+// Cut the given (ordered, non-overlapping) match ranges out of the content.
+function removeMatches(content: string, ranges: ExtractedStageDirection[]) {
+  let cursor = 0
+  const segments: string[] = []
+  for (const range of ranges) {
+    if (range.start > cursor) {
+      segments.push(content.slice(cursor, range.start))
+    }
+    cursor = range.end
+  }
+  if (cursor < content.length) {
+    segments.push(content.slice(cursor))
+  }
+  return segments.join('')
 }
 
 export type DisplaySegment = { stage: boolean; text: string }
 
 // Split displayed assistant text into normal spans and stage-direction spans so
-// the bubble can render the asides in a muted, intentional style instead of
-// letting them read like leaked text. Uses the SAME shape rule as the speech
-// strip, so display and voice always agree on what counts as an aside.
+// the bubble can render UNRECOGNISED asides in a muted, intentional style instead
+// of letting them read like leaked text. Recognised asides are pure expressions —
+// they were already stripped from the displayed content — so they are skipped
+// here too, keeping the renderer in agreement with the parser.
 export function segmentStageDirections(content: string): DisplaySegment[] {
   const segments: DisplaySegment[] = []
 
@@ -589,7 +595,7 @@ export function segmentStageDirections(content: string): DisplaySegment[] {
     const fullMatch = match[0]
     const matchIndex = match.index ?? -1
 
-    if (!inner || !fullMatch || matchIndex < 0 || isStructuredBracket(inner)) {
+    if (!inner || !fullMatch || matchIndex < 0 || isStructuredBracket(inner) || resolvePerformancePlan(inner)) {
       continue
     }
 
