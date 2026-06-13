@@ -449,6 +449,41 @@ export function combineVoiceInstructions(base: string | undefined, emotionStyle:
   return [base?.trim(), emotionStyle.trim()].filter(Boolean).join(' ')
 }
 
+// Pace multiplier per mood. Unlike the style instruction (instruction-aware
+// providers only), rate/speed is universal — every provider, including the
+// free local sherpa TTS, honours it. So this is the emotion channel that
+// reaches her voice EVERYWHERE: she actually speaks quicker when excited,
+// slower when drowsy. Same mood source as the style and the avatar, so pace,
+// tone and expression all agree. Multipliers stay gentle (±15%) — a nudge,
+// not a caricature.
+const VOICE_RATE_BY_MOOD: Record<PetMood, number> = {
+  idle: 1,
+  thinking: 0.95,
+  happy: 1.04,
+  sleepy: 0.85,
+  surprised: 1.05,
+  confused: 0.95,
+  embarrassed: 0.97,
+  excited: 1.12,
+  affectionate: 0.95,
+  proud: 1,
+  curious: 1.03,
+  worried: 0.95,
+  playful: 1.08,
+}
+
+/**
+ * The effective speech rate for how she should sound right now: her configured
+ * base rate nudged by her current mood. Clamped to the provider-safe 0.5–2.0
+ * band. Universal — lands on every TTS provider, not just instruction-aware
+ * ones.
+ */
+export function emotionToVoiceRate(state: EmotionState, baseRate: number): number {
+  const base = Number.isFinite(baseRate) ? baseRate : 1
+  const scaled = base * VOICE_RATE_BY_MOOD[emotionToPetMood(state)]
+  return Math.max(0.5, Math.min(2, Number(scaled.toFixed(3))))
+}
+
 // ── Emotion-driven proactivity ───────────────────────────────────────────────
 //
 // The autonomy decision engine used to see emotion as a bare number line

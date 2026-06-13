@@ -12,6 +12,7 @@ import type {
 } from '../../types'
 import type { VoiceActivityDetector } from '../../features/hearing/browserVad.ts'
 import type { MainProcessVadController } from '../../features/hearing/mainProcessVad.ts'
+import type { EmotionState } from '../../features/autonomy/emotionModel.ts'
 
 export type ApiRecordingSession = {
   mediaRecorder: MediaRecorder
@@ -124,12 +125,13 @@ export type UseVoiceContext = {
    */
   applyVoiceEmotion?: (label: VoiceEmotionLabel) => void
   /**
-   * Returns a TTS style instruction for how she should sound right now,
-   * derived from her live emotion (''=neutral, no override). Wired through a
-   * ref because autonomy — which owns the emotion state — is created after
-   * useVoice. Combined into speechOutputInstructions at the speak entry.
+   * Returns her live emotion state, or undefined when unavailable. The speak
+   * entry derives both the TTS style instruction (instruction-aware providers)
+   * and the pace multiplier (universal) from it, so voice and avatar express
+   * the same mood. Wired through a ref because autonomy — which owns the
+   * emotion state — is created after useVoice.
    */
-  getEmotionVoiceStyle?: () => string
+  getEmotionSnapshot?: () => EmotionState | undefined
 }
 
 export type UseVoiceSnapshot = {
