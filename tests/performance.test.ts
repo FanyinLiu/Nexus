@@ -59,6 +59,16 @@ test('preserves unknown bracket text in spoken content', () => {
   assert.deepEqual(parsed.stageDirections, [])
 })
 
+test('strips bright-eyes stage directions and brightens her expression', () => {
+  const parsed = parseAssistantPerformanceContent('（眼睛亮了）这算不算变相表白呀？')
+
+  assert.equal(parsed.displayContent, '这算不算变相表白呀？')
+  assert.equal(parsed.spokenContent, '这算不算变相表白呀？')
+  assert.deepEqual(parsed.stageDirections, ['眼睛亮了'])
+  assert.equal(parsed.cues.length, 1)
+  assert.equal(parsed.cues[0]?.expressionSlot, 'happy')
+})
+
 test('allows silent-only stage directions without forcing spoken fallback text', () => {
   const parsed = parseAssistantPerformanceContent('（操作音效）')
 
