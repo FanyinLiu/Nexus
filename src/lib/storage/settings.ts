@@ -126,12 +126,16 @@ const defaultSettings: AppSettings = {
   screenVlmBaseUrl: '',
   screenVlmApiKey: '',
   screenVlmModel: '',
-  toolWebSearchEnabled: false,
-  toolWebSearchProviderId: 'duckduckgo',
+  // Web search + weather on by default so the companion can answer factual and
+  // weather questions out of the box. Bing is the default provider: its keyless
+  // RSS endpoint is more reliable and more broadly reachable than DuckDuckGo's
+  // scraped HTML (which frequently returns a bot-detection challenge).
+  toolWebSearchEnabled: true,
+  toolWebSearchProviderId: 'bing',
   toolWebSearchApiBaseUrl: '',
   toolWebSearchApiKey: '',
   toolWebSearchFallbackToBing: true,
-  toolWeatherEnabled: false,
+  toolWeatherEnabled: true,
   toolWeatherDefaultLocation: '',
   toolOpenExternalEnabled: false,
   toolOpenExternalRequiresConfirmation: true,
