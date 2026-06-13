@@ -254,6 +254,11 @@ export type RunToolCallLoopOptions = {
    * the result card in chat history and the pet dialog bubble.
    */
   onBuiltInToolResult?: BuiltInToolExecutionCallbacks['onBuiltInToolResult']
+  /**
+   * Lets a `set_tool_enabled` call flip a disabled built-in capability on
+   * (persisted by the host via applySettingsUpdate; takes effect next turn).
+   */
+  onSetToolEnabled?: BuiltInToolExecutionCallbacks['onSetToolEnabled']
 }
 
 /**
@@ -391,6 +396,7 @@ export async function runToolCallLoop(
   const settings = options.settings ?? null
   const builtInCallbacks: BuiltInToolExecutionCallbacks = {
     onBuiltInToolResult: options.onBuiltInToolResult,
+    onSetToolEnabled: options.onSetToolEnabled,
   }
   let response = initialResponse
   let round = 0

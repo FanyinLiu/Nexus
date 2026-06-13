@@ -6,6 +6,7 @@ import {
   extractSearchQuery,
 } from '../src/features/tools/extractors.ts'
 import { executeBuiltInToolByName } from '../src/features/tools/builtInToolExecutor.ts'
+import { buildBuiltInToolDescriptors } from '../src/features/tools/builtInToolSchemas.ts'
 import { resolveBuiltInToolPermissionLevel } from '../src/features/tools/permissions.ts'
 import { executeBuiltInTool } from '../src/features/tools/registry.ts'
 
@@ -134,4 +135,52 @@ test('built-in open_external rejects private and reserved URL targets before IPC
   }
 
   assert.deepEqual(opened, [])
+})
+
+test('set_tool_enabled is offered only when a capability is off, and names it', () => {
+  const allOn = buildBuiltInToolDescriptors({
+    toolWebSearchEnabled: true,
+    toolWeatherEnabled: true,
+    toolOpenExternalEnabled: true,
+  })
+  assert.equal(allOn.find((tool) => tool.name === 'set_tool_enabled'), undefined)
+
+  const weatherOff = buildBuiltInToolDescriptors({
+    toolWebSearchEnabled: true,
+    toolWeatherEnabled: false,
+    toolOpenExternalEnabled: true,
+  })
+  const meta = weatherOff.find((tool) => tool.name === 'set_tool_enabled')
+  assert.ok(meta, 'set_tool_enabled should appear when weather is off')
+  assert.match(meta.description, /weather/)
+  assert.deepEqual(meta.inputSchema.properties?.capability?.enum, ['weather'])
+  // The disabled tool itself is not offered for direct use.
+  assert.equal(weatherOff.find((tool) => tool.name === 'weather'), undefined)
+})
+
+test('set_tool_enabled flips the named capability on via the callback', async () => {
+  const enabled: string[] = []
+  const response = await executeBuiltInToolByName(
+    'set_tool_enabled',
+    JSON.stringify({ capability: 'weather' }),
+    { toolWeatherEnabled: false },
+    { onSetToolEnabled: (capability) => { enabled.push(capability) } },
+  )
+
+  assert.deepEqual(enabled, ['weather'])
+  assert.match(response, /"enabled":true/)
+  assert.match(response, /"capability":"weather"/)
+})
+
+test('set_tool_enabled rejects an unknown capability', async () => {
+  let called = false
+  const response = await executeBuiltInToolByName(
+    'set_tool_enabled',
+    JSON.stringify({ capability: 'delete_everything' }),
+    {},
+    { onSetToolEnabled: () => { called = true } },
+  )
+
+  assert.equal(called, false)
+  assert.match(response, /"error"/)
 })

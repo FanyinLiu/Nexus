@@ -146,6 +146,12 @@ export type AssistantReplyRequestOptions = {
    */
   onBuiltInToolResult?: (result: BuiltInToolResult) => void
   /**
+   * Fired when a `set_tool_enabled` call asks to turn a disabled built-in
+   * capability back on. Host persists it via applySettingsUpdate; the tool
+   * becomes available on the next turn.
+   */
+  onSetToolEnabled?: (capability: string) => Promise<void> | void
+  /**
    * Pre-resolved callback hints — memories the dream cycle queued for
    * resurfacing. Caller (assistantReply) loads loadCallbackQueue() and
    * resolves each id against the current memory list. The builder writes

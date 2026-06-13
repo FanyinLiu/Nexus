@@ -349,6 +349,14 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           autoSkillContext,
           triggeredLorebookEntries,
           onBuiltInToolResult: handleBuiltInToolResult,
+          onSetToolEnabled: async (capability) => {
+            await dependencies.ctx.applySettingsUpdate?.((current) => {
+              if (capability === 'web_search') return { ...current, toolWebSearchEnabled: true }
+              if (capability === 'weather') return { ...current, toolWeatherEnabled: true }
+              if (capability === 'open_external') return { ...current, toolOpenExternalEnabled: true }
+              return current
+            })
+          },
           // Current emotion/relationship/rhythm awareness — the latest values
           // come from useAutonomyController via a ref wrapper. These getters
           // are wired up in useAppController; when unset they return an empty
