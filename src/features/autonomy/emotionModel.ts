@@ -375,3 +375,35 @@ export function formatEmotionForPrompt(state: EmotionState): string {
   if (toneWords.length === 0) return ''
   return `Current emotional state: ${toneWords.join(', ')}. Let this emotion come through naturally in your reply.`
 }
+
+// ── Emotion-driven proactivity ───────────────────────────────────────────────
+//
+// The autonomy decision engine used to see emotion as a bare number line
+// (energy=0.50 warmth=0.50 ...) with no guidance — pure narrator context.
+// resolveProactiveLean translates the four axes into ONE actionable leaning
+// that colors the character of a proactive moment, and at the margins nudges
+// the speak/stay-quiet boundary. It never overrides upstream suppression
+// (quiet hours, away/locked, cost caps still gate everything): a 'rest_quiet'
+// lean only makes silence more likely when she's already deciding, and a
+// 'check_in_gently' lean only shapes HOW she reaches out when reaching out is
+// already appropriate. Restraint-first: worry and tiredness bias toward
+// gentleness/quiet; only a genuinely bright state leans outward.
+
+export type ProactiveLean =
+  | 'check_in_gently'
+  | 'rest_quiet'
+  | 'playful_share'
+  | 'reach_out_warmly'
+  | 'neutral'
+
+export function resolveProactiveLean(state: EmotionState): ProactiveLean {
+  // Worry is the most action-relevant: a gentle check-in takes precedence.
+  if (state.concern > 0.6) return 'check_in_gently'
+  // Tired (and not worried) → prefer quiet; don't manufacture energy.
+  if (state.energy < 0.3) return 'rest_quiet'
+  // Bright and inquisitive, with nothing weighing on her → playful share.
+  if (state.energy > 0.65 && state.curiosity > 0.65 && state.concern < 0.4) return 'playful_share'
+  // Tender and not flat → if she does reach out, do it warmly.
+  if (state.warmth > 0.7 && state.energy >= 0.4 && state.concern < 0.4) return 'reach_out_warmly'
+  return 'neutral'
+}

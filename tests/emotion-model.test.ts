@@ -10,6 +10,7 @@ import {
   createIdleArcTracker,
   classifyMessageSignals,
   createDefaultEmotionState,
+  resolveProactiveLean,
   decayEmotion,
   emotionToPetMood,
   formatEmotionForPrompt,
@@ -286,4 +287,27 @@ test('userMoodReadToEmotionSignal maps clear reads and stays silent on mild/neut
   assert.equal(userMoodReadToEmotionSignal('sad', 3), null)
   assert.equal(userMoodReadToEmotionSignal('neutral', 9), null)
   assert.equal(userMoodReadToEmotionSignal('calm', 9), null)
+})
+
+// ── Emotion-driven proactivity lean ──────────────────────────────────────────
+
+test('resolveProactiveLean: worry takes precedence over a bright state', () => {
+  // Bright energy+curiosity would be playful, but high concern wins.
+  assert.equal(resolveProactiveLean(withState({ energy: 0.8, curiosity: 0.8, concern: 0.7 })), 'check_in_gently')
+})
+
+test('resolveProactiveLean: tired (and not worried) leans toward quiet', () => {
+  assert.equal(resolveProactiveLean(withState({ energy: 0.2, concern: 0.3 })), 'rest_quiet')
+})
+
+test('resolveProactiveLean: bright + curious + unburdened → playful', () => {
+  assert.equal(resolveProactiveLean(withState({ energy: 0.7, curiosity: 0.7, concern: 0.2 })), 'playful_share')
+})
+
+test('resolveProactiveLean: tender and not flat → reach out warmly', () => {
+  assert.equal(resolveProactiveLean(withState({ warmth: 0.75, energy: 0.5, curiosity: 0.4, concern: 0.2 })), 'reach_out_warmly')
+})
+
+test('resolveProactiveLean: a calm middling state stays neutral (no extra prompt line)', () => {
+  assert.equal(resolveProactiveLean(withState({ energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 })), 'neutral')
 })

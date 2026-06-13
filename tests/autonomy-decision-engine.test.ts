@@ -305,3 +305,25 @@ test('buildDecisionPrompt: idle_motion contract appears only when allowIdleMotio
   const withFlag = buildDecisionPrompt(makeContext(), makePersona(), { allowIdleMotion: true })
   assert.ok(withFlag[0].content.includes('idle_motion'))
 })
+
+test('buildDecisionPrompt surfaces the emotion-driven proactivity lean in the user message', () => {
+  // High concern → the gentle check-in lean must appear alongside the numbers.
+  const worried = buildDecisionPrompt(
+    makeContext({ emotion: { energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.7 } }),
+    makePersona(),
+  )
+  // Default locale in these fixtures is zh-CN; the lean line is prefixed with
+  // "→ 倾向" (distinct from the deep-focus "应倾向 silent" heuristic).
+  const userMsg = worried.filter((m) => m.role === 'user').at(-1)?.content ?? ''
+  assert.match(userMsg, /concern=0\.70/)
+  assert.match(userMsg, /→ 倾向：今天有点惦记对方/)
+
+  // A calm middling state stays neutral — numbers only, no lean line.
+  const calm = buildDecisionPrompt(
+    makeContext({ emotion: { energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 } }),
+    makePersona(),
+  )
+  const calmMsg = calm.filter((m) => m.role === 'user').at(-1)?.content ?? ''
+  assert.match(calmMsg, /concern=0\.20/)
+  assert.doesNotMatch(calmMsg, /→ 倾向/)
+})

@@ -26,6 +26,7 @@ import {
 } from './prompts/index.ts'
 import { formatSubDimensionsForPrompt } from '../relationshipDimensions.ts'
 import { analyzeRecentReplies } from './repetitionGuard.ts'
+import { resolveProactiveLean } from '../emotionModel.ts'
 
 export interface DecisionPromptHints {
   /**
@@ -211,10 +212,12 @@ function formatPersonaSystemPrompt(
 
 // ── Context → text ─────────────────────────────────────────────────────────
 
-function formatEmotion(emotion: AutonomyContextV2['emotion']): string {
+function formatEmotion(emotion: AutonomyContextV2['emotion'], strings: DecisionPromptStrings): string {
   const { energy, warmth, curiosity, concern } = emotion
   const fmt = (v: number) => v.toFixed(2)
-  return `energy=${fmt(energy)} warmth=${fmt(warmth)} curiosity=${fmt(curiosity)} concern=${fmt(concern)}`
+  const numbers = `energy=${fmt(energy)} warmth=${fmt(warmth)} curiosity=${fmt(curiosity)} concern=${fmt(concern)}`
+  const lean = strings.proactiveLean[resolveProactiveLean(emotion)]
+  return lean ? `${numbers}\n${lean}` : numbers
 }
 
 function formatContextSections(
@@ -254,7 +257,7 @@ function formatContextSections(
   sections.push(
     strings.sectionEngineSelf({
       phase: context.phase,
-      emotionLine: formatEmotion(context.emotion),
+      emotionLine: formatEmotion(context.emotion, strings),
       relLine: strings.relationshipLevel(context.relationshipLevel),
       relScore: context.relationshipScore,
       streak: context.streak,

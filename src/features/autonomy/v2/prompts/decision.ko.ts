@@ -87,6 +87,14 @@ line commentary — will be discarded and treated as silent. So don't.`,
     + `감정: ${emotionLine}\n`
     + `관계: ${relLine} (score ${relScore}/100, ${streak}일 연속, 누적 ${daysInteracted}일)`,
 
+  proactiveLean: {
+    check_in_gently: '→ 성향: 오늘은 상대가 조금 마음에 걸려요. 타이밍이 자연스러우면 살며시 안부를 물어도 좋아요 — 부드럽게, 다그치지 말고.',
+    rest_quiet: '→ 성향: 지금은 기운이 없어 조용히 있고 싶어요. 이번 틱은 정말 필요한 일이 아니면 말하지 않는 쪽으로.',
+    playful_share: '→ 성향: 가볍고 호기심이 있어요. 자연스러운 계기가 있으면 장난스럽게 한마디 나누거나 작은 생각을 꺼내도 좋아요.',
+    reach_out_warmly: '→ 성향: 마음이 따뜻해요. 말을 건다면 그 가까움이 묻어나게 — 더 가깝게, 더 부드럽게.',
+    neutral: '',
+  },
+
   sectionRecentChatHeader: '## 최근 대화 (오래된 순)',
   recentChatUserLabel: '주인',
   recentChatAssistantLabel: '당신',

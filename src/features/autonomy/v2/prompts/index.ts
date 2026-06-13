@@ -57,6 +57,13 @@ export interface DecisionPromptStrings {
     daysInteracted: number
   }) => string
 
+  /**
+   * Actionable proactivity leaning derived from the emotion axes. Appended to
+   * the emotion line so the decision model knows what the numbers mean for
+   * how/whether to reach out. 'neutral' is the empty string (no extra line).
+   */
+  proactiveLean: Record<import('../../emotionModel.ts').ProactiveLean, string>
+
   sectionRecentChatHeader: string
   recentChatUserLabel: string
   recentChatAssistantLabel: string
