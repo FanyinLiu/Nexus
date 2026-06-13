@@ -86,6 +86,21 @@ test('a labeled bracket with a colon is content, not a stage direction', () => {
   assert.deepEqual(parsed.stageDirections, [])
 })
 
+test('ASCII brackets and markdown links are content, never asides', () => {
+  // Only full-width （…）/【…】 are stage directions. ASCII [ ] / ( ) show up in
+  // code, notes, and markdown links and must stay in BOTH display and speech.
+  const note = parseAssistantPerformanceContent('我把它叫做[重要任务]好吗')
+  assert.equal(note.displayContent, '我把它叫做[重要任务]好吗')
+  assert.equal(note.spokenContent, '我把它叫做[重要任务]好吗')
+  assert.deepEqual(note.stageDirections, [])
+
+  const link = parseAssistantPerformanceContent('推荐看[文档](https://example.com/d)很有用')
+  assert.equal(link.spokenContent, '推荐看[文档](https://example.com/d)很有用')
+  assert.deepEqual(segmentStageDirections(link.displayContent), [
+    { stage: false, text: '推荐看[文档](https://example.com/d)很有用' },
+  ])
+})
+
 test('allows silent-only stage directions without forcing spoken fallback text', () => {
   const parsed = parseAssistantPerformanceContent('（操作音效）')
 

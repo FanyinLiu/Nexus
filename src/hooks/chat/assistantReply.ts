@@ -324,7 +324,6 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
 
             if (streamingTtsController) {
               const spokenDelta = stageDirectionSpeechFilter.push(visibleDelta)
-                + (done ? stageDirectionSpeechFilter.flush() : '')
               if (spokenDelta) {
                 streamingTtsController.pushDelta(spokenDelta)
               }
@@ -332,6 +331,12 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           }
 
           if (done && streamingTtsController) {
+            // Release any aside the speech filter is still holding — even when
+            // this final delta filtered to empty, so held text isn't lost from TTS.
+            const spokenTail = stageDirectionSpeechFilter.flush()
+            if (spokenTail) {
+              streamingTtsController.pushDelta(spokenTail)
+            }
             // Per-LLM-round flush, not finalize: runToolCallLoop may fire
             // another stream after a tool result, and its deltas also need
             // to reach TTS. finalize() runs once at the end of the turn

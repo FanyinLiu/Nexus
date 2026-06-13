@@ -184,3 +184,26 @@ test('set_tool_enabled rejects an unknown capability', async () => {
   assert.equal(called, false)
   assert.match(response, /"error"/)
 })
+
+test('open_external cannot be self-enabled by the model (browser-opening is user-only)', () => {
+  // Even when open_external is off, set_tool_enabled does not offer it.
+  const descriptors = buildBuiltInToolDescriptors({
+    toolWebSearchEnabled: true,
+    toolWeatherEnabled: true,
+    toolOpenExternalEnabled: false,
+  })
+  assert.equal(descriptors.find((tool) => tool.name === 'set_tool_enabled'), undefined)
+})
+
+test('set_tool_enabled refuses open_external even if the model asks directly', async () => {
+  let called = false
+  const response = await executeBuiltInToolByName(
+    'set_tool_enabled',
+    JSON.stringify({ capability: 'open_external' }),
+    { toolOpenExternalEnabled: false },
+    { onSetToolEnabled: () => { called = true } },
+  )
+
+  assert.equal(called, false)
+  assert.match(response, /"error"/)
+})
