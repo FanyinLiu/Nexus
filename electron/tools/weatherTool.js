@@ -636,7 +636,7 @@ export async function lookupWeatherByLocation(location, fallbackLocation = '') {
     )
 
     if (!geocodingResponse.ok) {
-      throw new Error(`天气定位失败（状态码：${geocodingResponse.status}）。`)
+      throw new Error(`天气定位没成功，服务那边回了个 ${geocodingResponse.status}。`)
     }
 
     const geocodingData = await readJsonSafe(geocodingResponse)
@@ -674,7 +674,7 @@ export async function lookupWeatherByLocation(location, fallbackLocation = '') {
   )
 
   if (!forecastResponse.ok) {
-    throw new Error(`天气查询失败（状态码：${forecastResponse.status}）。`)
+    throw new Error(`天气查不出来，服务那边回了个 ${forecastResponse.status}。`)
   }
 
   const forecastData = await readJsonSafe(forecastResponse)
