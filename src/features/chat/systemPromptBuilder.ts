@@ -19,6 +19,8 @@ import { buildLorebookSection } from './lorebookInjection.ts'
 import { DEFAULT_PERSONA_PROFILE_ID, type LoadedPersona } from '../autonomy/v2/personaTypes.ts'
 import { getApiProviderPreset } from '../models/index.ts'
 import { formatDesktopContext } from '../context/desktopContext.ts'
+import { classifyActivity } from '../autonomy/v2/contextGatherer.ts'
+import { formatActivityToneGuidance } from '../autonomy/activityTone.ts'
 import { formatNarrativeForPrompt } from '../memory/narrativeMemory.ts'
 import { getChatPromptStrings } from './prompts/index.ts'
 import type { BuiltInToolResult } from '../tools/toolTypes'
@@ -322,6 +324,11 @@ export async function buildSystemPrompt(
   const desktopContextSection = settings.contextAwarenessEnabled
     ? formatDesktopContext(options.desktopContext)
     : ''
+  // Faint, subordinate tone hint from what the user is mostly doing. Reuses the
+  // active-window title already flowing in via desktopContext; no extra capture.
+  const activityToneSection = settings.contextAwarenessEnabled
+    ? formatActivityToneGuidance(classifyActivity(options.desktopContext?.activeWindowTitle ?? null))
+    : ''
   const gameContextSection = options.gameContext ?? ''
   const intentContextSection = options.intentContext
     ? prompts.intentContextHeader(options.intentContext)
@@ -347,6 +354,7 @@ export async function buildSystemPrompt(
     headerText,
     emotionSection,
     rhythmSection,
+    activityToneSection,
     affectGuidanceSection,
     repairGuidanceSection,
     crisisGuidanceSection,
