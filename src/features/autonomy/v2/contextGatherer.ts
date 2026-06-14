@@ -45,14 +45,15 @@ export type ActivityClass =
   | 'unknown'
 
 const ACTIVITY_PATTERNS: Array<{ class: ActivityClass; pattern: RegExp }> = [
+  // Coding first — IDE names are unambiguous.
   {
     class: 'coding',
     pattern: /Visual Studio|VS ?Code|IntelliJ|WebStorm|PyCharm|Sublime Text|Cursor|Android Studio|Xcode|CLion|GoLand|RustRover|Terminal|iTerm|Warp|Alacritty|Neovim|Vim|Emacs/i,
   },
-  {
-    class: 'browsing',
-    pattern: /Chrome|Firefox|Edge|Safari|Opera|Brave|Arc|Vivaldi/i,
-  },
+  // Specific activities BEFORE browsing — browser window titles often contain
+  // both the site name and the browser name (e.g. "YouTube - Chrome").
+  // Checking media/gaming/communication/documents first ensures the specific
+  // activity wins over the generic "browsing" fallback.
   {
     class: 'media',
     pattern: /Spotify|YouTube|Netflix|Bilibili|VLC|PotPlayer|网易云|QQ音乐|Apple Music/i,
@@ -68,6 +69,11 @@ const ACTIVITY_PATTERNS: Array<{ class: ActivityClass; pattern: RegExp }> = [
   {
     class: 'documents',
     pattern: /Word|Excel|PowerPoint|Notion|Obsidian|Typora|WPS|OneNote|Google Docs|Figma/i,
+  },
+  // Browsing last — generic fallback for browser windows with no specific match.
+  {
+    class: 'browsing',
+    pattern: /Chrome|Firefox|Edge|Safari|Opera|Brave|Arc|Vivaldi/i,
   },
 ]
 
