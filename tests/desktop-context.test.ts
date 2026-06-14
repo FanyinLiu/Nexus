@@ -41,6 +41,17 @@ test('formatDesktopContext quotes captured observations before adding them to th
   assert.doesNotMatch(prompt, /data:image\/png;base64/)
 })
 
+test('formatDesktopContext tells the companion to stay perceptive without announcing it watches', () => {
+  const prompt = formatDesktopContext({
+    capturedAt: '2026-06-04T17:00:00.000Z',
+    activeWindowTitle: 'main.ts — Visual Studio Code',
+  })
+
+  // Quiet awareness that colors replies, not a surveillance announcement (silent-emotion principle).
+  assert.match(prompt, /Never announce or draw attention/)
+  assert.match(prompt, /do not say things like/)
+})
+
 test('formatDesktopContext returns empty text when every observation is blank', () => {
   assert.equal(formatDesktopContext(null), '')
   assert.equal(formatDesktopContext(undefined), '')

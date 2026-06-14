@@ -1,3 +1,5 @@
+import { shouldSkipOcrForFrame } from './frameTextHeuristic.ts'
+
 type ScreenOcrWorker = {
   recognize: (image: string) => Promise<{
     data: {
@@ -95,6 +97,11 @@ async function ensureScreenOcrWorker(language: string) {
 export async function recognizeScreenText(imageDataUrl: string, language = DEFAULT_SCREEN_OCR_LANGUAGE) {
   const normalizedImageDataUrl = String(imageDataUrl ?? '').trim()
   if (!normalizedImageDataUrl) return ''
+
+  // Skip the (expensive) OCR pass for near-uniform frames — a blank/solid
+  // desktop or a dark screen has no text worth reading. Fails open: anything
+  // that can't be analysed falls through to a real recognition pass.
+  if (await shouldSkipOcrForFrame(normalizedImageDataUrl)) return ''
 
   const worker = await ensureScreenOcrWorker(language)
   const result = await worker.recognize(normalizedImageDataUrl)

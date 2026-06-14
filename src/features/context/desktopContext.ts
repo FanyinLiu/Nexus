@@ -83,7 +83,11 @@ export function formatDesktopContext(snapshot: DesktopContextSnapshot | null | u
   }
 
   return [
-    'Below is supplementary desktop context. Use it only when naturally relevant; do not force a reference. Reply in the user\'s language.',
+    'Below is supplementary desktop context — a quiet sense of what the user is doing right now. '
+      + 'Let it subtly shape your replies: be perceptive when it genuinely fits, the way someone in the room would pick up on what is going on. '
+      + 'Never announce or draw attention to the fact that you can see their screen, window, or clipboard (do not say things like "I see you have X open") — '
+      + 'just let the awareness color your tone and what you bring up, naturally. '
+      + 'If it is not relevant, ignore it completely; never force a reference. Reply in the user\'s language.',
     sections.join('\n\n'),
   ].join('\n\n')
 }
