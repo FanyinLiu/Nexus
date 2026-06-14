@@ -56,6 +56,14 @@ export function useConnectionTests({
   }
 
   function renderTestResult(capability: ServiceConnectionCapability): ReactNode {
+    if (testingTarget === capability) {
+      return createElement('div', {
+        className: 'settings-test-result is-loading',
+        role: 'status',
+        'aria-live': 'polite',
+      }, '正在连接，请稍等…')
+    }
+
     const result = testResults[capability]
     if (!result) return null
 
