@@ -55,6 +55,13 @@ test('classifyActivity recognises common foreground app signatures', () => {
   assert.equal(classifyActivity(null), 'unknown')
 })
 
+test('classifyActivity prefers specific activity over browser name in title', () => {
+  assert.equal(classifyActivity('YouTube - Google Chrome'), 'media')
+  assert.equal(classifyActivity('Discord — Mozilla Firefox'), 'communication')
+  assert.equal(classifyActivity('Google Docs - Brave'), 'documents')
+  assert.equal(classifyActivity('reddit — Google Chrome'), 'browsing')
+})
+
 test('isUserDeepFocused respects idle ticks as the soft exit', () => {
   // Coding + active → deep focused
   assert.equal(isUserDeepFocused('coding', 0, 'VS Code'), true)
