@@ -11,11 +11,11 @@ import type { UiLanguage } from '../src/types/app.ts'
 
 const LOCALES: UiLanguage[] = ['zh-CN', 'zh-TW', 'en-US', 'ja', 'ko']
 
-test('every locale has 12 morning open questions and 4 go-deeper followups', () => {
+test('every locale has 12 morning open questions and 8 go-deeper followups', () => {
   for (const locale of LOCALES) {
     const t = getBracketTemplates(locale)
     assert.equal(t.morningOpenQuestions.length, 12, `${locale} morning count`)
-    assert.equal(t.eveningGoDeeperPool.length, 4, `${locale} go-deeper count`)
+    assert.equal(t.eveningGoDeeperPool.length, 8, `${locale} go-deeper count`)
     assert.ok(t.eveningHighlight.length > 0)
     assert.ok(t.eveningStressful.length > 0)
     assert.ok(t.morningCallback.includes('{topic}'), `${locale} callback has placeholder`)
