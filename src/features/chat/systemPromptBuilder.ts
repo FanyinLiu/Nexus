@@ -24,6 +24,7 @@ import { formatActivityToneGuidance } from '../autonomy/activityTone.ts'
 import { formatNarrativeForPrompt } from '../memory/narrativeMemory.ts'
 import { COHERENCE_GUIDANCE } from './coherenceGuidance.ts'
 import { REUNION_GUIDANCE } from './reunionGuidance.ts'
+import { EMOTIONAL_TRANSITION_GUIDANCE } from './emotionalTransitionGuidance.ts'
 import { getChatPromptStrings } from './prompts/index.ts'
 import type { BuiltInToolResult } from '../tools/toolTypes'
 import {
@@ -357,6 +358,7 @@ export async function buildSystemPrompt(
     COHERENCE_GUIDANCE,
     REUNION_GUIDANCE,
     emotionSection,
+    EMOTIONAL_TRANSITION_GUIDANCE,
     rhythmSection,
     activityToneSection,
     affectGuidanceSection,
