@@ -1876,6 +1876,14 @@ button.settings-choice-card,
   color: rgba(255, 255, 255, 0.4);
 }
 
+.settings-drawer input:disabled:not([type='checkbox']):not([type='range']),
+.settings-drawer select:disabled,
+.settings-drawer textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .settings-url-input--invalid {
   border-color: #e74c3c;
   box-shadow: 0 0 0 1px #e74c3c;

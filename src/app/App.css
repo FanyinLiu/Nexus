@@ -522,11 +522,18 @@
   font-weight: 600;
 }
 
-.ghost-button:hover {
+.ghost-button:hover:not(:disabled) {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(168, 139, 255, 0.25);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.ghost-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+  box-shadow: none;
 }
 
 .primary-button:hover {
