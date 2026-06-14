@@ -288,7 +288,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
     const audioResponse = await performNetworkRequestWithRetry(audioUrl, {
       method: 'GET',
       timeoutMs: synthTimeoutMs,
-      timeoutMessage: '语音文件下载超时，请检查网络或稍后重试。',
+      timeoutMessage: '语音文件下载有点久，看看网络或者稍后再试试？',
       onRetry: logTtsRetry,
     })
 

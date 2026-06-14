@@ -950,7 +950,7 @@ function formatLocalServiceProbeError(error, host, port, timeoutMs) {
     return `${host}:${port} 连接超时（${timeoutMs}ms）。`
   }
 
-  return `${host}:${port} 连接失败：${error instanceof Error ? error.message : '未知错误'}`
+  return `${host}:${port} 没能连上：${error instanceof Error ? error.message : '未知原因'}`
 }
 
 // Host allowlist for local-service probes. The doctor panel's only legit use

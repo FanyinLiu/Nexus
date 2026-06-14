@@ -282,7 +282,7 @@ export function getChatConnectionTestPreflightFailure({ providerId, apiKey }) {
         ok: false,
         status: 'needs_key',
         message: error instanceof Error ? error.message : formatInvalidChatApiKeyMessage(normalizedProviderId),
-        recommendation: '重新复制服务商控制台里的原始 API Key，只保留 Key 本身。',
+        recommendation: '重新去服务商那里复制一下原始 Key，只要 Key 本身就好。',
       }
     }
     return null
@@ -291,13 +291,13 @@ export function getChatConnectionTestPreflightFailure({ providerId, apiKey }) {
   if (normalizedProviderId === 'deepseek') {
     return {
       ok: false,
-      message: 'DeepSeek API 需要先填写 API Key。请在模型设置里选择 DeepSeek，并填入 DeepSeek 控制台生成的 API Key。',
+      message: 'DeepSeek 需要填 API Key，去控制台拿一个填在上面就好。',
     }
   }
 
   return {
     ok: false,
-    message: '请先填写 API Key。',
+    message: '先填一下 API Key 吧。',
   }
 }
 
@@ -530,7 +530,7 @@ export function summarizeChatConnectionTestSuccess({ providerId, successKind, da
     return {
       ok: true,
       status: 'ready',
-      message: '连接成功，已收到模型响应。',
+      message: '连上了，模型已经回应啦。',
       checkedAt,
     }
   }
@@ -545,8 +545,8 @@ export function summarizeChatConnectionTestSuccess({ providerId, successKind, da
       return {
         ok: false,
         status: 'model_missing',
-        message: 'Ollama 已连接，但还没有发现可用模型。请先运行：ollama pull qwen3:8b。',
-        recommendation: '运行 ollama pull qwen3:8b，或在 Ollama 中安装任意可用聊天模型后刷新。',
+        message: 'Ollama 连上了，不过还没有模型呢。运行 ollama pull qwen3:8b 装一个吧。',
+        recommendation: '运行 ollama pull qwen3:8b 装一个，或者装好别的模型再来刷新。',
         discoveredModels,
         checkedAt,
       }
@@ -556,8 +556,8 @@ export function summarizeChatConnectionTestSuccess({ providerId, successKind, da
       return {
         ok: false,
         status: 'model_missing',
-        message: `Ollama 已连接，但没有找到模型「${requestedModel}」。请先运行：ollama pull ${requestedModel}，或在设置里填写已安装模型。`,
-        recommendation: `运行 ollama pull ${requestedModel}，或在模型列表里选择已安装模型。`,
+        message: `Ollama 连上了，不过没找到「${requestedModel}」。先 ollama pull ${requestedModel} 装一下，或者换个已有的模型。`,
+        recommendation: `运行 ollama pull ${requestedModel}，或者在模型列表里选一个已有的。`,
         discoveredModels,
         checkedAt,
       }
@@ -568,7 +568,7 @@ export function summarizeChatConnectionTestSuccess({ providerId, successKind, da
     return {
       ok: true,
       status: 'ready',
-      message: `连接成功，可用模型示例：${modelIds.slice(0, 3).join(', ')}`,
+      message: `连上了，发现了这些模型：${modelIds.slice(0, 3).join('、')}`,
       discoveredModels,
       checkedAt,
     }
@@ -577,7 +577,7 @@ export function summarizeChatConnectionTestSuccess({ providerId, successKind, da
   return {
     ok: true,
     status: 'ready',
-    message: '连接成功，接口已正常响应。',
+    message: '连上了，一切正常。',
     discoveredModels,
     checkedAt,
   }
@@ -605,9 +605,9 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
         ok: false,
         status: 'needs_key',
         message: hasApiKey
-          ? 'DeepSeek API Key 无效或已失效，请检查 DeepSeek 控制台中的 Key。'
-          : 'DeepSeek API 需要先填写 API Key。请在模型设置里选择 DeepSeek，并填入 DeepSeek 控制台生成的 API Key。',
-        recommendation: '打开 DeepSeek 控制台重新生成 API Key，并确认当前账号余额与模型权限。',
+          ? 'DeepSeek 的 API Key 好像不太对，去控制台看看是不是过期了？'
+          : 'DeepSeek 需要填 API Key 才能用哦，去控制台拿一个填在上面就好。',
+        recommendation: '可以去 DeepSeek 控制台重新生成一个，顺便看看余额和模型权限。',
         checkedAt,
       }
     }
@@ -616,9 +616,9 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
       ok: false,
       status: 'needs_key',
       message: hasApiKey
-        ? 'URL 可访问，但 API Key 无效或已失效。'
-        : 'URL 可访问，但还没有填写 API Key。',
-      recommendation: '检查 API Key 是否填入、是否过期，以及当前 provider 是否要求 Bearer token。',
+        ? '地址能通，不过 API Key 好像不太对。'
+        : '地址能通，不过还没填 API Key 呢。',
+      recommendation: '看看 Key 有没有过期，或者重新复制一下。',
       checkedAt,
     }
   }
@@ -628,8 +628,8 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
       return {
         ok: false,
         status: 'needs_key',
-        message: rawMessage || 'DeepSeek API 返回权限或余额限制，请检查账号余额、模型权限和 API Key 状态。',
-        recommendation: '检查 DeepSeek 账号余额、模型权限和 API Key 状态。',
+        message: rawMessage || 'DeepSeek 好像遇到了权限或余额限制，看看账号还有没有额度？',
+        recommendation: '去控制台看看余额和模型权限。',
         checkedAt,
       }
     }
@@ -638,8 +638,8 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
       return {
         ok: false,
         status: 'misconfigured',
-        message: 'DeepSeek API 地址或模型名不匹配。建议 Base URL 使用 https://api.deepseek.com，模型先用 deepseek-v4-flash。',
-        recommendation: 'Base URL 改为 https://api.deepseek.com，模型先用 deepseek-v4-flash。',
+        message: 'DeepSeek 的地址或模型名好像对不上，Base URL 填 https://api.deepseek.com，模型先选 deepseek-v4-flash 试试？',
+        recommendation: 'Base URL 改成 https://api.deepseek.com，模型先用 deepseek-v4-flash。',
         checkedAt,
       }
     }
@@ -648,8 +648,8 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
       return {
         ok: false,
         status: 'model_missing',
-        message: `DeepSeek 没有接受当前模型「${requestedModel}」。建议先改成 deepseek-v4-flash，再重新测试。`,
-        recommendation: '模型先改成 deepseek-v4-flash；如果需要更强推理，再切 deepseek-v4-pro。',
+        message: `DeepSeek 好像不认识「${requestedModel}」这个模型，先换成 deepseek-v4-flash 试试？`,
+        recommendation: '先用 deepseek-v4-flash，需要更强推理再切 deepseek-v4-pro。',
         checkedAt,
       }
     }
@@ -659,8 +659,8 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
     return {
       ok: false,
       status: 'error',
-      message: rawMessage || '请求频率超过服务商限制，请稍后再试。',
-      recommendation: '等待几秒后重试。如果持续出现，检查服务商控制台的调用限额和套餐。',
+      message: rawMessage || '请求有点太频繁了，歇一小会儿再试试。',
+      recommendation: '等几秒再试就好。如果老是这样，去看看服务商那边的调用限额。',
       checkedAt,
     }
   }
@@ -669,8 +669,8 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
     return {
       ok: false,
       status: 'needs_key',
-      message: rawMessage || '服务商返回权限或余额限制。',
-      recommendation: '检查 API Key 权限、账号套餐余额，以及是否需要开通对应模型的访问。',
+      message: rawMessage || '服务商好像有权限或余额限制。',
+      recommendation: '看看 API Key 权限和账号余额，有些模型可能需要单独开通。',
       checkedAt,
     }
   }
@@ -679,8 +679,8 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
     return {
       ok: false,
       status: 'model_missing',
-      message: rawMessage || `模型「${requestedModel}」不存在或当前账号无权访问。`,
-      recommendation: '检查模型名是否正确，或换成服务商推荐的默认模型。',
+      message: rawMessage || `没找到「${requestedModel}」这个模型，可能名字不对或者账号没开通。`,
+      recommendation: '核对一下模型名，或者先换个服务商推荐的默认模型试试。',
       checkedAt,
     }
   }
@@ -689,8 +689,8 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
     return {
       ok: false,
       status: 'unreachable',
-      message: rawMessage || '请求超时，服务商未在规定时间内响应。',
-      recommendation: '检查网络连接和代理设置。如果服务商正常，可稍后重试。',
+      message: rawMessage || '等了好一会儿都没回应，可能是网络不太顺畅。',
+      recommendation: '看看网络和代理设置，也可以稍后再试一下。',
       checkedAt,
     }
   }
@@ -699,8 +699,8 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
     return {
       ok: false,
       status: 'unreachable',
-      message: rawMessage || '服务商暂时不可用，可能正在维护或过载。',
-      recommendation: '稍后重试。如果持续出现，查看服务商状态页面确认是否有故障。',
+      message: rawMessage || '服务商那边暂时忙不过来，可能在维护或者流量太大。',
+      recommendation: '过一会儿再试试。如果一直这样，可以去看看服务商的状态页。',
       checkedAt,
     }
   }
@@ -708,8 +708,8 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
   return {
     ok: false,
     status: status >= 500 ? 'unreachable' : 'error',
-    message: rawMessage || `接口返回异常状态：${status}`,
-    recommendation: '检查 API Base URL、网络代理、模型名和服务商状态。',
+    message: rawMessage || `接口返回了状态码 ${status}，不太确定哪里出了问题。`,
+    recommendation: '看看地址、网络和模型名，也可以关注一下服务商那边有没有公告。',
     checkedAt,
   }
 }

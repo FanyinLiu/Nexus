@@ -90,7 +90,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         headers: requestSpec.headers,
         body: requestSpec.body,
         timeoutMs: CHAT_REQUEST_TIMEOUT_MS,
-        timeoutMessage: '模型响应超时，请检查网络、代理或当前模型服务状态。',
+        timeoutMessage: '模型回复太慢了，看看网络和服务有没有问题？',
         maxAttempts: 2,
         onRetry: ({ attempt, reason }) =>
           console.warn('[chat:complete] transient failure, retrying', { attempt, reason }),
@@ -104,7 +104,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         model: requestPayload.model,
         reason,
       })
-      throw new Error(`模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：${reason}`)
+      throw new Error(`没能连上模型接口，看看地址和网络对不对？具体原因：${reason}`)
     }
 
     const data = await response.json().catch((parseErr) => {
@@ -124,15 +124,15 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       if (response.status === 401) {
         throw new Error(
           requestPayload.apiKey || !chatProviderRequiresApiKey(providerId)
-            ? '模型接口鉴权失败，请检查 API Key 是否有效。'
-            : '还没有填写 API Key，所以现在还不能对话。请先在设置里填入可用的 API Key。',
+            ? 'API Key 好像不太对，去设置里看看？'
+            : '还没填 API Key 呢，先去设置里填一个吧。',
         )
       }
 
       throw new Error(
         data?.error?.message ??
           data?.message ??
-          `模型请求失败（状态码：${response.status}）`,
+          `模型那边回了个状态码 ${response.status}，不太确定怎么回事。`,
       )
     }
 
@@ -204,7 +204,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         body: requestSpec.body,
         signal: abortController.signal,
         timeoutMs: CHAT_REQUEST_TIMEOUT_MS,
-        timeoutMessage: '模型响应超时，请检查网络、代理或当前模型服务状态。',
+        timeoutMessage: '模型回复太慢了，看看网络和服务有没有问题？',
         maxAttempts: 2,
         onRetry: ({ attempt, reason }) =>
           console.warn('[chat:stream] transient failure, retrying', { attempt, reason }),
@@ -213,7 +213,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       const reason = error instanceof Error ? error.message : String(error)
       activeChatStreamControllers.delete(requestId)
       console.error('[chat:stream] network failure', { requestId, reason })
-      throw new Error(`模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：${reason}`)
+      throw new Error(`没能连上模型接口，看看地址和网络对不对？具体原因：${reason}`)
     }
 
     if (!response.ok) {
@@ -222,12 +222,12 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       if (response.status === 401) {
         throw new Error(
           chatPayload.apiKey || !chatProviderRequiresApiKey(providerId)
-            ? '模型接口鉴权失败，请检查 API Key 是否有效。'
-            : '还没有填写 API Key，所以现在还不能对话。请先在设置里填入可用的 API Key。',
+            ? 'API Key 好像不太对，去设置里看看？'
+            : '还没填 API Key 呢，先去设置里填一个吧。',
         )
       }
       throw new Error(
-        data?.error?.message ?? data?.message ?? `模型请求失败（状态码：${response.status}）`,
+        data?.error?.message ?? data?.message ?? `模型那边回了个状态码 ${response.status}，不太确定怎么回事。`,
       )
     }
 
@@ -436,7 +436,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     if (!baseUrl) {
       return {
         ok: false,
-        message: '请先填写 API Base URL。',
+        message: '还没填 API 地址呢。',
       }
     }
 
@@ -444,7 +444,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     if (!safety.ok) {
       return {
         ok: false,
-        message: `API Base URL 被拒绝（${safety.reason}）。`,
+        message: `这个地址不太安全，没法用哦（${safety.reason}）。`,
       }
     }
 
@@ -471,7 +471,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         // hosts past the first-hop SSRF check (non-streaming probe — safe to follow).
         followRedirectsSafely: true,
         timeoutMs: CONNECTION_TEST_TIMEOUT_MS,
-        timeoutMessage: '模型接口测试超时，请检查 URL、网络、代理或服务状态。',
+        timeoutMessage: '等了好久都没连上，看看地址和网络对不对？',
       })
 
       const data = await response.json().catch(() => ({}))
@@ -498,7 +498,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         ok: false,
         status: 'unreachable',
         message: formatConnectionFailureMessage(reason),
-        recommendation: '检查 API Base URL、网络代理和本地服务是否正在运行。',
+        recommendation: '看看地址和网络，本地服务的话确认一下有没有在跑。',
         checkedAt: new Date().toISOString(),
       }
     }
@@ -516,8 +516,8 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         ok: false,
         providerId,
         status: 'misconfigured',
-        message: '请先填写 API Base URL。',
-        recommendation: '本地 Ollama 默认使用 http://127.0.0.1:11434/v1。',
+        message: '还没填 API 地址呢。',
+        recommendation: '本地 Ollama 一般用 http://127.0.0.1:11434/v1 哦。',
         checkedAt: new Date().toISOString(),
         discoveredModels: [],
       }
@@ -529,8 +529,8 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         ok: false,
         providerId,
         status: 'misconfigured',
-        message: `API Base URL 被拒绝（${safety.reason}）。`,
-        recommendation: '请使用合法的 https/http 模型接口地址；本地服务使用 127.0.0.1 或 localhost。',
+        message: `这个地址不太安全，没法用哦（${safety.reason}）。`,
+        recommendation: '地址需要是正常的 http/https 网址，本地服务用 127.0.0.1 或 localhost 就好。',
         checkedAt: new Date().toISOString(),
         discoveredModels: [],
       }
@@ -545,7 +545,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         ...preflightFailure,
         providerId,
         status: 'needs_key',
-        recommendation: '填写该 provider 的 API Key 后再刷新模型列表。',
+        recommendation: '填上 API Key 再来刷新就好。',
         checkedAt: new Date().toISOString(),
         discoveredModels: [],
       }
@@ -566,7 +566,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         // a non-streaming GET, safe to follow with per-hop SSRF revalidation.
         followRedirectsSafely: true,
         timeoutMs: CONNECTION_TEST_TIMEOUT_MS,
-        timeoutMessage: '模型列表读取超时，请检查 URL、网络、代理或服务状态。',
+        timeoutMessage: '读取模型列表有点久，看看地址和网络对不对？',
       })
       const data = await response.json().catch(() => ({}))
       const discoveredModels = buildDiscoveredChatModels({ providerId, data })
@@ -577,13 +577,13 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
           providerId,
           status: discoveredModels.length > 0 ? 'ready' : 'model_missing',
           message: discoveredModels.length > 0
-            ? `已发现 ${discoveredModels.length} 个可用模型。`
-            : '已连接，但没有发现可用模型。',
+            ? `发现了 ${discoveredModels.length} 个可用模型。`
+            : '连上了，不过暂时没发现可用模型。',
           recommendation: discoveredModels.length > 0
             ? ''
             : providerId === 'ollama'
-              ? '运行 ollama pull qwen3:8b，或在 Ollama 中安装任意聊天模型后刷新。'
-              : '检查该服务商是否开放 /models 接口；也可以手动填写模型 ID。',
+              ? '运行 ollama pull qwen3:8b 装一个，或者装好别的模型再来刷新。'
+              : '有些服务商不开放模型列表接口，手动填写模型名也可以的。',
           discoveredModels,
           checkedAt: new Date().toISOString(),
         }
@@ -610,8 +610,8 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         status: 'unreachable',
         message: formatConnectionFailureMessage(reason),
         recommendation: providerId === 'ollama'
-          ? '确认 Ollama 已启动，并且 Nexus 预览地址仍是 47821，不是 11434/v1。'
-          : '检查 API Base URL、网络代理和服务商状态。',
+          ? '确认 Ollama 有没有在跑，地址确认是 127.0.0.1:11434/v1。'
+          : '看看地址和网络设置对不对。',
         discoveredModels: [],
         checkedAt: new Date().toISOString(),
       }
@@ -632,7 +632,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     if (!baseUrl) {
       return {
         ok: false,
-        message: '请先填写 API Base URL。',
+        message: '还没填 API 地址呢。',
       }
     }
 
@@ -640,7 +640,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     if (!safety.ok) {
       return {
         ok: false,
-        message: `API Base URL 被拒绝（${safety.reason}）。`,
+        message: `这个地址不太安全，没法用哦（${safety.reason}）。`,
       }
     }
 
@@ -650,8 +650,8 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         return {
           ok: false,
           message: isVolcengineSpeechInputProvider(requestPayload.providerId)
-            ? '火山语音识别请在 API Key 一栏填写 APP_ID:ACCESS_TOKEN。'
-            : '火山语音合成请在 API Key 一栏填写 APP_ID:ACCESS_TOKEN。',
+            ? '火山语音识别需要在 API Key 那里填 APP_ID:ACCESS_TOKEN 的格式哦。'
+            : '火山语音合成需要在 API Key 那里填 APP_ID:ACCESS_TOKEN 的格式哦。',
         }
       }
     }
