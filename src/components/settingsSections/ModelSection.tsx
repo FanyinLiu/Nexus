@@ -253,6 +253,16 @@ export const ModelSection = memo(function ModelSection({
                 className={`onboarding-region-tabs__tab${activeRegion === tab.region ? ' is-active' : ''}`}
                 aria-pressed={activeRegion === tab.region}
                 onClick={() => setRegionTab(tab.region)}
+                onKeyDown={(e) => {
+                  const btns = Array.from(e.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>('button'))
+                  const i = btns.indexOf(e.currentTarget)
+                  let next = -1
+                  if (e.key === 'ArrowRight') next = (i + 1) % btns.length
+                  else if (e.key === 'ArrowLeft') next = (i - 1 + btns.length) % btns.length
+                  else if (e.key === 'Home') next = 0
+                  else if (e.key === 'End') next = btns.length - 1
+                  if (next >= 0) { e.preventDefault(); btns[next].focus() }
+                }}
               >
                 {ti(tab.labelKey)}
               </button>
