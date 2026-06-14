@@ -663,8 +663,8 @@ export function SettingsDrawer({
   useEffect(() => {
     if (!open) return undefined
     const frame = window.requestAnimationFrame(() => {
-      drawerBodyRef.current?.scrollTo({ top: 0 })
-      settingsSectionsRef.current?.scrollTo({ top: 0 })
+      drawerBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+      settingsSectionsRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
     })
     return () => window.cancelAnimationFrame(frame)
   }, [activeSectionId, open, settingsView])

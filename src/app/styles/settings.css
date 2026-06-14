@@ -4005,6 +4005,11 @@ summary.settings-console-section__header:focus-visible {
   transition: transform 0.25s ease;
 }
 
+.settings-toggle input:focus-visible {
+  outline: 2px solid rgba(168, 139, 255, 0.62);
+  outline-offset: 2px;
+}
+
 .settings-toggle input:checked {
   background: linear-gradient(135deg, #A88BFF, #C8A6FF);
 }
@@ -4858,6 +4863,12 @@ summary.settings-console-section__header:focus-visible {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
+  animation: onboarding-section-in 260ms ease-out;
+}
+
+@keyframes onboarding-section-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
   color: rgba(255, 255, 255, 0.72);
   font-size: 13px;
   line-height: 1.65;
