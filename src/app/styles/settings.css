@@ -3675,6 +3675,12 @@ summary.settings-console-section__header:focus-visible {
   border: 1px solid rgba(74, 234, 174, 0.15);
 }
 
+.settings-test-result.is-error {
+  background: rgba(248, 113, 113, 0.06);
+  color: rgba(248, 113, 113, 0.9);
+  border: 1px solid rgba(248, 113, 113, 0.15);
+}
+
 .settings-test-result__recommendation {
   margin: 8px 0 0;
   font-size: 12px;

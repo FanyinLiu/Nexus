@@ -277,6 +277,33 @@ test('deepseek connection test reports model mismatches with a recommended fallb
   assert.match(result.message, /deepseek-v4-flash/)
 })
 
+test('429 rate-limit returns actionable recommendation', () => {
+  const result = summarizeChatConnectionTestFailure({
+    providerId: 'openai',
+    status: 429,
+    hasApiKey: true,
+    model: 'gpt-4o',
+    data: { error: { message: 'Rate limit exceeded' } },
+  })
+
+  assert.equal(result.ok, false)
+  assert.match(result.message, /Rate limit/)
+})
+
+test('404 with model returns model_missing status for non-deepseek providers', () => {
+  const result = summarizeChatConnectionTestFailure({
+    providerId: 'openai',
+    status: 404,
+    hasApiKey: true,
+    model: 'gpt-99',
+    data: {},
+  })
+
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 'model_missing')
+  assert.match(result.message, /gpt-99/)
+})
+
 test('extractChatResponseContent handles anthropic text blocks', () => {
   const content = extractChatResponseContent('anthropic', {
     content: [
