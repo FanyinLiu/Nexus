@@ -339,6 +339,10 @@
   opacity: 0.5;
 }
 
+.settings-drawer--day .settings-toggle input:focus-visible {
+  outline-color: rgba(52, 120, 246, 0.6);
+}
+
 .settings-drawer--day .settings-inline-note,
 .settings-drawer--day .settings-test-result {
   border-color: rgba(28, 42, 60, 0.1);
@@ -5377,6 +5381,10 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-drawer--warm-day .settings-page[data-section] .settings-toggle input:disabled {
   cursor: not-allowed;
   opacity: 0.52;
+}
+
+.settings-drawer--warm-day .settings-page[data-section] .settings-toggle input:focus-visible {
+  outline-color: rgba(199, 102, 69, 0.6);
 }
 
 .settings-drawer--warm-day .settings-page[data-section] .settings-lorebook-check input[type='checkbox'] {

@@ -50,7 +50,7 @@ function formatEmptyChatContentMessage({ reasoningLength = 0, finishReason = '' 
   if (reasoningLength > 0) details.push(`reasoningLength=${reasoningLength}`)
   if (finishReason) details.push(`finishReason=${finishReason}`)
   const suffix = details.length ? `（${details.join('，')}）` : ''
-  return `模型返回了空内容${suffix}，请检查接口兼容性或关闭该模型的 Thinking。`
+  return `模型回来了但是内容是空的${suffix}，看看接口兼容性或者试试关掉 Thinking？`
 }
 
 export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS, CONNECTION_TEST_TIMEOUT_MS }) {

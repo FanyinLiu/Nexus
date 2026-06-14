@@ -944,7 +944,7 @@ function formatLocalServiceProbeError(error, host, port, timeoutMs) {
     return `${host}:${port} 当前拒绝连接，服务可能没有启动。`
   }
   if (code === 'EHOSTUNREACH' || code === 'ENETUNREACH') {
-    return `${host}:${port} 当前不可达，请检查本地网络栈或绑定地址。`
+    return `${host}:${port} 当前不可达，看看本地网络栈或绑定地址对不对？`
   }
   if (code === 'ETIMEDOUT') {
     return `${host}:${port} 连接超时（${timeoutMs}ms）。`

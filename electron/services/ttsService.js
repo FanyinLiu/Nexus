@@ -128,7 +128,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
     })
 
     if (!response.ok) {
-      throw new Error(await extractResponseErrorMessage(response, '语音播报请求失败（状态码：' + response.status + '）'))
+      throw new Error(await extractResponseErrorMessage(response, '语音播报那边回了个状态码 ' + response.status + '，不太确定哪里出了问题。'))
     }
 
     const pcmBuffer = await readResponseBufferWithLimit(response, { label: '语音音频' })
@@ -162,7 +162,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
     })
 
     if (!response.ok) {
-      throw new Error(await extractResponseErrorMessage(response, '语音播报请求失败（状态码：' + response.status + '）'))
+      throw new Error(await extractResponseErrorMessage(response, '语音播报那边回了个状态码 ' + response.status + '，不太确定哪里出了问题。'))
     }
 
     const pcmBuffer = await readResponseBufferWithLimit(response, { label: '语音音频' })
@@ -236,7 +236,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
     })
 
     if (!response.ok) {
-      throw new Error(await extractResponseErrorMessage(response, '语音播报请求失败（状态码：' + response.status + '）'))
+      throw new Error(await extractResponseErrorMessage(response, '语音播报那边回了个状态码 ' + response.status + '，不太确定哪里出了问题。'))
     }
 
     const data = await readJsonSafe(response)
@@ -278,7 +278,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
     })
 
     if (!response.ok) {
-      throw new Error(await extractResponseErrorMessage(response, '语音播报请求失败（状态码：' + response.status + '）'))
+      throw new Error(await extractResponseErrorMessage(response, '语音播报那边回了个状态码 ' + response.status + '，不太确定哪里出了问题。'))
     }
 
     const data = await readJsonSafe(response)

@@ -222,7 +222,7 @@ async function performVolcengineSpeechOutputAttempt({
   volume = 1,
   pitch = 1,
   timeoutMs = AUDIO_SYNTH_TIMEOUT_MS,
-  timeoutMessage = '语音播报响应超时，请检查网络、代理或当前语音服务状态。',
+  timeoutMessage = '语音播报等了好久都没回应，看看网络和代理对不对？',
 }) {
   const response = await performNetworkRequest(`${baseUrl}/v1/tts`, {
     allowPrivateNetwork: true,
