@@ -20,6 +20,7 @@ import { setSettingsSnapshot } from '../store/settingsStore'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { runConnectionPreflight } from '../../features/models/connectionPreflight'
 import type {
   AppSettings,
   DebugConsoleEvent,
@@ -384,6 +385,15 @@ export function useAppOverlays({
             message: t('settings.test_connection.unsupported'),
           }
         }
+
+        const preflightFail = runConnectionPreflight({
+          providerId: draftSettings.apiProviderId,
+          apiKey: draftSettings.apiKey,
+          apiBaseUrl: draftSettings.apiBaseUrl,
+          model: draftSettings.model,
+          uiLanguage: draftSettings.uiLanguage,
+        })
+        if (preflightFail) return preflightFail
 
         return window.desktopPet.testChatConnection({
           providerId: draftSettings.apiProviderId,

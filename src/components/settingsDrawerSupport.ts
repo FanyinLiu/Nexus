@@ -279,6 +279,7 @@ export type ConnectionResult = {
   ok: boolean
   message: string
   recommendation?: string
+  status?: import('../types/model').ProviderHealthStatus
 }
 
 type LabeledOption<T> = {
