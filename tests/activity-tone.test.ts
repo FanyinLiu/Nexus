@@ -22,6 +22,19 @@ test('formatActivityToneGuidance covers every known activity class', () => {
   }
 })
 
+test('formatActivityToneGuidance includes density hint for focused activities', () => {
+  assert.match(formatActivityToneGuidance('coding'), /shorter, direct/)
+  assert.match(formatActivityToneGuidance('gaming'), /brief, light/)
+  assert.match(formatActivityToneGuidance('media'), /brevity/)
+  assert.match(formatActivityToneGuidance('documents'), /more thorough/)
+})
+
+test('formatActivityToneGuidance omits density hint when neutral', () => {
+  const browsing = formatActivityToneGuidance('browsing')
+  assert.doesNotMatch(browsing, /Lean toward/)
+  assert.doesNotMatch(browsing, /thorough/)
+})
+
 test('formatActivityToneGuidance is a no-op for unknown activity', () => {
   assert.equal(formatActivityToneGuidance('unknown'), '')
 })
