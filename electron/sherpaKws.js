@@ -300,7 +300,7 @@ function resolveKwsRuntime(options = {}) {
     if (!keywordConfig) {
       return {
         config: null,
-        reason: '中文唤醒词转换失败，请改成纯中文词语，例如“星绘”或“小爱同学”。',
+        reason: '这个中文唤醒词没能识别，换成纯中文试试，比如”星绘”或”小爱同学”。',
         modelKind: 'zh',
       }
     }
@@ -323,7 +323,7 @@ function resolveKwsRuntime(options = {}) {
   if (!modelFiles) {
     return {
       config: null,
-      reason: `未找到英文唤醒词模型：${ENGLISH_KWS_DIRNAME}（请在首启向导中下载，或使用中文唤醒词）`,
+      reason: `还没有英文唤醒词模型（${ENGLISH_KWS_DIRNAME}），在首启向导里下载一个，或者先用中文唤醒词吧。`,
       modelKind: 'en',
     }
   }
@@ -341,8 +341,8 @@ function resolveKwsRuntime(options = {}) {
     return {
       config: null,
       reason: useRuntimeBpe
-        ? '英文唤醒词解析失败，请检查是否包含 BPE 词表无法识别的字符。'
-        : '自定义英文唤醒词暂不支持。请改成中文唤醒词，或使用内置词：HELLO WORLD / HI GOOGLE / HEY SIRI / ALEXA / LOVE AND PEACE / PLAY MUSIC / GO HOME / HAPPY NEW YEAR / MERRY CHRISTMAS。',
+        ? '这个英文唤醒词没能解析，可能有不认识的字符，换一个试试？'
+        : '自定义英文唤醒词暂时还不支持，可以改成中文唤醒词，或者用内置的：HELLO WORLD / HI GOOGLE / HEY SIRI / ALEXA / LOVE AND PEACE / PLAY MUSIC / GO HOME / HAPPY NEW YEAR / MERRY CHRISTMAS。',
       modelKind: 'en',
     }
   }

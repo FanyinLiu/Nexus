@@ -64,7 +64,7 @@ function getVolcengineSpeechOutputErrorDetails(data, fallbackMessage) {
       isAuthError: true,
       isGrantError: false,
       isInitError: false,
-      message: '火山语音鉴权失败，请确认 API Key 填的是 APP_ID:ACCESS_TOKEN，并且当前账号已开通豆包语音服务。',
+      message: '火山语音的身份验证没通过，看看 API Key 是不是 APP_ID:ACCESS_TOKEN 的格式，账号也要开通豆包语音服务哦。',
     }
   }
 
@@ -75,7 +75,7 @@ function getVolcengineSpeechOutputErrorDetails(data, fallbackMessage) {
       isAuthError: false,
       isGrantError: true,
       isInitError: false,
-      message: '当前火山音色还没授权到你的账号，请先在控制台服务页为这个音色下单/授权；如果只是想先能播报，建议改回 BV001_streaming 或 BV002_streaming。',
+      message: '这个火山音色还没授权到你的账号，去控制台语音服务页给它下个单或授权就好；想先能播报的话，改成 BV001_streaming 或 BV002_streaming。',
     }
   }
 
@@ -86,7 +86,7 @@ function getVolcengineSpeechOutputErrorDetails(data, fallbackMessage) {
       isAuthError: false,
       isGrantError: false,
       isInitError: true,
-      message: '火山语音初始化失败，请检查业务集群和音色是否匹配，建议先用 volcano_tts + BV001_streaming。',
+      message: '火山语音启动不了，可能是集群和音色不匹配，先用 volcano_tts + BV001_streaming 试试？',
     }
   }
 
@@ -97,7 +97,7 @@ function getVolcengineSpeechOutputErrorDetails(data, fallbackMessage) {
       isAuthError: false,
       isGrantError: false,
       isInitError: false,
-      message: code ? `火山语音合成失败（${code}）：${rawMessage}` : rawMessage,
+      message: code ? `火山语音遇到了点问题（${code}）：${rawMessage}` : rawMessage,
     }
   }
 
@@ -195,20 +195,20 @@ function summarizeVolcengineSpeechOutputAttempts(attempts) {
 function buildVolcengineSpeechOutputFailureMessage(attempts, fallbackMessage) {
   const prefix = fallbackMessage && !isVolcengineSpeechOutputInitErrorMessage(fallbackMessage)
     ? fallbackMessage
-    : '火山语音初始化失败。'
+    : '火山语音启动不了。'
   const retriedMessage = attempts.length > 1
-    ? ' 已自动尝试兼容组合，但仍然失败。'
-    : ' 这次请求仍然失败。'
+    ? ' 自动试了几个兼容组合，但都没行。'
+    : ' 这次也没成功。'
 
-  return `${prefix}${retriedMessage}请确认业务集群和音色匹配；想先稳定播报，建议先改成 volcano_tts + BV001_streaming。`
+  return `${prefix}${retriedMessage}看看业务集群和音色是不是匹配的；想先稳定播报的话，建议改成 volcano_tts + BV001_streaming。`
 }
 
 function buildVolcengineSpeechOutputGrantFailureMessage(attempts) {
   const retriedMessage = attempts.length > 1
-    ? '已自动尝试兼容音色，但仍然失败。'
-    : '当前音色仍然不可用。'
+    ? '自动试了几个兼容音色，但都没行。'
+    : '当前音色还是用不了。'
 
-  return `当前火山音色还没授权到你的账号，${retriedMessage}请到火山控制台语音服务页为目标音色做 0 元下单或授权；如果只是想先稳定播报，建议直接用 BV001_streaming 或 BV002_streaming。`
+  return `这个火山音色还没授权到你的账号，${retriedMessage}去火山控制台语音服务页给目标音色做个 0 元下单或授权就好；想先稳定播报的话，直接用 BV001_streaming 或 BV002_streaming。`
 }
 
 async function performVolcengineSpeechOutputAttempt({
@@ -262,13 +262,13 @@ async function performVolcengineSpeechOutputAttempt({
     const details = data
       ? getVolcengineSpeechOutputErrorDetails(
         data,
-        `火山语音播报请求失败（状态码：${response.status}）`,
+        `火山语音播报没成功（${response.status}）`,
       )
       : null
     const errorMessage =
       details?.message
       || responseText.trim()
-      || `火山语音播报请求失败（状态码：${response.status}）`
+      || `火山语音播报没成功（${response.status}）`
     const rawMessage = details?.rawMessage || responseText
 
     return {
@@ -368,7 +368,7 @@ export async function synthesizeVolcengineSpeechOutputWithFallback(options) {
 
   console.warn('[Volcengine TTS] all fallback attempts failed', {
     attempts: summarizeVolcengineSpeechOutputAttempts(attempts),
-    finalError: lastFailure?.errorMessage ?? '火山语音初始化失败。',
+    finalError: lastFailure?.errorMessage ?? '火山语音启动不了。',
     finalRawMessage: lastFailure?.rawMessage ?? '',
   })
 
@@ -377,7 +377,7 @@ export async function synthesizeVolcengineSpeechOutputWithFallback(options) {
       ok: false,
       cluster: normalizeVolcengineSpeechOutputCluster(options.cluster),
       voice: normalizeVolcengineSpeechOutputVoice(options.voice),
-      errorMessage: '火山语音初始化失败。',
+      errorMessage: '火山语音启动不了。',
       rawMessage: '',
       isGrantError: false,
       isInitError: true,

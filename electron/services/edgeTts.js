@@ -143,7 +143,7 @@ export async function synthesizeEdgeTts(text, options = {}) {
       ws = new globalThis.WebSocket(wsUrl)
     } catch (err) {
       clearTimeout(connectTimeout)
-      reject(new Error(`Edge TTS WebSocket 创建失败: ${err.message}`))
+      reject(new Error(`Edge TTS 连接没能建起来：${err.message}`))
       return
     }
 
@@ -199,7 +199,7 @@ export async function synthesizeEdgeTts(text, options = {}) {
     ws.addEventListener('error', (event) => {
       clearTimeout(connectTimeout)
       clearTimeout(synthesisTimeout)
-      const msg = `Edge TTS WebSocket 错误: ${event.message || 'unknown'}`
+      const msg = `Edge TTS 连接出了点状况：${event.message || 'unknown'}`
       console.error('[Edge-TTS]', msg)
       if (!resolved) {
         resolved = true

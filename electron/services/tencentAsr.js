@@ -107,7 +107,7 @@ function handleMessage(rawData) {
       console.error('[TencentASR] server error:', data.code, data.message)
       sendToRenderer('tencent-asr:result', {
         type: 'error',
-        text: data.message || `腾讯云语音识别错误 (code=${data.code})`,
+        text: data.message || `腾讯云语音识别遇到了点问题（${data.code}）`,
       })
       return
     }
@@ -215,7 +215,7 @@ export async function connect(credentials) {
     } catch (err) {
       clearTimeout(timeoutId)
       _state = 'disconnected'
-      reject(new Error(`WebSocket 创建失败: ${err.message}`))
+      reject(new Error(`WebSocket 没能建起来：${err.message}`))
       return
     }
 
@@ -242,7 +242,7 @@ export async function connect(credentials) {
           }
           clearTimeout(timeoutId)
           _state = 'disconnected'
-          reject(new Error(data.message || `腾讯云握手失败 (code=${data.code})`))
+          reject(new Error(data.message || `腾讯云连接没成功（${data.code}）`))
           return
         } catch {
           // Not JSON, ignore
