@@ -10,8 +10,8 @@ export type BracketTemplates = {
   morningOpenQuestions: string[]
   /** Callback template; replace {topic} with the prior evening's gist. */
   morningCallback: string
-  eveningHighlight: string
-  eveningStressful: string
+  eveningHighlightPool: string[]
+  eveningStressfulPool: string[]
   /** Button / inline prompt offering to extend the evening callback. */
   eveningGoDeeperPrompt: string
   /** Pool of follow-ups picked when the user opts into "go deeper". */
@@ -39,8 +39,18 @@ const ZH_CN: BracketTemplates = {
     '有没有什么话是昨天想说但没说出口的？',
   ],
   morningCallback: '昨晚你说{topic}——今天再看，感觉变了吗？',
-  eveningHighlight: '今天最让你开心的一个瞬间是什么？',
-  eveningStressful: '今天什么事最让你心累？',
+  eveningHighlightPool: [
+    '今天最让你开心的一个瞬间是什么？',
+    '今天有没有什么小事让你意外地高兴？',
+    '今天哪个时刻你想暂停一下、多待一会儿？',
+    '回想今天，有什么是你不想忘掉的？',
+  ],
+  eveningStressfulPool: [
+    '今天什么事最让你心累？',
+    '今天有没有什么事让你皱了一下眉？',
+    '今天最不想重来一次的是哪个部分？',
+    '如果今天能删掉一件事，你会删哪件？',
+  ],
   eveningGoDeeperPrompt: '想多坐一会儿这件事吗？',
   eveningGoDeeperPool: [
     '当时你心里第一反应是什么？',
@@ -73,8 +83,18 @@ const ZH_TW: BracketTemplates = {
     '有沒有什麼話是昨天想說但沒說出口的？',
   ],
   morningCallback: '昨晚你說{topic}——今天再看，感覺變了嗎？',
-  eveningHighlight: '今天最讓你開心的一個瞬間是什麼？',
-  eveningStressful: '今天什麼事最讓你心累？',
+  eveningHighlightPool: [
+    '今天最讓你開心的一個瞬間是什麼？',
+    '今天有沒有什麼小事讓你意外地高興？',
+    '今天哪個時刻你想暫停一下、多待一會兒？',
+    '回想今天，有什麼是你不想忘掉的？',
+  ],
+  eveningStressfulPool: [
+    '今天什麼事最讓你心累？',
+    '今天有沒有什麼事讓你皺了一下眉？',
+    '今天最不想重來一次的是哪個部分？',
+    '如果今天能刪掉一件事，你會刪哪件？',
+  ],
   eveningGoDeeperPrompt: '想多坐一會兒這件事嗎？',
   eveningGoDeeperPool: [
     '當時你心裡第一反應是什麼？',
@@ -107,8 +127,18 @@ const EN_US: BracketTemplates = {
     'Is there something you wanted to say yesterday but didn’t?',
   ],
   morningCallback: 'Last night you said {topic} — does it look different this morning?',
-  eveningHighlight: 'What was the highlight of your day?',
-  eveningStressful: 'What was stressful about your day?',
+  eveningHighlightPool: [
+    'What was the highlight of your day?',
+    'Did anything catch you off guard in a good way today?',
+    'What moment today would you want to hold onto?',
+    'Was there a point today when things just felt right?',
+  ],
+  eveningStressfulPool: [
+    'What was stressful about your day?',
+    'Anything today that made you tense up?',
+    'What part of today would you rather not do again?',
+    'If you could erase one thing from today, what would it be?',
+  ],
   eveningGoDeeperPrompt: 'Want to sit with this a little longer?',
   eveningGoDeeperPool: [
     'What was your first reaction in the moment?',
@@ -141,8 +171,18 @@ const JA: BracketTemplates = {
     '昨日言いたくて言えなかったことはある？',
   ],
   morningCallback: '昨晩、{topic}って言ってたよね — 今朝になって感じ方は変わった？',
-  eveningHighlight: '今日いちばん嬉しかった瞬間は？',
-  eveningStressful: '今日いちばん疲れたことは？',
+  eveningHighlightPool: [
+    '今日いちばん嬉しかった瞬間は？',
+    '今日、思いがけず良かったことはある？',
+    '今日のどの瞬間に「もう少しここにいたい」と思った？',
+    '今日のことで、忘れたくないものはある？',
+  ],
+  eveningStressfulPool: [
+    '今日いちばん疲れたことは？',
+    '今日、ちょっと顔をしかめた瞬間はあった？',
+    '今日の中で、もう一回はやりたくない部分は？',
+    '今日から一つだけ消せるとしたら、何にする？',
+  ],
   eveningGoDeeperPrompt: 'もう少しこのことに付き合おうか？',
   eveningGoDeeperPool: [
     'その瞬間、最初に浮かんだ気持ちは？',
@@ -175,8 +215,18 @@ const KO: BracketTemplates = {
     '어제 하고 싶었는데 못 한 말 있어?',
   ],
   morningCallback: '어젯밤에 {topic}라고 했잖아 — 아침이 되니까 좀 달라 보여?',
-  eveningHighlight: '오늘 가장 기뻤던 순간은?',
-  eveningStressful: '오늘 가장 마음 무거웠던 일은?',
+  eveningHighlightPool: [
+    '오늘 가장 기뻤던 순간은?',
+    '오늘 뜻밖에 좋았던 일 있어?',
+    '오늘 중에 좀 더 머물고 싶었던 순간은?',
+    '오늘 하루에서 잊고 싶지 않은 건 뭐야?',
+  ],
+  eveningStressfulPool: [
+    '오늘 가장 마음 무거웠던 일은?',
+    '오늘 좀 찡그렸던 순간 있어?',
+    '오늘 중에 다시 하긴 싫은 부분은?',
+    '오늘에서 하나만 지울 수 있으면 뭘 지울 거야?',
+  ],
   eveningGoDeeperPrompt: '이 얘기 조금만 더 같이 있을까?',
   eveningGoDeeperPool: [
     '그 순간 처음 든 기분은 뭐였어?',
@@ -256,8 +306,12 @@ export function buildBracketNotification(
     }
   }
 
+  const rand = input.randomFn ?? Math.random
+  const highlight = t.eveningHighlightPool[Math.floor(rand() * t.eveningHighlightPool.length)]
+  const stressful = t.eveningStressfulPool[Math.floor(rand() * t.eveningStressfulPool.length)]
+
   return {
     title: t.eveningNotificationTitle.replace('{companionName}', companionName),
-    body: `${t.eveningHighlight}${t.eveningJoiner}${t.eveningStressful}`,
+    body: `${highlight}${t.eveningJoiner}${stressful}`,
   }
 }
