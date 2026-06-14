@@ -20,13 +20,22 @@ const ACTIVITY_LABELS: Record<Exclude<ActivityClass, 'unknown'>, string> = {
   documents: 'working on documents',
 }
 
+const ACTIVITY_DENSITY: Partial<Record<Exclude<ActivityClass, 'unknown'>, string>> = {
+  coding: 'Lean toward shorter, direct answers — they are in flow.',
+  gaming: 'Lean toward brief, light replies — they are in the middle of something.',
+  media: 'Lean toward brevity — they might just be checking in.',
+  documents: 'You can be slightly more thorough if the question warrants it — they are in a reading mindset.',
+}
+
 export function formatActivityToneGuidance(activityClass: ActivityClass): string {
   if (activityClass === 'unknown') return ''
   const label = ACTIVITY_LABELS[activityClass]
+  const density = ACTIVITY_DENSITY[activityClass]
 
   return `<activity_tone>\n`
     + `A faint background sense: the user seems to be mostly ${label} right now. `
     + `Let it gently color your tone if it fits — but always defer to how the conversation actually `
-    + `feels, and never mention or hint that you can tell what they are doing.\n`
-    + `</activity_tone>`
+    + `feels, and never mention or hint that you can tell what they are doing.`
+    + (density ? ` ${density}` : '')
+    + `\n</activity_tone>`
 }
