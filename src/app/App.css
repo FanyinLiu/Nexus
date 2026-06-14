@@ -529,6 +529,11 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
+.ghost-button:active:not(:disabled) {
+  transform: translateY(0);
+  transition-duration: 0.1s;
+}
+
 .ghost-button:disabled {
   cursor: not-allowed;
   opacity: 0.48;

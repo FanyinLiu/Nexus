@@ -598,6 +598,11 @@ summary.settings-mini-group__head:focus-visible {
   background: color-mix(in srgb, var(--settings-accent) 9%, var(--settings-surface-soft));
 }
 
+.settings-model-source-card:active {
+  transform: scale(0.98);
+  transition-duration: 0.1s;
+}
+
 .settings-model-source-card:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--settings-accent) 58%, transparent);
   outline-offset: 2px;
@@ -909,6 +914,11 @@ summary.settings-mini-group__head:focus-visible {
 .settings-choice-card:hover {
   border-color: rgba(168, 139, 255, 0.2);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.settings-choice-card:active {
+  transform: scale(0.98);
+  transition-duration: 0.1s;
 }
 
 button.settings-choice-card,
