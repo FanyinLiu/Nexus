@@ -1277,6 +1277,17 @@ button.settings-choice-card,
   color: rgba(255, 255, 255, 0.8);
 }
 
+.settings-drawer .ghost-button:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.settings-drawer .ghost-button:focus-visible,
+.settings-drawer .primary-button:focus-visible {
+  outline: 2px solid rgba(99, 179, 237, 0.6);
+  outline-offset: 2px;
+}
+
 .settings-drawer .ghost-button:disabled,
 .settings-drawer .primary-button:disabled {
   cursor: not-allowed;
@@ -3667,6 +3678,15 @@ summary.settings-console-section__header:focus-visible {
   padding: 14px 16px;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.settings-test-result {
+  animation: settings-test-result-in 220ms ease-out;
+}
+
+@keyframes settings-test-result-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .settings-test-result.is-success {
