@@ -36,11 +36,11 @@ export function buildHotTierMemorySections(
   }
 
   const longTermSection = longTermLines.length
-    ? `The following are long-term memories. Use them when naturally relevant; do not recite them mechanically:\n${longTermLines.join('\n')}`
+    ? `Things you know about this person from your time together. When one naturally fits the moment, let it shape what you say — the way a memory surfaces on its own, not cited or announced. If nothing connects, they stay quiet:\n${longTermLines.join('\n')}`
     : ''
 
   const dailySection = dailyLines.length
-    ? `The following are recent daily logs and context. Only pick them up naturally when they are relevant:\n${dailyLines.join('\n')}`
+    ? `Recent days together — still fresh. You can pick a thread back up if it naturally connects to now, the way you would with someone you see every day. If they have moved on, so have you:\n${dailyLines.join('\n')}`
     : ''
 
   return { longTermSection, dailySection }
@@ -66,5 +66,5 @@ export function buildSemanticMemorySection(memoryContext: MemoryRecallContext) {
     })
     .join('\n')
 
-  return `The following are key memories retrieved by this round's semantic search. Each line is tagged with a confidence score (0.00–1.00) — treat low-confidence matches as soft hints, not facts. Prioritize the parts that are genuinely relevant:\n${lines}`
+  return `Associations this conversation stirred up. The confidence score (0.00–1.00) reflects how clearly each one connects: high means vivid and specific, low means a faint echo — mention it gently if at all. Let the clear ones inform you; let the faint ones stay at the edge:\n${lines}`
 }
