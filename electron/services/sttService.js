@@ -135,7 +135,7 @@ async function runSpeechInputConnectionSmokeTest(payload, baseUrl) {
     headers,
     body,
     timeoutMs: CONNECTION_TEST_TIMEOUT_MS,
-    timeoutMessage: '服务连接测试超时，请检查 URL、网络、代理或服务状态。',
+    timeoutMessage: '连接测试等了好久，看看地址和网络对不对？',
   })
   const data = await readJsonSafe(response)
 

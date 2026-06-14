@@ -65,15 +65,15 @@ export function shouldLabelAsConnectionFailure(reason) {
     || normalized.includes('tls')
     || normalized.includes('certificate')
     || normalized.includes('net::err_')
-    || message.includes('服务连接测试超时')
-    || message.includes('请求超时，请检查网络')
-    || message.includes('语音文件下载超时')
+    || message.includes('连接测试等了好久')
+    || message.includes('等了好久都没回应')
+    || message.includes('语音文件下载有点久')
     || message.includes('连接被拒绝')
     || message.includes('无法连接')
   )
 }
 
-export function formatConnectionFailureMessage(reason, prefix = '连接失败，请检查 URL、网络或代理设置。') {
+export function formatConnectionFailureMessage(reason, prefix = '没能连上，可能是地址或网络的问题。') {
   const message = String(reason ?? '').trim()
 
   if (!message) {
@@ -84,9 +84,9 @@ export function formatConnectionFailureMessage(reason, prefix = '连接失败，
     return message
   }
 
-  if (message.includes('连接失败') || message.includes('超时')) {
+  if (message.includes('没能连') || message.includes('超时')) {
     return message
   }
 
-  return `${prefix}原始错误：${message}`
+  return `${prefix}具体原因：${message}`
 }

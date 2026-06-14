@@ -49,15 +49,15 @@ const COMMON_PATTERNS: KnownPattern[] = [
   { match: /\b(404|not\s*found)/i, key: 'humanize.not_found' },
   { match: /\b(429|rate.?limit|quota.?exceed)/i, key: 'humanize.rate_limited' },
   { match: /\b5\d{2}\b|server.?error|internal.?error/i, key: 'humanize.server_error' },
-  // 连接失败/超时: electron/ipc/chatIpc.js throws its own Chinese copy for
+  // 没能连上/太慢: electron/ipc/chatIpc.js throws its own Chinese copy for
   // connection and timeout failures; without these the most common real-world
   // failures fall through to the generic fallback instead of targeted advice.
-  // 超时 must outrank 连接失败: backend timeouts reach the renderer wrapped as
-  // `模型接口连接失败…原始错误：模型响应超时…` (net.js rejects inside chatIpc's
-  // catch), and first-match-wins would otherwise classify every timeout as a
+  // 太慢 must outrank 没能连上: backend timeouts reach the renderer wrapped as
+  // `没能连上…具体原因：模型回复太慢…` (net.js rejects inside chatIpc's catch),
+  // and first-match-wins would otherwise classify every timeout as a
   // connection failure.
-  { match: /ETIMEDOUT|timeout|timed out|超时|逾時/i, key: 'humanize.timeout' },
-  { match: /ECONNREFUSED|connection refused|连接失败/i, key: 'humanize.connection_refused' },
+  { match: /ETIMEDOUT|timeout|timed out|超时|太慢|逾時/i, key: 'humanize.timeout' },
+  { match: /ECONNREFUSED|connection refused|没能连上|连接失败/i, key: 'humanize.connection_refused' },
   { match: /ENOTFOUND|getaddrinfo|dns/i, key: 'humanize.dns_failed' },
   // 'terminated' / 'other side closed' are undici's wording for a connection
   // dropped mid-stream. 'terminated' is anchored to the end of the text so a

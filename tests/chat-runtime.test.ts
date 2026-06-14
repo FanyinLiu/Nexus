@@ -206,7 +206,7 @@ test('ollama connection test reports an empty local model list clearly', () => {
   })
 
   assert.equal(result.ok, false)
-  assert.match(result.message, /还没有发现可用模型/)
+  assert.match(result.message, /还没有模型/)
   assert.equal(result.status, 'model_missing')
 })
 
@@ -257,7 +257,7 @@ test('deepseek connection test asks for an API key before probing the network', 
   })
 
   assert.equal(result?.ok, false)
-  assert.match(result?.message ?? '', /DeepSeek API.*API Key/)
+  assert.match(result?.message ?? '', /DeepSeek.*API Key/)
 })
 
 test('deepseek connection test reports model mismatches with a recommended fallback', () => {

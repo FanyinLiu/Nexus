@@ -294,7 +294,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         model: payload.model,
         reason,
       })
-      throw new Error(`语音识别接口连接失败，请检查 URL、网络或代理设置。原始错误：${reason}`)
+      throw new Error(`没能连上语音识别接口，看看地址和网络对不对？具体原因：${reason}`)
     }
 
     const data = await readJsonSafe(response)
@@ -439,7 +439,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         })
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error)
-        throw new Error(`语音播报接口连接失败，请检查 URL、网络或代理设置。原始错误：${reason}`)
+        throw new Error(`没能连上语音播报接口，看看地址和网络对不对？具体原因：${reason}`)
       }
 
       if (!result.ok) {
@@ -492,7 +492,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
       })
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
-      throw new Error(`语音播报接口连接失败，请检查 URL、网络或代理设置。原始错误：${reason}`)
+      throw new Error(`没能连上语音播报接口，看看地址和网络对不对？具体原因：${reason}`)
     }
 
     if (!response.ok) {
@@ -536,7 +536,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         audioResponse = await performNetworkRequest(audioUrl, {
           method: 'GET',
           timeoutMs: synthTimeoutMs,
-          timeoutMessage: '语音文件下载超时，请检查网络或稍后重试。',
+          timeoutMessage: '语音文件下载有点久，看看网络或者稍后再试试？',
         })
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error)

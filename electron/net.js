@@ -61,7 +61,7 @@ export async function performNetworkRequest(url, options = {}) {
     allowPrivateNetwork = false,
     body,
     timeoutMs = CONNECTION_TEST_TIMEOUT_MS,
-    timeoutMessage = '请求超时，请检查网络、代理或服务状态。',
+    timeoutMessage = '等了好久都没回应，看看网络和代理对不对？',
     signal,
     forceNativeFetch = false,
     followRedirectsSafely = false,

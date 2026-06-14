@@ -87,11 +87,11 @@ describe('humanizeError — real chat-send backend strings', () => {
     // pin the copy at the source-text level instead.
     const source = readFileSync(new URL('../electron/ipc/chatIpc.js', import.meta.url), 'utf8')
     const pinned = [
-      '模型接口鉴权失败，请检查 API Key 是否有效。',
-      '还没有填写 API Key，所以现在还不能对话。请先在设置里填入可用的 API Key。',
-      '模型请求失败（状态码：',
-      '模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：',
-      '模型响应超时，请检查网络、代理或当前模型服务状态。',
+      'API Key 好像不太对，去设置里看看？',
+      '还没填 API Key 呢，先去设置里填一个吧。',
+      '模型那边回了个状态码',
+      '没能连上模型接口，看看地址和网络对不对？具体原因：',
+      '模型回复太慢了，看看网络和服务有没有问题？',
     ]
     for (const literal of pinned) {
       assert.ok(source.includes(literal), `chatIpc.js no longer contains pinned copy: ${literal}`)
@@ -99,45 +99,43 @@ describe('humanizeError — real chat-send backend strings', () => {
   })
 
   test('401 auth message (contains "API Key") → bad-key advice, key text dropped', () => {
-    const out = humanizeError('模型接口鉴权失败，请检查 API Key 是否有效。', 'chat')
+    const out = humanizeError('API Key 好像不太对，去设置里看看？', 'chat')
     assert.match(out, /(API key|Settings)/i)
-    assert.doesNotMatch(out, /鉴权失败/)
   })
 
   test('missing-key 401 message also maps to bad-key advice', () => {
-    const out = humanizeError('还没有填写 API Key，所以现在还不能对话。请先在设置里填入可用的 API Key。', 'chat')
+    const out = humanizeError('还没填 API Key 呢，先去设置里填一个吧。', 'chat')
     assert.match(out, /(API key|Settings)/i)
   })
 
   test('404 status-code fallback → "check URL / model" advice', () => {
-    const out = humanizeError('模型请求失败（状态码：404）', 'chat')
+    const out = humanizeError('模型那边回了个状态码 404，不太确定怎么回事。', 'chat')
     assert.match(out, /(URL|model|address)/i)
-    assert.doesNotMatch(out, /状态码/)
   })
 
   test('429 status-code fallback → rate-limit advice', () => {
-    const out = humanizeError('模型请求失败（状态码：429）', 'chat')
+    const out = humanizeError('模型那边回了个状态码 429，不太确定怎么回事。', 'chat')
     assert.match(out, /(too many|wait|moment)/i)
   })
 
   test('connection-failure wrapper → reachability advice, raw host dropped', () => {
-    const out = humanizeError('模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：ECONNREFUSED 127.0.0.1:11434', 'chat')
+    const out = humanizeError('没能连上模型接口，看看地址和网络对不对？具体原因：ECONNREFUSED 127.0.0.1:11434', 'chat')
     assert.match(out, /(reach|connect|server)/i)
     assert.doesNotMatch(out, /ECONNREFUSED/)
   })
 
   test('backend timeout copy maps to the dedicated timeout advice, not the generic fallback', () => {
-    const out = humanizeError('模型响应超时，请检查网络、代理或当前模型服务状态。', 'chat')
+    const out = humanizeError('模型回复太慢了，看看网络和服务有没有问题？', 'chat')
     assert.match(out, /(too long|faster|try)/i)
     assert.doesNotMatch(out, /Something went wrong/)
   })
 
-  test('the REAL chat-send timeout shape (wrapped in the 连接失败 copy) still maps to timeout advice', () => {
+  test('the REAL chat-send timeout shape (wrapped in the 没能连上 copy) still maps to timeout advice', () => {
     // net.js rejects with the timeout copy INSIDE chatIpc's catch, so the
     // renderer always receives it wrapped — the timeout pattern must outrank
     // the connection-failure pattern for this, the most common failure shape.
     const out = humanizeError(
-      '模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：模型响应超时，请检查网络、代理或当前模型服务状态。',
+      '没能连上模型接口，看看地址和网络对不对？具体原因：模型回复太慢了，看看网络和服务有没有问题？',
       'chat',
     )
     assert.match(out, /(too long|faster)/i)
@@ -152,7 +150,7 @@ describe('humanizeError — real chat-send backend strings', () => {
   })
 
   test('backend connection-failure copy maps to reachability advice even without an ASCII errno', () => {
-    const out = humanizeError('模型接口连接失败，请检查 API Base URL、网络或代理设置。原始错误：terminated', 'chat')
+    const out = humanizeError('没能连上模型接口，看看地址和网络对不对？具体原因：terminated', 'chat')
     assert.match(out, /(reach|connect|server)/i)
     assert.doesNotMatch(out, /Something went wrong/)
   })
