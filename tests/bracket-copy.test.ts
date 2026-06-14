@@ -16,8 +16,8 @@ test('every locale has 12 morning open questions and 8 go-deeper followups', () 
     const t = getBracketTemplates(locale)
     assert.equal(t.morningOpenQuestions.length, 12, `${locale} morning count`)
     assert.equal(t.eveningGoDeeperPool.length, 8, `${locale} go-deeper count`)
-    assert.ok(t.eveningHighlight.length > 0)
-    assert.ok(t.eveningStressful.length > 0)
+    assert.equal(t.eveningHighlightPool.length, 4, `${locale} highlight count`)
+    assert.equal(t.eveningStressfulPool.length, 4, `${locale} stressful count`)
     assert.ok(t.morningCallback.includes('{topic}'), `${locale} callback has placeholder`)
   }
 })
@@ -102,6 +102,7 @@ test('buildBracketNotification evening joins highlight + stressful', () => {
     uiLanguage: 'en-US',
     companionName: 'X',
     bracket: 'evening',
+    randomFn: () => 0,
   })
   assert.match(out.body, /highlight/i)
   assert.match(out.body, /stressful/i)
