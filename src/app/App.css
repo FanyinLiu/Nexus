@@ -3275,6 +3275,11 @@
   cursor: pointer;
 }
 
+.onboarding-region-tabs__tab:hover:not(.is-active) {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .onboarding-region-tabs__tab.is-active {
   border-color: rgba(168, 139, 255, 0.3);
   background: rgba(168, 139, 255, 0.08);
@@ -3294,6 +3299,12 @@
   border-color: var(--settings-border, rgba(28, 42, 60, 0.14));
   background: transparent;
   color: inherit;
+}
+
+.settings-drawer .onboarding-region-tabs__tab:hover:not(.is-active),
+.settings-page .onboarding-region-tabs__tab:hover:not(.is-active) {
+  border-color: color-mix(in srgb, var(--settings-accent, #3478f6) 22%, transparent);
+  background: color-mix(in srgb, var(--settings-accent, #3478f6) 5%, transparent);
 }
 
 .settings-drawer .onboarding-region-tabs__tab.is-active,

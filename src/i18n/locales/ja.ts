@@ -1655,6 +1655,8 @@ export const jaMessages: TranslationDictionary = {
   'settings.preflight.invalid_key': 'API Key に HTTP リクエストを壊す文字が含まれています。',
   'settings.preflight.invalid_key_rec': 'キーを完全にコピーしたか、余分な引用符やマークアップがないか確認してください。',
   'settings.preflight.no_url': 'エンドポイント URL が空です。',
+  'settings.preflight.bad_url': 'URL は http:// または https:// で始める必要があります。',
+  'settings.preflight.bad_url_rec': 'URL の先頭に https:// を追加してください。',
   'settings.preflight.no_model': 'モデル名が選択されていません。',
   'settings.list_speech_voices.unsupported': '現在の環境ではオンライン音色一覧の取得をサポートしていません。',
   'settings.preview.busy_error': '前の会話がまだ処理中です。しばらくしてからプレビューを再試行してください。',

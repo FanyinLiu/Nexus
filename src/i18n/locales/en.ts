@@ -1655,6 +1655,8 @@ export const enMessages: TranslationDictionary = {
   'settings.preflight.invalid_key': 'The API key contains characters that would break the HTTP request.',
   'settings.preflight.invalid_key_rec': 'Check that you copied the full key without surrounding quotes or markup.',
   'settings.preflight.no_url': 'Endpoint URL is empty.',
+  'settings.preflight.bad_url': 'URL must start with http:// or https://.',
+  'settings.preflight.bad_url_rec': 'Add https:// at the beginning of the URL.',
   'settings.preflight.no_model': 'No model name selected.',
   'settings.list_speech_voices.unsupported': 'The current environment does not support fetching the online voice list.',
   'settings.preview.busy_error': 'A previous turn is still running — please try the preview again shortly.',

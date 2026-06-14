@@ -43,6 +43,12 @@ test('catches empty base URL', () => {
   assert.equal(result?.status, 'misconfigured')
 })
 
+test('catches URL missing protocol', () => {
+  const result = runConnectionPreflight({ ...base, apiBaseUrl: 'api.openai.com' })
+  assert.equal(result?.ok, false)
+  assert.equal(result?.status, 'misconfigured')
+})
+
 test('catches empty model', () => {
   const result = runConnectionPreflight({ ...base, model: '' })
   assert.equal(result?.ok, false)

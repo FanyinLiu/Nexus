@@ -589,6 +589,8 @@ export type SettingsTranslationKey =
   | 'settings.preflight.invalid_key'
   | 'settings.preflight.invalid_key_rec'
   | 'settings.preflight.no_url'
+  | 'settings.preflight.bad_url'
+  | 'settings.preflight.bad_url_rec'
   | 'settings.preflight.no_model'
   | 'settings.list_speech_voices.unsupported'
   | 'settings.preview.busy_error'

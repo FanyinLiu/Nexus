@@ -22,6 +22,7 @@ type PreflightInput = {
 
 const HAS_CJK = /[一-鿿぀-ゟ゠-ヿ가-힯]/
 const HAS_WHITESPACE = /\s/
+const URL_PROTOCOL_RE = /^https?:\/\//i
 
 export function runConnectionPreflight(input: PreflightInput): PreflightResult | null {
   const t = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
@@ -65,11 +66,21 @@ export function runConnectionPreflight(input: PreflightInput): PreflightResult |
     }
   }
 
-  if (!input.apiBaseUrl.trim()) {
+  const trimmedUrl = input.apiBaseUrl.trim()
+  if (!trimmedUrl) {
     return {
       ok: false,
       status: 'misconfigured',
       message: t('settings.preflight.no_url'),
+    }
+  }
+
+  if (!URL_PROTOCOL_RE.test(trimmedUrl)) {
+    return {
+      ok: false,
+      status: 'misconfigured',
+      message: t('settings.preflight.bad_url'),
+      recommendation: t('settings.preflight.bad_url_rec'),
     }
   }
 

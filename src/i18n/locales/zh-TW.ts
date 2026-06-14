@@ -1655,6 +1655,8 @@ export const zhTWMessages: TranslationDictionary = {
   'settings.preflight.invalid_key': 'API Key 包含會導致請求失敗的特殊字元。',
   'settings.preflight.invalid_key_rec': '請檢查是否完整複製了金鑰，且沒有多餘的引號或標記。',
   'settings.preflight.no_url': '接口位址為空。',
+  'settings.preflight.bad_url': '位址必須以 http:// 或 https:// 開頭。',
+  'settings.preflight.bad_url_rec': '請在位址開頭加上 https://。',
   'settings.preflight.no_model': '未選擇模型名稱。',
   'settings.list_speech_voices.unsupported': '目前環境不支援拉取線上音色列表。',
   'settings.preview.busy_error': '上一輪對話還在處理中，請稍後再試聽。',
