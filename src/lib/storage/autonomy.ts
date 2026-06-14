@@ -10,6 +10,13 @@ import {
 export type BracketState = {
   lastMorningFiredMs: number | null
   lastEveningFiredMs: number | null
+  /** Indices of the last questions picked, for back-to-back dedup. */
+  lastPicks?: {
+    morning?: number | null
+    highlight?: number | null
+    stressful?: number | null
+    goDeeper?: number | null
+  }
 }
 
 const GOAL_STATUSES = new Set<GoalStatus>(['active', 'completed', 'paused', 'abandoned'])
@@ -146,12 +153,29 @@ export function saveAutonomyGoals(goals: Goal[]): void {
   writeJson(AUTONOMY_GOALS_STORAGE_KEY, normalizeAutonomyGoals(goals))
 }
 
+function normalizeLastPicks(raw: unknown): BracketState['lastPicks'] {
+  if (!isObject(raw)) return undefined
+  const safeIdx = (v: unknown): number | null => {
+    if (typeof v !== 'number' || !Number.isFinite(v)) return null
+    return Math.max(0, Math.floor(v))
+  }
+  return {
+    morning: safeIdx(raw.morning),
+    highlight: safeIdx(raw.highlight),
+    stressful: safeIdx(raw.stressful),
+    goDeeper: safeIdx(raw.goDeeper),
+  }
+}
+
 export function normalizeBracketState(raw: unknown): BracketState {
   if (!isObject(raw)) return EMPTY_BRACKET_STATE
-  return {
+  const state: BracketState = {
     lastMorningFiredMs: normalizeTimestamp(raw.lastMorningFiredMs),
     lastEveningFiredMs: normalizeTimestamp(raw.lastEveningFiredMs),
   }
+  const picks = normalizeLastPicks(raw.lastPicks)
+  if (picks) state.lastPicks = picks
+  return state
 }
 
 export function loadBracketState(): BracketState {

@@ -69,12 +69,14 @@ export function useBracketScheduler({
       // bracket runs unchanged. We only deliver one errand per morning
       // — the others wait for the next day, otherwise the user gets a
       // wall of text on heavy-queue mornings.
-      let notification = buildBracketNotification({
+      const result = buildBracketNotification({
         uiLanguage: s.uiLanguage,
         companionName: s.companionName,
         bracket: decision.bracket,
         previousEveningTopic: null,
+        lastPicks: state.lastPicks,
       })
+      let notification: { title: string; body: string } = result
       let deliveredErrandId: string | null = null
       if (decision.bracket === 'morning') {
         const undelivered = findUndeliveredErrands()
@@ -95,14 +97,10 @@ export function useBracketScheduler({
 
       try {
         await window.desktopPet?.showProactiveNotification?.(notification)
-        // Re-read state inside the lock so a concurrent write outside
-        // the scheduler doesn't get clobbered by our pre-await snapshot
-        // (matches the useErrandScheduler fix from this audit cycle).
         const fresh = loadBracketState()
-        writeJson(
-          PROACTIVE_BRACKET_STATE_STORAGE_KEY,
-          recordBracketFire(fresh, decision.bracket, Date.now()),
-        )
+        const updated = recordBracketFire(fresh, decision.bracket, Date.now())
+        updated.lastPicks = { ...fresh.lastPicks, ...result.pickedIndices }
+        writeJson(PROACTIVE_BRACKET_STATE_STORAGE_KEY, updated)
         if (deliveredErrandId) {
           markDelivered(deliveredErrandId)
         }
