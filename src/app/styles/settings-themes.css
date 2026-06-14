@@ -389,6 +389,22 @@
   color: #17202a;
 }
 
+.settings-drawer--day input:not([type='checkbox']):not([type='range']):hover,
+.settings-drawer--day select:hover,
+.settings-drawer--day textarea:hover {
+  border-color: rgba(28, 42, 60, 0.22);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.settings-drawer--day input:not([type='checkbox']):not([type='range']):focus,
+.settings-drawer--day select:focus,
+.settings-drawer--day textarea:focus {
+  outline: none;
+  border-color: rgba(90, 120, 200, 0.38);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 3px rgba(90, 120, 200, 0.08);
+}
+
 .settings-drawer--day input[readonly]:not([type='checkbox']):not([type='range']) {
   border-color: rgba(28, 42, 60, 0.1);
   background: rgba(255, 255, 255, 0.58);
@@ -4376,6 +4392,22 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   background: rgba(255, 253, 249, 0.82);
   color: rgba(36, 27, 22, 0.9);
   -webkit-text-fill-color: rgba(36, 27, 22, 0.9);
+}
+
+.settings-drawer--warm-day .settings-page[data-section] input:not([type='checkbox']):not([type='range']):hover,
+.settings-drawer--warm-day .settings-page[data-section] select:hover,
+.settings-drawer--warm-day .settings-page[data-section] textarea:hover {
+  border-color: rgba(72, 53, 40, 0.22);
+  background: rgba(255, 253, 249, 0.92);
+}
+
+.settings-drawer--warm-day .settings-page[data-section] input:not([type='checkbox']):not([type='range']):focus,
+.settings-drawer--warm-day .settings-page[data-section] select:focus,
+.settings-drawer--warm-day .settings-page[data-section] textarea:focus {
+  outline: none;
+  border-color: rgba(168, 120, 80, 0.38);
+  background: rgba(255, 253, 249, 0.96);
+  box-shadow: 0 0 0 3px rgba(168, 120, 80, 0.08);
 }
 
 .settings-drawer--warm-day .settings-page[data-section] input::placeholder,

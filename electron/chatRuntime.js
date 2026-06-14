@@ -665,12 +665,42 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
     }
   }
 
+  if ((status === 402 || status === 403) && normalizedProviderId !== 'deepseek') {
+    return {
+      ok: false,
+      status: 'needs_key',
+      message: rawMessage || '服务商返回权限或余额限制。',
+      recommendation: '检查 API Key 权限、账号套餐余额，以及是否需要开通对应模型的访问。',
+      checkedAt,
+    }
+  }
+
   if (status === 404 && requestedModel) {
     return {
       ok: false,
       status: 'model_missing',
       message: rawMessage || `模型「${requestedModel}」不存在或当前账号无权访问。`,
       recommendation: '检查模型名是否正确，或换成服务商推荐的默认模型。',
+      checkedAt,
+    }
+  }
+
+  if (status === 408) {
+    return {
+      ok: false,
+      status: 'unreachable',
+      message: rawMessage || '请求超时，服务商未在规定时间内响应。',
+      recommendation: '检查网络连接和代理设置。如果服务商正常，可稍后重试。',
+      checkedAt,
+    }
+  }
+
+  if (status === 502 || status === 503) {
+    return {
+      ok: false,
+      status: 'unreachable',
+      message: rawMessage || '服务商暂时不可用，可能正在维护或过载。',
+      recommendation: '稍后重试。如果持续出现，查看服务商状态页面确认是否有故障。',
       checkedAt,
     }
   }
