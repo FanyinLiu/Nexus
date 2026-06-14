@@ -55,6 +55,8 @@ export function TextStep({
     try {
       const result = await onTestConnection(draft)
       setTestResult(result)
+    } catch {
+      setTestResult({ ok: false, message: '这次没能连上，可能是网络打了个盹，稍后再试试吧。' })
     } finally {
       setTesting(false)
     }

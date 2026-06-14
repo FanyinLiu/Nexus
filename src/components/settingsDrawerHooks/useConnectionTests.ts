@@ -26,19 +26,27 @@ export function useConnectionTests({
 
   async function runConnectionTest(capability: ServiceConnectionCapability) {
     setTestingTarget(capability)
-    const result = await onTestConnection(capability, draft)
-    setTestResults((current) => ({
-      ...current,
-      [capability]: result,
-    }))
-    setTestingTarget(null)
+    try {
+      const result = await onTestConnection(capability, draft)
+      setTestResults((current) => ({
+        ...current,
+        [capability]: result,
+      }))
 
-    if (
-      capability === 'speech-output'
-      && result.ok
-      && isMiniMaxSpeechOutputProvider(draft.speechOutputProviderId)
-    ) {
-      await handleLoadSpeechVoices(false)
+      if (
+        capability === 'speech-output'
+        && result.ok
+        && isMiniMaxSpeechOutputProvider(draft.speechOutputProviderId)
+      ) {
+        await handleLoadSpeechVoices(false)
+      }
+    } catch {
+      setTestResults((current) => ({
+        ...current,
+        [capability]: { ok: false, message: '这次没能连上，可能是网络打了个盹，稍后再试试吧。' },
+      }))
+    } finally {
+      setTestingTarget(null)
     }
   }
 
