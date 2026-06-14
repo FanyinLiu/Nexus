@@ -1655,6 +1655,8 @@ export const zhCNMessages: TranslationDictionary = {
   'settings.preflight.invalid_key': 'API Key 包含会导致请求失败的特殊字符。',
   'settings.preflight.invalid_key_rec': '请检查是否完整复制了密钥，且没有多余的引号或标记。',
   'settings.preflight.no_url': '接口地址为空。',
+  'settings.preflight.bad_url': '地址必须以 http:// 或 https:// 开头。',
+  'settings.preflight.bad_url_rec': '请在地址开头加上 https://。',
   'settings.preflight.no_model': '未选择模型名称。',
   'settings.list_speech_voices.unsupported': '当前环境不支持拉取在线音色列表。',
   'settings.preview.busy_error': '上一轮对话还在处理中，请稍后再试听。',

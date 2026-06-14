@@ -1655,6 +1655,8 @@ export const koMessages: TranslationDictionary = {
   'settings.preflight.invalid_key': 'API Key에 HTTP 요청을 깨뜨리는 문자가 포함되어 있어요.',
   'settings.preflight.invalid_key_rec': '키를 완전히 복사했는지, 여분의 따옴표나 마크업이 없는지 확인해 주세요.',
   'settings.preflight.no_url': '엔드포인트 URL이 비어 있어요.',
+  'settings.preflight.bad_url': 'URL은 http:// 또는 https://로 시작해야 해요.',
+  'settings.preflight.bad_url_rec': 'URL 앞에 https://를 추가해 주세요.',
   'settings.preflight.no_model': '모델 이름이 선택되지 않았어요.',
   'settings.list_speech_voices.unsupported': '현재 환경에서는 온라인 음성 목록 가져오기를 지원하지 않아요.',
   'settings.preview.busy_error': '이전 대화가 아직 처리 중이에요. 잠시 후 다시 미리 들어 보세요.',
