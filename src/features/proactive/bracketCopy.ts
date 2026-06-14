@@ -255,29 +255,67 @@ export function getBracketTemplates(uiLanguage: UiLanguage): BracketTemplates {
   return TEMPLATES[normalizeUiLanguage(uiLanguage)]
 }
 
+// ── Dedup helper ──────────────────────────────────────────────────────────
+
+export type PoolPick = { idx: number; value: string }
+
+export function pickFromPool(
+  pool: readonly string[],
+  avoidIdx: number | null | undefined,
+  randomFn: () => number = Math.random,
+): PoolPick {
+  if (pool.length <= 1) return { idx: 0, value: pool[0] }
+  if (avoidIdx == null || avoidIdx < 0 || avoidIdx >= pool.length) {
+    const idx = Math.floor(randomFn() * pool.length)
+    return { idx, value: pool[idx] }
+  }
+  const remaining = pool.length - 1
+  let raw = Math.floor(randomFn() * remaining)
+  if (raw >= avoidIdx) raw += 1
+  return { idx: raw, value: pool[raw] }
+}
+
+// ── Last-pick tracking ───────────────────────────────────────────────────
+
+export type BracketLastPicks = {
+  morning?: number | null
+  highlight?: number | null
+  stressful?: number | null
+  goDeeper?: number | null
+}
+
+// ── Pick functions ────────────────────────────────────────────────────────
+
 export type PickMorningPromptInput = {
   uiLanguage: UiLanguage
   /** Gist of the prior evening's exchange; null when bracket has never run. */
   previousEveningTopic: string | null
   /** 0..1 RNG; supply a fixed value in tests. */
   randomFn?: () => number
+  /** Index of the last morning question picked; excluded from this pick. */
+  avoidIdx?: number | null
 }
 
-export function pickMorningPrompt(input: PickMorningPromptInput): string {
+export function pickMorningPrompt(input: PickMorningPromptInput): PoolPick & { isCallback: boolean } {
   const t = getBracketTemplates(input.uiLanguage)
   if (input.previousEveningTopic && input.previousEveningTopic.trim().length > 0) {
-    return t.morningCallback.replace('{topic}', input.previousEveningTopic.trim())
+    return {
+      idx: -1,
+      value: t.morningCallback.replace('{topic}', input.previousEveningTopic.trim()),
+      isCallback: true,
+    }
   }
-  const rand = input.randomFn ?? Math.random
-  return t.morningOpenQuestions[Math.floor(rand() * t.morningOpenQuestions.length)]
+  const pick = pickFromPool(t.morningOpenQuestions, input.avoidIdx, input.randomFn ?? Math.random)
+  return { ...pick, isCallback: false }
 }
 
 export function pickGoDeeperFollowup(
   uiLanguage: UiLanguage,
   randomFn: () => number = Math.random,
-): string {
+  avoidIdx?: number | null,
+): PoolPick {
   const t = getBracketTemplates(uiLanguage)
-  return t.eveningGoDeeperPool[Math.floor(randomFn() * t.eveningGoDeeperPool.length)]
+  return pickFromPool(t.eveningGoDeeperPool, avoidIdx, randomFn)
 }
 
 export type BuildBracketNotificationInput = {
@@ -287,31 +325,45 @@ export type BuildBracketNotificationInput = {
   /** Used by the morning callback when present; ignored for evening. */
   previousEveningTopic?: string | null
   randomFn?: () => number
+  /** Last-picked indices to avoid back-to-back repeats. */
+  lastPicks?: BracketLastPicks
+}
+
+export type BracketNotificationResult = {
+  title: string
+  body: string
+  /** Indices picked this time — caller should persist for next dedup. */
+  pickedIndices: BracketLastPicks
 }
 
 export function buildBracketNotification(
   input: BuildBracketNotificationInput,
-): { title: string; body: string } {
+): BracketNotificationResult {
   const t = getBracketTemplates(input.uiLanguage)
   const companionName = input.companionName?.trim() || 'Nexus'
+  const last = input.lastPicks ?? {}
 
   if (input.bracket === 'morning') {
+    const pick = pickMorningPrompt({
+      uiLanguage: input.uiLanguage,
+      previousEveningTopic: input.previousEveningTopic ?? null,
+      randomFn: input.randomFn,
+      avoidIdx: last.morning,
+    })
     return {
       title: t.morningNotificationTitle.replace('{companionName}', companionName),
-      body: pickMorningPrompt({
-        uiLanguage: input.uiLanguage,
-        previousEveningTopic: input.previousEveningTopic ?? null,
-        randomFn: input.randomFn,
-      }),
+      body: pick.value,
+      pickedIndices: { morning: pick.isCallback ? last.morning : pick.idx },
     }
   }
 
   const rand = input.randomFn ?? Math.random
-  const highlight = t.eveningHighlightPool[Math.floor(rand() * t.eveningHighlightPool.length)]
-  const stressful = t.eveningStressfulPool[Math.floor(rand() * t.eveningStressfulPool.length)]
+  const hPick = pickFromPool(t.eveningHighlightPool, last.highlight, rand)
+  const sPick = pickFromPool(t.eveningStressfulPool, last.stressful, rand)
 
   return {
     title: t.eveningNotificationTitle.replace('{companionName}', companionName),
-    body: `${highlight}${t.eveningJoiner}${stressful}`,
+    body: `${hPick.value}${t.eveningJoiner}${sPick.value}`,
+    pickedIndices: { highlight: hPick.idx, stressful: sPick.idx },
   }
 }
