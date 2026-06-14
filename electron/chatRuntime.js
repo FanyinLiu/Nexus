@@ -655,6 +655,26 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
     }
   }
 
+  if (status === 429) {
+    return {
+      ok: false,
+      status: 'error',
+      message: rawMessage || '请求频率超过服务商限制，请稍后再试。',
+      recommendation: '等待几秒后重试。如果持续出现，检查服务商控制台的调用限额和套餐。',
+      checkedAt,
+    }
+  }
+
+  if (status === 404 && requestedModel) {
+    return {
+      ok: false,
+      status: 'model_missing',
+      message: rawMessage || `模型「${requestedModel}」不存在或当前账号无权访问。`,
+      recommendation: '检查模型名是否正确，或换成服务商推荐的默认模型。',
+      checkedAt,
+    }
+  }
+
   return {
     ok: false,
     status: status >= 500 ? 'unreachable' : 'error',
