@@ -56,7 +56,7 @@ const COMMON_PATTERNS: KnownPattern[] = [
   // `没能连上…具体原因：模型回复太慢…` (net.js rejects inside chatIpc's catch),
   // and first-match-wins would otherwise classify every timeout as a
   // connection failure.
-  { match: /ETIMEDOUT|timeout|timed out|超时|太慢|逾時/i, key: 'humanize.timeout' },
+  { match: /ETIMEDOUT|timeout|timed out|超时|太慢|等了好久|逾時/i, key: 'humanize.timeout' },
   { match: /ECONNREFUSED|connection refused|没能连上|连接失败/i, key: 'humanize.connection_refused' },
   { match: /ENOTFOUND|getaddrinfo|dns/i, key: 'humanize.dns_failed' },
   // 'terminated' / 'other side closed' are undici's wording for a connection

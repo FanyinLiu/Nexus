@@ -34,7 +34,7 @@ export function resolveSpeechOutputTimeoutMs() {
 }
 
 export function resolveSpeechOutputTimeoutMessage() {
-  return '语音播报响应超时，请检查网络、代理或当前语音服务状态。'
+  return '语音播报等了好久都没回应，看看网络和代理对不对？'
 }
 
 export function buildOpenAiCompatibleSpeechRequestPayload(payload, content, options = {}) {

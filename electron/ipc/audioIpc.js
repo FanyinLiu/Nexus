@@ -96,11 +96,11 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         // voice-list, safe to follow with per-hop SSRF revalidation.
         followRedirectsSafely: true,
         timeoutMs: AUDIO_VOICE_LIST_TIMEOUT_MS,
-        timeoutMessage: '音色列表拉取超时，请检查网络或稍后重试。',
+        timeoutMessage: '音色列表拉了好久都没回来，看看网络对不对？',
       })
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
-      throw new Error(`音色列表请求失败，请检查 URL、网络或代理设置。原始错误：${reason}`)
+      throw new Error(`音色列表没能拉到，看看地址和网络对不对？具体原因：${reason}`)
     }
 
     const data = await readJsonSafe(response)
@@ -110,7 +110,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         data?.error?.message
           ?? data?.detail?.message
           ?? data?.message
-          ?? `音色列表请求失败（状态码：${response.status}）`,
+          ?? `音色列表那边回了个状态码 ${response.status}，不太确定哪里出了问题。`,
       )
     }
 
@@ -283,7 +283,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         headers,
         body,
         timeoutMs: AUDIO_TRANSCRIBE_TIMEOUT_MS,
-        timeoutMessage: '语音识别响应超时，请检查网络、代理或当前语音服务状态。',
+        timeoutMessage: '语音识别那边等了好久都没回应，看看网络和代理对不对？',
       })
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
@@ -307,7 +307,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         }
 
         throw new Error(
-          volcStatus.message || `火山语音识别请求失败（状态码：${volcStatus.code}）`,
+          volcStatus.message || `火山语音识别那边回了个状态码 ${volcStatus.code}，不太确定哪里出了问题。`,
         )
       }
     }
@@ -317,14 +317,14 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         data?.error?.message
           ?? data?.detail?.message
           ?? data?.message
-          ?? `语音识别请求失败（状态码：${response.status}）`,
+          ?? `语音识别那边回了个状态码 ${response.status}，不太确定哪里出了问题。`,
       )
     }
 
     const text = String(data?.text ?? data?.transcript ?? '').trim()
 
     if (!text) {
-      throw new Error('语音识别返回了空文本，请检查录音内容或模型设置。')
+      throw new Error('语音识别回来了但是没听到什么内容，可以再说一遍试试。')
     }
 
     console.info('[audio:transcribe] success', {
@@ -497,7 +497,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
 
     if (!response.ok) {
       throw new Error(
-        await extractResponseErrorMessage(response, '语音播报请求失败（状态码：' + response.status + '）'),
+        await extractResponseErrorMessage(response, '语音播报那边回了个状态码 ' + response.status + '，不太确定哪里出了问题。'),
       )
     }
 

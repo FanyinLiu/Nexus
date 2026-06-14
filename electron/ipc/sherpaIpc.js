@@ -100,7 +100,7 @@ export function register() {
       throw new Error(
         status.installed
           ? 'SenseVoice 模型未安装，请在设置 → 本地模型向导里点击下载。'
-          : 'sherpa-onnx-node 原生模块未加载，请检查安装是否完整。',
+          : 'sherpa-onnx-node 原生模块没能加载，可能是安装不完整。',
       )
     }
     const ok = sherpaSenseVoiceService.startStream()
@@ -158,7 +158,7 @@ export function register() {
       throw new Error(
         status.installed
           ? 'Paraformer 模型未安装，请在设置 → 本地模型向导里下载（可选模型，默认使用 SenseVoice）。'
-          : 'sherpa-onnx-node 原生模块未加载，请检查安装是否完整。',
+          : 'sherpa-onnx-node 原生模块没能加载，可能是安装不完整。',
       )
     }
     const ok = sherpaParaformerService.startStream()

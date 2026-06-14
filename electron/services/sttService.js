@@ -159,7 +159,7 @@ async function runSpeechInputConnectionSmokeTest(payload, baseUrl) {
       data?.error?.message
       ?? data?.detail?.message
       ?? data?.message
-      ?? `语音识别请求失败（状态码：${response.status}）`
+      ?? `语音识别那边回了个状态码 ${response.status}，不太确定哪里出了问题。`
 
     if (isSpeechInputNoSpeechMessage(message)) {
       return {
