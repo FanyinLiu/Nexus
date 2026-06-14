@@ -1086,6 +1086,10 @@ button.settings-choice-card,
   color: rgba(255, 190, 190, 0.92);
   cursor: pointer;
   line-height: 1;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
 }
 
 .settings-inline-delete svg {
@@ -1098,6 +1102,11 @@ button.settings-choice-card,
   border-color: rgba(248, 113, 113, 0.36);
   background: rgba(248, 113, 113, 0.14);
   color: rgba(255, 226, 226, 0.98);
+}
+
+.settings-inline-delete:active {
+  transform: scale(0.92);
+  transition-duration: 0.1s;
 }
 
 .settings-inline-delete:focus-visible {
@@ -1279,6 +1288,11 @@ button.settings-choice-card,
   padding: 0 16px;
   border-radius: 8px;
   font-size: 13px;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease,
+    opacity 0.16s ease;
 }
 
 .settings-drawer .ghost-button {
@@ -3712,6 +3726,29 @@ summary.settings-console-section__header:focus-visible {
 @keyframes settings-test-result-in {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.settings-test-result.is-loading {
+  background: rgba(147, 197, 253, 0.06);
+  color: rgba(147, 197, 253, 0.78);
+  border: 1px solid rgba(147, 197, 253, 0.12);
+}
+
+.settings-test-result.is-loading::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  border: 2px solid rgba(147, 197, 253, 0.25);
+  border-top-color: rgba(147, 197, 253, 0.78);
+  border-radius: 50%;
+  vertical-align: -2px;
+  animation: settings-spinner 0.7s linear infinite;
+}
+
+@keyframes settings-spinner {
+  to { transform: rotate(360deg); }
 }
 
 .settings-test-result.is-success {

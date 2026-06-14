@@ -358,6 +358,17 @@
   color: rgba(155, 44, 12, 0.92);
 }
 
+.settings-drawer--day .settings-test-result.is-loading {
+  border-color: rgba(52, 120, 246, 0.18);
+  background: rgba(52, 120, 246, 0.06);
+  color: rgba(30, 80, 180, 0.82);
+}
+
+.settings-drawer--day .settings-test-result.is-loading::before {
+  border-color: rgba(52, 120, 246, 0.22);
+  border-top-color: rgba(52, 120, 246, 0.78);
+}
+
 .settings-drawer--day .settings-drawer__actions {
   border-top-color: rgba(28, 42, 60, 0.08);
 }
@@ -4194,6 +4205,17 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border-color: rgba(191, 65, 24, 0.18);
   background: rgba(191, 65, 24, 0.06);
   color: rgba(155, 44, 12, 0.9);
+}
+
+.settings-drawer--warm-day .settings-page[data-section] .settings-test-result.is-loading {
+  border-color: rgba(199, 102, 69, 0.16);
+  background: rgba(199, 102, 69, 0.05);
+  color: rgba(140, 70, 40, 0.8);
+}
+
+.settings-drawer--warm-day .settings-page[data-section] .settings-test-result.is-loading::before {
+  border-color: rgba(199, 102, 69, 0.2);
+  border-top-color: rgba(199, 102, 69, 0.75);
 }
 
 .settings-drawer--warm-day .settings-page[data-section] .settings-choice-card:hover,
