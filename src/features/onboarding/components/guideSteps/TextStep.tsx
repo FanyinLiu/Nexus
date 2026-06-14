@@ -1,9 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { getApiProviderPreset, getDefaultOnboardingRegion, getOnboardingTextProviderOptionsByRegion } from '../../../../lib/apiProviders'
 import type { ApiProviderPreset } from '../../../../lib/apiProviders'
 import { displaySecretInputValue } from '../../../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
 import { getLocalizedApiProviderNote } from '../../../models/providerNotes'
+import type { ConnectionResult } from '../../../../components/settingsDrawerSupport'
 import type { AppSettings } from '../../../../types'
 import type { OnboardingDraftSetter } from './types'
 
@@ -19,6 +20,7 @@ type TextStepProps = {
    */
   regionTab: ApiProviderPreset['region'] | null
   onRegionTabChange: (region: ApiProviderPreset['region']) => void
+  onTestConnection?: (settings: AppSettings) => Promise<ConnectionResult>
 }
 
 // 国内 / 海外 / 本地 — the region field partitions every preset with no overlap,
@@ -36,11 +38,27 @@ export function TextStep({
   onApplyTextProviderPreset,
   regionTab,
   onRegionTabChange,
+  onTestConnection,
 }: TextStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
   const currentPreset = getApiProviderPreset(draft.apiProviderId)
   const hasModelOptions = currentPreset.models.length > 0
+
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<ConnectionResult | null>(null)
+
+  async function handleTestConnection() {
+    if (!onTestConnection || testing) return
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const result = await onTestConnection(draft)
+      setTestResult(result)
+    } finally {
+      setTesting(false)
+    }
+  }
 
   // The currently-selected provider stays visible regardless of the active tab.
   const region = regionTab ?? getDefaultOnboardingRegion(draft.uiLanguage)
@@ -133,6 +151,32 @@ export function TextStep({
           placeholder={ti('onboarding.text.api_key_placeholder')}
         />
       </label>
+
+      {onTestConnection ? (
+        <div className="onboarding-test-connection">
+          <button
+            type="button"
+            className="ghost-button"
+            disabled={testing}
+            onClick={handleTestConnection}
+          >
+            {testing ? ti('settings.model.testing') : ti('settings.model.test_endpoint')}
+          </button>
+          {testResult ? (
+            <div
+              className={testResult.ok ? 'settings-test-result is-success' : 'settings-test-result is-error'}
+              role={testResult.ok ? 'status' : 'alert'}
+              aria-live={testResult.ok ? 'polite' : 'assertive'}
+              aria-atomic="true"
+            >
+              <p>{testResult.message}</p>
+              {testResult.recommendation ? (
+                <p className="settings-test-result__recommendation">{testResult.recommendation}</p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
 }

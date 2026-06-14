@@ -477,6 +477,27 @@ export function useAppOverlays({
         completeOnboarding: true,
       })
     },
+    onTestTextConnection: async (draftSettings) => {
+      if (!window.desktopPet?.testChatConnection) {
+        return { ok: false, message: t('settings.test_connection.unsupported') }
+      }
+
+      const preflightFail = runConnectionPreflight({
+        providerId: draftSettings.apiProviderId,
+        apiKey: draftSettings.apiKey,
+        apiBaseUrl: draftSettings.apiBaseUrl,
+        model: draftSettings.model,
+        uiLanguage: draftSettings.uiLanguage,
+      })
+      if (preflightFail) return preflightFail
+
+      return window.desktopPet.testChatConnection({
+        providerId: draftSettings.apiProviderId,
+        baseUrl: draftSettings.apiBaseUrl,
+        apiKey: draftSettings.apiKey,
+        model: draftSettings.model,
+      })
+    },
   }
 
   return {

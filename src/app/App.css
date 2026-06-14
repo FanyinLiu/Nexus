@@ -3389,6 +3389,12 @@
   grid-template-columns: 1fr;
 }
 
+.onboarding-test-connection {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
 .ai-disclosure-step {
   gap: 10px;
 }

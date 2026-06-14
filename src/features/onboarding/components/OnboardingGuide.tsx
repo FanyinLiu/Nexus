@@ -43,6 +43,7 @@ export type OnboardingGuideProps = {
   petModelPresets: PetModelDefinition[]
   onDismiss: () => void
   onSave: (settings: AppSettings) => Promise<void>
+  onTestTextConnection?: (settings: AppSettings) => Promise<import('../../../components/settingsDrawerSupport').ConnectionResult>
 }
 
 export function OnboardingGuide({
@@ -53,6 +54,7 @@ export function OnboardingGuide({
   petModelPresets,
   onDismiss,
   onSave,
+  onTestTextConnection,
 }: OnboardingGuideProps) {
   const [stepIndex, setStepIndex] = useState(0)
   const [draft, setDraft] = useState(settings)
@@ -204,6 +206,7 @@ export function OnboardingGuide({
             onApplyTextProviderPreset={applyTextProviderPreset}
             regionTab={textProviderRegion}
             onRegionTabChange={setTextProviderRegion}
+            onTestConnection={onTestTextConnection}
           />
         )
       case 'voice':
