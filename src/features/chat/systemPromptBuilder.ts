@@ -23,6 +23,7 @@ import { classifyActivity } from '../autonomy/v2/contextGatherer.ts'
 import { formatActivityToneGuidance } from '../autonomy/activityTone.ts'
 import { formatNarrativeForPrompt } from '../memory/narrativeMemory.ts'
 import { COHERENCE_GUIDANCE } from './coherenceGuidance.ts'
+import { REUNION_GUIDANCE } from './reunionGuidance.ts'
 import { getChatPromptStrings } from './prompts/index.ts'
 import type { BuiltInToolResult } from '../tools/toolTypes'
 import {
@@ -354,6 +355,7 @@ export async function buildSystemPrompt(
     messageFollowUpSection,
     headerText,
     COHERENCE_GUIDANCE,
+    REUNION_GUIDANCE,
     emotionSection,
     rhythmSection,
     activityToneSection,
