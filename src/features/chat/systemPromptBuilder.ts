@@ -27,6 +27,7 @@ import { REUNION_GUIDANCE } from './reunionGuidance.ts'
 import { EMOTIONAL_TRANSITION_GUIDANCE } from './emotionalTransitionGuidance.ts'
 import { LOW_SIGNAL_GUIDANCE } from './lowSignalGuidance.ts'
 import { QUESTION_PACING_GUIDANCE } from './questionPacingGuidance.ts'
+import { TOPIC_EXHAUSTION_GUIDANCE } from './topicExhaustionGuidance.ts'
 import { getChatPromptStrings } from './prompts/index.ts'
 import type { BuiltInToolResult } from '../tools/toolTypes'
 import {
@@ -361,6 +362,7 @@ export async function buildSystemPrompt(
     REUNION_GUIDANCE,
     LOW_SIGNAL_GUIDANCE,
     QUESTION_PACING_GUIDANCE,
+    TOPIC_EXHAUSTION_GUIDANCE,
     emotionSection,
     EMOTIONAL_TRANSITION_GUIDANCE,
     rhythmSection,
