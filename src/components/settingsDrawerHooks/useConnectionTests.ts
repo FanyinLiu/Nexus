@@ -25,6 +25,11 @@ export function useConnectionTests({
   >({})
 
   async function runConnectionTest(capability: ServiceConnectionCapability) {
+    setTestResults((current) => {
+      const next = { ...current }
+      delete next[capability]
+      return next
+    })
     setTestingTarget(capability)
     try {
       const result = await onTestConnection(capability, draft)
