@@ -304,6 +304,46 @@ test('404 with model returns model_missing status for non-deepseek providers', (
   assert.match(result.message, /gpt-99/)
 })
 
+test('402 returns needs_key for non-deepseek providers', () => {
+  const result = summarizeChatConnectionTestFailure({
+    providerId: 'openai',
+    status: 402,
+    hasApiKey: true,
+    model: 'gpt-4o',
+    data: {},
+  })
+
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 'needs_key')
+})
+
+test('408 timeout returns unreachable with recommendation', () => {
+  const result = summarizeChatConnectionTestFailure({
+    providerId: 'openai',
+    status: 408,
+    hasApiKey: true,
+    model: 'gpt-4o',
+    data: {},
+  })
+
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 'unreachable')
+  assert.ok(result.recommendation)
+})
+
+test('502 returns unreachable with maintenance hint', () => {
+  const result = summarizeChatConnectionTestFailure({
+    providerId: 'openai',
+    status: 502,
+    hasApiKey: true,
+    model: 'gpt-4o',
+    data: {},
+  })
+
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 'unreachable')
+})
+
 test('extractChatResponseContent handles anthropic text blocks', () => {
   const content = extractChatResponseContent('anthropic', {
     content: [

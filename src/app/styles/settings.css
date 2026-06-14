@@ -1855,6 +1855,13 @@ button.settings-choice-card,
   padding: 10px 12px;
 }
 
+.settings-drawer input:not([type='checkbox']):not([type='range']):hover,
+.settings-drawer select:hover,
+.settings-drawer textarea:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .settings-drawer input:not([type='checkbox']):not([type='range']):focus,
 .settings-drawer select:focus,
 .settings-drawer textarea:focus {
