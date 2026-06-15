@@ -1133,6 +1133,16 @@
   text-decoration: underline;
 }
 
+.tool-result-card__sourceAnchor:active {
+  transform: scale(0.97);
+  transition-duration: 0.1s;
+}
+
+.tool-result-card__sourceAnchor:focus-visible {
+  outline: 2px solid rgba(168, 139, 255, 0.6);
+  outline-offset: 2px;
+}
+
 .empty-chat {
   color: var(--text-soft);
   font-size: 14px;
@@ -3157,6 +3167,12 @@
   padding: 16px;
   background: rgba(8, 8, 10, 0.34);
   backdrop-filter: blur(20px);
+  animation: onboarding-backdrop-in 200ms ease-out;
+}
+
+@keyframes onboarding-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .onboarding-backdrop--pet {
@@ -3185,6 +3201,12 @@
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(24px);
   -webkit-app-region: no-drag;
+  animation: onboarding-card-in 240ms ease-out;
+}
+
+@keyframes onboarding-card-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .onboarding-card--pet {
