@@ -1340,7 +1340,7 @@ export const jaMessages: TranslationDictionary = {
   'voice.restart_failed': '音声の再起動がうまくいかなかった…もう一度試してみてね。',
   'voice.start_failed': '音声が起動できなかったみたい。もう一度試してみてね。',
   'voice.provider.tencent.connect_required': '現在の環境ではデスクトップクライアントが接続されておらず、Tencent Cloud 音声認識は利用できません。',
-  'voice.provider.tencent.credentials_invalid': 'Tencent Cloud 音声認識の資格情報の形式が正しくありません。API Key 欄に APPID:SecretId:SecretKey を入力してください。',
+  'voice.provider.tencent.credentials_invalid': 'Tencent Cloud 音声認識の資格情報の形式がちょっと違うみたい。API Key 欄に APPID:SecretId:SecretKey を入力してみて。',
   'voice.provider.tencent.configure_credentials': 'まず Tencent Cloud 音声認識の資格情報を設定してください。',
   'voice.provider.tencent.failed_retry': 'Tencent Cloud の音声認識がうまくいかなかった…少し待ってからもう一度試してみて。',
   'voice.provider.tencent.start_failed': 'Tencent Cloud の音声認識が起動できなかったみたい。資格情報とネットワークを見てみて。',

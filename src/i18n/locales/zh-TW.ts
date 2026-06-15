@@ -1340,7 +1340,7 @@ export const zhTWMessages: TranslationDictionary = {
   'voice.restart_failed': '語音沒能重啟，再手動試一次吧。',
   'voice.start_failed': '語音沒能啟動，再試一次吧。',
   'voice.provider.tencent.connect_required': '目前環境沒連上桌面客戶端，沒法用騰訊雲語音辨識。',
-  'voice.provider.tencent.credentials_invalid': '騰訊雲語音辨識憑證格式不正確。請在介面密鑰欄填寫 APPID:SecretId:SecretKey。',
+  'voice.provider.tencent.credentials_invalid': '騰訊雲語音辨識憑證格式好像不太對，在介面密鑰欄填 APPID:SecretId:SecretKey 看看？',
   'voice.provider.tencent.configure_credentials': '請先設定騰訊雲語音辨識憑證。',
   'voice.provider.tencent.failed_retry': '騰訊雲語音辨識沒成功，等一下再試試？',
   'voice.provider.tencent.start_failed': '騰訊雲語音辨識沒能啟動，看看憑證和網路對不對？',
