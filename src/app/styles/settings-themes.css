@@ -391,6 +391,10 @@
   box-shadow: 0 10px 22px rgba(52, 120, 246, 0.2);
 }
 
+.settings-drawer--day summary.settings-console-section__header:hover {
+  background: rgba(28, 42, 60, 0.05);
+}
+
 .settings-drawer--day summary.settings-console-section__header:focus-visible {
   outline-color: rgba(52, 120, 246, 0.38);
 }
