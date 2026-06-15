@@ -57,6 +57,8 @@ import {
   useWindowStateSync,
   usePetModelImport,
 } from './settingsDrawerHooks/index.ts'
+import { ConfirmDialog } from './ConfirmDialog.tsx'
+import { useConfirm } from './useConfirm.ts'
 import { PetControlIcon } from './PetControlIcon.tsx'
 import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
 import { buildSettingsSectionMeta } from './settingsDrawerMetadata.ts'
@@ -399,8 +401,11 @@ export function SettingsDrawer({
     handleLoadSpeechVoices: speechVoices.handleLoadSpeechVoices,
   })
 
+  const { confirm, confirmOptions, handleConfirm, handleCancel } = useConfirm()
+
   const chatHistory = useChatHistoryActions({
     chatMessageCount,
+    confirm,
     onExportChatHistory,
     onImportChatHistory,
     onClearChatHistory,
@@ -409,6 +414,7 @@ export function SettingsDrawer({
   const memoryArchive = useMemoryArchiveActions({
     memories,
     dailyMemoryEntries,
+    confirm,
     onExportMemoryArchive,
     onImportMemoryArchive,
     onClearMemoryArchive,
@@ -728,6 +734,7 @@ export function SettingsDrawer({
             clearingChatHistory={chatHistory.clearingChatHistory}
             chatHistoryStatus={chatHistory.chatHistoryStatus}
             currentSessionId={currentChatSessionId}
+            confirm={confirm}
             onExportChatHistory={() => void chatHistory.handleExportChatHistory()}
             onImportChatHistory={() => void chatHistory.handleImportChatHistory()}
             onClearChatHistory={() => void chatHistory.handleClearChatHistory()}
@@ -1132,6 +1139,7 @@ export function SettingsDrawer({
         </button>
       </div>
       </aside>
+      <ConfirmDialog options={confirmOptions} onConfirm={handleConfirm} onCancel={handleCancel} />
     </div>
   )
 }
