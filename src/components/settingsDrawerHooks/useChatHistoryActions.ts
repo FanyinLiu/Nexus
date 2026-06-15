@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import type { ConfirmFn } from '../useConfirm.ts'
 import type { ConnectionResult } from '../settingsDrawerSupport'
 
 export type UseChatHistoryActionsOptions = {
   chatMessageCount: number
+  confirm: ConfirmFn
   onExportChatHistory: () => Promise<{
     canceled: boolean
     filePath?: string
@@ -22,6 +24,7 @@ export type UseChatHistoryActionsOptions = {
 
 export function useChatHistoryActions({
   chatMessageCount,
+  confirm,
   onExportChatHistory,
   onImportChatHistory,
   onClearChatHistory,
@@ -58,7 +61,7 @@ export function useChatHistoryActions({
 
   async function handleImportChatHistory() {
     if (chatMessageCount > 0) {
-      const confirmed = window.confirm(t('settings.chat_history.import_confirm'))
+      const confirmed = await confirm({ message: t('settings.chat_history.import_confirm'), tone: 'danger' })
       if (!confirmed) {
         return
       }
@@ -96,7 +99,7 @@ export function useChatHistoryActions({
       return
     }
 
-    const confirmed = window.confirm(t('settings.chat_history.clear_confirm'))
+    const confirmed = await confirm({ message: t('settings.chat_history.clear_confirm'), tone: 'danger' })
     if (!confirmed) {
       return
     }

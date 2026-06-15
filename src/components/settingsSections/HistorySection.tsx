@@ -1,6 +1,7 @@
 import { memo, useMemo, useState } from 'react'
 import { loadChatSessions, removeChatSession, type ChatSession } from '../../lib'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import type { ConfirmFn } from '../useConfirm.ts'
 import type { UiLanguage } from '../../types'
 
 type StatusMessage = {
@@ -18,6 +19,7 @@ type HistorySectionProps = {
   clearingChatHistory: boolean
   chatHistoryStatus: StatusMessage
   currentSessionId?: string
+  confirm: ConfirmFn
   onExportChatHistory: () => void
   onImportChatHistory: () => void
   onClearChatHistory: () => void
@@ -43,6 +45,7 @@ export const HistorySection = memo(function HistorySection({
   clearingChatHistory,
   chatHistoryStatus,
   currentSessionId,
+  confirm,
   onExportChatHistory,
   onImportChatHistory,
   onClearChatHistory,
@@ -69,8 +72,8 @@ export const HistorySection = memo(function HistorySection({
     [sessions, currentSessionId],
   )
 
-  const handleRemove = (id: string) => {
-    if (!window.confirm(ti('settings.history.delete_confirm'))) return
+  const handleRemove = async (id: string) => {
+    if (!(await confirm({ message: ti('settings.history.delete_confirm'), tone: 'danger' }))) return
     removeChatSession(id)
     setRefreshKey((v) => v + 1)
     if (expandedId === id) setExpandedId(null)

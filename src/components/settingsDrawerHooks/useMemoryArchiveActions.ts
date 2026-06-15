@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import type { ConfirmFn } from '../useConfirm.ts'
 import type { ConnectionResult } from '../settingsDrawerSupport'
 import type { DailyMemoryEntry, MemoryItem } from '../../types'
 
 export type UseMemoryArchiveActionsOptions = {
   memories: MemoryItem[]
   dailyMemoryEntries: DailyMemoryEntry[]
+  confirm: ConfirmFn
   onExportMemoryArchive: () => Promise<{
     canceled: boolean
     filePath?: string
@@ -25,6 +27,7 @@ export type UseMemoryArchiveActionsOptions = {
 export function useMemoryArchiveActions({
   memories,
   dailyMemoryEntries,
+  confirm,
   onExportMemoryArchive,
   onImportMemoryArchive,
   onClearMemoryArchive,
@@ -61,7 +64,7 @@ export function useMemoryArchiveActions({
 
   async function handleImportMemoryArchive() {
     if (memories.length || dailyMemoryEntries.length) {
-      const confirmed = window.confirm(t('settings.memory.import_confirm'))
+      const confirmed = await confirm({ message: t('settings.memory.import_confirm'), tone: 'danger' })
       if (!confirmed) {
         return
       }
@@ -99,7 +102,7 @@ export function useMemoryArchiveActions({
       return
     }
 
-    const confirmed = window.confirm(t('settings.memory.clear_confirm'))
+    const confirmed = await confirm({ message: t('settings.memory.clear_confirm'), tone: 'danger' })
     if (!confirmed) {
       return
     }
