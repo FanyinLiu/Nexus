@@ -8,6 +8,12 @@
   backdrop-filter: blur(16px);
   display: grid;
   place-items: center;
+  animation: settings-backdrop-in 200ms ease-out;
+}
+
+@keyframes settings-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .settings-drawer {
@@ -40,6 +46,12 @@
   box-shadow: 0 16px 56px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(24px);
   overflow: hidden;
+  animation: settings-drawer-in 240ms ease-out;
+}
+
+@keyframes settings-drawer-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .settings-drawer:focus {

@@ -3285,6 +3285,10 @@
   color: rgba(255, 255, 255, 0.55);
   font-size: 13px;
   cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
 }
 
 .onboarding-region-tabs__tab:hover:not(.is-active) {
