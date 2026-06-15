@@ -540,12 +540,12 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         })
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error)
-        throw new Error(`百炼音频文件下载失败。原始错误：${reason}`)
+        throw new Error(`百炼音频文件没下下来，具体原因：${reason}`)
       }
 
       if (!audioResponse.ok) {
         throw new Error(
-          await extractResponseErrorMessage(audioResponse, '百炼音频下载失败（状态码：' + audioResponse.status + '）'),
+          await extractResponseErrorMessage(audioResponse, '百炼音频那边回了个状态码 ' + audioResponse.status + '，不太确定哪里出了问题。'),
         )
       }
 

@@ -26,7 +26,7 @@ export function register() {
     }
     const ok = sherpaKwsService.start(payload)
     if (!ok) {
-      throw new Error('唤醒词引擎初始化失败。')
+      throw new Error('唤醒词引擎没能启动。')
     }
     return { ok: true, sampleRate: 16000 }
   })
@@ -104,7 +104,7 @@ export function register() {
       )
     }
     const ok = sherpaSenseVoiceService.startStream()
-    if (!ok) throw new Error('SenseVoice 初始化失败。')
+    if (!ok) throw new Error('SenseVoice 没能启动。')
     return { ok: true, sampleRate: 16000 }
   })
 
@@ -162,7 +162,7 @@ export function register() {
       )
     }
     const ok = sherpaParaformerService.startStream()
-    if (!ok) throw new Error('Paraformer 初始化失败。')
+    if (!ok) throw new Error('Paraformer 没能启动。')
     return { ok: true, sampleRate: 16000 }
   })
 

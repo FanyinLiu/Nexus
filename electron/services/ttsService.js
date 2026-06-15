@@ -293,7 +293,7 @@ async function synthesizeRemoteTts(sessionPayload, text) {
     })
 
     if (!audioResponse.ok) {
-      throw new Error(await extractResponseErrorMessage(audioResponse, '百炼音频下载失败（状态码：' + audioResponse.status + '）'))
+      throw new Error(await extractResponseErrorMessage(audioResponse, '百炼音频那边回了个状态码 ' + audioResponse.status + '，不太确定哪里出了问题。'))
     }
 
     return {
