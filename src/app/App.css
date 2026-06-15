@@ -7446,6 +7446,9 @@ html[data-theme='warm-day'] .panel-window--companion .empty-chat__prompt {
   from { opacity: 0; }
 }
 
+/* Card colors follow the active in-app settings theme (night base, with
+   day / warm-day overrides scoped under the settings backdrop tone class —
+   the same layering the rest of settings uses), not the OS color scheme. */
 .confirm-dialog-card {
   box-sizing: border-box;
   width: min(380px, 100%);
@@ -7454,9 +7457,9 @@ html[data-theme='warm-day'] .panel-window--companion .empty-chat__prompt {
   gap: 14px;
   padding: 22px 22px 18px;
   border-radius: 12px;
-  background: #fff;
-  color: #1a1f29;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+  background: #1d2230;
+  color: #e6e9f0;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
   animation: confirm-dialog-card-in 220ms ease-out;
 }
 
@@ -7469,13 +7472,14 @@ html[data-theme='warm-day'] .panel-window--companion .empty-chat__prompt {
   font-size: 16px;
   font-weight: 700;
   line-height: 1.3;
+  color: inherit;
 }
 
 .confirm-dialog-card__message {
   margin: 0;
   font-size: 13.5px;
   line-height: 1.55;
-  color: #3a4150;
+  color: #aab2c4;
   overflow-wrap: anywhere;
 }
 
@@ -7498,18 +7502,20 @@ html[data-theme='warm-day'] .panel-window--companion .empty-chat__prompt {
 }
 
 .confirm-dialog-card .ghost-button {
-  border: 1px solid #d0d5de;
-  background: #fff;
-  color: #1a1f29;
+  border: 1px solid rgba(230, 233, 240, 0.18);
+  background: rgba(230, 233, 240, 0.04);
+  color: #e6e9f0;
   box-shadow: none;
 }
 
 .confirm-dialog-card .ghost-button:hover:not(:disabled) {
-  border-color: #aab2c0;
-  background: #f5f7fb;
-  color: #1a1f29;
+  border-color: rgba(230, 233, 240, 0.32);
+  background: rgba(230, 233, 240, 0.09);
+  color: #fff;
 }
 
+/* Confirm/affirmative button: danger red across all themes — an alarm colour
+   is deliberately theme-independent, like the model-setup modal's blue. */
 .confirm-dialog-card__confirm {
   border: 1px solid #4e7cff;
   background: #4e7cff;
@@ -7535,32 +7541,64 @@ html[data-theme='warm-day'] .panel-window--companion .empty-chat__prompt {
 
 .confirm-dialog-card .ghost-button:focus-visible,
 .confirm-dialog-card__confirm:focus-visible {
-  outline: 2px solid rgba(78, 124, 255, 0.55);
+  outline: 2px solid rgba(168, 139, 255, 0.6);
   outline-offset: 2px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .confirm-dialog-card {
-    background: #1d2230;
-    color: #e6e9f0;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
-  }
+/* Day theme */
+.settings-backdrop--day .confirm-dialog-card {
+  background: #fff;
+  color: #1a1f29;
+  box-shadow: 0 24px 60px rgba(72, 92, 120, 0.28);
+}
 
-  .confirm-dialog-card__message {
-    color: #aab2c4;
-  }
+.settings-backdrop--day .confirm-dialog-card__message {
+  color: #3a4150;
+}
 
-  .confirm-dialog-card .ghost-button {
-    border-color: rgba(230, 233, 240, 0.18);
-    background: rgba(230, 233, 240, 0.04);
-    color: #e6e9f0;
-  }
+.settings-backdrop--day .confirm-dialog-card .ghost-button {
+  border-color: #d0d5de;
+  background: #fff;
+  color: #1a1f29;
+}
 
-  .confirm-dialog-card .ghost-button:hover:not(:disabled) {
-    border-color: rgba(230, 233, 240, 0.32);
-    background: rgba(230, 233, 240, 0.09);
-    color: #fff;
-  }
+.settings-backdrop--day .confirm-dialog-card .ghost-button:hover:not(:disabled) {
+  border-color: #aab2c0;
+  background: #f5f7fb;
+  color: #1a1f29;
+}
+
+.settings-backdrop--day .confirm-dialog-card .ghost-button:focus-visible,
+.settings-backdrop--day .confirm-dialog-card__confirm:focus-visible {
+  outline-color: rgba(52, 120, 246, 0.6);
+}
+
+/* Warm-day theme (layers on top of day) */
+.settings-backdrop--warm-day .confirm-dialog-card {
+  background: #fffdf9;
+  color: rgba(36, 27, 22, 0.92);
+  box-shadow: 0 24px 60px rgba(72, 53, 40, 0.2);
+}
+
+.settings-backdrop--warm-day .confirm-dialog-card__message {
+  color: rgba(78, 64, 54, 0.72);
+}
+
+.settings-backdrop--warm-day .confirm-dialog-card .ghost-button {
+  border-color: rgba(72, 53, 40, 0.16);
+  background: rgba(255, 253, 249, 0.8);
+  color: rgba(72, 53, 40, 0.82);
+}
+
+.settings-backdrop--warm-day .confirm-dialog-card .ghost-button:hover:not(:disabled) {
+  border-color: rgba(199, 102, 69, 0.32);
+  background: rgba(255, 253, 249, 0.95);
+  color: rgba(36, 27, 22, 0.94);
+}
+
+.settings-backdrop--warm-day .confirm-dialog-card .ghost-button:focus-visible,
+.settings-backdrop--warm-day .confirm-dialog-card__confirm:focus-visible {
+  outline-color: rgba(199, 102, 69, 0.6);
 }
 
 @media (prefers-reduced-motion: reduce) {
