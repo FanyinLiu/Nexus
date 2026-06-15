@@ -6745,6 +6745,11 @@ html[data-theme='warm-day'] .panel-window--companion .empty-chat__prompt {
   background: rgba(12, 16, 24, 0.62);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+  animation: model-setup-backdrop-in 200ms ease-out;
+}
+
+@keyframes model-setup-backdrop-in {
+  from { opacity: 0; }
 }
 
 .model-setup-card {
@@ -6762,6 +6767,11 @@ html[data-theme='warm-day'] .panel-window--companion .empty-chat__prompt {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
   scrollbar-width: thin;
   scrollbar-color: rgba(26, 31, 41, 0.22) rgba(26, 31, 41, 0.06);
+  animation: model-setup-card-in 240ms ease-out;
+}
+
+@keyframes model-setup-card-in {
+  from { opacity: 0; transform: scale(0.96); }
 }
 
 .model-setup-card::-webkit-scrollbar {
