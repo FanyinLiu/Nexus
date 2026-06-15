@@ -1485,7 +1485,7 @@ export const zhTWMessages: TranslationDictionary = {
   // ── P3: chat/reminder/memory/misc ───────────────────────────────────────
   'voice.audio.playback_stopped': '語音播報已停止。',
   'voice.audio.playback_failed': '語音沒能播出來，看看本地音訊輸出裝置？',
-  'voice.audio.playback_start_not_allowed': '目前環境攔截了自動播放，請先確認系統輸出裝置可用，然後點一下桌寵視窗再重試。',
+  'voice.audio.playback_start_not_allowed': '目前環境攔截了自動播放，看看系統輸出裝置可不可用，然後點一下桌寵視窗再試試？',
   'voice.audio.playback_start_not_supported': '目前音訊格式好像沒法正常解碼，換一個音色或重啟桌寵再試試？',
   'voice.audio.playback_start_generic': '看看系統音量、輸出裝置，或者重啟桌寵後再試試。',
   'voice.audio.playback_start_original': '原始狀況：{detail}',
