@@ -191,6 +191,10 @@
   display: none;
 }
 
+.settings-home-card {
+  transition: background 0.15s ease;
+}
+
 .settings-home-card:hover {
   background: rgba(255, 255, 255, 0.035);
 }
