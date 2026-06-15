@@ -1340,7 +1340,7 @@ export const koMessages: TranslationDictionary = {
   'voice.restart_failed': '음성 재시작이 안 됐어요 — 수동으로 한번 더 해볼래요?',
   'voice.start_failed': '음성이 시작이 안 됐어요 — 한번 더 해볼래요?',
   'voice.provider.tencent.connect_required': '현재 환경에서는 데스크톱 클라이언트가 연결되지 않아 Tencent Cloud 음성 인식을 사용할 수 없습니다.',
-  'voice.provider.tencent.credentials_invalid': 'Tencent Cloud 음성 인식 자격 증명 형식이 올바르지 않습니다. API Key 필드에 APPID:SecretId:SecretKey 를 입력하세요.',
+  'voice.provider.tencent.credentials_invalid': 'Tencent Cloud 음성 인식 자격 증명 형식이 좀 안 맞는 것 같아요. API Key 필드에 APPID:SecretId:SecretKey 를 입력해 보세요.',
   'voice.provider.tencent.configure_credentials': '먼저 Tencent Cloud 음성 인식 자격 증명을 설정하세요.',
   'voice.provider.tencent.failed_retry': 'Tencent Cloud 음성 인식이 잘 안 됐어요 — 잠시 후 다시 해볼래요?',
   'voice.provider.tencent.start_failed': 'Tencent Cloud 음성 인식이 시작이 안 됐어요 — 자격 증명이랑 네트워크를 한번 봐주세요.',

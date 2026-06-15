@@ -1340,7 +1340,7 @@ export const zhCNMessages: TranslationDictionary = {
   'voice.restart_failed': '语音没能重启，再手动试一次吧。',
   'voice.start_failed': '语音没能启动，再试一次吧。',
   'voice.provider.tencent.connect_required': '当前环境未连接桌面客户端，无法使用腾讯云语音识别。',
-  'voice.provider.tencent.credentials_invalid': '腾讯云语音识别凭证格式不正确。请在接口密钥栏填写 APPID:SecretId:SecretKey。',
+  'voice.provider.tencent.credentials_invalid': '腾讯云语音识别凭证格式好像不太对，在接口密钥栏填 APPID:SecretId:SecretKey 看看？',
   'voice.provider.tencent.configure_credentials': '请先配置腾讯云语音识别凭证。',
   'voice.provider.tencent.failed_retry': '腾讯云语音识别没成功，稍后再试试？',
   'voice.provider.tencent.start_failed': '腾讯云语音识别没能启动，看看凭证和网络对不对？',

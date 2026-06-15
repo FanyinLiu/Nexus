@@ -1340,7 +1340,7 @@ export const enMessages: TranslationDictionary = {
   'voice.restart_failed': 'Voice couldn\'t restart — try again manually?',
   'voice.start_failed': 'Voice couldn\'t start — try again?',
   'voice.provider.tencent.connect_required': 'The desktop client is not connected in the current environment, so Tencent Cloud ASR is unavailable.',
-  'voice.provider.tencent.credentials_invalid': 'Invalid Tencent Cloud ASR credentials. Please fill in APPID:SecretId:SecretKey in the API Key field.',
+  'voice.provider.tencent.credentials_invalid': 'The Tencent Cloud ASR credentials format looks off — fill in APPID:SecretId:SecretKey in the API Key field?',
   'voice.provider.tencent.configure_credentials': 'Please configure your Tencent Cloud ASR credentials first.',
   'voice.provider.tencent.failed_retry': 'Tencent Cloud speech recognition didn\'t work — try again in a moment?',
   'voice.provider.tencent.start_failed': 'Tencent Cloud ASR couldn\'t start — check the credentials and network?',
