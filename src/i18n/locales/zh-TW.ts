@@ -1726,7 +1726,7 @@ export const zhTWMessages: TranslationDictionary = {
   'onboarding.ai_disclosure.continue_note': '點「下一步」繼續。日後可從設定 → 引導重新開啟這一頁。',
   'chat.failover.no_api_base': '請先在設定裡填寫介面地址和模型名稱。',
   'chat.failover.no_api_key': '請先在設定裡填寫目前文字提供商的介面密鑰。',
-  'voice.vad.unavailable': '目前環境無法啟動主程序 VAD。',
+  'voice.vad.unavailable': '目前環境沒法啟動主程序 VAD。',
   'voice.vad.start_failed': '主程序 VAD 沒能啟動。',
   'tools.circuit.open': '工具「{toolId}」連續沒成功，暫時休息一下。',
   'tools.circuit.opened_during_retry': '工具「{toolId}」在重試期間不可用。',
@@ -1772,7 +1772,7 @@ export const zhTWMessages: TranslationDictionary = {
   'settings.window.pet_time.night': '夜晚 23:00',
   // ── humanizeError() friendly messages ───────────────────
   'humanize.auth_failed': '她暫時連不上她的「大腦」—— 介面密鑰可能填錯了或者過期了。',
-  'humanize.forbidden': '服務商拒絕了請求。你的帳號可能沒開通這個模型的權限。',
+  'humanize.forbidden': '服務商那邊沒讓通過。你的帳號可能沒開通這個模型的權限。',
   'humanize.not_found': '地址打不開 —— 檢查一下 API URL 或者模型名字是不是寫對了。',
   'humanize.rate_limited': '短時間內請求太多了，稍等一下再試。',
   'humanize.server_error': '服務商那邊出了點問題，通常自己會好。',
