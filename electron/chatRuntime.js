@@ -54,7 +54,7 @@ function formatInvalidChatApiKeyMessage(providerId) {
   const label = isMiniMaxTokenPlanProvider(providerId)
     ? 'MiniMax Token Plan API Key'
     : 'API Key'
-  return `${label} 格式无效：包含中文、换行、空格或其他不能用于 HTTP Header 的字符。请只填写服务商控制台生成的原始 Key，不要包含套餐说明、模型名或备注。`
+  return `${label} 格式好像不太对：里面有中文、换行、空格之类不能用于 HTTP Header 的字符。只填服务商控制台生成的原始 Key 就好，不要包含套餐说明、模型名或备注。`
 }
 
 function normalizeChatApiKeyForHeader(providerId, apiKey) {

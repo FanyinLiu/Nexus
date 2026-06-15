@@ -170,6 +170,13 @@
   height: 18px;
 }
 
+@keyframes language-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
 .settings-drawer__language-menu {
   position: absolute;
   top: calc(100% + 8px);
@@ -184,6 +191,7 @@
   background: rgba(20, 24, 36, 0.96);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
+  animation: language-menu-in 160ms ease-out;
 }
 
 .settings-drawer__language-menu-item {
@@ -2866,6 +2874,50 @@ button.settings-choice-card,
 }
 
 .settings-drawer--day .settings-startup-status__item.is-warning .settings-startup-status__item-badge {
+  background: rgba(255, 214, 102, 0.3);
+  color: #6f4700;
+}
+
+.settings-drawer--warm-day .settings-startup-status {
+  border-color: rgba(72, 53, 40, 0.1);
+  background: rgba(255, 252, 247, 0.78);
+}
+
+.settings-drawer--warm-day .settings-startup-status__header h4,
+.settings-drawer--warm-day .settings-startup-status__item strong {
+  color: rgba(36, 27, 22, 0.92);
+}
+
+.settings-drawer--warm-day .settings-startup-status__header p,
+.settings-drawer--warm-day .settings-startup-status__item p {
+  color: rgba(78, 64, 54, 0.68);
+}
+
+.settings-drawer--warm-day .settings-startup-status__badge {
+  border-color: rgba(72, 53, 40, 0.14);
+}
+
+.settings-drawer--warm-day .settings-startup-status__badge.is-ok {
+  color: #0f6b4b;
+  background: rgba(31, 163, 111, 0.18);
+}
+
+.settings-drawer--warm-day .settings-startup-status__badge.is-warning {
+  color: #6f4700;
+  background: rgba(255, 214, 102, 0.34);
+}
+
+.settings-drawer--warm-day .settings-startup-status__item {
+  border-color: rgba(72, 53, 40, 0.12);
+  background: rgba(255, 253, 249, 0.82);
+}
+
+.settings-drawer--warm-day .settings-startup-status__item-badge {
+  background: rgba(31, 163, 111, 0.12);
+  color: #0f6b4b;
+}
+
+.settings-drawer--warm-day .settings-startup-status__item.is-warning .settings-startup-status__item-badge {
   background: rgba(255, 214, 102, 0.3);
   color: #6f4700;
 }

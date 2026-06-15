@@ -71,8 +71,8 @@ async function _vaultStore(slot, plaintext) {
 
   if (!isEncryptionAvailable()) {
     throw new Error(
-      '系统加密服务不可用，无法安全存储密钥。'
-      + '在 Linux 下请安装 gnome-keyring 或 kwallet 后重试。',
+      '系统加密服务好像不可用，密钥没法安全存储。'
+      + '在 Linux 下试试安装 gnome-keyring 或 kwallet 再重试？',
     )
   }
 
@@ -157,8 +157,8 @@ async function _vaultStoreMany(entries) {
 
     if (!isEncryptionAvailable()) {
       throw new Error(
-        '系统加密服务不可用，无法安全存储密钥。'
-        + '在 Linux 下请安装 gnome-keyring 或 kwallet 后重试。',
+        '系统加密服务好像不可用，密钥没法安全存储。'
+        + '在 Linux 下试试安装 gnome-keyring 或 kwallet 再重试？',
       )
     }
 

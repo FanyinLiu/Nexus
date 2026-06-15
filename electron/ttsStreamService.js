@@ -92,7 +92,7 @@ function decodeWav(buffer) {
   }
 
   if (!dataOffset || !dataSize) {
-    throw new Error('无法解析 WAV 音频数据。')
+    throw new Error('WAV 音频数据没能解析。')
   }
 
   const dataBuffer = buffer.slice(dataOffset, dataOffset + dataSize)
@@ -445,7 +445,7 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
           emit(session.sender, {
             type: 'error',
             requestId: session.requestId,
-            message: error instanceof Error ? error.message : '流式 TTS 合成失败。',
+            message: error instanceof Error ? error.message : '语音合成好像没接上。',
           })
         }
       })

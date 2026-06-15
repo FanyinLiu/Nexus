@@ -284,7 +284,7 @@ function readZipEntries(buffer) {
     centralDirectoryOffset + centralDirectorySize > buffer.length
     || centralDirectoryOffset >= buffer.length
   ) {
-    throw new Error('ZIP 包中央目录位置无效。')
+    throw new Error('ZIP 包中央目录位置不太对。')
   }
 
   const entries = []
@@ -293,7 +293,7 @@ function readZipEntries(buffer) {
 
   for (let index = 0; index < entryCount; index += 1) {
     if (offset + 46 > buffer.length || buffer.readUInt32LE(offset) !== ZIP_CENTRAL_DIRECTORY_FILE_HEADER_SIGNATURE) {
-      throw new Error('ZIP 包中央目录结构无效。')
+      throw new Error('ZIP 包中央目录结构不太对。')
     }
 
     const flags = buffer.readUInt16LE(offset + 8)
@@ -309,7 +309,7 @@ function readZipEntries(buffer) {
     const nextOffset = fileNameEnd + extraFieldLength + fileCommentLength
 
     if (fileNameEnd > buffer.length || nextOffset > buffer.length) {
-      throw new Error('ZIP 包文件名长度无效。')
+      throw new Error('ZIP 包文件名长度不太对。')
     }
 
     if ((flags & 0x01) !== 0) {
@@ -393,11 +393,11 @@ export async function extractSpritePetZipArchive(archivePath, targetDirectory) {
 
   for (const entry of entries) {
     if (entry.localHeaderOffset + 30 > archiveBuffer.length) {
-      throw new Error('ZIP 包本地文件头位置无效。')
+      throw new Error('ZIP 包本地文件头位置不太对。')
     }
 
     if (archiveBuffer.readUInt32LE(entry.localHeaderOffset) !== ZIP_LOCAL_FILE_HEADER_SIGNATURE) {
-      throw new Error('ZIP 包本地文件头结构无效。')
+      throw new Error('ZIP 包本地文件头结构不太对。')
     }
 
     const localNameLength = archiveBuffer.readUInt16LE(entry.localHeaderOffset + 26)
@@ -406,7 +406,7 @@ export async function extractSpritePetZipArchive(archivePath, targetDirectory) {
     const dataEnd = dataStart + entry.compressedSize
 
     if (dataEnd > archiveBuffer.length) {
-      throw new Error('ZIP 包压缩数据长度无效。')
+      throw new Error('ZIP 包压缩数据长度不太对。')
     }
 
     const compressed = archiveBuffer.subarray(dataStart, dataEnd)
@@ -418,7 +418,7 @@ export async function extractSpritePetZipArchive(archivePath, targetDirectory) {
       try {
         fileBytes = inflateRawSync(compressed, { maxOutputLength: entry.uncompressedSize })
       } catch (error) {
-        throw new Error(`ZIP 文件 ${entry.safeName} 解压失败：${error?.message ?? error}`)
+        throw new Error(`ZIP 文件 ${entry.safeName} 解压没成功：${error?.message ?? error}`)
       }
     } else {
       throw new Error(`不支持 ZIP 压缩方式：${entry.compressionMethod}。`)
@@ -459,7 +459,7 @@ export async function extractSpritePetZipArchive(archivePath, targetDirectory) {
     }
   }
 
-  throw new Error(`ZIP 宠物包没有可用的 Sprite pet manifest：${lastError?.message ?? '未知错误'}`)
+  throw new Error(`ZIP 宠物包里没找到可用的 Sprite pet manifest：${lastError?.message ?? '原因不明'}`)
 }
 
 export function formatSpritePetDisplayName(name) {
@@ -499,12 +499,12 @@ function parsePngInfo(buffer) {
     const nextOffset = dataOffset + chunkLength + 4
 
     if (nextOffset > buffer.length) {
-      throw new Error('spritesheet.png 的 chunk 长度无效。')
+      throw new Error('spritesheet.png 的 chunk 长度不太对。')
     }
 
     if (chunkType === 'IHDR') {
       if (chunkLength !== 13) {
-        throw new Error('spritesheet.png 的 IHDR 长度无效。')
+        throw new Error('spritesheet.png 的 IHDR 长度不太对。')
       }
       ihdr = buffer.subarray(dataOffset, dataOffset + chunkLength)
     } else if (chunkType === 'IDAT') {
@@ -670,7 +670,7 @@ export function readWebpInfo(buffer) {
       sawAlphaChunk = true
     } else if (chunkId === 'VP8L' && chunkSize >= 5 && dataOffset + 5 <= buffer.length) {
       if (buffer[dataOffset] !== 0x2f) {
-        throw new Error('spritesheet.webp 的 VP8L 头无效。')
+        throw new Error('spritesheet.webp 的 VP8L 头不太对。')
       }
       const byte1 = buffer[dataOffset + 1]
       const byte2 = buffer[dataOffset + 2]
@@ -694,7 +694,7 @@ export function readWebpInfo(buffer) {
         || buffer[dataOffset + 4] !== 0x01
         || buffer[dataOffset + 5] !== 0x2a
       ) {
-          throw new Error('spritesheet.webp 的 VP8 头无效。')
+          throw new Error('spritesheet.webp 的 VP8 头不太对。')
       }
       const imageInfo = {
         width: buffer.readUInt16LE(dataOffset + 6) & 0x3fff,
@@ -713,7 +713,7 @@ export function readWebpInfo(buffer) {
     offset = dataOffset + chunkSize + (chunkSize % 2)
   }
 
-  throw new Error(extendedInfo ? 'spritesheet.webp 缺少图像数据。' : '无法读取 spritesheet.webp 的尺寸。')
+  throw new Error(extendedInfo ? 'spritesheet.webp 好像缺少图像数据。' : 'spritesheet.webp 的尺寸没读出来。')
 }
 
 export function readWebpDimensions(buffer) {

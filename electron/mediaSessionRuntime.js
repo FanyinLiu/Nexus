@@ -439,7 +439,7 @@ function parseMediaSessionJson(stdout) {
   try {
     return JSON.parse(String(stdout ?? '').trim() || '{}')
   } catch (error) {
-    throw new Error(`系统媒体会话返回了无法解析的内容。${error instanceof Error ? ` ${error.message}` : ''}`)
+    throw new Error(`系统媒体会话返回的内容没看懂。${error instanceof Error ? ` ${error.message}` : ''}`)
   }
 }
 

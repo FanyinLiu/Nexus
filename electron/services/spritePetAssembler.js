@@ -131,7 +131,7 @@ async function renderRowStrip(row, sourcePath) {
   const metadata = await source.metadata()
 
   if (!metadata.width || !metadata.height) {
-    throw new Error(`无法读取行图片尺寸：${sourcePath}`)
+    throw new Error(`行图片尺寸没读出来：${sourcePath}`)
   }
 
   return source

@@ -25,7 +25,7 @@ test('executeWithProtection opens the circuit after consecutive runtime failures
 
     await assert.rejects(
       executeWithProtection(toolId, async () => 'should not run', { maxRetries: 0 }),
-      /temporarily unavailable|暂时不可用|暫時不可用|사용할 수 없어요|一時的に利用できません/,
+      /temporarily unavailable|暂时不可用|暫時不可用|사용할 수 없어요|一時的に利用できません|连续没成功|hiccups in a row/,
     )
   } finally {
     resetCircuit(toolId)
@@ -63,7 +63,7 @@ test('half-open circuits allow only one recovery probe at a time', async () => {
 
     await assert.rejects(
       executeWithProtection(toolId, async () => 'parallel probe', { maxRetries: 0 }),
-      /temporarily unavailable|暂时不可用|暫時不可用|사용할 수 없어요|一時的に利用できません/,
+      /temporarily unavailable|暂时不可用|暫時不可用|사용할 수 없어요|一時的に利用できません|连续没成功|hiccups in a row/,
     )
 
     assert.ok(releaseProbe)

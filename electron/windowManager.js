@@ -990,7 +990,7 @@ export function probeLocalServiceTarget(target = {}) {
       ...normalized,
       ok: false,
       latencyMs: null,
-      message: '端口无效，无法执行本地探测。',
+      message: '端口好像不对，没法做本地探测。',
     })
   }
 

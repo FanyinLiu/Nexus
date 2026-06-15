@@ -80,7 +80,7 @@ function inferSpriteExtension(spriteUrl, declaredExtension) {
   if (pathname.endsWith('.png')) return 'png'
   if (pathname.endsWith('.webp')) return 'webp'
 
-  throw new Error('无法识别 spritesheet 格式，只支持 PNG 或 WebP。')
+  throw new Error('spritesheet 格式没认出来，目前只支持 PNG 或 WebP。')
 }
 
 function normalizeEmbeddedNextData(value) {
@@ -531,7 +531,7 @@ async function fetchCodexPetGalleryCatalog(options = {}) {
 
   if (!catalogs.length) {
     const reason = results.find((result) => result.status === 'rejected')?.reason
-    throw new Error(`请求 Codex 宠物图库失败：${reason?.message ?? String(reason)}`)
+    throw new Error(`Codex 宠物图库没连上：${reason?.message ?? String(reason)}`)
   }
 
   return filterCodexPetGalleryCatalog(mergeCatalogs(catalogs), options)
@@ -540,7 +540,7 @@ async function fetchCodexPetGalleryCatalog(options = {}) {
 async function fetchCatalogText(url) {
   const response = await fetch(url)
   if (!response.ok) {
-    throw new Error(`请求 ${url} 失败：${response.status} ${response.statusText}`)
+    throw new Error(`请求 ${url} 没通：${response.status} ${response.statusText}`)
   }
 
   return response.text()

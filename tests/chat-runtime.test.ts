@@ -119,7 +119,7 @@ test('chat auth headers trim keys and reject pasted non-header text', () => {
       model: 'MiniMax-M3',
       messages: [{ role: 'user', content: 'Ping' }],
     }),
-    /MiniMax Token Plan API Key 格式无效/,
+    /MiniMax Token Plan API Key 格式好像不太对/,
   )
 
   const preflight = getChatConnectionTestPreflightFailure({
@@ -127,7 +127,7 @@ test('chat auth headers trim keys and reject pasted non-header text', () => {
     apiKey: 'test-key 模型说明',
   })
   assert.equal(preflight?.ok, false)
-  assert.match(preflight?.message ?? '', /MiniMax Token Plan API Key 格式无效/)
+  assert.match(preflight?.message ?? '', /MiniMax Token Plan API Key 格式好像不太对/)
 })
 
 test('anthropic-compatible base URL infers messages protocol for custom providers', () => {

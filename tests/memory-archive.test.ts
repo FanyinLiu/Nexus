@@ -60,7 +60,7 @@ test('handles plain array format (legacy)', () => {
 
 test('rejects invalid JSON', () => {
   assert.throws(() => parseMemoryArchive('not json'), {
-    message: /JSON 解析失败/,
+    message: /JSON 没能解析/,
   })
 })
 
