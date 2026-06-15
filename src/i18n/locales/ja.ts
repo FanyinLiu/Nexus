@@ -1903,7 +1903,7 @@ export const jaMessages: TranslationDictionary = {
   'settings.integrations.hint.mcp_error': 'コマンドが見つかりません。PATH を確認するか、`npx` / `python` プレフィックスを使用するか、実行ファイルのフルパスを指定してください。',
   'settings.integrations.hint.mcp_default': 'MCP サーバーを起動するコマンドを入力してください — Nexus がそのツールを LLM に公開します。',
   'settings.integrations.hint.ready': 'エンドポイントに到達可能です — 使用する準備ができています。',
-  'settings.integrations.hint.error': '接続できません。アドレス、ポート、およびリモートサービスが実際に起動しているかを確認してください。',
+  'settings.integrations.hint.error': '接続できなかったみたい。アドレス、ポート、リモートサービスが起動してるか見てみて。',
   'settings.integrations.hint.configured': '設定が入力されています。モジュールスイッチを切り替えて接続を試みてください。',
   'settings.integrations.hint.default': '接続情報を入力し、モジュールを有効にして使用を開始してください。',
   'settings.integrations.runtime_probe': 'ランタイムプローブ',
