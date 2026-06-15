@@ -334,6 +334,11 @@
   box-shadow: 0 4px 16px rgba(168, 139, 255, 0.15);
 }
 
+.settings-section-nav__button:focus-visible {
+  outline: 2px solid rgba(168, 139, 255, 0.5);
+  outline-offset: 2px;
+}
+
 .settings-section-nav__marker {
   width: 8px;
   height: 8px;
@@ -3159,6 +3164,10 @@ summary.settings-console-section__header::after {
 
 .settings-console-section[open] > summary.settings-console-section__header::after {
   transform: rotate(90deg);
+}
+
+summary.settings-console-section__header:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 summary.settings-console-section__header:focus-visible {
