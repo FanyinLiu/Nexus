@@ -205,7 +205,7 @@ test('extractSpritePetZipArchive bounds deflated output before allocation comple
 
     await assert.rejects(
       () => extractSpritePetZipArchive(archivePath, extractPath),
-      /解压失败/,
+      /解压没成功/,
     )
   })
 })

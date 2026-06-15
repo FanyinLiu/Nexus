@@ -403,7 +403,7 @@ app.whenReady()
     console.error('Failed to initialize the application:', error)
 
     try {
-      dialog.showErrorBox('Nexus 启动失败', message)
+      dialog.showErrorBox('Nexus 没能启动', message)
     } catch {}
 
     app.quit()

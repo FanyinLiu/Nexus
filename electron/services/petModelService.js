@@ -99,7 +99,7 @@ async function fetchText(url) {
     followRedirectsSafely: true,
   })
   if (!response.ok) {
-    throw new Error(`请求 ${url} 失败：${response.status} ${response.statusText}`)
+    throw new Error(`请求 ${url} 没通：${response.status} ${response.statusText}`)
   }
 
   return response.text()
@@ -114,7 +114,7 @@ async function fetchBytes(url, options = {}) {
     followRedirectsSafely: true,
   })
   if (!response.ok) {
-    throw new Error(`请求 ${url} 失败：${response.status} ${response.statusText}`)
+    throw new Error(`请求 ${url} 没通：${response.status} ${response.statusText}`)
   }
 
   return readResponseBufferWithLimit(response, { maxBytes, label })
@@ -355,7 +355,7 @@ async function importSpritePetModelFromCodexGalleryUrlCandidates(candidateUrls, 
   const detailHint = candidateUrls.length > 1
     ? '已尝试 codex-pet.com 详情页和 codex-pet.org 详情页。'
     : ''
-  throw new Error(`未能导入 ${fallbackContext}。${detailHint}${lastError?.message ? `最近错误：${lastError.message}` : ''}`)
+  throw new Error(`没能导入 ${fallbackContext}。${detailHint}${lastError?.message ? `详情：${lastError.message}` : ''}`)
 }
 
 async function createSpritePetModelFromImagePath(selectedImagePath) {
@@ -719,7 +719,7 @@ async function openSpritePetCreatorKitPathFromPayload(payload = {}) {
   const errorMessage = await shell.openPath(openTargetPath)
 
   if (errorMessage) {
-    throw new Error(`打开制作包路径失败：${errorMessage}`)
+    throw new Error(`制作包路径没能打开：${errorMessage}`)
   }
 
   return {

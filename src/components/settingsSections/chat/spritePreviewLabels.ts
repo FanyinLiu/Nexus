@@ -38,11 +38,11 @@ const SPRITE_PREVIEW_STATE_LABELS: Record<SpritePetAnimationState, Record<AppSet
     ko: '점프',
   },
   failed: {
-    'zh-CN': '失败',
-    'zh-TW': '失敗',
-    'en-US': 'Failed',
-    ja: '失敗',
-    ko: '실패',
+    'zh-CN': '没成功',
+    'zh-TW': '沒成功',
+    'en-US': 'Didn\'t work',
+    ja: 'うまくいかず',
+    ko: '안 됨',
   },
   waiting: {
     'zh-CN': '等待',

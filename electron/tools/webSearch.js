@@ -233,7 +233,7 @@ export async function fetchBingRssItems(query, limit = 5) {
   )
 
   if (!response.ok) {
-    throw new Error(`网页搜索失败（状态码：${response.status}）。`)
+    throw new Error(`网页搜索没通（状态码 ${response.status}），稍后再试试？`)
   }
 
   const rssText = await readTextSafe(response)

@@ -36,7 +36,7 @@ export function isLocalTtsAvailable() {
 
 async function getTts() {
   if (!sherpa?.OfflineTts) {
-    throw new Error('本地语音合成组件不可用，请重新安装应用。')
+    throw new Error('本地语音合成组件好像没装好，试试重新安装应用？')
   }
   const dir = findModelDir(LOCAL_TTS_MODEL_DIR)
   if (!dir || !fs.existsSync(path.join(dir, 'model.onnx'))) {

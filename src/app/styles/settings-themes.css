@@ -399,6 +399,14 @@
   outline-color: rgba(52, 120, 246, 0.38);
 }
 
+.settings-drawer--warm-day summary.settings-console-section__header:hover {
+  background: rgba(72, 53, 40, 0.05);
+}
+
+.settings-drawer--warm-day summary.settings-console-section__header:focus-visible {
+  outline-color: rgba(199, 102, 69, 0.5);
+}
+
 .settings-drawer--day input:not([type='checkbox']):not([type='range']),
 .settings-drawer--day select,
 .settings-drawer--day textarea {

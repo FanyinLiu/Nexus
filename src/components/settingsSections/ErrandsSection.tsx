@@ -17,7 +17,7 @@ const STATUS_LABEL: Record<ErrandStatus, Record<string, string>> = {
   queued:    { 'en-US': 'Queued', 'zh-CN': '已加入', 'zh-TW': '已加入', 'ja': 'キュー', 'ko': '대기 중' },
   running:   { 'en-US': 'Running', 'zh-CN': '执行中', 'zh-TW': '執行中', 'ja': '実行中', 'ko': '실행 중' },
   completed: { 'en-US': 'Ready', 'zh-CN': '已完成', 'zh-TW': '已完成', 'ja': '完了', 'ko': '완료' },
-  failed:    { 'en-US': 'Failed', 'zh-CN': '失败', 'zh-TW': '失敗', 'ja': '失敗', 'ko': '실패' },
+  failed:    { 'en-US': 'Didn\'t work', 'zh-CN': '没成功', 'zh-TW': '沒成功', 'ja': 'うまくいかず', 'ko': '안 됨' },
   delivered: { 'en-US': 'Delivered', 'zh-CN': '已送达', 'zh-TW': '已送達', 'ja': '受け取り済み', 'ko': '전달됨' },
 }
 
@@ -41,7 +41,7 @@ const COPY = {
   remove:     { 'en-US': 'Remove', 'zh-CN': '移除', 'zh-TW': '移除', 'ja': '削除', 'ko': '제거' },
   empty:      { 'en-US': 'No errands queued.', 'zh-CN': '当前没有任务。', 'zh-TW': '當前沒有任務。', 'ja': 'おつかいはまだありません。', 'ko': '맡긴 일이 없습니다.' },
   result:     { 'en-US': 'Result', 'zh-CN': '结果', 'zh-TW': '結果', 'ja': '結果', 'ko': '결과' },
-  error:      { 'en-US': 'Error', 'zh-CN': '错误', 'zh-TW': '錯誤', 'ja': 'エラー', 'ko': '오류' },
+  error:      { 'en-US': 'Hiccup', 'zh-CN': '出了点状况', 'zh-TW': '出了點狀況', 'ja': 'ちょっと問題が', 'ko': '문제 생김' },
 }
 
 function pick(field: { [key: string]: string }, uiLanguage: UiLanguage): string {

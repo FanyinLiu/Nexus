@@ -349,7 +349,7 @@ async function buildAtlasCellsFromAtlasSource(sourcePath) {
   const sourceHeight = metadata.height ?? 0
 
   if (!sourceWidth || !sourceHeight) {
-    throw new Error('无法读取来源图片尺寸。')
+    throw new Error('来源图片尺寸没读出来。')
   }
 
   const cells = []
