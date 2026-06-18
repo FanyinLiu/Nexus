@@ -101,6 +101,19 @@ export function useMemory({ settings }: UseMemoryParams) {
     return () => window.clearTimeout(timerId)
   }, [settings.memoryEmbeddingModel, settings.memorySearchMode])
 
+  const applyRemoteMemoryState = useCallback((
+    nextMemories: MemoryItem[],
+    nextDailyMemories: DailyMemoryStore,
+  ) => {
+    memoriesSaveSkipRef.current = true
+    dailyMemoriesSaveSkipRef.current = true
+    personaPersistSkipRef.current = true
+    memoriesRef.current = nextMemories
+    dailyMemoriesRef.current = nextDailyMemories
+    setMemories(nextMemories)
+    setDailyMemories(nextDailyMemories)
+  }, [])
+
   const recentDailyMemoryEntries = useMemo(
     () => getRecentDailyEntries(dailyMemories, 1).slice(0, 8),
     [dailyMemories],
@@ -300,6 +313,7 @@ export function useMemory({ settings }: UseMemoryParams) {
     recentDailyMemoryEntries,
     setMemories,
     setDailyMemories,
+    applyRemoteMemoryState,
     appendDailyMemoryEntries,
     addManualMemory,
     removeMemory,
@@ -318,6 +332,7 @@ export function useMemory({ settings }: UseMemoryParams) {
     recentDailyMemoryEntries,
     setMemories,
     setDailyMemories,
+    applyRemoteMemoryState,
     appendDailyMemoryEntries,
     addManualMemory,
     removeMemory,

@@ -145,8 +145,22 @@ response returns only the selected copy id, backup id, domains, readiness
 counts, confirmation flags, and rollback hints; it does not return chat text,
 memory bodies, raw localStorage values, or paths. Disabling clears the flag,
 returns ledger rows to `copied`, and records an audit event. This is the
-guarded switch contract for the next renderer read-through step, not the
-renderer chat/memory fallback implementation itself.
+guarded switch contract for renderer read-through data access.
+
+`queryLocalStorageReadThroughData()` adds the first guarded data-bearing
+read-through path. It is exposed as `storage:read-through-data` and
+`window.desktopPet.readLocalStorageReadThroughData()`. Unlike the redacted
+preview, this response can return copied chat text, chat session data, long-term
+memory bodies, and daily memory entries, so it only succeeds when an existing
+copy run has `readThroughMigrationEnabled`, source localStorage is preserved,
+destructive runtime migration is disabled, and the mode was enabled through the
+user-confirmed switch above. The IPC response explicitly sets
+`containsUserData: true` and `sqliteValuesReturned: true`, blocks raw
+localStorage values and absolute paths, and keeps `valuesCopiedToAuditLog:
+false`. The renderer startup adapter hydrates chat and memory React state from
+that response without writing fallback localStorage. This is still a
+transitional renderer hydration path, not the final sensitive-memory boundary or
+main-process write store.
 
 `downgradeNexusStorageSchema()` and `m4:storage:downgrade:evidence` add the
 first offline schema downgrade fixture for the M4 SQLite store. The evidence
@@ -160,8 +174,8 @@ or absolute paths.
 ## Impact Scope
 
 Electron main-process services, package scripts, v1 milestone governance, docs,
-preload/IPC contracts, and test coverage. Runtime renderer storage behavior is
-intentionally unchanged.
+preload/IPC contracts, renderer startup hydration, memory/chat hooks, and test
+coverage. Runtime writes still keep source localStorage as the fallback.
 
 ## Risks
 
@@ -233,7 +247,7 @@ npm run m4:storage:restore:evidence -- --sample --require-ready --output artifac
 npm run m4:storage:read-through:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-read-through-evidence.json
 npm run m4:storage:downgrade:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-downgrade-evidence.json
 npm run m4:storage:audit -- --sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json --snapshot-copy-evidence-file artifacts/v1/m4-storage-snapshot-copy-evidence.json --restore-evidence-file artifacts/v1/m4-storage-restore-evidence.json --read-through-evidence-file artifacts/v1/m4-storage-read-through-evidence.json --downgrade-evidence-file artifacts/v1/m4-storage-downgrade-evidence.json --require-inventory-ready --output artifacts/v1/m4-storage-migration.json
-node --experimental-strip-types --test tests/storage-ipc.test.ts tests/storage-local-snapshot-backup.test.ts tests/m4-sqlite-foundation.test.ts tests/m4-storage-migration-audit.test.ts tests/m4-storage-snapshot-copy-evidence.test.ts tests/m4-storage-restore-evidence.test.ts tests/m4-storage-read-through-evidence.test.ts tests/m4-storage-downgrade-evidence.test.ts tests/v1-milestone-audit.test.ts
+node --experimental-strip-types --test tests/storage-ipc.test.ts tests/storage-local-snapshot-backup.test.ts tests/storage-read-through-hydration.test.ts tests/m4-sqlite-foundation.test.ts tests/m4-storage-migration-audit.test.ts tests/m4-storage-snapshot-copy-evidence.test.ts tests/m4-storage-restore-evidence.test.ts tests/m4-storage-read-through-evidence.test.ts tests/m4-storage-downgrade-evidence.test.ts tests/v1-milestone-audit.test.ts
 node --experimental-strip-types --test tests/storage-ipc.test.ts tests/storage-local-snapshot-backup.test.ts tests/ipc-bridge-contract.test.ts tests/m3-ipc-security-audit.test.ts
 npm run v1:milestone:audit -- --m4-storage-file artifacts/v1/m4-storage-migration.json --require-ready
 ```
@@ -280,10 +294,13 @@ main process can query the structured SQLite chat/memory copy and emit only
 redacted counts, key names, and readiness flags. `storage:set-read-through-mode`
 now gates read-through mode behind `userConfirmed: true`, an existing copy run,
 source-localStorage preservation, response validation, audit events, and a
-disable rollback path. `m4:storage:downgrade:evidence` now proves that a schema
-v3 database with copied chat/memory rows can export a restore bundle, write a
-private database backup, remove structured copy tables, and land on schema v2
-without exposing user values in the public report.
+disable rollback path. `storage:read-through-data` now returns copied SQLite
+chat/memory values only after that mode is enabled, discloses that the response
+contains user data, refuses unsafe privacy flags, and hydrates renderer chat and
+memory state without writing fallback localStorage. `m4:storage:downgrade:evidence`
+now proves that a schema v3 database with copied chat/memory rows can export a
+restore bundle, write a private database backup, remove structured copy tables,
+and land on schema v2 without exposing user values in the public report.
 
 M4 is not accepted as complete. Strict v1 acceptance should keep blocking on M4
 until packaged-runtime SQLite evidence, read-through migration, real renderer
@@ -295,15 +312,17 @@ cross-platform evidence exist.
 - Packaged Electron `node:sqlite` behavior still needs smoke evidence.
 - Relationship state is backed up but not structured-copied until a dedicated
   table or view exists.
-- Renderer chat/memory read-through storage adapters are not implemented.
+- Renderer startup chat/memory read-through hydration is implemented behind the
+  confirmed mode switch, but runtime writes still fall back to localStorage and
+  the final main-process write store is not implemented.
 - Restore bundle export and schema downgrade evidence exist, but automatic
   restore application and in-app downgrade UX are not implemented.
 - Snapshot backup and structured copy evidence can be generated from sample or
   private renderer-export input, but a real renderer profile still needs to be
   exported and run through that gate before M4 migration acceptance.
-- Read-through preview evidence, renderer preview IPC, and the user-confirmed
-  read-through mode switch exist, but renderer fallback reads are not
-  implemented.
+- Read-through preview evidence, renderer preview IPC, the user-confirmed mode
+  switch, and renderer startup hydration exist, but real renderer-profile
+  hydration evidence still needs to be captured.
 - Existing localStorage data remains the runtime source of truth.
 
 ## Next Stage Tasks
@@ -312,6 +331,6 @@ cross-platform evidence exist.
 - Run `m4:storage:restore:evidence` against a real renderer export.
 - Run `m4:storage:read-through:evidence` against a real renderer export.
 - Run `m4:storage:downgrade:evidence` against a real renderer export.
-- Wire renderer chat/memory reads to main-process SQLite behind the confirmed
-  read-through mode, with localStorage fallback.
+- Capture renderer read-through hydration evidence with the confirmed
+  read-through mode enabled and fallback localStorage left intact.
 - Add fixture-based runtime migration, corruption, and automatic restore tests.

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
+  buildLocalStorageReadThroughDataResponse,
   buildLocalStorageReadThroughPreviewResponse,
   buildLocalStorageReadThroughModeResponse,
   buildLocalStorageSnapshotBackupResponse,
@@ -9,10 +10,12 @@ import {
   buildStorageStatusResponse,
   STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL,
   STORAGE_COPY_LOCAL_SNAPSHOT_CHANNEL,
+  STORAGE_READ_THROUGH_DATA_CHANNEL,
   STORAGE_READ_THROUGH_PREVIEW_CHANNEL,
   STORAGE_SET_READ_THROUGH_MODE_CHANNEL,
   register,
   STORAGE_STATUS_CHANNEL,
+  validateLocalStorageReadThroughDataResponse,
   validateLocalStorageReadThroughModeResponse,
   validateLocalStorageReadThroughPreviewResponse,
   validateLocalStorageSnapshotBackupResponse,
@@ -381,12 +384,137 @@ test('local storage read-through mode response is user-confirmed and private-saf
   )
 })
 
+test('local storage read-through data response discloses returned user data and keeps safety flags', () => {
+  const response = buildLocalStorageReadThroughDataResponse({
+    ok: true,
+    status: 'read-through-data-ready',
+    generatedAt: '2026-06-18T13:20:00.000Z',
+    backupId: 'local-storage-backup-read-through-data-test',
+    copyId: 'local-storage-copy-read-through-data-test',
+    copiedAt: '2026-06-18T13:19:00.000Z',
+    copyStatus: 'copied',
+    domains: ['chat', 'memory'],
+    limit: 10,
+    chat: {
+      selected: true,
+      messages: [
+        {
+          id: 'data-user',
+          role: 'user',
+          content: 'private user chat sample',
+          createdAt: '2026-06-18T13:18:00.000Z',
+        },
+      ],
+      sessions: [
+        {
+          id: 'local-storage-flat-chat',
+          startedAt: Date.parse('2026-06-18T13:18:00.000Z'),
+          lastActiveAt: Date.parse('2026-06-18T13:18:00.000Z'),
+          title: 'private user chat sample',
+          messages: [
+            {
+              id: 'data-user',
+              role: 'user',
+              content: 'private user chat sample',
+              createdAt: '2026-06-18T13:18:00.000Z',
+            },
+          ],
+        },
+      ],
+      sessionCount: 1,
+      messageCount: 1,
+      returnedMessageCount: 1,
+      returnedSessionCount: 1,
+    },
+    memory: {
+      selected: true,
+      memories: [
+        {
+          id: 'data-memory',
+          content: 'private memory sample',
+          category: 'preference',
+          source: 'chat',
+          enabled: true,
+          createdAt: '2026-06-18T13:18:30.000Z',
+        },
+      ],
+      dailyMemories: {
+        '2026-06-18': [
+          {
+            id: 'data-daily',
+            day: '2026-06-18',
+            role: 'assistant',
+            content: 'private daily memory sample',
+            source: 'chat',
+            createdAt: '2026-06-18T13:19:00.000Z',
+          },
+        ],
+      },
+      memoryCount: 1,
+      dailyMemoryEntryCount: 1,
+      returnedMemoryCount: 1,
+      returnedDailyMemoryEntryCount: 1,
+      dayCount: 1,
+    },
+    totals: {
+      readableRowCount: 4,
+      returnedRowCount: 4,
+    },
+    runtimeMigrationEnabled: false,
+    readThroughMigrationEnabled: true,
+    userConfirmedReadThroughMode: true,
+    sourceLocalStoragePreserved: true,
+    sourceLocalStorageMutated: false,
+    valuesReturned: true,
+    containsUserData: true,
+  })
+  const json = JSON.stringify(response)
+
+  assert.equal(response.gate, 'nexus-v1-m4-local-storage-read-through-data')
+  assert.equal(response.ok, true)
+  assert.equal(response.chat.messages[0]?.content, 'private user chat sample')
+  assert.equal(response.memory.memories[0]?.content, 'private memory sample')
+  assert.equal(response.migrationPlan.runtimeMigrationEnabled, false)
+  assert.equal(response.migrationPlan.readThroughMigrationEnabled, true)
+  assert.equal(response.migrationPlan.userConfirmedReadThroughMode, true)
+  assert.equal(response.privacy.containsUserData, true)
+  assert.equal(response.privacy.sqliteValuesReturned, true)
+  assert.equal(response.privacy.localStorageRawValuesReturned, false)
+  assert.equal(response.privacy.absolutePathExposed, false)
+  assert.equal(response.privacy.sourceLocalStorageMutated, false)
+  assert.equal(response.privacy.valuesCopiedToAuditLog, false)
+  assert.equal(json.includes('private user chat sample'), true)
+  assert.equal(json.includes('/Users/example'), false)
+  assert.equal(validateLocalStorageReadThroughDataResponse(response), response)
+  assert.throws(
+    () => validateLocalStorageReadThroughDataResponse({
+      ...response,
+      migrationPlan: {
+        ...response.migrationPlan,
+        userConfirmedReadThroughMode: false,
+      },
+    }),
+    /requires confirmed read-through mode/,
+  )
+  assert.throws(
+    () => validateLocalStorageReadThroughDataResponse({
+      ...response,
+      privacy: {
+        ...response.privacy,
+        valuesCopiedToAuditLog: true,
+      },
+    }),
+    /must not copy values to audit log/,
+  )
+})
+
 test('storage IPC registers trusted sender checks for status and snapshot backup', async () => {
   const registeredHandlers = new Map<string, (event: unknown, payload?: unknown) => Promise<unknown>>()
   let trustedSenderChecked = false
   let closeCalled = false
   let readThroughPreviewCalled = false
   let readThroughModeCalled = false
+  let readThroughDataCalled = false
 
   const ipcMainLike = {
     handle(channel: string, handler: (event: unknown) => Promise<unknown>) {
@@ -483,6 +611,57 @@ test('storage IPC registers trusted sender checks for status and snapshot backup
         valuesCopiedToResponse: false,
       }
     },
+    async queryLocalStorageReadThroughData() {
+      readThroughDataCalled = true
+      return {
+        ok: true,
+        status: 'read-through-data-ready',
+        generatedAt: '2026-06-18T13:20:00.000Z',
+        backupId: 'local-storage-backup-read-through-test',
+        copyId: 'local-storage-copy-read-through-test',
+        copiedAt: '2026-06-18T13:19:00.000Z',
+        copyStatus: 'copied',
+        domains: ['chat'],
+        limit: 2,
+        chat: {
+          selected: true,
+          messages: [
+            {
+              id: 'data-user',
+              role: 'user',
+              content: 'private user chat sample',
+              createdAt: '2026-06-18T13:18:00.000Z',
+            },
+          ],
+          sessions: [],
+          sessionCount: 1,
+          messageCount: 1,
+          returnedMessageCount: 1,
+          returnedSessionCount: 0,
+        },
+        memory: {
+          selected: false,
+          memories: [],
+          dailyMemories: {},
+          memoryCount: 0,
+          dailyMemoryEntryCount: 0,
+          returnedMemoryCount: 0,
+          returnedDailyMemoryEntryCount: 0,
+          dayCount: 0,
+        },
+        totals: {
+          readableRowCount: 1,
+          returnedRowCount: 1,
+        },
+        runtimeMigrationEnabled: false,
+        readThroughMigrationEnabled: true,
+        userConfirmedReadThroughMode: true,
+        sourceLocalStoragePreserved: true,
+        sourceLocalStorageMutated: false,
+        valuesReturned: true,
+        containsUserData: true,
+      }
+    },
   })
 
   assert.equal(typeof registeredHandlers.get(STORAGE_STATUS_CHANNEL), 'function')
@@ -490,6 +669,7 @@ test('storage IPC registers trusted sender checks for status and snapshot backup
   assert.equal(typeof registeredHandlers.get(STORAGE_COPY_LOCAL_SNAPSHOT_CHANNEL), 'function')
   assert.equal(typeof registeredHandlers.get(STORAGE_READ_THROUGH_PREVIEW_CHANNEL), 'function')
   assert.equal(typeof registeredHandlers.get(STORAGE_SET_READ_THROUGH_MODE_CHANNEL), 'function')
+  assert.equal(typeof registeredHandlers.get(STORAGE_READ_THROUGH_DATA_CHANNEL), 'function')
   const response = await registeredHandlers.get(STORAGE_STATUS_CHANNEL)?.({})
   const previewResponse = await registeredHandlers.get(STORAGE_READ_THROUGH_PREVIEW_CHANNEL)?.({}, {
     domains: ['chat'],
@@ -509,14 +689,21 @@ test('storage IPC registers trusted sender checks for status and snapshot backup
     domains: ['chat'],
     reason: 'manual-enable',
   })
+  const dataResponse = await registeredHandlers.get(STORAGE_READ_THROUGH_DATA_CHANNEL)?.({}, {
+    domains: ['chat'],
+    limit: 2,
+  })
 
   assert.equal(trustedSenderChecked, true)
   assert.equal(closeCalled, true)
   assert.equal(readThroughPreviewCalled, true)
   assert.equal(readThroughModeCalled, true)
+  assert.equal(readThroughDataCalled, true)
   assert.equal((response as { ok?: boolean })?.ok, true)
   assert.equal((response as { database?: { fileName?: string } })?.database?.fileName, 'nexus.sqlite3')
   assert.equal((previewResponse as { ok?: boolean })?.ok, true)
   assert.equal((previewResponse as { chat?: { messageCount?: number } })?.chat?.messageCount, 2)
   assert.equal((modeResponse as { enabled?: boolean })?.enabled, true)
+  assert.equal((dataResponse as { ok?: boolean })?.ok, true)
+  assert.equal((dataResponse as { privacy?: { containsUserData?: boolean } })?.privacy?.containsUserData, true)
 })

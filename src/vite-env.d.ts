@@ -13,7 +13,9 @@ import type {
   AudioTranscriptionResponse,
   ChatCompletionRequest,
   ChatCompletionResponse,
+  ChatMessage,
   ChatModelListRequest,
+  DailyMemoryStore,
   DesktopContextRequest,
   DesktopContextSnapshot,
   ExternalLinkRequest,
@@ -25,6 +27,7 @@ import type {
   MediaSessionControlRequest,
   MediaSessionControlResponse,
   MediaSessionSnapshot,
+  MemoryItem,
   PlatformProfile,
   TextFileOpenRequest,
   TextFileOpenResponse,
@@ -496,6 +499,72 @@ type LocalStorageReadThroughModeResponse = {
   nextActions: string[]
 }
 
+type LocalStorageReadThroughDataRequest = {
+  backupId?: string
+  copyId?: string
+  domains?: Array<'chat' | 'memory'>
+  limit?: number
+}
+
+type LocalStorageReadThroughDataResponse = {
+  gate: 'nexus-v1-m4-local-storage-read-through-data'
+  ok: boolean
+  status: string
+  generatedAt: string
+  backupId: string
+  copyId: string
+  copiedAt: string
+  copyStatus: string
+  domains: string[]
+  limit: number
+  chat: {
+    selected: boolean
+    messages: ChatMessage[]
+    sessions: Array<{
+      id: string
+      startedAt: number
+      lastActiveAt: number
+      title?: string
+      messages: ChatMessage[]
+    }>
+    sessionCount: number
+    messageCount: number
+    returnedMessageCount: number
+    returnedSessionCount: number
+  }
+  memory: {
+    selected: boolean
+    memories: MemoryItem[]
+    dailyMemories: DailyMemoryStore
+    memoryCount: number
+    dailyMemoryEntryCount: number
+    returnedMemoryCount: number
+    returnedDailyMemoryEntryCount: number
+    dayCount: number
+  }
+  totals: {
+    readableRowCount: number
+    returnedRowCount: number
+  }
+  migrationPlan: {
+    runtimeMigrationEnabled: boolean
+    readThroughMigrationEnabled: boolean
+    userConfirmedReadThroughMode: boolean
+    sourceLocalStoragePreserved: boolean
+    destructiveMigrationDetected: boolean
+    fallbackLocalStorageSupported: boolean
+  }
+  privacy: {
+    containsUserData: boolean
+    sqliteValuesReturned: boolean
+    localStorageRawValuesReturned: boolean
+    absolutePathExposed: boolean
+    sourceLocalStorageMutated: boolean
+    valuesCopiedToAuditLog: boolean
+  }
+  nextActions: string[]
+}
+
 declare global {
   interface Window {
     desktopPet?: {
@@ -622,6 +691,9 @@ declare global {
       setLocalStorageReadThroughMode: (
         payload: LocalStorageReadThroughModeRequest,
       ) => Promise<LocalStorageReadThroughModeResponse>
+      readLocalStorageReadThroughData: (
+        payload?: LocalStorageReadThroughDataRequest,
+      ) => Promise<LocalStorageReadThroughDataResponse>
       listSpeechVoices: (payload: SpeechVoiceListRequest) => Promise<SpeechVoiceListResponse>
       transcribeAudio: (payload: AudioTranscriptionRequest) => Promise<AudioTranscriptionResponse>
       synthesizeAudio: (payload: AudioSynthesisRequest) => Promise<AudioSynthesisResponse>

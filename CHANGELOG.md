@@ -113,6 +113,12 @@
   true`, readiness checks, source-localStorage preservation, response
   validation, audit logging, and a reversible disable path. Renderer
   chat/memory fallback reads remain the next M4 step.
+- **M4 read-through data hydration** — added guarded
+  `storage:read-through-data` / `window.desktopPet.readLocalStorageReadThroughData()`
+  plus renderer startup hydration for copied SQLite chat and memory state. The
+  path only succeeds after confirmed read-through mode is enabled, discloses that
+  user data is returned, blocks raw localStorage values and path exposure, avoids
+  audit-log value copying, and keeps fallback localStorage writes intact.
 - **M2 distribution trust audit** — added
   `npm run m2:distribution:trust` and
   `docs/V1_M2_DISTRIBUTION_TRUST.md` so platform installer targets,

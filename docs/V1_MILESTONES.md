@@ -418,6 +418,11 @@ report. `storage:set-read-through-mode` adds the first guarded runtime
 read-through switch contract: enabling requires `userConfirmed: true`, an
 existing copied run, source-localStorage preservation, readable copied rows,
 response validation, audit logging, and a disable rollback path.
+`storage:read-through-data` adds the first data-bearing renderer hydration path:
+it returns copied SQLite chat/memory values only after the confirmed mode is
+enabled, marks the response as containing user data, blocks raw localStorage
+values, paths, and audit-log value copying, and hydrates renderer chat/memory
+state without writing fallback localStorage.
 
 ### Impact Scope
 
@@ -447,9 +452,10 @@ The current SQLite foundation gate is
 `npm run m4:sqlite:foundation -- --require-ready --output artifacts/v1/m4-sqlite-foundation.json`;
 then rerun the inventory gate with
 `--sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json` so the M4
-report records the built-in SQLite selection. Focused IPC coverage is included
-in `tests/storage-ipc.test.ts`, `tests/storage-local-snapshot-backup.test.ts`,
-`tests/m4-storage-snapshot-copy-evidence.test.ts`,
+	report records the built-in SQLite selection. Focused IPC coverage is included
+	in `tests/storage-ipc.test.ts`, `tests/storage-local-snapshot-backup.test.ts`,
+	`tests/storage-read-through-hydration.test.ts`,
+	`tests/m4-storage-snapshot-copy-evidence.test.ts`,
 `tests/m4-storage-restore-evidence.test.ts`,
 `tests/m4-storage-read-through-evidence.test.ts`, and
 `tests/ipc-bridge-contract.test.ts`.
@@ -490,29 +496,31 @@ consume that report. `m4:storage:downgrade:evidence` is wired for sample or
 private renderer-export backup+copy+restore+downgrade evidence, and M4
 inventory can consume that report. `storage:set-read-through-mode` is wired
 through trusted preload/main IPC for a user-confirmed, reversible read-through
-mode flag over an existing copy run.
-Renderer chat/memory read-through adapters are not enabled, source localStorage
-remains the fallback source of truth, and strict v1 acceptance remains blocked
-on M4.
+mode flag over an existing copy run. `storage:read-through-data` and the
+renderer read-through hydration adapter are wired for startup chat/memory state
+replacement after the confirmed mode is enabled. Source localStorage remains the
+fallback source of truth for writes, and strict v1 acceptance remains blocked on
+M4.
 
 ### Known Gaps
 
 Electron packaged-runtime `node:sqlite` behavior still needs package smoke
-evidence. Renderer chat/memory read-through fallback, automatic restore
-application, in-app downgrade UX, and cross-platform migration evidence are not
-implemented yet; snapshot backup, structured copy, restore bundle export,
-read-through preview IPC, user-confirmed read-through mode, schema downgrade
-evidence, and their evidence gates exist but are not yet a full migration or
-relationship-state migration.
+evidence. Renderer startup read-through hydration is implemented, but real
+renderer-profile hydration evidence, automatic restore application, in-app
+downgrade UX, main-process write persistence, and cross-platform migration
+evidence are not implemented yet; snapshot backup, structured copy, restore
+bundle export, read-through preview IPC, user-confirmed read-through mode,
+read-through data IPC, schema downgrade evidence, and their evidence gates exist
+but are not yet a full migration or relationship-state migration.
 
 ### Next Stage Tasks
 
 Run snapshot backup plus structured copy evidence against a real renderer
 export, run restore, read-through, and downgrade evidence against a real
-renderer export, wire renderer chat/memory reads to the confirmed main-process
-read-through mode with localStorage fallback, add automatic restore and
-corruption fixtures, capture packaged SQLite smoke evidence, then proceed to M5
-white-box memory after persistence is stable.
+renderer export, capture renderer read-through hydration evidence with the
+confirmed main-process read-through mode enabled and localStorage fallback
+intact, add automatic restore and corruption fixtures, capture packaged SQLite
+smoke evidence, then proceed to M5 white-box memory after persistence is stable.
 
 ## M5 - White-Box Long-Term Memory
 

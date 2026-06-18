@@ -134,8 +134,9 @@ voice/
   migration evidence are in place. Use `npm run m4:sqlite:foundation` to
   initialize and audit the built-in `node:sqlite` main-process schema plus the
   read-only `storage:status` IPC and bounded
-  `storage:backup-local-snapshot` / `storage:copy-local-snapshot` /
-  `storage:read-through-preview` / `storage:set-read-through-mode` IPC.
+	  `storage:backup-local-snapshot` / `storage:copy-local-snapshot` /
+	  `storage:read-through-preview` / `storage:set-read-through-mode` /
+	  `storage:read-through-data` IPC.
   `storage:status` is diagnostic-only: trusted sender checked,
   response-validated, high-risk-audited, and path-redacted. The snapshot backup
   IPC can copy allowlisted chat/memory values into a local private backup file
@@ -147,10 +148,14 @@ voice/
   key names, safe aggregates, and readiness flags. The schema downgrade evidence
   fixture can remove v3 structured copy tables back to the v2 snapshot/ledger
   layer after writing a private database backup. The read-through mode IPC can
-  mark a copied run as enabled only after `userConfirmed: true`, readiness
-  checks, source-localStorage preservation, audit logging, and a disable
-  rollback path. All of these paths preserve source localStorage; renderer
-  chat/memory fallback reads are still the next migration step. Use
+	  mark a copied run as enabled only after `userConfirmed: true`, readiness
+	  checks, source-localStorage preservation, audit logging, and a disable
+	  rollback path. The read-through data IPC can return copied SQLite chat and
+	  memory values only after that confirmed mode is enabled, and the renderer
+	  startup adapter hydrates chat/memory state without writing fallback
+	  localStorage. All of these paths preserve source localStorage; main-process
+	  write persistence and real-profile hydration evidence are still future M4
+	  work. Use
   `npm run m4:storage:snapshot-copy:evidence` for a redacted backup+copy evidence
   report from sample or private renderer-export input, and
   `npm run m4:storage:restore:evidence` for the matching redacted restore

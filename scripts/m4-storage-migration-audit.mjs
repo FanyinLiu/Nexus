@@ -322,6 +322,18 @@ function isLocalStorageReadThroughModeIpcReady(sqliteFoundationSource) {
     && raw?.ipcStatus?.readThroughMode?.rollbackReady === true
 }
 
+function isLocalStorageReadThroughDataIpcReady(sqliteFoundationSource) {
+  const raw = sqliteFoundationSource?.value
+  return isLocalStorageReadThroughModeIpcReady(sqliteFoundationSource)
+    && raw?.migrationPlan?.localStorageReadThroughDataIpcReady === true
+    && raw?.ipcStatus?.readThroughData?.ready === true
+    && raw?.ipcStatus?.readThroughData?.readThroughModeRequired === true
+    && raw?.ipcStatus?.readThroughData?.userDataDisclosureReady === true
+    && raw?.ipcStatus?.readThroughData?.rawLocalStorageValuesBlocked === true
+    && raw?.ipcStatus?.readThroughData?.auditValueRedactionReady === true
+    && raw?.ipcStatus?.readThroughData?.rendererHydrationReady === true
+}
+
 function isLocalStorageSnapshotCopyEvidenceReady(snapshotCopyEvidenceSource) {
   const raw = snapshotCopyEvidenceSource?.value
   return snapshotCopyEvidenceSource?.exists === true
@@ -487,6 +499,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
   const localStorageStructuredCopyReady = isLocalStorageStructuredCopyReady(sqliteFoundationSource)
   const localStorageReadThroughPreviewIpcReady = isLocalStorageReadThroughPreviewIpcReady(sqliteFoundationSource)
   const localStorageReadThroughModeIpcReady = isLocalStorageReadThroughModeIpcReady(sqliteFoundationSource)
+  const localStorageReadThroughDataIpcReady = isLocalStorageReadThroughDataIpcReady(sqliteFoundationSource)
   const localStorageSnapshotCopyEvidenceReady = isLocalStorageSnapshotCopyEvidenceReady(snapshotCopyEvidenceSource)
   const localStorageRestoreEvidenceReady = isLocalStorageRestoreEvidenceReady(restoreEvidenceSource)
   const localStorageReadThroughEvidenceReady = isLocalStorageReadThroughEvidenceReady(readThroughEvidenceSource)
@@ -534,6 +547,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
       localStorageStructuredCopyReady,
       localStorageReadThroughPreviewIpcReady,
       localStorageReadThroughModeIpcReady,
+      localStorageReadThroughDataIpcReady,
       localStorageSnapshotCopyEvidenceReady,
       localStorageRestoreEvidenceReady,
       localStorageReadThroughEvidenceReady,
@@ -573,12 +587,18 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
             && !localStorageReadThroughModeIpcReady
             ? ['wire-runtime-read-through-behind-user-confirmed-feature-flag']
             : []),
+          ...(localStorageReadThroughEvidenceReady
+            && localStorageReadThroughModeIpcReady
+            && localStorageSchemaDowngradeEvidenceReady
+            && !localStorageReadThroughDataIpcReady
+            ? ['wire-renderer-chat-memory-reads-to-main-process-with-localstorage-fallback']
+            : []),
           ...(!localStorageSnapshotBackupReady ? ['extend-main-process-storage-ipc-for-read-through-migration'] : []),
           ...(!localStorageStructuredCopyReady ? ['copy-chat-memory-snapshot-into-structured-sqlite'] : []),
           ...(localStorageReadThroughEvidenceReady
             ? (
-                localStorageReadThroughPreviewIpcReady && localStorageSchemaDowngradeEvidenceReady && localStorageReadThroughModeIpcReady
-                  ? ['wire-renderer-chat-memory-reads-to-main-process-with-localstorage-fallback']
+                localStorageReadThroughPreviewIpcReady && localStorageSchemaDowngradeEvidenceReady && localStorageReadThroughModeIpcReady && localStorageReadThroughDataIpcReady
+                  ? ['capture-renderer-read-through-hydration-evidence']
                   : []
               )
             : ['implement-read-through-migration-with-localstorage-preservation']),

@@ -20,6 +20,8 @@ const IPC_REGISTRY_PATH = 'electron/ipcRegistry.js'
 const STORAGE_IPC_PATH = 'electron/ipc/storageIpc.js'
 const SQLITE_STORAGE_PATH = 'electron/services/sqliteStorage.js'
 const VITE_ENV_PATH = 'src/vite-env.d.ts'
+const READ_THROUGH_HYDRATION_PATH = 'src/lib/storage/readThroughHydration.ts'
+const USE_DESKTOP_BRIDGE_PATH = 'src/app/controllers/useDesktopBridge.ts'
 
 function printUsage(stream = process.stderr) {
   stream.write([
@@ -126,12 +128,14 @@ async function readText(rootDir, relativePath) {
 }
 
 async function summarizeStorageStatusIpc(rootDir) {
-  const [preload, ipcRegistry, storageIpc, sqliteStorage, viteEnv] = await Promise.all([
+  const [preload, ipcRegistry, storageIpc, sqliteStorage, viteEnv, readThroughHydration, useDesktopBridge] = await Promise.all([
     readText(rootDir, PRELOAD_PATH),
     readText(rootDir, IPC_REGISTRY_PATH),
     readText(rootDir, STORAGE_IPC_PATH),
     readText(rootDir, SQLITE_STORAGE_PATH),
     readText(rootDir, VITE_ENV_PATH),
+    readText(rootDir, READ_THROUGH_HYDRATION_PATH),
+    readText(rootDir, USE_DESKTOP_BRIDGE_PATH),
   ])
   const preloadExposed = /storageStatus\s*:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(['"]storage:status['"]\)/.test(preload.text)
   const handlerRegistered = /(?:ipcMain|ipcMainLike)\.handle\(\s*(?:STORAGE_STATUS_CHANNEL|['"]storage:status['"])/.test(storageIpc.text)
@@ -243,7 +247,51 @@ async function summarizeStorageStatusIpc(rootDir) {
     && readThroughMode.sourcePreservationReady
     && readThroughMode.runtimeMigrationDisabled
     && readThroughMode.rollbackReady
-  const missingSourceIds = [preload, ipcRegistry, storageIpc, sqliteStorage, viteEnv]
+  const readThroughData = {
+    channel: 'storage:read-through-data',
+    preloadExposed: /readLocalStorageReadThroughData\s*:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(['"]storage:read-through-data['"],\s*payload\)/.test(preload.text),
+    handlerRegistered: /(?:ipcMain|ipcMainLike)\.handle\(\s*(?:STORAGE_READ_THROUGH_DATA_CHANNEL|['"]storage:read-through-data['"])/.test(storageIpc.text),
+    trustedSenderCheck,
+    requestValidationReady: /validateLocalStorageReadThroughDataRequest/.test(storageIpc.text)
+      && /read-through data request must be a plain object/.test(sqliteStorage.text),
+    responseValidationReady: /validateLocalStorageReadThroughDataResponse/.test(storageIpc.text)
+      && /return validateLocalStorageReadThroughDataResponse\(/.test(storageIpc.text),
+    rendererTypeDeclared: /readLocalStorageReadThroughData:\s*\([\s\S]*?LocalStorageReadThroughDataRequest[\s\S]*?\)\s*=>\s*Promise<LocalStorageReadThroughDataResponse>/.test(viteEnv.text),
+    readThroughModeRequired: /requires read-through mode/.test(storageIpc.text)
+      && /requires confirmed read-through mode/.test(storageIpc.text)
+      && /read_through_migration_enabled\s*=\s*1/.test(sqliteStorage.text),
+    userDataDisclosureReady: /containsUserData:\s*ok\s*&&\s*result\?\.containsUserData\s*===\s*true/.test(storageIpc.text)
+      && /sqliteValuesReturned:\s*ok\s*&&\s*result\?\.valuesReturned\s*===\s*true/.test(storageIpc.text)
+      && /must disclose returned user data/.test(storageIpc.text),
+    rawLocalStorageValuesBlocked: /localStorageRawValuesReturned:\s*false/.test(storageIpc.text)
+      && /must not return raw localStorage values/.test(storageIpc.text),
+    absolutePathRedactionReady: /absolutePathExposed:\s*false/.test(storageIpc.text),
+    sourcePreservationReady: /sourceLocalStorageMutated:\s*result\?\.sourceLocalStorageMutated\s*===\s*true/.test(storageIpc.text)
+      && /sourceLocalStoragePreserved:\s*result\?\.sourceLocalStoragePreserved\s*===\s*true/.test(storageIpc.text),
+    runtimeMigrationDisabled: /runtimeMigrationEnabled:\s*false/.test(storageIpc.text)
+      && /must keep destructive runtime migration disabled/.test(storageIpc.text),
+    auditValueRedactionReady: /valuesCopiedToAuditLog:\s*false/.test(storageIpc.text)
+      && /must not copy values to audit log/.test(storageIpc.text),
+    rendererHydrationReady: /loadChatMemoryReadThroughSnapshot/.test(readThroughHydration.text)
+      && /readLocalStorageReadThroughData/.test(readThroughHydration.text)
+      && /applyRemoteMemoryState/.test(useDesktopBridge.text)
+      && /applyRemoteMessages/.test(useDesktopBridge.text),
+  }
+  readThroughData.ready = readThroughData.preloadExposed
+    && readThroughData.handlerRegistered
+    && readThroughData.trustedSenderCheck
+    && readThroughData.requestValidationReady
+    && readThroughData.responseValidationReady
+    && readThroughData.rendererTypeDeclared
+    && readThroughData.readThroughModeRequired
+    && readThroughData.userDataDisclosureReady
+    && readThroughData.rawLocalStorageValuesBlocked
+    && readThroughData.absolutePathRedactionReady
+    && readThroughData.sourcePreservationReady
+    && readThroughData.runtimeMigrationDisabled
+    && readThroughData.auditValueRedactionReady
+    && readThroughData.rendererHydrationReady
+  const missingSourceIds = [preload, ipcRegistry, storageIpc, sqliteStorage, viteEnv, readThroughHydration, useDesktopBridge]
     .filter((source) => !source.exists || source.error)
     .map((source) => source.path)
   const ready = missingSourceIds.length === 0
@@ -258,6 +306,7 @@ async function summarizeStorageStatusIpc(rootDir) {
     && structuredCopy.ready
     && readThroughPreview.ready
     && readThroughMode.ready
+    && readThroughData.ready
 
   return {
     ready,
@@ -273,6 +322,7 @@ async function summarizeStorageStatusIpc(rootDir) {
     structuredCopy,
     readThroughPreview,
     readThroughMode,
+    readThroughData,
     missingSourceIds,
   }
 }
@@ -305,6 +355,7 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
     ...(!ipcStatus.structuredCopy?.ready ? ['local-storage-structured-copy-ipc-not-ready'] : []),
     ...(!ipcStatus.readThroughPreview?.ready ? ['local-storage-read-through-preview-ipc-not-ready'] : []),
     ...(!ipcStatus.readThroughMode?.ready ? ['local-storage-read-through-mode-ipc-not-ready'] : []),
+    ...(!ipcStatus.readThroughData?.ready ? ['local-storage-read-through-data-ipc-not-ready'] : []),
   ]
 
   return {
@@ -371,6 +422,14 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
         && status.tables?.includes('daily_memory_entries') === true
         && status.tables?.includes('memory_sources') === true
         && ipcStatus.readThroughMode?.ready === true,
+      localStorageReadThroughDataIpcReady: status.tables?.includes('local_storage_copy_runs') === true
+        && status.tables?.includes('local_storage_copy_items') === true
+        && status.tables?.includes('chat_sessions') === true
+        && status.tables?.includes('chat_messages') === true
+        && status.tables?.includes('memories') === true
+        && status.tables?.includes('daily_memory_entries') === true
+        && status.tables?.includes('memory_sources') === true
+        && ipcStatus.readThroughData?.ready === true,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
       rollbackToolRequired: true,
@@ -394,7 +453,7 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
           'capture-chat-memory-local-storage-snapshot-backup',
           'copy-chat-memory-snapshot-into-structured-sqlite',
           'capture-main-process-read-through-preview-evidence',
-          'implement-read-through-chat-memory-migration-with-backup',
+          'capture-renderer-read-through-hydration-evidence',
           'add-restore-and-downgrade-cli-fixtures',
           'capture-packaged-electron-sqlite-smoke-evidence',
         ]

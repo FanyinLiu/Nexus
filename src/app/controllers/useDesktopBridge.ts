@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import {
@@ -23,6 +24,7 @@ import {
 import {
   CHAT_STORAGE_KEY,
   loadChatMessages,
+  loadChatMemoryReadThroughSnapshot,
   onStorageChange,
   savePetWindowPreferences,
 } from '../../lib'
@@ -198,7 +200,7 @@ type UseDesktopBridgeOptions = {
   reminderTasks: ReminderTask[]
   setReminderTasks: Dispatch<SetStateAction<ReminderTask[]>>
   setDebugConsoleEvents: Dispatch<SetStateAction<DebugConsoleEvent[]>>
-  memory: Pick<MemoryController, 'memories' | 'setMemories' | 'setDailyMemories'>
+  memory: Pick<MemoryController, 'memories' | 'setMemories' | 'setDailyMemories' | 'applyRemoteMemoryState'>
   chat: Pick<ChatController, 'input' | 'busy' | 'assistantActivity' | 'setMessages' | 'applyRemoteMessages'>
   pet: Pick<
     PetController,
@@ -254,6 +256,7 @@ export function useDesktopBridge({
   const [runtimeSnapshot, setRuntimeSnapshotState] = useState<RuntimeStateSnapshot>(
     DEFAULT_RUNTIME_SNAPSHOT,
   )
+  const readThroughHydrationAttemptedRef = useRef(false)
 
   // Settings are persisted explicitly by applySettingsSave → setSettingsSnapshot.
   // Cross-window sync is handled by subscribeToSettings in useAppController.
@@ -400,6 +403,41 @@ export function useDesktopBridge({
     )
     return unsubscribe
   }, [chat])
+
+  const applyReadThroughChatMessages = chat.applyRemoteMessages
+  const applyReadThroughMemoryState = memory.applyRemoteMemoryState
+  useEffect(() => {
+    if (readThroughHydrationAttemptedRef.current) return
+    readThroughHydrationAttemptedRef.current = true
+
+    let cancelled = false
+    const timerId = window.setTimeout(() => {
+      void loadChatMemoryReadThroughSnapshot()
+        .then((snapshot) => {
+          if (cancelled || !snapshot) return
+
+          if (snapshot.chat.messages.length > 0) {
+            applyReadThroughChatMessages(snapshot.chat.messages)
+          }
+
+          if (
+            snapshot.memory.memories.length > 0
+            || Object.keys(snapshot.memory.dailyMemories).length > 0
+          ) {
+            applyReadThroughMemoryState(
+              snapshot.memory.memories,
+              snapshot.memory.dailyMemories,
+            )
+          }
+        })
+        .catch(() => undefined)
+    }, 0)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timerId)
+    }
+  }, [applyReadThroughChatMessages, applyReadThroughMemoryState])
 
   // Runtime-state bridge: listens for cross-window snapshot pushes and writes
   // them into local state. Depends only on `pet.setMood` — not the whole

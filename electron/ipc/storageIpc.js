@@ -8,8 +8,10 @@ import {
   M4_SQLITE_FOUNDATION_GATE,
   M4_SQLITE_FOUNDATION_TABLES,
   M4_SQLITE_SCHEMA_VERSION,
+  queryLocalStorageReadThroughData,
   queryLocalStorageReadThroughPreview,
   setLocalStorageReadThroughMode,
+  validateLocalStorageReadThroughDataRequest,
   validateLocalStorageReadThroughModeRequest,
   validateLocalStorageReadThroughQueryRequest,
   validateLocalStorageSnapshotCopyRequest,
@@ -21,10 +23,12 @@ export const STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL = 'storage:backup-local-snaps
 export const STORAGE_COPY_LOCAL_SNAPSHOT_CHANNEL = 'storage:copy-local-snapshot'
 export const STORAGE_READ_THROUGH_PREVIEW_CHANNEL = 'storage:read-through-preview'
 export const STORAGE_SET_READ_THROUGH_MODE_CHANNEL = 'storage:set-read-through-mode'
+export const STORAGE_READ_THROUGH_DATA_CHANNEL = 'storage:read-through-data'
 export const STORAGE_BACKUP_LOCAL_SNAPSHOT_GATE = 'nexus-v1-m4-local-storage-snapshot-backup'
 export const STORAGE_COPY_LOCAL_SNAPSHOT_GATE = 'nexus-v1-m4-local-storage-snapshot-copy'
 export const STORAGE_READ_THROUGH_PREVIEW_GATE = 'nexus-v1-m4-local-storage-read-through-preview'
 export const STORAGE_READ_THROUGH_MODE_GATE = 'nexus-v1-m4-local-storage-read-through-mode'
+export const STORAGE_READ_THROUGH_DATA_GATE = 'nexus-v1-m4-local-storage-read-through-data'
 
 const { app, ipcMain } = electron ?? {}
 
@@ -799,6 +803,372 @@ export function validateLocalStorageReadThroughModeResponse(response) {
   return response
 }
 
+function toContentString(value) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function toOptionalPlainObject(value) {
+  return isObject(value) ? value : undefined
+}
+
+function toReadThroughChatMessages(value) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((message) => {
+      if (!isObject(message)) return null
+      const id = cleanString(message.id)
+      const role = cleanString(message.role)
+      const content = toContentString(message.content)
+      const createdAt = cleanString(message.createdAt)
+      if (!id || !['user', 'assistant', 'system'].includes(role) || !content || !createdAt) return null
+      const tone = cleanString(message.tone)
+      const toolResult = toOptionalPlainObject(message.toolResult)
+      const reasoning = typeof message.reasoning_content === 'string' ? message.reasoning_content : ''
+      return {
+        id,
+        role,
+        content,
+        createdAt,
+        ...(tone ? { tone } : {}),
+        ...(toolResult ? { toolResult } : {}),
+        ...(reasoning ? { reasoning_content: reasoning } : {}),
+      }
+    })
+    .filter(Boolean)
+}
+
+function toReadThroughChatSessions(value) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((session) => {
+      if (!isObject(session)) return null
+      const id = cleanString(session.id)
+      const startedAt = toFiniteNumber(session.startedAt, 0)
+      const lastActiveAt = toFiniteNumber(session.lastActiveAt, 0)
+      const title = cleanString(session.title)
+      if (!id) return null
+      return {
+        id,
+        startedAt,
+        lastActiveAt,
+        ...(title ? { title } : {}),
+        messages: toReadThroughChatMessages(session.messages),
+      }
+    })
+    .filter(Boolean)
+}
+
+function toReadThroughMemoryItems(value) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((memory) => {
+      if (!isObject(memory)) return null
+      const id = cleanString(memory.id)
+      const content = toContentString(memory.content)
+      const category = cleanString(memory.category) || 'manual'
+      const source = cleanString(memory.source) || 'storage'
+      const kind = cleanString(memory.kind)
+      const sourceRef = cleanString(memory.sourceRef)
+      const createdAt = cleanString(memory.createdAt)
+      const lastUsedAt = cleanString(memory.lastUsedAt)
+      const importance = cleanString(memory.importance)
+      const importanceScore = Number(memory.importanceScore)
+      const recallCount = Number(memory.recallCount)
+      const lastRecalledAt = cleanString(memory.lastRecalledAt)
+      const emotionalValence = cleanString(memory.emotionalValence)
+      const significance = Number(memory.significance)
+      const reflectionTopic = cleanString(memory.reflectionTopic)
+      const reflectionConfidence = Number(memory.reflectionConfidence)
+      if (!id || !content || !createdAt) return null
+      return {
+        id,
+        content,
+        category,
+        source,
+        ...(kind ? { kind } : {}),
+        enabled: memory.enabled !== false,
+        ...(sourceRef ? { sourceRef } : {}),
+        createdAt,
+        ...(lastUsedAt ? { lastUsedAt } : {}),
+        ...(importance ? { importance } : {}),
+        ...(Number.isFinite(importanceScore) ? { importanceScore } : {}),
+        ...(Number.isFinite(recallCount) ? { recallCount: Math.max(0, Math.round(recallCount)) } : {}),
+        ...(lastRecalledAt ? { lastRecalledAt } : {}),
+        ...(emotionalValence ? { emotionalValence } : {}),
+        ...(Number.isFinite(significance) ? { significance } : {}),
+        ...(reflectionTopic ? { reflectionTopic } : {}),
+        ...(Number.isFinite(reflectionConfidence) ? { reflectionConfidence } : {}),
+      }
+    })
+    .filter(Boolean)
+}
+
+function toReadThroughDailyMemoryStore(value) {
+  if (!isObject(value)) return {}
+  const result = {}
+  for (const [day, entries] of Object.entries(value)) {
+    if (!Array.isArray(entries)) continue
+    const normalizedEntries = entries
+      .map((entry) => {
+        if (!isObject(entry)) return null
+        const id = cleanString(entry.id)
+        const role = cleanString(entry.role)
+        const content = toContentString(entry.content)
+        const source = cleanString(entry.source) === 'voice' ? 'voice' : 'chat'
+        const sourceRef = cleanString(entry.sourceRef)
+        const createdAt = cleanString(entry.createdAt)
+        if (!id || !['user', 'assistant'].includes(role) || !content || !createdAt) return null
+        return {
+          id,
+          day: cleanString(entry.day) || day,
+          role,
+          content,
+          source,
+          ...(sourceRef ? { sourceRef } : {}),
+          createdAt,
+        }
+      })
+      .filter(Boolean)
+    if (normalizedEntries.length) result[day] = normalizedEntries
+  }
+  return result
+}
+
+function buildReadThroughChatData(chat) {
+  const messages = toReadThroughChatMessages(chat?.messages)
+  const sessions = toReadThroughChatSessions(chat?.sessions)
+  return {
+    selected: chat?.selected === true,
+    messages,
+    sessions,
+    sessionCount: toFiniteNumber(chat?.sessionCount, sessions.length),
+    messageCount: toFiniteNumber(chat?.messageCount, messages.length),
+    returnedMessageCount: toFiniteNumber(chat?.returnedMessageCount, messages.length),
+    returnedSessionCount: toFiniteNumber(chat?.returnedSessionCount, sessions.length),
+  }
+}
+
+function buildReadThroughMemoryData(memory) {
+  const memories = toReadThroughMemoryItems(memory?.memories)
+  const dailyMemories = toReadThroughDailyMemoryStore(memory?.dailyMemories)
+  const returnedDailyMemoryEntryCount = Object.values(dailyMemories)
+    .reduce((total, entries) => total + entries.length, 0)
+  return {
+    selected: memory?.selected === true,
+    memories,
+    dailyMemories,
+    memoryCount: toFiniteNumber(memory?.memoryCount, memories.length),
+    dailyMemoryEntryCount: toFiniteNumber(memory?.dailyMemoryEntryCount, returnedDailyMemoryEntryCount),
+    returnedMemoryCount: toFiniteNumber(memory?.returnedMemoryCount, memories.length),
+    returnedDailyMemoryEntryCount: toFiniteNumber(memory?.returnedDailyMemoryEntryCount, returnedDailyMemoryEntryCount),
+    dayCount: toFiniteNumber(memory?.dayCount, Object.keys(dailyMemories).length),
+  }
+}
+
+function requireReadThroughChatData(value, label) {
+  requirePlainObject(value, label)
+  requireBoolean(value.selected, `${label}.selected`)
+  requireFiniteNumber(value.sessionCount, `${label}.sessionCount`)
+  requireFiniteNumber(value.messageCount, `${label}.messageCount`)
+  requireFiniteNumber(value.returnedMessageCount, `${label}.returnedMessageCount`)
+  requireFiniteNumber(value.returnedSessionCount, `${label}.returnedSessionCount`)
+  if (!Array.isArray(value.messages)) throw new Error(`${label}.messages must be an array`)
+  for (const [index, message] of value.messages.entries()) {
+    requirePlainObject(message, `${label}.messages[${index}]`)
+    requireStringValue(message.id, `${label}.messages[${index}].id`)
+    requireStringValue(message.role, `${label}.messages[${index}].role`)
+    if (!['user', 'assistant', 'system'].includes(message.role)) {
+      throw new Error(`${label}.messages[${index}].role must be a chat role`)
+    }
+    requireStringValue(message.content, `${label}.messages[${index}].content`)
+    requireIsoString(message.createdAt, `${label}.messages[${index}].createdAt`)
+  }
+  if (!Array.isArray(value.sessions)) throw new Error(`${label}.sessions must be an array`)
+  for (const [index, session] of value.sessions.entries()) {
+    requirePlainObject(session, `${label}.sessions[${index}]`)
+    requireStringValue(session.id, `${label}.sessions[${index}].id`)
+    requireFiniteNumber(session.startedAt, `${label}.sessions[${index}].startedAt`)
+    requireFiniteNumber(session.lastActiveAt, `${label}.sessions[${index}].lastActiveAt`)
+    requireReadThroughChatData({
+      selected: true,
+      messages: session.messages,
+      sessions: [],
+      sessionCount: 0,
+      messageCount: Array.isArray(session.messages) ? session.messages.length : 0,
+      returnedMessageCount: Array.isArray(session.messages) ? session.messages.length : 0,
+      returnedSessionCount: 0,
+    }, `${label}.sessions[${index}]`)
+  }
+}
+
+function requireReadThroughMemoryData(value, label) {
+  requirePlainObject(value, label)
+  requireBoolean(value.selected, `${label}.selected`)
+  requireFiniteNumber(value.memoryCount, `${label}.memoryCount`)
+  requireFiniteNumber(value.dailyMemoryEntryCount, `${label}.dailyMemoryEntryCount`)
+  requireFiniteNumber(value.returnedMemoryCount, `${label}.returnedMemoryCount`)
+  requireFiniteNumber(value.returnedDailyMemoryEntryCount, `${label}.returnedDailyMemoryEntryCount`)
+  requireFiniteNumber(value.dayCount, `${label}.dayCount`)
+  if (!Array.isArray(value.memories)) throw new Error(`${label}.memories must be an array`)
+  for (const [index, memory] of value.memories.entries()) {
+    requirePlainObject(memory, `${label}.memories[${index}]`)
+    requireStringValue(memory.id, `${label}.memories[${index}].id`)
+    requireStringValue(memory.content, `${label}.memories[${index}].content`)
+    requireStringValue(memory.category, `${label}.memories[${index}].category`)
+    requireStringValue(memory.source, `${label}.memories[${index}].source`)
+    requireIsoString(memory.createdAt, `${label}.memories[${index}].createdAt`)
+    requireBoolean(memory.enabled, `${label}.memories[${index}].enabled`)
+  }
+  requirePlainObject(value.dailyMemories, `${label}.dailyMemories`)
+  for (const [day, entries] of Object.entries(value.dailyMemories)) {
+    if (!Array.isArray(entries)) throw new Error(`${label}.dailyMemories.${day} must be an array`)
+    for (const [index, entry] of entries.entries()) {
+      requirePlainObject(entry, `${label}.dailyMemories.${day}[${index}]`)
+      requireStringValue(entry.id, `${label}.dailyMemories.${day}[${index}].id`)
+      requireStringValue(entry.day, `${label}.dailyMemories.${day}[${index}].day`)
+      requireStringValue(entry.role, `${label}.dailyMemories.${day}[${index}].role`)
+      if (!['user', 'assistant'].includes(entry.role)) {
+        throw new Error(`${label}.dailyMemories.${day}[${index}].role must be user or assistant`)
+      }
+      requireStringValue(entry.content, `${label}.dailyMemories.${day}[${index}].content`)
+      requireStringValue(entry.source, `${label}.dailyMemories.${day}[${index}].source`)
+      requireIsoString(entry.createdAt, `${label}.dailyMemories.${day}[${index}].createdAt`)
+    }
+  }
+}
+
+export function buildLocalStorageReadThroughDataResponse(result) {
+  const ok = result?.ok === true
+  const chat = buildReadThroughChatData(result?.chat)
+  const memory = buildReadThroughMemoryData(result?.memory)
+  const returnedRowCount = toFiniteNumber(
+    result?.totals?.returnedRowCount,
+    chat.returnedMessageCount + chat.returnedSessionCount + memory.returnedMemoryCount + memory.returnedDailyMemoryEntryCount,
+  )
+  const readableRowCount = toFiniteNumber(
+    result?.totals?.readableRowCount,
+    chat.sessionCount + chat.messageCount + memory.memoryCount + memory.dailyMemoryEntryCount,
+  )
+
+  return validateLocalStorageReadThroughDataResponse({
+    gate: STORAGE_READ_THROUGH_DATA_GATE,
+    ok,
+    status: cleanString(result?.status) || 'unknown',
+    generatedAt: cleanString(result?.generatedAt),
+    backupId: cleanString(result?.backupId || result?.requestedBackupId),
+    copyId: cleanString(result?.copyId || result?.requestedCopyId),
+    copiedAt: cleanString(result?.copiedAt),
+    copyStatus: cleanString(result?.copyStatus),
+    domains: toStringArray(result?.domains),
+    limit: toFiniteNumber(result?.limit, 0),
+    chat: ok ? chat : buildReadThroughChatData(null),
+    memory: ok ? memory : buildReadThroughMemoryData(null),
+    totals: {
+      readableRowCount: ok ? readableRowCount : 0,
+      returnedRowCount: ok ? returnedRowCount : 0,
+    },
+    migrationPlan: {
+      runtimeMigrationEnabled: false,
+      readThroughMigrationEnabled: result?.readThroughMigrationEnabled === true,
+      userConfirmedReadThroughMode: result?.userConfirmedReadThroughMode === true,
+      sourceLocalStoragePreserved: result?.sourceLocalStoragePreserved === true,
+      destructiveMigrationDetected: false,
+      fallbackLocalStorageSupported: true,
+    },
+    privacy: {
+      containsUserData: ok && result?.containsUserData === true,
+      sqliteValuesReturned: ok && result?.valuesReturned === true,
+      localStorageRawValuesReturned: false,
+      absolutePathExposed: false,
+      sourceLocalStorageMutated: result?.sourceLocalStorageMutated === true,
+      valuesCopiedToAuditLog: false,
+    },
+    nextActions: ok
+      ? ['hydrate-renderer-chat-memory-state-without-localstorage-writeback']
+      : ['keep-localstorage-fallback-until-read-through-enabled'],
+  })
+}
+
+export function validateLocalStorageReadThroughDataResponse(response) {
+  requirePlainObject(response, 'local storage read-through data response')
+  requireStringValue(response.gate, 'gate')
+  if (response.gate !== STORAGE_READ_THROUGH_DATA_GATE) {
+    throw new Error('local storage read-through data response gate mismatch')
+  }
+  requireBoolean(response.ok, 'ok')
+  requireStringValue(response.status, 'status')
+  requireIsoString(response.generatedAt, 'generatedAt')
+  requireString(response.backupId, 'backupId')
+  requireString(response.copyId, 'copyId')
+  requireOptionalIsoString(response.copiedAt, 'copiedAt')
+  requireString(response.copyStatus, 'copyStatus')
+  requireStringArray(response.domains, 'domains')
+  requireFiniteNumber(response.limit, 'limit')
+  requireReadThroughChatData(response.chat, 'chat')
+  requireReadThroughMemoryData(response.memory, 'memory')
+
+  requirePlainObject(response.totals, 'totals')
+  requireFiniteNumber(response.totals.readableRowCount, 'totals.readableRowCount')
+  requireFiniteNumber(response.totals.returnedRowCount, 'totals.returnedRowCount')
+
+  requirePlainObject(response.migrationPlan, 'migrationPlan')
+  requireBoolean(response.migrationPlan.runtimeMigrationEnabled, 'migrationPlan.runtimeMigrationEnabled')
+  requireBoolean(response.migrationPlan.readThroughMigrationEnabled, 'migrationPlan.readThroughMigrationEnabled')
+  requireBoolean(response.migrationPlan.userConfirmedReadThroughMode, 'migrationPlan.userConfirmedReadThroughMode')
+  requireBoolean(response.migrationPlan.sourceLocalStoragePreserved, 'migrationPlan.sourceLocalStoragePreserved')
+  requireBoolean(response.migrationPlan.destructiveMigrationDetected, 'migrationPlan.destructiveMigrationDetected')
+  requireBoolean(response.migrationPlan.fallbackLocalStorageSupported, 'migrationPlan.fallbackLocalStorageSupported')
+
+  requirePlainObject(response.privacy, 'privacy')
+  requireBoolean(response.privacy.containsUserData, 'privacy.containsUserData')
+  requireBoolean(response.privacy.sqliteValuesReturned, 'privacy.sqliteValuesReturned')
+  requireBoolean(response.privacy.localStorageRawValuesReturned, 'privacy.localStorageRawValuesReturned')
+  requireBoolean(response.privacy.absolutePathExposed, 'privacy.absolutePathExposed')
+  requireBoolean(response.privacy.sourceLocalStorageMutated, 'privacy.sourceLocalStorageMutated')
+  requireBoolean(response.privacy.valuesCopiedToAuditLog, 'privacy.valuesCopiedToAuditLog')
+  requireStringArray(response.nextActions, 'nextActions')
+
+  if (response.migrationPlan.runtimeMigrationEnabled) {
+    throw new Error('local storage read-through data response must keep destructive runtime migration disabled')
+  }
+  if (response.migrationPlan.destructiveMigrationDetected) {
+    throw new Error('local storage read-through data response must not include destructive migration')
+  }
+  if (!response.migrationPlan.fallbackLocalStorageSupported) {
+    throw new Error('local storage read-through data response must keep localStorage fallback available')
+  }
+  if (response.privacy.localStorageRawValuesReturned) {
+    throw new Error('local storage read-through data response must not return raw localStorage values')
+  }
+  if (response.privacy.absolutePathExposed) {
+    throw new Error('local storage read-through data response must not expose absolute paths')
+  }
+  if (response.privacy.sourceLocalStorageMutated) {
+    throw new Error('local storage read-through data response must preserve source localStorage')
+  }
+  if (response.privacy.valuesCopiedToAuditLog) {
+    throw new Error('local storage read-through data response must not copy values to audit log')
+  }
+  if (response.ok) {
+    if (!response.migrationPlan.readThroughMigrationEnabled) {
+      throw new Error('local storage read-through data response requires read-through mode')
+    }
+    if (!response.migrationPlan.userConfirmedReadThroughMode) {
+      throw new Error('local storage read-through data response requires confirmed read-through mode')
+    }
+    if (!response.migrationPlan.sourceLocalStoragePreserved) {
+      throw new Error('local storage read-through data response requires preserved source localStorage')
+    }
+    if (!response.privacy.containsUserData || !response.privacy.sqliteValuesReturned) {
+      throw new Error('local storage read-through data response must disclose returned user data')
+    }
+  } else if (response.privacy.containsUserData || response.privacy.sqliteValuesReturned) {
+    throw new Error('local storage read-through data response must not return user data when disabled')
+  }
+
+  return response
+}
+
 export async function getStorageStatus(options = {}) {
   const initializeFn = options.initializeStorageDatabase || initializeNexusStorageDatabase
   const appLike = options.appLike || app
@@ -851,6 +1221,16 @@ export async function setRendererLocalStorageReadThroughMode(payload, options = 
   return buildLocalStorageReadThroughModeResponse(result)
 }
 
+export async function queryRendererLocalStorageReadThroughData(payload, options = {}) {
+  const queryFn = options.queryLocalStorageReadThroughData || queryLocalStorageReadThroughData
+  const appLike = options.appLike || app
+  const result = await queryFn(payload, {
+    ...options,
+    appLike,
+  })
+  return buildLocalStorageReadThroughDataResponse(result)
+}
+
 export function register(options = {}) {
   const ipcMainLike = options.ipcMainLike || ipcMain
   if (!ipcMainLike || typeof ipcMainLike.handle !== 'function') {
@@ -881,5 +1261,10 @@ export function register(options = {}) {
     trustedSenderCheck(event)
     validateLocalStorageReadThroughModeRequest(payload)
     return setRendererLocalStorageReadThroughMode(payload, options)
+  })
+  ipcMainLike.handle('storage:read-through-data', async (event, payload) => {
+    trustedSenderCheck(event)
+    validateLocalStorageReadThroughDataRequest(payload)
+    return queryRendererLocalStorageReadThroughData(payload, options)
   })
 }

@@ -288,11 +288,12 @@ heavy renderer localStorage with a migration path that users can recover from.
   memory, settings/permissions, and audit/log-style keys stay inventoried.
 - Use `npm run m4:sqlite:foundation -- --require-ready` to verify the
   main-process `node:sqlite` schema, backup ledger, rollback ledger,
-  localStorage migration ledger, migration event table, snapshot backup tables,
-  structured copy tables, read-only `storage:status` IPC, bounded
-  `storage:backup-local-snapshot` / `storage:copy-local-snapshot` IPC,
-  redacted `storage:read-through-preview` IPC, and user-confirmed
-  `storage:set-read-through-mode` IPC.
+	  localStorage migration ledger, migration event table, snapshot backup tables,
+	  structured copy tables, read-only `storage:status` IPC, bounded
+	  `storage:backup-local-snapshot` / `storage:copy-local-snapshot` IPC,
+	  redacted `storage:read-through-preview` IPC, and user-confirmed
+	  `storage:set-read-through-mode` IPC plus guarded
+	  `storage:read-through-data` hydration IPC.
 - Keep `storage:status` diagnostic-only: it may expose table readiness and
   privacy flags, but not absolute database paths or localStorage values.
 - Use `storage:backup-local-snapshot` only for allowlisted chat/memory snapshot
@@ -305,12 +306,18 @@ heavy renderer localStorage with a migration path that users can recover from.
   existing copied run. It must require `userConfirmed: true`, preserve source
   localStorage, record an audit event, and remain reversible by disabling the
   flag.
+- Use `storage:read-through-data` only after the confirmed mode is enabled. It
+  may return copied SQLite chat and memory values to the trusted renderer, so it
+  must disclose `containsUserData`, block raw localStorage values, block path
+  exposure, avoid audit-log value copying, and keep fallback localStorage
+  intact.
 - Use `npm run m4:storage:downgrade:evidence` to verify that schema v3
   structured copy data can be rolled back to the v2 snapshot/ledger layer after
   a restore bundle and private database backup exist.
-- Keep source localStorage as the fallback until renderer chat/memory reads use
-  the confirmed main-process read-through mode, verified backups,
-  restore/downgrade tooling, and macOS/Windows/Linux package evidence exist.
+- Keep source localStorage as the fallback until renderer chat/memory hydration
+  has real-profile evidence, writes move safely to the main-process store,
+  restore/downgrade tooling is automatic enough for users, and
+  macOS/Windows/Linux package evidence exists.
 - Start with chat and memory migration; avoid moving secrets or high-risk
   permission state until IPC response validation and audit boundaries are
   strong enough.
