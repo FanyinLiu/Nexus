@@ -133,8 +133,12 @@ voice/
   fallback until a main-process store, backup, rollback, and cross-platform
   migration evidence are in place. Use `npm run m4:sqlite:foundation` to
   initialize and audit the built-in `node:sqlite` main-process schema plus the
-  read-only `storage:status` IPC. That IPC is diagnostic-only: trusted sender
-  checked, response-validated, high-risk-audited, and path-redacted. Then use
+  read-only `storage:status` IPC and bounded
+  `storage:backup-local-snapshot` IPC. `storage:status` is diagnostic-only:
+  trusted sender checked, response-validated, high-risk-audited, and
+  path-redacted. The snapshot backup IPC can copy allowlisted chat/memory values
+  into a local private backup file and SQLite ledger, but it preserves source
+  localStorage and is not read-through migration. Then use
   `npm run m4:storage:audit` to refresh the private-safe storage inventory
   before changing read/write persistence contracts.
 

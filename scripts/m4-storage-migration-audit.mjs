@@ -263,6 +263,13 @@ function isSqliteFoundationReady(sqliteFoundationSource) {
     && missingTables.length === 0
 }
 
+function isLocalStorageSnapshotBackupReady(sqliteFoundationSource) {
+  const raw = sqliteFoundationSource?.value
+  return isSqliteFoundationReady(sqliteFoundationSource)
+    && raw?.migrationPlan?.localStorageSnapshotBackupReady === true
+    && raw?.ipcStatus?.snapshotBackup?.ready === true
+}
+
 function summarizeDependencyStatus(packageSource, sqliteFoundationSource) {
   const deps = {
     ...(packageSource.value?.dependencies ?? {}),
@@ -317,6 +324,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
     .filter((entry) => !entry.covered)
     .map((entry) => entry.domain)
   const sqliteDependency = summarizeDependencyStatus(packageSource, sqliteFoundationSource)
+  const localStorageSnapshotBackupReady = isLocalStorageSnapshotBackupReady(sqliteFoundationSource)
 
   const migrationReady = false
   const inventoryReady = packageSource.exists
@@ -356,6 +364,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
     migrationPlan: {
       runtimeMigrationEnabled: false,
       sqliteFoundationReady: sqliteDependency.foundationReady === true,
+      localStorageSnapshotBackupReady,
       destructiveMigrationDetected: false,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
@@ -374,7 +383,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
       ? []
       : [
           ...(sqliteDependency.foundationReady === true ? [] : ['choose-sqlite-dependency-after-packaging-review']),
-          'extend-main-process-storage-ipc-for-read-through-migration',
+          ...(localStorageSnapshotBackupReady ? ['capture-chat-memory-local-storage-snapshot-backup-evidence'] : ['extend-main-process-storage-ipc-for-read-through-migration']),
           'implement-read-through-migration-with-localstorage-preservation',
           'add-backup-restore-and-rollback-fixtures',
         ],

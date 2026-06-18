@@ -2,13 +2,17 @@ import electron from 'electron'
 
 import { requireTrustedSender } from './validate.js'
 import {
+  backupLocalStorageSnapshot,
   initializeNexusStorageDatabase,
   M4_SQLITE_FOUNDATION_GATE,
   M4_SQLITE_FOUNDATION_TABLES,
   M4_SQLITE_SCHEMA_VERSION,
+  validateLocalStorageSnapshotRequest,
 } from '../services/sqliteStorage.js'
 
 export const STORAGE_STATUS_CHANNEL = 'storage:status'
+export const STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL = 'storage:backup-local-snapshot'
+export const STORAGE_BACKUP_LOCAL_SNAPSHOT_GATE = 'nexus-v1-m4-local-storage-snapshot-backup'
 
 const { app, ipcMain } = electron ?? {}
 
@@ -93,6 +97,8 @@ export function buildStorageStatusResponse(status, options = {}) {
         backups: toFiniteNumber(counts.backups, 0),
         localStorageLedgerItems: toFiniteNumber(counts.localStorageLedgerItems, 0),
         migrationEvents: toFiniteNumber(counts.migrationEvents, 0),
+        localStorageBackupRuns: toFiniteNumber(counts.localStorageBackupRuns, 0),
+        localStorageBackupItems: toFiniteNumber(counts.localStorageBackupItems, 0),
       },
     },
     migrationPlan: {
@@ -104,6 +110,8 @@ export function buildStorageStatusResponse(status, options = {}) {
       backupLedgerReady: tables.includes('storage_backups'),
       rollbackLedgerReady: tables.includes('storage_schema_migrations'),
       localStorageLedgerReady: tables.includes('local_storage_migration_ledger'),
+      localStorageSnapshotBackupReady: tables.includes('local_storage_backup_runs')
+        && tables.includes('local_storage_backup_items'),
       crossPlatformCoverageRequired: ['macos', 'windows', 'linux'],
     },
     privacy: {
@@ -115,6 +123,7 @@ export function buildStorageStatusResponse(status, options = {}) {
     nextActions: blockingIssueIds.length > 0
       ? ['fix-node-sqlite-foundation-before-runtime-migration']
       : [
+          'capture-local-storage-snapshot-backup-before-read-through-migration',
           'implement-read-through-chat-memory-migration-with-backup',
           'add-restore-and-downgrade-cli-fixtures',
           'capture-packaged-electron-sqlite-smoke-evidence',
@@ -187,6 +196,8 @@ export function validateStorageStatusResponse(response) {
   requireFiniteNumber(response.database.counts.backups, 'database.counts.backups')
   requireFiniteNumber(response.database.counts.localStorageLedgerItems, 'database.counts.localStorageLedgerItems')
   requireFiniteNumber(response.database.counts.migrationEvents, 'database.counts.migrationEvents')
+  requireFiniteNumber(response.database.counts.localStorageBackupRuns, 'database.counts.localStorageBackupRuns')
+  requireFiniteNumber(response.database.counts.localStorageBackupItems, 'database.counts.localStorageBackupItems')
 
   requirePlainObject(response.migrationPlan, 'migrationPlan')
   requireBoolean(response.migrationPlan.runtimeMigrationEnabled, 'migrationPlan.runtimeMigrationEnabled')
@@ -197,6 +208,7 @@ export function validateStorageStatusResponse(response) {
   requireBoolean(response.migrationPlan.backupLedgerReady, 'migrationPlan.backupLedgerReady')
   requireBoolean(response.migrationPlan.rollbackLedgerReady, 'migrationPlan.rollbackLedgerReady')
   requireBoolean(response.migrationPlan.localStorageLedgerReady, 'migrationPlan.localStorageLedgerReady')
+  requireBoolean(response.migrationPlan.localStorageSnapshotBackupReady, 'migrationPlan.localStorageSnapshotBackupReady')
   requireStringArray(response.migrationPlan.crossPlatformCoverageRequired, 'migrationPlan.crossPlatformCoverageRequired')
 
   requirePlainObject(response.privacy, 'privacy')
@@ -208,6 +220,118 @@ export function validateStorageStatusResponse(response) {
 
   if (response.schemaVersion > M4_SQLITE_SCHEMA_VERSION) {
     throw new Error('storage status response schemaVersion is newer than this runtime')
+  }
+
+  return response
+}
+
+function requireIsoString(value, label) {
+  requireStringValue(value, label)
+  if (!Number.isFinite(Date.parse(value))) throw new Error(`${label} must be an ISO timestamp`)
+}
+
+function requireSafeFileName(value, label) {
+  requireStringValue(value, label)
+  if (value.includes('/') || value.includes('\\')) {
+    throw new Error(`${label} must not include path separators`)
+  }
+}
+
+function requireSha256(value, label) {
+  requireStringValue(value, label)
+  if (!/^[a-f0-9]{64}$/i.test(value)) throw new Error(`${label} must be a sha256 hex string`)
+}
+
+export function buildLocalStorageSnapshotBackupResponse(result, options = {}) {
+  const keys = toStringArray(result?.keys)
+  const domains = toStringArray(result?.domains)
+
+  return validateLocalStorageSnapshotBackupResponse({
+    gate: STORAGE_BACKUP_LOCAL_SNAPSHOT_GATE,
+    ok: result?.ok === true,
+    status: cleanString(result?.status) || 'unknown',
+    backupId: cleanString(result?.backupId),
+    createdAt: cleanString(result?.createdAt),
+    reason: cleanString(result?.reason),
+    entryCount: toFiniteNumber(result?.entryCount, 0),
+    totalBytes: toFiniteNumber(result?.totalBytes, 0),
+    keys,
+    domains,
+    backup: {
+      pathKind: databasePathKind(result?.backupPath, options.appLike),
+      fileName: databaseFileName(result?.backupPath || result?.backupFileName),
+      sha256: cleanString(result?.sha256),
+    },
+    migrationPlan: {
+      runtimeMigrationEnabled: false,
+      readThroughMigrationEnabled: false,
+      sourceLocalStoragePreserved: result?.sourceLocalStoragePreserved === true,
+      backupBeforeMutationCompleted: result?.ok === true,
+      destructiveMigrationDetected: false,
+    },
+    privacy: {
+      localStorageValuesReturned: false,
+      absoluteBackupPathExposed: false,
+      sourceLocalStorageMutated: false,
+      valuesCopiedToResponse: result?.valuesCopiedToResponse === true,
+    },
+    nextActions: [
+      'verify-snapshot-backup-before-read-through-migration',
+      'implement-chat-memory-read-through-to-sqlite',
+      'add-restore-and-downgrade-cli-fixtures',
+    ],
+  })
+}
+
+export function validateLocalStorageSnapshotBackupResponse(response) {
+  requirePlainObject(response, 'local storage snapshot backup response')
+  requireStringValue(response.gate, 'gate')
+  if (response.gate !== STORAGE_BACKUP_LOCAL_SNAPSHOT_GATE) {
+    throw new Error('local storage snapshot backup response gate mismatch')
+  }
+  requireBoolean(response.ok, 'ok')
+  requireStringValue(response.status, 'status')
+  requireStringValue(response.backupId, 'backupId')
+  requireIsoString(response.createdAt, 'createdAt')
+  requireStringValue(response.reason, 'reason')
+  requireFiniteNumber(response.entryCount, 'entryCount')
+  requireFiniteNumber(response.totalBytes, 'totalBytes')
+  requireStringArray(response.keys, 'keys')
+  requireStringArray(response.domains, 'domains')
+
+  requirePlainObject(response.backup, 'backup')
+  requireStringValue(response.backup.pathKind, 'backup.pathKind')
+  if (!['userData', 'custom', 'unknown'].includes(response.backup.pathKind)) {
+    throw new Error('backup.pathKind must be userData, custom, or unknown')
+  }
+  requireSafeFileName(response.backup.fileName, 'backup.fileName')
+  requireSha256(response.backup.sha256, 'backup.sha256')
+
+  requirePlainObject(response.migrationPlan, 'migrationPlan')
+  requireBoolean(response.migrationPlan.runtimeMigrationEnabled, 'migrationPlan.runtimeMigrationEnabled')
+  requireBoolean(response.migrationPlan.readThroughMigrationEnabled, 'migrationPlan.readThroughMigrationEnabled')
+  requireBoolean(response.migrationPlan.sourceLocalStoragePreserved, 'migrationPlan.sourceLocalStoragePreserved')
+  requireBoolean(response.migrationPlan.backupBeforeMutationCompleted, 'migrationPlan.backupBeforeMutationCompleted')
+  requireBoolean(response.migrationPlan.destructiveMigrationDetected, 'migrationPlan.destructiveMigrationDetected')
+
+  requirePlainObject(response.privacy, 'privacy')
+  requireBoolean(response.privacy.localStorageValuesReturned, 'privacy.localStorageValuesReturned')
+  requireBoolean(response.privacy.absoluteBackupPathExposed, 'privacy.absoluteBackupPathExposed')
+  requireBoolean(response.privacy.sourceLocalStorageMutated, 'privacy.sourceLocalStorageMutated')
+  requireBoolean(response.privacy.valuesCopiedToResponse, 'privacy.valuesCopiedToResponse')
+  requireStringArray(response.nextActions, 'nextActions')
+
+  if (response.privacy.localStorageValuesReturned) {
+    throw new Error('local storage snapshot backup response must not return values')
+  }
+  if (response.privacy.absoluteBackupPathExposed) {
+    throw new Error('local storage snapshot backup response must not expose absolute paths')
+  }
+  if (response.privacy.sourceLocalStorageMutated) {
+    throw new Error('local storage snapshot backup response must preserve source localStorage')
+  }
+  if (response.privacy.valuesCopiedToResponse) {
+    throw new Error('local storage snapshot backup response must not copy values to response')
   }
 
   return response
@@ -227,6 +351,15 @@ export async function getStorageStatus(options = {}) {
   }
 }
 
+export async function backupRendererLocalStorageSnapshot(payload, options = {}) {
+  const appLike = options.appLike || app
+  const result = await backupLocalStorageSnapshot(payload, {
+    ...options,
+    appLike,
+  })
+  return buildLocalStorageSnapshotBackupResponse(result, { appLike })
+}
+
 export function register(options = {}) {
   const ipcMainLike = options.ipcMainLike || ipcMain
   if (!ipcMainLike || typeof ipcMainLike.handle !== 'function') {
@@ -237,5 +370,10 @@ export function register(options = {}) {
   ipcMainLike.handle('storage:status', async (event) => {
     trustedSenderCheck(event)
     return getStorageStatus(options)
+  })
+  ipcMainLike.handle('storage:backup-local-snapshot', async (event, payload) => {
+    trustedSenderCheck(event)
+    validateLocalStorageSnapshotRequest(payload)
+    return backupRendererLocalStorageSnapshot(payload, options)
   })
 }

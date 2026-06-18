@@ -389,11 +389,14 @@ direct storage access before any runtime migration is enabled. The first
 main-process SQLite foundation uses built-in `node:sqlite` through
 `electron/services/sqliteStorage.js` and is audited with
 `npm run m4:sqlite:foundation`; it creates schema, backup, rollback, local
-storage migration ledger, and migration event tables without reading or copying
-renderer storage values. The renderer-facing `storage:status` IPC is read-only,
-trusted-sender checked, high-risk-audited, and response-validated; it returns
-schema/table readiness and redacted status only, never absolute database paths
-or localStorage values.
+storage migration ledger, migration event, and localStorage snapshot backup
+tables. The renderer-facing `storage:status` IPC is read-only, trusted-sender
+checked, high-risk-audited, and response-validated; it returns schema/table
+readiness and redacted status only, never absolute database paths or
+localStorage values. `storage:backup-local-snapshot` provides the first bounded,
+non-destructive chat/memory/relationship snapshot backup path: values are
+written only to a local private backup file and SQLite ledger, while the
+renderer response exposes only counts, keys, file name, and hash.
 
 ### Impact Scope
 
@@ -424,7 +427,8 @@ The current SQLite foundation gate is
 then rerun the inventory gate with
 `--sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json` so the M4
 report records the built-in SQLite selection. Focused IPC coverage is included
-in `tests/storage-ipc.test.ts` and `tests/ipc-bridge-contract.test.ts`.
+in `tests/storage-ipc.test.ts`, `tests/storage-local-snapshot-backup.test.ts`,
+and `tests/ipc-bridge-contract.test.ts`.
 The stricter migration gate is intentionally not ready yet:
 `npm run m4:storage:audit -- --require-migration-ready`. The v1 milestone
 audit consumes `artifacts/v1/m4-storage-migration.json` and treats M4 as
@@ -441,23 +445,28 @@ Inventory scaffold implemented. It captures private-safe storage key names,
 source files, domain coverage, direct localStorage/sessionStorage access
 counts, SQLite dependency status, and migration guardrails without reading
 stored values. SQLite foundation scaffolding is implemented with built-in
-`node:sqlite`, schema version 1, and private-safe backup/rollback/migration
-ledger tables. `storage:status` is wired through preload and main-process IPC
-with response validation and path redaction. Runtime migration is not enabled,
-source localStorage remains the fallback source of truth, and strict v1
-acceptance remains blocked on M4.
+`node:sqlite`, schema version 2, private-safe backup/rollback/migration ledger
+tables, and localStorage snapshot backup run/item tables. `storage:status` is
+wired through preload and main-process IPC with response validation and path
+redaction. `storage:backup-local-snapshot` is wired for bounded
+chat/memory/relationship backups, request/response validation, source
+localStorage preservation, and path/value redaction. Runtime read-through
+migration is not enabled, source localStorage remains the fallback source of
+truth, and strict v1 acceptance remains blocked on M4.
 
 ### Known Gaps
 
 Electron packaged-runtime `node:sqlite` behavior still needs package smoke
-evidence. Read-through migration IPC, real backup files, restore/rollback CLI
-tooling, and cross-platform migration evidence are not implemented yet.
+evidence. Read-through migration IPC, restore/rollback CLI tooling, and
+cross-platform migration evidence are not implemented yet; snapshot backup
+exists but is not yet a full migration or restore path.
 
 ### Next Stage Tasks
 
-Extend the storage IPC for read-through chat and memory migration behind
-backups, add restore/downgrade CLI fixtures, capture packaged SQLite smoke
-evidence, then proceed to M5 white-box memory after persistence is stable.
+Capture real renderer snapshot backup evidence, extend the storage IPC for
+read-through chat and memory migration behind backups, add restore/downgrade
+CLI fixtures, capture packaged SQLite smoke evidence, then proceed to M5
+white-box memory after persistence is stable.
 
 ## M5 - White-Box Long-Term Memory
 

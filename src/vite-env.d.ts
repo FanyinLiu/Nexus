@@ -262,6 +262,8 @@ type StorageStatus = {
       backups: number
       localStorageLedgerItems: number
       migrationEvents: number
+      localStorageBackupRuns: number
+      localStorageBackupItems: number
     }
   }
   migrationPlan: {
@@ -273,6 +275,7 @@ type StorageStatus = {
     backupLedgerReady: boolean
     rollbackLedgerReady: boolean
     localStorageLedgerReady: boolean
+    localStorageSnapshotBackupReady: boolean
     crossPlatformCoverageRequired: string[]
   }
   privacy: {
@@ -281,6 +284,47 @@ type StorageStatus = {
     absoluteDatabasePathExposed: boolean
   }
   blockingIssueIds: string[]
+  nextActions: string[]
+}
+
+type LocalStorageSnapshotBackupRequest = {
+  reason?: string
+  entries: Array<{
+    key: string
+    value: string
+    sourceUpdatedAt?: string
+  }>
+}
+
+type LocalStorageSnapshotBackupResponse = {
+  gate: 'nexus-v1-m4-local-storage-snapshot-backup'
+  ok: boolean
+  status: string
+  backupId: string
+  createdAt: string
+  reason: string
+  entryCount: number
+  totalBytes: number
+  keys: string[]
+  domains: string[]
+  backup: {
+    pathKind: 'userData' | 'custom' | 'unknown'
+    fileName: string
+    sha256: string
+  }
+  migrationPlan: {
+    runtimeMigrationEnabled: boolean
+    readThroughMigrationEnabled: boolean
+    sourceLocalStoragePreserved: boolean
+    backupBeforeMutationCompleted: boolean
+    destructiveMigrationDetected: boolean
+  }
+  privacy: {
+    localStorageValuesReturned: boolean
+    absoluteBackupPathExposed: boolean
+    sourceLocalStorageMutated: boolean
+    valuesCopiedToResponse: boolean
+  }
   nextActions: string[]
 }
 
@@ -398,6 +442,9 @@ declare global {
         payload: IntegrationInspectRequest,
       ) => Promise<IntegrationInspectResponse>
       storageStatus: () => Promise<StorageStatus>
+      backupLocalStorageSnapshot: (
+        payload: LocalStorageSnapshotBackupRequest,
+      ) => Promise<LocalStorageSnapshotBackupResponse>
       listSpeechVoices: (payload: SpeechVoiceListRequest) => Promise<SpeechVoiceListResponse>
       transcribeAudio: (payload: AudioTranscriptionRequest) => Promise<AudioTranscriptionResponse>
       synthesizeAudio: (payload: AudioSynthesisRequest) => Promise<AudioSynthesisResponse>

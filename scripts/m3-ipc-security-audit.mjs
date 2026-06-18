@@ -194,7 +194,7 @@ function classifyRequestValidation(segment, payloadParamCount) {
     }
   }
   const evidence = []
-  if (/\bvalidate(?:Ipc)?[A-Za-z0-9]*Payload\s*\(/.test(segment) || /\bvalidateIpcPayload\s*\(/.test(segment)) {
+  if (/\bvalidate(?:Ipc)?[A-Za-z0-9]*(?:Payload|Request)\s*\(/.test(segment) || /\bvalidateIpcPayload\s*\(/.test(segment)) {
     evidence.push('schema-validator')
   }
   if (/\b(requireString|expectString|requireObject|requireSlotName|requireSlotNames|requireVaultEntries|assertNumber|assertArray|assertOptionalString)\s*\(/.test(segment)) {

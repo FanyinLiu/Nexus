@@ -73,6 +73,13 @@
   an M1 repair hint when opened from that path, reminding the user to verify
   provider, endpoint, API key, and model before explicitly testing the
   connection.
+- **M4 local storage snapshot backups** — expanded the built-in `node:sqlite`
+  foundation to schema version 2 with localStorage snapshot run/item tables,
+  added `storage:backup-local-snapshot` plus a renderer collection helper for
+  allowlisted chat, memory, daily memory, and relationship keys, and records
+  private local backup files, SQLite ledger rows, and migration events without
+  mutating source localStorage or returning values/absolute paths to the
+  renderer.
 - **M2 distribution trust audit** — added
   `npm run m2:distribution:trust` and
   `docs/V1_M2_DISTRIBUTION_TRUST.md` so platform installer targets,
@@ -102,12 +109,13 @@
   storage access, migration domains, SQLite dependency status, and rollback
   guardrails without reading user data. Strict v1 acceptance now consumes the
   M4 report and keeps the SQLite migration milestone blocked until runtime
-  migration, backups, rollback tooling, and cross-platform evidence exist.
+  read-through migration, restore/rollback tooling, and cross-platform evidence
+  exist.
 - **M4 SQLite foundation** — added `electron/services/sqliteStorage.js` and
   `npm run m4:sqlite:foundation` to initialize a main-process built-in
   `node:sqlite` schema with migration, backup, rollback, localStorage ledger,
   and migration event tables. The foundation report is private-safe and keeps
-  runtime migration disabled until read-through migration, backups, rollback
+  runtime migration disabled until read-through migration, restore/rollback
   tooling, and packaged-runtime evidence exist.
 - **M4 storage status IPC** — added a read-only `storage:status` /
   `window.desktopPet.storageStatus()` bridge for SQLite foundation readiness.

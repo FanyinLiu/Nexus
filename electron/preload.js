@@ -92,6 +92,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   probeLocalServices: (payload) => ipcRenderer.invoke('doctor:probe-local-services', payload),
   inspectIntegrations: (payload) => ipcRenderer.invoke('integrations:inspect', payload),
   storageStatus: () => ipcRenderer.invoke('storage:status'),
+  backupLocalStorageSnapshot: (payload) => ipcRenderer.invoke('storage:backup-local-snapshot', payload),
   listSpeechVoices: (payload) => ipcRenderer.invoke('audio:list-voices', payload),
   transcribeAudio: (payload) => ipcRenderer.invoke('audio:transcribe', payload),
   synthesizeAudio: (payload) => ipcRenderer.invoke('audio:synthesize', payload),

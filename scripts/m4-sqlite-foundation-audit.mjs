@@ -141,6 +141,27 @@ async function summarizeStorageStatusIpc(rootDir) {
   const rendererTypeDeclared = /storageStatus:\s*\(\)\s*=>\s*Promise<StorageStatus>/.test(viteEnv.text)
   const absolutePathRedactionReady = /absoluteDatabasePathExposed:\s*false/.test(storageIpc.text)
     && !/databasePath\s*:/.test(storageIpc.text)
+  const snapshotBackup = {
+    channel: 'storage:backup-local-snapshot',
+    preloadExposed: /backupLocalStorageSnapshot\s*:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(['"]storage:backup-local-snapshot['"],\s*payload\)/.test(preload.text),
+    handlerRegistered: /(?:ipcMain|ipcMainLike)\.handle\(\s*(?:STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL|['"]storage:backup-local-snapshot['"])/.test(storageIpc.text),
+    trustedSenderCheck,
+    responseValidationReady: /validateLocalStorageSnapshotBackupResponse/.test(storageIpc.text)
+      && /return validateLocalStorageSnapshotBackupResponse\(/.test(storageIpc.text),
+    rendererTypeDeclared: /backupLocalStorageSnapshot:\s*\([\s\S]*?LocalStorageSnapshotBackupRequest[\s\S]*?\)\s*=>\s*Promise<LocalStorageSnapshotBackupResponse>/.test(viteEnv.text),
+    absolutePathRedactionReady: /absoluteBackupPathExposed:\s*false/.test(storageIpc.text),
+    valuesRedactionReady: /localStorageValuesReturned:\s*false/.test(storageIpc.text)
+      && /valuesCopiedToResponse:\s*result\?\.valuesCopiedToResponse\s*===\s*true/.test(storageIpc.text),
+    sourcePreservationReady: /sourceLocalStorageMutated:\s*false/.test(storageIpc.text),
+  }
+  snapshotBackup.ready = snapshotBackup.preloadExposed
+    && snapshotBackup.handlerRegistered
+    && snapshotBackup.trustedSenderCheck
+    && snapshotBackup.responseValidationReady
+    && snapshotBackup.rendererTypeDeclared
+    && snapshotBackup.absolutePathRedactionReady
+    && snapshotBackup.valuesRedactionReady
+    && snapshotBackup.sourcePreservationReady
   const missingSourceIds = [preload, ipcRegistry, storageIpc, viteEnv]
     .filter((source) => !source.exists || source.error)
     .map((source) => source.path)
@@ -152,6 +173,7 @@ async function summarizeStorageStatusIpc(rootDir) {
     && responseValidationReady
     && rendererTypeDeclared
     && absolutePathRedactionReady
+    && snapshotBackup.ready
 
   return {
     ready,
@@ -163,6 +185,7 @@ async function summarizeStorageStatusIpc(rootDir) {
     responseValidationReady,
     rendererTypeDeclared,
     absolutePathRedactionReady,
+    snapshotBackup,
     missingSourceIds,
   }
 }
@@ -191,6 +214,7 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
     ...(status.ok ? [] : ['sqlite-foundation-schema-not-ready']),
     ...missingTables.map((table) => `missing-table:${table}`),
     ...(!ipcStatus.ready ? ['storage-status-ipc-not-ready'] : []),
+    ...(!ipcStatus.snapshotBackup?.ready ? ['local-storage-snapshot-backup-ipc-not-ready'] : []),
   ]
 
   return {
@@ -230,6 +254,9 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
       backupLedgerReady: status.tables?.includes('storage_backups') === true,
       rollbackLedgerReady: status.tables?.includes('storage_schema_migrations') === true,
       localStorageLedgerReady: status.tables?.includes('local_storage_migration_ledger') === true,
+      localStorageSnapshotBackupReady: status.tables?.includes('local_storage_backup_runs') === true
+        && status.tables?.includes('local_storage_backup_items') === true
+        && ipcStatus.snapshotBackup?.ready === true,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
       rollbackToolRequired: true,
@@ -250,6 +277,7 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
     blockingIssueIds,
     nextActions: ok
       ? [
+          'capture-chat-memory-local-storage-snapshot-backup',
           'implement-read-through-chat-memory-migration-with-backup',
           'add-restore-and-downgrade-cli-fixtures',
           'capture-packaged-electron-sqlite-smoke-evidence',

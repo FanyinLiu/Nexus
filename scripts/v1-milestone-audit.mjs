@@ -694,6 +694,7 @@ function summarizeM4AcceptanceEvidence(source) {
     sqliteDependencyStatus: cleanString(sqliteDependency.status) || 'unknown',
     sqliteDependencyReviewRequired: sqliteDependency.requiresDependencyReview === true,
     runtimeMigrationEnabled: migrationPlan.runtimeMigrationEnabled === true,
+    localStorageSnapshotBackupReady: migrationPlan.localStorageSnapshotBackupReady === true,
     sourceLocalStoragePreservationRequired: migrationPlan.sourceLocalStoragePreservationRequired === true,
     backupBeforeMutationRequired: migrationPlan.backupBeforeMutationRequired === true,
     rollbackToolRequired: migrationPlan.rollbackToolRequired === true,

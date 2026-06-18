@@ -2,9 +2,12 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
+  buildLocalStorageSnapshotBackupResponse,
   buildStorageStatusResponse,
+  STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL,
   register,
   STORAGE_STATUS_CHANNEL,
+  validateLocalStorageSnapshotBackupResponse,
   validateStorageStatusResponse,
 } from '../electron/ipc/storageIpc.js'
 import {
@@ -32,6 +35,8 @@ function foundationStatus(overrides = {}) {
       backups: 0,
       localStorageLedgerItems: 0,
       migrationEvents: 0,
+      localStorageBackupRuns: 0,
+      localStorageBackupItems: 0,
     },
     ...overrides,
   }
@@ -56,6 +61,7 @@ test('storage status response is private-safe and validates its shape', () => {
   assert.deepEqual(response.database.missingTables, [])
   assert.equal(response.migrationPlan.runtimeMigrationEnabled, false)
   assert.equal(response.migrationPlan.readThroughMigrationEnabled, false)
+  assert.equal(response.migrationPlan.localStorageSnapshotBackupReady, true)
   assert.equal(response.privacy.userDataCopied, false)
   assert.equal(response.privacy.localStorageValuesRead, false)
   assert.equal(response.privacy.absoluteDatabasePathExposed, false)
@@ -102,6 +108,8 @@ test('storage status validator rejects malformed responses before renderer expos
           backups: 0,
           localStorageLedgerItems: 0,
           migrationEvents: 0,
+          localStorageBackupRuns: 0,
+          localStorageBackupItems: 0,
         },
       },
       migrationPlan: {},
@@ -113,16 +121,50 @@ test('storage status validator rejects malformed responses before renderer expos
   )
 })
 
-test('storage status IPC registers trusted sender check and closes database status', async () => {
-  let registeredChannel = ''
-  let registeredHandler: ((event: unknown) => Promise<unknown>) | null = null
+test('local storage snapshot backup response redacts paths and values', () => {
+  const response = buildLocalStorageSnapshotBackupResponse({
+    ok: true,
+    status: 'snapshot-backed-up',
+    backupId: 'local-storage-backup-test',
+    createdAt: '2026-06-18T12:30:00.000Z',
+    reason: 'manual',
+    entryCount: 1,
+    totalBytes: 23,
+    keys: ['nexus:chat'],
+    domains: ['chat'],
+    backupFileName: 'local-storage-backup-test.local-storage-snapshot.json',
+    backupPath: '/Users/example/Library/Application Support/Nexus/storage/backups/local-storage-backup-test.local-storage-snapshot.json',
+    sha256: 'a'.repeat(64),
+    sourceLocalStoragePreserved: true,
+    runtimeMigrationEnabled: false,
+    readThroughMigrationEnabled: false,
+    valuesCopiedToResponse: false,
+  }, { appLike })
+  const json = JSON.stringify(response)
+
+  assert.equal(response.gate, 'nexus-v1-m4-local-storage-snapshot-backup')
+  assert.equal(response.ok, true)
+  assert.equal(response.backup.pathKind, 'userData')
+  assert.equal(response.backup.fileName, 'local-storage-backup-test.local-storage-snapshot.json')
+  assert.equal(response.migrationPlan.runtimeMigrationEnabled, false)
+  assert.equal(response.migrationPlan.readThroughMigrationEnabled, false)
+  assert.equal(response.migrationPlan.sourceLocalStoragePreserved, true)
+  assert.equal(response.privacy.localStorageValuesReturned, false)
+  assert.equal(response.privacy.absoluteBackupPathExposed, false)
+  assert.equal(response.privacy.sourceLocalStorageMutated, false)
+  assert.equal(response.privacy.valuesCopiedToResponse, false)
+  assert.equal(json.includes('/Users/example'), false)
+  assert.equal(validateLocalStorageSnapshotBackupResponse(response), response)
+})
+
+test('storage IPC registers trusted sender checks for status and snapshot backup', async () => {
+  const registeredHandlers = new Map<string, (event: unknown, payload?: unknown) => Promise<unknown>>()
   let trustedSenderChecked = false
   let closeCalled = false
 
   const ipcMainLike = {
     handle(channel: string, handler: (event: unknown) => Promise<unknown>) {
-      registeredChannel = channel
-      registeredHandler = handler
+      registeredHandlers.set(channel, handler)
     },
   }
 
@@ -142,9 +184,9 @@ test('storage status IPC registers trusted sender check and closes database stat
     },
   })
 
-  assert.equal(registeredChannel, STORAGE_STATUS_CHANNEL)
-  assert.equal(typeof registeredHandler, 'function')
-  const response = await registeredHandler?.({})
+  assert.equal(typeof registeredHandlers.get(STORAGE_STATUS_CHANNEL), 'function')
+  assert.equal(typeof registeredHandlers.get(STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL), 'function')
+  const response = await registeredHandlers.get(STORAGE_STATUS_CHANNEL)?.({})
 
   assert.equal(trustedSenderChecked, true)
   assert.equal(closeCalled, true)
