@@ -119,6 +119,10 @@
   path only succeeds after confirmed read-through mode is enabled, discloses that
   user data is returned, blocks raw localStorage values and path exposure, avoids
   audit-log value copying, and keeps fallback localStorage writes intact.
+- **M4 renderer hydration evidence** — added
+  `npm run m4:storage:renderer-hydration:evidence` to prove the renderer adapter
+  accepts confirmed read-through data, rejects unsafe privacy flags, avoids
+  fallback localStorage writeback, and emits only redacted counts/safety flags.
 - **M2 distribution trust audit** — added
   `npm run m2:distribution:trust` and
   `docs/V1_M2_DISTRIBUTION_TRUST.md` so platform installer targets,

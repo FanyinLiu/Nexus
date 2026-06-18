@@ -162,6 +162,15 @@ that response without writing fallback localStorage. This is still a
 transitional renderer hydration path, not the final sensitive-memory boundary or
 main-process write store.
 
+`m4:storage:renderer-hydration:evidence` proves that transitional path end to
+end with sample or private renderer-export input. It runs snapshot backup,
+structured copy, user-confirmed read-through mode enablement, data-bearing IPC
+response validation, and the renderer startup adapter under a trapped
+`localStorage`. The public report records counts and safety flags only: the
+adapter must accept the confirmed response, reject an unsafe privacy response,
+hydrate chat and memory state, avoid `setItem`/`removeItem`/`clear` on fallback
+localStorage, and omit hydrated content and private paths from the report.
+
 `downgradeNexusStorageSchema()` and `m4:storage:downgrade:evidence` add the
 first offline schema downgrade fixture for the M4 SQLite store. The evidence
 path runs snapshot backup, structured copy, restore-bundle export, and then a
@@ -192,8 +201,10 @@ automatic in-app restore evidence yet. The read-through preview evidence and
 renderer IPC prove queryability of the copied rows as a redacted summary, but
 they are not runtime migration or an automatic fallback switch. The
 user-confirmed read-through mode IPC proves the guarded switch can be enabled
-and disabled for a copied run, but renderer chat/memory modules still need a
-main-process read path with localStorage fallback before localStorage stops
+and disabled for a copied run. The renderer hydration evidence proves the
+startup adapter can consume the confirmed read-through data response without
+fallback localStorage writeback, but renderer chat/memory modules still need a
+main-process write store with localStorage fallback before localStorage stops
 being the source of truth.
 
 ## Rollback Plan
@@ -205,9 +216,11 @@ Remove `electron/services/sqliteStorage.js`,
 `scripts/m4-storage-snapshot-copy-evidence.mjs`,
 `scripts/m4-storage-restore-evidence.mjs`,
 `scripts/m4-storage-read-through-evidence.mjs`,
+`scripts/m4-storage-renderer-hydration-evidence.mjs`,
 `scripts/m4-storage-downgrade-evidence.mjs`, the `m4:sqlite:foundation`,
 `m4:storage:audit`, `m4:storage:snapshot-copy:evidence`,
-`m4:storage:restore:evidence`, `m4:storage:read-through:evidence`, and
+`m4:storage:restore:evidence`, `m4:storage:read-through:evidence`,
+`m4:storage:renderer-hydration:evidence`, and
 `m4:storage:downgrade:evidence` package scripts,
 the M4 evidence-gate entry in
 `scripts/v1-milestone-audit.mjs`, `src/lib/storage/localSnapshotBackup.ts`,
@@ -230,10 +243,13 @@ bundle. The read-through preview path can query the structured SQLite copy from
 the main process without returning values, but it does not change runtime
 persistence. The schema downgrade fixture can roll the current v3 structured
 copy tables back to the v2 snapshot/ledger layer after a restore bundle and
-database backup exist. The future migration must keep source localStorage values
-until the SQLite copy is verified, write a private-safe backup before mutation,
-record each key in the migration ledger, and provide an in-app restore
-application path for every runtime migration.
+database backup exist. The renderer hydration evidence can confirm that a
+user-confirmed copied run hydrates chat and memory state from SQLite without
+writing fallback localStorage, but runtime writes still use the old source. The
+future migration must keep source localStorage values until the SQLite copy is
+verified, write a private-safe backup before mutation, record each key in the
+migration ledger, and provide an in-app restore application path for every
+runtime migration.
 
 ## Tests And Evidence
 
@@ -245,9 +261,10 @@ npm run m4:sqlite:foundation -- --require-ready --output artifacts/v1/m4-sqlite-
 npm run m4:storage:snapshot-copy:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-snapshot-copy-evidence.json
 npm run m4:storage:restore:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-restore-evidence.json
 npm run m4:storage:read-through:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-read-through-evidence.json
+npm run m4:storage:renderer-hydration:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-renderer-hydration-evidence.json
 npm run m4:storage:downgrade:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-downgrade-evidence.json
-npm run m4:storage:audit -- --sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json --snapshot-copy-evidence-file artifacts/v1/m4-storage-snapshot-copy-evidence.json --restore-evidence-file artifacts/v1/m4-storage-restore-evidence.json --read-through-evidence-file artifacts/v1/m4-storage-read-through-evidence.json --downgrade-evidence-file artifacts/v1/m4-storage-downgrade-evidence.json --require-inventory-ready --output artifacts/v1/m4-storage-migration.json
-node --experimental-strip-types --test tests/storage-ipc.test.ts tests/storage-local-snapshot-backup.test.ts tests/storage-read-through-hydration.test.ts tests/m4-sqlite-foundation.test.ts tests/m4-storage-migration-audit.test.ts tests/m4-storage-snapshot-copy-evidence.test.ts tests/m4-storage-restore-evidence.test.ts tests/m4-storage-read-through-evidence.test.ts tests/m4-storage-downgrade-evidence.test.ts tests/v1-milestone-audit.test.ts
+npm run m4:storage:audit -- --sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json --snapshot-copy-evidence-file artifacts/v1/m4-storage-snapshot-copy-evidence.json --restore-evidence-file artifacts/v1/m4-storage-restore-evidence.json --read-through-evidence-file artifacts/v1/m4-storage-read-through-evidence.json --renderer-hydration-evidence-file artifacts/v1/m4-storage-renderer-hydration-evidence.json --downgrade-evidence-file artifacts/v1/m4-storage-downgrade-evidence.json --require-inventory-ready --output artifacts/v1/m4-storage-migration.json
+node --experimental-strip-types --test tests/storage-ipc.test.ts tests/storage-local-snapshot-backup.test.ts tests/storage-read-through-hydration.test.ts tests/m4-sqlite-foundation.test.ts tests/m4-storage-migration-audit.test.ts tests/m4-storage-snapshot-copy-evidence.test.ts tests/m4-storage-restore-evidence.test.ts tests/m4-storage-read-through-evidence.test.ts tests/m4-storage-renderer-hydration-evidence.test.ts tests/m4-storage-downgrade-evidence.test.ts tests/v1-milestone-audit.test.ts
 node --experimental-strip-types --test tests/storage-ipc.test.ts tests/storage-local-snapshot-backup.test.ts tests/ipc-bridge-contract.test.ts tests/m3-ipc-security-audit.test.ts
 npm run v1:milestone:audit -- --m4-storage-file artifacts/v1/m4-storage-migration.json --require-ready
 ```
@@ -297,7 +314,11 @@ source-localStorage preservation, response validation, audit events, and a
 disable rollback path. `storage:read-through-data` now returns copied SQLite
 chat/memory values only after that mode is enabled, discloses that the response
 contains user data, refuses unsafe privacy flags, and hydrates renderer chat and
-memory state without writing fallback localStorage. `m4:storage:downgrade:evidence`
+memory state without writing fallback localStorage.
+`m4:storage:renderer-hydration:evidence` now proves that the renderer adapter
+accepts a confirmed data response, rejects unsafe privacy flags, hydrates chat
+and memory counts, and avoids fallback localStorage writeback while omitting
+hydrated content from the public report. `m4:storage:downgrade:evidence`
 now proves that a schema v3 database with copied chat/memory rows can export a
 restore bundle, write a private database backup, remove structured copy tables,
 and land on schema v2 without exposing user values in the public report.
@@ -321,8 +342,8 @@ cross-platform evidence exist.
   private renderer-export input, but a real renderer profile still needs to be
   exported and run through that gate before M4 migration acceptance.
 - Read-through preview evidence, renderer preview IPC, the user-confirmed mode
-  switch, and renderer startup hydration exist, but real renderer-profile
-  hydration evidence still needs to be captured.
+  switch, and renderer startup hydration evidence exist, but a real
+  renderer-profile export still needs to be run through the hydration gate.
 - Existing localStorage data remains the runtime source of truth.
 
 ## Next Stage Tasks
@@ -330,7 +351,8 @@ cross-platform evidence exist.
 - Run `m4:storage:snapshot-copy:evidence` against a real renderer export.
 - Run `m4:storage:restore:evidence` against a real renderer export.
 - Run `m4:storage:read-through:evidence` against a real renderer export.
+- Run `m4:storage:renderer-hydration:evidence` against a real renderer export.
 - Run `m4:storage:downgrade:evidence` against a real renderer export.
-- Capture renderer read-through hydration evidence with the confirmed
-  read-through mode enabled and fallback localStorage left intact.
+- Wire chat/memory writes to a main-process SQLite store while preserving
+  localStorage fallback and rollback.
 - Add fixture-based runtime migration, corruption, and automatic restore tests.

@@ -29,6 +29,8 @@ test('m4 storage migration args support inventory and migration gates', () => {
     'artifacts/v1/m4-storage-restore-evidence.json',
     '--read-through-evidence-file',
     'artifacts/v1/m4-storage-read-through-evidence.json',
+    '--renderer-hydration-evidence-file',
+    'artifacts/v1/m4-storage-renderer-hydration-evidence.json',
     '--downgrade-evidence-file',
     'artifacts/v1/m4-storage-downgrade-evidence.json',
     '--require-inventory-ready',
@@ -39,6 +41,7 @@ test('m4 storage migration args support inventory and migration gates', () => {
     help: false,
     outputPath: 'artifacts/v1/m4-storage-migration.json',
     readThroughEvidenceFile: 'artifacts/v1/m4-storage-read-through-evidence.json',
+    rendererHydrationEvidenceFile: 'artifacts/v1/m4-storage-renderer-hydration-evidence.json',
     requireInventoryReady: true,
     requireMigrationReady: true,
     restoreEvidenceFile: 'artifacts/v1/m4-storage-restore-evidence.json',
@@ -54,6 +57,7 @@ test('m4 storage migration report inventories localStorage keys without user dat
     snapshotCopyEvidenceFile: 'artifacts/v1/m4-storage-snapshot-copy-evidence-missing-for-test.json',
     restoreEvidenceFile: 'artifacts/v1/m4-storage-restore-evidence-missing-for-test.json',
     readThroughEvidenceFile: 'artifacts/v1/m4-storage-read-through-evidence-missing-for-test.json',
+    rendererHydrationEvidenceFile: 'artifacts/v1/m4-storage-renderer-hydration-evidence-missing-for-test.json',
     downgradeEvidenceFile: 'artifacts/v1/m4-storage-downgrade-evidence-missing-for-test.json',
   })
   const json = JSON.stringify(report)
@@ -88,6 +92,7 @@ test('m4 storage migration report inventories localStorage keys without user dat
   assert.equal(report.migrationPlan.localStorageSnapshotCopyEvidenceReady, false)
   assert.equal(report.migrationPlan.localStorageRestoreEvidenceReady, false)
   assert.equal(report.migrationPlan.localStorageReadThroughEvidenceReady, false)
+  assert.equal(report.migrationPlan.localStorageRendererHydrationEvidenceReady, false)
   assert.equal(report.migrationPlan.localStorageSchemaDowngradeEvidenceReady, false)
   assert.equal(report.migrationPlan.sourceLocalStoragePreservationRequired, true)
   assert.equal(report.migrationPlan.backupBeforeMutationRequired, true)
@@ -103,6 +108,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
     const evidencePath = path.join(directoryPath, 'm4-storage-snapshot-copy-evidence.json')
     const restoreEvidencePath = path.join(directoryPath, 'm4-storage-restore-evidence.json')
     const readThroughEvidencePath = path.join(directoryPath, 'm4-storage-read-through-evidence.json')
+    const rendererHydrationEvidencePath = path.join(directoryPath, 'm4-storage-renderer-hydration-evidence.json')
     const downgradeEvidencePath = path.join(directoryPath, 'm4-storage-downgrade-evidence.json')
     await writeFile(foundationPath, JSON.stringify({
       gate: 'nexus-v1-m4-sqlite-foundation',
@@ -142,6 +148,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
       snapshotCopyEvidenceFile: path.join(directoryPath, 'missing-evidence.json'),
       restoreEvidenceFile: path.join(directoryPath, 'missing-restore-evidence.json'),
       readThroughEvidenceFile: path.join(directoryPath, 'missing-read-through-evidence.json'),
+      rendererHydrationEvidenceFile: path.join(directoryPath, 'missing-renderer-hydration-evidence.json'),
       downgradeEvidenceFile: path.join(directoryPath, 'missing-downgrade-evidence.json'),
     })
 
@@ -198,6 +205,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
       snapshotCopyEvidenceFile: evidencePath,
       restoreEvidenceFile: path.join(directoryPath, 'missing-restore-evidence.json'),
       readThroughEvidenceFile: path.join(directoryPath, 'missing-read-through-evidence.json'),
+      rendererHydrationEvidenceFile: rendererHydrationEvidencePath,
       downgradeEvidenceFile: path.join(directoryPath, 'missing-downgrade-evidence.json'),
     })
     assert.equal(evidenceReadyReport.migrationPlan.localStorageSnapshotCopyEvidenceReady, true)
@@ -243,6 +251,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
       snapshotCopyEvidenceFile: evidencePath,
       restoreEvidenceFile: restoreEvidencePath,
       readThroughEvidenceFile: path.join(directoryPath, 'missing-read-through-evidence.json'),
+      rendererHydrationEvidenceFile: rendererHydrationEvidencePath,
       downgradeEvidenceFile: path.join(directoryPath, 'missing-downgrade-evidence.json'),
     })
     assert.equal(restoreReadyReport.migrationPlan.localStorageSnapshotCopyEvidenceReady, true)
@@ -297,6 +306,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
       snapshotCopyEvidenceFile: evidencePath,
       restoreEvidenceFile: restoreEvidencePath,
       readThroughEvidenceFile: readThroughEvidencePath,
+      rendererHydrationEvidenceFile: rendererHydrationEvidencePath,
       downgradeEvidenceFile: path.join(directoryPath, 'missing-downgrade-evidence.json'),
     })
     assert.equal(readThroughReadyReport.migrationPlan.localStorageSnapshotCopyEvidenceReady, true)
@@ -354,6 +364,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
       snapshotCopyEvidenceFile: evidencePath,
       restoreEvidenceFile: restoreEvidencePath,
       readThroughEvidenceFile: readThroughEvidencePath,
+      rendererHydrationEvidenceFile: rendererHydrationEvidencePath,
       downgradeEvidenceFile: downgradeEvidencePath,
     })
     assert.equal(downgradeReadyReport.migrationPlan.localStorageSchemaDowngradeEvidenceReady, true)
@@ -406,6 +417,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
       snapshotCopyEvidenceFile: evidencePath,
       restoreEvidenceFile: restoreEvidencePath,
       readThroughEvidenceFile: readThroughEvidencePath,
+      rendererHydrationEvidenceFile: rendererHydrationEvidencePath,
       downgradeEvidenceFile: downgradeEvidencePath,
     })
     assert.equal(modeReadyReport.migrationPlan.localStorageReadThroughModeIpcReady, true)
@@ -462,12 +474,86 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
       snapshotCopyEvidenceFile: evidencePath,
       restoreEvidenceFile: restoreEvidencePath,
       readThroughEvidenceFile: readThroughEvidencePath,
+      rendererHydrationEvidenceFile: rendererHydrationEvidencePath,
       downgradeEvidenceFile: downgradeEvidencePath,
     })
     assert.equal(dataReadyReport.migrationPlan.localStorageReadThroughModeIpcReady, true)
     assert.equal(dataReadyReport.migrationPlan.localStorageReadThroughDataIpcReady, true)
+    assert.equal(dataReadyReport.migrationPlan.localStorageRendererHydrationEvidenceReady, false)
     assert.deepEqual(dataReadyReport.nextActions, [
       'capture-renderer-read-through-hydration-evidence',
+    ])
+
+    await writeFile(rendererHydrationEvidencePath, JSON.stringify({
+      gate: 'nexus-v1-m4-storage-renderer-hydration-evidence',
+      ok: true,
+      backup: {
+        ok: true,
+      },
+      copy: {
+        ok: true,
+        copiedItemCount: 3,
+        failedItemCount: 0,
+      },
+      mode: {
+        ok: true,
+        enabled: true,
+        userConfirmed: true,
+      },
+      data: {
+        ok: true,
+        containsUserData: true,
+        sqliteValuesReturned: true,
+        localStorageRawValuesReturned: false,
+        absolutePathExposed: false,
+        valuesCopiedToAuditLog: false,
+      },
+      renderer: {
+        ok: true,
+        snapshotReturned: true,
+        adapterAcceptedConfirmedResponse: true,
+        unsafePrivacyResponseRejected: true,
+        chatMessageCount: 2,
+        memoryCount: 1,
+        dailyMemoryEntryCount: 1,
+        fallbackLocalStorageWritten: false,
+        fallbackLocalStorageMutated: false,
+      },
+      migrationPlan: {
+        rendererReadThroughHydrationEvidenceReady: true,
+        readThroughModeEnabled: true,
+        readThroughDataIpcResponseReady: true,
+        runtimeMigrationEnabled: false,
+        readThroughMigrationEnabled: true,
+        userConfirmedReadThroughMode: true,
+        sourceLocalStoragePreserved: true,
+        destructiveMigrationDetected: false,
+        fallbackLocalStorageSupported: true,
+        rendererFallbackLocalStorageWritebackBlocked: true,
+      },
+      privacy: {
+        localStorageValuesCopiedToReport: false,
+        rendererHydratedContentCopiedToReport: false,
+        localStorageRawValuesReturned: false,
+        absolutePathsExposed: false,
+        sourceLocalStorageMutated: false,
+        rendererFallbackLocalStorageWritten: false,
+        valuesCopiedToAuditLog: false,
+      },
+    }), 'utf8')
+    const rendererHydrationReadyReport = await buildM4StorageMigrationReport({
+      generatedAt: '2026-06-18T11:00:00Z',
+      sqliteFoundationFile: foundationPath,
+      snapshotCopyEvidenceFile: evidencePath,
+      restoreEvidenceFile: restoreEvidencePath,
+      readThroughEvidenceFile: readThroughEvidencePath,
+      rendererHydrationEvidenceFile: rendererHydrationEvidencePath,
+      downgradeEvidenceFile: downgradeEvidencePath,
+    })
+    assert.equal(rendererHydrationReadyReport.migrationPlan.localStorageReadThroughDataIpcReady, true)
+    assert.equal(rendererHydrationReadyReport.migrationPlan.localStorageRendererHydrationEvidenceReady, true)
+    assert.deepEqual(rendererHydrationReadyReport.nextActions, [
+      'wire-chat-memory-writes-to-main-process-store-with-localstorage-fallback',
     ])
   } finally {
     await rm(directoryPath, { recursive: true, force: true })
@@ -489,6 +575,7 @@ test('m4 storage migration strict migration mode blocks until real migration exi
     requireInventoryReady: false,
     requireMigrationReady: true,
     readThroughEvidenceFile: 'artifacts/v1/m4-storage-read-through-evidence.json',
+    rendererHydrationEvidenceFile: 'artifacts/v1/m4-storage-renderer-hydration-evidence.json',
     restoreEvidenceFile: 'artifacts/v1/m4-storage-restore-evidence.json',
     snapshotCopyEvidenceFile: 'artifacts/v1/m4-storage-snapshot-copy-evidence.json',
   })
@@ -537,16 +624,19 @@ test('m4 storage migration package wiring stays available', () => {
   assert.equal(packageJson.scripts?.['m4:sqlite:foundation'], 'node scripts/m4-sqlite-foundation-audit.mjs')
   assert.equal(packageJson.scripts?.['m4:storage:restore:evidence'], 'node scripts/m4-storage-restore-evidence.mjs')
   assert.equal(packageJson.scripts?.['m4:storage:read-through:evidence'], 'node scripts/m4-storage-read-through-evidence.mjs')
+  assert.equal(packageJson.scripts?.['m4:storage:renderer-hydration:evidence'], 'node --experimental-strip-types scripts/m4-storage-renderer-hydration-evidence.mjs')
   assert.equal(packageJson.scripts?.['m4:storage:downgrade:evidence'], 'node scripts/m4-storage-downgrade-evidence.mjs')
   assert.ok(packageJson.build?.files?.includes('scripts/m4-storage-migration-audit.mjs'))
   assert.ok(packageJson.build?.files?.includes('scripts/m4-sqlite-foundation-audit.mjs'))
   assert.ok(packageJson.build?.files?.includes('scripts/m4-storage-restore-evidence.mjs'))
   assert.ok(packageJson.build?.files?.includes('scripts/m4-storage-read-through-evidence.mjs'))
+  assert.ok(packageJson.build?.files?.includes('scripts/m4-storage-renderer-hydration-evidence.mjs'))
   assert.ok(packageJson.build?.files?.includes('scripts/m4-storage-downgrade-evidence.mjs'))
   assert.ok(packageJson.build?.asarUnpack?.includes('scripts/m4-storage-migration-audit.mjs'))
   assert.ok(packageJson.build?.asarUnpack?.includes('scripts/m4-sqlite-foundation-audit.mjs'))
   assert.ok(packageJson.build?.asarUnpack?.includes('scripts/m4-storage-restore-evidence.mjs'))
   assert.ok(packageJson.build?.asarUnpack?.includes('scripts/m4-storage-read-through-evidence.mjs'))
+  assert.ok(packageJson.build?.asarUnpack?.includes('scripts/m4-storage-renderer-hydration-evidence.mjs'))
   assert.ok(packageJson.build?.asarUnpack?.includes('scripts/m4-storage-downgrade-evidence.mjs'))
   assert.equal(DEFAULT_M4_STORAGE_MIGRATION_FILE, 'artifacts/v1/m4-storage-migration.json')
 })

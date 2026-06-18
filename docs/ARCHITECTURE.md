@@ -153,14 +153,18 @@ voice/
 	  rollback path. The read-through data IPC can return copied SQLite chat and
 	  memory values only after that confirmed mode is enabled, and the renderer
 	  startup adapter hydrates chat/memory state without writing fallback
-	  localStorage. All of these paths preserve source localStorage; main-process
-	  write persistence and real-profile hydration evidence are still future M4
-	  work. Use
+	  localStorage. `m4:storage:renderer-hydration:evidence` verifies that
+	  adapter path with counts and safety flags only, including unsafe-response
+	  rejection and no fallback localStorage writeback. All of these paths
+	  preserve source localStorage; main-process write persistence and
+	  real-profile hydration evidence are still future M4 work. Use
   `npm run m4:storage:snapshot-copy:evidence` for a redacted backup+copy evidence
   report from sample or private renderer-export input, and
   `npm run m4:storage:restore:evidence` for the matching redacted restore
   evidence report, plus `npm run m4:storage:read-through:evidence` for the
-  redacted main-process preview-query evidence, and
+  redacted main-process preview-query evidence,
+  `npm run m4:storage:renderer-hydration:evidence` for renderer hydration
+  evidence, and
   `npm run m4:storage:downgrade:evidence` for the redacted offline downgrade
   evidence. Then use
   `npm run m4:storage:audit` to refresh the private-safe storage inventory

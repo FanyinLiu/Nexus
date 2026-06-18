@@ -172,9 +172,11 @@ card/package workflows.
 v1 M4 storage work now has a schema v3 foundation for non-destructive
 localStorage snapshot backup, structured chat/memory copy into main-process
 SQLite, restore-bundle evidence, and a redacted main-process read-through
-preview query. Runtime reads still use the existing renderer storage path until
-runtime read-through migration, restore/rollback, packaged-runtime SQLite
-smoke, and cross-platform evidence are in place.
+preview query. The guarded read-through data IPC and renderer hydration evidence
+prove confirmed startup chat/memory reads can hydrate without fallback
+localStorage writeback, but runtime writes still use the existing renderer
+storage path until main-process write persistence, restore/rollback,
+packaged-runtime SQLite smoke, and cross-platform evidence are in place.
 
 P3 groundwork: new email and additional-IM adapters must enter through the
 local webhook contract unless they become first-party native bridges. The
@@ -311,6 +313,10 @@ heavy renderer localStorage with a migration path that users can recover from.
   must disclose `containsUserData`, block raw localStorage values, block path
   exposure, avoid audit-log value copying, and keep fallback localStorage
   intact.
+- Use `npm run m4:storage:renderer-hydration:evidence` to verify the renderer
+  adapter accepts confirmed read-through data, rejects unsafe privacy flags, and
+  avoids fallback localStorage writeback while omitting hydrated content from
+  the public report.
 - Use `npm run m4:storage:downgrade:evidence` to verify that schema v3
   structured copy data can be rolled back to the v2 snapshot/ledger layer after
   a restore bundle and private database backup exist.

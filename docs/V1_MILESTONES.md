@@ -423,6 +423,10 @@ it returns copied SQLite chat/memory values only after the confirmed mode is
 enabled, marks the response as containing user data, blocks raw localStorage
 values, paths, and audit-log value copying, and hydrates renderer chat/memory
 state without writing fallback localStorage.
+`m4:storage:renderer-hydration:evidence` proves that renderer adapter behavior
+from sample or private renderer-export input: confirmed data responses are
+accepted, unsafe privacy responses are rejected, hydrated chat/memory content is
+omitted from the public report, and fallback localStorage is not written.
 
 ### Impact Scope
 
@@ -455,9 +459,10 @@ then rerun the inventory gate with
 	report records the built-in SQLite selection. Focused IPC coverage is included
 	in `tests/storage-ipc.test.ts`, `tests/storage-local-snapshot-backup.test.ts`,
 	`tests/storage-read-through-hydration.test.ts`,
-	`tests/m4-storage-snapshot-copy-evidence.test.ts`,
+`tests/m4-storage-snapshot-copy-evidence.test.ts`,
 `tests/m4-storage-restore-evidence.test.ts`,
-`tests/m4-storage-read-through-evidence.test.ts`, and
+`tests/m4-storage-read-through-evidence.test.ts`,
+`tests/m4-storage-renderer-hydration-evidence.test.ts`, and
 `tests/ipc-bridge-contract.test.ts`.
 The stricter migration gate is intentionally not ready yet:
 `npm run m4:storage:audit -- --require-migration-ready`. The v1 milestone
@@ -492,9 +497,12 @@ renderer-export backup+copy evidence, and M4 inventory can consume that report.
 backup+restore evidence, and M4 inventory can consume that report.
 `m4:storage:read-through:evidence` is wired for sample or private
 renderer-export backup+copy+preview-query evidence, and M4 inventory can
-consume that report. `m4:storage:downgrade:evidence` is wired for sample or
-private renderer-export backup+copy+restore+downgrade evidence, and M4
-inventory can consume that report. `storage:set-read-through-mode` is wired
+consume that report. `m4:storage:renderer-hydration:evidence` is wired for
+sample or private renderer-export backup+copy+confirmed-mode+renderer-adapter
+evidence, and M4 inventory can consume that report.
+`m4:storage:downgrade:evidence` is wired for sample or private renderer-export
+backup+copy+restore+downgrade evidence, and M4 inventory can consume that
+report. `storage:set-read-through-mode` is wired
 through trusted preload/main IPC for a user-confirmed, reversible read-through
 mode flag over an existing copy run. `storage:read-through-data` and the
 renderer read-through hydration adapter are wired for startup chat/memory state
@@ -505,22 +513,23 @@ M4.
 ### Known Gaps
 
 Electron packaged-runtime `node:sqlite` behavior still needs package smoke
-evidence. Renderer startup read-through hydration is implemented, but real
-renderer-profile hydration evidence, automatic restore application, in-app
-downgrade UX, main-process write persistence, and cross-platform migration
-evidence are not implemented yet; snapshot backup, structured copy, restore
-bundle export, read-through preview IPC, user-confirmed read-through mode,
-read-through data IPC, schema downgrade evidence, and their evidence gates exist
-but are not yet a full migration or relationship-state migration.
+evidence. Renderer startup read-through hydration evidence exists for sample or
+private renderer-export input, but a real renderer-profile export, automatic
+restore application, in-app downgrade UX, main-process write persistence, and
+cross-platform migration evidence are not implemented yet; snapshot backup,
+structured copy, restore bundle export, read-through preview IPC,
+user-confirmed read-through mode, read-through data IPC, renderer hydration
+evidence, schema downgrade evidence, and their evidence gates exist but are not
+yet a full migration or relationship-state migration.
 
 ### Next Stage Tasks
 
 Run snapshot backup plus structured copy evidence against a real renderer
-export, run restore, read-through, and downgrade evidence against a real
-renderer export, capture renderer read-through hydration evidence with the
-confirmed main-process read-through mode enabled and localStorage fallback
-intact, add automatic restore and corruption fixtures, capture packaged SQLite
-smoke evidence, then proceed to M5 white-box memory after persistence is stable.
+export, run restore, read-through, renderer hydration, and downgrade evidence
+against a real renderer export, wire chat/memory writes to a main-process
+SQLite store with localStorage fallback, add automatic restore and corruption
+fixtures, capture packaged SQLite smoke evidence, then proceed to M5 white-box
+memory after persistence is stable.
 
 ## M5 - White-Box Long-Term Memory
 

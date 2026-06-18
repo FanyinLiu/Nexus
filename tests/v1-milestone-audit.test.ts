@@ -187,6 +187,7 @@ function m4Storage(overrides = {}) {
       localStorageReadThroughEvidenceReady: true,
       localStorageReadThroughModeIpcReady: true,
       localStorageReadThroughDataIpcReady: true,
+      localStorageRendererHydrationEvidenceReady: true,
       localStorageSchemaDowngradeEvidenceReady: true,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
@@ -305,6 +306,7 @@ test('v1 milestone audit can require M1, M2, M3, and M4 acceptance evidence', as
     assert.equal(m4Evidence?.localStorageReadThroughEvidenceReady, true)
     assert.equal(m4Evidence?.localStorageReadThroughModeIpcReady, true)
     assert.equal(m4Evidence?.localStorageReadThroughDataIpcReady, true)
+    assert.equal(m4Evidence?.localStorageRendererHydrationEvidenceReady, true)
     assert.equal(m4Evidence?.localStorageSchemaDowngradeEvidenceReady, true)
     assert.equal(m4Evidence?.backupBeforeMutationRequired, true)
     assert.equal(m4Evidence?.rollbackToolRequired, true)
@@ -544,6 +546,7 @@ test('v1 milestone audit package wiring stays available', async () => {
   assert.equal(packageJson.scripts?.['m4:storage:snapshot-copy:evidence'], 'node scripts/m4-storage-snapshot-copy-evidence.mjs')
   assert.equal(packageJson.scripts?.['m4:storage:restore:evidence'], 'node scripts/m4-storage-restore-evidence.mjs')
   assert.equal(packageJson.scripts?.['m4:storage:read-through:evidence'], 'node scripts/m4-storage-read-through-evidence.mjs')
+  assert.equal(packageJson.scripts?.['m4:storage:renderer-hydration:evidence'], 'node --experimental-strip-types scripts/m4-storage-renderer-hydration-evidence.mjs')
   assert.equal(packageJson.scripts?.['m4:storage:downgrade:evidence'], 'node scripts/m4-storage-downgrade-evidence.mjs')
   assert.match(scriptText, /nexus-v1-milestone-governance/)
   assert.match(scriptText, /m1:first-run:status/)

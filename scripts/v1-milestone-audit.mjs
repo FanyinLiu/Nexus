@@ -146,6 +146,7 @@ const REQUIRED_EVIDENCE_GATES = [
       'm4:storage:snapshot-copy:evidence',
       'm4:storage:restore:evidence',
       'm4:storage:read-through:evidence',
+      'm4:storage:renderer-hydration:evidence',
       'm4:storage:downgrade:evidence',
     ],
     docs: [
@@ -709,6 +710,7 @@ function summarizeM4AcceptanceEvidence(source) {
     localStorageReadThroughEvidenceReady: migrationPlan.localStorageReadThroughEvidenceReady === true,
     localStorageReadThroughModeIpcReady: migrationPlan.localStorageReadThroughModeIpcReady === true,
     localStorageReadThroughDataIpcReady: migrationPlan.localStorageReadThroughDataIpcReady === true,
+    localStorageRendererHydrationEvidenceReady: migrationPlan.localStorageRendererHydrationEvidenceReady === true,
     localStorageSchemaDowngradeEvidenceReady: migrationPlan.localStorageSchemaDowngradeEvidenceReady === true,
     sourceLocalStoragePreservationRequired: migrationPlan.sourceLocalStoragePreservationRequired === true,
     backupBeforeMutationRequired: migrationPlan.backupBeforeMutationRequired === true,
