@@ -1,3 +1,9 @@
+import {
+  FAILOVER_STATE_STORAGE_KEY,
+  readJsonValidated,
+  writeJson,
+} from '../../lib/storage/core.ts'
+
 export type FailoverDomain = 'chat' | 'speech-input' | 'speech-output'
 
 type FailoverEntry = {
@@ -12,7 +18,6 @@ type FailoverState = {
   entries: Record<string, FailoverEntry>
 }
 
-const FAILOVER_STATE_STORAGE_KEY = 'nexus:provider-failover-state'
 const FAILOVER_BACKOFF_MS = [
   60_000,
   5 * 60_000,
@@ -21,21 +26,20 @@ const FAILOVER_BACKOFF_MS = [
 ]
 
 function readState(): FailoverState {
-  try {
-    const raw = window.localStorage.getItem(FAILOVER_STATE_STORAGE_KEY)
-    if (!raw) {
-      return { entries: {} }
-    }
-
-    const parsed = JSON.parse(raw) as FailoverState | null
-    return parsed?.entries ? parsed : { entries: {} }
-  } catch {
-    return { entries: {} }
-  }
+  return readJsonValidated<FailoverState>(
+    FAILOVER_STATE_STORAGE_KEY,
+    { entries: {} },
+    (parsed) => {
+      if (!parsed || typeof parsed !== 'object') return null
+      const entries = (parsed as Partial<FailoverState>).entries
+      if (!entries || typeof entries !== 'object' || Array.isArray(entries)) return null
+      return { entries: entries as Record<string, FailoverEntry> }
+    },
+  )
 }
 
 function writeState(state: FailoverState) {
-  window.localStorage.setItem(FAILOVER_STATE_STORAGE_KEY, JSON.stringify(state))
+  writeJson(FAILOVER_STATE_STORAGE_KEY, state)
 }
 
 function normalizeKeyPart(value: string) {

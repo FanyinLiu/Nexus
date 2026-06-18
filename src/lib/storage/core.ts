@@ -39,8 +39,10 @@ export const PROACTIVE_BRACKET_STATE_STORAGE_KEY = 'nexus:proactive:bracket-stat
 export const PROACTIVE_CARE_EVENTS_STORAGE_KEY = 'nexus:proactive:care-events'
 export const LETTER_STORE_STORAGE_KEY = 'nexus:letters'
 export const AUTH_PROFILES_STORAGE_KEY = 'nexus:auth-profiles'
+export const ANALYTICS_CONSENT_STORAGE_KEY = 'nexus:analytics:consent'
 export const COST_ENTRIES_STORAGE_KEY = 'nexus:cost-entries'
 export const BUDGET_CONFIG_STORAGE_KEY = 'nexus:budget-config'
+export const FAILOVER_STATE_STORAGE_KEY = 'nexus:provider-failover-state'
 export const PLAN_STORE_STORAGE_KEY = 'nexus:plans'
 export const OPEN_GOALS_STORAGE_KEY = 'nexus:open-goals'
 export const AGENT_TRACE_STORAGE_KEY = 'nexus:agent-traces'
@@ -123,6 +125,33 @@ export function readJsonValidated<T>(
     console.error(`[storage] Failed to parse stored data for key "${key}":`, err)
     return fallback
   }
+}
+
+export function readStorageString(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key)
+  } catch (err) {
+    console.error(`[storage] Failed to read string data for key "${key}":`, err)
+    return null
+  }
+}
+
+export function writeStorageString(key: string, value: string): void {
+  try {
+    window.localStorage.setItem(key, value)
+  } catch (err) {
+    console.error(`[storage] Failed to write string data for key "${key}":`, err)
+  }
+  broadcastWrite(key, value)
+}
+
+export function removeStorageItem(key: string): void {
+  try {
+    window.localStorage.removeItem(key)
+  } catch (err) {
+    console.error(`[storage] Failed to remove data for key "${key}":`, err)
+  }
+  broadcastWrite(key, null)
 }
 
 // ---------------------------------------------------------------------------

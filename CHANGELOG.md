@@ -28,6 +28,9 @@
 - **Roadmap posture** — Nexus is now documented as an AI desktop companion
   first. Tools, knowledge, game bridges, and automation are supporting
   abilities, not the core product identity.
+- **M4 storage access cleanup** — analytics consent and provider failover state
+  now use centralized storage-core keys/helpers, reducing direct feature-local
+  `localStorage` access before the main-process SQLite migration.
 
 ### Removed
 - **Subagent dispatcher** — removed the background research helper agent,

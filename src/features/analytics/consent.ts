@@ -1,15 +1,16 @@
-const ANALYTICS_CONSENT_STORAGE_KEY = 'nexus:analytics:consent'
+import {
+  ANALYTICS_CONSENT_STORAGE_KEY,
+  readStorageString,
+  removeStorageItem,
+  writeStorageString,
+} from '../../lib/storage/core.ts'
 
 export function getAnalyticsConsent() {
   if (typeof window === 'undefined') {
     return false
   }
 
-  try {
-    return window.localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY) === 'granted'
-  } catch {
-    return false
-  }
+  return readStorageString(ANALYTICS_CONSENT_STORAGE_KEY) === 'granted'
 }
 
 export function setAnalyticsConsent(granted: boolean) {
@@ -17,14 +18,10 @@ export function setAnalyticsConsent(granted: boolean) {
     return
   }
 
-  try {
-    if (granted) {
-      window.localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, 'granted')
-      return
-    }
-
-    window.localStorage.removeItem(ANALYTICS_CONSENT_STORAGE_KEY)
-  } catch {
-    // Analytics consent is best-effort; private-mode storage failures must not break the app.
+  if (granted) {
+    writeStorageString(ANALYTICS_CONSENT_STORAGE_KEY, 'granted')
+    return
   }
+
+  removeStorageItem(ANALYTICS_CONSENT_STORAGE_KEY)
 }
