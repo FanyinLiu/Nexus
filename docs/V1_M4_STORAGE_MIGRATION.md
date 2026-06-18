@@ -135,6 +135,15 @@ renderer-export input, then writes
 `previewQueryEnabled: true` but keeps `runtimeMigrationEnabled: false` and
 `readThroughMigrationEnabled: false`.
 
+`downgradeNexusStorageSchema()` and `m4:storage:downgrade:evidence` add the
+first offline schema downgrade fixture for the M4 SQLite store. The evidence
+path runs snapshot backup, structured copy, restore-bundle export, and then a
+schema v3 to v2 downgrade that removes structured copy tables after writing a
+private database backup and migration events. The public report exposes only
+counts, table names, file-name/hash presence, and policy flags; it does not
+copy chat text, memory bodies, raw localStorage values, restore bundle contents,
+or absolute paths.
+
 ## Impact Scope
 
 Electron main-process services, package scripts, v1 milestone governance, docs,
@@ -164,10 +173,11 @@ Remove `electron/services/sqliteStorage.js`,
 `scripts/m4-storage-migration-audit.mjs`,
 `scripts/m4-storage-snapshot-copy-evidence.mjs`,
 `scripts/m4-storage-restore-evidence.mjs`,
-`scripts/m4-storage-read-through-evidence.mjs`, the `m4:sqlite:foundation`,
+`scripts/m4-storage-read-through-evidence.mjs`,
+`scripts/m4-storage-downgrade-evidence.mjs`, the `m4:sqlite:foundation`,
 `m4:storage:audit`, `m4:storage:snapshot-copy:evidence`,
-`m4:storage:restore:evidence`, and `m4:storage:read-through:evidence` package
-scripts,
+`m4:storage:restore:evidence`, `m4:storage:read-through:evidence`, and
+`m4:storage:downgrade:evidence` package scripts,
 the M4 evidence-gate entry in
 `scripts/v1-milestone-audit.mjs`, `src/lib/storage/localSnapshotBackup.ts`,
 this document, and the focused tests. Delete only generated files under
@@ -187,10 +197,12 @@ disabled. The restore bundle path can reconstruct backed-up localStorage values
 into a private manual-confirmed bundle and verify hashes before writing the
 bundle. The read-through preview path can query the structured SQLite copy from
 the main process without returning values, but it does not change runtime
-persistence. The future migration must keep source localStorage values until
-the SQLite copy is verified, write a private-safe backup before mutation,
+persistence. The schema downgrade fixture can roll the current v3 structured
+copy tables back to the v2 snapshot/ledger layer after a restore bundle and
+database backup exist. The future migration must keep source localStorage values
+until the SQLite copy is verified, write a private-safe backup before mutation,
 record each key in the migration ledger, and provide an in-app restore
-application path or downgrade command for each schema version.
+application path for every runtime migration.
 
 ## Tests And Evidence
 
@@ -202,8 +214,9 @@ npm run m4:sqlite:foundation -- --require-ready --output artifacts/v1/m4-sqlite-
 npm run m4:storage:snapshot-copy:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-snapshot-copy-evidence.json
 npm run m4:storage:restore:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-restore-evidence.json
 npm run m4:storage:read-through:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-read-through-evidence.json
-npm run m4:storage:audit -- --sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json --snapshot-copy-evidence-file artifacts/v1/m4-storage-snapshot-copy-evidence.json --restore-evidence-file artifacts/v1/m4-storage-restore-evidence.json --read-through-evidence-file artifacts/v1/m4-storage-read-through-evidence.json --require-inventory-ready --output artifacts/v1/m4-storage-migration.json
-node --experimental-strip-types --test tests/m4-sqlite-foundation.test.ts tests/m4-storage-migration-audit.test.ts tests/m4-storage-snapshot-copy-evidence.test.ts tests/m4-storage-restore-evidence.test.ts tests/m4-storage-read-through-evidence.test.ts tests/v1-milestone-audit.test.ts
+npm run m4:storage:downgrade:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-downgrade-evidence.json
+npm run m4:storage:audit -- --sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json --snapshot-copy-evidence-file artifacts/v1/m4-storage-snapshot-copy-evidence.json --restore-evidence-file artifacts/v1/m4-storage-restore-evidence.json --read-through-evidence-file artifacts/v1/m4-storage-read-through-evidence.json --downgrade-evidence-file artifacts/v1/m4-storage-downgrade-evidence.json --require-inventory-ready --output artifacts/v1/m4-storage-migration.json
+node --experimental-strip-types --test tests/m4-sqlite-foundation.test.ts tests/m4-storage-migration-audit.test.ts tests/m4-storage-snapshot-copy-evidence.test.ts tests/m4-storage-restore-evidence.test.ts tests/m4-storage-read-through-evidence.test.ts tests/m4-storage-downgrade-evidence.test.ts tests/v1-milestone-audit.test.ts
 node --experimental-strip-types --test tests/storage-ipc.test.ts tests/storage-local-snapshot-backup.test.ts tests/ipc-bridge-contract.test.ts tests/m3-ipc-security-audit.test.ts
 npm run v1:milestone:audit -- --m4-storage-file artifacts/v1/m4-storage-migration.json --require-ready
 ```
@@ -248,12 +261,15 @@ verification while producing a redacted public report.
 trusted preload bridge, and `m4:storage:read-through:evidence` proves that the
 main process can query the structured SQLite chat/memory copy and emit only
 redacted counts, key names, and readiness flags. Runtime read-through migration
-is not enabled.
+is not enabled. `m4:storage:downgrade:evidence` now proves that a schema v3
+database with copied chat/memory rows can export a restore bundle, write a
+private database backup, remove structured copy tables, and land on schema v2
+without exposing user values in the public report.
 
 M4 is not accepted as complete. Strict v1 acceptance should keep blocking on M4
 until packaged-runtime SQLite evidence, read-through migration, real renderer
-snapshot backup and restore evidence, automatic restore application or schema
-downgrade tooling, and cross-platform evidence exist.
+snapshot backup/restore/downgrade evidence, automatic restore application, and
+cross-platform evidence exist.
 
 ## Known Gaps
 
@@ -261,8 +277,8 @@ downgrade tooling, and cross-platform evidence exist.
 - Relationship state is backed up but not structured-copied until a dedicated
   table or view exists.
 - Runtime read-through storage contracts are not implemented.
-- Restore bundle export exists, but automatic restore application and schema
-  downgrade tooling are not implemented.
+- Restore bundle export and schema downgrade evidence exist, but automatic
+  restore application and in-app downgrade UX are not implemented.
 - Snapshot backup and structured copy evidence can be generated from sample or
   private renderer-export input, but a real renderer profile still needs to be
   exported and run through that gate before M4 migration acceptance.
@@ -275,6 +291,6 @@ downgrade tooling, and cross-platform evidence exist.
 - Run `m4:storage:snapshot-copy:evidence` against a real renderer export.
 - Run `m4:storage:restore:evidence` against a real renderer export.
 - Run `m4:storage:read-through:evidence` against a real renderer export.
+- Run `m4:storage:downgrade:evidence` against a real renderer export.
 - Wire runtime read-through behind a user-confirmed feature flag.
-- Add fixture-based migration, corruption, automatic restore, and schema
-  downgrade tests.
+- Add fixture-based runtime migration, corruption, and automatic restore tests.

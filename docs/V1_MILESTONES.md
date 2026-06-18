@@ -410,7 +410,11 @@ restore evidence report without mutating source localStorage.
 trusted preload bridge, and `m4:storage:read-through:evidence` proves the main
 process can query the structured chat/memory SQLite copy and return only
 redacted counts, source key names, safe aggregates, and readiness flags while
-leaving runtime read-through disabled.
+leaving runtime read-through disabled. `m4:storage:downgrade:evidence` proves
+the offline rollback side of this slice by exporting a restore bundle, writing a
+private database backup, and downgrading schema v3 structured copy tables back
+to the v2 snapshot/ledger layer without exposing user values in the public
+report.
 
 ### Impact Scope
 
@@ -479,26 +483,28 @@ renderer-export backup+copy evidence, and M4 inventory can consume that report.
 backup+restore evidence, and M4 inventory can consume that report.
 `m4:storage:read-through:evidence` is wired for sample or private
 renderer-export backup+copy+preview-query evidence, and M4 inventory can
-consume that report.
+consume that report. `m4:storage:downgrade:evidence` is wired for sample or
+private renderer-export backup+copy+restore+downgrade evidence, and M4
+inventory can consume that report.
 Runtime read-through migration is not enabled, source localStorage remains the
 fallback source of truth, and strict v1 acceptance remains blocked on M4.
 
 ### Known Gaps
 
 Electron packaged-runtime `node:sqlite` behavior still needs package smoke
-evidence. Runtime read-through fallback, automatic restore application, schema
-downgrade tooling, and cross-platform migration evidence are not implemented
+evidence. Runtime read-through fallback, automatic restore application,
+in-app downgrade UX, and cross-platform migration evidence are not implemented
 yet; snapshot backup, structured copy, restore bundle export, read-through
-preview IPC, and their evidence gates exist but are not yet a full migration or
-relationship-state migration.
+preview IPC, schema downgrade evidence, and their evidence gates exist but are
+not yet a full migration or relationship-state migration.
 
 ### Next Stage Tasks
 
 Run snapshot backup plus structured copy evidence against a real renderer
-export, run restore and read-through evidence against a real renderer export,
-wire runtime read-through behind a user-confirmed feature flag, add automatic
-restore and schema downgrade fixtures, capture packaged SQLite smoke evidence,
-then proceed to M5 white-box memory after persistence is stable.
+export, run restore, read-through, and downgrade evidence against a real
+renderer export, wire runtime read-through behind a user-confirmed feature
+flag, add automatic restore and corruption fixtures, capture packaged SQLite
+smoke evidence, then proceed to M5 white-box memory after persistence is stable.
 
 ## M5 - White-Box Long-Term Memory
 

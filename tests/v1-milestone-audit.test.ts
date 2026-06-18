@@ -185,6 +185,7 @@ function m4Storage(overrides = {}) {
       localStorageSnapshotCopyEvidenceReady: true,
       localStorageRestoreEvidenceReady: true,
       localStorageReadThroughEvidenceReady: true,
+      localStorageSchemaDowngradeEvidenceReady: true,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
       rollbackToolRequired: true,
@@ -300,6 +301,7 @@ test('v1 milestone audit can require M1, M2, M3, and M4 acceptance evidence', as
     assert.equal(m4Evidence?.localStorageSnapshotCopyEvidenceReady, true)
     assert.equal(m4Evidence?.localStorageRestoreEvidenceReady, true)
     assert.equal(m4Evidence?.localStorageReadThroughEvidenceReady, true)
+    assert.equal(m4Evidence?.localStorageSchemaDowngradeEvidenceReady, true)
     assert.equal(m4Evidence?.backupBeforeMutationRequired, true)
     assert.equal(m4Evidence?.rollbackToolRequired, true)
     assert.equal(m4Evidence?.sqliteDependencyStatus, 'selected')
@@ -538,6 +540,7 @@ test('v1 milestone audit package wiring stays available', async () => {
   assert.equal(packageJson.scripts?.['m4:storage:snapshot-copy:evidence'], 'node scripts/m4-storage-snapshot-copy-evidence.mjs')
   assert.equal(packageJson.scripts?.['m4:storage:restore:evidence'], 'node scripts/m4-storage-restore-evidence.mjs')
   assert.equal(packageJson.scripts?.['m4:storage:read-through:evidence'], 'node scripts/m4-storage-read-through-evidence.mjs')
+  assert.equal(packageJson.scripts?.['m4:storage:downgrade:evidence'], 'node scripts/m4-storage-downgrade-evidence.mjs')
   assert.match(scriptText, /nexus-v1-milestone-governance/)
   assert.match(scriptText, /m1:first-run:status/)
   assert.match(scriptText, /m2:distribution:trust/)
@@ -547,6 +550,7 @@ test('v1 milestone audit package wiring stays available', async () => {
   assert.match(scriptText, /m4:storage:snapshot-copy:evidence/)
   assert.match(scriptText, /m4:storage:restore:evidence/)
   assert.match(scriptText, /m4:storage:read-through:evidence/)
+  assert.match(scriptText, /m4:storage:downgrade:evidence/)
   assert.match(roadmap, /V1_MILESTONES/)
   assert.match(architecture, /V1_MILESTONES/)
   assert.match(changelog, /v1\.0 milestone governance/)

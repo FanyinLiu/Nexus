@@ -300,6 +300,9 @@ heavy renderer localStorage with a migration path that users can recover from.
 - Use `storage:read-through-preview` only for redacted copied-row summaries; it
   must not return chat text, memory bodies, localStorage values, or absolute
   paths, and it must not enable runtime fallback by itself.
+- Use `npm run m4:storage:downgrade:evidence` to verify that schema v3
+  structured copy data can be rolled back to the v2 snapshot/ledger layer after
+  a restore bundle and private database backup exist.
 - Keep source localStorage as the fallback until read-through migration,
   verified backups, restore/downgrade tooling, and macOS/Windows/Linux package
   evidence exist.

@@ -101,6 +101,11 @@
   query over copied chat/memory rows. The evidence proves queryability with
   redacted counts, key names, and readiness flags while keeping runtime
   read-through migration disabled.
+- **M4 schema downgrade evidence** — added
+  `npm run m4:storage:downgrade:evidence` and an offline v3-to-v2 SQLite
+  downgrade fixture that exports a restore bundle, writes a private database
+  backup, drops structured copy tables, and reports only redacted counts,
+  table names, and readiness flags.
 - **M2 distribution trust audit** — added
   `npm run m2:distribution:trust` and
   `docs/V1_M2_DISTRIBUTION_TRUST.md` so platform installer targets,

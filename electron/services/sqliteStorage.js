@@ -109,6 +109,7 @@ const STRUCTURED_COPY_MIGRATION_CHECKSUM = crypto
   .createHash('sha256')
   .update(`${STRUCTURED_COPY_MIGRATION_ID}:3:${M4_SQLITE_STRUCTURED_COPY_TABLES.join(',')}`)
   .digest('hex')
+const STRUCTURED_COPY_DOWNGRADE_ID = 'm4-chat-memory-structured-copy-v3-to-v2'
 
 function cleanString(value) {
   return String(value ?? '').replace(/\s+/g, ' ').trim()
@@ -464,58 +465,25 @@ function getDatabaseSummary(database) {
   const journalMode = cleanString(getScalar(database.prepare('PRAGMA journal_mode').get(), 'unknown'))
   const tables = listTables(database)
   const missingTables = M4_SQLITE_FOUNDATION_TABLES.filter((table) => !tables.includes(table))
-  const migrationRows = Number(getScalar(
-    database.prepare('SELECT COUNT(*) AS count FROM storage_schema_migrations').get(),
-    0,
-  ))
-  const backupRows = Number(getScalar(
-    database.prepare('SELECT COUNT(*) AS count FROM storage_backups').get(),
-    0,
-  ))
-  const ledgerRows = Number(getScalar(
-    database.prepare('SELECT COUNT(*) AS count FROM local_storage_migration_ledger').get(),
-    0,
-  ))
-  const eventRows = Number(getScalar(
-    database.prepare('SELECT COUNT(*) AS count FROM storage_migration_events').get(),
-    0,
-  ))
-  const localStorageBackupRuns = Number(getScalar(
-    database.prepare('SELECT COUNT(*) AS count FROM local_storage_backup_runs').get(),
-    0,
-  ))
-  const localStorageBackupItems = Number(getScalar(
-    database.prepare('SELECT COUNT(*) AS count FROM local_storage_backup_items').get(),
-    0,
-  ))
-  const localStorageCopyRuns = Number(getScalar(
-    database.prepare('SELECT COUNT(*) AS count FROM local_storage_copy_runs').get(),
-    0,
-  ))
-  const localStorageCopyItems = Number(getScalar(
-    database.prepare('SELECT COUNT(*) AS count FROM local_storage_copy_items').get(),
-    0,
-  ))
-  const chatSessions = Number(getScalar(
-    database.prepare('SELECT COUNT(*) AS count FROM chat_sessions').get(),
-    0,
-  ))
-  const chatMessages = Number(getScalar(
-    database.prepare('SELECT COUNT(*) AS count FROM chat_messages').get(),
-    0,
-  ))
-  const memories = Number(getScalar(
-    database.prepare('SELECT COUNT(*) AS count FROM memories').get(),
-    0,
-  ))
-  const dailyMemoryEntries = Number(getScalar(
-    database.prepare('SELECT COUNT(*) AS count FROM daily_memory_entries').get(),
-    0,
-  ))
-  const memorySources = Number(getScalar(
-    database.prepare('SELECT COUNT(*) AS count FROM memory_sources').get(),
-    0,
-  ))
+  const tableSet = new Set(tables)
+  const countRows = (table) => (
+    tableSet.has(table)
+      ? Number(getScalar(database.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get(), 0))
+      : 0
+  )
+  const migrationRows = countRows('storage_schema_migrations')
+  const backupRows = countRows('storage_backups')
+  const ledgerRows = countRows('local_storage_migration_ledger')
+  const eventRows = countRows('storage_migration_events')
+  const localStorageBackupRuns = countRows('local_storage_backup_runs')
+  const localStorageBackupItems = countRows('local_storage_backup_items')
+  const localStorageCopyRuns = countRows('local_storage_copy_runs')
+  const localStorageCopyItems = countRows('local_storage_copy_items')
+  const chatSessions = countRows('chat_sessions')
+  const chatMessages = countRows('chat_messages')
+  const memories = countRows('memories')
+  const dailyMemoryEntries = countRows('daily_memory_entries')
+  const memorySources = countRows('memory_sources')
 
   return {
     schemaVersion: userVersion,
@@ -1083,6 +1051,51 @@ export function validateLocalStorageReadThroughQueryRequest(request = {}) {
     copyId,
     domains,
     limit: requestedLimit,
+  }
+}
+
+export function validateNexusStorageSchemaDowngradeRequest(request = {}) {
+  if (!request || typeof request !== 'object' || Array.isArray(request)) {
+    throw new Error('storage schema downgrade request must be a plain object')
+  }
+
+  const targetVersion = Number(request.targetVersion ?? request.targetSchemaVersion)
+  if (!Number.isInteger(targetVersion) || targetVersion !== 2) {
+    throw new Error('targetVersion must be 2 for the M4 schema downgrade fixture')
+  }
+
+  const reason = cleanString(request.reason) || 'manual'
+  if (!/^[a-z0-9:-]{1,64}$/i.test(reason)) {
+    throw new Error('reason must be a short id')
+  }
+
+  const downgradeId = cleanString(request.downgradeId)
+  if (downgradeId && !/^[a-z0-9:_-]{1,160}$/i.test(downgradeId)) {
+    throw new Error('downgradeId must be a short id')
+  }
+
+  const backupId = cleanString(request.backupId)
+  if (backupId && !/^[a-z0-9:_-]{1,160}$/i.test(backupId)) {
+    throw new Error('backupId must be a short id')
+  }
+
+  const restoreBundleSha256 = cleanString(request.restoreBundleSha256)
+  if (restoreBundleSha256 && !/^[a-f0-9]{64}$/i.test(restoreBundleSha256)) {
+    throw new Error('restoreBundleSha256 must be a sha256 hex string')
+  }
+
+  const requireRestoreBundle = request.requireRestoreBundle !== false
+  if (requireRestoreBundle && !restoreBundleSha256) {
+    throw new Error('restoreBundleSha256 is required before schema downgrade')
+  }
+
+  return {
+    targetVersion,
+    reason,
+    downgradeId,
+    backupId,
+    restoreBundleSha256,
+    requireRestoreBundle,
   }
 }
 
@@ -2290,6 +2303,203 @@ export async function queryLocalStorageReadThroughPreview(request = {}, options 
     }
   } finally {
     if (shouldClose) status?.close?.()
+  }
+}
+
+function writeSchemaDowngradeDatabaseBackup(database, downgrade, options = {}) {
+  const backupDirectory = resolveNexusStorageBackupDirectory(options)
+  fs.mkdirSync(backupDirectory, { recursive: true })
+  database.exec('PRAGMA wal_checkpoint(FULL);')
+  const backupFileName = `${downgrade.downgradeId}.schema-v${downgrade.fromVersion}-to-v${downgrade.targetVersion}.sqlite3`
+  const backupPath = path.join(backupDirectory, backupFileName)
+  fs.copyFileSync(options.databasePath, backupPath, fs.constants.COPYFILE_EXCL)
+  return {
+    backupFileName,
+    backupPath,
+    sha256: sha256(fs.readFileSync(backupPath)),
+  }
+}
+
+function v2TablesReady(tables) {
+  const tableSet = new Set(tables)
+  return [
+    ...M4_SQLITE_FOUNDATION_V1_TABLES,
+    ...M4_SQLITE_SNAPSHOT_TABLES,
+  ].every((table) => tableSet.has(table))
+}
+
+function structuredCopyTablesPresent(tables) {
+  const tableSet = new Set(tables)
+  return M4_SQLITE_STRUCTURED_COPY_TABLES.filter((table) => tableSet.has(table))
+}
+
+export async function downgradeNexusStorageSchema(request = {}, options = {}) {
+  const normalizedRequest = validateNexusStorageSchemaDowngradeRequest(request)
+  const generatedAt = normalizeIso(options.generatedAt || options.now || new Date())
+  const databasePath = resolveNexusStorageDatabasePath(options)
+  const sqlite = await loadNodeSqlite(options)
+  const database = new sqlite.DatabaseSync(databasePath)
+  let closed = false
+  const close = () => {
+    if (closed) return
+    database.close()
+    closed = true
+  }
+
+  const downgradeId = normalizedRequest.downgradeId || createId('schema-downgrade')
+  let databaseBackup = null
+  let committed = false
+
+  try {
+    const before = getDatabaseSummary(database)
+    const presentStructuredTables = structuredCopyTablesPresent(before.tables)
+    if (before.schemaVersion < 3 || presentStructuredTables.length < 1) {
+      throw new Error('M4 schema downgrade requires a schema v3 database with structured copy tables')
+    }
+    if (!v2TablesReady(before.tables)) {
+      throw new Error('M4 schema downgrade requires v1/v2 ledger and snapshot tables to be present')
+    }
+
+    databaseBackup = writeSchemaDowngradeDatabaseBackup(database, {
+      downgradeId,
+      fromVersion: before.schemaVersion,
+      targetVersion: normalizedRequest.targetVersion,
+    }, {
+      ...options,
+      databasePath,
+    })
+
+    database.exec('PRAGMA foreign_keys = OFF;')
+    database.exec('BEGIN IMMEDIATE;')
+    try {
+      insertStorageBackup(database, {
+        backupId: downgradeId,
+        createdAt: generatedAt,
+        reason: normalizedRequest.reason,
+        backupPath: databaseBackup.backupPath,
+        sha256: databaseBackup.sha256,
+      }, {
+        databasePath,
+      })
+      recordStorageMigrationEvent(database, {
+        eventType: 'storage-schema-downgrade-started',
+        level: 'info',
+        details: {
+          downgradeId,
+          backupId: normalizedRequest.backupId,
+          fromVersion: before.schemaVersion,
+          targetVersion: normalizedRequest.targetVersion,
+          droppedTables: presentStructuredTables,
+          databaseBackupFileName: databaseBackup.backupFileName,
+          databaseBackupSha256Present: true,
+          restoreBundleRequired: normalizedRequest.requireRestoreBundle,
+          restoreBundleSha256Present: Boolean(normalizedRequest.restoreBundleSha256),
+          runtimeMigrationEnabled: false,
+          readThroughMigrationEnabled: false,
+          sourceLocalStoragePreserved: true,
+        },
+      }, { now: generatedAt })
+
+      for (const table of [
+        'chat_messages',
+        'chat_sessions',
+        'memories',
+        'daily_memory_entries',
+        'memory_sources',
+        'local_storage_copy_items',
+        'local_storage_copy_runs',
+      ]) {
+        database.exec(`DROP TABLE IF EXISTS ${table};`)
+      }
+
+      database
+        .prepare(`
+          UPDATE local_storage_migration_ledger
+          SET status = 'backed-up',
+              last_error = NULL,
+              updated_at = ?
+          WHERE status IN ('copied', 'verified', 'renderer-read-through', 'retired')
+        `)
+        .run(generatedAt)
+      database
+        .prepare('DELETE FROM storage_schema_migrations WHERE version >= ?')
+        .run(3)
+      database.exec(`PRAGMA user_version = ${normalizedRequest.targetVersion};`)
+      recordStorageMigrationEvent(database, {
+        eventType: STRUCTURED_COPY_DOWNGRADE_ID,
+        level: 'info',
+        details: {
+          downgradeId,
+          backupId: normalizedRequest.backupId,
+          fromVersion: before.schemaVersion,
+          targetVersion: normalizedRequest.targetVersion,
+          droppedTables: presentStructuredTables,
+          databaseBackupFileName: databaseBackup.backupFileName,
+          databaseBackupSha256Present: true,
+          restoreBundleRequired: normalizedRequest.requireRestoreBundle,
+          restoreBundleSha256Present: Boolean(normalizedRequest.restoreBundleSha256),
+          sourceLocalStoragePreserved: true,
+        },
+      }, { now: generatedAt })
+      database.exec('COMMIT;')
+      committed = true
+    } finally {
+      if (!committed) {
+        try { database.exec('ROLLBACK;') } catch {}
+      }
+      try { database.exec('PRAGMA foreign_keys = ON;') } catch {}
+    }
+
+    const after = getDatabaseSummary(database)
+    const remainingStructuredTables = structuredCopyTablesPresent(after.tables)
+    return {
+      ok: after.schemaVersion === normalizedRequest.targetVersion
+        && remainingStructuredTables.length === 0
+        && v2TablesReady(after.tables),
+      status: 'schema-downgraded-to-v2',
+      downgradeId,
+      generatedAt,
+      fromSchemaVersion: before.schemaVersion,
+      targetSchemaVersion: normalizedRequest.targetVersion,
+      droppedTables: presentStructuredTables,
+      remainingStructuredTables,
+      databaseBackupFileName: databaseBackup.backupFileName,
+      databaseBackupPath: databaseBackup.backupPath,
+      databaseBackupSha256: databaseBackup.sha256,
+      restoreBundleRequired: normalizedRequest.requireRestoreBundle,
+      restoreBundleSha256Present: Boolean(normalizedRequest.restoreBundleSha256),
+      before: {
+        schemaVersion: before.schemaVersion,
+        structuredTableCount: presentStructuredTables.length,
+        localStorageCopyRuns: before.localStorageCopyRuns,
+        localStorageCopyItems: before.localStorageCopyItems,
+        chatSessions: before.chatSessions,
+        chatMessages: before.chatMessages,
+        memories: before.memories,
+        dailyMemoryEntries: before.dailyMemoryEntries,
+        memorySources: before.memorySources,
+      },
+      after: {
+        schemaVersion: after.schemaVersion,
+        v2TablesReady: v2TablesReady(after.tables),
+        structuredTableCount: remainingStructuredTables.length,
+        localStorageBackupRuns: after.localStorageBackupRuns,
+        localStorageBackupItems: after.localStorageBackupItems,
+        localStorageLedgerItems: after.ledgerRows,
+        migrationEvents: after.eventRows,
+        schemaMigrations: after.migrationRows,
+      },
+      runtimeMigrationEnabled: false,
+      readThroughMigrationEnabled: false,
+      sourceLocalStoragePreserved: true,
+      destructiveMigrationDetected: false,
+      valuesCopiedToResponse: false,
+    }
+  } finally {
+    close()
+    if (!committed && databaseBackup?.backupPath) {
+      try { fs.rmSync(databaseBackup.backupPath, { force: true }) } catch {}
+    }
   }
 }
 

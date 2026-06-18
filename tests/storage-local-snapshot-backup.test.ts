@@ -13,11 +13,13 @@ import {
 import {
   backupLocalStorageSnapshot,
   copyLocalStorageSnapshotToStructuredSqlite,
+  downgradeNexusStorageSchema,
   exportLocalStorageSnapshotRestoreBundle,
   initializeNexusStorageDatabase,
   M4_LOCAL_STORAGE_SNAPSHOT_MAX_ENTRY_BYTES,
   M4_SQLITE_SCHEMA_VERSION,
   queryLocalStorageReadThroughPreview,
+  validateNexusStorageSchemaDowngradeRequest,
   summarizeNexusStorageDatabase,
   validateLocalStorageReadThroughQueryRequest,
   validateLocalStorageSnapshotCopyRequest,
@@ -161,6 +163,42 @@ test('local storage read-through query request validation bounds domains and lim
   assert.throws(
     () => validateLocalStorageReadThroughQueryRequest({ limit: 501 }),
     /limit must be an integer/,
+  )
+})
+
+test('storage schema downgrade request validation requires a restore bundle proof', () => {
+  assert.deepEqual(validateNexusStorageSchemaDowngradeRequest({
+    targetVersion: 2,
+    reason: 'm4-downgrade-evidence',
+    downgradeId: 'schema-downgrade-test',
+    backupId: 'local-storage-backup-test',
+    restoreBundleSha256: 'a'.repeat(64),
+  }), {
+    targetVersion: 2,
+    reason: 'm4-downgrade-evidence',
+    downgradeId: 'schema-downgrade-test',
+    backupId: 'local-storage-backup-test',
+    restoreBundleSha256: 'a'.repeat(64),
+    requireRestoreBundle: true,
+  })
+
+  assert.throws(
+    () => validateNexusStorageSchemaDowngradeRequest({ targetVersion: 3 }),
+    /targetVersion must be 2/,
+  )
+  assert.throws(
+    () => validateNexusStorageSchemaDowngradeRequest({
+      targetVersion: 2,
+      restoreBundleSha256: '',
+    }),
+    /restoreBundleSha256 is required/,
+  )
+  assert.throws(
+    () => validateNexusStorageSchemaDowngradeRequest({
+      targetVersion: 2,
+      restoreBundleSha256: 'not-a-sha',
+    }),
+    /restoreBundleSha256 must be a sha256/,
   )
 })
 
@@ -575,6 +613,93 @@ test('local storage read-through preview reads structured rows without exposing 
     assert.equal(previewJson.includes('private read through chat sample'), false)
     assert.equal(previewJson.includes('private read through memory sample'), false)
     assert.equal(previewJson.includes(directoryPath), false)
+  } finally {
+    await rm(directoryPath, { recursive: true, force: true })
+  }
+})
+
+test('storage schema downgrade fixture removes v3 structured tables after restore bundle export', async () => {
+  const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'nexus-storage-downgrade-'))
+  try {
+    const databasePath = path.join(directoryPath, 'storage.sqlite3')
+    const backupDirectory = path.join(directoryPath, 'backups')
+    await backupLocalStorageSnapshot({
+      reason: 'pre-migration',
+      entries: [
+        {
+          key: 'nexus:chat',
+          value: JSON.stringify([
+            { id: 'downgrade-user', role: 'user', content: 'private downgrade chat sample', createdAt: '2026-06-18T12:00:00Z' },
+          ]),
+        },
+        {
+          key: 'nexus:memory:long-term',
+          value: JSON.stringify([
+            {
+              id: 'downgrade-memory',
+              content: 'private downgrade memory sample',
+              category: 'preference',
+              source: 'chat',
+              createdAt: '2026-06-18T12:03:00Z',
+            },
+          ]),
+        },
+      ],
+    }, {
+      databasePath,
+      backupDirectory,
+      generatedAt: '2026-06-18T12:50:00Z',
+      backupId: 'local-storage-backup-downgrade-test',
+    })
+    await copyLocalStorageSnapshotToStructuredSqlite({
+      backupId: 'local-storage-backup-downgrade-test',
+      copyId: 'local-storage-copy-downgrade-test',
+    }, {
+      databasePath,
+      generatedAt: '2026-06-18T12:51:00Z',
+    })
+    const restore = await exportLocalStorageSnapshotRestoreBundle({
+      backupId: 'local-storage-backup-downgrade-test',
+      restoreId: 'local-storage-restore-downgrade-test',
+    }, {
+      databasePath,
+      backupDirectory,
+      generatedAt: '2026-06-18T12:52:00Z',
+    })
+
+    const result = await downgradeNexusStorageSchema({
+      targetVersion: 2,
+      reason: 'm4-downgrade-evidence',
+      downgradeId: 'schema-downgrade-test',
+      backupId: 'local-storage-backup-downgrade-test',
+      restoreBundleSha256: restore.sha256,
+    }, {
+      databasePath,
+      backupDirectory,
+      generatedAt: '2026-06-18T12:53:00Z',
+    })
+    const resultJson = JSON.stringify(result)
+    const backupBytes = await readFile(result.databaseBackupPath)
+
+    assert.equal(result.ok, true)
+    assert.equal(result.status, 'schema-downgraded-to-v2')
+    assert.equal(result.fromSchemaVersion, 3)
+    assert.equal(result.targetSchemaVersion, 2)
+    assert.deepEqual(result.remainingStructuredTables, [])
+    assert.equal(result.before.chatMessages, 1)
+    assert.equal(result.before.memories, 1)
+    assert.equal(result.after.schemaVersion, 2)
+    assert.equal(result.after.v2TablesReady, true)
+    assert.equal(result.after.structuredTableCount, 0)
+    assert.equal(result.after.localStorageBackupRuns, 1)
+    assert.equal(result.restoreBundleSha256Present, true)
+    assert.equal(result.runtimeMigrationEnabled, false)
+    assert.equal(result.readThroughMigrationEnabled, false)
+    assert.equal(result.sourceLocalStoragePreserved, true)
+    assert.match(result.databaseBackupSha256, /^[a-f0-9]{64}$/)
+    assert.ok(backupBytes.length > 0)
+    assert.equal(resultJson.includes('private downgrade chat sample'), false)
+    assert.equal(resultJson.includes('private downgrade memory sample'), false)
   } finally {
     await rm(directoryPath, { recursive: true, force: true })
   }
