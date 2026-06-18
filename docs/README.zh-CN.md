@@ -24,15 +24,15 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **当前版本：** v0.3.2 稳定版。Nexus 现在已经可日常使用，但仍是快速迭代中的个人项目；打包、本地语音模型和 provider 配置上，可能还有一些不够顺滑、需要手动处理的地方。
+> **当前版本：** v0.3.4 稳定版。Nexus 现在已经可日常使用，但仍是快速迭代中的个人项目；打包、本地语音模型和 provider 配置上，可能还有一些不够顺滑、需要手动处理的地方。
 
 > **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前短期开发以根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 为准：Phase 1 只收敛桌面常驻小窗口、极简头像、Ollama / DeepSeek 文本模型和简单对话。
 
 ---
 
-## 本次更新 — v0.3.4-beta.4（预发布）
+## 本次更新 — v0.3.4
 
-> **她的小表情落在脸上，不再漏进聊天框。** 她常用括号给回复加小动作（「（眼睛亮了）」「（歪头）」），这些是给头像的舞台指令，本该驱动表情、不该当文字念或显示，偶尔会有一条漏进可见回复里像 bug。这版改成**按形状**判断（不靠人工维护的词表）：认识的表情驱动她的脸、不显示也不念（跟之前一样）；她临时造的、没收录的旁白则留下来渲染成**暗色斜体旁注**，是有意的旁白而不是漏出来的字；两类都不会被念（连语音流式中途也不念）。带冒号的「（注：周一照常）」仍当正文照常显示。按**形状**判断意味着别人屏幕上出现的新表情也被同样处理，不用谁去往词表里加。完整说明见 [RELEASE-NOTES-v0.3.4-beta.4.md](RELEASE-NOTES-v0.3.4-beta.4.md)（英文）。预发布版仅供手动验证。
+> **v0.3.4 beta 线转为稳定版。** 她的小表情现在落在脸上，不再漏进聊天框。完整说明见 [RELEASE-NOTES-v0.3.4.md](RELEASE-NOTES-v0.3.4.md)（英文）。
 
 ## 本次更新 — v0.3.4-beta.3（预发布）
 

@@ -24,15 +24,15 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **目前版本：** v0.3.2 穩定版。Nexus 現在已可日常使用，但仍是快速迭代中的個人專案；打包、本地語音模型和 provider 設定上，可能還有一些不夠順滑、需要手動處理的地方。
+> **目前版本：** v0.3.4 穩定版。Nexus 現在已可日常使用，但仍是快速迭代中的個人專案；打包、本地語音模型和 provider 設定上，可能還有一些不夠順滑、需要手動處理的地方。
 
 > **開發範圍提示：** 這份多語 README 保留的是長期能力清單。當前短期開發以根目錄 [README](../README.md) 和 [Nexus 升級整合計畫](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 為準：Phase 1 只收斂桌面常駐小視窗、極簡頭像、Ollama / DeepSeek 文字模型和簡單對話。
 
 ---
 
-## 本次更新 — v0.3.4-beta.4（預發布）
+## 本次更新 — v0.3.4
 
-> **她的小表情落在臉上，不再漏進聊天框。** 她常用括號給回覆加小動作（「（眼睛亮了）」「（歪頭）」），這些是給頭像的舞台指令，本該驅動表情、不該當文字念或顯示，偶爾會有一條漏進可見回覆裡像 bug。這版改成**按形狀**判斷（不靠人工維護的詞表）：認識的表情驅動她的臉、不顯示也不念（跟之前一樣）；她臨時造的、沒收錄的旁白則留下來渲染成**暗色斜體旁註**，是有意的旁白而不是漏出來的字；兩類都不會被念（連語音串流中途也不念）。帶冒號的「（註：週一照常）」仍當正文照常顯示。按**形狀**判斷意味著別人螢幕上出現的新表情也被同樣處理，不用誰去往詞表裡加。完整說明見 [RELEASE-NOTES-v0.3.4-beta.4.md](RELEASE-NOTES-v0.3.4-beta.4.md)（英文）。預發布版僅供手動驗證。
+> **v0.3.4 beta 線轉為穩定版。** 她的小表情現在落在臉上，不再漏進聊天框。完整說明見 [RELEASE-NOTES-v0.3.4.md](RELEASE-NOTES-v0.3.4.md)（英文）。
 
 ## 本次更新 — v0.3.4-beta.3（預發布）
 
