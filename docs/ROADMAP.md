@@ -281,7 +281,10 @@ heavy renderer localStorage with a migration path that users can recover from.
   memory, settings/permissions, and audit/log-style keys stay inventoried.
 - Use `npm run m4:sqlite:foundation -- --require-ready` to verify the
   main-process `node:sqlite` schema, backup ledger, rollback ledger,
-  localStorage migration ledger, and migration event table.
+  localStorage migration ledger, migration event table, and read-only
+  `storage:status` IPC.
+- Keep `storage:status` diagnostic-only: it may expose table readiness and
+  privacy flags, but not absolute database paths or localStorage values.
 - Keep source localStorage as the fallback until read-through migration,
   verified backups, restore/downgrade tooling, and macOS/Windows/Linux package
   evidence exist.

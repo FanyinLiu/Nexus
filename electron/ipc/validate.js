@@ -1,4 +1,6 @@
-import { BrowserWindow } from 'electron'
+import electron from 'electron'
+
+const { BrowserWindow } = electron ?? {}
 
 /**
  * Lightweight IPC payload validators.
@@ -14,6 +16,9 @@ import { BrowserWindow } from 'electron'
 export function requireTrustedSender(event) {
   const sender = event?.sender
   if (!sender) throw new Error('IPC sender missing')
+  if (!BrowserWindow || typeof BrowserWindow.fromWebContents !== 'function') {
+    throw new Error('IPC rejected: BrowserWindow API unavailable')
+  }
   const ownerWindow = BrowserWindow.fromWebContents(sender)
   if (!ownerWindow) {
     throw new Error('IPC rejected: sender is not a known application window')

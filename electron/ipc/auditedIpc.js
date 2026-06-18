@@ -15,7 +15,7 @@ export function classifyIpcAuditCategories(channel) {
     || normalized === 'tool:get-weather') {
     categories.push('network-or-integration')
   }
-  if (/^(file|pet-model|persona|plugin|plugin-bus|skill|memory):/.test(normalized)) {
+  if (/^(file|pet-model|persona|plugin|plugin-bus|skill|memory|storage):/.test(normalized)) {
     categories.push('local-data-or-files')
   }
   if (/^(tool:open-external|updater:install|app:set-launch-on-startup|media-session:control|window:|pet-window:|panel-window:|runtime-state:update|proactive:show-notification)/.test(normalized)) {

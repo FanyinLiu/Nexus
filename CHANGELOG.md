@@ -109,6 +109,11 @@
   and migration event tables. The foundation report is private-safe and keeps
   runtime migration disabled until read-through migration, backups, rollback
   tooling, and packaged-runtime evidence exist.
+- **M4 storage status IPC** — added a read-only `storage:status` /
+  `window.desktopPet.storageStatus()` bridge for SQLite foundation readiness.
+  It requires trusted sender validation, is covered by high-risk IPC audit,
+  validates the response shape before renderer exposure, and redacts absolute
+  database paths and all localStorage values.
 - **Companion wake-up checklist** — onboarding now summarizes identity, text
   model, character model, and speech readiness before the desktop companion
   starts.

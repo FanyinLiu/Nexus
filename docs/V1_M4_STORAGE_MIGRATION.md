@@ -54,22 +54,32 @@ records engine availability, schema/table readiness, backup/rollback ledger
 readiness, and privacy guarantees. It does not read renderer localStorage and
 does not copy user chat, memory, secrets, files, or audit log contents.
 
+`electron/ipc/storageIpc.js` exposes the first read-only storage bridge through
+`storage:status` and `window.desktopPet.storageStatus()`. The handler requires a
+trusted sender, returns only foundation readiness, schema/table counts, and
+privacy flags, validates the response before renderer exposure, and redacts
+absolute database paths. It is not a read-through migration API.
+
 ## Impact Scope
 
 Electron main-process services, package scripts, v1 milestone governance, docs,
-and test coverage. Runtime renderer storage behavior is intentionally unchanged.
+preload/IPC contracts, and test coverage. Runtime renderer storage behavior is
+intentionally unchanged.
 
 ## Risks
 
 Static scanning can miss dynamically constructed storage keys. The SQLite
 foundation proves schema and ledger readiness, not read-through migration or
 packaged Electron compatibility. Treat these reports as a work queue and
-release-candidate gate, not as user-data migration evidence.
+release-candidate gate, not as user-data migration evidence. The `storage:status`
+IPC is diagnostic-only; it must not be used as proof that chat or memory reads
+have migrated.
 
 ## Rollback Plan
 
 Remove `electron/services/sqliteStorage.js`,
 `scripts/m4-sqlite-foundation-audit.mjs`,
+`electron/ipc/storageIpc.js`,
 `scripts/m4-storage-migration-audit.mjs`, the `m4:sqlite:foundation` and
 `m4:storage:audit` package scripts, the M4 evidence-gate entry in
 `scripts/v1-milestone-audit.mjs`, this document, and the focused tests. Delete
@@ -94,6 +104,7 @@ npm run m4:storage:audit -- --require-inventory-ready --output artifacts/v1/m4-s
 npm run m4:sqlite:foundation -- --require-ready --output artifacts/v1/m4-sqlite-foundation.json
 npm run m4:storage:audit -- --sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json --require-inventory-ready --output artifacts/v1/m4-storage-migration.json
 node --experimental-strip-types --test tests/m4-sqlite-foundation.test.ts tests/m4-storage-migration-audit.test.ts tests/v1-milestone-audit.test.ts
+node --experimental-strip-types --test tests/storage-ipc.test.ts tests/ipc-bridge-contract.test.ts tests/m3-ipc-security-audit.test.ts
 npm run v1:milestone:audit -- --m4-storage-file artifacts/v1/m4-storage-migration.json --require-ready
 ```
 
@@ -116,7 +127,10 @@ Inventory scaffolding is implemented. The audit identifies storage keys across
 chat, memory, permissions/settings, audit/log style data, runtime cache, and
 other support domains. SQLite foundation scaffolding is implemented with
 built-in `node:sqlite`, schema version 1, and private-safe migration, backup,
-rollback, ledger, and event tables. Runtime migration is not enabled.
+rollback, ledger, and event tables. Read-only `storage:status` IPC is wired
+through preload, requires trusted sender validation, is covered by the global
+high-risk IPC audit wrapper, validates its response shape, and redacts the
+absolute database path. Runtime migration is not enabled.
 
 M4 is not accepted as complete. Strict v1 acceptance should keep blocking on M4
 until packaged-runtime SQLite evidence, read-through migration, backup,
@@ -125,12 +139,12 @@ rollback, and cross-platform evidence exist.
 ## Known Gaps
 
 - Packaged Electron `node:sqlite` behavior still needs smoke evidence.
-- Main-process storage IPC contracts are not implemented.
+- Read-through storage IPC contracts are not implemented.
 - Backup, restore, rollback, and schema downgrade tooling are not implemented.
 - Existing localStorage data remains the runtime source of truth.
 
 ## Next Stage Tasks
 
-- Wire a storage status IPC contract with response validation.
+- Extend storage IPC for read-through chat and memory migration.
 - Implement read-through migration for chat and memory first.
 - Add fixture-based migration, corruption, backup, and rollback tests.

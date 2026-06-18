@@ -38,6 +38,7 @@ test('m4 storage migration args support inventory and migration gates', () => {
 test('m4 storage migration report inventories localStorage keys without user data', async () => {
   const report = await buildM4StorageMigrationReport({
     generatedAt: '2026-06-18T11:00:00Z',
+    sqliteFoundationFile: 'artifacts/v1/m4-sqlite-foundation-missing-for-test.json',
   })
   const json = JSON.stringify(report)
 
@@ -100,7 +101,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
     assert.equal(report.sqliteDependency.foundationReady, true)
     assert.equal(report.migrationPlan.sqliteFoundationReady, true)
     assert.deepEqual(report.nextActions, [
-      'design-main-process-storage-ipc-contracts',
+      'extend-main-process-storage-ipc-for-read-through-migration',
       'implement-read-through-migration-with-localstorage-preservation',
       'add-backup-restore-and-rollback-fixtures',
     ])

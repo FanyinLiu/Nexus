@@ -139,7 +139,7 @@ test('every preload invoke channel has an ipcMain handler', () => {
   const handlerChannels = new Set<string>()
 
   for (const file of walkFiles(path.join(ROOT, 'electron', 'ipc'), (file) => file.endsWith('.js'))) {
-    for (const channel of extractRegexMatches(fs.readFileSync(file, 'utf8'), /ipcMain\.handle\(['"]([^'"]+)['"]/g)) {
+    for (const channel of extractRegexMatches(fs.readFileSync(file, 'utf8'), /(?:ipcMain|ipcMainLike)\.handle\(['"]([^'"]+)['"]/g)) {
       handlerChannels.add(channel)
     }
   }

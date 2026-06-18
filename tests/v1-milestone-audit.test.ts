@@ -79,8 +79,8 @@ function m3IpcSecurity(overrides = {}) {
     overallStatus: 'ready',
     targetMilestone: 'M3',
     totals: {
-      ipcHandlerCount: 169,
-      preloadInvokeChannelCount: 169,
+      ipcHandlerCount: 170,
+      preloadInvokeChannelCount: 170,
       preloadSubscriptionChannelCount: 16,
     },
     preloadContract: {
@@ -99,7 +99,7 @@ function m3IpcSecurity(overrides = {}) {
       unvalidatedPayloadChannels: [],
     },
     highRiskAudit: {
-      highRiskHandlerCount: 124,
+      highRiskHandlerCount: 125,
       highRiskAuditReady: true,
       unauditedHighRiskChannels: [],
     },
@@ -285,9 +285,9 @@ test('v1 milestone audit can require M1, M2, M3, and M4 acceptance evidence', as
     assert.equal(m3Evidence?.secretBoundaryReady, true)
     assert.equal(m3Evidence?.globalHighRiskAuditReady, true)
     assert.equal(m3Evidence?.auditLogReady, true)
-    assert.equal(m3Evidence?.handlerCount, 169)
+    assert.equal(m3Evidence?.handlerCount, 170)
     assert.equal(m3Evidence?.payloadHandlerCount, 101)
-    assert.equal(m3Evidence?.highRiskHandlerCount, 124)
+    assert.equal(m3Evidence?.highRiskHandlerCount, 125)
     assert.deepEqual(m3Evidence?.unvalidatedPayloadChannels, [])
     const m4Evidence = readyReport.acceptanceEvidence.find((entry) => entry.id === 'm4-storage-migration')
     assert.equal(m4Evidence?.ready, true)
@@ -368,7 +368,7 @@ test('v1 milestone audit can require M1, M2, M3, and M4 acceptance evidence', as
         unvalidatedPayloadChannels: ['example:unsafe-channel'],
       },
       highRiskAudit: {
-        highRiskHandlerCount: 124,
+        highRiskHandlerCount: 125,
         highRiskAuditReady: false,
         unauditedHighRiskChannels: ['example:unsafe-channel'],
       },

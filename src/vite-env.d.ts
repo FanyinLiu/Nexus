@@ -239,6 +239,51 @@ type ModelProgressEvent = {
   message?: string
 }
 
+type StorageStatus = {
+  gate: 'nexus-v1-m4-sqlite-foundation'
+  ok: boolean
+  status: string
+  schemaVersion: number
+  runtime: {
+    engine: 'node:sqlite' | string
+    available: boolean
+    experimental: boolean
+    externalDependencyAdded: boolean
+  }
+  database: {
+    pathKind: 'userData' | 'custom' | 'unknown'
+    fileName: string
+    schemaVersion: number
+    journalMode: string
+    expectedTables: Array<{ table: string; ready: boolean }>
+    missingTables: string[]
+    counts: {
+      schemaMigrations: number
+      backups: number
+      localStorageLedgerItems: number
+      migrationEvents: number
+    }
+  }
+  migrationPlan: {
+    runtimeMigrationEnabled: boolean
+    readThroughMigrationEnabled: boolean
+    sourceLocalStoragePreservationRequired: boolean
+    backupBeforeMutationRequired: boolean
+    rollbackToolRequired: boolean
+    backupLedgerReady: boolean
+    rollbackLedgerReady: boolean
+    localStorageLedgerReady: boolean
+    crossPlatformCoverageRequired: string[]
+  }
+  privacy: {
+    userDataCopied: boolean
+    localStorageValuesRead: boolean
+    absoluteDatabasePathExposed: boolean
+  }
+  blockingIssueIds: string[]
+  nextActions: string[]
+}
+
 declare global {
   interface Window {
     desktopPet?: {
@@ -352,6 +397,7 @@ declare global {
       inspectIntegrations: (
         payload: IntegrationInspectRequest,
       ) => Promise<IntegrationInspectResponse>
+      storageStatus: () => Promise<StorageStatus>
       listSpeechVoices: (payload: SpeechVoiceListRequest) => Promise<SpeechVoiceListResponse>
       transcribeAudio: (payload: AudioTranscriptionRequest) => Promise<AudioTranscriptionResponse>
       synthesizeAudio: (payload: AudioSynthesisRequest) => Promise<AudioSynthesisResponse>

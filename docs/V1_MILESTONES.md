@@ -390,7 +390,10 @@ main-process SQLite foundation uses built-in `node:sqlite` through
 `electron/services/sqliteStorage.js` and is audited with
 `npm run m4:sqlite:foundation`; it creates schema, backup, rollback, local
 storage migration ledger, and migration event tables without reading or copying
-renderer storage values.
+renderer storage values. The renderer-facing `storage:status` IPC is read-only,
+trusted-sender checked, high-risk-audited, and response-validated; it returns
+schema/table readiness and redacted status only, never absolute database paths
+or localStorage values.
 
 ### Impact Scope
 
@@ -420,7 +423,8 @@ The current SQLite foundation gate is
 `npm run m4:sqlite:foundation -- --require-ready --output artifacts/v1/m4-sqlite-foundation.json`;
 then rerun the inventory gate with
 `--sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json` so the M4
-report records the built-in SQLite selection.
+report records the built-in SQLite selection. Focused IPC coverage is included
+in `tests/storage-ipc.test.ts` and `tests/ipc-bridge-contract.test.ts`.
 The stricter migration gate is intentionally not ready yet:
 `npm run m4:storage:audit -- --require-migration-ready`. The v1 milestone
 audit consumes `artifacts/v1/m4-storage-migration.json` and treats M4 as
@@ -438,21 +442,22 @@ source files, domain coverage, direct localStorage/sessionStorage access
 counts, SQLite dependency status, and migration guardrails without reading
 stored values. SQLite foundation scaffolding is implemented with built-in
 `node:sqlite`, schema version 1, and private-safe backup/rollback/migration
-ledger tables. Runtime migration is not enabled, source localStorage remains
-the fallback source of truth, and strict v1 acceptance remains blocked on M4.
+ledger tables. `storage:status` is wired through preload and main-process IPC
+with response validation and path redaction. Runtime migration is not enabled,
+source localStorage remains the fallback source of truth, and strict v1
+acceptance remains blocked on M4.
 
 ### Known Gaps
 
 Electron packaged-runtime `node:sqlite` behavior still needs package smoke
-evidence. Main-process storage IPC, read-through migration, real backup files,
-restore/rollback CLI tooling, and cross-platform migration evidence are not
-implemented yet.
+evidence. Read-through migration IPC, real backup files, restore/rollback CLI
+tooling, and cross-platform migration evidence are not implemented yet.
 
 ### Next Stage Tasks
 
-Wire storage status IPC with response validation, implement read-through chat
-and memory migration behind backups, add restore/downgrade CLI fixtures, then
-proceed to M5 white-box memory after persistence is stable.
+Extend the storage IPC for read-through chat and memory migration behind
+backups, add restore/downgrade CLI fixtures, capture packaged SQLite smoke
+evidence, then proceed to M5 white-box memory after persistence is stable.
 
 ## M5 - White-Box Long-Term Memory
 

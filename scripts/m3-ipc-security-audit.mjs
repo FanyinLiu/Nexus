@@ -175,7 +175,7 @@ function classifyChannel(channel) {
     || channel === 'tool:get-weather') {
     categories.push('network-or-integration')
   }
-  if (/^(file|pet-model|persona|plugin|plugin-bus|skill|memory):/.test(channel)) {
+  if (/^(file|pet-model|persona|plugin|plugin-bus|skill|memory|storage):/.test(channel)) {
     categories.push('local-data-or-files')
   }
   if (/^(tool:open-external|updater:install|app:set-launch-on-startup|media-session:control|window:|pet-window:|panel-window:|runtime-state:update|proactive:show-notification)/.test(channel)) {
@@ -228,7 +228,7 @@ function summarizeHandler(source, relativePath, match, segment, globalHighRiskAu
     file: relativePath,
     line: lineForIndex(source, match.index ?? 0),
     payloadParamCount,
-    hasTrustedSenderCheck: /\brequireTrustedSender\s*\(\s*event\s*\)/.test(segment),
+    hasTrustedSenderCheck: /\b(?:requireTrustedSender|trustedSenderCheck)\s*\(\s*event\s*\)/.test(segment),
     requestValidationStatus: validation.status,
     requestValidationEvidence: validation.evidence,
     usesVaultRefResolution: /\bresolveVaultRefsForSender\s*\(/.test(segment),
@@ -242,7 +242,7 @@ function summarizeHandler(source, relativePath, match, segment, globalHighRiskAu
 }
 
 function extractHandlersFromSource(source, relativePath, globalHighRiskAuditReady) {
-  const regex = /ipcMain\.handle\(\s*(['"`])([^'"`]+)\1\s*,\s*(?:async\s*)?\(([^)]*)\)\s*=>/g
+  const regex = /(?:ipcMain|ipcMainLike)\.handle\(\s*(['"`])([^'"`]+)\1\s*,\s*(?:async\s*)?\(([^)]*)\)\s*=>/g
   const matches = [...source.matchAll(regex)]
   return matches.map((match, index) => {
     const start = match.index ?? 0

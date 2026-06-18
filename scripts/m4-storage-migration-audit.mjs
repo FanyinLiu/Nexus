@@ -374,7 +374,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
       ? []
       : [
           ...(sqliteDependency.foundationReady === true ? [] : ['choose-sqlite-dependency-after-packaging-review']),
-          'design-main-process-storage-ipc-contracts',
+          'extend-main-process-storage-ipc-for-read-through-migration',
           'implement-read-through-migration-with-localstorage-preservation',
           'add-backup-restore-and-rollback-fixtures',
         ],

@@ -132,9 +132,11 @@ voice/
 - M4 SQLite migration work must keep renderer localStorage as the source
   fallback until a main-process store, backup, rollback, and cross-platform
   migration evidence are in place. Use `npm run m4:sqlite:foundation` to
-  initialize and audit the built-in `node:sqlite` main-process schema, then use
+  initialize and audit the built-in `node:sqlite` main-process schema plus the
+  read-only `storage:status` IPC. That IPC is diagnostic-only: trusted sender
+  checked, response-validated, high-risk-audited, and path-redacted. Then use
   `npm run m4:storage:audit` to refresh the private-safe storage inventory
-  before changing persistence contracts.
+  before changing read/write persistence contracts.
 
 ### `src/types/`
 

@@ -15,6 +15,11 @@ import {
 export const DEFAULT_M4_SQLITE_FOUNDATION_FILE = 'artifacts/v1/m4-sqlite-foundation.json'
 export const DEFAULT_M4_SQLITE_FOUNDATION_DATABASE = 'artifacts/v1/m4-sqlite-foundation.sqlite3'
 
+const PRELOAD_PATH = 'electron/preload.js'
+const IPC_REGISTRY_PATH = 'electron/ipcRegistry.js'
+const STORAGE_IPC_PATH = 'electron/ipc/storageIpc.js'
+const VITE_ENV_PATH = 'src/vite-env.d.ts'
+
 function printUsage(stream = process.stderr) {
   stream.write([
     'Usage: node scripts/m4-sqlite-foundation-audit.mjs [options]',
@@ -100,11 +105,74 @@ function safeRelativePath(rootDir, targetPath) {
   return relative && !relative.startsWith('..') ? relative : '[outside-workspace]'
 }
 
+async function readText(rootDir, relativePath) {
+  const target = cleanString(relativePath)
+  try {
+    return {
+      exists: true,
+      path: target,
+      text: await fs.readFile(path.resolve(rootDir, target), 'utf8'),
+      error: null,
+    }
+  } catch (error) {
+    return {
+      exists: false,
+      path: target,
+      text: '',
+      error: error?.code === 'ENOENT' ? 'missing' : 'read-failed',
+    }
+  }
+}
+
+async function summarizeStorageStatusIpc(rootDir) {
+  const [preload, ipcRegistry, storageIpc, viteEnv] = await Promise.all([
+    readText(rootDir, PRELOAD_PATH),
+    readText(rootDir, IPC_REGISTRY_PATH),
+    readText(rootDir, STORAGE_IPC_PATH),
+    readText(rootDir, VITE_ENV_PATH),
+  ])
+  const preloadExposed = /storageStatus\s*:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(['"]storage:status['"]\)/.test(preload.text)
+  const handlerRegistered = /(?:ipcMain|ipcMainLike)\.handle\(\s*(?:STORAGE_STATUS_CHANNEL|['"]storage:status['"])/.test(storageIpc.text)
+  const registryRegistered = /storageIpc\.register\s*\(/.test(ipcRegistry.text)
+  const trustedSenderCheck = /trustedSenderCheck\s*\(\s*event\s*\)/.test(storageIpc.text)
+    && /requireTrustedSender/.test(storageIpc.text)
+  const responseValidationReady = /validateStorageStatusResponse/.test(storageIpc.text)
+    && /return validateStorageStatusResponse\(/.test(storageIpc.text)
+  const rendererTypeDeclared = /storageStatus:\s*\(\)\s*=>\s*Promise<StorageStatus>/.test(viteEnv.text)
+  const absolutePathRedactionReady = /absoluteDatabasePathExposed:\s*false/.test(storageIpc.text)
+    && !/databasePath\s*:/.test(storageIpc.text)
+  const missingSourceIds = [preload, ipcRegistry, storageIpc, viteEnv]
+    .filter((source) => !source.exists || source.error)
+    .map((source) => source.path)
+  const ready = missingSourceIds.length === 0
+    && preloadExposed
+    && handlerRegistered
+    && registryRegistered
+    && trustedSenderCheck
+    && responseValidationReady
+    && rendererTypeDeclared
+    && absolutePathRedactionReady
+
+  return {
+    ready,
+    channel: 'storage:status',
+    preloadExposed,
+    handlerRegistered,
+    registryRegistered,
+    trustedSenderCheck,
+    responseValidationReady,
+    rendererTypeDeclared,
+    absolutePathRedactionReady,
+    missingSourceIds,
+  }
+}
+
 export async function buildM4SqliteFoundationReport(options = {}, context = {}) {
   const rootDir = context.rootDir || process.cwd()
   const generatedAt = normalizeIso(options.generatedAt || context.now || new Date())
   const databasePath = path.resolve(rootDir, cleanString(options.databasePath) || DEFAULT_M4_SQLITE_FOUNDATION_DATABASE)
   const runtime = await probeNexusSqliteRuntime(context)
+  const ipcStatus = await summarizeStorageStatusIpc(rootDir)
   const status = await initializeNexusStorageDatabase({
     ...context,
     databasePath,
@@ -117,10 +185,12 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
     && status.ok === true
     && status.schemaVersion >= M4_SQLITE_SCHEMA_VERSION
     && missingTables.length === 0
+    && ipcStatus.ready === true
   const blockingIssueIds = [
     ...(runtime.available ? [] : ['node-sqlite-runtime-unavailable']),
     ...(status.ok ? [] : ['sqlite-foundation-schema-not-ready']),
     ...missingTables.map((table) => `missing-table:${table}`),
+    ...(!ipcStatus.ready ? ['storage-status-ipc-not-ready'] : []),
   ]
 
   return {
@@ -165,6 +235,7 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
       rollbackToolRequired: true,
       crossPlatformCoverageRequired: ['macos', 'windows', 'linux'],
     },
+    ipcStatus,
     privacy: {
       userDataCopied: false,
       localStorageValuesRead: false,
@@ -179,9 +250,9 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
     blockingIssueIds,
     nextActions: ok
       ? [
-          'wire-storage-status-ipc-with-response-validation',
           'implement-read-through-chat-memory-migration-with-backup',
           'add-restore-and-downgrade-cli-fixtures',
+          'capture-packaged-electron-sqlite-smoke-evidence',
         ]
       : ['fix-node-sqlite-foundation-before-runtime-migration'],
   }
