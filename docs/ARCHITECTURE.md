@@ -26,6 +26,26 @@ src/
   types/        Domain type definitions
 ```
 
+## v1.0 Milestone Boundary
+
+Long-running architecture work follows the auditable milestone contract in
+[`docs/V1_MILESTONES.md`](V1_MILESTONES.md). Each stage must name the problem,
+technical design, impact scope, risks, rollback plan, data migration behavior,
+tests/evidence, docs, acceptance results, known gaps, and next-stage tasks
+before it graduates.
+
+Use that contract when changing structural areas such as Electron IPC, secret
+boundaries, SQLite persistence, memory ownership, presence state, voice lazy
+loading, file indexing, Tool Registry, or MCP/plugin surfaces. The point is to
+keep the runtime layers below stable while the product moves toward v1.0.
+
+For IPC work,
+`npm run m3:ipc:audit -- --require-full-validation --require-high-risk-audit`
+is the current strict inventory gate. It tracks preload/handler coverage, event
+sources, trusted sender checks, vault refs, full request validation, and
+redacted high-risk invocation audit without copying payload values or user
+data.
+
 ## Layer Responsibilities
 
 ### `electron/`
@@ -109,6 +129,10 @@ voice/
 - May keep compatibility exports while modules migrate into `features/`.
 - New domain code should import from the owning feature module, not from a
   legacy `lib` wrapper.
+- M4 SQLite migration work must keep renderer localStorage as the source
+  fallback until a main-process store, backup, rollback, and cross-platform
+  migration evidence are in place. Use `npm run m4:storage:audit` to refresh
+  the private-safe storage inventory before changing persistence contracts.
 
 ### `src/types/`
 

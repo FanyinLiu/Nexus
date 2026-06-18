@@ -1,4 +1,5 @@
 import type { AutonomySettings } from './autonomy.ts'
+import type { PetActionMapOverrideStore } from '../features/pet/actionMap.ts'
 import type { AppLocale } from './i18n.ts'
 import type { MemorySearchMode } from './memory.ts'
 import type { CompanionPresenceState, PetMood } from './pet.ts'
@@ -71,6 +72,7 @@ export interface IdentitySettings {
   userName: string
   systemPrompt: string
   petModelId: string
+  petActionMapOverrides: PetActionMapOverrideStore
   characterProfiles: CharacterProfile[]
   activeCharacterProfileId: string
   /**

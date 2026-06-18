@@ -5,7 +5,15 @@ import { PetControlIcon } from '../PetControlIcon'
 import { clampPresenceIntervalMinutes } from '../../lib/settings'
 import { humanizeError } from '../../lib/humanizeError'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import {
+  resolveProactiveCareAutonomyFocus,
+  type ProactiveCareAutonomyFocus,
+  type ProactiveCareSourceRef,
+} from '../../lib/storage/proactiveCare.ts'
 import type { AppSettings, NotificationChannel, UiLanguage } from '../../types'
+import { ErrandsSection } from './ErrandsSection'
+import { FutureCapsulesSection } from './FutureCapsulesSection'
+import { OpenArcsSection } from './OpenArcsSection'
 
 // ── Channel management types ─────────────────────────────────────────────────
 
@@ -22,9 +30,13 @@ type AutonomySectionProps = {
   draft: AppSettings
   setDraft: Dispatch<SetStateAction<AppSettings>>
   uiLanguage: UiLanguage
+  sourceTarget?: ProactiveCareSourceRef | null
 } & Partial<ChannelManagerProps>
 
-type TiFunction = (key: Parameters<typeof pickTranslatedUiText>[1]) => string
+type TiFunction = (
+  key: Parameters<typeof pickTranslatedUiText>[1],
+  params?: Parameters<typeof pickTranslatedUiText>[2],
+) => string
 
 // Mirrors the preload bridge shape (vite-env.d.ts is module-scoped).
 type NotificationWatcherStatus = {
@@ -67,6 +79,42 @@ function AutonomyFieldCard({ children }: { children: ReactNode }) {
   return (
     <div className="settings-control-card settings-autonomy-field">
       {children}
+    </div>
+  )
+}
+
+function getSourceDetailTitleKey(focus: ProactiveCareAutonomyFocus): Parameters<typeof pickTranslatedUiText>[1] {
+  if (focus === 'away_notification') return 'settings.console.proactive_care.source.away_notification'
+  if (focus === 'daily_bracket') return 'settings.console.proactive_care.source.daily_bracket'
+  if (focus === 'open_arc' || focus === 'arc') return 'settings.console.proactive_care.source.open_arc'
+  if (focus === 'future_capsule' || focus === 'capsule') return 'settings.console.proactive_care.source.future_capsule'
+  if (focus === 'errand') return 'settings.console.proactive_care.source_ref.errand'
+  return 'settings.autonomy.proactive_sources.detail.unknown.title'
+}
+
+function getSourceDetailBodyKey(focus: ProactiveCareAutonomyFocus): Parameters<typeof pickTranslatedUiText>[1] {
+  if (focus === 'away_notification') return 'settings.autonomy.proactive_sources.detail.away_notification'
+  if (focus === 'daily_bracket') return 'settings.autonomy.proactive_sources.detail.daily_bracket'
+  if (focus === 'open_arc' || focus === 'arc') return 'settings.autonomy.proactive_sources.detail.open_arc'
+  if (focus === 'future_capsule' || focus === 'capsule') return 'settings.autonomy.proactive_sources.detail.future_capsule'
+  if (focus === 'errand') return 'settings.autonomy.proactive_sources.detail.errand'
+  return 'settings.autonomy.proactive_sources.detail.unknown.body'
+}
+
+function ProactiveSourceDetail({
+  focus,
+  sourceTargetLabel,
+  ti,
+}: {
+  focus: ProactiveCareAutonomyFocus
+  sourceTargetLabel: string
+  ti: TiFunction
+}) {
+  return (
+    <div className="settings-proactive-source-detail">
+      <span className="settings-proactive-source-detail__badge">{sourceTargetLabel}</span>
+      <strong>{ti(getSourceDetailTitleKey(focus))}</strong>
+      <p>{ti(getSourceDetailBodyKey(focus))}</p>
     </div>
   )
 }
@@ -392,9 +440,14 @@ export const AutonomySection = memo(function AutonomySection({
   onAddChannel,
   onUpdateChannel,
   onRemoveChannel,
+  sourceTarget,
 }: AutonomySectionProps) {
-  const ti: TiFunction = (key) => pickTranslatedUiText(uiLanguage, key)
+  const ti: TiFunction = (key, params) => pickTranslatedUiText(uiLanguage, key, params)
   const fieldProps = { draft, setDraft }
+  const sourceTargetLabel = sourceTarget ? `${sourceTarget.kind}:${sourceTarget.id}` : ''
+  const sourceFocus = sourceTarget ? resolveProactiveCareAutonomyFocus(sourceTarget) : null
+  const highlightCareControls = sourceFocus === 'away_notification' || sourceFocus === 'daily_bracket'
+  const highlightCareQueues = Boolean(sourceFocus && !highlightCareControls && sourceFocus !== 'unknown')
 
   const hasChannelProps = channels !== undefined
     && onAddChannel !== undefined
@@ -410,7 +463,7 @@ export const AutonomySection = memo(function AutonomySection({
       </AutonomyControlCard>
 
       {/* ── Proactive Presence (basic fallback) ──────────────────────────── */}
-      <div className="settings-mini-group settings-autonomy-group">
+      <div className={`settings-mini-group settings-autonomy-group${highlightCareControls ? ' is-source-target' : ''}`}>
         <SubsectionHeader
           title={ti('settings.autonomy.presence.title')}
           hint={ti('settings.autonomy.presence.hint')}
@@ -474,6 +527,28 @@ export const AutonomySection = memo(function AutonomySection({
             />
           </label>
         )}
+
+        <AutonomyControlCard>
+          <ToggleField
+            label={ti('settings.autonomy.bracket.enable')}
+            field="proactiveBracketEnabled"
+            {...fieldProps}
+          />
+        </AutonomyControlCard>
+        <p className="settings-mini-group__note settings-autonomy-note">
+          {ti('settings.autonomy.bracket.hint')}
+        </p>
+
+        <AutonomyControlCard>
+          <ToggleField
+            label={ti('settings.autonomy.letter.enable')}
+            field="proactiveLetterEnabled"
+            {...fieldProps}
+          />
+        </AutonomyControlCard>
+        <p className="settings-mini-group__note settings-autonomy-note">
+          {ti('settings.autonomy.letter.hint')}
+        </p>
       </div>
 
       {/* ── Tick Loop & Sleep ─────────────────────────────────────────────── */}
@@ -617,6 +692,44 @@ export const AutonomySection = memo(function AutonomySection({
             ti={ti}
           />
         )}
+      </div>
+
+      <div className={`settings-mini-group settings-autonomy-group${highlightCareQueues ? ' is-source-target' : ''}`}>
+        <SubsectionHeader
+          title={ti('settings.autonomy.proactive_sources.title')}
+          hint={ti('settings.autonomy.proactive_sources.hint')}
+        />
+
+        {sourceTarget ? (
+          <p className="settings-inline-note settings-proactive-source-target">
+            {ti('settings.autonomy.proactive_sources.target', { ref: sourceTargetLabel })}
+          </p>
+        ) : null}
+        {sourceTarget && sourceFocus ? (
+          <ProactiveSourceDetail
+            focus={sourceFocus}
+            sourceTargetLabel={sourceTargetLabel}
+            ti={ti}
+          />
+        ) : null}
+
+        <div className="settings-autonomy-proactive-sources">
+          <ErrandsSection
+            active={active}
+            sourceTarget={sourceTarget?.kind === 'errand' ? sourceTarget : null}
+            uiLanguage={uiLanguage}
+          />
+          <OpenArcsSection
+            active={active}
+            sourceTarget={sourceTarget?.kind === 'arc' ? sourceTarget : null}
+            uiLanguage={uiLanguage}
+          />
+          <FutureCapsulesSection
+            active={active}
+            sourceTarget={sourceTarget?.kind === 'capsule' ? sourceTarget : null}
+            uiLanguage={uiLanguage}
+          />
+        </div>
       </div>
     </section>
   )

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getApiProviderPreset, getDefaultOnboardingRegion, getOnboardingTextProviderOptionsByRegion } from '../../../../lib/apiProviders'
 import type { ApiProviderPreset } from '../../../../lib/apiProviders'
 import { displaySecretInputValue } from '../../../../lib/keyVaultBridge'
@@ -47,6 +47,10 @@ export function TextStep({
 
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<ConnectionResult | null>(null)
+
+  useEffect(() => {
+    setTestResult(null)
+  }, [draft.apiBaseUrl, draft.apiKey, draft.apiProviderId, draft.model])
 
   async function handleTestConnection() {
     if (!onTestConnection || testing) return

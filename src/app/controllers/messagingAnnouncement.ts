@@ -34,10 +34,51 @@ function collapseWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
 }
 
+function normalizeDedupeToken(value: string): string {
+  return collapseWhitespace(value).normalize('NFKC').toLowerCase()
+}
+
 function shorten(value: string, maxChars: number): string {
   const normalized = collapseWhitespace(value)
   if (normalized.length <= maxChars) return normalized
   return `${normalized.slice(0, Math.max(0, maxChars - 3))}...`
+}
+
+function hashDedupeValue(value: string): string {
+  let hash = 0x811c9dc5
+  for (const char of value) {
+    hash ^= char.codePointAt(0) ?? 0
+    hash = Math.imul(hash, 0x01000193) >>> 0
+  }
+  return hash.toString(36)
+}
+
+export function getMessagingSourceGroup(
+  message: Pick<MessagingAnnouncementMessage, 'sourceId' | 'sourceName'>,
+): 'telegram' | 'discord' | null {
+  const source = normalizeDedupeToken(`${message.sourceId} ${message.sourceName}`)
+  if (/(^|[^a-z0-9])(?:telegram|org\.telegram|ru\.keepcoder\.telegram|telegramdesktop)([^a-z0-9]|$)/iu.test(source)) {
+    return 'telegram'
+  }
+  if (/(^|[^a-z0-9])(?:discord|com\.hnc\.discord)([^a-z0-9]|$)/iu.test(source)) {
+    return 'discord'
+  }
+  return null
+}
+
+export function buildMessagingDedupeKey(message: MessagingAnnouncementMessage): string {
+  const sourceGroup = getMessagingSourceGroup(message)
+  if (sourceGroup) {
+    const contentFingerprint = [
+      sourceGroup,
+      normalizeDedupeToken(message.fallbackTitle),
+      normalizeDedupeToken(message.sender),
+      normalizeDedupeToken(message.media || message.text),
+    ].join('\n')
+    return `message-xpipe:${sourceGroup}:${hashDedupeValue(contentFingerprint)}`
+  }
+
+  return `message:${message.sourceId}:${message.targetId}:${message.messageId}`
 }
 
 export function getMessagingAnnouncementSender(message: MessagingAnnouncementMessage): string {
@@ -60,7 +101,7 @@ export function buildMessagingAnnouncementContent(
 
   const source = shorten(message.sourceName || message.sourceId, MAX_SENDER_CHARS)
   const sender = getMessagingAnnouncementSender(message)
-  const dedupeKey = `message:${message.sourceId}:${message.targetId}:${message.messageId}`
+  const dedupeKey = buildMessagingDedupeKey(message)
 
   // Media-only messages (no text) announce generically and never read content,
   // regardless of the preview toggle — there is nothing to preview.

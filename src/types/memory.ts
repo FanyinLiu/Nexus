@@ -63,6 +63,7 @@ export interface DailyMemoryEntry {
   role: Exclude<ChatRole, 'system'>
   content: string
   source: 'chat' | 'voice'
+  sourceRef?: string
   createdAt: string
 }
 

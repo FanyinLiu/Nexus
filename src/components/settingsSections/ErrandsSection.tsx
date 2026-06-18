@@ -6,11 +6,13 @@ import {
   type ErrandRecord,
   type ErrandStatus,
 } from '../../features/agent/errandStore'
+import type { ProactiveCareSourceRef } from '../../lib/storage/proactiveCare.ts'
 import type { UiLanguage } from '../../types'
 
 interface ErrandsSectionProps {
   active: boolean
   uiLanguage: UiLanguage
+  sourceTarget?: ProactiveCareSourceRef | null
 }
 
 const STATUS_LABEL: Record<ErrandStatus, Record<string, string>> = {
@@ -67,10 +69,12 @@ function formatRelativeTime(iso: string | undefined, uiLanguage: UiLanguage): st
 
 export const ErrandsSection = memo(function ErrandsSection({
   active,
+  sourceTarget,
   uiLanguage,
 }: ErrandsSectionProps) {
   const [errands, setErrands] = useState<ErrandRecord[]>(() => loadErrands())
   const [draft, setDraft] = useState('')
+  const targetId = sourceTarget?.kind === 'errand' ? sourceTarget.id : null
 
   const refresh = useCallback(() => {
     setErrands(loadErrands())
@@ -143,7 +147,14 @@ export const ErrandsSection = memo(function ErrandsSection({
         <ul className="settings-errands__list">
           {(['queued', 'running', 'completed', 'delivered', 'failed'] as ErrandStatus[]).flatMap((status) =>
             (grouped[status] ?? []).map((errand) => (
-              <li key={errand.id} className={`settings-errands__item settings-errands__item--${errand.status}`}>
+              <li
+                key={errand.id}
+                className={[
+                  'settings-errands__item',
+                  `settings-errands__item--${errand.status}`,
+                  targetId === errand.id ? 'is-source-target' : '',
+                ].filter(Boolean).join(' ')}
+              >
                 <div className="settings-errands__item-header">
                   <span className="settings-errands__status">{formatStatus(status, uiLanguage)}</span>
                   <span className="settings-errands__time">{formatRelativeTime(errand.createdAt, uiLanguage)}</span>

@@ -1,15 +1,19 @@
 import type { VoiceBusEvent } from '../../features/voice/busEvents'
 import type { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer'
-import { voiceDebug } from '../../features/voice/voiceDebugLog'
-import { prepareTextForTts } from '../../features/voice/text'
-import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes'
-import { createId } from '../../lib'
-import { recordTtsUsage } from '../../features/metering/speechCost'
+import { StreamingTtsChunker } from '../../features/voice/streamingTts.ts'
+import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
+import { prepareTextForTts } from '../../features/voice/text.ts'
+import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes.ts'
+import { createId } from '../../lib/index.ts'
+import { recordTtsUsage } from '../../features/metering/speechCost.ts'
 import type { AppSettings, TranslationKey, TranslationParams } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
 import {
   getMaxRequestCharsForProvider,
+  getStreamingTtsChunkerOptionsForProvider,
+  resolveTtsLatencyPolicy,
+  shouldStreamTtsDeltasForProvider,
   splitLongTextAtSentences,
 } from './speechTextSegmentation.ts'
 import type { StreamingSpeechOutputController, VoiceStreamEvent } from './types'
@@ -48,12 +52,15 @@ export function createStreamingSpeechOutputController(
   const busEmit = options?.busEmit
   const speechGeneration = options?.speechGeneration ?? 0
   const providerId = speechSettings.speechOutputProviderId
+  const ttsPolicy = resolveTtsLatencyPolicy(providerId)
+  const streamDeltas = shouldStreamTtsDeltasForProvider(providerId)
+  const deltaChunker = streamDeltas
+    ? new StreamingTtsChunker(getStreamingTtsChunkerOptionsForProvider(providerId))
+    : null
   // Hard ceiling on how long we'll wait for the first audio chunk after the
-  // stream has been started. Catches providers whose socket is half-closed
-  // after a long play — observed as the "text rendered but no audio on the
-  // next turn" bug. Shorter than the chat-turn wait (12 s) so the upstream
-  // handler can fall back to direct-speech before the user gives up.
-  const FIRST_AUDIO_TIMEOUT_MS = 6_000
+  // stream has been started. Low-latency providers get a tighter watchdog;
+  // round-buffer providers keep the older, more tolerant limit.
+  const firstAudioTimeoutMs = ttsPolicy.firstAudioTimeoutMs
   let firstAudioWatchdog: ReturnType<typeof setTimeout> | null = null
   let segmentCounter = 0
   let firstAudioEmitted = false
@@ -236,14 +243,14 @@ export function createStreamingSpeechOutputController(
     }).then(() => {
       streamStarted = true
       // Arm the first-audio watchdog. If the provider never sends a chunk
-      // within FIRST_AUDIO_TIMEOUT_MS we fail the controller explicitly,
-      // which lets the upstream chat handler fall back to direct-speech.
+      // within its policy timeout we fail the controller explicitly, which
+      // lets the upstream chat handler fall back to direct-speech.
       if (firstAudioWatchdog === null && !settled && !aborted) {
         firstAudioWatchdog = setTimeout(() => {
           firstAudioWatchdog = null
           if (firstAudioEmitted || settled || aborted) return
-          fail(new Error(options?.ti?.('voice.streaming_tts.first_audio_timeout') ?? 'Streaming TTS did not produce audio within 6 seconds.'))
-        }, FIRST_AUDIO_TIMEOUT_MS)
+          fail(new Error(options?.ti?.('voice.streaming_tts.first_audio_timeout') ?? 'Streaming TTS did not produce audio within the provider timeout.'))
+        }, firstAudioTimeoutMs)
       }
     })
 
@@ -345,6 +352,13 @@ export function createStreamingSpeechOutputController(
   // flush between agent-loop rounds (pre-tool text goes first, post-tool text
   // appended after the tool result lands) without finalizing the stream.
   const flushAccumulatedText = () => {
+    if (deltaChunker) {
+      for (const segment of deltaChunker.flush()) {
+        queueSegment(segment)
+      }
+      return
+    }
+
     const fullText = accumulatedText
     accumulatedText = ''
     if (!fullText) return
@@ -358,6 +372,13 @@ export function createStreamingSpeechOutputController(
   const controller: StreamingSpeechOutputController = {
     pushDelta(delta: string) {
       if (!delta || settled || aborted) {
+        return
+      }
+
+      if (deltaChunker) {
+        for (const segment of deltaChunker.pushText(delta)) {
+          queueSegment(segment)
+        }
         return
       }
 

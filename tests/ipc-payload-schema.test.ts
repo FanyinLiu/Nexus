@@ -5,14 +5,31 @@ import {
   validateChatCompletionPayload,
   validateAudioSynthesisPayload,
   validateAudioTranscriptionPayload,
+  validateCodexPetGalleryInputPayload,
+  validateCodexPetGalleryListPayload,
+  validateConfirmDialogPayload,
+  validateCreatorKitCreatePayload,
+  validateCreatorKitInstallPayload,
+  validateCreatorKitOpenPathPayload,
+  validateCreatorKitOptionalDirectoryPayload,
   validateDesktopContextRequestPayload,
   validateExternalLinkToolPayload,
+  validateIntegrationInspectPayload,
+  validateKwsOptionsPayload,
+  validateLaunchOnStartupPayload,
   validateMcpCallToolPayload,
   validateMcpSyncServersPayload,
   validateMediaSessionControlPayload,
   validateMemoryVectorIndexPayload,
+  validateModelDownloadPayload,
+  validateNotificationWatcherSetPayload,
+  validatePersonaContentPayload,
+  validatePersonaInitPayload,
+  validatePersonaProfileIdPayload,
+  validatePetFreeModePayload,
   validatePluginBusRecentPayload,
   validatePluginIdPayload,
+  validateProactiveNotificationPayload,
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
@@ -20,6 +37,12 @@ import {
   validateSkillIdPayload,
   validateSkillSavePayload,
   validateSkillSearchPayload,
+  validateTextFileOpenPayload,
+  validateTextFileSavePayload,
+  validateTtsStreamPushTextPayload,
+  validateTtsStreamRequestIdPayload,
+  validateTtsStreamStartPayload,
+  validateVadStartPayload,
   validateWebSearchToolPayload,
   validateWindowDragPayload,
 } from '../electron/ipc/payloadSchemas.js'
@@ -378,5 +401,202 @@ test('IPC skill schemas bound persisted skill payloads and file ids', () => {
   assert.throws(
     () => validateSkillIdPayload('skill:mark-used', { id: '.hidden' }),
     /Invalid IPC payload for skill:mark-used: payload\.id has an invalid format/,
+  )
+})
+
+test('IPC desktop utility schemas validate launch, dialog, file, and integration payloads', () => {
+  assert.equal(validateLaunchOnStartupPayload(true), true)
+  assert.throws(
+    () => validateLaunchOnStartupPayload('true'),
+    /Invalid IPC payload for app:set-launch-on-startup: payload must be a boolean/,
+  )
+
+  assert.deepEqual(validatePetFreeModePayload({ freeMode: true, ignored: true }), { freeMode: true })
+  assert.deepEqual(validatePetFreeModePayload(undefined), { freeMode: false })
+
+  assert.equal(validateConfirmDialogPayload('x'.repeat(5_000)).length, 4_000)
+
+  assert.deepEqual(
+    validateTextFileSavePayload({
+      title: ' Save ',
+      defaultFileName: ' export.json ',
+      content: '{"ok":true}',
+      filters: [{ name: ' JSON ', extensions: [' json ', 'txt'] }],
+      ignored: true,
+    }),
+    {
+      title: 'Save',
+      defaultFileName: 'export.json',
+      content: '{"ok":true}',
+      filters: [{ name: 'JSON', extensions: ['json', 'txt'] }],
+    },
+  )
+
+  assert.throws(
+    () => validateTextFileOpenPayload({ filters: [{ name: 'JSON', extensions: ['json', 42] }] }),
+    /Invalid IPC payload for file:open-text: payload\.filters\[0\]\.extensions\[1\] must be a string/,
+  )
+
+  assert.deepEqual(
+    validateIntegrationInspectPayload({
+      mcpServers: [{ id: ' srv ', command: ' node ', args: ' server.js ', enabled: true, ignored: true }],
+      minecraftIntegrationEnabled: true,
+      minecraftServerAddress: ' localhost ',
+      minecraftServerPort: 25565,
+      minecraftUsername: ' Alex ',
+      ignored: true,
+    }),
+    {
+      mcpServers: [{ id: 'srv', command: 'node', args: 'server.js', enabled: true }],
+      minecraftIntegrationEnabled: true,
+      minecraftServerAddress: 'localhost',
+      minecraftServerPort: 25565,
+      minecraftUsername: 'Alex',
+    },
+  )
+
+  assert.throws(
+    () => validateIntegrationInspectPayload({ factorioServerPort: 70_000 }),
+    /Invalid IPC payload for integrations:inspect: payload\.factorioServerPort must be <= 65535/,
+  )
+})
+
+test('IPC persona and pet creator schemas bound local file workflows', () => {
+  assert.deepEqual(validatePersonaContentPayload('persona:save-soul', { content: 'hello', ignored: true }), {
+    content: 'hello',
+  })
+  assert.deepEqual(validatePersonaInitPayload(undefined), { defaultSoul: '' })
+  assert.deepEqual(validatePersonaProfileIdPayload('persona:load-profile', { profileId: ' star-hui ' }), {
+    profileId: 'star-hui',
+  })
+  assert.throws(
+    () => validatePersonaProfileIdPayload('persona:profile-dir', { profileId: '   ' }),
+    /Invalid IPC payload for persona:profile-dir: payload\.profileId must be a non-empty string/,
+  )
+
+  assert.equal(validateCodexPetGalleryInputPayload(' codex-pet-slug '), 'codex-pet-slug')
+  assert.deepEqual(validateCodexPetGalleryListPayload({ query: ' cat ', limit: 12, ignored: true }), {
+    query: 'cat',
+    limit: 12,
+  })
+  assert.deepEqual(
+    validateCreatorKitCreatePayload({
+      displayName: ' Star Hui ',
+      concept: ' desktop companion ',
+      styleNotes: 'soft idle',
+      ignored: true,
+    }),
+    {
+      displayName: 'Star Hui',
+      concept: 'desktop companion',
+      styleNotes: 'soft idle',
+    },
+  )
+  assert.deepEqual(
+    validateCreatorKitOptionalDirectoryPayload('pet-model:inspect-creator-kit', {
+      kitDirectory: ' /tmp/nexus-kit ',
+      ignored: true,
+    }),
+    { kitDirectory: '/tmp/nexus-kit' },
+  )
+  assert.deepEqual(
+    validateCreatorKitInstallPayload({
+      kitDirectory: ' /tmp/nexus-kit ',
+      manifestPath: ' /tmp/nexus-kit/pet.json ',
+      ignored: true,
+    }),
+    {
+      kitDirectory: '/tmp/nexus-kit',
+      manifestPath: '/tmp/nexus-kit/pet.json',
+    },
+  )
+  assert.deepEqual(
+    validateCreatorKitOpenPathPayload({
+      kitDirectory: '/tmp/nexus-kit',
+      targetPath: '/tmp/nexus-kit/pet.json',
+      mode: 'reveal',
+    }),
+    {
+      kitDirectory: '/tmp/nexus-kit',
+      targetPath: '/tmp/nexus-kit/pet.json',
+      mode: 'reveal',
+    },
+  )
+  assert.throws(
+    () => validateCreatorKitOpenPathPayload({
+      kitDirectory: '/tmp/nexus-kit',
+      targetPath: '/tmp/nexus-kit/pet.json',
+      mode: 'delete',
+    }),
+    /Invalid IPC payload for pet-model:open-creator-kit-path: payload\.mode must be one of: open, reveal/,
+  )
+})
+
+test('IPC voice and notification schemas validate streaming and local model requests', () => {
+  assert.deepEqual(validateNotificationWatcherSetPayload({ enabled: true, appsPattern: ' Telegram|Discord ' }), {
+    enabled: true,
+    appsPattern: 'Telegram|Discord',
+  })
+  assert.deepEqual(validateProactiveNotificationPayload({ title: ' Hi ', body: ' there ', ignored: true }), {
+    title: 'Hi',
+    body: 'there',
+  })
+  assert.deepEqual(validateKwsOptionsPayload('kws:start', { wakeWord: ' Star Hui ' }), {
+    wakeWord: 'Star Hui',
+  })
+  assert.deepEqual(
+    validateVadStartPayload({
+      threshold: 0.45,
+      minSilenceDuration: 0.2,
+      minSpeechDuration: 0.08,
+      maxSpeechDuration: 30,
+      ignored: true,
+    }),
+    {
+      threshold: 0.45,
+      minSilenceDuration: 0.2,
+      minSpeechDuration: 0.08,
+      maxSpeechDuration: 30,
+    },
+  )
+  assert.throws(
+    () => validateVadStartPayload({ threshold: 2 }),
+    /Invalid IPC payload for vad:start: payload\.threshold must be <= 1/,
+  )
+
+  assert.deepEqual(validateModelDownloadPayload({ modelId: ' sensevoice ' }), {
+    modelId: 'sensevoice',
+  })
+  assert.deepEqual(
+    validateTtsStreamStartPayload({
+      requestId: ' tts-1 ',
+      providerId: ' openai-tts ',
+      baseUrl: ' https://api.example.test/v1 ',
+      apiKey: 'nexus-vault-ref:token',
+      rate: 1.1,
+      pitch: 0,
+      volume: 1,
+      ignored: true,
+    }),
+    {
+      requestId: 'tts-1',
+      providerId: 'openai-tts',
+      baseUrl: 'https://api.example.test/v1',
+      apiKey: 'nexus-vault-ref:token',
+      rate: 1.1,
+      pitch: 0,
+      volume: 1,
+    },
+  )
+  assert.deepEqual(validateTtsStreamPushTextPayload({ requestId: 'tts-1', text: 'hello', ignored: true }), {
+    requestId: 'tts-1',
+    text: 'hello',
+  })
+  assert.deepEqual(validateTtsStreamRequestIdPayload('tts:stream-finish', { requestId: ' tts-1 ' }), {
+    requestId: 'tts-1',
+  })
+  assert.throws(
+    () => validateTtsStreamStartPayload({ requestId: 'tts-1', providerId: 'openai-tts', rate: 10 }),
+    /Invalid IPC payload for tts:stream-start: payload\.rate must be <= 4/,
   )
 })

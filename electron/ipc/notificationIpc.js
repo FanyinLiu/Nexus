@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain } from 'electron'
 import * as notificationBridge from '../services/notificationBridge.js'
 import * as macWatcher from '../services/macNotificationWatcher.js'
 import { requireTrustedSender } from './validate.js'
+import { validateNotificationWatcherSetPayload } from './payloadSchemas.js'
 
 export function register() {
   // Forward incoming notifications to all renderer windows
@@ -21,9 +22,10 @@ export function register() {
 
   ipcMain.handle('notification:watcher-set', async (event, payload) => {
     requireTrustedSender(event)
-    const enabled = Boolean(payload?.enabled)
+    payload = validateNotificationWatcherSetPayload(payload)
+    const enabled = payload.enabled
     if (!enabled) return macWatcher.stopWatcher()
-    const appsPattern = typeof payload?.appsPattern === 'string' ? payload.appsPattern : ''
+    const appsPattern = payload.appsPattern
     // Restart so a pattern change takes effect immediately.
     macWatcher.stopWatcher()
     return macWatcher.startWatcher({ appsPattern })

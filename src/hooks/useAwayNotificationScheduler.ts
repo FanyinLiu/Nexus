@@ -1,19 +1,25 @@
 import { useEffect, useRef } from 'react'
 import { decideAwayNotification } from '../features/proactive/awayScheduler.ts'
 import { pickAwayNotificationCopy } from '../features/proactive/awayNotificationCopy.ts'
+import { formatAwayCareVisibleReason } from '../features/proactive/proactiveCareReasons.ts'
 import {
   loadAwayLastFiredMs,
+  recordProactiveCareEvent,
   saveAwayLastFiredMs,
 } from '../lib/storage'
 import type { AppSettings, ChatMessage } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60_000 // every 5 minutes — coarse enough that startup cost is nil
 
-function findLastUserMessageMs(messages: ChatMessage[]): number | null {
+function formatErrorDetail(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err)
+  return message.slice(0, 200) || 'unknown error'
+}
+
+function findLastUserMessage(messages: ChatMessage[]): ChatMessage | null {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     if (messages[i].role === 'user') {
-      const t = Date.parse(messages[i].createdAt)
-      return Number.isFinite(t) ? t : null
+      return messages[i]
     }
   }
   return null
@@ -53,9 +59,27 @@ export function useAwayNotificationScheduler({
       // Read latest values via ref so the closure isn't stale.
       const { settings: s, messages: msgs, panelOpen: open } = liveRef.current
       if (!s.proactiveAwayNotificationsEnabled) return
-      if (open) return
+      if (open) {
+        recordProactiveCareEvent({
+          source: 'away_notification',
+          outcome: 'skipped',
+          reason: 'panel_open',
+          detail: 'settings panel is open',
+          userVisibleReason: formatAwayCareVisibleReason({
+            hasLastUserMessage: false,
+            outcome: 'skipped',
+            reason: 'panel_open',
+            thresholdMinutes: s.proactiveAwayNotificationThresholdMinutes,
+            uiLanguage: s.uiLanguage,
+          }),
+          sourceRef: { kind: 'scheduler', id: 'away_notification' },
+        })
+        return
+      }
 
-      const lastUserActivityMs = findLastUserMessageMs(msgs)
+      const lastUserMessage = findLastUserMessage(msgs)
+      const parsedLastUserActivityMs = lastUserMessage ? Date.parse(lastUserMessage.createdAt) : NaN
+      const lastUserActivityMs = Number.isFinite(parsedLastUserActivityMs) ? parsedLastUserActivityMs : null
       const lastFiredMs = loadAwayLastFiredMs()
       const decision = decideAwayNotification({
         enabled: true,
@@ -65,7 +89,25 @@ export function useAwayNotificationScheduler({
         thresholdMinutes: s.proactiveAwayNotificationThresholdMinutes,
       })
 
-      if (!decision.shouldFire) return
+      if (!decision.shouldFire) {
+        recordProactiveCareEvent({
+          source: 'away_notification',
+          outcome: 'skipped',
+          reason: decision.reason,
+          detail: `threshold=${s.proactiveAwayNotificationThresholdMinutes}m`,
+          userVisibleReason: formatAwayCareVisibleReason({
+            hasLastUserMessage: Boolean(lastUserMessage),
+            outcome: 'skipped',
+            reason: decision.reason,
+            thresholdMinutes: s.proactiveAwayNotificationThresholdMinutes,
+            uiLanguage: s.uiLanguage,
+          }),
+          sourceRef: lastUserMessage
+            ? { kind: 'message', id: lastUserMessage.id, label: lastUserMessage.createdAt }
+            : { kind: 'scheduler', id: 'away_notification' },
+        })
+        return
+      }
 
       const copy = pickAwayNotificationCopy({
         uiLanguage: s.uiLanguage,
@@ -79,7 +121,39 @@ export function useAwayNotificationScheduler({
           body: copy.body,
         })
         saveAwayLastFiredMs(Date.now())
+        recordProactiveCareEvent({
+          source: 'away_notification',
+          outcome: 'fired',
+          reason: decision.reason,
+          detail: `threshold=${s.proactiveAwayNotificationThresholdMinutes}m`,
+          userVisibleReason: formatAwayCareVisibleReason({
+            hasLastUserMessage: Boolean(lastUserMessage),
+            outcome: 'fired',
+            reason: decision.reason,
+            thresholdMinutes: s.proactiveAwayNotificationThresholdMinutes,
+            uiLanguage: s.uiLanguage,
+          }),
+          sourceRef: lastUserMessage
+            ? { kind: 'message', id: lastUserMessage.id, label: lastUserMessage.createdAt }
+            : { kind: 'scheduler', id: 'away_notification' },
+        })
       } catch (err) {
+        recordProactiveCareEvent({
+          source: 'away_notification',
+          outcome: 'error',
+          reason: 'notification_failed',
+          detail: formatErrorDetail(err),
+          userVisibleReason: formatAwayCareVisibleReason({
+            hasLastUserMessage: Boolean(lastUserMessage),
+            outcome: 'error',
+            reason: 'notification_failed',
+            thresholdMinutes: s.proactiveAwayNotificationThresholdMinutes,
+            uiLanguage: s.uiLanguage,
+          }),
+          sourceRef: lastUserMessage
+            ? { kind: 'message', id: lastUserMessage.id, label: lastUserMessage.createdAt }
+            : { kind: 'scheduler', id: 'away_notification' },
+        })
         console.warn('[awayNotification] fire failed:', err)
       }
     }

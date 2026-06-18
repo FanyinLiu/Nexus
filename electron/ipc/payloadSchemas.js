@@ -14,6 +14,8 @@ const SHORT_TEXT_MAX = 256
 const URL_TEXT_MAX = 2_048
 const SECRET_TEXT_MAX = 20_000
 const BODY_TEXT_MAX = 20_000
+const EXPORT_TEXT_MAX = 5_000_000
+const PERSONA_TEXT_MAX = 500_000
 const AUDIO_BASE64_MAX = 50_000_000
 const PATH_TEXT_MAX = 4_096
 const CHAT_MESSAGE_TEXT_MAX = 200_000
@@ -395,6 +397,262 @@ const tencentAsrConnectSchema = {
   },
 }
 
+const launchOnStartupSchema = {
+  type: 'boolean',
+  optional: true,
+  default: false,
+}
+
+const confirmDialogSchema = {
+  type: 'string',
+  optional: true,
+  default: '',
+  maxLength: 4_000,
+  clamp: true,
+}
+
+const petFreeModeSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    freeMode: { type: 'boolean', optional: true, default: false },
+  },
+}
+
+const textFileFilterSchema = {
+  type: 'object',
+  fields: {
+    name: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
+    extensions: {
+      type: 'array',
+      maxItems: 32,
+      items: { type: 'string', maxLength: 32, trim: true, allowEmpty: false, clamp: true },
+    },
+  },
+}
+
+const textFileFiltersSchema = {
+  type: 'array',
+  optional: true,
+  maxItems: 16,
+  items: textFileFilterSchema,
+}
+
+const textFileSaveSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    title: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    defaultFileName: { type: 'string', optional: true, maxLength: 255, trim: true, clamp: true },
+    content: { type: 'string', optional: true, default: '', maxLength: EXPORT_TEXT_MAX },
+    filters: textFileFiltersSchema,
+  },
+}
+
+const textFileOpenSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    title: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    filters: textFileFiltersSchema,
+  },
+}
+
+const integrationMcpServerSchema = {
+  type: 'object',
+  fields: {
+    id: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    label: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    command: { type: 'string', optional: true, maxLength: PATH_TEXT_MAX, trim: true, clamp: true },
+    args: { type: 'string', optional: true, maxLength: PATH_TEXT_MAX, trim: true, clamp: true },
+    enabled: optionalBoolean,
+  },
+}
+
+const integrationInspectSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    mcpServers: {
+      type: 'array',
+      optional: true,
+      maxItems: 32,
+      items: integrationMcpServerSchema,
+    },
+    minecraftIntegrationEnabled: optionalBoolean,
+    minecraftServerAddress: { type: 'string', optional: true, maxLength: URL_TEXT_MAX, trim: true, clamp: true },
+    minecraftServerPort: { type: 'number', optional: true, integer: true, min: 1, max: 65_535 },
+    minecraftUsername: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    factorioIntegrationEnabled: optionalBoolean,
+    factorioServerAddress: { type: 'string', optional: true, maxLength: URL_TEXT_MAX, trim: true, clamp: true },
+    factorioServerPort: { type: 'number', optional: true, integer: true, min: 1, max: 65_535 },
+    factorioUsername: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+  },
+}
+
+const personaContentSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    content: { type: 'string', optional: true, default: '', maxLength: PERSONA_TEXT_MAX },
+  },
+}
+
+const personaInitSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    defaultSoul: { type: 'string', optional: true, default: '', maxLength: PERSONA_TEXT_MAX },
+  },
+}
+
+const personaProfileIdSchema = {
+  type: 'object',
+  fields: {
+    profileId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+  },
+}
+
+const codexPetGalleryInputSchema = {
+  type: 'string',
+  maxLength: URL_TEXT_MAX,
+  trim: true,
+  allowEmpty: false,
+}
+
+const codexPetGalleryListSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    query: { type: 'string', optional: true, default: '', maxLength: 2_000, trim: true, clamp: true },
+    limit: { type: 'number', optional: true, integer: true, min: 1, max: 50 },
+  },
+}
+
+const creatorKitCreateSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    id: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    displayName: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    description: { type: 'string', optional: true, maxLength: BODY_TEXT_MAX, trim: true, clamp: true },
+    concept: { type: 'string', optional: true, maxLength: BODY_TEXT_MAX, trim: true, clamp: true },
+    styleNotes: { type: 'string', optional: true, maxLength: BODY_TEXT_MAX, trim: true, clamp: true },
+  },
+}
+
+const creatorKitOptionalDirectorySchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    kitDirectory: { type: 'string', optional: true, maxLength: PATH_TEXT_MAX, trim: true, clamp: true },
+  },
+}
+
+const creatorKitInstallSchema = {
+  type: 'object',
+  fields: {
+    kitDirectory: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
+    manifestPath: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
+  },
+}
+
+const creatorKitOpenPathSchema = {
+  type: 'object',
+  fields: {
+    kitDirectory: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
+    targetPath: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
+    mode: { type: 'enum', optional: true, default: 'open', values: ['open', 'reveal'] },
+  },
+}
+
+const notificationWatcherSetSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    enabled: { type: 'boolean', optional: true, default: false },
+    appsPattern: { type: 'string', optional: true, default: '', maxLength: 2_000, trim: true, clamp: true },
+  },
+}
+
+const proactiveNotificationSchema = {
+  type: 'object',
+  fields: {
+    title: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    body: { type: 'string', maxLength: 4_000, trim: true, clamp: true },
+  },
+}
+
+const kwsOptionsSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    wakeWord: { type: 'string', optional: true, maxLength: 64, trim: true, clamp: true },
+  },
+}
+
+const vadStartSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    threshold: { type: 'number', optional: true, min: 0, max: 1 },
+    minSilenceDuration: { type: 'number', optional: true, min: 0, max: 60 },
+    minSpeechDuration: { type: 'number', optional: true, min: 0, max: 60 },
+    maxSpeechDuration: { type: 'number', optional: true, min: 0.1, max: 600 },
+  },
+}
+
+const modelDownloadSchema = {
+  type: 'object',
+  fields: {
+    modelId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
+  },
+}
+
+const ttsStreamStartSchema = {
+  type: 'object',
+  fields: {
+    requestId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    providerId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    baseUrl: { type: 'string', optional: true, default: '', maxLength: URL_TEXT_MAX, trim: true, clamp: true },
+    apiKey: { type: 'string', optional: true, default: '', maxLength: SECRET_TEXT_MAX },
+    model: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    voice: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    instructions: { type: 'string', optional: true, maxLength: 4_000, clamp: true },
+    language: { type: 'string', optional: true, maxLength: 64, trim: true, clamp: true },
+    rate: { type: 'number', optional: true, min: 0.25, max: 4 },
+    pitch: { type: 'number', optional: true, min: -4, max: 4 },
+    volume: { type: 'number', optional: true, min: 0, max: 4 },
+  },
+}
+
+const ttsStreamPushTextSchema = {
+  type: 'object',
+  fields: {
+    requestId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    text: { type: 'string', optional: true, default: '', maxLength: BODY_TEXT_MAX },
+  },
+}
+
+const ttsStreamRequestIdSchema = {
+  type: 'object',
+  fields: {
+    requestId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+  },
+}
+
 const speechVoiceListSchema = {
   type: 'object',
   fields: {
@@ -547,4 +805,100 @@ export function validateGameCommandPayload(channel, payload) {
 
 export function validateTencentAsrConnectPayload(payload) {
   return validateIpcPayload('tencent-asr:connect', payload, tencentAsrConnectSchema)
+}
+
+export function validateLaunchOnStartupPayload(payload) {
+  return validateIpcPayload('app:set-launch-on-startup', payload, launchOnStartupSchema)
+}
+
+export function validateConfirmDialogPayload(payload) {
+  return validateIpcPayload('dialog:confirm', payload, confirmDialogSchema)
+}
+
+export function validatePetFreeModePayload(payload) {
+  return { freeMode: false, ...validateIpcPayload('pet-window:set-free-mode', payload, petFreeModeSchema) }
+}
+
+export function validateTextFileSavePayload(payload) {
+  return validateIpcPayload('file:save-text', payload, textFileSaveSchema)
+}
+
+export function validateTextFileOpenPayload(payload) {
+  return validateIpcPayload('file:open-text', payload, textFileOpenSchema)
+}
+
+export function validateIntegrationInspectPayload(payload) {
+  return validateIpcPayload('integrations:inspect', payload, integrationInspectSchema)
+}
+
+export function validatePersonaContentPayload(channel, payload) {
+  return { content: '', ...validateIpcPayload(channel, payload, personaContentSchema) }
+}
+
+export function validatePersonaInitPayload(payload) {
+  return { defaultSoul: '', ...validateIpcPayload('persona:init', payload, personaInitSchema) }
+}
+
+export function validatePersonaProfileIdPayload(channel, payload) {
+  return validateIpcPayload(channel, payload, personaProfileIdSchema)
+}
+
+export function validateCodexPetGalleryInputPayload(payload) {
+  return validateIpcPayload('pet-model:import-codex-gallery', payload, codexPetGalleryInputSchema)
+}
+
+export function validateCodexPetGalleryListPayload(payload) {
+  return validateIpcPayload('pet-model:list-codex-gallery', payload, codexPetGalleryListSchema)
+}
+
+export function validateCreatorKitCreatePayload(payload) {
+  return validateIpcPayload('pet-model:create-creator-kit', payload, creatorKitCreateSchema)
+}
+
+export function validateCreatorKitOptionalDirectoryPayload(channel, payload) {
+  return validateIpcPayload(channel, payload, creatorKitOptionalDirectorySchema)
+}
+
+export function validateCreatorKitInstallPayload(payload) {
+  return validateIpcPayload('pet-model:install-creator-kit-codex', payload, creatorKitInstallSchema)
+}
+
+export function validateCreatorKitOpenPathPayload(payload) {
+  return validateIpcPayload('pet-model:open-creator-kit-path', payload, creatorKitOpenPathSchema)
+}
+
+export function validateNotificationWatcherSetPayload(payload) {
+  return {
+    enabled: false,
+    appsPattern: '',
+    ...validateIpcPayload('notification:watcher-set', payload, notificationWatcherSetSchema),
+  }
+}
+
+export function validateProactiveNotificationPayload(payload) {
+  return validateIpcPayload('proactive:show-notification', payload, proactiveNotificationSchema)
+}
+
+export function validateKwsOptionsPayload(channel, payload) {
+  return validateIpcPayload(channel, payload, kwsOptionsSchema)
+}
+
+export function validateVadStartPayload(payload) {
+  return validateIpcPayload('vad:start', payload, vadStartSchema)
+}
+
+export function validateModelDownloadPayload(payload) {
+  return validateIpcPayload('models:download', payload, modelDownloadSchema)
+}
+
+export function validateTtsStreamStartPayload(payload) {
+  return validateIpcPayload('tts:stream-start', payload, ttsStreamStartSchema)
+}
+
+export function validateTtsStreamPushTextPayload(payload) {
+  return validateIpcPayload('tts:stream-push-text', payload, ttsStreamPushTextSchema)
+}
+
+export function validateTtsStreamRequestIdPayload(channel, payload) {
+  return validateIpcPayload(channel, payload, ttsStreamRequestIdSchema)
 }

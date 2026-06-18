@@ -622,6 +622,7 @@ export function useAppController() {
     view,
     settings,
     platformProfile,
+    focusState: autonomy.focusAwareness.focusState,
     setSettings,
     settingsOpen,
     setSettingsOpen,

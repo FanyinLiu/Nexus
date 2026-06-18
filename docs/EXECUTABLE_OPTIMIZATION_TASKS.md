@@ -6,6 +6,12 @@
 
 > **对账（2026-06-12）**：勾选状态已与实际代码核对。Sprint 1.5 主体已随 v0.3.3 线发货；
 > 通讯桥（v0.3.4-beta.1 线）超出本清单原始范围交付了双向消息/语音/配对码，相关条目已标注。
+>
+> **当前入口（2026-06-16）**：v0.3.4 已进入稳定化，而不是继续按早期 Phase 1 扩功能。
+> P0 gate 见 [V0.3.4_STABILIZATION](V0.3.4_STABILIZATION.md)：README/ROADMAP 对齐、消息感知真实验证、
+> Telegram/Discord live bridge 验证先于新能力扩张。固定脚本入口是 `npm run message:live:template`、
+> `npm run message:live:record -- macos ...` / `-- telegram ...` / `-- discord ...`、`npm run message:gate:live` 和
+> `npm run message:status:release`、`npm run message:merge:release`、`npm run message:gate:release`。
 
 ## Sprint 1（P0）：主路径 + 消息抓取闭环
 

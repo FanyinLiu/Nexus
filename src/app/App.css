@@ -1345,6 +1345,41 @@
   font-size: 14px;
 }
 
+.first-run-conversation-guide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  background: rgba(96, 165, 250, 0.08);
+  color: rgba(226, 237, 255, 0.94);
+}
+
+.first-run-conversation-guide--error {
+  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.first-run-conversation-guide strong {
+  display: block;
+  margin-bottom: 2px;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.first-run-conversation-guide p {
+  margin: 0;
+  color: rgba(226, 237, 255, 0.72);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .composer {
   margin-top: 16px;
   display: grid;
@@ -4230,6 +4265,15 @@
 
   .empty-chat__visual {
     min-height: 180px;
+  }
+
+  .first-run-conversation-guide {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .first-run-conversation-guide .ghost-button {
+    width: 100%;
   }
 }
 

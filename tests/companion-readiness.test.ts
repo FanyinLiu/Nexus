@@ -3,6 +3,7 @@ import { test } from 'node:test'
 
 import {
   buildCompanionReadiness,
+  type CompanionReadinessItemId,
   type CompanionReadinessInput,
 } from '../src/features/onboarding/companionReadiness.ts'
 
@@ -23,9 +24,14 @@ const baseInput: CompanionReadinessInput = {
   speechOutputApiBaseUrl: '',
   speechOutputRequiresApiBaseUrl: true,
   continuousVoiceModeEnabled: false,
+  autonomyNotificationsEnabled: true,
+  macosMessageWatcherEnabled: true,
+  autonomyNotificationMessagePreviewEnabled: false,
+  telegramAnnounceMessagePreview: false,
+  discordAnnounceMessagePreview: false,
 }
 
-function itemStatus(input: CompanionReadinessInput, id: 'identity' | 'text' | 'pet' | 'voice') {
+function itemStatus(input: CompanionReadinessInput, id: CompanionReadinessItemId) {
   const item = buildCompanionReadiness(input).items.find((candidate) => candidate.id === id)
   assert.ok(item)
   return item.status
@@ -41,6 +47,8 @@ test('marks a text-only companion as ready when the core identity and text model
       ['identity', 'ready'],
       ['text', 'ready'],
       ['pet', 'ready'],
+      ['message_context', 'ready'],
+      ['privacy', 'ready'],
     ],
   )
 })
@@ -101,6 +109,33 @@ test('warns when continuous voice is enabled without both sides of speech', () =
 
   assert.equal(readiness.status, 'warning')
   assert.equal(readiness.items.find((item) => item.id === 'voice')?.messageKey, 'onboarding.readiness.voice.warning_continuous')
+})
+
+test('surfaces message context readiness on first-run checklist', () => {
+  const bridgeOff = buildCompanionReadiness({
+    ...baseInput,
+    autonomyNotificationsEnabled: false,
+  })
+  const watcherOff = buildCompanionReadiness({
+    ...baseInput,
+    macosMessageWatcherEnabled: false,
+  })
+
+  assert.equal(bridgeOff.status, 'warning')
+  assert.equal(bridgeOff.items.find((item) => item.id === 'message_context')?.messageKey, 'onboarding.readiness.message_context.warning_off')
+  assert.equal(watcherOff.status, 'warning')
+  assert.equal(watcherOff.items.find((item) => item.id === 'message_context')?.messageKey, 'onboarding.readiness.message_context.warning_watcher')
+})
+
+test('surfaces message preview privacy boundary on first-run checklist', () => {
+  const readiness = buildCompanionReadiness({
+    ...baseInput,
+    telegramAnnounceMessagePreview: true,
+  })
+
+  assert.equal(readiness.status, 'warning')
+  assert.equal(itemStatus({ ...baseInput, telegramAnnounceMessagePreview: true }, 'privacy'), 'warning')
+  assert.equal(readiness.items.find((item) => item.id === 'privacy')?.messageKey, 'onboarding.readiness.privacy.warning_preview')
 })
 
 function readinessInputWithLocalVoice(): CompanionReadinessInput {

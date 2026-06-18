@@ -9,7 +9,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from 'react'
-import { getLiveTranscriptLabel, getTimeGreeting, getTimeGreetingEmoji, getVoiceStateLabel } from '../appSupport'
+import { getLiveTranscriptLabel, getTimeGreeting, getTimeGreetingEmoji } from '../appSupport'
 import { ActivePlanStrip } from '../../components/ActivePlanStrip'
 import { MessageBubble } from '../../components/MessageBubble'
 import { resolveCharacterPreset } from '../../features/character/presets'
@@ -24,6 +24,8 @@ import {
 } from '../../features/panelScene'
 import { CrisisHotlinePanel, useCrisisPanelState } from '../../features/safety'
 import type { CrisisSignal } from '../../features/safety'
+import { resolveCompanionPresenceStatus } from '../../features/presence/companionPresenceStatus'
+import { buildM1FirstRunConversationGuide } from '../../features/onboarding/firstRunAuditInput'
 import { useAmbientWeather } from '../../hooks/useAmbientWeather'
 import { shorten } from '../../lib'
 import { modelSupportsVision } from '../../lib/modelCapabilities'
@@ -79,6 +81,7 @@ export function PanelView({
   chat,
   runtimeSnapshot,
   petRuntimeContinuousVoiceActive,
+  focusState,
   notificationBridge,
   panelCollapsed,
   openSettingsPanel,
@@ -133,38 +136,23 @@ export function PanelView({
     : autoTimeBand
   const timeBlend = settings.petTimePreview !== 'auto' ? undefined : autoTimeBlend
   const panelSceneLocation = settings.petSceneLocation === 'off' ? 'fields' : settings.petSceneLocation
-  const voiceStateLabel = getVoiceStateLabel(voice.voiceState, ti)
   const nextSchedulerStatusLabel = runtimeSnapshot.schedulerArmed
     ? runtimeSnapshot.activeTaskLabel
       ? ti('panel.next_task_prefix', { name: runtimeSnapshot.activeTaskLabel })
       : ti('panel.timer_suspended')
     : ''
-  const assistantActivityLabel = voice.voiceState === 'speaking'
-    ? ti('panel.status.speaking')
-    : voice.voiceState === 'listening'
-      ? ti('panel.status.listening')
-      : chat.assistantActivity === 'searching'
-        ? ti('panel.status.searching')
-        : chat.assistantActivity === 'summarizing'
-          ? ti('panel.status.summarizing')
-          : chat.assistantActivity === 'scheduling'
-            ? ti('panel.status.scheduling')
-            : chat.busy
-              ? ti('panel.status.thinking')
-              : ''
-  const companionStatusChipLabel = voice.voiceState !== 'idle'
-    ? voiceStateLabel
-    : chat.assistantActivity === 'searching'
-      ? ti('panel.chip.searching')
-      : chat.assistantActivity === 'summarizing'
-        ? ti('panel.chip.summarizing')
-        : chat.assistantActivity === 'scheduling'
-          ? ti('panel.chip.scheduling')
-          : chat.busy
-            ? ti('panel.chip.thinking')
-            : runtimeSnapshot.petOnline || runtimeSnapshot.panelOnline
-              ? ti('panel.chip.online')
-              : voiceStateLabel
+  const companionPresenceStatus = resolveCompanionPresenceStatus({
+    assistantActivity: chat.assistantActivity,
+    chatBusy: chat.busy,
+    focusState,
+    quietHoursEnd: settings.autonomyQuietHoursEnd,
+    quietHoursStart: settings.autonomyQuietHoursStart,
+    voiceState: voice.voiceState,
+  }, ti)
+  const companionStatusChipLabel = companionPresenceStatus.chipLabel
+  const activeCompanionStatusLabel = companionPresenceStatus.state === 'resting'
+    ? ''
+    : companionPresenceStatus.statusLabel
   // Pane-session scoping: hide everything the archive already had when
   // useChat mounted. useChat keeps the snapshot at app-root scope so it
   // survives PanelView remounts (earlier attempts at 2b9134c / 8574360
@@ -182,20 +170,20 @@ export function PanelView({
   const liveTranscriptLabel = getLiveTranscriptLabel(voice.voiceState, ti)
   const liveStatusLine = voice.liveTranscript
     ? `${liveTranscriptLabel}：${shorten(voice.liveTranscript, 34)}`
-    : assistantActivityLabel
-      ? assistantActivityLabel
+    : activeCompanionStatusLabel
+      ? activeCompanionStatusLabel
       : nextSchedulerStatusLabel
         ? nextSchedulerStatusLabel
-        : pet.petStatusText
+        : companionPresenceStatus.statusLabel || pet.petStatusText
   const panelHeroStatusText = chat.error
     ? ti('panel.audio_smoke_test_hint')
-    : assistantActivityLabel
-      ? assistantActivityLabel
+    : activeCompanionStatusLabel
+      ? activeCompanionStatusLabel
       : nextSchedulerStatusLabel
         ? nextSchedulerStatusLabel
-    : pet.ambientPresence?.text
-      ? shorten(pet.ambientPresence.text, 64)
-      : ti(characterPreset.motionLabel)
+        : pet.ambientPresence?.text
+          ? shorten(pet.ambientPresence.text, 64)
+          : companionPresenceStatus.statusLabel || ti(characterPreset.motionLabel)
 
   const unreadNotifications = useMemo(() => {
     if (!notificationBridge) return []
@@ -401,6 +389,12 @@ export function PanelView({
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- ti is stable per render via the pickTranslatedUiText call
   ]), [memory.memories, settings.uiLanguage])
+  const firstRunConversationGuide = useMemo(
+    () => buildM1FirstRunConversationGuide(
+      visibleMessages.map(({ createdAt, role, tone }) => ({ createdAt, role, tone })),
+    ),
+    [visibleMessages],
+  )
   const voiceActionLabel = voice.continuousVoiceActive
     ? ti('panel.voice.stop_continuous')
     : petRuntimeContinuousVoiceActive
@@ -456,6 +450,11 @@ export function PanelView({
       const cursorPosition = composer.value.length
       composer.setSelectionRange(cursorPosition, cursorPosition)
     })
+  }
+
+  function handleFirstRunConversationPrompt() {
+    if (!firstRunConversationGuide.promptKey) return
+    handleApplyQuickPrompt(ti(firstRunConversationGuide.promptKey))
   }
 
   function handleComposerKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
@@ -860,6 +859,28 @@ export function PanelView({
               {chat.error ? (
                 <div className="error-banner" role="alert" aria-live="assertive" aria-atomic="true">
                   {chat.error}
+                </div>
+              ) : null}
+
+              {firstRunConversationGuide.visible && !activeNotificationReply ? (
+                <div
+                  className={`first-run-conversation-guide first-run-conversation-guide--${firstRunConversationGuide.tone}`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  <div>
+                    <strong>{ti('panel.first_run.title')}</strong>
+                    <p>{ti(firstRunConversationGuide.messageKey)}</p>
+                  </div>
+                  {firstRunConversationGuide.actionLabelKey && firstRunConversationGuide.promptKey ? (
+                    <button
+                      type="button"
+                      className="ghost-button ghost-button--compact"
+                      onClick={handleFirstRunConversationPrompt}
+                    >
+                      {ti(firstRunConversationGuide.actionLabelKey)}
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
 

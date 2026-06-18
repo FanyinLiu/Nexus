@@ -1,5 +1,14 @@
 import type { AppSettings, CharacterProfile } from '../../types'
 
+export type CharacterProfilePresetPatch = Pick<
+  Partial<CharacterProfile>,
+  | 'petModelId'
+  | 'speechOutputProviderId'
+  | 'speechOutputVoice'
+  | 'speechOutputModel'
+  | 'speechOutputInstructions'
+>
+
 export function createCharacterProfile(
   settings: AppSettings,
   label: string,
@@ -57,6 +66,32 @@ export function removeCharacterProfile(
   profileId: string,
 ): CharacterProfile[] {
   return profiles.filter((profile) => profile.id !== profileId)
+}
+
+export function updateCharacterProfilePreset(
+  settings: AppSettings,
+  profileId: string,
+  patch: CharacterProfilePresetPatch,
+): AppSettings {
+  const nextSettings: AppSettings = {
+    ...settings,
+    characterProfiles: updateCharacterProfile(
+      settings.characterProfiles,
+      profileId,
+      patch,
+    ),
+  }
+
+  if (settings.activeCharacterProfileId !== profileId) return nextSettings
+
+  return {
+    ...nextSettings,
+    petModelId: patch.petModelId ?? nextSettings.petModelId,
+    speechOutputProviderId: patch.speechOutputProviderId ?? nextSettings.speechOutputProviderId,
+    speechOutputVoice: patch.speechOutputVoice ?? nextSettings.speechOutputVoice,
+    speechOutputModel: patch.speechOutputModel ?? nextSettings.speechOutputModel,
+    speechOutputInstructions: patch.speechOutputInstructions ?? nextSettings.speechOutputInstructions,
+  }
 }
 
 export function syncCurrentToProfile(

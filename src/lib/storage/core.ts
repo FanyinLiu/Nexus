@@ -36,6 +36,7 @@ export const AUTONOMY_EMOTION_HISTORY_STORAGE_KEY = 'nexus:autonomy:emotion-hist
 export const AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY = 'nexus:autonomy:relationship-history'
 export const PROACTIVE_AWAY_LAST_FIRED_STORAGE_KEY = 'nexus:proactive:away-last-fired'
 export const PROACTIVE_BRACKET_STATE_STORAGE_KEY = 'nexus:proactive:bracket-state'
+export const PROACTIVE_CARE_EVENTS_STORAGE_KEY = 'nexus:proactive:care-events'
 export const LETTER_STORE_STORAGE_KEY = 'nexus:letters'
 export const AUTH_PROFILES_STORAGE_KEY = 'nexus:auth-profiles'
 export const COST_ENTRIES_STORAGE_KEY = 'nexus:cost-entries'

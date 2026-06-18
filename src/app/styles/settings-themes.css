@@ -462,7 +462,8 @@
 }
 
 .settings-drawer--day .memory-pill__category,
-.settings-drawer--day .memory-count {
+.settings-drawer--day .memory-count,
+.settings-drawer--day .memory-pill__meta {
   border-color: rgba(28, 42, 60, 0.1);
   background: rgba(255, 255, 255, 0.72);
   color: rgba(23, 32, 42, 0.72);
@@ -4148,6 +4149,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-drawer--warm-day .memory-pill__category,
 .settings-drawer--warm-day .memory-count,
+.settings-drawer--warm-day .memory-pill__meta,
 .settings-drawer--warm-day .memory-pill {
   border-color: rgba(72, 53, 40, 0.1);
   background: rgba(255, 253, 249, 0.7);
@@ -8771,7 +8773,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .onboarding-subsection,
 .onboarding-summary,
-.onboarding-readiness {
+.onboarding-readiness,
+.onboarding-first-run {
   gap: 8px;
   padding: 10px 12px;
 }
@@ -8785,6 +8788,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .onboarding-readiness p,
+.onboarding-first-run p,
 .onboarding-readiness__item,
 .onboarding-relationship__hint {
   font-size: 12px;

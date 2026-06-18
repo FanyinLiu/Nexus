@@ -29,7 +29,10 @@ import { getRelationshipLevel } from '../../features/autonomy/relationshipTracke
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile'
 import type { DailyMemoryStore, Goal, ReminderTask } from '../../types'
-import { buildLocalMessagingAnnouncementContent } from './localMessagingAnnouncement'
+import {
+  buildLocalMessagingAnnouncementContent,
+  shouldSuppressLocalNativeBridgeEcho,
+} from './localMessagingAnnouncement'
 import { isNotificationBridgeEnabled } from './notificationBridgeActivation'
 
 type ChatBridge = {
@@ -249,6 +252,15 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     if (!isNotificationBridgeEnabled(currentSettings)) return
 
     if (message.kind === 'message') {
+      if (shouldSuppressLocalNativeBridgeEcho(message, currentSettings)) {
+        debugConsole.appendDebugConsoleEvent({
+          source: 'autonomy',
+          title: 'Desktop message echo suppressed',
+          detail: `[${message.sourceName || message.channelName}] routed by native bridge`,
+        })
+        return
+      }
+
       const announcement = buildLocalMessagingAnnouncementContent(message, currentSettings, t)
       debugConsole.appendDebugConsoleEvent({
         source: 'autonomy',

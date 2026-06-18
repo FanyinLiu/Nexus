@@ -34,6 +34,18 @@ const MAX_SEEN_KEYS = 500
 let _status = 'stopped'
 /** @type {string|null} */
 let _lastError = null
+/** @type {string|null} */
+let _lastEventAt = null
+/** @type {string|null} */
+let _lastEventSource = null
+/** @type {string|null} */
+let _lastEventId = null
+/** @type {string|null} */
+let _lastSkipReason = null
+/** @type {string|null} */
+let _lastSkipAt = null
+/** @type {string|null} */
+let _lastErrorAt = null
 /** @type {ReturnType<typeof setTimeout>|null} */
 let _timer = null
 let _running = false
@@ -75,7 +87,21 @@ function setStatus(status, errorMessage = null) {
   const changed = status !== _status || errorMessage !== _lastError
   _status = status
   _lastError = errorMessage
+  if (errorMessage) _lastErrorAt = new Date().toISOString()
   if (changed) _onStatusChange?.(getWatcherStatus())
+}
+
+function recordLastEvent(message) {
+  _lastEventAt = new Date().toISOString()
+  _lastEventSource = String(message?.source ?? message?.sender ?? 'notification')
+  _lastEventId = String(message?.messageId ?? '')
+  _onStatusChange?.(getWatcherStatus())
+}
+
+function recordLastSkip(reason) {
+  _lastSkipReason = String(reason || 'skipped')
+  _lastSkipAt = new Date().toISOString()
+  _onStatusChange?.(getWatcherStatus())
 }
 
 
@@ -87,7 +113,7 @@ async function pollOnce() {
   const messages = filterNewNotificationMessages(rows, { pattern, seenKeys: _seenKeys })
   for (const message of messages) {
     _seenKeys.add(message.messageId)
-    ingestNotificationPayload({
+    const result = ingestNotificationPayload({
       kind: 'message',
       source: message.source,
       sender: message.sender,
@@ -95,7 +121,12 @@ async function pollOnce() {
       text: message.text,
       conversationId: message.conversationId,
       messageId: message.messageId,
-    })
+    }, { ingress: 'macos-notification-center' })
+    if (result.ok) {
+      recordLastEvent(message)
+    } else {
+      recordLastSkip(result.error)
+    }
   }
   if (messages.length > 0) await saveSeenKeys()
 }
@@ -138,6 +169,9 @@ export async function startWatcher(options = {}) {
         seenKeys: _seenKeys,
       })
       for (const message of backlog) _seenKeys.add(message.messageId)
+      if (backlog.length > 0) {
+        recordLastSkip(`initial_backlog_marked_seen:${backlog.length}`)
+      }
       await saveSeenKeys()
       setStatus('running')
     } catch (err) {
@@ -160,7 +194,17 @@ export function stopWatcher() {
 }
 
 export function getWatcherStatus() {
-  return { status: _status, lastError: _lastError, platformSupported: process.platform === 'darwin' }
+  return {
+    status: _status,
+    lastError: _lastError,
+    platformSupported: process.platform === 'darwin',
+    lastEventAt: _lastEventAt,
+    lastEventSource: _lastEventSource,
+    lastEventId: _lastEventId,
+    lastSkipReason: _lastSkipReason,
+    lastSkipAt: _lastSkipAt,
+    lastErrorAt: _lastErrorAt,
+  }
 }
 
 /** @param {((status: ReturnType<typeof getWatcherStatus>) => void)|null} cb */

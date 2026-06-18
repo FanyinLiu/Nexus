@@ -7,6 +7,9 @@
  */
 
 import { createRequire } from 'node:module'
+import { createHash } from 'node:crypto'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import path from 'node:path'
 
 import { isAllowedSender } from './allowlistPolicy.js'
 import { createPairingManager } from './pairingManager.js'
@@ -16,9 +19,11 @@ import { createPairingManager } from './pairingManager.js'
 // string, not the API). This is what makes the gateway loadable in tests.
 const require = createRequire(import.meta.url)
 let _electronNet = null
+let _electronApp = null
 try {
   const electron = require('electron')
   if (typeof electron?.net?.fetch === 'function') _electronNet = electron.net
+  if (typeof electron?.app?.getPath === 'function') _electronApp = electron.app
 } catch {
   // plain node — fall through to global fetch
 }
@@ -27,6 +32,7 @@ const doFetch = (...args) => (_electronNet ? _electronNet.fetch(...args) : globa
 // Configurable for tests and for users behind networks where
 // api.telegram.org needs a reverse proxy.
 const TELEGRAM_API_BASE = (process.env.NEXUS_TELEGRAM_API_BASE ?? 'https://api.telegram.org').replace(/\/+$/, '')
+const TELEGRAM_OFFSET_STATE_FILE = 'telegram-gateway-offsets.json'
 
 /** @type {'disconnected'|'connecting'|'connected'|'error'} */
 let _state = 'disconnected'
@@ -53,6 +59,26 @@ let _pollAbort = null
 let _pollGeneration = 0
 /** @type {string|null} */
 let _lastError = null
+/** @type {string|null} */
+let _lastEventAt = null
+/** @type {string|null} */
+let _lastEventSource = null
+/** @type {string|null} */
+let _lastEventId = null
+/** @type {string|null} */
+let _lastSkipReason = null
+/** @type {string|null} */
+let _lastSkipAt = null
+/** @type {string|null} */
+let _lastErrorAt = null
+/** @type {string|null} */
+let _lastOutboundAt = null
+/** @type {string|null} */
+let _lastOutboundTarget = null
+/** @type {string|null} */
+let _lastOutboundKind = null
+/** @type {string|null} */
+let _lastOutboundError = null
 
 /**
  * @typedef {{ chatId: number, chatTitle: string, fromUser: string, text: string, media: string|null, messageId: number, timestamp: string }} TelegramIncomingMessage
@@ -83,6 +109,100 @@ const MEDIA_KINDS = [
 // Telegram voice notes are tiny (~1 MB/min of Opus); anything bigger than
 // this is not a voice note worth transcribing inline.
 const VOICE_DOWNLOAD_MAX_BYTES = 15 * 1024 * 1024
+
+function recordLastEvent(message) {
+  _lastEventAt = String(message?.timestamp ?? new Date().toISOString())
+  _lastEventSource = String(message?.chatTitle ?? message?.chatId ?? 'telegram')
+  _lastEventId = String(message?.messageId ?? '')
+}
+
+function recordLastSkip(reason) {
+  _lastSkipReason = String(reason || 'skipped')
+  _lastSkipAt = new Date().toISOString()
+}
+
+function recordLastError(message) {
+  _lastError = String(message || 'unknown error')
+  _lastErrorAt = new Date().toISOString()
+}
+
+function recordLastOutbound(target, kind) {
+  _lastOutboundAt = new Date().toISOString()
+  _lastOutboundTarget = String(target ?? '')
+  _lastOutboundKind = String(kind || 'message')
+  _lastOutboundError = null
+}
+
+function recordLastOutboundError(target, kind, error) {
+  _lastOutboundAt = new Date().toISOString()
+  _lastOutboundTarget = String(target ?? '')
+  _lastOutboundKind = String(kind || 'message')
+  _lastOutboundError = String(error?.message ?? error ?? 'unknown error')
+}
+
+function getOffsetStatePath() {
+  const override = String(process.env.NEXUS_TELEGRAM_GATEWAY_STATE_FILE ?? '').trim()
+  if (override) return override
+  if (_electronApp) return path.join(_electronApp.getPath('userData'), TELEGRAM_OFFSET_STATE_FILE)
+  return ''
+}
+
+function getBotTokenStateKey(botToken) {
+  return createHash('sha256').update(String(botToken ?? '')).digest('hex').slice(0, 24)
+}
+
+async function readOffsetState() {
+  const filePath = getOffsetStatePath()
+  if (!filePath) return { schemaVersion: 1, bots: {} }
+  try {
+    const parsed = JSON.parse(await readFile(filePath, 'utf8'))
+    if (parsed && typeof parsed === 'object' && parsed.bots && typeof parsed.bots === 'object') {
+      return parsed
+    }
+  } catch (err) {
+    if (err?.code !== 'ENOENT') {
+      console.warn('[telegram] failed to read offset state:', err?.message ?? err)
+    }
+  }
+  return { schemaVersion: 1, bots: {} }
+}
+
+async function loadPersistedUpdateOffset(botToken) {
+  if (!botToken) return 0
+  const state = await readOffsetState()
+  const key = getBotTokenStateKey(botToken)
+  const offset = Number(state.bots?.[key]?.updateOffset)
+  return Number.isFinite(offset) && offset > 0 ? Math.floor(offset) : 0
+}
+
+async function persistUpdateOffset(botToken, updateOffset) {
+  const filePath = getOffsetStatePath()
+  if (!filePath || !botToken || !Number.isFinite(updateOffset) || updateOffset <= 0) return
+
+  try {
+    const state = await readOffsetState()
+    const key = getBotTokenStateKey(botToken)
+    const current = Number(state.bots?.[key]?.updateOffset)
+    const nextOffset = Math.max(
+      Number.isFinite(current) ? Math.floor(current) : 0,
+      Math.floor(updateOffset),
+    )
+    const nextState = {
+      schemaVersion: 1,
+      bots: {
+        ...(state.bots ?? {}),
+        [key]: {
+          updateOffset: nextOffset,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    }
+    await mkdir(path.dirname(filePath), { recursive: true })
+    await writeFile(filePath, `${JSON.stringify(nextState, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 })
+  } catch (err) {
+    console.warn('[telegram] failed to persist update offset:', err?.message ?? err)
+  }
+}
 
 function detectMediaKind(message) {
   for (const kind of MEDIA_KINDS) {
@@ -124,6 +244,7 @@ async function apiCall(method, params, signal) {
 async function pollOnce(generation) {
   if (generation !== _pollGeneration || !_polling || !_botToken) return
 
+  const pollBotToken = _botToken
   _pollAbort = new AbortController()
   const timeout = 30 // long-poll timeout in seconds
 
@@ -136,10 +257,19 @@ async function pollOnce(generation) {
       }, _pollAbort.signal)
     )
 
+    let nextUpdateOffset = _updateOffset
     for (const update of updates) {
-      const updateId = /** @type {number} */ (update.update_id)
-      _updateOffset = updateId + 1
+      const updateId = Number(update.update_id)
+      if (Number.isFinite(updateId)) {
+        nextUpdateOffset = Math.max(nextUpdateOffset, Math.floor(updateId) + 1)
+      }
+    }
+    if (nextUpdateOffset > _updateOffset) {
+      _updateOffset = nextUpdateOffset
+      await persistUpdateOffset(pollBotToken, _updateOffset)
+    }
 
+    for (const update of updates) {
       const message = /** @type {Record<string, unknown>|undefined} */ (update.message)
       if (!message) continue
 
@@ -161,19 +291,25 @@ async function pollOnce(generation) {
           _onPairingRequest?.({ senderId: String(chatId), name: senderName, code: pairing.code })
           try {
             await apiCall('sendMessage', { chat_id: chatId, text: PAIRING_REPLY(pairing.code) })
+            recordLastOutbound(chatId, 'pairing')
           } catch (err) {
+            recordLastOutboundError(chatId, 'pairing', err)
             console.warn('[telegram] pairing reply failed:', err.message)
           }
         } else {
           console.info(`[telegram] Ignoring message from unauthorized chat ${chatId} (pairing ${pairing.kind})`)
         }
+        recordLastSkip(`unauthorized_sender:${pairing.kind}`)
         continue
       }
 
       const from = /** @type {Record<string, unknown>|undefined} */ (message.from)
       const text = /** @type {string|undefined} */ (message.text)
       const media = text ? null : detectMediaKind(message)
-      if (!text && !media) continue // Skip service/unsupported messages
+      if (!text && !media) {
+        recordLastSkip('unsupported_message_payload')
+        continue
+      } // Skip service/unsupported messages
 
       const incoming = {
         chatId,
@@ -209,17 +345,19 @@ async function pollOnce(generation) {
             }
           } catch (err) {
             console.warn('[telegram] voice download failed:', err.message)
+            recordLastSkip(`voice_download_failed:${err.message}`)
           }
         }
       }
 
+      recordLastEvent(incoming)
       _onMessage?.(incoming)
     }
   } catch (err) {
     if (err?.name === 'AbortError') return // intentional stop
     if (generation !== _pollGeneration) return // stale loop — stand down
     console.error('[telegram] Poll error:', err.message)
-    _lastError = err.message
+    recordLastError(err.message)
     // Brief pause before retry to avoid hammering on transient errors
     await new Promise((r) => setTimeout(r, 3000))
   }
@@ -252,6 +390,7 @@ export async function connect(botToken, allowedChatIds = []) {
   // every reconnect replay the previous unconfirmed getUpdates batch, so a
   // flaky network turned old messages into duplicate companion turns. The
   // offset only advances (line ~102), which is exactly Telegram's contract.
+  _updateOffset = Math.max(_updateOffset, await loadPersistedUpdateOffset(_botToken))
 
   try {
     // Verify the token by calling getMe
@@ -266,7 +405,7 @@ export async function connect(botToken, allowedChatIds = []) {
     setTimeout(() => pollOnce(generation), 0)
   } catch (err) {
     _state = 'error'
-    _lastError = err.message
+    recordLastError(err.message)
     _botToken = null
     throw err
   }
@@ -304,7 +443,13 @@ export async function sendMessage(chatId, text, options = {}) {
     params.parse_mode = options.parseMode
   }
 
-  await apiCall('sendMessage', params)
+  try {
+    await apiCall('sendMessage', params)
+    recordLastOutbound(chatId, 'text')
+  } catch (err) {
+    recordLastOutboundError(chatId, 'text', err)
+    throw err
+  }
 }
 
 /** Container formats Telegram renders as a voice bubble (Bot API sendVoice). */
@@ -330,7 +475,11 @@ export async function sendVoice(chatId, audio, mimeType, options = {}) {
   if (_state !== 'connected') throw new Error('Telegram gateway not connected')
 
   const ext = TELEGRAM_VOICE_EXT_BY_MIME[String(mimeType).toLowerCase().split(';')[0].trim()]
-  if (!ext) throw new Error(`Telegram voice notes do not support ${mimeType}`)
+  if (!ext) {
+    const error = new Error(`Telegram voice notes do not support ${mimeType}`)
+    recordLastOutboundError(chatId, 'voice', error)
+    throw error
+  }
 
   const form = new FormData()
   form.append('chat_id', String(chatId))
@@ -339,13 +488,19 @@ export async function sendVoice(chatId, audio, mimeType, options = {}) {
   }
   form.append('voice', new Blob([audio], { type: mimeType }), `voice-reply.${ext}`)
 
-  const resp = await doFetch(`${TELEGRAM_API_BASE}/bot${_botToken}/sendVoice`, {
-    method: 'POST',
-    body: form,
-  })
-  const json = await resp.json()
-  if (!json.ok) {
-    throw new Error(`Telegram API error: ${json.description ?? JSON.stringify(json)}`)
+  try {
+    const resp = await doFetch(`${TELEGRAM_API_BASE}/bot${_botToken}/sendVoice`, {
+      method: 'POST',
+      body: form,
+    })
+    const json = await resp.json()
+    if (!json.ok) {
+      throw new Error(`Telegram API error: ${json.description ?? JSON.stringify(json)}`)
+    }
+    recordLastOutbound(chatId, 'voice')
+  } catch (err) {
+    recordLastOutboundError(chatId, 'voice', err)
+    throw err
   }
 }
 
@@ -355,6 +510,16 @@ export function getStatus() {
     botUsername: _botUsername,
     allowedChatIds: [..._allowedChatIds],
     lastError: _lastError,
+    lastEventAt: _lastEventAt,
+    lastEventSource: _lastEventSource,
+    lastEventId: _lastEventId,
+    lastSkipReason: _lastSkipReason,
+    lastSkipAt: _lastSkipAt,
+    lastErrorAt: _lastErrorAt,
+    lastOutboundAt: _lastOutboundAt,
+    lastOutboundTarget: _lastOutboundTarget,
+    lastOutboundKind: _lastOutboundKind,
+    lastOutboundError: _lastOutboundError,
     // Diagnostic: the next getUpdates offset. Confirms batches and lets
     // tests assert offset retention without racing the poll loop.
     updateOffset: _updateOffset,

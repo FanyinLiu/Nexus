@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
+  buildMemoryOwnershipEvidenceReport,
   loadDailyMemories,
   loadMemories,
   normalizeDailyMemoryStore,
@@ -56,6 +57,7 @@ test('normalizeMemoryItemsForStorage sanitizes rich memory metadata and dedupes 
       emotionSnapshot: { energy: 2, warmth: -1, curiosity: 0.5, concern: Number.NaN },
       emotionalValence: 'bad',
       significance: 2,
+      sourceRef: ' chat:message-42 ',
       reflectionTopic: ` ${'topic '.repeat(40)} `,
       reflectionConfidence: -1,
     },
@@ -81,6 +83,7 @@ test('normalizeMemoryItemsForStorage sanitizes rich memory metadata and dedupes 
     importanceScore: 2,
     recallCount: 0,
     lastRecalledAt: '2026-06-04T01:00:00.000Z',
+    sourceRef: 'chat:message-42',
     relatedIds: ['a', 'b'],
     significance: 1,
     reflectionTopic: 'topic topic topic topic topic topic topic topic topic topic topic topic topic topic topic topic topic topic topic topic',
@@ -127,7 +130,15 @@ test('loadMemories migrates sanitized legacy memories when current store is empt
 test('normalizeDailyMemoryStore repairs day keys, filters entries, and caps per day', () => {
   const store = normalizeDailyMemoryStore({
     'bad-day': [
-      { id: 'd1', day: 'ignored', role: 'user', content: '  user note  ', source: 'voice', createdAt: '2026-06-04T00:00:00Z' },
+      {
+        id: 'd1',
+        day: 'ignored',
+        role: 'user',
+        content: '  user note  ',
+        source: 'voice',
+        sourceRef: ' voice:msg-1 ',
+        createdAt: '2026-06-04T00:00:00Z',
+      },
       { id: 'drop-role', role: 'system', content: 'drop', source: 'chat', createdAt: '2026-06-04T00:00:00Z' },
     ],
     '2026-06-04': Array.from({ length: 20 }, (_, index) => ({
@@ -147,6 +158,7 @@ test('normalizeDailyMemoryStore repairs day keys, filters entries, and caps per 
     role: 'user',
     content: 'user note',
     source: 'voice',
+    sourceRef: 'voice:msg-1',
     createdAt: '2026-06-04T00:00:00.000Z',
   })
   assert.deepEqual(store['2026-06-04']?.find((entry) => entry.id === 'id-0'), {
@@ -182,4 +194,83 @@ test('loadDailyMemories writes normalized daily store back to storage', () => {
     }],
   })
   assert.deepEqual(JSON.parse(storage.getItem(DAILY_MEMORY_STORAGE_KEY) ?? '{}'), daily)
+})
+
+test('buildMemoryOwnershipEvidenceReport summarizes memory control coverage without private content', () => {
+  const memories = normalizeMemoryItemsForStorage([
+    {
+      id: 'private-long-term-1',
+      content: 'private preference content',
+      category: 'preference',
+      source: 'chat',
+      createdAt: '2026-06-16T10:00:00Z',
+      importance: 'pinned',
+      sourceRef: 'chat:private-message-1',
+    },
+    {
+      id: 'private-reflection-1',
+      content: 'private reflection content',
+      category: 'feedback',
+      source: 'dream',
+      createdAt: '2026-06-16T11:00:00Z',
+      enabled: false,
+      importance: 'reflection',
+      reflectionTopic: 'private-topic',
+      sourceRef: 'arc:private-arc-1',
+    },
+  ])
+  const daily = normalizeDailyMemoryStore({
+    '2026-06-16': [
+      {
+        id: 'private-daily-1',
+        role: 'user',
+        content: 'private diary content',
+        source: 'voice',
+        sourceRef: 'voice:private-voice-1',
+        createdAt: '2026-06-16T12:00:00Z',
+      },
+    ],
+  })
+
+  const report = buildMemoryOwnershipEvidenceReport(memories, daily, '2026-06-16T13:00:00Z')
+  const checks = new Map(report.checks.map((check) => [check.id, check.pass]))
+  const json = JSON.stringify(report)
+
+  assert.equal(report.gate, 'memory-ownership-observability')
+  assert.equal(report.generatedAt, '2026-06-16T13:00:00.000Z')
+  assert.equal(report.longTermCount, 2)
+  assert.equal(report.dailyEntryCount, 1)
+  assert.equal(report.relationshipInsightCount, 1)
+  assert.equal(report.pinnedCount, 1)
+  assert.equal(report.recallPausedCount, 1)
+  assert.equal(report.sourceRefCount, 3)
+  assert.equal(report.sourceRefCoverage, 1)
+  assert.equal(report.openableSourceRefCount, 3)
+  assert.deepEqual(report.sourceKindCounts, { arc: 1, chat: 1, voice: 1 })
+  assert.equal(checks.get('has-long-term-memories'), true)
+  assert.equal(checks.get('has-daily-entries'), true)
+  assert.equal(checks.get('has-relationship-reflection-lane'), true)
+  assert.equal(checks.get('has-openable-source-refs'), true)
+  assert.equal(checks.get('has-recall-governance'), true)
+  assert.equal(checks.get('has-editable-data'), true)
+  assert.equal(report.qualityIssueCount, 0)
+  assert.equal(
+    /private preference content|private reflection content|private diary content|private-message-1|private-arc-1|private-voice-1|private-topic/.test(json),
+    false,
+  )
+})
+
+test('buildMemoryOwnershipEvidenceReport keeps missing ownership evidence explicit', () => {
+  const report = buildMemoryOwnershipEvidenceReport([], {}, 'bad-date')
+  const checks = new Map(report.checks.map((check) => [check.id, check.pass]))
+
+  assert.equal(report.longTermCount, 0)
+  assert.equal(report.dailyEntryCount, 0)
+  assert.equal(report.sourceRefCoverage, 0)
+  assert.equal(report.qualityIssues.some((issue) => issue.id === 'no-long-term-memories'), true)
+  assert.equal(report.qualityIssues.some((issue) => issue.id === 'no-source-refs'), true)
+  assert.equal(checks.get('has-long-term-memories'), false)
+  assert.equal(checks.get('has-daily-entries'), false)
+  assert.equal(checks.get('has-editable-data'), false)
+  assert.equal(Number.isFinite(Date.parse(report.generatedAt)), true)
 })

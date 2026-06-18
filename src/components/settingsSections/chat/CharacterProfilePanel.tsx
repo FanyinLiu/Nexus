@@ -18,7 +18,17 @@ type CharacterProfilePanelProps = {
   onSelectProfile: (profile: CharacterProfile) => void
   onDeleteProfile: (profileId: string) => void
   onUpdateProfileLabel: (profileId: string, label: string) => void
+  onUpdateProfilePreset: (profileId: string, patch: CharacterProfilePresetPatch) => void
 }
+
+type CharacterProfilePresetPatch = Pick<
+  Partial<CharacterProfile>,
+  | 'petModelId'
+  | 'speechOutputProviderId'
+  | 'speechOutputVoice'
+  | 'speechOutputModel'
+  | 'speechOutputInstructions'
+>
 
 export function CharacterProfilePanel({
   draft,
@@ -28,6 +38,7 @@ export function CharacterProfilePanel({
   onSelectProfile,
   onDeleteProfile,
   onUpdateProfileLabel,
+  onUpdateProfilePreset,
 }: CharacterProfilePanelProps) {
   const profileCount = draft.characterProfiles.length
   if (profileCount === 0) return null
@@ -109,6 +120,80 @@ export function CharacterProfilePanel({
                   <PetControlIcon name="close" />
                 </button>
               </div>
+
+              {isActive ? (
+                <details className="settings-profile-preset-editor">
+                  <summary>
+                    <span>
+                      <strong>{ti('settings.chat.profile_preset_editor')}</strong>
+                      <small>{ti('settings.chat.profile_preset_editor_hint')}</small>
+                    </span>
+                  </summary>
+
+                  <div className="settings-profile-preset-editor__grid">
+                    <label className="settings-profile-preset-editor__field">
+                      <span>{ti('settings.chat.profile_preset_pet_model')}</span>
+                      <select
+                        value={profile.petModelId}
+                        onChange={(event) =>
+                          onUpdateProfilePreset(profile.id, { petModelId: event.target.value })}
+                      >
+                        {profileModel ? null : (
+                          <option value={profile.petModelId}>
+                            {profile.petModelId || ti('settings.chat.sprite_pet_fallback_label')}
+                          </option>
+                        )}
+                        {petModelPresets.map((preset) => (
+                          <option key={preset.id} value={preset.id}>
+                            {translatePetText(preset.label) || preset.id}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="settings-profile-preset-editor__field">
+                      <span>{ti('settings.chat.profile_preset_voice_provider')}</span>
+                      <input
+                        value={profile.speechOutputProviderId ?? ''}
+                        placeholder={ti('settings.chat.profile_preset_voice_provider_placeholder')}
+                        onChange={(event) =>
+                          onUpdateProfilePreset(profile.id, { speechOutputProviderId: event.target.value })}
+                      />
+                    </label>
+
+                    <label className="settings-profile-preset-editor__field">
+                      <span>{ti('settings.chat.profile_preset_voice_id')}</span>
+                      <input
+                        value={profile.speechOutputVoice ?? ''}
+                        placeholder={ti('settings.chat.voice_id_placeholder')}
+                        onChange={(event) =>
+                          onUpdateProfilePreset(profile.id, { speechOutputVoice: event.target.value })}
+                      />
+                    </label>
+
+                    <label className="settings-profile-preset-editor__field">
+                      <span>{ti('settings.chat.profile_preset_voice_model')}</span>
+                      <input
+                        value={profile.speechOutputModel ?? ''}
+                        placeholder={ti('settings.chat.profile_preset_voice_model_placeholder')}
+                        onChange={(event) =>
+                          onUpdateProfilePreset(profile.id, { speechOutputModel: event.target.value })}
+                      />
+                    </label>
+
+                    <label className="settings-profile-preset-editor__field settings-profile-preset-editor__field--wide">
+                      <span>{ti('settings.chat.profile_preset_voice_instructions')}</span>
+                      <textarea
+                        rows={3}
+                        value={profile.speechOutputInstructions ?? ''}
+                        placeholder={ti('settings.chat.speaking_instructions_placeholder')}
+                        onChange={(event) =>
+                          onUpdateProfilePreset(profile.id, { speechOutputInstructions: event.target.value })}
+                      />
+                    </label>
+                  </div>
+                </details>
+              ) : null}
             </div>
           )
         })}

@@ -1,8 +1,9 @@
-import { memo, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { loadChatSessions, removeChatSession, type ChatSession } from '../../lib'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { ConfirmFn } from '../useConfirm.ts'
 import type { UiLanguage } from '../../types'
+import type { ParsedMemorySourceRef } from '../../features/memory/sourceRefs'
 
 type StatusMessage = {
   ok: boolean
@@ -19,6 +20,7 @@ type HistorySectionProps = {
   clearingChatHistory: boolean
   chatHistoryStatus: StatusMessage
   currentSessionId?: string
+  sourceTarget?: ParsedMemorySourceRef | null
   confirm: ConfirmFn
   onExportChatHistory: () => void
   onImportChatHistory: () => void
@@ -45,12 +47,17 @@ export const HistorySection = memo(function HistorySection({
   clearingChatHistory,
   chatHistoryStatus,
   currentSessionId,
+  sourceTarget,
   confirm,
   onExportChatHistory,
   onImportChatHistory,
   onClearChatHistory,
 }: HistorySectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
+  const tiParam = (
+    key: Parameters<typeof pickTranslatedUiText>[1],
+    params: Parameters<typeof pickTranslatedUiText>[2],
+  ) => pickTranslatedUiText(uiLanguage, key, params)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   // Monotonic counter that forces a re-read of the sessions store after
   // destructive actions (delete). Paired with `active` + `chatMessageCount`
@@ -71,6 +78,20 @@ export const HistorySection = memo(function HistorySection({
     () => sessions.filter((session) => session.id !== currentSessionId),
     [sessions, currentSessionId],
   )
+  const sourceTargetSession = useMemo(
+    () => sourceTarget
+      ? sessions.find((session) => session.messages.some((message) => message.id === sourceTarget.id)) ?? null
+      : null,
+    [sessions, sourceTarget],
+  )
+  const visibleSessions = sourceTarget
+    ? sourceTargetSession ? [sourceTargetSession] : archivedSessions
+    : archivedSessions
+
+  useEffect(() => {
+    if (!active || !sourceTargetSession) return
+    setExpandedId(sourceTargetSession.id)
+  }, [active, sourceTarget?.raw, sourceTargetSession])
 
   const handleRemove = async (id: string) => {
     if (!(await confirm({ message: ti('settings.history.delete_confirm'), tone: 'danger' }))) return
@@ -153,11 +174,19 @@ export const HistorySection = memo(function HistorySection({
           </span>
         </div>
 
-        {archivedSessions.length === 0 ? (
+        {sourceTarget ? (
+          <p className={`settings-history-source-target ${sourceTargetSession ? 'is-found' : 'is-missing'}`}>
+            {sourceTargetSession
+              ? tiParam('settings.history.source_target_found', { ref: sourceTarget.raw })
+              : tiParam('settings.history.source_target_missing', { ref: sourceTarget.raw })}
+          </p>
+        ) : null}
+
+        {visibleSessions.length === 0 ? (
           <p className="settings-history-empty">{ti('settings.history.archived_empty')}</p>
         ) : (
           <ul className="settings-history-list">
-            {archivedSessions.map((session) => {
+            {visibleSessions.map((session) => {
               const isExpanded = expandedId === session.id
               const sessionTitle = session.title ?? ti('settings.history.untitled_session')
               const messagesId = `settings-history-messages-${encodeURIComponent(session.id)}`
@@ -208,7 +237,10 @@ export const HistorySection = memo(function HistorySection({
                         <div className="settings-history-messages__empty">{ti('settings.history.empty_messages')}</div>
                       ) : (
                         session.messages.map((msg) => (
-                          <div key={msg.id} className="settings-history-message">
+                          <div
+                            key={msg.id}
+                            className={`settings-history-message${sourceTarget?.id === msg.id ? ' is-source-target' : ''}`}
+                          >
                             <span className="settings-history-message__role">
                               {msg.role === 'user'
                                 ? ti('settings.history.role.user')

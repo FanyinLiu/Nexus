@@ -187,12 +187,14 @@ export function normalizeDailyMemoryEntry(
   if (!createdAt) return null
   const day = isValidDayKey(dayHint) ? dayHint : dayKeyFromTimestamp(createdAt)
   const id = normalizeText(value.id, 120) || `daily-memory-recovered-${index}-${Date.parse(createdAt)}`
+  const sourceRef = normalizeText(value.sourceRef, 240)
   return {
     id,
     day,
     role,
     content,
     source: value.source === 'voice' ? 'voice' : 'chat',
+    ...(sourceRef ? { sourceRef } : {}),
     createdAt,
   }
 }
@@ -252,4 +254,252 @@ export function loadDailyMemories(): DailyMemoryStore {
 
 export function saveDailyMemories(memories: DailyMemoryStore) {
   writeJsonDebounced(DAILY_MEMORY_STORAGE_KEY, normalizeDailyMemoryStore(memories))
+}
+
+export type MemoryOwnershipEvidenceCheckId =
+  | 'has-long-term-memories'
+  | 'has-daily-entries'
+  | 'has-relationship-reflection-lane'
+  | 'has-source-refs'
+  | 'has-openable-source-refs'
+  | 'has-recall-governance'
+  | 'has-editable-data'
+
+export type MemoryOwnershipQualityIssueSeverity = 'info' | 'warning'
+
+export interface MemoryOwnershipEvidenceCheck {
+  id: MemoryOwnershipEvidenceCheckId
+  pass: boolean
+  detail: string
+}
+
+export interface MemoryOwnershipQualityIssue {
+  id: string
+  severity: MemoryOwnershipQualityIssueSeverity
+  detail: string
+}
+
+export interface MemoryOwnershipEvidenceReport {
+  schemaVersion: 1
+  gate: 'memory-ownership-observability'
+  generatedAt: string
+  longTermCount: number
+  dailyEntryCount: number
+  dayCount: number
+  relationshipInsightCount: number
+  enabledCount: number
+  recallPausedCount: number
+  pinnedCount: number
+  reflectionCount: number
+  editableItemCount: number
+  longTermSourceRefCount: number
+  dailySourceRefCount: number
+  sourceRefCount: number
+  sourceRefCoverage: number
+  openableSourceRefCount: number
+  sourceKindCounts: Record<string, number>
+  checks: MemoryOwnershipEvidenceCheck[]
+  qualityIssueCount: number
+  qualityIssues: MemoryOwnershipQualityIssue[]
+}
+
+const OPENABLE_MEMORY_SOURCE_KINDS = new Set([
+  'chat',
+  'voice',
+  'scheduler',
+  'bracket',
+  'errand',
+  'arc',
+  'capsule',
+])
+
+function roundRatio(numerator: number, denominator: number): number {
+  if (denominator <= 0) return 0
+  return Math.round((numerator / denominator) * 1000) / 1000
+}
+
+function getMemorySourceRefKind(sourceRef: string | undefined): string | null {
+  if (!sourceRef) return null
+  const normalized = sourceRef.replace(/\s+/g, ' ').trim()
+  if (!normalized) return null
+  const separatorIndex = normalized.indexOf(':')
+  if (separatorIndex <= 0) return 'unknown'
+  return normalized.slice(0, separatorIndex).trim().toLowerCase() || 'unknown'
+}
+
+function isOpenableMemorySourceRef(sourceRef: string | undefined): boolean {
+  const kind = getMemorySourceRefKind(sourceRef)
+  return Boolean(kind && OPENABLE_MEMORY_SOURCE_KINDS.has(kind))
+}
+
+function isRelationshipInsightMemory(memory: MemoryItem): boolean {
+  return memory.importance === 'reflection'
+    || memory.kind === 'relationship'
+    || memory.category === 'feedback'
+    || memory.category === 'manual'
+}
+
+function incrementSourceKind(
+  counts: Record<string, number>,
+  sourceRef: string | undefined,
+): void {
+  const kind = getMemorySourceRefKind(sourceRef)
+  if (!kind) return
+  counts[kind] = (counts[kind] ?? 0) + 1
+}
+
+function buildMemoryOwnershipQualityIssues(report: {
+  longTermCount: number
+  dailyEntryCount: number
+  relationshipInsightCount: number
+  sourceRefCount: number
+  openableSourceRefCount: number
+  recallPausedCount: number
+  pinnedCount: number
+}): MemoryOwnershipQualityIssue[] {
+  const issues: MemoryOwnershipQualityIssue[] = []
+  if (report.longTermCount === 0) {
+    issues.push({
+      id: 'no-long-term-memories',
+      severity: 'warning',
+      detail: 'No long-term memories are available for browse/edit evidence.',
+    })
+  }
+  if (report.dailyEntryCount === 0) {
+    issues.push({
+      id: 'no-daily-entries',
+      severity: 'info',
+      detail: 'No daily memory entries are available for diary browse/edit evidence.',
+    })
+  }
+  if (report.relationshipInsightCount === 0) {
+    issues.push({
+      id: 'no-relationship-reflection-lane',
+      severity: 'info',
+      detail: 'No relationship-shaped or reflection memories are present yet.',
+    })
+  }
+  if (report.sourceRefCount === 0) {
+    issues.push({
+      id: 'no-source-refs',
+      severity: 'warning',
+      detail: 'No memory entries include source references.',
+    })
+  } else if (report.openableSourceRefCount === 0) {
+    issues.push({
+      id: 'no-openable-source-refs',
+      severity: 'warning',
+      detail: 'Memory source references exist, but none route to History or Autonomy.',
+    })
+  }
+  if (report.recallPausedCount === 0 && report.pinnedCount === 0) {
+    issues.push({
+      id: 'no-recall-governance-evidence',
+      severity: 'info',
+      detail: 'No pinned or recall-paused memory state has been exercised yet.',
+    })
+  }
+  return issues
+}
+
+export function buildMemoryOwnershipEvidenceReport(
+  inputMemories: readonly MemoryItem[],
+  inputDailyMemories: DailyMemoryStore,
+  generatedAt = new Date().toISOString(),
+): MemoryOwnershipEvidenceReport {
+  const memories = normalizeMemoryItemsForStorage([...inputMemories])
+  const dailyStore = normalizeDailyMemoryStore(inputDailyMemories)
+  const dailyEntries = Object.values(dailyStore).flat()
+  const longTermSourceRefCount = memories.filter((memory) => Boolean(memory.sourceRef)).length
+  const dailySourceRefCount = dailyEntries.filter((entry) => Boolean(entry.sourceRef)).length
+  const sourceRefCount = longTermSourceRefCount + dailySourceRefCount
+  const sourceKindCounts: Record<string, number> = {}
+  let openableSourceRefCount = 0
+
+  for (const memory of memories) {
+    incrementSourceKind(sourceKindCounts, memory.sourceRef)
+    if (isOpenableMemorySourceRef(memory.sourceRef)) openableSourceRefCount += 1
+  }
+  for (const entry of dailyEntries) {
+    incrementSourceKind(sourceKindCounts, entry.sourceRef)
+    if (isOpenableMemorySourceRef(entry.sourceRef)) openableSourceRefCount += 1
+  }
+
+  const pinnedCount = memories.filter((memory) => memory.importance === 'pinned').length
+  const recallPausedCount = memories.filter((memory) => memory.enabled === false).length
+  const relationshipInsightCount = memories.filter(isRelationshipInsightMemory).length
+  const reflectionCount = memories.filter((memory) => memory.importance === 'reflection').length
+  const editableItemCount = memories.length + dailyEntries.length
+  const sourceRefCoverage = roundRatio(sourceRefCount, editableItemCount)
+  const issueInput = {
+    dailyEntryCount: dailyEntries.length,
+    longTermCount: memories.length,
+    openableSourceRefCount,
+    pinnedCount,
+    recallPausedCount,
+    relationshipInsightCount,
+    sourceRefCount,
+  }
+  const qualityIssues = buildMemoryOwnershipQualityIssues(issueInput)
+  const checks: MemoryOwnershipEvidenceCheck[] = [
+    {
+      id: 'has-long-term-memories',
+      pass: memories.length > 0,
+      detail: `${memories.length} long-term memory item(s)`,
+    },
+    {
+      id: 'has-daily-entries',
+      pass: dailyEntries.length > 0,
+      detail: `${dailyEntries.length} daily memory entr${dailyEntries.length === 1 ? 'y' : 'ies'} across ${Object.keys(dailyStore).length} day(s)`,
+    },
+    {
+      id: 'has-relationship-reflection-lane',
+      pass: relationshipInsightCount > 0,
+      detail: `${relationshipInsightCount} relationship/reflection memory item(s)`,
+    },
+    {
+      id: 'has-source-refs',
+      pass: sourceRefCount > 0,
+      detail: `${sourceRefCount} memory source reference(s); ${Math.round(sourceRefCoverage * 100)}% coverage`,
+    },
+    {
+      id: 'has-openable-source-refs',
+      pass: openableSourceRefCount > 0,
+      detail: `${openableSourceRefCount} source reference(s) route to History or Autonomy`,
+    },
+    {
+      id: 'has-recall-governance',
+      pass: pinnedCount > 0 || recallPausedCount > 0,
+      detail: `${pinnedCount} pinned; ${recallPausedCount} recall-paused`,
+    },
+    {
+      id: 'has-editable-data',
+      pass: editableItemCount > 0,
+      detail: `${editableItemCount} memory item(s) can be edited or forgotten from Settings`,
+    },
+  ]
+
+  return {
+    schemaVersion: 1,
+    gate: 'memory-ownership-observability',
+    generatedAt: normalizeIsoTimestamp(generatedAt) ?? new Date().toISOString(),
+    longTermCount: memories.length,
+    dailyEntryCount: dailyEntries.length,
+    dayCount: Object.keys(dailyStore).length,
+    relationshipInsightCount,
+    enabledCount: memories.filter((memory) => memory.enabled !== false).length,
+    recallPausedCount,
+    pinnedCount,
+    reflectionCount,
+    editableItemCount,
+    longTermSourceRefCount,
+    dailySourceRefCount,
+    sourceRefCount,
+    sourceRefCoverage,
+    openableSourceRefCount,
+    sourceKindCounts,
+    checks,
+    qualityIssueCount: qualityIssues.length,
+    qualityIssues,
+  }
 }

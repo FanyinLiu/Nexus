@@ -13,7 +13,7 @@
  * transient developer-console noise that only matters when hacking on the
  * voice state machine.
  */
-const VOICE_DEBUG_ENABLED = import.meta.env.DEV
+const VOICE_DEBUG_ENABLED = Boolean(import.meta.env?.DEV)
 
 export function voiceDebug(tag: string, ...args: unknown[]): void {
   if (VOICE_DEBUG_ENABLED) {

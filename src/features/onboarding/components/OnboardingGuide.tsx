@@ -17,7 +17,13 @@ import {
   switchSpeechOutputProvider,
 } from '../../../lib/speechProviderProfiles'
 import { switchTextProvider } from '../../../lib/textProviderProfiles'
-import type { AppSettings, PlatformProfile, WindowView } from '../../../types'
+import type {
+  AppSettings,
+  ChatMessage,
+  PlatformProfile,
+  ServiceConnectionResponse,
+  WindowView,
+} from '../../../types'
 import type { PetModelDefinition } from '../../pet'
 import {
   AiDisclosureStep,
@@ -41,6 +47,7 @@ export type OnboardingGuideProps = {
   settings: AppSettings
   platformProfile: PlatformProfile
   petModelPresets: PetModelDefinition[]
+  chatMessageSummaries?: Array<Pick<ChatMessage, 'createdAt' | 'role' | 'tone'>>
   onDismiss: () => void
   onSave: (settings: AppSettings) => Promise<void>
   onTestTextConnection?: (settings: AppSettings) => Promise<import('../../../components/settingsDrawerSupport').ConnectionResult>
@@ -52,6 +59,7 @@ export function OnboardingGuide({
   settings,
   platformProfile,
   petModelPresets,
+  chatMessageSummaries = [],
   onDismiss,
   onSave,
   onTestTextConnection,
@@ -60,6 +68,7 @@ export function OnboardingGuide({
   const [draft, setDraft] = useState(settings)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [textConnectionResult, setTextConnectionResult] = useState<ServiceConnectionResponse | null>(null)
   // Lives here (not in TextStep) because inactive steps unmount: the picked
   // tab must survive Next/Back. null = untouched, TextStep derives the
   // language default.
@@ -95,10 +104,15 @@ export function OnboardingGuide({
     setStepIndex(0)
     setSaving(false)
     setError(null)
+    setTextConnectionResult(null)
     window.requestAnimationFrame(() => {
       dialogRef.current?.focus()
     })
   }, [open, settings])
+
+  useEffect(() => {
+    setTextConnectionResult(null)
+  }, [draft.apiBaseUrl, draft.apiKey, draft.apiProviderId, draft.model])
 
   useEffect(() => {
     if (!open || saving) return undefined
@@ -149,6 +163,19 @@ export function OnboardingGuide({
 
   function applySpeechOutputPreset(providerId: string) {
     setDraft((current) => switchSpeechOutputProvider(current, providerId))
+  }
+
+  async function handleTestTextConnection(draftSettings: AppSettings) {
+    if (!onTestTextConnection) {
+      return {
+        ok: false,
+        message: ti('settings.test_connection.unsupported'),
+      }
+    }
+
+    const result = await onTestTextConnection(draftSettings)
+    setTextConnectionResult(result)
+    return result
   }
 
   function goNextStep() {
@@ -206,7 +233,7 @@ export function OnboardingGuide({
             onApplyTextProviderPreset={applyTextProviderPreset}
             regionTab={textProviderRegion}
             onRegionTabChange={setTextProviderRegion}
-            onTestConnection={onTestTextConnection}
+            onTestConnection={handleTestTextConnection}
           />
         )
       case 'voice':
@@ -234,6 +261,9 @@ export function OnboardingGuide({
             selectedPetModel={selectedPetModel}
             launchOnStartupSupported={platformProfile.startup.supported}
             finishHint={finishHint}
+            platformProfile={platformProfile}
+            textConnectionResult={textConnectionResult}
+            chatMessageSummaries={chatMessageSummaries}
           />
         )
     }

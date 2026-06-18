@@ -3,6 +3,11 @@ import * as personaLoader from '../services/personaLoader.js'
 import { parseCharacterCard } from '../services/characterCardParser.js'
 import { mapCardToPersona } from '../services/characterCardMapper.js'
 import { requireTrustedSender } from './validate.js'
+import {
+  validatePersonaContentPayload,
+  validatePersonaInitPayload,
+  validatePersonaProfileIdPayload,
+} from './payloadSchemas.js'
 
 export function register() {
   ipcMain.handle('persona:load-soul', async (event) => {
@@ -17,13 +22,15 @@ export function register() {
 
   ipcMain.handle('persona:save-soul', async (event, payload) => {
     requireTrustedSender(event)
-    await personaLoader.saveSoul(String(payload?.content ?? ''))
+    payload = validatePersonaContentPayload('persona:save-soul', payload)
+    await personaLoader.saveSoul(payload.content)
     return { ok: true }
   })
 
   ipcMain.handle('persona:save-memory', async (event, payload) => {
     requireTrustedSender(event)
-    await personaLoader.savePersonaMemory(String(payload?.content ?? ''))
+    payload = validatePersonaContentPayload('persona:save-memory', payload)
+    await personaLoader.savePersonaMemory(payload.content)
     return { ok: true }
   })
 
@@ -42,25 +49,22 @@ export function register() {
 
   ipcMain.handle('persona:init', async (event, payload) => {
     requireTrustedSender(event)
-    return personaLoader.ensurePersonaDir(String(payload?.defaultSoul ?? ''))
+    payload = validatePersonaInitPayload(payload)
+    return personaLoader.ensurePersonaDir(payload.defaultSoul)
   })
 
   // ── v2 per-profile persona (soul/memory/examples/style/voice/tools) ──
   ipcMain.handle('persona:load-profile', async (event, payload) => {
     requireTrustedSender(event)
-    const profileId = String(payload?.profileId ?? '').trim()
-    if (!profileId) {
-      throw new Error('persona:load-profile 需要非空的 profileId。')
-    }
+    payload = validatePersonaProfileIdPayload('persona:load-profile', payload)
+    const profileId = payload.profileId
     return personaLoader.loadPersonaProfile(profileId)
   })
 
   ipcMain.handle('persona:profile-dir', async (event, payload) => {
     requireTrustedSender(event)
-    const profileId = String(payload?.profileId ?? '').trim()
-    if (!profileId) {
-      throw new Error('persona:profile-dir 需要非空的 profileId。')
-    }
+    payload = validatePersonaProfileIdPayload('persona:profile-dir', payload)
+    const profileId = payload.profileId
     return { dir: personaLoader.getPersonaProfileDir(profileId) }
   })
 
@@ -83,6 +87,7 @@ export function register() {
     return {
       profile: mapped.profile,
       greeting: mapped.greeting,
+      importReport: mapped.importReport,
       lorebookEntries: mapped.lorebookEntries,
     }
   })

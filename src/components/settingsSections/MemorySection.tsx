@@ -2,6 +2,7 @@ import { memo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { MemoryPanel } from '../../features/memory/components'
 import { MEMORY_EMBEDDING_MODEL_OPTIONS, SCREEN_VLM_MODEL_OPTIONS } from '../../features/memory/constants'
+import type { ParsedMemorySourceRef } from '../../features/memory/sourceRefs'
 import {
   getPlatformDependencyHint,
   isDesktopContextActiveWindowAvailable,
@@ -51,9 +52,12 @@ type MemorySectionProps = {
   onAddManualMemory: (content: string) => void
   onUpdateMemory: (id: string, content: string) => void
   onRemoveMemory: (id: string) => void
+  onSetMemoryEnabled: (id: string, enabled: boolean) => void
+  onToggleMemoryPinned: (id: string) => void
   onClearDailyMemory: () => void
   onUpdateDailyEntry?: (id: string, day: string, content: string) => void
   onRemoveDailyEntry?: (id: string, day: string) => void
+  onOpenMemorySourceRef?: (sourceRef: ParsedMemorySourceRef) => void
 }
 
 export const MemorySection = memo(function MemorySection({
@@ -77,9 +81,12 @@ export const MemorySection = memo(function MemorySection({
   onAddManualMemory,
   onUpdateMemory,
   onRemoveMemory,
+  onSetMemoryEnabled,
+  onToggleMemoryPinned,
   onClearDailyMemory,
   onUpdateDailyEntry,
   onRemoveDailyEntry,
+  onOpenMemorySourceRef,
 }: MemorySectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const tiParam = (
@@ -436,7 +443,10 @@ export const MemorySection = memo(function MemorySection({
         onAddMemory={onAddManualMemory}
         onUpdateMemory={onUpdateMemory}
         onRemove={onRemoveMemory}
+        onSetMemoryEnabled={onSetMemoryEnabled}
+        onToggleMemoryPinned={onToggleMemoryPinned}
         onClearDaily={onClearDailyMemory}
+        onOpenSourceRef={onOpenMemorySourceRef}
         onUpdateDailyEntry={onUpdateDailyEntry}
         onRemoveDailyEntry={onRemoveDailyEntry}
       />

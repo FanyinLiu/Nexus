@@ -13,7 +13,7 @@
  *   C. Security                (npm audit, Electron config, electron versions, secrets, CSP)
  *   D. Asset integrity         (locale parity, models, dist artefacts)
  *   E. Docs + compliance       (release notes, README sync, SBOM, AI-Act, licenses)
- *   F. Privacy + governance    (no default telemetry, H4 status, known-issues coverage)
+ *   F. Privacy + governance    (no default telemetry, message-awareness evidence, H4 status, known-issues coverage)
  *
  * Docs: docs/RELEASING.md.
  */
@@ -21,7 +21,7 @@
 import { execSync } from 'node:child_process'
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import { dirname, isAbsolute, join } from 'node:path'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -77,25 +77,94 @@ function readPkg() {
 
 // ── Args ────────────────────────────────────────────────────────────────────
 
-const tag = process.argv[2]
-const quick = process.argv.includes('--quick')
-const skipArg = process.argv.find((a) => a.startsWith('--skip='))
-const onlyArg = process.argv.find((a) => a.startsWith('--only='))
-const skipped = new Set((skipArg?.split('=')[1] ?? '').split(',').filter(Boolean))
-const onlyStages = (onlyArg?.split('=')[1] ?? '').split(',').filter(Boolean)
+function readOptionList(argv, index, optionName, inlineValue) {
+  const raw = inlineValue ?? argv[index + 1]
+  if (!raw || raw.startsWith('--')) {
+    throw new Error(`${optionName} requires a comma-separated stage list`)
+  }
+  return {
+    nextIndex: inlineValue == null ? index + 1 : index,
+    values: raw.split(',').map((entry) => entry.trim()).filter(Boolean),
+  }
+}
+
+function parsePrereleaseArgs(argv) {
+  const parsed = {
+    onlyStages: [],
+    quick: false,
+    skipped: [],
+    tag: '',
+  }
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index]
+    if (arg === '--quick') {
+      parsed.quick = true
+      continue
+    }
+    if (arg === '--skip' || arg.startsWith('--skip=')) {
+      const inlineValue = arg.startsWith('--skip=') ? arg.slice('--skip='.length) : null
+      const result = readOptionList(argv, index, '--skip', inlineValue)
+      parsed.skipped.push(...result.values)
+      index = result.nextIndex
+      continue
+    }
+    if (arg === '--only' || arg.startsWith('--only=')) {
+      const inlineValue = arg.startsWith('--only=') ? arg.slice('--only='.length) : null
+      const result = readOptionList(argv, index, '--only', inlineValue)
+      parsed.onlyStages.push(...result.values)
+      index = result.nextIndex
+      continue
+    }
+    if (arg.startsWith('--')) {
+      throw new Error(`Unknown option: ${arg}`)
+    }
+    if (!parsed.tag) {
+      parsed.tag = arg
+      continue
+    }
+    throw new Error(`Unexpected argument: ${arg}`)
+  }
+
+  return parsed
+}
+
+let parsedArgs
+try {
+  parsedArgs = parsePrereleaseArgs(process.argv.slice(2))
+} catch (error) {
+  console.error(COLOR.red(error instanceof Error ? error.message : String(error)))
+  process.exit(2)
+}
+
+const tag = parsedArgs.tag
+const quick = parsedArgs.quick
+const skipped = new Set(parsedArgs.skipped)
+const onlyStages = parsedArgs.onlyStages
 
 if (!tag) {
-  console.error(COLOR.red('Usage: npm run prerelease-check -- <tag> [--quick] [--skip=B,C] [--only=A]'))
+  console.error(COLOR.red('Usage: npm run prerelease-check -- <tag> [--quick] [--skip=B,C|--skip B,C] [--only=A|--only A]'))
   process.exit(2)
 }
 
 const SEMVER_TAG = /^v(\d+)\.(\d+)\.(\d+)(-[a-z]+\.\d+)?$/
-if (!SEMVER_TAG.test(tag)) {
+const tagMatch = SEMVER_TAG.exec(tag)
+if (!tagMatch) {
   console.error(COLOR.red(`Invalid release tag '${tag}'. Expected v<major>.<minor>.<patch> or v<major>.<minor>.<patch>-<pre>.<n>.`))
   process.exit(2)
 }
 
 const isStable = !tag.includes('-')
+const tagVersion = {
+  major: Number(tagMatch[1]),
+  minor: Number(tagMatch[2]),
+  patch: Number(tagMatch[3]),
+}
+const requiresMessageAwarenessGate = tagVersion.major > 0
+  || tagVersion.minor > 3
+  || (tagVersion.minor === 3 && tagVersion.patch >= 4)
+const requiresV04ReadinessGate = tagVersion.major > 0
+  || tagVersion.minor >= 4
 
 console.log(COLOR.bold(`Pre-release check: ${tag}`) + COLOR.dim(`  ${isStable ? '(stable)' : '(beta)'}${quick ? ' [quick]' : ''}`))
 console.log()
@@ -116,6 +185,198 @@ function stage(letter, name, fn) {
   total = 0
   fn()
   console.log()
+}
+
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, `'\\''`)}'`
+}
+
+function messageAwarenessRedactedEvidenceCandidates() {
+  const candidates = [
+    process.env.NEXUS_MESSAGE_AWARENESS_EVIDENCE_FILE,
+    join(ROOT, 'docs', 'release-evidence', `${tag}-message-awareness.json`),
+    join(ROOT, 'docs', 'release-evidence', `v${tagVersion.major}.${tagVersion.minor}.${tagVersion.patch}-message-awareness.json`),
+  ].filter(Boolean)
+
+  return [...new Set(candidates.map((candidate) => (
+    isAbsolute(candidate) ? candidate : join(ROOT, candidate)
+  )))]
+}
+
+function messageAwarenessRawEvidenceCandidates() {
+  return [
+    join(ROOT, 'artifacts', `v${tagVersion.major}.${tagVersion.minor}.${tagVersion.patch}`, 'message-awareness-complete.json'),
+  ]
+}
+
+function messageAwarenessCollectionCommand() {
+  if (requiresV04ReadinessGate) {
+    return 'Run npm run v04:message:smoke:local, record real macOS/Telegram/Discord evidence with npm run v04:message:live:record, then run npm run v04:message:finalize and commit the redacted docs/release-evidence/v0.4.0-message-awareness.json for stable tags.'
+  }
+  return `Run npm run message:smoke:local, record real macOS/Telegram/Discord evidence, then run npm run message:release:redact and commit a redacted docs/release-evidence/${tag}-message-awareness.json for stable tags.`
+}
+
+function runMessageAwarenessGate() {
+  const candidates = messageAwarenessRedactedEvidenceCandidates()
+  const rawCandidates = messageAwarenessRawEvidenceCandidates()
+  const evidencePath = candidates.find((candidate) => existsSync(candidate))
+  if (!evidencePath) {
+    const rawEvidence = rawCandidates.filter((candidate) => existsSync(candidate))
+    throw new Error(
+      `message-awareness redacted release evidence missing. Checked:\n       ${
+        candidates.map((candidate) => candidate.replace(`${ROOT}/`, '')).join('\n       ')
+      }${
+        rawEvidence.length > 0
+          ? `\n       Raw diagnostic artifact exists but is not commit-safe release evidence:\n       ${rawEvidence.map((candidate) => candidate.replace(`${ROOT}/`, '')).join('\n       ')}`
+          : ''
+      }\n       ${messageAwarenessCollectionCommand()}`,
+    )
+  }
+
+  try {
+    const raw = JSON.parse(readFileSync(evidencePath, 'utf8'))
+    if (raw?.redacted !== true) {
+      throw new Error(
+        `message-awareness release evidence must be redacted before stable promotion. `
+          + `Found raw/private evidence at ${evidencePath.replace(`${ROOT}/`, '')}. ${messageAwarenessCollectionCommand()}`,
+      )
+    }
+    const result = shJson(
+      `node scripts/validate-message-awareness.mjs --check-evidence-file ${shellQuote(evidencePath)} --require-release-complete`,
+      { stdio: ['ignore', 'pipe', 'pipe'] },
+    )
+    const audit = result.audit ?? {}
+    return `${audit.overallStatus ?? 'pass'} (${evidencePath.replace(`${ROOT}/`, '')})`
+  } catch (err) {
+    let audit = null
+    try {
+      audit = JSON.parse(err.stdout?.toString() || '{}').audit
+    } catch {}
+    if (audit) {
+      const pending = audit.liveEvidence?.pendingCheckIds?.join(', ') || 'unknown'
+      const local = audit.localWebhook?.status || 'unknown'
+      throw new Error(
+        `message-awareness release gate incomplete: ${audit.overallStatus}; local=${local}; pending=${pending}. `
+          + `Evidence: ${evidencePath.replace(`${ROOT}/`, '')}`,
+      )
+    }
+    const detail = err.stderr?.toString()?.split('\n').slice(0, 6).join('\n') || err.message
+    throw new Error(`message-awareness release gate failed:\n       ${detail.replace(/\n/g, '\n       ')}`)
+  }
+}
+
+function summarizeCommands(commands) {
+  if (!Array.isArray(commands)) return ''
+  const commandEntries = commands.filter((entry) => entry?.command)
+  const standalonePreflightEntries = commandEntries.filter((entry) => (
+    String(entry.id ?? '').includes('live-preflight')
+      || String(entry.command ?? '').includes(':message:preflight:live')
+  ))
+  const preflightEntries = commandEntries.filter((entry) => entry.preflightCommand)
+  const summarizedEntries = preflightEntries.length >= 3
+    ? [...standalonePreflightEntries, ...preflightEntries]
+      .filter((entry, index, entries) => (
+        entries.findIndex((candidate) => candidate.command === entry.command) === index
+      ))
+    : commandEntries
+  const summaryLimit = standalonePreflightEntries.length && preflightEntries.length >= 3 ? 4 : 3
+  return summarizedEntries.slice(0, summaryLimit).map((entry) => {
+    if (!entry?.command) return ''
+    const placeholders = Array.isArray(entry.placeholderFields)
+      ? entry.placeholderFields.filter(Boolean).join(', ')
+      : ''
+    const placeholderNote = `${
+      entry.mustReplacePlaceholders === true && placeholders
+        ? ` (replace placeholders: ${placeholders})`
+        : ''
+    }`
+    const command = `${entry.command}${placeholderNote}`
+    if (entry.preflightCommand) {
+      return `preflight: ${entry.preflightCommand}${placeholderNote} -> record: ${command}`
+    }
+    if (entry.dryRunCommand) {
+      return `dry-run: ${entry.dryRunCommand}${placeholderNote} -> record: ${command}`
+    }
+    return command
+  }).filter(Boolean).join(' ; ')
+}
+
+function summarizeRequirementCommands(requirements) {
+  if (!Array.isArray(requirements)) return ''
+  const details = requirements
+    .flatMap((entry) => (
+      Array.isArray(entry?.nextCommandDetails)
+        ? entry.nextCommandDetails
+        : (Array.isArray(entry?.nextCommands)
+            ? entry.nextCommands.map((command) => ({ command }))
+            : [])
+    ))
+  return summarizeCommands(details)
+}
+
+function runV04ReadinessStatusGate() {
+  try {
+    const result = shJson(
+      'node --experimental-strip-types scripts/v04-readiness-status.mjs --require-ready',
+      { stdio: ['ignore', 'pipe', 'pipe'] },
+    )
+    const status = result.overallStatus ?? 'ready'
+    const evidence = result.sourceReports?.stabilization?.overallStatus ?? 'unknown'
+    return `${status}; stabilization=${evidence}`
+  } catch (err) {
+    let report = null
+    try {
+      report = JSON.parse(err.stdout?.toString() || '{}')
+    } catch {}
+    if (report) {
+      const blocking = Array.isArray(report.blockingCheckIds)
+        ? report.blockingCheckIds.join(', ')
+        : 'unknown'
+      const next = summarizeCommands(report.nextCommands)
+      throw new Error(
+        `v0.4 readiness gate incomplete: ${report.overallStatus ?? 'unknown'}; blocking=${blocking}.`
+          + (next ? ` Next: ${next}` : ''),
+      )
+    }
+    const detail = err.stderr?.toString()?.split('\n').slice(0, 6).join('\n') || err.message
+    throw new Error(`v0.4 readiness gate failed:\n       ${detail.replace(/\n/g, '\n       ')}`)
+  }
+}
+
+function runV04CompletionAuditGate() {
+  try {
+    const result = shJson(
+      'node --experimental-strip-types scripts/v04-completion-audit.mjs --require-complete',
+      { stdio: ['ignore', 'pipe', 'pipe'] },
+    )
+    return `${result.overallStatus ?? 'complete'}; ${result.completeCount ?? '?'} ${COLOR.dim('/')} ${result.totalCount ?? '?'} requirements`
+  } catch (err) {
+    let report = null
+    try {
+      report = JSON.parse(err.stdout?.toString() || '{}')
+    } catch {}
+    if (report) {
+      const blocking = Array.isArray(report.blockingRequirementIds)
+        ? report.blockingRequirementIds.join(', ')
+        : 'unknown'
+      const external = Array.isArray(report.externalRequirementIds) && report.externalRequirementIds.length
+        ? ` external=${report.externalRequirementIds.join(', ')}.`
+        : ''
+      const next = summarizeRequirementCommands(report.requirements)
+      throw new Error(
+        `v0.4 completion audit incomplete: ${report.overallStatus ?? 'unknown'}; blocking=${blocking}.${external}`
+          + (next ? ` Next: ${next}` : ''),
+      )
+    }
+    const detail = err.stderr?.toString()?.split('\n').slice(0, 6).join('\n') || err.message
+    throw new Error(`v0.4 completion audit failed:\n       ${detail.replace(/\n/g, '\n       ')}`)
+  }
+}
+
+function runV04ReadinessGate() {
+  const readiness = runV04ReadinessStatusGate()
+  const completion = runV04CompletionAuditGate()
+  return `${readiness}; completion=${completion}`
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -458,6 +719,24 @@ stage('F', 'Privacy + governance', () => {
     }
     if (errors.length > 0) throw new Error(`suspicious telemetry hosts:\n       ${errors.join('\n       ')}`)
   })
+
+  if (requiresMessageAwarenessGate) {
+    check(
+      'F',
+      'v0.3.4+ message-awareness release evidence complete',
+      () => runMessageAwarenessGate(),
+      { warnOnly: !isStable },
+    )
+  }
+
+  if (requiresV04ReadinessGate) {
+    check(
+      'F',
+      'v0.4 readiness and completion gates complete',
+      () => runV04ReadinessGate(),
+      { warnOnly: !isStable },
+    )
+  }
 
   if (existsSync(join(ROOT, 'docs/AUDIT-FINDINGS-2026-04-24.md'))) {
     check('F', 'Audit deferred items still tracked (H4 noted)', () => {

@@ -24,9 +24,9 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **現在のリリース：** v0.3.2 安定版。Nexus は今すぐ日常利用できますが、まだ高速に磨いている個人プロジェクトです。パッケージング、任意のローカル音声モデル、provider 設定では、少し手作業が必要な場面が残る可能性があります。
+> **現在のリリースライン：** v0.3.4 beta stabilization。Nexus は初期デスクトッププロトタイプ段階から検証フェーズへ進み、Live2D、音声、メモリ、proactive care、デスクトップメッセージ感知、Telegram / Discord ブリッジ、外部 webhook adapter はすでにコード上にあります。ただし実際の macOS 通知、Telegram、Discord の live evidence は、安定版昇格のゲートです。
 
-> **開発スコープの注記：** この多言語 README は長期的な機能一覧を残しています。短期開発はルートの [README](../README.md) と [Nexus アップグレード統合計画](NEXUS_UPGRADE_INTEGRATION_PLAN.md) を基準にしてください。Phase 1 は常駐する小さなデスクトップウィンドウ、ミニマルなアバター、Ollama / DeepSeek のテキストモデル、シンプルな会話だけに絞ります。
+> **開発スコープの注記：** この多言語 README は長期的な機能一覧を残します。現在の短期開発はルートの [README](../README.md)、[ROADMAP](ROADMAP.md)、[v0.3.4 stabilization plan](V0.3.4_STABILIZATION.md) が基準です。優先順位は P0 stabilization / docs alignment / real message-awareness validation、続いて P1 proactive care と memory ownership、P2 companion depth と voice pipeline、P3 email / more IM adapters は permissioned groundwork のみです。
 
 ---
 

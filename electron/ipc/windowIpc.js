@@ -47,14 +47,26 @@ import {
 import { inspectIntegrationRuntime } from '../integrationRuntime.js'
 import { requireTrustedSender } from './validate.js'
 import {
+  validateCodexPetGalleryInputPayload,
+  validateCodexPetGalleryListPayload,
+  validateConfirmDialogPayload,
+  validateCreatorKitCreatePayload,
+  validateCreatorKitInstallPayload,
+  validateCreatorKitOpenPathPayload,
+  validateCreatorKitOptionalDirectoryPayload,
   validateDesktopContextRequestPayload,
   validateExternalLinkToolPayload,
+  validateIntegrationInspectPayload,
+  validateLaunchOnStartupPayload,
   validateMediaSessionControlPayload,
   validateOpenPanelPayload,
   validatePanelWindowStatePayload,
+  validatePetFreeModePayload,
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
+  validateTextFileOpenPayload,
+  validateTextFileSavePayload,
   validateWeatherToolPayload,
   validateWebSearchToolPayload,
   validateWindowDragPayload,
@@ -97,7 +109,8 @@ export function register() {
 
   ipcMain.handle('pet-window:set-free-mode', (event, payload) => {
     requireTrustedSender(event)
-    return setPetFreeModeForEvent(event, Boolean(payload?.freeMode))
+    payload = validatePetFreeModePayload(payload)
+    return setPetFreeModeForEvent(event, payload.freeMode)
   })
 
   ipcMain.handle('window:open-panel', (event, section) => {
@@ -169,7 +182,8 @@ export function register() {
 
   ipcMain.handle('app:set-launch-on-startup', (event, value) => {
     requireTrustedSender(event)
-    return setLaunchOnStartupState(Boolean(value))
+    value = validateLaunchOnStartupPayload(value)
+    return setLaunchOnStartupState(value)
   })
 
   ipcMain.handle('app:get-platform-profile', (event) => {
@@ -194,36 +208,43 @@ export function register() {
 
   ipcMain.handle('pet-model:import-codex-gallery', async (event, input) => {
     requireTrustedSender(event)
+    input = validateCodexPetGalleryInputPayload(input)
     return importSpritePetModelFromCodexGallery(input)
   })
 
   ipcMain.handle('pet-model:list-codex-gallery', async (event, payload = {}) => {
     requireTrustedSender(event)
+    payload = validateCodexPetGalleryListPayload(payload)
     return listCodexPetGalleryCatalog(payload)
   })
 
   ipcMain.handle('pet-model:create-creator-kit', async (event, payload = {}) => {
     requireTrustedSender(event)
+    payload = validateCreatorKitCreatePayload(payload)
     return createSpritePetCreatorKitFromPayload(payload)
   })
 
   ipcMain.handle('pet-model:inspect-creator-kit', async (event, payload = {}) => {
     requireTrustedSender(event)
+    payload = validateCreatorKitOptionalDirectoryPayload('pet-model:inspect-creator-kit', payload)
     return inspectSpritePetCreatorKitFromDialog(payload)
   })
 
   ipcMain.handle('pet-model:assemble-creator-kit', async (event, payload = {}) => {
     requireTrustedSender(event)
+    payload = validateCreatorKitOptionalDirectoryPayload('pet-model:assemble-creator-kit', payload)
     return assembleSpritePetCreatorKitFromDialog(payload)
   })
 
   ipcMain.handle('pet-model:install-creator-kit-codex', async (event, payload = {}) => {
     requireTrustedSender(event)
+    payload = validateCreatorKitInstallPayload(payload)
     return installSpritePetCreatorKitPackageToCodex(payload)
   })
 
   ipcMain.handle('pet-model:open-creator-kit-path', async (event, payload = {}) => {
     requireTrustedSender(event)
+    payload = validateCreatorKitOpenPathPayload(payload)
     return openSpritePetCreatorKitPathFromPayload(payload)
   })
 
@@ -234,25 +255,28 @@ export function register() {
 
   ipcMain.handle('dialog:confirm', async (event, message) => {
     requireTrustedSender(event)
+    message = validateConfirmDialogPayload(message)
     const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
     const { response } = await dialog.showMessageBox(parentWindow, {
       type: 'question',
       buttons: ['确定', '取消'],
       defaultId: 0,
       cancelId: 1,
-      message: String(message ?? ''),
+      message,
     })
     return response === 0
   })
 
   ipcMain.handle('file:save-text', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateTextFileSavePayload(payload)
     const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
     return saveTextFileFromDialog(sourceWindow, payload)
   })
 
   ipcMain.handle('file:open-text', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateTextFileOpenPayload(payload)
     const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
     return openTextFileFromDialog(sourceWindow, payload)
   })
@@ -351,6 +375,7 @@ export function register() {
 
   ipcMain.handle('integrations:inspect', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateIntegrationInspectPayload(payload)
     return inspectIntegrationRuntime(payload)
   })
 }

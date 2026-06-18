@@ -68,6 +68,10 @@ const MEMORY_SEARCH_MODE_KEYS: Record<MemorySearchMode, { label: TranslationKey;
 }
 
 export type SettingsAppearanceTone = 'night' | 'day' | 'warm-day'
+export type SettingsSectionEntryReason = 'm1-first-run-repair'
+export type SettingsSectionOpenOptions = {
+  entryReason?: SettingsSectionEntryReason
+}
 
 const THEME_TONE_BY_ID: Record<ThemeId, SettingsAppearanceTone> = {
   'nexus-default': 'day',
@@ -280,6 +284,8 @@ export type ConnectionResult = {
   message: string
   recommendation?: string
   status?: import('../types/model').ProviderHealthStatus
+  checkedAt?: string
+  discoveredModels?: import('../types/model').DiscoveredModel[]
 }
 
 type LabeledOption<T> = {

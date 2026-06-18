@@ -1,37 +1,16 @@
 // Pure helpers for deciding how to break a TTS request's text into one or
 // more sub-requests before it reaches the provider.
 //
-// Kept dependency-free so both the renderer runtime (streamingSpeechOutput.ts)
-// and unit tests can import it without pulling in window-touching modules.
+// Kept window-free so renderer runtime and tests can import it safely. The
+// provider policy itself lives under features/voice so diagnostics can report
+// the exact same low-latency strategy that playback uses.
 
-// Per-provider soft cap on the single-request text length. Two providers have
-// real limits that silently truncate long inputs; everything else is fine at
-// 3000 chars which covers ~99% of real replies.
-//
-// - k2-fsa/OmniVoice (local, via scripts/omnivoice_server.py) is a diffusion
-//   TTS with a fixed audio-context window (~30s per generation). Long text
-//   inputs don't error — the Python side just returns `audios[0]` truncated
-//   to whatever fit, so the pet speaks the first few sentences and goes
-//   silent for the rest. ~80 chars ≈ 15–20s of speech leaves comfortable
-//   headroom.
-// - Volcengine /v1/tts `query` has a 1024-BYTE cap on the text field. UTF-8
-//   Chinese is 3 bytes/char, so ~340 chars fits, but mixed punctuation and
-//   ascii can push it over. 300 is the safe ceiling.
-//
-// When the reply exceeds the provider cap, the caller splits at sentence
-// boundaries and queues each segment as its own push_text. ttsStreamService
-// on the main side serializes them via session.chain (same requestId, same
-// pinned voice), and streamAudioPlayer smooths chunk boundaries, so the
-// user hears one continuous utterance.
-const DEFAULT_MAX_REQUEST_CHARS = 3000
-const PROVIDER_MAX_REQUEST_CHARS: Record<string, number> = {
-  'omnivoice-tts': 80,
-  'volcengine-tts': 300,
-}
-
-export function getMaxRequestCharsForProvider(providerId: string): number {
-  return PROVIDER_MAX_REQUEST_CHARS[providerId] ?? DEFAULT_MAX_REQUEST_CHARS
-}
+export {
+  getMaxRequestCharsForProvider,
+  getStreamingTtsChunkerOptionsForProvider,
+  resolveTtsLatencyPolicy,
+  shouldStreamTtsDeltasForProvider,
+} from '../../features/voice/ttsLatencyPolicy.ts'
 
 const SENTENCE_BOUNDARY_RE = /[。！？!?；;\n]/u
 

@@ -58,7 +58,10 @@ Supported aliases:
 - title: `title`, `conversationTitle`, `chatTitle`, `roomName`, `channelName`
 
 Use stable `conversationId` and `messageId` when the adapter can provide them.
-Nexus uses them to dedupe repeated announcements.
+Nexus uses them to dedupe repeated announcements. Telegram/Discord-labeled
+macOS notification payloads also get a cross-pipeline content fingerprint, so
+the same message does not speak twice when the native Telegram/Discord bridge
+is enabled alongside the Notification Center watcher.
 
 ## CLI Helper
 
@@ -89,6 +92,34 @@ node scripts/send-message-webhook.mjs \
 Packaged builds unpack these helper scripts under the application resources
 directory as `app.asar.unpacked/scripts/...`, so external automation can still
 call them without depending on the source checkout.
+
+Before wiring a new email or IM adapter, run the contract checker. It validates
+the payload shape, support boundary, permissioned capture method, dedupe
+readiness, and privacy warnings without sending anything to Nexus:
+
+```bash
+npm run message:adapter:check -- \
+  --source Mail \
+  --capture-method mail-rule \
+  --sender alerts@example.com \
+  --chat-title "Production alert" \
+  --conversation-id mail-thread-1 \
+  --message-id mail-msg-1 \
+  --text "Short summary or safe excerpt" \
+  --output artifacts/v0.3.4/message-adapter-mail.json \
+  --require-ready
+```
+
+The report is private-safe: it includes source category, booleans, text length,
+capture method, support status, checks, and next actions, but omits sender
+values, message text, conversation IDs, and message IDs. Use it for planned
+email and additional IM adapters before adding a new bridge surface. The
+`--output` file contains the same private-safe JSON that stdout prints, so it
+can be attached as adapter-readiness evidence without copying private message
+fields. Add `--require-ready` for evidence runs so the command exits non-zero
+when required contract checks fail. Allowed capture methods are `mail-rule`,
+`imap-api`, `public-api`, `system-notification`, `user-automation`, and
+`export-file`; private app database scraping is outside the adapter boundary.
 
 Direct `curl` works too:
 

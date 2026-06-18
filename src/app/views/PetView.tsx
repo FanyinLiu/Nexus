@@ -9,12 +9,13 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react'
-import { getVoiceStateLabel, pickHoverReaction } from '../appSupport'
+import { pickHoverReaction } from '../appSupport'
 import { MusicPopupCard } from '../../components/MusicPopupCard'
 import { PetControlIcon } from '../../components/PetControlIcon'
 import { PetDialogBubble } from '../../components/PetDialogBubble'
 import { PetThoughtBubble } from '../../components/PetThoughtBubble'
 import { resolveCharacterPreset } from '../../features/character/presets'
+import { resolveCompanionPresenceStatus } from '../../features/presence/companionPresenceStatus'
 import {
   classifyWeatherCondition,
   getTimeOfDayBand,
@@ -81,6 +82,7 @@ export function PetView({
   chat,
   isPinned,
   clickThrough,
+  focusState,
   mediaSession,
   musicActionBusy,
   dismissedMusicSessionKey,
@@ -172,14 +174,15 @@ export function PetView({
     voice.voiceState === 'processing' ||
     chat.busy ||
     (pet.petTapActive && Boolean(pet.petTouchZone))
-  const voiceStateLabel = getVoiceStateLabel(voice.voiceState, ti)
-  const petStageStatusLabel = voice.voiceState !== 'idle'
-    ? voiceStateLabel
-    : chat.busy
-      ? ti('pet.status.thinking')
-      : settings.continuousVoiceModeEnabled
-        ? ti('pet.status.standby')
-        : ti('pet.status.ready')
+  const companionPresenceStatus = resolveCompanionPresenceStatus({
+    assistantActivity: chat.assistantActivity,
+    chatBusy: chat.busy,
+    focusState,
+    quietHoursEnd: settings.autonomyQuietHoursEnd,
+    quietHoursStart: settings.autonomyQuietHoursStart,
+    voiceState: voice.voiceState,
+  }, ti)
+  const petStageStatusLabel = companionPresenceStatus.statusLabel
 
   const notificationUnreadBadge = notificationUnreadCount > 99 ? '99+' : String(notificationUnreadCount)
   const hasUnreadNotifications = notificationUnreadCount > 0

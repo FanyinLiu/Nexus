@@ -1,6 +1,8 @@
-import { app } from 'electron'
+import { app, ipcMain } from 'electron'
 import { synthesizeRemoteTts, warmupRemoteTtsSession } from './services/ttsService.js'
 import { createTtsStreamService } from './ttsStreamService.js'
+import { installHighRiskIpcAudit } from './ipc/auditedIpc.js'
+import { audit } from './services/auditLog.js'
 
 import * as windowIpc from './ipc/windowIpc.js'
 import * as chatIpc from './ipc/chatIpc.js'
@@ -58,6 +60,8 @@ function loadDeferredModules() {
 }
 
 export function registerIpc() {
+  installHighRiskIpcAudit(ipcMain, { auditFn: audit })
+
   windowIpc.register()
 
   chatIpc.register({

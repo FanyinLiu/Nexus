@@ -1,4 +1,5 @@
 export * from './models.ts'
+export * from './actionMap.ts'
 export * from './codexPetGallery.ts'
 export * from './spritePetCreatorKit.ts'
 export * from './performance.ts'

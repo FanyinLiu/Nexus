@@ -1,6 +1,7 @@
 import type { AppSettings, NotificationMessage, TranslationKey } from '../../types'
 import {
   buildMessagingAnnouncementContent,
+  getMessagingSourceGroup,
   type MessagingAnnouncementContent,
   type MessagingAnnouncementSettings,
 } from './messagingAnnouncement.ts'
@@ -10,6 +11,14 @@ type Translate = (key: TranslationKey, params?: Record<string, string>) => strin
 type LocalMessagingAnnouncementSettings = Pick<
   AppSettings,
   'autonomyNotificationMessageAnnouncementsEnabled' | 'autonomyNotificationMessagePreviewEnabled'
+>
+
+type LocalNativeBridgeEchoSettings = Pick<
+  AppSettings,
+  | 'discordBotToken'
+  | 'discordIntegrationEnabled'
+  | 'telegramBotToken'
+  | 'telegramIntegrationEnabled'
 >
 
 function normalizeFallback(value: string | undefined, fallback: string): string {
@@ -51,4 +60,26 @@ export function buildLocalMessagingAnnouncementContent(
     getLocalMessagingAnnouncementSettings(settings),
     t,
   )
+}
+
+export function shouldSuppressLocalNativeBridgeEcho(
+  message: NotificationMessage,
+  settings: LocalNativeBridgeEchoSettings,
+): boolean {
+  if (message.kind !== 'message') return false
+
+  const sourceGroup = getMessagingSourceGroup({
+    sourceId: message.sourceId ?? message.channelId,
+    sourceName: message.sourceName ?? message.channelName,
+  })
+
+  if (sourceGroup === 'telegram') {
+    return settings.telegramIntegrationEnabled && Boolean(settings.telegramBotToken.trim())
+  }
+
+  if (sourceGroup === 'discord') {
+    return settings.discordIntegrationEnabled && Boolean(settings.discordBotToken.trim())
+  }
+
+  return false
 }

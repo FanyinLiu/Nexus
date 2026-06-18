@@ -729,6 +729,7 @@ export function useChat(ctx: UseChatContext) {
     input,
     busy,
     error,
+    currentSessionIdRef,
     assistantActivity,
     petDialogBubble,
     petThoughtBubble,

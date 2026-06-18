@@ -95,6 +95,12 @@ type NotificationWatcherStatus = {
   status: 'stopped' | 'running' | 'needs-permission' | 'unsupported' | 'error'
   lastError: string | null
   platformSupported: boolean
+  lastEventAt?: string | null
+  lastEventSource?: string | null
+  lastEventId?: string | null
+  lastSkipReason?: string | null
+  lastSkipAt?: string | null
+  lastErrorAt?: string | null
 }
 
 type PairingRequest = {
@@ -109,6 +115,17 @@ type TelegramGatewayStatus = {
   botUsername: string | null
   allowedChatIds: number[]
   lastError: string | null
+  lastEventAt?: string | null
+  lastEventSource?: string | null
+  lastEventId?: string | null
+  lastSkipReason?: string | null
+  lastSkipAt?: string | null
+  lastErrorAt?: string | null
+  lastOutboundAt?: string | null
+  lastOutboundTarget?: string | null
+  lastOutboundKind?: string | null
+  lastOutboundError?: string | null
+  updateOffset?: number
 }
 
 type TelegramIncomingMessage = {
@@ -125,6 +142,19 @@ type DiscordGatewayStatus = {
   botUsername: string | null
   allowedChannelIds: string[]
   lastError: string | null
+  lastEventAt?: string | null
+  lastEventSource?: string | null
+  lastEventId?: string | null
+  lastSkipReason?: string | null
+  lastSkipAt?: string | null
+  lastErrorAt?: string | null
+  lastReconnectAt?: string | null
+  lastReconnectReason?: string | null
+  reconnectAttempt?: number | null
+  lastOutboundAt?: string | null
+  lastOutboundTarget?: string | null
+  lastOutboundKind?: string | null
+  lastOutboundError?: string | null
 }
 
 type DiscordIncomingMessage = {
@@ -563,8 +593,73 @@ declare global {
           companionName: string
           systemPrompt: string
           petModelId: string
+          speechOutputProviderId?: string
+          speechOutputVoice?: string
+          speechOutputModel?: string
+          speechOutputInstructions?: string
         }
         greeting: string | null
+        importReport?: {
+          schemaVersion: 1
+          gate: 'character-card-import'
+          generatedAt: string
+          spec: string
+          profile: {
+            id: string
+            label: string
+            companionName: string
+            petModelId: string
+            systemPromptChars: number
+          }
+          source: {
+            name: string
+            hasDescription: boolean
+            hasPersonality: boolean
+            hasScenario: boolean
+            hasSystemPrompt: boolean
+            hasPostHistoryInstructions: boolean
+            hasCreatorNotes: boolean
+            hasGreeting: boolean
+            exampleBlocks: number
+            characterBookEntries: number
+          }
+          personaFiles: Record<string, { chars: number; present: boolean }>
+          lorebook: {
+            entries: number
+            enabledEntries: number
+            keywordCount: number
+          }
+          rolePackagePreset: {
+            explicit: boolean
+            validFieldCount: number
+            style: {
+              toneTagCount: number
+              signaturePhraseCount: number
+              forbiddenPhraseCount: number
+            }
+            voice: {
+              hasProviderId: boolean
+              hasVoice: boolean
+              hasModel: boolean
+              hasInstructions: boolean
+              ignoredApiBaseUrl: boolean
+              ignoredApiKey: boolean
+              ignoredUnsupportedProviderId: boolean
+            }
+            tools: {
+              allowlistCount: number
+              blocklistCount: number
+            }
+            petModel: {
+              provided: boolean
+            }
+          }
+          checks: Array<{
+            id: string
+            pass: boolean
+            detail: string
+          }>
+        }
         lorebookEntries: Array<{
           id: string
           label: string
@@ -649,6 +744,12 @@ declare global {
         token: string
         authHeader: string
         maxBodyBytes: number
+        lastEventAt?: string | null
+        lastEventSource?: string | null
+        lastEventId?: string | null
+        lastSkipReason?: string | null
+        lastSkipAt?: string | null
+        lastErrorAt?: string | null
       }>
       setNotificationChannels: (channels: import('./types').NotificationChannel[]) => Promise<void>
       startNotificationBridge: () => Promise<void>

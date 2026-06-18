@@ -10,6 +10,9 @@
  */
 import assert from 'node:assert/strict'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
+import { mkdtemp, rm } from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 import { after, before, beforeEach, describe, test } from 'node:test'
 
 const BOT_TOKEN = 'test-token-123'
@@ -21,6 +24,8 @@ type RecordedRequest = { method: string; url: string; contentType: string; body:
 
 let server: Server
 let baseUrl = ''
+let stateDir = ''
+let freshImportCounter = 0
 // Offset-based store with REAL Telegram redelivery semantics: getUpdates
 // returns every update with update_id >= offset, repeatedly, until the
 // client confirms by polling with a higher offset. (A destructive queue
@@ -46,6 +51,8 @@ function json(res: ServerResponse, payload: unknown) {
 }
 
 before(async () => {
+  stateDir = await mkdtemp(path.join(os.tmpdir(), 'nexus-telegram-gateway-'))
+  process.env.NEXUS_TELEGRAM_GATEWAY_STATE_FILE = path.join(stateDir, 'telegram-offsets.json')
   server = createServer((req, res) => {
     void (async () => {
       const url = req.url ?? ''
@@ -100,6 +107,8 @@ after(async () => {
   const gateway = await import('../electron/services/telegramGateway.js')
   await gateway.disconnect()
   await new Promise<void>((resolve) => server.close(() => resolve()))
+  delete process.env.NEXUS_TELEGRAM_GATEWAY_STATE_FILE
+  await rm(stateDir, { recursive: true, force: true })
 })
 
 beforeEach(() => {
@@ -114,6 +123,11 @@ async function loadGateway() {
   // Env var is set in before(); the module reads it at first import and the
   // module registry caches it, so every test sees the mock server.
   return import('../electron/services/telegramGateway.js')
+}
+
+async function loadFreshGateway() {
+  freshImportCounter += 1
+  return import(`../electron/services/telegramGateway.js?fresh=${freshImportCounter}`)
 }
 
 function waitFor(check: () => boolean, timeoutMs = 10_000): Promise<void> {
@@ -191,6 +205,10 @@ describe('telegramGateway against a mock Bot API', () => {
     assert.equal(sendMessageCalls[0].chat_id, 42)
     assert.equal(sendMessageCalls[0].text, 'reply text')
     assert.deepEqual(sendMessageCalls[0].reply_parameters, { message_id: 1234 })
+    assert.equal(gateway.getStatus().lastOutboundTarget, '42')
+    assert.equal(gateway.getStatus().lastOutboundKind, 'text')
+    assert.equal(gateway.getStatus().lastOutboundError, null)
+    assert.equal(Number.isFinite(Date.parse(gateway.getStatus().lastOutboundAt ?? '')), true)
 
     await gateway.disconnect()
   })
@@ -208,6 +226,9 @@ describe('telegramGateway against a mock Bot API', () => {
     assert.match(raw, /\b42\b/)
     assert.match(raw, /filename="voice-reply\.mp3"/)
     assert.match(raw, /fake-mp3/)
+    assert.equal(gateway.getStatus().lastOutboundTarget, '42')
+    assert.equal(gateway.getStatus().lastOutboundKind, 'voice')
+    assert.equal(gateway.getStatus().lastOutboundError, null)
 
     // Telegram only renders mp3/ogg/m4a as voice bubbles — wav must throw
     // before any network call.
@@ -216,6 +237,9 @@ describe('telegramGateway against a mock Bot API', () => {
       /do not support audio\/wav/,
     )
     assert.equal(sendVoiceCalls.length, 1)
+    assert.equal(gateway.getStatus().lastOutboundTarget, '42')
+    assert.equal(gateway.getStatus().lastOutboundKind, 'voice')
+    assert.match(gateway.getStatus().lastOutboundError ?? '', /do not support audio\/wav/)
 
     await gateway.disconnect()
   })
@@ -327,5 +351,34 @@ describe('telegramGateway pairing flow', () => {
     await gateway.disconnect()
     gateway.onMessage(null)
     gateway.onPairingRequest(null)
+  })
+})
+
+describe('telegramGateway persisted offset', () => {
+  test('a fresh gateway module resumes from the persisted update offset', async () => {
+    const gateway = await loadGateway()
+    const firstModuleMessages: unknown[] = []
+    gateway.onMessage((msg: unknown) => firstModuleMessages.push(msg))
+
+    pendingUpdates.push(makeUpdate(700))
+    await gateway.connect(BOT_TOKEN, [42])
+    await waitFor(() => firstModuleMessages.length >= 1)
+    assert.equal(gateway.getStatus().updateOffset, 701)
+    await gateway.disconnect()
+    gateway.onMessage(null)
+
+    const freshGateway = await loadFreshGateway()
+    const replayedMessages: unknown[] = []
+    freshGateway.onMessage((msg: unknown) => replayedMessages.push(msg))
+
+    await freshGateway.connect(BOT_TOKEN, [42])
+    await waitFor(() => receivedOffsets.includes(701))
+    await new Promise((resolve) => setTimeout(resolve, 80))
+
+    assert.equal(freshGateway.getStatus().updateOffset, 701)
+    assert.equal(replayedMessages.length, 0)
+
+    await freshGateway.disconnect()
+    freshGateway.onMessage(null)
   })
 })

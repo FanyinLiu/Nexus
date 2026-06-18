@@ -13,6 +13,9 @@ import { segmentTextForSpeech, StreamingTtsChunker } from '../src/features/voice
 import { normalizeVoiceDedupText, prepareTextForTts } from '../src/features/voice/text.ts'
 import {
   getMaxRequestCharsForProvider,
+  getStreamingTtsChunkerOptionsForProvider,
+  resolveTtsLatencyPolicy,
+  shouldStreamTtsDeltasForProvider,
   splitLongTextAtSentences,
 } from '../src/hooks/voice/speechTextSegmentation.ts'
 
@@ -374,6 +377,52 @@ test('StreamingTtsChunker first chunk splits at first comma even when delivered 
   assert.deepEqual(chunker.pushText('\u3002'), ['\u4e3b\u4eba\u3002'])
 })
 
+test('low-latency TTS providers stream short deltas while cloud providers keep round-level flushing', () => {
+  assert.equal(shouldStreamTtsDeltasForProvider('edge-tts'), true)
+  assert.equal(shouldStreamTtsDeltasForProvider('local-tts'), true)
+  assert.equal(shouldStreamTtsDeltasForProvider('voxtral-local'), true)
+  assert.equal(shouldStreamTtsDeltasForProvider('kyutai-local'), true)
+  assert.equal(shouldStreamTtsDeltasForProvider('minimax-tts'), false)
+  assert.equal(shouldStreamTtsDeltasForProvider('volcengine-tts'), false)
+})
+
+test('provider chunker options let low-latency TTS emit a first comma immediately', () => {
+  const chunker = new StreamingTtsChunker(getStreamingTtsChunkerOptionsForProvider('edge-tts'))
+
+  assert.deepEqual(chunker.pushText('\u597d'), [])
+  assert.deepEqual(chunker.pushText('\u7684'), [])
+  assert.deepEqual(chunker.pushText('\uff0c'), ['\u597d\u7684\uff0c'])
+})
+
+test('resolveTtsLatencyPolicy reports the actual low-latency provider strategy', () => {
+  const localPolicy = resolveTtsLatencyPolicy('local-tts')
+  assert.equal(localPolicy.localEngine, true)
+  assert.equal(localPolicy.deltaStreaming, true)
+  assert.equal(localPolicy.requestMode, 'delta-stream')
+  assert.equal(localPolicy.firstChunkMaxLength, 12)
+  assert.equal(localPolicy.maxRequestChars, 3000)
+  assert.equal(localPolicy.firstAudioBudgetMs, 700)
+  assert.equal(localPolicy.firstAudioTimeoutMs, 3000)
+
+  const targetPolicy = resolveTtsLatencyPolicy('voxtral-local')
+  assert.equal(targetPolicy.localEngine, true)
+  assert.equal(targetPolicy.deltaStreaming, true)
+  assert.equal(targetPolicy.requestMode, 'delta-stream')
+  assert.equal(targetPolicy.firstChunkMaxLength, 12)
+  assert.equal(targetPolicy.maxRequestChars, 240)
+  assert.equal(targetPolicy.firstAudioBudgetMs, 700)
+  assert.equal(targetPolicy.firstAudioTimeoutMs, 3000)
+
+  const omniPolicy = resolveTtsLatencyPolicy('omnivoice-tts')
+  assert.equal(omniPolicy.localEngine, true)
+  assert.equal(omniPolicy.deltaStreaming, false)
+  assert.equal(omniPolicy.requestMode, 'round-buffer')
+  assert.equal(omniPolicy.firstChunkMaxLength, null)
+  assert.equal(omniPolicy.maxRequestChars, 80)
+  assert.equal(omniPolicy.firstAudioBudgetMs, 1400)
+  assert.equal(omniPolicy.firstAudioTimeoutMs, 6000)
+})
+
 test('getMaxRequestCharsForProvider caps OmniVoice at 80 chars so the diffusion model does not silently truncate', () => {
   // k2-fsa/OmniVoice has a fixed audio-context window (~30s of audio per
   // generation). Long text inputs don't error — the Python wrapper returns
@@ -385,6 +434,11 @@ test('getMaxRequestCharsForProvider caps OmniVoice at 80 chars so the diffusion 
 
 test('getMaxRequestCharsForProvider caps Volcengine at 300 chars so the 1024-byte text limit is never hit', () => {
   assert.equal(getMaxRequestCharsForProvider('volcengine-tts'), 300)
+})
+
+test('getMaxRequestCharsForProvider caps target local engines for low-latency turns', () => {
+  assert.equal(getMaxRequestCharsForProvider('voxtral-local'), 240)
+  assert.equal(getMaxRequestCharsForProvider('kyutai-local'), 240)
 })
 
 test('getMaxRequestCharsForProvider defaults to 3000 chars for unconstrained providers', () => {

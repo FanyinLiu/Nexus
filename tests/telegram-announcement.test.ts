@@ -8,10 +8,14 @@ import {
   type TelegramAnnouncementMessage,
 } from '../src/app/controllers/telegramAnnouncement.ts'
 import {
+  buildMessagingDedupeKey,
   buildMessagingAnnouncementContent,
   getDiscordAnnouncementSettings,
 } from '../src/app/controllers/messagingAnnouncement.ts'
-import { buildLocalMessagingAnnouncementContent } from '../src/app/controllers/localMessagingAnnouncement.ts'
+import {
+  buildLocalMessagingAnnouncementContent,
+  shouldSuppressLocalNativeBridgeEcho,
+} from '../src/app/controllers/localMessagingAnnouncement.ts'
 import {
   routeTelegramMessage,
   type TelegramRouteDeps,
@@ -55,7 +59,15 @@ test('telegram announcement omits message text unless preview is enabled', () =>
   )
 
   assert.ok(result)
-  assert.equal(result.dedupeKey, 'message:telegram:42:1001')
+  assert.equal(result.dedupeKey, buildMessagingDedupeKey({
+    sourceId: 'telegram',
+    sourceName: 'Telegram',
+    targetId: '42',
+    messageId: '1001',
+    sender: 'Klein',
+    fallbackTitle: 'Product chat',
+    text: message.text,
+  }))
   assert.equal(result.speechContent, 'chat.bridge.messaging_announcement_speech|Klein|')
   assert.equal(result.speechContent.includes(message.text), false)
 })
@@ -109,7 +121,15 @@ test('discord announcement uses the same privacy defaults and unique message key
   )
 
   assert.ok(result)
-  assert.equal(result.dedupeKey, 'message:discord:channel-1:msg-1')
+  assert.equal(result.dedupeKey, buildMessagingDedupeKey({
+    sourceId: 'discord',
+    sourceName: 'Discord',
+    targetId: 'channel-1',
+    messageId: 'msg-1',
+    sender: 'Ada',
+    fallbackTitle: 'general',
+    text: 'private deployment note',
+  }))
   assert.equal(result.speechContent, 'chat.bridge.messaging_announcement_speech|Ada|')
   assert.equal(result.speechContent.includes('private deployment note'), false)
 })
@@ -192,6 +212,72 @@ test('local webhook messages use source, sender, preview, and provided message i
   assert.equal(result.speechContent, 'chat.bridge.messaging_announcement_speech_preview|企业微信|李四|麻烦看下发布清单 谢谢')
 })
 
+test('native and macOS Telegram announcements share a cross-pipeline dedupe key', () => {
+  const nativeKey = buildMessagingDedupeKey({
+    sourceId: 'telegram',
+    sourceName: 'Telegram',
+    targetId: '42',
+    messageId: '1001',
+    sender: 'Klein',
+    fallbackTitle: 'Product chat',
+    text: 'please check the release gate before shipping',
+  })
+  const macosKey = buildMessagingDedupeKey({
+    sourceId: 'org.telegram.desktop',
+    sourceName: 'Telegram',
+    targetId: 'org.telegram.desktop:Product chat',
+    messageId: 'org.telegram.desktop:row-987',
+    sender: 'Klein',
+    fallbackTitle: 'Product chat',
+    text: 'please check the release gate before shipping',
+  })
+
+  assert.equal(nativeKey, macosKey)
+  assert.match(nativeKey, /^message-xpipe:telegram:/)
+})
+
+test('local native bridge echo suppression only covers enabled native bridge sources', () => {
+  const telegramMessage = {
+    id: 'local-telegram',
+    channelId: 'webhook',
+    channelName: 'Telegram',
+    kind: 'message' as const,
+    sourceId: 'org.telegram.desktop',
+    sourceName: 'Telegram',
+    conversationId: 'org.telegram.desktop:Product chat',
+    messageId: 'org.telegram.desktop:row-987',
+    sender: 'Klein',
+    title: 'Product chat',
+    body: 'please check the release gate before shipping',
+    receivedAt: new Date(0).toISOString(),
+    read: false,
+  }
+
+  assert.equal(shouldSuppressLocalNativeBridgeEcho(telegramMessage, {
+    discordBotToken: '',
+    discordIntegrationEnabled: false,
+    telegramBotToken: 'telegram-token',
+    telegramIntegrationEnabled: true,
+  }), true)
+  assert.equal(shouldSuppressLocalNativeBridgeEcho(telegramMessage, {
+    discordBotToken: '',
+    discordIntegrationEnabled: false,
+    telegramBotToken: '',
+    telegramIntegrationEnabled: true,
+  }), false)
+  assert.equal(shouldSuppressLocalNativeBridgeEcho({
+    ...telegramMessage,
+    id: 'local-wechat',
+    sourceId: 'wechat',
+    sourceName: '微信',
+  }, {
+    discordBotToken: '',
+    discordIntegrationEnabled: true,
+    telegramBotToken: 'telegram-token',
+    telegramIntegrationEnabled: true,
+  }), false)
+})
+
 test('telegram media announcement stays generic and never leaks content even with preview on', () => {
   const result = buildTelegramAnnouncementContent(
     { ...message, text: '', media: 'photo' },
@@ -203,7 +289,7 @@ test('telegram media announcement stays generic and never leaks content even wit
   )
 
   assert.ok(result)
-  assert.equal(result.dedupeKey, 'message:telegram:42:1001')
+  assert.match(result.dedupeKey, /^message-xpipe:telegram:/)
   assert.equal(result.speechContent, 'chat.bridge.messaging_announcement_speech_media|Klein|')
   assert.equal(result.chatContent.startsWith('chat.bridge.messaging_announcement_chat_media'), true)
 })

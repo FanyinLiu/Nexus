@@ -7,11 +7,13 @@ import {
   resolveArc,
   type OpenArcRecord,
 } from '../../features/arc/openArcStore'
+import type { ProactiveCareSourceRef } from '../../lib/storage/proactiveCare.ts'
 import type { UiLanguage } from '../../types'
 
 interface OpenArcsSectionProps {
   active: boolean
   uiLanguage: UiLanguage
+  sourceTarget?: ProactiveCareSourceRef | null
 }
 
 const COPY = {
@@ -140,6 +142,7 @@ function daysBetween(iso: string, now: Date): number {
 
 export const OpenArcsSection = memo(function OpenArcsSection({
   active,
+  sourceTarget,
   uiLanguage,
 }: OpenArcsSectionProps) {
   const [arcs, setArcs] = useState<OpenArcRecord[]>(() => loadOpenArcs())
@@ -196,6 +199,7 @@ export const OpenArcsSection = memo(function OpenArcsSection({
 
   const open = arcs.filter((a) => a.status === 'open')
   const closed = arcs.filter((a) => a.status !== 'open')
+  const targetId = sourceTarget?.kind === 'arc' ? sourceTarget.id : null
   const now = new Date()
 
   return (
@@ -232,7 +236,14 @@ export const OpenArcsSection = memo(function OpenArcsSection({
             const days = daysBetween(a.startedAt, now)
             const isClosing = closingNoteFor === a.id
             return (
-              <li key={a.id} className="settings-errands__item settings-errands__item--queued">
+              <li
+                key={a.id}
+                className={[
+                  'settings-errands__item',
+                  'settings-errands__item--queued',
+                  targetId === a.id ? 'is-source-target' : '',
+                ].filter(Boolean).join(' ')}
+              >
                 <div className="settings-errands__item-header">
                   <span className="settings-errands__status">{pick(COPY.statusOpen, uiLanguage)}</span>
                   <span className="settings-errands__time">
@@ -283,7 +294,14 @@ export const OpenArcsSection = memo(function OpenArcsSection({
             )
           })}
           {closed.map((a) => (
-            <li key={a.id} className="settings-errands__item settings-errands__item--delivered">
+            <li
+              key={a.id}
+              className={[
+                'settings-errands__item',
+                'settings-errands__item--delivered',
+                targetId === a.id ? 'is-source-target' : '',
+              ].filter(Boolean).join(' ')}
+            >
               <div className="settings-errands__item-header">
                 <span className="settings-errands__status">
                   {a.status === 'resolved'

@@ -3,6 +3,7 @@ import {
   decideBracket,
 } from '../features/proactive/bracketScheduler.ts'
 import { buildBracketNotification } from '../features/proactive/bracketCopy.ts'
+import { formatBracketCareVisibleReason } from '../features/proactive/proactiveCareReasons.ts'
 import {
   findUndeliveredErrands,
   markDelivered,
@@ -11,12 +12,18 @@ import { buildErrandDeliveryBody } from '../features/agent/errandDelivery.ts'
 import {
   PROACTIVE_BRACKET_STATE_STORAGE_KEY,
   loadBracketState,
+  recordProactiveCareEvent,
   recordBracketFire,
   writeJson,
 } from '../lib/storage'
 import type { AppSettings } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60_000
+
+function formatErrorDetail(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err)
+  return message.slice(0, 200) || 'unknown error'
+}
 
 type UseBracketSchedulerOptions = {
   settings: AppSettings
@@ -51,7 +58,22 @@ export function useBracketScheduler({
     const tick = async () => {
       const { settings: s, panelOpen: open } = liveRef.current
       if (!s.proactiveBracketEnabled) return
-      if (open) return
+      if (open) {
+        recordProactiveCareEvent({
+          source: 'daily_bracket',
+          outcome: 'skipped',
+          reason: 'panel_open',
+          detail: 'settings panel is open',
+          userVisibleReason: formatBracketCareVisibleReason({
+            deliveredErrand: false,
+            outcome: 'skipped',
+            reason: 'panel_open',
+            uiLanguage: s.uiLanguage,
+          }),
+          sourceRef: { kind: 'scheduler', id: 'daily_bracket' },
+        })
+        return
+      }
 
       const state = loadBracketState()
       const decision = decideBracket({
@@ -62,7 +84,22 @@ export function useBracketScheduler({
         relationshipType: s.companionRelationshipType,
       })
 
-      if (!decision.shouldFire) return
+      if (!decision.shouldFire) {
+        recordProactiveCareEvent({
+          source: 'daily_bracket',
+          outcome: 'skipped',
+          reason: decision.reason,
+          detail: `relationship=${s.companionRelationshipType}`,
+          userVisibleReason: formatBracketCareVisibleReason({
+            deliveredErrand: false,
+            outcome: 'skipped',
+            reason: decision.reason,
+            uiLanguage: s.uiLanguage,
+          }),
+          sourceRef: { kind: 'scheduler', id: 'daily_bracket' },
+        })
+        return
+      }
 
       // Morning bracket gets the "here's what I researched overnight"
       // delivery if there's an undelivered completed errand. Evening
@@ -104,7 +141,39 @@ export function useBracketScheduler({
         if (deliveredErrandId) {
           markDelivered(deliveredErrandId)
         }
+        recordProactiveCareEvent({
+          source: 'daily_bracket',
+          outcome: 'fired',
+          reason: decision.reason,
+          detail: deliveredErrandId
+            ? `bracket=${decision.bracket}; errand=${deliveredErrandId}`
+            : `bracket=${decision.bracket}`,
+          userVisibleReason: formatBracketCareVisibleReason({
+            bracket: decision.bracket,
+            deliveredErrand: Boolean(deliveredErrandId),
+            outcome: 'fired',
+            reason: decision.reason,
+            uiLanguage: s.uiLanguage,
+          }),
+          sourceRef: deliveredErrandId
+            ? { kind: 'errand', id: deliveredErrandId, label: decision.bracket }
+            : { kind: 'bracket', id: decision.bracket },
+        })
       } catch (err) {
+        recordProactiveCareEvent({
+          source: 'daily_bracket',
+          outcome: 'error',
+          reason: 'notification_failed',
+          detail: formatErrorDetail(err),
+          userVisibleReason: formatBracketCareVisibleReason({
+            bracket: decision.bracket,
+            deliveredErrand: Boolean(deliveredErrandId),
+            outcome: 'error',
+            reason: 'notification_failed',
+            uiLanguage: s.uiLanguage,
+          }),
+          sourceRef: { kind: 'bracket', id: decision.bracket },
+        })
         console.warn('[bracket] fire failed:', err)
       }
     }

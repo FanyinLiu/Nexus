@@ -108,6 +108,9 @@ function normalizeDailyStore(value: unknown) {
           role,
           content,
           source: entry.source === 'voice' ? 'voice' : 'chat',
+          ...(typeof entry.sourceRef === 'string' && entry.sourceRef.trim()
+            ? { sourceRef: entry.sourceRef.trim() }
+            : {}),
           createdAt: normalizedCreatedAt,
         }
       })

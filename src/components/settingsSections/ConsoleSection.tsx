@@ -5,10 +5,15 @@ import { getArchiveStats } from '../../features/memory/coldArchive'
 import { loadNarrative } from '../../features/memory/narrativeMemory'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import { getCoreRuntime } from '../../lib/coreRuntime'
+import type { ProactiveCareSourceRef } from '../../lib/storage/proactiveCare.ts'
 import type { PetModelDefinition } from '../../features/pet'
 import type {
   AppSettings,
+  ChatMessage,
   DebugConsoleEvent,
+  FocusState,
+  PlatformProfile,
+  ServiceConnectionResponse,
   ReminderTask,
   UiLanguage,
   VoicePipelineState,
@@ -23,14 +28,21 @@ import {
   formatReminderCenterNextLabel,
   formatVoicePipelineStepLabel,
   formatVoiceStateLabel,
+  type SettingsSectionOpenOptions,
+  type SettingsSectionId,
 } from '../settingsDrawerSupport'
 import { AboutPanel } from './AboutPanel'
+import { CompanionReadinessPanel } from './CompanionReadinessPanel'
+import { ContextDiagnosticsPanel } from './ContextDiagnosticsPanel'
 import { CostHistoryPanel } from './CostHistoryPanel'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
+import { ProactiveCarePanel } from './ProactiveCarePanel'
+import { StabilizationEvidencePanel } from './StabilizationEvidencePanel'
 import { StartupStatusPanel } from './StartupStatusPanel'
 import { MoodMapPanel } from './MoodMapPanel'
 import { StateTimelinePanel } from './StateTimelinePanel'
 import { UpdaterPanel } from './UpdaterPanel'
+import { VoiceDiagnosticsPanel } from './VoiceDiagnosticsPanel'
 import { WeeklyRecapPanel } from './WeeklyRecapPanel'
 import { AgentTracePanel } from '../AgentTracePanel'
 import { PlanPanel } from '../PlanPanel'
@@ -45,6 +57,7 @@ type EmotionSnapshot = {
 type ConsoleSectionProps = {
   active: boolean
   continuousVoiceActive: boolean
+  chatMessageSummaries: Array<Pick<ChatMessage, 'createdAt' | 'role' | 'tone'>>
   debugConsoleEvents: DebugConsoleEvent[]
   liveTranscript: string
   onClearDebugConsole: () => void
@@ -52,31 +65,42 @@ type ConsoleSectionProps = {
   speechLevel: number
   uiLanguage: UiLanguage
   draft: AppSettings
+  focusState?: FocusState
   petModel: PetModelDefinition | undefined
+  platformProfile: PlatformProfile
   voicePipeline: VoicePipelineState
   voiceState: VoiceState
   voiceTrace: VoiceTraceEntry[]
+  textConnectionResult?: ServiceConnectionResponse | null
   emotionState?: EmotionSnapshot
   memoryCount?: number
   autonomyPhase?: string
+  onOpenProactiveCareSourceRef?: (sourceRef: ProactiveCareSourceRef) => void
+  onOpenSettingsSection?: (sectionId: SettingsSectionId, options?: SettingsSectionOpenOptions) => void
 }
 
 export const ConsoleSection = memo(function ConsoleSection({
   active,
   continuousVoiceActive,
+  chatMessageSummaries,
   debugConsoleEvents,
   onClearDebugConsole,
   reminderTasks,
   speechLevel,
   uiLanguage,
   draft,
+  focusState,
   petModel,
+  platformProfile,
   voicePipeline,
   voiceState,
   voiceTrace,
+  textConnectionResult,
   emotionState,
   memoryCount,
   autonomyPhase,
+  onOpenProactiveCareSourceRef,
+  onOpenSettingsSection,
 }: ConsoleSectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const enabledReminderCount = reminderTasks.filter((task) => task.enabled).length
@@ -183,6 +207,20 @@ export const ConsoleSection = memo(function ConsoleSection({
         </article>
       </div>
 
+      <CompanionReadinessPanel
+        active={active}
+        draft={draft}
+        focusState={focusState}
+        petModel={petModel}
+        platformProfile={platformProfile}
+        uiLanguage={uiLanguage}
+        voicePipeline={voicePipeline}
+        voiceState={voiceState}
+        textConnectionResult={textConnectionResult}
+        chatMessageSummaries={chatMessageSummaries}
+        onOpenSettingsSection={onOpenSettingsSection}
+      />
+
       <UpdaterPanel uiLanguage={uiLanguage} />
 
       {/* ── Collapsible detail sections ──────────────────────────────────── */}
@@ -205,6 +243,39 @@ export const ConsoleSection = memo(function ConsoleSection({
               <p className="settings-section__note">{ti('settings.console.advanced_diagnostics_note')}</p>
             </div>
           </summary>
+          <ContextDiagnosticsPanel
+            active={active}
+            draft={draft}
+            platformProfile={platformProfile}
+            uiLanguage={uiLanguage}
+          />
+          <StabilizationEvidencePanel
+            active={active}
+            draft={draft}
+            petModel={petModel}
+            platformProfile={platformProfile}
+            speechLevel={speechLevel}
+            uiLanguage={uiLanguage}
+            voicePipeline={voicePipeline}
+            voiceState={voiceState}
+            voiceTrace={voiceTrace}
+          />
+          <VoiceDiagnosticsPanel
+            active={active}
+            speechOutputModel={draft.speechOutputModel}
+            speechOutputProviderId={draft.speechOutputProviderId}
+            speechOutputVoice={draft.speechOutputVoice}
+            speechLevel={speechLevel}
+            uiLanguage={uiLanguage}
+            voicePipeline={voicePipeline}
+            voiceState={voiceState}
+            voiceTrace={voiceTrace}
+          />
+          <ProactiveCarePanel
+            active={active}
+            onOpenSourceRef={onOpenProactiveCareSourceRef}
+            uiLanguage={uiLanguage}
+          />
           <DiagnosticsPanel uiLanguage={uiLanguage} />
           <StartupStatusPanel draft={draft} petModel={petModel} uiLanguage={uiLanguage} />
           <MoodMapPanel uiLanguage={uiLanguage} active={active} />

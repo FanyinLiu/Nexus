@@ -7,6 +7,7 @@ import type {
   SpritePetAnimationState,
 } from '../../features/pet'
 import {
+  applyPetActionMapOverride,
   buildCodexPetCreatorPrompt,
 } from '../../features/pet'
 import {
@@ -15,6 +16,7 @@ import {
   removeCharacterProfile,
   syncCurrentToProfile,
   updateCharacterProfile,
+  updateCharacterProfilePreset,
 } from '../../features/character/profiles'
 import {
   pickTranslatedUiText,
@@ -30,11 +32,16 @@ import { PetModelPicker } from './chat/PetModelPicker'
 import { PetMotionModeToggle } from './chat/PetMotionModeToggle'
 import { CodexPetGalleryPanel } from './chat/CodexPetGalleryPanel'
 import { SpriteCreatorKitPanel } from './chat/SpriteCreatorKitPanel'
+import { Live2DActionMapPanel } from './chat/Live2DActionMapPanel'
 
 type StatusMessage = {
   ok: boolean
   message: string
 } | null
+
+type CharacterCardImportReport = NonNullable<
+  Awaited<ReturnType<NonNullable<typeof window.desktopPet>['personaImportCard']>>
+>['importReport']
 
 type ChatSectionProps = {
   active: boolean
@@ -115,7 +122,10 @@ export const ChatSection = memo(function ChatSection({
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1], params?: Parameters<typeof pickTranslatedUiText>[2]) =>
     pickTranslatedUiText(draft.uiLanguage, key, params)
 
-  const petModel = petModelPresets.find((preset) => preset.id === draft.petModelId) ?? petModelPresets[0]
+  const basePetModel = petModelPresets.find((preset) => preset.id === draft.petModelId) ?? petModelPresets[0]
+  const petModel = basePetModel
+    ? applyPetActionMapOverride(basePetModel, draft.petActionMapOverrides[basePetModel.id])
+    : basePetModel
   const translatePetText = (value: string | undefined) => pickTranslatedUiTextOrFallback(draft.uiLanguage, value)
   const spritePetLabel = translatePetText(petModel?.label) || petModel?.label || ti('settings.chat.sprite_pet_fallback_label')
 
@@ -158,8 +168,17 @@ export const ChatSection = memo(function ChatSection({
     }))
   }
 
+  function handleUpdateProfilePreset(
+    profileId: string,
+    patch: Parameters<typeof updateCharacterProfilePreset>[2],
+  ) {
+    setDraft((prev) => updateCharacterProfilePreset(prev, profileId, patch))
+  }
+
   const [importingCard, setImportingCard] = useState(false)
   const [cardStatus, setCardStatus] = useState<StatusMessage>(null)
+  const [lastCardImportReport, setLastCardImportReport] = useState<CharacterCardImportReport | null>(null)
+  const [cardReportCopyState, setCardReportCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
   const [codexPetInput, setCodexPetInput] = useState('')
   const [codexPetCatalogQuery, setCodexPetCatalogQuery] = useState('')
   const [creatorKitName, setCreatorKitName] = useState('')
@@ -201,6 +220,8 @@ export const ChatSection = memo(function ChatSection({
     if (!window.desktopPet?.personaImportCard) return
     setImportingCard(true)
     setCardStatus(null)
+    setLastCardImportReport(null)
+    setCardReportCopyState('idle')
     try {
       const result = await window.desktopPet.personaImportCard()
       if (!result) { setImportingCard(false); return }
@@ -210,13 +231,24 @@ export const ChatSection = memo(function ChatSection({
         label: result.profile.label,
         companionName: result.profile.companionName,
         systemPrompt: result.profile.systemPrompt,
-        petModelId: result.profile.petModelId || draft.petModelId,
+        petModelId: result.profile.petModelId && petModelPresets.some((preset) => preset.id === result.profile.petModelId)
+          ? result.profile.petModelId
+          : draft.petModelId,
+        speechOutputProviderId: result.profile.speechOutputProviderId,
+        speechOutputVoice: result.profile.speechOutputVoice,
+        speechOutputModel: result.profile.speechOutputModel,
+        speechOutputInstructions: result.profile.speechOutputInstructions,
       }
 
       setDraft((prev) => ({
         ...prev,
         companionName: profile.companionName,
         systemPrompt: profile.systemPrompt,
+        petModelId: profile.petModelId,
+        ...(profile.speechOutputProviderId ? { speechOutputProviderId: profile.speechOutputProviderId } : {}),
+        ...(profile.speechOutputVoice ? { speechOutputVoice: profile.speechOutputVoice } : {}),
+        ...(profile.speechOutputModel ? { speechOutputModel: profile.speechOutputModel } : {}),
+        ...(profile.speechOutputInstructions ? { speechOutputInstructions: profile.speechOutputInstructions } : {}),
         characterProfiles: [...prev.characterProfiles, profile],
         activeCharacterProfileId: profile.id,
       }))
@@ -231,6 +263,7 @@ export const ChatSection = memo(function ChatSection({
       if (result.greeting) {
         savePendingGreeting(result.greeting)
       }
+      setLastCardImportReport(result.importReport ?? null)
 
       setCardStatus({
         ok: true,
@@ -249,6 +282,24 @@ export const ChatSection = memo(function ChatSection({
     } finally {
       setImportingCard(false)
     }
+  }
+
+  async function handleCopyCardImportReport() {
+    if (!lastCardImportReport || !navigator.clipboard?.writeText) {
+      setCardReportCopyState('failed')
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(lastCardImportReport, null, 2))
+      setCardReportCopyState('copied')
+    } catch {
+      setCardReportCopyState('failed')
+    }
+
+    window.setTimeout(() => {
+      setCardReportCopyState('idle')
+    }, 1800)
   }
 
   function selectRelationshipType(value: CompanionRelationshipType) {
@@ -272,6 +323,7 @@ export const ChatSection = memo(function ChatSection({
         onSelectProfile={handleSwitchProfile}
         onDeleteProfile={handleDeleteProfile}
         onUpdateProfileLabel={handleUpdateProfileLabel}
+        onUpdateProfilePreset={handleUpdateProfilePreset}
       />
 
       <div className="settings-control-grid settings-chat-identity-grid">
@@ -347,6 +399,33 @@ export const ChatSection = memo(function ChatSection({
       />
 
       <PetMotionModeToggle isSpriteAvatar={Boolean(petModel?.spriteAtlas)} ti={ti} />
+      <Live2DActionMapPanel
+        petModel={petModel}
+        ti={ti}
+        translatePetText={translatePetText}
+        hasSavedActionMapOverride={Boolean(petModel && draft.petActionMapOverrides[petModel.id])}
+        onApplyActionMapDraft={(patch) => {
+          if (!petModel) return
+          setDraft((prev) => ({
+            ...prev,
+            petActionMapOverrides: {
+              ...prev.petActionMapOverrides,
+              [petModel.id]: patch,
+            },
+          }))
+        }}
+        onClearActionMapOverride={() => {
+          if (!petModel) return
+          setDraft((prev) => {
+            const nextOverrides = { ...prev.petActionMapOverrides }
+            delete nextOverrides[petModel.id]
+            return {
+              ...prev,
+              petActionMapOverrides: nextOverrides,
+            }
+          })
+        }}
+      />
 
       <details className="settings-mini-group settings-chat-advanced-card">
         <summary className="settings-mini-group__head">
@@ -425,6 +504,20 @@ export const ChatSection = memo(function ChatSection({
             ? ti('settings.chat.importing_card')
             : ti('settings.chat.import_card')}
         </button>
+
+        {lastCardImportReport ? (
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={() => void handleCopyCardImportReport()}
+          >
+            {cardReportCopyState === 'copied'
+              ? ti('settings.chat.copy_card_import_report_copied')
+              : cardReportCopyState === 'failed'
+                ? ti('settings.chat.copy_card_import_report_failed')
+                : ti('settings.chat.copy_card_import_report')}
+          </button>
+        ) : null}
 
         <button
           type="button"
@@ -587,6 +680,14 @@ export const ChatSection = memo(function ChatSection({
           aria-atomic="true"
         >
           {cardStatus.message}
+          {lastCardImportReport ? (
+            <span className="settings-test-result__meta">
+              {ti('settings.chat.import_card_report_summary', {
+                passed: lastCardImportReport.checks.filter((check) => check.pass).length,
+                total: lastCardImportReport.checks.length,
+              })}
+            </span>
+          ) : null}
         </div>
       ) : null}
     </section>

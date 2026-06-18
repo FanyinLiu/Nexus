@@ -245,14 +245,23 @@ export async function postMessageWebhookPayload(payload, {
     throw new Error('fetch is not available in this Node runtime')
   }
 
-  const response = await fetchImpl(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${normalizeWebhookToken(token)}`,
-    },
-    body: JSON.stringify(payload),
-  })
+  let response
+  try {
+    response = await fetchImpl(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${normalizeWebhookToken(token)}`,
+      },
+      body: JSON.stringify(payload),
+    })
+  } catch (error) {
+    const detail = error?.cause?.code ?? error?.code ?? error?.message ?? String(error)
+    throw new Error(
+      `Webhook request could not reach Nexus at ${url}: ${detail}. `
+        + 'Start Nexus, enable the local notification webhook, and retry the message-awareness gate.',
+    )
+  }
   const text = await response.text()
   let parsed = null
   try {

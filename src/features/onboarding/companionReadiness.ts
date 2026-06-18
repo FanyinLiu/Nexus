@@ -2,7 +2,13 @@ import type { TranslationKey } from '../../types'
 
 export type CompanionReadinessStatus = 'ready' | 'warning' | 'blocked'
 
-export type CompanionReadinessItemId = 'identity' | 'text' | 'pet' | 'voice'
+export type CompanionReadinessItemId =
+  | 'identity'
+  | 'message_context'
+  | 'pet'
+  | 'privacy'
+  | 'text'
+  | 'voice'
 
 export type CompanionReadinessItem = {
   id: CompanionReadinessItemId
@@ -33,6 +39,11 @@ export type CompanionReadinessInput = {
   speechOutputApiBaseUrl: string
   speechOutputRequiresApiBaseUrl: boolean
   continuousVoiceModeEnabled: boolean
+  autonomyNotificationsEnabled: boolean
+  macosMessageWatcherEnabled: boolean
+  autonomyNotificationMessagePreviewEnabled: boolean
+  telegramAnnounceMessagePreview: boolean
+  discordAnnounceMessagePreview: boolean
 }
 
 const SUMMARY_KEY_BY_STATUS: Record<CompanionReadinessStatus, TranslationKey> = {
@@ -150,6 +161,52 @@ function buildVoiceItem(input: CompanionReadinessInput): CompanionReadinessItem 
   }
 }
 
+function buildMessageContextItem(input: CompanionReadinessInput): CompanionReadinessItem {
+  if (!input.autonomyNotificationsEnabled) {
+    return {
+      id: 'message_context',
+      status: 'warning',
+      messageKey: 'onboarding.readiness.message_context.warning_off',
+    }
+  }
+
+  if (!input.macosMessageWatcherEnabled) {
+    return {
+      id: 'message_context',
+      status: 'warning',
+      messageKey: 'onboarding.readiness.message_context.warning_watcher',
+    }
+  }
+
+  return {
+    id: 'message_context',
+    status: 'ready',
+    messageKey: 'onboarding.readiness.message_context.ready',
+  }
+}
+
+function buildPrivacyItem(input: CompanionReadinessInput): CompanionReadinessItem {
+  const messagePreviewEnabled = Boolean(
+    input.autonomyNotificationMessagePreviewEnabled
+    || input.telegramAnnounceMessagePreview
+    || input.discordAnnounceMessagePreview,
+  )
+
+  if (messagePreviewEnabled) {
+    return {
+      id: 'privacy',
+      status: 'warning',
+      messageKey: 'onboarding.readiness.privacy.warning_preview',
+    }
+  }
+
+  return {
+    id: 'privacy',
+    status: 'ready',
+    messageKey: 'onboarding.readiness.privacy.ready',
+  }
+}
+
 export function buildCompanionReadiness(input: CompanionReadinessInput): CompanionReadinessSummary {
   const voiceConfigured = (
     input.speechInputEnabled
@@ -161,6 +218,8 @@ export function buildCompanionReadiness(input: CompanionReadinessInput): Compani
     buildTextItem(input),
     buildPetItem(input),
     ...(voiceConfigured ? [buildVoiceItem(input)] : []),
+    buildMessageContextItem(input),
+    buildPrivacyItem(input),
   ]
   const status = getOverallStatus(items)
 

@@ -24,6 +24,14 @@ test('visible speech provider options come from the provider catalog', () => {
     getSpeechOutputProviderOptions().some((provider) => provider.id === 'minimax-tts'),
     true,
   )
+  assert.equal(
+    getSpeechOutputProviderOptions().some((provider) => provider.id === 'voxtral-local'),
+    true,
+  )
+  assert.equal(
+    getSpeechOutputProviderOptions().some((provider) => provider.id === 'kyutai-local'),
+    true,
+  )
 })
 
 test('wake word support accepts Chinese and English, and rejects symbol-only text', () => {
@@ -88,6 +96,20 @@ test('speech output settings view describes Volcengine cluster and voice labels'
   assert.equal(view.modelLabelKey, 'settings.speech_output.cluster')
   assert.equal(view.voiceLabelKey, 'settings.speech_output.voice_type')
   assert.equal(view.adjustmentSupport.pitch, true)
+})
+
+test('speech output settings view describes target local TTS engines as keyless endpoints', () => {
+  const view = resolveSpeechOutputSettingsView({
+    speechOutputProviderId: 'voxtral-local',
+  })
+
+  assert.equal(view.provider.id, 'voxtral-local')
+  assert.equal(view.provider.baseUrl, 'http://127.0.0.1:7860/v1')
+  assert.equal(view.provider.defaultModel, 'voxtral-tts')
+  assert.equal(view.hideCredentials, true)
+  assert.equal(view.showEndpoint, true)
+  assert.equal(view.showCustomVoiceInput, true)
+  assert.equal(view.modelOptions.some((option) => option.value === 'voxtral-tts'), true)
 })
 
 test('speech service connection request builders keep IPC payloads stable', () => {

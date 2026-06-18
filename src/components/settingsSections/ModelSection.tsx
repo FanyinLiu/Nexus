@@ -18,6 +18,7 @@ import {
 import { isHttpHeaderSafeCredential } from '../../core/routing/AuthProfileStore'
 import type { AppSettings, ServiceConnectionCapability } from '../../types'
 import type { UiLanguage } from '../../types'
+import type { SettingsSectionEntryReason } from '../settingsDrawerSupport'
 import anthropicLogo from '../../assets/provider-logos/anthropic.svg'
 import deepseekLogo from '../../assets/provider-logos/deepseek.svg'
 import doubaoLogo from '../../assets/provider-logos/doubao.svg'
@@ -103,6 +104,7 @@ function getModelProviderFallbackGlyph(label: string) {
 type ModelSectionProps = {
   active: boolean
   draft: AppSettings
+  entryReason?: SettingsSectionEntryReason | null
   setDraft: Dispatch<SetStateAction<AppSettings>>
   testingTarget: ServiceConnectionCapability | null
   uiLanguage: UiLanguage
@@ -114,6 +116,7 @@ type ModelSectionProps = {
 export const ModelSection = memo(function ModelSection({
   active,
   draft,
+  entryReason = null,
   setDraft,
   testingTarget,
   uiLanguage,
@@ -132,7 +135,8 @@ export const ModelSection = memo(function ModelSection({
     && !isHttpHeaderSafeCredential(draft.apiKey)
     ? ti('settings.model.extra_keys_error')
     : ''
-  const [detailsOpen, setDetailsOpen] = useState(false)
+  const openedFromM1Repair = entryReason === 'm1-first-run-repair'
+  const [detailsOpen, setDetailsOpen] = useState(openedFromM1Repair)
   // 国内 / 海外 / 本地 segmented filter over the brand grid. Defaults to the
   // current provider's region so opening settings always lands on the tab
   // that contains your selection; falls back to the UI-language heuristic.
@@ -141,6 +145,7 @@ export const ModelSection = memo(function ModelSection({
   const [extraKeysText, setExtraKeysText] = useState('')
   const [extraKeysProviderId, setExtraKeysProviderId] = useState<string | null>(null)
   const [extraKeysError, setExtraKeysError] = useState('')
+
   // Reset the textarea whenever the selected provider changes. Done during
   // render via the prev-prop pattern to avoid set-state-in-effect churn.
   if (draft.apiProviderId !== extraKeysProviderId) {
@@ -372,6 +377,13 @@ export const ModelSection = memo(function ModelSection({
                   {textConnectionTestLabel}
                 </button>
             </div>
+
+            {openedFromM1Repair ? (
+              <div className="settings-model-m1-repair" role="note">
+                <strong>{ti('settings.model.m1_repair_title')}</strong>
+                <p>{ti('settings.model.m1_repair_hint')}</p>
+              </div>
+            ) : null}
 
             <div className="settings-model-detail-fields">
               {currentBrandProviders.length > 1 ? (

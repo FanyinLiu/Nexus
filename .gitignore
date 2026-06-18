@@ -33,6 +33,7 @@ output/
 docs/ui-preview/
 release/
 release-smoke/
+artifacts/
 resources/local-speech/
 sherpa-models/*
 !sherpa-models/README.md

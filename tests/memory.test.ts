@@ -17,6 +17,7 @@ import {
   removeDailyMemoryEntry,
   updateDailyMemoryEntry,
 } from '../src/features/memory/memory.ts'
+import { parseMemorySourceRef } from '../src/features/memory/sourceRefs.ts'
 import type { ChatMessage, DailyMemoryStore, MemoryItem } from '../src/types/index.ts'
 
 // ── normalizeText ──
@@ -74,8 +75,27 @@ test('extracts memories from user messages with self-referential patterns', () =
   assert.ok(memories.length >= 1, `expected at least 1 memory, got ${memories.length}`)
   assert.ok(memories.every((m) => m.id.startsWith('memory-')))
   assert.ok(memories.every((m) => m.source === 'chat'))
+  assert.ok(memories.every((m) => m.sourceRef === 'chat:test-1'))
   assert.ok(memories.every((m) => m.enabled === true))
   assert.ok(memories.every((m) => m.kind))
+})
+
+test('long-term memories carry chat source refs that can jump back to history', () => {
+  const msg: ChatMessage = {
+    id: 'source-message-1',
+    role: 'user',
+    content: '我喜欢在晚上写代码。',
+    createdAt: '2026-04-01T00:00:00Z',
+  }
+
+  const memory = extractMemoriesFromMessage(msg)[0]
+  const parsed = parseMemorySourceRef(memory?.sourceRef)
+
+  assert.equal(memory?.sourceRef, 'chat:source-message-1')
+  assert.equal(parsed?.kind, 'chat')
+  assert.equal(parsed?.id, 'source-message-1')
+  assert.equal(parsed?.canOpenHistory, true)
+  assert.equal(parsed?.canOpenAutonomy, false)
 })
 
 test('ignores assistant messages', () => {
@@ -194,7 +214,44 @@ test('creates daily entry from user message', () => {
   assert.ok(entry)
   assert.equal(entry.role, 'user')
   assert.equal(entry.source, 'chat')
+  assert.equal(entry.sourceRef, 'chat:c1')
   assert.ok(entry.id.startsWith('daily-memory-'))
+})
+
+test('creates voice daily source refs that can jump back to chat history', () => {
+  const msg: ChatMessage = {
+    id: 'voice-turn-1', role: 'assistant', content: '收到，我会记得。', createdAt: '2026-04-02T10:00:00Z',
+  }
+  const entry = createDailyMemoryEntry(msg, 'voice')
+  const parsed = parseMemorySourceRef(entry?.sourceRef)
+
+  assert.equal(entry?.sourceRef, 'voice:voice-turn-1')
+  assert.equal(parsed?.kind, 'voice')
+  assert.equal(parsed?.id, 'voice-turn-1')
+  assert.equal(parsed?.canOpenHistory, true)
+  assert.equal(parsed?.canOpenAutonomy, false)
+})
+
+test('parseMemorySourceRef keeps non-chat source refs visible but not jumpable', () => {
+  const parsed = parseMemorySourceRef('telegram:chat-123:msg-456')
+
+  assert.equal(parsed?.kind, 'telegram')
+  assert.equal(parsed?.id, 'chat-123:msg-456')
+  assert.equal(parsed?.canOpenHistory, false)
+  assert.equal(parsed?.canOpenAutonomy, false)
+})
+
+test('parseMemorySourceRef marks proactive object refs as autonomy-jumpable', () => {
+  const scheduler = parseMemorySourceRef('scheduler:daily_bracket')
+  const errand = parseMemorySourceRef('errand:errand-1')
+  const arc = parseMemorySourceRef('arc:arc-1')
+  const capsule = parseMemorySourceRef('capsule:capsule-1')
+
+  assert.equal(scheduler?.canOpenHistory, false)
+  assert.equal(scheduler?.canOpenAutonomy, true)
+  assert.equal(errand?.canOpenAutonomy, true)
+  assert.equal(arc?.canOpenAutonomy, true)
+  assert.equal(capsule?.canOpenAutonomy, true)
 })
 
 test('returns null for system messages', () => {

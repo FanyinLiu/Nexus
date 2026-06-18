@@ -6,7 +6,13 @@ import {
   useState,
 } from 'react'
 import type { SettingsDrawerProps } from '../../components/SettingsDrawer'
+import type { ConnectionResult } from '../../components/settingsDrawerSupport'
 import type { OnboardingGuideProps } from '../../features/onboarding/components/OnboardingGuide'
+import {
+  buildM1TextConnectionEvidence,
+  resolveM1TextConnectionResult,
+  type M1TextConnectionEvidence,
+} from '../../features/onboarding/firstRunAuditInput'
 import type { PetModelDefinition } from '../../features/pet'
 import {
   loadOnboardingCompleted,
@@ -24,6 +30,7 @@ import { runConnectionPreflight } from '../../features/models/connectionPrefligh
 import type {
   AppSettings,
   DebugConsoleEvent,
+  FocusState,
   NotificationChannel,
   PlatformProfile,
   ReminderTask,
@@ -39,6 +46,7 @@ type UseAppOverlaysOptions = {
   view: 'pet' | 'panel'
   settings: AppSettings
   platformProfile: PlatformProfile
+  focusState?: FocusState
   setSettings: Dispatch<SetStateAction<AppSettings>>
   settingsOpen: boolean
   setSettingsOpen: Dispatch<SetStateAction<boolean>>
@@ -57,9 +65,11 @@ type UseAppOverlaysOptions = {
     | 'addManualMemory'
     | 'updateMemory'
     | 'removeMemory'
+    | 'setMemoryEnabled'
     | 'clearTodayDailyMemory'
     | 'updateDailyEntry'
     | 'removeDailyEntry'
+    | 'toggleMemoryPin'
   >
   chat: Pick<
     ChatController,
@@ -107,6 +117,7 @@ export function useAppOverlays({
   view,
   settings,
   platformProfile,
+  focusState,
   setSettings,
   settingsOpen,
   setSettingsOpen,
@@ -133,6 +144,15 @@ export function useAppOverlays({
   const onboardingPendingInitial = useMemo(() => !loadOnboardingCompleted(), [])
   const [onboardingPending, setOnboardingPending] = useState(onboardingPendingInitial)
   const [onboardingOpen, setOnboardingOpen] = useState(onboardingPendingInitial)
+  const [latestTextConnectionEvidence, setLatestTextConnectionEvidence] =
+    useState<M1TextConnectionEvidence | null>(null)
+
+  const recordTextConnectionEvidence = useCallback((
+    draftSettings: AppSettings,
+    result: ConnectionResult,
+  ) => {
+    setLatestTextConnectionEvidence(buildM1TextConnectionEvidence(draftSettings, result))
+  }, [])
 
   const applySettingsSave = useCallback(async (
     nextSettings: AppSettings,
@@ -213,12 +233,22 @@ export function useAppOverlays({
     () => chat.messages.filter((message) => message.role !== 'system').length,
     [chat.messages],
   )
+  const chatMessageSummaries = useMemo(
+    () => chat.messages.map(({ createdAt, role, tone }) => ({ createdAt, role, tone })),
+    [chat.messages],
+  )
+  const runtimeTextConnectionResult = useMemo(
+    () => resolveM1TextConnectionResult(settings, latestTextConnectionEvidence),
+    [latestTextConnectionEvidence, settings],
+  )
 
   const settingsDrawerProps: SettingsDrawerProps = {
     open: settingsOpen,
     settings,
     chatMessageCount,
+    chatMessageSummaries,
     chatBusy: chat.busy,
+    focusState,
     currentChatSessionId: chat.currentSessionId,
     memories: memory.memories,
     dailyMemoryEntries: memory.recentDailyMemoryEntries,
@@ -234,6 +264,7 @@ export function useAppOverlays({
     voicePipeline: voice.voicePipeline,
     voiceTrace: voice.voiceTrace,
     debugConsoleEvents,
+    runtimeTextConnectionResult,
     onClose: () => setSettingsOpen(false),
     onExportChatHistory: chat.exportChatHistory,
     onImportChatHistory: chat.importChatHistory,
@@ -244,6 +275,8 @@ export function useAppOverlays({
     onAddManualMemory: memory.addManualMemory,
     onUpdateMemory: memory.updateMemory,
     onRemoveMemory: memory.removeMemory,
+    onSetMemoryEnabled: memory.setMemoryEnabled,
+    onToggleMemoryPinned: memory.toggleMemoryPin,
     onClearDailyMemory: memory.clearTodayDailyMemory,
     onUpdateDailyEntry: memory.updateDailyEntry,
     onRemoveDailyEntry: memory.removeDailyEntry,
@@ -379,11 +412,14 @@ export function useAppOverlays({
     },
     onTestConnection: async (capability, draftSettings) => {
       if (capability === 'text') {
+        let result: ConnectionResult
         if (!window.desktopPet?.testChatConnection) {
-          return {
+          result = {
             ok: false,
             message: t('settings.test_connection.unsupported'),
           }
+          recordTextConnectionEvidence(draftSettings, result)
+          return result
         }
 
         const preflightFail = runConnectionPreflight({
@@ -393,14 +429,19 @@ export function useAppOverlays({
           model: draftSettings.model,
           uiLanguage: draftSettings.uiLanguage,
         })
-        if (preflightFail) return preflightFail
+        if (preflightFail) {
+          recordTextConnectionEvidence(draftSettings, preflightFail)
+          return preflightFail
+        }
 
-        return window.desktopPet.testChatConnection({
+        result = await window.desktopPet.testChatConnection({
           providerId: draftSettings.apiProviderId,
           baseUrl: draftSettings.apiBaseUrl,
           apiKey: draftSettings.apiKey,
           model: draftSettings.model,
         })
+        recordTextConnectionEvidence(draftSettings, result)
+        return result
       }
 
       if (capability === 'speech-input') {
@@ -470,6 +511,7 @@ export function useAppOverlays({
     settings,
     platformProfile,
     petModelPresets,
+    chatMessageSummaries,
     onDismiss: () => setOnboardingOpen(false),
     onSave: async (nextSettings) => {
       await applySettingsSave(nextSettings, {
@@ -478,8 +520,11 @@ export function useAppOverlays({
       })
     },
     onTestTextConnection: async (draftSettings) => {
+      let result: ConnectionResult
       if (!window.desktopPet?.testChatConnection) {
-        return { ok: false, message: t('settings.test_connection.unsupported') }
+        result = { ok: false, message: t('settings.test_connection.unsupported') }
+        recordTextConnectionEvidence(draftSettings, result)
+        return result
       }
 
       const preflightFail = runConnectionPreflight({
@@ -489,14 +534,19 @@ export function useAppOverlays({
         model: draftSettings.model,
         uiLanguage: draftSettings.uiLanguage,
       })
-      if (preflightFail) return preflightFail
+      if (preflightFail) {
+        recordTextConnectionEvidence(draftSettings, preflightFail)
+        return preflightFail
+      }
 
-      return window.desktopPet.testChatConnection({
+      result = await window.desktopPet.testChatConnection({
         providerId: draftSettings.apiProviderId,
         baseUrl: draftSettings.apiBaseUrl,
         apiKey: draftSettings.apiKey,
         model: draftSettings.model,
       })
+      recordTextConnectionEvidence(draftSettings, result)
+      return result
     },
   }
 

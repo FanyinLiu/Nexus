@@ -1,6 +1,7 @@
 import type { AppSettings, VoiceTriggerMode } from '../../types'
 import { DEFAULT_MEMORY_EMBEDDING_MODEL } from '../../features/memory/constants.ts'
 import { DEFAULT_PET_MODEL_ID } from '../../features/pet/models.ts'
+import { normalizePetActionMapOverrideStore } from '../../features/pet/actionMap.ts'
 import {
   getSpeechInputProviderPreset,
   getSpeechOutputProviderPreset,
@@ -51,6 +52,7 @@ import {
 const defaultSettings: AppSettings = {
   settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
   petModelId: DEFAULT_PET_MODEL_ID,
+  petActionMapOverrides: {},
   uiLanguage: 'zh-CN',
   themeId: 'nexus-default',
   ambientWeatherEnabled: false,
@@ -505,6 +507,7 @@ export function loadSettings(): AppSettings {
     ),
     characterProfiles: readStoredCharacterProfiles(stored.characterProfiles),
     activeCharacterProfileId: String(stored.activeCharacterProfileId ?? ''),
+    petActionMapOverrides: normalizePetActionMapOverrideStore(stored.petActionMapOverrides),
     mcpServers: readStoredMcpServers(stored),
     minecraftIntegrationEnabled: stored.minecraftIntegrationEnabled === true,
     minecraftServerAddress: String(

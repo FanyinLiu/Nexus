@@ -24,9 +24,9 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **현재 릴리스:** v0.3.2 안정 버전. Nexus는 지금도 일상적으로 사용할 수 있지만, 빠르게 다듬고 있는 개인 프로젝트입니다. 패키징, 선택형 로컬 음성 모델, provider 설정에는 아직 약간의 수동 처리가 필요한 부분이 남아 있을 수 있습니다.
+> **현재 릴리스 라인:** v0.3.4 beta stabilization. Nexus는 초기 데스크톱 프로토타입 단계를 지나 검증 단계에 들어섰습니다. Live2D, 음성, 메모리, proactive care, 데스크톱 메시지 감지, Telegram / Discord 브리지, 외부 webhook adapter는 이미 코드에 존재합니다. 다만 실제 macOS 알림, Telegram, Discord live evidence는 안정판 승격 게이트입니다.
 
-> **개발 범위 안내:** 이 다국어 README는 장기 기능 목록을 보존합니다. 단기 개발 기준은 루트 [README](../README.md)와 [Nexus 업그레이드 통합 계획](NEXUS_UPGRADE_INTEGRATION_PLAN.md)입니다. Phase 1은 상주하는 작은 데스크톱 창, 미니멀 아바타, Ollama / DeepSeek 텍스트 모델, 간단한 대화에만 집중합니다.
+> **개발 범위 안내:** 이 다국어 README는 장기 기능 목록을 보존합니다. 현재 단기 개발 기준은 루트 [README](../README.md), [ROADMAP](ROADMAP.md), [v0.3.4 stabilization plan](V0.3.4_STABILIZATION.md)입니다. 우선순위는 P0 stabilization / docs alignment / real message-awareness validation, 그다음 P1 proactive care와 memory ownership, P2 companion depth와 voice pipeline이며, P3 email / more IM adapters는 permissioned groundwork로 제한합니다.
 
 ---
 

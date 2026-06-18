@@ -25,6 +25,14 @@ test('exposes Edge TTS and MiniMax in the visible speech output provider list', 
     USER_VISIBLE_SPEECH_OUTPUT_PROVIDER_PRESETS.some((p) => p.id === 'minimax-tts'),
     true,
   )
+  assert.equal(
+    USER_VISIBLE_SPEECH_OUTPUT_PROVIDER_PRESETS.some((p) => p.id === 'voxtral-local'),
+    true,
+  )
+  assert.equal(
+    USER_VISIBLE_SPEECH_OUTPUT_PROVIDER_PRESETS.some((p) => p.id === 'kyutai-local'),
+    true,
+  )
 })
 
 test('returns a valid preset for known providers', () => {

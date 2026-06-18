@@ -24,9 +24,9 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **当前版本：** v0.3.2 稳定版。Nexus 现在已经可日常使用，但仍是快速迭代中的个人项目；打包、本地语音模型和 provider 配置上，可能还有一些不够顺滑、需要手动处理的地方。
+> **当前发布线：** v0.3.4 beta 稳定化。Nexus 已经从早期桌面原型进入验证期：Live2D、语音、记忆、主动关怀、桌面消息感知、Telegram / Discord 桥和外部 webhook adapter 都已在代码中存在，但真实 macOS 通知、Telegram、Discord 的 live evidence 仍是稳定版门槛。
 
-> **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前短期开发以根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 为准：Phase 1 只收敛桌面常驻小窗口、极简头像、Ollama / DeepSeek 文本模型和简单对话。
+> **开发范围提示：** 这份多语言 README 保留长期能力清单；当前短期开发以根目录 [README](../README.md)、[ROADMAP](ROADMAP.md) 和 [v0.3.4 稳定化验证计划](V0.3.4_STABILIZATION.md) 为准。现在的优先级是 P0 稳定化 / 文档对齐 / 消息感知真实验证，随后是 P1 主动关怀与记忆可控性、P2 伴侣深度和语音链路，P3 邮件与更多 IM adapter 只做 permissioned groundwork。
 
 ---
 

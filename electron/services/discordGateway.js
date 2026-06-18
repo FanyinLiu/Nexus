@@ -42,6 +42,32 @@ let _resumeGatewayUrl = null
 let _originalGatewayUrl = null
 /** @type {string|null} */
 let _lastError = null
+/** @type {string|null} */
+let _lastEventAt = null
+/** @type {string|null} */
+let _lastEventSource = null
+/** @type {string|null} */
+let _lastEventId = null
+/** @type {string|null} */
+let _lastSkipReason = null
+/** @type {string|null} */
+let _lastSkipAt = null
+/** @type {string|null} */
+let _lastErrorAt = null
+/** @type {string|null} */
+let _lastReconnectAt = null
+/** @type {string|null} */
+let _lastReconnectReason = null
+/** @type {string|null} */
+let _pendingReconnectReason = null
+/** @type {string|null} */
+let _lastOutboundAt = null
+/** @type {string|null} */
+let _lastOutboundTarget = null
+/** @type {string|null} */
+let _lastOutboundKind = null
+/** @type {string|null} */
+let _lastOutboundError = null
 /** @type {boolean} */
 let _shouldReconnect = false
 let _reconnectAttempt = 0
@@ -63,6 +89,41 @@ const PAIRING_REPLY = (code) =>
   `Nexus pairing code 配对码: ${code}\n` +
   'Approve this channel in Nexus → Settings → Integrations to start talking.\n' +
   '在 Nexus 的 设置 → 集成 里批准这个频道即可开始聊天（1 小时内有效）。'
+
+function recordLastEvent(message) {
+  _lastEventAt = String(message?.timestamp ?? new Date().toISOString())
+  _lastEventSource = String(message?.channelName ?? message?.channelId ?? 'discord')
+  _lastEventId = String(message?.messageId ?? '')
+}
+
+function recordLastSkip(reason) {
+  _lastSkipReason = String(reason || 'skipped')
+  _lastSkipAt = new Date().toISOString()
+}
+
+function recordLastError(message) {
+  _lastError = String(message || 'unknown error')
+  _lastErrorAt = new Date().toISOString()
+}
+
+function recordLastReconnect(reason) {
+  _lastReconnectAt = new Date().toISOString()
+  _lastReconnectReason = String(reason || 'reconnect')
+}
+
+function recordLastOutbound(target, kind) {
+  _lastOutboundAt = new Date().toISOString()
+  _lastOutboundTarget = String(target ?? '')
+  _lastOutboundKind = String(kind || 'message')
+  _lastOutboundError = null
+}
+
+function recordLastOutboundError(target, kind, error) {
+  _lastOutboundAt = new Date().toISOString()
+  _lastOutboundTarget = String(target ?? '')
+  _lastOutboundKind = String(kind || 'message')
+  _lastOutboundError = String(error?.message ?? error ?? 'unknown error')
+}
 
 // ── Discord REST API helpers ────────────────────────────────────────────────
 
@@ -198,6 +259,7 @@ function handleGatewayMessage(raw) {
     case 7: {
       // Reconnect requested
       _shouldReconnect = true
+      _pendingReconnectReason = 'gateway_reconnect_requested'
       _ws?.close(4000, 'Reconnect requested')
       break
     }
@@ -207,6 +269,7 @@ function handleGatewayMessage(raw) {
       _sessionId = null
       _resumeGatewayUrl = null
       _shouldReconnect = true
+      _pendingReconnectReason = 'invalid_session'
       _reconnectTimer = setTimeout(() => {
         _reconnectTimer = null
         _ws?.close(4000, 'Invalid session')
@@ -261,13 +324,21 @@ function handleDispatch(eventName, data) {
         console.info(`[discord] Pairing request from channel ${channelId}`)
         _onPairingRequest?.({ senderId: String(channelId), name: senderName, code: pairing.code })
         apiCall(`/channels/${channelId}/messages`, { method: 'POST', body: { content: PAIRING_REPLY(pairing.code) } })
-          .catch((err) => console.warn('[discord] pairing reply failed:', err.message))
+          .then(() => recordLastOutbound(channelId, 'pairing'))
+          .catch((err) => {
+            recordLastOutboundError(channelId, 'pairing', err)
+            console.warn('[discord] pairing reply failed:', err.message)
+          })
       }
+      recordLastSkip(`unauthorized_sender:${pairing.kind}`)
       return
     }
 
     const text = data.content
-    if (!text) return // Skip non-text messages
+    if (!text) {
+      recordLastSkip('unsupported_message_payload')
+      return
+    } // Skip non-text messages
 
     /** @type {DiscordIncomingMessage} */
     const incoming = {
@@ -282,6 +353,7 @@ function handleDispatch(eventName, data) {
       timestamp: data.timestamp ?? new Date().toISOString(),
     }
 
+    recordLastEvent(incoming)
     _onMessage?.(incoming)
   }
 }
@@ -314,11 +386,14 @@ async function connectGateway(gatewayUrl) {
       if (_shouldReconnect && _botToken) {
         _shouldReconnect = false
         _reconnectAttempt++
+        const reconnectReason = _pendingReconnectReason ?? `websocket_close:${code}`
+        _pendingReconnectReason = null
+        recordLastReconnect(reconnectReason)
 
         if (_reconnectAttempt > MAX_RECONNECT_ATTEMPTS) {
           console.error(`[discord] Max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) exceeded, giving up`)
           _state = 'error'
-          _lastError = 'Max reconnect attempts exceeded'
+          recordLastError('Max reconnect attempts exceeded')
           _reconnectAttempt = 0
         } else {
           const backoffMs = Math.min(RECONNECT_BASE_MS * (2 ** (_reconnectAttempt - 1)), RECONNECT_MAX_MS)
@@ -330,7 +405,8 @@ async function connectGateway(gatewayUrl) {
             connectGateway(url).catch((err) => {
               console.error('[discord] Reconnect failed:', err.message)
               _state = 'error'
-              _lastError = err.message
+              recordLastReconnect(`reconnect_failed:${err.message}`)
+              recordLastError(err.message)
             })
           }, backoffMs + jitter)
         }
@@ -341,7 +417,7 @@ async function connectGateway(gatewayUrl) {
 
     ws.on('error', (err) => {
       console.error('[discord] WebSocket error:', err.message)
-      _lastError = err.message
+      recordLastError(err.message)
       reject(err)
     })
   })
@@ -367,6 +443,7 @@ export async function connect(botToken, allowedChannelIds = []) {
   _sessionId = null
   _resumeGatewayUrl = null
   _shouldReconnect = true
+  _pendingReconnectReason = null
 
   try {
     // Get the gateway URL
@@ -378,7 +455,7 @@ export async function connect(botToken, allowedChannelIds = []) {
     await connectGateway(gatewayUrl)
   } catch (err) {
     _state = 'error'
-    _lastError = err.message
+    recordLastError(err.message)
     _botToken = null
     _shouldReconnect = false
     throw err
@@ -399,6 +476,7 @@ export async function disconnect() {
   _botId = null
   _allowedChannelIds.clear()
   _lastError = null
+  _pendingReconnectReason = null
   _sessionId = null
   _resumeGatewayUrl = null
   _originalGatewayUrl = null
@@ -419,7 +497,13 @@ export async function sendMessage(channelId, text, options = {}) {
     body.message_reference = { message_id: options.replyToMessageId }
   }
 
-  await apiCall(`/channels/${channelId}/messages`, { method: 'POST', body })
+  try {
+    await apiCall(`/channels/${channelId}/messages`, { method: 'POST', body })
+    recordLastOutbound(channelId, 'text')
+  } catch (err) {
+    recordLastOutboundError(channelId, 'text', err)
+    throw err
+  }
 }
 
 const DISCORD_AUDIO_EXT_BY_MIME = {
@@ -458,14 +542,20 @@ export async function sendAudioAttachment(channelId, audio, mimeType, options = 
   form.append('payload_json', JSON.stringify(payload))
   form.append('files[0]', new Blob([audio], { type: mimeType }), fileName)
 
-  const resp = await net.fetch(`${DISCORD_API_BASE}/channels/${channelId}/messages`, {
-    method: 'POST',
-    headers: { Authorization: `Bot ${_botToken}` },
-    body: form,
-  })
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => '')
-    throw new Error(`Discord API ${resp.status}: ${text}`)
+  try {
+    const resp = await net.fetch(`${DISCORD_API_BASE}/channels/${channelId}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bot ${_botToken}` },
+      body: form,
+    })
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '')
+      throw new Error(`Discord API ${resp.status}: ${text}`)
+    }
+    recordLastOutbound(channelId, 'audio')
+  } catch (err) {
+    recordLastOutboundError(channelId, 'audio', err)
+    throw err
   }
 }
 
@@ -475,6 +565,19 @@ export function getStatus() {
     botUsername: _botUsername,
     allowedChannelIds: [..._allowedChannelIds],
     lastError: _lastError,
+    lastEventAt: _lastEventAt,
+    lastEventSource: _lastEventSource,
+    lastEventId: _lastEventId,
+    lastSkipReason: _lastSkipReason,
+    lastSkipAt: _lastSkipAt,
+    lastErrorAt: _lastErrorAt,
+    lastReconnectAt: _lastReconnectAt,
+    lastReconnectReason: _lastReconnectReason,
+    reconnectAttempt: _reconnectAttempt,
+    lastOutboundAt: _lastOutboundAt,
+    lastOutboundTarget: _lastOutboundTarget,
+    lastOutboundKind: _lastOutboundKind,
+    lastOutboundError: _lastOutboundError,
   }
 }
 

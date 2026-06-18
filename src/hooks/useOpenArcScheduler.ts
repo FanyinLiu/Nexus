@@ -2,9 +2,16 @@ import { useEffect, useRef } from 'react'
 import { autoDropExpiredArcs, loadOpenArcs, recordCheckInFired } from '../features/arc/openArcStore'
 import { decideNextCheckIn } from '../features/arc/openArcPolicy'
 import { buildArcCheckIn } from '../features/arc/openArcDelivery'
+import { formatOpenArcCareVisibleReason } from '../features/proactive/proactiveCareReasons.ts'
+import { recordProactiveCareEvent } from '../lib/storage'
 import type { AppSettings } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000  // 5 min — matches bracket / errand / capsule
+
+function formatErrorDetail(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err)
+  return message.slice(0, 200) || 'unknown error'
+}
 
 interface UseOpenArcSchedulerOptions {
   settings: AppSettings
@@ -43,10 +50,43 @@ export function useOpenArcScheduler({ settings }: UseOpenArcSchedulerOptions) {
         quietHoursStart: s.autonomyQuietHoursStart,
         quietHoursEnd: s.autonomyQuietHoursEnd,
       })
-      if (!decision.shouldFire || !decision.arcId || decision.milestoneDay == null) return
+      const openArcCount = arcs.filter((arc) => arc.status === 'open').length
+      if (!decision.shouldFire || !decision.arcId || decision.milestoneDay == null) {
+        recordProactiveCareEvent({
+          source: 'open_arc',
+          outcome: 'skipped',
+          reason: decision.reason,
+          detail: `open_arcs=${openArcCount}`,
+          userVisibleReason: formatOpenArcCareVisibleReason({
+            openArcCount,
+            outcome: 'skipped',
+            reason: decision.reason,
+            uiLanguage: s.uiLanguage,
+          }),
+          sourceRef: decision.arcId
+            ? { kind: 'arc', id: decision.arcId }
+            : { kind: 'scheduler', id: 'open_arc' },
+        })
+        return
+      }
 
       const arc = arcs.find((a) => a.id === decision.arcId)
-      if (!arc) return
+      if (!arc) {
+        recordProactiveCareEvent({
+          source: 'open_arc',
+          outcome: 'skipped',
+          reason: 'arc_missing',
+          detail: `arc=${decision.arcId}`,
+          userVisibleReason: formatOpenArcCareVisibleReason({
+            openArcCount,
+            outcome: 'skipped',
+            reason: 'arc_missing',
+            uiLanguage: s.uiLanguage,
+          }),
+          sourceRef: { kind: 'arc', id: decision.arcId },
+        })
+        return
+      }
 
       const payload = buildArcCheckIn({
         arc,
@@ -59,7 +99,35 @@ export function useOpenArcScheduler({ settings }: UseOpenArcSchedulerOptions) {
         await window.desktopPet?.showProactiveNotification?.(payload)
         if (stopped) return
         recordCheckInFired(arc.id)
+        recordProactiveCareEvent({
+          source: 'open_arc',
+          outcome: 'fired',
+          reason: decision.reason,
+          detail: `arc=${arc.id}; milestone=${decision.milestoneDay}`,
+          userVisibleReason: formatOpenArcCareVisibleReason({
+            milestoneDay: decision.milestoneDay,
+            openArcCount,
+            outcome: 'fired',
+            reason: decision.reason,
+            uiLanguage: s.uiLanguage,
+          }),
+          sourceRef: { kind: 'arc', id: arc.id, label: `day ${decision.milestoneDay}` },
+        })
       } catch (err) {
+        recordProactiveCareEvent({
+          source: 'open_arc',
+          outcome: 'error',
+          reason: 'notification_failed',
+          detail: formatErrorDetail(err),
+          userVisibleReason: formatOpenArcCareVisibleReason({
+            milestoneDay: decision.milestoneDay,
+            openArcCount,
+            outcome: 'error',
+            reason: 'notification_failed',
+            uiLanguage: s.uiLanguage,
+          }),
+          sourceRef: { kind: 'arc', id: arc.id },
+        })
         console.warn('[open-arc] check-in delivery failed:', err)
       }
     }

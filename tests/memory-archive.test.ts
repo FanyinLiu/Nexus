@@ -34,7 +34,7 @@ test('round-trips through serialize → parse', () => {
   const daily: DailyMemoryStore = {
     '2026-04-01': [{
       id: 'd1', day: '2026-04-01', role: 'user', content: '你好',
-      source: 'chat', createdAt: '2026-04-01T10:00:00Z',
+      source: 'chat', sourceRef: 'chat:c1', createdAt: '2026-04-01T10:00:00Z',
     }],
   }
 
@@ -44,6 +44,7 @@ test('round-trips through serialize → parse', () => {
   assert.equal(result.memories[0].content, '我住在上海')
   assert.ok(result.dailyMemories['2026-04-01'])
   assert.equal(result.dailyMemories['2026-04-01'].length, 1)
+  assert.equal(result.dailyMemories['2026-04-01'][0]?.sourceRef, 'chat:c1')
 })
 
 test('handles plain array format (legacy)', () => {

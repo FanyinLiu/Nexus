@@ -10,6 +10,8 @@ import {
   normalizeSettingsSectionId,
   SETTINGS_APPEARANCE_OPTIONS,
   type ConnectionResult,
+  type SettingsSectionEntryReason,
+  type SettingsSectionOpenOptions,
   type SettingsSectionId,
 } from './settingsDrawerSupport.ts'
 import {
@@ -26,6 +28,12 @@ import {
   pickTranslatedUiText,
 } from '../lib/uiLanguage.ts'
 import { ensureLocaleLoaded, isLocaleLoaded } from '../i18n/index.ts'
+import { parseMemorySourceRef, type ParsedMemorySourceRef } from '../features/memory/sourceRefs'
+import {
+  resolveProactiveCareSourceRefNavigation,
+  type ProactiveCareSourceRefKind,
+  type ProactiveCareSourceRef,
+} from '../lib/storage/proactiveCare.ts'
 import type {
   CodexPetGalleryCatalogResult,
   PetModelDefinition,
@@ -64,12 +72,15 @@ import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
 import { buildSettingsSectionMeta } from './settingsDrawerMetadata.ts'
 import type {
   AppSettings,
+  ChatMessage,
   DailyMemoryEntry,
   DebugConsoleEvent,
+  FocusState,
   MemoryItem,
   PlatformProfile,
   ReminderTask,
   ServiceConnectionCapability,
+  ServiceConnectionResponse,
   SpeechVoiceListResponse,
   VoicePipelineState,
   VoiceState,
@@ -81,7 +92,9 @@ export type SettingsDrawerProps = {
   settings: AppSettings
   platformProfile: PlatformProfile
   chatMessageCount: number
+  chatMessageSummaries: Array<Pick<ChatMessage, 'createdAt' | 'role' | 'tone'>>
   chatBusy: boolean
+  focusState?: FocusState
   currentChatSessionId?: string
   memories: MemoryItem[]
   dailyMemoryEntries: DailyMemoryEntry[]
@@ -94,6 +107,7 @@ export type SettingsDrawerProps = {
   voicePipeline: VoicePipelineState
   voiceTrace: VoiceTraceEntry[]
   debugConsoleEvents: DebugConsoleEvent[]
+  runtimeTextConnectionResult?: ServiceConnectionResponse | null
   onClose: () => void
   onSave: (settings: AppSettings) => void
   onExportChatHistory: () => Promise<{
@@ -127,6 +141,8 @@ export type SettingsDrawerProps = {
   onAddManualMemory: (content: string) => void
   onUpdateMemory: (id: string, content: string) => void
   onRemoveMemory: (id: string) => void
+  onSetMemoryEnabled: (id: string, enabled: boolean) => void
+  onToggleMemoryPinned: (id: string) => void
   onClearDailyMemory: () => void
   onUpdateDailyEntry?: (id: string, day: string, content: string) => void
   onRemoveDailyEntry?: (id: string, day: string) => void
@@ -213,12 +229,34 @@ export type SettingsDrawerProps = {
   onRemoveNotificationChannel?: (id: string) => Promise<void>
 }
 
+function convertMemorySourceRefToProactiveTarget(
+  sourceRef: ParsedMemorySourceRef,
+): ProactiveCareSourceRef | null {
+  if (!sourceRef.canOpenAutonomy) return null
+  const kind = sourceRef.kind as ProactiveCareSourceRefKind
+  if (
+    kind !== 'scheduler'
+    && kind !== 'bracket'
+    && kind !== 'errand'
+    && kind !== 'arc'
+    && kind !== 'capsule'
+  ) {
+    return null
+  }
+  return {
+    kind,
+    id: sourceRef.id,
+  }
+}
+
 export function SettingsDrawer({
   open,
   settings,
   platformProfile,
   chatMessageCount,
+  chatMessageSummaries,
   chatBusy,
+  focusState,
   currentChatSessionId,
   memories,
   dailyMemoryEntries,
@@ -231,6 +269,7 @@ export function SettingsDrawer({
   voicePipeline,
   voiceTrace,
   debugConsoleEvents,
+  runtimeTextConnectionResult,
   onClose,
   onSave,
   onExportChatHistory,
@@ -242,6 +281,8 @@ export function SettingsDrawer({
   onAddManualMemory,
   onUpdateMemory,
   onRemoveMemory,
+  onSetMemoryEnabled,
+  onToggleMemoryPinned,
   onClearDailyMemory,
   onUpdateDailyEntry,
   onRemoveDailyEntry,
@@ -270,6 +311,9 @@ export function SettingsDrawer({
   const [draft, setDraft] = useState(settings)
   const [activeSectionId, setActiveSectionId] = useState<SettingsSectionId>('console')
   const [settingsView, setSettingsView] = useState<'home' | 'section'>('home')
+  const [historySourceTarget, setHistorySourceTarget] = useState<ParsedMemorySourceRef | null>(null)
+  const [proactiveSourceTarget, setProactiveSourceTarget] = useState<ProactiveCareSourceRef | null>(null)
+  const [modelEntryReason, setModelEntryReason] = useState<SettingsSectionEntryReason | null>(null)
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false)
   const [, setLocaleLoadTick] = useState(0)
   const themePreview = useTheme()
@@ -503,6 +547,7 @@ export function SettingsDrawer({
       themePreview.previewTheme(settings.themeId)
       speechVoices.syncPreviewText(settings.companionName)
       setSettingsView('home')
+      setModelEntryReason(null)
     } else {
       themePreview.previewTheme(settings.themeId)
     }
@@ -651,8 +696,54 @@ export function SettingsDrawer({
     onClose()
   }
 
-  function handleOpenSettingsSection(sectionId: SettingsSectionId) {
-    setActiveSectionId(normalizeSettingsSectionId(sectionId))
+  function handleOpenSettingsSection(sectionId: SettingsSectionId, options?: SettingsSectionOpenOptions) {
+    const nextSectionId = normalizeSettingsSectionId(sectionId)
+    setHistorySourceTarget(null)
+    setProactiveSourceTarget(null)
+    setModelEntryReason(nextSectionId === 'model' && options?.entryReason === 'm1-first-run-repair'
+      ? 'm1-first-run-repair'
+      : null)
+    setActiveSectionId(nextSectionId)
+    setSettingsView('section')
+  }
+
+  function handleOpenMemorySourceRef(sourceRef: ParsedMemorySourceRef) {
+    if (sourceRef.canOpenHistory) {
+      setHistorySourceTarget(sourceRef)
+      setProactiveSourceTarget(null)
+      setModelEntryReason(null)
+      setActiveSectionId('history')
+      setSettingsView('section')
+      return
+    }
+
+    const proactiveTarget = convertMemorySourceRefToProactiveTarget(sourceRef)
+    if (!proactiveTarget) return
+
+    setHistorySourceTarget(null)
+    setProactiveSourceTarget(proactiveTarget)
+    setModelEntryReason(null)
+    setActiveSectionId('autonomy')
+    setSettingsView('section')
+  }
+
+  function handleOpenProactiveCareSourceRef(sourceRef: ProactiveCareSourceRef) {
+    const navigation = resolveProactiveCareSourceRefNavigation(sourceRef)
+    if (navigation.section === 'history') {
+      const parsed = parseMemorySourceRef(navigation.historySourceRef)
+      if (!parsed?.canOpenHistory) return
+      setHistorySourceTarget(parsed)
+      setProactiveSourceTarget(null)
+      setModelEntryReason(null)
+      setActiveSectionId('history')
+      setSettingsView('section')
+      return
+    }
+
+    setHistorySourceTarget(null)
+    setProactiveSourceTarget(sourceRef)
+    setModelEntryReason(null)
+    setActiveSectionId('autonomy')
     setSettingsView('section')
   }
 
@@ -663,6 +754,7 @@ export function SettingsDrawer({
   }
 
   function handleReturnToSettingsHome() {
+    setModelEntryReason(null)
     setSettingsView('home')
   }
 
@@ -682,6 +774,7 @@ export function SettingsDrawer({
           <ModelSection
             active
             draft={draft}
+            entryReason={modelEntryReason}
             setDraft={setDraft}
             testingTarget={connectionTests.testingTarget}
             uiLanguage={uiLanguage}
@@ -734,6 +827,7 @@ export function SettingsDrawer({
             clearingChatHistory={chatHistory.clearingChatHistory}
             chatHistoryStatus={chatHistory.chatHistoryStatus}
             currentSessionId={currentChatSessionId}
+            sourceTarget={historySourceTarget}
             confirm={confirm}
             onExportChatHistory={() => void chatHistory.handleExportChatHistory()}
             onImportChatHistory={() => void chatHistory.handleImportChatHistory()}
@@ -770,9 +864,12 @@ export function SettingsDrawer({
             onAddManualMemory={onAddManualMemory}
             onUpdateMemory={onUpdateMemory}
             onRemoveMemory={onRemoveMemory}
+            onSetMemoryEnabled={onSetMemoryEnabled}
+            onToggleMemoryPinned={onToggleMemoryPinned}
             onClearDailyMemory={onClearDailyMemory}
             onUpdateDailyEntry={onUpdateDailyEntry}
             onRemoveDailyEntry={onRemoveDailyEntry}
+            onOpenMemorySourceRef={handleOpenMemorySourceRef}
           />
         )
       case 'lorebooks':
@@ -859,6 +956,7 @@ export function SettingsDrawer({
             uiLanguage={uiLanguage}
             channels={notificationChannels}
             channelsLoading={notificationChannelsLoading}
+            sourceTarget={proactiveSourceTarget}
             onAddChannel={onAddNotificationChannel}
             onUpdateChannel={onUpdateNotificationChannel}
             onRemoveChannel={onRemoveNotificationChannel}
@@ -878,9 +976,12 @@ export function SettingsDrawer({
           <ConsoleSection
             active
             draft={draft}
+            focusState={focusState}
             petModel={petModel}
+            platformProfile={platformProfile}
             continuousVoiceActive={continuousVoiceActive}
             debugConsoleEvents={debugConsoleEvents}
+            chatMessageSummaries={chatMessageSummaries}
             liveTranscript={liveTranscript}
             onClearDebugConsole={onClearDebugConsole}
             reminderTasks={reminderTasks}
@@ -889,6 +990,9 @@ export function SettingsDrawer({
             voicePipeline={voicePipeline}
             voiceState={voiceState}
             voiceTrace={voiceTrace}
+            textConnectionResult={connectionTests.testResults.text ?? runtimeTextConnectionResult ?? null}
+            onOpenProactiveCareSourceRef={handleOpenProactiveCareSourceRef}
+            onOpenSettingsSection={handleOpenSettingsSection}
           />
         )
     }

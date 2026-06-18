@@ -37,6 +37,72 @@
   separate helper loop.
 
 ### Added
+- **v1.0 milestone governance** — added a milestone contract and
+  `npm run v1:milestone:audit` so long-term stages must carry design, impact,
+  rollback, migration, tests, docs, acceptance, and next-task evidence before
+  they graduate. The audit now also reports M1 first-run status evidence from
+  `artifacts/v1/m1-first-run-status.json`, with
+  `--require-acceptance-evidence` available for release-candidate checks that
+  should fail on missing runtime/platform evidence.
+- **M1 first-run audit** — added `npm run m1:first-run:audit` and the
+  `docs/V1_M1_FIRST_RUN_SETUP.md` contract so first launch, model repair,
+  first conversation evidence, and five-minute setup budget can be checked
+  without copying API keys, endpoints, model names, prompts, or transcripts.
+  The runtime-side `firstRunAuditInput` adapter now maps text connection-test
+  results and chat-history role/timing metadata into the same evidence shape,
+  and Settings -> Console can copy the private-safe M1 report. Onboarding text
+  connection checks now hand off a hashed, settings-matched result to that
+  report so first-run setup evidence survives leaving the guide without leaking
+  raw keys, endpoints, or model names. The final onboarding step now previews
+  and copies the same M1 evidence state so users can see whether model testing,
+  first-conversation evidence, privacy redaction, and next setup actions are
+  ready before finishing. After onboarding, the Panel composer now shows a
+  first-reply guide that can fill a starter prompt without auto-sending it, and
+  records waiting, failed, slow, or ready states from role/timestamp/error
+  metadata only. The onboarding M1 evidence card now expands repair and next
+  action ids into localized concrete fix steps. Added `npm run
+  m1:first-run:record` for real-machine operator evidence that records only
+  booleans and latency, then can be merged into the M1 audit without storing
+  prompts, replies, transcripts, model names, endpoints, API keys, operator
+  names, or notes. Added `npm run m1:first-run:status` to summarize runtime M1
+  audit evidence plus macOS/Windows/Linux operator records, keeping full M1
+  readiness failing while only sample evidence exists. Settings -> Console can
+  now save the runtime M1 report, copy the status/operator handoff commands,
+  show localized runtime repair steps, and open Model settings for model-scoped
+  repair actions without auto-running provider checks. Model settings now shows
+  an M1 repair hint when opened from that path, reminding the user to verify
+  provider, endpoint, API key, and model before explicitly testing the
+  connection.
+- **M2 distribution trust audit** — added
+  `npm run m2:distribution:trust` and
+  `docs/V1_M2_DISTRIBUTION_TRUST.md` so platform installer targets,
+  electron-updater metadata, release workflow safety, Linux checksums/GPG
+  posture, and documented macOS/Windows unsigned fallback are captured as
+  private-safe v1 evidence. Packaged smoke can now write private-safe M2
+  evidence with `PACKAGED_SMOKE_EVIDENCE_FILE`, and
+  `m2:distribution:trust -- --require-package-smoke` can require
+  Windows/macOS/Linux package-smoke records for release-candidate checks.
+  `v1:milestone:audit -- --require-acceptance-evidence` now consumes the M2
+  report with `--m2-trust-file` and blocks top-level v1 acceptance until those
+  package-smoke records are present.
+- **M3 IPC security inventory** — added `npm run m3:ipc:audit` and
+  `docs/V1_M3_IPC_SECURITY.md` so preload invokes, IPC handlers, event sources,
+  trusted sender checks, vault refs, request-validation gaps, and high-risk
+  audit coverage are captured as private-safe v1 evidence before IPC hardening
+  continues. Full request validation is now enforced for all payload-taking
+  handlers, and high-risk IPC handlers are covered by a global redacted audit
+  wrapper that records channel/category/outcome metadata without copying
+  payloads, returns, message text, file contents, or secrets.
+  `v1:milestone:audit -- --require-acceptance-evidence` now consumes the M3
+  IPC security report and blocks strict v1 acceptance when trusted sender,
+  request-validation, secret-boundary, global high-risk audit, or audit-log
+  readiness is not green.
+- **M4 storage migration inventory** — added `npm run m4:storage:audit` and
+  `docs/V1_M4_STORAGE_MIGRATION.md` to classify localStorage keys, direct
+  storage access, migration domains, SQLite dependency status, and rollback
+  guardrails without reading user data. Strict v1 acceptance now consumes the
+  M4 report and keeps the SQLite migration milestone blocked until runtime
+  migration, backups, rollback tooling, and cross-platform evidence exist.
 - **Companion wake-up checklist** — onboarding now summarizes identity, text
   model, character model, and speech readiness before the desktop companion
   starts.

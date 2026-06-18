@@ -25,6 +25,7 @@ import { runMacPermissionChecks } from './services/macPermissions.js'
 import { runWindowsPermissionChecks } from './services/windowsPermissions.js'
 import { initModelManager } from './services/modelManager.js'
 import { ensurePythonRuntimeStatus, getPythonRuntimeStatus } from './services/pythonRuntime.js'
+import * as notificationBridge from './services/notificationBridge.js'
 
 // ── Console safety: suppress broken-pipe errors on stdout/stderr ──
 
@@ -76,6 +77,7 @@ const __dirname = path.dirname(__filename)
 
 const isDev = !app.isPackaged
 const useDevServer = process.env.DESKTOP_PET_USE_DEV_SERVER === '1'
+const isMessageAwarenessSmoke = process.env.NEXUS_MESSAGE_AWARENESS_SMOKE === '1'
 const devServerUrl = 'http://127.0.0.1:47821'
 const hasSingleInstanceLock = app.requestSingleInstanceLock()
 const WINDOWS_APP_USER_MODEL_ID = 'ai.factory.desktoppet'
@@ -343,6 +345,16 @@ initRendererServer({
 
 app.whenReady()
   .then(async () => {
+    if (isMessageAwarenessSmoke) {
+      await notificationBridge.start()
+      const info = await notificationBridge.getWebhookInfo()
+      console.info(`[message-awareness-smoke] ready ${JSON.stringify({
+        url: info.url,
+        maxBodyBytes: info.maxBodyBytes,
+      })}`)
+      return
+    }
+
     await ensureRendererServer()
     registerMediaPermissionHandlers()
     registerIpc()

@@ -15,6 +15,7 @@ import {
 } from '../appSupport'
 import {
   DEFAULT_PET_MODEL_ID,
+  applyPetActionMapOverride,
   getPetModelPreset,
   getPetModelPresets,
   type PetModelDefinition,
@@ -310,13 +311,19 @@ export function useDesktopBridge({
   }, [setSettings])
 
   const petModelPresets = useMemo(
-    () => getPetModelPresets(discoveredPetModels),
-    [discoveredPetModels],
+    () => getPetModelPresets(discoveredPetModels).map((model) =>
+      applyPetActionMapOverride(model, settings.petActionMapOverrides[model.id]),
+    ),
+    [discoveredPetModels, settings.petActionMapOverrides],
   )
 
   const petModel = useMemo(
-    () => getPetModelPreset(settings.petModelId, discoveredPetModels),
-    [discoveredPetModels, settings.petModelId],
+    () => petModelPresets.find((preset) => preset.id === settings.petModelId)
+      ?? applyPetActionMapOverride(
+        getPetModelPreset(settings.petModelId, discoveredPetModels),
+        settings.petActionMapOverrides[settings.petModelId],
+      ),
+    [discoveredPetModels, petModelPresets, settings.petActionMapOverrides, settings.petModelId],
   )
 
   const loadPetModels = useCallback(async () => {

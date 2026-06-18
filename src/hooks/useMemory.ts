@@ -24,6 +24,7 @@ import type {
   DailyMemoryEntry,
   DailyMemoryStore,
   MemoryItem,
+  MemoryImportance,
 } from '../types/index.ts'
 
 type UseMemoryParams = {
@@ -172,6 +173,24 @@ export function useMemory({ settings }: UseMemoryParams) {
     })
   }, [])
 
+  const toggleMemoryPin = useCallback((id: string) => {
+    setMemories((current) => {
+      const nextMemories = current.map((memory) => (
+        memory.id === id
+          ? {
+              ...memory,
+              importance: memory.importance === 'pinned'
+                ? 'normal'
+                : ('pinned' as MemoryImportance),
+              lastUsedAt: new Date().toISOString(),
+            }
+          : memory
+      ))
+      memoriesRef.current = nextMemories
+      return nextMemories
+    })
+  }, [])
+
   const clearTodayDailyMemory = useCallback(() => {
     const nextDailyMemories = clearDailyMemoriesForDay(dailyMemoriesRef.current)
     dailyMemoriesRef.current = nextDailyMemories
@@ -286,6 +305,7 @@ export function useMemory({ settings }: UseMemoryParams) {
     removeMemory,
     updateMemory,
     setMemoryEnabled,
+    toggleMemoryPin,
     clearTodayDailyMemory,
     updateDailyEntry,
     removeDailyEntry,
@@ -303,6 +323,7 @@ export function useMemory({ settings }: UseMemoryParams) {
     removeMemory,
     updateMemory,
     setMemoryEnabled,
+    toggleMemoryPin,
     clearTodayDailyMemory,
     updateDailyEntry,
     removeDailyEntry,

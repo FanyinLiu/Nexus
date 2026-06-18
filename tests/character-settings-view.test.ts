@@ -6,6 +6,7 @@ import {
   createCharacterProfile,
   resolveCharacterSettingsSummary,
   syncCurrentToProfile,
+  updateCharacterProfilePreset,
 } from '../src/features/character/index.ts'
 import { PET_MODEL_PRESETS } from '../src/features/pet/models.ts'
 import type { AppSettings, CharacterProfile } from '../src/types/app.ts'
@@ -77,6 +78,67 @@ test('syncCurrentToProfile writes current companion identity back to the active 
   assert.equal(synced.characterProfiles[0]?.userName, '主人')
   assert.equal(synced.characterProfiles[0]?.companionRelationshipType, 'mentor')
   assert.equal(synced.characterProfiles[0]?.petModelId, 'original-virtual-swordsman')
+})
+
+test('updateCharacterProfilePreset syncs active profile preset edits into settings draft', () => {
+  const profile: CharacterProfile = {
+    id: 'char-a',
+    label: '默认',
+    companionName: '星绘',
+    petModelId: 'mao',
+    systemPrompt: 'old',
+    speechOutputProviderId: 'edge-tts',
+    speechOutputVoice: 'old-voice',
+  }
+
+  const updated = updateCharacterProfilePreset(makeSettings({
+    activeCharacterProfileId: 'char-a',
+    characterProfiles: [profile],
+  }), 'char-a', {
+    petModelId: 'original-virtual-swordsman',
+    speechOutputProviderId: 'local-tts',
+    speechOutputVoice: 'new-voice',
+    speechOutputModel: 'fast',
+    speechOutputInstructions: 'bright',
+  })
+
+  assert.equal(updated.petModelId, 'original-virtual-swordsman')
+  assert.equal(updated.speechOutputProviderId, 'local-tts')
+  assert.equal(updated.speechOutputVoice, 'new-voice')
+  assert.equal(updated.speechOutputModel, 'fast')
+  assert.equal(updated.speechOutputInstructions, 'bright')
+  assert.equal(updated.characterProfiles[0]?.petModelId, 'original-virtual-swordsman')
+  assert.equal(updated.characterProfiles[0]?.speechOutputProviderId, 'local-tts')
+  assert.equal(updated.characterProfiles[0]?.speechOutputVoice, 'new-voice')
+})
+
+test('updateCharacterProfilePreset keeps inactive profile edits out of current draft', () => {
+  const activeProfile: CharacterProfile = {
+    id: 'char-a',
+    label: '当前',
+    companionName: '星绘',
+    petModelId: 'mao',
+    systemPrompt: 'active',
+  }
+  const inactiveProfile: CharacterProfile = {
+    id: 'char-b',
+    label: '备用',
+    companionName: '月影',
+    petModelId: 'mao',
+    systemPrompt: 'inactive',
+  }
+
+  const updated = updateCharacterProfilePreset(makeSettings({
+    activeCharacterProfileId: 'char-a',
+    characterProfiles: [activeProfile, inactiveProfile],
+    speechOutputVoice: 'current-voice',
+  }), 'char-b', {
+    speechOutputVoice: 'inactive-voice',
+  })
+
+  assert.equal(updated.speechOutputVoice, 'current-voice')
+  assert.equal(updated.characterProfiles[0]?.speechOutputVoice, undefined)
+  assert.equal(updated.characterProfiles[1]?.speechOutputVoice, 'inactive-voice')
 })
 
 test('resolveCharacterSettingsSummary exposes compact labels for the settings page', () => {

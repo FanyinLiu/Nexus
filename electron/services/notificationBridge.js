@@ -53,6 +53,30 @@ const RSS_MAX_REDIRECTS = 5
 let _webhookToken = ''
 /** @type {Promise<string> | null} */
 let _webhookTokenPromise = null
+/** @type {string|null} */
+let _lastWebhookEventAt = null
+/** @type {string|null} */
+let _lastWebhookEventSource = null
+/** @type {string|null} */
+let _lastWebhookEventId = null
+/** @type {string|null} */
+let _lastWebhookSkipReason = null
+/** @type {string|null} */
+let _lastWebhookSkipAt = null
+/** @type {string|null} */
+let _lastWebhookErrorAt = null
+
+function recordWebhookEvent(message) {
+  _lastWebhookEventAt = new Date().toISOString()
+  _lastWebhookEventSource = String(message?.sourceName ?? message?.channelName ?? 'webhook')
+  _lastWebhookEventId = String(message?.messageId ?? message?.id ?? '')
+}
+
+function recordWebhookReject(reason, error = false) {
+  _lastWebhookSkipReason = String(reason || 'rejected')
+  _lastWebhookSkipAt = new Date().toISOString()
+  if (error) _lastWebhookErrorAt = _lastWebhookSkipAt
+}
 
 function getWebhookTokenPath() {
   return path.join(app.getPath('userData'), WEBHOOK_TOKEN_FILE)
@@ -99,6 +123,12 @@ export async function getWebhookInfo() {
     token,
     authHeader: `Bearer ${token}`,
     maxBodyBytes: WEBHOOK_MAX_BODY_BYTES,
+    lastEventAt: _lastWebhookEventAt,
+    lastEventSource: _lastWebhookEventSource,
+    lastEventId: _lastWebhookEventId,
+    lastSkipReason: _lastWebhookSkipReason,
+    lastSkipAt: _lastWebhookSkipAt,
+    lastErrorAt: _lastWebhookErrorAt,
   }
 }
 
@@ -345,6 +375,7 @@ function startWebhookServer() {
 
   _webhookServer = createServer((req, res) => {
     if (authLimiter.isBlocked()) {
+      recordWebhookReject('auth_rate_limited', true)
       res.writeHead(429, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ error: 'Too many failed attempts, cool down' }))
       return
@@ -352,12 +383,14 @@ function startWebhookServer() {
 
     if (!verifyWebhookAuth(req.headers.authorization, _webhookToken)) {
       authLimiter.recordFailure()
+      recordWebhookReject('unauthorized')
       res.writeHead(401, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ error: 'Unauthorized' }))
       return
     }
 
     if (req.method !== 'POST' || req.url !== '/webhook') {
+      recordWebhookReject('unsupported_route')
       res.writeHead(404, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ error: 'Not found. POST to /webhook' }))
       return
@@ -372,6 +405,7 @@ function startWebhookServer() {
       bodyBytes += Buffer.isBuffer(chunk) ? chunk.length : Buffer.byteLength(String(chunk))
       if (bodyBytes > WEBHOOK_MAX_BODY_BYTES) {
         bodyTooLarge = true
+        recordWebhookReject('body_too_large')
         res.writeHead(413, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify({ error: 'Request body too large' }))
         req.destroy()
@@ -383,7 +417,7 @@ function startWebhookServer() {
       if (bodyTooLarge) return
       try {
         const payload = JSON.parse(body)
-        const result = ingestNotificationPayload(payload)
+        const result = ingestNotificationPayload(payload, { ingress: 'webhook' })
 
         if (!result.ok) {
           res.writeHead(400, { 'Content-Type': 'application/json' })
@@ -394,6 +428,7 @@ function startWebhookServer() {
         res.writeHead(200, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify({ ok: true, id: result.id }))
       } catch {
+        recordWebhookReject('invalid_json')
         res.writeHead(400, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify({ error: 'Invalid JSON body' }))
       }
@@ -402,6 +437,7 @@ function startWebhookServer() {
 
   _webhookServer.on('error', (err) => {
     console.error(`[notification-bridge] Webhook server error:`, err?.message ?? err)
+    recordWebhookReject(err?.message ?? 'server_error', true)
     _webhookServer = null
   })
 
@@ -434,11 +470,13 @@ export function onNotification(callback) {
  * so everything downstream (inbox, announce, chat injection) treats every
  * source identically.
  * @param {unknown} payload
+ * @param {{ ingress?: 'webhook' | 'macos-notification-center' | 'programmatic' }} [options]
  * @returns {{ ok: true, id: string } | { ok: false, error: string }}
  */
-export function ingestNotificationPayload(payload) {
+export function ingestNotificationPayload(payload, options = {}) {
   const normalized = normalizeWebhookPayload(payload)
   if (!normalized.ok) {
+    if (options.ingress === 'webhook') recordWebhookReject(normalized.error)
     return { ok: false, error: normalized.error }
   }
 
@@ -467,6 +505,7 @@ export function ingestNotificationPayload(payload) {
   }
 
   _onNotification?.(message)
+  if (options.ingress === 'webhook') recordWebhookEvent(message)
   return { ok: true, id: message.id }
 }
 

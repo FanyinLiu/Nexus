@@ -275,6 +275,60 @@ test('preserves a non-default pet choice during the Codex pet migration', () => 
   assert.equal(settings.petModelId, 'mao')
 })
 
+test('loads sanitized pet action map overrides for known editable slots', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+      petActionMapOverrides: {
+        mao: {
+          expressions: {
+            happy: '  exp_custom_happy  ',
+            surprised: '',
+            badExpression: 'drop-me',
+          },
+          gestures: {
+            wave: ' Wave ',
+            badGesture: 'drop-me',
+          },
+          lifecycleMotions: {
+            speakingStart: ' Talk ',
+            badMotion: 'drop-me',
+          },
+        },
+        ' ': {
+          expressions: {
+            happy: 'drop-me',
+          },
+        },
+        codex: 'not-an-object',
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.deepEqual(settings.petActionMapOverrides, {
+    mao: {
+      expressions: {
+        happy: 'exp_custom_happy',
+        surprised: '',
+      },
+      gestures: {
+        wave: 'Wave',
+      },
+      lifecycleMotions: {
+        speakingStart: 'Talk',
+      },
+    },
+  })
+})
+
 test('preserves volcengine-tts selection without migration', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({

@@ -11,6 +11,7 @@ import type {
 import type { EmotionState } from '../autonomy/emotionModel.ts'
 import { computeMemorySignificance } from './decay.ts'
 import { createId } from '../../lib/index.ts'
+import { createDailyMemorySourceRef, createMessageMemorySourceRef } from './sourceRefs.ts'
 
 const longTermDuplicateThreshold = 0.72
 const dailyDuplicateThreshold = 0.88
@@ -147,6 +148,7 @@ export function extractMemoriesFromMessage(
   }
 
   const valence = emotionState ? inferValence(emotionState) : undefined
+  const sourceRef = createMessageMemorySourceRef('chat', message.id)
 
   return splitMessageSegments(message.content)
     .filter((segment) => (
@@ -162,6 +164,7 @@ export function extractMemoriesFromMessage(
         kind: inferMemoryKind(category),
         enabled: true,
         source: 'chat',
+        ...(sourceRef ? { sourceRef } : {}),
         importance: inferImportance(segment, category),
         createdAt: new Date().toISOString(),
         emotionSnapshot: emotionState,
@@ -282,12 +285,15 @@ export function createDailyMemoryEntry(
     return null
   }
 
+  const sourceRef = createDailyMemorySourceRef(source, message.id)
+
   return {
     id: createId('daily-memory'),
     day: getLocalDayKey(message.createdAt),
     role: message.role,
     content,
     source,
+    ...(sourceRef ? { sourceRef } : {}),
     createdAt: message.createdAt,
   }
 }

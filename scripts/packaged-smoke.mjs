@@ -1,13 +1,72 @@
 #!/usr/bin/env node
 
-import { existsSync, readdirSync, statSync, chmodSync } from 'node:fs'
+import { existsSync, readdirSync, statSync, chmodSync, mkdirSync, writeFileSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import path from 'node:path'
+import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const RELEASE_DIR = path.resolve(ROOT, process.env.PACKAGED_SMOKE_RELEASE_DIR || 'release')
 const TIMEOUT_MS = Number.parseInt(process.env.PACKAGED_SMOKE_TIMEOUT_MS || '90000', 10)
+const EVIDENCE_FILE = process.env.PACKAGED_SMOKE_EVIDENCE_FILE || ''
+const M2_PACKAGE_SMOKE_GATE = 'nexus-v1-m2-package-smoke'
+
+function normalizePlatform(value = process.platform) {
+  if (value === 'win32') return 'windows'
+  if (value === 'darwin') return 'macos'
+  if (value === 'linux') return 'linux'
+  return 'unknown'
+}
+
+function redactLocalPath(value) {
+  return String(value ?? '')
+    .replaceAll(ROOT, '<repo>')
+    .replaceAll(os.homedir(), '<home>')
+}
+
+function relativeReleaseDir() {
+  const relative = path.relative(ROOT, RELEASE_DIR)
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return '<external-release-dir>'
+  return relative
+}
+
+function executableKind(executable) {
+  const normalized = String(executable ?? '')
+  if (/\.app\/Contents\/MacOS\//.test(normalized)) return 'macos-app'
+  if (/\.exe$/i.test(normalized)) return 'windows-exe'
+  if (/linux-unpacked/.test(normalized)) return 'linux-unpacked'
+  return executable ? 'executable' : 'missing'
+}
+
+function writeEvidence(payload) {
+  if (!EVIDENCE_FILE) return
+  const resolved = path.resolve(ROOT, EVIDENCE_FILE)
+  const report = {
+    schemaVersion: 1,
+    gate: M2_PACKAGE_SMOKE_GATE,
+    generatedAt: new Date().toISOString(),
+    platform: normalizePlatform(),
+    ok: payload.ok === true,
+    releaseDir: relativeReleaseDir(),
+    executableKind: executableKind(payload.executable),
+    executableFound: Boolean(payload.executable),
+    timeoutMs: TIMEOUT_MS,
+    status: payload.ok === true ? 'pass' : 'fail',
+    error: payload.error ? redactLocalPath(payload.error) : null,
+    privacy: {
+      artifactContentsCopied: false,
+      privateFieldsOmitted: [
+        'absolute executable path',
+        'user home directory',
+        'release operator names and notes',
+        'signing secrets',
+      ],
+    },
+  }
+  mkdirSync(path.dirname(resolved), { recursive: true })
+  writeFileSync(resolved, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
+}
 
 function isExecutable(filePath) {
   try {
@@ -178,13 +237,21 @@ function runSmoke(executable) {
 const executable = findPackagedExecutable()
 if (!executable) {
   console.error('[packaged-smoke] No packaged executable found. Run `npm run package:dir` first.')
+  writeEvidence({
+    ok: false,
+    executable: null,
+    error: 'No packaged executable found. Run `npm run package:dir` first.',
+  })
   process.exit(1)
 }
 
 try {
   await runSmoke(executable)
+  writeEvidence({ ok: true, executable })
   console.log('[packaged-smoke] Packaged app loaded successfully.')
 } catch (error) {
-  console.error(`[packaged-smoke] ${error instanceof Error ? error.message : String(error)}`)
+  const message = error instanceof Error ? error.message : String(error)
+  writeEvidence({ ok: false, executable, error: message })
+  console.error(`[packaged-smoke] ${message}`)
   process.exit(1)
 }
