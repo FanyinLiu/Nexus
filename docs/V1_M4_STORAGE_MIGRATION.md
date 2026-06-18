@@ -1,15 +1,17 @@
 # Nexus v1.0 M4 Storage Migration Inventory
 
 This note is the M4 implementation contract. It prepares the
-localStorage-to-main-process-SQLite migration without moving user data yet, and
-now includes the first main-process SQLite foundation.
+localStorage-to-main-process-SQLite migration without moving runtime reads yet,
+and now includes the first main-process SQLite foundation plus a non-destructive
+structured copy path for already-backed-up chat and memory snapshots.
 
 ## Objective
 
 Make the current renderer localStorage surface visible, classified, and
 release-gated, then establish a main-process SQLite schema and migration
-ledger plus a non-destructive local snapshot backup path before introducing
-read-through migration or rollback tooling.
+ledger, a non-destructive local snapshot backup path, and a structured
+chat/memory copy target before introducing read-through migration or rollback
+tooling.
 
 ## Problem Analysis
 
@@ -41,7 +43,7 @@ API keys, audit log entries, local file contents, or source ids.
 
 `electron/services/sqliteStorage.js` is the first main-process SQLite
 foundation. It selects built-in `node:sqlite` before adding a packaged native
-dependency, creates schema version 2, and initializes private tables for:
+dependency, creates schema version 3, and initializes private tables for:
 
 - `storage_schema_migrations`
 - `storage_backups`
@@ -49,6 +51,13 @@ dependency, creates schema version 2, and initializes private tables for:
 - `storage_migration_events`
 - `local_storage_backup_runs`
 - `local_storage_backup_items`
+- `local_storage_copy_runs`
+- `local_storage_copy_items`
+- `memory_sources`
+- `chat_sessions`
+- `chat_messages`
+- `memories`
+- `daily_memory_entries`
 
 `scripts/m4-sqlite-foundation-audit.mjs` initializes that schema in a bounded
 database path and writes `artifacts/v1/m4-sqlite-foundation.json`. The report
@@ -73,10 +82,23 @@ domains, a backup file name, and a sha256 hash. It never returns localStorage
 values, absolute backup paths, or any mutation signal, and it leaves source
 localStorage untouched.
 
+`storage:copy-local-snapshot` and
+`window.desktopPet.copyLocalStorageSnapshot()` add the first non-destructive
+structured copy step after a snapshot backup exists. The main process reads the
+private SQLite backup rows by backup id, writes chat sessions/messages,
+long-term memories, daily memory entries, and memory-source references into
+schema v3 tables, records copy run/item rows, and marks copied keys in the
+ledger. The response returns only counts, copied/skipped key names, and policy
+flags. It does not return values, does not delete source localStorage, and keeps
+runtime/read-through migration disabled. Relationship-shaped localStorage is
+backed up but skipped by this copy step until a dedicated relationship table or
+view is introduced.
+
 `src/lib/storage/localSnapshotBackup.ts` centralizes the renderer-side
 collection of the current chat, chat session, long-term memory, daily memory,
 legacy memory, and relationship localStorage keys. The helper is intentionally
-manual-call only; no startup path automatically copies user data yet.
+manual-call only; no startup path automatically backs up or copies user data
+yet.
 
 ## Impact Scope
 
@@ -91,9 +113,10 @@ foundation proves schema and ledger readiness, not read-through migration or
 packaged Electron compatibility. Treat these reports as a work queue and
 release-candidate gate, not as completed user-data migration evidence. The
 `storage:status` IPC is diagnostic-only; it must not be used as proof that chat
-or memory reads have migrated. Snapshot backups prove that user data can be
-copied into a local backup and ledger without mutating source localStorage, but
-they are not restore, rollback, or read-through evidence yet.
+or memory reads have migrated. Snapshot backups and structured copy prove that
+allowlisted chat/memory data can be copied into private local files, ledger
+rows, and schema v3 tables without mutating source localStorage, but they are
+not restore, rollback, or read-through evidence yet.
 
 ## Rollback Plan
 
@@ -111,13 +134,15 @@ files created during manual testing. Source localStorage is not changed.
 
 No runtime user data migration is performed in this slice. The foundation
 creates schema migration, backup, localStorage migration ledger, migration
-event, snapshot run, and snapshot item tables. The snapshot backup path can
-copy allowlisted chat/memory values into a local private backup file and SQLite
-ledger, but it does not delete, rewrite, or bypass renderer localStorage. The
-future migration must keep source localStorage values until the SQLite copy is
-verified, write a private-safe backup before mutation, record each key in the
-migration ledger, and provide a restore or downgrade command for each schema
-version.
+event, snapshot run/item, structured copy run/item, chat, memory, and source
+reference tables. The snapshot backup path can copy allowlisted chat/memory
+values into a local private backup file and SQLite ledger, and the structured
+copy path can then write backed-up chat/memory rows into schema v3 tables. Both
+paths preserve source localStorage and keep runtime/read-through migration
+disabled. The future migration must keep source localStorage values until the
+SQLite copy is verified, write a private-safe backup before mutation, record
+each key in the migration ledger, and provide a restore or downgrade command for
+each schema version.
 
 ## Tests And Evidence
 
@@ -150,14 +175,19 @@ with the actual SQLite migration. This inventory stage is developer-facing.
 Inventory scaffolding is implemented. The audit identifies storage keys across
 chat, memory, permissions/settings, audit/log style data, runtime cache, and
 other support domains. SQLite foundation scaffolding is implemented with
-built-in `node:sqlite`, schema version 2, and private-safe migration, backup,
-snapshot, ledger, and event tables. Read-only `storage:status` IPC is wired
-through preload, requires trusted sender validation, is covered by the global
-high-risk IPC audit wrapper, validates its response shape, and redacts the
-absolute database path. `storage:backup-local-snapshot` now backs up
-allowlisted chat/memory/relationship localStorage values into a local backup
-file and SQLite ledger, validates request and response shapes, redacts absolute
-paths, and preserves source localStorage. Runtime read-through migration is not
+built-in `node:sqlite`, schema version 3, and private-safe migration, backup,
+snapshot, structured copy, chat, memory, source reference, ledger, and event
+tables. Read-only `storage:status` IPC is wired through preload, requires
+trusted sender validation, is covered by the global high-risk IPC audit wrapper,
+validates its response shape, and redacts the absolute database path.
+`storage:backup-local-snapshot` now backs up allowlisted
+chat/memory/relationship localStorage values into a local backup file and
+SQLite ledger, validates request and response shapes, redacts absolute paths,
+and preserves source localStorage. `storage:copy-local-snapshot` now copies
+already-backed-up chat sessions/messages, long-term memories, and daily memory
+entries into schema v3 tables, records copied/skipped item rows, keeps
+relationship state backed up but skipped, returns only private-safe counts and
+keys, and preserves source localStorage. Runtime read-through migration is not
 enabled.
 
 M4 is not accepted as complete. Strict v1 acceptance should keep blocking on M4
@@ -167,16 +197,18 @@ snapshot backup evidence, restore/rollback, and cross-platform evidence exist.
 ## Known Gaps
 
 - Packaged Electron `node:sqlite` behavior still needs smoke evidence.
+- Relationship state is backed up but not structured-copied until a dedicated
+  table or view exists.
 - Read-through storage IPC contracts are not implemented.
 - Restore, rollback, and schema downgrade tooling are not implemented.
-- Snapshot backup evidence is available, but no automated release gate invokes
-  it against a real renderer profile yet.
+- Snapshot backup and structured copy evidence is available, but no automated
+  release gate invokes it against a real renderer profile yet.
 - Existing localStorage data remains the runtime source of truth.
 
 ## Next Stage Tasks
 
-- Capture chat/memory localStorage snapshot backup evidence from a real renderer
-  profile.
+- Capture chat/memory localStorage snapshot backup and structured copy evidence
+  from a real renderer profile.
 - Extend storage IPC for read-through chat and memory migration.
 - Implement read-through migration for chat and memory first.
 - Add fixture-based migration, corruption, backup, and rollback tests.

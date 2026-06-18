@@ -264,6 +264,13 @@ type StorageStatus = {
       migrationEvents: number
       localStorageBackupRuns: number
       localStorageBackupItems: number
+      localStorageCopyRuns: number
+      localStorageCopyItems: number
+      chatSessions: number
+      chatMessages: number
+      memories: number
+      dailyMemoryEntries: number
+      memorySources: number
     }
   }
   migrationPlan: {
@@ -276,6 +283,7 @@ type StorageStatus = {
     rollbackLedgerReady: boolean
     localStorageLedgerReady: boolean
     localStorageSnapshotBackupReady: boolean
+    localStorageStructuredCopyReady: boolean
     crossPlatformCoverageRequired: string[]
   }
   privacy: {
@@ -322,6 +330,46 @@ type LocalStorageSnapshotBackupResponse = {
   privacy: {
     localStorageValuesReturned: boolean
     absoluteBackupPathExposed: boolean
+    sourceLocalStorageMutated: boolean
+    valuesCopiedToResponse: boolean
+  }
+  nextActions: string[]
+}
+
+type LocalStorageSnapshotCopyRequest = {
+  backupId: string
+  copyId?: string
+}
+
+type LocalStorageSnapshotCopyResponse = {
+  gate: 'nexus-v1-m4-local-storage-snapshot-copy'
+  ok: boolean
+  status: string
+  copyId: string
+  backupId: string
+  copiedAt: string
+  itemCount: number
+  copiedItemCount: number
+  skippedItemCount: number
+  failedItemCount: number
+  chatSessionCount: number
+  chatMessageCount: number
+  memoryCount: number
+  dailyMemoryEntryCount: number
+  keys: string[]
+  copiedKeys: string[]
+  skippedKeys: string[]
+  failedKeys: string[]
+  migrationPlan: {
+    runtimeMigrationEnabled: boolean
+    readThroughMigrationEnabled: boolean
+    sourceLocalStoragePreserved: boolean
+    structuredSqliteCopyCompleted: boolean
+    destructiveMigrationDetected: boolean
+  }
+  privacy: {
+    localStorageValuesReturned: boolean
+    absolutePathExposed: boolean
     sourceLocalStorageMutated: boolean
     valuesCopiedToResponse: boolean
   }
@@ -445,6 +493,9 @@ declare global {
       backupLocalStorageSnapshot: (
         payload: LocalStorageSnapshotBackupRequest,
       ) => Promise<LocalStorageSnapshotBackupResponse>
+      copyLocalStorageSnapshot: (
+        payload: LocalStorageSnapshotCopyRequest,
+      ) => Promise<LocalStorageSnapshotCopyResponse>
       listSpeechVoices: (payload: SpeechVoiceListRequest) => Promise<SpeechVoiceListResponse>
       transcribeAudio: (payload: AudioTranscriptionRequest) => Promise<AudioTranscriptionResponse>
       synthesizeAudio: (payload: AudioSynthesisRequest) => Promise<AudioSynthesisResponse>

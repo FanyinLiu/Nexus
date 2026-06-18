@@ -3,16 +3,20 @@ import electron from 'electron'
 import { requireTrustedSender } from './validate.js'
 import {
   backupLocalStorageSnapshot,
+  copyLocalStorageSnapshotToStructuredSqlite,
   initializeNexusStorageDatabase,
   M4_SQLITE_FOUNDATION_GATE,
   M4_SQLITE_FOUNDATION_TABLES,
   M4_SQLITE_SCHEMA_VERSION,
+  validateLocalStorageSnapshotCopyRequest,
   validateLocalStorageSnapshotRequest,
 } from '../services/sqliteStorage.js'
 
 export const STORAGE_STATUS_CHANNEL = 'storage:status'
 export const STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL = 'storage:backup-local-snapshot'
+export const STORAGE_COPY_LOCAL_SNAPSHOT_CHANNEL = 'storage:copy-local-snapshot'
 export const STORAGE_BACKUP_LOCAL_SNAPSHOT_GATE = 'nexus-v1-m4-local-storage-snapshot-backup'
+export const STORAGE_COPY_LOCAL_SNAPSHOT_GATE = 'nexus-v1-m4-local-storage-snapshot-copy'
 
 const { app, ipcMain } = electron ?? {}
 
@@ -99,6 +103,13 @@ export function buildStorageStatusResponse(status, options = {}) {
         migrationEvents: toFiniteNumber(counts.migrationEvents, 0),
         localStorageBackupRuns: toFiniteNumber(counts.localStorageBackupRuns, 0),
         localStorageBackupItems: toFiniteNumber(counts.localStorageBackupItems, 0),
+        localStorageCopyRuns: toFiniteNumber(counts.localStorageCopyRuns, 0),
+        localStorageCopyItems: toFiniteNumber(counts.localStorageCopyItems, 0),
+        chatSessions: toFiniteNumber(counts.chatSessions, 0),
+        chatMessages: toFiniteNumber(counts.chatMessages, 0),
+        memories: toFiniteNumber(counts.memories, 0),
+        dailyMemoryEntries: toFiniteNumber(counts.dailyMemoryEntries, 0),
+        memorySources: toFiniteNumber(counts.memorySources, 0),
       },
     },
     migrationPlan: {
@@ -112,6 +123,13 @@ export function buildStorageStatusResponse(status, options = {}) {
       localStorageLedgerReady: tables.includes('local_storage_migration_ledger'),
       localStorageSnapshotBackupReady: tables.includes('local_storage_backup_runs')
         && tables.includes('local_storage_backup_items'),
+      localStorageStructuredCopyReady: tables.includes('local_storage_copy_runs')
+        && tables.includes('local_storage_copy_items')
+        && tables.includes('chat_sessions')
+        && tables.includes('chat_messages')
+        && tables.includes('memories')
+        && tables.includes('daily_memory_entries')
+        && tables.includes('memory_sources'),
       crossPlatformCoverageRequired: ['macos', 'windows', 'linux'],
     },
     privacy: {
@@ -198,6 +216,13 @@ export function validateStorageStatusResponse(response) {
   requireFiniteNumber(response.database.counts.migrationEvents, 'database.counts.migrationEvents')
   requireFiniteNumber(response.database.counts.localStorageBackupRuns, 'database.counts.localStorageBackupRuns')
   requireFiniteNumber(response.database.counts.localStorageBackupItems, 'database.counts.localStorageBackupItems')
+  requireFiniteNumber(response.database.counts.localStorageCopyRuns, 'database.counts.localStorageCopyRuns')
+  requireFiniteNumber(response.database.counts.localStorageCopyItems, 'database.counts.localStorageCopyItems')
+  requireFiniteNumber(response.database.counts.chatSessions, 'database.counts.chatSessions')
+  requireFiniteNumber(response.database.counts.chatMessages, 'database.counts.chatMessages')
+  requireFiniteNumber(response.database.counts.memories, 'database.counts.memories')
+  requireFiniteNumber(response.database.counts.dailyMemoryEntries, 'database.counts.dailyMemoryEntries')
+  requireFiniteNumber(response.database.counts.memorySources, 'database.counts.memorySources')
 
   requirePlainObject(response.migrationPlan, 'migrationPlan')
   requireBoolean(response.migrationPlan.runtimeMigrationEnabled, 'migrationPlan.runtimeMigrationEnabled')
@@ -209,6 +234,7 @@ export function validateStorageStatusResponse(response) {
   requireBoolean(response.migrationPlan.rollbackLedgerReady, 'migrationPlan.rollbackLedgerReady')
   requireBoolean(response.migrationPlan.localStorageLedgerReady, 'migrationPlan.localStorageLedgerReady')
   requireBoolean(response.migrationPlan.localStorageSnapshotBackupReady, 'migrationPlan.localStorageSnapshotBackupReady')
+  requireBoolean(response.migrationPlan.localStorageStructuredCopyReady, 'migrationPlan.localStorageStructuredCopyReady')
   requireStringArray(response.migrationPlan.crossPlatformCoverageRequired, 'migrationPlan.crossPlatformCoverageRequired')
 
   requirePlainObject(response.privacy, 'privacy')
@@ -337,6 +363,101 @@ export function validateLocalStorageSnapshotBackupResponse(response) {
   return response
 }
 
+export function buildLocalStorageSnapshotCopyResponse(result) {
+  return validateLocalStorageSnapshotCopyResponse({
+    gate: STORAGE_COPY_LOCAL_SNAPSHOT_GATE,
+    ok: result?.ok === true,
+    status: cleanString(result?.status) || 'unknown',
+    copyId: cleanString(result?.copyId),
+    backupId: cleanString(result?.backupId),
+    copiedAt: cleanString(result?.copiedAt),
+    itemCount: toFiniteNumber(result?.itemCount, 0),
+    copiedItemCount: toFiniteNumber(result?.copiedItemCount, 0),
+    skippedItemCount: toFiniteNumber(result?.skippedItemCount, 0),
+    failedItemCount: toFiniteNumber(result?.failedItemCount, 0),
+    chatSessionCount: toFiniteNumber(result?.chatSessionCount, 0),
+    chatMessageCount: toFiniteNumber(result?.chatMessageCount, 0),
+    memoryCount: toFiniteNumber(result?.memoryCount, 0),
+    dailyMemoryEntryCount: toFiniteNumber(result?.dailyMemoryEntryCount, 0),
+    keys: toStringArray(result?.keys),
+    copiedKeys: toStringArray(result?.copiedKeys),
+    skippedKeys: toStringArray(result?.skippedKeys),
+    failedKeys: toStringArray(result?.failedKeys),
+    migrationPlan: {
+      runtimeMigrationEnabled: false,
+      readThroughMigrationEnabled: false,
+      sourceLocalStoragePreserved: result?.sourceLocalStoragePreserved === true,
+      structuredSqliteCopyCompleted: result?.copiedItemCount > 0,
+      destructiveMigrationDetected: false,
+    },
+    privacy: {
+      localStorageValuesReturned: false,
+      absolutePathExposed: false,
+      sourceLocalStorageMutated: false,
+      valuesCopiedToResponse: result?.valuesCopiedToResponse === true,
+    },
+    nextActions: [
+      'verify-structured-copy-before-read-through-migration',
+      'implement-chat-memory-read-through-to-sqlite',
+      'add-restore-and-downgrade-cli-fixtures',
+    ],
+  })
+}
+
+export function validateLocalStorageSnapshotCopyResponse(response) {
+  requirePlainObject(response, 'local storage snapshot copy response')
+  requireStringValue(response.gate, 'gate')
+  if (response.gate !== STORAGE_COPY_LOCAL_SNAPSHOT_GATE) {
+    throw new Error('local storage snapshot copy response gate mismatch')
+  }
+  requireBoolean(response.ok, 'ok')
+  requireStringValue(response.status, 'status')
+  requireStringValue(response.copyId, 'copyId')
+  requireStringValue(response.backupId, 'backupId')
+  requireIsoString(response.copiedAt, 'copiedAt')
+  requireFiniteNumber(response.itemCount, 'itemCount')
+  requireFiniteNumber(response.copiedItemCount, 'copiedItemCount')
+  requireFiniteNumber(response.skippedItemCount, 'skippedItemCount')
+  requireFiniteNumber(response.failedItemCount, 'failedItemCount')
+  requireFiniteNumber(response.chatSessionCount, 'chatSessionCount')
+  requireFiniteNumber(response.chatMessageCount, 'chatMessageCount')
+  requireFiniteNumber(response.memoryCount, 'memoryCount')
+  requireFiniteNumber(response.dailyMemoryEntryCount, 'dailyMemoryEntryCount')
+  requireStringArray(response.keys, 'keys')
+  requireStringArray(response.copiedKeys, 'copiedKeys')
+  requireStringArray(response.skippedKeys, 'skippedKeys')
+  requireStringArray(response.failedKeys, 'failedKeys')
+
+  requirePlainObject(response.migrationPlan, 'migrationPlan')
+  requireBoolean(response.migrationPlan.runtimeMigrationEnabled, 'migrationPlan.runtimeMigrationEnabled')
+  requireBoolean(response.migrationPlan.readThroughMigrationEnabled, 'migrationPlan.readThroughMigrationEnabled')
+  requireBoolean(response.migrationPlan.sourceLocalStoragePreserved, 'migrationPlan.sourceLocalStoragePreserved')
+  requireBoolean(response.migrationPlan.structuredSqliteCopyCompleted, 'migrationPlan.structuredSqliteCopyCompleted')
+  requireBoolean(response.migrationPlan.destructiveMigrationDetected, 'migrationPlan.destructiveMigrationDetected')
+
+  requirePlainObject(response.privacy, 'privacy')
+  requireBoolean(response.privacy.localStorageValuesReturned, 'privacy.localStorageValuesReturned')
+  requireBoolean(response.privacy.absolutePathExposed, 'privacy.absolutePathExposed')
+  requireBoolean(response.privacy.sourceLocalStorageMutated, 'privacy.sourceLocalStorageMutated')
+  requireBoolean(response.privacy.valuesCopiedToResponse, 'privacy.valuesCopiedToResponse')
+  requireStringArray(response.nextActions, 'nextActions')
+
+  if (response.privacy.localStorageValuesReturned) {
+    throw new Error('local storage snapshot copy response must not return values')
+  }
+  if (response.privacy.absolutePathExposed) {
+    throw new Error('local storage snapshot copy response must not expose absolute paths')
+  }
+  if (response.privacy.sourceLocalStorageMutated) {
+    throw new Error('local storage snapshot copy response must preserve source localStorage')
+  }
+  if (response.privacy.valuesCopiedToResponse) {
+    throw new Error('local storage snapshot copy response must not copy values to response')
+  }
+
+  return response
+}
+
 export async function getStorageStatus(options = {}) {
   const initializeFn = options.initializeStorageDatabase || initializeNexusStorageDatabase
   const appLike = options.appLike || app
@@ -360,6 +481,15 @@ export async function backupRendererLocalStorageSnapshot(payload, options = {}) 
   return buildLocalStorageSnapshotBackupResponse(result, { appLike })
 }
 
+export async function copyRendererLocalStorageSnapshot(payload, options = {}) {
+  const appLike = options.appLike || app
+  const result = await copyLocalStorageSnapshotToStructuredSqlite(payload, {
+    ...options,
+    appLike,
+  })
+  return buildLocalStorageSnapshotCopyResponse(result)
+}
+
 export function register(options = {}) {
   const ipcMainLike = options.ipcMainLike || ipcMain
   if (!ipcMainLike || typeof ipcMainLike.handle !== 'function') {
@@ -375,5 +505,10 @@ export function register(options = {}) {
     trustedSenderCheck(event)
     validateLocalStorageSnapshotRequest(payload)
     return backupRendererLocalStorageSnapshot(payload, options)
+  })
+  ipcMainLike.handle('storage:copy-local-snapshot', async (event, payload) => {
+    trustedSenderCheck(event)
+    validateLocalStorageSnapshotCopyRequest(payload)
+    return copyRendererLocalStorageSnapshot(payload, options)
   })
 }

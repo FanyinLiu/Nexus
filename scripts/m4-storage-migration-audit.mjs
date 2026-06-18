@@ -270,6 +270,13 @@ function isLocalStorageSnapshotBackupReady(sqliteFoundationSource) {
     && raw?.ipcStatus?.snapshotBackup?.ready === true
 }
 
+function isLocalStorageStructuredCopyReady(sqliteFoundationSource) {
+  const raw = sqliteFoundationSource?.value
+  return isLocalStorageSnapshotBackupReady(sqliteFoundationSource)
+    && raw?.migrationPlan?.localStorageStructuredCopyReady === true
+    && raw?.ipcStatus?.structuredCopy?.ready === true
+}
+
 function summarizeDependencyStatus(packageSource, sqliteFoundationSource) {
   const deps = {
     ...(packageSource.value?.dependencies ?? {}),
@@ -325,6 +332,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
     .map((entry) => entry.domain)
   const sqliteDependency = summarizeDependencyStatus(packageSource, sqliteFoundationSource)
   const localStorageSnapshotBackupReady = isLocalStorageSnapshotBackupReady(sqliteFoundationSource)
+  const localStorageStructuredCopyReady = isLocalStorageStructuredCopyReady(sqliteFoundationSource)
 
   const migrationReady = false
   const inventoryReady = packageSource.exists
@@ -365,6 +373,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
       runtimeMigrationEnabled: false,
       sqliteFoundationReady: sqliteDependency.foundationReady === true,
       localStorageSnapshotBackupReady,
+      localStorageStructuredCopyReady,
       destructiveMigrationDetected: false,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
@@ -384,6 +393,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
       : [
           ...(sqliteDependency.foundationReady === true ? [] : ['choose-sqlite-dependency-after-packaging-review']),
           ...(localStorageSnapshotBackupReady ? ['capture-chat-memory-local-storage-snapshot-backup-evidence'] : ['extend-main-process-storage-ipc-for-read-through-migration']),
+          ...(localStorageStructuredCopyReady ? ['capture-chat-memory-structured-copy-evidence'] : ['copy-chat-memory-snapshot-into-structured-sqlite']),
           'implement-read-through-migration-with-localstorage-preservation',
           'add-backup-restore-and-rollback-fixtures',
         ],

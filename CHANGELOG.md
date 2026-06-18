@@ -80,6 +80,12 @@
   private local backup files, SQLite ledger rows, and migration events without
   mutating source localStorage or returning values/absolute paths to the
   renderer.
+- **M4 structured snapshot copy** — expanded the SQLite foundation to schema
+  version 3 with structured copy, chat, memory, daily memory, and memory-source
+  tables. `storage:copy-local-snapshot` copies an existing private snapshot
+  backup into those tables with private-safe counts/keys only, keeps
+  relationship state backed up but skipped, preserves source localStorage, and
+  leaves runtime read-through migration disabled.
 - **M2 distribution trust audit** — added
   `npm run m2:distribution:trust` and
   `docs/V1_M2_DISTRIBUTION_TRUST.md` so platform installer targets,

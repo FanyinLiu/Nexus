@@ -3,11 +3,14 @@ import { test } from 'node:test'
 
 import {
   buildLocalStorageSnapshotBackupResponse,
+  buildLocalStorageSnapshotCopyResponse,
   buildStorageStatusResponse,
   STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL,
+  STORAGE_COPY_LOCAL_SNAPSHOT_CHANNEL,
   register,
   STORAGE_STATUS_CHANNEL,
   validateLocalStorageSnapshotBackupResponse,
+  validateLocalStorageSnapshotCopyResponse,
   validateStorageStatusResponse,
 } from '../electron/ipc/storageIpc.js'
 import {
@@ -31,12 +34,19 @@ function foundationStatus(overrides = {}) {
     journalMode: 'wal',
     tables: M4_SQLITE_FOUNDATION_TABLES,
     counts: {
-      schemaMigrations: 1,
+      schemaMigrations: 3,
       backups: 0,
       localStorageLedgerItems: 0,
       migrationEvents: 0,
       localStorageBackupRuns: 0,
       localStorageBackupItems: 0,
+      localStorageCopyRuns: 0,
+      localStorageCopyItems: 0,
+      chatSessions: 0,
+      chatMessages: 0,
+      memories: 0,
+      dailyMemoryEntries: 0,
+      memorySources: 0,
     },
     ...overrides,
   }
@@ -62,6 +72,7 @@ test('storage status response is private-safe and validates its shape', () => {
   assert.equal(response.migrationPlan.runtimeMigrationEnabled, false)
   assert.equal(response.migrationPlan.readThroughMigrationEnabled, false)
   assert.equal(response.migrationPlan.localStorageSnapshotBackupReady, true)
+  assert.equal(response.migrationPlan.localStorageStructuredCopyReady, true)
   assert.equal(response.privacy.userDataCopied, false)
   assert.equal(response.privacy.localStorageValuesRead, false)
   assert.equal(response.privacy.absoluteDatabasePathExposed, false)
@@ -110,6 +121,13 @@ test('storage status validator rejects malformed responses before renderer expos
           migrationEvents: 0,
           localStorageBackupRuns: 0,
           localStorageBackupItems: 0,
+          localStorageCopyRuns: 0,
+          localStorageCopyItems: 0,
+          chatSessions: 0,
+          chatMessages: 0,
+          memories: 0,
+          dailyMemoryEntries: 0,
+          memorySources: 0,
         },
       },
       migrationPlan: {},
@@ -119,6 +137,44 @@ test('storage status validator rejects malformed responses before renderer expos
     }),
     /database\.fileName must not include path separators/,
   )
+})
+
+test('local storage snapshot copy response redacts values and keeps runtime migration disabled', () => {
+  const response = buildLocalStorageSnapshotCopyResponse({
+    ok: true,
+    status: 'snapshot-copied',
+    copyId: 'local-storage-copy-test',
+    backupId: 'local-storage-backup-test',
+    copiedAt: '2026-06-18T12:35:00.000Z',
+    itemCount: 2,
+    copiedItemCount: 2,
+    skippedItemCount: 0,
+    failedItemCount: 0,
+    chatSessionCount: 1,
+    chatMessageCount: 2,
+    memoryCount: 1,
+    dailyMemoryEntryCount: 0,
+    keys: ['nexus:chat', 'nexus:memory:long-term'],
+    copiedKeys: ['nexus:chat', 'nexus:memory:long-term'],
+    skippedKeys: [],
+    failedKeys: [],
+    sourceLocalStoragePreserved: true,
+    valuesCopiedToResponse: false,
+  })
+  const json = JSON.stringify(response)
+
+  assert.equal(response.gate, 'nexus-v1-m4-local-storage-snapshot-copy')
+  assert.equal(response.ok, true)
+  assert.equal(response.migrationPlan.runtimeMigrationEnabled, false)
+  assert.equal(response.migrationPlan.readThroughMigrationEnabled, false)
+  assert.equal(response.migrationPlan.sourceLocalStoragePreserved, true)
+  assert.equal(response.migrationPlan.structuredSqliteCopyCompleted, true)
+  assert.equal(response.privacy.localStorageValuesReturned, false)
+  assert.equal(response.privacy.absolutePathExposed, false)
+  assert.equal(response.privacy.sourceLocalStorageMutated, false)
+  assert.equal(response.privacy.valuesCopiedToResponse, false)
+  assert.equal(json.includes('private user chat sample'), false)
+  assert.equal(validateLocalStorageSnapshotCopyResponse(response), response)
 })
 
 test('local storage snapshot backup response redacts paths and values', () => {
@@ -186,6 +242,7 @@ test('storage IPC registers trusted sender checks for status and snapshot backup
 
   assert.equal(typeof registeredHandlers.get(STORAGE_STATUS_CHANNEL), 'function')
   assert.equal(typeof registeredHandlers.get(STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL), 'function')
+  assert.equal(typeof registeredHandlers.get(STORAGE_COPY_LOCAL_SNAPSHOT_CHANNEL), 'function')
   const response = await registeredHandlers.get(STORAGE_STATUS_CHANNEL)?.({})
 
   assert.equal(trustedSenderChecked, true)

@@ -67,6 +67,7 @@ test('m4 storage migration report inventories localStorage keys without user dat
   assert.equal(report.migrationPlan.runtimeMigrationEnabled, false)
   assert.equal(report.migrationPlan.sqliteFoundationReady, false)
   assert.equal(report.migrationPlan.localStorageSnapshotBackupReady, false)
+  assert.equal(report.migrationPlan.localStorageStructuredCopyReady, false)
   assert.equal(report.migrationPlan.sourceLocalStoragePreservationRequired, true)
   assert.equal(report.migrationPlan.backupBeforeMutationRequired, true)
   assert.equal(report.migrationPlan.rollbackToolRequired, true)
@@ -89,9 +90,13 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
       },
       migrationPlan: {
         localStorageSnapshotBackupReady: true,
+        localStorageStructuredCopyReady: true,
       },
       ipcStatus: {
         snapshotBackup: {
+          ready: true,
+        },
+        structuredCopy: {
           ready: true,
         },
       },
@@ -110,8 +115,10 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
     assert.equal(report.sqliteDependency.foundationReady, true)
     assert.equal(report.migrationPlan.sqliteFoundationReady, true)
     assert.equal(report.migrationPlan.localStorageSnapshotBackupReady, true)
+    assert.equal(report.migrationPlan.localStorageStructuredCopyReady, true)
     assert.deepEqual(report.nextActions, [
       'capture-chat-memory-local-storage-snapshot-backup-evidence',
+      'capture-chat-memory-structured-copy-evidence',
       'implement-read-through-migration-with-localstorage-preservation',
       'add-backup-restore-and-rollback-fixtures',
     ])

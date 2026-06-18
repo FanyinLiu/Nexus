@@ -49,3 +49,13 @@ export async function backupChatMemoryLocalStorageSnapshot(
   if (!bridge?.backupLocalStorageSnapshot) return null
   return bridge.backupLocalStorageSnapshot({ reason, entries })
 }
+
+export async function copyChatMemoryLocalStorageSnapshotBackup(
+  backupId: string,
+) {
+  const trimmedBackupId = backupId.trim()
+  if (!trimmedBackupId) return null
+  const bridge = typeof window !== 'undefined' ? window.desktopPet : undefined
+  if (!bridge?.copyLocalStorageSnapshot) return null
+  return bridge.copyLocalStorageSnapshot({ backupId: trimmedBackupId })
+}

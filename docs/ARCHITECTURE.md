@@ -134,11 +134,13 @@ voice/
   migration evidence are in place. Use `npm run m4:sqlite:foundation` to
   initialize and audit the built-in `node:sqlite` main-process schema plus the
   read-only `storage:status` IPC and bounded
-  `storage:backup-local-snapshot` IPC. `storage:status` is diagnostic-only:
-  trusted sender checked, response-validated, high-risk-audited, and
-  path-redacted. The snapshot backup IPC can copy allowlisted chat/memory values
-  into a local private backup file and SQLite ledger, but it preserves source
-  localStorage and is not read-through migration. Then use
+  `storage:backup-local-snapshot` / `storage:copy-local-snapshot` IPC.
+  `storage:status` is diagnostic-only: trusted sender checked,
+  response-validated, high-risk-audited, and path-redacted. The snapshot backup
+  IPC can copy allowlisted chat/memory values into a local private backup file
+  and SQLite ledger; the structured copy IPC can copy already-backed-up
+  chat/memory rows into schema v3 tables. Both paths preserve source
+  localStorage and are not read-through migration. Then use
   `npm run m4:storage:audit` to refresh the private-safe storage inventory
   before changing read/write persistence contracts.
 

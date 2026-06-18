@@ -3,7 +3,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 
 export const M4_SQLITE_FOUNDATION_GATE = 'nexus-v1-m4-sqlite-foundation'
-export const M4_SQLITE_SCHEMA_VERSION = 2
+export const M4_SQLITE_SCHEMA_VERSION = 3
 
 const M4_SQLITE_FOUNDATION_V1_TABLES = [
   'storage_schema_migrations',
@@ -17,9 +17,20 @@ const M4_SQLITE_SNAPSHOT_TABLES = [
   'local_storage_backup_items',
 ]
 
+const M4_SQLITE_STRUCTURED_COPY_TABLES = [
+  'local_storage_copy_runs',
+  'local_storage_copy_items',
+  'memory_sources',
+  'chat_sessions',
+  'chat_messages',
+  'memories',
+  'daily_memory_entries',
+]
+
 export const M4_SQLITE_FOUNDATION_TABLES = [
   ...M4_SQLITE_FOUNDATION_V1_TABLES,
   ...M4_SQLITE_SNAPSHOT_TABLES,
+  ...M4_SQLITE_STRUCTURED_COPY_TABLES,
 ]
 
 export const M4_LOCAL_STORAGE_SNAPSHOT_SOURCE_KIND = 'renderer-local-storage-snapshot'
@@ -88,6 +99,11 @@ const SNAPSHOT_MIGRATION_ID = 'm4-local-storage-snapshot-backup-v2'
 const SNAPSHOT_MIGRATION_CHECKSUM = crypto
   .createHash('sha256')
   .update(`${SNAPSHOT_MIGRATION_ID}:2:${M4_SQLITE_SNAPSHOT_TABLES.join(',')}`)
+  .digest('hex')
+const STRUCTURED_COPY_MIGRATION_ID = 'm4-chat-memory-structured-copy-v3'
+const STRUCTURED_COPY_MIGRATION_CHECKSUM = crypto
+  .createHash('sha256')
+  .update(`${STRUCTURED_COPY_MIGRATION_ID}:3:${M4_SQLITE_STRUCTURED_COPY_TABLES.join(',')}`)
   .digest('hex')
 
 function cleanString(value) {
@@ -272,6 +288,118 @@ function createSchema(database, now) {
 
     CREATE INDEX IF NOT EXISTS idx_local_storage_backup_items_storage_key
       ON local_storage_backup_items(storage_key);
+
+    CREATE TABLE IF NOT EXISTS local_storage_copy_runs (
+      copy_id TEXT PRIMARY KEY,
+      backup_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      source_kind TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('copied', 'partial', 'failed')),
+      item_count INTEGER NOT NULL CHECK (item_count >= 0),
+      copied_item_count INTEGER NOT NULL CHECK (copied_item_count >= 0),
+      skipped_item_count INTEGER NOT NULL CHECK (skipped_item_count >= 0),
+      failed_item_count INTEGER NOT NULL CHECK (failed_item_count >= 0),
+      chat_session_count INTEGER NOT NULL CHECK (chat_session_count >= 0),
+      chat_message_count INTEGER NOT NULL CHECK (chat_message_count >= 0),
+      memory_count INTEGER NOT NULL CHECK (memory_count >= 0),
+      daily_memory_entry_count INTEGER NOT NULL CHECK (daily_memory_entry_count >= 0),
+      runtime_migration_enabled INTEGER NOT NULL CHECK (runtime_migration_enabled IN (0, 1)),
+      read_through_migration_enabled INTEGER NOT NULL CHECK (read_through_migration_enabled IN (0, 1)),
+      source_local_storage_preserved INTEGER NOT NULL CHECK (source_local_storage_preserved IN (0, 1)),
+      FOREIGN KEY (backup_id) REFERENCES local_storage_backup_runs(backup_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS local_storage_copy_items (
+      copy_id TEXT NOT NULL,
+      storage_key TEXT NOT NULL,
+      domain TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('copied', 'skipped', 'failed')),
+      inserted_rows INTEGER NOT NULL CHECK (inserted_rows >= 0),
+      skipped_rows INTEGER NOT NULL CHECK (skipped_rows >= 0),
+      error_message TEXT,
+      PRIMARY KEY (copy_id, storage_key),
+      FOREIGN KEY (copy_id) REFERENCES local_storage_copy_runs(copy_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS memory_sources (
+      source_id TEXT PRIMARY KEY,
+      source_kind TEXT NOT NULL,
+      storage_key TEXT NOT NULL,
+      backup_id TEXT NOT NULL,
+      source_value_sha256 TEXT NOT NULL,
+      copied_at TEXT NOT NULL,
+      FOREIGN KEY (backup_id) REFERENCES local_storage_backup_runs(backup_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS chat_sessions (
+      session_id TEXT PRIMARY KEY,
+      title TEXT,
+      started_at TEXT NOT NULL,
+      last_active_at TEXT NOT NULL,
+      source_storage_key TEXT NOT NULL,
+      copied_from_backup_id TEXT NOT NULL,
+      copied_at TEXT NOT NULL,
+      message_count INTEGER NOT NULL CHECK (message_count >= 0),
+      source_value_sha256 TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      session_id TEXT NOT NULL,
+      message_id TEXT NOT NULL,
+      role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+      content TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      tone TEXT,
+      reasoning_content TEXT,
+      tool_result_json TEXT CHECK (tool_result_json IS NULL OR json_valid(tool_result_json)),
+      source_storage_key TEXT NOT NULL,
+      copied_from_backup_id TEXT NOT NULL,
+      copied_at TEXT NOT NULL,
+      source_value_sha256 TEXT NOT NULL,
+      PRIMARY KEY (session_id, message_id),
+      FOREIGN KEY (session_id) REFERENCES chat_sessions(session_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS memories (
+      memory_id TEXT PRIMARY KEY,
+      content TEXT NOT NULL,
+      category TEXT NOT NULL,
+      source TEXT NOT NULL,
+      kind TEXT,
+      enabled INTEGER NOT NULL CHECK (enabled IN (0, 1)),
+      source_ref TEXT,
+      created_at TEXT NOT NULL,
+      last_used_at TEXT,
+      importance TEXT,
+      importance_score REAL,
+      recall_count INTEGER,
+      last_recalled_at TEXT,
+      emotional_valence TEXT,
+      significance REAL,
+      reflection_topic TEXT,
+      reflection_confidence REAL,
+      raw_json TEXT NOT NULL CHECK (json_valid(raw_json)),
+      source_storage_key TEXT NOT NULL,
+      copied_from_backup_id TEXT NOT NULL,
+      copied_at TEXT NOT NULL,
+      source_value_sha256 TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS daily_memory_entries (
+      day TEXT NOT NULL,
+      entry_id TEXT NOT NULL,
+      role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+      content TEXT NOT NULL,
+      source TEXT NOT NULL CHECK (source IN ('chat', 'voice')),
+      source_ref TEXT,
+      created_at TEXT NOT NULL,
+      raw_json TEXT NOT NULL CHECK (json_valid(raw_json)),
+      source_storage_key TEXT NOT NULL,
+      copied_from_backup_id TEXT NOT NULL,
+      copied_at TEXT NOT NULL,
+      source_value_sha256 TEXT NOT NULL,
+      PRIMARY KEY (day, entry_id)
+    );
   `)
 
   database
@@ -301,6 +429,20 @@ function createSchema(database, now) {
       ON CONFLICT(version) DO NOTHING
     `)
     .run(2, SNAPSHOT_MIGRATION_ID, now, SNAPSHOT_MIGRATION_CHECKSUM)
+
+  database
+    .prepare(`
+      INSERT INTO storage_schema_migrations (
+        version,
+        migration_id,
+        applied_at,
+        direction,
+        checksum
+      )
+      VALUES (?, ?, ?, 'up', ?)
+      ON CONFLICT(version) DO NOTHING
+    `)
+    .run(3, STRUCTURED_COPY_MIGRATION_ID, now, STRUCTURED_COPY_MIGRATION_CHECKSUM)
 
   database.exec(`PRAGMA user_version = ${M4_SQLITE_SCHEMA_VERSION};`)
 }
@@ -342,6 +484,34 @@ function getDatabaseSummary(database) {
     database.prepare('SELECT COUNT(*) AS count FROM local_storage_backup_items').get(),
     0,
   ))
+  const localStorageCopyRuns = Number(getScalar(
+    database.prepare('SELECT COUNT(*) AS count FROM local_storage_copy_runs').get(),
+    0,
+  ))
+  const localStorageCopyItems = Number(getScalar(
+    database.prepare('SELECT COUNT(*) AS count FROM local_storage_copy_items').get(),
+    0,
+  ))
+  const chatSessions = Number(getScalar(
+    database.prepare('SELECT COUNT(*) AS count FROM chat_sessions').get(),
+    0,
+  ))
+  const chatMessages = Number(getScalar(
+    database.prepare('SELECT COUNT(*) AS count FROM chat_messages').get(),
+    0,
+  ))
+  const memories = Number(getScalar(
+    database.prepare('SELECT COUNT(*) AS count FROM memories').get(),
+    0,
+  ))
+  const dailyMemoryEntries = Number(getScalar(
+    database.prepare('SELECT COUNT(*) AS count FROM daily_memory_entries').get(),
+    0,
+  ))
+  const memorySources = Number(getScalar(
+    database.prepare('SELECT COUNT(*) AS count FROM memory_sources').get(),
+    0,
+  ))
 
   return {
     schemaVersion: userVersion,
@@ -354,6 +524,13 @@ function getDatabaseSummary(database) {
     eventRows,
     localStorageBackupRuns,
     localStorageBackupItems,
+    localStorageCopyRuns,
+    localStorageCopyItems,
+    chatSessions,
+    chatMessages,
+    memories,
+    dailyMemoryEntries,
+    memorySources,
   }
 }
 
@@ -409,6 +586,13 @@ export async function initializeNexusStorageDatabase(options = {}) {
         migrationEvents: summary.eventRows,
         localStorageBackupRuns: summary.localStorageBackupRuns,
         localStorageBackupItems: summary.localStorageBackupItems,
+        localStorageCopyRuns: summary.localStorageCopyRuns,
+        localStorageCopyItems: summary.localStorageCopyItems,
+        chatSessions: summary.chatSessions,
+        chatMessages: summary.chatMessages,
+        memories: summary.memories,
+        dailyMemoryEntries: summary.dailyMemoryEntries,
+        memorySources: summary.memorySources,
       },
       database,
       close,
@@ -809,6 +993,747 @@ export async function backupLocalStorageSnapshot(request, options = {}) {
   }
 }
 
+export function validateLocalStorageSnapshotCopyRequest(request) {
+  if (!request || typeof request !== 'object' || Array.isArray(request)) {
+    throw new Error('local storage snapshot copy request must be a plain object')
+  }
+  const backupId = cleanString(request.backupId)
+  if (!backupId || !/^[a-z0-9:_-]{1,160}$/i.test(backupId)) {
+    throw new Error('backupId must be a short id')
+  }
+  const copyId = cleanString(request.copyId)
+  if (copyId && !/^[a-z0-9:_-]{1,160}$/i.test(copyId)) {
+    throw new Error('copyId must be a short id')
+  }
+  return { backupId, copyId }
+}
+
+function isPlainObject(value) {
+  return value != null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function normalizeText(value, limit) {
+  return typeof value === 'string'
+    ? value.replace(/\s+/g, ' ').trim().slice(0, limit).trim()
+    : ''
+}
+
+function normalizeContentText(value, limit) {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  return trimmed.length > limit ? trimmed.slice(0, limit) : trimmed
+}
+
+function normalizeIsoForCopy(value, fallbackIndex = 0) {
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value.trim())
+    if (Number.isFinite(parsed)) return new Date(parsed).toISOString()
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return new Date(value).toISOString()
+  }
+  return new Date(fallbackIndex).toISOString()
+}
+
+function normalizeOptionalIsoForCopy(value) {
+  const text = cleanString(value)
+  if (!text) return ''
+  const parsed = Date.parse(text)
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : ''
+}
+
+function parseSnapshotJson(item) {
+  try {
+    return JSON.parse(item.source_value_text)
+  } catch {
+    throw new Error(`invalid JSON for ${item.storage_key}`)
+  }
+}
+
+function readSnapshotBackupItems(database, backupId) {
+  const backupRun = database
+    .prepare('SELECT backup_id FROM local_storage_backup_runs WHERE backup_id = ?')
+    .get(backupId)
+  if (!backupRun) throw new Error(`local storage backup not found: ${backupId}`)
+
+  return database
+    .prepare(`
+      SELECT
+        storage_key,
+        domain,
+        source_value_text,
+        source_value_sha256,
+        source_value_bytes,
+        source_updated_at
+      FROM local_storage_backup_items
+      WHERE backup_id = ?
+      ORDER BY storage_key
+    `)
+    .all(backupId)
+}
+
+function insertMemorySource(database, item, context) {
+  database
+    .prepare(`
+      INSERT OR REPLACE INTO memory_sources (
+        source_id,
+        source_kind,
+        storage_key,
+        backup_id,
+        source_value_sha256,
+        copied_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?)
+    `)
+    .run(
+      `${context.backupId}:${item.storage_key}`,
+      M4_LOCAL_STORAGE_SNAPSHOT_SOURCE_KIND,
+      item.storage_key,
+      context.backupId,
+      item.source_value_sha256,
+      context.copiedAt,
+    )
+}
+
+function normalizeChatMessageForSqlite(value, index) {
+  if (!isPlainObject(value)) return null
+  if (!['user', 'assistant', 'system'].includes(value.role)) return null
+  const content = normalizeContentText(value.content, 50_000)
+  if (!content) return null
+  const createdAt = normalizeIsoForCopy(value.createdAt, index)
+  const id = normalizeText(value.id, 160) || `chat-message-recovered-${index}-${Date.parse(createdAt)}`
+  const tone = ['neutral', 'error'].includes(value.tone) ? value.tone : ''
+  const reasoning = typeof value.reasoning_content === 'string' && value.reasoning_content
+    ? value.reasoning_content.slice(0, 50_000)
+    : ''
+  const toolResultJson = isPlainObject(value.toolResult) ? JSON.stringify(value.toolResult) : ''
+  return { id, role: value.role, content, createdAt, tone, reasoning, toolResultJson }
+}
+
+function inferSqliteSessionTitle(messages) {
+  const firstUser = messages.find((message) => message.role === 'user' && message.content)
+  if (!firstUser) return ''
+  return firstUser.content.length > 80 ? firstUser.content.slice(0, 80).trim() : firstUser.content
+}
+
+function insertChatSession(database, session, item, context) {
+  database
+    .prepare(`
+      INSERT OR REPLACE INTO chat_sessions (
+        session_id,
+        title,
+        started_at,
+        last_active_at,
+        source_storage_key,
+        copied_from_backup_id,
+        copied_at,
+        message_count,
+        source_value_sha256
+      )
+      VALUES (?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?)
+    `)
+    .run(
+      session.id,
+      session.title,
+      session.startedAt,
+      session.lastActiveAt,
+      item.storage_key,
+      context.backupId,
+      context.copiedAt,
+      session.messages.length,
+      item.source_value_sha256,
+    )
+}
+
+function insertChatMessage(database, message, sessionId, item, context) {
+  database
+    .prepare(`
+      INSERT OR REPLACE INTO chat_messages (
+        session_id,
+        message_id,
+        role,
+        content,
+        created_at,
+        tone,
+        reasoning_content,
+        tool_result_json,
+        source_storage_key,
+        copied_from_backup_id,
+        copied_at,
+        source_value_sha256
+      )
+      VALUES (?, ?, ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?, ?, ?, ?)
+    `)
+    .run(
+      sessionId,
+      message.id,
+      message.role,
+      message.content,
+      message.createdAt,
+      message.tone,
+      message.reasoning,
+      message.toolResultJson,
+      item.storage_key,
+      context.backupId,
+      context.copiedAt,
+      item.source_value_sha256,
+    )
+}
+
+function copyFlatChatMessages(database, item, context) {
+  const parsed = parseSnapshotJson(item)
+  if (!Array.isArray(parsed)) return { status: 'skipped', insertedRows: 0, skippedRows: 1 }
+  const messages = parsed
+    .map(normalizeChatMessageForSqlite)
+    .filter(Boolean)
+  if (!messages.length) return { status: 'skipped', insertedRows: 0, skippedRows: parsed.length }
+
+  const startedAt = messages[0]?.createdAt || context.copiedAt
+  const lastActiveAt = messages[messages.length - 1]?.createdAt || startedAt
+  const session = {
+    id: 'local-storage-flat-chat',
+    title: inferSqliteSessionTitle(messages),
+    startedAt,
+    lastActiveAt,
+    messages,
+  }
+  insertMemorySource(database, item, context)
+  insertChatSession(database, session, item, context)
+  for (const message of messages) insertChatMessage(database, message, session.id, item, context)
+  return {
+    status: 'copied',
+    insertedRows: 1 + messages.length,
+    skippedRows: Math.max(0, parsed.length - messages.length),
+    chatSessions: 1,
+    chatMessages: messages.length,
+  }
+}
+
+function normalizeSessionTimestamp(value, fallbackIso) {
+  if (typeof value === 'number' && Number.isFinite(value)) return new Date(value).toISOString()
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value)
+    if (Number.isFinite(parsed)) return new Date(parsed).toISOString()
+  }
+  return fallbackIso
+}
+
+function copyChatSessions(database, item, context) {
+  const parsed = parseSnapshotJson(item)
+  if (!Array.isArray(parsed)) return { status: 'skipped', insertedRows: 0, skippedRows: 1 }
+
+  let insertedRows = 0
+  let skippedRows = 0
+  let chatSessions = 0
+  let chatMessages = 0
+
+  insertMemorySource(database, item, context)
+  for (let index = 0; index < parsed.length; index += 1) {
+    const rawSession = parsed[index]
+    if (!isPlainObject(rawSession)) {
+      skippedRows += 1
+      continue
+    }
+    const rawMessages = Array.isArray(rawSession.messages) ? rawSession.messages : []
+    const messages = rawMessages
+      .map(normalizeChatMessageForSqlite)
+      .filter(Boolean)
+    const latestMessageAt = messages[messages.length - 1]?.createdAt || context.copiedAt
+    const firstMessageAt = messages[0]?.createdAt || latestMessageAt
+    const sessionId = normalizeText(rawSession.id, 160) || `chat-session-recovered-${index}-${Date.parse(firstMessageAt)}`
+    const session = {
+      id: sessionId,
+      title: normalizeText(rawSession.title, 120) || inferSqliteSessionTitle(messages),
+      startedAt: normalizeSessionTimestamp(rawSession.startedAt, firstMessageAt),
+      lastActiveAt: normalizeSessionTimestamp(rawSession.lastActiveAt, latestMessageAt),
+      messages,
+    }
+    insertChatSession(database, session, item, context)
+    for (const message of messages) insertChatMessage(database, message, session.id, item, context)
+    insertedRows += 1 + messages.length
+    skippedRows += Math.max(0, rawMessages.length - messages.length)
+    chatSessions += 1
+    chatMessages += messages.length
+  }
+
+  return {
+    status: chatSessions > 0 ? 'copied' : 'skipped',
+    insertedRows,
+    skippedRows,
+    chatSessions,
+    chatMessages,
+  }
+}
+
+const VALID_MEMORY_CATEGORIES = new Set(['profile', 'preference', 'goal', 'habit', 'manual', 'feedback', 'project', 'reference'])
+const VALID_MEMORY_KINDS = new Set(['preference', 'fact', 'relationship', 'knowledge'])
+const VALID_MEMORY_IMPORTANCE = new Set(['low', 'normal', 'high', 'pinned', 'reflection'])
+const VALID_MEMORY_VALENCES = new Set(['positive', 'negative', 'neutral', 'mixed'])
+
+function normalizeFiniteScore(value, max) {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.max(0, Math.min(max, value))
+    : null
+}
+
+function normalizeMemoryItemForSqlite(value, index) {
+  if (!isPlainObject(value)) return null
+  const content = normalizeContentText(value.content, 2_000)
+  if (!content) return null
+  const createdAt = normalizeIsoForCopy(value.createdAt, index)
+  const id = normalizeText(value.id, 160) || `memory-recovered-${index}-${Date.parse(createdAt)}`
+  const category = VALID_MEMORY_CATEGORIES.has(value.category) ? value.category : 'manual'
+  const source = normalizeText(value.source, 160) || 'storage'
+  const kind = VALID_MEMORY_KINDS.has(value.kind) ? value.kind : ''
+  const importance = VALID_MEMORY_IMPORTANCE.has(value.importance) ? value.importance : ''
+  const emotionalValence = VALID_MEMORY_VALENCES.has(value.emotionalValence) ? value.emotionalValence : ''
+  const recallCount = typeof value.recallCount === 'number' && Number.isFinite(value.recallCount)
+    ? Math.max(0, Math.round(value.recallCount))
+    : null
+  return {
+    id,
+    content,
+    category,
+    source,
+    kind,
+    enabled: typeof value.enabled === 'boolean' ? value.enabled : true,
+    sourceRef: normalizeText(value.sourceRef, 260),
+    createdAt,
+    lastUsedAt: normalizeOptionalIsoForCopy(value.lastUsedAt),
+    importance,
+    importanceScore: normalizeFiniteScore(value.importanceScore, 2),
+    recallCount,
+    lastRecalledAt: normalizeOptionalIsoForCopy(value.lastRecalledAt),
+    emotionalValence,
+    significance: normalizeFiniteScore(value.significance, 1),
+    reflectionTopic: normalizeText(value.reflectionTopic, 160),
+    reflectionConfidence: normalizeFiniteScore(value.reflectionConfidence, 1),
+    rawJson: JSON.stringify(value),
+  }
+}
+
+function insertMemory(database, memory, item, context) {
+  database
+    .prepare(`
+      INSERT OR REPLACE INTO memories (
+        memory_id,
+        content,
+        category,
+        source,
+        kind,
+        enabled,
+        source_ref,
+        created_at,
+        last_used_at,
+        importance,
+        importance_score,
+        recall_count,
+        last_recalled_at,
+        emotional_valence,
+        significance,
+        reflection_topic,
+        reflection_confidence,
+        raw_json,
+        source_storage_key,
+        copied_from_backup_id,
+        copied_at,
+        source_value_sha256
+      )
+      VALUES (?, ?, ?, ?, NULLIF(?, ''), ?, NULLIF(?, ''), ?, NULLIF(?, ''), NULLIF(?, ''), ?, ?, NULLIF(?, ''), NULLIF(?, ''), ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?)
+    `)
+    .run(
+      memory.id,
+      memory.content,
+      memory.category,
+      memory.source,
+      memory.kind,
+      memory.enabled ? 1 : 0,
+      memory.sourceRef,
+      memory.createdAt,
+      memory.lastUsedAt,
+      memory.importance,
+      memory.importanceScore,
+      memory.recallCount,
+      memory.lastRecalledAt,
+      memory.emotionalValence,
+      memory.significance,
+      memory.reflectionTopic,
+      memory.reflectionConfidence,
+      memory.rawJson,
+      item.storage_key,
+      context.backupId,
+      context.copiedAt,
+      item.source_value_sha256,
+    )
+}
+
+function copyLongTermMemories(database, item, context) {
+  const parsed = parseSnapshotJson(item)
+  if (!Array.isArray(parsed)) return { status: 'skipped', insertedRows: 0, skippedRows: 1 }
+  const memories = parsed
+    .map(normalizeMemoryItemForSqlite)
+    .filter(Boolean)
+  if (!memories.length) return { status: 'skipped', insertedRows: 0, skippedRows: parsed.length }
+  insertMemorySource(database, item, context)
+  for (const memory of memories) insertMemory(database, memory, item, context)
+  return {
+    status: 'copied',
+    insertedRows: memories.length,
+    skippedRows: Math.max(0, parsed.length - memories.length),
+    memories: memories.length,
+  }
+}
+
+function isValidDayKey(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(`${value}T00:00:00.000Z`))
+}
+
+function normalizeDailyMemoryEntryForSqlite(value, index, dayHint) {
+  if (!isPlainObject(value)) return null
+  if (!['user', 'assistant'].includes(value.role)) return null
+  const content = normalizeContentText(value.content, 200)
+  if (!content) return null
+  const createdAt = normalizeIsoForCopy(value.createdAt, index)
+  const day = isValidDayKey(dayHint) ? dayHint : createdAt.slice(0, 10)
+  const id = normalizeText(value.id, 160) || `daily-memory-recovered-${index}-${Date.parse(createdAt)}`
+  return {
+    id,
+    day,
+    role: value.role,
+    content,
+    source: value.source === 'voice' ? 'voice' : 'chat',
+    sourceRef: normalizeText(value.sourceRef, 260),
+    createdAt,
+    rawJson: JSON.stringify(value),
+  }
+}
+
+function insertDailyMemoryEntry(database, entry, item, context) {
+  database
+    .prepare(`
+      INSERT OR REPLACE INTO daily_memory_entries (
+        day,
+        entry_id,
+        role,
+        content,
+        source,
+        source_ref,
+        created_at,
+        raw_json,
+        source_storage_key,
+        copied_from_backup_id,
+        copied_at,
+        source_value_sha256
+      )
+      VALUES (?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?)
+    `)
+    .run(
+      entry.day,
+      entry.id,
+      entry.role,
+      entry.content,
+      entry.source,
+      entry.sourceRef,
+      entry.createdAt,
+      entry.rawJson,
+      item.storage_key,
+      context.backupId,
+      context.copiedAt,
+      item.source_value_sha256,
+    )
+}
+
+function copyDailyMemories(database, item, context) {
+  const parsed = parseSnapshotJson(item)
+  if (!isPlainObject(parsed)) return { status: 'skipped', insertedRows: 0, skippedRows: 1 }
+  let insertedRows = 0
+  let skippedRows = 0
+  insertMemorySource(database, item, context)
+  for (const [dayHint, rawEntries] of Object.entries(parsed)) {
+    if (!Array.isArray(rawEntries)) {
+      skippedRows += 1
+      continue
+    }
+    const entries = rawEntries
+      .map((entry, index) => normalizeDailyMemoryEntryForSqlite(entry, index, dayHint))
+      .filter(Boolean)
+    for (const entry of entries) insertDailyMemoryEntry(database, entry, item, context)
+    insertedRows += entries.length
+    skippedRows += Math.max(0, rawEntries.length - entries.length)
+  }
+  return {
+    status: insertedRows > 0 ? 'copied' : 'skipped',
+    insertedRows,
+    skippedRows,
+    dailyMemoryEntries: insertedRows,
+  }
+}
+
+function copySnapshotItemToStructuredTables(database, item, context) {
+  switch (item.storage_key) {
+    case 'nexus:chat':
+      return copyFlatChatMessages(database, item, context)
+    case 'nexus:chat:sessions':
+      return copyChatSessions(database, item, context)
+    case 'nexus:memory':
+    case 'nexus:memory:long-term':
+      return copyLongTermMemories(database, item, context)
+    case 'nexus:memory:daily':
+      return copyDailyMemories(database, item, context)
+    default:
+      return { status: 'skipped', insertedRows: 0, skippedRows: 1 }
+  }
+}
+
+function insertCopyItem(database, copyId, item, result) {
+  database
+    .prepare(`
+      INSERT OR REPLACE INTO local_storage_copy_items (
+        copy_id,
+        storage_key,
+        domain,
+        status,
+        inserted_rows,
+        skipped_rows,
+        error_message
+      )
+      VALUES (?, ?, ?, ?, ?, ?, NULLIF(?, ''))
+    `)
+    .run(
+      copyId,
+      item.storage_key,
+      item.domain,
+      result.status,
+      result.insertedRows || 0,
+      result.skippedRows || 0,
+      cleanString(result.errorMessage).slice(0, 240),
+    )
+}
+
+function insertCopyRun(database, run) {
+  database
+    .prepare(`
+      INSERT INTO local_storage_copy_runs (
+        copy_id,
+        backup_id,
+        created_at,
+        source_kind,
+        status,
+        item_count,
+        copied_item_count,
+        skipped_item_count,
+        failed_item_count,
+        chat_session_count,
+        chat_message_count,
+        memory_count,
+        daily_memory_entry_count,
+        runtime_migration_enabled,
+        read_through_migration_enabled,
+        source_local_storage_preserved
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 1)
+      ON CONFLICT(copy_id) DO UPDATE SET
+        backup_id = excluded.backup_id,
+        created_at = excluded.created_at,
+        source_kind = excluded.source_kind,
+        status = excluded.status,
+        item_count = excluded.item_count,
+        copied_item_count = excluded.copied_item_count,
+        skipped_item_count = excluded.skipped_item_count,
+        failed_item_count = excluded.failed_item_count,
+        chat_session_count = excluded.chat_session_count,
+        chat_message_count = excluded.chat_message_count,
+        memory_count = excluded.memory_count,
+        daily_memory_entry_count = excluded.daily_memory_entry_count,
+        runtime_migration_enabled = excluded.runtime_migration_enabled,
+        read_through_migration_enabled = excluded.read_through_migration_enabled,
+        source_local_storage_preserved = excluded.source_local_storage_preserved
+    `)
+    .run(
+      run.copyId,
+      run.backupId,
+      run.copiedAt,
+      M4_LOCAL_STORAGE_SNAPSHOT_SOURCE_KIND,
+      run.status,
+      run.itemCount,
+      run.copiedItemCount,
+      run.skippedItemCount,
+      run.failedItemCount,
+      run.chatSessionCount,
+      run.chatMessageCount,
+      run.memoryCount,
+      run.dailyMemoryEntryCount,
+    )
+}
+
+function copyStatusFromCounts(copiedItemCount, skippedItemCount, failedItemCount) {
+  if (failedItemCount > 0) return copiedItemCount > 0 || skippedItemCount > 0 ? 'partial' : 'failed'
+  if (copiedItemCount > 0) return skippedItemCount > 0 ? 'partial' : 'copied'
+  return skippedItemCount > 0 ? 'partial' : 'failed'
+}
+
+export async function copyLocalStorageSnapshotToStructuredSqlite(request, options = {}) {
+  const normalizedRequest = validateLocalStorageSnapshotCopyRequest(request)
+  const copiedAt = normalizeIso(options.generatedAt || options.now || new Date())
+  const copyId = normalizedRequest.copyId || cleanString(options.copyId) || createId('local-storage-copy')
+  const initializeFn = options.initializeStorageDatabase || initializeNexusStorageDatabase
+  const status = options.storageStatus || await initializeFn({
+    ...options,
+    generatedAt: copiedAt,
+  })
+  const shouldClose = !options.storageStatus
+
+  try {
+    if (!status?.ok || !status.database) {
+      throw new Error('sqlite storage foundation must be ready before local storage snapshot copy')
+    }
+
+    const items = readSnapshotBackupItems(status.database, normalizedRequest.backupId)
+    const context = { backupId: normalizedRequest.backupId, copyId, copiedAt }
+    const itemResults = []
+    const totals = {
+      copiedItemCount: 0,
+      skippedItemCount: 0,
+      failedItemCount: 0,
+      chatSessionCount: 0,
+      chatMessageCount: 0,
+      memoryCount: 0,
+      dailyMemoryEntryCount: 0,
+    }
+
+    let committed = false
+    try {
+      status.database.exec('BEGIN IMMEDIATE')
+      insertCopyRun(status.database, {
+        copyId,
+        backupId: normalizedRequest.backupId,
+        copiedAt,
+        status: 'partial',
+        itemCount: items.length,
+        copiedItemCount: 0,
+        skippedItemCount: 0,
+        failedItemCount: 0,
+        chatSessionCount: 0,
+        chatMessageCount: 0,
+        memoryCount: 0,
+        dailyMemoryEntryCount: 0,
+      })
+      for (const item of items) {
+        let result
+        try {
+          result = copySnapshotItemToStructuredTables(status.database, item, context)
+        } catch (error) {
+          result = {
+            status: 'failed',
+            insertedRows: 0,
+            skippedRows: 0,
+            errorMessage: error instanceof Error ? error.message : String(error),
+          }
+        }
+
+        insertCopyItem(status.database, copyId, item, result)
+        itemResults.push({
+          storageKey: item.storage_key,
+          domain: item.domain,
+          status: result.status,
+          insertedRows: result.insertedRows || 0,
+          skippedRows: result.skippedRows || 0,
+          errorMessage: cleanString(result.errorMessage),
+        })
+
+        if (result.status === 'copied') {
+          totals.copiedItemCount += 1
+          const metadata = snapshotMetadataForKey(item.storage_key)
+          upsertLocalStorageMigrationLedgerItem(status.database, {
+            storageKey: item.storage_key,
+            domain: item.domain,
+            migrationPriority: metadata?.migrationPriority || 'p0',
+            sourceKind: M4_LOCAL_STORAGE_SNAPSHOT_SOURCE_KIND,
+            firstSeenFile: metadata?.firstSeenFile || 'src/lib/storage/core.ts',
+            firstSeenLine: metadata?.firstSeenLine || 0,
+            status: 'copied',
+          }, { now: copiedAt })
+        } else if (result.status === 'skipped') {
+          totals.skippedItemCount += 1
+        } else {
+          totals.failedItemCount += 1
+        }
+        totals.chatSessionCount += result.chatSessions || 0
+        totals.chatMessageCount += result.chatMessages || 0
+        totals.memoryCount += result.memories || 0
+        totals.dailyMemoryEntryCount += result.dailyMemoryEntries || 0
+      }
+
+      const runStatus = copyStatusFromCounts(
+        totals.copiedItemCount,
+        totals.skippedItemCount,
+        totals.failedItemCount,
+      )
+      insertCopyRun(status.database, {
+        copyId,
+        backupId: normalizedRequest.backupId,
+        copiedAt,
+        status: runStatus,
+        itemCount: items.length,
+        ...totals,
+      })
+      recordStorageMigrationEvent(status.database, {
+        eventType: 'local-storage-snapshot-copied',
+        level: totals.failedItemCount > 0 ? 'warn' : 'info',
+        details: {
+          copyId,
+          backupId: normalizedRequest.backupId,
+          itemCount: items.length,
+          copiedItemCount: totals.copiedItemCount,
+          skippedItemCount: totals.skippedItemCount,
+          failedItemCount: totals.failedItemCount,
+          chatSessionCount: totals.chatSessionCount,
+          chatMessageCount: totals.chatMessageCount,
+          memoryCount: totals.memoryCount,
+          dailyMemoryEntryCount: totals.dailyMemoryEntryCount,
+          runtimeMigrationEnabled: false,
+          readThroughMigrationEnabled: false,
+          valuesCopiedToResponse: false,
+          sourceLocalStoragePreserved: true,
+        },
+      }, { now: copiedAt })
+
+      status.database.exec('COMMIT')
+      committed = true
+
+      return {
+        ok: totals.failedItemCount === 0 && totals.copiedItemCount > 0,
+        status: runStatus === 'copied' ? 'snapshot-copied' : `snapshot-copy-${runStatus}`,
+        copyId,
+        backupId: normalizedRequest.backupId,
+        copiedAt,
+        itemCount: items.length,
+        copiedItemCount: totals.copiedItemCount,
+        skippedItemCount: totals.skippedItemCount,
+        failedItemCount: totals.failedItemCount,
+        chatSessionCount: totals.chatSessionCount,
+        chatMessageCount: totals.chatMessageCount,
+        memoryCount: totals.memoryCount,
+        dailyMemoryEntryCount: totals.dailyMemoryEntryCount,
+        keys: itemResults.map((item) => item.storageKey),
+        copiedKeys: itemResults.filter((item) => item.status === 'copied').map((item) => item.storageKey),
+        skippedKeys: itemResults.filter((item) => item.status === 'skipped').map((item) => item.storageKey),
+        failedKeys: itemResults.filter((item) => item.status === 'failed').map((item) => item.storageKey),
+        runtimeMigrationEnabled: false,
+        readThroughMigrationEnabled: false,
+        sourceLocalStoragePreserved: true,
+        valuesCopiedToResponse: false,
+      }
+    } finally {
+      if (!committed) {
+        try { status.database.exec('ROLLBACK') } catch {}
+      }
+    }
+  } finally {
+    if (shouldClose) status?.close?.()
+  }
+}
+
 export function summarizeNexusStorageDatabase(database) {
   const summary = getDatabaseSummary(database)
   return {
@@ -824,6 +1749,13 @@ export function summarizeNexusStorageDatabase(database) {
       migrationEvents: summary.eventRows,
       localStorageBackupRuns: summary.localStorageBackupRuns,
       localStorageBackupItems: summary.localStorageBackupItems,
+      localStorageCopyRuns: summary.localStorageCopyRuns,
+      localStorageCopyItems: summary.localStorageCopyItems,
+      chatSessions: summary.chatSessions,
+      chatMessages: summary.chatMessages,
+      memories: summary.memories,
+      dailyMemoryEntries: summary.dailyMemoryEntries,
+      memorySources: summary.memorySources,
     },
   }
 }

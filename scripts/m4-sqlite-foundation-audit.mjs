@@ -162,6 +162,30 @@ async function summarizeStorageStatusIpc(rootDir) {
     && snapshotBackup.absolutePathRedactionReady
     && snapshotBackup.valuesRedactionReady
     && snapshotBackup.sourcePreservationReady
+  const structuredCopy = {
+    channel: 'storage:copy-local-snapshot',
+    preloadExposed: /copyLocalStorageSnapshot\s*:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(['"]storage:copy-local-snapshot['"],\s*payload\)/.test(preload.text),
+    handlerRegistered: /(?:ipcMain|ipcMainLike)\.handle\(\s*(?:STORAGE_COPY_LOCAL_SNAPSHOT_CHANNEL|['"]storage:copy-local-snapshot['"])/.test(storageIpc.text),
+    trustedSenderCheck,
+    requestValidationReady: /validateLocalStorageSnapshotCopyRequest/.test(storageIpc.text),
+    responseValidationReady: /validateLocalStorageSnapshotCopyResponse/.test(storageIpc.text)
+      && /return validateLocalStorageSnapshotCopyResponse\(/.test(storageIpc.text),
+    rendererTypeDeclared: /copyLocalStorageSnapshot:\s*\([\s\S]*?LocalStorageSnapshotCopyRequest[\s\S]*?\)\s*=>\s*Promise<LocalStorageSnapshotCopyResponse>/.test(viteEnv.text),
+    valuesRedactionReady: /localStorageValuesReturned:\s*false/.test(storageIpc.text)
+      && /valuesCopiedToResponse:\s*result\?\.valuesCopiedToResponse\s*===\s*true/.test(storageIpc.text),
+    sourcePreservationReady: /sourceLocalStorageMutated:\s*false/.test(storageIpc.text),
+    runtimeMigrationDisabled: /runtimeMigrationEnabled:\s*false/.test(storageIpc.text)
+      && /readThroughMigrationEnabled:\s*false/.test(storageIpc.text),
+  }
+  structuredCopy.ready = structuredCopy.preloadExposed
+    && structuredCopy.handlerRegistered
+    && structuredCopy.trustedSenderCheck
+    && structuredCopy.requestValidationReady
+    && structuredCopy.responseValidationReady
+    && structuredCopy.rendererTypeDeclared
+    && structuredCopy.valuesRedactionReady
+    && structuredCopy.sourcePreservationReady
+    && structuredCopy.runtimeMigrationDisabled
   const missingSourceIds = [preload, ipcRegistry, storageIpc, viteEnv]
     .filter((source) => !source.exists || source.error)
     .map((source) => source.path)
@@ -174,6 +198,7 @@ async function summarizeStorageStatusIpc(rootDir) {
     && rendererTypeDeclared
     && absolutePathRedactionReady
     && snapshotBackup.ready
+    && structuredCopy.ready
 
   return {
     ready,
@@ -186,6 +211,7 @@ async function summarizeStorageStatusIpc(rootDir) {
     rendererTypeDeclared,
     absolutePathRedactionReady,
     snapshotBackup,
+    structuredCopy,
     missingSourceIds,
   }
 }
@@ -215,6 +241,7 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
     ...missingTables.map((table) => `missing-table:${table}`),
     ...(!ipcStatus.ready ? ['storage-status-ipc-not-ready'] : []),
     ...(!ipcStatus.snapshotBackup?.ready ? ['local-storage-snapshot-backup-ipc-not-ready'] : []),
+    ...(!ipcStatus.structuredCopy?.ready ? ['local-storage-structured-copy-ipc-not-ready'] : []),
   ]
 
   return {
@@ -257,6 +284,14 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
       localStorageSnapshotBackupReady: status.tables?.includes('local_storage_backup_runs') === true
         && status.tables?.includes('local_storage_backup_items') === true
         && ipcStatus.snapshotBackup?.ready === true,
+      localStorageStructuredCopyReady: status.tables?.includes('local_storage_copy_runs') === true
+        && status.tables?.includes('local_storage_copy_items') === true
+        && status.tables?.includes('chat_sessions') === true
+        && status.tables?.includes('chat_messages') === true
+        && status.tables?.includes('memories') === true
+        && status.tables?.includes('daily_memory_entries') === true
+        && status.tables?.includes('memory_sources') === true
+        && ipcStatus.structuredCopy?.ready === true,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
       rollbackToolRequired: true,
@@ -278,6 +313,7 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
     nextActions: ok
       ? [
           'capture-chat-memory-local-storage-snapshot-backup',
+          'copy-chat-memory-snapshot-into-structured-sqlite',
           'implement-read-through-chat-memory-migration-with-backup',
           'add-restore-and-downgrade-cli-fixtures',
           'capture-packaged-electron-sqlite-smoke-evidence',
