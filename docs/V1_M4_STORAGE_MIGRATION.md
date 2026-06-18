@@ -4,14 +4,16 @@ This note is the M4 implementation contract. It prepares the
 localStorage-to-main-process-SQLite migration without moving runtime reads yet,
 and now includes the first main-process SQLite foundation, a non-destructive
 structured copy path for already-backed-up chat and memory snapshots, and a
-private restore-bundle fixture for rollback evidence.
+private restore-bundle fixture plus a redacted read-through preview evidence
+gate.
 
 ## Objective
 
 Make the current renderer localStorage surface visible, classified, and
 release-gated, then establish a main-process SQLite schema and migration
 ledger, a non-destructive local snapshot backup path, a structured chat/memory
-copy target, and restore evidence before introducing read-through migration.
+copy target, restore evidence, and a main-process read-through preview before
+introducing runtime read-through migration.
 
 ## Problem Analysis
 
@@ -118,6 +120,17 @@ does not mutate renderer localStorage or enable read-through migration.
 renderer-export input and writes
 `artifacts/v1/m4-storage-restore-evidence.json`.
 
+`queryLocalStorageReadThroughPreview()` adds a main-process-only read-through
+preview over copied schema v3 chat and memory rows. It can locate a copy run by
+backup id or copy id and return counts, source storage keys, safe role/category
+aggregates, freshness flags, and policy flags. It does not return chat content,
+chat session titles, memory bodies, source refs, localStorage raw values, or
+absolute paths. `m4:storage:read-through:evidence` runs backup, structured
+copy, and this preview query from sample or private renderer-export input, then
+writes `artifacts/v1/m4-storage-read-through-evidence.json`. The report sets
+`previewQueryEnabled: true` but keeps `runtimeMigrationEnabled: false` and
+`readThroughMigrationEnabled: false`.
+
 ## Impact Scope
 
 Electron main-process services, package scripts, v1 milestone governance, docs,
@@ -135,7 +148,9 @@ or memory reads have migrated. Snapshot backups, structured copy, restore
 bundle export, and their evidence scripts prove that allowlisted chat/memory
 data can be copied into private local files, ledger rows, schema v3 tables, and
 a private rollback bundle without mutating source localStorage. They are not
-read-through migration or automatic in-app restore evidence yet.
+automatic in-app restore evidence yet. The read-through preview evidence proves
+main-process queryability of the copied rows, but it is not renderer IPC
+read-through, runtime migration, or an automatic fallback switch.
 
 ## Rollback Plan
 
@@ -144,9 +159,11 @@ Remove `electron/services/sqliteStorage.js`,
 `electron/ipc/storageIpc.js`,
 `scripts/m4-storage-migration-audit.mjs`,
 `scripts/m4-storage-snapshot-copy-evidence.mjs`,
-`scripts/m4-storage-restore-evidence.mjs`, the `m4:sqlite:foundation`,
-`m4:storage:audit`, `m4:storage:snapshot-copy:evidence`, and
-`m4:storage:restore:evidence` package scripts,
+`scripts/m4-storage-restore-evidence.mjs`,
+`scripts/m4-storage-read-through-evidence.mjs`, the `m4:sqlite:foundation`,
+`m4:storage:audit`, `m4:storage:snapshot-copy:evidence`,
+`m4:storage:restore:evidence`, and `m4:storage:read-through:evidence` package
+scripts,
 the M4 evidence-gate entry in
 `scripts/v1-milestone-audit.mjs`, `src/lib/storage/localSnapshotBackup.ts`,
 this document, and the focused tests. Delete only generated files under
@@ -164,10 +181,12 @@ copy path can then write backed-up chat/memory rows into schema v3 tables. Both
 paths preserve source localStorage and keep runtime/read-through migration
 disabled. The restore bundle path can reconstruct backed-up localStorage values
 into a private manual-confirmed bundle and verify hashes before writing the
-bundle. The future migration must keep source localStorage values until the
-SQLite copy is verified, write a private-safe backup before mutation, record
-each key in the migration ledger, and provide an in-app restore application path
-or downgrade command for each schema version.
+bundle. The read-through preview path can query the structured SQLite copy from
+the main process without returning values, but it does not change runtime
+persistence. The future migration must keep source localStorage values until
+the SQLite copy is verified, write a private-safe backup before mutation,
+record each key in the migration ledger, and provide an in-app restore
+application path or downgrade command for each schema version.
 
 ## Tests And Evidence
 
@@ -178,14 +197,15 @@ npm run m4:storage:audit -- --require-inventory-ready --output artifacts/v1/m4-s
 npm run m4:sqlite:foundation -- --require-ready --output artifacts/v1/m4-sqlite-foundation.json
 npm run m4:storage:snapshot-copy:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-snapshot-copy-evidence.json
 npm run m4:storage:restore:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-restore-evidence.json
-npm run m4:storage:audit -- --sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json --snapshot-copy-evidence-file artifacts/v1/m4-storage-snapshot-copy-evidence.json --restore-evidence-file artifacts/v1/m4-storage-restore-evidence.json --require-inventory-ready --output artifacts/v1/m4-storage-migration.json
-node --experimental-strip-types --test tests/m4-sqlite-foundation.test.ts tests/m4-storage-migration-audit.test.ts tests/m4-storage-snapshot-copy-evidence.test.ts tests/m4-storage-restore-evidence.test.ts tests/v1-milestone-audit.test.ts
+npm run m4:storage:read-through:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-read-through-evidence.json
+npm run m4:storage:audit -- --sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json --snapshot-copy-evidence-file artifacts/v1/m4-storage-snapshot-copy-evidence.json --restore-evidence-file artifacts/v1/m4-storage-restore-evidence.json --read-through-evidence-file artifacts/v1/m4-storage-read-through-evidence.json --require-inventory-ready --output artifacts/v1/m4-storage-migration.json
+node --experimental-strip-types --test tests/m4-sqlite-foundation.test.ts tests/m4-storage-migration-audit.test.ts tests/m4-storage-snapshot-copy-evidence.test.ts tests/m4-storage-restore-evidence.test.ts tests/m4-storage-read-through-evidence.test.ts tests/v1-milestone-audit.test.ts
 node --experimental-strip-types --test tests/storage-ipc.test.ts tests/storage-local-snapshot-backup.test.ts tests/ipc-bridge-contract.test.ts tests/m3-ipc-security-audit.test.ts
 npm run v1:milestone:audit -- --m4-storage-file artifacts/v1/m4-storage-migration.json --require-ready
 ```
 
-The stricter migration gate is expected to fail until real SQLite read-through
-migration and automatic restore application code exists:
+The stricter migration gate is expected to fail until real runtime SQLite
+read-through migration and automatic restore application code exists:
 
 ```bash
 npm run m4:storage:audit -- --require-migration-ready
@@ -219,8 +239,10 @@ keys, and preserves source localStorage.
 can run end to end from sample or private renderer-export input while producing
 a redacted public report. `m4:storage:restore:evidence` now proves that a
 backed-up snapshot can be reconstructed into a private restore bundle with hash
-verification while producing a redacted public report. Runtime read-through
-migration is not enabled.
+verification while producing a redacted public report.
+`m4:storage:read-through:evidence` now proves that the main process can query
+the structured SQLite chat/memory copy and emit only redacted counts, key names,
+and readiness flags. Runtime read-through migration is not enabled.
 
 M4 is not accepted as complete. Strict v1 acceptance should keep blocking on M4
 until packaged-runtime SQLite evidence, read-through migration, real renderer
@@ -238,13 +260,15 @@ downgrade tooling, and cross-platform evidence exist.
 - Snapshot backup and structured copy evidence can be generated from sample or
   private renderer-export input, but a real renderer profile still needs to be
   exported and run through that gate before M4 migration acceptance.
+- Read-through preview evidence exists, but renderer IPC read-through and
+  runtime fallback switching are not implemented.
 - Existing localStorage data remains the runtime source of truth.
 
 ## Next Stage Tasks
 
 - Run `m4:storage:snapshot-copy:evidence` against a real renderer export.
 - Run `m4:storage:restore:evidence` against a real renderer export.
-- Extend storage IPC for read-through chat and memory migration.
-- Implement read-through migration for chat and memory first.
+- Run `m4:storage:read-through:evidence` against a real renderer export.
+- Wire runtime read-through behind a user-confirmed feature flag.
 - Add fixture-based migration, corruption, automatic restore, and schema
   downgrade tests.

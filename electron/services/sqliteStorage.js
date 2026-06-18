@@ -37,6 +37,10 @@ export const M4_LOCAL_STORAGE_SNAPSHOT_SOURCE_KIND = 'renderer-local-storage-sna
 export const M4_LOCAL_STORAGE_SNAPSHOT_MAX_ENTRIES = 12
 export const M4_LOCAL_STORAGE_SNAPSHOT_MAX_ENTRY_BYTES = 2 * 1024 * 1024
 export const M4_LOCAL_STORAGE_SNAPSHOT_MAX_TOTAL_BYTES = 8 * 1024 * 1024
+export const M4_LOCAL_STORAGE_READ_THROUGH_DEFAULT_LIMIT = 100
+export const M4_LOCAL_STORAGE_READ_THROUGH_MAX_LIMIT = 500
+
+const M4_LOCAL_STORAGE_READ_THROUGH_DOMAINS = ['chat', 'memory']
 
 export const M4_LOCAL_STORAGE_SNAPSHOT_KEY_METADATA = [
   {
@@ -1037,6 +1041,51 @@ export function validateLocalStorageSnapshotRestoreRequest(request) {
   return { backupId, restoreId, keys: uniqueKeys }
 }
 
+export function validateLocalStorageReadThroughQueryRequest(request = {}) {
+  if (!request || typeof request !== 'object' || Array.isArray(request)) {
+    throw new Error('local storage read-through query request must be a plain object')
+  }
+
+  const backupId = cleanString(request.backupId)
+  if (backupId && !/^[a-z0-9:_-]{1,160}$/i.test(backupId)) {
+    throw new Error('backupId must be a short id')
+  }
+  const copyId = cleanString(request.copyId)
+  if (copyId && !/^[a-z0-9:_-]{1,160}$/i.test(copyId)) {
+    throw new Error('copyId must be a short id')
+  }
+
+  const rawDomains = Array.isArray(request.domains)
+    ? request.domains.map(cleanString).filter(Boolean)
+    : M4_LOCAL_STORAGE_READ_THROUGH_DOMAINS
+  const domains = unique(rawDomains)
+  if (domains.length < 1) throw new Error('domains must include at least one read-through domain')
+  if (domains.length !== rawDomains.length) throw new Error('domains must not include duplicates')
+  for (const domain of domains) {
+    if (!M4_LOCAL_STORAGE_READ_THROUGH_DOMAINS.includes(domain)) {
+      throw new Error(`read-through domain is not allowed for M4 localStorage preview: ${domain}`)
+    }
+  }
+
+  const requestedLimit = request.limit == null
+    ? M4_LOCAL_STORAGE_READ_THROUGH_DEFAULT_LIMIT
+    : Number(request.limit)
+  if (
+    !Number.isInteger(requestedLimit)
+    || requestedLimit < 1
+    || requestedLimit > M4_LOCAL_STORAGE_READ_THROUGH_MAX_LIMIT
+  ) {
+    throw new Error(`limit must be an integer from 1 to ${M4_LOCAL_STORAGE_READ_THROUGH_MAX_LIMIT}`)
+  }
+
+  return {
+    backupId,
+    copyId,
+    domains,
+    limit: requestedLimit,
+  }
+}
+
 function isPlainObject(value) {
   return value != null && typeof value === 'object' && !Array.isArray(value)
 }
@@ -1919,6 +1968,325 @@ export async function exportLocalStorageSnapshotRestoreBundle(request, options =
       readThroughMigrationEnabled: false,
       valuesCopiedToResponse: false,
       restoreBundleContainsValues: true,
+    }
+  } finally {
+    if (shouldClose) status?.close?.()
+  }
+}
+
+function findReadThroughCopyRun(database, request) {
+  const where = []
+  const params = []
+  if (request.copyId) {
+    where.push('copy_id = ?')
+    params.push(request.copyId)
+  }
+  if (request.backupId) {
+    where.push('backup_id = ?')
+    params.push(request.backupId)
+  }
+  const query = `
+    SELECT
+      copy_id,
+      backup_id,
+      created_at,
+      status,
+      item_count,
+      copied_item_count,
+      skipped_item_count,
+      failed_item_count,
+      chat_session_count,
+      chat_message_count,
+      memory_count,
+      daily_memory_entry_count,
+      runtime_migration_enabled,
+      read_through_migration_enabled,
+      source_local_storage_preserved
+    FROM local_storage_copy_runs
+    ${where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''}
+    ORDER BY created_at DESC, copy_id DESC
+    LIMIT 1
+  `
+  return database.prepare(query).get(...params) || null
+}
+
+function queryNumber(database, sql, params = []) {
+  return Number(getScalar(database.prepare(sql).get(...params), 0) || 0)
+}
+
+function queryText(database, sql, params = []) {
+  return cleanString(getScalar(database.prepare(sql).get(...params), ''))
+}
+
+function queryGroupedCounts(database, sql, params = []) {
+  const rows = database.prepare(sql).all(...params)
+  return Object.fromEntries(rows.map((row) => [
+    cleanString(row.name) || 'unknown',
+    Number(row.count || 0),
+  ]))
+}
+
+function queryStorageKeys(database, backupId, domains) {
+  const keys = []
+  if (domains.includes('chat')) {
+    keys.push(
+      ...database
+        .prepare('SELECT DISTINCT source_storage_key AS key FROM chat_sessions WHERE copied_from_backup_id = ?')
+        .all(backupId)
+        .map((row) => cleanString(row.key)),
+      ...database
+        .prepare('SELECT DISTINCT source_storage_key AS key FROM chat_messages WHERE copied_from_backup_id = ?')
+        .all(backupId)
+        .map((row) => cleanString(row.key)),
+    )
+  }
+  if (domains.includes('memory')) {
+    keys.push(
+      ...database
+        .prepare('SELECT DISTINCT source_storage_key AS key FROM memories WHERE copied_from_backup_id = ?')
+        .all(backupId)
+        .map((row) => cleanString(row.key)),
+      ...database
+        .prepare('SELECT DISTINCT source_storage_key AS key FROM daily_memory_entries WHERE copied_from_backup_id = ?')
+        .all(backupId)
+        .map((row) => cleanString(row.key)),
+      ...database
+        .prepare('SELECT DISTINCT storage_key AS key FROM memory_sources WHERE backup_id = ?')
+        .all(backupId)
+        .map((row) => cleanString(row.key)),
+    )
+  }
+  return unique(keys).sort()
+}
+
+function queryCopyItems(database, copyId, domains) {
+  const placeholders = domains.map(() => '?').join(', ')
+  return database
+    .prepare(`
+      SELECT
+        storage_key,
+        domain,
+        status,
+        inserted_rows,
+        skipped_rows
+      FROM local_storage_copy_items
+      WHERE copy_id = ?
+        AND domain IN (${placeholders})
+      ORDER BY domain, storage_key
+    `)
+    .all(copyId, ...domains)
+    .map((row) => ({
+      storageKey: cleanString(row.storage_key),
+      domain: cleanString(row.domain),
+      status: cleanString(row.status),
+      insertedRows: Number(row.inserted_rows || 0),
+      skippedRows: Number(row.skipped_rows || 0),
+    }))
+}
+
+function buildChatReadThroughPreview(database, backupId, limit) {
+  const sessionCount = queryNumber(
+    database,
+    'SELECT COUNT(*) FROM chat_sessions WHERE copied_from_backup_id = ?',
+    [backupId],
+  )
+  const messageCount = queryNumber(
+    database,
+    'SELECT COUNT(*) FROM chat_messages WHERE copied_from_backup_id = ?',
+    [backupId],
+  )
+  const sampledMessageCount = queryNumber(
+    database,
+    `
+      SELECT COUNT(*) FROM (
+        SELECT 1 FROM chat_messages
+        WHERE copied_from_backup_id = ?
+        ORDER BY created_at DESC, message_id DESC
+        LIMIT ?
+      )
+    `,
+    [backupId, limit],
+  )
+  return {
+    selected: true,
+    hasReadableRows: sessionCount > 0 || messageCount > 0,
+    sessionCount,
+    messageCount,
+    sampledMessageCount,
+    latestMessageAt: queryText(
+      database,
+      'SELECT MAX(created_at) FROM chat_messages WHERE copied_from_backup_id = ?',
+      [backupId],
+    ),
+    roleCounts: queryGroupedCounts(
+      database,
+      `
+        SELECT role AS name, COUNT(*) AS count
+        FROM chat_messages
+        WHERE copied_from_backup_id = ?
+        GROUP BY role
+        ORDER BY role
+      `,
+      [backupId],
+    ),
+    valuesCopiedToResponse: false,
+  }
+}
+
+function buildMemoryReadThroughPreview(database, backupId, limit) {
+  const memoryCount = queryNumber(
+    database,
+    'SELECT COUNT(*) FROM memories WHERE copied_from_backup_id = ?',
+    [backupId],
+  )
+  const dailyMemoryEntryCount = queryNumber(
+    database,
+    'SELECT COUNT(*) FROM daily_memory_entries WHERE copied_from_backup_id = ?',
+    [backupId],
+  )
+  const sampledMemoryCount = queryNumber(
+    database,
+    `
+      SELECT COUNT(*) FROM (
+        SELECT 1 FROM memories
+        WHERE copied_from_backup_id = ?
+        ORDER BY created_at DESC, memory_id DESC
+        LIMIT ?
+      )
+    `,
+    [backupId, limit],
+  )
+  const sampledDailyMemoryEntryCount = queryNumber(
+    database,
+    `
+      SELECT COUNT(*) FROM (
+        SELECT 1 FROM daily_memory_entries
+        WHERE copied_from_backup_id = ?
+        ORDER BY created_at DESC, entry_id DESC
+        LIMIT ?
+      )
+    `,
+    [backupId, limit],
+  )
+  return {
+    selected: true,
+    hasReadableRows: memoryCount > 0 || dailyMemoryEntryCount > 0,
+    memoryCount,
+    dailyMemoryEntryCount,
+    sampledMemoryCount,
+    sampledDailyMemoryEntryCount,
+    latestMemoryCreatedAt: queryText(
+      database,
+      'SELECT MAX(created_at) FROM memories WHERE copied_from_backup_id = ?',
+      [backupId],
+    ),
+    latestDailyMemoryEntryAt: queryText(
+      database,
+      'SELECT MAX(created_at) FROM daily_memory_entries WHERE copied_from_backup_id = ?',
+      [backupId],
+    ),
+    categoryCounts: queryGroupedCounts(
+      database,
+      `
+        SELECT category AS name, COUNT(*) AS count
+        FROM memories
+        WHERE copied_from_backup_id = ?
+        GROUP BY category
+        ORDER BY category
+      `,
+      [backupId],
+    ),
+    dailyRoleCounts: queryGroupedCounts(
+      database,
+      `
+        SELECT role AS name, COUNT(*) AS count
+        FROM daily_memory_entries
+        WHERE copied_from_backup_id = ?
+        GROUP BY role
+        ORDER BY role
+      `,
+      [backupId],
+    ),
+    valuesCopiedToResponse: false,
+  }
+}
+
+export async function queryLocalStorageReadThroughPreview(request = {}, options = {}) {
+  const normalizedRequest = validateLocalStorageReadThroughQueryRequest(request)
+  const generatedAt = normalizeIso(options.generatedAt || options.now || new Date())
+  const initializeFn = options.initializeStorageDatabase || initializeNexusStorageDatabase
+  const status = options.storageStatus || await initializeFn({
+    ...options,
+    generatedAt,
+  })
+  const shouldClose = !options.storageStatus
+
+  try {
+    if (!status?.ok || !status.database) {
+      throw new Error('sqlite storage foundation must be ready before local storage read-through preview')
+    }
+
+    const copyRun = findReadThroughCopyRun(status.database, normalizedRequest)
+    if (!copyRun) {
+      return {
+        ok: false,
+        status: 'read-through-copy-run-missing',
+        generatedAt,
+        requestedBackupId: normalizedRequest.backupId,
+        requestedCopyId: normalizedRequest.copyId,
+        domains: normalizedRequest.domains,
+        limit: normalizedRequest.limit,
+        previewQueryEnabled: true,
+        runtimeMigrationEnabled: false,
+        readThroughMigrationEnabled: false,
+        sourceLocalStoragePreserved: true,
+        valuesCopiedToResponse: false,
+      }
+    }
+
+    const domains = normalizedRequest.domains
+    const backupId = cleanString(copyRun.backup_id)
+    const chat = domains.includes('chat')
+      ? buildChatReadThroughPreview(status.database, backupId, normalizedRequest.limit)
+      : { selected: false, hasReadableRows: false, valuesCopiedToResponse: false }
+    const memory = domains.includes('memory')
+      ? buildMemoryReadThroughPreview(status.database, backupId, normalizedRequest.limit)
+      : { selected: false, hasReadableRows: false, valuesCopiedToResponse: false }
+    const sourceStorageKeys = queryStorageKeys(status.database, backupId, domains)
+    const copyItems = queryCopyItems(status.database, cleanString(copyRun.copy_id), domains)
+    const readableRowCount = Number(chat.messageCount || 0)
+      + Number(chat.sessionCount || 0)
+      + Number(memory.memoryCount || 0)
+      + Number(memory.dailyMemoryEntryCount || 0)
+
+    return {
+      ok: true,
+      status: 'read-through-preview-ready',
+      generatedAt,
+      backupId,
+      copyId: cleanString(copyRun.copy_id),
+      copiedAt: cleanString(copyRun.created_at),
+      copyStatus: cleanString(copyRun.status),
+      domains,
+      limit: normalizedRequest.limit,
+      chat,
+      memory,
+      source: {
+        sourceStorageKeyCount: sourceStorageKeys.length,
+        sourceStorageKeys,
+        copyItemCount: copyItems.length,
+        copyItems,
+      },
+      totals: {
+        readableRowCount,
+        sourceStorageKeyCount: sourceStorageKeys.length,
+        copyItemCount: copyItems.length,
+      },
+      previewQueryEnabled: true,
+      runtimeMigrationEnabled: Number(copyRun.runtime_migration_enabled || 0) === 1,
+      readThroughMigrationEnabled: Number(copyRun.read_through_migration_enabled || 0) === 1,
+      sourceLocalStoragePreserved: Number(copyRun.source_local_storage_preserved || 0) === 1,
+      valuesCopiedToResponse: false,
     }
   } finally {
     if (shouldClose) status?.close?.()

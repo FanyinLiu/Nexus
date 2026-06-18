@@ -170,10 +170,11 @@ is running the local TTS adapters for real samples, model packaging, and deeper
 card/package workflows.
 
 v1 M4 storage work now has a schema v3 foundation for non-destructive
-localStorage snapshot backup and structured chat/memory copy into main-process
-SQLite. Runtime reads still use the existing renderer storage path until
-read-through migration, restore/rollback, packaged-runtime SQLite smoke, and
-cross-platform evidence are in place.
+localStorage snapshot backup, structured chat/memory copy into main-process
+SQLite, restore-bundle evidence, and a redacted main-process read-through
+preview query. Runtime reads still use the existing renderer storage path until
+runtime read-through migration, restore/rollback, packaged-runtime SQLite
+smoke, and cross-platform evidence are in place.
 
 P3 groundwork: new email and additional-IM adapters must enter through the
 local webhook contract unless they become first-party native bridges. The

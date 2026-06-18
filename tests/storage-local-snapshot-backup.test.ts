@@ -17,7 +17,9 @@ import {
   initializeNexusStorageDatabase,
   M4_LOCAL_STORAGE_SNAPSHOT_MAX_ENTRY_BYTES,
   M4_SQLITE_SCHEMA_VERSION,
+  queryLocalStorageReadThroughPreview,
   summarizeNexusStorageDatabase,
+  validateLocalStorageReadThroughQueryRequest,
   validateLocalStorageSnapshotCopyRequest,
   validateLocalStorageSnapshotRequest,
   validateLocalStorageSnapshotRestoreRequest,
@@ -122,6 +124,43 @@ test('local storage snapshot restore request validation requires safe ids and al
       keys: ['nexus:chat', 'nexus:chat'],
     }),
     /restore keys must not include duplicates/,
+  )
+})
+
+test('local storage read-through query request validation bounds domains and limits', () => {
+  assert.deepEqual(validateLocalStorageReadThroughQueryRequest({
+    backupId: 'local-storage-backup-test',
+    copyId: 'local-storage-copy-test',
+    domains: ['chat', 'memory'],
+    limit: 12,
+  }), {
+    backupId: 'local-storage-backup-test',
+    copyId: 'local-storage-copy-test',
+    domains: ['chat', 'memory'],
+    limit: 12,
+  })
+
+  assert.deepEqual(validateLocalStorageReadThroughQueryRequest({}), {
+    backupId: '',
+    copyId: '',
+    domains: ['chat', 'memory'],
+    limit: 100,
+  })
+  assert.throws(
+    () => validateLocalStorageReadThroughQueryRequest({ backupId: '../private' }),
+    /backupId must be a short id/,
+  )
+  assert.throws(
+    () => validateLocalStorageReadThroughQueryRequest({ domains: ['chat', 'chat'] }),
+    /domains must not include duplicates/,
+  )
+  assert.throws(
+    () => validateLocalStorageReadThroughQueryRequest({ domains: ['settings'] }),
+    /read-through domain is not allowed/,
+  )
+  assert.throws(
+    () => validateLocalStorageReadThroughQueryRequest({ limit: 501 }),
+    /limit must be an integer/,
   )
 })
 
@@ -440,6 +479,102 @@ test('local storage snapshot copy writes structured chat and memory tables witho
     assert.equal(responseJson.includes('private flat chat sample'), false)
     assert.equal(responseJson.includes('private long term memory sample'), false)
     assert.equal(responseJson.includes(directoryPath), false)
+  } finally {
+    await rm(directoryPath, { recursive: true, force: true })
+  }
+})
+
+test('local storage read-through preview reads structured rows without exposing values', async () => {
+  const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'nexus-storage-read-through-'))
+  try {
+    const databasePath = path.join(directoryPath, 'storage.sqlite3')
+    const backupDirectory = path.join(directoryPath, 'backups')
+    await backupLocalStorageSnapshot({
+      reason: 'pre-migration',
+      entries: [
+        {
+          key: 'nexus:chat',
+          value: JSON.stringify([
+            { id: 'flat-user', role: 'user', content: 'private read through chat sample', createdAt: '2026-06-18T12:00:00Z' },
+            { id: 'flat-assistant', role: 'assistant', content: 'private read through assistant sample', createdAt: '2026-06-18T12:01:00Z' },
+          ]),
+        },
+        {
+          key: 'nexus:memory:long-term',
+          value: JSON.stringify([
+            {
+              id: 'memory-1',
+              content: 'private read through memory sample',
+              category: 'preference',
+              source: 'chat',
+              createdAt: '2026-06-18T12:03:00Z',
+            },
+          ]),
+        },
+        {
+          key: 'nexus:memory:daily',
+          value: JSON.stringify({
+            '2026-06-18': [
+              {
+                id: 'daily-1',
+                role: 'user',
+                content: 'private read through daily memory sample',
+                source: 'chat',
+                createdAt: '2026-06-18T12:04:00Z',
+              },
+            ],
+          }),
+        },
+      ],
+    }, {
+      databasePath,
+      backupDirectory,
+      generatedAt: '2026-06-18T12:40:00Z',
+      backupId: 'local-storage-backup-read-through-test',
+    })
+
+    await copyLocalStorageSnapshotToStructuredSqlite({
+      backupId: 'local-storage-backup-read-through-test',
+      copyId: 'local-storage-copy-read-through-test',
+    }, {
+      databasePath,
+      generatedAt: '2026-06-18T12:45:00Z',
+    })
+
+    const preview = await queryLocalStorageReadThroughPreview({
+      backupId: 'local-storage-backup-read-through-test',
+      copyId: 'local-storage-copy-read-through-test',
+      domains: ['chat', 'memory'],
+      limit: 10,
+    }, {
+      databasePath,
+      generatedAt: '2026-06-18T12:46:00Z',
+    })
+    const previewJson = JSON.stringify(preview)
+
+    assert.equal(preview.ok, true)
+    assert.equal(preview.status, 'read-through-preview-ready')
+    assert.equal(preview.previewQueryEnabled, true)
+    assert.equal(preview.runtimeMigrationEnabled, false)
+    assert.equal(preview.readThroughMigrationEnabled, false)
+    assert.equal(preview.sourceLocalStoragePreserved, true)
+    assert.equal(preview.valuesCopiedToResponse, false)
+    assert.equal(preview.chat.sessionCount, 1)
+    assert.equal(preview.chat.messageCount, 2)
+    assert.equal(preview.chat.hasReadableRows, true)
+    assert.deepEqual(preview.chat.roleCounts, { assistant: 1, user: 1 })
+    assert.equal(preview.memory.memoryCount, 1)
+    assert.equal(preview.memory.dailyMemoryEntryCount, 1)
+    assert.equal(preview.memory.hasReadableRows, true)
+    assert.deepEqual(preview.memory.categoryCounts, { preference: 1 })
+    assert.deepEqual(preview.source.sourceStorageKeys, [
+      'nexus:chat',
+      'nexus:memory:daily',
+      'nexus:memory:long-term',
+    ])
+    assert.equal(previewJson.includes('private read through chat sample'), false)
+    assert.equal(previewJson.includes('private read through memory sample'), false)
+    assert.equal(previewJson.includes(directoryPath), false)
   } finally {
     await rm(directoryPath, { recursive: true, force: true })
   }

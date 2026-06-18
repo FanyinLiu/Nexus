@@ -406,6 +406,9 @@ evidence report for M4 inventory consumption. `m4:storage:restore:evidence`
 then reconstructs an existing backup into a private manual-confirmed restore
 bundle, verifies hashes, records a migration event, and emits a redacted
 restore evidence report without mutating source localStorage.
+`m4:storage:read-through:evidence` then proves the main process can query the
+structured chat/memory SQLite copy and return only redacted counts, source key
+names, and readiness flags while leaving runtime read-through disabled.
 
 ### Impact Scope
 
@@ -438,7 +441,8 @@ then rerun the inventory gate with
 report records the built-in SQLite selection. Focused IPC coverage is included
 in `tests/storage-ipc.test.ts`, `tests/storage-local-snapshot-backup.test.ts`,
 `tests/m4-storage-snapshot-copy-evidence.test.ts`,
-`tests/m4-storage-restore-evidence.test.ts`, and
+`tests/m4-storage-restore-evidence.test.ts`,
+`tests/m4-storage-read-through-evidence.test.ts`, and
 `tests/ipc-bridge-contract.test.ts`.
 The stricter migration gate is intentionally not ready yet:
 `npm run m4:storage:audit -- --require-migration-ready`. The v1 milestone
@@ -469,22 +473,26 @@ disabled. `m4:storage:snapshot-copy:evidence` is wired for sample or private
 renderer-export backup+copy evidence, and M4 inventory can consume that report.
 `m4:storage:restore:evidence` is wired for sample or private renderer-export
 backup+restore evidence, and M4 inventory can consume that report.
+`m4:storage:read-through:evidence` is wired for sample or private
+renderer-export backup+copy+preview-query evidence, and M4 inventory can
+consume that report.
 Runtime read-through migration is not enabled, source localStorage remains the
 fallback source of truth, and strict v1 acceptance remains blocked on M4.
 
 ### Known Gaps
 
 Electron packaged-runtime `node:sqlite` behavior still needs package smoke
-evidence. Read-through migration IPC, automatic restore application, schema
-downgrade tooling, and cross-platform migration evidence are not implemented
-yet; snapshot backup, structured copy, restore bundle export, and their evidence
-gates exist but are not yet a full migration or relationship-state migration.
+evidence. Runtime read-through migration IPC, automatic restore application,
+schema downgrade tooling, and cross-platform migration evidence are not
+implemented yet; snapshot backup, structured copy, restore bundle export,
+read-through preview query, and their evidence gates exist but are not yet a
+full migration or relationship-state migration.
 
 ### Next Stage Tasks
 
 Run snapshot backup plus structured copy evidence against a real renderer
-export, run restore evidence against a real renderer export, extend the storage
-IPC for read-through chat and memory migration behind backups, add automatic
+export, run restore and read-through evidence against a real renderer export,
+wire runtime read-through behind a user-confirmed feature flag, add automatic
 restore and schema downgrade fixtures, capture packaged SQLite smoke evidence,
 then proceed to M5 white-box memory after persistence is stable.
 

@@ -143,7 +143,9 @@ const REQUIRED_EVIDENCE_GATES = [
     scriptNames: [
       'm4:storage:audit',
       'm4:sqlite:foundation',
+      'm4:storage:snapshot-copy:evidence',
       'm4:storage:restore:evidence',
+      'm4:storage:read-through:evidence',
     ],
     docs: [
       'docs/V1_M4_STORAGE_MIGRATION.md',
@@ -152,7 +154,9 @@ const REQUIRED_EVIDENCE_GATES = [
     terms: [
       'm4:storage:audit',
       'm4:sqlite:foundation',
+      'm4:storage:snapshot-copy:evidence',
       'm4:storage:restore:evidence',
+      'm4:storage:read-through:evidence',
       'localStorage',
       'SQLite',
       'rollback',
@@ -700,6 +704,7 @@ function summarizeM4AcceptanceEvidence(source) {
     localStorageStructuredCopyReady: migrationPlan.localStorageStructuredCopyReady === true,
     localStorageSnapshotCopyEvidenceReady: migrationPlan.localStorageSnapshotCopyEvidenceReady === true,
     localStorageRestoreEvidenceReady: migrationPlan.localStorageRestoreEvidenceReady === true,
+    localStorageReadThroughEvidenceReady: migrationPlan.localStorageReadThroughEvidenceReady === true,
     sourceLocalStoragePreservationRequired: migrationPlan.sourceLocalStoragePreservationRequired === true,
     backupBeforeMutationRequired: migrationPlan.backupBeforeMutationRequired === true,
     rollbackToolRequired: migrationPlan.rollbackToolRequired === true,

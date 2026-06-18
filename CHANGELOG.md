@@ -96,6 +96,11 @@
   path that reconstructs backed-up localStorage values into a local
   manual-confirmed rollback file, verifies hashes, records a migration event,
   and emits only redacted key/count/readiness evidence for M4 inventory.
+- **M4 read-through preview evidence** — added
+  `npm run m4:storage:read-through:evidence` and a main-process SQLite preview
+  query over copied chat/memory rows. The evidence proves queryability with
+  redacted counts, key names, and readiness flags while keeping runtime
+  read-through migration disabled.
 - **M2 distribution trust audit** — added
   `npm run m2:distribution:trust` and
   `docs/V1_M2_DISTRIBUTION_TRUST.md` so platform installer targets,

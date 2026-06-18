@@ -12,6 +12,8 @@ export const M4_STORAGE_SNAPSHOT_COPY_EVIDENCE_GATE = 'nexus-v1-m4-storage-snaps
 export const DEFAULT_M4_STORAGE_SNAPSHOT_COPY_EVIDENCE_FILE = 'artifacts/v1/m4-storage-snapshot-copy-evidence.json'
 export const M4_STORAGE_RESTORE_EVIDENCE_GATE = 'nexus-v1-m4-storage-restore-evidence'
 export const DEFAULT_M4_STORAGE_RESTORE_EVIDENCE_FILE = 'artifacts/v1/m4-storage-restore-evidence.json'
+export const M4_STORAGE_READ_THROUGH_EVIDENCE_GATE = 'nexus-v1-m4-storage-read-through-evidence'
+export const DEFAULT_M4_STORAGE_READ_THROUGH_EVIDENCE_FILE = 'artifacts/v1/m4-storage-read-through-evidence.json'
 
 const SOURCE_DIRS = ['src', 'electron']
 const PACKAGE_JSON_PATH = 'package.json'
@@ -46,6 +48,8 @@ function printUsage(stream = process.stderr) {
     `                                Optional backup+structured-copy evidence report (default: ${DEFAULT_M4_STORAGE_SNAPSHOT_COPY_EVIDENCE_FILE})`,
     `  --restore-evidence-file <path>`,
     `                                Optional restore-bundle evidence report (default: ${DEFAULT_M4_STORAGE_RESTORE_EVIDENCE_FILE})`,
+    `  --read-through-evidence-file <path>`,
+    `                                Optional read-through preview evidence report (default: ${DEFAULT_M4_STORAGE_READ_THROUGH_EVIDENCE_FILE})`,
     '  --require-inventory-ready     Exit non-zero unless the storage inventory is ready',
     '  --require-migration-ready     Also require a real SQLite migration/rollback implementation',
     '  --help                        Show this help',
@@ -82,6 +86,7 @@ export function parseM4StorageMigrationArgs(argv) {
     generatedAt: '',
     help: false,
     outputPath: DEFAULT_M4_STORAGE_MIGRATION_FILE,
+    readThroughEvidenceFile: DEFAULT_M4_STORAGE_READ_THROUGH_EVIDENCE_FILE,
     requireInventoryReady: false,
     requireMigrationReady: false,
     restoreEvidenceFile: DEFAULT_M4_STORAGE_RESTORE_EVIDENCE_FILE,
@@ -116,6 +121,8 @@ export function parseM4StorageMigrationArgs(argv) {
         options.snapshotCopyEvidenceFile = parsed.value
       } else if (name === '--restore-evidence-file' || name === '--m4-storage-restore-evidence-file') {
         options.restoreEvidenceFile = parsed.value
+      } else if (name === '--read-through-evidence-file' || name === '--m4-storage-read-through-evidence-file') {
+        options.readThroughEvidenceFile = parsed.value
       } else {
         throw new Error(`Unknown option: ${name}`)
       }
@@ -329,6 +336,31 @@ function isLocalStorageRestoreEvidenceReady(restoreEvidenceSource) {
     && raw?.privacy?.sourceLocalStorageMutated === false
 }
 
+function isLocalStorageReadThroughEvidenceReady(readThroughEvidenceSource) {
+  const raw = readThroughEvidenceSource?.value
+  return readThroughEvidenceSource?.exists === true
+    && raw?.gate === M4_STORAGE_READ_THROUGH_EVIDENCE_GATE
+    && raw?.ok === true
+    && raw?.backup?.ok === true
+    && raw?.copy?.ok === true
+    && raw?.copy?.failedItemCount === 0
+    && raw?.readThrough?.ok === true
+    && raw?.readThrough?.previewQueryEnabled === true
+    && raw?.readThrough?.chatReadable === true
+    && raw?.readThrough?.memoryReadable === true
+    && raw?.readThrough?.readableRowCount > 0
+    && raw?.migrationPlan?.snapshotBackupEvidenceReady === true
+    && raw?.migrationPlan?.structuredCopyEvidenceReady === true
+    && raw?.migrationPlan?.readThroughPreviewEvidenceReady === true
+    && raw?.migrationPlan?.runtimeMigrationEnabled === false
+    && raw?.migrationPlan?.readThroughMigrationEnabled === false
+    && raw?.migrationPlan?.previewQueryEnabled === true
+    && raw?.migrationPlan?.sourceLocalStoragePreserved === true
+    && raw?.privacy?.localStorageValuesCopiedToReport === false
+    && raw?.privacy?.absolutePathsExposed === false
+    && raw?.privacy?.sourceLocalStorageMutated === false
+}
+
 function summarizeDependencyStatus(packageSource, sqliteFoundationSource) {
   const deps = {
     ...(packageSource.value?.dependencies ?? {}),
@@ -373,6 +405,10 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
     rootDir,
     options.restoreEvidenceFile || DEFAULT_M4_STORAGE_RESTORE_EVIDENCE_FILE,
   )
+  const readThroughEvidenceSource = await readJsonStatus(
+    rootDir,
+    options.readThroughEvidenceFile || DEFAULT_M4_STORAGE_READ_THROUGH_EVIDENCE_FILE,
+  )
   const sourceFiles = (await Promise.all(SOURCE_DIRS.map((dir) => listSourceFiles(rootDir, dir)))).flat()
   const sources = await Promise.all(sourceFiles.map(async (relativePath) => ({
     relativePath,
@@ -395,6 +431,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
   const localStorageStructuredCopyReady = isLocalStorageStructuredCopyReady(sqliteFoundationSource)
   const localStorageSnapshotCopyEvidenceReady = isLocalStorageSnapshotCopyEvidenceReady(snapshotCopyEvidenceSource)
   const localStorageRestoreEvidenceReady = isLocalStorageRestoreEvidenceReady(restoreEvidenceSource)
+  const localStorageReadThroughEvidenceReady = isLocalStorageReadThroughEvidenceReady(readThroughEvidenceSource)
 
   const migrationReady = false
   const inventoryReady = packageSource.exists
@@ -438,6 +475,8 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
       localStorageStructuredCopyReady,
       localStorageSnapshotCopyEvidenceReady,
       localStorageRestoreEvidenceReady,
+      localStorageReadThroughEvidenceReady,
+      readThroughMigrationEnabled: false,
       destructiveMigrationDetected: false,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
@@ -451,6 +490,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
       requireInventoryReady: Boolean(options.requireInventoryReady),
       requireMigrationReady: Boolean(options.requireMigrationReady),
       restoreEvidenceFile: restoreEvidenceSource.path,
+      readThroughEvidenceFile: readThroughEvidenceSource.path,
       snapshotCopyEvidenceFile: snapshotCopyEvidenceSource.path,
     },
     blockingIssueIds,
@@ -461,9 +501,12 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
           ...(localStorageSnapshotBackupReady && !localStorageSnapshotCopyEvidenceReady ? ['capture-chat-memory-local-storage-snapshot-backup-evidence'] : []),
           ...(localStorageStructuredCopyReady && !localStorageSnapshotCopyEvidenceReady ? ['capture-chat-memory-structured-copy-evidence'] : []),
           ...(localStorageSnapshotCopyEvidenceReady && !localStorageRestoreEvidenceReady ? ['capture-local-storage-restore-evidence'] : []),
+          ...(localStorageRestoreEvidenceReady && !localStorageReadThroughEvidenceReady ? ['capture-main-process-read-through-evidence'] : []),
           ...(!localStorageSnapshotBackupReady ? ['extend-main-process-storage-ipc-for-read-through-migration'] : []),
           ...(!localStorageStructuredCopyReady ? ['copy-chat-memory-snapshot-into-structured-sqlite'] : []),
-          'implement-read-through-migration-with-localstorage-preservation',
+          ...(localStorageReadThroughEvidenceReady
+            ? ['wire-runtime-read-through-behind-user-confirmed-feature-flag']
+            : ['implement-read-through-migration-with-localstorage-preservation']),
           ...(localStorageRestoreEvidenceReady ? ['add-schema-downgrade-cli-fixtures'] : ['add-backup-restore-and-rollback-fixtures']),
         ],
     privacy: {
