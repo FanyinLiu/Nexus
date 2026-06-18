@@ -392,15 +392,17 @@ main-process SQLite foundation uses built-in `node:sqlite` through
 storage migration ledger, migration event, localStorage snapshot backup, and
 structured chat/memory copy tables. The renderer-facing `storage:status` IPC is
 read-only, trusted-sender checked, high-risk-audited, and response-validated; it
-returns schema/table readiness and redacted status only, never absolute
-database paths or localStorage values. `storage:backup-local-snapshot` provides the first bounded,
+returns schema/table readiness and redacted status only, never absolute database
+paths or localStorage values. `storage:backup-local-snapshot` provides the first bounded,
 non-destructive chat/memory/relationship snapshot backup path: values are
 written only to a local private backup file and SQLite ledger, while the
 renderer response exposes only counts, keys, file name, and hash.
 `storage:copy-local-snapshot` then copies an existing backup into schema v3 chat
 and memory tables, records copied/skipped copy items, keeps relationship state
 backed up but skipped, preserves source localStorage, and keeps read-through
-migration disabled.
+migration disabled. `m4:storage:snapshot-copy:evidence` runs those backup and
+copy paths from sample or private renderer-export input and emits a redacted
+evidence report for M4 inventory consumption.
 
 ### Impact Scope
 
@@ -432,7 +434,8 @@ then rerun the inventory gate with
 `--sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json` so the M4
 report records the built-in SQLite selection. Focused IPC coverage is included
 in `tests/storage-ipc.test.ts`, `tests/storage-local-snapshot-backup.test.ts`,
-and `tests/ipc-bridge-contract.test.ts`.
+`tests/m4-storage-snapshot-copy-evidence.test.ts`, and
+`tests/ipc-bridge-contract.test.ts`.
 The stricter migration gate is intentionally not ready yet:
 `npm run m4:storage:audit -- --require-migration-ready`. The v1 milestone
 audit consumes `artifacts/v1/m4-storage-migration.json` and treats M4 as
@@ -458,24 +461,25 @@ chat/memory/relationship backups, request/response validation, source
 localStorage preservation, and path/value redaction. `storage:copy-local-snapshot`
 is wired for bounded structured copies from an existing backup id into chat and
 memory tables, with private-safe counts/keys only and runtime migration still
-disabled. Runtime read-through migration is not enabled, source localStorage
-remains the fallback source of truth, and strict v1 acceptance remains blocked
-on M4.
+disabled. `m4:storage:snapshot-copy:evidence` is wired for sample or private
+renderer-export backup+copy evidence, and M4 inventory can consume that report.
+Runtime read-through migration is not enabled, source localStorage remains the
+fallback source of truth, and strict v1 acceptance remains blocked on M4.
 
 ### Known Gaps
 
 Electron packaged-runtime `node:sqlite` behavior still needs package smoke
 evidence. Read-through migration IPC, restore/rollback CLI tooling, and
-cross-platform migration evidence are not implemented yet; snapshot backup and
-structured copy exist but are not yet a full migration, relationship-state
-migration, or restore path.
+cross-platform migration evidence are not implemented yet; snapshot backup,
+structured copy, and their evidence gate exist but are not yet a full migration,
+relationship-state migration, or restore path.
 
 ### Next Stage Tasks
 
-Capture real renderer snapshot backup plus structured copy evidence, extend the
-storage IPC for read-through chat and memory migration behind backups, add
-restore/downgrade CLI fixtures, capture packaged SQLite smoke evidence, then
-proceed to M5 white-box memory after persistence is stable.
+Run snapshot backup plus structured copy evidence against a real renderer
+export, extend the storage IPC for read-through chat and memory migration behind
+backups, add restore/downgrade CLI fixtures, capture packaged SQLite smoke
+evidence, then proceed to M5 white-box memory after persistence is stable.
 
 ## M5 - White-Box Long-Term Memory
 

@@ -8,6 +8,8 @@ export const M4_STORAGE_MIGRATION_GATE = 'nexus-v1-m4-storage-migration-inventor
 export const DEFAULT_M4_STORAGE_MIGRATION_FILE = 'artifacts/v1/m4-storage-migration.json'
 export const M4_SQLITE_FOUNDATION_GATE = 'nexus-v1-m4-sqlite-foundation'
 export const DEFAULT_M4_SQLITE_FOUNDATION_FILE = 'artifacts/v1/m4-sqlite-foundation.json'
+export const M4_STORAGE_SNAPSHOT_COPY_EVIDENCE_GATE = 'nexus-v1-m4-storage-snapshot-copy-evidence'
+export const DEFAULT_M4_STORAGE_SNAPSHOT_COPY_EVIDENCE_FILE = 'artifacts/v1/m4-storage-snapshot-copy-evidence.json'
 
 const SOURCE_DIRS = ['src', 'electron']
 const PACKAGE_JSON_PATH = 'package.json'
@@ -38,6 +40,8 @@ function printUsage(stream = process.stderr) {
     `  --output <path>               Write JSON report (default: ${DEFAULT_M4_STORAGE_MIGRATION_FILE})`,
     `  --sqlite-foundation-file <path>`,
     `                                Optional SQLite foundation report (default: ${DEFAULT_M4_SQLITE_FOUNDATION_FILE})`,
+    `  --snapshot-copy-evidence-file <path>`,
+    `                                Optional backup+structured-copy evidence report (default: ${DEFAULT_M4_STORAGE_SNAPSHOT_COPY_EVIDENCE_FILE})`,
     '  --require-inventory-ready     Exit non-zero unless the storage inventory is ready',
     '  --require-migration-ready     Also require a real SQLite migration/rollback implementation',
     '  --help                        Show this help',
@@ -76,6 +80,7 @@ export function parseM4StorageMigrationArgs(argv) {
     outputPath: DEFAULT_M4_STORAGE_MIGRATION_FILE,
     requireInventoryReady: false,
     requireMigrationReady: false,
+    snapshotCopyEvidenceFile: DEFAULT_M4_STORAGE_SNAPSHOT_COPY_EVIDENCE_FILE,
     sqliteFoundationFile: DEFAULT_M4_SQLITE_FOUNDATION_FILE,
   }
 
@@ -102,6 +107,8 @@ export function parseM4StorageMigrationArgs(argv) {
         options.outputPath = parsed.value
       } else if (name === '--sqlite-foundation-file' || name === '--m4-sqlite-foundation-file') {
         options.sqliteFoundationFile = parsed.value
+      } else if (name === '--snapshot-copy-evidence-file' || name === '--m4-storage-snapshot-copy-evidence-file') {
+        options.snapshotCopyEvidenceFile = parsed.value
       } else {
         throw new Error(`Unknown option: ${name}`)
       }
@@ -277,6 +284,25 @@ function isLocalStorageStructuredCopyReady(sqliteFoundationSource) {
     && raw?.ipcStatus?.structuredCopy?.ready === true
 }
 
+function isLocalStorageSnapshotCopyEvidenceReady(snapshotCopyEvidenceSource) {
+  const raw = snapshotCopyEvidenceSource?.value
+  return snapshotCopyEvidenceSource?.exists === true
+    && raw?.gate === M4_STORAGE_SNAPSHOT_COPY_EVIDENCE_GATE
+    && raw?.ok === true
+    && raw?.backup?.ok === true
+    && raw?.copy?.ok === true
+    && raw?.copy?.failedItemCount === 0
+    && raw?.copy?.copiedItemCount > 0
+    && raw?.migrationPlan?.snapshotBackupEvidenceReady === true
+    && raw?.migrationPlan?.structuredCopyEvidenceReady === true
+    && raw?.migrationPlan?.runtimeMigrationEnabled === false
+    && raw?.migrationPlan?.readThroughMigrationEnabled === false
+    && raw?.migrationPlan?.sourceLocalStoragePreserved === true
+    && raw?.privacy?.localStorageValuesCopiedToReport === false
+    && raw?.privacy?.absolutePathsExposed === false
+    && raw?.privacy?.sourceLocalStorageMutated === false
+}
+
 function summarizeDependencyStatus(packageSource, sqliteFoundationSource) {
   const deps = {
     ...(packageSource.value?.dependencies ?? {}),
@@ -313,6 +339,10 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
     rootDir,
     options.sqliteFoundationFile || DEFAULT_M4_SQLITE_FOUNDATION_FILE,
   )
+  const snapshotCopyEvidenceSource = await readJsonStatus(
+    rootDir,
+    options.snapshotCopyEvidenceFile || DEFAULT_M4_STORAGE_SNAPSHOT_COPY_EVIDENCE_FILE,
+  )
   const sourceFiles = (await Promise.all(SOURCE_DIRS.map((dir) => listSourceFiles(rootDir, dir)))).flat()
   const sources = await Promise.all(sourceFiles.map(async (relativePath) => ({
     relativePath,
@@ -333,6 +363,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
   const sqliteDependency = summarizeDependencyStatus(packageSource, sqliteFoundationSource)
   const localStorageSnapshotBackupReady = isLocalStorageSnapshotBackupReady(sqliteFoundationSource)
   const localStorageStructuredCopyReady = isLocalStorageStructuredCopyReady(sqliteFoundationSource)
+  const localStorageSnapshotCopyEvidenceReady = isLocalStorageSnapshotCopyEvidenceReady(snapshotCopyEvidenceSource)
 
   const migrationReady = false
   const inventoryReady = packageSource.exists
@@ -374,6 +405,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
       sqliteFoundationReady: sqliteDependency.foundationReady === true,
       localStorageSnapshotBackupReady,
       localStorageStructuredCopyReady,
+      localStorageSnapshotCopyEvidenceReady,
       destructiveMigrationDetected: false,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
@@ -386,14 +418,17 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
     requirementMode: {
       requireInventoryReady: Boolean(options.requireInventoryReady),
       requireMigrationReady: Boolean(options.requireMigrationReady),
+      snapshotCopyEvidenceFile: snapshotCopyEvidenceSource.path,
     },
     blockingIssueIds,
     nextActions: migrationReady
       ? []
       : [
           ...(sqliteDependency.foundationReady === true ? [] : ['choose-sqlite-dependency-after-packaging-review']),
-          ...(localStorageSnapshotBackupReady ? ['capture-chat-memory-local-storage-snapshot-backup-evidence'] : ['extend-main-process-storage-ipc-for-read-through-migration']),
-          ...(localStorageStructuredCopyReady ? ['capture-chat-memory-structured-copy-evidence'] : ['copy-chat-memory-snapshot-into-structured-sqlite']),
+          ...(localStorageSnapshotBackupReady && !localStorageSnapshotCopyEvidenceReady ? ['capture-chat-memory-local-storage-snapshot-backup-evidence'] : []),
+          ...(localStorageStructuredCopyReady && !localStorageSnapshotCopyEvidenceReady ? ['capture-chat-memory-structured-copy-evidence'] : []),
+          ...(!localStorageSnapshotBackupReady ? ['extend-main-process-storage-ipc-for-read-through-migration'] : []),
+          ...(!localStorageStructuredCopyReady ? ['copy-chat-memory-snapshot-into-structured-sqlite'] : []),
           'implement-read-through-migration-with-localstorage-preservation',
           'add-backup-restore-and-rollback-fixtures',
         ],

@@ -182,6 +182,7 @@ function m4Storage(overrides = {}) {
     },
     migrationPlan: {
       runtimeMigrationEnabled: true,
+      localStorageSnapshotCopyEvidenceReady: true,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
       rollbackToolRequired: true,
@@ -294,6 +295,7 @@ test('v1 milestone audit can require M1, M2, M3, and M4 acceptance evidence', as
     assert.equal(m4Evidence?.inventoryReady, true)
     assert.equal(m4Evidence?.migrationReady, true)
     assert.equal(m4Evidence?.runtimeMigrationEnabled, true)
+    assert.equal(m4Evidence?.localStorageSnapshotCopyEvidenceReady, true)
     assert.equal(m4Evidence?.backupBeforeMutationRequired, true)
     assert.equal(m4Evidence?.rollbackToolRequired, true)
     assert.equal(m4Evidence?.sqliteDependencyStatus, 'selected')

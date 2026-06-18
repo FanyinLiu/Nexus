@@ -39,6 +39,7 @@
     "m3:ipc:audit": "node scripts/m3-ipc-security-audit.mjs",
     "m4:storage:audit": "node scripts/m4-storage-migration-audit.mjs",
     "m4:sqlite:foundation": "node scripts/m4-sqlite-foundation-audit.mjs",
+    "m4:storage:snapshot-copy:evidence": "node scripts/m4-storage-snapshot-copy-evidence.mjs",
     "v04:message:smoke:local": "node scripts/message-awareness-local-smoke.mjs --evidence-file artifacts/v0.4.0/message-awareness-local.json",
     "v04:message:preflight:live": "node scripts/message-awareness-live-preflight.mjs --output artifacts/v0.4.0/message-awareness-live-preflight.json",
     "v04:message:probe:macos": "node scripts/message-awareness-macos-live-probe.mjs --output artifacts/v0.4.0/message-awareness-macos-live-probe.json",

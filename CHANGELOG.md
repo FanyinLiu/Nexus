@@ -86,6 +86,11 @@
   backup into those tables with private-safe counts/keys only, keeps
   relationship state backed up but skipped, preserves source localStorage, and
   leaves runtime read-through migration disabled.
+- **M4 snapshot-copy evidence** — added
+  `npm run m4:storage:snapshot-copy:evidence` to run snapshot backup plus
+  structured SQLite copy from sample or private renderer-export input, writing a
+  redacted evidence report that M4 inventory can consume without copying chat,
+  memory, relationship, path, or backup-file contents.
 - **M2 distribution trust audit** — added
   `npm run m2:distribution:trust` and
   `docs/V1_M2_DISTRIBUTION_TRUST.md` so platform installer targets,

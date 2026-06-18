@@ -23,6 +23,8 @@ test('m4 storage migration args support inventory and migration gates', () => {
     'artifacts/v1/m4-storage-migration.json',
     '--sqlite-foundation-file',
     'artifacts/v1/m4-sqlite-foundation.json',
+    '--snapshot-copy-evidence-file',
+    'artifacts/v1/m4-storage-snapshot-copy-evidence.json',
     '--require-inventory-ready',
     '--require-migration-ready',
   ]), {
@@ -31,6 +33,7 @@ test('m4 storage migration args support inventory and migration gates', () => {
     outputPath: 'artifacts/v1/m4-storage-migration.json',
     requireInventoryReady: true,
     requireMigrationReady: true,
+    snapshotCopyEvidenceFile: 'artifacts/v1/m4-storage-snapshot-copy-evidence.json',
     sqliteFoundationFile: 'artifacts/v1/m4-sqlite-foundation.json',
   })
 })
@@ -39,6 +42,7 @@ test('m4 storage migration report inventories localStorage keys without user dat
   const report = await buildM4StorageMigrationReport({
     generatedAt: '2026-06-18T11:00:00Z',
     sqliteFoundationFile: 'artifacts/v1/m4-sqlite-foundation-missing-for-test.json',
+    snapshotCopyEvidenceFile: 'artifacts/v1/m4-storage-snapshot-copy-evidence-missing-for-test.json',
   })
   const json = JSON.stringify(report)
 
@@ -68,6 +72,7 @@ test('m4 storage migration report inventories localStorage keys without user dat
   assert.equal(report.migrationPlan.sqliteFoundationReady, false)
   assert.equal(report.migrationPlan.localStorageSnapshotBackupReady, false)
   assert.equal(report.migrationPlan.localStorageStructuredCopyReady, false)
+  assert.equal(report.migrationPlan.localStorageSnapshotCopyEvidenceReady, false)
   assert.equal(report.migrationPlan.sourceLocalStoragePreservationRequired, true)
   assert.equal(report.migrationPlan.backupBeforeMutationRequired, true)
   assert.equal(report.migrationPlan.rollbackToolRequired, true)
@@ -79,6 +84,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
   const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'nexus-m4-storage-foundation-'))
   try {
     const foundationPath = path.join(directoryPath, 'm4-sqlite-foundation.json')
+    const evidencePath = path.join(directoryPath, 'm4-storage-snapshot-copy-evidence.json')
     await writeFile(foundationPath, JSON.stringify({
       gate: 'nexus-v1-m4-sqlite-foundation',
       ok: true,
@@ -105,6 +111,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
     const report = await buildM4StorageMigrationReport({
       generatedAt: '2026-06-18T11:00:00Z',
       sqliteFoundationFile: foundationPath,
+      snapshotCopyEvidenceFile: path.join(directoryPath, 'missing-evidence.json'),
     })
 
     assert.equal(report.inventoryReady, true)
@@ -116,9 +123,45 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
     assert.equal(report.migrationPlan.sqliteFoundationReady, true)
     assert.equal(report.migrationPlan.localStorageSnapshotBackupReady, true)
     assert.equal(report.migrationPlan.localStorageStructuredCopyReady, true)
+    assert.equal(report.migrationPlan.localStorageSnapshotCopyEvidenceReady, false)
     assert.deepEqual(report.nextActions, [
       'capture-chat-memory-local-storage-snapshot-backup-evidence',
       'capture-chat-memory-structured-copy-evidence',
+      'implement-read-through-migration-with-localstorage-preservation',
+      'add-backup-restore-and-rollback-fixtures',
+    ])
+
+    await writeFile(evidencePath, JSON.stringify({
+      gate: 'nexus-v1-m4-storage-snapshot-copy-evidence',
+      ok: true,
+      backup: {
+        ok: true,
+      },
+      copy: {
+        ok: true,
+        copiedItemCount: 4,
+        failedItemCount: 0,
+      },
+      migrationPlan: {
+        snapshotBackupEvidenceReady: true,
+        structuredCopyEvidenceReady: true,
+        runtimeMigrationEnabled: false,
+        readThroughMigrationEnabled: false,
+        sourceLocalStoragePreserved: true,
+      },
+      privacy: {
+        localStorageValuesCopiedToReport: false,
+        absolutePathsExposed: false,
+        sourceLocalStorageMutated: false,
+      },
+    }), 'utf8')
+    const evidenceReadyReport = await buildM4StorageMigrationReport({
+      generatedAt: '2026-06-18T11:00:00Z',
+      sqliteFoundationFile: foundationPath,
+      snapshotCopyEvidenceFile: evidencePath,
+    })
+    assert.equal(evidenceReadyReport.migrationPlan.localStorageSnapshotCopyEvidenceReady, true)
+    assert.deepEqual(evidenceReadyReport.nextActions, [
       'implement-read-through-migration-with-localstorage-preservation',
       'add-backup-restore-and-rollback-fixtures',
     ])
@@ -140,6 +183,7 @@ test('m4 storage migration strict migration mode blocks until real migration exi
   assert.deepEqual(report.requirementMode, {
     requireInventoryReady: false,
     requireMigrationReady: true,
+    snapshotCopyEvidenceFile: 'artifacts/v1/m4-storage-snapshot-copy-evidence.json',
   })
 })
 

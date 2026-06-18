@@ -140,7 +140,9 @@ voice/
   IPC can copy allowlisted chat/memory values into a local private backup file
   and SQLite ledger; the structured copy IPC can copy already-backed-up
   chat/memory rows into schema v3 tables. Both paths preserve source
-  localStorage and are not read-through migration. Then use
+  localStorage and are not read-through migration. Use
+  `npm run m4:storage:snapshot-copy:evidence` for a redacted backup+copy evidence
+  report from sample or private renderer-export input. Then use
   `npm run m4:storage:audit` to refresh the private-safe storage inventory
   before changing read/write persistence contracts.
 
