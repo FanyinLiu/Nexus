@@ -19,7 +19,9 @@ import {
   M4_LOCAL_STORAGE_SNAPSHOT_MAX_ENTRY_BYTES,
   M4_SQLITE_SCHEMA_VERSION,
   queryLocalStorageReadThroughPreview,
+  setLocalStorageReadThroughMode,
   validateNexusStorageSchemaDowngradeRequest,
+  validateLocalStorageReadThroughModeRequest,
   summarizeNexusStorageDatabase,
   validateLocalStorageReadThroughQueryRequest,
   validateLocalStorageSnapshotCopyRequest,
@@ -163,6 +165,63 @@ test('local storage read-through query request validation bounds domains and lim
   assert.throws(
     () => validateLocalStorageReadThroughQueryRequest({ limit: 501 }),
     /limit must be an integer/,
+  )
+})
+
+test('local storage read-through mode request validation requires user confirmation', () => {
+  assert.deepEqual(validateLocalStorageReadThroughModeRequest({
+    enabled: true,
+    userConfirmed: true,
+    copyId: 'local-storage-copy-test',
+    backupId: 'local-storage-backup-test',
+    domains: ['chat', 'memory'],
+    reason: 'manual-enable',
+    confirmedAt: '2026-06-18T13:00:00Z',
+  }), {
+    enabled: true,
+    backupId: 'local-storage-backup-test',
+    copyId: 'local-storage-copy-test',
+    domains: ['chat', 'memory'],
+    reason: 'manual-enable',
+    confirmedAt: '2026-06-18T13:00:00.000Z',
+    userConfirmed: true,
+  })
+
+  assert.deepEqual(validateLocalStorageReadThroughModeRequest({
+    enabled: false,
+    userConfirmed: true,
+  }), {
+    enabled: false,
+    backupId: '',
+    copyId: '',
+    domains: ['chat', 'memory'],
+    reason: 'manual-disable',
+    confirmedAt: '',
+    userConfirmed: true,
+  })
+
+  assert.throws(
+    () => validateLocalStorageReadThroughModeRequest({
+      enabled: true,
+      copyId: 'local-storage-copy-test',
+    }),
+    /userConfirmed must be true/,
+  )
+  assert.throws(
+    () => validateLocalStorageReadThroughModeRequest({
+      enabled: true,
+      userConfirmed: true,
+    }),
+    /copyId is required/,
+  )
+  assert.throws(
+    () => validateLocalStorageReadThroughModeRequest({
+      enabled: true,
+      userConfirmed: true,
+      copyId: 'ok',
+      domains: ['chat', 'chat'],
+    }),
+    /domains must not include duplicates/,
   )
 })
 
@@ -613,6 +672,172 @@ test('local storage read-through preview reads structured rows without exposing 
     assert.equal(previewJson.includes('private read through chat sample'), false)
     assert.equal(previewJson.includes('private read through memory sample'), false)
     assert.equal(previewJson.includes(directoryPath), false)
+  } finally {
+    await rm(directoryPath, { recursive: true, force: true })
+  }
+})
+
+test('local storage read-through mode requires confirmation and can be disabled without mutating localStorage', async () => {
+  const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'nexus-storage-read-through-mode-'))
+  try {
+    const databasePath = path.join(directoryPath, 'storage.sqlite3')
+    const backupDirectory = path.join(directoryPath, 'backups')
+    await backupLocalStorageSnapshot({
+      reason: 'pre-migration',
+      entries: [
+        {
+          key: 'nexus:chat',
+          value: JSON.stringify([
+            { id: 'mode-user', role: 'user', content: 'private mode chat sample', createdAt: '2026-06-18T13:00:00Z' },
+            { id: 'mode-assistant', role: 'assistant', content: 'private mode assistant sample', createdAt: '2026-06-18T13:01:00Z' },
+          ]),
+        },
+        {
+          key: 'nexus:memory:long-term',
+          value: JSON.stringify([
+            {
+              id: 'mode-memory',
+              content: 'private mode memory sample',
+              category: 'preference',
+              source: 'chat',
+              createdAt: '2026-06-18T13:03:00Z',
+            },
+          ]),
+        },
+      ],
+    }, {
+      databasePath,
+      backupDirectory,
+      generatedAt: '2026-06-18T13:05:00Z',
+      backupId: 'local-storage-backup-read-through-mode-test',
+    })
+
+    await copyLocalStorageSnapshotToStructuredSqlite({
+      backupId: 'local-storage-backup-read-through-mode-test',
+      copyId: 'local-storage-copy-read-through-mode-test',
+    }, {
+      databasePath,
+      generatedAt: '2026-06-18T13:06:00Z',
+    })
+
+    assert.throws(
+      () => validateLocalStorageReadThroughModeRequest({
+        enabled: true,
+        copyId: 'local-storage-copy-read-through-mode-test',
+      }),
+      /userConfirmed must be true/,
+    )
+
+    const enabled = await setLocalStorageReadThroughMode({
+      enabled: true,
+      userConfirmed: true,
+      copyId: 'local-storage-copy-read-through-mode-test',
+      backupId: 'local-storage-backup-read-through-mode-test',
+      domains: ['chat', 'memory'],
+      reason: 'manual-enable',
+      confirmedAt: '2026-06-18T13:07:00Z',
+    }, {
+      databasePath,
+      generatedAt: '2026-06-18T13:07:00Z',
+    })
+    const enabledJson = JSON.stringify(enabled)
+
+    assert.equal(enabled.ok, true)
+    assert.equal(enabled.status, 'read-through-mode-enabled')
+    assert.equal(enabled.enabled, true)
+    assert.equal(enabled.userConfirmed, true)
+    assert.equal(enabled.readThroughMigrationEnabled, true)
+    assert.equal(enabled.runtimeMigrationEnabled, false)
+    assert.equal(enabled.sourceLocalStoragePreserved, true)
+    assert.equal(enabled.sourceLocalStorageMutated, false)
+    assert.equal(enabled.valuesCopiedToResponse, false)
+    assert.equal(enabled.readableRowCount, 4)
+    assert.equal(enabled.chatReadable, true)
+    assert.equal(enabled.memoryReadable, true)
+    assert.equal(enabledJson.includes('private mode chat sample'), false)
+    assert.equal(enabledJson.includes('private mode memory sample'), false)
+    assert.equal(enabledJson.includes(directoryPath), false)
+
+    const preview = await queryLocalStorageReadThroughPreview({
+      copyId: 'local-storage-copy-read-through-mode-test',
+      domains: ['chat', 'memory'],
+    }, {
+      databasePath,
+      generatedAt: '2026-06-18T13:08:00Z',
+    })
+    assert.equal(preview.readThroughMigrationEnabled, true)
+    assert.equal(preview.runtimeMigrationEnabled, false)
+    assert.equal(preview.sourceLocalStoragePreserved, true)
+
+    const status = await initializeNexusStorageDatabase({
+      databasePath,
+      generatedAt: '2026-06-18T13:09:00Z',
+    })
+    try {
+      const summary = summarizeNexusStorageDatabase(status.database)
+      assert.equal(summary.counts.readThroughEnabledCopyRuns, 1)
+      assert.equal(summary.counts.runtimeMigrationEnabledCopyRuns, 0)
+      const ledgerRow = status.database
+        .prepare('SELECT status FROM local_storage_migration_ledger WHERE storage_key = ?')
+        .get('nexus:memory:long-term') as { status?: string } | undefined
+      assert.equal(ledgerRow?.status, 'renderer-read-through')
+
+      const eventRow = status.database
+        .prepare('SELECT details_json FROM storage_migration_events WHERE event_type = ? ORDER BY created_at DESC LIMIT 1')
+        .get('local-storage-read-through-mode-updated') as { details_json?: string } | undefined
+      const details = JSON.parse(eventRow?.details_json ?? '{}') as {
+        enabled?: boolean
+        userConfirmed?: boolean
+        readThroughMigrationEnabled?: boolean
+        runtimeMigrationEnabled?: boolean
+        valuesCopiedToResponse?: boolean
+      }
+      assert.equal(details.enabled, true)
+      assert.equal(details.userConfirmed, true)
+      assert.equal(details.readThroughMigrationEnabled, true)
+      assert.equal(details.runtimeMigrationEnabled, false)
+      assert.equal(details.valuesCopiedToResponse, false)
+    } finally {
+      status.close?.()
+    }
+
+    const disabled = await setLocalStorageReadThroughMode({
+      enabled: false,
+      userConfirmed: true,
+      copyId: 'local-storage-copy-read-through-mode-test',
+      reason: 'manual-disable',
+    }, {
+      databasePath,
+      generatedAt: '2026-06-18T13:10:00Z',
+    })
+    assert.equal(disabled.ok, true)
+    assert.equal(disabled.enabled, false)
+    assert.equal(disabled.readThroughMigrationEnabled, false)
+    assert.equal(disabled.sourceLocalStoragePreserved, true)
+
+    const disabledPreview = await queryLocalStorageReadThroughPreview({
+      copyId: 'local-storage-copy-read-through-mode-test',
+      domains: ['chat', 'memory'],
+    }, {
+      databasePath,
+      generatedAt: '2026-06-18T13:11:00Z',
+    })
+    assert.equal(disabledPreview.readThroughMigrationEnabled, false)
+
+    const disabledStatus = await initializeNexusStorageDatabase({
+      databasePath,
+      generatedAt: '2026-06-18T13:12:00Z',
+    })
+    try {
+      const summary = summarizeNexusStorageDatabase(disabledStatus.database)
+      assert.equal(summary.counts.readThroughEnabledCopyRuns, 0)
+      const ledgerRow = disabledStatus.database
+        .prepare('SELECT status FROM local_storage_migration_ledger WHERE storage_key = ?')
+        .get('nexus:memory:long-term') as { status?: string } | undefined
+      assert.equal(ledgerRow?.status, 'copied')
+    } finally {
+      disabledStatus.close?.()
+    }
   } finally {
     await rm(directoryPath, { recursive: true, force: true })
   }

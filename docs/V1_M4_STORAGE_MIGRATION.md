@@ -135,6 +135,19 @@ renderer-export input, then writes
 `previewQueryEnabled: true` but keeps `runtimeMigrationEnabled: false` and
 `readThroughMigrationEnabled: false`.
 
+`setLocalStorageReadThroughMode()` adds the first user-confirmed runtime
+read-through feature-flag contract. It is exposed as
+`storage:set-read-through-mode` and
+`window.desktopPet.setLocalStorageReadThroughMode()`. Enabling requires an
+existing copied run, `copyId`, `userConfirmed: true`, readable chat or memory
+rows, preserved source localStorage, and a non-destructive runtime state. The
+response returns only the selected copy id, backup id, domains, readiness
+counts, confirmation flags, and rollback hints; it does not return chat text,
+memory bodies, raw localStorage values, or paths. Disabling clears the flag,
+returns ledger rows to `copied`, and records an audit event. This is the
+guarded switch contract for the next renderer read-through step, not the
+renderer chat/memory fallback implementation itself.
+
 `downgradeNexusStorageSchema()` and `m4:storage:downgrade:evidence` add the
 first offline schema downgrade fixture for the M4 SQLite store. The evidence
 path runs snapshot backup, structured copy, restore-bundle export, and then a
@@ -163,7 +176,11 @@ data can be copied into private local files, ledger rows, schema v3 tables, and
 a private rollback bundle without mutating source localStorage. They are not
 automatic in-app restore evidence yet. The read-through preview evidence and
 renderer IPC prove queryability of the copied rows as a redacted summary, but
-they are not runtime migration or an automatic fallback switch.
+they are not runtime migration or an automatic fallback switch. The
+user-confirmed read-through mode IPC proves the guarded switch can be enabled
+and disabled for a copied run, but renderer chat/memory modules still need a
+main-process read path with localStorage fallback before localStorage stops
+being the source of truth.
 
 ## Rollback Plan
 
@@ -216,7 +233,7 @@ npm run m4:storage:restore:evidence -- --sample --require-ready --output artifac
 npm run m4:storage:read-through:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-read-through-evidence.json
 npm run m4:storage:downgrade:evidence -- --sample --require-ready --output artifacts/v1/m4-storage-downgrade-evidence.json
 npm run m4:storage:audit -- --sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json --snapshot-copy-evidence-file artifacts/v1/m4-storage-snapshot-copy-evidence.json --restore-evidence-file artifacts/v1/m4-storage-restore-evidence.json --read-through-evidence-file artifacts/v1/m4-storage-read-through-evidence.json --downgrade-evidence-file artifacts/v1/m4-storage-downgrade-evidence.json --require-inventory-ready --output artifacts/v1/m4-storage-migration.json
-node --experimental-strip-types --test tests/m4-sqlite-foundation.test.ts tests/m4-storage-migration-audit.test.ts tests/m4-storage-snapshot-copy-evidence.test.ts tests/m4-storage-restore-evidence.test.ts tests/m4-storage-read-through-evidence.test.ts tests/m4-storage-downgrade-evidence.test.ts tests/v1-milestone-audit.test.ts
+node --experimental-strip-types --test tests/storage-ipc.test.ts tests/storage-local-snapshot-backup.test.ts tests/m4-sqlite-foundation.test.ts tests/m4-storage-migration-audit.test.ts tests/m4-storage-snapshot-copy-evidence.test.ts tests/m4-storage-restore-evidence.test.ts tests/m4-storage-read-through-evidence.test.ts tests/m4-storage-downgrade-evidence.test.ts tests/v1-milestone-audit.test.ts
 node --experimental-strip-types --test tests/storage-ipc.test.ts tests/storage-local-snapshot-backup.test.ts tests/ipc-bridge-contract.test.ts tests/m3-ipc-security-audit.test.ts
 npm run v1:milestone:audit -- --m4-storage-file artifacts/v1/m4-storage-migration.json --require-ready
 ```
@@ -260,9 +277,11 @@ verification while producing a redacted public report.
 `storage:read-through-preview` now exposes that redacted preview through the
 trusted preload bridge, and `m4:storage:read-through:evidence` proves that the
 main process can query the structured SQLite chat/memory copy and emit only
-redacted counts, key names, and readiness flags. Runtime read-through migration
-is not enabled. `m4:storage:downgrade:evidence` now proves that a schema v3
-database with copied chat/memory rows can export a restore bundle, write a
+redacted counts, key names, and readiness flags. `storage:set-read-through-mode`
+now gates read-through mode behind `userConfirmed: true`, an existing copy run,
+source-localStorage preservation, response validation, audit events, and a
+disable rollback path. `m4:storage:downgrade:evidence` now proves that a schema
+v3 database with copied chat/memory rows can export a restore bundle, write a
 private database backup, remove structured copy tables, and land on schema v2
 without exposing user values in the public report.
 
@@ -276,14 +295,15 @@ cross-platform evidence exist.
 - Packaged Electron `node:sqlite` behavior still needs smoke evidence.
 - Relationship state is backed up but not structured-copied until a dedicated
   table or view exists.
-- Runtime read-through storage contracts are not implemented.
+- Renderer chat/memory read-through storage adapters are not implemented.
 - Restore bundle export and schema downgrade evidence exist, but automatic
   restore application and in-app downgrade UX are not implemented.
 - Snapshot backup and structured copy evidence can be generated from sample or
   private renderer-export input, but a real renderer profile still needs to be
   exported and run through that gate before M4 migration acceptance.
-- Read-through preview evidence and renderer preview IPC exist, but runtime
-  fallback switching is not implemented.
+- Read-through preview evidence, renderer preview IPC, and the user-confirmed
+  read-through mode switch exist, but renderer fallback reads are not
+  implemented.
 - Existing localStorage data remains the runtime source of truth.
 
 ## Next Stage Tasks
@@ -292,5 +312,6 @@ cross-platform evidence exist.
 - Run `m4:storage:restore:evidence` against a real renderer export.
 - Run `m4:storage:read-through:evidence` against a real renderer export.
 - Run `m4:storage:downgrade:evidence` against a real renderer export.
-- Wire runtime read-through behind a user-confirmed feature flag.
+- Wire renderer chat/memory reads to main-process SQLite behind the confirmed
+  read-through mode, with localStorage fallback.
 - Add fixture-based runtime migration, corruption, and automatic restore tests.

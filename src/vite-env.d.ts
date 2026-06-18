@@ -271,6 +271,8 @@ type StorageStatus = {
       memories: number
       dailyMemoryEntries: number
       memorySources: number
+      readThroughEnabledCopyRuns: number
+      runtimeMigrationEnabledCopyRuns: number
     }
   }
   migrationPlan: {
@@ -448,6 +450,52 @@ type LocalStorageReadThroughPreviewResponse = {
   nextActions: string[]
 }
 
+type LocalStorageReadThroughModeRequest = {
+  enabled: boolean
+  userConfirmed: true
+  copyId?: string
+  backupId?: string
+  domains?: Array<'chat' | 'memory'>
+  reason?: string
+  confirmedAt?: string
+}
+
+type LocalStorageReadThroughModeResponse = {
+  gate: 'nexus-v1-m4-local-storage-read-through-mode'
+  ok: boolean
+  status: string
+  generatedAt: string
+  requestedEnabled: boolean
+  enabled: boolean
+  backupId: string
+  copyId: string
+  domains: string[]
+  reason: string
+  userConfirmed: boolean
+  readiness: {
+    chatReadable: boolean
+    memoryReadable: boolean
+    readableRowCount: number
+    sourceStorageKeyCount: number
+    copyItemCount: number
+  }
+  migrationPlan: {
+    runtimeMigrationEnabled: boolean
+    readThroughMigrationEnabled: boolean
+    sourceLocalStoragePreserved: boolean
+    userConfirmedFeatureFlag: boolean
+    destructiveMigrationDetected: boolean
+    rollbackByDisablingReadThrough: boolean
+  }
+  privacy: {
+    localStorageValuesReturned: boolean
+    absolutePathExposed: boolean
+    sourceLocalStorageMutated: boolean
+    valuesCopiedToResponse: boolean
+  }
+  nextActions: string[]
+}
+
 declare global {
   interface Window {
     desktopPet?: {
@@ -571,6 +619,9 @@ declare global {
       queryLocalStorageReadThroughPreview: (
         payload?: LocalStorageReadThroughPreviewRequest,
       ) => Promise<LocalStorageReadThroughPreviewResponse>
+      setLocalStorageReadThroughMode: (
+        payload: LocalStorageReadThroughModeRequest,
+      ) => Promise<LocalStorageReadThroughModeResponse>
       listSpeechVoices: (payload: SpeechVoiceListRequest) => Promise<SpeechVoiceListResponse>
       transcribeAudio: (payload: AudioTranscriptionRequest) => Promise<AudioTranscriptionResponse>
       synthesizeAudio: (payload: AudioSynthesisRequest) => Promise<AudioSynthesisResponse>

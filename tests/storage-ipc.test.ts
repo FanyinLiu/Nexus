@@ -3,14 +3,17 @@ import { test } from 'node:test'
 
 import {
   buildLocalStorageReadThroughPreviewResponse,
+  buildLocalStorageReadThroughModeResponse,
   buildLocalStorageSnapshotBackupResponse,
   buildLocalStorageSnapshotCopyResponse,
   buildStorageStatusResponse,
   STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL,
   STORAGE_COPY_LOCAL_SNAPSHOT_CHANNEL,
   STORAGE_READ_THROUGH_PREVIEW_CHANNEL,
+  STORAGE_SET_READ_THROUGH_MODE_CHANNEL,
   register,
   STORAGE_STATUS_CHANNEL,
+  validateLocalStorageReadThroughModeResponse,
   validateLocalStorageReadThroughPreviewResponse,
   validateLocalStorageSnapshotBackupResponse,
   validateLocalStorageSnapshotCopyResponse,
@@ -50,6 +53,8 @@ function foundationStatus(overrides = {}) {
       memories: 0,
       dailyMemoryEntries: 0,
       memorySources: 0,
+      readThroughEnabledCopyRuns: 0,
+      runtimeMigrationEnabledCopyRuns: 0,
     },
     ...overrides,
   }
@@ -312,11 +317,76 @@ test('local storage read-through preview response redacts content and keeps runt
   )
 })
 
+test('local storage read-through mode response is user-confirmed and private-safe', () => {
+  const response = buildLocalStorageReadThroughModeResponse({
+    ok: true,
+    status: 'read-through-mode-enabled',
+    generatedAt: '2026-06-18T13:10:00.000Z',
+    requestedEnabled: true,
+    enabled: true,
+    backupId: 'local-storage-backup-read-through-mode-test',
+    copyId: 'local-storage-copy-read-through-mode-test',
+    domains: ['chat', 'memory'],
+    reason: 'manual-enable',
+    userConfirmed: true,
+    chatReadable: true,
+    memoryReadable: true,
+    readableRowCount: 4,
+    sourceStorageKeyCount: 2,
+    copyItemCount: 2,
+    sourceLocalStoragePreserved: true,
+    runtimeMigrationEnabled: false,
+    readThroughMigrationEnabled: true,
+    sourceLocalStorageMutated: false,
+    valuesCopiedToResponse: false,
+  })
+  const json = JSON.stringify(response)
+
+  assert.equal(response.gate, 'nexus-v1-m4-local-storage-read-through-mode')
+  assert.equal(response.ok, true)
+  assert.equal(response.enabled, true)
+  assert.equal(response.userConfirmed, true)
+  assert.equal(response.readiness.readableRowCount, 4)
+  assert.equal(response.migrationPlan.runtimeMigrationEnabled, false)
+  assert.equal(response.migrationPlan.readThroughMigrationEnabled, true)
+  assert.equal(response.migrationPlan.userConfirmedFeatureFlag, true)
+  assert.equal(response.migrationPlan.rollbackByDisablingReadThrough, true)
+  assert.equal(response.privacy.localStorageValuesReturned, false)
+  assert.equal(response.privacy.absolutePathExposed, false)
+  assert.equal(response.privacy.sourceLocalStorageMutated, false)
+  assert.equal(response.privacy.valuesCopiedToResponse, false)
+  assert.equal(json.includes('private user chat sample'), false)
+  assert.equal(json.includes('/Users/example'), false)
+  assert.equal(validateLocalStorageReadThroughModeResponse(response), response)
+  assert.throws(
+    () => validateLocalStorageReadThroughModeResponse({
+      ...response,
+      userConfirmed: false,
+      migrationPlan: {
+        ...response.migrationPlan,
+        userConfirmedFeatureFlag: false,
+      },
+    }),
+    /must be user confirmed/,
+  )
+  assert.throws(
+    () => validateLocalStorageReadThroughModeResponse({
+      ...response,
+      privacy: {
+        ...response.privacy,
+        sourceLocalStorageMutated: true,
+      },
+    }),
+    /must preserve source localStorage/,
+  )
+})
+
 test('storage IPC registers trusted sender checks for status and snapshot backup', async () => {
   const registeredHandlers = new Map<string, (event: unknown, payload?: unknown) => Promise<unknown>>()
   let trustedSenderChecked = false
   let closeCalled = false
   let readThroughPreviewCalled = false
+  let readThroughModeCalled = false
 
   const ipcMainLike = {
     handle(channel: string, handler: (event: unknown) => Promise<unknown>) {
@@ -388,23 +458,65 @@ test('storage IPC registers trusted sender checks for status and snapshot backup
         valuesCopiedToResponse: false,
       }
     },
+    async setLocalStorageReadThroughMode() {
+      readThroughModeCalled = true
+      return {
+        ok: true,
+        status: 'read-through-mode-enabled',
+        generatedAt: '2026-06-18T13:10:00.000Z',
+        requestedEnabled: true,
+        enabled: true,
+        backupId: 'local-storage-backup-read-through-test',
+        copyId: 'local-storage-copy-read-through-test',
+        domains: ['chat'],
+        reason: 'manual-enable',
+        userConfirmed: true,
+        chatReadable: true,
+        memoryReadable: false,
+        readableRowCount: 3,
+        sourceStorageKeyCount: 1,
+        copyItemCount: 1,
+        runtimeMigrationEnabled: false,
+        readThroughMigrationEnabled: true,
+        sourceLocalStoragePreserved: true,
+        sourceLocalStorageMutated: false,
+        valuesCopiedToResponse: false,
+      }
+    },
   })
 
   assert.equal(typeof registeredHandlers.get(STORAGE_STATUS_CHANNEL), 'function')
   assert.equal(typeof registeredHandlers.get(STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL), 'function')
   assert.equal(typeof registeredHandlers.get(STORAGE_COPY_LOCAL_SNAPSHOT_CHANNEL), 'function')
   assert.equal(typeof registeredHandlers.get(STORAGE_READ_THROUGH_PREVIEW_CHANNEL), 'function')
+  assert.equal(typeof registeredHandlers.get(STORAGE_SET_READ_THROUGH_MODE_CHANNEL), 'function')
   const response = await registeredHandlers.get(STORAGE_STATUS_CHANNEL)?.({})
   const previewResponse = await registeredHandlers.get(STORAGE_READ_THROUGH_PREVIEW_CHANNEL)?.({}, {
     domains: ['chat'],
     limit: 2,
   })
+  await assert.rejects(
+    registeredHandlers.get(STORAGE_SET_READ_THROUGH_MODE_CHANNEL)?.({}, {
+      enabled: true,
+      copyId: 'local-storage-copy-read-through-test',
+    }),
+    /userConfirmed must be true/,
+  )
+  const modeResponse = await registeredHandlers.get(STORAGE_SET_READ_THROUGH_MODE_CHANNEL)?.({}, {
+    enabled: true,
+    userConfirmed: true,
+    copyId: 'local-storage-copy-read-through-test',
+    domains: ['chat'],
+    reason: 'manual-enable',
+  })
 
   assert.equal(trustedSenderChecked, true)
   assert.equal(closeCalled, true)
   assert.equal(readThroughPreviewCalled, true)
+  assert.equal(readThroughModeCalled, true)
   assert.equal((response as { ok?: boolean })?.ok, true)
   assert.equal((response as { database?: { fileName?: string } })?.database?.fileName, 'nexus.sqlite3')
   assert.equal((previewResponse as { ok?: boolean })?.ok, true)
   assert.equal((previewResponse as { chat?: { messageCount?: number } })?.chat?.messageCount, 2)
+  assert.equal((modeResponse as { enabled?: boolean })?.enabled, true)
 })

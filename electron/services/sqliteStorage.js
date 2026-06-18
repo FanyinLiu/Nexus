@@ -41,6 +41,7 @@ export const M4_LOCAL_STORAGE_READ_THROUGH_DEFAULT_LIMIT = 100
 export const M4_LOCAL_STORAGE_READ_THROUGH_MAX_LIMIT = 500
 
 const M4_LOCAL_STORAGE_READ_THROUGH_DOMAINS = ['chat', 'memory']
+const M4_LOCAL_STORAGE_READ_THROUGH_MODE_EVENT = 'local-storage-read-through-mode-updated'
 
 export const M4_LOCAL_STORAGE_SNAPSHOT_KEY_METADATA = [
   {
@@ -484,6 +485,20 @@ function getDatabaseSummary(database) {
   const memories = countRows('memories')
   const dailyMemoryEntries = countRows('daily_memory_entries')
   const memorySources = countRows('memory_sources')
+  const readThroughEnabledCopyRuns = tableSet.has('local_storage_copy_runs')
+    ? Number(getScalar(database.prepare(`
+      SELECT COUNT(*) AS count
+      FROM local_storage_copy_runs
+      WHERE read_through_migration_enabled = 1
+    `).get(), 0))
+    : 0
+  const runtimeMigrationEnabledCopyRuns = tableSet.has('local_storage_copy_runs')
+    ? Number(getScalar(database.prepare(`
+      SELECT COUNT(*) AS count
+      FROM local_storage_copy_runs
+      WHERE runtime_migration_enabled = 1
+    `).get(), 0))
+    : 0
 
   return {
     schemaVersion: userVersion,
@@ -503,6 +518,8 @@ function getDatabaseSummary(database) {
     memories,
     dailyMemoryEntries,
     memorySources,
+    readThroughEnabledCopyRuns,
+    runtimeMigrationEnabledCopyRuns,
   }
 }
 
@@ -565,6 +582,8 @@ export async function initializeNexusStorageDatabase(options = {}) {
         memories: summary.memories,
         dailyMemoryEntries: summary.dailyMemoryEntries,
         memorySources: summary.memorySources,
+        readThroughEnabledCopyRuns: summary.readThroughEnabledCopyRuns,
+        runtimeMigrationEnabledCopyRuns: summary.runtimeMigrationEnabledCopyRuns,
       },
       database,
       close,
@@ -1051,6 +1070,59 @@ export function validateLocalStorageReadThroughQueryRequest(request = {}) {
     copyId,
     domains,
     limit: requestedLimit,
+  }
+}
+
+export function validateLocalStorageReadThroughModeRequest(request = {}) {
+  if (!request || typeof request !== 'object' || Array.isArray(request)) {
+    throw new Error('local storage read-through mode request must be a plain object')
+  }
+  if (typeof request.enabled !== 'boolean') {
+    throw new Error('enabled must be a boolean')
+  }
+  if (request.userConfirmed !== true) {
+    throw new Error('userConfirmed must be true before changing read-through mode')
+  }
+
+  const backupId = cleanString(request.backupId)
+  if (backupId && !/^[a-z0-9:_-]{1,160}$/i.test(backupId)) {
+    throw new Error('backupId must be a short id')
+  }
+  const copyId = cleanString(request.copyId)
+  if (copyId && !/^[a-z0-9:_-]{1,160}$/i.test(copyId)) {
+    throw new Error('copyId must be a short id')
+  }
+  if (request.enabled && !copyId) {
+    throw new Error('copyId is required before enabling read-through mode')
+  }
+
+  const rawDomains = Array.isArray(request.domains)
+    ? request.domains.map(cleanString).filter(Boolean)
+    : M4_LOCAL_STORAGE_READ_THROUGH_DOMAINS
+  const domains = unique(rawDomains)
+  if (domains.length < 1) throw new Error('domains must include at least one read-through domain')
+  if (domains.length !== rawDomains.length) throw new Error('domains must not include duplicates')
+  for (const domain of domains) {
+    if (!M4_LOCAL_STORAGE_READ_THROUGH_DOMAINS.includes(domain)) {
+      throw new Error(`read-through domain is not allowed for M4 localStorage mode: ${domain}`)
+    }
+  }
+
+  const reason = cleanString(request.reason) || (request.enabled ? 'manual-enable' : 'manual-disable')
+  if (!/^[a-z0-9:-]{1,64}$/i.test(reason)) {
+    throw new Error('reason must be a short id')
+  }
+
+  const confirmedAt = normalizeOptionalIso(request.confirmedAt, 'confirmedAt')
+
+  return {
+    enabled: request.enabled,
+    backupId,
+    copyId,
+    domains,
+    reason,
+    confirmedAt,
+    userConfirmed: true,
   }
 }
 
@@ -2306,6 +2378,319 @@ export async function queryLocalStorageReadThroughPreview(request = {}, options 
   }
 }
 
+function buildReadThroughModeReadiness(database, copyRun, domains, limit = M4_LOCAL_STORAGE_READ_THROUGH_DEFAULT_LIMIT) {
+  if (!copyRun) {
+    return {
+      ok: false,
+      chatReadable: false,
+      memoryReadable: false,
+      readableRowCount: 0,
+      sourceStorageKeyCount: 0,
+      copyItemCount: 0,
+      enabledStorageKeys: [],
+    }
+  }
+
+  const backupId = cleanString(copyRun.backup_id)
+  const copyId = cleanString(copyRun.copy_id)
+  const chat = domains.includes('chat')
+    ? buildChatReadThroughPreview(database, backupId, limit)
+    : { hasReadableRows: false, messageCount: 0, sessionCount: 0 }
+  const memory = domains.includes('memory')
+    ? buildMemoryReadThroughPreview(database, backupId, limit)
+    : { hasReadableRows: false, memoryCount: 0, dailyMemoryEntryCount: 0 }
+  const sourceStorageKeys = queryStorageKeys(database, backupId, domains)
+  const copyItems = queryCopyItems(database, copyId, domains)
+  const enabledStorageKeys = copyItems
+    .filter((item) => item.status === 'copied')
+    .map((item) => item.storageKey)
+  const readableRowCount = Number(chat.messageCount || 0)
+    + Number(chat.sessionCount || 0)
+    + Number(memory.memoryCount || 0)
+    + Number(memory.dailyMemoryEntryCount || 0)
+
+  return {
+    ok: readableRowCount > 0,
+    chatReadable: domains.includes('chat') ? chat.hasReadableRows === true : false,
+    memoryReadable: domains.includes('memory') ? memory.hasReadableRows === true : false,
+    readableRowCount,
+    sourceStorageKeyCount: sourceStorageKeys.length,
+    copyItemCount: copyItems.length,
+    enabledStorageKeys,
+  }
+}
+
+function findActiveReadThroughCopyRun(database) {
+  return database.prepare(`
+    SELECT
+      copy_id,
+      backup_id,
+      created_at,
+      status,
+      item_count,
+      copied_item_count,
+      skipped_item_count,
+      failed_item_count,
+      chat_session_count,
+      chat_message_count,
+      memory_count,
+      daily_memory_entry_count,
+      runtime_migration_enabled,
+      read_through_migration_enabled,
+      source_local_storage_preserved
+    FROM local_storage_copy_runs
+    WHERE read_through_migration_enabled = 1
+    ORDER BY created_at DESC, copy_id DESC
+    LIMIT 1
+  `).get() || null
+}
+
+function updateLedgerForReadThroughMode(database, copyId, enabled, now) {
+  database
+    .prepare(`
+      UPDATE local_storage_migration_ledger
+      SET status = ?, updated_at = ?
+      WHERE storage_key IN (
+        SELECT storage_key
+        FROM local_storage_copy_items
+        WHERE copy_id = ?
+          AND status = 'copied'
+      )
+        AND status IN ('copied', 'verified', 'renderer-read-through')
+    `)
+    .run(enabled ? 'renderer-read-through' : 'copied', now, copyId)
+}
+
+export async function setLocalStorageReadThroughMode(request = {}, options = {}) {
+  const normalizedRequest = validateLocalStorageReadThroughModeRequest(request)
+  const generatedAt = normalizeIso(options.generatedAt || options.now || new Date())
+  const initializeFn = options.initializeStorageDatabase || initializeNexusStorageDatabase
+  const status = options.storageStatus || await initializeFn({
+    ...options,
+    generatedAt,
+  })
+  const shouldClose = !options.storageStatus
+
+  try {
+    if (!status?.ok || !status.database) {
+      throw new Error('sqlite storage foundation must be ready before changing local storage read-through mode')
+    }
+
+    const requestedCopyRun = normalizedRequest.copyId || normalizedRequest.backupId
+      ? findReadThroughCopyRun(status.database, normalizedRequest)
+      : findActiveReadThroughCopyRun(status.database)
+
+    if (normalizedRequest.enabled && !requestedCopyRun) {
+      return {
+        ok: false,
+        status: 'read-through-copy-run-missing',
+        generatedAt,
+        requestedEnabled: true,
+        enabled: false,
+        backupId: normalizedRequest.backupId,
+        copyId: normalizedRequest.copyId,
+        domains: normalizedRequest.domains,
+        userConfirmed: true,
+        reason: normalizedRequest.reason,
+        readableRowCount: 0,
+        chatReadable: false,
+        memoryReadable: false,
+        sourceStorageKeyCount: 0,
+        copyItemCount: 0,
+        runtimeMigrationEnabled: false,
+        readThroughMigrationEnabled: false,
+        sourceLocalStoragePreserved: true,
+        valuesCopiedToResponse: false,
+        sourceLocalStorageMutated: false,
+      }
+    }
+
+    if (normalizedRequest.enabled) {
+      const copyRun = requestedCopyRun
+      const copyStatus = cleanString(copyRun.status)
+      const copiedItemCount = Number(copyRun.copied_item_count || 0)
+      const sourcePreserved = Number(copyRun.source_local_storage_preserved || 0) === 1
+      const runtimeMigrationEnabled = Number(copyRun.runtime_migration_enabled || 0) === 1
+      const readiness = buildReadThroughModeReadiness(status.database, copyRun, normalizedRequest.domains)
+      if (copyStatus === 'failed' || copiedItemCount < 1 || !sourcePreserved || runtimeMigrationEnabled || !readiness.ok) {
+        return {
+          ok: false,
+          status: 'read-through-copy-run-not-ready',
+          generatedAt,
+          requestedEnabled: true,
+          enabled: false,
+          backupId: cleanString(copyRun.backup_id),
+          copyId: cleanString(copyRun.copy_id),
+          domains: normalizedRequest.domains,
+          userConfirmed: true,
+          reason: normalizedRequest.reason,
+          readableRowCount: readiness.readableRowCount,
+          chatReadable: readiness.chatReadable,
+          memoryReadable: readiness.memoryReadable,
+          sourceStorageKeyCount: readiness.sourceStorageKeyCount,
+          copyItemCount: readiness.copyItemCount,
+          runtimeMigrationEnabled,
+          readThroughMigrationEnabled: false,
+          sourceLocalStoragePreserved: sourcePreserved,
+          valuesCopiedToResponse: false,
+          sourceLocalStorageMutated: false,
+        }
+      }
+
+      let committed = false
+      try {
+        status.database.exec('BEGIN IMMEDIATE')
+        status.database
+          .prepare('UPDATE local_storage_copy_runs SET read_through_migration_enabled = 0')
+          .run()
+        status.database
+          .prepare(`
+            UPDATE local_storage_migration_ledger
+            SET status = 'copied', updated_at = ?
+            WHERE status = 'renderer-read-through'
+          `)
+          .run(generatedAt)
+        status.database
+          .prepare(`
+            UPDATE local_storage_copy_runs
+            SET read_through_migration_enabled = 1,
+                runtime_migration_enabled = 0
+            WHERE copy_id = ?
+          `)
+          .run(cleanString(copyRun.copy_id))
+        updateLedgerForReadThroughMode(status.database, cleanString(copyRun.copy_id), true, generatedAt)
+        recordStorageMigrationEvent(status.database, {
+          eventType: M4_LOCAL_STORAGE_READ_THROUGH_MODE_EVENT,
+          level: 'info',
+          details: {
+            enabled: true,
+            copyId: cleanString(copyRun.copy_id),
+            backupId: cleanString(copyRun.backup_id),
+            domains: normalizedRequest.domains,
+            reason: normalizedRequest.reason,
+            confirmedAt: normalizedRequest.confirmedAt || generatedAt,
+            userConfirmed: true,
+            readableRowCount: readiness.readableRowCount,
+            sourceStorageKeyCount: readiness.sourceStorageKeyCount,
+            sourceLocalStoragePreserved: true,
+            runtimeMigrationEnabled: false,
+            readThroughMigrationEnabled: true,
+            destructiveMigrationDetected: false,
+            valuesCopiedToResponse: false,
+          },
+        }, { now: generatedAt })
+        status.database.exec('COMMIT')
+        committed = true
+      } finally {
+        if (!committed) {
+          try { status.database.exec('ROLLBACK') } catch {}
+        }
+      }
+
+      return {
+        ok: true,
+        status: 'read-through-mode-enabled',
+        generatedAt,
+        requestedEnabled: true,
+        enabled: true,
+        backupId: cleanString(copyRun.backup_id),
+        copyId: cleanString(copyRun.copy_id),
+        domains: normalizedRequest.domains,
+        userConfirmed: true,
+        reason: normalizedRequest.reason,
+        readableRowCount: readiness.readableRowCount,
+        chatReadable: readiness.chatReadable,
+        memoryReadable: readiness.memoryReadable,
+        sourceStorageKeyCount: readiness.sourceStorageKeyCount,
+        copyItemCount: readiness.copyItemCount,
+        runtimeMigrationEnabled: false,
+        readThroughMigrationEnabled: true,
+        sourceLocalStoragePreserved: true,
+        valuesCopiedToResponse: false,
+        sourceLocalStorageMutated: false,
+      }
+    }
+
+    const copyId = requestedCopyRun ? cleanString(requestedCopyRun.copy_id) : normalizedRequest.copyId
+    const backupId = requestedCopyRun ? cleanString(requestedCopyRun.backup_id) : normalizedRequest.backupId
+    let disabledCount = 0
+    let committed = false
+    try {
+      status.database.exec('BEGIN IMMEDIATE')
+      const updateResult = copyId
+        ? status.database
+          .prepare('UPDATE local_storage_copy_runs SET read_through_migration_enabled = 0 WHERE copy_id = ?')
+          .run(copyId)
+        : status.database
+          .prepare('UPDATE local_storage_copy_runs SET read_through_migration_enabled = 0 WHERE read_through_migration_enabled = 1')
+          .run()
+      disabledCount = Number(updateResult?.changes || 0)
+      if (copyId) {
+        updateLedgerForReadThroughMode(status.database, copyId, false, generatedAt)
+      } else {
+        status.database
+          .prepare(`
+            UPDATE local_storage_migration_ledger
+            SET status = 'copied', updated_at = ?
+            WHERE status = 'renderer-read-through'
+          `)
+          .run(generatedAt)
+      }
+      recordStorageMigrationEvent(status.database, {
+        eventType: M4_LOCAL_STORAGE_READ_THROUGH_MODE_EVENT,
+        level: 'info',
+        details: {
+          enabled: false,
+          copyId,
+          backupId,
+          domains: normalizedRequest.domains,
+          reason: normalizedRequest.reason,
+          confirmedAt: normalizedRequest.confirmedAt || generatedAt,
+          userConfirmed: true,
+          disabledCopyRunCount: disabledCount,
+          sourceLocalStoragePreserved: true,
+          runtimeMigrationEnabled: false,
+          readThroughMigrationEnabled: false,
+          destructiveMigrationDetected: false,
+          valuesCopiedToResponse: false,
+        },
+      }, { now: generatedAt })
+      status.database.exec('COMMIT')
+      committed = true
+    } finally {
+      if (!committed) {
+        try { status.database.exec('ROLLBACK') } catch {}
+      }
+    }
+
+    return {
+      ok: true,
+      status: disabledCount > 0 ? 'read-through-mode-disabled' : 'read-through-mode-already-disabled',
+      generatedAt,
+      requestedEnabled: false,
+      enabled: false,
+      backupId,
+      copyId,
+      domains: normalizedRequest.domains,
+      userConfirmed: true,
+      reason: normalizedRequest.reason,
+      disabledCopyRunCount: disabledCount,
+      readableRowCount: 0,
+      chatReadable: false,
+      memoryReadable: false,
+      sourceStorageKeyCount: 0,
+      copyItemCount: 0,
+      runtimeMigrationEnabled: false,
+      readThroughMigrationEnabled: false,
+      sourceLocalStoragePreserved: true,
+      valuesCopiedToResponse: false,
+      sourceLocalStorageMutated: false,
+    }
+  } finally {
+    if (shouldClose) status?.close?.()
+  }
+}
+
 function writeSchemaDowngradeDatabaseBackup(database, downgrade, options = {}) {
   const backupDirectory = resolveNexusStorageBackupDirectory(options)
   fs.mkdirSync(backupDirectory, { recursive: true })
@@ -2525,6 +2910,8 @@ export function summarizeNexusStorageDatabase(database) {
       memories: summary.memories,
       dailyMemoryEntries: summary.dailyMemoryEntries,
       memorySources: summary.memorySources,
+      readThroughEnabledCopyRuns: summary.readThroughEnabledCopyRuns,
+      runtimeMigrationEnabledCopyRuns: summary.runtimeMigrationEnabledCopyRuns,
     },
   }
 }

@@ -9,6 +9,8 @@ import {
   M4_SQLITE_FOUNDATION_TABLES,
   M4_SQLITE_SCHEMA_VERSION,
   queryLocalStorageReadThroughPreview,
+  setLocalStorageReadThroughMode,
+  validateLocalStorageReadThroughModeRequest,
   validateLocalStorageReadThroughQueryRequest,
   validateLocalStorageSnapshotCopyRequest,
   validateLocalStorageSnapshotRequest,
@@ -18,9 +20,11 @@ export const STORAGE_STATUS_CHANNEL = 'storage:status'
 export const STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL = 'storage:backup-local-snapshot'
 export const STORAGE_COPY_LOCAL_SNAPSHOT_CHANNEL = 'storage:copy-local-snapshot'
 export const STORAGE_READ_THROUGH_PREVIEW_CHANNEL = 'storage:read-through-preview'
+export const STORAGE_SET_READ_THROUGH_MODE_CHANNEL = 'storage:set-read-through-mode'
 export const STORAGE_BACKUP_LOCAL_SNAPSHOT_GATE = 'nexus-v1-m4-local-storage-snapshot-backup'
 export const STORAGE_COPY_LOCAL_SNAPSHOT_GATE = 'nexus-v1-m4-local-storage-snapshot-copy'
 export const STORAGE_READ_THROUGH_PREVIEW_GATE = 'nexus-v1-m4-local-storage-read-through-preview'
+export const STORAGE_READ_THROUGH_MODE_GATE = 'nexus-v1-m4-local-storage-read-through-mode'
 
 const { app, ipcMain } = electron ?? {}
 
@@ -114,11 +118,13 @@ export function buildStorageStatusResponse(status, options = {}) {
         memories: toFiniteNumber(counts.memories, 0),
         dailyMemoryEntries: toFiniteNumber(counts.dailyMemoryEntries, 0),
         memorySources: toFiniteNumber(counts.memorySources, 0),
+        readThroughEnabledCopyRuns: toFiniteNumber(counts.readThroughEnabledCopyRuns, 0),
+        runtimeMigrationEnabledCopyRuns: toFiniteNumber(counts.runtimeMigrationEnabledCopyRuns, 0),
       },
     },
     migrationPlan: {
       runtimeMigrationEnabled: false,
-      readThroughMigrationEnabled: false,
+      readThroughMigrationEnabled: toFiniteNumber(counts.readThroughEnabledCopyRuns, 0) > 0,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
       rollbackToolRequired: true,
@@ -231,6 +237,8 @@ export function validateStorageStatusResponse(response) {
   requireFiniteNumber(response.database.counts.memories, 'database.counts.memories')
   requireFiniteNumber(response.database.counts.dailyMemoryEntries, 'database.counts.dailyMemoryEntries')
   requireFiniteNumber(response.database.counts.memorySources, 'database.counts.memorySources')
+  requireFiniteNumber(response.database.counts.readThroughEnabledCopyRuns, 'database.counts.readThroughEnabledCopyRuns')
+  requireFiniteNumber(response.database.counts.runtimeMigrationEnabledCopyRuns, 'database.counts.runtimeMigrationEnabledCopyRuns')
 
   requirePlainObject(response.migrationPlan, 'migrationPlan')
   requireBoolean(response.migrationPlan.runtimeMigrationEnabled, 'migrationPlan.runtimeMigrationEnabled')
@@ -679,6 +687,118 @@ export function validateLocalStorageReadThroughPreviewResponse(response) {
   return response
 }
 
+export function buildLocalStorageReadThroughModeResponse(result) {
+  const enabled = result?.enabled === true
+  const requestedEnabled = result?.requestedEnabled === true
+  return validateLocalStorageReadThroughModeResponse({
+    gate: STORAGE_READ_THROUGH_MODE_GATE,
+    ok: result?.ok === true,
+    status: cleanString(result?.status) || 'unknown',
+    generatedAt: cleanString(result?.generatedAt),
+    requestedEnabled,
+    enabled,
+    backupId: cleanString(result?.backupId),
+    copyId: cleanString(result?.copyId),
+    domains: toStringArray(result?.domains),
+    reason: cleanString(result?.reason),
+    userConfirmed: result?.userConfirmed === true,
+    readiness: {
+      chatReadable: result?.chatReadable === true,
+      memoryReadable: result?.memoryReadable === true,
+      readableRowCount: toFiniteNumber(result?.readableRowCount, 0),
+      sourceStorageKeyCount: toFiniteNumber(result?.sourceStorageKeyCount, 0),
+      copyItemCount: toFiniteNumber(result?.copyItemCount, 0),
+    },
+    migrationPlan: {
+      runtimeMigrationEnabled: false,
+      readThroughMigrationEnabled: enabled,
+      sourceLocalStoragePreserved: result?.sourceLocalStoragePreserved === true,
+      userConfirmedFeatureFlag: result?.userConfirmed === true,
+      destructiveMigrationDetected: false,
+      rollbackByDisablingReadThrough: true,
+    },
+    privacy: {
+      localStorageValuesReturned: false,
+      absolutePathExposed: false,
+      sourceLocalStorageMutated: result?.sourceLocalStorageMutated === true,
+      valuesCopiedToResponse: result?.valuesCopiedToResponse === true,
+    },
+    nextActions: enabled
+      ? ['wire-renderer-chat-memory-reads-to-main-process-with-localstorage-fallback']
+      : ['keep-localstorage-fallback-until-read-through-enabled'],
+  })
+}
+
+export function validateLocalStorageReadThroughModeResponse(response) {
+  requirePlainObject(response, 'local storage read-through mode response')
+  requireStringValue(response.gate, 'gate')
+  if (response.gate !== STORAGE_READ_THROUGH_MODE_GATE) {
+    throw new Error('local storage read-through mode response gate mismatch')
+  }
+  requireBoolean(response.ok, 'ok')
+  requireStringValue(response.status, 'status')
+  requireIsoString(response.generatedAt, 'generatedAt')
+  requireBoolean(response.requestedEnabled, 'requestedEnabled')
+  requireBoolean(response.enabled, 'enabled')
+  requireString(response.backupId, 'backupId')
+  requireString(response.copyId, 'copyId')
+  requireStringArray(response.domains, 'domains')
+  requireStringValue(response.reason, 'reason')
+  requireBoolean(response.userConfirmed, 'userConfirmed')
+
+  requirePlainObject(response.readiness, 'readiness')
+  requireBoolean(response.readiness.chatReadable, 'readiness.chatReadable')
+  requireBoolean(response.readiness.memoryReadable, 'readiness.memoryReadable')
+  requireFiniteNumber(response.readiness.readableRowCount, 'readiness.readableRowCount')
+  requireFiniteNumber(response.readiness.sourceStorageKeyCount, 'readiness.sourceStorageKeyCount')
+  requireFiniteNumber(response.readiness.copyItemCount, 'readiness.copyItemCount')
+
+  requirePlainObject(response.migrationPlan, 'migrationPlan')
+  requireBoolean(response.migrationPlan.runtimeMigrationEnabled, 'migrationPlan.runtimeMigrationEnabled')
+  requireBoolean(response.migrationPlan.readThroughMigrationEnabled, 'migrationPlan.readThroughMigrationEnabled')
+  requireBoolean(response.migrationPlan.sourceLocalStoragePreserved, 'migrationPlan.sourceLocalStoragePreserved')
+  requireBoolean(response.migrationPlan.userConfirmedFeatureFlag, 'migrationPlan.userConfirmedFeatureFlag')
+  requireBoolean(response.migrationPlan.destructiveMigrationDetected, 'migrationPlan.destructiveMigrationDetected')
+  requireBoolean(response.migrationPlan.rollbackByDisablingReadThrough, 'migrationPlan.rollbackByDisablingReadThrough')
+
+  requirePlainObject(response.privacy, 'privacy')
+  requireBoolean(response.privacy.localStorageValuesReturned, 'privacy.localStorageValuesReturned')
+  requireBoolean(response.privacy.absolutePathExposed, 'privacy.absolutePathExposed')
+  requireBoolean(response.privacy.sourceLocalStorageMutated, 'privacy.sourceLocalStorageMutated')
+  requireBoolean(response.privacy.valuesCopiedToResponse, 'privacy.valuesCopiedToResponse')
+  requireStringArray(response.nextActions, 'nextActions')
+
+  if (response.migrationPlan.runtimeMigrationEnabled) {
+    throw new Error('local storage read-through mode response must keep destructive runtime migration disabled')
+  }
+  if (response.migrationPlan.readThroughMigrationEnabled !== response.enabled) {
+    throw new Error('local storage read-through mode response flag mismatch')
+  }
+  if (response.enabled && !response.userConfirmed) {
+    throw new Error('local storage read-through mode response must be user confirmed before enabling')
+  }
+  if (response.migrationPlan.destructiveMigrationDetected) {
+    throw new Error('local storage read-through mode response must not include destructive migration')
+  }
+  if (!response.migrationPlan.rollbackByDisablingReadThrough) {
+    throw new Error('local storage read-through mode response must be reversible by disabling read-through')
+  }
+  if (response.privacy.localStorageValuesReturned) {
+    throw new Error('local storage read-through mode response must not return values')
+  }
+  if (response.privacy.absolutePathExposed) {
+    throw new Error('local storage read-through mode response must not expose absolute paths')
+  }
+  if (response.privacy.sourceLocalStorageMutated) {
+    throw new Error('local storage read-through mode response must preserve source localStorage')
+  }
+  if (response.privacy.valuesCopiedToResponse) {
+    throw new Error('local storage read-through mode response must not copy values to response')
+  }
+
+  return response
+}
+
 export async function getStorageStatus(options = {}) {
   const initializeFn = options.initializeStorageDatabase || initializeNexusStorageDatabase
   const appLike = options.appLike || app
@@ -721,6 +841,16 @@ export async function queryRendererLocalStorageReadThroughPreview(payload, optio
   return buildLocalStorageReadThroughPreviewResponse(result)
 }
 
+export async function setRendererLocalStorageReadThroughMode(payload, options = {}) {
+  const setModeFn = options.setLocalStorageReadThroughMode || setLocalStorageReadThroughMode
+  const appLike = options.appLike || app
+  const result = await setModeFn(payload, {
+    ...options,
+    appLike,
+  })
+  return buildLocalStorageReadThroughModeResponse(result)
+}
+
 export function register(options = {}) {
   const ipcMainLike = options.ipcMainLike || ipcMain
   if (!ipcMainLike || typeof ipcMainLike.handle !== 'function') {
@@ -746,5 +876,10 @@ export function register(options = {}) {
     trustedSenderCheck(event)
     validateLocalStorageReadThroughQueryRequest(payload)
     return queryRendererLocalStorageReadThroughPreview(payload, options)
+  })
+  ipcMainLike.handle('storage:set-read-through-mode', async (event, payload) => {
+    trustedSenderCheck(event)
+    validateLocalStorageReadThroughModeRequest(payload)
+    return setRendererLocalStorageReadThroughMode(payload, options)
   })
 }

@@ -106,6 +106,13 @@
   downgrade fixture that exports a restore bundle, writes a private database
   backup, drops structured copy tables, and reports only redacted counts,
   table names, and readiness flags.
+- **M4 read-through mode guardrail** — added
+  `storage:set-read-through-mode` and
+  `window.desktopPet.setLocalStorageReadThroughMode()` so an existing copied
+  chat/memory run can be marked for read-through only after `userConfirmed:
+  true`, readiness checks, source-localStorage preservation, response
+  validation, audit logging, and a reversible disable path. Renderer
+  chat/memory fallback reads remain the next M4 step.
 - **M2 distribution trust audit** — added
   `npm run m2:distribution:trust` and
   `docs/V1_M2_DISTRIBUTION_TRUST.md` so platform installer targets,

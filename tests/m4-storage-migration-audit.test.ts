@@ -117,6 +117,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
         localStorageSnapshotBackupReady: true,
         localStorageStructuredCopyReady: true,
         localStorageReadThroughPreviewIpcReady: true,
+        localStorageReadThroughModeIpcReady: false,
       },
       ipcStatus: {
         snapshotBackup: {
@@ -127,6 +128,9 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
         },
         readThroughPreview: {
           ready: true,
+        },
+        readThroughMode: {
+          ready: false,
         },
       },
     }), 'utf8')
@@ -150,6 +154,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
     assert.equal(report.migrationPlan.localStorageSnapshotBackupReady, true)
     assert.equal(report.migrationPlan.localStorageStructuredCopyReady, true)
     assert.equal(report.migrationPlan.localStorageReadThroughPreviewIpcReady, true)
+    assert.equal(report.migrationPlan.localStorageReadThroughModeIpcReady, false)
     assert.equal(report.migrationPlan.localStorageSnapshotCopyEvidenceReady, false)
     assert.equal(report.migrationPlan.localStorageRestoreEvidenceReady, false)
     assert.equal(report.migrationPlan.localStorageReadThroughEvidenceReady, false)
@@ -195,6 +200,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
     })
     assert.equal(evidenceReadyReport.migrationPlan.localStorageSnapshotCopyEvidenceReady, true)
     assert.equal(evidenceReadyReport.migrationPlan.localStorageReadThroughPreviewIpcReady, true)
+    assert.equal(evidenceReadyReport.migrationPlan.localStorageReadThroughModeIpcReady, false)
     assert.equal(evidenceReadyReport.migrationPlan.localStorageRestoreEvidenceReady, false)
     assert.equal(evidenceReadyReport.migrationPlan.localStorageReadThroughEvidenceReady, false)
     assert.equal(evidenceReadyReport.migrationPlan.localStorageSchemaDowngradeEvidenceReady, false)
@@ -239,6 +245,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
     assert.equal(restoreReadyReport.migrationPlan.localStorageSnapshotCopyEvidenceReady, true)
     assert.equal(restoreReadyReport.migrationPlan.localStorageRestoreEvidenceReady, true)
     assert.equal(restoreReadyReport.migrationPlan.localStorageReadThroughPreviewIpcReady, true)
+    assert.equal(restoreReadyReport.migrationPlan.localStorageReadThroughModeIpcReady, false)
     assert.equal(restoreReadyReport.migrationPlan.localStorageReadThroughEvidenceReady, false)
     assert.equal(restoreReadyReport.migrationPlan.localStorageSchemaDowngradeEvidenceReady, false)
     assert.deepEqual(restoreReadyReport.nextActions, [
@@ -291,6 +298,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
     assert.equal(readThroughReadyReport.migrationPlan.localStorageSnapshotCopyEvidenceReady, true)
     assert.equal(readThroughReadyReport.migrationPlan.localStorageRestoreEvidenceReady, true)
     assert.equal(readThroughReadyReport.migrationPlan.localStorageReadThroughPreviewIpcReady, true)
+    assert.equal(readThroughReadyReport.migrationPlan.localStorageReadThroughModeIpcReady, false)
     assert.equal(readThroughReadyReport.migrationPlan.localStorageReadThroughEvidenceReady, true)
     assert.equal(readThroughReadyReport.migrationPlan.localStorageSchemaDowngradeEvidenceReady, false)
     assert.deepEqual(readThroughReadyReport.nextActions, [
@@ -344,8 +352,55 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
       downgradeEvidenceFile: downgradeEvidencePath,
     })
     assert.equal(downgradeReadyReport.migrationPlan.localStorageSchemaDowngradeEvidenceReady, true)
+    assert.equal(downgradeReadyReport.migrationPlan.localStorageReadThroughModeIpcReady, false)
     assert.deepEqual(downgradeReadyReport.nextActions, [
       'wire-runtime-read-through-behind-user-confirmed-feature-flag',
+    ])
+
+    await writeFile(foundationPath, JSON.stringify({
+      gate: 'nexus-v1-m4-sqlite-foundation',
+      ok: true,
+      sqlite: {
+        engine: 'node:sqlite',
+      },
+      database: {
+        missingTables: [],
+      },
+      migrationPlan: {
+        localStorageSnapshotBackupReady: true,
+        localStorageStructuredCopyReady: true,
+        localStorageReadThroughPreviewIpcReady: true,
+        localStorageReadThroughModeIpcReady: true,
+      },
+      ipcStatus: {
+        snapshotBackup: {
+          ready: true,
+        },
+        structuredCopy: {
+          ready: true,
+        },
+        readThroughPreview: {
+          ready: true,
+        },
+        readThroughMode: {
+          ready: true,
+          userConfirmationRequired: true,
+          runtimeMigrationDisabled: true,
+          rollbackReady: true,
+        },
+      },
+    }), 'utf8')
+    const modeReadyReport = await buildM4StorageMigrationReport({
+      generatedAt: '2026-06-18T11:00:00Z',
+      sqliteFoundationFile: foundationPath,
+      snapshotCopyEvidenceFile: evidencePath,
+      restoreEvidenceFile: restoreEvidencePath,
+      readThroughEvidenceFile: readThroughEvidencePath,
+      downgradeEvidenceFile: downgradeEvidencePath,
+    })
+    assert.equal(modeReadyReport.migrationPlan.localStorageReadThroughModeIpcReady, true)
+    assert.deepEqual(modeReadyReport.nextActions, [
+      'wire-renderer-chat-memory-reads-to-main-process-with-localstorage-fallback',
     ])
   } finally {
     await rm(directoryPath, { recursive: true, force: true })

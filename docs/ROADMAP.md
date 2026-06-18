@@ -290,8 +290,9 @@ heavy renderer localStorage with a migration path that users can recover from.
   main-process `node:sqlite` schema, backup ledger, rollback ledger,
   localStorage migration ledger, migration event table, snapshot backup tables,
   structured copy tables, read-only `storage:status` IPC, bounded
-  `storage:backup-local-snapshot` / `storage:copy-local-snapshot` IPC, and
-  redacted `storage:read-through-preview` IPC.
+  `storage:backup-local-snapshot` / `storage:copy-local-snapshot` IPC,
+  redacted `storage:read-through-preview` IPC, and user-confirmed
+  `storage:set-read-through-mode` IPC.
 - Keep `storage:status` diagnostic-only: it may expose table readiness and
   privacy flags, but not absolute database paths or localStorage values.
 - Use `storage:backup-local-snapshot` only for allowlisted chat/memory snapshot
@@ -300,12 +301,16 @@ heavy renderer localStorage with a migration path that users can recover from.
 - Use `storage:read-through-preview` only for redacted copied-row summaries; it
   must not return chat text, memory bodies, localStorage values, or absolute
   paths, and it must not enable runtime fallback by itself.
+- Use `storage:set-read-through-mode` only as the confirmed feature flag for an
+  existing copied run. It must require `userConfirmed: true`, preserve source
+  localStorage, record an audit event, and remain reversible by disabling the
+  flag.
 - Use `npm run m4:storage:downgrade:evidence` to verify that schema v3
   structured copy data can be rolled back to the v2 snapshot/ledger layer after
   a restore bundle and private database backup exist.
-- Keep source localStorage as the fallback until read-through migration,
-  verified backups, restore/downgrade tooling, and macOS/Windows/Linux package
-  evidence exist.
+- Keep source localStorage as the fallback until renderer chat/memory reads use
+  the confirmed main-process read-through mode, verified backups,
+  restore/downgrade tooling, and macOS/Windows/Linux package evidence exist.
 - Start with chat and memory migration; avoid moving secrets or high-risk
   permission state until IPC response validation and audit boundaries are
   strong enough.

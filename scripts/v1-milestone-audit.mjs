@@ -707,6 +707,7 @@ function summarizeM4AcceptanceEvidence(source) {
     localStorageSnapshotCopyEvidenceReady: migrationPlan.localStorageSnapshotCopyEvidenceReady === true,
     localStorageRestoreEvidenceReady: migrationPlan.localStorageRestoreEvidenceReady === true,
     localStorageReadThroughEvidenceReady: migrationPlan.localStorageReadThroughEvidenceReady === true,
+    localStorageReadThroughModeIpcReady: migrationPlan.localStorageReadThroughModeIpcReady === true,
     localStorageSchemaDowngradeEvidenceReady: migrationPlan.localStorageSchemaDowngradeEvidenceReady === true,
     sourceLocalStoragePreservationRequired: migrationPlan.sourceLocalStoragePreservationRequired === true,
     backupBeforeMutationRequired: migrationPlan.backupBeforeMutationRequired === true,

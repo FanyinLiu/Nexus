@@ -135,7 +135,7 @@ voice/
   initialize and audit the built-in `node:sqlite` main-process schema plus the
   read-only `storage:status` IPC and bounded
   `storage:backup-local-snapshot` / `storage:copy-local-snapshot` /
-  `storage:read-through-preview` IPC.
+  `storage:read-through-preview` / `storage:set-read-through-mode` IPC.
   `storage:status` is diagnostic-only: trusted sender checked,
   response-validated, high-risk-audited, and path-redacted. The snapshot backup
   IPC can copy allowlisted chat/memory values into a local private backup file
@@ -146,8 +146,11 @@ voice/
   chat/memory rows from the main process while returning only redacted counts,
   key names, safe aggregates, and readiness flags. The schema downgrade evidence
   fixture can remove v3 structured copy tables back to the v2 snapshot/ledger
-  layer after writing a private database backup. All of these paths preserve
-  source localStorage and are not runtime read-through migration. Use
+  layer after writing a private database backup. The read-through mode IPC can
+  mark a copied run as enabled only after `userConfirmed: true`, readiness
+  checks, source-localStorage preservation, audit logging, and a disable
+  rollback path. All of these paths preserve source localStorage; renderer
+  chat/memory fallback reads are still the next migration step. Use
   `npm run m4:storage:snapshot-copy:evidence` for a redacted backup+copy evidence
   report from sample or private renderer-export input, and
   `npm run m4:storage:restore:evidence` for the matching redacted restore

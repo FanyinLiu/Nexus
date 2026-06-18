@@ -414,7 +414,10 @@ leaving runtime read-through disabled. `m4:storage:downgrade:evidence` proves
 the offline rollback side of this slice by exporting a restore bundle, writing a
 private database backup, and downgrading schema v3 structured copy tables back
 to the v2 snapshot/ledger layer without exposing user values in the public
-report.
+report. `storage:set-read-through-mode` adds the first guarded runtime
+read-through switch contract: enabling requires `userConfirmed: true`, an
+existing copied run, source-localStorage preservation, readable copied rows,
+response validation, audit logging, and a disable rollback path.
 
 ### Impact Scope
 
@@ -485,26 +488,31 @@ backup+restore evidence, and M4 inventory can consume that report.
 renderer-export backup+copy+preview-query evidence, and M4 inventory can
 consume that report. `m4:storage:downgrade:evidence` is wired for sample or
 private renderer-export backup+copy+restore+downgrade evidence, and M4
-inventory can consume that report.
-Runtime read-through migration is not enabled, source localStorage remains the
-fallback source of truth, and strict v1 acceptance remains blocked on M4.
+inventory can consume that report. `storage:set-read-through-mode` is wired
+through trusted preload/main IPC for a user-confirmed, reversible read-through
+mode flag over an existing copy run.
+Renderer chat/memory read-through adapters are not enabled, source localStorage
+remains the fallback source of truth, and strict v1 acceptance remains blocked
+on M4.
 
 ### Known Gaps
 
 Electron packaged-runtime `node:sqlite` behavior still needs package smoke
-evidence. Runtime read-through fallback, automatic restore application,
-in-app downgrade UX, and cross-platform migration evidence are not implemented
-yet; snapshot backup, structured copy, restore bundle export, read-through
-preview IPC, schema downgrade evidence, and their evidence gates exist but are
-not yet a full migration or relationship-state migration.
+evidence. Renderer chat/memory read-through fallback, automatic restore
+application, in-app downgrade UX, and cross-platform migration evidence are not
+implemented yet; snapshot backup, structured copy, restore bundle export,
+read-through preview IPC, user-confirmed read-through mode, schema downgrade
+evidence, and their evidence gates exist but are not yet a full migration or
+relationship-state migration.
 
 ### Next Stage Tasks
 
 Run snapshot backup plus structured copy evidence against a real renderer
 export, run restore, read-through, and downgrade evidence against a real
-renderer export, wire runtime read-through behind a user-confirmed feature
-flag, add automatic restore and corruption fixtures, capture packaged SQLite
-smoke evidence, then proceed to M5 white-box memory after persistence is stable.
+renderer export, wire renderer chat/memory reads to the confirmed main-process
+read-through mode with localStorage fallback, add automatic restore and
+corruption fixtures, capture packaged SQLite smoke evidence, then proceed to M5
+white-box memory after persistence is stable.
 
 ## M5 - White-Box Long-Term Memory
 

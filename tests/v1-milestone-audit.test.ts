@@ -185,6 +185,7 @@ function m4Storage(overrides = {}) {
       localStorageSnapshotCopyEvidenceReady: true,
       localStorageRestoreEvidenceReady: true,
       localStorageReadThroughEvidenceReady: true,
+      localStorageReadThroughModeIpcReady: true,
       localStorageSchemaDowngradeEvidenceReady: true,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
@@ -301,6 +302,7 @@ test('v1 milestone audit can require M1, M2, M3, and M4 acceptance evidence', as
     assert.equal(m4Evidence?.localStorageSnapshotCopyEvidenceReady, true)
     assert.equal(m4Evidence?.localStorageRestoreEvidenceReady, true)
     assert.equal(m4Evidence?.localStorageReadThroughEvidenceReady, true)
+    assert.equal(m4Evidence?.localStorageReadThroughModeIpcReady, true)
     assert.equal(m4Evidence?.localStorageSchemaDowngradeEvidenceReady, true)
     assert.equal(m4Evidence?.backupBeforeMutationRequired, true)
     assert.equal(m4Evidence?.rollbackToolRequired, true)
