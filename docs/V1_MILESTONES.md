@@ -385,7 +385,12 @@ existing storage, integrity checks, backups, and rollback tooling. The first
 private-safe inventory scaffold is maintained in
 `docs/V1_M4_STORAGE_MIGRATION.md` and
 `scripts/m4-storage-migration-audit.mjs`; it classifies localStorage keys and
-direct storage access before any runtime migration is enabled.
+direct storage access before any runtime migration is enabled. The first
+main-process SQLite foundation uses built-in `node:sqlite` through
+`electron/services/sqliteStorage.js` and is audited with
+`npm run m4:sqlite:foundation`; it creates schema, backup, rollback, local
+storage migration ledger, and migration event tables without reading or copying
+renderer storage values.
 
 ### Impact Scope
 
@@ -411,6 +416,11 @@ restore instructions for each schema version.
 Migration fixtures, rollback tests, corruption handling tests, and packaged
 smoke verification. The initial inventory gate is
 `npm run m4:storage:audit -- --require-inventory-ready --output artifacts/v1/m4-storage-migration.json`.
+The current SQLite foundation gate is
+`npm run m4:sqlite:foundation -- --require-ready --output artifacts/v1/m4-sqlite-foundation.json`;
+then rerun the inventory gate with
+`--sqlite-foundation-file artifacts/v1/m4-sqlite-foundation.json` so the M4
+report records the built-in SQLite selection.
 The stricter migration gate is intentionally not ready yet:
 `npm run m4:storage:audit -- --require-migration-ready`. The v1 milestone
 audit consumes `artifacts/v1/m4-storage-migration.json` and treats M4 as
@@ -426,18 +436,23 @@ Document local data location, export, backup, and recovery.
 Inventory scaffold implemented. It captures private-safe storage key names,
 source files, domain coverage, direct localStorage/sessionStorage access
 counts, SQLite dependency status, and migration guardrails without reading
-stored values. Runtime migration is not enabled and SQLite is not selected yet,
-so strict v1 acceptance remains blocked on M4.
+stored values. SQLite foundation scaffolding is implemented with built-in
+`node:sqlite`, schema version 1, and private-safe backup/rollback/migration
+ledger tables. Runtime migration is not enabled, source localStorage remains
+the fallback source of truth, and strict v1 acceptance remains blocked on M4.
 
 ### Known Gaps
 
-SQLite dependency and packaging strategy require a dependency review. Main
-process storage IPC, read-through migration, backups, restore/rollback tooling,
-and cross-platform migration evidence are not implemented yet.
+Electron packaged-runtime `node:sqlite` behavior still needs package smoke
+evidence. Main-process storage IPC, read-through migration, real backup files,
+restore/rollback CLI tooling, and cross-platform migration evidence are not
+implemented yet.
 
 ### Next Stage Tasks
 
-Proceed to M5 white-box memory after persistence is stable.
+Wire storage status IPC with response validation, implement read-through chat
+and memory migration behind backups, add restore/downgrade CLI fixtures, then
+proceed to M5 white-box memory after persistence is stable.
 
 ## M5 - White-Box Long-Term Memory
 

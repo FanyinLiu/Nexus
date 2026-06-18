@@ -131,8 +131,10 @@ voice/
   legacy `lib` wrapper.
 - M4 SQLite migration work must keep renderer localStorage as the source
   fallback until a main-process store, backup, rollback, and cross-platform
-  migration evidence are in place. Use `npm run m4:storage:audit` to refresh
-  the private-safe storage inventory before changing persistence contracts.
+  migration evidence are in place. Use `npm run m4:sqlite:foundation` to
+  initialize and audit the built-in `node:sqlite` main-process schema, then use
+  `npm run m4:storage:audit` to refresh the private-safe storage inventory
+  before changing persistence contracts.
 
 ### `src/types/`
 

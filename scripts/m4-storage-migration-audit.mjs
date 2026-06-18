@@ -6,6 +6,8 @@ import { pathToFileURL } from 'node:url'
 
 export const M4_STORAGE_MIGRATION_GATE = 'nexus-v1-m4-storage-migration-inventory'
 export const DEFAULT_M4_STORAGE_MIGRATION_FILE = 'artifacts/v1/m4-storage-migration.json'
+export const M4_SQLITE_FOUNDATION_GATE = 'nexus-v1-m4-sqlite-foundation'
+export const DEFAULT_M4_SQLITE_FOUNDATION_FILE = 'artifacts/v1/m4-sqlite-foundation.json'
 
 const SOURCE_DIRS = ['src', 'electron']
 const PACKAGE_JSON_PATH = 'package.json'
@@ -34,6 +36,8 @@ function printUsage(stream = process.stderr) {
     'Options:',
     '  --generated-at <iso>          Override report timestamp',
     `  --output <path>               Write JSON report (default: ${DEFAULT_M4_STORAGE_MIGRATION_FILE})`,
+    `  --sqlite-foundation-file <path>`,
+    `                                Optional SQLite foundation report (default: ${DEFAULT_M4_SQLITE_FOUNDATION_FILE})`,
     '  --require-inventory-ready     Exit non-zero unless the storage inventory is ready',
     '  --require-migration-ready     Also require a real SQLite migration/rollback implementation',
     '  --help                        Show this help',
@@ -72,6 +76,7 @@ export function parseM4StorageMigrationArgs(argv) {
     outputPath: DEFAULT_M4_STORAGE_MIGRATION_FILE,
     requireInventoryReady: false,
     requireMigrationReady: false,
+    sqliteFoundationFile: DEFAULT_M4_SQLITE_FOUNDATION_FILE,
   }
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -95,6 +100,8 @@ export function parseM4StorageMigrationArgs(argv) {
         options.generatedAt = parsed.value
       } else if (name === '--output' || name === '--output-file') {
         options.outputPath = parsed.value
+      } else if (name === '--sqlite-foundation-file' || name === '--m4-sqlite-foundation-file') {
+        options.sqliteFoundationFile = parsed.value
       } else {
         throw new Error(`Unknown option: ${name}`)
       }
@@ -246,7 +253,17 @@ function summarizeDomainCoverage(storageKeys) {
   })
 }
 
-function summarizeDependencyStatus(packageSource) {
+function isSqliteFoundationReady(sqliteFoundationSource) {
+  const raw = sqliteFoundationSource?.value
+  const missingTables = Array.isArray(raw?.database?.missingTables) ? raw.database.missingTables : []
+  return sqliteFoundationSource?.exists === true
+    && raw?.gate === M4_SQLITE_FOUNDATION_GATE
+    && raw?.ok === true
+    && raw?.sqlite?.engine === 'node:sqlite'
+    && missingTables.length === 0
+}
+
+function summarizeDependencyStatus(packageSource, sqliteFoundationSource) {
   const deps = {
     ...(packageSource.value?.dependencies ?? {}),
     ...(packageSource.value?.devDependencies ?? {}),
@@ -255,11 +272,20 @@ function summarizeDependencyStatus(packageSource) {
   const selectedDependencies = SQLITE_DEPENDENCY_NAMES.filter((name) => (
     typeof deps[name] === 'string' && deps[name].length > 0
   ))
+  const foundationReady = isSqliteFoundationReady(sqliteFoundationSource)
   return {
-    status: selectedDependencies.length > 0 ? 'selected' : 'not-selected',
-    selectedDependencies,
-    requiresDependencyReview: selectedDependencies.length === 0,
-    note: selectedDependencies.length > 0
+    status: foundationReady
+      ? 'selected-built-in'
+      : selectedDependencies.length > 0
+        ? 'selected'
+        : 'not-selected',
+    selectedDependencies: foundationReady ? ['node:sqlite'] : selectedDependencies,
+    requiresDependencyReview: foundationReady ? false : selectedDependencies.length === 0,
+    foundationEvidencePath: sqliteFoundationSource?.path || DEFAULT_M4_SQLITE_FOUNDATION_FILE,
+    foundationReady,
+    note: foundationReady
+      ? 'Built-in node:sqlite foundation is ready; keep fallback and packaging evidence before enabling runtime migration.'
+      : selectedDependencies.length > 0
       ? 'SQLite dependency is present; packaging and native-module behavior still need review.'
       : 'No SQLite dependency is selected yet; M4 must review packaging, native module, and cross-platform update impact before adding one.',
   }
@@ -269,6 +295,10 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
   const rootDir = context.rootDir || process.cwd()
   const generatedAt = normalizeIso(options.generatedAt || context.now || new Date())
   const packageSource = await readJsonStatus(rootDir, PACKAGE_JSON_PATH)
+  const sqliteFoundationSource = await readJsonStatus(
+    rootDir,
+    options.sqliteFoundationFile || DEFAULT_M4_SQLITE_FOUNDATION_FILE,
+  )
   const sourceFiles = (await Promise.all(SOURCE_DIRS.map((dir) => listSourceFiles(rootDir, dir)))).flat()
   const sources = await Promise.all(sourceFiles.map(async (relativePath) => ({
     relativePath,
@@ -286,7 +316,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
   const missingDomainIds = domainCoverage
     .filter((entry) => !entry.covered)
     .map((entry) => entry.domain)
-  const sqliteDependency = summarizeDependencyStatus(packageSource)
+  const sqliteDependency = summarizeDependencyStatus(packageSource, sqliteFoundationSource)
 
   const migrationReady = false
   const inventoryReady = packageSource.exists
@@ -325,6 +355,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
     sqliteDependency,
     migrationPlan: {
       runtimeMigrationEnabled: false,
+      sqliteFoundationReady: sqliteDependency.foundationReady === true,
       destructiveMigrationDetected: false,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
@@ -342,7 +373,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
     nextActions: migrationReady
       ? []
       : [
-          'choose-sqlite-dependency-after-packaging-review',
+          ...(sqliteDependency.foundationReady === true ? [] : ['choose-sqlite-dependency-after-packaging-review']),
           'design-main-process-storage-ipc-contracts',
           'implement-read-through-migration-with-localstorage-preservation',
           'add-backup-restore-and-rollback-fixtures',

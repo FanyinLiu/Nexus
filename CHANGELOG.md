@@ -103,6 +103,12 @@
   guardrails without reading user data. Strict v1 acceptance now consumes the
   M4 report and keeps the SQLite migration milestone blocked until runtime
   migration, backups, rollback tooling, and cross-platform evidence exist.
+- **M4 SQLite foundation** — added `electron/services/sqliteStorage.js` and
+  `npm run m4:sqlite:foundation` to initialize a main-process built-in
+  `node:sqlite` schema with migration, backup, rollback, localStorage ledger,
+  and migration event tables. The foundation report is private-safe and keeps
+  runtime migration disabled until read-through migration, backups, rollback
+  tooling, and packaged-runtime evidence exist.
 - **Companion wake-up checklist** — onboarding now summarizes identity, text
   model, character model, and speech readiness before the desktop companion
   starts.

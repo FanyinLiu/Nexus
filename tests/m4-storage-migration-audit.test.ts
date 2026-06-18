@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
@@ -21,6 +21,8 @@ test('m4 storage migration args support inventory and migration gates', () => {
     '--generated-at=2026-06-18T11:00:00Z',
     '--output',
     'artifacts/v1/m4-storage-migration.json',
+    '--sqlite-foundation-file',
+    'artifacts/v1/m4-sqlite-foundation.json',
     '--require-inventory-ready',
     '--require-migration-ready',
   ]), {
@@ -29,6 +31,7 @@ test('m4 storage migration args support inventory and migration gates', () => {
     outputPath: 'artifacts/v1/m4-storage-migration.json',
     requireInventoryReady: true,
     requireMigrationReady: true,
+    sqliteFoundationFile: 'artifacts/v1/m4-sqlite-foundation.json',
   })
 })
 
@@ -59,12 +62,51 @@ test('m4 storage migration report inventories localStorage keys without user dat
   )
   assert.equal(report.sqliteDependency.status, 'not-selected')
   assert.equal(report.sqliteDependency.requiresDependencyReview, true)
+  assert.equal(report.sqliteDependency.foundationReady, false)
   assert.equal(report.migrationPlan.runtimeMigrationEnabled, false)
+  assert.equal(report.migrationPlan.sqliteFoundationReady, false)
   assert.equal(report.migrationPlan.sourceLocalStoragePreservationRequired, true)
   assert.equal(report.migrationPlan.backupBeforeMutationRequired, true)
   assert.equal(report.migrationPlan.rollbackToolRequired, true)
   assert.equal(report.privacy.artifactContentsCopied, false)
   assert.equal(json.includes('private user chat sample'), false)
+})
+
+test('m4 storage migration report consumes SQLite foundation evidence', async () => {
+  const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'nexus-m4-storage-foundation-'))
+  try {
+    const foundationPath = path.join(directoryPath, 'm4-sqlite-foundation.json')
+    await writeFile(foundationPath, JSON.stringify({
+      gate: 'nexus-v1-m4-sqlite-foundation',
+      ok: true,
+      sqlite: {
+        engine: 'node:sqlite',
+      },
+      database: {
+        missingTables: [],
+      },
+    }), 'utf8')
+
+    const report = await buildM4StorageMigrationReport({
+      generatedAt: '2026-06-18T11:00:00Z',
+      sqliteFoundationFile: foundationPath,
+    })
+
+    assert.equal(report.inventoryReady, true)
+    assert.equal(report.migrationReady, false)
+    assert.equal(report.sqliteDependency.status, 'selected-built-in')
+    assert.deepEqual(report.sqliteDependency.selectedDependencies, ['node:sqlite'])
+    assert.equal(report.sqliteDependency.requiresDependencyReview, false)
+    assert.equal(report.sqliteDependency.foundationReady, true)
+    assert.equal(report.migrationPlan.sqliteFoundationReady, true)
+    assert.deepEqual(report.nextActions, [
+      'design-main-process-storage-ipc-contracts',
+      'implement-read-through-migration-with-localstorage-preservation',
+      'add-backup-restore-and-rollback-fixtures',
+    ])
+  } finally {
+    await rm(directoryPath, { recursive: true, force: true })
+  }
 })
 
 test('m4 storage migration strict migration mode blocks until real migration exists', async () => {
@@ -123,7 +165,10 @@ test('m4 storage migration CLI persists report and enforces inventory readiness'
 
 test('m4 storage migration package wiring stays available', () => {
   assert.equal(packageJson.scripts?.['m4:storage:audit'], 'node scripts/m4-storage-migration-audit.mjs')
+  assert.equal(packageJson.scripts?.['m4:sqlite:foundation'], 'node scripts/m4-sqlite-foundation-audit.mjs')
   assert.ok(packageJson.build?.files?.includes('scripts/m4-storage-migration-audit.mjs'))
+  assert.ok(packageJson.build?.files?.includes('scripts/m4-sqlite-foundation-audit.mjs'))
   assert.ok(packageJson.build?.asarUnpack?.includes('scripts/m4-storage-migration-audit.mjs'))
+  assert.ok(packageJson.build?.asarUnpack?.includes('scripts/m4-sqlite-foundation-audit.mjs'))
   assert.equal(DEFAULT_M4_STORAGE_MIGRATION_FILE, 'artifacts/v1/m4-storage-migration.json')
 })

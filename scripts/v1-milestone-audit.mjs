@@ -142,6 +142,7 @@ const REQUIRED_EVIDENCE_GATES = [
     label: 'M4 localStorage-to-SQLite migration inventory gate',
     scriptNames: [
       'm4:storage:audit',
+      'm4:sqlite:foundation',
     ],
     docs: [
       'docs/V1_M4_STORAGE_MIGRATION.md',
@@ -149,6 +150,7 @@ const REQUIRED_EVIDENCE_GATES = [
     ],
     terms: [
       'm4:storage:audit',
+      'm4:sqlite:foundation',
       'localStorage',
       'SQLite',
       'rollback',

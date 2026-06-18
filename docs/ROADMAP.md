@@ -272,6 +272,23 @@ auditable.
 - Promote the static inventory into a central IPC contract registry once
   response schemas and permission explanations are classified.
 
+### Phase 5b — Main-process storage migration
+
+Before memory and task execution become deeper, move long-lived data out of
+heavy renderer localStorage with a migration path that users can recover from.
+
+- Keep `npm run m4:storage:audit -- --require-inventory-ready` green so chat,
+  memory, settings/permissions, and audit/log-style keys stay inventoried.
+- Use `npm run m4:sqlite:foundation -- --require-ready` to verify the
+  main-process `node:sqlite` schema, backup ledger, rollback ledger,
+  localStorage migration ledger, and migration event table.
+- Keep source localStorage as the fallback until read-through migration,
+  verified backups, restore/downgrade tooling, and macOS/Windows/Linux package
+  evidence exist.
+- Start with chat and memory migration; avoid moving secrets or high-risk
+  permission state until IPC response validation and audit boundaries are
+  strong enough.
+
 ### Phase 6 — Persona and character system
 
 Let users shape a companion without editing source files.
