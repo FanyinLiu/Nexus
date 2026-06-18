@@ -91,6 +91,11 @@
   structured SQLite copy from sample or private renderer-export input, writing a
   redacted evidence report that M4 inventory can consume without copying chat,
   memory, relationship, path, or backup-file contents.
+- **M4 restore evidence** — added
+  `npm run m4:storage:restore:evidence` and a private restore-bundle export
+  path that reconstructs backed-up localStorage values into a local
+  manual-confirmed rollback file, verifies hashes, records a migration event,
+  and emits only redacted key/count/readiness evidence for M4 inventory.
 - **M2 distribution trust audit** — added
   `npm run m2:distribution:trust` and
   `docs/V1_M2_DISTRIBUTION_TRUST.md` so platform installer targets,

@@ -1008,6 +1008,35 @@ export function validateLocalStorageSnapshotCopyRequest(request) {
   return { backupId, copyId }
 }
 
+export function validateLocalStorageSnapshotRestoreRequest(request) {
+  if (!request || typeof request !== 'object' || Array.isArray(request)) {
+    throw new Error('local storage snapshot restore request must be a plain object')
+  }
+  const backupId = cleanString(request.backupId)
+  if (!backupId || !/^[a-z0-9:_-]{1,160}$/i.test(backupId)) {
+    throw new Error('backupId must be a short id')
+  }
+  const restoreId = cleanString(request.restoreId)
+  if (restoreId && !/^[a-z0-9:_-]{1,160}$/i.test(restoreId)) {
+    throw new Error('restoreId must be a short id')
+  }
+
+  const keys = Array.isArray(request.keys)
+    ? request.keys.map(cleanString).filter(Boolean)
+    : []
+  const uniqueKeys = unique(keys)
+  if (uniqueKeys.length !== keys.length) {
+    throw new Error('restore keys must not include duplicates')
+  }
+  for (const key of uniqueKeys) {
+    if (!snapshotMetadataForKey(key)) {
+      throw new Error(`restore key is not allowed for M4 localStorage backup: ${key}`)
+    }
+  }
+
+  return { backupId, restoreId, keys: uniqueKeys }
+}
+
 function isPlainObject(value) {
   return value != null && typeof value === 'object' && !Array.isArray(value)
 }
@@ -1070,6 +1099,70 @@ function readSnapshotBackupItems(database, backupId) {
       ORDER BY storage_key
     `)
     .all(backupId)
+}
+
+function readSelectedSnapshotBackupItems(database, backupId, keys) {
+  const items = readSnapshotBackupItems(database, backupId)
+  if (!keys.length) return items
+
+  const allowed = new Set(keys)
+  const selected = items.filter((item) => allowed.has(item.storage_key))
+  const found = new Set(selected.map((item) => item.storage_key))
+  const missing = keys.filter((key) => !found.has(key))
+  if (missing.length > 0) {
+    throw new Error(`restore keys are not present in backup: ${missing.join(', ')}`)
+  }
+  return selected
+}
+
+function validateSnapshotBackupItemIntegrity(item) {
+  const value = String(item.source_value_text ?? '')
+  const expectedSha256 = cleanString(item.source_value_sha256)
+  const expectedBytes = Number(item.source_value_bytes)
+  const actualSha256 = sha256(value)
+  const actualBytes = byteLength(value)
+  return {
+    ok: actualSha256 === expectedSha256 && actualBytes === expectedBytes,
+    storageKey: cleanString(item.storage_key),
+    expectedSha256,
+    actualSha256,
+    expectedBytes,
+    actualBytes,
+  }
+}
+
+function createSnapshotRestorePayload(restore) {
+  return {
+    schemaVersion: 1,
+    restoreId: restore.restoreId,
+    backupId: restore.backupId,
+    createdAt: restore.createdAt,
+    sourceKind: M4_LOCAL_STORAGE_SNAPSHOT_SOURCE_KIND,
+    applyMode: 'manual-confirmed-localStorage-restore',
+    sourceLocalStoragePreserved: true,
+    entries: restore.items.map((item) => ({
+      storageKey: item.storage_key,
+      domain: item.domain,
+      sourceUpdatedAt: item.source_updated_at || null,
+      sourceValueText: item.source_value_text,
+      sourceValueSha256: item.source_value_sha256,
+      sourceValueBytes: item.source_value_bytes,
+    })),
+  }
+}
+
+function writeSnapshotRestoreBundleFile(restore, backupDirectory) {
+  fs.mkdirSync(backupDirectory, { recursive: true })
+  const payload = createSnapshotRestorePayload(restore)
+  const text = `${JSON.stringify(payload, null, 2)}\n`
+  const restoreFileName = `${restore.restoreId}.local-storage-restore.json`
+  const restorePath = path.join(backupDirectory, restoreFileName)
+  fs.writeFileSync(restorePath, text, { encoding: 'utf8', flag: 'wx' })
+  return {
+    restoreFileName,
+    restorePath,
+    sha256: sha256(text),
+  }
 }
 
 function insertMemorySource(database, item, context) {
@@ -1728,6 +1821,104 @@ export async function copyLocalStorageSnapshotToStructuredSqlite(request, option
       if (!committed) {
         try { status.database.exec('ROLLBACK') } catch {}
       }
+    }
+  } finally {
+    if (shouldClose) status?.close?.()
+  }
+}
+
+export async function exportLocalStorageSnapshotRestoreBundle(request, options = {}) {
+  const normalizedRequest = validateLocalStorageSnapshotRestoreRequest(request)
+  const createdAt = normalizeIso(options.generatedAt || options.now || new Date())
+  const restoreId = normalizedRequest.restoreId || cleanString(options.restoreId) || createId('local-storage-restore')
+  const initializeFn = options.initializeStorageDatabase || initializeNexusStorageDatabase
+  const status = options.storageStatus || await initializeFn({
+    ...options,
+    generatedAt: createdAt,
+  })
+  const shouldClose = !options.storageStatus
+
+  try {
+    if (!status?.ok || !status.database) {
+      throw new Error('sqlite storage foundation must be ready before local storage restore export')
+    }
+
+    const items = readSelectedSnapshotBackupItems(
+      status.database,
+      normalizedRequest.backupId,
+      normalizedRequest.keys,
+    )
+    if (items.length < 1) {
+      throw new Error('local storage restore export requires at least one backup item')
+    }
+
+    const integrity = items.map(validateSnapshotBackupItemIntegrity)
+    const failedIntegrity = integrity.filter((entry) => !entry.ok)
+    if (failedIntegrity.length > 0) {
+      throw new Error(`local storage backup item checksum mismatch: ${failedIntegrity.map((entry) => entry.storageKey).join(', ')}`)
+    }
+
+    const backupDirectory = resolveNexusStorageBackupDirectory({
+      ...options,
+      databasePath: status.databasePath,
+    })
+    const restoreBase = {
+      restoreId,
+      backupId: normalizedRequest.backupId,
+      createdAt,
+      items,
+    }
+    const fileResult = writeSnapshotRestoreBundleFile(restoreBase, backupDirectory)
+
+    let committed = false
+    try {
+      status.database.exec('BEGIN IMMEDIATE')
+      recordStorageMigrationEvent(status.database, {
+        eventType: 'local-storage-snapshot-restore-bundle-exported',
+        level: 'info',
+        details: {
+          restoreId,
+          backupId: normalizedRequest.backupId,
+          entryCount: items.length,
+          totalBytes: items.reduce((total, item) => total + Number(item.source_value_bytes || 0), 0),
+          keys: items.map((item) => item.storage_key),
+          valuesCopiedToResponse: false,
+          restoreBundleContainsValues: true,
+          sourceLocalStorageMutated: false,
+          runtimeMigrationEnabled: false,
+          readThroughMigrationEnabled: false,
+        },
+      }, { now: createdAt })
+      status.database.exec('COMMIT')
+      committed = true
+    } finally {
+      if (!committed) {
+        try { status.database.exec('ROLLBACK') } catch {}
+        try { fs.rmSync(fileResult.restorePath, { force: true }) } catch {}
+      }
+    }
+
+    const totalBytes = items.reduce((total, item) => total + Number(item.source_value_bytes || 0), 0)
+    return {
+      ok: true,
+      status: 'restore-bundle-exported',
+      restoreId,
+      backupId: normalizedRequest.backupId,
+      createdAt,
+      entryCount: items.length,
+      totalBytes,
+      keys: items.map((item) => item.storage_key),
+      domains: unique(items.map((item) => item.domain)),
+      restoreFileName: fileResult.restoreFileName,
+      restorePath: fileResult.restorePath,
+      sha256: fileResult.sha256,
+      hashesVerified: true,
+      sourceLocalStoragePreserved: true,
+      sourceLocalStorageMutated: false,
+      runtimeMigrationEnabled: false,
+      readThroughMigrationEnabled: false,
+      valuesCopiedToResponse: false,
+      restoreBundleContainsValues: true,
     }
   } finally {
     if (shouldClose) status?.close?.()

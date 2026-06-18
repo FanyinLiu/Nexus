@@ -183,6 +183,7 @@ function m4Storage(overrides = {}) {
     migrationPlan: {
       runtimeMigrationEnabled: true,
       localStorageSnapshotCopyEvidenceReady: true,
+      localStorageRestoreEvidenceReady: true,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
       rollbackToolRequired: true,
@@ -296,6 +297,7 @@ test('v1 milestone audit can require M1, M2, M3, and M4 acceptance evidence', as
     assert.equal(m4Evidence?.migrationReady, true)
     assert.equal(m4Evidence?.runtimeMigrationEnabled, true)
     assert.equal(m4Evidence?.localStorageSnapshotCopyEvidenceReady, true)
+    assert.equal(m4Evidence?.localStorageRestoreEvidenceReady, true)
     assert.equal(m4Evidence?.backupBeforeMutationRequired, true)
     assert.equal(m4Evidence?.rollbackToolRequired, true)
     assert.equal(m4Evidence?.sqliteDependencyStatus, 'selected')
@@ -531,12 +533,14 @@ test('v1 milestone audit package wiring stays available', async () => {
   assert.equal(packageJson.scripts?.['m3:ipc:audit'], 'node scripts/m3-ipc-security-audit.mjs')
   assert.equal(packageJson.scripts?.['m4:storage:audit'], 'node scripts/m4-storage-migration-audit.mjs')
   assert.equal(packageJson.scripts?.['m4:sqlite:foundation'], 'node scripts/m4-sqlite-foundation-audit.mjs')
+  assert.equal(packageJson.scripts?.['m4:storage:restore:evidence'], 'node scripts/m4-storage-restore-evidence.mjs')
   assert.match(scriptText, /nexus-v1-milestone-governance/)
   assert.match(scriptText, /m1:first-run:status/)
   assert.match(scriptText, /m2:distribution:trust/)
   assert.match(scriptText, /m3:ipc:audit/)
   assert.match(scriptText, /m4:storage:audit/)
   assert.match(scriptText, /m4:sqlite:foundation/)
+  assert.match(scriptText, /m4:storage:restore:evidence/)
   assert.match(roadmap, /V1_MILESTONES/)
   assert.match(architecture, /V1_MILESTONES/)
   assert.match(changelog, /v1\.0 milestone governance/)

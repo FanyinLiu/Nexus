@@ -13,12 +13,14 @@ import {
 import {
   backupLocalStorageSnapshot,
   copyLocalStorageSnapshotToStructuredSqlite,
+  exportLocalStorageSnapshotRestoreBundle,
   initializeNexusStorageDatabase,
   M4_LOCAL_STORAGE_SNAPSHOT_MAX_ENTRY_BYTES,
   M4_SQLITE_SCHEMA_VERSION,
   summarizeNexusStorageDatabase,
   validateLocalStorageSnapshotCopyRequest,
   validateLocalStorageSnapshotRequest,
+  validateLocalStorageSnapshotRestoreRequest,
 } from '../electron/services/sqliteStorage.js'
 
 test('local storage snapshot request validation allows only bounded chat and memory keys', () => {
@@ -82,6 +84,44 @@ test('local storage snapshot copy request validation requires a safe backup id',
   assert.throws(
     () => validateLocalStorageSnapshotCopyRequest({ backupId: 'ok', copyId: '../private' }),
     /copyId must be a short id/,
+  )
+})
+
+test('local storage snapshot restore request validation requires safe ids and allowed keys', () => {
+  assert.deepEqual(validateLocalStorageSnapshotRestoreRequest({
+    backupId: 'local-storage-backup-test',
+    restoreId: 'local-storage-restore-test',
+    keys: ['nexus:chat', 'nexus:memory:long-term'],
+  }), {
+    backupId: 'local-storage-backup-test',
+    restoreId: 'local-storage-restore-test',
+    keys: ['nexus:chat', 'nexus:memory:long-term'],
+  })
+
+  assert.throws(
+    () => validateLocalStorageSnapshotRestoreRequest({ backupId: '../private' }),
+    /backupId must be a short id/,
+  )
+  assert.throws(
+    () => validateLocalStorageSnapshotRestoreRequest({
+      backupId: 'ok',
+      restoreId: '../private',
+    }),
+    /restoreId must be a short id/,
+  )
+  assert.throws(
+    () => validateLocalStorageSnapshotRestoreRequest({
+      backupId: 'ok',
+      keys: ['nexus:settings'],
+    }),
+    /restore key is not allowed/,
+  )
+  assert.throws(
+    () => validateLocalStorageSnapshotRestoreRequest({
+      backupId: 'ok',
+      keys: ['nexus:chat', 'nexus:chat'],
+    }),
+    /restore keys must not include duplicates/,
   )
 })
 
@@ -167,6 +207,94 @@ test('local storage snapshot backup writes file, sqlite rows, and private-safe r
     assert.equal(responseJson.includes(directoryPath), false)
     assert.equal(responseJson.includes('private user chat sample'), false)
     assert.equal(responseJson.includes('private memory sample'), false)
+  } finally {
+    await rm(directoryPath, { recursive: true, force: true })
+  }
+})
+
+test('local storage snapshot restore bundle reconstructs backup values without mutating source localStorage', async () => {
+  const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'nexus-storage-restore-'))
+  try {
+    const databasePath = path.join(directoryPath, 'storage.sqlite3')
+    const backupDirectory = path.join(directoryPath, 'backups')
+    await backupLocalStorageSnapshot({
+      reason: 'pre-migration',
+      entries: [
+        {
+          key: 'nexus:chat',
+          value: '[{"id":"private-chat","role":"user","content":"private restore chat sample"}]',
+        },
+        {
+          key: 'nexus:memory:long-term',
+          value: '[{"id":"private-memory","content":"private restore memory sample","category":"preference","source":"chat"}]',
+        },
+      ],
+    }, {
+      databasePath,
+      backupDirectory,
+      generatedAt: '2026-06-18T12:30:00Z',
+      backupId: 'local-storage-backup-restore-test',
+    })
+
+    const result = await exportLocalStorageSnapshotRestoreBundle({
+      backupId: 'local-storage-backup-restore-test',
+      restoreId: 'local-storage-restore-test',
+    }, {
+      databasePath,
+      backupDirectory,
+      generatedAt: '2026-06-18T12:35:00Z',
+    })
+
+    assert.equal(result.ok, true)
+    assert.equal(result.status, 'restore-bundle-exported')
+    assert.equal(result.entryCount, 2)
+    assert.equal(result.totalBytes > 0, true)
+    assert.deepEqual(result.keys, ['nexus:chat', 'nexus:memory:long-term'])
+    assert.equal(result.hashesVerified, true)
+    assert.equal(result.sourceLocalStoragePreserved, true)
+    assert.equal(result.sourceLocalStorageMutated, false)
+    assert.equal(result.runtimeMigrationEnabled, false)
+    assert.equal(result.readThroughMigrationEnabled, false)
+    assert.equal(result.valuesCopiedToResponse, false)
+    assert.equal(result.restoreBundleContainsValues, true)
+
+    const restoreText = await readFile(result.restorePath, 'utf8')
+    assert.ok(restoreText.includes('private restore chat sample'))
+    assert.ok(restoreText.includes('private restore memory sample'))
+    const restorePayload = JSON.parse(restoreText) as {
+      applyMode?: string
+      entries?: Array<{ storageKey?: string; sourceValueText?: string }>
+    }
+    assert.equal(restorePayload.applyMode, 'manual-confirmed-localStorage-restore')
+    assert.deepEqual(restorePayload.entries?.map((entry) => entry.storageKey), [
+      'nexus:chat',
+      'nexus:memory:long-term',
+    ])
+
+    const status = await initializeNexusStorageDatabase({
+      databasePath,
+      generatedAt: '2026-06-18T12:36:00Z',
+    })
+    try {
+      const summary = summarizeNexusStorageDatabase(status.database)
+      assert.equal(summary.counts.migrationEvents, 2)
+      const eventRow = status.database
+        .prepare('SELECT event_type, details_json FROM storage_migration_events WHERE event_type = ?')
+        .get('local-storage-snapshot-restore-bundle-exported') as { event_type?: string; details_json?: string } | undefined
+      assert.equal(eventRow?.event_type, 'local-storage-snapshot-restore-bundle-exported')
+      const details = JSON.parse(eventRow?.details_json ?? '{}') as {
+        keys?: string[]
+        valuesCopiedToResponse?: boolean
+        restoreBundleContainsValues?: boolean
+        sourceLocalStorageMutated?: boolean
+      }
+      assert.deepEqual(details.keys, ['nexus:chat', 'nexus:memory:long-term'])
+      assert.equal(details.valuesCopiedToResponse, false)
+      assert.equal(details.restoreBundleContainsValues, true)
+      assert.equal(details.sourceLocalStorageMutated, false)
+    } finally {
+      status.close?.()
+    }
   } finally {
     await rm(directoryPath, { recursive: true, force: true })
   }
