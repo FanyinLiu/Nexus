@@ -2,13 +2,16 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
+  buildLocalStorageReadThroughPreviewResponse,
   buildLocalStorageSnapshotBackupResponse,
   buildLocalStorageSnapshotCopyResponse,
   buildStorageStatusResponse,
   STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL,
   STORAGE_COPY_LOCAL_SNAPSHOT_CHANNEL,
+  STORAGE_READ_THROUGH_PREVIEW_CHANNEL,
   register,
   STORAGE_STATUS_CHANNEL,
+  validateLocalStorageReadThroughPreviewResponse,
   validateLocalStorageSnapshotBackupResponse,
   validateLocalStorageSnapshotCopyResponse,
   validateStorageStatusResponse,
@@ -213,10 +216,107 @@ test('local storage snapshot backup response redacts paths and values', () => {
   assert.equal(validateLocalStorageSnapshotBackupResponse(response), response)
 })
 
+test('local storage read-through preview response redacts content and keeps runtime migration disabled', () => {
+  const response = buildLocalStorageReadThroughPreviewResponse({
+    ok: true,
+    status: 'read-through-preview-ready',
+    generatedAt: '2026-06-18T12:40:00.000Z',
+    backupId: 'local-storage-backup-read-through-test',
+    copyId: 'local-storage-copy-read-through-test',
+    copiedAt: '2026-06-18T12:39:00.000Z',
+    copyStatus: 'snapshot-copied',
+    domains: ['chat', 'memory'],
+    limit: 5,
+    chat: {
+      selected: true,
+      hasReadableRows: true,
+      sessionCount: 1,
+      messageCount: 2,
+      sampledMessageCount: 2,
+      latestMessageAt: '2026-06-18T12:38:00.000Z',
+      roleCounts: { assistant: 1, user: 1 },
+      valuesCopiedToResponse: false,
+    },
+    memory: {
+      selected: true,
+      hasReadableRows: true,
+      memoryCount: 1,
+      dailyMemoryEntryCount: 1,
+      sampledMemoryCount: 1,
+      sampledDailyMemoryEntryCount: 1,
+      latestMemoryCreatedAt: '2026-06-18T12:20:00.000Z',
+      latestDailyMemoryEntryAt: '2026-06-18T12:30:00.000Z',
+      categoryCounts: { preference: 1 },
+      dailyRoleCounts: { user: 1 },
+      valuesCopiedToResponse: false,
+    },
+    source: {
+      sourceStorageKeyCount: 2,
+      sourceStorageKeys: ['nexus:chat', 'nexus:memory:long-term'],
+      copyItemCount: 2,
+      copyItems: [
+        {
+          storageKey: 'nexus:chat',
+          domain: 'chat',
+          status: 'copied',
+          insertedRows: 3,
+          skippedRows: 0,
+        },
+        {
+          storageKey: 'nexus:memory:long-term',
+          domain: 'memory',
+          status: 'copied',
+          insertedRows: 2,
+          skippedRows: 0,
+        },
+      ],
+    },
+    totals: {
+      readableRowCount: 5,
+      sourceStorageKeyCount: 2,
+      copyItemCount: 2,
+    },
+    previewQueryEnabled: true,
+    runtimeMigrationEnabled: false,
+    readThroughMigrationEnabled: false,
+    sourceLocalStoragePreserved: true,
+    valuesCopiedToResponse: false,
+  })
+  const json = JSON.stringify(response)
+
+  assert.equal(response.gate, 'nexus-v1-m4-local-storage-read-through-preview')
+  assert.equal(response.ok, true)
+  assert.equal(response.chat.messageCount, 2)
+  assert.equal(response.chat.latestMessageAtPresent, true)
+  assert.equal(response.memory.latestMemoryCreatedAtPresent, true)
+  assert.equal(response.migrationPlan.previewQueryEnabled, true)
+  assert.equal(response.migrationPlan.runtimeMigrationEnabled, false)
+  assert.equal(response.migrationPlan.readThroughMigrationEnabled, false)
+  assert.equal(response.migrationPlan.sourceLocalStoragePreserved, true)
+  assert.equal(response.privacy.localStorageValuesReturned, false)
+  assert.equal(response.privacy.absolutePathExposed, false)
+  assert.equal(response.privacy.sourceLocalStorageMutated, false)
+  assert.equal(response.privacy.valuesCopiedToResponse, false)
+  assert.equal(json.includes('private user chat sample'), false)
+  assert.equal(json.includes('/Users/example'), false)
+  assert.equal(validateLocalStorageReadThroughPreviewResponse(response), response)
+  assert.throws(
+    () => validateLocalStorageReadThroughPreviewResponse({
+      ...response,
+      privacy: {
+        ...response.privacy,
+        localStorageValuesReturned: true,
+      },
+    }),
+    /must not return values/,
+  )
+})
+
 test('storage IPC registers trusted sender checks for status and snapshot backup', async () => {
   const registeredHandlers = new Map<string, (event: unknown, payload?: unknown) => Promise<unknown>>()
   let trustedSenderChecked = false
   let closeCalled = false
+  let readThroughPreviewCalled = false
 
   const ipcMainLike = {
     handle(channel: string, handler: (event: unknown) => Promise<unknown>) {
@@ -238,15 +338,73 @@ test('storage IPC registers trusted sender checks for status and snapshot backup
         },
       }
     },
+    async queryLocalStorageReadThroughPreview() {
+      readThroughPreviewCalled = true
+      return {
+        ok: true,
+        status: 'read-through-preview-ready',
+        generatedAt: '2026-06-18T12:40:00.000Z',
+        backupId: 'local-storage-backup-read-through-test',
+        copyId: 'local-storage-copy-read-through-test',
+        copiedAt: '2026-06-18T12:39:00.000Z',
+        copyStatus: 'snapshot-copied',
+        domains: ['chat'],
+        limit: 2,
+        chat: {
+          selected: true,
+          hasReadableRows: true,
+          sessionCount: 1,
+          messageCount: 2,
+          sampledMessageCount: 2,
+          roleCounts: { assistant: 1, user: 1 },
+          valuesCopiedToResponse: false,
+        },
+        memory: {
+          selected: false,
+          hasReadableRows: false,
+          valuesCopiedToResponse: false,
+        },
+        source: {
+          sourceStorageKeyCount: 1,
+          sourceStorageKeys: ['nexus:chat'],
+          copyItemCount: 1,
+          copyItems: [{
+            storageKey: 'nexus:chat',
+            domain: 'chat',
+            status: 'copied',
+            insertedRows: 3,
+            skippedRows: 0,
+          }],
+        },
+        totals: {
+          readableRowCount: 3,
+          sourceStorageKeyCount: 1,
+          copyItemCount: 1,
+        },
+        previewQueryEnabled: true,
+        runtimeMigrationEnabled: false,
+        readThroughMigrationEnabled: false,
+        sourceLocalStoragePreserved: true,
+        valuesCopiedToResponse: false,
+      }
+    },
   })
 
   assert.equal(typeof registeredHandlers.get(STORAGE_STATUS_CHANNEL), 'function')
   assert.equal(typeof registeredHandlers.get(STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL), 'function')
   assert.equal(typeof registeredHandlers.get(STORAGE_COPY_LOCAL_SNAPSHOT_CHANNEL), 'function')
+  assert.equal(typeof registeredHandlers.get(STORAGE_READ_THROUGH_PREVIEW_CHANNEL), 'function')
   const response = await registeredHandlers.get(STORAGE_STATUS_CHANNEL)?.({})
+  const previewResponse = await registeredHandlers.get(STORAGE_READ_THROUGH_PREVIEW_CHANNEL)?.({}, {
+    domains: ['chat'],
+    limit: 2,
+  })
 
   assert.equal(trustedSenderChecked, true)
   assert.equal(closeCalled, true)
+  assert.equal(readThroughPreviewCalled, true)
   assert.equal((response as { ok?: boolean })?.ok, true)
   assert.equal((response as { database?: { fileName?: string } })?.database?.fileName, 'nexus.sqlite3')
+  assert.equal((previewResponse as { ok?: boolean })?.ok, true)
+  assert.equal((previewResponse as { chat?: { messageCount?: number } })?.chat?.messageCount, 2)
 })

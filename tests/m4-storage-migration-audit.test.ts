@@ -80,6 +80,7 @@ test('m4 storage migration report inventories localStorage keys without user dat
   assert.equal(report.migrationPlan.sqliteFoundationReady, false)
   assert.equal(report.migrationPlan.localStorageSnapshotBackupReady, false)
   assert.equal(report.migrationPlan.localStorageStructuredCopyReady, false)
+  assert.equal(report.migrationPlan.localStorageReadThroughPreviewIpcReady, false)
   assert.equal(report.migrationPlan.localStorageSnapshotCopyEvidenceReady, false)
   assert.equal(report.migrationPlan.localStorageRestoreEvidenceReady, false)
   assert.equal(report.migrationPlan.localStorageReadThroughEvidenceReady, false)
@@ -109,12 +110,16 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
       migrationPlan: {
         localStorageSnapshotBackupReady: true,
         localStorageStructuredCopyReady: true,
+        localStorageReadThroughPreviewIpcReady: true,
       },
       ipcStatus: {
         snapshotBackup: {
           ready: true,
         },
         structuredCopy: {
+          ready: true,
+        },
+        readThroughPreview: {
           ready: true,
         },
       },
@@ -137,6 +142,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
     assert.equal(report.migrationPlan.sqliteFoundationReady, true)
     assert.equal(report.migrationPlan.localStorageSnapshotBackupReady, true)
     assert.equal(report.migrationPlan.localStorageStructuredCopyReady, true)
+    assert.equal(report.migrationPlan.localStorageReadThroughPreviewIpcReady, true)
     assert.equal(report.migrationPlan.localStorageSnapshotCopyEvidenceReady, false)
     assert.equal(report.migrationPlan.localStorageRestoreEvidenceReady, false)
     assert.equal(report.migrationPlan.localStorageReadThroughEvidenceReady, false)
@@ -179,6 +185,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
       readThroughEvidenceFile: path.join(directoryPath, 'missing-read-through-evidence.json'),
     })
     assert.equal(evidenceReadyReport.migrationPlan.localStorageSnapshotCopyEvidenceReady, true)
+    assert.equal(evidenceReadyReport.migrationPlan.localStorageReadThroughPreviewIpcReady, true)
     assert.equal(evidenceReadyReport.migrationPlan.localStorageRestoreEvidenceReady, false)
     assert.equal(evidenceReadyReport.migrationPlan.localStorageReadThroughEvidenceReady, false)
     assert.deepEqual(evidenceReadyReport.nextActions, [
@@ -220,6 +227,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
     })
     assert.equal(restoreReadyReport.migrationPlan.localStorageSnapshotCopyEvidenceReady, true)
     assert.equal(restoreReadyReport.migrationPlan.localStorageRestoreEvidenceReady, true)
+    assert.equal(restoreReadyReport.migrationPlan.localStorageReadThroughPreviewIpcReady, true)
     assert.equal(restoreReadyReport.migrationPlan.localStorageReadThroughEvidenceReady, false)
     assert.deepEqual(restoreReadyReport.nextActions, [
       'capture-main-process-read-through-evidence',
@@ -269,6 +277,7 @@ test('m4 storage migration report consumes SQLite foundation evidence', async ()
     })
     assert.equal(readThroughReadyReport.migrationPlan.localStorageSnapshotCopyEvidenceReady, true)
     assert.equal(readThroughReadyReport.migrationPlan.localStorageRestoreEvidenceReady, true)
+    assert.equal(readThroughReadyReport.migrationPlan.localStorageReadThroughPreviewIpcReady, true)
     assert.equal(readThroughReadyReport.migrationPlan.localStorageReadThroughEvidenceReady, true)
     assert.deepEqual(readThroughReadyReport.nextActions, [
       'wire-runtime-read-through-behind-user-confirmed-feature-flag',

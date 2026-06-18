@@ -289,13 +289,17 @@ heavy renderer localStorage with a migration path that users can recover from.
 - Use `npm run m4:sqlite:foundation -- --require-ready` to verify the
   main-process `node:sqlite` schema, backup ledger, rollback ledger,
   localStorage migration ledger, migration event table, snapshot backup tables,
-  read-only `storage:status` IPC, and bounded
-  `storage:backup-local-snapshot` IPC.
+  structured copy tables, read-only `storage:status` IPC, bounded
+  `storage:backup-local-snapshot` / `storage:copy-local-snapshot` IPC, and
+  redacted `storage:read-through-preview` IPC.
 - Keep `storage:status` diagnostic-only: it may expose table readiness and
   privacy flags, but not absolute database paths or localStorage values.
 - Use `storage:backup-local-snapshot` only for allowlisted chat/memory snapshot
   backups. It may write a private local backup file and ledger rows, but must
   preserve source localStorage and must not return values or absolute paths.
+- Use `storage:read-through-preview` only for redacted copied-row summaries; it
+  must not return chat text, memory bodies, localStorage values, or absolute
+  paths, and it must not enable runtime fallback by itself.
 - Keep source localStorage as the fallback until read-through migration,
   verified backups, restore/downgrade tooling, and macOS/Windows/Linux package
   evidence exist.

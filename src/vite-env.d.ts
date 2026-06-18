@@ -376,6 +376,78 @@ type LocalStorageSnapshotCopyResponse = {
   nextActions: string[]
 }
 
+type LocalStorageReadThroughPreviewRequest = {
+  backupId?: string
+  copyId?: string
+  domains?: Array<'chat' | 'memory'>
+  limit?: number
+}
+
+type LocalStorageReadThroughPreviewResponse = {
+  gate: 'nexus-v1-m4-local-storage-read-through-preview'
+  ok: boolean
+  status: string
+  generatedAt: string
+  backupId: string
+  copyId: string
+  copiedAt: string
+  copyStatus: string
+  domains: string[]
+  limit: number
+  chat: {
+    selected: boolean
+    hasReadableRows: boolean
+    sessionCount: number
+    messageCount: number
+    sampledMessageCount: number
+    latestMessageAtPresent: boolean
+    roleCounts: Record<string, number>
+  }
+  memory: {
+    selected: boolean
+    hasReadableRows: boolean
+    memoryCount: number
+    dailyMemoryEntryCount: number
+    sampledMemoryCount: number
+    sampledDailyMemoryEntryCount: number
+    latestMemoryCreatedAtPresent: boolean
+    latestDailyMemoryEntryAtPresent: boolean
+    categoryCounts: Record<string, number>
+    dailyRoleCounts: Record<string, number>
+  }
+  source: {
+    sourceStorageKeyCount: number
+    sourceStorageKeys: string[]
+    copyItemCount: number
+    copyItems: Array<{
+      storageKey: string
+      domain: string
+      status: string
+      insertedRows: number
+      skippedRows: number
+    }>
+  }
+  totals: {
+    readableRowCount: number
+    sourceStorageKeyCount: number
+    copyItemCount: number
+  }
+  migrationPlan: {
+    previewQueryEnabled: boolean
+    runtimeMigrationEnabled: boolean
+    readThroughMigrationEnabled: boolean
+    sourceLocalStoragePreserved: boolean
+    destructiveMigrationDetected: boolean
+  }
+  privacy: {
+    localStorageValuesReturned: boolean
+    absolutePathExposed: boolean
+    sourceLocalStorageMutated: boolean
+    valuesCopiedToResponse: boolean
+  }
+  nextActions: string[]
+}
+
 declare global {
   interface Window {
     desktopPet?: {
@@ -496,6 +568,9 @@ declare global {
       copyLocalStorageSnapshot: (
         payload: LocalStorageSnapshotCopyRequest,
       ) => Promise<LocalStorageSnapshotCopyResponse>
+      queryLocalStorageReadThroughPreview: (
+        payload?: LocalStorageReadThroughPreviewRequest,
+      ) => Promise<LocalStorageReadThroughPreviewResponse>
       listSpeechVoices: (payload: SpeechVoiceListRequest) => Promise<SpeechVoiceListResponse>
       transcribeAudio: (payload: AudioTranscriptionRequest) => Promise<AudioTranscriptionResponse>
       synthesizeAudio: (payload: AudioSynthesisRequest) => Promise<AudioSynthesisResponse>

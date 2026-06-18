@@ -94,6 +94,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   storageStatus: () => ipcRenderer.invoke('storage:status'),
   backupLocalStorageSnapshot: (payload) => ipcRenderer.invoke('storage:backup-local-snapshot', payload),
   copyLocalStorageSnapshot: (payload) => ipcRenderer.invoke('storage:copy-local-snapshot', payload),
+  queryLocalStorageReadThroughPreview: (payload) => ipcRenderer.invoke('storage:read-through-preview', payload),
   listSpeechVoices: (payload) => ipcRenderer.invoke('audio:list-voices', payload),
   transcribeAudio: (payload) => ipcRenderer.invoke('audio:transcribe', payload),
   synthesizeAudio: (payload) => ipcRenderer.invoke('audio:synthesize', payload),

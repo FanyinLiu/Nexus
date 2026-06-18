@@ -134,16 +134,17 @@ voice/
   migration evidence are in place. Use `npm run m4:sqlite:foundation` to
   initialize and audit the built-in `node:sqlite` main-process schema plus the
   read-only `storage:status` IPC and bounded
-  `storage:backup-local-snapshot` / `storage:copy-local-snapshot` IPC.
+  `storage:backup-local-snapshot` / `storage:copy-local-snapshot` /
+  `storage:read-through-preview` IPC.
   `storage:status` is diagnostic-only: trusted sender checked,
   response-validated, high-risk-audited, and path-redacted. The snapshot backup
   IPC can copy allowlisted chat/memory values into a local private backup file
   and SQLite ledger; the structured copy IPC can copy already-backed-up
   chat/memory rows into schema v3 tables. The restore bundle helper can
   reconstruct backed-up values into a private manual-confirmed restore file
-  with hash verification. The read-through preview helper can query the copied
+  with hash verification. The read-through preview IPC can query the copied
   chat/memory rows from the main process while returning only redacted counts,
-  key names, and readiness flags. All of these paths preserve source
+  key names, safe aggregates, and readiness flags. All of these paths preserve source
   localStorage and are not runtime read-through migration. Use
   `npm run m4:storage:snapshot-copy:evidence` for a redacted backup+copy evidence
   report from sample or private renderer-export input, and

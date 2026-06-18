@@ -406,9 +406,11 @@ evidence report for M4 inventory consumption. `m4:storage:restore:evidence`
 then reconstructs an existing backup into a private manual-confirmed restore
 bundle, verifies hashes, records a migration event, and emits a redacted
 restore evidence report without mutating source localStorage.
-`m4:storage:read-through:evidence` then proves the main process can query the
-structured chat/memory SQLite copy and return only redacted counts, source key
-names, and readiness flags while leaving runtime read-through disabled.
+`storage:read-through-preview` exposes the copied-row preview through the
+trusted preload bridge, and `m4:storage:read-through:evidence` proves the main
+process can query the structured chat/memory SQLite copy and return only
+redacted counts, source key names, safe aggregates, and readiness flags while
+leaving runtime read-through disabled.
 
 ### Impact Scope
 
@@ -469,7 +471,9 @@ chat/memory/relationship backups, request/response validation, source
 localStorage preservation, and path/value redaction. `storage:copy-local-snapshot`
 is wired for bounded structured copies from an existing backup id into chat and
 memory tables, with private-safe counts/keys only and runtime migration still
-disabled. `m4:storage:snapshot-copy:evidence` is wired for sample or private
+disabled. `storage:read-through-preview` is wired for renderer-visible,
+trusted-sender preview summaries over copied chat/memory rows.
+`m4:storage:snapshot-copy:evidence` is wired for sample or private
 renderer-export backup+copy evidence, and M4 inventory can consume that report.
 `m4:storage:restore:evidence` is wired for sample or private renderer-export
 backup+restore evidence, and M4 inventory can consume that report.
@@ -482,11 +486,11 @@ fallback source of truth, and strict v1 acceptance remains blocked on M4.
 ### Known Gaps
 
 Electron packaged-runtime `node:sqlite` behavior still needs package smoke
-evidence. Runtime read-through migration IPC, automatic restore application,
-schema downgrade tooling, and cross-platform migration evidence are not
-implemented yet; snapshot backup, structured copy, restore bundle export,
-read-through preview query, and their evidence gates exist but are not yet a
-full migration or relationship-state migration.
+evidence. Runtime read-through fallback, automatic restore application, schema
+downgrade tooling, and cross-platform migration evidence are not implemented
+yet; snapshot backup, structured copy, restore bundle export, read-through
+preview IPC, and their evidence gates exist but are not yet a full migration or
+relationship-state migration.
 
 ### Next Stage Tasks
 

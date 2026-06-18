@@ -186,6 +186,30 @@ async function summarizeStorageStatusIpc(rootDir) {
     && structuredCopy.valuesRedactionReady
     && structuredCopy.sourcePreservationReady
     && structuredCopy.runtimeMigrationDisabled
+  const readThroughPreview = {
+    channel: 'storage:read-through-preview',
+    preloadExposed: /queryLocalStorageReadThroughPreview\s*:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(['"]storage:read-through-preview['"],\s*payload\)/.test(preload.text),
+    handlerRegistered: /(?:ipcMain|ipcMainLike)\.handle\(\s*(?:STORAGE_READ_THROUGH_PREVIEW_CHANNEL|['"]storage:read-through-preview['"])/.test(storageIpc.text),
+    trustedSenderCheck,
+    requestValidationReady: /validateLocalStorageReadThroughQueryRequest/.test(storageIpc.text),
+    responseValidationReady: /validateLocalStorageReadThroughPreviewResponse/.test(storageIpc.text)
+      && /return validateLocalStorageReadThroughPreviewResponse\(/.test(storageIpc.text),
+    rendererTypeDeclared: /queryLocalStorageReadThroughPreview:\s*\([\s\S]*?LocalStorageReadThroughPreviewRequest[\s\S]*?\)\s*=>\s*Promise<LocalStorageReadThroughPreviewResponse>/.test(viteEnv.text),
+    valuesRedactionReady: /localStorageValuesReturned:\s*false/.test(storageIpc.text)
+      && /valuesCopiedToResponse:\s*result\?\.valuesCopiedToResponse\s*===\s*true/.test(storageIpc.text),
+    sourcePreservationReady: /sourceLocalStorageMutated:\s*false/.test(storageIpc.text),
+    runtimeMigrationDisabled: /runtimeMigrationEnabled:\s*false/.test(storageIpc.text)
+      && /readThroughMigrationEnabled:\s*false/.test(storageIpc.text),
+  }
+  readThroughPreview.ready = readThroughPreview.preloadExposed
+    && readThroughPreview.handlerRegistered
+    && readThroughPreview.trustedSenderCheck
+    && readThroughPreview.requestValidationReady
+    && readThroughPreview.responseValidationReady
+    && readThroughPreview.rendererTypeDeclared
+    && readThroughPreview.valuesRedactionReady
+    && readThroughPreview.sourcePreservationReady
+    && readThroughPreview.runtimeMigrationDisabled
   const missingSourceIds = [preload, ipcRegistry, storageIpc, viteEnv]
     .filter((source) => !source.exists || source.error)
     .map((source) => source.path)
@@ -199,6 +223,7 @@ async function summarizeStorageStatusIpc(rootDir) {
     && absolutePathRedactionReady
     && snapshotBackup.ready
     && structuredCopy.ready
+    && readThroughPreview.ready
 
   return {
     ready,
@@ -212,6 +237,7 @@ async function summarizeStorageStatusIpc(rootDir) {
     absolutePathRedactionReady,
     snapshotBackup,
     structuredCopy,
+    readThroughPreview,
     missingSourceIds,
   }
 }
@@ -242,6 +268,7 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
     ...(!ipcStatus.ready ? ['storage-status-ipc-not-ready'] : []),
     ...(!ipcStatus.snapshotBackup?.ready ? ['local-storage-snapshot-backup-ipc-not-ready'] : []),
     ...(!ipcStatus.structuredCopy?.ready ? ['local-storage-structured-copy-ipc-not-ready'] : []),
+    ...(!ipcStatus.readThroughPreview?.ready ? ['local-storage-read-through-preview-ipc-not-ready'] : []),
   ]
 
   return {
@@ -292,6 +319,14 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
         && status.tables?.includes('daily_memory_entries') === true
         && status.tables?.includes('memory_sources') === true
         && ipcStatus.structuredCopy?.ready === true,
+      localStorageReadThroughPreviewIpcReady: status.tables?.includes('local_storage_copy_runs') === true
+        && status.tables?.includes('local_storage_copy_items') === true
+        && status.tables?.includes('chat_sessions') === true
+        && status.tables?.includes('chat_messages') === true
+        && status.tables?.includes('memories') === true
+        && status.tables?.includes('daily_memory_entries') === true
+        && status.tables?.includes('memory_sources') === true
+        && ipcStatus.readThroughPreview?.ready === true,
       sourceLocalStoragePreservationRequired: true,
       backupBeforeMutationRequired: true,
       rollbackToolRequired: true,
@@ -314,6 +349,7 @@ export async function buildM4SqliteFoundationReport(options = {}, context = {}) 
       ? [
           'capture-chat-memory-local-storage-snapshot-backup',
           'copy-chat-memory-snapshot-into-structured-sqlite',
+          'capture-main-process-read-through-preview-evidence',
           'implement-read-through-chat-memory-migration-with-backup',
           'add-restore-and-downgrade-cli-fixtures',
           'capture-packaged-electron-sqlite-smoke-evidence',

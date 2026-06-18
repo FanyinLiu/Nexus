@@ -8,6 +8,8 @@ import {
   M4_SQLITE_FOUNDATION_GATE,
   M4_SQLITE_FOUNDATION_TABLES,
   M4_SQLITE_SCHEMA_VERSION,
+  queryLocalStorageReadThroughPreview,
+  validateLocalStorageReadThroughQueryRequest,
   validateLocalStorageSnapshotCopyRequest,
   validateLocalStorageSnapshotRequest,
 } from '../services/sqliteStorage.js'
@@ -15,8 +17,10 @@ import {
 export const STORAGE_STATUS_CHANNEL = 'storage:status'
 export const STORAGE_BACKUP_LOCAL_SNAPSHOT_CHANNEL = 'storage:backup-local-snapshot'
 export const STORAGE_COPY_LOCAL_SNAPSHOT_CHANNEL = 'storage:copy-local-snapshot'
+export const STORAGE_READ_THROUGH_PREVIEW_CHANNEL = 'storage:read-through-preview'
 export const STORAGE_BACKUP_LOCAL_SNAPSHOT_GATE = 'nexus-v1-m4-local-storage-snapshot-backup'
 export const STORAGE_COPY_LOCAL_SNAPSHOT_GATE = 'nexus-v1-m4-local-storage-snapshot-copy'
+export const STORAGE_READ_THROUGH_PREVIEW_GATE = 'nexus-v1-m4-local-storage-read-through-preview'
 
 const { app, ipcMain } = electron ?? {}
 
@@ -165,6 +169,10 @@ function requireStringValue(value, label) {
   if (typeof value !== 'string' || !value.trim()) throw new Error(`${label} must be a non-empty string`)
 }
 
+function requireString(value, label) {
+  if (typeof value !== 'string') throw new Error(`${label} must be a string`)
+}
+
 function requireStringArray(value, label) {
   if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
     throw new Error(`${label} must be an array of strings`)
@@ -254,6 +262,11 @@ export function validateStorageStatusResponse(response) {
 function requireIsoString(value, label) {
   requireStringValue(value, label)
   if (!Number.isFinite(Date.parse(value))) throw new Error(`${label} must be an ISO timestamp`)
+}
+
+function requireOptionalIsoString(value, label) {
+  requireString(value, label)
+  if (value && !Number.isFinite(Date.parse(value))) throw new Error(`${label} must be an ISO timestamp`)
 }
 
 function requireSafeFileName(value, label) {
@@ -458,6 +471,214 @@ export function validateLocalStorageSnapshotCopyResponse(response) {
   return response
 }
 
+function toSafeCountMap(value) {
+  if (!isObject(value)) return {}
+  return Object.fromEntries(Object.entries(value)
+    .map(([key, count]) => [cleanString(key) || 'unknown', toFiniteNumber(count, 0)])
+    .filter(([key]) => Boolean(key)))
+}
+
+function requireCountMap(value, label) {
+  requirePlainObject(value, label)
+  for (const [key, count] of Object.entries(value)) {
+    requireStringValue(key, `${label} key`)
+    requireFiniteNumber(count, `${label}.${key}`)
+  }
+}
+
+function requireCopyItemSummary(value, label) {
+  if (!Array.isArray(value)) throw new Error(`${label} must be an array`)
+  for (const [index, item] of value.entries()) {
+    requirePlainObject(item, `${label}[${index}]`)
+    requireStringValue(item.storageKey, `${label}[${index}].storageKey`)
+    requireStringValue(item.domain, `${label}[${index}].domain`)
+    requireStringValue(item.status, `${label}[${index}].status`)
+    requireFiniteNumber(item.insertedRows, `${label}[${index}].insertedRows`)
+    requireFiniteNumber(item.skippedRows, `${label}[${index}].skippedRows`)
+  }
+}
+
+function buildReadThroughChatSummary(chat) {
+  return {
+    selected: chat?.selected === true,
+    hasReadableRows: chat?.hasReadableRows === true,
+    sessionCount: toFiniteNumber(chat?.sessionCount, 0),
+    messageCount: toFiniteNumber(chat?.messageCount, 0),
+    sampledMessageCount: toFiniteNumber(chat?.sampledMessageCount, 0),
+    latestMessageAtPresent: Boolean(cleanString(chat?.latestMessageAt)),
+    roleCounts: toSafeCountMap(chat?.roleCounts),
+  }
+}
+
+function buildReadThroughMemorySummary(memory) {
+  return {
+    selected: memory?.selected === true,
+    hasReadableRows: memory?.hasReadableRows === true,
+    memoryCount: toFiniteNumber(memory?.memoryCount, 0),
+    dailyMemoryEntryCount: toFiniteNumber(memory?.dailyMemoryEntryCount, 0),
+    sampledMemoryCount: toFiniteNumber(memory?.sampledMemoryCount, 0),
+    sampledDailyMemoryEntryCount: toFiniteNumber(memory?.sampledDailyMemoryEntryCount, 0),
+    latestMemoryCreatedAtPresent: Boolean(cleanString(memory?.latestMemoryCreatedAt)),
+    latestDailyMemoryEntryAtPresent: Boolean(cleanString(memory?.latestDailyMemoryEntryAt)),
+    categoryCounts: toSafeCountMap(memory?.categoryCounts),
+    dailyRoleCounts: toSafeCountMap(memory?.dailyRoleCounts),
+  }
+}
+
+function buildReadThroughSourceSummary(source) {
+  const sourceStorageKeys = toStringArray(source?.sourceStorageKeys)
+  const copyItems = Array.isArray(source?.copyItems)
+    ? source.copyItems.map((item) => ({
+        storageKey: cleanString(item?.storageKey),
+        domain: cleanString(item?.domain),
+        status: cleanString(item?.status),
+        insertedRows: toFiniteNumber(item?.insertedRows, 0),
+        skippedRows: toFiniteNumber(item?.skippedRows, 0),
+      })).filter((item) => item.storageKey && item.domain && item.status)
+    : []
+  return {
+    sourceStorageKeyCount: toFiniteNumber(source?.sourceStorageKeyCount, sourceStorageKeys.length),
+    sourceStorageKeys,
+    copyItemCount: toFiniteNumber(source?.copyItemCount, copyItems.length),
+    copyItems,
+  }
+}
+
+export function buildLocalStorageReadThroughPreviewResponse(result) {
+  const chat = buildReadThroughChatSummary(result?.chat)
+  const memory = buildReadThroughMemorySummary(result?.memory)
+  const source = buildReadThroughSourceSummary(result?.source)
+  const readableRowCount = toFiniteNumber(
+    result?.totals?.readableRowCount,
+    chat.sessionCount + chat.messageCount + memory.memoryCount + memory.dailyMemoryEntryCount,
+  )
+
+  return validateLocalStorageReadThroughPreviewResponse({
+    gate: STORAGE_READ_THROUGH_PREVIEW_GATE,
+    ok: result?.ok === true,
+    status: cleanString(result?.status) || 'unknown',
+    generatedAt: cleanString(result?.generatedAt),
+    backupId: cleanString(result?.backupId || result?.requestedBackupId),
+    copyId: cleanString(result?.copyId || result?.requestedCopyId),
+    copiedAt: cleanString(result?.copiedAt),
+    copyStatus: cleanString(result?.copyStatus),
+    domains: toStringArray(result?.domains),
+    limit: toFiniteNumber(result?.limit, 0),
+    chat,
+    memory,
+    source,
+    totals: {
+      readableRowCount,
+      sourceStorageKeyCount: toFiniteNumber(result?.totals?.sourceStorageKeyCount, source.sourceStorageKeyCount),
+      copyItemCount: toFiniteNumber(result?.totals?.copyItemCount, source.copyItemCount),
+    },
+    migrationPlan: {
+      previewQueryEnabled: result?.previewQueryEnabled === true,
+      runtimeMigrationEnabled: false,
+      readThroughMigrationEnabled: false,
+      sourceLocalStoragePreserved: result?.sourceLocalStoragePreserved === true,
+      destructiveMigrationDetected: false,
+    },
+    privacy: {
+      localStorageValuesReturned: false,
+      absolutePathExposed: false,
+      sourceLocalStorageMutated: false,
+      valuesCopiedToResponse: result?.valuesCopiedToResponse === true,
+    },
+    nextActions: [
+      'wire-runtime-read-through-behind-user-confirmed-feature-flag',
+      'add-schema-downgrade-cli-fixtures',
+    ],
+  })
+}
+
+export function validateLocalStorageReadThroughPreviewResponse(response) {
+  requirePlainObject(response, 'local storage read-through preview response')
+  requireStringValue(response.gate, 'gate')
+  if (response.gate !== STORAGE_READ_THROUGH_PREVIEW_GATE) {
+    throw new Error('local storage read-through preview response gate mismatch')
+  }
+  requireBoolean(response.ok, 'ok')
+  requireStringValue(response.status, 'status')
+  requireIsoString(response.generatedAt, 'generatedAt')
+  requireString(response.backupId, 'backupId')
+  requireString(response.copyId, 'copyId')
+  requireOptionalIsoString(response.copiedAt, 'copiedAt')
+  requireString(response.copyStatus, 'copyStatus')
+  requireStringArray(response.domains, 'domains')
+  requireFiniteNumber(response.limit, 'limit')
+
+  requirePlainObject(response.chat, 'chat')
+  requireBoolean(response.chat.selected, 'chat.selected')
+  requireBoolean(response.chat.hasReadableRows, 'chat.hasReadableRows')
+  requireFiniteNumber(response.chat.sessionCount, 'chat.sessionCount')
+  requireFiniteNumber(response.chat.messageCount, 'chat.messageCount')
+  requireFiniteNumber(response.chat.sampledMessageCount, 'chat.sampledMessageCount')
+  requireBoolean(response.chat.latestMessageAtPresent, 'chat.latestMessageAtPresent')
+  requireCountMap(response.chat.roleCounts, 'chat.roleCounts')
+
+  requirePlainObject(response.memory, 'memory')
+  requireBoolean(response.memory.selected, 'memory.selected')
+  requireBoolean(response.memory.hasReadableRows, 'memory.hasReadableRows')
+  requireFiniteNumber(response.memory.memoryCount, 'memory.memoryCount')
+  requireFiniteNumber(response.memory.dailyMemoryEntryCount, 'memory.dailyMemoryEntryCount')
+  requireFiniteNumber(response.memory.sampledMemoryCount, 'memory.sampledMemoryCount')
+  requireFiniteNumber(response.memory.sampledDailyMemoryEntryCount, 'memory.sampledDailyMemoryEntryCount')
+  requireBoolean(response.memory.latestMemoryCreatedAtPresent, 'memory.latestMemoryCreatedAtPresent')
+  requireBoolean(response.memory.latestDailyMemoryEntryAtPresent, 'memory.latestDailyMemoryEntryAtPresent')
+  requireCountMap(response.memory.categoryCounts, 'memory.categoryCounts')
+  requireCountMap(response.memory.dailyRoleCounts, 'memory.dailyRoleCounts')
+
+  requirePlainObject(response.source, 'source')
+  requireFiniteNumber(response.source.sourceStorageKeyCount, 'source.sourceStorageKeyCount')
+  requireStringArray(response.source.sourceStorageKeys, 'source.sourceStorageKeys')
+  requireFiniteNumber(response.source.copyItemCount, 'source.copyItemCount')
+  requireCopyItemSummary(response.source.copyItems, 'source.copyItems')
+
+  requirePlainObject(response.totals, 'totals')
+  requireFiniteNumber(response.totals.readableRowCount, 'totals.readableRowCount')
+  requireFiniteNumber(response.totals.sourceStorageKeyCount, 'totals.sourceStorageKeyCount')
+  requireFiniteNumber(response.totals.copyItemCount, 'totals.copyItemCount')
+
+  requirePlainObject(response.migrationPlan, 'migrationPlan')
+  requireBoolean(response.migrationPlan.previewQueryEnabled, 'migrationPlan.previewQueryEnabled')
+  requireBoolean(response.migrationPlan.runtimeMigrationEnabled, 'migrationPlan.runtimeMigrationEnabled')
+  requireBoolean(response.migrationPlan.readThroughMigrationEnabled, 'migrationPlan.readThroughMigrationEnabled')
+  requireBoolean(response.migrationPlan.sourceLocalStoragePreserved, 'migrationPlan.sourceLocalStoragePreserved')
+  requireBoolean(response.migrationPlan.destructiveMigrationDetected, 'migrationPlan.destructiveMigrationDetected')
+
+  requirePlainObject(response.privacy, 'privacy')
+  requireBoolean(response.privacy.localStorageValuesReturned, 'privacy.localStorageValuesReturned')
+  requireBoolean(response.privacy.absolutePathExposed, 'privacy.absolutePathExposed')
+  requireBoolean(response.privacy.sourceLocalStorageMutated, 'privacy.sourceLocalStorageMutated')
+  requireBoolean(response.privacy.valuesCopiedToResponse, 'privacy.valuesCopiedToResponse')
+  requireStringArray(response.nextActions, 'nextActions')
+
+  if (response.migrationPlan.runtimeMigrationEnabled) {
+    throw new Error('local storage read-through preview response must keep runtime migration disabled')
+  }
+  if (response.migrationPlan.readThroughMigrationEnabled) {
+    throw new Error('local storage read-through preview response must keep read-through migration disabled')
+  }
+  if (response.migrationPlan.destructiveMigrationDetected) {
+    throw new Error('local storage read-through preview response must not include destructive migration')
+  }
+  if (response.privacy.localStorageValuesReturned) {
+    throw new Error('local storage read-through preview response must not return values')
+  }
+  if (response.privacy.absolutePathExposed) {
+    throw new Error('local storage read-through preview response must not expose absolute paths')
+  }
+  if (response.privacy.sourceLocalStorageMutated) {
+    throw new Error('local storage read-through preview response must preserve source localStorage')
+  }
+  if (response.privacy.valuesCopiedToResponse) {
+    throw new Error('local storage read-through preview response must not copy values to response')
+  }
+
+  return response
+}
+
 export async function getStorageStatus(options = {}) {
   const initializeFn = options.initializeStorageDatabase || initializeNexusStorageDatabase
   const appLike = options.appLike || app
@@ -490,6 +711,16 @@ export async function copyRendererLocalStorageSnapshot(payload, options = {}) {
   return buildLocalStorageSnapshotCopyResponse(result)
 }
 
+export async function queryRendererLocalStorageReadThroughPreview(payload, options = {}) {
+  const queryFn = options.queryLocalStorageReadThroughPreview || queryLocalStorageReadThroughPreview
+  const appLike = options.appLike || app
+  const result = await queryFn(payload, {
+    ...options,
+    appLike,
+  })
+  return buildLocalStorageReadThroughPreviewResponse(result)
+}
+
 export function register(options = {}) {
   const ipcMainLike = options.ipcMainLike || ipcMain
   if (!ipcMainLike || typeof ipcMainLike.handle !== 'function') {
@@ -510,5 +741,10 @@ export function register(options = {}) {
     trustedSenderCheck(event)
     validateLocalStorageSnapshotCopyRequest(payload)
     return copyRendererLocalStorageSnapshot(payload, options)
+  })
+  ipcMainLike.handle('storage:read-through-preview', async (event, payload) => {
+    trustedSenderCheck(event)
+    validateLocalStorageReadThroughQueryRequest(payload)
+    return queryRendererLocalStorageReadThroughPreview(payload, options)
   })
 }

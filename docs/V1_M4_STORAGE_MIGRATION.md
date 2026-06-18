@@ -4,16 +4,16 @@ This note is the M4 implementation contract. It prepares the
 localStorage-to-main-process-SQLite migration without moving runtime reads yet,
 and now includes the first main-process SQLite foundation, a non-destructive
 structured copy path for already-backed-up chat and memory snapshots, and a
-private restore-bundle fixture plus a redacted read-through preview evidence
-gate.
+private restore-bundle fixture plus a redacted read-through preview IPC and
+evidence gate.
 
 ## Objective
 
 Make the current renderer localStorage surface visible, classified, and
 release-gated, then establish a main-process SQLite schema and migration
 ledger, a non-destructive local snapshot backup path, a structured chat/memory
-copy target, restore evidence, and a main-process read-through preview before
-introducing runtime read-through migration.
+copy target, restore evidence, and a renderer-visible redacted read-through
+preview before introducing runtime read-through migration.
 
 ## Problem Analysis
 
@@ -120,14 +120,18 @@ does not mutate renderer localStorage or enable read-through migration.
 renderer-export input and writes
 `artifacts/v1/m4-storage-restore-evidence.json`.
 
-`queryLocalStorageReadThroughPreview()` adds a main-process-only read-through
-preview over copied schema v3 chat and memory rows. It can locate a copy run by
-backup id or copy id and return counts, source storage keys, safe role/category
-aggregates, freshness flags, and policy flags. It does not return chat content,
-chat session titles, memory bodies, source refs, localStorage raw values, or
-absolute paths. `m4:storage:read-through:evidence` runs backup, structured
-copy, and this preview query from sample or private renderer-export input, then
-writes `artifacts/v1/m4-storage-read-through-evidence.json`. The report sets
+`queryLocalStorageReadThroughPreview()` adds a read-through preview over copied
+schema v3 chat and memory rows. It can locate a copy run by backup id or copy id
+and return counts, source storage keys, safe role/category aggregates,
+freshness flags, and policy flags. The preview is exposed to the renderer
+through `storage:read-through-preview` and
+`window.desktopPet.queryLocalStorageReadThroughPreview()` with trusted sender
+checks, request validation, response validation, and preload type coverage. It
+does not return chat content, chat session titles, memory bodies, source refs,
+localStorage raw values, or absolute paths. `m4:storage:read-through:evidence`
+runs backup, structured copy, and this preview query from sample or private
+renderer-export input, then writes
+`artifacts/v1/m4-storage-read-through-evidence.json`. The report sets
 `previewQueryEnabled: true` but keeps `runtimeMigrationEnabled: false` and
 `readThroughMigrationEnabled: false`.
 
@@ -148,9 +152,9 @@ or memory reads have migrated. Snapshot backups, structured copy, restore
 bundle export, and their evidence scripts prove that allowlisted chat/memory
 data can be copied into private local files, ledger rows, schema v3 tables, and
 a private rollback bundle without mutating source localStorage. They are not
-automatic in-app restore evidence yet. The read-through preview evidence proves
-main-process queryability of the copied rows, but it is not renderer IPC
-read-through, runtime migration, or an automatic fallback switch.
+automatic in-app restore evidence yet. The read-through preview evidence and
+renderer IPC prove queryability of the copied rows as a redacted summary, but
+they are not runtime migration or an automatic fallback switch.
 
 ## Rollback Plan
 
@@ -240,9 +244,11 @@ can run end to end from sample or private renderer-export input while producing
 a redacted public report. `m4:storage:restore:evidence` now proves that a
 backed-up snapshot can be reconstructed into a private restore bundle with hash
 verification while producing a redacted public report.
-`m4:storage:read-through:evidence` now proves that the main process can query
-the structured SQLite chat/memory copy and emit only redacted counts, key names,
-and readiness flags. Runtime read-through migration is not enabled.
+`storage:read-through-preview` now exposes that redacted preview through the
+trusted preload bridge, and `m4:storage:read-through:evidence` proves that the
+main process can query the structured SQLite chat/memory copy and emit only
+redacted counts, key names, and readiness flags. Runtime read-through migration
+is not enabled.
 
 M4 is not accepted as complete. Strict v1 acceptance should keep blocking on M4
 until packaged-runtime SQLite evidence, read-through migration, real renderer
@@ -254,14 +260,14 @@ downgrade tooling, and cross-platform evidence exist.
 - Packaged Electron `node:sqlite` behavior still needs smoke evidence.
 - Relationship state is backed up but not structured-copied until a dedicated
   table or view exists.
-- Read-through storage IPC contracts are not implemented.
+- Runtime read-through storage contracts are not implemented.
 - Restore bundle export exists, but automatic restore application and schema
   downgrade tooling are not implemented.
 - Snapshot backup and structured copy evidence can be generated from sample or
   private renderer-export input, but a real renderer profile still needs to be
   exported and run through that gate before M4 migration acceptance.
-- Read-through preview evidence exists, but renderer IPC read-through and
-  runtime fallback switching are not implemented.
+- Read-through preview evidence and renderer preview IPC exist, but runtime
+  fallback switching is not implemented.
 - Existing localStorage data remains the runtime source of truth.
 
 ## Next Stage Tasks

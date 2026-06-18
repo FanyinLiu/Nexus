@@ -298,6 +298,13 @@ function isLocalStorageStructuredCopyReady(sqliteFoundationSource) {
     && raw?.ipcStatus?.structuredCopy?.ready === true
 }
 
+function isLocalStorageReadThroughPreviewIpcReady(sqliteFoundationSource) {
+  const raw = sqliteFoundationSource?.value
+  return isLocalStorageStructuredCopyReady(sqliteFoundationSource)
+    && raw?.migrationPlan?.localStorageReadThroughPreviewIpcReady === true
+    && raw?.ipcStatus?.readThroughPreview?.ready === true
+}
+
 function isLocalStorageSnapshotCopyEvidenceReady(snapshotCopyEvidenceSource) {
   const raw = snapshotCopyEvidenceSource?.value
   return snapshotCopyEvidenceSource?.exists === true
@@ -429,6 +436,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
   const sqliteDependency = summarizeDependencyStatus(packageSource, sqliteFoundationSource)
   const localStorageSnapshotBackupReady = isLocalStorageSnapshotBackupReady(sqliteFoundationSource)
   const localStorageStructuredCopyReady = isLocalStorageStructuredCopyReady(sqliteFoundationSource)
+  const localStorageReadThroughPreviewIpcReady = isLocalStorageReadThroughPreviewIpcReady(sqliteFoundationSource)
   const localStorageSnapshotCopyEvidenceReady = isLocalStorageSnapshotCopyEvidenceReady(snapshotCopyEvidenceSource)
   const localStorageRestoreEvidenceReady = isLocalStorageRestoreEvidenceReady(restoreEvidenceSource)
   const localStorageReadThroughEvidenceReady = isLocalStorageReadThroughEvidenceReady(readThroughEvidenceSource)
@@ -473,6 +481,7 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
       sqliteFoundationReady: sqliteDependency.foundationReady === true,
       localStorageSnapshotBackupReady,
       localStorageStructuredCopyReady,
+      localStorageReadThroughPreviewIpcReady,
       localStorageSnapshotCopyEvidenceReady,
       localStorageRestoreEvidenceReady,
       localStorageReadThroughEvidenceReady,
@@ -502,10 +511,15 @@ export async function buildM4StorageMigrationReport(options = {}, context = {}) 
           ...(localStorageStructuredCopyReady && !localStorageSnapshotCopyEvidenceReady ? ['capture-chat-memory-structured-copy-evidence'] : []),
           ...(localStorageSnapshotCopyEvidenceReady && !localStorageRestoreEvidenceReady ? ['capture-local-storage-restore-evidence'] : []),
           ...(localStorageRestoreEvidenceReady && !localStorageReadThroughEvidenceReady ? ['capture-main-process-read-through-evidence'] : []),
+          ...(localStorageReadThroughEvidenceReady && !localStorageReadThroughPreviewIpcReady ? ['wire-renderer-read-through-preview-ipc'] : []),
           ...(!localStorageSnapshotBackupReady ? ['extend-main-process-storage-ipc-for-read-through-migration'] : []),
           ...(!localStorageStructuredCopyReady ? ['copy-chat-memory-snapshot-into-structured-sqlite'] : []),
           ...(localStorageReadThroughEvidenceReady
-            ? ['wire-runtime-read-through-behind-user-confirmed-feature-flag']
+            ? (
+                localStorageReadThroughPreviewIpcReady
+                  ? ['wire-runtime-read-through-behind-user-confirmed-feature-flag']
+                  : []
+              )
             : ['implement-read-through-migration-with-localstorage-preservation']),
           ...(localStorageRestoreEvidenceReady ? ['add-schema-downgrade-cli-fixtures'] : ['add-backup-restore-and-rollback-fixtures']),
         ],
