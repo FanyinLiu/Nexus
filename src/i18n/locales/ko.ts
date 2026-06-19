@@ -125,6 +125,7 @@ export const koMessages: TranslationDictionary = {
   'memory_panel.pause': '일시 정지',
   'memory_panel.resume': '다시 사용',
   'memory_panel.paused_badge': '일시 정지됨',
+  'memory_panel.focused_badge': '이번 답변에서',
   'memory_panel.delete': '삭제',
   'memory_panel.cancel': '취소',
   'memory_panel.clear_diary': '오늘 일지 비우기',

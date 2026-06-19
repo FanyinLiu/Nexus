@@ -6053,6 +6053,18 @@ summary.settings-console-section__header:focus-visible {
   box-shadow: none;
 }
 
+.memory-pill.is-focused {
+  border-color: color-mix(in srgb, var(--settings-accent) 44%, var(--settings-border));
+  background: color-mix(in srgb, var(--settings-accent) 10%, rgba(255, 255, 255, 0.035));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--settings-accent) 16%, transparent);
+}
+
+.memory-pill__category--focus {
+  border-color: color-mix(in srgb, var(--settings-accent) 48%, var(--settings-border));
+  background: color-mix(in srgb, var(--settings-accent) 16%, rgba(255, 255, 255, 0.045));
+  color: rgba(246, 248, 252, 0.88);
+}
+
 .memory-pill p,
 .memory-pill__confirm p,
 .memory-pill__error {
@@ -6201,6 +6213,10 @@ summary.settings-console-section__header:focus-visible {
 
 .memory-pill.is-disabled {
   opacity: 0.62;
+}
+
+.memory-pill.is-disabled.is-focused {
+  opacity: 0.82;
 }
 
 .memory-pill.is-disabled p {

@@ -125,6 +125,7 @@ export const zhCNMessages: TranslationDictionary = {
   'memory_panel.pause': '暂停使用',
   'memory_panel.resume': '恢复使用',
   'memory_panel.paused_badge': '已暂停',
+  'memory_panel.focused_badge': '来自这次回复',
   'memory_panel.delete': '删除',
   'memory_panel.cancel': '取消',
   'memory_panel.clear_diary': '清空今日日志',

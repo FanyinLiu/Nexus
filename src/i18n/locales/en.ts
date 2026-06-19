@@ -125,6 +125,7 @@ export const enMessages: TranslationDictionary = {
   'memory_panel.pause': 'Pause',
   'memory_panel.resume': 'Resume',
   'memory_panel.paused_badge': 'Paused',
+  'memory_panel.focused_badge': 'From this reply',
   'memory_panel.delete': 'Delete',
   'memory_panel.cancel': 'Cancel',
   'memory_panel.clear_diary': 'Clear today\'s diary',

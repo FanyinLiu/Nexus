@@ -238,6 +238,11 @@ Goal: move heavy, long-lived data out of renderer localStorage.
   time, shows short previews for still-present memories/daily entries, marks
   missing or paused sources explicitly, and can open Settings directly to the
   Memory page for editing.
+- Slice 7 adds reply-source focus inside the Memory settings page. Opening
+  Memory from a reply now carries only the referenced memory IDs, highlights the
+  corresponding long-term memories and diary entries, and temporarily includes
+  referenced older diary entries in the visible panel without changing stored
+  memory data.
 - Rollback: keep legacy localStorage snapshots until migration is verified.
 
 ### M6 - Desktop presence state machine

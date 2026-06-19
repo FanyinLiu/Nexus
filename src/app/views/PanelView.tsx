@@ -14,6 +14,7 @@ import { ActivePlanStrip } from '../../components/ActivePlanStrip'
 import { MessageBubble } from '../../components/MessageBubble'
 import { resolveCharacterPreset } from '../../features/character/presets'
 import {
+  buildChatMemoryTraceFocus,
   resolveChatMemoryTraceDetails,
   type ChatMemoryTraceDetails,
 } from '../../features/memory/traceDetails'
@@ -841,7 +842,7 @@ export function PanelView({
                         message={message}
                         assistantName={settings.companionName}
                         memoryTraceDetails={messageMemoryTraceDetails.get(message.id)}
-                        onOpenMemorySettings={() => openSettingsSection('memory')}
+                        onOpenMemorySettings={() => openSettingsSection('memory', buildChatMemoryTraceFocus(message.memoryTrace))}
                       />
                     ))}
                   </>

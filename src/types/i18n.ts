@@ -187,6 +187,7 @@ export type TranslationKey =
   | 'memory_panel.pause'
   | 'memory_panel.resume'
   | 'memory_panel.paused_badge'
+  | 'memory_panel.focused_badge'
   | 'memory_panel.delete'
   | 'memory_panel.cancel'
   | 'memory_panel.clear_diary'

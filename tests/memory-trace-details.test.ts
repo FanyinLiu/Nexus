@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { resolveChatMemoryTraceDetails } from '../src/features/memory/traceDetails.ts'
+import {
+  buildChatMemoryTraceFocus,
+  mergeFocusedDailyEntries,
+  resolveChatMemoryTraceDetails,
+} from '../src/features/memory/traceDetails.ts'
 import type { ChatMemoryTrace } from '../src/types/chat.ts'
 import type { DailyMemoryStore, MemoryItem } from '../src/types/memory.ts'
 
@@ -29,6 +33,14 @@ const dailyMemories: DailyMemoryStore = {
     content: 'A daily note that can be shown as a short runtime preview.',
     source: 'chat',
     createdAt: '2026-06-19T08:01:00.000Z',
+  }],
+  '2026-06-18': [{
+    id: 'daily-old',
+    day: '2026-06-18',
+    role: 'assistant',
+    content: 'An older diary fragment referenced by the reply trace.',
+    source: 'chat',
+    createdAt: '2026-06-18T22:00:00.000Z',
   }],
 }
 
@@ -78,4 +90,44 @@ test('resolveChatMemoryTraceDetails keeps paused traces explicit and empty', () 
 
 test('resolveChatMemoryTraceDetails returns null when a message has no trace', () => {
   assert.equal(resolveChatMemoryTraceDetails({ memories, dailyMemories }), null)
+})
+
+test('buildChatMemoryTraceFocus returns deduped ids and skips paused traces', () => {
+  const trace: ChatMemoryTrace = {
+    status: 'active',
+    searchModeUsed: 'hybrid',
+    vectorSearchAvailable: true,
+    longTermIds: ['memory-1', ' memory-1 ', ''],
+    dailyEntryIds: ['daily-1', 'daily-1'],
+    semanticIds: ['daily-old', ' daily-old '],
+  }
+
+  assert.deepEqual(buildChatMemoryTraceFocus(trace), {
+    longTermIds: ['memory-1'],
+    dailyEntryIds: ['daily-1'],
+    semanticIds: ['daily-old'],
+  })
+
+  assert.equal(buildChatMemoryTraceFocus({
+    ...trace,
+    status: 'paused',
+    longTermIds: ['memory-1'],
+  }), null)
+})
+
+test('mergeFocusedDailyEntries includes focused diary entries outside the recent preview', () => {
+  const baseEntries = [dailyMemories['2026-06-19']![0]!]
+
+  const merged = mergeFocusedDailyEntries({
+    baseEntries,
+    dailyMemories,
+    focus: {
+      longTermIds: [],
+      dailyEntryIds: ['daily-old', 'daily-1'],
+      semanticIds: ['daily-old'],
+    },
+  })
+
+  assert.deepEqual(merged.map((entry) => entry.id), ['daily-1', 'daily-old'])
+  assert.equal(mergeFocusedDailyEntries({ baseEntries, dailyMemories }), baseEntries)
 })

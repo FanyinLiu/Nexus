@@ -49,6 +49,7 @@ import {
   VoiceSection,
   WindowSection,
 } from './settingsSections/index.ts'
+import type { ChatMemoryTraceFocusTarget } from '../features/memory/traceDetails.ts'
 import {
   useConnectionTests,
   useSpeechVoiceManagement,
@@ -80,6 +81,7 @@ import type {
 export type SettingsDrawerProps = {
   open: boolean
   preferredSectionId?: SettingsSectionId | null
+  memoryFocus?: ChatMemoryTraceFocusTarget | null
   settings: AppSettings
   platformProfile: PlatformProfile
   chatMessageCount: number
@@ -219,6 +221,7 @@ export type SettingsDrawerProps = {
 export function SettingsDrawer({
   open,
   preferredSectionId,
+  memoryFocus,
   settings,
   platformProfile,
   chatMessageCount,
@@ -775,6 +778,7 @@ export function SettingsDrawer({
             setDraft={setDraft}
             memories={memories}
             dailyMemoryEntries={dailyMemoryEntries}
+            memoryFocus={memoryFocus}
             uiLanguage={uiLanguage}
             memorySearchModeOptions={memorySearchModeOptions}
             selectedMemorySearchMode={selectedMemorySearchMode}

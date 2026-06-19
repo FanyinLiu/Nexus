@@ -29,6 +29,7 @@ import { useReminderController } from './useReminderController'
 import { getSettingsSnapshot } from '../store/settingsStore'
 import { useAppOverlays } from './useAppOverlays'
 import type { SettingsSectionId } from '../../components/settingsDrawerSupport.ts'
+import type { ChatMemoryTraceFocusTarget } from '../../features/memory/traceDetails.ts'
 import { useAutonomyController } from './useAutonomyController'
 import { useBudgetConfigSync } from './useBudgetConfigSync'
 import { useBackgroundSchedulers } from './useBackgroundSchedulers'
@@ -63,6 +64,7 @@ export function useAppController() {
     () => view === 'panel' && getInitialPanelSection() === 'settings',
   )
   const [preferredSettingsSectionId, setPreferredSettingsSectionId] = useState<SettingsSectionId | null>(null)
+  const [preferredMemoryFocus, setPreferredMemoryFocus] = useState<ChatMemoryTraceFocusTarget | null>(null)
 
   // Refine view from async preload bridge (only matters inside Electron)
   useEffect(() => {
@@ -156,6 +158,7 @@ export function useAppController() {
 
   const openSettingsPanel = useCallback(() => {
     setPreferredSettingsSectionId(null)
+    setPreferredMemoryFocus(null)
     if (view === 'pet') {
       const openPanel = window.desktopPet?.openPanel
       if (openPanel) {
@@ -175,8 +178,9 @@ export function useAppController() {
     setSettingsOpen(true)
   }, [applyPanelWindowState, panelCollapsed, view])
 
-  const openSettingsSection = useCallback((sectionId: SettingsSectionId) => {
+  const openSettingsSection = useCallback((sectionId: SettingsSectionId, memoryFocus?: ChatMemoryTraceFocusTarget | null) => {
     setPreferredSettingsSectionId(sectionId)
+    setPreferredMemoryFocus(sectionId === 'memory' ? memoryFocus ?? null : null)
     if (view === 'pet') {
       const openPanel = window.desktopPet?.openPanel
       if (openPanel) {
@@ -649,6 +653,7 @@ export function useAppController() {
     setSettings,
     settingsOpen,
     preferredSettingsSectionId,
+    preferredMemoryFocus,
     setSettingsOpen,
     petModelPresets,
     petRuntimeContinuousVoiceActive,

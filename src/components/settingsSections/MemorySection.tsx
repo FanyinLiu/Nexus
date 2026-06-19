@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react'
 import { MemoryPanel } from '../../features/memory/components'
 import { MEMORY_EMBEDDING_MODEL_OPTIONS, SCREEN_VLM_MODEL_OPTIONS } from '../../features/memory/constants'
 import { resolveMemoryTransparencySummary } from '../../features/memory/memorySettingsView'
+import type { ChatMemoryTraceFocusTarget } from '../../features/memory/traceDetails.ts'
 import {
   getPlatformDependencyHint,
   isDesktopContextActiveWindowAvailable,
@@ -38,6 +39,7 @@ type MemorySectionProps = {
   setDraft: Dispatch<SetStateAction<AppSettings>>
   memories: MemoryItem[]
   dailyMemoryEntries: DailyMemoryEntry[]
+  memoryFocus?: ChatMemoryTraceFocusTarget | null
   uiLanguage: UiLanguage
   memorySearchModeOptions: MemorySearchModeOption[]
   selectedMemorySearchMode: MemorySearchModeOption
@@ -65,6 +67,7 @@ export const MemorySection = memo(function MemorySection({
   setDraft,
   memories,
   dailyMemoryEntries,
+  memoryFocus,
   uiLanguage,
   memorySearchModeOptions,
   selectedMemorySearchMode,
@@ -497,6 +500,7 @@ export const MemorySection = memo(function MemorySection({
         assistantName={draft.companionName}
         memories={memories}
         dailyEntries={dailyMemoryEntries}
+        focus={memoryFocus}
         searchMode={draft.memorySearchMode}
         embeddingModel={draft.memoryEmbeddingModel}
         uiLanguage={uiLanguage}

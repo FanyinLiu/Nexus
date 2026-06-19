@@ -196,8 +196,12 @@ Current baseline:
   `memoryTrace` metadata with only memory status, recall mode, vector
   availability, and bounded recalled memory/daily/semantic IDs; the renderer UI
   displays a count summary and can resolve those IDs against current renderer
-  memory state for an expandable, runtime-only detail view. The short previews
-  shown there are not written back into chat metadata, audit logs, or SQLite.
+  memory state for an expandable, runtime-only detail view. Opening Memory from
+  that detail view passes only the referenced source IDs into Settings, where
+  the corresponding long-term memories and diary entries are highlighted; older
+  referenced diary entries may be temporarily included in the visible panel
+  without changing stored data. The short previews shown there are not written
+  back into chat metadata, audit logs, or SQLite.
 
 Target v1.0 direction:
 
@@ -489,8 +493,8 @@ hooks/useReminderScheduler
 - `features/memory/recallTrace.ts` owns the content-minimized assistant-message
   memory provenance metadata derived from `MemoryRecallContext`.
 - `features/memory/traceDetails.ts` owns runtime-only resolution of memory
-  trace IDs to current long-term/daily memory previews and missing-source
-  states for the chat UI.
+  trace IDs to current long-term/daily memory previews, missing-source states,
+  and reply-source focus targets for the Memory settings panel.
 
 ### Pet and character
 

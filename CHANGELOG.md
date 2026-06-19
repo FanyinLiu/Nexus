@@ -22,6 +22,10 @@
   runtime-only detail view that resolves trace IDs to current memory previews,
   marks missing or paused sources, and opens Settings directly to Memory for
   edits.
+- **Memory source focus** — opening Memory from a reply source detail now
+  highlights the referenced long-term memories and diary entries, including
+  referenced older diary entries that were outside the recent preview, without
+  adding new automation or changing stored memory data.
 
 ## [0.3.5] - 2026-06-19
 

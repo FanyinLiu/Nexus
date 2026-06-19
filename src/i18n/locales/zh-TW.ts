@@ -125,6 +125,7 @@ export const zhTWMessages: TranslationDictionary = {
   'memory_panel.pause': '暫停使用',
   'memory_panel.resume': '恢復使用',
   'memory_panel.paused_badge': '已暫停',
+  'memory_panel.focused_badge': '來自這次回覆',
   'memory_panel.delete': '刪除',
   'memory_panel.cancel': '取消',
   'memory_panel.clear_diary': '清空今日日誌',

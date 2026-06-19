@@ -666,8 +666,120 @@ Acceptance results:
 - The "Manage memories" action opens Settings directly to the Memory section
   without adding new IPC, dependencies, or mutation surfaces.
 
+## Implementation Slice 7 - Memory Source Focus in Settings
+
+Status: implemented in this branch; full validation passed.
+
+Product boundary:
+
+- This slice keeps Nexus companion-first. It does not add autonomous task
+  execution, planner/executor behavior, tool calls, or a Codex-style work-agent
+  surface.
+- The goal is source legibility: when a reply says memory shaped the answer,
+  the user can jump to the Memory page and see which remembered preferences or
+  diary fragments were involved.
+
+Problem:
+
+- Slice 6 could open Settings directly to Memory, but users still had to scan
+  the whole Memory page to find the referenced records.
+- The daily preview intentionally shows only recent diary entries; a reply may
+  reference an older diary entry that is still present in the store but outside
+  that preview.
+- Adding inline editing inside chat would duplicate mutation UI and increase
+  accidental-delete risk.
+
+Design:
+
+- Add `buildChatMemoryTraceFocus()` to convert a content-minimized
+  `ChatMemoryTrace` into deduplicated long-term, daily, and semantic source ID
+  lists.
+- Carry that focus target through the existing Settings-section navigation path
+  when the user opens Memory from a reply source detail.
+- Add `mergeFocusedDailyEntries()` so focused diary entries outside the recent
+  preview are temporarily included in the Memory panel view.
+- Highlight matching long-term memories and diary entries in the Memory panel
+  with a small "from this reply" source badge and scroll the first highlighted
+  entry into view.
+- Keep all previews runtime-only. Persisted assistant messages still store only
+  bounded source IDs, not memory text.
+
+Impact scope:
+
+- Memory trace helpers.
+- Panel message action wiring.
+- App settings-overlay controller data flow.
+- Settings drawer and Memory section props.
+- Memory panel UI, styling, and locale copy.
+- Focused memory trace tests and milestone docs.
+
+No new dependency:
+
+- The slice reuses existing React state, Settings navigation, and Memory panel
+  controls.
+
+Migration:
+
+- No stored data is migrated.
+- No SQLite schema, localStorage key, IPC contract, or audit-log schema changes.
+- Focus targets are runtime-only and disappear when Settings is opened normally.
+
+Rollback:
+
+- Remove the focus helper, focused diary merge helper, Settings focus prop
+  plumbing, Memory panel highlight styles, locale key, and focused tests.
+- Existing `memoryTrace` metadata and Slice 6 source detail UI remain valid.
+- Memory and daily-memory stores remain untouched.
+
+Known risks:
+
+- Highlights reflect current renderer-localStorage memory state. If a referenced
+  memory was deleted or archive-imported away, there is nothing to highlight.
+- Semantic IDs can refer to long-term or diary entries. The UI highlights a
+  matching visible record by ID and leaves unmatched semantic IDs invisible.
+- The first highlighted entry scrolls into view after render; if a future
+  virtualized Memory list is introduced, this behavior should move to the list
+  owner.
+
+Validation results:
+
+- `node --experimental-strip-types --test tests/memory-trace-details.test.ts tests/memory-recall-trace.test.ts tests/chat-storage.test.ts tests/assistant-reply-failure.test.ts`
+  - 16 focused memory-detail/focus/memory-trace/chat-storage/assistant-runtime
+    tests passed.
+- `npx tsc -b --pretty false`
+  - passed.
+- `npm run lint`
+  - passed.
+- `npm run i18n:audit`
+  - 2214 keys, 0 missing/extra/duplicate across all locales.
+- `npm test`
+  - 1950 tests passed.
+- `npm run ipc:audit`
+  - passed with 0 errors and 0 warnings.
+- `npm run build`
+  - `tsc -b` and Vite production build passed.
+- `git diff --check`
+  - passed.
+- `npm run package:dir:smoke`
+  - directory packaging and packaged-app smoke test passed on macOS arm64.
+  - Existing unsigned macOS, duplicate dependency, and optional Python module
+    smoke warnings remain unchanged residual packaging/setup risks.
+
+Acceptance results:
+
+- Opening Memory from a reply source detail carries only source IDs, not memory
+  text or diary content.
+- Referenced long-term memories and diary entries are highlighted in the Memory
+  panel with localized source badges.
+- Referenced older diary entries outside the recent preview can appear
+  temporarily for management without changing stored memory data.
+- The mutation owner remains the Memory settings panel; chat still only shows
+  details and a navigation action.
+- The slice adds no new IPC, dependencies, migration, permissions, or
+  automation surfaces.
+
 Suggested next M5 slice:
 
-- Add memory-source focus inside the Memory settings page, so opening from a
-  reply can scroll to or highlight the referenced long-term memories and daily
-  entries without adding another mutation surface.
+- Start the smallest reversible SQLite-backed memory repository design: a
+  content-free dry-run audit of long-term memory and daily-memory localStorage
+  shape before any write path or authority change.

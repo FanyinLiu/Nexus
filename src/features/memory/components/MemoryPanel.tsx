@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { pickTranslatedUiText } from '../../../lib/uiLanguage.ts'
+import type { ChatMemoryTraceFocusTarget } from '../traceDetails.ts'
 import type {
   DailyMemoryEntry,
   MemoryItem,
@@ -12,6 +13,7 @@ type MemoryPanelProps = {
   assistantName: string
   dailyEntries: DailyMemoryEntry[]
   embeddingModel: string
+  focus?: ChatMemoryTraceFocusTarget | null
   memories: MemoryItem[]
   onAddMemory: (content: string) => void
   onClearDaily: () => void
@@ -58,6 +60,7 @@ export function MemoryPanel({
   assistantName,
   dailyEntries,
   embeddingModel,
+  focus,
   memories,
   onAddMemory,
   onClearDaily,
@@ -80,6 +83,21 @@ export function MemoryPanel({
   const [editingContent, setEditingContent] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const focusedLongTermIds = useMemo(
+    () => new Set([...(focus?.longTermIds ?? []), ...(focus?.semanticIds ?? [])]),
+    [focus],
+  )
+  const focusedDailyIds = useMemo(
+    () => new Set([...(focus?.dailyEntryIds ?? []), ...(focus?.semanticIds ?? [])]),
+    [focus],
+  )
+  const focusSignature = useMemo(
+    () => Array
+      .from(new Set([...focusedLongTermIds, ...focusedDailyIds]))
+      .sort()
+      .join('\n'),
+    [focusedDailyIds, focusedLongTermIds],
+  )
 
   function handleAddMemory() {
     const content = manualMemory.trim()
@@ -159,6 +177,20 @@ export function MemoryPanel({
     }
   }, [deletingId, editingId])
 
+  useEffect(() => {
+    if (!focusSignature || typeof window === 'undefined') return undefined
+
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>('.memory-pill[data-memory-focus="true"]')
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+    }
+  }, [focusSignature])
+
   return (
     <section className="memory-card">
       <div className="memory-card__header">
@@ -201,12 +233,22 @@ export function MemoryPanel({
         {memories.length ? (
           memories.map((memory) => {
             const memoryEnabled = memory.enabled !== false
+            const memoryFocused = focusedLongTermIds.has(memory.id)
             return (
-              <article key={memory.id} className={`memory-pill ${memoryEnabled ? '' : 'is-disabled'}`.trim()}>
+              <article
+                key={memory.id}
+                className={`memory-pill ${memoryEnabled ? '' : 'is-disabled'} ${memoryFocused ? 'is-focused' : ''}`.trim()}
+                data-memory-focus={memoryFocused ? 'true' : undefined}
+              >
                 <div className="memory-pill__meta-row">
                   <span className="memory-pill__category">{getCategoryLabel(memory.category, uiLanguage)}</span>
                   {!memoryEnabled ? (
                     <span className="memory-pill__category">{ti('memory_panel.paused_badge')}</span>
+                  ) : null}
+                  {memoryFocused ? (
+                    <span className="memory-pill__category memory-pill__category--focus">
+                      {ti('memory_panel.focused_badge')}
+                    </span>
                   ) : null}
                 </div>
 
@@ -312,94 +354,108 @@ export function MemoryPanel({
 
         <div className="memory-list">
           {dailyEntries.length ? (
-            dailyEntries.map((entry) => (
-              <article key={entry.id} className="memory-pill memory-pill--daily">
-                <span className="memory-pill__category">
-                  {entry.role === 'user'
-                    ? ti('memory_panel.user_label')
-                    : assistantName}
-                </span>
-
-                {editingId === entry.id ? (
-                  <div className="memory-pill__edit">
-                    <textarea
-                      rows={2}
-                      value={editingContent}
-                      aria-label={`${ti('memory_panel.edit')} ${ti('memory_panel.category.diary')}`}
-                      onChange={(event) => setEditingContent(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' && !event.shiftKey) {
-                          event.preventDefault()
-                          saveDailyEdit(entry.id, entry.day)
-                        }
-                      }}
-                      autoFocus
-                    />
-                    {editError ? (
-                      <p className="memory-pill__error" role="alert" aria-live="assertive" aria-atomic="true">
-                        {editError}
-                      </p>
+            dailyEntries.map((entry) => {
+              const entryFocused = focusedDailyIds.has(entry.id)
+              return (
+                <article
+                  key={entry.id}
+                  className={`memory-pill memory-pill--daily ${entryFocused ? 'is-focused' : ''}`.trim()}
+                  data-memory-focus={entryFocused ? 'true' : undefined}
+                >
+                  <div className="memory-pill__meta-row">
+                    <span className="memory-pill__category">
+                      {entry.role === 'user'
+                        ? ti('memory_panel.user_label')
+                        : assistantName}
+                    </span>
+                    {entryFocused ? (
+                      <span className="memory-pill__category memory-pill__category--focus">
+                        {ti('memory_panel.focused_badge')}
+                      </span>
                     ) : null}
-                    <div className="memory-pill__actions">
-                      <button type="button" onClick={() => saveDailyEdit(entry.id, entry.day)}>
-                        {ti('memory_panel.save')}
-                      </button>
-                      <button type="button" onClick={cancelEditing}>
-                        {ti('memory_panel.cancel')}
-                      </button>
-                    </div>
                   </div>
-                ) : deletingId === entry.id ? (
-                  <div className="memory-pill__confirm">
-                    <p>{ti('memory_panel.confirm_delete_diary')}</p>
-                    <div className="memory-pill__actions">
-                      <button
-                        type="button"
-                        aria-label={`${ti('memory_panel.delete')}: ${entry.day} ${getActionSnippet(entry.content)}`}
-                        title={`${ti('memory_panel.delete')}: ${entry.day} ${getActionSnippet(entry.content)}`}
-                        onClick={() => {
-                          onRemoveDailyEntry?.(entry.id, entry.day)
-                          cancelDelete()
+
+                  {editingId === entry.id ? (
+                    <div className="memory-pill__edit">
+                      <textarea
+                        rows={2}
+                        value={editingContent}
+                        aria-label={`${ti('memory_panel.edit')} ${ti('memory_panel.category.diary')}`}
+                        onChange={(event) => setEditingContent(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' && !event.shiftKey) {
+                            event.preventDefault()
+                            saveDailyEdit(entry.id, entry.day)
+                          }
                         }}
-                      >
-                        {ti('memory_panel.delete')}
-                      </button>
-                      <button type="button" onClick={cancelDelete}>
-                        {ti('memory_panel.cancel')}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <p>{entry.content}</p>
-                    {(onUpdateDailyEntry || onRemoveDailyEntry) && (
+                        autoFocus
+                      />
+                      {editError ? (
+                        <p className="memory-pill__error" role="alert" aria-live="assertive" aria-atomic="true">
+                          {editError}
+                        </p>
+                      ) : null}
                       <div className="memory-pill__actions">
-                        {onUpdateDailyEntry && (
-                          <button
-                            type="button"
-                            aria-label={`${ti('memory_panel.edit')}: ${entry.day} ${getActionSnippet(entry.content)}`}
-                            title={`${ti('memory_panel.edit')}: ${entry.day} ${getActionSnippet(entry.content)}`}
-                            onClick={() => startEditing(entry.id, entry.content)}
-                          >
-                            {ti('memory_panel.edit')}
-                          </button>
-                        )}
-                        {onRemoveDailyEntry && (
-                          <button
-                            type="button"
-                            aria-label={`${ti('memory_panel.delete')}: ${entry.day} ${getActionSnippet(entry.content)}`}
-                            title={`${ti('memory_panel.delete')}: ${entry.day} ${getActionSnippet(entry.content)}`}
-                            onClick={() => confirmDelete(entry.id)}
-                          >
-                            {ti('memory_panel.delete')}
-                          </button>
-                        )}
+                        <button type="button" onClick={() => saveDailyEdit(entry.id, entry.day)}>
+                          {ti('memory_panel.save')}
+                        </button>
+                        <button type="button" onClick={cancelEditing}>
+                          {ti('memory_panel.cancel')}
+                        </button>
                       </div>
-                    )}
-                  </>
-                )}
-              </article>
-            ))
+                    </div>
+                  ) : deletingId === entry.id ? (
+                    <div className="memory-pill__confirm">
+                      <p>{ti('memory_panel.confirm_delete_diary')}</p>
+                      <div className="memory-pill__actions">
+                        <button
+                          type="button"
+                          aria-label={`${ti('memory_panel.delete')}: ${entry.day} ${getActionSnippet(entry.content)}`}
+                          title={`${ti('memory_panel.delete')}: ${entry.day} ${getActionSnippet(entry.content)}`}
+                          onClick={() => {
+                            onRemoveDailyEntry?.(entry.id, entry.day)
+                            cancelDelete()
+                          }}
+                        >
+                          {ti('memory_panel.delete')}
+                        </button>
+                        <button type="button" onClick={cancelDelete}>
+                          {ti('memory_panel.cancel')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p>{entry.content}</p>
+                      {(onUpdateDailyEntry || onRemoveDailyEntry) && (
+                        <div className="memory-pill__actions">
+                          {onUpdateDailyEntry && (
+                            <button
+                              type="button"
+                              aria-label={`${ti('memory_panel.edit')}: ${entry.day} ${getActionSnippet(entry.content)}`}
+                              title={`${ti('memory_panel.edit')}: ${entry.day} ${getActionSnippet(entry.content)}`}
+                              onClick={() => startEditing(entry.id, entry.content)}
+                            >
+                              {ti('memory_panel.edit')}
+                            </button>
+                          )}
+                          {onRemoveDailyEntry && (
+                            <button
+                              type="button"
+                              aria-label={`${ti('memory_panel.delete')}: ${entry.day} ${getActionSnippet(entry.content)}`}
+                              title={`${ti('memory_panel.delete')}: ${entry.day} ${getActionSnippet(entry.content)}`}
+                              onClick={() => confirmDelete(entry.id)}
+                            >
+                              {ti('memory_panel.delete')}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </article>
+              )
+            })
           ) : (
             <div className="memory-empty">
               {ti('memory_panel.diary_empty')}

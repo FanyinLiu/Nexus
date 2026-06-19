@@ -125,6 +125,7 @@ export const jaMessages: TranslationDictionary = {
   'memory_panel.pause': '一時停止',
   'memory_panel.resume': '再開',
   'memory_panel.paused_badge': '一時停止中',
+  'memory_panel.focused_badge': 'この返信から',
   'memory_panel.delete': '削除',
   'memory_panel.cancel': 'キャンセル',
   'memory_panel.clear_diary': '今日の日誌をクリア',

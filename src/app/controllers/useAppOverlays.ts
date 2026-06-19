@@ -7,6 +7,10 @@ import {
 } from 'react'
 import type { SettingsDrawerProps } from '../../components/SettingsDrawer'
 import type { SettingsSectionId } from '../../components/settingsDrawerSupport.ts'
+import {
+  mergeFocusedDailyEntries,
+  type ChatMemoryTraceFocusTarget,
+} from '../../features/memory/traceDetails.ts'
 import type { OnboardingGuideProps } from '../../features/onboarding/components/OnboardingGuide'
 import type { PetModelDefinition } from '../../features/pet'
 import {
@@ -43,6 +47,7 @@ type UseAppOverlaysOptions = {
   setSettings: Dispatch<SetStateAction<AppSettings>>
   settingsOpen: boolean
   preferredSettingsSectionId: SettingsSectionId | null
+  preferredMemoryFocus: ChatMemoryTraceFocusTarget | null
   setSettingsOpen: Dispatch<SetStateAction<boolean>>
   petModelPresets: PetModelDefinition[]
   petRuntimeContinuousVoiceActive: boolean
@@ -52,6 +57,7 @@ type UseAppOverlaysOptions = {
   memory: Pick<
     MemoryController,
     | 'memories'
+    | 'dailyMemories'
     | 'recentDailyMemoryEntries'
     | 'exportMemoryArchive'
     | 'importMemoryArchive'
@@ -113,6 +119,7 @@ export function useAppOverlays({
   setSettings,
   settingsOpen,
   preferredSettingsSectionId,
+  preferredMemoryFocus,
   setSettingsOpen,
   petModelPresets,
   petRuntimeContinuousVoiceActive,
@@ -218,15 +225,25 @@ export function useAppOverlays({
     [chat.messages],
   )
 
+  const settingsDailyMemoryEntries = useMemo(
+    () => mergeFocusedDailyEntries({
+      baseEntries: memory.recentDailyMemoryEntries,
+      dailyMemories: memory.dailyMemories,
+      focus: preferredMemoryFocus,
+    }),
+    [memory.dailyMemories, memory.recentDailyMemoryEntries, preferredMemoryFocus],
+  )
+
   const settingsDrawerProps: SettingsDrawerProps = {
     open: settingsOpen,
     preferredSectionId: preferredSettingsSectionId,
+    memoryFocus: preferredMemoryFocus,
     settings,
     chatMessageCount,
     chatBusy: chat.busy,
     currentChatSessionId: chat.currentSessionId,
     memories: memory.memories,
-    dailyMemoryEntries: memory.recentDailyMemoryEntries,
+    dailyMemoryEntries: settingsDailyMemoryEntries,
     petModelPresets,
     reminderTasks,
     voiceState: voice.voiceState,
