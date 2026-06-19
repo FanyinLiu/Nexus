@@ -24,7 +24,7 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **当前版本：** v0.3.5 稳定版。Nexus 现在继续向“本地优先的桌面陪伴”收敛；这版重点是首次启动修复、发布信任、IPC 安全和聊天记忆的本地可控迁移预演。
+> **当前代码版本：** v0.3.5 候选。Nexus 现在继续向“本地优先的桌面陪伴”收敛；这版重点是首次启动修复、发布信任、IPC 安全和聊天/记忆的本地可控迁移预演。正式下载页以 GitHub Releases 的 `v0.3.5` tag 为准。
 
 > **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前短期开发以根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 为准：Phase 1 只收敛桌面常驻小窗口、极简头像、Ollama / DeepSeek 文本模型和简单对话。
 
@@ -32,7 +32,16 @@
 
 ## 本次更新 — v0.3.5
 
-> **给会陪伴、会记住的 Nexus 打地基。** 这版不把 Nexus 做成替你干活的 Codex 式智能体，而是补上陪伴体验需要的底层信任：首次启动和模型连接更容易修复，发布/更新状态更清楚，IPC、权限、密钥和审计边界更硬；聊天记忆开始进入主进程 SQLite 的隐藏迁移预演。现有聊天仍以 localStorage 为权威来源，不会被删除；隐藏预演可以 dry-run、备份、应用、回滚、运行时镜像和元数据对账。完整说明见 [RELEASE-NOTES-v0.3.5.md](RELEASE-NOTES-v0.3.5.md)（英文）。
+> **给会陪伴、会记住的 Nexus 打地基。** 这版不把 Nexus 做成替你干活的 Codex 式智能体，而是补上陪伴体验需要的底层信任：首次启动和模型连接更容易修复，发布/更新状态更清楚，IPC、权限、密钥和审计边界更硬；聊天和长期记忆开始进入主进程 SQLite 的可控迁移预演。现有聊天和记忆仍以 localStorage 为权威来源，不会被删除。中文说明见 [RELEASE-NOTES-v0.3.5.zh-CN.md](RELEASE-NOTES-v0.3.5.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.3.5.md](RELEASE-NOTES-v0.3.5.md)。
+
+0.3.5 具体升级：
+
+- **首次启动更顺**：Ollama / DeepSeek / OpenAI-compatible 配置会先预检，错误会给可执行修复建议。
+- **发布更可信**：明确 macOS 未签名包的手动更新路径，补上发布信任和 SQLite 打包冒烟检查。
+- **权限和密钥更安全**：更多 IPC 有输入校验、确认/权限边界和元数据审计；renderer 仍拿不到明文 API Key。
+- **聊天迁移更稳**：SQLite 迁移先做隐藏 dry-run、备份、应用、回滚、镜像和对账，不会自动删除 localStorage 聊天。
+- **记忆更白盒**：Memory 页可以暂停全部或单条记忆；回复会显示记忆来源，能展开查看、跳到 Memory 页并高亮对应记忆。
+- **长期记忆迁移先体检**：新增只读 dry-run，看长期记忆/日志的数据形状和风险，不暴露记忆正文，也不写 SQLite。
 
 ## 本次更新 — v0.3.4-beta.4（预发布）
 

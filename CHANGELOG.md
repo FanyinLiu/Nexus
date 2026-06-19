@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+No user-facing changes yet.
+
+## [0.3.5] - 2026-06-19
+
 ### Added
 - **Memory transparency and pause controls** — the Memory settings page now
   shows whether memory recall/learning is active, the active long-term and
@@ -30,8 +34,6 @@
   legacy, and daily memory localStorage shapes so the next SQLite memory
   migration can be designed from counts, byte sizes, date ranges, and issue
   codes without exposing private memory text or writing storage.
-
-## [0.3.5] - 2026-06-19
 
 ### Fixed
 - **Model setup preflight guidance** — first-run and settings connection tests
