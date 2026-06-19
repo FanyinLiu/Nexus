@@ -62,6 +62,15 @@ test('loadChatMessages compacts malformed persisted messages and writes back', (
         content: 'answer',
         createdAt: 1780531200000,
         toolResult: { kind: 'open_external', result: { ok: true, url: ' https://example.com ', message: ' ok ' } },
+        memoryTrace: {
+          status: 'active',
+          searchModeUsed: 'hybrid',
+          vectorSearchAvailable: true,
+          longTermIds: [' memory-1 ', '', 'memory-1', 'memory-2'],
+          dailyEntryIds: ['daily-1'],
+          semanticIds: ['semantic-1'],
+          content: 'must be stripped',
+        },
       },
       { id: 'bad-role', role: 'bot', content: 'drop me', createdAt: '2026-06-04T00:00:00Z' },
       { id: 'bad-content', role: 'user', content: 42, createdAt: '2026-06-04T00:00:00Z' },
@@ -81,6 +90,15 @@ test('loadChatMessages compacts malformed persisted messages and writes back', (
     kind: 'open_external',
     result: { ok: true, url: 'https://example.com', message: 'ok' },
   })
+  assert.deepEqual(messages[1]?.memoryTrace, {
+    status: 'active',
+    searchModeUsed: 'hybrid',
+    vectorSearchAvailable: true,
+    longTermIds: ['memory-1', 'memory-2'],
+    dailyEntryIds: ['daily-1'],
+    semanticIds: ['semantic-1'],
+  })
+  assert.equal(JSON.stringify(messages[1]?.memoryTrace).includes('must be stripped'), false)
   assert.deepEqual(JSON.parse(storage.getItem(CHAT_STORAGE_KEY) ?? '[]'), messages)
 })
 

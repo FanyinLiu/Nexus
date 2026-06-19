@@ -8,6 +8,19 @@ export type ChatRole = 'user' | 'assistant' | 'system'
 
 export type ChatMessageTone = 'neutral' | 'error'
 
+export type ChatMemoryTraceStatus = 'active' | 'paused'
+
+export type ChatMemoryTraceSearchMode = 'keyword' | 'hybrid' | 'vector'
+
+export interface ChatMemoryTrace {
+  status: ChatMemoryTraceStatus
+  searchModeUsed: ChatMemoryTraceSearchMode
+  vectorSearchAvailable: boolean
+  longTermIds: string[]
+  dailyEntryIds: string[]
+  semanticIds: string[]
+}
+
 export type ChatToolResult =
   | {
       kind: 'web_search'
@@ -43,6 +56,12 @@ export interface ChatMessage {
    * message only.
    */
   reasoning_content?: string
+  /**
+   * Content-minimized memory provenance for the assistant turn. Stores only
+   * recall metadata so the UI can explain whether memory shaped a reply
+   * without duplicating private memory text into chat history.
+   */
+  memoryTrace?: ChatMemoryTrace
 }
 
 export interface PetDialogBubbleState {

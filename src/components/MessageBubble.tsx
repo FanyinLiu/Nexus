@@ -78,6 +78,29 @@ function renderAssistantContent(content: string) {
   )
 }
 
+function getMemoryTraceLabel(message: ChatMessage, t: ReturnType<typeof useTranslation>['t']) {
+  const trace = message.memoryTrace
+  if (!trace || message.role !== 'assistant') return null
+
+  if (trace.status === 'paused') {
+    return t('message_bubble.memory_trace.paused')
+  }
+
+  const longTerm = trace.longTermIds.length
+  const daily = trace.dailyEntryIds.length
+  const semantic = trace.semanticIds.length
+
+  if (longTerm + daily + semantic === 0) {
+    return t('message_bubble.memory_trace.none')
+  }
+
+  return t('message_bubble.memory_trace.used', {
+    longTerm,
+    daily,
+    semantic,
+  })
+}
+
 export const MessageBubble = memo(function MessageBubble({ message, assistantName }: MessageBubbleProps) {
   const { t, locale } = useTranslation()
   const resolvedAssistantName = assistantName ?? t('message_bubble.role.assistant_default')
@@ -95,6 +118,7 @@ export const MessageBubble = memo(function MessageBubble({ message, assistantNam
       ? `message-bubble--${message.tone ?? 'neutral'}`
       : '',
   ].filter(Boolean).join(' ')
+  const memoryTraceLabel = getMemoryTraceLabel(message, t)
 
   return (
     <article className={bubbleClassName}>
@@ -126,6 +150,11 @@ export const MessageBubble = memo(function MessageBubble({ message, assistantNam
           </div>
         ) : null}
         {message.toolResult ? <ToolResultCard toolResult={message.toolResult} /> : null}
+        {memoryTraceLabel ? (
+          <div className="message-bubble__memory-trace">
+            {memoryTraceLabel}
+          </div>
+        ) : null}
       </div>
     </article>
   )

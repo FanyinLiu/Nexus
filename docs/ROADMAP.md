@@ -229,6 +229,10 @@ Goal: move heavy, long-lived data out of renderer localStorage.
   and learning or pause individual long-term memories without deleting them.
   Paused chat turns receive an empty memory recall context and skip daily-memory
   capture.
+- Slice 5 adds content-minimized memory source traces to assistant messages.
+  Each reply can now record whether memory was active or paused, which recall
+  mode ran, vector availability, and bounded recalled memory/daily/semantic IDs;
+  the chat bubble shows a subtle count summary without duplicating memory text.
 - Rollback: keep legacy localStorage snapshots until migration is verified.
 
 ### M6 - Desktop presence state machine

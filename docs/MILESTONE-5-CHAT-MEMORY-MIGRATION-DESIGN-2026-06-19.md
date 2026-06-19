@@ -447,8 +447,118 @@ Acceptance results:
 - The Memory settings page reports that renderer `localStorage` remains the
   current memory storage authority and SQLite is not memory-authoritative yet.
 
+## Implementation Slice 5 - Memory Source Trace
+
+Status: implemented in this branch; full validation passed.
+
+Product boundary:
+
+- This slice keeps Nexus companion-first. It does not add planner/executor
+  behavior, autonomous task execution, or a work-agent surface.
+- The goal is explainable companionship: after Nexus answers, the user should
+  be able to tell whether memory shaped the reply without exposing private
+  memory text in a new channel.
+
+Problem:
+
+- Slice 4 made memory usage visible at the settings level, but individual
+  assistant replies still did not carry a durable memory-source trace.
+- The runtime knew which long-term memories and daily entries were recalled,
+  but that information disappeared after the request.
+- Without a content-minimized trace, later white-box memory UI would have to
+  infer provenance from chat text or re-run recall, both of which are weaker
+  and less auditable.
+
+Design:
+
+- Add `ChatMemoryTrace` metadata to assistant `ChatMessage` records.
+- Store only:
+  - memory status (`active` or `paused`)
+  - recall search mode
+  - vector availability
+  - recalled long-term memory IDs
+  - recalled daily-entry IDs
+  - semantic match IDs
+- Add a pure `buildChatMemoryTrace()` helper that builds the metadata from the
+  already constructed `MemoryRecallContext`.
+- Attach the trace to assistant messages after the model reply is accepted as
+  the latest turn.
+- Preserve and sanitize traces in chat localStorage normalization; imported or
+  malformed traces are clipped to bounded ID arrays and cannot carry memory
+  body text.
+- Show a subtle message-bubble hint with counts, for example "memory touched
+  this reply", "memory was on; nothing was recalled", or "memory was paused".
+
+Impact scope:
+
+- Chat message type and storage normalization.
+- Assistant reply message construction.
+- Message bubble UI and i18n copy.
+- Focused tests for trace generation, storage sanitization, and paused turns.
+
+No new dependency:
+
+- The slice reuses existing memory recall, chat message, and i18n primitives.
+
+Migration:
+
+- Existing chat messages remain valid because `memoryTrace` is optional.
+- New assistant messages can include bounded trace metadata in the existing
+  renderer localStorage chat/session stores.
+- No memory records are moved, rewritten, deleted, or sent to the main process.
+
+Rollback:
+
+- Remove the optional `memoryTrace` field, trace helper, message-bubble hint,
+  runtime attachment, and tests.
+- Existing chat messages containing `memoryTrace` remain harmless if older code
+  ignores unknown fields, or they are stripped by the normalizer after rollback.
+- Memory and daily-memory stores remain untouched.
+
+Known risks:
+
+- Trace metadata still lives with renderer chat history until chat authority
+  moves to SQLite.
+- IDs are useful for future white-box detail views, but the current UI only
+  shows counts; resolving IDs back to editable memory entries is a later slice.
+- Semantic IDs can overlap with long-term IDs; the UI intentionally reports
+  semantic hits separately to avoid pretending they are distinct memories.
+
+Validation results:
+
+- `node --experimental-strip-types --test tests/memory-recall-trace.test.ts tests/chat-storage.test.ts tests/assistant-reply-failure.test.ts`
+  - 11 focused memory-trace/chat-storage/assistant-runtime tests passed.
+- `npx tsc -b --pretty false`
+  - passed.
+- `npm run i18n:audit`
+  - 2204 keys, 0 missing/extra/duplicate across all locales.
+- `npm run lint`
+  - passed.
+- `npm test`
+  - 1945 tests passed.
+- `npm run ipc:audit`
+  - passed with 0 errors and 0 warnings.
+- `npm run build`
+  - `tsc -b` and Vite production build passed.
+- `npm run package:dir:smoke`
+  - directory packaging and packaged-app smoke test passed on macOS arm64.
+- `git diff --check`
+  - passed.
+
+Acceptance results:
+
+- Assistant messages can carry a bounded `memoryTrace` without duplicating
+  private memory or daily-entry body text.
+- Paused memory turns explicitly record `status: paused` with empty source ID
+  arrays.
+- Chat storage normalization preserves valid trace metadata, removes unexpected
+  fields, deduplicates trace IDs, and clips arrays.
+- The chat bubble shows only a count/status summary, not memory content.
+- The slice does not add planner/executor behavior, new permissions, new IPC,
+  or new dependencies.
+
 Suggested next M5 slice:
 
-- Keep companion-memory scope. Add source-trace preparation for memory recall:
-  record which memory IDs were eligible/used per reply in a user-visible,
-  content-minimized way before any SQLite authority switch.
+- Add a white-box memory-source detail view that resolves stored trace IDs back
+  to editable memory entries when they still exist, with missing/deleted memory
+  states handled explicitly and without copying memory text into audit logs.

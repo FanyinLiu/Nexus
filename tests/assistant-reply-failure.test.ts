@@ -307,4 +307,12 @@ test('memory pause sends an empty recall context and skips diary capture', async
   assert.equal(calls.dailyMemoryAppendCount, 0)
   assert.deepEqual(calls.recalledIds, [])
   assert.equal(calls.appendedMessages.at(-1)?.role, 'assistant')
+  assert.deepEqual(calls.appendedMessages.at(-1)?.memoryTrace, {
+    status: 'paused',
+    searchModeUsed: calls.memoryContexts[0].searchModeUsed,
+    vectorSearchAvailable: false,
+    longTermIds: [],
+    dailyEntryIds: [],
+    semanticIds: [],
+  })
 })

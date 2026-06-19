@@ -10,6 +10,7 @@ import {
   createDailyMemoryEntry,
 } from '../../features/memory/memory.ts'
 import { buildMemoryRecallContext } from '../../features/memory/recall.ts'
+import { buildChatMemoryTrace } from '../../features/memory/recallTrace.ts'
 import { loadRelevantSkills, shouldGenerateSkill, generateAndSaveSkill } from '../../features/skills/autoSkillGenerator.ts'
 import { matchCoreSkills } from '../../lib/coreRuntime.ts'
 import { captureUserAffectSample } from '../../features/autonomy/userAffectTimeline.ts'
@@ -564,6 +565,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         role: 'assistant',
         content: finalAssistantMessageContent,
         createdAt: new Date().toISOString(),
+        memoryTrace: buildChatMemoryTrace({ memoryContext, memoryPaused }),
         ...(response.response.reasoning_content
           ? { reasoning_content: response.response.reasoning_content }
           : {}),

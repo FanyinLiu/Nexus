@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatToolResult, WebSearchDisplay } from '../../types'
+import type { ChatMemoryTrace, ChatMessage, ChatToolResult, WebSearchDisplay } from '../../types'
 import { CHAT_STORAGE_KEY, readJson, writeJson, writeJsonDebounced } from './core.ts'
 
 const MAX_PERSISTED_CHAT_MESSAGES = 500
@@ -21,6 +21,50 @@ function normalizeStringArray(value: unknown, limit = 8): string[] {
     .map((item) => String(item ?? '').trim())
     .filter(Boolean)
     .slice(0, limit)
+}
+
+function normalizeTraceIds(value: unknown): string[] {
+  const seen = new Set<string>()
+  const ids: string[] = []
+  for (const id of normalizeStringArray(value, 48)) {
+    if (seen.has(id)) continue
+    seen.add(id)
+    ids.push(id)
+    if (ids.length >= 24) break
+  }
+  return ids
+}
+
+function normalizeMemoryTrace(value: unknown): ChatMemoryTrace | undefined {
+  if (!isObject(value)) return undefined
+
+  const status = value.status
+  if (status !== 'active' && status !== 'paused') return undefined
+
+  const searchModeUsed = value.searchModeUsed
+  if (searchModeUsed !== 'keyword' && searchModeUsed !== 'hybrid' && searchModeUsed !== 'vector') {
+    return undefined
+  }
+
+  if (status === 'paused') {
+    return {
+      status,
+      searchModeUsed,
+      vectorSearchAvailable: false,
+      longTermIds: [],
+      dailyEntryIds: [],
+      semanticIds: [],
+    }
+  }
+
+  return {
+    status,
+    searchModeUsed,
+    vectorSearchAvailable: Boolean(value.vectorSearchAvailable),
+    longTermIds: normalizeTraceIds(value.longTermIds),
+    dailyEntryIds: normalizeTraceIds(value.dailyEntryIds),
+    semanticIds: normalizeTraceIds(value.semanticIds),
+  }
 }
 
 function normalizeWebSearchDisplay(value: unknown): WebSearchDisplay | undefined {
@@ -189,6 +233,7 @@ export function normalizeChatMessage(value: unknown, index: number): ChatMessage
     ? value.id.trim()
     : `chat-message-recovered-${index}-${Date.parse(createdAt)}`
   const toolResult = normalizeToolResult(value.toolResult)
+  const memoryTrace = normalizeMemoryTrace(value.memoryTrace)
   const reasoning = typeof value.reasoning_content === 'string' && value.reasoning_content
     ? value.reasoning_content
     : undefined
@@ -200,6 +245,7 @@ export function normalizeChatMessage(value: unknown, index: number): ChatMessage
     createdAt,
     ...(isValidTone(value.tone) ? { tone: value.tone } : {}),
     ...(toolResult ? { toolResult } : {}),
+    ...(memoryTrace ? { memoryTrace } : {}),
     ...(reasoning ? { reasoning_content: reasoning } : {}),
   }
 }

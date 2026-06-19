@@ -882,6 +882,20 @@
   margin-top: 10px;
 }
 
+.message-bubble__memory-trace {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--nx-label-text, rgba(255, 255, 255, 0.58));
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: normal;
+}
+
 .message-bubble__link {
   color: var(--nx-link, #4a6fa5);
   text-decoration: underline;

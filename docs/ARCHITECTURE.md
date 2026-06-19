@@ -192,7 +192,10 @@ Current baseline:
   transparency summary for recall/capture/context-read state. When paused, chat
   turns use an empty memory recall context, skip pending memory callbacks, skip
   recall feedback, and skip daily-memory capture; memory dream consolidation
-  also returns early.
+  also returns early. Assistant chat messages can carry optional
+  `memoryTrace` metadata with only memory status, recall mode, vector
+  availability, and bounded recalled memory/daily/semantic IDs; the renderer UI
+  displays only a count summary, not duplicated memory text.
 
 Target v1.0 direction:
 
@@ -481,6 +484,8 @@ hooks/useReminderScheduler
 - `features/memory/memorySettingsView.ts` owns the user-facing memory
   transparency summary used by Settings, including the current storage-authority
   statement that memory is not SQLite-authoritative yet.
+- `features/memory/recallTrace.ts` owns the content-minimized assistant-message
+  memory provenance metadata derived from `MemoryRecallContext`.
 
 ### Pet and character
 

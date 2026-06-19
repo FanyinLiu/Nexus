@@ -14,6 +14,10 @@
   individual long-term memories without deleting them; paused chat turns skip
   memory recall, pending memory callbacks, recall feedback, and daily-memory
   capture.
+- **Memory source trace hints** — assistant replies now keep a content-minimized
+  memory provenance trace with recalled memory/daily/semantic IDs and show a
+  subtle chat-bubble count summary, so users can see whether memory shaped a
+  reply without duplicating private memory text.
 
 ## [0.3.5] - 2026-06-19
 
