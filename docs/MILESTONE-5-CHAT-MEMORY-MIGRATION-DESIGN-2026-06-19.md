@@ -432,6 +432,8 @@ Validation results:
   - passed with 0 errors and 0 warnings.
 - `npm run build`
   - `tsc -b` and Vite production build passed.
+- `npm run package:dir:smoke`
+  - directory packaging and packaged-app smoke test passed on macOS arm64.
 - `git diff --check`
   - passed.
 
