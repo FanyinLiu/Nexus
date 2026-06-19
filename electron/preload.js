@@ -218,6 +218,19 @@ contextBridge.exposeInMainWorld('desktopPet', {
   mcpCallTool: (payload) => ipcRenderer.invoke('mcp:call-tool', payload),
   mcpSyncServers: (payload) => ipcRenderer.invoke('mcp:sync-servers', payload),
 
+  // External action permission policy
+  externalActionPolicyGet: () => ipcRenderer.invoke('external-action-policy:get'),
+  externalActionPolicySync: (payload) => ipcRenderer.invoke('external-action-policy:sync', payload),
+
+  // Main-process local data foundation. Renderer storage remains authoritative in M4.
+  localDataStatus: () => ipcRenderer.invoke('local-data:status'),
+  localDataMirrorOnboarding: (payload) => ipcRenderer.invoke('local-data:mirror-onboarding', payload),
+  localDataChatMigrationStatus: () => ipcRenderer.invoke('local-data:chat-migration-status'),
+  localDataMirrorChatSession: (payload) => ipcRenderer.invoke('local-data:chat-session-mirror', payload),
+  localDataCompareChatSessions: (payload) => ipcRenderer.invoke('local-data:chat-comparison-preview', payload),
+  localDataApplyChatMigration: (payload) => ipcRenderer.invoke('local-data:chat-migration-apply', payload),
+  localDataRollbackChatMigration: (payload) => ipcRenderer.invoke('local-data:chat-migration-rollback', payload),
+
   // Plugin Host
   pluginScan: () => ipcRenderer.invoke('plugin:scan'),
   pluginList: () => ipcRenderer.invoke('plugin:list'),

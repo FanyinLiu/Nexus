@@ -2,6 +2,29 @@ import { BrowserWindow, ipcMain } from 'electron'
 import * as discordGateway from '../services/discordGateway.js'
 import { requireTrustedSender, requireString } from './validate.js'
 import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
+import { audit } from '../services/auditLog.js'
+import { requireExternalActionPermission } from '../services/externalActionPolicy.js'
+import {
+  summarizeExternalActionRequest,
+  summarizeExternalActionResult,
+} from './externalActionAudit.js'
+import {
+  validateDiscordSendMessagePayload,
+  validateDiscordSendVoicePayload,
+} from './payloadSchemas.js'
+
+async function runAuditedExternalAction(channel, payload, action) {
+  audit('external-action', 'request', summarizeExternalActionRequest(channel, payload))
+  try {
+    await requireExternalActionPermission(channel)
+    const result = await action()
+    audit('external-action', 'result', summarizeExternalActionResult(channel, result))
+    return result
+  } catch (error) {
+    audit('external-action', 'result', summarizeExternalActionResult(channel, {}, error))
+    throw error
+  }
+}
 
 export function register() {
   // Forward incoming Discord messages to all renderer windows
@@ -48,27 +71,31 @@ export function register() {
 
   ipcMain.handle('discord:send-message', async (event, payload) => {
     requireTrustedSender(event)
-    const channelId = requireString(payload?.channelId, 'channelId')
-    const text = requireString(payload?.text, 'text')
+    payload = validateDiscordSendMessagePayload(payload)
+    const channelId = payload.channelId
+    const text = payload.text
     const options = {
       replyToMessageId: payload?.replyToMessageId ?? undefined,
     }
-    await discordGateway.sendMessage(channelId, text, options)
-    return { ok: true }
+    return runAuditedExternalAction('discord:send-message', payload, async () => {
+      await discordGateway.sendMessage(channelId, text, options)
+      return { ok: true }
+    })
   })
 
   ipcMain.handle('discord:send-voice', async (event, payload) => {
     requireTrustedSender(event)
-    const channelId = requireString(payload?.channelId, 'channelId')
-    const audioBase64 = requireString(payload?.audioBase64, 'audioBase64')
-    // Discord caps non-Nitro uploads at 25 MB; base64 inflates by ~4/3.
-    if (audioBase64.length > 34_000_000) throw new Error('audio payload too large')
-    const mimeType = requireString(payload?.mimeType, 'mimeType')
+    payload = validateDiscordSendVoicePayload(payload)
+    const channelId = payload.channelId
+    const audioBase64 = payload.audioBase64
+    const mimeType = payload.mimeType
     const audio = Buffer.from(audioBase64, 'base64')
-    await discordGateway.sendAudioAttachment(channelId, audio, mimeType, {
-      replyToMessageId: payload?.replyToMessageId ?? undefined,
+    return runAuditedExternalAction('discord:send-voice', payload, async () => {
+      await discordGateway.sendAudioAttachment(channelId, audio, mimeType, {
+        replyToMessageId: payload?.replyToMessageId ?? undefined,
+      })
+      return { ok: true }
     })
-    return { ok: true }
   })
 
   ipcMain.handle('discord:status', (event) => {

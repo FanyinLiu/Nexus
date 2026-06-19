@@ -43,6 +43,125 @@ Run `npm run distribution:audit` whenever changing packaging, update metadata,
 release workflow, installer docs, or npm scripts. `npm run verify:release`
 already includes that audit.
 
+Run the focused release trust gate when changing signing, update behavior,
+installer trust docs, or release workflow secrets:
+
+```bash
+npm run release:trust:audit
+```
+
+`npm run distribution:audit` also runs this gate.
+
+To inspect signing readiness without changing the current unsigned release
+posture, run:
+
+```bash
+npm run release:signing:readiness
+```
+
+This report is non-blocking and is also printed in the release workflow
+preflight job. It is expected to warn until Apple Developer ID signing and a
+Windows signing provider are actually configured.
+
+When preparing a signed beta that should satisfy every signed release profile,
+run the hard gate:
+
+```bash
+npm run release:signing:gate
+```
+
+Platform-specific gates are also available while bringing up one signing path
+at a time:
+
+```bash
+npm run release:signing:gate:mac
+npm run release:signing:gate:windows
+```
+
+These gates are expected to fail today. Do not add them to the default release
+gate until Developer ID secrets, hardened runtime, notarization, signed updater
+mode, and Windows signing prerequisites are wired and verified.
+
+## Signing and Update Trust
+
+Current release posture:
+
+- **macOS unsigned auto-update limitation.** Current macOS beta/local release
+  artifacts are explicit unsigned distribution: `hardenedRuntime` and
+  Gatekeeper assessment are disabled, CI disables automatic identity discovery,
+  and the artifacts should be treated as manual update downloads until
+  Developer ID signing is enabled. The app checks GitHub Releases for new
+  versions and opens the release page, but unsigned macOS packages are not a
+  trusted one-click auto-update path.
+- **Windows unsigned installer limitation.** Current Windows release CI
+  disables executable signing with `signAndEditExecutable=false`. NSIS
+  installers can still install and update through the existing release channel,
+  but SmartScreen warnings remain until a Windows signing certificate path is
+  wired.
+- **Linux integrity path.** Linux artifacts include `SHA256SUMS`; detached GPG
+  signatures are produced when `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` are
+  configured.
+
+Trusted macOS release prerequisites:
+
+- Apple Developer ID Application certificate exported as `CSC_LINK` with
+  `CSC_KEY_PASSWORD`.
+- App Store Connect API credentials in `APPLE_API_KEY`, `APPLE_API_KEY_ID`, and
+  `APPLE_API_ISSUER`.
+- `package.json > build.mac` switched to hardened runtime and notarization, and
+  the release workflow no longer forces `CSC_IDENTITY_AUTO_DISCOVERY=false`.
+- Release CI sets `NEXUS_MAC_AUTO_UPDATE_MODE=electron-updater` only for the
+  signed macOS job so the runtime uses the full auto-download/install updater
+  path.
+- One beta cycle verifies `spctl -a -vv Nexus.app`, notarization, first launch,
+  permissions, and update from the last unsigned build. The first unsigned to
+  signed transition may require a manual download.
+
+Trusted Windows release prerequisites:
+
+- A Windows code-signing path is selected and documented. The release workflow
+  must wire either `WINDOWS_CSC_LINK` + `WINDOWS_CSC_KEY_PASSWORD` for a
+  certificate-file flow, or the `WINDOWS_SIGNING_*` cloud-signing secret group
+  for a managed signing flow.
+- Release CI stops passing `--config.win.signAndEditExecutable=false`.
+- A beta verifies installer launch, SmartScreen behavior, NSIS update, and
+  rollback through a higher version tag.
+
+Rollback and recovery:
+
+- If signing fails before publication, keep the release as a draft, fix the
+  configuration, and rerun the failed workflow job with the same tag.
+- If a signed artifact is already published and broken, never replace it in
+  place. Publish a higher version tag with a fixed artifact.
+- If update metadata is wrong, ship a higher version with corrected metadata;
+  do not delete or rebuild a public release.
+- If `release:signing:gate` or a platform-specific signing gate fails, keep
+  the affected platform on the documented unsigned path. For macOS, stay on
+  manual update downloads and do not set
+  `NEXUS_MAC_AUTO_UPDATE_MODE=electron-updater` until the macOS gate passes in
+  CI. For Windows, keep the SmartScreen caveat visible until the Windows gate
+  passes with real signing prerequisites.
+
+For first-run validation evidence, attach a local doctor report from:
+
+```bash
+npm run doctor -- --json
+```
+
+Use `--skip-network` in offline CI when you only need repository/runtime
+shape. The JSON report records check status and repair hints, not API Key
+values, chat content, model output, or provider secrets.
+
+For the focused first-run/model-repair gate, run:
+
+```bash
+npm run verify:first-run
+```
+
+This does not replace `npm run verify:release` or packaged smoke; it is the
+fast M1 gate for doctor JSON privacy, model preflight, onboarding repair,
+first-conversation timing, startup reports, and locale coverage.
+
 ---
 
 ## Flow

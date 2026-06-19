@@ -27,6 +27,10 @@ export function useMcpServerSync(mcpServers: McpServerConfig[] | undefined) {
       })),
     )
     if (signature === lastSignatureRef.current) return
+    if (list.length === 0 && lastSignatureRef.current === '') {
+      lastSignatureRef.current = signature
+      return
+    }
     lastSignatureRef.current = signature
 
     void bridge.mcpSyncServers({ servers: list }).catch((error: unknown) => {

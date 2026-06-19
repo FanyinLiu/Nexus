@@ -13,9 +13,14 @@ import {
 } from '../src/lib/storage/lorebooks.ts'
 import {
   loadOnboardingCompleted,
+  markOnboardingFirstConversationCompleted,
   normalizeOnboardingState,
   saveOnboardingCompleted,
 } from '../src/lib/storage/onboarding.ts'
+import {
+  loadFirstConversationTelemetryStatus,
+  recordFirstConversationTelemetry,
+} from '../src/features/onboarding/firstConversationTelemetry.ts'
 import {
   CHAT_STORAGE_KEY,
   DEBUG_CONSOLE_EVENTS_STORAGE_KEY,
@@ -33,7 +38,7 @@ function createLocalStorageMock(initial: Record<string, string> = {}) {
   }
 }
 
-function installStorage(initial: Record<string, string> = {}) {
+function installStorage(initial: Record<string, string> = {}, desktopPet?: Record<string, unknown>) {
   const localStorage = createLocalStorageMock(initial)
   Object.defineProperty(globalThis, 'window', {
     value: {
@@ -43,6 +48,7 @@ function installStorage(initial: Record<string, string> = {}) {
         return 1
       },
       clearTimeout: () => {},
+      ...(desktopPet ? { desktopPet } : {}),
     },
     configurable: true,
     writable: true,
@@ -133,6 +139,21 @@ test('normalizeOnboardingState requires a real completion timestamp', () => {
   assert.deepEqual(normalizeOnboardingState({ completedAt: '2026-06-04T09:00:00Z' }), {
     completedAt: '2026-06-04T09:00:00.000Z',
   })
+  assert.deepEqual(normalizeOnboardingState({
+    completedAt: '2026-06-04T09:00:00Z',
+    firstConversationAt: '2026-06-04T09:03:15.500Z',
+    firstConversationElapsedMs: 999,
+  }), {
+    completedAt: '2026-06-04T09:00:00.000Z',
+    firstConversationAt: '2026-06-04T09:03:15.500Z',
+    firstConversationElapsedMs: 195500,
+  })
+  assert.deepEqual(normalizeOnboardingState({
+    completedAt: '2026-06-04T09:00:00Z',
+    firstConversationAt: 'bad',
+  }), {
+    completedAt: '2026-06-04T09:00:00.000Z',
+  })
   assert.equal(normalizeOnboardingState({ completedAt: 'yes' }), null)
   assert.equal(normalizeOnboardingState(true), null)
 })
@@ -160,11 +181,135 @@ test('loadOnboardingCompleted compacts valid state and removes invalid explicit 
 test('saveOnboardingCompleted writes or removes the explicit completion flag', () => {
   const storage = installStorage()
 
-  saveOnboardingCompleted(true)
-  assert.equal(normalizeOnboardingState(JSON.parse(storage.getItem(ONBOARDING_STORAGE_KEY) ?? '{}')) !== null, true)
+  saveOnboardingCompleted(true, new Date('2026-06-04T09:00:00Z'))
+  assert.deepEqual(normalizeOnboardingState(JSON.parse(storage.getItem(ONBOARDING_STORAGE_KEY) ?? '{}')), {
+    completedAt: '2026-06-04T09:00:00.000Z',
+  })
 
   saveOnboardingCompleted(false)
   assert.equal(storage.getItem(ONBOARDING_STORAGE_KEY), null)
+})
+
+test('onboarding storage mirrors low-risk completion state to local data bridge', () => {
+  const mirrorCalls: unknown[] = []
+  const storage = installStorage({}, {
+    localDataMirrorOnboarding: (payload: unknown) => {
+      mirrorCalls.push(payload)
+      return Promise.resolve({ ok: true })
+    },
+  })
+
+  saveOnboardingCompleted(true, new Date('2026-06-04T09:00:00Z'))
+  assert.deepEqual(mirrorCalls.at(-1), {
+    state: {
+      completedAt: '2026-06-04T09:00:00.000Z',
+    },
+  })
+
+  markOnboardingFirstConversationCompleted(new Date('2026-06-04T09:04:59Z'))
+  assert.deepEqual(mirrorCalls.at(-1), {
+    state: {
+      completedAt: '2026-06-04T09:00:00.000Z',
+      firstConversationAt: '2026-06-04T09:04:59.000Z',
+      firstConversationElapsedMs: 299000,
+    },
+  })
+  assert.deepEqual(JSON.parse(storage.getItem(ONBOARDING_STORAGE_KEY) ?? '{}'), {
+    completedAt: '2026-06-04T09:00:00.000Z',
+    firstConversationAt: '2026-06-04T09:04:59.000Z',
+    firstConversationElapsedMs: 299000,
+  })
+
+  saveOnboardingCompleted(false)
+  assert.deepEqual(mirrorCalls.at(-1), {})
+})
+
+test('markOnboardingFirstConversationCompleted records elapsed time once', () => {
+  const storage = installStorage({
+    [ONBOARDING_STORAGE_KEY]: JSON.stringify({ completedAt: '2026-06-04T09:00:00Z' }),
+  })
+
+  const first = markOnboardingFirstConversationCompleted(new Date('2026-06-04T09:04:59Z'))
+
+  assert.equal(first?.recorded, true)
+  assert.deepEqual(first?.state, {
+    completedAt: '2026-06-04T09:00:00.000Z',
+    firstConversationAt: '2026-06-04T09:04:59.000Z',
+    firstConversationElapsedMs: 299000,
+  })
+
+  const second = markOnboardingFirstConversationCompleted(new Date('2026-06-04T10:00:00Z'))
+  assert.equal(second?.recorded, false)
+  assert.deepEqual(JSON.parse(storage.getItem(ONBOARDING_STORAGE_KEY) ?? '{}'), first?.state)
+})
+
+test('saveOnboardingCompleted preserves existing first-run telemetry on repeated saves', () => {
+  const storage = installStorage({
+    [ONBOARDING_STORAGE_KEY]: JSON.stringify({
+      completedAt: '2026-06-04T09:00:00Z',
+      firstConversationAt: '2026-06-04T09:04:00Z',
+    }),
+  })
+
+  saveOnboardingCompleted(true, new Date('2026-06-05T09:00:00Z'))
+
+  assert.deepEqual(JSON.parse(storage.getItem(ONBOARDING_STORAGE_KEY) ?? '{}'), {
+    completedAt: '2026-06-04T09:00:00.000Z',
+    firstConversationAt: '2026-06-04T09:04:00.000Z',
+    firstConversationElapsedMs: 240000,
+  })
+})
+
+test('recordFirstConversationTelemetry classifies the five-minute target', () => {
+  installStorage()
+  saveOnboardingCompleted(true, new Date('2026-06-04T09:00:00Z'))
+
+  const telemetry = recordFirstConversationTelemetry(new Date('2026-06-04T09:04:00Z'))
+
+  assert.deepEqual(telemetry, {
+    completedAt: '2026-06-04T09:00:00.000Z',
+    firstConversationAt: '2026-06-04T09:04:00.000Z',
+    elapsedMs: 240000,
+    targetMinutes: 5,
+    withinTarget: true,
+  })
+  assert.equal(recordFirstConversationTelemetry(new Date('2026-06-04T09:06:00Z')), null)
+
+  installStorage()
+  saveOnboardingCompleted(true, new Date('2026-06-04T09:00:00Z'))
+  assert.deepEqual(recordFirstConversationTelemetry(new Date('2026-06-04T09:06:00Z')), {
+    completedAt: '2026-06-04T09:00:00.000Z',
+    firstConversationAt: '2026-06-04T09:06:00.000Z',
+    elapsedMs: 360000,
+    targetMinutes: 5,
+    withinTarget: false,
+  })
+})
+
+test('loadFirstConversationTelemetryStatus summarizes stored first-run timing', () => {
+  installStorage()
+
+  assert.deepEqual(loadFirstConversationTelemetryStatus(), {
+    status: 'not_recorded',
+    targetMinutes: 5,
+  })
+
+  saveOnboardingCompleted(true, new Date('2026-06-04T09:00:00Z'))
+  assert.deepEqual(loadFirstConversationTelemetryStatus(), {
+    status: 'pending',
+    completedAt: '2026-06-04T09:00:00.000Z',
+    targetMinutes: 5,
+  })
+
+  recordFirstConversationTelemetry(new Date('2026-06-04T09:04:00Z'))
+  assert.deepEqual(loadFirstConversationTelemetryStatus(), {
+    status: 'met',
+    completedAt: '2026-06-04T09:00:00.000Z',
+    firstConversationAt: '2026-06-04T09:04:00.000Z',
+    elapsedMs: 240000,
+    targetMinutes: 5,
+    withinTarget: true,
+  })
 })
 
 test('normalizeLorebookEntries keeps drafts but stabilizes malformed fields and duplicate ids', () => {

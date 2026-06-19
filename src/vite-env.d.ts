@@ -209,6 +209,165 @@ type ModelProgressEvent = {
   message?: string
 }
 
+type LocalDataStatus = {
+  initialized: boolean
+  healthy: boolean
+  backend: 'sqlite'
+  schemaVersion: number
+  targetSchemaVersion: number
+  migrationCount: number
+  lastMigrationId: string | null
+  storageDirectoryName: 'local-data'
+  errorKind: string | null
+  errorMessage: string | null
+}
+
+type LocalDataOnboardingMirrorState = {
+  completedAt: string
+  firstConversationAt?: string
+  firstConversationElapsedMs?: number
+}
+
+type LocalDataOnboardingMirrorResult = {
+  ok: boolean
+  domainId: 'onboarding'
+  recordId: 'state'
+  mirrored: boolean
+  deleted: boolean
+  schemaVersion?: number
+  errorKind: string | null
+  errorMessage: string | null
+}
+
+type LocalDataChatMigrationMessage = {
+  id: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  createdAt: string
+  tone?: 'neutral' | 'error'
+  reasoning_content?: string
+  toolResult?: unknown
+}
+
+type LocalDataChatMigrationSession = {
+  id: string
+  startedAt: number
+  lastActiveAt: number
+  title?: string
+  messages: LocalDataChatMigrationMessage[]
+}
+
+type LocalDataChatMigrationPackage = {
+  schemaVersion: 1
+  createdAt: string
+  source: {
+    sessionsKeyPresent: boolean
+    legacyFlatChatKeyPresent: boolean
+    legacyFlatChatUsed: boolean
+  }
+  dryRunReport?: unknown
+  sessions: LocalDataChatMigrationSession[]
+}
+
+type LocalDataChatMigrationApplyResult = {
+  ok: boolean
+  targetDomainId: 'chat-sessions'
+  schemaVersion?: number
+  sessionCount?: number
+  messageCount?: number
+  payloadBytes?: number
+  legacyFlatChatUsed?: boolean
+  requiresConfirmation?: boolean
+  writesData?: boolean
+  applied: boolean
+  recordsWritten: number
+  auditRecordId: string | null
+  errorKind: string | null
+  errorMessage: string | null
+}
+
+type LocalDataChatMigrationRollbackResult = {
+  ok: boolean
+  targetDomainId: 'chat-sessions'
+  recordsDeleted: number
+  auditRecordId: string | null
+  errorKind: string | null
+  errorMessage: string | null
+}
+
+type LocalDataChatMigrationStatusResult = {
+  ok: boolean
+  targetDomainId: 'chat-sessions'
+  schemaVersion?: number
+  recordCount: number
+  messageCount: number
+  recordPayloadsIncluded: false
+  lastAuditRecordId: string | null
+  lastAuditAction: 'chat-sessions-migration-applied' | 'chat-sessions-migration-rolled-back' | null
+  lastAuditAt: string | null
+  errorKind: string | null
+  errorMessage: string | null
+}
+
+type LocalDataChatRuntimeMirrorResult = {
+  ok: boolean
+  targetDomainId: 'chat-sessions'
+  schemaVersion?: number
+  mirrored: boolean
+  deleted: boolean
+  recordsWritten: number
+  recordsDeleted: number
+  messageCount: number
+  auditRecordId: string | null
+  errorKind: string | null
+  errorMessage: string | null
+}
+
+type LocalDataChatComparisonSourceSession = {
+  id: string
+  startedAt: number
+  lastActiveAt: number
+  messageCount: number
+  payloadBytes: number
+}
+
+type LocalDataChatComparisonSource = {
+  schemaVersion: 1
+  generatedAt: string
+  source: {
+    sessionsKeyPresent: boolean
+    legacyFlatChatKeyPresent: boolean
+    legacyFlatChatUsed: boolean
+  }
+  sessions: LocalDataChatComparisonSourceSession[]
+}
+
+type LocalDataChatComparisonResult = {
+  ok: boolean
+  targetDomainId: 'chat-sessions'
+  schemaVersion?: number
+  compared: boolean
+  recordPayloadsIncluded: false
+  status: 'aligned' | 'differences' | 'empty' | 'blocked'
+  sourceSessionCount: number
+  sqliteSessionCount: number
+  matchedRecordCount: number
+  metadataAlignedRecordCount: number
+  metadataMismatchCount: number
+  missingSqliteRecordCount: number
+  extraSqliteRecordCount: number
+  malformedSqliteRecordCount: number
+  sourceMessageCount: number
+  sqliteMessageCount: number
+  messageCountDelta: number
+  sourcePayloadBytes: number
+  sqlitePayloadBytes: number
+  issueCodes: string[]
+  auditRecordId: string | null
+  errorKind: string | null
+  errorMessage: string | null
+}
+
 declare global {
   interface Window {
     desktopPet?: {
@@ -386,6 +545,35 @@ declare global {
       mcpListTools: (payload?: { id: string }) => Promise<McpToolDescriptor[]>
       mcpCallTool: (payload: { serverId?: string; name: string; arguments?: Record<string, unknown> }) => Promise<unknown>
       mcpSyncServers: (payload: { servers: Array<{ id: string; label?: string; command: string; args?: string; enabled: boolean }> }) => Promise<McpHostStatus[]>
+
+      // External action permission policy
+      externalActionPolicyGet: () => Promise<Record<'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp', 'read-only' | 'confirm' | 'auto'>>
+      externalActionPolicySync: (payload: {
+        policies: Record<'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp', {
+          mode: 'read-only' | 'confirm' | 'auto'
+          active?: boolean
+        }>
+      }) => Promise<{
+        policy: Record<'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp', 'read-only' | 'confirm' | 'auto'>
+        changes: Array<{ integration: string; from: string; to: string; active: boolean }>
+        rejected: Array<{ integration: string; from: string; to: string; active: boolean }>
+      }>
+      localDataStatus: () => Promise<LocalDataStatus>
+      localDataMirrorOnboarding: (payload?: { state?: LocalDataOnboardingMirrorState }) => Promise<LocalDataOnboardingMirrorResult>
+      localDataChatMigrationStatus: () => Promise<LocalDataChatMigrationStatusResult>
+      localDataMirrorChatSession: (payload: {
+        confirmed: boolean
+        session: LocalDataChatMigrationSession
+      }) => Promise<LocalDataChatRuntimeMirrorResult>
+      localDataCompareChatSessions: (payload: {
+        confirmed: boolean
+        source: LocalDataChatComparisonSource
+      }) => Promise<LocalDataChatComparisonResult>
+      localDataApplyChatMigration: (payload: {
+        confirmed: boolean
+        migrationPackage: LocalDataChatMigrationPackage
+      }) => Promise<LocalDataChatMigrationApplyResult>
+      localDataRollbackChatMigration: (payload: { confirmed: boolean }) => Promise<LocalDataChatMigrationRollbackResult>
 
       // Plugin Host
       pluginScan: () => Promise<PluginStatus[]>
@@ -661,7 +849,8 @@ declare global {
       // Proactive OS-level notification ("[name] 在想你")
       showProactiveNotification: (payload: { title: string; body: string }) => Promise<{ ok: boolean }>
 
-      // Key vault (safeStorage encryption)
+      // Key vault (safeStorage encryption). Retrieval returns opaque
+      // nexus-vault-ref tokens; plaintext is resolved only in the main process.
       vaultIsAvailable: () => Promise<boolean>
       vaultStore: (slot: string, plaintext: string) => Promise<void>
       vaultRetrieve: (slot: string) => Promise<string>
@@ -675,11 +864,15 @@ declare global {
         ok: boolean
         currentVersion: string
         latestVersion?: string | null
+        updateMode?: string | null
+        manualDownload?: boolean
+        releaseUrl?: string | null
         reason?: string
       }>
       updaterStatus: () => Promise<{
         currentVersion: string
         isPackaged: boolean
+        updateMode?: string | null
         last: import('./features/updater').UpdaterEvent
       }>
       updaterInstall: () => Promise<boolean>

@@ -1,2 +1,4 @@
 export * from './providerCatalog.ts'
 export * from './discovery.ts'
+export * from './connectionPreflight.ts'
+export * from './connectionRepair.ts'

@@ -11,6 +11,8 @@ const ollamaBaseUrl = (process.env.NEXUS_OLLAMA_BASE_URL || 'http://127.0.0.1:11
 const defaultOllamaModel = process.env.NEXUS_OLLAMA_MODEL || 'qwen3:8b'
 const rawProviderMode = getFlagValue('--provider') || process.env.NEXUS_DOCTOR_PROVIDER || 'auto'
 const providerMode = normalizeProviderMode(rawProviderMode)
+const jsonMode = hasFlag('--json') || getFlagValue('--format') === 'json'
+const skipNetwork = hasFlag('--skip-network') || process.env.NEXUS_DOCTOR_SKIP_NETWORK === '1'
 
 const counters = {
   ok: 0,
@@ -18,9 +20,18 @@ const counters = {
   error: 0,
   info: 0,
 }
+const checks = []
 
 function print(status, title, detail = '') {
   counters[status] += 1
+  checks.push({
+    status,
+    title,
+    ...(detail ? { detail } : {}),
+  })
+
+  if (jsonMode) return
+
   const tag = {
     ok: 'OK',
     warn: 'WARN',
@@ -32,6 +43,10 @@ function print(status, title, detail = '') {
   if (detail) {
     console.log(`     ${detail}`)
   }
+}
+
+function hasFlag(name) {
+  return process.argv.includes(name)
 }
 
 function readJson(filePath) {
@@ -79,6 +94,11 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 1800) {
 }
 
 async function checkPreviewServer() {
+  if (skipNetwork) {
+    print('info', 'Nexus 预览服务检查已跳过', `预览地址应是 ${previewUrl}。`)
+    return
+  }
+
   try {
     const response = await fetchWithTimeout(previewUrl, { method: 'HEAD' })
     if (response.ok) {
@@ -98,6 +118,11 @@ async function checkPreviewServer() {
 async function checkOllama() {
   const missingSeverity = providerMode === 'deepseek' || isDeepSeekConfigured() ? 'info' : 'warn'
   const modelsUrl = `${ollamaBaseUrl}/models`
+  if (skipNetwork) {
+    print('info', 'Ollama API 检查已跳过', `如需本地模型，请确认 ${modelsUrl} 可访问并已安装 ${defaultOllamaModel}。`)
+    return
+  }
+
   try {
     const response = await fetchWithTimeout(modelsUrl)
     if (!response.ok) {
@@ -179,7 +204,7 @@ function checkDependencies() {
 
 function checkDeepSeekHint() {
   if (isDeepSeekConfigured()) {
-    print('ok', 'DeepSeek 环境变量存在', '应用内仍会优先使用设置页保存的 API Key。')
+    print('ok', 'DeepSeek 环境变量存在', '仅记录存在状态；应用内仍会优先使用设置页保存的 API Key。')
     return
   }
 
@@ -190,8 +215,10 @@ function checkDeepSeekHint() {
   )
 }
 
-console.log('Nexus Doctor')
-console.log('-------------')
+if (!jsonMode) {
+  console.log('Nexus Doctor')
+  console.log('-------------')
+}
 
 if (providerMode !== rawProviderMode) {
   print('warn', '未知文本路径参数', `收到 --provider=${rawProviderMode}，已回退到 auto。可用值：auto、ollama、deepseek。`)
@@ -205,8 +232,36 @@ await checkPreviewServer()
 await checkOllama()
 checkDeepSeekHint()
 
-console.log('-------------')
-console.log(`Summary: ${counters.ok} ok, ${counters.warn} warnings, ${counters.error} errors, ${counters.info} info`)
+if (jsonMode) {
+  console.log(JSON.stringify({
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    repoRoot,
+    mode: {
+      provider: providerMode,
+      skipNetwork,
+      previewUrl,
+      ollamaBaseUrl,
+      defaultOllamaModel,
+    },
+    runtime: {
+      node: process.version,
+      platform: process.platform,
+      arch: process.arch,
+    },
+    summary: counters,
+    checks,
+    privacy: {
+      includesApiKeys: false,
+      includesMessageContent: false,
+      includesModelOutput: false,
+      includesProviderSecrets: false,
+    },
+  }, null, 2))
+} else {
+  console.log('-------------')
+  console.log(`Summary: ${counters.ok} ok, ${counters.warn} warnings, ${counters.error} errors, ${counters.info} info`)
+}
 
 if (counters.error > 0) {
   process.exitCode = 1

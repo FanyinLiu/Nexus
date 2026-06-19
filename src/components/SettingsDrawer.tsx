@@ -62,6 +62,7 @@ import { useConfirm } from './useConfirm.ts'
 import { PetControlIcon } from './PetControlIcon.tsx'
 import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
 import { buildSettingsSectionMeta } from './settingsDrawerMetadata.ts'
+import { applyConnectionTestRepairDraft } from '../features/models/connectionRepair.ts'
 import type {
   AppSettings,
   DailyMemoryEntry,
@@ -399,6 +400,9 @@ export function SettingsDrawer({
     draft,
     onTestConnection,
     handleLoadSpeechVoices: speechVoices.handleLoadSpeechVoices,
+    onApplyTextConnectionRepair: (repair) => {
+      setDraft((current) => applyConnectionTestRepairDraft(current, repair))
+    },
   })
 
   const { confirm, confirmOptions, handleConfirm, handleCancel } = useConfirm()

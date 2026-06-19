@@ -14,6 +14,7 @@ import { loadRelevantSkills, shouldGenerateSkill, generateAndSaveSkill } from '.
 import { matchCoreSkills } from '../../lib/coreRuntime.ts'
 import { captureUserAffectSample } from '../../features/autonomy/userAffectTimeline.ts'
 import { userMoodReadToEmotionSignal, userMoodReadToVAD } from '../../features/autonomy/emotionModel.ts'
+import { recordFirstConversationTelemetry } from '../../features/onboarding/firstConversationTelemetry.ts'
 import { PUBLIC_GESTURE_NAMES } from '../../features/pet/models.ts'
 import {
   PerformanceTagStreamFilter,
@@ -554,6 +555,20 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       }
 
       dependencies.appendChatMessage(assistantMessage)
+      if (source === 'text' || source === 'voice') {
+        const firstConversationTelemetry = recordFirstConversationTelemetry(new Date(assistantMessage.createdAt))
+        if (firstConversationTelemetry) {
+          const elapsedSeconds = Math.round(firstConversationTelemetry.elapsedMs / 1000)
+          dependencies.ctx.appendDebugConsoleEvent({
+            source: 'system',
+            title: firstConversationTelemetry.withinTarget
+              ? 'First conversation target met'
+              : 'First conversation target missed',
+            detail: `First assistant reply arrived after ${elapsedSeconds}s; target is ${firstConversationTelemetry.targetMinutes}min.`,
+            tone: firstConversationTelemetry.withinTarget ? 'success' : 'warning',
+          })
+        }
+      }
       try {
         // Bridge listeners (Telegram/Discord auto-reply) hang off this; their
         // failures must never break the chat turn itself.

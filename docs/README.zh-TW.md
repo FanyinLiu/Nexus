@@ -4,7 +4,7 @@
 
 <p align="center"><b>本地優先的桌面 AI 夥伴，具備記憶、語音、Live2D 和長期關係狀態。</b></p>
 
-<p align="center">Nexus 關注的是連續性：夥伴會記住真正重要的事，感知關係如何變化，透過桌寵形態陪在桌面上，也能替你處理一些輕量後台任務。模型請求由你選擇的 provider 承擔；記憶、語音編排、工具和安全狀態都留在本機。</p>
+<p align="center">Nexus 關注的是連續性：夥伴會記住真正重要的事，感知關係如何變化，透過桌寵形態陪在桌面上，並在你明確授權時提供輕量協助。模型請求由你選擇的 provider 承擔；記憶、語音編排、工具和安全狀態都留在本機。</p>
 
 <p align="center">
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/github/v/release/FanyinLiu/Nexus?style=flat-square&color=blue&label=release" alt="Release"></a>
@@ -24,11 +24,15 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **目前版本：** v0.3.2 穩定版。Nexus 現在已可日常使用，但仍是快速迭代中的個人專案；打包、本地語音模型和 provider 設定上，可能還有一些不夠順滑、需要手動處理的地方。
+> **目前版本：** v0.3.5 穩定版。Nexus 會繼續收斂到「本地優先的桌面陪伴」；此版本重點是首次啟動修復、發布信任、IPC 安全，以及聊天記憶的本地可控遷移預演。
 
 > **開發範圍提示：** 這份多語 README 保留的是長期能力清單。當前短期開發以根目錄 [README](../README.md) 和 [Nexus 升級整合計畫](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 為準：Phase 1 只收斂桌面常駐小視窗、極簡頭像、Ollama / DeepSeek 文字模型和簡單對話。
 
 ---
+
+## 本次更新 — v0.3.5
+
+> **替會陪伴、會記住的 Nexus 打地基。** 這版不把 Nexus 做成替你工作的 Codex 式智能體，而是補上陪伴體驗需要的底層信任：首次啟動和模型連線更容易修復，發布/更新狀態更清楚，IPC、權限、密鑰和稽核邊界更硬；聊天記憶開始進入主行程 SQLite 的隱藏遷移預演。現有聊天仍以 localStorage 為權威來源，不會被刪除；隱藏預演可以 dry-run、備份、套用、回滾、執行時鏡像和中繼資料對帳。完整說明見 [RELEASE-NOTES-v0.3.5.md](RELEASE-NOTES-v0.3.5.md)（英文）。
 
 ## 本次更新 — v0.3.4-beta.4（預發布）
 
@@ -311,7 +315,7 @@ npm run package:win     # 或 package:mac / package:linux
 ### 待升級
 
 - [ ] **螢幕感知主動對話** — 定期讀取螢幕上下文（前台應用、可見文字），主動發起與你正在做的事相關的對話，而不僅僅是被動回應。
-- [ ] **決策 / 角色扮演 / 後台任務三層分離** — 將意圖分類（快速）、角色扮演（保持人設純淨）和後台任務執行分開。角色扮演層永遠看不到工具元資料；任務結果由角色以自己的聲音「轉述」。
+- [ ] **意圖 / 角色 / 授權協助三層分離** — 將輕量意圖判斷、角色表達和使用者確認後的輔助動作分開。角色層永遠看不到工具元資料；協助結果由夥伴以自己的聲音「轉述」。
 - [ ] **角色日記與自主時間線** — 夥伴每天自動生成第一人稱日記，記錄當天發生了什麼；可選發布「動態」到可瀏覽的時間線，營造獨立生活的感覺。
 - [ ] **日程表與活動狀態** — 夥伴遵循日常作息（工作 / 吃飯 / 睡覺 / 通勤），影響可用性、語氣和精力。深夜對話和早晨對話感覺不同。
 - [ ] **Mini 模式 / 停靠隱藏** — 把角色拖到螢幕邊緣，自動隱藏並在懸停時探頭。「一直在，但不打擾。」

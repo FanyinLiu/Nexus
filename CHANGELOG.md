@@ -4,9 +4,55 @@
 > is the high-level summary suitable for "what changed since last release"
 > at a glance. Beta versions are listed under their target stable release.
 
-## [Unreleased] - 2026-04-30
+## [Unreleased]
+
+- No changes yet.
+
+## [0.3.5] - 2026-06-19
 
 ### Fixed
+- **Model setup preflight guidance** — first-run and settings connection tests
+  now catch common Ollama, DeepSeek, and custom OpenAI-compatible configuration
+  mistakes before making a request, including missing Ollama `/v1`, missing
+  local model names, and provider-specific default URL/model guidance. The
+  onboarding text-model step now reuses the same repair guidance while still
+  allowing users to save first when only a cloud API key is missing, and renders
+  the issue separately from the recommended repair action. For safe built-in
+  provider fixes, onboarding can now apply the recommended Base URL/model
+  defaults without touching API keys, rerun local preflight after the repair,
+  and continue catching endpoint/model issues even when the cloud key is still
+  blank. The real connection-test surfaces in onboarding and Settings now share
+  the same safe repair action after runtime failures such as provider
+  misconfiguration or local-model mismatch, while API keys and custom endpoints
+  remain manual. If local Ollama refuses the connection or times out, Nexus now
+  points users to starting Ollama, checking `http://127.0.0.1:11434/v1`, and
+  pulling `qwen3:8b` when no local model is installed. The final onboarding
+  wake-up checklist now makes the "first conversation within 5 minutes" target
+  visible and classifies the current setup as ready, degraded-but-startable, or
+  blocked; it only marks the text model ready after the current onboarding
+  draft passes a real connection test, and clears that verified state when the
+  provider, endpoint, model, key, or repair patch changes. After onboarding is
+  completed, the first direct text/voice assistant reply now records local
+  first-conversation timing telemetry and a Debug Console system event without
+  storing message content or secrets; re-saving onboarding preserves that
+  first-run timing state instead of resetting it. The Settings startup status
+  check now surfaces whether first-conversation timing is pending, met, missed,
+  or unavailable for older profiles, and can download a local first-run QA
+  report with launch checks and timing evidence while excluding chat content,
+  model output, API keys, and provider secrets. `npm run doctor -- --json`
+  now emits a structured local startup report for release QA and support
+  evidence, with `--skip-network` available for offline CI. `npm run
+  verify:first-run` now runs the focused M1 gate across doctor JSON privacy,
+  connection preflight, onboarding repair, first-conversation timing, startup
+  reports, and locale coverage.
+- **Korean startup greeting placeholder** — fixed a locale placeholder mismatch
+  so `npm run i18n:audit` passes cleanly across all five locales.
+- **Dependency audit baseline** — refreshed vulnerable npm lockfile entries and
+  bumped direct `esbuild` usage to the fixed `^0.28.1` line; both
+  `npm audit --omit=dev` and full `npm audit` now report 0 vulnerabilities.
+- **Chat hook lint baseline** — `useChat` now declares its stable
+  `currentSessionIdRef` dependency in the returned memo bag, clearing the
+  remaining `react-hooks/exhaustive-deps` warning.
 - **Onboarding Edge TTS validation** — the voice setup step no longer blocks
   keyless Edge TTS because an API endpoint field is intentionally hidden.
 - **Notification bridge RSS intervals** — RSS channels now normalize
@@ -23,6 +69,136 @@
 - **Lint cleanup** — removed a stale `eslint-disable` from the app controller.
 
 ### Changed
+- **v1.0 roadmap and architecture baseline** — ROADMAP and ARCHITECTURE now
+  document the 2026-06-18 stabilization track: first-run reliability, release
+  trust, IPC contracts, main-process storage/SQLite, white-box memory, desktop
+  presence, voice budgets, local RAG, authorized tasks, and gated MCP/plugins.
+- **Release trust posture** — added `npm run release:trust:audit` and wired it
+  into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
+  assumptions are checked against release docs. The current macOS unsigned
+  build is now documented and implemented as a manual-update-download path until
+  Developer ID signing and notarization are enabled; it checks GitHub Releases
+  and opens the release page instead of attempting an untrusted auto-install.
+  Release CI now prints a non-blocking signed macOS/Windows readiness report,
+  with `npm run release:signing:gate` reserved as the future all-platform hard
+  gate and platform-specific gates available for macOS and Windows bring-up
+  before enabling signed updates.
+- **IPC contract baseline** — added `npm run ipc:audit` and wired it into
+  `npm run distribution:audit`. The new source-only report inventories preload
+  invokes, subscriptions, main-process handlers, trusted-sender coverage,
+  payload validation posture, risk classes, and current audit/permission gaps
+  without reading user data, keychain state, environment variables, or secret
+  values.
+- **File IPC hardening** — `file:save-text` and `file:open-text` now validate
+  request payloads before opening native dialogs and write metadata-only audit
+  records for file save/open requests and outcomes without logging file content
+  or full local paths.
+- **Desktop context audit** — `desktop-context:get` now writes metadata-only
+  audit records for requested/allowed/enabled active-window, clipboard, and
+  screenshot access, plus returned category lengths, without logging captured
+  window titles, clipboard text, screenshot data URLs, display names, or process
+  paths.
+- **External action audit** — Telegram/Discord sends, Minecraft/Factorio
+  command execution, and MCP call/sync IPC now write metadata-only request and
+  result audit records without logging outbound text, audio payloads, commands,
+  target IDs, MCP command text, tool names, or tool arguments.
+- **External action permission gate** — Telegram/Discord sends,
+  Minecraft/Factorio command execution, and MCP call/sync IPC now pass through
+  a main-process read-only/confirm/auto policy. Active auto-mode escalation
+  requires native confirmation, while renderer policy sync sends only mode plus
+  active/configured booleans.
+- **Pet model IPC hardening** — pet-model import/create/assemble/install/open
+  IPC now validates local-artifact payloads, writes metadata-only audit records,
+  and requires native confirmation for direct renderer-triggered path, remote
+  import, install, and open-path operations without logging paths, URLs, slugs,
+  model names, or error text.
+- **Plugin IPC hardening** — plugin lifecycle and plugin bus write IPC now use
+  metadata-only audit records and native confirmation for execution-granting
+  lifecycle actions and bus publish/subscribe/unsubscribe without logging plugin
+  IDs, server IDs, topics, payload contents, commands, or error text.
+- **External link IPC audit** — `tool:open-external` now writes metadata-only
+  request/result audit records around the existing URL safety check and native
+  confirmation without logging full URLs, hostnames, paths, queries, fragments,
+  or error text.
+- **Vault IPC audit and permission contract** — vault availability, store,
+  retrieve, delete, list, store-many, and retrieve-many IPC now write
+  metadata-only audit records and expose an explicit secret-safe permission
+  boundary without logging slot names, plaintext secrets, vault ref tokens, or
+  error text.
+- **IPC payload warning cleanup** — integrations inspection, KWS start/status,
+  VAD start, model download, and TTS streaming lifecycle IPC now validate
+  renderer request shape, bringing `npm run ipc:audit` to 0 warnings / 0 errors.
+- **Main-process local-data foundation** — added a dependency-free
+  `json-ledger` storage adapter in the main process with schema versioning,
+  migration ledger, metadata-only export/import planning, rollback-by-rename,
+  startup initialization, and read-only `local-data:status` IPC. Existing chat,
+  memory, settings, and other renderer `localStorage` data remain authoritative.
+- **SQLite local-data backend** — added Electron/Node built-in `node:sqlite`
+  behind the main-process local-data adapter, creating
+  `userData/local-data/nexus.sqlite` with schema version `2`, migration
+  `0002-create-sqlite-local-data-foundation`, an empty domain registry,
+  `npm run sqlite:smoke`, an Electron SQLite smoke script, release CI smoke
+  coverage, and packaged smoke validation. Existing renderer `localStorage`
+  data is still authoritative; no chat or memory records are migrated in this
+  slice.
+- **Local-data domain registry mirror** — raised the local-data schema to
+  version `3` with migration
+  `0003-create-domain-records-and-onboarding-mirror`, added the generic
+  `local_data_records` table, registered the low-risk onboarding domain, and
+  mirrored normalized onboarding completion timing into SQLite through a
+  schema-validated `local-data:mirror-onboarding` IPC. Renderer localStorage
+  remains authoritative and mirror results do not return record payloads.
+- **Chat migration dry-run audit** — added a renderer-side, content-free
+  dry-run report for `nexus:chat:sessions` and legacy `nexus:chat`. The report
+  captures counts, byte estimates, role distribution, time range, and migration
+  issue codes without mutating localStorage, sending raw chat content over IPC,
+  or creating SQLite chat records.
+- **Confirmed chat migration service path** — added a service-only path that
+  builds normalized chat migration packages, validates content-bearing packages
+  in the main-process local-data service, requires explicit confirmation before
+  writes, stores chat sessions under the `chat-sessions` domain, records
+  content-free `local-data-audit` events, and rolls back only chat-session
+  records. This path is not exposed through production IPC/UI yet.
+- **Disabled chat migration IPC boundary** — added feature-flagged
+  `local-data:chat-migration-apply` and
+  `local-data:chat-migration-rollback` IPC/preload methods. They are disabled
+  unless `NEXUS_ENABLE_LOCAL_DATA_CHAT_MIGRATION=1`, require trusted sender
+  checks, schema validation, explicit confirmation, high-risk IPC audit
+  coverage, and return only status/count metadata.
+- **Hidden chat migration preview panel** — added a developer-only Settings
+  history panel behind `VITE_NEXUS_ENABLE_LOCAL_DATA_CHAT_MIGRATION_UI=1`.
+  It reads the content-free dry-run summary, shows aggregate counts and issue
+  codes only, requires a checkbox plus confirmation dialog, and then calls the
+  already feature-flagged apply IPC path without reading SQLite chat records
+  back into the renderer.
+- **Hidden chat migration backup and rollback review** — the same developer-only
+  panel can now export a local `nexus-chat-migration-backup` JSON file that is
+  explicitly marked as containing full chat message content. It also exposes a
+  separate rollback review with its own checkbox and confirmation dialog before
+  calling the existing feature-flagged rollback IPC path.
+- **Metadata-only chat migration status** — added a disabled-by-default
+  `local-data:chat-migration-status` IPC/preload method and hidden Settings panel
+  section that reports only migrated SQLite record counts, stored message counts,
+  and last migration audit metadata. It carries no renderer payload and does not
+  return chat records, session IDs, titles, message text, or userData paths.
+- **M5 chat readback foundation** — added a service-only
+  `readChatLocalDataSessions()` path that lets the main process read and
+  normalize migrated SQLite `chat-sessions` records for tests and future storage
+  authority work. This content-bearing read path is not exposed through
+  preload/renderer IPC and does not change the live chat runtime yet.
+- **Hidden chat runtime SQLite mirror** — added a disabled-by-default current
+  chat session mirror behind `NEXUS_ENABLE_LOCAL_DATA_CHAT_MIGRATION=1`,
+  `VITE_NEXUS_ENABLE_LOCAL_DATA_CHAT_RUNTIME_MIRROR=1`, and explicit hidden
+  Settings consent. Renderer localStorage remains authoritative; mirror writes
+  are debounced, schema-validated, high-risk audited, and return only
+  counts/status metadata without reading SQLite chat records back into the UI.
+- **Hidden chat-memory SQLite comparison** — added a confirmed,
+  disabled-by-default comparison preview for companion chat memory storage. The
+  renderer
+  sends only local session metadata, the main process compares it with SQLite
+  metadata, writes a content-free audit record, and returns aggregate difference
+  counts without returning SQLite chat records, titles, message text, userData
+  paths, or session IDs to the UI.
 - **Realtime voice surface gated** — dormant OpenAI realtime voice preload/IPC
   APIs are hidden unless `NEXUS_ENABLE_REALTIME_VOICE=1` is set.
 - **Roadmap posture** — Nexus is now documented as an AI desktop companion
@@ -37,6 +213,26 @@
   separate helper loop.
 
 ### Added
+- **Milestone 2 design** — added
+  `docs/MILESTONE-2-RELEASE-TRUST-DESIGN-2026-06-19.md` to scope release
+  trust, signing/update limitations, rollback, and the first release-trust
+  audit slice.
+- **Milestone 3 design** — added
+  `docs/MILESTONE-3-IPC-PERMISSION-AUDIT-DESIGN-2026-06-19.md` to scope IPC
+  inventory, risk classification, trusted sender coverage, validation/audit
+  warning gaps, rollback, and the first M3 audit slice.
+- **Milestone 4 design** — added
+  `docs/MILESTONE-4-MAIN-PROCESS-STORAGE-DESIGN-2026-06-19.md` to scope the
+  main-process storage foundation, SQLite dependency deferral, migration ledger,
+  export/import scaffolding, rollback, and acceptance criteria.
+- **Milestone 1 design** — added
+  `docs/MILESTONE-1-FIRST-RUN-MODEL-REPAIR-DESIGN-2026-06-18.md` to scope the
+  first-run model repair loop, impact area, risks, rollback, and acceptance
+  criteria before implementation.
+- **Milestone 0 baseline audit** — added
+  `docs/MILESTONE-0-BASELINE-AUDIT-2026-06-18.md` with current structure,
+  dependency, IPC, storage, build, smoke, migration, rollback, and next-milestone
+  findings for the v1.0 upgrade path.
 - **Companion wake-up checklist** — onboarding now summarizes identity, text
   model, character model, and speech readiness before the desktop companion
   starts.

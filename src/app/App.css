@@ -3444,6 +3444,10 @@
   justify-items: start;
 }
 
+.settings-test-result__action {
+  margin-top: 10px;
+}
+
 .ai-disclosure-step {
   gap: 10px;
 }
@@ -3702,6 +3706,10 @@
   color: rgba(255, 255, 255, 0.58);
   font-size: 13px;
   line-height: 1.6;
+}
+
+.onboarding-readiness__timebox {
+  color: rgba(255, 255, 255, 0.78) !important;
 }
 
 .onboarding-readiness__list {

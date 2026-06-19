@@ -28,10 +28,11 @@ name: Release Build
 #                   release stays as a draft so you can inspect the
 #                   partial uploads and fix before going out.
 #
-# Neither the Windows nor macOS builds are code-signed — Gatekeeper /
-# SmartScreen will warn on first launch. Wire in Apple Developer ID and
-# Windows signing certificates as repo secrets when available and flip
-# signAndEditExecutable back on.
+# Neither the Windows nor macOS builds are code-signed today — Gatekeeper /
+# SmartScreen will warn on first launch. The preflight job prints a
+# non-blocking signing readiness report; the hard gates stay out of the default
+# release flow until Apple Developer ID and Windows signing prerequisites are
+# wired and verified.
 
 on:
   push:
@@ -138,8 +139,14 @@ jobs:
 
       - run: npm ci
 
+      - name: Run SQLite smoke
+        run: npm run sqlite:smoke
+
       - name: Run tag-safe pre-release gate
         run: npm run prerelease-check -- ${{ needs.ensure-release.outputs.tag }} --skip=A --quick
+
+      - name: Report signing readiness
+        run: npm run release:signing:readiness
 
   build:
     needs: [ensure-release, preflight]
@@ -195,6 +202,9 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: Run SQLite smoke
+        run: npm run sqlite:smoke
 
       - run: npm run build
         name: Vite build

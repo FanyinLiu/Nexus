@@ -25,6 +25,7 @@ import { runMacPermissionChecks } from './services/macPermissions.js'
 import { runWindowsPermissionChecks } from './services/windowsPermissions.js'
 import { initModelManager } from './services/modelManager.js'
 import { ensurePythonRuntimeStatus, getPythonRuntimeStatus } from './services/pythonRuntime.js'
+import { initializeLocalDataStore } from './services/localDataStore.js'
 
 // ── Console safety: suppress broken-pipe errors on stdout/stderr ──
 
@@ -344,6 +345,10 @@ initRendererServer({
 app.whenReady()
   .then(async () => {
     await ensureRendererServer()
+    const localDataStatus = await initializeLocalDataStore()
+    if (!localDataStatus.healthy) {
+      console.warn('[local-data] main-process storage adapter unavailable:', localDataStatus.errorMessage)
+    }
     registerMediaPermissionHandlers()
     registerIpc()
     initModelManager()

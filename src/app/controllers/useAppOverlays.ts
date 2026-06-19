@@ -20,7 +20,7 @@ import { setSettingsSnapshot } from '../store/settingsStore'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
-import { runConnectionPreflight } from '../../features/models/connectionPreflight'
+import { runTextConnectionTestPreflight } from '../../features/models/connectionPreflight'
 import type {
   AppSettings,
   DebugConsoleEvent,
@@ -386,7 +386,7 @@ export function useAppOverlays({
           }
         }
 
-        const preflightFail = runConnectionPreflight({
+        const preflightFail = runTextConnectionTestPreflight({
           providerId: draftSettings.apiProviderId,
           apiKey: draftSettings.apiKey,
           apiBaseUrl: draftSettings.apiBaseUrl,
@@ -482,7 +482,7 @@ export function useAppOverlays({
         return { ok: false, message: t('settings.test_connection.unsupported') }
       }
 
-      const preflightFail = runConnectionPreflight({
+      const preflightFail = runTextConnectionTestPreflight({
         providerId: draftSettings.apiProviderId,
         apiKey: draftSettings.apiKey,
         apiBaseUrl: draftSettings.apiBaseUrl,

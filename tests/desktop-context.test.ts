@@ -5,6 +5,10 @@ import {
   buildDesktopContextRequest,
   formatDesktopContext,
 } from '../src/features/context/desktopContext.ts'
+import {
+  summarizeDesktopContextRequest,
+  summarizeDesktopContextSnapshot,
+} from '../electron/ipc/desktopContextAudit.js'
 
 test('buildDesktopContextRequest keeps screenshots opt-in by default', () => {
   assert.deepEqual(buildDesktopContextRequest(), {
@@ -62,4 +66,68 @@ test('formatDesktopContext returns empty text when every observation is blank', 
     screenText: '',
     vlmAnalysis: null as unknown as string,
   }), '')
+})
+
+test('desktop context audit summaries exclude captured private content', () => {
+  const requestSummary = summarizeDesktopContextRequest({
+    includeActiveWindow: true,
+    includeClipboard: true,
+    includeScreenshot: true,
+  }, {
+    activeWindow: true,
+    clipboard: false,
+    screenshot: true,
+  })
+
+  assert.deepEqual(requestSummary, {
+    requested: {
+      activeWindow: true,
+      clipboard: true,
+      screenshot: true,
+    },
+    allowed: {
+      activeWindow: true,
+      clipboard: false,
+      screenshot: true,
+    },
+    enabled: {
+      activeWindow: true,
+      clipboard: false,
+      screenshot: true,
+    },
+  })
+
+  const snapshotSummary = summarizeDesktopContextSnapshot({
+    capturedAt: '2026-06-04T17:00:00.000Z',
+    activeWindowTitle: 'Secret document title',
+    activeWindowAppName: 'PrivateApp',
+    activeWindowProcessPath: '/Users/example/PrivateApp.app',
+    clipboardText: 'private clipboard contents',
+    displayName: 'Built-in Retina Display',
+    screenshotDataUrl: 'data:image/png;base64,abcdef',
+  })
+  const summaryText = JSON.stringify(snapshotSummary)
+
+  assert.deepEqual(snapshotSummary, {
+    capturedAtPresent: true,
+    activeWindow: {
+      present: true,
+      titleLength: 21,
+      appNameLength: 10,
+      processPathLength: 29,
+    },
+    clipboard: {
+      present: true,
+      textLength: 26,
+    },
+    screenshot: {
+      present: true,
+      dataUrlLength: 28,
+      displayNameLength: 23,
+    },
+  })
+  assert.doesNotMatch(summaryText, /Secret document title/)
+  assert.doesNotMatch(summaryText, /private clipboard contents/)
+  assert.doesNotMatch(summaryText, /data:image\/png/)
+  assert.doesNotMatch(summaryText, /PrivateApp\.app/)
 })

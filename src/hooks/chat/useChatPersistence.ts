@@ -4,9 +4,10 @@ import {
   inferSessionTitle,
   upsertChatSession,
 } from '../../lib'
-import { saveChatMessages, takePendingGreeting } from '../../lib/storage'
+import { mirrorChatSessionToLocalData, saveChatMessages, takePendingGreeting } from '../../lib/storage'
 import { getCoreRuntime } from '../../lib/coreRuntime'
 import type { ChatMessage } from '../../types'
+import type { ChatSession } from '../../lib/storage'
 
 function messagesSignature(msgs: ChatMessage[]): string {
   if (!msgs.length) return '0:'
@@ -27,6 +28,8 @@ export function useChatPersistence({
   const mirroredMessageIdsRef = useRef<Set<string>>(new Set())
   const messagesSaveSkipRef = useRef(true)
   const lastSavedMessagesSignatureRef = useRef<string>('')
+  const runtimeMirrorTimerRef = useRef<number | null>(null)
+  const pendingRuntimeMirrorSessionRef = useRef<ChatSession | null>(null)
 
   const applyRemoteMessages = useCallback((next: ChatMessage[]) => {
     messagesSaveSkipRef.current = true
@@ -47,14 +50,35 @@ export function useChatPersistence({
     }
     lastSavedMessagesSignatureRef.current = signature
 
-    saveChatMessages(messages)
-    upsertChatSession({
+    const title = inferSessionTitle(messages)
+    const sessionSnapshot: ChatSession = {
       id: currentSessionIdRef.current,
       startedAt: currentSessionStartedAt,
       lastActiveAt: Date.now(),
-      title: inferSessionTitle(messages),
+      ...(title ? { title } : {}),
       messages,
-    })
+    }
+
+    saveChatMessages(messages)
+    upsertChatSession(sessionSnapshot)
+    pendingRuntimeMirrorSessionRef.current = sessionSnapshot
+    if (runtimeMirrorTimerRef.current) {
+      window.clearTimeout(runtimeMirrorTimerRef.current)
+    }
+    runtimeMirrorTimerRef.current = window.setTimeout(() => {
+      runtimeMirrorTimerRef.current = null
+      const session = pendingRuntimeMirrorSessionRef.current
+      if (!session) return
+      void mirrorChatSessionToLocalData(session)
+        .then(({ attempted, result, reason }) => {
+          if (attempted && result && !result.ok) {
+            console.warn('[chatLocalDataRuntimeMirror] mirror failed:', reason)
+          }
+        })
+        .catch((error) => {
+          console.warn('[chatLocalDataRuntimeMirror] mirror failed:', error)
+        })
+    }, 750)
 
     const { sessionStore } = getCoreRuntime()
     if (!sessionIdRef.current) {
@@ -76,6 +100,13 @@ export function useChatPersistence({
       mirrored.add(msg.id)
     }
   }, [currentSessionStartedAt, messages])
+
+  useEffect(() => () => {
+    if (runtimeMirrorTimerRef.current) {
+      window.clearTimeout(runtimeMirrorTimerRef.current)
+      runtimeMirrorTimerRef.current = null
+    }
+  }, [])
 
   // One-shot: if a Character-Card import left a pending greeting and the live
   // thread is empty, open the conversation with it as the companion's first

@@ -3,6 +3,10 @@ import { getApiProviderPreset, getDefaultOnboardingRegion, getOnboardingTextProv
 import type { ApiProviderPreset } from '../../../../lib/apiProviders'
 import { displaySecretInputValue } from '../../../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
+import {
+  applyConnectionTestRepairDraft,
+  buildConnectionTestRepairAction,
+} from '../../../models/connectionRepair'
 import { getLocalizedApiProviderNote } from '../../../models/providerNotes'
 import type { ConnectionResult } from '../../../../components/settingsDrawerSupport'
 import type { AppSettings } from '../../../../types'
@@ -21,6 +25,7 @@ type TextStepProps = {
   regionTab: ApiProviderPreset['region'] | null
   onRegionTabChange: (region: ApiProviderPreset['region']) => void
   onTestConnection?: (settings: AppSettings) => Promise<ConnectionResult>
+  onTextConnectionConfigChanged: () => void
 }
 
 // 国内 / 海外 / 本地 — the region field partitions every preset with no overlap,
@@ -39,6 +44,7 @@ export function TextStep({
   regionTab,
   onRegionTabChange,
   onTestConnection,
+  onTextConnectionConfigChanged,
 }: TextStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
@@ -47,6 +53,11 @@ export function TextStep({
 
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<ConnectionResult | null>(null)
+
+  function clearTextConnectionResult() {
+    onTextConnectionConfigChanged()
+    setTestResult(null)
+  }
 
   async function handleTestConnection() {
     if (!onTestConnection || testing) return
@@ -62,12 +73,28 @@ export function TextStep({
     }
   }
 
+  function handleApplyTestRepair() {
+    if (!testResult) return
+    const repair = buildConnectionTestRepairAction(testResult, draft)
+    if (!repair) return
+    clearTextConnectionResult()
+    setDraft((current) => applyConnectionTestRepairDraft(current, repair))
+    setTestResult({
+      ok: true,
+      status: 'ready',
+      message: repair.appliedMessage,
+    })
+  }
+
   // The currently-selected provider stays visible regardless of the active tab.
   const region = regionTab ?? getDefaultOnboardingRegion(draft.uiLanguage)
   const providerOptions = useMemo(
     () => getOnboardingTextProviderOptionsByRegion(region, draft.apiProviderId),
     [region, draft.apiProviderId],
   )
+  const testRepair = testResult
+    ? buildConnectionTestRepairAction(testResult, draft)
+    : null
 
   return (
     <div className="onboarding-grid onboarding-grid--stack">
@@ -98,7 +125,10 @@ export function TextStep({
         <span>{ti('onboarding.text.provider_label')}</span>
         <select
           value={draft.apiProviderId}
-          onChange={(event) => onApplyTextProviderPreset(event.target.value)}
+          onChange={(event) => {
+            clearTextConnectionResult()
+            onApplyTextProviderPreset(event.target.value)
+          }}
         >
           {providerOptions.map((provider) => (
             <option key={provider.id} value={provider.id}>
@@ -115,10 +145,13 @@ export function TextStep({
           <span>{ti('onboarding.text.api_base_label')}</span>
           <input
             value={draft.apiBaseUrl}
-            onChange={(event) => setDraft((current) => ({
-              ...current,
-              apiBaseUrl: event.target.value,
-            }))}
+            onChange={(event) => {
+              clearTextConnectionResult()
+              setDraft((current) => ({
+                ...current,
+                apiBaseUrl: event.target.value,
+              }))
+            }}
           />
         </label>
 
@@ -127,10 +160,13 @@ export function TextStep({
           {hasModelOptions ? (
             <select
               value={draft.model}
-              onChange={(event) => setDraft((current) => ({
-                ...current,
-                model: event.target.value,
-              }))}
+              onChange={(event) => {
+                clearTextConnectionResult()
+                setDraft((current) => ({
+                  ...current,
+                  model: event.target.value,
+                }))
+              }}
             >
               {currentPreset.models.map((model) => (
                 <option key={model} value={model}>{model}</option>
@@ -142,10 +178,13 @@ export function TextStep({
           ) : (
             <input
               value={draft.model}
-              onChange={(event) => setDraft((current) => ({
-                ...current,
-                model: event.target.value,
-              }))}
+              onChange={(event) => {
+                clearTextConnectionResult()
+                setDraft((current) => ({
+                  ...current,
+                  model: event.target.value,
+                }))
+              }}
             />
           )}
         </label>
@@ -156,10 +195,13 @@ export function TextStep({
         <input
           type="password"
           value={displaySecretInputValue(draft.apiKey)}
-          onChange={(event) => setDraft((current) => ({
-            ...current,
-            apiKey: event.target.value,
-          }))}
+          onChange={(event) => {
+            clearTextConnectionResult()
+            setDraft((current) => ({
+              ...current,
+              apiKey: event.target.value,
+            }))
+          }}
           placeholder={ti('onboarding.text.api_key_placeholder')}
         />
       </label>
@@ -184,6 +226,15 @@ export function TextStep({
               <p>{testResult.message}</p>
               {testResult.recommendation ? (
                 <p className="settings-test-result__recommendation">{testResult.recommendation}</p>
+              ) : null}
+              {testRepair ? (
+                <button
+                  type="button"
+                  className="ghost-button settings-test-result__action"
+                  onClick={handleApplyTestRepair}
+                >
+                  {testRepair.label}
+                </button>
               ) : null}
             </div>
           ) : null}

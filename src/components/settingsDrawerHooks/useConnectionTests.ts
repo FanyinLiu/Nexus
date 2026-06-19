@@ -3,6 +3,10 @@ import {
   isMiniMaxSpeechOutputProvider,
 } from '../../lib'
 import type { ConnectionResult } from '../settingsDrawerSupport'
+import {
+  buildConnectionTestRepairAction,
+  type ConnectionTestRepairAction,
+} from '../../features/models/connectionRepair'
 import type { AppSettings, ServiceConnectionCapability } from '../../types'
 
 export type UseConnectionTestsOptions = {
@@ -12,12 +16,14 @@ export type UseConnectionTestsOptions = {
     settings: AppSettings,
   ) => Promise<ConnectionResult>
   handleLoadSpeechVoices: (showStatus?: boolean) => Promise<void>
+  onApplyTextConnectionRepair?: (repair: ConnectionTestRepairAction) => void
 }
 
 export function useConnectionTests({
   draft,
   onTestConnection,
   handleLoadSpeechVoices,
+  onApplyTextConnectionRepair,
 }: UseConnectionTestsOptions) {
   const [testingTarget, setTestingTarget] = useState<ServiceConnectionCapability | null>(null)
   const [testResults, setTestResults] = useState<
@@ -66,6 +72,9 @@ export function useConnectionTests({
 
     const result = testResults[capability]
     if (!result) return null
+    const repair = capability === 'text'
+      ? buildConnectionTestRepairAction(result, draft)
+      : null
 
     return createElement('div', {
       className: result.ok ? 'settings-test-result is-success' : 'settings-test-result is-error',
@@ -82,6 +91,28 @@ export function useConnectionTests({
             className: 'settings-test-result__recommendation',
           },
           result.recommendation,
+        )
+      ) : null,
+      repair && onApplyTextConnectionRepair ? (
+        createElement(
+          'button',
+          {
+            key: 'repair',
+            type: 'button',
+            className: 'ghost-button settings-test-result__action',
+            onClick: () => {
+              onApplyTextConnectionRepair(repair)
+              setTestResults((current) => ({
+                ...current,
+                [capability]: {
+                  ok: true,
+                  status: 'ready',
+                  message: repair.appliedMessage,
+                },
+              }))
+            },
+          },
+          repair.label,
         )
       ) : null,
     ])

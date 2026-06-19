@@ -3,6 +3,7 @@ import { test } from 'node:test'
 
 import {
   buildCompanionReadiness,
+  FIRST_CONVERSATION_TARGET_MINUTES,
   type CompanionReadinessInput,
 } from '../src/features/onboarding/companionReadiness.ts'
 
@@ -13,6 +14,7 @@ const baseInput: CompanionReadinessInput = {
   apiKey: '',
   model: 'llama3.1',
   textProviderRequiresApiKey: false,
+  textConnectionVerified: true,
   petModelAvailable: true,
   speechInputEnabled: false,
   speechInputProviderId: '',
@@ -35,6 +37,9 @@ test('marks a text-only companion as ready when the core identity and text model
   const readiness = buildCompanionReadiness(baseInput)
 
   assert.equal(readiness.status, 'ready')
+  assert.equal(readiness.targetMinutes, FIRST_CONVERSATION_TARGET_MINUTES)
+  assert.equal(readiness.targetMinutes, 5)
+  assert.equal(readiness.timeboxKey, 'onboarding.readiness.timebox.ready')
   assert.deepEqual(
     readiness.items.map((item) => [item.id, item.status]),
     [
@@ -52,6 +57,7 @@ test('blocks readiness when the text model is missing required launch fields', (
   })
 
   assert.equal(readiness.status, 'blocked')
+  assert.equal(readiness.timeboxKey, 'onboarding.readiness.timebox.blocked')
   assert.equal(itemStatus({ ...baseInput, apiBaseUrl: '' }, 'text'), 'blocked')
 })
 
@@ -62,7 +68,26 @@ test('warns when a keyed text provider has no api key yet', () => {
   })
 
   assert.equal(readiness.status, 'warning')
+  assert.equal(readiness.timeboxKey, 'onboarding.readiness.timebox.warning')
   assert.equal(itemStatus({ ...baseInput, textProviderRequiresApiKey: true }, 'text'), 'warning')
+})
+
+test('warns when the text model fields are filled but the connection test has not passed', () => {
+  const readiness = buildCompanionReadiness({
+    ...baseInput,
+    textConnectionVerified: false,
+  })
+
+  assert.equal(readiness.status, 'warning')
+  assert.equal(readiness.timeboxKey, 'onboarding.readiness.timebox.warning')
+  assert.deepEqual(
+    readiness.items.find((item) => item.id === 'text'),
+    {
+      id: 'text',
+      status: 'warning',
+      messageKey: 'onboarding.readiness.text.warning_unverified',
+    },
+  )
 })
 
 test('allows local speech input and keyless speech output without api base urls', () => {

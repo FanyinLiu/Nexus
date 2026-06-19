@@ -4,7 +4,7 @@
 
 <p align="center"><b>本地优先的桌面 AI 伙伴，具备记忆、语音、Live2D 和长期关系状态。</b></p>
 
-<p align="center">Nexus 关注的是连续性：伙伴会记住真正重要的事，感知关系如何变化，通过桌宠形态陪在桌面上，也能帮你处理一些轻量后台任务。模型请求由你选择的 provider 承担；记忆、语音编排、工具和安全状态都留在本机。</p>
+<p align="center">Nexus 关注的是连续性：伙伴会记住真正重要的事，感知关系如何变化，通过桌宠形态陪在桌面上，并在你明确授权时提供轻量帮助。模型请求由你选择的 provider 承担；记忆、语音编排、工具和安全状态都留在本机。</p>
 
 <p align="center">
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/github/v/release/FanyinLiu/Nexus?style=flat-square&color=blue&label=release" alt="Release"></a>
@@ -24,11 +24,15 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **当前版本：** v0.3.2 稳定版。Nexus 现在已经可日常使用，但仍是快速迭代中的个人项目；打包、本地语音模型和 provider 配置上，可能还有一些不够顺滑、需要手动处理的地方。
+> **当前版本：** v0.3.5 稳定版。Nexus 现在继续向“本地优先的桌面陪伴”收敛；这版重点是首次启动修复、发布信任、IPC 安全和聊天记忆的本地可控迁移预演。
 
 > **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前短期开发以根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 为准：Phase 1 只收敛桌面常驻小窗口、极简头像、Ollama / DeepSeek 文本模型和简单对话。
 
 ---
+
+## 本次更新 — v0.3.5
+
+> **给会陪伴、会记住的 Nexus 打地基。** 这版不把 Nexus 做成替你干活的 Codex 式智能体，而是补上陪伴体验需要的底层信任：首次启动和模型连接更容易修复，发布/更新状态更清楚，IPC、权限、密钥和审计边界更硬；聊天记忆开始进入主进程 SQLite 的隐藏迁移预演。现有聊天仍以 localStorage 为权威来源，不会被删除；隐藏预演可以 dry-run、备份、应用、回滚、运行时镜像和元数据对账。完整说明见 [RELEASE-NOTES-v0.3.5.md](RELEASE-NOTES-v0.3.5.md)（英文）。
 
 ## 本次更新 — v0.3.4-beta.4（预发布）
 
@@ -311,7 +315,7 @@ npm run package:win     # 或 package:mac / package:linux
 ### 待升级
 
 - [ ] **屏幕感知主动对话** — 定期读取屏幕上下文（前台应用、可见文本），主动发起与你正在做的事相关的对话，而不仅仅是被动回应。
-- [ ] **决策 / 角色扮演 / 后台任务三层分离** — 将意图分类（快速）、角色扮演（保持人设纯净）和后台任务执行分开。角色扮演层永远看不到工具元数据；任务结果由角色以自己的声音"转述"。
+- [ ] **意图 / 角色 / 授权辅助三层分离** — 将轻量意图判断、角色表达和用户确认后的辅助动作分开。角色层永远看不到工具元数据；辅助结果由伙伴以自己的声音"转述"。
 - [ ] **角色日记与自主时间线** — 伙伴每天自动生成第一人称日记，记录当天发生了什么；可选发布"动态"到可浏览的时间线，营造独立生活的感觉。
 - [ ] **日程表与活动状态** — 伙伴遵循日常作息（工作 / 吃饭 / 睡觉 / 通勤），影响可用性、语气和精力。深夜对话和早晨对话感觉不同。
 - [ ] **Mini 模式 / 停靠隐藏** — 把角色拖到屏幕边缘，自动隐藏并在悬停时探头。"一直在，但不打扰。"

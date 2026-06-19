@@ -6,11 +6,13 @@ import {
 } from '../models/index.ts'
 import type { AppSettings } from '../../types/app.ts'
 import type { TranslationKey, TranslationParams } from '../../types/i18n.ts'
+import { FIRST_CONVERSATION_TARGET_MINUTES } from './companionReadiness.ts'
+import type { FirstConversationTelemetryStatus } from './firstConversationTelemetry.ts'
 
 export type StartupStatusLevel = 'ok' | 'warning'
 
 export type StartupStatusItem = {
-  id: 'preview' | 'bridge' | 'model' | 'avatar' | 'voice'
+  id: 'preview' | 'bridge' | 'model' | 'avatar' | 'voice' | 'firstConversation'
   detailKey: TranslationKey
   detailParams?: TranslationParams
   labelKey: TranslationKey
@@ -32,6 +34,7 @@ export type ResolveStartupStatusInput = {
   origin: string
   petModel: PetModelDefinition | undefined
   settings: StartupStatusSettings
+  firstConversationStatus?: FirstConversationTelemetryStatus
 }
 
 export type StartupStatusSummary = {
@@ -163,11 +166,52 @@ function resolveVoiceStatus(settings: StartupStatusSettings): StartupStatusItem 
   }
 }
 
+function resolveFirstConversationStatus(
+  firstConversationStatus: FirstConversationTelemetryStatus | undefined,
+): StartupStatusItem {
+  const base = {
+    id: 'firstConversation' as const,
+    labelKey: 'settings.startup_status.first_conversation.label' as const,
+  }
+
+  if (!firstConversationStatus || firstConversationStatus.status === 'not_recorded') {
+    return {
+      ...base,
+      status: 'ok',
+      detailKey: 'settings.startup_status.first_conversation.not_recorded',
+      detailParams: { minutes: firstConversationStatus?.targetMinutes ?? FIRST_CONVERSATION_TARGET_MINUTES },
+    }
+  }
+
+  if (firstConversationStatus.status === 'pending') {
+    return {
+      ...base,
+      status: 'warning',
+      detailKey: 'settings.startup_status.first_conversation.pending',
+      detailParams: { minutes: firstConversationStatus.targetMinutes },
+    }
+  }
+
+  const elapsedSeconds = Math.round(firstConversationStatus.elapsedMs / 1000)
+  return {
+    ...base,
+    status: firstConversationStatus.withinTarget ? 'ok' : 'warning',
+    detailKey: firstConversationStatus.withinTarget
+      ? 'settings.startup_status.first_conversation.met'
+      : 'settings.startup_status.first_conversation.missed',
+    detailParams: {
+      seconds: elapsedSeconds,
+      minutes: firstConversationStatus.targetMinutes,
+    },
+  }
+}
+
 export function resolveStartupStatusSummary({
   bridgeReady,
   origin,
   petModel,
   settings,
+  firstConversationStatus,
 }: ResolveStartupStatusInput): StartupStatusSummary {
   const items: StartupStatusItem[] = [
     resolvePreviewStatus(origin),
@@ -182,6 +226,7 @@ export function resolveStartupStatusSummary({
     resolveModelStatus(settings),
     resolveAvatarStatus(petModel),
     resolveVoiceStatus(settings),
+    resolveFirstConversationStatus(firstConversationStatus),
   ]
 
   return {

@@ -11,6 +11,7 @@ import type { TranslationKey } from '../types/i18n.ts'
 import type { ThemeId } from '../types/theme.ts'
 import type {
   DebugConsoleEvent,
+  DiscoveredModel,
   MemorySearchMode,
   ReminderTaskAction,
   ReminderTask,
@@ -20,6 +21,7 @@ import type {
   VoiceState,
   VoiceTriggerMode,
 } from '../types/index.ts'
+import type { ConnectionPreflightRepair } from '../features/models/connectionPreflight.ts'
 
 const VOICE_STATE_KEY: Record<VoiceState, TranslationKey> = {
   idle: 'voice_state.idle',
@@ -280,6 +282,9 @@ export type ConnectionResult = {
   message: string
   recommendation?: string
   status?: import('../types/model').ProviderHealthStatus
+  repair?: ConnectionPreflightRepair
+  discoveredModels?: DiscoveredModel[]
+  checkedAt?: string
 }
 
 type LabeledOption<T> = {

@@ -6,8 +6,10 @@ import {
   isPackagedOrigin,
   resolveStartupStatusSummary,
 } from '../src/features/onboarding/startupStatusView.ts'
+import { buildFirstRunQaReport } from '../src/features/onboarding/firstRunQaReport.ts'
 import { PET_MODEL_PRESETS } from '../src/features/pet/models.ts'
 import type { AppSettings } from '../src/types/app.ts'
+import type { TranslationKey, TranslationParams } from '../src/types/i18n.ts'
 
 function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   return {
@@ -52,6 +54,10 @@ test('startup status reports the common text path and bridge state separately', 
   assert.equal(summary.warningCount, 0)
   assert.equal(summary.items.find((item) => item.id === 'bridge')?.status, 'ok')
   assert.equal(summary.items.find((item) => item.id === 'model')?.detailKey, 'settings.startup_status.model.ready')
+  assert.equal(
+    summary.items.find((item) => item.id === 'firstConversation')?.detailKey,
+    'settings.startup_status.first_conversation.not_recorded',
+  )
 })
 
 test('startup status flags DeepSeek without an API key', () => {
@@ -68,4 +74,105 @@ test('startup status flags DeepSeek without an API key', () => {
   const modelItem = summary.items.find((item) => item.id === 'model')
   assert.equal(modelItem?.status, 'warning')
   assert.equal(modelItem?.detailKey, 'settings.startup_status.model.deepseek_missing_key')
+})
+
+test('startup status surfaces first conversation timing states', () => {
+  const pending = resolveStartupStatusSummary({
+    bridgeReady: true,
+    firstConversationStatus: {
+      status: 'pending',
+      completedAt: '2026-06-04T09:00:00.000Z',
+      targetMinutes: 5,
+    },
+    origin: 'http://127.0.0.1:47821',
+    petModel: PET_MODEL_PRESETS[0],
+    settings: makeSettings(),
+  }).items.find((item) => item.id === 'firstConversation')
+
+  assert.equal(pending?.status, 'warning')
+  assert.equal(pending?.detailKey, 'settings.startup_status.first_conversation.pending')
+
+  const met = resolveStartupStatusSummary({
+    bridgeReady: true,
+    firstConversationStatus: {
+      status: 'met',
+      completedAt: '2026-06-04T09:00:00.000Z',
+      firstConversationAt: '2026-06-04T09:04:00.000Z',
+      elapsedMs: 240000,
+      targetMinutes: 5,
+      withinTarget: true,
+    },
+    origin: 'http://127.0.0.1:47821',
+    petModel: PET_MODEL_PRESETS[0],
+    settings: makeSettings(),
+  }).items.find((item) => item.id === 'firstConversation')
+
+  assert.equal(met?.status, 'ok')
+  assert.equal(met?.detailKey, 'settings.startup_status.first_conversation.met')
+  assert.deepEqual(met?.detailParams, { seconds: 240, minutes: 5 })
+
+  const missed = resolveStartupStatusSummary({
+    bridgeReady: true,
+    firstConversationStatus: {
+      status: 'missed',
+      completedAt: '2026-06-04T09:00:00.000Z',
+      firstConversationAt: '2026-06-04T09:06:00.000Z',
+      elapsedMs: 360000,
+      targetMinutes: 5,
+      withinTarget: false,
+    },
+    origin: 'http://127.0.0.1:47821',
+    petModel: PET_MODEL_PRESETS[0],
+    settings: makeSettings(),
+  }).items.find((item) => item.id === 'firstConversation')
+
+  assert.equal(missed?.status, 'warning')
+  assert.equal(missed?.detailKey, 'settings.startup_status.first_conversation.missed')
+})
+
+test('first-run QA report keeps local timing evidence without sensitive content', () => {
+  const firstConversationStatus = {
+    status: 'met' as const,
+    completedAt: '2026-06-04T09:00:00.000Z',
+    firstConversationAt: '2026-06-04T09:04:00.000Z',
+    elapsedMs: 240000,
+    targetMinutes: 5,
+    withinTarget: true,
+  }
+  const summary = resolveStartupStatusSummary({
+    bridgeReady: true,
+    firstConversationStatus,
+    origin: 'http://127.0.0.1:47821',
+    petModel: PET_MODEL_PRESETS[0],
+    settings: makeSettings(),
+  })
+  const translate = (key: TranslationKey, params?: TranslationParams) => {
+    const suffix = params ? ` ${JSON.stringify(params)}` : ''
+    return `translated:${key}${suffix}`
+  }
+
+  const report = buildFirstRunQaReport({
+    firstConversationStatus,
+    generatedAt: '2026-06-04T09:05:00Z',
+    summary,
+    translate,
+  })
+
+  assert.equal(report.schemaVersion, 1)
+  assert.equal(report.generatedAt, '2026-06-04T09:05:00.000Z')
+  assert.equal(report.targetMinutes, 5)
+  assert.deepEqual(report.firstConversation, firstConversationStatus)
+  assert.equal(report.startupStatus.warningCount, 0)
+  assert.equal(report.startupStatus.items.length, summary.items.length)
+  assert.equal(report.startupStatus.items.find((item) => item.id === 'model')?.label, 'translated:settings.startup_status.model.label')
+  assert.equal(
+    report.startupStatus.items.find((item) => item.id === 'firstConversation')?.detail,
+    'translated:settings.startup_status.first_conversation.met {"seconds":240,"minutes":5}',
+  )
+  assert.deepEqual(report.privacy, {
+    includesApiKeys: false,
+    includesMessageContent: false,
+    includesModelOutput: false,
+    includesProviderSecrets: false,
+  })
 })

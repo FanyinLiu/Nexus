@@ -4,11 +4,30 @@ import * as minecraftGateway from '../services/minecraftGateway.js'
 import * as factorioRcon from '../services/factorioRcon.js'
 import { requireTrustedSender } from './validate.js'
 import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
+import { audit } from '../services/auditLog.js'
+import { requireExternalActionPermission } from '../services/externalActionPolicy.js'
+import {
+  summarizeExternalActionRequest,
+  summarizeExternalActionResult,
+} from './externalActionAudit.js'
 import {
   validateGameCommandPayload,
   validateGameConnectPayload,
   validateTencentAsrConnectPayload,
 } from './payloadSchemas.js'
+
+async function runAuditedExternalAction(channel, payload, action) {
+  audit('external-action', 'request', summarizeExternalActionRequest(channel, payload))
+  try {
+    await requireExternalActionPermission(channel)
+    const result = await action()
+    audit('external-action', 'result', summarizeExternalActionResult(channel, result))
+    return result
+  } catch (error) {
+    audit('external-action', 'result', summarizeExternalActionResult(channel, {}, error))
+    throw error
+  }
+}
 
 function parseTencentAsrApiKey(apiKey) {
   const parts = String(apiKey ?? '').split(':')
@@ -96,8 +115,10 @@ export function register() {
   ipcMain.handle('minecraft:send-command', (event, payload) => {
     requireTrustedSender(event)
     payload = validateGameCommandPayload('minecraft:send-command', payload)
-    minecraftGateway.sendCommand(String(payload?.command ?? ''))
-    return { ok: true }
+    return runAuditedExternalAction('minecraft:send-command', payload, async () => {
+      minecraftGateway.sendCommand(String(payload?.command ?? ''))
+      return { ok: true }
+    })
   })
 
   ipcMain.handle('minecraft:status', (event) => {
@@ -132,8 +153,10 @@ export function register() {
     requireTrustedSender(event)
     payload = validateGameCommandPayload('factorio:execute', payload)
     const command = String(payload?.command ?? '')
-    const response = await factorioRcon.execute(command)
-    return { response }
+    return runAuditedExternalAction('factorio:execute', payload, async () => {
+      const response = await factorioRcon.execute(command)
+      return { response }
+    })
   })
 
   ipcMain.handle('factorio:status', (event) => {

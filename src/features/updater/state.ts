@@ -4,6 +4,7 @@ const INVALID_UPDATER_EVENT_MESSAGE = 'Invalid updater event'
 const MAX_VERSION_CHARS = 80
 const MAX_RELEASE_NOTES_CHARS = 20_000
 const MAX_ERROR_MESSAGE_CHARS = 1_000
+const MAX_URL_CHARS = 2_000
 const MAX_PROGRESS_BYTES = Number.MAX_SAFE_INTEGER
 
 export type UpdaterState = {
@@ -15,11 +16,14 @@ export type UpdaterState = {
   currentVersion: string | null
   /** True only when running in a packaged build (auto-update is a no-op in dev). */
   isPackaged: boolean
+  /** Runtime update behavior chosen by the main process. */
+  updateMode: 'dev' | 'auto-download' | 'manual-download' | 'unknown'
 }
 
 export type UpdaterStatusSnapshot = {
   currentVersion: string | null
   isPackaged: boolean
+  updateMode?: string | null
   last?: UpdaterEvent | null
 }
 
@@ -27,6 +31,9 @@ export type UpdaterCheckResult = {
   ok: boolean
   currentVersion: string
   latestVersion?: string | null
+  updateMode?: string | null
+  manualDownload?: boolean
+  releaseUrl?: string | null
   reason?: string
 }
 
@@ -36,6 +43,7 @@ export function createInitialUpdaterState(): UpdaterState {
     busy: false,
     currentVersion: null,
     isPackaged: false,
+    updateMode: 'unknown',
   }
 }
 
@@ -52,6 +60,30 @@ function normalizeText(value: unknown, maxLength: number): string | null {
 
 function normalizeRequiredText(value: unknown, fallback: string, maxLength: number): string {
   return normalizeText(value, maxLength) ?? fallback
+}
+
+function normalizeUrl(value: unknown): string | null {
+  const trimmed = normalizeText(value, MAX_URL_CHARS)
+  if (!trimmed) return null
+  try {
+    const url = new URL(trimmed)
+    if (url.protocol !== 'https:') return null
+    return url.toString()
+  } catch {
+    return null
+  }
+}
+
+function normalizeReleaseUrl(value: unknown): string | null {
+  const url = normalizeUrl(value)
+  if (!url) return null
+  return /^https:\/\/github\.com\/FanyinLiu\/Nexus\/releases\//.test(url) ? url : null
+}
+
+function normalizeUpdateMode(value: unknown): UpdaterState['updateMode'] {
+  return value === 'dev' || value === 'auto-download' || value === 'manual-download'
+    ? value
+    : 'unknown'
 }
 
 function normalizeNumber(value: unknown): number {
@@ -112,6 +144,13 @@ export function normalizeUpdaterEvent(
         version: normalizeOptionalVersion(event.version),
         releaseNotes: normalizeText(event.releaseNotes, MAX_RELEASE_NOTES_CHARS),
       }
+    case 'manual-update':
+      return {
+        type: 'manual-update',
+        version: normalizeOptionalVersion(event.version),
+        releaseUrl: normalizeReleaseUrl(event.releaseUrl) ?? 'https://github.com/FanyinLiu/Nexus/releases/latest',
+        reason: normalizeText(event.reason, MAX_ERROR_MESSAGE_CHARS),
+      }
     case 'not-available':
       return {
         type: 'not-available',
@@ -165,11 +204,13 @@ export function applyUpdaterStatus(
   const event = status.last === undefined || status.last === null
     ? previous.event
     : normalizeUpdaterEvent(status.last, previous.event, { currentVersion })
+  const updateMode = normalizeUpdateMode(status.updateMode)
 
   return {
     ...previous,
     currentVersion,
     isPackaged: typeof status.isPackaged === 'boolean' ? status.isPackaged : previous.isPackaged,
+    updateMode: updateMode === 'unknown' ? previous.updateMode : updateMode,
     event,
     busy: isUpdaterBusyEvent(event),
   }
@@ -202,11 +243,16 @@ export function reduceUpdaterCheckResult(
   }
 
   const currentVersion = normalizeOptionalVersion(result.currentVersion) ?? previous.currentVersion
+  const updateMode = normalizeUpdateMode(result.updateMode)
+  const nextBase = {
+    ...previous,
+    currentVersion,
+    updateMode: updateMode === 'unknown' ? previous.updateMode : updateMode,
+  }
 
   if (result.ok !== true) {
     return {
-      ...previous,
-      currentVersion,
+      ...nextBase,
       busy: false,
       event: {
         type: 'error',
@@ -216,10 +262,22 @@ export function reduceUpdaterCheckResult(
   }
 
   const latestVersion = normalizeOptionalVersion(result.latestVersion)
+  if (result.manualDownload === true) {
+    return {
+      ...nextBase,
+      busy: false,
+      event: {
+        type: 'manual-update',
+        version: latestVersion,
+        releaseUrl: normalizeReleaseUrl(result.releaseUrl) ?? 'https://github.com/FanyinLiu/Nexus/releases/latest',
+        reason: normalizeText(result.reason, MAX_ERROR_MESSAGE_CHARS),
+      },
+    }
+  }
+
   if (!latestVersion || latestVersion === currentVersion) {
     return {
-      ...previous,
-      currentVersion,
+      ...nextBase,
       busy: false,
       event: { type: 'not-available', version: normalizeRequiredVersion(currentVersion, previous.currentVersion) },
     }
@@ -227,15 +285,13 @@ export function reduceUpdaterCheckResult(
 
   if (previous.event.type === 'progress' || previous.event.type === 'downloaded') {
     return {
-      ...previous,
-      currentVersion,
+      ...nextBase,
       busy: isUpdaterBusyEvent(previous.event),
     }
   }
 
   return {
-    ...previous,
-    currentVersion,
+    ...nextBase,
     busy: true,
     event: { type: 'available', version: latestVersion, releaseNotes: null },
   }
