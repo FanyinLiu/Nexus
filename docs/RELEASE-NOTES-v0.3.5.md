@@ -1,12 +1,34 @@
-# Nexus v0.3.5
+# Nexus v0.3.5 — Memory is no longer a black box
 
-> **Stable — a safer foundation for a companion that remembers locally.** This
-> release keeps Nexus pointed at companionship, not autonomous work execution.
-> The big change is trust: first-run setup is easier to repair, release posture
-> is clearer, IPC boundaries are stricter, and chat memory now has a hidden,
-> reversible SQLite migration rehearsal before any storage authority switch.
+> **The memorable upgrade:** Nexus can now show which memories shaped a reply,
+> then take you back to those memory records so you can inspect, pause, edit, or
+> delete them.
+>
+> This release keeps Nexus pointed at companionship, not autonomous work
+> execution. The trust work around first-run setup, IPC, release posture, and
+> SQLite rehearsal exists to make memory local, visible, reversible, and under
+> the user's control.
 
 ## What changes for users
+
+### Memory is no longer hidden background magic
+
+This is the companion-memory headline for v0.3.5. Existing memory still lives in
+renderer `localStorage` by default, and nothing is deleted.
+
+- Assistant replies can show a small memory-source hint when memory shaped the
+  response.
+- Expanding that hint resolves the stored source IDs against the current memory
+  state, marks missing or paused sources, and opens Settings directly to Memory.
+- Opening Memory from a reply highlights the relevant memories and diary
+  fragments, including older diary entries outside the recent preview.
+- The Memory settings page now shows whether recall and learning are active,
+  how many long-term memories and daily fragments are available, and which
+  storage boundary is still authoritative.
+- Users can pause all memory or pause individual long-term memories without
+  deleting them.
+- A new content-free memory dry-run inspects long-term, legacy, and daily memory
+  localStorage shapes before any SQLite memory migration is attempted.
 
 ### First conversation is easier to reach
 
@@ -42,25 +64,6 @@ lives in renderer `localStorage` by default, and nothing is deleted.
   SQLite metadata and show aggregate differences.
 - Rollback deletes only the SQLite chat-session records written by this path;
   localStorage chat history remains untouched.
-
-### Long-term memory is easier to understand and control
-
-This release makes memory feel less like a hidden model trick and more like
-something the user can inspect.
-
-- The Memory settings page now shows whether recall and learning are active,
-  how many long-term memories and daily fragments are available, and which
-  storage boundary is still authoritative.
-- Users can pause all memory or pause individual long-term memories without
-  deleting them.
-- Assistant replies can show a small memory-source hint when memory shaped the
-  response.
-- Expanding that hint resolves the stored source IDs against the current memory
-  state, marks missing or paused sources, and opens Settings directly to Memory.
-- Opening Memory from a reply highlights the relevant memories and diary
-  fragments, including older diary entries outside the recent preview.
-- A new content-free memory dry-run inspects long-term, legacy, and daily memory
-  localStorage shapes before any SQLite memory migration is attempted.
 
 ## Under the hood
 

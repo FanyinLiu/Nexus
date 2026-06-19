@@ -11,6 +11,10 @@ No user-facing changes yet.
 ## [0.3.5] - 2026-06-19
 
 ### Added
+- **Release theme: memory is no longer a black box** — assistant replies can now
+  explain which memories shaped a response, and the Memory settings page can
+  highlight those exact long-term memories or diary fragments for review,
+  pause, edit, or deletion.
 - **Memory transparency and pause controls** — the Memory settings page now
   shows whether memory recall/learning is active, the active long-term and
   daily-memory counts, desktop-context read status, and the current storage
