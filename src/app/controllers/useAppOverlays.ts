@@ -56,6 +56,7 @@ type UseAppOverlaysOptions = {
     | 'clearMemoryArchive'
     | 'addManualMemory'
     | 'updateMemory'
+    | 'setMemoryEnabled'
     | 'removeMemory'
     | 'clearTodayDailyMemory'
     | 'updateDailyEntry'
@@ -243,6 +244,7 @@ export function useAppOverlays({
     onClearMemoryArchive: memory.clearMemoryArchive,
     onAddManualMemory: memory.addManualMemory,
     onUpdateMemory: memory.updateMemory,
+    onSetMemoryEnabled: memory.setMemoryEnabled,
     onRemoveMemory: memory.removeMemory,
     onClearDailyMemory: memory.clearTodayDailyMemory,
     onUpdateDailyEntry: memory.updateDailyEntry,

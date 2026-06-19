@@ -256,6 +256,7 @@ export interface VoiceControlSettings {
 }
 
 export interface MemorySettings {
+  memoryPaused: boolean
   memorySearchMode: MemorySearchMode
   memoryEmbeddingModel: string
   memoryLongTermRecallCount: number

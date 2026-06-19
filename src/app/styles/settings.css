@@ -5936,6 +5936,35 @@ summary.settings-console-section__header:focus-visible {
   margin-top: 0;
 }
 
+.settings-memory-transparency__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.settings-memory-transparency__card {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.settings-memory-transparency__card strong {
+  color: rgba(246, 248, 252, 0.9);
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 680;
+  overflow-wrap: anywhere;
+}
+
+.settings-memory-transparency__card span {
+  color: rgba(246, 248, 252, 0.62);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .memory-card__header {
   display: flex;
   align-items: flex-start;

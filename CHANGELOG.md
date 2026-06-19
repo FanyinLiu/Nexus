@@ -6,7 +6,14 @@
 
 ## [Unreleased]
 
-- No changes yet.
+### Added
+- **Memory transparency and pause controls** — the Memory settings page now
+  shows whether memory recall/learning is active, the active long-term and
+  daily-memory counts, desktop-context read status, and the current storage
+  authority. Users can globally pause memory recall and learning or pause
+  individual long-term memories without deleting them; paused chat turns skip
+  memory recall, pending memory callbacks, recall feedback, and daily-memory
+  capture.
 
 ## [0.3.5] - 2026-06-19
 

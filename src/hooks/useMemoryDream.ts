@@ -85,6 +85,7 @@ export function useMemoryDream({
     if (dreamRunningRef.current) return
     if (busyRef?.current) return
     const settings = settingsRef.current
+    if (settings.memoryPaused) return
     if (!settings.autonomyEnabled || !settings.autonomyDreamEnabled) return
     if (!shouldRunDream(dreamLogRef.current, settings)) return
 

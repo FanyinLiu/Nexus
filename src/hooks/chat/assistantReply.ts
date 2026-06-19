@@ -35,6 +35,7 @@ import type {
   AppSettings,
   ChatMessage,
   DailyMemoryStore,
+  MemoryRecallContext,
   MemoryItem,
   PetDialogBubbleState,
 } from '../../types/index.ts'
@@ -126,6 +127,17 @@ type AssistantReplyRunnerDependencies = {
   requestStreaming?: typeof requestAssistantReplyStreaming
 }
 
+function createPausedMemoryRecallContext(searchModeUsed: AppSettings['memorySearchMode']): MemoryRecallContext {
+  return {
+    longTerm: [],
+    daily: [],
+    semantic: [],
+    searchModeUsed,
+    vectorSearchAvailable: false,
+    recalledLongTermIds: [],
+  }
+}
+
 function isSpeechAuthFailure(error: unknown): boolean {
   const message = getSpeechOutputErrorMessage(error)
   return /(api\s*key|api\s*secret|authorization|bearer|credential|unauthori[sz]ed|\b401\b|\b403\b|鉴权|认证|授权|登录|login)/i
@@ -189,6 +201,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       }
 
       // Run all independent context-loading tasks in parallel
+      const memoryPaused = currentSettings.memoryPaused === true
       const [desktopContext, mcpTools, gameContext, memoryContext, pluginSkillContext, triggeredLorebookEntries] = await Promise.all([
         dependencies.ctx.loadDesktopContextSnapshot(),
         loadAvailableTools(currentSettings),
@@ -196,18 +209,20 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           console.warn('[assistantReply] loadGameContext failed; continuing without game context.', err)
           return ''
         }),
-        buildMemoryRecallContext({
-          query: content,
-          longTermMemories: nextMemories,
-          dailyMemories: nextDailyMemories,
-          searchMode: currentSettings.memorySearchMode,
-          embeddingModel: currentSettings.memoryEmbeddingModel,
-          longTermLimit: currentSettings.memoryLongTermRecallCount,
-          dailyLimit: currentSettings.memoryDailyRecallCount,
-          semanticLimit: currentSettings.memorySemanticRecallCount,
-          retentionDays: currentSettings.memoryDiaryRetentionDays,
-          currentEmotion: dependencies.ctx.getEmotionSnapshot?.(),
-        }),
+        memoryPaused
+          ? Promise.resolve(createPausedMemoryRecallContext(currentSettings.memorySearchMode))
+          : buildMemoryRecallContext({
+              query: content,
+              longTermMemories: nextMemories,
+              dailyMemories: nextDailyMemories,
+              searchMode: currentSettings.memorySearchMode,
+              embeddingModel: currentSettings.memoryEmbeddingModel,
+              longTermLimit: currentSettings.memoryLongTermRecallCount,
+              dailyLimit: currentSettings.memoryDailyRecallCount,
+              semanticLimit: currentSettings.memorySemanticRecallCount,
+              retentionDays: currentSettings.memoryDiaryRetentionDays,
+              currentEmotion: dependencies.ctx.getEmotionSnapshot?.(),
+            }),
         loadRelevantSkills(content).catch((err) => {
           console.warn('[assistantReply] loadRelevantSkills failed; continuing without skill context.', err)
           return ''
@@ -261,7 +276,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       const autoSkillContext = [pluginSkillContext, coreSkillContext].filter(Boolean).join('\n')
 
       // Fire recall feedback — boost importance of memories that were actually used
-      if (memoryContext.recalledLongTermIds?.length && dependencies.onMemoryRecalled) {
+      if (!memoryPaused && memoryContext.recalledLongTermIds?.length && dependencies.onMemoryRecalled) {
         dependencies.onMemoryRecalled(memoryContext.recalledLongTermIds)
       }
 
@@ -294,7 +309,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       // diverge exactly where they should.
       const stageDirectionSpeechFilter = new StageDirectionStreamFilter()
 
-      const pendingCallbackHints = buildPendingCallbackHints(nextMemories)
+      const pendingCallbackHints = memoryPaused ? [] : buildPendingCallbackHints(nextMemories)
       const requestStreaming = dependencies.requestStreaming ?? requestAssistantReplyStreaming
       const request = bindStreamingAbort(
         requestStreaming(
@@ -491,7 +506,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           consumeCallback(cue.memoryId)
           recalledIds.add(cue.memoryId)
         }
-        if (recalledIds.size && dependencies.onMemoryRecalled) {
+        if (!memoryPaused && recalledIds.size && dependencies.onMemoryRecalled) {
           dependencies.onMemoryRecalled([...recalledIds])
         }
       }
@@ -580,11 +595,13 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       } catch (listenerError) {
         console.warn('[chat] onAssistantReplyDelivered listener failed:', listenerError)
       }
-      dependencies.ctx.appendDailyMemoryEntries(
-        [createDailyMemoryEntry(assistantMessage, fromVoice ? 'voice' : 'chat')].filter(
-          (entry): entry is NonNullable<ReturnType<typeof createDailyMemoryEntry>> => Boolean(entry),
-        ),
-      )
+      if (!memoryPaused) {
+        dependencies.ctx.appendDailyMemoryEntries(
+          [createDailyMemoryEntry(assistantMessage, fromVoice ? 'voice' : 'chat')].filter(
+            (entry): entry is NonNullable<ReturnType<typeof createDailyMemoryEntry>> => Boolean(entry),
+          ),
+        )
+      }
       dependencies.ctx.queuePetPerformanceCue([
         ...assistantPerformance.cues,
         ...inlineExpressionOverrideCues,

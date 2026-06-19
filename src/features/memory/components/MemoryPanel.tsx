@@ -17,6 +17,7 @@ type MemoryPanelProps = {
   onClearDaily: () => void
   onRemove: (id: string) => void
   onRemoveDailyEntry?: (id: string, day: string) => void
+  onSetMemoryEnabled: (id: string, enabled: boolean) => void
   onUpdateDailyEntry?: (id: string, day: string, content: string) => void
   onUpdateMemory: (id: string, content: string) => void
   searchMode: MemorySearchMode
@@ -62,6 +63,7 @@ export function MemoryPanel({
   onClearDaily,
   onRemove,
   onRemoveDailyEntry,
+  onSetMemoryEnabled,
   onUpdateDailyEntry,
   onUpdateMemory,
   searchMode,
@@ -197,84 +199,100 @@ export function MemoryPanel({
 
       <div className="memory-list">
         {memories.length ? (
-          memories.map((memory) => (
-            <article key={memory.id} className="memory-pill">
-              <span className="memory-pill__category">{getCategoryLabel(memory.category, uiLanguage)}</span>
-
-              {editingId === memory.id ? (
-                <div className="memory-pill__edit">
-                  <textarea
-                    rows={2}
-                    value={editingContent}
-                    aria-label={`${ti('memory_panel.edit')} ${ti('memory_panel.category.long_term')}`}
-                    onChange={(event) => setEditingContent(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' && !event.shiftKey) {
-                        event.preventDefault()
-                        saveMemoryEdit(memory.id)
-                      }
-                    }}
-                    autoFocus
-                  />
-                  {editError ? (
-                    <p className="memory-pill__error" role="alert" aria-live="assertive" aria-atomic="true">
-                      {editError}
-                    </p>
+          memories.map((memory) => {
+            const memoryEnabled = memory.enabled !== false
+            return (
+              <article key={memory.id} className={`memory-pill ${memoryEnabled ? '' : 'is-disabled'}`.trim()}>
+                <div className="memory-pill__meta-row">
+                  <span className="memory-pill__category">{getCategoryLabel(memory.category, uiLanguage)}</span>
+                  {!memoryEnabled ? (
+                    <span className="memory-pill__category">{ti('memory_panel.paused_badge')}</span>
                   ) : null}
-                  <div className="memory-pill__actions">
-                    <button type="button" onClick={() => saveMemoryEdit(memory.id)}>
-                      {ti('memory_panel.save')}
-                    </button>
-                    <button type="button" onClick={cancelEditing}>
-                      {ti('memory_panel.cancel')}
-                    </button>
-                  </div>
                 </div>
-              ) : deletingId === memory.id ? (
-                <div className="memory-pill__confirm">
-                  <p>{ti('memory_panel.confirm_delete_memory')}</p>
-                  <div className="memory-pill__actions">
-                    <button
-                      type="button"
-                      aria-label={`${ti('memory_panel.delete')}: ${getActionSnippet(memory.content)}`}
-                      title={`${ti('memory_panel.delete')}: ${getActionSnippet(memory.content)}`}
-                      onClick={() => {
-                        onRemove(memory.id)
-                        cancelDelete()
+
+                {editingId === memory.id ? (
+                  <div className="memory-pill__edit">
+                    <textarea
+                      rows={2}
+                      value={editingContent}
+                      aria-label={`${ti('memory_panel.edit')} ${ti('memory_panel.category.long_term')}`}
+                      onChange={(event) => setEditingContent(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' && !event.shiftKey) {
+                          event.preventDefault()
+                          saveMemoryEdit(memory.id)
+                        }
                       }}
-                    >
-                      {ti('memory_panel.delete')}
-                    </button>
-                    <button type="button" onClick={cancelDelete}>
-                      {ti('memory_panel.cancel')}
-                    </button>
+                      autoFocus
+                    />
+                    {editError ? (
+                      <p className="memory-pill__error" role="alert" aria-live="assertive" aria-atomic="true">
+                        {editError}
+                      </p>
+                    ) : null}
+                    <div className="memory-pill__actions">
+                      <button type="button" onClick={() => saveMemoryEdit(memory.id)}>
+                        {ti('memory_panel.save')}
+                      </button>
+                      <button type="button" onClick={cancelEditing}>
+                        {ti('memory_panel.cancel')}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <>
-                  <p>{memory.content}</p>
-                  <div className="memory-pill__actions">
-                    <button
-                      type="button"
-                      aria-label={`${ti('memory_panel.edit')}: ${getActionSnippet(memory.content)}`}
-                      title={`${ti('memory_panel.edit')}: ${getActionSnippet(memory.content)}`}
-                      onClick={() => startEditing(memory.id, memory.content)}
-                    >
-                      {ti('memory_panel.edit')}
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`${ti('memory_panel.delete')}: ${getActionSnippet(memory.content)}`}
-                      title={`${ti('memory_panel.delete')}: ${getActionSnippet(memory.content)}`}
-                      onClick={() => confirmDelete(memory.id)}
-                    >
-                      {ti('memory_panel.delete')}
-                    </button>
+                ) : deletingId === memory.id ? (
+                  <div className="memory-pill__confirm">
+                    <p>{ti('memory_panel.confirm_delete_memory')}</p>
+                    <div className="memory-pill__actions">
+                      <button
+                        type="button"
+                        aria-label={`${ti('memory_panel.delete')}: ${getActionSnippet(memory.content)}`}
+                        title={`${ti('memory_panel.delete')}: ${getActionSnippet(memory.content)}`}
+                        onClick={() => {
+                          onRemove(memory.id)
+                          cancelDelete()
+                        }}
+                      >
+                        {ti('memory_panel.delete')}
+                      </button>
+                      <button type="button" onClick={cancelDelete}>
+                        {ti('memory_panel.cancel')}
+                      </button>
+                    </div>
                   </div>
-                </>
-              )}
-            </article>
-          ))
+                ) : (
+                  <>
+                    <p>{memory.content}</p>
+                    <div className="memory-pill__actions">
+                      <button
+                        type="button"
+                        aria-label={`${ti('memory_panel.edit')}: ${getActionSnippet(memory.content)}`}
+                        title={`${ti('memory_panel.edit')}: ${getActionSnippet(memory.content)}`}
+                        onClick={() => startEditing(memory.id, memory.content)}
+                      >
+                        {ti('memory_panel.edit')}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`${memoryEnabled ? ti('memory_panel.pause') : ti('memory_panel.resume')}: ${getActionSnippet(memory.content)}`}
+                        title={`${memoryEnabled ? ti('memory_panel.pause') : ti('memory_panel.resume')}: ${getActionSnippet(memory.content)}`}
+                        onClick={() => onSetMemoryEnabled(memory.id, !memoryEnabled)}
+                      >
+                        {memoryEnabled ? ti('memory_panel.pause') : ti('memory_panel.resume')}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`${ti('memory_panel.delete')}: ${getActionSnippet(memory.content)}`}
+                        title={`${ti('memory_panel.delete')}: ${getActionSnippet(memory.content)}`}
+                        onClick={() => confirmDelete(memory.id)}
+                      >
+                        {ti('memory_panel.delete')}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </article>
+            )
+          })
         ) : (
           <div className="memory-empty">
             {ti('memory_panel.empty_long_term')}

@@ -223,6 +223,12 @@ Goal: move heavy, long-lived data out of renderer localStorage.
   difference counts. It does not return SQLite chat records, titles, message
   text, userData paths, or session IDs to the renderer, and it does not switch
   chat authority.
+- Slice 4 adds user-visible memory transparency and pause controls. The Memory
+  settings page now shows active memory/diary counts, context-read status, and
+  the current storage-authority boundary; users can globally pause memory recall
+  and learning or pause individual long-term memories without deleting them.
+  Paused chat turns receive an empty memory recall context and skip daily-memory
+  capture.
 - Rollback: keep legacy localStorage snapshots until migration is verified.
 
 ### M6 - Desktop presence state machine

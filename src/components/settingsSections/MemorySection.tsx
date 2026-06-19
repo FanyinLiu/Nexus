@@ -2,6 +2,7 @@ import { memo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { MemoryPanel } from '../../features/memory/components'
 import { MEMORY_EMBEDDING_MODEL_OPTIONS, SCREEN_VLM_MODEL_OPTIONS } from '../../features/memory/constants'
+import { resolveMemoryTransparencySummary } from '../../features/memory/memorySettingsView'
 import {
   getPlatformDependencyHint,
   isDesktopContextActiveWindowAvailable,
@@ -50,6 +51,7 @@ type MemorySectionProps = {
   onClearMemoryArchive: () => void
   onAddManualMemory: (content: string) => void
   onUpdateMemory: (id: string, content: string) => void
+  onSetMemoryEnabled: (id: string, enabled: boolean) => void
   onRemoveMemory: (id: string) => void
   onClearDailyMemory: () => void
   onUpdateDailyEntry?: (id: string, day: string, content: string) => void
@@ -76,6 +78,7 @@ export const MemorySection = memo(function MemorySection({
   onClearMemoryArchive,
   onAddManualMemory,
   onUpdateMemory,
+  onSetMemoryEnabled,
   onRemoveMemory,
   onClearDailyMemory,
   onUpdateDailyEntry,
@@ -119,9 +122,73 @@ export const MemorySection = memo(function MemorySection({
   const selectedMemoryEmbeddingModel = MEMORY_EMBEDDING_MODEL_OPTIONS.find((option) => (
     option.value === draft.memoryEmbeddingModel
   ))
+  const memoryTransparencySummary = resolveMemoryTransparencySummary({
+    activeWindowContextEnabled: draft.activeWindowContextEnabled,
+    clipboardContextEnabled: draft.clipboardContextEnabled,
+    contextAwarenessEnabled: draft.contextAwarenessEnabled,
+    dailyEntries: dailyMemoryEntries,
+    memories,
+    memoryDailyRecallCount: draft.memoryDailyRecallCount,
+    memoryLongTermRecallCount: draft.memoryLongTermRecallCount,
+    memoryPaused: draft.memoryPaused,
+    memorySemanticRecallCount: draft.memorySemanticRecallCount,
+    screenContextEnabled: draft.screenContextEnabled,
+    searchMode: draft.memorySearchMode,
+  })
 
   return (
     <section className={`settings-section settings-memory-section ${active ? 'is-active' : 'is-hidden'}`}>
+      <div className="settings-mini-group settings-memory-group settings-memory-transparency">
+        <div className="settings-mini-group__head">
+          <h5>{ti('settings.memory.transparency.title')}</h5>
+          <span>{ti('settings.memory.transparency.note')}</span>
+        </div>
+
+        <div className="settings-memory-transparency__grid">
+          <div className="settings-control-card settings-memory-transparency__card">
+            <strong>
+              {memoryTransparencySummary.memoryPaused
+                ? ti('settings.memory.transparency.status_paused')
+                : ti('settings.memory.transparency.status_active')}
+            </strong>
+            <span>
+              {memoryTransparencySummary.memoryPaused
+                ? ti('settings.memory.transparency.paused_effect')
+                : ti('settings.memory.transparency.active_effect')}
+            </span>
+          </div>
+          <div className="settings-control-card settings-memory-transparency__card">
+            <strong>{memoryTransparencySummary.activeLongTermCount}</strong>
+            <span>{ti('settings.memory.transparency.active_long_term')}</span>
+          </div>
+          <div className="settings-control-card settings-memory-transparency__card">
+            <strong>{memoryTransparencySummary.dailyEntryCount}</strong>
+            <span>{ti('settings.memory.transparency.daily_entries')}</span>
+          </div>
+          <div className="settings-control-card settings-memory-transparency__card">
+            <strong>
+              {memoryTransparencySummary.contextReadEnabled
+                ? ti('settings.memory.transparency.context_on')
+                : ti('settings.memory.transparency.context_off')}
+            </strong>
+            <span>{ti('settings.memory.transparency.context_status')}</span>
+          </div>
+        </div>
+
+        <div className="settings-control-card settings-memory-control">
+          <ToggleField
+            label={ti('settings.memory.transparency.pause')}
+            field="memoryPaused"
+            draft={draft}
+            setDraft={setDraft}
+          />
+        </div>
+
+        <p className="settings-mini-group__note settings-memory-note">
+          {ti('settings.memory.transparency.storage_note')}
+        </p>
+      </div>
+
       <div className="settings-mini-group settings-memory-group">
         <div className="settings-mini-group__head">
           <h5>{ti('settings.memory.context.title')}</h5>
@@ -435,6 +502,7 @@ export const MemorySection = memo(function MemorySection({
         uiLanguage={uiLanguage}
         onAddMemory={onAddManualMemory}
         onUpdateMemory={onUpdateMemory}
+        onSetMemoryEnabled={onSetMemoryEnabled}
         onRemove={onRemoveMemory}
         onClearDaily={onClearDailyMemory}
         onUpdateDailyEntry={onUpdateDailyEntry}

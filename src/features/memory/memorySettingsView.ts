@@ -15,6 +15,17 @@ export type MemorySettingsSummary = {
   searchMode: MemorySearchMode
 }
 
+export type MemoryTransparencySummary = MemorySettingsSummary & {
+  automaticCaptureEnabled: boolean
+  contextReadEnabled: boolean
+  dailyRecallEnabled: boolean
+  longTermRecallEnabled: boolean
+  memoryPaused: boolean
+  semanticRecallEnabled: boolean
+  sqliteAuthorityEnabled: false
+  storageAuthority: 'renderer-localStorage'
+}
+
 const EMPTY_KIND_COUNTS: MemoryKindCounts = {
   preference: 0,
   fact: 0,
@@ -44,5 +55,39 @@ export function resolveMemorySettingsSummary(input: {
     disabledLongTermCount: input.memories.filter((memory) => memory.enabled === false).length,
     kindCounts: countMemoryKinds(input.memories),
     searchMode: input.searchMode,
+  }
+}
+
+export function resolveMemoryTransparencySummary(input: {
+  activeWindowContextEnabled: boolean
+  clipboardContextEnabled: boolean
+  contextAwarenessEnabled: boolean
+  dailyEntries: DailyMemoryEntry[]
+  memories: MemoryItem[]
+  memoryDailyRecallCount: number
+  memoryLongTermRecallCount: number
+  memoryPaused: boolean
+  memorySemanticRecallCount: number
+  screenContextEnabled: boolean
+  searchMode: MemorySearchMode
+}): MemoryTransparencySummary {
+  const base = resolveMemorySettingsSummary(input)
+  const memoryActive = !input.memoryPaused
+  const contextReadEnabled = input.contextAwarenessEnabled && (
+    input.activeWindowContextEnabled
+    || input.clipboardContextEnabled
+    || input.screenContextEnabled
+  )
+
+  return {
+    ...base,
+    automaticCaptureEnabled: memoryActive,
+    contextReadEnabled,
+    dailyRecallEnabled: memoryActive && input.memoryDailyRecallCount > 0,
+    longTermRecallEnabled: memoryActive && input.memoryLongTermRecallCount > 0,
+    memoryPaused: input.memoryPaused,
+    semanticRecallEnabled: memoryActive && input.memorySemanticRecallCount > 0 && input.searchMode !== 'keyword',
+    sqliteAuthorityEnabled: false,
+    storageAuthority: 'renderer-localStorage',
   }
 }

@@ -187,6 +187,12 @@ Current baseline:
   byte sizes only; the main process returns aggregate alignment/difference
   counts and writes a content-free audit record without returning SQLite chat
   records, titles, message text, userData paths, or session IDs to the renderer.
+  Memory itself still remains renderer-localStorage authoritative, but the
+  settings model now includes `memoryPaused` and the Memory page exposes a
+  transparency summary for recall/capture/context-read state. When paused, chat
+  turns use an empty memory recall context, skip pending memory callbacks, skip
+  recall feedback, and skip daily-memory capture; memory dream consolidation
+  also returns early.
 
 Target v1.0 direction:
 
@@ -472,6 +478,9 @@ hooks/useReminderScheduler
 - `features/memory/` owns long-term memory, daily memory, archive import/export,
   recall support, and vector warmup helpers.
 - `hooks/useMemory.ts` owns persistence and React state synchronization.
+- `features/memory/memorySettingsView.ts` owns the user-facing memory
+  transparency summary used by Settings, including the current storage-authority
+  statement that memory is not SQLite-authoritative yet.
 
 ### Pet and character
 

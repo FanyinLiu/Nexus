@@ -340,9 +340,113 @@ Acceptance results:
 - The hidden Settings panel can show aggregate alignment/difference counts
   without reading SQLite chat records back into the renderer.
 
+## Implementation Slice 4 - Memory Transparency and Pause
+
+Status: implemented in this branch; full validation passed.
+
+Product boundary:
+
+- This slice keeps Nexus companion-first. It does not add planner/executor
+  behavior, autonomous task execution, or a work-agent surface.
+- The goal is user trust: before memory migration becomes authoritative, users
+  must be able to see whether Nexus is actively using memory and pause that
+  behavior without deleting existing memories.
+
+Problem:
+
+- The Memory settings page already let users view, edit, delete, import, and
+  export memory content, and the storage layer already supported disabled
+  individual memories.
+- The UI did not expose a clear global memory pause state, and single-memory
+  pause/resume was not reachable from the settings panel.
+- Users also could not see a concise summary of what memory reads/writes were
+  currently active or which storage authority still owned memory data.
+
+Design:
+
+- Add `memoryPaused` to `AppSettings`, defaulting to `false` and normalized on
+  settings load.
+- Add a pure `resolveMemoryTransparencySummary()` helper that reports:
+  - active and disabled long-term memory counts
+  - recent daily-entry count
+  - whether recall, automatic diary capture, semantic recall, and desktop
+    context reads are active
+  - that memory and diary storage authority is still renderer `localStorage`
+    and SQLite is not authoritative for memory yet
+- Add a Memory settings transparency panel with status, counts, context-read
+  status, storage-authority note, and a global "pause memory recall and
+  learning" toggle.
+- Wire the existing per-memory `enabled` field into the Memory panel as
+  pause/resume controls.
+- Make the chat reply runtime honor `memoryPaused` by sending an empty memory
+  recall context, skipping pending memory callbacks, skipping recall feedback,
+  and skipping new daily-memory capture.
+- Make memory dream consolidation return early while memory is paused.
+
+Impact scope:
+
+- App settings type/default/load normalization.
+- Memory settings UI and Memory panel controls.
+- Chat reply memory recall/writeback behavior.
+- Memory dream scheduling guard.
+- i18n keys/locales and focused tests.
+
+No new dependency:
+
+- The slice reuses existing settings, memory, recall, and settings UI
+  primitives.
+
+Migration:
+
+- Settings migration is additive. Existing users get `memoryPaused: false`.
+- No memory records are moved, rewritten, deleted, or sent to the main process.
+- Existing disabled memory records remain disabled.
+
+Rollback:
+
+- Remove the `memoryPaused` field, UI panel, runtime guards, and tests.
+- Existing memory and daily-memory localStorage data remains untouched.
+- Per-memory `enabled` data is already supported by the storage normalizer and
+  can remain harmless if the UI is removed.
+
+Known risks:
+
+- Memory data still lives in renderer `localStorage`; this slice improves
+  transparency and pause behavior but does not reduce localStorage size.
+- The pause switch intentionally does not delete or redact existing memory
+  exports. Users must still use clear/delete/export controls for data changes.
+- Desktop context controls remain separate; the transparency panel reports
+  whether they are active but does not override them.
+
+Validation results:
+
+- `node --experimental-strip-types --test tests/assistant-reply-failure.test.ts tests/memory-settings-view.test.ts tests/storage-settings.test.ts tests/memory-storage.test.ts tests/chat-storage.test.ts`
+  - 33 focused memory/chat/settings tests passed.
+- `npm test`
+  - 1943 tests passed.
+- `npm run lint`
+  - passed.
+- `npm run i18n:audit`
+  - 2201 keys, 0 missing/extra/duplicate across all locales.
+- `npm run ipc:audit`
+  - passed with 0 errors and 0 warnings.
+- `npm run build`
+  - `tsc -b` and Vite production build passed.
+- `git diff --check`
+  - passed.
+
+Acceptance results:
+
+- Users can globally pause memory recall and learning without deleting memory.
+- Users can pause or resume individual long-term memory entries from the Memory
+  panel.
+- Tests prove paused chat turns receive an empty memory recall context, skip
+  pending memory callbacks, and do not append daily-memory entries.
+- The Memory settings page reports that renderer `localStorage` remains the
+  current memory storage authority and SQLite is not memory-authoritative yet.
+
 Suggested next M5 slice:
 
-- Do not move into an agent/task system. Continue companion-memory work by
-  adding a user-readable memory/chathistory review concept: what Nexus may
-  remember, how the user can pause it, and how migrated chat memory will remain
-  visible and editable before any authority switch.
+- Keep companion-memory scope. Add source-trace preparation for memory recall:
+  record which memory IDs were eligible/used per reply in a user-visible,
+  content-minimized way before any SQLite authority switch.

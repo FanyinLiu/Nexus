@@ -127,6 +127,7 @@ export type SettingsDrawerProps = {
   }>
   onAddManualMemory: (content: string) => void
   onUpdateMemory: (id: string, content: string) => void
+  onSetMemoryEnabled: (id: string, enabled: boolean) => void
   onRemoveMemory: (id: string) => void
   onClearDailyMemory: () => void
   onUpdateDailyEntry?: (id: string, day: string, content: string) => void
@@ -242,6 +243,7 @@ export function SettingsDrawer({
   onClearMemoryArchive,
   onAddManualMemory,
   onUpdateMemory,
+  onSetMemoryEnabled,
   onRemoveMemory,
   onClearDailyMemory,
   onUpdateDailyEntry,
@@ -773,6 +775,7 @@ export function SettingsDrawer({
             onClearMemoryArchive={() => void memoryArchive.handleClearMemoryArchive()}
             onAddManualMemory={onAddManualMemory}
             onUpdateMemory={onUpdateMemory}
+            onSetMemoryEnabled={onSetMemoryEnabled}
             onRemoveMemory={onRemoveMemory}
             onClearDailyMemory={onClearDailyMemory}
             onUpdateDailyEntry={onUpdateDailyEntry}
