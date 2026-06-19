@@ -18,6 +18,10 @@
   memory provenance trace with recalled memory/daily/semantic IDs and show a
   subtle chat-bubble count summary, so users can see whether memory shaped a
   reply without duplicating private memory text.
+- **Memory source details** — reply memory hints can now expand into a
+  runtime-only detail view that resolves trace IDs to current memory previews,
+  marks missing or paused sources, and opens Settings directly to Memory for
+  edits.
 
 ## [0.3.5] - 2026-06-19
 

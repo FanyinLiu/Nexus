@@ -79,6 +79,7 @@ import type {
 
 export type SettingsDrawerProps = {
   open: boolean
+  preferredSectionId?: SettingsSectionId | null
   settings: AppSettings
   platformProfile: PlatformProfile
   chatMessageCount: number
@@ -217,6 +218,7 @@ export type SettingsDrawerProps = {
 
 export function SettingsDrawer({
   open,
+  preferredSectionId,
   settings,
   platformProfile,
   chatMessageCount,
@@ -508,12 +510,23 @@ export function SettingsDrawer({
       setDraft(settings)
       themePreview.previewTheme(settings.themeId)
       speechVoices.syncPreviewText(settings.companionName)
-      setSettingsView('home')
+      if (preferredSectionId) {
+        setActiveSectionId(normalizeSettingsSectionId(preferredSectionId))
+        setSettingsView('section')
+      } else {
+        setSettingsView('home')
+      }
     } else {
       themePreview.previewTheme(settings.themeId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only fire on open transition, not settings changes
   }, [open])
+
+  useEffect(() => {
+    if (!open || !preferredSectionId) return
+    setActiveSectionId(normalizeSettingsSectionId(preferredSectionId))
+    setSettingsView('section')
+  }, [open, preferredSectionId])
 
   useEffect(() => {
     if (!open || isLocaleLoaded(draft.uiLanguage)) return

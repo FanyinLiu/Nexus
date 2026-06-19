@@ -557,8 +557,117 @@ Acceptance results:
 - The slice does not add planner/executor behavior, new permissions, new IPC,
   or new dependencies.
 
+## Implementation Slice 6 - Memory Source Detail View
+
+Status: implemented in this branch; full validation passed.
+
+Product boundary:
+
+- This slice keeps Nexus companion-first. It does not add planner/executor
+  behavior, autonomous task execution, or a work-agent surface.
+- The goal is white-box memory: a user can expand a reply and see which current
+  memory records or daily entries correspond to the stored source trace.
+
+Problem:
+
+- Slice 5 stored content-minimized source trace IDs and showed count summaries,
+  but counts alone do not let a user verify which memory influenced a reply.
+- Memory records can be edited, paused, or deleted after a reply is generated,
+  so the UI must handle missing source IDs explicitly instead of pretending the
+  source is still present.
+- Opening the Memory settings page from a trace should not require a new IPC
+  channel or copying memory text into chat-message metadata.
+
+Design:
+
+- Add a pure `resolveChatMemoryTraceDetails()` helper that resolves a
+  `ChatMemoryTrace` against current renderer memory state.
+- Resolve:
+  - long-term memory IDs to category, enabled/paused status, source, and a
+    runtime-only short preview
+  - daily-memory IDs to day, role/source, and a runtime-only short preview
+  - semantic IDs against both long-term and daily indexes
+  - missing IDs as explicit `missing` entries
+- Keep the persisted assistant message unchanged: `memoryTrace` still stores
+  only status, recall mode, vector availability, and bounded ID arrays.
+- Add an expandable message-bubble detail block under the source summary.
+- Add a "Manage memories" action that opens Settings directly to the Memory
+  section using existing renderer state; no new dependency or IPC is added.
+
+Impact scope:
+
+- Memory trace detail resolver.
+- Panel message rendering data flow.
+- Message bubble UI and i18n copy.
+- Settings drawer section targeting.
+- Focused tests for trace detail resolution.
+
+No new dependency:
+
+- The slice reuses existing React state, settings drawer navigation, and memory
+  storage primitives.
+
+Migration:
+
+- No stored data is migrated.
+- Existing `memoryTrace` metadata remains valid.
+- Runtime-only previews are derived from current memory state and are not
+  written into chat history, audit logs, or SQLite.
+
+Rollback:
+
+- Remove the detail resolver, message-bubble expandable detail UI, direct
+  Memory-section targeting, and focused tests.
+- Stored chat messages with `memoryTrace` remain valid because Slice 5 metadata
+  is unchanged.
+- Memory and daily-memory stores remain untouched.
+
+Known risks:
+
+- Details are based on current renderer-localStorage memory state; they may
+  show `missing` after a user deletes or imports memory archives.
+- Daily-memory details require the current runtime daily store. If future
+  storage authority moves to SQLite, this resolver needs to read through the
+  same white-box memory service instead of direct renderer state.
+- The detail view is intentionally not an inline editor; edits still happen in
+  the Memory settings panel to keep one owner for mutation and confirmation UI.
+
+Validation results:
+
+- `node --experimental-strip-types --test tests/memory-trace-details.test.ts tests/memory-recall-trace.test.ts tests/chat-storage.test.ts tests/assistant-reply-failure.test.ts`
+  - 14 focused memory-detail/memory-trace/chat-storage/assistant-runtime tests
+    passed.
+- `npx tsc -b --pretty false`
+  - passed.
+- `npm run lint`
+  - passed.
+- `npm run i18n:audit`
+  - 2213 keys, 0 missing/extra/duplicate across all locales.
+- `npm test`
+  - 1948 tests passed.
+- `npm run ipc:audit`
+  - passed with 0 errors and 0 warnings.
+- `npm run build`
+  - `tsc -b` and Vite production build passed.
+- `npm run package:dir:smoke`
+  - directory packaging and packaged-app smoke test passed on macOS arm64.
+- `git diff --check`
+  - passed.
+
+Acceptance results:
+
+- Reply memory hints can expand into a detail view grouped by long-term,
+  daily, and semantic sources.
+- Current long-term memories and daily entries resolve to runtime-only short
+  previews; missing IDs are marked explicitly.
+- Paused/disabled long-term memories are marked in the detail view.
+- The persisted assistant message remains content-minimized; memory previews
+  are not written into chat metadata, audit logs, or SQLite.
+- The "Manage memories" action opens Settings directly to the Memory section
+  without adding new IPC, dependencies, or mutation surfaces.
+
 Suggested next M5 slice:
 
-- Add a white-box memory-source detail view that resolves stored trace IDs back
-  to editable memory entries when they still exist, with missing/deleted memory
-  states handled explicitly and without copying memory text into audit logs.
+- Add memory-source focus inside the Memory settings page, so opening from a
+  reply can scroll to or highlight the referenced long-term memories and daily
+  entries without adding another mutation surface.

@@ -233,6 +233,11 @@ Goal: move heavy, long-lived data out of renderer localStorage.
   Each reply can now record whether memory was active or paused, which recall
   mode ran, vector availability, and bounded recalled memory/daily/semantic IDs;
   the chat bubble shows a subtle count summary without duplicating memory text.
+- Slice 6 adds an expandable memory-source detail view on assistant replies.
+  The renderer resolves stored trace IDs against current memory state at render
+  time, shows short previews for still-present memories/daily entries, marks
+  missing or paused sources explicitly, and can open Settings directly to the
+  Memory page for editing.
 - Rollback: keep legacy localStorage snapshots until migration is verified.
 
 ### M6 - Desktop presence state machine

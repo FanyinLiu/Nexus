@@ -14,6 +14,10 @@ import { ActivePlanStrip } from '../../components/ActivePlanStrip'
 import { MessageBubble } from '../../components/MessageBubble'
 import { resolveCharacterPreset } from '../../features/character/presets'
 import {
+  resolveChatMemoryTraceDetails,
+  type ChatMemoryTraceDetails,
+} from '../../features/memory/traceDetails'
+import {
   classifyWeatherCondition,
   getTimeOfDayBand,
   getTimeOfDayBlend,
@@ -82,6 +86,7 @@ export function PanelView({
   notificationBridge,
   panelCollapsed,
   openSettingsPanel,
+  openSettingsSection,
   togglePanelCollapse,
   closePanel,
   settingsDrawer,
@@ -175,6 +180,20 @@ export function PanelView({
   const hiddenMessageCount = Math.max(0, visibleMessages.length - MESSAGE_PAGE_SIZE)
   const loadEarlierLabel = ti('panel.messages.load_earlier', { count: hiddenMessageCount })
   const chatMessageCount = visibleMessages.filter((message) => message.role !== 'system').length
+  const messageMemoryTraceDetails = useMemo(() => {
+    const detailsByMessageId = new Map<string, ChatMemoryTraceDetails>()
+    for (const message of visibleMessages) {
+      const details = resolveChatMemoryTraceDetails({
+        trace: message.memoryTrace,
+        memories: memory.memories,
+        dailyMemories: memory.dailyMemories,
+      })
+      if (details) {
+        detailsByMessageId.set(message.id, details)
+      }
+    }
+    return detailsByMessageId
+  }, [memory.dailyMemories, memory.memories, visibleMessages])
   const welcomeTitle = `${timeGreeting}，${settings.userName}`
   const welcomeBody = memory.memories[0]?.content
     ? ti('panel.greeting.remembered', { memory: shorten(memory.memories[0].content, 24) })
@@ -821,6 +840,8 @@ export function PanelView({
                         key={message.id}
                         message={message}
                         assistantName={settings.companionName}
+                        memoryTraceDetails={messageMemoryTraceDetails.get(message.id)}
+                        onOpenMemorySettings={() => openSettingsSection('memory')}
                       />
                     ))}
                   </>

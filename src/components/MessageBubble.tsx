@@ -2,12 +2,21 @@ import { memo } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import { segmentStageDirections } from '../features/pet/performance.ts'
+import type { ChatMemoryTraceDetailItem, ChatMemoryTraceDetails } from '../features/memory/traceDetails'
 import type { ChatMessage } from '../types'
 import { ToolResultCard } from './ToolResultCard'
 
 type MessageBubbleProps = {
   message: ChatMessage
   assistantName?: string
+  memoryTraceDetails?: ChatMemoryTraceDetails | null
+  onOpenMemorySettings?: () => void
+}
+
+const MEMORY_TRACE_SEARCH_MODE_KEY: Record<ChatMemoryTraceDetails['searchModeUsed'], Parameters<ReturnType<typeof useTranslation>['t']>[0]> = {
+  keyword: 'memory_search.keyword.label',
+  hybrid: 'memory_search.hybrid.label',
+  vector: 'memory_search.vector.label',
 }
 
 function formatMessageTimestamp(createdAt: string, locale: string) {
@@ -101,7 +110,52 @@ function getMemoryTraceLabel(message: ChatMessage, t: ReturnType<typeof useTrans
   })
 }
 
-export const MessageBubble = memo(function MessageBubble({ message, assistantName }: MessageBubbleProps) {
+function renderMemoryTraceItem(
+  item: ChatMemoryTraceDetailItem,
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  const statusLabel = item.status === 'missing'
+    ? t('message_bubble.memory_trace.missing')
+    : item.enabled === false
+      ? t('message_bubble.memory_trace.disabled')
+      : null
+  const fallbackLabel = item.status === 'missing' ? item.id : ''
+
+  return (
+    <li key={`${item.kind}-${item.id}`} className={`message-bubble__memory-item ${item.status === 'missing' ? 'is-missing' : ''}`}>
+      <span className="message-bubble__memory-item-text">
+        {item.preview || fallbackLabel}
+      </span>
+      {statusLabel ? (
+        <span className="message-bubble__memory-item-status">{statusLabel}</span>
+      ) : null}
+    </li>
+  )
+}
+
+function renderMemoryTraceGroup(
+  label: string,
+  items: ChatMemoryTraceDetailItem[],
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  if (!items.length) return null
+
+  return (
+    <div className="message-bubble__memory-group">
+      <span className="message-bubble__memory-group-label">{label}</span>
+      <ul>
+        {items.map((item) => renderMemoryTraceItem(item, t))}
+      </ul>
+    </div>
+  )
+}
+
+export const MessageBubble = memo(function MessageBubble({
+  message,
+  assistantName,
+  memoryTraceDetails,
+  onOpenMemorySettings,
+}: MessageBubbleProps) {
   const { t, locale } = useTranslation()
   const resolvedAssistantName = assistantName ?? t('message_bubble.role.assistant_default')
   const speakerLabel = message.role === 'assistant'
@@ -119,6 +173,12 @@ export const MessageBubble = memo(function MessageBubble({ message, assistantNam
       : '',
   ].filter(Boolean).join(' ')
   const memoryTraceLabel = getMemoryTraceLabel(message, t)
+  const memoryTraceSearchModeLabel = memoryTraceDetails
+    ? t(MEMORY_TRACE_SEARCH_MODE_KEY[memoryTraceDetails.searchModeUsed])
+    : ''
+  const memoryTraceVectorLabel = memoryTraceDetails?.vectorSearchAvailable
+    ? t('message_bubble.memory_trace.vector_on')
+    : t('message_bubble.memory_trace.vector_off')
 
   return (
     <article className={bubbleClassName}>
@@ -150,10 +210,44 @@ export const MessageBubble = memo(function MessageBubble({ message, assistantNam
           </div>
         ) : null}
         {message.toolResult ? <ToolResultCard toolResult={message.toolResult} /> : null}
-        {memoryTraceLabel ? (
-          <div className="message-bubble__memory-trace">
-            {memoryTraceLabel}
-          </div>
+        {memoryTraceLabel && memoryTraceDetails ? (
+          <details className="message-bubble__memory-trace">
+            <summary>{memoryTraceLabel}</summary>
+            <div className="message-bubble__memory-details">
+              <p>
+                {t('message_bubble.memory_trace.search_meta', {
+                  mode: memoryTraceSearchModeLabel,
+                  vector: memoryTraceVectorLabel,
+                })}
+              </p>
+              {renderMemoryTraceGroup(
+                t('message_bubble.memory_trace.long_term'),
+                memoryTraceDetails.longTerm,
+                t,
+              )}
+              {renderMemoryTraceGroup(
+                t('message_bubble.memory_trace.daily'),
+                memoryTraceDetails.daily,
+                t,
+              )}
+              {renderMemoryTraceGroup(
+                t('message_bubble.memory_trace.semantic'),
+                memoryTraceDetails.semantic,
+                t,
+              )}
+              {onOpenMemorySettings ? (
+                <button
+                  type="button"
+                  className="message-bubble__memory-action"
+                  onClick={onOpenMemorySettings}
+                >
+                  {t('message_bubble.memory_trace.manage')}
+                </button>
+              ) : null}
+            </div>
+          </details>
+        ) : memoryTraceLabel ? (
+          <div className="message-bubble__memory-trace">{memoryTraceLabel}</div>
         ) : null}
       </div>
     </article>

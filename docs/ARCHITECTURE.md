@@ -195,7 +195,9 @@ Current baseline:
   also returns early. Assistant chat messages can carry optional
   `memoryTrace` metadata with only memory status, recall mode, vector
   availability, and bounded recalled memory/daily/semantic IDs; the renderer UI
-  displays only a count summary, not duplicated memory text.
+  displays a count summary and can resolve those IDs against current renderer
+  memory state for an expandable, runtime-only detail view. The short previews
+  shown there are not written back into chat metadata, audit logs, or SQLite.
 
 Target v1.0 direction:
 
@@ -486,6 +488,9 @@ hooks/useReminderScheduler
   statement that memory is not SQLite-authoritative yet.
 - `features/memory/recallTrace.ts` owns the content-minimized assistant-message
   memory provenance metadata derived from `MemoryRecallContext`.
+- `features/memory/traceDetails.ts` owns runtime-only resolution of memory
+  trace IDs to current long-term/daily memory previews and missing-source
+  states for the chat UI.
 
 ### Pet and character
 

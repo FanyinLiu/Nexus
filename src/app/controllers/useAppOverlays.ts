@@ -6,6 +6,7 @@ import {
   useState,
 } from 'react'
 import type { SettingsDrawerProps } from '../../components/SettingsDrawer'
+import type { SettingsSectionId } from '../../components/settingsDrawerSupport.ts'
 import type { OnboardingGuideProps } from '../../features/onboarding/components/OnboardingGuide'
 import type { PetModelDefinition } from '../../features/pet'
 import {
@@ -41,6 +42,7 @@ type UseAppOverlaysOptions = {
   platformProfile: PlatformProfile
   setSettings: Dispatch<SetStateAction<AppSettings>>
   settingsOpen: boolean
+  preferredSettingsSectionId: SettingsSectionId | null
   setSettingsOpen: Dispatch<SetStateAction<boolean>>
   petModelPresets: PetModelDefinition[]
   petRuntimeContinuousVoiceActive: boolean
@@ -110,6 +112,7 @@ export function useAppOverlays({
   platformProfile,
   setSettings,
   settingsOpen,
+  preferredSettingsSectionId,
   setSettingsOpen,
   petModelPresets,
   petRuntimeContinuousVoiceActive,
@@ -217,6 +220,7 @@ export function useAppOverlays({
 
   const settingsDrawerProps: SettingsDrawerProps = {
     open: settingsOpen,
+    preferredSectionId: preferredSettingsSectionId,
     settings,
     chatMessageCount,
     chatBusy: chat.busy,
