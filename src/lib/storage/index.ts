@@ -8,6 +8,7 @@
 //   chatMigrationPreview.ts — content-free settings preview for the chat migration audit
 //   chatLocalDataRuntimeMirror.ts — hidden chat SQLite runtime mirror consent
 //   memory.ts        — long-term + daily memory persistence
+//   memoryMigrationDryRun.ts — content-free memory localStorage migration audit
 //   voice.ts         — voice pipeline state + trace
 //   reminders.ts     — reminder task persistence
 //   debugConsole.ts  — debug console event log
@@ -26,6 +27,7 @@ export * from './chatLocalDataRuntimeMirror.ts'
 export * from './lorebooks.ts'
 export * from './pendingGreeting.ts'
 export * from './memory.ts'
+export * from './memoryMigrationDryRun.ts'
 export * from './voice.ts'
 export * from './reminders.ts'
 export * from './debugConsole.ts'

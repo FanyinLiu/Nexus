@@ -778,8 +778,122 @@ Acceptance results:
 - The slice adds no new IPC, dependencies, migration, permissions, or
   automation surfaces.
 
+## Implementation Slice 8 - Memory LocalStorage Migration Dry-Run
+
+Status: implemented in this branch; full validation passed.
+
+Product boundary:
+
+- This slice keeps Nexus companion-first and memory-safe. It does not add
+  autonomous task execution, tool calls, planner/executor behavior, or a
+  Codex-style work-agent surface.
+- The goal is to prepare the long-term memory migration with a content-free
+  local audit before any SQLite memory write path, renderer readback path, or
+  storage-authority change exists.
+
+Problem:
+
+- Long-term memory and daily memory still live in renderer `localStorage`.
+- The app needs to understand current data shape, legacy key presence,
+  normalization losses, and date/count coverage before a safe migration can be
+  designed.
+- A migration report must not expose memory text, diary text, source refs,
+  memory IDs, related IDs, or user-private details.
+
+Design:
+
+- Add `memoryMigrationDryRun.ts` as a pure renderer-side report builder.
+- Inspect three known memory keys:
+  - `nexus:memory:long-term`
+  - legacy `nexus:memory`
+  - `nexus:memory:daily`
+- Reuse existing memory normalizers to compute normalized long-term memory and
+  daily-entry counts without writing the normalized values back.
+- Report only:
+  - storage key presence, byte sizes, JSON validity, raw/normalized counts
+  - long-term enabled/paused counts, category/kind/importance counts
+  - daily day/entry counts, role/source counts, date ranges
+  - estimated content byte totals and issue codes
+- Use stable JSON comparison for normalization warnings so field-order changes
+  do not create false review states.
+- Export `loadMemoryStorageMigrationDryRun()` through the storage barrel for
+  future hidden UI or development diagnostics.
+
+Impact scope:
+
+- New storage dry-run helper.
+- Storage barrel export.
+- Focused memory migration dry-run tests.
+- M5/ROADMAP/ARCHITECTURE/CHANGELOG documentation.
+
+No new dependency:
+
+- The slice reuses existing localStorage constants and memory normalization
+  helpers.
+
+Migration:
+
+- No stored data is migrated.
+- No SQLite schema, localStorage value, IPC contract, audit-log schema, or UI
+  entry point changes.
+- Reports are content-free and are not persisted.
+
+Rollback:
+
+- Remove `memoryMigrationDryRun.ts`, its storage barrel export, focused tests,
+  and documentation updates.
+- Existing memory, daily-memory, trace, and Settings behavior remains valid.
+
+Known risks:
+
+- The report is renderer-side only and reflects the current localStorage state
+  visible to that renderer process.
+- Estimated content byte totals are aggregate sizes only; they are useful for
+  migration sizing, not for exact encrypted/export package sizing.
+- The next write-path slice still needs a separate SQLite schema, explicit
+  confirmation, backup/rollback design, and no-content audit records.
+
+Validation results:
+
+- `node --experimental-strip-types --test tests/memory-migration-dry-run.test.ts tests/memory-storage.test.ts tests/memory-trace-details.test.ts tests/memory-recall-trace.test.ts tests/chat-storage.test.ts tests/assistant-reply-failure.test.ts`
+  - 26 focused memory migration/storage/trace/chat-runtime tests passed.
+- `npx tsc -b --pretty false`
+  - passed.
+- `npm run lint`
+  - passed.
+- `npm run i18n:audit`
+  - 2214 keys, 0 missing/extra/duplicate across all locales.
+- `npm test`
+  - 1955 tests passed.
+- `npm run ipc:audit`
+  - passed with 0 errors and 0 warnings.
+- `npm run build`
+  - `tsc -b` and Vite production build passed.
+- `git diff --check`
+  - passed.
+- `npm run package:dir:smoke`
+  - directory packaging and packaged-app smoke test passed on macOS arm64.
+  - Existing unsigned macOS, duplicate dependency, and optional local model
+    warnings remain unchanged residual packaging/setup risks.
+
+Acceptance results:
+
+- Empty memory storage reports `empty` and performs no localStorage writes.
+- Valid long-term and daily memory storage reports counts, date ranges, byte
+  estimates, and category/source totals without exposing memory content, diary
+  content, memory IDs, source refs, or related IDs.
+- Legacy memory is planned only when the current long-term memory key has no
+  normalized records; otherwise legacy presence is marked as ignored.
+- Malformed JSON blocks the dry-run and points the next step to localStorage
+  repair before any migration can be attempted.
+- Normalization losses are surfaced as issue codes while the dry-run itself
+  remains read-only.
+- The slice adds no new IPC, dependencies, migration, permissions, or
+  automation surfaces.
+
 Suggested next M5 slice:
 
-- Start the smallest reversible SQLite-backed memory repository design: a
-  content-free dry-run audit of long-term memory and daily-memory localStorage
-  shape before any write path or authority change.
+- Design the smallest reversible main-process SQLite memory repository schema
+  and a service-only migration package builder, still hidden from production UI
+  until backup, confirmation, rollback, and content-free audit behavior are
+  tested.

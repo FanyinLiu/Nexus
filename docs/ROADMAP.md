@@ -243,6 +243,11 @@ Goal: move heavy, long-lived data out of renderer localStorage.
   corresponding long-term memories and diary entries, and temporarily includes
   referenced older diary entries in the visible panel without changing stored
   memory data.
+- Slice 8 adds a content-free memory migration dry-run for `nexus:memory:long-term`,
+  legacy `nexus:memory`, and `nexus:memory:daily`. It reports storage presence,
+  byte sizes, normalized record counts, day/date ranges, category/source counts,
+  and issue codes without writing SQLite, changing localStorage, or exposing
+  memory text, IDs, source refs, or related IDs.
 - Rollback: keep legacy localStorage snapshots until migration is verified.
 
 ### M6 - Desktop presence state machine

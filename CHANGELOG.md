@@ -26,6 +26,10 @@
   highlights the referenced long-term memories and diary entries, including
   referenced older diary entries that were outside the recent preview, without
   adding new automation or changing stored memory data.
+- **Memory migration dry-run** — added a content-free audit for long-term,
+  legacy, and daily memory localStorage shapes so the next SQLite memory
+  migration can be designed from counts, byte sizes, date ranges, and issue
+  codes without exposing private memory text or writing storage.
 
 ## [0.3.5] - 2026-06-19
 

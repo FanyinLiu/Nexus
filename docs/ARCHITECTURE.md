@@ -200,7 +200,12 @@ Current baseline:
   that detail view passes only the referenced source IDs into Settings, where
   the corresponding long-term memories and diary entries are highlighted; older
   referenced diary entries may be temporarily included in the visible panel
-  without changing stored data. The short previews shown there are not written
+  without changing stored data. A content-free memory migration dry-run can
+  inspect `nexus:memory:long-term`, legacy `nexus:memory`, and
+  `nexus:memory:daily` for storage shape, counts, date ranges, and issue codes
+  before any SQLite memory write path exists. It does not write SQLite, mutate
+  localStorage, or include memory text, memory IDs, source refs, related IDs, or
+  diary content in the report. The short previews shown in chat are not written
   back into chat metadata, audit logs, or SQLite.
 
 Target v1.0 direction:
