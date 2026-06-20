@@ -55,3 +55,11 @@ test('error redaction audit covers updater renderer-facing errors', () => {
   assert.equal(report.summary.errors, 0)
   assert.ok(report.checkedFiles.includes('electron/services/updaterService.js'))
 })
+
+test('error redaction audit covers model download renderer-facing errors', () => {
+  const report = buildErrorRedactionReport()
+
+  assert.equal(report.summary.errors, 0)
+  assert.ok(report.checkedFiles.includes('electron/services/modelDownloader.js'))
+  assert.ok(report.checkedFiles.includes('electron/services/modelManager.js'))
+})

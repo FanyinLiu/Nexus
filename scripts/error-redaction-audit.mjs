@@ -12,6 +12,8 @@ const CHECKED_FILES = [
   'electron/ipc/audioIpc.js',
   'electron/ipc/vtsBridgeIpc.js',
   'electron/net.js',
+  'electron/services/modelDownloader.js',
+  'electron/services/modelManager.js',
   'electron/services/updaterService.js',
   'electron/services/vtsBridge.js',
   'tests/error-redaction.test.ts',
@@ -59,6 +61,18 @@ const UNSAFE_PATTERNS = [
     file: 'electron/services/updaterService.js',
     pattern: /reason:\s*error\s+instanceof\s+Error\s*\?\s*error\.message\s*:\s*String\(error\)/,
     message: 'updater check results must not expose raw update error text',
+  },
+  {
+    id: 'model-downloader-raw-progress-error',
+    file: 'electron/services/modelDownloader.js',
+    pattern: /message:\s*error\s+instanceof\s+Error\s*\?\s*error\.message\s*:\s*String\(error\)/,
+    message: 'model download progress errors must be redacted before renderer broadcast',
+  },
+  {
+    id: 'model-manager-raw-progress-error',
+    file: 'electron/services/modelManager.js',
+    pattern: /message:\s*error\s+instanceof\s+Error\s*\?\s*error\.message\s*:\s*String\(error\)/,
+    message: 'model manager progress/results must not expose raw download error text',
   },
   {
     id: 'net-extracts-raw-response-error',
@@ -109,6 +123,22 @@ const REQUIRED_PHRASES = [
     phrases: [
       "import { redactSensitiveErrorText } from './services/errorRedaction.js'",
       'return redactSensitiveErrorText(',
+    ],
+  },
+  {
+    id: 'model-downloader-redacts-progress-errors',
+    file: 'electron/services/modelDownloader.js',
+    phrases: [
+      "import { getRedactedErrorMessage } from './errorRedaction.js'",
+      "emit({ phase: 'error', message: getRedactedErrorMessage(error) })",
+    ],
+  },
+  {
+    id: 'model-manager-redacts-progress-errors',
+    file: 'electron/services/modelManager.js',
+    phrases: [
+      "import { getRedactedErrorMessage } from './errorRedaction.js'",
+      'message: getRedactedErrorMessage(error)',
     ],
   },
   {
