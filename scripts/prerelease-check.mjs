@@ -226,7 +226,7 @@ stage('B', 'Code quality', () => {
       return `${pct}%`
     }, { warnOnly: true })
   } else {
-    console.log(COLOR.dim('       smoke / coverage skipped (--quick)'))
+    console.log(COLOR.dim('       smoke / packaged smoke / coverage skipped (--quick)'))
   }
 
   check('B', 'Bundle: app-runtime ≤ 1700 KB', () => {

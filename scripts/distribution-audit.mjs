@@ -112,6 +112,10 @@ check('pre-release gate docs include packaged smoke', () => {
     'RELEASING should document the packaged smoke gate',
   )
   assert(
+    releasingDoc.includes('smoke, packaged smoke, coverage, benchmarks'),
+    'RELEASING should document that --quick skips packaged smoke',
+  )
+  assert(
     releasingDoc.includes('package an unpacked app and launch it with') ||
       releasingDoc.includes('Packaged smoke'),
     'RELEASING should explain what the packaged smoke gate validates',

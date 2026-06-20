@@ -246,8 +246,8 @@ exit non-zero with a specific diagnostic. Some checks are warn-only
 should be reviewed manually.
 
 Flags:
-- `--quick` skips slow stages (smoke, coverage, benchmarks). Use when
-  iterating; the full check runs before the actual tag push.
+- `--quick` skips slow stages (smoke, packaged smoke, coverage, benchmarks).
+  Use when iterating; the full check runs before the actual tag push.
 - `--skip=B,C` skips specific stages.
 - `--only=A` runs only specific stages.
 

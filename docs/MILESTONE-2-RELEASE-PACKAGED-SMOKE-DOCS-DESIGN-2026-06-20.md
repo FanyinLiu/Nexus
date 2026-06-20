@@ -12,8 +12,10 @@ to miss a required installer-path validation when preparing v0.3.5.
 - Update the `prerelease-check` header comment so Stage B names packaged smoke.
 - Update `docs/RELEASING.md` Stage B to six checks and document
   `npm run package:dir:smoke`.
+- Keep the `--quick` documentation and console copy explicit that quick mode
+  skips packaged smoke as well as renderer smoke, coverage, and benchmarks.
 - Extend `npm run distribution:audit` so it fails if the release doc no longer
-  lists the packaged smoke gate.
+  lists the packaged smoke gate or its quick-mode skip behavior.
 
 No dependencies, IPC channels, storage writes, migrations, permissions, network
 calls, model requests, or automation tools are introduced.
@@ -23,6 +25,7 @@ calls, model requests, or automation tools are introduced.
 - Release operators see the same Stage B gate that the script actually runs.
 - Release documentation now reflects that v0.3.5 validates both renderer launch
   smoke and packaged-app launch smoke.
+- Quick-mode release checks no longer hide that packaged smoke is skipped.
 - Future drift between release docs and packaged smoke coverage becomes a
   distribution audit failure.
 
@@ -47,6 +50,8 @@ runtime or data rollback is needed.
 
 - `docs/RELEASING.md` Stage B lists six checks and includes
   `npm run package:dir:smoke`.
+- `docs/RELEASING.md` and `scripts/prerelease-check.mjs` both state that quick
+  mode skips packaged smoke.
 - `scripts/prerelease-check.mjs` names packaged smoke in the Stage B summary.
 - `npm run distribution:audit` enforces the packaged smoke documentation.
 - Focused distribution audit, build, lint, full tests, package smoke, and pet
