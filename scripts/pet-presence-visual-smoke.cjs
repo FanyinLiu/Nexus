@@ -34,6 +34,10 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+function cleanupTempUserData() {
+  fs.rmSync(userDataRoot, { recursive: true, force: true })
+}
+
 async function waitForPetStage(window) {
   const startedAt = Date.now()
   let lastSnapshot = null
@@ -195,7 +199,7 @@ async function main() {
     }))
   } finally {
     window.destroy()
-    fs.rmSync(userDataRoot, { recursive: true, force: true })
+    cleanupTempUserData()
     app.quit()
   }
 }
@@ -203,6 +207,6 @@ async function main() {
 main().catch((error) => {
   console.error('[pet-presence-smoke] failed')
   console.error(error)
-  try { fs.rmSync(userDataRoot, { recursive: true, force: true }) } catch {}
+  try { cleanupTempUserData() } catch {}
   app.exit(1)
 })
