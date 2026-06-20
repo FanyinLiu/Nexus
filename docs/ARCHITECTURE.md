@@ -96,9 +96,19 @@ Current baseline:
 - `npm run ipc:audit` is the M3 source-only IPC contract inventory. It parses
   preload invokes, preload subscriptions, and main-process handlers without
   reading user data or secrets, then fails on structural drift such as missing
-  handlers, duplicate handlers, missing trusted-sender checks, or missing event
-  sources. Current validation/audit/permission gaps are reported as warnings
-  until later M3 slices tighten each high-risk channel family.
+  handlers, duplicate handlers, missing trusted-sender checks, missing event
+  sources, payload-validation gaps, or high-risk audit/permission gaps.
+- `npm run storage:audit` is the renderer localStorage contract inventory. It
+  fails if a storage key is added without classification, authority, and
+  migration posture.
+- `npm run heavy:audit` guards renderer-side heavy modules such as embeddings,
+  OCR, browser VAD, and Live2D so they remain lazy-loaded or vendor-loaded on
+  demand.
+- `npm run companion-boundary:audit` keeps the repo aligned to companionship
+  instead of work-agent expansion by requiring the companion task boundary to be
+  documented in code-facing and release-facing docs.
+- `npm run verify:pr` is the day-to-day merge gate. `npm run verify:release`
+  reuses it and then adds the SQLite smoke check for release confidence.
 - The `file:save-text` and `file:open-text` IPC handlers now use explicit
   request schemas, native file dialogs as the user confirmation point, and
   metadata-only audit records that avoid file content and full local paths.
@@ -539,6 +549,16 @@ hooks/useReminderScheduler
 - Any future v1.0 assisted action should introduce a main-process
   permission/audit service before expanding tools, so new audit surfaces do not
   depend directly on renderer-side stores.
+
+### Companion task boundary
+
+Nexus can keep lightweight reminders, follow-ups, and trace state, but those
+surfaces are not autonomous work-agent execution. The companion task layer must
+stay permission-gated, default-off when behavior is active, and explainable in
+plain UI terms before it expands beyond local reminders or user-confirmed
+follow-ups. The existing `features/agent/` name is retained for import and data
+compatibility only; user-facing copy should describe companion tasks rather
+than presenting Nexus as a Codex-style work agent.
 
 ### Memory
 

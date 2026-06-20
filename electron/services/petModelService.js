@@ -68,6 +68,7 @@ import {
   IMPORTED_SPRITE_PET_MODELS_ROUTE,
 } from './petModelUrlBuilders.js'
 import {
+  formatDiscoveredModelLabel,
   listPetModelsFromRoot,
   readAndValidateLive2dModelFile,
 } from './live2dModelDiscoveryService.js'

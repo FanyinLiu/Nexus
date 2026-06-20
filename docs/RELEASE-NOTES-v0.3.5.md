@@ -111,10 +111,10 @@ lives in renderer `localStorage` by default, and nothing is deleted.
 ## Product boundary
 
 Nexus is still a desktop companion. This release does not add a Codex-style
-agent, task planner, autonomous executor, or background work system. The storage
-and audit work exists so future memory feels local, visible, reversible, and
-under the user's control; the presence work exists so Nexus feels more alive on
-the desktop without taking work away from the user.
+work agent, task planner, autonomous executor, or background work system. The
+storage and audit work exists so future memory feels local, visible,
+reversible, and under the user's control; the presence work exists so Nexus
+feels more alive on the desktop without taking work away from the user.
 
 ## Known issues
 

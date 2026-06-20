@@ -1,4 +1,19 @@
 import { validateIpcPayload } from './schemaValidator.js'
+import {
+  AUDIO_BASE64_MAX,
+  BODY_TEXT_MAX,
+  CHAT_MESSAGE_TEXT_MAX,
+  PATH_TEXT_MAX,
+  SAFE_FILE_EXTENSION_PATTERN,
+  SAFE_SKILL_ID_PATTERN,
+  SECRET_TEXT_MAX,
+  SHORT_TEXT_MAX,
+  TEXT_FILE_CONTENT_MAX,
+  URL_TEXT_MAX,
+  integrationPermissionModeSchema,
+  optionalBoolean,
+  optionalShortString,
+} from './payloadSchemaPrimitives.js'
 export {
   validateDesktopContextRequestPayload,
   validateMediaSessionControlPayload,
@@ -9,30 +24,6 @@ export {
   validateRuntimeStateUpdatePayload,
   validateWindowDragPayload,
 } from './windowPayloadSchemas.js'
-
-const SHORT_TEXT_MAX = 256
-const URL_TEXT_MAX = 2_048
-const SECRET_TEXT_MAX = 20_000
-const BODY_TEXT_MAX = 20_000
-const TEXT_FILE_CONTENT_MAX = 10_000_000
-const AUDIO_BASE64_MAX = 50_000_000
-const PATH_TEXT_MAX = 4_096
-const CHAT_MESSAGE_TEXT_MAX = 200_000
-const SAFE_SKILL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
-const SAFE_FILE_EXTENSION_PATTERN = /^[A-Za-z0-9*][A-Za-z0-9+._-]{0,31}$/
-
-const optionalBoolean = { type: 'boolean', optional: true }
-const optionalShortString = {
-  type: 'string',
-  optional: true,
-  maxLength: SHORT_TEXT_MAX,
-  clamp: true,
-}
-
-const integrationPermissionModeSchema = {
-  type: 'enum',
-  values: ['read-only', 'confirm', 'auto'],
-}
 
 const externalActionPolicyItemSchema = {
   type: 'object',

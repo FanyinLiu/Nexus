@@ -145,6 +145,11 @@ _No changes yet._
   release handoff, and documented architecture entry points synchronized before
   merge. The v0.3.5 handoff evidence is also refreshed past the stale
   `48e6b78` baseline.
+- **Engineering hardening guardrails** — added a conservative Electron/script
+  JS lint gate, renderer localStorage storage-contract audit, heavy renderer
+  module lazy-load audit, companion-not-agent boundary audit, stricter
+  zero-warning IPC audit behavior, and a `verify:pr` gate that `verify:release`
+  now reuses before SQLite smoke.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned

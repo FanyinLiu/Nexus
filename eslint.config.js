@@ -8,10 +8,34 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   globalIgnores([
     'dist',
+    'release',
+    'release-smoke',
     'public/vendor/**',
     '.venv-qwen3tts/**',
     '.hf-home/**',
   ]),
+  {
+    files: ['electron/**/*.js', 'scripts/**/*.{js,mjs,cjs}'],
+    extends: [
+      js.configs.recommended,
+    ],
+    languageOptions: {
+      ecmaVersion: 2024,
+      globals: {
+        ...globals.node,
+        ...globals.browser,
+      },
+    },
+    rules: {
+      // Existing main-process JS predates this gate. Keep the first pass
+      // focused on real undefined/runtime hazards, then tighten unused symbols
+      // after the Electron files move toward typed modules.
+      'no-unused-vars': 'off',
+      'no-empty': 'off',
+      'no-extra-boolean-cast': 'off',
+      'no-useless-escape': 'off',
+    },
+  },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
