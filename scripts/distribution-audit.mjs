@@ -10,6 +10,7 @@ import { buildHeavyModuleAuditReport } from './heavy-module-audit.mjs'
 import { buildCompanionBoundaryReport } from './companion-boundary-audit.mjs'
 import { buildArchitectureBoundaryReport } from './architecture-boundary-audit.mjs'
 import { buildSourceSizeReport } from './source-size-audit.mjs'
+import { buildMessagePrivacyReport } from './message-privacy-audit.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -65,6 +66,7 @@ check('developer npm scripts cover run, package and release verification', () =>
     'source-size:audit',
     'performance:baseline',
     'companion-boundary:audit',
+    'message-privacy:audit',
     'sqlite:smoke',
     'sqlite:smoke:electron',
     'sqlite:smoke:all',
@@ -195,6 +197,13 @@ check('source files stay below the large-file budget', () => {
 check('companion boundary is documented and guarded', () => {
   const report = buildCompanionBoundaryReport(ROOT)
   assert(report.summary.errors === 0, `companion boundary audit has ${report.summary.errors} error(s); run npm run companion-boundary:audit`)
+})
+
+check('message privacy boundary is guarded', () => {
+  const report = buildMessagePrivacyReport(ROOT)
+  assert(report.summary.errors === 0, `message privacy audit has ${report.summary.errors} error(s); run npm run message-privacy:audit`)
+  assert(report.privacy.staticSourceOnly === true, 'message privacy audit must stay source-only')
+  assert(report.privacy.readsMessageContent === false, 'message privacy audit must not read user messages')
 })
 
 check('source desktop shortcut launches without a terminal window', () => {

@@ -158,8 +158,11 @@ _No changes yet._
   a fixed vault slot and one-way legacy localStorage migration, the renderer no
   longer exposes VTS token read/write IPC, high-risk VTS migration IPC is
   schema-validated, IPC payload schemas are split into domain modules behind
-  the same public `payloadSchemas.js` export, and `verify:pr` records a
-  production bundle performance baseline.
+  the same public `payloadSchemas.js` export, `verify:pr` records a production
+  bundle performance baseline, and `npm run message-privacy:audit` now blocks
+  desktop notification/message body regressions that would send third-party
+  message text into chat/model forwarding, chat history, missed-message
+  follow-ups, or renderer localStorage persistence.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned
