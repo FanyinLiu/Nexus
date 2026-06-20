@@ -118,6 +118,9 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
   notification/message bodies cannot regress into model forwarding, persisted
   chat history, missed-message follow-up hints, reply draft composer text, or
   renderer localStorage writes.
+- Add `npm run desktop-context-privacy:audit` to the PR/release guard so
+  active-window, clipboard, OCR, and VLM context cannot bypass sensitive-text
+  redaction before renderer return or model prompt formatting.
 - Rollback: signing config changes must be isolated in packaging config and
   release docs.
 
@@ -176,6 +179,10 @@ auditable.
 - Local notification webhook info is token-safe across IPC: the main process
   creates and enforces a `0600` user-data token file, while the renderer sees
   only the URL, auth-required flag, token file name, and size cap.
+- Desktop context capture now redacts obvious secrets such as API keys, bearer
+  tokens, passwords, and private-key material before active-window/clipboard
+  text leaves the main process, with a renderer-side prompt-formatting fallback
+  for OCR and VLM text.
 - Create an inventory of every preload-exposed method and matching
   `ipcMain.handle`.
 - Require trusted sender checks, request validation, response shape decisions,

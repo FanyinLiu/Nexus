@@ -130,6 +130,11 @@ Current baseline:
   draft composer text, or raw renderer localStorage writes. The audit reads
   repository source only and never reads user notifications, chat content,
   localStorage values, secrets, or message bodies.
+- `npm run desktop-context-privacy:audit` is the source-only desktop context
+  privacy guard. It fails if `desktop-context:get` returns active-window,
+  clipboard, OCR, or VLM text without the sensitive-text sanitizer, or if prompt
+  formatting bypasses the renderer-side sanitizer. It never reads the live
+  clipboard, screenshots, active-window text, localStorage values, or secrets.
 - `npm run verify:pr` is the day-to-day merge gate. `npm run verify:release`
   reuses it and then adds the SQLite smoke check for release confidence.
 - The `file:save-text` and `file:open-text` IPC handlers now use explicit
@@ -139,6 +144,11 @@ Current baseline:
   for requested/allowed/enabled context capabilities and returned data-category
   lengths. It deliberately avoids logging active-window text, clipboard text,
   screenshot data URLs, display names, or process paths.
+- The same desktop context path redacts obvious secrets such as API keys,
+  bearer tokens, passwords, and private-key material before captured
+  active-window/clipboard text leaves the main process. Renderer prompt
+  formatting applies the same sanitizer again to OCR and VLM text before it can
+  enter the model context.
 - External action IPC handlers for Telegram, Discord, Minecraft, Factorio, and
   MCP now write metadata-only request/result audit records. These records keep
   outbound message text, voice payloads, game commands, target IDs, MCP command

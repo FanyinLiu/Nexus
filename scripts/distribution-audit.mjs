@@ -11,6 +11,7 @@ import { buildCompanionBoundaryReport } from './companion-boundary-audit.mjs'
 import { buildArchitectureBoundaryReport } from './architecture-boundary-audit.mjs'
 import { buildSourceSizeReport } from './source-size-audit.mjs'
 import { buildMessagePrivacyReport } from './message-privacy-audit.mjs'
+import { buildDesktopContextPrivacyReport } from './desktop-context-privacy-audit.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -67,6 +68,7 @@ check('developer npm scripts cover run, package and release verification', () =>
     'performance:baseline',
     'companion-boundary:audit',
     'message-privacy:audit',
+    'desktop-context-privacy:audit',
     'sqlite:smoke',
     'sqlite:smoke:electron',
     'sqlite:smoke:all',
@@ -204,6 +206,16 @@ check('message privacy boundary is guarded', () => {
   assert(report.summary.errors === 0, `message privacy audit has ${report.summary.errors} error(s); run npm run message-privacy:audit`)
   assert(report.privacy.staticSourceOnly === true, 'message privacy audit must stay source-only')
   assert(report.privacy.readsMessageContent === false, 'message privacy audit must not read user messages')
+})
+
+check('desktop context privacy boundary is guarded', () => {
+  const report = buildDesktopContextPrivacyReport(ROOT)
+  assert(report.summary.errors === 0, `desktop context privacy audit has ${report.summary.errors} error(s); run npm run desktop-context-privacy:audit`)
+  assert(report.privacy.staticSourceOnly === true, 'desktop context privacy audit must stay source-only')
+  assert(report.privacy.readsUserData === false, 'desktop context privacy audit must not read user data')
+  assert(report.privacy.readsClipboard === false, 'desktop context privacy audit must not read clipboard content')
+  assert(report.privacy.readsScreenshots === false, 'desktop context privacy audit must not read screenshots')
+  assert(report.privacy.readsActiveWindow === false, 'desktop context privacy audit must not read active-window content')
 })
 
 check('source desktop shortcut launches without a terminal window', () => {
