@@ -165,7 +165,10 @@ _No changes yet._
   follow-ups, or renderer localStorage persistence. The same guard now covers
   Telegram/Discord bridge ingress: external-contact messages are announce-only,
   only owner-listed remote messages enter the model, debug events are
-  metadata-only, and external Telegram voice notes are not transcribed.
+  metadata-only, and external Telegram voice notes are not transcribed. Local
+  notification webhook info no longer returns the bearer token or full
+  `Authorization` header to the renderer; Settings shows only the token file
+  placeholder while scripts continue reading the 0600 user-data token file.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned

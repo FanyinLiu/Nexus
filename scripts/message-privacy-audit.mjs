@@ -13,9 +13,12 @@ const CHECKED_FILES = [
   'src/app/controllers/discordMessageRouter.ts',
   'src/app/controllers/useTelegramBridge.ts',
   'src/app/controllers/useDiscordBridge.ts',
+  'electron/services/notificationBridge.js',
   'src/hooks/useNotificationBridge.ts',
+  'src/components/settingsSections/AutonomySection.tsx',
   'src/lib/privacy/bridgeMessagePrivacy.ts',
   'src/lib/privacy/notificationPrivacy.ts',
+  'src/vite-env.d.ts',
 ]
 
 const UNSAFE_PATTERNS = [
@@ -79,6 +82,24 @@ const UNSAFE_PATTERNS = [
     pattern: /if\s*\(\s*wasVoice\s*&&\s*msg\.voiceBase64\s*\)\s*\{/,
     message: 'Telegram voice transcription must be owner-only',
   },
+  {
+    id: 'webhook-token-returned-to-renderer',
+    file: 'electron/services/notificationBridge.js',
+    pattern: /return\s*\{\s*[\s\S]{0,260}\btoken\b|authHeader\s*:/,
+    message: 'notification webhook info must not return bearer token material to the renderer',
+  },
+  {
+    id: 'webhook-token-typed-in-renderer',
+    file: 'src/vite-env.d.ts',
+    pattern: /getNotificationWebhookInfo[\s\S]{0,260}(?:\btoken:\s*string|authHeader:\s*string)/,
+    message: 'renderer webhook info type must not expose bearer token material',
+  },
+  {
+    id: 'webhook-token-rendered-in-settings',
+    file: 'src/components/settingsSections/AutonomySection.tsx',
+    pattern: /webhookInfo\?\.authHeader|Authorization:\s*\{webhookInfo/,
+    message: 'settings UI must not render the plaintext notification webhook token',
+  },
 ]
 
 const REQUIRED_PHRASES = [
@@ -121,6 +142,16 @@ const REQUIRED_PHRASES = [
     id: 'telegram-owner-only-voice-transcription',
     file: 'src/app/controllers/useTelegramBridge.ts',
     phrases: ['if (wasVoice && msg.voiceBase64 && isOwner)'],
+  },
+  {
+    id: 'webhook-info-token-file-only',
+    file: 'electron/services/notificationBridge.js',
+    phrases: ['requiresAuth: true', 'tokenFileName: WEBHOOK_TOKEN_FILE'],
+  },
+  {
+    id: 'webhook-settings-token-placeholder',
+    file: 'src/components/settingsSections/AutonomySection.tsx',
+    phrases: ['Authorization: Bearer &lt;{webhookInfo.tokenFileName'],
   },
 ]
 

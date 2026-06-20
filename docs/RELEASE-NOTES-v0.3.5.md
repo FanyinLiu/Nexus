@@ -113,6 +113,9 @@ lives in renderer `localStorage` by default, and nothing is deleted.
   allowed bridge channel to push their message text into Nexus' model context;
   only owner-listed remote messages are forwarded, bridge debug logs stay
   metadata-only, and external Telegram voice notes are not transcribed.
+- Stopped returning the local notification webhook bearer token to the renderer;
+  Settings now shows the token file placeholder, while local automation scripts
+  continue reading the `0600` token file directly.
 - Kept renderer access to plaintext secrets blocked through the safeStorage
   vault/ref pattern.
 

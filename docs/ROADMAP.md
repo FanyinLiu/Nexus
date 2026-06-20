@@ -172,6 +172,9 @@ auditable.
   owner-listed remote messages are the only bridge messages forwarded into
   chat/model input. Debug logging is metadata-only and external Telegram voice
   notes are not transcribed.
+- Local notification webhook info is token-safe across IPC: the main process
+  creates and enforces a `0600` user-data token file, while the renderer sees
+  only the URL, auth-required flag, token file name, and size cap.
 - Create an inventory of every preload-exposed method and matching
   `ipcMain.handle`.
 - Require trusted sender checks, request validation, response shape decisions,

@@ -93,11 +93,11 @@ async function ensureWebhookToken() {
 }
 
 export async function getWebhookInfo() {
-  const token = await ensureWebhookToken()
+  await ensureWebhookToken()
   return {
     url: `http://127.0.0.1:${WEBHOOK_PORT}/webhook`,
-    token,
-    authHeader: `Bearer ${token}`,
+    requiresAuth: true,
+    tokenFileName: WEBHOOK_TOKEN_FILE,
     maxBodyBytes: WEBHOOK_MAX_BODY_BYTES,
   }
 }
