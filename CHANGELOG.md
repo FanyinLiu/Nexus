@@ -256,7 +256,10 @@ _No changes yet._
 - **Plugin IPC hardening** — plugin lifecycle and plugin bus write IPC now use
   metadata-only audit records and native confirmation for execution-granting
   lifecycle actions and bus publish/subscribe/unsubscribe without logging plugin
-  IDs, server IDs, topics, payload contents, commands, or error text.
+  IDs, server IDs, topics, payload contents, commands, or error text. Plugin
+  host support logs now keep approval, manifest-skip, and auto-start diagnostics
+  metadata-only, avoiding raw plugin names, directory entries, paths, command
+  errors, and token-like text.
 - **External link IPC audit** — `tool:open-external` now writes metadata-only
   request/result audit records around the existing URL safety check and native
   confirmation without logging full URLs, hostnames, paths, queries, fragments,

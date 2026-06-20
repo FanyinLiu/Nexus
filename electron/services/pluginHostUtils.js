@@ -22,3 +22,15 @@ export function isPluginCommandTrusted(plugin, approvedPlugins) {
   if (!storedHash) return false
   return storedHash === hashCommand(plugin.command, plugin.args)
 }
+
+export function formatPluginLogLabel(plugin) {
+  return [
+    `idLength=${String(plugin?.id ?? '').length}`,
+    `nameLength=${String(plugin?.name ?? '').length}`,
+    `versionLength=${String(plugin?.version ?? '').length}`,
+  ].join(' ')
+}
+
+export function formatPluginDirectoryEntryLogLabel(entry) {
+  return `entryLength=${String(entry ?? '').length}`
+}

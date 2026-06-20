@@ -8,7 +8,12 @@ import {
   summarizeMcpOutputLineForLog,
   summarizeMcpToolNamesForLog,
 } from '../electron/services/mcpHostUtils.js'
-import { hashCommand, isPluginCommandTrusted } from '../electron/services/pluginHostUtils.js'
+import {
+  formatPluginDirectoryEntryLogLabel,
+  formatPluginLogLabel,
+  hashCommand,
+  isPluginCommandTrusted,
+} from '../electron/services/pluginHostUtils.js'
 
 // ── parseArgsString ─────────────────────────────────────────────────────
 
@@ -138,6 +143,29 @@ test('hashCommand: args order matters', () => {
   const a = hashCommand('cmd', ['--a', '--b'])
   const b = hashCommand('cmd', ['--b', '--a'])
   assert.notEqual(a, b)
+})
+
+test('plugin host log helpers omit plugin ids names paths commands and tokens', () => {
+  const plugin = {
+    id: 'private-plugin-id',
+    name: 'Private Plugin',
+    version: '1.2.3',
+    command: '/Users/me/private-plugin/bin/server',
+    args: ['--token', 'secret-token'],
+  }
+  const label = formatPluginLogLabel(plugin)
+  const entry = formatPluginDirectoryEntryLogLabel('private-plugin-folder')
+  const serialized = [label, entry].join('\n')
+
+  assert.match(serialized, /idLength=/)
+  assert.match(serialized, /nameLength=/)
+  assert.match(serialized, /versionLength=/)
+  assert.match(serialized, /entryLength=/)
+  assert.doesNotMatch(serialized, /private-plugin-id/)
+  assert.doesNotMatch(serialized, /Private Plugin/)
+  assert.doesNotMatch(serialized, /private-plugin-folder/)
+  assert.doesNotMatch(serialized, /\/Users\/me/)
+  assert.doesNotMatch(serialized, /secret-token/)
 })
 
 test('hashCommand: defaults to empty args array', () => {
