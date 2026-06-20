@@ -105,6 +105,10 @@ lives in renderer `localStorage` by default, and nothing is deleted.
   status, chat runtime mirror, and chat comparison preview paths.
 - Added content-free memory storage dry-run reports for future long-term memory
   SQLite migration design.
+- Added a source-only message privacy audit and tightened desktop notification
+  handling so third-party message bodies remain local preview data, not
+  automatic model input, persisted chat history, follow-up hints, or renderer
+  localStorage payloads.
 - Kept renderer access to plaintext secrets blocked through the safeStorage
   vault/ref pattern.
 

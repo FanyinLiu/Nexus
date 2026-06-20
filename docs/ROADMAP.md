@@ -114,6 +114,9 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
   WebSocket authentication behind a main-process bridge, increasing IPC schema
   coverage, splitting IPC payload schemas behind a stable public export, and
   adding `npm run performance:baseline` to the PR gate.
+- Add `npm run message-privacy:audit` to the same PR/release guard so desktop
+  notification/message bodies cannot regress into model forwarding, persisted
+  chat history, missed-message follow-up hints, or renderer localStorage writes.
 - Rollback: signing config changes must be isolated in packaging config and
   release docs.
 
@@ -159,6 +162,11 @@ auditable.
 - The remaining renderer-payload IPC backlog is now schema-bound:
   integrations inspection, KWS start/status, VAD start, model download, and TTS
   streaming lifecycle requests all validate request shape before service work.
+- Desktop notification/message awareness now follows a local-preview boundary:
+  the companion may show or speak a user-enabled preview locally, but automatic
+  notification-to-chat forwarding, persisted chat history, missed-message
+  follow-up records, and renderer notification storage keep only metadata or
+  strip body/summary content.
 - Create an inventory of every preload-exposed method and matching
   `ipcMain.handle`.
 - Require trusted sender checks, request validation, response shape decisions,

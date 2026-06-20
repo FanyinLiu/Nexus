@@ -61,10 +61,11 @@ test('telegram announcement omits message text unless preview is enabled', () =>
 })
 
 test('telegram announcement can include a normalized bounded preview', () => {
+  const originalText = `  ${'x'.repeat(120)}\n\nsecond line`
   const result = buildTelegramAnnouncementContent(
     {
       ...message,
-      text: `  ${'x'.repeat(120)}\n\nsecond line`,
+      text: originalText,
     },
     {
       telegramAnnounceIncomingEnabled: true,
@@ -74,6 +75,8 @@ test('telegram announcement can include a normalized bounded preview', () => {
   )
 
   assert.ok(result)
+  assert.equal(result.chatContent, 'chat.bridge.messaging_announcement_chat|Klein|')
+  assert.equal(result.chatContent.includes(originalText.trim()), false)
   assert.equal(result.speechContent.startsWith('chat.bridge.messaging_announcement_speech_preview|Klein|'), true)
   assert.equal(result.speechContent.includes('\n'), false)
   assert.ok(getTelegramAnnouncementPreview('x'.repeat(120)).endsWith('...'))
@@ -189,6 +192,8 @@ test('local webhook messages use source, sender, preview, and provided message i
 
   assert.ok(result)
   assert.equal(result.dedupeKey, 'message:wecom:room-2:msg-4')
+  assert.equal(result.chatContent, 'chat.bridge.messaging_announcement_chat|企业微信|李四|')
+  assert.equal(result.chatContent.includes('麻烦看下发布清单'), false)
   assert.equal(result.speechContent, 'chat.bridge.messaging_announcement_speech_preview|企业微信|李四|麻烦看下发布清单 谢谢')
 })
 

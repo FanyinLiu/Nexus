@@ -124,6 +124,12 @@ Current baseline:
 - `npm run companion-boundary:audit` keeps the repo aligned to companionship
   instead of work-agent expansion by requiring the companion task boundary to be
   documented in code-facing and release-facing docs.
+- `npm run message-privacy:audit` is the source-only desktop message privacy
+  guard. It fails if notification/message bodies are wired into automatic chat
+  forwarding, persisted chat history, missed-message follow-up hints, or raw
+  renderer localStorage writes. The audit reads repository source only and
+  never reads user notifications, chat content, localStorage values, secrets, or
+  message bodies.
 - `npm run verify:pr` is the day-to-day merge gate. `npm run verify:release`
   reuses it and then adds the SQLite smoke check for release confidence.
 - The `file:save-text` and `file:open-text` IPC handlers now use explicit
@@ -177,6 +183,12 @@ Current baseline:
   current `npm run ipc:audit` gate reports no missing handlers, missing trusted
   sender checks, payload-validation warnings, high-risk audit gaps, or
   high-risk permission gaps.
+- Desktop notification/message awareness treats message text as local preview
+  data, not model input. Automatic desktop-message chat forwarding now sends
+  only source/sender metadata, missed-message follow-up records omit topic/body
+  snippets, notification companion notices stored in chat history use
+  metadata-only copy, and renderer notification localStorage persistence strips
+  body/summary text before writing.
 - A main-process local-data foundation now initializes both
   `userData/local-data/manifest.json` and the SQLite database
   `userData/local-data/nexus.sqlite` using Electron/Node's built-in
