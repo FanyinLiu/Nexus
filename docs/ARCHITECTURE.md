@@ -412,8 +412,51 @@ src/features/themes/index.ts
 
 The app shell should prefer these entry points over imports like
 `../../features/voice/sessionMachine` unless the symbol is explicitly private.
+There is currently no `src/features/index.ts` aggregate barrel; feature modules
+should use their own `src/features/<feature>/index.ts` public surface until a
+real aggregate is added intentionally.
 
 ## Core Runtime Flows
+
+### Companion presence and memory visibility flow
+
+```text
+chat / voice / runtime snapshot
+  -> features/pet/activityState
+  -> app/views/PetView
+       -> status dot + accessibility label
+       -> data-companion-activity / data-companion-motion
+       -> SpritePetCanvas fallback state
+       -> Live2D listening/speaking flags
+```
+
+The current v0.3.5 desktop presence contract is intentionally presentation
+oriented. `features/pet/activityState.ts` resolves one visible phase
+(`idle`, `thinking`, `listening`, `speaking`, `waiting`, `error`, or `offline`)
+plus a small motion token. It must stay content-minimized: no chat text,
+memory text, secrets, model output, tool arguments, local paths, or audit
+payloads belong in the resolved companion state.
+
+Settings uses the same resolver through
+`components/settingsSections/chat/CompanionStatePreview.tsx`, so the Companion
+Profile preview cannot drift away from the pet window. Stage directions stay in
+`features/pet/performance.ts`: recognized companion asides can drive avatar
+cues, while ordinary notes and Markdown remain content.
+
+Memory visibility is a separate white-box provenance surface, not part of the
+presence state machine:
+
+```text
+features/memory recall context
+  -> content-minimized assistant-message memoryTrace IDs
+  -> runtime-only trace detail resolution
+  -> Settings Memory focus/edit/delete/pause surface
+```
+
+`features/releaseNotes/` is also intentionally narrow. The v0.3.5 spotlight is
+localized release copy plus local Settings navigation actions only; it must not
+own updater logic, migrations, IPC, background checks, chat generation, voice
+capture, tools, or task execution.
 
 ### Voice and chat flow
 
