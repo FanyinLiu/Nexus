@@ -60,6 +60,6 @@ export const STORAGE_KEY_CONTRACTS = [
   { constant: 'ARCHIVE_STORAGE_KEY', key: 'nexus:memory:archive', domain: 'memory', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'MODEL_SETUP_DISMISSED_STORAGE_KEY', key: 'nexus.modelSetup.dismissedUntilRestart', domain: 'onboarding', classification: 'session', authority: 'renderer-sessionStorage', migration: 'do-not-migrate' },
   { constant: 'STORAGE_KEY', key: 'nexus:safety:disclosure', domain: 'safety', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
-  { constant: 'LEGACY_STORAGE_KEY', key: 'nexus:vts-auth-token', domain: 'pet', classification: 'secret-adjacent', authority: 'renderer-localStorage-legacy-migration-source', migration: 'migrated-to-main-vault-fixed-slot' },
+  { constant: 'LEGACY_STORAGE_KEY', key: 'nexus:vts-auth-token', domain: 'pet', classification: 'secret-adjacent', authority: 'renderer-localStorage-legacy-migration-source', migration: 'migrated-to-main-vts-bridge-vault-fixed-slot' },
   { constant: 'INLINE_VOICE_TTS_PIPELINE_FLAG', key: 'nexus:useTtsPipeline', domain: 'voice', classification: 'debug', authority: 'renderer-localStorage-debug-flag', migration: 'do-not-migrate' },
 ]
