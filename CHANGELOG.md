@@ -188,7 +188,9 @@ _No changes yet._
   renderer-visible status broadcasts or VTS audit records can expose
   token-like strings, credentialed URLs, or local user paths. Auto-updater
   check/download failures now use it too before update events, manual-check
-  results, or updater logs reach UI/support surfaces.
+  results, or updater logs reach UI/support surfaces. Model download/install
+  failures now use it before first-run setup progress events or batch download
+  results can expose credentialed source URLs, tar stderr, or local user paths.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned

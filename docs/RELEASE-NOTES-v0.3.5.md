@@ -141,6 +141,9 @@ lives in renderer `localStorage` by default, and nothing is deleted.
 - Auto-updater check/download errors now use the same redaction boundary before
   renderer-visible update events, manual-check results, or updater logs can
   expose token-like strings, credentialed URLs, or local user paths.
+- Model download/install failures now use the same redaction boundary before
+  first-run model setup progress events or batch download results can expose
+  credentialed source URLs, tar stderr, or local user paths.
 
 ## Product boundary
 

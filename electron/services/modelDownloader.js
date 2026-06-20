@@ -12,6 +12,7 @@ import { join, dirname } from 'node:path'
 import { get as httpsGet } from 'node:https'
 import { get as httpGet } from 'node:http'
 import { spawn } from 'node:child_process'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 
 // ── Network probe (HuggingFace vs ModelScope fallback) ─────────────────
 
@@ -256,7 +257,7 @@ export async function downloadModel(model, opts) {
 
     emit({ phase: 'done' })
   } catch (error) {
-    emit({ phase: 'error', message: error instanceof Error ? error.message : String(error) })
+    emit({ phase: 'error', message: getRedactedErrorMessage(error) })
     throw error
   }
 }
