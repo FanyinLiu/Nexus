@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { resolveCompanionActivityState } from '../src/features/pet/activityState.ts'
+import {
+  COMPANION_ACTIVITY_PHASES,
+  resolveCompanionActivityPreviewState,
+  resolveCompanionActivityState,
+} from '../src/features/pet/activityState.ts'
 
 const now = '2026-06-20T01:00:00.000Z'
 
@@ -96,4 +100,87 @@ test('resolveCompanionActivityState returns idle with trimmed task label when no
   assert.equal(state.spriteState, null)
   assert.equal(state.activeTaskLabel, 'evening reminder')
   assert.equal(state.statusKey, 'pet.status.ready')
+})
+
+test('resolveCompanionActivityPreviewState covers every desktop presence state', () => {
+  assert.deepEqual(COMPANION_ACTIVITY_PHASES, [
+    'idle',
+    'thinking',
+    'listening',
+    'speaking',
+    'waiting',
+    'error',
+    'offline',
+  ])
+
+  const previewRows = COMPANION_ACTIVITY_PHASES.map((phase) => {
+    const state = resolveCompanionActivityPreviewState(phase, now)
+    return {
+      requested: phase,
+      phase: state.phase,
+      motionToken: state.motionToken,
+      spriteState: state.spriteState,
+      statusKey: state.statusKey,
+      updatedAt: state.updatedAt,
+    }
+  })
+
+  assert.deepEqual(previewRows, [
+    {
+      requested: 'idle',
+      phase: 'idle',
+      motionToken: 'breathe',
+      spriteState: null,
+      statusKey: 'pet.status.ready',
+      updatedAt: now,
+    },
+    {
+      requested: 'thinking',
+      phase: 'thinking',
+      motionToken: 'think',
+      spriteState: 'running',
+      statusKey: 'pet.status.thinking',
+      updatedAt: now,
+    },
+    {
+      requested: 'listening',
+      phase: 'listening',
+      motionToken: 'listen',
+      spriteState: 'waiting',
+      statusKey: 'voice_state.listening',
+      updatedAt: now,
+    },
+    {
+      requested: 'speaking',
+      phase: 'speaking',
+      motionToken: 'speak',
+      spriteState: 'review',
+      statusKey: 'voice_state.speaking',
+      updatedAt: now,
+    },
+    {
+      requested: 'waiting',
+      phase: 'waiting',
+      motionToken: 'wait',
+      spriteState: 'waiting',
+      statusKey: 'pet.status.waiting_confirmation',
+      updatedAt: now,
+    },
+    {
+      requested: 'error',
+      phase: 'error',
+      motionToken: 'error',
+      spriteState: 'failed',
+      statusKey: 'pet.status.error',
+      updatedAt: now,
+    },
+    {
+      requested: 'offline',
+      phase: 'offline',
+      motionToken: 'offline',
+      spriteState: 'waiting',
+      statusKey: 'pet.status.offline',
+      updatedAt: now,
+    },
+  ])
 })

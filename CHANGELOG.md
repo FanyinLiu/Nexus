@@ -22,6 +22,9 @@
   `npm run pet:presence-smoke` to launch the built pet view through Electron,
   confirm the completed-onboarding idle/breathe presence state, reject
   onboarding-overlay false positives, and save a nonblank screenshot report.
+- **Desktop state preview** — Companion Profile now includes a compact
+  idle/thinking/listening/speaking/waiting/error/offline preview, with Sprite
+  avatars switching to the same runtime state mapping used by the desktop pet.
 - **In-app release spotlight** — About/Help now shows the v0.3.5 theme,
   "memory is no longer a black box," with short localized bullets for memory
   sources, memory controls, first-run repair, and the companion-first boundary.
