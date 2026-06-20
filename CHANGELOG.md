@@ -134,6 +134,12 @@ _No changes yet._
   document the 2026-06-18 stabilization track: first-run reliability, release
   trust, IPC contracts, main-process storage/SQLite, white-box memory, desktop
   presence, voice budgets, local RAG, authorized tasks, and gated MCP/plugins.
+- **Companion presence architecture alignment** — ARCHITECTURE and ROADMAP now
+  map the v0.3.5 presence implementation back to its real module boundaries:
+  `features/pet/activityState` owns the content-minimized visible state,
+  `PetView` and Companion Profile consume the same resolver, memory provenance
+  stays separate from avatar state, and release spotlight actions remain local
+  Settings navigation rather than task execution.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned

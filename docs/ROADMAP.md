@@ -312,6 +312,13 @@ Goal: the companion's visible state reflects what Nexus is actually doing.
   `Unreleased` into the `[0.3.5]` changelog section, with a focused guard so the
   release candidate has one clear user-facing version boundary. See
   [Milestone 6 Slice 11 Design](MILESTONE-6-DESKTOP-PRESENCE-CHANGELOG-CUTOVER-DESIGN-2026-06-20.md).
+- Slice 12 aligns the architecture documentation with the actual v0.3.5
+  companion-presence implementation: `features/pet/activityState` owns the
+  content-minimized visible state contract, `PetView` and Companion Profile
+  consume that same resolver, memory provenance remains a separate white-box
+  surface, and release spotlight actions stay local Settings navigation rather
+  than task execution. See
+  [Milestone 6 Slice 12 Design](MILESTONE-6-DESKTOP-PRESENCE-ARCHITECTURE-ALIGNMENT-DESIGN-2026-06-20.md).
 - Bind chat, voice, setup, tool, and error flows to that contract.
 - Keep Live2D/sprite-heavy rendering lazy and budgeted.
 - Rollback: state mapping is additive and can fall back to current pet behavior.

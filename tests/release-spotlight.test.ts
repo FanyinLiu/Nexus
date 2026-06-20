@@ -110,6 +110,33 @@ test('human-facing v0.3.5 docs keep visible memory and companion presence aligne
   assert.match(releaseSection, /Release theme guard/)
 })
 
+test('architecture docs keep companion presence boundaries aligned', () => {
+  const architecture = readWorkspaceFile('docs/ARCHITECTURE.md')
+  const roadmap = readWorkspaceFile('docs/ROADMAP.md')
+  const changelog = readWorkspaceFile('CHANGELOG.md')
+  const design = readWorkspaceFile(
+    'docs/MILESTONE-6-DESKTOP-PRESENCE-ARCHITECTURE-ALIGNMENT-DESIGN-2026-06-20.md',
+  )
+
+  assert.match(architecture, /Companion presence and memory visibility flow/)
+  assert.match(architecture, /features\/pet\/activityState/)
+  assert.match(architecture, /content-minimized/)
+  assert.match(architecture, /Memory visibility is a separate white-box provenance surface/)
+  assert.match(architecture, /features\/releaseNotes\/` is also intentionally narrow/)
+  assert.match(architecture, /no `src\/features\/index\.ts` aggregate barrel/)
+
+  assert.match(roadmap, /Slice 12 aligns the architecture documentation/)
+  assert.match(roadmap, /memory provenance remains a separate white-box\s+surface/)
+  assert.match(roadmap, /release spotlight actions stay local Settings navigation/)
+
+  assert.match(changelog, /Companion presence architecture alignment/)
+  assert.match(changelog, /memory provenance\s+stays separate from avatar state/)
+  assert.match(changelog, /rather than task execution/)
+
+  assert.match(design, /task-agent\s+dashboard/)
+  assert.match(design, /No runtime behavior, user data, IPC, migrations, dependencies, or release\s+packaging change/)
+})
+
 test('v0.3.5 release handoff keeps merge and tag evidence explicit', () => {
   const handoff = readWorkspaceFile('docs/RELEASE-CANDIDATE-v0.3.5-HANDOFF.md')
 
