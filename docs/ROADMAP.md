@@ -187,6 +187,10 @@ auditable.
   redaction boundary before Settings/status/support surfaces can expose bot
   tokens, credentialed gateway URLs, service error payloads, or local user
   paths.
+- macOS notification watcher status and persistence errors now use the same
+  redaction boundary before `notification:watcher-status` or logs can expose
+  Notification Center database paths, local user paths, or sensitive system
+  error details.
 - The remaining renderer-payload IPC backlog is now schema-bound:
   integrations inspection, KWS start/status, VAD start, model download, and TTS
   streaming lifecycle requests all validate request shape before service work.

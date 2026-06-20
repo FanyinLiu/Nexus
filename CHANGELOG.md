@@ -194,7 +194,10 @@ _No changes yet._
   Telegram/Discord gateway status errors and diagnostic logs now use the same
   redaction boundary before Settings/status/support surfaces can expose bot
   tokens, credentialed gateway URLs, service error payloads, or local user
-  paths.
+  paths. macOS notification watcher status and persistence errors now use the
+  same boundary before `notification:watcher-status` or logs can expose
+  Notification Center database paths, local user paths, or sensitive system
+  error details.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned
