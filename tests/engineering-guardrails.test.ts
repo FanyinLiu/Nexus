@@ -5,8 +5,10 @@ import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 
 import { buildCompanionBoundaryReport } from '../scripts/companion-boundary-audit.mjs'
+import { buildArchitectureBoundaryReport } from '../scripts/architecture-boundary-audit.mjs'
 import { buildHeavyModuleAuditReport } from '../scripts/heavy-module-audit.mjs'
 import { buildIpcContractReport } from '../scripts/ipc-contract-audit.mjs'
+import { buildSourceSizeReport } from '../scripts/source-size-audit.mjs'
 import { buildStorageContractReport } from '../scripts/storage-contract-audit.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -22,6 +24,8 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
     'lint:js',
     'storage:audit',
     'heavy:audit',
+    'architecture:audit',
+    'source-size:audit',
     'companion-boundary:audit',
     'verify:pr',
     'verify:release',
@@ -31,6 +35,8 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
 
   assert.match(pkg.scripts['verify:pr'], /npm run storage:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run heavy:audit/)
+  assert.match(pkg.scripts['verify:pr'], /npm run architecture:audit/)
+  assert.match(pkg.scripts['verify:pr'], /npm run source-size:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run companion-boundary:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run ipc:audit/)
   assert.match(pkg.scripts['verify:release'], /npm run verify:pr/)
@@ -41,13 +47,20 @@ test('source-only engineering audits are clean at the current baseline', () => {
   const ipcReport = buildIpcContractReport(ROOT)
   const storageReport = buildStorageContractReport(ROOT)
   const heavyReport = buildHeavyModuleAuditReport(ROOT)
+  const architectureReport = buildArchitectureBoundaryReport(ROOT)
+  const sourceSizeReport = buildSourceSizeReport(ROOT)
   const boundaryReport = buildCompanionBoundaryReport(ROOT)
 
   assert.equal(ipcReport.summary.errors, 0)
   assert.equal(ipcReport.summary.warnings, 0)
   assert.equal(ipcReport.summary.ok, true)
   assert.equal(storageReport.summary.errors, 0)
+  assert.equal(storageReport.discoveredKeys, storageReport.contracts)
+  assert.ok(storageReport.discoveredKeyReferences >= storageReport.discoveredKeys)
+  assert.ok(storageReport.discoveredKeys >= 60)
   assert.equal(heavyReport.summary.errors, 0)
+  assert.equal(architectureReport.summary.errors, 0)
+  assert.equal(sourceSizeReport.summary.errors, 0)
   assert.equal(boundaryReport.summary.errors, 0)
 })
 

@@ -8,6 +8,8 @@ import { buildReleaseTrustReport, summarizeReleaseTrustReport } from './release-
 import { buildStorageContractReport } from './storage-contract-audit.mjs'
 import { buildHeavyModuleAuditReport } from './heavy-module-audit.mjs'
 import { buildCompanionBoundaryReport } from './companion-boundary-audit.mjs'
+import { buildArchitectureBoundaryReport } from './architecture-boundary-audit.mjs'
+import { buildSourceSizeReport } from './source-size-audit.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -59,6 +61,8 @@ check('developer npm scripts cover run, package and release verification', () =>
     'ipc:audit',
     'storage:audit',
     'heavy:audit',
+    'architecture:audit',
+    'source-size:audit',
     'companion-boundary:audit',
     'sqlite:smoke',
     'sqlite:smoke:electron',
@@ -169,12 +173,22 @@ check('IPC bridge contract baseline is inventoried', () => {
 check('renderer localStorage keys have a migration contract', () => {
   const report = buildStorageContractReport(ROOT)
   assert(report.summary.errors === 0, `storage contract audit has ${report.summary.errors} error(s); run npm run storage:audit`)
-  assert(report.constants === report.contracts, 'storage contract count should match exported localStorage key constants')
+  assert(report.discoveredKeys === report.contracts, 'storage contract count should match unique discovered browser storage keys')
 })
 
 check('heavy renderer modules stay lazy-loaded', () => {
   const report = buildHeavyModuleAuditReport(ROOT)
   assert(report.summary.errors === 0, `heavy module audit has ${report.summary.errors} error(s); run npm run heavy:audit`)
+})
+
+check('renderer architecture boundaries do not invert', () => {
+  const report = buildArchitectureBoundaryReport(ROOT)
+  assert(report.summary.errors === 0, `architecture boundary audit has ${report.summary.errors} error(s); run npm run architecture:audit`)
+})
+
+check('source files stay below the large-file budget', () => {
+  const report = buildSourceSizeReport(ROOT)
+  assert(report.summary.errors === 0, `source size audit has ${report.summary.errors} error(s); run npm run source-size:audit`)
 })
 
 check('companion boundary is documented and guarded', () => {

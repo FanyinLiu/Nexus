@@ -1,25 +1,71 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { readdirSync, readFileSync } from 'node:fs'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { STORAGE_CONTRACT_VERSION, STORAGE_KEY_CONTRACTS } from './storage-contract.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const STORAGE_CORE_PATH = join('src', 'lib', 'storage', 'core.ts')
 const VALID_CLASSIFICATIONS = new Set([
   'audit-adjacent',
   'debug',
   'ephemeral',
   'legacy-compat',
+  'secret-adjacent',
+  'session',
   'settings',
   'user-data',
 ])
 
-function readStorageConstants(root = ROOT) {
-  const source = readFileSync(join(root, STORAGE_CORE_PATH), 'utf8')
-  return [...source.matchAll(/export const ([A-Z0-9_]+_STORAGE_KEY) = '([^']+)'/g)]
-    .map((match) => ({ constant: match[1], key: match[2] }))
+function walkSourceFiles(root, directory) {
+  const base = join(root, directory)
+  const files = []
+  for (const entry of readdirSync(base, { withFileTypes: true })) {
+    const fullPath = join(base, entry.name)
+    const rel = relative(root, fullPath)
+    if (entry.isDirectory()) {
+      files.push(...walkSourceFiles(root, rel))
+    } else if (entry.isFile() && /\.(ts|tsx)$/.test(entry.name)) {
+      files.push(rel)
+    }
+  }
+  return files
+}
+
+function readBrowserStorageKeys(root = ROOT) {
+  const keys = []
+  const keyBySource = new Map()
+
+  function addKey(item) {
+    const sourceKey = `${item.key}:${item.file}:${item.constant}`
+    if (keyBySource.has(sourceKey)) return
+    keyBySource.set(sourceKey, item)
+    keys.push(item)
+  }
+
+  for (const file of walkSourceFiles(root, 'src')) {
+    const source = readFileSync(join(root, file), 'utf8')
+
+    for (const match of source.matchAll(/\b(?:export\s+)?const\s+([A-Z0-9_]*(?:KEY|PREFIX)[A-Z0-9_]*)\s*=\s*'([^']*nexus[.:][^']*)'/g)) {
+      addKey({
+        constant: match[1],
+        key: match[2],
+        file,
+        kind: match[1].includes('PREFIX') ? 'prefix' : 'exact',
+      })
+    }
+
+    for (const match of source.matchAll(/(?:window\.)?(?:localStorage|sessionStorage)\.(?:getItem|setItem|removeItem)\(\s*'([^']*nexus[.:][^']*)'/g)) {
+      addKey({
+        constant: 'INLINE_STORAGE_KEY',
+        key: match[1],
+        file,
+        kind: 'exact',
+      })
+    }
+  }
+
+  return keys.sort((left, right) => left.key.localeCompare(right.key) || left.file.localeCompare(right.file))
 }
 
 function countBy(items, field) {
@@ -31,9 +77,9 @@ function countBy(items, field) {
 }
 
 export function buildStorageContractReport(root = ROOT) {
-  const constants = readStorageConstants(root)
-  const constantMap = new Map(constants.map((item) => [item.constant, item]))
-  const contractMap = new Map(STORAGE_KEY_CONTRACTS.map((item) => [item.constant, item]))
+  const discoveredKeys = readBrowserStorageKeys(root)
+  const discoveredKeySet = new Set(discoveredKeys.map((item) => item.key))
+  const contractMap = new Map(STORAGE_KEY_CONTRACTS.map((item) => [item.key, item]))
   const keyOwners = new Map()
   const duplicateContractKeys = []
 
@@ -47,13 +93,14 @@ export function buildStorageContractReport(root = ROOT) {
     if (owners.length > 1) duplicateContractKeys.push({ key, constants: owners })
   }
 
-  const missingContracts = constants.filter((item) => !contractMap.has(item.constant))
-  const staleContracts = STORAGE_KEY_CONTRACTS.filter((item) => !constantMap.has(item.constant))
-  const keyMismatches = STORAGE_KEY_CONTRACTS
+  const missingContracts = discoveredKeys.filter((item) => !contractMap.has(item.key))
+  const staleContracts = STORAGE_KEY_CONTRACTS.filter((item) => !discoveredKeySet.has(item.key))
+  const wrongKind = discoveredKeys
     .map((item) => {
-      const source = constantMap.get(item.constant)
-      return source && source.key !== item.key
-        ? { constant: item.constant, sourceKey: source.key, contractKey: item.key }
+      const contract = contractMap.get(item.key)
+      const contractKind = contract?.kind ?? 'exact'
+      return contract && contractKind !== item.kind
+        ? { key: item.key, sourceKind: item.kind, contractKind, file: item.file }
         : null
     })
     .filter(Boolean)
@@ -70,7 +117,7 @@ export function buildStorageContractReport(root = ROOT) {
   const errors = {
     missingContracts,
     staleContracts,
-    keyMismatches,
+    wrongKind,
     duplicateContractKeys,
     invalidClassifications,
     missingMigration,
@@ -80,8 +127,9 @@ export function buildStorageContractReport(root = ROOT) {
 
   return {
     schemaVersion: STORAGE_CONTRACT_VERSION,
-    source: STORAGE_CORE_PATH,
-    constants: constants.length,
+    source: 'src/**/*.ts{x}',
+    discoveredKeyReferences: discoveredKeys.length,
+    discoveredKeys: discoveredKeySet.size,
     contracts: STORAGE_KEY_CONTRACTS.length,
     coverage: {
       classification: countBy(STORAGE_KEY_CONTRACTS, 'classification'),
@@ -109,7 +157,8 @@ function formatList(items, key = 'constant', limit = 8) {
 
 function formatHumanReport(report) {
   const lines = ['Storage contract audit']
-  lines.push(`- storage constants: ${report.constants}`)
+  lines.push(`- discovered browser storage keys: ${report.discoveredKeys}`)
+  lines.push(`- source references: ${report.discoveredKeyReferences}`)
   lines.push(`- contract entries: ${report.contracts}`)
   lines.push(`- classifications: ${JSON.stringify(report.coverage.classification)}`)
   lines.push(`- migration posture: ${JSON.stringify(report.coverage.migration)}`)
