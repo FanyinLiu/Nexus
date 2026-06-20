@@ -144,10 +144,10 @@ Current baseline:
   request handlers stop resolving vault refs before using API keys. It never
   reads safeStorage, keychain values, localStorage, or secret material.
 - `npm run error-redaction:audit` is the source-only network-error privacy
-  guard. It fails if main-process chat/audio network handlers return or log raw
-  caught error text without the shared secret/path redactor. It never performs
-  network requests or reads user data, localStorage, keychain values, or secret
-  material.
+  guard. It fails if main-process chat/audio network handlers or the VTube
+  Studio bridge return or log raw caught error text without the shared
+  secret/path redactor. It never performs network requests or reads user data,
+  localStorage, keychain values, or secret material.
 - `npm run verify:pr` is the day-to-day merge gate. `npm run verify:release`
   reuses it and then adds the SQLite smoke check for release confidence.
 - The `file:save-text` and `file:open-text` IPC handlers now use explicit
@@ -211,7 +211,9 @@ Current baseline:
   parameter injection, and hotkey triggering in the main process. Renderer code
   can connect/disconnect, send bounded companion state input, subscribe to
   bridge status, and migrate the old `nexus:vts-auth-token` localStorage value
-  one way into the fixed vault slot; it cannot read the VTS token back.
+  one way into the fixed vault slot; it cannot read the VTS token back. VTS
+  connection/authentication errors use the same main-process redactor before
+  status broadcasts or audit records can expose them.
 - Integrations inspection, KWS start/status, VAD start, model download, and TTS
   streaming lifecycle IPC now validate request shape before service work. The
   current `npm run ipc:audit` gate reports no missing handlers, missing trusted

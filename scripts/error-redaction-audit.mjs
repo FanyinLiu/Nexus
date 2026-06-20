@@ -10,7 +10,9 @@ const CHECKED_FILES = [
   'electron/services/errorRedaction.js',
   'electron/ipc/chatIpc.js',
   'electron/ipc/audioIpc.js',
+  'electron/ipc/vtsBridgeIpc.js',
   'electron/net.js',
+  'electron/services/vtsBridge.js',
   'tests/error-redaction.test.ts',
 ]
 
@@ -32,6 +34,18 @@ const UNSAFE_PATTERNS = [
     file: 'electron/ipc/chatIpc.js',
     pattern: /error:\s*streamError\s+instanceof\s+Error\s*\?\s*streamError\.message\s*:\s*String\(streamError\)/,
     message: 'stream terminal frames must not send raw provider error text to the renderer',
+  },
+  {
+    id: 'vts-bridge-raw-status-error',
+    file: 'electron/services/vtsBridge.js',
+    pattern: /const\s+message\s*=\s*error\s+instanceof\s+Error\s*\?\s*error\.message\s*:\s*String\(error\)/,
+    message: 'VTS bridge status errors must be redacted before broadcasting to renderer windows',
+  },
+  {
+    id: 'vts-ipc-raw-audit-error',
+    file: 'electron/ipc/vtsBridgeIpc.js',
+    pattern: /error:\s*error\s+instanceof\s+Error\s*\?\s*error\.message\s*:\s*String\(error\)/,
+    message: 'VTS bridge audit entries must not record raw error text',
   },
   {
     id: 'net-extracts-raw-response-error',
@@ -82,6 +96,23 @@ const REQUIRED_PHRASES = [
     phrases: [
       "import { redactSensitiveErrorText } from './services/errorRedaction.js'",
       'return redactSensitiveErrorText(',
+    ],
+  },
+  {
+    id: 'vts-bridge-redacts-status-errors',
+    file: 'electron/services/vtsBridge.js',
+    phrases: [
+      "import { getRedactedErrorMessage } from './errorRedaction.js'",
+      'const message = getRedactedErrorMessage(error)',
+      "const message = getRedactedErrorMessage(error || 'WebSocket connection failed')",
+    ],
+  },
+  {
+    id: 'vts-ipc-redacts-audit-errors',
+    file: 'electron/ipc/vtsBridgeIpc.js',
+    phrases: [
+      "import { getRedactedErrorMessage } from '../services/errorRedaction.js'",
+      'error: getRedactedErrorMessage(error)',
     ],
   },
   {

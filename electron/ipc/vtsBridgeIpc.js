@@ -1,5 +1,6 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import { audit } from '../services/auditLog.js'
+import { getRedactedErrorMessage } from '../services/errorRedaction.js'
 import {
   connectVtsBridge,
   disconnectVtsBridge,
@@ -52,7 +53,7 @@ async function runAuditedVtsAction(channel, payload, action) {
   } catch (error) {
     audit('vts-bridge', 'result', {
       channel,
-      error: error instanceof Error ? error.message : String(error),
+      error: getRedactedErrorMessage(error),
     })
     throw error
   }

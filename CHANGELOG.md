@@ -183,7 +183,10 @@ _No changes yet._
   instead of plaintext API keys or bot tokens. Main-process chat/audio network
   failures now redact common API-key, bearer-token, JWT, URL-credential, secret
   parameter, and user-home path shapes before logging or returning provider
-  error text, guarded by `npm run error-redaction:audit`.
+  error text, guarded by `npm run error-redaction:audit`. VTube Studio bridge
+  connection/authentication failures now use that same redaction boundary before
+  renderer-visible status broadcasts or VTS audit records can expose
+  token-like strings, credentialed URLs, or local user paths.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned

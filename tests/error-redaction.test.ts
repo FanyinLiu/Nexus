@@ -5,6 +5,7 @@ import {
   getRedactedErrorMessage,
   redactSensitiveErrorText,
 } from '../electron/services/errorRedaction.js'
+import { buildErrorRedactionReport } from '../scripts/error-redaction-audit.mjs'
 
 test('main-process error redaction strips common API secrets', () => {
   const raw = [
@@ -38,4 +39,12 @@ test('main-process error redaction handles Error objects', () => {
 
   assert.equal(redacted, 'upstream echoed token=***')
   assert.doesNotMatch(redacted, /xai-abcdefghijklmnop/)
+})
+
+test('error redaction audit covers VTS bridge renderer-facing errors', () => {
+  const report = buildErrorRedactionReport()
+
+  assert.equal(report.summary.errors, 0)
+  assert.ok(report.checkedFiles.includes('electron/services/vtsBridge.js'))
+  assert.ok(report.checkedFiles.includes('electron/ipc/vtsBridgeIpc.js'))
 })

@@ -4,6 +4,7 @@ import {
   vaultRetrieve,
   vaultStore,
 } from './keyVault.js'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 
 const VTS_API_NAME = 'VTubeStudioPublicAPI'
 const VTS_API_VERSION = '1.0'
@@ -403,7 +404,7 @@ export function connectVtsBridge({ port }) {
   try {
     ws = new WebSocket(wsUrl)
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
+    const message = getRedactedErrorMessage(error)
     setStatus('error', { modelName: '', error: message })
     return getStatus()
   }
@@ -423,7 +424,7 @@ export function connectVtsBridge({ port }) {
     }
     void initializeAuth(generation).catch((error) => {
       if (generation !== connectGeneration) return
-      const message = error instanceof Error ? error.message : String(error)
+      const message = getRedactedErrorMessage(error)
       cleanupConnection(message)
       setStatus('error', { modelName: '', error: message })
     })
@@ -433,7 +434,7 @@ export function connectVtsBridge({ port }) {
 
   ws.on('error', (error) => {
     if (generation !== connectGeneration) return
-    const message = error instanceof Error ? error.message : 'WebSocket connection failed'
+    const message = getRedactedErrorMessage(error || 'WebSocket connection failed')
     cleanupConnection(message)
     setStatus('error', { modelName: '', error: message })
   })
