@@ -170,7 +170,11 @@ _No changes yet._
   token or full `Authorization` header to the renderer; Settings shows only the
   token file placeholder while scripts continue reading the 0600 user-data token
   file. Notification reply drafts now seed only the source label, not the
-  third-party message preview text.
+  third-party message preview text. `npm run desktop-context-privacy:audit` now
+  guards desktop context redaction, and desktop context capture redacts obvious
+  API keys, bearer tokens, passwords, and private-key material before
+  active-window or clipboard text leaves the main process; OCR and VLM text are
+  redacted again before prompt formatting.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned

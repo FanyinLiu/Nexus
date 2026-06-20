@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 import { buildCompanionBoundaryReport } from '../scripts/companion-boundary-audit.mjs'
 import { buildArchitectureBoundaryReport } from '../scripts/architecture-boundary-audit.mjs'
+import { buildDesktopContextPrivacyReport } from '../scripts/desktop-context-privacy-audit.mjs'
 import { buildHeavyModuleAuditReport } from '../scripts/heavy-module-audit.mjs'
 import { buildIpcContractReport } from '../scripts/ipc-contract-audit.mjs'
 import { buildMessagePrivacyReport } from '../scripts/message-privacy-audit.mjs'
@@ -30,6 +31,7 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
     'performance:baseline',
     'companion-boundary:audit',
     'message-privacy:audit',
+    'desktop-context-privacy:audit',
     'verify:pr',
     'verify:release',
   ]) {
@@ -43,6 +45,7 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
   assert.match(pkg.scripts['verify:pr'], /npm run performance:baseline/)
   assert.match(pkg.scripts['verify:pr'], /npm run companion-boundary:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run message-privacy:audit/)
+  assert.match(pkg.scripts['verify:pr'], /npm run desktop-context-privacy:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run ipc:audit/)
   assert.match(pkg.scripts['verify:release'], /npm run verify:pr/)
   assert.match(pkg.scripts['verify:release'], /npm run sqlite:smoke/)
@@ -56,6 +59,7 @@ test('source-only engineering audits are clean at the current baseline', () => {
   const sourceSizeReport = buildSourceSizeReport(ROOT)
   const boundaryReport = buildCompanionBoundaryReport(ROOT)
   const messagePrivacyReport = buildMessagePrivacyReport(ROOT)
+  const desktopContextPrivacyReport = buildDesktopContextPrivacyReport(ROOT)
 
   assert.equal(ipcReport.summary.errors, 0)
   assert.equal(ipcReport.summary.warnings, 0)
@@ -70,6 +74,10 @@ test('source-only engineering audits are clean at the current baseline', () => {
   assert.equal(boundaryReport.summary.errors, 0)
   assert.equal(messagePrivacyReport.summary.errors, 0)
   assert.equal(messagePrivacyReport.privacy.readsMessageContent, false)
+  assert.equal(desktopContextPrivacyReport.summary.errors, 0)
+  assert.equal(desktopContextPrivacyReport.privacy.readsClipboard, false)
+  assert.equal(desktopContextPrivacyReport.privacy.readsScreenshots, false)
+  assert.equal(desktopContextPrivacyReport.privacy.readsActiveWindow, false)
 })
 
 test('IPC schema primitives are split without changing public validators', () => {

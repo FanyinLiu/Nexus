@@ -119,6 +119,10 @@ lives in renderer `localStorage` by default, and nothing is deleted.
 - Stopped returning the local notification webhook bearer token to the renderer;
   Settings now shows the token file placeholder, while local automation scripts
   continue reading the `0600` token file directly.
+- Desktop context now redacts obvious secrets such as API keys, bearer tokens,
+  passwords, and private-key material before active-window or clipboard text
+  leaves the main process; OCR and VLM text are redacted again before prompt
+  formatting.
 - Kept renderer access to plaintext secrets blocked through the safeStorage
   vault/ref pattern.
 

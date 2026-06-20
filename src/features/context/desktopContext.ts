@@ -1,5 +1,6 @@
 import type { DesktopContextRequest, DesktopContextSnapshot } from '../../types'
 import { shorten } from '../../lib/common.ts'
+import { sanitizeDesktopContextSnapshotForPrompt } from '../../lib/privacy/desktopContextPrivacy.ts'
 
 const MAX_ACTIVE_WINDOW_TITLE_LENGTH = 180
 const MAX_ACTIVE_WINDOW_APP_NAME_LENGTH = 80
@@ -40,13 +41,14 @@ function formatObservedBlock(label: string, text: string, maxLength: number) {
 export function formatDesktopContext(snapshot: DesktopContextSnapshot | null | undefined) {
   if (!snapshot) return ''
 
+  const sanitizedSnapshot = sanitizeDesktopContextSnapshotForPrompt(snapshot)
   const sections: string[] = []
-  const activeWindowTitle = normalizeObservedText(snapshot.activeWindowTitle)
-  const activeWindowAppName = normalizeObservedText(snapshot.activeWindowAppName)
-  const activeWindowProcessPath = normalizeObservedText(snapshot.activeWindowProcessPath)
-  const clipboardText = normalizeObservedText(snapshot.clipboardText)
-  const screenText = normalizeObservedText(snapshot.screenText)
-  const vlmAnalysis = normalizeObservedText(snapshot.vlmAnalysis)
+  const activeWindowTitle = normalizeObservedText(sanitizedSnapshot.activeWindowTitle)
+  const activeWindowAppName = normalizeObservedText(sanitizedSnapshot.activeWindowAppName)
+  const activeWindowProcessPath = normalizeObservedText(sanitizedSnapshot.activeWindowProcessPath)
+  const clipboardText = normalizeObservedText(sanitizedSnapshot.clipboardText)
+  const screenText = normalizeObservedText(sanitizedSnapshot.screenText)
+  const vlmAnalysis = normalizeObservedText(sanitizedSnapshot.vlmAnalysis)
 
   if (activeWindowTitle || activeWindowAppName || activeWindowProcessPath) {
     const activeWindowLines = ['Current foreground window:']
