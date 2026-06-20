@@ -275,6 +275,10 @@ Goal: the companion's visible state reflects what Nexus is actually doing.
   the completed-onboarding pet surface, idle/breathe state, and a nonblank
   screenshot artifact. See
   [Milestone 6 Slice 4 Design](MILESTONE-6-DESKTOP-PRESENCE-VISUAL-SMOKE-DESIGN-2026-06-20.md).
+- Slice 5 adds a compact Companion Profile state preview so users and release
+  QA can inspect idle/thinking/listening/speaking/waiting/error/offline without
+  forcing chat, voice, network, or Live2D settings-page rendering. See
+  [Milestone 6 Slice 5 Design](MILESTONE-6-DESKTOP-PRESENCE-STATE-PREVIEW-DESIGN-2026-06-20.md).
 - Bind chat, voice, setup, tool, and error flows to that contract.
 - Keep Live2D/sprite-heavy rendering lazy and budgeted.
 - Rollback: state mapping is additive and can fall back to current pet behavior.

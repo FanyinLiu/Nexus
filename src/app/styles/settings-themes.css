@@ -5962,6 +5962,28 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   color: color-mix(in srgb, var(--text-soft) 82%, var(--text-h) 18%);
 }
 
+.settings-page[data-section] .settings-companion-state-preview__readout,
+.settings-page[data-section] .settings-companion-state-preview__states button {
+  border-color: var(--settings-border);
+  background: color-mix(in srgb, var(--settings-surface-soft) 88%, transparent);
+  color: color-mix(in srgb, var(--text-soft) 84%, var(--text-h) 16%);
+  box-shadow: none;
+}
+
+.settings-page[data-section] .settings-companion-state-preview__readout strong {
+  color: var(--text-h);
+}
+
+.settings-page[data-section] .settings-companion-state-preview__readout span {
+  color: var(--text-soft);
+}
+
+.settings-page[data-section] .settings-companion-state-preview__states button.is-active {
+  border-color: color-mix(in srgb, var(--settings-accent) 42%, var(--settings-border));
+  background: color-mix(in srgb, var(--settings-accent) 14%, var(--settings-surface-soft));
+  color: var(--text-h);
+}
+
 .settings-drawer .settings-page[data-section] .settings-community-links {
   gap: 7px;
   grid-template-columns: repeat(2, minmax(0, 1fr));

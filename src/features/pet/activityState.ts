@@ -26,6 +26,16 @@ export type CompanionActivityMotion =
   | 'error'
   | 'offline'
 
+export const COMPANION_ACTIVITY_PHASES: readonly CompanionActivityPhase[] = [
+  'idle',
+  'thinking',
+  'listening',
+  'speaking',
+  'waiting',
+  'error',
+  'offline',
+]
+
 export interface CompanionActivityInput {
   mood: PetMood
   voiceState?: VoiceState
@@ -158,4 +168,32 @@ export function resolveCompanionActivityState(input: CompanionActivityInput): Co
 
 export function getCompanionActivityStatusKey(phase: CompanionActivityPhase): TranslationKey {
   return STATUS_KEYS[phase]
+}
+
+export function resolveCompanionActivityPreviewState(
+  phase: CompanionActivityPhase,
+  now: CompanionActivityInput['now'] = '2026-06-20T00:00:00.000Z',
+): CompanionActivityState {
+  const baseInput: CompanionActivityInput = {
+    mood: phase === 'thinking' ? 'thinking' : 'idle',
+    isOnline: true,
+    now,
+  }
+
+  switch (phase) {
+    case 'thinking':
+      return resolveCompanionActivityState({ ...baseInput, chatBusy: true })
+    case 'listening':
+      return resolveCompanionActivityState({ ...baseInput, voiceState: 'listening' })
+    case 'speaking':
+      return resolveCompanionActivityState({ ...baseInput, voiceState: 'speaking' })
+    case 'waiting':
+      return resolveCompanionActivityState({ ...baseInput, waitingForConfirmation: true })
+    case 'error':
+      return resolveCompanionActivityState({ ...baseInput, hasBlockingError: true })
+    case 'offline':
+      return resolveCompanionActivityState({ ...baseInput, isOnline: false })
+    default:
+      return resolveCompanionActivityState(baseInput)
+  }
 }
