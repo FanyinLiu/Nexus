@@ -145,7 +145,8 @@ _No changes yet._
   gate and platform-specific gates available for macOS and Windows bring-up
   before enabling signed updates. The pre-release Stage B docs now also list
   `npm run package:dir:smoke`, and `npm run distribution:audit` fails if that
-  packaged-app launch gate drops out of the release checklist.
+  packaged-app launch gate or its quick-mode skip note drops out of the release
+  checklist.
 - **IPC contract baseline** — added `npm run ipc:audit` and wired it into
   `npm run distribution:audit`. The new source-only report inventories preload
   invokes, subscriptions, main-process handlers, trusted-sender coverage,
