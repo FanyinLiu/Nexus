@@ -2841,9 +2841,99 @@
   filter: none;
 }
 
+.pet-window__stage-shell[data-companion-motion] .pet-window__mascot .live2d-shell,
+.pet-window__stage-shell[data-companion-motion] .pet-window__mascot .sprite-pet-shell {
+  transform-origin: center bottom;
+  will-change: transform;
+}
+
+.pet-window__stage-shell[data-companion-motion="breathe"] .pet-window__mascot .live2d-shell,
+.pet-window__stage-shell[data-companion-motion="breathe"] .pet-window__mascot .sprite-pet-shell {
+  animation: pet-presence-breathe 5.8s ease-in-out infinite;
+}
+
+.pet-window__stage-shell[data-companion-motion="think"] .pet-window__mascot .live2d-shell,
+.pet-window__stage-shell[data-companion-motion="think"] .pet-window__mascot .sprite-pet-shell {
+  animation: pet-presence-think 1.7s ease-in-out infinite;
+}
+
+.pet-window__stage-shell[data-companion-motion="listen"] .pet-window__mascot .live2d-shell,
+.pet-window__stage-shell[data-companion-motion="listen"] .pet-window__mascot .sprite-pet-shell {
+  animation: pet-presence-listen 2.4s ease-in-out infinite;
+}
+
+.pet-window__stage-shell[data-companion-motion="speak"] .pet-window__mascot .live2d-shell,
+.pet-window__stage-shell[data-companion-motion="speak"] .pet-window__mascot .sprite-pet-shell {
+  animation: pet-presence-speak 0.72s ease-in-out infinite;
+}
+
+.pet-window__stage-shell[data-companion-motion="wait"] .pet-window__mascot .live2d-shell,
+.pet-window__stage-shell[data-companion-motion="wait"] .pet-window__mascot .sprite-pet-shell {
+  animation: pet-presence-wait 1.8s ease-in-out infinite;
+}
+
+.pet-window__stage-shell[data-companion-motion="offline"] .pet-window__mascot .live2d-shell,
+.pet-window__stage-shell[data-companion-motion="offline"] .pet-window__mascot .sprite-pet-shell {
+  opacity: 0.72;
+}
+
+.pet-window__stage-shell[data-companion-motion="breathe"] .pet-window__floor-shadow {
+  animation: pet-shadow-breathe 5.8s ease-in-out infinite;
+}
+
+.pet-window__stage-shell[data-companion-motion="think"] .pet-window__floor-shadow,
+.pet-window__stage-shell[data-companion-motion="listen"] .pet-window__floor-shadow,
+.pet-window__stage-shell[data-companion-motion="speak"] .pet-window__floor-shadow,
+.pet-window__stage-shell[data-companion-motion="wait"] .pet-window__floor-shadow {
+  animation: pet-shadow-active 1.8s ease-in-out infinite;
+}
+
+@keyframes pet-presence-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.006); }
+}
+
+@keyframes pet-presence-think {
+  0%, 100% { transform: translateY(-1px) rotate(-0.3deg) scale(1.002); }
+  50% { transform: translateY(-5px) rotate(0.45deg) scale(1.006); }
+}
+
+@keyframes pet-presence-listen {
+  0%, 100% { transform: translateY(-2px) scale(1.006); }
+  50% { transform: translateY(-6px) scale(1.012); }
+}
+
+@keyframes pet-presence-speak {
+  0%, 100% { transform: translateY(-1px) scale(1.004); }
+  50% { transform: translateY(-4px) scale(1.014); }
+}
+
+@keyframes pet-presence-wait {
+  0%, 100% { transform: translateY(-1px) scale(1.002); }
+  50% { transform: translateY(-3px) scale(1.009); }
+}
+
+@keyframes pet-shadow-breathe {
+  0%, 100% { transform: translateX(-50%) scaleX(1); opacity: 1; }
+  50% { transform: translateX(-50%) scaleX(0.94); opacity: 0.86; }
+}
+
+@keyframes pet-shadow-active {
+  0%, 100% { transform: translateX(-50%) scaleX(0.96); opacity: 0.92; }
+  50% { transform: translateX(-50%) scaleX(0.88); opacity: 0.78; }
+}
+
 @media (max-height: 260px) {
   .pet-window__stage-shell .pet-window__mascot.is-hovered {
     transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-window__stage-shell[data-companion-motion] .pet-window__mascot .live2d-shell,
+  .pet-window__stage-shell[data-companion-motion] .pet-window__mascot .sprite-pet-shell,
+  .pet-window__stage-shell[data-companion-motion] .pet-window__floor-shadow {
+    animation: none !important;
   }
 }
 

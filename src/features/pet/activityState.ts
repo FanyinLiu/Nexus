@@ -17,6 +17,15 @@ export type CompanionActivityPhase =
   | 'error'
   | 'offline'
 
+export type CompanionActivityMotion =
+  | 'breathe'
+  | 'think'
+  | 'listen'
+  | 'speak'
+  | 'wait'
+  | 'error'
+  | 'offline'
+
 export interface CompanionActivityInput {
   mood: PetMood
   voiceState?: VoiceState
@@ -38,6 +47,7 @@ export interface CompanionActivityState extends CompanionPresenceState {
   isWaiting: boolean
   isError: boolean
   isOffline: boolean
+  motionToken: CompanionActivityMotion
   spriteState: SpritePetAnimationState | null
   statusKey: TranslationKey
 }
@@ -85,6 +95,25 @@ function phaseToSpriteState(phase: CompanionActivityPhase): SpritePetAnimationSt
   }
 }
 
+function phaseToMotionToken(phase: CompanionActivityPhase): CompanionActivityMotion {
+  switch (phase) {
+    case 'thinking':
+      return 'think'
+    case 'listening':
+      return 'listen'
+    case 'speaking':
+      return 'speak'
+    case 'waiting':
+      return 'wait'
+    case 'error':
+      return 'error'
+    case 'offline':
+      return 'offline'
+    default:
+      return 'breathe'
+  }
+}
+
 function resolvePhase(input: CompanionActivityInput): CompanionActivityPhase {
   if (input.isOnline === false) return 'offline'
   if (input.hasBlockingError) return 'error'
@@ -121,6 +150,7 @@ export function resolveCompanionActivityState(input: CompanionActivityInput): Co
     isWaiting: phase === 'waiting',
     isError: phase === 'error',
     isOffline: phase === 'offline',
+    motionToken: phaseToMotionToken(phase),
     spriteState: phaseToSpriteState(phase),
     statusKey: STATUS_KEYS[phase],
   }

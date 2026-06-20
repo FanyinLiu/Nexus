@@ -11,6 +11,10 @@
   thinking, listening, speaking, waiting, error, and offline through one
   tested companion activity state before driving the status dot and avatar
   render inputs.
+- **Desktop presence micro-motion** — the companion stage now turns those
+  states into small, shared Live2D/Sprite motion tokens for breathing, thinking,
+  listening, speaking, waiting, error, and offline presence without adding new
+  runtime dependencies or background work.
 
 ## [0.3.5] - 2026-06-19
 

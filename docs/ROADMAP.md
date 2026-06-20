@@ -260,6 +260,10 @@ Goal: the companion's visible state reflects what Nexus is actually doing.
   status dot, accessibility label, Sprite fallback state, and Live2D
   listening/speaking inputs to that shared contract. See
   [Milestone 6 Slice 1 Design](MILESTONE-6-DESKTOP-PRESENCE-STATE-DESIGN-2026-06-20.md).
+- Slice 2 adds shared micro-motion tokens and CSS-only desktop presence motion
+  so idle/thinking/listening/speaking/waiting states are visible without new
+  dependencies or heavier renderers. See
+  [Milestone 6 Slice 2 Design](MILESTONE-6-DESKTOP-PRESENCE-MICRO-MOTION-DESIGN-2026-06-20.md).
 - Bind chat, voice, setup, tool, and error flows to that contract.
 - Keep Live2D/sprite-heavy rendering lazy and budgeted.
 - Rollback: state mapping is additive and can fall back to current pet behavior.
