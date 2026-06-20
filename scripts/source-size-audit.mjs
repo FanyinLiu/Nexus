@@ -17,7 +17,7 @@ const FILE_BUDGETS = {
   'src/i18n/locales/ja.ts': 2600,
   'src/i18n/locales/ko.ts': 2600,
   'src/i18n/keys.ts': 2600,
-  'electron/services/localDataStore.js': 2100,
+  'electron/services/localDataStore.js': 1800,
 }
 
 function normalizePath(path) {

@@ -17,6 +17,10 @@ still easy to drift:
   shared code could drift upward toward app/view orchestration.
 - Very large source files had no budget gate, making cleanup and review harder
   to keep incremental.
+- VTube Studio auth token persistence still depended on a renderer
+  localStorage key, even though it is secret-adjacent.
+- Release verification did not record a lightweight bundle/performance budget
+  baseline before adding more Live2D, voice, and retrieval code.
 - `verify:release` was the only named local gate, so PR-level verification and
   release-level verification were not clearly separated.
 - Legacy `features/agent/` naming could read like a Codex-style work-agent
@@ -40,6 +44,17 @@ still easy to drift:
 - Add `npm run source-size:audit` to keep normal source files below the
   large-file budget, with explicit allowances for generated i18n catalogs and
   the current local data store service.
+- Split `SettingsDrawer.tsx` by moving active settings-section dispatch into a
+  child component, and split chat-migration validation out of
+  `electron/services/localDataStore.js` so both large files stay below tighter
+  source-size budgets.
+- Move VTube Studio auth token persistence to a fixed main-process vault slot
+  with audited, trusted-sender-only IPC. The renderer still uses the token
+  transiently for the existing VTS WebSocket bridge, but the old
+  `nexus:vts-auth-token` localStorage key is now only a one-time migration
+  source and is removed after migration.
+- Add `npm run performance:baseline` to fail on production bundle-size budget
+  regressions and eager heavy-module regressions after `npm run build`.
 - Tighten `npm run ipc:audit` so warnings fail now that the IPC baseline is
   already 0 warnings / 0 errors.
 - Add `npm run companion-boundary:audit` and `src/features/agent/README.md` so
@@ -52,15 +67,22 @@ still easy to drift:
 
 ## Impact Scope
 
-- Runtime behavior: unchanged.
-- Data/storage migration: none.
-- IPC channel names and payload shapes: unchanged.
+- Runtime behavior: VTube Studio token persistence moves from renderer
+  localStorage to main-process vault storage; VTS connection behavior is
+  otherwise unchanged.
+- Data/storage migration: one-time best-effort migration of the legacy
+  `nexus:vts-auth-token` key into a fixed vault slot, then deletion of the
+  legacy renderer key.
+- IPC channel names and payload shapes: three fixed-slot VTS token channels are
+  added; `vts-auth-token:store` uses schema validation and all three are treated
+  as high-risk secret-vault channels by the IPC audit.
 - New dependencies: none.
 - User-facing UI: unchanged.
 - Developer workflow: new audit scripts and a clearer PR/release verification
   split.
 - Maintainer workflow: PR verification now catches storage-contract drift,
-  inverted renderer boundaries, and source-file bloat before release work.
+  inverted renderer boundaries, source-file bloat, and build asset budget
+  regressions before release work.
 
 ## Risks
 
@@ -79,6 +101,13 @@ still easy to drift:
   doc in the same slice.
 - The source-size audit can force earlier extraction work when files approach
   the budget. That is intentional, but generated files need explicit budgets.
+- The current VTS bridge still runs WebSocket authentication in the renderer, so
+  the token can be present transiently in renderer memory. This slice removes
+  renderer persistent plaintext storage; a later, larger slice would move the
+  VTS WebSocket bridge itself into the main process.
+- The performance baseline is a stable build-output budget, not a full runtime
+  CPU/memory profiler. Runtime idle metrics should be added once the app has a
+  deterministic measurement harness.
 
 ## Rollback
 
@@ -86,8 +115,11 @@ Revert the new scripts, npm script wiring, `distribution:audit` imports, the
 small IPC primitive split, the agent README, and this design doc. If only the
 second hardening slice needs rollback, revert `architecture-boundary-audit.mjs`,
 `source-size-audit.mjs`, the all-source storage-audit expansion, and their npm
-script/test/doc wiring. Because no runtime state, user data, IPC names,
-migrations, or dependencies changed, no user-data rollback is required.
+script/test/doc wiring. If this tightening slice needs rollback, also revert
+`SettingsDrawerActiveSection.tsx`, `localDataChatMigration.js`, the fixed-slot
+VTS token IPC/preload/type changes, and `performance-baseline.mjs`. Existing
+vaulted VTS tokens may remain harmlessly in the vault; users can re-authorize
+VTS if the old localStorage path is restored.
 
 ## Acceptance
 
@@ -96,6 +128,7 @@ migrations, or dependencies changed, no user-data rollback is required.
 - `npm run heavy:audit`
 - `npm run architecture:audit`
 - `npm run source-size:audit`
+- `npm run performance:baseline`
 - `npm run companion-boundary:audit`
 - `npm run ipc:audit`
 - focused engineering guardrail tests

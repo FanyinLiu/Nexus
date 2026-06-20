@@ -103,7 +103,8 @@ Current baseline:
   inline storage calls, then fails if a key is added without classification,
   authority, and migration posture. The report is source-only, compares unique
   discovered keys against the contract, and marks the legacy VTube Studio auth
-  token key as `secret-adjacent` until it can move behind a main-process vault.
+  token key as a `secret-adjacent` migration source after the token moves to a
+  fixed main-process vault slot.
 - `npm run heavy:audit` guards renderer-side heavy modules such as embeddings,
   OCR, browser VAD, and Live2D so they remain lazy-loaded or vendor-loaded on
   demand.
@@ -114,6 +115,10 @@ Current baseline:
   source file grows past the large-file budget, while keeping explicit temporary
   allowances for generated i18n catalogs and the current main-process local data
   service.
+- `npm run performance:baseline` reads the production `dist/assets` output and
+  static heavy-module audit result after `npm run build`. It records bundle
+  size budgets for total assets, JavaScript, CSS, WASM, largest JS chunk, and
+  eager heavy-module regressions without reading runtime user data.
 - `npm run companion-boundary:audit` keeps the repo aligned to companionship
   instead of work-agent expansion by requiring the companion task boundary to be
   documented in code-facing and release-facing docs.

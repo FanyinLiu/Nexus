@@ -19,7 +19,7 @@ const NEXUS_PARAMS = [
   { id: 'NexusEyeY', min: -1, max: 1, defaultValue: 0 },
 ] as const
 
-const STORAGE_KEY = 'nexus:vts-auth-token'
+const LEGACY_STORAGE_KEY = 'nexus:vts-auth-token'
 const INJECT_INTERVAL_MS = 33 // ~30fps
 
 type VTSBridgeState = 'disconnected' | 'connecting' | 'auth_needed' | 'ready' | 'error'
@@ -85,19 +85,44 @@ export function useVTSBridge(enabled: boolean, port: number) {
 
   async function initAuth(client: VTSClient) {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY)
+      const stored = await loadStoredAuthToken()
       if (stored) {
         const ok = await client.authenticate(stored)
         if (ok) { await onAuthenticated(client); return }
       }
       setState('auth_needed')
       const token = await client.requestAuthToken()
-      localStorage.setItem(STORAGE_KEY, token)
+      await storeAuthToken(token)
       const ok = await client.authenticate(token)
       if (!ok) { setState('error'); return }
       await onAuthenticated(client)
     } catch {
       setState('error')
+    }
+  }
+
+  async function loadStoredAuthToken() {
+    const legacyToken = localStorage.getItem(LEGACY_STORAGE_KEY)
+    if (legacyToken) {
+      await storeAuthToken(legacyToken)
+      return legacyToken
+    }
+
+    try {
+      return await window.desktopPet?.vtsAuthTokenGet?.() ?? ''
+    } catch (error) {
+      console.warn('[VTS] Failed to read auth token from vault', error)
+      return ''
+    }
+  }
+
+  async function storeAuthToken(token: string) {
+    try {
+      await window.desktopPet?.vtsAuthTokenStore?.(token)
+    } catch (error) {
+      console.warn('[VTS] Failed to persist auth token in vault', error)
+    } finally {
+      localStorage.removeItem(LEGACY_STORAGE_KEY)
     }
   }
 

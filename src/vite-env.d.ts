@@ -858,6 +858,11 @@ declare global {
       vaultListSlots: () => Promise<string[]>
       vaultStoreMany: (entries: Record<string, string>) => Promise<void>
       vaultRetrieveMany: (slots: string[]) => Promise<Record<string, string>>
+      // VTube Studio token is fixed-slot vault storage for the renderer VTS bridge.
+      // It is not a generic vault read surface and should not accept slot names.
+      vtsAuthTokenGet: () => Promise<string>
+      vtsAuthTokenStore: (token: string) => Promise<void>
+      vtsAuthTokenDelete: () => Promise<void>
 
       // Auto-updater (electron-updater + GitHub Releases)
       updaterCheck: () => Promise<{

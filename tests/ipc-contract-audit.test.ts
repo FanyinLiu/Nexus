@@ -16,8 +16,8 @@ test('IPC contract audit inventories the current preload and main handler surfac
 
   assert.equal(report.schemaVersion, 1)
   assert.equal(summary.errors, 0)
-  assert.equal(report.counts.preloadInvokeChannels, 178)
-  assert.equal(report.counts.mainHandlerChannels, 178)
+  assert.equal(report.counts.preloadInvokeChannels, 181)
+  assert.equal(report.counts.mainHandlerChannels, 181)
   assert.equal(report.counts.preloadSubscriptionChannels, 16)
   assert.equal(report.errors.missingHandlers.length, 0)
   assert.equal(report.errors.duplicateHandlers.length, 0)
@@ -96,6 +96,7 @@ test('IPC contract audit classifies high-risk channels without reading secret va
     'local-data:chat-session-mirror',
     'local-data:chat-migration-apply',
     'local-data:chat-migration-rollback',
+    'vts-auth-token:store',
   ]) {
     assert.ok(highRiskChannels.includes(channel), `${channel} should be high risk`)
   }
@@ -117,9 +118,12 @@ test('IPC contract audit distinguishes schema, manual, and no-payload handlers',
   assert.equal(findChannel(report, 'file:open-text')?.auditLogged, true)
   assert.equal(findChannel(report, 'file:open-text')?.permissionHint, true)
   assert.equal(findChannel(report, 'vault:store')?.payloadValidation, 'manual')
+  assert.equal(findChannel(report, 'vts-auth-token:store')?.payloadValidation, 'schema')
+  assert.equal(findChannel(report, 'vts-auth-token:store')?.riskDomain, 'secret-vault')
   assert.equal(findChannel(report, 'pet-window:get-state')?.payloadValidation, 'none')
   assert.equal(findChannel(report, 'pet-window:get-state')?.rendererPayload, false)
   assert.equal(findChannel(report, 'vault:store')?.rendererPayload, true)
+  assert.equal(findChannel(report, 'vts-auth-token:store')?.rendererPayload, true)
 })
 
 test('IPC contract audit keeps file dialog channels out of warning buckets', () => {
@@ -259,6 +263,9 @@ test('IPC contract audit keeps vault channels out of high-risk warning buckets',
     'vault:list-slots',
     'vault:store-many',
     'vault:retrieve-many',
+    'vts-auth-token:get',
+    'vts-auth-token:store',
+    'vts-auth-token:delete',
   ]) {
     assert.ok(!highRiskWarnings.includes(channel), `${channel} should have audit and permission coverage`)
   }
