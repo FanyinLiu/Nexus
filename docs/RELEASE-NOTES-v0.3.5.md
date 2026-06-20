@@ -148,6 +148,10 @@ lives in renderer `localStorage` by default, and nothing is deleted.
   redaction boundary before Settings/status/support surfaces can expose bot
   tokens, credentialed gateway URLs, service error payloads, or local user
   paths.
+- macOS notification watcher status and persistence errors now use the same
+  redaction boundary before Settings/status surfaces or logs can expose
+  Notification Center database paths, local user paths, or sensitive system
+  error details.
 
 ## Product boundary
 

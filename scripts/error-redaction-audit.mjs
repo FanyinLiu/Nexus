@@ -13,6 +13,7 @@ const CHECKED_FILES = [
   'electron/ipc/vtsBridgeIpc.js',
   'electron/net.js',
   'electron/services/discordGateway.js',
+  'electron/services/macNotificationWatcher.js',
   'electron/services/modelDownloader.js',
   'electron/services/modelManager.js',
   'electron/services/telegramGateway.js',
@@ -101,6 +102,18 @@ const UNSAFE_PATTERNS = [
     message: 'Discord gateway logs must not record raw gateway error text',
   },
   {
+    id: 'mac-notification-watcher-raw-status-error',
+    file: 'electron/services/macNotificationWatcher.js',
+    pattern: /setStatus\([^,\n]+,\s*err\?\.message\s*\?\?\s*String\(err\)\)/,
+    message: 'macOS notification watcher status errors must be redacted before renderer exposure',
+  },
+  {
+    id: 'mac-notification-watcher-raw-error-log',
+    file: 'electron/services/macNotificationWatcher.js',
+    pattern: /console\.(?:warn|error)\([^\n]+err\.message/,
+    message: 'macOS notification watcher logs must not record raw watcher error text',
+  },
+  {
     id: 'net-extracts-raw-response-error',
     file: 'electron/net.js',
     pattern: /return\s+(?:data\?\.error\?\.message|text\.trim\(\)\s*\|\|)/,
@@ -172,6 +185,18 @@ const REQUIRED_PHRASES = [
       'redactSensitiveErrorText(reason)',
       'const message = getRedactedErrorMessage(err)',
       '_lastError = getRedactedErrorMessage(err)',
+    ],
+  },
+  {
+    id: 'mac-notification-watcher-redacts-status-errors',
+    file: 'electron/services/macNotificationWatcher.js',
+    phrases: [
+      "import { getRedactedErrorMessage } from './errorRedaction.js'",
+      "console.warn('[mac-notification-watcher] failed to persist state:', getRedactedErrorMessage(err))",
+      'const rawMessage = err instanceof Error ? err.message : String(err ?? \'\')',
+      'const message = getRedactedErrorMessage(err)',
+      'setStatus(kind, message)',
+      'setStatus(classifyMacWatcherError(rawMessage), message)',
     ],
   },
   {
