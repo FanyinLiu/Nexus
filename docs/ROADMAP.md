@@ -173,6 +173,10 @@ auditable.
   JWT, URL-userinfo, secret query parameter, and user-home path shapes before
   logging or returning provider error text. `npm run error-redaction:audit`
   guards the redaction boundary.
+- The VTube Studio bridge now uses the same redaction boundary for
+  connection/authentication errors before broadcasting renderer-visible status
+  or writing VTS audit records, keeping companion avatar integration from
+  becoming a token/path leak.
 - The remaining renderer-payload IPC backlog is now schema-bound:
   integrations inspection, KWS start/status, VAD start, model download, and TTS
   streaming lifecycle requests all validate request shape before service work.
