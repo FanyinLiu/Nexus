@@ -79,6 +79,7 @@ test('current release spotlight names the companion presence upgrade in user cop
 
 test('human-facing v0.3.5 docs keep visible memory and companion presence aligned', () => {
   const rootReadme = readWorkspaceFile('README.md')
+  const changelog = readWorkspaceFile('CHANGELOG.md')
   const englishReleaseNotes = normalizeMarkdownProse(
     readWorkspaceFile('docs/RELEASE-NOTES-v0.3.5.md'),
   )
@@ -97,4 +98,14 @@ test('human-facing v0.3.5 docs keep visible memory and companion presence aligne
   assert.match(chineseReleaseNotes, /记忆看得见，伙伴也动起来/)
   assert.match(chineseReleaseNotes, /待机、思考、聆听、说话、等待、错误和离线状态/)
   assert.match(chineseReleaseNotes, /不是把 Nexus 做成替你干活的 Codex 式智能体/)
+
+  const unreleasedSection = changelog.split('## [0.3.5]')[0]
+  assert.match(unreleasedSection, /## \[Unreleased\]\s+_No changes yet\._/)
+  assert.doesNotMatch(unreleasedSection, /v0\.3\.5|Desktop presence|release spotlight/i)
+
+  const releaseSection = changelog.split('## [0.3.5]')[1]?.split('\n## [')[0] ?? ''
+  assert.match(releaseSection, /Release theme: visible memory and readable companion presence/)
+  assert.match(releaseSection, /Desktop presence state contract/)
+  assert.match(releaseSection, /Settings home release spotlight/)
+  assert.match(releaseSection, /Release theme guard/)
 })

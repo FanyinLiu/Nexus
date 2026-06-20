@@ -6,7 +6,16 @@
 
 ## [Unreleased]
 
+_No changes yet._
+
+## [0.3.5] - 2026-06-19
+
 ### Added
+- **Release theme: visible memory and readable companion presence** — assistant
+  replies can now explain which memories shaped a response, the Memory settings
+  page can highlight those exact long-term memories or diary fragments, and the
+  companion profile can preview the desktop companion's idle/thinking/listening/
+  speaking/waiting/error/offline states.
 - **Desktop presence state contract** — the pet window now resolves idle,
   thinking, listening, speaking, waiting, error, and offline through one
   tested companion activity state before driving the status dot and avatar
@@ -38,15 +47,6 @@
 - **Release theme guard** — the root README now matches the v0.3.5 release
   notes around visible memory plus readable desktop companion states, with a
   focused test preventing the user-facing theme from drifting before release.
-
-## [0.3.5] - 2026-06-19
-
-### Added
-- **Release theme: visible memory and readable companion presence** — assistant
-  replies can now explain which memories shaped a response, the Memory settings
-  page can highlight those exact long-term memories or diary fragments, and the
-  companion profile can preview the desktop companion's idle/thinking/listening/
-  speaking/waiting/error/offline states.
 - **Memory transparency and pause controls** — the Memory settings page now
   shows whether memory recall/learning is active, the active long-term and
   daily-memory counts, desktop-context read status, and the current storage

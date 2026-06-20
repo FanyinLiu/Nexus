@@ -299,6 +299,10 @@ Goal: the companion's visible state reflects what Nexus is actually doing.
   focused guard so the user-facing release theme remains visible memory plus
   readable desktop companion states. See
   [Milestone 6 Slice 10 Design](MILESTONE-6-DESKTOP-PRESENCE-README-THEME-GUARD-DESIGN-2026-06-20.md).
+- Slice 11 cuts the v0.3.5 presence and spotlight entries over from
+  `Unreleased` into the `[0.3.5]` changelog section, with a focused guard so the
+  release candidate has one clear user-facing version boundary. See
+  [Milestone 6 Slice 11 Design](MILESTONE-6-DESKTOP-PRESENCE-CHANGELOG-CUTOVER-DESIGN-2026-06-20.md).
 - Bind chat, voice, setup, tool, and error flows to that contract.
 - Keep Live2D/sprite-heavy rendering lazy and budgeted.
 - Rollback: state mapping is additive and can fall back to current pet behavior.
