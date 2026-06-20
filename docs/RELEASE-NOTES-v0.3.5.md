@@ -158,6 +158,9 @@ lives in renderer `localStorage` by default, and nothing is deleted.
 - MCP host support logs now keep external-process output metadata-only, avoiding
   raw server ids, launch commands, arguments, tool names, stdout lines, paths,
   and tokens.
+- Renderer-side VTube Studio support logs now sanitize token-like strings and
+  local paths before printing connection, input-update, or legacy-token
+  migration errors.
 
 ## Product boundary
 

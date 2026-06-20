@@ -186,20 +186,21 @@ _No changes yet._
   error text, guarded by `npm run error-redaction:audit`. VTube Studio bridge
   connection/authentication failures now use that same redaction boundary before
   renderer-visible status broadcasts or VTS audit records can expose
-  token-like strings, credentialed URLs, or local user paths. Auto-updater
-  check/download failures now use it too before update events, manual-check
-  results, or updater logs reach UI/support surfaces. Model download/install
-  failures now use it before first-run setup progress events or batch download
-  results can expose credentialed source URLs, tar stderr, or local user paths.
-  Telegram/Discord gateway status errors and diagnostic logs now use the same
-  redaction boundary before Settings/status/support surfaces can expose bot
-  tokens, credentialed gateway URLs, service error payloads, or local user
-  paths. macOS notification watcher status and persistence errors now use the
-  same boundary before `notification:watcher-status` or logs can expose
-  Notification Center database paths, local user paths, or sensitive system
-  error details. Local notification bridge support logs now keep webhook/RSS
-  failures metadata-only, avoiding raw channel names, ids, feed URLs, bearer
-  tokens, and URL-safety host details.
+  token-like strings, credentialed URLs, or local user paths, and renderer-side
+  VTS support logs now sanitize input-update, connection, and legacy-token
+  migration errors before printing them. Auto-updater check/download failures
+  now use it too before update events, manual-check results, or updater logs
+  reach UI/support surfaces. Model download/install failures now use it before
+  first-run setup progress events or batch download results can expose
+  credentialed source URLs, tar stderr, or local user paths. Telegram/Discord
+  gateway status errors and diagnostic logs now use the same redaction boundary
+  before Settings/status/support surfaces can expose bot tokens, credentialed
+  gateway URLs, service error payloads, or local user paths. macOS notification
+  watcher status and persistence errors now use the same boundary before
+  `notification:watcher-status` or logs can expose Notification Center database
+  paths, local user paths, or sensitive system error details. Local notification
+  bridge support logs now keep webhook/RSS failures metadata-only, avoiding raw
+  channel names, ids, feed URLs, bearer tokens, and URL-safety host details.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned

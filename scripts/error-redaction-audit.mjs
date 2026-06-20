@@ -23,6 +23,8 @@ const CHECKED_FILES = [
   'electron/services/telegramGateway.js',
   'electron/services/updaterService.js',
   'electron/services/vtsBridge.js',
+  'src/features/pet/vts/useVTSBridge.ts',
+  'src/lib/logRedaction.ts',
   'tests/error-redaction.test.ts',
 ]
 
@@ -170,6 +172,12 @@ const UNSAFE_PATTERNS = [
     file: 'electron/net.js',
     pattern: /return\s+(?:data\?\.error\?\.message|text\.trim\(\)\s*\|\|)/,
     message: 'shared response-error extraction must redact provider response text',
+  },
+  {
+    id: 'renderer-vts-raw-error-log',
+    file: 'src/features/pet/vts/useVTSBridge.ts',
+    pattern: /console\.warn\([^\n]+,\s*error\)|console\.warn\('[^']*VTS[^']*'\s*,\s*error\)/,
+    message: 'renderer VTS support logs must not record raw token-adjacent errors',
   },
 ]
 
@@ -353,6 +361,28 @@ const REQUIRED_PHRASES = [
     phrases: [
       'main-process error redaction strips common API secrets',
       'main-process error redaction handles Error objects',
+    ],
+  },
+  {
+    id: 'renderer-log-redaction-helper',
+    file: 'src/lib/logRedaction.ts',
+    phrases: [
+      'export function redactSensitiveLogText',
+      'export function getRedactedLogErrorMessage',
+      'Bearer ***',
+      'sk-***',
+      'AIza***',
+      'jwt***',
+    ],
+  },
+  {
+    id: 'renderer-vts-redacts-support-logs',
+    file: 'src/features/pet/vts/useVTSBridge.ts',
+    phrases: [
+      "import { getRedactedLogErrorMessage } from '../../../lib/logRedaction'",
+      "console.warn('[VTS] Failed to update bridge input:', getRedactedLogErrorMessage(error))",
+      "console.warn('[VTS]', getRedactedLogErrorMessage(error))",
+      "console.warn('[VTS] Failed to migrate legacy auth token:', getRedactedLogErrorMessage(error))",
     ],
   },
 ]
