@@ -177,6 +177,11 @@ Current baseline:
   restart failures, and shutdown failures record only ids/commands/args/tool
   names/output lengths plus redacted error text, not raw server ids, launch
   commands, arguments, tool names, stdout lines, paths, or tokens.
+- Renderer support logs for token-adjacent companion integrations use the same
+  redaction boundary. The VTube Studio hook logs sanitized error text for input
+  updates, connection failures, and legacy-token migration failures instead of
+  printing raw exception objects that may contain token-like strings or local
+  paths.
 - The same external action handlers now pass through a main-process permission
   policy before execution. The policy defaults to `confirm`, persists approved
   modes in Electron `userData`, blocks active actions in `read-only`, prompts

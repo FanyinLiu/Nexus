@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PetExpressionSlot } from '../models'
 import type { GazeTarget } from '../components/live2d/types'
+import { getRedactedLogErrorMessage } from '../../../lib/logRedaction'
 
 const LEGACY_STORAGE_KEY = 'nexus:vts-auth-token'
 
@@ -49,7 +50,7 @@ export function useVTSBridge(enabled: boolean, port: number) {
     lastInputSignatureRef.current = signature
 
     window.desktopPet?.vtsBridgeUpdateInput?.(nextInput).catch((error) => {
-      console.warn('[VTS] Failed to update bridge input', error)
+      console.warn('[VTS] Failed to update bridge input:', getRedactedLogErrorMessage(error))
     })
   }, [])
 
@@ -83,7 +84,7 @@ export function useVTSBridge(enabled: boolean, port: number) {
       })
       .catch((error) => {
         setState('error')
-        console.warn('[VTS]', error)
+        console.warn('[VTS]', getRedactedLogErrorMessage(error))
       })
 
     return () => {
@@ -97,7 +98,7 @@ export function useVTSBridge(enabled: boolean, port: number) {
     try {
       await window.desktopPet?.vtsBridgeMigrateLegacyToken?.(legacyToken)
     } catch (error) {
-      console.warn('[VTS] Failed to migrate legacy auth token', error)
+      console.warn('[VTS] Failed to migrate legacy auth token:', getRedactedLogErrorMessage(error))
     } finally {
       localStorage.removeItem(LEGACY_STORAGE_KEY)
     }

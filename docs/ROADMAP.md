@@ -180,7 +180,9 @@ auditable.
 - The VTube Studio bridge now uses the same redaction boundary for
   connection/authentication errors before broadcasting renderer-visible status
   or writing VTS audit records, keeping companion avatar integration from
-  becoming a token/path leak.
+  becoming a token/path leak. Renderer VTS support logs now use the same
+  sanitized error helper for input updates, connection failures, and legacy
+  token migration failures instead of printing raw exception objects.
 - Auto-updater check/download errors now use the same redaction boundary before
   renderer-visible update events, manual-check results, or updater logs can
   expose token-like strings, credentialed URLs, or local user paths.
