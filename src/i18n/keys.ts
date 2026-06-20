@@ -61,6 +61,8 @@ export const translationKeys: TranslationKey[] = [
   'about.release_spotlight.bullet.memory_sources.body',
   'about.release_spotlight.bullet.memory_control.title',
   'about.release_spotlight.bullet.memory_control.body',
+  'about.release_spotlight.bullet.companion_presence.title',
+  'about.release_spotlight.bullet.companion_presence.body',
   'about.release_spotlight.bullet.first_run.title',
   'about.release_spotlight.bullet.first_run.body',
   'about.release_spotlight.bullet.companion_boundary.title',

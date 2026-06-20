@@ -1,13 +1,13 @@
-# Nexus v0.3.5 — Memory is no longer a black box
+# Nexus v0.3.5 — Memory is visible. The companion feels present.
 
 > **The memorable upgrade:** Nexus can now show which memories shaped a reply,
-> then take you back to those memory records so you can inspect, pause, edit, or
-> delete them.
+> and the desktop companion has readable states you can preview: idle, thinking,
+> listening, speaking, waiting, error, and offline.
 >
 > This release keeps Nexus pointed at companionship, not autonomous work
 > execution. The trust work around first-run setup, IPC, release posture, and
 > SQLite rehearsal exists to make memory local, visible, reversible, and under
-> the user's control.
+> the user's control while the companion becomes more visibly present.
 
 ## What changes for users
 
@@ -29,6 +29,25 @@ renderer `localStorage` by default, and nothing is deleted.
   deleting them.
 - A new content-free memory dry-run inspects long-term, legacy, and daily memory
   localStorage shapes before any SQLite memory migration is attempted.
+
+### The desktop companion has readable states
+
+This is the user-visible presence upgrade for v0.3.5. Nexus still avoids
+autonomous task-agent behavior, but the companion no longer feels like a static
+status icon.
+
+- The pet window now resolves idle, thinking, listening, speaking, waiting,
+  error, and offline through one shared companion activity state.
+- CSS-only micro-motion turns those states into subtle breathing, thinking,
+  listening, speaking, waiting, error, and offline motion cues without new
+  runtime dependencies.
+- Companion Profile includes a compact desktop state preview so users and QA can
+  inspect those states without forcing chat, voice, network, or Live2D rendering
+  inside settings.
+- Sprite companions preview the same runtime state mapping used by the desktop
+  pet, while Live2D remains lazy in the pet window.
+- Common English stage directions such as `(eyes brightened)`, `(blush)`, and
+  `(nod)` now drive avatar cues instead of reading like leaked task text.
 
 ### First conversation is easier to reach
 
@@ -86,7 +105,8 @@ lives in renderer `localStorage` by default, and nothing is deleted.
 Nexus is still a desktop companion. This release does not add a Codex-style
 agent, task planner, autonomous executor, or background work system. The storage
 and audit work exists so future memory feels local, visible, reversible, and
-under the user's control.
+under the user's control; the presence work exists so Nexus feels more alive on
+the desktop without taking work away from the user.
 
 ## Known issues
 

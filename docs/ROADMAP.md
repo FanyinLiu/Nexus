@@ -279,6 +279,10 @@ Goal: the companion's visible state reflects what Nexus is actually doing.
   QA can inspect idle/thinking/listening/speaking/waiting/error/offline without
   forcing chat, voice, network, or Live2D settings-page rendering. See
   [Milestone 6 Slice 5 Design](MILESTONE-6-DESKTOP-PRESENCE-STATE-PREVIEW-DESIGN-2026-06-20.md).
+- Slice 6 syncs the v0.3.5 in-app spotlight and release notes so the memorable
+  theme is visible memory plus readable desktop companion states, not a generic
+  task-agent expansion. See
+  [Milestone 6 Slice 6 Design](MILESTONE-6-DESKTOP-PRESENCE-RELEASE-THEME-DESIGN-2026-06-20.md).
 - Bind chat, voice, setup, tool, and error flows to that contract.
 - Keep Live2D/sprite-heavy rendering lazy and budgeted.
 - Rollback: state mapping is additive and can fall back to current pet behavior.
