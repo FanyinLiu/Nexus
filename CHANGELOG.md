@@ -22,6 +22,9 @@
   `npm run pet:presence-smoke` to launch the built pet view through Electron,
   confirm the completed-onboarding idle/breathe presence state, reject
   onboarding-overlay false positives, and save a nonblank screenshot report.
+- **In-app release spotlight** — About/Help now shows the v0.3.5 theme,
+  "memory is no longer a black box," with short localized bullets for memory
+  sources, memory controls, first-run repair, and the companion-first boundary.
 
 ## [0.3.5] - 2026-06-19
 

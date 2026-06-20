@@ -1,5 +1,6 @@
 import { memo, useState } from 'react'
 import { useUpdater } from '../../features/updater/useUpdater'
+import { CURRENT_RELEASE_SPOTLIGHT } from '../../features/releaseNotes/index.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { UiLanguage } from '../../types'
 
@@ -77,6 +78,29 @@ export const AboutPanel = memo(function AboutPanel({ uiLanguage }: AboutPanelPro
           {ti('about.links.changelog')}
         </a>
       </div>
+
+      <section className="settings-about-panel__spotlight" aria-labelledby="about-release-spotlight-title">
+        <div className="settings-about-panel__spotlight-header">
+          <span className="settings-about-panel__spotlight-eyebrow">
+            {ti(CURRENT_RELEASE_SPOTLIGHT.eyebrowKey, { version: CURRENT_RELEASE_SPOTLIGHT.version })}
+          </span>
+          <h5 id="about-release-spotlight-title" className="settings-about-panel__spotlight-title">
+            {ti(CURRENT_RELEASE_SPOTLIGHT.titleKey)}
+          </h5>
+          <p className="settings-about-panel__spotlight-summary">
+            {ti(CURRENT_RELEASE_SPOTLIGHT.summaryKey)}
+          </p>
+        </div>
+
+        <ul className="settings-about-panel__spotlight-list">
+          {CURRENT_RELEASE_SPOTLIGHT.bullets.map((item) => (
+            <li key={item.id}>
+              <strong>{ti(item.titleKey)}</strong>
+              <span>{ti(item.bodyKey)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <div className="settings-about-panel__faq">
         <h5 className="settings-about-panel__section-title">{ti('about.faq.title')}</h5>

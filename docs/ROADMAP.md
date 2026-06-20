@@ -86,6 +86,9 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
 - Keep GitHub Releases + `electron-updater` as the update channel.
 - Add release documentation for installer trust, signing prerequisites,
   rollback, and failed-update recovery.
+- Add an in-app About/Help release spotlight so users can see the current
+  version theme and companion-first boundary without leaving Nexus. See
+  [Milestone 2 In-App Release Spotlight Design](MILESTONE-2-IN-APP-RELEASE-SPOTLIGHT-DESIGN-2026-06-20.md).
 - Rollback: signing config changes must be isolated in packaging config and
   release docs.
 
