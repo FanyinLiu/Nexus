@@ -35,6 +35,9 @@
 - **Settings home release spotlight** — the same v0.3.5 theme now appears on
   Settings home, making visible memory and readable companion states discoverable
   before users open the deeper About / Help panel.
+- **Release theme guard** — the root README now matches the v0.3.5 release
+  notes around visible memory plus readable desktop companion states, with a
+  focused test preventing the user-facing theme from drifting before release.
 
 ## [0.3.5] - 2026-06-19
 

@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 
 import {
   CURRENT_RELEASE_SPOTLIGHT,
@@ -7,6 +10,16 @@ import {
 } from '../src/features/releaseNotes/index.ts'
 import { translationKeys } from '../src/i18n/keys.ts'
 import { AVAILABLE_LOCALES, ensureLocaleLoaded } from '../src/i18n/runtime.ts'
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+function readWorkspaceFile(relativePath: string) {
+  return readFileSync(join(ROOT, relativePath), 'utf8')
+}
+
+function normalizeMarkdownProse(text: string) {
+  return text.replace(/[>\s]+/g, ' ').trim()
+}
 
 test('current release spotlight keeps the v0.3.5 memorable theme explicit', () => {
   assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, '0.3.5')
@@ -62,4 +75,26 @@ test('current release spotlight names the companion presence upgrade in user cop
   assert.match(zhCN['about.release_spotlight.bullet.companion_presence.body'], /状态点和头像动作/)
   assert.equal(zhCN['about.release_spotlight.action.review_memory'], '查看记忆')
   assert.equal(zhCN['about.release_spotlight.action.preview_companion'], '预览伙伴')
+})
+
+test('human-facing v0.3.5 docs keep visible memory and companion presence aligned', () => {
+  const rootReadme = readWorkspaceFile('README.md')
+  const englishReleaseNotes = normalizeMarkdownProse(
+    readWorkspaceFile('docs/RELEASE-NOTES-v0.3.5.md'),
+  )
+  const chineseReleaseNotes = normalizeMarkdownProse(
+    readWorkspaceFile('docs/RELEASE-NOTES-v0.3.5.zh-CN.md'),
+  )
+
+  assert.match(rootReadme, /记忆看得见，伙伴也动起来/)
+  assert.match(rootReadme, /待机、思考、聆听、说话、等待、错误和离线状态/)
+  assert.match(rootReadme, /不把 Nexus 做成替你干活的 Codex 式智能体/)
+
+  assert.match(englishReleaseNotes, /Memory is visible\. The companion feels present\./)
+  assert.match(englishReleaseNotes, /idle, thinking, listening, speaking, waiting, error, and offline/)
+  assert.match(englishReleaseNotes, /not autonomous work execution/)
+
+  assert.match(chineseReleaseNotes, /记忆看得见，伙伴也动起来/)
+  assert.match(chineseReleaseNotes, /待机、思考、聆听、说话、等待、错误和离线状态/)
+  assert.match(chineseReleaseNotes, /不是把 Nexus 做成替你干活的 Codex 式智能体/)
 })
