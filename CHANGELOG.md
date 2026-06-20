@@ -178,7 +178,9 @@ _No changes yet._
   stripped before desktop context is handed to chat/runtime code. Autonomy
   context triggers now keep only salted comparison fingerprints for previous
   active-window and clipboard values instead of retaining earlier desktop text
-  in renderer refs.
+  in renderer refs. Added `npm run vault-security:audit` so renderer-facing
+  vault retrieval paths must keep returning opaque `nexus-vault-ref:` tokens
+  instead of plaintext API keys or bot tokens.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned

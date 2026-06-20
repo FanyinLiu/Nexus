@@ -316,7 +316,8 @@ contextBridge.exposeInMainWorld('desktopPet', {
   // Proactive OS-level notification ("[name] 在想你")
   showProactiveNotification: (payload) => ipcRenderer.invoke('proactive:show-notification', payload),
 
-  // Key vault (safeStorage encryption)
+  // Key vault (safeStorage encryption). Retrieval returns opaque refs;
+  // plaintext secret values stay in main-process handlers.
   vaultIsAvailable: () => ipcRenderer.invoke('vault:is-available'),
   vaultStore: (slot, plaintext) => ipcRenderer.invoke('vault:store', slot, plaintext),
   vaultRetrieve: (slot) => ipcRenderer.invoke('vault:retrieve', slot),
