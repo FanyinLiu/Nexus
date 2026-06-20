@@ -195,6 +195,11 @@ Current baseline:
   explicitly listed as the owner. Bridge debug events record metadata such as
   source, sender, media type, and text length, never message bodies. External
   Telegram voice notes stay announce-only and are not sent through STT.
+- Local notification webhook authentication uses a per-user bearer token stored
+  in Electron `userData` as `notification-webhook-token.txt` with mode `0600`.
+  The renderer-visible `notification:webhook-info` IPC returns only URL,
+  max-body size, `requiresAuth`, and the token file name; it does not return
+  the bearer token or full `Authorization` header.
 - A main-process local-data foundation now initializes both
   `userData/local-data/manifest.json` and the SQLite database
   `userData/local-data/nexus.sqlite` using Electron/Node's built-in

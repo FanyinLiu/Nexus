@@ -834,8 +834,8 @@ declare global {
       getNotificationChannels: () => Promise<import('./types').NotificationChannel[]>
       getNotificationWebhookInfo: () => Promise<{
         url: string
-        token: string
-        authHeader: string
+        requiresAuth: boolean
+        tokenFileName: string
         maxBodyBytes: number
       }>
       setNotificationChannels: (channels: import('./types').NotificationChannel[]) => Promise<void>

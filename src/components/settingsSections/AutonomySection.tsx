@@ -35,7 +35,8 @@ type NotificationWatcherStatus = {
 
 type WebhookInfo = {
   url: string
-  authHeader: string
+  requiresAuth: boolean
+  tokenFileName: string
   maxBodyBytes: number
 }
 
@@ -161,9 +162,9 @@ function NotificationChannelsPanel({
         <code className="settings-autonomy-channel__code">
           POST {webhookInfo?.url ?? 'http://127.0.0.1:47830/webhook'}
         </code>
-        {webhookInfo?.authHeader ? (
+        {webhookInfo?.requiresAuth ? (
           <code className="settings-autonomy-channel__code">
-            Authorization: {webhookInfo.authHeader}
+            Authorization: Bearer &lt;{webhookInfo.tokenFileName || 'notification-webhook-token.txt'}&gt;
           </code>
         ) : null}
         <p className="settings-drawer__hint settings-autonomy-channel__hint">
