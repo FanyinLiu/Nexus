@@ -64,6 +64,7 @@ import { PetControlIcon } from './PetControlIcon.tsx'
 import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
 import { buildSettingsSectionMeta } from './settingsDrawerMetadata.ts'
 import { applyConnectionTestRepairDraft } from '../features/models/connectionRepair.ts'
+import { CURRENT_RELEASE_SPOTLIGHT } from '../features/releaseNotes/index.ts'
 import type {
   AppSettings,
   DailyMemoryEntry,
@@ -1028,6 +1029,39 @@ export function SettingsDrawer({
         <div className="settings-drawer__body" ref={drawerBodyRef}>
           {settingsView === 'home' ? (
             <div className="settings-home">
+              <section
+                className="settings-home-release"
+                aria-labelledby="settings-home-release-title"
+              >
+                <div className="settings-home-release__copy">
+                  <span className="settings-home-release__eyebrow">
+                    {ti(CURRENT_RELEASE_SPOTLIGHT.eyebrowKey, {
+                      version: CURRENT_RELEASE_SPOTLIGHT.version,
+                    })}
+                  </span>
+                  <strong id="settings-home-release-title">
+                    {ti(CURRENT_RELEASE_SPOTLIGHT.titleKey)}
+                  </strong>
+                  <p>{ti(CURRENT_RELEASE_SPOTLIGHT.summaryKey)}</p>
+                </div>
+                <div className="settings-home-release__actions">
+                  {CURRENT_RELEASE_SPOTLIGHT.actions.map((item, index) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={index === 0 ? 'primary-button' : 'ghost-button'}
+                      onClick={() => handleOpenSettingsSection(item.targetSectionId)}
+                    >
+                      <PetControlIcon
+                        name={item.id === 'review_memory' ? 'thought' : 'sparkles'}
+                        className="settings-home-release__action-icon"
+                      />
+                      <span>{ti(item.labelKey)}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
               <div className="settings-appearance-switch" role="radiogroup" aria-label={ti('settings.appearance.label')}>
                 <span className="settings-appearance-switch__label">{ti('settings.appearance.label')}</span>
                 <div className="settings-appearance-switch__control">
