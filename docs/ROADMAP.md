@@ -201,6 +201,9 @@ auditable.
   redaction boundary before `notification:watcher-status` or logs can expose
   Notification Center database paths, local user paths, or sensitive system
   error details.
+- Memory vector store worker, append-log, and compaction failure logs now use
+  the same redaction boundary so future long-term memory diagnostics cannot
+  leak raw exception text, local user paths, or token-like strings.
 - The remaining renderer-payload IPC backlog is now schema-bound:
   integrations inspection, KWS start/status, VAD start, model download, and TTS
   streaming lifecycle requests all validate request shape before service work.

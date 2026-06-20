@@ -149,9 +149,10 @@ Current baseline:
 - `npm run error-redaction:audit` is the source-only network-error privacy
   guard. It fails if main-process chat/audio network handlers or the VTube
   Studio bridge or auto-updater or model downloader or Telegram/Discord gateway
-  or macOS notification watcher return or log raw caught error text without the
-  shared secret/path redactor. It never performs network requests or reads user
-  data, localStorage, keychain values, or secret material.
+  or macOS notification watcher or memory vector store return or log raw caught
+  error text without the shared secret/path redactor. It never performs network
+  requests or reads user data, localStorage, keychain values, or secret
+  material.
 - `npm run verify:pr` is the day-to-day merge gate. `npm run verify:release`
   reuses it and then adds the SQLite smoke check for release confidence.
 - The `file:save-text` and `file:open-text` IPC handlers now use explicit
@@ -185,6 +186,11 @@ Current baseline:
   updates, connection failures, and legacy-token migration failures instead of
   printing raw exception objects that may contain token-like strings or local
   paths.
+- Memory vector store support logs use the same redaction boundary for worker
+  failures, append-log failures, and snapshot compaction failures. The index may
+  contain private long-term memory content, so diagnostics must keep raw
+  exception text, local user paths, and token-like strings out of support logs
+  while preserving the existing recoverable persistence behavior.
 - The same external action handlers now pass through a main-process permission
   policy before execution. The policy defaults to `confirm`, persists approved
   modes in Electron `userData`, blocks active actions in `read-only`, prompts
