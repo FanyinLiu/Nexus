@@ -256,6 +256,10 @@ Goal: the companion's visible state reflects what Nexus is actually doing.
 
 - Define a shared state contract for idle, thinking, listening, speaking,
   waiting for confirmation, error, and offline states.
+- Slice 1 adds a pure companion activity resolver and binds the pet window
+  status dot, accessibility label, Sprite fallback state, and Live2D
+  listening/speaking inputs to that shared contract. See
+  [Milestone 6 Slice 1 Design](MILESTONE-6-DESKTOP-PRESENCE-STATE-DESIGN-2026-06-20.md).
 - Bind chat, voice, setup, tool, and error flows to that contract.
 - Keep Live2D/sprite-heavy rendering lazy and budgeted.
 - Rollback: state mapping is additive and can fall back to current pet behavior.

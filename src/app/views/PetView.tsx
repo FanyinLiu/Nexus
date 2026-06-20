@@ -9,7 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react'
-import { getVoiceStateLabel, pickHoverReaction } from '../appSupport'
+import { pickHoverReaction } from '../appSupport'
 import { MusicPopupCard } from '../../components/MusicPopupCard'
 import { PetControlIcon } from '../../components/PetControlIcon'
 import { PetDialogBubble } from '../../components/PetDialogBubble'
@@ -32,6 +32,7 @@ import {
 } from '../../lib/uiLanguage'
 import type { PetTouchZone } from '../../types'
 import { useVTSBridge } from '../../features/pet/vts/useVTSBridge'
+import { resolveCompanionActivityState } from '../../features/pet/activityState'
 import { resolveExpressionSlot } from '../../features/pet/components/live2d/expressions'
 import {
   SpritePetCanvas,
@@ -84,6 +85,7 @@ export function PetView({
   mediaSession,
   musicActionBusy,
   dismissedMusicSessionKey,
+  runtimeSnapshot,
   remotePanelSettingsOpen,
   openSettingsPanel,
   openChatPanelForVoice,
@@ -166,20 +168,37 @@ export function PetView({
     void window.desktopPet?.getPetWindowState?.()?.then(apply).catch(() => undefined)
     return window.desktopPet?.subscribePetWindowState?.(apply)
   }, [])
+  const companionActivity = useMemo(() => resolveCompanionActivityState({
+    mood: pet.mood,
+    voiceState: voice.voiceState,
+    assistantActivity: chat.assistantActivity,
+    chatBusy: chat.busy,
+    isOnline: true,
+    hasBlockingError: runtimeSnapshot?.wakewordPhase === 'error' && Boolean(runtimeSnapshot?.wakewordError),
+    activeTaskLabel: runtimeSnapshot?.activeTaskLabel,
+  }), [
+    chat.assistantActivity,
+    chat.busy,
+    pet.mood,
+    runtimeSnapshot?.activeTaskLabel,
+    runtimeSnapshot?.wakewordError,
+    runtimeSnapshot?.wakewordPhase,
+    voice.voiceState,
+  ])
   const petLocomotionBusy =
-    voice.voiceState === 'speaking' ||
-    voice.voiceState === 'listening' ||
-    voice.voiceState === 'processing' ||
-    chat.busy ||
+    !companionActivity.isIdle ||
     (pet.petTapActive && Boolean(pet.petTouchZone))
-  const voiceStateLabel = getVoiceStateLabel(voice.voiceState, ti)
-  const petStageStatusLabel = voice.voiceState !== 'idle'
-    ? voiceStateLabel
-    : chat.busy
-      ? ti('pet.status.thinking')
-      : settings.continuousVoiceModeEnabled
-        ? ti('pet.status.standby')
-        : ti('pet.status.ready')
+  const petStageStatusLabel = companionActivity.isIdle && settings.continuousVoiceModeEnabled
+    ? ti('pet.status.standby')
+    : ti(companionActivity.statusKey)
+  const petStageStatusClass =
+    companionActivity.isError ? 'is-error'
+    : companionActivity.isOffline ? 'is-offline'
+    : companionActivity.isListening || companionActivity.isSpeaking ? 'is-active'
+    : companionActivity.isThinking ? 'is-busy'
+    : companionActivity.isWaiting ? 'is-armed'
+    : settings.continuousVoiceModeEnabled ? 'is-armed'
+    : ''
 
   const notificationUnreadBadge = notificationUnreadCount > 99 ? '99+' : String(notificationUnreadCount)
   const hasUnreadNotifications = notificationUnreadCount > 0
@@ -504,13 +523,8 @@ export function PetView({
             ) : null}
 
             <div
-              className={`pet-window__status-indicator ${
-                voice.voiceState !== 'idle' ? 'is-active'
-                : chat.busy ? 'is-busy'
-                : settings.continuousVoiceModeEnabled ? 'is-armed'
-                : hasUnreadNotifications ? 'is-notify'
-                : ''
-              }`}
+              className={`pet-window__status-indicator ${petStageStatusClass || (hasUnreadNotifications ? 'is-notify' : '')}`}
+              data-companion-activity={companionActivity.phase}
               role="status"
               aria-label={petStageStatusLabelWithNotifications}
               title={petStageStatusLabelWithNotifications}
@@ -666,13 +680,13 @@ export function PetView({
                     }
                     mood={pet.mood}
                     touchZone={pet.petTapActive ? pet.petTouchZone : null}
-                    isListening={voice.voiceState === 'listening'}
-                    isSpeaking={voice.voiceState === 'speaking'}
-                    isBusy={chat.busy || voice.voiceState === 'processing'}
+                    isListening={companionActivity.isListening}
+                    isSpeaking={companionActivity.isSpeaking}
+                    isBusy={companionActivity.isThinking || companionActivity.isWaiting}
                     speechLevel={voice.speechLevel}
                     gazeTarget={pet.gazeTarget}
                     performanceCue={pet.petPerformanceCue}
-                    overrideState={spriteDebugState ?? spriteDragState ?? petLocomotionOverride}
+                    overrideState={spriteDebugState ?? spriteDragState ?? petLocomotionOverride ?? companionActivity.spriteState}
                     placement="pet-stage"
                     label={spritePetLabel}
                   />
@@ -682,8 +696,8 @@ export function PetView({
                       modelDefinition={petModel}
                       mood={pet.mood}
                       touchZone={pet.petTapActive ? pet.petTouchZone : null}
-                      isListening={voice.voiceState === 'listening'}
-                      isSpeaking={voice.voiceState === 'speaking'}
+                      isListening={companionActivity.isListening}
+                      isSpeaking={companionActivity.isSpeaking}
                       speechLevel={voice.speechLevel}
                       gazeTarget={pet.gazeTarget}
                       performanceCue={pet.petPerformanceCue}

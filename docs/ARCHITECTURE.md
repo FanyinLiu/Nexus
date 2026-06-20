@@ -504,7 +504,7 @@ hooks/useReminderScheduler
 ### Pet and character
 
 - `features/pet/` owns Live2D model metadata, performance cues, presence lines,
-  and the `Live2DCanvas` component.
+  companion activity state normalization, and the `Live2DCanvas` component.
 - `features/character/` owns UI/voice/presence preset data that themes the app
   toward the companion-style presentation layer.
 
