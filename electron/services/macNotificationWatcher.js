@@ -25,6 +25,7 @@ import {
   queryMacNotificationRows,
   resolveMacNotificationDb,
 } from '../../scripts/communication-adapters/macos-notification-center-watch.mjs'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 import { ingestNotificationPayload } from './notificationBridge.js'
 
 const POLL_MS = 3_000
@@ -67,7 +68,7 @@ async function saveSeenKeys() {
     await mkdir(path.dirname(stateFilePath()), { recursive: true })
     await writeFile(stateFilePath(), JSON.stringify({ seen, updatedAt: new Date().toISOString() }))
   } catch (err) {
-    console.warn('[mac-notification-watcher] failed to persist state:', err.message)
+    console.warn('[mac-notification-watcher] failed to persist state:', getRedactedErrorMessage(err))
   }
 }
 
@@ -106,8 +107,10 @@ async function loop() {
     await pollOnce()
     setStatus('running')
   } catch (err) {
-    const kind = classifyMacWatcherError(err?.message)
-    setStatus(kind, err?.message ?? String(err))
+    const rawMessage = err instanceof Error ? err.message : String(err ?? '')
+    const kind = classifyMacWatcherError(rawMessage)
+    const message = getRedactedErrorMessage(err)
+    setStatus(kind, message)
   }
   if (_running) {
     _timer = setTimeout(() => { void loop() }, POLL_MS)
@@ -141,7 +144,9 @@ export async function startWatcher(options = {}) {
       await saveSeenKeys()
       setStatus('running')
     } catch (err) {
-      setStatus(classifyMacWatcherError(err?.message), err?.message ?? String(err))
+      const rawMessage = err instanceof Error ? err.message : String(err ?? '')
+      const message = getRedactedErrorMessage(err)
+      setStatus(classifyMacWatcherError(rawMessage), message)
     }
   }
 

@@ -59,6 +59,7 @@ type ConsoleSectionProps = {
   emotionState?: EmotionSnapshot
   memoryCount?: number
   autonomyPhase?: string
+  onOpenSettingsSection?: (sectionId: 'memory' | 'chat') => void
 }
 
 export const ConsoleSection = memo(function ConsoleSection({
@@ -77,6 +78,7 @@ export const ConsoleSection = memo(function ConsoleSection({
   emotionState,
   memoryCount,
   autonomyPhase,
+  onOpenSettingsSection,
 }: ConsoleSectionProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const enabledReminderCount = reminderTasks.filter((task) => task.enabled).length
@@ -194,7 +196,10 @@ export const ConsoleSection = memo(function ConsoleSection({
               <p className="settings-section__note">{ti('settings.console.about_recap_note')}</p>
             </div>
           </summary>
-          <AboutPanel uiLanguage={uiLanguage} />
+          <AboutPanel
+            uiLanguage={uiLanguage}
+            onOpenSettingsSection={onOpenSettingsSection}
+          />
           <WeeklyRecapPanel uiLanguage={uiLanguage} />
         </details>
 

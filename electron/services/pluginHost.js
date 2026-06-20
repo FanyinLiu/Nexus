@@ -2,7 +2,13 @@ import { readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { app, dialog } from 'electron'
 import * as mcpHost from './mcpHost.js'
-import { hashCommand, isPluginCommandTrusted as _isPluginCommandTrusted } from './pluginHostUtils.js'
+import {
+  formatPluginDirectoryEntryLogLabel,
+  formatPluginLogLabel,
+  hashCommand,
+  isPluginCommandTrusted as _isPluginCommandTrusted,
+} from './pluginHostUtils.js'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 
 const PLUGINS_DIR_NAME = 'plugins'
 const PLUGIN_MANIFEST_FILE = 'plugin.json'
@@ -56,7 +62,7 @@ async function loadApprovedPlugins() {
     }
   } catch (err) {
     if (err?.code !== 'ENOENT') {
-      console.error('[pluginHost] Failed to load approved plugins:', err?.message)
+      console.error('[pluginHost] Failed to load approved plugins:', getRedactedErrorMessage(err))
     }
   }
   _approvedPluginsLoaded = true
@@ -158,7 +164,7 @@ export async function scanPlugins() {
       _plugins.set(manifest.id, manifest)
       discovered.push(manifest)
     } catch (err) {
-      console.warn(`[pluginHost] skipping ${entry}:`, err.message)
+      console.warn(`[pluginHost] skipping plugin entry (${formatPluginDirectoryEntryLogLabel(entry)}):`, getRedactedErrorMessage(err))
     }
   }
 
@@ -298,16 +304,16 @@ export async function autoStartPlugins() {
     const allowed = await promptPluginApproval(plugin)
     if (allowed) {
       _approvedPlugins.set(plugin.id, hashCommand(plugin.command, plugin.args))
-      console.info(`[pluginHost] user approved plugin: ${plugin.name}`)
+      console.info(`[pluginHost] user approved plugin (${formatPluginLogLabel(plugin)})`)
     } else {
-      console.info(`[pluginHost] user rejected plugin: ${plugin.name}`)
+      console.info(`[pluginHost] user rejected plugin (${formatPluginLogLabel(plugin)})`)
     }
     await persistApprovedPlugins()
   } else if (needApproval.length > 1) {
     const approved = await promptBatchPluginApproval(needApproval)
     for (const plugin of approved) {
       _approvedPlugins.set(plugin.id, hashCommand(plugin.command, plugin.args))
-      console.info(`[pluginHost] user approved plugin: ${plugin.name}`)
+      console.info(`[pluginHost] user approved plugin (${formatPluginLogLabel(plugin)})`)
     }
     if (approved.length) {
       await persistApprovedPlugins()
@@ -323,11 +329,11 @@ export async function autoStartPlugins() {
   const results = await Promise.all(autoStartable.map(async (plugin) => {
     try {
       await startPlugin(plugin.id)
-      console.info(`[pluginHost] auto-started: ${plugin.name}`)
+      console.info(`[pluginHost] auto-started plugin (${formatPluginLogLabel(plugin)})`)
       return { id: plugin.id, ok: true }
     } catch (err) {
-      console.warn(`[pluginHost] auto-start failed for ${plugin.name}:`, err.message)
-      return { id: plugin.id, ok: false, error: err.message }
+      console.warn(`[pluginHost] auto-start failed (${formatPluginLogLabel(plugin)}):`, getRedactedErrorMessage(err))
+      return { id: plugin.id, ok: false, error: getRedactedErrorMessage(err) }
     }
   }))
 

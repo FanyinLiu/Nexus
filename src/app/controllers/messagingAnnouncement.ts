@@ -78,27 +78,25 @@ export function buildMessagingAnnouncementContent(
     ? getMessagingAnnouncementPreview(message.text)
     : ''
 
-  const params = { source, sender, text: preview }
+  const metadataParams = { source, sender }
+  const previewParams = { source, sender, text: preview }
   const hasPreview = Boolean(preview)
 
+  // chatContent is persisted in the conversation list and can be included in
+  // future model context. Keep it metadata-only; previews are local bubble/TTS.
   return {
-    chatContent: t(
-      hasPreview
-        ? 'chat.bridge.messaging_announcement_chat_preview'
-        : 'chat.bridge.messaging_announcement_chat',
-      params,
-    ),
+    chatContent: t('chat.bridge.messaging_announcement_chat', metadataParams),
     bubbleContent: t(
       hasPreview
         ? 'chat.bridge.messaging_announcement_bubble_preview'
         : 'chat.bridge.messaging_announcement_bubble',
-      params,
+      hasPreview ? previewParams : metadataParams,
     ),
     speechContent: t(
       hasPreview
         ? 'chat.bridge.messaging_announcement_speech_preview'
         : 'chat.bridge.messaging_announcement_speech',
-      params,
+      hasPreview ? previewParams : metadataParams,
     ),
     dedupeKey,
   }

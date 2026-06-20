@@ -8,10 +8,9 @@ import {
   type BridgeForwardQueue,
   createBridgeForwardQueue,
   decideBridgeAutoReply,
-  parseCsvIdSet,
   resolveBridgeReplyTarget,
 } from './bridgeUtils'
-import { buildMessagingAnnouncementContent, getDiscordAnnouncementSettings } from './messagingAnnouncement'
+import { routeDiscordMessage } from './discordMessageRouter'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 
 type ChatBridge = {
@@ -81,7 +80,7 @@ export function useDiscordBridge({
         debugConsole.appendDebugConsoleEvent({
           source: 'autonomy',
           title: 'Discord message dropped',
-          detail: `${reason}: ${text.slice(0, 120)}`,
+          detail: `${reason}: textLength=${text.length}`,
         })
       },
     })
@@ -93,53 +92,14 @@ export function useDiscordBridge({
   }, [busyRef, debugConsole])
 
   const handleDiscordMessage = useCallback((msg: DiscordIncoming) => {
-    const ownerUserIds = parseCsvIdSet(settingsRef.current.ownerDiscordUserIds)
-    // Default: empty ownerDiscordUserIds means every incoming Discord message
-    // is treated as an external contact. Only fromUserIds that match the
-    // configured owner list are promoted to "master via Discord".
-    const isOwner = ownerUserIds.has(msg.fromUserId)
-
-    debugConsole.appendDebugConsoleEvent({
-      source: 'autonomy',
-      title: 'Discord message',
-      detail: `[${msg.channelName}] ${msg.fromUser}${isOwner ? t('chat.bridge.owner_suffix') : ''}: ${msg.text}`,
-    })
-
-    const announcement = buildMessagingAnnouncementContent(
-      {
-        sourceId: 'discord',
-        sourceName: 'Discord',
-        targetId: msg.channelId,
-        messageId: msg.messageId,
-        sender: msg.fromUser,
-        fallbackTitle: msg.channelName,
-        text: msg.text,
+    const isOwner = routeDiscordMessage(msg, settingsRef.current, t, {
+      appendDebugConsoleEvent: debugConsole.appendDebugConsoleEvent,
+      pushCompanionNotice: chat.pushCompanionNotice,
+      sendMessage: async (text?: string) => {
+        if (text) forwardQueueRef.current?.push(text)
+        return undefined
       },
-      getDiscordAnnouncementSettings(settingsRef.current),
-      t,
-    )
-    if (announcement && chat.pushCompanionNotice) {
-      debugConsole.appendDebugConsoleEvent({
-        source: 'autonomy',
-        title: 'Discord announcement',
-        detail: announcement.speechContent,
-      })
-      void chat.pushCompanionNotice({
-        ...announcement,
-        autoHideMs: 10_000,
-      })
-    }
-
-    // Forward to companion chat as a Discord-sourced message.
-    // Owner-match → prefix without a name so the system prompt treats it as
-    // the master speaking via Discord. Otherwise use the named prefix for
-    // external contacts.
-    if (chat.sendMessage) {
-      const prefixedText = isOwner
-        ? `【Discord】${msg.text}`
-        : `【Discord · ${msg.fromUser}】${msg.text}`
-      forwardQueueRef.current?.push(prefixedText)
-    }
+    }).isOwner
 
     const channelEntry: DiscordChannelEntry = { channelId: msg.channelId, messageId: msg.messageId, isOwner }
     lastDiscordChannelRef.current = channelEntry

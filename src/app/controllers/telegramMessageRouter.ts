@@ -1,5 +1,11 @@
 import type { AppSettings, DebugConsoleEventSource, TranslationKey } from '../../types'
 import type { TelegramIncoming } from '../../hooks/useTelegramGateway'
+import {
+  buildBridgeAnnouncementDebugDetail,
+  buildBridgeIncomingDebugDetail,
+  buildBridgeOwnerChatForwardText,
+  shouldForwardBridgeIncomingToChat,
+} from '../../lib/privacy/bridgeMessagePrivacy.ts'
 import { parseCsvIdSet } from './bridgeUtils.ts'
 import { buildTelegramAnnouncementContent } from './telegramAnnouncement.ts'
 
@@ -31,10 +37,10 @@ export type TelegramRouteDeps = {
 
 /**
  * Pure routing for one incoming Telegram message: emits debug events, builds and
- * pushes the companion announce notice, and forwards text messages into the
- * companion chat. Media-only messages are announced but not forwarded (there is
- * no text to converse about). No React and no side effects beyond the injected
- * deps, so the IPC → bridge → speak seam is unit-testable.
+ * pushes the companion announce notice, and forwards only owner-originated text
+ * into the companion chat. External contacts are local announcements only. No
+ * React and no side effects beyond the injected deps, so this bridge path is
+ * unit-testable.
  *
  * Returns whether the message was owner-originated so the caller can keep its own
  * per-chat reply bookkeeping.
@@ -54,9 +60,15 @@ export function routeTelegramMessage(
   deps.appendDebugConsoleEvent({
     source: 'autonomy',
     title: 'Telegram message',
-    detail: `[${msg.chatTitle}] ${msg.fromUser}${isOwner ? t('chat.bridge.owner_suffix') : ''}: ${
-      msg.text || (msg.media ? `[${msg.media}]` : '')
-    }`,
+    detail: buildBridgeIncomingDebugDetail({
+      source: 'Telegram',
+      container: msg.chatTitle,
+      sender: msg.fromUser,
+      isOwner,
+      ownerSuffix: t('chat.bridge.owner_suffix'),
+      text: msg.text,
+      media: msg.media,
+    }),
   })
 
   const announcement = buildTelegramAnnouncementContent(msg, settings, t)
@@ -64,7 +76,12 @@ export function routeTelegramMessage(
     deps.appendDebugConsoleEvent({
       source: 'autonomy',
       title: 'Telegram announcement',
-      detail: announcement.speechContent,
+      detail: buildBridgeAnnouncementDebugDetail({
+        source: 'Telegram',
+        sender: msg.fromUser,
+        text: msg.text,
+        media: msg.media,
+      }),
     })
     void deps.pushCompanionNotice({
       ...announcement,
@@ -72,11 +89,8 @@ export function routeTelegramMessage(
     })
   }
 
-  if (deps.sendMessage && msg.text) {
-    const prefixedText = isOwner
-      ? `【Telegram】${msg.text}`
-      : `【Telegram · ${msg.fromUser}】${msg.text}`
-    void deps.sendMessage(prefixedText, { source: 'telegram' })
+  if (deps.sendMessage && shouldForwardBridgeIncomingToChat({ isOwner, text: msg.text })) {
+    void deps.sendMessage(buildBridgeOwnerChatForwardText('Telegram', msg.text), { source: 'telegram' })
   }
 
   return { isOwner }

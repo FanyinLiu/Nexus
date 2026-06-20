@@ -316,7 +316,8 @@ contextBridge.exposeInMainWorld('desktopPet', {
   // Proactive OS-level notification ("[name] 在想你")
   showProactiveNotification: (payload) => ipcRenderer.invoke('proactive:show-notification', payload),
 
-  // Key vault (safeStorage encryption)
+  // Key vault (safeStorage encryption). Retrieval returns opaque refs;
+  // plaintext secret values stay in main-process handlers.
   vaultIsAvailable: () => ipcRenderer.invoke('vault:is-available'),
   vaultStore: (slot, plaintext) => ipcRenderer.invoke('vault:store', slot, plaintext),
   vaultRetrieve: (slot) => ipcRenderer.invoke('vault:retrieve', slot),
@@ -324,4 +325,17 @@ contextBridge.exposeInMainWorld('desktopPet', {
   vaultListSlots: () => ipcRenderer.invoke('vault:list-slots'),
   vaultStoreMany: (entries) => ipcRenderer.invoke('vault:store-many', entries),
   vaultRetrieveMany: (slots) => ipcRenderer.invoke('vault:retrieve-many', slots),
+
+  // VTube Studio bridge. The renderer sends companion state only; VTS
+  // WebSocket authentication and token persistence stay in the main process.
+  vtsBridgeConnect: (payload) => ipcRenderer.invoke('vts-bridge:connect', payload),
+  vtsBridgeDisconnect: () => ipcRenderer.invoke('vts-bridge:disconnect'),
+  vtsBridgeStatus: () => ipcRenderer.invoke('vts-bridge:status'),
+  vtsBridgeUpdateInput: (payload) => ipcRenderer.invoke('vts-bridge:update-input', payload),
+  vtsBridgeMigrateLegacyToken: (token) => ipcRenderer.invoke('vts-bridge:migrate-legacy-token', { token }),
+  subscribeVtsBridgeStatus: (listener) => {
+    const handler = (_event, status) => listener(status)
+    ipcRenderer.on('vts-bridge:status', handler)
+    return () => ipcRenderer.removeListener('vts-bridge:status', handler)
+  },
 })

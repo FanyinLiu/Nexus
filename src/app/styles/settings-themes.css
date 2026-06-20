@@ -1709,6 +1709,90 @@
   background: rgba(120, 160, 230, 0.22);
 }
 
+.settings-about-panel__spotlight {
+  display: grid;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid color-mix(in srgb, var(--settings-border, rgba(255, 255, 255, 0.14)) 76%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--settings-border, rgba(255, 255, 255, 0.14)) 76%, transparent);
+}
+
+.settings-about-panel__spotlight-header {
+  display: grid;
+  gap: 4px;
+}
+
+.settings-about-panel__spotlight-eyebrow {
+  color: color-mix(in srgb, var(--settings-accent, #8fb6ff) 80%, white 20%);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.settings-about-panel__spotlight-title {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.settings-about-panel__spotlight-summary {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.settings-about-panel__spotlight-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-about-panel__spotlight-list li {
+  display: grid;
+  gap: 2px;
+  padding-left: 10px;
+  border-left: 2px solid color-mix(in srgb, var(--settings-accent, #8fb6ff) 50%, transparent);
+}
+
+.settings-about-panel__spotlight-list strong {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.settings-about-panel__spotlight-list span {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settings-about-panel__spotlight-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-about-panel__spotlight-actions .primary-button,
+.settings-about-panel__spotlight-actions .ghost-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding-inline: 11px;
+  white-space: normal;
+}
+
+.settings-about-panel__spotlight-action-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
 .settings-about-panel__faq {
   display: grid;
   gap: 6px;
@@ -1959,6 +2043,8 @@
 }
 
 .settings-drawer--day .settings-about-panel__title,
+.settings-drawer--day .settings-about-panel__spotlight-title,
+.settings-drawer--day .settings-about-panel__spotlight-list strong,
 .settings-drawer--day .settings-about-panel__section-title,
 .settings-drawer--day .settings-about-panel__faq-question,
 .settings-drawer--day .settings-about-panel__credits-list strong,
@@ -1968,6 +2054,8 @@
 
 .settings-drawer--day .settings-about-panel__tagline,
 .settings-drawer--day .settings-about-panel__version,
+.settings-drawer--day .settings-about-panel__spotlight-summary,
+.settings-drawer--day .settings-about-panel__spotlight-list span,
 .settings-drawer--day .settings-about-panel__faq-answer,
 .settings-drawer--day .settings-about-panel__credits-intro,
 .settings-drawer--day .settings-about-panel__credits-list,
@@ -2066,6 +2154,8 @@
 .settings-drawer--day .settings-timeline-chart strong,
 .settings-drawer--day .settings-cost-breakdown strong,
 .settings-drawer--day .settings-about-panel__title,
+.settings-drawer--day .settings-about-panel__spotlight-title,
+.settings-drawer--day .settings-about-panel__spotlight-list strong,
 .settings-drawer--day .settings-about-panel__section-title,
 .settings-drawer--day .settings-about-panel__faq-question,
 .settings-drawer--day .settings-about-panel__credits-list strong,
@@ -2109,6 +2199,8 @@
 .settings-drawer--day .settings-cost-breakdown__table td,
 .settings-drawer--day .settings-about-panel__tagline,
 .settings-drawer--day .settings-about-panel__version,
+.settings-drawer--day .settings-about-panel__spotlight-summary,
+.settings-drawer--day .settings-about-panel__spotlight-list span,
 .settings-drawer--day .settings-about-panel__faq-answer,
 .settings-drawer--day .settings-about-panel__credits-intro,
 .settings-drawer--day .settings-about-panel__credits-list,
@@ -4333,6 +4425,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-drawer--warm-day .settings-page[data-section] .settings-cost-breakdown__table td,
 .settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__tagline,
 .settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__version,
+.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__spotlight-summary,
+.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__spotlight-list span,
 .settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__faq-answer,
 .settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__credits-intro,
 .settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__credits-list,
@@ -4355,6 +4449,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-drawer--warm-day .settings-page[data-section] .settings-console-list__item strong,
 .settings-drawer--warm-day .settings-page[data-section] .settings-diagnostics-panel__header h4,
 .settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__title,
+.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__spotlight-title,
+.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__spotlight-list strong,
 .settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__section-title,
 .settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__faq-question,
 .settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__credits-list strong,
@@ -4726,6 +4822,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-about-panel__title,
+.settings-page[data-section] .settings-about-panel__spotlight-title,
 .settings-page[data-section] .settings-about-panel__section-title {
   font-size: 13px;
   font-weight: 700;
@@ -4734,6 +4831,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-about-panel__tagline,
 .settings-page[data-section] .settings-about-panel__version,
+.settings-page[data-section] .settings-about-panel__spotlight-summary,
+.settings-page[data-section] .settings-about-panel__spotlight-list span,
 .settings-page[data-section] .settings-about-panel__faq-answer,
 .settings-page[data-section] .settings-about-panel__credits-intro,
 .settings-page[data-section] .settings-about-panel__credits-list {
@@ -4784,6 +4883,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-about-panel__faq,
+.settings-page[data-section] .settings-about-panel__spotlight,
 .settings-page[data-section] .settings-about-panel__credits {
   display: grid;
   gap: 8px;
@@ -5882,6 +5982,28 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border-color: color-mix(in srgb, var(--settings-border) 86%, transparent);
   background: color-mix(in srgb, var(--settings-surface-soft) 68%, var(--settings-surface) 32%);
   color: color-mix(in srgb, var(--text-soft) 82%, var(--text-h) 18%);
+}
+
+.settings-page[data-section] .settings-companion-state-preview__readout,
+.settings-page[data-section] .settings-companion-state-preview__states button {
+  border-color: var(--settings-border);
+  background: color-mix(in srgb, var(--settings-surface-soft) 88%, transparent);
+  color: color-mix(in srgb, var(--text-soft) 84%, var(--text-h) 16%);
+  box-shadow: none;
+}
+
+.settings-page[data-section] .settings-companion-state-preview__readout strong {
+  color: var(--text-h);
+}
+
+.settings-page[data-section] .settings-companion-state-preview__readout span {
+  color: var(--text-soft);
+}
+
+.settings-page[data-section] .settings-companion-state-preview__states button.is-active {
+  border-color: color-mix(in srgb, var(--settings-accent) 42%, var(--settings-border));
+  background: color-mix(in srgb, var(--settings-accent) 14%, var(--settings-surface-soft));
+  color: var(--text-h);
 }
 
 .settings-drawer .settings-page[data-section] .settings-community-links {
@@ -9368,6 +9490,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__links,
+.settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__spotlight,
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__faq,
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__credits {
   gap: 8px;
@@ -9395,6 +9518,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__tagline,
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__version,
+.settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__spotlight-summary,
+.settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__spotlight-list span,
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__faq-answer,
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__credits-intro,
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__credits-list li span {

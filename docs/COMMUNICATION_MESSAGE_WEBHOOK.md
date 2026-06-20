@@ -17,10 +17,12 @@ In Nexus settings:
 The settings panel shows:
 
 - `POST http://127.0.0.1:47830/webhook`
-- `Authorization: Bearer ...`
+- `Authorization: Bearer <notification-webhook-token.txt>`
 
 The webhook is bound to `127.0.0.1` and requires the bearer token stored in the
-Nexus user-data directory as `notification-webhook-token.txt`.
+Nexus user-data directory as `notification-webhook-token.txt`. Settings does
+not expose the token value to the renderer; the helper CLI reads the token file
+directly.
 
 ## Payload
 
@@ -75,7 +77,7 @@ npm run message:send -- \
 ```
 
 The CLI tries to read the Nexus webhook token from common user-data locations.
-You can also pass a token copied from settings:
+You can also pass a token from `notification-webhook-token.txt` directly:
 
 ```bash
 node scripts/send-message-webhook.mjs \
@@ -182,3 +184,5 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 - For Chinese desktop apps, the practical path is a small per-app adapter that observes system notifications,
   automation events, or exported message events, then calls this webhook contract.
 - Keep message text out of speech by leaving Read webhook message previews aloud disabled.
+- Nexus may show enabled message previews locally, but reply draft buttons must
+  not copy third-party message text into the chat composer or model context.

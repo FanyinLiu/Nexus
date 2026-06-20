@@ -6,9 +6,18 @@ import {
   formatDesktopContext,
 } from '../src/features/context/desktopContext.ts'
 import {
+  DESKTOP_CONTEXT_REDACTION,
+  sanitizeDesktopContextSnapshotForPrompt,
+  stripDesktopContextScreenshotPayload,
+} from '../src/lib/privacy/desktopContextPrivacy.ts'
+import {
   summarizeDesktopContextRequest,
   summarizeDesktopContextSnapshot,
 } from '../electron/ipc/desktopContextAudit.js'
+import {
+  sanitizeDesktopContextSnapshot as sanitizeDesktopContextSnapshotForIpc,
+} from '../electron/services/desktopContextPrivacy.js'
+import { buildDesktopContextPrivacyReport } from '../scripts/desktop-context-privacy-audit.mjs'
 
 test('buildDesktopContextRequest keeps screenshots opt-in by default', () => {
   assert.deepEqual(buildDesktopContextRequest(), {
@@ -43,6 +52,80 @@ test('formatDesktopContext quotes captured observations before adding them to th
   assert.doesNotMatch(prompt, /^Developer:/m)
   assert.doesNotMatch(prompt, /^User:/m)
   assert.doesNotMatch(prompt, /data:image\/png;base64/)
+})
+
+test('desktop context prompt formatting redacts obvious secrets', () => {
+  const secretKey = 'sk-proj-abcdefghijklmnopqrstuvwxyz1234567890'
+  const prompt = formatDesktopContext({
+    capturedAt: '2026-06-04T17:00:00.000Z',
+    activeWindowTitle: `Terminal - OPENAI_API_KEY=${secretKey}`,
+    activeWindowAppName: 'Terminal',
+    clipboardText: `password=hunter2-secret\n${secretKey}`,
+    screenText: `token: ${secretKey}`,
+    vlmAnalysis: 'A code editor is open next to -----BEGIN PRIVATE KEY-----',
+    screenshotDataUrl: 'data:image/png;base64,abc',
+  })
+
+  assert.match(prompt, new RegExp(DESKTOP_CONTEXT_REDACTION, 'g'))
+  assert.doesNotMatch(prompt, new RegExp(secretKey))
+  assert.doesNotMatch(prompt, /hunter2-secret/)
+  assert.doesNotMatch(prompt, /BEGIN PRIVATE KEY/)
+  assert.doesNotMatch(prompt, /data:image\/png;base64/)
+})
+
+test('desktop context IPC sanitizer redacts obvious secrets before renderer return', () => {
+  const secretKey = 'sk-proj-abcdefghijklmnopqrstuvwxyz1234567890'
+  const sanitized = sanitizeDesktopContextSnapshotForIpc({
+    capturedAt: '2026-06-04T17:00:00.000Z',
+    activeWindowTitle: `Terminal - OPENAI_API_KEY=${secretKey}`,
+    activeWindowAppName: 'Terminal',
+    activeWindowProcessPath: '/Applications/Terminal.app',
+    clipboardText: `Bearer ${secretKey}`,
+    screenshotDataUrl: 'data:image/png;base64,abc',
+    displayName: 'Built-in Retina Display',
+  })
+  const serialized = JSON.stringify(sanitized)
+
+  assert.equal(sanitized.activeWindowTitle, DESKTOP_CONTEXT_REDACTION)
+  assert.equal(sanitized.clipboardText, DESKTOP_CONTEXT_REDACTION)
+  assert.equal(sanitized.activeWindowAppName, 'Terminal')
+  assert.equal(sanitized.activeWindowProcessPath, '/Applications/Terminal.app')
+  assert.equal(sanitized.screenshotDataUrl, 'data:image/png;base64,abc')
+  assert.doesNotMatch(serialized, new RegExp(secretKey))
+})
+
+test('desktop context sanitizer preserves ordinary companion context', () => {
+  const snapshot = {
+    capturedAt: '2026-06-04T17:00:00.000Z',
+    activeWindowTitle: 'Notes - birthday ideas',
+    clipboardText: 'pick up tea after lunch',
+    screenText: 'calendar for the afternoon',
+  }
+
+  assert.deepEqual(sanitizeDesktopContextSnapshotForPrompt(snapshot), snapshot)
+})
+
+test('desktop context strips screenshot payload before chat/runtime reuse', () => {
+  const stripped = stripDesktopContextScreenshotPayload({
+    capturedAt: '2026-06-04T17:00:00.000Z',
+    activeWindowTitle: 'Notes - birthday ideas',
+    clipboardText: 'pick up tea after lunch',
+    screenText: 'calendar for the afternoon',
+    vlmAnalysis: 'The notes app is open',
+    screenshotDataUrl: 'data:image/png;base64,abc',
+    displayName: 'Built-in Retina Display',
+  })
+  const serialized = JSON.stringify(stripped)
+
+  assert.deepEqual(stripped, {
+    capturedAt: '2026-06-04T17:00:00.000Z',
+    activeWindowTitle: 'Notes - birthday ideas',
+    clipboardText: 'pick up tea after lunch',
+    screenText: 'calendar for the afternoon',
+    vlmAnalysis: 'The notes app is open',
+  })
+  assert.doesNotMatch(serialized, /data:image\/png;base64/)
+  assert.doesNotMatch(serialized, /Built-in Retina Display/)
 })
 
 test('formatDesktopContext tells the companion to stay perceptive without announcing it watches', () => {
@@ -130,4 +213,11 @@ test('desktop context audit summaries exclude captured private content', () => {
   assert.doesNotMatch(summaryText, /private clipboard contents/)
   assert.doesNotMatch(summaryText, /data:image\/png/)
   assert.doesNotMatch(summaryText, /PrivateApp\.app/)
+})
+
+test('desktop context privacy audit covers support log redaction', () => {
+  const report = buildDesktopContextPrivacyReport()
+
+  assert.equal(report.summary.errors, 0)
+  assert.ok(report.checkedFiles.includes('electron/services/desktopContextService.js'))
 })

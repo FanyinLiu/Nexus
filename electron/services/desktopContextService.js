@@ -1,6 +1,7 @@
 import { clipboard, desktopCapturer, screen } from 'electron'
 import { execFile } from 'node:child_process'
 import { promises as fsp } from 'node:fs'
+import { redactSensitiveErrorText } from './errorRedaction.js'
 
 const ACTIVE_WINDOW_CONTEXT_TIMEOUT_MS = 1_400
 const ACTIVE_WINDOW_CONTEXT_CACHE_TTL_MS = 4_000
@@ -74,6 +75,16 @@ let activeWindowLinuxUnavailableAt = 0
 function isCommandNotFoundError(error) {
   const message = `${error?.message ?? ''} ${error?.stderr ?? ''}`
   return error?.code === 'ENOENT' || /command not found|not found|No such file/i.test(message)
+}
+
+function formatDesktopContextErrorForLog(error) {
+  const message = error instanceof Error
+    ? (error.message || error.name || 'Unknown error')
+    : String(error ?? 'Unknown error')
+  const stderr = error && typeof error === 'object' && 'stderr' in error
+    ? String(error.stderr ?? '')
+    : ''
+  return redactSensitiveErrorText([message, stderr].filter(Boolean).join(' '))
 }
 
 function execFileStdout(file, args, options) {
@@ -181,7 +192,7 @@ function captureActiveWindowContextMac() {
             resolve(null)
             return
           }
-          console.warn('[desktop-context:mac] active window capture failed', message)
+          console.warn('[desktop-context:mac] active window capture failed:', formatDesktopContextErrorForLog(error))
           resolve(null)
           return
         }
@@ -203,7 +214,7 @@ function captureActiveWindowContextMac() {
           })
           resolve(snapshot)
         } catch (parseError) {
-          console.warn('[desktop-context:mac] parse failed', parseError)
+          console.warn('[desktop-context:mac] parse failed:', formatDesktopContextErrorForLog(parseError))
           resolve(null)
         }
       },
@@ -266,7 +277,7 @@ function captureActiveWindowContextLinux() {
         }
         return null
       }
-      console.warn('[desktop-context:linux] active window capture failed', message || error)
+      console.warn('[desktop-context:linux] active window capture failed:', formatDesktopContextErrorForLog(error))
       return null
     }
   })().then((snapshot) => {
@@ -465,7 +476,7 @@ function captureActiveWindowContextWindows() {
       },
       (error, stdout) => {
         if (error) {
-          console.warn('[desktop-context:get] active window capture failed', error)
+          console.warn('[desktop-context:get] active window capture failed:', formatDesktopContextErrorForLog(error))
           resolve(null)
           return
         }
@@ -476,7 +487,7 @@ function captureActiveWindowContextWindows() {
           )
           resolve(normalizedSnapshot)
         } catch (parseError) {
-          console.warn('[desktop-context:get] active window parse failed', parseError)
+          console.warn('[desktop-context:get] active window parse failed:', formatDesktopContextErrorForLog(parseError))
           resolve(null)
         }
       },
@@ -541,7 +552,7 @@ export async function captureScreenshotContext() {
         screenshotDataUrl: source.thumbnail.toDataURL(),
       }
     } catch (error) {
-      console.warn('[desktop-context:get] screenshot capture failed', error)
+      console.warn('[desktop-context:get] screenshot capture failed:', formatDesktopContextErrorForLog(error))
       return null
     }
   })().then((snapshot) => {

@@ -5,6 +5,15 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildIpcContractReport, summarizeIpcContractReport } from './ipc-contract-audit.mjs'
 import { buildReleaseTrustReport, summarizeReleaseTrustReport } from './release-trust-audit.mjs'
+import { buildStorageContractReport } from './storage-contract-audit.mjs'
+import { buildHeavyModuleAuditReport } from './heavy-module-audit.mjs'
+import { buildCompanionBoundaryReport } from './companion-boundary-audit.mjs'
+import { buildArchitectureBoundaryReport } from './architecture-boundary-audit.mjs'
+import { buildSourceSizeReport } from './source-size-audit.mjs'
+import { buildMessagePrivacyReport } from './message-privacy-audit.mjs'
+import { buildDesktopContextPrivacyReport } from './desktop-context-privacy-audit.mjs'
+import { buildVaultSecurityReport } from './vault-security-audit.mjs'
+import { buildErrorRedactionReport } from './error-redaction-audit.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -52,7 +61,16 @@ check('developer npm scripts cover run, package and release verification', () =>
     'package:linux',
     'package:dir:smoke',
     'verify:release',
+    'verify:pr',
     'ipc:audit',
+    'storage:audit',
+    'heavy:audit',
+    'architecture:audit',
+    'source-size:audit',
+    'performance:baseline',
+    'companion-boundary:audit',
+    'message-privacy:audit',
+    'desktop-context-privacy:audit',
     'sqlite:smoke',
     'sqlite:smoke:electron',
     'sqlite:smoke:all',
@@ -102,6 +120,26 @@ check('release workflow runs the pre-release gate before packaging', () => {
   assert(releaseWorkflow.includes('needs: [ensure-release, preflight]'), 'build job must depend on preflight')
 })
 
+check('pre-release gate docs include packaged smoke', () => {
+  assert(
+    releasingDoc.includes('### Stage B — Code quality (6 checks)'),
+    'RELEASING should keep Stage B count aligned with prerelease-check',
+  )
+  assert(
+    releasingDoc.includes('`npm run package:dir:smoke`'),
+    'RELEASING should document the packaged smoke gate',
+  )
+  assert(
+    releasingDoc.includes('smoke, packaged smoke, coverage, benchmarks'),
+    'RELEASING should document that --quick skips packaged smoke',
+  )
+  assert(
+    releasingDoc.includes('package an unpacked app and launch it with') ||
+      releasingDoc.includes('Packaged smoke'),
+    'RELEASING should explain what the packaged smoke gate validates',
+  )
+})
+
 check('release workflow refuses to mutate published releases', () => {
   assert(!releaseWorkflow.includes('gh release delete'), 'release workflow must not delete published releases')
   assert(
@@ -134,8 +172,67 @@ check('IPC bridge contract baseline is inventoried', () => {
   const report = buildIpcContractReport(ROOT)
   const summary = summarizeIpcContractReport(report)
   assert(summary.errors === 0, `IPC contract audit has ${summary.errors} error(s); run npm run ipc:audit`)
+  assert(summary.warnings === 0, `IPC contract audit has ${summary.warnings} warning(s); run npm run ipc:audit`)
   assert(report.counts.preloadInvokeChannels > 0, 'IPC contract audit found no preload invoke channels')
   assert(report.counts.mainHandlerChannels > 0, 'IPC contract audit found no main handler channels')
+})
+
+check('renderer localStorage keys have a migration contract', () => {
+  const report = buildStorageContractReport(ROOT)
+  assert(report.summary.errors === 0, `storage contract audit has ${report.summary.errors} error(s); run npm run storage:audit`)
+  assert(report.discoveredKeys === report.contracts, 'storage contract count should match unique discovered browser storage keys')
+})
+
+check('heavy renderer modules stay lazy-loaded', () => {
+  const report = buildHeavyModuleAuditReport(ROOT)
+  assert(report.summary.errors === 0, `heavy module audit has ${report.summary.errors} error(s); run npm run heavy:audit`)
+})
+
+check('renderer architecture boundaries do not invert', () => {
+  const report = buildArchitectureBoundaryReport(ROOT)
+  assert(report.summary.errors === 0, `architecture boundary audit has ${report.summary.errors} error(s); run npm run architecture:audit`)
+})
+
+check('source files stay below the large-file budget', () => {
+  const report = buildSourceSizeReport(ROOT)
+  assert(report.summary.errors === 0, `source size audit has ${report.summary.errors} error(s); run npm run source-size:audit`)
+})
+
+check('companion boundary is documented and guarded', () => {
+  const report = buildCompanionBoundaryReport(ROOT)
+  assert(report.summary.errors === 0, `companion boundary audit has ${report.summary.errors} error(s); run npm run companion-boundary:audit`)
+})
+
+check('message privacy boundary is guarded', () => {
+  const report = buildMessagePrivacyReport(ROOT)
+  assert(report.summary.errors === 0, `message privacy audit has ${report.summary.errors} error(s); run npm run message-privacy:audit`)
+  assert(report.privacy.staticSourceOnly === true, 'message privacy audit must stay source-only')
+  assert(report.privacy.readsMessageContent === false, 'message privacy audit must not read user messages')
+})
+
+check('desktop context privacy boundary is guarded', () => {
+  const report = buildDesktopContextPrivacyReport(ROOT)
+  assert(report.summary.errors === 0, `desktop context privacy audit has ${report.summary.errors} error(s); run npm run desktop-context-privacy:audit`)
+  assert(report.privacy.staticSourceOnly === true, 'desktop context privacy audit must stay source-only')
+  assert(report.privacy.readsUserData === false, 'desktop context privacy audit must not read user data')
+  assert(report.privacy.readsClipboard === false, 'desktop context privacy audit must not read clipboard content')
+  assert(report.privacy.readsScreenshots === false, 'desktop context privacy audit must not read screenshots')
+  assert(report.privacy.readsActiveWindow === false, 'desktop context privacy audit must not read active-window content')
+})
+
+check('vault secret boundary is guarded', () => {
+  const report = buildVaultSecurityReport(ROOT)
+  assert(report.summary.errors === 0, `vault security audit has ${report.summary.errors} error(s); run npm run vault-security:audit`)
+  assert(report.privacy.staticSourceOnly === true, 'vault security audit must stay source-only')
+  assert(report.privacy.readsSecrets === false, 'vault security audit must not read secret values')
+  assert(report.privacy.rendererReceivesPlaintextSecrets === false, 'renderer must not receive plaintext vault secrets')
+})
+
+check('network error redaction boundary is guarded', () => {
+  const report = buildErrorRedactionReport(ROOT)
+  assert(report.summary.errors === 0, `error redaction audit has ${report.summary.errors} error(s); run npm run error-redaction:audit`)
+  assert(report.privacy.staticSourceOnly === true, 'error redaction audit must stay source-only')
+  assert(report.privacy.readsSecrets === false, 'error redaction audit must not read secret values')
 })
 
 check('source desktop shortcut launches without a terminal window', () => {

@@ -8,6 +8,7 @@ import {
   isDesktopContextClipboardAvailable,
   isDesktopContextScreenshotAvailable,
 } from '../lib/platformProfile'
+import { stripDesktopContextScreenshotPayload } from '../lib/privacy/desktopContextPrivacy'
 import type { AppSettings, DesktopContextSnapshot, PlatformProfile } from '../types'
 
 type UseDesktopContextParams = {
@@ -62,7 +63,7 @@ export function useDesktopContext({ settingsRef, platformProfileRef }: UseDeskto
         || !includeScreenshot
         || !snapshot.screenshotDataUrl
       ) {
-        return snapshot
+        return stripDesktopContextScreenshotPayload(snapshot)
       }
 
       let enrichedSnapshot = snapshot
@@ -109,7 +110,7 @@ export function useDesktopContext({ settingsRef, platformProfileRef }: UseDeskto
         enrichedSnapshot = { ...enrichedSnapshot, vlmAnalysis }
       }
 
-      return enrichedSnapshot
+      return stripDesktopContextScreenshotPayload(enrichedSnapshot)
     } catch {
       return null
     }

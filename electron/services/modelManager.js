@@ -22,6 +22,7 @@ import {
   getUserModelsRoot,
   getPrimaryModelsDir,
 } from './modelPaths.js'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 
 const PROGRESS_CHANNEL = 'models:download-progress'
 
@@ -95,7 +96,7 @@ async function _downloadOne(modelId) {
     broadcast(PROGRESS_CHANNEL, {
       modelId,
       phase: 'error',
-      message: error instanceof Error ? error.message : String(error),
+      message: getRedactedErrorMessage(error),
     })
     throw error
   }
@@ -117,7 +118,7 @@ export async function downloadMissingRequired() {
       results.push({
         id,
         ok: false,
-        message: error instanceof Error ? error.message : String(error),
+        message: getRedactedErrorMessage(error),
       })
     }
   }

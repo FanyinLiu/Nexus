@@ -73,6 +73,15 @@ Current baseline:
   docs only; it does not read environment variables, certificates, keychain
   state, app-local user data, or signing secret values. `npm run
   distribution:audit` includes this gate.
+- `npm run distribution:audit` also guards release-process drift such as the
+  Stage B packaged-smoke checklist in `docs/RELEASING.md`; if the actual
+  `npm run package:dir:smoke` gate is removed from the release docs, the audit
+  fails before release.
+- `docs/RELEASE-CANDIDATE-v0.3.5-HANDOFF.md` records the current release
+  candidate's memorable theme, merge/tag evidence, already-collected smoke
+  results, residual signing/runtime risks, rollback path, and companion-first
+  next phase. It is a per-release operator handoff, not a replacement for
+  `docs/RELEASING.md`.
 - The updater runtime uses full `electron-updater` auto-download/install on
   Windows, Linux, and future signed macOS builds. Current unsigned macOS builds
   resolve to `manual-download`: they check GitHub Releases and open the release
@@ -87,9 +96,65 @@ Current baseline:
 - `npm run ipc:audit` is the M3 source-only IPC contract inventory. It parses
   preload invokes, preload subscriptions, and main-process handlers without
   reading user data or secrets, then fails on structural drift such as missing
-  handlers, duplicate handlers, missing trusted-sender checks, or missing event
-  sources. Current validation/audit/permission gaps are reported as warnings
-  until later M3 slices tighten each high-risk channel family.
+  handlers, duplicate handlers, missing trusted-sender checks, missing event
+  sources, payload-validation gaps, or high-risk audit/permission gaps.
+- `npm run storage:audit` is the renderer browser-storage contract inventory.
+  It scans `src/**/*.ts{x}` for localStorage/sessionStorage key constants and
+  inline storage calls, then fails if a key is added without classification,
+  authority, and migration posture. The report is source-only, compares unique
+  discovered keys against the contract, and marks the legacy VTube Studio auth
+  token key as a `secret-adjacent` migration source after VTS authentication
+  moves behind the main-process bridge and fixed vault slot.
+- `npm run heavy:audit` guards renderer-side heavy modules such as embeddings,
+  OCR, browser VAD, and Live2D so they remain lazy-loaded or vendor-loaded on
+  demand.
+- `npm run architecture:audit` is the renderer source-layer boundary guard. It
+  keeps `lib`, `core`, `types`, hooks, components, and feature modules from
+  importing back upward into app/view orchestration.
+- `npm run source-size:audit` is the source-size guard. It fails when a normal
+  source file grows past the large-file budget, while keeping explicit temporary
+  allowances for generated i18n catalogs and the current main-process local data
+  service. IPC payload schemas are split by domain behind
+  `electron/ipc/payloadSchemas.js`, so existing handler imports stay stable
+  while schema definitions no longer collect in one large file.
+- `npm run performance:baseline` reads the production `dist/assets` output and
+  static heavy-module audit result after `npm run build`. It records bundle
+  size budgets for total assets, JavaScript, CSS, WASM, largest JS chunk, and
+  eager heavy-module regressions without reading runtime user data.
+- `npm run companion-boundary:audit` keeps the repo aligned to companionship
+  instead of work-agent expansion by requiring the companion task boundary to be
+  documented in code-facing and release-facing docs.
+- `npm run message-privacy:audit` is the source-only desktop message privacy
+  guard. It fails if notification/message bodies are wired into automatic chat
+  forwarding, persisted chat history, missed-message follow-up hints, reply
+  draft composer text, or raw renderer localStorage writes. The audit reads
+  repository source only and never reads user notifications, chat content,
+  localStorage values, secrets, or message bodies.
+- `npm run desktop-context-privacy:audit` is the source-only desktop context
+  privacy guard. It fails if `desktop-context:get` returns active-window,
+  clipboard, OCR, or VLM text without the sensitive-text sanitizer, or if prompt
+  formatting bypasses the renderer-side sanitizer, or if the renderer returns
+  screenshot image payloads into chat/runtime context after OCR/VLM finishes, or
+  if the autonomy context scheduler retains previous active-window or clipboard
+  text instead of comparison fingerprints. It never reads the live clipboard,
+  screenshots, active-window text, localStorage values, or secrets. The same
+  guard now covers desktop-context support logs so active-window and screenshot
+  capture failures log redacted error summaries instead of raw exception
+  objects, stderr, local paths, or captured text.
+- `npm run vault-security:audit` is the source-only secret-boundary guard. It
+  fails if vault retrieval IPC stops issuing opaque `nexus-vault-ref:` tokens,
+  if refs stop being scoped per sender, or if known main-process outbound
+  request handlers stop resolving vault refs before using API keys. It never
+  reads safeStorage, keychain values, localStorage, or secret material.
+- `npm run error-redaction:audit` is the source-only network-error privacy
+  guard. It fails if main-process chat/audio network handlers or the VTube
+  Studio bridge or auto-updater or model downloader or Telegram/Discord gateway
+  or macOS notification watcher or memory vector store return or log raw caught
+  error text without the shared secret/path redactor. It never performs network
+  requests or reads user data, localStorage, keychain values, or secret
+  material.
+- `npm run verify:pr` is the day-to-day merge gate. `npm run verify:release`
+  reuses it and then adds the SQLite smoke check for release confidence.
 - The `file:save-text` and `file:open-text` IPC handlers now use explicit
   request schemas, native file dialogs as the user confirmation point, and
   metadata-only audit records that avoid file content and full local paths.
@@ -97,11 +162,35 @@ Current baseline:
   for requested/allowed/enabled context capabilities and returned data-category
   lengths. It deliberately avoids logging active-window text, clipboard text,
   screenshot data URLs, display names, or process paths.
+- The same desktop context path redacts obvious secrets such as API keys,
+  bearer tokens, passwords, and private-key material before captured
+  active-window/clipboard text leaves the main process. Renderer prompt
+  formatting applies the same sanitizer again to OCR and VLM text before it can
+  enter the model context. Screenshot data URLs are treated as temporary OCR/VLM
+  inputs and stripped from the desktop-context snapshot before chat/runtime code
+  can reuse it. The autonomy context scheduler keeps only salted comparison
+  fingerprints for previous active-window and clipboard values, so change
+  detection does not retain the earlier desktop text in renderer refs.
 - External action IPC handlers for Telegram, Discord, Minecraft, Factorio, and
   MCP now write metadata-only request/result audit records. These records keep
   outbound message text, voice payloads, game commands, target IDs, MCP command
   text, tool names, and tool arguments out of the audit log while preserving
   action category, payload shape, lengths, and success/failure state.
+- MCP host support logs are also content-minimized. External server stdout
+  parse failures, server notifications, tool discovery, launch attempts,
+  restart failures, and shutdown failures record only ids/commands/args/tool
+  names/output lengths plus redacted error text, not raw server ids, launch
+  commands, arguments, tool names, stdout lines, paths, or tokens.
+- Renderer support logs for token-adjacent companion integrations use the same
+  redaction boundary. The VTube Studio hook logs sanitized error text for input
+  updates, connection failures, and legacy-token migration failures instead of
+  printing raw exception objects that may contain token-like strings or local
+  paths.
+- Memory vector store support logs use the same redaction boundary for worker
+  failures, append-log failures, and snapshot compaction failures. The index may
+  contain private long-term memory content, so diagnostics must keep raw
+  exception text, local user paths, and token-like strings out of support logs
+  while preserving the existing recoverable persistence behavior.
 - The same external action handlers now pass through a main-process permission
   policy before execution. The policy defaults to `confirm`, persists approved
   modes in Electron `userData`, blocks active actions in `read-only`, prompts
@@ -119,7 +208,10 @@ Current baseline:
   execution-granting lifecycle actions or bus publish/subscribe/unsubscribe
   operations. Audit records store identifier lengths, payload shape, result
   booleans, and error-message lengths, not plugin IDs, server IDs, topics,
-  message payloads, plugin names, commands, or error text.
+  message payloads, plugin names, commands, or error text. Plugin host support
+  logs follow the same boundary: approval decisions, skipped manifests, and
+  auto-start results log only id/name/version or directory-entry lengths plus
+  redacted error text.
 - External-link IPC keeps the existing URL safety normalization and native
   confirmation in the built-in tool registry, then records metadata-only
   request/result audit entries around the IPC call. Audit records store URL
@@ -130,12 +222,66 @@ Current baseline:
   metadata-only request/result audit entries for availability, store, retrieve,
   delete, list, store-many, and retrieve-many operations. Audit records include
   counts, lengths, booleans, and result kinds, not plaintext secrets, slot
-  names, vault ref tokens, or error text.
+  names, vault ref tokens, or error text. `npm run vault-security:audit` guards
+  this contract so renderer-facing vault retrieval cannot regress to plaintext
+  returns. KeyVault support logs now omit raw slot names, plaintext values,
+  vault paths, and raw exception objects by logging only slot lengths plus
+  redacted error text.
+- Main-process chat/audio network errors now pass through
+  `redactSensitiveErrorText` before they are logged, sent in stream terminal
+  frames, or returned to renderer-facing failure messages. The redactor strips
+  common API-key, bearer-token, JWT, URL-userinfo, secret query parameter, and
+  user-home path shapes while preserving enough context for actionable repair.
+- The VTube Studio bridge now keeps WebSocket authentication, token storage,
+  parameter injection, and hotkey triggering in the main process. Renderer code
+  can connect/disconnect, send bounded companion state input, subscribe to
+  bridge status, and migrate the old `nexus:vts-auth-token` localStorage value
+  one way into the fixed vault slot; it cannot read the VTS token back. VTS
+  connection/authentication errors use the same main-process redactor before
+  status broadcasts or audit records can expose them.
+- Auto-updater errors use the same main-process redactor before renderer
+  `updater:event` error payloads, manual-check results, or updater console logs
+  can expose token-like strings, credentialed URLs, or local user paths.
+- Model download/install errors use the same main-process redactor before
+  `models:download-progress` UI events or batch download results can expose
+  credentialed source URLs, tar stderr, or local user paths during first-run
+  speech/model setup.
+- Telegram/Discord gateway status and diagnostic logs use the same
+  main-process redactor before Settings/status/support surfaces can expose bot
+  tokens, credentialed gateway URLs, service error payloads, or local user
+  paths.
+- macOS notification watcher status and persistence errors use the same
+  main-process redactor before `notification:watcher-status` or logs can expose
+  Notification Center database paths, local user paths, or sensitive system
+  error details.
 - Integrations inspection, KWS start/status, VAD start, model download, and TTS
   streaming lifecycle IPC now validate request shape before service work. The
   current `npm run ipc:audit` gate reports no missing handlers, missing trusted
   sender checks, payload-validation warnings, high-risk audit gaps, or
   high-risk permission gaps.
+- Desktop notification/message awareness treats message text as local preview
+  data, not model input. Automatic desktop-message chat forwarding now sends
+  only source/sender metadata, missed-message follow-up records omit topic/body
+  snippets, notification companion notices stored in chat history use
+  metadata-only copy, reply draft composer text uses only source metadata, and
+  renderer notification localStorage persistence strips body/summary text before
+  writing.
+- Telegram and Discord bridges use an owner-only model-input boundary. Allowed
+  channels can still produce local companion announcements, but external-contact
+  messages are not forwarded into chat/model input unless the sender is
+  explicitly listed as the owner. Bridge debug events record metadata such as
+  source, sender, media type, and text length, never message bodies. External
+  Telegram voice notes stay announce-only and are not sent through STT.
+- Local notification webhook authentication uses a per-user bearer token stored
+  in Electron `userData` as `notification-webhook-token.txt` with mode `0600`.
+  The renderer-visible `notification:webhook-info` IPC returns only URL,
+  max-body size, `requiresAuth`, and the token file name; it does not return
+  the bearer token or full `Authorization` header.
+- Local notification bridge support logs are content-minimized. Webhook token
+  read failures, webhook server errors, RSS fetch/poll failures, and rejected
+  RSS channel configs use the shared error redactor plus channel metadata
+  lengths instead of raw user-supplied channel names, ids, feed URLs, bearer
+  tokens, or URL-safety host details.
 - A main-process local-data foundation now initializes both
   `userData/local-data/manifest.json` and the SQLite database
   `userData/local-data/nexus.sqlite` using Electron/Node's built-in
@@ -313,6 +459,7 @@ panelScene/
 pet/
 plan/
 proactive/
+releaseNotes/
 reminders/
 safety/
 setup/
@@ -374,36 +521,79 @@ Avoid:
 
 ## Public Entry Points
 
-The repo now has stable barrels for the layers we expect other modules to touch:
+Current aggregate barrels are intentionally limited to the layers that actually
+provide one:
 
 ```text
-src/index.ts
-src/app/index.ts
-src/components/index.ts
-src/features/index.ts
-src/hooks/index.ts
 src/i18n/index.ts
 src/lib/index.ts
 src/types/index.ts
 ```
 
-Feature-specific public surfaces also exist, for example:
+There is currently no aggregate `src/index.ts`, `src/app/index.ts`,
+`src/components/index.ts`, `src/features/index.ts`, or `src/hooks/index.ts`.
+Do not document or import those paths until the files exist and the ownership
+boundary is deliberate.
+
+Feature-specific public surfaces are the preferred feature entry points, for
+example:
 
 ```text
-src/features/voice/index.ts
-src/features/models/index.ts
-src/features/tasks/index.ts
-src/features/tools/index.ts
+src/features/chat/index.ts
+src/features/character/index.ts
 src/features/memory/index.ts
+src/features/models/index.ts
 src/features/pet/index.ts
-src/features/onboarding/index.ts
+src/features/releaseNotes/index.ts
 src/features/themes/index.ts
+src/features/tools/index.ts
+src/features/voice/index.ts
 ```
 
 The app shell should prefer these entry points over imports like
 `../../features/voice/sessionMachine` unless the symbol is explicitly private.
 
 ## Core Runtime Flows
+
+### Companion presence and memory visibility flow
+
+```text
+chat / voice / runtime snapshot
+  -> features/pet/activityState
+  -> app/views/PetView
+       -> status dot + accessibility label
+       -> data-companion-activity / data-companion-motion
+       -> SpritePetCanvas fallback state
+       -> Live2D listening/speaking flags
+```
+
+The current v0.3.5 desktop presence contract is intentionally presentation
+oriented. `features/pet/activityState.ts` resolves one visible phase
+(`idle`, `thinking`, `listening`, `speaking`, `waiting`, `error`, or `offline`)
+plus a small motion token. It must stay content-minimized: no chat text,
+memory text, secrets, model output, tool arguments, local paths, or audit
+payloads belong in the resolved companion state.
+
+Settings uses the same resolver through
+`components/settingsSections/chat/CompanionStatePreview.tsx`, so the Companion
+Profile preview cannot drift away from the pet window. Stage directions stay in
+`features/pet/performance.ts`: recognized companion asides can drive avatar
+cues, while ordinary notes and Markdown remain content.
+
+Memory visibility is a separate white-box provenance surface, not part of the
+presence state machine:
+
+```text
+features/memory recall context
+  -> content-minimized assistant-message memoryTrace IDs
+  -> runtime-only trace detail resolution
+  -> Settings Memory focus/edit/delete/pause surface
+```
+
+`features/releaseNotes/` is also intentionally narrow. The v0.3.5 spotlight is
+localized release copy plus local Settings navigation actions only; it must not
+own updater logic, migrations, IPC, background checks, chat generation, voice
+capture, tools, or task execution.
 
 ### Voice and chat flow
 
@@ -487,6 +677,16 @@ hooks/useReminderScheduler
   permission/audit service before expanding tools, so new audit surfaces do not
   depend directly on renderer-side stores.
 
+### Companion task boundary
+
+Nexus can keep lightweight reminders, follow-ups, and trace state, but those
+surfaces are not autonomous work-agent execution. The companion task layer must
+stay permission-gated, default-off when behavior is active, and explainable in
+plain UI terms before it expands beyond local reminders or user-confirmed
+follow-ups. The existing `features/agent/` name is retained for import and data
+compatibility only; user-facing copy should describe companion tasks rather
+than presenting Nexus as a Codex-style work agent.
+
 ### Memory
 
 - `features/memory/` owns long-term memory, daily memory, archive import/export,
@@ -504,9 +704,22 @@ hooks/useReminderScheduler
 ### Pet and character
 
 - `features/pet/` owns Live2D model metadata, performance cues, presence lines,
-  and the `Live2DCanvas` component.
+  companion activity state/motion normalization and preview helpers,
+  stage-direction-to-avatar cue bridging, and the `Live2DCanvas` component.
 - `features/character/` owns UI/voice/presence preset data that themes the app
   toward the companion-style presentation layer.
+- `features/releaseNotes/` owns small release-communication contracts used by the
+  app shell, such as the current About/Help release spotlight. It must stay
+  content-only: no updater logic, IPC, migrations, or background checks.
+- `tests/release-spotlight.test.ts` guards the current release spotlight, the
+  human-facing v0.3.5 README/release-note theme, the v0.3.5 changelog boundary,
+  and the release-candidate handoff so visible memory, readable companion
+  presence, merge/tag evidence, and the companion-not-agent boundary do not
+  drift apart before release.
+- `scripts/pet-presence-visual-smoke.cjs` is the Electron QA gate for the built
+  pet view: it uses a temporary completed-onboarding profile, checks
+  idle/breathe presence state, rejects onboarding overlays, and writes ignored
+  screenshot/report artifacts under `output/presence-smoke/`.
 
 ### Themes and i18n
 

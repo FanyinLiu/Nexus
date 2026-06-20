@@ -37,6 +37,7 @@ import {
 } from '../services/ttsService.js'
 import { synthesizeLocalTts } from '../services/localTts.js'
 import { encodeWavFromFloat32 } from '../services/audioEncoding.js'
+import { getRedactedErrorMessage, redactSensitiveErrorText } from '../services/errorRedaction.js'
 import { requireTrustedSender, requireString } from './validate.js'
 import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
 import {
@@ -99,7 +100,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         timeoutMessage: '音色列表拉了好久都没回来，看看网络对不对？',
       })
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
+      const reason = getRedactedErrorMessage(error)
       throw new Error(`音色列表没能拉到，看看地址和网络对不对？具体原因：${reason}`)
     }
 
@@ -107,19 +108,16 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
 
     if (!response.ok) {
       throw new Error(
-        data?.error?.message
-          ?? data?.detail?.message
-          ?? data?.message
-          ?? `音色列表那边回了个状态码 ${response.status}，不太确定哪里出了问题。`,
+        redactSensitiveErrorText(data?.error?.message ?? data?.detail?.message ?? data?.message)
+          || `音色列表那边回了个状态码 ${response.status}，不太确定哪里出了问题。`,
       )
     }
 
     if (isMiniMaxSpeechOutputProvider(payload.providerId)) {
       if (Number(data?.base_resp?.status_code ?? 0) !== 0) {
         throw new Error(
-          data?.base_resp?.status_msg
-          ?? data?.message
-          ?? 'MiniMax 音色接口返回了异常状态。',
+          redactSensitiveErrorText(data?.base_resp?.status_msg ?? data?.message)
+            || 'MiniMax 音色接口返回了异常状态。',
         )
       }
 
@@ -286,7 +284,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         timeoutMessage: '语音识别那边等了好久都没回应，看看网络和代理对不对？',
       })
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
+      const reason = getRedactedErrorMessage(error)
       console.error('[audio:transcribe] network failure', {
         traceId: payload.traceId ?? '',
         providerId: payload.providerId,
@@ -307,17 +305,16 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         }
 
         throw new Error(
-          volcStatus.message || `火山语音识别那边回了个状态码 ${volcStatus.code}，不太确定哪里出了问题。`,
+          redactSensitiveErrorText(volcStatus.message)
+            || `火山语音识别那边回了个状态码 ${volcStatus.code}，不太确定哪里出了问题。`,
         )
       }
     }
 
     if (!response.ok) {
       throw new Error(
-        data?.error?.message
-          ?? data?.detail?.message
-          ?? data?.message
-          ?? `语音识别那边回了个状态码 ${response.status}，不太确定哪里出了问题。`,
+        redactSensitiveErrorText(data?.error?.message ?? data?.detail?.message ?? data?.message)
+          || `语音识别那边回了个状态码 ${response.status}，不太确定哪里出了问题。`,
       )
     }
 
@@ -438,17 +435,17 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
           timeoutMessage: synthTimeoutMessage,
         })
       } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error)
+        const reason = getRedactedErrorMessage(error)
         throw new Error(`没能连上语音播报接口，看看地址和网络对不对？具体原因：${reason}`)
       }
 
       if (!result.ok) {
-        throw new Error(result.errorMessage)
+        throw new Error(redactSensitiveErrorText(result.errorMessage))
       }
 
       if (result.usedFallback) {
         console.warn(
-          `[Volcengine TTS] Automatically fell back to compatible combo ${formatVolcengineSpeechOutputCombo(result.cluster, result.voice)} (${result.reason})`,
+          `[Volcengine TTS] Automatically fell back to compatible combo ${formatVolcengineSpeechOutputCombo(result.cluster, result.voice)} (${redactSensitiveErrorText(result.reason)})`,
         )
       }
 
@@ -491,7 +488,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         timeoutMessage: synthTimeoutMessage,
       })
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
+      const reason = getRedactedErrorMessage(error)
       throw new Error(`没能连上语音播报接口，看看地址和网络对不对？具体原因：${reason}`)
     }
 
@@ -506,9 +503,8 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
 
       if (Number(data?.base_resp?.status_code ?? 0) !== 0) {
         throw new Error(
-          data?.base_resp?.status_msg
-          ?? data?.message
-          ?? 'MiniMax 语音接口返回了异常状态。',
+          redactSensitiveErrorText(data?.base_resp?.status_msg ?? data?.message)
+            || 'MiniMax 语音接口返回了异常状态。',
         )
       }
 
@@ -539,7 +535,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
           timeoutMessage: '语音文件下载有点久，看看网络或者稍后再试试？',
         })
       } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error)
+        const reason = getRedactedErrorMessage(error)
         throw new Error(`百炼音频文件没下下来，具体原因：${reason}`)
       }
 

@@ -22,6 +22,7 @@ import {
   verifyWebhookAuth,
   WEBHOOK_MAX_BODY_BYTES,
 } from './notificationBridgeUtils.js'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,18 @@ function createWebhookToken() {
   return `nexus_${randomUUID().replaceAll('-', '')}${randomUUID().replaceAll('-', '')}`
 }
 
+/**
+ * Keep support logs useful without recording user-supplied feed names or ids.
+ * @param {Partial<NotificationChannel>} channel
+ */
+function formatChannelLogLabel(channel) {
+  return [
+    `kind=${typeof channel.kind === 'string' ? channel.kind : 'unknown'}`,
+    `idLength=${String(channel.id ?? '').length}`,
+    `nameLength=${String(channel.name ?? '').length}`,
+  ].join(' ')
+}
+
 async function ensureWebhookToken() {
   if (_webhookToken) return _webhookToken
   if (_webhookTokenPromise) return _webhookTokenPromise
@@ -76,7 +89,7 @@ async function ensureWebhookToken() {
       }
     } catch (err) {
       if (err?.code !== 'ENOENT') {
-        console.warn('[notification-bridge] failed to read webhook token:', err?.message ?? err)
+        console.warn('[notification-bridge] failed to read webhook token:', getRedactedErrorMessage(err))
       }
     }
 
@@ -93,11 +106,11 @@ async function ensureWebhookToken() {
 }
 
 export async function getWebhookInfo() {
-  const token = await ensureWebhookToken()
+  await ensureWebhookToken()
   return {
     url: `http://127.0.0.1:${WEBHOOK_PORT}/webhook`,
-    token,
-    authHeader: `Bearer ${token}`,
+    requiresAuth: true,
+    tokenFileName: WEBHOOK_TOKEN_FILE,
     maxBodyBytes: WEBHOOK_MAX_BODY_BYTES,
   }
 }
@@ -236,7 +249,7 @@ function stripHtml(html) {
 async function pollRssChannel(channel) {
   const feedUrl = channel.config.url
   if (!feedUrl) {
-    console.warn(`[notification-bridge] RSS channel "${channel.name}" has no URL`)
+    console.warn(`[notification-bridge] RSS channel missing URL (${formatChannelLogLabel(channel)})`)
     return
   }
 
@@ -244,7 +257,7 @@ async function pollRssChannel(channel) {
     const resp = await fetchRssWithSafety(feedUrl)
 
     if (!resp.ok) {
-      console.warn(`[notification-bridge] RSS fetch failed for "${channel.name}": ${resp.status}`)
+      console.warn(`[notification-bridge] RSS fetch failed (${formatChannelLogLabel(channel)}): status=${resp.status}`)
       return
     }
 
@@ -289,7 +302,7 @@ async function pollRssChannel(channel) {
     // Update lastCheckedAt on the stored channel
     channel.lastCheckedAt = now
   } catch (err) {
-    console.error(`[notification-bridge] RSS poll error for "${channel.name}":`, err?.message ?? err)
+    console.error(`[notification-bridge] RSS poll error (${formatChannelLogLabel(channel)}):`, getRedactedErrorMessage(err))
   }
 }
 
@@ -401,7 +414,7 @@ function startWebhookServer() {
   })
 
   _webhookServer.on('error', (err) => {
-    console.error(`[notification-bridge] Webhook server error:`, err?.message ?? err)
+    console.error('[notification-bridge] Webhook server error:', getRedactedErrorMessage(err))
     _webhookServer = null
   })
 

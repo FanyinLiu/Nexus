@@ -40,6 +40,7 @@ import {
   normalizeDesktopContextPolicy,
   clipboard,
 } from '../services/desktopContextService.js'
+import { sanitizeDesktopContextSnapshot } from '../services/desktopContextPrivacy.js'
 import {
   controlSystemMediaSession,
   getSystemMediaSessionSnapshot,
@@ -441,8 +442,9 @@ export function register() {
       await Promise.all(tasks)
     }
 
-    audit('desktop-context', 'capture-result', summarizeDesktopContextSnapshot(snapshot))
-    return snapshot
+    const sanitizedSnapshot = sanitizeDesktopContextSnapshot(snapshot)
+    audit('desktop-context', 'capture-result', summarizeDesktopContextSnapshot(sanitizedSnapshot))
+    return sanitizedSnapshot
   })
 
   ipcMain.handle('media-session:get', async (event) => {

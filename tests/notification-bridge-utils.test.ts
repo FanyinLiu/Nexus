@@ -101,6 +101,38 @@ test('notification bridge keeps ordinary webhook payloads as notifications', () 
   assert.equal(result.message.title, 'Build finished')
 })
 
+test('notification bridge sanitization logs omit raw channel names and URLs', () => {
+  const originalWarn = console.warn
+  const warnings: string[] = []
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args.map(String).join(' '))
+  }
+
+  try {
+    const sanitized = sanitizeNotificationChannels([
+      {
+        id: 'secret-feed-id',
+        name: 'Private payroll RSS',
+        kind: 'rss',
+        enabled: true,
+        config: { url: 'https://127.0.0.1/private.xml?token=secret-token' },
+      },
+    ])
+
+    assert.deepEqual(sanitized, [])
+  } finally {
+    console.warn = originalWarn
+  }
+
+  const serialized = warnings.join('\n')
+  assert.match(serialized, /reason=private-ipv4/)
+  assert.match(serialized, /nameLength=/)
+  assert.doesNotMatch(serialized, /Private payroll RSS/)
+  assert.doesNotMatch(serialized, /secret-feed-id/)
+  assert.doesNotMatch(serialized, /127\.0\.0\.1/)
+  assert.doesNotMatch(serialized, /secret-token/)
+})
+
 // ── Webhook auth hardening (ClawJacked-informed) ─────────────────────────────
 
 import { verifyWebhookAuth, createAuthFailureLimiter } from '../electron/services/notificationBridgeUtils.js'

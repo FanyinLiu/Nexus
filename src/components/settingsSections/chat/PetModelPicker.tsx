@@ -12,6 +12,7 @@ import {
 } from '../../choiceRadioNav'
 import type { AppSettings } from '../../../types'
 import type { TranslationKey, TranslationParams } from '../../../types/i18n'
+import { CompanionStatePreview } from './CompanionStatePreview'
 import { getSpritePreviewStateLabel } from './spritePreviewLabels'
 
 const PET_MODEL_RADIO_GROUP_ID = 'settings-chat-pet-model'
@@ -141,6 +142,12 @@ export function PetModelPicker({
           </div>
         </div>
       ) : null}
+
+      <CompanionStatePreview
+        petModel={petModel}
+        spritePetLabel={spritePetLabel}
+        ti={ti}
+      />
     </div>
   )
 }

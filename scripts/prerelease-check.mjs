@@ -9,7 +9,7 @@
  *
  * Stages:
  *   A. Process / version       (tag shape, package.json sync, working tree, CI)
- *   B. Code quality            (verify:release, smoke, coverage, bundle, perf)
+ *   B. Code quality            (verify:release, smoke, packaged smoke, coverage, bundle, perf)
  *   C. Security                (npm audit, Electron config, electron versions, secrets, CSP)
  *   D. Asset integrity         (locale parity, models, dist artefacts)
  *   E. Docs + compliance       (release notes, README sync, SBOM, AI-Act, licenses)
@@ -226,7 +226,7 @@ stage('B', 'Code quality', () => {
       return `${pct}%`
     }, { warnOnly: true })
   } else {
-    console.log(COLOR.dim('       smoke / coverage skipped (--quick)'))
+    console.log(COLOR.dim('       smoke / packaged smoke / coverage skipped (--quick)'))
   }
 
   check('B', 'Bundle: app-runtime ≤ 1700 KB', () => {

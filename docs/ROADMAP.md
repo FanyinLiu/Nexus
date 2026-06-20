@@ -1,6 +1,6 @@
 # Nexus Roadmap — companion-first phases
 
-> Last updated 2026-06-19. Stewardship follows Klein's product direction.
+> Last updated 2026-06-20. Stewardship follows Klein's product direction.
 > For the short-term MVP and Chinese execution plan, see
 > [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md). When planning
 > near-term work, Phase 1 in that document is the active scope.
@@ -86,6 +86,45 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
 - Keep GitHub Releases + `electron-updater` as the update channel.
 - Add release documentation for installer trust, signing prerequisites,
   rollback, and failed-update recovery.
+- Add an in-app About/Help release spotlight so users can see the current
+  version theme and companion-first boundary without leaving Nexus. See
+  [Milestone 2 In-App Release Spotlight Design](MILESTONE-2-IN-APP-RELEASE-SPOTLIGHT-DESIGN-2026-06-20.md).
+- Align the pre-release Stage B documentation with the existing packaged smoke
+  gate and make `npm run distribution:audit` fail if `npm run
+  package:dir:smoke` drops out of the release checklist. See
+  [Milestone 2 Packaged Smoke Docs Design](MILESTONE-2-RELEASE-PACKAGED-SMOKE-DOCS-DESIGN-2026-06-20.md).
+- Add a v0.3.5 release-candidate handoff that keeps the memorable upgrade,
+  merge/tag evidence, residual signing risks, rollback path, and
+  companion-not-agent boundary in one guarded document. See
+  [v0.3.5 Release Candidate Handoff](RELEASE-CANDIDATE-v0.3.5-HANDOFF.md) and
+  [Milestone 2 Release Candidate Handoff Design](MILESTONE-2-RELEASE-CANDIDATE-HANDOFF-DESIGN-2026-06-20.md).
+- Add a project-alignment guard for the release candidate so package version,
+  in-app spotlight version, release notes, changelog boundary, release handoff,
+  and documented architecture entry points remain synchronized before merge. See
+  [Milestone 2 Project Alignment Design](MILESTONE-2-RELEASE-PROJECT-ALIGNMENT-DESIGN-2026-06-20.md).
+- Add a release engineering hardening guard for main-process JS lint coverage,
+  renderer localStorage classification, heavy-module lazy loading, PR/release
+  verification split, and companion-not-agent boundary checks. See
+  [Milestone 2 Engineering Hardening Design](MILESTONE-2-RELEASE-ENGINEERING-HARDENING-DESIGN-2026-06-20.md).
+- Tighten the same engineering guard so it scans all renderer browser-storage
+  keys, catches inverted renderer imports with `npm run architecture:audit`, and
+  blocks source-file bloat with `npm run source-size:audit`.
+- Continue the engineering tightening by splitting the settings drawer and
+  local-data store hot spots, moving VTube Studio token persistence and
+  WebSocket authentication behind a main-process bridge, increasing IPC schema
+  coverage, splitting IPC payload schemas behind a stable public export, and
+  adding `npm run performance:baseline` to the PR gate.
+- Add `npm run message-privacy:audit` to the same PR/release guard so desktop
+  notification/message bodies cannot regress into model forwarding, persisted
+  chat history, missed-message follow-up hints, reply draft composer text, or
+  renderer localStorage writes.
+- Add `npm run desktop-context-privacy:audit` to the PR/release guard so
+  active-window, clipboard, OCR, and VLM context cannot bypass sensitive-text
+  redaction before renderer return or model prompt formatting, and screenshot
+  image payloads cannot continue into chat/runtime context after OCR/VLM
+  finishes. The same guard now blocks autonomy context scheduling from retaining
+  previous active-window or clipboard text; it must use comparison fingerprints
+  for change detection.
 - Rollback: signing config changes must be isolated in packaging config and
   release docs.
 
@@ -107,6 +146,10 @@ auditable.
 - Telegram/Discord send, Minecraft/Factorio execute, and MCP call/sync channels
   now have metadata-only request/result audit records without logging outbound
   text, audio, commands, target IDs, or MCP argument contents.
+- MCP host support logs are now metadata-only as well, avoiding raw server ids,
+  launch commands, arguments, tool names, external stdout lines, paths, or
+  tokens when MCP processes fail, restart, emit notifications, or advertise
+  tools.
 - Those external action channels now also use a main-process permission policy
   for read-only, confirm, and auto modes. Active auto-mode escalation requires
   native confirmation and the renderer sync path carries only mode plus
@@ -118,7 +161,9 @@ auditable.
 - Plugin lifecycle and plugin bus write IPC now use metadata-only request/result
   audit records and native confirmation for execution-granting lifecycle
   actions and bus publish/subscribe/unsubscribe, without logging plugin IDs,
-  server IDs, topics, message payloads, commands, or error text.
+  server IDs, topics, message payloads, commands, or error text. Plugin host
+  support logs also avoid raw plugin names, directory entries, paths, command
+  errors, and token-like text.
 - `tool:open-external` now writes metadata-only request/result audit records
   around the existing main-process URL safety check and native confirmation,
   without logging full URLs, hostnames, paths, query strings, fragments, or
@@ -127,10 +172,67 @@ auditable.
   secret-safe permission contract: trusted renderer sender, strict slot/entry
   validation, opaque per-sender vault refs instead of plaintext retrieval
   returns, rate limits for enumeration-prone reads, and no slot names, secret
-  values, ref tokens, or error text in audit records.
+  values, ref tokens, or error text in audit records. `npm run
+  vault-security:audit` now guards the contract so renderer-facing vault
+  retrieval cannot regress to plaintext secret returns. KeyVault support logs
+  now follow the same secret-safe posture by omitting raw slot names, plaintext
+  values, vault paths, and raw exception objects.
+- Main-process chat/audio network failure paths now redact API-key, bearer,
+  JWT, URL-userinfo, secret query parameter, and user-home path shapes before
+  logging or returning provider error text. `npm run error-redaction:audit`
+  guards the redaction boundary.
+- The VTube Studio bridge now uses the same redaction boundary for
+  connection/authentication errors before broadcasting renderer-visible status
+  or writing VTS audit records, keeping companion avatar integration from
+  becoming a token/path leak. Renderer VTS support logs now use the same
+  sanitized error helper for input updates, connection failures, and legacy
+  token migration failures instead of printing raw exception objects.
+- Auto-updater check/download errors now use the same redaction boundary before
+  renderer-visible update events, manual-check results, or updater logs can
+  expose token-like strings, credentialed URLs, or local user paths.
+- Model download/install failures now use the same redaction boundary before
+  first-run model setup progress events or batch download results can expose
+  credentialed source URLs, tar stderr, or local user paths.
+- Telegram/Discord gateway status errors and diagnostic logs now use the same
+  redaction boundary before Settings/status/support surfaces can expose bot
+  tokens, credentialed gateway URLs, service error payloads, or local user
+  paths.
+- macOS notification watcher status and persistence errors now use the same
+  redaction boundary before `notification:watcher-status` or logs can expose
+  Notification Center database paths, local user paths, or sensitive system
+  error details.
+- Memory vector store worker, append-log, and compaction failure logs now use
+  the same redaction boundary so future long-term memory diagnostics cannot
+  leak raw exception text, local user paths, or token-like strings.
 - The remaining renderer-payload IPC backlog is now schema-bound:
   integrations inspection, KWS start/status, VAD start, model download, and TTS
   streaming lifecycle requests all validate request shape before service work.
+- Desktop notification/message awareness now follows a local-preview boundary:
+  the companion may show or speak a user-enabled preview locally, but automatic
+  notification-to-chat forwarding, persisted chat history, missed-message
+  follow-up records, reply draft composer text, and renderer notification
+  storage keep only metadata or strip body/summary content.
+- Telegram/Discord bridge ingress now follows the same companion-first privacy
+  boundary: external-contact messages are local announcements only, while
+  owner-listed remote messages are the only bridge messages forwarded into
+  chat/model input. Debug logging is metadata-only and external Telegram voice
+  notes are not transcribed.
+- Local notification webhook info is token-safe across IPC: the main process
+  creates and enforces a `0600` user-data token file, while the renderer sees
+  only the URL, auth-required flag, token file name, and size cap.
+- Local notification bridge support logs are now metadata-only for webhook
+  token read failures, webhook server errors, RSS fetch/poll failures, and
+  rejected RSS channel configs, avoiding raw channel names, ids, feed URLs,
+  bearer tokens, and URL-safety host details.
+- Desktop context capture now redacts obvious secrets such as API keys, bearer
+  tokens, passwords, and private-key material before active-window/clipboard
+  text leaves the main process, with a renderer-side prompt-formatting fallback
+  for OCR and VLM text. Screenshot data URLs are stripped after OCR/VLM so chat
+  runtime receives only text context, not the original image payload. Capture
+  failure support logs now redact errors before logging so stderr, local paths,
+  and accidental captured text do not leak through diagnostics. Autonomy
+  context triggers keep only salted comparison fingerprints for previous
+  active-window and clipboard values.
 - Create an inventory of every preload-exposed method and matching
   `ipcMain.handle`.
 - Require trusted sender checks, request validation, response shape decisions,
@@ -256,6 +358,57 @@ Goal: the companion's visible state reflects what Nexus is actually doing.
 
 - Define a shared state contract for idle, thinking, listening, speaking,
   waiting for confirmation, error, and offline states.
+- Slice 1 adds a pure companion activity resolver and binds the pet window
+  status dot, accessibility label, Sprite fallback state, and Live2D
+  listening/speaking inputs to that shared contract. See
+  [Milestone 6 Slice 1 Design](MILESTONE-6-DESKTOP-PRESENCE-STATE-DESIGN-2026-06-20.md).
+- Slice 2 adds shared micro-motion tokens and CSS-only desktop presence motion
+  so idle/thinking/listening/speaking/waiting states are visible without new
+  dependencies or heavier renderers. See
+  [Milestone 6 Slice 2 Design](MILESTONE-6-DESKTOP-PRESENCE-MICRO-MOTION-DESIGN-2026-06-20.md).
+- Slice 3 bridges common English stage directions like `(eyes brightened)`,
+  `(blush)`, and `(nod)` into the existing avatar cue queue while preserving
+  ordinary ASCII notes and Markdown links. See
+  [Milestone 6 Slice 3 Design](MILESTONE-6-DESKTOP-PRESENCE-STAGE-DIRECTION-BRIDGE-DESIGN-2026-06-20.md).
+- Slice 4 adds an Electron visual smoke gate for the built pet window, checking
+  the completed-onboarding pet surface, idle/breathe state, and a nonblank
+  screenshot artifact. See
+  [Milestone 6 Slice 4 Design](MILESTONE-6-DESKTOP-PRESENCE-VISUAL-SMOKE-DESIGN-2026-06-20.md).
+- Slice 5 adds a compact Companion Profile state preview so users and release
+  QA can inspect idle/thinking/listening/speaking/waiting/error/offline without
+  forcing chat, voice, network, or Live2D settings-page rendering. See
+  [Milestone 6 Slice 5 Design](MILESTONE-6-DESKTOP-PRESENCE-STATE-PREVIEW-DESIGN-2026-06-20.md).
+- Slice 6 syncs the v0.3.5 in-app spotlight and release notes so the memorable
+  theme is visible memory plus readable desktop companion states, not a generic
+  task-agent expansion. See
+  [Milestone 6 Slice 6 Design](MILESTONE-6-DESKTOP-PRESENCE-RELEASE-THEME-DESIGN-2026-06-20.md).
+- Slice 7 makes the About/Help spotlight actionable with local buttons to open
+  Memory and Companion Profile, so users can inspect the two v0.3.5 headline
+  upgrades without hunting through Settings. See
+  [Milestone 6 Slice 7 Design](MILESTONE-6-DESKTOP-PRESENCE-SPOTLIGHT-ACTIONS-DESIGN-2026-06-20.md).
+- Slice 8 surfaces the same v0.3.5 release spotlight on Settings home so the
+  visible-memory and readable-companion-state theme is discoverable before users
+  open Console / About. See
+  [Milestone 6 Slice 8 Design](MILESTONE-6-DESKTOP-PRESENCE-HOME-SPOTLIGHT-DESIGN-2026-06-20.md).
+- Slice 9 deduplicates the Settings home and About/Help release spotlight
+  actions into one shared component, keeping both entry points aligned as the
+  release candidate evolves. See
+  [Milestone 6 Slice 9 Design](MILESTONE-6-DESKTOP-PRESENCE-SPOTLIGHT-ACTION-COMPONENT-DESIGN-2026-06-20.md).
+- Slice 10 aligns the root README with the v0.3.5 release notes and adds a
+  focused guard so the user-facing release theme remains visible memory plus
+  readable desktop companion states. See
+  [Milestone 6 Slice 10 Design](MILESTONE-6-DESKTOP-PRESENCE-README-THEME-GUARD-DESIGN-2026-06-20.md).
+- Slice 11 cuts the v0.3.5 presence and spotlight entries over from
+  `Unreleased` into the `[0.3.5]` changelog section, with a focused guard so the
+  release candidate has one clear user-facing version boundary. See
+  [Milestone 6 Slice 11 Design](MILESTONE-6-DESKTOP-PRESENCE-CHANGELOG-CUTOVER-DESIGN-2026-06-20.md).
+- Slice 12 aligns the architecture documentation with the actual v0.3.5
+  companion-presence implementation: `features/pet/activityState` owns the
+  content-minimized visible state contract, `PetView` and Companion Profile
+  consume that same resolver, memory provenance remains a separate white-box
+  surface, and release spotlight actions stay local Settings navigation rather
+  than task execution. See
+  [Milestone 6 Slice 12 Design](MILESTONE-6-DESKTOP-PRESENCE-ARCHITECTURE-ALIGNMENT-DESIGN-2026-06-20.md).
 - Bind chat, voice, setup, tool, and error flows to that contract.
 - Keep Live2D/sprite-heavy rendering lazy and budgeted.
 - Rollback: state mapping is additive and can fall back to current pet behavior.

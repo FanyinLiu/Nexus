@@ -4,6 +4,7 @@ import {
   readJson,
   writeJson,
 } from '../lib/storage'
+import { sanitizeNotificationMessagesForStorage } from '../lib/privacy/notificationPrivacy'
 import type { NotificationChannel, NotificationMessage } from '../types'
 
 const MAX_STORED_MESSAGES = 50
@@ -49,7 +50,7 @@ export function useNotificationBridge({
 
   // Persist messages
   useEffect(() => {
-    writeJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, messages)
+    writeJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, sanitizeNotificationMessagesForStorage(messages))
   }, [messages])
 
   // Clean up expired snoozes so "later" notifications reappear automatically.

@@ -130,8 +130,11 @@ function detectHandlerValidation(handlerSource) {
 }
 
 function classifyRisk(channel) {
-  if (/^vault:/.test(channel)) {
+  if (/^vault:|^vts-bridge:migrate-legacy-token$/.test(channel)) {
     return { level: 'high', domain: 'secret-vault' }
+  }
+  if (/^vts-bridge:/.test(channel)) {
+    return { level: 'medium', domain: 'desktop-action' }
   }
   if (/^desktop-context:/.test(channel)) {
     return { level: 'high', domain: 'desktop-context' }
@@ -191,8 +194,8 @@ function extractMainHandlers(root) {
             location: { file, line: lineFor(sourceFile, node.getStart(sourceFile)) },
             trustedSender: /requireTrustedSender\s*\(\s*event\s*\)/.test(handlerSource),
             payloadValidation: detectHandlerValidation(handlerSource),
-            auditLogged: /\baudit\s*\(|runAuditedExternalAction\s*\(|runAuditedPetModelAction\s*\(|runAuditedPluginAction\s*\(|runAuditedVaultAction\s*\(|applyChatLocalDataMigration\s*\(|rollbackChatLocalDataMigration\s*\(|mirrorChatLocalDataSession\s*\(|compareChatLocalDataSessions\s*\(/.test(handlerSource),
-            permissionHint: /(dialog\.showMessageBox|dialog\.show(?:Save|Open)Dialog|saveTextFileFromDialog|openTextFileFromDialog|invokeRegisteredTool|normalizeDesktopContextPolicy|runAuditedExternalAction|runAuditedPetModelAction|runAuditedPluginAction|runAuditedVaultAction|requireExternalActionPermission|syncExternalActionPolicy|requiresConfirmation|approve|policy|confirm)/.test(handlerSource),
+            auditLogged: /\baudit\s*\(|runAuditedExternalAction\s*\(|runAuditedPetModelAction\s*\(|runAuditedPluginAction\s*\(|runAuditedVaultAction\s*\(|runAuditedVtsAction\s*\(|applyChatLocalDataMigration\s*\(|rollbackChatLocalDataMigration\s*\(|mirrorChatLocalDataSession\s*\(|compareChatLocalDataSessions\s*\(/.test(handlerSource),
+            permissionHint: /(dialog\.showMessageBox|dialog\.show(?:Save|Open)Dialog|saveTextFileFromDialog|openTextFileFromDialog|invokeRegisteredTool|normalizeDesktopContextPolicy|runAuditedExternalAction|runAuditedPetModelAction|runAuditedPluginAction|runAuditedVaultAction|runAuditedVtsAction|requireExternalActionPermission|syncExternalActionPolicy|requiresConfirmation|approve|policy|confirm)/.test(handlerSource),
             riskLevel: risk.level,
             riskDomain: risk.domain,
           })
@@ -339,7 +342,7 @@ export function buildIpcContractReport(root = DEFAULT_ROOT) {
     errors,
     warnings,
     summary: {
-      ok: errorCount === 0,
+      ok: errorCount === 0 && warningCount === 0,
       errors: errorCount,
       warnings: warningCount,
     },
@@ -397,7 +400,7 @@ function main(argv) {
   const options = parseArgs(argv)
   const report = buildIpcContractReport(DEFAULT_ROOT)
   process.stdout.write(options.json ? `${JSON.stringify(report, null, 2)}\n` : `${formatHumanReport(report)}\n`)
-  if (report.summary.errors > 0) {
+  if (!report.summary.ok) {
     process.exit(1)
   }
 }

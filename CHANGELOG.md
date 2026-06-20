@@ -6,15 +6,47 @@
 
 ## [Unreleased]
 
-No user-facing changes yet.
+_No changes yet._
 
 ## [0.3.5] - 2026-06-19
 
 ### Added
-- **Release theme: memory is no longer a black box** — assistant replies can now
-  explain which memories shaped a response, and the Memory settings page can
-  highlight those exact long-term memories or diary fragments for review,
-  pause, edit, or deletion.
+- **Release theme: visible memory and readable companion presence** — assistant
+  replies can now explain which memories shaped a response, the Memory settings
+  page can highlight those exact long-term memories or diary fragments, and the
+  companion profile can preview the desktop companion's idle/thinking/listening/
+  speaking/waiting/error/offline states.
+- **Desktop presence state contract** — the pet window now resolves idle,
+  thinking, listening, speaking, waiting, error, and offline through one
+  tested companion activity state before driving the status dot and avatar
+  render inputs.
+- **Desktop presence micro-motion** — the companion stage now turns those
+  states into small, shared Live2D/Sprite motion tokens for breathing, thinking,
+  listening, speaking, waiting, error, and offline presence without adding new
+  runtime dependencies or background work.
+- **Stage direction avatar bridge** — known English companion asides such as
+  `(eyes brightened)`, `(blush)`, and `(nod)` now drive the existing avatar cue
+  pipeline while ordinary notes and Markdown links remain visible content.
+- **Desktop presence visual smoke** — release QA can now run
+  `npm run pet:presence-smoke` to launch the built pet view through Electron,
+  confirm the completed-onboarding idle/breathe presence state, reject
+  onboarding-overlay false positives, and save a nonblank screenshot report.
+- **Desktop state preview** — Companion Profile now includes a compact
+  idle/thinking/listening/speaking/waiting/error/offline preview, with Sprite
+  avatars switching to the same runtime state mapping used by the desktop pet.
+- **In-app release spotlight** — About/Help now shows the v0.3.5 theme as
+  visible memory plus readable desktop companion states, with short localized
+  bullets for memory sources, memory controls, state preview, first-run repair,
+  and the companion-first boundary.
+- **Release spotlight actions** — the v0.3.5 spotlight now includes local
+  buttons to open Memory and Companion Profile, so users can inspect the
+  memorable upgrades without triggering chat, voice, network, or automation.
+- **Settings home release spotlight** — the same v0.3.5 theme now appears on
+  Settings home, making visible memory and readable companion states discoverable
+  before users open the deeper About / Help panel.
+- **Release theme guard** — the root README now matches the v0.3.5 release
+  notes around visible memory plus readable desktop companion states, with a
+  focused test preventing the user-facing theme from drifting before release.
 - **Memory transparency and pause controls** — the Memory settings page now
   shows whether memory recall/learning is active, the active long-term and
   daily-memory counts, desktop-context read status, and the current storage
@@ -102,6 +134,81 @@ No user-facing changes yet.
   document the 2026-06-18 stabilization track: first-run reliability, release
   trust, IPC contracts, main-process storage/SQLite, white-box memory, desktop
   presence, voice budgets, local RAG, authorized tasks, and gated MCP/plugins.
+- **Companion presence architecture alignment** — ARCHITECTURE and ROADMAP now
+  map the v0.3.5 presence implementation back to its real module boundaries:
+  `features/pet/activityState` owns the content-minimized visible state,
+  `PetView` and Companion Profile consume the same resolver, memory provenance
+  stays separate from avatar state, and release spotlight actions remain local
+  Settings navigation rather than task execution.
+- **Project alignment calibration** — added a release-candidate guard that keeps
+  the package version, in-app spotlight version, release notes, changelog,
+  release handoff, and documented architecture entry points synchronized before
+  merge. The v0.3.5 handoff evidence is also refreshed past the stale
+  `48e6b78` baseline.
+- **Engineering hardening guardrails** — added a conservative Electron/script
+  JS lint gate, renderer localStorage storage-contract audit, heavy renderer
+  module lazy-load audit, companion-not-agent boundary audit, stricter
+  zero-warning IPC audit behavior, and a `verify:pr` gate that `verify:release`
+  now reuses before SQLite smoke. The storage contract now scans all renderer
+  browser-storage keys, including session keys, prefix keys, and the legacy
+  VTube Studio token key marked as secret-adjacent; `verify:pr` also runs
+  renderer architecture-boundary and source-size budget audits. The settings
+  drawer and local-data store hot spots are split into smaller modules, VTube
+  Studio WebSocket/authentication now lives behind a main-process bridge with
+  a fixed vault slot and one-way legacy localStorage migration, the renderer no
+  longer exposes VTS token read/write IPC, high-risk VTS migration IPC is
+  schema-validated, IPC payload schemas are split into domain modules behind
+  the same public `payloadSchemas.js` export, `verify:pr` records a production
+  bundle performance baseline, and `npm run message-privacy:audit` now blocks
+  desktop notification/message body regressions that would send third-party
+  message text into chat/model forwarding, chat history, missed-message
+  follow-ups, reply draft composer text, or renderer localStorage persistence.
+  The same guard now covers Telegram/Discord bridge ingress: external-contact
+  messages are announce-only, only owner-listed remote messages enter the
+  model, debug events are metadata-only, and external Telegram voice notes are
+  not transcribed. Local notification webhook info no longer returns the bearer
+  token or full `Authorization` header to the renderer; Settings shows only the
+  token file placeholder while scripts continue reading the 0600 user-data token
+  file. Notification reply drafts now seed only the source label, not the
+  third-party message preview text. `npm run desktop-context-privacy:audit` now
+  guards desktop context redaction, and desktop context capture redacts obvious
+  API keys, bearer tokens, passwords, and private-key material before
+  active-window or clipboard text leaves the main process; OCR and VLM text are
+  redacted again before prompt formatting, and screenshot image payloads are
+  stripped before desktop context is handed to chat/runtime code. Desktop
+  context active-window and screenshot capture failures now log redacted error
+  summaries instead of raw exception objects, stderr, local paths, or accidental
+  captured text. Autonomy context triggers now keep only salted comparison
+  fingerprints for previous active-window and clipboard values instead of
+  retaining earlier desktop text in renderer refs. Added `npm run
+  vault-security:audit` so renderer-facing
+  vault retrieval paths must keep returning opaque `nexus-vault-ref:` tokens
+  instead of plaintext API keys or bot tokens, and KeyVault support logs now
+  omit raw slot names, plaintext values, vault paths, and raw exception objects
+  when vault reads or decrypts fail. Main-process chat/audio network failures
+  now redact common API-key, bearer-token, JWT, URL-credential, secret
+  parameter, and user-home path shapes before logging or returning provider
+  error text, guarded by `npm run error-redaction:audit`. VTube Studio bridge
+  connection/authentication failures now use that same redaction boundary before
+  renderer-visible status broadcasts or VTS audit records can expose
+  token-like strings, credentialed URLs, or local user paths, and renderer-side
+  VTS support logs now sanitize input-update, connection, and legacy-token
+  migration errors before printing them. Auto-updater check/download failures
+  now use it too before update events, manual-check results, or updater logs
+  reach UI/support surfaces. Model download/install failures now use it before
+  first-run setup progress events or batch download results can expose
+  credentialed source URLs, tar stderr, or local user paths. Telegram/Discord
+  gateway status errors and diagnostic logs now use the same redaction boundary
+  before Settings/status/support surfaces can expose bot tokens, credentialed
+  gateway URLs, service error payloads, or local user paths. macOS notification
+  watcher status and persistence errors now use the same boundary before
+  `notification:watcher-status` or logs can expose Notification Center database
+  paths, local user paths, or sensitive system error details. Memory vector
+  store worker, append-log, and compaction failure logs now use the same
+  redaction boundary before long-term memory diagnostics can expose raw
+  exception text, local user paths, or token-like strings. Local notification
+  bridge support logs now keep webhook/RSS failures metadata-only, avoiding raw
+  channel names, ids, feed URLs, bearer tokens, and URL-safety host details.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned
@@ -111,7 +218,13 @@ No user-facing changes yet.
   Release CI now prints a non-blocking signed macOS/Windows readiness report,
   with `npm run release:signing:gate` reserved as the future all-platform hard
   gate and platform-specific gates available for macOS and Windows bring-up
-  before enabling signed updates.
+  before enabling signed updates. The pre-release Stage B docs now also list
+  `npm run package:dir:smoke`, and `npm run distribution:audit` fails if that
+  packaged-app launch gate or its quick-mode skip note drops out of the release
+  checklist. The v0.3.5 release candidate now also has a guarded handoff doc
+  that records the memorable user-facing upgrade, merge/tag steps, local and CI
+  evidence, residual trust risks, rollback path, and companion-not-agent
+  boundary.
 - **IPC contract baseline** — added `npm run ipc:audit` and wired it into
   `npm run distribution:audit`. The new source-only report inventories preload
   invokes, subscriptions, main-process handlers, trusted-sender coverage,
@@ -130,7 +243,9 @@ No user-facing changes yet.
 - **External action audit** — Telegram/Discord sends, Minecraft/Factorio
   command execution, and MCP call/sync IPC now write metadata-only request and
   result audit records without logging outbound text, audio payloads, commands,
-  target IDs, MCP command text, tool names, or tool arguments.
+  target IDs, MCP command text, tool names, or tool arguments. MCP host support
+  logs are now metadata-only as well, avoiding raw server ids, launch commands,
+  arguments, tool names, external stdout lines, paths, or tokens.
 - **External action permission gate** — Telegram/Discord sends,
   Minecraft/Factorio command execution, and MCP call/sync IPC now pass through
   a main-process read-only/confirm/auto policy. Active auto-mode escalation
@@ -144,7 +259,10 @@ No user-facing changes yet.
 - **Plugin IPC hardening** — plugin lifecycle and plugin bus write IPC now use
   metadata-only audit records and native confirmation for execution-granting
   lifecycle actions and bus publish/subscribe/unsubscribe without logging plugin
-  IDs, server IDs, topics, payload contents, commands, or error text.
+  IDs, server IDs, topics, payload contents, commands, or error text. Plugin
+  host support logs now keep approval, manifest-skip, and auto-start diagnostics
+  metadata-only, avoiding raw plugin names, directory entries, paths, command
+  errors, and token-like text.
 - **External link IPC audit** — `tool:open-external` now writes metadata-only
   request/result audit records around the existing URL safety check and native
   confirmation without logging full URLs, hostnames, paths, queries, fragments,

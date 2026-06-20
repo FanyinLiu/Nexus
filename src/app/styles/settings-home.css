@@ -267,6 +267,90 @@
   gap: 1px;
 }
 
+.settings-home-release {
+  display: grid;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--settings-accent) 24%, var(--settings-border));
+  border-radius: 8px;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--settings-accent) 12%, var(--settings-surface-soft)),
+      var(--settings-surface-soft)
+    );
+}
+
+.settings-home-release__copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-home-release__eyebrow {
+  color: color-mix(in srgb, var(--settings-accent) 82%, white 18%);
+  font-size: 11px;
+  font-weight: 680;
+  line-height: 1.25;
+}
+
+.settings-home-release__copy strong {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 720;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.settings-home-release__copy p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.settings-drawer--day .settings-home-release__eyebrow,
+.settings-drawer--warm-day .settings-home-release__eyebrow {
+  color: color-mix(in srgb, var(--settings-accent) 78%, #223044 22%);
+}
+
+.settings-drawer--day .settings-home-release__copy strong,
+.settings-drawer--warm-day .settings-home-release__copy strong {
+  color: rgba(22, 28, 42, 0.92);
+}
+
+.settings-drawer--day .settings-home-release__copy p,
+.settings-drawer--warm-day .settings-home-release__copy p {
+  color: rgba(46, 56, 78, 0.72);
+}
+
+.settings-home-release__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-home-release__actions .primary-button,
+.settings-home-release__actions .ghost-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding-inline: 11px;
+  white-space: normal;
+}
+
+.settings-home-release__action-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
 .settings-drawer .settings-appearance-switch {
   min-height: 36px;
   padding: 4px 8px 5px 12px;
@@ -423,6 +507,10 @@
     min-height: 34px;
     padding: 0 8px;
   }
+
+  .settings-home-release__copy p {
+    -webkit-line-clamp: 4;
+  }
 }
 
 @media (max-width: 360px) {
@@ -450,6 +538,15 @@
   .settings-drawer .settings-appearance-switch {
     min-height: 34px;
     padding: 4px 8px;
+  }
+
+  .settings-home-release {
+    gap: 8px;
+    padding: 9px 10px;
+  }
+
+  .settings-home-release__copy p {
+    -webkit-line-clamp: 2;
   }
 
   .settings-drawer .settings-appearance-switch__label {

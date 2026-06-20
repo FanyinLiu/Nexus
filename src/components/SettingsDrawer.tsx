@@ -33,22 +33,7 @@ import type {
 } from '../features/pet/index.ts'
 import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
 import { useTheme } from '../features/themes/index.ts'
-import {
-  AutonomySection,
-  ChatSection,
-  ConsoleSection,
-  HistorySection,
-  IntegrationsSection,
-  LettersSection,
-  LorebooksSection,
-  MemorySection,
-  ModelSection,
-  SpeechInputSection,
-  SpeechOutputSection,
-  ToolsSection,
-  VoiceSection,
-  WindowSection,
-} from './settingsSections/index.ts'
+import { SettingsDrawerActiveSection } from './SettingsDrawerActiveSection.tsx'
 import type { ChatMemoryTraceFocusTarget } from '../features/memory/traceDetails.ts'
 import {
   useConnectionTests,
@@ -61,9 +46,11 @@ import {
 import { ConfirmDialog } from './ConfirmDialog.tsx'
 import { useConfirm } from './useConfirm.ts'
 import { PetControlIcon } from './PetControlIcon.tsx'
+import { ReleaseSpotlightActions } from './settingsSections/ReleaseSpotlightActions.tsx'
 import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
 import { buildSettingsSectionMeta } from './settingsDrawerMetadata.ts'
 import { applyConnectionTestRepairDraft } from '../features/models/connectionRepair.ts'
+import { CURRENT_RELEASE_SPOTLIGHT } from '../features/releaseNotes/index.ts'
 import type {
   AppSettings,
   DailyMemoryEntry,
@@ -698,224 +685,56 @@ export function SettingsDrawer({
   }, [activeSectionId, open, settingsView])
 
   function renderActiveSettingsSection() {
-    switch (activeSectionId) {
-      case 'model':
-        return (
-          <ModelSection
-            active
-            draft={draft}
-            setDraft={setDraft}
-            testingTarget={connectionTests.testingTarget}
-            uiLanguage={uiLanguage}
-            onApplyTextProviderPreset={applyTextProviderPreset}
-            onRunTextConnectionTest={() => void connectionTests.runConnectionTest('text')}
-            renderTextTestResult={() => connectionTests.renderTestResult('text')}
-          />
-        )
-      case 'chat':
-        return (
-          <ChatSection
-            active
-            draft={draft}
-            setDraft={setDraft}
-            petModelPresets={petModelPresets}
-            importingPetModel={petModel_.importingPetModel}
-            petModelStatus={petModel_.petModelStatus}
-            codexPetCatalog={petModel_.codexPetCatalog}
-            codexPetCatalogLoading={petModel_.codexPetCatalogLoading}
-            codexPetCatalogStatus={petModel_.codexPetCatalogStatus}
-            creatingCreatorKit={petModel_.creatingCreatorKit}
-            inspectingCreatorKit={petModel_.inspectingCreatorKit}
-            creatorKitInspection={petModel_.creatorKitInspection}
-            assemblingCreatorKit={petModel_.assemblingCreatorKit}
-            lastCreatorKitDirectory={petModel_.lastCreatorKitDirectory}
-            lastCreatorKitSourceRowsDirectory={petModel_.lastCreatorKitSourceRowsDirectory}
-            assembledCreatorKitPackage={petModel_.assembledCreatorKitPackage}
-            generatedSpritePetPackage={petModel_.generatedSpritePetPackage}
-            onImportPetModel={() => void petModel_.handleImportPetModel()}
-            onImportCodexPetGallery={(input) => void petModel_.handleImportCodexPetGallery(input)}
-            onLoadCodexPetGallery={(query) => void petModel_.handleLoadCodexPetGallery(query)}
-            onCreateCodexPetCreatorKit={(payload) => void petModel_.handleCreateCodexPetCreatorKit(payload)}
-            onInspectCodexPetCreatorKit={() => void petModel_.handleInspectCodexPetCreatorKit()}
-            onAssembleCodexPetCreatorKit={() => void petModel_.handleAssembleCodexPetCreatorKit()}
-            onInstallCodexPetCreatorKitToCodex={() => void petModel_.handleInstallCodexPetCreatorKitToCodex()}
-            onInstallGeneratedSpritePetPackageToCodex={() => void petModel_.handleInstallGeneratedSpritePetPackageToCodex()}
-            onOpenCodexPetCreatorKitPath={(payload) => void petModel_.handleOpenCodexPetCreatorKitPath(payload)}
-            onCreateSpritePetFromImage={() => void petModel_.handleCreateSpritePetFromImage()}
-          />
-        )
-      case 'history':
-        return (
-          <HistorySection
-            active
-            uiLanguage={draft.uiLanguage}
-            chatMessageCount={chatMessageCount}
-            chatBusy={chatBusy}
-            exportingChatHistory={chatHistory.exportingChatHistory}
-            importingChatHistory={chatHistory.importingChatHistory}
-            clearingChatHistory={chatHistory.clearingChatHistory}
-            chatHistoryStatus={chatHistory.chatHistoryStatus}
-            currentSessionId={currentChatSessionId}
-            confirm={confirm}
-            onExportChatHistory={() => void chatHistory.handleExportChatHistory()}
-            onImportChatHistory={() => void chatHistory.handleImportChatHistory()}
-            onClearChatHistory={() => void chatHistory.handleClearChatHistory()}
-          />
-        )
-      case 'letters':
-        return (
-          <LettersSection
-            active
-            uiLanguage={draft.uiLanguage}
-          />
-        )
-      case 'memory':
-        return (
-          <MemorySection
-            active
-            draft={draft}
-            platformProfile={platformProfile}
-            setDraft={setDraft}
-            memories={memories}
-            dailyMemoryEntries={dailyMemoryEntries}
-            memoryFocus={memoryFocus}
-            uiLanguage={uiLanguage}
-            memorySearchModeOptions={memorySearchModeOptions}
-            selectedMemorySearchMode={selectedMemorySearchMode}
-            exportingMemoryArchive={memoryArchive.exportingMemoryArchive}
-            importingMemoryArchive={memoryArchive.importingMemoryArchive}
-            clearingMemoryArchive={memoryArchive.clearingMemoryArchive}
-            chatBusy={chatBusy}
-            memoryArchiveStatus={memoryArchive.memoryArchiveStatus}
-            onExportMemoryArchive={() => void memoryArchive.handleExportMemoryArchive()}
-            onImportMemoryArchive={() => void memoryArchive.handleImportMemoryArchive()}
-            onClearMemoryArchive={() => void memoryArchive.handleClearMemoryArchive()}
-            onAddManualMemory={onAddManualMemory}
-            onUpdateMemory={onUpdateMemory}
-            onSetMemoryEnabled={onSetMemoryEnabled}
-            onRemoveMemory={onRemoveMemory}
-            onClearDailyMemory={onClearDailyMemory}
-            onUpdateDailyEntry={onUpdateDailyEntry}
-            onRemoveDailyEntry={onRemoveDailyEntry}
-          />
-        )
-      case 'lorebooks':
-        return (
-          <LorebooksSection
-            active
-            uiLanguage={draft.uiLanguage}
-          />
-        )
-      case 'voice':
-        return (
-          <>
-            <VoiceSection
-              active
-              audioSmokeStatus={speechVoices.audioSmokeStatus}
-              draft={draft}
-              onRunAudioSmokeTest={() => void speechVoices.handleRunAudioSmokeTest()}
-              previewingSpeech={speechVoices.previewingSpeech}
-              runningAudioSmoke={speechVoices.runningAudioSmoke}
-              setDraft={setDraft}
-              platformProfile={platformProfile}
-              testingTarget={connectionTests.testingTarget}
-              uiLanguage={uiLanguage}
-            />
-
-            <SpeechInputSection
-              active
-              draft={draft}
-              platformProfile={platformProfile}
-              setDraft={setDraft}
-              testingTarget={connectionTests.testingTarget}
-              onRunSpeechInputConnectionTest={() => void connectionTests.runConnectionTest('speech-input')}
-              renderSpeechInputTestResult={() => connectionTests.renderTestResult('speech-input')}
-            />
-
-            <SpeechOutputSection
-              active
-              draft={draft}
-              setDraft={setDraft}
-              speechVoiceOptions={speechVoices.speechVoiceOptions}
-              speechVoiceStatus={speechVoices.speechVoiceStatus}
-              loadingSpeechVoices={speechVoices.loadingSpeechVoices}
-              speechPreviewText={speechVoices.speechPreviewText}
-              setSpeechPreviewText={speechVoices.setSpeechPreviewText}
-              speechPreviewStatus={speechVoices.speechPreviewStatus}
-              previewingSpeech={speechVoices.previewingSpeech}
-              testingTarget={connectionTests.testingTarget}
-              onApplySpeechOutputPreset={applySpeechOutputPreset}
-              onLoadSpeechVoices={() => void speechVoices.handleLoadSpeechVoices()}
-              onPreviewSpeech={() => void speechVoices.handlePreviewSpeech()}
-              onRunSpeechOutputConnectionTest={() => void connectionTests.runConnectionTest('speech-output')}
-              renderSpeechOutputTestResult={() => connectionTests.renderTestResult('speech-output')}
-            />
-          </>
-        )
-      case 'window':
-        return (
-          <WindowSection
-            active
-            draft={draft}
-            petWindowState={windowState.petWindowState}
-            setDraft={setDraft}
-            uiLanguage={uiLanguage}
-            updateWindowState={windowState.updateWindowState}
-            windowStatusMessage={windowState.windowStatusMessage}
-            launchOnStartupSupported={platformProfile.startup.supported}
-          />
-        )
-      case 'integrations':
-        return (
-          <IntegrationsSection
-            active
-            draft={draft}
-            setDraft={setDraft}
-            uiLanguage={uiLanguage}
-          />
-        )
-      case 'autonomy':
-        return (
-          <AutonomySection
-            active
-            draft={draft}
-            setDraft={setDraft}
-            uiLanguage={uiLanguage}
-            channels={notificationChannels}
-            channelsLoading={notificationChannelsLoading}
-            onAddChannel={onAddNotificationChannel}
-            onUpdateChannel={onUpdateNotificationChannel}
-            onRemoveChannel={onRemoveNotificationChannel}
-          />
-        )
-      case 'tools':
-        return (
-          <ToolsSection
-            active
-            draft={draft}
-            setDraft={setDraft}
-          />
-        )
-      case 'console':
-      default:
-        return (
-          <ConsoleSection
-            active
-            draft={draft}
-            petModel={petModel}
-            continuousVoiceActive={continuousVoiceActive}
-            debugConsoleEvents={debugConsoleEvents}
-            liveTranscript={liveTranscript}
-            onClearDebugConsole={onClearDebugConsole}
-            reminderTasks={reminderTasks}
-            speechLevel={speechLevel}
-            uiLanguage={uiLanguage}
-            voicePipeline={voicePipeline}
-            voiceState={voiceState}
-            voiceTrace={voiceTrace}
-          />
-        )
-    }
+    return (
+      <SettingsDrawerActiveSection
+        activeSectionId={activeSectionId}
+        chatBusy={chatBusy}
+        chatHistory={chatHistory}
+        chatMessageCount={chatMessageCount}
+        connectionTests={connectionTests}
+        continuousVoiceActive={continuousVoiceActive}
+        confirm={confirm}
+        currentChatSessionId={currentChatSessionId}
+        dailyMemoryEntries={dailyMemoryEntries}
+        debugConsoleEvents={debugConsoleEvents}
+        draft={draft}
+        liveTranscript={liveTranscript}
+        memories={memories}
+        memoryArchive={memoryArchive}
+        memoryFocus={memoryFocus}
+        memorySearchModeOptions={memorySearchModeOptions}
+        notificationChannels={notificationChannels}
+        notificationChannelsLoading={notificationChannelsLoading}
+        onAddManualMemory={onAddManualMemory}
+        onAddNotificationChannel={onAddNotificationChannel}
+        onApplySpeechOutputPreset={applySpeechOutputPreset}
+        onApplyTextProviderPreset={applyTextProviderPreset}
+        onClearDailyMemory={onClearDailyMemory}
+        onClearDebugConsole={onClearDebugConsole}
+        onOpenSettingsSection={handleOpenSettingsSection}
+        onRemoveDailyEntry={onRemoveDailyEntry}
+        onRemoveMemory={onRemoveMemory}
+        onRemoveNotificationChannel={onRemoveNotificationChannel}
+        onSetMemoryEnabled={onSetMemoryEnabled}
+        onUpdateDailyEntry={onUpdateDailyEntry}
+        onUpdateMemory={onUpdateMemory}
+        onUpdateNotificationChannel={onUpdateNotificationChannel}
+        petModel={petModel}
+        petModelImport={petModel_}
+        petModelPresets={petModelPresets}
+        platformProfile={platformProfile}
+        reminderTasks={reminderTasks}
+        selectedMemorySearchMode={selectedMemorySearchMode}
+        setDraft={setDraft}
+        speechLevel={speechLevel}
+        speechVoices={speechVoices}
+        uiLanguage={uiLanguage}
+        voicePipeline={voicePipeline}
+        voiceState={voiceState}
+        voiceTrace={voiceTrace}
+        windowState={windowState}
+      />
+    )
   }
 
   if (!open) return null
@@ -1027,6 +846,30 @@ export function SettingsDrawer({
         <div className="settings-drawer__body" ref={drawerBodyRef}>
           {settingsView === 'home' ? (
             <div className="settings-home">
+              <section
+                className="settings-home-release"
+                aria-labelledby="settings-home-release-title"
+              >
+                <div className="settings-home-release__copy">
+                  <span className="settings-home-release__eyebrow">
+                    {ti(CURRENT_RELEASE_SPOTLIGHT.eyebrowKey, {
+                      version: CURRENT_RELEASE_SPOTLIGHT.version,
+                    })}
+                  </span>
+                  <strong id="settings-home-release-title">
+                    {ti(CURRENT_RELEASE_SPOTLIGHT.titleKey)}
+                  </strong>
+                  <p>{ti(CURRENT_RELEASE_SPOTLIGHT.summaryKey)}</p>
+                </div>
+                <ReleaseSpotlightActions
+                  actions={CURRENT_RELEASE_SPOTLIGHT.actions}
+                  className="settings-home-release__actions"
+                  iconClassName="settings-home-release__action-icon"
+                  translate={ti}
+                  onOpenSettingsSection={handleOpenSettingsSection}
+                />
+              </section>
+
               <div className="settings-appearance-switch" role="radiogroup" aria-label={ti('settings.appearance.label')}>
                 <span className="settings-appearance-switch__label">{ti('settings.appearance.label')}</span>
                 <div className="settings-appearance-switch__control">

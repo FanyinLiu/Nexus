@@ -31,6 +31,12 @@ import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile
 import type { DailyMemoryStore, Goal, ReminderTask } from '../../types'
 import { buildLocalMessagingAnnouncementContent } from './localMessagingAnnouncement'
 import { isNotificationBridgeEnabled } from './notificationBridgeActivation'
+import {
+  buildNotificationHistorySafeNoticeContent,
+  buildNotificationMessageChatForwardText,
+  buildNotificationMessageFollowUpInput,
+  getNotificationConversationKey,
+} from '../../lib/privacy/notificationPrivacy'
 
 type ChatBridge = {
   pushCompanionNotice: (payload: {
@@ -232,7 +238,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
         debugConsole.appendDebugConsoleEvent({
           source: 'autonomy',
           title: 'Desktop message dropped',
-          detail: `${reason}: ${text.slice(0, 120)}`,
+          detail: `${reason}: textLength=${text.length}`,
         })
       },
     })
@@ -272,23 +278,15 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
         // A flicker of attentiveness: she noticed someone tried to reach
         // the user. Tiny delta — colors tone, never dominates.
         applyEmotionSignalStable('missed_message_noticed')
-        recordMessageFollowUp({
-          conversationKey: message.conversationId
-            || `${message.sourceName ?? message.channelName}:${message.sender ?? message.title}`,
-          sourceLabel: message.sourceName || message.channelName,
-          senderLabel: message.sender || message.title,
-          ...(currentSettings.autonomyNotificationMessagePreviewEnabled && message.body
-            ? { topicHint: message.body.slice(0, 80) }
-            : {}),
-        })
+        recordMessageFollowUp(buildNotificationMessageFollowUpInput(message))
       }
 
       // Into the conversation (the actual "companion knows about all your
-      // messages" behaviour). Privacy follows the announce model: content
-      // only when the preview opt-in is on, otherwise source + sender only.
+      // messages" behaviour). Forward only source/sender metadata. The preview
+      // toggle is for local UI/TTS, not for sending third-party message bodies
+      // into the chat model or future prompt history.
       if (currentSettings.autonomyNotificationMessagesToChatEnabled && chat.sendMessage) {
-        const conversationKey = message.conversationId
-          || `${message.sourceName ?? message.channelName}:${message.sender ?? message.title}`
+        const conversationKey = getNotificationConversationKey(message)
         const now = Date.now()
         const seen = notificationConversationSeenRef.current
         const last = seen.get(conversationKey) ?? 0
@@ -298,12 +296,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
             const oldest = [...seen.entries()].sort((a, b) => a[1] - b[1])[0]
             if (oldest) seen.delete(oldest[0])
           }
-          const sourceLabel = message.sourceName || message.channelName
-          const senderLabel = message.sender || message.title
-          const prefixedText = currentSettings.autonomyNotificationMessagePreviewEnabled && message.body
-            ? `【${sourceLabel} · ${senderLabel}】${message.body}`
-            : t('chat.prefix.desktop_message', { source: sourceLabel, sender: senderLabel })
-          notificationChatQueueRef.current?.push(prefixedText)
+          notificationChatQueueRef.current?.push(buildNotificationMessageChatForwardText(message, t))
         }
       }
       return
@@ -316,9 +309,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     })
 
     void chat.pushCompanionNotice({
-      chatContent: t('chat.prefix.notification', { channel: message.channelName, title: message.title, body: message.body }),
-      bubbleContent: t('chat.prefix.notification_bubble', { channel: message.channelName, title: message.title }),
-      speechContent: t('chat.prefix.notification_speech', { channel: message.channelName, title: message.title }),
+      ...buildNotificationHistorySafeNoticeContent(message, t),
       autoHideMs: 12_000,
     })
   }, [applyEmotionSignalStable, chat, debugConsole, focusAwareness.focusStateRef, settingsRef, t])
