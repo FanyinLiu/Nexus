@@ -106,6 +106,9 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
   renderer localStorage classification, heavy-module lazy loading, PR/release
   verification split, and companion-not-agent boundary checks. See
   [Milestone 2 Engineering Hardening Design](MILESTONE-2-RELEASE-ENGINEERING-HARDENING-DESIGN-2026-06-20.md).
+- Tighten the same engineering guard so it scans all renderer browser-storage
+  keys, catches inverted renderer imports with `npm run architecture:audit`, and
+  blocks source-file bloat with `npm run source-size:audit`.
 - Rollback: signing config changes must be isolated in packaging config and
   release docs.
 

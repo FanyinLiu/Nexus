@@ -98,12 +98,22 @@ Current baseline:
   reading user data or secrets, then fails on structural drift such as missing
   handlers, duplicate handlers, missing trusted-sender checks, missing event
   sources, payload-validation gaps, or high-risk audit/permission gaps.
-- `npm run storage:audit` is the renderer localStorage contract inventory. It
-  fails if a storage key is added without classification, authority, and
-  migration posture.
+- `npm run storage:audit` is the renderer browser-storage contract inventory.
+  It scans `src/**/*.ts{x}` for localStorage/sessionStorage key constants and
+  inline storage calls, then fails if a key is added without classification,
+  authority, and migration posture. The report is source-only, compares unique
+  discovered keys against the contract, and marks the legacy VTube Studio auth
+  token key as `secret-adjacent` until it can move behind a main-process vault.
 - `npm run heavy:audit` guards renderer-side heavy modules such as embeddings,
   OCR, browser VAD, and Live2D so they remain lazy-loaded or vendor-loaded on
   demand.
+- `npm run architecture:audit` is the renderer source-layer boundary guard. It
+  keeps `lib`, `core`, `types`, hooks, components, and feature modules from
+  importing back upward into app/view orchestration.
+- `npm run source-size:audit` is the source-size guard. It fails when a normal
+  source file grows past the large-file budget, while keeping explicit temporary
+  allowances for generated i18n catalogs and the current main-process local data
+  service.
 - `npm run companion-boundary:audit` keeps the repo aligned to companionship
   instead of work-agent expansion by requiring the companion task boundary to be
   documented in code-facing and release-facing docs.

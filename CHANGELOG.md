@@ -149,7 +149,10 @@ _No changes yet._
   JS lint gate, renderer localStorage storage-contract audit, heavy renderer
   module lazy-load audit, companion-not-agent boundary audit, stricter
   zero-warning IPC audit behavior, and a `verify:pr` gate that `verify:release`
-  now reuses before SQLite smoke.
+  now reuses before SQLite smoke. The storage contract now scans all renderer
+  browser-storage keys, including session keys, prefix keys, and the legacy
+  VTube Studio token key marked as secret-adjacent; `verify:pr` also runs
+  renderer architecture-boundary and source-size budget audits.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned
