@@ -8,6 +8,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const CHECKED_FILES = [
   'electron/ipc/vaultIpc.js',
+  'electron/services/keyVault.js',
   'electron/services/vaultRefs.js',
   'electron/ipc/vaultAudit.js',
   'electron/preload.js',
@@ -55,6 +56,24 @@ const UNSAFE_PATTERNS = [
     pattern: /vaultRetrieve[\s\S]{0,260}plaintext(?! is resolved only in the main process)/i,
     message: 'renderer vault types must describe opaque refs, not plaintext retrieval',
   },
+  {
+    id: 'key-vault-raw-read-error-log',
+    file: 'electron/services/keyVault.js',
+    pattern: /console\.warn\('\[KeyVault\] Failed to read vault file:',\s*error\)/,
+    message: 'KeyVault read failures must redact raw error objects before logging',
+  },
+  {
+    id: 'key-vault-raw-slot-log',
+    file: 'electron/services/keyVault.js',
+    pattern: /cannot decrypt slot:\s*\$\{slot\}|Failed to decrypt slot "\$\{slot\}"/,
+    message: 'KeyVault decrypt logs must not record raw vault slot names',
+  },
+  {
+    id: 'key-vault-raw-decrypt-error-log',
+    file: 'electron/services/keyVault.js',
+    pattern: /console\.warn\(`\[KeyVault\] Failed to decrypt slot[^`]+`,\s*error\)/,
+    message: 'KeyVault decrypt failures must redact raw error objects before logging',
+  },
 ]
 
 const REQUIRED_PHRASES = [
@@ -69,6 +88,18 @@ const REQUIRED_PHRASES = [
       'refs[name] = issueVaultRefForSender(event.sender, name)',
       'rateLimitSingleRetrieve(event, name)',
       "rateLimitBulkOp(event, 'retrieve-many')",
+    ],
+  },
+  {
+    id: 'key-vault-support-logs-are-secret-safe',
+    file: 'electron/services/keyVault.js',
+    phrases: [
+      "import { getRedactedErrorMessage } from './errorRedaction.js'",
+      'function formatVaultSlotLogLabel(slot)',
+      "console.warn('[KeyVault] Failed to read vault file:', getRedactedErrorMessage(error))",
+      'Encryption unavailable, cannot decrypt slot (${formatVaultSlotLogLabel(slot)})',
+      'Failed to decrypt slot (${formatVaultSlotLogLabel(slot)}):',
+      'getRedactedErrorMessage(error)',
     ],
   },
   {

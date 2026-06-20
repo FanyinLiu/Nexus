@@ -212,7 +212,9 @@ Current baseline:
   counts, lengths, booleans, and result kinds, not plaintext secrets, slot
   names, vault ref tokens, or error text. `npm run vault-security:audit` guards
   this contract so renderer-facing vault retrieval cannot regress to plaintext
-  returns.
+  returns. KeyVault support logs now omit raw slot names, plaintext values,
+  vault paths, and raw exception objects by logging only slot lengths plus
+  redacted error text.
 - Main-process chat/audio network errors now pass through
   `redactSensitiveErrorText` before they are logged, sent in stream terminal
   frames, or returned to renderer-facing failure messages. The redactor strips

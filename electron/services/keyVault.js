@@ -2,6 +2,7 @@ import { app, safeStorage } from 'electron'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { createAsyncLock } from './asyncLock.js'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 
 const VAULT_FILE_NAME = 'vault.json'
 
@@ -10,6 +11,10 @@ const withVaultLock = createAsyncLock()
 
 function getVaultPath() {
   return path.join(app.getPath('userData'), VAULT_FILE_NAME)
+}
+
+function formatVaultSlotLogLabel(slot) {
+  return `slotLength=${String(slot ?? '').length}`
 }
 
 // Dev-mode plaintext path: skip safeStorage entirely so unsigned dev binaries
@@ -36,7 +41,7 @@ async function loadVault() {
     vaultCache = JSON.parse(raw)
   } catch (error) {
     if (error?.code !== 'ENOENT') {
-      console.warn('[KeyVault] Failed to read vault file:', error)
+      console.warn('[KeyVault] Failed to read vault file:', getRedactedErrorMessage(error))
     }
     vaultCache = {}
   }
@@ -97,14 +102,14 @@ export async function vaultRetrieve(slot) {
     }
 
     if (!isEncryptionAvailable()) {
-      console.warn(`[KeyVault] Encryption unavailable, cannot decrypt slot: ${slot}`)
+      console.warn(`[KeyVault] Encryption unavailable, cannot decrypt slot (${formatVaultSlotLogLabel(slot)})`)
       return ''
     }
 
     try {
       return safeStorage.decryptString(Buffer.from(entry.e, 'base64'))
     } catch (error) {
-      console.warn(`[KeyVault] Failed to decrypt slot "${slot}":`, error)
+      console.warn(`[KeyVault] Failed to decrypt slot (${formatVaultSlotLogLabel(slot)}):`, getRedactedErrorMessage(error))
       return ''
     }
   }
