@@ -77,6 +77,11 @@ Current baseline:
   Stage B packaged-smoke checklist in `docs/RELEASING.md`; if the actual
   `npm run package:dir:smoke` gate is removed from the release docs, the audit
   fails before release.
+- `docs/RELEASE-CANDIDATE-v0.3.5-HANDOFF.md` records the current release
+  candidate's memorable theme, merge/tag evidence, already-collected smoke
+  results, residual signing/runtime risks, rollback path, and companion-first
+  next phase. It is a per-release operator handoff, not a replacement for
+  `docs/RELEASING.md`.
 - The updater runtime uses full `electron-updater` auto-download/install on
   Windows, Linux, and future signed macOS builds. Current unsigned macOS builds
   resolve to `manual-download`: they check GitHub Releases and open the release
@@ -516,11 +521,11 @@ hooks/useReminderScheduler
 - `features/releaseNotes/` owns small release-communication contracts used by the
   app shell, such as the current About/Help release spotlight. It must stay
   content-only: no updater logic, IPC, migrations, or background checks.
-- `tests/release-spotlight.test.ts` guards the current release spotlight and the
-  human-facing v0.3.5 README/release-note theme so visible memory and readable
-  companion presence do not drift apart before release. It also checks the
-  v0.3.5 changelog boundary so release-targeted presence work does not linger
-  under `Unreleased`.
+- `tests/release-spotlight.test.ts` guards the current release spotlight, the
+  human-facing v0.3.5 README/release-note theme, the v0.3.5 changelog boundary,
+  and the release-candidate handoff so visible memory, readable companion
+  presence, merge/tag evidence, and the companion-not-agent boundary do not
+  drift apart before release.
 - `scripts/pet-presence-visual-smoke.cjs` is the Electron QA gate for the built
   pet view: it uses a temporary completed-onboarding profile, checks
   idle/breathe presence state, rejects onboarding overlays, and writes ignored

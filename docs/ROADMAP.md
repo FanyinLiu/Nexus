@@ -1,6 +1,6 @@
 # Nexus Roadmap — companion-first phases
 
-> Last updated 2026-06-19. Stewardship follows Klein's product direction.
+> Last updated 2026-06-20. Stewardship follows Klein's product direction.
 > For the short-term MVP and Chinese execution plan, see
 > [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md). When planning
 > near-term work, Phase 1 in that document is the active scope.
@@ -93,6 +93,11 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
   gate and make `npm run distribution:audit` fail if `npm run
   package:dir:smoke` drops out of the release checklist. See
   [Milestone 2 Packaged Smoke Docs Design](MILESTONE-2-RELEASE-PACKAGED-SMOKE-DOCS-DESIGN-2026-06-20.md).
+- Add a v0.3.5 release-candidate handoff that keeps the memorable upgrade,
+  merge/tag evidence, residual signing risks, rollback path, and
+  companion-not-agent boundary in one guarded document. See
+  [v0.3.5 Release Candidate Handoff](RELEASE-CANDIDATE-v0.3.5-HANDOFF.md) and
+  [Milestone 2 Release Candidate Handoff Design](MILESTONE-2-RELEASE-CANDIDATE-HANDOFF-DESIGN-2026-06-20.md).
 - Rollback: signing config changes must be isolated in packaging config and
   release docs.
 

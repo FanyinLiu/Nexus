@@ -146,7 +146,10 @@ _No changes yet._
   before enabling signed updates. The pre-release Stage B docs now also list
   `npm run package:dir:smoke`, and `npm run distribution:audit` fails if that
   packaged-app launch gate or its quick-mode skip note drops out of the release
-  checklist.
+  checklist. The v0.3.5 release candidate now also has a guarded handoff doc
+  that records the memorable user-facing upgrade, merge/tag steps, local and CI
+  evidence, residual trust risks, rollback path, and companion-not-agent
+  boundary.
 - **IPC contract baseline** — added `npm run ipc:audit` and wired it into
   `npm run distribution:audit`. The new source-only report inventories preload
   invokes, subscriptions, main-process handlers, trusted-sender coverage,

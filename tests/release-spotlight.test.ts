@@ -109,3 +109,23 @@ test('human-facing v0.3.5 docs keep visible memory and companion presence aligne
   assert.match(releaseSection, /Settings home release spotlight/)
   assert.match(releaseSection, /Release theme guard/)
 })
+
+test('v0.3.5 release handoff keeps merge and tag evidence explicit', () => {
+  const handoff = readWorkspaceFile('docs/RELEASE-CANDIDATE-v0.3.5-HANDOFF.md')
+
+  assert.match(handoff, /PR: \[#105/)
+  assert.match(handoff, /Evidence baseline head: `48e6b78`/)
+  assert.match(handoff, /verify the latest PR head and latest\s+GitHub CI/)
+  assert.match(handoff, /npm run prerelease-check -- v0\.3\.5/)
+  assert.match(handoff, /git tag v0\.3\.5/)
+  assert.match(handoff, /npm run package:dir:smoke/)
+  assert.match(handoff, /npm run pet:presence-smoke/)
+  assert.match(handoff, /22 blocker checks/)
+  assert.match(handoff, /Developer ID/)
+  assert.match(handoff, /SmartScreen/)
+  assert.match(handoff, /node:sqlite/)
+  assert.match(handoff, /Codex-style work agent/)
+  assert.match(handoff, /Live2D/)
+  assert.match(handoff, /voice MVP/)
+  assert.match(handoff, /white-box long-term memory/)
+})
