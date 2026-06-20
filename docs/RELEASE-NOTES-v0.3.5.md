@@ -122,7 +122,8 @@ lives in renderer `localStorage` by default, and nothing is deleted.
 - Desktop context now redacts obvious secrets such as API keys, bearer tokens,
   passwords, and private-key material before active-window or clipboard text
   leaves the main process; OCR and VLM text are redacted again before prompt
-  formatting.
+  formatting. Screenshot image data is used only as a temporary OCR/VLM input
+  and is stripped before desktop context is handed to chat/runtime code.
 - Kept renderer access to plaintext secrets blocked through the safeStorage
   vault/ref pattern.
 

@@ -174,7 +174,8 @@ _No changes yet._
   guards desktop context redaction, and desktop context capture redacts obvious
   API keys, bearer tokens, passwords, and private-key material before
   active-window or clipboard text leaves the main process; OCR and VLM text are
-  redacted again before prompt formatting.
+  redacted again before prompt formatting, and screenshot image payloads are
+  stripped before desktop context is handed to chat/runtime code.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned

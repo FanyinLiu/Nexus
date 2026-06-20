@@ -120,7 +120,9 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
   renderer localStorage writes.
 - Add `npm run desktop-context-privacy:audit` to the PR/release guard so
   active-window, clipboard, OCR, and VLM context cannot bypass sensitive-text
-  redaction before renderer return or model prompt formatting.
+  redaction before renderer return or model prompt formatting, and screenshot
+  image payloads cannot continue into chat/runtime context after OCR/VLM
+  finishes.
 - Rollback: signing config changes must be isolated in packaging config and
   release docs.
 
@@ -182,7 +184,8 @@ auditable.
 - Desktop context capture now redacts obvious secrets such as API keys, bearer
   tokens, passwords, and private-key material before active-window/clipboard
   text leaves the main process, with a renderer-side prompt-formatting fallback
-  for OCR and VLM text.
+  for OCR and VLM text. Screenshot data URLs are stripped after OCR/VLM so chat
+  runtime receives only text context, not the original image payload.
 - Create an inventory of every preload-exposed method and matching
   `ipcMain.handle`.
 - Require trusted sender checks, request validation, response shape decisions,
