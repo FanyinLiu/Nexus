@@ -3,9 +3,11 @@ import { useUpdater } from '../../features/updater/useUpdater'
 import { CURRENT_RELEASE_SPOTLIGHT } from '../../features/releaseNotes/index.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { UiLanguage } from '../../types'
+import { PetControlIcon } from '../PetControlIcon'
 
 type AboutPanelProps = {
   uiLanguage: UiLanguage
+  onOpenSettingsSection?: (sectionId: 'memory' | 'chat') => void
 }
 
 const CREDIT_ITEMS = [
@@ -30,7 +32,10 @@ const CREDIT_ITEMS = [
  * stay consistent with UpdaterPanel / DiagnosticsPanel placement (all
  * "info about the app itself" lives together).
  */
-export const AboutPanel = memo(function AboutPanel({ uiLanguage }: AboutPanelProps) {
+export const AboutPanel = memo(function AboutPanel({
+  uiLanguage,
+  onOpenSettingsSection,
+}: AboutPanelProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1], params?: Record<string, string>) =>
     pickTranslatedUiText(uiLanguage, key, params)
   const { currentVersion } = useUpdater()
@@ -100,6 +105,25 @@ export const AboutPanel = memo(function AboutPanel({ uiLanguage }: AboutPanelPro
             </li>
           ))}
         </ul>
+
+        {onOpenSettingsSection ? (
+          <div className="settings-about-panel__spotlight-actions">
+            {CURRENT_RELEASE_SPOTLIGHT.actions.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                className={index === 0 ? 'primary-button' : 'ghost-button'}
+                onClick={() => onOpenSettingsSection(item.targetSectionId)}
+              >
+                <PetControlIcon
+                  name={item.id === 'review_memory' ? 'thought' : 'sparkles'}
+                  className="settings-about-panel__spotlight-action-icon"
+                />
+                <span>{ti(item.labelKey)}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       <div className="settings-about-panel__faq">

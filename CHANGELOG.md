@@ -29,6 +29,9 @@
   visible memory plus readable desktop companion states, with short localized
   bullets for memory sources, memory controls, state preview, first-run repair,
   and the companion-first boundary.
+- **Release spotlight actions** — the v0.3.5 spotlight now includes local
+  buttons to open Memory and Companion Profile, so users can inspect the
+  memorable upgrades without triggering chat, voice, network, or automation.
 
 ## [0.3.5] - 2026-06-19
 

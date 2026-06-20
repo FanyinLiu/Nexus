@@ -20,6 +20,8 @@ renderer `localStorage` by default, and nothing is deleted.
   response.
 - Expanding that hint resolves the stored source IDs against the current memory
   state, marks missing or paused sources, and opens Settings directly to Memory.
+- The About / Help spotlight also has a local "Review Memory" action that opens
+  Memory without starting a chat, model request, or migration.
 - Opening Memory from a reply highlights the relevant memories and diary
   fragments, including older diary entries outside the recent preview.
 - The Memory settings page now shows whether recall and learning are active,
@@ -44,6 +46,8 @@ status icon.
 - Companion Profile includes a compact desktop state preview so users and QA can
   inspect those states without forcing chat, voice, network, or Live2D rendering
   inside settings.
+- The About / Help spotlight has a local "Preview Companion" action that opens
+  Companion Profile directly.
 - Sprite companions preview the same runtime state mapping used by the desktop
   pet, while Live2D remains lazy in the pet window.
 - Common English stage directions such as `(eyes brightened)`, `(blush)`, and
