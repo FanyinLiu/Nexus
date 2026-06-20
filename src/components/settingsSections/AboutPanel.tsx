@@ -3,7 +3,7 @@ import { useUpdater } from '../../features/updater/useUpdater'
 import { CURRENT_RELEASE_SPOTLIGHT } from '../../features/releaseNotes/index.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { UiLanguage } from '../../types'
-import { PetControlIcon } from '../PetControlIcon'
+import { ReleaseSpotlightActions } from './ReleaseSpotlightActions'
 
 type AboutPanelProps = {
   uiLanguage: UiLanguage
@@ -106,24 +106,13 @@ export const AboutPanel = memo(function AboutPanel({
           ))}
         </ul>
 
-        {onOpenSettingsSection ? (
-          <div className="settings-about-panel__spotlight-actions">
-            {CURRENT_RELEASE_SPOTLIGHT.actions.map((item, index) => (
-              <button
-                key={item.id}
-                type="button"
-                className={index === 0 ? 'primary-button' : 'ghost-button'}
-                onClick={() => onOpenSettingsSection(item.targetSectionId)}
-              >
-                <PetControlIcon
-                  name={item.id === 'review_memory' ? 'thought' : 'sparkles'}
-                  className="settings-about-panel__spotlight-action-icon"
-                />
-                <span>{ti(item.labelKey)}</span>
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <ReleaseSpotlightActions
+          actions={CURRENT_RELEASE_SPOTLIGHT.actions}
+          className="settings-about-panel__spotlight-actions"
+          iconClassName="settings-about-panel__spotlight-action-icon"
+          translate={ti}
+          onOpenSettingsSection={onOpenSettingsSection}
+        />
       </section>
 
       <div className="settings-about-panel__faq">
