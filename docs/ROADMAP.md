@@ -283,6 +283,10 @@ Goal: the companion's visible state reflects what Nexus is actually doing.
   theme is visible memory plus readable desktop companion states, not a generic
   task-agent expansion. See
   [Milestone 6 Slice 6 Design](MILESTONE-6-DESKTOP-PRESENCE-RELEASE-THEME-DESIGN-2026-06-20.md).
+- Slice 7 makes the About/Help spotlight actionable with local buttons to open
+  Memory and Companion Profile, so users can inspect the two v0.3.5 headline
+  upgrades without hunting through Settings. See
+  [Milestone 6 Slice 7 Design](MILESTONE-6-DESKTOP-PRESENCE-SPOTLIGHT-ACTIONS-DESIGN-2026-06-20.md).
 - Bind chat, voice, setup, tool, and error flows to that contract.
 - Keep Live2D/sprite-heavy rendering lazy and budgeted.
 - Rollback: state mapping is additive and can fall back to current pet behavior.

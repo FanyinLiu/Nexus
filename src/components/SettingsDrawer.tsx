@@ -907,6 +907,7 @@ export function SettingsDrawer({
             debugConsoleEvents={debugConsoleEvents}
             liveTranscript={liveTranscript}
             onClearDebugConsole={onClearDebugConsole}
+            onOpenSettingsSection={handleOpenSettingsSection}
             reminderTasks={reminderTasks}
             speechLevel={speechLevel}
             uiLanguage={uiLanguage}

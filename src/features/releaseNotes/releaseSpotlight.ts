@@ -11,12 +11,19 @@ export type ReleaseSpotlightBullet = {
   bodyKey: TranslationKey
 }
 
+export type ReleaseSpotlightAction = {
+  id: 'review_memory' | 'preview_companion'
+  labelKey: TranslationKey
+  targetSectionId: 'memory' | 'chat'
+}
+
 export type ReleaseSpotlight = {
   version: string
   eyebrowKey: TranslationKey
   titleKey: TranslationKey
   summaryKey: TranslationKey
   bullets: readonly ReleaseSpotlightBullet[]
+  actions: readonly ReleaseSpotlightAction[]
 }
 
 export const CURRENT_RELEASE_SPOTLIGHT: ReleaseSpotlight = {
@@ -51,6 +58,18 @@ export const CURRENT_RELEASE_SPOTLIGHT: ReleaseSpotlight = {
       bodyKey: 'about.release_spotlight.bullet.companion_boundary.body',
     },
   ],
+  actions: [
+    {
+      id: 'review_memory',
+      labelKey: 'about.release_spotlight.action.review_memory',
+      targetSectionId: 'memory',
+    },
+    {
+      id: 'preview_companion',
+      labelKey: 'about.release_spotlight.action.preview_companion',
+      targetSectionId: 'chat',
+    },
+  ],
 }
 
 export function getReleaseSpotlightTranslationKeys(spotlight = CURRENT_RELEASE_SPOTLIGHT): TranslationKey[] {
@@ -59,5 +78,6 @@ export function getReleaseSpotlightTranslationKeys(spotlight = CURRENT_RELEASE_S
     spotlight.titleKey,
     spotlight.summaryKey,
     ...spotlight.bullets.flatMap((item) => [item.titleKey, item.bodyKey]),
+    ...spotlight.actions.map((item) => item.labelKey),
   ]
 }

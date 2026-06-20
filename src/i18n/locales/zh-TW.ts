@@ -1978,6 +1978,8 @@ export const zhTWMessages: TranslationDictionary = {
   'about.release_spotlight.eyebrow': '版本主題 · v{version}',
   'about.release_spotlight.title': '記憶看得見，夥伴也動起來',
   'about.release_spotlight.summary': '這版讓 Nexus 能說明回覆用了哪些記憶，也讓桌面夥伴的待機、思考、聆聽、說話、等待、錯誤和離線狀態可以被預覽。',
+  'about.release_spotlight.action.review_memory': '查看記憶',
+  'about.release_spotlight.action.preview_companion': '預覽夥伴',
   'about.release_spotlight.bullet.memory_sources.title': '回覆能說清來源',
   'about.release_spotlight.bullet.memory_sources.body': '當記憶影響回答時，氣泡會顯示來源提示，展開後能看到對應記憶或日誌的目前狀態。',
   'about.release_spotlight.bullet.memory_control.title': '記憶控制在你手裡',

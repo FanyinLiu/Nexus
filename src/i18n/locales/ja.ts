@@ -1978,6 +1978,8 @@ export const jaMessages: TranslationDictionary = {
   'about.release_spotlight.eyebrow': 'バージョンテーマ · v{version}',
   'about.release_spotlight.title': '記憶が見えて、コンパニオンも息づきます',
   'about.release_spotlight.summary': 'このリリースでは、Nexus が返答に使った記憶を示し、デスクトップコンパニオンの待機、思考、聞き取り、発話、待機確認、エラー、オフライン状態をプレビューできます。',
+  'about.release_spotlight.action.review_memory': 'Memory を確認',
+  'about.release_spotlight.action.preview_companion': 'コンパニオンをプレビュー',
   'about.release_spotlight.bullet.memory_sources.title': '返答の根拠が見える',
   'about.release_spotlight.bullet.memory_sources.body': '記憶が返答に影響したとき、チャットの吹き出しから現在の記憶や日記の状態を確認できます。',
   'about.release_spotlight.bullet.memory_control.title': '記憶はあなたが管理',

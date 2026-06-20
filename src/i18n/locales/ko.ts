@@ -1978,6 +1978,8 @@ export const koMessages: TranslationDictionary = {
   'about.release_spotlight.eyebrow': '버전 테마 · v{version}',
   'about.release_spotlight.title': '기억은 보이고, 동반자는 살아 움직여요',
   'about.release_spotlight.summary': '이번 릴리스에서는 Nexus가 답변에 어떤 기억을 사용했는지 보여 주고, 데스크톱 동반자의 대기, 생각, 듣기, 말하기, 확인 대기, 오류, 오프라인 상태를 미리 볼 수 있게 합니다.',
+  'about.release_spotlight.action.review_memory': 'Memory 보기',
+  'about.release_spotlight.action.preview_companion': '동반자 미리보기',
   'about.release_spotlight.bullet.memory_sources.title': '답변의 기억 출처를 볼 수 있어요',
   'about.release_spotlight.bullet.memory_sources.body': '기억이 답변에 영향을 주면 말풍선에서 출처 힌트를 열어 현재 기억이나 일기 상태를 확인할 수 있어요.',
   'about.release_spotlight.bullet.memory_control.title': '기억은 사용자가 조절해요',

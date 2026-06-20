@@ -1978,6 +1978,8 @@ export const enMessages: TranslationDictionary = {
   'about.release_spotlight.eyebrow': 'Version theme · v{version}',
   'about.release_spotlight.title': 'Memory is visible. The companion feels present.',
   'about.release_spotlight.summary': 'This release lets Nexus show which memories shaped a reply and makes the desktop companion states previewable: idle, thinking, listening, speaking, waiting, error, and offline.',
+  'about.release_spotlight.action.review_memory': 'Review Memory',
+  'about.release_spotlight.action.preview_companion': 'Preview Companion',
   'about.release_spotlight.bullet.memory_sources.title': 'Replies can show their sources',
   'about.release_spotlight.bullet.memory_sources.body': 'When memory influences an answer, the chat bubble can show a source hint and resolve it to the current memory or diary state.',
   'about.release_spotlight.bullet.memory_control.title': 'Memory stays under your control',

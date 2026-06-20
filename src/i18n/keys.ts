@@ -57,6 +57,8 @@ export const translationKeys: TranslationKey[] = [
   'about.release_spotlight.eyebrow',
   'about.release_spotlight.title',
   'about.release_spotlight.summary',
+  'about.release_spotlight.action.review_memory',
+  'about.release_spotlight.action.preview_companion',
   'about.release_spotlight.bullet.memory_sources.title',
   'about.release_spotlight.bullet.memory_sources.body',
   'about.release_spotlight.bullet.memory_control.title',

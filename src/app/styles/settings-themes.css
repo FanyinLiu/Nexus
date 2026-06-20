@@ -1771,6 +1771,28 @@
   line-height: 1.45;
 }
 
+.settings-about-panel__spotlight-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-about-panel__spotlight-actions .primary-button,
+.settings-about-panel__spotlight-actions .ghost-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding-inline: 11px;
+  white-space: normal;
+}
+
+.settings-about-panel__spotlight-action-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
 .settings-about-panel__faq {
   display: grid;
   gap: 6px;
