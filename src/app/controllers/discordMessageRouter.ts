@@ -1,5 +1,5 @@
 import type { AppSettings, DebugConsoleEventSource, TranslationKey } from '../../types'
-import type { TelegramIncoming } from '../../hooks/useTelegramGateway'
+import type { DiscordIncoming } from '../../hooks/useDiscordGateway'
 import {
   buildBridgeAnnouncementDebugDetail,
   buildBridgeIncomingDebugDetail,
@@ -7,16 +7,16 @@ import {
   shouldForwardBridgeIncomingToChat,
 } from '../../lib/privacy/bridgeMessagePrivacy.ts'
 import { parseCsvIdSet } from './bridgeUtils.ts'
-import { buildTelegramAnnouncementContent } from './telegramAnnouncement.ts'
+import { buildMessagingAnnouncementContent, getDiscordAnnouncementSettings } from './messagingAnnouncement.ts'
 
 type Translate = (key: TranslationKey, params?: Record<string, string>) => string
 
-export type TelegramRouteSettings = Pick<
+export type DiscordRouteSettings = Pick<
   AppSettings,
-  'ownerTelegramChatIds' | 'telegramAnnounceIncomingEnabled' | 'telegramAnnounceMessagePreview'
+  'ownerDiscordUserIds' | 'discordAnnounceIncomingEnabled' | 'discordAnnounceMessagePreview'
 >
 
-export type TelegramRouteDeps = {
+export type DiscordRouteDeps = {
   appendDebugConsoleEvent: (event: {
     source: DebugConsoleEventSource
     title: string
@@ -35,52 +35,49 @@ export type TelegramRouteDeps = {
   ) => Promise<unknown>
 }
 
-/**
- * Pure routing for one incoming Telegram message: emits debug events, builds and
- * pushes the companion announce notice, and forwards only owner-originated text
- * into the companion chat. External contacts are local announcements only. No
- * React and no side effects beyond the injected deps, so this bridge path is
- * unit-testable.
- *
- * Returns whether the message was owner-originated so the caller can keep its own
- * per-chat reply bookkeeping.
- */
-export function routeTelegramMessage(
-  msg: TelegramIncoming,
-  settings: TelegramRouteSettings,
+export function routeDiscordMessage(
+  msg: DiscordIncoming,
+  settings: DiscordRouteSettings,
   t: Translate,
-  deps: TelegramRouteDeps,
+  deps: DiscordRouteDeps,
 ): { isOwner: boolean } {
-  const ownerChatIds = parseCsvIdSet(settings.ownerTelegramChatIds)
-  // Until the master declares their own chatId(s), every incoming message is an
-  // external contact (named prefix). Owner-listed chatIds are promoted to
-  // "master via Telegram".
-  const isOwner = ownerChatIds.has(String(msg.chatId))
+  const ownerUserIds = parseCsvIdSet(settings.ownerDiscordUserIds)
+  const isOwner = ownerUserIds.has(msg.fromUserId)
 
   deps.appendDebugConsoleEvent({
     source: 'autonomy',
-    title: 'Telegram message',
+    title: 'Discord message',
     detail: buildBridgeIncomingDebugDetail({
-      source: 'Telegram',
-      container: msg.chatTitle,
+      source: 'Discord',
+      container: msg.channelName,
       sender: msg.fromUser,
       isOwner,
       ownerSuffix: t('chat.bridge.owner_suffix'),
       text: msg.text,
-      media: msg.media,
     }),
   })
 
-  const announcement = buildTelegramAnnouncementContent(msg, settings, t)
+  const announcement = buildMessagingAnnouncementContent(
+    {
+      sourceId: 'discord',
+      sourceName: 'Discord',
+      targetId: msg.channelId,
+      messageId: msg.messageId,
+      sender: msg.fromUser,
+      fallbackTitle: msg.channelName,
+      text: msg.text,
+    },
+    getDiscordAnnouncementSettings(settings),
+    t,
+  )
   if (announcement && deps.pushCompanionNotice) {
     deps.appendDebugConsoleEvent({
       source: 'autonomy',
-      title: 'Telegram announcement',
+      title: 'Discord announcement',
       detail: buildBridgeAnnouncementDebugDetail({
-        source: 'Telegram',
+        source: 'Discord',
         sender: msg.fromUser,
         text: msg.text,
-        media: msg.media,
       }),
     })
     void deps.pushCompanionNotice({
@@ -90,7 +87,7 @@ export function routeTelegramMessage(
   }
 
   if (deps.sendMessage && shouldForwardBridgeIncomingToChat({ isOwner, text: msg.text })) {
-    void deps.sendMessage(buildBridgeOwnerChatForwardText('Telegram', msg.text), { source: 'telegram' })
+    void deps.sendMessage(buildBridgeOwnerChatForwardText('Discord', msg.text), { source: 'discord' })
   }
 
   return { isOwner }

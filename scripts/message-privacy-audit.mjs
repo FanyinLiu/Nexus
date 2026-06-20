@@ -9,7 +9,12 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const CHECKED_FILES = [
   'src/app/controllers/useAutonomyController.ts',
   'src/app/controllers/messagingAnnouncement.ts',
+  'src/app/controllers/telegramMessageRouter.ts',
+  'src/app/controllers/discordMessageRouter.ts',
+  'src/app/controllers/useTelegramBridge.ts',
+  'src/app/controllers/useDiscordBridge.ts',
   'src/hooks/useNotificationBridge.ts',
+  'src/lib/privacy/bridgeMessagePrivacy.ts',
   'src/lib/privacy/notificationPrivacy.ts',
 ]
 
@@ -44,6 +49,36 @@ const UNSAFE_PATTERNS = [
     pattern: /writeJson\(\s*AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY\s*,\s*messages\s*\)/,
     message: 'notification messages must be sanitized before renderer localStorage persistence',
   },
+  {
+    id: 'telegram-external-text-forwarding',
+    file: 'src/app/controllers/telegramMessageRouter.ts',
+    pattern: /【Telegram · \$\{msg\.fromUser\}】\$\{msg\.text\}|if\s*\(\s*deps\.sendMessage\s*&&\s*msg\.text\s*\)/,
+    message: 'Telegram external-contact text must not be forwarded into chat/model input',
+  },
+  {
+    id: 'discord-external-text-forwarding',
+    file: 'src/app/controllers/discordMessageRouter.ts',
+    pattern: /【Discord · \$\{msg\.fromUser\}】\$\{msg\.text\}|if\s*\(\s*deps\.sendMessage\s*&&\s*msg\.text\s*\)/,
+    message: 'Discord external-contact text must not be forwarded into chat/model input',
+  },
+  {
+    id: 'telegram-raw-text-debug',
+    file: 'src/app/controllers/telegramMessageRouter.ts',
+    pattern: /detail:\s*`[^`]*\$\{msg\.text\}|announcement\.speechContent/,
+    message: 'Telegram debug events must stay metadata-only',
+  },
+  {
+    id: 'discord-raw-text-debug',
+    file: 'src/app/controllers/discordMessageRouter.ts',
+    pattern: /detail:\s*`[^`]*\$\{msg\.text\}|announcement\.speechContent/,
+    message: 'Discord debug events must stay metadata-only',
+  },
+  {
+    id: 'telegram-external-voice-transcription',
+    file: 'src/app/controllers/useTelegramBridge.ts',
+    pattern: /if\s*\(\s*wasVoice\s*&&\s*msg\.voiceBase64\s*\)\s*\{/,
+    message: 'Telegram voice transcription must be owner-only',
+  },
 ]
 
 const REQUIRED_PHRASES = [
@@ -66,6 +101,26 @@ const REQUIRED_PHRASES = [
     id: 'notification-storage-body-stripped',
     file: 'src/lib/privacy/notificationPrivacy.ts',
     phrases: ['body: \'\',', 'summary: undefined'],
+  },
+  {
+    id: 'telegram-owner-only-forwarding',
+    file: 'src/app/controllers/telegramMessageRouter.ts',
+    phrases: ['shouldForwardBridgeIncomingToChat({ isOwner, text: msg.text })'],
+  },
+  {
+    id: 'discord-owner-only-forwarding',
+    file: 'src/app/controllers/discordMessageRouter.ts',
+    phrases: ['shouldForwardBridgeIncomingToChat({ isOwner, text: msg.text })'],
+  },
+  {
+    id: 'bridge-debug-metadata-helper',
+    file: 'src/lib/privacy/bridgeMessagePrivacy.ts',
+    phrases: ['textLength=', 'media='],
+  },
+  {
+    id: 'telegram-owner-only-voice-transcription',
+    file: 'src/app/controllers/useTelegramBridge.ts',
+    phrases: ['if (wasVoice && msg.voiceBase64 && isOwner)'],
   },
 ]
 

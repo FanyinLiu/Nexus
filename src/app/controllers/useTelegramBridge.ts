@@ -116,7 +116,7 @@ export function useTelegramBridge({
         debugConsole.appendDebugConsoleEvent({
           source: 'autonomy',
           title: 'Telegram message dropped',
-          detail: `${reason}: ${text.slice(0, 120)}`,
+          detail: `${reason}: textLength=${text.length}`,
         })
       },
     })
@@ -139,11 +139,11 @@ export function useTelegramBridge({
 
     const wasVoice = msg.media === 'voice'
     let isOwner: boolean
-    if (wasVoice && msg.voiceBase64) {
-      // Voice note: transcribe first so it reaches the companion as text.
-      // Route async; on transcription failure fall back to the original
-      // announce-only routing for media messages.
-      isOwner = parseCsvIdSet(settingsRef.current.ownerTelegramChatIds).has(String(msg.chatId))
+    isOwner = parseCsvIdSet(settingsRef.current.ownerTelegramChatIds).has(String(msg.chatId))
+    if (wasVoice && msg.voiceBase64 && isOwner) {
+      // Owner voice note: transcribe first so it reaches the companion as text.
+      // External-contact voice remains announce-only, avoiding cloud STT or
+      // local transcript creation for somebody else's message.
       void (async () => {
         const transcript = await transcribeTelegramVoice(msg, settingsRef.current)
         if (transcript) {

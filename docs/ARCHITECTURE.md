@@ -189,6 +189,12 @@ Current baseline:
   snippets, notification companion notices stored in chat history use
   metadata-only copy, and renderer notification localStorage persistence strips
   body/summary text before writing.
+- Telegram and Discord bridges use an owner-only model-input boundary. Allowed
+  channels can still produce local companion announcements, but external-contact
+  messages are not forwarded into chat/model input unless the sender is
+  explicitly listed as the owner. Bridge debug events record metadata such as
+  source, sender, media type, and text length, never message bodies. External
+  Telegram voice notes stay announce-only and are not sent through STT.
 - A main-process local-data foundation now initializes both
   `userData/local-data/manifest.json` and the SQLite database
   `userData/local-data/nexus.sqlite` using Electron/Node's built-in

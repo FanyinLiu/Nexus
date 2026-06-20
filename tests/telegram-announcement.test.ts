@@ -16,6 +16,11 @@ import {
   routeTelegramMessage,
   type TelegramRouteDeps,
 } from '../src/app/controllers/telegramMessageRouter.ts'
+import {
+  routeDiscordMessage,
+  type DiscordRouteDeps,
+} from '../src/app/controllers/discordMessageRouter.ts'
+import type { DiscordIncoming } from '../src/hooks/useDiscordGateway.ts'
 import type { TelegramIncoming } from '../src/hooks/useTelegramGateway.ts'
 import type { TranslationKey } from '../src/types/i18n.ts'
 
@@ -240,7 +245,7 @@ function makeDeps() {
   return { notices, sends, debug, deps }
 }
 
-test('routeTelegramMessage announces and forwards a text message', () => {
+test('routeTelegramMessage announces external text without forwarding it to chat', () => {
   const { notices, sends, debug, deps } = makeDeps()
   const out = routeTelegramMessage(
     makeIncoming(),
@@ -253,13 +258,12 @@ test('routeTelegramMessage announces and forwards a text message', () => {
   assert.equal(notices.length, 1)
   assert.equal(notices[0].speechContent, 'chat.bridge.messaging_announcement_speech|Klein|')
   assert.equal(notices[0].autoHideMs, 10_000)
-  assert.equal(sends.length, 1)
-  assert.equal(sends[0].text, '【Telegram · Klein】please check the release gate before shipping')
-  assert.equal(sends[0].options?.source, 'telegram')
+  assert.equal(sends.length, 0)
   assert.deepEqual(debug.map((d) => d.title), ['Telegram message', 'Telegram announcement'])
+  assert.equal(debug.some((event) => event.detail.includes(message.text)), false)
 })
 
-test('routeTelegramMessage stays silent when announce is off but still forwards to chat', () => {
+test('routeTelegramMessage keeps external contacts out of chat when announce is off', () => {
   const { notices, sends, deps } = makeDeps()
   routeTelegramMessage(
     makeIncoming(),
@@ -269,7 +273,7 @@ test('routeTelegramMessage stays silent when announce is off but still forwards 
   )
 
   assert.equal(notices.length, 0)
-  assert.equal(sends.length, 1)
+  assert.equal(sends.length, 0)
 })
 
 test('routeTelegramMessage announces media generically and does NOT forward it to chat', () => {
@@ -298,4 +302,69 @@ test('routeTelegramMessage promotes an owner chat to an unnamed master prefix', 
   assert.equal(out.isOwner, true)
   assert.equal(sends[0].text, '【Telegram】please check the release gate before shipping')
   assert.ok(debug[0].detail.includes('chat.bridge.owner_suffix'))
+  assert.equal(debug[0].detail.includes(message.text), false)
+})
+
+// ── routeDiscordMessage: external contacts announce-only, owner messages route in ──
+
+function makeDiscordIncoming(overrides: Partial<DiscordIncoming> = {}): DiscordIncoming {
+  return {
+    channelId: 'channel-1',
+    guildId: 'guild-1',
+    guildName: 'Nexus',
+    channelName: 'Product chat',
+    fromUser: 'Ada',
+    fromUserId: 'user-1',
+    text: 'please review this private deployment note',
+    messageId: 'msg-1',
+    timestamp: new Date(0).toISOString(),
+    ...overrides,
+  }
+}
+
+function makeDiscordDeps() {
+  const notices: Array<{ chatContent: string; speechContent?: string; autoHideMs?: number }> = []
+  const sends: Array<{ text?: string; options?: { source?: string } }> = []
+  const debug: Array<{ title: string; detail: string }> = []
+  const deps: DiscordRouteDeps = {
+    appendDebugConsoleEvent: (event) => { debug.push({ title: event.title, detail: event.detail }) },
+    pushCompanionNotice: async (payload) => { notices.push(payload) },
+    sendMessage: async (text, options) => { sends.push({ text, options }); return undefined },
+  }
+  return { notices, sends, debug, deps }
+}
+
+test('routeDiscordMessage announces external text without forwarding it to chat', () => {
+  const incoming = makeDiscordIncoming()
+  const { notices, sends, debug, deps } = makeDiscordDeps()
+  const out = routeDiscordMessage(
+    incoming,
+    { ownerDiscordUserIds: '', discordAnnounceIncomingEnabled: true, discordAnnounceMessagePreview: true },
+    t,
+    deps,
+  )
+
+  assert.equal(out.isOwner, false)
+  assert.equal(notices.length, 1)
+  assert.equal(sends.length, 0)
+  assert.equal(debug.map((event) => event.title).join(','), 'Discord message,Discord announcement')
+  assert.equal(debug.some((event) => event.detail.includes(incoming.text)), false)
+  assert.equal(notices[0].chatContent.includes(incoming.text), false)
+})
+
+test('routeDiscordMessage forwards only owner text to chat', () => {
+  const incoming = makeDiscordIncoming()
+  const { sends, debug, deps } = makeDiscordDeps()
+  const out = routeDiscordMessage(
+    incoming,
+    { ownerDiscordUserIds: 'user-1', discordAnnounceIncomingEnabled: false, discordAnnounceMessagePreview: false },
+    t,
+    deps,
+  )
+
+  assert.equal(out.isOwner, true)
+  assert.equal(sends.length, 1)
+  assert.equal(sends[0].text, '【Discord】please review this private deployment note')
+  assert.equal(sends[0].options?.source, 'discord')
+  assert.equal(debug[0].detail.includes(incoming.text), false)
 })

@@ -167,6 +167,11 @@ auditable.
   notification-to-chat forwarding, persisted chat history, missed-message
   follow-up records, and renderer notification storage keep only metadata or
   strip body/summary content.
+- Telegram/Discord bridge ingress now follows the same companion-first privacy
+  boundary: external-contact messages are local announcements only, while
+  owner-listed remote messages are the only bridge messages forwarded into
+  chat/model input. Debug logging is metadata-only and external Telegram voice
+  notes are not transcribed.
 - Create an inventory of every preload-exposed method and matching
   `ipcMain.handle`.
 - Require trusted sender checks, request validation, response shape decisions,
