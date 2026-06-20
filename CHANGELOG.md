@@ -18,6 +18,10 @@
 - **Stage direction avatar bridge** — known English companion asides such as
   `(eyes brightened)`, `(blush)`, and `(nod)` now drive the existing avatar cue
   pipeline while ordinary notes and Markdown links remain visible content.
+- **Desktop presence visual smoke** — release QA can now run
+  `npm run pet:presence-smoke` to launch the built pet view through Electron,
+  confirm the completed-onboarding idle/breathe presence state, reject
+  onboarding-overlay false positives, and save a nonblank screenshot report.
 
 ## [0.3.5] - 2026-06-19
 

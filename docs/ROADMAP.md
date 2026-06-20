@@ -268,6 +268,10 @@ Goal: the companion's visible state reflects what Nexus is actually doing.
   `(blush)`, and `(nod)` into the existing avatar cue queue while preserving
   ordinary ASCII notes and Markdown links. See
   [Milestone 6 Slice 3 Design](MILESTONE-6-DESKTOP-PRESENCE-STAGE-DIRECTION-BRIDGE-DESIGN-2026-06-20.md).
+- Slice 4 adds an Electron visual smoke gate for the built pet window, checking
+  the completed-onboarding pet surface, idle/breathe state, and a nonblank
+  screenshot artifact. See
+  [Milestone 6 Slice 4 Design](MILESTONE-6-DESKTOP-PRESENCE-VISUAL-SMOKE-DESIGN-2026-06-20.md).
 - Bind chat, voice, setup, tool, and error flows to that contract.
 - Keep Live2D/sprite-heavy rendering lazy and budgeted.
 - Rollback: state mapping is additive and can fall back to current pet behavior.
