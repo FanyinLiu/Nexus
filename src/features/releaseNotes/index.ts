@@ -4,5 +4,6 @@ export {
 } from './releaseSpotlight.ts'
 export type {
   ReleaseSpotlight,
+  ReleaseSpotlightAction,
   ReleaseSpotlightBullet,
 } from './releaseSpotlight.ts'

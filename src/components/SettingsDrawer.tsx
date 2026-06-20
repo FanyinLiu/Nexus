@@ -61,6 +61,7 @@ import {
 import { ConfirmDialog } from './ConfirmDialog.tsx'
 import { useConfirm } from './useConfirm.ts'
 import { PetControlIcon } from './PetControlIcon.tsx'
+import { ReleaseSpotlightActions } from './settingsSections/ReleaseSpotlightActions.tsx'
 import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
 import { buildSettingsSectionMeta } from './settingsDrawerMetadata.ts'
 import { applyConnectionTestRepairDraft } from '../features/models/connectionRepair.ts'
@@ -1044,22 +1045,13 @@ export function SettingsDrawer({
                   </strong>
                   <p>{ti(CURRENT_RELEASE_SPOTLIGHT.summaryKey)}</p>
                 </div>
-                <div className="settings-home-release__actions">
-                  {CURRENT_RELEASE_SPOTLIGHT.actions.map((item, index) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={index === 0 ? 'primary-button' : 'ghost-button'}
-                      onClick={() => handleOpenSettingsSection(item.targetSectionId)}
-                    >
-                      <PetControlIcon
-                        name={item.id === 'review_memory' ? 'thought' : 'sparkles'}
-                        className="settings-home-release__action-icon"
-                      />
-                      <span>{ti(item.labelKey)}</span>
-                    </button>
-                  ))}
-                </div>
+                <ReleaseSpotlightActions
+                  actions={CURRENT_RELEASE_SPOTLIGHT.actions}
+                  className="settings-home-release__actions"
+                  iconClassName="settings-home-release__action-icon"
+                  translate={ti}
+                  onOpenSettingsSection={handleOpenSettingsSection}
+                />
               </section>
 
               <div className="settings-appearance-switch" role="radiogroup" aria-label={ti('settings.appearance.label')}>

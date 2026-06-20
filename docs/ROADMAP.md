@@ -291,6 +291,10 @@ Goal: the companion's visible state reflects what Nexus is actually doing.
   visible-memory and readable-companion-state theme is discoverable before users
   open Console / About. See
   [Milestone 6 Slice 8 Design](MILESTONE-6-DESKTOP-PRESENCE-HOME-SPOTLIGHT-DESIGN-2026-06-20.md).
+- Slice 9 deduplicates the Settings home and About/Help release spotlight
+  actions into one shared component, keeping both entry points aligned as the
+  release candidate evolves. See
+  [Milestone 6 Slice 9 Design](MILESTONE-6-DESKTOP-PRESENCE-SPOTLIGHT-ACTION-COMPONENT-DESIGN-2026-06-20.md).
 - Bind chat, voice, setup, tool, and error flows to that contract.
 - Keep Live2D/sprite-heavy rendering lazy and budgeted.
 - Rollback: state mapping is additive and can fall back to current pet behavior.
