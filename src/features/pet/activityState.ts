@@ -1,0 +1,131 @@
+import type {
+  AssistantRuntimeActivity,
+  CompanionPresencePhase,
+  CompanionPresenceState,
+  PetMood,
+  TranslationKey,
+  VoiceState,
+} from '../../types/index.ts'
+import type { SpritePetAnimationState } from './spriteAtlas.ts'
+
+export type CompanionActivityPhase =
+  | 'idle'
+  | 'thinking'
+  | 'listening'
+  | 'speaking'
+  | 'waiting'
+  | 'error'
+  | 'offline'
+
+export interface CompanionActivityInput {
+  mood: PetMood
+  voiceState?: VoiceState
+  assistantActivity?: AssistantRuntimeActivity
+  chatBusy?: boolean
+  waitingForConfirmation?: boolean
+  hasBlockingError?: boolean
+  isOnline?: boolean
+  activeTaskLabel?: string
+  now?: Date | string | number
+}
+
+export interface CompanionActivityState extends CompanionPresenceState {
+  phase: CompanionActivityPhase
+  isIdle: boolean
+  isThinking: boolean
+  isListening: boolean
+  isSpeaking: boolean
+  isWaiting: boolean
+  isError: boolean
+  isOffline: boolean
+  spriteState: SpritePetAnimationState | null
+  statusKey: TranslationKey
+}
+
+const ACTIVE_ASSISTANT_ACTIVITIES = new Set<AssistantRuntimeActivity>([
+  'thinking',
+  'searching',
+  'summarizing',
+  'scheduling',
+])
+
+const STATUS_KEYS: Record<CompanionActivityPhase, TranslationKey> = {
+  idle: 'pet.status.ready',
+  thinking: 'pet.status.thinking',
+  listening: 'voice_state.listening',
+  speaking: 'voice_state.speaking',
+  waiting: 'pet.status.waiting_confirmation',
+  error: 'pet.status.error',
+  offline: 'pet.status.offline',
+}
+
+function toUpdatedAt(value: CompanionActivityInput['now']): string {
+  if (value instanceof Date) return value.toISOString()
+  if (typeof value === 'number' || typeof value === 'string') {
+    const date = new Date(value)
+    if (Number.isFinite(date.getTime())) return date.toISOString()
+  }
+  return new Date().toISOString()
+}
+
+function phaseToSpriteState(phase: CompanionActivityPhase): SpritePetAnimationState | null {
+  switch (phase) {
+    case 'thinking':
+      return 'running'
+    case 'listening':
+    case 'waiting':
+    case 'offline':
+      return 'waiting'
+    case 'speaking':
+      return 'review'
+    case 'error':
+      return 'failed'
+    default:
+      return null
+  }
+}
+
+function resolvePhase(input: CompanionActivityInput): CompanionActivityPhase {
+  if (input.isOnline === false) return 'offline'
+  if (input.hasBlockingError) return 'error'
+  if (input.waitingForConfirmation) return 'waiting'
+  if (input.voiceState === 'speaking' || input.assistantActivity === 'speaking') return 'speaking'
+  if (input.voiceState === 'listening' || input.assistantActivity === 'listening') return 'listening'
+  if (
+    input.voiceState === 'processing'
+    || input.chatBusy
+    || (input.assistantActivity ? ACTIVE_ASSISTANT_ACTIVITIES.has(input.assistantActivity) : false)
+  ) {
+    return 'thinking'
+  }
+  return 'idle'
+}
+
+export function resolveCompanionActivityState(input: CompanionActivityInput): CompanionActivityState {
+  const phase = resolvePhase(input)
+  const baseState: CompanionPresenceState = {
+    phase: phase as CompanionPresencePhase,
+    mood: input.mood,
+    activeTaskLabel: input.activeTaskLabel?.trim() || undefined,
+    reason: phase,
+    updatedAt: toUpdatedAt(input.now),
+  }
+
+  return {
+    ...baseState,
+    phase,
+    isIdle: phase === 'idle',
+    isThinking: phase === 'thinking',
+    isListening: phase === 'listening',
+    isSpeaking: phase === 'speaking',
+    isWaiting: phase === 'waiting',
+    isError: phase === 'error',
+    isOffline: phase === 'offline',
+    spriteState: phaseToSpriteState(phase),
+    statusKey: STATUS_KEYS[phase],
+  }
+}
+
+export function getCompanionActivityStatusKey(phase: CompanionActivityPhase): TranslationKey {
+  return STATUS_KEYS[phase]
+}

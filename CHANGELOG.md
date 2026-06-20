@@ -6,7 +6,11 @@
 
 ## [Unreleased]
 
-No user-facing changes yet.
+### Added
+- **Desktop presence state contract** — the pet window now resolves idle,
+  thinking, listening, speaking, waiting, error, and offline through one
+  tested companion activity state before driving the status dot and avatar
+  render inputs.
 
 ## [0.3.5] - 2026-06-19
 

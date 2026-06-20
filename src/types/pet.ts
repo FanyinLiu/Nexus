@@ -42,6 +42,7 @@ export type PetMood =
 export type PetTouchZone = 'head' | 'face' | 'body'
 
 export type CompanionPresencePhase =
+  | 'idle'
   | 'online'
   | 'thinking'
   | 'speaking'
@@ -49,6 +50,7 @@ export type CompanionPresencePhase =
   | 'resting'
   | 'waiting'
   | 'error'
+  | 'offline'
 
 export interface CompanionPresenceState {
   phase: CompanionPresencePhase
