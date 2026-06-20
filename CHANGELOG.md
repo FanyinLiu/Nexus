@@ -32,6 +32,9 @@
 - **Release spotlight actions** — the v0.3.5 spotlight now includes local
   buttons to open Memory and Companion Profile, so users can inspect the
   memorable upgrades without triggering chat, voice, network, or automation.
+- **Settings home release spotlight** — the same v0.3.5 theme now appears on
+  Settings home, making visible memory and readable companion states discoverable
+  before users open the deeper About / Help panel.
 
 ## [0.3.5] - 2026-06-19
 
