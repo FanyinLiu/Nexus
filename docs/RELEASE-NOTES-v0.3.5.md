@@ -128,7 +128,9 @@ lives in renderer `localStorage` by default, and nothing is deleted.
   previous active-window and clipboard values instead of retaining earlier
   desktop text in renderer refs.
 - Kept renderer access to plaintext secrets blocked through the safeStorage
-  vault/ref pattern.
+  vault/ref pattern, and added `npm run vault-security:audit` so vault
+  retrieval paths must keep returning opaque `nexus-vault-ref:` tokens instead
+  of plaintext API keys or bot tokens.
 
 ## Product boundary
 

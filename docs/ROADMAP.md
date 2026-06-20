@@ -166,7 +166,9 @@ auditable.
   secret-safe permission contract: trusted renderer sender, strict slot/entry
   validation, opaque per-sender vault refs instead of plaintext retrieval
   returns, rate limits for enumeration-prone reads, and no slot names, secret
-  values, ref tokens, or error text in audit records.
+  values, ref tokens, or error text in audit records. `npm run
+  vault-security:audit` now guards the contract so renderer-facing vault
+  retrieval cannot regress to plaintext secret returns.
 - The remaining renderer-payload IPC backlog is now schema-bound:
   integrations inspection, KWS start/status, VAD start, model download, and TTS
   streaming lifecycle requests all validate request shape before service work.

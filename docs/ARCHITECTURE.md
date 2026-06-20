@@ -138,6 +138,11 @@ Current baseline:
   if the autonomy context scheduler retains previous active-window or clipboard
   text instead of comparison fingerprints. It never reads the live clipboard,
   screenshots, active-window text, localStorage values, or secrets.
+- `npm run vault-security:audit` is the source-only secret-boundary guard. It
+  fails if vault retrieval IPC stops issuing opaque `nexus-vault-ref:` tokens,
+  if refs stop being scoped per sender, or if known main-process outbound
+  request handlers stop resolving vault refs before using API keys. It never
+  reads safeStorage, keychain values, localStorage, or secret material.
 - `npm run verify:pr` is the day-to-day merge gate. `npm run verify:release`
   reuses it and then adds the SQLite smoke check for release confidence.
 - The `file:save-text` and `file:open-text` IPC handlers now use explicit
@@ -189,7 +194,9 @@ Current baseline:
   metadata-only request/result audit entries for availability, store, retrieve,
   delete, list, store-many, and retrieve-many operations. Audit records include
   counts, lengths, booleans, and result kinds, not plaintext secrets, slot
-  names, vault ref tokens, or error text.
+  names, vault ref tokens, or error text. `npm run vault-security:audit` guards
+  this contract so renderer-facing vault retrieval cannot regress to plaintext
+  returns.
 - The VTube Studio bridge now keeps WebSocket authentication, token storage,
   parameter injection, and hotkey triggering in the main process. Renderer code
   can connect/disconnect, send bounded companion state input, subscribe to

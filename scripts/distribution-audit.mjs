@@ -12,6 +12,7 @@ import { buildArchitectureBoundaryReport } from './architecture-boundary-audit.m
 import { buildSourceSizeReport } from './source-size-audit.mjs'
 import { buildMessagePrivacyReport } from './message-privacy-audit.mjs'
 import { buildDesktopContextPrivacyReport } from './desktop-context-privacy-audit.mjs'
+import { buildVaultSecurityReport } from './vault-security-audit.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -216,6 +217,14 @@ check('desktop context privacy boundary is guarded', () => {
   assert(report.privacy.readsClipboard === false, 'desktop context privacy audit must not read clipboard content')
   assert(report.privacy.readsScreenshots === false, 'desktop context privacy audit must not read screenshots')
   assert(report.privacy.readsActiveWindow === false, 'desktop context privacy audit must not read active-window content')
+})
+
+check('vault secret boundary is guarded', () => {
+  const report = buildVaultSecurityReport(ROOT)
+  assert(report.summary.errors === 0, `vault security audit has ${report.summary.errors} error(s); run npm run vault-security:audit`)
+  assert(report.privacy.staticSourceOnly === true, 'vault security audit must stay source-only')
+  assert(report.privacy.readsSecrets === false, 'vault security audit must not read secret values')
+  assert(report.privacy.rendererReceivesPlaintextSecrets === false, 'renderer must not receive plaintext vault secrets')
 })
 
 check('source desktop shortcut launches without a terminal window', () => {
