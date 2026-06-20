@@ -109,6 +109,10 @@ lives in renderer `localStorage` by default, and nothing is deleted.
   handling so third-party message bodies remain local preview data, not
   automatic model input, persisted chat history, follow-up hints, or renderer
   localStorage payloads.
+- Tightened Telegram/Discord bridge ingress so external contacts cannot use an
+  allowed bridge channel to push their message text into Nexus' model context;
+  only owner-listed remote messages are forwarded, bridge debug logs stay
+  metadata-only, and external Telegram voice notes are not transcribed.
 - Kept renderer access to plaintext secrets blocked through the safeStorage
   vault/ref pattern.
 

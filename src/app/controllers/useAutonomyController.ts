@@ -238,7 +238,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
         debugConsole.appendDebugConsoleEvent({
           source: 'autonomy',
           title: 'Desktop message dropped',
-          detail: `${reason}: ${text.slice(0, 120)}`,
+          detail: `${reason}: textLength=${text.length}`,
         })
       },
     })
