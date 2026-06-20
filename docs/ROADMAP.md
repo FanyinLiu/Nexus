@@ -112,7 +112,8 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
 - Continue the engineering tightening by splitting the settings drawer and
   local-data store hot spots, moving VTube Studio token persistence and
   WebSocket authentication behind a main-process bridge, increasing IPC schema
-  coverage, and adding `npm run performance:baseline` to the PR gate.
+  coverage, splitting IPC payload schemas behind a stable public export, and
+  adding `npm run performance:baseline` to the PR gate.
 - Rollback: signing config changes must be isolated in packaging config and
   release docs.
 

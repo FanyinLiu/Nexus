@@ -157,8 +157,9 @@ _No changes yet._
   Studio WebSocket/authentication now lives behind a main-process bridge with
   a fixed vault slot and one-way legacy localStorage migration, the renderer no
   longer exposes VTS token read/write IPC, high-risk VTS migration IPC is
-  schema-validated, and `verify:pr` records a production bundle performance
-  baseline.
+  schema-validated, IPC payload schemas are split into domain modules behind
+  the same public `payloadSchemas.js` export, and `verify:pr` records a
+  production bundle performance baseline.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned

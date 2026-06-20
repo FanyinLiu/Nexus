@@ -114,7 +114,9 @@ Current baseline:
 - `npm run source-size:audit` is the source-size guard. It fails when a normal
   source file grows past the large-file budget, while keeping explicit temporary
   allowances for generated i18n catalogs and the current main-process local data
-  service.
+  service. IPC payload schemas are split by domain behind
+  `electron/ipc/payloadSchemas.js`, so existing handler imports stay stable
+  while schema definitions no longer collect in one large file.
 - `npm run performance:baseline` reads the production `dist/assets` output and
   static heavy-module audit result after `npm run build`. It records bundle
   size budgets for total assets, JavaScript, CSS, WASM, largest JS chunk, and

@@ -68,13 +68,22 @@ test('source-only engineering audits are clean at the current baseline', () => {
 
 test('IPC schema primitives are split without changing public validators', () => {
   assert.equal(existsSync(join(ROOT, 'electron/ipc/payloadSchemaPrimitives.js')), true)
+  assert.equal(existsSync(join(ROOT, 'electron/ipc/assistantPayloadSchemas.js')), true)
+  assert.equal(existsSync(join(ROOT, 'electron/ipc/voicePayloadSchemas.js')), true)
+  assert.equal(existsSync(join(ROOT, 'electron/ipc/localDataPayloadSchemas.js')), true)
 
   const payloadSchemas = readWorkspaceFile('electron/ipc/payloadSchemas.js')
   const payloadPrimitives = readWorkspaceFile('electron/ipc/payloadSchemaPrimitives.js')
+  const assistantPayloadSchemas = readWorkspaceFile('electron/ipc/assistantPayloadSchemas.js')
+  const voicePayloadSchemas = readWorkspaceFile('electron/ipc/voicePayloadSchemas.js')
+  const localDataPayloadSchemas = readWorkspaceFile('electron/ipc/localDataPayloadSchemas.js')
 
-  assert.match(payloadSchemas, /from '\.\/payloadSchemaPrimitives\.js'/)
-  assert.match(payloadSchemas, /export function validateChatCompletionPayload/)
-  assert.match(payloadSchemas, /export function validateVadStartPayload/)
+  assert.match(payloadSchemas, /from '\.\/assistantPayloadSchemas\.js'/)
+  assert.match(payloadSchemas, /from '\.\/voicePayloadSchemas\.js'/)
+  assert.match(payloadSchemas, /from '\.\/localDataPayloadSchemas\.js'/)
+  assert.match(assistantPayloadSchemas, /export function validateChatCompletionPayload/)
+  assert.match(voicePayloadSchemas, /export function validateVadStartPayload/)
+  assert.match(localDataPayloadSchemas, /export function validateLocalDataChatMigrationApplyPayload/)
   assert.match(payloadPrimitives, /export const SHORT_TEXT_MAX/)
   assert.match(payloadPrimitives, /export const SAFE_SKILL_ID_PATTERN/)
 })
