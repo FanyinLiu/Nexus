@@ -313,6 +313,7 @@ panelScene/
 pet/
 plan/
 proactive/
+releaseNotes/
 reminders/
 safety/
 setup/
@@ -508,6 +509,9 @@ hooks/useReminderScheduler
   bridging, and the `Live2DCanvas` component.
 - `features/character/` owns UI/voice/presence preset data that themes the app
   toward the companion-style presentation layer.
+- `features/releaseNotes/` owns small release-communication contracts used by the
+  app shell, such as the current About/Help release spotlight. It must stay
+  content-only: no updater logic, IPC, migrations, or background checks.
 - `scripts/pet-presence-visual-smoke.cjs` is the Electron QA gate for the built
   pet view: it uses a temporary completed-onboarding profile, checks
   idle/breathe presence state, rejects onboarding overlays, and writes ignored
