@@ -152,6 +152,9 @@ lives in renderer `localStorage` by default, and nothing is deleted.
   redaction boundary before Settings/status surfaces or logs can expose
   Notification Center database paths, local user paths, or sensitive system
   error details.
+- Local notification bridge support logs now keep webhook/RSS failures
+  metadata-only, avoiding raw channel names, ids, feed URLs, bearer tokens, and
+  URL-safety host details.
 
 ## Product boundary
 

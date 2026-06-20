@@ -197,7 +197,9 @@ _No changes yet._
   paths. macOS notification watcher status and persistence errors now use the
   same boundary before `notification:watcher-status` or logs can expose
   Notification Center database paths, local user paths, or sensitive system
-  error details.
+  error details. Local notification bridge support logs now keep webhook/RSS
+  failures metadata-only, avoiding raw channel names, ids, feed URLs, bearer
+  tokens, and URL-safety host details.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned
