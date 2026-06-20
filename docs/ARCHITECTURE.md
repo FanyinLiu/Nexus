@@ -143,6 +143,11 @@ Current baseline:
   if refs stop being scoped per sender, or if known main-process outbound
   request handlers stop resolving vault refs before using API keys. It never
   reads safeStorage, keychain values, localStorage, or secret material.
+- `npm run error-redaction:audit` is the source-only network-error privacy
+  guard. It fails if main-process chat/audio network handlers return or log raw
+  caught error text without the shared secret/path redactor. It never performs
+  network requests or reads user data, localStorage, keychain values, or secret
+  material.
 - `npm run verify:pr` is the day-to-day merge gate. `npm run verify:release`
   reuses it and then adds the SQLite smoke check for release confidence.
 - The `file:save-text` and `file:open-text` IPC handlers now use explicit
@@ -197,6 +202,11 @@ Current baseline:
   names, vault ref tokens, or error text. `npm run vault-security:audit` guards
   this contract so renderer-facing vault retrieval cannot regress to plaintext
   returns.
+- Main-process chat/audio network errors now pass through
+  `redactSensitiveErrorText` before they are logged, sent in stream terminal
+  frames, or returned to renderer-facing failure messages. The redactor strips
+  common API-key, bearer-token, JWT, URL-userinfo, secret query parameter, and
+  user-home path shapes while preserving enough context for actionable repair.
 - The VTube Studio bridge now keeps WebSocket authentication, token storage,
   parameter injection, and hotkey triggering in the main process. Renderer code
   can connect/disconnect, send bounded companion state input, subscribe to

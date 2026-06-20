@@ -13,6 +13,7 @@ import { buildSourceSizeReport } from './source-size-audit.mjs'
 import { buildMessagePrivacyReport } from './message-privacy-audit.mjs'
 import { buildDesktopContextPrivacyReport } from './desktop-context-privacy-audit.mjs'
 import { buildVaultSecurityReport } from './vault-security-audit.mjs'
+import { buildErrorRedactionReport } from './error-redaction-audit.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -225,6 +226,13 @@ check('vault secret boundary is guarded', () => {
   assert(report.privacy.staticSourceOnly === true, 'vault security audit must stay source-only')
   assert(report.privacy.readsSecrets === false, 'vault security audit must not read secret values')
   assert(report.privacy.rendererReceivesPlaintextSecrets === false, 'renderer must not receive plaintext vault secrets')
+})
+
+check('network error redaction boundary is guarded', () => {
+  const report = buildErrorRedactionReport(ROOT)
+  assert(report.summary.errors === 0, `error redaction audit has ${report.summary.errors} error(s); run npm run error-redaction:audit`)
+  assert(report.privacy.staticSourceOnly === true, 'error redaction audit must stay source-only')
+  assert(report.privacy.readsSecrets === false, 'error redaction audit must not read secret values')
 })
 
 check('source desktop shortcut launches without a terminal window', () => {

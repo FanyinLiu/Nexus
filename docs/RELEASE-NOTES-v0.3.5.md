@@ -131,6 +131,10 @@ lives in renderer `localStorage` by default, and nothing is deleted.
   vault/ref pattern, and added `npm run vault-security:audit` so vault
   retrieval paths must keep returning opaque `nexus-vault-ref:` tokens instead
   of plaintext API keys or bot tokens.
+- Main-process chat/audio network failures now redact common API-key, bearer
+  token, JWT, URL credential, secret parameter, and user-home path shapes before
+  logging or returning provider error text; `npm run error-redaction:audit`
+  keeps that boundary in the PR/release gate.
 
 ## Product boundary
 

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { buildCompanionBoundaryReport } from '../scripts/companion-boundary-audit.mjs'
 import { buildArchitectureBoundaryReport } from '../scripts/architecture-boundary-audit.mjs'
 import { buildDesktopContextPrivacyReport } from '../scripts/desktop-context-privacy-audit.mjs'
+import { buildErrorRedactionReport } from '../scripts/error-redaction-audit.mjs'
 import { buildHeavyModuleAuditReport } from '../scripts/heavy-module-audit.mjs'
 import { buildIpcContractReport } from '../scripts/ipc-contract-audit.mjs'
 import { buildMessagePrivacyReport } from '../scripts/message-privacy-audit.mjs'
@@ -34,6 +35,7 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
     'message-privacy:audit',
     'desktop-context-privacy:audit',
     'vault-security:audit',
+    'error-redaction:audit',
     'verify:pr',
     'verify:release',
   ]) {
@@ -49,6 +51,7 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
   assert.match(pkg.scripts['verify:pr'], /npm run message-privacy:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run desktop-context-privacy:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run vault-security:audit/)
+  assert.match(pkg.scripts['verify:pr'], /npm run error-redaction:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run ipc:audit/)
   assert.match(pkg.scripts['verify:release'], /npm run verify:pr/)
   assert.match(pkg.scripts['verify:release'], /npm run sqlite:smoke/)
@@ -64,6 +67,7 @@ test('source-only engineering audits are clean at the current baseline', () => {
   const messagePrivacyReport = buildMessagePrivacyReport(ROOT)
   const desktopContextPrivacyReport = buildDesktopContextPrivacyReport(ROOT)
   const vaultSecurityReport = buildVaultSecurityReport(ROOT)
+  const errorRedactionReport = buildErrorRedactionReport(ROOT)
 
   assert.equal(ipcReport.summary.errors, 0)
   assert.equal(ipcReport.summary.warnings, 0)
@@ -85,6 +89,8 @@ test('source-only engineering audits are clean at the current baseline', () => {
   assert.equal(vaultSecurityReport.summary.errors, 0)
   assert.equal(vaultSecurityReport.privacy.readsSecrets, false)
   assert.equal(vaultSecurityReport.privacy.rendererReceivesPlaintextSecrets, false)
+  assert.equal(errorRedactionReport.summary.errors, 0)
+  assert.equal(errorRedactionReport.privacy.readsSecrets, false)
 })
 
 test('IPC schema primitives are split without changing public validators', () => {

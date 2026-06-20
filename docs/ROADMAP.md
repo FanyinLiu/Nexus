@@ -169,6 +169,10 @@ auditable.
   values, ref tokens, or error text in audit records. `npm run
   vault-security:audit` now guards the contract so renderer-facing vault
   retrieval cannot regress to plaintext secret returns.
+- Main-process chat/audio network failure paths now redact API-key, bearer,
+  JWT, URL-userinfo, secret query parameter, and user-home path shapes before
+  logging or returning provider error text. `npm run error-redaction:audit`
+  guards the redaction boundary.
 - The remaining renderer-payload IPC backlog is now schema-bound:
   integrations inspection, KWS start/status, VAD start, model download, and TTS
   streaming lifecycle requests all validate request shape before service work.

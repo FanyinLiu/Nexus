@@ -180,7 +180,10 @@ _No changes yet._
   active-window and clipboard values instead of retaining earlier desktop text
   in renderer refs. Added `npm run vault-security:audit` so renderer-facing
   vault retrieval paths must keep returning opaque `nexus-vault-ref:` tokens
-  instead of plaintext API keys or bot tokens.
+  instead of plaintext API keys or bot tokens. Main-process chat/audio network
+  failures now redact common API-key, bearer-token, JWT, URL-credential, secret
+  parameter, and user-home path shapes before logging or returning provider
+  error text, guarded by `npm run error-redaction:audit`.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned
