@@ -26,6 +26,7 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
     'heavy:audit',
     'architecture:audit',
     'source-size:audit',
+    'performance:baseline',
     'companion-boundary:audit',
     'verify:pr',
     'verify:release',
@@ -37,6 +38,7 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
   assert.match(pkg.scripts['verify:pr'], /npm run heavy:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run architecture:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run source-size:audit/)
+  assert.match(pkg.scripts['verify:pr'], /npm run performance:baseline/)
   assert.match(pkg.scripts['verify:pr'], /npm run companion-boundary:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run ipc:audit/)
   assert.match(pkg.scripts['verify:release'], /npm run verify:pr/)

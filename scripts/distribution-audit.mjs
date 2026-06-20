@@ -63,6 +63,7 @@ check('developer npm scripts cover run, package and release verification', () =>
     'heavy:audit',
     'architecture:audit',
     'source-size:audit',
+    'performance:baseline',
     'companion-boundary:audit',
     'sqlite:smoke',
     'sqlite:smoke:electron',

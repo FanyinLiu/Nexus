@@ -10,6 +10,7 @@ import * as serviceIpc from './ipc/serviceIpc.js'
 import * as telegramIpc from './ipc/telegramIpc.js'
 import * as discordIpc from './ipc/discordIpc.js'
 import * as vaultIpc from './ipc/vaultIpc.js'
+import * as vtsAuthTokenIpc from './ipc/vtsAuthTokenIpc.js'
 import * as personaIpc from './ipc/personaIpc.js'
 import * as updaterIpc from './ipc/updaterIpc.js'
 import * as sherpaIpc from './ipc/sherpaIpc.js'
@@ -78,6 +79,7 @@ export function registerIpc() {
   telegramIpc.register()
   discordIpc.register()
   vaultIpc.register()
+  vtsAuthTokenIpc.register()
   personaIpc.register()
   updaterIpc.register()
   sherpaIpc.register()

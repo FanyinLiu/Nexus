@@ -200,6 +200,13 @@ const externalLinkRequestSchema = {
   },
 }
 
+const vtsAuthTokenStoreSchema = {
+  type: 'object',
+  fields: {
+    token: { type: 'string', maxLength: SECRET_TEXT_MAX },
+  },
+}
+
 const integrationInspectSchema = {
   type: 'object',
   fields: {
@@ -974,6 +981,10 @@ export function validateDiscordSendVoicePayload(payload) {
 
 export function validateExternalActionPolicySyncPayload(payload) {
   return validateIpcPayload('external-action-policy:sync', payload, externalActionPolicySyncSchema)
+}
+
+export function validateVtsAuthTokenStorePayload(payload) {
+  return validateIpcPayload('vts-auth-token:store', payload, vtsAuthTokenStoreSchema)
 }
 
 export function validateLocalDataOnboardingMirrorPayload(payload) {

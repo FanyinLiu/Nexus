@@ -324,4 +324,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   vaultListSlots: () => ipcRenderer.invoke('vault:list-slots'),
   vaultStoreMany: (entries) => ipcRenderer.invoke('vault:store-many', entries),
   vaultRetrieveMany: (slots) => ipcRenderer.invoke('vault:retrieve-many', slots),
+  vtsAuthTokenGet: () => ipcRenderer.invoke('vts-auth-token:get'),
+  vtsAuthTokenStore: (token) => ipcRenderer.invoke('vts-auth-token:store', { token }),
+  vtsAuthTokenDelete: () => ipcRenderer.invoke('vts-auth-token:delete'),
 })

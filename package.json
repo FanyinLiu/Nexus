@@ -29,6 +29,7 @@
     "heavy:audit": "node scripts/heavy-module-audit.mjs",
     "architecture:audit": "node scripts/architecture-boundary-audit.mjs",
     "source-size:audit": "node scripts/source-size-audit.mjs",
+    "performance:baseline": "node scripts/performance-baseline.mjs",
     "companion-boundary:audit": "node scripts/companion-boundary-audit.mjs",
     "sqlite:smoke": "node scripts/sqlite-smoke.mjs",
     "sqlite:smoke:electron": "electron scripts/sqlite-electron-smoke.cjs",
@@ -68,7 +69,7 @@
     "package:mac": "npm run build && electron-builder --mac",
     "prepackage:linux": "node scripts/download-models.mjs --skip-asr",
     "package:linux": "npm run build && electron-builder --linux",
-    "verify:pr": "tsc -b --force && npm run lint && npm test && npm run build && npm run storage:audit && npm run heavy:audit && npm run architecture:audit && npm run source-size:audit && npm run companion-boundary:audit && npm run ipc:audit && npm run distribution:audit",
+    "verify:pr": "tsc -b --force && npm run lint && npm test && npm run build && npm run storage:audit && npm run heavy:audit && npm run architecture:audit && npm run source-size:audit && npm run performance:baseline && npm run companion-boundary:audit && npm run ipc:audit && npm run distribution:audit",
     "verify:release": "npm run verify:pr && npm run sqlite:smoke",
     "prerelease-check": "node scripts/prerelease-check.mjs"
   },

@@ -130,7 +130,7 @@ function detectHandlerValidation(handlerSource) {
 }
 
 function classifyRisk(channel) {
-  if (/^vault:/.test(channel)) {
+  if (/^vault:|^vts-auth-token:/.test(channel)) {
     return { level: 'high', domain: 'secret-vault' }
   }
   if (/^desktop-context:/.test(channel)) {
