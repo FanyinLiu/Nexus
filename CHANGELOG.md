@@ -15,6 +15,9 @@
   states into small, shared Live2D/Sprite motion tokens for breathing, thinking,
   listening, speaking, waiting, error, and offline presence without adding new
   runtime dependencies or background work.
+- **Stage direction avatar bridge** — known English companion asides such as
+  `(eyes brightened)`, `(blush)`, and `(nod)` now drive the existing avatar cue
+  pipeline while ordinary notes and Markdown links remain visible content.
 
 ## [0.3.5] - 2026-06-19
 
