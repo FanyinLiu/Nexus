@@ -295,6 +295,10 @@ Goal: the companion's visible state reflects what Nexus is actually doing.
   actions into one shared component, keeping both entry points aligned as the
   release candidate evolves. See
   [Milestone 6 Slice 9 Design](MILESTONE-6-DESKTOP-PRESENCE-SPOTLIGHT-ACTION-COMPONENT-DESIGN-2026-06-20.md).
+- Slice 10 aligns the root README with the v0.3.5 release notes and adds a
+  focused guard so the user-facing release theme remains visible memory plus
+  readable desktop companion states. See
+  [Milestone 6 Slice 10 Design](MILESTONE-6-DESKTOP-PRESENCE-README-THEME-GUARD-DESIGN-2026-06-20.md).
 - Bind chat, voice, setup, tool, and error flows to that contract.
 - Keep Live2D/sprite-heavy rendering lazy and budgeted.
 - Rollback: state mapping is additive and can fall back to current pet behavior.

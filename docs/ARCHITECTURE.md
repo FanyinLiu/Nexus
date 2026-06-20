@@ -512,6 +512,9 @@ hooks/useReminderScheduler
 - `features/releaseNotes/` owns small release-communication contracts used by the
   app shell, such as the current About/Help release spotlight. It must stay
   content-only: no updater logic, IPC, migrations, or background checks.
+- `tests/release-spotlight.test.ts` guards the current release spotlight and the
+  human-facing v0.3.5 README/release-note theme so visible memory and readable
+  companion presence do not drift apart before release.
 - `scripts/pet-presence-visual-smoke.cjs` is the Electron QA gate for the built
   pet view: it uses a temporary completed-onboarding profile, checks
   idle/breathe presence state, rejects onboarding overlays, and writes ignored
