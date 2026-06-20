@@ -384,37 +384,37 @@ Avoid:
 
 ## Public Entry Points
 
-The repo now has stable barrels for the layers we expect other modules to touch:
+Current aggregate barrels are intentionally limited to the layers that actually
+provide one:
 
 ```text
-src/index.ts
-src/app/index.ts
-src/components/index.ts
-src/features/index.ts
-src/hooks/index.ts
 src/i18n/index.ts
 src/lib/index.ts
 src/types/index.ts
 ```
 
-Feature-specific public surfaces also exist, for example:
+There is currently no aggregate `src/index.ts`, `src/app/index.ts`,
+`src/components/index.ts`, `src/features/index.ts`, or `src/hooks/index.ts`.
+Do not document or import those paths until the files exist and the ownership
+boundary is deliberate.
+
+Feature-specific public surfaces are the preferred feature entry points, for
+example:
 
 ```text
-src/features/voice/index.ts
-src/features/models/index.ts
-src/features/tasks/index.ts
-src/features/tools/index.ts
+src/features/chat/index.ts
+src/features/character/index.ts
 src/features/memory/index.ts
+src/features/models/index.ts
 src/features/pet/index.ts
-src/features/onboarding/index.ts
+src/features/releaseNotes/index.ts
 src/features/themes/index.ts
+src/features/tools/index.ts
+src/features/voice/index.ts
 ```
 
 The app shell should prefer these entry points over imports like
 `../../features/voice/sessionMachine` unless the symbol is explicitly private.
-There is currently no `src/features/index.ts` aggregate barrel; feature modules
-should use their own `src/features/<feature>/index.ts` public surface until a
-real aggregate is added intentionally.
 
 ## Core Runtime Flows
 

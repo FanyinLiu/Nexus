@@ -140,6 +140,11 @@ _No changes yet._
   `PetView` and Companion Profile consume the same resolver, memory provenance
   stays separate from avatar state, and release spotlight actions remain local
   Settings navigation rather than task execution.
+- **Project alignment calibration** — added a release-candidate guard that keeps
+  the package version, in-app spotlight version, release notes, changelog,
+  release handoff, and documented architecture entry points synchronized before
+  merge. The v0.3.5 handoff evidence is also refreshed past the stale
+  `48e6b78` baseline.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned
