@@ -48,6 +48,15 @@ export function buildNotificationMessageChatForwardText(
   })
 }
 
+export function buildNotificationReplyDraftText(
+  message: NotificationMessage,
+  t: Translate,
+): string {
+  return t('panel.notification.draft_reply', {
+    source: getNotificationSourceLabel(message),
+  })
+}
+
 export function buildNotificationHistorySafeNoticeContent(
   message: NotificationMessage,
   t: Translate,

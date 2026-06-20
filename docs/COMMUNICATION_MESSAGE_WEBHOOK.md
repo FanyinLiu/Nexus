@@ -184,3 +184,5 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 - For Chinese desktop apps, the practical path is a small per-app adapter that observes system notifications,
   automation events, or exported message events, then calls this webhook contract.
 - Keep message text out of speech by leaving Read webhook message previews aloud disabled.
+- Nexus may show enabled message previews locally, but reply draft buttons must
+  not copy third-party message text into the chat composer or model context.

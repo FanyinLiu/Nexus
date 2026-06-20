@@ -162,13 +162,15 @@ _No changes yet._
   bundle performance baseline, and `npm run message-privacy:audit` now blocks
   desktop notification/message body regressions that would send third-party
   message text into chat/model forwarding, chat history, missed-message
-  follow-ups, or renderer localStorage persistence. The same guard now covers
-  Telegram/Discord bridge ingress: external-contact messages are announce-only,
-  only owner-listed remote messages enter the model, debug events are
-  metadata-only, and external Telegram voice notes are not transcribed. Local
-  notification webhook info no longer returns the bearer token or full
-  `Authorization` header to the renderer; Settings shows only the token file
-  placeholder while scripts continue reading the 0600 user-data token file.
+  follow-ups, reply draft composer text, or renderer localStorage persistence.
+  The same guard now covers Telegram/Discord bridge ingress: external-contact
+  messages are announce-only, only owner-listed remote messages enter the
+  model, debug events are metadata-only, and external Telegram voice notes are
+  not transcribed. Local notification webhook info no longer returns the bearer
+  token or full `Authorization` header to the renderer; Settings shows only the
+  token file placeholder while scripts continue reading the 0600 user-data token
+  file. Notification reply drafts now seed only the source label, not the
+  third-party message preview text.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned

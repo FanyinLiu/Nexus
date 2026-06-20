@@ -116,7 +116,8 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
   adding `npm run performance:baseline` to the PR gate.
 - Add `npm run message-privacy:audit` to the same PR/release guard so desktop
   notification/message bodies cannot regress into model forwarding, persisted
-  chat history, missed-message follow-up hints, or renderer localStorage writes.
+  chat history, missed-message follow-up hints, reply draft composer text, or
+  renderer localStorage writes.
 - Rollback: signing config changes must be isolated in packaging config and
   release docs.
 
@@ -165,8 +166,8 @@ auditable.
 - Desktop notification/message awareness now follows a local-preview boundary:
   the companion may show or speak a user-enabled preview locally, but automatic
   notification-to-chat forwarding, persisted chat history, missed-message
-  follow-up records, and renderer notification storage keep only metadata or
-  strip body/summary content.
+  follow-up records, reply draft composer text, and renderer notification
+  storage keep only metadata or strip body/summary content.
 - Telegram/Discord bridge ingress now follows the same companion-first privacy
   boundary: external-contact messages are local announcements only, while
   owner-listed remote messages are the only bridge messages forwarded into
