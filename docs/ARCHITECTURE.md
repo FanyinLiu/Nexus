@@ -508,6 +508,10 @@ hooks/useReminderScheduler
   bridging, and the `Live2DCanvas` component.
 - `features/character/` owns UI/voice/presence preset data that themes the app
   toward the companion-style presentation layer.
+- `scripts/pet-presence-visual-smoke.cjs` is the Electron QA gate for the built
+  pet view: it uses a temporary completed-onboarding profile, checks
+  idle/breathe presence state, rejects onboarding overlays, and writes ignored
+  screenshot/report artifacts under `output/presence-smoke/`.
 
 ### Themes and i18n
 
