@@ -45,16 +45,39 @@ import {
   getSystemMediaSessionSnapshot,
 } from '../mediaSessionRuntime.js'
 import { inspectIntegrationRuntime } from '../integrationRuntime.js'
+import { audit } from '../services/auditLog.js'
+import {
+  summarizeDesktopContextRequest,
+  summarizeDesktopContextSnapshot,
+} from './desktopContextAudit.js'
+import {
+  summarizeExternalLinkRequest,
+  summarizeExternalLinkResult,
+} from './externalLinkAudit.js'
+import {
+  petModelActionNeedsConfirmation,
+  summarizePetModelRequest,
+  summarizePetModelResult,
+} from './petModelAudit.js'
 import { requireTrustedSender } from './validate.js'
 import {
   validateDesktopContextRequestPayload,
   validateExternalLinkToolPayload,
+  validateIntegrationInspectPayload,
   validateMediaSessionControlPayload,
   validateOpenPanelPayload,
   validatePanelWindowStatePayload,
+  validatePetModelCreatorKitCreatePayload,
+  validatePetModelCreatorKitInstallPayload,
+  validatePetModelCreatorKitOpenPathPayload,
+  validatePetModelCreatorKitOptionalPathPayload,
+  validatePetModelGalleryImportPayload,
+  validatePetModelGalleryListPayload,
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
+  validateTextFileOpenPayload,
+  validateTextFileSavePayload,
   validateWeatherToolPayload,
   validateWebSearchToolPayload,
   validateWindowDragPayload,
@@ -63,6 +86,62 @@ import {
 const POWER_EVENT_CHANNEL = 'app:power-event'
 const POWER_EVENT_KINDS = ['suspend', 'resume', 'lock-screen', 'unlock-screen', 'shutdown']
 let powerEventForwardingRegistered = false
+
+function summarizeFileDialogPayload(payload) {
+  return {
+    title: payload?.title ?? '',
+    filterCount: Array.isArray(payload?.filters) ? payload.filters.length : 0,
+  }
+}
+
+function summarizeTextFileResult(result) {
+  const extension = typeof result?.filePath === 'string'
+    ? result.filePath.split(/[\\/]/).pop()?.split('.').pop() ?? ''
+    : ''
+  return {
+    canceled: Boolean(result?.canceled),
+    extension: extension.slice(0, 32),
+    contentLength: typeof result?.content === 'string' ? result.content.length : undefined,
+  }
+}
+
+async function confirmPetModelAction(event, channel, payload) {
+  if (!petModelActionNeedsConfirmation(channel, payload)) return true
+
+  const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+  audit('pet-model', 'confirmation-request', summarizePetModelRequest(channel, payload))
+  const { response } = await dialog.showMessageBox(parentWindow, {
+    type: 'warning',
+    buttons: ['继续', '取消'],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+    title: '确认本地宠物工件操作',
+    message: '允许 Nexus 执行这个宠物工件操作吗？',
+    detail:
+      '该操作可能读取本地制作包、写入本地宠物目录、下载社区宠物包，或打开本地路径。'
+      + ' 审计日志只会记录元数据，不记录路径、URL、slug 或宠物内容。',
+  })
+  const approved = response === 0
+  audit('pet-model', approved ? 'confirmation-approved' : 'confirmation-rejected', summarizePetModelRequest(channel, payload))
+  return approved
+}
+
+async function runAuditedPetModelAction(event, channel, payload, action) {
+  audit('pet-model', 'request', summarizePetModelRequest(channel, payload))
+  try {
+    const approved = await confirmPetModelAction(event, channel, payload)
+    if (!approved) {
+      throw new Error('宠物工件操作已取消。')
+    }
+    const result = await action()
+    audit('pet-model', 'result', summarizePetModelResult(channel, result))
+    return result
+  } catch (error) {
+    audit('pet-model', 'result', summarizePetModelResult(channel, {}, error))
+    throw error
+  }
+}
 
 function broadcastPowerEvent(kind) {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -189,47 +268,66 @@ export function register() {
 
   ipcMain.handle('pet-model:import', async (event) => {
     requireTrustedSender(event)
-    return importPetModelFromDialog()
+    return runAuditedPetModelAction(event, 'pet-model:import', {}, () => importPetModelFromDialog())
   })
 
   ipcMain.handle('pet-model:import-codex-gallery', async (event, input) => {
     requireTrustedSender(event)
-    return importSpritePetModelFromCodexGallery(input)
+    input = validatePetModelGalleryImportPayload(input)
+    return runAuditedPetModelAction(event, 'pet-model:import-codex-gallery', input, () => (
+      importSpritePetModelFromCodexGallery(input)
+    ))
   })
 
   ipcMain.handle('pet-model:list-codex-gallery', async (event, payload = {}) => {
     requireTrustedSender(event)
+    payload = validatePetModelGalleryListPayload(payload)
     return listCodexPetGalleryCatalog(payload)
   })
 
   ipcMain.handle('pet-model:create-creator-kit', async (event, payload = {}) => {
     requireTrustedSender(event)
-    return createSpritePetCreatorKitFromPayload(payload)
+    payload = validatePetModelCreatorKitCreatePayload(payload)
+    return runAuditedPetModelAction(event, 'pet-model:create-creator-kit', payload, () => (
+      createSpritePetCreatorKitFromPayload(payload)
+    ))
   })
 
   ipcMain.handle('pet-model:inspect-creator-kit', async (event, payload = {}) => {
     requireTrustedSender(event)
-    return inspectSpritePetCreatorKitFromDialog(payload)
+    payload = validatePetModelCreatorKitOptionalPathPayload('pet-model:inspect-creator-kit', payload)
+    return runAuditedPetModelAction(event, 'pet-model:inspect-creator-kit', payload, () => (
+      inspectSpritePetCreatorKitFromDialog(payload)
+    ))
   })
 
   ipcMain.handle('pet-model:assemble-creator-kit', async (event, payload = {}) => {
     requireTrustedSender(event)
-    return assembleSpritePetCreatorKitFromDialog(payload)
+    payload = validatePetModelCreatorKitOptionalPathPayload('pet-model:assemble-creator-kit', payload)
+    return runAuditedPetModelAction(event, 'pet-model:assemble-creator-kit', payload, () => (
+      assembleSpritePetCreatorKitFromDialog(payload)
+    ))
   })
 
   ipcMain.handle('pet-model:install-creator-kit-codex', async (event, payload = {}) => {
     requireTrustedSender(event)
-    return installSpritePetCreatorKitPackageToCodex(payload)
+    payload = validatePetModelCreatorKitInstallPayload(payload)
+    return runAuditedPetModelAction(event, 'pet-model:install-creator-kit-codex', payload, () => (
+      installSpritePetCreatorKitPackageToCodex(payload)
+    ))
   })
 
   ipcMain.handle('pet-model:open-creator-kit-path', async (event, payload = {}) => {
     requireTrustedSender(event)
-    return openSpritePetCreatorKitPathFromPayload(payload)
+    payload = validatePetModelCreatorKitOpenPathPayload(payload)
+    return runAuditedPetModelAction(event, 'pet-model:open-creator-kit-path', payload, () => (
+      openSpritePetCreatorKitPathFromPayload(payload)
+    ))
   })
 
   ipcMain.handle('pet-model:create-from-image', async (event) => {
     requireTrustedSender(event)
-    return createSpritePetModelFromImageDialog()
+    return runAuditedPetModelAction(event, 'pet-model:create-from-image', {}, () => createSpritePetModelFromImageDialog())
   })
 
   ipcMain.handle('dialog:confirm', async (event, message) => {
@@ -247,14 +345,26 @@ export function register() {
 
   ipcMain.handle('file:save-text', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateTextFileSavePayload(payload)
     const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
-    return saveTextFileFromDialog(sourceWindow, payload)
+    audit('file', 'save-text-dialog-open', {
+      ...summarizeFileDialogPayload(payload),
+      defaultFileName: payload.defaultFileName,
+      contentLength: payload.content.length,
+    })
+    const result = await saveTextFileFromDialog(sourceWindow, payload)
+    audit('file', 'save-text-dialog-result', summarizeTextFileResult(result))
+    return result
   })
 
   ipcMain.handle('file:open-text', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateTextFileOpenPayload(payload)
     const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
-    return openTextFileFromDialog(sourceWindow, payload)
+    audit('file', 'open-text-dialog-open', summarizeFileDialogPayload(payload))
+    const result = await openTextFileFromDialog(sourceWindow, payload)
+    audit('file', 'open-text-dialog-result', summarizeTextFileResult(result))
+    return result
   })
 
   ipcMain.handle('tool:web-search', async (event, payload = {}) => {
@@ -279,13 +389,22 @@ export function register() {
   ipcMain.handle('tool:open-external', async (event, payload = {}) => {
     requireTrustedSender(event)
     payload = validateExternalLinkToolPayload(payload)
-    return invokeRegisteredTool(event, 'open_external_link', payload)
+    audit('external-link', 'request', summarizeExternalLinkRequest(payload))
+    try {
+      const result = await invokeRegisteredTool(event, 'open_external_link', payload)
+      audit('external-link', 'result', summarizeExternalLinkResult(result))
+      return result
+    } catch (error) {
+      audit('external-link', 'result', summarizeExternalLinkResult({}, error))
+      throw error
+    }
   })
 
   ipcMain.handle('desktop-context:get', async (event, request = {}) => {
     requireTrustedSender(event)
     request = validateDesktopContextRequestPayload(request)
     const contextPolicy = normalizeDesktopContextPolicy(request?.policy)
+    audit('desktop-context', 'capture-request', summarizeDesktopContextRequest(request, contextPolicy))
     const snapshot = {
       capturedAt: new Date().toISOString(),
     }
@@ -322,6 +441,7 @@ export function register() {
       await Promise.all(tasks)
     }
 
+    audit('desktop-context', 'capture-result', summarizeDesktopContextSnapshot(snapshot))
     return snapshot
   })
 
@@ -351,6 +471,7 @@ export function register() {
 
   ipcMain.handle('integrations:inspect', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateIntegrationInspectPayload(payload)
     return inspectIntegrationRuntime(payload)
   })
 }

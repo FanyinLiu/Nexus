@@ -10,6 +10,12 @@ import {
   normalizeChatSessionsForStorage,
 } from '../src/lib/storage/chatSessions.ts'
 import {
+  buildChatLocalDataRuntimeMirrorSession,
+  CHAT_LOCAL_DATA_RUNTIME_MIRROR_CONSENT_KEY,
+  getChatLocalDataRuntimeMirrorConsent,
+  setChatLocalDataRuntimeMirrorConsent,
+} from '../src/lib/storage/chatLocalDataRuntimeMirror.ts'
+import {
   CHAT_SESSIONS_STORAGE_KEY,
   CHAT_STORAGE_KEY,
 } from '../src/lib/storage/core.ts'
@@ -56,6 +62,15 @@ test('loadChatMessages compacts malformed persisted messages and writes back', (
         content: 'answer',
         createdAt: 1780531200000,
         toolResult: { kind: 'open_external', result: { ok: true, url: ' https://example.com ', message: ' ok ' } },
+        memoryTrace: {
+          status: 'active',
+          searchModeUsed: 'hybrid',
+          vectorSearchAvailable: true,
+          longTermIds: [' memory-1 ', '', 'memory-1', 'memory-2'],
+          dailyEntryIds: ['daily-1'],
+          semanticIds: ['semantic-1'],
+          content: 'must be stripped',
+        },
       },
       { id: 'bad-role', role: 'bot', content: 'drop me', createdAt: '2026-06-04T00:00:00Z' },
       { id: 'bad-content', role: 'user', content: 42, createdAt: '2026-06-04T00:00:00Z' },
@@ -75,6 +90,15 @@ test('loadChatMessages compacts malformed persisted messages and writes back', (
     kind: 'open_external',
     result: { ok: true, url: 'https://example.com', message: 'ok' },
   })
+  assert.deepEqual(messages[1]?.memoryTrace, {
+    status: 'active',
+    searchModeUsed: 'hybrid',
+    vectorSearchAvailable: true,
+    longTermIds: ['memory-1', 'memory-2'],
+    dailyEntryIds: ['daily-1'],
+    semanticIds: ['semantic-1'],
+  })
+  assert.equal(JSON.stringify(messages[1]?.memoryTrace).includes('must be stripped'), false)
   assert.deepEqual(JSON.parse(storage.getItem(CHAT_STORAGE_KEY) ?? '[]'), messages)
 })
 
@@ -168,4 +192,42 @@ test('loadChatSessions migrates legacy flat chat using message timestamps', asyn
   assert.equal(sessions[0]?.lastActiveAt, Date.parse('2026-06-02T00:00:00Z'))
   assert.equal(sessions[0]?.title, 'first topic')
   assert.deepEqual(JSON.parse(storage.getItem(CHAT_SESSIONS_STORAGE_KEY) ?? '[]'), sessions)
+})
+
+test('chat local-data runtime mirror helper normalizes content and stores explicit consent', () => {
+  const storage = installStorage()
+  setChatLocalDataRuntimeMirrorConsent(true)
+  assert.equal(storage.getItem(CHAT_LOCAL_DATA_RUNTIME_MIRROR_CONSENT_KEY), '1')
+  assert.equal(getChatLocalDataRuntimeMirrorConsent(), true)
+
+  const session = buildChatLocalDataRuntimeMirrorSession({
+    id: 'session-1',
+    startedAt: 1.4,
+    lastActiveAt: 2.6,
+    title: 'Private title',
+    messages: [{
+      id: 'm1',
+      role: 'user',
+      content: 'hello',
+      createdAt: '2026-06-19T08:00:00.000Z',
+      images: ['data:image/png;base64,abc'],
+    }],
+  })
+
+  assert.deepEqual(session, {
+    id: 'session-1',
+    startedAt: 1,
+    lastActiveAt: 3,
+    title: 'Private title',
+    messages: [{
+      id: 'm1',
+      role: 'user',
+      content: 'hello',
+      createdAt: '2026-06-19T08:00:00.000Z',
+    }],
+  })
+
+  setChatLocalDataRuntimeMirrorConsent(false)
+  assert.equal(storage.getItem(CHAT_LOCAL_DATA_RUNTIME_MIRROR_CONSENT_KEY), null)
+  assert.equal(getChatLocalDataRuntimeMirrorConsent(), false)
 })

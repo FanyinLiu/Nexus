@@ -1,10 +1,26 @@
 import {
   isSenseVoiceSpeechInputProvider,
   isSpeechOutputKeyless,
-} from '../../../lib/audioProviders'
-import { pickTranslatedUiText } from '../../../lib/uiLanguage'
-import type { AppSettings, TranslationKey, UiLanguage } from '../../../types'
-import type { OnboardingStep, OnboardingStepId } from './guideSteps'
+} from '../../../lib/audioProviders.ts'
+import { pickTranslatedUiText } from '../../../lib/uiLanguage.ts'
+import type { AppSettings } from '../../../types/app.ts'
+import type { TranslationKey, UiLanguage } from '../../../types/i18n.ts'
+import {
+  runConnectionPreflight,
+  type ConnectionPreflightRepair,
+} from '../../models/connectionPreflight.ts'
+import type { OnboardingStep, OnboardingStepId } from './guideSteps/types.ts'
+
+export type OnboardingStepRepair = {
+  label: string
+  patch: ConnectionPreflightRepair
+}
+
+export type OnboardingStepIssue = {
+  message: string
+  recommendation?: string
+  repair?: OnboardingStepRepair
+}
 
 // Step meta as translation-key tuples. The component builds the final
 // localized list at render time so language switches reflow the stepper.
@@ -31,13 +47,39 @@ export function buildOnboardingSteps(uiLanguage: UiLanguage): OnboardingStep[] {
   }))
 }
 
+function getTextConnectionPreflightFailure(
+  draft: AppSettings,
+  uiLanguage: UiLanguage,
+  options: { skipMissingApiKey?: boolean } = {},
+) {
+  return runConnectionPreflight({
+    providerId: draft.apiProviderId,
+    apiKey: draft.apiKey,
+    apiBaseUrl: draft.apiBaseUrl,
+    model: draft.model,
+    uiLanguage,
+    skipMissingApiKey: options.skipMissingApiKey,
+  })
+}
+
+function formatOnboardingIssue(issue: OnboardingStepIssue) {
+  return issue.recommendation
+    ? `${issue.message} ${issue.recommendation}`
+    : issue.message
+}
+
 export function getOnboardingFinishHint(
   draft: AppSettings,
   textProviderRequiresApiKey: boolean,
   uiLanguage: UiLanguage,
 ) {
   if (textProviderRequiresApiKey && !draft.apiKey.trim()) {
-    return pickTranslatedUiText(uiLanguage, 'onboarding.finish_hint.missing_api_key')
+    const preflightFail = getTextConnectionPreflightFailure(draft, uiLanguage)
+    const repairHint = preflightFail?.status === 'needs_key'
+      ? preflightFail.recommendation
+      : undefined
+    const baseHint = pickTranslatedUiText(uiLanguage, 'onboarding.finish_hint.missing_api_key')
+    return repairHint ? `${baseHint} ${repairHint}` : baseHint
   }
 
   return pickTranslatedUiText(uiLanguage, 'onboarding.finish_hint.default')
@@ -48,38 +90,64 @@ export function getOnboardingStepError(
   stepId: OnboardingStepId,
   uiLanguage: UiLanguage,
 ) {
+  const issue = getOnboardingStepIssue(draft, stepId, uiLanguage)
+  return issue ? formatOnboardingIssue(issue) : null
+}
+
+export function getOnboardingStepIssue(
+  draft: AppSettings,
+  stepId: OnboardingStepId,
+  uiLanguage: UiLanguage,
+): OnboardingStepIssue | null {
   const ti = (key: TranslationKey) => pickTranslatedUiText(uiLanguage, key)
 
   if (stepId === 'welcome') {
-    if (!draft.userName.trim()) return ti('onboarding.error.welcome.no_user_name')
-    if (!draft.companionName.trim()) return ti('onboarding.error.welcome.no_companion_name')
+    if (!draft.userName.trim()) return { message: ti('onboarding.error.welcome.no_user_name') }
+    if (!draft.companionName.trim()) return { message: ti('onboarding.error.welcome.no_companion_name') }
     return null
   }
 
   if (stepId === 'text') {
-    if (!draft.apiBaseUrl.trim()) return ti('onboarding.error.text.no_api_base')
-    if (!draft.model.trim()) return ti('onboarding.error.text.no_model')
+    const preflightFail = getTextConnectionPreflightFailure(draft, uiLanguage, {
+      skipMissingApiKey: true,
+    })
+    if (preflightFail && preflightFail.status !== 'needs_key') {
+      return {
+        message: preflightFail.message,
+        recommendation: preflightFail.recommendation,
+        repair: preflightFail.repair
+          ? {
+              label: ti('onboarding.repair.apply_text_defaults'),
+              patch: preflightFail.repair,
+            }
+          : undefined,
+      }
+    }
     return null
   }
 
   if (stepId === 'voice') {
     if (draft.speechInputEnabled) {
-      if (!draft.speechInputProviderId.trim()) return ti('onboarding.error.voice.no_input_provider')
+      if (!draft.speechInputProviderId.trim()) {
+        return { message: ti('onboarding.error.voice.no_input_provider') }
+      }
       if (
         !isSenseVoiceSpeechInputProvider(draft.speechInputProviderId)
         && !draft.speechInputApiBaseUrl.trim()
       ) {
-        return ti('onboarding.error.voice.no_input_api_base')
+        return { message: ti('onboarding.error.voice.no_input_api_base') }
       }
     }
 
     if (draft.speechOutputEnabled) {
-      if (!draft.speechOutputProviderId.trim()) return ti('onboarding.error.voice.no_output_provider')
+      if (!draft.speechOutputProviderId.trim()) {
+        return { message: ti('onboarding.error.voice.no_output_provider') }
+      }
       if (
         !isSpeechOutputKeyless(draft.speechOutputProviderId)
         && !draft.speechOutputApiBaseUrl.trim()
       ) {
-        return ti('onboarding.error.voice.no_output_api_base')
+        return { message: ti('onboarding.error.voice.no_output_api_base') }
       }
     }
 
@@ -87,6 +155,16 @@ export function getOnboardingStepError(
   }
 
   return null
+}
+
+export function applyOnboardingStepRepairDraft(
+  draft: AppSettings,
+  repair: OnboardingStepRepair,
+): AppSettings {
+  return {
+    ...draft,
+    ...repair.patch,
+  }
 }
 
 export function sanitizeOnboardingSettings(

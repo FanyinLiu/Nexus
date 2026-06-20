@@ -28,10 +28,12 @@ import {
 } from './guideSteps'
 import { recordDisclosureAck } from '../../safety/disclosureState'
 import {
+  applyOnboardingStepRepairDraft,
   buildOnboardingSteps,
   getOnboardingFinishHint,
-  getOnboardingStepError,
+  getOnboardingStepIssue,
   sanitizeOnboardingSettings,
+  type OnboardingStepIssue,
 } from './onboardingGuideSupport'
 import { pickTranslatedUiText } from '../../../lib/uiLanguage'
 
@@ -59,7 +61,9 @@ export function OnboardingGuide({
   const [stepIndex, setStepIndex] = useState(0)
   const [draft, setDraft] = useState(settings)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<OnboardingStepIssue | null>(null)
+  const [repairNotice, setRepairNotice] = useState<string | null>(null)
+  const [textConnectionVerified, setTextConnectionVerified] = useState(false)
   // Lives here (not in TextStep) because inactive steps unmount: the picked
   // tab must survive Next/Back. null = untouched, TextStep derives the
   // language default.
@@ -95,6 +99,8 @@ export function OnboardingGuide({
     setStepIndex(0)
     setSaving(false)
     setError(null)
+    setRepairNotice(null)
+    setTextConnectionVerified(false)
     window.requestAnimationFrame(() => {
       dialogRef.current?.focus()
     })
@@ -139,31 +145,62 @@ export function OnboardingGuide({
     })
   }, [open, stepIndex])
 
+  function updateDraftFromStep(next: Parameters<typeof setDraft>[0]) {
+    setDraft(next)
+    setError(null)
+    setRepairNotice(null)
+  }
+
   function applyTextProviderPreset(providerId: string) {
+    setTextConnectionVerified(false)
     setDraft((current) => switchTextProvider(current, providerId))
+    setError(null)
+    setRepairNotice(null)
   }
 
   function applySpeechInputPreset(providerId: string) {
     setDraft((current) => switchSpeechInputProvider(current, providerId))
+    setError(null)
+    setRepairNotice(null)
   }
 
   function applySpeechOutputPreset(providerId: string) {
     setDraft((current) => switchSpeechOutputProvider(current, providerId))
+    setError(null)
+    setRepairNotice(null)
+  }
+
+  function applyOnboardingRepair(repair: OnboardingStepIssue['repair']) {
+    if (!repair) return
+    if (step.id === 'text') {
+      setTextConnectionVerified(false)
+    }
+    const nextDraft = applyOnboardingStepRepairDraft(draft, repair)
+    const remainingIssue = getOnboardingStepIssue(nextDraft, step.id, nextDraft.uiLanguage)
+    setDraft(nextDraft)
+    if (remainingIssue) {
+      setError(remainingIssue)
+      setRepairNotice(null)
+      return
+    }
+    setError(null)
+    setRepairNotice(ti('onboarding.repair.applied_text_defaults'))
   }
 
   function goNextStep() {
-    const nextError = getOnboardingStepError(draft, step.id, draft.uiLanguage)
+    const nextError = getOnboardingStepIssue(draft, step.id, draft.uiLanguage)
     if (nextError) {
       setError(nextError)
       return
     }
 
     setError(null)
+    setRepairNotice(null)
     setStepIndex((current) => Math.min(lastStepIndex, current + 1))
   }
 
   async function handleFinish() {
-    const nextError = getOnboardingStepError(draft, step.id, draft.uiLanguage)
+    const nextError = getOnboardingStepIssue(draft, step.id, draft.uiLanguage)
     if (nextError) {
       setError(nextError)
       return
@@ -171,6 +208,7 @@ export function OnboardingGuide({
 
     setSaving(true)
     setError(null)
+    setRepairNotice(null)
 
     try {
       await onSave(sanitizeOnboardingSettings(draft, settings))
@@ -181,9 +219,24 @@ export function OnboardingGuide({
       recordDisclosureAck()
       onDismiss()
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : ti('onboarding.save_failed'))
+      setError({ message: caught instanceof Error ? caught.message : ti('onboarding.save_failed') })
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function testOnboardingTextConnection(nextDraft: AppSettings) {
+    if (!onTestTextConnection) {
+      return { ok: false, message: ti('settings.test_connection.unsupported') }
+    }
+
+    try {
+      const result = await onTestTextConnection(nextDraft)
+      setTextConnectionVerified(result.ok)
+      return result
+    } catch (caught) {
+      setTextConnectionVerified(false)
+      throw caught
     }
   }
 
@@ -195,25 +248,26 @@ export function OnboardingGuide({
         return (
           <WelcomeStep
             draft={draft}
-            setDraft={setDraft}
+            setDraft={updateDraftFromStep}
           />
         )
       case 'text':
         return (
           <TextStep
             draft={draft}
-            setDraft={setDraft}
+            setDraft={updateDraftFromStep}
             onApplyTextProviderPreset={applyTextProviderPreset}
             regionTab={textProviderRegion}
             onRegionTabChange={setTextProviderRegion}
-            onTestConnection={onTestTextConnection}
+            onTestConnection={onTestTextConnection ? testOnboardingTextConnection : undefined}
+            onTextConnectionConfigChanged={() => setTextConnectionVerified(false)}
           />
         )
       case 'voice':
         return (
           <VoiceStep
             draft={draft}
-            setDraft={setDraft}
+            setDraft={updateDraftFromStep}
             speechInputProvider={speechInputProvider}
             speechOutputProvider={speechOutputProvider}
             speechInputModelOptions={speechInputModelOptions}
@@ -229,11 +283,12 @@ export function OnboardingGuide({
         return (
           <CompanionStep
             draft={draft}
-            setDraft={setDraft}
+            setDraft={updateDraftFromStep}
             petModelPresets={petModelPresets}
             selectedPetModel={selectedPetModel}
             launchOnStartupSupported={platformProfile.startup.supported}
             finishHint={finishHint}
+            textConnectionVerified={textConnectionVerified}
           />
         )
     }
@@ -282,6 +337,7 @@ export function OnboardingGuide({
                 if (index > stepIndex) return
                 setStepIndex(index)
                 setError(null)
+                setRepairNotice(null)
               }}
               disabled={index > stepIndex || saving}
               title={item.title}
@@ -308,7 +364,30 @@ export function OnboardingGuide({
                 aria-live="assertive"
                 aria-atomic="true"
               >
-                {error}
+                <p>{error.message}</p>
+                {error.recommendation ? (
+                  <p className="settings-test-result__recommendation">{error.recommendation}</p>
+                ) : null}
+                {error.repair ? (
+                  <button
+                    type="button"
+                    className="ghost-button settings-test-result__action"
+                    onClick={() => applyOnboardingRepair(error.repair)}
+                    disabled={saving}
+                  >
+                    {error.repair.label}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+            {!error && repairNotice ? (
+              <div
+                className="settings-test-result is-success"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                <p>{repairNotice}</p>
               </div>
             ) : null}
           </div>
@@ -321,6 +400,7 @@ export function OnboardingGuide({
             onClick={() => {
               setStepIndex((current) => Math.max(0, current - 1))
               setError(null)
+              setRepairNotice(null)
             }}
             disabled={stepIndex === 0 || saving}
           >

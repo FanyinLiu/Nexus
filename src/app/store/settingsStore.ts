@@ -11,6 +11,7 @@ import {
   isVaultRefString,
   migrateKeysToVault,
 } from '../../lib/keyVaultBridge.ts'
+import { syncExternalActionPolicyToMain } from '../../features/integrations/externalActionPolicySync.ts'
 import type { AppSettings } from '../../types/index.ts'
 
 let vaultMigrationDone = false
@@ -35,6 +36,12 @@ function notifySettingsListeners(settings: AppSettings) {
   }
 }
 
+function syncMainProcessPermissionPolicy(settings: AppSettings) {
+  syncExternalActionPolicyToMain(settings).catch((err) => {
+    console.error('[settingsStore] Failed to sync external action policy:', err)
+  })
+}
+
 function hydrateAndCacheSettings(base: AppSettings): Promise<AppSettings> {
   const key = settingsHydrationKey(base)
   if (pendingHydration?.key === key) {
@@ -44,6 +51,7 @@ function hydrateAndCacheSettings(base: AppSettings): Promise<AppSettings> {
   const promise = hydrateSettingsKeys(base)
     .then((hydrated) => {
       cachedHydratedSettings = hydrated
+      syncMainProcessPermissionPolicy(hydrated)
       return hydrated
     })
     .finally(() => {
@@ -115,6 +123,7 @@ export function getSettingsSnapshot(): AppSettings {
 export async function setSettingsSnapshot(nextSettings: AppSettings) {
   cachedHydratedSettings = nextSettings
   pendingHydration = null
+  syncMainProcessPermissionPolicy(nextSettings)
   // Dehydrate keys to vault first, then write stripped settings to localStorage.
   // Only one write — never persists plaintext keys.
   const stripped = await dehydrateSettingsKeys(nextSettings)

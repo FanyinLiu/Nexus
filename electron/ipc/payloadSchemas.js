@@ -14,10 +14,12 @@ const SHORT_TEXT_MAX = 256
 const URL_TEXT_MAX = 2_048
 const SECRET_TEXT_MAX = 20_000
 const BODY_TEXT_MAX = 20_000
+const TEXT_FILE_CONTENT_MAX = 10_000_000
 const AUDIO_BASE64_MAX = 50_000_000
 const PATH_TEXT_MAX = 4_096
 const CHAT_MESSAGE_TEXT_MAX = 200_000
 const SAFE_SKILL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
+const SAFE_FILE_EXTENSION_PATTERN = /^[A-Za-z0-9*][A-Za-z0-9+._-]{0,31}$/
 
 const optionalBoolean = { type: 'boolean', optional: true }
 const optionalShortString = {
@@ -25,6 +27,20 @@ const optionalShortString = {
   optional: true,
   maxLength: SHORT_TEXT_MAX,
   clamp: true,
+}
+
+const integrationPermissionModeSchema = {
+  type: 'enum',
+  values: ['read-only', 'confirm', 'auto'],
+}
+
+const externalActionPolicyItemSchema = {
+  type: 'object',
+  optional: true,
+  fields: {
+    mode: integrationPermissionModeSchema,
+    active: { type: 'boolean', optional: true },
+  },
 }
 
 const rendererToolPolicySchema = {
@@ -193,6 +209,87 @@ const externalLinkRequestSchema = {
   },
 }
 
+const integrationInspectSchema = {
+  type: 'object',
+  fields: {
+    mcpServers: {
+      type: 'array',
+      maxItems: 32,
+      items: {
+        type: 'object',
+        fields: {
+          id: { type: 'string', maxLength: SHORT_TEXT_MAX },
+          label: { type: 'string', maxLength: SHORT_TEXT_MAX },
+          command: { type: 'string', maxLength: PATH_TEXT_MAX },
+          args: { type: 'string', maxLength: PATH_TEXT_MAX },
+          enabled: { type: 'boolean' },
+        },
+      },
+    },
+    minecraftIntegrationEnabled: { type: 'boolean' },
+    minecraftServerAddress: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    minecraftServerPort: { type: 'number', integer: true, min: 1, max: 65535 },
+    minecraftUsername: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    factorioIntegrationEnabled: { type: 'boolean' },
+    factorioServerAddress: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    factorioServerPort: { type: 'number', integer: true, min: 1, max: 65535 },
+    factorioUsername: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+  },
+}
+
+const modelDownloadSchema = {
+  type: 'object',
+  fields: {
+    modelId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+  },
+}
+
+const fileDialogFilterSchema = {
+  type: 'object',
+  fields: {
+    name: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
+    extensions: {
+      type: 'array',
+      maxItems: 32,
+      items: {
+        type: 'string',
+        maxLength: 32,
+        trim: true,
+        allowEmpty: false,
+        pattern: SAFE_FILE_EXTENSION_PATTERN,
+      },
+    },
+  },
+}
+
+const textFileSaveSchema = {
+  type: 'object',
+  fields: {
+    title: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
+    defaultFileName: { type: 'string', maxLength: 255, trim: true, allowEmpty: false, clamp: true },
+    content: { type: 'string', maxLength: TEXT_FILE_CONTENT_MAX },
+    filters: {
+      type: 'array',
+      optional: true,
+      maxItems: 16,
+      items: fileDialogFilterSchema,
+    },
+  },
+}
+
+const textFileOpenSchema = {
+  type: 'object',
+  fields: {
+    title: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
+    filters: {
+      type: 'array',
+      optional: true,
+      maxItems: 16,
+      items: fileDialogFilterSchema,
+    },
+  },
+}
+
 const embeddingArraySchema = {
   type: 'array',
   maxItems: 8_192,
@@ -339,6 +436,264 @@ const mcpSyncServersSchema = {
   },
 }
 
+const telegramSendMessageSchema = {
+  type: 'object',
+  fields: {
+    chatId: { type: 'number', integer: true },
+    text: { type: 'string', maxLength: BODY_TEXT_MAX, trim: true, allowEmpty: false },
+    replyToMessageId: { type: 'number', optional: true, integer: true },
+    parseMode: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+  },
+}
+
+const telegramSendVoiceSchema = {
+  type: 'object',
+  fields: {
+    chatId: { type: 'number', integer: true },
+    audioBase64: { type: 'string', maxLength: AUDIO_BASE64_MAX, allowEmpty: false },
+    mimeType: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    replyToMessageId: { type: 'number', optional: true, integer: true },
+  },
+}
+
+const discordSendMessageSchema = {
+  type: 'object',
+  fields: {
+    channelId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    text: { type: 'string', maxLength: BODY_TEXT_MAX, trim: true, allowEmpty: false },
+    replyToMessageId: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+  },
+}
+
+const discordSendVoiceSchema = {
+  type: 'object',
+  fields: {
+    channelId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    audioBase64: { type: 'string', maxLength: 34_000_000, allowEmpty: false },
+    mimeType: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    replyToMessageId: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+  },
+}
+
+const externalActionPolicySyncSchema = {
+  type: 'object',
+  fields: {
+    policies: {
+      type: 'object',
+      fields: {
+        telegram: externalActionPolicyItemSchema,
+        discord: externalActionPolicyItemSchema,
+        minecraft: externalActionPolicyItemSchema,
+        factorio: externalActionPolicyItemSchema,
+        mcp: externalActionPolicyItemSchema,
+      },
+    },
+  },
+}
+
+const localDataOnboardingStateSchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    completedAt: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    firstConversationAt: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    firstConversationElapsedMs: { type: 'number', optional: true, integer: true, min: 0, max: 86_400_000 },
+  },
+}
+
+const localDataOnboardingMirrorSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  unknown: 'reject',
+  fields: {
+    state: {
+      ...localDataOnboardingStateSchema,
+      optional: true,
+    },
+  },
+}
+
+const localDataChatMigrationMessageSchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    id: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    role: { type: 'enum', values: ['user', 'assistant', 'system'] },
+    content: { type: 'string', maxLength: CHAT_MESSAGE_TEXT_MAX, allowEmpty: false },
+    createdAt: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    tone: { type: 'enum', optional: true, values: ['neutral', 'error'] },
+    reasoning_content: { type: 'string', optional: true, maxLength: CHAT_MESSAGE_TEXT_MAX },
+    toolResult: { type: 'any', optional: true },
+  },
+}
+
+const localDataChatMigrationSessionSchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    id: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    startedAt: { type: 'number', min: 0 },
+    lastActiveAt: { type: 'number', min: 0 },
+    title: { type: 'string', optional: true, maxLength: 80, trim: true, clamp: true },
+    messages: {
+      type: 'array',
+      maxItems: 500,
+      items: localDataChatMigrationMessageSchema,
+    },
+  },
+}
+
+const localDataChatMigrationPackageSchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    schemaVersion: { type: 'number', integer: true, min: 1, max: 1 },
+    createdAt: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    source: {
+      type: 'object',
+      unknown: 'reject',
+      fields: {
+        sessionsKeyPresent: { type: 'boolean' },
+        legacyFlatChatKeyPresent: { type: 'boolean' },
+        legacyFlatChatUsed: { type: 'boolean' },
+      },
+    },
+    dryRunReport: { type: 'any', optional: true },
+    sessions: {
+      type: 'array',
+      maxItems: 30,
+      items: localDataChatMigrationSessionSchema,
+    },
+  },
+}
+
+const localDataChatMigrationApplySchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    confirmed: { type: 'boolean' },
+    migrationPackage: localDataChatMigrationPackageSchema,
+  },
+}
+
+const localDataChatMigrationRollbackSchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    confirmed: { type: 'boolean' },
+  },
+}
+
+const localDataChatRuntimeMirrorSchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    confirmed: { type: 'boolean' },
+    session: localDataChatMigrationSessionSchema,
+  },
+}
+
+const localDataChatComparisonSessionSchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    id: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    startedAt: { type: 'number', min: 0 },
+    lastActiveAt: { type: 'number', min: 0 },
+    messageCount: { type: 'number', integer: true, min: 0, max: 500 },
+    payloadBytes: { type: 'number', integer: true, min: 0, max: 20_000_000 },
+  },
+}
+
+const localDataChatComparisonSourceSchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    schemaVersion: { type: 'number', integer: true, min: 1, max: 1 },
+    generatedAt: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    source: {
+      type: 'object',
+      unknown: 'reject',
+      fields: {
+        sessionsKeyPresent: { type: 'boolean' },
+        legacyFlatChatKeyPresent: { type: 'boolean' },
+        legacyFlatChatUsed: { type: 'boolean' },
+      },
+    },
+    sessions: {
+      type: 'array',
+      maxItems: 30,
+      items: localDataChatComparisonSessionSchema,
+    },
+  },
+}
+
+const localDataChatComparisonSchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    confirmed: { type: 'boolean' },
+    source: localDataChatComparisonSourceSchema,
+  },
+}
+
+const petModelGalleryImportSchema = {
+  type: 'string',
+  maxLength: URL_TEXT_MAX,
+  trim: true,
+  allowEmpty: false,
+}
+
+const petModelGalleryListSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    query: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    limit: { type: 'number', optional: true, integer: true, min: 1, max: 100 },
+  },
+}
+
+const petModelCreatorKitCreateSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    id: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    displayName: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+    concept: { type: 'string', optional: true, maxLength: 2_000, trim: true, clamp: true },
+    description: { type: 'string', optional: true, maxLength: 2_000, trim: true, clamp: true },
+    styleNotes: { type: 'string', optional: true, maxLength: 2_000, trim: true, clamp: true },
+  },
+}
+
+const petModelCreatorKitOptionalPathSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    kitDirectory: { type: 'string', optional: true, maxLength: PATH_TEXT_MAX, trim: true, clamp: true },
+  },
+}
+
+const petModelCreatorKitInstallSchema = {
+  type: 'object',
+  fields: {
+    kitDirectory: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },
+    manifestPath: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },
+  },
+}
+
+const petModelCreatorKitOpenPathSchema = {
+  type: 'object',
+  fields: {
+    kitDirectory: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },
+    targetPath: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },
+    mode: { type: 'enum', optional: true, values: ['open', 'reveal'] },
+  },
+}
+
 const pluginIdSchema = {
   type: 'object',
   fields: {
@@ -437,6 +792,59 @@ const audioSynthesisSchema = {
   },
 }
 
+const requestIdSchema = {
+  type: 'object',
+  fields: {
+    requestId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+  },
+}
+
+const ttsStreamStartSchema = {
+  type: 'object',
+  fields: {
+    requestId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    providerId: { type: 'string', maxLength: SHORT_TEXT_MAX },
+    baseUrl: { type: 'string', maxLength: URL_TEXT_MAX },
+    apiKey: { type: 'string', maxLength: SECRET_TEXT_MAX },
+    model: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
+    voice: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
+    instructions: { type: 'string', optional: true, maxLength: 4_000 },
+    language: { type: 'string', optional: true, maxLength: 64 },
+    rate: { type: 'number', optional: true, min: 0.25, max: 4 },
+    pitch: { type: 'number', optional: true, min: -4, max: 4 },
+    volume: { type: 'number', optional: true, min: 0, max: 4 },
+  },
+}
+
+const ttsStreamPushTextSchema = {
+  type: 'object',
+  fields: {
+    requestId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+    text: { type: 'string', maxLength: BODY_TEXT_MAX, trim: true, allowEmpty: false },
+  },
+}
+
+const kwsOptionsSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    wakeWord: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
+  },
+}
+
+const vadStartSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    threshold: { type: 'number', optional: true, min: 0, max: 1 },
+    minSilenceDuration: { type: 'number', optional: true, min: 0, max: 60 },
+    minSpeechDuration: { type: 'number', optional: true, min: 0, max: 60 },
+    maxSpeechDuration: { type: 'number', optional: true, min: 0.1, max: 300 },
+  },
+}
+
 export function validateSpeechVoiceListPayload(payload) {
   return validateIpcPayload('audio:list-voices', payload, speechVoiceListSchema)
 }
@@ -447,6 +855,22 @@ export function validateAudioTranscriptionPayload(payload) {
 
 export function validateAudioSynthesisPayload(payload) {
   return validateIpcPayload('audio:synthesize', payload, audioSynthesisSchema)
+}
+
+export function validateTtsStreamStartPayload(payload) {
+  return validateIpcPayload('tts:stream-start', payload, ttsStreamStartSchema)
+}
+
+export function validateTtsStreamPushTextPayload(payload) {
+  return validateIpcPayload('tts:stream-push-text', payload, ttsStreamPushTextSchema)
+}
+
+export function validateTtsStreamFinishPayload(payload) {
+  return validateIpcPayload('tts:stream-finish', payload, requestIdSchema)
+}
+
+export function validateTtsStreamAbortPayload(payload) {
+  return validateIpcPayload('tts:stream-abort', payload, requestIdSchema)
 }
 
 export function validateChatCompletionPayload(channel, payload) {
@@ -475,6 +899,22 @@ export function validateWeatherToolPayload(payload) {
 
 export function validateExternalLinkToolPayload(payload) {
   return validateIpcPayload('tool:open-external', payload, externalLinkRequestSchema)
+}
+
+export function validateIntegrationInspectPayload(payload) {
+  return validateIpcPayload('integrations:inspect', payload, integrationInspectSchema)
+}
+
+export function validateModelDownloadPayload(payload) {
+  return validateIpcPayload('models:download', payload, modelDownloadSchema)
+}
+
+export function validateTextFileSavePayload(payload) {
+  return validateIpcPayload('file:save-text', payload, textFileSaveSchema)
+}
+
+export function validateTextFileOpenPayload(payload) {
+  return validateIpcPayload('file:open-text', payload, textFileOpenSchema)
 }
 
 export function validateMemoryVectorIndexPayload(payload) {
@@ -525,6 +965,70 @@ export function validateMcpSyncServersPayload(payload) {
   return validateIpcPayload('mcp:sync-servers', payload, mcpSyncServersSchema)
 }
 
+export function validateTelegramSendMessagePayload(payload) {
+  return validateIpcPayload('telegram:send-message', payload, telegramSendMessageSchema)
+}
+
+export function validateTelegramSendVoicePayload(payload) {
+  return validateIpcPayload('telegram:send-voice', payload, telegramSendVoiceSchema)
+}
+
+export function validateDiscordSendMessagePayload(payload) {
+  return validateIpcPayload('discord:send-message', payload, discordSendMessageSchema)
+}
+
+export function validateDiscordSendVoicePayload(payload) {
+  return validateIpcPayload('discord:send-voice', payload, discordSendVoiceSchema)
+}
+
+export function validateExternalActionPolicySyncPayload(payload) {
+  return validateIpcPayload('external-action-policy:sync', payload, externalActionPolicySyncSchema)
+}
+
+export function validateLocalDataOnboardingMirrorPayload(payload) {
+  return validateIpcPayload('local-data:mirror-onboarding', payload, localDataOnboardingMirrorSchema)
+}
+
+export function validateLocalDataChatMigrationApplyPayload(payload) {
+  return validateIpcPayload('local-data:chat-migration-apply', payload, localDataChatMigrationApplySchema)
+}
+
+export function validateLocalDataChatMigrationRollbackPayload(payload) {
+  return validateIpcPayload('local-data:chat-migration-rollback', payload, localDataChatMigrationRollbackSchema)
+}
+
+export function validateLocalDataChatRuntimeMirrorPayload(payload) {
+  return validateIpcPayload('local-data:chat-session-mirror', payload, localDataChatRuntimeMirrorSchema)
+}
+
+export function validateLocalDataChatComparisonPayload(payload) {
+  return validateIpcPayload('local-data:chat-comparison-preview', payload, localDataChatComparisonSchema)
+}
+
+export function validatePetModelGalleryImportPayload(payload) {
+  return validateIpcPayload('pet-model:import-codex-gallery', payload, petModelGalleryImportSchema)
+}
+
+export function validatePetModelGalleryListPayload(payload) {
+  return validateIpcPayload('pet-model:list-codex-gallery', payload, petModelGalleryListSchema)
+}
+
+export function validatePetModelCreatorKitCreatePayload(payload) {
+  return validateIpcPayload('pet-model:create-creator-kit', payload, petModelCreatorKitCreateSchema)
+}
+
+export function validatePetModelCreatorKitOptionalPathPayload(channel, payload) {
+  return validateIpcPayload(channel, payload, petModelCreatorKitOptionalPathSchema)
+}
+
+export function validatePetModelCreatorKitInstallPayload(payload) {
+  return validateIpcPayload('pet-model:install-creator-kit-codex', payload, petModelCreatorKitInstallSchema)
+}
+
+export function validatePetModelCreatorKitOpenPathPayload(payload) {
+  return validateIpcPayload('pet-model:open-creator-kit-path', payload, petModelCreatorKitOpenPathSchema)
+}
+
 export function validatePluginIdPayload(channel, payload) {
   return validateIpcPayload(channel, payload, pluginIdSchema)
 }
@@ -547,4 +1051,12 @@ export function validateGameCommandPayload(channel, payload) {
 
 export function validateTencentAsrConnectPayload(payload) {
   return validateIpcPayload('tencent-asr:connect', payload, tencentAsrConnectSchema)
+}
+
+export function validateKwsOptionsPayload(channel, payload) {
+  return validateIpcPayload(channel, payload, kwsOptionsSchema)
+}
+
+export function validateVadStartPayload(payload) {
+  return validateIpcPayload('vad:start', payload, vadStartSchema)
 }

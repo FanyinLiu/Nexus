@@ -16,6 +16,8 @@ import * as sherpaIpc from './ipc/sherpaIpc.js'
 import * as notificationIpc from './ipc/notificationIpc.js'
 import * as proactiveNotificationIpc from './ipc/proactiveNotificationIpc.js'
 import * as mcpIpc from './ipc/mcpIpc.js'
+import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
+import * as localDataIpc from './ipc/localDataIpc.js'
 
 const CHAT_REQUEST_TIMEOUT_MS = 25_000
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
@@ -82,6 +84,8 @@ export function registerIpc() {
   notificationIpc.register()
   proactiveNotificationIpc.register()
   mcpIpc.register()
+  externalActionPolicyIpc.register()
+  localDataIpc.register()
 
   // Kick off the deferred-module load immediately (no setTimeout). The
   // load is async (Promise.all of dynamic imports) so the call returns

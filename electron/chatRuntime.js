@@ -714,6 +714,65 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
   }
 }
 
+function formatTransportFailureReason(reason) {
+  const message = String(reason ?? '').trim()
+  if (!message) {
+    return '没能连上，可能是地址或网络的问题。'
+  }
+
+  if (message.includes('没能连') || message.includes('超时')) {
+    return message
+  }
+
+  return `没能连上，可能是地址或网络的问题。具体原因：${message}`
+}
+
+function classifyOllamaTransportFailure(reason) {
+  const normalized = String(reason ?? '').trim().toLowerCase()
+  if (
+    normalized.includes('econnrefused')
+    || normalized.includes('err_connection_refused')
+    || normalized.includes('连接被拒绝')
+  ) {
+    return 'refused'
+  }
+  if (
+    normalized.includes('etimedout')
+    || normalized.includes('timeout')
+    || normalized.includes('超时')
+  ) {
+    return 'timeout'
+  }
+  return 'unknown'
+}
+
+export function summarizeChatConnectionTransportFailure({ providerId, reason, baseUrl }) {
+  const checkedAt = new Date().toISOString()
+  const normalizedProviderId = normalizeChatProviderId(providerId, baseUrl)
+
+  if (normalizedProviderId === 'ollama') {
+    const failureKind = classifyOllamaTransportFailure(reason)
+    const baseMessage = failureKind === 'timeout'
+      ? '本机 Ollama 一直没有回应。'
+      : '没能连上本机 Ollama。'
+    return {
+      ok: false,
+      status: 'unreachable',
+      message: `${baseMessage}请先启动 Ollama，并确认 Nexus 的 Base URL 是 http://127.0.0.1:11434/v1。`,
+      recommendation: '打开 Ollama 应用，或在终端运行 ollama serve；启动后再点一次连接测试。如果还没有模型，运行 ollama pull qwen3:8b。',
+      checkedAt,
+    }
+  }
+
+  return {
+    ok: false,
+    status: 'unreachable',
+    message: formatTransportFailureReason(reason),
+    recommendation: '看看地址和网络，本地服务的话确认一下有没有在跑。',
+    checkedAt,
+  }
+}
+
 export function extractChatResponseContent(providerId, payload) {
   if (getChatProviderProtocol(providerId) === 'anthropic') {
     return extractTextFromContent(payload?.content)

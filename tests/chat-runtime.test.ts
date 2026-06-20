@@ -15,6 +15,7 @@ import {
   normalizeChatProviderId,
   summarizeChatConnectionTestFailure,
   summarizeChatConnectionTestSuccess,
+  summarizeChatConnectionTransportFailure,
 } from '../electron/chatRuntime.js'
 
 test('ollama is inferred from the default local port and does not require an API key', () => {
@@ -329,6 +330,47 @@ test('408 timeout returns unreachable with recommendation', () => {
   assert.equal(result.ok, false)
   assert.equal(result.status, 'unreachable')
   assert.ok(result.recommendation)
+})
+
+test('ollama transport failure tells the user to start the local service', () => {
+  const result = summarizeChatConnectionTransportFailure({
+    providerId: 'ollama',
+    baseUrl: 'http://127.0.0.1:11434/v1',
+    reason: 'connect ECONNREFUSED 127.0.0.1:11434',
+  })
+
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 'unreachable')
+  assert.match(result.message, /本机 Ollama/)
+  assert.match(result.message, /http:\/\/127\.0\.0\.1:11434\/v1/)
+  assert.match(result.recommendation ?? '', /ollama serve/)
+  assert.match(result.recommendation ?? '', /ollama pull qwen3:8b/)
+})
+
+test('ollama transport timeout keeps the same actionable startup path', () => {
+  const result = summarizeChatConnectionTransportFailure({
+    providerId: 'ollama',
+    baseUrl: 'http://127.0.0.1:11434/v1',
+    reason: 'ETIMEDOUT',
+  })
+
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 'unreachable')
+  assert.match(result.message, /一直没有回应/)
+  assert.match(result.recommendation ?? '', /连接测试/)
+})
+
+test('non-local transport failures keep generic network repair guidance', () => {
+  const result = summarizeChatConnectionTransportFailure({
+    providerId: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    reason: 'fetch failed',
+  })
+
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 'unreachable')
+  assert.match(result.message, /fetch failed/)
+  assert.match(result.recommendation ?? '', /地址和网络/)
 })
 
 test('502 returns unreachable with maintenance hint', () => {

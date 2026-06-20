@@ -17,6 +17,7 @@ import {
   normalizeChatProviderId,
   summarizeChatConnectionTestFailure,
   summarizeChatConnectionTestSuccess,
+  summarizeChatConnectionTransportFailure,
   trimRepeatedStreamingDelta as trimChatStreamingDelta,
 } from '../chatRuntime.js'
 import {
@@ -494,13 +495,11 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       })
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
-      return {
-        ok: false,
-        status: 'unreachable',
-        message: formatConnectionFailureMessage(reason),
-        recommendation: '看看地址和网络，本地服务的话确认一下有没有在跑。',
-        checkedAt: new Date().toISOString(),
-      }
+      return summarizeChatConnectionTransportFailure({
+        providerId,
+        reason,
+        baseUrl,
+      })
     }
   })
 
@@ -605,15 +604,13 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
       return {
-        ok: false,
+        ...summarizeChatConnectionTransportFailure({
+          providerId,
+          reason,
+          baseUrl,
+        }),
         providerId,
-        status: 'unreachable',
-        message: formatConnectionFailureMessage(reason),
-        recommendation: providerId === 'ollama'
-          ? '确认 Ollama 有没有在跑，地址确认是 127.0.0.1:11434/v1。'
-          : '看看地址和网络设置对不对。',
         discoveredModels: [],
-        checkedAt: new Date().toISOString(),
       }
     }
   })

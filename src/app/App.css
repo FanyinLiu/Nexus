@@ -882,6 +882,85 @@
   margin-top: 10px;
 }
 
+.message-bubble__memory-trace {
+  display: block;
+  max-width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--nx-label-text, rgba(255, 255, 255, 0.58));
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.message-bubble__memory-trace summary {
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.message-bubble__memory-details {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.message-bubble__memory-details p {
+  margin: 0;
+}
+
+.message-bubble__memory-group {
+  display: grid;
+  gap: 5px;
+}
+
+.message-bubble__memory-group-label {
+  color: var(--nx-assistant-text, rgba(255, 255, 255, 0.78));
+  font-weight: 650;
+}
+
+.message-bubble__memory-group ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.message-bubble__memory-item {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.message-bubble__memory-item-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.message-bubble__memory-item-status {
+  flex: 0 0 auto;
+  color: var(--nx-label-text, rgba(255, 255, 255, 0.58));
+}
+
+.message-bubble__memory-action {
+  justify-self: start;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.message-bubble__memory-action:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .message-bubble__link {
   color: var(--nx-link, #4a6fa5);
   text-decoration: underline;
@@ -3444,6 +3523,10 @@
   justify-items: start;
 }
 
+.settings-test-result__action {
+  margin-top: 10px;
+}
+
 .ai-disclosure-step {
   gap: 10px;
 }
@@ -3702,6 +3785,10 @@
   color: rgba(255, 255, 255, 0.58);
   font-size: 13px;
   line-height: 1.6;
+}
+
+.onboarding-readiness__timebox {
+  color: rgba(255, 255, 255, 0.78) !important;
 }
 
 .onboarding-readiness__list {

@@ -11,15 +11,22 @@ import {
 } from '../services/modelManager.js'
 import { ensurePythonRuntimeStatus } from '../services/pythonRuntime.js'
 import { requireTrustedSender } from './validate.js'
+import {
+  validateKwsOptionsPayload,
+  validateModelDownloadPayload,
+  validateVadStartPayload,
+} from './payloadSchemas.js'
 
 export function register() {
   ipcMain.handle('kws:status', (event, payload) => {
     requireTrustedSender(event)
+    payload = validateKwsOptionsPayload('kws:status', payload)
     return sherpaKwsService.getStatus(payload)
   })
 
   ipcMain.handle('kws:start', (event, payload) => {
     requireTrustedSender(event)
+    payload = validateKwsOptionsPayload('kws:start', payload)
     const status = sherpaKwsService.getStatus(payload)
     if (!status.modelFound) {
       throw new Error(status.reason || '唤醒词模型未安装，请在设置 → 本地模型向导里下载。')
@@ -56,6 +63,7 @@ export function register() {
 
   ipcMain.handle('vad:start', (event, payload) => {
     requireTrustedSender(event)
+    payload = validateVadStartPayload(payload)
     return sherpaVadService.start(payload ?? {})
   })
 
@@ -200,10 +208,8 @@ export function register() {
 
   ipcMain.handle('models:download', async (event, payload) => {
     requireTrustedSender(event)
+    payload = validateModelDownloadPayload(payload)
     const modelId = payload?.modelId
-    if (!modelId || typeof modelId !== 'string') {
-      throw new Error('modelId required')
-    }
     await downloadModelById(modelId)
     return getModelInventory()
   })

@@ -28,6 +28,8 @@ import { useVoice } from '../../hooks/useVoice'
 import { useReminderController } from './useReminderController'
 import { getSettingsSnapshot } from '../store/settingsStore'
 import { useAppOverlays } from './useAppOverlays'
+import type { SettingsSectionId } from '../../components/settingsDrawerSupport.ts'
+import type { ChatMemoryTraceFocusTarget } from '../../features/memory/traceDetails.ts'
 import { useAutonomyController } from './useAutonomyController'
 import { useBudgetConfigSync } from './useBudgetConfigSync'
 import { useBackgroundSchedulers } from './useBackgroundSchedulers'
@@ -61,6 +63,8 @@ export function useAppController() {
   const [settingsOpen, setSettingsOpen] = useState(
     () => view === 'panel' && getInitialPanelSection() === 'settings',
   )
+  const [preferredSettingsSectionId, setPreferredSettingsSectionId] = useState<SettingsSectionId | null>(null)
+  const [preferredMemoryFocus, setPreferredMemoryFocus] = useState<ChatMemoryTraceFocusTarget | null>(null)
 
   // Refine view from async preload bridge (only matters inside Electron)
   useEffect(() => {
@@ -153,6 +157,30 @@ export function useAppController() {
   }, [applyPanelWindowState, panelCollapsed])
 
   const openSettingsPanel = useCallback(() => {
+    setPreferredSettingsSectionId(null)
+    setPreferredMemoryFocus(null)
+    if (view === 'pet') {
+      const openPanel = window.desktopPet?.openPanel
+      if (openPanel) {
+        void openPanel('settings').catch(() => {
+          setSettingsOpen(true)
+        })
+        return
+      }
+
+      setSettingsOpen(true)
+      return
+    }
+
+    if (panelCollapsed) {
+      void applyPanelWindowState({ collapsed: false })
+    }
+    setSettingsOpen(true)
+  }, [applyPanelWindowState, panelCollapsed, view])
+
+  const openSettingsSection = useCallback((sectionId: SettingsSectionId, memoryFocus?: ChatMemoryTraceFocusTarget | null) => {
+    setPreferredSettingsSectionId(sectionId)
+    setPreferredMemoryFocus(sectionId === 'memory' ? memoryFocus ?? null : null)
     if (view === 'pet') {
       const openPanel = window.desktopPet?.openPanel
       if (openPanel) {
@@ -624,6 +652,8 @@ export function useAppController() {
     platformProfile,
     setSettings,
     settingsOpen,
+    preferredSettingsSectionId,
+    preferredMemoryFocus,
     setSettingsOpen,
     petModelPresets,
     petRuntimeContinuousVoiceActive,
@@ -710,6 +740,7 @@ export function useAppController() {
     petRuntimeContinuousVoiceActive,
     panelCollapsed,
     openSettingsPanel,
+    openSettingsSection,
     togglePanelCollapse,
     closePanel,
     autonomyState: autonomy.autonomyTick.autonomyState,
@@ -729,6 +760,7 @@ export function useAppController() {
     petRuntimeContinuousVoiceActive,
     panelCollapsed,
     openSettingsPanel,
+    openSettingsSection,
     togglePanelCollapse,
     closePanel,
     autonomy.autonomyTick.autonomyState,

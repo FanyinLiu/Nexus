@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import {
   countMemoryKinds,
   resolveMemorySettingsSummary,
+  resolveMemoryTransparencySummary,
 } from '../src/features/memory/memorySettingsView.ts'
 import type { DailyMemoryEntry, MemoryItem } from '../src/types/memory.ts'
 
@@ -59,4 +60,59 @@ test('resolveMemorySettingsSummary keeps active, disabled and daily counts separ
   assert.equal(summary.kindCounts.preference, 1)
   assert.equal(summary.kindCounts.relationship, 1)
   assert.equal(summary.searchMode, 'hybrid')
+})
+
+test('resolveMemoryTransparencySummary reports active recall, capture and storage authority', () => {
+  const summary = resolveMemoryTransparencySummary({
+    activeWindowContextEnabled: true,
+    clipboardContextEnabled: false,
+    contextAwarenessEnabled: true,
+    dailyEntries: [dailyEntry],
+    memories: [
+      memory({ id: 'a', kind: 'preference' }),
+      memory({ id: 'b', kind: 'fact', enabled: false }),
+    ],
+    memoryDailyRecallCount: 2,
+    memoryLongTermRecallCount: 3,
+    memoryPaused: false,
+    memorySemanticRecallCount: 4,
+    screenContextEnabled: false,
+    searchMode: 'hybrid',
+  })
+
+  assert.equal(summary.memoryPaused, false)
+  assert.equal(summary.automaticCaptureEnabled, true)
+  assert.equal(summary.longTermRecallEnabled, true)
+  assert.equal(summary.dailyRecallEnabled, true)
+  assert.equal(summary.semanticRecallEnabled, true)
+  assert.equal(summary.contextReadEnabled, true)
+  assert.equal(summary.activeLongTermCount, 1)
+  assert.equal(summary.disabledLongTermCount, 1)
+  assert.equal(summary.storageAuthority, 'renderer-localStorage')
+  assert.equal(summary.sqliteAuthorityEnabled, false)
+})
+
+test('resolveMemoryTransparencySummary makes pause state explicit without deleting counts', () => {
+  const summary = resolveMemoryTransparencySummary({
+    activeWindowContextEnabled: true,
+    clipboardContextEnabled: true,
+    contextAwarenessEnabled: true,
+    dailyEntries: [dailyEntry],
+    memories: [memory({ id: 'a', kind: 'relationship' })],
+    memoryDailyRecallCount: 4,
+    memoryLongTermRecallCount: 4,
+    memoryPaused: true,
+    memorySemanticRecallCount: 4,
+    screenContextEnabled: true,
+    searchMode: 'vector',
+  })
+
+  assert.equal(summary.memoryPaused, true)
+  assert.equal(summary.automaticCaptureEnabled, false)
+  assert.equal(summary.longTermRecallEnabled, false)
+  assert.equal(summary.dailyRecallEnabled, false)
+  assert.equal(summary.semanticRecallEnabled, false)
+  assert.equal(summary.contextReadEnabled, true)
+  assert.equal(summary.activeLongTermCount, 1)
+  assert.equal(summary.dailyEntryCount, 1)
 })

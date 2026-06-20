@@ -108,6 +108,7 @@ const defaultSettings: AppSettings = {
   wakewordAlwaysOn: false,
   wakewordSessionIdleTimeoutMs: 10_000,
   memorySearchMode: 'hybrid',
+  memoryPaused: false,
   memoryEmbeddingModel: DEFAULT_MEMORY_EMBEDDING_MODEL,
   memoryLongTermRecallCount: 4,
   memoryDailyRecallCount: 4,
@@ -467,6 +468,7 @@ export function loadSettings(): AppSettings {
       || stored.memorySearchMode === 'vector'
         ? stored.memorySearchMode
         : defaultSettings.memorySearchMode,
+    memoryPaused: Boolean(stored.memoryPaused ?? defaultSettings.memoryPaused),
     memoryEmbeddingModel: String(stored.memoryEmbeddingModel ?? defaultSettings.memoryEmbeddingModel).trim()
       || defaultSettings.memoryEmbeddingModel,
     memoryLongTermRecallCount: clampInteger(

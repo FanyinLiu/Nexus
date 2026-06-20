@@ -49,6 +49,7 @@ import {
   VoiceSection,
   WindowSection,
 } from './settingsSections/index.ts'
+import type { ChatMemoryTraceFocusTarget } from '../features/memory/traceDetails.ts'
 import {
   useConnectionTests,
   useSpeechVoiceManagement,
@@ -62,6 +63,7 @@ import { useConfirm } from './useConfirm.ts'
 import { PetControlIcon } from './PetControlIcon.tsx'
 import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
 import { buildSettingsSectionMeta } from './settingsDrawerMetadata.ts'
+import { applyConnectionTestRepairDraft } from '../features/models/connectionRepair.ts'
 import type {
   AppSettings,
   DailyMemoryEntry,
@@ -78,6 +80,8 @@ import type {
 
 export type SettingsDrawerProps = {
   open: boolean
+  preferredSectionId?: SettingsSectionId | null
+  memoryFocus?: ChatMemoryTraceFocusTarget | null
   settings: AppSettings
   platformProfile: PlatformProfile
   chatMessageCount: number
@@ -126,6 +130,7 @@ export type SettingsDrawerProps = {
   }>
   onAddManualMemory: (content: string) => void
   onUpdateMemory: (id: string, content: string) => void
+  onSetMemoryEnabled: (id: string, enabled: boolean) => void
   onRemoveMemory: (id: string) => void
   onClearDailyMemory: () => void
   onUpdateDailyEntry?: (id: string, day: string, content: string) => void
@@ -215,6 +220,8 @@ export type SettingsDrawerProps = {
 
 export function SettingsDrawer({
   open,
+  preferredSectionId,
+  memoryFocus,
   settings,
   platformProfile,
   chatMessageCount,
@@ -241,6 +248,7 @@ export function SettingsDrawer({
   onClearMemoryArchive,
   onAddManualMemory,
   onUpdateMemory,
+  onSetMemoryEnabled,
   onRemoveMemory,
   onClearDailyMemory,
   onUpdateDailyEntry,
@@ -399,6 +407,9 @@ export function SettingsDrawer({
     draft,
     onTestConnection,
     handleLoadSpeechVoices: speechVoices.handleLoadSpeechVoices,
+    onApplyTextConnectionRepair: (repair) => {
+      setDraft((current) => applyConnectionTestRepairDraft(current, repair))
+    },
   })
 
   const { confirm, confirmOptions, handleConfirm, handleCancel } = useConfirm()
@@ -502,12 +513,23 @@ export function SettingsDrawer({
       setDraft(settings)
       themePreview.previewTheme(settings.themeId)
       speechVoices.syncPreviewText(settings.companionName)
-      setSettingsView('home')
+      if (preferredSectionId) {
+        setActiveSectionId(normalizeSettingsSectionId(preferredSectionId))
+        setSettingsView('section')
+      } else {
+        setSettingsView('home')
+      }
     } else {
       themePreview.previewTheme(settings.themeId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only fire on open transition, not settings changes
   }, [open])
+
+  useEffect(() => {
+    if (!open || !preferredSectionId) return
+    setActiveSectionId(normalizeSettingsSectionId(preferredSectionId))
+    setSettingsView('section')
+  }, [open, preferredSectionId])
 
   useEffect(() => {
     if (!open || isLocaleLoaded(draft.uiLanguage)) return
@@ -756,6 +778,7 @@ export function SettingsDrawer({
             setDraft={setDraft}
             memories={memories}
             dailyMemoryEntries={dailyMemoryEntries}
+            memoryFocus={memoryFocus}
             uiLanguage={uiLanguage}
             memorySearchModeOptions={memorySearchModeOptions}
             selectedMemorySearchMode={selectedMemorySearchMode}
@@ -769,6 +792,7 @@ export function SettingsDrawer({
             onClearMemoryArchive={() => void memoryArchive.handleClearMemoryArchive()}
             onAddManualMemory={onAddManualMemory}
             onUpdateMemory={onUpdateMemory}
+            onSetMemoryEnabled={onSetMemoryEnabled}
             onRemoveMemory={onRemoveMemory}
             onClearDailyMemory={onClearDailyMemory}
             onUpdateDailyEntry={onUpdateDailyEntry}

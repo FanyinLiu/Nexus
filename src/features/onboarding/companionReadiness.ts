@@ -13,6 +13,8 @@ export type CompanionReadinessItem = {
 export type CompanionReadinessSummary = {
   status: CompanionReadinessStatus
   summaryKey: TranslationKey
+  timeboxKey: TranslationKey
+  targetMinutes: number
   items: CompanionReadinessItem[]
 }
 
@@ -23,6 +25,7 @@ export type CompanionReadinessInput = {
   apiKey: string
   model: string
   textProviderRequiresApiKey: boolean
+  textConnectionVerified: boolean
   petModelAvailable: boolean
   speechInputEnabled: boolean
   speechInputProviderId: string
@@ -40,6 +43,14 @@ const SUMMARY_KEY_BY_STATUS: Record<CompanionReadinessStatus, TranslationKey> = 
   warning: 'onboarding.readiness.summary.warning',
   blocked: 'onboarding.readiness.summary.blocked',
 }
+
+const TIMEBOX_KEY_BY_STATUS: Record<CompanionReadinessStatus, TranslationKey> = {
+  ready: 'onboarding.readiness.timebox.ready',
+  warning: 'onboarding.readiness.timebox.warning',
+  blocked: 'onboarding.readiness.timebox.blocked',
+}
+
+export const FIRST_CONVERSATION_TARGET_MINUTES = 5
 
 function hasValue(value: string) {
   return value.trim().length > 0
@@ -81,6 +92,14 @@ function buildTextItem(input: CompanionReadinessInput): CompanionReadinessItem {
       id: 'text',
       status: 'warning',
       messageKey: 'onboarding.readiness.text.warning_api_key',
+    }
+  }
+
+  if (!input.textConnectionVerified) {
+    return {
+      id: 'text',
+      status: 'warning',
+      messageKey: 'onboarding.readiness.text.warning_unverified',
     }
   }
 
@@ -167,6 +186,8 @@ export function buildCompanionReadiness(input: CompanionReadinessInput): Compani
   return {
     status,
     summaryKey: SUMMARY_KEY_BY_STATUS[status],
+    timeboxKey: TIMEBOX_KEY_BY_STATUS[status],
+    targetMinutes: FIRST_CONVERSATION_TARGET_MINUTES,
     items,
   }
 }

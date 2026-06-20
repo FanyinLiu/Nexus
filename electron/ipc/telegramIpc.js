@@ -2,6 +2,29 @@ import { BrowserWindow, ipcMain } from 'electron'
 import * as telegramGateway from '../services/telegramGateway.js'
 import { requireTrustedSender, requireString } from './validate.js'
 import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
+import { audit } from '../services/auditLog.js'
+import { requireExternalActionPermission } from '../services/externalActionPolicy.js'
+import {
+  summarizeExternalActionRequest,
+  summarizeExternalActionResult,
+} from './externalActionAudit.js'
+import {
+  validateTelegramSendMessagePayload,
+  validateTelegramSendVoicePayload,
+} from './payloadSchemas.js'
+
+async function runAuditedExternalAction(channel, payload, action) {
+  audit('external-action', 'request', summarizeExternalActionRequest(channel, payload))
+  try {
+    await requireExternalActionPermission(channel)
+    const result = await action()
+    audit('external-action', 'result', summarizeExternalActionResult(channel, result))
+    return result
+  } catch (error) {
+    audit('external-action', 'result', summarizeExternalActionResult(channel, {}, error))
+    throw error
+  }
+}
 
 export function register() {
   // Forward incoming Telegram messages to all renderer windows
@@ -48,30 +71,32 @@ export function register() {
 
   ipcMain.handle('telegram:send-message', async (event, payload) => {
     requireTrustedSender(event)
-    const chatId = Number(payload?.chatId)
-    if (!Number.isFinite(chatId)) throw new Error('chatId must be a number')
-    const text = requireString(payload?.text, 'text')
+    payload = validateTelegramSendMessagePayload(payload)
+    const chatId = Number(payload.chatId)
+    const text = payload.text
     const options = {
       replyToMessageId: payload?.replyToMessageId ?? undefined,
       parseMode: payload?.parseMode ?? undefined,
     }
-    await telegramGateway.sendMessage(chatId, text, options)
-    return { ok: true }
+    return runAuditedExternalAction('telegram:send-message', payload, async () => {
+      await telegramGateway.sendMessage(chatId, text, options)
+      return { ok: true }
+    })
   })
 
   ipcMain.handle('telegram:send-voice', async (event, payload) => {
     requireTrustedSender(event)
-    const chatId = Number(payload?.chatId)
-    if (!Number.isFinite(chatId)) throw new Error('chatId must be a number')
-    const audioBase64 = requireString(payload?.audioBase64, 'audioBase64')
-    // Telegram caps bot uploads at 50 MB; base64 inflates by ~4/3.
-    if (audioBase64.length > 50_000_000) throw new Error('audio payload too large')
-    const mimeType = requireString(payload?.mimeType, 'mimeType')
+    payload = validateTelegramSendVoicePayload(payload)
+    const chatId = Number(payload.chatId)
+    const audioBase64 = payload.audioBase64
+    const mimeType = payload.mimeType
     const audio = Buffer.from(audioBase64, 'base64')
-    await telegramGateway.sendVoice(chatId, audio, mimeType, {
-      replyToMessageId: payload?.replyToMessageId ?? undefined,
+    return runAuditedExternalAction('telegram:send-voice', payload, async () => {
+      await telegramGateway.sendVoice(chatId, audio, mimeType, {
+        replyToMessageId: payload?.replyToMessageId ?? undefined,
+      })
+      return { ok: true }
     })
-    return { ok: true }
   })
 
   ipcMain.handle('telegram:status', (event) => {

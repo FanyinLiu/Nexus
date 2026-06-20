@@ -1,6 +1,7 @@
 export * from './AboutPanel'
 export * from './AutonomySection'
 export * from './ChatSection'
+export * from './ChatMigrationPreviewPanel'
 export * from './ConsoleSection'
 export * from './UpdaterPanel'
 export * from './DiagnosticsPanel'

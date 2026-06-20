@@ -22,6 +22,12 @@ test('updater busy state covers checking, available, and progress phases', () =>
     bytesPerSecond: 10,
   }), true)
   assert.equal(isUpdaterBusyEvent({ type: 'downloaded', version: '0.4.0', releaseNotes: null }), false)
+  assert.equal(isUpdaterBusyEvent({
+    type: 'manual-update',
+    version: '0.4.0',
+    releaseUrl: 'https://github.com/FanyinLiu/Nexus/releases/tag/v0.4.0',
+    reason: 'macos-unsigned',
+  }), false)
   assert.equal(isUpdaterBusyEvent({ type: 'not-available', version: '0.3.2' }), false)
   assert.equal(isUpdaterBusyEvent({ type: 'error', message: 'network failed' }), false)
   assert.equal(isUpdaterBusyEvent(null), false)
@@ -62,6 +68,18 @@ test('normalizeUpdaterEvent clamps progress and ignores malformed display fields
     type: 'available',
     version: '0.4.0',
     releaseNotes: null,
+  })
+
+  assert.deepEqual(normalizeUpdaterEvent({
+    type: 'manual-update',
+    version: ' 0.4.0 ',
+    releaseUrl: 'https://example.com/not-allowed',
+    reason: ' macos-unsigned ',
+  }), {
+    type: 'manual-update',
+    version: '0.4.0',
+    releaseUrl: 'https://github.com/FanyinLiu/Nexus/releases/latest',
+    reason: 'macos-unsigned',
   })
 })
 
@@ -111,6 +129,7 @@ test('applyUpdaterStatus imports packaged status and derives busy from the last 
 
   assert.equal(state.currentVersion, '0.3.2')
   assert.equal(state.isPackaged, true)
+  assert.equal(state.updateMode, 'unknown')
   assert.equal(state.busy, true)
   assert.deepEqual(state.event, { type: 'available', version: '0.4.0', releaseNotes: null })
 })
@@ -123,6 +142,7 @@ test('applyUpdaterStatus preserves known fields when status snapshots are partia
   })
 
   const state = applyUpdaterStatus(previous, {
+    updateMode: 'manual-download',
     last: {
       type: 'progress',
       percent: Number.NaN,
@@ -134,12 +154,35 @@ test('applyUpdaterStatus preserves known fields when status snapshots are partia
 
   assert.equal(state.currentVersion, '0.3.2')
   assert.equal(state.isPackaged, true)
+  assert.equal(state.updateMode, 'manual-download')
   assert.deepEqual(state.event, {
     type: 'progress',
     percent: 0,
     transferred: 0,
     total: 0,
     bytesPerSecond: 0,
+  })
+})
+
+test('reduceUpdaterCheckResult records manual download updates without entering busy download state', () => {
+  const state = reduceUpdaterCheckResult(createInitialUpdaterState(), {
+    ok: true,
+    currentVersion: '0.3.2',
+    latestVersion: '0.4.0',
+    updateMode: 'manual-download',
+    manualDownload: true,
+    releaseUrl: 'https://github.com/FanyinLiu/Nexus/releases/tag/v0.4.0',
+    reason: 'macos-unsigned',
+  }, 'check failed')
+
+  assert.equal(state.currentVersion, '0.3.2')
+  assert.equal(state.updateMode, 'manual-download')
+  assert.equal(state.busy, false)
+  assert.deepEqual(state.event, {
+    type: 'manual-update',
+    version: '0.4.0',
+    releaseUrl: 'https://github.com/FanyinLiu/Nexus/releases/tag/v0.4.0',
+    reason: 'macos-unsigned',
   })
 })
 

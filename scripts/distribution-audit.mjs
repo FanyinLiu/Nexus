@@ -3,6 +3,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { buildIpcContractReport, summarizeIpcContractReport } from './ipc-contract-audit.mjs'
+import { buildReleaseTrustReport, summarizeReleaseTrustReport } from './release-trust-audit.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -50,6 +52,15 @@ check('developer npm scripts cover run, package and release verification', () =>
     'package:linux',
     'package:dir:smoke',
     'verify:release',
+    'ipc:audit',
+    'sqlite:smoke',
+    'sqlite:smoke:electron',
+    'sqlite:smoke:all',
+    'release:trust:audit',
+    'release:signing:readiness',
+    'release:signing:gate',
+    'release:signing:gate:mac',
+    'release:signing:gate:windows',
     'prerelease-check',
   ]) {
     assert(hasScript(pkg, name), `missing npm script: ${name}`)
@@ -84,8 +95,10 @@ check('release workflow builds and uploads updater metadata', () => {
 
 check('release workflow runs the pre-release gate before packaging', () => {
   assert(releaseWorkflow.includes('preflight:'), 'release workflow missing preflight job')
+  assert(releaseWorkflow.includes('npm run sqlite:smoke'), 'release workflow must run sqlite:smoke before packaging')
   assert(releaseWorkflow.includes('npm run prerelease-check --'), 'release workflow must run prerelease-check')
   assert(releaseWorkflow.includes('--skip=A --quick'), 'release workflow should use the tag-safe prerelease-check mode')
+  assert(releaseWorkflow.includes('npm run release:signing:readiness'), 'release workflow should report signing readiness before packaging')
   assert(releaseWorkflow.includes('needs: [ensure-release, preflight]'), 'build job must depend on preflight')
 })
 
@@ -109,6 +122,20 @@ check('auto-updater is wired through main and preload', () => {
   for (const api of ['updaterCheck', 'updaterStatus', 'updaterInstall', 'subscribeUpdaterEvent']) {
     assert(preload.includes(api), `preload missing ${api}`)
   }
+})
+
+check('release trust posture is explicit and documented', () => {
+  const report = buildReleaseTrustReport(ROOT)
+  const summary = summarizeReleaseTrustReport(report)
+  assert(summary.error === 0, `release trust audit has ${summary.error} error(s); run npm run release:trust:audit`)
+})
+
+check('IPC bridge contract baseline is inventoried', () => {
+  const report = buildIpcContractReport(ROOT)
+  const summary = summarizeIpcContractReport(report)
+  assert(summary.errors === 0, `IPC contract audit has ${summary.errors} error(s); run npm run ipc:audit`)
+  assert(report.counts.preloadInvokeChannels > 0, 'IPC contract audit found no preload invoke channels')
+  assert(report.counts.mainHandlerChannels > 0, 'IPC contract audit found no main handler channels')
 })
 
 check('source desktop shortcut launches without a terminal window', () => {

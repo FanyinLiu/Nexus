@@ -23,6 +23,7 @@ type CompanionStepProps = {
   selectedPetModel: PetModelDefinition | undefined
   launchOnStartupSupported: boolean
   finishHint: string
+  textConnectionVerified: boolean
 }
 
 export function CompanionStep({
@@ -32,6 +33,7 @@ export function CompanionStep({
   selectedPetModel,
   launchOnStartupSupported,
   finishHint,
+  textConnectionVerified,
 }: CompanionStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
@@ -43,6 +45,7 @@ export function CompanionStep({
     apiKey: draft.apiKey,
     model: draft.model,
     textProviderRequiresApiKey: apiProviderRequiresApiKey(draft.apiProviderId),
+    textConnectionVerified,
     petModelAvailable: Boolean(selectedPetModel),
     speechInputEnabled: draft.speechInputEnabled,
     speechInputProviderId: draft.speechInputProviderId,
@@ -151,6 +154,11 @@ export function CompanionStep({
           </span>
         </div>
         <p>{ti(readiness.summaryKey)}</p>
+        <p className="onboarding-readiness__timebox">
+          {pickTranslatedUiText(draft.uiLanguage, readiness.timeboxKey, {
+            minutes: readiness.targetMinutes,
+          })}
+        </p>
         <ul className="onboarding-readiness__list">
           {readiness.items.map((item) => (
             <li

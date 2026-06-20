@@ -28,7 +28,7 @@ export const UpdaterPanel = memo(function UpdaterPanel({ uiLanguage }: UpdaterPa
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1], params?: TranslationParams) =>
     pickTranslatedUiText(uiLanguage, key, params)
   const updater = useUpdater()
-  const { event, busy, currentVersion, isPackaged } = updater
+  const { event, busy, currentVersion, isPackaged, updateMode } = updater
 
   let statusText: string
   let statusTone: 'idle' | 'info' | 'success' | 'warning' | 'error' = 'idle'
@@ -36,7 +36,9 @@ export const UpdaterPanel = memo(function UpdaterPanel({ uiLanguage }: UpdaterPa
   switch (event.type) {
     case 'idle':
       statusText = isPackaged
-        ? ti('settings.updater.idle')
+        ? (updateMode === 'manual-download'
+            ? ti('settings.updater.manual_mode')
+            : ti('settings.updater.idle'))
         : ti('settings.updater.dev_mode')
       statusTone = 'idle'
       break
@@ -47,6 +49,10 @@ export const UpdaterPanel = memo(function UpdaterPanel({ uiLanguage }: UpdaterPa
     case 'available':
       statusText = ti('settings.updater.available', { version: event.version ?? '?' })
       statusTone = 'info'
+      break
+    case 'manual-update':
+      statusText = ti('settings.updater.manual_update_available', { version: event.version ?? '?' })
+      statusTone = 'warning'
       break
     case 'not-available':
       statusText = ti('settings.updater.up_to_date', { version: event.version ?? '?' })
@@ -75,6 +81,7 @@ export const UpdaterPanel = memo(function UpdaterPanel({ uiLanguage }: UpdaterPa
   }
 
   const showInstallButton = event.type === 'downloaded'
+  const showReleasePageButton = event.type === 'manual-update'
   const progressPercent = event.type === 'progress'
     ? Math.max(0, Math.min(100, event.percent))
     : null
@@ -89,13 +96,13 @@ export const UpdaterPanel = memo(function UpdaterPanel({ uiLanguage }: UpdaterPa
           </p>
         </div>
         <div className="settings-updater-panel__actions">
-          {showInstallButton ? (
+          {showInstallButton || showReleasePageButton ? (
             <button
               type="button"
               className="primary-button"
               onClick={() => void updater.installAndRestart()}
             >
-              {ti('settings.updater.install')}
+              {showReleasePageButton ? ti('settings.updater.open_release') : ti('settings.updater.install')}
             </button>
           ) : (
             <button

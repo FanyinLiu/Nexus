@@ -6,6 +6,7 @@ import { ensureLocaleLoaded, setLocale } from '../src/i18n/runtime.ts'
 import { loadSettings } from '../src/lib/storage.ts'
 import type { AppSettings } from '../src/types/app.ts'
 import type { ChatMessage } from '../src/types/chat.ts'
+import type { MemoryRecallContext } from '../src/types/memory.ts'
 
 // Covers the catch-block wiring in createAssistantReplyRunner: the
 // user-facing surfaces (error banner, failure bubble, system message) must
@@ -40,9 +41,10 @@ before(async () => {
 })
 
 beforeEach(() => {
+  const localStorage = new MemoryStorage()
   Object.defineProperty(globalThis, 'window', {
     value: {
-      localStorage: new MemoryStorage(),
+      localStorage,
       setTimeout: (handler: TimerHandler, timeout?: number, ...args: unknown[]) => (
         setTimeout(handler as () => void, timeout, ...args) as unknown as number
       ),
@@ -52,11 +54,21 @@ beforeEach(() => {
     configurable: true,
     writable: true,
   })
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: localStorage,
+    configurable: true,
+    writable: true,
+  })
 })
 
 const RAW_PROVIDER_ERROR = '模型请求失败（状态码：429）'
 
 type RecordedCalls = {
+  appendedMessages: ChatMessage[]
+  dailyMemoryAppendCount: number
+  memoryContexts: MemoryRecallContext[]
+  pendingCallbackCount: number | null
+  recalledIds: string[][]
   setError: Array<string | null>
   bubbles: string[]
   systemMessages: Array<{ content: string; tone?: string }>
@@ -67,6 +79,11 @@ type RecordedCalls = {
 
 function createFailingRunner(failure: Error) {
   const calls: RecordedCalls = {
+    appendedMessages: [],
+    dailyMemoryAppendCount: 0,
+    memoryContexts: [],
+    pendingCallbackCount: null,
+    recalledIds: [],
     setError: [],
     bubbles: [],
     systemMessages: [],
@@ -109,6 +126,65 @@ function createFailingRunner(failure: Error) {
   return { runner, calls }
 }
 
+function createSuccessfulRunner() {
+  const calls: RecordedCalls = {
+    appendedMessages: [],
+    dailyMemoryAppendCount: 0,
+    memoryContexts: [],
+    pendingCallbackCount: null,
+    recalledIds: [],
+    setError: [],
+    bubbles: [],
+    systemMessages: [],
+    voiceTraces: [],
+    voicePipeline: [],
+    busEvents: [],
+  }
+
+  const ctx = {
+    loadDesktopContextSnapshot: async () => null,
+    suppressVoiceReplyRef: { current: false },
+    beginStreamingSpeechReply: () => null,
+    setMood: () => {},
+    busEmit: (event: Record<string, unknown>) => { calls.busEvents.push(event) },
+    updateVoicePipeline: (stage: string, status: string) => { calls.voicePipeline.push({ stage, status }) },
+    appendVoiceTrace: (label: string, detail: string, tone: string) => { calls.voiceTraces.push({ label, detail, tone }) },
+    clearPendingVoiceRestart: () => {},
+    resetNoSpeechRestartCount: () => {},
+    updatePetStatus: () => {},
+    appendDailyMemoryEntries: () => { calls.dailyMemoryAppendCount += 1 },
+    appendDebugConsoleEvent: () => {},
+    queuePetPerformanceCue: () => {},
+    onAssistantReplyDelivered: () => {},
+    settingsRef: { current: null },
+    setSettings: () => {},
+    updateVoicePipelineStage: () => {},
+    speakAssistantReply: async () => {},
+  }
+
+  const runner = createAssistantReplyRunner({
+    ctx,
+    appendChatMessage: (message: ChatMessage) => { calls.appendedMessages.push(message) },
+    appendSystemMessage: (content: string, tone?: string) => { calls.systemMessages.push({ content, tone }) },
+    presentPetDialogBubble: (bubble: { content: string }) => { calls.bubbles.push(bubble.content) },
+    handleSpeechPlaybackFailure: () => {},
+    setError: (error: string | null) => { calls.setError.push(error) },
+    setActiveStreamAbort: () => {},
+    onMemoryRecalled: (ids: string[]) => { calls.recalledIds.push(ids) },
+    requestStreaming: (_settings, _history, memoryContext, _onDelta, requestOptions) => {
+      calls.memoryContexts.push(memoryContext)
+      calls.pendingCallbackCount = requestOptions.pendingCallbacks?.length ?? null
+      return Promise.resolve({
+        providerId: 'ollama',
+        response: { content: 'I am here.' },
+        usedFallback: false,
+      })
+    },
+  } as unknown as Parameters<typeof createAssistantReplyRunner>[0])
+
+  return { runner, calls }
+}
+
 function makeOptions(fromVoice: boolean) {
   const settings: AppSettings = {
     ...loadSettings(),
@@ -134,6 +210,37 @@ function makeOptions(fromVoice: boolean) {
     shouldResumeContinuousVoice: false,
     turnId: 1,
     isLatestTurn: () => true,
+  }
+}
+
+function makePausedMemoryOptions() {
+  const options = makeOptions(false)
+  return {
+    ...options,
+    currentSettings: {
+      ...options.currentSettings,
+      memoryPaused: true,
+      speechOutputEnabled: false,
+      autoSkillGenerationEnabled: false,
+    },
+    nextMemories: [{
+      id: 'memory-1',
+      category: 'preference' as const,
+      content: 'User likes quiet replies.',
+      createdAt: '2026-06-09T12:00:00.000Z',
+      enabled: true,
+      source: 'chat',
+    }],
+    nextDailyMemories: {
+      '2026-06-09': [{
+        id: 'daily-1',
+        day: '2026-06-09',
+        role: 'user' as const,
+        content: 'A prior diary note',
+        source: 'chat' as const,
+        createdAt: '2026-06-09T12:00:00.000Z',
+      }],
+    },
   }
 }
 
@@ -183,4 +290,29 @@ test('voice-source failure humanizes the system message and status, keeps the vo
 
   // Error banner: voice summary wrapping the humanized message.
   assert.match(calls.setError[0] ?? '', /(too many|wait|moment)/i)
+})
+
+test('memory pause sends an empty recall context and skips diary capture', async () => {
+  const { runner, calls } = createSuccessfulRunner()
+
+  const result = await runner(makePausedMemoryOptions())
+
+  assert.equal(result, true)
+  assert.equal(calls.memoryContexts.length, 1)
+  assert.deepEqual(calls.memoryContexts[0].longTerm, [])
+  assert.deepEqual(calls.memoryContexts[0].daily, [])
+  assert.deepEqual(calls.memoryContexts[0].semantic, [])
+  assert.equal(calls.memoryContexts[0].vectorSearchAvailable, false)
+  assert.equal(calls.pendingCallbackCount, 0)
+  assert.equal(calls.dailyMemoryAppendCount, 0)
+  assert.deepEqual(calls.recalledIds, [])
+  assert.equal(calls.appendedMessages.at(-1)?.role, 'assistant')
+  assert.deepEqual(calls.appendedMessages.at(-1)?.memoryTrace, {
+    status: 'paused',
+    searchModeUsed: calls.memoryContexts[0].searchModeUsed,
+    vectorSearchAvailable: false,
+    longTermIds: [],
+    dailyEntryIds: [],
+    semanticIds: [],
+  })
 })

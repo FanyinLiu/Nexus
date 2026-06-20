@@ -14,4 +14,9 @@ export interface DesktopContextRequest {
   includeActiveWindow?: boolean
   includeClipboard?: boolean
   includeScreenshot?: boolean
+  policy?: {
+    activeWindow?: boolean
+    clipboard?: boolean
+    screenshot?: boolean
+  }
 }

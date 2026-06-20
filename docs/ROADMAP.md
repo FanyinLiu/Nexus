@@ -1,12 +1,308 @@
 # Nexus Roadmap — companion-first phases
 
-> Last updated 2026-05-07. Stewardship follows Klein's product direction.
+> Last updated 2026-06-19. Stewardship follows Klein's product direction.
 > For the short-term MVP and Chinese execution plan, see
 > [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md). When planning
 > near-term work, Phase 1 in that document is the active scope.
 
 For the execution order and concrete acceptance metrics, use
 [EXECUTABLE_OPTIMIZATION_TASKS](EXECUTABLE_OPTIMIZATION_TASKS.md).
+
+## v1.0 Stabilization Milestones
+
+The v1.0 track keeps Nexus focused on a local-first AI desktop companion:
+visible on the desktop, privacy-preserving, memory-transparent, and able to act
+only with user authorization. Each milestone must finish with a working build,
+tests or smoke validation, migration/rollback notes, user/developer docs, and a
+short list of known risks.
+
+Near-term releases should not turn Nexus into a Codex-style work agent. The
+current priority is companion presence, local privacy, transparent memory, and
+safe user-controlled data movement; task automation stays later and gated.
+
+### M0 - Baseline audit and hygiene - completed 2026-06-18
+
+Goal: establish a trustworthy baseline before deeper changes.
+
+- Audited repository structure, dependencies, scripts, tests, build, packaging,
+  IPC posture, storage posture, and release docs.
+- Cleared current npm audit findings and lint warnings.
+- Verified `npm test`, `npm run build`, `npm run distribution:audit`, and
+  `npm run package:dir:smoke`.
+- Recorded the baseline in
+  [Milestone 0 Baseline Audit](MILESTONE-0-BASELINE-AUDIT-2026-06-18.md).
+
+### M1 - First-run and model repair loop
+
+Goal: a new user can install, configure a text model, and complete the first
+conversation within 5 minutes.
+
+- Harden setup state for Ollama, DeepSeek, OpenAI-compatible, and custom
+  provider paths.
+- Surface actionable repair messages for missing Ollama service, missing local
+  model, invalid API key, bad base URL, provider timeout, and unsupported model.
+- Keep connection-test repairs limited to non-secret fields: built-in provider
+  Base URL/model defaults and installed Ollama model selection. API keys and
+  custom endpoints remain explicit user input.
+- Surface the 5-minute first-conversation target in onboarding readiness so the
+  user can see whether setup is ready, degraded-but-startable, or still blocked;
+  text-model readiness requires a successful connection test for the current
+  onboarding draft.
+- Record local first-conversation timing after onboarding completion when the
+  first direct text/voice assistant reply succeeds, without storing message
+  content or credentials.
+- Surface that timing result in the Settings startup status panel for manual
+  release QA and user-visible first-run diagnostics.
+- Let users download a local first-run QA report from the startup status panel
+  with launch checks and timing evidence, excluding chat content, model output,
+  API keys, and provider secrets.
+- Support `npm run doctor -- --json` for structured local startup evidence in
+  release QA and support reports, with the same no-secrets/no-content boundary.
+- Add `npm run verify:first-run` as a repeatable M1 gate for doctor JSON
+  privacy checks, model preflight, onboarding repair, first-conversation
+  timing, startup reports, and locale coverage.
+- Keep voice, OCR, RAG, plugins, and advanced automation out of the default
+  first-run path.
+- Add tests for model setup state, connection preflight, and humanized repair
+  copy.
+- Rollback: keep existing settings shape and only add optional setup metadata.
+
+### M2 - Release trust and update hardening
+
+Goal: installers and updates are predictable across macOS, Windows, and Linux.
+
+- Add `npm run release:trust:audit` as the M2 release-trust gate and integrate
+  it into `npm run distribution:audit`.
+- Verify unsigned local build behavior separately from signed release behavior.
+- Document that unsigned macOS artifacts are manual update downloads until
+  Developer ID signing is enabled.
+- Run unsigned macOS builds in check-only update mode so they open GitHub
+  Releases instead of attempting an untrusted auto-install flow.
+- Add a non-blocking signed readiness report plus future hard gates for macOS
+  Developer ID secrets, hardened runtime, notarization, signed updater mode, and
+  Windows signing provider prerequisites.
+- Prepare macOS hardened runtime/notarization and Windows signing paths without
+  blocking local developer smoke builds.
+- Keep GitHub Releases + `electron-updater` as the update channel.
+- Add release documentation for installer trust, signing prerequisites,
+  rollback, and failed-update recovery.
+- Rollback: signing config changes must be isolated in packaging config and
+  release docs.
+
+### M3 - IPC contract, permission, and audit baseline
+
+Goal: renderer-visible IPC becomes explicit, validated, permission-aware, and
+auditable.
+
+- Add `npm run ipc:audit` as the source-only M3 IPC inventory gate and
+  integrate it into `npm run distribution:audit`.
+- Track current IPC coverage: preload invokes, subscriptions, main handlers,
+  trusted sender checks, payload validation posture, risk class, audit hints,
+  and permission/confirmation hints.
+- Tighten high-risk IPC clusters in small slices; `file:save-text` and
+  `file:open-text` now have request schemas, native-dialog confirmation, and
+  metadata-only audit records.
+- `desktop-context:get` now has metadata-only audit records for active-window,
+  clipboard, and screenshot capability access without logging captured content.
+- Telegram/Discord send, Minecraft/Factorio execute, and MCP call/sync channels
+  now have metadata-only request/result audit records without logging outbound
+  text, audio, commands, target IDs, or MCP argument contents.
+- Those external action channels now also use a main-process permission policy
+  for read-only, confirm, and auto modes. Active auto-mode escalation requires
+  native confirmation and the renderer sync path carries only mode plus
+  active/configured booleans.
+- Pet-model import/create/assemble/install/open IPC now validates payloads,
+  writes metadata-only audit records, and uses native confirmation for direct
+  renderer-triggered local artifact operations while keeping paths, URLs, slugs,
+  and model names out of audit records.
+- Plugin lifecycle and plugin bus write IPC now use metadata-only request/result
+  audit records and native confirmation for execution-granting lifecycle
+  actions and bus publish/subscribe/unsubscribe, without logging plugin IDs,
+  server IDs, topics, message payloads, commands, or error text.
+- `tool:open-external` now writes metadata-only request/result audit records
+  around the existing main-process URL safety check and native confirmation,
+  without logging full URLs, hostnames, paths, query strings, fragments, or
+  error text.
+- Vault IPC now has metadata-only request/result audit records and an explicit
+  secret-safe permission contract: trusted renderer sender, strict slot/entry
+  validation, opaque per-sender vault refs instead of plaintext retrieval
+  returns, rate limits for enumeration-prone reads, and no slot names, secret
+  values, ref tokens, or error text in audit records.
+- The remaining renderer-payload IPC backlog is now schema-bound:
+  integrations inspection, KWS start/status, VAD start, model download, and TTS
+  streaming lifecycle requests all validate request shape before service work.
+- Create an inventory of every preload-exposed method and matching
+  `ipcMain.handle`.
+- Require trusted sender checks, request validation, response shape decisions,
+  and risk classification for every channel.
+- Move high-risk operations toward unknown-field rejection instead of silent
+  compatibility stripping.
+- Record high-risk operations in the audit log with stable categories.
+- Rollback: schema tightening lands channel by channel with compatibility tests.
+
+### M4 - Main-process storage adapter and SQLite foundation
+
+Goal: introduce durable local storage without a large data migration.
+
+- Add a main-process storage service with schema versioning, migrations,
+  rollback hooks, and export/import scaffolding.
+- Initial slice landed a dependency-free `json-ledger` storage foundation in
+  the main process: `userData/local-data/manifest.json`, schema version `1`,
+  migration `0001-create-local-data-manifest`, metadata-only export/import
+  planning, and rollback-by-rename.
+- SQLite foundation landed behind the same adapter with Electron/Node's built-in
+  `node:sqlite`, `userData/local-data/nexus.sqlite`, schema version `2`,
+  migration `0002-create-sqlite-local-data-foundation`, Node smoke coverage,
+  release CI smoke coverage, an Electron smoke script, and packaged smoke
+  validation.
+- Domain registry and the first low-risk record mirror landed in schema version
+  `3`: migration `0003-create-domain-records-and-onboarding-mirror` creates the
+  generic record table and mirrors normalized onboarding completion timing from
+  renderer `localStorage` without making it authoritative.
+- `local-data:status` is available as a read-only renderer IPC status surface,
+  and `local-data:mirror-onboarding` is available as a narrow schema-validated
+  write surface; neither returns userData paths or record payloads.
+- A renderer-side chat migration dry-run now audits `nexus:chat:sessions` and
+  legacy `nexus:chat` without writing storage or exposing message content. It
+  reports counts, byte estimates, role distribution, time range, and issue codes
+  for the later chat SQLite migration design.
+- A service-only confirmed chat migration path can now validate a content-bearing
+  package, require explicit confirmation, write `chat-sessions` records to
+  SQLite, write a content-free `local-data-audit` record, and roll back only the
+  chat-session domain. It is not exposed through production IPC/UI yet.
+- A disabled-by-default chat migration IPC boundary is now inventoried:
+  `local-data:chat-migration-apply` and `local-data:chat-migration-rollback`
+  require schema validation, trusted sender checks, explicit confirmation, and
+  `NEXUS_ENABLE_LOCAL_DATA_CHAT_MIGRATION=1` before the service path can run.
+- A disabled-by-default Settings history preview panel can now be exposed with
+  `VITE_NEXUS_ENABLE_LOCAL_DATA_CHAT_MIGRATION_UI=1`. It reads only the
+  content-free dry-run summary, requires a checkbox plus confirmation dialog,
+  then calls the feature-flagged apply IPC path. It still does not read SQLite
+  chat records back into the renderer, and it is not a default production
+  migration flow.
+- The hidden preview panel also has a content-explicit backup export and a
+  separate rollback review. Backup JSON is clearly marked as containing full
+  chat message content, while rollback requires its own checkbox, confirmation
+  dialog, and the existing main-process migration gate before deleting migrated
+  SQLite chat-session records.
+- The hidden panel can also refresh a post-apply/rollback local-data status
+  summary through a disabled-by-default no-payload IPC. The summary reports only
+  record count, message count, last migration audit id/action/time, and
+  `recordPayloadsIncluded: false`; it does not return SQLite chat records,
+  session IDs, titles, message text, or userData paths.
+- Keep the SQLite dependency gate in release CI so Windows, macOS, and Linux
+  runners validate the native package before installer builds.
+- Keep localStorage as the read/write source until the adapter has tests and
+  packaged smoke coverage.
+- Rollback: adapter can be disabled and existing renderer storage remains
+  authoritative.
+
+### M5 - Chat and memory migration
+
+Goal: move heavy, long-lived data out of renderer localStorage.
+
+- Migrate chat sessions, long-term memory, memory archive, relationship state,
+  and audit-relevant logs domain by domain.
+- Preserve existing user data with idempotent migration and export.
+- Provide a user-visible way to view, edit, delete, export, and pause memory.
+- Show which memories or files influenced a response when relevant.
+- Slice 1 has started on chat-session storage authority: the main-process
+  local-data service can now read back migrated SQLite `chat-sessions` records as
+  content-bearing service data for tests and future repository work. This is not
+  exposed through production renderer IPC/UI yet, and live chat still reads and
+  writes renderer `localStorage`.
+- Slice 2 adds a hidden, disabled-by-default runtime mirror for the current live
+  chat session. It requires `NEXUS_ENABLE_LOCAL_DATA_CHAT_MIGRATION=1`,
+  `VITE_NEXUS_ENABLE_LOCAL_DATA_CHAT_RUNTIME_MIRROR=1`, and explicit hidden
+  Settings consent before the renderer sends a debounced mirror write to SQLite.
+  LocalStorage remains authoritative, SQLite records are not read back into the
+  renderer, and audit records remain content-free.
+- Slice 3 adds a hidden, confirmed comparison preview for chat memory storage.
+  The renderer sends only local session metadata, the main process compares it
+  with SQLite metadata, writes a content-free audit record, and returns aggregate
+  difference counts. It does not return SQLite chat records, titles, message
+  text, userData paths, or session IDs to the renderer, and it does not switch
+  chat authority.
+- Slice 4 adds user-visible memory transparency and pause controls. The Memory
+  settings page now shows active memory/diary counts, context-read status, and
+  the current storage-authority boundary; users can globally pause memory recall
+  and learning or pause individual long-term memories without deleting them.
+  Paused chat turns receive an empty memory recall context and skip daily-memory
+  capture.
+- Slice 5 adds content-minimized memory source traces to assistant messages.
+  Each reply can now record whether memory was active or paused, which recall
+  mode ran, vector availability, and bounded recalled memory/daily/semantic IDs;
+  the chat bubble shows a subtle count summary without duplicating memory text.
+- Slice 6 adds an expandable memory-source detail view on assistant replies.
+  The renderer resolves stored trace IDs against current memory state at render
+  time, shows short previews for still-present memories/daily entries, marks
+  missing or paused sources explicitly, and can open Settings directly to the
+  Memory page for editing.
+- Slice 7 adds reply-source focus inside the Memory settings page. Opening
+  Memory from a reply now carries only the referenced memory IDs, highlights the
+  corresponding long-term memories and diary entries, and temporarily includes
+  referenced older diary entries in the visible panel without changing stored
+  memory data.
+- Slice 8 adds a content-free memory migration dry-run for `nexus:memory:long-term`,
+  legacy `nexus:memory`, and `nexus:memory:daily`. It reports storage presence,
+  byte sizes, normalized record counts, day/date ranges, category/source counts,
+  and issue codes without writing SQLite, changing localStorage, or exposing
+  memory text, IDs, source refs, or related IDs.
+- Rollback: keep legacy localStorage snapshots until migration is verified.
+
+### M6 - Desktop presence state machine
+
+Goal: the companion's visible state reflects what Nexus is actually doing.
+
+- Define a shared state contract for idle, thinking, listening, speaking,
+  waiting for confirmation, error, and offline states.
+- Bind chat, voice, setup, tool, and error flows to that contract.
+- Keep Live2D/sprite-heavy rendering lazy and budgeted.
+- Rollback: state mapping is additive and can fall back to current pet behavior.
+
+### M7 - Voice basics with resource budgets
+
+Goal: voice is usable without making idle Nexus heavy.
+
+- Stabilize microphone permission, VAD, STT, TTS, interruption, and lip-sync
+  paths behind explicit user settings.
+- Add diagnostics for mic level, VAD activity, first-audio latency, provider
+  failures, and local sidecar prerequisites.
+- Lazy-load heavyweight ASR/TTS/OCR/local model code.
+- Rollback: text chat remains the primary path and voice can be fully disabled.
+
+### M8 - Local files, lightweight RAG, and citations
+
+Goal: Nexus can use personal knowledge with visible provenance.
+
+- Add opt-in file indexing with clear folder authorization and size limits.
+- Keep retrieval lightweight before broad connector work.
+- Return source references for file-backed answers.
+- Keep private files local unless the user explicitly routes a request to a
+  remote model.
+- Rollback: file index can be paused, deleted, or rebuilt without affecting chat.
+
+### M9 - Authorized task assistant
+
+Goal: Nexus can help with tasks without becoming an uncontrolled automation
+agent.
+
+- Separate planner and executor state.
+- Preview plans before execution.
+- Require confirmation for high-risk tools and file/system changes.
+- Support pause, cancel, and execution reports.
+- Persist audit logs for tool calls and decisions.
+- Rollback: disable executor while leaving read-only planning available.
+
+### M10 - MCP, plugins, and advanced automation
+
+Goal: open extension surfaces only after core trust boundaries are stable.
+
+- Keep MCP/plugin support opt-in, scoped, and logged.
+- Require per-tool approvals and visible risk labels.
+- Avoid arbitrary marketplace behavior until signing, storage, IPC, and audit
+  foundations are stable.
+- Rollback: plugin and MCP surfaces remain behind advanced gates.
 
 ## Posture
 

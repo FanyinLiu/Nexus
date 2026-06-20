@@ -22,7 +22,7 @@
 | 6 | `nexus:voice-pipeline` | `VoicePipelineState` | `saveVoicePipelineState()` | `loadVoicePipelineState()` | `{step:'idle',...}` | - |
 | 7 | `nexus:voice-trace` | `VoiceTraceEntry[]` | `saveVoiceTrace()` | `loadVoiceTrace()` | `[]` | 8 条 |
 | 8 | `nexus:debug-console-events` | `DebugConsoleEvent[]` | `saveDebugConsoleEvents()` | `loadDebugConsoleEvents()` | `[]` | 60 条 |
-| 9 | `nexus:onboarding` | `{completedAt?}` | `saveOnboardingCompleted()` | `loadOnboardingCompleted()` | `null` | - |
+| 9 | `nexus:onboarding` | `{completedAt, firstConversationAt?, firstConversationElapsedMs?}` | `saveOnboardingCompleted()` / `markOnboardingFirstConversationCompleted()` | `loadOnboardingCompleted()` | `null` | - |
 | 10 | `nexus:ambient-presence` | `AmbientPresenceState\|null` | `saveAmbientPresence()` | `loadAmbientPresence()` | `null` | 含过期检查 |
 | 11 | `nexus:presence-activity-at` | `number` (ms) | `savePresenceActivityAt()` | `loadPresenceActivityAt()` | `Date.now()` | - |
 | 12 | `nexus:last-proactive-presence-at` | `number` (ms) | `saveLastProactivePresenceAt()` | `loadLastProactivePresenceAt()` | `0` | - |

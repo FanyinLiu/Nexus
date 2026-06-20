@@ -18,13 +18,21 @@
 //   { type: 'error', message }
 
 import electronUpdater from 'electron-updater'
-import { app } from 'electron'
+import { app, shell } from 'electron'
+import {
+  compareReleaseVersions,
+  GITHUB_RELEASES_API_URL,
+  GITHUB_RELEASES_URL,
+  normalizeGithubReleasePayload,
+  resolveUpdaterMode,
+} from './updatePolicy.js'
 
 const { autoUpdater } = electronUpdater
 
 let initialized = false
 let lastStatus = { type: 'idle' }
 let getBroadcastTargets = () => []
+let updateMode = resolveUpdaterMode({ isPackaged: app.isPackaged })
 
 function broadcast(payload) {
   lastStatus = payload
@@ -41,6 +49,7 @@ function broadcast(payload) {
 export function initAutoUpdater({ getWindows }) {
   if (initialized) return
   initialized = true
+  updateMode = resolveUpdaterMode({ isPackaged: app.isPackaged })
 
   if (typeof getWindows === 'function') {
     getBroadcastTargets = getWindows
@@ -50,6 +59,16 @@ export function initAutoUpdater({ getWindows }) {
   // installer to update. Skip silently — the IPC still works and reports idle.
   if (!app.isPackaged) {
     console.info('[updater] dev mode — skipping auto-update wiring')
+    return
+  }
+
+  if (updateMode === 'manual-download') {
+    console.info('[updater] unsigned macOS mode — using check-only release downloads')
+    setTimeout(() => {
+      checkForUpdatesNow().catch((error) => {
+        console.warn('[updater] initial manual check failed:', error?.message ?? error)
+      })
+    }, 8_000)
     return
   }
 
@@ -109,9 +128,78 @@ export function initAutoUpdater({ getWindows }) {
   }, 8_000)
 }
 
+async function fetchLatestGithubRelease() {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 8_000)
+  try {
+    const response = await fetch(GITHUB_RELEASES_API_URL, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        'User-Agent': `Nexus/${app.getVersion()}`,
+      },
+      signal: controller.signal,
+    })
+    if (!response.ok) {
+      throw new Error(`GitHub Releases returned ${response.status}`)
+    }
+    return normalizeGithubReleasePayload(await response.json())
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+async function checkForManualDownloadUpdate() {
+  broadcast({ type: 'checking' })
+  const currentVersion = app.getVersion()
+  try {
+    const release = await fetchLatestGithubRelease()
+    if (!release || compareReleaseVersions(release.version, currentVersion) <= 0) {
+      broadcast({ type: 'not-available', version: currentVersion })
+      return {
+        ok: true,
+        currentVersion,
+        latestVersion: release?.version ?? currentVersion,
+        updateMode,
+        manualDownload: false,
+      }
+    }
+
+    const event = {
+      type: 'manual-update',
+      version: release.version,
+      releaseUrl: release.releaseUrl,
+      reason: 'macos-unsigned',
+    }
+    broadcast(event)
+    return {
+      ok: true,
+      currentVersion,
+      latestVersion: release.version,
+      updateMode,
+      manualDownload: true,
+      releaseUrl: release.releaseUrl,
+      reason: 'macos-unsigned',
+    }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    broadcast({ type: 'error', message: reason })
+    return {
+      ok: false,
+      reason,
+      currentVersion,
+      updateMode,
+      manualDownload: true,
+      releaseUrl: GITHUB_RELEASES_URL,
+    }
+  }
+}
+
 export async function checkForUpdatesNow() {
   if (!app.isPackaged) {
-    return { ok: false, reason: 'dev-mode', currentVersion: app.getVersion() }
+    return { ok: false, reason: 'dev-mode', currentVersion: app.getVersion(), updateMode }
+  }
+  if (updateMode === 'manual-download') {
+    return checkForManualDownloadUpdate()
   }
   try {
     const result = await autoUpdater.checkForUpdates()
@@ -119,18 +207,29 @@ export async function checkForUpdatesNow() {
       ok: true,
       currentVersion: app.getVersion(),
       latestVersion: result?.updateInfo?.version ?? null,
+      updateMode,
     }
   } catch (error) {
     return {
       ok: false,
       reason: error instanceof Error ? error.message : String(error),
       currentVersion: app.getVersion(),
+      updateMode,
     }
   }
 }
 
 export function quitAndInstallUpdate() {
   if (!app.isPackaged) return false
+  if (updateMode === 'manual-download') {
+    const releaseUrl = lastStatus?.type === 'manual-update' ? lastStatus.releaseUrl : GITHUB_RELEASES_URL
+    setImmediate(() => {
+      shell.openExternal(releaseUrl).catch((error) => {
+        console.warn('[updater] failed to open release page:', error?.message ?? error)
+      })
+    })
+    return true
+  }
   setImmediate(() => {
     autoUpdater.quitAndInstall(false, true)
   })
@@ -141,6 +240,7 @@ export function getUpdaterStatus() {
   return {
     currentVersion: app.getVersion(),
     isPackaged: app.isPackaged,
+    updateMode,
     last: lastStatus,
   }
 }

@@ -3,6 +3,7 @@ import { loadChatSessions, removeChatSession, type ChatSession } from '../../lib
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { ConfirmFn } from '../useConfirm.ts'
 import type { UiLanguage } from '../../types'
+import { ChatMigrationPreviewPanel } from './ChatMigrationPreviewPanel.tsx'
 
 type StatusMessage = {
   ok: boolean
@@ -144,6 +145,11 @@ export const HistorySection = memo(function HistorySection({
           </div>
         ) : null}
       </div>
+
+      <ChatMigrationPreviewPanel
+        uiLanguage={uiLanguage}
+        confirm={confirm}
+      />
 
       <div className="settings-mini-group settings-history-group">
         <div className="settings-mini-group__head settings-history-group__head">
