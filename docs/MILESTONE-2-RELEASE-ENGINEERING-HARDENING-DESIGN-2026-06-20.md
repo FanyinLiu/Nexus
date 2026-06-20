@@ -62,8 +62,9 @@ still easy to drift:
   work-agent expansion.
 - Add `npm run verify:pr` as the day-to-day gate and make
   `npm run verify:release` reuse it before running the SQLite smoke check.
-- Split IPC schema primitives into `electron/ipc/payloadSchemaPrimitives.js`
-  while keeping every public validator in `payloadSchemas.js`.
+- Split IPC schema primitives into `electron/ipc/payloadSchemaPrimitives.js`,
+  then split IPC payload schemas into domain modules behind the same public
+  `payloadSchemas.js` export.
 
 ## Impact Scope
 
@@ -122,10 +123,10 @@ second hardening slice needs rollback, revert `architecture-boundary-audit.mjs`,
 `source-size-audit.mjs`, the all-source storage-audit expansion, and their npm
 script/test/doc wiring. If this tightening slice needs rollback, also revert
 `SettingsDrawerActiveSection.tsx`, `localDataChatMigration.js`, the
-main-process VTS bridge service/IPC/preload/type changes, and
-`performance-baseline.mjs`. Existing vaulted VTS tokens may remain harmlessly
-in the vault; users can re-authorize VTS if the old renderer WebSocket path is
-restored.
+main-process VTS bridge service/IPC/preload/type changes, the domain
+`*PayloadSchemas.js` modules, and `performance-baseline.mjs`. Existing vaulted
+VTS tokens may remain harmlessly in the vault; users can re-authorize VTS if
+the old renderer WebSocket path is restored.
 
 ## Acceptance
 
