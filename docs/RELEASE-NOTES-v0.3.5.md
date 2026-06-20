@@ -144,6 +144,10 @@ lives in renderer `localStorage` by default, and nothing is deleted.
 - Model download/install failures now use the same redaction boundary before
   first-run model setup progress events or batch download results can expose
   credentialed source URLs, tar stderr, or local user paths.
+- Telegram/Discord gateway status errors and diagnostic logs now use the same
+  redaction boundary before Settings/status/support surfaces can expose bot
+  tokens, credentialed gateway URLs, service error payloads, or local user
+  paths.
 
 ## Product boundary
 

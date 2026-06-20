@@ -145,9 +145,10 @@ Current baseline:
   reads safeStorage, keychain values, localStorage, or secret material.
 - `npm run error-redaction:audit` is the source-only network-error privacy
   guard. It fails if main-process chat/audio network handlers or the VTube
-  Studio bridge or auto-updater or model downloader return or log raw caught
-  error text without the shared secret/path redactor. It never performs network
-  requests or reads user data, localStorage, keychain values, or secret material.
+  Studio bridge or auto-updater or model downloader or Telegram/Discord gateway
+  return or log raw caught error text without the shared secret/path redactor. It
+  never performs network requests or reads user data, localStorage, keychain
+  values, or secret material.
 - `npm run verify:pr` is the day-to-day merge gate. `npm run verify:release`
   reuses it and then adds the SQLite smoke check for release confidence.
 - The `file:save-text` and `file:open-text` IPC handlers now use explicit
@@ -221,6 +222,10 @@ Current baseline:
   `models:download-progress` UI events or batch download results can expose
   credentialed source URLs, tar stderr, or local user paths during first-run
   speech/model setup.
+- Telegram/Discord gateway status and diagnostic logs use the same
+  main-process redactor before Settings/status/support surfaces can expose bot
+  tokens, credentialed gateway URLs, service error payloads, or local user
+  paths.
 - Integrations inspection, KWS start/status, VAD start, model download, and TTS
   streaming lifecycle IPC now validate request shape before service work. The
   current `npm run ipc:audit` gate reports no missing handlers, missing trusted

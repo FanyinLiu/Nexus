@@ -10,6 +10,7 @@ import { createRequire } from 'node:module'
 
 import { isAllowedSender } from './allowlistPolicy.js'
 import { createPairingManager } from './pairingManager.js'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 
 // Electron's net.fetch when running inside the app; plain global fetch under
 // node:test (requiring 'electron' outside the runtime yields the binary path
@@ -162,7 +163,7 @@ async function pollOnce(generation) {
           try {
             await apiCall('sendMessage', { chat_id: chatId, text: PAIRING_REPLY(pairing.code) })
           } catch (err) {
-            console.warn('[telegram] pairing reply failed:', err.message)
+            console.warn('[telegram] pairing reply failed:', getRedactedErrorMessage(err))
           }
         } else {
           console.info(`[telegram] Ignoring message from unauthorized chat ${chatId} (pairing ${pairing.kind})`)
@@ -208,7 +209,7 @@ async function pollOnce(generation) {
               }
             }
           } catch (err) {
-            console.warn('[telegram] voice download failed:', err.message)
+            console.warn('[telegram] voice download failed:', getRedactedErrorMessage(err))
           }
         }
       }
@@ -218,8 +219,9 @@ async function pollOnce(generation) {
   } catch (err) {
     if (err?.name === 'AbortError') return // intentional stop
     if (generation !== _pollGeneration) return // stale loop — stand down
-    console.error('[telegram] Poll error:', err.message)
-    _lastError = err.message
+    const message = getRedactedErrorMessage(err)
+    console.error('[telegram] Poll error:', message)
+    _lastError = message
     // Brief pause before retry to avoid hammering on transient errors
     await new Promise((r) => setTimeout(r, 3000))
   }
@@ -266,7 +268,7 @@ export async function connect(botToken, allowedChatIds = []) {
     setTimeout(() => pollOnce(generation), 0)
   } catch (err) {
     _state = 'error'
-    _lastError = err.message
+    _lastError = getRedactedErrorMessage(err)
     _botToken = null
     throw err
   }
