@@ -123,7 +123,8 @@ test('architecture docs keep companion presence boundaries aligned', () => {
   assert.match(architecture, /content-minimized/)
   assert.match(architecture, /Memory visibility is a separate white-box provenance surface/)
   assert.match(architecture, /features\/releaseNotes\/` is also intentionally narrow/)
-  assert.match(architecture, /no `src\/features\/index\.ts` aggregate barrel/)
+  assert.match(architecture, /There is currently no aggregate `src\/index\.ts`/)
+  assert.match(architecture, /Do not document or import those paths/)
 
   assert.match(roadmap, /Slice 12 aligns the architecture documentation/)
   assert.match(roadmap, /memory provenance remains a separate white-box\s+surface/)
@@ -141,7 +142,8 @@ test('v0.3.5 release handoff keeps merge and tag evidence explicit', () => {
   const handoff = readWorkspaceFile('docs/RELEASE-CANDIDATE-v0.3.5-HANDOFF.md')
 
   assert.match(handoff, /PR: \[#105/)
-  assert.match(handoff, /Evidence baseline head: `48e6b78`/)
+  assert.match(handoff, /Evidence baseline head: `[0-9a-f]{7,40}`/)
+  assert.doesNotMatch(handoff, /48e6b78/)
   assert.match(handoff, /verify the latest PR head and latest\s+GitHub CI/)
   assert.match(handoff, /npm run prerelease-check -- v0\.3\.5/)
   assert.match(handoff, /git tag v0\.3\.5/)

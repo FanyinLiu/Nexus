@@ -3,10 +3,12 @@
 ## Status
 
 - PR: [#105 — v0.3.5 companion presence and visible memory](https://github.com/FanyinLiu/Nexus/pull/105)
-- Evidence baseline head: `48e6b78`
+- Evidence baseline head: `76e1157`
 - Branch: `codex/m6-presence-state-contract`
-- State: ready for review and mergeable at the evidence baseline, with GitHub
-  CI green on Windows, macOS, and Ubuntu.
+- State: ready for review and mergeable at the evidence baseline, with local
+  release gates and GitHub CI green on Windows, macOS, and Ubuntu. If any
+  handoff-only calibration commit lands after this baseline, verify the latest
+  PR head and latest CI before merging.
 - Product theme: visible memory plus readable desktop companion presence.
 
 This handoff is for the final merge/tag step. It does not replace
@@ -30,7 +32,7 @@ task planner, autonomous executor, or new automation surface.
 
 ## Evidence Already Collected
 
-- `npm test` — 1966 passed.
+- `npm test` — 1969 passed.
 - `npm run build` — passed.
 - `npm run lint` — passed.
 - `npx tsc -b --pretty false` — passed.
@@ -45,12 +47,15 @@ task planner, autonomous executor, or new automation surface.
 - `npm run pet:presence-smoke` — passed; it writes
   `output/presence-smoke/pet-presence-smoke.png` and JSON evidence.
 - `node --experimental-strip-types --test tests/release-spotlight.test.ts` —
-  5 passed, including README/release-note/changelog theme alignment and this
-  handoff guard.
+  6 passed, including README/release-note/changelog theme alignment,
+  architecture-boundary alignment, and this handoff guard.
+- `node --experimental-strip-types --test tests/project-alignment.test.ts` —
+  2 passed, including version/theme alignment and architecture entry-point
+  existence checks.
 - `node scripts/prerelease-check.mjs v0.3.5 --only=B --quick` — passed.
 - `node scripts/prerelease-check.mjs v0.3.5 --skip=A --quick` — passed stages
   B-F with 22 blocker checks, 0 warnings, and 0 failures.
-- GitHub CI on baseline PR head `48e6b78` — Windows, macOS, and Ubuntu all
+- GitHub CI on baseline PR head `76e1157` — Windows, macOS, and Ubuntu all
   passed.
 
 ## Remaining Required Steps

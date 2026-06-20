@@ -98,6 +98,10 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
   companion-not-agent boundary in one guarded document. See
   [v0.3.5 Release Candidate Handoff](RELEASE-CANDIDATE-v0.3.5-HANDOFF.md) and
   [Milestone 2 Release Candidate Handoff Design](MILESTONE-2-RELEASE-CANDIDATE-HANDOFF-DESIGN-2026-06-20.md).
+- Add a project-alignment guard for the release candidate so package version,
+  in-app spotlight version, release notes, changelog boundary, release handoff,
+  and documented architecture entry points remain synchronized before merge. See
+  [Milestone 2 Project Alignment Design](MILESTONE-2-RELEASE-PROJECT-ALIGNMENT-DESIGN-2026-06-20.md).
 - Rollback: signing config changes must be isolated in packaging config and
   release docs.
 
