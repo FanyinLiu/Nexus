@@ -41,3 +41,32 @@ export function parseArgsString(raw) {
   if (current) out.push(current)
   return out
 }
+
+export function formatMcpHostLogLabel(id) {
+  return `idLength=${String(id ?? '').length}`
+}
+
+export function summarizeMcpCommandForLog(command, args = []) {
+  const normalizedArgs = Array.isArray(args) ? args : []
+  return [
+    `commandLength=${String(command ?? '').length}`,
+    `argsCount=${normalizedArgs.length}`,
+    `argsTotalLength=${normalizedArgs.reduce((sum, arg) => sum + String(arg ?? '').length, 0)}`,
+  ].join(' ')
+}
+
+export function summarizeMcpToolNamesForLog(names = []) {
+  const list = Array.isArray(names) ? names : []
+  return [
+    `toolCount=${list.length}`,
+    `totalNameLength=${list.reduce((sum, name) => sum + String(name ?? '').length, 0)}`,
+  ].join(' ')
+}
+
+export function summarizeMcpOutputLineForLog(line) {
+  const text = String(line ?? '')
+  return [
+    `chars=${text.length}`,
+    `bytes=${Buffer.byteLength(text, 'utf8')}`,
+  ].join(' ')
+}

@@ -172,6 +172,11 @@ Current baseline:
   outbound message text, voice payloads, game commands, target IDs, MCP command
   text, tool names, and tool arguments out of the audit log while preserving
   action category, payload shape, lengths, and success/failure state.
+- MCP host support logs are also content-minimized. External server stdout
+  parse failures, server notifications, tool discovery, launch attempts,
+  restart failures, and shutdown failures record only ids/commands/args/tool
+  names/output lengths plus redacted error text, not raw server ids, launch
+  commands, arguments, tool names, stdout lines, paths, or tokens.
 - The same external action handlers now pass through a main-process permission
   policy before execution. The policy defaults to `confirm`, persists approved
   modes in Electron `userData`, blocks active actions in `read-only`, prompts

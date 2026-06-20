@@ -146,6 +146,10 @@ auditable.
 - Telegram/Discord send, Minecraft/Factorio execute, and MCP call/sync channels
   now have metadata-only request/result audit records without logging outbound
   text, audio, commands, target IDs, or MCP argument contents.
+- MCP host support logs are now metadata-only as well, avoiding raw server ids,
+  launch commands, arguments, tool names, external stdout lines, paths, or
+  tokens when MCP processes fail, restart, emit notifications, or advertise
+  tools.
 - Those external action channels now also use a main-process permission policy
   for read-only, confirm, and auto modes. Active auto-mode escalation requires
   native confirmation and the renderer sync path carries only mode plus

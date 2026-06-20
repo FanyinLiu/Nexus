@@ -10,7 +10,14 @@ import {
   revokeMcpApproval,
   snapshotInitialTools,
 } from './mcpApprovals.js'
-import { parseArgsString as parseArgsStringPure } from './mcpHostUtils.js'
+import {
+  formatMcpHostLogLabel,
+  parseArgsString as parseArgsStringPure,
+  summarizeMcpCommandForLog,
+  summarizeMcpOutputLineForLog,
+  summarizeMcpToolNamesForLog,
+} from './mcpHostUtils.js'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 
 const REQUEST_TIMEOUT_MS = 15_000
 
@@ -22,6 +29,10 @@ const BASE_RESTART_DELAY_MS = 3_000
 
 /** @type {Map<string, McpInstance>} */
 const _instances = new Map()
+
+function mcpLogScope(id) {
+  return `[mcpHost ${formatMcpHostLogLabel(id)}]`
+}
 
 class McpInstance {
   constructor(id) {
@@ -91,7 +102,7 @@ class McpInstance {
     try {
       this.process.stdin.write(JSON.stringify({ jsonrpc: '2.0', method, params }) + '\n')
     } catch (err) {
-      console.warn(`[mcpHost:${this.id}] notification send failed (${method}):`, err?.message)
+      console.warn(`${mcpLogScope(this.id)} notification send failed (methodLength=${String(method ?? '').length}):`, getRedactedErrorMessage(err))
     }
   }
 
@@ -103,7 +114,7 @@ class McpInstance {
     try {
       message = JSON.parse(trimmed)
     } catch {
-      console.warn(`[mcpHost:${this.id}] unparseable line:`, trimmed.slice(0, 200))
+      console.warn(`${mcpLogScope(this.id)} unparseable line: ${summarizeMcpOutputLineForLog(trimmed)}`)
       return
     }
 
@@ -113,7 +124,7 @@ class McpInstance {
         clearTimeout(pending.timeoutId)
         this.pending.delete(message.id)
         if (message.error) {
-          pending.reject(new Error(message.error.message ?? JSON.stringify(message.error)))
+          pending.reject(new Error(getRedactedErrorMessage(message.error.message ?? JSON.stringify(message.error))))
         } else {
           pending.resolve(message.result)
         }
@@ -122,7 +133,7 @@ class McpInstance {
     }
 
     if (message.method) {
-      console.info(`[mcpHost:${this.id}] server notification:`, message.method)
+      console.info(`${mcpLogScope(this.id)} server notification: methodLength=${String(message.method ?? '').length}`)
     }
   }
 
@@ -157,7 +168,7 @@ class McpInstance {
         })
       }
     }
-    console.info(`[mcpHost:${this.id}] discovered ${this.tools.size} tool(s):`, [...this.tools.keys()])
+    console.info(`${mcpLogScope(this.id)} discovered tools: ${summarizeMcpToolNamesForLog([...this.tools.keys()])}`)
 
     // M2: snapshot the initial tool set so the user isn't prompted for
     // every tool the first time the server runs. snapshotInitialTools is
@@ -167,7 +178,7 @@ class McpInstance {
     try {
       await snapshotInitialTools(this.id, [...this.tools.keys()])
     } catch (err) {
-      console.warn(`[mcpHost:${this.id}] failed to snapshot initial tools:`, err?.message)
+      console.warn(`${mcpLogScope(this.id)} failed to snapshot initial tools:`, getRedactedErrorMessage(err))
     }
   }
 
@@ -182,14 +193,14 @@ class McpInstance {
   _scheduleRestart() {
     if (this.intentionallyStopped) return
     if (this.restartCount >= MAX_RESTART_ATTEMPTS) {
-      console.error(`[mcpHost:${this.id}] max restart attempts reached`)
+      console.error(`${mcpLogScope(this.id)} max restart attempts reached`)
       this.state = 'crashed'
       return
     }
 
     const delayMs = BASE_RESTART_DELAY_MS * Math.pow(2, this.restartCount)
     this.restartCount++
-    console.warn(`[mcpHost:${this.id}] restart #${this.restartCount} in ${delayMs}ms`)
+    console.warn(`${mcpLogScope(this.id)} restart #${this.restartCount} in ${delayMs}ms`)
 
     this.restartTimer = setTimeout(async () => {
       this.restartTimer = null
@@ -197,7 +208,7 @@ class McpInstance {
       try {
         await this.start(this.pendingStartCommand, this.pendingStartArgs ?? [])
       } catch (err) {
-        console.error(`[mcpHost:${this.id}] restart failed:`, err.message)
+        console.error(`${mcpLogScope(this.id)} restart failed:`, getRedactedErrorMessage(err))
         this._scheduleRestart()
       }
     }, delayMs)
@@ -251,7 +262,7 @@ class McpInstance {
     this.lineBuffer = ''
     this._rejectAllPending('MCP host restarting')
 
-    console.info(`[mcpHost:${this.id}] spawning:`, command, args)
+    console.info(`${mcpLogScope(this.id)} spawning: ${summarizeMcpCommandForLog(command, args)}`)
 
     // Resolve .cmd/.bat on Windows without shell: true to avoid command injection.
     // On Windows, npm/npx install as .cmd files that require shell interpretation.
@@ -285,14 +296,14 @@ class McpInstance {
       child.once('error', (err) => {
         this.state = 'crashed'
         this.process = null
-        reject(new Error(`Failed to spawn MCP server [${this.id}]: ${err.message}`))
+        reject(new Error(`Failed to spawn MCP server: ${getRedactedErrorMessage(err)}`))
       })
       child.once('spawn', resolve)
     })
 
     // Register exit listener BEFORE handshake to avoid missing early exits
     child.once('exit', (code, signal) => {
-      console.warn(`[mcpHost:${this.id}] process exited (code=${code}, signal=${signal})`)
+      console.warn(`${mcpLogScope(this.id)} process exited (code=${code}, signal=${signal})`)
       this.process = null
       this.pid = null
       const wasRunning = this.state === 'running'
@@ -309,12 +320,12 @@ class McpInstance {
       await this._discoverTools()
       this.state = 'running'
       this.restartCount = 0
-      console.info(`[mcpHost:${this.id}] ready, pid:`, this.pid)
+      console.info(`${mcpLogScope(this.id)} ready, hasPid=${this.pid !== null}`)
     } catch (err) {
       this.state = 'crashed'
       this.process = null
       child.kill()
-      throw new Error(`MCP handshake failed [${this.id}]: ${err.message}`)
+      throw new Error(`MCP handshake failed: ${getRedactedErrorMessage(err)}`)
     }
   }
 
@@ -353,7 +364,7 @@ class McpInstance {
     this.tools.clear()
     this.pid = null
     unsubscribeAll(this.id)
-    console.info(`[mcpHost:${this.id}] stopped`)
+    console.info(`${mcpLogScope(this.id)} stopped`)
   }
 
   async restart(command, args = []) {
@@ -525,7 +536,7 @@ export async function stopAll() {
   await Promise.all(
     [..._instances.values()].map((instance) =>
       instance.stop().catch((err) => {
-        console.warn(`[mcpHost:${instance.id}] stop failed during shutdown:`, err?.message)
+        console.warn(`${mcpLogScope(instance.id)} stop failed during shutdown:`, getRedactedErrorMessage(err))
       }),
     ),
   )
@@ -577,7 +588,7 @@ export async function syncFromSettings(desired) {
       // removed/disabled (leaking an untracked child on removal). stop() is
       // idempotent and a no-op kill when there is no live process.
       await instance.stop().catch((err) => {
-        console.warn(`[mcpHost:sync] stop ${id} failed:`, err?.message)
+        console.warn(`[mcpHost:sync] stop failed (${formatMcpHostLogLabel(id)}):`, getRedactedErrorMessage(err))
       })
       if (!target) {
         // Drop the persisted approval — if the user re-adds this server
@@ -606,7 +617,7 @@ export async function syncFromSettings(desired) {
         await instance.start(target.command, target.args)
       }
     } catch (err) {
-      console.warn(`[mcpHost:sync] start ${target.id} failed:`, err?.message)
+      console.warn(`[mcpHost:sync] start failed (${formatMcpHostLogLabel(target.id)}):`, getRedactedErrorMessage(err))
     }
   }
 
