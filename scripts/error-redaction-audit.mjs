@@ -20,6 +20,8 @@ const CHECKED_FILES = [
   'electron/services/modelManager.js',
   'electron/services/notificationBridge.js',
   'electron/services/notificationBridgeUtils.js',
+  'electron/services/pluginHost.js',
+  'electron/services/pluginHostUtils.js',
   'electron/services/telegramGateway.js',
   'electron/services/updaterService.js',
   'electron/services/vtsBridge.js',
@@ -178,6 +180,24 @@ const UNSAFE_PATTERNS = [
     file: 'src/features/pet/vts/useVTSBridge.ts',
     pattern: /console\.warn\([^\n]+,\s*error\)|console\.warn\('[^']*VTS[^']*'\s*,\s*error\)/,
     message: 'renderer VTS support logs must not record raw token-adjacent errors',
+  },
+  {
+    id: 'plugin-host-raw-name-log',
+    file: 'electron/services/pluginHost.js',
+    pattern: /console\.(?:info|warn|error)\([^\n]*\$\{plugin\.name\}/,
+    message: 'plugin host support logs must not record raw plugin names',
+  },
+  {
+    id: 'plugin-host-raw-entry-log',
+    file: 'electron/services/pluginHost.js',
+    pattern: /console\.warn\(`\[pluginHost\] skipping \$\{entry\}:/,
+    message: 'plugin host support logs must not record raw plugin directory entries',
+  },
+  {
+    id: 'plugin-host-raw-error-log',
+    file: 'electron/services/pluginHost.js',
+    pattern: /console\.(?:warn|error)\([^\n]+err(?:or)?\?\.message|err\.message/,
+    message: 'plugin host support logs must redact errors before logging',
   },
 ]
 
@@ -383,6 +403,32 @@ const REQUIRED_PHRASES = [
       "console.warn('[VTS] Failed to update bridge input:', getRedactedLogErrorMessage(error))",
       "console.warn('[VTS]', getRedactedLogErrorMessage(error))",
       "console.warn('[VTS] Failed to migrate legacy auth token:', getRedactedLogErrorMessage(error))",
+    ],
+  },
+  {
+    id: 'plugin-host-redacts-support-logs',
+    file: 'electron/services/pluginHost.js',
+    phrases: [
+      "import { getRedactedErrorMessage } from './errorRedaction.js'",
+      'formatPluginDirectoryEntryLogLabel(entry)',
+      'formatPluginLogLabel(plugin)',
+      "console.error('[pluginHost] Failed to load approved plugins:', getRedactedErrorMessage(err))",
+      'skipping plugin entry (${formatPluginDirectoryEntryLogLabel(entry)}):',
+      'user approved plugin (${formatPluginLogLabel(plugin)})',
+      'user rejected plugin (${formatPluginLogLabel(plugin)})',
+      'auto-started plugin (${formatPluginLogLabel(plugin)})',
+      'auto-start failed (${formatPluginLogLabel(plugin)}):',
+      'getRedactedErrorMessage(err)',
+    ],
+  },
+  {
+    id: 'plugin-host-utils-log-summarizers',
+    file: 'electron/services/pluginHostUtils.js',
+    phrases: [
+      'export function formatPluginLogLabel(plugin)',
+      'export function formatPluginDirectoryEntryLogLabel(entry)',
+      'idLength=${String(plugin?.id ?? \'\').length}',
+      'entryLength=${String(entry ?? \'\').length}',
     ],
   },
 ]

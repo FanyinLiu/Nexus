@@ -161,7 +161,9 @@ auditable.
 - Plugin lifecycle and plugin bus write IPC now use metadata-only request/result
   audit records and native confirmation for execution-granting lifecycle
   actions and bus publish/subscribe/unsubscribe, without logging plugin IDs,
-  server IDs, topics, message payloads, commands, or error text.
+  server IDs, topics, message payloads, commands, or error text. Plugin host
+  support logs also avoid raw plugin names, directory entries, paths, command
+  errors, and token-like text.
 - `tool:open-external` now writes metadata-only request/result audit records
   around the existing main-process URL safety check and native confirmation,
   without logging full URLs, hostnames, paths, query strings, fragments, or

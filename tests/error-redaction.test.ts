@@ -124,3 +124,11 @@ test('error redaction audit covers MCP host support logs', () => {
   assert.ok(report.checkedFiles.includes('electron/services/mcpHost.js'))
   assert.ok(report.checkedFiles.includes('electron/services/mcpHostUtils.js'))
 })
+
+test('error redaction audit covers plugin host support logs', () => {
+  const report = buildErrorRedactionReport()
+
+  assert.equal(report.summary.errors, 0)
+  assert.ok(report.checkedFiles.includes('electron/services/pluginHost.js'))
+  assert.ok(report.checkedFiles.includes('electron/services/pluginHostUtils.js'))
+})

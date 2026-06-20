@@ -202,7 +202,10 @@ Current baseline:
   execution-granting lifecycle actions or bus publish/subscribe/unsubscribe
   operations. Audit records store identifier lengths, payload shape, result
   booleans, and error-message lengths, not plugin IDs, server IDs, topics,
-  message payloads, plugin names, commands, or error text.
+  message payloads, plugin names, commands, or error text. Plugin host support
+  logs follow the same boundary: approval decisions, skipped manifests, and
+  auto-start results log only id/name/version or directory-entry lengths plus
+  redacted error text.
 - External-link IPC keeps the existing URL safety normalization and native
   confirmation in the built-in tool registry, then records metadata-only
   request/result audit entries around the IPC call. Audit records store URL
