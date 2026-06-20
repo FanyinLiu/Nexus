@@ -12,6 +12,7 @@ import {
   checkChatBaseUrlSafety,
   checkUrlSafetyWithDns,
 } from './services/urlSafety.js'
+import { redactSensitiveErrorText } from './services/errorRedaction.js'
 
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
 const MAX_SAFE_REDIRECTS = 5
@@ -255,11 +256,13 @@ export async function extractResponseErrorMessage(response, fallbackMessage) {
 
   if (contentType.includes('application/json')) {
     const data = await readJsonSafe(response)
-    return data?.error?.message ?? data?.detail?.message ?? data?.message ?? fallbackMessage
+    return redactSensitiveErrorText(
+      data?.error?.message ?? data?.detail?.message ?? data?.message ?? fallbackMessage,
+    )
   }
 
   const text = await readTextSafe(response)
-  return text.trim() || fallbackMessage
+  return redactSensitiveErrorText(text.trim() || fallbackMessage)
 }
 
 // Pure network helpers (normalizeBaseUrl / isLoopbackUrl / canonicalizeLoopbackUrl

@@ -37,6 +37,7 @@ import {
   runSpeechInputConnectionSmokeTest,
   runSpeechOutputConnectionSmokeTest,
 } from '../services/sttService.js'
+import { getRedactedErrorMessage, redactSensitiveErrorText } from '../services/errorRedaction.js'
 import { requireTrustedSender, expectString, assertArray } from './validate.js'
 import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
 import {
@@ -97,7 +98,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
           console.warn('[chat:complete] transient failure, retrying', { attempt, reason }),
       })
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
+      const reason = getRedactedErrorMessage(error)
       console.error('[chat:complete] network failure', {
         traceId: requestPayload.traceId ?? '',
         providerId,
@@ -120,7 +121,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         baseUrl,
         model: requestPayload.model,
         status: response.status,
-        message: data?.error?.message ?? data?.message ?? '',
+        message: redactSensitiveErrorText(data?.error?.message ?? data?.message ?? ''),
       })
       if (response.status === 401) {
         throw new Error(
@@ -131,8 +132,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       }
 
       throw new Error(
-        data?.error?.message ??
-          data?.message ??
+        redactSensitiveErrorText(data?.error?.message ?? data?.message) ||
           `模型那边回了个状态码 ${response.status}，不太确定怎么回事。`,
       )
     }
@@ -211,7 +211,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
           console.warn('[chat:stream] transient failure, retrying', { attempt, reason }),
       })
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
+      const reason = getRedactedErrorMessage(error)
       activeChatStreamControllers.delete(requestId)
       console.error('[chat:stream] network failure', { requestId, reason })
       throw new Error(`没能连上模型接口，看看地址和网络对不对？具体原因：${reason}`)
@@ -228,7 +228,8 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         )
       }
       throw new Error(
-        data?.error?.message ?? data?.message ?? `模型那边回了个状态码 ${response.status}，不太确定怎么回事。`,
+        redactSensitiveErrorText(data?.error?.message ?? data?.message)
+          || `模型那边回了个状态码 ${response.status}，不太确定怎么回事。`,
       )
     }
 
@@ -356,7 +357,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
               requestId,
               delta: '',
               done: true,
-              error: streamError instanceof Error ? streamError.message : String(streamError),
+              error: getRedactedErrorMessage(streamError),
             }
           : { requestId, delta: '', done: true }
         try {
@@ -370,7 +371,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     // Re-surface the original error to the invoker promise so callers
     // see the rejection just like before — the change above is purely
     // additive on the streaming side.
-    if (streamError) throw streamError
+    if (streamError) throw new Error(getRedactedErrorMessage(streamError))
 
     const content = extractChatResponseContent(requestSpec.protocol, { content: fullContent })
 
@@ -494,7 +495,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         model: requestPayload.model,
       })
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
+      const reason = getRedactedErrorMessage(error)
       return summarizeChatConnectionTransportFailure({
         providerId,
         reason,
@@ -602,7 +603,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         discoveredModels,
       }
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
+      const reason = getRedactedErrorMessage(error)
       return {
         ...summarizeChatConnectionTransportFailure({
           providerId,
@@ -657,7 +658,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       try {
         return await runSpeechOutputConnectionSmokeTest(requestPayload, baseUrl)
       } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error)
+        const reason = getRedactedErrorMessage(error)
 
         return {
           ok: false,
@@ -669,7 +670,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     try {
       return await runSpeechInputConnectionSmokeTest(requestPayload, baseUrl)
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
+      const reason = getRedactedErrorMessage(error)
 
       return {
         ok: false,
