@@ -175,7 +175,10 @@ _No changes yet._
   API keys, bearer tokens, passwords, and private-key material before
   active-window or clipboard text leaves the main process; OCR and VLM text are
   redacted again before prompt formatting, and screenshot image payloads are
-  stripped before desktop context is handed to chat/runtime code.
+  stripped before desktop context is handed to chat/runtime code. Autonomy
+  context triggers now keep only salted comparison fingerprints for previous
+  active-window and clipboard values instead of retaining earlier desktop text
+  in renderer refs.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned
