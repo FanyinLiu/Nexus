@@ -22,8 +22,12 @@
     "electron:dev": "node scripts/electron-dev.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "lint:js": "eslint electron scripts --no-warn-ignored",
     "i18n:audit": "node scripts/i18n-audit.mjs",
     "ipc:audit": "node scripts/ipc-contract-audit.mjs",
+    "storage:audit": "node scripts/storage-contract-audit.mjs",
+    "heavy:audit": "node scripts/heavy-module-audit.mjs",
+    "companion-boundary:audit": "node scripts/companion-boundary-audit.mjs",
     "sqlite:smoke": "node scripts/sqlite-smoke.mjs",
     "sqlite:smoke:electron": "electron scripts/sqlite-electron-smoke.cjs",
     "sqlite:smoke:all": "npm run sqlite:smoke && npm run sqlite:smoke:electron",
@@ -62,7 +66,8 @@
     "package:mac": "npm run build && electron-builder --mac",
     "prepackage:linux": "node scripts/download-models.mjs --skip-asr",
     "package:linux": "npm run build && electron-builder --linux",
-    "verify:release": "tsc -b --force && npm run lint && npm test && npm run build && npm run sqlite:smoke && npm run distribution:audit",
+    "verify:pr": "tsc -b --force && npm run lint && npm test && npm run build && npm run storage:audit && npm run heavy:audit && npm run companion-boundary:audit && npm run ipc:audit && npm run distribution:audit",
+    "verify:release": "npm run verify:pr && npm run sqlite:smoke",
     "prerelease-check": "node scripts/prerelease-check.mjs"
   },
   "dependencies": {

@@ -102,6 +102,10 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
   in-app spotlight version, release notes, changelog boundary, release handoff,
   and documented architecture entry points remain synchronized before merge. See
   [Milestone 2 Project Alignment Design](MILESTONE-2-RELEASE-PROJECT-ALIGNMENT-DESIGN-2026-06-20.md).
+- Add a release engineering hardening guard for main-process JS lint coverage,
+  renderer localStorage classification, heavy-module lazy loading, PR/release
+  verification split, and companion-not-agent boundary checks. See
+  [Milestone 2 Engineering Hardening Design](MILESTONE-2-RELEASE-ENGINEERING-HARDENING-DESIGN-2026-06-20.md).
 - Rollback: signing config changes must be isolated in packaging config and
   release docs.
 

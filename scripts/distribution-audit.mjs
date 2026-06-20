@@ -5,6 +5,9 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildIpcContractReport, summarizeIpcContractReport } from './ipc-contract-audit.mjs'
 import { buildReleaseTrustReport, summarizeReleaseTrustReport } from './release-trust-audit.mjs'
+import { buildStorageContractReport } from './storage-contract-audit.mjs'
+import { buildHeavyModuleAuditReport } from './heavy-module-audit.mjs'
+import { buildCompanionBoundaryReport } from './companion-boundary-audit.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -52,7 +55,11 @@ check('developer npm scripts cover run, package and release verification', () =>
     'package:linux',
     'package:dir:smoke',
     'verify:release',
+    'verify:pr',
     'ipc:audit',
+    'storage:audit',
+    'heavy:audit',
+    'companion-boundary:audit',
     'sqlite:smoke',
     'sqlite:smoke:electron',
     'sqlite:smoke:all',
@@ -154,8 +161,25 @@ check('IPC bridge contract baseline is inventoried', () => {
   const report = buildIpcContractReport(ROOT)
   const summary = summarizeIpcContractReport(report)
   assert(summary.errors === 0, `IPC contract audit has ${summary.errors} error(s); run npm run ipc:audit`)
+  assert(summary.warnings === 0, `IPC contract audit has ${summary.warnings} warning(s); run npm run ipc:audit`)
   assert(report.counts.preloadInvokeChannels > 0, 'IPC contract audit found no preload invoke channels')
   assert(report.counts.mainHandlerChannels > 0, 'IPC contract audit found no main handler channels')
+})
+
+check('renderer localStorage keys have a migration contract', () => {
+  const report = buildStorageContractReport(ROOT)
+  assert(report.summary.errors === 0, `storage contract audit has ${report.summary.errors} error(s); run npm run storage:audit`)
+  assert(report.constants === report.contracts, 'storage contract count should match exported localStorage key constants')
+})
+
+check('heavy renderer modules stay lazy-loaded', () => {
+  const report = buildHeavyModuleAuditReport(ROOT)
+  assert(report.summary.errors === 0, `heavy module audit has ${report.summary.errors} error(s); run npm run heavy:audit`)
+})
+
+check('companion boundary is documented and guarded', () => {
+  const report = buildCompanionBoundaryReport(ROOT)
+  assert(report.summary.errors === 0, `companion boundary audit has ${report.summary.errors} error(s); run npm run companion-boundary:audit`)
 })
 
 check('source desktop shortcut launches without a terminal window', () => {

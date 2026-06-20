@@ -339,7 +339,7 @@ export function buildIpcContractReport(root = DEFAULT_ROOT) {
     errors,
     warnings,
     summary: {
-      ok: errorCount === 0,
+      ok: errorCount === 0 && warningCount === 0,
       errors: errorCount,
       warnings: warningCount,
     },
@@ -397,7 +397,7 @@ function main(argv) {
   const options = parseArgs(argv)
   const report = buildIpcContractReport(DEFAULT_ROOT)
   process.stdout.write(options.json ? `${JSON.stringify(report, null, 2)}\n` : `${formatHumanReport(report)}\n`)
-  if (report.summary.errors > 0) {
+  if (!report.summary.ok) {
     process.exit(1)
   }
 }
