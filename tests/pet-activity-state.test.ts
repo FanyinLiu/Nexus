@@ -18,6 +18,7 @@ test('resolveCompanionActivityState prioritizes unavailable and blocking states'
   assert.equal(offline.phase, 'offline')
   assert.equal(offline.isOffline, true)
   assert.equal(offline.spriteState, 'waiting')
+  assert.equal(offline.motionToken, 'offline')
   assert.equal(offline.statusKey, 'pet.status.offline')
   assert.equal(offline.updatedAt, now)
 
@@ -31,6 +32,7 @@ test('resolveCompanionActivityState prioritizes unavailable and blocking states'
 
   assert.equal(error.phase, 'error')
   assert.equal(error.isError, true)
+  assert.equal(error.motionToken, 'error')
   assert.equal(error.spriteState, 'failed')
 })
 
@@ -42,6 +44,11 @@ test('resolveCompanionActivityState keeps confirmation, voice, and thinking prio
     chatBusy: true,
     now,
   }).phase, 'waiting')
+  assert.equal(resolveCompanionActivityState({
+    mood: 'idle',
+    waitingForConfirmation: true,
+    now,
+  }).motionToken, 'wait')
 
   const speaking = resolveCompanionActivityState({
     mood: 'happy',
@@ -51,6 +58,7 @@ test('resolveCompanionActivityState keeps confirmation, voice, and thinking prio
   })
   assert.equal(speaking.phase, 'speaking')
   assert.equal(speaking.isSpeaking, true)
+  assert.equal(speaking.motionToken, 'speak')
   assert.equal(speaking.spriteState, 'review')
 
   const listening = resolveCompanionActivityState({
@@ -61,6 +69,7 @@ test('resolveCompanionActivityState keeps confirmation, voice, and thinking prio
   })
   assert.equal(listening.phase, 'listening')
   assert.equal(listening.isListening, true)
+  assert.equal(listening.motionToken, 'listen')
   assert.equal(listening.spriteState, 'waiting')
 
   const thinking = resolveCompanionActivityState({
@@ -70,6 +79,7 @@ test('resolveCompanionActivityState keeps confirmation, voice, and thinking prio
   })
   assert.equal(thinking.phase, 'thinking')
   assert.equal(thinking.isThinking, true)
+  assert.equal(thinking.motionToken, 'think')
   assert.equal(thinking.spriteState, 'running')
 })
 
@@ -82,6 +92,7 @@ test('resolveCompanionActivityState returns idle with trimmed task label when no
 
   assert.equal(state.phase, 'idle')
   assert.equal(state.isIdle, true)
+  assert.equal(state.motionToken, 'breathe')
   assert.equal(state.spriteState, null)
   assert.equal(state.activeTaskLabel, 'evening reminder')
   assert.equal(state.statusKey, 'pet.status.ready')

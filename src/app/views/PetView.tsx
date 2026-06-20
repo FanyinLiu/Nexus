@@ -482,7 +482,11 @@ export function PetView({
             openPetMenu()
           }}
         >
-            <div className="pet-window__stage-shell">
+            <div
+              className="pet-window__stage-shell"
+              data-companion-activity={companionActivity.phase}
+              data-companion-motion={companionActivity.motionToken}
+            >
               {(!petFreeMode || !isSpriteAvatar) && (
                 <>
                   <div className="pet-window__stage-backdrop" aria-hidden="true" />
@@ -653,6 +657,8 @@ export function PetView({
               <div
                 ref={mascotRef}
                 className={`pet-window__mascot ${pet.mascotHovered ? 'is-hovered' : ''} ${pet.petTapActive ? 'is-tapped' : ''}`}
+                data-companion-activity={companionActivity.phase}
+                data-companion-motion={companionActivity.motionToken}
                 onPointerEnter={() => {
                   pet.setMascotHovered(true)
                   pet.markPresenceActivity({ dismissAmbient: false })
