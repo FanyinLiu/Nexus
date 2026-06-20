@@ -18,8 +18,10 @@ inside About/Help that names the current theme and the user-visible changes.
   contract:
   - current version: `0.3.5`,
   - spotlight title and summary translation keys,
-  - four memorable bullets: memory sources, memory control, first-run repair,
-    and companion-first boundary.
+  - initial memorable bullets: memory sources, memory control, first-run
+    repair, and companion-first boundary. Milestone 6 Slice 6 later extends the
+    same spotlight with a companion-presence bullet after the desktop state
+    preview ships.
 - Render the spotlight in `AboutPanel` between app links and FAQ.
 - Add localized strings for zh-CN, zh-TW, en-US, ja, and ko.
 - Add compact settings CSS that behaves like inline release information rather
@@ -34,8 +36,9 @@ renderer access to secrets are introduced.
 
 ## Impact
 
-- Users can open About/Help and immediately see the memorable v0.3.5 theme:
-  memory is no longer a black box.
+- Users can open About/Help and immediately see the memorable v0.3.5 theme.
+  The initial theme is memory transparency; Milestone 6 Slice 6 extends it to
+  visible memory plus readable desktop companion states.
 - Release QA has a stable in-app place to verify the release message.
 - The companion boundary is visible in the product itself: these changes are
   about transparent local memory and first-run reliability, not autonomous task
@@ -51,7 +54,9 @@ renderer access to secrets are introduced.
 ## Mitigations
 
 - Keep the current version and bullet IDs in one typed contract.
-- Limit the spotlight to one title, one summary, and four short bullets.
+- Keep the spotlight to one title, one summary, and a short bullet list. If a
+  later slice adds a bullet, it must name a shipped user-visible change rather
+  than turn About/Help into a changelog.
 - Treat detailed history as changelog/release-note content, not About-panel
   content.
 

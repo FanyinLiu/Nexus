@@ -1,7 +1,12 @@
 import type { TranslationKey } from '../../types/i18n.ts'
 
 export type ReleaseSpotlightBullet = {
-  id: 'memory_sources' | 'memory_control' | 'first_run' | 'companion_boundary'
+  id:
+    | 'memory_sources'
+    | 'memory_control'
+    | 'companion_presence'
+    | 'first_run'
+    | 'companion_boundary'
   titleKey: TranslationKey
   bodyKey: TranslationKey
 }
@@ -29,6 +34,11 @@ export const CURRENT_RELEASE_SPOTLIGHT: ReleaseSpotlight = {
       id: 'memory_control',
       titleKey: 'about.release_spotlight.bullet.memory_control.title',
       bodyKey: 'about.release_spotlight.bullet.memory_control.body',
+    },
+    {
+      id: 'companion_presence',
+      titleKey: 'about.release_spotlight.bullet.companion_presence.title',
+      bodyKey: 'about.release_spotlight.bullet.companion_presence.body',
     },
     {
       id: 'first_run',
