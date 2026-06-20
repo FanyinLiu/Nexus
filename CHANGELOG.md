@@ -175,10 +175,13 @@ _No changes yet._
   API keys, bearer tokens, passwords, and private-key material before
   active-window or clipboard text leaves the main process; OCR and VLM text are
   redacted again before prompt formatting, and screenshot image payloads are
-  stripped before desktop context is handed to chat/runtime code. Autonomy
-  context triggers now keep only salted comparison fingerprints for previous
-  active-window and clipboard values instead of retaining earlier desktop text
-  in renderer refs. Added `npm run vault-security:audit` so renderer-facing
+  stripped before desktop context is handed to chat/runtime code. Desktop
+  context active-window and screenshot capture failures now log redacted error
+  summaries instead of raw exception objects, stderr, local paths, or accidental
+  captured text. Autonomy context triggers now keep only salted comparison
+  fingerprints for previous active-window and clipboard values instead of
+  retaining earlier desktop text in renderer refs. Added `npm run
+  vault-security:audit` so renderer-facing
   vault retrieval paths must keep returning opaque `nexus-vault-ref:` tokens
   instead of plaintext API keys or bot tokens, and KeyVault support logs now
   omit raw slot names, plaintext values, vault paths, and raw exception objects

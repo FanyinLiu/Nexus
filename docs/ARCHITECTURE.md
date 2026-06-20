@@ -137,7 +137,10 @@ Current baseline:
   screenshot image payloads into chat/runtime context after OCR/VLM finishes, or
   if the autonomy context scheduler retains previous active-window or clipboard
   text instead of comparison fingerprints. It never reads the live clipboard,
-  screenshots, active-window text, localStorage values, or secrets.
+  screenshots, active-window text, localStorage values, or secrets. The same
+  guard now covers desktop-context support logs so active-window and screenshot
+  capture failures log redacted error summaries instead of raw exception
+  objects, stderr, local paths, or captured text.
 - `npm run vault-security:audit` is the source-only secret-boundary guard. It
   fails if vault retrieval IPC stops issuing opaque `nexus-vault-ref:` tokens,
   if refs stop being scoped per sender, or if known main-process outbound

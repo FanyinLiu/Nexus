@@ -8,6 +8,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const CHECKED_FILES = [
   'electron/ipc/windowIpc.js',
+  'electron/services/desktopContextService.js',
   'electron/services/desktopContextPrivacy.js',
   'src/hooks/useDesktopContext.ts',
   'src/hooks/useContextScheduler.ts',
@@ -49,6 +50,18 @@ const UNSAFE_PATTERNS = [
     pattern: /previousActiveWindowTitle|previousClipboardText/,
     message: 'context scheduler snapshots must use explicit changed flags instead of previous desktop text',
   },
+  {
+    id: 'desktop-context-service-raw-error-log',
+    file: 'electron/services/desktopContextService.js',
+    pattern: /console\.warn\('\[desktop-context(?::[^\]]+)?\][^']*failed'[^,\n]*,\s*(?:error|parseError|message\s*\|\|\s*error)\)/,
+    message: 'desktop context capture logs must not record raw errors, stderr, paths, or captured text',
+  },
+  {
+    id: 'desktop-context-service-raw-parse-error-log',
+    file: 'electron/services/desktopContextService.js',
+    pattern: /console\.warn\('\[desktop-context(?::[^\]]+)?\][^']*parse failed'[^,\n]*,\s*parseError\)/,
+    message: 'desktop context parse logs must redact errors before logging',
+  },
 ]
 
 const REQUIRED_PHRASES = [
@@ -69,6 +82,21 @@ const REQUIRED_PHRASES = [
       'containsSensitiveDesktopContext',
       'redactSensitiveDesktopContextText',
       'sanitizeDesktopContextSnapshot',
+    ],
+  },
+  {
+    id: 'main-desktop-context-support-logs-redact-errors',
+    file: 'electron/services/desktopContextService.js',
+    phrases: [
+      "import { redactSensitiveErrorText } from './errorRedaction.js'",
+      'function formatDesktopContextErrorForLog(error)',
+      'return redactSensitiveErrorText([message, stderr].filter(Boolean).join(\' \'))',
+      "console.warn('[desktop-context:mac] active window capture failed:', formatDesktopContextErrorForLog(error))",
+      "console.warn('[desktop-context:mac] parse failed:', formatDesktopContextErrorForLog(parseError))",
+      "console.warn('[desktop-context:linux] active window capture failed:', formatDesktopContextErrorForLog(error))",
+      "console.warn('[desktop-context:get] active window capture failed:', formatDesktopContextErrorForLog(error))",
+      "console.warn('[desktop-context:get] active window parse failed:', formatDesktopContextErrorForLog(parseError))",
+      "console.warn('[desktop-context:get] screenshot capture failed:', formatDesktopContextErrorForLog(error))",
     ],
   },
   {

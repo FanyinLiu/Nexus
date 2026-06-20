@@ -223,7 +223,9 @@ auditable.
   tokens, passwords, and private-key material before active-window/clipboard
   text leaves the main process, with a renderer-side prompt-formatting fallback
   for OCR and VLM text. Screenshot data URLs are stripped after OCR/VLM so chat
-  runtime receives only text context, not the original image payload. Autonomy
+  runtime receives only text context, not the original image payload. Capture
+  failure support logs now redact errors before logging so stderr, local paths,
+  and accidental captured text do not leak through diagnostics. Autonomy
   context triggers keep only salted comparison fingerprints for previous
   active-window and clipboard values.
 - Create an inventory of every preload-exposed method and matching
