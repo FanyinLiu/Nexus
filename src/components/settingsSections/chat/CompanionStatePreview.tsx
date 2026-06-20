@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type {
   CompanionActivityMotion,
   CompanionActivityPhase,
@@ -28,6 +28,12 @@ const MOTION_LABEL_KEYS: Record<CompanionActivityMotion, TranslationKey> = {
   offline: 'settings.chat.companion_state_preview.motion.offline',
 }
 
+const DEFAULT_PREVIEW_STATE = resolveCompanionActivityPreviewState('idle')
+const PREVIEW_ROWS = COMPANION_ACTIVITY_PHASES.map((phase) => ({
+  phase,
+  state: phase === 'idle' ? DEFAULT_PREVIEW_STATE : resolveCompanionActivityPreviewState(phase),
+}))
+
 type CompanionStatePreviewProps = {
   petModel: PetModelDefinition | undefined
   spritePetLabel: string
@@ -40,10 +46,7 @@ export function CompanionStatePreview({
   ti,
 }: CompanionStatePreviewProps) {
   const [previewPhase, setPreviewPhase] = useState<CompanionActivityPhase>('idle')
-  const previewState = useMemo(
-    () => resolveCompanionActivityPreviewState(previewPhase),
-    [previewPhase],
-  )
+  const previewState = PREVIEW_ROWS.find((row) => row.phase === previewPhase)?.state ?? DEFAULT_PREVIEW_STATE
   const spritePreviewState = previewState.spriteState ?? 'idle'
 
   return (
@@ -80,8 +83,7 @@ export function CompanionStatePreview({
           role="radiogroup"
           aria-label={ti('settings.chat.companion_state_preview.title')}
         >
-          {COMPANION_ACTIVITY_PHASES.map((phase) => {
-            const state = resolveCompanionActivityPreviewState(phase)
+          {PREVIEW_ROWS.map(({ phase, state }) => {
             const selected = phase === previewPhase
 
             return (
