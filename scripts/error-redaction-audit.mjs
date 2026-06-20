@@ -12,6 +12,7 @@ const CHECKED_FILES = [
   'electron/ipc/audioIpc.js',
   'electron/ipc/vtsBridgeIpc.js',
   'electron/net.js',
+  'electron/services/updaterService.js',
   'electron/services/vtsBridge.js',
   'tests/error-redaction.test.ts',
 ]
@@ -46,6 +47,18 @@ const UNSAFE_PATTERNS = [
     file: 'electron/ipc/vtsBridgeIpc.js',
     pattern: /error:\s*error\s+instanceof\s+Error\s*\?\s*error\.message\s*:\s*String\(error\)/,
     message: 'VTS bridge audit entries must not record raw error text',
+  },
+  {
+    id: 'updater-service-raw-event-error',
+    file: 'electron/services/updaterService.js',
+    pattern: /message:\s*error\s+instanceof\s+Error\s*\?\s*error\.message\s*:\s*String\(error(?:\s*\?\?\s*'unknown error')?\)/,
+    message: 'updater renderer events must not expose raw update error text',
+  },
+  {
+    id: 'updater-service-raw-check-reason',
+    file: 'electron/services/updaterService.js',
+    pattern: /reason:\s*error\s+instanceof\s+Error\s*\?\s*error\.message\s*:\s*String\(error\)/,
+    message: 'updater check results must not expose raw update error text',
   },
   {
     id: 'net-extracts-raw-response-error',
@@ -96,6 +109,19 @@ const REQUIRED_PHRASES = [
     phrases: [
       "import { redactSensitiveErrorText } from './services/errorRedaction.js'",
       'return redactSensitiveErrorText(',
+    ],
+  },
+  {
+    id: 'updater-service-redacts-update-errors',
+    file: 'electron/services/updaterService.js',
+    phrases: [
+      "import { getRedactedErrorMessage } from './errorRedaction.js'",
+      "console.warn('[updater] failed to send event to renderer:', getRedactedErrorMessage(error))",
+      "console.warn('[updater] initial manual check failed:', getRedactedErrorMessage(error))",
+      "message: getRedactedErrorMessage(error ?? 'unknown error')",
+      'const reason = getRedactedErrorMessage(error)',
+      'reason: getRedactedErrorMessage(error)',
+      "console.warn('[updater] failed to open release page:', getRedactedErrorMessage(error))",
     ],
   },
   {

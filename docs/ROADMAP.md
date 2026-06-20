@@ -177,6 +177,9 @@ auditable.
   connection/authentication errors before broadcasting renderer-visible status
   or writing VTS audit records, keeping companion avatar integration from
   becoming a token/path leak.
+- Auto-updater check/download errors now use the same redaction boundary before
+  renderer-visible update events, manual-check results, or updater logs can
+  expose token-like strings, credentialed URLs, or local user paths.
 - The remaining renderer-payload IPC backlog is now schema-bound:
   integrations inspection, KWS start/status, VAD start, model download, and TTS
   streaming lifecycle requests all validate request shape before service work.
