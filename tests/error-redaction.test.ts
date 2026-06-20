@@ -63,3 +63,11 @@ test('error redaction audit covers model download renderer-facing errors', () =>
   assert.ok(report.checkedFiles.includes('electron/services/modelDownloader.js'))
   assert.ok(report.checkedFiles.includes('electron/services/modelManager.js'))
 })
+
+test('error redaction audit covers chat gateway renderer-facing errors', () => {
+  const report = buildErrorRedactionReport()
+
+  assert.equal(report.summary.errors, 0)
+  assert.ok(report.checkedFiles.includes('electron/services/telegramGateway.js'))
+  assert.ok(report.checkedFiles.includes('electron/services/discordGateway.js'))
+})

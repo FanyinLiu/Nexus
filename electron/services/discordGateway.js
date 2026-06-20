@@ -11,6 +11,7 @@ import WebSocket from 'ws'
 
 import { isAllowedSender } from './allowlistPolicy.js'
 import { createPairingManager } from './pairingManager.js'
+import { getRedactedErrorMessage, redactSensitiveErrorText } from './errorRedaction.js'
 
 /** @type {'disconnected'|'connecting'|'connected'|'error'} */
 let _state = 'disconnected'
@@ -261,7 +262,7 @@ function handleDispatch(eventName, data) {
         console.info(`[discord] Pairing request from channel ${channelId}`)
         _onPairingRequest?.({ senderId: String(channelId), name: senderName, code: pairing.code })
         apiCall(`/channels/${channelId}/messages`, { method: 'POST', body: { content: PAIRING_REPLY(pairing.code) } })
-          .catch((err) => console.warn('[discord] pairing reply failed:', err.message))
+          .catch((err) => console.warn('[discord] pairing reply failed:', getRedactedErrorMessage(err)))
       }
       return
     }
@@ -302,12 +303,12 @@ async function connectGateway(gatewayUrl) {
       } catch (err) {
         // A malformed/unexpected gateway frame must never reach the global
         // uncaughtException handler (which exits the whole app). Drop it.
-        console.error('[discord] Dropping malformed gateway frame:', err?.message ?? err)
+        console.error('[discord] Dropping malformed gateway frame:', getRedactedErrorMessage(err))
       }
     })
 
     ws.on('close', (code, reason) => {
-      console.info(`[discord] WebSocket closed: ${code} ${reason}`)
+      console.info(`[discord] WebSocket closed: ${code} ${redactSensitiveErrorText(reason)}`)
       clearTimers()
       _ws = null
 
@@ -328,9 +329,10 @@ async function connectGateway(gatewayUrl) {
           _reconnectTimer = setTimeout(() => {
             _reconnectTimer = null
             connectGateway(url).catch((err) => {
-              console.error('[discord] Reconnect failed:', err.message)
+              const message = getRedactedErrorMessage(err)
+              console.error('[discord] Reconnect failed:', message)
               _state = 'error'
-              _lastError = err.message
+              _lastError = message
             })
           }, backoffMs + jitter)
         }
@@ -340,8 +342,9 @@ async function connectGateway(gatewayUrl) {
     })
 
     ws.on('error', (err) => {
-      console.error('[discord] WebSocket error:', err.message)
-      _lastError = err.message
+      const message = getRedactedErrorMessage(err)
+      console.error('[discord] WebSocket error:', message)
+      _lastError = message
       reject(err)
     })
   })
@@ -378,7 +381,7 @@ export async function connect(botToken, allowedChannelIds = []) {
     await connectGateway(gatewayUrl)
   } catch (err) {
     _state = 'error'
-    _lastError = err.message
+    _lastError = getRedactedErrorMessage(err)
     _botToken = null
     _shouldReconnect = false
     throw err

@@ -12,8 +12,10 @@ const CHECKED_FILES = [
   'electron/ipc/audioIpc.js',
   'electron/ipc/vtsBridgeIpc.js',
   'electron/net.js',
+  'electron/services/discordGateway.js',
   'electron/services/modelDownloader.js',
   'electron/services/modelManager.js',
+  'electron/services/telegramGateway.js',
   'electron/services/updaterService.js',
   'electron/services/vtsBridge.js',
   'tests/error-redaction.test.ts',
@@ -75,6 +77,30 @@ const UNSAFE_PATTERNS = [
     message: 'model manager progress/results must not expose raw download error text',
   },
   {
+    id: 'telegram-gateway-raw-last-error',
+    file: 'electron/services/telegramGateway.js',
+    pattern: /_lastError\s*=\s*err\.message/,
+    message: 'Telegram gateway status errors must be redacted before renderer exposure',
+  },
+  {
+    id: 'telegram-gateway-raw-error-log',
+    file: 'electron/services/telegramGateway.js',
+    pattern: /console\.(?:warn|error)\([^\n]+err\.message/,
+    message: 'Telegram gateway logs must not record raw gateway error text',
+  },
+  {
+    id: 'discord-gateway-raw-last-error',
+    file: 'electron/services/discordGateway.js',
+    pattern: /_lastError\s*=\s*err\.message/,
+    message: 'Discord gateway status errors must be redacted before renderer exposure',
+  },
+  {
+    id: 'discord-gateway-raw-error-log',
+    file: 'electron/services/discordGateway.js',
+    pattern: /console\.(?:warn|error)\([^\n]+err\.message/,
+    message: 'Discord gateway logs must not record raw gateway error text',
+  },
+  {
     id: 'net-extracts-raw-response-error',
     file: 'electron/net.js',
     pattern: /return\s+(?:data\?\.error\?\.message|text\.trim\(\)\s*\|\|)/,
@@ -123,6 +149,29 @@ const REQUIRED_PHRASES = [
     phrases: [
       "import { redactSensitiveErrorText } from './services/errorRedaction.js'",
       'return redactSensitiveErrorText(',
+    ],
+  },
+  {
+    id: 'telegram-gateway-redacts-status-errors',
+    file: 'electron/services/telegramGateway.js',
+    phrases: [
+      "import { getRedactedErrorMessage } from './errorRedaction.js'",
+      "console.warn('[telegram] pairing reply failed:', getRedactedErrorMessage(err))",
+      "console.warn('[telegram] voice download failed:', getRedactedErrorMessage(err))",
+      'const message = getRedactedErrorMessage(err)',
+      '_lastError = getRedactedErrorMessage(err)',
+    ],
+  },
+  {
+    id: 'discord-gateway-redacts-status-errors',
+    file: 'electron/services/discordGateway.js',
+    phrases: [
+      "import { getRedactedErrorMessage, redactSensitiveErrorText } from './errorRedaction.js'",
+      "console.warn('[discord] pairing reply failed:', getRedactedErrorMessage(err))",
+      "console.error('[discord] Dropping malformed gateway frame:', getRedactedErrorMessage(err))",
+      'redactSensitiveErrorText(reason)',
+      'const message = getRedactedErrorMessage(err)',
+      '_lastError = getRedactedErrorMessage(err)',
     ],
   },
   {
