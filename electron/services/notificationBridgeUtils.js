@@ -97,6 +97,27 @@ function normalizeWebhookString(value, maxChars) {
     .slice(0, maxChars)
 }
 
+function formatChannelInputLogLabel(raw, kind = 'unknown') {
+  return [
+    `kind=${kind}`,
+    `idLength=${String(raw?.id ?? '').trim().length}`,
+    `nameLength=${String(raw?.name ?? '').trim().length}`,
+  ].join(' ')
+}
+
+function classifyUrlSafetyReason(reason) {
+  const text = String(reason ?? '').toLowerCase()
+  if (text.includes('empty')) return 'empty-url'
+  if (text.includes('malformed')) return 'malformed-url'
+  if (text.includes('scheme')) return 'disallowed-scheme'
+  if (text.includes('host')) return 'disallowed-host'
+  if (text.includes('ipv4')) return 'private-ipv4'
+  if (text.includes('ipv6')) return 'private-ipv6'
+  if (text.includes('dns lookup failed')) return 'dns-failed'
+  if (text.includes('dns lookup returned no addresses')) return 'dns-empty'
+  return 'unsafe-url'
+}
+
 function pickWebhookString(payload, keys, maxChars) {
   for (const key of keys) {
     if (!Object.prototype.hasOwnProperty.call(payload, key)) continue
@@ -227,7 +248,7 @@ export function sanitizeNotificationChannels(channels) {
 
     const kind = raw.kind === 'rss' || raw.kind === 'webhook' ? raw.kind : null
     if (!kind) {
-      console.warn('[notification-bridge] dropped channel: invalid kind', raw?.kind)
+      console.warn(`[notification-bridge] dropped channel: invalid kind (${formatChannelInputLogLabel(raw)})`)
       continue
     }
 
@@ -235,7 +256,7 @@ export function sanitizeNotificationChannels(channels) {
     const name = String(raw.name ?? '').trim()
     const enabled = Boolean(raw.enabled)
     if (!id || !name) {
-      console.warn('[notification-bridge] dropped channel: missing id/name')
+      console.warn(`[notification-bridge] dropped channel: missing id/name (${formatChannelInputLogLabel(raw, kind)})`)
       continue
     }
 
@@ -245,7 +266,7 @@ export function sanitizeNotificationChannels(channels) {
       const url = String(config.url ?? '').trim()
       const safety = checkUrlSafety(url)
       if (!safety.ok) {
-        console.warn(`[notification-bridge] dropped RSS channel "${name}": ${safety.reason}`)
+        console.warn(`[notification-bridge] dropped RSS channel (${formatChannelInputLogLabel(raw, kind)}): reason=${classifyUrlSafetyReason(safety.reason)}`)
         continue
       }
 

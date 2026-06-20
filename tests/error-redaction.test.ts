@@ -78,3 +78,11 @@ test('error redaction audit covers notification watcher renderer-facing errors',
   assert.equal(report.summary.errors, 0)
   assert.ok(report.checkedFiles.includes('electron/services/macNotificationWatcher.js'))
 })
+
+test('error redaction audit covers notification bridge support logs', () => {
+  const report = buildErrorRedactionReport()
+
+  assert.equal(report.summary.errors, 0)
+  assert.ok(report.checkedFiles.includes('electron/services/notificationBridge.js'))
+  assert.ok(report.checkedFiles.includes('electron/services/notificationBridgeUtils.js'))
+})

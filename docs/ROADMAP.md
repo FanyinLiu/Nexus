@@ -207,6 +207,10 @@ auditable.
 - Local notification webhook info is token-safe across IPC: the main process
   creates and enforces a `0600` user-data token file, while the renderer sees
   only the URL, auth-required flag, token file name, and size cap.
+- Local notification bridge support logs are now metadata-only for webhook
+  token read failures, webhook server errors, RSS fetch/poll failures, and
+  rejected RSS channel configs, avoiding raw channel names, ids, feed URLs,
+  bearer tokens, and URL-safety host details.
 - Desktop context capture now redacts obvious secrets such as API keys, bearer
   tokens, passwords, and private-key material before active-window/clipboard
   text leaves the main process, with a renderer-side prompt-formatting fallback

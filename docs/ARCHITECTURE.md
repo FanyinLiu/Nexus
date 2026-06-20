@@ -253,6 +253,11 @@ Current baseline:
   The renderer-visible `notification:webhook-info` IPC returns only URL,
   max-body size, `requiresAuth`, and the token file name; it does not return
   the bearer token or full `Authorization` header.
+- Local notification bridge support logs are content-minimized. Webhook token
+  read failures, webhook server errors, RSS fetch/poll failures, and rejected
+  RSS channel configs use the shared error redactor plus channel metadata
+  lengths instead of raw user-supplied channel names, ids, feed URLs, bearer
+  tokens, or URL-safety host details.
 - A main-process local-data foundation now initializes both
   `userData/local-data/manifest.json` and the SQLite database
   `userData/local-data/nexus.sqlite` using Electron/Node's built-in
