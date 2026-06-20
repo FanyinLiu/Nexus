@@ -858,11 +858,45 @@ declare global {
       vaultListSlots: () => Promise<string[]>
       vaultStoreMany: (entries: Record<string, string>) => Promise<void>
       vaultRetrieveMany: (slots: string[]) => Promise<Record<string, string>>
-      // VTube Studio token is fixed-slot vault storage for the renderer VTS bridge.
-      // It is not a generic vault read surface and should not accept slot names.
-      vtsAuthTokenGet: () => Promise<string>
-      vtsAuthTokenStore: (token: string) => Promise<void>
-      vtsAuthTokenDelete: () => Promise<void>
+      // VTube Studio bridge. Renderer sends companion state only; token
+      // storage and WebSocket authentication stay in the main process.
+      vtsBridgeConnect: (payload: { port: number }) => Promise<{
+        state: 'disconnected' | 'connecting' | 'auth_needed' | 'ready' | 'error'
+        modelName: string
+        port: number
+        error?: string
+      }>
+      vtsBridgeDisconnect: () => Promise<{
+        state: 'disconnected' | 'connecting' | 'auth_needed' | 'ready' | 'error'
+        modelName: string
+        port: number
+        error?: string
+      }>
+      vtsBridgeStatus: () => Promise<{
+        state: 'disconnected' | 'connecting' | 'auth_needed' | 'ready' | 'error'
+        modelName: string
+        port: number
+        error?: string
+      }>
+      vtsBridgeUpdateInput: (payload: {
+        expressionSlot: import('./features/pet/models').PetExpressionSlot
+        speechLevel: number
+        gazeTarget: import('./features/pet/components/live2d/types').GazeTarget
+        isSpeaking: boolean
+        isListening: boolean
+      }) => Promise<{
+        state: 'disconnected' | 'connecting' | 'auth_needed' | 'ready' | 'error'
+        modelName: string
+        port: number
+        error?: string
+      }>
+      vtsBridgeMigrateLegacyToken: (token: string) => Promise<void>
+      subscribeVtsBridgeStatus: (listener: (status: {
+        state: 'disconnected' | 'connecting' | 'auth_needed' | 'ready' | 'error'
+        modelName: string
+        port: number
+        error?: string
+      }) => void) => () => void
 
       // Auto-updater (electron-updater + GitHub Releases)
       updaterCheck: () => Promise<{

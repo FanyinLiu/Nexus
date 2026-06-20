@@ -17,8 +17,8 @@ still easy to drift:
   shared code could drift upward toward app/view orchestration.
 - Very large source files had no budget gate, making cleanup and review harder
   to keep incremental.
-- VTube Studio auth token persistence still depended on a renderer
-  localStorage key, even though it is secret-adjacent.
+- VTube Studio auth token persistence and WebSocket authentication still
+  depended on renderer-owned code, even though the token is secret-adjacent.
 - Release verification did not record a lightweight bundle/performance budget
   baseline before adding more Live2D, voice, and retrieval code.
 - `verify:release` was the only named local gate, so PR-level verification and
@@ -48,11 +48,11 @@ still easy to drift:
   child component, and split chat-migration validation out of
   `electron/services/localDataStore.js` so both large files stay below tighter
   source-size budgets.
-- Move VTube Studio auth token persistence to a fixed main-process vault slot
-  with audited, trusted-sender-only IPC. The renderer still uses the token
-  transiently for the existing VTS WebSocket bridge, but the old
-  `nexus:vts-auth-token` localStorage key is now only a one-time migration
-  source and is removed after migration.
+- Move VTube Studio WebSocket authentication, token persistence, parameter
+  injection, and hotkey triggering behind a main-process bridge with
+  audited, trusted-sender-only IPC. The renderer now sends only bounded
+  companion-state input and can migrate the old `nexus:vts-auth-token`
+  localStorage key one way into the fixed vault slot before deleting it.
 - Add `npm run performance:baseline` to fail on production bundle-size budget
   regressions and eager heavy-module regressions after `npm run build`.
 - Tighten `npm run ipc:audit` so warnings fail now that the IPC baseline is
@@ -67,15 +67,19 @@ still easy to drift:
 
 ## Impact Scope
 
-- Runtime behavior: VTube Studio token persistence moves from renderer
-  localStorage to main-process vault storage; VTS connection behavior is
-  otherwise unchanged.
+- Runtime behavior: VTube Studio connection, authentication, token storage,
+  parameter injection, and hotkey triggering move from renderer code to a
+  main-process bridge. The visible pet-window contract remains
+  `state / modelName / updateInput`.
 - Data/storage migration: one-time best-effort migration of the legacy
   `nexus:vts-auth-token` key into a fixed vault slot, then deletion of the
   legacy renderer key.
-- IPC channel names and payload shapes: three fixed-slot VTS token channels are
-  added; `vts-auth-token:store` uses schema validation and all three are treated
-  as high-risk secret-vault channels by the IPC audit.
+- IPC channel names and payload shapes: the old fixed-slot VTS token read/write
+  preload surface is removed. New `vts-bridge:*` channels cover connect,
+  disconnect, status, bounded input updates, status subscription, and one-way
+  legacy-token migration. The migration channel is treated as high-risk
+  `secret-vault`; connect/update-input are schema-validated desktop-action
+  channels.
 - New dependencies: none.
 - User-facing UI: unchanged.
 - Developer workflow: new audit scripts and a clearer PR/release verification
@@ -101,10 +105,11 @@ still easy to drift:
   doc in the same slice.
 - The source-size audit can force earlier extraction work when files approach
   the budget. That is intentional, but generated files need explicit budgets.
-- The current VTS bridge still runs WebSocket authentication in the renderer, so
-  the token can be present transiently in renderer memory. This slice removes
-  renderer persistent plaintext storage; a later, larger slice would move the
-  VTS WebSocket bridge itself into the main process.
+- The main-process bridge still depends on a local VTube Studio WebSocket
+  server and the user's VTS plugin approval flow. The legacy localStorage
+  migration can see the old token transiently in renderer memory once because
+  that is where older builds stored it; after migration, renderer code cannot
+  read the VTS token from the vault.
 - The performance baseline is a stable build-output budget, not a full runtime
   CPU/memory profiler. Runtime idle metrics should be added once the app has a
   deterministic measurement harness.
@@ -116,10 +121,11 @@ small IPC primitive split, the agent README, and this design doc. If only the
 second hardening slice needs rollback, revert `architecture-boundary-audit.mjs`,
 `source-size-audit.mjs`, the all-source storage-audit expansion, and their npm
 script/test/doc wiring. If this tightening slice needs rollback, also revert
-`SettingsDrawerActiveSection.tsx`, `localDataChatMigration.js`, the fixed-slot
-VTS token IPC/preload/type changes, and `performance-baseline.mjs`. Existing
-vaulted VTS tokens may remain harmlessly in the vault; users can re-authorize
-VTS if the old localStorage path is restored.
+`SettingsDrawerActiveSection.tsx`, `localDataChatMigration.js`, the
+main-process VTS bridge service/IPC/preload/type changes, and
+`performance-baseline.mjs`. Existing vaulted VTS tokens may remain harmlessly
+in the vault; users can re-authorize VTS if the old renderer WebSocket path is
+restored.
 
 ## Acceptance
 

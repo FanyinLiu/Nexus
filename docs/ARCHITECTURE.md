@@ -103,8 +103,8 @@ Current baseline:
   inline storage calls, then fails if a key is added without classification,
   authority, and migration posture. The report is source-only, compares unique
   discovered keys against the contract, and marks the legacy VTube Studio auth
-  token key as a `secret-adjacent` migration source after the token moves to a
-  fixed main-process vault slot.
+  token key as a `secret-adjacent` migration source after VTS authentication
+  moves behind the main-process bridge and fixed vault slot.
 - `npm run heavy:audit` guards renderer-side heavy modules such as embeddings,
   OCR, browser VAD, and Live2D so they remain lazy-loaded or vendor-loaded on
   demand.
@@ -165,6 +165,11 @@ Current baseline:
   delete, list, store-many, and retrieve-many operations. Audit records include
   counts, lengths, booleans, and result kinds, not plaintext secrets, slot
   names, vault ref tokens, or error text.
+- The VTube Studio bridge now keeps WebSocket authentication, token storage,
+  parameter injection, and hotkey triggering in the main process. Renderer code
+  can connect/disconnect, send bounded companion state input, subscribe to
+  bridge status, and migrate the old `nexus:vts-auth-token` localStorage value
+  one way into the fixed vault slot; it cannot read the VTS token back.
 - Integrations inspection, KWS start/status, VAD start, model download, and TTS
   streaming lifecycle IPC now validate request shape before service work. The
   current `npm run ipc:audit` gate reports no missing handlers, missing trusted

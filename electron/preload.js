@@ -324,7 +324,17 @@ contextBridge.exposeInMainWorld('desktopPet', {
   vaultListSlots: () => ipcRenderer.invoke('vault:list-slots'),
   vaultStoreMany: (entries) => ipcRenderer.invoke('vault:store-many', entries),
   vaultRetrieveMany: (slots) => ipcRenderer.invoke('vault:retrieve-many', slots),
-  vtsAuthTokenGet: () => ipcRenderer.invoke('vts-auth-token:get'),
-  vtsAuthTokenStore: (token) => ipcRenderer.invoke('vts-auth-token:store', { token }),
-  vtsAuthTokenDelete: () => ipcRenderer.invoke('vts-auth-token:delete'),
+
+  // VTube Studio bridge. The renderer sends companion state only; VTS
+  // WebSocket authentication and token persistence stay in the main process.
+  vtsBridgeConnect: (payload) => ipcRenderer.invoke('vts-bridge:connect', payload),
+  vtsBridgeDisconnect: () => ipcRenderer.invoke('vts-bridge:disconnect'),
+  vtsBridgeStatus: () => ipcRenderer.invoke('vts-bridge:status'),
+  vtsBridgeUpdateInput: (payload) => ipcRenderer.invoke('vts-bridge:update-input', payload),
+  vtsBridgeMigrateLegacyToken: (token) => ipcRenderer.invoke('vts-bridge:migrate-legacy-token', { token }),
+  subscribeVtsBridgeStatus: (listener) => {
+    const handler = (_event, status) => listener(status)
+    ipcRenderer.on('vts-bridge:status', handler)
+    return () => ipcRenderer.removeListener('vts-bridge:status', handler)
+  },
 })

@@ -154,10 +154,11 @@ _No changes yet._
   VTube Studio token key marked as secret-adjacent; `verify:pr` also runs
   renderer architecture-boundary and source-size budget audits. The settings
   drawer and local-data store hot spots are split into smaller modules, VTube
-  Studio token persistence now uses an audited fixed-slot main-process vault
-  path instead of renderer localStorage authority, one high-risk VTS IPC store
-  path now uses schema validation, and `verify:pr` records a production bundle
-  performance baseline.
+  Studio WebSocket/authentication now lives behind a main-process bridge with
+  a fixed vault slot and one-way legacy localStorage migration, the renderer no
+  longer exposes VTS token read/write IPC, high-risk VTS migration IPC is
+  schema-validated, and `verify:pr` records a production bundle performance
+  baseline.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned
