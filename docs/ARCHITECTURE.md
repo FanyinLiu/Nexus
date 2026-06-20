@@ -126,10 +126,10 @@ Current baseline:
   documented in code-facing and release-facing docs.
 - `npm run message-privacy:audit` is the source-only desktop message privacy
   guard. It fails if notification/message bodies are wired into automatic chat
-  forwarding, persisted chat history, missed-message follow-up hints, or raw
-  renderer localStorage writes. The audit reads repository source only and
-  never reads user notifications, chat content, localStorage values, secrets, or
-  message bodies.
+  forwarding, persisted chat history, missed-message follow-up hints, reply
+  draft composer text, or raw renderer localStorage writes. The audit reads
+  repository source only and never reads user notifications, chat content,
+  localStorage values, secrets, or message bodies.
 - `npm run verify:pr` is the day-to-day merge gate. `npm run verify:release`
   reuses it and then adds the SQLite smoke check for release confidence.
 - The `file:save-text` and `file:open-text` IPC handlers now use explicit
@@ -187,8 +187,9 @@ Current baseline:
   data, not model input. Automatic desktop-message chat forwarding now sends
   only source/sender metadata, missed-message follow-up records omit topic/body
   snippets, notification companion notices stored in chat history use
-  metadata-only copy, and renderer notification localStorage persistence strips
-  body/summary text before writing.
+  metadata-only copy, reply draft composer text uses only source metadata, and
+  renderer notification localStorage persistence strips body/summary text before
+  writing.
 - Telegram and Discord bridges use an owner-only model-input boundary. Allowed
   channels can still produce local companion announcements, but external-contact
   messages are not forwarded into chat/model input unless the sender is

@@ -5,6 +5,7 @@ import {
   buildNotificationHistorySafeNoticeContent,
   buildNotificationMessageChatForwardText,
   buildNotificationMessageFollowUpInput,
+  buildNotificationReplyDraftText,
   sanitizeNotificationMessageForStorage,
   sanitizeNotificationMessagesForStorage,
 } from '../src/lib/privacy/notificationPrivacy.ts'
@@ -78,6 +79,15 @@ test('notification notice content stored in chat history omits notification body
   assert.equal(notice.chatContent.includes(message.body), false)
   assert.equal(notice.bubbleContent.includes(message.body), false)
   assert.equal(notice.speechContent.includes(message.body), false)
+})
+
+test('notification reply draft text does not copy third-party message content', () => {
+  const message = makeMessage()
+  const draft = buildNotificationReplyDraftText(message, t)
+
+  assert.equal(draft, 'panel.notification.draft_reply|Messages|||||')
+  assert.equal(draft.includes(message.body), false)
+  assert.equal(draft.includes(String(message.summary)), false)
 })
 
 test('notification persistence strips body and summaries before renderer storage', () => {

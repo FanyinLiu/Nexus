@@ -32,6 +32,7 @@ import type { CrisisSignal } from '../../features/safety'
 import { useAmbientWeather } from '../../hooks/useAmbientWeather'
 import { shorten } from '../../lib'
 import { modelSupportsVision } from '../../lib/modelCapabilities'
+import { buildNotificationReplyDraftText } from '../../lib/privacy/notificationPrivacy'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import { PetControlIcon, type PetControlIconName } from '../../components/PetControlIcon'
 import type { UseAppControllerResult } from '../controllers/useAppController'
@@ -367,9 +368,7 @@ export function PanelView({
   }
 
   function handleNotificationDraft(message: NotificationMessage) {
-    const sourceName = getNotificationSourceLabel(message)
-    const summary = getNotificationSummary(message)
-    chat.setInput(`${ti('panel.notification.draft_reply', { source: sourceName })}${summary}`)
+    chat.setInput(buildNotificationReplyDraftText(message, ti))
 
     window.requestAnimationFrame(() => {
       const composer = composerTextareaRef.current

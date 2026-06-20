@@ -109,6 +109,9 @@ lives in renderer `localStorage` by default, and nothing is deleted.
   handling so third-party message bodies remain local preview data, not
   automatic model input, persisted chat history, follow-up hints, or renderer
   localStorage payloads.
+- Notification reply drafts now keep that same local-preview boundary: the
+  composer is seeded with the message source only, not the third-party message
+  text shown in the notification preview.
 - Tightened Telegram/Discord bridge ingress so external contacts cannot use an
   allowed bridge channel to push their message text into Nexus' model context;
   only owner-listed remote messages are forwarded, bridge debug logs stay

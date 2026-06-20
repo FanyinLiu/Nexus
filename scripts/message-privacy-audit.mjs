@@ -13,6 +13,7 @@ const CHECKED_FILES = [
   'src/app/controllers/discordMessageRouter.ts',
   'src/app/controllers/useTelegramBridge.ts',
   'src/app/controllers/useDiscordBridge.ts',
+  'src/app/views/PanelView.tsx',
   'electron/services/notificationBridge.js',
   'src/hooks/useNotificationBridge.ts',
   'src/components/settingsSections/AutonomySection.tsx',
@@ -45,6 +46,12 @@ const UNSAFE_PATTERNS = [
     file: 'src/app/controllers/messagingAnnouncement.ts',
     pattern: /chat\.bridge\.messaging_announcement_chat_preview/,
     message: 'message previews may be used for local bubble/TTS, not persisted chat history',
+  },
+  {
+    id: 'notification-reply-draft-copies-message-content',
+    file: 'src/app/views/PanelView.tsx',
+    pattern: /handleNotificationDraft[\s\S]{0,500}(?:getNotificationSummary|message\.summary|message\.body)/,
+    message: 'notification reply drafts must not copy third-party message content into the chat composer',
   },
   {
     id: 'notification-message-storage-raw-write',
@@ -122,6 +129,11 @@ const REQUIRED_PHRASES = [
     id: 'notification-storage-body-stripped',
     file: 'src/lib/privacy/notificationPrivacy.ts',
     phrases: ['body: \'\',', 'summary: undefined'],
+  },
+  {
+    id: 'notification-reply-draft-helper-used',
+    file: 'src/app/views/PanelView.tsx',
+    phrases: ['buildNotificationReplyDraftText(message, ti)'],
   },
   {
     id: 'telegram-owner-only-forwarding',
