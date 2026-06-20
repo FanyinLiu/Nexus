@@ -186,7 +186,9 @@ _No changes yet._
   error text, guarded by `npm run error-redaction:audit`. VTube Studio bridge
   connection/authentication failures now use that same redaction boundary before
   renderer-visible status broadcasts or VTS audit records can expose
-  token-like strings, credentialed URLs, or local user paths.
+  token-like strings, credentialed URLs, or local user paths. Auto-updater
+  check/download failures now use it too before update events, manual-check
+  results, or updater logs reach UI/support surfaces.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
   into `npm run distribution:audit` so macOS, Windows, and Linux signing/update
   assumptions are checked against release docs. The current macOS unsigned

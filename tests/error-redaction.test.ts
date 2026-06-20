@@ -48,3 +48,10 @@ test('error redaction audit covers VTS bridge renderer-facing errors', () => {
   assert.ok(report.checkedFiles.includes('electron/services/vtsBridge.js'))
   assert.ok(report.checkedFiles.includes('electron/ipc/vtsBridgeIpc.js'))
 })
+
+test('error redaction audit covers updater renderer-facing errors', () => {
+  const report = buildErrorRedactionReport()
+
+  assert.equal(report.summary.errors, 0)
+  assert.ok(report.checkedFiles.includes('electron/services/updaterService.js'))
+})

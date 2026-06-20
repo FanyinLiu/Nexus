@@ -138,6 +138,9 @@ lives in renderer `localStorage` by default, and nothing is deleted.
 - VTube Studio bridge connection/authentication errors now use the same
   redaction boundary before renderer-visible status updates or VTS audit records
   can expose token-like strings, credentialed URLs, or local user paths.
+- Auto-updater check/download errors now use the same redaction boundary before
+  renderer-visible update events, manual-check results, or updater logs can
+  expose token-like strings, credentialed URLs, or local user paths.
 
 ## Product boundary
 

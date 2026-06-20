@@ -26,6 +26,7 @@ import {
   normalizeGithubReleasePayload,
   resolveUpdaterMode,
 } from './updatePolicy.js'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 
 const { autoUpdater } = electronUpdater
 
@@ -41,7 +42,7 @@ function broadcast(payload) {
     try {
       win.webContents.send('updater:event', payload)
     } catch (error) {
-      console.warn('[updater] failed to send event to renderer:', error?.message)
+      console.warn('[updater] failed to send event to renderer:', getRedactedErrorMessage(error))
     }
   }
 }
@@ -66,7 +67,7 @@ export function initAutoUpdater({ getWindows }) {
     console.info('[updater] unsigned macOS mode — using check-only release downloads')
     setTimeout(() => {
       checkForUpdatesNow().catch((error) => {
-        console.warn('[updater] initial manual check failed:', error?.message ?? error)
+        console.warn('[updater] initial manual check failed:', getRedactedErrorMessage(error))
       })
     }, 8_000)
     return
@@ -116,14 +117,14 @@ export function initAutoUpdater({ getWindows }) {
   autoUpdater.on('error', (error) => {
     broadcast({
       type: 'error',
-      message: error instanceof Error ? error.message : String(error ?? 'unknown error'),
+      message: getRedactedErrorMessage(error ?? 'unknown error'),
     })
   })
 
   // Silent background check shortly after startup.
   setTimeout(() => {
     autoUpdater.checkForUpdates().catch((error) => {
-      console.warn('[updater] initial check failed:', error?.message ?? error)
+      console.warn('[updater] initial check failed:', getRedactedErrorMessage(error))
     })
   }, 8_000)
 }
@@ -181,7 +182,7 @@ async function checkForManualDownloadUpdate() {
       reason: 'macos-unsigned',
     }
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error)
+    const reason = getRedactedErrorMessage(error)
     broadcast({ type: 'error', message: reason })
     return {
       ok: false,
@@ -212,7 +213,7 @@ export async function checkForUpdatesNow() {
   } catch (error) {
     return {
       ok: false,
-      reason: error instanceof Error ? error.message : String(error),
+      reason: getRedactedErrorMessage(error),
       currentVersion: app.getVersion(),
       updateMode,
     }
@@ -225,7 +226,7 @@ export function quitAndInstallUpdate() {
     const releaseUrl = lastStatus?.type === 'manual-update' ? lastStatus.releaseUrl : GITHUB_RELEASES_URL
     setImmediate(() => {
       shell.openExternal(releaseUrl).catch((error) => {
-        console.warn('[updater] failed to open release page:', error?.message ?? error)
+        console.warn('[updater] failed to open release page:', getRedactedErrorMessage(error))
       })
     })
     return true
