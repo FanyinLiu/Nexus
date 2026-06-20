@@ -5,6 +5,7 @@ import {
   summarizeVaultRequest,
   summarizeVaultResult,
 } from '../electron/ipc/vaultAudit.js'
+import { buildVaultSecurityReport } from '../scripts/vault-security-audit.mjs'
 
 test('vault audit summaries exclude slot names plaintext and ref tokens', () => {
   const store = summarizeVaultRequest('vault:store', {
@@ -117,4 +118,11 @@ test('vault error summaries omit private error messages', () => {
     errorMessageLength: 34,
   })
   assert.ok(!JSON.stringify(summary).includes('settings:apiKey'))
+})
+
+test('vault security audit covers secret-safe KeyVault support logs', () => {
+  const report = buildVaultSecurityReport()
+
+  assert.equal(report.summary.errors, 0)
+  assert.ok(report.checkedFiles.includes('electron/services/keyVault.js'))
 })

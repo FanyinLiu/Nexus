@@ -172,7 +172,9 @@ auditable.
   returns, rate limits for enumeration-prone reads, and no slot names, secret
   values, ref tokens, or error text in audit records. `npm run
   vault-security:audit` now guards the contract so renderer-facing vault
-  retrieval cannot regress to plaintext secret returns.
+  retrieval cannot regress to plaintext secret returns. KeyVault support logs
+  now follow the same secret-safe posture by omitting raw slot names, plaintext
+  values, vault paths, and raw exception objects.
 - Main-process chat/audio network failure paths now redact API-key, bearer,
   JWT, URL-userinfo, secret query parameter, and user-home path shapes before
   logging or returning provider error text. `npm run error-redaction:audit`

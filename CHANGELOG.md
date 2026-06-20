@@ -180,8 +180,10 @@ _No changes yet._
   active-window and clipboard values instead of retaining earlier desktop text
   in renderer refs. Added `npm run vault-security:audit` so renderer-facing
   vault retrieval paths must keep returning opaque `nexus-vault-ref:` tokens
-  instead of plaintext API keys or bot tokens. Main-process chat/audio network
-  failures now redact common API-key, bearer-token, JWT, URL-credential, secret
+  instead of plaintext API keys or bot tokens, and KeyVault support logs now
+  omit raw slot names, plaintext values, vault paths, and raw exception objects
+  when vault reads or decrypts fail. Main-process chat/audio network failures
+  now redact common API-key, bearer-token, JWT, URL-credential, secret
   parameter, and user-home path shapes before logging or returning provider
   error text, guarded by `npm run error-redaction:audit`. VTube Studio bridge
   connection/authentication failures now use that same redaction boundary before

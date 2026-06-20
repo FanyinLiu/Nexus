@@ -161,6 +161,8 @@ lives in renderer `localStorage` by default, and nothing is deleted.
 - Renderer-side VTube Studio support logs now sanitize token-like strings and
   local paths before printing connection, input-update, or legacy-token
   migration errors.
+- KeyVault support logs now avoid raw slot names, plaintext values, vault
+  paths, and raw exception objects when vault reads or decrypts fail.
 
 ## Product boundary
 
