@@ -55,3 +55,20 @@ export function sanitizeDesktopContextSnapshotForPrompt(
 
   return sanitized
 }
+
+export function stripDesktopContextScreenshotPayload(
+  snapshot: DesktopContextSnapshot | null | undefined,
+): DesktopContextSnapshot | null {
+  if (!snapshot) return null
+
+  const {
+    screenshotDataUrl: _screenshotDataUrl,
+    displayName: _displayName,
+    ...contentOnlySnapshot
+  } = snapshot
+
+  void _screenshotDataUrl
+  void _displayName
+
+  return contentOnlySnapshot
+}

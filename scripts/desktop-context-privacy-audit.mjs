@@ -9,6 +9,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const CHECKED_FILES = [
   'electron/ipc/windowIpc.js',
   'electron/services/desktopContextPrivacy.js',
+  'src/hooks/useDesktopContext.ts',
   'src/features/context/desktopContext.ts',
   'src/lib/privacy/desktopContextPrivacy.ts',
   'tests/desktop-context.test.ts',
@@ -26,6 +27,12 @@ const UNSAFE_PATTERNS = [
     file: 'src/features/context/desktopContext.ts',
     pattern: /normalizeObservedText\(snapshot\.(?:activeWindowTitle|activeWindowAppName|activeWindowProcessPath|clipboardText|screenText|vlmAnalysis)\)/,
     message: 'desktop context prompt formatting must use the sanitized snapshot fields',
+  },
+  {
+    id: 'desktop-context-hook-returns-screenshot-payload',
+    file: 'src/hooks/useDesktopContext.ts',
+    pattern: /return\s+(?:snapshot|enrichedSnapshot)\b/,
+    message: 'desktop context snapshots returned to chat/runtime must strip screenshot image payloads first',
   },
 ]
 
@@ -59,6 +66,15 @@ const REQUIRED_PHRASES = [
     ],
   },
   {
+    id: 'renderer-strips-screenshot-payload-before-runtime-return',
+    file: 'src/hooks/useDesktopContext.ts',
+    phrases: [
+      "import { stripDesktopContextScreenshotPayload } from '../lib/privacy/desktopContextPrivacy'",
+      'return stripDesktopContextScreenshotPayload(snapshot)',
+      'return stripDesktopContextScreenshotPayload(enrichedSnapshot)',
+    ],
+  },
+  {
     id: 'renderer-desktop-context-redaction-helper',
     file: 'src/lib/privacy/desktopContextPrivacy.ts',
     phrases: [
@@ -66,6 +82,7 @@ const REQUIRED_PHRASES = [
       'containsSensitiveDesktopContext',
       'redactSensitiveDesktopContextText',
       'sanitizeDesktopContextSnapshotForPrompt',
+      'stripDesktopContextScreenshotPayload',
     ],
   },
   {
@@ -74,6 +91,7 @@ const REQUIRED_PHRASES = [
     phrases: [
       'desktop context prompt formatting redacts obvious secrets',
       'desktop context IPC sanitizer redacts obvious secrets before renderer return',
+      'desktop context strips screenshot payload before chat/runtime reuse',
     ],
   },
 ]

@@ -8,6 +8,7 @@ import {
 import {
   DESKTOP_CONTEXT_REDACTION,
   sanitizeDesktopContextSnapshotForPrompt,
+  stripDesktopContextScreenshotPayload,
 } from '../src/lib/privacy/desktopContextPrivacy.ts'
 import {
   summarizeDesktopContextRequest,
@@ -101,6 +102,29 @@ test('desktop context sanitizer preserves ordinary companion context', () => {
   }
 
   assert.deepEqual(sanitizeDesktopContextSnapshotForPrompt(snapshot), snapshot)
+})
+
+test('desktop context strips screenshot payload before chat/runtime reuse', () => {
+  const stripped = stripDesktopContextScreenshotPayload({
+    capturedAt: '2026-06-04T17:00:00.000Z',
+    activeWindowTitle: 'Notes - birthday ideas',
+    clipboardText: 'pick up tea after lunch',
+    screenText: 'calendar for the afternoon',
+    vlmAnalysis: 'The notes app is open',
+    screenshotDataUrl: 'data:image/png;base64,abc',
+    displayName: 'Built-in Retina Display',
+  })
+  const serialized = JSON.stringify(stripped)
+
+  assert.deepEqual(stripped, {
+    capturedAt: '2026-06-04T17:00:00.000Z',
+    activeWindowTitle: 'Notes - birthday ideas',
+    clipboardText: 'pick up tea after lunch',
+    screenText: 'calendar for the afternoon',
+    vlmAnalysis: 'The notes app is open',
+  })
+  assert.doesNotMatch(serialized, /data:image\/png;base64/)
+  assert.doesNotMatch(serialized, /Built-in Retina Display/)
 })
 
 test('formatDesktopContext tells the companion to stay perceptive without announcing it watches', () => {
