@@ -3,12 +3,12 @@
 ## Status
 
 - PR: [#105 — v0.3.5 companion presence and visible memory](https://github.com/FanyinLiu/Nexus/pull/105)
-- Evidence baseline head: `76e1157`
+- Evidence baseline head: `5722d2b`
 - Branch: `codex/m6-presence-state-contract`
-- State: ready for review and mergeable at the evidence baseline, with local
-  release gates and GitHub CI green on Windows, macOS, and Ubuntu. If any
-  handoff-only calibration commit lands after this baseline, verify the latest
-  PR head and latest CI before merging.
+- State: ready for review at the evidence baseline, with local release gates
+  and packaged smoke green. If this handoff-only calibration commit or any
+  later commit lands after the baseline, verify the latest PR head and latest
+  GitHub CI before merging.
 - Product theme: visible memory plus readable desktop companion presence.
 
 This handoff is for the final merge/tag step. It does not replace
@@ -32,14 +32,24 @@ task planner, autonomous executor, or new automation surface.
 
 ## Evidence Already Collected
 
-- `npm test` — 1969 passed.
+- `npm run verify:release` — passed on baseline `5722d2b`; this includes type
+  check, lint, 1973 tests, production build, storage/heavy/architecture/source
+  size/companion-boundary/IPC/distribution audits, and SQLite smoke.
+- `npm test` — 1973 passed.
 - `npm run build` — passed.
 - `npm run lint` — passed.
 - `npx tsc -b --pretty false` — passed.
 - `npm run i18n:audit` — 2242 keys, 0 missing, 0 extra, 0 duplicate across
   zh-CN, zh-TW, en-US, ja, and ko.
+- `npm run storage:audit` — 61 unique browser-storage keys, 62 source
+  references, 0 errors; includes session keys, prefix keys, and the legacy
+  VTube Studio token key marked as secret-adjacent.
+- `npm run architecture:audit` — 540 renderer source files, 1902 resolved
+  relative imports, 0 inverted boundary errors.
+- `npm run source-size:audit` — 919 source files checked, 0 files over budget.
 - `npm run distribution:audit` — passed, including the packaged smoke
-  release-doc and quick-mode guard.
+  release-doc, storage/heavy/architecture/source-size guard wiring, and
+  quick-mode guard.
 - `npm run release:trust:audit` — 7 OK, 2 expected warnings for unsigned
   macOS/Windows release posture.
 - `npm run package:dir:smoke` — passed; it builds, packages an unpacked local
@@ -55,8 +65,8 @@ task planner, autonomous executor, or new automation surface.
 - `node scripts/prerelease-check.mjs v0.3.5 --only=B --quick` — passed.
 - `node scripts/prerelease-check.mjs v0.3.5 --skip=A --quick` — passed stages
   B-F with 22 blocker checks, 0 warnings, and 0 failures.
-- GitHub CI on baseline PR head `76e1157` — Windows, macOS, and Ubuntu all
-  passed.
+- GitHub CI on earlier PR head `07fe524` — Windows, macOS, and Ubuntu all
+  passed. Recheck CI on the latest pushed PR head before merging.
 
 ## Remaining Required Steps
 
