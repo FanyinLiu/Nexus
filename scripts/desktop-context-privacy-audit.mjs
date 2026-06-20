@@ -10,8 +10,11 @@ const CHECKED_FILES = [
   'electron/ipc/windowIpc.js',
   'electron/services/desktopContextPrivacy.js',
   'src/hooks/useDesktopContext.ts',
+  'src/hooks/useContextScheduler.ts',
+  'src/features/autonomy/contextScheduler.ts',
   'src/features/context/desktopContext.ts',
   'src/lib/privacy/desktopContextPrivacy.ts',
+  'tests/context-scheduler.test.ts',
   'tests/desktop-context.test.ts',
 ]
 
@@ -33,6 +36,18 @@ const UNSAFE_PATTERNS = [
     file: 'src/hooks/useDesktopContext.ts',
     pattern: /return\s+(?:snapshot|enrichedSnapshot)\b/,
     message: 'desktop context snapshots returned to chat/runtime must strip screenshot image payloads first',
+  },
+  {
+    id: 'context-scheduler-retains-previous-desktop-text',
+    file: 'src/hooks/useContextScheduler.ts',
+    pattern: /previous(?:Window|Clipboard)Ref|previousActiveWindowTitle|previousClipboardText/,
+    message: 'context scheduler must retain only comparison fingerprints for previous desktop context text',
+  },
+  {
+    id: 'context-scheduler-exposes-previous-desktop-text',
+    file: 'src/features/autonomy/contextScheduler.ts',
+    pattern: /previousActiveWindowTitle|previousClipboardText/,
+    message: 'context scheduler snapshots must use explicit changed flags instead of previous desktop text',
   },
 ]
 
@@ -75,6 +90,29 @@ const REQUIRED_PHRASES = [
     ],
   },
   {
+    id: 'context-scheduler-keeps-prior-context-fingerprinted',
+    file: 'src/hooks/useContextScheduler.ts',
+    phrases: [
+      'createContextComparisonSalt',
+      'createContextTextFingerprint',
+      'const previousActiveWindowFingerprintRef = useRef<string | null>(null)',
+      'const previousClipboardFingerprintRef = useRef<string | null>(null)',
+      'activeWindowChanged:',
+      'clipboardChanged:',
+      'Save non-reversible comparison tokens, not desktop text.',
+    ],
+  },
+  {
+    id: 'context-scheduler-comparison-fingerprint-helper',
+    file: 'src/features/autonomy/contextScheduler.ts',
+    phrases: [
+      'createContextComparisonSalt',
+      'createContextTextFingerprint',
+      'activeWindowChanged: boolean',
+      'clipboardChanged: boolean',
+    ],
+  },
+  {
     id: 'renderer-desktop-context-redaction-helper',
     file: 'src/lib/privacy/desktopContextPrivacy.ts',
     phrases: [
@@ -83,6 +121,15 @@ const REQUIRED_PHRASES = [
       'redactSensitiveDesktopContextText',
       'sanitizeDesktopContextSnapshotForPrompt',
       'stripDesktopContextScreenshotPayload',
+    ],
+  },
+  {
+    id: 'context-scheduler-privacy-tests',
+    file: 'tests/context-scheduler.test.ts',
+    phrases: [
+      'context scheduler detects app switches without retaining previous window title',
+      'context scheduler detects clipboard changes without retaining previous clipboard text',
+      'context text fingerprints are salted and do not expose source text',
     ],
   },
   {

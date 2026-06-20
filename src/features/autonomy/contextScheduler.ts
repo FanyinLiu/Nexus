@@ -11,14 +11,46 @@ export type ContextSnapshot = {
   focusState: FocusState
   previousFocusState: FocusState
   activeWindowTitle: string | null
-  previousActiveWindowTitle: string | null
+  activeWindowChanged: boolean
   clipboardText: string | null
-  previousClipboardText: string | null
+  clipboardChanged: boolean
   currentHour: number
   idleSeconds: number
 }
 
 // ── Evaluation ────────────────────────────────────────────────────────────────
+
+const FNV_OFFSET_BASIS = 0x811c9dc5
+const FNV_PRIME = 0x01000193
+
+export function createContextComparisonSalt(): string {
+  const cryptoApi = globalThis.crypto
+  if (cryptoApi?.randomUUID) return cryptoApi.randomUUID()
+
+  if (cryptoApi?.getRandomValues) {
+    const bytes = new Uint32Array(2)
+    cryptoApi.getRandomValues(bytes)
+    return `${bytes[0].toString(36)}:${bytes[1].toString(36)}`
+  }
+
+  return `${Date.now().toString(36)}:${Math.random().toString(36).slice(2)}`
+}
+
+export function createContextTextFingerprint(
+  value: string | null | undefined,
+  salt: string,
+): string | null {
+  if (value === null || value === undefined) return null
+
+  let hash = FNV_OFFSET_BASIS
+  const source = `${salt}\u0000${value}`
+  for (let index = 0; index < source.length; index += 1) {
+    hash ^= source.charCodeAt(index)
+    hash = Math.imul(hash, FNV_PRIME)
+  }
+
+  return `${value.length}:${(hash >>> 0).toString(36)}`
+}
 
 /**
  * Evaluate a single trigger condition against the current context snapshot.
@@ -30,14 +62,14 @@ export function evaluateCondition(
   switch (condition.kind) {
     case 'app_switched':
       return (
-        snapshot.activeWindowTitle !== snapshot.previousActiveWindowTitle
+        snapshot.activeWindowChanged
         && snapshot.activeWindowTitle !== null
         && snapshot.activeWindowTitle.toLowerCase().includes(condition.appName.toLowerCase())
       )
 
     case 'clipboard_changed':
       if (
-        snapshot.clipboardText === snapshot.previousClipboardText
+        !snapshot.clipboardChanged
         || snapshot.clipboardText === null
       ) return false
       if (!condition.pattern) return true

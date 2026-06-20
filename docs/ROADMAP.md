@@ -122,7 +122,9 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
   active-window, clipboard, OCR, and VLM context cannot bypass sensitive-text
   redaction before renderer return or model prompt formatting, and screenshot
   image payloads cannot continue into chat/runtime context after OCR/VLM
-  finishes.
+  finishes. The same guard now blocks autonomy context scheduling from retaining
+  previous active-window or clipboard text; it must use comparison fingerprints
+  for change detection.
 - Rollback: signing config changes must be isolated in packaging config and
   release docs.
 
@@ -185,7 +187,9 @@ auditable.
   tokens, passwords, and private-key material before active-window/clipboard
   text leaves the main process, with a renderer-side prompt-formatting fallback
   for OCR and VLM text. Screenshot data URLs are stripped after OCR/VLM so chat
-  runtime receives only text context, not the original image payload.
+  runtime receives only text context, not the original image payload. Autonomy
+  context triggers keep only salted comparison fingerprints for previous
+  active-window and clipboard values.
 - Create an inventory of every preload-exposed method and matching
   `ipcMain.handle`.
 - Require trusted sender checks, request validation, response shape decisions,

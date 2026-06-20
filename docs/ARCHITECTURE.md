@@ -134,9 +134,10 @@ Current baseline:
   privacy guard. It fails if `desktop-context:get` returns active-window,
   clipboard, OCR, or VLM text without the sensitive-text sanitizer, or if prompt
   formatting bypasses the renderer-side sanitizer, or if the renderer returns
-  screenshot image payloads into chat/runtime context after OCR/VLM finishes. It
-  never reads the live clipboard, screenshots, active-window text, localStorage
-  values, or secrets.
+  screenshot image payloads into chat/runtime context after OCR/VLM finishes, or
+  if the autonomy context scheduler retains previous active-window or clipboard
+  text instead of comparison fingerprints. It never reads the live clipboard,
+  screenshots, active-window text, localStorage values, or secrets.
 - `npm run verify:pr` is the day-to-day merge gate. `npm run verify:release`
   reuses it and then adds the SQLite smoke check for release confidence.
 - The `file:save-text` and `file:open-text` IPC handlers now use explicit
@@ -152,7 +153,9 @@ Current baseline:
   formatting applies the same sanitizer again to OCR and VLM text before it can
   enter the model context. Screenshot data URLs are treated as temporary OCR/VLM
   inputs and stripped from the desktop-context snapshot before chat/runtime code
-  can reuse it.
+  can reuse it. The autonomy context scheduler keeps only salted comparison
+  fingerprints for previous active-window and clipboard values, so change
+  detection does not retain the earlier desktop text in renderer refs.
 - External action IPC handlers for Telegram, Discord, Minecraft, Factorio, and
   MCP now write metadata-only request/result audit records. These records keep
   outbound message text, voice payloads, game commands, target IDs, MCP command

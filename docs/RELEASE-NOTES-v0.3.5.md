@@ -124,6 +124,9 @@ lives in renderer `localStorage` by default, and nothing is deleted.
   leaves the main process; OCR and VLM text are redacted again before prompt
   formatting. Screenshot image data is used only as a temporary OCR/VLM input
   and is stripped before desktop context is handed to chat/runtime code.
+  Autonomy context triggers now keep only salted comparison fingerprints for
+  previous active-window and clipboard values instead of retaining earlier
+  desktop text in renderer refs.
 - Kept renderer access to plaintext secrets blocked through the safeStorage
   vault/ref pattern.
 

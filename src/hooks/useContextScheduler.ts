@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  createContextComparisonSalt,
+  createContextTextFingerprint,
   findTriggeredTasks,
   markTaskTriggered,
   type ContextSnapshot,
@@ -41,9 +43,10 @@ export function useContextScheduler({
   )
   const tasksRef = useRef(tasks)
   const onActionRef = useRef(onAction)
+  const contextFingerprintSaltRef = useRef(createContextComparisonSalt())
   const previousFocusRef = useRef<FocusState>('active')
-  const previousWindowRef = useRef<string | null>(null)
-  const previousClipboardRef = useRef<string | null>(null)
+  const previousActiveWindowFingerprintRef = useRef<string | null>(null)
+  const previousClipboardFingerprintRef = useRef<string | null>(null)
 
   useEffect(() => {
     tasksRef.current = tasks
@@ -87,21 +90,27 @@ export function useContextScheduler({
       // Desktop context not available
     }
 
+    const fingerprintSalt = contextFingerprintSaltRef.current
+    const activeWindowFingerprint = createContextTextFingerprint(activeWindowTitle, fingerprintSalt)
+    const clipboardFingerprint = createContextTextFingerprint(clipboardText, fingerprintSalt)
+
     const snapshot: ContextSnapshot = {
       focusState: focusStateRef.current,
       previousFocusState: previousFocusRef.current,
       activeWindowTitle,
-      previousActiveWindowTitle: previousWindowRef.current,
+      activeWindowChanged: activeWindowTitle !== null
+        && activeWindowFingerprint !== previousActiveWindowFingerprintRef.current,
       clipboardText,
-      previousClipboardText: previousClipboardRef.current,
+      clipboardChanged: clipboardText !== null
+        && clipboardFingerprint !== previousClipboardFingerprintRef.current,
       currentHour: new Date().getHours(),
       idleSeconds: idleSecondsRef.current,
     }
 
-    // Save current values for next comparison
+    // Save non-reversible comparison tokens, not desktop text.
     previousFocusRef.current = focusStateRef.current
-    previousWindowRef.current = activeWindowTitle
-    previousClipboardRef.current = clipboardText
+    previousActiveWindowFingerprintRef.current = activeWindowFingerprint
+    previousClipboardFingerprintRef.current = clipboardFingerprint
 
     const triggered = findTriggeredTasks(tasksRef.current, snapshot)
 
