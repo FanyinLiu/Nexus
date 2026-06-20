@@ -264,6 +264,10 @@ Goal: the companion's visible state reflects what Nexus is actually doing.
   so idle/thinking/listening/speaking/waiting states are visible without new
   dependencies or heavier renderers. See
   [Milestone 6 Slice 2 Design](MILESTONE-6-DESKTOP-PRESENCE-MICRO-MOTION-DESIGN-2026-06-20.md).
+- Slice 3 bridges common English stage directions like `(eyes brightened)`,
+  `(blush)`, and `(nod)` into the existing avatar cue queue while preserving
+  ordinary ASCII notes and Markdown links. See
+  [Milestone 6 Slice 3 Design](MILESTONE-6-DESKTOP-PRESENCE-STAGE-DIRECTION-BRIDGE-DESIGN-2026-06-20.md).
 - Bind chat, voice, setup, tool, and error flows to that contract.
 - Keep Live2D/sprite-heavy rendering lazy and budgeted.
 - Rollback: state mapping is additive and can fall back to current pet behavior.

@@ -65,16 +65,53 @@ const INLINE_SPOKEN_SECTION_PATTERNS = [
   /(?:^|\n)\s*(?:语音播报|语音回复|语音内容|播报内容|口头回复)\s*[：:]\s*([\s\S]{1,500}?)(?=(?:\n\s*(?:屏幕展示区|屏幕展示|展示区|展示内容|气泡展示(?:区)?|结果展示(?:区)?)\s*[：:])|\n{2,}|$)/giu,
 ]
 
-function buildKeywordPattern(keywords: string[]) {
-  return new RegExp(keywords.join('|'), 'u')
+function buildKeywordPattern(keywords: string[], flags = 'u') {
+  return new RegExp(keywords.join('|'), flags)
 }
 
-// Stage directions are full-width-bracketed asides \u2014 \uFF08\u2026\uFF09/\u3010\u2026\u3011 (the Chinese RP
-// convention the model actually uses). ASCII [ ] / ( ) are deliberately NOT
-// matched: they show up in code, markdown links, and ordinary parentheticals,
-// and treating those as asides would silently strip them from speech / italicize
-// them. Full-width only keeps the aside handling from eating real content.
-const STAGE_DIRECTION_GLOBAL_PATTERN = /[\uFF08\u3010]([^\uFF09\u3011]{1,32})[\uFF09\u3011]/gu
+// Stage directions are normally full-width-bracketed asides \u2014 \uFF08\u2026\uFF09/\u3010\u2026\u3011 (the
+// Chinese RP convention the model actually uses). We also accept ASCII
+// parentheses only when the inner text resolves to a known companion gesture
+// such as `(eyes brightened)` / `(blush)` / `(nod)`. Unknown ASCII
+// parentheticals stay ordinary content, which keeps code, markdown links, and
+// normal notes from being stripped.
+const STAGE_DIRECTION_GLOBAL_PATTERN = /(?:\uFF08([^\uFF09]{1,32})\uFF09|\u3010([^\u3011]{1,32})\u3011|\(([^()\r\n]{1,32})\))/gu
+
+const ASCII_STAGE_DIRECTION_ALIASES = [
+  'eyes?\\s+(?:bright(?:en|ened|ening)?|(?:light|lit)\\s+up)',
+  'brightens?',
+  'sparkles?',
+  'blush(?:es|ed|ing)?',
+  'shy(?:ly)?',
+  'bashful',
+  'embarrassed',
+  'nods?',
+  'nodding',
+  'tilts?\\s+(?:her\\s+|his\\s+|their\\s+)?head',
+  'head\\s+tilt',
+  'thinking',
+  'thinks?',
+  'ponders?',
+  'thoughtful',
+  'smiles?',
+  'grins?',
+  'listens?',
+  'listening',
+  'leans?\\s+in',
+  'attentive',
+  'surprised?',
+  'startled',
+  'eyes?\\s+widen(?:ed|ing)?',
+  'wide\\s+eyes?',
+  'confused',
+  'puzzled',
+  'question\\s+marks?',
+]
+
+const ASCII_STAGE_DIRECTION_ALIAS_PATTERN = new RegExp(
+  `^(?:${ASCII_STAGE_DIRECTION_ALIASES.join('|')})$`,
+  'iu',
+)
 
 const SLEEPY_STAGE_PATTERN = buildKeywordPattern([
   '\u56f0\u5026',
@@ -114,7 +151,11 @@ const TOUCH_FACE_STAGE_PATTERN = buildKeywordPattern([
   '\u8c03\u76ae',
   '\u7728\u773c',
   '\u843d\u843d\u5927\u65b9\u5730\u7b11',
-])
+  'blush(?:es|ed|ing)?',
+  'shy(?:ly)?',
+  'bashful',
+  'smiles? shyly',
+], 'iu')
 
 const THINKING_STAGE_PATTERN = buildKeywordPattern([
   '\u6b6a\u5934',
@@ -130,7 +171,13 @@ const THINKING_STAGE_PATTERN = buildKeywordPattern([
   '\u8ba4\u771f\u60f3',
   '\u60f3\u4e86\u60f3',
   '\u7406\u4e86\u7406\u601d\u8def',
-])
+  'tilts? (?:her |his |their )?head',
+  'head tilt',
+  'thinking',
+  'thinks?',
+  'ponders?',
+  'thoughtful',
+], 'iu')
 
 const HAPPY_STAGE_PATTERN = buildKeywordPattern([
   '\u5f00\u5fc3',
@@ -155,7 +202,12 @@ const HAPPY_STAGE_PATTERN = buildKeywordPattern([
   '\u8f7b\u8f7b\u70b9\u5934',
   '\u8fde\u8fde\u70b9\u5934',
   '\u70b9\u70b9\u5934',
-])
+  'eyes? bright(?:en|ened|ening)?',
+  'eyes? (?:light|lit) up',
+  'brightens?',
+  'smiles?',
+  'grins?',
+], 'iu')
 
 const LISTENING_STAGE_PATTERN = buildKeywordPattern([
   '\u8ba4\u771f\u542c',
@@ -167,7 +219,11 @@ const LISTENING_STAGE_PATTERN = buildKeywordPattern([
   '\u51dd\u89c6',
   '\u4e13\u6ce8\u5730\u770b',
   '\u4e13\u5fc3\u542c',
-])
+  'listens?',
+  'listening',
+  'leans? in',
+  'attentive',
+], 'iu')
 
 const SURPRISED_STAGE_PATTERN = buildKeywordPattern([
   '吃惊',
@@ -183,7 +239,11 @@ const SURPRISED_STAGE_PATTERN = buildKeywordPattern([
   '愣住',
   '愣了一下',
   '一愣',
-])
+  'surprised?',
+  'startled',
+  'eyes? widen(?:ed|ing)?',
+  'wide eyes?',
+], 'iu')
 
 const CONFUSED_STAGE_PATTERN = buildKeywordPattern([
   '不解',
@@ -197,7 +257,10 @@ const CONFUSED_STAGE_PATTERN = buildKeywordPattern([
   '满头问号',
   '搞不懂',
   '纳闷',
-])
+  'confused',
+  'puzzled',
+  'question marks?',
+], 'iu')
 
 const EMBARRASSED_STAGE_PATTERN = buildKeywordPattern([
   '不好意思',
@@ -210,7 +273,11 @@ const EMBARRASSED_STAGE_PATTERN = buildKeywordPattern([
   '不敢看',
   '心虚',
   '手足无措',
-])
+  'blush(?:es|ed|ing)?',
+  'embarrassed',
+  'bashful',
+  'shy',
+], 'iu')
 
 const PEEK_STAGE_PATTERN = buildKeywordPattern([
   '\u51d1\u8fd1\u5c4f\u5e55',
@@ -292,7 +359,9 @@ const CONFIRM_STAGE_PATTERN = buildKeywordPattern([
   '\u6bd4\u4e86\u4e2aOK',
   '\u6bd4\u4e2aok',
   '\u6bd4\u4e2aOK',
-])
+  'nods?',
+  'nodding',
+], 'iu')
 
 const SPARKLE_STAGE_PATTERN = buildKeywordPattern([
   '\u773c\u775b\u5fae\u5fae\u53d1\u4eae',
@@ -301,7 +370,10 @@ const SPARKLE_STAGE_PATTERN = buildKeywordPattern([
   '\u773c\u775b\u53d1\u4eae',
   '\u773c\u775b\u4eae\u6676\u6676',
   '\u661f\u661f\u773c',
-])
+  'eyes? bright(?:en|ened|ening)?',
+  'eyes? (?:light|lit) up',
+  'sparkles?',
+], 'iu')
 
 function resolveAccentStyle(stageDirection: string): PetPerformanceAccent | undefined {
   if (SPARKLE_STAGE_PATTERN.test(stageDirection)) return 'sparkle'
@@ -511,6 +583,10 @@ function isStructuredBracket(inner: string) {
   return /[：:]/u.test(inner)
 }
 
+function isKnownAsciiStageDirectionAlias(inner: string) {
+  return ASCII_STAGE_DIRECTION_ALIAS_PATTERN.test(inner.trim())
+}
+
 type StageDirectionSplit = {
   keptContent: string
   strippedContent: string
@@ -519,24 +595,27 @@ type StageDirectionSplit = {
   stageDirections: string[]
 }
 
-// Detect short bracketed asides (（…）, (...), 【…】) by SHAPE, not by a keyword
-// whitelist — except colon brackets (注：/语音播报：), which are structured
-// content and left alone. Then split two ways:
+// Detect short bracketed asides (（…）, 【…】, and recognised ASCII (...)) by
+// SHAPE, not by a hand-maintained exact phrase list — except colon brackets
+// (注：/语音播报：), which are structured content and left alone. Then split
+// two ways:
 //   • RECOGNISED asides (we have a face cue) are "just an expression": they drive
 //     her avatar and are stripped from BOTH display and speech, exactly like
 //     before. （眼睛亮了） brightens her face; it is not shown and not spoken.
 //   • UNRECOGNISED asides (no cue) are kept in the displayed reply so the bubble
 //     can style them as intentional script asides instead of letting them read
 //     like leaked text — but they are still stripped from speech.
-// Either way nothing leaks as raw text and nothing gets spoken, and a novel cue
-// the model invents is handled by shape without anyone editing a list.
+// Either way nothing leaks as raw text and nothing gets spoken, and a novel
+// full-width cue the model invents is handled by shape without anyone editing
+// a list.
 function extractStageDirections(content: string): StageDirectionSplit {
   const matches: ExtractedStageDirection[] = []
 
   STAGE_DIRECTION_GLOBAL_PATTERN.lastIndex = 0
 
   for (const match of content.matchAll(STAGE_DIRECTION_GLOBAL_PATTERN)) {
-    const rawStageDirection = match[1]?.trim()
+    const rawStageDirection = (match[1] ?? match[2] ?? match[3])?.trim()
+    const asciiParenthetical = match[3] !== undefined
     const fullMatch = match[0]
     const matchIndex = match.index ?? -1
 
@@ -544,8 +623,13 @@ function extractStageDirections(content: string): StageDirectionSplit {
       continue
     }
 
+    const plan = resolvePerformancePlan(rawStageDirection)
+    if (asciiParenthetical && (!isKnownAsciiStageDirectionAlias(rawStageDirection) || !plan)) {
+      continue
+    }
+
     matches.push({
-      plan: resolvePerformancePlan(rawStageDirection),
+      plan,
       stageDirection: rawStageDirection,
       start: matchIndex,
       end: matchIndex + fullMatch.length,
@@ -596,11 +680,17 @@ export function segmentStageDirections(content: string): DisplaySegment[] {
 
   let cursor = 0
   for (const match of content.matchAll(STAGE_DIRECTION_GLOBAL_PATTERN)) {
-    const inner = match[1]?.trim()
+    const inner = (match[1] ?? match[2] ?? match[3])?.trim()
+    const asciiParenthetical = match[3] !== undefined
     const fullMatch = match[0]
     const matchIndex = match.index ?? -1
 
-    if (!inner || !fullMatch || matchIndex < 0 || isStructuredBracket(inner) || resolvePerformancePlan(inner)) {
+    if (!inner || !fullMatch || matchIndex < 0 || isStructuredBracket(inner)) {
+      continue
+    }
+
+    const recognizedPlan = resolvePerformancePlan(inner)
+    if (recognizedPlan || asciiParenthetical) {
       continue
     }
 

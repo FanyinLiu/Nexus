@@ -78,6 +78,31 @@ test('（眼睛亮了）is just an expression — drives a happy face, shown and
   assert.equal(parsed.cues[0]?.expressionSlot, 'happy')
 })
 
+test('English stage directions drive the avatar when bracketed as known gestures', () => {
+  const parsed = parseAssistantPerformanceContent('(eyes brightened)I knew you would notice.（blush）')
+
+  assert.equal(parsed.displayContent, 'I knew you would notice.')
+  assert.equal(parsed.spokenContent, 'I knew you would notice.')
+  assert.deepEqual(parsed.stageDirections, ['eyes brightened', 'blush'])
+  assert.equal(parsed.cues.length, 2)
+  assert.equal(parsed.cues[0]?.accentStyle, 'sparkle')
+  assert.equal(parsed.cues[0]?.expressionSlot, 'happy')
+  assert.equal(parsed.cues[1]?.accentStyle, 'shy')
+  assert.equal(parsed.cues[1]?.expressionSlot, 'embarrassed')
+  assert.equal(parsed.cues[1]?.motionSlot, 'touchFace')
+})
+
+test('known ASCII stage directions are stripped, but ordinary ASCII notes stay content', () => {
+  const parsed = parseAssistantPerformanceContent('(nod)Okay (TODO) keep this note.')
+
+  assert.equal(parsed.displayContent, 'Okay (TODO) keep this note.')
+  assert.equal(parsed.spokenContent, 'Okay (TODO) keep this note.')
+  assert.deepEqual(parsed.stageDirections, ['nod'])
+  assert.equal(parsed.cues.length, 1)
+  assert.equal(parsed.cues[0]?.accentStyle, 'confirm')
+  assert.equal(parsed.cues[0]?.expressionSlot, 'happy')
+})
+
 test('a labeled bracket with a colon is content, not a stage direction', () => {
   const parsed = parseAssistantPerformanceContent('明天放假（注：周一照常）记得哦')
 
@@ -86,9 +111,10 @@ test('a labeled bracket with a colon is content, not a stage direction', () => {
   assert.deepEqual(parsed.stageDirections, [])
 })
 
-test('ASCII brackets and markdown links are content, never asides', () => {
-  // Only full-width （…）/【…】 are stage directions. ASCII [ ] / ( ) show up in
-  // code, notes, and markdown links and must stay in BOTH display and speech.
+test('unrecognized ASCII brackets and markdown links are content, never asides', () => {
+  // Only known ASCII companion gestures are accepted as stage directions.
+  // Other ASCII [ ] / ( ) show up in code, notes, and markdown links and must
+  // stay in BOTH display and speech.
   const note = parseAssistantPerformanceContent('我把它叫做[重要任务]好吗')
   assert.equal(note.displayContent, '我把它叫做[重要任务]好吗')
   assert.equal(note.spokenContent, '我把它叫做[重要任务]好吗')
@@ -99,6 +125,16 @@ test('ASCII brackets and markdown links are content, never asides', () => {
   assert.deepEqual(segmentStageDirections(link.displayContent), [
     { stage: false, text: '推荐看[文档](https://example.com/d)很有用' },
   ])
+
+  const asciiNote = parseAssistantPerformanceContent('Keep this (TODO) visible.')
+  assert.equal(asciiNote.displayContent, 'Keep this (TODO) visible.')
+  assert.equal(asciiNote.spokenContent, 'Keep this (TODO) visible.')
+  assert.deepEqual(asciiNote.stageDirections, [])
+
+  const prose = parseAssistantPerformanceContent('I am (thinking about it) with you.')
+  assert.equal(prose.displayContent, 'I am (thinking about it) with you.')
+  assert.equal(prose.spokenContent, 'I am (thinking about it) with you.')
+  assert.deepEqual(prose.stageDirections, [])
 })
 
 test('allows silent-only stage directions without forcing spoken fallback text', () => {
