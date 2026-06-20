@@ -102,6 +102,22 @@ check('release workflow runs the pre-release gate before packaging', () => {
   assert(releaseWorkflow.includes('needs: [ensure-release, preflight]'), 'build job must depend on preflight')
 })
 
+check('pre-release gate docs include packaged smoke', () => {
+  assert(
+    releasingDoc.includes('### Stage B — Code quality (6 checks)'),
+    'RELEASING should keep Stage B count aligned with prerelease-check',
+  )
+  assert(
+    releasingDoc.includes('`npm run package:dir:smoke`'),
+    'RELEASING should document the packaged smoke gate',
+  )
+  assert(
+    releasingDoc.includes('package an unpacked app and launch it with') ||
+      releasingDoc.includes('Packaged smoke'),
+    'RELEASING should explain what the packaged smoke gate validates',
+  )
+})
+
 check('release workflow refuses to mutate published releases', () => {
   assert(!releaseWorkflow.includes('gh release delete'), 'release workflow must not delete published releases')
   assert(

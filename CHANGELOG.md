@@ -143,7 +143,9 @@ _No changes yet._
   Release CI now prints a non-blocking signed macOS/Windows readiness report,
   with `npm run release:signing:gate` reserved as the future all-platform hard
   gate and platform-specific gates available for macOS and Windows bring-up
-  before enabling signed updates.
+  before enabling signed updates. The pre-release Stage B docs now also list
+  `npm run package:dir:smoke`, and `npm run distribution:audit` fails if that
+  packaged-app launch gate drops out of the release checklist.
 - **IPC contract baseline** — added `npm run ipc:audit` and wired it into
   `npm run distribution:audit`. The new source-only report inventories preload
   invokes, subscriptions, main-process handlers, trusted-sender coverage,

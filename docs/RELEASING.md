@@ -260,12 +260,14 @@ Flags:
 6. `HEAD === origin/main` (after fetch).
 7. CI on HEAD success.
 
-### Stage B — Code quality (5 checks)
+### Stage B — Code quality (6 checks)
 1. `npm run verify:release` (tsc + lint + test + build + distribution audit).
 2. `npm run smoke` — Electron actually launches + renderer loads.
-3. Coverage ≥ 80% lines (warn).
-4. `dist/assets/app-runtime-*.js` ≤ 1700 KB.
-5. Benchmarks complete without crash (warn).
+3. `npm run package:dir:smoke` — package an unpacked app and launch it with
+   the packaged smoke runner.
+4. Coverage ≥ 80% lines (warn).
+5. `dist/assets/app-runtime-*.js` ≤ 1700 KB.
+6. Benchmarks complete without crash (warn).
 
 ### Stage C — Security (6 checks)
 1. `npm audit --omit=dev`: 0 critical + 0 high.

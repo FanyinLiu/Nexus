@@ -9,7 +9,7 @@
  *
  * Stages:
  *   A. Process / version       (tag shape, package.json sync, working tree, CI)
- *   B. Code quality            (verify:release, smoke, coverage, bundle, perf)
+ *   B. Code quality            (verify:release, smoke, packaged smoke, coverage, bundle, perf)
  *   C. Security                (npm audit, Electron config, electron versions, secrets, CSP)
  *   D. Asset integrity         (locale parity, models, dist artefacts)
  *   E. Docs + compliance       (release notes, README sync, SBOM, AI-Act, licenses)

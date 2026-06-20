@@ -89,6 +89,10 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
 - Add an in-app About/Help release spotlight so users can see the current
   version theme and companion-first boundary without leaving Nexus. See
   [Milestone 2 In-App Release Spotlight Design](MILESTONE-2-IN-APP-RELEASE-SPOTLIGHT-DESIGN-2026-06-20.md).
+- Align the pre-release Stage B documentation with the existing packaged smoke
+  gate and make `npm run distribution:audit` fail if `npm run
+  package:dir:smoke` drops out of the release checklist. See
+  [Milestone 2 Packaged Smoke Docs Design](MILESTONE-2-RELEASE-PACKAGED-SMOKE-DOCS-DESIGN-2026-06-20.md).
 - Rollback: signing config changes must be isolated in packaging config and
   release docs.
 

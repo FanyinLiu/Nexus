@@ -73,6 +73,10 @@ Current baseline:
   docs only; it does not read environment variables, certificates, keychain
   state, app-local user data, or signing secret values. `npm run
   distribution:audit` includes this gate.
+- `npm run distribution:audit` also guards release-process drift such as the
+  Stage B packaged-smoke checklist in `docs/RELEASING.md`; if the actual
+  `npm run package:dir:smoke` gate is removed from the release docs, the audit
+  fails before release.
 - The updater runtime uses full `electron-updater` auto-download/install on
   Windows, Linux, and future signed macOS builds. Current unsigned macOS builds
   resolve to `manual-download`: they check GitHub Releases and open the release
