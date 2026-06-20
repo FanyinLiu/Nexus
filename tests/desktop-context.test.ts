@@ -17,6 +17,7 @@ import {
 import {
   sanitizeDesktopContextSnapshot as sanitizeDesktopContextSnapshotForIpc,
 } from '../electron/services/desktopContextPrivacy.js'
+import { buildDesktopContextPrivacyReport } from '../scripts/desktop-context-privacy-audit.mjs'
 
 test('buildDesktopContextRequest keeps screenshots opt-in by default', () => {
   assert.deepEqual(buildDesktopContextRequest(), {
@@ -212,4 +213,11 @@ test('desktop context audit summaries exclude captured private content', () => {
   assert.doesNotMatch(summaryText, /private clipboard contents/)
   assert.doesNotMatch(summaryText, /data:image\/png/)
   assert.doesNotMatch(summaryText, /PrivateApp\.app/)
+})
+
+test('desktop context privacy audit covers support log redaction', () => {
+  const report = buildDesktopContextPrivacyReport()
+
+  assert.equal(report.summary.errors, 0)
+  assert.ok(report.checkedFiles.includes('electron/services/desktopContextService.js'))
 })

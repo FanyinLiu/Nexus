@@ -135,6 +135,9 @@ lives in renderer `localStorage` by default, and nothing is deleted.
   token, JWT, URL credential, secret parameter, and user-home path shapes before
   logging or returning provider error text; `npm run error-redaction:audit`
   keeps that boundary in the PR/release gate.
+- Desktop context active-window and screenshot capture failures now log
+  redacted error summaries instead of raw exception objects, stderr, local
+  paths, or accidental captured text.
 - VTube Studio bridge connection/authentication errors now use the same
   redaction boundary before renderer-visible status updates or VTS audit records
   can expose token-like strings, credentialed URLs, or local user paths.
