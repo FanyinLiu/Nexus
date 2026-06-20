@@ -234,7 +234,9 @@ _No changes yet._
 - **External action audit** — Telegram/Discord sends, Minecraft/Factorio
   command execution, and MCP call/sync IPC now write metadata-only request and
   result audit records without logging outbound text, audio payloads, commands,
-  target IDs, MCP command text, tool names, or tool arguments.
+  target IDs, MCP command text, tool names, or tool arguments. MCP host support
+  logs are now metadata-only as well, avoiding raw server ids, launch commands,
+  arguments, tool names, external stdout lines, paths, or tokens.
 - **External action permission gate** — Telegram/Discord sends,
   Minecraft/Factorio command execution, and MCP call/sync IPC now pass through
   a main-process read-only/confirm/auto policy. Active auto-mode escalation

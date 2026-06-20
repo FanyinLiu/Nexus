@@ -155,6 +155,9 @@ lives in renderer `localStorage` by default, and nothing is deleted.
 - Local notification bridge support logs now keep webhook/RSS failures
   metadata-only, avoiding raw channel names, ids, feed URLs, bearer tokens, and
   URL-safety host details.
+- MCP host support logs now keep external-process output metadata-only, avoiding
+  raw server ids, launch commands, arguments, tool names, stdout lines, paths,
+  and tokens.
 
 ## Product boundary
 
