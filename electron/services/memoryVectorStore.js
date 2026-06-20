@@ -5,6 +5,7 @@ import { app } from 'electron'
 import { Worker } from 'node:worker_threads'
 import { Bm25Index } from './bm25Search.js'
 import { audit } from './auditLog.js'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 
 const STORE_FILENAME = 'memory-vectors.json'
 // Append-only log filename — same dir as snapshot, NDJSON one mutation per line.
@@ -53,7 +54,7 @@ function getWorker() {
     }
   })
   _worker.on('error', (err) => {
-    console.error('[memoryVectorStore] worker error:', err.message)
+    console.error('[memoryVectorStore] worker error:', getRedactedErrorMessage(err))
     for (const pending of _pendingSearches.values()) {
       pending.reject(err)
     }
@@ -201,7 +202,7 @@ async function ensureLoaded() {
     if (!_compactTimer) {
       _compactTimer = setInterval(() => {
         void compactIfNeeded().catch((err) => {
-          console.warn('[memoryVectorStore] periodic compact failed:', err?.message)
+          console.warn('[memoryVectorStore] periodic compact failed:', getRedactedErrorMessage(err))
         })
       }, COMPACTION_CHECK_INTERVAL_MS)
       // Don't keep the event loop alive just for this check.
@@ -225,7 +226,7 @@ function appendLogOp(op) {
     .then(() => mkdir(path.dirname(getLogPath()), { recursive: true }))
     .then(() => appendFile(getLogPath(), line, 'utf8'))
     .catch((err) => {
-      console.warn('[memoryVectorStore] log append failed:', err?.message)
+      console.warn('[memoryVectorStore] log append failed:', getRedactedErrorMessage(err))
     })
   return _logAppendChain
 }
@@ -261,7 +262,7 @@ async function compactSnapshot() {
       logTaken = true
     } catch (err) {
       if (err?.code !== 'ENOENT') {
-        console.error('[memoryVectorStore] compaction rename failed:', err.message)
+        console.error('[memoryVectorStore] compaction rename failed:', getRedactedErrorMessage(err))
         _savePromise = null
         return
       }
@@ -287,7 +288,7 @@ async function compactSnapshot() {
         try { await unlink(compactingPath) } catch {}
       }
     } catch (err) {
-      console.error('[memoryVectorStore] compaction failed:', err.message)
+      console.error('[memoryVectorStore] compaction failed:', getRedactedErrorMessage(err))
       // Snapshot did not durably land. Put the taken log back so the
       // mutations it captured aren't stranded across a restart — replay
       // on next load reapplies them on top of whatever snapshot was

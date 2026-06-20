@@ -16,6 +16,7 @@ const CHECKED_FILES = [
   'electron/services/macNotificationWatcher.js',
   'electron/services/mcpHost.js',
   'electron/services/mcpHostUtils.js',
+  'electron/services/memoryVectorStore.js',
   'electron/services/modelDownloader.js',
   'electron/services/modelManager.js',
   'electron/services/notificationBridge.js',
@@ -198,6 +199,12 @@ const UNSAFE_PATTERNS = [
     file: 'electron/services/pluginHost.js',
     pattern: /console\.(?:warn|error)\([^\n]+err(?:or)?\?\.message|err\.message/,
     message: 'plugin host support logs must redact errors before logging',
+  },
+  {
+    id: 'memory-vector-store-raw-error-log',
+    file: 'electron/services/memoryVectorStore.js',
+    pattern: /console\.(?:warn|error)\([^\n]+err(?:or)?\?\.message|err\.message/,
+    message: 'memory vector store support logs must redact worker and persistence errors before logging',
   },
 ]
 
@@ -429,6 +436,18 @@ const REQUIRED_PHRASES = [
       'export function formatPluginDirectoryEntryLogLabel(entry)',
       'idLength=${String(plugin?.id ?? \'\').length}',
       'entryLength=${String(entry ?? \'\').length}',
+    ],
+  },
+  {
+    id: 'memory-vector-store-redacts-support-logs',
+    file: 'electron/services/memoryVectorStore.js',
+    phrases: [
+      "import { getRedactedErrorMessage } from './errorRedaction.js'",
+      "console.error('[memoryVectorStore] worker error:', getRedactedErrorMessage(err))",
+      "console.warn('[memoryVectorStore] periodic compact failed:', getRedactedErrorMessage(err))",
+      "console.warn('[memoryVectorStore] log append failed:', getRedactedErrorMessage(err))",
+      "console.error('[memoryVectorStore] compaction rename failed:', getRedactedErrorMessage(err))",
+      "console.error('[memoryVectorStore] compaction failed:', getRedactedErrorMessage(err))",
     ],
   },
 ]

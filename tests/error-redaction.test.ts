@@ -132,3 +132,10 @@ test('error redaction audit covers plugin host support logs', () => {
   assert.ok(report.checkedFiles.includes('electron/services/pluginHost.js'))
   assert.ok(report.checkedFiles.includes('electron/services/pluginHostUtils.js'))
 })
+
+test('error redaction audit covers memory vector store support logs', () => {
+  const report = buildErrorRedactionReport()
+
+  assert.equal(report.summary.errors, 0)
+  assert.ok(report.checkedFiles.includes('electron/services/memoryVectorStore.js'))
+})

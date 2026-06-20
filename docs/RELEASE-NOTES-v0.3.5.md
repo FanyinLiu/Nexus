@@ -155,6 +155,9 @@ lives in renderer `localStorage` by default, and nothing is deleted.
   redaction boundary before Settings/status surfaces or logs can expose
   Notification Center database paths, local user paths, or sensitive system
   error details.
+- Memory vector store support logs now redact worker, append-log, and compaction
+  failures before diagnostics can expose local user paths, token-like strings,
+  or raw exception text around long-term memory indexing.
 - Local notification bridge support logs now keep webhook/RSS failures
   metadata-only, avoiding raw channel names, ids, feed URLs, bearer tokens, and
   URL-safety host details.

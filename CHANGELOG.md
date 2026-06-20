@@ -203,7 +203,10 @@ _No changes yet._
   gateway URLs, service error payloads, or local user paths. macOS notification
   watcher status and persistence errors now use the same boundary before
   `notification:watcher-status` or logs can expose Notification Center database
-  paths, local user paths, or sensitive system error details. Local notification
+  paths, local user paths, or sensitive system error details. Memory vector
+  store worker, append-log, and compaction failure logs now use the same
+  redaction boundary before long-term memory diagnostics can expose raw
+  exception text, local user paths, or token-like strings. Local notification
   bridge support logs now keep webhook/RSS failures metadata-only, avoiding raw
   channel names, ids, feed URLs, bearer tokens, and URL-safety host details.
 - **Release trust posture** — added `npm run release:trust:audit` and wired it
