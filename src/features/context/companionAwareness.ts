@@ -38,6 +38,11 @@ const FIVE_MINUTES_MS = 5 * 60_000
 const TWENTY_FIVE_MINUTES_MS = 25 * 60_000
 const FIFTY_FIVE_MINUTES_MS = 55 * 60_000
 const ONE_HUNDRED_TEN_MINUTES_MS = 110 * 60_000
+const PRECISE_TIME_PATTERNS: readonly RegExp[] = [
+  /\b\d+(?:\.\d+)?\s*(?:ms|msec|millisecond|milliseconds|sec|secs|second|seconds|min|mins|minute|minutes|hr|hrs|hour|hours)\b/i,
+  /\b\d{1,2}:\d{2}(?::\d{2})?\b/,
+  /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z?\b/,
+]
 
 function toTimeMs(value: string | number | Date | null | undefined): number | null {
   if (value == null) return null
@@ -53,6 +58,10 @@ export function bucketCompanionElapsedMs(elapsedMs: number): CompanionElapsedBuc
   if (elapsedMs < FIFTY_FIVE_MINUTES_MS) return 'about_half_hour'
   if (elapsedMs < ONE_HUNDRED_TEN_MINUTES_MS) return 'about_hour'
   return 'two_hours_or_more'
+}
+
+export function containsPreciseCompanionTimeLanguage(text: string): boolean {
+  return PRECISE_TIME_PATTERNS.some((pattern) => pattern.test(text))
 }
 
 const COMPANION_ELAPSED_LABELS: Record<UiLanguage, Record<CompanionElapsedBucket, string>> = {
@@ -97,7 +106,11 @@ export function formatCompanionElapsedBucket(
   bucket: CompanionElapsedBucket,
   uiLanguage: UiLanguage = 'en-US',
 ): string {
-  return COMPANION_ELAPSED_LABELS[normalizeUiLanguage(uiLanguage)][bucket]
+  const label = COMPANION_ELAPSED_LABELS[normalizeUiLanguage(uiLanguage)][bucket]
+  if (containsPreciseCompanionTimeLanguage(label)) {
+    return COMPANION_ELAPSED_LABELS['en-US'][bucket]
+  }
+  return label
 }
 
 function isNexusForeground(windowTitle: string | null | undefined): boolean {
@@ -111,7 +124,9 @@ export function buildQuietObservationSummary(
 
   const nowMs = toTimeMs(input.now ?? new Date())
   const openedMs = toTimeMs(input.nexusOpenSince)
-  const lastInteractionMs = toTimeMs(input.lastNexusInteractionAt) ?? openedMs
+  const lastInteractionMs = input.lastNexusInteractionAt == null
+    ? openedMs
+    : toTimeMs(input.lastNexusInteractionAt)
   const activeWindowTitle = String(input.activeWindowTitle ?? '').trim()
 
   if (nowMs == null || openedMs == null || lastInteractionMs == null) return null
@@ -140,9 +155,13 @@ export function buildQuietObservationSummary(
 export function formatQuietObservationForPrompt(summary: QuietObservationSummary | null): string {
   if (!summary) return ''
 
+  const elapsedLabel = containsPreciseCompanionTimeLanguage(summary.elapsedLabel)
+    ? formatCompanionElapsedBucket(summary.elapsedBucket, 'en-US')
+    : summary.elapsedLabel
+
   return [
     'Quiet companion awareness:',
-    `- Nexus is open, and the user has not interacted with Nexus for ${summary.elapsedLabel}.`,
+    `- Nexus is open, and the user has not interacted with Nexus for ${elapsedLabel}.`,
     `- Recent desktop activity looks like ${summary.activityClass}.`,
     '- Treat this only as companionship continuity. Stay quiet unless the user asks or the context is genuinely helpful.',
     '- Do not mention monitoring, window titles, or exact timers.',

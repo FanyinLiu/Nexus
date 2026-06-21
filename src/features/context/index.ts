@@ -1,5 +1,6 @@
 export * from './activityClassification'
 export * from './companionCheckInPolicy'
+export * from './companionInteractionState'
 export * from './companionSummaryStore'
 export * from './companionTransparency'
 export * from './browserScreenOcr'

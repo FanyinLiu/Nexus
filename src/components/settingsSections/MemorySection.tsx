@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react'
+import { memo, useEffect, useMemo, useReducer } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { MemoryPanel } from '../../features/memory/components'
 import { MEMORY_EMBEDDING_MODEL_OPTIONS, SCREEN_VLM_MODEL_OPTIONS } from '../../features/memory/constants'
@@ -92,18 +92,20 @@ export const MemorySection = memo(function MemorySection({
   onUpdateDailyEntry,
   onRemoveDailyEntry,
 }: MemorySectionProps) {
-  const [recentCompanionSummary, setRecentCompanionSummary] = useState(() => loadRecentCompanionSummary())
+  const [recentCompanionSummaryRevision, refreshRecentCompanionSummary] = useReducer((value: number) => value + 1, 0)
+  const companionAwarenessActive = draft.contextAwarenessEnabled && !draft.companionAwarenessPaused
   useEffect(() => {
-    if (draft.contextAwarenessEnabled && !draft.companionAwarenessPaused) return
+    if (companionAwarenessActive) return
     clearRecentCompanionSummary()
-  }, [draft.companionAwarenessPaused, draft.contextAwarenessEnabled])
+  }, [companionAwarenessActive])
 
-  const effectiveRecentCompanionSummary = draft.contextAwarenessEnabled && !draft.companionAwarenessPaused
-    ? recentCompanionSummary
-    : null
+  const effectiveRecentCompanionSummary = useMemo(() => {
+    void recentCompanionSummaryRevision
+    return companionAwarenessActive ? loadRecentCompanionSummary() : null
+  }, [companionAwarenessActive, recentCompanionSummaryRevision])
   const clearCompanionSummaryState = () => {
     clearRecentCompanionSummary()
-    setRecentCompanionSummary(null)
+    refreshRecentCompanionSummary()
   }
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const tiParam = (
@@ -322,10 +324,7 @@ export const MemorySection = memo(function MemorySection({
               className="ghost-button"
               disabled={!companionTransparency.canClearRecentSummary}
               title={ti('settings.memory.context.clear_recent_summary')}
-              onClick={() => {
-                clearRecentCompanionSummary()
-                setRecentCompanionSummary(null)
-              }}
+              onClick={clearCompanionSummaryState}
             >
               {ti('settings.memory.context.clear_recent_summary')}
             </button>

@@ -6,6 +6,22 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-21
+
+### Added
+- **Desktop companion awareness foundation** — Nexus now keeps a short-lived,
+  privacy-bounded companion awareness summary when the app is open, the user is
+  active elsewhere, and desktop context awareness is enabled.
+- **Stable release documentation** — final v0.4.0 release notes, localized
+  release entry points, and the stable checklist now describe the quiet
+  observation boundary separately from later v0.4.x and v0.5 behavior.
+
+### Fixed
+- **Session-bound quiet observation summaries** — recent companion summaries are
+  tied to the current app session and renderer lifecycle, reject precise
+  elapsed-time language, and are purged on pause, disable, stale, future, or
+  cross-session restore cases.
+
 ## [0.4.0-beta.1] - 2026-06-21
 
 ### Added

@@ -2,10 +2,12 @@
 
 ## Status
 
-- Evidence baseline head: `517b822` plus local working-tree v0.4 changes.
-- Branch: local working tree.
-- State: locally validated for beta preparation; final tag is blocked only by
-  release-branch process items recorded below.
+- Evidence baseline head: `d454731394b1077f689c41c70563503a406e3e99`.
+- Published beta head: `d454731394b1077f689c41c70563503a406e3e99`.
+- Branch: `main`.
+- State: published prerelease.
+- Release:
+  [`v0.4.0-beta.1`](https://github.com/FanyinLiu/Nexus/releases/tag/v0.4.0-beta.1).
 - Product theme: v0.4 desktop companion awareness begins. Nexus can stay
   quietly present after the user opens it, notice coarse time passing, and use
   low-frequency companion care without becoming a screen recorder, stopwatch,
@@ -23,8 +25,16 @@ This beta handoff is the version-specific entry point for
 - `npm run prerelease-check -- v0.4.0-beta.1 --skip=A` — passed with 20
   blocker checks, 0 warnings, and 0 failures.
 - `npm run prerelease-check -- v0.4.0-beta.1 --only=A` — version and tag checks
-  now pass after the package version bump. Remaining blockers are clean working
-  tree and release head alignment with `origin/main`.
+  passed on `main` before tagging.
+- GitHub PR
+  [#106](https://github.com/FanyinLiu/Nexus/pull/106) merged into `main` with
+  commit `d454731394b1077f689c41c70563503a406e3e99`.
+- Tag `v0.4.0-beta.1` points to
+  `d454731394b1077f689c41c70563503a406e3e99`.
+- Release Build run `27901490144` passed, including preflight, Windows, macOS,
+  Linux, and publish jobs.
+- Published assets include Windows `.exe`, macOS `.dmg` and `.zip`, Linux
+  `.AppImage`, `.deb`, `.tar.gz`, updater metadata, and `SHA256SUMS`.
 - Pausing or disabling desktop companion awareness now clears the recent local
   companion summary so Settings does not keep stale awareness status after the
   user pauses the feature.
@@ -49,20 +59,10 @@ Out of scope:
 - file reading, message sending, app opening, or settings changes without
   explicit user action
 
-## Remaining Required Steps
+## Publication Result
 
-Before tagging `v0.4.0-beta.1`:
-
-```bash
-git status --short
-npm run prerelease-check -- v0.4.0-beta.1 --only=A
-git tag v0.4.0-beta.1
-git push origin v0.4.0-beta.1
-gh run watch --repo FanyinLiu/Nexus
-```
-
-Do not tag until the working tree is clean, the release commit has landed, and
-`HEAD === origin/main`.
+`v0.4.0-beta.1` has been tagged, pushed, built, and published. Do not reuse the
+tag for fixes; publish a higher beta if a regression is found.
 
 ## Known Local Smoke Warnings
 

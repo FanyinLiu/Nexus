@@ -24,24 +24,24 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **当前代码版本：** v0.4.0-beta.1。Nexus 现在进入桌面陪伴感知 beta：打开后即使用户去电脑别处工作，也能安静理解时间流逝，并把隐私边界放在设置里。正式下载页仍以 GitHub Releases 的最新 tag 为准。
+> **当前代码版本：** v0.4.0。Nexus 现在进入桌面陪伴感知地基：打开后即使用户去电脑别处工作，也能安静理解时间流逝，并把隐私边界放在设置里。正式下载页仍以 GitHub Releases 的最新 tag 为准。
 
 > **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前短期开发以根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 为准：Phase 1 只收敛桌面常驻小窗口、极简头像、Ollama / DeepSeek 文本模型和简单对话。
 
 ---
 
-## 本次更新 — v0.4.0-beta.1
+## 本次更新 — v0.4.0
 
-> **主题：桌面陪伴感知开始。** 中文说明见 [RELEASE-NOTES-v0.4.0-beta.1.zh-CN.md](RELEASE-NOTES-v0.4.0-beta.1.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.0-beta.1.md](RELEASE-NOTES-v0.4.0-beta.1.md)。
+> **主题：桌面陪伴感知地基。** 中文说明见 [RELEASE-NOTES-v0.4.0.zh-CN.md](RELEASE-NOTES-v0.4.0.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.0.md](RELEASE-NOTES-v0.4.0.md)。
 
-0.4.0-beta.1 开始真正做“打开 Nexus 后，它能安静理解时间流逝”的桌面陪伴感知。它会形成短期、粗粒度、可暂停和可清理的陪伴摘要；进入模型的是脱敏摘要，不是原始截图、完整剪贴板、私人消息或精确计时。
+0.4.0 正式开始“打开 Nexus 后，它能安静理解时间流逝”的桌面陪伴感知。它会形成短期、粗粒度、可暂停和可清理的陪伴摘要；进入模型的是脱敏摘要，不是原始截图、完整剪贴板、私人消息或精确计时。
 
-一句话记住 0.4 beta：
+一句话记住 0.4.0：
 
 - **打开 Nexus 后，即使你去电脑别处工作，陪伴感也不会立刻断掉。**
 - **时间说法是“一会儿 / 半小时左右 / 一小时左右”，不是精确到分秒。**
 - **Memory 设置里能看到说明，并能暂停或清理近期陪伴摘要。**
-- **主动关心保持低频、保守、可关闭。**
+- **这个稳定版先打好安静观察地基，不扩展主动 check-in。**
 - **0.5 才做桌宠跟随鼠标、打字反应和窗口互动。**
 
 ## 上次更新 — v0.3.6
@@ -98,7 +98,7 @@
 | 查看安全与隐私 | [安全与援助](#安全与援助) |
 | 参与社区内容 | [社区](#社区) · [Community Guide](COMMUNITY.md) |
 | 理解 0.4 方向 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 验证 0.4 beta | [v0.4.0-beta.1 Release Notes](RELEASE-NOTES-v0.4.0-beta.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 查看 0.4 正式版 | [v0.4.0 Release Notes](RELEASE-NOTES-v0.4.0.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## 为什么是 Nexus？
 
@@ -360,7 +360,7 @@ npm run package:win     # 或 package:mac / package:linux
 
 Nexus 目前由个人维护，issue 和 PR 的处理速度取决于分流是否精准：
 
-社区文档会贯穿所有版本，不只属于某一次发布。0.3 收安全、记忆和设置地基；0.4 会进入桌面陪伴感知；0.5 会进入桌宠桌面行为。社区可以持续贡献文档、人格模板、桌宠包、模型配置菜谱、翻译和 beta 验证报告，让项目变大但不失控。长期入口见 [Community Guide](COMMUNITY.md)，0.4 方向见 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 beta 说明见 [v0.4.0-beta.1 Release Notes](RELEASE-NOTES-v0.4.0-beta.1.md)，发布前加固清单见 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
+社区文档会贯穿所有版本，不只属于某一次发布。0.3 收安全、记忆和设置地基；0.4 会进入桌面陪伴感知；0.5 会进入桌宠桌面行为。社区可以持续贡献文档、人格模板、桌宠包、模型配置菜谱、翻译和 beta 验证报告，让项目变大但不失控。长期入口见 [Community Guide](COMMUNITY.md)，0.4 方向见 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 正式版说明见 [v0.4.0 Release Notes](RELEASE-NOTES-v0.4.0.md)，发布前加固清单见 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
 
 - 🐛 **发现 Bug？** → [Bug 报告](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **有明确的功能想法？** → [功能请求](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

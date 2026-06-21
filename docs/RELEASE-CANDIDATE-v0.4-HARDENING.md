@@ -3,15 +3,21 @@
 ## Status
 
 - Scope: v0.4 desktop companion awareness release line.
-- State: hardening checklist for the first v0.4 beta and later stable handoff.
+- State: `v0.4.0-beta.1` is published; keep this as the checklist for later
+  v0.4 beta and stable handoffs.
 - Product theme: Nexus can stay quietly present after the user opens it, notice
   coarse time passing, and speak with low-frequency companion care without
   becoming a screen recorder, stopwatch, or autonomous work agent.
-- Evidence baseline head: `517b822` plus local working-tree v0.4 changes.
+- Evidence baseline head: `d454731394b1077f689c41c70563503a406e3e99`.
+- Published beta head: `d454731394b1077f689c41c70563503a406e3e99`.
 
 This handoff does not replace [Releasing Nexus](RELEASING.md). It adds the
 v0.4-specific proof that desktop companion awareness still respects the v0.3
 privacy posture before a beta or stable tag is created.
+
+For the beta-to-stable step, use
+[Nexus v0.4.0 Stable Release Checklist](RELEASE-CANDIDATE-v0.4.0-STABLE.md)
+before preparing the `v0.4.0` tag.
 
 ## Release Boundary
 
@@ -61,6 +67,18 @@ tag must not include `-beta.N`.
 
 ## Evidence Collected
 
+- GitHub PR
+  [#106](https://github.com/FanyinLiu/Nexus/pull/106) was merged into `main`
+  with commit `d454731394b1077f689c41c70563503a406e3e99`.
+- Tag `v0.4.0-beta.1` points to
+  `d454731394b1077f689c41c70563503a406e3e99`.
+- GitHub Release
+  [`v0.4.0-beta.1`](https://github.com/FanyinLiu/Nexus/releases/tag/v0.4.0-beta.1)
+  is published as a prerelease, not a draft.
+- Release Build run `27901490144` passed. It completed preflight, Windows,
+  macOS, Linux, and publish jobs.
+- Release assets were uploaded for Windows (`.exe`), macOS (`.dmg`, `.zip`),
+  Linux (`.AppImage`, `.deb`, `.tar.gz`), updater metadata, and `SHA256SUMS`.
 - `npm run verify:release` — passed locally. This includes forced typecheck,
   lint, 2037 tests, production build, storage/heavy/architecture/source-size/
   performance/companion-boundary/message-privacy/desktop-context-privacy/vault/
@@ -76,11 +94,10 @@ tag must not include `-beta.N`.
   Electron smoke, packaged smoke, coverage at 90.37%, bundle budget,
   benchmarks, security, asset integrity, docs/compliance, and privacy/
   governance checks.
-- `npm run prerelease-check -- v0.4.0-beta.1 --only=A` — expected local
-  blocker state. Tag format, local tag absence, remote tag absence, and CI check
-  passed. Remaining blockers before tagging are:
-  - commit or otherwise clean the working tree
-  - land the release head so `HEAD === origin/main`
+- `npm run prerelease-check -- v0.4.0-beta.1 --only=A` — passed on `main`
+  before tagging. After publication, local and remote tag-existence checks are
+  expected to report the tag as present.
+- Before publication, the remaining Stage A blockers were to commit or otherwise clean the working tree and land the release head so `HEAD === origin/main`. Those blockers were cleared before the tag was created.
 
 Expected local smoke warnings remain:
 
