@@ -14,6 +14,10 @@
 - **v0.4.2 check-in policy boundary** — added local emission control for the
   companion check-in policy so in-app lines remain explainable, dismissible,
   polling-safe, and separate from external notifications or message sending.
+- **v0.4.3 transparency view model** — routed the Settings companion-awareness
+  transparency block through a deterministic view model that explains status,
+  observed categories, model reach, local storage, clear-summary availability,
+  and blocked reasons without changing the release entry point.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now
@@ -23,6 +27,10 @@
 - **Repeated check-in suppression** — active chat, stale return signals,
   duplicate activity signals, and recently dismissed lines now suppress local
   check-in output before an in-app payload can be built.
+- **Raw desktop content transparency guard** — companion awareness
+  transparency now keeps raw window titles, clipboard bodies, message bodies,
+  file paths, screenshots, and precise minute/second time labels out of the
+  Settings view model.
 
 ## [0.4.0] - 2026-06-21
 
