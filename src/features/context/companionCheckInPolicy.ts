@@ -6,42 +6,60 @@ export type CompanionCheckInReason =
   | 'disabled'
   | 'paused'
   | 'no_observation'
+  | 'active_chat'
   | 'quiet_hours'
   | 'cooldown'
   | 'focused'
+  | 'recently_dismissed'
+  | 'duplicate_window'
+  | 'return_window_expired'
   | 'not_enough_signal'
   | 'return_to_nexus'
   | 'long_continuous_activity'
   | 'frequent_switching'
   | 'long_idle_after_activity'
 
+export type CompanionCheckInTriggerReason = Extract<CompanionCheckInReason,
+  | 'return_to_nexus'
+  | 'long_continuous_activity'
+  | 'frequent_switching'
+  | 'long_idle_after_activity'
+>
+
 export type CompanionCheckInDecision = {
   shouldCheckIn: boolean
   reason: CompanionCheckInReason
   surface: 'none' | 'in_app'
   priority: 'none' | 'low' | 'normal'
+  signalKey?: string
 }
 
 export type CompanionCheckInLine = {
   text: string
-  reason: Extract<CompanionCheckInReason,
-    | 'return_to_nexus'
-    | 'long_continuous_activity'
-    | 'frequent_switching'
-    | 'long_idle_after_activity'
-  >
+  reason: CompanionCheckInTriggerReason
 }
 
 export type CompanionCheckInPolicyInput = {
   enabled: boolean
   paused?: boolean
+  isActiveChatSession?: boolean
   nowMs: number
   quietHoursStart?: number
   quietHoursEnd?: number
   lastCheckInAtMs?: number | null
+  lastCheckInReason?: CompanionCheckInTriggerReason | null
+  lastCheckInSignalKey?: string | null
   cooldownMinutes?: number
+  emissionWindowMinutes?: number
+  lastDismissedAtMs?: number | null
+  lastDismissedReason?: CompanionCheckInTriggerReason | null
+  lastDismissedSignalKey?: string | null
+  dismissalWindowMinutes?: number
+  activitySegmentId?: string | null
   summary: QuietObservationSummary | null
   returnedToNexus?: boolean
+  returnedToNexusAtMs?: number | null
+  returnToNexusWindowMinutes?: number
   activitySwitchCount?: number
   idleAfterActivityMs?: number
 }
@@ -49,10 +67,13 @@ export type CompanionCheckInPolicyInput = {
 const DEFAULT_QUIET_START = 23
 const DEFAULT_QUIET_END = 8
 const DEFAULT_COOLDOWN_MINUTES = 90
+const DEFAULT_EMISSION_WINDOW_MINUTES = 180
+const DEFAULT_DISMISSAL_WINDOW_MINUTES = 120
+const DEFAULT_RETURN_TO_NEXUS_WINDOW_MINUTES = 10
 const FREQUENT_SWITCH_THRESHOLD = 4
 const LONG_IDLE_AFTER_ACTIVITY_MS = 15 * 60_000
 
-const CHECK_IN_LINES: Record<UiLanguage, Record<CompanionCheckInLine['reason'], string>> = {
+const CHECK_IN_LINES: Record<UiLanguage, Record<CompanionCheckInTriggerReason, string>> = {
   'zh-CN': {
     return_to_nexus: '你刚回来，我还在。刚才这段时间我只留了一个大概的连续感。',
     long_continuous_activity: '你已经在这个节奏里待了一阵子。要不要先停一下，整理一句现在最想继续的事？',
@@ -101,12 +122,83 @@ function isCoolingDown(
   return nowMs - lastCheckInAtMs < Math.max(1, cooldownMinutes) * 60_000
 }
 
-function allowInApp(reason: CompanionCheckInReason, priority: CompanionCheckInDecision['priority']): CompanionCheckInDecision {
+function isWithinRecentWindow(
+  nowMs: number,
+  timestampMs: number | null | undefined,
+  windowMinutes: number,
+): boolean {
+  if (timestampMs == null || !Number.isFinite(timestampMs)) return false
+  const elapsedMs = nowMs - timestampMs
+  return elapsedMs >= 0 && elapsedMs < Math.max(1, windowMinutes) * 60_000
+}
+
+function normalizeSignalPart(value: unknown, fallback: string): string {
+  const text = typeof value === 'string' ? value.trim() : ''
+  const normalized = text
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64)
+  return normalized || fallback
+}
+
+export function buildCompanionCheckInSignalKey(
+  input: CompanionCheckInPolicyInput,
+  reason: CompanionCheckInTriggerReason,
+): string {
+  const segment = normalizeSignalPart(input.activitySegmentId, 'unsegmented')
+  return `${reason}:${segment}`
+}
+
+function isDuplicateCheckIn(
+  input: CompanionCheckInPolicyInput,
+  reason: CompanionCheckInTriggerReason,
+  signalKey: string,
+): boolean {
+  if (!isWithinRecentWindow(
+    input.nowMs,
+    input.lastCheckInAtMs,
+    input.emissionWindowMinutes ?? DEFAULT_EMISSION_WINDOW_MINUTES,
+  )) {
+    return false
+  }
+
+  if (input.lastCheckInSignalKey) return input.lastCheckInSignalKey === signalKey
+  return input.lastCheckInReason === reason
+}
+
+function isRecentlyDismissed(
+  input: CompanionCheckInPolicyInput,
+  reason: CompanionCheckInTriggerReason,
+  signalKey: string,
+): boolean {
+  if (!isWithinRecentWindow(
+    input.nowMs,
+    input.lastDismissedAtMs,
+    input.dismissalWindowMinutes ?? DEFAULT_DISMISSAL_WINDOW_MINUTES,
+  )) {
+    return false
+  }
+
+  if (input.lastDismissedSignalKey) return input.lastDismissedSignalKey === signalKey
+  return input.lastDismissedReason === reason
+}
+
+function allowInApp(
+  input: CompanionCheckInPolicyInput,
+  reason: CompanionCheckInTriggerReason,
+  priority: Extract<CompanionCheckInDecision['priority'], 'low' | 'normal'>,
+): CompanionCheckInDecision {
+  const signalKey = buildCompanionCheckInSignalKey(input, reason)
+  if (isRecentlyDismissed(input, reason, signalKey)) return suppress('recently_dismissed')
+  if (isDuplicateCheckIn(input, reason, signalKey)) return suppress('duplicate_window')
+
   return {
     shouldCheckIn: true,
     reason,
     surface: 'in_app',
     priority,
+    signalKey,
   }
 }
 
@@ -125,6 +217,7 @@ export function decideCompanionCheckIn(
   if (!input.enabled) return suppress('disabled')
   if (input.paused) return suppress('paused')
   if (!input.summary) return suppress('no_observation')
+  if (input.isActiveChatSession) return suppress('active_chat')
 
   if (isInsideQuietHours(
     input.nowMs,
@@ -143,7 +236,18 @@ export function decideCompanionCheckIn(
   }
 
   if (input.returnedToNexus) {
-    return allowInApp('return_to_nexus', 'low')
+    if (
+      input.returnedToNexusAtMs != null
+      && !isWithinRecentWindow(
+        input.nowMs,
+        input.returnedToNexusAtMs,
+        input.returnToNexusWindowMinutes ?? DEFAULT_RETURN_TO_NEXUS_WINDOW_MINUTES,
+      )
+    ) {
+      return suppress('return_window_expired')
+    }
+
+    return allowInApp(input, 'return_to_nexus', 'low')
   }
 
   if (input.summary.userDeepFocused) {
@@ -151,18 +255,18 @@ export function decideCompanionCheckIn(
   }
 
   if ((input.activitySwitchCount ?? 0) >= FREQUENT_SWITCH_THRESHOLD) {
-    return allowInApp('frequent_switching', 'normal')
+    return allowInApp(input, 'frequent_switching', 'normal')
   }
 
   if ((input.idleAfterActivityMs ?? 0) >= LONG_IDLE_AFTER_ACTIVITY_MS) {
-    return allowInApp('long_idle_after_activity', 'low')
+    return allowInApp(input, 'long_idle_after_activity', 'low')
   }
 
   if (
     input.summary.elapsedBucket === 'about_hour'
     || input.summary.elapsedBucket === 'two_hours_or_more'
   ) {
-    return allowInApp('long_continuous_activity', 'low')
+    return allowInApp(input, 'long_continuous_activity', 'low')
   }
 
   return suppress('not_enough_signal')

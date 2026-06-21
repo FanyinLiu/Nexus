@@ -26,7 +26,8 @@ The larger product steps are:
   The v0.4 line is split into quiet observation, coarse time language,
   check-in policy, transparency UI, beta copy tuning, and release hardening.
   `v0.4.0` is now the stable quiet-observation foundation; `v0.4.1` is the
-  active coarse-time-language follow-up.
+  draft coarse-time-language follow-up; `v0.4.2` is the active stacked
+  check-in-policy draft.
 - **v0.5.0 — desktop pet behavior.** The visible companion can react to mouse
   movement, typing rhythm, idleness, and desktop state without blocking the
   user's work.

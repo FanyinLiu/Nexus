@@ -1,4 +1,5 @@
 export * from './activityClassification'
+export * from './companionCheckInAdapter'
 export * from './companionCheckInPolicy'
 export * from './companionInteractionState'
 export * from './companionSummaryStore'
