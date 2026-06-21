@@ -24,15 +24,21 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **현재 릴리스:** v0.3.5 안정 버전. Nexus는 계속 "로컬 우선 데스크톱 동반자" 방향으로 수렴하고 있습니다. 이번 버전의 핵심은 첫 실행 복구, 릴리스 신뢰성, IPC 안전성, 그리고 채팅 기억의 로컬 제어형 마이그레이션 리허설입니다.
+> **현재 릴리스:** v0.3.6 후보. Nexus는 계속 "로컬 우선 데스크톱 동반자" 방향으로 수렴하고 있습니다. 이번 버전의 핵심은 0.3 기반 마무리: 설정 가독성, 기억 경계, 데스크톱 인식 진입점, 개인정보 설명입니다.
 
 > **개발 범위 안내:** 이 다국어 README는 장기 기능 목록을 보존합니다. 단기 개발 기준은 루트 [README](../README.md)와 [Nexus 업그레이드 통합 계획](NEXUS_UPGRADE_INTEGRATION_PLAN.md)입니다. Phase 1은 상주하는 작은 데스크톱 창, 미니멀 아바타, Ollama / DeepSeek 텍스트 모델, 간단한 대화에만 집중합니다.
 
 ---
 
-## 이번 업데이트 — v0.3.5
+## 이번 업데이트 — v0.4.0-beta.1
 
-> **기억은 보이고, 동반자는 살아 움직이는 버전.** 이번 릴리스는 Nexus를 Codex 같은 작업 에이전트로 만드는 것이 아닙니다. 답변에 사용된 기억을 볼 수 있게 하고, 데스크톱 동반자의 대기, 생각, 듣기, 말하기, 확인 대기, 오류, 오프라인 상태를 바로 미리 볼 수 있게 합니다. 첫 실행, 릴리스 신뢰성, IPC, 키, 채팅 기억 마이그레이션 리허설은 계속 로컬에서 제어되는 기반으로 다집니다. 자세한 내용은 [RELEASE-NOTES-v0.3.5.md](RELEASE-NOTES-v0.3.5.md)(영어).
+> **데스크톱 동반자 인식이 시작됩니다.** 이 beta는 Nexus를 연 뒤 사용자가 다른 곳에서 작업해도 시간의 흐름을 조용히 이해하는 루프를 시작합니다. 자세한 내용은 [RELEASE-NOTES-v0.4.0-beta.1.md](RELEASE-NOTES-v0.4.0-beta.1.md)(영어).
+
+Nexus는 낮은 빈도, 보수적인 동작, 일시정지 가능한 상태를 유지하며 짧고 대략적인 동반자 요약만 만듭니다. 시간 표현은 “잠시”, “30분쯤”, “한 시간쯤”처럼 대략적이며 원본 스크린샷, 전체 클립보드, 개인 메시지, 정확한 타이머를 모델로 보내지 않습니다. 마우스 따라가기, 타이핑 반응, 창 상호작용은 v0.5 범위입니다.
+
+## 이전 업데이트 — v0.3.6
+
+> **0.3 기반을 마무리하는 버전.** 이번 릴리스는 Nexus를 Codex 같은 작업 에이전트로 만들지 않고, 0.4의 데스크톱 동반 감지도 미리 넣지 않습니다. 안전, 기억, 설정, 데스크톱 인식 진입점을 정리합니다. 자세한 내용은 [RELEASE-NOTES-v0.3.6.md](RELEASE-NOTES-v0.3.6.md)(영어).
 
 ## 이번 업데이트 — v0.3.4-beta.4(프리릴리스)
 
@@ -72,6 +78,9 @@
 | 소스에서 실행 | [빠른 시작](#빠른-시작) |
 | 모델 설정 | [추천 모델 구성](#추천-모델-구성) · [지원 제공자](#지원-제공자) |
 | 안전/개인정보 확인 | [안전 및 지원](#안전-및-지원) |
+| 커뮤니티 참여 | [커뮤니티](#커뮤니티) · [Community Guide](COMMUNITY.md) |
+| 0.4 방향 이해 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
+| 0.4 beta 검증 | [v0.4.0-beta.1 Release Notes](RELEASE-NOTES-v0.4.0-beta.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## 왜 Nexus인가?
 
@@ -335,6 +344,8 @@ npm run package:win     # 또는 package:mac / package:linux
 ## 커뮤니티
 
 Nexus는 개인 유지 프로젝트로, issue와 PR 처리 속도는 정확한 분류에 달려 있습니다:
+
+커뮤니티 문서는 특정 릴리스 하나에만 속하지 않고 모든 버전을 관통하는 입구입니다. 0.3은 안전, 기억, 설정 기반을 마무리하고, 0.4는 데스크톱 동반자 인식으로 들어가며, 0.5는 데스크톱 펫 행동으로 이어집니다. 장기 입구는 [Community Guide](COMMUNITY.md), 0.4 방향은 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md), 0.4 beta 설명은 [v0.4.0-beta.1 Release Notes](RELEASE-NOTES-v0.4.0-beta.1.md), 릴리스 전 hardening은 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)입니다.
 
 - 🐛 **버그를 발견했나요?** → [버그 신고](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **명확한 기능 아이디어?** → [기능 요청](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

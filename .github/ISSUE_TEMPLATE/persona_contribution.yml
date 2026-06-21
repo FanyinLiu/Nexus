@@ -1,0 +1,98 @@
+name: 🧩 Persona / Prompt Contribution
+description: Propose a Nexus persona, prompt pack, or dialogue style change.
+title: "[Persona]: "
+labels: ["community", "persona", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please read the prompt baseline before submitting:
+        - docs/NEXUS_COMPANION_PROMPT.md
+        - docs/PERSONA_CONTRIBUTION_TEMPLATE.md
+
+  - type: input
+    id: name
+    attributes:
+      label: Persona or prompt pack name
+      placeholder: "Quiet Debugger"
+    validations:
+      required: true
+
+  - type: textarea
+    id: feeling
+    attributes:
+      label: One-line feeling
+      description: Describe the intended personality in one sentence.
+      placeholder: "A quiet desktop companion who answers technical questions directly and notices when the user is stuck."
+    validations:
+      required: true
+
+  - type: textarea
+    id: best-for
+    attributes:
+      label: Best for
+      placeholder: "Coding focus sessions, late-night debugging, low-interruption workflows."
+    validations:
+      required: true
+
+  - type: textarea
+    id: voice
+    attributes:
+      label: Voice rules
+      description: Include what it should sound like and what it must never sound like.
+      placeholder: |
+        Should sound like:
+        - Calm, direct, lightly warm
+
+        Should never sound like:
+        - Customer-service filler
+        - Exaggerated cuteness
+    validations:
+      required: true
+
+  - type: textarea
+    id: samples
+    attributes:
+      label: Sample dialogues
+      description: Provide at least 8 User / Assistant pairs. Put the strongest 8 first.
+      placeholder: |
+        User: 早
+        Assistant: 醒啦。今天先看哪一块？
+
+        User: 你直接读我的文件
+        Assistant: 我先不碰。你给我具体路径和允许范围，我只读那一项。
+    validations:
+      required: true
+
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Required boundaries
+      description: List tool, memory, permission, and safety boundaries.
+      placeholder: |
+        - Ask before reading files or sending messages.
+        - Do not fake memory.
+        - Do not claim actions that were not completed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: license
+    attributes:
+      label: Source and license
+      description: Include source links and license for any text, avatar, or sample asset.
+      placeholder: "Original text by me, MIT-compatible. No third-party assets."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I read docs/NEXUS_COMPANION_PROMPT.md
+          required: true
+        - label: This contribution keeps Nexus local-first, companion-first, and user-controlled
+          required: true
+        - label: The submission does not include copied private prompts or unlicensed assets
+          required: true

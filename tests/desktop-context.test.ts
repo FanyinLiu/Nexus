@@ -60,6 +60,7 @@ test('desktop context prompt formatting redacts obvious secrets', () => {
     capturedAt: '2026-06-04T17:00:00.000Z',
     activeWindowTitle: `Terminal - OPENAI_API_KEY=${secretKey}`,
     activeWindowAppName: 'Terminal',
+    companionAwarenessSummary: `Quiet companion awareness:\n- token: ${secretKey}`,
     clipboardText: `password=hunter2-secret\n${secretKey}`,
     screenText: `token: ${secretKey}`,
     vlmAnalysis: 'A code editor is open next to -----BEGIN PRIVATE KEY-----',
@@ -80,6 +81,7 @@ test('desktop context IPC sanitizer redacts obvious secrets before renderer retu
     activeWindowTitle: `Terminal - OPENAI_API_KEY=${secretKey}`,
     activeWindowAppName: 'Terminal',
     activeWindowProcessPath: '/Applications/Terminal.app',
+    companionAwarenessSummary: `token: ${secretKey}`,
     clipboardText: `Bearer ${secretKey}`,
     screenshotDataUrl: 'data:image/png;base64,abc',
     displayName: 'Built-in Retina Display',
@@ -87,6 +89,7 @@ test('desktop context IPC sanitizer redacts obvious secrets before renderer retu
   const serialized = JSON.stringify(sanitized)
 
   assert.equal(sanitized.activeWindowTitle, DESKTOP_CONTEXT_REDACTION)
+  assert.equal(sanitized.companionAwarenessSummary, DESKTOP_CONTEXT_REDACTION)
   assert.equal(sanitized.clipboardText, DESKTOP_CONTEXT_REDACTION)
   assert.equal(sanitized.activeWindowAppName, 'Terminal')
   assert.equal(sanitized.activeWindowProcessPath, '/Applications/Terminal.app')
@@ -137,6 +140,27 @@ test('formatDesktopContext tells the companion to stay perceptive without announ
   // Quiet awareness that colors replies, not a surveillance announcement (silent-emotion principle).
   assert.match(prompt, /Never announce or draw attention/)
   assert.match(prompt, /do not say things like/)
+})
+
+test('formatDesktopContext includes sanitized companion continuity without raw titles', () => {
+  const prompt = formatDesktopContext({
+    capturedAt: '2026-06-04T17:00:00.000Z',
+    companionAwarenessSummary: [
+      'Quiet companion awareness:',
+      '- Nexus is open, and the user has not interacted with Nexus for 半小时左右.',
+      '- Recent desktop activity looks like coding.',
+      '- Treat this only as companionship continuity. Stay quiet unless the user asks or the context is genuinely helpful.',
+      '- Do not mention monitoring, window titles, or exact timers.',
+    ].join('\n'),
+  })
+
+  assert.match(prompt, /Companion continuity summary/)
+  assert.match(prompt, /半小时左右/)
+  assert.match(prompt, /coding/)
+  assert.match(prompt, /Stay quiet/)
+  assert.doesNotMatch(prompt, /Window title:/)
+  assert.doesNotMatch(prompt, /\b\d+\b/)
+  assert.doesNotMatch(prompt, /minutes?|seconds?/i)
 })
 
 test('formatDesktopContext returns empty text when every observation is blank', () => {
@@ -198,6 +222,10 @@ test('desktop context audit summaries exclude captured private content', () => {
       titleLength: 21,
       appNameLength: 10,
       processPathLength: 29,
+    },
+    companionAwareness: {
+      present: false,
+      textLength: 0,
     },
     clipboard: {
       present: true,

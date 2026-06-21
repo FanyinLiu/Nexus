@@ -3,6 +3,7 @@ export interface DesktopContextSnapshot {
   activeWindowTitle?: string
   activeWindowAppName?: string
   activeWindowProcessPath?: string
+  companionAwarenessSummary?: string
   clipboardText?: string
   screenText?: string
   screenshotDataUrl?: string

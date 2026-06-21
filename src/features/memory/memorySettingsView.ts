@@ -4,6 +4,11 @@ import type {
   MemoryKind,
   MemorySearchMode,
 } from '../../types/memory.ts'
+import {
+  resolveCompanionTransparencySummary,
+  type CompanionTransparencySummary,
+} from '../context/companionTransparency.ts'
+import type { QuietObservationSummary } from '../context/companionAwareness.ts'
 
 export type MemoryKindCounts = Record<MemoryKind, number>
 
@@ -24,6 +29,7 @@ export type MemoryTransparencySummary = MemorySettingsSummary & {
   semanticRecallEnabled: boolean
   sqliteAuthorityEnabled: false
   storageAuthority: 'renderer-localStorage'
+  companionAwareness: CompanionTransparencySummary
 }
 
 const EMPTY_KIND_COUNTS: MemoryKindCounts = {
@@ -61,6 +67,7 @@ export function resolveMemorySettingsSummary(input: {
 export function resolveMemoryTransparencySummary(input: {
   activeWindowContextEnabled: boolean
   clipboardContextEnabled: boolean
+  companionAwarenessPaused?: boolean
   contextAwarenessEnabled: boolean
   dailyEntries: DailyMemoryEntry[]
   memories: MemoryItem[]
@@ -68,6 +75,7 @@ export function resolveMemoryTransparencySummary(input: {
   memoryLongTermRecallCount: number
   memoryPaused: boolean
   memorySemanticRecallCount: number
+  companionSummary?: QuietObservationSummary | null
   screenContextEnabled: boolean
   searchMode: MemorySearchMode
 }): MemoryTransparencySummary {
@@ -82,6 +90,12 @@ export function resolveMemoryTransparencySummary(input: {
   return {
     ...base,
     automaticCaptureEnabled: memoryActive,
+    companionAwareness: resolveCompanionTransparencySummary({
+      contextAwarenessEnabled: input.contextAwarenessEnabled,
+      companionAwarenessPaused: input.companionAwarenessPaused ?? false,
+      activeWindowContextEnabled: input.activeWindowContextEnabled,
+      summary: input.companionSummary ?? null,
+    }),
     contextReadEnabled,
     dailyRecallEnabled: memoryActive && input.memoryDailyRecallCount > 0,
     longTermRecallEnabled: memoryActive && input.memoryLongTermRecallCount > 0,

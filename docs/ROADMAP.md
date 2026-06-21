@@ -1,12 +1,42 @@
 # Nexus Roadmap — companion-first phases
 
-> Last updated 2026-06-20. Stewardship follows Klein's product direction.
+> Last updated 2026-06-21. Stewardship follows Klein's product direction.
 > For the short-term MVP and Chinese execution plan, see
 > [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md). When planning
 > near-term work, Phase 1 in that document is the active scope.
 
 For the execution order and concrete acceptance metrics, use
 [EXECUTABLE_OPTIMIZATION_TASKS](EXECUTABLE_OPTIMIZATION_TASKS.md).
+
+## Near-Term Release Boundary
+
+v0.3.6 closes the current foundation line. Its scope is safety, memory
+visibility, settings readability, release alignment, and visible
+desktop-awareness capability status. It should not absorb the larger desktop
+companion sensing loop.
+
+The larger product steps are:
+
+- **v0.4.0 — desktop companion awareness.** When Nexus is open but the user is
+  not interacting with it, the companion can quietly observe coarse desktop
+  activity and time passing, then use rough intervals such as "a while",
+  "about half an hour", "about an hour", or "two hours or more" for low-frequency
+  companionship. See
+  [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md).
+  The v0.4 line is split into quiet observation, coarse time language,
+  check-in policy, transparency UI, beta copy tuning, and release hardening.
+- **v0.5.0 — desktop pet behavior.** The visible companion can react to mouse
+  movement, typing rhythm, idleness, and desktop state without blocking the
+  user's work.
+
+Both steps must preserve the v0.3 privacy posture: sanitized summaries for the
+model, no raw screenshot chat context, no precise timer language, and no
+Codex-style autonomous work-agent expansion by default.
+
+Community documentation, persona templates, pet packs, model recipes, and beta
+validation reports are cross-version infrastructure. They should keep growing
+through v0.3, v0.4, v0.5, and v1.0 instead of being treated as a single release
+feature.
 
 ## v1.0 Stabilization Milestones
 

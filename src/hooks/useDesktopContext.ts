@@ -1,6 +1,9 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  buildQuietObservationSummary,
   buildDesktopContextRequest,
+  formatQuietObservationForPrompt,
+  saveRecentCompanionSummary,
 } from '../features/context'
 import { analyzeScreenWithVlm, disposeScreenOcrWorker, enqueueScreenOcr } from '../features/vision'
 import {
@@ -17,11 +20,48 @@ type UseDesktopContextParams = {
 }
 
 export function useDesktopContext({ settingsRef, platformProfileRef }: UseDesktopContextParams) {
+  const [initialOpenAt] = useState(() => new Date().toISOString())
+  const nexusOpenSinceRef = useRef(initialOpenAt)
+  const lastNexusInteractionAtRef = useRef(initialOpenAt)
+
   useEffect(() => {
+    const markNexusInteraction = () => {
+      lastNexusInteractionAtRef.current = new Date().toISOString()
+    }
+
+    document.addEventListener('pointerdown', markNexusInteraction, { capture: true })
+    document.addEventListener('keydown', markNexusInteraction, { capture: true })
+    document.addEventListener('touchstart', markNexusInteraction, { capture: true })
+
     return () => {
+      document.removeEventListener('pointerdown', markNexusInteraction, { capture: true })
+      document.removeEventListener('keydown', markNexusInteraction, { capture: true })
+      document.removeEventListener('touchstart', markNexusInteraction, { capture: true })
       void disposeScreenOcrWorker()
     }
   }, [])
+
+  const withCompanionAwareness = useCallback((contentSnapshot: DesktopContextSnapshot | null): DesktopContextSnapshot | null => {
+    if (!contentSnapshot) return null
+
+    const summary = buildQuietObservationSummary({
+      enabled: Boolean(settingsRef.current.contextAwarenessEnabled),
+      paused: !settingsRef.current.contextAwarenessEnabled
+        || settingsRef.current.companionAwarenessPaused,
+      nexusOpenSince: nexusOpenSinceRef.current,
+      lastNexusInteractionAt: lastNexusInteractionAtRef.current,
+      activeWindowTitle: contentSnapshot.activeWindowTitle,
+      uiLanguage: settingsRef.current.uiLanguage,
+    })
+    const companionAwarenessSummary = formatQuietObservationForPrompt(summary)
+
+    if (!companionAwarenessSummary) return contentSnapshot
+    saveRecentCompanionSummary(summary!)
+    return {
+      ...contentSnapshot,
+      companionAwarenessSummary,
+    }
+  }, [settingsRef])
 
   const loadDesktopContextSnapshot = useCallback(async (): Promise<DesktopContextSnapshot | null> => {
     const currentSettings = settingsRef.current
@@ -63,7 +103,8 @@ export function useDesktopContext({ settingsRef, platformProfileRef }: UseDeskto
         || !includeScreenshot
         || !snapshot.screenshotDataUrl
       ) {
-        return stripDesktopContextScreenshotPayload(snapshot)
+        const strippedSnapshot = stripDesktopContextScreenshotPayload(snapshot)
+        return withCompanionAwareness(strippedSnapshot)
       }
 
       let enrichedSnapshot = snapshot
@@ -110,11 +151,12 @@ export function useDesktopContext({ settingsRef, platformProfileRef }: UseDeskto
         enrichedSnapshot = { ...enrichedSnapshot, vlmAnalysis }
       }
 
-      return stripDesktopContextScreenshotPayload(enrichedSnapshot)
+      const strippedEnrichedSnapshot = stripDesktopContextScreenshotPayload(enrichedSnapshot)
+      return withCompanionAwareness(strippedEnrichedSnapshot)
     } catch {
       return null
     }
-  }, [platformProfileRef, settingsRef])
+  }, [platformProfileRef, settingsRef, withCompanionAwareness])
 
   return {
     loadDesktopContextSnapshot,

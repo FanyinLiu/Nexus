@@ -10203,3 +10203,166 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   color: rgba(23, 32, 42, 0.7);
   -webkit-text-fill-color: rgba(23, 32, 42, 0.7);
 }
+
+/* Keep light settings readable over the companion panel artwork. */
+.settings-backdrop--day {
+  background: rgba(232, 238, 246, 0.82);
+  backdrop-filter: blur(22px) saturate(1.02);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) {
+  --settings-surface: rgba(255, 255, 255, 0.995);
+  --settings-surface-strong: #ffffff;
+  --settings-surface-soft: rgba(246, 248, 252, 0.96);
+  --text-h: rgba(23, 32, 42, 0.88);
+  --text-soft: rgba(23, 32, 42, 0.64);
+  background: #fbfcfe;
+  box-shadow:
+    0 26px 74px rgba(30, 42, 58, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.settings-drawer--warm-day {
+  --settings-surface: rgba(255, 252, 247, 0.995);
+  --settings-surface-strong: #fffdf9;
+  --settings-surface-soft: rgba(248, 241, 232, 0.96);
+  --text-h: rgba(36, 27, 22, 0.9);
+  --text-soft: rgba(78, 64, 54, 0.66);
+  background: #fffaf3;
+}
+
+.settings-drawer--day .settings-drawer__actions,
+.settings-drawer--warm-day .settings-drawer__actions {
+  margin: 0 -2px;
+  padding: 10px 2px 0;
+  border-top: 1px solid var(--settings-border);
+  background:
+    linear-gradient(to bottom, color-mix(in srgb, var(--settings-surface) 72%, transparent), var(--settings-surface) 32%),
+    var(--settings-surface);
+  box-shadow: 0 -14px 22px color-mix(in srgb, var(--settings-surface) 76%, transparent);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-memory-transparency__card strong {
+  color: rgba(23, 32, 42, 0.88);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.88);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-memory-transparency__card span {
+  color: rgba(23, 32, 42, 0.64);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.64);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-mini-group__head span {
+  color: rgba(23, 32, 42, 0.66);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.66);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-toggle > span {
+  color: rgba(23, 32, 42, 0.82);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.82);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-toggle:has(input:disabled) > span {
+  color: rgba(23, 32, 42, 0.46);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.46);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='window'] .settings-control-card > .settings-toggle > span,
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='window'] .settings-window-section .settings-control-card > .settings-toggle > span {
+  color: rgba(23, 32, 42, 0.82);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.82);
+}
+
+.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='window'] .settings-window-section .settings-control-card > p {
+  color: rgba(23, 32, 42, 0.66);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.66);
+}
+
+.settings-drawer--warm-day .settings-memory-transparency__card strong {
+  color: rgba(36, 27, 22, 0.9);
+  -webkit-text-fill-color: rgba(36, 27, 22, 0.9);
+}
+
+.settings-drawer--warm-day .settings-memory-transparency__card span {
+  color: rgba(78, 64, 54, 0.66);
+  -webkit-text-fill-color: rgba(78, 64, 54, 0.66);
+}
+
+.settings-drawer--warm-day .settings-page[data-section] .settings-mini-group__head span {
+  color: rgba(78, 64, 54, 0.66);
+  -webkit-text-fill-color: rgba(78, 64, 54, 0.66);
+}
+
+.settings-drawer--warm-day .settings-page[data-section] .settings-toggle > span {
+  color: rgba(36, 27, 22, 0.82);
+  -webkit-text-fill-color: rgba(36, 27, 22, 0.82);
+}
+
+.settings-drawer--warm-day .settings-page[data-section] .settings-toggle:has(input:disabled) > span {
+  color: rgba(78, 64, 54, 0.48);
+  -webkit-text-fill-color: rgba(78, 64, 54, 0.48);
+}
+
+.settings-drawer--warm-day .settings-page[data-section='window'] .settings-control-card > .settings-toggle > span,
+.settings-drawer--warm-day .settings-page[data-section='window'] .settings-window-section .settings-control-card > .settings-toggle > span {
+  color: rgba(36, 27, 22, 0.82);
+  -webkit-text-fill-color: rgba(36, 27, 22, 0.82);
+}
+
+.settings-drawer--warm-day .settings-page[data-section='window'] .settings-window-section .settings-control-card > p {
+  color: rgba(78, 64, 54, 0.66);
+  -webkit-text-fill-color: rgba(78, 64, 54, 0.66);
+}
+
+.settings-drawer .settings-page[data-section] .settings-mini-group__head h5,
+.settings-drawer .settings-page[data-section] .settings-control-card > .settings-toggle > span,
+.settings-drawer .settings-page[data-section] .settings-window-section > .settings-control-grid > .settings-control-card:not(.settings-window-field):not(.settings-window-control) > .settings-toggle > span,
+.settings-drawer .settings-page[data-section] .settings-window-control > .settings-toggle > span,
+.settings-drawer .settings-page[data-section] .settings-voice-control > .settings-toggle > span,
+.settings-drawer .settings-page[data-section] .settings-voice-advanced-control > .settings-toggle > span,
+.settings-drawer .settings-page[data-section] .settings-tools-control > .settings-toggle > span,
+.settings-drawer .settings-page[data-section] .settings-memory-control > .settings-toggle > span,
+.settings-drawer .settings-page[data-section] .settings-autonomy-control > .settings-toggle > span,
+.settings-drawer .settings-page[data-section] .settings-model-advanced__control > .settings-toggle > span,
+.settings-drawer .settings-page[data-section] .settings-control-card > span,
+.settings-drawer .settings-page[data-section] .settings-chat-identity-field > label > span,
+.settings-drawer .settings-page[data-section] .settings-lorebook-field > span,
+.settings-drawer .settings-page[data-section] .settings-lorebook-priority > span,
+.settings-drawer .settings-page[data-section] .settings-speech-config-field > span,
+.settings-drawer .settings-page[data-section] .settings-tools-field > span,
+.settings-drawer .settings-page[data-section] .settings-memory-field > span,
+.settings-drawer .settings-page[data-section] .settings-memory-field > label > span,
+.settings-drawer .settings-page[data-section] .settings-autonomy-field > span,
+.settings-drawer .settings-page[data-section] .settings-autonomy-field > label > span,
+.settings-drawer .settings-page[data-section] .settings-window-field > span,
+.settings-drawer .settings-page[data-section] .settings-window-field > label > span,
+.settings-drawer .settings-page[data-section] .settings-voice-field > span,
+.settings-drawer .settings-page[data-section] .settings-model-detail-fields > label > span,
+.settings-drawer .settings-page[data-section] .settings-model-advanced__field > span {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.settings-drawer .settings-page[data-section] .settings-mini-group__head span,
+.settings-drawer .settings-page[data-section] .settings-section__note,
+.settings-drawer .settings-page[data-section] .settings-drawer__hint,
+.settings-drawer .settings-page[data-section] .settings-control-card > p,
+.settings-drawer .settings-page[data-section] .settings-control-card > small,
+.settings-drawer .settings-page[data-section] .settings-memory-transparency__card span,
+.settings-drawer .settings-page[data-section] .settings-section p:not([class]) {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settings-drawer .settings-page[data-section] .settings-memory-context-status-grid {
+  gap: 6px;
+}
+
+.settings-drawer .settings-page[data-section] .settings-memory-context-status {
+  gap: 4px;
+  padding: 7px 10px;
+}
+
+.settings-drawer .settings-page[data-section] .settings-memory-context-status p {
+  line-height: 1.4;
+}

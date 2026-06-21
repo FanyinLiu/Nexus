@@ -21,6 +21,7 @@ export const STORAGE_KEY_CONTRACTS = [
   { constant: 'DEBUG_CONSOLE_EVENTS_STORAGE_KEY', key: 'nexus:debug-console-events', domain: 'debug', classification: 'debug', authority: 'renderer-localStorage', migration: 'do-not-migrate' },
   { constant: 'AUTONOMY_DREAM_LOG_STORAGE_KEY', key: 'nexus:autonomy:dream-log', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'AUTONOMY_CONTEXT_TRIGGERS_STORAGE_KEY', key: 'nexus:autonomy:context-triggers', domain: 'companion-rhythm', classification: 'settings', authority: 'renderer-localStorage', migration: 'keep-renderer-cache' },
+  { constant: 'COMPANION_SUMMARY_STORAGE_KEY', key: 'nexus:companion-awareness:recent-summary', domain: 'companion-awareness', classification: 'ephemeral', authority: 'renderer-localStorage', migration: 'do-not-migrate' },
   { constant: 'AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY', key: 'nexus:autonomy:notification-messages', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'AUTONOMY_GOALS_STORAGE_KEY', key: 'nexus:autonomy:goals', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'AUTONOMY_RELATIONSHIP_STORAGE_KEY', key: 'nexus:autonomy:relationship', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },

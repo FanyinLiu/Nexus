@@ -19,6 +19,11 @@ export type TranslationKey =
   | 'common.cancel'
   | 'common.close'
   | 'common.none'
+  | 'companion_awareness.elapsed.just_started'
+  | 'companion_awareness.elapsed.a_while'
+  | 'companion_awareness.elapsed.about_half_hour'
+  | 'companion_awareness.elapsed.about_hour'
+  | 'companion_awareness.elapsed.two_hours_or_more'
   // humanizeError() friendly-message keys. Mapped from raw runtime errors
   // to companion-voice copy in src/lib/humanizeError.ts.
   | 'humanize.auth_failed'

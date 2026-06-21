@@ -1,8 +1,13 @@
-import { memo } from 'react'
+import { memo, useEffect, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { MemoryPanel } from '../../features/memory/components'
 import { MEMORY_EMBEDDING_MODEL_OPTIONS, SCREEN_VLM_MODEL_OPTIONS } from '../../features/memory/constants'
 import { resolveMemoryTransparencySummary } from '../../features/memory/memorySettingsView'
+import {
+  clearRecentCompanionSummary,
+  loadRecentCompanionSummary,
+  recentCompanionSummaryToQuietObservation,
+} from '../../features/context'
 import type { ChatMemoryTraceFocusTarget } from '../../features/memory/traceDetails.ts'
 import {
   getPlatformDependencyHint,
@@ -87,6 +92,19 @@ export const MemorySection = memo(function MemorySection({
   onUpdateDailyEntry,
   onRemoveDailyEntry,
 }: MemorySectionProps) {
+  const [recentCompanionSummary, setRecentCompanionSummary] = useState(() => loadRecentCompanionSummary())
+  useEffect(() => {
+    if (draft.contextAwarenessEnabled && !draft.companionAwarenessPaused) return
+    clearRecentCompanionSummary()
+  }, [draft.companionAwarenessPaused, draft.contextAwarenessEnabled])
+
+  const effectiveRecentCompanionSummary = draft.contextAwarenessEnabled && !draft.companionAwarenessPaused
+    ? recentCompanionSummary
+    : null
+  const clearCompanionSummaryState = () => {
+    clearRecentCompanionSummary()
+    setRecentCompanionSummary(null)
+  }
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const tiParam = (
     key: Parameters<typeof pickTranslatedUiText>[1],
@@ -122,12 +140,66 @@ export const MemorySection = memo(function MemorySection({
     platformProfile.desktopContext.screenshotAvailable,
     platformProfile.desktopContext.screenshotDependencyHint,
   ))
+  const resolveContextStatusLabel = (available: boolean, enabled: boolean) => {
+    if (!available) return ti('settings.memory.context.status_unavailable')
+    if (enabled) return ti('settings.memory.context.status_enabled')
+    if (draft.contextAwarenessEnabled) return ti('settings.memory.context.status_ready')
+    return ti('settings.memory.context.status_off')
+  }
+  const contextStatusItems = [
+    {
+      id: 'companion-continuity',
+      label: ti('settings.memory.context.companion_awareness'),
+      status: draft.contextAwarenessEnabled && !draft.companionAwarenessPaused
+        ? ti('settings.memory.context.status_enabled')
+        : draft.contextAwarenessEnabled
+          ? ti('settings.memory.context.status_paused')
+          : ti('settings.memory.context.status_off'),
+      hint: ti('settings.memory.context.companion_awareness_hint'),
+      active: draft.contextAwarenessEnabled && !draft.companionAwarenessPaused,
+      available: contextAwarenessAvailable,
+    },
+    {
+      id: 'active-window',
+      label: ti('settings.memory.context.active_window'),
+      status: resolveContextStatusLabel(
+        activeWindowContextAvailable,
+        draft.contextAwarenessEnabled && draft.activeWindowContextEnabled && activeWindowContextAvailable,
+      ),
+      hint: activeWindowPlatformHint ?? ti('settings.memory.context.active_window_hint'),
+      active: draft.contextAwarenessEnabled && draft.activeWindowContextEnabled && activeWindowContextAvailable,
+      available: activeWindowContextAvailable,
+    },
+    {
+      id: 'clipboard',
+      label: ti('settings.memory.context.clipboard'),
+      status: resolveContextStatusLabel(
+        clipboardContextAvailable,
+        draft.contextAwarenessEnabled && draft.clipboardContextEnabled && clipboardContextAvailable,
+      ),
+      hint: clipboardPlatformHint ?? ti('settings.memory.context.clipboard_hint'),
+      active: draft.contextAwarenessEnabled && draft.clipboardContextEnabled && clipboardContextAvailable,
+      available: clipboardContextAvailable,
+    },
+    {
+      id: 'screen-ocr',
+      label: ti('settings.memory.context.screen_ocr'),
+      status: resolveContextStatusLabel(
+        screenContextAvailable,
+        draft.contextAwarenessEnabled && draft.screenContextEnabled && screenContextAvailable,
+      ),
+      hint: screenPlatformHint ?? ti('settings.memory.context.screen_ocr_hint'),
+      active: draft.contextAwarenessEnabled && draft.screenContextEnabled && screenContextAvailable,
+      available: screenContextAvailable,
+    },
+  ]
   const selectedMemoryEmbeddingModel = MEMORY_EMBEDDING_MODEL_OPTIONS.find((option) => (
     option.value === draft.memoryEmbeddingModel
   ))
   const memoryTransparencySummary = resolveMemoryTransparencySummary({
     activeWindowContextEnabled: draft.activeWindowContextEnabled,
     clipboardContextEnabled: draft.clipboardContextEnabled,
+    companionAwarenessPaused: draft.companionAwarenessPaused,
     contextAwarenessEnabled: draft.contextAwarenessEnabled,
     dailyEntries: dailyMemoryEntries,
     memories,
@@ -137,7 +209,22 @@ export const MemorySection = memo(function MemorySection({
     memorySemanticRecallCount: draft.memorySemanticRecallCount,
     screenContextEnabled: draft.screenContextEnabled,
     searchMode: draft.memorySearchMode,
+    companionSummary: recentCompanionSummaryToQuietObservation(effectiveRecentCompanionSummary),
   })
+  const companionTransparency = memoryTransparencySummary.companionAwareness
+  const companionTransparencyStatusText = (() => {
+    switch (companionTransparency.status) {
+      case 'paused':
+        return ti('settings.memory.context.transparency_status_paused')
+      case 'watching_for_away_activity':
+        return ti('settings.memory.context.transparency_status_waiting')
+      case 'summarizing_quietly':
+        return ti('settings.memory.context.transparency_status_summarizing')
+      case 'off':
+      default:
+        return ti('settings.memory.context.transparency_status_off')
+    }
+  })()
 
   return (
     <section className={`settings-section settings-memory-section ${active ? 'is-active' : 'is-hidden'}`}>
@@ -198,14 +285,82 @@ export const MemorySection = memo(function MemorySection({
           <span>{ti('settings.memory.context.note')}</span>
         </div>
 
+        <div className="settings-memory-context-status-grid">
+          {contextStatusItems.map((item) => (
+            <div
+              key={item.id}
+              className={
+                'settings-control-card settings-memory-context-status'
+                + (item.active ? ' is-active' : '')
+                + (!item.available ? ' is-unavailable' : '')
+              }
+            >
+              <div className="settings-memory-context-status__head">
+                <strong>{item.label}</strong>
+                <span>{item.status}</span>
+              </div>
+              <p>{item.hint}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="settings-mini-group__note settings-memory-note">
+          {ti('settings.memory.context.privacy_note')}
+        </p>
+
+        <div className="settings-control-card settings-memory-context-transparency">
+          <div className="settings-memory-context-status__head">
+            <strong>{ti('settings.memory.context.transparency_title')}</strong>
+            <span>{companionTransparencyStatusText}</span>
+          </div>
+          <p>{ti('settings.memory.context.transparency_observes')}</p>
+          <p>{ti('settings.memory.context.transparency_model')}</p>
+          <p>{ti('settings.memory.context.transparency_storage')}</p>
+          <div className="settings-action-row settings-memory-context-actions">
+            <button
+              type="button"
+              className="ghost-button"
+              disabled={!companionTransparency.canClearRecentSummary}
+              title={ti('settings.memory.context.clear_recent_summary')}
+              onClick={() => {
+                clearRecentCompanionSummary()
+                setRecentCompanionSummary(null)
+              }}
+            >
+              {ti('settings.memory.context.clear_recent_summary')}
+            </button>
+          </div>
+        </div>
+
         <div className="settings-control-card settings-memory-control">
-          <ToggleField
-            label={ti('settings.memory.context.enable')}
-            field="contextAwarenessEnabled"
-            disabled={!contextAwarenessAvailable}
-            draft={draft}
-            setDraft={setDraft}
-          />
+          <label className="settings-toggle">
+            <span>{ti('settings.memory.context.enable')}</span>
+            <input
+              type="checkbox"
+              checked={draft.contextAwarenessEnabled}
+              disabled={!contextAwarenessAvailable}
+              onChange={(event) => {
+                const enabled = event.target.checked
+                if (!enabled) clearCompanionSummaryState()
+                setDraft((prev) => ({ ...prev, contextAwarenessEnabled: enabled }))
+              }}
+            />
+          </label>
+        </div>
+        <div className="settings-control-card settings-memory-control">
+          <label className="settings-toggle">
+            <span>{ti('settings.memory.context.companion_pause')}</span>
+            <input
+              type="checkbox"
+              checked={draft.companionAwarenessPaused}
+              disabled={!draft.contextAwarenessEnabled}
+              onChange={(event) => {
+                const paused = event.target.checked
+                if (paused) clearCompanionSummaryState()
+                setDraft((prev) => ({ ...prev, companionAwarenessPaused: paused }))
+              }}
+            />
+          </label>
         </div>
         <div className="settings-control-card settings-memory-control">
           <ToggleField

@@ -1,0 +1,91 @@
+name: 🧪 Model Config Recipe
+description: Share a working LLM / STT / TTS setup recipe for Nexus.
+title: "[Model Recipe]: "
+labels: ["community", "provider", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share reproducible configuration, not secrets. Never paste API keys, tokens, account IDs, or private endpoints.
+
+  - type: dropdown
+    id: recipe-type
+    attributes:
+      label: Recipe type
+      multiple: true
+      options:
+        - LLM
+        - STT
+        - TTS
+        - Embeddings
+        - Local model
+        - OpenAI-compatible endpoint
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: setup
+    attributes:
+      label: Setup
+      description: Include provider, model, base URL shape, local services, and Nexus settings.
+      placeholder: |
+        Provider:
+        Model:
+        Base URL shape:
+        Local services:
+        Nexus settings:
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Install Ollama
+        2. Pull qwen3:8b
+        3. Set Nexus base URL to http://127.0.0.1:11434/v1
+        4. Run connection test
+    validations:
+      required: true
+
+  - type: textarea
+    id: failures
+    attributes:
+      label: Common failures and fixes
+      placeholder: |
+        Error:
+        Cause:
+        Fix:
+
+  - type: textarea
+    id: cost
+    attributes:
+      label: Cost, rate limit, or offline notes
+      placeholder: "Fully local after model download; no API cost."
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Tested operating system
+      multiple: true
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I removed all API keys, tokens, account IDs, and private endpoints
+          required: true
+        - label: I tested this recipe in Nexus or clearly marked it as untested
+          required: true

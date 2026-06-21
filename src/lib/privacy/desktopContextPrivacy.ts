@@ -44,6 +44,7 @@ export function sanitizeDesktopContextSnapshotForPrompt(
     'activeWindowTitle',
     'activeWindowAppName',
     'activeWindowProcessPath',
+    'companionAwarenessSummary',
     'clipboardText',
     'screenText',
     'vlmAnalysis',

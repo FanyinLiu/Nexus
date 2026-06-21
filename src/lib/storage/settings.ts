@@ -118,6 +118,7 @@ const defaultSettings: AppSettings = {
   autoSkillGenerationEnabled: false,
   lorebookRewriteQueryEnabled: false,
   contextAwarenessEnabled: false,
+  companionAwarenessPaused: false,
   activeWindowContextEnabled: false,
   clipboardContextEnabled: false,
   screenContextEnabled: false,

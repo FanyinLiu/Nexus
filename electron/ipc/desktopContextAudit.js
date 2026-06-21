@@ -43,6 +43,10 @@ export function summarizeDesktopContextSnapshot(snapshot = {}) {
       appNameLength: textLength(snapshot?.activeWindowAppName),
       processPathLength: textLength(snapshot?.activeWindowProcessPath),
     },
+    companionAwareness: {
+      present: hasText(snapshot?.companionAwarenessSummary),
+      textLength: textLength(snapshot?.companionAwarenessSummary),
+    },
     clipboard: {
       present: hasText(snapshot?.clipboardText),
       textLength: textLength(snapshot?.clipboardText),

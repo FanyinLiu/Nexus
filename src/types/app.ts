@@ -275,6 +275,7 @@ export interface MemorySettings {
 
 export interface ContextSettings {
   contextAwarenessEnabled: boolean
+  companionAwarenessPaused: boolean
   activeWindowContextEnabled: boolean
   clipboardContextEnabled: boolean
   screenContextEnabled: boolean

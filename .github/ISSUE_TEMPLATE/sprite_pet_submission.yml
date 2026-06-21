@@ -1,0 +1,79 @@
+name: 🎨 Sprite Pet / Avatar Submission
+description: Submit or discuss a Nexus sprite pet, avatar, or pet package.
+title: "[Pet]: "
+labels: ["community", "pet", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please read docs/ADDING_SPRITE_PET.md before submitting. Nexus can support user-selected community pets, but bundled assets need explicit redistribution permission.
+
+  - type: input
+    id: pet-name
+    attributes:
+      label: Pet or avatar name
+      placeholder: "Pixel Coder"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package-type
+    attributes:
+      label: Package type
+      options:
+        - Codex-compatible sprite pet package
+        - Nexus bundled pet proposal
+        - Avatar concept / WIP
+        - Import bug for an existing community pet
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: preview
+    attributes:
+      label: Preview
+      description: Add screenshots, a short clip, or a link to the package preview.
+      placeholder: "Drag images or paste links here."
+    validations:
+      required: true
+
+  - type: textarea
+    id: package
+    attributes:
+      label: Package details
+      description: Include ZIP URL, pet.json notes, atlas size, and which motion rows were tested.
+      placeholder: |
+        ZIP:
+        pet.json:
+        Atlas:
+        Tested states:
+    validations:
+      required: true
+
+  - type: textarea
+    id: source-license
+    attributes:
+      label: Source and license
+      description: Explain whether the art is original, generated, commissioned, or third-party.
+      placeholder: "Original art by me; permission granted to include in Nexus under MIT-compatible terms."
+    validations:
+      required: true
+
+  - type: textarea
+    id: issues
+    attributes:
+      label: Known issues or review notes
+      placeholder: "The waving row feels too fast; failed row needs redraw."
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I read docs/ADDING_SPRITE_PET.md
+          required: true
+        - label: I included source and license information
+          required: true
+        - label: This submission does not copy private app assets or unlicensed community art
+          required: true

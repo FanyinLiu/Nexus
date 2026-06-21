@@ -24,15 +24,21 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **目前版本：** v0.3.5 穩定版。Nexus 會繼續收斂到「本地優先的桌面陪伴」；此版本重點是首次啟動修復、發布信任、IPC 安全，以及聊天記憶的本地可控遷移預演。
+> **目前版本：** v0.4.0-beta.1。Nexus 進入桌面陪伴感知 beta：打開後即使使用者去電腦別處工作，也能安靜理解時間流逝，並把隱私邊界放在設定裡。
 
 > **開發範圍提示：** 這份多語 README 保留的是長期能力清單。當前短期開發以根目錄 [README](../README.md) 和 [Nexus 升級整合計畫](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 為準：Phase 1 只收斂桌面常駐小視窗、極簡頭像、Ollama / DeepSeek 文字模型和簡單對話。
 
 ---
 
-## 本次更新 — v0.3.5
+## 本次更新 — v0.4.0-beta.1
 
-> **記憶看得見，夥伴也動起來。** 這版不把 Nexus 做成替你工作的 Codex 式智能體，而是讓陪伴記憶更透明，並讓桌面夥伴的待機、思考、聆聽、說話、等待、錯誤和離線狀態可以直接預覽。首次啟動、發布信任、IPC、密鑰和聊天記憶遷移預演仍然是底層信任工作；現有聊天仍以 localStorage 為權威來源，不會被刪除。完整說明見 [RELEASE-NOTES-v0.3.5.md](RELEASE-NOTES-v0.3.5.md)（英文）。
+> **桌面陪伴感知開始。** 此 beta 開始建立「打開 Nexus 後，它能安靜理解時間流逝」的循環。完整說明見 [RELEASE-NOTES-v0.4.0-beta.1.md](RELEASE-NOTES-v0.4.0-beta.1.md)（英文）。
+
+Nexus 會保持低頻、保守、可暫停，只形成短期粗粒度的陪伴摘要。它使用「一會兒」「半小時左右」「一小時左右」這類粗略時間，不把原始截圖、完整剪貼簿、私人訊息或精確計時送進模型。0.5 才會做桌寵跟隨滑鼠、打字反應和視窗互動。
+
+## 上次更新 — v0.3.6
+
+> **0.3 的地基收尾。** 這版不把 Nexus 做成替你工作的 Codex 式智能體，也不把 0.4 的桌面陪伴感知提前塞進來；它把安全、記憶、設定和桌面感知入口收清楚。完整說明見 [RELEASE-NOTES-v0.3.6.md](RELEASE-NOTES-v0.3.6.md)（英文）。
 
 ## 本次更新 — v0.3.4-beta.4（預發布）
 
@@ -72,6 +78,9 @@
 | 從原始碼執行 | [快速開始](#快速開始) |
 | 配置模型 | [推薦模型配置](#推薦模型配置) · [支援的供應商](#支援的供應商) |
 | 查看安全與隱私 | [安全與援助](#安全與援助) |
+| 參與社群內容 | [社群](#社群) · [Community Guide](COMMUNITY.md) |
+| 理解 0.4 方向 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
+| 驗證 0.4 beta | [v0.4.0-beta.1 Release Notes](RELEASE-NOTES-v0.4.0-beta.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## 為什麼是 Nexus？
 
@@ -332,6 +341,8 @@ npm run package:win     # 或 package:mac / package:linux
 ## 社群
 
 Nexus 目前由個人維護，issue 和 PR 的處理速度取決於分流是否精準：
+
+社群文件會貫穿所有版本，不只屬於某一次發布。0.3 收安全、記憶和設定地基；0.4 進入桌面陪伴感知；0.5 進入桌寵桌面行為。長期入口見 [Community Guide](COMMUNITY.md)，0.4 方向見 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 beta 說明見 [v0.4.0-beta.1 Release Notes](RELEASE-NOTES-v0.4.0-beta.1.md)，發布前加固清單見 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
 
 - 🐛 **發現 Bug？** → [Bug 回報](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **有明確的功能想法？** → [功能請求](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

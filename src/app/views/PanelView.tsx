@@ -714,7 +714,7 @@ export function PanelView({
               </div>
             </div>
 
-            {notificationBridge ? (
+            {notificationBridge && hasUnreadNotifications ? (
               <section className="panel-notification-summary" aria-live="polite">
                 <div className="panel-notification-summary__header">
                   <div>

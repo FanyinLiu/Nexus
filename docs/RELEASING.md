@@ -162,6 +162,38 @@ This does not replace `npm run verify:release` or packaged smoke; it is the
 fast M1 gate for doctor JSON privacy, model preflight, onboarding repair,
 first-conversation timing, startup reports, and locale coverage.
 
+## v0.4 desktop companion awareness gate
+
+When preparing a v0.4 beta or stable release, also use
+[Nexus v0.4 Release Hardening Handoff](RELEASE-CANDIDATE-v0.4-HARDENING.md).
+This is required for the desktop companion awareness line because it introduces
+quiet observation, rough time language, check-in policy, and user-facing
+transparency.
+
+Before tagging a v0.4 release, confirm the v0.4 handoff records:
+
+- `npm run verify:release`
+- `npm run package:dir:smoke`
+- `npm run desktop-context-privacy:audit`
+- `npm run message-privacy:audit`
+- `npm run error-redaction:audit`
+- `npm run ipc:audit`
+- `npm run distribution:audit`
+
+Also confirm the human-facing beta path is ready:
+
+- `docs/RELEASE-NOTES-v0.4.0-beta.1.md` explains that desktop companion
+  awareness is beginning.
+- The GitHub **Beta Validation Report** template asks about timing, tone,
+  interruption feel, privacy boundaries, OS permission friction, and false
+  positives.
+- Community docs link the v0.4 plan, beta notes, and hardening handoff.
+
+The v0.4 release is not ready if raw screenshots, OCR dumps, full clipboard
+contents, private message bodies, private file paths, exact second-level
+timers, or hidden activity logs can reach model prompts, logs, localStorage, or
+support reports.
+
 ---
 
 ## Flow
