@@ -89,7 +89,11 @@ function App() {
         settingsDrawer={settingsDrawer}
         onboardingGuide={onboardingGuide}
       />
-      <ModelSetupOverlay />
+      <ModelSetupOverlay
+        settings={controller.panelView.settings}
+        onOpenOnboardingGuide={controller.overlays.openOnboardingGuide}
+        onTestTextConnection={controller.overlays.onboardingGuideProps.onTestTextConnection}
+      />
     </AppErrorBoundary>
   )
 }

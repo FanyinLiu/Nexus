@@ -61,7 +61,7 @@
 
 ### 任务
 - [x] 增加「区域模板」选择（国内 / 国外 / 本地）——onboarding 与设置页 ModelSection 共用区域 tab 契约，设置页品牌网格支持跨区 brand 路由并保留当前选择可见。
-- [ ] `ModelSetup` 增加“连通性+鉴权”一键校验（模型可达、key 语法、模型名存在）。
+- [x] `ModelSetup` 增加“连通性+鉴权”一键校验（模型可达、key 语法、模型名存在）——首次模型设置面板复用文本连接预检并接入真实连接测试入口。
 - [ ] 输出统一错误码映射（含中文 key、空格/换行导致 header 失效、模型不存在、限流等）。
 - [x] 把 MiniMax Token Plan / DeepSeek / OpenAI / Gemini / Claude 的最小配置模板接入向导默认值 ✅（随 Sprint 1.5 first-success 落地）
 

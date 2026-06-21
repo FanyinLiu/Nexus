@@ -39,6 +39,9 @@
 - **Settings model region tabs hardening** — shared the text-provider region
   tab contract between onboarding and Settings, made the Settings brand grid
   region filtering testable, and removed render-time extra-key state syncing.
+- **Model setup text connection check** — added a first-run text-model
+  connection card that reuses preflight diagnostics, opens the model guide, and
+  runs the existing real connection test without exposing API keys.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now

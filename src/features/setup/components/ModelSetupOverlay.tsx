@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { ConnectionResult } from '../../../components/settingsDrawerSupport.ts'
 import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap'
 import { useTranslation } from '../../../i18n/useTranslation.ts'
 import { humanizeError } from '../../../lib/humanizeError.ts'
+import type { AppSettings } from '../../../types/app.ts'
 import {
   MODEL_SETUP_DISMISSED_STORAGE_KEY,
+  buildTextModelSetupSnapshot,
   getModelProgressPercent,
   isModelProgressActive,
   isModelProgressComplete,
@@ -19,6 +22,9 @@ import {
 type Props = {
   /** Hide the overlay even when inventory is incomplete — used while the pet view is active. */
   suppressed?: boolean
+  settings?: AppSettings
+  onOpenOnboardingGuide?: () => void
+  onTestTextConnection?: (settings: AppSettings) => Promise<ConnectionResult>
 }
 
 function formatBytes(bytes: number): string {
@@ -29,11 +35,21 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
-export function ModelSetupOverlay({ suppressed = false }: Props) {
+export function ModelSetupOverlay({
+  suppressed = false,
+  settings,
+  onOpenOnboardingGuide,
+  onTestTextConnection,
+}: Props) {
   const { t } = useTranslation()
   const [inventory, setInventory] = useState<Inventory | null>(null)
   const [progress, setProgress] = useState<Record<string, PerModelProgress>>({})
   const [busy, setBusy] = useState(false)
+  const [textConnectionBusy, setTextConnectionBusy] = useState(false)
+  const [textConnectionResult, setTextConnectionResult] = useState<{
+    key: string
+    result: ConnectionResult
+  } | null>(null)
   const [dismissed, setDismissed] = useState(() => {
     try { return sessionStorage.getItem(MODEL_SETUP_DISMISSED_STORAGE_KEY) === '1' } catch { return false }
   })
@@ -48,6 +64,31 @@ export function ModelSetupOverlay({ suppressed = false }: Props) {
 
   const dialogRef = useRef<HTMLElement | null>(null)
   const refreshInventoryRef = useRef<() => Promise<void>>(() => Promise.resolve())
+  const textModelSetup = useMemo(
+    () => settings ? buildTextModelSetupSnapshot(settings) : null,
+    [settings],
+  )
+
+  const textConnectionKey = settings
+    ? [
+        settings.apiProviderId,
+        settings.apiBaseUrl,
+        settings.model,
+        settings.apiKey ? 'key-present' : 'key-empty',
+      ].join('|')
+    : ''
+
+  const displayedTextConnection = textConnectionResult?.key === textConnectionKey
+    ? textConnectionResult.result
+    : null
+  const preflightTextConnection = !displayedTextConnection && textModelSetup?.message
+    ? {
+        ok: false,
+        message: textModelSetup.message,
+        recommendation: textModelSetup.recommendation,
+      }
+    : null
+  const activeTextConnection = displayedTextConnection ?? preflightTextConnection
 
   const refreshInventory = useCallback(async () => {
     try {
@@ -102,6 +143,26 @@ export function ModelSetupOverlay({ suppressed = false }: Props) {
       setErrorBanner(humanizeError(err, 'model'))
     }
   }, [refreshInventory])
+
+  const testTextConnection = useCallback(async () => {
+    if (!settings || !onTestTextConnection) return
+    setTextConnectionBusy(true)
+    setTextConnectionResult(null)
+    try {
+      const result = await onTestTextConnection(settings)
+      setTextConnectionResult({ key: textConnectionKey, result })
+    } catch (err) {
+      setTextConnectionResult({
+        key: textConnectionKey,
+        result: {
+          ok: false,
+          message: humanizeError(err, 'chat'),
+        },
+      })
+    } finally {
+      setTextConnectionBusy(false)
+    }
+  }, [onTestTextConnection, settings, textConnectionKey])
 
   const handleDismiss = useCallback(() => {
     try { sessionStorage.setItem(MODEL_SETUP_DISMISSED_STORAGE_KEY, '1') } catch { /* no session storage (sandboxed) */ }
@@ -254,6 +315,58 @@ export function ModelSetupOverlay({ suppressed = false }: Props) {
           {errorBanner ? (
             <div className="model-setup__error" role="alert" aria-live="assertive" aria-atomic="true">
               {errorBanner}
+            </div>
+          ) : null}
+
+          {textModelSetup ? (
+            <div
+              className={`model-setup__text-check${activeTextConnection?.ok ? ' is-ok' : activeTextConnection ? ' is-warning' : ''}`}
+            >
+              <div className="model-setup__text-check-main">
+                <strong>{t('model_setup.text_check_title')}</strong>
+                <p>
+                  {t('model_setup.text_check_current', {
+                    provider: textModelSetup.providerLabel,
+                    model: textModelSetup.modelLabel,
+                  })}
+                </p>
+                {activeTextConnection ? (
+                  <div
+                    className={`model-setup__text-check-status${activeTextConnection.ok ? ' is-ok' : ' is-warning'}`}
+                    role={activeTextConnection.ok ? 'status' : 'alert'}
+                    aria-live={activeTextConnection.ok ? 'polite' : 'assertive'}
+                  >
+                    {activeTextConnection.message}
+                    {activeTextConnection.recommendation ? (
+                      <span>{activeTextConnection.recommendation}</span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="model-setup__text-check-status" role="status" aria-live="polite">
+                    {t('model_setup.text_check_ready')}
+                  </div>
+                )}
+              </div>
+              <div className="model-setup__text-check-actions">
+                <button
+                  type="button"
+                  className="model-setup__inline-btn"
+                  onClick={testTextConnection}
+                  disabled={textConnectionBusy || !onTestTextConnection}
+                >
+                  {textConnectionBusy ? t('model_setup.text_check_testing') : t('model_setup.text_check_action')}
+                </button>
+                {onOpenOnboardingGuide ? (
+                  <button
+                    type="button"
+                    className="model-setup__inline-btn model-setup__inline-btn--secondary"
+                    onClick={onOpenOnboardingGuide}
+                    disabled={textConnectionBusy}
+                  >
+                    {t('model_setup.text_check_open_guide')}
+                  </button>
+                ) : null}
+              </div>
             </div>
           ) : null}
 

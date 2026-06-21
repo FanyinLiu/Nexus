@@ -1,3 +1,7 @@
+import { runTextConnectionTestPreflight } from '../models/connectionPreflight.ts'
+import { getApiProviderPreset } from '../models/providerCatalog.ts'
+import type { AppSettings } from '../../types/app.ts'
+
 export type ModelEntry = {
   id: string
   label: string
@@ -32,6 +36,14 @@ export type PerModelProgress = {
   total: number
   fileName?: string
   message?: string
+}
+
+export type TextModelSetupSnapshot = {
+  providerLabel: string
+  modelLabel: string
+  status: 'needs_attention' | 'ready_to_test'
+  message: string | null
+  recommendation?: string
 }
 
 export const MODEL_SETUP_DISMISSED_STORAGE_KEY = 'nexus.modelSetup.dismissedUntilRestart'
@@ -135,4 +147,26 @@ export function shouldShowModelSetupOverlay({
   inventoryReady: boolean | undefined
 }): boolean {
   return !suppressed && !dismissed && inventoryReady === false
+}
+
+export function buildTextModelSetupSnapshot(settings: Pick<
+  AppSettings,
+  'apiProviderId' | 'apiKey' | 'apiBaseUrl' | 'model' | 'uiLanguage'
+>): TextModelSetupSnapshot {
+  const preset = getApiProviderPreset(settings.apiProviderId)
+  const preflight = runTextConnectionTestPreflight({
+    providerId: settings.apiProviderId,
+    apiKey: settings.apiKey,
+    apiBaseUrl: settings.apiBaseUrl,
+    model: settings.model,
+    uiLanguage: settings.uiLanguage,
+  })
+
+  return {
+    providerLabel: preset.label,
+    modelLabel: settings.model.trim() || preset.defaultModel || '—',
+    status: preflight ? 'needs_attention' : 'ready_to_test',
+    message: preflight?.message ?? null,
+    recommendation: preflight?.recommendation,
+  }
 }
