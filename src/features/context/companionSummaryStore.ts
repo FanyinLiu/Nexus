@@ -1,9 +1,10 @@
 import type { ActivityClass } from './activityClassification.ts'
+import type { QuietObservationSummary } from './companionAwareness.ts'
 import {
+  COMPANION_ELAPSED_BUCKETS,
   containsPreciseCompanionTimeLanguage,
   type CompanionElapsedBucket,
-  type QuietObservationSummary,
-} from './companionAwareness.ts'
+} from './companionTimeLanguage.ts'
 
 export const COMPANION_SUMMARY_STORAGE_KEY = 'nexus:companion-awareness:recent-summary'
 const COMPANION_SUMMARY_SESSION_KEY = 'nexus:companion-awareness:session-id'
@@ -29,14 +30,6 @@ const ACTIVITY_CLASSES: ActivityClass[] = [
   'communication',
   'documents',
   'unknown',
-]
-
-const ELAPSED_BUCKETS: CompanionElapsedBucket[] = [
-  'just_started',
-  'a_while',
-  'about_half_hour',
-  'about_hour',
-  'two_hours_or_more',
 ]
 
 function getStorage(): Storage | null {
@@ -111,7 +104,7 @@ function normalizeRecentCompanionSummary(value: unknown): RecentCompanionSummary
   if (!sessionId) return null
   if (!lifecycleId) return null
   if (!candidate.savedAt || Number.isNaN(Date.parse(candidate.savedAt))) return null
-  if (!candidate.elapsedBucket || !ELAPSED_BUCKETS.includes(candidate.elapsedBucket)) return null
+  if (!candidate.elapsedBucket || !COMPANION_ELAPSED_BUCKETS.includes(candidate.elapsedBucket)) return null
   if (!candidate.activityClass || !ACTIVITY_CLASSES.includes(candidate.activityClass)) return null
   const elapsedLabel = String(candidate.elapsedLabel ?? '').trim()
   if (!elapsedLabel) return null

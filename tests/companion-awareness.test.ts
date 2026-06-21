@@ -4,10 +4,13 @@ import { test } from 'node:test'
 import {
   bucketCompanionElapsedMs,
   buildQuietObservationSummary,
-  containsPreciseCompanionTimeLanguage,
-  formatCompanionElapsedBucket,
   formatQuietObservationForPrompt,
 } from '../src/features/context/companionAwareness.ts'
+import {
+  coerceCompanionElapsedLabel,
+  containsPreciseCompanionTimeLanguage,
+  formatCompanionElapsedBucket,
+} from '../src/features/context/companionTimeLanguage.ts'
 
 const now = '2026-06-21T17:00:00.000Z'
 
@@ -51,6 +54,13 @@ test('containsPreciseCompanionTimeLanguage catches exact elapsed time leaks', ()
     '2026-06-21T17:00:00.000Z',
     '12min',
     '2 hours',
+    '90分钟',
+    '1小时30分钟',
+    '2个小时',
+    '1時間30分',
+    '2시간 10분',
+    'about 1 hour (60 min)',
+    '一小时左右 / 60min',
   ]) {
     assert.equal(containsPreciseCompanionTimeLanguage(unsafe), true, unsafe)
   }
@@ -62,9 +72,31 @@ test('containsPreciseCompanionTimeLanguage catches exact elapsed time leaks', ()
     '一小时左右',
     '二時間以上',
     '두 시간 이상',
+    '两小时以上',
+    '一會兒',
+    '반 시간 정도',
   ]) {
     assert.equal(containsPreciseCompanionTimeLanguage(safe), false, safe)
   }
+})
+
+test('coerceCompanionElapsedLabel falls back to localized bucket language for precise labels', () => {
+  assert.equal(
+    coerceCompanionElapsedLabel('about_half_hour', '1小时30分钟', 'zh-CN'),
+    '半小时左右',
+  )
+  assert.equal(
+    coerceCompanionElapsedLabel('about_hour', '1時間30分', 'ja'),
+    '一時間ほど',
+  )
+  assert.equal(
+    coerceCompanionElapsedLabel('two_hours_or_more', '2시간 10분', 'ko'),
+    '두 시간 이상',
+  )
+  assert.equal(
+    coerceCompanionElapsedLabel('a_while', 'about 1 hour (60 min)', 'en-US'),
+    'a little while',
+  )
 })
 
 test('buildQuietObservationSummary stays silent when disabled, paused, or too recent', () => {

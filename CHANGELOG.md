@@ -6,6 +6,18 @@
 
 ## [Unreleased]
 
+### Changed
+- **v0.4.1 coarse time language boundary** — moved companion elapsed-time
+  labels, precision-leak detection, and safe fallback formatting into a
+  dedicated context time-language layer while keeping the v0.4.0 observation
+  thresholds and trigger logic unchanged.
+
+### Fixed
+- **Localized exact-time leak detection** — desktop companion awareness now
+  rejects or downgrades Arabic-digit Chinese, Japanese, and Korean precise
+  duration strings such as `1小时30分钟`, `1時間30分`, and `2시간 10분` before they
+  can reach prompt, UI, or recent-summary display surfaces.
+
 ## [0.4.0] - 2026-06-21
 
 ### Added
