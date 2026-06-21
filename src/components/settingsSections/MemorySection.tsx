@@ -213,20 +213,7 @@ export const MemorySection = memo(function MemorySection({
     searchMode: draft.memorySearchMode,
     companionSummary: recentCompanionSummaryToQuietObservation(effectiveRecentCompanionSummary),
   })
-  const companionTransparency = memoryTransparencySummary.companionAwareness
-  const companionTransparencyStatusText = (() => {
-    switch (companionTransparency.status) {
-      case 'paused':
-        return ti('settings.memory.context.transparency_status_paused')
-      case 'watching_for_away_activity':
-        return ti('settings.memory.context.transparency_status_waiting')
-      case 'summarizing_quietly':
-        return ti('settings.memory.context.transparency_status_summarizing')
-      case 'off':
-      default:
-        return ti('settings.memory.context.transparency_status_off')
-    }
-  })()
+  const companionTransparencyView = memoryTransparencySummary.companionAwarenessView
 
   return (
     <section className={`settings-section settings-memory-section ${active ? 'is-active' : 'is-hidden'}`}>
@@ -313,20 +300,25 @@ export const MemorySection = memo(function MemorySection({
         <div className="settings-control-card settings-memory-context-transparency">
           <div className="settings-memory-context-status__head">
             <strong>{ti('settings.memory.context.transparency_title')}</strong>
-            <span>{companionTransparencyStatusText}</span>
+            <span>{ti(companionTransparencyView.statusLabelKey)}</span>
           </div>
-          <p>{ti('settings.memory.context.transparency_observes')}</p>
-          <p>{ti('settings.memory.context.transparency_model')}</p>
-          <p>{ti('settings.memory.context.transparency_storage')}</p>
+          <div className="settings-memory-context-transparency__rows">
+            {companionTransparencyView.detailRows.map((row) => (
+              <div key={row.id} className="settings-memory-context-transparency__row">
+                <strong>{ti(row.labelKey)}</strong>
+                <p>{ti(row.bodyKey)}</p>
+              </div>
+            ))}
+          </div>
           <div className="settings-action-row settings-memory-context-actions">
             <button
               type="button"
               className="ghost-button"
-              disabled={!companionTransparency.canClearRecentSummary}
-              title={ti('settings.memory.context.clear_recent_summary')}
+              disabled={!companionTransparencyView.clearRecentSummaryAction.enabled}
+              title={ti(companionTransparencyView.clearRecentSummaryAction.labelKey)}
               onClick={clearCompanionSummaryState}
             >
-              {ti('settings.memory.context.clear_recent_summary')}
+              {ti(companionTransparencyView.clearRecentSummaryAction.labelKey)}
             </button>
           </div>
         </div>

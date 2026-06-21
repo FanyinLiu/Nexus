@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { resolveCompanionTransparencySummary } from '../src/features/context/companionTransparency.ts'
+import {
+  assertCompanionTransparencyInvariant,
+  type CompanionTransparencyViewModel,
+  resolveCompanionTransparencySummary,
+  resolveCompanionTransparencyViewModel,
+} from '../src/features/context/companionTransparency.ts'
 import type { QuietObservationSummary } from '../src/features/context/companionAwareness.ts'
 
 const summary: QuietObservationSummary = {
@@ -23,10 +28,21 @@ test('resolveCompanionTransparencySummary reports off state without raw content 
 
   assert.equal(result.status, 'off')
   assert.equal(result.active, false)
+  assert.equal(result.summaryPresent, false)
+  assert.equal(result.modelReachBlockedReason, 'off')
+  assert.equal(result.clearUnavailableReason, 'off')
+  assert.equal(result.storageTtlKind, 'none')
   assert.deepEqual(result.observes, [])
   assert.deepEqual(result.stores, [])
   assert.deepEqual(result.reachesModel, [])
   assert.equal(result.rawContentVisible, false)
+
+  const view = resolveCompanionTransparencyViewModel(result)
+  assert.equal(view.statusLabelKey, 'settings.memory.context.transparency_status_off')
+  assert.equal(view.clearRecentSummaryAction.enabled, false)
+  assert.equal(view.clearRecentSummaryAction.unavailableReason, 'off')
+  assert.deepEqual(view.detailRows.map((row) => row.id), ['observes', 'reaches_model', 'stores'])
+  assert.equal(view.rawContentVisible, false)
 })
 
 test('resolveCompanionTransparencySummary shows waiting state before a quiet summary exists', () => {
@@ -38,10 +54,19 @@ test('resolveCompanionTransparencySummary shows waiting state before a quiet sum
   })
 
   assert.equal(result.status, 'watching_for_away_activity')
+  assert.equal(result.summaryPresent, false)
+  assert.equal(result.modelReachBlockedReason, 'no_observation')
+  assert.equal(result.clearUnavailableReason, 'no_summary')
+  assert.equal(result.storageTtlKind, 'session_purged_on_pause')
   assert.equal(result.canPause, true)
   assert.equal(result.canClearRecentSummary, false)
   assert.deepEqual(result.observes, ['active_window_class', 'coarse_elapsed_time'])
   assert.deepEqual(result.reachesModel, [])
+
+  const view = resolveCompanionTransparencyViewModel(result)
+  assert.equal(view.statusLabelKey, 'settings.memory.context.transparency_status_waiting')
+  assert.equal(view.clearRecentSummaryAction.enabled, false)
+  assert.equal(view.clearRecentSummaryAction.unavailableReason, 'no_summary')
 })
 
 test('resolveCompanionTransparencySummary exposes only coarse summary fields', () => {
@@ -53,6 +78,10 @@ test('resolveCompanionTransparencySummary exposes only coarse summary fields', (
   })
 
   assert.equal(result.status, 'summarizing_quietly')
+  assert.equal(result.summaryPresent, true)
+  assert.equal(result.modelReachBlockedReason, null)
+  assert.equal(result.clearUnavailableReason, null)
+  assert.equal(result.storageTtlKind, 'session_purged_on_pause')
   assert.equal(result.currentActivityClass, 'coding')
   assert.equal(result.currentElapsedLabel, '半小时左右')
   assert.deepEqual(result.stores, ['short_lived_summary_only'])
@@ -60,6 +89,11 @@ test('resolveCompanionTransparencySummary exposes only coarse summary fields', (
   assert.equal(result.canClearRecentSummary, true)
   assert.equal(JSON.stringify(result).includes('Visual Studio Code'), false)
   assert.equal(JSON.stringify(result).includes('clipboard'), false)
+
+  const view = resolveCompanionTransparencyViewModel(result)
+  assert.equal(view.statusLabelKey, 'settings.memory.context.transparency_status_summarizing')
+  assert.equal(view.clearRecentSummaryAction.enabled, true)
+  assert.equal(view.clearRecentSummaryAction.unavailableReason, null)
 })
 
 test('resolveCompanionTransparencySummary downgrades precise elapsed language before display', () => {
@@ -88,6 +122,81 @@ test('resolveCompanionTransparencySummary keeps pause explicit and removes model
   assert.equal(result.status, 'paused')
   assert.equal(result.active, false)
   assert.equal(result.paused, true)
+  assert.equal(result.summaryPresent, true)
+  assert.equal(result.modelReachBlockedReason, 'paused')
+  assert.equal(result.clearUnavailableReason, null)
+  assert.equal(result.storageTtlKind, 'session_purged_on_pause')
   assert.deepEqual(result.reachesModel, [])
+  assert.equal(result.canClearRecentSummary, true)
   assert.equal(result.currentElapsedLabel, '半小时左右')
+
+  const view = resolveCompanionTransparencyViewModel(result)
+  assert.equal(view.statusLabelKey, 'settings.memory.context.transparency_status_paused')
+  assert.equal(view.clearRecentSummaryAction.enabled, true)
+  assert.equal(view.clearRecentSummaryAction.unavailableReason, null)
+  assert.doesNotThrow(() => assertCompanionTransparencyInvariant(result, view))
+})
+
+test('companion transparency view model never carries raw desktop content', () => {
+  const rawLeaningSummary = {
+    ...summary,
+    elapsedLabel: '37 minutes and 12 seconds',
+    rawWindowTitle: 'Secret Window - private.txt',
+    clipboardText: 'PRIVATE_CLIPBOARD_BODY',
+    messageBody: 'PRIVATE_MESSAGE_BODY',
+    filePath: '/Users/klein/private.txt',
+  } as QuietObservationSummary & Record<string, string>
+
+  const result = resolveCompanionTransparencySummary({
+    contextAwarenessEnabled: true,
+    companionAwarenessPaused: false,
+    activeWindowContextEnabled: true,
+    summary: rawLeaningSummary,
+  })
+  const view = resolveCompanionTransparencyViewModel(result)
+  const payload = JSON.stringify({ result, view })
+
+  assert.equal(result.currentElapsedLabel, 'about half an hour')
+  assert.equal(payload.includes('37 minutes'), false)
+  assert.equal(payload.includes('Secret Window'), false)
+  assert.equal(payload.includes('PRIVATE_CLIPBOARD_BODY'), false)
+  assert.equal(payload.includes('PRIVATE_MESSAGE_BODY'), false)
+  assert.equal(payload.includes('/Users/klein/private.txt'), false)
+  assert.equal(view.rawContentVisible, false)
+})
+
+test('companion transparency invariant rejects view model drift', () => {
+  const result = resolveCompanionTransparencySummary({
+    contextAwarenessEnabled: true,
+    companionAwarenessPaused: false,
+    activeWindowContextEnabled: true,
+    summary,
+  })
+  const view = resolveCompanionTransparencyViewModel(result)
+
+  assert.doesNotThrow(() => assertCompanionTransparencyInvariant(result, view))
+  assert.throws(
+    () => assertCompanionTransparencyInvariant(result, {
+      ...view,
+      rawContentVisible: true,
+    } as unknown as CompanionTransparencyViewModel),
+    /rawContentVisible must stay false/,
+  )
+  assert.throws(
+    () => assertCompanionTransparencyInvariant(result, {
+      ...view,
+      clearRecentSummaryAction: {
+        ...view.clearRecentSummaryAction,
+        enabled: false,
+      },
+    }),
+    /clear action enabled state must match summary/,
+  )
+  assert.throws(
+    () => assertCompanionTransparencyInvariant({
+      ...result,
+      currentElapsedLabel: '37 minutes',
+    }, view),
+    /current elapsed label must stay coarse/,
+  )
 })
