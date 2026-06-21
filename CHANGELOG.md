@@ -6,7 +6,45 @@
 
 ## [Unreleased]
 
-_No changes yet._
+## [0.4.0-beta.1] - 2026-06-21
+
+### Added
+- **v0.4 desktop companion awareness foundation** — Nexus can now build toward
+  quiet observation, rough time language, conservative check-in policy, and
+  Settings transparency for the "Nexus is open, the user is elsewhere, time is
+  passing" companion loop.
+- **v0.4 community validation path** — the beta validation template and
+  community guide now collect feedback on timing, tone, interruption feel,
+  privacy boundaries, OS permission friction, and false positives.
+- **v0.4 release hardening handoff** — added a release-candidate checklist for
+  desktop companion awareness privacy assertions, release verification,
+  packaged smoke, rollback, and the v0.5 hand-off boundary.
+
+## [0.3.6] - 2026-06-21
+
+### Added
+- **Settings readability and desktop-awareness status** — Memory settings now
+  show compact status rows for active-window context, clipboard context, and
+  screen OCR, with clear enabled/ready/off/unavailable labels and a short
+  privacy note that raw screenshots do not enter chat context.
+- **0.3 foundation release boundary** — release notes, handoff, roadmap, and
+  in-app spotlight now frame v0.3.6 as the foundation wrap-up for safety,
+  memory, settings, and visible capability boundaries before the larger
+  desktop-companion sensing work moves to v0.4.0.
+
+### Fixed
+- **Light settings contrast** — day and warm-day settings surfaces now keep
+  card text, toggle labels, footer actions, and release spotlight controls
+  readable over the companion panel artwork.
+- **Empty notification summary** — the panel no longer shows the notification
+  summary card when the notification bridge is available but has no unread
+  notifications.
+
+### Changed
+- **Desktop context scope** — v0.3.6 keeps desktop awareness as a visible,
+  opt-in capability surface. Time-passing companionship, quiet observation
+  after no Nexus interaction, and desktop-pet reactions are explicitly left for
+  later major milestones.
 
 ## [0.3.5] - 2026-06-19
 

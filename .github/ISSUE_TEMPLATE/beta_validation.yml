@@ -1,0 +1,105 @@
+name: 🧭 Beta Validation Report
+description: Report structured validation results for a Nexus beta or release candidate.
+title: "[Beta Validation]: "
+labels: ["validation", "needs-triage"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Nexus version or commit
+      placeholder: "v0.4.0-beta.1 or commit SHA"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-type
+    attributes:
+      label: Install type
+      options:
+        - Release installer
+        - Source build
+        - Packaged local build
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: What did you test?
+      placeholder: "Desktop companion awareness, memory transparency, setup, model connection, or sprite pet preview."
+    validations:
+      required: true
+
+  - type: textarea
+    id: result
+    attributes:
+      label: Result
+      placeholder: |
+        Passed:
+        Failed:
+        Confusing:
+    validations:
+      required: true
+
+  - type: textarea
+    id: providers
+    attributes:
+      label: Providers and integrations used
+      placeholder: "LLM: Ollama qwen3:8b | STT: none | TTS: Edge TTS | integrations: none"
+
+  - type: textarea
+    id: desktop-companion-awareness
+    attributes:
+      label: v0.4 desktop companion awareness feedback
+      description: Fill this in when testing the v0.4 line. Leave blank for unrelated beta reports.
+      placeholder: |
+        Nexus state:
+        - Was Nexus open but unused, or were you actively chatting with it?
+        - Did the companion stay quiet while you were working elsewhere?
+
+        Time and activity feel:
+        - Did time wording feel natural, such as "a while" or "about half an hour"?
+        - Did anything show exact minutes, seconds, raw window titles, clipboard text, or screenshots?
+        - What broad desktop activity were you doing? Example: coding, reading, browsing, idle, switching often.
+
+        Check-in feel:
+        - Did a check-in feel caring, too early, too late, too frequent, or too much like monitoring?
+        - Did Nexus behave differently when you returned to Nexus after being away?
+        - Was pause or clear recent summary easy to find?
+
+        Permission friction:
+        - Did your OS ask for screen, accessibility, notification, or window permissions?
+        - What was confusing?
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Add safe screenshots, short clips, logs, or exact error messages. Redact private content first.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I did not include API keys, tokens, private chat contents, or personal contact details
+          required: true
+        - label: I did not include raw screenshots, clipboard contents, private window titles, or private file paths unless they are safe test fixtures
+          required: true
+        - label: I included enough detail for another person to understand what was tested
+          required: true

@@ -77,11 +77,10 @@ Current baseline:
   Stage B packaged-smoke checklist in `docs/RELEASING.md`; if the actual
   `npm run package:dir:smoke` gate is removed from the release docs, the audit
   fails before release.
-- `docs/RELEASE-CANDIDATE-v0.3.5-HANDOFF.md` records the current release
-  candidate's memorable theme, merge/tag evidence, already-collected smoke
-  results, residual signing/runtime risks, rollback path, and companion-first
-  next phase. It is a per-release operator handoff, not a replacement for
-  `docs/RELEASING.md`.
+- `docs/RELEASE-CANDIDATE-v0.3.6-HANDOFF.md` records the current release
+  candidate's foundation wrap-up scope, required evidence, residual
+  signing/runtime risks, rollback path, and companion-first next phase. It is a
+  per-release operator handoff, not a replacement for `docs/RELEASING.md`.
 - The updater runtime uses full `electron-updater` auto-download/install on
   Windows, Linux, and future signed macOS builds. Current unsigned macOS builds
   resolve to `manual-download`: they check GitHub Releases and open the release
@@ -567,7 +566,7 @@ chat / voice / runtime snapshot
        -> Live2D listening/speaking flags
 ```
 
-The current v0.3.5 desktop presence contract is intentionally presentation
+The current v0.3.x desktop presence contract is intentionally presentation
 oriented. `features/pet/activityState.ts` resolves one visible phase
 (`idle`, `thinking`, `listening`, `speaking`, `waiting`, `error`, or `offline`)
 plus a small motion token. It must stay content-minimized: no chat text,
@@ -590,7 +589,7 @@ features/memory recall context
   -> Settings Memory focus/edit/delete/pause surface
 ```
 
-`features/releaseNotes/` is also intentionally narrow. The v0.3.5 spotlight is
+`features/releaseNotes/` is also intentionally narrow. The current spotlight is
 localized release copy plus local Settings navigation actions only; it must not
 own updater logic, migrations, IPC, background checks, chat generation, voice
 capture, tools, or task execution.
@@ -640,6 +639,20 @@ hooks/useDesktopContext
   -> optional OCR pipeline
   -> chat runtime prompt enrichment
 ```
+
+The v0.3.6 desktop-context surface is a controlled capability boundary, not the
+full desktop-companion sensing loop. It may expose active-window, clipboard, and
+screen OCR status in Settings and may pass sanitized text summaries into chat
+when the user has enabled the relevant source. It must not pass raw screenshots
+into chat context, retain raw previous desktop text for autonomy comparisons, or
+turn foreground-window/OCR data into a hidden always-on recorder.
+
+The next major desktop-companion sensing work belongs to v0.4.0 or later. That
+future layer should model "Nexus is open, the user is not interacting with
+Nexus, and time is passing while the user works elsewhere" as coarse
+companionship state: a while, about half an hour, about an hour, or two hours
+or more. The model should receive a sanitized companionship summary, not raw
+window titles, screenshots, clipboard contents, or precise timers.
 
 ### Reminder flow
 
@@ -712,10 +725,10 @@ than presenting Nexus as a Codex-style work agent.
   app shell, such as the current About/Help release spotlight. It must stay
   content-only: no updater logic, IPC, migrations, or background checks.
 - `tests/release-spotlight.test.ts` guards the current release spotlight, the
-  human-facing v0.3.5 README/release-note theme, the v0.3.5 changelog boundary,
-  and the release-candidate handoff so visible memory, readable companion
-  presence, merge/tag evidence, and the companion-not-agent boundary do not
-  drift apart before release.
+  human-facing v0.3.6 README/release-note theme, the v0.3.6 changelog boundary,
+  and the release-candidate handoff so the foundation wrap-up, visible
+  desktop-awareness boundary, tag evidence, and companion-not-agent boundary do
+  not drift apart before release.
 - `scripts/pet-presence-visual-smoke.cjs` is the Electron QA gate for the built
   pet view: it uses a temporary completed-onboarding profile, checks
   idle/breathe presence state, rejects onboarding overlays, and writes ignored

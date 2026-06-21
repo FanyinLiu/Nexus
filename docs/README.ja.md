@@ -24,15 +24,21 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **現在のリリース：** v0.3.5 安定版。Nexus は「ローカルファーストのデスクトップコンパニオン」に向けて収束しています。この版の重点は初回起動の修復、リリース信頼性、IPC 安全性、そしてチャット記憶のローカル制御された移行リハーサルです。
+> **現在のリリース：** v0.3.6 候補。Nexus は「ローカルファーストのデスクトップコンパニオン」に向けて収束しています。この版の重点は 0.3 の土台の締めくくり、設定の読みやすさ、記憶境界、デスクトップ認識入口、プライバシー説明です。
 
 > **開発スコープの注記：** この多言語 README は長期的な機能一覧を残しています。短期開発はルートの [README](../README.md) と [Nexus アップグレード統合計画](NEXUS_UPGRADE_INTEGRATION_PLAN.md) を基準にしてください。Phase 1 は常駐する小さなデスクトップウィンドウ、ミニマルなアバター、Ollama / DeepSeek のテキストモデル、シンプルな会話だけに絞ります。
 
 ---
 
-## 今回のアップデート — v0.3.5
+## 今回のアップデート — v0.4.0-beta.1
 
-> **記憶が見えて、コンパニオンも息づく版。** このリリースは Nexus を Codex のような作業エージェントにするものではありません。返答に使われた記憶を見えるようにし、デスクトップコンパニオンの待機、思考、聞き取り、発話、待機確認、エラー、オフライン状態を直接プレビューできるようにします。初回起動、リリース信頼性、IPC、鍵、チャット記憶の移行リハーサルは、引き続きローカルで制御できる土台として整えています。詳細は [RELEASE-NOTES-v0.3.5.md](RELEASE-NOTES-v0.3.5.md)（英語）。
+> **デスクトップ・コンパニオン認識が始まります。** この beta では、Nexus を開いたあとユーザーが別の場所で作業していても、時間の経過を静かに理解するループを始めます。詳細は [RELEASE-NOTES-v0.4.0-beta.1.md](RELEASE-NOTES-v0.4.0-beta.1.md)（英語）。
+
+Nexus は低頻度、保守的、一時停止可能なまま、短期で粗いコンパニオン要約だけを作ります。時間表現は「しばらく」「30分くらい」「1時間くらい」のように粗く、生のスクリーンショット、完全なクリップボード、私的なメッセージ、正確なタイマーはモデルへ送りません。マウス追従、タイピング反応、ウィンドウ操作は v0.5 の範囲です。
+
+## 前回のアップデート — v0.3.6
+
+> **0.3 の土台を締めくくる版。** このリリースは Nexus を Codex のような作業エージェントにするものではなく、0.4 のデスクトップ伴走感知を先取りするものでもありません。安全、記憶、設定、デスクトップ認識入口を整理します。詳細は [RELEASE-NOTES-v0.3.6.md](RELEASE-NOTES-v0.3.6.md)（英語）。
 
 ## 今回のアップデート — v0.3.4-beta.4（プレリリース）
 
@@ -72,6 +78,9 @@
 | ソースから実行 | [クイックスタート](#クイックスタート) |
 | モデルを設定 | [おすすめモデル構成](#おすすめモデル構成) · [対応プロバイダー](#対応プロバイダー) |
 | 安全性とプライバシーを確認 | [セーフティとサポート](#セーフティとサポート) |
+| コミュニティに参加 | [コミュニティ](#コミュニティ) · [Community Guide](COMMUNITY.md) |
+| 0.4 の方向を理解 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
+| 0.4 beta を検証 | [v0.4.0-beta.1 Release Notes](RELEASE-NOTES-v0.4.0-beta.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## なぜ Nexus なのか？
 
@@ -334,6 +343,8 @@ npm run package:win     # または package:mac / package:linux
 ## コミュニティ
 
 Nexus は個人メンテナンスのプロジェクトです。issue や PR の対応速度はトリアージの精度に左右されます：
+
+コミュニティ文書は特定の 1 リリースだけのものではなく、全バージョンをまたぐ入口です。0.3 は安全性、メモリ、設定の土台を締め、0.4 はデスクトップ・コンパニオン認識へ進み、0.5 はデスクトップペットの振る舞いへ進みます。長期入口は [Community Guide](COMMUNITY.md)、0.4 の方向は [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)、0.4 beta 説明は [v0.4.0-beta.1 Release Notes](RELEASE-NOTES-v0.4.0-beta.1.md)、リリース前の hardening は [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) です。
 
 - 🐛 **バグを見つけた？** → [バグ報告](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **明確な機能アイデア？** → [機能リクエスト](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

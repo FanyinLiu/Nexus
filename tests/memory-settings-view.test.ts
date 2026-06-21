@@ -66,6 +66,7 @@ test('resolveMemoryTransparencySummary reports active recall, capture and storag
   const summary = resolveMemoryTransparencySummary({
     activeWindowContextEnabled: true,
     clipboardContextEnabled: false,
+    companionAwarenessPaused: false,
     contextAwarenessEnabled: true,
     dailyEntries: [dailyEntry],
     memories: [
@@ -86,6 +87,8 @@ test('resolveMemoryTransparencySummary reports active recall, capture and storag
   assert.equal(summary.dailyRecallEnabled, true)
   assert.equal(summary.semanticRecallEnabled, true)
   assert.equal(summary.contextReadEnabled, true)
+  assert.equal(summary.companionAwareness.status, 'watching_for_away_activity')
+  assert.deepEqual(summary.companionAwareness.observes, ['active_window_class', 'coarse_elapsed_time'])
   assert.equal(summary.activeLongTermCount, 1)
   assert.equal(summary.disabledLongTermCount, 1)
   assert.equal(summary.storageAuthority, 'renderer-localStorage')
@@ -96,6 +99,7 @@ test('resolveMemoryTransparencySummary makes pause state explicit without deleti
   const summary = resolveMemoryTransparencySummary({
     activeWindowContextEnabled: true,
     clipboardContextEnabled: true,
+    companionAwarenessPaused: true,
     contextAwarenessEnabled: true,
     dailyEntries: [dailyEntry],
     memories: [memory({ id: 'a', kind: 'relationship' })],
@@ -113,6 +117,8 @@ test('resolveMemoryTransparencySummary makes pause state explicit without deleti
   assert.equal(summary.dailyRecallEnabled, false)
   assert.equal(summary.semanticRecallEnabled, false)
   assert.equal(summary.contextReadEnabled, true)
+  assert.equal(summary.companionAwareness.status, 'paused')
+  assert.deepEqual(summary.companionAwareness.reachesModel, [])
   assert.equal(summary.activeLongTermCount, 1)
   assert.equal(summary.dailyEntryCount, 1)
 })

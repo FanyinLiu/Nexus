@@ -113,8 +113,8 @@ const REQUIRED_PHRASES = [
     file: 'src/hooks/useDesktopContext.ts',
     phrases: [
       "import { stripDesktopContextScreenshotPayload } from '../lib/privacy/desktopContextPrivacy'",
-      'return stripDesktopContextScreenshotPayload(snapshot)',
-      'return stripDesktopContextScreenshotPayload(enrichedSnapshot)',
+      'const strippedSnapshot = stripDesktopContextScreenshotPayload(snapshot)',
+      'const strippedEnrichedSnapshot = stripDesktopContextScreenshotPayload(enrichedSnapshot)',
     ],
   },
   {

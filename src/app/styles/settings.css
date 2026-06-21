@@ -6042,6 +6042,66 @@ summary.settings-console-section__header:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.settings-memory-context-status-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  min-width: 0;
+}
+
+.settings-memory-context-status {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  padding: 7px 10px;
+}
+
+.settings-memory-context-status__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.settings-memory-context-status__head strong {
+  min-width: 0;
+  color: var(--text-h, rgba(246, 248, 252, 0.9));
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.settings-memory-context-status__head span {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--settings-accent) 26%, var(--settings-border));
+  border-radius: 999px;
+  color: var(--settings-accent);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.settings-memory-context-status p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  margin: 0;
+  color: var(--text-soft, rgba(246, 248, 252, 0.62));
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.settings-memory-context-status.is-unavailable {
+  opacity: 0.72;
+}
+
 .memory-card__header {
   display: flex;
   align-items: flex-start;

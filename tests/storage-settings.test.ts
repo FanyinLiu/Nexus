@@ -53,6 +53,7 @@ test('fresh settings start with the Phase 1 Ollama text path', () => {
   assert.equal(settings.speechInputEnabled, false)
   assert.equal(settings.speechOutputEnabled, false)
   assert.equal(settings.memoryPaused, false)
+  assert.equal(settings.companionAwarenessPaused, false)
   assert.equal(settings.toolWebSearchEnabled, true)
   assert.equal(settings.toolWebSearchProviderId, 'bing')
   assert.equal(settings.toolWeatherEnabled, true)
@@ -88,6 +89,20 @@ test('preserves the memory pause switch on load', () => {
   const settings = loadSettings()
 
   assert.equal(settings.memoryPaused, true)
+})
+
+test('preserves the companion awareness pause switch on load', () => {
+  window.localStorage.setItem(
+    SETTINGS_STORAGE_KEY,
+    JSON.stringify({
+      settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+      companionAwarenessPaused: true,
+    }),
+  )
+
+  const settings = loadSettings()
+
+  assert.equal(settings.companionAwarenessPaused, true)
 })
 
 test('clamps out-of-range autonomy numerics on load (no 0ms busy-loop, no negative cost cap)', () => {

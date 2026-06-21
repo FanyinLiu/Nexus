@@ -21,8 +21,8 @@ function normalizeMarkdownProse(text: string) {
   return text.replace(/[>\s]+/g, ' ').trim()
 }
 
-test('current release spotlight keeps the v0.3.5 memorable theme explicit', () => {
-  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, '0.3.5')
+test('current release spotlight keeps the v0.4.0 beta companion awareness explicit', () => {
+  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, '0.4.0-beta.1')
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.bullets.map((item) => item.id),
     ['memory_sources', 'memory_control', 'companion_presence', 'first_run', 'companion_boundary'],
@@ -60,54 +60,60 @@ test('current release spotlight translation keys are registered for every locale
   }
 })
 
-test('current release spotlight names the companion presence upgrade in user copy', async () => {
+test('current release spotlight names desktop companion awareness in user copy', async () => {
   const en = await ensureLocaleLoaded('en-US')
   const zhCN = await ensureLocaleLoaded('zh-CN')
 
-  assert.match(en['about.release_spotlight.title'], /companion/i)
-  assert.match(en['about.release_spotlight.summary'], /idle, thinking, listening, speaking, waiting, error, and offline/)
-  assert.match(en['about.release_spotlight.bullet.companion_presence.body'], /status dot and avatar motion/)
+  assert.match(en['about.release_spotlight.title'], /Desktop companion awareness/i)
+  assert.match(en['about.release_spotlight.summary'], /rough time language/)
+  assert.match(en['about.release_spotlight.bullet.companion_presence.body'], /pause or clear/)
   assert.equal(en['about.release_spotlight.action.review_memory'], 'Review Memory')
   assert.equal(en['about.release_spotlight.action.preview_companion'], 'Preview Companion')
 
-  assert.match(zhCN['about.release_spotlight.title'], /伙伴/)
-  assert.match(zhCN['about.release_spotlight.summary'], /待机、思考、聆听、说话、等待、错误和离线/)
-  assert.match(zhCN['about.release_spotlight.bullet.companion_presence.body'], /状态点和头像动作/)
+  assert.match(zhCN['about.release_spotlight.title'], /桌面陪伴感知/)
+  assert.match(zhCN['about.release_spotlight.summary'], /粗略时间/)
+  assert.match(zhCN['about.release_spotlight.bullet.companion_presence.body'], /暂停或清理近期摘要/)
   assert.equal(zhCN['about.release_spotlight.action.review_memory'], '查看记忆')
   assert.equal(zhCN['about.release_spotlight.action.preview_companion'], '预览伙伴')
 })
 
-test('human-facing v0.3.5 docs keep visible memory and companion presence aligned', () => {
+test('human-facing v0.3.6 docs keep foundation wrap-up aligned', () => {
   const rootReadme = readWorkspaceFile('README.md')
   const changelog = readWorkspaceFile('CHANGELOG.md')
   const englishReleaseNotes = normalizeMarkdownProse(
-    readWorkspaceFile('docs/RELEASE-NOTES-v0.3.5.md'),
+    readWorkspaceFile('docs/RELEASE-NOTES-v0.3.6.md'),
   )
   const chineseReleaseNotes = normalizeMarkdownProse(
-    readWorkspaceFile('docs/RELEASE-NOTES-v0.3.5.zh-CN.md'),
+    readWorkspaceFile('docs/RELEASE-NOTES-v0.3.6.zh-CN.md'),
   )
 
-  assert.match(rootReadme, /记忆看得见，伙伴也动起来/)
-  assert.match(rootReadme, /待机、思考、聆听、说话、等待、错误和离线状态/)
-  assert.match(rootReadme, /不把 Nexus 做成替你干活的 Codex 式智能体/)
+  assert.match(rootReadme, /0\.3 的地基收尾/)
+  assert.match(rootReadme, /当前窗口、剪贴板、OCR/)
+  assert.match(rootReadme, /0\.4\.0 才开始真正的桌面陪伴感知/)
 
-  assert.match(englishReleaseNotes, /Memory is visible\. The companion feels present\./)
-  assert.match(englishReleaseNotes, /idle, thinking, listening, speaking, waiting, error, and offline/)
-  assert.match(englishReleaseNotes, /not autonomous work execution/)
+  assert.match(englishReleaseNotes, /The foundation is ready for the next companion step\./)
+  assert.match(englishReleaseNotes, /active-window context[\s\S]*clipboard context[\s\S]*screen OCR/)
+  assert.match(englishReleaseNotes, /No time-passing proactive companionship loop yet/)
 
-  assert.match(chineseReleaseNotes, /记忆看得见，伙伴也动起来/)
-  assert.match(chineseReleaseNotes, /待机、思考、聆听、说话、等待、错误和离线状态/)
-  assert.match(chineseReleaseNotes, /不是把 Nexus 做成替你干活的 Codex 式智能体/)
+  assert.match(chineseReleaseNotes, /0\.3 的地基收尾/)
+  assert.match(chineseReleaseNotes, /当前窗口上下文[\s\S]*剪贴板上下文[\s\S]*屏幕文字 OCR/)
+  assert.match(chineseReleaseNotes, /不做“时间流逝后的主动陪伴”主循环/)
 
-  const unreleasedSection = changelog.split('## [0.3.5]')[0]
-  assert.match(unreleasedSection, /## \[Unreleased\]\s+_No changes yet\._/)
-  assert.doesNotMatch(unreleasedSection, /v0\.3\.5|Desktop presence|release spotlight/i)
+  const unreleasedSection = changelog.split('## [0.4.0-beta.1]')[0]
+  assert.match(unreleasedSection, /## \[Unreleased\]/)
+  assert.doesNotMatch(unreleasedSection, /v0\.4 desktop companion awareness foundation/)
 
-  const releaseSection = changelog.split('## [0.3.5]')[1]?.split('\n## [')[0] ?? ''
-  assert.match(releaseSection, /Release theme: visible memory and readable companion presence/)
-  assert.match(releaseSection, /Desktop presence state contract/)
-  assert.match(releaseSection, /Settings home release spotlight/)
-  assert.match(releaseSection, /Release theme guard/)
+  const betaSection = changelog.split('## [0.4.0-beta.1]')[1]?.split('\n## [')[0] ?? ''
+  assert.match(betaSection, /v0\.4 desktop companion awareness foundation/)
+  assert.match(betaSection, /v0\.4 community validation path/)
+  assert.match(betaSection, /v0\.4 release hardening handoff/)
+  assert.doesNotMatch(unreleasedSection, /v0\.3\.6|desktop-awareness status|foundation release boundary/i)
+
+  const releaseSection = changelog.split('## [0.3.6]')[1]?.split('\n## [')[0] ?? ''
+  assert.match(releaseSection, /Settings readability and desktop-awareness status/)
+  assert.match(releaseSection, /0\.3 foundation release boundary/)
+  assert.match(releaseSection, /Light settings contrast/)
+  assert.match(releaseSection, /Desktop context scope/)
 })
 
 test('architecture docs keep companion presence boundaries aligned', () => {
@@ -138,23 +144,19 @@ test('architecture docs keep companion presence boundaries aligned', () => {
   assert.match(design, /No runtime behavior, user data, IPC, migrations, dependencies, or release\s+packaging change/)
 })
 
-test('v0.3.5 release handoff keeps merge and tag evidence explicit', () => {
-  const handoff = readWorkspaceFile('docs/RELEASE-CANDIDATE-v0.3.5-HANDOFF.md')
+test('v0.3.6 release handoff keeps scope and tag evidence explicit', () => {
+  const handoff = readWorkspaceFile('docs/RELEASE-CANDIDATE-v0.3.6-HANDOFF.md')
 
-  assert.match(handoff, /PR: \[#105/)
   assert.match(handoff, /Evidence baseline head: `[0-9a-f]{7,40}`/)
   assert.doesNotMatch(handoff, /48e6b78/)
-  assert.match(handoff, /verify the latest PR head and latest\s+GitHub CI/)
-  assert.match(handoff, /npm run prerelease-check -- v0\.3\.5/)
-  assert.match(handoff, /git tag v0\.3\.5/)
+  assert.match(handoff, /foundation wrap-up/)
+  assert.match(handoff, /npm run prerelease-check -- v0\.3\.6/)
+  assert.match(handoff, /git tag v0\.3\.6/)
   assert.match(handoff, /npm run package:dir:smoke/)
-  assert.match(handoff, /npm run pet:presence-smoke/)
-  assert.match(handoff, /22 blocker checks/)
+  assert.match(handoff, /desktop-context-privacy:audit/)
   assert.match(handoff, /Developer ID/)
   assert.match(handoff, /SmartScreen/)
-  assert.match(handoff, /node:sqlite/)
   assert.match(handoff, /Codex-style work agent/)
-  assert.match(handoff, /Live2D/)
-  assert.match(handoff, /voice MVP/)
-  assert.match(handoff, /white-box long-term memory/)
+  assert.match(handoff, /v0\.4\.0 desktop-companion sensing loop/)
+  assert.match(handoff, /about half an hour/)
 })

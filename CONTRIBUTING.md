@@ -13,6 +13,7 @@ Thanks for your interest! Nexus is a solo-maintained project, so any help — fr
 - [Commit messages](#commit-messages)
 - [Pull requests](#pull-requests)
 - [Translations](#translations)
+- [Personas, prompts, and community assets](#personas-prompts-and-community-assets)
 - [Security issues](#security-issues)
 
 ---
@@ -156,6 +157,18 @@ Scope is optional but welcome: `fix(voice): ...`, `feat(autonomy): ...`.
 The `docs/` directory holds translated READMEs (`README.zh-CN.md`, `README.zh-TW.md`, `README.ja.md`, `README.ko.md`). UI strings live in `src/lib/i18n/` — keep keys in sync across all locales when you edit them.
 
 New languages welcome. Open a Discussion first so we can agree on the locale code and layout.
+
+## Personas, prompts, and community assets
+
+Nexus has a stable companion contract: local-first, present on the desktop, companion-first, and user-controlled. Before changing persona prompts or submitting community content, read:
+
+- [Nexus Companion Prompt Baseline](docs/NEXUS_COMPANION_PROMPT.md)
+- [Persona Contribution Template](docs/PERSONA_CONTRIBUTION_TEMPLATE.md)
+- [Community Guide](docs/COMMUNITY.md)
+
+Good prompt/persona contributions include concrete sample dialogues, not just abstract traits. Keep examples short, include permission-boundary cases, and do not make Nexus pretend to have memories, actions, or human life experience it does not have.
+
+Community pets, avatars, and prompt packs must include their source and license. User-selected imports are fine; bundled Nexus assets need explicit redistribution permission.
 
 ## Security issues
 

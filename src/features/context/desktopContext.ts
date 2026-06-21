@@ -8,6 +8,7 @@ const MAX_ACTIVE_WINDOW_PROCESS_PATH_LENGTH = 220
 const MAX_CLIPBOARD_CONTEXT_LENGTH = 1_600
 const MAX_SCREEN_TEXT_CONTEXT_LENGTH = 1_800
 const MAX_VLM_ANALYSIS_LENGTH = 800
+const MAX_COMPANION_AWARENESS_LENGTH = 900
 
 type DesktopContextRequestOptions = {
   includeActiveWindow?: boolean
@@ -46,9 +47,18 @@ export function formatDesktopContext(snapshot: DesktopContextSnapshot | null | u
   const activeWindowTitle = normalizeObservedText(sanitizedSnapshot.activeWindowTitle)
   const activeWindowAppName = normalizeObservedText(sanitizedSnapshot.activeWindowAppName)
   const activeWindowProcessPath = normalizeObservedText(sanitizedSnapshot.activeWindowProcessPath)
+  const companionAwarenessSummary = normalizeObservedText(sanitizedSnapshot.companionAwarenessSummary)
   const clipboardText = normalizeObservedText(sanitizedSnapshot.clipboardText)
   const screenText = normalizeObservedText(sanitizedSnapshot.screenText)
   const vlmAnalysis = normalizeObservedText(sanitizedSnapshot.vlmAnalysis)
+
+  if (companionAwarenessSummary) {
+    sections.push(formatObservedBlock(
+      'Companion continuity summary',
+      companionAwarenessSummary,
+      MAX_COMPANION_AWARENESS_LENGTH,
+    ))
+  }
 
   if (activeWindowTitle || activeWindowAppName || activeWindowProcessPath) {
     const activeWindowLines = ['Current foreground window:']

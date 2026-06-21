@@ -343,7 +343,7 @@ function formatContextSections(
 
 // ── Few-shot ───────────────────────────────────────────────────────────────
 
-function buildFewShotMessages(persona: LoadedPersona, limit = 4): ChatMessage[] {
+function buildFewShotMessages(persona: LoadedPersona, limit = 8): ChatMessage[] {
   if (!persona.examples.length) return []
 
   const picked = persona.examples.slice(0, limit)

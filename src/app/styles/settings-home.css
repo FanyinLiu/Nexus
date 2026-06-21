@@ -345,6 +345,39 @@
   white-space: normal;
 }
 
+.settings-home-release__actions .primary-button:disabled,
+.settings-home-release__actions .ghost-button:disabled {
+  opacity: 1;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.settings-drawer--day .settings-home-release__actions .primary-button:disabled,
+.settings-drawer--day .settings-home-release__actions .ghost-button:disabled {
+  border-color: rgba(30, 42, 58, 0.1);
+  background: rgba(233, 238, 246, 0.86);
+  color: rgba(23, 32, 42, 0.42);
+}
+
+.settings-drawer--day .settings-home-release__actions .ghost-button:not(:disabled) {
+  border-color: rgba(30, 42, 58, 0.1);
+  background: rgba(255, 255, 255, 0.68);
+  color: rgba(23, 32, 42, 0.68);
+}
+
+.settings-drawer--warm-day .settings-home-release__actions .primary-button:disabled,
+.settings-drawer--warm-day .settings-home-release__actions .ghost-button:disabled {
+  border-color: rgba(72, 53, 40, 0.1);
+  background: rgba(244, 235, 224, 0.86);
+  color: rgba(78, 64, 54, 0.46);
+}
+
+.settings-drawer--warm-day .settings-home-release__actions .ghost-button:not(:disabled) {
+  border-color: rgba(72, 53, 40, 0.1);
+  background: rgba(255, 250, 242, 0.72);
+  color: rgba(78, 64, 54, 0.7);
+}
+
 .settings-home-release__action-icon {
   width: 15px;
   height: 15px;
