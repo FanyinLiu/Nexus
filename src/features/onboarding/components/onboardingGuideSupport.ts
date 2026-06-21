@@ -37,6 +37,7 @@ const ONBOARDING_STEP_KEYS: Array<{
   { id: 'text', titleKey: 'onboarding.step.text.title', descriptionKey: 'onboarding.step.text.description' },
   { id: 'voice', titleKey: 'onboarding.step.voice.title', descriptionKey: 'onboarding.step.voice.description' },
   { id: 'companion', titleKey: 'onboarding.step.companion.title', descriptionKey: 'onboarding.step.companion.description' },
+  { id: 'message_action_demo', titleKey: 'onboarding.step.message_action_demo.title', descriptionKey: 'onboarding.step.message_action_demo.description' },
 ]
 
 export function buildOnboardingSteps(uiLanguage: UiLanguage): OnboardingStep[] {

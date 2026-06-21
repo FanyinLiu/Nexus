@@ -8771,6 +8771,9 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .onboarding-section__intro p,
 .onboarding-tip,
 .onboarding-summary p,
+.onboarding-message-demo__header p,
+.onboarding-message-demo__step p,
+.onboarding-message-demo__privacy,
 .ai-disclosure-step__lead,
 .ai-disclosure-step__continue-note {
   font-size: 12px;
@@ -8900,6 +8903,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .onboarding-subsection strong,
 .onboarding-summary strong,
+.onboarding-message-demo__header strong,
+.onboarding-message-demo__step strong,
 .onboarding-readiness__header strong {
   font-size: 13px;
   font-weight: 650;
@@ -8917,6 +8922,97 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   padding: 3px 8px;
   font-size: 12px;
   line-height: 1.35;
+}
+
+.onboarding-message-demo__header,
+.onboarding-message-demo__step {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.onboarding-message-demo__header {
+  display: grid;
+  grid-template-columns: minmax(0, 150px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.onboarding-message-demo__source {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+}
+
+.onboarding-message-demo__source strong {
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: none;
+}
+
+.onboarding-message-demo__steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.onboarding-message-demo__step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.onboarding-message-demo__index {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(168, 139, 255, 0.18);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.onboarding-message-demo__actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.onboarding-message-demo__action {
+  display: inline-grid;
+  place-items: center;
+  min-height: 38px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.onboarding-message-demo__privacy {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.onboarding-message-demo__header .onboarding-message-demo__privacy {
+  margin-top: 4px;
+  font-size: 11px;
 }
 
 .onboarding-local-models__item {
@@ -9018,6 +9114,10 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
   .onboarding-section {
     padding: 10px;
+  }
+
+  .onboarding-message-demo__header {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

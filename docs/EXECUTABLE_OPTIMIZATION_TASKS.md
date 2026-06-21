@@ -23,7 +23,10 @@
   Pet runtime phases now stay stable while a separate display-action mapping
   lets the pet surface summarizing and needs-attention states; broadcasting is
   registered as a UI-only action until a real runtime broadcast signal exists.
-- [ ] 在首次安装后的新手路径里加入「收到消息后的处理动作」演示（至少 1 条）。
+- [x] 在首次安装后的新手路径里加入「收到消息后的处理动作」演示（至少 1 条）。✅
+  Onboarding now ends with a static message-action demo that explains source
+  notice, a desktop hint, and user-chosen actions without binding to real
+  notification schemas, message bodies, IDs, precise timestamps, or chat sends.
 
 ### 完成验收
 - 模拟 1 条外部消息在 5 秒内生成桌面摘要。
