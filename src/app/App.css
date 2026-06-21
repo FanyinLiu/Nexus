@@ -7109,6 +7109,76 @@ html[data-theme='warm-day'] .panel-window--companion .empty-chat__prompt {
   background: color-mix(in srgb, #d95555 12%, var(--color-surface-elevated, #fff));
 }
 
+.model-setup__text-check {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #e3e6ec);
+  border-radius: 8px;
+  background: var(--color-surface-muted, #fcfcfd);
+}
+
+.model-setup__text-check.is-ok {
+  border-color: rgba(44, 154, 90, 0.55);
+  background: color-mix(in srgb, #2c9a5a 10%, var(--color-surface-elevated, #fff));
+}
+
+.model-setup__text-check.is-warning {
+  border-color: color-mix(in srgb, #d8a43a 52%, transparent);
+  background: color-mix(in srgb, #d8a43a 12%, var(--color-surface-elevated, #fff));
+}
+
+.model-setup__text-check-main {
+  min-width: 0;
+}
+
+.model-setup__text-check-main strong {
+  display: block;
+  color: var(--color-text-primary, #1a1f29);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.model-setup__text-check-main p {
+  margin: 4px 0 0;
+  color: var(--color-text-muted, #5d6575);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.model-setup__text-check-status {
+  margin-top: 6px;
+  color: var(--color-text-muted, #4c5361);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.model-setup__text-check-status.is-ok {
+  color: color-mix(in srgb, #2c9a5a 74%, var(--color-text-primary, #1a1f29));
+}
+
+.model-setup__text-check-status.is-warning {
+  color: color-mix(in srgb, #d8a43a 64%, var(--color-text-primary, #1a1f29));
+}
+
+.model-setup__text-check-status span {
+  display: block;
+  margin-top: 3px;
+}
+
+.model-setup__text-check-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .model-setup__row-main {
   min-width: 0;
   max-width: 100%;
@@ -7232,6 +7302,10 @@ html[data-theme='warm-day'] .panel-window--companion .empty-chat__prompt {
 .model-setup__inline-btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+.model-setup__inline-btn--secondary {
+  background: transparent;
 }
 
 .model-setup__progress {
@@ -7380,6 +7454,14 @@ html[data-theme='warm-day'] .panel-window--companion .empty-chat__prompt {
   .model-setup-card__actions .primary-button {
     width: 100%;
     justify-content: center;
+  }
+
+  .model-setup__text-check {
+    grid-template-columns: 1fr;
+  }
+
+  .model-setup__text-check-actions {
+    justify-content: stretch;
   }
 
   .model-setup__row {

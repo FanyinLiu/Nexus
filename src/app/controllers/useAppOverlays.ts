@@ -225,6 +225,11 @@ export function useAppOverlays({
     [chat.messages],
   )
 
+  const openOnboardingGuide = useCallback(() => {
+    setSettingsOpen(false)
+    setOnboardingOpen(true)
+  }, [setSettingsOpen])
+
   const settingsDailyMemoryEntries = useMemo(
     () => mergeFocusedDailyEntries({
       baseEntries: memory.recentDailyMemoryEntries,
@@ -480,10 +485,7 @@ export function useAppOverlays({
     },
     onRunAudioSmokeTest: async (draftSettings) => voice.runAudioSmokeTest(draftSettings),
     onClearDebugConsole: clearDebugConsoleEvents,
-    onOpenOnboardingGuide: () => {
-      setSettingsOpen(false)
-      setOnboardingOpen(true)
-    },
+    onOpenOnboardingGuide: openOnboardingGuide,
     platformProfile,
   }
 
@@ -526,6 +528,7 @@ export function useAppOverlays({
   return {
     overlays: {
       onboardingGuideProps,
+      openOnboardingGuide,
       settingsDrawerProps,
     },
   }
