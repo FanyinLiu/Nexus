@@ -19,6 +19,12 @@ For the beta-to-stable step, use
 [Nexus v0.4.0 Stable Release Checklist](RELEASE-CANDIDATE-v0.4.0-STABLE.md)
 before preparing the `v0.4.0` tag.
 
+For the current post-stable draft stack, use
+[Nexus v0.4.5 Draft Release Hardening Handoff](RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md)
+instead. That newer handoff is a no-release review artifact for the stacked
+`v0.4.1` through `v0.4.5` draft PRs and must not create a package bump, tag,
+GitHub Release, or README stable-entry switch.
+
 ## Release Boundary
 
 v0.4 includes:

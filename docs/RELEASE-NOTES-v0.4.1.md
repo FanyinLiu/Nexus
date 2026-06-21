@@ -1,12 +1,11 @@
 # Nexus v0.4.1 — Coarse Time Language
 
-> **Draft.** This follow-up release keeps the v0.4 desktop companion awareness
-> line focused on companionship continuity. It changes how Nexus expresses
-> elapsed time; it does not add new sensing, proactive check-ins, pet motion, or
-> desktop control.
->
-> Do not publish until the user explicitly asks for the final release gate, tag,
-> and GitHub Release.
+Status: Draft. Do not publish until Klein explicitly asks for the final release
+gate, tag, and GitHub Release.
+
+This follow-up release keeps the v0.4 desktop companion awareness line focused
+on companionship continuity. It changes how Nexus expresses elapsed time; it
+does not add new sensing, proactive check-ins, pet motion, or desktop control.
 
 ## What changes
 
@@ -37,6 +36,10 @@ Nexus falls back to the approved coarse bucket wording for that locale.
 
 This release does not include:
 
+- No formal v0.4.1 release yet.
+- No package version bump.
+- No tag or GitHub Release.
+- No README stable-entry switch.
 - proactive check-in scheduling
 - No new sensing sources
 - activity-history UI

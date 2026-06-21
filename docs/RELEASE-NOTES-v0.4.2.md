@@ -1,12 +1,12 @@
 # Nexus v0.4.2 — Check-In Policy
 
-> **Draft.** This follow-up release keeps the v0.4 desktop companion awareness
-> line local and conservative. It hardens when a gentle in-app check-in may be
-> considered; it does not send messages, trigger tools, create external
-> notifications, or publish a new release.
->
-> Do not publish until the user explicitly asks for the final release gate, tag,
-> and GitHub Release.
+Status: Draft. Do not publish until Klein explicitly asks for the final release
+gate, tag, and GitHub Release.
+
+This follow-up release keeps the v0.4 desktop companion awareness line local and
+conservative. It hardens when a gentle in-app check-in may be considered; it
+does not send messages, trigger tools, create external notifications, or publish
+a new release.
 
 ## What changes
 
@@ -37,6 +37,10 @@ It does not schedule timers, write storage, send notifications, or call tools.
 
 This release does not include:
 
+- No formal v0.4.2 release yet.
+- No package version bump.
+- No tag or GitHub Release.
+- No README stable-entry switch.
 - external notifications
 - message sending
 - tool execution
