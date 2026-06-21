@@ -22,6 +22,10 @@
   normalization layer and structured beta-report labels so timing, tone,
   privacy, and permission friction can be reviewed without retaining raw
   desktop activity or private feedback text.
+- **v0.4.5 release hardening draft** — added a source-only draft-stack audit
+  and release-hardening handoff that keeps package version, tag, GitHub
+  Release, and README stable-entry state unchanged while preparing review
+  evidence for the stacked v0.4.x drafts.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now

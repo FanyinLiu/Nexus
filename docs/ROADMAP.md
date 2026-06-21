@@ -26,8 +26,10 @@ The larger product steps are:
   The v0.4 line is split into quiet observation, coarse time language,
   check-in policy, transparency UI, beta copy tuning, and release hardening.
   `v0.4.0` is now the stable quiet-observation foundation; `v0.4.1`,
-  `v0.4.2`, and `v0.4.3` are draft stacked prerequisites; `v0.4.4` is the
-  active stacked beta-feedback and copy-safety draft.
+  `v0.4.2`, `v0.4.3`, and `v0.4.4` are draft stacked prerequisites;
+  `v0.4.5` is the active stacked release-hardening draft. It keeps package
+  version, tag, GitHub Release, and README stable-entry state unchanged: no
+  package version bump, tag, GitHub Release, or README stable-entry switch.
 - **v0.5.0 — desktop pet behavior.** The visible companion can react to mouse
   movement, typing rhythm, idleness, and desktop state without blocking the
   user's work.
