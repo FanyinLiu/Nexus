@@ -30,6 +30,9 @@
   settings foreground-window, clipboard, and screenshot/OCR availability cards
   onto a pure presentation mapper so the UI is easier to test without adding
   new sensing behavior.
+- **Pet display action mapping** — separated pet runtime phases from
+  user-facing display actions so summarizing and needs-attention states can be
+  shown on the pet without inventing a broadcasting runtime signal.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now

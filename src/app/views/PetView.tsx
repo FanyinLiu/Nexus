@@ -190,7 +190,7 @@ export function PetView({
     (pet.petTapActive && Boolean(pet.petTouchZone))
   const petStageStatusLabel = companionActivity.isIdle && settings.continuousVoiceModeEnabled
     ? ti('pet.status.standby')
-    : ti(companionActivity.statusKey)
+    : ti(companionActivity.displayStatusKey)
   const petStageStatusClass =
     companionActivity.isError ? 'is-error'
     : companionActivity.isOffline ? 'is-offline'
@@ -485,6 +485,7 @@ export function PetView({
             <div
               className="pet-window__stage-shell"
               data-companion-activity={companionActivity.phase}
+              data-companion-display-action={companionActivity.displayAction}
               data-companion-motion={companionActivity.motionToken}
             >
               {(!petFreeMode || !isSpriteAvatar) && (
@@ -529,6 +530,7 @@ export function PetView({
             <div
               className={`pet-window__status-indicator ${petStageStatusClass || (hasUnreadNotifications ? 'is-notify' : '')}`}
               data-companion-activity={companionActivity.phase}
+              data-companion-display-action={companionActivity.displayAction}
               role="status"
               aria-label={petStageStatusLabelWithNotifications}
               title={petStageStatusLabelWithNotifications}
@@ -658,6 +660,7 @@ export function PetView({
                 ref={mascotRef}
                 className={`pet-window__mascot ${pet.mascotHovered ? 'is-hovered' : ''} ${pet.petTapActive ? 'is-tapped' : ''}`}
                 data-companion-activity={companionActivity.phase}
+                data-companion-display-action={companionActivity.displayAction}
                 data-companion-motion={companionActivity.motionToken}
                 onPointerEnter={() => {
                   pet.setMascotHovered(true)

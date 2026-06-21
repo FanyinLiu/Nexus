@@ -19,7 +19,10 @@
   pure diagnostics view model, preserving the no-new-sensing privacy boundary
   while making foreground-window, clipboard, and screenshot/OCR availability
   testable.
-- [ ] 在 `Pet` 侧状态显示新增 `broadcasting / summarizing / needs_attention` 的动作映射。
+- [x] 在 `Pet` 侧状态显示新增 `broadcasting / summarizing / needs_attention` 的动作映射。✅
+  Pet runtime phases now stay stable while a separate display-action mapping
+  lets the pet surface summarizing and needs-attention states; broadcasting is
+  registered as a UI-only action until a real runtime broadcast signal exists.
 - [ ] 在首次安装后的新手路径里加入「收到消息后的处理动作」演示（至少 1 条）。
 
 ### 完成验收
