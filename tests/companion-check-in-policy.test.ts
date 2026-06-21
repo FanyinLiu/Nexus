@@ -7,8 +7,12 @@ import {
 import {
   buildCompanionCheckInLine,
   buildCompanionCheckInSignalKey,
+  COMPANION_CHECK_IN_COPY_LANGUAGES,
+  COMPANION_CHECK_IN_TRIGGER_REASONS,
   decideCompanionCheckIn,
+  resolveCompanionCheckInSafeCopy,
   type CompanionCheckInPolicyInput,
+  validateCompanionCheckInCopyTone,
 } from '../src/features/context/companionCheckInPolicy.ts'
 import type { QuietObservationSummary } from '../src/features/context/companionAwareness.ts'
 
@@ -230,28 +234,93 @@ test('buildCompanionCheckInSignalKey uses conservative fallback when no stable s
 })
 
 test('buildCompanionCheckInLine returns local gentle copy without surveillance wording', () => {
-  const cases = [
-    { reason: 'return_to_nexus' as const, language: 'zh-CN' as const },
-    { reason: 'long_continuous_activity' as const, language: 'en-US' as const },
-    { reason: 'long_continuous_activity' as const, language: 'zh-TW' as const },
-    { reason: 'frequent_switching' as const, language: 'ja' as const },
-    { reason: 'long_idle_after_activity' as const, language: 'ko' as const },
-  ]
-
-  for (const item of cases) {
+  for (const language of COMPANION_CHECK_IN_COPY_LANGUAGES) {
+    for (const reason of COMPANION_CHECK_IN_TRIGGER_REASONS) {
     const line = buildCompanionCheckInLine({
       shouldCheckIn: true,
-      reason: item.reason,
+      reason,
       surface: 'in_app',
       priority: 'low',
-    }, item.language)
+    }, language)
 
-    assert.equal(line?.reason, item.reason)
+    assert.equal(line?.reason, reason)
     assert.ok(line?.text)
+    assert.deepEqual(validateCompanionCheckInCopyTone(line.text, language), {
+      ok: true,
+      issues: [],
+    })
     assert.doesNotMatch(line.text, /\bmust\b|\bmonitor(?:ing)?\b|\bwatching\b|surveillance/i)
     assert.doesNotMatch(line.text, /必须|監控|监控|看着|看著/)
     assert.doesNotMatch(line.text, /\b\d+\b|minutes?|seconds?/i)
+    }
   }
+})
+
+test('validateCompanionCheckInCopyTone rejects imperatives, surveillance framing and exact timers', () => {
+  assert.deepEqual(validateCompanionCheckInCopyTone('You must stop now after 37 minutes.', 'en-US'), {
+    ok: false,
+    issues: ['missing_soft_invitation', 'imperative_language', 'precise_time_language'],
+  })
+  assert.equal(
+    validateCompanionCheckInCopyTone('I am monitoring your window.', 'en-US').issues.includes('surveillance_language'),
+    true,
+  )
+  assert.equal(
+    validateCompanionCheckInCopyTone('你必须现在休息，已经 1小时30分钟 了。', 'zh-CN')
+      .issues.includes('imperative_language'),
+    true,
+  )
+  assert.equal(
+    validateCompanionCheckInCopyTone('画面を監視しています。1時間30分です。', 'ja')
+      .issues.includes('surveillance_language'),
+    true,
+  )
+  assert.equal(
+    validateCompanionCheckInCopyTone('반드시 쉬어야 해요. 2시간 10분 지났어요.', 'ko')
+      .issues.includes('precise_time_language'),
+    true,
+  )
+})
+
+test('validateCompanionCheckInCopyTone avoids broad keyword bans for safe companion wording', () => {
+  assert.deepEqual(validateCompanionCheckInCopyTone(
+    'I stayed with the thread in a broad, quiet way.',
+    'en-US',
+  ), {
+    ok: true,
+    issues: [],
+  })
+  assert.deepEqual(validateCompanionCheckInCopyTone(
+    '你刚回来，我还在。刚才这段时间我只留了一个大概的连续感。',
+    'zh-CN',
+  ), {
+    ok: true,
+    issues: [],
+  })
+})
+
+test('resolveCompanionCheckInSafeCopy falls back instead of dropping unsafe copy', () => {
+  const fallback = resolveCompanionCheckInSafeCopy(
+    'long_continuous_activity',
+    'en-US',
+    'You must stop now after 37 minutes because I am monitoring your window.',
+  )
+
+  assert.notEqual(fallback, '')
+  assert.notEqual(fallback, 'You must stop now after 37 minutes because I am monitoring your window.')
+  assert.deepEqual(validateCompanionCheckInCopyTone(fallback, 'en-US'), {
+    ok: true,
+    issues: [],
+  })
+  assert.doesNotMatch(fallback, /must|37 minutes|monitoring|window/i)
+
+  const line = buildCompanionCheckInLine({
+    shouldCheckIn: true,
+    reason: 'long_continuous_activity',
+    surface: 'in_app',
+    priority: 'low',
+  }, 'en-US')
+  assert.ok(line?.text)
 })
 
 test('buildCompanionCheckInLine returns null for suppressed decisions', () => {

@@ -18,6 +18,10 @@
   transparency block through a deterministic view model that explains status,
   observed categories, model reach, local storage, clear-summary availability,
   and blocked reasons without changing the release entry point.
+- **v0.4.4 beta feedback safety boundary** — added a local feedback
+  normalization layer and structured beta-report labels so timing, tone,
+  privacy, and permission friction can be reviewed without retaining raw
+  desktop activity or private feedback text.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now
@@ -31,6 +35,9 @@
   transparency now keeps raw window titles, clipboard bodies, message bodies,
   file paths, screenshots, and precise minute/second time labels out of the
   Settings view model.
+- **Check-in copy safety matrix** — every supported locale and check-in reason
+  now runs through copy guardrails that reject surveillance-like framing,
+  imperative language, and exact timer wording.
 
 ## [0.4.0] - 2026-06-21
 
