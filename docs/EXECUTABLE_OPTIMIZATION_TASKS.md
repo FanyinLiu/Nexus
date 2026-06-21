@@ -42,7 +42,7 @@
 
 ### 任务
 - [x] 把通知小窗与侧栏的未读文案补齐为 5 个语言版本并通过 i18n 审核。
-- [x] 在模型接入里增加“国内 / 国外”模式预设 ✅（onboarding 国内/海外/本地分段控件 PR #14 + `switchTextProvider` 自动填充；设置页 ModelSection 的区域 UI 仍 deferred，见下）
+- [x] 在模型接入里增加“国内 / 国外”模式预设 ✅（onboarding 国内/海外/本地分段控件 PR #14 + `switchTextProvider` 自动填充；设置页 ModelSection 区域 UI 已接入并共享区域 tab 契约，见 Sprint 2）
 - [x] 加入“模型 Key 合法性”联动校验 ✅（`isHttpHeaderSafeCredential` 三层强制 + 5 语文案 + 测试）
 - [x] 在模型列表页补齐“按厂商最小成功模板” ✅（`FIRST_SUCCESS_PROVIDER_IDS` 置顶排序，PR #12）
 - [x] 统一连接失败到用户可执行建议 ✅（`humanizeError('chat')` 四个用户面 + 后端真实串契约测试，PR #11）
@@ -60,7 +60,7 @@
 - 把模型配置从“参数表单”变成“向导”。
 
 ### 任务
-- [ ] 增加「区域模板」选择（国内 / 国外）——onboarding 已做（见 Sprint 1.5）；**余设置页 ModelSection 的区域 UI**（brand 跨区，需视觉 review）。
+- [x] 增加「区域模板」选择（国内 / 国外 / 本地）——onboarding 与设置页 ModelSection 共用区域 tab 契约，设置页品牌网格支持跨区 brand 路由并保留当前选择可见。
 - [ ] `ModelSetup` 增加“连通性+鉴权”一键校验（模型可达、key 语法、模型名存在）。
 - [ ] 输出统一错误码映射（含中文 key、空格/换行导致 header 失效、模型不存在、限流等）。
 - [x] 把 MiniMax Token Plan / DeepSeek / OpenAI / Gemini / Claude 的最小配置模板接入向导默认值 ✅（随 Sprint 1.5 first-success 落地）

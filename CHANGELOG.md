@@ -36,6 +36,9 @@
 - **Onboarding message action demo** — added a static first-run walkthrough for
   received-message actions, keeping the demo separate from real notification
   schemas, message bodies, IDs, precise timestamps, and chat sending.
+- **Settings model region tabs hardening** — shared the text-provider region
+  tab contract between onboarding and Settings, made the Settings brand grid
+  region filtering testable, and removed render-time extra-key state syncing.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now

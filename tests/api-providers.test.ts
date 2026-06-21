@@ -3,19 +3,21 @@ import assert from 'node:assert/strict'
 
 import {
   FIRST_SUCCESS_PROVIDER_IDS,
+  MODEL_PROVIDER_REGION_TABS,
   brandMatchesRegion,
-  pickBrandProviderForRegion,
   getApiProviderPreset,
   getCommonTextProviderOptions,
   getDefaultOnboardingRegion,
   getOnboardingTextProviderOptions,
   getOnboardingTextProviderOptionsByRegion,
+  getProviderBrandsForRegion,
   getProviderModelCapability,
   getProviderPresetModels,
   getTextProviderCatalogOptions,
   getTextProviderPresets,
   inferApiProviderId,
   isCommonTextProviderId,
+  pickBrandProviderForRegion,
 } from '../src/features/models/index.ts'
 
 test('common text providers stay first and focused', () => {
@@ -83,6 +85,21 @@ test('onboarding region tabs filter by region, keep first-success order, and kee
   const chinaWithGlobalPick = getOnboardingTextProviderOptionsByRegion('china', 'openai')
   assert.equal(chinaWithGlobalPick[0]?.id, 'openai')
   assert.equal(chinaWithGlobalPick.slice(1).every((provider) => provider.region === 'china'), true)
+})
+
+test('provider region tabs share one order and translation contract', () => {
+  assert.deepEqual(
+    MODEL_PROVIDER_REGION_TABS.map((tab) => tab.region),
+    ['china', 'global', 'custom'],
+  )
+  assert.deepEqual(
+    MODEL_PROVIDER_REGION_TABS.map((tab) => tab.labelKey),
+    [
+      'settings.model.provider_group.china',
+      'settings.model.provider_group.global',
+      'settings.model.provider_group.local',
+    ],
+  )
 })
 
 test('default onboarding region tab follows the UI language', () => {
@@ -188,6 +205,27 @@ test('brandMatchesRegion spans every region a brand serves', () => {
   assert.equal(brandMatchesRegion(['ollama'], 'china'), false)
   assert.equal(brandMatchesRegion(['openai'], 'global'), true)
   assert.equal(brandMatchesRegion(['openai'], 'china'), false)
+})
+
+test('getProviderBrandsForRegion keeps the selected brand visible across tabs', () => {
+  const brands = [
+    { id: 'moonshot', providerIds: ['moonshot', 'moonshot-global'] },
+    { id: 'openai', providerIds: ['openai'] },
+    { id: 'ollama', providerIds: ['ollama'] },
+  ]
+
+  assert.deepEqual(
+    getProviderBrandsForRegion(brands, 'china').map((brand) => brand.id),
+    ['moonshot'],
+  )
+  assert.deepEqual(
+    getProviderBrandsForRegion(brands, 'china', 'openai').map((brand) => brand.id),
+    ['moonshot', 'openai'],
+  )
+  assert.deepEqual(
+    getProviderBrandsForRegion(brands, 'custom').map((brand) => brand.id),
+    ['ollama'],
+  )
 })
 
 test('pickBrandProviderForRegion keeps a matching current selection, else picks the region variant', () => {
