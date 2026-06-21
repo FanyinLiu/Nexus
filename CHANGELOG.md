@@ -11,12 +11,18 @@
   labels, precision-leak detection, and safe fallback formatting into a
   dedicated context time-language layer while keeping the v0.4.0 observation
   thresholds and trigger logic unchanged.
+- **v0.4.2 check-in policy boundary** — added local emission control for the
+  companion check-in policy so in-app lines remain explainable, dismissible,
+  polling-safe, and separate from external notifications or message sending.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now
   rejects or downgrades Arabic-digit Chinese, Japanese, and Korean precise
   duration strings such as `1小时30分钟`, `1時間30分`, and `2시간 10분` before they
   can reach prompt, UI, or recent-summary display surfaces.
+- **Repeated check-in suppression** — active chat, stale return signals,
+  duplicate activity signals, and recently dismissed lines now suppress local
+  check-in output before an in-app payload can be built.
 
 ## [0.4.0] - 2026-06-21
 

@@ -2,7 +2,11 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
+  buildCompanionCheckInInAppPayload,
+} from '../src/features/context/companionCheckInAdapter.ts'
+import {
   buildCompanionCheckInLine,
+  buildCompanionCheckInSignalKey,
   decideCompanionCheckIn,
   type CompanionCheckInPolicyInput,
 } from '../src/features/context/companionCheckInPolicy.ts'
@@ -39,6 +43,29 @@ test('decideCompanionCheckIn suppresses when disabled, paused, or missing observ
   assert.deepEqual(decideCompanionCheckIn(input({ summary: null })).reason, 'no_observation')
 })
 
+test('decideCompanionCheckIn keeps active chat ahead of every check-in signal', () => {
+  assert.deepEqual(decideCompanionCheckIn(input({
+    isActiveChatSession: true,
+    returnedToNexus: true,
+    activitySwitchCount: 8,
+    idleAfterActivityMs: 30 * 60_000,
+    summary: summary({ elapsedBucket: 'two_hours_or_more' }),
+  })), {
+    shouldCheckIn: false,
+    reason: 'active_chat',
+    surface: 'none',
+    priority: 'none',
+  })
+
+  assert.deepEqual(decideCompanionCheckIn(input({
+    isActiveChatSession: true,
+    nowMs: new Date(2026, 5, 21, 23, 30, 0).getTime(),
+    lastCheckInAtMs: baseNow - 20 * 60_000,
+    cooldownMinutes: 90,
+    activitySwitchCount: 8,
+  })).reason, 'active_chat')
+})
+
 test('decideCompanionCheckIn respects quiet hours and cooldown', () => {
   assert.deepEqual(decideCompanionCheckIn(input({
     nowMs: new Date(2026, 5, 21, 23, 30, 0).getTime(),
@@ -60,15 +87,34 @@ test('decideCompanionCheckIn suppresses focused activity unless the user returns
     summary: summary({ userDeepFocused: true, activityClass: 'coding' }),
   })).reason, 'focused')
 
-  assert.deepEqual(decideCompanionCheckIn(input({
+  const returned = decideCompanionCheckIn(input({
     returnedToNexus: true,
     summary: summary({ userDeepFocused: true, activityClass: 'coding' }),
+  }))
+  assert.equal(returned.shouldCheckIn, true)
+  assert.equal(returned.reason, 'return_to_nexus')
+  assert.equal(returned.surface, 'in_app')
+  assert.equal(returned.priority, 'low')
+  assert.match(returned.signalKey ?? '', /^return_to_nexus:/)
+})
+
+test('decideCompanionCheckIn limits stale return-to-Nexus signals to a short window', () => {
+  assert.deepEqual(decideCompanionCheckIn(input({
+    returnedToNexus: true,
+    returnedToNexusAtMs: baseNow - 11 * 60_000,
+    returnToNexusWindowMinutes: 10,
   })), {
-    shouldCheckIn: true,
-    reason: 'return_to_nexus',
-    surface: 'in_app',
-    priority: 'low',
+    shouldCheckIn: false,
+    reason: 'return_window_expired',
+    surface: 'none',
+    priority: 'none',
   })
+
+  assert.deepEqual(decideCompanionCheckIn(input({
+    returnedToNexus: true,
+    returnedToNexusAtMs: baseNow - 3 * 60_000,
+    returnToNexusWindowMinutes: 10,
+  })).reason, 'return_to_nexus')
 })
 
 test('decideCompanionCheckIn allows explainable local check-ins for strong signals', () => {
@@ -98,6 +144,89 @@ test('decideCompanionCheckIn does not nag on weak signals', () => {
     surface: 'none',
     priority: 'none',
   })
+})
+
+test('decideCompanionCheckIn suppresses repeated emissions for the same signal window', () => {
+  const first = decideCompanionCheckIn(input({
+    activitySegmentId: 'browser research block',
+    summary: summary({ elapsedBucket: 'two_hours_or_more' }),
+  }))
+
+  assert.equal(first.shouldCheckIn, true)
+  assert.equal(first.reason, 'long_continuous_activity')
+  assert.ok(first.signalKey)
+
+  assert.deepEqual(decideCompanionCheckIn(input({
+    activitySegmentId: 'browser research block',
+    cooldownMinutes: 1,
+    emissionWindowMinutes: 180,
+    lastCheckInAtMs: baseNow - 120 * 60_000,
+    lastCheckInSignalKey: first.signalKey,
+    summary: summary({ elapsedBucket: 'two_hours_or_more' }),
+  })), {
+    shouldCheckIn: false,
+    reason: 'duplicate_window',
+    surface: 'none',
+    priority: 'none',
+  })
+
+  assert.equal(decideCompanionCheckIn(input({
+    activitySegmentId: 'browser research block',
+    cooldownMinutes: 1,
+    emissionWindowMinutes: 60,
+    lastCheckInAtMs: baseNow - 120 * 60_000,
+    lastCheckInSignalKey: first.signalKey,
+    summary: summary({ elapsedBucket: 'two_hours_or_more' }),
+  })).reason, 'long_continuous_activity')
+})
+
+test('decideCompanionCheckIn suppresses recently dismissed same-signal lines', () => {
+  const signalKey = buildCompanionCheckInSignalKey(input({
+    activitySegmentId: 'rapid switching block',
+    activitySwitchCount: 6,
+  }), 'frequent_switching')
+
+  assert.deepEqual(decideCompanionCheckIn(input({
+    activitySegmentId: 'rapid switching block',
+    activitySwitchCount: 6,
+    lastDismissedAtMs: baseNow - 30 * 60_000,
+    lastDismissedSignalKey: signalKey,
+    dismissalWindowMinutes: 120,
+  })), {
+    shouldCheckIn: false,
+    reason: 'recently_dismissed',
+    surface: 'none',
+    priority: 'none',
+  })
+
+  assert.equal(decideCompanionCheckIn(input({
+    activitySegmentId: 'rapid switching block',
+    activitySwitchCount: 6,
+    lastDismissedAtMs: baseNow - 150 * 60_000,
+    lastDismissedSignalKey: signalKey,
+    dismissalWindowMinutes: 120,
+  })).reason, 'frequent_switching')
+})
+
+test('buildCompanionCheckInSignalKey normalizes segment ids for stable dedupe', () => {
+  assert.equal(
+    buildCompanionCheckInSignalKey(input({
+      activitySegmentId: ' Browser / Research Block ',
+    }), 'long_continuous_activity'),
+    'long_continuous_activity:browser-research-block',
+  )
+})
+
+test('buildCompanionCheckInSignalKey uses conservative fallback when no stable segment id exists', () => {
+  const first = buildCompanionCheckInSignalKey(input({
+    summary: summary({ activityClass: 'browsing', elapsedBucket: 'about_half_hour' }),
+  }), 'long_continuous_activity')
+  const second = buildCompanionCheckInSignalKey(input({
+    summary: summary({ activityClass: 'coding', elapsedBucket: 'two_hours_or_more', activeElsewhere: false }),
+  }), 'long_continuous_activity')
+
+  assert.equal(first, 'long_continuous_activity:unsegmented')
+  assert.equal(second, first)
 })
 
 test('buildCompanionCheckInLine returns local gentle copy without surveillance wording', () => {
@@ -132,4 +261,23 @@ test('buildCompanionCheckInLine returns null for suppressed decisions', () => {
     surface: 'none',
     priority: 'none',
   }, 'zh-CN'), null)
+})
+
+test('buildCompanionCheckInInAppPayload returns an expiring local-only dismissible payload', () => {
+  const decision = decideCompanionCheckIn(input({
+    activitySegmentId: 'switching burst',
+    activitySwitchCount: 6,
+  }))
+  const payload = buildCompanionCheckInInAppPayload(decision, 'en-US', baseNow, { ttlMs: 2 * 60_000 })
+
+  assert.equal(payload?.show, true)
+  assert.equal(payload?.surface, 'in_app')
+  assert.equal(payload?.kind, 'soft_card')
+  assert.equal(payload?.reason, 'frequent_switching')
+  assert.equal(payload?.priority, 'normal')
+  assert.equal(payload?.dismissible, true)
+  assert.equal(payload?.createdAtMs, baseNow)
+  assert.equal(payload?.expiresAtMs, baseNow + 2 * 60_000)
+  assert.equal(payload?.signalKey, decision.signalKey)
+  assert.doesNotMatch(payload?.text ?? '', /\bmust\b|\bmonitor(?:ing)?\b|\bwatching\b|surveillance/i)
 })
