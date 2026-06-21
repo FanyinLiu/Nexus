@@ -1,13 +1,22 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
+import { buildOnboardingMessageActionDemo } from '../src/features/onboarding/messageActionDemo.ts'
+import { enMessages } from '../src/i18n/locales/en.ts'
+import { jaMessages } from '../src/i18n/locales/ja.ts'
+import { koMessages } from '../src/i18n/locales/ko.ts'
+import { zhCNMessages } from '../src/i18n/locales/zh-CN.ts'
+import { zhTWMessages } from '../src/i18n/locales/zh-TW.ts'
 import {
   applyOnboardingStepRepairDraft,
+  buildOnboardingSteps,
   getOnboardingFinishHint,
   getOnboardingStepError,
   getOnboardingStepIssue,
 } from '../src/features/onboarding/components/onboardingGuideSupport.ts'
 import type { AppSettings } from '../src/types/app.ts'
+import type { TranslationDictionary } from '../src/types/i18n.ts'
 
 function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   return {
@@ -190,4 +199,76 @@ test('onboarding custom provider keeps endpoint repairs manual', () => {
 
   assert.match(issue?.recommendation ?? '', /\/v1/)
   assert.equal(issue?.repair, undefined)
+})
+
+test('onboarding keeps message action demo as a separate final step', () => {
+  const steps = buildOnboardingSteps('en').map((step) => step.id)
+
+  assert.deepEqual(steps, [
+    'ai_disclosure',
+    'welcome',
+    'text',
+    'voice',
+    'companion',
+    'message_action_demo',
+  ])
+})
+
+test('onboarding message action demo stays static and schema-free', () => {
+  const demo = buildOnboardingMessageActionDemo()
+  const secondDemo = buildOnboardingMessageActionDemo()
+  const serialized = JSON.stringify(demo)
+
+  assert.deepEqual(demo, secondDemo)
+  assert.deepEqual(demo.steps.map((step) => step.id), ['received', 'hint', 'decide'])
+  assert.deepEqual(demo.actions.map((action) => action.id), [
+    'snooze',
+    'mark_important',
+    'draft_reply',
+  ])
+  assert.doesNotMatch(serialized, /body|messageId|conversationId|userId|accountId/i)
+  assert.doesNotMatch(serialized, /timestamp|createdAt|updatedAt|exactTime|sequence/i)
+  assert.doesNotMatch(serialized, /notificationBridge|sendMessage|chat|autonomyController/i)
+})
+
+test('onboarding message action demo source has no runtime notification coupling', () => {
+  const helperSource = readFileSync(
+    new URL('../src/features/onboarding/messageActionDemo.ts', import.meta.url),
+    'utf8',
+  )
+  const componentSource = readFileSync(
+    new URL('../src/features/onboarding/components/guideSteps/MessageActionDemoStep.tsx', import.meta.url),
+    'utf8',
+  )
+  const combined = `${helperSource}\n${componentSource}`
+
+  assert.doesNotMatch(combined, /NotificationMessage|notificationBridge|useNotificationBridge/)
+  assert.doesNotMatch(combined, /useAutonomyController|chat\.sendMessage|sendMessage\(/)
+  assert.doesNotMatch(combined, /message\.body|message\.summary|conversationId|messageId/)
+})
+
+test('onboarding message action demo copy stays conceptual across locales', () => {
+  const dictionaries: TranslationDictionary[] = [
+    enMessages,
+    jaMessages,
+    koMessages,
+    zhCNMessages,
+    zhTWMessages,
+  ]
+  const keys = [
+    'onboarding.message_action_demo.intro',
+    'onboarding.message_action_demo.step.received.description',
+    'onboarding.message_action_demo.step.hint.description',
+    'onboarding.message_action_demo.step.decide.description',
+    'onboarding.message_action_demo.privacy_note',
+  ] as const
+
+  for (const dictionary of dictionaries) {
+    const copy = keys.map((key) => dictionary[key]).join('\n')
+
+    assert.doesNotMatch(copy, /schema|通知结构|通知結構|スキーマ|스키마/i)
+    assert.doesNotMatch(copy, /message body|消息正文|訊息正文|タイムスタンプ|타임스탬프/i)
+    assert.doesNotMatch(copy, /默认读取|預設讀取|normally reads|reads full/i)
+    assert.doesNotMatch(copy, /pipeline|preprocess|prepare|handling path|处理路径|處理路徑/i)
+  }
 })

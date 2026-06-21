@@ -22,6 +22,7 @@ import type { PetModelDefinition } from '../../pet'
 import {
   AiDisclosureStep,
   CompanionStep,
+  MessageActionDemoStep,
   TextStep,
   VoiceStep,
   WelcomeStep,
@@ -278,6 +279,8 @@ export function OnboardingGuide({
             onApplySpeechOutputPreset={applySpeechOutputPreset}
           />
         )
+      case 'message_action_demo':
+        return <MessageActionDemoStep uiLanguage={draft.uiLanguage} />
       case 'companion':
       default:
         return (

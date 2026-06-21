@@ -33,6 +33,9 @@
 - **Pet display action mapping** — separated pet runtime phases from
   user-facing display actions so summarizing and needs-attention states can be
   shown on the pet without inventing a broadcasting runtime signal.
+- **Onboarding message action demo** — added a static first-run walkthrough for
+  received-message actions, keeping the demo separate from real notification
+  schemas, message bodies, IDs, precise timestamps, and chat sending.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now
