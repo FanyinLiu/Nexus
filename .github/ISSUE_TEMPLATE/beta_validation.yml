@@ -86,6 +86,65 @@ body:
         - Did your OS ask for screen, accessibility, notification, or window permissions?
         - What was confusing?
 
+  - type: dropdown
+    id: desktop-companion-context
+    attributes:
+      label: v0.4 interaction context
+      description: Pick the closest safe label. Do not include raw window titles or private activity text here.
+      options:
+        - Not testing v0.4
+        - Nexus open but unused
+        - Active chat with Nexus
+        - Returned to Nexus after being away
+        - Unsure
+
+  - type: dropdown
+    id: desktop-companion-timing
+    attributes:
+      label: v0.4 check-in timing feel
+      options:
+        - Not seen
+        - Well timed
+        - Too early
+        - Too late
+        - Too frequent
+        - Unsure
+
+  - type: dropdown
+    id: desktop-companion-tone
+    attributes:
+      label: v0.4 check-in tone feel
+      options:
+        - Caring
+        - Cold
+        - Nagging
+        - Too much like monitoring
+        - Unsure
+
+  - type: checkboxes
+    id: desktop-companion-privacy-flags
+    attributes:
+      label: v0.4 privacy boundary signals
+      description: Select only safe labels. Redact the evidence field if you attach screenshots or logs.
+      options:
+        - label: No privacy boundary issue noticed
+        - label: Exact minutes or seconds appeared in companion copy
+        - label: Raw window title appeared
+        - label: Clipboard body appeared
+        - label: Screenshot or screen text appeared
+        - label: Private file path appeared
+
+  - type: checkboxes
+    id: desktop-companion-permission-friction
+    attributes:
+      label: v0.4 OS permission friction
+      options:
+        - label: No permission friction noticed
+        - label: Screen permission was confusing
+        - label: Accessibility or automation permission was confusing
+        - label: Notification permission was confusing
+        - label: Window/app permission was confusing
+
   - type: textarea
     id: evidence
     attributes:

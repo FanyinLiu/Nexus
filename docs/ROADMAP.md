@@ -25,9 +25,9 @@ The larger product steps are:
   [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md).
   The v0.4 line is split into quiet observation, coarse time language,
   check-in policy, transparency UI, beta copy tuning, and release hardening.
-  `v0.4.0` is now the stable quiet-observation foundation; `v0.4.1` and
-  `v0.4.2` are draft stacked prerequisites; `v0.4.3` is the active stacked
-  user-facing transparency draft.
+  `v0.4.0` is now the stable quiet-observation foundation; `v0.4.1`,
+  `v0.4.2`, and `v0.4.3` are draft stacked prerequisites; `v0.4.4` is the
+  active stacked beta-feedback and copy-safety draft.
 - **v0.5.0 — desktop pet behavior.** The visible companion can react to mouse
   movement, typing rhythm, idleness, and desktop state without blocking the
   user's work.

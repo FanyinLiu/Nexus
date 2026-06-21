@@ -136,6 +136,12 @@ For v0.4 desktop companion awareness, also include:
 - whether clearing the recent companion summary was obvious
 - whether the OS permission flow was understandable
 
+Use the structured v0.4 fields when possible. They intentionally reduce
+feedback into safe labels such as timing feel, tone feel, privacy-boundary
+signals, permission friction, and whether Nexus was open but unused, actively
+chatting, or returning from away. These labels are useful for tuning without
+retaining raw desktop activity.
+
 Do not include raw screenshots, private message text, full clipboard contents,
 or private file paths unless you intentionally created a safe test fixture.
 
