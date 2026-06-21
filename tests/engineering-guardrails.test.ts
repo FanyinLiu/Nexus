@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
@@ -19,6 +19,22 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 function readWorkspaceFile(relativePath: string) {
   return readFileSync(join(ROOT, relativePath), 'utf8')
+}
+
+function listSourceFiles(relativeDir: string): string[] {
+  const root = join(ROOT, relativeDir)
+  const files: string[] = []
+  for (const entry of readdirSync(root)) {
+    const absolute = join(root, entry)
+    const relative = `${relativeDir}/${entry}`
+    const stat = statSync(absolute)
+    if (stat.isDirectory()) {
+      files.push(...listSourceFiles(relative))
+    } else if (/\.(?:ts|tsx|js|mjs|cjs)$/.test(entry)) {
+      files.push(relative)
+    }
+  }
+  return files
 }
 
 test('engineering guardrail npm scripts stay wired into PR and release verification', () => {
@@ -123,4 +139,12 @@ test('companion task boundary is explicit for legacy agent-named code', () => {
   assert.match(agentReadme, /default-off or confirmation-gated/)
   assert.match(architecture, /Companion task boundary/)
   assert.match(architecture, /user-facing copy should describe companion tasks/)
+})
+
+test('removed voice bus reducer does not re-enter source imports', () => {
+  const removedImportPath = ['features', 'voice', 'busReducer'].join('/')
+  const offenders = [...listSourceFiles('src'), ...listSourceFiles('tests')]
+    .filter((file) => readWorkspaceFile(file).includes(removedImportPath))
+
+  assert.deepEqual(offenders, [])
 })

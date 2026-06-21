@@ -390,11 +390,31 @@ stage('E', 'Docs + compliance', () => {
   })
 
   if (isStable) {
-    const ver = tag.slice(1)
+    check('E', `docs/RELEASE-NOTES-${tag}.md no longer marked draft`, () => {
+      const path = join(ROOT, 'docs', `RELEASE-NOTES-${tag}.md`)
+      if (!existsSync(path)) return
+      const notes = readFileSync(path, 'utf8')
+      if (/\bDraft\b|pre-tag|尚未打 tag/i.test(notes)) {
+        throw new Error(`release notes still contain draft/pre-tag markers`)
+      }
+    }, { warnOnly: true })
+
+    check('E', `docs/RELEASE-NOTES-${tag}.zh-CN.md exists and is not draft`, () => {
+      const path = join(ROOT, 'docs', `RELEASE-NOTES-${tag}.zh-CN.md`)
+      if (!existsSync(path)) {
+        throw new Error(`missing localized release notes — add docs/RELEASE-NOTES-${tag}.zh-CN.md`)
+      }
+      const notes = readFileSync(path, 'utf8')
+      if (/\bDraft\b|pre-tag|尚未打 tag/i.test(notes)) {
+        throw new Error(`localized release notes still contain draft/pre-tag markers`)
+      }
+    }, { warnOnly: true })
+
     check('E', `README.md mentions ${tag}`, () => {
       const readme = readFileSync(join(ROOT, 'README.md'), 'utf8')
-      if (!readme.includes(tag) && !readme.includes(ver)) {
-        throw new Error(`README.md does not reference ${tag}. Update News + What's-new sections.`)
+      const releaseNotes = `RELEASE-NOTES-${tag}.md`
+      if (!readme.includes(releaseNotes)) {
+        throw new Error(`README.md does not link ${releaseNotes}. Update News + What's-new sections.`)
       }
     })
 
@@ -403,8 +423,9 @@ stage('E', 'Docs + compliance', () => {
         const path = join(ROOT, 'docs', `README.${lang}.md`)
         if (!existsSync(path)) throw new Error(`missing docs/README.${lang}.md`)
         const md = readFileSync(path, 'utf8')
-        if (!md.includes(tag) && !md.includes(ver)) {
-          throw new Error(`does not reference ${tag} — update news block`)
+        const releaseNotes = `RELEASE-NOTES-${tag}.md`
+        if (!md.includes(releaseNotes)) {
+          throw new Error(`does not link ${releaseNotes} — update news block`)
         }
       })
     }

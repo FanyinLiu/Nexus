@@ -62,6 +62,21 @@ test('resolveCompanionTransparencySummary exposes only coarse summary fields', (
   assert.equal(JSON.stringify(result).includes('clipboard'), false)
 })
 
+test('resolveCompanionTransparencySummary downgrades precise elapsed language before display', () => {
+  const result = resolveCompanionTransparencySummary({
+    contextAwarenessEnabled: true,
+    companionAwarenessPaused: false,
+    activeWindowContextEnabled: true,
+    summary: {
+      ...summary,
+      elapsedLabel: '37 minutes',
+    },
+  })
+
+  assert.equal(result.currentElapsedLabel, 'about half an hour')
+  assert.equal(JSON.stringify(result).includes('37 minutes'), false)
+})
+
 test('resolveCompanionTransparencySummary keeps pause explicit and removes model reach', () => {
   const result = resolveCompanionTransparencySummary({
     contextAwarenessEnabled: true,

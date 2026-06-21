@@ -21,8 +21,8 @@ function normalizeMarkdownProse(text: string) {
   return text.replace(/[>\s]+/g, ' ').trim()
 }
 
-test('current release spotlight keeps the v0.4.0 beta companion awareness explicit', () => {
-  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, '0.4.0-beta.1')
+test('current release spotlight keeps the v0.4.0 stable companion awareness explicit', () => {
+  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, '0.4.0')
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.bullets.map((item) => item.id),
     ['memory_sources', 'memory_control', 'companion_presence', 'first_run', 'companion_boundary'],
@@ -65,13 +65,17 @@ test('current release spotlight names desktop companion awareness in user copy',
   const zhCN = await ensureLocaleLoaded('zh-CN')
 
   assert.match(en['about.release_spotlight.title'], /Desktop companion awareness/i)
+  assert.match(en['about.release_spotlight.summary'], /stable release/)
   assert.match(en['about.release_spotlight.summary'], /rough time language/)
+  assert.match(en['about.release_spotlight.bullet.first_run.body'], /proactive check-in expansion/)
   assert.match(en['about.release_spotlight.bullet.companion_presence.body'], /pause or clear/)
   assert.equal(en['about.release_spotlight.action.review_memory'], 'Review Memory')
   assert.equal(en['about.release_spotlight.action.preview_companion'], 'Preview Companion')
 
   assert.match(zhCN['about.release_spotlight.title'], /桌面陪伴感知/)
+  assert.match(zhCN['about.release_spotlight.summary'], /稳定版/)
   assert.match(zhCN['about.release_spotlight.summary'], /粗略时间/)
+  assert.match(zhCN['about.release_spotlight.bullet.first_run.body'], /主动 check-in 扩展/)
   assert.match(zhCN['about.release_spotlight.bullet.companion_presence.body'], /暂停或清理近期摘要/)
   assert.equal(zhCN['about.release_spotlight.action.review_memory'], '查看记忆')
   assert.equal(zhCN['about.release_spotlight.action.preview_companion'], '预览伙伴')
@@ -99,9 +103,13 @@ test('human-facing v0.3.6 docs keep foundation wrap-up aligned', () => {
   assert.match(chineseReleaseNotes, /当前窗口上下文[\s\S]*剪贴板上下文[\s\S]*屏幕文字 OCR/)
   assert.match(chineseReleaseNotes, /不做“时间流逝后的主动陪伴”主循环/)
 
-  const unreleasedSection = changelog.split('## [0.4.0-beta.1]')[0]
+  const unreleasedSection = changelog.split('## [0.4.0]')[0]
   assert.match(unreleasedSection, /## \[Unreleased\]/)
   assert.doesNotMatch(unreleasedSection, /v0\.4 desktop companion awareness foundation/)
+
+  const stableSection = changelog.split('## [0.4.0]')[1]?.split('\n## [')[0] ?? ''
+  assert.match(stableSection, /Desktop companion awareness foundation/)
+  assert.match(stableSection, /Session-bound quiet observation summaries/)
 
   const betaSection = changelog.split('## [0.4.0-beta.1]')[1]?.split('\n## [')[0] ?? ''
   assert.match(betaSection, /v0\.4 desktop companion awareness foundation/)

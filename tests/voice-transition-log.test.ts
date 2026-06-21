@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import type { VoiceBusEvent } from '../src/features/voice/busEvents.ts'
-import type { VoicePhase } from '../src/features/voice/busReducer.ts'
+import type { VoicePhase } from '../src/features/voice/session/voiceSessionTypes.ts'
 import { VoiceReasonCodes } from '../src/features/voice/voiceReasonCodes.ts'
 import { VoiceTransitionLog } from '../src/features/voice/voiceTransitionLog.ts'
 

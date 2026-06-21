@@ -1,4 +1,8 @@
-import type { QuietObservationSummary } from './companionAwareness.ts'
+import {
+  containsPreciseCompanionTimeLanguage,
+  formatCompanionElapsedBucket,
+  type QuietObservationSummary,
+} from './companionAwareness.ts'
 
 export type CompanionTransparencyStatus =
   | 'off'
@@ -27,6 +31,14 @@ export type CompanionTransparencyInput = {
   summary: QuietObservationSummary | null
 }
 
+function resolveVisibleElapsedLabel(summary: QuietObservationSummary | null): string | null {
+  if (!summary) return null
+  if (!containsPreciseCompanionTimeLanguage(summary.elapsedLabel)) {
+    return summary.elapsedLabel
+  }
+  return formatCompanionElapsedBucket(summary.elapsedBucket, 'en-US')
+}
+
 export function resolveCompanionTransparencySummary(
   input: CompanionTransparencyInput,
 ): CompanionTransparencySummary {
@@ -49,7 +61,7 @@ export function resolveCompanionTransparencySummary(
     canPause: input.contextAwarenessEnabled,
     canClearRecentSummary: Boolean(input.summary),
     currentActivityClass: input.summary?.activityClass ?? null,
-    currentElapsedLabel: input.summary?.elapsedLabel ?? null,
+    currentElapsedLabel: resolveVisibleElapsedLabel(input.summary),
     rawContentVisible: false as const,
   }
 

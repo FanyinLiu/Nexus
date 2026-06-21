@@ -167,8 +167,10 @@ first-conversation timing, startup reports, and locale coverage.
 When preparing a v0.4 beta or stable release, also use
 [Nexus v0.4 Release Hardening Handoff](RELEASE-CANDIDATE-v0.4-HARDENING.md).
 This is required for the desktop companion awareness line because it introduces
-quiet observation, rough time language, check-in policy, and user-facing
-transparency.
+quiet observation, rough time language, and user-facing transparency. For the
+`v0.4.0` stable tag specifically, use
+[Nexus v0.4.0 Stable Release Checklist](RELEASE-CANDIDATE-v0.4.0-STABLE.md)
+and keep the scope frozen to the Quiet Observation Foundation.
 
 Before tagging a v0.4 release, confirm the v0.4 handoff records:
 
@@ -188,6 +190,11 @@ Also confirm the human-facing beta path is ready:
   interruption feel, privacy boundaries, OS permission friction, and false
   positives.
 - Community docs link the v0.4 plan, beta notes, and hardening handoff.
+
+For the `v0.4.0` stable tag, keep `docs/RELEASE-NOTES-v0.4.0.md` and
+`docs/RELEASE-NOTES-v0.4.0.zh-CN.md` as pre-tag drafts until the release branch
+is frozen. Do not switch README entry points from `v0.4.0-beta.1` to `v0.4.0`
+until the final tag is being prepared.
 
 The v0.4 release is not ready if raw screenshots, OCR dumps, full clipboard
 contents, private message bodies, private file paths, exact second-level

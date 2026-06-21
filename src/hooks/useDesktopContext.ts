@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   buildQuietObservationSummary,
   buildDesktopContextRequest,
+  createNexusInteractionState,
   formatQuietObservationForPrompt,
   saveRecentCompanionSummary,
 } from '../features/context'
@@ -20,14 +21,11 @@ type UseDesktopContextParams = {
 }
 
 export function useDesktopContext({ settingsRef, platformProfileRef }: UseDesktopContextParams) {
-  const [initialOpenAt] = useState(() => new Date().toISOString())
-  const nexusOpenSinceRef = useRef(initialOpenAt)
-  const lastNexusInteractionAtRef = useRef(initialOpenAt)
+  const [interactionState] = useState(() => createNexusInteractionState())
+  const nexusOpenSinceRef = useRef(interactionState.nexusOpenSince)
 
   useEffect(() => {
-    const markNexusInteraction = () => {
-      lastNexusInteractionAtRef.current = new Date().toISOString()
-    }
+    const markNexusInteraction = () => interactionState.markNexusInteraction()
 
     document.addEventListener('pointerdown', markNexusInteraction, { capture: true })
     document.addEventListener('keydown', markNexusInteraction, { capture: true })
@@ -39,7 +37,7 @@ export function useDesktopContext({ settingsRef, platformProfileRef }: UseDeskto
       document.removeEventListener('touchstart', markNexusInteraction, { capture: true })
       void disposeScreenOcrWorker()
     }
-  }, [])
+  }, [interactionState])
 
   const withCompanionAwareness = useCallback((contentSnapshot: DesktopContextSnapshot | null): DesktopContextSnapshot | null => {
     if (!contentSnapshot) return null
@@ -49,7 +47,7 @@ export function useDesktopContext({ settingsRef, platformProfileRef }: UseDeskto
       paused: !settingsRef.current.contextAwarenessEnabled
         || settingsRef.current.companionAwarenessPaused,
       nexusOpenSince: nexusOpenSinceRef.current,
-      lastNexusInteractionAt: lastNexusInteractionAtRef.current,
+      lastNexusInteractionAt: interactionState.getLastNexusInteractionAt(),
       activeWindowTitle: contentSnapshot.activeWindowTitle,
       uiLanguage: settingsRef.current.uiLanguage,
     })
@@ -61,7 +59,7 @@ export function useDesktopContext({ settingsRef, platformProfileRef }: UseDeskto
       ...contentSnapshot,
       companionAwarenessSummary,
     }
-  }, [settingsRef])
+  }, [interactionState, settingsRef])
 
   const loadDesktopContextSnapshot = useCallback(async (): Promise<DesktopContextSnapshot | null> => {
     const currentSettings = settingsRef.current

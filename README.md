@@ -115,18 +115,18 @@ Phase 1 已经开始落地，当前默认体验正在收敛到最小闭环：
 - 基础检查可以下载本地首次运行 QA 报告，包含检查项、首次对话耗时和隐私标记；不会导出聊天内容、模型输出、API Key 或 provider secret。
 - 本地开发时，Nexus 网页预览地址是 `http://127.0.0.1:47821/`；`11434/v1` 是 Ollama API，不是网页预览。
 
-## 本次更新 — v0.4.0-beta.1
+## 本次更新 — v0.4.0
 
-> **主题：桌面陪伴感知开始。** 中文说明见 [RELEASE-NOTES-v0.4.0-beta.1.zh-CN.md](docs/RELEASE-NOTES-v0.4.0-beta.1.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.0-beta.1.md](docs/RELEASE-NOTES-v0.4.0-beta.1.md)。
+> **主题：桌面陪伴感知地基。** 中文说明见 [RELEASE-NOTES-v0.4.0.zh-CN.md](docs/RELEASE-NOTES-v0.4.0.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.0.md](docs/RELEASE-NOTES-v0.4.0.md)。
 
-0.4.0-beta.1 开始真正做“打开 Nexus 后，它能安静理解时间流逝”的桌面陪伴感知。它会优先保持安静，只形成短期、粗粒度、可暂停和可清理的陪伴摘要；进入模型的是脱敏摘要，不是原始截图、完整剪贴板、私人消息或精确计时。
+0.4.0 正式开始“打开 Nexus 后，它能安静理解时间流逝”的桌面陪伴感知。它会优先保持安静，只形成短期、粗粒度、可暂停和可清理的陪伴摘要；进入模型的是脱敏摘要，不是原始截图、完整剪贴板、私人消息或精确计时。
 
-一句话记住 0.4 beta：
+一句话记住 0.4.0：
 
 - **打开 Nexus 后，即使你去电脑别处工作，陪伴感也不会立刻断掉。**
 - **时间说法是“一会儿 / 半小时左右 / 一小时左右”，不是精确到分秒。**
 - **Memory 设置里能看到说明，并能暂停或清理近期陪伴摘要。**
-- **主动关心保持低频、保守、可关闭。**
+- **这个稳定版先打好安静观察地基，不扩展主动 check-in。**
 - **0.5 才做桌宠跟随鼠标、打字反应和窗口互动。**
 
 ## 上次更新 — v0.3.6
@@ -303,8 +303,8 @@ npm run distribution:audit
 社区文档不是某个版本的小功能，而是项目长期变大的入口。社区入口见
 [COMMUNITY.md](docs/COMMUNITY.md)，0.4 系列方向见
 [v0.4 Desktop Companion Awareness](docs/V0.4_DESKTOP_COMPANION_AWARENESS.md)，
-0.4 beta 草稿见
-[RELEASE-NOTES-v0.4.0-beta.1.md](docs/RELEASE-NOTES-v0.4.0-beta.1.md)，
+0.4 正式版说明见
+[RELEASE-NOTES-v0.4.0.md](docs/RELEASE-NOTES-v0.4.0.md)，
 发布加固清单见
 [RELEASE-CANDIDATE-v0.4-HARDENING.md](docs/RELEASE-CANDIDATE-v0.4-HARDENING.md)。
 提交人格、提示词或桌宠素材前，请先看 [Nexus Companion Prompt Baseline](docs/NEXUS_COMPANION_PROMPT.md)；
