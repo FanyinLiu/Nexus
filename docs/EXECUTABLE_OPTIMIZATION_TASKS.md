@@ -14,7 +14,11 @@
 
 ### 任务
 - [x] ~~在通知入口增加「消息摘要」快速通道~~ **被通讯桥超越**（v0.3.4-beta.1）：Telegram/Discord 消息直接进伴侣对话并自动回信，语音消息转写；webhook 通知保留播报+收件箱通道。
-- [ ] 在设置页新增「窗口上下文」诊断卡，显示前台窗口、剪贴板更新、截图抓取是否可用。
+- [x] 在设置页新增「窗口上下文」诊断卡，显示前台窗口、剪贴板更新、截图抓取是否可用。✅
+  Settings -> Memory now routes the desktop context status grid through a
+  pure diagnostics view model, preserving the no-new-sensing privacy boundary
+  while making foreground-window, clipboard, and screenshot/OCR availability
+  testable.
 - [ ] 在 `Pet` 侧状态显示新增 `broadcasting / summarizing / needs_attention` 的动作映射。
 - [ ] 在首次安装后的新手路径里加入「收到消息后的处理动作」演示（至少 1 条）。
 

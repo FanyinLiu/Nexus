@@ -26,6 +26,10 @@
   and release-hardening handoff that keeps package version, tag, GitHub
   Release, and README stable-entry state unchanged while preparing review
   evidence for the stacked v0.4.x drafts.
+- **Settings desktop-context diagnostics view model** — moved the Memory
+  settings foreground-window, clipboard, and screenshot/OCR availability cards
+  onto a pure presentation mapper so the UI is easier to test without adding
+  new sensing behavior.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now
