@@ -1,8 +1,7 @@
 import {
-  containsPreciseCompanionTimeLanguage,
-  formatCompanionElapsedBucket,
   type QuietObservationSummary,
 } from './companionAwareness.ts'
+import { coerceCompanionElapsedLabel } from './companionTimeLanguage.ts'
 
 export type CompanionTransparencyStatus =
   | 'off'
@@ -33,10 +32,7 @@ export type CompanionTransparencyInput = {
 
 function resolveVisibleElapsedLabel(summary: QuietObservationSummary | null): string | null {
   if (!summary) return null
-  if (!containsPreciseCompanionTimeLanguage(summary.elapsedLabel)) {
-    return summary.elapsedLabel
-  }
-  return formatCompanionElapsedBucket(summary.elapsedBucket, 'en-US')
+  return coerceCompanionElapsedLabel(summary.elapsedBucket, summary.elapsedLabel)
 }
 
 export function resolveCompanionTransparencySummary(
