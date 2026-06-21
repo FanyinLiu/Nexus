@@ -156,11 +156,18 @@ Targeted v0.4.0 checks should also cover:
   functional, privacy, or lifecycle blocker based on the provided gate summary;
   the only remaining requirement is the formal Stage A release-integrity check
   after the final commit and before the `v0.4.0` tag.
-- `npm run prerelease-check -- v0.4.0 --only=A` — partially passed after the
-  local candidate commit. A.1-A.5 passed: tag format, package version, local tag
-  absence, remote tag absence, and clean working tree. A.6-A.7 remain pending
-  because the candidate commit is on `codex/v0.4.0-stable-candidate`, not yet
-  `origin/main`, and therefore has no CI run on the final main HEAD.
+- Draft PR
+  [#107](https://github.com/FanyinLiu/Nexus/pull/107) merged into `main` with
+  commit `1d4a74e1c4719e762dd91f6fcdd70e10e47e5a48`.
+- Main CI run
+  [27906777483](https://github.com/FanyinLiu/Nexus/actions/runs/27906777483)
+  passed on Windows, macOS, and Ubuntu for commit
+  `1d4a74e1c4719e762dd91f6fcdd70e10e47e5a48`.
+- `npm run prerelease-check -- v0.4.0 --only=A` — passed locally on `main`
+  with 7 blocker checks, 0 warnings, and 0 failures.
+- `npm run prerelease-check -- v0.4.0` — passed locally on `main` with 35
+  blocker checks, 0 warnings, and 0 failures. The tag is safe to create after
+  this checklist update is committed and Stage A is rerun on the final HEAD.
 
 ## Manual Checks
 
