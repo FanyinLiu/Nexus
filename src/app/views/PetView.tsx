@@ -192,7 +192,11 @@ export function PetView({
     ? ti('pet.status.standby')
     : ti(companionActivity.displayStatusKey)
   const petStageStatusClass =
-    companionActivity.isError ? 'is-error'
+    companionActivity.displayAction === 'failed' ? 'is-error'
+    : companionActivity.displayAction === 'done' ? 'is-done'
+    : companionActivity.displayAction === 'executing' ? 'is-busy'
+    : companionActivity.displayAction === 'waiting_confirmation' ? 'is-armed'
+    : companionActivity.isError ? 'is-error'
     : companionActivity.isOffline ? 'is-offline'
     : companionActivity.isListening || companionActivity.isSpeaking ? 'is-active'
     : companionActivity.isThinking ? 'is-busy'

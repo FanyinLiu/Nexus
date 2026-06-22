@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
 import {
+  COMPANION_ACTIVITY_DISPLAY_ACTIONS,
   COMPANION_ACTIVITY_PHASES,
   getCompanionActivityDisplayActionSource,
   getCompanionActivityDisplayActionStatusKey,
@@ -43,10 +44,10 @@ test('resolveCompanionActivityState prioritizes unavailable and blocking states'
   assert.equal(error.isError, true)
   assert.equal(error.motionToken, 'error')
   assert.equal(error.spriteState, 'failed')
-  assert.equal(error.displayAction, 'needs_attention')
-  assert.equal(error.displayActionSource, 'ui_label_only')
+  assert.equal(error.displayAction, 'failed')
+  assert.equal(error.displayActionSource, 'task_state')
   assert.equal(error.statusKey, 'pet.status.error')
-  assert.equal(error.displayStatusKey, 'pet.status.needs_attention')
+  assert.equal(error.displayStatusKey, 'pet.status.failed')
 })
 
 test('resolveCompanionActivityState keeps confirmation, voice, and thinking priority stable', () => {
@@ -57,11 +58,15 @@ test('resolveCompanionActivityState keeps confirmation, voice, and thinking prio
     chatBusy: true,
     now,
   }).phase, 'waiting')
-  assert.equal(resolveCompanionActivityState({
+  const waiting = resolveCompanionActivityState({
     mood: 'idle',
     waitingForConfirmation: true,
     now,
-  }).motionToken, 'wait')
+  })
+  assert.equal(waiting.motionToken, 'wait')
+  assert.equal(waiting.displayAction, 'waiting_confirmation')
+  assert.equal(waiting.displayActionSource, 'task_state')
+  assert.equal(waiting.displayStatusKey, 'pet.status.waiting_confirmation')
 
   const speaking = resolveCompanionActivityState({
     mood: 'happy',
@@ -102,12 +107,55 @@ test('resolveCompanionActivityState keeps confirmation, voice, and thinking prio
 })
 
 test('companion activity display actions keep UI-only actions out of runtime phase resolution', () => {
+  assert.deepEqual(
+    COMPANION_ACTIVITY_DISPLAY_ACTIONS.filter(action => (
+      action === 'waiting_confirmation'
+      || action === 'executing'
+      || action === 'done'
+      || action === 'failed'
+    )),
+    ['waiting_confirmation', 'executing', 'done', 'failed'],
+  )
+  assert.equal(getCompanionActivityDisplayActionStatusKey('waiting_confirmation'), 'pet.status.waiting_confirmation')
+  assert.equal(getCompanionActivityDisplayActionStatusKey('executing'), 'pet.status.executing')
+  assert.equal(getCompanionActivityDisplayActionStatusKey('done'), 'pet.status.done')
+  assert.equal(getCompanionActivityDisplayActionStatusKey('failed'), 'pet.status.failed')
+  assert.equal(getCompanionActivityDisplayActionSource('waiting_confirmation'), 'task_state')
+  assert.equal(getCompanionActivityDisplayActionSource('executing'), 'task_state')
+  assert.equal(getCompanionActivityDisplayActionSource('done'), 'task_state')
+  assert.equal(getCompanionActivityDisplayActionSource('failed'), 'task_state')
   assert.equal(getCompanionActivityDisplayActionStatusKey('broadcasting'), 'pet.status.broadcasting')
   assert.equal(getCompanionActivityDisplayActionSource('broadcasting'), 'ui_label_only')
   assert.equal(getCompanionActivityDisplayActionSource('needs_attention'), 'ui_label_only')
 
   const source = readFileSync(new URL('../src/types/voice.ts', import.meta.url), 'utf8')
   assert.doesNotMatch(source, /'broadcasting'/)
+  assert.doesNotMatch(source, /'waiting_confirmation'/)
+  assert.doesNotMatch(source, /'executing'/)
+  assert.doesNotMatch(source, /'done'/)
+  assert.doesNotMatch(source, /'failed'/)
+})
+
+test('task state display actions do not rewrite the underlying runtime phase', () => {
+  const executing = resolveCompanionActivityState({
+    mood: 'thinking',
+    assistantActivity: 'scheduling',
+    now,
+  })
+  assert.equal(executing.phase, 'thinking')
+  assert.equal(executing.displayAction, 'executing')
+  assert.equal(executing.displayStatusKey, 'pet.status.executing')
+  assert.equal(executing.motionToken, 'think')
+
+  const done = resolveCompanionActivityState({
+    mood: 'proud',
+    taskState: 'done',
+    now,
+  })
+  assert.equal(done.phase, 'idle')
+  assert.equal(done.displayAction, 'done')
+  assert.equal(done.displayStatusKey, 'pet.status.done')
+  assert.equal(done.motionToken, 'breathe')
 })
 
 test('PetView renders display status separately from runtime phase status', () => {
@@ -209,8 +257,8 @@ test('resolveCompanionActivityPreviewState covers every desktop presence state',
     {
       requested: 'waiting',
       phase: 'waiting',
-      displayAction: 'waiting',
-      displayActionSource: 'runtime_reflection',
+      displayAction: 'waiting_confirmation',
+      displayActionSource: 'task_state',
       displayStatusKey: 'pet.status.waiting_confirmation',
       motionToken: 'wait',
       spriteState: 'waiting',
@@ -220,9 +268,9 @@ test('resolveCompanionActivityPreviewState covers every desktop presence state',
     {
       requested: 'error',
       phase: 'error',
-      displayAction: 'needs_attention',
-      displayActionSource: 'ui_label_only',
-      displayStatusKey: 'pet.status.needs_attention',
+      displayAction: 'failed',
+      displayActionSource: 'task_state',
+      displayStatusKey: 'pet.status.failed',
       motionToken: 'error',
       spriteState: 'failed',
       statusKey: 'pet.status.error',

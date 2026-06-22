@@ -45,6 +45,8 @@
 - **Model connection error codes** — added stable codes for first-run text-model
   failures including missing keys, CJK/whitespace header issues, missing models,
   rate limits, timeouts, and provider-side outages.
+- **Pet task display actions** — added task-level pet display states for waiting
+  confirmation, executing, done, and failed while keeping runtime phases stable.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now

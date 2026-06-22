@@ -78,7 +78,7 @@
 - 让“自动任务 / 通知动作”具备可追踪、可撤销的最小权限回路。
 
 ### 任务
-- [ ] 宠物面板状态图增加 `waiting_confirmation / executing / done / failed`。
+- [x] 宠物面板状态图增加 `waiting_confirmation / executing / done / failed`——PetView 继续保留底层 phase，新增任务层 display-action 与 5 语文案，后续自动任务可直接复用这些稳定状态。
 - [ ] 通知卡片提供 `稍后处理 / 标记重要 / 一键起草回复`。
 - [ ] 权限弹窗统一分为「本次一次 / 本次会话 / 长期允许」。
 - [ ] 所有高风险动作落审计日志（类型、输入、结果、耗时、失败码）。

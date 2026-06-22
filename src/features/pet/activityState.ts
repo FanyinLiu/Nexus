@@ -28,6 +28,10 @@ export type CompanionActivityMotion =
 
 export type CompanionActivityDisplayAction =
   | CompanionActivityPhase
+  | 'waiting_confirmation'
+  | 'executing'
+  | 'done'
+  | 'failed'
   | 'broadcasting'
   | 'summarizing'
   | 'needs_attention'
@@ -35,6 +39,7 @@ export type CompanionActivityDisplayAction =
 export type CompanionActivityDisplayActionSource =
   | 'runtime_reflection'
   | 'assistant_activity'
+  | 'task_state'
   | 'ui_label_only'
 
 export const COMPANION_ACTIVITY_PHASES: readonly CompanionActivityPhase[] = [
@@ -49,6 +54,10 @@ export const COMPANION_ACTIVITY_PHASES: readonly CompanionActivityPhase[] = [
 
 export const COMPANION_ACTIVITY_DISPLAY_ACTIONS: readonly CompanionActivityDisplayAction[] = [
   ...COMPANION_ACTIVITY_PHASES,
+  'waiting_confirmation',
+  'executing',
+  'done',
+  'failed',
   'broadcasting',
   'summarizing',
   'needs_attention',
@@ -60,6 +69,10 @@ export interface CompanionActivityInput {
   assistantActivity?: AssistantRuntimeActivity
   chatBusy?: boolean
   waitingForConfirmation?: boolean
+  taskState?: Extract<
+    CompanionActivityDisplayAction,
+    'waiting_confirmation' | 'executing' | 'done' | 'failed'
+  >
   hasBlockingError?: boolean
   isOnline?: boolean
   activeTaskLabel?: string
@@ -172,6 +185,22 @@ const COMPANION_ACTIVITY_DISPLAY_ACTION_METADATA: Record<
     source: 'runtime_reflection',
   },
   // Registered as a UI-only product action until a real broadcast runtime signal exists.
+  waiting_confirmation: {
+    statusKey: 'pet.status.waiting_confirmation',
+    source: 'task_state',
+  },
+  executing: {
+    statusKey: 'pet.status.executing',
+    source: 'task_state',
+  },
+  done: {
+    statusKey: 'pet.status.done',
+    source: 'task_state',
+  },
+  failed: {
+    statusKey: 'pet.status.failed',
+    source: 'task_state',
+  },
   broadcasting: {
     statusKey: 'pet.status.broadcasting',
     source: 'ui_label_only',
@@ -225,7 +254,10 @@ function resolveDisplayAction(
   input: CompanionActivityInput,
   phase: CompanionActivityPhase,
 ): CompanionActivityDisplayAction {
-  if (phase === 'error') return 'needs_attention'
+  if (phase === 'error' || input.taskState === 'failed') return 'failed'
+  if (phase === 'waiting' || input.taskState === 'waiting_confirmation') return 'waiting_confirmation'
+  if (input.taskState === 'executing' || input.assistantActivity === 'scheduling') return 'executing'
+  if (input.taskState === 'done') return 'done'
   if (input.assistantActivity === 'summarizing') return 'summarizing'
   return phase
 }
