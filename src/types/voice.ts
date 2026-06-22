@@ -1,5 +1,6 @@
 import type {
   DiscoveredModel,
+  ModelConnectionErrorCode,
   ProviderHealthStatus,
 } from './model'
 
@@ -34,6 +35,7 @@ export interface ServiceConnectionResponse {
   ok: boolean
   message: string
   status?: ProviderHealthStatus
+  code?: ModelConnectionErrorCode
   recommendation?: string
   discoveredModels?: DiscoveredModel[]
   checkedAt?: string

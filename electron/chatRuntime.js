@@ -57,12 +57,21 @@ function formatInvalidChatApiKeyMessage(providerId) {
   return `${label} 格式好像不太对：里面有中文、换行、空格之类不能用于 HTTP Header 的字符。只填服务商控制台生成的原始 Key 就好，不要包含套餐说明、模型名或备注。`
 }
 
+function classifyInvalidChatApiKeyCode(apiKey) {
+  const value = String(apiKey ?? '').trim()
+  if (/[一-鿿぀-ゟ゠-ヿ가-힯]/u.test(value)) return 'api_key_contains_cjk'
+  if (/\s/u.test(value)) return 'api_key_contains_whitespace'
+  return 'api_key_header_unsafe'
+}
+
 function normalizeChatApiKeyForHeader(providerId, apiKey) {
   const value = String(apiKey ?? '').trim()
   if (!value) return ''
 
   if (/[^\x21-\x7E]/u.test(value)) {
-    throw new Error(formatInvalidChatApiKeyMessage(providerId))
+    const error = new Error(formatInvalidChatApiKeyMessage(providerId))
+    error.code = classifyInvalidChatApiKeyCode(value)
+    throw error
   }
 
   return value
@@ -281,6 +290,7 @@ export function getChatConnectionTestPreflightFailure({ providerId, apiKey }) {
       return {
         ok: false,
         status: 'needs_key',
+        code: error?.code || 'api_key_header_unsafe',
         message: error instanceof Error ? error.message : formatInvalidChatApiKeyMessage(normalizedProviderId),
         recommendation: '重新去服务商那里复制一下原始 Key，只要 Key 本身就好。',
       }
@@ -291,12 +301,16 @@ export function getChatConnectionTestPreflightFailure({ providerId, apiKey }) {
   if (normalizedProviderId === 'deepseek') {
     return {
       ok: false,
+      status: 'needs_key',
+      code: 'missing_api_key',
       message: 'DeepSeek 需要填 API Key，去控制台拿一个填在上面就好。',
     }
   }
 
   return {
     ok: false,
+    status: 'needs_key',
+    code: 'missing_api_key',
     message: '先填一下 API Key 吧。',
   }
 }
@@ -545,6 +559,7 @@ export function summarizeChatConnectionTestSuccess({ providerId, successKind, da
       return {
         ok: false,
         status: 'model_missing',
+        code: 'missing_model',
         message: 'Ollama 连上了，不过还没有模型呢。运行 ollama pull qwen3:8b 装一个吧。',
         recommendation: '运行 ollama pull qwen3:8b 装一个，或者装好别的模型再来刷新。',
         discoveredModels,
@@ -556,6 +571,7 @@ export function summarizeChatConnectionTestSuccess({ providerId, successKind, da
       return {
         ok: false,
         status: 'model_missing',
+        code: 'model_not_found',
         message: `Ollama 连上了，不过没找到「${requestedModel}」。先 ollama pull ${requestedModel} 装一下，或者换个已有的模型。`,
         recommendation: `运行 ollama pull ${requestedModel}，或者在模型列表里选一个已有的。`,
         discoveredModels,
@@ -604,6 +620,7 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
       return {
         ok: false,
         status: 'needs_key',
+        code: 'auth_failed',
         message: hasApiKey
           ? 'DeepSeek 的 API Key 好像不太对，去控制台看看是不是过期了？'
           : 'DeepSeek 需要填 API Key 才能用哦，去控制台拿一个填在上面就好。',
@@ -615,6 +632,7 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
     return {
       ok: false,
       status: 'needs_key',
+      code: 'auth_failed',
       message: hasApiKey
         ? '地址能通，不过 API Key 好像不太对。'
         : '地址能通，不过还没填 API Key 呢。',
@@ -628,6 +646,7 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
       return {
         ok: false,
         status: 'needs_key',
+        code: 'quota_or_permission',
         message: rawMessage || 'DeepSeek 好像遇到了权限或余额限制，看看账号还有没有额度？',
         recommendation: '去控制台看看余额和模型权限。',
         checkedAt,
@@ -638,6 +657,7 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
       return {
         ok: false,
         status: 'misconfigured',
+        code: 'invalid_api_base_url',
         message: 'DeepSeek 的地址或模型名好像对不上，Base URL 填 https://api.deepseek.com，模型先选 deepseek-v4-flash 试试？',
         recommendation: 'Base URL 改成 https://api.deepseek.com，模型先用 deepseek-v4-flash。',
         checkedAt,
@@ -648,6 +668,7 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
       return {
         ok: false,
         status: 'model_missing',
+        code: 'model_not_found',
         message: `DeepSeek 好像不认识「${requestedModel}」这个模型，先换成 deepseek-v4-flash 试试？`,
         recommendation: '先用 deepseek-v4-flash，需要更强推理再切 deepseek-v4-pro。',
         checkedAt,
@@ -659,6 +680,7 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
     return {
       ok: false,
       status: 'error',
+      code: 'rate_limited',
       message: rawMessage || '请求有点太频繁了，歇一小会儿再试试。',
       recommendation: '等几秒再试就好。如果老是这样，去看看服务商那边的调用限额。',
       checkedAt,
@@ -669,6 +691,7 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
     return {
       ok: false,
       status: 'needs_key',
+      code: 'quota_or_permission',
       message: rawMessage || '服务商好像有权限或余额限制。',
       recommendation: '看看 API Key 权限和账号余额，有些模型可能需要单独开通。',
       checkedAt,
@@ -679,6 +702,7 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
     return {
       ok: false,
       status: 'model_missing',
+      code: 'model_not_found',
       message: rawMessage || `没找到「${requestedModel}」这个模型，可能名字不对或者账号没开通。`,
       recommendation: '核对一下模型名，或者先换个服务商推荐的默认模型试试。',
       checkedAt,
@@ -689,6 +713,7 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
     return {
       ok: false,
       status: 'unreachable',
+      code: 'request_timeout',
       message: rawMessage || '等了好一会儿都没回应，可能是网络不太顺畅。',
       recommendation: '看看网络和代理设置，也可以稍后再试一下。',
       checkedAt,
@@ -699,6 +724,7 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
     return {
       ok: false,
       status: 'unreachable',
+      code: 'provider_server_error',
       message: rawMessage || '服务商那边暂时忙不过来，可能在维护或者流量太大。',
       recommendation: '过一会儿再试试。如果一直这样，可以去看看服务商的状态页。',
       checkedAt,
@@ -708,6 +734,7 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
   return {
     ok: false,
     status: status >= 500 ? 'unreachable' : 'error',
+    code: status >= 500 ? 'provider_server_error' : 'unknown_connection_error',
     message: rawMessage || `接口返回了状态码 ${status}，不太确定哪里出了问题。`,
     recommendation: '看看地址、网络和模型名，也可以关注一下服务商那边有没有公告。',
     checkedAt,
@@ -758,6 +785,7 @@ export function summarizeChatConnectionTransportFailure({ providerId, reason, ba
     return {
       ok: false,
       status: 'unreachable',
+      code: failureKind === 'timeout' ? 'request_timeout' : 'provider_unreachable',
       message: `${baseMessage}请先启动 Ollama，并确认 Nexus 的 Base URL 是 http://127.0.0.1:11434/v1。`,
       recommendation: '打开 Ollama 应用，或在终端运行 ollama serve；启动后再点一次连接测试。如果还没有模型，运行 ollama pull qwen3:8b。',
       checkedAt,
@@ -767,6 +795,7 @@ export function summarizeChatConnectionTransportFailure({ providerId, reason, ba
   return {
     ok: false,
     status: 'unreachable',
+    code: 'provider_unreachable',
     message: formatTransportFailureReason(reason),
     recommendation: '看看地址和网络，本地服务的话确认一下有没有在跑。',
     checkedAt,

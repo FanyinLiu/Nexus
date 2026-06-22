@@ -21,6 +21,7 @@ test('catches empty API key for provider that requires one', () => {
   const result = runConnectionPreflight({ ...base, apiKey: '' })
   assert.equal(result?.ok, false)
   assert.equal(result?.status, 'needs_key')
+  assert.equal(result?.code, 'missing_api_key')
 })
 
 test('DeepSeek missing API key includes the first-run repair path', () => {
@@ -53,18 +54,28 @@ test('catches CJK characters in API key', () => {
   const result = runConnectionPreflight({ ...base, apiKey: 'sk-test模型key' })
   assert.equal(result?.ok, false)
   assert.equal(result?.status, 'misconfigured')
+  assert.equal(result?.code, 'api_key_contains_cjk')
 })
 
 test('catches whitespace in API key', () => {
   const result = runConnectionPreflight({ ...base, apiKey: 'sk-test key' })
   assert.equal(result?.ok, false)
   assert.equal(result?.status, 'misconfigured')
+  assert.equal(result?.code, 'api_key_contains_whitespace')
+})
+
+test('catches newlines in API key before they break HTTP headers', () => {
+  const result = runConnectionPreflight({ ...base, apiKey: 'sk-test\nkey' })
+  assert.equal(result?.ok, false)
+  assert.equal(result?.status, 'misconfigured')
+  assert.equal(result?.code, 'api_key_contains_whitespace')
 })
 
 test('catches empty base URL', () => {
   const result = runConnectionPreflight({ ...base, apiBaseUrl: '  ' })
   assert.equal(result?.ok, false)
   assert.equal(result?.status, 'misconfigured')
+  assert.equal(result?.code, 'missing_api_base_url')
 })
 
 test('Ollama missing base URL recommends the local OpenAI-compatible endpoint', () => {
@@ -171,6 +182,7 @@ test('catches URL missing protocol', () => {
   const result = runConnectionPreflight({ ...base, apiBaseUrl: 'api.openai.com' })
   assert.equal(result?.ok, false)
   assert.equal(result?.status, 'misconfigured')
+  assert.equal(result?.code, 'invalid_api_base_url')
 })
 
 test('Ollama URL without protocol points back to the exact local endpoint', () => {
@@ -201,6 +213,7 @@ test('Ollama URL without /v1 is caught before making a request', () => {
 
   assert.equal(result?.ok, false)
   assert.equal(result?.status, 'misconfigured')
+  assert.equal(result?.code, 'ollama_missing_v1')
   assert.match(result?.message ?? '', /\/v1/)
   assert.match(result?.recommendation ?? '', /http:\/\/127\.0\.0\.1:11434\/v1/)
   assert.deepEqual(result?.repair, {
@@ -212,6 +225,7 @@ test('catches empty model', () => {
   const result = runConnectionPreflight({ ...base, model: '' })
   assert.equal(result?.ok, false)
   assert.equal(result?.status, 'misconfigured')
+  assert.equal(result?.code, 'missing_model')
 })
 
 test('Ollama missing model recommends the default pull command', () => {

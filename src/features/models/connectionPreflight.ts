@@ -2,12 +2,13 @@ import { isHttpHeaderSafeCredential } from '../../core/routing/AuthProfileStore.
 import { isVaultRefString } from '../../lib/keyVaultBridge.ts'
 import { getApiProviderPreset } from './providerCatalog.ts'
 import type { UiLanguage } from '../../types/i18n.ts'
-import type { ProviderHealthStatus } from '../../types/model.ts'
+import type { ModelConnectionErrorCode, ProviderHealthStatus } from '../../types/model.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 
 export type PreflightResult = {
   ok: boolean
   status: ProviderHealthStatus
+  code: ModelConnectionErrorCode
   message: string
   recommendation?: string
   repair?: ConnectionPreflightRepair
@@ -77,6 +78,7 @@ export function runConnectionPreflight(input: PreflightInput): PreflightResult |
     return {
       ok: false,
       status: 'needs_key',
+      code: 'missing_api_key',
       message: t('settings.preflight.no_key'),
       recommendation: isDeepSeek
         ? t('settings.preflight.no_key_rec_deepseek')
@@ -90,6 +92,7 @@ export function runConnectionPreflight(input: PreflightInput): PreflightResult |
       return {
         ok: false,
         status: 'misconfigured',
+        code: 'api_key_contains_cjk',
         message: t('settings.preflight.cjk_key'),
         recommendation: t('settings.preflight.cjk_key_rec'),
       }
@@ -98,6 +101,7 @@ export function runConnectionPreflight(input: PreflightInput): PreflightResult |
       return {
         ok: false,
         status: 'misconfigured',
+        code: 'api_key_contains_whitespace',
         message: t('settings.preflight.whitespace_key'),
         recommendation: t('settings.preflight.whitespace_key_rec'),
       }
@@ -106,6 +110,7 @@ export function runConnectionPreflight(input: PreflightInput): PreflightResult |
       return {
         ok: false,
         status: 'misconfigured',
+        code: 'api_key_header_unsafe',
         message: t('settings.preflight.invalid_key'),
         recommendation: t('settings.preflight.invalid_key_rec'),
       }
@@ -118,6 +123,7 @@ export function runConnectionPreflight(input: PreflightInput): PreflightResult |
       return {
         ok: false,
         status: 'misconfigured',
+        code: 'missing_api_base_url',
         message: t('settings.preflight.no_url_ollama'),
         recommendation: t('settings.preflight.no_url_ollama_rec', { url: defaultBaseUrl }),
         repair: buildDefaultRepair(input, { apiBaseUrl: defaultBaseUrl, model: defaultModel || 'qwen3:8b' }),
@@ -128,6 +134,7 @@ export function runConnectionPreflight(input: PreflightInput): PreflightResult |
       return {
         ok: false,
         status: 'misconfigured',
+        code: 'missing_api_base_url',
         message: t('settings.preflight.no_url_custom'),
         recommendation: t('settings.preflight.no_url_custom_rec'),
       }
@@ -136,6 +143,7 @@ export function runConnectionPreflight(input: PreflightInput): PreflightResult |
     return {
       ok: false,
       status: 'misconfigured',
+      code: 'missing_api_base_url',
       message: t('settings.preflight.no_url_provider', { provider: providerLabel }),
       recommendation: t('settings.preflight.no_url_provider_rec', { url: defaultBaseUrl }),
       repair: buildDefaultRepair(input, { apiBaseUrl: defaultBaseUrl, model: defaultModel }),
@@ -146,6 +154,7 @@ export function runConnectionPreflight(input: PreflightInput): PreflightResult |
     return {
       ok: false,
       status: 'misconfigured',
+      code: 'invalid_api_base_url',
       message: t('settings.preflight.bad_url'),
       recommendation: isOllama && defaultBaseUrl
         ? t('settings.preflight.bad_url_ollama_rec', { url: defaultBaseUrl })
@@ -161,6 +170,7 @@ export function runConnectionPreflight(input: PreflightInput): PreflightResult |
     return {
       ok: false,
       status: 'misconfigured',
+      code: 'ollama_missing_v1',
       message: t('settings.preflight.ollama_missing_v1'),
       recommendation: t('settings.preflight.ollama_missing_v1_rec', { url: defaultBaseUrl }),
       repair: buildDefaultRepair(input, { apiBaseUrl: defaultBaseUrl, model: defaultModel || 'qwen3:8b' }),
@@ -172,6 +182,7 @@ export function runConnectionPreflight(input: PreflightInput): PreflightResult |
       return {
         ok: false,
         status: 'misconfigured',
+        code: 'missing_model',
         message: t('settings.preflight.no_model_ollama'),
         recommendation: t('settings.preflight.no_model_ollama_rec', { model: defaultModel || 'qwen3:8b' }),
         repair: buildDefaultRepair(input, { model: defaultModel || 'qwen3:8b' }),
@@ -182,6 +193,7 @@ export function runConnectionPreflight(input: PreflightInput): PreflightResult |
       return {
         ok: false,
         status: 'misconfigured',
+        code: 'missing_model',
         message: t('settings.preflight.no_model_custom'),
         recommendation: t('settings.preflight.no_model_custom_rec'),
       }
@@ -190,6 +202,7 @@ export function runConnectionPreflight(input: PreflightInput): PreflightResult |
     return {
       ok: false,
       status: 'misconfigured',
+      code: 'missing_model',
       message: t('settings.preflight.no_model_provider', { provider: providerLabel }),
       recommendation: isDeepSeek
         ? t('settings.preflight.no_model_deepseek_rec', { model: defaultModel })
