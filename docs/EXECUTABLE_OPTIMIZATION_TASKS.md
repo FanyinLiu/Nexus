@@ -96,7 +96,7 @@
 
 ### 任务
 - [x] 统一未签名安装提示文档（macOS/Windows 各一版）并放进主 README + 语言 README——根 README 和 4 个语言 README 现在都明确写出 GitHub Releases 下载来源、不要从镜像安装、macOS Gatekeeper 右键打开或 `xattr` 处理、Windows SmartScreen “详细信息/仍要运行”路径，并由分发审计防止后续文档漂移。
-- [ ] 打包体积与启动路径优化清单：先行清点可延迟下载模型/重资源。
+- [x] 打包体积与启动路径优化清单：先行清点可延迟下载模型/重资源——新增 [PACKAGE_STARTUP_OPTIMIZATION](PACKAGE_STARTUP_OPTIMIZATION.md)，记录当前 `performance:baseline` 体积基线、ONNX/Live2D/Transformers/Tesseract/Sherpa 模型等重资源、默认启动懒加载边界、可选模型不进安装包的约束，以及后续把必需语音模型迁到首次运行下载前必须验证的降级路径。
 - [ ] 建立每月一次的「文档一致性检查」流程（ROADMAP / 升级计划 / FEATURES / README）。
 
 ### 完成验收

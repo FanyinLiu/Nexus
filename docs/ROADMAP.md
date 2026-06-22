@@ -149,6 +149,10 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
   WebSocket authentication behind a main-process bridge, increasing IPC schema
   coverage, splitting IPC payload schemas behind a stable public export, and
   adding `npm run performance:baseline` to the PR gate.
+- Keep a release-facing package/startup optimization inventory so ONNX,
+  Live2D/Pixi, Transformers, Tesseract, Sherpa models, optional voice models,
+  and runtime-download candidates stay visible before changing installer
+  strategy. See [Package Startup Optimization](PACKAGE_STARTUP_OPTIMIZATION.md).
 - Add `npm run message-privacy:audit` to the same PR/release guard so desktop
   notification/message bodies cannot regress into model forwarding, persisted
   chat history, missed-message follow-up hints, reply draft composer text, or
