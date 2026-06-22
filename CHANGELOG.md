@@ -47,6 +47,9 @@
   rate limits, timeouts, and provider-side outages.
 - **Pet task display actions** — added task-level pet display states for waiting
   confirmation, executing, done, and failed while keeping runtime phases stable.
+- **Notification card quick actions** — normalized notification cards around
+  draft reply, important, and handle-later actions while keeping reply drafts
+  local to the composer.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now
