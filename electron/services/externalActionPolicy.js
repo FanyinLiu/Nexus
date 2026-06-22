@@ -65,6 +65,12 @@ function formatPermissionKind(kind) {
   }
 }
 
+function createExternalActionPolicyError(message, code) {
+  const error = new Error(message)
+  error.code = code
+  return error
+}
+
 async function promptPolicyEscalation(change) {
   const parent = getDialogParent()
   const label = formatIntegrationLabel(change.integration)
@@ -195,7 +201,10 @@ export async function requireExternalActionPermission(channel) {
       mode,
       reason: initialDecision.reason,
     })
-    throw new Error(`${formatIntegrationLabel(descriptor.integration)} is in read-only mode`)
+    throw createExternalActionPolicyError(
+      `${formatIntegrationLabel(descriptor.integration)} is in read-only mode`,
+      'external_action_read_only',
+    )
   }
 
   audit('external-action-policy', 'confirmation-request', {
@@ -220,7 +229,10 @@ export async function requireExternalActionPermission(channel) {
   })
 
   if (!finalDecision.allowed) {
-    throw new Error(`${formatIntegrationLabel(descriptor.integration)} action was rejected by the user`)
+    throw createExternalActionPolicyError(
+      `${formatIntegrationLabel(descriptor.integration)} action was rejected by the user`,
+      'external_action_rejected',
+    )
   }
 
   if (grantScope === 'session' && sessionGrantKey) {
