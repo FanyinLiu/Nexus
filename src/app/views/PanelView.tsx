@@ -19,6 +19,10 @@ import {
   type ChatMemoryTraceDetails,
 } from '../../features/memory/traceDetails'
 import {
+  getNotificationCardPrimaryActions,
+  type NotificationCardPrimaryActionId,
+} from '../../features/notifications/notificationCardActions'
+import {
   classifyWeatherCondition,
   getTimeOfDayBand,
   getTimeOfDayBlend,
@@ -390,6 +394,20 @@ export function PanelView({
     notificationBridge?.markRead(messageId)
   }
 
+  function handleNotificationPrimaryAction(actionId: NotificationCardPrimaryActionId, message: NotificationMessage) {
+    if (actionId === 'draft_reply') {
+      handleNotificationDraft(message)
+      return
+    }
+
+    if (actionId === 'mark_important') {
+      handleMarkImportant(message.id)
+      return
+    }
+
+    handleSnoozeNotification(message.id, 30)
+  }
+
   function isNotificationReplying() {
     return activeNotificationReply !== null
   }
@@ -758,36 +776,17 @@ export function PanelView({
                           {getNotificationSummary(message)}
                         </p>
                         <div className="panel-notification-summary__item-actions">
-                          <button
-                            type="button"
-                            className="ghost-button ghost-button--compact"
-                            onClick={() => handleNotificationDraft(message)}
-                          >
-                            {ti('panel.notification.draft_reply')}
-                          </button>
-                          <button
-                            type="button"
-                            className="ghost-button ghost-button--compact"
-                            onClick={() => handleMarkImportant(message.id)}
-                          >
-                            {message.isImportant ? ti('panel.notification.unmark_important') : ti('panel.notification.mark_important')}
-                          </button>
-                          <button
-                            type="button"
-                            className="ghost-button ghost-button--compact"
-                            onClick={() => handleSnoozeNotification(message.id, 10)}
-                            title={ti('panel.notification.snooze_10m')}
-                          >
-                            {ti('panel.notification.snooze_10m')}
-                          </button>
-                          <button
-                            type="button"
-                            className="ghost-button ghost-button--compact"
-                            onClick={() => handleSnoozeNotification(message.id, 30)}
-                            title={ti('panel.notification.snooze_30m')}
-                          >
-                            {ti('panel.notification.snooze_30m')}
-                          </button>
+                          {getNotificationCardPrimaryActions(message).map((action) => (
+                            <button
+                              key={action.id}
+                              type="button"
+                              className="ghost-button ghost-button--compact"
+                              onClick={() => handleNotificationPrimaryAction(action.id, message)}
+                              title={action.titleKey ? ti(action.titleKey, { source: getNotificationSourceLabel(message) }) : undefined}
+                            >
+                              {ti(action.labelKey)}
+                            </button>
+                          ))}
                           {canReplyToNotification(message) ? (
                             <button
                               type="button"
