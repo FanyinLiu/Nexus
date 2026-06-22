@@ -2325,7 +2325,7 @@
     transform 0.4s ease;
 }
 
-.pet-window__status-indicator:not(.is-active):not(.is-busy):not(.is-armed):not(.is-error):not(.is-offline) .pet-window__status-dot {
+.pet-window__status-indicator:not(.is-active):not(.is-busy):not(.is-armed):not(.is-done):not(.is-error):not(.is-offline) .pet-window__status-dot {
   opacity: 0;
   transform: scale(0.65);
 }
@@ -2344,6 +2344,11 @@
 .pet-window__status-indicator.is-armed .pet-window__status-dot {
   background: #5ec6ff;
   box-shadow: 0 0 10px rgba(94, 198, 255, 0.6);
+}
+
+.pet-window__status-indicator.is-done .pet-window__status-dot {
+  background: #58d68d;
+  box-shadow: 0 0 10px rgba(88, 214, 141, 0.58);
 }
 
 .pet-window__status-indicator.is-notify .pet-window__status-dot {
