@@ -1,7 +1,9 @@
 export const EXTERNAL_ACTION_INTEGRATIONS = ['telegram', 'discord', 'minecraft', 'factorio', 'mcp']
 export const EXTERNAL_ACTION_MODES = ['read-only', 'confirm', 'auto']
+export const EXTERNAL_ACTION_GRANT_SCOPES = ['once', 'session', 'always']
 
 const DEFAULT_MODE = 'confirm'
+const DEFAULT_GRANT_SCOPE = 'once'
 
 const CHANNEL_DESCRIPTORS = {
   'telegram:send-message': { integration: 'telegram', permissionKind: 'send' },
@@ -18,8 +20,16 @@ function isValidMode(value) {
   return EXTERNAL_ACTION_MODES.includes(value)
 }
 
+function isValidGrantScope(value) {
+  return EXTERNAL_ACTION_GRANT_SCOPES.includes(value)
+}
+
 export function normalizeExternalActionMode(value, fallback = DEFAULT_MODE) {
   return isValidMode(value) ? value : fallback
+}
+
+export function normalizeExternalActionGrantScope(value, fallback = DEFAULT_GRANT_SCOPE) {
+  return isValidGrantScope(value) ? value : fallback
 }
 
 export function createDefaultExternalActionPolicy() {
@@ -56,6 +66,23 @@ export function resolveExternalActionDescriptor(channel) {
   return CHANNEL_DESCRIPTORS[channel] ?? {
     integration: 'unknown',
     permissionKind: 'execute',
+  }
+}
+
+export function getExternalActionSessionGrantKey(channel) {
+  return String(channel || '').trim()
+}
+
+export function resolveExternalActionGrantScopeFromDialogResponse(response) {
+  switch (response) {
+    case 1:
+      return 'once'
+    case 2:
+      return 'session'
+    case 3:
+      return 'always'
+    default:
+      return null
   }
 }
 

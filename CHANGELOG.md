@@ -50,6 +50,9 @@
 - **Notification card quick actions** — normalized notification cards around
   draft reply, important, and handle-later actions while keeping reply drafts
   local to the composer.
+- **External action permission scopes** — changed high-risk external action
+  confirmations to support once, current-session, and persistent grants while
+  keeping audit payloads metadata-only.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now
