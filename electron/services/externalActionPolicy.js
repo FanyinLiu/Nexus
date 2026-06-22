@@ -5,14 +5,17 @@ import { audit } from './auditLog.js'
 import {
   createDefaultExternalActionPolicy,
   decideExternalActionPermission,
+  getExternalActionSessionGrantKey,
   normalizeExternalActionPolicySnapshot,
   planExternalActionPolicySync,
   resolveExternalActionDescriptor,
+  resolveExternalActionGrantScopeFromDialogResponse,
 } from './externalActionPolicyCore.js'
 
 const POLICY_FILE_NAME = 'external-action-policy.json'
 
 let policyCache = null
+const sessionGrantKeys = new Set()
 
 function getPolicyPath() {
   return path.join(app.getPath('userData'), POLICY_FILE_NAME)
@@ -93,12 +96,12 @@ async function promptExternalActionConfirmation({ channel, integration, permissi
       + `Integration: ${label}\n\n`
       + 'This confirmation is enforced in the main process before the action is executed. '
       + 'The audit log records metadata only, not message text, commands, target IDs, or tool arguments.',
-    buttons: ['Cancel', 'Allow once'],
+    buttons: ['Cancel', 'Allow once', 'Allow this session', 'Always allow'],
     defaultId: 0,
     cancelId: 0,
     noLink: true,
   })
-  return result.response === 1
+  return resolveExternalActionGrantScopeFromDialogResponse(result.response)
 }
 
 export async function getExternalActionPolicySnapshot() {
@@ -158,6 +161,19 @@ export async function requireExternalActionPermission(channel) {
   const descriptor = resolveExternalActionDescriptor(channel)
   const policy = await loadPolicy()
   const mode = policy[descriptor.integration] ?? 'confirm'
+  const sessionGrantKey = getExternalActionSessionGrantKey(channel)
+  if (mode === 'confirm' && sessionGrantKey && sessionGrantKeys.has(sessionGrantKey)) {
+    audit('external-action-policy', 'allow', {
+      channel,
+      integration: descriptor.integration,
+      permissionKind: descriptor.permissionKind,
+      mode,
+      reason: 'session-grant',
+      grantScope: 'session',
+    })
+    return true
+  }
+
   const initialDecision = decideExternalActionPermission(mode, descriptor.permissionKind)
 
   if (initialDecision.allowed) {
@@ -188,21 +204,45 @@ export async function requireExternalActionPermission(channel) {
     permissionKind: descriptor.permissionKind,
     mode,
   })
-  const confirmed = await promptExternalActionConfirmation({
+  const grantScope = await promptExternalActionConfirmation({
     channel,
     integration: descriptor.integration,
     permissionKind: descriptor.permissionKind,
   })
+  const confirmed = Boolean(grantScope)
   const finalDecision = decideExternalActionPermission(mode, descriptor.permissionKind, confirmed)
   audit('external-action-policy', finalDecision.allowed ? 'confirmation-approved' : 'confirmation-rejected', {
     channel,
     integration: descriptor.integration,
     permissionKind: descriptor.permissionKind,
     mode,
+    grantScope: grantScope ?? 'none',
   })
 
   if (!finalDecision.allowed) {
     throw new Error(`${formatIntegrationLabel(descriptor.integration)} action was rejected by the user`)
+  }
+
+  if (grantScope === 'session' && sessionGrantKey) {
+    sessionGrantKeys.add(sessionGrantKey)
+    audit('external-action-policy', 'session-grant', {
+      channel,
+      integration: descriptor.integration,
+      permissionKind: descriptor.permissionKind,
+      mode,
+    })
+  } else if (grantScope === 'always' && descriptor.integration !== 'unknown') {
+    await savePolicy({
+      ...policy,
+      [descriptor.integration]: 'auto',
+    })
+    audit('external-action-policy', 'persistent-grant', {
+      channel,
+      integration: descriptor.integration,
+      permissionKind: descriptor.permissionKind,
+      from: mode,
+      to: 'auto',
+    })
   }
 
   return true
@@ -210,4 +250,5 @@ export async function requireExternalActionPermission(channel) {
 
 export function __resetExternalActionPolicyForTests() {
   policyCache = null
+  sessionGrantKeys.clear()
 }

@@ -4,9 +4,12 @@ import { test } from 'node:test'
 import {
   createDefaultExternalActionPolicy,
   decideExternalActionPermission,
+  getExternalActionSessionGrantKey,
+  normalizeExternalActionGrantScope,
   normalizeExternalActionPolicySyncPayload,
   planExternalActionPolicySync,
   resolveExternalActionDescriptor,
+  resolveExternalActionGrantScopeFromDialogResponse,
 } from '../electron/services/externalActionPolicyCore.js'
 import { buildExternalActionPolicySyncPayload } from '../src/features/integrations/externalActionPolicySync.ts'
 import type { AppSettings } from '../src/types/app.ts'
@@ -101,6 +104,34 @@ test('external action permission decisions enforce read-only, confirm, and auto 
     requiresConfirmation: false,
     reason: 'auto',
   })
+})
+
+test('external action confirmation scopes normalize to once session and always', () => {
+  assert.equal(normalizeExternalActionGrantScope('once'), 'once')
+  assert.equal(normalizeExternalActionGrantScope('session'), 'session')
+  assert.equal(normalizeExternalActionGrantScope('always'), 'always')
+  assert.equal(normalizeExternalActionGrantScope('invalid'), 'once')
+  assert.equal(normalizeExternalActionGrantScope('invalid', 'session'), 'session')
+})
+
+test('external action confirmation dialog responses map to the three grant scopes', () => {
+  assert.equal(resolveExternalActionGrantScopeFromDialogResponse(0), null)
+  assert.equal(resolveExternalActionGrantScopeFromDialogResponse(1), 'once')
+  assert.equal(resolveExternalActionGrantScopeFromDialogResponse(2), 'session')
+  assert.equal(resolveExternalActionGrantScopeFromDialogResponse(3), 'always')
+  assert.equal(resolveExternalActionGrantScopeFromDialogResponse(99), null)
+})
+
+test('external action session grant keys stay channel scoped', () => {
+  assert.equal(getExternalActionSessionGrantKey(' telegram:send-message '), 'telegram:send-message')
+  assert.notEqual(
+    getExternalActionSessionGrantKey('telegram:send-message'),
+    getExternalActionSessionGrantKey('telegram:send-voice'),
+  )
+  assert.notEqual(
+    getExternalActionSessionGrantKey('discord:send-message'),
+    getExternalActionSessionGrantKey('telegram:send-message'),
+  )
 })
 
 test('external action channel descriptors map send execute and configure actions', () => {
