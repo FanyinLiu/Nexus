@@ -258,7 +258,21 @@ test('deepseek connection test asks for an API key before probing the network', 
   })
 
   assert.equal(result?.ok, false)
+  assert.equal(result?.status, 'needs_key')
+  assert.equal(result?.code, 'missing_api_key')
   assert.match(result?.message ?? '', /DeepSeek.*API Key/)
+})
+
+test('connection test preflight gives unsafe header characters a stable code', () => {
+  const result = getChatConnectionTestPreflightFailure({
+    providerId: 'openai',
+    apiKey: 'sk-test\nkey',
+  })
+
+  assert.equal(result?.ok, false)
+  assert.equal(result?.status, 'needs_key')
+  assert.equal(result?.code, 'api_key_contains_whitespace')
+  assert.match(result?.message ?? '', /HTTP Header/)
 })
 
 test('deepseek connection test reports model mismatches with a recommended fallback', () => {
@@ -275,6 +289,7 @@ test('deepseek connection test reports model mismatches with a recommended fallb
   })
 
   assert.equal(result.ok, false)
+  assert.equal(result.code, 'model_not_found')
   assert.match(result.message, /deepseek-v4-flash/)
 })
 
@@ -288,6 +303,7 @@ test('429 rate-limit returns actionable recommendation', () => {
   })
 
   assert.equal(result.ok, false)
+  assert.equal(result.code, 'rate_limited')
   assert.match(result.message, /Rate limit/)
 })
 
@@ -302,6 +318,7 @@ test('404 with model returns model_missing status for non-deepseek providers', (
 
   assert.equal(result.ok, false)
   assert.equal(result.status, 'model_missing')
+  assert.equal(result.code, 'model_not_found')
   assert.match(result.message, /gpt-99/)
 })
 
@@ -316,6 +333,7 @@ test('402 returns needs_key for non-deepseek providers', () => {
 
   assert.equal(result.ok, false)
   assert.equal(result.status, 'needs_key')
+  assert.equal(result.code, 'quota_or_permission')
 })
 
 test('408 timeout returns unreachable with recommendation', () => {
@@ -329,6 +347,7 @@ test('408 timeout returns unreachable with recommendation', () => {
 
   assert.equal(result.ok, false)
   assert.equal(result.status, 'unreachable')
+  assert.equal(result.code, 'request_timeout')
   assert.ok(result.recommendation)
 })
 
@@ -341,6 +360,7 @@ test('ollama transport failure tells the user to start the local service', () =>
 
   assert.equal(result.ok, false)
   assert.equal(result.status, 'unreachable')
+  assert.equal(result.code, 'provider_unreachable')
   assert.match(result.message, /本机 Ollama/)
   assert.match(result.message, /http:\/\/127\.0\.0\.1:11434\/v1/)
   assert.match(result.recommendation ?? '', /ollama serve/)
@@ -356,6 +376,7 @@ test('ollama transport timeout keeps the same actionable startup path', () => {
 
   assert.equal(result.ok, false)
   assert.equal(result.status, 'unreachable')
+  assert.equal(result.code, 'request_timeout')
   assert.match(result.message, /一直没有回应/)
   assert.match(result.recommendation ?? '', /连接测试/)
 })
@@ -369,6 +390,7 @@ test('non-local transport failures keep generic network repair guidance', () => 
 
   assert.equal(result.ok, false)
   assert.equal(result.status, 'unreachable')
+  assert.equal(result.code, 'provider_unreachable')
   assert.match(result.message, /fetch failed/)
   assert.match(result.recommendation ?? '', /地址和网络/)
 })
@@ -384,6 +406,7 @@ test('502 returns unreachable with maintenance hint', () => {
 
   assert.equal(result.ok, false)
   assert.equal(result.status, 'unreachable')
+  assert.equal(result.code, 'provider_server_error')
 })
 
 test('extractChatResponseContent handles anthropic text blocks', () => {

@@ -42,6 +42,9 @@
 - **Model setup text connection check** — added a first-run text-model
   connection card that reuses preflight diagnostics, opens the model guide, and
   runs the existing real connection test without exposing API keys.
+- **Model connection error codes** — added stable codes for first-run text-model
+  failures including missing keys, CJK/whitespace header issues, missing models,
+  rate limits, timeouts, and provider-side outages.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now
