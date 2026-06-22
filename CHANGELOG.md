@@ -53,6 +53,10 @@
 - **External action permission scopes** — changed high-risk external action
   confirmations to support once, current-session, and persistent grants while
   keeping audit payloads metadata-only.
+- **External action audit lifecycle** — routed high-risk Telegram, Discord,
+  MCP, Minecraft, and Factorio actions through one lifecycle audit wrapper that
+  records metadata-only start/end entries, action type, duration, result shape,
+  and stable failure codes.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now

@@ -2,29 +2,11 @@ import { BrowserWindow, ipcMain } from 'electron'
 import * as discordGateway from '../services/discordGateway.js'
 import { requireTrustedSender, requireString } from './validate.js'
 import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
-import { audit } from '../services/auditLog.js'
-import { requireExternalActionPermission } from '../services/externalActionPolicy.js'
-import {
-  summarizeExternalActionRequest,
-  summarizeExternalActionResult,
-} from './externalActionAudit.js'
+import { runAuditedExternalAction } from './externalActionAudit.js'
 import {
   validateDiscordSendMessagePayload,
   validateDiscordSendVoicePayload,
 } from './payloadSchemas.js'
-
-async function runAuditedExternalAction(channel, payload, action) {
-  audit('external-action', 'request', summarizeExternalActionRequest(channel, payload))
-  try {
-    await requireExternalActionPermission(channel)
-    const result = await action()
-    audit('external-action', 'result', summarizeExternalActionResult(channel, result))
-    return result
-  } catch (error) {
-    audit('external-action', 'result', summarizeExternalActionResult(channel, {}, error))
-    throw error
-  }
-}
 
 export function register() {
   // Forward incoming Discord messages to all renderer windows

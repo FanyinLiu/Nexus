@@ -1,12 +1,7 @@
 import { ipcMain } from 'electron'
 import * as mcpHost from '../services/mcpHost.js'
 import { requireString, requireObject, requireTrustedSender } from './validate.js'
-import { audit } from '../services/auditLog.js'
-import { requireExternalActionPermission } from '../services/externalActionPolicy.js'
-import {
-  summarizeExternalActionRequest,
-  summarizeExternalActionResult,
-} from './externalActionAudit.js'
+import { runAuditedExternalAction } from './externalActionAudit.js'
 import {
   validateMcpCallToolPayload,
   validateMcpIdPayload,
@@ -17,19 +12,6 @@ import {
 // handlers (start/stop/restart) are driven through plugin:* in pluginIpc.js.
 // The old stdio client (mcp-client:*) had no renderer callers and was removed
 // along with electron/services/mcpClient.js.
-
-async function runAuditedExternalAction(channel, payload, action) {
-  audit('external-action', 'request', summarizeExternalActionRequest(channel, payload))
-  try {
-    await requireExternalActionPermission(channel)
-    const result = await action()
-    audit('external-action', 'result', summarizeExternalActionResult(channel, result))
-    return result
-  } catch (error) {
-    audit('external-action', 'result', summarizeExternalActionResult(channel, {}, error))
-    throw error
-  }
-}
 
 export function register() {
   ipcMain.handle('mcp:status', (event, payload) => {
