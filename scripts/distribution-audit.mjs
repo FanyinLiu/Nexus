@@ -45,6 +45,7 @@ const updaterService = readText('electron/services/updaterService.js')
 const preload = readText('electron/preload.js')
 const releasingDoc = readText('docs/RELEASING.md')
 const readme = readText('README.md')
+const packageStartupOptimizationDoc = readText('docs/PACKAGE_STARTUP_OPTIMIZATION.md')
 const localizedReadmes = {
   'docs/README.zh-CN.md': readText('docs/README.zh-CN.md'),
   'docs/README.zh-TW.md': readText('docs/README.zh-TW.md'),
@@ -325,6 +326,34 @@ check('unsigned install docs cover macOS and Windows trust prompts', () => {
     for (const phrase of requiredPhrases) {
       assert(text.includes(phrase), `${file} missing unsigned install phrase: ${phrase}`)
     }
+  }
+})
+
+check('package size and startup optimization inventory is documented', () => {
+  for (const phrase of [
+    'npm run performance:baseline',
+    'npm run heavy:audit',
+    'npm run source-size:audit',
+    'npm run distribution:audit',
+    'npm run package:dir:smoke',
+    'ort-wasm-simd-threaded.jsep.wasm',
+    '@huggingface/transformers',
+    'tesseract.js',
+    'Live2D',
+    'sherpa-models',
+    'Silero VAD',
+    'download-models.mjs --skip-asr',
+    '首次运行下载',
+    '可选模型不进安装包',
+  ]) {
+    assert(packageStartupOptimizationDoc.includes(phrase), `package startup optimization doc missing phrase: ${phrase}`)
+  }
+
+  for (const scriptName of ['prepackage:win', 'prepackage:win:signed', 'prepackage:mac', 'prepackage:linux']) {
+    assert(
+      pkg.scripts?.[scriptName]?.includes('download-models.mjs --skip-asr'),
+      `${scriptName} should keep optional voice models out of the default package path`,
+    )
   }
 })
 

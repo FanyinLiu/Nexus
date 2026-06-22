@@ -61,6 +61,10 @@
   SmartScreen first-launch guidance across the main README and localized
   READMEs, with distribution audit coverage to keep the installer trust notes
   from drifting.
+- **Package and startup optimization inventory** — documented the current
+  build-size baseline, heavy resource loading boundaries, optional model
+  packaging constraint, and runtime-download candidates, then added
+  distribution audit coverage for the inventory.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now
