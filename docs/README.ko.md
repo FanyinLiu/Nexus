@@ -255,6 +255,12 @@ README에는 현재 안정 버전과 직전 안정 버전의 핵심만 남깁니
 > Linux 아티팩트에는 SHA-256과 GPG 분리 서명이 함께 제공되어
 > 독립적으로 검증할 수 있습니다.
 
+#### 미서명 설치 안내
+
+- **다운로드 출처**: 반드시 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases/latest) 에서 다운로드하세요. 미러 사이트나 재배포된 압축 파일에서 설치하지 마세요. 출처가 확실하지 않다면 파일을 삭제하고 GitHub Releases 에서 다시 다운로드하세요.
+- **macOS / Gatekeeper**: 첫 실행이 차단되면 아래 macOS 절차에 따라 우클릭으로 열거나 `xattr -dr com.apple.quarantine /Applications/Nexus.app` 를 실행하세요.
+- **Windows / SmartScreen**: **"Windows에서 PC를 보호했습니다"** 가 표시되면 **"추가 정보"** 를 클릭한 다음 **"실행"** 을 클릭하세요.
+
 #### macOS 첫 실행
 
 1. `.dmg` 를 열고 `Nexus.app` 을 `/Applications` 로 드래그합니다.

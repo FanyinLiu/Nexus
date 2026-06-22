@@ -45,6 +45,12 @@ const updaterService = readText('electron/services/updaterService.js')
 const preload = readText('electron/preload.js')
 const releasingDoc = readText('docs/RELEASING.md')
 const readme = readText('README.md')
+const localizedReadmes = {
+  'docs/README.zh-CN.md': readText('docs/README.zh-CN.md'),
+  'docs/README.zh-TW.md': readText('docs/README.zh-TW.md'),
+  'docs/README.ja.md': readText('docs/README.ja.md'),
+  'docs/README.ko.md': readText('docs/README.ko.md'),
+}
 const desktopShortcutInstaller = readText('scripts/install-desktop-shortcut.ps1')
 const hiddenLauncher = readText('scripts/launch-nexus-hidden.vbs')
 
@@ -253,6 +259,73 @@ check('release documentation separates installers from npm developer path', () =
   assert(!/\bnpx\s+[@\w-]/.test(releasingDoc), 'RELEASING should not recommend npx for end-user install')
   assert(!readme.includes('nexus-desktop'), 'README should not mention the rejected nexus-desktop name')
   assert(!releasingDoc.includes('nexus-desktop'), 'RELEASING should not mention the rejected nexus-desktop name')
+})
+
+check('unsigned install docs cover macOS and Windows trust prompts', () => {
+  const requiredByFile = {
+    'README.md': [
+      '未签名安装提示',
+      'GitHub Releases',
+      '不要从镜像',
+      'Gatekeeper',
+      'xattr -dr com.apple.quarantine /Applications/Nexus.app',
+      '右键',
+      'SmartScreen',
+      '详细信息',
+      '仍要运行',
+    ],
+    'docs/README.zh-CN.md': [
+      '未签名安装提示',
+      'GitHub Releases',
+      '不要从镜像',
+      'Gatekeeper',
+      'xattr -dr com.apple.quarantine /Applications/Nexus.app',
+      '右键',
+      'SmartScreen',
+      '详细信息',
+      '仍要运行',
+    ],
+    'docs/README.zh-TW.md': [
+      '未簽署安裝提示',
+      'GitHub Releases',
+      '不要從鏡像',
+      'Gatekeeper',
+      'xattr -dr com.apple.quarantine /Applications/Nexus.app',
+      '右鍵',
+      'SmartScreen',
+      '其他資訊',
+      '仍要執行',
+    ],
+    'docs/README.ja.md': [
+      '未署名インストール時の注意',
+      'GitHub Releases',
+      'ミラー',
+      'Gatekeeper',
+      'xattr -dr com.apple.quarantine /Applications/Nexus.app',
+      '右クリック',
+      'SmartScreen',
+      '詳細情報',
+      '実行',
+    ],
+    'docs/README.ko.md': [
+      '미서명 설치 안내',
+      'GitHub Releases',
+      '미러',
+      'Gatekeeper',
+      'xattr -dr com.apple.quarantine /Applications/Nexus.app',
+      '우클릭',
+      'SmartScreen',
+      '추가 정보',
+      '실행',
+    ],
+  }
+
+  for (const [file, requiredPhrases] of Object.entries(requiredByFile)) {
+    const text = file === 'README.md' ? readme : localizedReadmes[file]
+    for (const phrase of requiredPhrases) {
+      assert(text.includes(phrase), `${file} missing unsigned install phrase: ${phrase}`)
+    }
+  }
 })
 
 let failed = 0

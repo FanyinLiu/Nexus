@@ -57,6 +57,10 @@
   MCP, Minecraft, and Factorio actions through one lifecycle audit wrapper that
   records metadata-only start/end entries, action type, duration, result shape,
   and stable failure codes.
+- **Unsigned install guidance** — unified macOS Gatekeeper and Windows
+  SmartScreen first-launch guidance across the main README and localized
+  READMEs, with distribution audit coverage to keep the installer trust notes
+  from drifting.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now
