@@ -45,6 +45,10 @@ const updaterService = readText('electron/services/updaterService.js')
 const preload = readText('electron/preload.js')
 const releasingDoc = readText('docs/RELEASING.md')
 const readme = readText('README.md')
+const roadmap = readText('docs/ROADMAP.md')
+const upgradePlan = readText('docs/NEXUS_UPGRADE_INTEGRATION_PLAN.md')
+const featureInventory = readText('FEATURES.md')
+const documentationConsistencyDoc = readText('docs/DOCUMENTATION_CONSISTENCY.md')
 const packageStartupOptimizationDoc = readText('docs/PACKAGE_STARTUP_OPTIMIZATION.md')
 const localizedReadmes = {
   'docs/README.zh-CN.md': readText('docs/README.zh-CN.md'),
@@ -54,6 +58,11 @@ const localizedReadmes = {
 }
 const desktopShortcutInstaller = readText('scripts/install-desktop-shortcut.ps1')
 const hiddenLauncher = readText('scripts/launch-nexus-hidden.vbs')
+const currentVersion = `v${pkg.version}`
+const readmeFiles = {
+  'README.md': readme,
+  ...localizedReadmes,
+}
 
 check('desktop app stays private on npm', () => {
   assert(pkg.private === true, 'package.json should remain private until a separate CLI installer exists')
@@ -260,6 +269,40 @@ check('release documentation separates installers from npm developer path', () =
   assert(!/\bnpx\s+[@\w-]/.test(releasingDoc), 'RELEASING should not recommend npx for end-user install')
   assert(!readme.includes('nexus-desktop'), 'README should not mention the rejected nexus-desktop name')
   assert(!releasingDoc.includes('nexus-desktop'), 'RELEASING should not mention the rejected nexus-desktop name')
+})
+
+check('README version framing follows package version', () => {
+  for (const [file, text] of Object.entries(readmeFiles)) {
+    assert(text.includes(currentVersion), `${file} missing current package version ${currentVersion}`)
+    assert(!text.includes('v0.2.7'), `${file} should move v0.2.7 history to release notes or GitHub Releases`)
+  }
+
+  assert(readme.includes('当前代码版本'), 'README should label the package-aligned current code version')
+  assert(localizedReadmes['docs/README.zh-CN.md'].includes('当前代码版本'), 'zh-CN README should label the current code version')
+  assert(localizedReadmes['docs/README.zh-TW.md'].includes('目前程式碼版本'), 'zh-TW README should label the current code version')
+  assert(localizedReadmes['docs/README.ja.md'].includes('現在のコードバージョン'), 'ja README should label the current code version')
+  assert(localizedReadmes['docs/README.ko.md'].includes('현재 코드 버전'), 'ko README should label the current code version')
+})
+
+check('documentation consistency workflow is documented', () => {
+  for (const phrase of [
+    '每月一次',
+    'package.json',
+    currentVersion,
+    'v0.3.6',
+    'README.md',
+    'docs/README.zh-CN.md',
+    'docs/ROADMAP.md',
+    'docs/NEXUS_UPGRADE_INTEGRATION_PLAN.md',
+    'FEATURES.md',
+    'npm run distribution:audit',
+  ]) {
+    assert(documentationConsistencyDoc.includes(phrase), `documentation consistency doc missing phrase: ${phrase}`)
+  }
+
+  assert(roadmap.includes(currentVersion), 'ROADMAP should mention the current package version boundary')
+  assert(upgradePlan.includes('每月一次文档回看'), 'upgrade plan should keep the monthly documentation review checkpoint')
+  assert(featureInventory.includes('broad capability inventory'), 'FEATURES should keep its capability-inventory framing')
 })
 
 check('unsigned install docs cover macOS and Windows trust prompts', () => {

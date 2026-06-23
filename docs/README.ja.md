@@ -24,7 +24,7 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **現在のリリース：** v0.4.0。Nexus はデスクトップ・コンパニオン認識の土台に入りました。アプリを開いたあと別の場所で作業していても、時間の経過を静かに理解し、プライバシー境界を設定内で見えるようにします。
+> **現在のコードバージョン：** v0.4.0。Nexus はデスクトップ・コンパニオン認識の土台に入りました。アプリを開いたあと別の場所で作業していても、時間の経過を静かに理解し、プライバシー境界を設定内で見えるようにします。
 
 > **開発スコープの注記：** この多言語 README は長期的な機能一覧を残しています。短期開発はルートの [README](../README.md) と [Nexus アップグレード統合計画](NEXUS_UPGRADE_INTEGRATION_PLAN.md) を基準にしてください。Phase 1 は常駐する小さなデスクトップウィンドウ、ミニマルなアバター、Ollama / DeepSeek のテキストモデル、シンプルな会話だけに絞ります。
 
@@ -182,7 +182,7 @@ beta ラインが基盤を作り、本安定版で最終仕上げ：
 
 ## 旧バージョンの記録
 
-README には現在の安定版と一つ前の安定版だけを載せています。v0.2.9、v0.2.7、v0.2.5 などの古い履歴は [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) をご覧ください。
+README には現在のコードバージョン v0.4.0 と直前の安定入口 v0.3.6 の要点だけを載せます。より古い履歴は [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) に集約し、README 上部で古いバージョン番号を更新し続けません。
 
 ---
 

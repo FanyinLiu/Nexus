@@ -24,7 +24,7 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **현재 릴리스:** v0.4.0. Nexus는 데스크톱 동반자 인식의 기반에 들어섰습니다. 앱을 연 뒤 사용자가 다른 곳에서 작업해도 시간의 흐름을 조용히 이해하고, 개인정보 경계를 설정에서 볼 수 있게 합니다.
+> **현재 코드 버전:** v0.4.0. Nexus는 데스크톱 동반자 인식의 기반에 들어섰습니다. 앱을 연 뒤 사용자가 다른 곳에서 작업해도 시간의 흐름을 조용히 이해하고, 개인정보 경계를 설정에서 볼 수 있게 합니다.
 
 > **개발 범위 안내:** 이 다국어 README는 장기 기능 목록을 보존합니다. 단기 개발 기준은 루트 [README](../README.md)와 [Nexus 업그레이드 통합 계획](NEXUS_UPGRADE_INTEGRATION_PLAN.md)입니다. Phase 1은 상주하는 작은 데스크톱 창, 미니멀 아바타, Ollama / DeepSeek 텍스트 모델, 간단한 대화에만 집중합니다.
 
@@ -182,7 +182,7 @@ Nexus는 조용하고 보수적이며 일시정지 가능한 상태를 유지하
 
 ## 이전 버전 기록
 
-README에는 현재 안정 버전과 직전 안정 버전의 핵심만 남깁니다. v0.2.9, v0.2.7, v0.2.5 같은 이전 기록은 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)를 확인하세요.
+README에는 현재 코드 버전 v0.4.0과 직전 안정 진입점 v0.3.6의 핵심만 남깁니다. 더 오래된 기록은 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)에 모으고, README 상단에서 오래된 버전 번호를 계속 관리하지 않습니다.
 
 ---
 
