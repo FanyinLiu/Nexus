@@ -69,6 +69,10 @@
   version framing with `package.json` v0.4.0, moved stale v0.2.7 pointers out
   of README copy, and added a monthly documentation consistency checklist with
   distribution audit coverage.
+- **README known limitations** — added a visible root README section for active
+  development status, unsigned installers, resource costs, provider networking,
+  desktop-awareness privacy boundaries, and voice-model caveats, with
+  distribution audit coverage.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now

@@ -271,6 +271,26 @@ check('release documentation separates installers from npm developer path', () =
   assert(!releasingDoc.includes('nexus-desktop'), 'RELEASING should not mention the rejected nexus-desktop name')
 })
 
+check('README known limitations are visible before developer setup', () => {
+  for (const phrase of [
+    '## 已知限制与适用人群',
+    '仍在活跃开发',
+    '未签名安装包',
+    '资源占用',
+    'provider 联网',
+    '桌面感知',
+    '暂停或清理近期陪伴摘要',
+    '本地开发',
+  ]) {
+    assert(readme.includes(phrase), `README missing known limitation phrase: ${phrase}`)
+  }
+
+  assert(
+    readme.indexOf('## 已知限制与适用人群') < readme.indexOf('## 本地开发'),
+    'README known limitations should appear before developer setup',
+  )
+})
+
 check('README version framing follows package version', () => {
   for (const [file, text] of Object.entries(readmeFiles)) {
     assert(text.includes(currentVersion), `${file} missing current package version ${currentVersion}`)
