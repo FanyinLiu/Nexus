@@ -65,6 +65,10 @@
   build-size baseline, heavy resource loading boundaries, optional model
   packaging constraint, and runtime-download candidates, then added
   distribution audit coverage for the inventory.
+- **README version alignment** — aligned the root and localized README current
+  version framing with `package.json` v0.4.0, moved stale v0.2.7 pointers out
+  of README copy, and added a monthly documentation consistency checklist with
+  distribution audit coverage.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now

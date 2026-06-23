@@ -199,7 +199,7 @@ beta 线奠定了基础，本稳定版做最后打磨：
 
 ## 旧版本记录
 
-README 只保留当前稳定版和上一稳定版的重点。更早的版本，例如 v0.2.9、v0.2.7 和 v0.2.5，请查看 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)。
+README 只保留当前代码版本 v0.4.0 和上一稳定入口 v0.3.6 的重点；更早历史版本统一放在 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 顶部继续滚动维护旧版本号。
 
 ---
 

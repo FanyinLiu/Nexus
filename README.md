@@ -8,6 +8,8 @@ Nexus 是一个 **本地优先的 AI 桌面伙伴**。
 
 一句话：**Nexus 是一个住在电脑里的 AI 伙伴。**
 
+> **当前代码版本：** v0.4.0，和 `package.json` 保持一致。正式下载页仍以 GitHub Releases 的最新 tag 为准；更早历史统一放在 Releases，不在 README 顶部继续滚动维护旧版本号。
+
 ## 这个项目是什么
 
 Nexus 想做的是一种“陪伴式桌面 AI”：

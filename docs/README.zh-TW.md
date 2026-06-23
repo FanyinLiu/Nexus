@@ -24,7 +24,7 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **目前版本：** v0.4.0。Nexus 進入桌面陪伴感知地基：打開後即使使用者去電腦別處工作，也能安靜理解時間流逝，並把隱私邊界放在設定裡。
+> **目前程式碼版本：** v0.4.0。Nexus 進入桌面陪伴感知地基：打開後即使使用者去電腦別處工作，也能安靜理解時間流逝，並把隱私邊界放在設定裡。
 
 > **開發範圍提示：** 這份多語 README 保留的是長期能力清單。當前短期開發以根目錄 [README](../README.md) 和 [Nexus 升級整合計畫](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 為準：Phase 1 只收斂桌面常駐小視窗、極簡頭像、Ollama / DeepSeek 文字模型和簡單對話。
 
@@ -181,7 +181,7 @@ beta 線奠定了基礎，本穩定版做最後打磨：
 
 ## 舊版本記錄
 
-README 只保留目前穩定版和上一個穩定版的重點。更早的版本，例如 v0.2.9、v0.2.7 和 v0.2.5，請查看 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)。
+README 只保留目前程式碼版本 v0.4.0 和上一個穩定入口 v0.3.6 的重點；更早歷史版本統一放在 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 頂部繼續滾動維護舊版本號。
 
 ---
 
