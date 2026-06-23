@@ -40,6 +40,7 @@ function hasScript(pkg, name) {
 }
 
 const pkg = readJson('package.json')
+const ciWorkflow = readText('.github/workflows/ci.yml')
 const releaseWorkflow = readText('.github/workflows/release.yml')
 const updaterService = readText('electron/services/updaterService.js')
 const preload = readText('electron/preload.js')
@@ -76,6 +77,8 @@ check('developer npm scripts cover run, package and release verification', () =>
     'package:win',
     'package:linux',
     'package:dir:smoke',
+    'core-path:smoke',
+    'core-path:smoke:built',
     'verify:release',
     'verify:pr',
     'ipc:audit',
@@ -153,6 +156,29 @@ check('pre-release gate docs include packaged smoke', () => {
     releasingDoc.includes('package an unpacked app and launch it with') ||
       releasingDoc.includes('Packaged smoke'),
     'RELEASING should explain what the packaged smoke gate validates',
+  )
+})
+
+check('core path smoke is release-gated and documented', () => {
+  const corePathSmoke = readText('scripts/core-path-smoke.cjs')
+  assert(pkg.scripts?.['core-path:smoke']?.includes('core-path:smoke:built'), 'core-path:smoke should build then run the built smoke')
+  assert(pkg.scripts?.['core-path:smoke:built'] === 'electron scripts/core-path-smoke.cjs', 'core-path:smoke:built should run the Electron smoke script')
+  assert(pkg.scripts?.['verify:release']?.includes('npm run core-path:smoke:built'), 'verify:release should include core path smoke')
+  assert(ciWorkflow.includes('npm run core-path:smoke:built'), 'CI should run core path smoke after build')
+  assert(ciWorkflow.includes('xvfb-run -a npm run core-path:smoke:built'), 'Linux CI should run core path smoke under xvfb')
+  for (const phrase of [
+    "view: 'panel'",
+    'settings-home-card[data-section="model"]',
+    'settings-page[data-section="model"]',
+    'settings-model-test-button',
+    'nexus.modelSetup.dismissedUntilRestart',
+  ]) {
+    assert(corePathSmoke.includes(phrase), `core path smoke missing phrase: ${phrase}`)
+  }
+  assert(releasingDoc.includes('npm run core-path:smoke'), 'RELEASING should document the core path smoke command')
+  assert(
+    releasingDoc.includes('without real microphone or provider calls'),
+    'RELEASING should document that core path smoke avoids microphone/provider dependencies',
   )
 })
 
