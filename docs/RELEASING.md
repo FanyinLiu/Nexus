@@ -300,10 +300,12 @@ Flags:
 7. CI on HEAD success.
 
 ### Stage B — Code quality (6 checks)
-1. `npm run verify:release` (`verify:pr` + SQLite smoke). `verify:pr` runs
+1. `npm run verify:release` (`verify:pr` + SQLite smoke + core path smoke). `verify:pr` runs
    tsc, lint, tests, build, storage audit, heavy-module audit, companion
    boundary audit, IPC audit, and distribution audit.
-2. `npm run smoke` — Electron actually launches + renderer loads.
+2. `npm run smoke` — Electron actually launches + renderer loads. `npm run core-path:smoke`
+   goes one step deeper by loading the panel, opening Settings, and reaching
+   the model configuration path without real microphone or provider calls.
 3. `npm run package:dir:smoke` — package an unpacked app and launch it with
    the packaged smoke runner.
 4. Coverage ≥ 80% lines (warn).

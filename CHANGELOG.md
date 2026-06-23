@@ -73,6 +73,9 @@
   development status, unsigned installers, resource costs, provider networking,
   desktop-awareness privacy boundaries, and voice-model caveats, with
   distribution audit coverage.
+- **Core path smoke** — added an Electron smoke that loads the panel, opens
+  Settings, reaches the model configuration path, and joins `verify:release`
+  plus CI without requiring a real microphone or provider call.
 
 ### Fixed
 - **Localized exact-time leak detection** — desktop companion awareness now
