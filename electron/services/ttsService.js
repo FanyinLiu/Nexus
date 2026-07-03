@@ -8,6 +8,7 @@ import {
   audioFormatToMimeType,
 } from '../net.js'
 import { synthesizeEdgeTts } from './edgeTts.js'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 import {
   SPEECH_PROVIDER_IDS,
   isElevenLabsProvider,
@@ -60,8 +61,12 @@ function logTtsRetry({ attempt, reason, url, error }) {
   })()
   console.warn(
     `[TTS-Retry] attempt=${attempt} reason=${reason} host=${host}`,
-    error?.message ? `error=${error.message}` : '',
+    error ? `error=${getRedactedErrorMessage(error)}` : '',
   )
+}
+
+function formatSpeechTextLogMeta(text) {
+  return `chars=${String(text ?? '').length}`
 }
 
 /**
@@ -304,7 +309,12 @@ async function synthesizeRemoteTts(sessionPayload, text) {
 
   // Edge TTS: Microsoft Edge Read Aloud, free, ultra-low latency
   if (isEdgeTtsSpeechOutputProvider(payload.providerId)) {
-    console.log('[Edge-TTS] synthesize:', content.slice(0, 40), 'voice:', payload.voice || 'zh-CN-XiaoxiaoNeural')
+    console.info(
+      '[Edge-TTS] synthesize:',
+      formatSpeechTextLogMeta(content),
+      'voice:',
+      payload.voice || 'zh-CN-XiaoxiaoNeural',
+    )
     return synthesizeEdgeTts(content, {
       voice: payload.voice || 'zh-CN-XiaoxiaoNeural',
       rate: Number.isFinite(payload.rate) ? payload.rate : undefined,

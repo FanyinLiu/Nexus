@@ -3,9 +3,13 @@ import type { TranslationKey, TranslationParams } from '../../../types/i18n'
 
 type SpritePetPackageOutput = {
   packageDirectory: string
+  packageDirectoryDisplay?: string
   manifestPath: string
+  manifestPathDisplay?: string
   visualAuditPath?: string
+  visualAuditPathDisplay?: string
   archivePath?: string
+  archivePathDisplay?: string
 } | null
 
 type SpriteCreatorKitPanelProps = {
@@ -20,7 +24,9 @@ type SpriteCreatorKitPanelProps = {
   creatorKitInspection: SpritePetCreatorKitInspection | null
   assemblingCreatorKit: boolean
   lastCreatorKitDirectory: string
+  lastCreatorKitDirectoryDisplay: string
   lastCreatorKitSourceRowsDirectory: string
+  lastCreatorKitSourceRowsDirectoryDisplay: string
   assembledCreatorKitPackage: SpritePetPackageOutput
   ti: (key: TranslationKey, params?: TranslationParams) => string
   onShowCreatorPrompt: () => void
@@ -57,7 +63,9 @@ export function SpriteCreatorKitPanel({
   creatorKitInspection,
   assemblingCreatorKit,
   lastCreatorKitDirectory,
+  lastCreatorKitDirectoryDisplay,
   lastCreatorKitSourceRowsDirectory,
+  lastCreatorKitSourceRowsDirectoryDisplay,
   assembledCreatorKitPackage,
   ti,
   onShowCreatorPrompt,
@@ -71,6 +79,7 @@ export function SpriteCreatorKitPanel({
   const creatorStyleSamplesPath = lastCreatorKitDirectory
     ? joinCreatorKitPath(lastCreatorKitDirectory, 'references/style-samples.md')
     : ''
+  const sourceRowsDisplayPath = lastCreatorKitSourceRowsDirectoryDisplay || lastCreatorKitSourceRowsDirectory
 
   return (
     <div className="settings-mini-group settings-pet-workflow-card settings-pet-workflow-card--creator">
@@ -138,7 +147,8 @@ export function SpriteCreatorKitPanel({
       {lastCreatorKitDirectory ? (
         <div className="settings-pet-kit-output">
           <p className="settings-mini-group__note">
-            {ti('settings.chat.codex_pet_creator_current_kit')} <code>{lastCreatorKitDirectory}</code>
+            {ti('settings.chat.codex_pet_creator_current_kit')}{' '}
+            <code>{lastCreatorKitDirectoryDisplay || lastCreatorKitDirectory}</code>
           </p>
           <button
             type="button"
@@ -168,6 +178,7 @@ export function SpriteCreatorKitPanel({
             <button
               type="button"
               className="ghost-button"
+              title={sourceRowsDisplayPath}
               onClick={() => onOpenCodexPetCreatorKitPath({
                 kitDirectory: lastCreatorKitDirectory,
                 targetPath: lastCreatorKitSourceRowsDirectory,
@@ -205,7 +216,7 @@ export function SpriteCreatorKitPanel({
           </div>
           <div className="settings-pet-kit-output">
             <p className="settings-mini-group__note">
-              <code>{assembledCreatorKitPackage.packageDirectory}</code>
+              <code>{assembledCreatorKitPackage.packageDirectoryDisplay ?? assembledCreatorKitPackage.packageDirectory}</code>
             </p>
             <button
               type="button"
@@ -223,7 +234,7 @@ export function SpriteCreatorKitPanel({
             <div className="settings-pet-kit-output">
               <p className="settings-mini-group__note">
                 <span>{ti('settings.chat.codex_pet_creator_archive')}</span>{' '}
-                <code>{assembledCreatorKitPackage.archivePath}</code>
+                <code>{assembledCreatorKitPackage.archivePathDisplay ?? assembledCreatorKitPackage.archivePath}</code>
               </p>
               <button
                 type="button"
@@ -277,7 +288,8 @@ export function SpriteCreatorKitPanel({
           {creatorKitInspection.contactSheetPath ? (
             <div className="settings-pet-kit-output">
               <p className="settings-mini-group__note">
-                {ti('settings.chat.codex_pet_creator_contact_sheet')} <code>{creatorKitInspection.contactSheetPath}</code>
+                {ti('settings.chat.codex_pet_creator_contact_sheet')}{' '}
+                <code>{creatorKitInspection.contactSheetPathDisplay ?? creatorKitInspection.contactSheetPath}</code>
               </p>
               <button
                 type="button"
@@ -295,7 +307,8 @@ export function SpriteCreatorKitPanel({
           {creatorKitInspection.motionPreviewPath ? (
             <div className="settings-pet-kit-output">
               <p className="settings-mini-group__note">
-                {ti('settings.chat.codex_pet_creator_motion_preview')} <code>{creatorKitInspection.motionPreviewPath}</code>
+                {ti('settings.chat.codex_pet_creator_motion_preview')}{' '}
+                <code>{creatorKitInspection.motionPreviewPathDisplay ?? creatorKitInspection.motionPreviewPath}</code>
               </p>
               <button
                 type="button"

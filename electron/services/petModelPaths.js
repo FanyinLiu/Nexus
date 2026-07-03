@@ -11,6 +11,9 @@ const __dirname = path.dirname(__filename)
 
 const IMPORTED_PET_MODELS_DIRECTORY = 'live2d-imports'
 const IMPORTED_SPRITE_PET_MODELS_DIRECTORY = 'sprite-pet-imports'
+const USER_DATA_DISPLAY_ROOT = 'app-user-data'
+const DOCUMENTS_DISPLAY_ROOT = 'Documents'
+const CODEX_HOME_DISPLAY_ROOT = 'codex-home'
 
 let _isDev = false
 let _useDevServer = false
@@ -76,6 +79,48 @@ function getCodexHomeRoot() {
 
 export function getCodexCustomSpritePetModelsRoot() {
   return path.join(getCodexHomeRoot(), 'pets')
+}
+
+function isPathInsideRoot(rootPath, candidatePath) {
+  const relativePath = path.relative(rootPath, candidatePath)
+  return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))
+}
+
+function joinDisplayPath(rootLabel, relativePath) {
+  const normalized = relativePath.split(path.sep).filter(Boolean).join('/')
+  return normalized ? `${rootLabel}/${normalized}` : rootLabel
+}
+
+function displayPathUnderRoot(rootPath, rootLabel, targetPath) {
+  const resolvedRoot = path.resolve(rootPath)
+  const resolvedTarget = path.resolve(targetPath)
+  if (!isPathInsideRoot(resolvedRoot, resolvedTarget)) return ''
+  return joinDisplayPath(rootLabel, path.relative(resolvedRoot, resolvedTarget))
+}
+
+export function getLocalFileDisplayPath(targetPath) {
+  const rawPath = String(targetPath ?? '').trim()
+  if (!rawPath) return ''
+
+  const resolvedTarget = path.resolve(rawPath)
+  const knownRootDisplays = [
+    [app.getPath('userData'), USER_DATA_DISPLAY_ROOT],
+    [getSpritePetCreatorKitsRoot(), `${DOCUMENTS_DISPLAY_ROOT}/Nexus Pet Creator Kits`],
+    [getCodexCustomSpritePetModelsRoot(), `${CODEX_HOME_DISPLAY_ROOT}/pets`],
+    [app.getPath('documents'), DOCUMENTS_DISPLAY_ROOT],
+    [app.getPath('home'), '~'],
+  ]
+
+  for (const [rootPath, rootLabel] of knownRootDisplays) {
+    const displayPath = displayPathUnderRoot(rootPath, rootLabel, resolvedTarget)
+    if (displayPath) return displayPath
+  }
+
+  return `.../${path.basename(resolvedTarget) || 'path'}`
+}
+
+export function getPetArtifactDisplayPath(targetPath) {
+  return getLocalFileDisplayPath(targetPath)
 }
 
 export function slugifyPetModelId(value) {

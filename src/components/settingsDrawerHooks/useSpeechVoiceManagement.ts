@@ -4,6 +4,7 @@ import {
   getFallbackSpeechOutputVoices,
 } from '../../lib'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import type { ConnectionResult } from '../settingsDrawerSupport'
 import type {
   AppSettings,
@@ -106,7 +107,7 @@ export function useSpeechVoiceManagement({
       if (showStatus) {
         setSpeechVoiceStatus({
           ok: false,
-          message: error instanceof Error ? error.message : t('settings.voice.fetch_voices_error'),
+          message: getRedactedLogErrorMessage(error) || t('settings.voice.fetch_voices_error'),
         })
       }
     } finally {
@@ -137,7 +138,7 @@ export function useSpeechVoiceManagement({
     } catch (error) {
       setSpeechPreviewStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.voice.preview_error'),
+        message: getRedactedLogErrorMessage(error) || t('settings.voice.preview_error'),
       })
     } finally {
       setPreviewingSpeech(false)
@@ -154,7 +155,7 @@ export function useSpeechVoiceManagement({
     } catch (error) {
       setAudioSmokeStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.voice.audio_smoke_error'),
+        message: getRedactedLogErrorMessage(error) || t('settings.voice.audio_smoke_error'),
       })
     } finally {
       setRunningAudioSmoke(false)

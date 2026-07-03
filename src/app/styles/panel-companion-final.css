@@ -1,0 +1,589 @@
+/* Final Image4 visual convergence pass. */
+
+.panel-window--image4 .panel-window__simple-header {
+  z-index: 6;
+}
+
+.panel-window--image4 .companion-chat__toolbar.image4-header-controls,
+html[data-theme='warm-day'] .panel-window--image4 .companion-chat__toolbar.image4-header-controls {
+  top: clamp(58px, 15.8cqw, 66px);
+  right: clamp(12px, 3.2cqw, 18px);
+  left: auto;
+  z-index: 12;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  opacity: 0.74;
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
+  width: clamp(23px, 3.1vw, 26px) !important;
+  height: clamp(23px, 3.1vw, 26px) !important;
+  min-width: clamp(23px, 3.1vw, 26px) !important;
+  min-height: clamp(23px, 3.1vw, 26px) !important;
+  border-radius: 8px;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: rgba(214, 226, 242, 0.52);
+  box-shadow: none !important;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease;
+  padding: 0;
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
+  color: rgba(74, 60, 48, 0.5);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings {
+  color: rgba(214, 226, 242, 0.52);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse {
+  color: rgba(214, 226, 242, 0.52);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
+  color: rgba(214, 226, 242, 0.5);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse {
+  color: rgba(74, 60, 48, 0.46);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
+  color: rgba(74, 60, 48, 0.42);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button svg,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings svg,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse svg,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger svg {
+  width: clamp(12px, 1.7vw, 14px) !important;
+  height: clamp(12px, 1.7vw, 14px) !important;
+  stroke-width: 1.72;
+  opacity: 0.88;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover {
+  border-color: transparent !important;
+  background: rgba(255, 255, 255, 0.045) !important;
+  color: rgba(244, 248, 255, 0.94);
+  opacity: 1;
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover {
+  background: rgba(74, 60, 48, 0.048) !important;
+  color: rgba(48, 40, 35, 0.82);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover {
+  background: rgba(74, 60, 48, 0.048) !important;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover {
+  background: rgba(255, 112, 112, 0.095) !important;
+  color: rgba(255, 202, 204, 0.96);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover {
+  background: rgba(160, 62, 46, 0.08) !important;
+  color: rgba(122, 48, 38, 0.9);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:focus-visible,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:focus-visible {
+  outline: none;
+  border-color: var(--image4-state-focus-border);
+  box-shadow: var(--image4-state-focus-ring);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:focus-visible,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:focus-visible {
+  box-shadow: 0 0 0 1px var(--image4-state-focus-ring), 0 0 0 3px rgba(217, 104, 96, 0.26);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button {
+  box-sizing: border-box;
+}
+
+/* Final composer rail geometry. */
+.panel-window--image4 .image4-composer__field,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field {
+  --image4-composer-control: 29px;
+  --image4-composer-icon: 16px;
+  --image4-composer-rail-gap: 2px;
+  --image4-composer-side-inset: 12px;
+  --image4-composer-left-text-gap: 11px;
+  --image4-composer-right-text-gap: 10px;
+}
+
+.panel-window--image4 .image4-composer__field textarea,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field textarea,
+.panel-window--image4 .image4-composer__field .composer textarea,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer textarea {
+  padding: 17px 82px 13px 52px;
+  padding-right: calc((var(--image4-composer-control) * 2) + var(--image4-composer-rail-gap) + var(--image4-composer-side-inset) + var(--image4-composer-right-text-gap));
+  padding-left: calc(var(--image4-composer-control) + var(--image4-composer-side-inset) + var(--image4-composer-left-text-gap));
+  letter-spacing: 0;
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill {
+  left: var(--image4-composer-side-inset);
+}
+
+.panel-window--image4 .image4-composer__field .composer__actions,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions {
+  right: var(--image4-composer-side-inset);
+  width: auto;
+  height: var(--image4-composer-control);
+  align-items: center;
+  justify-content: center;
+  gap: var(--image4-composer-rail-gap);
+  grid-auto-columns: var(--image4-composer-control);
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill,
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+.panel-window--image4 .image4-composer__field .composer__actions .primary-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button {
+  width: var(--image4-composer-control);
+  height: var(--image4-composer-control);
+  min-width: var(--image4-composer-control);
+  min-height: var(--image4-composer-control);
+  border-radius: var(--image4-composer-control-radius);
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill__plus,
+.panel-window--image4 .image4-composer__field .composer__action-icon,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill__plus,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__action-icon {
+  width: var(--image4-composer-icon);
+  height: var(--image4-composer-icon);
+  stroke-width: 1.85;
+}
+
+.panel-window--image4 .companion-presence__dial-stage,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-stage {
+  isolation: isolate;
+}
+
+.panel-window--image4 .companion-presence__dial,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial {
+  width: min(clamp(204px, 47vw, 352px), calc(var(--image4-rhythm-dial) - 2px));
+  gap: clamp(2px, 0.24vw, 4px);
+}
+
+.panel-window--image4 .companion-presence__dial-layer--moon,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--moon {
+  display: none;
+}
+
+.panel-window--image4 .companion-presence__dial-layer--ring,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--ring {
+  inset: 9%;
+  border-color: color-mix(in srgb, currentColor 20%, transparent 80%);
+  opacity: 0.9;
+  box-shadow:
+    0 0 0 clamp(8px, 2vw, 14px) color-mix(in srgb, currentColor 8%, transparent 92%),
+    inset 0 0 18px color-mix(in srgb, currentColor 12%, transparent 88%);
+}
+
+.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta {
+  width: 78%;
+  display: grid;
+  justify-items: center;
+  gap: clamp(2px, 0.5vw, 4px);
+  text-align: center;
+}
+
+.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__date,
+.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__weather,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__date,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__weather {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * Final visual alignment pass: keep image4 controls compact and consistent.
+ * This overrides earlier polish values that caused uneven scale and spacing
+ * across toolbar, dial, and composer.
+ */
+.panel-window--image4 .companion-chat__toolbar,
+html[data-theme='warm-day'] .panel-window--image4 .companion-chat__toolbar {
+  min-height: 0;
+  gap: 6px;
+}
+
+.panel-window--image4 .image4-header-controls,
+html[data-theme='warm-day'] .panel-window--image4 .image4-header-controls {
+  top: clamp(10px, 2.3vw, 18px);
+  right: clamp(12px, 2.5vw, 16px);
+  left: auto;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 {
+  gap: 3px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
+  width: clamp(22px, 2.8vw, 26px) !important;
+  height: clamp(22px, 2.8vw, 26px) !important;
+  min-width: clamp(22px, 2.8vw, 26px) !important;
+  min-height: clamp(22px, 2.8vw, 26px) !important;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, currentColor 34%, transparent 66%) !important;
+  background: color-mix(in srgb, currentColor 8%, transparent 92%) !important;
+  color: color-mix(in srgb, currentColor 78%, transparent 22%);
+  box-shadow: none;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button svg,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings svg,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse svg,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger svg {
+  width: clamp(11px, 1.6vw, 13px) !important;
+  height: clamp(11px, 1.6vw, 13px) !important;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover {
+  border-color: color-mix(in srgb, currentColor 54%, transparent 46%) !important;
+  background: color-mix(in srgb, currentColor 13%, transparent 87%) !important;
+  color: color-mix(in srgb, currentColor 98%, transparent 2%) !important;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:focus-visible,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, currentColor 74%, transparent 26%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 16%, transparent 84%);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
+  color: color-mix(in srgb, #ff5b61 84%, transparent 16%);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover {
+  background: color-mix(in srgb, #ff5b61 18%, transparent 82%) !important;
+  color: color-mix(in srgb, #ffd0d0 82%, transparent 18%);
+}
+
+.panel-window--image4 .image4-composer,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer {
+  gap: 6px;
+  padding: 0 !important;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.panel-window--image4 .image4-composer__field,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field {
+  --image4-composer-control: 30px;
+  --image4-composer-icon: 15px;
+  --image4-composer-rail-gap: 3px;
+  --image4-composer-side-inset: 10px;
+  --image4-composer-left-text-gap: 11px;
+  --image4-composer-right-text-gap: 8px;
+  --image4-composer-control-radius: 10px;
+  width: 100%;
+  height: clamp(66px, 7vh, 78px);
+  min-height: clamp(66px, 7vh, 78px);
+  border-radius: 16px;
+  padding: 0;
+}
+
+.panel-window--image4 .image4-composer__field textarea,
+.panel-window--image4 .image4-composer__field .composer textarea,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field textarea,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer textarea {
+  padding: 20px 92px 16px 48px;
+  font-size: 14px;
+  line-height: 1.46;
+}
+
+.panel-window--image4 .image4-composer__field .composer__actions,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions {
+  right: var(--image4-composer-side-inset);
+  width: auto;
+  height: var(--image4-composer-control);
+  gap: var(--image4-composer-rail-gap);
+  padding: 0;
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill,
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+.panel-window--image4 .image4-composer__field .composer__actions .primary-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button {
+  width: var(--image4-composer-control);
+  height: var(--image4-composer-control);
+  min-width: var(--image4-composer-control);
+  min-height: var(--image4-composer-control);
+  border-radius: 9px;
+}
+
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+.panel-window--image4 .image4-composer__field .composer__actions .primary-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button {
+  padding: 0;
+  margin: 0;
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill__plus,
+.panel-window--image4 .image4-composer__field .composer__action-icon,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill__plus,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__action-icon {
+  width: var(--image4-composer-icon);
+  height: var(--image4-composer-icon);
+  stroke-width: 1.95;
+}
+
+.panel-window--image4 .companion-presence__dial,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial {
+  width: min(clamp(218px, 54vw, 364px), calc(var(--image4-rhythm-dial) - 0px));
+  margin-top: 0;
+  transform: translateY(0);
+}
+
+.panel-window--image4 .companion-presence__dial-layer--ring,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--ring {
+  inset: 8%;
+  border-color: color-mix(in srgb, currentColor 24%, transparent 76%);
+  box-shadow:
+    0 0 0 clamp(10px, 2.4vw, 16px) color-mix(in srgb, currentColor 10%, transparent 90%),
+    inset 0 0 20px color-mix(in srgb, currentColor 13%, transparent 87%);
+}
+
+.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta {
+  width: 80%;
+  display: grid;
+  gap: 0;
+  text-align: center;
+}
+
+.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__date,
+.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__weather,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__date,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__weather {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__date,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__date {
+  font-size: clamp(8.3px, 1.5vw, 10.5px);
+}
+
+.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__weather,
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__weather {
+  font-size: clamp(7.8px, 1.42vw, 10px);
+  color: color-mix(in srgb, currentColor 72%, #ffbf8f 28%);
+}
+
+.panel-window--image4 .companion-presence__signal-bars,
+.panel-window--image4 .companion-presence__signal.is-speaking .companion-presence__signal-bars {
+  align-items: flex-end;
+}
+
+.panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__signal.is-speaking .companion-presence__signal-bar,
+.panel-window--image4 .companion-presence__signal.is-speaking .companion-presence__signal-bar {
+  animation-play-state: running;
+}
+
+.panel-window--image4 .companion-presence__signal:not(.is-speaking) .companion-presence__signal-bar {
+  animation: none !important;
+}
+
+/* Final micro-alignment for icon controls: keep header actions and composer
+ * action buttons perfectly compact, with no hard contrast ring unless hover/focus.
+ * Keeps the look close to the target "image4-preview" frame while preserving hit
+ * area for desktop interaction.
+ */
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
+  display: inline-grid !important;
+  place-items: center !important;
+  line-height: 1 !important;
+  font-size: 0 !important;
+  padding: 0 !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button svg,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings svg,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse svg,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger svg {
+  display: block;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover {
+  border-color: color-mix(in srgb, currentColor 16%, transparent 84%) !important;
+  background: color-mix(in srgb, currentColor 12%, transparent 88%) !important;
+}
+
+.panel-window--image4 .image4-composer__field .composer__actions,
+.panel-window--image4 .image4-composer__field .composer__actions,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+.panel-window--image4 .image4-composer__field .composer__actions .primary-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button {
+  display: inline-grid !important;
+  place-items: center !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button span,
+.panel-window--image4 .image4-composer__field .composer__actions .primary-button span,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button span,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button span {
+  display: none !important;
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill,
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+.panel-window--image4 .image4-composer__field .composer__actions .primary-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button {
+  display: inline-grid !important;
+  place-items: center !important;
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill__plus,
+.panel-window--image4 .image4-composer__field .composer__action-icon,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill__plus,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__action-icon {
+  display: block !important;
+  line-height: 1 !important;
+}
+
+@media (max-height: 760px) {
+  .panel-window--image4 .image4-composer__field,
+  html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field {
+    height: clamp(62px, 6.6vh, 72px);
+    min-height: clamp(62px, 6.6vh, 72px);
+  }
+
+  .panel-window--image4 .companion-presence__dial,
+  html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial {
+    width: min(clamp(188px, 50vw, 248px), calc(var(--image4-rhythm-dial) - 1px));
+  }
+}

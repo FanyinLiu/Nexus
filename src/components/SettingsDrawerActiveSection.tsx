@@ -181,7 +181,9 @@ export function SettingsDrawerActiveSection({
           creatorKitInspection={petModelImport.creatorKitInspection}
           assemblingCreatorKit={petModelImport.assemblingCreatorKit}
           lastCreatorKitDirectory={petModelImport.lastCreatorKitDirectory}
+          lastCreatorKitDirectoryDisplay={petModelImport.lastCreatorKitDirectoryDisplay}
           lastCreatorKitSourceRowsDirectory={petModelImport.lastCreatorKitSourceRowsDirectory}
+          lastCreatorKitSourceRowsDirectoryDisplay={petModelImport.lastCreatorKitSourceRowsDirectoryDisplay}
           assembledCreatorKitPackage={petModelImport.assembledCreatorKitPackage}
           generatedSpritePetPackage={petModelImport.generatedSpritePetPackage}
           onImportPetModel={() => void petModelImport.handleImportPetModel()}

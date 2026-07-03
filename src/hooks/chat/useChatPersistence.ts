@@ -6,6 +6,7 @@ import {
 } from '../../lib'
 import { mirrorChatSessionToLocalData, saveChatMessages, takePendingGreeting } from '../../lib/storage'
 import { getCoreRuntime } from '../../lib/coreRuntime'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction'
 import type { ChatMessage } from '../../types'
 import type { ChatSession } from '../../lib/storage'
 
@@ -72,11 +73,11 @@ export function useChatPersistence({
       void mirrorChatSessionToLocalData(session)
         .then(({ attempted, result, reason }) => {
           if (attempted && result && !result.ok) {
-            console.warn('[chatLocalDataRuntimeMirror] mirror failed:', reason)
+            console.warn('[chatLocalDataRuntimeMirror] mirror failed:', getRedactedLogErrorMessage(reason))
           }
         })
         .catch((error) => {
-          console.warn('[chatLocalDataRuntimeMirror] mirror failed:', error)
+          console.warn('[chatLocalDataRuntimeMirror] mirror failed:', getRedactedLogErrorMessage(error))
         })
     }, 750)
 

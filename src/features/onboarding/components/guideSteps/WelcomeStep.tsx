@@ -6,6 +6,10 @@ import {
   isLocaleDefaultUserName,
   pickTranslatedUiText,
 } from '../../../../lib/uiLanguage'
+import {
+  setCompanionNameWithWakeWordSync,
+  syncWakeWordWithCompanionNameChange,
+} from '../../../hearing/companionWakeWordSync.ts'
 import type { AppSettings } from '../../../../types'
 import type { OnboardingDraftSetter } from './types'
 
@@ -25,7 +29,7 @@ export function WelcomeStep({ draft, setDraft }: WelcomeStepProps) {
           value={draft.uiLanguage}
           onChange={(event) => {
             const next = event.target.value as AppSettings['uiLanguage']
-            setDraft((current) => ({
+            setDraft((current) => syncWakeWordWithCompanionNameChange(current, {
               ...current,
               uiLanguage: next,
               companionName: isLocaleDefaultCompanionName(current.companionName)
@@ -62,10 +66,9 @@ export function WelcomeStep({ draft, setDraft }: WelcomeStepProps) {
           <span>{ti('onboarding.welcome.companion_name_label')}</span>
           <input
             value={draft.companionName}
-            onChange={(event) => setDraft((current) => ({
-              ...current,
-              companionName: event.target.value,
-            }))}
+            onChange={(event) => setDraft((current) =>
+              setCompanionNameWithWakeWordSync(current, event.target.value),
+            )}
             placeholder={ti('onboarding.welcome.companion_name_placeholder')}
           />
         </label>

@@ -13,10 +13,63 @@ type MessageBubbleProps = {
   onOpenMemorySettings?: () => void
 }
 
-const MEMORY_TRACE_SEARCH_MODE_KEY: Record<ChatMemoryTraceDetails['searchModeUsed'], Parameters<ReturnType<typeof useTranslation>['t']>[0]> = {
+type TranslationKey = Parameters<ReturnType<typeof useTranslation>['t']>[0]
+
+const CHAT_MESSAGE_SURFACE_STATES = [
+  'final',
+  'streaming',
+  'waiting',
+  'tool-running',
+  'tool-result',
+  'error',
+  'resumable',
+  'context-used',
+] as const
+
+type ChatMessageSurfaceState = typeof CHAT_MESSAGE_SURFACE_STATES[number]
+
+const CHAT_RUN_STATUS_TO_SURFACE_STATE: Partial<Record<NonNullable<ChatMessage['runStatus']>, ChatMessageSurfaceState>> = {
+  waiting: 'waiting',
+  streaming_text: 'streaming',
+  tool_pending: 'tool-running',
+  tool_result_preview: 'tool-result',
+  final: 'final',
+  interrupted: 'resumable',
+  error_recoverable: 'error',
+}
+
+const CHAT_RUN_STATUS_LABEL_KEYS: Partial<Record<NonNullable<ChatMessage['runStatus']>, TranslationKey>> = {
+  waiting: 'message_bubble.run_status.waiting',
+  streaming_text: 'message_bubble.run_status.streaming_text',
+  tool_pending: 'message_bubble.run_status.tool_pending',
+  tool_result_preview: 'message_bubble.run_status.tool_result_preview',
+  interrupted: 'message_bubble.run_status.interrupted',
+  error_recoverable: 'message_bubble.run_status.error_recoverable',
+}
+
+const MEMORY_TRACE_SEARCH_MODE_KEY: Record<ChatMemoryTraceDetails['searchModeUsed'], TranslationKey> = {
   keyword: 'memory_search.keyword.label',
   hybrid: 'memory_search.hybrid.label',
   vector: 'memory_search.vector.label',
+}
+
+function resolveChatMessageSurfaceState(message: ChatMessage): ChatMessageSurfaceState {
+  if (message.role === 'system' && message.tone === 'error') return 'error'
+  if (message.role === 'assistant' && message.runStatus) {
+    return CHAT_RUN_STATUS_TO_SURFACE_STATE[message.runStatus] ?? 'final'
+  }
+  if (message.toolResult) return 'tool-result'
+  if (message.role === 'assistant' && message.memoryTrace) return 'context-used'
+  return 'final'
+}
+
+function getRunStatusLabel(message: ChatMessage, t: ReturnType<typeof useTranslation>['t']) {
+  if (message.role !== 'assistant' || !message.runStatus || message.runStatus === 'final') {
+    return null
+  }
+
+  const labelKey = CHAT_RUN_STATUS_LABEL_KEYS[message.runStatus]
+  return labelKey ? t(labelKey) : null
 }
 
 function formatMessageTimestamp(createdAt: string, locale: string) {
@@ -172,6 +225,11 @@ export const MessageBubble = memo(function MessageBubble({
       ? `message-bubble--${message.tone ?? 'neutral'}`
       : '',
   ].filter(Boolean).join(' ')
+  let chatSurfaceState = resolveChatMessageSurfaceState(message)
+  if (!CHAT_MESSAGE_SURFACE_STATES.includes(chatSurfaceState)) {
+    chatSurfaceState = 'final'
+  }
+  const runStatusLabel = getRunStatusLabel(message, t)
   const memoryTraceLabel = getMemoryTraceLabel(message, t)
   const memoryTraceSearchModeLabel = memoryTraceDetails
     ? t(MEMORY_TRACE_SEARCH_MODE_KEY[memoryTraceDetails.searchModeUsed])
@@ -181,7 +239,7 @@ export const MessageBubble = memo(function MessageBubble({
     : t('message_bubble.memory_trace.vector_off')
 
   return (
-    <article className={bubbleClassName}>
+    <article className={bubbleClassName} data-chat-surface-state={chatSurfaceState}>
       <div className="message-bubble__label">
         <span>{speakerLabel}</span>
         <span className="message-bubble__label-meta">
@@ -207,6 +265,17 @@ export const MessageBubble = memo(function MessageBubble({
             {message.role === 'assistant'
               ? renderAssistantContent(message.content)
               : renderLinkedContent(message.content)}
+          </div>
+        ) : null}
+        {runStatusLabel ? (
+          <div
+            className="message-bubble__run-status"
+            role="status"
+            aria-live="polite"
+            data-run-status={message.runStatus}
+          >
+            <span className="message-bubble__run-status-dot" aria-hidden="true" />
+            <span>{runStatusLabel}</span>
           </div>
         ) : null}
         {message.toolResult ? <ToolResultCard toolResult={message.toolResult} /> : null}

@@ -1,5 +1,8 @@
 import type { MutableRefObject } from 'react'
-import { normalizeRecognizedVoiceTranscript, resolveVoiceTranscriptDecision } from '../../features/hearing/core.ts'
+import {
+  normalizeRecognizedVoiceTranscript,
+  resolveVoiceTranscriptDecision,
+} from '../../features/hearing/core.ts'
 import { applyVoiceHotwordCorrections } from '../../features/hearing/hotwordCorrection.ts'
 import { formatTraceLabel, logVoiceEvent } from '../../features/voice/shared.ts'
 import type { VoiceSessionEvent } from '../../features/voice/sessionMachine.ts'
@@ -109,7 +112,7 @@ export async function handleRecognizedVoiceTranscriptRuntime(
   options.dispatchVoiceSessionAndSync({ type: 'stt_final', text: transcript })
 
   const triggerMode = options.hearingConfig.voiceTriggerMode
-  const wakeWord = options.hearingConfig.wakeWord.trim()
+  const wakeWord = options.hearingConfig.wakeWord
   const wakeWordAlreadyTriggered = Boolean(options.activeVoiceConversationOptionsRef.current.wakewordTriggered)
   options.activeVoiceConversationOptionsRef.current = {}
 

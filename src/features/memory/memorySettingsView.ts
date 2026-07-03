@@ -5,8 +5,10 @@ import type {
   MemorySearchMode,
 } from '../../types/memory.ts'
 import {
+  resolveCompanionTransparencyViewModel,
   resolveCompanionTransparencySummary,
   type CompanionTransparencySummary,
+  type CompanionTransparencyViewModel,
 } from '../context/companionTransparency.ts'
 import type { QuietObservationSummary } from '../context/companionAwareness.ts'
 
@@ -30,6 +32,7 @@ export type MemoryTransparencySummary = MemorySettingsSummary & {
   sqliteAuthorityEnabled: false
   storageAuthority: 'renderer-localStorage'
   companionAwareness: CompanionTransparencySummary
+  companionAwarenessView: CompanionTransparencyViewModel
 }
 
 const EMPTY_KIND_COUNTS: MemoryKindCounts = {
@@ -87,15 +90,18 @@ export function resolveMemoryTransparencySummary(input: {
     || input.screenContextEnabled
   )
 
+  const companionAwareness = resolveCompanionTransparencySummary({
+    contextAwarenessEnabled: input.contextAwarenessEnabled,
+    companionAwarenessPaused: input.companionAwarenessPaused ?? false,
+    activeWindowContextEnabled: input.activeWindowContextEnabled,
+    summary: input.companionSummary ?? null,
+  })
+
   return {
     ...base,
     automaticCaptureEnabled: memoryActive,
-    companionAwareness: resolveCompanionTransparencySummary({
-      contextAwarenessEnabled: input.contextAwarenessEnabled,
-      companionAwarenessPaused: input.companionAwarenessPaused ?? false,
-      activeWindowContextEnabled: input.activeWindowContextEnabled,
-      summary: input.companionSummary ?? null,
-    }),
+    companionAwareness,
+    companionAwarenessView: resolveCompanionTransparencyViewModel(companionAwareness),
     contextReadEnabled,
     dailyRecallEnabled: memoryActive && input.memoryDailyRecallCount > 0,
     longTermRecallEnabled: memoryActive && input.memoryLongTermRecallCount > 0,

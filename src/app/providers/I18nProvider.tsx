@@ -9,6 +9,7 @@ import {
   setLocale as setGlobalLocale,
   t,
 } from '../../i18n'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { getSettingsSnapshot, subscribeToSettings } from '../store/settingsStore'
 import type { AppLocale, I18nContextValue } from '../../types/i18n'
 
@@ -39,7 +40,7 @@ export function I18nProvider({ children }: I18nProviderProps) {
         ))
       })
       .catch((error) => {
-        console.error('[i18n] Failed to load locale:', normalizedLocale, error)
+        console.error('[i18n] Failed to load locale:', normalizedLocale, getRedactedLogErrorMessage(error))
       })
   }, [])
 

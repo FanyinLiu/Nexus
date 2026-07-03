@@ -11,6 +11,7 @@ import {
   type ReminderTaskActionKind,
 } from '../settingsDrawerSupport'
 import { formatReminderScheduleSummaryForUi, type ReminderTaskDraftInput } from '../../features/reminders/schedule'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type {
   ReminderTask,
@@ -165,7 +166,7 @@ export const ContextSection = memo(function ContextSection({
     } catch (error) {
       setReminderStatus({
         ok: false,
-        message: error instanceof Error ? error.message : ti('settings.context.error.save_failed'),
+        message: getRedactedLogErrorMessage(error) || ti('settings.context.error.save_failed'),
       })
     }
   }
@@ -185,7 +186,7 @@ export const ContextSection = memo(function ContextSection({
     } catch (error) {
       setReminderStatus({
         ok: false,
-        message: error instanceof Error ? error.message : ti('settings.context.error.template_failed'),
+        message: getRedactedLogErrorMessage(error) || ti('settings.context.error.template_failed'),
       })
     }
   }

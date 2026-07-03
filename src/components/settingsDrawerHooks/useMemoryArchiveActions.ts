@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import type { ConfirmFn } from '../useConfirm.ts'
 import type { ConnectionResult } from '../settingsDrawerSupport'
 import type { DailyMemoryEntry, MemoryItem } from '../../types'
@@ -55,7 +56,7 @@ export function useMemoryArchiveActions({
     } catch (error) {
       setMemoryArchiveStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.memory.export_error'),
+        message: getRedactedLogErrorMessage(error) || t('settings.memory.export_error'),
       })
     } finally {
       setExportingMemoryArchive(false)
@@ -86,7 +87,7 @@ export function useMemoryArchiveActions({
     } catch (error) {
       setMemoryArchiveStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.memory.import_error'),
+        message: getRedactedLogErrorMessage(error) || t('settings.memory.import_error'),
       })
     } finally {
       setImportingMemoryArchive(false)
@@ -123,7 +124,7 @@ export function useMemoryArchiveActions({
     } catch (error) {
       setMemoryArchiveStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.memory.clear_error'),
+        message: getRedactedLogErrorMessage(error) || t('settings.memory.clear_error'),
       })
     } finally {
       setClearingMemoryArchive(false)

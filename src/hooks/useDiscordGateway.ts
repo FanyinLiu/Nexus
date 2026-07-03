@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { parseDiscordChannelIdList } from '../features/integrations/allowlists.ts'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 
 export type DiscordStatus = {
   state: 'disconnected' | 'connecting' | 'connected' | 'error'
@@ -75,14 +76,14 @@ export function useDiscordGateway({
         setStatus({
           state: s.state as DiscordStatus['state'],
           botUsername: s.botUsername,
-          lastError: s.lastError,
+          lastError: s.lastError ? getRedactedLogErrorMessage(s.lastError) : null,
         })
       })
       .catch((err) => {
         setStatus({
           state: 'error',
           botUsername: null,
-          lastError: err instanceof Error ? err.message : String(err),
+          lastError: getRedactedLogErrorMessage(err),
         })
       })
 
@@ -114,7 +115,7 @@ export function useDiscordGateway({
       setStatus({
         state: s.state as DiscordStatus['state'],
         botUsername: s.botUsername,
-        lastError: s.lastError,
+        lastError: s.lastError ? getRedactedLogErrorMessage(s.lastError) : null,
       })
     }
   }, [])

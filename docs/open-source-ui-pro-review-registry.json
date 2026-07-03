@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "lastUpdated": "2026-07-03",
+  "policy": {
+    "statusSource": "local-review-registry",
+    "doesNotStoreProResponse": true,
+    "doesNotStoreSecrets": true,
+    "requiresAnswerQualityBeforeIntake": true,
+    "requiresIntakeBeforeImplementation": true,
+    "requiresImplementationReadinessBeforeCodeChange": true
+  },
+  "surfaces": [
+    {
+      "surface": "image4-presence",
+      "status": "recorded",
+      "decision": "accepted",
+      "nextAction": "Keep the bounded record and move to the next actionable Pro review.",
+      "commands": {
+        "handoff": "npm run ui:references:audit -- --surface=image4-presence --pro-handoff",
+        "quality": "npm run ui:references:audit -- --surface=image4-presence --pro-answer-quality",
+        "intake": "npm run ui:references:audit -- --surface=image4-presence --review-intake-template",
+        "record": "npm run ui:references:audit -- --surface=image4-presence --record-template",
+        "implementation": "npm run ui:references:audit -- --surface=image4-presence --implementation-readiness",
+        "check": "npm run image4:visual-contract:audit"
+      }
+    },
+    {
+      "surface": "dial",
+      "status": "recorded",
+      "decision": "accepted",
+      "nextAction": "Keep the bounded dial summary and move to the next actionable Pro review.",
+      "commands": {
+        "handoff": "npm run ui:references:audit -- --surface=dial --pro-handoff",
+        "quality": "npm run ui:references:audit -- --surface=dial --pro-answer-quality",
+        "intake": "npm run ui:references:audit -- --surface=dial --review-intake-template",
+        "record": "npm run ui:references:audit -- --surface=dial --record-template",
+        "implementation": "npm run ui:references:audit -- --surface=dial --implementation-readiness",
+        "check": "npm run image4:visual-contract:audit"
+      }
+    },
+    {
+      "surface": "companion-tone",
+      "status": "accepted-for-prototype",
+      "decision": "needs-prototype",
+      "nextAction": "Keep the current warm-day companion tone as a bounded prototype only; run answer quality, implementation readiness, local color audit, and browser review before recording a final accepted contract.",
+      "commands": {
+        "handoff": "npm run ui:references:audit -- --surface=companion-tone --pro-handoff",
+        "quality": "npm run ui:references:audit -- --surface=companion-tone --pro-answer-quality",
+        "intake": "npm run ui:references:audit -- --surface=companion-tone --review-intake-template",
+        "record": "npm run ui:references:audit -- --surface=companion-tone --record-template",
+        "implementation": "npm run ui:references:audit -- --surface=companion-tone --implementation-readiness",
+        "check": "npm run image4:color:audit"
+      }
+    },
+    {
+      "surface": "composer",
+      "status": "recorded",
+      "decision": "accepted",
+      "nextAction": "Keep the bounded composer summary and move to the next actionable Pro review.",
+      "commands": {
+        "handoff": "npm run ui:references:audit -- --surface=composer --pro-handoff",
+        "quality": "npm run ui:references:audit -- --surface=composer --pro-answer-quality",
+        "intake": "npm run ui:references:audit -- --surface=composer --review-intake-template",
+        "record": "npm run ui:references:audit -- --surface=composer --record-template",
+        "implementation": "npm run ui:references:audit -- --surface=composer --implementation-readiness",
+        "check": "npm run composer:surface:audit"
+      }
+    },
+    {
+      "surface": "chat",
+      "status": "recorded",
+      "decision": "accepted",
+      "nextAction": "Keep the bounded chat summary and move to the next actionable Pro review.",
+      "commands": {
+        "handoff": "npm run ui:references:audit -- --surface=chat --pro-handoff",
+        "quality": "npm run ui:references:audit -- --surface=chat --pro-answer-quality",
+        "intake": "npm run ui:references:audit -- --surface=chat --review-intake-template",
+        "record": "npm run ui:references:audit -- --surface=chat --record-template",
+        "implementation": "npm run ui:references:audit -- --surface=chat --implementation-readiness",
+        "check": "npm run chat:surface:audit"
+      }
+    },
+    {
+      "surface": "settings",
+      "status": "recorded",
+      "decision": "accepted",
+      "nextAction": "Keep the bounded settings summary and move to the next actionable Pro review.",
+      "commands": {
+        "handoff": "npm run ui:references:audit -- --surface=settings --pro-handoff",
+        "quality": "npm run ui:references:audit -- --surface=settings --pro-answer-quality",
+        "intake": "npm run ui:references:audit -- --surface=settings --review-intake-template",
+        "record": "npm run ui:references:audit -- --surface=settings --record-template",
+        "implementation": "npm run ui:references:audit -- --surface=settings --implementation-readiness",
+        "check": "npm run settings:surface:audit"
+      }
+    },
+    {
+      "surface": "forms",
+      "status": "recorded",
+      "decision": "accepted",
+      "nextAction": "Keep the bounded forms summary and move to the next actionable Pro review.",
+      "commands": {
+        "handoff": "npm run ui:references:audit -- --surface=forms --pro-handoff",
+        "quality": "npm run ui:references:audit -- --surface=forms --pro-answer-quality",
+        "intake": "npm run ui:references:audit -- --surface=forms --review-intake-template",
+        "record": "npm run ui:references:audit -- --surface=forms --record-template",
+        "implementation": "npm run ui:references:audit -- --surface=forms --implementation-readiness",
+        "check": "npm run forms:surface:audit"
+      }
+    },
+    {
+      "surface": "focus-management",
+      "status": "recorded",
+      "decision": "accepted",
+      "nextAction": "Keep the bounded focus-management summary and move to the next actionable Pro review.",
+      "commands": {
+        "handoff": "npm run ui:references:audit -- --surface=focus-management --pro-handoff",
+        "quality": "npm run ui:references:audit -- --surface=focus-management --pro-answer-quality",
+        "intake": "npm run ui:references:audit -- --surface=focus-management --review-intake-template",
+        "record": "npm run ui:references:audit -- --surface=focus-management --record-template",
+        "implementation": "npm run ui:references:audit -- --surface=focus-management --implementation-readiness",
+        "check": "npm run focus:surface:audit"
+      }
+    },
+    {
+      "surface": "streaming",
+      "status": "recorded",
+      "decision": "accepted",
+      "nextAction": "Keep the bounded streaming summary and move to the next actionable Pro review.",
+      "commands": {
+        "handoff": "npm run ui:references:audit -- --surface=streaming --pro-handoff",
+        "quality": "npm run ui:references:audit -- --surface=streaming --pro-answer-quality",
+        "intake": "npm run ui:references:audit -- --surface=streaming --review-intake-template",
+        "record": "npm run ui:references:audit -- --surface=streaming --record-template",
+        "implementation": "npm run ui:references:audit -- --surface=streaming --implementation-readiness",
+        "check": "npm run streaming:surface:audit"
+      }
+    },
+    {
+      "surface": "agent-activity",
+      "status": "recorded",
+      "decision": "accepted",
+      "nextAction": "Keep the bounded agent-activity summary and use it as the companion-first activity contract.",
+      "commands": {
+        "handoff": "npm run ui:references:audit -- --surface=agent-activity --pro-handoff",
+        "quality": "npm run ui:references:audit -- --surface=agent-activity --pro-answer-quality",
+        "intake": "npm run ui:references:audit -- --surface=agent-activity --review-intake-template",
+        "record": "npm run ui:references:audit -- --surface=agent-activity --record-template",
+        "implementation": "npm run ui:references:audit -- --surface=agent-activity --implementation-readiness",
+        "check": "npm run agent-activity:surface:audit"
+      }
+    }
+  ]
+}

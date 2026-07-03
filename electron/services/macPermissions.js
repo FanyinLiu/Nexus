@@ -1,5 +1,7 @@
 import { systemPreferences, dialog, shell } from 'electron'
 
+import { getRedactedErrorMessage } from './errorRedaction.js'
+
 /**
  * macOS 隐私权限自检 + 引导。
  *
@@ -38,7 +40,7 @@ async function promptOpenSettings({ title, message, detail, settingsUrl }) {
   })
   if (response === 0) {
     shell.openExternal(settingsUrl).catch((err) => {
-      console.warn('[mac-perm] failed to open settings:', err?.message)
+      console.warn('[mac-perm] failed to open settings:', getRedactedErrorMessage(err))
     })
   }
 }
@@ -75,7 +77,7 @@ async function ensureMicrophonePermission() {
 
     return status
   } catch (err) {
-    console.warn('[mac-perm] microphone check failed:', err?.message)
+    console.warn('[mac-perm] microphone check failed:', getRedactedErrorMessage(err))
     return 'unknown'
   }
 }
@@ -107,7 +109,7 @@ async function ensureScreenPermission() {
 
     return status
   } catch (err) {
-    console.warn('[mac-perm] screen check failed:', err?.message)
+    console.warn('[mac-perm] screen check failed:', getRedactedErrorMessage(err))
     return 'unknown'
   }
 }

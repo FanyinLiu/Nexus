@@ -1,0 +1,245 @@
+/* Image 4 motion and responsive states. */
+@keyframes image4-wave-bar {
+  0% {
+    transform: scaleY(0.5);
+  }
+
+  40% {
+    transform: scaleY(1.12);
+  }
+
+  70% {
+    transform: scaleY(0.78);
+  }
+
+  100% {
+    transform: scaleY(0.95);
+  }
+}
+
+@keyframes image4-wave-bar-reduced {
+  0%, 100% {
+    transform: scaleY(0.58);
+  }
+
+  50% {
+    transform: scaleY(0.68);
+  }
+}
+
+@keyframes image4-dial-ticks {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes image4-dial-glow {
+  0%, 100% {
+    opacity: 0.58;
+    transform: scale(0.99);
+  }
+
+  50% {
+    opacity: 0.76;
+    transform: scale(1.025);
+  }
+}
+
+@keyframes image4-dial-arc {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes image4-dial-voice-ring {
+  0%, 100% {
+    opacity: 0.28;
+    transform: scale(0.94);
+  }
+
+  45% {
+    opacity: 0.78;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes image4-dial-voice-core {
+  0%, 100% {
+    opacity: 0.42;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 0.72;
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-window--image4 .companion-presence__signal::before,
+  .panel-window--image4 .companion-presence__signal::after,
+  .panel-window--image4 .companion-presence__dial::before,
+  .panel-window--image4 .companion-presence__dial-layer--glow,
+  .panel-window--image4 .companion-presence__dial-layer--arc,
+  .panel-window--image4 .companion-presence__dial-voice-ring,
+  .panel-window--image4 .companion-presence__dial-voice-core {
+    animation: none;
+    transition: none;
+  }
+
+  .panel-window--image4 .companion-presence__signal,
+  .panel-window--image4 .companion-presence__signal-bar,
+  .panel-window--image4 .companion-presence__signal-bar::after,
+  .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+  .panel-window--image4 .image4-action,
+  .panel-window--image4 .image4-attachment-pill,
+  .panel-window--image4 .composer textarea,
+  .panel-window--image4 .composer__actions .ghost-button,
+  .panel-window--image4 .composer__actions .primary-button {
+    transition-duration: 0ms;
+  }
+
+  .panel-window--image4 .companion-presence__signal-bar {
+    animation: none;
+  }
+
+  .panel-window--image4 .companion-presence__signal.is-speaking .companion-presence__signal-bar {
+    opacity: var(--image4-motion-reduced-signal-opacity);
+    transform: scaleY(0.58);
+    animation: image4-wave-bar-reduced var(--image4-motion-reduced-signal-duration) ease-out infinite;
+  }
+
+  .panel-window--image4 .companion-presence__signal.is-speaking .companion-presence__signal-bar.is-live {
+    animation-duration: calc(var(--image4-motion-reduced-signal-duration) * 0.86);
+  }
+
+  .panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__dial-voice-ring {
+    opacity: 0.42;
+    transform: none;
+  }
+
+  .panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__dial-voice-core {
+    opacity: 0.5;
+    transform: none;
+  }
+}
+
+@media (max-height: 760px) {
+  .panel-window--image4 .image4-chat,
+  html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
+    --image4-rhythm-presence: clamp(72px, 8vh, 86px);
+    --image4-rhythm-dial: clamp(132px, 18vh, 166px);
+    --image4-rhythm-greeting: clamp(74px, 9vh, 92px);
+    --image4-rhythm-actions: clamp(188px, 26vh, 216px);
+    --image4-rhythm-composer: clamp(80px, 10vh, 96px);
+    --image4-rhythm-gap: clamp(6px, 0.95vh, 8px);
+    --image4-rhythm-padding-top: clamp(16px, 2.6vh, 22px);
+    --image4-rhythm-padding-bottom: clamp(10px, 1.8vh, 14px);
+  }
+
+  .panel-window--image4 .image4-action,
+  html[data-theme='warm-day'] .panel-window--image4 .image4-action {
+    min-height: 0;
+    padding-block: 6px;
+  }
+
+  .panel-window--image4 .empty-chat__prompt-copy small,
+  html[data-theme='warm-day'] .panel-window--image4 .empty-chat__prompt-copy small {
+    -webkit-line-clamp: 1;
+  }
+}
+
+@media (min-aspect-ratio: 1 / 1) and (max-height: 760px) {
+  .panel-window--image4 .image4-chat,
+  html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
+    --image4-rhythm-presence: clamp(46px, 17cqw, 64px);
+    --image4-rhythm-dial: clamp(120px, 54cqw, 166px);
+    --image4-rhythm-greeting: clamp(54px, 20cqw, 74px);
+    --image4-rhythm-actions: clamp(140px, 56cqw, 186px);
+    --image4-rhythm-composer: clamp(58px, 21cqw, 76px);
+    --image4-rhythm-gap: clamp(4px, 1.8cqw, 7px);
+    --image4-rhythm-padding-top: clamp(14px, 6cqw, 22px);
+    --image4-rhythm-padding-bottom: clamp(10px, 4.8cqw, 16px);
+  }
+}
+
+@media (max-height: 620px) {
+  .desktop-pet-root--panel:has(.panel-window--image4) {
+    align-items: start;
+  }
+
+  .panel-window--image4 .image4-chat,
+  html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
+    --image4-rhythm-presence: clamp(68px, 9vh, 76px);
+    --image4-rhythm-dial: 0px;
+    --image4-rhythm-greeting: clamp(66px, 9vh, 76px);
+    --image4-rhythm-actions: clamp(196px, 36vh, 226px);
+    --image4-rhythm-composer: clamp(76px, 12vh, 88px);
+    --image4-rhythm-gap: 6px;
+    --image4-rhythm-padding-top: 14px;
+    --image4-rhythm-padding-bottom: 10px;
+  }
+
+  .panel-window--image4 .image4-dial-stage,
+  html[data-theme='warm-day'] .panel-window--image4 .image4-dial-stage {
+    display: none;
+  }
+
+  .panel-window--image4 .image4-action,
+  html[data-theme='warm-day'] .panel-window--image4 .image4-action {
+    min-height: 64px;
+    padding-block: 10px;
+  }
+}
+
+@media (min-aspect-ratio: 1 / 1) and (max-height: 620px) {
+  .panel-window--image4 .image4-chat,
+  html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
+    --image4-rhythm-presence: clamp(44px, 16cqw, 58px);
+    --image4-rhythm-dial: 0px;
+    --image4-rhythm-greeting: clamp(52px, 18cqw, 68px);
+    --image4-rhythm-actions: clamp(148px, 58cqw, 190px);
+    --image4-rhythm-composer: clamp(56px, 20cqw, 72px);
+    --image4-rhythm-gap: clamp(4px, 1.7cqw, 6px);
+    --image4-rhythm-padding-top: clamp(12px, 5cqw, 18px);
+    --image4-rhythm-padding-bottom: clamp(8px, 4cqw, 14px);
+  }
+
+  .panel-window--image4 .image4-greeting,
+  html[data-theme='warm-day'] .panel-window--image4 .image4-greeting {
+    align-self: start;
+    overflow: hidden;
+    padding: var(--image4-row-buffer-y) clamp(8px, 4.4cqw, 14px) 0;
+  }
+
+  .panel-window--image4 .empty-chat__copy {
+    gap: clamp(3px, 1.2cqw, 5px);
+  }
+
+  .panel-window--image4 .empty-chat__copy > strong,
+  html[data-theme='warm-day'] .panel-window--image4 .empty-chat__copy > strong {
+    overflow: hidden;
+    font-size: clamp(16px, 7cqw, 20px);
+    line-height: 1.08;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .panel-window--image4 .empty-chat p,
+  html[data-theme='warm-day'] .panel-window--image4 .empty-chat p {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: clamp(10px, 3.8cqw, 12px);
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}

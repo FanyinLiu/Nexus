@@ -3,7 +3,7 @@
  *
  * Usage:
  *   npm run prerelease-check -- vX.Y.Z[-beta.N]          # full 6-stage check
- *   npm run prerelease-check -- vX.Y.Z --quick           # skip slow checks (bench, coverage, smoke, sbom)
+ *   npm run prerelease-check -- vX.Y.Z --quick           # skip slow checks (smoke, packaged smoke, coverage, benchmarks)
  *   npm run prerelease-check -- vX.Y.Z --skip C,D        # skip specific stages
  *   npm run prerelease-check -- vX.Y.Z --only A          # run only specific stages
  *
@@ -12,8 +12,8 @@
  *   B. Code quality            (verify:release, smoke, packaged smoke, coverage, bundle, perf)
  *   C. Security                (npm audit, Electron config, electron versions, secrets, CSP)
  *   D. Asset integrity         (locale parity, models, dist artefacts)
- *   E. Docs + compliance       (release notes, README sync, SBOM, AI-Act, licenses)
- *   F. Privacy + governance    (no default telemetry, H4 status, known-issues coverage)
+ *   E. Docs + compliance       (release notes, README sync, license scan, AI disclosure)
+ *   F. Privacy + governance    (telemetry guard, H4 status, unsigned caveats)
  *
  * Docs: docs/RELEASING.md.
  */
@@ -178,7 +178,7 @@ stage('A', 'Process & version', () => {
 // ════════════════════════════════════════════════════════════════════════════
 
 stage('B', 'Code quality', () => {
-  check('B', `verify:release ${COLOR.dim('(tsc + lint + test + build + distribution audit)')}`, () => {
+  check('B', `verify:release ${COLOR.dim('(verify:pr + sqlite + core path smoke)')}`, () => {
     try {
       sh('npm run verify:release', { stdio: ['ignore', 'ignore', 'pipe'] })
     } catch (err) {
@@ -363,9 +363,17 @@ stage('D', 'Asset integrity', () => {
     const pkg = readPkg()
     const macExtras = pkg.build?.mac?.extraResources ?? []
     const winExtras = pkg.build?.win?.extraResources ?? []
+    const linuxExtras = pkg.build?.linux?.extraResources ?? []
     const sherpaInMac = macExtras.some((e) => e.from?.includes('sherpa-models'))
     const sherpaInWin = winExtras.some((e) => e.from?.includes('sherpa-models'))
-    if (!sherpaInMac || !sherpaInWin) throw new Error(`sherpa-models extraResources missing on ${[!sherpaInMac && 'mac', !sherpaInWin && 'win'].filter(Boolean).join('+')}`)
+    const sherpaInLinux = linuxExtras.some((e) => e.from?.includes('sherpa-models'))
+    if (!sherpaInMac || !sherpaInWin || !sherpaInLinux) {
+      throw new Error(`sherpa-models extraResources missing on ${[
+        !sherpaInMac && 'mac',
+        !sherpaInWin && 'win',
+        !sherpaInLinux && 'linux',
+      ].filter(Boolean).join('+')}`)
+    }
   })
 
   check('D', 'dist/ contains app-runtime + index.html + ort-wasm', () => {
@@ -433,7 +441,7 @@ stage('E', 'Docs + compliance', () => {
     console.log(COLOR.dim('       README sync only enforced for stable tags'))
   }
 
-  check('E', 'No GPL/AGPL in production deps', () => {
+  check('E', 'No GPL/AGPL/SSPL in production deps', () => {
     let out
     try {
       out = sh('npx -y license-checker --production --summary 2>/dev/null', { stdio: ['ignore', 'pipe', 'ignore'], timeout: 60_000 })

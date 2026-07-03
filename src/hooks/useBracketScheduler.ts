@@ -14,6 +14,7 @@ import {
   recordBracketFire,
   writeJson,
 } from '../lib/storage'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60_000
@@ -105,7 +106,7 @@ export function useBracketScheduler({
           markDelivered(deliveredErrandId)
         }
       } catch (err) {
-        console.warn('[bracket] fire failed:', err)
+        console.warn('[bracket] fire failed:', getRedactedLogErrorMessage(err))
       }
     }
 

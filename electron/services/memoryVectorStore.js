@@ -6,10 +6,13 @@ import { Worker } from 'node:worker_threads'
 import { Bm25Index } from './bm25Search.js'
 import { audit } from './auditLog.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { MemoryVectorLogAppendBuffer } from './memoryVectorLogBuffer.js'
 
 const STORE_FILENAME = 'memory-vectors.json'
 // Append-only log filename — same dir as snapshot, NDJSON one mutation per line.
 const LOG_FILENAME = 'memory-vectors.log'
+const STORE_DISPLAY_PATH = `app-user-data/${STORE_FILENAME}`
+const LOG_DISPLAY_PATH = `app-user-data/${LOG_FILENAME}`
 // Max entries kept in memory.
 const MAX_ENTRIES = 2000
 // Compaction threshold for the append-only log. When the log file exceeds
@@ -26,9 +29,11 @@ const _index = new Map()
 let _loaded = false
 let _loadPromise = null
 let _savePromise = null
-// Serialised tail-append for the log so concurrent writes don't interleave
-// JSON lines. Each mutation .then()'s onto this chain.
+// Batched tail-append for the log so concurrent writes don't interleave
+// JSON lines or create one disk write per mutation. Each mutation updates
+// this chain so flush()/compaction can wait for persistence to catch up.
 let _logAppendChain = Promise.resolve()
+let _logAppendBuffer = null
 let _compactTimer = null
 
 // ── Worker thread for search ──
@@ -74,8 +79,9 @@ function getWorker() {
 //   - memory-vectors.json (canonical snapshot, periodic compaction only)
 //   - memory-vectors.log  (append-only NDJSON, one mutation per line)
 //
-// Mutation flow: in-memory Map updated immediately, plus one small
-// `appendFile` line. Reads always come from in-memory, so no read amp.
+// Mutation flow: in-memory Map updated immediately, plus one queued NDJSON
+// line that is appendFile'd in small batches. Reads always come from
+// in-memory, so no read amp.
 // Compaction (snapshot rewrite + log truncate) runs every 10 min if
 // the log exceeds 5MB, plus unconditionally on terminate().
 //
@@ -220,15 +226,31 @@ async function ensureLoaded() {
  * (in-memory state is the source of truth and the next compaction
  * will snapshot everything).
  */
+function getLogAppendBuffer() {
+  if (!_logAppendBuffer) {
+    _logAppendBuffer = new MemoryVectorLogAppendBuffer({
+      append: async (chunk) => {
+        await mkdir(path.dirname(getLogPath()), { recursive: true })
+        await appendFile(getLogPath(), chunk, 'utf8')
+      },
+    })
+  }
+  return _logAppendBuffer
+}
+
 function appendLogOp(op) {
   const line = JSON.stringify(op) + '\n'
-  _logAppendChain = _logAppendChain
-    .then(() => mkdir(path.dirname(getLogPath()), { recursive: true }))
-    .then(() => appendFile(getLogPath(), line, 'utf8'))
+  _logAppendChain = getLogAppendBuffer()
+    .enqueue(line)
     .catch((err) => {
       console.warn('[memoryVectorStore] log append failed:', getRedactedErrorMessage(err))
     })
   return _logAppendChain
+}
+
+async function drainLogAppends() {
+  try { await _logAppendChain } catch {}
+  try { await _logAppendBuffer?.drain() } catch {}
 }
 
 /**
@@ -246,7 +268,7 @@ async function compactSnapshot() {
     // old name no longer exists — those new lines are NOT covered by
     // the snapshot we're about to write, but they survive on disk and
     // get replayed on next load.
-    try { await _logAppendChain } catch {}
+    await drainLogAppends()
 
     const logPath = getLogPath()
     const compactingPath = logPath + '.compacting'
@@ -591,7 +613,8 @@ export async function getStats() {
     longTermCount,
     dailyCount,
     maxEntries: MAX_ENTRIES,
-    storePath: getStorePath(),
+    storePath: STORE_DISPLAY_PATH,
+    logPath: LOG_DISPLAY_PATH,
   }
 }
 
@@ -599,7 +622,7 @@ export async function flush() {
   // Drain any in-flight log appends, then run a snapshot compaction.
   // This collapses the log into the snapshot regardless of size — used
   // before app exit to ensure the next launch needs no replay.
-  try { await _logAppendChain } catch {}
+  await drainLogAppends()
   await compactSnapshot()
 }
 

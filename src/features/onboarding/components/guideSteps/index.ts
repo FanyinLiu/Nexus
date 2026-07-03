@@ -1,6 +1,7 @@
 export * from './AiDisclosureStep'
 export * from './CompanionStep'
 export * from './LocalVoiceModelsStatus'
+export * from './MessageActionDemoStep'
 export * from './TextStep'
 export * from './types'
 export * from './VoiceStep'

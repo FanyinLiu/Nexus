@@ -21,8 +21,8 @@ function normalizeMarkdownProse(text: string) {
   return text.replace(/[>\s]+/g, ' ').trim()
 }
 
-test('current release spotlight keeps the v0.4.0 stable companion awareness explicit', () => {
-  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, '0.4.0')
+test('current release spotlight keeps the v0.4.1 companion UI hardening explicit', () => {
+  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, '0.4.1')
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.bullets.map((item) => item.id),
     ['memory_sources', 'memory_control', 'companion_presence', 'first_run', 'companion_boundary'],
@@ -60,23 +60,27 @@ test('current release spotlight translation keys are registered for every locale
   }
 })
 
-test('current release spotlight names desktop companion awareness in user copy', async () => {
+test('current release spotlight names companion UI hardening in user copy', async () => {
   const en = await ensureLocaleLoaded('en-US')
   const zhCN = await ensureLocaleLoaded('zh-CN')
 
-  assert.match(en['about.release_spotlight.title'], /Desktop companion awareness/i)
-  assert.match(en['about.release_spotlight.summary'], /stable release/)
-  assert.match(en['about.release_spotlight.summary'], /rough time language/)
-  assert.match(en['about.release_spotlight.bullet.first_run.body'], /proactive check-in expansion/)
-  assert.match(en['about.release_spotlight.bullet.companion_presence.body'], /pause or clear/)
+  assert.match(en['about.release_spotlight.title'], /Companion UI and settings/i)
+  assert.match(en['about.release_spotlight.summary'], /stable follow-up/)
+  assert.match(en['about.release_spotlight.summary'], /chat panel, Settings, Image4/)
+  assert.match(en['about.release_spotlight.bullet.first_run.body'], /proactive check-in expansion/i)
+  assert.match(en['about.release_spotlight.bullet.memory_control.body'], /lazy-loaded/)
+  assert.match(en['about.release_spotlight.bullet.companion_presence.body'], /rough time buckets/)
+  assert.match(en['about.release_spotlight.bullet.companion_presence.body'], /raw screens/)
   assert.equal(en['about.release_spotlight.action.review_memory'], 'Review Memory')
   assert.equal(en['about.release_spotlight.action.preview_companion'], 'Preview Companion')
 
-  assert.match(zhCN['about.release_spotlight.title'], /桌面陪伴感知/)
-  assert.match(zhCN['about.release_spotlight.summary'], /稳定版/)
-  assert.match(zhCN['about.release_spotlight.summary'], /粗略时间/)
+  assert.match(zhCN['about.release_spotlight.title'], /陪伴 UI 和设置/)
+  assert.match(zhCN['about.release_spotlight.summary'], /稳定跟进版/)
+  assert.match(zhCN['about.release_spotlight.summary'], /主对话面板、设置、Image4/)
   assert.match(zhCN['about.release_spotlight.bullet.first_run.body'], /主动 check-in 扩展/)
-  assert.match(zhCN['about.release_spotlight.bullet.companion_presence.body'], /暂停或清理近期摘要/)
+  assert.match(zhCN['about.release_spotlight.bullet.memory_control.body'], /懒加载/)
+  assert.match(zhCN['about.release_spotlight.bullet.companion_presence.body'], /粗粒度时间桶/)
+  assert.match(zhCN['about.release_spotlight.bullet.companion_presence.body'], /原始屏幕/)
   assert.equal(zhCN['about.release_spotlight.action.review_memory'], '查看记忆')
   assert.equal(zhCN['about.release_spotlight.action.preview_companion'], '预览伙伴')
 })
@@ -91,9 +95,9 @@ test('human-facing v0.3.6 docs keep foundation wrap-up aligned', () => {
     readWorkspaceFile('docs/RELEASE-NOTES-v0.3.6.zh-CN.md'),
   )
 
-  assert.match(rootReadme, /0\.3 的地基收尾/)
-  assert.match(rootReadme, /当前窗口、剪贴板、OCR/)
-  assert.match(rootReadme, /0\.4\.0 才开始真正的桌面陪伴感知/)
+  assert.match(rootReadme, /本次更新 — v0\.4\.1/)
+  assert.match(rootReadme, /上次更新 — v0\.4\.0/)
+  assert.doesNotMatch(rootReadme, /## 上次更新 — v0\.3\.6/)
 
   assert.match(englishReleaseNotes, /The foundation is ready for the next companion step\./)
   assert.match(englishReleaseNotes, /active-window context[\s\S]*clipboard context[\s\S]*screen OCR/)

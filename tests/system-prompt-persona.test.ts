@@ -86,14 +86,29 @@ test('loadActiveProfilePersona returns null when the bridge is unavailable', asy
 })
 
 test('loadActiveProfilePersona returns null and does not throw when loading fails', async () => {
+  const originalWarn = console.warn
+  const warnCalls: unknown[][] = []
   window.desktopPet = {
     personaLoadProfile: async () => {
-      throw new Error('ipc boom')
+      throw new Error('failed settings:apiKey token=xai-abcdefghijklmnop at /Users/klein/SOUL.md')
     },
   } as unknown as typeof window.desktopPet
+  console.warn = (...args: unknown[]) => { warnCalls.push(args) }
 
-  const result = await loadActiveProfilePersona(
-    settingsWith({ profilePersonaInChatEnabled: true, activeCharacterProfileId: 'card-1' }),
-  )
-  assert.equal(result, null)
+  try {
+    const result = await loadActiveProfilePersona(
+      settingsWith({ profilePersonaInChatEnabled: true, activeCharacterProfileId: 'card-1' }),
+    )
+    assert.equal(result, null)
+  } finally {
+    console.warn = originalWarn
+  }
+
+  const serialized = JSON.stringify(warnCalls)
+  assert.equal(warnCalls.length, 1)
+  assert.match(serialized, /token=\*\*\*/)
+  assert.match(serialized, /~\/SOUL\.md/)
+  assert.doesNotMatch(serialized, /settings:apiKey/)
+  assert.doesNotMatch(serialized, /xai-abcdefghijklmnop/)
+  assert.doesNotMatch(serialized, /\/Users\/klein/)
 })

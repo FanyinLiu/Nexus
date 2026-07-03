@@ -1,5 +1,6 @@
 import type {
   DiscoveredModel,
+  ModelConnectionErrorCode,
   ProviderHealthStatus,
 } from './model'
 
@@ -34,6 +35,7 @@ export interface ServiceConnectionResponse {
   ok: boolean
   message: string
   status?: ProviderHealthStatus
+  code?: ModelConnectionErrorCode
   recommendation?: string
   discoveredModels?: DiscoveredModel[]
   checkedAt?: string
@@ -102,6 +104,7 @@ export interface TextFileSaveRequest {
 export interface TextFileSaveResponse {
   canceled: boolean
   filePath?: string
+  filePathDisplay?: string
   message: string
 }
 
@@ -113,6 +116,7 @@ export interface TextFileOpenRequest {
 export interface TextFileOpenResponse {
   canceled: boolean
   filePath?: string
+  filePathDisplay?: string
   content?: string
   message: string
 }

@@ -53,6 +53,8 @@ import {
   getImportedPetModelsRoot,
   getImportedSpritePetModelsRoot,
   getLive2dAssetRoot,
+  getLocalFileDisplayPath,
+  getPetArtifactDisplayPath,
   getSpritePetAssetRoot,
   getSpritePetCreatorKitsRoot,
   normalizeAssetRelativePath,
@@ -128,6 +130,55 @@ async function pathExists(targetPath) {
   } catch {
     return false
   }
+}
+
+async function resolveUniqueChildDirectory(root, baseName) {
+  let targetDirectory = path.join(root, baseName)
+  let duplicateIndex = 2
+
+  while (await pathExists(targetDirectory)) {
+    targetDirectory = path.join(root, `${baseName}-${duplicateIndex}`)
+    duplicateIndex += 1
+  }
+
+  return targetDirectory
+}
+
+async function resolveUniqueChildIdDirectory(root, baseId) {
+  let id = baseId
+  let targetDirectory = path.join(root, id)
+  let duplicateIndex = 2
+
+  while (await pathExists(targetDirectory)) {
+    id = `${baseId}-${duplicateIndex}`
+    targetDirectory = path.join(root, id)
+    duplicateIndex += 1
+  }
+
+  return { id, targetDirectory }
+}
+
+function petArtifactDisplayFields(paths = {}) {
+  const fields = {}
+  for (const [field, displayField] of [
+    ['directoryPath', 'directoryPathDisplay'],
+    ['sourceRowsDirectory', 'sourceRowsDirectoryDisplay'],
+    ['layoutGuidesDirectory', 'layoutGuidesDirectoryDisplay'],
+    ['kitDirectory', 'kitDirectoryDisplay'],
+    ['packageDirectory', 'packageDirectoryDisplay'],
+    ['manifestPath', 'manifestPathDisplay'],
+    ['spritesheetPath', 'spritesheetPathDisplay'],
+    ['reportPath', 'reportPathDisplay'],
+    ['visualAuditPath', 'visualAuditPathDisplay'],
+    ['archivePath', 'archivePathDisplay'],
+    ['contactSheetPath', 'contactSheetPathDisplay'],
+    ['motionPreviewPath', 'motionPreviewPathDisplay'],
+  ]) {
+    if (typeof paths[field] === 'string' && paths[field].trim()) {
+      fields[displayField] = getPetArtifactDisplayPath(paths[field])
+    }
+  }
+  return fields
 }
 
 async function readAndValidateJsonFile(filePath) {
@@ -216,13 +267,7 @@ async function importLive2dPetModelFromPath(selectedModelPath) {
   const importDirectoryBaseName = `${slugifyPetModelId(sourceDirectoryName)}-${Date.now()}`
 
   await fs.mkdir(importedRoot, { recursive: true })
-
-  let targetDirectory = path.join(importedRoot, importDirectoryBaseName)
-  let duplicateIndex = 2
-  while (await pathExists(targetDirectory)) {
-    targetDirectory = path.join(importedRoot, `${importDirectoryBaseName}-${duplicateIndex}`)
-    duplicateIndex += 1
-  }
+  const targetDirectory = await resolveUniqueChildDirectory(importedRoot, importDirectoryBaseName)
 
   await fs.cp(sourceDirectory, targetDirectory, { recursive: true })
 
@@ -261,13 +306,7 @@ async function importSpritePetModelFromPath(selectedManifestPath) {
   const importDirectoryBaseName = `${slugifyPetModelId(manifest.id || manifest.displayName || path.basename(sourceDirectory))}-${Date.now()}`
 
   await fs.mkdir(importedRoot, { recursive: true })
-
-  let targetDirectory = path.join(importedRoot, importDirectoryBaseName)
-  let duplicateIndex = 2
-  while (await pathExists(targetDirectory)) {
-    targetDirectory = path.join(importedRoot, `${importDirectoryBaseName}-${duplicateIndex}`)
-    duplicateIndex += 1
-  }
+  const targetDirectory = await resolveUniqueChildDirectory(importedRoot, importDirectoryBaseName)
 
   await fs.mkdir(targetDirectory, { recursive: true })
 
@@ -367,13 +406,7 @@ async function createSpritePetModelFromImagePath(selectedImagePath) {
   const importDirectoryBaseName = `${packageId}-${Date.now()}`
 
   await fs.mkdir(importedRoot, { recursive: true })
-
-  let targetDirectory = path.join(importedRoot, importDirectoryBaseName)
-  let duplicateIndex = 2
-  while (await pathExists(targetDirectory)) {
-    targetDirectory = path.join(importedRoot, `${importDirectoryBaseName}-${duplicateIndex}`)
-    duplicateIndex += 1
-  }
+  const targetDirectory = await resolveUniqueChildDirectory(importedRoot, importDirectoryBaseName)
 
   const {
     spritePath,
@@ -414,9 +447,16 @@ async function createSpritePetModelFromImagePath(selectedImagePath) {
     spritesheetPath: spritePath,
     visualAuditPath,
     archivePath,
+    ...petArtifactDisplayFields({
+      packageDirectory,
+      manifestPath,
+      spritesheetPath: spritePath,
+      visualAuditPath,
+      archivePath,
+    }),
     message: visualWarnings.length
-      ? `${sourceMessage} ${importedModel.label}，现在可以直接切换。可分享 ZIP：${archivePath}。视觉审计有 ${visualWarnings.length} 条提醒，建议预览后再分享。`
-      : `${sourceMessage} ${importedModel.label}，现在可以直接切换。可分享 ZIP：${archivePath}。视觉审计通过。`,
+      ? `${sourceMessage} ${importedModel.label}，现在可以直接切换。可分享 ZIP：${getPetArtifactDisplayPath(archivePath)}。视觉审计有 ${visualWarnings.length} 条提醒，建议预览后再分享。`
+      : `${sourceMessage} ${importedModel.label}，现在可以直接切换。可分享 ZIP：${getPetArtifactDisplayPath(archivePath)}。视觉审计通过。`,
   }
 }
 
@@ -472,13 +512,7 @@ async function importSpritePetModelFromParsedPage(petPage) {
   const importDirectoryBaseName = `${packageId}-${Date.now()}`
 
   await fs.mkdir(importedRoot, { recursive: true })
-
-  let targetDirectory = path.join(importedRoot, importDirectoryBaseName)
-  let duplicateIndex = 2
-  while (await pathExists(targetDirectory)) {
-    targetDirectory = path.join(importedRoot, `${importDirectoryBaseName}-${duplicateIndex}`)
-    duplicateIndex += 1
-  }
+  const targetDirectory = await resolveUniqueChildDirectory(importedRoot, importDirectoryBaseName)
 
   const targetSpriteName = `spritesheet.${petPage.spriteExtension}`
   const targetSpritePath = path.join(targetDirectory, targetSpriteName)
@@ -528,7 +562,7 @@ async function createSpritePetCreatorKitFromPayload(payload = {}) {
 
   await fs.mkdir(getSpritePetCreatorKitsRoot(), { recursive: true })
 
-  return createSpritePetCreatorKit({
+  const created = await createSpritePetCreatorKit({
     targetDirectory,
     id: packageId,
     displayName,
@@ -536,6 +570,11 @@ async function createSpritePetCreatorKitFromPayload(payload = {}) {
     description: String(payload?.description ?? '').trim(),
     styleNotes: String(payload?.styleNotes ?? '').trim(),
   })
+  return {
+    ...created,
+    ...petArtifactDisplayFields(created),
+    message: `已创建 ${created.displayName} 的 Codex 宠物制作包：${getPetArtifactDisplayPath(created.directoryPath)}`,
+  }
 }
 
 function normalizeOptionalKitDirectory(value) {
@@ -560,9 +599,10 @@ async function assembleSpritePetCreatorKitFromDialog(payload = {}) {
       reportPath: assembled.reportPath,
       visualAuditPath: assembled.visualAuditPath,
       archivePath: assembled.archivePath,
+      ...petArtifactDisplayFields(assembled),
       message: assembled.visualWarnings?.length
-        ? `已组装并导入 ${imported.model.label}。制作包输出：${assembled.packageDirectory}。视觉审计有 ${assembled.visualWarnings.length} 条提醒。`
-        : `已组装并导入 ${imported.model.label}。制作包输出：${assembled.packageDirectory}。视觉审计通过。`,
+        ? `已组装并导入 ${imported.model.label}。制作包输出：${getPetArtifactDisplayPath(assembled.packageDirectory)}。视觉审计有 ${assembled.visualWarnings.length} 条提醒。`
+        : `已组装并导入 ${imported.model.label}。制作包输出：${getPetArtifactDisplayPath(assembled.packageDirectory)}。视觉审计通过。`,
     }
   }
 
@@ -596,9 +636,10 @@ async function assembleSpritePetCreatorKitFromDialog(payload = {}) {
     reportPath: assembled.reportPath,
     visualAuditPath: assembled.visualAuditPath,
     archivePath: assembled.archivePath,
+    ...petArtifactDisplayFields(assembled),
     message: assembled.visualWarnings?.length
-      ? `已组装并导入 ${imported.model.label}。制作包输出：${assembled.packageDirectory}。视觉审计有 ${assembled.visualWarnings.length} 条提醒。`
-      : `已组装并导入 ${imported.model.label}。制作包输出：${assembled.packageDirectory}。视觉审计通过。`,
+      ? `已组装并导入 ${imported.model.label}。制作包输出：${getPetArtifactDisplayPath(assembled.packageDirectory)}。视觉审计有 ${assembled.visualWarnings.length} 条提醒。`
+      : `已组装并导入 ${imported.model.label}。制作包输出：${getPetArtifactDisplayPath(assembled.packageDirectory)}。视觉审计通过。`,
   }
 }
 
@@ -628,15 +669,7 @@ async function installSpritePetCreatorKitPackageToCodex(payload = {}) {
   )
 
   await fs.mkdir(petsRoot, { recursive: true })
-
-  let packageId = basePackageId
-  let targetDirectory = path.join(petsRoot, packageId)
-  let duplicateIndex = 2
-  while (await pathExists(targetDirectory)) {
-    packageId = `${basePackageId}-${duplicateIndex}`
-    targetDirectory = path.join(petsRoot, packageId)
-    duplicateIndex += 1
-  }
+  const { id: packageId, targetDirectory } = await resolveUniqueChildIdDirectory(petsRoot, basePackageId)
 
   await fs.mkdir(targetDirectory, { recursive: true })
 
@@ -660,16 +693,24 @@ async function installSpritePetCreatorKitPackageToCodex(payload = {}) {
     id: packageId,
     directoryPath: targetDirectory,
     manifestPath: targetManifestPath,
-    message: `已安装到 Codex 自定义宠物目录：${targetDirectory}`,
+    ...petArtifactDisplayFields({
+      directoryPath: targetDirectory,
+      manifestPath: targetManifestPath,
+    }),
+    message: `已安装到 Codex 自定义宠物目录：${getPetArtifactDisplayPath(targetDirectory)}`,
   }
 }
 
 async function inspectSpritePetCreatorKitFromDialog(payload = {}) {
   const directKitDirectory = normalizeOptionalKitDirectory(payload?.kitDirectory)
   if (directKitDirectory) {
-    return inspectSpritePetCreatorKit({
+    const inspection = await inspectSpritePetCreatorKit({
       kitDirectory: directKitDirectory,
     })
+    return {
+      ...inspection,
+      ...petArtifactDisplayFields(inspection),
+    }
   }
 
   const panelWindow = _getPanelWindow()
@@ -688,9 +729,13 @@ async function inspectSpritePetCreatorKitFromDialog(payload = {}) {
     return null
   }
 
-  return inspectSpritePetCreatorKit({
+  const inspection = await inspectSpritePetCreatorKit({
     kitDirectory: path.resolve(selection.filePaths[0]),
   })
+  return {
+    ...inspection,
+    ...petArtifactDisplayFields(inspection),
+  }
 }
 
 async function openSpritePetCreatorKitPathFromPayload(payload = {}) {
@@ -726,8 +771,8 @@ async function openSpritePetCreatorKitPathFromPayload(payload = {}) {
   return {
     ok: true,
     message: stats.isDirectory()
-      ? `已打开制作包文件夹：${targetRealPath}`
-      : `已打开制作包文件：${targetRealPath}`,
+      ? `已打开制作包文件夹：${getPetArtifactDisplayPath(targetRealPath)}`
+      : `已打开制作包文件：${getPetArtifactDisplayPath(targetRealPath)}`,
   }
 }
 
@@ -829,11 +874,13 @@ async function saveTextFileFromDialog(sourceWindow, payload = {}) {
   }
 
   await fs.writeFile(result.filePath, content, 'utf8')
+  const filePathDisplay = getLocalFileDisplayPath(result.filePath)
 
   return {
     canceled: false,
     filePath: result.filePath,
-    message: `已保存到 ${result.filePath}`,
+    filePathDisplay,
+    message: `已保存到 ${filePathDisplay}`,
   }
 }
 
@@ -867,12 +914,14 @@ async function openTextFileFromDialog(sourceWindow, payload = {}) {
 
   const filePath = path.resolve(result.filePaths[0])
   const content = await fs.readFile(filePath, 'utf8')
+  const filePathDisplay = getLocalFileDisplayPath(filePath)
 
   return {
     canceled: false,
     filePath,
+    filePathDisplay,
     content: content.replace(/^\uFEFF/, ''),
-    message: `已读取 ${filePath}`,
+    message: `已读取 ${filePathDisplay}`,
   }
 }
 

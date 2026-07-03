@@ -12,11 +12,27 @@ import type { QuietObservationSummary } from '../src/features/context/companionA
 
 function createLocalStorageMock() {
   const store = new Map<string, string>()
+  let setItemCount = 0
+  let getItemCount = 0
   return {
-    getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => store.set(key, value),
+    getItem: (key: string) => {
+      getItemCount += 1
+      return store.get(key) ?? null
+    },
+    setItem: (key: string, value: string) => {
+      setItemCount += 1
+      store.set(key, value)
+    },
     removeItem: (key: string) => store.delete(key),
     clear: () => store.clear(),
+    getSetItemCount: () => setItemCount,
+    getGetItemCount: () => getItemCount,
+    resetSetItemCount: () => {
+      setItemCount = 0
+    },
+    resetGetItemCount: () => {
+      getItemCount = 0
+    },
   }
 }
 
@@ -47,6 +63,7 @@ function resolveCurrentLifecycleId() {
 }
 
 beforeEach(() => {
+  clearRecentCompanionSummary()
   Object.defineProperty(globalThis, 'window', {
     value: {
       localStorage: createLocalStorageMock(),
@@ -78,16 +95,115 @@ test('recent companion summary store saves only coarse fields', () => {
   assert.equal(raw?.includes('clipboard'), false)
 })
 
+test('recent companion summary store throttles redundant writes when summary content is unchanged', () => {
+  const localStorage = window.localStorage as ReturnType<typeof createLocalStorageMock>
+
+  const firstSaved = saveRecentCompanionSummary(summary, new Date('2026-06-21T17:00:00.000Z'))
+  const firstWrites = localStorage.getSetItemCount()
+  assert.ok(firstSaved)
+  assert.equal(firstWrites, 1)
+
+  localStorage.resetSetItemCount()
+  const secondSaved = saveRecentCompanionSummary(summary, new Date('2026-06-21T17:00:00.500Z'))
+  assert.ok(secondSaved)
+  assert.equal(localStorage.getSetItemCount(), 0)
+  assert.equal(secondSaved.savedAt, firstSaved.savedAt)
+  const throttledRaw = window.localStorage.getItem(COMPANION_SUMMARY_STORAGE_KEY)
+  assert.ok(throttledRaw)
+  assert.equal(JSON.parse(throttledRaw).savedAt, firstSaved.savedAt)
+
+  const refreshedSaved = saveRecentCompanionSummary(summary, new Date('2026-06-21T17:00:02.500Z'))
+  assert.ok(refreshedSaved)
+  assert.equal(localStorage.getSetItemCount(), 1)
+  assert.equal(refreshedSaved.savedAt, '2026-06-21T17:00:02.500Z')
+
+  const refreshedRaw = window.localStorage.getItem(COMPANION_SUMMARY_STORAGE_KEY)
+  assert.ok(refreshedRaw)
+  assert.equal(JSON.parse(refreshedRaw).savedAt, '2026-06-21T17:00:02.500Z')
+
+  localStorage.resetSetItemCount()
+  const changed = {
+    ...summary,
+    elapsedBucket: 'about_hour' as const,
+    elapsedLabel: 'about an hour',
+  }
+  const thirdSaved = saveRecentCompanionSummary(changed, new Date('2026-06-21T17:01:00.000Z'))
+  assert.ok(thirdSaved)
+  assert.equal(localStorage.getSetItemCount(), 1)
+  assert.equal(thirdSaved.elapsedBucket, 'about_hour')
+  assert.equal(thirdSaved.elapsedLabel, 'about an hour')
+})
+
 test('recent companion summary store loads and clears normalized summaries', () => {
   saveRecentCompanionSummary(summary, new Date('2026-06-21T17:00:00.000Z'))
   const loaded = loadRecentCompanionSummary(new Date('2026-06-21T17:05:00.000Z'))
 
   assert.equal(loaded?.activityClass, 'coding')
   assert.equal(loaded?.elapsedLabel, '半小时左右')
-  assert.deepEqual(recentCompanionSummaryToQuietObservation(loaded), summary)
+  assert.deepEqual(
+    recentCompanionSummaryToQuietObservation(loaded, 'en-US'),
+    {
+      ...summary,
+      elapsedLabel: 'about half an hour',
+    },
+  )
 
   clearRecentCompanionSummary()
   assert.equal(loadRecentCompanionSummary(), null)
+})
+
+test('recent companion summary store uses in-memory cache for rapid re-loads', () => {
+  const localStorage = window.localStorage as ReturnType<typeof createLocalStorageMock>
+  const loadedAt = new Date('2026-06-21T17:00:00.000Z')
+
+  const saved = saveRecentCompanionSummary(summary, loadedAt)
+  assert.ok(saved)
+  const savedRaw = localStorage.getItem(COMPANION_SUMMARY_STORAGE_KEY)
+  assert.ok(savedRaw)
+  clearRecentCompanionSummary()
+  window.localStorage.setItem(COMPANION_SUMMARY_STORAGE_KEY, savedRaw)
+
+  localStorage.resetGetItemCount()
+  const firstLoad = loadRecentCompanionSummary(loadedAt)
+  assert.ok(firstLoad)
+  assert.ok(localStorage.getGetItemCount() > 0)
+
+  localStorage.resetGetItemCount()
+  const secondLoad = loadRecentCompanionSummary(new Date('2026-06-21T17:00:01.500Z'))
+  assert.ok(secondLoad)
+  assert.deepEqual(secondLoad, firstLoad)
+  assert.equal(localStorage.getGetItemCount(), 0)
+
+  const thirdLoad = loadRecentCompanionSummary(new Date('2026-06-21T17:00:03.200Z'))
+  assert.ok(thirdLoad)
+  assert.ok(localStorage.getGetItemCount() > 0)
+})
+
+test('recent companion summary store drops invalid in-memory cache when persisted copy is gone', () => {
+  const saved = saveRecentCompanionSummary(summary, new Date('2026-06-21T17:00:00.000Z'))
+  assert.ok(saved)
+
+  window.localStorage.removeItem(COMPANION_SUMMARY_STORAGE_KEY)
+
+  assert.equal(loadRecentCompanionSummary(new Date('2026-06-21T16:58:30.000Z')), null)
+  assert.equal(loadRecentCompanionSummary(new Date('2026-06-21T17:00:01.000Z')), null)
+})
+
+test('recent companion summary to quiet observation falls back to default locale', () => {
+  const observation = recentCompanionSummaryToQuietObservation(
+    {
+      sessionId: 'test-session',
+      lifecycleId: 'lifecycle',
+      savedAt: '2026-06-21T17:00:00.000Z',
+      ...summary,
+    },
+    'eo' as never,
+  )
+
+  assert.deepEqual(observation, {
+    ...summary,
+    elapsedLabel: '半小时左右',
+  })
 })
 
 test('recent companion summary store clears summaries from a previous app session', () => {
@@ -223,6 +339,19 @@ test('recent companion summary store clears future summaries', () => {
 
   assert.equal(loadRecentCompanionSummary(new Date('2026-06-21T17:05:00.000Z')), null)
   assert.equal(window.localStorage.getItem(COMPANION_SUMMARY_STORAGE_KEY), null)
+})
+
+test('recent companion summary store rejects invalid current dates without surfacing stale summaries', () => {
+  assert.equal(saveRecentCompanionSummary(summary, new Date('not a date')), null)
+  assert.equal(window.localStorage.getItem(COMPANION_SUMMARY_STORAGE_KEY), null)
+
+  const saved = saveRecentCompanionSummary(summary, new Date('2026-06-21T17:00:00.000Z'))
+  assert.ok(saved)
+  const raw = window.localStorage.getItem(COMPANION_SUMMARY_STORAGE_KEY)
+  assert.ok(raw)
+
+  assert.equal(loadRecentCompanionSummary(new Date('not a date')), null)
+  assert.equal(window.localStorage.getItem(COMPANION_SUMMARY_STORAGE_KEY), raw)
 })
 
 test('recent companion summary store removes malformed entries', () => {

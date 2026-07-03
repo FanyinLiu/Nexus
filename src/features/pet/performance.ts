@@ -375,6 +375,61 @@ const SPARKLE_STAGE_PATTERN = buildKeywordPattern([
   'sparkles?',
 ], 'iu')
 
+const ACCENT_EXPRESSION_SLOTS: Partial<Record<PetPerformanceAccent, PetExpressionSlot>> = {
+  peek: 'touchBody',
+  search: 'thinking',
+  organize: 'happy',
+  write: 'thinking',
+  deliver: 'happy',
+  confirm: 'happy',
+  sparkle: 'happy',
+  listen: 'listening',
+  shy: 'touchFace',
+}
+
+const ACCENT_MOTION_SLOTS: Record<PetPerformanceAccent, PetExpressionSlot> = {
+  peek: 'touchBody',
+  search: 'touchHead',
+  organize: 'touchBody',
+  write: 'touchBody',
+  deliver: 'touchBody',
+  confirm: 'touchHead',
+  sparkle: 'touchHead',
+  listen: 'listening',
+  shy: 'touchFace',
+}
+
+const EXPRESSION_MOTION_SLOTS: Partial<Record<PetExpressionSlot, PetExpressionSlot>> = {
+  touchHead: 'touchHead',
+  touchFace: 'touchFace',
+  touchBody: 'touchBody',
+  listening: 'listening',
+  thinking: 'touchHead',
+  happy: 'touchHead',
+}
+
+const ACCENT_DURATION_MS: Record<PetPerformanceAccent, number> = {
+  peek: 1_900,
+  search: 2_500,
+  organize: 2_250,
+  write: 2_250,
+  deliver: 2_100,
+  confirm: 1_950,
+  sparkle: 2_150,
+  listen: 2_100,
+  shy: 2_150,
+}
+
+const EXPRESSION_DURATION_MS: Partial<Record<PetExpressionSlot, number>> = {
+  sleepy: 2_800,
+  thinking: 2_400,
+  happy: 2_100,
+  listening: 2_000,
+  touchFace: 2_200,
+  touchHead: 2_200,
+  touchBody: 2_200,
+}
+
 function resolveAccentStyle(stageDirection: string): PetPerformanceAccent | undefined {
   if (SPARKLE_STAGE_PATTERN.test(stageDirection)) return 'sparkle'
   if (PEEK_STAGE_PATTERN.test(stageDirection)) return 'peek'
@@ -399,103 +454,20 @@ function resolveExpressionSlot(stageDirection: string, accentStyle?: PetPerforma
   if (HAPPY_STAGE_PATTERN.test(stageDirection)) return 'happy'
   if (LISTENING_STAGE_PATTERN.test(stageDirection)) return 'listening'
 
-  switch (accentStyle) {
-    case 'peek':
-      return 'touchBody'
-    case 'search':
-    case 'write':
-      return 'thinking'
-    case 'organize':
-    case 'deliver':
-    case 'confirm':
-    case 'sparkle':
-      return 'happy'
-    case 'listen':
-      return 'listening'
-    case 'shy':
-      return 'touchFace'
-    default:
-      return null
-  }
+  return accentStyle ? ACCENT_EXPRESSION_SLOTS[accentStyle] ?? null : null
 }
 
 function resolveMotionSlot(
   expressionSlot: PetExpressionSlot,
   accentStyle?: PetPerformanceAccent,
 ): PetExpressionSlot | undefined {
-  switch (accentStyle) {
-    case 'peek':
-    case 'organize':
-    case 'write':
-    case 'deliver':
-      return 'touchBody'
-    case 'search':
-    case 'confirm':
-    case 'sparkle':
-      return 'touchHead'
-    case 'listen':
-      return 'listening'
-    case 'shy':
-      return 'touchFace'
-    default:
-      break
-  }
-
-  switch (expressionSlot) {
-    case 'touchHead':
-    case 'touchFace':
-    case 'touchBody':
-      return expressionSlot
-    case 'listening':
-      return 'listening'
-    case 'thinking':
-    case 'happy':
-      return 'touchHead'
-    default:
-      return undefined
-  }
+  if (accentStyle) return ACCENT_MOTION_SLOTS[accentStyle]
+  return EXPRESSION_MOTION_SLOTS[expressionSlot]
 }
 
 function resolveDurationMs(expressionSlot: PetExpressionSlot, accentStyle?: PetPerformanceAccent) {
-  switch (accentStyle) {
-    case 'peek':
-      return 1_900
-    case 'search':
-      return 2_500
-    case 'organize':
-      return 2_250
-    case 'write':
-      return 2_250
-    case 'deliver':
-      return 2_100
-    case 'confirm':
-      return 1_950
-    case 'sparkle':
-      return 2_150
-    case 'listen':
-      return 2_100
-    case 'shy':
-      return 2_150
-    default:
-      break
-  }
-
-  switch (expressionSlot) {
-    case 'sleepy':
-      return 2_800
-    case 'thinking':
-      return 2_400
-    case 'happy':
-      return 2_100
-    case 'listening':
-      return 2_000
-    case 'touchFace':
-    case 'touchHead':
-    case 'touchBody':
-      return 2_200
-    default:
-      return 2_000
-  }
+  if (accentStyle) return ACCENT_DURATION_MS[accentStyle]
+  return EXPRESSION_DURATION_MS[expressionSlot] ?? 2_000
 }
 
 function resolvePerformancePlan(stageDirection: string) {
@@ -957,7 +929,14 @@ export class StageDirectionStreamFilter {
     STAGE_DIRECTION_GLOBAL_PATTERN.lastIndex = 0
     this.buffer = this.buffer.replace(
       STAGE_DIRECTION_GLOBAL_PATTERN,
-      (full: string, inner: string) => (isStructuredBracket(inner.trim()) ? full : ''),
+      (full: string, roundInner?: string, cornerInner?: string, asciiInner?: string) => {
+        const inner = (roundInner ?? cornerInner ?? asciiInner ?? '').trim()
+        if (!inner || isStructuredBracket(inner)) return full
+        if (asciiInner !== undefined) {
+          return isKnownAsciiStageDirectionAlias(inner) && resolvePerformancePlan(inner) ? '' : full
+        }
+        return ''
+      },
     )
 
     if (forceFlush) {

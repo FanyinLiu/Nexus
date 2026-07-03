@@ -4,6 +4,7 @@ import {
   markDelivered,
 } from '../features/futureCapsule/futureCapsuleStore'
 import { buildFutureCapsuleDelivery } from '../features/futureCapsule/futureCapsuleDelivery'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000  // 5 min — same cadence as bracket / errand
@@ -54,7 +55,7 @@ export function useFutureCapsuleScheduler({ settings }: UseFutureCapsuleSchedule
         if (stopped) return
         markDelivered(due.id)
       } catch (err) {
-        console.warn('[future-capsule] delivery failed:', err)
+        console.warn('[future-capsule] delivery failed:', getRedactedLogErrorMessage(err))
       }
     }
 

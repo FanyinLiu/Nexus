@@ -39,6 +39,12 @@ const UNSAFE_PATTERNS = [
     message: 'desktop context snapshots returned to chat/runtime must strip screenshot image payloads first',
   },
   {
+    id: 'desktop-context-hook-raw-vision-error-log',
+    file: 'src/hooks/useDesktopContext.ts',
+    pattern: /console\.warn\('\[screen-(?:ocr|vlm)\][^']*failed[^']*',\s*error\)/,
+    message: 'renderer desktop context OCR/VLM logs must not record raw errors, paths, tokens, or captured text',
+  },
+  {
     id: 'context-scheduler-retains-previous-desktop-text',
     file: 'src/hooks/useContextScheduler.ts',
     pattern: /previous(?:Window|Clipboard)Ref|previousActiveWindowTitle|previousClipboardText/,
@@ -112,9 +118,12 @@ const REQUIRED_PHRASES = [
     id: 'renderer-strips-screenshot-payload-before-runtime-return',
     file: 'src/hooks/useDesktopContext.ts',
     phrases: [
+      "import { getRedactedLogErrorMessage } from '../lib/logRedaction'",
       "import { stripDesktopContextScreenshotPayload } from '../lib/privacy/desktopContextPrivacy'",
       'const strippedSnapshot = stripDesktopContextScreenshotPayload(snapshot)',
       'const strippedEnrichedSnapshot = stripDesktopContextScreenshotPayload(enrichedSnapshot)',
+      "console.warn('[screen-ocr] failed to recognize screenshot text', getRedactedLogErrorMessage(error))",
+      "console.warn('[screen-vlm] failed to analyze screenshot', getRedactedLogErrorMessage(error))",
     ],
   },
   {

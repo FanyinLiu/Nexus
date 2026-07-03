@@ -40,6 +40,7 @@ import {
   summarizeOlderMessages,
 } from './contextCompaction.ts'
 import { buildHotTierMemorySections, buildSemanticMemorySection } from './memoryInjection.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { buildPromptModeInstructions } from './promptModeMcp.ts'
 import {
   buildToolDefinitions,
@@ -206,7 +207,7 @@ export async function loadActiveProfilePersona(
     }
     return loaded?.present ? loaded : null
   } catch (err) {
-    console.warn('[runtime] Per-profile persona load failed, using global SOUL.md:', err)
+    console.warn('[runtime] Per-profile persona load failed, using global SOUL.md:', getRedactedLogErrorMessage(err))
     return null
   }
 }
@@ -227,7 +228,7 @@ export async function buildSystemPrompt(
     soulContent = soul
     personaMemoryContent = pMem
   } catch (err) {
-    console.warn('[runtime] Persona file loading failed, using settings fallback:', err)
+    console.warn('[runtime] Persona file loading failed, using settings fallback:', getRedactedLogErrorMessage(err))
   }
 
   // Per-profile persona (imported card / switched profile) takes precedence
@@ -329,7 +330,7 @@ export async function buildSystemPrompt(
   const crisisGuidanceSection = options.crisisGuidancePromptText ?? ''
 
   const desktopContextSection = settings.contextAwarenessEnabled
-    ? formatDesktopContext(options.desktopContext)
+    ? formatDesktopContext(options.desktopContext, settings.uiLanguage)
     : ''
   // Faint, subordinate tone hint from what the user is mostly doing. Reuses the
   // active-window title already flowing in via desktopContext; no extra capture.

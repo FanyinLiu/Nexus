@@ -6,6 +6,7 @@ import {
   resolveMemorySettingsSummary,
   resolveMemoryTransparencySummary,
 } from '../src/features/memory/memorySettingsView.ts'
+import type { QuietObservationSummary } from '../src/features/context/companionAwareness.ts'
 import type { DailyMemoryEntry, MemoryItem } from '../src/types/memory.ts'
 
 function memory(overrides: Partial<MemoryItem>): MemoryItem {
@@ -27,6 +28,15 @@ const dailyEntry: DailyMemoryEntry = {
   day: '2026-01-01',
   role: 'user',
   source: 'chat',
+}
+
+const companionSummary: QuietObservationSummary = {
+  elapsedBucket: 'about_hour',
+  elapsedLabel: 'about an hour',
+  activityClass: 'reading',
+  userDeepFocused: false,
+  activeElsewhere: true,
+  shouldStaySilent: true,
 }
 
 test('countMemoryKinds counts enabled memories by user-facing layer', () => {
@@ -89,6 +99,14 @@ test('resolveMemoryTransparencySummary reports active recall, capture and storag
   assert.equal(summary.contextReadEnabled, true)
   assert.equal(summary.companionAwareness.status, 'watching_for_away_activity')
   assert.deepEqual(summary.companionAwareness.observes, ['active_window_class', 'coarse_elapsed_time'])
+  assert.equal(summary.companionAwarenessView.statusLabelKey, 'settings.memory.context.transparency_status_waiting')
+  assert.deepEqual(summary.companionAwarenessView.detailRows.map((row) => row.id), [
+    'observes',
+    'reaches_model',
+    'stores',
+  ])
+  assert.equal(summary.companionAwarenessView.clearRecentSummaryAction.enabled, false)
+  assert.equal(summary.companionAwarenessView.clearRecentSummaryAction.unavailableReason, 'no_summary')
   assert.equal(summary.activeLongTermCount, 1)
   assert.equal(summary.disabledLongTermCount, 1)
   assert.equal(summary.storageAuthority, 'renderer-localStorage')
@@ -119,6 +137,36 @@ test('resolveMemoryTransparencySummary makes pause state explicit without deleti
   assert.equal(summary.contextReadEnabled, true)
   assert.equal(summary.companionAwareness.status, 'paused')
   assert.deepEqual(summary.companionAwareness.reachesModel, [])
+  assert.equal(summary.companionAwarenessView.statusLabelKey, 'settings.memory.context.transparency_status_paused')
+  assert.equal(summary.companionAwarenessView.clearRecentSummaryAction.enabled, false)
+  assert.equal(summary.companionAwarenessView.clearRecentSummaryAction.unavailableReason, 'paused')
   assert.equal(summary.activeLongTermCount, 1)
   assert.equal(summary.dailyEntryCount, 1)
+})
+
+test('resolveMemoryTransparencySummary includes companion transparency action state', () => {
+  const summary = resolveMemoryTransparencySummary({
+    activeWindowContextEnabled: true,
+    clipboardContextEnabled: false,
+    companionAwarenessPaused: false,
+    contextAwarenessEnabled: true,
+    dailyEntries: [],
+    memories: [],
+    memoryDailyRecallCount: 0,
+    memoryLongTermRecallCount: 0,
+    memoryPaused: false,
+    memorySemanticRecallCount: 0,
+    screenContextEnabled: false,
+    searchMode: 'keyword',
+    companionSummary,
+  })
+
+  assert.equal(summary.companionAwareness.summaryPresent, true)
+  assert.equal(summary.companionAwareness.currentActivityClass, 'reading')
+  assert.equal(summary.companionAwareness.modelReachBlockedReason, null)
+  assert.equal(summary.companionAwareness.clearUnavailableReason, null)
+  assert.equal(summary.companionAwarenessView.statusLabelKey, 'settings.memory.context.transparency_status_summarizing')
+  assert.equal(summary.companionAwarenessView.clearRecentSummaryAction.enabled, true)
+  assert.equal(summary.companionAwarenessView.clearRecentSummaryAction.unavailableReason, null)
+  assert.equal(summary.companionAwarenessView.rawContentVisible, false)
 })

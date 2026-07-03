@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "lastChecked": "2026-06-30",
+  "policy": {
+    "staticSourceOnly": true,
+    "remoteChecked": false,
+    "liveNetworkGate": false,
+    "manualDesignGuard": true,
+    "borrowRule": "constraints-not-skins"
+  },
+  "requiredSurfaceCoverage": [
+    {
+      "surface": "chat",
+      "minReferences": 2,
+      "reason": "Chat density and streaming boundaries need more than one comparison source."
+    },
+    {
+      "surface": "composer",
+      "minReferences": 2,
+      "reason": "The primary input affordance must be checked against desktop and streaming-first references."
+    },
+    {
+      "surface": "settings",
+      "minReferences": 2,
+      "reason": "Settings need both dense desktop organization and component primitive discipline."
+    },
+    {
+      "surface": "image4-presence",
+      "minReferences": 1,
+      "reason": "The companion identity layer needs at least one agent-identity reference."
+    },
+    {
+      "surface": "dial",
+      "minReferences": 1,
+      "reason": "The dial is Image4-specific, but it still needs an identity/hierarchy reference."
+    },
+    {
+      "surface": "companion-tone",
+      "minReferences": 2,
+      "reason": "Companion color and emotional tone need both ambient identity and desktop-local trust references."
+    },
+    {
+      "surface": "forms",
+      "minReferences": 2,
+      "reason": "Form behavior should combine component grammar with accessible primitive behavior."
+    },
+    {
+      "surface": "focus-management",
+      "minReferences": 2,
+      "reason": "Keyboard and focus behavior need both accessible primitive behavior and AI interaction focus boundaries."
+    },
+    {
+      "surface": "streaming",
+      "minReferences": 2,
+      "reason": "Streaming message flow needs at least two AI chat references for append-only output and tool-result boundaries."
+    },
+    {
+      "surface": "agent-activity",
+      "minReferences": 3,
+      "reason": "Companion activity boundaries need multiple checks across agent boundary, approval, and product-capability references."
+    }
+  ],
+  "references": [
+    {
+      "id": "open-webui",
+      "name": "Open WebUI",
+      "repository": "https://github.com/open-webui/open-webui",
+      "observedHead": {
+        "branch": "refs/heads/main",
+        "commit": "b711935dd57dbc223ebbf410175a8bbe7e4efafb"
+      },
+      "surfaces": ["chat", "ai-workspace-density"],
+      "borrow": "Low-noise chat density and restrained utility affordances.",
+      "avoid": "Full workspace/admin chrome or broad platform density inside the companion panel."
+    },
+    {
+      "id": "chatbox",
+      "name": "Chatbox",
+      "repository": "https://github.com/chatboxai/chatbox",
+      "observedHead": {
+        "branch": "refs/heads/main",
+        "commit": "8639c946c0baedfdd12bbc88ac10f5aa87431647"
+      },
+      "surfaces": ["composer", "desktop-client", "companion-tone"],
+      "borrow": "Desktop composer ergonomics, local-first feel, and progressive replies.",
+      "avoid": "Floating action clusters or generic desktop-client chrome that competes with input."
+    },
+    {
+      "id": "jan",
+      "name": "Jan",
+      "repository": "https://github.com/janhq/jan",
+      "observedHead": {
+        "branch": "refs/heads/main",
+        "commit": "56ecb8b8ae98d703ee96f20f3078343bafd48c52"
+      },
+      "surfaces": ["chat", "composer", "desktop-client", "privacy-local", "companion-tone"],
+      "borrow": "Local-first desktop AI posture, quiet model/runtime status, and privacy-centered client feel.",
+      "avoid": "Generic local-model workbench chrome or provider/runtime controls inside the companion surface."
+    },
+    {
+      "id": "assistant-ui",
+      "name": "assistant-ui",
+      "repository": "https://github.com/assistant-ui/assistant-ui",
+      "observedHead": {
+        "branch": "refs/heads/main",
+        "commit": "148e438bd89e68a89bb728e2c3ddaf80d855f9f5"
+      },
+      "surfaces": ["chat", "composer", "streaming", "focus-management"],
+      "borrow": "Chat component state grammar for thread, composer, branch, and streaming affordances.",
+      "avoid": "Library demo skin, app shell assumptions, or replacing Nexus-specific state ownership with generic component defaults."
+    },
+    {
+      "id": "librechat",
+      "name": "LibreChat",
+      "repository": "https://github.com/danny-avila/LibreChat",
+      "observedHead": {
+        "branch": "refs/heads/main",
+        "commit": "9e74cc0e57b395926122bd4062c1fcedc48ed465"
+      },
+      "surfaces": ["chat", "composer", "settings", "streaming", "agent-activity"],
+      "borrow": "Mature all-in-one chat product boundaries for agents, MCP/tools, presets, search, artifacts, and resumable streams.",
+      "avoid": "ChatGPT-like skin, admin panel density, multi-user workspace chrome, or treating Nexus like a general chat platform."
+    },
+    {
+      "id": "cherry-studio",
+      "name": "Cherry Studio",
+      "repository": "https://github.com/CherryHQ/cherry-studio",
+      "observedHead": {
+        "branch": "refs/heads/main",
+        "commit": "4112ff3a2ce410d9b5d4ee783a5c8014c91fa394"
+      },
+      "surfaces": ["settings", "integrations"],
+      "borrow": "Dense provider and settings organization through predictable sections.",
+      "avoid": "Dashboard card stacks, provider-studio chrome, or feature density inside Image4."
+    },
+    {
+      "id": "anything-llm",
+      "name": "AnythingLLM",
+      "repository": "https://github.com/Mintplex-Labs/anything-llm",
+      "observedHead": {
+        "branch": "refs/heads/master",
+        "commit": "548987c2ce8d00613b36448c397a66b972e90450"
+      },
+      "surfaces": ["chat", "settings", "desktop-awareness", "agent-workflow"],
+      "borrow": "Workspace memory, source context, and agent capability grouping with explicit boundaries.",
+      "avoid": "Document-workspace density, enterprise dashboards, or turning companion awareness into a heavy workbench."
+    },
+    {
+      "id": "lobehub",
+      "name": "LobeHub / LobeChat lineage",
+      "repository": "https://github.com/lobehub/lobehub",
+      "observedHead": {
+        "branch": "refs/heads/canary",
+        "commit": "bd488dab060c26f9048247cfa83d2994c150a6cc"
+      },
+      "surfaces": ["image4-presence", "dial", "agent-identity", "companion-tone"],
+      "borrow": "Calm agent identity, conversational spacing discipline, and companion hierarchy.",
+      "avoid": "Avatar chrome, multi-agent workforce framing, or product shell mimicry."
+    },
+    {
+      "id": "vercel-ai-chatbot",
+      "name": "Vercel AI Chatbot",
+      "repository": "https://github.com/vercel/ai-chatbot",
+      "observedHead": {
+        "branch": "refs/heads/main",
+        "commit": "2becdb4a56e7683ae08aef927cec1c6c52dfad5e"
+      },
+      "surfaces": ["chat", "streaming", "composer"],
+      "borrow": "Streaming-first composition, composer priority, and tool/result boundaries.",
+      "avoid": "Browser-page layout assumptions copied into the desktop side panel."
+    },
+    {
+      "id": "openhands",
+      "name": "OpenHands",
+      "repository": "https://github.com/All-Hands-AI/OpenHands",
+      "observedHead": {
+        "branch": "refs/heads/main",
+        "commit": "6bbb4f3e1926766d1bed5fba4e2c7eeb01395ff5"
+      },
+      "surfaces": ["chat", "streaming", "agent-activity"],
+      "borrow": "Coding-agent activity boundaries, observation/action/run-state separation, and explicit task progress framing.",
+      "avoid": "Autonomous workbench chrome, code execution cockpit layouts, issue-agent workflows, or turning Nexus into a Codex-like product shell."
+    },
+    {
+      "id": "cline",
+      "name": "Cline",
+      "repository": "https://github.com/cline/cline",
+      "observedHead": {
+        "branch": "refs/heads/main",
+        "commit": "dbe15202e1b7dc12b6bfd8c86b450d678f3ec33d"
+      },
+      "surfaces": ["agent-activity", "streaming", "focus-management"],
+      "borrow": "Human-in-the-loop agent activity, plan/act mode boundaries, command/output monitoring, checkpoints, and approval gates.",
+      "avoid": "IDE extension shell, terminal/log surfaces, file diff chrome, autonomous code-agent framing, or multi-agent task board metaphors."
+    },
+    {
+      "id": "shadcn-ui",
+      "name": "shadcn/ui",
+      "repository": "https://github.com/shadcn-ui/ui",
+      "observedHead": {
+        "branch": "refs/heads/main",
+        "commit": "dbf9c5ebc430888ffae9baea9502c44c29b97304"
+      },
+      "surfaces": ["settings", "dialogs", "forms"],
+      "borrow": "Component grammar, state discipline, form/dialog/button/tabs composition.",
+      "avoid": "Default demo skin, card-heavy examples, or imported radius/color language."
+    },
+    {
+      "id": "radix-primitives",
+      "name": "Radix UI Primitives",
+      "repository": "https://github.com/radix-ui/primitives",
+      "observedHead": {
+        "branch": "refs/heads/main",
+        "commit": "baa70937f2a20ec34d59825130fcf0c5f24bcc28"
+      },
+      "surfaces": ["settings", "menus", "dialogs", "forms", "focus-management"],
+      "borrow": "Accessible focus behavior, controlled primitives, keyboard interaction semantics.",
+      "avoid": "Headless abstraction churn where Nexus simple controls are already stable."
+    }
+  ]
+}

@@ -4,7 +4,7 @@ import {
   modelSupportsVision,
 } from '../../lib/modelCapabilities.ts'
 import { normalizeUiLanguage } from '../../lib/uiLanguage.ts'
-import type { UiLanguage } from '../../types/i18n.ts'
+import type { TranslationKey, UiLanguage } from '../../types/i18n.ts'
 import type {
   DiscoveredModel,
   ModelCapability,
@@ -30,6 +30,17 @@ export type ApiProviderPreset = {
    */
   supportsToolsApi?: boolean
 }
+
+export type ApiProviderRegion = ApiProviderPreset['region']
+
+export const MODEL_PROVIDER_REGION_TABS: Array<{
+  region: ApiProviderRegion
+  labelKey: TranslationKey
+}> = [
+  { region: 'china', labelKey: 'settings.model.provider_group.china' },
+  { region: 'global', labelKey: 'settings.model.provider_group.global' },
+  { region: 'custom', labelKey: 'settings.model.provider_group.local' },
+]
 
 function getProviderRunLocation(provider: ApiProviderPreset): ModelRunLocation {
   if (provider.id === 'ollama') return 'local'
@@ -751,9 +762,19 @@ export function getOnboardingTextProviderOptionsByRegion(
  */
 export function brandMatchesRegion(
   providerIds: string[],
-  region: ApiProviderPreset['region'],
+  region: ApiProviderRegion,
 ): boolean {
   return providerIds.some((id) => API_PROVIDER_PRESETS.find((p) => p.id === id)?.region === region)
+}
+
+export function getProviderBrandsForRegion<T extends { providerIds: string[] }>(
+  brands: T[],
+  region: ApiProviderRegion,
+  selectedProviderId?: string,
+): T[] {
+  return brands.filter((brand) =>
+    brandMatchesRegion(brand.providerIds, region)
+    || (selectedProviderId ? brand.providerIds.includes(selectedProviderId) : false))
 }
 
 /**
@@ -764,7 +785,7 @@ export function brandMatchesRegion(
  */
 export function pickBrandProviderForRegion(
   providerIds: string[],
-  region: ApiProviderPreset['region'],
+  region: ApiProviderRegion,
   currentProviderId?: string,
 ): string {
   const regionOf = (id: string) => API_PROVIDER_PRESETS.find((p) => p.id === id)?.region

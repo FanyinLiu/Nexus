@@ -14,6 +14,7 @@ import {
   type IntegrationModuleDescriptor,
 } from '../../features/integrations/registry'
 import { appendIdToCsvList } from '../../features/integrations/allowlists.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type {
   AppSettings,
@@ -190,7 +191,7 @@ export const IntegrationsSection = memo(function IntegrationsSection({
         })
         .catch((error) => {
           if (!cancelled) {
-            setInspectionError(error instanceof Error ? error.message : String(error))
+            setInspectionError(getRedactedLogErrorMessage(error))
           }
         })
         .finally(() => {

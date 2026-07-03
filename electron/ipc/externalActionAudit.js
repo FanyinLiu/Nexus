@@ -1,3 +1,5 @@
+let externalActionAuditSequence = 0
+
 function textLength(value) {
   return typeof value === 'string' ? value.length : 0
 }
@@ -15,6 +17,24 @@ function valueKind(value) {
 function plainObjectKeyCount(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return 0
   return Object.keys(value).length
+}
+
+function nextExternalActionAuditId(nowMs = Date.now()) {
+  externalActionAuditSequence = (externalActionAuditSequence + 1) % Number.MAX_SAFE_INTEGER
+  return `external-action-${Math.max(0, Math.trunc(nowMs)).toString(36)}-${externalActionAuditSequence.toString(36)}`
+}
+
+function sanitizeFailureCode(value) {
+  const normalized = String(value ?? '').trim()
+  if (!normalized) return null
+  return normalized.replace(/[^a-zA-Z0-9_.:-]/g, '_').slice(0, 80) || null
+}
+
+export function resolveExternalActionFailureCode(error) {
+  if (!error || typeof error !== 'object') return 'unknown'
+  return sanitizeFailureCode(error.code)
+    ?? sanitizeFailureCode(error.name)
+    ?? 'unknown'
 }
 
 function summarizeTarget(payload = {}, targetKey) {
@@ -159,5 +179,77 @@ export function summarizeExternalActionResult(channel, result = {}, error = null
     responseLength: failed ? 0 : textLength(result?.response),
     errorName: failed && error instanceof Error ? error.name : undefined,
     errorMessageLength: failed && error instanceof Error ? textLength(error.message) : 0,
+  }
+}
+
+export function summarizeExternalActionStart(actionId, channel, payload = {}) {
+  const input = summarizeExternalActionRequest(channel, payload)
+  return {
+    actionId,
+    phase: 'start',
+    channel: input.channel,
+    integration: input.integration,
+    type: input.actionKind,
+    input,
+  }
+}
+
+export function summarizeExternalActionFinish(actionId, channel, startedAtMs, finishedAtMs, result = {}, error = null) {
+  const output = summarizeExternalActionResult(channel, result, error)
+  return {
+    actionId,
+    phase: 'finish',
+    channel: output.channel,
+    ok: output.ok,
+    durationMs: Math.max(0, Math.round(finishedAtMs - startedAtMs)),
+    failureCode: output.ok ? null : resolveExternalActionFailureCode(error),
+    result: output,
+  }
+}
+
+async function getDefaultAuditWriter() {
+  const module = await import('../services/auditLog.js')
+  return module.audit
+}
+
+async function getDefaultPermissionCheck() {
+  const module = await import('../services/externalActionPolicy.js')
+  return module.requireExternalActionPermission
+}
+
+export async function runAuditedExternalAction(channel, payload, action, options = {}) {
+  const now = typeof options.now === 'function' ? options.now : Date.now
+  const auditWriter = typeof options.audit === 'function'
+    ? options.audit
+    : await getDefaultAuditWriter()
+  const permissionCheck = typeof options.requirePermission === 'function'
+    ? options.requirePermission
+    : await getDefaultPermissionCheck()
+  const startedAtMs = now()
+  const actionId = options.actionId || nextExternalActionAuditId(startedAtMs)
+
+  auditWriter('external-action', 'start', summarizeExternalActionStart(actionId, channel, payload))
+
+  try {
+    await permissionCheck(channel)
+    const result = await action()
+    auditWriter('external-action', 'finish', summarizeExternalActionFinish(
+      actionId,
+      channel,
+      startedAtMs,
+      now(),
+      result,
+    ))
+    return result
+  } catch (error) {
+    auditWriter('external-action', 'finish', summarizeExternalActionFinish(
+      actionId,
+      channel,
+      startedAtMs,
+      now(),
+      {},
+      error,
+    ))
+    throw error
   }
 }

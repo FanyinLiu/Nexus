@@ -83,18 +83,42 @@ function normalizeSpeechText(value: string) {
     .replace(/[\s,，。.!！？、:：;；~"'`]/g, '')
 }
 
-function getWakeWordCandidates(wakeWord: string) {
-  const trimmedWakeWord = wakeWord.trim()
-  if (!trimmedWakeWord) return []
+const WAKE_WORD_ALIASES = ['星会', '星慧', '星惠', '星辉', '星晖', '星回']
 
-  const candidates = new Set([trimmedWakeWord])
-  if (normalizeSpeechText(trimmedWakeWord) === normalizeSpeechText('星绘')) {
-    ;['星会', '星慧', '星惠', '星辉', '星晖', '星回'].forEach((candidate) => {
-      candidates.add(candidate)
+const WAKE_WORD_LIST_SEPARATOR_PATTERN = /[,\uFF0C;；|/\n\r]+/g
+
+function splitWakeWordInput(value: string) {
+  return String(value ?? '')
+    .trim()
+    .split(WAKE_WORD_LIST_SEPARATOR_PATTERN)
+    .map((candidate) => candidate.trim())
+    .filter(Boolean)
+}
+
+export function getWakeWordCandidates(wakeWord: string) {
+  const splitWakeWords = splitWakeWordInput(wakeWord)
+  if (!splitWakeWords.length) return []
+
+  const candidates = new Map<string, string>()
+  for (const candidate of splitWakeWords) {
+    candidates.set(normalizeSpeechText(candidate), candidate)
+  }
+
+  const primaryWakeWord = splitWakeWords[0]
+  if (primaryWakeWord && normalizeSpeechText(primaryWakeWord) === normalizeSpeechText('星绘')) {
+    WAKE_WORD_ALIASES.forEach((alias) => {
+      const normalizedAlias = normalizeSpeechText(alias)
+      if (!candidates.has(normalizedAlias)) {
+        candidates.set(normalizedAlias, alias)
+      }
     })
   }
 
-  return [...candidates]
+  return [...candidates.values()]
+}
+
+export function getPrimaryWakeWord(value: string) {
+  return splitWakeWordInput(value)[0] ?? ''
 }
 
 function matchesWakeWord(transcript: string, wakeWord: string) {
@@ -378,7 +402,7 @@ export function resolveVoiceTranscriptDecision(
     }
   }
 
-  const wakeWord = input.wakeWord.trim()
+  const wakeWord = getPrimaryWakeWord(input.wakeWord)
   if (!wakeWord) {
     return {
       kind: 'blocked_missing_wake_word',

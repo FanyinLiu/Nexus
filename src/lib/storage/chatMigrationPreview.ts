@@ -4,6 +4,7 @@ import type {
   ChatMigrationDryRunStatus,
   ChatStorageMigrationPackage,
 } from './chatMigrationDryRun.ts'
+import { getRedactedLogErrorMessage } from '../logRedaction.ts'
 import { loadChatStorageMigrationPackage } from './chatMigrationDryRun.ts'
 
 type EnvLike = Record<string, string | boolean | undefined>
@@ -102,6 +103,11 @@ function nowIso(now: Date | string | number = new Date()): string {
 
 function byteLength(value: string): number {
   return new TextEncoder().encode(value).length
+}
+
+export function formatChatMigrationUiError(error: unknown, fallback = 'unknown'): string {
+  const message = getRedactedLogErrorMessage(error).trim()
+  return message || fallback
 }
 
 function toneForStatus(status: ChatMigrationDryRunStatus): ChatMigrationPreviewTone {

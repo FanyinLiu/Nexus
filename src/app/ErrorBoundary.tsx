@@ -1,6 +1,7 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { t as translate } from '../i18n/runtime.ts'
+import { formatComponentStackForLog, formatErrorBoundaryDetail } from './errorBoundarySupport.ts'
 
 type Props = {
   children: ReactNode
@@ -22,7 +23,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('[ErrorBoundary] Uncaught render error:', error, info.componentStack)
+    console.error(
+      '[ErrorBoundary] Uncaught render error:',
+      formatErrorBoundaryDetail(error, translate('app.error_boundary.unknown_detail')),
+      formatComponentStackForLog(info.componentStack),
+    )
   }
 
   handleReload = () => {
@@ -38,7 +43,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <h1>{translate('app.error_boundary.title')}</h1>
             <p>{translate('app.error_boundary.body')}</p>
             <pre className="app-error-fallback__detail">
-              {this.state.error?.message ?? translate('app.error_boundary.unknown_detail')}
+              {formatErrorBoundaryDetail(this.state.error, translate('app.error_boundary.unknown_detail'))}
             </pre>
             <button
               type="button"

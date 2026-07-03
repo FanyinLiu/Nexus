@@ -26,6 +26,22 @@ export type CompanionActivityMotion =
   | 'error'
   | 'offline'
 
+export type CompanionActivityDisplayAction =
+  | CompanionActivityPhase
+  | 'waiting_confirmation'
+  | 'executing'
+  | 'done'
+  | 'failed'
+  | 'broadcasting'
+  | 'summarizing'
+  | 'needs_attention'
+
+export type CompanionActivityDisplayActionSource =
+  | 'runtime_reflection'
+  | 'assistant_activity'
+  | 'task_state'
+  | 'ui_label_only'
+
 export const COMPANION_ACTIVITY_PHASES: readonly CompanionActivityPhase[] = [
   'idle',
   'thinking',
@@ -36,12 +52,27 @@ export const COMPANION_ACTIVITY_PHASES: readonly CompanionActivityPhase[] = [
   'offline',
 ]
 
+export const COMPANION_ACTIVITY_DISPLAY_ACTIONS: readonly CompanionActivityDisplayAction[] = [
+  ...COMPANION_ACTIVITY_PHASES,
+  'waiting_confirmation',
+  'executing',
+  'done',
+  'failed',
+  'broadcasting',
+  'summarizing',
+  'needs_attention',
+]
+
 export interface CompanionActivityInput {
   mood: PetMood
   voiceState?: VoiceState
   assistantActivity?: AssistantRuntimeActivity
   chatBusy?: boolean
   waitingForConfirmation?: boolean
+  taskState?: Extract<
+    CompanionActivityDisplayAction,
+    'waiting_confirmation' | 'executing' | 'done' | 'failed'
+  >
   hasBlockingError?: boolean
   isOnline?: boolean
   activeTaskLabel?: string
@@ -57,6 +88,9 @@ export interface CompanionActivityState extends CompanionPresenceState {
   isWaiting: boolean
   isError: boolean
   isOffline: boolean
+  displayAction: CompanionActivityDisplayAction
+  displayActionSource: CompanionActivityDisplayActionSource
+  displayStatusKey: TranslationKey
   motionToken: CompanionActivityMotion
   spriteState: SpritePetAnimationState | null
   statusKey: TranslationKey
@@ -73,6 +107,11 @@ type CompanionActivityMetadata = {
   motionToken: CompanionActivityMotion
   spriteState: SpritePetAnimationState | null
   statusKey: TranslationKey
+}
+
+type CompanionActivityDisplayActionMetadata = {
+  statusKey: TranslationKey
+  source: CompanionActivityDisplayActionSource
 }
 
 const COMPANION_ACTIVITY_METADATA: Record<CompanionActivityPhase, CompanionActivityMetadata> = {
@@ -113,6 +152,69 @@ const COMPANION_ACTIVITY_METADATA: Record<CompanionActivityPhase, CompanionActiv
   },
 }
 
+const COMPANION_ACTIVITY_DISPLAY_ACTION_METADATA: Record<
+  CompanionActivityDisplayAction,
+  CompanionActivityDisplayActionMetadata
+> = {
+  idle: {
+    statusKey: 'pet.status.ready',
+    source: 'runtime_reflection',
+  },
+  thinking: {
+    statusKey: 'pet.status.thinking',
+    source: 'runtime_reflection',
+  },
+  listening: {
+    statusKey: 'voice_state.listening',
+    source: 'runtime_reflection',
+  },
+  speaking: {
+    statusKey: 'voice_state.speaking',
+    source: 'runtime_reflection',
+  },
+  waiting: {
+    statusKey: 'pet.status.waiting_confirmation',
+    source: 'runtime_reflection',
+  },
+  error: {
+    statusKey: 'pet.status.error',
+    source: 'runtime_reflection',
+  },
+  offline: {
+    statusKey: 'pet.status.offline',
+    source: 'runtime_reflection',
+  },
+  // Registered as a UI-only product action until a real broadcast runtime signal exists.
+  waiting_confirmation: {
+    statusKey: 'pet.status.waiting_confirmation',
+    source: 'task_state',
+  },
+  executing: {
+    statusKey: 'pet.status.executing',
+    source: 'task_state',
+  },
+  done: {
+    statusKey: 'pet.status.done',
+    source: 'task_state',
+  },
+  failed: {
+    statusKey: 'pet.status.failed',
+    source: 'task_state',
+  },
+  broadcasting: {
+    statusKey: 'pet.status.broadcasting',
+    source: 'ui_label_only',
+  },
+  summarizing: {
+    statusKey: 'pet.status.summarizing',
+    source: 'assistant_activity',
+  },
+  needs_attention: {
+    statusKey: 'pet.status.needs_attention',
+    source: 'ui_label_only',
+  },
+}
+
 const PREVIEW_INPUT_OVERRIDES: Record<CompanionActivityPhase, Partial<CompanionActivityInput>> = {
   idle: {},
   thinking: { chatBusy: true },
@@ -148,9 +250,23 @@ function resolvePhase(input: CompanionActivityInput): CompanionActivityPhase {
   return 'idle'
 }
 
+function resolveDisplayAction(
+  input: CompanionActivityInput,
+  phase: CompanionActivityPhase,
+): CompanionActivityDisplayAction {
+  if (phase === 'error' || input.taskState === 'failed') return 'failed'
+  if (phase === 'waiting' || input.taskState === 'waiting_confirmation') return 'waiting_confirmation'
+  if (input.taskState === 'executing' || input.assistantActivity === 'scheduling') return 'executing'
+  if (input.taskState === 'done') return 'done'
+  if (input.assistantActivity === 'summarizing') return 'summarizing'
+  return phase
+}
+
 export function resolveCompanionActivityState(input: CompanionActivityInput): CompanionActivityState {
   const phase = resolvePhase(input)
   const metadata = COMPANION_ACTIVITY_METADATA[phase]
+  const displayAction = resolveDisplayAction(input, phase)
+  const displayMetadata = COMPANION_ACTIVITY_DISPLAY_ACTION_METADATA[displayAction]
   const baseState: CompanionPresenceState = {
     phase: phase as CompanionPresencePhase,
     mood: input.mood,
@@ -169,12 +285,27 @@ export function resolveCompanionActivityState(input: CompanionActivityInput): Co
     isWaiting: phase === 'waiting',
     isError: phase === 'error',
     isOffline: phase === 'offline',
+    displayAction,
+    displayActionSource: displayMetadata.source,
+    displayStatusKey: displayMetadata.statusKey,
     ...metadata,
   }
 }
 
 export function getCompanionActivityStatusKey(phase: CompanionActivityPhase): TranslationKey {
   return COMPANION_ACTIVITY_METADATA[phase].statusKey
+}
+
+export function getCompanionActivityDisplayActionStatusKey(
+  action: CompanionActivityDisplayAction,
+): TranslationKey {
+  return COMPANION_ACTIVITY_DISPLAY_ACTION_METADATA[action].statusKey
+}
+
+export function getCompanionActivityDisplayActionSource(
+  action: CompanionActivityDisplayAction,
+): CompanionActivityDisplayActionSource {
+  return COMPANION_ACTIVITY_DISPLAY_ACTION_METADATA[action].source
 }
 
 export function resolveCompanionActivityPreviewState(

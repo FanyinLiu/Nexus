@@ -415,7 +415,9 @@ declare global {
         id: string
         displayName: string
         directoryPath: string
+        directoryPathDisplay?: string
         sourceRowsDirectory?: string
+        sourceRowsDirectoryDisplay?: string
         message: string
       }>
       inspectCodexPetCreatorKit: (payload?: { kitDirectory?: string }) => Promise<SpritePetCreatorKitInspection | null>
@@ -423,11 +425,17 @@ declare global {
         model: PetModelDefinition
         message: string
         packageDirectory?: string
+        packageDirectoryDisplay?: string
         manifestPath?: string
+        manifestPathDisplay?: string
         spritesheetPath?: string
+        spritesheetPathDisplay?: string
         reportPath?: string
+        reportPathDisplay?: string
         visualAuditPath?: string
+        visualAuditPathDisplay?: string
         archivePath?: string
+        archivePathDisplay?: string
       } | null>
       installCodexPetCreatorKitToCodex: (payload: {
         kitDirectory: string
@@ -436,7 +444,9 @@ declare global {
         ok: boolean
         id: string
         directoryPath: string
+        directoryPathDisplay?: string
         manifestPath: string
+        manifestPathDisplay?: string
         message: string
       }>
       openCodexPetCreatorKitPath: (payload: {
@@ -451,10 +461,15 @@ declare global {
         model: PetModelDefinition
         message: string
         packageDirectory?: string
+        packageDirectoryDisplay?: string
         manifestPath?: string
+        manifestPathDisplay?: string
         spritesheetPath?: string
+        spritesheetPathDisplay?: string
         visualAuditPath?: string
+        visualAuditPathDisplay?: string
         archivePath?: string
+        archivePathDisplay?: string
       } | null>
       showConfirmDialog: (message: string) => Promise<boolean>
       saveTextFile: (payload: TextFileSaveRequest) => Promise<TextFileSaveResponse>
@@ -636,6 +651,7 @@ declare global {
         dailyCount: number
         maxEntries: number
         storePath: string
+        logPath: string
       }>
       memoryKeywordSearch: (payload: {
         query: string

@@ -35,6 +35,8 @@ const ENGLISH_CUSTOM_KEYWORDS_FILE = 'keywords.nexus-en.txt'
 const CHINESE_CUSTOM_KEYWORDS_FILE = 'keywords.nexus-zh.txt'
 const CJK_CHAR_REGEX = /[\u3400-\u9fff]/
 const SPACE_REGEX = /\s+/g
+const WAKE_WORD_LIST_SEPARATOR_PATTERN = /[,，;；|\/\n\r]+/g
+const WAKE_WORD_ALIASES = ['星会', '星慧', '星惠', '星辉', '星晖', '星回']
 
 // Per-user writable root for generated keyword files. We can't write into a
 // bundled kwsDir on packaged mac (resourcesPath is read-only), so custom wake
@@ -47,6 +49,56 @@ function getKeywordOverlayDir(dirName) {
 
 function normalizeWakeWord(value) {
   return String(value ?? '').trim()
+}
+
+function splitWakeWordCandidates(value) {
+  return normalizeWakeWord(value)
+    .split(WAKE_WORD_LIST_SEPARATOR_PATTERN)
+    .map((candidate) => candidate.trim())
+    .filter(Boolean)
+}
+
+function getChineseWakeWordCandidates(wakeWord) {
+  const splitWakeWords = splitWakeWordCandidates(wakeWord)
+  if (!splitWakeWords.length) return []
+
+  const ordered = new Map()
+  for (const candidate of splitWakeWords) {
+    const label = candidate.trim()
+    if (!label) continue
+    if (!ordered.has(label)) {
+      ordered.set(label, label)
+    }
+  }
+
+  const primary = splitWakeWords[0]?.trim()
+  if (primary && primary.trim().replace(SPACE_REGEX, '') === '星绘') {
+    for (const alias of WAKE_WORD_ALIASES) {
+      if (!ordered.has(alias)) {
+        ordered.set(alias, alias)
+      }
+    }
+  }
+
+  return [...ordered.values()]
+}
+
+function getEnglishWakeWordCandidates(wakeWord) {
+  const splitWakeWords = splitWakeWordCandidates(wakeWord)
+  if (!splitWakeWords.length) return []
+
+  const ordered = new Map()
+  for (const candidate of splitWakeWords) {
+    const label = candidate.replace(SPACE_REGEX, ' ').trim()
+    if (!label) continue
+
+    const key = label.toUpperCase()
+    if (!ordered.has(key)) {
+      ordered.set(key, label)
+    }
+  }
+
+  return [...ordered.values()]
 }
 
 function containsCjkCharacters(value) {
@@ -121,17 +173,29 @@ function buildEnglishKeywordMap(kwsDir) {
 }
 
 function ensureEnglishKeywordsFileAllowlist(kwsDir, wakeWord) {
-  const normalized = normalizeWakeWord(wakeWord).replace(SPACE_REGEX, ' ').toUpperCase()
+  const wakeWords = getEnglishWakeWordCandidates(wakeWord)
   const keywords = buildEnglishKeywordMap(kwsDir)
-  const matched = keywords?.get(normalized)
-  if (!matched) return null
+  if (!keywords || !wakeWords.length) return null
+
+  const lines = []
+  for (const label of wakeWords) {
+    const normalized = label.replace(SPACE_REGEX, ' ').toUpperCase()
+    const matched = keywords.get(normalized)
+    if (!matched) return null
+    lines.push(`${matched.encoded} @${label}`)
+  }
 
   const targetFile = path.join(getKeywordOverlayDir(ENGLISH_KWS_DIRNAME), ENGLISH_CUSTOM_KEYWORDS_FILE)
-  fs.writeFileSync(targetFile, `${matched.encoded} @${normalizeWakeWord(wakeWord)}\n`, 'utf8')
+  const content = `${lines.join('\n')}\n`
+
+  if (content !== _lastEnglishRawKeywordFileContent) {
+    fs.writeFileSync(targetFile, content, 'utf8')
+    _lastEnglishRawKeywordFileContent = content
+  }
 
   return {
     keywordsFile: targetFile,
-    label: normalizeWakeWord(wakeWord),
+    label: wakeWords[0],
   }
 }
 
@@ -142,12 +206,19 @@ let _lastEnglishRawKeywordFileContent = ''
 // unlocks arbitrary custom English wake words (e.g. "HEY NEXUS") instead
 // of the fixed 9-keyword allowlist baked into keywords_raw.txt.
 function ensureEnglishRawKeywordsFile(_kwsDir, wakeWord) {
-  const label = normalizeWakeWord(wakeWord)
-  const normalized = label.replace(SPACE_REGEX, ' ').toUpperCase()
-  if (!normalized) return null
+  const wakeWords = getEnglishWakeWordCandidates(wakeWord)
+  if (!wakeWords.length) return null
+
+  const lines = wakeWords
+    .map((label) => {
+      const normalized = label.replace(SPACE_REGEX, ' ').toUpperCase()
+      return normalized ? `${normalized} @${label}` : ''
+    })
+    .filter(Boolean)
+  if (!lines.length) return null
 
   const targetFile = path.join(getKeywordOverlayDir(ENGLISH_KWS_DIRNAME), ENGLISH_CUSTOM_KEYWORDS_FILE)
-  const content = `${normalized} @${label}\n`
+  const content = `${lines.join('\n')}\n`
 
   if (content !== _lastEnglishRawKeywordFileContent) {
     fs.writeFileSync(targetFile, content, 'utf8')
@@ -156,7 +227,7 @@ function ensureEnglishRawKeywordsFile(_kwsDir, wakeWord) {
 
   return {
     keywordsFile: targetFile,
-    label,
+    label: wakeWords[0],
   }
 }
 
@@ -255,14 +326,28 @@ function buildChineseKeywordTokenString(wakeWord, tokensFile) {
 
 let _lastKeywordFileContent = ''
 
-function ensureChineseKeywordsFile(kwsDir, wakeWord) {
-  const label = normalizeWakeWord(wakeWord)
+function buildChineseKeywordLines(kwsDir, wakeWord) {
+  const wakeWords = getChineseWakeWordCandidates(wakeWord)
+  if (!wakeWords.length) return null
+
   const tokensFile = path.join(kwsDir, 'tokens.txt')
-  const tokenString = buildChineseKeywordTokenString(label, tokensFile)
-  if (!tokenString) return null
+  const lines = []
+
+  for (const label of wakeWords) {
+    const tokenString = buildChineseKeywordTokenString(label, tokensFile)
+    if (!tokenString) return null
+    lines.push(`${tokenString} @${label}`)
+  }
+
+  return lines.join('\n')
+}
+
+function ensureChineseKeywordsFile(kwsDir, wakeWord) {
+  const lines = buildChineseKeywordLines(kwsDir, wakeWord)
+  if (!lines) return null
 
   const targetFile = path.join(getKeywordOverlayDir(CHINESE_KWS_DIRNAME), CHINESE_CUSTOM_KEYWORDS_FILE)
-  const content = `${tokenString} @${label}\n`
+  const content = `${lines}\n`
 
   if (content !== _lastKeywordFileContent) {
     fs.writeFileSync(targetFile, content, 'utf8')
@@ -271,7 +356,7 @@ function ensureChineseKeywordsFile(kwsDir, wakeWord) {
 
   return {
     keywordsFile: targetFile,
-    label,
+    label: getChineseWakeWordCandidates(wakeWord)[0],
   }
 }
 
@@ -285,7 +370,20 @@ function resolveKwsRuntime(options = {}) {
     }
   }
 
-  if (containsCjkCharacters(wakeWord)) {
+  const wakeWords = splitWakeWordCandidates(wakeWord)
+  const wakeWordSignature = wakeWords.join('|')
+  const hasChineseWakeWord = wakeWords.some((candidate) => containsCjkCharacters(candidate))
+  const hasNonChineseWakeWord = wakeWords.some((candidate) => !containsCjkCharacters(candidate))
+
+  if (hasChineseWakeWord && hasNonChineseWakeWord) {
+    return {
+      config: null,
+      reason: '唤醒词不能同时包含中英文，请保持同一语言。',
+      modelKind: null,
+    }
+  }
+
+  if (hasChineseWakeWord) {
     const kwsDir = findModelDir(CHINESE_KWS_DIRNAME)
     const modelFiles = kwsDir ? resolveModelFiles(kwsDir) : null
     if (!modelFiles) {
@@ -309,7 +407,7 @@ function resolveKwsRuntime(options = {}) {
       config: {
         ...modelFiles,
         keywordsFile: keywordConfig.keywordsFile,
-        cacheKey: `zh:${extractChineseCharacters(wakeWord)}`,
+        cacheKey: `zh:${wakeWordSignature}`,
         modelKind: 'zh',
         wakeWord: keywordConfig.label,
       },
@@ -353,7 +451,7 @@ function resolveKwsRuntime(options = {}) {
       keywordsFile: keywordConfig.keywordsFile,
       bpeVocab: useRuntimeBpe ? bpeVocab : '',
       modelingUnit: useRuntimeBpe ? 'bpe' : '',
-      cacheKey: `en${useRuntimeBpe ? '-bpe' : ''}:${wakeWord.replace(SPACE_REGEX, ' ').toUpperCase()}`,
+      cacheKey: `en${useRuntimeBpe ? '-bpe' : ''}:${wakeWordSignature}`,
       modelKind: 'en',
       wakeWord: keywordConfig.label,
     },

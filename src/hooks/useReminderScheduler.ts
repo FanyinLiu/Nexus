@@ -4,6 +4,7 @@ import {
   refreshReminderTask,
   sortReminderTasks,
 } from '../features/reminders'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { DebugConsoleEventDraft, ReminderTask } from '../types'
 
 type UseReminderSchedulerOptions = {
@@ -164,7 +165,7 @@ export function useReminderScheduler({
           // a rejected promise doesn't surface as an unhandled rejection
           // and doesn't take down the rest of the tick loop.
           Promise.resolve(onTriggerRef.current(task)).catch((err) => {
-            console.warn('[reminder] onTrigger failed:', err)
+            console.warn('[reminder] onTrigger failed:', getRedactedLogErrorMessage(err))
           })
         }
       }

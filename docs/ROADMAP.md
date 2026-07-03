@@ -23,8 +23,16 @@ The larger product steps are:
   "about half an hour", "about an hour", or "two hours or more" for low-frequency
   companionship. See
   [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md).
-  The v0.4 line is split into quiet observation, coarse time language,
-  check-in policy, transparency UI, beta copy tuning, and release hardening.
+  The v0.4 line is split into quiet observation, companion UI/reliability
+  hardening, check-in policy, transparency UI, beta copy tuning, and release
+  hardening. `v0.4.0` is the stable quiet-observation foundation; `v0.4.1` is
+  the stable companion UI, Settings, and reliability hardening follow-up;
+  `v0.4.2`, `v0.4.3`, and `v0.4.4` are draft stacked prerequisites; `v0.4.5`
+  is the active stacked release-hardening draft. It keeps package version, tag,
+  GitHub Release, and README stable-entry state unchanged for future draft
+  slices: no package version bump past the active stable, no future-draft tag,
+  no future-draft GitHub Release, and no README stable-entry switch past
+  `v0.4.1`.
 - **v0.5.0 — desktop pet behavior.** The visible companion can react to mouse
   movement, typing rhythm, idleness, and desktop state without blocking the
   user's work.
@@ -144,6 +152,10 @@ Goal: installers and updates are predictable across macOS, Windows, and Linux.
   WebSocket authentication behind a main-process bridge, increasing IPC schema
   coverage, splitting IPC payload schemas behind a stable public export, and
   adding `npm run performance:baseline` to the PR gate.
+- Keep a release-facing package/startup optimization inventory so ONNX,
+  Live2D/Pixi, Transformers, Tesseract, Sherpa models, optional voice models,
+  and runtime-download candidates stay visible before changing installer
+  strategy. See [Package Startup Optimization](PACKAGE_STARTUP_OPTIMIZATION.md).
 - Add `npm run message-privacy:audit` to the same PR/release guard so desktop
   notification/message bodies cannot regress into model forwarding, persisted
   chat history, missed-message follow-up hints, reply draft composer text, or

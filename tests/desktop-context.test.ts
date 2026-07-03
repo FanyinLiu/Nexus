@@ -18,6 +18,15 @@ import {
   sanitizeDesktopContextSnapshot as sanitizeDesktopContextSnapshotForIpc,
 } from '../electron/services/desktopContextPrivacy.js'
 import { buildDesktopContextPrivacyReport } from '../scripts/desktop-context-privacy-audit.mjs'
+import { ensureLocaleLoaded } from '../src/i18n/runtime.ts'
+import { buildQuietObservationSummary, formatQuietObservationForPrompt } from '../src/features/context/companionAwareness.ts'
+
+await Promise.all([
+  ensureLocaleLoaded('en-US'),
+  ensureLocaleLoaded('zh-TW'),
+  ensureLocaleLoaded('ja'),
+  ensureLocaleLoaded('ko'),
+])
 
 test('buildDesktopContextRequest keeps screenshots opt-in by default', () => {
   assert.deepEqual(buildDesktopContextRequest(), {
@@ -62,7 +71,7 @@ test('desktop context prompt formatting redacts obvious secrets', () => {
     activeWindowAppName: 'Terminal',
     companionAwarenessSummary: `Quiet companion awareness:\n- token: ${secretKey}`,
     clipboardText: `password=hunter2-secret\n${secretKey}`,
-    screenText: `token: ${secretKey}`,
+    screenText: `{"apiKey":"desktop-context-secret"}`,
     vlmAnalysis: 'A code editor is open next to -----BEGIN PRIVATE KEY-----',
     screenshotDataUrl: 'data:image/png;base64,abc',
   })
@@ -70,6 +79,7 @@ test('desktop context prompt formatting redacts obvious secrets', () => {
   assert.match(prompt, new RegExp(DESKTOP_CONTEXT_REDACTION, 'g'))
   assert.doesNotMatch(prompt, new RegExp(secretKey))
   assert.doesNotMatch(prompt, /hunter2-secret/)
+  assert.doesNotMatch(prompt, /desktop-context-secret/)
   assert.doesNotMatch(prompt, /BEGIN PRIVATE KEY/)
   assert.doesNotMatch(prompt, /data:image\/png;base64/)
 })
@@ -83,6 +93,7 @@ test('desktop context IPC sanitizer redacts obvious secrets before renderer retu
     activeWindowProcessPath: '/Applications/Terminal.app',
     companionAwarenessSummary: `token: ${secretKey}`,
     clipboardText: `Bearer ${secretKey}`,
+    screenText: `{"apiKey":"desktop-ipc-secret"}`,
     screenshotDataUrl: 'data:image/png;base64,abc',
     displayName: 'Built-in Retina Display',
   })
@@ -91,10 +102,12 @@ test('desktop context IPC sanitizer redacts obvious secrets before renderer retu
   assert.equal(sanitized.activeWindowTitle, DESKTOP_CONTEXT_REDACTION)
   assert.equal(sanitized.companionAwarenessSummary, DESKTOP_CONTEXT_REDACTION)
   assert.equal(sanitized.clipboardText, DESKTOP_CONTEXT_REDACTION)
+  assert.equal(sanitized.screenText, DESKTOP_CONTEXT_REDACTION)
   assert.equal(sanitized.activeWindowAppName, 'Terminal')
   assert.equal(sanitized.activeWindowProcessPath, '/Applications/Terminal.app')
   assert.equal(sanitized.screenshotDataUrl, 'data:image/png;base64,abc')
   assert.doesNotMatch(serialized, new RegExp(secretKey))
+  assert.doesNotMatch(serialized, /desktop-ipc-secret/)
 })
 
 test('desktop context sanitizer preserves ordinary companion context', () => {
@@ -143,24 +156,141 @@ test('formatDesktopContext tells the companion to stay perceptive without announ
 })
 
 test('formatDesktopContext includes sanitized companion continuity without raw titles', () => {
+  const summary = buildQuietObservationSummary({
+    enabled: true,
+    nexusOpenSince: '2026-06-04T16:00:00.000Z',
+    lastNexusInteractionAt: '2026-06-04T16:00:00.000Z',
+    now: '2026-06-04T17:00:00.000Z',
+    activeWindowTitle: 'main.ts - Visual Studio Code',
+    uiLanguage: 'zh-CN',
+  })!
+
   const prompt = formatDesktopContext({
     capturedAt: '2026-06-04T17:00:00.000Z',
-    companionAwarenessSummary: [
-      'Quiet companion awareness:',
-      '- Nexus is open, and the user has not interacted with Nexus for 半小时左右.',
-      '- Recent desktop activity looks like coding.',
-      '- Treat this only as companionship continuity. Stay quiet unless the user asks or the context is genuinely helpful.',
-      '- Do not mention monitoring, window titles, or exact timers.',
-    ].join('\n'),
-  })
+    companionAwarenessSummary: formatQuietObservationForPrompt(summary, 'zh-CN'),
+  }, 'zh-CN')
 
-  assert.match(prompt, /Companion continuity summary/)
-  assert.match(prompt, /半小时左右/)
-  assert.match(prompt, /coding/)
-  assert.match(prompt, /Stay quiet/)
+  assert.match(prompt, /陪伴连续性摘要/)
+  assert.match(prompt, /一小时左右/)
+  assert.match(prompt, /编码/)
+  assert.match(prompt, /自然回应/)
   assert.doesNotMatch(prompt, /Window title:/)
   assert.doesNotMatch(prompt, /\b\d+\b/)
   assert.doesNotMatch(prompt, /minutes?|seconds?/i)
+})
+
+test('formatDesktopContext uses current locale for heading and labels', () => {
+  const prompt = formatDesktopContext({
+    capturedAt: '2026-06-04T17:00:00.000Z',
+    activeWindowTitle: 'notes.app - Project Plan',
+    activeWindowAppName: 'Notes',
+    clipboardText: 'pick up tea after lunch',
+    screenText: 'todo list',
+    companionAwarenessSummary: formatQuietObservationForPrompt(
+      buildQuietObservationSummary({
+        enabled: true,
+        nexusOpenSince: '2026-06-04T16:00:00.000Z',
+        lastNexusInteractionAt: '2026-06-04T16:00:00.000Z',
+        now: '2026-06-04T17:00:00.000Z',
+        activeWindowTitle: 'main.ts - Visual Studio Code',
+        uiLanguage: 'zh-CN',
+      })!,
+      'zh-CN',
+    ),
+    vlmAnalysis: 'The notes app is open',
+  }, 'zh-CN')
+
+  assert.match(prompt, /陪伴连续性摘要/)
+  assert.match(prompt, /当前前景窗口:/)
+  assert.match(prompt, /窗口标题:/)
+  assert.match(prompt, /应用名称:/)
+  assert.match(prompt, /剪贴板内容:/)
+  assert.match(prompt, /可见屏幕文本:/)
+  assert.match(prompt, /不要宣称你看到了它的界面/)
+  assert.match(prompt, /只在自然契合时轻微调整语气与内容/)
+  assert.doesNotMatch(prompt, /\b\d+\b/)
+  assert.doesNotMatch(prompt, /minutes?|seconds?/i)
+})
+
+test('formatDesktopContext localizes heading, labels, and header across locales', () => {
+  const checks = [
+    {
+      locale: 'zh-CN' as const,
+      expectHeader: '这是补充桌面上下文',
+      expectWindow: '当前前景窗口',
+      expectClipboard: '剪贴板内容',
+    },
+    {
+      locale: 'zh-TW' as const,
+      expectHeader: '這是補充桌面上下文',
+      expectWindow: '當前前景視窗',
+      expectClipboard: '剪貼簿文字',
+    },
+    {
+      locale: 'ja' as const,
+      expectHeader: '以下は補足的なデスクトップコンテキストです',
+      expectWindow: '現在の前景ウィンドウ',
+      expectClipboard: 'クリップボード文字列',
+    },
+    {
+      locale: 'ko' as const,
+      expectHeader: '아래는 보조 데스크톱 컨텍스트입니다',
+      expectWindow: '현재 전경 창',
+      expectClipboard: '클립보드 텍스트',
+    },
+    {
+      locale: 'en-US' as const,
+      expectHeader: 'Below is supplementary desktop context',
+      expectWindow: 'Current foreground window',
+      expectClipboard: 'Clipboard text',
+    },
+  ]
+
+  for (const check of checks) {
+    const prompt = formatDesktopContext({
+      capturedAt: '2026-06-04T17:00:00.000Z',
+      activeWindowTitle: 'notes.app - Project Plan',
+      activeWindowAppName: 'Notes',
+      clipboardText: 'pick up tea after lunch',
+      screenText: 'todo list',
+      vlmAnalysis: 'The notes app is open',
+    }, check.locale)
+
+    assert.match(prompt, new RegExp(check.expectHeader))
+    assert.match(prompt, new RegExp(check.expectWindow))
+    assert.match(prompt, new RegExp(check.expectClipboard))
+  }
+})
+
+test('formatDesktopContext falls back to default locale when locale is unknown', () => {
+  const prompt = formatDesktopContext({
+    capturedAt: '2026-06-04T17:00:00.000Z',
+    activeWindowTitle: 'notes.app - Project Plan',
+    activeWindowAppName: 'Notes',
+    clipboardText: 'pick up tea after lunch',
+    screenText: 'todo list',
+  }, 'eo' as never)
+
+  assert.match(prompt, /当前前景窗口/)
+  assert.match(prompt, /窗口标题/)
+  assert.match(prompt, /应用名称/)
+  assert.match(prompt, /剪贴板内容/)
+  assert.doesNotMatch(prompt, /Companion continuity summary|Current foreground window/)
+})
+
+test('formatDesktopContext keeps English labels for explicit en-US locale', () => {
+  const prompt = formatDesktopContext({
+    capturedAt: '2026-06-04T17:00:00.000Z',
+    activeWindowTitle: 'notes.app - Project Plan',
+    activeWindowAppName: 'Notes',
+    clipboardText: 'pick up tea after lunch',
+    screenText: 'todo list',
+  }, 'en-US')
+
+  assert.match(prompt, /Below is supplementary desktop context/)
+  assert.match(prompt, /Current foreground window/)
+  assert.match(prompt, /Clipboard text/)
+  assert.doesNotMatch(prompt, /当前前景窗口|這是|は|동반|陪伴/)
 })
 
 test('formatDesktopContext returns empty text when every observation is blank', () => {
@@ -248,4 +378,5 @@ test('desktop context privacy audit covers support log redaction', () => {
 
   assert.equal(report.summary.errors, 0)
   assert.ok(report.checkedFiles.includes('electron/services/desktopContextService.js'))
+  assert.ok(report.checkedFiles.includes('src/hooks/useDesktopContext.ts'))
 })

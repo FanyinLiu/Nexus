@@ -40,6 +40,7 @@ import {
   readJson,
   writeJson,
 } from '../lib/storage'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type {
   AppSettings,
   DailyMemoryStore,
@@ -349,7 +350,7 @@ export function useMemoryDream({
         appendDebugConsoleEvent({
           source: 'autonomy',
           title: 'Callback selection failed',
-          detail: callbackError instanceof Error ? callbackError.message : String(callbackError),
+          detail: getRedactedLogErrorMessage(callbackError),
         })
       }
 
@@ -372,7 +373,7 @@ export function useMemoryDream({
       appendDebugConsoleEvent({
         source: 'autonomy',
         title: 'Memory consolidation failed',
-        detail: error instanceof Error ? error.message : String(error),
+        detail: getRedactedLogErrorMessage(error),
       })
     } finally {
       dreamRunningRef.current = false

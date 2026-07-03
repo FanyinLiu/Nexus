@@ -6,6 +6,46 @@
 
 ## [Unreleased]
 
+No changes yet.
+
+## [0.4.1] - 2026-07-03
+
+### Changed
+
+- **Companion UI and Settings hardening** — organized the panel, Settings, and
+  Image4 companion-field source structure with source-backed review docs and
+  surface audits for chat, Settings, composer, forms, focus, streaming, and
+  agent-activity paths.
+- **Settings drawer performance guard** — split the Settings drawer lazy CSS,
+  tiny lazy JS entry, and initial CSS budgets so future changes cannot silently
+  move Settings styles back onto the startup path or inflate the open-settings
+  hot path.
+- **Companion time language boundary** — moved companion elapsed-time labels,
+  precision-leak detection, and safe fallback formatting into a dedicated
+  context time-language layer while keeping the v0.4.0 observation thresholds
+  and trigger logic unchanged.
+- **Companion wake-word synchronization** — added a feature-layer sync boundary
+  so custom companion names can drive future wake-word behavior without
+  importing app-level code into hearing modules.
+- **Runtime privacy and release gates** — expanded desktop context, message,
+  vault, runtime-log, memory-vector, and network-error redaction audits, then
+  wired the new UI, privacy, performance, and release checks into `verify:pr`.
+- **v0.4.5 release hardening draft** — added a source-only draft-stack audit
+  and release-hardening handoff that keeps package version, tag, GitHub
+  Release, and README stable-entry state unchanged for future draft slices while
+  preparing review evidence for the stacked v0.4.x drafts.
+
+### Fixed
+
+- **Localized exact-time leak detection** — desktop companion awareness now
+  rejects or downgrades Arabic-digit Chinese, Japanese, and Korean precise
+  duration strings such as `1小时30分钟`, `1時間30分`, and `2시간 10분` before they
+  can reach prompt, UI, or recent-summary display surfaces.
+- **Raw desktop content transparency guard** — companion awareness
+  transparency now keeps raw window titles, clipboard bodies, message bodies,
+  file paths, screenshots, and precise minute/second time labels out of the
+  Settings view model.
+
 ## [0.4.0] - 2026-06-21
 
 ### Added

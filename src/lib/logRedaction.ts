@@ -9,7 +9,8 @@ export function redactSensitiveLogText(value: unknown): string {
     .replace(/AIza[0-9A-Za-z_-]{30,}/g, 'AIza***')
     .replace(/\bxai-[A-Za-z0-9_-]{16,}/g, 'xai-***')
     .replace(/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}/g, 'jwt***')
-    .replace(/([A-Za-z0-9_-]*(?:key|token|secret))=[^&\s'"]+/gi, '$1=***')
+    .replace(/\b(?:settings|profile)(?::[A-Za-z0-9_-]+)*:[A-Za-z0-9_-]*(?:key|token|secret|password|passwd|pwd)[A-Za-z0-9_-]*\b/gi, '[vault-slot]')
+    .replace(/(["']?)([A-Za-z0-9_-]*(?:key|token|secret|password|passwd|pwd))\1(\s*[:=]\s*)(["']?)[^&\s'",}]+(\4)/gi, '$1$2$1$3$4***$4')
 }
 
 export function getRedactedLogErrorMessage(error: unknown): string {

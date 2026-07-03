@@ -1,6 +1,7 @@
 import { memo, useEffect, useState } from 'react'
 import { loadLetters, type SavedLetter } from '../../features/letter/letterStore'
 import { saveTextFileWithFallback } from '../../lib/textFiles'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { UiLanguage } from '../../types'
 
@@ -25,7 +26,7 @@ async function exportLetterToFile(letter: SavedLetter): Promise<void> {
     // Wraps both chunk-load failure (offline / cache poisoning) and the
     // save-dialog rejection. Either way, button click should not become
     // an unhandled promise.
-    console.warn('[letter-export] failed:', err)
+    console.warn('[letter-export] failed:', getRedactedLogErrorMessage(err))
   }
 }
 

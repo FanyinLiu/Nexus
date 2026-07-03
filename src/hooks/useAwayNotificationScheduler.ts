@@ -5,6 +5,7 @@ import {
   loadAwayLastFiredMs,
   saveAwayLastFiredMs,
 } from '../lib/storage'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings, ChatMessage } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60_000 // every 5 minutes — coarse enough that startup cost is nil
@@ -80,7 +81,7 @@ export function useAwayNotificationScheduler({
         })
         saveAwayLastFiredMs(Date.now())
       } catch (err) {
-        console.warn('[awayNotification] fire failed:', err)
+        console.warn('[awayNotification] fire failed:', getRedactedLogErrorMessage(err))
       }
     }
 

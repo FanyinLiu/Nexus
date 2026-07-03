@@ -18,10 +18,26 @@ export type ConfirmFn = (options: ConfirmOptions) => Promise<boolean>
 export function useConfirm() {
   const [confirmOptions, setConfirmOptions] = useState<ConfirmOptions | null>(null)
   const resolverRef = useRef<((value: boolean) => void) | null>(null)
+  const confirmOpenerRef = useRef<HTMLElement | null>(null)
+
+  const restoreConfirmOpenerFocus = useCallback(() => {
+    const opener = confirmOpenerRef.current
+    confirmOpenerRef.current = null
+
+    if (!opener?.isConnected) return
+
+    window.requestAnimationFrame(() => {
+      opener.focus()
+    })
+  }, [])
 
   const confirm = useCallback<ConfirmFn>(
     (options) =>
       new Promise<boolean>((resolve) => {
+        const activeElement = document.activeElement
+        confirmOpenerRef.current = activeElement instanceof HTMLElement
+          ? activeElement
+          : null
         resolverRef.current = resolve
         setConfirmOptions(options)
       }),
@@ -32,7 +48,8 @@ export function useConfirm() {
     resolverRef.current?.(value)
     resolverRef.current = null
     setConfirmOptions(null)
-  }, [])
+    restoreConfirmOpenerFocus()
+  }, [restoreConfirmOpenerFocus])
 
   return {
     confirm,

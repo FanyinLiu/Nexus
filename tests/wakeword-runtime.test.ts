@@ -100,6 +100,36 @@ test('runtime gives up into unavailable phase when startListener fails repeatedl
   runtime.destroy()
 })
 
+test('runtime uses full wake-word list when starting listener', async () => {
+  let startedWith = ''
+  const runtime = createWakewordRuntime({
+    checkAvailability: async () => ({
+      installed: true,
+      modelFound: true,
+      modelKind: 'zh',
+      modelsDir: '',
+      reason: '',
+    }),
+    startListener: async (callbacks, options) => {
+      startedWith = options?.wakeWord ?? ''
+      return {
+        stop: () => undefined,
+        subscribeFrames: () => () => undefined,
+      }
+    },
+  })
+
+  await runtime.update({
+    enabled: true,
+    wakeWord: '小白, 小助手',
+    suspended: false,
+  })
+
+  assert.equal(startedWith, '小白, 小助手')
+  assert.equal(runtime.getState().wakeWord, '小白')
+  runtime.destroy()
+})
+
 test('runtime short-circuits to unavailable when retryMaxAttempts is exhausted', async () => {
   // retryMaxAttempts=0 means "state.retryCount (0) >= cap (0)" on the very
   // first failure, which exercises the give-up branch without us having to

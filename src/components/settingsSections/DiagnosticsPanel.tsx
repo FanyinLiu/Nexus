@@ -1,5 +1,6 @@
 import { memo, useCallback, useState } from 'react'
 import { clearLogs, exportLogs, getLogEntries } from '../../lib/logger'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { UiLanguage } from '../../types'
 
@@ -61,7 +62,7 @@ export const DiagnosticsPanel = memo(function DiagnosticsPanel({ uiLanguage }: D
       showFeedback(ti('settings.console.diagnostics.copied', { count: getLogEntries().length }))
     } catch (err) {
       showFeedback(ti('settings.console.diagnostics.copy_failed', {
-        message: err instanceof Error ? err.message : String(err),
+        message: getRedactedLogErrorMessage(err),
       }))
     }
   }, [showFeedback, ti])

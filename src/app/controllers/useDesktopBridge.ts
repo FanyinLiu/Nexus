@@ -13,6 +13,7 @@ import {
   buildStartupGreetingText,
   makeTranslator,
 } from '../appSupport'
+import { getDirectSendFallbackWakeWord } from '../../features/hearing/companionWakeWordSync.ts'
 import {
   DEFAULT_PET_MODEL_ID,
   getPetModelPreset,
@@ -292,7 +293,7 @@ export function useDesktopBridge({
         if (
           current.voiceTriggerMode === 'direct_send'
           && !current.wakeWordEnabled
-          && current.wakeWord === '星绘'
+          && getDirectSendFallbackWakeWord(current) === current.wakeWord
         ) {
           return current
         }
@@ -301,7 +302,7 @@ export function useDesktopBridge({
           ...current,
           voiceTriggerMode: 'direct_send',
           wakeWordEnabled: false,
-          wakeWord: '星绘',
+          wakeWord: getDirectSendFallbackWakeWord(current),
         }
       }, setSettings)
     }, 0)

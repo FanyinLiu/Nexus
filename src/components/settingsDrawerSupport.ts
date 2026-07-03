@@ -282,6 +282,7 @@ export type ConnectionResult = {
   message: string
   recommendation?: string
   status?: import('../types/model').ProviderHealthStatus
+  code?: import('../types/model').ModelConnectionErrorCode
   repair?: ConnectionPreflightRepair
   discoveredModels?: DiscoveredModel[]
   checkedAt?: string

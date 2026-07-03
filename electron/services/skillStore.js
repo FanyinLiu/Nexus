@@ -12,6 +12,7 @@ import { tokenize, Bm25Index } from './bm25Search.js'
 const SKILLS_DIR = 'skills'
 const INDEX_FILE = 'skills-index.json'
 const MAX_SKILLS = 200
+const USER_DATA_DISPLAY_ROOT = 'app-user-data'
 
 /**
  * @typedef {{
@@ -55,6 +56,10 @@ async function atomicWriteFile(destPath, data) {
 
 function getSkillsDir() {
   return path.join(app.getPath('userData'), SKILLS_DIR)
+}
+
+function getSkillsDisplayDir() {
+  return `${USER_DATA_DISPLAY_ROOT}/${SKILLS_DIR}`
 }
 
 function getIndexPath() {
@@ -220,6 +225,6 @@ export async function getStats() {
   return {
     totalSkills: _entries.length,
     maxSkills: MAX_SKILLS,
-    skillsDir: getSkillsDir(),
+    skillsDir: getSkillsDisplayDir(),
   }
 }

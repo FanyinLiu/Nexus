@@ -34,7 +34,7 @@ export function register() {
 
   ipcMain.handle('persona:open-dir', async (event) => {
     requireTrustedSender(event)
-    const paths = personaLoader.getPersonaPaths()
+    const paths = personaLoader.getPersonaAbsolutePaths()
     await personaLoader.ensurePersonaDir('')
     shell.openPath(paths.personaDir)
     return { ok: true }
@@ -61,7 +61,7 @@ export function register() {
     if (!profileId) {
       throw new Error('persona:profile-dir 需要非空的 profileId。')
     }
-    return { dir: personaLoader.getPersonaProfileDir(profileId) }
+    return { dir: personaLoader.getPersonaProfileDisplayDir(profileId) }
   })
 
   ipcMain.handle('persona:import-card', async (event) => {

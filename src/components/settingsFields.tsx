@@ -6,6 +6,7 @@
 // component (drawer pattern) and write back via the standard
 // `setDraft(prev => ({...prev, [field]: nextValue}))` shape.
 
+import { useId } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { parseNumberInput } from './settingsDrawerSupport'
 import { displaySecretInputValue } from '../lib/keyVaultBridge'
@@ -80,24 +81,74 @@ type TextFieldProps = FieldShared & {
   field: StringFieldKey
   placeholder?: string
   type?: 'text' | 'password' | 'email' | 'url'
+  id?: string
+  description?: string
+  validation?: string
+  status?: string
+  autoComplete?: string
+  updateDraft?: (prev: AppSettings, value: string) => AppSettings
 }
 
-export function TextField({ label, field, placeholder, type = 'text', draft, setDraft }: TextFieldProps) {
+function getSettingsFieldId(field: string, id: string) {
+  return `settings-field-${field.replace(/[^a-z0-9_-]/gi, '-').toLowerCase()}-${id.replace(/:/g, '')}`
+}
+
+export function TextField({
+  label,
+  field,
+  placeholder,
+  type = 'text',
+  id,
+  description,
+  validation,
+  status,
+  autoComplete,
+  updateDraft,
+  draft,
+  setDraft,
+}: TextFieldProps) {
+  const reactId = useId()
+  const inputId = id ?? getSettingsFieldId(String(field), reactId)
+  const descriptionId = description ? `${inputId}-description` : undefined
+  const validationId = validation ? `${inputId}-validation` : undefined
+  const describedBy = [descriptionId, validationId].filter(Boolean).join(' ') || undefined
   const rawValue = draft[field] as string
   const inputValue = type === 'password'
     ? displaySecretInputValue(rawValue)
     : rawValue
 
   return (
-    <label>
-      <span>{label}</span>
+    <div className="settings-form-row">
+      <label className="settings-form-row__label" htmlFor={inputId}>
+        {label}
+      </label>
+      {description ? (
+        <p className="settings-form-row__description" id={descriptionId}>
+          {description}
+        </p>
+      ) : null}
       <input
+        id={inputId}
         type={type}
         value={inputValue}
         placeholder={placeholder}
-        onChange={(e) => setDraft((prev) => ({ ...prev, [field]: e.target.value }))}
+        autoComplete={autoComplete}
+        aria-describedby={describedBy}
+        aria-invalid={validation ? true : undefined}
+        onChange={(e) => setDraft((prev) => (
+          updateDraft ? updateDraft(prev, e.target.value) : { ...prev, [field]: e.target.value }
+        ))}
       />
-    </label>
+      {validation ? (
+        <p className="settings-form-row__validation" id={validationId}>
+          {validation}
+        </p>
+      ) : null}
+      {status ? (
+        <p className="settings-form-row__status">
+          {status}
+        </p>
+      ) : null}
+    </div>
   )
 }
-

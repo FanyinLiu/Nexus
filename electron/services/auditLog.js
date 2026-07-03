@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { app } from 'electron'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 
 const MAX_LOG_SIZE = 2 * 1024 * 1024 // 2 MB
 const MAX_ROTATED_FILES = 3
@@ -25,7 +26,7 @@ function ensureStream() {
   if (logStream) return logStream
   logStream = fs.createWriteStream(getLogPath(), { flags: 'a' })
   logStream.on('error', (err) => {
-    console.error('[AuditLog] write error:', err.message)
+    console.error('[AuditLog] write error:', getRedactedErrorMessage(err))
     logStream = null
   })
   return logStream

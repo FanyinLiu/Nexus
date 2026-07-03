@@ -1,9 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import { decodePcm16LeBufferToFloat32, enhanceSpeechSamples } from './audioPostprocess.js'
+import { getRedactedErrorMessage } from './services/errorRedaction.js'
 
 const STREAM_CHUNK_SIZE = 4096
 const INITIAL_STREAM_CHUNK_SIZE = 1024
 const DEFAULT_PCM_SAMPLE_RATE = 24000
+
+function formatStreamTextLogMeta(text) {
+  return `chars=${String(text ?? '').length}`
+}
 
 function chunkSamples(samples, chunkSize = STREAM_CHUNK_SIZE) {
   const chunks = []
@@ -270,8 +275,8 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
           // renderer controller fails fast and upstream can fall back to
           // direct-speech instead of silently 'finishing without playback'.
           console.warn(
-            '[TTS-Stream] remote pcmStream ended without emitting any data for text:',
-            text?.slice(0, 80),
+            '[TTS-Stream] remote pcmStream ended without emitting any data:',
+            formatStreamTextLogMeta(text),
           )
           emit(session.sender, {
             type: 'error',
@@ -283,11 +288,12 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
       })
 
       stream.on('error', (err) => {
-        console.error('[TTS-Stream] PCM stream error:', err?.message)
+        const message = getRedactedErrorMessage(err) || '流式音频传输中断。'
+        console.error('[TTS-Stream] PCM stream error:', message)
         emit(session.sender, {
           type: 'error',
           requestId: session.requestId,
-          message: err instanceof Error ? err.message : '流式音频传输中断。',
+          message,
         })
         resolve()
       })

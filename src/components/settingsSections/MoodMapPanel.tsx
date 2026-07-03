@@ -21,6 +21,7 @@ import {
 import { loadLetters } from '../../features/letter/letterStore.ts'
 import { loadUserAffectHistory } from '../../features/autonomy/userAffectTimeline.ts'
 import { saveTextFileWithFallback } from '../../lib/textFiles.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import type { UiLanguage } from '../../types/index.ts'
 
 /**
@@ -60,7 +61,7 @@ async function exportYearbook(uiLanguage: UiLanguage): Promise<void> {
     // Wraps both chunk-load failure (offline / cache poisoning) and the
     // save-dialog rejection. Either way, button click should not become
     // an unhandled promise.
-    console.warn('[yearbook] failed:', err)
+    console.warn('[yearbook] failed:', getRedactedLogErrorMessage(err))
   }
 }
 

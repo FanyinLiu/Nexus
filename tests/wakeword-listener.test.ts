@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { startWakewordListener } from '../src/features/hearing/wakewordListener.ts'
+import { startWakewordListener, checkWakewordAvailability } from '../src/features/hearing/wakewordListener.ts'
 
 function nextTick() {
   return new Promise((resolve) => setTimeout(resolve, 0))
@@ -173,6 +173,66 @@ test('startWakewordListener feeds frames, notifies subscribers, and tears down c
     assert.equal(stream.track.stopped, true)
     assert.equal(kwsStopCount, 1)
     assert.equal(audio.isClosed(), true)
+  } finally {
+    restoreWindow()
+  }
+})
+
+test('startWakewordListener passes a full wake-word list through to the engine', async () => {
+  const restoreWindow = installDesktopPet({
+    kwsStart: async (payload: { wakeWord: string }) => {
+      assert.equal(payload.wakeWord, '小白, 小助手')
+    },
+    kwsFeed: async () => ({ keyword: '小白' }),
+    kwsStop: async () => undefined,
+  })
+
+  try {
+    await startWakewordListener({
+      onKeywordDetected: () => undefined,
+    }, {
+      wakeWord: '小白, 小助手',
+      requestInputStream: async () => ({
+        stream: createStream(),
+        profileId: 'raw',
+        trackSettings: null,
+      }),
+      AudioContextCtor: createAudioContextHarness().AudioContextCtor,
+    })
+  } finally {
+    restoreWindow()
+  }
+})
+
+test('checkWakewordAvailability forwards the full configured wake-word list', async () => {
+  let statusPayload: { wakeWord?: string } | null = null
+  const restoreWindow = installDesktopPet({
+    kwsStatus: async (payload: { wakeWord: string }) => {
+      statusPayload = payload
+      return {
+        installed: true,
+        modelFound: true,
+        active: true,
+        modelKind: null,
+        reason: '',
+      }
+    },
+    kwsStart: async () => undefined,
+    kwsFeed: async () => ({}),
+    kwsStop: async () => undefined,
+  })
+
+  try {
+    const status = await checkWakewordAvailability({
+      wakeWord: '小白, 小助手',
+    })
+
+    assert.deepEqual(statusPayload, {
+      wakeWord: '小白, 小助手',
+    })
+    assert.equal(status.installed, true)
+    assert.equal(status.modelFound, true)
+    assert.equal(status.active, true)
   } finally {
     restoreWindow()
   }

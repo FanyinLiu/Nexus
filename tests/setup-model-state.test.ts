@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  buildTextModelSetupSnapshot,
   getModelProgressPercent,
   isModelProgressActive,
   isModelProgressComplete,
@@ -160,4 +161,36 @@ test('shouldShowModelSetupOverlay only opens for missing inventory that is not s
   assert.equal(shouldShowModelSetupOverlay({ suppressed: false, dismissed: true, inventoryReady: false }), false)
   assert.equal(shouldShowModelSetupOverlay({ suppressed: false, dismissed: false, inventoryReady: true }), false)
   assert.equal(shouldShowModelSetupOverlay({ suppressed: false, dismissed: false, inventoryReady: undefined }), false)
+})
+
+test('buildTextModelSetupSnapshot flags missing authentication before a real connection test', () => {
+  const snapshot = buildTextModelSetupSnapshot({
+    apiProviderId: 'deepseek',
+    apiKey: '',
+    apiBaseUrl: 'https://api.deepseek.com',
+    model: 'deepseek-v4-flash',
+    uiLanguage: 'en-US',
+  })
+
+  assert.equal(snapshot.providerLabel, 'DeepSeek')
+  assert.equal(snapshot.modelLabel, 'deepseek-v4-flash')
+  assert.equal(snapshot.status, 'needs_attention')
+  assert.match(snapshot.message ?? '', /API Key/i)
+  assert.match(snapshot.recommendation ?? '', /DeepSeek/)
+})
+
+test('buildTextModelSetupSnapshot marks complete text settings ready for the one-click check', () => {
+  const snapshot = buildTextModelSetupSnapshot({
+    apiProviderId: 'ollama',
+    apiKey: '',
+    apiBaseUrl: 'http://127.0.0.1:11434/v1',
+    model: 'qwen3:8b',
+    uiLanguage: 'en-US',
+  })
+
+  assert.equal(snapshot.providerLabel, 'Ollama')
+  assert.equal(snapshot.modelLabel, 'qwen3:8b')
+  assert.equal(snapshot.status, 'ready_to_test')
+  assert.equal(snapshot.message, null)
+  assert.equal(snapshot.recommendation, undefined)
 })

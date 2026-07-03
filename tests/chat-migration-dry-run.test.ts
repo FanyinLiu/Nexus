@@ -11,6 +11,7 @@ import {
   buildChatMigrationBackupFileName,
   buildChatMigrationComparisonSource,
   buildChatMigrationPreviewSummary,
+  formatChatMigrationUiError,
   isChatMigrationPreviewEnabled,
 } from '../src/lib/storage/chatMigrationPreview.ts'
 
@@ -268,6 +269,18 @@ test('chat migration preview summary blocks unsafe dry-run states', () => {
   assert.equal(empty.status, 'empty')
   assert.equal(empty.canApply, false)
   assert.equal(empty.canExportBackup, false)
+})
+
+test('chat migration preview UI errors redact secrets before display', () => {
+  const message = formatChatMigrationUiError(
+    new Error('migration failed for settings:apiKey token=xai-abcdefghijklmnop at /Users/klein/chat.json'),
+  )
+
+  assert.match(message, /token=\*\*\*/)
+  assert.match(message, /~\/chat\.json/)
+  assert.doesNotMatch(message, /settings:apiKey/)
+  assert.doesNotMatch(message, /xai-abcdefghijklmnop/)
+  assert.doesNotMatch(message, /\/Users\/klein/)
 })
 
 test('chat migration backup envelope is content-explicit and file-name safe', () => {

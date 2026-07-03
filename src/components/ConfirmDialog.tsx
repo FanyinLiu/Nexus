@@ -52,7 +52,13 @@ export function ConfirmDialog({ options, onConfirm, onCancel }: ConfirmDialogPro
         {options.title ? <h2 className="confirm-dialog-card__title">{options.title}</h2> : null}
         <p className="confirm-dialog-card__message">{options.message}</p>
         <div className="confirm-dialog-card__actions">
-          <button ref={cancelButtonRef} type="button" className="ghost-button" onClick={onCancel}>
+          <button
+            ref={cancelButtonRef}
+            type="button"
+            className="ghost-button"
+            data-focus-default="cancel"
+            onClick={onCancel}
+          >
             {cancelLabel}
           </button>
           <button

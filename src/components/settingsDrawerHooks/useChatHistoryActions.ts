@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import type { ConfirmFn } from '../useConfirm.ts'
 import type { ConnectionResult } from '../settingsDrawerSupport'
 
@@ -52,7 +53,7 @@ export function useChatHistoryActions({
     } catch (error) {
       setChatHistoryStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.chat_history.export_error'),
+        message: getRedactedLogErrorMessage(error) || t('settings.chat_history.export_error'),
       })
     } finally {
       setExportingChatHistory(false)
@@ -83,7 +84,7 @@ export function useChatHistoryActions({
     } catch (error) {
       setChatHistoryStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.chat_history.import_error'),
+        message: getRedactedLogErrorMessage(error) || t('settings.chat_history.import_error'),
       })
     } finally {
       setImportingChatHistory(false)
@@ -120,7 +121,7 @@ export function useChatHistoryActions({
     } catch (error) {
       setChatHistoryStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.chat_history.clear_error'),
+        message: getRedactedLogErrorMessage(error) || t('settings.chat_history.clear_error'),
       })
     } finally {
       setClearingChatHistory(false)

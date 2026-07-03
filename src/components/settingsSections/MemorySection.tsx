@@ -7,14 +7,11 @@ import {
   clearRecentCompanionSummary,
   loadRecentCompanionSummary,
   recentCompanionSummaryToQuietObservation,
+  resolveDesktopContextDiagnostics,
+  type DesktopContextDiagnosticItem,
+  type DesktopContextDiagnosticText,
 } from '../../features/context'
 import type { ChatMemoryTraceFocusTarget } from '../../features/memory/traceDetails.ts'
-import {
-  getPlatformDependencyHint,
-  isDesktopContextActiveWindowAvailable,
-  isDesktopContextClipboardAvailable,
-  isDesktopContextScreenshotAvailable,
-} from '../../lib/platformProfile'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import { NumberField, TextField, ToggleField } from '../settingsFields'
 import type {
@@ -112,89 +109,28 @@ export const MemorySection = memo(function MemorySection({
     key: Parameters<typeof pickTranslatedUiText>[1],
     params: Parameters<typeof pickTranslatedUiText>[2],
   ) => pickTranslatedUiText(uiLanguage, key, params)
-  const formatPlatformHint = (reason: string | null) => {
-    if (!reason) return null
-    if (reason === 'unsupported') return ti('settings.platform.unsupported')
-    if (reason === 'unavailable') return ti('settings.platform.unavailable')
-    return tiParam('settings.platform.unavailable_dependency', { dependency: reason })
-  }
-  const activeWindowContextAvailable = isDesktopContextActiveWindowAvailable(platformProfile)
-  const clipboardContextAvailable = isDesktopContextClipboardAvailable(platformProfile)
-  const screenContextAvailable = isDesktopContextScreenshotAvailable(platformProfile)
-  const contextAwarenessAvailable = activeWindowContextAvailable
-    || clipboardContextAvailable
-    || screenContextAvailable
-  const activeWindowPlatformHint = formatPlatformHint(getPlatformDependencyHint(
+  const translateDiagnosticText = (value: DesktopContextDiagnosticText) => (
+    value.params ? tiParam(value.key, value.params) : ti(value.key)
+  )
+  const desktopContextDiagnostics = resolveDesktopContextDiagnostics({
+    activeWindowContextEnabled: draft.activeWindowContextEnabled,
+    clipboardContextEnabled: draft.clipboardContextEnabled,
+    companionAwarenessPaused: draft.companionAwarenessPaused,
+    contextAwarenessEnabled: draft.contextAwarenessEnabled,
     platformProfile,
-    platformProfile.desktopContext.activeWindowSupported,
-    platformProfile.desktopContext.activeWindowAvailable,
-    platformProfile.desktopContext.activeWindowDependencyHint,
-  ))
-  const clipboardPlatformHint = formatPlatformHint(getPlatformDependencyHint(
-    platformProfile,
-    platformProfile.desktopContext.clipboardSupported,
-    platformProfile.desktopContext.clipboardAvailable,
-    null,
-  ))
-  const screenPlatformHint = formatPlatformHint(getPlatformDependencyHint(
-    platformProfile,
-    platformProfile.desktopContext.screenshotSupported,
-    platformProfile.desktopContext.screenshotAvailable,
-    platformProfile.desktopContext.screenshotDependencyHint,
-  ))
-  const resolveContextStatusLabel = (available: boolean, enabled: boolean) => {
-    if (!available) return ti('settings.memory.context.status_unavailable')
-    if (enabled) return ti('settings.memory.context.status_enabled')
-    if (draft.contextAwarenessEnabled) return ti('settings.memory.context.status_ready')
-    return ti('settings.memory.context.status_off')
-  }
-  const contextStatusItems = [
-    {
-      id: 'companion-continuity',
-      label: ti('settings.memory.context.companion_awareness'),
-      status: draft.contextAwarenessEnabled && !draft.companionAwarenessPaused
-        ? ti('settings.memory.context.status_enabled')
-        : draft.contextAwarenessEnabled
-          ? ti('settings.memory.context.status_paused')
-          : ti('settings.memory.context.status_off'),
-      hint: ti('settings.memory.context.companion_awareness_hint'),
-      active: draft.contextAwarenessEnabled && !draft.companionAwarenessPaused,
-      available: contextAwarenessAvailable,
-    },
-    {
-      id: 'active-window',
-      label: ti('settings.memory.context.active_window'),
-      status: resolveContextStatusLabel(
-        activeWindowContextAvailable,
-        draft.contextAwarenessEnabled && draft.activeWindowContextEnabled && activeWindowContextAvailable,
-      ),
-      hint: activeWindowPlatformHint ?? ti('settings.memory.context.active_window_hint'),
-      active: draft.contextAwarenessEnabled && draft.activeWindowContextEnabled && activeWindowContextAvailable,
-      available: activeWindowContextAvailable,
-    },
-    {
-      id: 'clipboard',
-      label: ti('settings.memory.context.clipboard'),
-      status: resolveContextStatusLabel(
-        clipboardContextAvailable,
-        draft.contextAwarenessEnabled && draft.clipboardContextEnabled && clipboardContextAvailable,
-      ),
-      hint: clipboardPlatformHint ?? ti('settings.memory.context.clipboard_hint'),
-      active: draft.contextAwarenessEnabled && draft.clipboardContextEnabled && clipboardContextAvailable,
-      available: clipboardContextAvailable,
-    },
-    {
-      id: 'screen-ocr',
-      label: ti('settings.memory.context.screen_ocr'),
-      status: resolveContextStatusLabel(
-        screenContextAvailable,
-        draft.contextAwarenessEnabled && draft.screenContextEnabled && screenContextAvailable,
-      ),
-      hint: screenPlatformHint ?? ti('settings.memory.context.screen_ocr_hint'),
-      active: draft.contextAwarenessEnabled && draft.screenContextEnabled && screenContextAvailable,
-      available: screenContextAvailable,
-    },
-  ]
+    screenContextEnabled: draft.screenContextEnabled,
+  })
+  const contextStatusItems = desktopContextDiagnostics.items
+  const contextAwarenessAvailable = desktopContextDiagnostics.contextAwarenessAvailable
+  const activeWindowContextAvailable = desktopContextDiagnostics.activeWindowAvailable
+  const clipboardContextAvailable = desktopContextDiagnostics.clipboardAvailable
+  const screenContextAvailable = desktopContextDiagnostics.screenContextAvailable
+  const getPlatformHint = (id: DesktopContextDiagnosticItem['id']) => (
+    contextStatusItems.find((item) => item.id === id)?.platformHint ?? null
+  )
+  const activeWindowPlatformHint = getPlatformHint('active-window')
+  const clipboardPlatformHint = getPlatformHint('clipboard')
+  const screenPlatformHint = getPlatformHint('screen-ocr')
   const selectedMemoryEmbeddingModel = MEMORY_EMBEDDING_MODEL_OPTIONS.find((option) => (
     option.value === draft.memoryEmbeddingModel
   ))
@@ -211,22 +147,12 @@ export const MemorySection = memo(function MemorySection({
     memorySemanticRecallCount: draft.memorySemanticRecallCount,
     screenContextEnabled: draft.screenContextEnabled,
     searchMode: draft.memorySearchMode,
-    companionSummary: recentCompanionSummaryToQuietObservation(effectiveRecentCompanionSummary),
+    companionSummary: recentCompanionSummaryToQuietObservation(
+      effectiveRecentCompanionSummary,
+      uiLanguage,
+    ),
   })
-  const companionTransparency = memoryTransparencySummary.companionAwareness
-  const companionTransparencyStatusText = (() => {
-    switch (companionTransparency.status) {
-      case 'paused':
-        return ti('settings.memory.context.transparency_status_paused')
-      case 'watching_for_away_activity':
-        return ti('settings.memory.context.transparency_status_waiting')
-      case 'summarizing_quietly':
-        return ti('settings.memory.context.transparency_status_summarizing')
-      case 'off':
-      default:
-        return ti('settings.memory.context.transparency_status_off')
-    }
-  })()
+  const companionTransparencyView = memoryTransparencySummary.companionAwarenessView
 
   return (
     <section className={`settings-section settings-memory-section ${active ? 'is-active' : 'is-hidden'}`}>
@@ -298,10 +224,10 @@ export const MemorySection = memo(function MemorySection({
               }
             >
               <div className="settings-memory-context-status__head">
-                <strong>{item.label}</strong>
-                <span>{item.status}</span>
+                <strong>{translateDiagnosticText(item.label)}</strong>
+                <span>{translateDiagnosticText(item.status)}</span>
               </div>
-              <p>{item.hint}</p>
+              <p>{translateDiagnosticText(item.hint)}</p>
             </div>
           ))}
         </div>
@@ -313,20 +239,25 @@ export const MemorySection = memo(function MemorySection({
         <div className="settings-control-card settings-memory-context-transparency">
           <div className="settings-memory-context-status__head">
             <strong>{ti('settings.memory.context.transparency_title')}</strong>
-            <span>{companionTransparencyStatusText}</span>
+            <span>{ti(companionTransparencyView.statusLabelKey)}</span>
           </div>
-          <p>{ti('settings.memory.context.transparency_observes')}</p>
-          <p>{ti('settings.memory.context.transparency_model')}</p>
-          <p>{ti('settings.memory.context.transparency_storage')}</p>
+          <div className="settings-memory-context-transparency__rows">
+            {companionTransparencyView.detailRows.map((row) => (
+              <div key={row.id} className="settings-memory-context-transparency__row">
+                <strong>{ti(row.labelKey)}</strong>
+                <p>{ti(row.bodyKey)}</p>
+              </div>
+            ))}
+          </div>
           <div className="settings-action-row settings-memory-context-actions">
             <button
               type="button"
               className="ghost-button"
-              disabled={!companionTransparency.canClearRecentSummary}
-              title={ti('settings.memory.context.clear_recent_summary')}
+              disabled={!companionTransparencyView.clearRecentSummaryAction.enabled}
+              title={ti(companionTransparencyView.clearRecentSummaryAction.labelKey)}
               onClick={clearCompanionSummaryState}
             >
-              {ti('settings.memory.context.clear_recent_summary')}
+              {ti(companionTransparencyView.clearRecentSummaryAction.labelKey)}
             </button>
           </div>
         </div>
@@ -391,19 +322,19 @@ export const MemorySection = memo(function MemorySection({
 
         {clipboardPlatformHint ? (
           <p className="settings-mini-group__note settings-memory-note">
-            {ti('settings.memory.context.clipboard')}: {clipboardPlatformHint}
+            {ti('settings.memory.context.clipboard')}: {translateDiagnosticText(clipboardPlatformHint)}
           </p>
         ) : null}
 
         {activeWindowPlatformHint ? (
           <p className="settings-mini-group__note settings-memory-note">
-            {ti('settings.memory.context.active_window')}: {activeWindowPlatformHint}
+            {ti('settings.memory.context.active_window')}: {translateDiagnosticText(activeWindowPlatformHint)}
           </p>
         ) : null}
 
         {screenPlatformHint ? (
           <p className="settings-mini-group__note settings-memory-note">
-            {ti('settings.memory.context.screen_ocr')}: {screenPlatformHint}
+            {ti('settings.memory.context.screen_ocr')}: {translateDiagnosticText(screenPlatformHint)}
           </p>
         ) : null}
 

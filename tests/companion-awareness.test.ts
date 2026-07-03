@@ -4,10 +4,21 @@ import { test } from 'node:test'
 import {
   bucketCompanionElapsedMs,
   buildQuietObservationSummary,
-  containsPreciseCompanionTimeLanguage,
-  formatCompanionElapsedBucket,
   formatQuietObservationForPrompt,
 } from '../src/features/context/companionAwareness.ts'
+import {
+  coerceCompanionElapsedLabel,
+  containsPreciseCompanionTimeLanguage,
+  formatCompanionElapsedBucket,
+} from '../src/features/context/companionTimeLanguage.ts'
+import { ensureLocaleLoaded } from '../src/i18n/runtime.ts'
+
+await Promise.all([
+  ensureLocaleLoaded('en-US'),
+  ensureLocaleLoaded('zh-TW'),
+  ensureLocaleLoaded('ja'),
+  ensureLocaleLoaded('ko'),
+])
 
 const now = '2026-06-21T17:00:00.000Z'
 
@@ -46,11 +57,34 @@ test('containsPreciseCompanionTimeLanguage catches exact elapsed time leaks', ()
   for (const unsafe of [
     '37 minutes',
     '90 seconds',
+    'half a minute',
+    'half second',
     '00:34',
     '1:42:09',
     '2026-06-21T17:00:00.000Z',
     '12min',
+    '90s',
+    '2m',
+    '1h',
     '2 hours',
+    '90秒',
+    '90分钟',
+    '半分钟',
+    '半秒',
+    '1小时30分钟',
+    '2个小时',
+    '三十七分钟',
+    '九十秒',
+    '1時間30分',
+    '三十七分',
+    '90초',
+    '반분',
+    '반초',
+    '2시간 10분',
+    '삼십칠분',
+    '구십초',
+    'about 1 hour (60 min)',
+    '一小时左右 / 60min',
   ]) {
     assert.equal(containsPreciseCompanionTimeLanguage(unsafe), true, unsafe)
   }
@@ -62,9 +96,31 @@ test('containsPreciseCompanionTimeLanguage catches exact elapsed time leaks', ()
     '一小时左右',
     '二時間以上',
     '두 시간 이상',
+    '两小时以上',
+    '一會兒',
+    '반 시간 정도',
   ]) {
     assert.equal(containsPreciseCompanionTimeLanguage(safe), false, safe)
   }
+})
+
+test('coerceCompanionElapsedLabel falls back to localized bucket language for precise labels', () => {
+  assert.equal(
+    coerceCompanionElapsedLabel('about_half_hour', '1小时30分钟', 'zh-CN'),
+    '半小时左右',
+  )
+  assert.equal(
+    coerceCompanionElapsedLabel('about_hour', '1時間30分', 'ja'),
+    '一時間ほど',
+  )
+  assert.equal(
+    coerceCompanionElapsedLabel('two_hours_or_more', '2시간 10분', 'ko'),
+    '두 시간 이상',
+  )
+  assert.equal(
+    coerceCompanionElapsedLabel('a_while', 'about 1 hour (60 min)', 'en-US'),
+    'a little while',
+  )
 })
 
 test('buildQuietObservationSummary stays silent when disabled, paused, or too recent', () => {
@@ -196,7 +252,7 @@ test('formatQuietObservationForPrompt avoids raw titles and exact timers', () =>
     activeWindowTitle: 'Secret Client Plan - Google Docs',
   })
 
-  const prompt = formatQuietObservationForPrompt(summary)
+  const prompt = formatQuietObservationForPrompt(summary, 'en-US')
 
   assert.match(prompt, /Quiet companion awareness/)
   assert.match(prompt, /about an hour/)
@@ -208,6 +264,67 @@ test('formatQuietObservationForPrompt avoids raw titles and exact timers', () =>
   assert.match(prompt, /Do not mention monitoring/)
 })
 
+test('formatQuietObservationForPrompt localizes prompt language', () => {
+  const summary = buildQuietObservationSummary({
+    enabled: true,
+    nexusOpenSince: '2026-06-21T15:40:00.000Z',
+    lastNexusInteractionAt: '2026-06-21T15:40:00.000Z',
+    now,
+    activeWindowTitle: 'main.ts - Visual Studio Code',
+    uiLanguage: 'zh-CN',
+  })!
+
+  const prompt = formatQuietObservationForPrompt(summary, 'zh-CN')
+
+  assert.match(prompt, /陪伴感知摘要/)
+  assert.match(prompt, /一小时左右/)
+  assert.match(prompt, /编码/)
+  assert.doesNotMatch(prompt, /Nexus is open/)
+})
+
+test('formatQuietObservationForPrompt localizes prompt language across all supported locales', () => {
+  const localizedChecks: Array<{ locale: string; heading: string; label: string }> = [
+    { locale: 'zh-CN', heading: '陪伴感知摘要', label: '一小时左右' },
+    { locale: 'zh-TW', heading: '陪伴感知摘要', label: '一小時左右' },
+    { locale: 'ja', heading: '静かな付き添い認識', label: '一時間ほど' },
+    { locale: 'ko', heading: '조용한 동반 인식', label: '한 시간 정도' },
+    { locale: 'en-US', heading: 'Quiet companion awareness', label: 'about an hour' },
+  ]
+
+  for (const check of localizedChecks) {
+    const summary = buildQuietObservationSummary({
+      enabled: true,
+      nexusOpenSince: '2026-06-21T15:40:00.000Z',
+      lastNexusInteractionAt: '2026-06-21T15:40:00.000Z',
+      now,
+      activeWindowTitle: 'main.ts - Visual Studio Code',
+      uiLanguage: check.locale as never,
+    })!
+
+    const localizedPrompt = formatQuietObservationForPrompt(summary, check.locale as never)
+    assert.match(localizedPrompt, new RegExp(check.heading))
+    assert.match(localizedPrompt, new RegExp(check.label))
+  }
+})
+
+test('formatQuietObservationForPrompt falls back to default locale for unsupported language', () => {
+  const summary = buildQuietObservationSummary({
+    enabled: true,
+    nexusOpenSince: '2026-06-21T15:40:00.000Z',
+    lastNexusInteractionAt: '2026-06-21T15:40:00.000Z',
+    now,
+    activeWindowTitle: 'main.ts - Visual Studio Code',
+    uiLanguage: 'zh-CN',
+  })!
+
+  const prompt = formatQuietObservationForPrompt(summary, 'eo' as never)
+
+  assert.match(prompt, /陪伴感知摘要/)
+  assert.match(prompt, /一小时左右/)
+  assert.match(prompt, /编码/)
+  assert.doesNotMatch(prompt, /Quiet companion awareness|Nexus is open/)
+})
+
 test('formatQuietObservationForPrompt downgrades malformed exact elapsed labels', () => {
   const prompt = formatQuietObservationForPrompt({
     elapsedBucket: 'about_half_hour',
@@ -216,8 +333,7 @@ test('formatQuietObservationForPrompt downgrades malformed exact elapsed labels'
     userDeepFocused: false,
     activeElsewhere: true,
     shouldStaySilent: true,
-  })
-
+  }, 'en-US')
   assert.match(prompt, /about half an hour/)
   assert.doesNotMatch(prompt, /37 minutes/)
 })

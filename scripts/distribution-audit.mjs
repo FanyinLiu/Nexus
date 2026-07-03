@@ -10,6 +10,8 @@ import { buildHeavyModuleAuditReport } from './heavy-module-audit.mjs'
 import { buildCompanionBoundaryReport } from './companion-boundary-audit.mjs'
 import { buildArchitectureBoundaryReport } from './architecture-boundary-audit.mjs'
 import { buildSourceSizeReport } from './source-size-audit.mjs'
+import { buildPerformanceBaselineReport } from './performance-baseline.mjs'
+import { buildV04DraftStackReport } from './v04-draft-stack-audit.mjs'
 import { buildMessagePrivacyReport } from './message-privacy-audit.mjs'
 import { buildDesktopContextPrivacyReport } from './desktop-context-privacy-audit.mjs'
 import { buildVaultSecurityReport } from './vault-security-audit.mjs'
@@ -40,13 +42,30 @@ function hasScript(pkg, name) {
 }
 
 const pkg = readJson('package.json')
+const ciWorkflow = readText('.github/workflows/ci.yml')
 const releaseWorkflow = readText('.github/workflows/release.yml')
 const updaterService = readText('electron/services/updaterService.js')
 const preload = readText('electron/preload.js')
 const releasingDoc = readText('docs/RELEASING.md')
 const readme = readText('README.md')
+const roadmap = readText('docs/ROADMAP.md')
+const upgradePlan = readText('docs/NEXUS_UPGRADE_INTEGRATION_PLAN.md')
+const featureInventory = readText('FEATURES.md')
+const documentationConsistencyDoc = readText('docs/DOCUMENTATION_CONSISTENCY.md')
+const packageStartupOptimizationDoc = readText('docs/PACKAGE_STARTUP_OPTIMIZATION.md')
+const localizedReadmes = {
+  'docs/README.zh-CN.md': readText('docs/README.zh-CN.md'),
+  'docs/README.zh-TW.md': readText('docs/README.zh-TW.md'),
+  'docs/README.ja.md': readText('docs/README.ja.md'),
+  'docs/README.ko.md': readText('docs/README.ko.md'),
+}
 const desktopShortcutInstaller = readText('scripts/install-desktop-shortcut.ps1')
 const hiddenLauncher = readText('scripts/launch-nexus-hidden.vbs')
+const currentVersion = `v${pkg.version}`
+const readmeFiles = {
+  'README.md': readme,
+  ...localizedReadmes,
+}
 
 check('desktop app stays private on npm', () => {
   assert(pkg.private === true, 'package.json should remain private until a separate CLI installer exists')
@@ -60,6 +79,11 @@ check('developer npm scripts cover run, package and release verification', () =>
     'package:win',
     'package:linux',
     'package:dir:smoke',
+    'core-path:smoke',
+    'core-path:smoke:built',
+    'lint',
+    'test',
+    'build',
     'verify:release',
     'verify:pr',
     'ipc:audit',
@@ -68,9 +92,13 @@ check('developer npm scripts cover run, package and release verification', () =>
     'architecture:audit',
     'source-size:audit',
     'performance:baseline',
+    'v04:draft-stack:audit',
+    'v04:draft-stack:audit:quick',
     'companion-boundary:audit',
     'message-privacy:audit',
     'desktop-context-privacy:audit',
+    'vault-security:audit',
+    'error-redaction:audit',
     'sqlite:smoke',
     'sqlite:smoke:electron',
     'sqlite:smoke:all',
@@ -80,6 +108,7 @@ check('developer npm scripts cover run, package and release verification', () =>
     'release:signing:gate:mac',
     'release:signing:gate:windows',
     'prerelease-check',
+    'distribution:audit',
   ]) {
     assert(hasScript(pkg, name), `missing npm script: ${name}`)
   }
@@ -137,6 +166,29 @@ check('pre-release gate docs include packaged smoke', () => {
     releasingDoc.includes('package an unpacked app and launch it with') ||
       releasingDoc.includes('Packaged smoke'),
     'RELEASING should explain what the packaged smoke gate validates',
+  )
+})
+
+check('core path smoke is release-gated and documented', () => {
+  const corePathSmoke = readText('scripts/core-path-smoke.cjs')
+  assert(pkg.scripts?.['core-path:smoke']?.includes('core-path:smoke:built'), 'core-path:smoke should build then run the built smoke')
+  assert(pkg.scripts?.['core-path:smoke:built'] === 'electron --no-sandbox scripts/core-path-smoke.cjs', 'core-path:smoke:built should run the Electron smoke script with Linux CI sandbox compatibility')
+  assert(pkg.scripts?.['verify:release']?.includes('npm run core-path:smoke:built'), 'verify:release should include core path smoke')
+  assert(ciWorkflow.includes('npm run core-path:smoke:built'), 'CI should run core path smoke after build')
+  assert(ciWorkflow.includes('xvfb-run -a npm run core-path:smoke:built'), 'Linux CI should run core path smoke under xvfb')
+  for (const phrase of [
+    "view: 'panel'",
+    'settings-home-card[data-section="model"]',
+    'settings-page[data-section="model"]',
+    'settings-model-test-button',
+    'nexus.modelSetup.dismissedUntilRestart',
+  ]) {
+    assert(corePathSmoke.includes(phrase), `core path smoke missing phrase: ${phrase}`)
+  }
+  assert(releasingDoc.includes('npm run core-path:smoke'), 'RELEASING should document the core path smoke command')
+  assert(
+    releasingDoc.includes('without real microphone or provider calls'),
+    'RELEASING should document that core path smoke avoids microphone/provider dependencies',
   )
 })
 
@@ -198,6 +250,16 @@ check('source files stay below the large-file budget', () => {
   assert(report.summary.errors === 0, `source size audit has ${report.summary.errors} error(s); run npm run source-size:audit`)
 })
 
+check('built assets stay within performance baseline budgets', () => {
+  const report = buildPerformanceBaselineReport(ROOT)
+  assert(report.summary.errors === 0, `performance baseline has ${report.summary.errors} error(s); run npm run performance:baseline`)
+})
+
+check('v0.4 draft stack stays in quick PR-safe state', () => {
+  const report = buildV04DraftStackReport(ROOT, { mode: 'quick' })
+  assert(report.summary.errors === 0, `v0.4 draft stack audit has ${report.summary.errors} error(s); run npm run v04:draft-stack:audit:quick`)
+})
+
 check('companion boundary is documented and guarded', () => {
   const report = buildCompanionBoundaryReport(ROOT)
   assert(report.summary.errors === 0, `companion boundary audit has ${report.summary.errors} error(s); run npm run companion-boundary:audit`)
@@ -253,6 +315,158 @@ check('release documentation separates installers from npm developer path', () =
   assert(!/\bnpx\s+[@\w-]/.test(releasingDoc), 'RELEASING should not recommend npx for end-user install')
   assert(!readme.includes('nexus-desktop'), 'README should not mention the rejected nexus-desktop name')
   assert(!releasingDoc.includes('nexus-desktop'), 'RELEASING should not mention the rejected nexus-desktop name')
+})
+
+check('README known limitations are visible before developer setup', () => {
+  for (const phrase of [
+    '## 已知限制与适用人群',
+    '仍在活跃开发',
+    '未签名安装包',
+    '资源占用',
+    'provider 联网',
+    '桌面感知',
+    '暂停或清理近期陪伴摘要',
+    '本地开发',
+  ]) {
+    assert(readme.includes(phrase), `README missing known limitation phrase: ${phrase}`)
+  }
+
+  assert(
+    readme.indexOf('## 已知限制与适用人群') < readme.indexOf('## 本地开发'),
+    'README known limitations should appear before developer setup',
+  )
+})
+
+check('README version framing follows package version', () => {
+  for (const [file, text] of Object.entries(readmeFiles)) {
+    assert(text.includes(currentVersion), `${file} missing current package version ${currentVersion}`)
+    assert(!text.includes('v0.2.7'), `${file} should move v0.2.7 history to release notes or GitHub Releases`)
+  }
+
+  assert(readme.includes('当前代码版本'), 'README should label the package-aligned current code version')
+  assert(localizedReadmes['docs/README.zh-CN.md'].includes('当前代码版本'), 'zh-CN README should label the current code version')
+  assert(localizedReadmes['docs/README.zh-TW.md'].includes('目前程式碼版本'), 'zh-TW README should label the current code version')
+  assert(localizedReadmes['docs/README.ja.md'].includes('現在のコードバージョン'), 'ja README should label the current code version')
+  assert(localizedReadmes['docs/README.ko.md'].includes('현재 코드 버전'), 'ko README should label the current code version')
+})
+
+check('documentation consistency workflow is documented', () => {
+  for (const phrase of [
+    '每月一次',
+    'package.json',
+    currentVersion,
+    'v0.3.6',
+    'README.md',
+    'docs/README.zh-CN.md',
+    'docs/ROADMAP.md',
+    'docs/NEXUS_UPGRADE_INTEGRATION_PLAN.md',
+    'FEATURES.md',
+    'npm run distribution:audit',
+  ]) {
+    assert(documentationConsistencyDoc.includes(phrase), `documentation consistency doc missing phrase: ${phrase}`)
+  }
+
+  assert(roadmap.includes(currentVersion), 'ROADMAP should mention the current package version boundary')
+  assert(upgradePlan.includes('每月一次文档回看'), 'upgrade plan should keep the monthly documentation review checkpoint')
+  assert(featureInventory.includes('broad capability inventory'), 'FEATURES should keep its capability-inventory framing')
+})
+
+check('unsigned install docs cover macOS and Windows trust prompts', () => {
+  const requiredByFile = {
+    'README.md': [
+      '未签名安装提示',
+      'GitHub Releases',
+      '不要从镜像',
+      'Gatekeeper',
+      'xattr -dr com.apple.quarantine /Applications/Nexus.app',
+      '右键',
+      'SmartScreen',
+      '详细信息',
+      '仍要运行',
+    ],
+    'docs/README.zh-CN.md': [
+      '未签名安装提示',
+      'GitHub Releases',
+      '不要从镜像',
+      'Gatekeeper',
+      'xattr -dr com.apple.quarantine /Applications/Nexus.app',
+      '右键',
+      'SmartScreen',
+      '详细信息',
+      '仍要运行',
+    ],
+    'docs/README.zh-TW.md': [
+      '未簽署安裝提示',
+      'GitHub Releases',
+      '不要從鏡像',
+      'Gatekeeper',
+      'xattr -dr com.apple.quarantine /Applications/Nexus.app',
+      '右鍵',
+      'SmartScreen',
+      '其他資訊',
+      '仍要執行',
+    ],
+    'docs/README.ja.md': [
+      '未署名インストール時の注意',
+      'GitHub Releases',
+      'ミラー',
+      'Gatekeeper',
+      'xattr -dr com.apple.quarantine /Applications/Nexus.app',
+      '右クリック',
+      'SmartScreen',
+      '詳細情報',
+      '実行',
+    ],
+    'docs/README.ko.md': [
+      '미서명 설치 안내',
+      'GitHub Releases',
+      '미러',
+      'Gatekeeper',
+      'xattr -dr com.apple.quarantine /Applications/Nexus.app',
+      '우클릭',
+      'SmartScreen',
+      '추가 정보',
+      '실행',
+    ],
+  }
+
+  for (const [file, requiredPhrases] of Object.entries(requiredByFile)) {
+    const text = file === 'README.md' ? readme : localizedReadmes[file]
+    for (const phrase of requiredPhrases) {
+      assert(text.includes(phrase), `${file} missing unsigned install phrase: ${phrase}`)
+    }
+  }
+})
+
+check('package size and startup optimization inventory is documented', () => {
+  for (const phrase of [
+    'npm run performance:baseline',
+    'npm run heavy:audit',
+    'npm run source-size:audit',
+    'npm run distribution:audit',
+    'npm run package:dir:smoke',
+    '最大 CSS chunk',
+    'TS/JS/CSS',
+    '明确临时预算',
+    'ort-wasm-simd-threaded.jsep.wasm',
+    '@huggingface/transformers',
+    'tesseract.js',
+    'Live2D',
+    'sherpa-models',
+    'Silero VAD',
+    'download-models.mjs --skip-asr',
+    '首次运行下载',
+    '可选模型不进安装包',
+  ]) {
+    assert(packageStartupOptimizationDoc.includes(phrase), `package startup optimization doc missing phrase: ${phrase}`)
+  }
+
+  for (const scriptName of ['prepackage:win', 'prepackage:win:signed', 'prepackage:mac', 'prepackage:linux']) {
+    assert(
+      pkg.scripts?.[scriptName]?.includes('download-models.mjs --skip-asr'),
+      `${scriptName} should keep optional voice models out of the default package path`,
+    )
+  }
 })
 
 let failed = 0

@@ -1,5 +1,6 @@
 # Logs
 logs
+.dev/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -31,6 +32,11 @@ tmp-debug/
 output/
 .playwright-cli/
 docs/ui-preview/
+
+# Local UI QA evidence. Keep screenshots/metrics on the working machine; commit
+# source-backed review docs instead.
+docs/ui-qa/
+
 release/
 release-smoke/
 resources/local-speech/

@@ -15,6 +15,9 @@ const CHECKED_FILES = [
   'src/app/controllers/useDiscordBridge.ts',
   'src/app/views/PanelView.tsx',
   'electron/services/notificationBridge.js',
+  'electron/services/tencentAsr.js',
+  'electron/services/ttsService.js',
+  'electron/ttsStreamService.js',
   'src/hooks/useNotificationBridge.ts',
   'src/components/settingsSections/AutonomySection.tsx',
   'src/lib/privacy/bridgeMessagePrivacy.ts',
@@ -107,6 +110,24 @@ const UNSAFE_PATTERNS = [
     pattern: /webhookInfo\?\.authHeader|Authorization:\s*\{webhookInfo/,
     message: 'settings UI must not render the plaintext notification webhook token',
   },
+  {
+    id: 'tencent-asr-raw-transcript-log',
+    file: 'electron/services/tencentAsr.js',
+    pattern: /console\.(?:log|info|warn|error)\([^\n]*(?:text\.slice|voice_text_str)|console\.(?:log|info|warn|error)\([^\n]*,\s*text\b/,
+    message: 'speech recognition logs must stay metadata-only and never include transcript snippets',
+  },
+  {
+    id: 'edge-tts-raw-speech-log',
+    file: 'electron/services/ttsService.js',
+    pattern: /console\.(?:log|info|warn|error)\([^\n]*(?:content\.slice|text\.slice)|console\.(?:log|info|warn|error)\([^\n]*,\s*content\b/,
+    message: 'speech synthesis logs must stay metadata-only and never include text-to-speech content snippets',
+  },
+  {
+    id: 'tts-stream-raw-speech-log',
+    file: 'electron/ttsStreamService.js',
+    pattern: /console\.(?:log|info|warn|error)\([\s\S]{0,260}(?:text\?\.slice|text\.slice)|console\.(?:log|info|warn|error)\([\s\S]{0,180},\s*text\b/,
+    message: 'TTS stream support logs must stay metadata-only and never include speech text snippets',
+  },
 ]
 
 const REQUIRED_PHRASES = [
@@ -164,6 +185,21 @@ const REQUIRED_PHRASES = [
     id: 'webhook-settings-token-placeholder',
     file: 'src/components/settingsSections/AutonomySection.tsx',
     phrases: ['Authorization: Bearer &lt;{webhookInfo.tokenFileName'],
+  },
+  {
+    id: 'tencent-asr-transcript-log-metadata',
+    file: 'electron/services/tencentAsr.js',
+    phrases: ['formatTranscriptLogMeta(text)', 'chars=${String(text ?? \'\').length}'],
+  },
+  {
+    id: 'edge-tts-speech-log-metadata',
+    file: 'electron/services/ttsService.js',
+    phrases: ['formatSpeechTextLogMeta(content)', 'chars=${String(text ?? \'\').length}'],
+  },
+  {
+    id: 'tts-stream-speech-log-metadata',
+    file: 'electron/ttsStreamService.js',
+    phrases: ['formatStreamTextLogMeta(text)', 'chars=${String(text ?? \'\').length}'],
   },
 ]
 

@@ -53,3 +53,43 @@ test('Nexus interaction state does not carry interaction timestamps across app s
   assert.equal(currentSession.nexusOpenSince, '2026-06-21T17:00:00.000Z')
   assert.equal(currentSession.getLastNexusInteractionAt(), '2026-06-21T17:00:00.000Z')
 })
+
+test('Nexus interaction state ignores invalid interaction timestamps', () => {
+  const timestamps = [
+    'not-a-date',
+    '2026-06-21T17:12:00.000Z',
+  ]
+  const interactionState = createNexusInteractionState(
+    '2026-06-21T17:00:00.000Z',
+    () => timestamps.shift() ?? '2026-06-21T17:12:00.000Z',
+  )
+
+  assert.equal(interactionState.markNexusInteraction(), '2026-06-21T17:00:00.000Z')
+  assert.equal(interactionState.getLastNexusInteractionAt(), '2026-06-21T17:00:00.000Z')
+
+  const summaryAfterBadTick = buildQuietObservationSummary({
+    enabled: true,
+    nexusOpenSince: interactionState.nexusOpenSince,
+    lastNexusInteractionAt: interactionState.getLastNexusInteractionAt(),
+    now: '2026-06-21T17:10:00.000Z',
+    activeWindowTitle: 'main.ts - Visual Studio Code',
+    uiLanguage: 'zh-CN',
+  })
+
+  assert.equal(summaryAfterBadTick?.elapsedLabel, '一会儿')
+
+  assert.equal(interactionState.markNexusInteraction(), '2026-06-21T17:12:00.000Z')
+  assert.equal(interactionState.getLastNexusInteractionAt(), '2026-06-21T17:12:00.000Z')
+})
+
+test('Nexus interaction state keeps the previous timestamp when now provider throws', () => {
+  const interactionState = createNexusInteractionState(
+    '2026-06-21T17:00:00.000Z',
+    () => {
+      throw new Error('clock unavailable')
+    },
+  )
+
+  assert.equal(interactionState.markNexusInteraction(), '2026-06-21T17:00:00.000Z')
+  assert.equal(interactionState.getLastNexusInteractionAt(), '2026-06-21T17:00:00.000Z')
+})

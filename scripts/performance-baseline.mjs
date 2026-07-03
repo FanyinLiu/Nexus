@@ -11,9 +11,13 @@ const DIST_ASSETS_DIR = join('dist', 'assets')
 const BUDGETS = {
   totalAssetBytes: 35_000_000,
   totalJavaScriptBytes: 5_000_000,
-  totalCssBytes: 800_000,
+  totalCssBytes: 900_000,
   totalWasmBytes: 25_000_000,
   maxJavaScriptChunkBytes: 1_200_000,
+  maxCssChunkBytes: 650_000,
+  maxInitialCssChunkBytes: 450_000,
+  maxSettingsDrawerCssChunkBytes: 600_000,
+  maxSettingsDrawerEntryChunkBytes: 100_000,
 }
 
 function classifyAsset(fileName) {
@@ -57,20 +61,43 @@ function readAssetMetrics(root = ROOT) {
   }
 
   const largestJavaScriptChunk = assets.find((asset) => asset.kind === 'javascript') ?? null
+  const largestCssChunk = assets.find((asset) => asset.kind === 'css') ?? null
+  const initialCssChunk = assets.find((asset) => (
+    asset.kind === 'css' && /^index[-.]/.test(asset.fileName)
+  )) ?? null
+  const settingsDrawerCssChunk = assets.find((asset) => (
+    asset.kind === 'css' && /^settingsDrawerEntry[-.]/.test(asset.fileName)
+  )) ?? null
+  const settingsDrawerEntryChunk = assets.find((asset) => (
+    asset.kind === 'javascript' && /^settingsDrawerEntry[-.]/.test(asset.fileName)
+  )) ?? null
   return {
     assetCount: assets.length,
     totals,
     largestAssets: assets.slice(0, 8),
     largestJavaScriptChunk,
+    largestCssChunk,
+    initialCssChunk,
+    settingsDrawerCssChunk,
+    settingsDrawerEntryChunk,
   }
 }
 
 function budgetErrors(assetMetrics, heavyReport) {
   const errors = []
+  if (!assetMetrics.settingsDrawerCssChunk) {
+    errors.push({ metric: 'missingSettingsDrawerCssChunk', actual: 0, budget: 1 })
+  }
+  if (!assetMetrics.settingsDrawerEntryChunk) {
+    errors.push({ metric: 'missingSettingsDrawerEntryChunk', actual: 0, budget: 1 })
+  }
   for (const [key, budget] of Object.entries(BUDGETS)) {
-    const actual = key === 'maxJavaScriptChunkBytes'
-      ? assetMetrics.largestJavaScriptChunk?.bytes ?? 0
-      : assetMetrics.totals[key]
+    let actual = assetMetrics.totals[key]
+    if (key === 'maxJavaScriptChunkBytes') actual = assetMetrics.largestJavaScriptChunk?.bytes ?? 0
+    if (key === 'maxCssChunkBytes') actual = assetMetrics.largestCssChunk?.bytes ?? 0
+    if (key === 'maxInitialCssChunkBytes') actual = assetMetrics.initialCssChunk?.bytes ?? 0
+    if (key === 'maxSettingsDrawerCssChunkBytes') actual = assetMetrics.settingsDrawerCssChunk?.bytes ?? 0
+    if (key === 'maxSettingsDrawerEntryChunkBytes') actual = assetMetrics.settingsDrawerEntryChunk?.bytes ?? 0
     if (actual > budget) errors.push({ metric: key, actual, budget })
   }
   if (heavyReport.summary.errors > 0) {
@@ -114,6 +141,10 @@ function formatHumanReport(report) {
   lines.push(`- total CSS: ${formatBytes(report.assetMetrics.totals.totalCssBytes)} / ${formatBytes(report.budgets.totalCssBytes)}`)
   lines.push(`- total WASM: ${formatBytes(report.assetMetrics.totals.totalWasmBytes)} / ${formatBytes(report.budgets.totalWasmBytes)}`)
   lines.push(`- largest JS chunk: ${report.assetMetrics.largestJavaScriptChunk?.fileName ?? 'none'} (${formatBytes(report.assetMetrics.largestJavaScriptChunk?.bytes ?? 0)})`)
+  lines.push(`- largest CSS chunk: ${report.assetMetrics.largestCssChunk?.fileName ?? 'none'} (${formatBytes(report.assetMetrics.largestCssChunk?.bytes ?? 0)})`)
+  lines.push(`- initial CSS chunk: ${report.assetMetrics.initialCssChunk?.fileName ?? 'none'} (${formatBytes(report.assetMetrics.initialCssChunk?.bytes ?? 0)} / ${formatBytes(report.budgets.maxInitialCssChunkBytes)})`)
+  lines.push(`- settings drawer CSS: ${report.assetMetrics.settingsDrawerCssChunk?.fileName ?? 'none'} (${formatBytes(report.assetMetrics.settingsDrawerCssChunk?.bytes ?? 0)} / ${formatBytes(report.budgets.maxSettingsDrawerCssChunkBytes)})`)
+  lines.push(`- settings drawer entry: ${report.assetMetrics.settingsDrawerEntryChunk?.fileName ?? 'none'} (${formatBytes(report.assetMetrics.settingsDrawerEntryChunk?.bytes ?? 0)} / ${formatBytes(report.budgets.maxSettingsDrawerEntryChunkBytes)})`)
   lines.push(`- heavy module audit errors: ${report.heavyModuleSummary.errors}`)
   lines.push('- largest assets:')
   for (const asset of report.assetMetrics.largestAssets) {

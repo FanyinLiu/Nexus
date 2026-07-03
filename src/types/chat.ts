@@ -8,6 +8,15 @@ export type ChatRole = 'user' | 'assistant' | 'system'
 
 export type ChatMessageTone = 'neutral' | 'error'
 
+export type ChatMessageRunStatus =
+  | 'waiting'
+  | 'streaming_text'
+  | 'tool_pending'
+  | 'tool_result_preview'
+  | 'final'
+  | 'interrupted'
+  | 'error_recoverable'
+
 export type ChatMemoryTraceStatus = 'active' | 'paused'
 
 export type ChatMemoryTraceSearchMode = 'keyword' | 'hybrid' | 'vector'
@@ -41,6 +50,11 @@ export interface ChatMessage {
   content: string
   createdAt: string
   tone?: ChatMessageTone
+  /**
+   * UI-only assistant run state used to keep streaming, tool-result previews,
+   * and recoverable interruptions inside the assistant message boundary.
+   */
+  runStatus?: ChatMessageRunStatus
   toolResult?: ChatToolResult
   /**
    * Optional inline image data URLs attached to a user message. Stripped before

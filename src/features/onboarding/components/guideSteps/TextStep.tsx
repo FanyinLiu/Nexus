@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react'
-import { getApiProviderPreset, getDefaultOnboardingRegion, getOnboardingTextProviderOptionsByRegion } from '../../../../lib/apiProviders'
+import {
+  MODEL_PROVIDER_REGION_TABS,
+  getApiProviderPreset,
+  getDefaultOnboardingRegion,
+  getOnboardingTextProviderOptionsByRegion,
+} from '../../../../lib/apiProviders'
 import type { ApiProviderPreset } from '../../../../lib/apiProviders'
 import { displaySecretInputValue } from '../../../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
@@ -27,15 +32,6 @@ type TextStepProps = {
   onTestConnection?: (settings: AppSettings) => Promise<ConnectionResult>
   onTextConnectionConfigChanged: () => void
 }
-
-// 国内 / 海外 / 本地 — the region field partitions every preset with no overlap,
-// so these three tabs cover the whole catalog and each provider lands in exactly
-// one. Switching a tab only filters the picker; it never mutates the draft.
-const REGION_TABS: { region: ApiProviderPreset['region']; labelKey: Parameters<typeof pickTranslatedUiText>[1] }[] = [
-  { region: 'china', labelKey: 'settings.model.provider_group.china' },
-  { region: 'global', labelKey: 'settings.model.provider_group.global' },
-  { region: 'custom', labelKey: 'settings.model.provider_group.local' },
-]
 
 export function TextStep({
   draft,
@@ -99,7 +95,7 @@ export function TextStep({
   return (
     <div className="onboarding-grid onboarding-grid--stack">
       <div className="onboarding-region-tabs" role="group" aria-label={ti('onboarding.text.region_filter_label')}>
-        {REGION_TABS.map((tab) => (
+        {MODEL_PROVIDER_REGION_TABS.map((tab) => (
           <button
             key={tab.region}
             type="button"

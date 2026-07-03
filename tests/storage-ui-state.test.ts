@@ -24,8 +24,11 @@ import {
 import {
   CHAT_STORAGE_KEY,
   DEBUG_CONSOLE_EVENTS_STORAGE_KEY,
+  readJson,
+  readJsonValidated,
   LOREBOOK_ENTRIES_STORAGE_KEY,
   ONBOARDING_STORAGE_KEY,
+  writeJson,
 } from '../src/lib/storage/core.ts'
 
 function createLocalStorageMock(initial: Record<string, string> = {}) {
@@ -55,6 +58,36 @@ function installStorage(initial: Record<string, string> = {}, desktopPet?: Recor
   })
   return localStorage
 }
+
+test('storage core support logs redact storage keys and errors', () => {
+  const rawKey = 'settings:apiKey:xai-abcdefghijklmnop:/Users/klein/private.json'
+  const storage = installStorage({
+    [rawKey]: '{"apiKey":"xai-abcdefghijklmnop",',
+  })
+  const originalError = console.error
+  const errorCalls: unknown[][] = []
+  console.error = (...args: unknown[]) => { errorCalls.push(args) }
+
+  try {
+    assert.deepEqual(readJson(rawKey, []), [])
+    assert.deepEqual(readJsonValidated(rawKey, { ok: false }, () => null), { ok: false })
+    storage.setItem = () => {
+      throw new Error('quota failed for settings:apiKey token=xai-abcdefghijklmnop at /Users/klein/private.json')
+    }
+    writeJson(rawKey, { ok: true })
+  } finally {
+    console.error = originalError
+  }
+
+  const serialized = JSON.stringify(errorCalls)
+  assert.equal(errorCalls.length, 3)
+  assert.match(serialized, /keyLength=/)
+  assert.match(serialized, /token=\*\*\*/)
+  assert.match(serialized, /~\/private\.json/)
+  assert.doesNotMatch(serialized, /settings:apiKey/)
+  assert.doesNotMatch(serialized, /xai-abcdefghijklmnop/)
+  assert.doesNotMatch(serialized, /\/Users\/klein/)
+})
 
 test('normalizeDebugConsoleEvents filters malformed entries and preserves autonomy source', () => {
   assert.deepEqual(normalizeDebugConsoleEvents([

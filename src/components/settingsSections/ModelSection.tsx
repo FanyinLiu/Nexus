@@ -10,8 +10,9 @@ import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBri
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import { getLocalizedApiProviderNote } from '../../features/models/providerNotes'
 import {
-  brandMatchesRegion,
+  MODEL_PROVIDER_REGION_TABS,
   getDefaultOnboardingRegion,
+  getProviderBrandsForRegion,
   pickBrandProviderForRegion,
   type ApiProviderPreset,
 } from '../../features/models/providerCatalog'
@@ -100,6 +101,15 @@ function getModelProviderFallbackGlyph(label: string) {
   return glyph || label.trim().slice(0, 1) || 'AI'
 }
 
+function getExtraKeysTextForProvider(providerId: string) {
+  const runtime = getCoreRuntime()
+  return runtime.authStore
+    .list(providerId)
+    .map((p) => p.apiKey)
+    .filter((key) => key && key.trim().length > 0)
+    .join('\n')
+}
+
 type ModelSectionProps = {
   active: boolean
   draft: AppSettings
@@ -109,6 +119,72 @@ type ModelSectionProps = {
   onApplyTextProviderPreset: (providerId: string) => void
   onRunTextConnectionTest: () => void
   renderTextTestResult: () => ReactNode
+}
+
+type ExtraKeysFieldProps = {
+  providerId: string
+  uiLanguage: UiLanguage
+}
+
+function ExtraKeysField({ providerId, uiLanguage }: ExtraKeysFieldProps) {
+  const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
+  const [extraKeysText, setExtraKeysText] = useState(() => getExtraKeysTextForProvider(providerId))
+  const [extraKeysError, setExtraKeysError] = useState('')
+
+  const commitExtraKeys = () => {
+    const runtime = getCoreRuntime()
+    const existingProfiles = runtime.authStore.list(providerId)
+    const nextKeys = extraKeysText
+      .split(/\r?\n/)
+      .map((k) => k.trim())
+      .filter((k) => k.length > 0)
+    const invalidKey = nextKeys.find((key) => !isHttpHeaderSafeCredential(key))
+    if (invalidKey) {
+      setExtraKeysError(ti('settings.model.extra_keys_error'))
+      return
+    }
+    const nextSet = new Set(nextKeys)
+    for (const profile of existingProfiles) {
+      if (!nextSet.has(profile.apiKey)) {
+        removeAuthProfileFromRuntime(profile.id)
+      }
+    }
+    const have = new Set(existingProfiles.map((p) => p.apiKey))
+    nextKeys.forEach((key, index) => {
+      if (have.has(key)) return
+      upsertAuthProfileInRuntime({
+        id: `${providerId}:${Date.now()}:${index}`,
+        providerId,
+        apiKey: key,
+        status: 'active',
+        successCount: 0,
+        failureCount: 0,
+      })
+    })
+    setExtraKeysError('')
+  }
+
+  return (
+    <label className="settings-control-card settings-model-advanced__field">
+      <span>{ti('settings.model.extra_keys')}</span>
+      <textarea
+        rows={3}
+        placeholder={'sk-extra-key-1\nsk-extra-key-2'}
+        value={extraKeysText}
+        onChange={(event) => {
+          setExtraKeysText(event.target.value)
+          if (extraKeysError) setExtraKeysError('')
+        }}
+        onBlur={commitExtraKeys}
+      />
+      {extraKeysError ? (
+        <small className="settings-model-advanced__error" role="alert">
+          {extraKeysError}
+        </small>
+      ) : null}
+      <small>{ti('settings.model.extra_keys_hint')}</small>
+    </label>
+  )
 }
 
 export const ModelSection = memo(function ModelSection({
@@ -132,60 +208,14 @@ export const ModelSection = memo(function ModelSection({
     && !isHttpHeaderSafeCredential(draft.apiKey)
     ? ti('settings.model.extra_keys_error')
     : ''
-  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(true)
   // 国内 / 海外 / 本地 segmented filter over the brand grid. Defaults to the
   // current provider's region so opening settings always lands on the tab
   // that contains your selection; falls back to the UI-language heuristic.
-  const [regionTab, setRegionTab] = useState<ApiProviderPreset['region'] | null>(null)
-
-  const [extraKeysText, setExtraKeysText] = useState('')
-  const [extraKeysProviderId, setExtraKeysProviderId] = useState<string | null>(null)
-  const [extraKeysError, setExtraKeysError] = useState('')
-  // Reset the textarea whenever the selected provider changes. Done during
-  // render via the prev-prop pattern to avoid set-state-in-effect churn.
-  if (draft.apiProviderId !== extraKeysProviderId) {
-    const runtime = getCoreRuntime()
-    const existing = runtime.authStore
-      .list(draft.apiProviderId)
-      .map((p) => p.apiKey)
-      .filter((k) => k && k.trim().length > 0)
-    setExtraKeysProviderId(draft.apiProviderId)
-    setExtraKeysText(existing.join('\n'))
-    setExtraKeysError('')
-  }
-
-  const commitExtraKeys = () => {
-    const runtime = getCoreRuntime()
-    const existingProfiles = runtime.authStore.list(draft.apiProviderId)
-    const nextKeys = extraKeysText
-      .split(/\r?\n/)
-      .map((k) => k.trim())
-      .filter((k) => k.length > 0)
-    const invalidKey = nextKeys.find((key) => !isHttpHeaderSafeCredential(key))
-    if (invalidKey) {
-      setExtraKeysError(ti('settings.model.extra_keys_error'))
-      return
-    }
-    const nextSet = new Set(nextKeys)
-    for (const profile of existingProfiles) {
-      if (!nextSet.has(profile.apiKey)) {
-        removeAuthProfileFromRuntime(profile.id)
-      }
-    }
-    const have = new Set(existingProfiles.map((p) => p.apiKey))
-    nextKeys.forEach((key, index) => {
-      if (have.has(key)) return
-      upsertAuthProfileInRuntime({
-        id: `${draft.apiProviderId}:${Date.now()}:${index}`,
-        providerId: draft.apiProviderId,
-        apiKey: key,
-        status: 'active',
-        successCount: 0,
-        failureCount: 0,
-      })
-    })
-    setExtraKeysError('')
-  }
+  const [regionOverride, setRegionOverride] = useState<{
+    providerId: string
+    region: ApiProviderPreset['region']
+  } | null>(null)
 
   const providerById = useMemo(() => {
     return new Map(API_PROVIDER_PRESETS.map((provider) => [provider.id, provider]))
@@ -210,12 +240,15 @@ export const ModelSection = memo(function ModelSection({
     return [...knownBrands, ...extraBrands]
   }, [providerById])
 
-  const activeRegion = regionTab
-    ?? API_PROVIDER_PRESETS.find((preset) => preset.id === draft.apiProviderId)?.region
+  const activeRegion = regionOverride?.providerId === draft.apiProviderId
+    ? regionOverride.region
+    : currentPreset.region
     ?? getDefaultOnboardingRegion(uiLanguage)
-  const regionBrands = providerBrands.filter((brand) =>
-    brandMatchesRegion(brand.providerIds, activeRegion)
-    || brand.providerIds.includes(draft.apiProviderId))
+  const regionBrands = getProviderBrandsForRegion(providerBrands, activeRegion, draft.apiProviderId)
+  const getRegionLabel = (region: ApiProviderPreset['region']) => {
+    const tab = MODEL_PROVIDER_REGION_TABS.find((item) => item.region === region)
+    return tab ? ti(tab.labelKey) : region
+  }
 
   const currentBrand = providerBrands.find((brand) => brand.providerIds.includes(draft.apiProviderId))
     ?? providerBrands[0]
@@ -242,17 +275,13 @@ export const ModelSection = memo(function ModelSection({
           </div>
 
           <div className="onboarding-region-tabs" role="group" aria-label={ti('onboarding.text.region_filter_label')}>
-            {([
-              { region: 'china', labelKey: 'settings.model.provider_group.china' },
-              { region: 'global', labelKey: 'settings.model.provider_group.global' },
-              { region: 'custom', labelKey: 'settings.model.provider_group.local' },
-            ] as const).map((tab) => (
+            {MODEL_PROVIDER_REGION_TABS.map((tab) => (
               <button
                 key={tab.region}
                 type="button"
                 className={`onboarding-region-tabs__tab${activeRegion === tab.region ? ' is-active' : ''}`}
                 aria-pressed={activeRegion === tab.region}
-                onClick={() => setRegionTab(tab.region)}
+                onClick={() => setRegionOverride({ providerId: draft.apiProviderId, region: tab.region })}
                 onKeyDown={(e) => {
                   const btns = Array.from(e.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>('button'))
                   const i = btns.indexOf(e.currentTarget)
@@ -273,6 +302,14 @@ export const ModelSection = memo(function ModelSection({
             {regionBrands.map((brand) => {
               const selected = brand.providerIds.includes(draft.apiProviderId)
               const brandLabel = brand.labelKey ? ti(brand.labelKey) : brand.label
+              const provider = providerById.get(
+                pickBrandProviderForRegion(brand.providerIds, activeRegion, draft.apiProviderId),
+              )
+              const brandSummary = provider
+                ? [getRegionLabel(provider.region), provider.defaultModel || provider.label]
+                  .filter(Boolean)
+                  .join(' · ')
+                : ''
               return (
                 <button
                   key={brand.id}
@@ -303,6 +340,9 @@ export const ModelSection = memo(function ModelSection({
                     </span>
                   )}
                   <span className="settings-model-source-card__name">{brandLabel}</span>
+                  {brandSummary ? (
+                    <span className="settings-model-source-card__meta">{brandSummary}</span>
+                  ) : null}
                   <svg
                     className="settings-model-source-card__chevron"
                     aria-hidden="true"
@@ -480,25 +520,11 @@ export const ModelSection = memo(function ModelSection({
                   <p>{ti('settings.model.failover_hint')}</p>
                 </div>
 
-                <label className="settings-control-card settings-model-advanced__field">
-                  <span>{ti('settings.model.extra_keys')}</span>
-                  <textarea
-                    rows={3}
-                    placeholder={'sk-extra-key-1\nsk-extra-key-2'}
-                    value={extraKeysText}
-                    onChange={(event) => {
-                      setExtraKeysText(event.target.value)
-                      if (extraKeysError) setExtraKeysError('')
-                    }}
-                    onBlur={commitExtraKeys}
-                  />
-                  {extraKeysError ? (
-                    <small className="settings-model-advanced__error" role="alert">
-                      {extraKeysError}
-                    </small>
-                  ) : null}
-                  <small>{ti('settings.model.extra_keys_hint')}</small>
-                </label>
+                <ExtraKeysField
+                  key={draft.apiProviderId}
+                  providerId={draft.apiProviderId}
+                  uiLanguage={uiLanguage}
+                />
 
                 <div className="settings-control-card settings-model-advanced__control">
                   <label className="settings-toggle">

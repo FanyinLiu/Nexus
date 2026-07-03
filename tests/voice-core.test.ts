@@ -18,6 +18,7 @@ import {
 
 const WAKE_WORD = '\u661f\u7ed8'
 const WAKE_WORD_ALIAS = '\u661f\u4f1a'
+const WAKE_WORD_LIST = '\u5c0f\u767d,\u661f\u5e05'
 
 test('returns manual confirmation decision when manual_confirm mode is enabled', () => {
   const transcript = '\u660e\u5929\u63d0\u9192\u6211\u5f00\u4f1a'
@@ -136,6 +137,22 @@ test('strips wake word aliases before sending content', () => {
     kind: 'send',
     transcript,
     content: '\u5e2e\u6211\u6253\u5f00\u5b98\u7f51',
+    mode: 'wake_word',
+  })
+})
+
+test('supports comma-separated custom wake words', () => {
+  const transcript = '\u5c0f\u767d \u5e2e\u6211\u67e5\u4e00\u4e0b\u5f53\u4eca\u5929\u5929\u6c14'
+  const decision = resolveVoiceTranscriptDecision({
+    transcript,
+    triggerMode: 'wake_word',
+    wakeWord: WAKE_WORD_LIST,
+  })
+
+  assert.deepEqual(decision, {
+    kind: 'send',
+    transcript,
+    content: '\u5e2e\u6211\u67e5\u4e00\u4e0b\u5f53\u4eca\u5929\u5929\u6c14',
     mode: 'wake_word',
   })
 })

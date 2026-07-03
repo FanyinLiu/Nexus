@@ -14,6 +14,7 @@ const PLUGINS_DIR_NAME = 'plugins'
 const PLUGIN_MANIFEST_FILE = 'plugin.json'
 const PLUGIN_SKILL_FILE = 'SKILL.md'
 const APPROVED_PLUGINS_FILE = 'approved-plugins.json'
+const USER_DATA_DISPLAY_ROOT = 'app-user-data'
 
 /** @type {Map<string, PluginEntry>} */
 const _plugins = new Map()
@@ -43,6 +44,10 @@ let _approvedPluginsLoaded = false
 
 function getPluginsDir() {
   return path.join(app.getPath('userData'), PLUGINS_DIR_NAME)
+}
+
+function getPluginsDisplayDir() {
+  return `${USER_DATA_DISPLAY_ROOT}/${PLUGINS_DIR_NAME}`
 }
 
 function getApprovedPluginsPath() {
@@ -352,4 +357,8 @@ export function hasCapability(pluginId, capability) {
 
 export function getPluginsDir_() {
   return getPluginsDir()
+}
+
+export function getPluginsDisplayDir_() {
+  return getPluginsDisplayDir()
 }
