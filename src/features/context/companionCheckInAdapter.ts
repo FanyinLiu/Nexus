@@ -1,4 +1,5 @@
 import type { UiLanguage } from '../../types'
+import { isSafeTimeMs } from '../../lib/time.ts'
 import {
   buildCompanionCheckInLine,
   type CompanionCheckInDecision,
@@ -6,6 +7,8 @@ import {
 } from './companionCheckInPolicy.ts'
 
 const DEFAULT_LINE_TTL_MS = 5 * 60_000
+const MIN_LINE_TTL_MS = 30_000
+const MAX_LINE_TTL_MS = 10 * 60_000
 
 export type CompanionCheckInInAppPayload = {
   show: true
@@ -20,19 +23,32 @@ export type CompanionCheckInInAppPayload = {
   signalKey?: string
 }
 
+function normalizeLineTtlMs(value: number | undefined): number {
+  const ttlMs = typeof value === 'number' && Number.isFinite(value)
+    ? Math.round(value)
+    : DEFAULT_LINE_TTL_MS
+  return Math.min(MAX_LINE_TTL_MS, Math.max(MIN_LINE_TTL_MS, ttlMs))
+}
+
+function isValidPayloadTimeMs(value: number): boolean {
+  return isSafeTimeMs(value)
+}
+
 export function buildCompanionCheckInInAppPayload(
   decision: CompanionCheckInDecision,
   uiLanguage: UiLanguage = 'en-US',
   nowMs: number,
   options: { ttlMs?: number } = {},
 ): CompanionCheckInInAppPayload | null {
+  if (!isValidPayloadTimeMs(nowMs)) return null
+  if (decision.priority !== 'low' && decision.priority !== 'normal') return null
+
   const line = buildCompanionCheckInLine(decision, uiLanguage)
   if (!line) return null
 
-  const createdAtMs = Number.isFinite(nowMs) ? nowMs : 0
-  const ttlMs = Number.isFinite(options.ttlMs)
-    ? Math.max(30_000, options.ttlMs ?? DEFAULT_LINE_TTL_MS)
-    : DEFAULT_LINE_TTL_MS
+  const ttlMs = normalizeLineTtlMs(options.ttlMs)
+  const expiresAtMs = nowMs + ttlMs
+  if (!isValidPayloadTimeMs(expiresAtMs)) return null
 
   return {
     show: true,
@@ -40,10 +56,10 @@ export function buildCompanionCheckInInAppPayload(
     kind: decision.priority === 'normal' ? 'soft_card' : 'inline_hint',
     text: line.text,
     reason: line.reason,
-    priority: decision.priority as Extract<CompanionCheckInDecision['priority'], 'low' | 'normal'>,
+    priority: decision.priority,
     dismissible: true,
-    createdAtMs,
-    expiresAtMs: createdAtMs + ttlMs,
+    createdAtMs: nowMs,
+    expiresAtMs,
     signalKey: decision.signalKey,
   }
 }

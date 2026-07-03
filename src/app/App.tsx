@@ -1,10 +1,12 @@
 import { Component, Suspense, lazy } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import './App.css'
+import './styles/panel-companion.css'
 import { useAppController } from './controllers'
 import { PetView, PanelView } from './views'
 import { ModelSetupOverlay } from '../features/setup/components/ModelSetupOverlay'
 import { t as translate } from '../i18n/runtime.ts'
+import { formatComponentStackForLog, formatErrorBoundaryDetail } from './errorBoundarySupport.ts'
 
 class AppErrorBoundary extends Component<
   { children: ReactNode },
@@ -17,7 +19,11 @@ class AppErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('[App] Uncaught render error:', error, info.componentStack)
+    console.error(
+      '[App] Uncaught render error:',
+      formatErrorBoundaryDetail(error, translate('app.error_boundary.unknown_detail')),
+      formatComponentStackForLog(info.componentStack),
+    )
   }
 
   render() {
@@ -28,7 +34,9 @@ class AppErrorBoundary extends Component<
             <span className="app-error-fallback__eyebrow">Nexus</span>
             <h1>{translate('app.error_boundary.title')}</h1>
             <p>{translate('app.error_boundary.body')}</p>
-            <pre className="app-error-fallback__detail">{this.state.error.message}</pre>
+            <pre className="app-error-fallback__detail">
+              {formatErrorBoundaryDetail(this.state.error, translate('app.error_boundary.unknown_detail'))}
+            </pre>
             <button
               type="button"
               className="app-error-fallback__button"
@@ -45,7 +53,7 @@ class AppErrorBoundary extends Component<
 }
 
 const SettingsDrawer = lazy(async () => {
-  const module = await import('../components/SettingsDrawer')
+  const module = await import('./settingsDrawerEntry')
   return { default: module.SettingsDrawer }
 })
 

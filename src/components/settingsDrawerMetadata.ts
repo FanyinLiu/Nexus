@@ -19,6 +19,27 @@ export type SettingsSectionMetaEntry = {
 
 export type SettingsSectionMetaMap = Record<SettingsSectionId, SettingsSectionMetaEntry>
 
+export const SETTINGS_TRUST_SURFACE_GROUPS = {
+  trustSafety: ['console', 'history'],
+  memoryContext: ['memory', 'lorebooks'],
+  desktopAwareness: ['window', 'autonomy', 'voice'],
+  permissionsIntegrations: ['model', 'integrations', 'tools'],
+  appearanceInteraction: ['chat', 'letters'],
+} as const satisfies Record<string, readonly SettingsSectionId[]>
+
+export type SettingsTrustSurfaceGroupId = keyof typeof SETTINGS_TRUST_SURFACE_GROUPS
+
+export function getSettingsTrustSurfaceGroupId(
+  sectionId: SettingsSectionId,
+): SettingsTrustSurfaceGroupId {
+  for (const groupId of Object.keys(SETTINGS_TRUST_SURFACE_GROUPS) as SettingsTrustSurfaceGroupId[]) {
+    const sectionIds = SETTINGS_TRUST_SURFACE_GROUPS[groupId] as readonly SettingsSectionId[]
+    if (sectionIds.includes(sectionId)) return groupId
+  }
+
+  return 'appearanceInteraction'
+}
+
 type Translator = (
   key: Parameters<typeof pickTranslatedUiText>[1],
   params?: Parameters<typeof pickTranslatedUiText>[2],

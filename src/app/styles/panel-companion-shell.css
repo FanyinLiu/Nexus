@@ -1,0 +1,666 @@
+/* Image 4 shell, backdrop, and top controls. */
+/* Image 4 companion panel shell. Keep this file scoped to the expanded panel. */
+.desktop-pet-root--panel:has(.panel-window--image4) {
+  position: relative;
+  display: grid;
+  min-height: 100vh;
+  align-items: start;
+  justify-items: center;
+  padding: clamp(24px, 3vh, 28px) clamp(18px, 5vw, 56px);
+  overflow: hidden;
+  overflow: clip;
+  background: #07101b;
+}
+
+.desktop-pet-root--panel:has(.panel-window--image4)::before {
+  content: "";
+  position: absolute;
+  inset: -24px;
+  z-index: -2;
+  background:
+    linear-gradient(180deg, rgba(5, 10, 17, 0.18), rgba(5, 10, 17, 0.46)),
+    url("../../features/panelScene/scenes/seaside.night.jpg") center bottom / cover no-repeat;
+  filter: blur(1.6px) saturate(1.02) brightness(0.99);
+  transform: scale(1.02);
+}
+
+.desktop-pet-root--panel:has(.panel-window--image4)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(120, 255, 230, 0.08), transparent 55%),
+    radial-gradient(circle at 80% 20%, rgba(180, 220, 255, 0.055), transparent 60%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.36));
+  pointer-events: none;
+}
+
+.desktop-pet-root--panel:has(.panel-window--image4) .panel-scene-layer {
+  opacity: 0;
+}
+
+.panel-window--image4.panel-window--simple,
+html[data-theme='warm-day'] .panel-window--image4.panel-window--simple {
+  width: min(742px, calc(100vw - 50px));
+  position: relative;
+  container-type: inline-size;
+  height: auto;
+  aspect-ratio: 742 / 1738;
+  min-height: 0;
+  max-height: calc(100vh - 58px);
+  margin-inline: auto;
+  padding: clamp(30px, 5vw, 50px) clamp(24px, 5.5vw, 52px) clamp(24px, 4.4vw, 40px);
+  border: 1px solid rgba(190, 210, 235, 0.1);
+  border-color: rgba(210, 228, 255, 0.16) rgba(120, 180, 255, 0.11) rgba(80, 120, 160, 0.09) rgba(200, 220, 255, 0.13);
+  border-radius: clamp(20px, 3.2vw, 28px);
+  background:
+    radial-gradient(circle at 44% 4%, rgba(120, 190, 255, 0.09), transparent 54%),
+    radial-gradient(circle at 50% 22%, rgba(120, 255, 230, 0.035), transparent 58%),
+    linear-gradient(180deg, rgba(18, 26, 44, 0.62), rgba(8, 12, 20, 0.7));
+  color: rgba(242, 247, 255, 0.9);
+  font-size: clamp(13px, 2.8vw, 22px);
+  line-height: 1.42;
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px) saturate(1.04);
+  -webkit-backdrop-filter: blur(24px) saturate(1.04);
+}
+
+@media (min-aspect-ratio: 1 / 1) {
+  .panel-window--image4.panel-window--simple,
+  html[data-theme='warm-day'] .panel-window--image4.panel-window--simple {
+    width: min(742px, calc(100vw - 50px), calc((100vh - 58px) * 742 / 1738));
+    padding: clamp(16px, 7cqw, 34px) clamp(14px, 7cqw, 32px) clamp(14px, 5.8cqw, 28px);
+    border-radius: clamp(16px, 6cqw, 24px);
+  }
+
+  .panel-window--image4 .image4-header-controls {
+    top: clamp(9px, 4.8cqw, 18px);
+    right: clamp(9px, 4.8cqw, 18px);
+  }
+
+  .panel-window--image4 .panel-window__header-actions--image4,
+  html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 {
+    gap: clamp(3px, 1.4cqw, 5px);
+    padding: clamp(2px, 1.1cqw, 4px) clamp(3px, 1.6cqw, 5px);
+    border-radius: clamp(12px, 5cqw, 16px);
+  }
+
+  .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+  html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button {
+    width: clamp(20px, 9cqw, 28px);
+    height: clamp(20px, 9cqw, 28px);
+    min-width: clamp(20px, 9cqw, 28px);
+    border-radius: clamp(7px, 3.2cqw, 10px);
+  }
+
+  .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button svg {
+    width: clamp(11px, 4.5cqw, 15px);
+    height: clamp(11px, 4.5cqw, 15px);
+  }
+}
+
+.panel-window--image4.panel-window--simple::before { content: ""; position: absolute; left: -6px; top: 10%; bottom: 10%; z-index: 0; width: 2px; background: linear-gradient(180deg, transparent, rgba(120, 255, 230, 0.25), transparent); opacity: 0.6; pointer-events: none; }
+
+html[data-theme='warm-day'] .desktop-pet-root--panel:has(.panel-window--image4) {
+  background: #120d0b;
+}
+
+html[data-theme='warm-day'] .desktop-pet-root--panel:has(.panel-window--image4)::before {
+  background:
+    linear-gradient(180deg, rgba(18, 10, 8, 0.12), rgba(18, 10, 8, 0.48)),
+    url("../../features/panelScene/scenes/seaside.night.jpg") center bottom / cover no-repeat;
+  filter: blur(1.6px) sepia(0.18) saturate(1.08) brightness(0.96);
+}
+
+html[data-theme='warm-day'] .desktop-pet-root--panel:has(.panel-window--image4)::after {
+  background:
+    radial-gradient(circle at 22% 28%, rgba(255, 178, 118, 0.11), transparent 56%),
+    radial-gradient(circle at 78% 18%, rgba(255, 222, 168, 0.06), transparent 58%),
+    linear-gradient(180deg, rgba(30, 18, 14, 0.16), rgba(11, 8, 8, 0.36));
+}
+
+html[data-theme='warm-day'] .panel-window--image4.panel-window--simple {
+  border-color: rgba(255, 219, 176, 0.16) rgba(255, 179, 120, 0.12) rgba(100, 70, 50, 0.11) rgba(255, 230, 196, 0.13);
+  background:
+    radial-gradient(circle at 44% 4%, rgba(255, 185, 120, 0.09), transparent 54%),
+    radial-gradient(circle at 52% 22%, rgba(255, 224, 180, 0.04), transparent 58%),
+    linear-gradient(180deg, rgba(34, 24, 22, 0.66), rgba(13, 10, 12, 0.72));
+  color: rgba(255, 248, 238, 0.9);
+}
+
+html[data-theme='warm-day'] .panel-window--image4.panel-window--simple::before {
+  background: linear-gradient(180deg, transparent, rgba(255, 185, 120, 0.22), transparent);
+}
+
+.panel-window--image4 .panel-window__shell--image4,
+html[data-theme='warm-day'] .desktop-pet-root--panel .panel-window--image4 .panel-window__shell--image4 {
+  display: block;
+  height: 100%;
+  min-height: 0;
+  color: rgba(242, 247, 255, 0.9);
+}
+
+.panel-window--image4 .image4-header-controls {
+  position: absolute;
+  top: clamp(16px, 3.8vw, 32px);
+  right: clamp(16px, 4vw, 32px);
+  z-index: 4;
+  min-height: 0;
+  justify-content: flex-end;
+}
+
+.panel-window--image4 .companion-chat__toolbar-left {
+  display: none;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 {
+  gap: clamp(4px, 0.8vw, 6px);
+  padding: clamp(2px, 0.5vw, 4px) clamp(3px, 0.8vw, 5px);
+  border: 1px solid rgba(203, 220, 244, 0.08);
+  border-radius: clamp(13px, 2.5vw, 18px);
+  background: rgba(10, 16, 28, 0.22);
+  box-shadow: none;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 {
+  border-color: rgba(255, 218, 176, 0.09);
+  background: rgba(31, 20, 18, 0.3);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button {
+  width: clamp(24px, 3.8vw, 34px);
+  height: clamp(24px, 3.8vw, 34px);
+  min-width: clamp(24px, 3.8vw, 34px);
+  border: 1px solid transparent;
+  border-radius: clamp(8px, 1.6vw, 12px);
+  background: transparent;
+  color: rgba(203, 220, 244, 0.7);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button {
+  color: rgba(246, 224, 203, 0.68);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings {
+  color: rgba(214, 228, 255, 0.78);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings {
+  color: rgba(255, 232, 206, 0.78);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse {
+  color: rgba(255, 213, 145, 0.66);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button svg {
+  width: clamp(13px, 2.1vw, 18px);
+  height: clamp(13px, 2.1vw, 18px);
+  stroke-width: 1.75;
+  opacity: 0.86;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover {
+  transform: none;
+  border-color: rgba(203, 220, 244, 0.12);
+  background: var(--image4-state-hover-neutral-bg);
+  color: rgba(238, 245, 255, 0.94);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover {
+  border-color: rgba(255, 218, 176, 0.13);
+  color: rgba(255, 246, 232, 0.92);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover {
+  border-color: rgba(255, 213, 145, 0.16);
+  background: rgba(255, 213, 145, 0.07);
+  color: rgba(255, 224, 166, 0.9);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:focus-visible,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:focus-visible {
+  outline: none;
+  border-color: var(--image4-state-focus-border);
+  box-shadow: var(--image4-state-focus-ring);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
+  border-color: transparent;
+  color: rgba(255, 174, 174, 0.62);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover {
+  border-color: rgba(255, 140, 145, 0.14);
+  background: var(--image4-state-hover-danger-bg);
+  color: rgba(255, 180, 185, 0.88);
+}
+
+/* Codex-like neutral pass for Image 4. This intentionally overrides warm-day. */
+.desktop-pet-root--panel:has(.panel-window--image4),
+html[data-theme='warm-day'] .desktop-pet-root--panel:has(.panel-window--image4) {
+  background: #0d1117;
+}
+
+.desktop-pet-root--panel:has(.panel-window--image4)::before,
+html[data-theme='warm-day'] .desktop-pet-root--panel:has(.panel-window--image4)::before {
+  background:
+    linear-gradient(180deg, rgba(13, 17, 23, 0.66), rgba(13, 17, 23, 0.88)),
+    url("../../features/panelScene/scenes/seaside.night.jpg") center bottom / cover no-repeat;
+  filter: blur(1px) saturate(0.72) brightness(0.56);
+}
+
+.desktop-pet-root--panel:has(.panel-window--image4)::after,
+html[data-theme='warm-day'] .desktop-pet-root--panel:has(.panel-window--image4)::after {
+  background: linear-gradient(180deg, rgba(13, 17, 23, 0.3), rgba(3, 6, 10, 0.62));
+}
+
+.panel-window--image4.panel-window--simple,
+html[data-theme='warm-day'] .panel-window--image4.panel-window--simple {
+  border-color: rgba(240, 246, 252, 0.13);
+  background:
+    linear-gradient(180deg, rgba(22, 27, 34, 0.88), rgba(13, 17, 23, 0.92));
+  color: rgba(240, 246, 252, 0.92);
+  box-shadow:
+    0 20px 46px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.panel-window--image4.panel-window--simple::before,
+html[data-theme='warm-day'] .panel-window--image4.panel-window--simple::before {
+  content: none;
+}
+
+.panel-window--image4 .panel-window__shell--image4,
+html[data-theme='warm-day'] .desktop-pet-root--panel .panel-window--image4 .panel-window__shell--image4 {
+  color: rgba(240, 246, 252, 0.9);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 {
+  border-color: rgba(240, 246, 252, 0.1);
+  background: rgba(22, 27, 34, 0.76);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse {
+  color: rgba(139, 148, 158, 0.96);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover {
+  border-color: rgba(240, 246, 252, 0.14);
+  background: rgba(48, 54, 61, 0.68);
+  color: rgba(240, 246, 252, 0.96);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover {
+  border-color: rgba(240, 246, 252, 0.14);
+  background: rgba(48, 54, 61, 0.68);
+  color: rgba(240, 246, 252, 0.96);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
+  color: rgba(248, 81, 73, 0.72);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover {
+  border-color: rgba(248, 81, 73, 0.24);
+  background: rgba(248, 81, 73, 0.1);
+  color: rgba(255, 123, 114, 0.94);
+}
+
+/* Image 4 morning theme. This sits after the neutral pass so warm-day stays bright. */
+html[data-theme='warm-day'] .desktop-pet-root--panel:has(.panel-window--image4) {
+  background: #e4edf4;
+}
+
+html[data-theme='warm-day'] .desktop-pet-root--panel:has(.panel-window--image4)::before {
+  background:
+    linear-gradient(180deg, rgba(245, 251, 255, 0.42), rgba(222, 234, 244, 0.64)),
+    url("../../features/panelScene/scenes/seaside.day.jpg") center bottom / cover no-repeat;
+  filter: blur(1px) saturate(0.9) brightness(1.08);
+}
+
+html[data-theme='warm-day'] .desktop-pet-root--panel:has(.panel-window--image4)::after {
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 219, 166, 0.22), transparent 52%),
+    radial-gradient(circle at 82% 22%, rgba(116, 164, 196, 0.13), transparent 58%),
+    linear-gradient(180deg, rgba(248, 252, 255, 0.16), rgba(213, 226, 237, 0.34));
+}
+
+html[data-theme='warm-day'] .panel-window--image4.panel-window--simple {
+  border-color: rgba(84, 109, 132, 0.2);
+  background:
+    radial-gradient(circle at 44% 0%, rgba(255, 220, 167, 0.16), transparent 46%),
+    linear-gradient(180deg, rgba(249, 253, 255, 0.82), rgba(226, 237, 246, 0.76));
+  color: rgba(27, 39, 52, 0.92);
+  box-shadow:
+    0 20px 46px rgba(58, 84, 108, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+html[data-theme='warm-day'] .panel-window--image4.panel-window--simple::before {
+  content: "";
+  background: linear-gradient(180deg, transparent, rgba(70, 112, 145, 0.22), transparent);
+}
+
+html[data-theme='warm-day'] .desktop-pet-root--panel .panel-window--image4 .panel-window__shell--image4 {
+  color: rgba(27, 39, 52, 0.9);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 {
+  border-color: rgba(74, 96, 118, 0.16);
+  background: rgba(248, 252, 255, 0.66);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse {
+  color: rgba(64, 78, 94, 0.8);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover {
+  border-color: rgba(74, 96, 118, 0.18);
+  background: rgba(231, 240, 247, 0.76);
+  color: rgba(25, 36, 48, 0.92);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
+  color: rgba(170, 74, 72, 0.68);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover {
+  border-color: rgba(170, 74, 72, 0.2);
+  background: rgba(214, 94, 88, 0.1);
+  color: rgba(145, 54, 54, 0.92);
+}
+
+/* Image 4 simple button system. */
+.panel-window--image4 .panel-window__header-actions--image4,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 {
+  gap: clamp(4px, 0.8vw, 6px);
+  padding: 2px 3px;
+  border: 1px solid rgba(73, 94, 114, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.24);
+  box-shadow: none;
+  backdrop-filter: blur(14px) saturate(1.04);
+  -webkit-backdrop-filter: blur(14px) saturate(1.04);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse {
+  border-color: transparent;
+  border-radius: 8px;
+  background: transparent;
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse {
+  border-color: transparent;
+  background: transparent;
+  color: rgba(56, 70, 84, 0.82);
+  box-shadow: none;
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover {
+  border-color: transparent;
+  background: rgba(73, 94, 114, 0.08);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
+  color: rgba(126, 32, 27, 0.72);
+}
+
+/* Xinghui companion palette: warm off-white base with blue-green support and apricot emotional accent. */
+html[data-theme='warm-day'] .desktop-pet-root--panel:has(.panel-window--image4) {
+  --image4-companion-bg: #fff6ea;
+  --image4-companion-surface: #fffaf3;
+  --image4-companion-surface-strong: #f4e4d0;
+  --image4-companion-primary: #d98257;
+  --image4-companion-primary-soft: #ffd7b8;
+  --image4-companion-secondary: #7fa99b;
+  --image4-companion-text: #302823;
+  --image4-companion-muted: #7a6a5e;
+  --image4-companion-border: rgba(96, 70, 48, 0.16);
+  --image4-companion-glow: rgba(245, 174, 111, 0.28);
+  --image4-companion-secondary-glow: rgba(127, 169, 155, 0.22);
+  background: var(--image4-companion-bg);
+}
+
+html[data-theme='warm-day'] .desktop-pet-root--panel:has(.panel-window--image4)::before {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image4-companion-surface) 52%, transparent),
+      color-mix(in srgb, var(--image4-companion-surface-strong) 64%, transparent)
+    ),
+    url("../../features/panelScene/scenes/seaside.day.jpg") center bottom / cover no-repeat;
+  filter: blur(1px) sepia(0.08) saturate(0.9) brightness(1.12);
+}
+
+html[data-theme='warm-day'] .desktop-pet-root--panel:has(.panel-window--image4)::after {
+  background:
+    radial-gradient(circle at 22% 18%, color-mix(in srgb, var(--image4-companion-primary-soft) 30%, transparent), transparent 54%),
+    radial-gradient(circle at 82% 22%, var(--image4-companion-secondary-glow), transparent 58%),
+    linear-gradient(180deg, color-mix(in srgb, var(--image4-companion-bg) 22%, transparent), color-mix(in srgb, var(--image4-companion-surface-strong) 32%, transparent));
+}
+
+html[data-theme='warm-day'] .panel-window--image4.panel-window--simple {
+  border-color: var(--image4-companion-border);
+  background:
+    radial-gradient(circle at 44% 0%, color-mix(in srgb, var(--image4-companion-primary-soft) 24%, transparent), transparent 45%),
+    radial-gradient(circle at 58% 20%, color-mix(in srgb, var(--image4-companion-secondary) 12%, transparent), transparent 50%),
+    linear-gradient(180deg, color-mix(in srgb, var(--image4-companion-surface) 90%, transparent), color-mix(in srgb, var(--image4-companion-surface-strong) 82%, transparent));
+  color: var(--image4-companion-text);
+  box-shadow:
+    0 20px 44px rgba(143, 104, 72, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+html[data-theme='warm-day'] .panel-window--image4.panel-window--simple::before {
+  background: linear-gradient(180deg, transparent, var(--image4-companion-glow), transparent);
+}
+
+html[data-theme='warm-day'] .desktop-pet-root--panel .panel-window--image4 .panel-window__shell--image4 {
+  color: var(--image4-companion-text);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 {
+  border-color: var(--image4-companion-border);
+  background: color-mix(in srgb, var(--image4-companion-surface) 64%, transparent);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse {
+  color: color-mix(in srgb, var(--image4-companion-text) 78%, transparent);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse {
+  color: color-mix(in srgb, var(--image4-companion-primary) 74%, var(--image4-companion-text));
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover {
+  background: color-mix(in srgb, var(--image4-companion-primary-soft) 32%, transparent);
+  color: color-mix(in srgb, var(--image4-companion-text) 92%, transparent);
+}
+
+/* Codex-app toolbar pass: clear individual tools without a shared button tray. */
+.panel-window--image4 .panel-window__header-actions--image4,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 {
+  gap: clamp(4px, 0.8vw, 6px);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse {
+  border: 1px solid color-mix(in srgb, var(--image4-companion-border, rgba(240, 246, 252, 0.12)) 72%, transparent);
+  background: color-mix(in srgb, var(--image4-companion-surface, rgba(22, 27, 34, 0.72)) 42%, transparent);
+  color: color-mix(in srgb, var(--image4-companion-text, rgba(240, 246, 252, 0.92)) 76%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover {
+  border-color: color-mix(in srgb, var(--image4-companion-border, rgba(240, 246, 252, 0.18)) 92%, transparent);
+  background: color-mix(in srgb, var(--image4-companion-surface, rgba(48, 54, 61, 0.72)) 66%, transparent);
+  color: color-mix(in srgb, var(--image4-companion-text, rgba(240, 246, 252, 0.96)) 92%, transparent);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
+  border-color: color-mix(in srgb, var(--image4-companion-border, rgba(240, 246, 252, 0.12)) 72%, transparent);
+  background: color-mix(in srgb, var(--image4-companion-surface, rgba(22, 27, 34, 0.72)) 42%, transparent);
+  color: color-mix(in srgb, var(--image4-companion-text, rgba(240, 246, 252, 0.92)) 70%, transparent);
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger:hover {
+  border-color: rgba(170, 74, 72, 0.22);
+  background: rgba(214, 94, 88, 0.1);
+  color: rgba(145, 54, 54, 0.92);
+}
+
+/* Pure icon controls: keep semantic tones but no dense background plate. */
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover {
+  background: color-mix(in srgb, var(--image4-companion-surface, rgba(22, 27, 34, 0.72)) 18%, transparent);
+  border-color: color-mix(in srgb, var(--image4-companion-border, rgba(240, 246, 252, 0.18)) 70%, transparent);
+}
+
+/* Final toolbar lock: keep top Image4 controls compact and tray-free, even while hovered/focused.
+   This overrides ancestor hover surfaces so the cluster never looks like a floating pane. */
+.panel-window--image4 .companion-chat__toolbar:hover .panel-window__header-actions--image4,
+.panel-window--image4 .panel-window__header-actions--image4:hover,
+.panel-window--image4 .panel-window__header-actions--image4:focus-within,
+html[data-theme='warm-day'] .panel-window--image4 .companion-chat__toolbar:hover .panel-window__header-actions--image4,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4:focus-within {
+  background: transparent;
+  border-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button {
+  background-clip: padding-box;
+}
+
+/* Final UI lock: keep top controls as standalone minimal icons (no tray look). */
+.panel-window--image4 .image4-header-controls,
+html[data-theme='warm-day'] .panel-window--image4 .image4-header-controls {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 {
+  gap: clamp(3px, 0.7vw, 6px) !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse {
+  width: clamp(22px, 4vw, 28px) !important;
+  height: clamp(22px, 4vw, 28px) !important;
+  min-width: clamp(22px, 4vw, 28px) !important;
+  border-radius: 9px !important;
+  border-color: color-mix(in srgb, var(--image4-companion-border, rgba(240, 246, 252, 0.16)) 74%, transparent) !important;
+  background: color-mix(in srgb, var(--image4-companion-surface, rgba(22, 27, 34, 0.64)) 42%, transparent) !important;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button svg,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings svg,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings svg,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse svg {
+  width: clamp(12px, 2.1vw, 15px) !important;
+  height: clamp(12px, 2.1vw, 15px) !important;
+}
+
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings:hover,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings:hover,
+html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse:hover,
+.panel-window--image4 .panel-window__header-actions--image4:focus-within {
+  background: color-mix(in srgb, var(--image4-companion-surface, rgba(48, 54, 61, 0.72)) 30%, transparent) !important;
+  border-color: color-mix(in srgb, var(--image4-companion-border, rgba(240, 246, 252, 0.22)) 80%, transparent) !important;
+}

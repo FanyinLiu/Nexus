@@ -13,6 +13,7 @@ import {
   isDesktopContextScreenshotAvailable,
 } from '../lib/platformProfile'
 import { stripDesktopContextScreenshotPayload } from '../lib/privacy/desktopContextPrivacy'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction'
 import type { AppSettings, DesktopContextSnapshot, PlatformProfile } from '../types'
 
 type UseDesktopContextParams = {
@@ -51,7 +52,10 @@ export function useDesktopContext({ settingsRef, platformProfileRef }: UseDeskto
       activeWindowTitle: contentSnapshot.activeWindowTitle,
       uiLanguage: settingsRef.current.uiLanguage,
     })
-    const companionAwarenessSummary = formatQuietObservationForPrompt(summary)
+    const companionAwarenessSummary = formatQuietObservationForPrompt(
+      summary,
+      settingsRef.current.uiLanguage,
+    )
 
     if (!companionAwarenessSummary) return contentSnapshot
     saveRecentCompanionSummary(summary!)
@@ -114,7 +118,7 @@ export function useDesktopContext({ settingsRef, platformProfileRef }: UseDeskto
             currentSettings.screenOcrLanguage,
           )
         } catch (error) {
-          console.warn('[screen-ocr] failed to recognize screenshot text', error)
+          console.warn('[screen-ocr] failed to recognize screenshot text', getRedactedLogErrorMessage(error))
           return undefined
         }
       })()
@@ -133,7 +137,7 @@ export function useDesktopContext({ settingsRef, platformProfileRef }: UseDeskto
                 model: currentSettings.screenVlmModel,
               })
             } catch (error) {
-              console.warn('[screen-vlm] failed to analyze screenshot', error)
+              console.warn('[screen-vlm] failed to analyze screenshot', getRedactedLogErrorMessage(error))
               return undefined
             }
           })()

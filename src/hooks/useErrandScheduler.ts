@@ -8,6 +8,7 @@ import {
   readErrandRunnerState,
   writeErrandRunnerState,
 } from '../features/agent/errandRunnerState'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings, MemoryRecallContext } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000  // 5 min — gentle on CPU and on the LLM bill
@@ -110,7 +111,7 @@ export function useErrandScheduler({ settings }: UseErrandSchedulerOptions) {
       } catch (err) {
         // Keep the scheduler alive if dynamic import / executor build /
         // outer orchestration throws.
-        console.warn('[errand] scheduler tick failed:', err)
+        console.warn('[errand] scheduler tick failed:', getRedactedLogErrorMessage(err))
       } finally {
         runningTick = false
       }

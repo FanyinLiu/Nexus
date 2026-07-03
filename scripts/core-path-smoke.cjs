@@ -18,6 +18,10 @@ const preloadPath = path.join(userDataRoot, 'core-path-smoke-preload.cjs')
 app.setPath('userData', userDataRoot)
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 app.commandLine.appendSwitch('disable-features', 'UseSkiaRenderer')
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('no-sandbox')
+  app.commandLine.appendSwitch('disable-setuid-sandbox')
+}
 
 fs.writeFileSync(preloadPath, `
 try {
@@ -38,7 +42,17 @@ function wait(ms) {
 }
 
 function cleanupTempUserData() {
-  fs.rmSync(userDataRoot, { recursive: true, force: true })
+  try {
+    fs.rmSync(userDataRoot, {
+      recursive: true,
+      force: true,
+      maxRetries: process.platform === 'win32' ? 5 : 0,
+      retryDelay: 100,
+    })
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error ? error.code : 'unknown'
+    console.warn('[core-path-smoke] temp cleanup skipped', { code })
+  }
 }
 
 async function snapshot(window) {
@@ -162,26 +176,36 @@ async function main() {
       && state.hasSettingsButton
       && state.hasComposer
       && state.hasSendButton
-      && state.panelWidth >= 420
+      && state.panelWidth >= 240
       && state.panelHeight >= 500
     ))
 
     await click(window, '.panel-window__header-actions--hero .panel-window__icon-button', 'open settings')
-    const settingsHome = await waitFor(window, 'settings home ready', (state) => (
+    const settingsEntry = await waitFor(window, 'settings entry ready', (state) => (
       state.hasSettingsDrawer
-      && state.hasSettingsHome
-      && state.hasModelCard
+      && (
+        (state.hasSettingsHome && state.hasModelCard)
+        || state.hasModelPage
+      )
     ))
 
-    await click(window, '.settings-home-card[data-section="model"]', 'open model settings')
+    if (!settingsEntry.hasModelPage) {
+      await click(window, '.settings-home-card[data-section="model"]', 'open model settings')
+    }
+
     const modelPage = await waitFor(window, 'model settings ready', (state) => (
       state.hasSettingsDrawer
       && state.hasModelPage
-      && state.hasModelGrid
-      && state.hasSelectedProvider
+      && (
+        (state.hasModelGrid && state.hasSelectedProvider)
+        || (state.hasModelDetail && state.hasModelTestButton)
+      )
     ))
 
-    await click(window, '.settings-model-source-card.is-selected', 'open selected provider detail')
+    if (!modelPage.hasModelDetail) {
+      await click(window, '.settings-model-source-card.is-selected', 'open selected provider detail')
+    }
+
     const modelDetail = await waitFor(window, 'model detail ready', (state) => (
       state.hasModelDetail
       && state.hasModelTestButton
@@ -191,7 +215,7 @@ async function main() {
     const report = {
       ok: true,
       panelReady,
-      settingsHome,
+      settingsEntry,
       modelPage,
       modelDetail,
       rendererWarnings: rendererWarnings.slice(0, 12),

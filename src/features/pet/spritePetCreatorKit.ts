@@ -28,13 +28,17 @@ export type SpritePetCreatorKitInspection = {
   id: string
   displayName: string
   kitDirectory: string
+  kitDirectoryDisplay?: string
   sourceRowsDirectory?: string
+  sourceRowsDirectoryDisplay?: string
   ready: boolean
   readyCount: number
   missingCount: number
   warningCount?: number
   contactSheetPath?: string
+  contactSheetPathDisplay?: string
   motionPreviewPath?: string
+  motionPreviewPathDisplay?: string
   rows: SpritePetCreatorKitRowStatus[]
   message: string
 }

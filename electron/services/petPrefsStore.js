@@ -3,6 +3,8 @@ import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 
+import { getRedactedErrorMessage } from './errorRedaction.js'
+
 // Small persisted key/value store for desktop-pet UI preferences that are owned
 // by the main process (toggled from the native context menu, not the renderer
 // settings) — currently just free/fixed mode. Mirrors windowBoundsStore's
@@ -40,7 +42,7 @@ export function savePetPref(key, value) {
     writeTimer = null
     fsp.writeFile(getStorePath(), JSON.stringify(cache, null, 2), 'utf8')
       .catch((err) => {
-        console.warn('[petPrefs] persist failed:', err?.message ?? err)
+        console.warn('[petPrefs] persist failed:', getRedactedErrorMessage(err))
       })
   }, 400)
 }

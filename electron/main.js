@@ -16,7 +16,17 @@ import {
   CODEX_CUSTOM_SPRITE_PET_MODELS_ROUTE,
 } from './services/petModelService.js'
 import { initRendererServer, ensureRendererServer, getRendererServerUrl, closeRendererServer } from './rendererServer.js'
-import { mainWindow, panelWindow, panelSection, createMainWindow, createApplicationMenu, createTray, applyPetWindowState, hasSystemTray } from './windowManager.js'
+import {
+  mainWindow,
+  panelWindow,
+  panelSection,
+  createMainWindow,
+  createApplicationMenu,
+  createTray,
+  applyPetWindowState,
+  flushRuntimeLogWriteBuffer,
+  hasSystemTray,
+} from './windowManager.js'
 import { registerIpc } from './ipcRegistry.js'
 import { autoStartPlugins } from './services/pluginHost.js'
 import { initAutoUpdater } from './services/updaterService.js'
@@ -26,6 +36,7 @@ import { runWindowsPermissionChecks } from './services/windowsPermissions.js'
 import { initModelManager } from './services/modelManager.js'
 import { ensurePythonRuntimeStatus, getPythonRuntimeStatus } from './services/pythonRuntime.js'
 import { initializeLocalDataStore } from './services/localDataStore.js'
+import { getRedactedErrorMessage } from './services/errorRedaction.js'
 
 // ── Console safety: suppress broken-pipe errors on stdout/stderr ──
 
@@ -60,7 +71,7 @@ console.error = createSafeConsoleMethod('error')
 for (const stream of [process.stdout, process.stderr]) {
   stream?.on('error', (err) => {
     if (isBrokenPipeConsoleError(err)) return
-    try { process.stderr.write(`[main] stream error: ${err?.message}\n`) } catch {}
+    try { process.stderr.write(`[main] stream error: ${getRedactedErrorMessage(err)}\n`) } catch {}
   })
 }
 
@@ -92,6 +103,7 @@ const LINUX_WM_CLASS = String(process.env.NEXUS_LINUX_WM_CLASS ?? 'Nexus').trim(
 // explicitly quitting.
 app.on('before-quit', () => {
   app.isQuitting = true
+  void flushRuntimeLogWriteBuffer()
 })
 
 // Keep Windows taskbar identity stable so window/taskbar/tray icon grouping
@@ -100,7 +112,7 @@ if (process.platform === 'win32') {
   try {
     app.setAppUserModelId(WINDOWS_APP_USER_MODEL_ID)
   } catch (err) {
-    console.warn('[windows] Failed to set AppUserModelId:', err?.message)
+    console.warn('[windows] Failed to set AppUserModelId:', getRedactedErrorMessage(err))
   }
 }
 
@@ -212,7 +224,7 @@ async function ensureServiceRunning({ tag, port, command, args, cwd, timeoutSec 
     }
   })
   child.on('error', (err) => {
-    console.warn(`[${tag}] Spawn error: ${err?.message}`)
+    console.warn(`[${tag}] Spawn error: ${getRedactedErrorMessage(err)}`)
   })
 
   for (let i = 0; i < timeoutSec; i++) {
@@ -356,7 +368,7 @@ app.whenReady()
     // macOS: hide dock icon for desktop pet (floating widget mode)
     if (process.platform === 'darwin' && app.dock) {
       try { app.dock.hide() } catch (err) {
-        console.warn('[macOS] Failed to hide dock icon:', err?.message)
+        console.warn('[macOS] Failed to hide dock icon:', getRedactedErrorMessage(err))
       }
     }
 
@@ -374,9 +386,9 @@ app.whenReady()
     })
     // macOS 隐私权限自检:未授权时主动弹 OS 对话框,已拒绝时弹 Electron 对话框
     // 引导用户打开系统设置。非阻塞,失败不影响其他启动流程。
-    runMacPermissionChecks().catch((err) => console.warn('[mac-perm] auto-check error:', err?.message))
-    runWindowsPermissionChecks().catch((err) => console.warn('[windows-perm] auto-check error:', err?.message))
-    autoStartPlugins().catch((err) => console.warn('[pluginHost] auto-start error:', err.message))
+    runMacPermissionChecks().catch((err) => console.warn('[mac-perm] auto-check error:', getRedactedErrorMessage(err)))
+    runWindowsPermissionChecks().catch((err) => console.warn('[windows-perm] auto-check error:', getRedactedErrorMessage(err)))
+    autoStartPlugins().catch((err) => console.warn('[pluginHost] auto-start error:', getRedactedErrorMessage(err)))
 
     // Probe Python + dependencies before attempting to spawn the optional
     // AI services. If Python is missing or torch/transformers aren't
@@ -385,17 +397,17 @@ app.whenReady()
     ensurePythonRuntimeStatus()
       .then((status) => {
         if (status.omniVoice.ready) {
-          ensureOmniVoiceRunning().catch((err) => console.warn('[OmniVoice] auto-start error:', err.message))
+          ensureOmniVoiceRunning().catch((err) => console.warn('[OmniVoice] auto-start error:', getRedactedErrorMessage(err)))
         } else {
           console.info('[OmniVoice] Skipping auto-start — Python prerequisites not met.')
         }
         if (status.glmAsr.ready) {
-          ensureGlmAsrRunning().catch((err) => console.warn('[GLM-ASR] auto-start error:', err.message))
+          ensureGlmAsrRunning().catch((err) => console.warn('[GLM-ASR] auto-start error:', getRedactedErrorMessage(err)))
         } else {
           console.info('[GLM-ASR] Skipping auto-start — Python prerequisites not met.')
         }
       })
-      .catch((err) => console.warn('[Python] Runtime probe failed:', err?.message))
+      .catch((err) => console.warn('[Python] Runtime probe failed:', getRedactedErrorMessage(err)))
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {

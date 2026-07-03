@@ -10,6 +10,8 @@ import { buildHeavyModuleAuditReport } from './heavy-module-audit.mjs'
 import { buildCompanionBoundaryReport } from './companion-boundary-audit.mjs'
 import { buildArchitectureBoundaryReport } from './architecture-boundary-audit.mjs'
 import { buildSourceSizeReport } from './source-size-audit.mjs'
+import { buildPerformanceBaselineReport } from './performance-baseline.mjs'
+import { buildV04DraftStackReport } from './v04-draft-stack-audit.mjs'
 import { buildMessagePrivacyReport } from './message-privacy-audit.mjs'
 import { buildDesktopContextPrivacyReport } from './desktop-context-privacy-audit.mjs'
 import { buildVaultSecurityReport } from './vault-security-audit.mjs'
@@ -79,6 +81,9 @@ check('developer npm scripts cover run, package and release verification', () =>
     'package:dir:smoke',
     'core-path:smoke',
     'core-path:smoke:built',
+    'lint',
+    'test',
+    'build',
     'verify:release',
     'verify:pr',
     'ipc:audit',
@@ -87,9 +92,13 @@ check('developer npm scripts cover run, package and release verification', () =>
     'architecture:audit',
     'source-size:audit',
     'performance:baseline',
+    'v04:draft-stack:audit',
+    'v04:draft-stack:audit:quick',
     'companion-boundary:audit',
     'message-privacy:audit',
     'desktop-context-privacy:audit',
+    'vault-security:audit',
+    'error-redaction:audit',
     'sqlite:smoke',
     'sqlite:smoke:electron',
     'sqlite:smoke:all',
@@ -99,6 +108,7 @@ check('developer npm scripts cover run, package and release verification', () =>
     'release:signing:gate:mac',
     'release:signing:gate:windows',
     'prerelease-check',
+    'distribution:audit',
   ]) {
     assert(hasScript(pkg, name), `missing npm script: ${name}`)
   }
@@ -162,7 +172,7 @@ check('pre-release gate docs include packaged smoke', () => {
 check('core path smoke is release-gated and documented', () => {
   const corePathSmoke = readText('scripts/core-path-smoke.cjs')
   assert(pkg.scripts?.['core-path:smoke']?.includes('core-path:smoke:built'), 'core-path:smoke should build then run the built smoke')
-  assert(pkg.scripts?.['core-path:smoke:built'] === 'electron scripts/core-path-smoke.cjs', 'core-path:smoke:built should run the Electron smoke script')
+  assert(pkg.scripts?.['core-path:smoke:built'] === 'electron --no-sandbox scripts/core-path-smoke.cjs', 'core-path:smoke:built should run the Electron smoke script with Linux CI sandbox compatibility')
   assert(pkg.scripts?.['verify:release']?.includes('npm run core-path:smoke:built'), 'verify:release should include core path smoke')
   assert(ciWorkflow.includes('npm run core-path:smoke:built'), 'CI should run core path smoke after build')
   assert(ciWorkflow.includes('xvfb-run -a npm run core-path:smoke:built'), 'Linux CI should run core path smoke under xvfb')
@@ -238,6 +248,16 @@ check('renderer architecture boundaries do not invert', () => {
 check('source files stay below the large-file budget', () => {
   const report = buildSourceSizeReport(ROOT)
   assert(report.summary.errors === 0, `source size audit has ${report.summary.errors} error(s); run npm run source-size:audit`)
+})
+
+check('built assets stay within performance baseline budgets', () => {
+  const report = buildPerformanceBaselineReport(ROOT)
+  assert(report.summary.errors === 0, `performance baseline has ${report.summary.errors} error(s); run npm run performance:baseline`)
+})
+
+check('v0.4 draft stack stays in quick PR-safe state', () => {
+  const report = buildV04DraftStackReport(ROOT, { mode: 'quick' })
+  assert(report.summary.errors === 0, `v0.4 draft stack audit has ${report.summary.errors} error(s); run npm run v04:draft-stack:audit:quick`)
 })
 
 check('companion boundary is documented and guarded', () => {
@@ -425,6 +445,9 @@ check('package size and startup optimization inventory is documented', () => {
     'npm run source-size:audit',
     'npm run distribution:audit',
     'npm run package:dir:smoke',
+    '最大 CSS chunk',
+    'TS/JS/CSS',
+    '明确临时预算',
     'ort-wasm-simd-threaded.jsep.wasm',
     '@huggingface/transformers',
     'tesseract.js',

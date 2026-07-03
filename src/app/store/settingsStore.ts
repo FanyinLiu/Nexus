@@ -12,6 +12,7 @@ import {
   migrateKeysToVault,
 } from '../../lib/keyVaultBridge.ts'
 import { syncExternalActionPolicyToMain } from '../../features/integrations/externalActionPolicySync.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import type { AppSettings } from '../../types/index.ts'
 
 let vaultMigrationDone = false
@@ -38,7 +39,7 @@ function notifySettingsListeners(settings: AppSettings) {
 
 function syncMainProcessPermissionPolicy(settings: AppSettings) {
   syncExternalActionPolicyToMain(settings).catch((err) => {
-    console.error('[settingsStore] Failed to sync external action policy:', err)
+    console.error('[settingsStore] Failed to sync external action policy:', getRedactedLogErrorMessage(err))
   })
 }
 
@@ -68,7 +69,7 @@ function handleExternalSettingsSnapshot(base: AppSettings) {
   hydrateAndCacheSettings(base)
     .then(notifySettingsListeners)
     .catch((err) => {
-      console.error('[settingsStore] Vault hydration failed, API keys may be unavailable:', err)
+      console.error('[settingsStore] Vault hydration failed, API keys may be unavailable:', getRedactedLogErrorMessage(err))
       cachedHydratedSettings = base
       notifySettingsListeners(base)
     })

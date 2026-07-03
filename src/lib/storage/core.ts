@@ -6,6 +6,8 @@
 //
 // Domain modules under ./ build on top of these primitives.
 
+import { getRedactedLogErrorMessage } from '../logRedaction.ts'
+
 export const CHAT_STORAGE_KEY = 'nexus:chat'
 export const CHAT_SESSIONS_STORAGE_KEY = 'nexus:chat:sessions'
 export const LOREBOOK_ENTRIES_STORAGE_KEY = 'nexus:lorebooks'
@@ -81,13 +83,17 @@ export function pruneLegacyStorageKeys(): void {
   }
 }
 
+export function formatStorageKeyForLog(key: string): string {
+  return `keyLength=${String(key ?? '').length}`
+}
+
 export function readJson<T>(key: string, fallback: T): T {
   try {
     const raw = window.localStorage.getItem(key)
     if (!raw) return fallback
     return JSON.parse(raw) as T
   } catch (err) {
-    console.error(`[storage] Failed to parse stored data for key "${key}":`, err)
+    console.error(`[storage] Failed to parse stored data (${formatStorageKeyForLog(key)}):`, getRedactedLogErrorMessage(err))
     return fallback
   }
 }
@@ -119,7 +125,7 @@ export function readJsonValidated<T>(
     const validated = validate(parsed)
     return validated ?? fallback
   } catch (err) {
-    console.error(`[storage] Failed to parse stored data for key "${key}":`, err)
+    console.error(`[storage] Failed to parse stored data (${formatStorageKeyForLog(key)}):`, getRedactedLogErrorMessage(err))
     return fallback
   }
 }
@@ -199,7 +205,7 @@ export function writeJson<T>(key: string, value: T): void {
     // The broadcast still fires so other windows stay consistent, but never let
     // a failed persist throw — it would crash callers on the startup-init path
     // (loadMemories / settings rewrite-on-load, etc.).
-    console.error(`[storage] writeJson failed for "${key}":`, err)
+    console.error(`[storage] writeJson failed (${formatStorageKeyForLog(key)}):`, getRedactedLogErrorMessage(err))
   }
   broadcastWrite(key, value)
 }

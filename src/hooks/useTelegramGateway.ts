@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { parseTelegramChatIdList } from '../features/integrations/allowlists.ts'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 
 export type TelegramStatus = {
   state: 'disconnected' | 'connecting' | 'connected' | 'error'
@@ -77,14 +78,14 @@ export function useTelegramGateway({
         setStatus({
           state: s.state as TelegramStatus['state'],
           botUsername: s.botUsername,
-          lastError: s.lastError,
+          lastError: s.lastError ? getRedactedLogErrorMessage(s.lastError) : null,
         })
       })
       .catch((err) => {
         setStatus({
           state: 'error',
           botUsername: null,
-          lastError: err instanceof Error ? err.message : String(err),
+          lastError: getRedactedLogErrorMessage(err),
         })
       })
 
@@ -116,7 +117,7 @@ export function useTelegramGateway({
       setStatus({
         state: s.state as TelegramStatus['state'],
         botUsername: s.botUsername,
-        lastError: s.lastError,
+        lastError: s.lastError ? getRedactedLogErrorMessage(s.lastError) : null,
       })
     }
   }, [])

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings } from '../types'
 
 type UseGameIntegrationParams = {
@@ -24,7 +25,7 @@ export function useGameIntegration({ settingsRef }: UseGameIntegrationParams) {
         port: settings.minecraftServerPort,
         username: settings.minecraftUsername,
       }).catch((err) => {
-        console.warn('[game-integration] minecraft auto-connect failed:', err.message ?? err)
+        console.warn('[game-integration] minecraft auto-connect failed:', getRedactedLogErrorMessage(err))
         mcConnectedRef.current = false
       })
     } else if (!settings.minecraftIntegrationEnabled && mcConnectedRef.current) {
@@ -43,7 +44,7 @@ export function useGameIntegration({ settingsRef }: UseGameIntegrationParams) {
         port: settings.factorioServerPort,
         password: '',
       }).catch((err) => {
-        console.warn('[game-integration] factorio auto-connect failed:', err.message ?? err)
+        console.warn('[game-integration] factorio auto-connect failed:', getRedactedLogErrorMessage(err))
         fcConnectedRef.current = false
       })
     } else if (!settings.factorioIntegrationEnabled && fcConnectedRef.current) {

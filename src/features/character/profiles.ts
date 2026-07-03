@@ -1,4 +1,5 @@
 import type { AppSettings, CharacterProfile } from '../../types'
+import { syncWakeWordWithCompanionNameChange } from '../hearing/companionWakeWordSync.ts'
 
 export function createCharacterProfile(
   settings: AppSettings,
@@ -25,7 +26,7 @@ export function applyCharacterProfile(
   settings: AppSettings,
   profile: CharacterProfile,
 ): AppSettings {
-  return {
+  return syncWakeWordWithCompanionNameChange(settings, {
     ...settings,
     companionName: profile.companionName,
     userName: profile.userName ?? settings.userName,
@@ -39,7 +40,7 @@ export function applyCharacterProfile(
     speechOutputApiKey: profile.speechOutputApiKey ?? settings.speechOutputApiKey,
     speechOutputModel: profile.speechOutputModel ?? settings.speechOutputModel,
     speechOutputInstructions: profile.speechOutputInstructions ?? settings.speechOutputInstructions,
-  }
+  })
 }
 
 export function updateCharacterProfile(

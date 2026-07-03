@@ -1,0 +1,314 @@
+/* Image 4 ambient dial, inner orbit, and speaking rings. */
+.panel-window--image4 .companion-presence__dial {
+  position: relative;
+  z-index: 1;
+  grid-area: dial;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  justify-self: center;
+  gap: clamp(2px, 0.45vw, 5px);
+  width: min(clamp(180px, 46vw, 340px), calc(var(--image4-rhythm-dial) - 4px));
+  aspect-ratio: 1;
+  margin-top: -4px;
+  transform: translateY(-4px);
+  isolation: isolate;
+  overflow: visible;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__dial {
+  opacity: var(--image4-dial-emphasis);
+}
+
+.panel-window--image4 .image4-chat[data-companion-mode='resting'] .companion-presence__dial {
+  opacity: var(--image4-dial-emphasis);
+}
+
+.panel-window--image4 .companion-presence__dial::before {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.panel-window--image4 .companion-presence__dial::before {
+  inset: -5%;
+  z-index: -1;
+  background: repeating-conic-gradient(
+    from -8deg,
+    rgba(224, 235, 248, 0.22) 0deg 1deg,
+    transparent 1deg 4deg
+  );
+  opacity: 0.18;
+  -webkit-mask: radial-gradient(circle, transparent 0 68%, #000 70% 73%, transparent 76%);
+  mask: radial-gradient(circle, transparent 0 68%, #000 70% 73%, transparent 76%);
+  animation: image4-dial-ticks 48s linear infinite;
+}
+
+.panel-window--image4 .companion-presence__dial-layer {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.panel-window--image4 .companion-presence__dial-layer--glow {
+  inset: -18%;
+  z-index: -3;
+  background: radial-gradient(
+    circle,
+    rgba(111, 226, 239, 0.08),
+    rgba(255, 200, 140, 0.06) 42%,
+    transparent 70%
+  );
+  filter: blur(8px);
+  animation: image4-dial-glow 7.2s ease-in-out infinite;
+}
+
+.panel-window--image4 .companion-presence__dial-layer--base {
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 42% 32%, rgba(255, 255, 255, 0.14), transparent 38%),
+    radial-gradient(circle at 50% 52%, rgba(42, 78, 126, 0.34), rgba(14, 24, 44, 0.68) 56%, rgba(7, 13, 23, 0.24) 74%, transparent 79%);
+  box-shadow:
+    0 0 0 1px rgba(206, 224, 246, 0.2),
+    0 0 clamp(30px, 6.5vw, 64px) rgba(111, 226, 239, 0.1),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--base {
+  background:
+    radial-gradient(circle at 42% 32%, rgba(255, 246, 230, 0.12), transparent 38%),
+    radial-gradient(circle at 50% 52%, rgba(95, 54, 42, 0.36), rgba(33, 20, 20, 0.68) 56%, rgba(14, 10, 12, 0.24) 74%, transparent 79%);
+  box-shadow:
+    0 0 0 1px rgba(255, 220, 178, 0.19),
+    0 0 clamp(30px, 6.5vw, 64px) rgba(255, 185, 120, 0.1),
+    inset 0 0 0 1px rgba(255, 244, 226, 0.07);
+}
+
+.panel-window--image4 .companion-presence__dial-layer--arc {
+  inset: 5%;
+  z-index: -1;
+  background:
+    conic-gradient(
+      from 180deg,
+      rgba(80, 255, 220, 0.34) 0 14%,
+      transparent 18% 49%,
+      rgba(255, 190, 120, 0.36) 49% 62%,
+      transparent 66%
+    );
+  opacity: 0.72;
+  filter: drop-shadow(0 0 10px rgba(111, 226, 239, 0.1));
+  -webkit-mask: radial-gradient(circle, transparent 0 69%, #000 70% 73%, transparent 76%);
+  mask: radial-gradient(circle, transparent 0 69%, #000 70% 73%, transparent 76%);
+  transform-origin: 50% 50%;
+  animation: image4-dial-arc 28s linear infinite;
+}
+
+.panel-window--image4 .companion-presence__dial-layer--moon {
+  inset: 29%;
+  z-index: -1;
+  border: 0;
+  background:
+    radial-gradient(circle at 44% 32%, rgba(255, 255, 255, 0.08), transparent 34%),
+    radial-gradient(circle, rgba(17, 25, 39, 0.52), rgba(8, 14, 24, 0.1) 70%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.035),
+    inset 0 0 18px rgba(255, 255, 255, 0.035);
+}
+
+.panel-window--image4 .companion-presence__dial-layer--ring {
+  display: none;
+  inset: 13%;
+  z-index: -1;
+  border: 1px solid rgba(203, 218, 238, 0.16);
+  box-shadow:
+    0 0 0 clamp(14px, 2.8vw, 24px) rgba(255, 255, 255, 0.012),
+    inset 0 0 22px rgba(111, 226, 239, 0.04);
+}
+
+.panel-window--image4 .companion-presence__dial-voice {
+  position: absolute;
+  inset: 20%;
+  z-index: 1;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.94);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.panel-window--image4 .companion-presence__dial-voice-ring,
+.panel-window--image4 .companion-presence__dial-voice-core {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.panel-window--image4 .companion-presence__dial-voice-ring {
+  border: 1px solid rgba(210, 236, 255, 0.34);
+  box-shadow:
+    0 0 14px rgba(111, 226, 239, 0.075),
+    inset 0 0 12px rgba(255, 255, 255, 0.035);
+  opacity: 0.32;
+  transform: scale(0.96);
+}
+
+.panel-window--image4 .companion-presence__dial-voice-ring--outer {
+  inset: 0;
+}
+
+.panel-window--image4 .companion-presence__dial-voice-ring--middle {
+  inset: 16%;
+}
+
+.panel-window--image4 .companion-presence__dial-voice-ring--inner {
+  inset: 32%;
+}
+
+.panel-window--image4 .companion-presence__dial-voice-core {
+  inset: 43%;
+  background: rgba(214, 238, 255, 0.26);
+  box-shadow: 0 0 20px rgba(111, 226, 239, 0.16);
+  opacity: 0.5;
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-voice-ring {
+  border-color: rgba(94, 124, 150, 0.36);
+  box-shadow:
+    0 0 14px rgba(88, 133, 166, 0.075),
+    inset 0 0 12px rgba(255, 255, 255, 0.075);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-voice-core {
+  background: rgba(83, 118, 145, 0.26);
+  box-shadow: 0 0 20px rgba(88, 133, 166, 0.14);
+}
+
+.panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__dial-voice {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__dial-voice-ring {
+  animation: image4-dial-voice-ring 2.7s ease-in-out infinite;
+}
+
+.panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__dial-voice-ring--middle {
+  animation-delay: 180ms;
+}
+
+.panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__dial-voice-ring--inner {
+  animation-delay: 360ms;
+}
+
+.panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__dial-voice-core {
+  animation: image4-dial-voice-core 1.8s ease-in-out infinite;
+}
+
+.panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__dial-band,
+.panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__dial strong,
+.panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__dial-meta {
+  opacity: 0;
+}
+
+.panel-window--image4 .companion-presence__dial-band,
+.panel-window--image4 .companion-presence__dial strong,
+.panel-window--image4 .companion-presence__dial-status,
+.panel-window--image4 .companion-presence__dial-meta {
+  position: relative;
+  z-index: 2;
+}
+
+.panel-window--image4 .companion-presence__dial-band {
+  position: absolute;
+  top: 38.2%;
+  left: 50%;
+  max-width: 78%;
+  overflow: hidden;
+  color: rgba(255, 213, 145, 0.92);
+  font-size: clamp(10.5px, 2.2vw, 19px);
+  font-weight: 520;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+.panel-window--image4 .companion-presence__dial strong {
+  position: absolute;
+  top: 51.6%;
+  left: 50%;
+  color: rgba(255, 218, 158, 0.98);
+  font-size: clamp(24px, 5.6vw, 50px);
+  font-weight: 380;
+  line-height: 1;
+  letter-spacing: 0;
+  transform: translate(-50%, -50%);
+}
+
+.panel-window--image4 .companion-presence__dial-status {
+  color: rgba(232, 238, 248, 0.78);
+  font-size: clamp(10.5px, 2.2vw, 19px);
+  font-weight: 430;
+  line-height: 1.1;
+}
+
+.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta {
+  position: absolute;
+  right: auto;
+  top: 67.8%;
+  bottom: auto;
+  left: 50%;
+  box-sizing: border-box;
+  display: grid;
+  justify-items: center;
+  gap: clamp(1px, 0.24vw, 3px);
+  width: 72%;
+  max-width: none;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: rgba(238, 242, 248, 0.66);
+  font-size: clamp(8.1px, 1.5vw, 12px);
+  font-weight: 430;
+  line-height: 1.05;
+  text-align: center;
+  text-shadow: 0 1px 6px rgba(2, 8, 18, 0.9);
+  transform: translate(-50%, -50%);
+  opacity: 0.92;
+}
+
+.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span:first-child {
+  color: rgba(238, 242, 248, 0.78);
+  font-size: clamp(8.4px, 1.54vw, 12px);
+  opacity: 0.92;
+}
+
+.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span + span {
+  color: rgba(255, 213, 145, 0.62);
+  font-size: clamp(8px, 1.45vw, 11px);
+  opacity: 0.84;
+}

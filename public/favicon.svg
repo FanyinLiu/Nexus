@@ -1,56 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
   <defs>
-    <linearGradient id="nexus-bg" x1="40" y1="28" x2="212" y2="224" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#3470FF"/>
-      <stop offset="1" stop-color="#7848F4"/>
+    <linearGradient id="sky" x1="128" y1="26" x2="128" y2="232" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF6EA"/>
+      <stop offset=".56" stop-color="#FFD7B8"/>
+      <stop offset="1" stop-color="#7FA99B"/>
     </linearGradient>
-    <radialGradient id="nexus-warm" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(74 58) rotate(46) scale(88 72)">
-      <stop stop-color="#FFE8D4" stop-opacity=".72"/>
-      <stop offset="1" stop-color="#FFE8D4" stop-opacity="0"/>
+    <radialGradient id="sun" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(128 104) scale(76)">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset=".44" stop-color="#FFF3DD"/>
+      <stop offset="1" stop-color="#FFD7B8" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="nexus-cool" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(184 194) rotate(46) scale(82 70)">
-      <stop stop-color="#86D6FF" stop-opacity=".42"/>
-      <stop offset="1" stop-color="#86D6FF" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="nexus-bolt" x1="96" y1="52" x2="160" y2="196" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FCFDFF"/>
-      <stop offset="1" stop-color="#DDE3FF"/>
-    </linearGradient>
-    <radialGradient id="nexus-orb" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(183 183) rotate(45) scale(24)">
-      <stop stop-color="#8AE8FF"/>
-      <stop offset="1" stop-color="#53CFFF"/>
-    </radialGradient>
-    <filter id="panel-shadow" x="18" y="26" width="220" height="220" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
-      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-      <feOffset dy="10"/>
-      <feGaussianBlur stdDeviation="14"/>
-      <feColorMatrix type="matrix" values="0 0 0 0 0.04 0 0 0 0 0.05 0 0 0 0 0.11 0 0 0 0.26 0"/>
-      <feBlend in2="BackgroundImageFix" result="effect1_dropShadow_0_1"/>
-      <feBlend in="SourceGraphic" in2="effect1_dropShadow_0_1" result="shape"/>
-    </filter>
-    <filter id="orb-glow" x="136" y="136" width="94" height="94" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
-      <feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-      <feGaussianBlur stdDeviation="8" result="effect1_foregroundBlur_0_1"/>
+    <filter id="soft-shadow" x="20" y="28" width="216" height="216" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#5A5148" flood-opacity=".12"/>
     </filter>
   </defs>
 
-  <g filter="url(#panel-shadow)">
-    <rect x="34" y="34" width="188" height="188" rx="50" fill="url(#nexus-bg)"/>
-    <rect x="34" y="34" width="188" height="188" rx="50" fill="url(#nexus-warm)"/>
-    <rect x="34" y="34" width="188" height="188" rx="50" fill="url(#nexus-cool)"/>
-    <rect x="34.5" y="34.5" width="187" height="187" rx="49.5" stroke="white" stroke-opacity=".72"/>
-    <rect x="42" y="42" width="172" height="172" rx="42" stroke="white" stroke-opacity=".14"/>
+  <g filter="url(#soft-shadow)">
+    <rect x="34" y="34" width="188" height="188" rx="48" fill="url(#sky)"/>
+    <circle cx="128" cy="105" r="76" fill="url(#sun)"/>
+    <circle cx="128" cy="104" r="38" stroke="white" stroke-width="7" stroke-opacity=".95"/>
+    <path d="M34 163C62 147 84 147 111 163C139 180 160 177 188 158C202 149 213 145 222 144V222H34V163Z" fill="#7FA99B" fill-opacity=".54"/>
+    <path d="M34 151C62 130 91 132 121 153C149 172 176 167 222 136V222H34V151Z" fill="#D98257" fill-opacity=".27"/>
+    <path d="M34 179C70 165 95 167 126 182C154 195 183 192 222 172V222H34V179Z" fill="#302823" fill-opacity=".16"/>
+    <path d="M68 184C93 177 114 177 139 185C164 193 184 191 210 181" stroke="white" stroke-opacity=".36" stroke-width="3" stroke-linecap="round"/>
   </g>
-
-  <path d="M138 54L98 132H130L110 204L160 124H130L150 54H138Z" fill="url(#nexus-bolt)"/>
-  <path d="M143 58L108 126" stroke="white" stroke-opacity=".42" stroke-width="7" stroke-linecap="round"/>
-
-  <g filter="url(#orb-glow)">
-    <circle cx="184" cy="184" r="20" fill="#72DDFF" fill-opacity=".68"/>
-  </g>
-  <circle cx="184" cy="184" r="14" fill="url(#nexus-orb)"/>
-  <circle cx="184" cy="184" r="13.5" stroke="#E6FBFF" stroke-opacity=".82"/>
-  <circle cx="177" cy="177" r="5" fill="white" fill-opacity=".34"/>
 </svg>

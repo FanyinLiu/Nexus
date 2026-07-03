@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo, useState } from 'react'
 import {
   buildChatMigrationBackupEnvelope,
   buildChatMigrationBackupFileName,
+  formatChatMigrationUiError,
   loadChatMigrationComparisonSource,
   buildChatMigrationPreviewSummary,
   getChatLocalDataRuntimeMirrorConsent,
@@ -37,7 +38,7 @@ type MigrationComparisonState = {
   result: MigrationComparisonResult | null
 }
 
-function createMigrationStatusError(errorMessage: string): MigrationStatusResult {
+function createMigrationStatusError(errorMessage: unknown): MigrationStatusResult {
   return {
     ok: false,
     targetDomainId: 'chat-sessions',
@@ -49,11 +50,11 @@ function createMigrationStatusError(errorMessage: string): MigrationStatusResult
     lastAuditAction: null,
     lastAuditAt: null,
     errorKind: 'local-data-chat-migration-status-unavailable',
-    errorMessage,
+    errorMessage: formatChatMigrationUiError(errorMessage),
   }
 }
 
-function createMigrationComparisonError(errorMessage: string): MigrationComparisonResult {
+function createMigrationComparisonError(errorMessage: unknown): MigrationComparisonResult {
   return {
     ok: false,
     targetDomainId: 'chat-sessions',
@@ -77,7 +78,7 @@ function createMigrationComparisonError(errorMessage: string): MigrationComparis
     issueCodes: [],
     auditRecordId: null,
     errorKind: 'local-data-chat-comparison-unavailable',
-    errorMessage,
+    errorMessage: formatChatMigrationUiError(errorMessage),
   }
 }
 
@@ -179,7 +180,7 @@ export const ChatMigrationPreviewPanel = memo(function ChatMigrationPreviewPanel
     } catch (error) {
       setMigrationStatus({
         loading: false,
-        result: createMigrationStatusError(error instanceof Error ? error.message : String(error)),
+        result: createMigrationStatusError(error),
       })
     }
   }, [ti])
@@ -256,19 +257,19 @@ export const ChatMigrationPreviewPanel = memo(function ChatMigrationPreviewPanel
         setStatus({
           ok: false,
           message: ti('settings.history.migration.compare_error', {
-            error: result.errorMessage || result.errorKind || 'unknown',
+            error: formatChatMigrationUiError(result.errorMessage || result.errorKind || 'unknown'),
           }),
         })
       }
     } catch (error) {
       setComparison({
         loading: false,
-        result: createMigrationComparisonError(error instanceof Error ? error.message : String(error)),
+        result: createMigrationComparisonError(error),
       })
       setStatus({
         ok: false,
         message: ti('settings.history.migration.compare_error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: formatChatMigrationUiError(error),
         }),
       })
     }
@@ -308,7 +309,7 @@ export const ChatMigrationPreviewPanel = memo(function ChatMigrationPreviewPanel
       setStatus({
         ok: false,
         message: ti('settings.history.migration.apply_error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: formatChatMigrationUiError(error),
         }),
       })
     } finally {
@@ -365,7 +366,7 @@ export const ChatMigrationPreviewPanel = memo(function ChatMigrationPreviewPanel
         setStatus({
           ok: false,
           message: ti('settings.history.migration.apply_error', {
-            error: result.errorMessage || result.errorKind || 'unknown',
+            error: formatChatMigrationUiError(result.errorMessage || result.errorKind || 'unknown'),
           }),
         })
       }
@@ -373,7 +374,7 @@ export const ChatMigrationPreviewPanel = memo(function ChatMigrationPreviewPanel
       setStatus({
         ok: false,
         message: ti('settings.history.migration.apply_error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: formatChatMigrationUiError(error),
         }),
       })
     } finally {
@@ -417,7 +418,7 @@ export const ChatMigrationPreviewPanel = memo(function ChatMigrationPreviewPanel
         setStatus({
           ok: false,
           message: ti('settings.history.migration.rollback_error', {
-            error: result.errorMessage || result.errorKind || 'unknown',
+            error: formatChatMigrationUiError(result.errorMessage || result.errorKind || 'unknown'),
           }),
         })
       }
@@ -425,7 +426,7 @@ export const ChatMigrationPreviewPanel = memo(function ChatMigrationPreviewPanel
       setStatus({
         ok: false,
         message: ti('settings.history.migration.rollback_error', {
-          error: error instanceof Error ? error.message : String(error),
+          error: formatChatMigrationUiError(error),
         }),
       })
     } finally {
@@ -651,7 +652,7 @@ export const ChatMigrationPreviewPanel = memo(function ChatMigrationPreviewPanel
           ) : (
             <div className="settings-test-result is-error" role="alert" aria-live="assertive" aria-atomic="true">
               {ti('settings.history.migration.local_status_error', {
-                error: localStatusResult.errorMessage || localStatusResult.errorKind || 'unknown',
+                error: formatChatMigrationUiError(localStatusResult.errorMessage || localStatusResult.errorKind || 'unknown'),
               })}
             </div>
           )
@@ -735,7 +736,7 @@ export const ChatMigrationPreviewPanel = memo(function ChatMigrationPreviewPanel
           ) : (
             <div className="settings-test-result is-error" role="alert" aria-live="assertive" aria-atomic="true">
               {ti('settings.history.migration.compare_error', {
-                error: comparisonResult.errorMessage || comparisonResult.errorKind || 'unknown',
+                error: formatChatMigrationUiError(comparisonResult.errorMessage || comparisonResult.errorKind || 'unknown'),
               })}
             </div>
           )

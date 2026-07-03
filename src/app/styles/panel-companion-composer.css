@@ -1,0 +1,406 @@
+/* Image 4 main dialog field. */
+.panel-window--image4 .image4-composer,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer {
+  padding: 0;
+}
+
+.panel-window--image4 .image4-composer__field,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field {
+  grid-area: input;
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: clamp(58px, 6.7vh, 76px);
+  min-height: clamp(58px, 6.7vh, 76px);
+  --image4-composer-control: 29px;
+  --image4-composer-icon: 16px;
+  --image4-composer-rail-gap: 2px;
+  --image4-composer-side-inset: 12px;
+  --image4-composer-left-text-gap: 11px;
+  --image4-composer-right-text-gap: 10px;
+  --image4-composer-control-radius: 10px;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(240, 246, 252, 0.16);
+  border-radius: clamp(16px, 2.6vw, 20px);
+  background:
+    linear-gradient(180deg, rgba(22, 27, 35, 0.72), rgba(12, 17, 24, 0.64)),
+    rgba(22, 27, 34, 0.56);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.064),
+    inset 0 -1px 0 rgba(6, 12, 18, 0.16);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    outline-color 160ms ease;
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field {
+  border-color: rgba(66, 88, 108, 0.15);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.64), rgba(244, 250, 254, 0.58)),
+    rgba(250, 253, 255, 0.52);
+  box-shadow:
+    0 1px 2px rgba(45, 68, 90, 0.045),
+    0 5px 12px rgba(60, 92, 118, 0.024),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -1px 0 rgba(73, 94, 114, 0.045);
+}
+
+.panel-window--image4 .image4-composer__field::before,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: calc(clamp(16px, 2.6vw, 20px) - 3px);
+  box-shadow: inset 0 0 0 1px rgba(240, 246, 252, 0.035);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field::before {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.46);
+}
+
+.panel-window--image4 .image4-composer__field:focus-within,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field:focus-within {
+  border-color: color-mix(in srgb, var(--image4-state-focus-border) 42%, rgba(73, 94, 114, 0.16));
+  outline: 2px solid color-mix(in srgb, var(--image4-state-focus-border) 10%, transparent);
+  outline-offset: 1px;
+}
+
+.panel-window--image4 .image4-composer__field[data-composer-state='drafting'],
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-composer-state='drafting'] {
+  border-color: color-mix(in srgb, var(--image4-state-focus-border) 34%, rgba(73, 94, 114, 0.2));
+}
+
+.panel-window--image4 .image4-composer__field[data-composer-state='drafting']:focus-within,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-composer-state='drafting']:focus-within {
+  border-color: color-mix(in srgb, var(--image4-state-focus-border) 54%, rgba(73, 94, 114, 0.22));
+  outline-color: color-mix(in srgb, var(--image4-state-focus-border) 18%, transparent);
+}
+
+.panel-window--image4 .image4-composer__field[data-composer-state='streaming'] {
+  border-color: rgba(240, 246, 252, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-composer-state='streaming'] {
+  border-color: rgba(73, 94, 114, 0.14);
+  box-shadow:
+    0 1px 2px rgba(45, 68, 90, 0.045),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.panel-window--image4 .image4-composer__field[data-composer-state='interrupted'] {
+  border-color: color-mix(in srgb, var(--image4-state-focus-border) 42%, rgba(73, 94, 114, 0.22));
+  background:
+    linear-gradient(180deg, rgba(19, 25, 34, 0.74), rgba(13, 18, 26, 0.66)),
+    rgba(22, 27, 34, 0.58);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-composer-state='interrupted'] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(246, 251, 255, 0.62)),
+    rgba(250, 253, 255, 0.72);
+}
+
+.panel-window--image4 .image4-composer__field .composer textarea,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer textarea,
+.panel-window--image4 .image4-composer__field textarea,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field textarea {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  height: 100%;
+  min-height: 100%;
+  padding: 17px 82px 13px 52px;
+  padding-right: calc((var(--image4-composer-control) * 2) + var(--image4-composer-rail-gap) + var(--image4-composer-side-inset) + var(--image4-composer-right-text-gap));
+  padding-left: calc(var(--image4-composer-control) + var(--image4-composer-side-inset) + var(--image4-composer-left-text-gap));
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: rgba(24, 36, 48, 0.9);
+  caret-color: rgba(45, 91, 126, 0.82);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 20px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.panel-window--image4 .image4-composer__field textarea::-webkit-scrollbar,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field textarea::-webkit-scrollbar {
+  display: none;
+}
+
+.panel-window--image4 .image4-composer__field textarea::placeholder,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field textarea::placeholder {
+  color: rgba(58, 74, 90, 0.68);
+  opacity: 1;
+}
+
+.panel-window--image4 .image4-composer__field textarea:focus,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field textarea:focus {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill,
+.panel-window--image4 .image4-composer__field .composer__actions,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions {
+  position: absolute;
+  top: 50%;
+  bottom: auto;
+  z-index: 2;
+  transform: translateY(-50%);
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill {
+  right: auto;
+  display: inline-flex;
+  left: var(--image4-composer-side-inset);
+  width: var(--image4-composer-control);
+  height: var(--image4-composer-control);
+  min-width: var(--image4-composer-control);
+  min-height: var(--image4-composer-control);
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  border-radius: var(--image4-composer-control-radius);
+}
+
+.panel-window--image4 .image4-composer__field .composer__actions,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions {
+  right: 12px;
+  right: var(--image4-composer-side-inset);
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 29px;
+  grid-auto-columns: var(--image4-composer-control);
+  width: auto;
+  height: 29px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--image4-composer-rail-gap);
+  padding: 0;
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill,
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+.panel-window--image4 .image4-composer__field .composer__actions .primary-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill__plus,
+.panel-window--image4 .image4-composer__field .composer__action-icon,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill__plus,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__action-icon {
+  width: var(--image4-composer-icon);
+  height: var(--image4-composer-icon);
+  stroke-width: 1.85;
+}
+
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+.panel-window--image4 .image4-composer__field .composer__actions .primary-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button {
+  width: var(--image4-composer-control);
+  height: var(--image4-composer-control);
+  min-width: var(--image4-composer-control);
+  min-height: var(--image4-composer-control);
+  border-radius: var(--image4-composer-control-radius);
+}
+
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+.panel-window--image4 .image4-composer__field .composer__actions .primary-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button {
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.panel-window--image4 .image4-composer__field .composer__actions .primary-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button {
+  order: 3;
+}
+
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button:first-child {
+  order: 1;
+}
+
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button span,
+.panel-window--image4 .image4-composer__field .composer__actions .primary-button span {
+  display: none;
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill,
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button {
+  color: rgba(58, 74, 90, 0.7);
+}
+
+.panel-window--image4 .image4-composer__field[data-has-attachment='true'] .image4-attachment-pill,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-has-attachment='true'] .image4-attachment-pill,
+.panel-window--image4 .image4-composer__field[data-send-state='ready'] .composer__actions .primary-button:not(:disabled),
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-send-state='ready'] .composer__actions .primary-button:not(:disabled) {
+  color: rgba(45, 91, 126, 0.88);
+  background: transparent;
+}
+
+.panel-window--image4 .image4-composer__field[data-send-state='busy'] .composer__actions .primary-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-send-state='busy'] .composer__actions .primary-button {
+  color: rgba(76, 92, 108, 0.48);
+  background: transparent;
+  cursor: progress;
+}
+
+.panel-window--image4 .image4-composer__field[data-voice-state='listening'] .composer__actions .ghost-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-voice-state='listening'] .composer__actions .ghost-button {
+  color: rgba(45, 91, 126, 0.9);
+  background: rgba(45, 91, 126, 0.08);
+}
+
+.panel-window--image4 .image4-composer__field[data-voice-state='processing'] .composer__actions .ghost-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-voice-state='processing'] .composer__actions .ghost-button {
+  color: rgba(76, 92, 108, 0.58);
+  background: rgba(76, 92, 108, 0.052);
+  cursor: progress;
+}
+
+.panel-window--image4 .image4-composer__field[data-voice-state='speaking'] .composer__actions .ghost-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-voice-state='speaking'] .composer__actions .ghost-button {
+  color: rgba(98, 83, 60, 0.76);
+  background: rgba(255, 185, 120, 0.085);
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill:hover,
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button:hover,
+.panel-window--image4 .image4-composer__field .composer__actions .primary-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill:hover,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button:hover,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button:hover {
+  border-color: transparent;
+  background: rgba(73, 94, 114, 0.07);
+  color: rgba(24, 36, 48, 0.9);
+  transform: none;
+  box-shadow: none;
+}
+
+.panel-window--image4 .image4-composer__field .image4-attachment-pill:focus-visible,
+.panel-window--image4 .image4-composer__field .composer__actions .ghost-button:focus-visible,
+.panel-window--image4 .image4-composer__field .composer__actions .primary-button:focus-visible,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill:focus-visible,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button:focus-visible,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button:focus-visible {
+  outline: none;
+  border-color: var(--image4-state-focus-border);
+  box-shadow: var(--image4-state-focus-ring);
+}
+
+.panel-window--image4 .image4-composer__field[data-send-state='disabled'] .composer__actions .primary-button:disabled,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-send-state='disabled'] .composer__actions .primary-button:disabled {
+  border-color: transparent;
+  background: transparent;
+  color: rgba(76, 92, 108, 0.36);
+  box-shadow: none;
+  cursor: default;
+}
+
+/* Xinghui companion palette for the main intent field. */
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field {
+  border-color: var(--image4-companion-border);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image4-companion-surface) 82%, transparent),
+      color-mix(in srgb, var(--image4-companion-surface-strong) 72%, transparent)
+    ),
+    color-mix(in srgb, var(--image4-companion-surface) 74%, transparent);
+  box-shadow:
+    0 1px 2px rgba(143, 104, 72, 0.04),
+    0 5px 12px rgba(143, 104, 72, 0.026),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    inset 0 -1px 0 rgba(170, 126, 84, 0.045);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field::before {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field:focus-within {
+  border-color: color-mix(in srgb, var(--image4-companion-secondary) 46%, var(--image4-companion-border));
+  outline-color: color-mix(in srgb, var(--image4-companion-secondary) 18%, transparent);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field textarea {
+  color: var(--image4-companion-text);
+  caret-color: color-mix(in srgb, var(--image4-companion-secondary) 88%, var(--image4-companion-text));
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field textarea::placeholder {
+  color: color-mix(in srgb, var(--image4-companion-muted) 72%, transparent);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button {
+  width: 29px;
+  height: 29px;
+  color: color-mix(in srgb, var(--image4-companion-muted) 88%, var(--image4-companion-text));
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-send-state='ready'] .composer__actions .primary-button:not(:disabled) {
+  color: color-mix(in srgb, var(--image4-companion-secondary) 82%, var(--image4-companion-text));
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-has-attachment='true'] .image4-attachment-pill,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-voice-state='listening'] .composer__actions .ghost-button {
+  color: color-mix(in srgb, var(--image4-companion-secondary) 76%, var(--image4-companion-text));
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-send-state='busy'] .composer__actions .primary-button,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-voice-state='processing'] .composer__actions .ghost-button {
+  color: color-mix(in srgb, var(--image4-companion-muted) 64%, var(--image4-companion-text));
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-voice-state='speaking'] .composer__actions .ghost-button {
+  color: color-mix(in srgb, var(--image4-companion-primary) 76%, var(--image4-companion-text));
+  background: color-mix(in srgb, var(--image4-companion-primary-soft) 24%, transparent);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-send-state='disabled'] .composer__actions .primary-button:disabled {
+  color: color-mix(in srgb, var(--image4-companion-muted) 36%, transparent);
+}
+
+/* Companion chat continuity: soften the gap between the last message and input. */
+html[data-theme='warm-day'] .panel-window--image4 .image4-message-list:not(.is-empty) ~ .image4-composer::before {
+  inset: clamp(-30px, -3.3vh, -20px) clamp(10px, 2.8vw, 18px) auto;
+  height: clamp(28px, 3.5vh, 38px);
+  border: 0;
+  background:
+    radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--image4-companion-surface) 52%, transparent), color-mix(in srgb, var(--image4-companion-surface-strong) 22%, transparent) 48%, transparent 74%),
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--image4-companion-primary-soft) 10%, transparent) 62%, color-mix(in srgb, var(--image4-companion-surface) 24%, transparent));
+  opacity: 0.82;
+  -webkit-mask: linear-gradient(180deg, transparent, #000 34%, #000);
+  mask: linear-gradient(180deg, transparent, #000 34%, #000);
+}

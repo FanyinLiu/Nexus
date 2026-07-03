@@ -23,10 +23,11 @@ The policy now guards against the cases that would make a companion line feel
 like nagging:
 
 - active chat with Nexus suppresses every check-in signal
+- invalid current and helper timestamps cannot trigger or suppress signals
 - stale return-to-Nexus signals expire
 - the same activity signal cannot repeat inside the emission window
 - recently dismissed signals stay suppressed
-- local in-app payloads are dismissible and short-lived
+- local in-app payloads are dismissible and short-lived with bounded integer TTLs
 
 ### In-app payloads stay passive
 
@@ -57,13 +58,14 @@ Those remain later v0.4.x or v0.5 work.
 Release validation should cover:
 
 - active chat priority
+- invalid current and helper timestamp suppression
 - quiet hours and cooldowns
 - focus suppression
 - stale return-to-Nexus windows
 - duplicate same-signal suppression
 - dismiss suppression
 - signal-key stability
-- passive in-app payload shape
+- passive in-app payload shape and integer TTL bounds
 - five-locale gentle copy without surveillance or exact timer wording
 
 Recommended focused checks:

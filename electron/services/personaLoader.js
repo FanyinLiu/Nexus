@@ -12,9 +12,17 @@ import { app } from 'electron'
 const PERSONA_DIR = 'persona'
 const SOUL_FILE = 'SOUL.md'
 const MEMORY_FILE = 'MEMORY.md'
+const USER_DATA_DISPLAY_ROOT = 'app-user-data'
 
 let _soulCache = { content: '', mtime: 0 }
 let _memoryCache = { content: '', mtime: 0 }
+
+function getDisplayPath(...segments) {
+  return [USER_DATA_DISPLAY_ROOT, ...segments]
+    .map((segment) => String(segment).replace(/^\/+|\/+$/g, ''))
+    .filter(Boolean)
+    .join('/')
+}
 
 function getPersonaDir() {
   return path.join(app.getPath('userData'), PERSONA_DIR)
@@ -92,8 +100,12 @@ export async function ensurePersonaDir(defaultSoulContent) {
     }
   }
 
+  return getPersonaPaths()
+}
+
+export function getPersonaAbsolutePaths() {
   return {
-    personaDir: dir,
+    personaDir: getPersonaDir(),
     soulPath: getSoulPath(),
     memoryPath: getMemoryPath(),
   }
@@ -101,9 +113,9 @@ export async function ensurePersonaDir(defaultSoulContent) {
 
 export function getPersonaPaths() {
   return {
-    personaDir: getPersonaDir(),
-    soulPath: getSoulPath(),
-    memoryPath: getMemoryPath(),
+    personaDir: getDisplayPath(PERSONA_DIR),
+    soulPath: getDisplayPath(PERSONA_DIR, SOUL_FILE),
+    memoryPath: getDisplayPath(PERSONA_DIR, MEMORY_FILE),
   }
 }
 
@@ -115,7 +127,7 @@ export async function writePersonaProfile(profileId, files) {
       writeFile(path.join(dir, filename), content, 'utf8'),
     ),
   )
-  return { dir }
+  return { dir: getPersonaProfileDisplayDir(profileId) }
 }
 
 // ── v2: per-profile multi-file persona (soul/memory/examples/style/voice/tools)
@@ -130,6 +142,11 @@ const V2_PERSONAS_DIR = 'personas'
 export function getPersonaProfileDir(profileId) {
   const safe = String(profileId ?? '').replace(/[^A-Za-z0-9_-]/g, '')
   return path.join(app.getPath('userData'), V2_PERSONAS_DIR, safe || 'default')
+}
+
+export function getPersonaProfileDisplayDir(profileId) {
+  const safe = String(profileId ?? '').replace(/[^A-Za-z0-9_-]/g, '')
+  return getDisplayPath(V2_PERSONAS_DIR, safe || 'default')
 }
 
 /**
@@ -163,7 +180,7 @@ export async function loadPersonaProfile(profileId) {
   const rootDir = getPersonaProfileDir(profileId)
   const result = {
     id: String(profileId ?? ''),
-    rootDir,
+    rootDir: getPersonaProfileDisplayDir(profileId),
     soul: '',
     memory: '',
     examplesRaw: '',

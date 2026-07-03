@@ -1,4 +1,5 @@
 import { cosineSimilarity, embedMemorySearchText, isLocalHashMemoryModel } from '../memory/vectorSearch.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import type { ChatMessage } from '../../types/chat.ts'
 import {
   LOREBOOK_SCAN_WINDOW_MESSAGES,
@@ -225,7 +226,7 @@ export async function selectTriggeredLorebookEntriesWithSemantic(
     try {
       queryEmbedding = await embedMemorySearchText(query, options.embeddingModel)
     } catch (err) {
-      console.warn('[lorebook] semantic query embedding failed; keyword-only:', err)
+      console.warn('[lorebook] semantic query embedding failed; keyword-only:', getRedactedLogErrorMessage(err))
       return results
     }
     if (!queryEmbedding.length) return results

@@ -22,6 +22,7 @@ import {
   DEFAULT_PERSONA_PROFILE_ID,
   type LoadedPersona,
 } from '../features/autonomy/v2/personaTypes.ts'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings, ChatMessage, MemoryItem } from '../types'
 
 const POLL_INTERVAL_MS = 30 * 60_000
@@ -194,7 +195,7 @@ export function useLetterScheduler({
       } catch (err) {
         live.onEvent?.({
           title: '[letter] LLM call failed',
-          detail: err instanceof Error ? err.message : String(err),
+          detail: getRedactedLogErrorMessage(err),
           tone: 'warn',
         })
         return

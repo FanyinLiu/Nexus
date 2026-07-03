@@ -1,5 +1,7 @@
 import { dialog, shell, systemPreferences } from 'electron'
 
+import { getRedactedErrorMessage } from './errorRedaction.js'
+
 const SETTINGS_URLS = {
   microphone: 'ms-settings:privacy-microphone',
   camera: 'ms-settings:privacy-webcam',
@@ -22,7 +24,7 @@ async function promptOpenSettings({ title, message, detail, settingsUrl }) {
   })
   if (response === 0) {
     shell.openExternal(settingsUrl).catch((err) => {
-      console.warn('[windows-perm] failed to open settings:', err?.message)
+      console.warn('[windows-perm] failed to open settings:', getRedactedErrorMessage(err))
     })
   }
 }
@@ -57,7 +59,7 @@ async function ensureWindowsMediaPermission(kind) {
 
     return status
   } catch (err) {
-    console.warn(`[windows-perm] ${kind} check failed:`, err?.message)
+    console.warn(`[windows-perm] ${kind} check failed:`, getRedactedErrorMessage(err))
     return 'unknown'
   }
 }
@@ -71,4 +73,3 @@ export async function runWindowsPermissionChecks({ delayMs = 600 } = {}) {
   const camera = await ensureWindowsMediaPermission('camera')
   console.info('[windows-perm] summary', { microphone, camera })
 }
-

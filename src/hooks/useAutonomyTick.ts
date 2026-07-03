@@ -6,6 +6,7 @@ import {
   shouldTick,
   wakeUpState,
 } from '../features/autonomy/tickLoop'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings, AutonomyPhase, AutonomyTickState, FocusState } from '../types'
 
 export type UseAutonomyTickOptions = {
@@ -69,11 +70,11 @@ export function useAutonomyTick({
         const result: unknown = onTickRef.current(nextState)
         if (result && typeof (result as Promise<unknown>).then === 'function') {
           (result as Promise<unknown>).catch((err) => {
-            console.warn('[Autonomy] tick callback rejected:', err)
+            console.warn('[Autonomy] tick callback rejected:', getRedactedLogErrorMessage(err))
           })
         }
       } catch (error) {
-        console.warn('[Autonomy] tick callback error:', error)
+        console.warn('[Autonomy] tick callback error:', getRedactedLogErrorMessage(error))
       }
     }, intervalMs)
 

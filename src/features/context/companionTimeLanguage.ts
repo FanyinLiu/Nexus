@@ -17,12 +17,18 @@ export const COMPANION_ELAPSED_BUCKETS: readonly CompanionElapsedBucket[] = [
 ]
 
 const PRECISE_TIME_PATTERNS: readonly RegExp[] = [
-  /\b\d+(?:\.\d+)?\s*(?:ms|msec|millisecond|milliseconds|sec|secs|second|seconds|min|mins|minute|minutes|hr|hrs|hour|hours)\b/i,
+  /\b\d+(?:\.\d+)?\s*(?:ms|msec|millisecond|milliseconds|s|sec|secs|second|seconds|m|min|mins|minute|minutes|h|hr|hrs|hour|hours)\b/i,
+  /\bhalf\s+(?:a\s+)?(?:sec|second|seconds|min|minute|minutes)\b/i,
   /\b\d{1,2}:\d{2}(?::\d{2})?\b/,
   /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z?\b/,
-  /\d+(?:\.\d+)?\s*(?:个)?\s*(?:小时|分鐘|分钟)/,
-  /\d+(?:\.\d+)?\s*(?:時間|分)/,
-  /\d+(?:\.\d+)?\s*(?:시간|분)/,
+  /\d+(?:\.\d+)?\s*(?:个)?\s*(?:小时|秒|分鐘|分钟)/,
+  /\d+(?:\.\d+)?\s*(?:時間|秒|分)/,
+  /\d+(?:\.\d+)?\s*(?:시간|초|분)/,
+  /半\s*(?:秒|分鐘|分钟)/,
+  /[零〇一二三四五六七八九十百千万兩两]+(?:个)?\s*(?:秒|分鐘|分钟|分)/,
+  /[零〇一二三四五六七八九十百千万]+(?:秒|分)/,
+  /반\s*(?:초|분)/,
+  /[일이삼사오육칠팔구십백천]+\s*(?:초|분)/,
 ]
 
 const COMPANION_ELAPSED_LABELS: Record<UiLanguage, Record<CompanionElapsedBucket, string>> = {

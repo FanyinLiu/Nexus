@@ -1,11 +1,20 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 
 import {
   petModelActionNeedsConfirmation,
   summarizePetModelRequest,
   summarizePetModelResult,
 } from '../electron/ipc/petModelAudit.js'
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+function readSource(relativePath: string) {
+  return readFileSync(join(ROOT, relativePath), 'utf8')
+}
 
 test('pet model audit summaries exclude paths urls slugs and model content', () => {
   const gallery = summarizePetModelRequest(
@@ -38,9 +47,13 @@ test('pet model audit summaries exclude paths urls slugs and model content', () 
     model: { id: 'private-model', label: 'Private Model' },
     message: 'Imported Private Model',
     packageDirectory: '/Users/me/Documents/private-kit/final-package',
+    packageDirectoryDisplay: 'Documents/Nexus Pet Creator Kits/final-package',
     manifestPath: '/Users/me/Documents/private-kit/final-package/pet.json',
+    manifestPathDisplay: 'Documents/Nexus Pet Creator Kits/final-package/pet.json',
     visualAuditPath: '/Users/me/Documents/private-kit/final-package/qa/audit.json',
+    visualAuditPathDisplay: 'Documents/Nexus Pet Creator Kits/final-package/qa/audit.json',
     archivePath: '/Users/me/Documents/private-kit/final-package/private.zip',
+    archivePathDisplay: 'Documents/Nexus Pet Creator Kits/final-package/private.zip',
   })
 
   assert.equal(result.modelPresent, true)
@@ -56,6 +69,7 @@ test('pet model audit summaries exclude paths urls slugs and model content', () 
     'private-pet',
     'token=secret',
     '/Users/me/Documents/private-kit',
+    'Documents/Nexus Pet Creator Kits/final-package',
     'private-model',
     'Private Model',
     'Imported Private Model',
@@ -63,6 +77,46 @@ test('pet model audit summaries exclude paths urls slugs and model content', () 
   ]) {
     assert.ok(!serialized.includes(privateValue), `${privateValue} should not be logged`)
   }
+})
+
+test('pet model creator-kit UI renders display paths instead of raw artifact paths', () => {
+  const pathSource = readSource('electron/services/petModelPaths.js')
+  const serviceSource = readSource('electron/services/petModelService.js')
+  const chatSectionSource = readSource('src/components/settingsSections/ChatSection.tsx')
+  const creatorPanelSource = readSource('src/components/settingsSections/chat/SpriteCreatorKitPanel.tsx')
+
+  assert.match(pathSource, /USER_DATA_DISPLAY_ROOT = 'app-user-data'/)
+  assert.match(pathSource, /CODEX_HOME_DISPLAY_ROOT = 'codex-home'/)
+  assert.match(pathSource, /return `\.\.\.\/\$\{path\.basename\(resolvedTarget\) \|\| 'path'\}`/)
+
+  assert.match(serviceSource, /getPetArtifactDisplayPath/)
+  assert.match(serviceSource, /packageDirectoryDisplay/)
+  assert.match(serviceSource, /archivePathDisplay/)
+  assert.doesNotMatch(serviceSource, /制作包输出：\$\{assembled\.packageDirectory\}/)
+  assert.doesNotMatch(serviceSource, /可分享 ZIP：\$\{archivePath\}/)
+  assert.doesNotMatch(serviceSource, /已打开制作包文件夹：\$\{targetRealPath\}/)
+  assert.doesNotMatch(serviceSource, /已打开制作包文件：\$\{targetRealPath\}/)
+
+  assert.match(
+    chatSectionSource,
+    /generatedSpritePetPackage\.packageDirectoryDisplay \?\? generatedSpritePetPackage\.packageDirectory/,
+  )
+  assert.match(
+    chatSectionSource,
+    /generatedSpritePetPackage\.archivePathDisplay \?\? generatedSpritePetPackage\.archivePath/,
+  )
+  assert.match(
+    creatorPanelSource,
+    /lastCreatorKitDirectoryDisplay \|\| lastCreatorKitDirectory/,
+  )
+  assert.match(
+    creatorPanelSource,
+    /assembledCreatorKitPackage\.packageDirectoryDisplay \?\? assembledCreatorKitPackage\.packageDirectory/,
+  )
+  assert.match(
+    creatorPanelSource,
+    /creatorKitInspection\.contactSheetPathDisplay \?\? creatorKitInspection\.contactSheetPath/,
+  )
 })
 
 test('pet model error summaries omit private error messages', () => {

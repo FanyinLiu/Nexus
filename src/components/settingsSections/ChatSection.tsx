@@ -20,10 +20,15 @@ import {
   pickTranslatedUiText,
   pickTranslatedUiTextOrFallback,
 } from '../../lib/uiLanguage'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { loadLorebookEntries, saveLorebookEntries } from '../../lib/storage/lorebooks'
 import { savePendingGreeting } from '../../lib/storage/pendingGreeting'
 import { TextField } from '../settingsFields'
 import type { AppSettings, CharacterProfile, CompanionRelationshipType } from '../../types'
+import {
+  setCompanionNameWithWakeWordSync,
+  syncWakeWordWithCompanionNameChange,
+} from '../../features/hearing/companionWakeWordSync.ts'
 import { CharacterProfilePanel } from './chat/CharacterProfilePanel'
 import { RelationshipPanel } from './chat/RelationshipPanel'
 import { PetModelPicker } from './chat/PetModelPicker'
@@ -51,18 +56,28 @@ type ChatSectionProps = {
   creatorKitInspection: SpritePetCreatorKitInspection | null
   assemblingCreatorKit: boolean
   lastCreatorKitDirectory: string
+  lastCreatorKitDirectoryDisplay: string
   lastCreatorKitSourceRowsDirectory: string
+  lastCreatorKitSourceRowsDirectoryDisplay: string
   assembledCreatorKitPackage: {
     packageDirectory: string
+    packageDirectoryDisplay?: string
     manifestPath: string
+    manifestPathDisplay?: string
     visualAuditPath?: string
+    visualAuditPathDisplay?: string
     archivePath?: string
+    archivePathDisplay?: string
   } | null
   generatedSpritePetPackage: {
     packageDirectory: string
+    packageDirectoryDisplay?: string
     manifestPath: string
+    manifestPathDisplay?: string
     visualAuditPath?: string
+    visualAuditPathDisplay?: string
     archivePath?: string
+    archivePathDisplay?: string
   } | null
   onImportPetModel: () => void
   onImportCodexPetGallery: (input: string) => void
@@ -98,7 +113,9 @@ export const ChatSection = memo(function ChatSection({
   creatorKitInspection,
   assemblingCreatorKit,
   lastCreatorKitDirectory,
+  lastCreatorKitDirectoryDisplay,
   lastCreatorKitSourceRowsDirectory,
+  lastCreatorKitSourceRowsDirectoryDisplay,
   assembledCreatorKitPackage,
   generatedSpritePetPackage,
   onImportPetModel,
@@ -213,7 +230,7 @@ export const ChatSection = memo(function ChatSection({
         petModelId: result.profile.petModelId || draft.petModelId,
       }
 
-      setDraft((prev) => ({
+      setDraft((prev) => syncWakeWordWithCompanionNameChange(prev, {
         ...prev,
         companionName: profile.companionName,
         systemPrompt: profile.systemPrompt,
@@ -243,7 +260,7 @@ export const ChatSection = memo(function ChatSection({
       setCardStatus({
         ok: false,
         message: ti('settings.chat.import_card_error', {
-          error: err instanceof Error ? err.message : String(err),
+          error: getRedactedLogErrorMessage(err),
         }),
       })
     } finally {
@@ -281,6 +298,7 @@ export const ChatSection = memo(function ChatSection({
             field="companionName"
             draft={draft}
             setDraft={setDraft}
+            updateDraft={setCompanionNameWithWakeWordSync}
           />
         </div>
 
@@ -482,7 +500,7 @@ export const ChatSection = memo(function ChatSection({
           </div>
           <div className="settings-pet-kit-output">
             <p className="settings-mini-group__note">
-              <code>{generatedSpritePetPackage.packageDirectory}</code>
+              <code>{generatedSpritePetPackage.packageDirectoryDisplay ?? generatedSpritePetPackage.packageDirectory}</code>
             </p>
             <button
               type="button"
@@ -500,7 +518,7 @@ export const ChatSection = memo(function ChatSection({
             <div className="settings-pet-kit-output">
               <p className="settings-mini-group__note">
                 <span>{ti('settings.chat.codex_pet_creator_archive')}</span>{' '}
-                <code>{generatedSpritePetPackage.archivePath}</code>
+                <code>{generatedSpritePetPackage.archivePathDisplay ?? generatedSpritePetPackage.archivePath}</code>
               </p>
               <button
                 type="button"
@@ -554,7 +572,9 @@ export const ChatSection = memo(function ChatSection({
         creatorKitInspection={creatorKitInspection}
         assemblingCreatorKit={assemblingCreatorKit}
         lastCreatorKitDirectory={lastCreatorKitDirectory}
+        lastCreatorKitDirectoryDisplay={lastCreatorKitDirectoryDisplay}
         lastCreatorKitSourceRowsDirectory={lastCreatorKitSourceRowsDirectory}
+        lastCreatorKitSourceRowsDirectoryDisplay={lastCreatorKitSourceRowsDirectoryDisplay}
         assembledCreatorKitPackage={assembledCreatorKitPackage}
         ti={ti}
         onShowCreatorPrompt={handleShowCreatorPrompt}

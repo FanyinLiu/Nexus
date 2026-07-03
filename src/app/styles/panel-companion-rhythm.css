@@ -1,0 +1,113 @@
+/* Image 4 rhythm-grid overlay. Enabled only by the image4Grid URL flag. */
+.panel-window--image4 .image4-chat {
+  --image4-rhythm-unit: 8px;
+  --image4-rhythm-line: rgba(125, 229, 246, 0.09);
+  --image4-rhythm-line-strong: rgba(255, 213, 145, 0.17);
+  --image4-rhythm-fill: rgba(111, 226, 239, 0.018);
+  position: relative;
+  isolation: isolate;
+}
+
+.panel-window--image4 .image4-presence,
+.panel-window--image4 .image4-dial-stage,
+.panel-window--image4 .image4-message-list,
+.panel-window--image4 .image4-greeting,
+.panel-window--image4 .image4-action-list,
+.panel-window--image4 .image4-composer {
+  position: relative;
+  z-index: 1;
+}
+
+.panel-window--image4 .image4-rhythm-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: grid;
+  grid-template-rows:
+    [presence] var(--image4-rhythm-presence)
+    [dial] var(--image4-rhythm-dial)
+    [greeting] var(--image4-rhythm-greeting)
+    [actions] var(--image4-rhythm-actions)
+    [composer] var(--image4-rhythm-composer);
+  gap: var(--image4-rhythm-gap);
+  box-sizing: border-box;
+  padding: var(--image4-rhythm-padding-top) 0 var(--image4-rhythm-padding-bottom);
+  overflow: visible;
+  border-radius: inherit;
+  opacity: 0.24;
+  pointer-events: none;
+}
+
+.panel-window--image4 .image4-chat.is-image4-snapshot .image4-rhythm-grid {
+  display: none;
+}
+
+.panel-window--image4 .image4-rhythm-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      var(--image4-rhythm-line) 0 1px,
+      transparent 1px var(--image4-rhythm-unit)
+    );
+  opacity: 0.56;
+}
+
+.panel-window--image4 .image4-rhythm-grid__row {
+  position: relative;
+  box-sizing: border-box;
+  min-width: 0;
+  border-block-start: 1px solid var(--image4-rhythm-line-strong);
+  background:
+    linear-gradient(90deg, var(--image4-rhythm-fill), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent);
+}
+
+.panel-window--image4 .image4-rhythm-grid__row::after {
+  content: none;
+}
+
+.panel-window--image4 .image4-rhythm-grid__rail {
+  position: absolute;
+  top: 0;
+  right: -23px;
+  bottom: 0;
+  display: grid;
+  grid-template-rows:
+    [presence] var(--image4-rhythm-presence)
+    [dial] var(--image4-rhythm-dial)
+    [greeting] var(--image4-rhythm-greeting)
+    [actions] var(--image4-rhythm-actions)
+    [composer] var(--image4-rhythm-composer);
+  gap: var(--image4-rhythm-gap);
+  box-sizing: border-box;
+  width: 20px;
+  padding: var(--image4-rhythm-padding-top) 0 var(--image4-rhythm-padding-bottom);
+  opacity: 0.66;
+}
+
+.panel-window--image4 .image4-rhythm-grid__rail span {
+  display: grid;
+  align-self: start;
+  justify-self: center;
+  width: 14px;
+  height: 14px;
+  margin-top: 5px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 213, 145, 0.12);
+  border-radius: 5px;
+  background: rgba(6, 12, 22, 0.46);
+  color: rgba(255, 226, 176, 0.72);
+  font-size: 9px;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.panel-window--image4 .image4-rhythm-grid__row[data-rhythm-row='composer'] {
+  border-block-end: 1px solid var(--image4-rhythm-line-strong);
+}

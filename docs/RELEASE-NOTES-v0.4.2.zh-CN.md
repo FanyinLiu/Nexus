@@ -19,10 +19,11 @@
 这个策略补上了会让陪伴变成打扰的几类边界：
 
 - 正在和 Nexus 聊天时，压制所有 check-in 信号
+- 无效当前时间和辅助时间戳都不能触发或误压制信号
 - 过期的“刚回到 Nexus”信号不会继续触发
 - 同一个活动信号在发出窗口内不能重复出现
 - 刚被用户 dismiss 的同类信号会继续保持安静
-- 本地 in-app payload 可 dismiss，并且会很快过期
+- 本地 in-app payload 可 dismiss，并且整数 TTL 会被限制在短窗口内
 
 ### In-app payload 只是被动数据
 
@@ -53,13 +54,14 @@
 发布前应覆盖：
 
 - active chat 优先级
+- 无效当前时间和辅助时间戳压制
 - quiet hours 和 cooldown
 - focus suppression
 - 过期 return-to-Nexus 窗口
 - 同一信号重复压制
 - dismiss 压制
 - signal key 稳定性
-- 被动 in-app payload 结构
+- 被动 in-app payload 结构和整数 TTL 边界
 - 五语言温和文案，不出现监控感或精确计时
 
 建议先跑：

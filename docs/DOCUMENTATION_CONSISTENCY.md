@@ -4,8 +4,9 @@
 
 ## 当前锚点
 
-- 当前代码版本来自 `package.json`：v0.4.0。
-- README 当前入口保留 v0.4.0 和上一稳定入口 v0.3.6。
+- 当前代码版本来自 `package.json`：v0.4.1。
+- README 当前入口保留 v0.4.1 和上一稳定入口 v0.4.0。
+- v0.3.6 这类更早历史只作为归档 release note / changelog 节点保留。
 - 更早历史放在 GitHub Releases 和 `docs/RELEASE-NOTES-v*.md`，不在 README 顶部继续滚动维护旧版本号。
 
 ## 检查范围

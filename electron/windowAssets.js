@@ -3,6 +3,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { app, nativeImage } from 'electron'
 
+import { getRedactedErrorMessage } from './services/errorRedaction.js'
+
 const WINDOWS_APP_USER_MODEL_ID = 'ai.factory.desktoppet'
 const WINDOWS_APP_ICON_FILE = 'nexus.ico'
 const DEFAULT_APP_ICON_FILE = 'nexus-256.png'
@@ -81,7 +83,7 @@ export function applyWindowIcon(win) {
   try {
     win.setIcon(getPetIconPath(process.platform))
   } catch (err) {
-    console.warn('[window] Failed to set window icon:', err?.message)
+    console.warn('[window] Failed to set window icon:', getRedactedErrorMessage(err))
   }
 }
 
@@ -96,6 +98,6 @@ export function applyWindowsAppDetails(win) {
       relaunchDisplayName: app.name || 'Nexus',
     })
   } catch (err) {
-    console.warn('[windows] Failed to set window app details:', err?.message)
+    console.warn('[windows] Failed to set window app details:', getRedactedErrorMessage(err))
   }
 }

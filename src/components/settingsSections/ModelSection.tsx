@@ -208,7 +208,7 @@ export const ModelSection = memo(function ModelSection({
     && !isHttpHeaderSafeCredential(draft.apiKey)
     ? ti('settings.model.extra_keys_error')
     : ''
-  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(true)
   // 国内 / 海外 / 本地 segmented filter over the brand grid. Defaults to the
   // current provider's region so opening settings always lands on the tab
   // that contains your selection; falls back to the UI-language heuristic.
@@ -245,6 +245,10 @@ export const ModelSection = memo(function ModelSection({
     : currentPreset.region
     ?? getDefaultOnboardingRegion(uiLanguage)
   const regionBrands = getProviderBrandsForRegion(providerBrands, activeRegion, draft.apiProviderId)
+  const getRegionLabel = (region: ApiProviderPreset['region']) => {
+    const tab = MODEL_PROVIDER_REGION_TABS.find((item) => item.region === region)
+    return tab ? ti(tab.labelKey) : region
+  }
 
   const currentBrand = providerBrands.find((brand) => brand.providerIds.includes(draft.apiProviderId))
     ?? providerBrands[0]
@@ -298,6 +302,14 @@ export const ModelSection = memo(function ModelSection({
             {regionBrands.map((brand) => {
               const selected = brand.providerIds.includes(draft.apiProviderId)
               const brandLabel = brand.labelKey ? ti(brand.labelKey) : brand.label
+              const provider = providerById.get(
+                pickBrandProviderForRegion(brand.providerIds, activeRegion, draft.apiProviderId),
+              )
+              const brandSummary = provider
+                ? [getRegionLabel(provider.region), provider.defaultModel || provider.label]
+                  .filter(Boolean)
+                  .join(' · ')
+                : ''
               return (
                 <button
                   key={brand.id}
@@ -328,6 +340,9 @@ export const ModelSection = memo(function ModelSection({
                     </span>
                   )}
                   <span className="settings-model-source-card__name">{brandLabel}</span>
+                  {brandSummary ? (
+                    <span className="settings-model-source-card__meta">{brandSummary}</span>
+                  ) : null}
                   <svg
                     className="settings-model-source-card__chevron"
                     aria-hidden="true"

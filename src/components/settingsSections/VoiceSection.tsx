@@ -19,17 +19,8 @@ import {
   getVoiceTriggerModeOptions,
   type ConnectionResult,
 } from '../settingsDrawerSupport'
-
-const CJK_CHAR_REGEX = /[\u3400-\u9fff]/
-const ASCII_LETTER_REGEX = /[A-Za-z]/
-
-function isWakeWordSupported(value: string) {
-  const trimmed = value.trim()
-  if (!trimmed) return true
-  // Chinese: handled by pinyin-based keyword generation in main process.
-  // English: handled by runtime BPE encoding via sherpa-onnx's bpeVocab path.
-  return CJK_CHAR_REGEX.test(trimmed) || ASCII_LETTER_REGEX.test(trimmed)
-}
+import { isWakeWordSupported } from '../../features/voice/providerSettings.ts'
+import { getDirectSendFallbackWakeWord } from '../../features/hearing/companionWakeWordSync.ts'
 
 type VoiceSectionProps = {
   active: boolean
@@ -315,6 +306,9 @@ export const VoiceSection = memo(function VoiceSection({
                   ...prev,
                   voiceTriggerMode: nextMode,
                   wakeWordEnabled: nextMode === 'wake_word',
+                  ...(nextMode === 'wake_word' && !prev.wakeWord.trim()
+                    ? { wakeWord: getDirectSendFallbackWakeWord(prev) }
+                    : {}),
                 }))
               }}
             >

@@ -126,3 +126,10 @@ test('vault security audit covers secret-safe KeyVault support logs', () => {
   assert.equal(report.summary.errors, 0)
   assert.ok(report.checkedFiles.includes('electron/services/keyVault.js'))
 })
+
+test('vault security audit covers renderer settings store support logs', () => {
+  const report = buildVaultSecurityReport()
+
+  assert.equal(report.summary.errors, 0)
+  assert.ok(report.checkedFiles.includes('src/app/store/settingsStore.ts'))
+})

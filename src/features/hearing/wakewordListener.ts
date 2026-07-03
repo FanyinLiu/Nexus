@@ -7,6 +7,7 @@
  */
 
 import { requestVoiceInputStream } from '../voice/runtimeSupport.ts'
+import { getPrimaryWakeWord } from './core.ts'
 import type { TranslationKey, TranslationParams } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
@@ -48,7 +49,9 @@ export async function startWakewordListener(
   }
   const wakewordApi = api
 
-  const wakeWord = options.wakeWord?.trim() || ''
+  const configuredWakeWord = String(options.wakeWord ?? '').trim()
+  const wakeWord = getPrimaryWakeWord(configuredWakeWord)
+  const activeKeywords = configuredWakeWord || wakeWord
   const requestInputStream = options.requestInputStream ?? requestVoiceInputStream
   const AudioContextCtor = options.AudioContextCtor ?? AudioContext
 
@@ -135,7 +138,7 @@ export async function startWakewordListener(
       }
     }
 
-    await wakewordApi.kwsStart({ wakeWord })
+        await wakewordApi.kwsStart({ wakeWord: activeKeywords })
     kwsStarted = true
     callbacks.onStatusChange?.(true)
 
@@ -231,5 +234,7 @@ export async function checkWakewordAvailability(
     return { installed: false, modelFound: false, active: false }
   }
 
-  return api.kwsStatus({ wakeWord: options.wakeWord?.trim() || '' })
+  const configuredWakeWord = String(options.wakeWord ?? '').trim()
+  const wakeWord = getPrimaryWakeWord(configuredWakeWord)
+  return api.kwsStatus({ wakeWord: configuredWakeWord || wakeWord })
 }

@@ -1188,93 +1188,77 @@ export async function readChatLocalDataSessions(options = {}) {
   }
 }
 
+function createChatComparisonBlockedResult(overrides = {}) {
+  return {
+    ok: false,
+    targetDomainId: LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID,
+    schemaVersion: CHAT_MIGRATION_PACKAGE_SCHEMA_VERSION,
+    compared: false,
+    recordPayloadsIncluded: false,
+    status: 'blocked',
+    sourceSessionCount: 0,
+    sqliteSessionCount: 0,
+    matchedRecordCount: 0,
+    metadataAlignedRecordCount: 0,
+    metadataMismatchCount: 0,
+    missingSqliteRecordCount: 0,
+    extraSqliteRecordCount: 0,
+    malformedSqliteRecordCount: 0,
+    sourceMessageCount: 0,
+    sqliteMessageCount: 0,
+    messageCountDelta: 0,
+    sourcePayloadBytes: 0,
+    sqlitePayloadBytes: 0,
+    issueCodes: [],
+    auditRecordId: null,
+    errorKind: null,
+    errorMessage: null,
+    ...overrides,
+  }
+}
+
+function createChatRuntimeMirrorResult(overrides = {}) {
+  return {
+    ok: false,
+    targetDomainId: LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID,
+    schemaVersion: CHAT_MIGRATION_PACKAGE_SCHEMA_VERSION,
+    mirrored: false,
+    deleted: false,
+    recordsWritten: 0,
+    recordsDeleted: 0,
+    messageCount: 0,
+    auditRecordId: null,
+    errorKind: null,
+    errorMessage: null,
+    ...overrides,
+  }
+}
+
 export async function compareChatLocalDataSessions(options = {}) {
   if (options.confirmed !== true) {
-    return {
-      ok: false,
-      targetDomainId: LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID,
-      schemaVersion: CHAT_MIGRATION_PACKAGE_SCHEMA_VERSION,
-      compared: false,
-      recordPayloadsIncluded: false,
-      status: 'blocked',
-      sourceSessionCount: 0,
-      sqliteSessionCount: 0,
-      matchedRecordCount: 0,
-      metadataAlignedRecordCount: 0,
-      metadataMismatchCount: 0,
-      missingSqliteRecordCount: 0,
-      extraSqliteRecordCount: 0,
-      malformedSqliteRecordCount: 0,
-      sourceMessageCount: 0,
-      sqliteMessageCount: 0,
-      messageCountDelta: 0,
-      sourcePayloadBytes: 0,
-      sqlitePayloadBytes: 0,
-      issueCodes: [],
-      auditRecordId: null,
+    return createChatComparisonBlockedResult({
       errorKind: 'local-data-chat-comparison-confirmation-required',
       errorMessage: 'Chat local-data comparison requires explicit confirmation.',
-    }
+    })
   }
 
   let source
   try {
     source = normalizeChatComparisonSource(options.source)
   } catch {
-    return {
-      ok: false,
-      targetDomainId: LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID,
-      schemaVersion: CHAT_MIGRATION_PACKAGE_SCHEMA_VERSION,
-      compared: false,
-      recordPayloadsIncluded: false,
-      status: 'blocked',
-      sourceSessionCount: 0,
-      sqliteSessionCount: 0,
-      matchedRecordCount: 0,
-      metadataAlignedRecordCount: 0,
-      metadataMismatchCount: 0,
-      missingSqliteRecordCount: 0,
-      extraSqliteRecordCount: 0,
-      malformedSqliteRecordCount: 0,
-      sourceMessageCount: 0,
-      sqliteMessageCount: 0,
-      messageCountDelta: 0,
-      sourcePayloadBytes: 0,
-      sqlitePayloadBytes: 0,
-      issueCodes: [],
-      auditRecordId: null,
+    return createChatComparisonBlockedResult({
       errorKind: 'local-data-chat-comparison-invalid',
       errorMessage: 'Chat local-data comparison source is invalid.',
-    }
+    })
   }
 
   const status = await initializeLocalDataStore(options)
   if (!status.healthy) {
-    return {
-      ok: false,
-      targetDomainId: LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID,
+    return createChatComparisonBlockedResult({
       schemaVersion: status.schemaVersion,
-      compared: false,
-      recordPayloadsIncluded: false,
-      status: 'blocked',
-      sourceSessionCount: 0,
-      sqliteSessionCount: 0,
-      matchedRecordCount: 0,
-      metadataAlignedRecordCount: 0,
-      metadataMismatchCount: 0,
-      missingSqliteRecordCount: 0,
-      extraSqliteRecordCount: 0,
-      malformedSqliteRecordCount: 0,
-      sourceMessageCount: 0,
-      sqliteMessageCount: 0,
-      messageCountDelta: 0,
-      sourcePayloadBytes: 0,
-      sqlitePayloadBytes: 0,
-      issueCodes: [],
-      auditRecordId: null,
       errorKind: status.errorKind,
       errorMessage: status.errorMessage,
-    }
+    })
   }
 
   let db = null
@@ -1370,31 +1354,11 @@ export async function compareChatLocalDataSessions(options = {}) {
     }
   } catch (error) {
     runtimeStatus = statusFromError(error)
-    return {
-      ok: false,
-      targetDomainId: LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID,
+    return createChatComparisonBlockedResult({
       schemaVersion: runtimeStatus.schemaVersion,
-      compared: false,
-      recordPayloadsIncluded: false,
-      status: 'blocked',
-      sourceSessionCount: 0,
-      sqliteSessionCount: 0,
-      matchedRecordCount: 0,
-      metadataAlignedRecordCount: 0,
-      metadataMismatchCount: 0,
-      missingSqliteRecordCount: 0,
-      extraSqliteRecordCount: 0,
-      malformedSqliteRecordCount: 0,
-      sourceMessageCount: 0,
-      sqliteMessageCount: 0,
-      messageCountDelta: 0,
-      sourcePayloadBytes: 0,
-      sqlitePayloadBytes: 0,
-      issueCodes: [],
-      auditRecordId: null,
       errorKind: runtimeStatus.errorKind,
       errorMessage: runtimeStatus.errorMessage,
-    }
+    })
   } finally {
     if (db) db.close()
   }
@@ -1402,55 +1366,29 @@ export async function compareChatLocalDataSessions(options = {}) {
 
 export async function mirrorChatLocalDataSession(options = {}) {
   if (options.confirmed !== true) {
-    return {
-      ok: false,
-      targetDomainId: LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID,
-      schemaVersion: CHAT_MIGRATION_PACKAGE_SCHEMA_VERSION,
-      mirrored: false,
-      deleted: false,
-      recordsWritten: 0,
-      recordsDeleted: 0,
-      messageCount: 0,
-      auditRecordId: null,
+    return createChatRuntimeMirrorResult({
       errorKind: 'local-data-chat-runtime-mirror-confirmation-required',
       errorMessage: 'Chat runtime mirror requires explicit confirmation.',
-    }
+    })
   }
 
   let normalizedSession
   try {
     normalizedSession = normalizeChatMigrationSession(options.session, 0)
   } catch {
-    return {
-      ok: false,
-      targetDomainId: LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID,
-      schemaVersion: CHAT_MIGRATION_PACKAGE_SCHEMA_VERSION,
-      mirrored: false,
-      deleted: false,
-      recordsWritten: 0,
-      recordsDeleted: 0,
-      messageCount: 0,
-      auditRecordId: null,
+    return createChatRuntimeMirrorResult({
       errorKind: 'local-data-chat-runtime-mirror-invalid',
       errorMessage: 'Chat runtime mirror session is invalid.',
-    }
+    })
   }
 
   const status = await initializeLocalDataStore(options)
   if (!status.healthy) {
-    return {
-      ok: false,
-      targetDomainId: LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID,
+    return createChatRuntimeMirrorResult({
       schemaVersion: status.schemaVersion,
-      mirrored: false,
-      deleted: false,
-      recordsWritten: 0,
-      recordsDeleted: 0,
-      messageCount: 0,
-      auditRecordId: null,
       errorKind: status.errorKind,
       errorMessage: status.errorMessage,
-    }
+    })
   }
 
   let db = null
@@ -1529,19 +1467,11 @@ export async function mirrorChatLocalDataSession(options = {}) {
     }
   } catch (error) {
     runtimeStatus = statusFromError(error)
-    return {
-      ok: false,
-      targetDomainId: LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID,
+    return createChatRuntimeMirrorResult({
       schemaVersion: runtimeStatus.schemaVersion,
-      mirrored: false,
-      deleted: false,
-      recordsWritten: 0,
-      recordsDeleted: 0,
-      messageCount: 0,
-      auditRecordId: null,
       errorKind: runtimeStatus.errorKind,
       errorMessage: runtimeStatus.errorMessage,
-    }
+    })
   } finally {
     if (db) db.close()
   }

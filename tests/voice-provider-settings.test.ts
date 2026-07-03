@@ -27,6 +27,7 @@ test('visible speech provider options come from the provider catalog', () => {
 })
 
 test('wake word support accepts Chinese and English, and rejects symbol-only text', () => {
+  assert.equal(isWakeWordSupported('小白'), true)
   assert.equal(isWakeWordSupported('你好 Nexus'), true)
   assert.equal(isWakeWordSupported('Hey Nexus'), true)
   assert.equal(isWakeWordSupported('   '), true)

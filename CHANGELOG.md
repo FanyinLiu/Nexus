@@ -6,92 +6,45 @@
 
 ## [Unreleased]
 
+No changes yet.
+
+## [0.4.1] - 2026-07-03
+
 ### Changed
-- **v0.4.1 coarse time language boundary** — moved companion elapsed-time
-  labels, precision-leak detection, and safe fallback formatting into a
-  dedicated context time-language layer while keeping the v0.4.0 observation
-  thresholds and trigger logic unchanged.
-- **v0.4.2 check-in policy boundary** — added local emission control for the
-  companion check-in policy so in-app lines remain explainable, dismissible,
-  polling-safe, and separate from external notifications or message sending.
-- **v0.4.3 transparency view model** — routed the Settings companion-awareness
-  transparency block through a deterministic view model that explains status,
-  observed categories, model reach, local storage, clear-summary availability,
-  and blocked reasons without changing the release entry point.
-- **v0.4.4 beta feedback safety boundary** — added a local feedback
-  normalization layer and structured beta-report labels so timing, tone,
-  privacy, and permission friction can be reviewed without retaining raw
-  desktop activity or private feedback text.
+
+- **Companion UI and Settings hardening** — organized the panel, Settings, and
+  Image4 companion-field source structure with source-backed review docs and
+  surface audits for chat, Settings, composer, forms, focus, streaming, and
+  agent-activity paths.
+- **Settings drawer performance guard** — split the Settings drawer lazy CSS,
+  tiny lazy JS entry, and initial CSS budgets so future changes cannot silently
+  move Settings styles back onto the startup path or inflate the open-settings
+  hot path.
+- **Companion time language boundary** — moved companion elapsed-time labels,
+  precision-leak detection, and safe fallback formatting into a dedicated
+  context time-language layer while keeping the v0.4.0 observation thresholds
+  and trigger logic unchanged.
+- **Companion wake-word synchronization** — added a feature-layer sync boundary
+  so custom companion names can drive future wake-word behavior without
+  importing app-level code into hearing modules.
+- **Runtime privacy and release gates** — expanded desktop context, message,
+  vault, runtime-log, memory-vector, and network-error redaction audits, then
+  wired the new UI, privacy, performance, and release checks into `verify:pr`.
 - **v0.4.5 release hardening draft** — added a source-only draft-stack audit
   and release-hardening handoff that keeps package version, tag, GitHub
-  Release, and README stable-entry state unchanged while preparing review
-  evidence for the stacked v0.4.x drafts.
-- **Settings desktop-context diagnostics view model** — moved the Memory
-  settings foreground-window, clipboard, and screenshot/OCR availability cards
-  onto a pure presentation mapper so the UI is easier to test without adding
-  new sensing behavior.
-- **Pet display action mapping** — separated pet runtime phases from
-  user-facing display actions so summarizing and needs-attention states can be
-  shown on the pet without inventing a broadcasting runtime signal.
-- **Onboarding message action demo** — added a static first-run walkthrough for
-  received-message actions, keeping the demo separate from real notification
-  schemas, message bodies, IDs, precise timestamps, and chat sending.
-- **Settings model region tabs hardening** — shared the text-provider region
-  tab contract between onboarding and Settings, made the Settings brand grid
-  region filtering testable, and removed render-time extra-key state syncing.
-- **Model setup text connection check** — added a first-run text-model
-  connection card that reuses preflight diagnostics, opens the model guide, and
-  runs the existing real connection test without exposing API keys.
-- **Model connection error codes** — added stable codes for first-run text-model
-  failures including missing keys, CJK/whitespace header issues, missing models,
-  rate limits, timeouts, and provider-side outages.
-- **Pet task display actions** — added task-level pet display states for waiting
-  confirmation, executing, done, and failed while keeping runtime phases stable.
-- **Notification card quick actions** — normalized notification cards around
-  draft reply, important, and handle-later actions while keeping reply drafts
-  local to the composer.
-- **External action permission scopes** — changed high-risk external action
-  confirmations to support once, current-session, and persistent grants while
-  keeping audit payloads metadata-only.
-- **External action audit lifecycle** — routed high-risk Telegram, Discord,
-  MCP, Minecraft, and Factorio actions through one lifecycle audit wrapper that
-  records metadata-only start/end entries, action type, duration, result shape,
-  and stable failure codes.
-- **Unsigned install guidance** — unified macOS Gatekeeper and Windows
-  SmartScreen first-launch guidance across the main README and localized
-  READMEs, with distribution audit coverage to keep the installer trust notes
-  from drifting.
-- **Package and startup optimization inventory** — documented the current
-  build-size baseline, heavy resource loading boundaries, optional model
-  packaging constraint, and runtime-download candidates, then added
-  distribution audit coverage for the inventory.
-- **README version alignment** — aligned the root and localized README current
-  version framing with `package.json` v0.4.0, moved stale v0.2.7 pointers out
-  of README copy, and added a monthly documentation consistency checklist with
-  distribution audit coverage.
-- **README known limitations** — added a visible root README section for active
-  development status, unsigned installers, resource costs, provider networking,
-  desktop-awareness privacy boundaries, and voice-model caveats, with
-  distribution audit coverage.
-- **Core path smoke** — added an Electron smoke that loads the panel, opens
-  Settings, reaches the model configuration path, and joins `verify:release`
-  plus CI without requiring a real microphone or provider call.
+  Release, and README stable-entry state unchanged for future draft slices while
+  preparing review evidence for the stacked v0.4.x drafts.
 
 ### Fixed
+
 - **Localized exact-time leak detection** — desktop companion awareness now
   rejects or downgrades Arabic-digit Chinese, Japanese, and Korean precise
   duration strings such as `1小时30分钟`, `1時間30分`, and `2시간 10분` before they
   can reach prompt, UI, or recent-summary display surfaces.
-- **Repeated check-in suppression** — active chat, stale return signals,
-  duplicate activity signals, and recently dismissed lines now suppress local
-  check-in output before an in-app payload can be built.
 - **Raw desktop content transparency guard** — companion awareness
   transparency now keeps raw window titles, clipboard bodies, message bodies,
   file paths, screenshots, and precise minute/second time labels out of the
   Settings view model.
-- **Check-in copy safety matrix** — every supported locale and check-in reason
-  now runs through copy guardrails that reject surveillance-like framing,
-  imperative language, and exact timer wording.
 
 ## [0.4.0] - 2026-06-21
 

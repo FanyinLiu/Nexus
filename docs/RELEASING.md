@@ -301,8 +301,19 @@ Flags:
 
 ### Stage B — Code quality (6 checks)
 1. `npm run verify:release` (`verify:pr` + SQLite smoke + core path smoke). `verify:pr` runs
-   tsc, lint, tests, build, storage audit, heavy-module audit, companion
-   boundary audit, IPC audit, and distribution audit.
+   tsc, lint, tests, build, storage/heavy/architecture/source-size audits,
+   v0.4 UI route and open-source reference audits, composer/chat/settings/forms/focus/
+   streaming/agent-activity surface audits, Image4 color and contract checks,
+   performance baseline, v0.4 draft-stack quick audit, companion boundary,
+   message privacy, desktop context privacy, vault security, error redaction,
+   IPC, and distribution audits.
+   - Image4 UI validation is split deliberately: `image4:contract:check` is the
+     release-blocking hard contract for the five-row visual rhythm grid and row
+     ownership, while `image4:contract:report` is a non-blocking drift summary to
+     review during visual tuning. Chat/settings/composer and related surface
+     changes are also PR-gated through their source-backed surface audits plus
+     `docs/DESIGN_REVIEW_CHECKLIST.md` and `docs/OPEN_SOURCE_UI_REFERENCE_AUDIT.md`
+     as the human review/reference layer.
 2. `npm run smoke` — Electron actually launches + renderer loads. `npm run core-path:smoke`
    goes one step deeper by loading the panel, opening Settings, and reaching
    the model configuration path without real microphone or provider calls.
@@ -328,12 +339,17 @@ Flags:
 2. `sherpa-models` referenced in `build.{mac,win,linux}.extraResources`.
 3. `dist/index.html` + `app-runtime-*.js` + `ort-wasm-simd*.wasm` present.
 
-### Stage E — Docs + compliance (5–8 checks)
+### Stage E — Docs + compliance (beta: 3 checks; stable: 10 checks)
 1. `docs/RELEASE-NOTES-<tag>.md` exists.
-2. README.md mentions tag (stable only).
-3. `docs/README.{zh-CN,zh-TW,ja,ko}.md` each mention tag (stable only).
-4. No GPL/AGPL/SSPL in production deps (warn — `license-checker`).
-5. README mentions "AI" (EU AI Act Aug-2026 transparency duty; warn).
+2. Stable only: English release notes no longer contain draft/pre-tag markers
+   (warn).
+3. Stable only: `docs/RELEASE-NOTES-<tag>.zh-CN.md` exists and is not draft
+   (warn).
+4. Stable only: `README.md` links the release notes.
+5. Stable only: `docs/README.{zh-CN,zh-TW,ja,ko}.md` each link the release
+   notes (4 checks).
+6. No GPL/AGPL/SSPL in production deps (warn — `license-checker`).
+7. README mentions "AI" (EU AI Act Aug-2026 transparency duty; warn).
 
 ### Stage F — Privacy + governance (1–3 checks)
 1. No suspicious telemetry hosts hardcoded in `src/` / `electron/`

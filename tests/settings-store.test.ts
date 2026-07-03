@@ -113,14 +113,14 @@ test('initializeSettingsWithVault shares concurrent vault hydration', async () =
 test('subscribeToSettings fans out a single vault hydration failure', async () => {
   let retrieveCalls = 0
   const originalError = console.error
-  let errorCalls = 0
-  console.error = () => { errorCalls += 1 }
+  const errorCalls: unknown[][] = []
+  console.error = (...args: unknown[]) => { errorCalls.push(args) }
   try {
     const win = installWindow({
       vaultStore: async () => undefined,
       vaultRetrieveMany: async () => {
         retrieveCalls += 1
-        throw new Error('rate limited')
+        throw new Error('failed for settings:apiKey token=xai-abcdefghijklmnop at /Users/klein/private.json')
       },
     })
     const base = loadSettings()
@@ -134,7 +134,13 @@ test('subscribeToSettings fans out a single vault hydration failure', async () =
     await flushAsyncHandlers()
 
     assert.equal(retrieveCalls, 1)
-    assert.equal(errorCalls, 1)
+    assert.equal(errorCalls.length, 1)
+    const serializedError = JSON.stringify(errorCalls)
+    assert.doesNotMatch(serializedError, /settings:apiKey/)
+    assert.doesNotMatch(serializedError, /xai-abcdefghijklmnop/)
+    assert.doesNotMatch(serializedError, /\/Users\/klein/)
+    assert.match(serializedError, /token=\*\*\*/)
+    assert.match(serializedError, /~\/private\.json/)
     assert.deepEqual(seen.sort(), ['a:', 'b:'])
   } finally {
     console.error = originalError

@@ -1,0 +1,179 @@
+/* Image 4 active-chat message list and bubble surfaces. */
+.panel-window--image4 .image4-message-list,
+html[data-theme='warm-day'] .panel-window--image4 .image4-message-list {
+  grid-row: greeting / actions;
+  position: relative;
+  display: grid;
+  gap: clamp(16px, 3vw, 28px);
+  isolation: isolate;
+  min-height: 0;
+  max-height: clamp(120px, 27vh, 360px);
+  overflow-y: auto;
+  padding: 0 clamp(8px, 2.4vw, 26px);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.panel-window--image4 .image4-message-list.is-empty,
+html[data-theme='warm-day'] .panel-window--image4 .image4-message-list.is-empty {
+  display: none;
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+}
+
+.panel-window--image4 .image4-message-list:not(.is-empty),
+html[data-theme='warm-day'] .panel-window--image4 .image4-message-list:not(.is-empty) {
+  grid-row: greeting / composer;
+  align-self: stretch;
+  align-content: end;
+  gap: clamp(7px, 0.9vh, 9px);
+  max-height: none;
+  padding: clamp(8px, 1vh, 12px) clamp(18px, 4.6vw, 32px) clamp(11px, 1.3vh, 15px);
+}
+
+.panel-window--image4 .image4-message-list:not(.is-empty)::before,
+html[data-theme='warm-day'] .panel-window--image4 .image4-message-list:not(.is-empty)::before {
+  content: "";
+  position: absolute;
+  inset: clamp(8px, 1.1vh, 13px) clamp(6px, 1.6vw, 10px) 0;
+  z-index: 0;
+  pointer-events: none;
+  border: 0;
+  border-radius: clamp(18px, 4vw, 26px);
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(222, 242, 255, 0.17), transparent 66%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(236, 247, 255, 0.055) 45%, rgba(236, 247, 255, 0.09));
+  box-shadow:
+    inset 1px 0 0 rgba(76, 101, 125, 0.035),
+    inset -1px 0 0 rgba(76, 101, 125, 0.035),
+    0 14px 18px -18px rgba(88, 133, 166, 0.18);
+}
+
+.panel-window--image4 .message-bubble {
+  position: relative;
+  z-index: 1;
+  width: fit-content;
+  min-width: min(112px, 48%);
+  max-width: min(86%, 560px);
+  padding: clamp(8px, 1.7vw, 13px) clamp(11px, 2.2vw, 18px);
+  border: 1px solid rgba(174, 205, 241, 0.13);
+  border-radius: clamp(12px, 2vw, 18px);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: 0 1px 2px rgba(33, 50, 66, 0.035);
+  line-height: 1.38;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.panel-window--image4 .message-bubble.assistant {
+  justify-self: start;
+}
+
+.panel-window--image4 .message-bubble.user {
+  justify-self: end;
+  min-width: min(98px, 44%);
+}
+
+.panel-window--image4 .message-bubble__label {
+  margin-bottom: 5px;
+}
+
+@media (min-aspect-ratio: 1 / 1) {
+  .panel-window--image4 .image4-message-list,
+  html[data-theme='warm-day'] .panel-window--image4 .image4-message-list {
+    gap: clamp(8px, 3cqw, 14px);
+    max-height: clamp(84px, 40cqw, 140px);
+    padding: 0 clamp(6px, 3.6cqw, 16px);
+  }
+
+  .panel-window--image4 .message-bubble {
+    padding: clamp(8px, 3.4cqw, 12px) clamp(10px, 4cqw, 15px);
+    border-radius: clamp(10px, 4.2cqw, 14px);
+  }
+}
+
+/* Codex-like neutral pass for Image 4 active chat. */
+.panel-window--image4 .message-bubble,
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble {
+  border-color: rgba(240, 246, 252, 0.12);
+  background: rgba(22, 27, 34, 0.68);
+}
+
+/* Bright morning state for Image 4 active chat. */
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble {
+  border-color: rgba(76, 101, 125, 0.13);
+  background: rgba(255, 255, 255, 0.58);
+  color: rgba(28, 40, 53, 0.92);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble.user {
+  border-color: rgba(55, 92, 122, 0.135);
+  background: rgba(232, 243, 250, 0.76);
+  color: rgba(24, 36, 48, 0.94);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble.assistant {
+  color: rgba(30, 42, 55, 0.92);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble__label {
+  color: rgba(70, 86, 102, 0.64);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble.user .message-bubble__label {
+  color: rgba(58, 82, 103, 0.66);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble[data-chat-surface-state='streaming'] .message-bubble__pulse {
+  opacity: 0.52;
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble__run-status {
+  color: rgba(122, 72, 52, 0.7);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble__run-status-dot {
+  background: color-mix(in srgb, var(--image4-companion-primary) 72%, var(--image4-companion-calm, #4f6f63));
+}
+
+/* Xinghui companion palette for active chat density. */
+html[data-theme='warm-day'] .panel-window--image4 .image4-message-list:not(.is-empty)::before {
+  background:
+    radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--image4-companion-primary-soft) 12%, transparent), transparent 64%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--image4-companion-surface) 0%, transparent),
+      color-mix(in srgb, var(--image4-companion-surface-strong) 5%, transparent) 48%,
+      color-mix(in srgb, var(--image4-companion-surface-strong) 8%, transparent)
+    );
+  border-radius: clamp(10px, 2.2vw, 16px);
+  box-shadow: none;
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble {
+  border-color: color-mix(in srgb, var(--image4-companion-border) 78%, transparent);
+  background: color-mix(in srgb, var(--image4-companion-surface) 76%, transparent);
+  color: var(--image4-companion-text);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble.user {
+  border-color: color-mix(in srgb, var(--image4-companion-secondary) 22%, transparent);
+  background: color-mix(in srgb, var(--image4-companion-surface-strong) 58%, var(--image4-companion-surface));
+  color: var(--image4-companion-text);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble.assistant {
+  color: var(--image4-companion-text);
+}
+
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble__label,
+html[data-theme='warm-day'] .panel-window--image4 .message-bubble.user .message-bubble__label {
+  color: color-mix(in srgb, var(--image4-companion-muted) 70%, transparent);
+}
+
+/* Companion chat continuity: keep the last message closer to the intent field. */
+html[data-theme='warm-day'] .panel-window--image4 .image4-message-list:not(.is-empty) {
+  padding-bottom: clamp(2px, 0.45vh, 5px);
+}

@@ -24,48 +24,25 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **현재 코드 버전:** v0.4.0. Nexus는 데스크톱 동반자 인식의 기반에 들어섰습니다. 앱을 연 뒤 사용자가 다른 곳에서 작업해도 시간의 흐름을 조용히 이해하고, 개인정보 경계를 설정에서 볼 수 있게 합니다.
+> **현재 코드 버전:** v0.4.1. Nexus는 동반자 UI, 설정, 신뢰성 강화 단계에 들어섰습니다. 데스크톱 동반자 인식은 대략적인 시간 표현과 개인정보 우선을 유지하고, 설정과 대화 화면, 업로드 전 감사를 더 안정적으로 다듬습니다.
 
 > **개발 범위 안내:** 이 다국어 README는 장기 기능 목록을 보존합니다. 단기 개발 기준은 루트 [README](../README.md)와 [Nexus 업그레이드 통합 계획](NEXUS_UPGRADE_INTEGRATION_PLAN.md)입니다. Phase 1은 상주하는 작은 데스크톱 창, 미니멀 아바타, Ollama / DeepSeek 텍스트 모델, 간단한 대화에만 집중합니다.
 
 ---
 
-## 이번 업데이트 — v0.4.0
+## 이번 업데이트 — v0.4.1
 
-> **데스크톱 동반자 인식 기반.** 이 안정 버전은 Nexus를 연 뒤 사용자가 다른 곳에서 작업해도 시간의 흐름을 조용히 이해하는 루프를 시작합니다. 자세한 내용은 [RELEASE-NOTES-v0.4.0.md](RELEASE-NOTES-v0.4.0.md)(영어).
+> **동반자 UI, 설정, 신뢰성 강화.** 이 안정 버전은 메인 대화 패널, 설정 화면, Image4 동반자 영역을 정리하고 source-only UI, 개인정보, 보안, 성능 감사를 강화합니다. 자세한 내용은 [RELEASE-NOTES-v0.4.1.md](RELEASE-NOTES-v0.4.1.md)(영어).
 
-Nexus는 조용하고 보수적이며 일시정지 가능한 상태를 유지하며 짧고 대략적인 동반자 요약만 만듭니다. 시간 표현은 “잠시”, “30분쯤”, “한 시간쯤”처럼 대략적이며 원본 스크린샷, 전체 클립보드, 개인 메시지, 정확한 타이머를 모델로 보내지 않습니다. 적극적인 check-in 확장은 이후 버전으로 미루고, 마우스 따라가기, 타이핑 반응, 창 상호작용은 v0.5 범위입니다.
+Nexus는 조용하고 보수적이며 일시정지 가능한 상태를 유지하며 짧고 대략적인 동반자 요약만 만듭니다. v0.4.1은 설정 드로어 스타일을 지연 로딩으로 유지해 큰 CSS가 시작 경로로 돌아가지 않도록 막습니다. 시간 표현은 “잠시”, “30분쯤”, “한 시간쯤”처럼 대략적이며 원본 스크린샷, 전체 클립보드, 개인 메시지, 정확한 타이머를 모델로 보내지 않습니다. 적극적인 check-in 확장은 이후 버전으로 미루고, 마우스 따라가기, 타이핑 반응, 창 상호작용은 v0.5 범위입니다.
 
 ## 이전 업데이트 — v0.3.6
 
 > **0.3 기반을 마무리하는 버전.** 이번 릴리스는 Nexus를 Codex 같은 작업 에이전트로 만들지 않고, 0.4의 데스크톱 동반 감지도 미리 넣지 않습니다. 안전, 기억, 설정, 데스크톱 인식 진입점을 정리합니다. 자세한 내용은 [RELEASE-NOTES-v0.3.6.md](RELEASE-NOTES-v0.3.6.md)(영어).
 
-## 이번 업데이트 — v0.3.4-beta.4(프리릴리스)
+## 이전 버전 기록
 
-> **그녀의 작은 표정이 채팅 텍스트가 아니라 얼굴에 닿습니다.** 그녀는 답장에 괄호로 작은 동작(「（눈이 반짝였다）」「（고개를 갸웃）」)을 자주 덧붙입니다. 이는 아바타용 무대 지시로 글자로 읽거나 표시할 것이 아니지만, 가끔 답장에 새어 나와 버그처럼 보였습니다. 이번에는 **형태(셰이프)**로 판단하도록 바꿨습니다(수동으로 관리하는 단어 목록에 의존하지 않음): 인식되는 표정은 그녀의 얼굴을 움직이고 표시도 낭독도 하지 않습니다(이전과 동일). 미수록된 즉흥적인 한마디는 남겨 두되 옅은 이탤릭 **지문**으로 렌더링되어, 새어 나온 글자가 아니라 의도된 방백으로 읽힙니다. 둘 다 낭독되지 않습니다(음성 스트리밍 도중에도). 콜론이 붙은 「（주: 월요일은 평소대로）」는 본문으로 평소처럼 표시됩니다. **형태**로 판단하므로 다른 사람 화면에 나오는 새로운 표정도 동일하게 처리되어 목록에 추가할 필요가 없습니다. 자세한 내용은 [RELEASE-NOTES-v0.3.4-beta.4.md](RELEASE-NOTES-v0.3.4-beta.4.md)(영어). 프리릴리스는 수동 검증용입니다.
-
-## 이번 업데이트 — v0.3.4-beta.3(프리릴리스)
-
-> **그녀의 감정이 이제 묘사가 아니라 행동을 이끕니다.** 감정 엔진을 끝까지 연결: 대화 전체에서 당신의 기분을 읽고(「오늘 해고당했어」도 키워드 없이 알아챔), 그녀 자신의 감정은 실제 사건(답장 실패·긴 부재·당신의 가라앉은 날들)으로 형성되며, 그것이 어떻게·말을 걸지 말지를 실제로 바꿉니다(걱정되면 살며시 안부, 피곤하면 조용히, 단 방해 금지 시간은 넘지 않고, 기분 좋다고 수다스러워지지 않으며, 가까울수록 솔직하게). 또한 Live2D 星绘가 기본 아바타로, 메시지 감지가 토글 하나로, 놓친 메시지는 다음 대화에서 살며시. 자세한 내용은 [RELEASE-NOTES-v0.3.4-beta.3.md](RELEASE-NOTES-v0.3.4-beta.3.md)(영어). 프리릴리스는 수동 검증용입니다.
-
-## 이번 업데이트 — v0.3.4-beta.2(프리릴리스)
-
-> **컴패니언이 모든 메시지를 감지합니다.** 데스크톱 메시지 감지(macOS) 추가: 시스템 알림 센터를 읽어 WeChat/QQ/메일 등 모든 앱의 메시지를 컴패니언이 인지하고 대화에 반영합니다(기본은 출처+보낸 사람만, "전체 디스크 접근" 권한 필요). 브리지에 페어링 코드 인증 추가(Chat ID 수동 입력 불필요). MiniMax 웹 검색, 설정 모델 지역 탭, 약 2,100줄 데드 코드 제거 포함. beta.1의 모든 내용 포함. 자세한 내용은 [RELEASE-NOTES-v0.3.4-beta.2.md](RELEASE-NOTES-v0.3.4-beta.2.md)(영어). 프리릴리스는 수동 검증용입니다.
-
-## 이번 업데이트 — v0.3.3
-
-> **유지보수 + 다듬기 + 슬리밍.** 가져온 캐릭터 카드가 채팅을 구동, 음성 인식 클라우드→로컬 폴백, 다수 버그 수정, 기본 펫 이름을 Pip으로 변경하고 기본적으로 배경 표시, 분신 기능 제거, 약 2,500줄의 데드 코드 제거. 자세한 내용은 [RELEASE-NOTES-v0.3.3.md](RELEASE-NOTES-v0.3.3.md)(영어). v0.3.3-beta.1 검증 기간을 거쳐 안정판으로 승격, 내용은 동일합니다.
-
-## 이번 업데이트 — v0.3.2
-
-> **Codex 호환 데스크톱 펫, 커뮤니티 가져오기, 펫 제작 도구.** 자세한 내용은 [RELEASE-NOTES-v0.3.2.md](RELEASE-NOTES-v0.3.2.md)(영어)를 참조하세요.
-
-| 주제 | 내용 |
-|---|---|
-| **Codex 호환 Sprite 펫** | Nexus는 `8x9` / `1536x1872` / `192x208` 규격의 `pet.json + spritesheet` 패키지를 읽고, 데스크톱 작은 창에서 idle, waving, review 같은 동작을 재생할 수 있습니다. |
-| **커뮤니티 펫 가져오기** | 설정 화면에 사용자가 직접 선택하는 커뮤니티 진입점을 추가해, 지원되는 gallery 페이지, slug, ZIP 다운로드 URL에서 검증 후 가져올 수 있습니다. |
-| **펫 제작 흐름** | 이미지나 creator kit에서 Codex 호환 펫을 만들고, 미리 보고, 조립하고, 내보내고, 설치할 수 있습니다. clean-room 출처 기록도 남깁니다. |
-| **보안 강화** | 원격 다운로드에 타임아웃, DNS / 사설 네트워크 검사, 스트리밍 크기 제한을 추가했습니다. ZIP 해제 출력 크기도 제한하며, production audit과 full audit 모두 0건입니다. |
+README에는 현재 코드 버전 v0.4.1과 직전 안정 진입점 v0.4.0의 핵심만 남깁니다. 더 오래된 기록은 [CHANGELOG](../CHANGELOG.md)와 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)에 모으고, README 상단에서 오래된 버전 번호를 계속 관리하지 않습니다.
 
 ---
 
@@ -80,7 +57,7 @@ Nexus는 조용하고 보수적이며 일시정지 가능한 상태를 유지하
 | 안전/개인정보 확인 | [안전 및 지원](#안전-및-지원) |
 | 커뮤니티 참여 | [커뮤니티](#커뮤니티) · [Community Guide](COMMUNITY.md) |
 | 0.4 방향 이해 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 0.4 안정 버전 보기 | [v0.4.0 Release Notes](RELEASE-NOTES-v0.4.0.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 0.4 최신 안정 버전 보기 | [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## 왜 Nexus인가?
 
@@ -119,70 +96,6 @@ Nexus는 조용하고 보수적이며 일시정지 가능한 상태를 유지하
 - 💬 **폰에서도 연결** — Discord와 Telegram 게이트웨이, 채팅별 라우팅 지원. 휴대폰에서 동반자와 대화하고 음성으로 응답받기.
 
 - 🌐 **다국어 UI** — 간체 중국어, 번체 중국어, 영어, 일본어, 한국어.
-
----
-
-## 이번 업데이트 — v0.3.1(안정 버전, 2026-04-28)
-
-> **감정 메인라인 + 보안 감사 누적 릴리스.** v0.3.0 이후 92개 commit. beta.1 → beta.5가 안정 버전 전까지 각각 한 부류의 문제를 닫았습니다. 자세한 내용은 [RELEASE-NOTES-v0.3.1.md](RELEASE-NOTES-v0.3.1.md)(영어)를 참조하세요.
-
-| 주제 | 내용 |
-|---|---|
-| **🧠 동반자의 어조가 적응한다** | 14일 장 윈도우 + 3일 단 윈도우의 감정 기준선이 매 응답의 system prompt에 주입돼: 정체된 저조 상태일 때는 제안 줄이고 받아주기 우선; 급격한 하강일 땐 호흡을 늦추고; 변동이 클 땐 화제를 끌어가지 않고; 안정·따뜻할 땐 그 호흡에 맞춰. Russell 1980 + Kuppens 2015 + Trull 2008. |
-| **💔 Gottman 결렬 / 회복** | 비판 / 경멸 / 방어 / 침묵의 네 가지 Horsemen을 자동 감지; 다음 턴에 soft start-up + accept influence 회복 자세를 주입. **전 과정이 조용히 바뀔 뿐 — "이 상태를 봤어요" 같은 알림은 절대 띄우지 않음**. |
-| **🔒 critical CVE 2건 해소** | `pixi-live2d-display`가 `gh-pages`(프로토타입 오염)를 runtime deps에 잘못 포함시킨 문제; `npm overrides`로 CVE 픽스 버전으로 강제 업그레이드. |
-| **🛡️ IPC 감사 6/7 HIGH 종료** | H2/H3/H5/H6/H7/H8 + M1/M2/M3/M5 + L3/L4/L6 모두 수정, H4는 설계상 v1.0으로 deferred. |
-| **🐛 30+ 정적 버그 수정** | 4라운드 audit + 병렬 정적 스캔; template-replace `$&` 누수, 동시성 레이스, StrictMode 순수성, NaN 가드, async leak, storage 검증. |
-| **🚦 릴리스 전 검사를 26항목으로 확장** | `prerelease-check.mjs`를 8항목에서 6 stage / 26 check로 확장: 프로세스 / 코드 품질 / 보안 / 자산 / 문서 준수 / 프라이버시 거버넌스. |
-| **🧹 UI 정리** | 편지 / 타임캡슐 / 심부름 / 열어둔 실 / 무드 맵 5개 settings 패널을 서랍에서 거두었습니다(기반 scheduler는 계속 동작). "동반자의 감정 적응은 사용자가 느끼는 것이지, 설정하는 것이 아니다." |
-
-<details>
-<summary>이 안정 버전이 포함하는 v0.3.1-beta 라인</summary>
-
-- **beta.1** — 설치 패키지 축소(1.2 GB → 250 MB)
-- **beta.2** — IPC 보안 강화(H5 / H8 / H4 완화)
-- **beta.3** — Live2D / thinking-mode / TTS / 멀티모달 4건 회귀 수정
-- **beta.4** — 감사 + 다듬기(compaction race, ja/ko 번역)
-- **beta.5** — 감정 메인라인 M1.4-1.7 + 다일 Arc + yearbook 내보내기
-
-</details>
-
----
-
-## 이전 안정 버전 — v0.3.0
-
-> **안정 버전 출시.** v0.2.9 → v0.3.0 누적 100+ commit, 약 12,000 라인 변경,
-> +361 유닛 테스트. 모든 변경은 하위 호환 — 기존 데이터는 자동 마이그레이션됩니다.
-> 개발자 관점의 상세 내용은
-> [RELEASE-NOTES-v0.3.0.md](RELEASE-NOTES-v0.3.0.md)(영어)를 참조하세요.
-
-| 테마 | 내용 |
-|---|---|
-| **🧠 메모리가 일한다** | 중요도 가중 리콜; dream cycle이 1–3개의 짧은 통찰 생성; callback 큐(다음 대화에서 과거 기억을 부드럽게 꺼냄); 30 / 100 / 365일 기념일 마일스톤. |
-| **💝 관계에 형태가 있다** | 기분 인지 리콜(3 모드); 5단계 마일스톤 첫 통과 발화; 4개 서브 차원; 풍부한 재회 프레이밍. |
-| **🤝 관계에 유형이 있다** | onboarding과 설정에서 *오픈 / 친구 / 멘토 / 조용한 동반자* 선택 — `SOUL.md`를 덮지 않고 한 줄로 system prompt를 바이어스. |
-| **💭 "생각하고 있어" 알림** | 한참 대화가 없으면 설정한 관계 유형에 맞춰 OS 알림 발송. 23–08시는 조용 시간으로 강제 차단. |
-| **🎬 모서리에서의 존재감** | autonomy V2의 4번째 액션(`idle_motion` 무음 제스처); 동적 cadence; 초반 응답에서의 호기심 질문. |
-| **🌅 부드러운 장면 전환** | 5–7시 / 16–18시 / 19–21시에 2시간 전환 창, smoothstep 이징; 색 대비 강화 — 새벽 핑크, 골든 아워 깊은 앰버, 심야는 차갑게 채도 낮은 파랑. |
-| **🪟 Liquid Glass UI** | 보라색 액센트 리스킨; 툴바 정리; 시간 인지 이모지 인사; 창 크기 / 위치 실행 간 영구화. |
-| **🌤️ 더 정확한 날씨** | 시간별 예보, 체감 온도 + 습도, 모레 예보. |
-| **🧹 엔지니어링 정리** | i18n.ts 1842 → 588 라인; 공유 SettingsField 컴포넌트; 정규식 컴파일 캐시; async-lock 중복 제거; 인스톨러 약 30–60 MB 슬림화. |
-
-<details>
-<summary>이번 안정 버전에 접힌 베타 라인</summary>
-
-베타 라인이 기반을 만들고, 안정 버전에서 마무리:
-
-- **v0.3.0-beta.1** —— 관계 시스템의 3개 독립 축: 기분 인지 리콜(VAD 투영 + 공감 / 복구 / 강화 모드), 일회성 레벨업 지시, 4개 서브 차원. [Notes](RELEASE-NOTES-v0.3.0-beta.1.md)
-- **v0.3.0-beta.2** —— 안정 + 리텐션 패스: 중요도 가중 메모리, dream-cycle reflection, callback queue, 기념일 마일스톤, idle motion, 동적 cadence, Liquid Glass UI, 날씨 정밀도, 트레이 + dock 아이콘, 7개 보안 수정. [Notes](RELEASE-NOTES-v0.3.0-beta.2.md)
-
-</details>
-
----
-
-## 이전 버전 기록
-
-README에는 현재 코드 버전 v0.4.0과 직전 안정 진입점 v0.3.6의 핵심만 남깁니다. 더 오래된 기록은 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)에 모으고, README 상단에서 오래된 버전 번호를 계속 관리하지 않습니다.
 
 ---
 
@@ -351,7 +264,7 @@ npm run package:win     # 또는 package:mac / package:linux
 
 Nexus는 개인 유지 프로젝트로, issue와 PR 처리 속도는 정확한 분류에 달려 있습니다:
 
-커뮤니티 문서는 특정 릴리스 하나에만 속하지 않고 모든 버전을 관통하는 입구입니다. 0.3은 안전, 기억, 설정 기반을 마무리하고, 0.4는 데스크톱 동반자 인식으로 들어가며, 0.5는 데스크톱 펫 행동으로 이어집니다. 장기 입구는 [Community Guide](COMMUNITY.md), 0.4 방향은 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md), 0.4 안정 버전 설명은 [v0.4.0 Release Notes](RELEASE-NOTES-v0.4.0.md), 릴리스 전 hardening은 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)입니다.
+커뮤니티 문서는 특정 릴리스 하나에만 속하지 않고 모든 버전을 관통하는 입구입니다. 0.3은 안전, 기억, 설정 기반을 마무리하고, 0.4는 데스크톱 동반자 인식으로 들어가며, 0.5는 데스크톱 펫 행동으로 이어집니다. 장기 입구는 [Community Guide](COMMUNITY.md), 0.4 방향은 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md), 0.4 최신 안정 버전 설명은 [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md), 릴리스 전 hardening은 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)입니다.
 
 - 🐛 **버그를 발견했나요?** → [버그 신고](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **명확한 기능 아이디어?** → [기능 요청](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

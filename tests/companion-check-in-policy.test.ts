@@ -47,6 +47,42 @@ test('decideCompanionCheckIn suppresses when disabled, paused, or missing observ
   assert.deepEqual(decideCompanionCheckIn(input({ summary: null })).reason, 'no_observation')
 })
 
+test('decideCompanionCheckIn suppresses invalid current time before strong signals', () => {
+  assert.deepEqual(decideCompanionCheckIn(input({
+    nowMs: Number.NaN,
+    returnedToNexus: true,
+    returnedToNexusAtMs: baseNow - 2 * 60_000,
+    activitySwitchCount: 8,
+    idleAfterActivityMs: 30 * 60_000,
+    summary: summary({ elapsedBucket: 'two_hours_or_more' }),
+  })), {
+    shouldCheckIn: false,
+    reason: 'invalid_time',
+    surface: 'none',
+    priority: 'none',
+  })
+
+  assert.equal(decideCompanionCheckIn(input({
+    nowMs: Number.POSITIVE_INFINITY,
+    activitySwitchCount: 8,
+  })).reason, 'invalid_time')
+
+  assert.equal(decideCompanionCheckIn(input({
+    nowMs: -1,
+    activitySwitchCount: 8,
+  })).reason, 'invalid_time')
+
+  assert.equal(decideCompanionCheckIn(input({
+    nowMs: baseNow + 0.5,
+    activitySwitchCount: 8,
+  })).reason, 'invalid_time')
+
+  assert.equal(decideCompanionCheckIn(input({
+    nowMs: Number.MAX_SAFE_INTEGER,
+    activitySwitchCount: 8,
+  })).reason, 'invalid_time')
+})
+
 test('decideCompanionCheckIn keeps active chat ahead of every check-in signal', () => {
   assert.deepEqual(decideCompanionCheckIn(input({
     isActiveChatSession: true,
@@ -84,6 +120,24 @@ test('decideCompanionCheckIn respects quiet hours and cooldown', () => {
     lastCheckInAtMs: baseNow - 20 * 60_000,
     cooldownMinutes: 90,
   })).reason, 'cooldown')
+
+  assert.deepEqual(decideCompanionCheckIn(input({
+    lastCheckInAtMs: baseNow + 30 * 60_000,
+    cooldownMinutes: 90,
+    activitySwitchCount: 8,
+  })).reason, 'cooldown')
+
+  assert.deepEqual(decideCompanionCheckIn(input({
+    lastCheckInAtMs: baseNow + 24 * 60 * 60_000,
+    cooldownMinutes: 90,
+    activitySwitchCount: 8,
+  })).reason, 'frequent_switching')
+
+  assert.deepEqual(decideCompanionCheckIn(input({
+    lastCheckInAtMs: baseNow - 20 * 60_000 + 0.5,
+    cooldownMinutes: 90,
+    activitySwitchCount: 8,
+  })).reason, 'frequent_switching')
 })
 
 test('decideCompanionCheckIn suppresses focused activity unless the user returns to Nexus', () => {
@@ -93,6 +147,7 @@ test('decideCompanionCheckIn suppresses focused activity unless the user returns
 
   const returned = decideCompanionCheckIn(input({
     returnedToNexus: true,
+    returnedToNexusAtMs: baseNow - 2 * 60_000,
     summary: summary({ userDeepFocused: true, activityClass: 'coding' }),
   }))
   assert.equal(returned.shouldCheckIn, true)
@@ -103,6 +158,36 @@ test('decideCompanionCheckIn suppresses focused activity unless the user returns
 })
 
 test('decideCompanionCheckIn limits stale return-to-Nexus signals to a short window', () => {
+  assert.deepEqual(decideCompanionCheckIn(input({
+    returnedToNexus: true,
+    returnedToNexusAtMs: null,
+  })), {
+    shouldCheckIn: false,
+    reason: 'return_window_expired',
+    surface: 'none',
+    priority: 'none',
+  })
+
+  assert.deepEqual(decideCompanionCheckIn(input({
+    returnedToNexus: true,
+    returnedToNexusAtMs: Number.NaN,
+  })), {
+    shouldCheckIn: false,
+    reason: 'return_window_expired',
+    surface: 'none',
+    priority: 'none',
+  })
+
+  assert.deepEqual(decideCompanionCheckIn(input({
+    returnedToNexus: true,
+    returnedToNexusAtMs: baseNow - 3 * 60_000 + 0.5,
+  })), {
+    shouldCheckIn: false,
+    reason: 'return_window_expired',
+    surface: 'none',
+    priority: 'none',
+  })
+
   assert.deepEqual(decideCompanionCheckIn(input({
     returnedToNexus: true,
     returnedToNexusAtMs: baseNow - 11 * 60_000,
@@ -210,6 +295,55 @@ test('decideCompanionCheckIn suppresses recently dismissed same-signal lines', (
     lastDismissedSignalKey: signalKey,
     dismissalWindowMinutes: 120,
   })).reason, 'frequent_switching')
+
+  assert.equal(decideCompanionCheckIn(input({
+    activitySegmentId: 'rapid switching block',
+    activitySwitchCount: 6,
+    lastDismissedAtMs: baseNow - 30 * 60_000 + 0.5,
+    lastDismissedSignalKey: signalKey,
+    dismissalWindowMinutes: 120,
+  })).reason, 'frequent_switching')
+})
+
+test('decideCompanionCheckIn treats small future dismissal timestamps as still suppressed', () => {
+  const signalKey = buildCompanionCheckInSignalKey(input({
+    activitySegmentId: 'rapid switching block',
+    activitySwitchCount: 6,
+  }), 'frequent_switching')
+
+  assert.deepEqual(decideCompanionCheckIn(input({
+    activitySegmentId: 'rapid switching block',
+    activitySwitchCount: 6,
+    lastDismissedAtMs: baseNow + 30 * 60_000,
+    lastDismissedSignalKey: signalKey,
+    dismissalWindowMinutes: 120,
+  })), {
+    shouldCheckIn: false,
+    reason: 'recently_dismissed',
+    surface: 'none',
+    priority: 'none',
+  })
+
+  assert.equal(decideCompanionCheckIn(input({
+    activitySegmentId: 'rapid switching block',
+    activitySwitchCount: 6,
+    lastDismissedAtMs: baseNow + 150 * 60_000,
+    lastDismissedSignalKey: signalKey,
+    dismissalWindowMinutes: 120,
+  })).reason, 'frequent_switching')
+})
+
+test('decideCompanionCheckIn keeps future return-to-Nexus timestamps from triggering', () => {
+  assert.deepEqual(decideCompanionCheckIn(input({
+    returnedToNexus: true,
+    returnedToNexusAtMs: baseNow + 2 * 60_000,
+    returnToNexusWindowMinutes: 10,
+  })), {
+    shouldCheckIn: false,
+    reason: 'return_window_expired',
+    surface: 'none',
+    priority: 'none',
+  })
 })
 
 test('buildCompanionCheckInSignalKey normalizes segment ids for stable dedupe', () => {
@@ -349,4 +483,43 @@ test('buildCompanionCheckInInAppPayload returns an expiring local-only dismissib
   assert.equal(payload?.expiresAtMs, baseNow + 2 * 60_000)
   assert.equal(payload?.signalKey, decision.signalKey)
   assert.doesNotMatch(payload?.text ?? '', /\bmust\b|\bmonitor(?:ing)?\b|\bwatching\b|surveillance/i)
+})
+
+test('buildCompanionCheckInInAppPayload drops invalid time and invalid priority decisions', () => {
+  const decision = decideCompanionCheckIn(input({
+    activitySegmentId: 'switching burst',
+    activitySwitchCount: 6,
+  }))
+
+  assert.equal(buildCompanionCheckInInAppPayload(decision, 'en-US', Number.NaN), null)
+  assert.equal(buildCompanionCheckInInAppPayload(decision, 'en-US', -1), null)
+  assert.equal(buildCompanionCheckInInAppPayload(decision, 'en-US', baseNow + 0.5), null)
+  assert.equal(buildCompanionCheckInInAppPayload(decision, 'en-US', Number.MAX_SAFE_INTEGER), null)
+
+  assert.equal(buildCompanionCheckInInAppPayload({
+    shouldCheckIn: true,
+    reason: 'frequent_switching',
+    surface: 'in_app',
+    priority: 'none',
+    signalKey: 'frequent_switching:switching-burst',
+  }, 'en-US', baseNow), null)
+})
+
+test('buildCompanionCheckInInAppPayload clamps ttl to a short local window', () => {
+  const decision = decideCompanionCheckIn(input({
+    activitySegmentId: 'switching burst',
+    activitySwitchCount: 6,
+  }))
+
+  const tooShort = buildCompanionCheckInInAppPayload(decision, 'en-US', baseNow, { ttlMs: 1 })
+  assert.equal(tooShort?.expiresAtMs, baseNow + 30_000)
+
+  const tooLong = buildCompanionCheckInInAppPayload(decision, 'en-US', baseNow, { ttlMs: 60 * 60_000 })
+  assert.equal(tooLong?.expiresAtMs, baseNow + 10 * 60_000)
+
+  const invalid = buildCompanionCheckInInAppPayload(decision, 'en-US', baseNow, { ttlMs: Number.NaN })
+  assert.equal(invalid?.expiresAtMs, baseNow + 5 * 60_000)
+
+  const fractional = buildCompanionCheckInInAppPayload(decision, 'en-US', baseNow, { ttlMs: 45_000.6 })
+  assert.equal(fractional?.expiresAtMs, baseNow + 45_001)
 })

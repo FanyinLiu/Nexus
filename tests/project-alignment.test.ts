@@ -30,7 +30,9 @@ test('release candidate version and theme surfaces stay aligned', () => {
   const chineseReleaseNotes = readWorkspaceFile(`docs/RELEASE-NOTES-v${version}.zh-CN.md`)
   const handoffPath = version === '0.4.0'
     ? 'docs/RELEASE-CANDIDATE-v0.4.0-STABLE.md'
-    : `docs/RELEASE-CANDIDATE-v${version}-HANDOFF.md`
+    : version === '0.4.1'
+      ? 'docs/GITHUB_UPLOAD_PREP.md'
+      : `docs/RELEASE-CANDIDATE-v${version}-HANDOFF.md`
   const handoff = readWorkspaceFile(handoffPath)
 
   assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, version)
@@ -38,11 +40,19 @@ test('release candidate version and theme surfaces stay aligned', () => {
   assert.match(releaseNotes, new RegExp(`# Nexus v${escapedVersion}`))
   assert.match(chineseReleaseNotes, new RegExp(`# Nexus v${escapedVersion}`))
   assert.match(changelog, new RegExp(`## \\[${escapedVersion}\\]`))
-  assert.match(handoff, new RegExp(`# Nexus v${escapedVersion} (Release Candidate Handoff|Stable Release Checklist)`))
-  assert.match(handoff, /(Evidence baseline head: `[0-9a-f]{7,40}`|Release state: `final_candidate`)/)
-  assert.doesNotMatch(handoff, /48e6b78/)
-  assert.match(handoff, /(desktop companion awareness begins|Quiet Observation Foundation only)/)
-  assert.match(handoff, /(Codex-style work agent|mouse-following, typing-following, or pet window control)/)
+  if (version === '0.4.1') {
+    assert.match(handoff, /GitHub Upload Prep - Nexus v0\.4\.1 release candidate/)
+    assert.match(handoff, /Package version: `0\.4\.1`/)
+    assert.match(handoff, /Stable public entry point is moving from `v0\.4\.0` to `v0\.4\.1`/)
+    assert.match(handoff, /npm run verify:pr/)
+    assert.match(handoff, /npm run prerelease-check -- v0\.4\.1/)
+  } else {
+    assert.match(handoff, new RegExp(`# Nexus v${escapedVersion} (Release Candidate Handoff|Stable Release Checklist)`))
+    assert.match(handoff, /(Evidence baseline head: `[0-9a-f]{7,40}`|Release state: `final_candidate`)/)
+    assert.doesNotMatch(handoff, /48e6b78/)
+    assert.match(handoff, /(desktop companion awareness begins|Quiet Observation Foundation only)/)
+    assert.match(handoff, /(Codex-style work agent|mouse-following, typing-following, or pet window control)/)
+  }
 })
 
 test('public readmes identify the current 0.4 stable entry point', () => {
@@ -61,7 +71,7 @@ test('public readmes identify the current 0.4 stable entry point', () => {
     assert.match(readme, new RegExp(`v${escapedVersion}`), `${path} should name the package version`)
     assert.match(
       readme,
-      /RELEASE-NOTES-v0\.4\.0\.md/,
+      new RegExp(`RELEASE-NOTES-v${escapedVersion}\\.md`),
       `${path} should link the current v0.4 stable release notes`,
     )
   }
@@ -139,8 +149,9 @@ test('v0.4 desktop companion awareness hardening stays documented', () => {
   const changelog = readWorkspaceFile('CHANGELOG.md')
 
   assert.match(v04Plan, /Current Release Priority/)
-  assert.match(v04Plan, /`v0\.4\.0` is now the stable Quiet Observation Foundation release/)
-  assert.match(v04Plan, /current active stacked\s+v0\.4\.x slice is `v0\.4\.5` Release\s+Hardening Draft/)
+  assert.match(v04Plan, /`v0\.4\.0` is the stable Quiet Observation Foundation release/)
+  assert.match(v04Plan, /`v0\.4\.1` is now\s+the stable companion UI, Settings, and reliability hardening follow-up/)
+  assert.match(v04Plan, /active stacked\s+v0\.4\.x slice after `v0\.4\.1` remains `v0\.4\.5` Release Hardening\s+Draft/)
   assert.match(v04Plan, /Do not publish `v0\.4\.5`/)
   assert.match(v04Plan, /README stable-entry switch/)
   assert.match(v04Plan, /Separate decision from emission/)
@@ -155,13 +166,13 @@ test('v0.4 desktop companion awareness hardening stays documented', () => {
   assert.match(v04Plan, /RELEASE-CANDIDATE-v0\.4\.5-DRAFT-HARDENING\.md/)
   assert.match(v04Plan, /npm run v04:draft-stack:audit/)
   assert.match(v04Plan, /CI only enforces quick audit; full audit is non-blocking release evidence\./)
-  assert.match(rootReadme, /RELEASE-NOTES-v0\.4\.0\.md/)
+  assert.match(rootReadme, /RELEASE-NOTES-v0\.4\.1\.md/)
   assert.doesNotMatch(rootReadme, /RELEASE-NOTES-v0\.4\.5\.md/)
-  assert.match(rootReadme, /本次更新 — v0\.4\.0/)
+  assert.match(rootReadme, /本次更新 — v0\.4\.1/)
   assert.match(rootReadme, /RELEASE-CANDIDATE-v0\.4-HARDENING\.md/)
   for (const [path, readme] of localizedReadmes) {
     assert.match(readme, /V0\.4_DESKTOP_COMPANION_AWARENESS\.md/, `${path} should link the v0.4 plan`)
-    assert.match(readme, /RELEASE-NOTES-v0\.4\.0\.md/, `${path} should link the v0.4 stable notes`)
+    assert.match(readme, /RELEASE-NOTES-v0\.4\.1\.md/, `${path} should link the v0.4 stable notes`)
     assert.match(readme, /RELEASE-CANDIDATE-v0\.4-HARDENING\.md/, `${path} should link the v0.4 hardening handoff`)
   }
   assert.match(community, /v0\.4 desktop companion awareness/)
@@ -231,13 +242,13 @@ test('v0.4 desktop companion awareness hardening stays documented', () => {
   assert.match(stableReleaseNotesZh, /Gatekeeper 或 quarantine/)
   assert.match(stableReleaseNotesZh, /SmartScreen 警告/)
   assert.doesNotMatch(stableReleaseNotesZh, /0\.4\.1/)
-  assert.match(coarseTimeReleaseNotes, /Draft/)
-  assert.match(coarseTimeReleaseNotes, /Coarse Time Language/)
-  assert.match(coarseTimeReleaseNotes, /No new sensing sources/)
-  assert.match(coarseTimeReleaseNotes, /Do not publish until/)
-  assert.match(coarseTimeReleaseNotesZh, /草稿/)
-  assert.match(coarseTimeReleaseNotesZh, /粗略时间语言/)
-  assert.match(coarseTimeReleaseNotesZh, /不新增感知来源/)
+  assert.doesNotMatch(coarseTimeReleaseNotes, /\bDraft\b|pre-tag/)
+  assert.match(coarseTimeReleaseNotes, /Companion UI, Settings, and Reliability Hardening/)
+  assert.match(coarseTimeReleaseNotes, /Settings drawer performance guard/)
+  assert.match(coarseTimeReleaseNotes, /Still Out of Scope/)
+  assert.doesNotMatch(coarseTimeReleaseNotesZh, /尚未打 tag|pre-tag/)
+  assert.match(coarseTimeReleaseNotesZh, /陪伴 UI、设置和可靠性加固/)
+  assert.match(coarseTimeReleaseNotesZh, /设置抽屉性能守卫/)
   assert.match(checkInReleaseNotes, /Draft/)
   assert.match(checkInReleaseNotes, /Check-In Policy/)
   assert.match(checkInReleaseNotes, /Do not publish until/)
@@ -326,10 +337,11 @@ test('v0.4 desktop companion awareness hardening stays documented', () => {
   assert.match(betaReleaseNotes, /clears the\s+recent local companion summary/)
   assert.match(betaReleaseNotes, /No v0\.5 desktop pet mouse-following or typing reactions yet/)
 
-  const stableSection = changelog.split('## [0.4.0]')[1]?.split('\n## [')[0] ?? ''
-  assert.match(stableSection, /Desktop companion awareness foundation/)
-  assert.match(stableSection, /Stable release documentation/)
-  assert.match(stableSection, /Session-bound quiet observation summaries/)
+  const stableSection = changelog.split('## [0.4.1]')[1]?.split('\n## [')[0] ?? ''
+  assert.match(stableSection, /Companion UI and Settings hardening/)
+  assert.match(stableSection, /Settings drawer performance guard/)
+  assert.match(stableSection, /Companion time language boundary/)
+  assert.match(stableSection, /Runtime privacy and release gates/)
 
   const betaSection = changelog.split('## [0.4.0-beta.1]')[1]?.split('\n## [')[0] ?? ''
   assert.match(betaSection, /v0\.4 desktop companion awareness foundation/)

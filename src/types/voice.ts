@@ -104,6 +104,7 @@ export interface TextFileSaveRequest {
 export interface TextFileSaveResponse {
   canceled: boolean
   filePath?: string
+  filePathDisplay?: string
   message: string
 }
 
@@ -115,6 +116,7 @@ export interface TextFileOpenRequest {
 export interface TextFileOpenResponse {
   canceled: boolean
   filePath?: string
+  filePathDisplay?: string
   content?: string
   message: string
 }

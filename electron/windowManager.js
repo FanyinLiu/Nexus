@@ -20,8 +20,21 @@ import {
 import {
   sanitizeRuntimeStatePatch,
 } from './windowStateSanitizers.js'
+import {
+  createRendererRuntimeLogEntry,
+  RUNTIME_LOG_DISPLAY_PATH,
+  RuntimeLogWriteBuffer,
+  sanitizeRuntimeLogMessage,
+  serializeRuntimeLogEntry,
+} from './runtimeLogSanitizer.js'
 import { getSavedBounds, trackWindow } from './services/windowBoundsStore.js'
-import { isAllowedRendererNavigation, normalizeExternalWindowOpenUrl } from './windowNavigation.js'
+import { getRedactedErrorMessage } from './services/errorRedaction.js'
+import {
+  isAllowedRendererNavigation,
+  normalizeExternalWindowOpenUrl,
+  summarizeWindowNavigationErrorForLog,
+  summarizeWindowNavigationUrlForLog,
+} from './windowNavigation.js'
 import {
   applyPetWindowInstances,
   configurePetWindowInstances,
@@ -79,6 +92,27 @@ const RUNTIME_LOG_PATH = isDev
   ? path.join(process.cwd(), '.dev', 'runtime.log')
   : null
 let runtimeLogReadyPromise = null
+let runtimeLogWriteBuffer = null
+
+function getRuntimeLogWriteBuffer() {
+  if (!RUNTIME_LOG_PATH) return null
+  if (!runtimeLogWriteBuffer) {
+    runtimeLogWriteBuffer = new RuntimeLogWriteBuffer({
+      write: async (chunk) => {
+        try {
+          await fsp.appendFile(RUNTIME_LOG_PATH, chunk)
+        } catch {
+          // appendFile failure should never crash the main process; just drop.
+        }
+      },
+    })
+  }
+  return runtimeLogWriteBuffer
+}
+
+export function flushRuntimeLogWriteBuffer() {
+  return runtimeLogWriteBuffer?.drain() ?? Promise.resolve()
+}
 
 async function ensureRuntimeLogReady() {
   if (!RUNTIME_LOG_PATH) return false
@@ -87,10 +121,10 @@ async function ensureRuntimeLogReady() {
     try {
       await fsp.mkdir(path.dirname(RUNTIME_LOG_PATH), { recursive: true })
       await fsp.writeFile(RUNTIME_LOG_PATH, '')
-      console.info(`[runtime-log] capturing renderer console to ${RUNTIME_LOG_PATH}`)
+      console.info(`[runtime-log] capturing renderer console to ${RUNTIME_LOG_DISPLAY_PATH}`)
       return true
     } catch (err) {
-      console.warn('[runtime-log] init failed:', err?.message ?? err)
+      console.warn('[runtime-log] init failed:', sanitizeRuntimeLogMessage(err?.message ?? err))
       runtimeLogReadyPromise = null
       return false
     }
@@ -103,20 +137,8 @@ function attachRendererLogCapture(webContents, label) {
   webContents.on('console-message', async (details) => {
     const ready = await ensureRuntimeLogReady()
     if (!ready) return
-    const entry = {
-      ts: new Date().toISOString(),
-      win: label,
-      level: details.level,
-      msg: details.message,
-      src: details.sourceId
-        ? `${path.basename(details.sourceId)}:${details.lineNumber}`
-        : null,
-    }
-    try {
-      await fsp.appendFile(RUNTIME_LOG_PATH, `${JSON.stringify(entry)}\n`)
-    } catch {
-      // appendFile failure should never crash the main process; just drop.
-    }
+    const entry = createRendererRuntimeLogEntry(details, label)
+    getRuntimeLogWriteBuffer()?.enqueue(serializeRuntimeLogEntry(entry))
   })
 }
 
@@ -192,7 +214,7 @@ function acquireDock() {
     try {
       app.dock.show?.()
     } catch (err) {
-      console.warn('[macOS] Failed to show dock icon:', err?.message)
+      console.warn('[macOS] Failed to show dock icon:', getRedactedErrorMessage(err))
     }
   }
 }
@@ -205,7 +227,7 @@ function releaseDock() {
     try {
       app.dock.hide?.()
     } catch (err) {
-      console.warn('[macOS] Failed to hide dock icon:', err?.message)
+      console.warn('[macOS] Failed to hide dock icon:', getRedactedErrorMessage(err))
     }
   }
 }
@@ -293,10 +315,18 @@ function openExternalUrlFromWindow(url, label) {
   try {
     const safeUrl = normalizeExternalWindowOpenUrl(url)
     shell.openExternal(safeUrl).catch((err) => {
-      console.warn(`[security] failed to open ${label} external URL:`, err?.message ?? err)
+      console.warn(
+        `[security] failed to open ${label} external URL:`,
+        summarizeWindowNavigationUrlForLog(safeUrl),
+        summarizeWindowNavigationErrorForLog(err),
+      )
     })
   } catch (err) {
-    console.warn(`[security] blocked ${label} external URL:`, url, err?.message ?? err)
+    console.warn(
+      `[security] blocked ${label} external URL:`,
+      summarizeWindowNavigationUrlForLog(url),
+      summarizeWindowNavigationErrorForLog(err),
+    )
   }
 }
 
@@ -312,10 +342,34 @@ function attachNavigationGuards(win, label, view) {
   win.webContents.on('will-navigate', (event, url) => {
     const allowed = getRendererEntry(view)
     if (!isAllowedRendererNavigation(url, allowed)) {
-      console.warn(`[security] blocked ${label} navigation to`, url)
+      console.warn(`[security] blocked ${label} navigation to`, summarizeWindowNavigationUrlForLog(url))
       event.preventDefault()
     }
   })
+}
+
+function attachDevToolsShortcut(win) {
+  if (app.isPackaged) return
+
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return
+    const isF12 = input.key === 'F12'
+    const isCtrlShiftI = (input.control || input.meta) && input.shift && input.key.toLowerCase() === 'i'
+    if (isF12 || isCtrlShiftI) {
+      win.webContents.toggleDevTools()
+      event.preventDefault()
+    }
+  })
+}
+
+function trustedRendererWebPreferences() {
+  return {
+    preload: getPreloadPath(),
+    contextIsolation: true,
+    nodeIntegration: false,
+    sandbox: true,
+    webSecurity: true,
+  }
 }
 
 export function moveMainWindowBy(deltaX, deltaY) {
@@ -377,13 +431,7 @@ function petWindowConstructorOptions({ x, y, width, height }) {
     fullscreenable: false,
     backgroundColor: '#00000000',
     icon: getPetIconPath(),
-    webPreferences: {
-      preload: getPreloadPath(),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      webSecurity: true,
-    },
+    webPreferences: trustedRendererWebPreferences(),
   }
 }
 
@@ -434,13 +482,13 @@ export function createMainWindow({ showOnReady = true } = {}) {
       try {
         win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
       } catch (err) {
-        console.warn('[pet-window] setVisibleOnAllWorkspaces failed:', err?.message)
+        console.warn('[pet-window] setVisibleOnAllWorkspaces failed:', getRedactedErrorMessage(err))
       }
     } else if (process.platform === 'linux') {
       try {
         win.setVisibleOnAllWorkspaces(true)
       } catch (err) {
-        console.warn('[pet-window:linux] setVisibleOnAllWorkspaces failed:', err?.message)
+        console.warn('[pet-window:linux] setVisibleOnAllWorkspaces failed:', getRedactedErrorMessage(err))
       }
     }
     if (showOnReady) {
@@ -460,7 +508,7 @@ export function createMainWindow({ showOnReady = true } = {}) {
 
   win.webContents.on('console-message', (details) => {
     if (details.level === 'warning' || details.level === 'error') {
-      console.error('Renderer console:', details.message)
+      console.error('Renderer console:', sanitizeRuntimeLogMessage(details.message))
     }
   })
 
@@ -469,18 +517,7 @@ export function createMainWindow({ showOnReady = true } = {}) {
   // anyone opening DevTools. dev-only.
   attachRendererLogCapture(win.webContents, 'pet')
 
-  // F12 / Ctrl+Shift+I → open DevTools (dev builds only).
-  if (!app.isPackaged) {
-    win.webContents.on('before-input-event', (event, input) => {
-      if (input.type !== 'keyDown') return
-      const isF12 = input.key === 'F12'
-      const isCtrlShiftI = (input.control || input.meta) && input.shift && input.key.toLowerCase() === 'i'
-      if (isF12 || isCtrlShiftI) {
-        win.webContents.toggleDevTools()
-        event.preventDefault()
-      }
-    })
-  }
+  attachDevToolsShortcut(win)
 
   win.loadURL(getRendererEntry('pet'))
 
@@ -563,13 +600,7 @@ export function createPanelWindow() {
     fullscreenable: false,
     backgroundColor: '#f3f3f3',
     icon: getPetIconPath(),
-    webPreferences: {
-      preload: getPreloadPath(),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      webSecurity: true,
-    },
+    webPreferences: trustedRendererWebPreferences(),
   })
 
   applyWindowsAppDetails(win)
@@ -579,18 +610,7 @@ export function createPanelWindow() {
   // Mirror the pet-window log capture for the panel's renderer.
   attachRendererLogCapture(win.webContents, 'panel')
 
-  // F12 / Ctrl+Shift+I → open DevTools (dev builds only).
-  if (!app.isPackaged) {
-    win.webContents.on('before-input-event', (event, input) => {
-      if (input.type !== 'keyDown') return
-      const isF12 = input.key === 'F12'
-      const isCtrlShiftI = (input.control || input.meta) && input.shift && input.key.toLowerCase() === 'i'
-      if (isF12 || isCtrlShiftI) {
-        win.webContents.toggleDevTools()
-        event.preventDefault()
-      }
-    })
-  }
+  attachDevToolsShortcut(win)
 
   // Track dock refcount for this panel window: acquire when it becomes
   // visible, release when it hides or is closed. This restores a dock icon
@@ -885,7 +905,7 @@ export function createTray() {
       tray = new Tray(trayImage ?? nativeImage.createFromPath(getPetIconPath('linux')))
     }
   } catch (err) {
-    console.warn('[tray] failed to create system tray:', err?.message)
+    console.warn('[tray] failed to create system tray:', getRedactedErrorMessage(err))
     tray = null
     return
   }

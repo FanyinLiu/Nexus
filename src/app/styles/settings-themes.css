@@ -562,7 +562,7 @@
 .settings-page__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
   align-content: flex-start;
   justify-content: flex-start;
 }
@@ -610,14 +610,14 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-height: 40px;
+  min-height: var(--settings-control-height);
   padding: 0 13px 0 12px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(8px);
   color: rgba(255, 255, 255, 0.85);
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -711,7 +711,7 @@
 .settings-page__spotlight-copy p:last-child {
   margin: 0;
   color: rgba(255, 255, 255, 0.5);
-  font-size: 14px;
+  font-size: var(--settings-body-font-size);
   line-height: 1.65;
 }
 
@@ -787,865 +787,7 @@
   }
 }
 
-/* ============================================================
-   Weather ambient layer — animated overlay matching the scene's
-   visual weight. Each condition paints a full-scene sky-tint +
-   heavy particle field + accent effects so the weather reads as
-   "this is a rainy scene", not "a few drops are falling".
-   ============================================================ */
-.weather-ambient {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  overflow: hidden;
-  opacity: 1;
-  animation: weather-ambient-fade-in 600ms ease forwards;
-  --weather-tint: transparent;
-  --weather-line-color: rgba(240, 246, 255, 0.85);
-  --weather-glow-color: rgba(255, 220, 150, 0.45);
-  --weather-sky-tint: transparent;
-  --weather-sky-blend: multiply;
-}
-
-@keyframes weather-ambient-fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-.weather-ambient__sky-tint {
-  position: absolute;
-  inset: 0;
-  background: var(--weather-sky-tint);
-  mix-blend-mode: var(--weather-sky-blend);
-  transition: background 1.2s ease;
-  pointer-events: none;
-}
-
-.weather-ambient__tint {
-  position: absolute;
-  inset: 0;
-  background: var(--weather-tint);
-  transition: background 1.2s ease;
-}
-
-/* ── Time-of-day tint layer ─────────────────────────────────── */
-.weather-ambient--day {
-  --weather-line-color: rgba(255, 255, 255, 0.8);
-  --weather-glow-color: rgba(255, 220, 150, 0.45);
-  --weather-tint: transparent;
-}
-.weather-ambient--dusk {
-  --weather-line-color: rgba(255, 205, 180, 0.75);
-  --weather-glow-color: rgba(255, 150, 100, 0.4);
-  --weather-tint: radial-gradient(
-    ellipse at 50% 100%,
-    rgba(200, 80, 120, 0.14),
-    rgba(60, 40, 80, 0.08) 60%,
-    transparent 90%
-  );
-}
-.weather-ambient--night {
-  --weather-line-color: rgba(190, 210, 255, 0.7);
-  --weather-glow-color: rgba(150, 180, 255, 0.35);
-  --weather-tint: linear-gradient(
-    180deg,
-    rgba(10, 18, 40, 0.2) 0%,
-    rgba(15, 20, 40, 0.12) 100%
-  );
-}
-
-/* ═══ Clear / Sunny ═══════════════════════════════════════════ */
-.weather-ambient--clear {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(255, 230, 170, 0.4) 0%,
-    rgba(255, 215, 150, 0.28) 50%,
-    rgba(255, 205, 140, 0.18) 100%
-  );
-  --weather-sky-blend: screen;
-}
-.weather-ambient--clear.weather-ambient--night {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(140, 170, 220, 0.35) 0%,
-    rgba(120, 150, 210, 0.22) 50%,
-    rgba(100, 130, 190, 0.14) 100%
-  );
-}
-
-.weather-ambient--clear .weather-ambient__dust {
-  position: absolute;
-  inset: 0;
-}
-
-.weather-ambient--clear .weather-ambient__dust-mote {
-  position: absolute;
-  border-radius: 50%;
-  background: var(--weather-glow-color);
-  box-shadow: 0 0 6px var(--weather-glow-color);
-  animation-name: weather-dust-drift;
-  animation-iteration-count: infinite;
-  animation-timing-function: ease-in-out;
-  animation-direction: alternate;
-}
-
-@keyframes weather-dust-drift {
-  0%   { transform: translate3d(0, 0, 0); opacity: 0.1; }
-  40%  { opacity: 0.7; }
-  60%  { opacity: 0.7; }
-  100% { transform: translate3d(var(--dust-drift-x, 25px), var(--dust-drift-y, -30px), 0); opacity: 0.1; }
-}
-
-/* ═══ Partly cloudy ═══════════════════════════════════════════
-   Clouds restricted to upper 35% — below is clear sky. */
-.weather-ambient--partly_cloudy {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(200, 215, 235, 0.2) 0%,
-    rgba(210, 222, 240, 0.1) 35%,
-    transparent 50%
-  );
-  --weather-sky-blend: screen;
-}
-.weather-ambient--partly_cloudy.weather-ambient--night {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(85, 105, 140, 0.3) 0%,
-    rgba(75, 90, 125, 0.15) 35%,
-    transparent 50%
-  );
-}
-
-.weather-ambient--partly_cloudy .weather-ambient__clouds--upper {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 40%;
-  overflow: hidden;
-  mask-image: linear-gradient(180deg, black 50%, transparent 100%);
-  -webkit-mask-image: linear-gradient(180deg, black 50%, transparent 100%);
-}
-.weather-ambient--partly_cloudy .weather-ambient__cloud {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(24px);
-  background: rgba(252, 253, 255, 0.55);
-  animation: weather-cloud-drift 100s linear infinite;
-}
-.weather-ambient--partly_cloudy.weather-ambient--night .weather-ambient__cloud {
-  background: rgba(165, 180, 210, 0.4);
-}
-.weather-ambient--partly_cloudy .weather-ambient__cloud--1 {
-  top: 10%; left: -15%; width: 240px; height: 100px;
-  animation-delay: -20s; animation-duration: 110s;
-}
-.weather-ambient--partly_cloudy .weather-ambient__cloud--2 {
-  top: 30%; left: -30%; width: 320px; height: 130px;
-  animation-delay: -55s; animation-duration: 140s; opacity: 0.75;
-}
-.weather-ambient--partly_cloudy .weather-ambient__cloud--3 {
-  top: 50%; left: -20%; width: 200px; height: 90px;
-  animation-delay: -80s; animation-duration: 120s; opacity: 0.6;
-}
-.weather-ambient--partly_cloudy .weather-ambient__cloud--4 {
-  top: 20%; left: -40%; width: 280px; height: 110px;
-  animation-delay: -40s; animation-duration: 130s; opacity: 0.5;
-}
-
-@keyframes weather-cloud-drift {
-  from { transform: translateX(0); }
-  to   { transform: translateX(150vw); }
-}
-
-/* ═══ Overcast (阴天) ═════════════════════════════════════════
-   No moving clouds — overcast is uniform light suppression from
-   above, like a dimmer switch. Top-heavy gradient + brightness
-   reduction on the scene. Visually still, not drifting. */
-.weather-ambient--overcast {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(110, 125, 150, 0.75) 0%,
-    rgba(130, 145, 170, 0.55) 40%,
-    rgba(155, 168, 190, 0.3) 100%
-  );
-  --weather-sky-blend: multiply;
-}
-.weather-ambient--overcast.weather-ambient--night {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(35, 45, 70, 0.8) 0%,
-    rgba(50, 65, 90, 0.6) 40%,
-    rgba(70, 85, 110, 0.35) 100%
-  );
-}
-
-/* ═══ Fog (雾天) ══════════════════════════════════════════════
-   Ground-level phenomenon — only covers bottom 55%, fades upward.
-   Horizontal drift retained but confined to lower portion. */
-.weather-ambient--fog {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(210, 215, 225, 0.35) 0%,
-    rgba(215, 220, 230, 0.5) 50%,
-    rgba(225, 230, 240, 0.65) 100%
-  );
-  --weather-sky-blend: normal;
-}
-.weather-ambient--fog.weather-ambient--night {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(80, 95, 120, 0.4) 0%,
-    rgba(90, 105, 130, 0.55) 50%,
-    rgba(105, 120, 145, 0.7) 100%
-  );
-}
-
-.weather-ambient--fog .weather-ambient__fog {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 60%;
-  overflow: hidden;
-  mask-image: linear-gradient(180deg, transparent 0%, black 35%, black 100%);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 35%, black 100%);
-}
-
-.weather-ambient--fog .weather-ambient__fog-a,
-.weather-ambient--fog .weather-ambient__fog-b,
-.weather-ambient--fog .weather-ambient__fog-c {
-  position: absolute;
-  left: -50%;
-  width: 200%;
-  height: 100%;
-  background: radial-gradient(
-    ellipse at 50% 80%,
-    rgba(225, 230, 240, 0.55) 0%,
-    rgba(225, 230, 240, 0.35) 40%,
-    transparent 70%
-  );
-  filter: blur(30px);
-}
-
-.weather-ambient--fog .weather-ambient__fog-a {
-  animation: weather-fog-drift-a 45s ease-in-out infinite alternate;
-}
-.weather-ambient--fog .weather-ambient__fog-b {
-  animation: weather-fog-drift-b 65s ease-in-out infinite alternate;
-  opacity: 0.7;
-  filter: blur(40px);
-}
-.weather-ambient--fog .weather-ambient__fog-c {
-  animation: weather-fog-drift-a 85s ease-in-out infinite alternate-reverse;
-  opacity: 0.5;
-  filter: blur(50px);
-}
-
-.weather-ambient--fog.weather-ambient--night .weather-ambient__fog-a,
-.weather-ambient--fog.weather-ambient--night .weather-ambient__fog-b,
-.weather-ambient--fog.weather-ambient--night .weather-ambient__fog-c {
-  background: radial-gradient(
-    ellipse at 50% 80%,
-    rgba(120, 135, 160, 0.6) 0%,
-    rgba(120, 135, 160, 0.35) 40%,
-    transparent 70%
-  );
-}
-
-@keyframes weather-fog-drift-a {
-  from { transform: translateX(-20%); }
-  to   { transform: translateX(20%); }
-}
-@keyframes weather-fog-drift-b {
-  from { transform: translateX(25%); }
-  to   { transform: translateX(-25%); }
-}
-
-/* ═══ Drizzle / Rain / Heavy Rain / Thunder / Storm ═══════════ */
-.weather-ambient--drizzle {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(140, 155, 175, 0.5) 0%,
-    rgba(165, 178, 200, 0.35) 50%,
-    rgba(190, 200, 218, 0.18) 100%
-  );
-  --weather-sky-blend: multiply;
-}
-.weather-ambient--rain {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(60, 75, 100, 0.82) 0%,
-    rgba(80, 95, 120, 0.6) 50%,
-    rgba(100, 115, 140, 0.32) 100%
-  );
-  --weather-sky-blend: multiply;
-}
-.weather-ambient--heavy_rain {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(35, 50, 75, 0.9) 0%,
-    rgba(55, 70, 95, 0.72) 50%,
-    rgba(75, 90, 115, 0.48) 100%
-  );
-  --weather-sky-blend: multiply;
-}
-.weather-ambient--thunder {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(28, 33, 52, 0.88) 0%,
-    rgba(48, 53, 78, 0.7) 50%,
-    rgba(68, 78, 102, 0.38) 100%
-  );
-  --weather-sky-blend: multiply;
-}
-.weather-ambient--storm {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(15, 20, 35, 0.94) 0%,
-    rgba(28, 33, 52, 0.8) 50%,
-    rgba(48, 53, 78, 0.52) 100%
-  );
-  --weather-sky-blend: multiply;
-}
-.weather-ambient--drizzle.weather-ambient--night,
-.weather-ambient--rain.weather-ambient--night,
-.weather-ambient--heavy_rain.weather-ambient--night,
-.weather-ambient--thunder.weather-ambient--night,
-.weather-ambient--storm.weather-ambient--night {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(15, 22, 40, 0.92) 0%,
-    rgba(22, 30, 50, 0.74) 50%,
-    rgba(30, 38, 60, 0.45) 100%
-  );
-}
-
-.weather-ambient--drizzle .weather-ambient__raindrop {
-  width: 1.5px;
-  height: 8px;
-  opacity: 0.4;
-  box-shadow: none;
-}
-.weather-ambient--rain .weather-ambient__raindrop {
-  width: 2.5px;
-}
-.weather-ambient--heavy_rain .weather-ambient__raindrop,
-.weather-ambient--storm .weather-ambient__raindrop {
-  width: 3.5px;
-  box-shadow: 0 0 5px rgba(230, 240, 255, 0.45);
-}
-.weather-ambient--thunder .weather-ambient__raindrop {
-  width: 3px;
-}
-
-/* Drizzle mist — subtle ground-level haze that separates drizzle
-   from regular rain visually. */
-.weather-ambient__drizzle-mist {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 35%;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(200, 210, 225, 0.2) 50%,
-    rgba(200, 210, 225, 0.35) 100%
-  );
-  pointer-events: none;
-}
-.weather-ambient--night .weather-ambient__drizzle-mist {
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(80, 95, 120, 0.2) 50%,
-    rgba(80, 95, 120, 0.3) 100%
-  );
-}
-
-.weather-ambient__rain {
-  position: absolute;
-  inset: 0;
-}
-
-.weather-ambient__raindrop {
-  position: absolute;
-  top: -30px;
-  width: 2.5px;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    var(--weather-line-color) 40%,
-    var(--weather-line-color) 100%
-  );
-  border-radius: 1px;
-  animation-name: weather-rain-fall;
-  animation-iteration-count: infinite;
-  animation-timing-function: linear;
-}
-
-@keyframes weather-rain-fall {
-  from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(var(--rain-drift-x, -22px), 110vh, 0); }
-}
-
-.weather-ambient__puddle-wash {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 20%;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(90, 110, 140, 0.15) 60%,
-    rgba(110, 130, 160, 0.25) 100%
-  );
-  mix-blend-mode: overlay;
-  pointer-events: none;
-}
-
-.weather-ambient--thunder .weather-ambient__flash,
-.weather-ambient--storm .weather-ambient__flash {
-  position: absolute;
-  inset: 0;
-  background: rgba(235, 240, 255, 0.95);
-  opacity: 0;
-  mix-blend-mode: screen;
-  animation: weather-thunder-flash 7s linear infinite;
-}
-
-.weather-ambient--storm .weather-ambient__flash {
-  animation: weather-storm-flash 4.5s linear infinite;
-}
-
-@keyframes weather-thunder-flash {
-  0%, 88%, 92%, 100% { opacity: 0; }
-  89%, 89.5%          { opacity: 0.7; }
-  90%                 { opacity: 0.12; }
-  90.5%, 91%          { opacity: 0.9; }
-  91.5%               { opacity: 0; }
-}
-
-@keyframes weather-storm-flash {
-  0%, 72%, 78%, 84%, 100% { opacity: 0; }
-  74%, 74.5%               { opacity: 0.8; }
-  75%                      { opacity: 0.2; }
-  75.5%, 76%               { opacity: 1; }
-  76.5%                    { opacity: 0.08; }
-  80%, 80.5%               { opacity: 0.55; }
-  81%                      { opacity: 0.08; }
-  81.5%                    { opacity: 0.7; }
-  82%                      { opacity: 0; }
-}
-
-/* ═══ Light Snow / Snow / Heavy Snow ═══════════════════════ */
-.weather-ambient--light_snow {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(225, 232, 245, 0.45) 0%,
-    rgba(235, 242, 250, 0.28) 50%,
-    rgba(245, 250, 255, 0.12) 100%
-  );
-  --weather-sky-blend: screen;
-}
-.weather-ambient--snow {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(210, 220, 240, 0.65) 0%,
-    rgba(220, 230, 245, 0.45) 50%,
-    rgba(235, 240, 250, 0.22) 100%
-  );
-  --weather-sky-blend: screen;
-}
-.weather-ambient--heavy_snow {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(195, 210, 232, 0.78) 0%,
-    rgba(215, 225, 240, 0.6) 50%,
-    rgba(230, 238, 250, 0.38) 100%
-  );
-  --weather-sky-blend: screen;
-}
-.weather-ambient--light_snow.weather-ambient--night,
-.weather-ambient--snow.weather-ambient--night,
-.weather-ambient--heavy_snow.weather-ambient--night {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(60, 75, 110, 0.65) 0%,
-    rgba(80, 100, 140, 0.45) 50%,
-    rgba(100, 120, 160, 0.25) 100%
-  );
-}
-.weather-ambient--heavy_snow .weather-ambient__snow-drift {
-  height: 18%;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(245, 250, 255, 0.35) 50%,
-    rgba(245, 250, 255, 0.6) 100%
-  );
-}
-
-.weather-ambient__snow {
-  position: absolute;
-  inset: 0;
-}
-
-.weather-ambient__snowflake {
-  position: absolute;
-  top: -12px;
-  border-radius: 50%;
-  background: var(--weather-line-color);
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
-  animation-iteration-count: infinite;
-  animation-timing-function: linear;
-}
-
-@keyframes weather-snow-fall-0 {
-  0%   { transform: translate3d(0, 0, 0); }
-  25%  { transform: translate3d(var(--snow-wobble, 20px), 25vh, 0); }
-  50%  { transform: translate3d(calc(var(--snow-drift, 0px) - var(--snow-wobble, 20px) * 0.5), 50vh, 0); }
-  75%  { transform: translate3d(calc(var(--snow-wobble, 20px) * 0.6), 75vh, 0); }
-  100% { transform: translate3d(var(--snow-drift, -10px), 110vh, 0); }
-}
-@keyframes weather-snow-fall-1 {
-  0%   { transform: translate3d(0, 0, 0); }
-  30%  { transform: translate3d(calc(var(--snow-wobble, 20px) * -0.8), 30vh, 0); }
-  60%  { transform: translate3d(calc(var(--snow-wobble, 20px) * 0.7), 60vh, 0); }
-  100% { transform: translate3d(var(--snow-drift, 10px), 110vh, 0); }
-}
-@keyframes weather-snow-fall-2 {
-  0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
-  40%  { transform: translate3d(calc(var(--snow-wobble, 20px) * 0.9), 40vh, 0) rotate(180deg); }
-  70%  { transform: translate3d(calc(var(--snow-wobble, 20px) * -0.5), 70vh, 0) rotate(270deg); }
-  100% { transform: translate3d(var(--snow-drift, 0px), 110vh, 0) rotate(360deg); }
-}
-
-.weather-ambient__snow-drift {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 12%;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(240, 245, 255, 0.22) 60%,
-    rgba(240, 245, 255, 0.4) 100%
-  );
-  mix-blend-mode: screen;
-  pointer-events: none;
-}
-
-/* ═══ Breeze / Gale ═══════════════════════════════════════ */
-.weather-ambient--breeze {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(200, 218, 235, 0.18) 0%,
-    rgba(210, 225, 238, 0.08) 100%
-  );
-  --weather-sky-blend: screen;
-}
-.weather-ambient--gale {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(165, 185, 212, 0.35) 0%,
-    rgba(180, 198, 222, 0.18) 100%
-  );
-  --weather-sky-blend: screen;
-}
-.weather-ambient--breeze.weather-ambient--night,
-.weather-ambient--gale.weather-ambient--night {
-  --weather-sky-tint: linear-gradient(
-    180deg,
-    rgba(55, 75, 115, 0.35) 0%,
-    rgba(70, 90, 135, 0.18) 100%
-  );
-}
-
-.weather-ambient__wind {
-  position: absolute;
-  inset: 0;
-}
-
-.weather-ambient__wind-streak {
-  position: absolute;
-  left: -100px;
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    var(--weather-line-color) 40%,
-    var(--weather-line-color) 60%,
-    transparent 100%
-  );
-  border-radius: 1px;
-  animation-name: weather-wind-streak;
-  animation-iteration-count: infinite;
-  animation-timing-function: ease-out;
-  transform: translateX(0);
-}
-
-@keyframes weather-wind-streak {
-  0%   { transform: translate(0, 0); opacity: 0; }
-  10%  { opacity: 0.8; }
-  50%  { transform: translate(50vw, calc(var(--wind-rise, 0px) * 0.5)); }
-  90%  { opacity: 0.8; }
-  100% { transform: translate(110vw, var(--wind-rise, 0px)); opacity: 0; }
-}
-
-/* ── Reduced motion ── */
-@media (prefers-reduced-motion: reduce) {
-  .weather-ambient *,
-  .weather-ambient {
-    animation: none !important;
-    transition: none !important;
-  }
-  .weather-ambient__raindrop,
-  .weather-ambient__snowflake,
-  .weather-ambient__wind-streak,
-  .weather-ambient__flash,
-  .weather-ambient__dust-mote {
-    display: none;
-  }
-}
-
-/* ============================================================
-   3-layer pet-stage backdrop
-   (1) SceneBackdrop — static SVG silhouette per location
-   (2) WeatherAmbient — animated weather particles (already above)
-   (3) SunlightTint — 14 time-of-day palettes + subtle wash
-   All three sit inside .pet-window__stage-shell, behind .orbit
-   rings and the Live2D character.
-   ============================================================ */
-
-/* Time-of-day layer applies an inline `filter: brightness() saturate()
- * hue-rotate()` computed per the clock (see SunlightTint.tsx). The
- * inline value changes every 60 seconds; this transition smooths the
- * step so the scene glides rather than snaps. */
-.scene-sunlight {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  transition: filter 2s ease;
-}
-
-/* Scene backdrop shell — full-fill the stage. Stacks 3 variants
- * (day / dusk / night) with opacity crossfade so the transition
- * between time bands is a gentle fade, not a cut. */
-.scene-backdrop {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: inherit;
-}
-
-.scene-backdrop__art {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-  display: block;
-  -webkit-user-drag: none;
-  user-select: none;
-  pointer-events: none;
-  /* Inline-styled opacity ramps via the 1-minute blend sampler; this
-     transition smooths the steps between samples (≤60s) so even slow
-     transitions render perceptibly continuous. */
-  transition: opacity 60s linear;
-}
-
-.scene-backdrop__art.is-active {
-  opacity: 1;
-}
-
-/* Reduced motion: disable transition smoothing on brightness — still
-   shows the correct level, just snaps between minute samples. */
-@media (prefers-reduced-motion: reduce) {
-  .scene-sunlight {
-    transition: none !important;
-  }
-}
-
-/* ── ActivePlanStrip ─────────────────────────────────────────────────── */
-
-.active-plan-strip {
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: rgba(15, 23, 42, 0.55);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  display: grid;
-  gap: 8px;
-}
-
-.active-plan-strip__header {
-  all: unset;
-  box-sizing: border-box;
-  cursor: pointer;
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-  min-height: 40px;
-  padding: 2px;
-  border-radius: 8px;
-  letter-spacing: 0;
-}
-
-.active-plan-strip__header:focus-visible {
-  outline: 2px solid rgba(168, 139, 255, 0.72);
-  outline-offset: 3px;
-}
-
-.active-plan-strip__title-row {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-}
-
-.active-plan-strip__eyebrow {
-  flex: 0 0 auto;
-  font-size: 12px;
-  line-height: 1.35;
-  color: #94a3b8;
-  letter-spacing: 0;
-}
-
-.active-plan-strip__goal {
-  font-size: 13px;
-  color: #e2e8f0;
-  flex: 1 1 160px;
-  min-width: 0;
-  font-weight: 600;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-
-.active-plan-strip__counter {
-  flex: 0 0 auto;
-  font-size: 12px;
-  line-height: 1.35;
-  color: #64748b;
-}
-
-.active-plan-strip__counter.is-failed {
-  color: #f87171;
-}
-
-.active-plan-strip__progress {
-  display: block;
-  appearance: none;
-  width: 100%;
-  height: 4px;
-  padding: 0;
-  border: 0;
-  border-radius: 2px;
-  background: rgba(148, 163, 184, 0.18);
-  overflow: hidden;
-}
-
-.active-plan-strip__progress::-webkit-progress-bar {
-  border-radius: 2px;
-  background: rgba(148, 163, 184, 0.18);
-}
-
-.active-plan-strip__progress::-webkit-progress-value {
-  border-radius: 2px;
-  background: #34d399;
-  transition: width 0.3s ease;
-}
-
-.active-plan-strip__progress::-moz-progress-bar {
-  border-radius: 2px;
-  background: #34d399;
-}
-
-.active-plan-strip__progress.is-failed::-webkit-progress-value,
-.active-plan-strip__progress.is-failed::-moz-progress-bar {
-  background: #f87171;
-}
-
-.active-plan-strip__current {
-  min-width: 0;
-  font-size: 12px;
-  line-height: 1.35;
-  color: #cbd5e1;
-  overflow-wrap: anywhere;
-}
-
-.active-plan-strip__steps {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.active-plan-strip__step {
-  font-size: 12px;
-  line-height: 1.35;
-  color: #cbd5e1;
-  display: flex;
-  gap: 6px;
-  align-items: flex-start;
-}
-
-.active-plan-strip__step-icon {
-  margin-top: 2px;
-}
-
-.active-plan-strip__current-icon,
-.active-plan-strip__step-icon {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  flex: 0 0 12px;
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  background: transparent;
-}
-
-.active-plan-strip__current-icon {
-  color: #fbbf24;
-  margin-right: 6px;
-}
-
-.active-plan-strip__step-icon.is-completed {
-  color: #34d399;
-  background: currentColor;
-}
-
-.active-plan-strip__current-icon.is-progress,
-.active-plan-strip__step-icon.is-progress {
-  color: #fbbf24;
-  background: conic-gradient(currentColor 0 64%, transparent 0);
-}
-
-.active-plan-strip__step-icon.is-failed {
-  color: #f87171;
-  background: currentColor;
-}
-
-.active-plan-strip__step-icon.is-pending,
-.active-plan-strip__step-icon.is-skipped   { color: #94a3b8; }
-
-.active-plan-strip__step-text {
-  flex: 1;
-  min-width: 0;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-
-.active-plan-strip__step-text.is-skipped {
-  text-decoration: line-through;
-}
+/* Weather ambient and scene composition styles are defined in App.css for shared rendering and reuse. */
 
 /* ── About / Help panel ────────────────────────────────────────────── */
 
@@ -1671,7 +813,7 @@
 
 .settings-about-panel__tagline {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   color: rgba(255, 255, 255, 0.7);
 }
 
@@ -1731,7 +873,7 @@
 .settings-about-panel__spotlight-title {
   margin: 0;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 14px;
+  font-size: var(--settings-heading-small-font-size);
   font-weight: 700;
   line-height: 1.3;
 }
@@ -1800,7 +942,7 @@
 
 .settings-about-panel__section-title {
   margin: 0 0 4px;
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
 }
@@ -1817,7 +959,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: 40px;
+  min-height: var(--settings-control-height);
   padding: 0 2px;
   border-radius: 8px;
   cursor: pointer;
@@ -1909,7 +1051,7 @@
 .settings-weekly-recap__title {
   min-width: 0;
   margin: 0;
-  font-size: 14px;
+  font-size: var(--settings-heading-small-font-size);
   font-weight: 600;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -1970,7 +1112,7 @@
 
 .settings-weekly-recap__metric-unit {
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--settings-body-font-size);
   font-weight: 400;
   color: rgba(255, 255, 255, 0.45);
   margin-left: 2px;
@@ -2449,8 +1591,8 @@
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 40px;
-  height: 40px;
+  width: var(--settings-control-height);
+  height: var(--settings-control-height);
   border: 1px solid transparent;
   border-radius: 8px;
   background: rgba(245, 158, 11, 0.08);
@@ -2480,7 +1622,7 @@
 
 .crisis-hotline-panel__body {
   margin: 0 0 14px;
-  font-size: 14px;
+  font-size: var(--settings-body-font-size);
   line-height: 1.55;
   color: rgba(254, 243, 199, 0.92);
 }
@@ -2502,7 +1644,7 @@
 }
 
 .crisis-hotline-panel__item-name {
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   font-weight: 650;
   line-height: 1.35;
   color: rgba(254, 243, 199, 0.85);
@@ -2521,7 +1663,7 @@
 }
 
 .crisis-hotline-panel__item-hours {
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   line-height: 1.4;
   color: rgba(254, 243, 199, 0.65);
   margin-top: 4px;
@@ -2540,13 +1682,13 @@
   justify-content: center;
   min-width: 0;
   width: 100%;
-  min-height: 40px;
+  min-height: var(--settings-control-height);
   padding: 0 12px;
   border-radius: 8px;
   background: #f59e0b;
   border: 1px solid #f59e0b;
   color: #1a0d00;
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   font-weight: 650;
   line-height: 1.25;
   text-decoration: none;
@@ -2601,7 +1743,7 @@
   cursor: pointer;
   list-style: none;
   color: var(--text-h);
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   font-weight: 760;
 }
 
@@ -3026,7 +2168,7 @@
 
 .settings-model-catalog__panel-head > .ghost-button {
   align-self: flex-start;
-  min-height: 40px;
+  min-height: var(--settings-control-height);
   padding: 0 14px;
   border-radius: 8px;
   font-size: 12px;
@@ -3133,7 +2275,7 @@
 
 .settings-voice-flow h5 {
   color: rgba(246, 248, 252, 0.94);
-  font-size: 14px;
+  font-size: var(--settings-heading-small-font-size);
 }
 
 .settings-voice-flow p {
@@ -3239,7 +2381,7 @@
 .settings-tool-card__copy h5 {
   margin: 0;
   color: rgba(246, 248, 252, 0.82);
-  font-size: 14px;
+  font-size: var(--settings-heading-small-font-size);
   font-weight: 700;
   line-height: 1.25;
 }
@@ -3323,7 +2465,7 @@
 
 .settings-tool-card__inline-toggle span {
   color: rgba(246, 248, 252, 0.76);
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   font-weight: 650;
 }
 
@@ -3745,18 +2887,18 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-about-panel,
 .settings-page[data-section] .settings-toggle,
 .settings-page[data-section] .settings-choice-card {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.45;
 }
 
 .settings-page[data-section] .settings-page__headline h4 {
-  font-size: 18px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.18;
 }
 
 .settings-page[data-section] .settings-section__title-row h4 {
-  font-size: 14px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 680;
   line-height: 1.3;
 }
@@ -3768,7 +2910,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-updater-panel__title {
   min-width: 0;
   margin: 0;
-  font-size: 14px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 660;
   line-height: 1.35;
 }
@@ -3790,7 +2932,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-console-card__headline span,
 .settings-page[data-section] .settings-console-card p,
 .settings-page[data-section] .settings-console-card__meta {
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.5;
 }
 
@@ -3829,7 +2971,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-choice-field__label,
 .settings-page[data-section] .settings-model-source-card__name,
 .settings-page[data-section] .settings-choice-card__header strong {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.35;
 }
@@ -3837,15 +2979,15 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] input:not([type='checkbox']):not([type='range']),
 .settings-page[data-section] select,
 .settings-page[data-section] textarea {
-  min-height: 40px;
-  padding: 8px 10px;
+  min-height: var(--settings-child-control-height);
+  padding: 5px 7px;
   border-radius: 8px;
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: var(--settings-child-control-font-size);
+  line-height: 1.35;
 }
 
 .settings-page[data-section] textarea {
-  min-height: 104px;
+  min-height: 80px;
   max-height: 260px;
   overflow-y: auto;
   resize: vertical;
@@ -3853,11 +2995,11 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] textarea[rows='3'] {
-  min-height: 92px;
+  min-height: 66px;
 }
 
 .settings-page[data-section] .settings-chat-system-prompt {
-  min-height: 140px;
+  min-height: 88px;
 }
 
 .settings-page[data-section] .settings-model-source-grid {
@@ -3896,8 +3038,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-model-source-card,
 .settings-page[data-section] .settings-choice-card {
-  min-height: 40px;
-  padding: 9px 11px;
+  min-height: var(--settings-child-control-height);
+  padding: 5px 6px;
 }
 
 .settings-drawer .settings-test-result,
@@ -3913,20 +3055,20 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-model-advanced:not([open]) {
-  min-height: 40px;
+  min-height: var(--settings-child-control-height);
   align-content: center;
   gap: 0;
   padding: 0 12px;
 }
 
 .settings-page[data-section] .settings-model-advanced:not([open]) summary {
-  min-height: 40px;
+  min-height: var(--settings-child-control-height);
   padding: 0;
 }
 
 .settings-page[data-section] .settings-toggle {
-  min-height: 40px;
-  padding: 10px 12px;
+  min-height: var(--settings-child-control-height);
+  padding: 4px 6px;
 }
 
 .settings-page[data-section] .settings-errands__compose,
@@ -3964,7 +3106,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-height: var(--settings-child-control-height);
   padding-right: 8px;
   padding-left: 8px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
 }
 
@@ -4025,7 +3167,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section='console'] .settings-section > .settings-console-grid > .settings-console-card .settings-console-card__headline strong {
-  font-size: 14px;
+  font-size: var(--settings-heading-small-font-size);
   font-weight: 720;
   line-height: 1.3;
 }
@@ -4059,7 +3201,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-console-card__headline strong,
 .settings-page[data-section] .settings-diagnostics-panel__header h4 {
-  font-size: 14px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 660;
   line-height: 1.35;
 }
@@ -4070,7 +3212,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-height: 28px;
   padding: 0 8px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.2;
   text-transform: none;
@@ -4086,14 +3228,14 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-section button,
 .settings-page[data-section] .onboarding-relationship__chip {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
 }
 
 .settings-page[data-section] .settings-chat-relationship-card .onboarding-relationship__options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 5px;
 }
 
 .settings-page[data-section] .onboarding-relationship__chip {
@@ -4101,8 +3243,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 40px;
-  padding: 0 12px;
+  min-height: var(--settings-child-control-height);
+  padding: 0 8px;
   border-radius: 8px;
   font-weight: 650;
   white-space: nowrap;
@@ -4116,7 +3258,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-pet-preview-card .settings-mini-group__head,
 .settings-page[data-section] .settings-pet-workflow-card .settings-mini-group__head {
   gap: 3px;
-  padding-bottom: 8px;
+  padding-bottom: 5px;
   border-bottom: 1px solid var(--settings-border);
 }
 
@@ -4144,7 +3286,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-community-links__label {
   min-height: 24px;
   padding: 0 2px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.25;
 }
@@ -4152,7 +3294,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-community-links a {
   min-height: var(--settings-child-control-height);
   padding: 0 10px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.25;
 }
@@ -4169,7 +3311,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border-radius: 8px;
   background: color-mix(in srgb, var(--settings-surface-soft) 72%, transparent);
   color: color-mix(in srgb, var(--text-soft) 90%, var(--text-h) 10%);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 500;
   line-height: 1.45;
   box-shadow: none;
@@ -4189,7 +3331,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-control-card > p {
   margin: 0 2px;
   color: rgba(78, 64, 54, 0.58);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -4569,7 +3711,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-history-summary-grid .settings-metric-card strong {
-  font-size: 14px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.24;
 }
 
@@ -4595,10 +3737,10 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-history-actions .ghost-button,
 .settings-page[data-section] .settings-history-actions .settings-danger-button {
-  min-height: 40px;
+  min-height: var(--settings-child-control-height);
   padding-right: 8px;
   padding-left: 8px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
   white-space: normal;
 }
@@ -4663,7 +3805,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-height: var(--settings-child-control-height);
   padding-right: 10px;
   padding-left: 10px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
   white-space: normal;
 }
@@ -4704,7 +3846,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-section__title-row h4 {
-  font-size: 14px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 680;
   line-height: 1.28;
 }
@@ -4733,7 +3875,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-control-card > p,
 .settings-page[data-section] .settings-section p:not([class]),
 .settings-page[data-section] .settings-inline-note {
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.5;
 }
 
@@ -4764,7 +3906,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-updater-panel__title {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 700;
   line-height: 1.3;
 }
@@ -4772,7 +3914,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-updater-panel__version {
   margin-top: 2px;
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4796,7 +3938,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-updater-panel__status {
   margin: 0;
   padding: 0 12px 12px;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.45;
 }
 
@@ -4824,7 +3966,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-about-panel__title,
 .settings-page[data-section] .settings-about-panel__spotlight-title,
 .settings-page[data-section] .settings-about-panel__section-title {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 700;
   line-height: 1.3;
 }
@@ -4836,7 +3978,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-about-panel__faq-answer,
 .settings-page[data-section] .settings-about-panel__credits-intro,
 .settings-page[data-section] .settings-about-panel__credits-list {
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.45;
 }
 
@@ -4855,7 +3997,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-height: 24px;
   padding: 0 8px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.2;
 }
 
@@ -4870,11 +4012,11 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   align-items: center;
   justify-content: center;
   min-width: 0;
-  min-height: 40px;
+  min-height: var(--settings-child-control-height);
   padding: 0 8px;
   border: 1px solid var(--settings-border);
   border-radius: 8px;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.2;
   text-align: center;
@@ -4902,9 +4044,9 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-about-panel__faq-question {
-  min-height: 40px;
+  min-height: var(--settings-child-control-height);
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.3;
 }
@@ -4937,7 +4079,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border: 1px solid var(--settings-border);
   border-radius: 8px;
   background: var(--settings-surface-soft);
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.35;
 }
 
@@ -4949,7 +4091,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-about-panel__credits-list li strong {
   color: color-mix(in srgb, var(--text-h) 78%, var(--text-soft));
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.35;
   word-break: normal;
@@ -4957,7 +4099,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-about-panel__credits-list li span {
   color: color-mix(in srgb, var(--text-soft) 88%, transparent);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.4;
 }
 
@@ -4990,7 +4132,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-weekly-recap__title {
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 700;
   line-height: 1.3;
   overflow-wrap: anywhere;
@@ -4999,7 +4141,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-weekly-recap__subtitle {
   min-width: 0;
   margin: 0;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
@@ -5013,7 +4155,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border: 1px solid var(--settings-border);
   border-radius: 8px;
   background: var(--settings-surface-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
@@ -5045,7 +4187,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-weekly-recap__metric-label,
 .settings-page[data-section] .settings-weekly-recap__spark-row {
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
@@ -5100,7 +4242,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-console-advanced-debug .settings-diagnostics-panel__header h4 {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 700;
   line-height: 1.3;
   color: var(--text-h);
@@ -5114,7 +4256,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-console-advanced-debug .settings-cost-breakdown__empty {
   margin: 0;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
@@ -5139,7 +4281,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-height: var(--settings-child-control-height);
   padding: 0 8px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.25;
   text-align: center;
@@ -5168,7 +4310,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-console-advanced-debug .settings-cost-breakdown strong {
   margin: 0;
   color: var(--text-h);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.3;
 }
@@ -5191,7 +4333,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-console-advanced-debug .settings-timeline-legend {
   gap: 6px 10px;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.35;
 }
 
@@ -5209,7 +4351,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-console-advanced-debug .settings-cost-breakdown__table {
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.35;
 }
 
@@ -5251,14 +4393,14 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-letter-empty__label {
   max-width: 30rem;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 500;
   line-height: 1.45;
 }
 
 .settings-page[data-section] .settings-letter-card__date {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   overflow-wrap: anywhere;
 }
 
@@ -5281,7 +4423,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-height: var(--settings-child-control-height);
   padding-right: 10px;
   padding-left: 10px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
   white-space: normal;
 }
@@ -5294,13 +4436,13 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-letter-card__body {
   min-width: 0;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.55;
   overflow-wrap: anywhere;
 }
 
 .settings-page[data-section] .settings-model-source-card {
-  min-height: 40px;
+  min-height: var(--settings-child-control-height);
 }
 
 .settings-drawer--night .settings-model-source-card[data-brand='anthropic'] .settings-model-source-card__logo,
@@ -5332,7 +4474,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-toggle > span {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.35;
 }
@@ -5528,16 +4670,18 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
    need one shared scale so labels, buttons, fields, and disclosure rows do not
    look like they came from different UI generations. */
 .settings-page[data-section] {
-  --settings-child-control-height: 40px;
-  --settings-child-gap: 10px;
+  --settings-child-control-height: var(--settings-control-height);
+  --settings-child-control-font-size: var(--settings-control-font-size);
+  --settings-child-meta-font-size: var(--settings-meta-font-size);
+  --settings-child-gap: 4px;
 }
 
 .settings-page[data-section] .settings-page__header {
   display: grid;
   grid-template-columns: 1fr;
   align-items: stretch;
-  gap: 8px;
-  padding-bottom: 6px;
+  gap: 4px;
+  padding-bottom: 2px;
 }
 
 .settings-page[data-section] .settings-page__mark {
@@ -5552,22 +4696,22 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-about-panel__link {
   min-height: var(--settings-child-control-height);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.25;
 }
 
 .settings-page[data-section] .settings-page__back {
   width: fit-content;
-  padding: 0 12px;
+  padding: 0 8px;
 }
 
 .settings-page[data-section] .settings-page__headline {
-  gap: 3px;
+  gap: 2px;
 }
 
 .settings-page[data-section] .settings-page__headline h4 {
-  font-size: 18px;
+  font-size: 12px;
   font-weight: 720;
   line-height: 1.2;
 }
@@ -5576,7 +4720,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 5px 10px;
+  gap: 4px 8px;
   overflow: visible;
 }
 
@@ -5591,11 +4735,11 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-section__title-row > .primary-button {
   justify-self: end;
   width: auto;
-  min-width: 112px;
+  min-width: 96px;
 }
 
 .settings-page[data-section] .settings-section__title-row h4 {
-  font-size: 14px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 700;
   line-height: 1.32;
 }
@@ -5617,20 +4761,20 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-section p:not([class]),
 .settings-page[data-section] .settings-inline-note {
   margin: 0;
-  font-size: 12px;
-  line-height: 1.48;
+  font-size: var(--settings-child-meta-font-size);
+  line-height: 1.34;
   overflow-wrap: anywhere;
 }
 
 .settings-page[data-section] label {
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
 }
 
 .settings-page[data-section] label > span,
 .settings-page[data-section] .settings-choice-field__label {
   margin: 0 2px;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.35;
 }
@@ -5639,15 +4783,15 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] select,
 .settings-page[data-section] textarea {
   min-height: var(--settings-child-control-height);
-  padding: 8px 10px;
+  padding: 5px 7px;
   border-radius: 8px;
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: var(--settings-child-control-font-size);
+  line-height: 1.35;
 }
 
 .settings-page[data-section] textarea {
-  padding-top: 9px;
-  padding-bottom: 9px;
+  padding-top: 7px;
+  padding-bottom: 7px;
 }
 
 .settings-page[data-section] .settings-lorebook-section__head {
@@ -5680,7 +4824,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-width: 0;
   height: var(--settings-child-control-height);
   padding: 0 10px;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.25;
 }
@@ -5690,7 +4834,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-width: 112px;
   min-height: var(--settings-child-control-height);
   justify-content: center;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
 }
 
@@ -5737,7 +4881,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border-radius: 8px;
   background: var(--settings-surface-soft);
   color: color-mix(in srgb, var(--text-h) 78%, var(--text-soft));
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.25;
 }
@@ -5764,7 +4908,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-lorebook-priority span {
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.35;
   white-space: nowrap;
@@ -5779,7 +4923,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border-right: 0;
   border-bottom: 0;
   border-radius: 0 8px 8px 0;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -5868,7 +5012,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-tts-tuning__header strong {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -5879,7 +5023,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-height: 32px;
   padding: 0 10px;
   color: color-mix(in srgb, var(--text-soft) 84%, var(--text-h) 16%);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.2;
 }
@@ -5899,13 +5043,13 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   height: var(--settings-child-control-height);
   min-height: var(--settings-child-control-height);
   padding: 0 8px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
 }
 
 .settings-page[data-section] .settings-tts-tuning__item > .settings-drawer__hint {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.42;
 }
 
@@ -5918,7 +5062,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-control-card {
-  padding: 12px;
+  padding: 8px 9px;
   border: 1px solid var(--settings-border);
   border-radius: 8px;
   background: var(--settings-surface-soft);
@@ -5941,7 +5085,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-control-card > p {
-  margin: 2px 0 0;
+  margin: 1px 0 0;
 }
 
 .settings-page[data-section] .settings-pet-model-card,
@@ -5972,7 +5116,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   width: 100%;
   min-height: var(--settings-child-control-height);
   padding: 0 9px 0 10px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.25;
 }
@@ -6044,7 +5188,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-drawer .settings-page[data-section] .settings-community-links a,
 .settings-drawer .settings-page[data-section] .settings-community-links__text {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
 }
 
@@ -6176,7 +5320,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-voice-field > span {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.32;
 }
@@ -6185,7 +5329,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-voice-advanced-control > p {
   margin: 0 2px;
   color: color-mix(in srgb, var(--text-soft) 88%, transparent);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 500;
   line-height: 1.45;
   overflow-wrap: anywhere;
@@ -6289,7 +5433,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-speech-config-field > span {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.32;
 }
@@ -6311,7 +5455,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border-radius: 8px;
   background: color-mix(in srgb, var(--settings-surface-soft) 72%, transparent);
   color: color-mix(in srgb, var(--text-soft) 90%, var(--text-h) 10%);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 500;
   line-height: 1.45;
   box-shadow: none;
@@ -6337,7 +5481,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-tools-field > span {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.32;
 }
@@ -6366,15 +5510,15 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer .settings-page[data-section] .settings-tools-section > .settings-mini-group:has(> .settings-tools-control) > .settings-tools-field {
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 38px;
+  padding: 4px 6px;
 }
 
 .settings-drawer .settings-page[data-section] .settings-tools-section > .settings-mini-group:has(> .settings-tools-control) > .settings-tools-field :is(input, select):not([type='checkbox']):not([type='range']) {
   height: var(--settings-child-control-height);
   min-height: var(--settings-child-control-height);
   padding: 0 9px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
 }
 
@@ -6421,7 +5565,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-memory-field > span,
 .settings-page[data-section] .settings-memory-field > label > span {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.32;
 }
@@ -6460,7 +5604,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   height: var(--settings-child-control-height);
   min-height: var(--settings-child-control-height);
   padding: 0 9px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
 }
 
@@ -6505,7 +5649,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .memory-card__header h3 {
   min-width: 0;
   margin-top: 1px;
-  font-size: 14px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 660;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -6514,7 +5658,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .memory-card__hint {
   min-width: 0;
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
@@ -6549,7 +5693,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .memory-card__daily h4 {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.35;
 }
@@ -6647,7 +5791,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-autonomy-group > .settings-autonomy-control > .settings-toggle > span {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.35;
 }
 
@@ -6658,7 +5802,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-autonomy-field > span,
 .settings-page[data-section] .settings-autonomy-field > label > span {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.32;
 }
@@ -6731,7 +5875,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-autonomy-rss-form__actions button {
   width: 100%;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
 }
 
@@ -6769,7 +5913,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-window-section > .settings-control-grid > .settings-control-card:not(.settings-window-field):not(.settings-window-control) > .settings-toggle > span {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
 }
 
@@ -6777,7 +5921,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   display: block;
   margin: 0;
   overflow: visible;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.36;
 }
 
@@ -6808,7 +5952,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-window-field > span,
 .settings-page[data-section] .settings-window-field > label > span {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.32;
 }
@@ -6899,7 +6043,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-model-detail-title h4 {
-  font-size: 14px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 720;
   line-height: 1.25;
 }
@@ -6909,7 +6053,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-choice-card__description,
 .settings-page[data-section] .settings-mini-group__note,
 .settings-page[data-section] .settings-mini-group__head span {
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.45;
 }
 
@@ -6963,7 +6107,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-model-detail-fields > label > span {
   min-width: 0;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.3;
   overflow-wrap: anywhere;
@@ -6991,7 +6135,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-height: 42px;
   padding: 0 12px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 700;
   line-height: 1.25;
 }
@@ -7014,7 +6158,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border-radius: 8px;
   background: color-mix(in srgb, var(--settings-surface-soft) 72%, transparent);
   color: color-mix(in srgb, var(--text-soft) 90%, var(--text-h) 10%);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 500;
   line-height: 1.45;
   box-shadow: none;
@@ -7093,7 +6237,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-model-advanced__field > span {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.32;
 }
@@ -7101,7 +6245,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-model-advanced__field > small {
   margin: -1px 0 0;
   color: color-mix(in srgb, var(--text-soft) 88%, transparent);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 500;
   line-height: 1.45;
   overflow-wrap: anywhere;
@@ -7137,7 +6281,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-toggle > span {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.35;
   white-space: normal;
@@ -7178,7 +6322,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-model-detail-fields > label > span,
 .settings-page[data-section] .settings-model-advanced__field > span {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.35;
 }
@@ -7187,7 +6331,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-voice-field > small {
   margin: 0 2px;
   color: color-mix(in srgb, var(--text-soft) 88%, transparent);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 500;
   line-height: 1.45;
 }
@@ -7303,7 +6447,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-voice-control > .settings-toggle > span {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.35;
 }
 
@@ -7312,7 +6456,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   margin: 0 1px;
   overflow: hidden;
   color: color-mix(in srgb, var(--text-soft) 86%, transparent);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.32;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -7345,7 +6489,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-tools-section > .settings-control-grid > .settings-control-card > .settings-toggle > span {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.35;
 }
 
@@ -7354,7 +6498,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   margin: 0 1px;
   overflow: hidden;
   color: color-mix(in srgb, var(--text-soft) 86%, transparent);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.32;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -7389,7 +6533,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-memory-section > .settings-memory-group:first-of-type > .settings-memory-control:nth-of-type(n + 2):nth-of-type(-n + 5) > .settings-toggle > span {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.35;
 }
 
@@ -7432,7 +6576,12 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-choice-grid,
 .settings-page[data-section] .settings-model-source-grid {
   min-width: 0;
-  gap: 8px;
+  gap: 6px;
+}
+
+.settings-page[data-section='model'] .settings-model-source-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 176px));
+  justify-content: start;
 }
 
 .settings-page[data-section] .settings-model-source-head {
@@ -7449,8 +6598,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   box-sizing: border-box;
   min-width: 0;
   max-width: 100%;
-  min-height: 40px;
-  padding: 9px 11px;
+  min-height: var(--settings-child-control-height);
+  padding: 7px 9px;
   border-radius: 8px;
 }
 
@@ -7468,23 +6617,23 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-model-source-card {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 14px;
+  grid-template-columns: 20px minmax(0, 1fr) 10px;
   align-items: center;
-  min-height: 56px;
+  min-height: 42px;
 }
 
 .settings-page[data-section] .settings-model-source-card__logo,
 .settings-page[data-section] .settings-model-source-card__logoFallback {
-  width: 24px;
-  height: 24px;
-  flex-basis: 24px;
+  width: 20px;
+  height: 20px;
+  flex-basis: 20px;
   border: 1px solid var(--settings-border);
   border-radius: 8px;
   background: var(--settings-surface);
 }
 
 .settings-page[data-section] .settings-model-source-card__logoFallback {
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1;
 }
 
@@ -7503,8 +6652,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-model-source-card__chevron {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 10px;
+  height: 10px;
   justify-self: end;
 }
 
@@ -7552,7 +6701,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] details.settings-console-section > summary.settings-console-section__header h5 {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 700;
   line-height: 1.3;
   overflow: hidden;
@@ -7565,7 +6714,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   margin: 0;
   overflow: hidden;
   color: inherit;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -7582,7 +6731,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border: 1px solid var(--settings-border);
   border-radius: 8px;
   background: var(--settings-surface-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.2;
   white-space: nowrap;
@@ -7616,7 +6765,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   width: 100%;
   min-height: var(--settings-child-control-height);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.25;
 }
@@ -7667,7 +6816,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border-color: var(--settings-border);
   border-radius: 8px;
   background: var(--settings-surface-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.2;
   text-transform: none;
@@ -7679,7 +6828,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-width: 0;
   overflow: hidden;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.3;
   text-align: right;
   text-overflow: ellipsis;
@@ -7689,7 +6838,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] details.settings-console-section .settings-console-list__item strong {
   min-width: 0;
   color: var(--text-h);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -7698,7 +6847,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] details.settings-console-section .settings-console-list__item p,
 .settings-page[data-section] details.settings-console-section .settings-console-list__secondary {
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
@@ -7714,7 +6863,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   justify-content: center;
   padding: 10px;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 500;
   line-height: 1.45;
   text-align: center;
@@ -7741,7 +6890,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border-radius: 8px;
   background: var(--settings-surface);
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 500;
   line-height: 1.45;
   text-align: center;
@@ -7750,7 +6899,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] details.settings-console-section:has(.settings-agent-panel) .settings-agent-panel__empty--compact {
-  min-height: 40px;
+  min-height: var(--settings-child-control-height);
   padding: 8px 10px;
 }
 
@@ -7785,7 +6934,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] details.settings-console-section .settings-agent-card__goal,
 .settings-page[data-section] details.settings-console-section .settings-agent-task__label {
   color: var(--text-h);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -7798,7 +6947,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] details.settings-console-section .settings-agent-task__meta,
 .settings-page[data-section] details.settings-console-section .settings-agent-panel__section-title {
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.35;
 }
 
@@ -7848,13 +6997,13 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border-radius: 8px;
   background: var(--settings-surface-soft);
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.4;
 }
 
 .settings-page[data-section] details.settings-console-section .settings-agent-step {
   grid-template-columns: 18px 34px minmax(0, 1fr);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
 }
 
 .settings-page[data-section] details.settings-console-section .settings-plan-card__step-icon,
@@ -7877,7 +7026,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border: 1px solid var(--settings-border);
   border-radius: 8px;
   background: var(--settings-surface-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 700;
   line-height: 1.2;
   text-transform: none;
@@ -7894,7 +7043,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border-radius: 8px;
   background: var(--settings-surface-soft);
   color: var(--text-h);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.25;
 }
@@ -7947,21 +7096,21 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border-color: var(--settings-border);
   border-radius: 8px;
   background: var(--settings-surface-soft);
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
 }
 
 .settings-page[data-section] details.settings-console-section .settings-agent-card__check {
   min-height: var(--settings-child-control-height);
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.3;
 }
 
 .settings-page[data-section] details.settings-console-section .settings-agent-step__content,
 .settings-page[data-section] details.settings-console-section .settings-agent-task__summary {
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.45;
 }
 
@@ -7990,7 +7139,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-console-sections > section.settings-console-section > .settings-console-section__header h5 {
   min-width: 0;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 700;
   line-height: 1.3;
   overflow: hidden;
@@ -8003,7 +7152,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   margin: 0;
   overflow: hidden;
   color: inherit;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -8018,7 +7167,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border: 1px solid var(--settings-border);
   border-radius: 8px;
   background: var(--settings-surface-soft);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.2;
   white-space: nowrap;
@@ -8040,14 +7189,14 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-console-sections > section.settings-console-section .settings-console-card__headline strong {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 700;
   line-height: 1.35;
 }
 
 .settings-page[data-section] .settings-console-sections > section.settings-console-section .settings-console-card p,
 .settings-page[data-section] .settings-console-sections > section.settings-console-section .settings-console-card__meta {
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.45;
 }
 
@@ -8059,7 +7208,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-console-sections > section.settings-console-section .settings-console-emotion__label,
 .settings-page[data-section] .settings-console-sections > section.settings-console-section .settings-console-emotion__value {
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.3;
 }
 
@@ -8114,7 +7263,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-page__headline .eyebrow {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
   line-height: 1.35;
 }
@@ -8130,7 +7279,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   margin: 1px 0 0;
   overflow: hidden;
   color: color-mix(in srgb, var(--text-soft) 88%, transparent);
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -8161,7 +7310,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-console-sections > section.settings-console-section > .settings-console-section__header h5,
 .settings-page[data-section] .settings-control-card > span,
 .settings-page[data-section] .settings-control-card > label > span {
-  font-size: 14px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.35;
 }
@@ -8170,7 +7319,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-mini-group__note,
 .settings-page[data-section] .settings-control-card > p,
 .settings-page[data-section] .settings-control-card > small {
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 500;
   line-height: 1.45;
 }
@@ -8222,7 +7371,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section='lorebooks'] .settings-lorebook-section__intro h4 {
   margin: 0;
   color: color-mix(in srgb, var(--text-h) 90%, var(--text-soft));
-  font-size: 14px;
+  font-size: var(--settings-heading-small-font-size);
   font-weight: 700;
   line-height: 1.35;
 }
@@ -8242,7 +7391,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-height: var(--settings-child-control-height);
   height: auto;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   font-weight: 650;
   line-height: 1.25;
   white-space: normal;
@@ -8286,7 +7435,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section='lorebooks'] .settings-lorebook-priority > span {
   margin: 0;
   color: color-mix(in srgb, var(--text-h) 72%, var(--text-soft));
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   font-weight: 650;
   line-height: 1.35;
 }
@@ -8324,7 +7473,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border: 1px solid var(--settings-border);
   border-radius: 8px;
   background: var(--settings-surface);
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   line-height: 1.25;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -8386,7 +7535,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-section__title-row h4 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 700;
   line-height: 1.35;
 }
@@ -8394,7 +7543,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-section__title-row h5,
 .settings-page[data-section] .settings-mini-group__head h5 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.35;
 }
@@ -8406,14 +7555,14 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   textarea,
   .settings-url-input
 ) {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.35;
 }
 
 .settings-page[data-section] .settings-section__title-row .settings-drawer__hint,
 .settings-page[data-section] .settings-section__title-row p,
 .settings-page[data-section] .settings-mini-group__note {
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 500;
   line-height: 1.45;
 }
@@ -8445,7 +7594,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-control-card > .settings-toggle > span,
 .settings-page[data-section] .settings-window-section > .settings-control-grid > .settings-control-card:not(.settings-window-field):not(.settings-window-control) > .settings-toggle > span,
 .settings-page[data-section] .settings-mini-group:not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card) > .settings-toggle > span {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.35;
 }
@@ -8453,8 +7602,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 /* Final child-page option pass: keep option rows visually consistent across every subpage. */
 .settings-page[data-section] .settings-control-card,
 .settings-page[data-section] .settings-mini-group {
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 6px;
+  padding: 8px 9px;
   border-radius: 8px;
 }
 
@@ -8467,8 +7616,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-tools-section > .settings-control-grid > .settings-control-card,
 .settings-page[data-section] .settings-lorebook-field,
 .settings-page[data-section] .settings-lorebook-priority {
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 6px;
+  padding: 8px 9px;
 }
 
 .settings-page[data-section] .settings-control-card > .settings-toggle,
@@ -8564,7 +7713,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-width: 0;
   overflow: visible;
   color: var(--text-h);
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.35;
   text-overflow: clip;
@@ -8595,7 +7744,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   border-radius: 8px;
   background: color-mix(in srgb, var(--settings-surface-soft) 86%, var(--settings-surface));
   color: var(--text-h);
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -8618,7 +7767,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   box-sizing: border-box;
   height: var(--settings-child-control-height);
   min-height: var(--settings-child-control-height);
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.25;
 }
@@ -8681,12 +7830,14 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 /* Onboarding sub-flow final pass: align nested steps with the settings child-page scale. */
 .onboarding-card {
-  --onboarding-control-height: 40px;
+  --onboarding-control-height: var(--settings-control-height);
+  --onboarding-font-size: var(--settings-control-font-size);
+  --onboarding-heading-small-font-size: var(--settings-heading-small-font-size);
   --onboarding-switch-width: 44px;
   --onboarding-switch-height: 24px;
   gap: 10px;
   padding: 18px;
-  font-size: 13px;
+  font-size: var(--onboarding-font-size);
   line-height: 1.5;
 }
 
@@ -8754,7 +7905,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .onboarding-section {
   gap: 12px;
   padding: 12px;
-  font-size: 13px;
+  font-size: var(--onboarding-font-size);
   line-height: 1.5;
 }
 
@@ -8763,7 +7914,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .onboarding-section__intro strong {
-  font-size: 14px;
+  font-size: var(--onboarding-heading-small-font-size);
   font-weight: 700;
   line-height: 1.35;
 }
@@ -8807,7 +7958,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .onboarding-section label span,
 .onboarding-relationship__label {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--onboarding-font-size);
   font-weight: 650;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -8820,7 +7971,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-width: 0;
   max-width: 100%;
   min-height: var(--onboarding-control-height);
-  font-size: 13px;
+  font-size: var(--onboarding-font-size);
   line-height: 1.25;
 }
 
@@ -8906,7 +8057,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .onboarding-message-demo__header strong,
 .onboarding-message-demo__step strong,
 .onboarding-readiness__header strong {
-  font-size: 13px;
+  font-size: var(--onboarding-font-size);
   font-weight: 650;
   line-height: 1.35;
 }
@@ -9018,7 +8169,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .onboarding-local-models__item {
   min-height: var(--onboarding-control-height);
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: var(--onboarding-font-size);
   line-height: 1.35;
 }
 
@@ -9029,7 +8180,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .onboarding-relationship__chip {
   min-height: var(--onboarding-control-height);
   padding: 0 10px;
-  font-size: 13px;
+  font-size: var(--onboarding-font-size);
   line-height: 1.25;
 }
 
@@ -9038,7 +8189,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-height: var(--onboarding-control-height);
   padding: 0 12px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--onboarding-font-size);
   font-weight: 650;
   line-height: 1.25;
 }
@@ -9256,7 +8407,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .music-popup-card__dismiss,
 .music-popup-card__control,
 .crisis-hotline-panel__dismiss {
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   line-height: 1;
 }
 
@@ -9265,8 +8416,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   grid-template-areas: "back headline";
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
-  padding: 0 0 8px;
+  gap: 5px;
+  padding: 0 0 3px;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -9275,10 +8426,10 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-page__back {
   position: relative;
   width: auto;
-  min-width: var(--settings-child-control-height, 40px);
-  height: var(--settings-child-control-height, 40px);
-  min-height: var(--settings-child-control-height, 40px);
-  padding: 0 12px 0 10px;
+  min-width: var(--settings-child-control-height, 36px);
+  height: var(--settings-child-control-height, 36px);
+  min-height: var(--settings-child-control-height, 36px);
+  padding: 0 8px 0 7px;
   justify-content: center;
   border-radius: 8px;
   box-shadow: none;
@@ -9300,15 +8451,15 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] .settings-page__headline h4 {
-  font-size: 18px;
+  font-size: 11px;
   font-weight: 720;
   line-height: 1.16;
 }
 
 .settings-page[data-section] .settings-page__headline .settings-section__note {
   margin-top: 0;
-  font-size: 12px;
-  line-height: 1.38;
+  font-size: var(--settings-child-meta-font-size);
+  line-height: 1.28;
 }
 
 .settings-page[data-section] .settings-control-card,
@@ -9360,8 +8511,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-mini-group:not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card):has(> .settings-letter-empty) > .settings-mini-group__head:not(summary),
 .settings-page[data-section] .settings-mini-group:not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card):has(> .settings-history-empty) > .settings-mini-group__head:not(summary) {
   align-content: center;
-  min-height: 48px;
-  padding: 4px 2px;
+  min-height: 32px;
+  padding: 2px;
   border-bottom: 0;
 }
 
@@ -9371,7 +8522,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-model-source-card,
 .settings-page[data-section] details.settings-console-section > summary.settings-console-section__header,
 .settings-page[data-section] .settings-community-links a {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.25;
 }
 
@@ -9383,7 +8534,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-community-links__label,
 .settings-page[data-section] .settings-community-links__text {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.35;
 }
@@ -9399,14 +8550,14 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] details.settings-console-section > summary.settings-console-section__header p,
 .settings-page[data-section] .settings-mini-group__head span,
 .settings-page[data-section] .settings-mini-group__note {
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 500;
-  line-height: 1.45;
+  line-height: 1.32;
 }
 
 .settings-page[data-section] details.settings-console-section > summary.settings-console-section__header h5,
 .settings-page[data-section] .settings-console-sections > section.settings-console-section > .settings-console-section__header h5 {
-  font-size: 14px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.35;
 }
@@ -9440,17 +8591,17 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer .settings-page[data-section] .settings-model-source-card {
-  grid-template-columns: 18px minmax(0, 1fr) 8px;
-  column-gap: 4px;
-  min-height: 44px;
-  padding: 6px;
+  grid-template-columns: 12px minmax(0, 1fr) 6px;
+  column-gap: 3px;
+  min-height: 31px;
+  padding: 3px 4px;
 }
 
 .settings-drawer .settings-page[data-section] .settings-model-source-card__logo,
 .settings-drawer .settings-page[data-section] .settings-model-source-card__logoFallback {
-  width: 18px;
-  height: 18px;
-  flex-basis: 18px;
+  width: 12px;
+  height: 12px;
+  flex-basis: 12px;
 }
 
 .settings-drawer .settings-page[data-section] .settings-model-source-card__name {
@@ -9462,12 +8613,12 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer .settings-page[data-section] .settings-model-source-card__chevron {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .settings-drawer .settings-page[data-section] .settings-model-source-card:last-child:nth-child(odd) {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
 
 /* Tools backend fields contain long URLs and provider keys; keep them as full
@@ -9479,15 +8630,15 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer .settings-page[data-section='tools'] label.settings-tools-field {
-  grid-template-columns: minmax(94px, 0.42fr) minmax(0, 1fr);
+  grid-template-columns: minmax(86px, 0.42fr) minmax(0, 1fr);
   align-items: center;
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 34px;
+  padding: 3px 5px;
 }
 
 .settings-drawer .settings-page[data-section='tools'] label.settings-tools-field > span {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
@@ -9501,14 +8652,24 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer .settings-page[data-section='tools'] .settings-tools-section > .settings-control-grid > .settings-control-card:has(> .settings-toggle + p) {
-  gap: 1px;
-  min-height: 66px;
-  padding: 5px 10px;
+  position: relative;
+  gap: 0;
+  min-height: 31px;
+  padding: 3px 4px;
+  align-content: center;
 }
 
 .settings-drawer .settings-page[data-section='tools'] .settings-tools-section > .settings-control-grid > .settings-control-card:has(> .settings-toggle + p) > p {
-  margin: 0 1px;
-  line-height: 1.25;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* Memory page: direct config and recall fields should match the compact
@@ -9516,15 +8677,15 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > label.settings-memory-field,
 .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) {
   align-items: center;
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 36px;
+  padding: 3px 5px;
 }
 
 .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > label.settings-memory-field,
 .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) > label {
-  grid-template-columns: minmax(118px, 0.44fr) minmax(0, 1fr);
+  grid-template-columns: minmax(92px, 0.42fr) minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) > label {
@@ -9534,7 +8695,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > label.settings-memory-field > span,
 .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) > label > span {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -9554,7 +8715,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > label.settings-memory-field,
   .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])),
   .settings-drawer .settings-page[data-section='memory'] .settings-memory-recall-grid > .settings-memory-field {
-    min-height: 72px;
+    min-height: 62px;
   }
 
   .settings-drawer .settings-page[data-section='memory'] .settings-memory-group > label.settings-memory-field,
@@ -9593,7 +8754,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__spotlight,
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__faq,
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__credits {
-  gap: 8px;
+  gap: 7px;
 }
 
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__link,
@@ -9601,7 +8762,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__credits-list li {
   min-height: var(--settings-child-control-height);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.35;
 }
 
@@ -9623,33 +8784,33 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__faq-answer,
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__credits-intro,
 .settings-drawer .settings-page[data-section] details.settings-console-section > .settings-about-panel .settings-about-panel__credits-list li span {
-  font-size: 12px;
+  font-size: var(--settings-child-meta-font-size);
   font-weight: 500;
   line-height: 1.45;
 }
 
 .settings-drawer .settings-page[data-section] .settings-toggle:not(.settings-lorebook-check) {
   grid-template-columns: minmax(0, 1fr) var(--settings-toggle-width);
-  gap: 10px;
+  gap: 8px;
 }
 
 .settings-drawer .settings-page[data-section] .settings-tools-section > .settings-control-grid > .settings-control-card > .settings-toggle,
 .settings-drawer .settings-page[data-section] .settings-memory-section > .settings-memory-group:first-of-type > .settings-memory-control:nth-of-type(n + 2):nth-of-type(-n + 5) > .settings-toggle,
 .settings-drawer .settings-page[data-section] .settings-autonomy-group > .settings-autonomy-control > .settings-toggle {
   grid-template-columns: minmax(0, 1fr) var(--settings-toggle-width);
-  gap: 10px;
+  gap: 8px;
 }
 
 .settings-drawer .settings-page[data-section] .settings-memory-control:has(> .settings-toggle):not(:has(> p)),
 .settings-drawer .settings-page[data-section] .settings-autonomy-control:has(> .settings-toggle):not(:has(> p)),
 .settings-drawer .settings-page[data-section] .settings-window-control:has(> .settings-toggle):not(:has(> p)) {
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 31px;
+  padding: 3px 5px;
 }
 
 .settings-drawer .settings-page[data-section='memory'] .settings-memory-section > .settings-memory-group:first-of-type > .settings-memory-control:has(> .settings-toggle):not(:has(> p)) {
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 34px;
+  padding: 3px 5px;
 }
 
 .settings-drawer .settings-page[data-section] .settings-toggle:has(input:disabled):not(.settings-lorebook-check),
@@ -9761,13 +8922,62 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-pet-action-row .ghost-button {
   min-height: var(--settings-child-control-height);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   font-weight: 650;
   line-height: 1.25;
 }
 
+.settings-drawer .settings-page[data-section='chat'] .settings-chat-relationship-card {
+  gap: 4px;
+  padding: 4px 5px;
+}
+
+.settings-drawer .settings-page[data-section='chat'] .settings-chat-advanced-control:has(> .settings-toggle) {
+  gap: 0;
+  min-height: 31px;
+  padding: 3px 4px;
+  align-content: center;
+}
+
+.settings-drawer .settings-page[data-section='chat'] .settings-chat-advanced-control:has(> .settings-toggle + p) {
+  position: relative;
+}
+
+.settings-drawer .settings-page[data-section='chat'] .settings-chat-advanced-control:has(> .settings-toggle + p) > p {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.settings-drawer .settings-page[data-section='chat'] .settings-choice-field--pet-model {
+  gap: 4px;
+  padding: 4px 5px;
+}
+
+.settings-drawer .settings-page[data-section='chat'] .settings-choice-field--pet-model .settings-choice-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 158px), 1fr));
+  gap: 4px;
+}
+
+.settings-drawer .settings-page[data-section='chat'] .settings-choice-field--pet-model .settings-choice-card {
+  min-height: 36px;
+  padding: 4px 5px;
+}
+
+.settings-drawer .settings-page[data-section='chat'] .settings-choice-field--pet-model .settings-choice-card__description {
+  -webkit-line-clamp: 1;
+  line-height: 1.25;
+}
+
 .settings-page[data-section] .settings-mini-group.settings-chat-advanced-card:not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card) {
-  padding: 8px 12px;
+  padding: 6px 8px;
 }
 
 .settings-page[data-section] .settings-mini-group.settings-chat-advanced-card:not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card) > summary.settings-mini-group__head {
@@ -9779,31 +8989,31 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-mini-group.settings-chat-advanced-card:not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card)[open] > summary.settings-mini-group__head {
   margin: 0;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
 }
 
 .settings-drawer .settings-page[data-section='voice'] .settings-voice-advanced-card:not([open]),
 .settings-drawer .settings-page[data-section='chat'] .settings-chat-advanced-card:not([open]):not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card) {
   gap: 0;
-  min-height: 58px;
-  padding: 8px 12px;
+  min-height: 38px;
+  padding: 4px 7px;
 }
 
 .settings-drawer .settings-page[data-section='voice'] details.settings-mini-group.settings-voice-advanced-card:not([open]) {
   gap: 0;
-  padding: 8px 12px;
+  padding: 4px 7px;
 }
 
 .settings-drawer .settings-page[data-section='voice'] .settings-voice-advanced-card:not([open]) > summary.settings-mini-group__head,
 .settings-drawer .settings-page[data-section='chat'] .settings-chat-advanced-card:not([open]):not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card) > summary.settings-mini-group__head {
-  min-height: 42px;
+  min-height: 30px;
   margin: 0;
   padding: 0;
   align-items: center;
 }
 
 .settings-drawer .settings-page[data-section='voice'] details.settings-mini-group.settings-voice-advanced-card:not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card):not([open]) > summary.settings-mini-group__head {
-  min-height: 42px;
+  min-height: 30px;
   margin: 0;
   padding: 0;
   align-items: center;
@@ -9830,16 +9040,16 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 @media (max-width: 430px) {
   .settings-drawer .settings-page[data-section='chat'] .settings-chat-advanced-card:not([open]):not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card) {
-    min-height: 92px;
+    min-height: 52px;
   }
 
   .settings-drawer .settings-page[data-section='chat'] .settings-chat-advanced-card:not([open]):not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card) > summary.settings-mini-group__head {
-    min-height: 76px;
+    min-height: 42px;
     align-items: flex-start;
   }
 
   .settings-drawer .settings-page[data-section='chat'] .settings-chat-advanced-card:not([open]):not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card) > summary.settings-mini-group__head > div > span {
-    -webkit-line-clamp: 4;
+    -webkit-line-clamp: 3;
   }
 }
 
@@ -9847,21 +9057,21 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
    rhythm as other child-page form fields instead of tall half cards. */
 .settings-drawer .settings-page[data-section='chat'] .settings-chat-identity-field {
   align-items: center;
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 36px;
+  padding: 4px 6px;
 }
 
 .settings-drawer .settings-page[data-section='chat'] .settings-chat-identity-field > label {
-  grid-template-columns: minmax(68px, 0.46fr) minmax(0, 1fr);
+  grid-template-columns: minmax(60px, 0.42fr) minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 40px;
+  min-height: var(--settings-control-height);
 }
 
 .settings-drawer .settings-page[data-section='chat'] .settings-chat-identity-field > label > span {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
@@ -9878,8 +9088,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
    keep those tuning rows compact so the page does not jump back to tall cards. */
 .settings-drawer .settings-page[data-section='autonomy'] .settings-autonomy-field {
   align-items: center;
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 38px;
+  padding: 4px 6px;
 }
 
 .settings-drawer .settings-page[data-section='autonomy'] label.settings-autonomy-field,
@@ -9887,13 +9097,13 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   grid-template-columns: minmax(122px, 0.56fr) minmax(72px, 0.44fr);
   align-items: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: var(--settings-control-height);
 }
 
 .settings-drawer .settings-page[data-section='autonomy'] label.settings-autonomy-field > span,
 .settings-drawer .settings-page[data-section='autonomy'] .settings-autonomy-field > label > span {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
@@ -9919,10 +9129,10 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-drawer .settings-page[data-section='model'] .settings-model-advanced__field:has(> input):not(:has(> small)),
 .settings-drawer .settings-page[data-section='model'] .settings-model-advanced__field-grid:has(input[type='number']) .settings-model-advanced__field:has(> input) {
-  grid-template-columns: minmax(142px, 0.48fr) minmax(0, 1fr);
+  grid-template-columns: minmax(124px, 0.46fr) minmax(0, 1fr);
   align-items: center;
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 38px;
+  padding: 4px 6px;
 }
 
 .settings-drawer .settings-page[data-section='model'] .settings-model-advanced__field > span {
@@ -9930,7 +9140,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   display: -webkit-box;
   overflow: hidden;
   overflow-wrap: anywhere;
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: normal;
@@ -9949,11 +9159,11 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 /* Window page: keep scene/weather selects as compact rows so this dense subpage
    uses the same option rhythm as the rest of the child settings pages. */
 .settings-drawer .settings-page[data-section='window'] .settings-window-section {
-  gap: 10px;
+  gap: 8px;
 }
 
 .settings-drawer .settings-page[data-section='window'] .settings-window-group {
-  gap: 8px;
+  gap: 6px;
 }
 
 .settings-drawer .settings-page[data-section='window'] .settings-window-group > .settings-mini-group__head:not(summary) {
@@ -9961,9 +9171,10 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer .settings-page[data-section='window'] .settings-window-section > .settings-control-grid > .settings-control-card:not(.settings-window-field):not(.settings-window-control) {
-  gap: 1px;
+  position: relative;
+  gap: 0;
   min-height: auto;
-  padding: 5px 10px;
+  padding: 3px 5px;
 }
 
 .settings-drawer .settings-page[data-section='window'] .settings-window-section > .settings-control-grid > .settings-control-card:not(.settings-window-field):not(.settings-window-control):last-child {
@@ -9971,20 +9182,32 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer .settings-page[data-section='window'] .settings-window-section > .settings-control-grid > .settings-control-card:not(.settings-window-field):not(.settings-window-control) > p {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   margin: 0;
-  line-height: 1.25;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.settings-drawer .settings-page[data-section='window'] .settings-window-section > .settings-control-grid > .settings-control-card:not(.settings-window-field):not(.settings-window-control) > .settings-toggle {
+  gap: 7px;
 }
 
 .settings-drawer .settings-page[data-section='window'] label.settings-window-field {
-  grid-template-columns: minmax(94px, 0.42fr) minmax(0, 1fr);
+  grid-template-columns: minmax(66px, 0.36fr) minmax(0, 1fr);
   align-items: center;
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 32px;
+  padding: 3px 4px;
 }
 
 .settings-drawer .settings-page[data-section='window'] label.settings-window-field > span {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
@@ -9998,35 +9221,45 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 /* Voice loop: reduce oversized toggle cards and keep the VAD selector visible
-   without changing the shared 40px switch target. */
+   without changing the shared switch target. */
 .settings-drawer .settings-page[data-section='voice'] .settings-voice-loop-card {
-  gap: 8px;
+  gap: 6px;
 }
 
 .settings-drawer .settings-page[data-section='voice'] .settings-voice-loop-card .settings-voice-control {
-  gap: 1px;
-  padding: 5px 10px;
+  gap: 0;
+  padding: 3px 5px;
 }
 
 .settings-drawer .settings-page[data-section='voice'] .settings-voice-loop-card .settings-voice-control:has(> p) {
-  min-height: 66px;
+  position: relative;
+  min-height: 31px;
+  align-content: center;
 }
 
 .settings-drawer .settings-page[data-section='voice'] .settings-voice-loop-card .settings-voice-control > p {
-  margin: 0 1px;
-  line-height: 1.25;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .settings-drawer .settings-page[data-section='voice'] .settings-voice-loop-card > label.settings-voice-field {
-  grid-template-columns: minmax(118px, 0.44fr) minmax(0, 1fr);
+  grid-template-columns: minmax(92px, 0.42fr) minmax(0, 1fr);
   align-items: center;
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 34px;
+  padding: 3px 5px;
 }
 
 .settings-drawer .settings-page[data-section='voice'] .settings-voice-loop-card > label.settings-voice-field > span {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -10044,15 +9277,15 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 /* Speech input/output provider fields should use the same compact row rhythm as
    the voice loop selector; leave hinted fields, textareas, and tuning cards tall. */
 .settings-drawer .settings-page[data-section='voice'] .settings-speech-config-section label.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)) {
-  grid-template-columns: minmax(118px, 0.44fr) minmax(0, 1fr);
+  grid-template-columns: minmax(92px, 0.42fr) minmax(0, 1fr);
   align-items: center;
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 38px;
+  padding: 4px 6px;
 }
 
 .settings-drawer .settings-page[data-section='voice'] .settings-speech-config-section label.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)) > span {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -10072,8 +9305,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   .settings-drawer .settings-page[data-section='voice'] .settings-speech-config-section label.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)) {
     grid-template-columns: 1fr;
     align-items: stretch;
-    gap: 7px;
-    min-height: 72px;
+    gap: 6px;
+    min-height: 56px;
   }
 
   .settings-drawer .settings-page[data-section='voice'] .settings-voice-loop-card > label.settings-voice-field > span,
@@ -10090,14 +9323,14 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-drawer .settings-page[data-section='lorebooks'] .settings-lorebook-keywords-field {
   grid-template-columns: minmax(74px, 0.32fr) minmax(0, 1fr);
   align-items: center;
-  min-height: 52px;
-  padding: 7px 10px;
+  min-height: 46px;
+  padding: 6px 8px;
 }
 
 .settings-drawer .settings-page[data-section='lorebooks'] .settings-lorebook-title-field > span,
 .settings-drawer .settings-page[data-section='lorebooks'] .settings-lorebook-keywords-field > span {
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--settings-control-font-size);
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
@@ -10127,12 +9360,12 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
     height: 44px;
     min-width: 118px;
     min-height: 44px;
-    font-size: 13px;
+    font-size: var(--settings-control-font-size);
     line-height: 1.25;
   }
 
   .settings-page[data-section='lorebooks'] .settings-lorebook-priority > span {
-    font-size: 13px;
+    font-size: var(--settings-control-font-size);
     line-height: 1.25;
   }
 
@@ -10229,7 +9462,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   }
 
   .settings-drawer--section {
-    --settings-child-control-height: 34px;
+    --settings-child-control-height: var(--settings-control-height-small);
   }
 
   .settings-page[data-section] {
@@ -10237,21 +9470,21 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   }
 
   .settings-page[data-section] .settings-page__header {
-    grid-template-columns: 34px minmax(0, 1fr);
-    gap: 6px;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 4px;
     padding-bottom: 2px;
   }
 
   .settings-page[data-section] .settings-page__back {
-    width: 34px;
-    min-width: 34px;
-    height: 34px;
-    min-height: 34px;
+    width: 28px;
+    min-width: 28px;
+    height: var(--settings-child-control-height);
+    min-height: var(--settings-child-control-height);
   }
 
   .settings-page[data-section] .settings-page__back svg {
-    width: 15px;
-    height: 15px;
+    width: 10px;
+    height: 10px;
   }
 
   .settings-page[data-section] .settings-page__back span {
@@ -10269,7 +9502,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
   .settings-page[data-section] .settings-page__headline h4 {
     overflow: hidden;
-    font-size: 16px;
+    font-size: 11px;
     line-height: 1.15;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -10333,8 +9566,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-drawer--day .settings-drawer__actions,
 .settings-drawer--warm-day .settings-drawer__actions {
-  margin: 0 -2px;
-  padding: 10px 2px 0;
+  margin: 0 -1px;
+  padding: 5px 1px 0;
   border-top: 1px solid var(--settings-border);
   background:
     linear-gradient(to bottom, color-mix(in srgb, var(--settings-surface) 72%, transparent), var(--settings-surface) 32%),
@@ -10439,7 +9672,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-drawer .settings-page[data-section] .settings-voice-field > span,
 .settings-drawer .settings-page[data-section] .settings-model-detail-fields > label > span,
 .settings-drawer .settings-page[data-section] .settings-model-advanced__field > span {
-  font-size: 13px;
+  font-size: var(--settings-child-control-font-size);
   line-height: 1.35;
 }
 
@@ -10450,19 +9683,170 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-drawer .settings-page[data-section] .settings-control-card > small,
 .settings-drawer .settings-page[data-section] .settings-memory-transparency__card span,
 .settings-drawer .settings-page[data-section] .settings-section p:not([class]) {
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: var(--settings-child-meta-font-size);
+  line-height: 1.32;
 }
 
 .settings-drawer .settings-page[data-section] .settings-memory-context-status-grid {
-  gap: 6px;
+  gap: 4px;
 }
 
 .settings-drawer .settings-page[data-section] .settings-memory-context-status {
-  gap: 4px;
-  padding: 7px 10px;
+  gap: 3px;
+  min-height: 32px;
+  padding: 3px 5px;
 }
 
 .settings-drawer .settings-page[data-section] .settings-memory-context-status p {
-  line-height: 1.4;
+  line-height: 1.3;
+}
+
+.settings-drawer .settings-page[data-section='memory'] .settings-memory-transparency__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.settings-drawer .settings-page[data-section='memory'] .settings-memory-transparency__card {
+  min-height: 34px;
+  padding: 4px 5px;
+  align-content: center;
+}
+
+.settings-drawer .settings-page[data-section='memory'] .settings-memory-transparency__card strong {
+  font-size: 11px;
+  line-height: 1.12;
+}
+
+.settings-drawer .settings-page[data-section='memory'] .settings-memory-transparency__card span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-height: 1.24;
+}
+
+.settings-drawer .settings-page[data-section='memory'] .settings-memory-context-transparency {
+  gap: 4px;
+  padding: 4px 5px;
+}
+
+.settings-drawer .settings-page[data-section='memory'] .settings-memory-context-transparency__row {
+  gap: 1px;
+}
+
+.settings-drawer .settings-page[data-section='memory'] .settings-memory-context-transparency__row p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.3;
+}
+
+/* Nexus Trace pass for the warm companion settings surface. */
+.settings-drawer--warm-day {
+  --settings-trace-cool: rgba(80, 125, 198, 0.56);
+  --settings-trace-warm: rgba(206, 122, 76, 0.54);
+  --settings-trace-memory: rgba(82, 136, 118, 0.56);
+  --settings-trace-permission: rgba(136, 104, 176, 0.48);
+  --settings-trace-muted: rgba(72, 53, 40, 0.12);
+}
+
+.settings-drawer--warm-day .settings-drawer__actions {
+  background: rgba(255, 253, 249, 0.68);
+  box-shadow: none;
+}
+
+.settings-drawer--warm-day .settings-drawer__actions .primary-button,
+html[data-theme='warm-day'] .settings-drawer--warm-day .settings-drawer__actions .primary-button,
+html[data-theme='system-day'] .settings-drawer--warm-day .settings-drawer__actions .primary-button {
+  border-color: rgba(178, 91, 61, 0.24);
+  background: rgba(186, 92, 60, 0.92);
+  box-shadow: none;
+}
+
+.settings-drawer--warm-day .settings-section-nav__button,
+.settings-drawer--warm-day .settings-home-card,
+.settings-drawer--warm-day .settings-home-card:hover,
+.settings-drawer--warm-day .settings-home-card:nth-child(even),
+.settings-drawer--warm-day .settings-home-card:nth-child(even):hover {
+  border-color: var(--settings-trace-muted);
+  border-left: 2px solid transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-drawer--warm-day .settings-section-nav__button:hover,
+.settings-drawer--warm-day .settings-home-card:hover,
+.settings-drawer--warm-day .settings-home-card:nth-child(even):hover {
+  border-color: rgba(72, 53, 40, 0.16);
+  border-left-color: var(--settings-trust-trace, var(--settings-trace-warm));
+  background: rgba(255, 253, 249, 0.46);
+  box-shadow: none;
+}
+
+.settings-drawer--warm-day .settings-section-nav__button.is-active {
+  border-color: rgba(72, 53, 40, 0.18);
+  border-left-color: var(--settings-trace-cool);
+  background: rgba(255, 253, 249, 0.58);
+  box-shadow: none;
+}
+
+.settings-drawer--warm-day .settings-section-nav__marker {
+  width: 2px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(72, 53, 40, 0.18);
+}
+
+.settings-drawer--warm-day .settings-section-nav__button.is-active .settings-section-nav__marker {
+  background: var(--settings-trace-cool);
+  transform: none;
+}
+
+.settings-drawer--warm-day .settings-home-card,
+.settings-drawer--warm-day .settings-home-card[data-trust-group] {
+  border-left-color: color-mix(in srgb, var(--settings-trust-trace, var(--settings-trace-cool)) 64%, transparent);
+}
+
+.settings-drawer--warm-day .settings-home-card[data-trust-group='trustSafety'] {
+  --settings-trust-trace: var(--settings-trace-warm);
+}
+
+.settings-drawer--warm-day .settings-home-card[data-trust-group='memoryContext'] {
+  --settings-trust-trace: var(--settings-trace-memory);
+}
+
+.settings-drawer--warm-day .settings-home-card[data-trust-group='desktopAwareness'] {
+  --settings-trust-trace: var(--settings-trace-cool);
+}
+
+.settings-drawer--warm-day .settings-home-card[data-trust-group='permissionsIntegrations'] {
+  --settings-trust-trace: var(--settings-trace-permission);
+}
+
+.settings-drawer--warm-day .settings-home-card[data-trust-group='appearanceInteraction'] {
+  --settings-trust-trace: rgba(196, 139, 68, 0.52);
+}
+
+.settings-drawer--warm-day .settings-home-card__glyph {
+  color: var(--settings-trust-trace, var(--settings-trace-cool));
+  opacity: 0.68;
+}
+
+.settings-drawer--warm-day .settings-drawer__content,
+.settings-drawer--warm-day .settings-section {
+  border-color: rgba(72, 53, 40, 0.12);
+  background: rgba(255, 253, 249, 0.38);
+  box-shadow: none;
+}
+
+.settings-drawer--warm-day .settings-section {
+  border-left: 2px solid rgba(80, 125, 198, 0.24);
+}
+
+.settings-drawer--warm-day .settings-section:hover {
+  border-color: rgba(72, 53, 40, 0.16);
+  border-left-color: var(--settings-trace-warm);
+  background: rgba(255, 253, 249, 0.52);
+  box-shadow: none;
 }

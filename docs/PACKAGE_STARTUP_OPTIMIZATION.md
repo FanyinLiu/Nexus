@@ -8,11 +8,15 @@
 
 | 指标 | 当前值 | 预算 | 说明 |
 |---|---:|---:|---|
-| 构建资产总量 | 27.29 MB | 35.00 MB | 只统计 `dist/assets`，不含 Electron、原生依赖和 extraResources。 |
-| JavaScript | 3.83 MB | 5.00 MB | 最大 JS chunk 是 `transformers-vendor`，当前仍在预算内。 |
-| CSS | 548.0 KB | 800.0 KB | Settings UI 是主要 CSS 来源。 |
+| 构建资产总量 | 27.64 MB | 35.00 MB | 只统计 `dist/assets`，不含 Electron、原生依赖和 extraResources。 |
+| JavaScript | 3.88 MB | 5.00 MB | 最大 JS chunk 是 `transformers-vendor`，当前仍在预算内。 |
+| CSS | 852.4 KB | 900.0 KB | 主入口 CSS 保持首屏轻量，Settings UI 通过延迟 CSS chunk 加载。 |
 | WASM | 21.60 MB | 25.00 MB | 最大资产是 `ort-wasm-simd-threaded.jsep.wasm`。 |
 | 最大 JS chunk | 868.7 KB | 1.20 MB | `transformers-vendor` 由记忆向量路径按需加载。 |
+| 最大 CSS chunk | 554.0 KB | 650.0 KB | 最大块是延迟加载的 Settings CSS，不进入首屏 CSS。 |
+| 首屏 CSS chunk | 298.4 KB | 450.0 KB | 主入口 CSS 的单块预算用于防止首屏样式无声膨胀。 |
+| Settings drawer lazy CSS | 554.0 KB | 600.0 KB | 设置抽屉样式作为 CSS 资源延迟加载，避免 raw CSS 打进 JS 后同步注入。 |
+| Settings drawer lazy JS entry | 0.1 KB | 100.0 KB | 设置入口 JS 只负责动态边界；若再次塞入 raw CSS 或重逻辑会触发预算。 |
 
 本地目录快照：
 
@@ -26,7 +30,7 @@
 
 - `npm run performance:baseline`
 - `npm run heavy:audit`
-- `npm run source-size:audit`
+- `npm run source-size:audit`（同时约束 TS/JS/CSS 源文件，现有大设置样式表只通过明确临时预算放行）
 - `npm run distribution:audit`
 - `npm run package:dir:smoke`（真正改打包策略时必须跑）
 
@@ -56,9 +60,10 @@
 
 1. **守住当前懒加载边界。** 继续让 `heavy:audit` 阻止 renderer 静态导入 `@huggingface/transformers`、`@ricky0123/vad-web`、`onnxruntime-web`、`pixi-live2d-display`、`pixi.js`、`tesseract.js`。
 2. **保持可选模型不进安装包。** `prepackage:win`、`prepackage:mac`、`prepackage:linux` 必须继续使用 `download-models.mjs --skip-asr`，避免可选 Paraformer / MeloTTS 被默认打包。
-3. **评估必需语音模型运行时下载。** 如果要进一步瘦安装包，优先把 required Sherpa 模型从 `extraResources` 迁到首次运行下载，同时保留下载进度、失败降级、离线说明和 `package:dir:smoke` 覆盖。
-4. **拆分供应商资源。** 若 WASM 或 vendor 继续增长，优先拆分 ORT/Live2D/OCR 的入口，而不是提高预算。
-5. **记录真实安装包体积。** 任何策略变更后，除了 `performance:baseline`，还要记录平台安装包大小和 `package:dir:smoke` 结果；`dist/assets` 不足以代表最终 installer。
+3. **继续拆设置样式。** `settingsDrawerEntry` 已避免污染首屏 CSS；设置 CSS 有 600 KB 预算，入口 JS 有 100 KB 预算，并且这两个懒加载资源必须继续存在。继续优化时优先拆掉过期设置规则，而不是提高预算或把设置样式合回首屏。
+4. **评估必需语音模型运行时下载。** 如果要进一步瘦安装包，优先把 required Sherpa 模型从 `extraResources` 迁到首次运行下载，同时保留下载进度、失败降级、离线说明和 `package:dir:smoke` 覆盖。
+5. **拆分供应商资源。** 若 WASM 或 vendor 继续增长，优先拆分 ORT/Live2D/OCR 的入口，而不是提高预算。
+6. **记录真实安装包体积。** 任何策略变更后，除了 `performance:baseline`，还要记录平台安装包大小和 `package:dir:smoke` 结果；`dist/assets` 不足以代表最终 installer。
 
 ## 下一步验收
 

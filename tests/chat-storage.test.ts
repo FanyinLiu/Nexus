@@ -194,6 +194,35 @@ test('loadChatSessions migrates legacy flat chat using message timestamps', asyn
   assert.deepEqual(JSON.parse(storage.getItem(CHAT_SESSIONS_STORAGE_KEY) ?? '[]'), sessions)
 })
 
+test('loadChatSessions redacts legacy migration failure logs', () => {
+  const storage = installStorage()
+  const originalGetItem = storage.getItem
+  const originalError = console.error
+  const errorCalls: unknown[][] = []
+
+  storage.getItem = (key: string) => {
+    if (key === CHAT_STORAGE_KEY) {
+      throw new Error('legacy chat failed for settings:apiKey token=xai-abcdefghijklmnop at /Users/klein/chat.json')
+    }
+    return originalGetItem(key)
+  }
+  console.error = (...args: unknown[]) => { errorCalls.push(args) }
+
+  try {
+    assert.deepEqual(loadChatSessions(), [])
+  } finally {
+    console.error = originalError
+  }
+
+  const serialized = JSON.stringify(errorCalls)
+  assert.equal(errorCalls.length, 1)
+  assert.match(serialized, /token=\*\*\*/)
+  assert.match(serialized, /~\/chat\.json/)
+  assert.doesNotMatch(serialized, /settings:apiKey/)
+  assert.doesNotMatch(serialized, /xai-abcdefghijklmnop/)
+  assert.doesNotMatch(serialized, /\/Users\/klein/)
+})
+
 test('chat local-data runtime mirror helper normalizes content and stores explicit consent', () => {
   const storage = installStorage()
   setChatLocalDataRuntimeMirrorConsent(true)

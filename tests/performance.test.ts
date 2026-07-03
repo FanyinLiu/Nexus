@@ -179,6 +179,22 @@ test('StageDirectionStreamFilter holds a partial aside back until it closes', ()
   assert.equal(filter.flush(), '')
 })
 
+test('StageDirectionStreamFilter handles corner brackets and keeps structured notes', () => {
+  const stripped = new StageDirectionStreamFilter()
+  assert.equal(stripped.push('【眼睛亮了】你好') + stripped.flush(), '你好')
+
+  const structured = new StageDirectionStreamFilter()
+  assert.equal(structured.push('【注：稍后提醒】继续') + structured.flush(), '【注：稍后提醒】继续')
+})
+
+test('StageDirectionStreamFilter strips known ASCII gestures but keeps ordinary notes', () => {
+  const gesture = new StageDirectionStreamFilter()
+  assert.equal(gesture.push('(nod)Okay') + gesture.flush(), 'Okay')
+
+  const note = new StageDirectionStreamFilter()
+  assert.equal(note.push('Keep this (TODO) visible.') + note.flush(), 'Keep this (TODO) visible.')
+})
+
 test('extractExpressionOverrides strips [expr:name] tags and emits matching cues', () => {
   const result = extractExpressionOverrides('我来了[expr:happy]！发现了点东西[expr:surprised]。')
 

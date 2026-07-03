@@ -15,6 +15,7 @@ import {
 } from './memory.ts'
 import { cosineSimilarity, embedMemorySearchText } from './vectorSearch.ts'
 import { getDecayedScore } from './decay.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import {
   computeEmotionResonance,
   detectRegulatoryMode,
@@ -191,7 +192,7 @@ function indexMemoriesToVectorStore<T extends { id: string; content: string }>(
 ) {
   const job = _indexQueue.then(() => doIndexMemoriesToVectorStore(items, embeddingModel, layer))
   _indexQueue = job.catch((err) => {
-    console.warn('[memory] Vector index queue job failed:', err)
+    console.warn('[memory] Vector index queue job failed:', getRedactedLogErrorMessage(err))
   })
   // Return the caught chain so callers using `void` never trigger unhandled rejections.
   return _indexQueue
@@ -214,7 +215,7 @@ async function doIndexMemoriesToVectorStore<T extends { id: string; content: str
 
   if (batch.length) {
     await window.desktopPet.memoryVectorIndexBatch(batch).catch((error) => {
-      console.warn('[Memory] Vector index batch failed:', error)
+      console.warn('[Memory] Vector index batch failed:', getRedactedLogErrorMessage(error))
     })
   }
 }
@@ -263,7 +264,7 @@ async function buildScoreMap<T extends { id: string; content: string }>(
 
       return scoreMap
     } catch (error) {
-      console.warn('[Memory] Hybrid search failed, falling back to vector-only:', error)
+      console.warn('[Memory] Hybrid search failed, falling back to vector-only:', getRedactedLogErrorMessage(error))
     }
   }
 
@@ -297,7 +298,7 @@ async function buildScoreMap<T extends { id: string; content: string }>(
 
       return scoreMap
     } catch (error) {
-      console.warn('[Memory] Vector search failed, falling back to per-item embeddings:', error)
+      console.warn('[Memory] Vector search failed, falling back to per-item embeddings:', getRedactedLogErrorMessage(error))
     }
   }
 
@@ -437,7 +438,7 @@ export async function buildMemoryRecallContext({
       recalledLongTermIds: selectedLongTerm.map((m) => m.id),
     }
   } catch (error) {
-    console.warn('[Memory] Score map build failed, falling back to keyword-only:', error)
+    console.warn('[Memory] Score map build failed, falling back to keyword-only:', getRedactedLogErrorMessage(error))
     const fallbackLongTerm = keywordLongTerm.slice(0, longTermLimit)
     updatePrimingFromSelection(fallbackLongTerm)
     return {

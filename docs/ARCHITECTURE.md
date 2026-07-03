@@ -111,15 +111,17 @@ Current baseline:
   keeps `lib`, `core`, `types`, hooks, components, and feature modules from
   importing back upward into app/view orchestration.
 - `npm run source-size:audit` is the source-size guard. It fails when a normal
-  source file grows past the large-file budget, while keeping explicit temporary
-  allowances for generated i18n catalogs and the current main-process local data
-  service. IPC payload schemas are split by domain behind
+  TypeScript, JavaScript, or CSS source file grows past the large-file budget,
+  while keeping explicit temporary allowances for generated i18n catalogs, the
+  current main-process local data service, and the existing large settings/panel
+  style sheets. IPC payload schemas are split by domain behind
   `electron/ipc/payloadSchemas.js`, so existing handler imports stay stable
   while schema definitions no longer collect in one large file.
 - `npm run performance:baseline` reads the production `dist/assets` output and
   static heavy-module audit result after `npm run build`. It records bundle
-  size budgets for total assets, JavaScript, CSS, WASM, largest JS chunk, and
-  eager heavy-module regressions without reading runtime user data.
+  size budgets for total assets, JavaScript, CSS, WASM, largest JS chunk,
+  largest CSS chunk, the lazy settings drawer CSS chunk, the lazy settings drawer entry chunk,
+  and eager heavy-module regressions without reading runtime user data.
 - `npm run companion-boundary:audit` keeps the repo aligned to companionship
   instead of work-agent expansion by requiring the companion task boundary to be
   documented in code-facing and release-facing docs.
@@ -154,6 +156,17 @@ Current baseline:
   material.
 - `npm run verify:pr` is the day-to-day merge gate. `npm run verify:release`
   reuses it and then adds the SQLite smoke check for release confidence.
+- The Image4 companion panel has a source-only UI contract system. Its hard
+  gate, `npm run image4:contract:check`, runs inside `verify:pr` and protects
+  structural layout rules only: the five-row visual rhythm grid, explicit row
+  placement, short-height collapse behavior, and the separation of Image4 signal
+  rendering from `PanelView`. The stricter `npm run image4:visual-contract:audit`
+  and non-blocking `npm run image4:contract:report` remain local design tools for
+  tuning soft visual drift without freezing the evolving visual language.
+  Cross-surface UI consistency for chat and settings is documented as a human
+  review layer in `docs/DESIGN_REVIEW_CHECKLIST.md`, with open-source reference
+  mapping in `docs/OPEN_SOURCE_UI_REFERENCE_AUDIT.md`, not as another hard grid
+  contract.
 - The `file:save-text` and `file:open-text` IPC handlers now use explicit
   request schemas, native file dialogs as the user confirmation point, and
   metadata-only audit records that avoid file content and full local paths.

@@ -1,7 +1,4 @@
-﻿import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
-import '../app/styles/settings.css'
-import '../app/styles/settings-home.css'
-import '../app/styles/settings-themes.css'
+﻿import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap.ts'
 import {
   getMemorySearchModeOptions,
@@ -25,6 +22,7 @@ import {
   isLocaleDefaultUserName,
   pickTranslatedUiText,
 } from '../lib/uiLanguage.ts'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import { ensureLocaleLoaded, isLocaleLoaded } from '../i18n/index.ts'
 import type {
   CodexPetGalleryCatalogResult,
@@ -33,6 +31,7 @@ import type {
 } from '../features/pet/index.ts'
 import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
 import { useTheme } from '../features/themes/index.ts'
+import { syncWakeWordWithCompanionNameChange } from '../features/hearing/companionWakeWordSync.ts'
 import { SettingsDrawerActiveSection } from './SettingsDrawerActiveSection.tsx'
 import type { ChatMemoryTraceFocusTarget } from '../features/memory/traceDetails.ts'
 import {
@@ -46,11 +45,17 @@ import {
 import { ConfirmDialog } from './ConfirmDialog.tsx'
 import { useConfirm } from './useConfirm.ts'
 import { PetControlIcon } from './PetControlIcon.tsx'
-import { ReleaseSpotlightActions } from './settingsSections/ReleaseSpotlightActions.tsx'
 import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
-import { buildSettingsSectionMeta } from './settingsDrawerMetadata.ts'
+import {
+  buildSettingsSectionMeta,
+  getSettingsTrustSurfaceGroupId,
+} from './settingsDrawerMetadata.ts'
+import {
+  compareSettingsHomeSections,
+  SETTINGS_HOME_GROUPS,
+  type SettingsHomeActionEntry,
+} from './settingsHomeArchitecture.ts'
 import { applyConnectionTestRepairDraft } from '../features/models/connectionRepair.ts'
-import { CURRENT_RELEASE_SPOTLIGHT } from '../features/releaseNotes/index.ts'
 import type {
   AppSettings,
   DailyMemoryEntry,
@@ -274,13 +279,16 @@ export function SettingsDrawer({
   )
   const languageMenuId = 'settings-language-menu'
   const settingsDialogRef = useRef<HTMLElement | null>(null)
+  const settingsOpenerRef = useRef<HTMLElement | null>(null)
   const languageButtonRef = useRef<HTMLButtonElement | null>(null)
   const languageMenuRef = useRef<HTMLDivElement | null>(null)
   const languageOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
   const appearanceOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const settingsHomeCardRefs = useRef<Partial<Record<SettingsSectionId, HTMLButtonElement | null>>>({})
   const initialThemeIdRef = useRef(settings.themeId)
   const drawerBodyRef = useRef<HTMLDivElement | null>(null)
   const settingsSectionsRef = useRef<HTMLDivElement | null>(null)
+  const activeSectionHeadingRef = useRef<HTMLHeadingElement | null>(null)
   useModalFocusTrap(settingsDialogRef, open)
 
   function focusLanguageOption(index: number) {
@@ -328,7 +336,7 @@ export function SettingsDrawer({
   }
 
   function applyDraftLanguage(nextLanguage: AppSettings['uiLanguage']) {
-    setDraft((prev) => ({
+    setDraft((prev) => syncWakeWordWithCompanionNameChange(prev, {
       ...prev,
       uiLanguage: nextLanguage,
       companionName: isLocaleDefaultCompanionName(prev.companionName)
@@ -351,7 +359,7 @@ export function SettingsDrawer({
     void ensureLocaleLoaded(nextLanguage)
       .then(() => applyDraftLanguage(nextLanguage))
       .catch((error) => {
-        console.error('[settings] Failed to load locale:', nextLanguage, error)
+        console.error('[settings] Failed to load locale:', nextLanguage, getRedactedLogErrorMessage(error))
         applyDraftLanguage(nextLanguage)
       })
   }
@@ -373,8 +381,25 @@ export function SettingsDrawer({
     }
   }, [languageMenuOpen])
 
+  function restoreSettingsOpenerFocus() {
+    const opener = settingsOpenerRef.current
+    if (!opener?.isConnected) return
+
+    window.requestAnimationFrame(() => {
+      opener.focus()
+    })
+  }
+
   useEffect(() => {
     if (!open) return
+
+    const activeElement = document.activeElement
+    if (
+      activeElement instanceof HTMLElement
+      && !settingsDialogRef.current?.contains(activeElement)
+    ) {
+      settingsOpenerRef.current = activeElement
+    }
 
     window.requestAnimationFrame(() => {
       settingsDialogRef.current?.focus()
@@ -472,8 +497,17 @@ export function SettingsDrawer({
       description: sectionMeta.description,
       glyph: sectionMeta.glyph,
       preview: sectionMeta.preview,
+      trustGroup: getSettingsTrustSurfaceGroupId(section.id),
     }
   })
+  const settingsHomeCardsBySectionId = new Map(settingsHomeCards.map((card) => [card.sectionId, card]))
+  const settingsHomeGroups = SETTINGS_HOME_GROUPS.map((group) => ({
+    ...group,
+    cards: group.sectionIds
+      .map((sectionId) => settingsHomeCardsBySectionId.get(sectionId))
+      .filter((card): card is (typeof settingsHomeCards)[number] => Boolean(card))
+      .sort((first, second) => compareSettingsHomeSections(group.sectionIds, first, second)),
+  })).filter((group) => group.cards.length || group.actions?.length)
   const activeSectionMeta = settingsSectionMetaById[activeSectionId]
   const activeSectionDescription = activeSectionMeta.description
   const settingsThemeTone = getSettingsThemeTone(draft.themeId)
@@ -528,7 +562,7 @@ export function SettingsDrawer({
         }
       })
       .catch((error) => {
-        console.error('[settings] Failed to load locale:', draft.uiLanguage, error)
+        console.error('[settings] Failed to load locale:', draft.uiLanguage, getRedactedLogErrorMessage(error))
       })
 
     return () => {
@@ -658,6 +692,7 @@ export function SettingsDrawer({
     themePreview.previewTheme(initialThemeIdRef.current)
     windowState.rollbackWindowState()
     onClose()
+    restoreSettingsOpenerFocus()
   }
 
   function handleOpenSettingsSection(sectionId: SettingsSectionId) {
@@ -672,14 +707,28 @@ export function SettingsDrawer({
   }
 
   function handleReturnToSettingsHome() {
+    const returnSectionId = activeSectionId
     setSettingsView('home')
+    window.requestAnimationFrame(() => {
+      settingsHomeCardRefs.current[returnSectionId]?.focus()
+    })
   }
 
+  function resetSettingsSectionScroll() {
+    drawerBodyRef.current?.scrollTo({ top: 0, behavior: 'auto' })
+    settingsSectionsRef.current?.scrollTo({ top: 0, behavior: 'auto' })
+  }
+
+  useLayoutEffect(() => {
+    if (!open) return
+    resetSettingsSectionScroll()
+  }, [activeSectionId, open, settingsView])
+
   useEffect(() => {
-    if (!open) return undefined
+    if (!open || settingsView !== 'section') return undefined
+
     const frame = window.requestAnimationFrame(() => {
-      drawerBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-      settingsSectionsRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+      activeSectionHeadingRef.current?.focus({ preventScroll: true })
     })
     return () => window.cancelAnimationFrame(frame)
   }, [activeSectionId, open, settingsView])
@@ -737,6 +786,117 @@ export function SettingsDrawer({
     )
   }
 
+  function renderSettingsHomeSectionCard(card: (typeof settingsHomeCards)[number]) {
+    const previewText = card.preview.filter(Boolean).join(' / ')
+    const cardLabel = previewText ? `${card.title}: ${previewText}` : card.title
+
+    return (
+      <button
+        ref={(node) => {
+          settingsHomeCardRefs.current[card.sectionId] = node
+        }}
+        key={card.key}
+        type="button"
+        className="settings-home-card"
+        data-section={card.key}
+        data-trust-group={card.trustGroup}
+        data-focus-return-section={card.sectionId}
+        aria-label={cardLabel}
+        title={cardLabel}
+        onClick={() => handleOpenSettingsSection(card.sectionId)}
+      >
+        <span className="settings-home-card__glyph" aria-hidden="true">
+          {renderSettingsCardIcon(card.glyph)}
+        </span>
+        <span className="settings-home-card__label">{card.title}</span>
+        <span className="settings-home-card__value">{card.preview[0] ?? ''}</span>
+      </button>
+    )
+  }
+
+  function renderSettingsAppearanceSwitch() {
+    return (
+      <div className="settings-appearance-switch" role="radiogroup" aria-label={ti('settings.appearance.label')}>
+        <span className="settings-appearance-switch__label">{ti('settings.appearance.label')}</span>
+        <div className="settings-appearance-switch__control">
+          {SETTINGS_APPEARANCE_OPTIONS.map((option, optionIndex) => {
+            const isActive = option.tone === settingsThemeTone
+            const optionLabel = ti(option.labelKey)
+            const optionTitle = `${ti('settings.appearance.label')}: ${optionLabel}`
+            const optionStyle = {
+              '--settings-theme-swatch-surface': option.swatch.surface,
+              '--settings-theme-swatch-accent': option.swatch.accent,
+            } as CSSProperties
+
+            return (
+              <button
+                ref={(node) => {
+                  appearanceOptionRefs.current[optionIndex] = node
+                }}
+                key={option.id}
+                type="button"
+                className={`settings-appearance-switch__option ${isActive ? 'is-active' : ''}`}
+                role="radio"
+                aria-checked={isActive}
+                aria-label={optionTitle}
+                tabIndex={optionIndex === selectedAppearanceIndex ? 0 : -1}
+                title={optionTitle}
+                style={optionStyle}
+                onClick={() => selectAppearanceOption(optionIndex)}
+                onKeyDown={(event) => handleAppearanceOptionKeyDown(event, optionIndex)}
+              >
+                <span className="settings-appearance-switch__swatch" aria-hidden="true" />
+                <span className="settings-appearance-switch__option-label">{optionLabel}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  function renderSettingsHomeAction(action: SettingsHomeActionEntry) {
+    return (
+      <button
+        key={action.actionId}
+        type="button"
+        className="settings-home-card settings-home-card--action"
+        data-section={action.actionId}
+        data-trust-group={action.trustGroup}
+        aria-label={ti(action.ariaLabelKey)}
+        title={ti(action.ariaLabelKey)}
+        onClick={handleOpenOnboardingGuide}
+      >
+        <span className="settings-home-card__glyph" aria-hidden="true">
+          {renderSettingsCardIcon(action.glyph)}
+        </span>
+        <span className="settings-home-card__label">{ti(action.titleKey)}</span>
+        <span className="settings-home-card__value">{ti(action.valueKey)}</span>
+      </button>
+    )
+  }
+
+  function renderSettingsHomePresence() {
+    return (
+      <section
+        className="settings-home-presence"
+        aria-labelledby="settings-home-presence-title"
+      >
+        <div className="settings-home-presence__copy">
+          <span className="settings-home-presence__badge">
+            {ti('settings.home.presence.badge')}
+          </span>
+          <strong id="settings-home-presence-title">
+            {ti('settings.home.presence.title')}
+          </strong>
+          <span className="settings-home-presence__body">
+            {ti('settings.home.presence.body')}
+          </span>
+        </div>
+      </section>
+    )
+  }
+
   if (!open) return null
 
   return (
@@ -754,8 +914,7 @@ export function SettingsDrawer({
           <div className="settings-drawer__header-main">
             <div className="settings-drawer__title-stack">
               <h3 className="settings-drawer__window-title">
-                <span className="settings-drawer__window-title-name">{draft.companionName}</span>
-                <span className="settings-drawer__window-title-label">{ti('settings.title')}</span>
+                <span className="settings-drawer__window-title-name">{ti('settings.title')}</span>
               </h3>
             </div>
 
@@ -846,102 +1005,24 @@ export function SettingsDrawer({
         <div className="settings-drawer__body" ref={drawerBodyRef}>
           {settingsView === 'home' ? (
             <div className="settings-home">
-              <section
-                className="settings-home-release"
-                aria-labelledby="settings-home-release-title"
-              >
-                <div className="settings-home-release__copy">
-                  <span className="settings-home-release__eyebrow">
-                    {ti(CURRENT_RELEASE_SPOTLIGHT.eyebrowKey, {
-                      version: CURRENT_RELEASE_SPOTLIGHT.version,
-                    })}
-                  </span>
-                  <strong id="settings-home-release-title">
-                    {ti(CURRENT_RELEASE_SPOTLIGHT.titleKey)}
-                  </strong>
-                  <p>{ti(CURRENT_RELEASE_SPOTLIGHT.summaryKey)}</p>
-                </div>
-                <ReleaseSpotlightActions
-                  actions={CURRENT_RELEASE_SPOTLIGHT.actions}
-                  className="settings-home-release__actions"
-                  iconClassName="settings-home-release__action-icon"
-                  translate={ti}
-                  onOpenSettingsSection={handleOpenSettingsSection}
-                />
-              </section>
-
-              <div className="settings-appearance-switch" role="radiogroup" aria-label={ti('settings.appearance.label')}>
-                <span className="settings-appearance-switch__label">{ti('settings.appearance.label')}</span>
-                <div className="settings-appearance-switch__control">
-                  {SETTINGS_APPEARANCE_OPTIONS.map((option, optionIndex) => {
-                    const isActive = option.tone === settingsThemeTone
-                    const optionLabel = ti(option.labelKey)
-                    const optionTitle = `${ti('settings.appearance.label')}: ${optionLabel}`
-                    const optionStyle = {
-                      '--settings-theme-swatch-surface': option.swatch.surface,
-                      '--settings-theme-swatch-accent': option.swatch.accent,
-                    } as CSSProperties
-
-                    return (
-                      <button
-                        ref={(node) => {
-                          appearanceOptionRefs.current[optionIndex] = node
-                        }}
-                        key={option.id}
-                        type="button"
-                        className={`settings-appearance-switch__option ${isActive ? 'is-active' : ''}`}
-                        role="radio"
-                        aria-checked={isActive}
-                        aria-label={optionTitle}
-                        tabIndex={optionIndex === selectedAppearanceIndex ? 0 : -1}
-                        title={optionTitle}
-                        style={optionStyle}
-                        onClick={() => selectAppearanceOption(optionIndex)}
-                        onKeyDown={(event) => handleAppearanceOptionKeyDown(event, optionIndex)}
-                      >
-                        <span className="settings-appearance-switch__swatch" aria-hidden="true" />
-                        <span className="settings-appearance-switch__option-label">{optionLabel}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-              <button
-                type="button"
-                className="settings-home-card settings-home-card--action"
-                data-section="onboarding"
-                aria-label={ti('settings.home.onboarding.aria_label')}
-                title={ti('settings.home.onboarding.aria_label')}
-                onClick={handleOpenOnboardingGuide}
-              >
-                <span className="settings-home-card__glyph" aria-hidden="true">
-                  {renderSettingsCardIcon('onboarding')}
-                </span>
-                <span className="settings-home-card__label">{ti('settings.home.onboarding.title')}</span>
-                <span className="settings-home-card__value">{ti('settings.home.onboarding.value')}</span>
-              </button>
-              {settingsHomeCards.map((card) => {
-                const previewText = card.preview.filter(Boolean).join(' / ')
-                const cardLabel = previewText ? `${card.title}: ${previewText}` : card.title
-
-                return (
-                  <button
-                    key={card.key}
-                    type="button"
-                    className="settings-home-card"
-                    data-section={card.key}
-                    aria-label={cardLabel}
-                    title={cardLabel}
-                    onClick={() => handleOpenSettingsSection(card.sectionId)}
-                  >
-                    <span className="settings-home-card__glyph" aria-hidden="true">
-                      {renderSettingsCardIcon(card.glyph)}
-                    </span>
-                    <span className="settings-home-card__label">{card.title}</span>
-                    <span className="settings-home-card__value">{card.preview[0] ?? ''}</span>
-                  </button>
-                )
-              })}
+              {renderSettingsHomePresence()}
+              {settingsHomeGroups.map((group) => (
+                <section
+                  key={group.id}
+                  className="settings-home-group"
+                  data-settings-home-group={group.id}
+                >
+                  <div className="settings-home-group__head">
+                    <span className="settings-home-group__title">{ti(group.titleKey)}</span>
+                    <span className="settings-home-group__hint">{ti(group.hintKey)}</span>
+                  </div>
+                  <div className="settings-home-group__list">
+                    {group.id === 'appearanceExperience' ? renderSettingsAppearanceSwitch() : null}
+                    {group.cards.map((card) => renderSettingsHomeSectionCard(card))}
+                    {group.actions?.map((action) => renderSettingsHomeAction(action))}
+                  </div>
+                </section>
+              ))}
             </div>
           ) : (
             <div className="settings-page" data-section={activeSectionId}>
@@ -961,7 +1042,7 @@ export function SettingsDrawer({
                   {activeSectionMeta.eyebrow ? (
                     <p className="eyebrow">{activeSectionMeta.eyebrow}</p>
                   ) : null}
-                  <h4>{activeSectionLabel}</h4>
+                  <h4 ref={activeSectionHeadingRef} tabIndex={-1}>{activeSectionLabel}</h4>
                   {activeSectionDescription ? (
                     <p className="settings-section__note">{activeSectionDescription}</p>
                   ) : null}

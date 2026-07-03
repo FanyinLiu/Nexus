@@ -1,4 +1,5 @@
 import type { ChatMessage } from '../../types'
+import { getRedactedLogErrorMessage } from '../logRedaction.ts'
 import {
   CHAT_SESSIONS_STORAGE_KEY,
   CHAT_STORAGE_KEY,
@@ -127,7 +128,7 @@ function migrateLegacyFlatChat(): ChatSession | null {
       messages: legacy,
     }
   } catch (err) {
-    console.error('[chatSessions] legacy migration failed:', err)
+    console.error('[chatSessions] legacy migration failed:', getRedactedLogErrorMessage(err))
     return null
   }
 }

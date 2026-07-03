@@ -9,10 +9,11 @@ README stable entry point.
 
 ## Release State Lock
 
-- Package version remains `0.4.0`.
-- `v0.4.0` remains the current stable release entry point.
-- `v0.4.1`, `v0.4.2`, `v0.4.3`, `v0.4.4`, and `v0.4.5` remain stacked draft
-  review layers.
+- Package version remains at the active stable `0.4.1` until a future release
+  is explicitly promoted.
+- `v0.4.1` remains the current stable release entry point.
+- `v0.4.2`, `v0.4.3`, `v0.4.4`, and `v0.4.5` remain stacked draft review
+  layers.
 - No package version bump.
 - No tag.
 - No GitHub Release.
@@ -53,12 +54,12 @@ runtime copy, alter Settings layout, or introduce pet movement.
 
 The v0.4 draft stack is not ready for release review if any of these fail:
 
-- `package.json` version is still `0.4.0`.
-- Root and localized README files still link `RELEASE-NOTES-v0.4.0.md` as the
+- `package.json` version is still the active stable `0.4.1`.
+- Root and localized README files still link `RELEASE-NOTES-v0.4.1.md` as the
   stable entry point.
-- Draft release notes for `v0.4.1` through `v0.4.5` are marked Draft and include
+- Draft release notes for `v0.4.2` through `v0.4.5` are marked Draft and include
   the no package version bump, no tag, no GitHub Release, and no README stable
-  switch boundary.
+  switch boundary for future draft slices.
 - `docs/V0.4_DESKTOP_COMPANION_AWARENESS.md`, `docs/ROADMAP.md`,
   `CHANGELOG.md`, and this document agree that `v0.4.5` is a draft hardening
   layer.
@@ -106,8 +107,6 @@ v0.4.5 must preserve the v0.4 privacy boundary:
 
 ## Rollback Matrix
 
-- Drop v0.4.1: keep v0.4.0 stable copy; remove draft exact-time regression
-  checks from the stack before release review.
 - Drop v0.4.2: keep quiet observation silent; do not ship local check-in
   payloads.
 - Drop v0.4.3: keep existing Settings controls; do not expose a partial

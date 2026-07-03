@@ -2,15 +2,19 @@ import type { SVGProps } from 'react'
 
 export type PetControlIconName =
   | 'chat'
+  | 'clipboard'
+  | 'calendar-clock'
   | 'settings'
   | 'tuning'
   | 'menu'
   | 'back'
   | 'expand'
   | 'collapse'
+  | 'chevron-down'
   | 'close'
   | 'pin'
   | 'pointer'
+  | 'plus'
   | 'image'
   | 'mic'
   | 'send'
@@ -20,6 +24,7 @@ export type PetControlIconName =
   | 'pause'
   | 'speaker'
   | 'sparkles'
+  | 'leaf'
   | 'thought'
   | 'continuous'
   | 'single-shot'
@@ -38,10 +43,30 @@ export function PetControlIcon({ name, ...props }: PetControlIconProps) {
           <path fill="currentColor" d="M6.5 5A3.5 3.5 0 0 0 3 8.5v5A3.5 3.5 0 0 0 6.5 17H8v3.25a.75.75 0 0 0 1.2.6L13 17h4.5a3.5 3.5 0 0 0 3.5-3.5v-5A3.5 3.5 0 0 0 17.5 5h-11ZM8.5 11a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Zm3.5 0a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Zm3.5 0a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Z" />
         </svg>
       )
+    case 'clipboard':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M9 5.5h6" />
+          <path d="M9.5 3.5h5a2 2 0 0 1 2 2v1h-9v-1a2 2 0 0 1 2-2Z" />
+          <path d="M7.5 6.5H6a2 2 0 0 0-2 2v10A2.5 2.5 0 0 0 6.5 21h11A2.5 2.5 0 0 0 20 18.5v-10a2 2 0 0 0-2-2h-1.5" />
+          <path d="M8 12h8M8 16h5" />
+        </svg>
+      )
+    case 'calendar-clock':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M7 3v4M17 3v4" />
+          <path d="M4.5 9h15" />
+          <path d="M6.5 5h11A2.5 2.5 0 0 1 20 7.5v8A4.5 4.5 0 0 1 15.5 20h-9A2.5 2.5 0 0 1 4 17.5v-10A2.5 2.5 0 0 1 6.5 5Z" />
+          <circle cx="16" cy="16" r="3.2" />
+          <path d="M16 14.4V16l1.2 1" />
+        </svg>
+      )
     case 'settings':
       return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
-          <path fill="currentColor" d="M13.85 3.15a2.5 2.5 0 0 0-3.7 0l-.78.86a1 1 0 0 1-.9.32l-1.15-.18a2.5 2.5 0 0 0-2.61 1.51l-.43 1.08a1 1 0 0 1-.65.58l-1.12.32A2.5 2.5 0 0 0 1.3 10.3l.32 1.12a1 1 0 0 1-.14.95L.7 13.3a2.5 2.5 0 0 0 .6 3.02l.86.78a1 1 0 0 1 .32.9l-.18 1.15a2.5 2.5 0 0 0 1.51 2.61l1.08.43a1 1 0 0 1 .58.65l.32 1.12A2.5 2.5 0 0 0 8.45 25l1.12-.32a1 1 0 0 1 .95.14l.93.78a2.5 2.5 0 0 0 3.02-.6l.78-.86a1 1 0 0 1 .9-.32l1.15.18a2.5 2.5 0 0 0 2.61-1.51l.43-1.08a1 1 0 0 1 .65-.58l1.12-.32a2.5 2.5 0 0 0 1.34-2.66l-.32-1.12a1 1 0 0 1 .14-.95l.78-.93a2.5 2.5 0 0 0-.6-3.02l-.86-.78a1 1 0 0 1-.32-.9l.18-1.15a2.5 2.5 0 0 0-1.51-2.61l-1.08-.43a1 1 0 0 1-.58-.65l-.32-1.12A2.5 2.5 0 0 0 16.5 3l-1.12.32a1 1 0 0 1-.95-.14l-.58-.03ZM12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z" />
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.05.05a2 2 0 0 1-2.83 2.83l-.05-.05A1.65 1.65 0 0 0 15.08 19a1.65 1.65 0 0 0-1 .6l-.04.05a2 2 0 0 1-4.08 0l-.04-.05A1.65 1.65 0 0 0 8.92 19a1.65 1.65 0 0 0-1.82.65l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1-.99h-.07a2 2 0 0 1 0-4.02h.07a1.65 1.65 0 0 0 1-.99 1.65 1.65 0 0 0-.33-1.82l-.05-.05A2 2 0 1 1 7.05 4.3l.05.05A1.65 1.65 0 0 0 8.92 5a1.65 1.65 0 0 0 1-.6l.04-.05a2 2 0 0 1 4.08 0l.04.05a1.65 1.65 0 0 0 1 .6 1.65 1.65 0 0 0 1.82-.65l.05-.05a2 2 0 1 1 2.83 2.83l-.05.05A1.65 1.65 0 0 0 19.4 9c.15.45.51.81.99.99h.07a2 2 0 0 1 0 4.02h-.07a1.65 1.65 0 0 0-.99.99Z" />
         </svg>
       )
     case 'tuning':
@@ -71,8 +96,13 @@ export function PetControlIcon({ name, ...props }: PetControlIconProps) {
     case 'collapse':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
-          <path fill="currentColor" opacity=".36" d="M6.5 5h11A2.5 2.5 0 0 1 20 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-9A2.5 2.5 0 0 1 6.5 5Zm0 2A.5.5 0 0 0 6 7.5v9a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-11Z" />
-          <path fill="currentColor" d="M8 12a1 1 0 0 1 1-1h6a1 1 0 1 1 0 2H9a1 1 0 0 1-1-1Z" />
+          <path fill="currentColor" d="M6 12a1.2 1.2 0 0 1 1.2-1.2h9.6a1.2 1.2 0 1 1 0 2.4H7.2A1.2 1.2 0 0 1 6 12Z" />
+        </svg>
+      )
+    case 'chevron-down':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="m6 9 6 6 6-6" />
         </svg>
       )
     case 'close':
@@ -91,6 +121,12 @@ export function PetControlIcon({ name, ...props }: PetControlIconProps) {
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
           <path fill="currentColor" d="M5.7 3.1a1 1 0 0 1 1.05-.12l13 7a1 1 0 0 1-.04 1.79l-5 2.2 1.9 5.5a1 1 0 0 1-1.6 1.1L11 16.5l-2.4 4.9a1 1 0 0 1-1.85-.2l-2-14a1 1 0 0 1 .95-1.1Z" />
+        </svg>
+      )
+    case 'plus':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M12 5v14M5 12h14" />
         </svg>
       )
     case 'image':
@@ -141,6 +177,13 @@ export function PetControlIcon({ name, ...props }: PetControlIconProps) {
         <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
           <path fill="currentColor" d="M12 2c.4 0 .7.24.84.6l1.68 4.38 4.38 1.68a.9.9 0 0 1 0 1.68l-4.38 1.68-1.68 4.38a.9.9 0 0 1-1.68 0L9.48 12.02 5.1 10.34a.9.9 0 0 1 0-1.68l4.38-1.68L11.16 2.6A.9.9 0 0 1 12 2Z" />
           <path fill="currentColor" d="M18 14c.3 0 .56.2.68.48l.82 2.02 2.02.82a.72.72 0 0 1 0 1.36l-2.02.82-.82 2.02a.72.72 0 0 1-1.36 0l-.82-2.02-2.02-.82a.72.72 0 0 1 0-1.36l2.02-.82.82-2.02A.72.72 0 0 1 18 14Z" opacity=".6" />
+        </svg>
+      )
+    case 'leaf':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M20 4.5c-6.8.2-11.8 2.5-14 6.4-1.6 2.9-.8 5.6 1.1 7.2 2.2 1.8 5.6 1.3 7.9-1.4 2.6-3 3.2-7.5 5-12.2Z" />
+          <path d="M6.7 17.7c2.2-4 5.3-6.4 9.4-7.7" />
         </svg>
       )
     case 'thought':

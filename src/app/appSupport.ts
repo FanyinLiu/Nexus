@@ -81,6 +81,25 @@ export function getInitialPanelSection(): PanelSection {
     : 'chat'
 }
 
+export function getImage4PreviewModeSync(): boolean {
+  return new URLSearchParams(window.location.search).get('image4Preview') === '1'
+}
+
+export function getImage4RhythmGridModeSync(): boolean {
+  return new URLSearchParams(window.location.search).get('image4Grid') === '1'
+}
+
+export function getImage4SnapshotModeSync(): boolean {
+  return new URLSearchParams(window.location.search).get('image4Snapshot') === '1'
+}
+
+export function getImage4StatePreviewSync(): string | null {
+  const value = new URLSearchParams(window.location.search).get('image4State')
+  return value === 'idle' || value === 'attentive' || value === 'speaking' || value === 'resting'
+    ? value
+    : null
+}
+
 export function getTimeGreeting(ti: Translator): string {
   const hour = new Date().getHours()
 

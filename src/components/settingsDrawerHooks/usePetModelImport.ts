@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import type {
   CodexPetGalleryCatalogResult,
   PetModelDefinition,
@@ -26,7 +27,9 @@ export type UsePetModelImportOptions = {
     id: string
     displayName: string
     directoryPath: string
+    directoryPathDisplay?: string
     sourceRowsDirectory?: string
+    sourceRowsDirectoryDisplay?: string
     message: string
   }>
   onInspectCodexPetCreatorKit?: (payload?: { kitDirectory?: string }) => Promise<SpritePetCreatorKitInspection | null>
@@ -34,11 +37,17 @@ export type UsePetModelImportOptions = {
     model: PetModelDefinition
     message: string
     packageDirectory?: string
+    packageDirectoryDisplay?: string
     manifestPath?: string
+    manifestPathDisplay?: string
     spritesheetPath?: string
+    spritesheetPathDisplay?: string
     reportPath?: string
+    reportPathDisplay?: string
     visualAuditPath?: string
+    visualAuditPathDisplay?: string
     archivePath?: string
+    archivePathDisplay?: string
   } | null>
   onInstallCodexPetCreatorKitToCodex?: (payload: {
     kitDirectory: string
@@ -47,7 +56,9 @@ export type UsePetModelImportOptions = {
     ok: boolean
     id: string
     directoryPath: string
+    directoryPathDisplay?: string
     manifestPath: string
+    manifestPathDisplay?: string
     message: string
   }>
   onOpenCodexPetCreatorKitPath?: (payload: {
@@ -62,10 +73,15 @@ export type UsePetModelImportOptions = {
     model: PetModelDefinition
     message: string
     packageDirectory?: string
+    packageDirectoryDisplay?: string
     manifestPath?: string
+    manifestPathDisplay?: string
     spritesheetPath?: string
+    spritesheetPathDisplay?: string
     visualAuditPath?: string
+    visualAuditPathDisplay?: string
     archivePath?: string
+    archivePathDisplay?: string
   } | null>
   onSelectImportedPetModel?: (petModelId: string) => Promise<void> | void
   setDraft: Dispatch<SetStateAction<AppSettings>>
@@ -95,19 +111,33 @@ export function usePetModelImport({
   const [creatorKitInspection, setCreatorKitInspection] = useState<SpritePetCreatorKitInspection | null>(null)
   const [assemblingCreatorKit, setAssemblingCreatorKit] = useState(false)
   const [lastCreatorKitDirectory, setLastCreatorKitDirectory] = useState('')
+  const [lastCreatorKitDirectoryDisplay, setLastCreatorKitDirectoryDisplay] = useState('')
   const [lastCreatorKitSourceRowsDirectory, setLastCreatorKitSourceRowsDirectory] = useState('')
+  const [lastCreatorKitSourceRowsDirectoryDisplay, setLastCreatorKitSourceRowsDirectoryDisplay] = useState('')
   const [assembledCreatorKitPackage, setAssembledCreatorKitPackage] = useState<{
     packageDirectory: string
+    packageDirectoryDisplay?: string
     manifestPath: string
+    manifestPathDisplay?: string
     visualAuditPath?: string
+    visualAuditPathDisplay?: string
     archivePath?: string
+    archivePathDisplay?: string
   } | null>(null)
   const [generatedSpritePetPackage, setGeneratedSpritePetPackage] = useState<{
     packageDirectory: string
+    packageDirectoryDisplay?: string
     manifestPath: string
+    manifestPathDisplay?: string
     visualAuditPath?: string
+    visualAuditPathDisplay?: string
     archivePath?: string
+    archivePathDisplay?: string
   } | null>(null)
+
+  function getPetImportErrorMessage(error: unknown) {
+    return getRedactedLogErrorMessage(error) || t('settings.pet.import_error')
+  }
 
   async function handleImportPetModel() {
     setImportingPetModel(true)
@@ -132,7 +162,7 @@ export function usePetModelImport({
     } catch (error) {
       setPetModelStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.pet.import_error'),
+        message: getPetImportErrorMessage(error),
       })
     } finally {
       setImportingPetModel(false)
@@ -162,7 +192,7 @@ export function usePetModelImport({
     } catch (error) {
       setPetModelStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.pet.import_error'),
+        message: getPetImportErrorMessage(error),
       })
     } finally {
       setImportingPetModel(false)
@@ -191,7 +221,7 @@ export function usePetModelImport({
     } catch (error) {
       setCodexPetCatalogStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.pet.import_error'),
+        message: getPetImportErrorMessage(error),
       })
     } finally {
       setCodexPetCatalogLoading(false)
@@ -221,9 +251,13 @@ export function usePetModelImport({
       if (result.packageDirectory && result.manifestPath) {
         setGeneratedSpritePetPackage({
           packageDirectory: result.packageDirectory,
+          packageDirectoryDisplay: result.packageDirectoryDisplay,
           manifestPath: result.manifestPath,
+          manifestPathDisplay: result.manifestPathDisplay,
           visualAuditPath: result.visualAuditPath,
+          visualAuditPathDisplay: result.visualAuditPathDisplay,
           archivePath: result.archivePath,
+          archivePathDisplay: result.archivePathDisplay,
         })
       }
       setPetModelStatus({
@@ -233,7 +267,7 @@ export function usePetModelImport({
     } catch (error) {
       setPetModelStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.pet.import_error'),
+        message: getPetImportErrorMessage(error),
       })
     } finally {
       setImportingPetModel(false)
@@ -254,7 +288,9 @@ export function usePetModelImport({
     try {
       const result = await onCreateCodexPetCreatorKit(payload)
       setLastCreatorKitDirectory(result.directoryPath)
+      setLastCreatorKitDirectoryDisplay(result.directoryPathDisplay ?? result.directoryPath)
       setLastCreatorKitSourceRowsDirectory(result.sourceRowsDirectory ?? '')
+      setLastCreatorKitSourceRowsDirectoryDisplay(result.sourceRowsDirectoryDisplay ?? result.sourceRowsDirectory ?? '')
       setCreatorKitInspection(null)
       setAssembledCreatorKitPackage(null)
       setPetModelStatus({
@@ -264,7 +300,7 @@ export function usePetModelImport({
     } catch (error) {
       setPetModelStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.pet.import_error'),
+        message: getPetImportErrorMessage(error),
       })
     } finally {
       setCreatingCreatorKit(false)
@@ -289,7 +325,9 @@ export function usePetModelImport({
 
       setCreatorKitInspection(result)
       setLastCreatorKitDirectory(result.kitDirectory)
+      setLastCreatorKitDirectoryDisplay(result.kitDirectoryDisplay ?? result.kitDirectory)
       setLastCreatorKitSourceRowsDirectory(result.sourceRowsDirectory ?? '')
+      setLastCreatorKitSourceRowsDirectoryDisplay(result.sourceRowsDirectoryDisplay ?? result.sourceRowsDirectory ?? '')
       setPetModelStatus({
         ok: result.ready,
         message: result.message,
@@ -297,7 +335,7 @@ export function usePetModelImport({
     } catch (error) {
       setPetModelStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.pet.import_error'),
+        message: getPetImportErrorMessage(error),
       })
     } finally {
       setInspectingCreatorKit(false)
@@ -328,9 +366,13 @@ export function usePetModelImport({
       if (result.packageDirectory && result.manifestPath) {
         setAssembledCreatorKitPackage({
           packageDirectory: result.packageDirectory,
+          packageDirectoryDisplay: result.packageDirectoryDisplay,
           manifestPath: result.manifestPath,
+          manifestPathDisplay: result.manifestPathDisplay,
           visualAuditPath: result.visualAuditPath,
+          visualAuditPathDisplay: result.visualAuditPathDisplay,
           archivePath: result.archivePath,
+          archivePathDisplay: result.archivePathDisplay,
         })
       }
       setPetModelStatus({
@@ -340,7 +382,7 @@ export function usePetModelImport({
     } catch (error) {
       setPetModelStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.pet.import_error'),
+        message: getPetImportErrorMessage(error),
       })
     } finally {
       setAssemblingCreatorKit(false)
@@ -367,7 +409,7 @@ export function usePetModelImport({
     } catch (error) {
       setPetModelStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.pet.import_error'),
+        message: getPetImportErrorMessage(error),
       })
     }
   }
@@ -391,7 +433,7 @@ export function usePetModelImport({
     } catch (error) {
       setPetModelStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.pet.import_error'),
+        message: getPetImportErrorMessage(error),
       })
     }
   }
@@ -415,7 +457,7 @@ export function usePetModelImport({
     } catch (error) {
       setPetModelStatus({
         ok: false,
-        message: error instanceof Error ? error.message : t('settings.pet.import_error'),
+        message: getPetImportErrorMessage(error),
       })
     }
   }
@@ -431,7 +473,9 @@ export function usePetModelImport({
     setCreatorKitInspection(null)
     setAssemblingCreatorKit(false)
     setLastCreatorKitDirectory('')
+    setLastCreatorKitDirectoryDisplay('')
     setLastCreatorKitSourceRowsDirectory('')
+    setLastCreatorKitSourceRowsDirectoryDisplay('')
     setAssembledCreatorKitPackage(null)
     setGeneratedSpritePetPackage(null)
   }
@@ -447,7 +491,9 @@ export function usePetModelImport({
     creatorKitInspection,
     assemblingCreatorKit,
     lastCreatorKitDirectory,
+    lastCreatorKitDirectoryDisplay,
     lastCreatorKitSourceRowsDirectory,
+    lastCreatorKitSourceRowsDirectoryDisplay,
     assembledCreatorKitPackage,
     generatedSpritePetPackage,
     handleImportPetModel,

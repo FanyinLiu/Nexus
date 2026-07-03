@@ -14,6 +14,7 @@
 
 import { createHmac } from 'node:crypto'
 import { BrowserWindow } from 'electron'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 
 /** @type {'disconnected'|'connecting'|'ready'|'streaming'} */
 let _state = 'disconnected'
@@ -33,6 +34,10 @@ let _credentials = null
 const CONNECTION_TIMEOUT_MS = 8_000
 const FINISH_TIMEOUT_MS = 6_000
 const SUPPORTED_SAMPLE_RATE = 16000
+
+function formatTranscriptLogMeta(text) {
+  return `chars=${String(text ?? '').length}`
+}
 
 // ── Signing ──
 
@@ -104,7 +109,7 @@ function handleMessage(rawData) {
     const data = JSON.parse(typeof rawData === 'string' ? rawData : rawData.toString())
 
     if (data.code !== 0) {
-      console.error('[TencentASR] server error:', data.code, data.message)
+      console.error('[TencentASR] server error:', data.code, getRedactedErrorMessage(data.message))
       sendToRenderer('tencent-asr:result', {
         type: 'error',
         text: data.message || `腾讯云语音识别遇到了点问题（${data.code}）`,
@@ -141,7 +146,7 @@ function handleMessage(rawData) {
       // Final result for this speech segment
       _lastFinalText = text
       _lastPartialText = ''
-      console.log('[TencentASR] final:', text.slice(0, 80))
+      console.info('[TencentASR] final transcript received:', formatTranscriptLogMeta(text))
       sendToRenderer('tencent-asr:result', { type: 'final', text })
 
       if (_finishResolve) {
@@ -154,7 +159,7 @@ function handleMessage(rawData) {
       // Partial/interim result
       if (text !== _lastPartialText) {
         _lastPartialText = text
-        console.log('[TencentASR] partial:', text.slice(0, 80))
+        console.info('[TencentASR] partial transcript received:', formatTranscriptLogMeta(text))
         sendToRenderer('tencent-asr:result', { type: 'partial', text })
       }
     }

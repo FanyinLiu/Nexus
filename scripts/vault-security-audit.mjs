@@ -19,6 +19,7 @@ const CHECKED_FILES = [
   'electron/ipc/telegramIpc.js',
   'electron/ipc/discordIpc.js',
   'electron/tools/toolRegistry.js',
+  'src/app/store/settingsStore.ts',
   'src/lib/keyVaultBridge.ts',
   'src/vite-env.d.ts',
   'tests/vault-audit.test.ts',
@@ -73,6 +74,12 @@ const UNSAFE_PATTERNS = [
     file: 'electron/services/keyVault.js',
     pattern: /console\.warn\(`\[KeyVault\] Failed to decrypt slot[^`]+`,\s*error\)/,
     message: 'KeyVault decrypt failures must redact raw error objects before logging',
+  },
+  {
+    id: 'settings-store-raw-vault-error-log',
+    file: 'src/app/store/settingsStore.ts',
+    pattern: /console\.error\('\[settingsStore\][^']+',\s*(?:err|error)\)/,
+    message: 'settings store vault and policy logs must redact renderer-visible errors before console output',
   },
 ]
 
@@ -134,6 +141,15 @@ const REQUIRED_PHRASES = [
       'if (isVaultRefString(value)) return',
       'await window.desktopPet!.vaultRetrieveMany(allSlots)',
       'hydrateProfileKeys',
+    ],
+  },
+  {
+    id: 'settings-store-redacts-vault-support-logs',
+    file: 'src/app/store/settingsStore.ts',
+    phrases: [
+      "import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'",
+      "console.error('[settingsStore] Failed to sync external action policy:', getRedactedLogErrorMessage(err))",
+      "console.error('[settingsStore] Vault hydration failed, API keys may be unavailable:', getRedactedLogErrorMessage(err))",
     ],
   },
   {

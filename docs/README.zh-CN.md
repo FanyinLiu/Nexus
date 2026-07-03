@@ -24,24 +24,24 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **当前代码版本：** v0.4.0。Nexus 现在进入桌面陪伴感知地基：打开后即使用户去电脑别处工作，也能安静理解时间流逝，并把隐私边界放在设置里。正式下载页仍以 GitHub Releases 的最新 tag 为准。
+> **当前代码版本：** v0.4.1。Nexus 现在进入陪伴 UI、设置和可靠性加固阶段：桌面陪伴感知继续保持粗粒度和隐私优先，设置与对话界面更稳，上传前审计更完整。正式下载页仍以 GitHub Releases 的最新 tag 为准。
 
 > **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前短期开发以根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 为准：Phase 1 只收敛桌面常驻小窗口、极简头像、Ollama / DeepSeek 文本模型和简单对话。
 
 ---
 
-## 本次更新 — v0.4.0
+## 本次更新 — v0.4.1
 
-> **主题：桌面陪伴感知地基。** 中文说明见 [RELEASE-NOTES-v0.4.0.zh-CN.md](RELEASE-NOTES-v0.4.0.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.0.md](RELEASE-NOTES-v0.4.0.md)。
+> **主题：陪伴 UI、设置和可靠性加固。** 中文说明见 [RELEASE-NOTES-v0.4.1.zh-CN.md](RELEASE-NOTES-v0.4.1.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.1.md](RELEASE-NOTES-v0.4.1.md)。
 
-0.4.0 正式开始“打开 Nexus 后，它能安静理解时间流逝”的桌面陪伴感知。它会形成短期、粗粒度、可暂停和可清理的陪伴摘要；进入模型的是脱敏摘要，不是原始截图、完整剪贴板、私人消息或精确计时。
+0.4.1 把主对话面板、设置页和 Image4 伙伴场域整理到更清晰的源码结构里，同时新增 UI、隐私、安全和性能审计。设置抽屉继续懒加载，陪伴时间语言继续保持粗粒度，不把精确计时、原始截图、完整剪贴板或私人消息送进模型。
 
-一句话记住 0.4.0：
+一句话记住 0.4.1：
 
-- **打开 Nexus 后，即使你去电脑别处工作，陪伴感也不会立刻断掉。**
-- **时间说法是“一会儿 / 半小时左右 / 一小时左右”，不是精确到分秒。**
-- **Memory 设置里能看到说明，并能暂停或清理近期陪伴摘要。**
-- **这个稳定版先打好安静观察地基，不扩展主动 check-in。**
+- **主对话面板、设置页和 Image4 伙伴场域更接近统一视觉系统。**
+- **设置抽屉样式保持懒加载，打开设置不再把大段 CSS 塞进 JS 热路径。**
+- **时间说法仍然是“一会儿 / 半小时左右 / 一小时左右”，不是精确到分秒。**
+- **新增多组 source-only 审计，上传前已跑完整 `verify:pr`。**
 - **0.5 才做桌宠跟随鼠标、打字反应和窗口互动。**
 
 ## 上次更新 — v0.3.6
@@ -58,32 +58,9 @@
 - **白天和暖白设置页更清楚，按钮和文字更稳。**
 - **0.4.0 才开始真正的桌面陪伴感知：时间流逝、安静观察和低频关心。**
 
-## 本次更新 — v0.3.4-beta.4（预发布）
+## 旧版本记录
 
-> **她的小表情落在脸上，不再漏进聊天框。** 她常用括号给回复加小动作（「（眼睛亮了）」「（歪头）」），这些是给头像的舞台指令，本该驱动表情、不该当文字念或显示，偶尔会有一条漏进可见回复里像 bug。这版改成**按形状**判断（不靠人工维护的词表）：认识的表情驱动她的脸、不显示也不念（跟之前一样）；她临时造的、没收录的旁白则留下来渲染成**暗色斜体旁注**，是有意的旁白而不是漏出来的字；两类都不会被念（连语音流式中途也不念）。带冒号的「（注：周一照常）」仍当正文照常显示。按**形状**判断意味着别人屏幕上出现的新表情也被同样处理，不用谁去往词表里加。完整说明见 [RELEASE-NOTES-v0.3.4-beta.4.md](RELEASE-NOTES-v0.3.4-beta.4.md)（英文）。预发布版仅供手动验证。
-
-## 本次更新 — v0.3.4-beta.3（预发布）
-
-> **她的情绪现在真的驱动她了，不只是描述她。** 情绪引擎端到端打通：她从整段对话读出你的心情（"我今天被裁了"也能察觉），自己的情绪由真实事件塑造（回复失败/你长时间离开/你最近不开心），并真的改变她怎么、要不要开口（担心→轻轻确认，累→安静，绝不越过免打扰，心情好≠话痨，关系越近越开放）。另含 Live2D 星绘成默认形象、消息感知合并成一个开关、错过的消息下次对话温柔带一句。完整说明见 [RELEASE-NOTES-v0.3.4-beta.3.md](RELEASE-NOTES-v0.3.4-beta.3.md)（英文）。预发布版仅供手动验证。
-
-## 本次更新 — v0.3.4-beta.2（预发布）
-
-> **伴侣能感知你全部的消息了。** 新增桌面消息感知（macOS）：读系统通知中心，微信/QQ/邮件等任何应用来信伴侣都知道、会进对话（默认只报来源+发件人，需"完全磁盘访问"权限）。通讯桥新增配对码授权（不用手挖 Chat ID），另含 MiniMax 联网搜索、设置页模型分区、删 2100 行死代码。含 beta.1 全部内容。完整说明见 [RELEASE-NOTES-v0.3.4-beta.2.md](RELEASE-NOTES-v0.3.4-beta.2.md)（英文）。预发布版仅供手动验证。
-
-## 本次更新 — v0.3.3
-
-> **维护 + 打磨 + 瘦身。** 导入角色卡可驱动聊天、语音识别云→本地兜底、一批 bug 修复、桌宠默认改名 Pip 并默认显示背景、移除分身、删约 2500 行死代码。完整说明见 [RELEASE-NOTES-v0.3.3.md](RELEASE-NOTES-v0.3.3.md)（英文）。v0.3.3-beta.1 验证期结束后转正，内容一致。
-
-## 本次更新 — v0.3.2
-
-> **Codex 兼容桌宠、社区导入和宠物制作工具。** 完整说明见 [RELEASE-NOTES-v0.3.2.md](RELEASE-NOTES-v0.3.2.md)（英文）。
-
-| 主题 | 落地内容 |
-|---|---|
-| **Codex 兼容 Sprite 宠物** | Nexus 可以读取 `8x9` / `1536x1872` / `192x208` 的 `pet.json + spritesheet` 包，并在桌面小窗里播放 idle、waving、review 等动作。 |
-| **社区宠物导入** | 设置页新增用户主动选择的社区入口，可从支持的 gallery 页面、slug、ZIP 下载地址导入并校验宠物包。 |
-| **宠物制作链路** | 支持从图片或 creator kit 制作、预览、组装、导出、安装 Codex 兼容宠物，并保留 clean-room 来源记录。 |
-| **安全加固** | 远程下载加入超时、DNS / 私网检查和流式大小上限；ZIP 解压限制输出大小；生产和完整依赖审计均为 0 漏洞。 |
+README 只保留当前代码版本 v0.4.1 和上一稳定入口 v0.4.0 的重点；更早历史版本统一放在 [CHANGELOG](../CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 顶部继续滚动维护旧版本号。
 
 ---
 
@@ -98,7 +75,7 @@
 | 查看安全与隐私 | [安全与援助](#安全与援助) |
 | 参与社区内容 | [社区](#社区) · [Community Guide](COMMUNITY.md) |
 | 理解 0.4 方向 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 查看 0.4 正式版 | [v0.4.0 Release Notes](RELEASE-NOTES-v0.4.0.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 查看 0.4 最新稳定版 | [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## 为什么是 Nexus？
 
@@ -137,69 +114,6 @@
 - 💬 **多平台** — Discord 和 Telegram 网关，支持按聊天路由。在手机上也能和伙伴对话。
 
 - 🌐 **多语言** — 界面支持简体中文、繁体中文、英语、日语和韩语。
-
----
-
-## 本次更新 — v0.3.1（稳定版，2026-04-28）
-
-> **情感主线 + 安全审计累积版。** 自 v0.3.0 起 92 个 commit；beta.1 → beta.5 在稳定版前分别关闭了一类问题。完整说明见 [RELEASE-NOTES-v0.3.1.md](RELEASE-NOTES-v0.3.1.md)（英文）。
-
-| 主题 | 落地内容 |
-|---|---|
-| **🧠 伴侣的语气会自适应** | 14 天长窗口 + 3 天短窗口的情绪基线接进每条回复：低落卡住时少建议多承接；急性下落时节奏放慢；起伏剧烈时不主动带话题；稳定温暖时跟节奏。Russell 1980 + Kuppens 2015 + Trull 2008。 |
-| **💔 Gottman 鲁莽 / 修复** | 自动检测批评 / 轻蔑 / 防御 / 筑墙四种 Horsemen；下一轮注入 soft start-up + accept influence 修复姿态。**全程默默改变，不弹任何"我看到你这个状态"的提示**。 |
-| **🔒 两个 critical CVE 清零** | `pixi-live2d-display` 误把 `gh-pages` 放进 runtime deps（原型污染）；`npm overrides` 强制升级到无 CVE 版本。 |
-| **🛡️ IPC 安全审计 6/7 HIGH 关闭** | H2/H3/H5/H6/H7/H8 + M1/M2/M3/M5 + L3/L4/L6 全部修复，H4 按设计 deferred 到 v1.0。 |
-| **🐛 30+ 静态 bug 修复** | 四轮 audit + 并行静态扫描；template-replace `$&` 漏洞、并发竞态、StrictMode 纯净化、NaN 守卫、async leak、storage 验证。 |
-| **🚦 发版前检查扩到 26 项** | `prerelease-check.mjs` 从 8 项扩到 6 stage / 26 check：流程 / 代码质量 / 安全 / 资产 / 文档合规 / 隐私治理。 |
-| **🧹 UI 精简** | 信件 / 时光胶囊 / 小事 / 还没收的线 / 心情地图 5 个 settings panel 从抽屉收回（底层 scheduler 仍在跑）。"伴侣的情感适应应该是用户感受到的，不是去配置的"。 |
-
-<details>
-<summary>本稳定版包含的 v0.3.1-beta 线</summary>
-
-- **beta.1** — 安装包瘦身（1.2 GB → 250 MB）
-- **beta.2** — IPC 安全 hardening（H5 / H8 / H4 缓解）
-- **beta.3** — Live2D / thinking-mode / TTS / 多模态 4 个回归修复
-- **beta.4** — 审计 + 打磨（compaction race、ja/ko 翻译）
-- **beta.5** — 情感主线 M1.4-1.7 + 多日 Arc + yearbook 导出
-
-</details>
-
----
-
-## 上一稳定版 — v0.3.0
-
-> **稳定版发布。** v0.2.9 → v0.3.0 累计 100+ commit、约 12,000 行变更、
-> +361 个单元测试。所有变更都向后兼容，旧数据自动迁移。完整开发者视角说明见
-> [RELEASE-NOTES-v0.3.0.md](RELEASE-NOTES-v0.3.0.md)（英文）。
-
-| 主题 | 落地内容 |
-|---|---|
-| **🧠 记忆开始做事** | 显著性加权召回；dream cycle 生成 1–3 条关于你的反思；callback 队列（下次聊天温柔提一个旧记忆）；30 / 100 / 365 天周年里程碑。 |
-| **💝 关系有了形状** | 心情感知召回（3 种模式）；五级里程碑首次跨越触发；四维子分数；重逢 framing 更丰富。 |
-| **🤝 关系有了类型** | onboarding 与设置里选择 *开放 / 朋友 / 导师 / 安静的陪伴*，单行偏置 system prompt 而不覆盖 `SOUL.md`。 |
-| **💭 "想着你" 通知** | 长时间无聊天时，按你设的关系类型推送系统通知。23–08 点静默不打扰。 |
-| **🎬 角落里的存在感** | autonomy V2 第 4 个 action（`idle_motion` 静默手势）；动态 cadence；早期回复中的好奇追问。 |
-| **🌅 平滑场景过渡** | 早 5–7 / 16–18 / 19–21 三个 2 小时过渡窗，smoothstep 缓动；色彩对比拉强 —— 黎明粉、金时刻深琥珀、深夜冷淡蓝。 |
-| **🪟 Liquid Glass UI** | 紫色 accent 重塑；工具栏整理；时间感知 emoji 招呼；窗口大小 / 位置跨启动持久化。 |
-| **🌤️ 天气更精准** | 小时级预报、体感温度 + 湿度、后天预报。 |
-| **🧹 工程精简** | i18n.ts 1842 → 588 行；共享 SettingsField 组件；正则编译缓存；async-lock 去重；安装包瘦身约 30–60 MB。 |
-
-<details>
-<summary>已折叠到本稳定版的 beta 线</summary>
-
-beta 线奠定了基础，本稳定版做最后打磨：
-
-- **v0.3.0-beta.1** —— 三轴关系系统：心情感知召回（VAD 投影 + 共情 / 修复 / 强化模式）、一次性升级指令、四维子分数。[Notes](RELEASE-NOTES-v0.3.0-beta.1.md)
-- **v0.3.0-beta.2** —— 稳定 + 留存批次：显著性记忆、dream-cycle reflection、callback queue、周年里程碑、idle motion、动态 cadence、Liquid Glass UI、天气精度、托盘 + dock 图标、7 项安全修复。[Notes](RELEASE-NOTES-v0.3.0-beta.2.md)
-
-</details>
-
----
-
-## 旧版本记录
-
-README 只保留当前代码版本 v0.4.0 和上一稳定入口 v0.3.6 的重点；更早历史版本统一放在 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 顶部继续滚动维护旧版本号。
 
 ---
 
@@ -366,7 +280,7 @@ npm run package:win     # 或 package:mac / package:linux
 
 Nexus 目前由个人维护，issue 和 PR 的处理速度取决于分流是否精准：
 
-社区文档会贯穿所有版本，不只属于某一次发布。0.3 收安全、记忆和设置地基；0.4 会进入桌面陪伴感知；0.5 会进入桌宠桌面行为。社区可以持续贡献文档、人格模板、桌宠包、模型配置菜谱、翻译和 beta 验证报告，让项目变大但不失控。长期入口见 [Community Guide](COMMUNITY.md)，0.4 方向见 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 正式版说明见 [v0.4.0 Release Notes](RELEASE-NOTES-v0.4.0.md)，发布前加固清单见 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
+社区文档会贯穿所有版本，不只属于某一次发布。0.3 收安全、记忆和设置地基；0.4 会进入桌面陪伴感知；0.5 会进入桌宠桌面行为。社区可以持续贡献文档、人格模板、桌宠包、模型配置菜谱、翻译和 beta 验证报告，让项目变大但不失控。长期入口见 [Community Guide](COMMUNITY.md)，0.4 方向见 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 最新稳定版说明见 [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md)，发布前加固清单见 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
 
 - 🐛 **发现 Bug？** → [Bug 报告](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **有明确的功能想法？** → [功能请求](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

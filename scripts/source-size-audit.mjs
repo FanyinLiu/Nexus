@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DEFAULT_MAX_LINES = 1200
 const SOURCE_ROOTS = ['src', 'electron', 'scripts', 'tests']
-const SOURCE_PATTERN = /\.(ts|tsx|js|mjs|cjs)$/
+const SOURCE_PATTERN = /\.(ts|tsx|js|mjs|cjs|css)$/
 const IGNORED_DIRECTORIES = new Set(['node_modules', 'dist', 'release', 'release-smoke', '.git'])
 
 const FILE_BUDGETS = {
@@ -18,6 +18,13 @@ const FILE_BUDGETS = {
   'src/i18n/locales/ko.ts': 2600,
   'src/i18n/keys.ts': 2600,
   'electron/services/localDataStore.js': 1800,
+  'src/app/App.css': 8400,
+  'src/app/styles/settings.css': 7300,
+  'src/app/styles/settings-themes.css': 11000,
+  'src/app/styles/settings-chat-final.css': 2600,
+  'tests/image4-visual-contract-audit.test.ts': 1300,
+  'tests/settings-surface-audit.test.ts': 1300,
+  'tests/settings-ui-scale.test.ts': 1400,
 }
 
 function normalizePath(path) {

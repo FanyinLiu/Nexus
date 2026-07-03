@@ -147,7 +147,10 @@ export const MemorySection = memo(function MemorySection({
     memorySemanticRecallCount: draft.memorySemanticRecallCount,
     screenContextEnabled: draft.screenContextEnabled,
     searchMode: draft.memorySearchMode,
-    companionSummary: recentCompanionSummaryToQuietObservation(effectiveRecentCompanionSummary),
+    companionSummary: recentCompanionSummaryToQuietObservation(
+      effectiveRecentCompanionSummary,
+      uiLanguage,
+    ),
   })
   const companionTransparencyView = memoryTransparencySummary.companionAwarenessView
 

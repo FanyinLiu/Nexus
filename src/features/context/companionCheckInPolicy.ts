@@ -1,10 +1,12 @@
 import type { QuietObservationSummary } from './companionAwareness.ts'
+import { isSafeTimeMs } from '../../lib/time.ts'
 import { normalizeUiLanguage } from '../../lib/uiLanguage.ts'
 import type { UiLanguage } from '../../types'
 
 export type CompanionCheckInReason =
   | 'disabled'
   | 'paused'
+  | 'invalid_time'
   | 'no_observation'
   | 'active_chat'
   | 'quiet_hours'
@@ -224,13 +226,16 @@ function isInsideQuietHours(nowMs: number, start: number, end: number): boolean 
   return hour >= start || hour < end
 }
 
+function isValidCurrentTimeMs(value: number): boolean {
+  return isSafeTimeMs(value)
+}
+
 function isCoolingDown(
   nowMs: number,
   lastCheckInAtMs: number | null | undefined,
   cooldownMinutes: number,
 ): boolean {
-  if (lastCheckInAtMs == null || !Number.isFinite(lastCheckInAtMs)) return false
-  return nowMs - lastCheckInAtMs < Math.max(1, cooldownMinutes) * 60_000
+  return isWithinLocalSuppressionWindow(nowMs, lastCheckInAtMs, cooldownMinutes)
 }
 
 function isWithinRecentWindow(
@@ -238,9 +243,19 @@ function isWithinRecentWindow(
   timestampMs: number | null | undefined,
   windowMinutes: number,
 ): boolean {
-  if (timestampMs == null || !Number.isFinite(timestampMs)) return false
+  if (timestampMs == null || !isSafeTimeMs(timestampMs)) return false
   const elapsedMs = nowMs - timestampMs
   return elapsedMs >= 0 && elapsedMs < Math.max(1, windowMinutes) * 60_000
+}
+
+function isWithinLocalSuppressionWindow(
+  nowMs: number,
+  timestampMs: number | null | undefined,
+  windowMinutes: number,
+): boolean {
+  if (timestampMs == null || !isSafeTimeMs(timestampMs)) return false
+  const elapsedMs = Math.abs(nowMs - timestampMs)
+  return elapsedMs < Math.max(1, windowMinutes) * 60_000
 }
 
 function normalizeSignalPart(value: unknown, fallback: string): string {
@@ -266,7 +281,7 @@ function isDuplicateCheckIn(
   reason: CompanionCheckInTriggerReason,
   signalKey: string,
 ): boolean {
-  if (!isWithinRecentWindow(
+  if (!isWithinLocalSuppressionWindow(
     input.nowMs,
     input.lastCheckInAtMs,
     input.emissionWindowMinutes ?? DEFAULT_EMISSION_WINDOW_MINUTES,
@@ -283,7 +298,7 @@ function isRecentlyDismissed(
   reason: CompanionCheckInTriggerReason,
   signalKey: string,
 ): boolean {
-  if (!isWithinRecentWindow(
+  if (!isWithinLocalSuppressionWindow(
     input.nowMs,
     input.lastDismissedAtMs,
     input.dismissalWindowMinutes ?? DEFAULT_DISMISSAL_WINDOW_MINUTES,
@@ -327,6 +342,7 @@ export function decideCompanionCheckIn(
 ): CompanionCheckInDecision {
   if (!input.enabled) return suppress('disabled')
   if (input.paused) return suppress('paused')
+  if (!isValidCurrentTimeMs(input.nowMs)) return suppress('invalid_time')
   if (!input.summary) return suppress('no_observation')
   if (input.isActiveChatSession) return suppress('active_chat')
 
@@ -348,8 +364,7 @@ export function decideCompanionCheckIn(
 
   if (input.returnedToNexus) {
     if (
-      input.returnedToNexusAtMs != null
-      && !isWithinRecentWindow(
+      !isWithinRecentWindow(
         input.nowMs,
         input.returnedToNexusAtMs,
         input.returnToNexusWindowMinutes ?? DEFAULT_RETURN_TO_NEXUS_WINDOW_MINUTES,

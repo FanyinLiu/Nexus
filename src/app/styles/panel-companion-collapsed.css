@@ -1,0 +1,111 @@
+/* Companion collapsed panel shell. Kept separate from Image4 chat/composer styles. */
+.desktop-pet-root--panel-collapsed {
+  display: grid;
+  min-height: 100vh;
+  align-items: center;
+  justify-items: center;
+}
+
+.panel-window--companion.panel-window--simple.is-collapsed,
+html[data-theme='warm-day'] .panel-window--companion.panel-window--simple.is-collapsed {
+  width: min(100%, 300px);
+  max-width: 300px;
+  height: auto;
+  gap: 7px;
+  padding: 8px 9px;
+  border: 1px solid rgba(188, 208, 231, 0.22);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(105, 210, 238, 0.14), transparent 24%),
+    linear-gradient(180deg, rgba(20, 29, 43, 0.9), rgba(8, 13, 22, 0.94));
+  color: rgba(240, 246, 255, 0.9);
+  box-shadow:
+    0 20px 54px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(255, 255, 255, 0.045) inset,
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.panel-window--companion.is-collapsed .panel-window__simple-header {
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+}
+
+.panel-window--companion.is-collapsed .panel-window__simple-copy {
+  gap: 0;
+}
+
+.panel-window--companion.is-collapsed .panel-window__simple-copy .eyebrow,
+.panel-window--companion.is-collapsed .panel-window__simple-copy p:last-child {
+  display: none;
+}
+
+.panel-window--companion.is-collapsed .panel-window__simple-copy strong,
+html[data-theme='warm-day'] .panel-window--companion.is-collapsed .panel-window__simple-copy strong {
+  overflow: hidden;
+  color: rgba(248, 251, 255, 0.94);
+  font-size: 12px;
+  font-weight: 720;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-window--companion.is-collapsed .panel-window__header-actions--simple,
+html[data-theme='warm-day'] .panel-window--companion.is-collapsed .panel-window__header-actions--simple {
+  gap: 5px;
+  flex-wrap: nowrap;
+  padding: 2px 3px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.panel-window--companion.is-collapsed .panel-window__header-actions--simple .panel-window__icon-button,
+html[data-theme='warm-day'] .panel-window--companion.is-collapsed .panel-window__header-actions--simple .panel-window__icon-button {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(232, 240, 255, 0.72);
+  font-size: 0;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.panel-window--companion.is-collapsed .panel-window__header-actions--simple .panel-window__icon-button svg {
+  width: 12px;
+  height: 12px;
+}
+
+.panel-window--companion.is-collapsed .panel-window__collapsed-bar,
+html[data-theme='warm-day'] .panel-window--companion.is-collapsed .panel-window__collapsed-bar {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 7px;
+  min-height: 28px;
+  padding: 5px 6px;
+  border-color: rgba(214, 231, 252, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(221, 231, 246, 0.72);
+}
+
+.panel-window--companion.is-collapsed .panel-window__collapsed-bar span:first-child,
+html[data-theme='warm-day'] .panel-window--companion.is-collapsed .panel-window__collapsed-bar span:first-child {
+  max-width: 82px;
+  color: rgba(248, 251, 255, 0.82);
+  font-size: 10px;
+}
+
+.panel-window--companion.is-collapsed .panel-window__collapsed-bar span:last-child,
+html[data-theme='warm-day'] .panel-window--companion.is-collapsed .panel-window__collapsed-bar span:last-child {
+  display: block;
+  overflow: hidden;
+  color: rgba(221, 231, 246, 0.66);
+  font-size: 9px;
+  line-height: 1.2;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

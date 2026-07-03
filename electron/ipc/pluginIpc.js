@@ -68,7 +68,8 @@ async function runAuditedPluginAction(event, channel, payload, action) {
 export function register() {
   ipcMain.handle('plugin:scan', async (event) => {
     requireTrustedSender(event)
-    return pluginHost.scanPlugins()
+    await pluginHost.scanPlugins()
+    return pluginHost.listPlugins()
   })
 
   ipcMain.handle('plugin:list', (event) => {
@@ -122,7 +123,7 @@ export function register() {
 
   ipcMain.handle('plugin:dir', (event) => {
     requireTrustedSender(event)
-    return pluginHost.getPluginsDir_()
+    return pluginHost.getPluginsDisplayDir_()
   })
 
   ipcMain.handle('plugin:approve', async (event, payload) => {

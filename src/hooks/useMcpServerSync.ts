@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { McpServerConfig } from '../types'
 
 /**
@@ -34,7 +35,7 @@ export function useMcpServerSync(mcpServers: McpServerConfig[] | undefined) {
     lastSignatureRef.current = signature
 
     void bridge.mcpSyncServers({ servers: list }).catch((error: unknown) => {
-      console.warn('[MCP] sync failed:', error instanceof Error ? error.message : error)
+      console.warn('[MCP] sync failed:', getRedactedLogErrorMessage(error))
     })
   }, [mcpServers])
 }

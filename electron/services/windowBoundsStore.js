@@ -3,6 +3,8 @@ import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 
+import { getRedactedErrorMessage } from './errorRedaction.js'
+
 const FILE_NAME = 'window-bounds.json'
 
 let cache = null
@@ -33,7 +35,7 @@ function persistDebounced() {
     writeTimer = null
     fsp.writeFile(getStorePath(), JSON.stringify(cache, null, 2), 'utf8')
       .catch((err) => {
-        console.warn('[windowBounds] persist failed:', err?.message ?? err)
+        console.warn('[windowBounds] persist failed:', getRedactedErrorMessage(err))
       })
   }, 400)
 }

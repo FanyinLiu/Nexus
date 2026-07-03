@@ -87,6 +87,7 @@ export async function saveTextFileWithFallback(payload: TextFileSaveRequest): Pr
 
   return {
     canceled: false,
+    filePathDisplay: defaultFileName,
     message: t('file.saved.downloaded', { fileName: defaultFileName }),
   }
 }
@@ -126,6 +127,7 @@ async function openTextFileWithPicker(payload: TextFileOpenRequest): Promise<Tex
     return {
       canceled: false,
       filePath: file.name,
+      filePathDisplay: file.name,
       content,
       message: t('file.picker.read_success', { fileName: file.name }),
     }
@@ -200,6 +202,7 @@ async function openTextFileWithInput(payload: TextFileOpenRequest): Promise<Text
         finish({
           canceled: false,
           filePath: file.name,
+          filePathDisplay: file.name,
           content,
           message: t('file.picker.read_success', { fileName: file.name }),
         })

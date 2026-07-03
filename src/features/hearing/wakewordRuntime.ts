@@ -11,6 +11,7 @@ import {
   type WakewordListenerCallbacks,
   type WakewordListenerOptions,
 } from './wakewordListener.ts'
+import { getPrimaryWakeWord } from './core.ts'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
 
@@ -109,10 +110,15 @@ function normalizeWakewordRuntimeConfig(config: WakewordRuntimeConfig): Required
   }
 }
 
+function normalizeWakewordListenerInput(value: string) {
+  return String(value ?? '').trim()
+}
+
 function buildBaseStatePatch(config: Required<WakewordRuntimeConfig>) {
+  const wakeWord = getPrimaryWakeWord(config.wakeWord)
   return {
     enabled: config.enabled,
-    wakeWord: config.wakeWord,
+    wakeWord,
     suspended: config.suspended,
     suspendReason: config.suspendReason,
   }
@@ -196,6 +202,7 @@ export function createWakewordRuntime(
   let activeListenerId = 0
   let currentActiveListenerId = 0
   let lastTriggeredAtMs = 0
+  let activeListenerWakeWord = ''
   // When "mic-released" the listener stays alive but its mic stream is
   // released so a concurrent VAD getUserMedia call can grab the device.
   // Main-process KWS engine state is preserved, so on mic reacquire the
@@ -230,6 +237,7 @@ export function createWakewordRuntime(
     const currentListener = listener
     listener = null
     currentActiveListenerId = 0
+    activeListenerWakeWord = ''
     currentListener?.stop()
   }
 
@@ -343,8 +351,14 @@ export function createWakewordRuntime(
     generation = nextGeneration
     const currentConfig = config
     const basePatch = buildBaseStatePatch(currentConfig)
+    const primaryWakeWord = basePatch.wakeWord
+    const activeKeywords = normalizeWakewordListenerInput(currentConfig.wakeWord)
 
-    if (!currentConfig.enabled || !currentConfig.wakeWord) {
+    if (state.wakeWord !== primaryWakeWord) {
+      activeListenerWakeWord = ''
+    }
+
+    if (!currentConfig.enabled || !primaryWakeWord) {
       clearRetryTimer()
       clearCooldownTimer()
       micReleased = false
@@ -373,7 +387,11 @@ export function createWakewordRuntime(
       // Zipformer hidden state hot for instant wake-word matching when
       // the voice session ends. Wake word config changes still need a
       // full rebuild, hence the listener+wakeword equality check.
-      if (listener && state.wakeWord === currentConfig.wakeWord) {
+      if (
+        listener
+        && state.wakeWord === primaryWakeWord
+        && activeListenerWakeWord === activeKeywords
+      ) {
         micReleased = true
         emitState({
           ...basePatch,
@@ -423,7 +441,8 @@ export function createWakewordRuntime(
     if (
       listener
       && (state.phase === 'listening' || state.phase === 'paused')
-      && state.wakeWord === currentConfig.wakeWord
+      && state.wakeWord === primaryWakeWord
+      && activeListenerWakeWord === activeKeywords
     ) {
       clearRetryTimer()
       emitState({
@@ -454,7 +473,7 @@ export function createWakewordRuntime(
 
     let availability: WakewordAvailabilityStatus
     try {
-      availability = await checkAvailability({ wakeWord: currentConfig.wakeWord })
+      availability = await checkAvailability({ wakeWord: activeKeywords || primaryWakeWord })
     } catch (error) {
       if (disposed || nextGeneration !== generation) return
       handleRecoverableError(
@@ -505,7 +524,7 @@ export function createWakewordRuntime(
           handleRecoverableError(message, availability.modelKind ?? null)
         },
       }, {
-        wakeWord: currentConfig.wakeWord,
+        wakeWord: activeKeywords || primaryWakeWord,
         ti: options.ti,
       })
 
@@ -516,6 +535,7 @@ export function createWakewordRuntime(
 
       listener = nextListener
       currentActiveListenerId = myListenerId
+      activeListenerWakeWord = activeKeywords || primaryWakeWord
       clearRetryTimer()
       emitState({
         ...basePatch,
@@ -556,6 +576,7 @@ export function createWakewordRuntime(
       clearRetryTimer()
       clearCooldownTimer()
       micReleased = false
+      activeListenerWakeWord = ''
       stopListener()
       emitState({
         ...buildBaseStatePatch(config),
@@ -576,6 +597,7 @@ export function createWakewordRuntime(
       clearRetryTimer()
       clearCooldownTimer()
       micReleased = false
+      activeListenerWakeWord = ''
       stopListener()
     },
     subscribeMicFrames(subscriber) {

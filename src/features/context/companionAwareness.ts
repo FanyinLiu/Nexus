@@ -9,6 +9,10 @@ import {
   type CompanionElapsedBucket,
 } from './companionTimeLanguage.ts'
 import type { UiLanguage } from '../../types'
+import { toFiniteTimeMs } from '../../lib/time.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
+
+type CompanionActivityLabelKey = `companion_awareness.activity_label.${'coding' | 'browsing' | 'media' | 'gaming' | 'communication' | 'documents' | 'unknown'}`
 
 export interface QuietObservationInput {
   enabled: boolean
@@ -36,12 +40,14 @@ const TWENTY_FIVE_MINUTES_MS = 25 * 60_000
 const FIFTY_FIVE_MINUTES_MS = 55 * 60_000
 const ONE_HUNDRED_TEN_MINUTES_MS = 110 * 60_000
 
-function toTimeMs(value: string | number | Date | null | undefined): number | null {
-  if (value == null) return null
-  const ms = value instanceof Date ? value.getTime()
-    : typeof value === 'number' ? value
-    : Date.parse(value)
-  return Number.isFinite(ms) ? ms : null
+const ACTIVITY_LABEL_KEY: Record<ActivityClass, CompanionActivityLabelKey> = {
+  coding: 'companion_awareness.activity_label.coding',
+  browsing: 'companion_awareness.activity_label.browsing',
+  media: 'companion_awareness.activity_label.media',
+  gaming: 'companion_awareness.activity_label.gaming',
+  communication: 'companion_awareness.activity_label.communication',
+  documents: 'companion_awareness.activity_label.documents',
+  unknown: 'companion_awareness.activity_label.unknown',
 }
 
 export function bucketCompanionElapsedMs(elapsedMs: number): CompanionElapsedBucket {
@@ -61,11 +67,11 @@ export function buildQuietObservationSummary(
 ): QuietObservationSummary | null {
   if (!input.enabled || input.paused) return null
 
-  const nowMs = toTimeMs(input.now ?? new Date())
-  const openedMs = toTimeMs(input.nexusOpenSince)
+  const nowMs = toFiniteTimeMs(input.now ?? new Date())
+  const openedMs = toFiniteTimeMs(input.nexusOpenSince)
   const lastInteractionMs = input.lastNexusInteractionAt == null
     ? openedMs
-    : toTimeMs(input.lastNexusInteractionAt)
+    : toFiniteTimeMs(input.lastNexusInteractionAt)
   const activeWindowTitle = String(input.activeWindowTitle ?? '').trim()
 
   if (nowMs == null || openedMs == null || lastInteractionMs == null) return null
@@ -91,16 +97,27 @@ export function buildQuietObservationSummary(
   }
 }
 
-export function formatQuietObservationForPrompt(summary: QuietObservationSummary | null): string {
+export function formatQuietObservationForPrompt(
+  summary: QuietObservationSummary | null,
+  uiLanguage: UiLanguage = 'en-US',
+): string {
   if (!summary) return ''
 
-  const elapsedLabel = coerceCompanionElapsedLabel(summary.elapsedBucket, summary.elapsedLabel)
+  const elapsedLabel = coerceCompanionElapsedLabel(
+    summary.elapsedBucket,
+    summary.elapsedLabel,
+    uiLanguage,
+  )
+  const activityLabel = pickTranslatedUiText(
+    uiLanguage,
+    ACTIVITY_LABEL_KEY[summary.activityClass],
+  )
 
   return [
-    'Quiet companion awareness:',
-    `- Nexus is open, and the user has not interacted with Nexus for ${elapsedLabel}.`,
-    `- Recent desktop activity looks like ${summary.activityClass}.`,
-    '- Treat this only as companionship continuity. Stay quiet unless the user asks or the context is genuinely helpful.',
-    '- Do not mention monitoring, window titles, or exact timers.',
+    pickTranslatedUiText(uiLanguage, 'companion_awareness.prompt.heading'),
+    `- ${pickTranslatedUiText(uiLanguage, 'companion_awareness.prompt.not_interacted', { elapsedLabel })}`,
+    `- ${pickTranslatedUiText(uiLanguage, 'companion_awareness.prompt.activity_prefix')} ${activityLabel}.`,
+    `- ${pickTranslatedUiText(uiLanguage, 'companion_awareness.prompt.stay_quiet')}`,
+    `- ${pickTranslatedUiText(uiLanguage, 'companion_awareness.prompt.no_monitoring')}`,
   ].join('\n')
 }

@@ -1,6 +1,8 @@
 import type { DesktopContextRequest, DesktopContextSnapshot } from '../../types'
 import { shorten } from '../../lib/common.ts'
 import { sanitizeDesktopContextSnapshotForPrompt } from '../../lib/privacy/desktopContextPrivacy.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
+import type { UiLanguage } from '../../types'
 
 const MAX_ACTIVE_WINDOW_TITLE_LENGTH = 180
 const MAX_ACTIVE_WINDOW_APP_NAME_LENGTH = 80
@@ -39,7 +41,7 @@ function formatObservedBlock(label: string, text: string, maxLength: number) {
   return `${label}:\n${quoteObservedText(text, maxLength)}`
 }
 
-export function formatDesktopContext(snapshot: DesktopContextSnapshot | null | undefined) {
+export function formatDesktopContext(snapshot: DesktopContextSnapshot | null | undefined, uiLanguage: UiLanguage = 'en-US') {
   if (!snapshot) return ''
 
   const sanitizedSnapshot = sanitizeDesktopContextSnapshotForPrompt(snapshot)
@@ -54,40 +56,64 @@ export function formatDesktopContext(snapshot: DesktopContextSnapshot | null | u
 
   if (companionAwarenessSummary) {
     sections.push(formatObservedBlock(
-      'Companion continuity summary',
+      pickTranslatedUiText(uiLanguage, 'desktop_context.prompt.companion_summary_heading'),
       companionAwarenessSummary,
       MAX_COMPANION_AWARENESS_LENGTH,
     ))
   }
 
   if (activeWindowTitle || activeWindowAppName || activeWindowProcessPath) {
-    const activeWindowLines = ['Current foreground window:']
+    const activeWindowLines = [`${pickTranslatedUiText(uiLanguage, 'desktop_context.prompt.current_foreground_window_heading')}:`]
 
     if (activeWindowTitle) {
-      activeWindowLines.push(formatObservedBlock('Window title', activeWindowTitle, MAX_ACTIVE_WINDOW_TITLE_LENGTH))
+      activeWindowLines.push(formatObservedBlock(
+        pickTranslatedUiText(uiLanguage, 'desktop_context.prompt.window_title'),
+        activeWindowTitle,
+        MAX_ACTIVE_WINDOW_TITLE_LENGTH,
+      ))
     }
 
     if (activeWindowAppName) {
-      activeWindowLines.push(formatObservedBlock('App name', activeWindowAppName, MAX_ACTIVE_WINDOW_APP_NAME_LENGTH))
+      activeWindowLines.push(formatObservedBlock(
+        pickTranslatedUiText(uiLanguage, 'desktop_context.prompt.app_name'),
+        activeWindowAppName,
+        MAX_ACTIVE_WINDOW_APP_NAME_LENGTH,
+      ))
     }
 
     if (activeWindowProcessPath) {
-      activeWindowLines.push(formatObservedBlock('Process path', activeWindowProcessPath, MAX_ACTIVE_WINDOW_PROCESS_PATH_LENGTH))
+      activeWindowLines.push(formatObservedBlock(
+        pickTranslatedUiText(uiLanguage, 'desktop_context.prompt.process_path'),
+        activeWindowProcessPath,
+        MAX_ACTIVE_WINDOW_PROCESS_PATH_LENGTH,
+      ))
     }
 
     sections.push(activeWindowLines.join('\n'))
   }
 
   if (clipboardText) {
-    sections.push(formatObservedBlock('Clipboard text', clipboardText, MAX_CLIPBOARD_CONTEXT_LENGTH))
+    sections.push(formatObservedBlock(
+      pickTranslatedUiText(uiLanguage, 'desktop_context.prompt.clipboard_text'),
+      clipboardText,
+      MAX_CLIPBOARD_CONTEXT_LENGTH,
+    ))
   }
 
   if (screenText) {
-    sections.push(formatObservedBlock('Visible on-screen text', screenText, MAX_SCREEN_TEXT_CONTEXT_LENGTH))
+    sections.push(formatObservedBlock(
+      pickTranslatedUiText(uiLanguage, 'desktop_context.prompt.screen_text'),
+      screenText,
+      MAX_SCREEN_TEXT_CONTEXT_LENGTH,
+    ))
   }
 
   if (vlmAnalysis) {
-    sections.push(formatObservedBlock('Screen visual analysis (VLM)', vlmAnalysis, MAX_VLM_ANALYSIS_LENGTH))
+    sections.push(formatObservedBlock(
+      pickTranslatedUiText(uiLanguage, 'desktop_context.prompt.vlm_analysis'),
+      vlmAnalysis,
+      MAX_VLM_ANALYSIS_LENGTH,
+    ))
   }
 
   if (!sections.length) {
@@ -95,11 +121,7 @@ export function formatDesktopContext(snapshot: DesktopContextSnapshot | null | u
   }
 
   return [
-    'Below is supplementary desktop context — a quiet sense of what the user is doing right now. '
-      + 'Let it subtly shape your replies: be perceptive when it genuinely fits, the way someone in the room would pick up on what is going on. '
-      + 'Never announce or draw attention to the fact that you can see their screen, window, or clipboard (do not say things like "I see you have X open") — '
-      + 'just let the awareness color your tone and what you bring up, naturally. '
-      + 'If it is not relevant, ignore it completely; never force a reference. Reply in the user\'s language.',
+    pickTranslatedUiText(uiLanguage, 'desktop_context.prompt.header'),
     sections.join('\n\n'),
   ].join('\n\n')
 }

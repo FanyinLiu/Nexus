@@ -5,11 +5,30 @@ import {
   useState,
   type ChangeEvent as ReactChangeEvent,
   type ClipboardEvent as ReactClipboardEvent,
+  type CSSProperties,
   type DragEvent as ReactDragEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from 'react'
-import { getLiveTranscriptLabel, getTimeGreeting, getTimeGreetingEmoji, getVoiceStateLabel } from '../appSupport'
+import {
+  getImage4PreviewModeSync,
+  getImage4RhythmGridModeSync,
+  getImage4SnapshotModeSync,
+  getImage4StatePreviewSync,
+  getTimeGreeting,
+  getTimeGreetingEmoji,
+  getVoiceStateLabel,
+} from '../appSupport'
+import { Image4Dial, Image4PresenceHeader } from './Image4CompanionField'
+import { Image4RhythmGrid } from './Image4RhythmGrid'
+import {
+  buildImage4ChatPreviewMessages,
+  getImage4ChatPreviewModeSync,
+  getImage4ChatPreviewVariantSync,
+} from './image4ChatPreview'
+import { resolveImage4ActivityLabelKey } from './image4ActivityLabel'
+import { deriveImage4CompanionState } from './image4CompanionState'
+import { deriveImage4ComposerState } from './image4ComposerState'
 import { ActivePlanStrip } from '../../components/ActivePlanStrip'
 import { MessageBubble } from '../../components/MessageBubble'
 import { resolveCharacterPreset } from '../../features/character/presets'
@@ -22,6 +41,10 @@ import {
   getNotificationCardPrimaryActions,
   type NotificationCardPrimaryActionId,
 } from '../../features/notifications/notificationCardActions'
+import {
+  formatCompanionElapsedBucket,
+  type CompanionElapsedBucket,
+} from '../../features/context/companionTimeLanguage'
 import {
   classifyWeatherCondition,
   getTimeOfDayBand,
@@ -45,6 +68,16 @@ import type { NotificationMessage } from '../../types'
 // Maximum number of messages rendered at once. Older messages are hidden
 // behind a "load earlier" button to keep the DOM lean on long conversations.
 const MESSAGE_PAGE_SIZE = 100
+const PANEL_QUICK_PROMPT_ICONS: readonly PetControlIconName[] = ['clipboard', 'chat', 'calendar-clock']
+
+function getPanelElapsedBucket(startedAtMs: number, nowMs: number): CompanionElapsedBucket {
+  const elapsedMinutes = Math.max(0, Math.floor((nowMs - startedAtMs) / 60000))
+  if (elapsedMinutes < 5) return 'just_started'
+  if (elapsedMinutes < 24) return 'a_while'
+  if (elapsedMinutes < 55) return 'about_half_hour'
+  if (elapsedMinutes < 110) return 'about_hour'
+  return 'two_hours_or_more'
+}
 
 type PanelViewProps = UseAppControllerResult['panelView'] & {
   settingsDrawer: ReactNode
@@ -64,13 +97,15 @@ type PanelToolbarButtonProps = {
   icon: PetControlIconName
   label: string
   onClick: () => void
-  tone?: 'default' | 'danger'
+  tone?: 'default' | 'settings' | 'collapse' | 'danger'
 }
 
 function PanelToolbarButton({ icon, label, onClick, tone = 'default' }: PanelToolbarButtonProps) {
+  const toneClass = tone === 'default' ? '' : ` panel-window__icon-button--${tone}`
+
   return (
     <button
-      className={`panel-window__icon-button${tone === 'danger' ? ' panel-window__icon-button--danger' : ''}`}
+      className={`panel-window__icon-button${toneClass}`}
       type="button"
       onClick={onClick}
       aria-label={label}
@@ -104,6 +139,7 @@ export function PanelView({
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const lastCrisisSignalRef = useRef<CrisisSignal | null>(null)
+  const panelSessionStartedAtRef = useRef(Date.now())
   const [showAllMessages, setShowAllMessages] = useState(false)
   const [activeNotificationReply, setActiveNotificationReply] = useState<NotificationReplyTarget | null>(null)
   const crisisSignal = useCrisisPanelState()
@@ -113,6 +149,12 @@ export function PanelView({
     params?: Parameters<typeof pickTranslatedUiText>[2],
   ) => pickTranslatedUiText(settings.uiLanguage, key, params)
   const characterPreset = useMemo(() => resolveCharacterPreset(), [])
+  const image4PreviewMode = useMemo(() => getImage4PreviewModeSync(), [])
+  const image4RhythmGridMode = useMemo(() => getImage4RhythmGridModeSync(), [])
+  const image4SnapshotMode = useMemo(() => getImage4SnapshotModeSync(), [])
+  const image4StatePreview = useMemo(() => getImage4StatePreviewSync(), [])
+  const image4ChatPreviewMode = useMemo(() => getImage4ChatPreviewModeSync(), [])
+  const image4ChatPreviewVariant = useMemo(() => getImage4ChatPreviewVariantSync(), [])
   const timeGreeting = getTimeGreeting(ti)
   const timeGreetingEmoji = getTimeGreetingEmoji()
   const visionEnabled = modelSupportsVision(settings.model)
@@ -131,8 +173,10 @@ export function PanelView({
   )
   const [autoTimeBand, setAutoTimeBand] = useState(() => getTimeOfDayBand())
   const [autoTimeBlend, setAutoTimeBlend] = useState(() => getTimeOfDayBlend())
+  const [panelClock, setPanelClock] = useState(() => new Date())
   useEffect(() => {
     const update = () => {
+      setPanelClock(new Date())
       setAutoTimeBand(getTimeOfDayBand())
       setAutoTimeBlend(getTimeOfDayBlend())
     }
@@ -182,7 +226,9 @@ export function PanelView({
   // re-seeded on every remount and ended up eating freshly appended
   // STT transcripts). Anything append()ed after boot — voice, text,
   // tool result, system notice — has a fresh id and passes through.
-  const visibleMessages = chat.messages
+  const visibleMessages = image4PreviewMode && image4ChatPreviewMode
+    ? buildImage4ChatPreviewMessages(panelClock, image4ChatPreviewVariant)
+    : chat.messages
   const hiddenMessageCount = Math.max(0, visibleMessages.length - MESSAGE_PAGE_SIZE)
   const loadEarlierLabel = ti('panel.messages.load_earlier', { count: hiddenMessageCount })
   const chatMessageCount = visibleMessages.filter((message) => message.role !== 'system').length
@@ -201,17 +247,11 @@ export function PanelView({
     return detailsByMessageId
   }, [memory.dailyMemories, memory.memories, visibleMessages])
   const welcomeTitle = `${timeGreeting}，${settings.userName}`
-  const welcomeBody = memory.memories[0]?.content
+  const welcomeBody = image4PreviewMode
+    ? `${settings.companionName}在这儿陪着你。哪怕只是说句今天怎么样，我也想听。`
+    : memory.memories[0]?.content
     ? ti('panel.greeting.remembered', { memory: shorten(memory.memories[0].content, 24) })
     : ti('panel.greeting.welcome', { companionName: settings.companionName })
-  const liveTranscriptLabel = getLiveTranscriptLabel(voice.voiceState, ti)
-  const liveStatusLine = voice.liveTranscript
-    ? `${liveTranscriptLabel}：${shorten(voice.liveTranscript, 34)}`
-    : assistantActivityLabel
-      ? assistantActivityLabel
-      : nextSchedulerStatusLabel
-        ? nextSchedulerStatusLabel
-        : pet.petStatusText
   const panelHeroStatusText = chat.error
     ? ti('panel.audio_smoke_test_hint')
     : assistantActivityLabel
@@ -221,6 +261,45 @@ export function PanelView({
     : pet.ambientPresence?.text
       ? shorten(pet.ambientPresence.text, 64)
       : ti(characterPreset.motionLabel)
+  const panelClockLabel = panelClock.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+  const panelDateLabel = panelClock.toLocaleDateString(settings.uiLanguage, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+  const image4ElapsedBucket = image4PreviewMode
+    ? 'about_half_hour'
+    : getPanelElapsedBucket(panelSessionStartedAtRef.current, panelClock.getTime())
+  const panelElapsedLabel = image4PreviewMode
+    ? '刚刚过了半小时'
+    : formatCompanionElapsedBucket(image4ElapsedBucket, settings.uiLanguage)
+  const image4HeaderTitle = settings.companionName
+  const image4CompanionState = deriveImage4CompanionState({
+    voiceState: voice.voiceState,
+    assistantActivity: chat.assistantActivity,
+    chatBusy: chat.busy,
+    elapsedBucket: image4ElapsedBucket,
+    statePreview: image4StatePreview,
+  })
+  const image4TopStatusLabel = ti(resolveImage4ActivityLabelKey(image4CompanionState))
+  const image4CompanionStateStyle = {
+    '--image4-companion-intensity': image4CompanionState.intensity.toFixed(2),
+    '--image4-dial-emphasis': image4CompanionState.dialEmphasis.toFixed(2),
+    '--image4-presence-pulse': image4CompanionState.presencePulse.toFixed(2),
+  } as CSSProperties
+  const image4WeatherCanSync = settings.ambientWeatherEnabled && settings.toolWeatherDefaultLocation.trim().length > 0
+  const image4WeatherLabel = ambientWeather
+    ? [
+        ambientWeather.conditionLabel || ti('panel.weather.fallback_label'),
+        ambientWeather.temperatureC !== null ? `${Math.round(ambientWeather.temperatureC)}°` : '',
+      ].filter(Boolean).join(' · ')
+    : image4WeatherCanSync
+      ? ti('panel.weather.syncing_label')
+      : ti('panel.weather.disabled_label')
 
   const unreadNotifications = useMemo(() => {
     if (!notificationBridge) return []
@@ -236,6 +315,9 @@ export function PanelView({
   const collapsedUnreadLabel = pendingNotificationCount > 0
     ? `${unreadNotificationCountLabel} · ${ti('panel.notification.compact_label')}`
     : null
+  const collapsedPanelStatusLabel = chat.error
+    ? shorten(chat.error, 26)
+    : collapsedUnreadLabel ?? `${panelElapsedLabel} · ${companionStatusChipLabel}`
 
   const hasUnreadNotifications = pendingNotificationCount > 0
 
@@ -419,25 +501,44 @@ export function PanelView({
 
     return message.title || message.channelName
   }
-  const panelQuickPrompts = useMemo(() => ([
-    {
-      label: memory.memories[0]?.content
-        ? ti('panel.quickstart.continue_label')
-        : ti('panel.quickstart.wrap_today_label'),
-      prompt: memory.memories[0]?.content
-        ? ti('panel.quickstart.continue_prompt', { topic: shorten(memory.memories[0].content, 18) })
-        : ti('panel.quickstart.wrap_today_prompt'),
-    },
-    {
-      label: ti('panel.quickstart.desktop_ctx_label'),
-      prompt: ti('panel.quickstart.desktop_ctx_prompt'),
-    },
-    {
-      label: ti('panel.quickstart.light_plan_label'),
-      prompt: ti('panel.quickstart.light_plan_prompt'),
-    },
+  const panelQuickPrompts = useMemo(() => {
+    if (image4PreviewMode) {
+      return [
+        {
+          label: '整理今日重点',
+          prompt: '帮我整理今天最重要的三件事，并告诉我现在第一步先做什么。',
+        },
+        {
+          label: '简单聊聊',
+          prompt: '先和我简单聊两句，帮我把现在脑子里最乱的一件事说清楚。',
+        },
+        {
+          label: '做个轻计划',
+          prompt: '根据我现在的状态，给我一个 20 分钟可执行的小计划，语气轻一点。',
+        },
+      ]
+    }
+
+    return [
+      {
+        label: memory.memories[0]?.content
+          ? ti('panel.quickstart.continue_label')
+          : ti('panel.quickstart.wrap_today_label'),
+        prompt: memory.memories[0]?.content
+          ? ti('panel.quickstart.continue_prompt', { topic: shorten(memory.memories[0].content, 18) })
+          : ti('panel.quickstart.wrap_today_prompt'),
+      },
+      {
+        label: ti('panel.quickstart.desktop_ctx_label'),
+        prompt: ti('panel.quickstart.desktop_ctx_prompt'),
+      },
+      {
+        label: ti('panel.quickstart.light_plan_label'),
+        prompt: ti('panel.quickstart.light_plan_prompt'),
+      },
+    ]
     // eslint-disable-next-line react-hooks/exhaustive-deps -- ti is stable per render via the pickTranslatedUiText call
-  ]), [memory.memories, settings.uiLanguage])
+  }, [image4PreviewMode, memory.memories, settings.uiLanguage])
   const voiceActionLabel = voice.continuousVoiceActive
     ? ti('panel.voice.stop_continuous')
     : petRuntimeContinuousVoiceActive
@@ -464,13 +565,26 @@ export function PanelView({
   const notificationReplyHintLabel = activeNotificationReply
     ? ti('panel.notification.replying_to')
     : null
-  const composerPlaceholder = ti('panel.composer.placeholder', { companionName: settings.companionName })
+  const composerPlaceholder = image4PreviewMode
+    ? `想和${settings.companionName}说什么？`
+    : ti('panel.composer.placeholder_short', { companionName: settings.companionName })
+  const image4SuggestionText = image4PreviewMode
+    ? `✦ 和${settings.companionName} 说点什么，比如：帮我整理今天待办 / 记一下刚才的灵感 / 给我一句放松的提醒。`
+    : `✦ 和${settings.companionName}说点什么，比如：帮我整理今天待办 / 记一下刚才的灵感 / 给我一句放松的提醒。`
 
   const hasNotificationReply = isNotificationReplying() && Boolean(activeNotificationReply)
   const canSendNotificationReply = hasNotificationReply
     && !chat.busy
     && Boolean(chat.input.trim())
     && !chat.pendingImage
+  const image4ComposerState = deriveImage4ComposerState({
+    busy: chat.busy,
+    input: chat.input,
+    hasPendingImage: Boolean(chat.pendingImage),
+    hasNotificationReply,
+    canSendNotificationReply,
+    voiceState: voice.voiceState,
+  })
 
   async function handleComposerSend() {
     if (hasNotificationReply && activeNotificationReply) {
@@ -591,6 +705,14 @@ export function PanelView({
     fileInputRef.current?.click()
   }
 
+  function handleImageAttachmentAction() {
+    if (visionEnabled) {
+      openFilePicker()
+      return
+    }
+    openSettingsSection('model')
+  }
+
   function clearPendingImage() {
     chat.setPendingImage(null)
   }
@@ -650,7 +772,7 @@ export function PanelView({
         <div className="panel-scene-layer__veil" />
       </div>
       <section
-        className={`panel-window panel-window--simple panel-window--companion ${panelCollapsed ? 'is-collapsed' : ''}`}
+        className={`panel-window panel-window--simple panel-window--companion ${panelCollapsed ? 'is-collapsed' : 'panel-window--image4'}`}
         aria-hidden={hasModalOverlay ? true : undefined}
         inert={hasModalOverlay ? true : undefined}
       >
@@ -684,14 +806,14 @@ export function PanelView({
               </div>
             </div>
 
-              <div className="panel-window__collapsed-bar">
+            <div className="panel-window__collapsed-bar">
               <span>{ti('panel.collapsed.session_count', { count: chatMessageCount })}</span>
-              <span>{chat.error ? shorten(chat.error, 26) : collapsedUnreadLabel ?? liveStatusLine}</span>
+              <span>{collapsedPanelStatusLabel}</span>
             </div>
           </>
         ) : (
-          <div className="panel-window__shell">
-            <div className="companion-chat__toolbar">
+          <div className="panel-window__shell panel-window__shell--image4 image4-layout">
+            <div className="companion-chat__toolbar image4-header-controls">
               <div className="companion-chat__toolbar-left">
                 {ambientWeather ? (
                   <span
@@ -712,16 +834,18 @@ export function PanelView({
                   </span>
                 ) : null}
               </div>
-              <div className="panel-window__header-actions panel-window__header-actions--hero">
+              <div className="panel-window__header-actions panel-window__header-actions--hero panel-window__header-actions--image4">
                 <PanelToolbarButton
                   icon="settings"
                   label={ti('panel.button.settings')}
                   onClick={openSettingsPanel}
+                  tone="settings"
                 />
                 <PanelToolbarButton
                   icon="collapse"
                   label={ti('panel.button.collapse')}
                   onClick={togglePanelCollapse}
+                  tone="collapse"
                 />
                 <PanelToolbarButton
                   icon="close"
@@ -815,9 +939,34 @@ export function PanelView({
 
             <ActivePlanStrip />
 
-            <section className="companion-chat">
+            <section
+              className={`companion-chat image4-chat ${image4SnapshotMode ? 'is-image4-snapshot' : ''}`}
+              data-companion-activity={image4CompanionState.activityState}
+              data-companion-mode={image4CompanionState.mode}
+              data-companion-tone={image4CompanionState.contextTone}
+              style={image4CompanionStateStyle}
+            >
+              {image4RhythmGridMode ? <Image4RhythmGrid /> : null}
+              <Image4PresenceHeader
+                body={welcomeBody}
+                signalActive={image4CompanionState.signalActive}
+                statusLabel={image4TopStatusLabel}
+                title={image4HeaderTitle}
+              />
+              <Image4Dial
+                clockLabel={panelClockLabel}
+                dateLabel={panelDateLabel}
+                greeting={timeGreeting}
+                speaking={image4CompanionState.mode === 'speaking'}
+                weatherLabel={image4WeatherLabel}
+              />
 
-              <div ref={messageListRef} className="message-list companion-chat__messages" aria-live="polite" aria-label={ti('panel.messages.aria_label')}>
+              <div
+                ref={messageListRef}
+                className={`message-list companion-chat__messages image4-message-list ${visibleMessages.length ? '' : 'is-empty'}`}
+                aria-live="polite"
+                aria-label={ti('panel.messages.aria_label')}
+              >
                 <CrisisHotlinePanel locale={settings.uiLanguage} />
                 {visibleMessages.length ? (
                   <>
@@ -844,8 +993,12 @@ export function PanelView({
                       />
                     ))}
                   </>
-                ) : (
-                  <div className="empty-chat empty-chat--nexus">
+                ) : null}
+              </div>
+
+              {!visibleMessages.length ? (
+                <>
+                  <section className="empty-chat empty-chat--nexus image4-greeting">
                     <div className="empty-chat__copy">
                       <strong>
                         <span className="empty-chat__greeting-emoji" aria-hidden="true">
@@ -854,28 +1007,35 @@ export function PanelView({
                         {welcomeTitle}
                       </strong>
                       <p>{welcomeBody} <span className="empty-chat__sparkle" aria-hidden="true">✨</span></p>
-                      <div className="empty-chat__prompt-grid">
-                        {panelQuickPrompts.map((item) => {
-                          const quickPromptLabel = `${item.label}: ${item.prompt}`
-                          return (
-                            <button
-                              key={item.label}
-                              className="empty-chat__prompt"
-                              type="button"
-                              onClick={() => handleApplyQuickPrompt(item.prompt)}
-                              aria-label={quickPromptLabel}
-                              title={quickPromptLabel}
-                            >
-                              <span>{item.label}</span>
-                              <small>{item.prompt}</small>
-                            </button>
-                          )
-                        })}
-                      </div>
                     </div>
+                  </section>
+
+                  <div className="empty-chat__prompt-grid image4-action-list">
+                    {panelQuickPrompts.map((item, index) => {
+                      const quickPromptLabel = `${item.label}: ${item.prompt}`
+                      const promptIconName = PANEL_QUICK_PROMPT_ICONS[index] ?? 'sparkles'
+                      return (
+                        <button
+                          key={item.label}
+                          className="empty-chat__prompt image4-action"
+                          type="button"
+                          onClick={() => handleApplyQuickPrompt(item.prompt)}
+                          aria-label={quickPromptLabel}
+                          title={quickPromptLabel}
+                        >
+                          <span className="empty-chat__prompt-icon" aria-hidden="true">
+                            <PetControlIcon name={promptIconName} />
+                          </span>
+                          <span className="empty-chat__prompt-copy">
+                            <span>{item.label}</span>
+                            <small>{item.prompt}</small>
+                          </span>
+                        </button>
+                      )
+                    })}
                   </div>
-                )}
-              </div>
+                </>
+              ) : null}
 
               {chat.error ? (
                 <div className="error-banner" role="alert" aria-live="assertive" aria-atomic="true">
@@ -883,7 +1043,11 @@ export function PanelView({
                 </div>
               ) : null}
 
-              <div className="composer composer--minimal companion-chat__composer">
+              <div className="composer composer--minimal companion-chat__composer image4-composer">
+                <div className="image4-composer__suggestion" aria-hidden="true">
+                  {image4SuggestionText}
+                </div>
+
                 {visionEnabled && chat.pendingImage ? (
                   <div className="composer__attachments">
                     <div className="composer__attachment-chip">
@@ -906,29 +1070,78 @@ export function PanelView({
                   </div>
                 ) : null}
 
-                <textarea
-                  ref={composerTextareaRef}
-                  rows={3}
-                  value={chat.input}
-                  placeholder={composerPlaceholder}
-                  aria-label={composerPlaceholder}
-                  onChange={(event) => chat.setInput(event.target.value)}
-                  onKeyDown={handleComposerKeyDown}
-                  onPaste={handleComposerPaste}
-                  onDragOver={handleComposerDragOver}
-                  onDrop={handleComposerDrop}
-                />
-
-                {visionEnabled ? (
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    className="composer__file-input"
-                    aria-label={ti('panel.composer.attach_title')}
-                    onChange={handleFilePickerChange}
+                <div
+                  className="image4-composer__field"
+                  data-composer-state={image4ComposerState.mode}
+                  data-send-state={image4ComposerState.sendState}
+                  data-has-attachment={image4ComposerState.hasAttachment ? 'true' : 'false'}
+                  data-voice-state={image4ComposerState.voiceMode}
+                >
+                  <textarea
+                    ref={composerTextareaRef}
+                    rows={3}
+                    value={chat.input}
+                    placeholder={composerPlaceholder}
+                    aria-label={composerPlaceholder}
+                    onChange={(event) => chat.setInput(event.target.value)}
+                    onKeyDown={handleComposerKeyDown}
+                    onPaste={handleComposerPaste}
+                    onDragOver={handleComposerDragOver}
+                    onDrop={handleComposerDrop}
                   />
-                ) : null}
+
+                  {visionEnabled ? (
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      className="composer__file-input"
+                      aria-label={ti('panel.composer.attach_title')}
+                      onChange={handleFilePickerChange}
+                    />
+                  ) : null}
+
+                  <button
+                    className="image4-attachment-pill"
+                    type="button"
+                    onClick={handleImageAttachmentAction}
+                    aria-label={ti('panel.composer.attach_title')}
+                    title={ti('panel.composer.attach_title')}
+                  >
+                    <PetControlIcon name="plus" className="image4-attachment-pill__plus" />
+                  </button>
+
+                  <div className="composer__actions">
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      onClick={voice.toggleVoiceConversation}
+                      disabled={voiceActionDisabled}
+                      aria-label={voiceActionLabel}
+                      title={voiceActionLabel}
+                    >
+                      <PetControlIcon name="mic" className="composer__action-icon" />
+                      <span>{voiceActionLabel}</span>
+                    </button>
+                    <button
+                      className="primary-button"
+                      type="button"
+                      onClick={() => void handleComposerSend()}
+                      disabled={image4ComposerState.sendDisabled}
+                      aria-label={sendButtonLabel}
+                      title={sendButtonLabel}
+                    >
+                      <PetControlIcon name="send" className="composer__action-icon" />
+                      <span>
+                        {chat.busy
+                          ? `${sendButtonLabel}...`
+                          : hasNotificationReply
+                            ? ti('panel.notification.send_reply')
+                            : ti('panel.composer.send')}
+                      </span>
+                    </button>
+                  </div>
+                </div>
 
                 <div className="companion-chat__composer-meta">
                   <div className="composer__hint">
@@ -946,49 +1159,6 @@ export function PanelView({
                     ) : null}
                     {ti('panel.composer.enter_hint')}
                   </div>
-                </div>
-
-                <div className="composer__actions">
-                  {visionEnabled ? (
-                    <button
-                      className="ghost-button"
-                      type="button"
-                      onClick={openFilePicker}
-                      aria-label={ti('panel.composer.attach_title')}
-                      title={ti('panel.composer.attach_title')}
-                    >
-                      <PetControlIcon name="image" className="composer__action-icon" />
-                      <span>{ti('panel.composer.image_button')}</span>
-                    </button>
-                  ) : null}
-                  <button
-                    className="ghost-button"
-                    type="button"
-                    onClick={voice.toggleVoiceConversation}
-                    disabled={voiceActionDisabled}
-                    aria-label={voiceActionLabel}
-                    title={voiceActionLabel}
-                  >
-                    <PetControlIcon name="mic" className="composer__action-icon" />
-                    <span>{voiceActionLabel}</span>
-                  </button>
-                  <button
-                    className="primary-button"
-                    type="button"
-                    onClick={() => void handleComposerSend()}
-                    disabled={hasNotificationReply ? !canSendNotificationReply : (chat.busy || (!chat.input.trim() && !chat.pendingImage))}
-                    aria-label={sendButtonLabel}
-                    title={sendButtonLabel}
-                  >
-                    <PetControlIcon name="send" className="composer__action-icon" />
-                    <span>
-                      {chat.busy
-                        ? `${sendButtonLabel}...`
-                        : hasNotificationReply
-                          ? ti('panel.notification.send_reply')
-                          : ti('panel.composer.send')}
-                    </span>
-                  </button>
                 </div>
               </div>
             </section>

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { autoDropExpiredArcs, loadOpenArcs, recordCheckInFired } from '../features/arc/openArcStore'
 import { decideNextCheckIn } from '../features/arc/openArcPolicy'
 import { buildArcCheckIn } from '../features/arc/openArcDelivery'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000  // 5 min — matches bracket / errand / capsule
@@ -60,7 +61,7 @@ export function useOpenArcScheduler({ settings }: UseOpenArcSchedulerOptions) {
         if (stopped) return
         recordCheckInFired(arc.id)
       } catch (err) {
-        console.warn('[open-arc] check-in delivery failed:', err)
+        console.warn('[open-arc] check-in delivery failed:', getRedactedLogErrorMessage(err))
       }
     }
 

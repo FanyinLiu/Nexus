@@ -16,6 +16,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
     characterProfiles: [],
     companionName: '星绘',
     companionRelationshipType: 'friend',
+    wakeWord: '星绘',
     petModelId: 'original-virtual-swordsman',
     speechOutputApiBaseUrl: '',
     speechOutputApiKey: '',
@@ -50,6 +51,27 @@ test('character profiles preserve user label and relationship framing', () => {
   assert.equal(switched.companionName, '星绘')
   assert.equal(switched.userName, '你')
   assert.equal(switched.companionRelationshipType, 'quiet_companion')
+})
+
+test('character profile switch keeps wake word aligned only while it follows the companion name', () => {
+  const profile = createCharacterProfile(makeSettings({
+    companionName: '星绘',
+    wakeWord: '星绘',
+  }), '星绘')
+
+  const synced = applyCharacterProfile(makeSettings({
+    companionName: '旧名',
+    wakeWord: '旧名',
+  }), profile)
+  assert.equal(synced.companionName, '星绘')
+  assert.equal(synced.wakeWord, '星绘')
+
+  const customWake = applyCharacterProfile(makeSettings({
+    companionName: '旧名',
+    wakeWord: '小助手',
+  }), profile)
+  assert.equal(customWake.companionName, '星绘')
+  assert.equal(customWake.wakeWord, '小助手')
 })
 
 test('syncCurrentToProfile writes current companion identity back to the active profile', () => {

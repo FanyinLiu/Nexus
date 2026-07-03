@@ -2,7 +2,7 @@ export const DESKTOP_CONTEXT_REDACTION = '[redacted sensitive desktop context]'
 
 const SECRET_LINE_PATTERNS = [
   /\bsk-(?:proj-)?[A-Za-z0-9_-]{16,}\b/,
-  /\b(?:api[_-]?key|access[_-]?token|auth[_-]?token|bearer|client[_-]?secret|refresh[_-]?token|password|passwd|pwd)\b\s*[:=]\s*["']?[^"'\s]{6,}/i,
+  /["']?\b(?:api[_-]?key|access[_-]?token|auth[_-]?token|bearer|client[_-]?secret|refresh[_-]?token|password|passwd|pwd)\b["']?\s*[:=]\s*["']?[^"'\s,}]{6,}/i,
   /\b(?:ghp|github_pat|xox[baprs]|ya29)\b[A-Za-z0-9._-]{12,}\b/i,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
 ]

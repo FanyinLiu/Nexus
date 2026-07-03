@@ -38,12 +38,16 @@ const REQUIRED_LAZY_PATTERNS = [
   },
 ]
 
+function normalizePath(path) {
+  return path.split('\\').join('/')
+}
+
 function walkFiles(root, directory, predicate) {
   const base = join(root, directory)
   const files = []
   for (const entry of readdirSync(base, { withFileTypes: true })) {
     const fullPath = join(base, entry.name)
-    const rel = relative(root, fullPath)
+    const rel = normalizePath(relative(root, fullPath))
     if (entry.isDirectory()) {
       files.push(...walkFiles(root, rel, predicate))
     } else if (entry.isFile() && predicate(rel)) {
