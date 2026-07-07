@@ -1,12 +1,11 @@
 # Nexus v0.4.2 — Check-In Policy
 
-Status: Draft. Do not publish until Klein explicitly asks for the final release
-gate, tag, and GitHub Release.
+Status: Release candidate. Tag and publish only after the final release gate
+passes and Klein explicitly asks for the GitHub Release.
 
 This follow-up release keeps the v0.4 desktop companion awareness line local and
 conservative. It hardens when a gentle in-app check-in may be considered; it
-does not send messages, trigger tools, create external notifications, or publish
-a new release.
+does not send messages, trigger tools, or create external notifications.
 
 ## What changes
 
@@ -38,10 +37,6 @@ It does not schedule timers, write storage, send notifications, or call tools.
 
 This release does not include:
 
-- No formal v0.4.2 release yet.
-- No package version bump.
-- No tag or GitHub Release.
-- No README stable-entry switch.
 - external notifications
 - message sending
 - tool execution
@@ -52,6 +47,18 @@ This release does not include:
 - mouse-following, typing-following, or pet window control
 
 Those remain later v0.4.x or v0.5 work.
+
+## Distribution notes
+
+v0.4.2 keeps the same unsigned desktop distribution posture as the previous
+public builds:
+
+- macOS users may see Gatekeeper quarantine warnings. Download only from GitHub
+  Releases, move `Nexus.app` to `/Applications`, and use the documented
+  quarantine removal command only when the file source is trusted.
+- Windows users may see SmartScreen warnings because the installer is not yet
+  code-signed. Download only from GitHub Releases, choose **More info**, then
+  **Run anyway** if the filename and source match the release.
 
 ## Validation focus
 

@@ -80,7 +80,7 @@ test('performance baseline reports the largest CSS chunk without failing under b
 test('performance baseline fails when a single CSS chunk crosses the budget', () => {
   withBaselineFixture({
     'index-abc123.css': 220_000,
-    'settingsDrawerEntry-abc123.css': 650_001,
+    'settingsDrawerEntry-abc123.css': 585_001,
     'settingsDrawerEntry-abc123.js': 16_000,
     'app.js': 64_000,
   }, (root) => {
@@ -89,9 +89,45 @@ test('performance baseline fails when a single CSS chunk crosses the budget', ()
     assert.equal(report.assetMetrics.largestCssChunk?.fileName, 'settingsDrawerEntry-abc123.css')
     assert.deepEqual(
       report.errors.filter((error) => error.metric === 'maxCssChunkBytes'),
-      [{ metric: 'maxCssChunkBytes', actual: 650_001, budget: 650_000 }],
+      [{ metric: 'maxCssChunkBytes', actual: 585_001, budget: 585_000 }],
     )
     assert.equal(report.summary.ok, false)
+  })
+})
+
+test('performance baseline fails when total CSS drifts above the tightened budget', () => {
+  withBaselineFixture({
+    'index-abc123.css': 440_000,
+    'settingsDrawerEntry-abc123.css': 320_000,
+    'settings-extra.css': 125_001,
+    'settingsDrawerEntry-abc123.js': 16_000,
+    'app.js': 64_000,
+  }, (root) => {
+    const report = buildPerformanceBaselineReport(root)
+
+    assert.deepEqual(
+      report.errors.filter((error) => error.metric === 'totalCssBytes'),
+      [{ metric: 'totalCssBytes', actual: 885_001, budget: 885_000 }],
+    )
+    assert.equal(report.summary.ok, false)
+  })
+})
+
+test('performance baseline warns when CSS budget headroom is nearly exhausted', () => {
+  withBaselineFixture({
+    'index-abc123.css': 280_000,
+    'settingsDrawerEntry-abc123.css': 530_000,
+    'settingsDrawerEntry-abc123.js': 16_000,
+    'app.js': 64_000,
+  }, (root) => {
+    const report = buildPerformanceBaselineReport(root)
+
+    assert.equal(report.summary.ok, true)
+    assert.deepEqual(
+      report.warnings.map((warning) => warning.metric),
+      ['totalCssBytes', 'maxCssChunkBytes', 'maxSettingsDrawerCssChunkBytes'],
+    )
+    assert.equal(report.summary.warnings, 3)
   })
 })
 
@@ -115,7 +151,7 @@ test('performance baseline fails when initial CSS crosses the startup budget', (
 test('performance baseline fails when settings lazy CSS crosses budget', () => {
   withBaselineFixture({
     'index-abc123.css': 220_000,
-    'settingsDrawerEntry-abc123.css': 600_001,
+    'settingsDrawerEntry-abc123.css': 585_001,
     'settingsDrawerEntry-abc123.js': 16_000,
     'app.js': 64_000,
   }, (root) => {
@@ -123,7 +159,7 @@ test('performance baseline fails when settings lazy CSS crosses budget', () => {
 
     assert.deepEqual(
       report.errors.filter((error) => error.metric === 'maxSettingsDrawerCssChunkBytes'),
-      [{ metric: 'maxSettingsDrawerCssChunkBytes', actual: 600_001, budget: 600_000 }],
+      [{ metric: 'maxSettingsDrawerCssChunkBytes', actual: 585_001, budget: 585_000 }],
     )
     assert.equal(report.summary.ok, false)
   })

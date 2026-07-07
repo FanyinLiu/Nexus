@@ -9,11 +9,10 @@ README stable entry point.
 
 ## Release State Lock
 
-- Package version remains at the active stable `0.4.1` until a future release
+- Package version remains at the active stable `0.4.2` until a future release
   is explicitly promoted.
-- `v0.4.1` remains the current stable release entry point.
-- `v0.4.2`, `v0.4.3`, `v0.4.4`, and `v0.4.5` remain stacked draft review
-  layers.
+- `v0.4.2` remains the current stable release entry point.
+- `v0.4.3`, `v0.4.4`, and `v0.4.5` remain stacked draft review layers.
 - No package version bump.
 - No tag.
 - No GitHub Release.
@@ -23,13 +22,11 @@ README stable entry point.
 ## Stacked Draft Graph
 
 - v0.4.1 -> v0.4.0: coarse time language, no new sensing.
-- v0.4.2 -> v0.4.1: local check-in decision policy, no external notification
-  channel.
 - v0.4.3 -> v0.4.2: Settings transparency view model, no raw activity
   timeline.
 - v0.4.4 -> v0.4.3: beta feedback labels and copy safety, no feedback
   analytics or adaptive copy.
-- v0.4.5 -> v0.4.1-v0.4.4: release-state hardening only, no feature expansion.
+- v0.4.5 -> v0.4.2-v0.4.4: release-state hardening only, no feature expansion.
 
 If one draft layer is dropped or rewritten before release, every later draft in
 the graph must be rechecked against the same privacy and no-release invariants.
@@ -54,10 +51,10 @@ runtime copy, alter Settings layout, or introduce pet movement.
 
 The v0.4 draft stack is not ready for release review if any of these fail:
 
-- `package.json` version is still the active stable `0.4.1`.
-- Root and localized README files still link `RELEASE-NOTES-v0.4.1.md` as the
+- `package.json` version is still the active stable `0.4.2`.
+- Root and localized README files still link `RELEASE-NOTES-v0.4.2.md` as the
   stable entry point.
-- Draft release notes for `v0.4.2` through `v0.4.5` are marked Draft and include
+- Draft release notes for `v0.4.3` through `v0.4.5` are marked Draft and include
   the no package version bump, no tag, no GitHub Release, and no README stable
   switch boundary for future draft slices.
 - `docs/V0.4_DESKTOP_COMPANION_AWARENESS.md`, `docs/ROADMAP.md`,

@@ -24,25 +24,33 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **現在のコードバージョン：** v0.4.1。Nexus はコンパニオン UI、設定、信頼性の強化段階に入りました。デスクトップ・コンパニオン認識は粗い時間表現とプライバシー優先を保ち、設定と会話画面、アップロード前監査をより安定させます。
+> **現在のコードバージョン：** v0.4.2。Nexus はデスクトップ・コンパニオン認識の粗い時間表現とプライバシー優先を保ちながら、穏やかな check-in ポリシー、設定の視覚システム、リリース前監査をさらに締めます。
 
 > **開発スコープの注記：** この多言語 README は長期的な機能一覧を残しています。短期開発はルートの [README](../README.md) と [Nexus アップグレード統合計画](NEXUS_UPGRADE_INTEGRATION_PLAN.md) を基準にしてください。Phase 1 は常駐する小さなデスクトップウィンドウ、ミニマルなアバター、Ollama / DeepSeek のテキストモデル、シンプルな会話だけに絞ります。
 
 ---
 
-## 今回のアップデート — v0.4.1
+## 今回のアップデート — v0.4.2
+
+> **Check-In ポリシーとリリースゲートの同期。** この安定版では、穏やかな check-in をまずローカルで抑制可能な in-app 判断として扱い、メッセージ送信、ツール実行、外部通知作成は行いません。詳細は [RELEASE-NOTES-v0.4.2.md](RELEASE-NOTES-v0.4.2.md)（英語）。
+
+Nexus と会話中のとき、直前に dismiss したとき、同じ種類の信号が重なるとき、古い「Nexus に戻った」信号のときは静かに抑制されます。時間表現は引き続き粗く、正確なタイマーや生のデスクトップ内容をモデル境界へ渡しません。設定 UI、リリース監査、パフォーマンス予算は `verify:pr` とリリース前ゲートで守ります。
+
+## 前回のアップデート — v0.4.1
 
 > **コンパニオン UI、設定、信頼性の強化。** この安定版では、メイン会話パネル、設定画面、Image4 コンパニオン領域を整理し、source-only の UI、プライバシー、セキュリティ、パフォーマンス監査を強化します。詳細は [RELEASE-NOTES-v0.4.1.md](RELEASE-NOTES-v0.4.1.md)（英語）。
 
 Nexus は静かで保守的、一時停止可能なまま、短期で粗いコンパニオン要約だけを作ります。v0.4.1 では設定ドロワーのスタイルを遅延読み込みに保ち、大きな CSS を起動パスへ戻さないようにします。時間表現は「しばらく」「30分くらい」「1時間くらい」のように粗く、生のスクリーンショット、完全なクリップボード、私的なメッセージ、正確なタイマーはモデルへ送りません。プロアクティブな check-in 拡張は後続版へ、マウス追従、タイピング反応、ウィンドウ操作は v0.5 の範囲です。
 
-## 前回のアップデート — v0.3.6
+## 以前のアップデート — v0.4.0
 
-> **0.3 の土台を締めくくる版。** このリリースは Nexus を Codex のような作業エージェントにするものではなく、0.4 のデスクトップ伴走感知を先取りするものでもありません。安全、記憶、設定、デスクトップ認識入口を整理します。詳細は [RELEASE-NOTES-v0.3.6.md](RELEASE-NOTES-v0.3.6.md)（英語）。
+> **デスクトップ・コンパニオン認識の土台。** この安定版から、Nexus を開いている間の時間の流れを静かに理解する v0.4 ラインが始まります。詳細は [RELEASE-NOTES-v0.4.0.md](RELEASE-NOTES-v0.4.0.md)（英語）。
+
+Nexus はまず静かでいることを優先し、短期で粗い、一時停止・削除可能なコンパニオン要約だけを作ります。モデルへ渡るのはサニタイズ済みの要約であり、生のスクリーンショット、完全なクリップボード、私的なメッセージ、正確なタイマーではありません。
 
 ## 旧バージョンの記録
 
-README には現在のコードバージョン v0.4.1 と直前の安定入口 v0.4.0 の要点だけを載せます。より古い履歴は [CHANGELOG](../CHANGELOG.md) と [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) に集約し、README 上部で古いバージョン番号を更新し続けません。
+README には現在のコードバージョン v0.4.2 と直前の安定入口 v0.4.1 の要点だけを載せます。より古い履歴は [CHANGELOG](../CHANGELOG.md) と [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) に集約し、README 上部で古いバージョン番号を更新し続けません。
 
 ---
 
@@ -57,7 +65,7 @@ README には現在のコードバージョン v0.4.1 と直前の安定入口 v
 | 安全性とプライバシーを確認 | [セーフティとサポート](#セーフティとサポート) |
 | コミュニティに参加 | [コミュニティ](#コミュニティ) · [Community Guide](COMMUNITY.md) |
 | 0.4 の方向を理解 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 0.4 最新安定版を見る | [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 0.4 最新安定版を見る | [v0.4.2 Release Notes](RELEASE-NOTES-v0.4.2.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## なぜ Nexus なのか？
 
@@ -263,7 +271,7 @@ npm run package:win     # または package:mac / package:linux
 
 Nexus は個人メンテナンスのプロジェクトです。issue や PR の対応速度はトリアージの精度に左右されます：
 
-コミュニティ文書は特定の 1 リリースだけのものではなく、全バージョンをまたぐ入口です。0.3 は安全性、メモリ、設定の土台を締め、0.4 はデスクトップ・コンパニオン認識へ進み、0.5 はデスクトップペットの振る舞いへ進みます。長期入口は [Community Guide](COMMUNITY.md)、0.4 の方向は [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)、0.4 最新安定版の説明は [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md)、リリース前の hardening は [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) です。
+コミュニティ文書は特定の 1 リリースだけのものではなく、全バージョンをまたぐ入口です。0.3 は安全性、メモリ、設定の土台を締め、0.4 はデスクトップ・コンパニオン認識へ進み、0.5 はデスクトップペットの振る舞いへ進みます。長期入口は [Community Guide](COMMUNITY.md)、0.4 の方向は [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)、0.4 最新安定版の説明は [v0.4.2 Release Notes](RELEASE-NOTES-v0.4.2.md)、リリース前の hardening は [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) です。
 
 - 🐛 **バグを見つけた？** → [バグ報告](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **明確な機能アイデア？** → [機能リクエスト](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

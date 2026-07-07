@@ -43,11 +43,16 @@ export function SettingsDrawer() {
   activeSectionHeadingRef.current?.focus({ preventScroll: true })
   return (
     <aside role="dialog" aria-modal="true" tabIndex={-1}>
-      <button data-focus-return-section="history" />
       <button role="menuitemradio" aria-checked={isActive} />
       <h4 ref={activeSectionHeadingRef} tabIndex={-1}>Privacy</h4>
     </aside>
   )
+}
+`,
+  'src/components/SettingsHomeView.tsx': `
+export function SettingsHomeView() {
+  settingsHomeCardRefs.current[card.sectionId] = node
+  return <button className="settings-home-card" data-focus-return-section={card.sectionId} onClick={() => onOpenSettingsSection(card.sectionId)} />
 }
 `,
   'src/components/ConfirmDialog.tsx': `
@@ -161,18 +166,15 @@ test('focus management surface audit rejects missing opener focus return', () =>
 
 test('focus management surface audit rejects missing settings home card focus return', () => {
   withFixture({
-    'src/components/SettingsDrawer.tsx': BASELINE_FILES['src/components/SettingsDrawer.tsx'].replace(
-      '  const settingsHomeCardRefs = useRef({})\n',
-      '',
-    ).replace(
-      '      <button data-focus-return-section="history" />\n',
+    'src/components/SettingsHomeView.tsx': BASELINE_FILES['src/components/SettingsHomeView.tsx'].replace(
+      ' data-focus-return-section={card.sectionId}',
       '',
     ),
   }, (root) => {
     const report = buildFocusManagementSurfaceReport(root)
 
     assert.equal(report.summary.ok, false)
-    assert.ok(report.missingContracts.some((item) => item.id === 'settings-drawer-focus-handoff'))
+    assert.ok(report.missingContracts.some((item) => item.id === 'settings-home-card-focus-return-targets'))
   })
 })
 

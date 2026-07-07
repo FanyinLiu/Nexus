@@ -14,7 +14,7 @@ function writeAuditFixtureRoot(readmeText: string): string {
   mkdirSync(join(root, 'docs'))
   writeFileSync(join(root, 'package.json'), JSON.stringify({
     private: true,
-    version: '0.4.1',
+    version: '0.4.2',
     scripts: {
       'v04:draft-stack:audit': 'node scripts/v04-draft-stack-audit.mjs',
       'v04:draft-stack:audit:quick': 'node scripts/v04-draft-stack-audit.mjs --quick',
@@ -39,18 +39,25 @@ function writeFullAuditFixtureRoot(overrides: Record<string, string> = {}): stri
   const root = writeAuditFixtureRoot(`
 # Nexus
 
-RELEASE-NOTES-v0.4.1.md
+RELEASE-NOTES-v0.4.2.md
 `)
 
-  for (const version of ['0.4.2', '0.4.3', '0.4.4', '0.4.5']) {
+  writeFileSync(join(root, 'docs/RELEASE-NOTES-v0.4.2.md'), overrides['docs/RELEASE-NOTES-v0.4.2.md'] ?? `
+# Nexus v0.4.2
+Status: Release candidate
+invalid current and helper timestamp suppression
+passive in-app payload shape and integer TTL bounds
+`)
+  writeFileSync(join(root, 'docs/RELEASE-NOTES-v0.4.2.zh-CN.md'), overrides['docs/RELEASE-NOTES-v0.4.2.zh-CN.md'] ?? `
+# Nexus v0.4.2
+状态：发布候选
+无效当前时间和辅助时间戳压制
+被动 in-app payload 结构和整数 TTL 边界
+`)
+
+  for (const version of ['0.4.3', '0.4.4', '0.4.5']) {
     const enPath = `docs/RELEASE-NOTES-v${version}.md`
     const zhPath = `docs/RELEASE-NOTES-v${version}.zh-CN.md`
-    const extraEn = version === '0.4.2'
-      ? 'invalid current and helper timestamp suppression\npassive in-app payload shape and integer TTL bounds'
-      : ''
-    const extraZh = version === '0.4.2'
-      ? '无效当前时间和辅助时间戳压制\n被动 in-app payload 结构和整数 TTL 边界'
-      : ''
 
     writeFileSync(join(root, enPath), overrides[enPath] ?? `
 # Nexus v${version}
@@ -59,7 +66,6 @@ Do not publish until Klein explicitly asks.
 No package version bump
 No tag or GitHub Release
 No README stable-entry switch
-${extraEn}
 `)
     writeFileSync(join(root, zhPath), overrides[zhPath] ?? `
 # Nexus v${version}
@@ -68,13 +74,12 @@ ${extraEn}
 不改 package 版本号
 不打 tag，不创建 GitHub Release
 不切换 README 稳定版入口
-${extraZh}
 `)
   }
 
   const files: Record<string, string> = {
     'docs/V0.4_DESKTOP_COMPANION_AWARENESS.md': `
-active stacked v0.4.x slice after \`v0.4.1\` remains \`v0.4.5\` Release Hardening Draft
+active stacked v0.4.x slice after \`v0.4.2\` remains \`v0.4.5\` Release Hardening Draft
 Do not publish \`v0.4.5\`
 RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md
 no new product behavior
@@ -84,7 +89,7 @@ integer TTL bounds
 `,
     'docs/ROADMAP.md': `
 \`v0.4.5\` is the active stacked release-hardening draft
-no package version bump past the active stable, no future-draft tag, no future-draft GitHub Release, and no README stable-entry switch past \`v0.4.1\`
+no package version bump past the active stable, no future-draft tag, no future-draft GitHub Release, and no README stable-entry switch past \`v0.4.2\`
 `,
     'CHANGELOG.md': `
 v0.4.5 release hardening draft
@@ -98,10 +103,9 @@ No tag
 No GitHub Release
 No README stable-entry switch
 v0.4.1 -> v0.4.0
-v0.4.2 -> v0.4.1
 v0.4.3 -> v0.4.2
 v0.4.4 -> v0.4.3
-v0.4.5 -> v0.4.1-v0.4.4
+v0.4.5 -> v0.4.2-v0.4.4
 npm run v04:draft-stack:audit
 npm run verify:release
 npm run package:dir:smoke
@@ -123,8 +127,8 @@ test('v0.4 draft stack audit guards the no-release state', () => {
   assert.equal(report.mode, 'quick')
   assert.equal(summary.ok, true)
   assert.equal(summary.errors, 0)
-  assert.equal(report.stableRelease, 'v0.4.1')
-  assert.deepEqual(report.draftReleases, ['v0.4.2', 'v0.4.3', 'v0.4.4', 'v0.4.5'])
+  assert.equal(report.stableRelease, 'v0.4.2')
+  assert.deepEqual(report.draftReleases, ['v0.4.3', 'v0.4.4', 'v0.4.5'])
   assert.equal(report.privacy.staticSourceOnly, true)
   assert.equal(report.privacy.readsUserData, false)
   assert.equal(report.privacy.readsEnvironment, false)
@@ -150,7 +154,7 @@ test('v0.4 draft stack audit rejects missing current 0.4 boundary phrases', (t) 
     {
       file: 'docs/V0.4_DESKTOP_COMPANION_AWARENESS.md',
       text: `
-active stacked v0.4.x slice after \`v0.4.1\` remains \`v0.4.5\` Release Hardening Draft
+active stacked v0.4.x slice after \`v0.4.2\` remains \`v0.4.5\` Release Hardening Draft
 Do not publish \`v0.4.5\`
 RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md
 no new product behavior
@@ -203,7 +207,7 @@ test('v0.4 draft stack audit rejects old v0.3 release-note links in public readm
   const root = writeAuditFixtureRoot(`
 # Nexus
 
-RELEASE-NOTES-v0.4.1.md
+RELEASE-NOTES-v0.4.2.md
 
 Old release details should live in CHANGELOG and GitHub Releases now.
 See RELEASE-NOTES-v0.3.4-beta.4.md for the old draft.
@@ -234,7 +238,7 @@ test('v0.4 draft stack audit rejects localized old v0.3 sections in public readm
     const root = writeAuditFixtureRoot(`
 # Nexus
 
-RELEASE-NOTES-v0.4.1.md
+RELEASE-NOTES-v0.4.2.md
 
 ${heading}
 

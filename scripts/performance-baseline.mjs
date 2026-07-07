@@ -11,13 +11,19 @@ const DIST_ASSETS_DIR = join('dist', 'assets')
 const BUDGETS = {
   totalAssetBytes: 35_000_000,
   totalJavaScriptBytes: 5_000_000,
-  totalCssBytes: 900_000,
+  totalCssBytes: 885_000,
   totalWasmBytes: 25_000_000,
   maxJavaScriptChunkBytes: 1_200_000,
-  maxCssChunkBytes: 650_000,
+  maxCssChunkBytes: 585_000,
   maxInitialCssChunkBytes: 450_000,
-  maxSettingsDrawerCssChunkBytes: 600_000,
+  maxSettingsDrawerCssChunkBytes: 585_000,
   maxSettingsDrawerEntryChunkBytes: 100_000,
+}
+
+const HEADROOM_WARNINGS = {
+  totalCssBytes: 0.9,
+  maxCssChunkBytes: 0.9,
+  maxSettingsDrawerCssChunkBytes: 0.9,
 }
 
 function classifyAsset(fileName) {
@@ -106,19 +112,47 @@ function budgetErrors(assetMetrics, heavyReport) {
   return errors
 }
 
+function readBudgetMetric(assetMetrics, key) {
+  if (key === 'maxJavaScriptChunkBytes') return assetMetrics.largestJavaScriptChunk?.bytes ?? 0
+  if (key === 'maxCssChunkBytes') return assetMetrics.largestCssChunk?.bytes ?? 0
+  if (key === 'maxInitialCssChunkBytes') return assetMetrics.initialCssChunk?.bytes ?? 0
+  if (key === 'maxSettingsDrawerCssChunkBytes') return assetMetrics.settingsDrawerCssChunk?.bytes ?? 0
+  if (key === 'maxSettingsDrawerEntryChunkBytes') return assetMetrics.settingsDrawerEntryChunk?.bytes ?? 0
+  return assetMetrics.totals[key] ?? 0
+}
+
+function budgetWarnings(assetMetrics) {
+  return Object.entries(HEADROOM_WARNINGS).flatMap(([key, warningRatio]) => {
+    const budget = BUDGETS[key]
+    const warningAt = Math.floor(budget * warningRatio)
+    const actual = readBudgetMetric(assetMetrics, key)
+    if (actual <= warningAt || actual > budget) return []
+    return [{
+      metric: key,
+      actual,
+      budget,
+      warningAt,
+      usage: Number((actual / budget).toFixed(4)),
+    }]
+  })
+}
+
 export function buildPerformanceBaselineReport(root = ROOT) {
   const assetMetrics = readAssetMetrics(root)
   const heavyReport = buildHeavyModuleAuditReport(root)
   const errors = budgetErrors(assetMetrics, heavyReport)
+  const warnings = budgetWarnings(assetMetrics)
   return {
     schemaVersion: 1,
     budgets: BUDGETS,
     assetMetrics,
     heavyModuleSummary: heavyReport.summary,
     errors,
+    warnings,
     summary: {
       ok: errors.length === 0,
       errors: errors.length,
+      warnings: warnings.length,
     },
     privacy: {
       readsUserStorage: false,
@@ -155,8 +189,12 @@ function formatHumanReport(report) {
   if (report.errors.length) {
     lines.push(`  ${report.errors.map((item) => `${item.metric} ${item.actual}/${item.budget}`).join(', ')}`)
   }
+  lines.push(`WARN budgetHeadroom: ${report.warnings.length}`)
+  if (report.warnings.length) {
+    lines.push(`  ${report.warnings.map((item) => `${item.metric} ${item.actual}/${item.budget} warn>${item.warningAt}`).join(', ')}`)
+  }
   lines.push('')
-  lines.push(`Summary: ok=${report.summary.ok} errors=${report.summary.errors}`)
+  lines.push(`Summary: ok=${report.summary.ok} errors=${report.summary.errors} warnings=${report.summary.warnings}`)
   return lines.join('\n')
 }
 

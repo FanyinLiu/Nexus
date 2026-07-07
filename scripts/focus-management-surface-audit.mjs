@@ -9,6 +9,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const REQUIRED_FILES = [
   'docs/FOCUS_MANAGEMENT_REFERENCE_REVIEW.md',
   'src/components/SettingsDrawer.tsx',
+  'src/components/SettingsHomeView.tsx',
   'src/components/ConfirmDialog.tsx',
   'src/components/useConfirm.ts',
   'src/hooks/useModalFocusTrap.ts',
@@ -42,7 +43,6 @@ const REQUIRED_CONTRACTS = [
       'settingsOpenerRef',
       'restoreSettingsOpenerFocus',
       'settingsHomeCardRefs',
-      'data-focus-return-section',
       'activeSectionHeadingRef',
       'resetSettingsSectionScroll',
       'useLayoutEffect',
@@ -51,6 +51,17 @@ const REQUIRED_CONTRACTS = [
       'role="dialog"',
       'aria-modal="true"',
       'tabIndex={-1}',
+    ],
+  },
+  {
+    id: 'settings-home-card-focus-return-targets',
+    file: 'src/components/SettingsHomeView.tsx',
+    description: 'Settings home cards expose stable return targets for the drawer section back flow.',
+    patterns: [
+      'settingsHomeCardRefs.current[card.sectionId]',
+      'data-focus-return-section',
+      'onOpenSettingsSection(card.sectionId)',
+      'className="settings-home-card"',
     ],
   },
   {
@@ -127,7 +138,11 @@ const REQUIRED_CONTRACTS = [
 const FORBIDDEN_SOURCE_PATTERNS = [
   {
     id: 'focus-dashboard-or-workbench-chrome',
-    files: ['docs/FOCUS_MANAGEMENT_REFERENCE_REVIEW.md', 'src/components/SettingsDrawer.tsx'],
+    files: [
+      'docs/FOCUS_MANAGEMENT_REFERENCE_REVIEW.md',
+      'src/components/SettingsDrawer.tsx',
+      'src/components/SettingsHomeView.tsx',
+    ],
     description: 'Focus management must not become dashboard, IDE, terminal, or workbench chrome.',
     patterns: [
       'focus-dashboard',
@@ -139,7 +154,7 @@ const FORBIDDEN_SOURCE_PATTERNS = [
   },
   {
     id: 'global-focus-manager',
-    files: ['src/components/SettingsDrawer.tsx'],
+    files: ['src/components/SettingsDrawer.tsx', 'src/components/SettingsHomeView.tsx'],
     description: 'The focus contract should stay local to SettingsDrawer instead of becoming a global focus manager.',
     patterns: [
       'window.__nexusFocusManager',
@@ -274,6 +289,7 @@ export function buildFocusManagementSurfaceReport(root = ROOT) {
   ])
   const combinedCss = [...cssByFile.values()].filter(Boolean).join('\n')
   const settingsDrawer = files.get('src/components/SettingsDrawer.tsx') ?? ''
+  const settingsHomeView = files.get('src/components/SettingsHomeView.tsx') ?? ''
   const confirmDialog = files.get('src/components/ConfirmDialog.tsx') ?? ''
   const useConfirm = files.get('src/components/useConfirm.ts') ?? ''
   const missingFiles = findMissingFiles(root)
@@ -296,7 +312,9 @@ export function buildFocusManagementSurfaceReport(root = ROOT) {
       dialogOccurrences: countOccurrences(settingsDrawer, 'role="dialog"'),
       alertDialogOccurrences: countOccurrences(confirmDialog, 'role="alertdialog"'),
       focusReturnOccurrences: countOccurrences(settingsDrawer, 'restoreSettingsOpenerFocus'),
-      homeCardFocusReturnOccurrences: countOccurrences(settingsDrawer, 'data-focus-return-section'),
+      homeCardFocusReturnOccurrences:
+        countOccurrences(settingsDrawer, 'data-focus-return-section')
+        + countOccurrences(settingsHomeView, 'data-focus-return-section'),
       confirmFocusReturnOccurrences: countOccurrences(useConfirm, 'restoreConfirmOpenerFocus'),
       safeConfirmFocusOccurrences: countOccurrences(confirmDialog, 'data-focus-default="cancel"'),
       sectionHeadingFocusOccurrences: countOccurrences(settingsDrawer, 'activeSectionHeadingRef'),

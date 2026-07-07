@@ -241,6 +241,16 @@
   white-space: normal;
 }
 
+.settings-home-card__copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.settings-home-card__chevron {
+  display: none;
+}
+
 .settings-home-card__glyph {
   position: static;
   grid-column: 3;

@@ -191,107 +191,6 @@
   color: rgba(23, 32, 42, 0.68);
 }
 
-.settings-drawer--day .settings-model-current {
-  border-color: rgba(52, 120, 246, 0.18);
-  background: rgba(52, 120, 246, 0.07);
-}
-
-.settings-drawer--day .settings-model-current span {
-  color: rgba(23, 32, 42, 0.62);
-}
-
-.settings-drawer--day .settings-model-current strong {
-  color: #17202a;
-}
-
-.settings-drawer--day .settings-model-catalog,
-.settings-drawer--day .settings-model-catalog__panel,
-.settings-drawer--day .settings-model-tab {
-  border-color: rgba(28, 42, 60, 0.1);
-  background: rgba(255, 255, 255, 0.68);
-  box-shadow:
-    0 8px 22px rgba(65, 83, 110, 0.07),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82);
-}
-
-.settings-drawer--day .settings-model-tab.is-active {
-  border-color: rgba(52, 120, 246, 0.34);
-  background: rgba(52, 120, 246, 0.07);
-  box-shadow:
-    inset 2px 0 0 #3478f6,
-    0 10px 26px rgba(52, 120, 246, 0.12);
-}
-
-.settings-drawer--day .settings-model-catalog__header h5,
-.settings-drawer--day .settings-model-catalog__panel-head strong,
-.settings-drawer--day .settings-model-tab__title {
-  color: #17202a;
-}
-
-.settings-drawer--day .settings-model-catalog__header p,
-.settings-drawer--day .settings-model-catalog__panel-head span,
-.settings-drawer--day .settings-model-catalog__panel-head p,
-.settings-drawer--day .settings-model-tab__meta {
-  color: rgba(23, 32, 42, 0.66);
-}
-
-.settings-drawer--day .settings-model-scope-switch,
-.settings-drawer--day .settings-model-chip {
-  border-color: rgba(28, 42, 60, 0.1);
-  background: rgba(255, 255, 255, 0.76);
-  color: rgba(23, 32, 42, 0.7);
-}
-
-.settings-drawer--day .settings-model-scope-switch button {
-  color: rgba(23, 32, 42, 0.62);
-}
-
-.settings-drawer--day .settings-model-scope-switch button:hover {
-  color: #17202a;
-}
-
-.settings-drawer--day .settings-model-scope-switch button.is-active {
-  background: rgba(52, 120, 246, 0.14);
-  color: #0f3f91;
-  box-shadow: 0 8px 18px rgba(52, 120, 246, 0.12);
-}
-
-.settings-drawer--day .settings-model-chip:hover {
-  border-color: rgba(52, 120, 246, 0.28);
-  background: rgba(52, 120, 246, 0.08);
-  color: #17202a;
-}
-
-.settings-drawer--day .settings-model-chip.is-active {
-  border-color: rgba(52, 120, 246, 0.42);
-  background: rgba(52, 120, 246, 0.14);
-  color: #0f3f91;
-}
-
-.settings-drawer--day .settings-model-status {
-  border-color: rgba(28, 42, 60, 0.1);
-  background: rgba(255, 255, 255, 0.7);
-  color: rgba(23, 32, 42, 0.66);
-}
-
-.settings-drawer--day .settings-model-status.is-current {
-  border-color: rgba(52, 120, 246, 0.32);
-  background: rgba(52, 120, 246, 0.12);
-  color: #0f3f91;
-}
-
-.settings-drawer--day .settings-model-status.is-available {
-  border-color: rgba(16, 143, 111, 0.22);
-  background: rgba(16, 143, 111, 0.08);
-  color: #0d715a;
-}
-
-.settings-drawer--day .settings-model-status.is-missing {
-  border-color: rgba(191, 112, 24, 0.24);
-  background: rgba(191, 112, 24, 0.08);
-  color: #8a4f12;
-}
-
 .settings-drawer--day .settings-window-group {
   border-color: rgba(28, 42, 60, 0.1);
   background: rgba(255, 255, 255, 0.68);
@@ -456,13 +355,11 @@
 }
 
 .settings-drawer--day .memory-card__hint,
-.settings-drawer--day .memory-empty,
-.settings-drawer--day .memory-preview__empty {
+.settings-drawer--day .memory-empty {
   color: rgba(23, 32, 42, 0.72);
 }
 
-.settings-drawer--day .memory-pill__category,
-.settings-drawer--day .memory-count {
+.settings-drawer--day .memory-pill__category {
   border-color: rgba(28, 42, 60, 0.1);
   background: rgba(255, 255, 255, 0.72);
   color: rgba(23, 32, 42, 0.72);
@@ -672,68 +569,8 @@
   letter-spacing: 0;
 }
 
-.settings-page__header--compact {
-  grid-template-columns: auto;
-  align-items: center;
-  padding: 0 0 10px;
-}
-
 .settings-page__meta {
   max-width: 100%;
-}
-
-.settings-page__spotlight {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  align-items: start;
-  padding: 18px 20px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  animation: sectionFadeIn 0.3s ease both;
-}
-
-.settings-page__spotlight-copy {
-  display: grid;
-  gap: 6px;
-}
-
-.settings-page__spotlight-copy strong {
-  color: #ffffff;
-  font-size: 18px;
-  line-height: 1.2;
-  letter-spacing: 0;
-}
-
-.settings-page__spotlight-copy p:last-child {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: var(--settings-body-font-size);
-  line-height: 1.65;
-}
-
-.settings-page__spotlight-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.settings-page__spotlight-tags span {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.2;
 }
 
 .settings-drawer__content {
@@ -744,13 +581,8 @@
 
 
 @media (max-width: 980px) {
-  .settings-page__header,
-  .settings-page__spotlight {
+  .settings-page__header {
     grid-template-columns: 1fr;
-  }
-
-  .settings-page__spotlight-tags {
-    justify-content: flex-start;
   }
 
   .settings-page__meta {
@@ -1284,10 +1116,6 @@
 .settings-drawer--day .settings-section h5,
 .settings-drawer--day .settings-choice-card__header strong,
 .settings-drawer--day .settings-drawer__card strong,
-.settings-drawer--day .settings-model-current strong,
-.settings-drawer--day .settings-model-catalog__header h5,
-.settings-drawer--day .settings-model-catalog__panel-head strong,
-.settings-drawer--day .settings-model-tab__title,
 .settings-drawer--day .settings-window-group__head h5,
 .settings-drawer--day .settings-console-card__headline strong,
 .settings-drawer--day .settings-console-list__item strong,
@@ -1316,11 +1144,6 @@
 .settings-drawer--day .eyebrow,
 .settings-drawer--day .settings-choice-card__meta,
 .settings-drawer--day .settings-choice-card__description,
-.settings-drawer--day .settings-model-current span,
-.settings-drawer--day .settings-model-catalog__header p,
-.settings-drawer--day .settings-model-catalog__panel-head span,
-.settings-drawer--day .settings-model-catalog__panel-head p,
-.settings-drawer--day .settings-model-tab__meta,
 .settings-drawer--day .settings-window-group__head span,
 .settings-drawer--day .settings-inline-note,
 .settings-drawer--day .settings-test-result,
@@ -1353,7 +1176,6 @@
 .settings-drawer--day .settings-weekly-recap__spark-row,
 .settings-drawer--day .memory-card__hint,
 .settings-drawer--day .memory-empty,
-.settings-drawer--day .memory-preview__empty,
 .settings-drawer--day label span {
   color: rgba(255, 255, 255, 0.62);
 }
@@ -1368,19 +1190,12 @@
 .settings-drawer--day .settings-section,
 .settings-drawer--day .settings-drawer__card,
 .settings-drawer--day .settings-choice-card,
-.settings-drawer--day .settings-model-catalog,
-.settings-drawer--day .settings-model-catalog__panel,
-.settings-drawer--day .settings-model-tab,
-.settings-drawer--day .settings-model-scope-switch,
-.settings-drawer--day .settings-model-chip,
-.settings-drawer--day .settings-model-status,
 .settings-drawer--day .settings-window-group,
 .settings-drawer--day .settings-toggle,
 .settings-drawer--day .settings-inline-note,
 .settings-drawer--day .settings-test-result,
 .settings-drawer--day .settings-section .memory-card,
 .settings-drawer--day .memory-pill__category,
-.settings-drawer--day .memory-count,
 .settings-drawer--day .memory-pill,
 .settings-drawer--day .settings-summary-chip,
 .settings-drawer--day .settings-page__meta span,
@@ -1408,7 +1223,6 @@
 }
 
 .settings-drawer--day .settings-choice-card:hover,
-.settings-drawer--day .settings-model-chip:hover,
 .settings-drawer--day .settings-toggle:hover,
 .settings-drawer--day .settings-drawer__language-button:hover,
 .settings-drawer--day .settings-drawer__language-button[aria-expanded="true"],
@@ -1425,45 +1239,27 @@
 }
 
 .settings-drawer--day .settings-appearance-switch__label,
-.settings-drawer--day .settings-appearance-switch__option,
-.settings-drawer--day .settings-model-scope-switch button {
+.settings-drawer--day .settings-appearance-switch__option {
   color: rgba(255, 255, 255, 0.6);
 }
 
-.settings-drawer--day .settings-appearance-switch__option:hover,
-.settings-drawer--day .settings-model-scope-switch button:hover {
+.settings-drawer--day .settings-appearance-switch__option:hover {
   color: rgba(255, 255, 255, 0.88);
 }
 
-.settings-drawer--day .settings-appearance-switch__option.is-active,
-.settings-drawer--day .settings-model-scope-switch button.is-active,
-.settings-drawer--day .settings-model-chip.is-active,
-.settings-drawer--day .settings-model-status.is-current {
+.settings-drawer--day .settings-appearance-switch__option.is-active {
   border-color: rgba(93, 161, 255, 0.34);
   background: rgba(93, 161, 255, 0.18);
   color: rgba(238, 247, 255, 0.95);
   box-shadow: 0 10px 24px rgba(59, 130, 246, 0.16);
 }
 
-.settings-drawer--day .settings-choice-card.is-active,
-.settings-drawer--day .settings-model-tab.is-active {
+.settings-drawer--day .settings-choice-card.is-active {
   border-color: rgba(93, 161, 255, 0.36);
   background: rgba(93, 161, 255, 0.12);
   box-shadow:
     inset 2px 0 0 rgba(93, 161, 255, 0.78),
     0 10px 24px rgba(59, 130, 246, 0.12);
-}
-
-.settings-drawer--day .settings-model-status.is-available {
-  border-color: rgba(74, 222, 128, 0.28);
-  background: rgba(74, 222, 128, 0.1);
-  color: rgba(196, 255, 218, 0.9);
-}
-
-.settings-drawer--day .settings-model-status.is-missing {
-  border-color: rgba(251, 191, 36, 0.3);
-  background: rgba(251, 191, 36, 0.1);
-  color: rgba(255, 229, 167, 0.9);
 }
 
 .settings-drawer--day .settings-toggle input {
@@ -1729,7 +1525,6 @@
 
 /* Nexus settings consolidation overrides.
    Keep these late so they win over earlier preview-era experiments. */
-.settings-model-connection,
 .settings-model-advanced {
   display: grid;
   gap: 12px;
@@ -1766,17 +1561,6 @@
 
 .settings-model-advanced[open] summary::after {
   transform: rotate(90deg);
-}
-
-.settings-model-custom-entry {
-  display: grid;
-  gap: 7px;
-}
-
-.settings-model-scope-switch {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  max-width: 100%;
-  overflow-x: auto;
 }
 
 .panel-window--companion .companion-chat,
@@ -1837,14 +1621,6 @@
 .settings-drawer--day .settings-section,
 .settings-drawer--day .settings-drawer__card,
 .settings-drawer--day .settings-choice-card,
-.settings-drawer--day .settings-model-current,
-.settings-drawer--day .settings-model-catalog,
-.settings-drawer--day .settings-model-catalog__panel,
-.settings-drawer--day .settings-model-tab,
-.settings-drawer--day .settings-model-scope-switch,
-.settings-drawer--day .settings-model-chip,
-.settings-drawer--day .settings-model-status,
-.settings-drawer--day .settings-model-connection,
 .settings-drawer--day .settings-model-advanced,
 .settings-drawer--day .settings-window-group,
 .settings-drawer--day .settings-toggle,
@@ -1865,111 +1641,24 @@
 }
 
 .settings-drawer--day .settings-choice-card:hover,
-.settings-drawer--day .settings-model-chip:hover,
 .settings-drawer--day .settings-toggle:hover {
   border-color: rgba(52, 120, 246, 0.2);
   background: rgba(255, 255, 255, 0.92);
 }
 
-.settings-drawer--day .settings-window-summary span,
-.settings-drawer--day .settings-character-summary span,
-.settings-drawer--day .settings-memory-summary span,
-.settings-drawer--day .settings-lorebook-summary span {
-  border-color: rgba(30, 42, 58, 0.1);
-  background: rgba(255, 255, 255, 0.7);
-  color: rgba(23, 32, 42, 0.68);
-  box-shadow:
-    0 6px 16px rgba(65, 83, 110, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
-}
-
-.settings-drawer--day .settings-lorebook-empty,
-.settings-drawer--day .settings-lorebook-embedded,
-.settings-drawer--day .settings-lorebook-trigger-preview,
-.settings-drawer--day .settings-lorebook-entry,
-.settings-drawer--day .settings-lorebook-entry__hint,
-.settings-drawer--day .settings-lorebook-details {
+.settings-drawer--day .settings-lorebook-empty {
   border-color: rgba(28, 42, 60, 0.1);
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 6px 16px rgba(65, 83, 110, 0.06);
 }
 
-.settings-drawer--day .settings-lorebook-entry {
-  background:
-    linear-gradient(135deg, rgba(52, 120, 246, 0.08), transparent 58%),
-    rgba(255, 255, 255, 0.74);
-}
-
-.settings-drawer--day .settings-lorebook-empty strong,
-.settings-drawer--day .settings-lorebook-trigger-preview__head h5,
-.settings-drawer--day .settings-lorebook-trigger-preview__result strong,
-.settings-drawer--day .settings-lorebook-trigger-preview__result li span,
-.settings-drawer--day .settings-lorebook-entry__hint strong,
-.settings-drawer--day .settings-lorebook-details__summary h5 {
+.settings-drawer--day .settings-lorebook-empty strong {
   color: #17202a;
 }
 
 .settings-drawer--day .settings-lorebook-empty p,
-.settings-drawer--day .settings-lorebook-trigger-preview__head p,
-.settings-drawer--day .settings-lorebook-trigger-preview__result p,
-.settings-drawer--day .settings-lorebook-trigger-preview__result small,
-.settings-drawer--day .settings-lorebook-entry__hint p,
-.settings-drawer--day .settings-lorebook-field span,
-.settings-drawer--day .settings-lorebook-details__summary p {
+.settings-drawer--day .settings-lorebook-field span {
   color: rgba(23, 32, 42, 0.64);
-}
-
-.settings-drawer--day .settings-lorebook-trigger-preview {
-  border-color: rgba(52, 120, 246, 0.14);
-  background:
-    linear-gradient(135deg, rgba(52, 120, 246, 0.08), rgba(255, 255, 255, 0.74));
-}
-
-.settings-drawer--day .settings-lorebook-trigger-preview input {
-  border-color: rgba(30, 42, 58, 0.12);
-  background: rgba(255, 255, 255, 0.86);
-  color: #17202a;
-}
-
-.settings-drawer--day .settings-lorebook-trigger-preview__result li {
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.settings-drawer--day .settings-lorebook-entry__enable {
-  color: rgba(23, 32, 42, 0.72);
-}
-
-.settings-drawer--day .settings-lorebook-entry__status,
-.settings-drawer--day .settings-lorebook-details__summary > span {
-  border-color: rgba(30, 42, 58, 0.1);
-  background: rgba(255, 255, 255, 0.74);
-  color: rgba(23, 32, 42, 0.64);
-}
-
-.settings-drawer--day .settings-lorebook-entry__status.is-ready {
-  border-color: rgba(28, 153, 96, 0.18);
-  background: rgba(223, 250, 237, 0.86);
-  color: #24704b;
-}
-
-.settings-drawer--day .settings-memory-details {
-  border-color: rgba(28, 42, 60, 0.1);
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 6px 16px rgba(65, 83, 110, 0.06);
-}
-
-.settings-drawer--day .settings-memory-details__summary h5 {
-  color: #17202a;
-}
-
-.settings-drawer--day .settings-memory-details__summary p {
-  color: rgba(23, 32, 42, 0.68);
-}
-
-.settings-drawer--day .settings-memory-details__summary > span {
-  border-color: rgba(30, 42, 58, 0.1);
-  background: rgba(255, 255, 255, 0.74);
-  color: rgba(23, 32, 42, 0.68);
 }
 
 .settings-drawer--day .settings-choice-card__label-input {
@@ -1995,10 +1684,6 @@
 .settings-drawer--day .settings-section h5,
 .settings-drawer--day .settings-choice-card__header strong,
 .settings-drawer--day .settings-drawer__card strong,
-.settings-drawer--day .settings-model-current strong,
-.settings-drawer--day .settings-model-catalog__header h5,
-.settings-drawer--day .settings-model-catalog__panel-head strong,
-.settings-drawer--day .settings-model-tab__title,
 .settings-drawer--day .settings-window-group__head h5,
 .settings-drawer--day .settings-console-card__headline strong,
 .settings-drawer--day .settings-console-list__item strong,
@@ -2012,11 +1697,6 @@
 .settings-drawer--day .settings-drawer__hint,
 .settings-drawer--day .settings-section__note,
 .settings-drawer--day .settings-choice-card__description,
-.settings-drawer--day .settings-model-current span,
-.settings-drawer--day .settings-model-catalog__header p,
-.settings-drawer--day .settings-model-catalog__panel-head span,
-.settings-drawer--day .settings-model-catalog__panel-head p,
-.settings-drawer--day .settings-model-tab__meta,
 .settings-drawer--day .settings-window-group__head span,
 .settings-drawer--day .settings-console-card p,
 .settings-drawer--day .settings-console-card__meta,
@@ -2028,45 +1708,27 @@
 }
 
 .settings-drawer--day .settings-appearance-switch__label,
-.settings-drawer--day .settings-appearance-switch__option,
-.settings-drawer--day .settings-model-scope-switch button {
+.settings-drawer--day .settings-appearance-switch__option {
   color: rgba(23, 32, 42, 0.62);
 }
 
-.settings-drawer--day .settings-appearance-switch__option:hover,
-.settings-drawer--day .settings-model-scope-switch button:hover {
+.settings-drawer--day .settings-appearance-switch__option:hover {
   color: #17202a;
 }
 
-.settings-drawer--day .settings-appearance-switch__option.is-active,
-.settings-drawer--day .settings-model-scope-switch button.is-active,
-.settings-drawer--day .settings-model-chip.is-active,
-.settings-drawer--day .settings-model-status.is-current {
+.settings-drawer--day .settings-appearance-switch__option.is-active {
   border-color: rgba(52, 120, 246, 0.34);
   background: rgba(52, 120, 246, 0.14);
   color: #0f3f91;
   box-shadow: 0 8px 18px rgba(52, 120, 246, 0.14);
 }
 
-.settings-drawer--day .settings-choice-card.is-active,
-.settings-drawer--day .settings-model-tab.is-active {
+.settings-drawer--day .settings-choice-card.is-active {
   border-color: rgba(52, 120, 246, 0.34);
   background: rgba(52, 120, 246, 0.08);
   box-shadow:
     inset 2px 0 0 #3478f6,
     0 10px 24px rgba(52, 120, 246, 0.12);
-}
-
-.settings-drawer--day .settings-model-status.is-available {
-  border-color: rgba(16, 143, 111, 0.22);
-  background: rgba(16, 143, 111, 0.08);
-  color: #0d715a;
-}
-
-.settings-drawer--day .settings-model-status.is-missing {
-  border-color: rgba(191, 112, 24, 0.24);
-  background: rgba(191, 112, 24, 0.08);
-  color: #8a4f12;
 }
 
 .settings-drawer--day input:not([type='checkbox']):not([type='range']),
@@ -2136,202 +1798,6 @@
   box-shadow: 0 12px 28px rgba(52, 120, 246, 0.22);
 }
 
-.settings-drawer--day .settings-context-overview,
-.settings-drawer--day .settings-context-empty,
-.settings-drawer--day .settings-context-overview__stats span {
-  border-color: rgba(30, 42, 58, 0.1);
-  background: rgba(255, 255, 255, 0.68);
-  color: rgba(23, 32, 42, 0.66);
-  box-shadow:
-    0 8px 22px rgba(65, 83, 110, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
-}
-
-.settings-drawer--day .settings-context-overview__main strong,
-.settings-drawer--day .settings-context-overview__stats strong,
-.settings-drawer--day .settings-context-block-title h5,
-.settings-drawer--day .settings-context-empty strong {
-  color: #17202a;
-}
-
-.settings-drawer--day .settings-context-overview__eyebrow,
-.settings-drawer--day .settings-context-template-row > span,
-.settings-drawer--day .settings-context-overview__main p,
-.settings-drawer--day .settings-context-block-title p,
-.settings-drawer--day .settings-context-empty p {
-  color: rgba(23, 32, 42, 0.62);
-}
-
-.settings-model-catalog__panel-head {
-  gap: 10px;
-}
-
-.settings-model-catalog__panel-head > .ghost-button {
-  align-self: flex-start;
-  min-height: var(--settings-control-height);
-  padding: 0 14px;
-  border-radius: 8px;
-  font-size: 12px;
-}
-
-.settings-model-capabilities {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.settings-model-capabilities span,
-.settings-model-chip__meta {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(246, 248, 252, 0.72);
-}
-
-.settings-model-capabilities span {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 0 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1.2;
-}
-
-.settings-model-health {
-  display: grid;
-  gap: 4px;
-  margin-top: 4px;
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.045);
-  color: rgba(246, 248, 252, 0.78);
-}
-
-.settings-model-health strong {
-  color: rgba(246, 248, 252, 0.92);
-  font-size: 12px;
-}
-
-.settings-model-health span,
-.settings-model-health em {
-  font-size: 12px;
-  font-style: normal;
-  line-height: 1.45;
-}
-
-.settings-model-health em {
-  color: rgba(246, 248, 252, 0.58);
-}
-
-.settings-model-health.is-success {
-  border-color: rgba(53, 197, 139, 0.18);
-  background: rgba(53, 197, 139, 0.08);
-}
-
-.settings-model-health.is-error {
-  border-color: rgba(255, 145, 77, 0.2);
-  background: rgba(255, 145, 77, 0.08);
-}
-
-.settings-model-chip {
-  display: grid;
-  gap: 5px;
-  justify-items: start;
-  text-align: left;
-}
-
-.settings-model-chip__id {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-.settings-model-chip__meta {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 0 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1.2;
-}
-
-.settings-voice-flow {
-  display: grid;
-  gap: 14px;
-  padding: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.045);
-}
-
-.settings-voice-flow h5,
-.settings-voice-flow p {
-  margin: 0;
-}
-
-.settings-voice-flow h5 {
-  color: rgba(246, 248, 252, 0.94);
-  font-size: var(--settings-heading-small-font-size);
-}
-
-.settings-voice-flow p {
-  margin-top: 4px;
-  color: rgba(246, 248, 252, 0.58);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.settings-voice-flow__steps {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.settings-voice-flow__steps span {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(246, 248, 252, 0.76);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.settings-voice-flow__steps b {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  background: rgba(168, 139, 255, 0.16);
-  color: rgba(246, 248, 252, 0.9);
-  font-size: 12px;
-}
-
-.settings-voice-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  gap: 12px;
-}
-
-.settings-voice-card {
-  align-content: start;
-}
-
-.settings-voice-card:nth-child(3) {
-  grid-column: 2;
-}
-
 .settings-test-result--compact {
   font-size: 12px;
   line-height: 1.5;
@@ -2340,262 +1806,6 @@
 
 .settings-voice-advanced {
   margin-top: 0;
-}
-
-.settings-tool-stack {
-  display: grid;
-  gap: 12px;
-}
-
-.settings-tool-card {
-  display: grid;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.055), transparent 58%),
-    rgba(255, 255, 255, 0.035);
-}
-
-.settings-tool-card.is-enabled {
-  border-color: rgba(168, 139, 255, 0.16);
-  background:
-    linear-gradient(135deg, rgba(168, 139, 255, 0.11), transparent 58%),
-    rgba(255, 255, 255, 0.045);
-}
-
-.settings-tool-card__header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-}
-
-.settings-tool-card__copy {
-  display: grid;
-  gap: 5px;
-  min-width: 0;
-}
-
-.settings-tool-card__copy h5 {
-  margin: 0;
-  color: rgba(246, 248, 252, 0.82);
-  font-size: var(--settings-heading-small-font-size);
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.settings-tool-card__copy p {
-  margin: 0;
-  color: rgba(246, 248, 252, 0.55);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.settings-tool-switch {
-  position: relative;
-  display: grid;
-  place-items: center;
-}
-
-.settings-tool-switch input {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  opacity: 0;
-}
-
-.settings-tool-switch span {
-  position: relative;
-  display: block;
-  width: 46px;
-  height: 28px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  transition: background 0.16s ease, box-shadow 0.16s ease;
-}
-
-.settings-tool-switch span::after {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.22);
-  transition: transform 0.16s ease;
-  content: "";
-}
-
-.settings-tool-switch input:checked + span {
-  background: #8f6dff;
-  box-shadow: 0 0 0 1px rgba(168, 139, 255, 0.24), 0 8px 22px rgba(168, 139, 255, 0.22);
-}
-
-.settings-tool-switch input:checked + span::after {
-  transform: translateX(18px);
-}
-
-.settings-tool-switch input:focus-visible + span {
-  outline: 2px solid rgba(168, 139, 255, 0.55);
-  outline-offset: 3px;
-}
-
-.settings-tool-card__body {
-  display: grid;
-  gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.settings-tool-card__inline-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.settings-tool-card__inline-toggle span {
-  color: rgba(246, 248, 252, 0.76);
-  font-size: var(--settings-control-font-size);
-  font-weight: 650;
-}
-
-.settings-drawer--day .settings-model-capabilities span,
-.settings-drawer--day .settings-model-chip__meta {
-  border-color: rgba(30, 42, 58, 0.08);
-  background: rgba(52, 120, 246, 0.07);
-  color: rgba(23, 32, 42, 0.64);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.64);
-}
-
-.settings-drawer--day .settings-model-health {
-  border-color: rgba(30, 42, 58, 0.1);
-  background: rgba(255, 255, 255, 0.64);
-  color: rgba(23, 32, 42, 0.72);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.72);
-}
-
-.settings-drawer--day .settings-model-health strong {
-  color: rgba(23, 32, 42, 0.88);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.88);
-}
-
-.settings-drawer--day .settings-model-health em {
-  color: rgba(23, 32, 42, 0.56);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.56);
-}
-
-.settings-drawer--day .settings-model-health.is-success {
-  border-color: rgba(18, 141, 104, 0.16);
-  background: rgba(18, 141, 104, 0.07);
-}
-
-.settings-drawer--day .settings-model-health.is-error {
-  border-color: rgba(191, 112, 24, 0.18);
-  background: rgba(191, 112, 24, 0.07);
-}
-
-.settings-drawer--day .settings-voice-flow {
-  border-color: rgba(30, 42, 58, 0.1);
-  background: rgba(255, 255, 255, 0.66);
-}
-
-.settings-drawer--day .settings-voice-flow h5 {
-  color: rgba(23, 32, 42, 0.9);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.9);
-}
-
-.settings-drawer--day .settings-voice-flow p {
-  color: rgba(23, 32, 42, 0.6);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.6);
-}
-
-.settings-drawer--day .settings-voice-flow__steps span {
-  border-color: rgba(30, 42, 58, 0.08);
-  background: rgba(52, 120, 246, 0.07);
-  color: rgba(23, 32, 42, 0.72);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.72);
-}
-
-.settings-drawer--day .settings-voice-flow__steps b {
-  background: rgba(52, 120, 246, 0.13);
-  color: rgba(23, 32, 42, 0.8);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.8);
-}
-
-.settings-drawer--day .settings-tool-card {
-  border-color: rgba(30, 42, 58, 0.1);
-  background:
-    linear-gradient(135deg, rgba(52, 120, 246, 0.06), transparent 58%),
-    rgba(255, 255, 255, 0.74);
-}
-
-.settings-drawer--day .settings-tool-card.is-enabled {
-  border-color: rgba(52, 120, 246, 0.18);
-  background:
-    linear-gradient(135deg, rgba(52, 120, 246, 0.1), transparent 58%),
-    rgba(255, 255, 255, 0.84);
-}
-
-.settings-drawer--day .settings-tool-card__copy h5 {
-  color: rgba(23, 32, 42, 0.78);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.78);
-}
-
-.settings-drawer--day .settings-tool-card__copy p {
-  color: rgba(23, 32, 42, 0.58);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.58);
-}
-
-.settings-drawer--day .settings-tool-switch span {
-  background: rgba(30, 42, 58, 0.14);
-  box-shadow: inset 0 0 0 1px rgba(30, 42, 58, 0.08);
-}
-
-.settings-drawer--day .settings-tool-switch input:checked + span {
-  background: #3478f6;
-  box-shadow: 0 0 0 1px rgba(52, 120, 246, 0.18), 0 8px 18px rgba(52, 120, 246, 0.2);
-}
-
-.settings-drawer--day .settings-tool-card__body,
-.settings-drawer--day .settings-tool-card__inline-toggle {
-  border-color: rgba(30, 42, 58, 0.08);
-}
-
-.settings-drawer--day .settings-tool-card__inline-toggle {
-  background: rgba(255, 255, 255, 0.58);
-}
-
-.settings-drawer--day .settings-tool-card__inline-toggle span {
-  color: rgba(23, 32, 42, 0.72);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.72);
-}
-
-@media (max-width: 740px) {
-  .settings-voice-flow__steps {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .settings-voice-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .settings-voice-card:nth-child(3) {
-    grid-column: auto;
-  }
-
-  .settings-model-scope-switch {
-    grid-template-columns: repeat(5, max-content);
-  }
 }
 
 /* ───────────────────────────────────────────────────────────────────
@@ -2968,7 +2178,6 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-page[data-section] label > span,
-.settings-page[data-section] .settings-choice-field__label,
 .settings-page[data-section] .settings-model-source-card__name,
 .settings-page[data-section] .settings-choice-card__header strong {
   font-size: var(--settings-child-control-font-size);
@@ -3031,8 +2240,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 .settings-page[data-section] .settings-console-card,
 .settings-page[data-section] .settings-console-section,
 .settings-page[data-section] .settings-console-list__item,
-.settings-page[data-section] .settings-diagnostics-panel,
-.settings-page[data-section] .reminder-task-card {
+.settings-page[data-section] .settings-diagnostics-panel {
   border-radius: 8px;
 }
 
@@ -3374,14 +2582,12 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 }
 
 .settings-drawer--warm-day .memory-card__hint,
-.settings-drawer--warm-day .memory-empty,
-.settings-drawer--warm-day .memory-preview__empty {
+.settings-drawer--warm-day .memory-empty {
   color: rgba(78, 64, 54, 0.62);
   -webkit-text-fill-color: rgba(78, 64, 54, 0.62);
 }
 
 .settings-drawer--warm-day .memory-pill__category,
-.settings-drawer--warm-day .memory-count,
 .settings-drawer--warm-day .memory-pill {
   border-color: rgba(72, 53, 40, 0.1);
   background: rgba(255, 253, 249, 0.7);
@@ -3402,41 +2608,36 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   -webkit-text-fill-color: rgba(78, 64, 54, 0.42);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-section,
-.settings-drawer--warm-day .settings-page[data-section] .settings-toggle,
-.settings-drawer--warm-day .settings-page[data-section] .settings-choice-card,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-source-card,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-detail-card,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-detail-fields,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-advanced,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-catalog,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-catalog__panel,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-tab,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-chip,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-status,
-.settings-drawer--warm-day .settings-page[data-section] .settings-inline-note,
-.settings-drawer--warm-day .settings-page[data-section] .settings-test-result,
-.settings-drawer--warm-day .settings-page[data-section] .settings-console-card,
-.settings-drawer--warm-day .settings-page[data-section] .settings-console-section,
-.settings-drawer--warm-day .settings-page[data-section] .settings-console-list__item,
-.settings-drawer--warm-day .settings-page[data-section] .settings-diagnostics-panel,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__faq-item,
-.settings-drawer--warm-day .settings-page[data-section] .settings-updater-panel,
-.settings-drawer--warm-day .settings-page[data-section] .settings-timeline-placeholder,
-.settings-drawer--warm-day .settings-page[data-section] .settings-timeline-chart__svg,
-.settings-drawer--warm-day .settings-page[data-section] .settings-cost-breakdown,
-.settings-drawer--warm-day .settings-page[data-section] .settings-weekly-recap,
-.settings-drawer--warm-day .settings-page[data-section] .settings-weekly-recap__metric,
-.settings-drawer--warm-day .settings-page[data-section] .settings-pet-model-card,
-.settings-drawer--warm-day .settings-page[data-section] .settings-pet-preview-card,
-.settings-drawer--warm-day .settings-page[data-section] .settings-pet-workflow-card,
-.settings-drawer--warm-day .settings-page[data-section] .settings-pet-action-row,
-.settings-drawer--warm-day .settings-page[data-section] .settings-pet-gallery-item,
-.settings-drawer--warm-day .settings-page[data-section] .settings-lorebook-item,
-.settings-drawer--warm-day .settings-page[data-section] .settings-letter-empty,
-.settings-drawer--warm-day .settings-page[data-section] .settings-letter-card,
-.settings-drawer--warm-day .settings-page[data-section] .settings-metric-card {
+.settings-drawer--warm-section .settings-section,
+.settings-drawer--warm-section .settings-toggle,
+.settings-drawer--warm-section .settings-choice-card,
+.settings-drawer--warm-section .settings-model-source-card,
+.settings-drawer--warm-section .settings-model-detail-card,
+.settings-drawer--warm-section .settings-model-detail-fields,
+.settings-drawer--warm-section .settings-model-advanced,
+.settings-drawer--warm-section .settings-inline-note,
+.settings-drawer--warm-section .settings-test-result,
+.settings-drawer--warm-section .settings-console-card,
+.settings-drawer--warm-section .settings-console-section,
+.settings-drawer--warm-section .settings-console-list__item,
+.settings-drawer--warm-section .settings-diagnostics-panel,
+.settings-drawer--warm-section .settings-about-panel,
+.settings-drawer--warm-section .settings-about-panel__faq-item,
+.settings-drawer--warm-section .settings-updater-panel,
+.settings-drawer--warm-section .settings-timeline-placeholder,
+.settings-drawer--warm-section .settings-timeline-chart__svg,
+.settings-drawer--warm-section .settings-cost-breakdown,
+.settings-drawer--warm-section .settings-weekly-recap,
+.settings-drawer--warm-section .settings-weekly-recap__metric,
+.settings-drawer--warm-section .settings-pet-model-card,
+.settings-drawer--warm-section .settings-pet-preview-card,
+.settings-drawer--warm-section .settings-pet-workflow-card,
+.settings-drawer--warm-section .settings-pet-action-row,
+.settings-drawer--warm-section .settings-pet-gallery-item,
+.settings-drawer--warm-section .settings-lorebook-item,
+.settings-drawer--warm-section .settings-letter-empty,
+.settings-drawer--warm-section .settings-letter-card,
+.settings-drawer--warm-section .settings-metric-card {
   border-color: rgba(72, 53, 40, 0.1);
   background: rgba(255, 252, 247, 0.78);
   color: rgba(36, 27, 22, 0.9);
@@ -3445,44 +2646,40 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
     inset 0 1px 0 rgba(255, 255, 255, 0.74);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-test-result.is-success {
+.settings-drawer--warm-section .settings-test-result.is-success {
   border-color: rgba(18, 141, 104, 0.18);
   background: rgba(18, 141, 104, 0.06);
   color: rgba(12, 95, 70, 0.9);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-test-result.is-error {
+.settings-drawer--warm-section .settings-test-result.is-error {
   border-color: rgba(191, 65, 24, 0.18);
   background: rgba(191, 65, 24, 0.06);
   color: rgba(155, 44, 12, 0.9);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-test-result.is-loading {
+.settings-drawer--warm-section .settings-test-result.is-loading {
   border-color: rgba(199, 102, 69, 0.16);
   background: rgba(199, 102, 69, 0.05);
   color: rgba(140, 70, 40, 0.8);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-test-result.is-loading::before {
+.settings-drawer--warm-section .settings-test-result.is-loading::before {
   border-color: rgba(199, 102, 69, 0.2);
   border-top-color: rgba(199, 102, 69, 0.75);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-choice-card:hover,
-.settings-drawer--warm-day .settings-page[data-section] .settings-toggle:hover,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-source-card:hover,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-chip:hover,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__link:hover {
+.settings-drawer--warm-section .settings-choice-card:hover,
+.settings-drawer--warm-section .settings-toggle:hover,
+.settings-drawer--warm-section .settings-model-source-card:hover,
+.settings-drawer--warm-section .settings-about-panel__link:hover {
   border-color: rgba(199, 102, 69, 0.22);
   background: rgba(255, 253, 249, 0.9);
   color: rgba(36, 27, 22, 0.94);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-choice-card.is-active,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-source-card.is-selected,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-tab.is-active,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-chip.is-active,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-status.is-current {
+.settings-drawer--warm-section .settings-choice-card.is-active,
+.settings-drawer--warm-section .settings-model-source-card.is-selected {
   border-color: rgba(199, 102, 69, 0.3);
   background: color-mix(in srgb, #c76645 12%, rgba(255, 253, 249, 0.92));
   color: rgba(36, 27, 22, 0.94);
@@ -3491,132 +2688,130 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
     0 10px 24px rgba(199, 102, 69, 0.12);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-page__back,
-.settings-drawer--warm-day .settings-page[data-section] .settings-section .ghost-button,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__link,
-.settings-drawer--warm-day .settings-page[data-section] .settings-sprite-preview__states button {
+.settings-drawer--warm-section .settings-page__back,
+.settings-drawer--warm-section .settings-section .ghost-button,
+.settings-drawer--warm-section .settings-about-panel__link,
+.settings-drawer--warm-section .settings-sprite-preview__states button {
   border-color: rgba(72, 53, 40, 0.1);
   background: rgba(255, 253, 249, 0.72);
   color: rgba(72, 53, 40, 0.76);
   box-shadow: none;
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-sprite-preview__states button.is-active,
-.settings-drawer--warm-day .settings-page[data-section] .onboarding-relationship__chip.is-active {
+.settings-drawer--warm-section .settings-sprite-preview__states button.is-active,
+.settings-drawer--warm-section .onboarding-relationship__chip.is-active {
   border-color: rgba(199, 102, 69, 0.34);
   background: rgba(199, 102, 69, 0.14);
   color: rgba(93, 45, 28, 0.94);
   box-shadow: 0 8px 18px rgba(199, 102, 69, 0.12);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .onboarding-relationship__chip {
+.settings-drawer--warm-section .onboarding-relationship__chip {
   border-color: rgba(72, 53, 40, 0.12);
   background: rgba(255, 253, 249, 0.72);
   color: rgba(72, 53, 40, 0.74);
   box-shadow: 0 3px 10px rgba(72, 53, 40, 0.06);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .onboarding-relationship__chip:hover {
+.settings-drawer--warm-section .onboarding-relationship__chip:hover {
   border-color: rgba(199, 102, 69, 0.24);
   background: rgba(255, 253, 249, 0.9);
   color: rgba(36, 27, 22, 0.92);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-danger-button {
+.settings-drawer--warm-section .settings-danger-button {
   border-color: rgba(176, 48, 48, 0.24);
   background: rgba(176, 48, 48, 0.08);
   color: rgba(122, 31, 31, 0.92);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-danger-button:hover {
+.settings-drawer--warm-section .settings-danger-button:hover {
   border-color: rgba(176, 48, 48, 0.36);
   background: rgba(176, 48, 48, 0.12);
   color: rgba(98, 24, 24, 0.96);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-sprite-preview__stage {
+.settings-drawer--warm-section .settings-sprite-preview__stage {
   border-color: rgba(72, 53, 40, 0.1);
   background:
     linear-gradient(180deg, rgba(255, 253, 249, 0.9), rgba(246, 239, 229, 0.72)),
     rgba(255, 252, 247, 0.78);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-community-links {
+.settings-drawer--warm-section .settings-community-links {
   border-color: rgba(72, 53, 40, 0.08);
   background: rgba(255, 250, 242, 0.46);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-community-links__label,
-.settings-drawer--warm-day .settings-page[data-section] .settings-tts-tuning__header span,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-source-card__chevron,
-.settings-drawer--warm-day .settings-page[data-section] .settings-mini-group__head span,
-.settings-drawer--warm-day .settings-page[data-section] .settings-mini-group__note,
-.settings-drawer--warm-day .settings-page[data-section] .settings-console-card__headline span,
-.settings-drawer--warm-day .settings-page[data-section] .settings-console-card p,
-.settings-drawer--warm-day .settings-page[data-section] .settings-console-card__meta,
-.settings-drawer--warm-day .settings-page[data-section] .settings-console-list__meta,
-.settings-drawer--warm-day .settings-page[data-section] .settings-console-list__secondary,
-.settings-drawer--warm-day .settings-page[data-section] .settings-console-list__empty,
-.settings-drawer--warm-day .settings-page[data-section] .settings-updater-panel__version,
-.settings-drawer--warm-day .settings-page[data-section] .settings-updater-panel__status,
-.settings-drawer--warm-day .settings-page[data-section] .settings-diagnostics-panel__feedback,
-.settings-drawer--warm-day .settings-page[data-section] .settings-timeline-placeholder,
-.settings-drawer--warm-day .settings-page[data-section] .settings-timeline-legend,
-.settings-drawer--warm-day .settings-page[data-section] .settings-cost-breakdown__empty,
-.settings-drawer--warm-day .settings-page[data-section] .settings-cost-breakdown__table th,
-.settings-drawer--warm-day .settings-page[data-section] .settings-cost-breakdown__table td,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__tagline,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__version,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__spotlight-summary,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__spotlight-list span,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__faq-answer,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__credits-intro,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__credits-list,
-.settings-drawer--warm-day .settings-page[data-section] .settings-weekly-recap__subtitle,
-.settings-drawer--warm-day .settings-page[data-section] .settings-weekly-recap__loading,
-.settings-drawer--warm-day .settings-page[data-section] .settings-weekly-recap__empty,
-.settings-drawer--warm-day .settings-page[data-section] .settings-weekly-recap__metric-label,
-.settings-drawer--warm-day .settings-page[data-section] .settings-weekly-recap__spark-row,
-.settings-drawer--warm-day .settings-page[data-section] .settings-metric-card span,
-.settings-drawer--warm-day .settings-page[data-section] .settings-letter-card__meta {
+.settings-drawer--warm-section .settings-community-links__label,
+.settings-drawer--warm-section .settings-tts-tuning__header span,
+.settings-drawer--warm-section .settings-model-source-card__chevron,
+.settings-drawer--warm-section .settings-mini-group__head span,
+.settings-drawer--warm-section .settings-mini-group__note,
+.settings-drawer--warm-section .settings-console-card__headline span,
+.settings-drawer--warm-section .settings-console-card p,
+.settings-drawer--warm-section .settings-console-card__meta,
+.settings-drawer--warm-section .settings-console-list__meta,
+.settings-drawer--warm-section .settings-console-list__secondary,
+.settings-drawer--warm-section .settings-console-list__empty,
+.settings-drawer--warm-section .settings-updater-panel__version,
+.settings-drawer--warm-section .settings-updater-panel__status,
+.settings-drawer--warm-section .settings-diagnostics-panel__feedback,
+.settings-drawer--warm-section .settings-timeline-placeholder,
+.settings-drawer--warm-section .settings-timeline-legend,
+.settings-drawer--warm-section .settings-cost-breakdown__empty,
+.settings-drawer--warm-section .settings-cost-breakdown__table th,
+.settings-drawer--warm-section .settings-cost-breakdown__table td,
+.settings-drawer--warm-section .settings-about-panel__tagline,
+.settings-drawer--warm-section .settings-about-panel__version,
+.settings-drawer--warm-section .settings-about-panel__spotlight-summary,
+.settings-drawer--warm-section .settings-about-panel__spotlight-list span,
+.settings-drawer--warm-section .settings-about-panel__faq-answer,
+.settings-drawer--warm-section .settings-about-panel__credits-intro,
+.settings-drawer--warm-section .settings-about-panel__credits-list,
+.settings-drawer--warm-section .settings-weekly-recap__subtitle,
+.settings-drawer--warm-section .settings-weekly-recap__loading,
+.settings-drawer--warm-section .settings-weekly-recap__empty,
+.settings-drawer--warm-section .settings-weekly-recap__metric-label,
+.settings-drawer--warm-section .settings-weekly-recap__spark-row,
+.settings-drawer--warm-section .settings-metric-card span,
+.settings-drawer--warm-section .settings-letter-card__meta {
   color: rgba(78, 64, 54, 0.62);
   -webkit-text-fill-color: rgba(78, 64, 54, 0.62);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-section h4,
-.settings-drawer--warm-day .settings-page[data-section] .settings-section h5,
-.settings-drawer--warm-day .settings-page[data-section] .settings-choice-card__header strong,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-source-card__name,
-.settings-drawer--warm-day .settings-page[data-section] .settings-console-card__headline strong,
-.settings-drawer--warm-day .settings-page[data-section] .settings-console-list__item strong,
-.settings-drawer--warm-day .settings-page[data-section] .settings-diagnostics-panel__header h4,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__title,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__spotlight-title,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__spotlight-list strong,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__section-title,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__faq-question,
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__credits-list strong,
-.settings-drawer--warm-day .settings-page[data-section] .settings-weekly-recap__title,
-.settings-drawer--warm-day .settings-page[data-section] .settings-metric-card strong,
-.settings-drawer--warm-day .settings-page[data-section] .settings-letter-card__date,
-.settings-drawer--warm-day .settings-page[data-section] .settings-letter-card__body {
+.settings-drawer--warm-section .settings-section h4,
+.settings-drawer--warm-section .settings-section h5,
+.settings-drawer--warm-section .settings-choice-card__header strong,
+.settings-drawer--warm-section .settings-model-source-card__name,
+.settings-drawer--warm-section .settings-console-card__headline strong,
+.settings-drawer--warm-section .settings-console-list__item strong,
+.settings-drawer--warm-section .settings-diagnostics-panel__header h4,
+.settings-drawer--warm-section .settings-about-panel__title,
+.settings-drawer--warm-section .settings-about-panel__spotlight-title,
+.settings-drawer--warm-section .settings-about-panel__spotlight-list strong,
+.settings-drawer--warm-section .settings-about-panel__section-title,
+.settings-drawer--warm-section .settings-about-panel__faq-question,
+.settings-drawer--warm-section .settings-about-panel__credits-list strong,
+.settings-drawer--warm-section .settings-weekly-recap__title,
+.settings-drawer--warm-section .settings-metric-card strong,
+.settings-drawer--warm-section .settings-letter-card__date,
+.settings-drawer--warm-section .settings-letter-card__body {
   color: rgba(36, 27, 22, 0.91);
   -webkit-text-fill-color: rgba(36, 27, 22, 0.91);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-choice-card__meta,
-.settings-drawer--warm-day .settings-page[data-section] .settings-choice-card__description,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-tab__meta,
-.settings-drawer--warm-day .settings-page[data-section] .settings-model-current span,
-.settings-drawer--warm-day .settings-page[data-section] .settings-lorebook-field span {
+.settings-drawer--warm-section .settings-choice-card__meta,
+.settings-drawer--warm-section .settings-choice-card__description,
+.settings-drawer--warm-section .settings-lorebook-field span {
   color: rgba(78, 64, 54, 0.62);
   -webkit-text-fill-color: rgba(78, 64, 54, 0.62);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-about-panel__version code,
-.settings-drawer--warm-day .settings-page[data-section] .settings-console-badge,
-.settings-drawer--warm-day .settings-page[data-section] .settings-console-list__badge,
-.settings-drawer--warm-day .settings-page[data-section] .settings-tts-tuning__header span {
+.settings-drawer--warm-section .settings-about-panel__version code,
+.settings-drawer--warm-section .settings-console-badge,
+.settings-drawer--warm-section .settings-console-list__badge,
+.settings-drawer--warm-section .settings-tts-tuning__header span {
   border-color: rgba(72, 53, 40, 0.1);
   background: rgba(255, 253, 249, 0.7);
   color: rgba(72, 53, 40, 0.72);
@@ -3624,23 +2819,23 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   box-shadow: none;
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-community-links a {
+.settings-drawer--warm-section .settings-community-links a {
   border-color: rgba(72, 53, 40, 0.09);
   background: rgba(255, 253, 249, 0.56);
   color: rgba(72, 53, 40, 0.78);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-community-links a svg {
+.settings-drawer--warm-section .settings-community-links a svg {
   color: rgba(78, 64, 54, 0.38);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-community-links a:hover {
+.settings-drawer--warm-section .settings-community-links a:hover {
   border-color: rgba(199, 102, 69, 0.2);
   background: rgba(199, 102, 69, 0.08);
   color: rgba(72, 53, 40, 0.9);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-community-links a:hover svg {
+.settings-drawer--warm-section .settings-community-links a:hover svg {
   color: rgba(128, 61, 37, 0.68);
 }
 
@@ -3652,7 +2847,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   accent-color: #3478f6;
 }
 
-.settings-drawer--warm-day .settings-page[data-section] input.settings-tts-tuning__range {
+.settings-drawer--warm-section input.settings-tts-tuning__range {
   --settings-tts-range-fill: color-mix(in srgb, var(--settings-accent) 86%, rgba(255, 255, 255, 0.16));
   --settings-tts-range-track: rgba(72, 53, 40, 0.13);
   --settings-tts-range-thumb: rgba(255, 253, 249, 0.98);
@@ -3660,9 +2855,9 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   accent-color: #c76645;
 }
 
-.settings-drawer--warm-day .settings-page[data-section] input:not([type='checkbox']):not([type='range']),
-.settings-drawer--warm-day .settings-page[data-section] select,
-.settings-drawer--warm-day .settings-page[data-section] textarea {
+.settings-drawer--warm-section input:not([type='checkbox']):not([type='range']),
+.settings-drawer--warm-section select,
+.settings-drawer--warm-section textarea {
   color-scheme: light;
   border-color: rgba(72, 53, 40, 0.12);
   background: rgba(255, 253, 249, 0.82);
@@ -3670,24 +2865,24 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   -webkit-text-fill-color: rgba(36, 27, 22, 0.9);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] input:not([type='checkbox']):not([type='range']):hover,
-.settings-drawer--warm-day .settings-page[data-section] select:hover,
-.settings-drawer--warm-day .settings-page[data-section] textarea:hover {
+.settings-drawer--warm-section input:not([type='checkbox']):not([type='range']):hover,
+.settings-drawer--warm-section select:hover,
+.settings-drawer--warm-section textarea:hover {
   border-color: rgba(72, 53, 40, 0.22);
   background: rgba(255, 253, 249, 0.92);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] input:not([type='checkbox']):not([type='range']):focus,
-.settings-drawer--warm-day .settings-page[data-section] select:focus,
-.settings-drawer--warm-day .settings-page[data-section] textarea:focus {
+.settings-drawer--warm-section input:not([type='checkbox']):not([type='range']):focus,
+.settings-drawer--warm-section select:focus,
+.settings-drawer--warm-section textarea:focus {
   outline: none;
   border-color: rgba(168, 120, 80, 0.38);
   background: rgba(255, 253, 249, 0.96);
   box-shadow: 0 0 0 3px rgba(168, 120, 80, 0.08);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] input::placeholder,
-.settings-drawer--warm-day .settings-page[data-section] textarea::placeholder {
+.settings-drawer--warm-section input::placeholder,
+.settings-drawer--warm-section textarea::placeholder {
   color: rgba(78, 64, 54, 0.42);
   -webkit-text-fill-color: rgba(78, 64, 54, 0.42);
 }
@@ -4600,58 +3795,58 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   -webkit-text-fill-color: rgba(23, 32, 42, 0.82);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] label > span,
-.settings-drawer--warm-day .settings-page[data-section] .settings-control-card > p,
-.settings-drawer--warm-day .settings-page[data-section] .settings-section p:not([class]),
-.settings-drawer--warm-day .settings-page[data-section] .settings-drawer__hint,
-.settings-drawer--warm-day .settings-page[data-section] .settings-updater-panel__version,
-.settings-drawer--warm-day .settings-page[data-section] .settings-updater-panel__status {
+.settings-drawer--warm-section label > span,
+.settings-drawer--warm-section .settings-control-card > p,
+.settings-drawer--warm-section .settings-section p:not([class]),
+.settings-drawer--warm-section .settings-drawer__hint,
+.settings-drawer--warm-section .settings-updater-panel__version,
+.settings-drawer--warm-section .settings-updater-panel__status {
   color: rgba(78, 64, 54, 0.68);
   -webkit-text-fill-color: rgba(78, 64, 54, 0.68);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-toggle > span {
+.settings-drawer--warm-section .settings-toggle > span {
   color: rgba(36, 27, 22, 0.82);
   -webkit-text-fill-color: rgba(36, 27, 22, 0.82);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-toggle input {
+.settings-drawer--warm-section .settings-toggle input {
   border: 1px solid rgba(72, 53, 40, 0.12);
   background: rgba(72, 53, 40, 0.16);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-toggle input::after {
+.settings-drawer--warm-section .settings-toggle input::after {
   background: rgba(255, 253, 249, 0.96);
   box-shadow: 0 2px 6px rgba(72, 53, 40, 0.2);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-toggle input:checked {
+.settings-drawer--warm-section .settings-toggle input:checked {
   border-color: rgba(199, 102, 69, 0.34);
   background: linear-gradient(135deg, #c76645, #df9a69);
   box-shadow: 0 4px 12px rgba(199, 102, 69, 0.16);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-toggle input:disabled {
+.settings-drawer--warm-section .settings-toggle input:disabled {
   cursor: not-allowed;
   opacity: 0.52;
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-toggle input:focus-visible {
+.settings-drawer--warm-section .settings-toggle input:focus-visible {
   outline-color: rgba(199, 102, 69, 0.6);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-lorebook-check input[type='checkbox'] {
+.settings-drawer--warm-section .settings-lorebook-check input[type='checkbox'] {
   background: rgba(72, 53, 40, 0.18);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-lorebook-check input[type='checkbox']:checked {
+.settings-drawer--warm-section .settings-lorebook-check input[type='checkbox']:checked {
   background: linear-gradient(135deg, #c76645, #df9a69);
 }
 
 .settings-drawer--night .settings-page[data-section] .settings-section,
 .settings-drawer--day .settings-page[data-section] .settings-section,
-.settings-drawer--warm-day .settings-page[data-section] .settings-section {
+.settings-drawer--warm-section .settings-section {
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -4659,7 +3854,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-drawer--night .settings-page[data-section] .settings-section:hover,
 .settings-drawer--day .settings-page[data-section] .settings-section:hover,
-.settings-drawer--warm-day .settings-page[data-section] .settings-section:hover {
+.settings-drawer--warm-section .settings-section:hover {
   border-color: transparent;
   background: transparent;
   box-shadow: none;
@@ -4771,8 +3966,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   min-width: 0;
 }
 
-.settings-page[data-section] label > span,
-.settings-page[data-section] .settings-choice-field__label {
+.settings-page[data-section] label > span {
   margin: 0 2px;
   font-size: var(--settings-child-meta-font-size);
   font-weight: 650;
@@ -5225,35 +4419,35 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   }
 }
 
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-community-links {
+.settings-drawer--day-section .settings-community-links {
   border-color: rgba(28, 42, 60, 0.1);
   background: rgba(248, 251, 255, 0.58);
 }
 
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-community-links__label {
+.settings-drawer--day-section .settings-community-links__label {
   color: rgba(23, 32, 42, 0.62);
   -webkit-text-fill-color: rgba(23, 32, 42, 0.62);
 }
 
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-community-links a {
+.settings-drawer--day-section .settings-community-links a {
   border-color: rgba(28, 42, 60, 0.11);
   background: rgba(255, 255, 255, 0.74);
   color: rgba(23, 32, 42, 0.8);
   -webkit-text-fill-color: rgba(23, 32, 42, 0.8);
 }
 
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-community-links a svg {
+.settings-drawer--day-section .settings-community-links a svg {
   color: rgba(34, 78, 142, 0.42);
 }
 
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-community-links a:hover {
+.settings-drawer--day-section .settings-community-links a:hover {
   border-color: rgba(52, 113, 232, 0.22);
   background: rgba(52, 113, 232, 0.08);
   color: rgba(23, 32, 42, 0.92);
   -webkit-text-fill-color: rgba(23, 32, 42, 0.92);
 }
 
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-community-links a:hover svg {
+.settings-drawer--day-section .settings-community-links a:hover svg {
   color: rgba(52, 113, 232, 0.72);
 }
 
@@ -6115,7 +5309,6 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-page[data-section] .settings-model-detail-fields > label > input,
 .settings-page[data-section] .settings-model-detail-fields > label > select,
-.settings-page[data-section] .settings-model-detail-fields > label .settings-url-field,
 .settings-page[data-section] .settings-model-detail-fields > label .settings-url-input {
   width: 100%;
   min-width: 0;
@@ -7663,7 +6856,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 .settings-drawer--night .settings-page[data-section] select,
 .settings-drawer--day .settings-page[data-section] select,
-.settings-drawer--warm-day .settings-page[data-section] select {
+.settings-drawer--warm-section select {
   background-image:
     linear-gradient(45deg, transparent 50%, currentColor 50%),
     linear-gradient(135deg, currentColor 50%, transparent 50%);
@@ -7674,7 +6867,7 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   background-size: 5px 5px;
 }
 
-.settings-drawer--warm-day .settings-page[data-section] select {
+.settings-drawer--warm-section select {
   background-color: color-mix(in srgb, var(--settings-surface-soft) 88%, var(--settings-surface));
 }
 
@@ -7828,580 +7021,18 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   display: none;
 }
 
-/* Onboarding sub-flow final pass: align nested steps with the settings child-page scale. */
+/* Keep the onboarding dialog aligned with the compact settings scale when the
+   lazy settings stylesheet is present, without duplicating the full dialog CSS. */
 .onboarding-card {
   --onboarding-control-height: var(--settings-control-height);
   --onboarding-font-size: var(--settings-control-font-size);
   --onboarding-heading-small-font-size: var(--settings-heading-small-font-size);
-  --onboarding-switch-width: 44px;
-  --onboarding-switch-height: 24px;
-  gap: 10px;
-  padding: 18px;
-  font-size: var(--onboarding-font-size);
-  line-height: 1.5;
-}
-
-.onboarding-card:focus {
-  outline: none;
-}
-
-.onboarding-card__header {
-  gap: 10px;
-}
-
-.onboarding-card__header h2 {
-  font-size: 20px;
-  font-weight: 720;
-  line-height: 1.18;
-}
-
-.onboarding-card__copy {
-  margin-top: 4px;
-  max-width: 62ch;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.onboarding-card .eyebrow {
-  margin-bottom: 4px;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.onboarding-stepper {
-  grid-template-columns: repeat(auto-fit, minmax(106px, 1fr));
-  gap: 8px;
-}
-
-.onboarding-stepper__item {
-  min-height: 58px;
-  align-content: start;
-  gap: 6px;
-  padding: 10px;
-}
-
-.onboarding-stepper__item span {
-  width: 24px;
-  height: 24px;
-  font-size: 12px;
-  line-height: 1;
-}
-
-.onboarding-stepper__item strong {
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
-
-.onboarding-card__body {
-  padding-right: 4px;
-  padding-bottom: 88px;
-  scroll-padding-bottom: 88px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 52px), transparent);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 52px), transparent);
-}
-
-.onboarding-section {
-  gap: 12px;
-  padding: 12px;
-  font-size: var(--onboarding-font-size);
-  line-height: 1.5;
-}
-
-.onboarding-section__intro {
-  gap: 4px;
-}
-
-.onboarding-section__intro strong {
-  font-size: var(--onboarding-heading-small-font-size);
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-.onboarding-section__intro p,
-.onboarding-tip,
-.onboarding-summary p,
-.onboarding-message-demo__header p,
-.onboarding-message-demo__step p,
-.onboarding-message-demo__privacy,
-.ai-disclosure-step__lead,
-.ai-disclosure-step__continue-note {
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.onboarding-grid {
-  gap: 10px;
-  min-width: 0;
-}
-
-.ai-disclosure-step {
-  gap: 8px;
-}
-
-.ai-disclosure-step__bullets {
-  gap: 6px;
-}
-
-.ai-disclosure-step__bullets li {
-  padding: 8px 10px;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.onboarding-section label {
-  min-width: 0;
-  gap: 6px;
-}
-
-.onboarding-section label span,
-.onboarding-relationship__label {
-  min-width: 0;
-  font-size: var(--onboarding-font-size);
-  font-weight: 650;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-
-.onboarding-section input,
-.onboarding-section select {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  min-height: var(--onboarding-control-height);
-  font-size: var(--onboarding-font-size);
-  line-height: 1.25;
-}
-
-.onboarding-section input {
-  padding: 0 10px;
-}
-
-.onboarding-section select {
-  appearance: none;
-  padding: 0 34px 0 10px;
-  background-image:
-    linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.58) 50%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.58) 50%, transparent 50%);
-  background-position:
-    calc(100% - 18px) 50%,
-    calc(100% - 13px) 50%;
-  background-repeat: no-repeat;
-  background-size: 5px 5px, 5px 5px;
-}
-
-.onboarding-toggle {
-  min-height: var(--onboarding-control-height);
-  grid-template-columns: minmax(0, 1fr) var(--onboarding-switch-width);
-  gap: 8px;
-  padding: 0 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
-}
-
-.onboarding-toggle input {
-  justify-self: end;
-  appearance: none;
-  position: relative;
-  width: var(--onboarding-switch-width);
-  height: var(--onboarding-switch-height);
-  min-height: var(--onboarding-switch-height);
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  cursor: pointer;
-  transition: background 0.2s ease, box-shadow 0.2s ease;
-}
-
-.onboarding-toggle input::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
-  transition: transform 0.2s ease;
-}
-
-.onboarding-toggle input:checked {
-  background: linear-gradient(135deg, #A88BFF, #C8A6FF);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-}
-
-.onboarding-toggle input:checked::after {
-  transform: translateX(20px);
-}
-
-.onboarding-toggle input:focus-visible {
-  outline: 2px solid rgba(168, 139, 255, 0.62);
-  outline-offset: 2px;
-}
-
-.onboarding-subsection,
-.onboarding-summary,
-.onboarding-readiness {
-  gap: 8px;
-  padding: 10px 12px;
-}
-
-.onboarding-subsection strong,
-.onboarding-summary strong,
-.onboarding-message-demo__header strong,
-.onboarding-message-demo__step strong,
-.onboarding-readiness__header strong {
-  font-size: var(--onboarding-font-size);
-  font-weight: 650;
-  line-height: 1.35;
-}
-
-.onboarding-readiness p,
-.onboarding-readiness__item,
-.onboarding-relationship__hint {
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.onboarding-readiness__status {
-  padding: 3px 8px;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.onboarding-message-demo__header,
-.onboarding-message-demo__step {
-  min-width: 0;
-  padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
-}
-
-.onboarding-message-demo__header {
-  display: grid;
-  grid-template-columns: minmax(0, 150px) minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
-}
-
-.onboarding-message-demo__source {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-  font-size: 11px;
-  font-weight: 650;
-  line-height: 1.35;
-  color: rgba(255, 255, 255, 0.6);
-  text-transform: uppercase;
-}
-
-.onboarding-message-demo__source strong {
-  color: rgba(255, 255, 255, 0.9);
-  text-transform: none;
-}
-
-.onboarding-message-demo__steps {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.onboarding-message-demo__step {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 8px;
-  align-items: start;
-}
-
-.onboarding-message-demo__index {
-  display: inline-grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  background: rgba(168, 139, 255, 0.18);
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.onboarding-message-demo__actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.onboarding-message-demo__action {
-  display: inline-grid;
-  place-items: center;
-  min-height: 38px;
-  padding: 6px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.045);
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1.25;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-
-.onboarding-message-demo__privacy {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.onboarding-message-demo__header .onboarding-message-demo__privacy {
-  margin-top: 4px;
-  font-size: 11px;
-}
-
-.onboarding-local-models__item {
-  min-height: var(--onboarding-control-height);
-  padding: 8px 10px;
-  font-size: var(--onboarding-font-size);
-  line-height: 1.35;
-}
-
-.onboarding-relationship__options {
-  gap: 8px;
-}
-
-.onboarding-relationship__chip {
-  min-height: var(--onboarding-control-height);
-  padding: 0 10px;
-  font-size: var(--onboarding-font-size);
-  line-height: 1.25;
 }
 
 .onboarding-card .ghost-button,
 .onboarding-card .primary-button {
   min-height: var(--onboarding-control-height);
-  padding: 0 12px;
-  border-radius: 8px;
   font-size: var(--onboarding-font-size);
-  font-weight: 650;
-  line-height: 1.25;
-}
-
-.onboarding-card__actions {
-  position: relative;
-  z-index: 2;
-  gap: 8px;
-  padding-top: 2px;
-  background:
-    linear-gradient(
-      to bottom,
-      rgba(14, 18, 28, 0),
-      rgba(14, 18, 28, 0.96) 34%
-    );
-  box-shadow: 0 -14px 22px rgba(14, 18, 28, 0.78);
-}
-
-@media (max-width: 620px) {
-  .onboarding-card {
-    gap: 10px;
-    padding: 14px;
-  }
-
-  .onboarding-card__header,
-  .onboarding-card__actions {
-    gap: 8px;
-  }
-
-  .onboarding-stepper,
-  .onboarding-card--pet .onboarding-stepper {
-    grid-auto-rows: 72px;
-  }
-
-  .onboarding-stepper__item,
-  .onboarding-card--pet .onboarding-stepper__item {
-    height: 72px;
-    min-height: 0;
-    align-content: center;
-    padding: 9px;
-  }
-
-  .onboarding-stepper__item strong {
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-
-  .onboarding-card__actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: center;
-  }
-
-  .onboarding-card__actions .ghost-button,
-  .onboarding-card__actions .primary-button {
-    width: auto;
-    min-width: 0;
-  }
-
-  .onboarding-card__header h2,
-  .onboarding-card--pet .onboarding-card__header h2 {
-    font-size: 20px;
-    line-height: 1.18;
-  }
-
-  .onboarding-stepper__item,
-  .onboarding-card--pet .onboarding-stepper__item {
-    min-height: 64px;
-    padding: 9px;
-  }
-
-  .onboarding-section {
-    padding: 10px;
-  }
-
-  .onboarding-message-demo__header {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (min-width: 390px) and (max-width: 620px) {
-  .onboarding-relationship__options {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 360px), (max-width: 620px) and (max-height: 620px) {
-  .onboarding-card {
-    grid-template-rows: auto auto minmax(120px, 1fr) auto;
-    gap: 8px;
-  }
-
-  .onboarding-card__header h2,
-  .onboarding-card--pet .onboarding-card__header h2 {
-    font-size: 18px;
-    line-height: 1.18;
-  }
-
-  .onboarding-card__copy,
-  .onboarding-card--pet .onboarding-card__copy {
-    line-height: 1.4;
-  }
-
-  .onboarding-stepper,
-  .onboarding-card--pet .onboarding-stepper {
-    display: flex;
-    grid-template-columns: none;
-    grid-auto-rows: auto;
-    gap: 8px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-bottom: 2px;
-    scroll-snap-type: x proximity;
-    scrollbar-width: thin;
-  }
-
-  .onboarding-stepper__item,
-  .onboarding-card--pet .onboarding-stepper__item {
-    flex: 0 0 min(116px, calc(50% - 4px));
-    width: auto;
-    height: 64px;
-    min-height: 64px;
-    align-content: center;
-    padding: 8px;
-    scroll-snap-align: start;
-  }
-
-  .onboarding-card__body {
-    padding-bottom: 64px;
-    scroll-padding-bottom: 64px;
-  }
-}
-
-@media (max-width: 430px) and (max-height: 640px) {
-  .onboarding-card {
-    grid-template-rows: auto auto minmax(180px, 1fr) auto;
-    gap: 6px;
-  }
-
-  .onboarding-card__header {
-    align-items: center;
-    gap: 8px;
-  }
-
-  .onboarding-card__header > div {
-    min-width: 0;
-  }
-
-  .onboarding-card .eyebrow,
-  .onboarding-card__copy {
-    display: none;
-  }
-
-  .onboarding-card__header h2,
-  .onboarding-card--pet .onboarding-card__header h2 {
-    overflow: visible;
-    overflow-wrap: anywhere;
-    font-size: 16px;
-    line-height: 1.18;
-    text-overflow: clip;
-    white-space: normal;
-  }
-
-  .onboarding-stepper,
-  .onboarding-card--pet .onboarding-stepper {
-    gap: 6px;
-  }
-
-  .onboarding-stepper__item,
-  .onboarding-card--pet .onboarding-stepper__item {
-    grid-template-columns: auto minmax(0, 1fr);
-    flex-basis: min(104px, calc(50% - 3px));
-    height: 48px;
-    min-height: 48px;
-    align-content: center;
-    align-items: center;
-    gap: 6px;
-    padding: 6px;
-  }
-
-  .onboarding-stepper__item span {
-    width: 22px;
-    height: 22px;
-  }
-
-  .onboarding-stepper__item strong {
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-    font-size: 11px;
-    line-height: 1.2;
-  }
-
-  .onboarding-section {
-    gap: 10px;
-    padding: 10px;
-  }
-
-  .onboarding-section__intro {
-    gap: 3px;
-  }
-
-  .onboarding-section__intro p {
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-height: 1.45;
-  }
 }
 
 .music-popup-card__dismiss,
@@ -9519,20 +8150,20 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
 
 /* Day-theme subpages need stronger body text than the home overview because
    most notes sit on bright cards at 12px. */
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-section__note,
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-page__headline .settings-section__note,
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-drawer__hint,
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-mini-group__note,
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-control-card > p,
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-section p:not([class]) {
+.settings-drawer--day-section .settings-section__note,
+.settings-drawer--day-section .settings-page__headline .settings-section__note,
+.settings-drawer--day-section .settings-drawer__hint,
+.settings-drawer--day-section .settings-mini-group__note,
+.settings-drawer--day-section .settings-control-card > p,
+.settings-drawer--day-section .settings-section p:not([class]) {
   color: rgba(23, 32, 42, 0.7);
   -webkit-text-fill-color: rgba(23, 32, 42, 0.7);
 }
 
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='console'] .settings-console-card__headline span,
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='console'] .settings-console-card p,
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='console'] .settings-console-card__meta,
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='console'] .settings-console-card__meta span {
+.settings-drawer--day-section .settings-page[data-section='console'] .settings-console-card__headline span,
+.settings-drawer--day-section .settings-page[data-section='console'] .settings-console-card p,
+.settings-drawer--day-section .settings-page[data-section='console'] .settings-console-card__meta,
+.settings-drawer--day-section .settings-page[data-section='console'] .settings-console-card__meta span {
   color: rgba(23, 32, 42, 0.7);
   -webkit-text-fill-color: rgba(23, 32, 42, 0.7);
 }
@@ -9585,28 +8216,28 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   -webkit-text-fill-color: rgba(23, 32, 42, 0.64);
 }
 
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-mini-group__head span {
+.settings-drawer--day-section .settings-mini-group__head span {
   color: rgba(23, 32, 42, 0.66);
   -webkit-text-fill-color: rgba(23, 32, 42, 0.66);
 }
 
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-toggle > span {
+.settings-drawer--day-section .settings-toggle > span {
   color: rgba(23, 32, 42, 0.82);
   -webkit-text-fill-color: rgba(23, 32, 42, 0.82);
 }
 
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section] .settings-toggle:has(input:disabled) > span {
+.settings-drawer--day-section .settings-toggle:has(input:disabled) > span {
   color: rgba(23, 32, 42, 0.46);
   -webkit-text-fill-color: rgba(23, 32, 42, 0.46);
 }
 
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='window'] .settings-control-card > .settings-toggle > span,
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='window'] .settings-window-section .settings-control-card > .settings-toggle > span {
+.settings-drawer--day-section .settings-page[data-section='window'] .settings-control-card > .settings-toggle > span,
+.settings-drawer--day-section .settings-page[data-section='window'] .settings-window-section .settings-control-card > .settings-toggle > span {
   color: rgba(23, 32, 42, 0.82);
   -webkit-text-fill-color: rgba(23, 32, 42, 0.82);
 }
 
-.settings-drawer--day:not(.settings-drawer--warm-day) .settings-page[data-section='window'] .settings-window-section .settings-control-card > p {
+.settings-drawer--day-section .settings-page[data-section='window'] .settings-window-section .settings-control-card > p {
   color: rgba(23, 32, 42, 0.66);
   -webkit-text-fill-color: rgba(23, 32, 42, 0.66);
 }
@@ -9621,17 +8252,17 @@ html[data-theme='system-day'] .settings-drawer--warm-day .primary-button {
   -webkit-text-fill-color: rgba(78, 64, 54, 0.66);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-mini-group__head span {
+.settings-drawer--warm-section .settings-mini-group__head span {
   color: rgba(78, 64, 54, 0.66);
   -webkit-text-fill-color: rgba(78, 64, 54, 0.66);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-toggle > span {
+.settings-drawer--warm-section .settings-toggle > span {
   color: rgba(36, 27, 22, 0.82);
   -webkit-text-fill-color: rgba(36, 27, 22, 0.82);
 }
 
-.settings-drawer--warm-day .settings-page[data-section] .settings-toggle:has(input:disabled) > span {
+.settings-drawer--warm-section .settings-toggle:has(input:disabled) > span {
   color: rgba(78, 64, 54, 0.48);
   -webkit-text-fill-color: rgba(78, 64, 54, 0.48);
 }

@@ -23,6 +23,7 @@ import {
 } from '../../lib'
 import { setSettingsSnapshot } from '../store/settingsStore'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
+import { syncWindowViewToUrl } from '../appSupport'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import { runTextConnectionTestPreflight } from '../../features/models/connectionPreflight'
@@ -145,6 +146,11 @@ export function useAppOverlays({
   const [onboardingPending, setOnboardingPending] = useState(onboardingPendingInitial)
   const [onboardingOpen, setOnboardingOpen] = useState(onboardingPendingInitial)
 
+  const closeSettingsSurface = useCallback(() => {
+    setSettingsOpen(false)
+    syncWindowViewToUrl(view === 'panel' ? 'panel' : 'pet', view === 'panel' ? 'chat' : undefined)
+  }, [setSettingsOpen, view])
+
   const applySettingsSave = useCallback(async (
     nextSettings: AppSettings,
     options?: {
@@ -182,7 +188,7 @@ export function useAppOverlays({
     setSettings(finalSettings)
 
     if (options?.closeSettings ?? true) {
-      setSettingsOpen(false)
+      closeSettingsSurface()
     }
 
     if (options?.completeOnboarding ?? onboardingPending) {
@@ -218,7 +224,7 @@ export function useAppOverlays({
         }
       }
     }
-  }, [chat, onboardingPending, platformProfile.startup.supported, setSettings, setSettingsOpen])
+  }, [chat, closeSettingsSurface, onboardingPending, platformProfile.startup.supported, setSettings])
 
   const chatMessageCount = useMemo(
     () => chat.messages.filter((message) => message.role !== 'system').length,
@@ -226,9 +232,9 @@ export function useAppOverlays({
   )
 
   const openOnboardingGuide = useCallback(() => {
-    setSettingsOpen(false)
+    closeSettingsSurface()
     setOnboardingOpen(true)
-  }, [setSettingsOpen])
+  }, [closeSettingsSurface])
 
   const settingsDailyMemoryEntries = useMemo(
     () => mergeFocusedDailyEntries({
@@ -261,7 +267,7 @@ export function useAppOverlays({
     voicePipeline: voice.voicePipeline,
     voiceTrace: voice.voiceTrace,
     debugConsoleEvents,
-    onClose: () => setSettingsOpen(false),
+    onClose: closeSettingsSurface,
     onExportChatHistory: chat.exportChatHistory,
     onImportChatHistory: chat.importChatHistory,
     onClearChatHistory: chat.clearChatHistory,

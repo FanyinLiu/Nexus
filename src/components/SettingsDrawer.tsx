@@ -1,4 +1,4 @@
-﻿import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+﻿import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap.ts'
 import {
   getMemorySearchModeOptions,
@@ -33,6 +33,7 @@ import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
 import { useTheme } from '../features/themes/index.ts'
 import { syncWakeWordWithCompanionNameChange } from '../features/hearing/companionWakeWordSync.ts'
 import { SettingsDrawerActiveSection } from './SettingsDrawerActiveSection.tsx'
+import { SettingsHomeView } from './SettingsHomeView.tsx'
 import type { ChatMemoryTraceFocusTarget } from '../features/memory/traceDetails.ts'
 import {
   useConnectionTests,
@@ -518,13 +519,18 @@ export function SettingsDrawer({
   const settingsBackdropClassName = [
     'settings-backdrop',
     settingsThemeTone === 'night' ? 'settings-backdrop--night' : 'settings-backdrop--day',
+    settingsThemeTone === 'night' ? '' : 'settings-backdrop--light',
     settingsThemeTone === 'warm-day' ? 'settings-backdrop--warm-day' : '',
   ].filter(Boolean).join(' ')
   const settingsDrawerClassName = [
     'settings-drawer',
     settingsView === 'home' ? 'settings-drawer--home' : 'settings-drawer--section',
     settingsThemeTone === 'night' ? 'settings-drawer--night' : 'settings-drawer--day',
+    settingsThemeTone === 'night' ? '' : 'settings-drawer--light',
+    settingsThemeTone !== 'night' && settingsView !== 'home' ? 'settings-drawer--light-section' : '',
     settingsThemeTone === 'warm-day' ? 'settings-drawer--warm-day' : '',
+    settingsThemeTone === 'warm-day' && settingsView !== 'home' ? 'settings-drawer--warm-section' : '',
+    settingsThemeTone === 'day' && settingsView !== 'home' ? 'settings-drawer--day-section' : '',
   ].filter(Boolean).join(' ')
   // Sync draft from external settings ONLY when the drawer opens,
   // not while the user is actively editing.
@@ -706,6 +712,12 @@ export function SettingsDrawer({
     onOpenOnboardingGuide()
   }
 
+  function handleOpenSettingsHomeAction(action: SettingsHomeActionEntry) {
+    if (action.actionId === 'onboarding') {
+      handleOpenOnboardingGuide()
+    }
+  }
+
   function handleReturnToSettingsHome() {
     const returnSectionId = activeSectionId
     setSettingsView('home')
@@ -786,117 +798,6 @@ export function SettingsDrawer({
     )
   }
 
-  function renderSettingsHomeSectionCard(card: (typeof settingsHomeCards)[number]) {
-    const previewText = card.preview.filter(Boolean).join(' / ')
-    const cardLabel = previewText ? `${card.title}: ${previewText}` : card.title
-
-    return (
-      <button
-        ref={(node) => {
-          settingsHomeCardRefs.current[card.sectionId] = node
-        }}
-        key={card.key}
-        type="button"
-        className="settings-home-card"
-        data-section={card.key}
-        data-trust-group={card.trustGroup}
-        data-focus-return-section={card.sectionId}
-        aria-label={cardLabel}
-        title={cardLabel}
-        onClick={() => handleOpenSettingsSection(card.sectionId)}
-      >
-        <span className="settings-home-card__glyph" aria-hidden="true">
-          {renderSettingsCardIcon(card.glyph)}
-        </span>
-        <span className="settings-home-card__label">{card.title}</span>
-        <span className="settings-home-card__value">{card.preview[0] ?? ''}</span>
-      </button>
-    )
-  }
-
-  function renderSettingsAppearanceSwitch() {
-    return (
-      <div className="settings-appearance-switch" role="radiogroup" aria-label={ti('settings.appearance.label')}>
-        <span className="settings-appearance-switch__label">{ti('settings.appearance.label')}</span>
-        <div className="settings-appearance-switch__control">
-          {SETTINGS_APPEARANCE_OPTIONS.map((option, optionIndex) => {
-            const isActive = option.tone === settingsThemeTone
-            const optionLabel = ti(option.labelKey)
-            const optionTitle = `${ti('settings.appearance.label')}: ${optionLabel}`
-            const optionStyle = {
-              '--settings-theme-swatch-surface': option.swatch.surface,
-              '--settings-theme-swatch-accent': option.swatch.accent,
-            } as CSSProperties
-
-            return (
-              <button
-                ref={(node) => {
-                  appearanceOptionRefs.current[optionIndex] = node
-                }}
-                key={option.id}
-                type="button"
-                className={`settings-appearance-switch__option ${isActive ? 'is-active' : ''}`}
-                role="radio"
-                aria-checked={isActive}
-                aria-label={optionTitle}
-                tabIndex={optionIndex === selectedAppearanceIndex ? 0 : -1}
-                title={optionTitle}
-                style={optionStyle}
-                onClick={() => selectAppearanceOption(optionIndex)}
-                onKeyDown={(event) => handleAppearanceOptionKeyDown(event, optionIndex)}
-              >
-                <span className="settings-appearance-switch__swatch" aria-hidden="true" />
-                <span className="settings-appearance-switch__option-label">{optionLabel}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
-
-  function renderSettingsHomeAction(action: SettingsHomeActionEntry) {
-    return (
-      <button
-        key={action.actionId}
-        type="button"
-        className="settings-home-card settings-home-card--action"
-        data-section={action.actionId}
-        data-trust-group={action.trustGroup}
-        aria-label={ti(action.ariaLabelKey)}
-        title={ti(action.ariaLabelKey)}
-        onClick={handleOpenOnboardingGuide}
-      >
-        <span className="settings-home-card__glyph" aria-hidden="true">
-          {renderSettingsCardIcon(action.glyph)}
-        </span>
-        <span className="settings-home-card__label">{ti(action.titleKey)}</span>
-        <span className="settings-home-card__value">{ti(action.valueKey)}</span>
-      </button>
-    )
-  }
-
-  function renderSettingsHomePresence() {
-    return (
-      <section
-        className="settings-home-presence"
-        aria-labelledby="settings-home-presence-title"
-      >
-        <div className="settings-home-presence__copy">
-          <span className="settings-home-presence__badge">
-            {ti('settings.home.presence.badge')}
-          </span>
-          <strong id="settings-home-presence-title">
-            {ti('settings.home.presence.title')}
-          </strong>
-          <span className="settings-home-presence__body">
-            {ti('settings.home.presence.body')}
-          </span>
-        </div>
-      </section>
-    )
-  }
-
   if (!open) return null
 
   return (
@@ -914,7 +815,12 @@ export function SettingsDrawer({
           <div className="settings-drawer__header-main">
             <div className="settings-drawer__title-stack">
               <h3 className="settings-drawer__window-title">
-                <span className="settings-drawer__window-title-name">{ti('settings.title')}</span>
+                <span className="settings-drawer__window-title-name">
+                  {settingsView === 'home' ? ti('settings.home.presence.title') : activeSectionLabel}
+                </span>
+                <span className="settings-drawer__window-title-label">
+                  {settingsView === 'home' ? draft.companionName : ti('settings.title')}
+                </span>
               </h3>
             </div>
 
@@ -1004,26 +910,23 @@ export function SettingsDrawer({
 
         <div className="settings-drawer__body" ref={drawerBodyRef}>
           {settingsView === 'home' ? (
-            <div className="settings-home">
-              {renderSettingsHomePresence()}
-              {settingsHomeGroups.map((group) => (
-                <section
-                  key={group.id}
-                  className="settings-home-group"
-                  data-settings-home-group={group.id}
-                >
-                  <div className="settings-home-group__head">
-                    <span className="settings-home-group__title">{ti(group.titleKey)}</span>
-                    <span className="settings-home-group__hint">{ti(group.hintKey)}</span>
-                  </div>
-                  <div className="settings-home-group__list">
-                    {group.id === 'appearanceExperience' ? renderSettingsAppearanceSwitch() : null}
-                    {group.cards.map((card) => renderSettingsHomeSectionCard(card))}
-                    {group.actions?.map((action) => renderSettingsHomeAction(action))}
-                  </div>
-                </section>
-              ))}
-            </div>
+            <SettingsHomeView
+              appearanceOptionRefs={appearanceOptionRefs}
+              groups={settingsHomeGroups}
+              presence={{
+                badge: ti('settings.home.presence.badge'),
+                title: ti('settings.home.presence.title'),
+                body: ti('settings.home.presence.body'),
+              }}
+              selectedAppearanceIndex={selectedAppearanceIndex}
+              settingsHomeCardRefs={settingsHomeCardRefs}
+              settingsThemeTone={settingsThemeTone}
+              ti={ti}
+              onAppearanceOptionKeyDown={handleAppearanceOptionKeyDown}
+              onOpenHomeAction={handleOpenSettingsHomeAction}
+              onOpenSettingsSection={handleOpenSettingsSection}
+              onSelectAppearanceOption={selectAppearanceOption}
+            />
           ) : (
             <div className="settings-page" data-section={activeSectionId}>
               <div className="settings-page__header">

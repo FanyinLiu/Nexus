@@ -81,6 +81,37 @@ export function getInitialPanelSection(): PanelSection {
     : 'chat'
 }
 
+export function getInitialSettingsSectionId(): string | null {
+  const searchParams = new URLSearchParams(window.location.search)
+  if (searchParams.get('section') !== 'settings') return null
+  const value = searchParams.get('settingsSection')?.trim()
+  return value ? value : null
+}
+
+export function syncWindowViewToUrl(
+  view: WindowView,
+  section?: PanelSection,
+  settingsSectionId?: string | null,
+): void {
+  const url = new URL(window.location.href)
+  url.searchParams.set('view', view)
+
+  if (view === 'panel') {
+    const nextSection = section ?? 'chat'
+    url.searchParams.set('section', nextSection)
+    if (nextSection === 'settings' && settingsSectionId) {
+      url.searchParams.set('settingsSection', settingsSectionId)
+    } else {
+      url.searchParams.delete('settingsSection')
+    }
+  } else {
+    url.searchParams.delete('section')
+    url.searchParams.delete('settingsSection')
+  }
+
+  window.history.replaceState(window.history.state, '', url)
+}
+
 export function getImage4PreviewModeSync(): boolean {
   return new URLSearchParams(window.location.search).get('image4Preview') === '1'
 }

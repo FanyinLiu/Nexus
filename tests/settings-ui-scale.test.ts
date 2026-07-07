@@ -122,67 +122,154 @@ test('settings home keeps maintenance utilities in one low-frequency group', () 
   )
 })
 
+test('settings visual system defines the 0.4.2 shared child-page contract', () => {
+  const visualSystem = readWorkspaceFile('src/app/styles/settings-visual-system.css')
+  const entry = readWorkspaceFile('src/app/settingsDrawerEntry.ts')
+
+  assertSourceOrder(
+    entry,
+    "import './styles/settings-visual-system.css'",
+    "import './styles/settings-visibility-final.css'",
+    'settings visual system should load before the final readability layer',
+  )
+
+  for (const token of [
+    '--nx-settings-control-height: 30px;',
+    '--nx-settings-control-height-small: 24px;',
+    '--nx-settings-segment-height: 28px;',
+    '--nx-settings-footer-height: 36px;',
+    '--nx-settings-row-height: 38px;',
+    '--nx-settings-field-height: 32px;',
+    '--nx-settings-icon-size: 18px;',
+    '--nx-settings-segment-gap: 3px;',
+    '--nx-settings-track-trust',
+    '--nx-settings-track-memory',
+    '--nx-settings-track-desktop',
+    '--nx-settings-track-permission',
+    '--nx-settings-track-appearance',
+  ]) {
+    assert.ok(visualSystem.includes(token), `missing settings visual-system token: ${token}`)
+  }
+
+  for (const themeClass of ['.settings-drawer--night', '.settings-drawer--day', '.settings-drawer--warm-day', '.settings-backdrop--night', '.settings-backdrop--day', '.settings-backdrop--warm-day']) {
+    assert.ok(visualSystem.includes(themeClass), `visual system should define theme contract for ${themeClass}`)
+  }
+
+  assertSourcePattern(
+    visualSystem,
+    /\.settings-drawer\.settings-drawer--section \.settings-page\[data-section\]\s*\{[\s\S]*?--settings-child-control-height:\s*var\(--nx-settings-control-height\);[\s\S]*?--settings-child-control-font-size:\s*var\(--nx-settings-font-body\);/m,
+    'settings child pages should derive their scale from the Nexus visual-system tokens',
+  )
+  assertSourcePattern(
+    visualSystem,
+    /\.settings-drawer\.settings-drawer--section \.settings-page\[data-section\] :is\(input:not\(\[type='checkbox'\]\):not\(\[type='radio'\]\):not\(\[type='range'\]\):not\(\[type='file'\]\), select, textarea, \.settings-url-input\)\s*\{[\s\S]*?min-height:\s*var\(--nx-settings-field-height\);[\s\S]*?border-radius:\s*var\(--nx-settings-radius-control\);[\s\S]*?background:\s*var\(--nx-settings-field\);/m,
+    'text inputs, selects, textareas, and URL inputs should share one field treatment',
+  )
+  assertSourcePattern(
+    visualSystem,
+    /\.settings-drawer\.settings-drawer--section \.settings-page\[data-section\] \.settings-toggle input:checked\s*\{[\s\S]*?background:\s*linear-gradient\(135deg,\s*var\(--nx-settings-accent\),/m,
+    'toggle checked state should use the visual-system accent rather than per-page colors',
+  )
+  assertSourcePattern(
+    visualSystem,
+    /\.settings-drawer\.settings-drawer--section \.settings-page\[data-section\] :is\(\.settings-appearance-switch__control, \.onboarding-region-tabs, \.onboarding-relationship__options, \.settings-sprite-preview__states, \.settings-companion-state-preview__states\)\s*\{[\s\S]*?gap:\s*var\(--nx-settings-segment-gap\);[\s\S]*?background:\s*var\(--nx-settings-segment-surface\);/m,
+    'segmented controls should share one visual-system track treatment',
+  )
+  assertSourcePattern(
+    visualSystem,
+    /\.settings-drawer\.settings-drawer--section \.settings-page\[data-section\] :is\(\.settings-appearance-switch__option\.is-active, \.onboarding-region-tabs__tab\.is-active, \.onboarding-relationship__chip\.is-active, \.settings-sprite-preview__states button\.is-active, \.settings-companion-state-preview__states button\.is-active\)\s*\{[\s\S]*?background:\s*var\(--nx-settings-segment-active\);/m,
+    'segmented active states should share one active surface',
+  )
+  assertSourcePattern(
+    visualSystem,
+    /\.settings-drawer\.settings-drawer--section \.settings-page\[data-section\] :is\(\.settings-form-row__validation, \.settings-model-advanced__error, \.settings-test-result\.is-error, \.settings-url-input--invalid\)\s*\{[\s\S]*?var\(--nx-settings-danger\)/m,
+    'validation and error states should share one danger treatment',
+  )
+  assertSourcePattern(
+    visualSystem,
+    /\.settings-drawer\.settings-drawer--section \.settings-drawer__actions\s*\{[\s\S]*?min-height:\s*var\(--nx-settings-footer-height\);[\s\S]*?background:\s*var\(--nx-settings-footer-surface\);/m,
+    'settings footer actions should share one bottom operation surface',
+  )
+  assertSourcePattern(
+    visualSystem,
+    /\.settings-backdrop \.confirm-dialog-card\s*\{[\s\S]*?border:\s*1px solid var\(--nx-settings-line\);[\s\S]*?background:\s*var\(--nx-settings-surface\);[\s\S]*?color:\s*var\(--nx-settings-ink\);/m,
+    'settings confirmation dialogs should inherit the settings visual-system surface',
+  )
+  assertSourcePattern(
+    visualSystem,
+    /\.settings-backdrop \.confirm-dialog-card__confirm\.is-danger\s*\{[\s\S]*?border-color:\s*var\(--nx-settings-danger\);[\s\S]*?background:\s*var\(--nx-settings-danger\);/m,
+    'danger confirmations should use the shared danger token',
+  )
+
+  const visibilityFinal = readWorkspaceFile('src/app/styles/settings-visibility-final.css')
+  assertSourcePattern(
+    visibilityFinal,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-drawer__actions,[\s\S]*?\.settings-drawer\.settings-drawer--light\.settings-drawer--section \.settings-drawer__actions,[\s\S]*?\.settings-drawer\.settings-drawer--section \.settings-drawer__actions\s*\{[\s\S]*?min-height:\s*var\(--nx-settings-footer-height\);[\s\S]*?background:\s*var\(--nx-settings-footer-surface\);/m,
+    'final visibility layer should keep the save footer on the visual-system token after warm-section overrides',
+  )
+})
+
 test('final warm settings top bar stays calm and readable', () => {
   const finalSettings = readWorkspaceFile('src/app/styles/settings-chat-final.css')
 
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home \.settings-drawer__header,[\s\S]*?\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-drawer__header\s*\{[\s\S]*?padding:\s*1px 2px 2px;[\s\S]*?border:\s*0;[\s\S]*?border-bottom:\s*1px solid transparent;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-drawer__header,[\s\S]*?\.settings-drawer\.settings-drawer--light\.settings-drawer--section \.settings-drawer__header\s*\{[\s\S]*?padding:\s*1px 2px 2px;[\s\S]*?border:\s*0;[\s\S]*?border-bottom:\s*1px solid transparent;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
     'final warm settings title bar should stay integrated instead of reading as a separate hard strip',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home \.settings-drawer__header-main,[\s\S]*?\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-drawer__header-main\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?padding:\s*0 1px 0 6px;[\s\S]*?border:\s*0;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-drawer__header-main,[\s\S]*?\.settings-drawer\.settings-drawer--light\.settings-drawer--section \.settings-drawer__header-main\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?padding:\s*0 1px 0 6px;[\s\S]*?border:\s*0;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
     'final warm settings header should stay as a native app bar instead of an inner capsule',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home \.settings-drawer__toolbar,[\s\S]*?\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-drawer__toolbar\s*\{[\s\S]*?gap:\s*1px;[\s\S]*?padding:\s*0;[\s\S]*?border:\s*0;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-drawer__toolbar,[\s\S]*?\.settings-drawer\.settings-drawer--light\.settings-drawer--section \.settings-drawer__toolbar\s*\{[\s\S]*?gap:\s*1px;[\s\S]*?padding:\s*0;[\s\S]*?border:\s*0;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
     'final warm settings title buttons should be simple app-bar glyph buttons instead of a shared capsule',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home \.settings-drawer__window-title-name,[\s\S]*?\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-drawer__window-title-name\s*\{[\s\S]*?display:\s*inline;[\s\S]*?font-size:\s*12px;[\s\S]*?font-weight:\s*620;/m,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-drawer__window-title-name,[\s\S]*?\.settings-drawer\.settings-drawer--light\.settings-drawer--section \.settings-drawer__window-title-name\s*\{[\s\S]*?display:\s*inline;[\s\S]*?font-size:\s*12px;[\s\S]*?font-weight:\s*620;/m,
     'final warm settings title should keep Settings as the only visible title word',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home \.settings-drawer__window-title-label,[\s\S]*?\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-drawer__window-title-label\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?width:\s*1px;[\s\S]*?height:\s*1px;[\s\S]*?clip-path:\s*inset\(50%\);[\s\S]*?white-space:\s*nowrap;/m,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-drawer__window-title-label,[\s\S]*?\.settings-drawer\.settings-drawer--light\.settings-drawer--section \.settings-drawer__window-title-label\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?width:\s*1px;[\s\S]*?height:\s*1px;[\s\S]*?clip-path:\s*inset\(50%\);[\s\S]*?white-space:\s*nowrap;/m,
     'final warm settings title should keep companion context out of the visible app bar',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home \.settings-drawer__language-button,[\s\S]*?\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-drawer__icon-button\s*\{[\s\S]*?width:\s*20px;[\s\S]*?height:\s*20px;[\s\S]*?min-width:\s*20px;[\s\S]*?min-height:\s*20px;[\s\S]*?border-radius:\s*6px;/m,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-drawer__language-button,[\s\S]*?\.settings-drawer\.settings-drawer--light\.settings-drawer--section \.settings-drawer__icon-button\s*\{[\s\S]*?width:\s*20px;[\s\S]*?height:\s*20px;[\s\S]*?min-width:\s*20px;[\s\S]*?min-height:\s*20px;[\s\S]*?border-radius:\s*6px;/m,
     'final warm settings top controls should use compact Codex-like glyph hit targets',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home,[\s\S]*?\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section\s*\{[\s\S]*?--settings-surface:\s*#fffaf3;[\s\S]*?linear-gradient\(180deg,\s*#fffaf3 0%,\s*#f6ecde 100%\);[\s\S]*?backdrop-filter:\s*none;[\s\S]*?-webkit-backdrop-filter:\s*none;/m,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home,[\s\S]*?\.settings-drawer\.settings-drawer--light\.settings-drawer--section\s*\{[\s\S]*?--settings-surface:\s*#fffaf3;[\s\S]*?linear-gradient\(180deg,\s*#fffaf3 0%,\s*#f6ecde 100%\);[\s\S]*?backdrop-filter:\s*none;[\s\S]*?-webkit-backdrop-filter:\s*none;/m,
     'final warm settings drawer should use an opaque warm surface so chat content cannot bleed through',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home \.settings-drawer__actions,[\s\S]*?\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-drawer__actions\s*\{[\s\S]*?display:\s*flex;[\s\S]*?justify-content:\s*flex-end;[\s\S]*?gap:\s*8px;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-drawer__actions,[\s\S]*?\.settings-drawer\.settings-drawer--light\.settings-drawer--section \.settings-drawer__actions\s*\{[\s\S]*?display:\s*flex;[\s\S]*?justify-content:\s*flex-end;[\s\S]*?gap:\s*8px;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
     'final warm settings footer should use compact right-aligned actions instead of two wide button columns',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home \.settings-drawer__actions \.ghost-button,[\s\S]*?html\[data-theme='system-day'\] \.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-drawer__actions \.primary-button\s*\{[\s\S]*?backdrop-filter:\s*none;[\s\S]*?-webkit-backdrop-filter:\s*none;/m,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-drawer__actions \.ghost-button,[\s\S]*?html\[data-theme='system-day'\] \.settings-drawer\.settings-drawer--light\.settings-drawer--section \.settings-drawer__actions \.primary-button\s*\{[\s\S]*?backdrop-filter:\s*none;[\s\S]*?-webkit-backdrop-filter:\s*none;/m,
     'final warm settings footer buttons should not keep a hidden blur base',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home \.settings-home-group__head\s*\{[\s\S]*?min-height:\s*22px;[\s\S]*?padding:\s*3px 6px 1px;/m,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-home-group__head\s*\{[\s\S]*?min-height:\s*22px;[\s\S]*?padding:\s*3px 6px 1px;/m,
     'final warm settings group headings should not waste vertical space above the settings rows',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home \.settings-home-card,[\s\S]*?\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home \.settings-home-card:nth-child\(even\):hover\s*\{[\s\S]*?grid-template-columns:\s*18px minmax\(0,\s*1fr\) minmax\(68px,\s*min\(48%,\s*176px\)\);[\s\S]*?min-height:\s*38px;/m,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-home-card,[\s\S]*?\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-home-card:nth-child\(even\):hover\s*\{[\s\S]*?grid-template-columns:\s*18px minmax\(0,\s*1fr\) minmax\(68px,\s*min\(48%,\s*176px\)\);[\s\S]*?min-height:\s*38px;/m,
     'final warm settings home rows should reserve a left glyph lane like the companion chat action rows',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home \.settings-home-card__glyph\s*\{[\s\S]*?grid-column:\s*1;[\s\S]*?justify-self:\s*center;[\s\S]*?opacity:\s*0\.62;/m,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-home-card__glyph\s*\{[\s\S]*?grid-column:\s*1;[\s\S]*?justify-self:\s*center;[\s\S]*?opacity:\s*0\.62;/m,
     'final warm settings home glyphs should stay visible as leading category cues instead of fading on the right',
   )
 })
@@ -439,237 +526,237 @@ test('final warm child setting choices use soft segmented controls', () => {
 
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='model'\] \.onboarding-region-tabs\s*\{[\s\S]*?gap:\s*2px;[\s\S]*?border:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?border-radius:\s*9px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='model'\] \.onboarding-region-tabs\s*\{[\s\S]*?gap:\s*2px;[\s\S]*?border:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?border-radius:\s*9px;/m,
     'model region tabs should read as a soft segmented control rather than a table row',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='model'\] \.onboarding-region-tabs__tab\s*\{[\s\S]*?min-height:\s*30px;[\s\S]*?border:\s*1px solid transparent;[\s\S]*?border-radius:\s*7px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='model'\] \.onboarding-region-tabs__tab\s*\{[\s\S]*?min-height:\s*30px;[\s\S]*?border:\s*1px solid transparent;[\s\S]*?border-radius:\s*7px;/m,
     'model region tab buttons should not keep square 0px corners',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='model'\] \.settings-model-detail-card\s*\{[\s\S]*?padding:\s*0 0 8px;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='model'\] \.settings-model-detail-card\s*\{[\s\S]*?padding:\s*0 0 8px;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
     'model detail surface should flatten into the settings list rhythm instead of a raised nested card',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='model'\] \.settings-model-detail-brand\s*\{[\s\S]*?display:\s*grid;[\s\S]*?border:\s*0;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='model'\] \.settings-model-detail-brand\s*\{[\s\S]*?display:\s*grid;[\s\S]*?border:\s*0;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
     'model detail provider header should be a flat list header, not a white nested provider card',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='model'\] \.settings-model-detail-nav\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);[\s\S]*?gap:\s*0;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='model'\] \.settings-model-detail-nav\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);[\s\S]*?gap:\s*0;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);/m,
     'model detail action row should read as a quiet command strip, not two separated button boxes',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='model'\] \.settings-model-detail-nav \.ghost-button\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?border-color:\s*transparent;[\s\S]*?border-radius:\s*7px;[\s\S]*?background:\s*transparent;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='model'\] \.settings-model-detail-nav \.ghost-button\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?border-color:\s*transparent;[\s\S]*?border-radius:\s*7px;[\s\S]*?background:\s*transparent;/m,
     'model detail action buttons should stay text-light and avoid raised button floors',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='model'\] \.settings-model-detail-fields\s*\{[\s\S]*?border-top:\s*0;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='model'\] \.settings-model-detail-fields\s*\{[\s\S]*?border-top:\s*0;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
     'model detail field group should stay transparent instead of becoming a rounded form card',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='model'\] \.settings-model-detail-fields > label\s*\{[\s\S]*?grid-template-columns:\s*minmax\(92px,\s*0\.32fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*42px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='model'\] \.settings-model-detail-fields > label\s*\{[\s\S]*?grid-template-columns:\s*minmax\(92px,\s*0\.32fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*42px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
     'model detail fields should use compact label plus native-safe value rows',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='model'\] \.settings-model-detail-fields > label > :is\(input:not\(\[type='checkbox'\]\):not\(\[type='range'\]\), select, \.settings-url-input\)\s*\{[\s\S]*?min-height:\s*32px;[\s\S]*?height:\s*32px;[\s\S]*?border-radius:\s*7px;[\s\S]*?background:\s*rgba\(255,\s*253,\s*249,\s*0\.12\);[\s\S]*?line-height:\s*30px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='model'\] \.settings-model-detail-fields > label > :is\(input:not\(\[type='checkbox'\]\):not\(\[type='range'\]\), select, \.settings-url-input\)\s*\{[\s\S]*?min-height:\s*32px;[\s\S]*?height:\s*32px;[\s\S]*?border-radius:\s*7px;[\s\S]*?background:\s*rgba\(255,\s*253,\s*249,\s*0\.12\);[\s\S]*?line-height:\s*30px;/m,
     'model detail native controls should be tall enough for Chinese text without becoming large cards',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='voice'\] \.settings-voice-loop-card > label\.settings-control-card\.settings-voice-field:not\(\.settings-metric-card\):not\(\.settings-updater-panel\)\s*\{[\s\S]*?grid-template-columns:\s*minmax\(108px,\s*0\.36fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*44px;[\s\S]*?padding:\s*5px 2px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='voice'\] \.settings-voice-loop-card > label\.settings-control-card\.settings-voice-field:not\(\.settings-metric-card\):not\(\.settings-updater-panel\)\s*\{[\s\S]*?grid-template-columns:\s*minmax\(108px,\s*0\.36fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*44px;[\s\S]*?padding:\s*5px 2px;/m,
     'voice select rows should give VAD and trigger fields enough value space without becoming tall cards',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='voice'\] \.settings-voice-loop-card > label\.settings-control-card\.settings-voice-field:not\(\.settings-metric-card\):not\(\.settings-updater-panel\) > select\s*\{[\s\S]*?min-height:\s*34px;[\s\S]*?height:\s*34px;[\s\S]*?line-height:\s*1\.2;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='voice'\] \.settings-voice-loop-card > label\.settings-control-card\.settings-voice-field:not\(\.settings-metric-card\):not\(\.settings-updater-panel\) > select\s*\{[\s\S]*?min-height:\s*34px;[\s\S]*?height:\s*34px;[\s\S]*?line-height:\s*1\.2;/m,
     'voice select controls should use native-safe vertical room for Chinese option text',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='voice'\] \.settings-speech-config-section > label\.settings-control-card\.settings-speech-config-field:not\(:has\(> textarea\)\):not\(:has\(> \.settings-drawer__hint\)\):not\(\.settings-metric-card\):not\(\.settings-updater-panel\)\s*\{[\s\S]*?grid-template-columns:\s*minmax\(108px,\s*0\.36fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*44px;[\s\S]*?padding:\s*5px 2px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='voice'\] \.settings-speech-config-section > label\.settings-control-card\.settings-speech-config-field:not\(:has\(> textarea\)\):not\(:has\(> \.settings-drawer__hint\)\):not\(\.settings-metric-card\):not\(\.settings-updater-panel\)\s*\{[\s\S]*?grid-template-columns:\s*minmax\(108px,\s*0\.36fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*44px;[\s\S]*?padding:\s*5px 2px;/m,
     'speech provider select rows should use the same wider value column as the VAD field',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='voice'\] \.settings-speech-config-section > label\.settings-control-card\.settings-speech-config-field:not\(:has\(> textarea\)\):not\(:has\(> \.settings-drawer__hint\)\):not\(\.settings-metric-card\):not\(\.settings-updater-panel\) > :is\(input:not\(\[type='checkbox'\]\):not\(\[type='range'\]\), select, \.settings-url-input\)\s*\{[\s\S]*?min-height:\s*34px;[\s\S]*?height:\s*34px;[\s\S]*?line-height:\s*1\.2;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='voice'\] \.settings-speech-config-section > label\.settings-control-card\.settings-speech-config-field:not\(:has\(> textarea\)\):not\(:has\(> \.settings-drawer__hint\)\):not\(\.settings-metric-card\):not\(\.settings-updater-panel\) > :is\(input:not\(\[type='checkbox'\]\):not\(\[type='range'\]\), select, \.settings-url-input\)\s*\{[\s\S]*?min-height:\s*34px;[\s\S]*?height:\s*34px;[\s\S]*?line-height:\s*1\.2;/m,
     'speech provider controls should keep the same native-safe vertical room as VAD selects',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='console'\] details\.settings-console-section > summary\.settings-console-section__header\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(36px,\s*auto\) 14px;[\s\S]*?min-height:\s*48px;[\s\S]*?height:\s*auto;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='console'\] details\.settings-console-section > summary\.settings-console-section__header\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(36px,\s*auto\) 14px;[\s\S]*?min-height:\s*48px;[\s\S]*?height:\s*auto;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;/m,
     'console detail rows should not keep the older 84px raised-card rhythm',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='console'\] details\.settings-console-section > summary\.settings-console-section__header p\s*\{[\s\S]*?line-height:\s*1\.32;[\s\S]*?-webkit-line-clamp:\s*2;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='console'\] details\.settings-console-section > summary\.settings-console-section__header p\s*\{[\s\S]*?line-height:\s*1\.32;[\s\S]*?-webkit-line-clamp:\s*2;/m,
     'console detail summaries should stay readable without forcing three-line cards',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='console'\] \.settings-console-sections > section\.settings-console-section\s*\{[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='console'\] \.settings-console-sections > section\.settings-console-section\s*\{[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
     'console observability details should use the same lightweight list shell as other diagnostics',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='console'\] \.settings-console-sections > section\.settings-console-section \.settings-console-card\s*\{[\s\S]*?min-height:\s*48px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='console'\] \.settings-console-sections > section\.settings-console-section \.settings-console-card\s*\{[\s\S]*?min-height:\s*48px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
     'console observability metric rows should not render as nested dashboard cards',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='lorebooks'\] \.settings-lorebook-check\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\) 44px;[\s\S]*?gap:\s*4px;[\s\S]*?padding:\s*0 6px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='lorebooks'\] \.settings-lorebook-check\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\) 44px;[\s\S]*?gap:\s*4px;[\s\S]*?padding:\s*0 6px;/m,
     'lorebook enable rows should leave enough room for the rendered 44px switch without horizontal overflow',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section\] \.settings-choice-card\.is-active,[\s\S]*?\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section\] \.settings-model-source-card\.is-selected\s*\{[\s\S]*?border-color:\s*rgba\(185,\s*92,\s*60,\s*0\.1\);[\s\S]*?box-shadow:\s*inset 0 0 0 1px rgba\(185,\s*92,\s*60,\s*0\.1\);/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-choice-card\.is-active,[\s\S]*?\.settings-drawer\.settings-drawer--light-section \.settings-model-source-card\.is-selected\s*\{[\s\S]*?border-color:\s*rgba\(185,\s*92,\s*60,\s*0\.1\);[\s\S]*?box-shadow:\s*inset 0 0 0 1px rgba\(185,\s*92,\s*60,\s*0\.1\);/m,
     'selected child-page choices should use a soft inset outline instead of a side stripe or underline',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-chat-identity-field > \.settings-form-row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(70px,\s*0\.36fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*30px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-chat-identity-field > \.settings-form-row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(70px,\s*0\.36fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*30px;/m,
     'chat identity inputs should use compact label plus field rows instead of tall stacked cards',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-chat-identity-field > \.settings-form-row > input:not\(\[type='checkbox'\]\):not\(\[type='radio'\]\):not\(\[type='range'\]\)\s*\{[\s\S]*?border-color:\s*rgba\(75,\s*62,\s*49,\s*0\.045\);[\s\S]*?background:\s*rgba\(255,\s*253,\s*249,\s*0\.16\);[\s\S]*?box-shadow:\s*none;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-chat-identity-field > \.settings-form-row > input:not\(\[type='checkbox'\]\):not\(\[type='radio'\]\):not\(\[type='range'\]\)\s*\{[\s\S]*?border-color:\s*rgba\(75,\s*62,\s*49,\s*0\.045\);[\s\S]*?background:\s*rgba\(255,\s*253,\s*249,\s*0\.16\);[\s\S]*?box-shadow:\s*none;/m,
     'chat identity text inputs should stay low-contrast instead of returning to heavy form boxes',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.onboarding-relationship__chip\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?border:\s*1px solid transparent;[\s\S]*?border-radius:\s*6px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.onboarding-relationship__chip\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?border:\s*1px solid transparent;[\s\S]*?border-radius:\s*6px;/m,
     'relationship chips should stay lighter than the model tabs and avoid thick pill buttons',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-mini-group:has\(> \.settings-chat-system-prompt\)\s*\{[\s\S]*?padding:\s*0 0 8px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-mini-group:has\(> \.settings-chat-system-prompt\)\s*\{[\s\S]*?padding:\s*0 0 8px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
     'chat system prompt should read as one light settings group rather than a raised form card',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-mini-group:not\(\.settings-pet-model-card\):not\(\.settings-pet-preview-card\):not\(\.settings-pet-workflow-card\):has\(> \.settings-chat-system-prompt\):has\(> \.settings-control-card\)\s*\{[\s\S]*?border:\s*0;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-mini-group:not\(\.settings-pet-model-card\):not\(\.settings-pet-preview-card\):not\(\.settings-pet-workflow-card\):has\(> \.settings-chat-system-prompt\):has\(> \.settings-control-card\)\s*\{[\s\S]*?border:\s*0;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);/m,
     'chat system prompt group should beat the generic nested-control mini-group reset without using important',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-chat-system-prompt\s*\{[\s\S]*?height:\s*68px;[\s\S]*?min-height:\s*58px;[\s\S]*?max-height:\s*72px;[\s\S]*?border-color:\s*rgba\(75,\s*62,\s*49,\s*0\.045\);[\s\S]*?background:\s*rgba\(255,\s*253,\s*249,\s*0\.14\);/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-chat-system-prompt\s*\{[\s\S]*?height:\s*68px;[\s\S]*?min-height:\s*58px;[\s\S]*?max-height:\s*72px;[\s\S]*?border-color:\s*rgba\(75,\s*62,\s*49,\s*0\.045\);[\s\S]*?background:\s*rgba\(255,\s*253,\s*249,\s*0\.14\);/m,
     'chat system prompt textarea should stay visually lighter and shorter than a large editor',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-mini-group:has\(> \.settings-chat-system-prompt\) \.settings-chat-advanced-control > \.settings-toggle\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?padding:\s*0 3px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-mini-group:has\(> \.settings-chat-system-prompt\) \.settings-chat-advanced-control > \.settings-toggle\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?padding:\s*0 3px;/m,
     'chat role-driven toggle should stay in the prompt group on the compact row scale',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-pet-model-card\s*\{[\s\S]*?padding:\s*0 0 6px;[\s\S]*?border-bottom-color:\s*var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-pet-model-card\s*\{[\s\S]*?padding:\s*0 0 6px;[\s\S]*?border-bottom-color:\s*var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
     'chat pet model chooser should read as a compact row list rather than a raised nested card',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-pet-model-card > \.settings-mini-group__head > span\s*\{[\s\S]*?display:\s*-webkit-box;[\s\S]*?white-space:\s*normal;[\s\S]*?-webkit-line-clamp:\s*2;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-pet-model-card > \.settings-mini-group__head > span\s*\{[\s\S]*?display:\s*-webkit-box;[\s\S]*?white-space:\s*normal;[\s\S]*?-webkit-line-clamp:\s*2;/m,
     'chat pet model helper copy should wrap to two lines instead of clipping long companion descriptions',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-pet-model-card \.settings-choice-grid\s*\{[\s\S]*?gap:\s*1px;[\s\S]*?border:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?border-radius:\s*9px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-pet-model-card \.settings-choice-grid\s*\{[\s\S]*?gap:\s*1px;[\s\S]*?border:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?border-radius:\s*9px;/m,
     'chat pet model choices should read as one compact segmented list instead of stacked cards',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-pet-model-card \.settings-choice-card\s*\{[\s\S]*?grid-template-columns:\s*minmax\(78px,\s*0\.34fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*46px;[\s\S]*?padding:\s*5px 6px;[\s\S]*?border-radius:\s*7px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-pet-model-card \.settings-choice-card\s*\{[\s\S]*?grid-template-columns:\s*minmax\(78px,\s*0\.34fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*46px;[\s\S]*?padding:\s*5px 6px;[\s\S]*?border-radius:\s*7px;/m,
     'chat pet model options should use compact but readable label plus description rows',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-pet-model-card \.settings-choice-card__description\s*\{[\s\S]*?color:\s*rgba\(78,\s*64,\s*54,\s*0\.62\);[\s\S]*?text-align:\s*left;[\s\S]*?white-space:\s*normal;[\s\S]*?-webkit-line-clamp:\s*2;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-pet-model-card \.settings-choice-card__description\s*\{[\s\S]*?color:\s*rgba\(78,\s*64,\s*54,\s*0\.62\);[\s\S]*?text-align:\s*left;[\s\S]*?white-space:\s*normal;[\s\S]*?-webkit-line-clamp:\s*2;/m,
     'chat pet model descriptions should stay subdued and readable inside the compact row',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-pet-preview-card\s*\{[\s\S]*?padding:\s*0 0 8px;[\s\S]*?border-bottom-color:\s*var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-pet-preview-card\s*\{[\s\S]*?padding:\s*0 0 8px;[\s\S]*?border-bottom-color:\s*var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
     'chat pet previews should read as embedded settings groups rather than raised debug cards',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-sprite-preview__stage\s*\{[\s\S]*?min-height:\s*118px;[\s\S]*?border-color:\s*var\(--settings-chat-parity-line\);[\s\S]*?background:\s*[\s\S]*?rgba\(255,\s*253,\s*249,\s*0\.12\);/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-sprite-preview__stage\s*\{[\s\S]*?min-height:\s*118px;[\s\S]*?border-color:\s*var\(--settings-chat-parity-line\);[\s\S]*?background:\s*[\s\S]*?rgba\(255,\s*253,\s*249,\s*0\.12\);/m,
     'chat sprite preview stage should stay compact and visually attached to the warm settings surface',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-sprite-preview__states button,[\s\S]*?\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-companion-state-preview__states button\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?padding:\s*0 5px;[\s\S]*?border-radius:\s*7px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-sprite-preview__states button,[\s\S]*?\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-companion-state-preview__states button\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?padding:\s*0 5px;[\s\S]*?border-radius:\s*7px;/m,
     'chat preview state buttons should use the same compact segmented scale as the role chips',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-pet-action-row\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);[\s\S]*?gap:\s*4px;[\s\S]*?border:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?border-radius:\s*9px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-pet-action-row\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);[\s\S]*?gap:\s*4px;[\s\S]*?border:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?border-radius:\s*9px;/m,
     'chat pet import commands should read as one compact segmented command row rather than stacked tool cards',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-pet-tools > \.settings-mini-group__note\s*\{[\s\S]*?max-height:\s*50px;[\s\S]*?border:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?-webkit-line-clamp:\s*3;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-pet-tools > \.settings-mini-group__note\s*\{[\s\S]*?max-height:\s*50px;[\s\S]*?border:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?-webkit-line-clamp:\s*3;/m,
     'chat pet import hint should stay a subdued note rather than a raised explanatory card',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-pet-workflow-card\s*\{[\s\S]*?padding:\s*0 0 8px;[\s\S]*?border-bottom-color:\s*var\(--settings-chat-parity-line\);[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-pet-workflow-card\s*\{[\s\S]*?padding:\s*0 0 8px;[\s\S]*?border-bottom-color:\s*var\(--settings-chat-parity-line\);[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;/m,
     'chat pet workflow panels should flatten into the settings list rhythm instead of raised developer cards',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-community-links\s*\{[\s\S]*?display:\s*flex;[\s\S]*?flex-wrap:\s*wrap;[\s\S]*?gap:\s*4px;[\s\S]*?padding:\s*0;[\s\S]*?border:\s*0;[\s\S]*?background:\s*transparent;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-community-links\s*\{[\s\S]*?display:\s*flex;[\s\S]*?flex-wrap:\s*wrap;[\s\S]*?gap:\s*4px;[\s\S]*?padding:\s*0;[\s\S]*?border:\s*0;[\s\S]*?background:\s*transparent;/m,
     'community pet sources should stay in a compact settings link group instead of a tall stacked directory',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-community-links a\s*\{[\s\S]*?flex:\s*1 1 132px;[\s\S]*?min-height:\s*28px;[\s\S]*?font-size:\s*11px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-community-links a\s*\{[\s\S]*?flex:\s*1 1 132px;[\s\S]*?min-height:\s*28px;[\s\S]*?font-size:\s*11px;/m,
     'community pet source links should use a stable two-column width so source labels do not clip',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='chat'\] \.settings-community-links__text\s*\{[\s\S]*?overflow:\s*visible;[\s\S]*?text-overflow:\s*clip;[\s\S]*?white-space:\s*normal;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='chat'\] \.settings-community-links__text\s*\{[\s\S]*?overflow:\s*visible;[\s\S]*?text-overflow:\s*clip;[\s\S]*?white-space:\s*normal;/m,
     'community pet source labels should wrap instead of being ellipsized inside narrow link buttons',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='memory'\] \.settings-memory-context-status-grid\s*\{[\s\S]*?gap:\s*0;[\s\S]*?border-top:\s*1px solid var\(--settings-chat-parity-line\);/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='memory'\] \.settings-memory-context-status-grid\s*\{[\s\S]*?gap:\s*0;[\s\S]*?border-top:\s*1px solid var\(--settings-chat-parity-line\);/m,
     'memory context diagnostics should read as a compact trust-status row list',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='memory'\] \.settings-memory-transparency__grid\s*\{[\s\S]*?grid-template-columns:\s*1fr;[\s\S]*?gap:\s*0;[\s\S]*?border-top:\s*1px solid var\(--settings-chat-parity-line\);/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='memory'\] \.settings-memory-transparency__grid\s*\{[\s\S]*?grid-template-columns:\s*1fr;[\s\S]*?gap:\s*0;[\s\S]*?border-top:\s*1px solid var\(--settings-chat-parity-line\);/m,
     'memory transparency summary should use one status list instead of a dashboard tile grid',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='memory'\] \.settings-control-card\.settings-memory-transparency__card:not\(\.settings-metric-card\):not\(\.settings-updater-panel\)\s*\{[\s\S]*?grid-template-columns:\s*minmax\(72px,\s*0\.28fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*36px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='memory'\] \.settings-control-card\.settings-memory-transparency__card:not\(\.settings-metric-card\):not\(\.settings-updater-panel\)\s*\{[\s\S]*?grid-template-columns:\s*minmax\(72px,\s*0\.28fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*36px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
     'memory transparency summary rows should align with the chat-style settings row rhythm',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='memory'\] \.settings-memory-context-status\s*\{[\s\S]*?min-height:\s*44px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='memory'\] \.settings-memory-context-status\s*\{[\s\S]*?min-height:\s*44px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
     'memory context status rows should not look like dashboard cards',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='memory'\] \.settings-memory-context-transparency__row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(80px,\s*0\.33fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*30px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='memory'\] \.settings-memory-context-transparency__row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(80px,\s*0\.33fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*30px;/m,
     'memory transparency detail rows should use compact label plus detail structure',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='memory'\] \.settings-memory-group > label\.settings-memory-field > select\s*\{[\s\S]*?min-height:\s*32px;[\s\S]*?height:\s*32px;[\s\S]*?line-height:\s*30px;[\s\S]*?padding:\s*0 34px 0 8px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='memory'\] \.settings-memory-group > label\.settings-memory-field > select\s*\{[\s\S]*?min-height:\s*32px;[\s\S]*?height:\s*32px;[\s\S]*?line-height:\s*30px;[\s\S]*?padding:\s*0 34px 0 8px;/m,
     'memory select rows should be tall enough for native dropdown text without breaking the compact settings rhythm',
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-page\[data-section='memory'\] \.settings-memory-group > \.settings-memory-field > \.settings-form-row > input:not\(\[type='checkbox'\]\):not\(\[type='radio'\]\):not\(\[type='range'\]\),[\s\S]*?\.settings-memory-recall-grid input:not\(\[type='checkbox'\]\):not\(\[type='range'\]\)\s*\{[\s\S]*?height:\s*30px;/m,
+    /\.settings-drawer\.settings-drawer--light-section \.settings-page\[data-section='memory'\] \.settings-memory-group > \.settings-memory-field > \.settings-form-row > input:not\(\[type='checkbox'\]\):not\(\[type='radio'\]\):not\(\[type='range'\]\),[\s\S]*?\.settings-memory-recall-grid input:not\(\[type='checkbox'\]\):not\(\[type='range'\]\)\s*\{[\s\S]*?height:\s*30px;/m,
     'memory text inputs should stay at the shared compact row height while selects get their own native-safe height',
   )
 })
@@ -685,7 +772,7 @@ test('warm-day settings drawer uses trace-list surfaces', () => {
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--home \.settings-drawer__toolbar,[\s\S]*?\.settings-drawer:is\(\.settings-drawer--warm-day, \.settings-drawer--day\)\.settings-drawer--section \.settings-drawer__toolbar\s*\{[\s\S]*?gap:\s*3px;[\s\S]*?padding:\s*0;[\s\S]*?border:\s*0;/m,
+    /\.settings-drawer\.settings-drawer--light\.settings-drawer--home \.settings-drawer__toolbar,[\s\S]*?\.settings-drawer\.settings-drawer--light\.settings-drawer--section \.settings-drawer__toolbar\s*\{[\s\S]*?gap:\s*3px;[\s\S]*?padding:\s*0;[\s\S]*?border:\s*0;/m,
     'warm-day settings toolbar should be a compact glyph cluster from the final settings shell',
   )
   assertSourcePattern(
@@ -748,6 +835,7 @@ test('warm-day settings drawer uses trace-list surfaces', () => {
 
 test('panel window controls stay compact, icon-only, and visually distinct', () => {
   const app = readWorkspaceFile('src/app/App.css')
+  const toolbarControls = readWorkspaceFile('src/app/styles/panel-toolbar-controls.css')
   const panelCompanion = readWorkspaceFile('src/app/styles/panel-companion-shell.css')
   const panelFinal = readWorkspaceFile('src/app/styles/panel-companion-final.css')
   const panelView = readWorkspaceFile('src/app/views/PanelView.tsx')
@@ -762,7 +850,7 @@ test('panel window controls stay compact, icon-only, and visually distinct', () 
     '{notificationBridge && hasUnreadNotifications ? (',
   )
   const toolbarControlSource = extractSourceRange(
-    app,
+    toolbarControls,
     '/* Panel toolbar controls: Nexus trace glyphs with context-aware reveal. */',
     '@media (max-width: 340px)',
   )
@@ -778,17 +866,17 @@ test('panel window controls stay compact, icon-only, and visually distinct', () 
   )
 
   assertSourcePattern(
-    app,
+    toolbarControls,
     /\.panel-window--companion \.panel-window__header-actions--hero\s*\{[\s\S]*?gap:\s*5px;[\s\S]*?padding:\s*2px 3px;[\s\S]*?background:\s*rgba\(12,\s*15,\s*22,\s*0\.12\);[\s\S]*?opacity:\s*0\.82;/m,
     'panel window controls should rest as a readable trace glyph cluster without growing',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /\.panel-window--companion \.companion-chat__toolbar:hover \.panel-window__header-actions--hero,[\s\S]*?\.panel-window--companion \.panel-window__header-actions--hero:hover,[\s\S]*?\.panel-window--companion \.panel-window__header-actions--hero:focus-within\s*\{[\s\S]*?opacity:\s*1;/m,
     'expanded panel controls should reveal only when the toolbar is active',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /\.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button\s*\{[\s\S]*?width:\s*24px;[\s\S]*?height:\s*24px;[\s\S]*?min-width:\s*24px;[\s\S]*?border-radius:\s*999px;/m,
     'panel window controls should stay small fixed-size trace glyph buttons',
   )
@@ -828,42 +916,42 @@ test('panel window controls stay compact, icon-only, and visually distinct', () 
     'warm-day collapsed close hover should reveal danger state without using a large traffic-light control',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /\.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button svg\s*\{[\s\S]*?width:\s*15px;[\s\S]*?height:\s*15px;[\s\S]*?opacity:\s*0\.86;[\s\S]*?stroke-width:\s*1\.85;/m,
     'panel window control icons should stay thin while remaining legible',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /\.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button::after\s*\{[\s\S]*?content:\s*none;/m,
     'panel window controls should not render aria-label text inside the buttons',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /\.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button:hover\s*\{[\s\S]*?background:\s*var\(--panel-toolbar-control-hover-bg\);/m,
     'panel window control hover state should be rendered by one shared rule',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /html\[data-theme='warm-day'\] \.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button\s*\{[\s\S]*?background:\s*var\(--panel-toolbar-control-bg\);[\s\S]*?color:\s*var\(--panel-toolbar-control-color\);/m,
     'warm-day panel controls should keep the same local color variables as the default theme',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /html\[data-theme='warm-day'\] \.panel-window--companion \.panel-window__header-actions--hero\s*\{[\s\S]*?border-color:\s*rgba\(72,\s*53,\s*40,\s*0\.12\);[\s\S]*?background:\s*rgba\(255,\s*252,\s*247,\s*0\.32\);/m,
     'warm-day panel controls should stay as a readable trace cluster instead of a glass pill',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /html\[data-theme='warm-day'\] \.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button\s*\{[\s\S]*?--panel-toolbar-control-bg:\s*rgba\(255,\s*253,\s*249,\s*0\.36\);[\s\S]*?--panel-toolbar-control-color:\s*rgba\(36,\s*27,\s*22,\s*0\.72\);/m,
     'warm-day panel icon buttons should be visible before hover reveal',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /html\[data-theme='warm-day'\] \.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button--collapse\s*\{[\s\S]*?--panel-toolbar-control-color:\s*rgba\(92,\s*59,\s*15,\s*0\.68\);/m,
     'warm-day collapse control should have a subtle functional tone at rest',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /html\[data-theme='warm-day'\] \.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button\.panel-window__icon-button--danger\s*\{[\s\S]*?--panel-toolbar-control-color:\s*rgba\(126,\s*32,\s*27,\s*0\.66\);/m,
     'warm-day close control should be distinguishable without becoming a large danger button',
   )
@@ -943,7 +1031,7 @@ test('panel window controls stay compact, icon-only, and visually distinct', () 
     'companion panel controls should not keep a broad raised icon-button override above the trace rules',
   )
   assertSourceOrder(
-    app,
+    toolbarControls,
     '/* Panel toolbar controls: Nexus trace glyphs with context-aware reveal. */',
     "html[data-theme='warm-day'] .panel-window--companion .panel-window__header-actions--hero .panel-window__icon-button {",
     'toolbar-specific warm-day variable rules should stay inside the final toolbar control block',
@@ -954,37 +1042,37 @@ test('panel window controls stay compact, icon-only, and visually distinct', () 
     'panel toolbar controls should avoid saturated candy-like gradients',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /\.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button--settings\s*\{[\s\S]*?--panel-toolbar-control-color:\s*rgba\(221,\s*234,\s*255,\s*0\.76\);[\s\S]*?--panel-toolbar-control-hover-color:\s*rgba\(255,\s*255,\s*255,\s*0\.98\);/m,
     'settings control should stay neutral but readable in the trace glyph cluster',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /\.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button--collapse\s*\{[\s\S]*?--panel-toolbar-control-color:\s*rgba\(221,\s*234,\s*255,\s*0\.7\);[\s\S]*?--panel-toolbar-control-hover-bg:\s*rgba\(255,\s*202,\s*91,\s*0\.1\);/m,
     'collapse control should stay readable and only warm up on hover reveal',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /\.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button\.panel-window__icon-button--danger\s*\{[\s\S]*?--panel-toolbar-control-bg:\s*rgba\(255,\s*79,\s*70,\s*0\.055\);[\s\S]*?--panel-toolbar-control-color:\s*rgba\(221,\s*234,\s*255,\s*0\.68\);/m,
     'close control should not look like a permanent traffic-light dot',
   )
   assert.doesNotMatch(
-    app,
+    toolbarControls,
     /\.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button:nth-of-type\(/m,
     'panel control tones should use explicit classes rather than button order',
   )
   assert.doesNotMatch(
-    app,
+    toolbarControls,
     /\.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button--(?:settings|collapse):hover\s*\{/m,
     'individual panel controls should not need duplicate hover blocks',
   )
   assertSourcePattern(
-    app,
+    toolbarControls,
     /html\[data-theme='warm-day'\] \.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button\.panel-window__icon-button--danger\s*\{[\s\S]*?--panel-toolbar-control-bg:\s*rgba\(206,\s*68,\s*56,\s*0\.055\);[\s\S]*?--panel-toolbar-control-color:\s*rgba\(126,\s*32,\s*27,\s*0\.66\);/m,
     'warm-day close control should be identifiable without becoming a traffic-light button',
   )
   assert.doesNotMatch(
-    app,
+    toolbarControls,
     /\.panel-window--companion \.panel-window__header-actions--hero \.panel-window__icon-button::after\s*\{[\s\S]*?content:\s*attr\(aria-label\)/m,
     'panel window control labels belong in aria-label/title, not inside the compact buttons',
   )

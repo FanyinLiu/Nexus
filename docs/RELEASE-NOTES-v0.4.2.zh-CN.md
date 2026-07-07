@@ -1,10 +1,11 @@
 # Nexus v0.4.2 — Check-In 策略
 
-状态：草稿。Klein 明确要求最终发布检查、tag 和 GitHub Release 之前，不要发布。
+状态：发布候选。只有最终发布门禁通过，并且 Klein 明确要求创建 GitHub Release 后，
+才打 tag 和发布。
 
 这个小版本继续保持 0.4 的桌面陪伴感知路线本地、保守。它只加固 Nexus 什么时候
 可以考虑给出一句温和的 in-app check-in；不发消息、不执行工具、不做外部通知，
-也不发布新版本。
+也不会把 check-in 变成外部提醒。
 
 ## 变化
 
@@ -34,10 +35,6 @@
 
 这个版本不包含：
 
-- 暂不发布正式 v0.4.2。
-- 不改 package 版本号。
-- 不打 tag，不创建 GitHub Release。
-- 不切换 README 稳定版入口。
 - 外部通知
 - 发消息
 - 工具执行
@@ -48,6 +45,15 @@
 - 跟随鼠标、跟随打字、桌宠窗口控制
 
 这些继续留给后续 0.4.x 或 0.5。
+
+## 分发说明
+
+v0.4.2 继续沿用上一版的未签名桌面分发状态：
+
+- macOS 可能出现 Gatekeeper 隔离提示。只从 GitHub Releases 下载，把 `Nexus.app`
+  放进 `/Applications`，并且只在确认来源可信时使用文档里的 quarantine 移除命令。
+- Windows 可能出现 SmartScreen 提示，因为安装包还没有代码签名。只从 GitHub Releases
+  下载；确认文件名和来源无误后，可以点 **更多信息**，再点 **仍要运行**。
 
 ## 验证重点
 

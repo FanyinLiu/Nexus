@@ -6,9 +6,9 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-const DRAFT_RELEASES = ['0.4.2', '0.4.3', '0.4.4', '0.4.5']
-const LOCALIZED_DRAFT_RELEASES = ['0.4.2', '0.4.3', '0.4.4', '0.4.5']
-const STABLE_RELEASE = '0.4.1'
+const DRAFT_RELEASES = ['0.4.3', '0.4.4', '0.4.5']
+const LOCALIZED_DRAFT_RELEASES = ['0.4.3', '0.4.4', '0.4.5']
+const STABLE_RELEASE = '0.4.2'
 const OLD_README_RELEASE_SECTION_PATTERNS = [
   /##\s+(?:本次更新|此次更新)\s+—\s+v0\.3\.[0-5]/,
   /##\s+今回のアップデート\s+—\s+v0\.3\.[0-5]/,
@@ -94,7 +94,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
   ]
   for (const file of readmeFiles) {
     const text = requireFile(file)
-    requirePhrase(file, text, 'RELEASE-NOTES-v0.4.1.md')
+    requirePhrase(file, text, 'RELEASE-NOTES-v0.4.2.md')
     for (const version of DRAFT_RELEASES) {
       rejectPattern(
         file,
@@ -151,7 +151,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
     }
 
     const v04Plan = requireFile('docs/V0.4_DESKTOP_COMPANION_AWARENESS.md')
-    requirePhrase(v04Plan ? 'docs/V0.4_DESKTOP_COMPANION_AWARENESS.md' : '', v04Plan, 'active stacked v0.4.x slice after `v0.4.1` remains `v0.4.5` Release Hardening Draft')
+    requirePhrase(v04Plan ? 'docs/V0.4_DESKTOP_COMPANION_AWARENESS.md' : '', v04Plan, 'active stacked v0.4.x slice after `v0.4.2` remains `v0.4.5` Release Hardening Draft')
     requirePhrase('docs/V0.4_DESKTOP_COMPANION_AWARENESS.md', v04Plan, 'Do not publish `v0.4.5`')
     requirePhrase('docs/V0.4_DESKTOP_COMPANION_AWARENESS.md', v04Plan, 'RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md')
     requirePhrase('docs/V0.4_DESKTOP_COMPANION_AWARENESS.md', v04Plan, 'no new product behavior')
@@ -169,7 +169,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
 
     const roadmap = requireFile('docs/ROADMAP.md')
     requirePhrase('docs/ROADMAP.md', roadmap, '`v0.4.5` is the active stacked release-hardening draft')
-    requirePhrase('docs/ROADMAP.md', roadmap, 'no package version bump past the active stable, no future-draft tag, no future-draft GitHub Release, and no README stable-entry switch past `v0.4.1`')
+    requirePhrase('docs/ROADMAP.md', roadmap, 'no package version bump past the active stable, no future-draft tag, no future-draft GitHub Release, and no README stable-entry switch past `v0.4.2`')
 
     const changelog = requireFile('CHANGELOG.md')
     requirePhrase('CHANGELOG.md', changelog, 'v0.4.5 release hardening draft')
@@ -186,10 +186,9 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
       'No GitHub Release',
       'No README stable-entry switch',
       'v0.4.1 -> v0.4.0',
-      'v0.4.2 -> v0.4.1',
       'v0.4.3 -> v0.4.2',
       'v0.4.4 -> v0.4.3',
-      'v0.4.5 -> v0.4.1-v0.4.4',
+      'v0.4.5 -> v0.4.2-v0.4.4',
       'npm run v04:draft-stack:audit',
       'npm run verify:release',
       'npm run package:dir:smoke',

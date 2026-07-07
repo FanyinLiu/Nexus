@@ -4,5 +4,7 @@ import './styles/settings-themes.css'
 import './styles/settings-chat-aligned.css'
 import './styles/settings-chat-final.css'
 import './styles/settings-chat-role-final.css'
+import './styles/settings-visual-system.css'
+import './styles/settings-visibility-final.css'
 
 export { SettingsDrawer } from '../components/SettingsDrawer'

@@ -6,7 +6,39 @@
 
 ## [Unreleased]
 
-No changes yet.
+### Changed
+
+- No unreleased changes yet.
+
+## [0.4.2] - 2026-07-07
+
+### Changed
+
+- **Check-In policy hardening** — promoted the local check-in policy slice to
+  the stable v0.4.2 entry point, keeping decisions local, suppressing repeated
+  or stale signals, and leaving external notifications, message sending, tool
+  execution, activity-history UI, and pet window behavior out of scope.
+- **Settings visual-system follow-up** — extended the 0.4.2 settings visual
+  layer across segmented controls, confirmation dialogs, and footer actions so
+  warm/day settings pages share the same compact surface contract as chat.
+- **Release documentation sync** — aligned package version, root README,
+  localized README files, release notes, documentation consistency anchors, and
+  v0.4 draft-stack audit state around v0.4.2 as the current stable entry.
+- **Pre-release evidence** — refreshed source-size, performance, settings,
+  privacy, security, IPC, distribution, SQLite, and core-path smoke checks for
+  the v0.4.2 release candidate path.
+- **Localized README release context** — aligned Simplified Chinese,
+  Traditional Chinese, Japanese, and Korean README top sections so their
+  previous stable entry points match the current v0.4.2 / previous v0.4.1
+  release framing.
+- **Settings visibility and preview routing** — tightened the warm Settings
+  drawer boundary, moved final readability overrides into a dedicated lazy
+  Settings stylesheet guarded by `settings:surface:audit`, restored an
+  unmistakable Settings-center identity on the home surface, added visible
+  Settings header chips and section page headers, isolated that identity block
+  from the large drawer renderer, split the shared panel toolbar
+  icon button out of `PanelView`, and kept browser preview URLs synchronized
+  when moving between pet, panel, and Settings states.
 
 ## [0.4.1] - 2026-07-03
 

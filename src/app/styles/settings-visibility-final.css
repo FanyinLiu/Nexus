@@ -1,0 +1,577 @@
+/* Settings visibility final layer.
+   This file intentionally loads last. Keep only active visual decisions here:
+   ImageGen concept home and the 0.4.2 child-page unity pass. */
+
+/* ImageGen concept pass: warm settings home as a flat command list. */
+.settings-drawer.settings-drawer--light.settings-drawer--home {
+  --settings-concept-ink: rgba(31, 27, 23, 0.92);
+  --settings-concept-muted: rgba(91, 80, 69, 0.66);
+  --settings-concept-faint: rgba(91, 80, 69, 0.46);
+  --settings-concept-line: rgba(78, 62, 46, 0.12);
+  --settings-concept-line-soft: rgba(78, 62, 46, 0.075);
+  --settings-concept-row-hover: rgba(255, 248, 238, 0.72);
+  width: min(340px, calc(100vw - 28px));
+  height: min(720px, calc(100vh - 42px));
+  max-height: min(720px, calc(100vh - 42px));
+  padding: 6px;
+  border-color: rgba(78, 62, 46, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 254, 251, 0.98), rgba(250, 244, 235, 0.96)),
+    #fffaf3;
+  box-shadow:
+    0 18px 48px rgba(72, 53, 40, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home::before {
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 254, 251, 0.98), rgba(250, 244, 235, 0.96)),
+    #fffaf3;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-drawer__header {
+  margin: 0 0 8px;
+  padding: 0 2px 7px;
+  border: 0;
+  border-bottom: 1px solid var(--settings-concept-line-soft);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-drawer__header-main {
+  min-height: 30px;
+  padding: 0 0 0 4px;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-drawer__window-title {
+  justify-self: center;
+  min-height: 30px;
+  margin-left: 48px;
+  color: var(--settings-concept-ink);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-drawer__window-title-name {
+  color: var(--settings-concept-ink);
+  font-size: 16px;
+  font-weight: 760;
+  line-height: 1;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-drawer__window-title-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-drawer__language-button,
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-drawer__icon-button {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  border-color: transparent;
+  background: transparent;
+  color: rgba(79, 66, 54, 0.66);
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-drawer__body {
+  padding-right: 4px;
+  padding-bottom: 12px;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home {
+  gap: 0;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-presence {
+  grid-template-columns: 40px minmax(0, 1fr);
+  min-height: 72px;
+  margin: 0 1px 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(172, 129, 78, 0.12);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(255, 250, 241, 0.92), rgba(255, 246, 232, 0.54)),
+    rgba(255, 253, 249, 0.58);
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-presence__icon {
+  width: 32px;
+  height: 32px;
+  border-color: rgba(188, 120, 45, 0.16);
+  border-radius: 8px;
+  background: rgba(188, 120, 45, 0.08);
+  color: rgba(151, 91, 30, 0.82);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-presence__badge {
+  color: rgba(151, 91, 30, 0.72);
+  font-size: 10px;
+  font-weight: 680;
+  letter-spacing: 0;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-presence__copy strong {
+  color: var(--settings-concept-ink);
+  font-size: 14px;
+  font-weight: 720;
+  line-height: 1.2;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-presence__body {
+  color: var(--settings-concept-muted);
+  font-size: 11px;
+  line-height: 1.42;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-group {
+  gap: 0;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-group + .settings-home-group {
+  margin-top: 13px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-group__head {
+  min-height: 25px;
+  padding: 0 4px 6px;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-group__title {
+  color: rgba(87, 76, 66, 0.78);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-group__hint {
+  display: none;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-group__list {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-appearance-switch {
+  position: relative;
+  grid-template-columns: 4px minmax(72px, 0.36fr) minmax(0, 1fr);
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 0 7px;
+  border: 0;
+  border-bottom: 1px solid var(--settings-concept-line-soft);
+  background: transparent;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-appearance-switch::before {
+  content: '';
+  width: 3px;
+  height: 30px;
+  align-self: center;
+  border-radius: 999px;
+  background: rgba(215, 124, 45, 0.9);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-appearance-switch__label {
+  align-self: center;
+  color: var(--settings-concept-ink);
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-appearance-switch__control {
+  align-self: center;
+  justify-self: end;
+  width: auto;
+  min-width: 154px;
+  padding: 2px;
+  border: 1px solid rgba(78, 62, 46, 0.075);
+  border-radius: 8px;
+  background: rgba(255, 253, 249, 0.62);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-appearance-switch__option {
+  flex-basis: 48px;
+  min-height: 24px;
+  border-radius: 6px;
+  color: var(--settings-concept-muted);
+  font-size: 10px;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-appearance-switch__option.is-active {
+  background: rgba(190, 111, 45, 0.1);
+  color: rgba(128, 67, 28, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(190, 111, 45, 0.13);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card,
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card:hover,
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card:nth-child(even),
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card:nth-child(even):hover {
+  --settings-trust-trace: rgba(215, 124, 45, 0.9);
+  --settings-trust-tint: rgba(215, 124, 45, 0.08);
+  position: relative;
+  display: grid;
+  grid-template-columns: 4px 38px minmax(0, 1fr) 18px;
+  min-height: 52px;
+  column-gap: 12px;
+  padding: 7px 0;
+  border: 0;
+  border-bottom: 1px solid var(--settings-concept-line-soft);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card[data-trust-group='trustSafety'] {
+  --settings-trust-trace: rgba(220, 116, 87, 0.86);
+  --settings-trust-tint: rgba(220, 116, 87, 0.08);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card[data-trust-group='memoryContext'] {
+  --settings-trust-trace: rgba(90, 164, 76, 0.86);
+  --settings-trust-tint: rgba(90, 164, 76, 0.08);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card[data-trust-group='desktopAwareness'] {
+  --settings-trust-trace: rgba(52, 124, 210, 0.86);
+  --settings-trust-tint: rgba(52, 124, 210, 0.08);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card[data-trust-group='permissionsIntegrations'] {
+  --settings-trust-trace: rgba(135, 82, 207, 0.82);
+  --settings-trust-tint: rgba(135, 82, 207, 0.08);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card[data-trust-group='appearanceInteraction'] {
+  --settings-trust-trace: rgba(215, 124, 45, 0.9);
+  --settings-trust-tint: rgba(215, 124, 45, 0.08);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card::before {
+  content: '';
+  display: block;
+  grid-column: 1;
+  grid-row: 1;
+  align-self: stretch;
+  width: 3px;
+  min-height: 32px;
+  border-radius: 999px;
+  background: var(--settings-trust-trace);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card::after {
+  content: none;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card__glyph {
+  grid-column: 2;
+  justify-self: center;
+  align-self: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid color-mix(in srgb, var(--settings-trust-trace) 14%, transparent);
+  border-radius: 8px;
+  background: var(--settings-trust-tint);
+  color: var(--settings-trust-trace);
+  opacity: 1;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card__glyph svg {
+  width: 16px;
+  height: 16px;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card__copy {
+  grid-column: 3;
+  align-self: center;
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card__label {
+  grid-column: auto;
+  color: var(--settings-concept-ink);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.18;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card__value {
+  grid-column: auto;
+  justify-self: start;
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--settings-concept-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: left;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card__chevron {
+  grid-column: 4;
+  align-self: center;
+  justify-self: center;
+  display: inline-grid;
+  color: var(--settings-concept-faint);
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card:hover,
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card:nth-child(even):hover {
+  background: var(--settings-concept-row-hover);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card:hover .settings-home-card__chevron {
+  color: rgba(128, 62, 42, 0.68);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card:last-child {
+  border-bottom-color: transparent;
+}
+
+@media (max-width: 360px) {
+  .settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card,
+  .settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card:hover,
+  .settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card:nth-child(even),
+  .settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card:nth-child(even):hover {
+    grid-template-columns: 4px 34px minmax(0, 1fr) 16px;
+    column-gap: 9px;
+    min-height: 50px;
+  }
+
+  .settings-drawer.settings-drawer--light.settings-drawer--home .settings-home-card__glyph {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* v0.4.2 settings child-page unity pass. */
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-page__header {
+  grid-template-columns: 26px minmax(0, 1fr);
+  column-gap: 8px;
+  min-height: 48px;
+  padding: 2px 3px 8px;
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-page__back {
+  width: var(--nx-settings-control-height-small);
+  min-width: var(--nx-settings-control-height-small);
+  height: var(--nx-settings-control-height-small);
+  min-height: var(--nx-settings-control-height-small);
+  max-height: var(--nx-settings-control-height-small);
+  border-color: var(--nx-settings-line);
+  border-radius: var(--nx-settings-radius-control);
+  background: var(--nx-settings-field);
+  color: var(--nx-settings-muted);
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-page__back:hover {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 22%, var(--nx-settings-line));
+  background: var(--nx-settings-field-hover);
+  color: var(--nx-settings-ink);
+}
+
+.settings-drawer.settings-drawer--light-section .settings-page__back {
+  width: var(--nx-settings-control-height-small);
+  min-width: var(--nx-settings-control-height-small);
+  height: var(--nx-settings-control-height-small);
+  min-height: var(--nx-settings-control-height-small);
+  max-height: var(--nx-settings-control-height-small);
+  border-color: var(--nx-settings-line);
+  border-radius: var(--nx-settings-radius-control);
+  background: var(--nx-settings-field);
+  color: var(--nx-settings-muted);
+  font-size: var(--nx-settings-font-body);
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--light-section .settings-page__back:hover {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 22%, var(--nx-settings-line));
+  background: var(--nx-settings-field-hover);
+  color: var(--nx-settings-ink);
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-page__headline {
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-page__headline h4 {
+  color: var(--nx-settings-ink);
+  font-size: 13px;
+  font-weight: 720;
+  line-height: 1.18;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-page__headline .settings-section__note {
+  max-width: 340px;
+  color: var(--nx-settings-muted);
+  font-size: var(--nx-settings-font-meta);
+  line-height: 1.35;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-drawer__content.settings-drawer__sections {
+  gap: var(--nx-settings-gap-section);
+  padding-right: 4px;
+  padding-bottom: 68px;
+  scroll-padding-bottom: 72px;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-section, .settings-mini-group, .settings-drawer__card, .settings-speech-config-section) {
+  border-color: var(--nx-settings-line);
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-section__title-row, .settings-mini-group__head:not(summary), summary.settings-mini-group__head) {
+  min-height: var(--nx-settings-row-height);
+  padding: 5px 3px 7px;
+  border-bottom: 1px solid var(--nx-settings-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-section__title-row h4, .settings-section__title-row h5, .settings-mini-group__head strong, .settings-mini-group__head h5) {
+  color: var(--nx-settings-ink);
+  font-size: var(--nx-settings-font-label);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-drawer__hint, .settings-section__note, .settings-mini-group__note, .settings-control-card > p, .settings-choice-card__meta, .settings-choice-card__description, .settings-form-row__description, .settings-form-row__status) {
+  color: var(--nx-settings-muted);
+  font-size: var(--nx-settings-font-meta);
+  line-height: 1.35;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-control-card:not(.settings-metric-card):not(.settings-updater-panel), .settings-form-row, .settings-toggle:not(.settings-lorebook-check), .settings-choice-card, .settings-model-source-card) {
+  min-height: var(--nx-settings-row-height);
+  border-color: transparent;
+  border-radius: var(--nx-settings-radius-row);
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-control-card:not(.settings-metric-card):not(.settings-updater-panel), .settings-form-row, .settings-toggle:not(.settings-lorebook-check), .settings-choice-card, .settings-model-source-card):hover {
+  border-color: var(--nx-settings-line);
+  background: var(--nx-settings-surface-hover);
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea, .settings-url-input) {
+  min-height: var(--nx-settings-field-height);
+  border-color: var(--nx-settings-line);
+  border-radius: var(--nx-settings-radius-control);
+  background: var(--nx-settings-field);
+  color: var(--nx-settings-ink);
+  font-size: var(--nx-settings-font-body);
+  line-height: 1.25;
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea, .settings-url-input):hover {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 22%, var(--nx-settings-line));
+  background: var(--nx-settings-field-hover);
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea, .settings-url-input):focus {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 38%, var(--nx-settings-line));
+  background: var(--nx-settings-field-hover);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-settings-accent) 13%, transparent);
+  outline: none;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] textarea {
+  min-height: 72px;
+  max-height: 140px;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-test-result {
+  border-color: var(--nx-settings-line);
+  border-radius: var(--nx-settings-radius-row);
+  background: var(--nx-settings-surface-soft);
+  color: var(--nx-settings-muted);
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-test-result.is-success {
+  border-color: color-mix(in srgb, var(--nx-settings-success) 30%, var(--nx-settings-line));
+  background: color-mix(in srgb, var(--nx-settings-success) 10%, transparent);
+  color: var(--nx-settings-ink);
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-test-result.is-error,
+.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-form-row__validation, .settings-model-advanced__error) {
+  border-color: color-mix(in srgb, var(--nx-settings-danger) 38%, var(--nx-settings-line));
+  color: var(--nx-settings-danger);
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-toggle input {
+  background: color-mix(in srgb, var(--nx-settings-muted) 17%, transparent);
+  box-shadow: inset 0 0 0 1px var(--nx-settings-line-soft);
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-toggle input:checked {
+  background: linear-gradient(135deg, var(--nx-settings-accent), color-mix(in srgb, var(--nx-settings-accent) 72%, white));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 24%, transparent);
+}
+
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-choice-card.is-active,
+.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-model-source-card.is-selected {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 18%, var(--nx-settings-line));
+  background: var(--nx-settings-accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 14%, transparent);
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-drawer__actions,
+.settings-drawer.settings-drawer--light.settings-drawer--section .settings-drawer__actions,
+.settings-drawer.settings-drawer--section .settings-drawer__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--nx-settings-gap-row);
+  min-height: var(--nx-settings-footer-height);
+  padding: 6px 4px 0;
+  border-top: 1px solid var(--nx-settings-line);
+  background: var(--nx-settings-footer-surface);
+  box-shadow: none;
+}
+
+.settings-drawer.settings-drawer--light.settings-drawer--home .settings-drawer__actions :is(.ghost-button, .primary-button),
+.settings-drawer.settings-drawer--light.settings-drawer--section .settings-drawer__actions :is(.ghost-button, .primary-button),
+html[data-theme='warm-day'] .settings-drawer.settings-drawer--light.settings-drawer--home .settings-drawer__actions :is(.ghost-button, .primary-button),
+html[data-theme='system-day'] .settings-drawer.settings-drawer--light.settings-drawer--home .settings-drawer__actions :is(.ghost-button, .primary-button),
+html[data-theme='warm-day'] .settings-drawer.settings-drawer--light.settings-drawer--section .settings-drawer__actions :is(.ghost-button, .primary-button),
+html[data-theme='system-day'] .settings-drawer.settings-drawer--light.settings-drawer--section .settings-drawer__actions :is(.ghost-button, .primary-button),
+.settings-drawer.settings-drawer--section .settings-drawer__actions :is(.ghost-button, .primary-button) {
+  min-height: var(--nx-settings-control-height);
+  padding: 0 12px;
+  border-radius: var(--nx-settings-radius-control);
+  font-size: var(--nx-settings-font-body);
+  line-height: 1.2;
+  box-shadow: none;
+}

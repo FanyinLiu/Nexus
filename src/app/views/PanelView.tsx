@@ -29,6 +29,8 @@ import {
 import { resolveImage4ActivityLabelKey } from './image4ActivityLabel'
 import { deriveImage4CompanionState } from './image4CompanionState'
 import { deriveImage4ComposerState } from './image4ComposerState'
+import { PanelNotificationSummary } from './PanelNotificationSummary'
+import { PanelToolbarButton } from './PanelToolbarButton'
 import { ActivePlanStrip } from '../../components/ActivePlanStrip'
 import { MessageBubble } from '../../components/MessageBubble'
 import { resolveCharacterPreset } from '../../features/character/presets'
@@ -37,10 +39,7 @@ import {
   resolveChatMemoryTraceDetails,
   type ChatMemoryTraceDetails,
 } from '../../features/memory/traceDetails'
-import {
-  getNotificationCardPrimaryActions,
-  type NotificationCardPrimaryActionId,
-} from '../../features/notifications/notificationCardActions'
+import type { NotificationCardPrimaryActionId } from '../../features/notifications/notificationCardActions'
 import {
   formatCompanionElapsedBucket,
   type CompanionElapsedBucket,
@@ -91,29 +90,6 @@ type NotificationReplyTarget = {
   conversationId?: string
   messageId?: string
   notificationMessageId: string
-}
-
-type PanelToolbarButtonProps = {
-  icon: PetControlIconName
-  label: string
-  onClick: () => void
-  tone?: 'default' | 'settings' | 'collapse' | 'danger'
-}
-
-function PanelToolbarButton({ icon, label, onClick, tone = 'default' }: PanelToolbarButtonProps) {
-  const toneClass = tone === 'default' ? '' : ` panel-window__icon-button--${tone}`
-
-  return (
-    <button
-      className={`panel-window__icon-button${toneClass}`}
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-    >
-      <PetControlIcon name={icon} />
-    </button>
-  )
 }
 
 export function PanelView({
@@ -321,26 +297,6 @@ export function PanelView({
 
   const hasUnreadNotifications = pendingNotificationCount > 0
 
-  function getNotificationSummary(message: NotificationMessage): string {
-    const rawSummary = message.summary || message.body || ''
-    return shorten(rawSummary || ti('panel.notification.no_preview'), 120)
-  }
-
-  function formatNotificationPriority(message: NotificationMessage): string {
-    if (message.importance === 'critical' || message.isImportant) return '!!!'
-    if (message.importance === 'high') return '!!'
-    return ''
-  }
-
-  function formatNotificationTime(timestamp: string): string {
-    const date = new Date(timestamp)
-    if (Number.isNaN(date.valueOf())) return ''
-    return date.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
   async function handleMarkAllRead() {
     await notificationBridge?.markAllRead()
   }
@@ -494,13 +450,6 @@ export function PanelView({
     return activeNotificationReply !== null
   }
 
-  function getNotificationTitle(message: { sender?: string; channelName: string; title: string }): string {
-    if (message.sender) {
-      return `${message.sender} · ${message.title}`
-    }
-
-    return message.title || message.channelName
-  }
   const panelQuickPrompts = useMemo(() => {
     if (image4PreviewMode) {
       return [
@@ -857,84 +806,18 @@ export function PanelView({
             </div>
 
             {notificationBridge && hasUnreadNotifications ? (
-              <section className="panel-notification-summary" aria-live="polite">
-                <div className="panel-notification-summary__header">
-                  <div>
-                    <p className="panel-notification-summary__title">
-                      {ti('panel.notification.title')}
-                    </p>
-                    <p className="panel-notification-summary__hint">
-                      {hasUnreadNotifications ? unreadNotificationCountLabel : ti('panel.notification.none')}
-                    </p>
-                  </div>
-                  <div className="panel-notification-summary__actions">
-                    <button
-                      className="ghost-button"
-                      type="button"
-                      onClick={handleMarkAllRead}
-                      disabled={!hasUnreadNotifications}
-                    >
-                      {ti('panel.notification.mark_all_read')}
-                    </button>
-                    <button
-                      className="ghost-button"
-                      type="button"
-                      onClick={handleClearNotifications}
-                      disabled={!notificationBridge.messages.length}
-                    >
-                      {ti('panel.notification.clear')}
-                    </button>
-                  </div>
-                </div>
-
-                {hasUnreadNotifications ? (
-                  <ul className="panel-notification-summary__list">
-                    {unreadNotifications.map((message) => (
-                      <li key={message.id} className="panel-notification-summary__item">
-                        <p className="panel-notification-summary__item-title">
-                          <span className="panel-notification-summary__item-priority">{formatNotificationPriority(message)}</span>
-                          <strong>{getNotificationTitle(message)}</strong>
-                          <small>{formatNotificationTime(message.receivedAt)}</small>
-                        </p>
-                        <p className="panel-notification-summary__item-body">
-                          {getNotificationSummary(message)}
-                        </p>
-                        <div className="panel-notification-summary__item-actions">
-                          {getNotificationCardPrimaryActions(message).map((action) => (
-                            <button
-                              key={action.id}
-                              type="button"
-                              className="ghost-button ghost-button--compact"
-                              onClick={() => handleNotificationPrimaryAction(action.id, message)}
-                              title={action.titleKey ? ti(action.titleKey, { source: getNotificationSourceLabel(message) }) : undefined}
-                            >
-                              {ti(action.labelKey)}
-                            </button>
-                          ))}
-                          {canReplyToNotification(message) ? (
-                            <button
-                              type="button"
-                              className="ghost-button ghost-button--compact"
-                              onClick={() => handleReplyToNotification(message)}
-                            >
-                              {ti('panel.notification.reply')}
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="ghost-button ghost-button--compact"
-                            onClick={() => handleMarkNotificationRead(message.id)}
-                          >
-                            {ti('panel.notification.mark_read')}
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="panel-notification-summary__empty">{ti('panel.notification.summary_empty')}</p>
-                )}
-              </section>
+              <PanelNotificationSummary
+                canReplyToNotification={canReplyToNotification}
+                getNotificationSourceLabel={getNotificationSourceLabel}
+                messages={unreadNotifications}
+                onClearNotifications={handleClearNotifications}
+                onMarkAllRead={handleMarkAllRead}
+                onMarkNotificationRead={handleMarkNotificationRead}
+                onNotificationPrimaryAction={handleNotificationPrimaryAction}
+                onReplyToNotification={handleReplyToNotification}
+                totalMessageCount={notificationBridge.messages.length}
+                translate={ti}
+              />
             ) : null}
 
             <ActivePlanStrip />

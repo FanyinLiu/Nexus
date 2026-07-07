@@ -36,9 +36,8 @@ const SCENE_IMAGES: Record<Exclude<PetSceneLocation, 'off'>, SceneVariants> = {
   mountain: { day: mountainDay, dusk: mountainDusk, night: mountainNight },
 }
 
-function getOpacityClass(opacity: number) {
-  const percent = Math.round(Math.min(1, Math.max(0, opacity)) * 100)
-  return `scene-backdrop__art--opacity-${percent}`
+function getClampedOpacity(opacity: number) {
+  return Math.min(1, Math.max(0, opacity))
 }
 
 /**
@@ -57,8 +56,7 @@ export function SceneBackdrop({ location, timeBand, timeBlend }: SceneBackdropPr
 
   // When blend weights are provided, paint all three variants at their
   // respective opacities so transition windows mix the artwork rather
-  // than stepping from one variant to the next. Otherwise fall back to
-  // the legacy is-active / opacity-1 behaviour.
+  // than stepping from one variant to the next.
   const opacities = timeBlend ?? {
     day: timeBand === 'day' ? 1 : 0,
     dusk: timeBand === 'dusk' ? 1 : 0,
@@ -68,22 +66,25 @@ export function SceneBackdrop({ location, timeBand, timeBlend }: SceneBackdropPr
   return (
     <div className={`scene-backdrop scene-backdrop--${location}`} aria-hidden="true">
       <img
-        className={`scene-backdrop__art scene-backdrop__art--day ${getOpacityClass(opacities.day)}`}
+        className="scene-backdrop__art scene-backdrop__art--day"
         src={variants.day}
         alt=""
         draggable={false}
+        style={{ opacity: getClampedOpacity(opacities.day) }}
       />
       <img
-        className={`scene-backdrop__art scene-backdrop__art--dusk ${getOpacityClass(opacities.dusk)}`}
+        className="scene-backdrop__art scene-backdrop__art--dusk"
         src={variants.dusk}
         alt=""
         draggable={false}
+        style={{ opacity: getClampedOpacity(opacities.dusk) }}
       />
       <img
-        className={`scene-backdrop__art scene-backdrop__art--night ${getOpacityClass(opacities.night)}`}
+        className="scene-backdrop__art scene-backdrop__art--night"
         src={variants.night}
         alt=""
         draggable={false}
+        style={{ opacity: getClampedOpacity(opacities.night) }}
       />
     </div>
   )
