@@ -60,7 +60,7 @@
 
 1. **守住当前懒加载边界。** 继续让 `heavy:audit` 阻止 renderer 静态导入 `@huggingface/transformers`、`@ricky0123/vad-web`、`onnxruntime-web`、`pixi-live2d-display`、`pixi.js`、`tesseract.js`。
 2. **保持可选模型不进安装包。** `prepackage:win`、`prepackage:mac`、`prepackage:linux` 必须继续使用 `download-models.mjs --skip-asr`，避免可选 Paraformer / MeloTTS 被默认打包。
-3. **继续拆设置样式。** `settingsDrawerEntry` 已避免污染首屏 CSS；设置 CSS 有 600 KB 预算，入口 JS 有 100 KB 预算，并且这两个懒加载资源必须继续存在。继续优化时优先拆掉过期设置规则，而不是提高预算或把设置样式合回首屏。
+3. **继续拆设置与守住设置打开速度。** `settingsDrawerEntry` 已避免污染首屏 CSS；设置 CSS 有 480 KB 预算，总 CSS 有 760 KB 预算，入口 JS 有 100 KB 预算，主 Settings UI JS chunk 有 390 KB 预算，并且这些懒加载资源必须继续存在。继续优化时优先拆掉过期设置规则、懒加载低频设置子页，或者把重面板延后到用户进入对应子页，而不是提高预算或把设置样式合回首屏。
 4. **评估必需语音模型运行时下载。** 如果要进一步瘦安装包，优先把 required Sherpa 模型从 `extraResources` 迁到首次运行下载，同时保留下载进度、失败降级、离线说明和 `package:dir:smoke` 覆盖。
 5. **拆分供应商资源。** 若 WASM 或 vendor 继续增长，优先拆分 ORT/Live2D/OCR 的入口，而不是提高预算。
 6. **记录真实安装包体积。** 任何策略变更后，除了 `performance:baseline`，还要记录平台安装包大小和 `package:dir:smoke` 结果；`dist/assets` 不足以代表最终 installer。

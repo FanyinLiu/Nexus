@@ -352,9 +352,8 @@ export function useChat(ctx: UseChatContext) {
   }) => {
     const speechErrorMessage = getSpeechOutputErrorMessage(speechError)
     logVoiceEvent('assistant reply speech output failed', {
-      traceId: options.traceId || undefined,
       source: options.source,
-      error: speechErrorMessage,
+      errorPresent: Boolean(speechErrorMessage),
     })
 
     if (options.fromVoice && options.traceLabel) {
@@ -487,7 +486,7 @@ export function useChat(ctx: UseChatContext) {
 
     if (!content && !attachedImage) {
       if (fromVoice) {
-        logVoiceEvent('voice transcript was empty, nothing was sent', { traceId })
+        logVoiceEvent('voice transcript was empty, nothing was sent')
         ctx.updateVoicePipeline('idle', t('chat.voice.empty_pipeline_detail'))
         ctx.appendVoiceTrace(t('chat.voice.empty_label'), t('chat.voice.empty_trace', { label: traceLabel }), 'error')
       }
@@ -505,7 +504,7 @@ export function useChat(ctx: UseChatContext) {
 
     if (busyRef.current) {
       if (fromVoice) {
-        logVoiceEvent('assistant is busy, voice transcript was not sent', { traceId, content })
+        logVoiceEvent('assistant is busy, voice transcript was not sent', { contentLength: content.length })
         ctx.fillComposerWithVoiceTranscript(content)
         ctx.updateVoicePipeline('blocked_busy', t('chat.voice.blocked_detail'), content)
         ctx.appendVoiceTrace(t('chat.voice.blocked_label'), t('chat.voice.blocked_trace', { label: traceLabel }), 'error')

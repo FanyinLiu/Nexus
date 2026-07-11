@@ -1,0 +1,1145 @@
+
+.sd-home .sdb,
+.sd-section .sdb,
+.sd-home:is(.sd-night, .sd-day, .sd-warm) .sdb,
+.sd-section:is(.sd-night, .sd-day, .sd-warm) .sdb {
+  min-height: 0;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+html[data-theme] .sd-home .sdb::after { content: ''; position: absolute; right: 0; bottom: 0; left: 0; z-index: 2; height: 18px; background: var(--nx-settings-surface); pointer-events: none; }
+
+.sd-home .settings-home {
+  gap: 18px;
+  height: 100%;
+  overflow: auto;
+  padding: 18px 22px 24px;
+}
+
+.sd-home .settings-home-presence {
+  grid-template-columns: 36px minmax(0, 1fr);
+  min-height: 84px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+  box-shadow: none;
+}
+
+.sd-home .settings-home-presence__icon,
+html[data-theme] .sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-home-presence__icon,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-home-presence__icon {
+  width: 30px;
+  height: 30px;
+  border: 1px solid color-mix(in srgb, var(--nx-settings-accent) 20%, transparent);
+  border-radius: 7px;
+  background: var(--nx-settings-accent-soft);
+  color: var(--nx-settings-accent);
+}
+
+.sd-home .settings-home-presence__badge {
+  color: var(--nx-settings-muted);
+  font-size: 10px;
+  font-weight: 620;
+  line-height: 1.2;
+}
+html[data-theme] .sd-home .settings-home-presence__copy { align-content: center; gap: 1px; }
+html[data-theme] .sd-home .settings-home-presence__copy strong, .sd-home .settings-home-presence__copy strong {
+  color: var(--nx-settings-ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.18;
+}
+
+html[data-theme] .sd-home .settings-home-presence__body, .sd-home .settings-home-presence__body {
+  color: var(--nx-settings-muted);
+  font-size: 11px;
+  line-height: 1.36;
+}
+.sd-home .settings-home-group {
+  gap: 7px;
+}
+
+.sd-home .settings-home-group + .settings-home-group {
+  margin-top: 0;
+}
+
+.sd-home .settings-home-group__head {
+  min-height: auto;
+  padding: 0 2px;
+}
+
+.sd-home .settings-home-group__title {
+  color: var(--nx-settings-muted);
+  font-size: 11px;
+  font-weight: 680;
+}
+
+.sd-home .settings-home-group__list {
+  overflow: hidden;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+  box-shadow: none;
+}
+
+.sd-home .settings-appearance-switch,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-appearance-switch {
+  min-height: 44px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+  background: transparent;
+}
+
+.sd-home .settings-home-card,
+.sd-home .settings-home-card:hover,
+.sd-home .settings-home-card:nth-child(even),
+.sd-home .settings-home-card:nth-child(even):hover,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-home-card,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-home-card:hover,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-home-card:nth-child(even),
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-home-card:nth-child(even):hover {
+  grid-template-columns: 28px minmax(0, 1fr) 14px;
+  min-height: 46px;
+  column-gap: 10px;
+  padding: 7px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sd-home .settings-home-card:hover, .sd-home .settings-home-card:nth-child(even):hover, .sd-home .settings-home-card:focus-visible {
+  background: var(--nx-settings-surface-hover); box-shadow: var(--nx-settings-card-shadow);
+}
+
+.sd-home .settings-home-card__glyph,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-home-card__glyph {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--nx-settings-accent-soft);
+  color: var(--nx-settings-accent);
+  opacity: 1;
+}
+
+.sd-home .settings-home-card__copy,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-home-card__copy {
+  grid-template-columns: minmax(64px, 0.34fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.sd-home .settings-home-card__label,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-home-card__label,
+.sd-home .settings-appearance-switch__label {
+  color: var(--nx-settings-ink);
+  font-size: 13px;
+  font-weight: 620;
+}
+
+.sd-home .settings-home-card__value,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-home-card__value {
+  color: var(--nx-settings-muted);
+  font-size: 11px;
+  font-weight: 480;
+}
+
+.sd-section .sp.sp {
+  height: 100%;
+  min-height: 0;
+}
+
+.sd-section .settings-page__layout {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+.sd-section .settings-section-nav {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 8px;
+  border-right: 1px solid var(--nx-settings-line-soft);
+  background: var(--nx-settings-sidebar-surface);
+}
+
+.sd-section .settings-section-nav__button,
+.sd-warm .settings-section-nav__button {
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nx-settings-muted);
+  box-shadow: none;
+}
+
+.sd-section .settings-section-nav__button:hover {
+  border-color: transparent;
+  background: var(--nx-settings-surface-hover);
+  color: var(--nx-settings-ink);
+}
+
+.sd-section .settings-section-nav__button.is-active,
+.sd-warm .settings-section-nav__button.is-active,
+.sd-section .sp[data-section='chat'] .onboarding-relationship__chip.is-active,
+.sd-section.sd-light-section .sp[data-section='chat'] .onboarding-relationship__chip.is-active,
+html[data-theme] .sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-appearance-switch__option.is-active,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-appearance-switch__option.is-active,
+html[data-theme] .sd-section .settings-segmented-control__option.is-active {
+  border-color: var(--nx-settings-line);
+  background: var(--nx-settings-surface-soft);
+  color: var(--nx-settings-ink);
+  box-shadow: var(--nx-settings-card-shadow);
+}
+
+.sd-section .settings-section-nav__marker {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: transparent;
+  color: currentColor;
+}
+
+.sd-section .settings-section-nav__marker svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sd-section .settings-section-nav__label {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 560;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sd-section .settings-page__main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.sd-section .sp.sp .sphd {
+  grid-template-columns: 30px minmax(0, 1fr);
+  column-gap: 10px;
+  min-height: 74px;
+  padding: 12px 18px 10px;
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+  background: var(--nx-settings-surface);
+}
+
+.sd-section .sp.sp .settings-page__back,
+.sd-light-section .settings-page__back {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 6px;
+  background: var(--nx-settings-surface-soft);
+  color: var(--nx-settings-muted);
+  box-shadow: none;
+}
+
+.sd-section .sp.sp .settings-page__back span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.sd-section .sp.sp .sph {
+  gap: 3px;
+}
+
+.sd-section .sp.sp .sph .eyebrow,
+.sd-section .sp.sp .settings-page__mark {
+  display: none;
+}
+
+.sd-section .sp.sp .sph h4 {
+  color: var(--nx-settings-ink);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.18;
+}
+
+.sd-section .sph h4[tabindex='-1']:focus {
+  outline: none;
+}
+
+.sd-section .sp.sp .sph .settings-section__note {
+  max-width: 460px;
+  color: var(--nx-settings-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.sd-section .sp.sp .sdc.settings-drawer__sections {
+  overflow: auto;
+  scroll-padding-bottom: 36px;
+}
+
+.sd-section .sp.sp :is(.settings-section, .settings-mini-group, .settings-drawer__card, .settings-speech-config-section) {
+  overflow: hidden;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+  box-shadow: none;
+}
+
+.sd-section .sp.sp :is(.settings-section__title-row, .settings-mini-group__head:not(summary), summary.settings-mini-group__head) {
+  min-height: 42px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+  background: transparent;
+}
+
+.sd-section .sp.sp :is(.settings-section__title-row h4, .settings-section__title-row h5, .settings-mini-group__head strong, .settings-mini-group__head h5) {
+  color: var(--nx-settings-ink);
+  font-size: 13px;
+  font-weight: 660;
+}
+
+.sd-section .sp.sp :is(.settings-drawer__hint, .settings-section__note, .settings-mini-group__note, .settings-control-card > p, .settings-choice-card__description, .settings-form-row__description, .settings-form-row__status) {
+  color: var(--nx-settings-muted);
+  font-size: 11px;
+  line-height: 1.42;
+}
+.sd-section .sp.sp .settings-choice-card__description, .sd-section.sd-light-section .sp[data-section='chat'] .settings-pet-model-card .settings-choice-card__description { display: block; overflow: visible; -webkit-line-clamp: unset; }
+
+.sd-section .sp.sp :is(.settings-control-card:not(.settings-metric-card):not(.settings-updater-panel), .settings-form-row, .settings-toggle:not(.settings-lorebook-check), .settings-choice-card, .settings-model-source-card) {
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sd-section .sp.sp :is(.settings-control-card:not(.settings-metric-card):not(.settings-updater-panel), .settings-form-row, .settings-toggle:not(.settings-lorebook-check), .settings-choice-card, .settings-model-source-card):hover {
+  border-color: transparent;
+  background: var(--nx-settings-surface-hover);
+}
+
+.sd-section .sp.sp :is(.settings-control-card:not(.settings-metric-card):not(.settings-updater-panel), .settings-form-row, .settings-toggle:not(.settings-lorebook-check), .settings-choice-card, .settings-model-source-card):last-child {
+  border-bottom-color: transparent;
+}
+
+.sd-section .sp.sp .settings-form-row {
+  display: grid;
+  grid-template-columns: minmax(98px, 0.32fr) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 14px;
+}
+
+.sd-section .sp.sp .settings-form-row__label,
+.sd-section .sp.sp .settings-toggle > span {
+  color: var(--nx-settings-ink);
+  font-size: 12px;
+  font-weight: 560;
+}
+
+.sd-section .sp.sp .settings-form-row__description,
+.sd-section .sp.sp .settings-form-row__validation,
+.sd-section .sp.sp .settings-form-row__status {
+  grid-column: 2;
+}
+
+.sd-section .sp.sp :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea, .settings-url-input) {
+  min-height: 32px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 7px;
+  background: var(--nx-settings-surface-soft);
+  color: var(--nx-settings-ink);
+  font-size: 12px;
+  box-shadow: none;
+}
+
+.sd-section .sp.sp textarea {
+  min-height: 88px;
+}
+
+.sd-section .sp.sp :is(.settings-appearance-switch__control, .onboarding-region-tabs, .onboarding-relationship__options, .settings-sprite-preview__states, .settings-companion-state-preview__states) {
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-segment-surface);
+  box-shadow: none;
+}
+
+.sd-section .sp.sp :is(.settings-appearance-switch__option, .onboarding-region-tabs__tab, .onboarding-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button) {
+  min-height: 28px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nx-settings-muted);
+  box-shadow: none;
+}
+
+.sd-section .sp.sp :is(.settings-appearance-switch__option.is-active, .onboarding-region-tabs__tab.is-active, .onboarding-relationship__chip.is-active, .settings-sprite-preview__states button.is-active, .settings-companion-state-preview__states button.is-active) {
+  border-color: var(--nx-settings-line);
+  background: var(--nx-settings-segment-active);
+  color: var(--nx-settings-ink);
+  box-shadow: var(--nx-settings-card-shadow);
+}
+
+.sd-section .sp.sp .settings-toggle {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.sd-section .sp.sp .settings-toggle input {
+  width: 34px;
+  height: 20px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 999px;
+  background: var(--nx-settings-line);
+}
+
+.sd-section .sp.sp .settings-toggle input:checked {
+  background: var(--nx-settings-accent);
+  box-shadow: none;
+}
+
+.sd-section .sp.sp .settings-test-result {
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+}
+
+.sd-section .sp.sp .settings-test-result.is-success {
+  border-color: color-mix(in srgb, var(--nx-settings-success) 28%, transparent);
+  background: color-mix(in srgb, var(--nx-settings-success) 9%, transparent);
+  color: var(--nx-settings-success);
+}
+
+.sd-section .sp.sp .settings-test-result.is-error,
+.sd-section .sp.sp :is(.settings-form-row__validation, .settings-model-advanced__error) {
+  border-color: color-mix(in srgb, var(--nx-settings-danger) 26%, transparent);
+  color: var(--nx-settings-danger);
+}
+
+.sd-home .sda,
+.sd-section .sda,
+.sd-light.sd-section .sda,
+.sd-home:is(.sd-night, .sd-day, .sd-warm) .sda,
+.sd-section:is(.sd-night, .sd-day, .sd-warm) .sda {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 50px;
+  padding: 10px;
+  border-top: 1px solid var(--nx-settings-line-soft);
+  background: var(--nx-settings-surface);
+  box-shadow: none;
+}
+
+.sd-home .sda :is(.ghost-button, .primary-button),
+.sd-section .sda :is(.ghost-button, .primary-button),
+.sd-light.sd-section .sda :is(.ghost-button, .primary-button) {
+  min-height: 30px;
+  padding: 0 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 560;
+  box-shadow: var(--nx-settings-card-shadow);
+}
+
+.sd-home .sda .ghost-button,
+.sd-section .sda .ghost-button,
+html[data-theme] .sd:is(.sd-night, .sd-day, .sd-warm):is(.sd-home, .sd-section) .sda .ghost-button {
+  border-color: var(--nx-settings-line);
+  background: var(--nx-settings-surface-soft);
+  color: var(--nx-settings-ink);
+}
+
+.sd-home .sda .primary-button,
+.sd-section .sda .primary-button,
+html[data-theme='warm-day'] .sd-light.sd-home .sda .primary-button,
+html[data-theme='system-day'] .sd-light.sd-home .sda .primary-button,
+html[data-theme='warm-day'] .sd-light.sd-section .sda .primary-button,
+html[data-theme='system-day'] .sd-light.sd-section .sda .primary-button {
+  min-width: 112px;
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 30%, var(--nx-settings-line));
+  background: var(--nx-settings-accent-soft);
+  color: var(--nx-settings-accent);
+}
+
+@media (max-width: 679px) {
+  .sb-night:has(.sd-home),
+  .sb-night:has(.sd-section),
+  .sb-day:has(.sd-home),
+  .sb-day:has(.sd-section),
+  .sb-warm:has(.sd-home),
+  .sb-warm:has(.sd-section) {
+    padding: 8px;
+  }
+
+  .sd-home,
+  .sd-section,
+  .sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm),
+  .sd-section:is(.sd-night, .sd-day, .sd-light, .sd-warm) {
+    width: min(392px, calc(100vw - 16px));
+    height: min(784px, calc(100vh - 16px));
+    max-height: min(784px, calc(100vh - 16px));
+  }
+
+  .sd-home .settings-home {
+    padding: 14px 12px 18px;
+  }
+
+  .sd-home .settings-home-group__list {
+    border-radius: 8px;
+  }
+
+  .sd-section .settings-page__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sd-section .settings-section-nav {
+    display: none;
+  }
+
+  .sd-section .sp.sp .sphd {
+    min-height: 68px;
+    padding: 12px 12px 10px;
+  }
+
+  .sd-section .sp.sp .settings-form-row {
+    grid-template-columns: minmax(78px, 0.33fr) minmax(0, 1fr);
+    column-gap: 10px;
+  }
+  .sd-section .sp[data-section='chat'] .settings-pet-model-card .settings-choice-grid { grid-template-columns: 1fr; }
+}
+
+.sd-section .sp[data-section='chat'] .settings-chat-relationship-card,
+.sd-section.sd-light-section .sp[data-section='chat'] .settings-chat-relationship-card {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 8px;
+  height: auto !important;
+  min-height: 102px;
+  overflow: visible;
+  padding: 12px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+  box-shadow: none;
+}
+
+.sd-section .sp[data-section='chat'] .settings-chat-relationship-card > .settings-mini-group__head:not(summary),
+.sd-section.sd-light-section .sp[data-section='chat'] .settings-chat-relationship-card > .settings-mini-group__head:not(summary),
+.sd-section .sp[data-section='chat'] .settings-mini-group:has(> .settings-chat-system-prompt) > .settings-mini-group__head,
+.sd-section.sd-light-section .sp[data-section='chat'] .settings-mini-group:has(> .settings-chat-system-prompt) > .settings-mini-group__head {
+  min-height: auto;
+  padding: 0 0 2px;
+  border-bottom: 0;
+}
+
+.sd-section .sp[data-section='chat'] .settings-chat-relationship-card .settings-mini-group__head strong,
+.sd-section .sp[data-section='chat'] .settings-chat-relationship-card .settings-mini-group__head span {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.sd-section .sp[data-section='chat'] .onboarding-relationship__options,
+.sd-section.sd-light-section .sp[data-section='chat'] .onboarding-relationship__options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+  height: auto !important;
+  min-height: 34px;
+  overflow: hidden;
+  padding: 2px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-segment-surface);
+}
+
+.sd-section .sp[data-section='chat'] .onboarding-relationship__chip,
+.sd-section.sd-light-section .sp[data-section='chat'] .onboarding-relationship__chip,
+html[data-theme] .sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-appearance-switch__option,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-appearance-switch__option {
+  min-height: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nx-settings-muted);
+  box-shadow: none;
+}
+
+.sd-section .sp[data-section='chat'] .settings-mini-group:has(> .settings-chat-system-prompt),
+.sd-section.sd-light-section .sp[data-section='chat'] .settings-mini-group:has(> .settings-chat-system-prompt),
+.sd-section.sd-light-section .sp[data-section='chat'] .settings-mini-group:not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card):has(> .settings-chat-system-prompt):has(> .settings-control-card) {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  gap: 8px;
+  height: auto !important;
+  min-height: 166px;
+  overflow: visible;
+  padding: 12px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+  box-shadow: none;
+}
+
+.sd-section .sp[data-section='chat'] .settings-chat-system-prompt,
+.sd-section.sd-light-section .sp[data-section='chat'] .settings-chat-system-prompt {
+  height: auto;
+  min-height: 82px;
+  max-height: 132px;
+  padding: 8px 9px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+  color: var(--nx-settings-ink);
+  line-height: 1.42;
+  box-shadow: none;
+}
+
+.sd-section .sp[data-section='chat'] .settings-mini-group:has(> .settings-chat-system-prompt) .settings-chat-advanced-control,
+.sd-section.sd-light-section .sp[data-section='chat'] .settings-mini-group:has(> .settings-chat-system-prompt) .settings-chat-advanced-control {
+  min-height: 38px;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--nx-settings-line-soft);
+  background: transparent;
+}
+
+.sd-section .sp[data-section='chat'] :is(.settings-pet-model-card, .settings-pet-preview-card, .settings-pet-workflow-card),
+.sd-section.sd-light-section .sp[data-section='chat'] :is(.settings-pet-model-card, .settings-pet-preview-card, .settings-pet-workflow-card) {
+  height: auto !important;
+  overflow: hidden;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+  box-shadow: none;
+}
+
+/* Child pages use one scroll plane. The page-level section is a container;
+   the nested groups and utility panels are the visible cards. */
+.sd-section .sp.sp .sdc.settings-drawer__sections,
+.sd-section.sd-light-section .sp.sp .sdc.settings-drawer__sections,
+.sd-section:is(.sd-night, .sd-day, .sd-warm) .sp.sp .sdc.settings-drawer__sections {
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  align-items: start;
+  gap: 12px;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 12px 12px 72px;
+  border: 0;
+  border-radius: 0;
+  background: var(--nx-settings-surface);
+  box-shadow: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.sd-section .sp.sp .sdc.settings-drawer__sections > .settings-section.is-active:not(.settings-speech-config-section),
+.sd-section.sd-light-section .sp.sp .sdc.settings-drawer__sections > .settings-section.is-active:not(.settings-speech-config-section),
+.sd-section:is(.sd-night, .sd-day, .sd-warm) .sp.sp .sdc.settings-drawer__sections > .settings-section.is-active:not(.settings-speech-config-section) {
+  align-self: start;
+  display: grid;
+  grid-auto-rows: max-content;
+  gap: 12px;
+  width: 100%;
+  min-height: 0;
+  height: auto !important;
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sd-section .sp.sp .sdc.settings-drawer__sections > .settings-section.is-active:not(.settings-speech-config-section):hover,
+.sd-section.sd-light-section .sp.sp .sdc.settings-drawer__sections > .settings-section.is-active:not(.settings-speech-config-section):hover {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sd-section .sp.sp :is(
+  .settings-mini-group,
+  .settings-drawer__card,
+  .settings-speech-config-section,
+  .settings-console-card,
+  .settings-console-section,
+  .settings-updater-panel,
+  .settings-history-empty,
+  .settings-letter-empty,
+  .settings-action-row
+),
+.sd-section.sd-light-section .sp.sp :is(
+  .settings-mini-group,
+  .settings-drawer__card,
+  .settings-speech-config-section,
+  .settings-console-card,
+  .settings-console-section,
+  .settings-updater-panel,
+  .settings-history-empty,
+  .settings-letter-empty,
+  .settings-action-row
+) {
+  align-self: start;
+  min-height: 0;
+  height: auto !important;
+  max-height: none;
+  overflow: hidden;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+  box-shadow: none;
+}
+
+.sd-section .sp.sp :is(.settings-mini-group, .settings-drawer__card, .settings-speech-config-section) {
+  display: grid;
+  gap: 0;
+}
+
+.sd-section .sp.sp :is(.settings-console-card, .settings-console-section, .settings-updater-panel, .settings-history-empty, .settings-letter-empty, .settings-action-row):hover,
+.sd-section .sp[data-section='console'] .settings-section > .settings-console-grid > .settings-console-card:hover,
+.sd-section.sd-light-section .sp[data-section='console'] .settings-section > .settings-console-grid > .settings-console-card:hover,
+html[data-theme] .sd.sd-section .sp[data-section='voice'] :is(.settings-voice-loop-card, details.settings-voice-advanced-card, .settings-speech-config-section):hover,
+html[data-theme] .sd.sd-section .sp[data-section='memory'] .settings-memory-group:hover,
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] :is(.settings-autonomy-group, .settings-autonomy-section > .settings-control-card.settings-autonomy-control):hover {
+  border-color: var(--nx-settings-line);
+  background: var(--nx-settings-surface-soft);
+  box-shadow: none;
+}
+
+.sd-section .sp.sp :is(.settings-control-grid, .settings-grid, .settings-console-grid, .settings-console-sections, .settings-memory-transparency__grid, .settings-memory-recall-grid, .settings-voice-advanced-body) {
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.sd-section .sp.sp :is(.settings-mini-group__note, .settings-drawer__hint, .settings-section__note, .settings-control-card > p, .settings-control-card > small) {
+  max-height: none;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+
+.sd-section .sp[data-section='voice'] :is(.settings-voice-loop-card, .settings-voice-advanced-card, .settings-speech-config-section),
+.sd-section .sp[data-section='autonomy'] :is(.settings-autonomy-group, .settings-drawer__card),
+.sd-section .sp[data-section='memory'] .settings-memory-group,
+.sd-section .sp[data-section='console'] :is(.settings-console-card, .settings-console-section, .settings-updater-panel) {
+  height: auto !important;
+  max-height: none;
+}
+
+.sd-section .sp[data-section='console'] .settings-section > .settings-console-grid,
+.sd-section.sd-light-section .sp[data-section='console'] .settings-section > .settings-console-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+  border-top: 0;
+}
+
+.sd-section .sp[data-section='console'] .settings-section > .settings-console-grid > .settings-console-card,
+.sd-section .sp[data-section='console'] .settings-section > .settings-console-grid > .settings-console-card--primary,
+.sd-section.sd-light-section .sp[data-section='console'] .settings-section > .settings-console-grid > .settings-console-card,
+.sd-section.sd-light-section .sp[data-section='console'] .settings-section > .settings-console-grid > .settings-console-card--primary {
+  min-height: 72px;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+  box-shadow: none;
+}
+
+.sd-section .sp[data-section='model'] .settings-model-detail-card,
+.sd-section.sd-light-section .sp[data-section='model'] .settings-model-detail-card,
+.sd-section .sp[data-section='model'] .settings-model-source-grid,
+.sd-section.sd-light-section .sp[data-section='model'] .settings-model-source-grid {
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+  box-shadow: none;
+}
+
+.sd-section .sp[data-section='model'] .settings-model-detail-brand,
+.sd-section.sd-light-section .sp[data-section='model'] .settings-model-detail-brand {
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+  background: transparent;
+}
+
+.sd-section .sp[data-section='model'] .settings-model-detail-nav,
+.sd-section.sd-light-section .sp[data-section='model'] .settings-model-detail-nav {
+  padding: 0;
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+}
+
+.sd-section .sp[data-section='model'] .settings-model-detail-nav .ghost-button,
+.sd-section.sd-light-section .sp[data-section='model'] .settings-model-detail-nav .ghost-button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--nx-settings-ink);
+}
+
+.sd-section .sp[data-section='model'] .settings-model-detail-nav .ghost-button + .ghost-button,
+.sd-section.sd-light-section .sp[data-section='model'] .settings-model-detail-nav .ghost-button + .ghost-button {
+  border-left: 1px solid var(--nx-settings-line-soft);
+}
+
+.sd-section .sp[data-section='model'] .settings-model-detail-fields,
+.sd-section.sd-light-section .sp[data-section='model'] .settings-model-detail-fields {
+  gap: 0;
+  border: 0;
+  background: transparent;
+}
+
+.sd-section .sp[data-section='model'] .settings-model-detail-fields > label,
+.sd-section.sd-light-section .sp[data-section='model'] .settings-model-detail-fields > label {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+  background: transparent;
+}
+
+.sd-section .sp[data-section='model'] .settings-model-detail-fields > label > :is(input:not([type='checkbox']):not([type='range']), select, .settings-url-input),
+.sd-section.sd-light-section .sp[data-section='model'] .settings-model-detail-fields > label > :is(input:not([type='checkbox']):not([type='range']), select, .settings-url-input) {
+  background: var(--nx-settings-surface-soft);
+  border-color: var(--nx-settings-line);
+}
+
+.sd-section .sp[data-section='model'] .settings-model-advanced,
+.sd-section.sd-light-section .sp[data-section='model'] .settings-model-advanced {
+  border: 0;
+  background: transparent;
+}
+
+.sd-section .sp[data-section='model'] .settings-model-advanced > summary,
+.sd-section.sd-light-section .sp[data-section='model'] .settings-model-advanced > summary {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 0;
+  color: var(--nx-settings-ink);
+  line-height: 40px;
+}
+
+@media (max-width: 679px) {
+  .sd-section .sp.sp .sdc.settings-drawer__sections,
+  .sd-section.sd-light-section .sp.sp .sdc.settings-drawer__sections {
+    padding: 12px 8px 72px;
+  }
+}
+
+html[data-theme] .sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-home-presence,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-home-presence {
+  grid-template-columns: 36px minmax(0, 1fr);
+  min-height: 84px;
+  padding: 10px 12px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+  color: var(--nx-settings-ink);
+  box-shadow: none;
+}
+
+html[data-theme] .sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-appearance-switch__control,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm) .settings-appearance-switch__control {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 164px;
+  min-width: 164px;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-segment-surface);
+  box-shadow: none;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] :is(.settings-voice-loop-card, details.settings-voice-advanced-card, .settings-speech-config-section),
+html[data-theme] .sd.sd-section .sp[data-section='memory'] .settings-memory-group,
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] :is(.settings-autonomy-group, .settings-autonomy-section > .settings-control-card.settings-autonomy-control) {
+  align-self: start; display: grid; grid-auto-rows: max-content; gap: 0;
+  min-height: 0; height: auto !important; max-height: none; overflow: hidden;
+  padding: 0; border: 1px solid var(--nx-settings-line); border-radius: 8px;
+  background: var(--nx-settings-surface-soft); box-shadow: none;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] :is(.settings-voice-loop-card, details.settings-voice-advanced-card, .settings-speech-config-section) > :is(.settings-mini-group__head, summary.settings-mini-group__head),
+html[data-theme] .sd.sd-section .sp[data-section='memory'] .settings-memory-group > .settings-mini-group__head,
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-group > .settings-mini-group__head {
+  min-height: 48px; padding: 10px 12px; border: 0;
+  border-bottom: 1px solid var(--nx-settings-line-soft); border-radius: 0; background: transparent;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] :is(.settings-voice-loop-card, details.settings-voice-advanced-card, .settings-speech-config-section) > :is(.settings-mini-group__head, summary.settings-mini-group__head) :is(div, h5, span),
+html[data-theme] .sd.sd-section .sp[data-section='memory'] .settings-memory-group > .settings-mini-group__head :is(div, h5, span),
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-group > .settings-mini-group__head :is(div, h5, span) {
+  min-width: 0; overflow: visible; text-overflow: clip; white-space: normal;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] :is(.settings-voice-control-grid, .settings-voice-advanced-body),
+html[data-theme] .sd.sd-section .sp[data-section='memory'] :is(.settings-memory-transparency__grid, .settings-memory-context-status-grid, .settings-memory-recall-grid),
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-group > :is(.settings-grid, .settings-autonomy-notifications) {
+  display: grid; grid-template-columns: 1fr; gap: 0; min-height: 0;
+  height: auto; max-height: none; overflow: visible; border-top: 0;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] :is(.settings-voice-loop-card :is(.settings-voice-control, label.settings-voice-field), details.settings-voice-advanced-card :is(.settings-voice-advanced-control, label.settings-voice-advanced-field), .settings-speech-config-section > label.settings-speech-config-field),
+html[data-theme] .sd.sd-section .sp[data-section='memory'] .settings-memory-group :is(.settings-memory-transparency__card, .settings-memory-context-status, .settings-memory-control, label.settings-memory-field, .settings-memory-field, .settings-memory-recall-card),
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] :is(.settings-autonomy-section > .settings-control-card.settings-autonomy-control, .settings-autonomy-group > .settings-control-card, .settings-autonomy-group > label.settings-control-card, .settings-autonomy-group .settings-autonomy-field-grid > .settings-control-card),
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-group > .settings-drawer__card > :is(.settings-section__title-row, .settings-toggle, label),
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-group :is(.settings-autonomy-channel, .settings-autonomy-rss-form, .settings-autonomy-add-rss) {
+  min-height: 44px; padding: 8px 12px; border: 0;
+  border-bottom: 1px solid var(--nx-settings-line-soft); border-radius: 0;
+  background: transparent; box-shadow: none;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-section > .settings-control-card.settings-autonomy-control,
+html[data-theme] .sd.sd-section .sp[data-section='voice'] :is(.settings-voice-loop-card, details.settings-voice-advanced-card, .settings-speech-config-section) > :last-child,
+html[data-theme] .sd.sd-section .sp[data-section='memory'] .settings-memory-group > :last-child,
+html[data-theme] .sd.sd-section .sp[data-section='memory'] .settings-memory-group :is(.settings-memory-transparency__grid, .settings-memory-context-status-grid, .settings-memory-recall-grid) > :last-child,
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-group > :last-child,
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-group > .settings-drawer__card > :last-child,
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-group :is(.settings-autonomy-notifications, .settings-autonomy-field-grid) > :last-child {
+  border-bottom: 0;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-group > .settings-drawer__card {
+  gap: 0; padding: 0; border: 0; border-bottom: 1px solid var(--nx-settings-line-soft);
+  border-radius: 0; background: transparent; box-shadow: none;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] .settings-voice-loop-head {
+  grid-template-columns: minmax(0, 1fr) auto; gap: 10px;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] .settings-voice-smoke-button {
+  min-height: 32px; padding: 0 10px; border-radius: 7px; box-shadow: var(--nx-settings-card-shadow);
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] :is(.settings-voice-loop-card > label.settings-control-card.settings-voice-field, .settings-speech-config-section > label.settings-control-card.settings-speech-config-field):not(.settings-metric-card):not(.settings-updater-panel),
+html[data-theme] .sd.sd-section .sp[data-section='memory'] .settings-memory-group > label.settings-control-card.settings-memory-field:not(.settings-metric-card):not(.settings-updater-panel),
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] :is(.settings-autonomy-group > label.settings-control-card.settings-autonomy-field, .settings-autonomy-field-grid > .settings-control-card.settings-autonomy-field):not(.settings-metric-card):not(.settings-updater-panel) {
+  grid-template-columns: minmax(116px, 0.38fr) minmax(0, 1fr); align-items: center; gap: 10px;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] :is(.settings-voice-loop-card, .settings-speech-config-section) :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select),
+html[data-theme] .sd.sd-section .sp[data-section='memory'] .settings-memory-group :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select),
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-section :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
+  min-width: 0; min-height: 34px; height: auto; padding: 0 10px;
+  border: 1px solid var(--nx-settings-line); border-radius: 7px; background: var(--nx-settings-surface-soft);
+  color: var(--nx-settings-ink); box-shadow: none;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-section textarea {
+  min-height: 70px; padding: 8px 10px; resize: vertical;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] :is(.settings-voice-loop-card, .settings-speech-config-section) :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select):focus,
+html[data-theme] .sd.sd-section .sp[data-section='memory'] .settings-memory-group :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select):focus,
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-section :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea):focus {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 28%, var(--nx-settings-line)); background: var(--nx-settings-surface-soft);
+  outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-settings-accent) 12%, transparent);
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] :is(.settings-voice-note, .settings-mini-group__note, .settings-test-result),
+html[data-theme] .sd.sd-section .sp[data-section='memory'] :is(.settings-memory-note, .settings-mini-group__note, .settings-test-result),
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] :is(.settings-autonomy-note, .settings-mini-group__note, .settings-drawer__hint, .settings-inline-note, .settings-autonomy-rss-form__error) {
+  display: block; margin: 0; padding: 8px 12px; max-height: none; overflow: visible;
+  border: 0; border-bottom: 1px solid var(--nx-settings-line-soft); background: transparent;
+  color: var(--nx-settings-muted); line-height: 1.42; -webkit-box-orient: unset; -webkit-line-clamp: unset;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='autonomy'] .settings-autonomy-rss-form__error {
+  border: 1px solid color-mix(in srgb, var(--nx-settings-danger) 24%, transparent); border-radius: 7px;
+  background: color-mix(in srgb, var(--nx-settings-danger) 9%, transparent); color: var(--nx-settings-danger);
+}
+
+@media (max-width: 679px) {
+  html[data-theme] .sd.sd-section .sp[data-section='voice'] :is(.settings-voice-loop-head, .settings-voice-loop-card > label.settings-control-card.settings-voice-field, .settings-speech-config-section > label.settings-control-card.settings-speech-config-field),
+  html[data-theme] .sd.sd-section .sp[data-section='memory'] .settings-memory-group > label.settings-control-card.settings-memory-field,
+  html[data-theme] .sd.sd-section .sp[data-section='autonomy'] :is(.settings-autonomy-group > label.settings-control-card.settings-autonomy-field, .settings-autonomy-field-grid > .settings-control-card.settings-autonomy-field) {
+    grid-template-columns: 1fr;
+  }
+}
+
+html[data-theme] .sd.sd-section.sd-light-section .sp[data-section='voice'] details.settings-mini-group.settings-voice-advanced-card,
+html[data-theme] .sd.sd-section.sd-light-section .sp[data-section='autonomy'] .settings-autonomy-section > .settings-control-card.settings-autonomy-control { overflow: hidden; padding: 0; border: 1px solid var(--nx-settings-line); border-radius: 8px; background: var(--nx-settings-surface-soft); box-shadow: none; }
+html[data-theme] .sd.sd-section.sd-light-section .sp[data-section='autonomy'] .settings-autonomy-section > .settings-control-card.settings-autonomy-control > .settings-toggle { min-height: 44px; padding: 8px 12px; border: 0; background: transparent; box-shadow: none; }
+
+html[data-theme] .sd:is(.sd-night, .sd-day, .sd-warm):is(.sd-home, .sd-section) .sda :is(.ghost-button, .primary-button) {
+  width: auto; flex: 0 0 auto; border-radius: 7px; box-shadow: var(--nx-settings-card-shadow);
+}
+html[data-theme] .sd:is(.sd-night, .sd-day, .sd-warm).sd-section .sp.sp :is(.settings-action-row, .settings-autonomy-rss-form__actions) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+html[data-theme] .sd:is(.sd-night, .sd-day, .sd-warm).sd-section .sp.sp :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='hidden']), select, textarea, .settings-url-input) { min-height: 34px; height: auto; padding: 0 10px; border-radius: 7px; }
+html[data-theme] .sd:is(.sd-night, .sd-day, .sd-warm).sd-section .sp.sp :is(.settings-action-row button, .settings-section__title-row button, .settings-pet-tools .settings-inline-row button, .settings-model-detail-nav button, .settings-lorebook-section__actions button, .settings-updater-panel__actions button, .settings-diagnostics-panel__actions button, .memory-card__actions button, .settings-autonomy-rss-form__actions button, .settings-autonomy-add-rss, .settings-speech-preview-button, .settings-danger-button, .settings-test-result__action) { width: auto; min-width: 96px; flex: 0 0 auto; height: 30px; min-height: 30px; padding: 0 12px; border-radius: 7px; font-size: 12px; line-height: 1.2; box-shadow: var(--nx-settings-card-shadow); }
+html[data-theme] .sd:is(.sd-night, .sd-day, .sd-warm).sd-section .sp.sp .settings-danger-button { border-color: color-mix(in srgb, var(--nx-settings-danger) 26%, transparent); background: color-mix(in srgb, var(--nx-settings-danger) 9%, transparent); color: var(--nx-settings-danger); }
+html[data-theme] .sd:is(.sd-night, .sd-day, .sd-warm).sd-section .sp.sp :is(.settings-form-row__validation, .settings-model-advanced__error, .settings-test-result.is-error, .settings-autonomy-rss-form__error, .settings-url-input--invalid) { border: 1px solid color-mix(in srgb, var(--nx-settings-danger) 26%, transparent); border-radius: 7px; background: color-mix(in srgb, var(--nx-settings-danger) 9%, transparent); color: var(--nx-settings-danger); box-shadow: none; }
+html[data-theme] .sd:is(.sd-night, .sd-day, .sd-warm).sd-section .sp[data-section='model'] .settings-model-detail-fields > label > .settings-model-advanced__error { grid-column: 2; width: 100%; padding: 7px 9px; }
+
+html[data-theme] .sb:has(.sd:is(.sd-home, .sd-section)) .confirm-dialog-card { width: min(360px, calc(100vw - 32px)); border: 1px solid var(--nx-settings-line); border-radius: 8px; background: var(--nx-settings-surface); color: var(--nx-settings-ink); box-shadow: var(--nx-settings-shell-shadow); }
+html[data-theme] .sb:has(.sd:is(.sd-home, .sd-section)) .confirm-dialog-card :is(.ghost-button, .confirm-dialog-card__confirm) { min-height: 30px; border-radius: 7px; font-size: 12px; box-shadow: var(--nx-settings-card-shadow); }
+
+/* Voice is readiness-first: provider and model internals stay available, but
+   they no longer dominate the first viewport. */
+html[data-theme] .sd.sd-section .sp[data-section='voice'] details.settings-voice-provider-disclosure {
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+  box-shadow: none;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] details.settings-voice-provider-disclosure > summary.settings-mini-group__head {
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] details.settings-voice-provider-disclosure[open] > summary.settings-mini-group__head {
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] .settings-voice-provider-body {
+  min-width: 0;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] .settings-voice-provider-body > .settings-speech-config-section {
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] .settings-speech-config-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+}
+
+html[data-theme] .sd.sd-section .sp.sp .sdc.settings-drawer__sections {
+  padding-bottom: calc(var(--nx-settings-footer-height) + 58px);
+  scroll-padding-bottom: calc(var(--nx-settings-footer-height) + 66px);
+}
+
+html[data-theme] .sd.sd-section .sp.sp .sdc.settings-drawer__sections > :last-child {
+  scroll-margin-bottom: calc(var(--nx-settings-footer-height) + 66px);
+}
+
+/* Shared settings controls: one markup and focus contract across every section. */
+.sd .settings-toggle__label--hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+html[data-theme] .sd-section .settings-segmented-control {
+  box-sizing: border-box;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(96px, 1fr);
+  width: fit-content;
+  max-width: 100%;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-segment-surface);
+  box-shadow: none;
+}
+
+html[data-theme] .sd-section .settings-segmented-control__option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nx-settings-muted);
+  font: inherit;
+  white-space: nowrap;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+html[data-theme] .sd-section .settings-segmented-control__option:hover {
+  background: var(--nx-settings-surface-hover);
+  color: var(--nx-settings-ink);
+}
+
+html[data-theme] .sd-section .settings-segmented-control__option:focus-visible {
+  outline: 2px solid var(--nx-settings-focus);
+  outline-offset: 2px;
+}
+
+.sd .settings-test-result--compact {
+  padding: 7px 9px;
+}
+
+.sd .settings-action-bar__status {
+  min-width: 0;
+  margin-right: auto;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 679px) {
+  html[data-theme] .sd-section .settings-segmented-control {
+    width: 100%;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+
+  html[data-theme] .sd-section .settings-segmented-control__option {
+    padding-inline: 8px;
+  }
+}

@@ -52,7 +52,28 @@ function formatStreamTextLogMeta(text) {
 console.warn('[TTS-Stream] remote pcmStream ended without emitting any data:', formatStreamTextLogMeta(text))
 `,
   'src/hooks/useNotificationBridge.ts': 'writeJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, sanitizeNotificationMessagesForStorage(messages))\n',
+  'src/hooks/chat/assistantReply.ts': `
+logVoiceEvent('sending message to assistant', { contentLength: content.length })
+logVoiceEvent('assistant reply received', { responseLength: response.response.content.length })
+`,
+  'src/hooks/useChat.ts': `
+logVoiceEvent('assistant is busy, voice transcript was not sent', { contentLength: content.length })
+`,
+  'src/hooks/voice/transcriptHandling.ts': `
+logVoiceEvent('recognized transcript', {
+  rawTranscriptLength: rawTranscript.length,
+  transcriptLength: transcript.length,
+  wakeWordConfigured: true,
+})
+`,
   'src/components/settingsSections/AutonomySection.tsx': 'Authorization: Bearer &lt;{webhookInfo.tokenFileName}\n',
+  'src/lib/logger.ts': `
+function summarizePrivateValue() {}
+export function sanitizeLogMeta() {}
+export function summarizeConsoleArguments() {}
+const entry = { message: \`console \${level} event\` }
+consoleOutput = original
+`,
   'src/lib/privacy/bridgeMessagePrivacy.ts': 'textLength=\nmedia=\n',
   'src/lib/privacy/notificationPrivacy.ts': `
 body: '',
@@ -179,6 +200,22 @@ console.warn(
     assert.equal(report.summary.ok, false)
     assert.ok(
       report.errors.unsafePatterns.some((item) => item.id === 'tts-stream-raw-speech-log'),
+    )
+  })
+})
+
+test('message privacy audit rejects raw renderer chat metadata', () => {
+  withMessagePrivacyFixture({
+    'src/hooks/chat/assistantReply.ts': `
+logVoiceEvent('sending message to assistant', { content })
+logVoiceEvent('assistant reply received', { responseLength: response.response.content.length })
+`,
+  }, (root) => {
+    const report = buildMessagePrivacyReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(
+      report.errors.unsafePatterns.some((item) => item.id === 'renderer-private-log-metadata:content'),
     )
   })
 })

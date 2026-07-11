@@ -2,6 +2,7 @@ import { softTheme } from './presets/soft.ts'
 import { editorialTheme } from './presets/editorial.ts'
 import { highContrastTheme } from './presets/high-contrast.ts'
 import { nexusDefaultTheme } from './presets/nexus-default.ts'
+import { systemBlackTheme } from './presets/system-black.ts'
 import { systemDarkTheme } from './presets/system-dark.ts'
 import { systemDayTheme } from './presets/system-day.ts'
 import { warmDayTheme } from './presets/warm-day.ts'
@@ -12,6 +13,7 @@ const themeMap: Record<ThemeId, ThemeDefinition> = {
   soft: softTheme,
   'high-contrast': highContrastTheme,
   editorial: editorialTheme,
+  'system-black': systemBlackTheme,
   'system-day': systemDayTheme,
   'warm-day': warmDayTheme,
   'system-dark': systemDarkTheme,

@@ -27,12 +27,12 @@ The larger product steps are:
   hardening, check-in policy, transparency UI, beta copy tuning, and release
   hardening. `v0.4.0` is the stable quiet-observation foundation; `v0.4.1` is
   the stable companion UI, Settings, and reliability hardening follow-up;
-  `v0.4.2`, `v0.4.3`, and `v0.4.4` are draft stacked prerequisites; `v0.4.5`
-  is the active stacked release-hardening draft. It keeps package version, tag,
-  GitHub Release, and README stable-entry state unchanged for future draft
-  slices: no package version bump past the active stable, no future-draft tag,
-  no future-draft GitHub Release, and no README stable-entry switch past
-  `v0.4.1`.
+  `v0.4.2` is the stable check-in policy follow-up; `v0.4.3` and `v0.4.4` are
+  draft stacked prerequisites; `v0.4.5` is the active stacked release-hardening
+  draft. It keeps package version, tag, GitHub Release, and README stable-entry
+  state unchanged for future draft slices: no package version bump past the
+  active stable, no future-draft tag, no future-draft GitHub Release, and no
+  README stable-entry switch past `v0.4.2`.
 - **v0.5.0 — desktop pet behavior.** The visible companion can react to mouse
   movement, typing rhythm, idleness, and desktop state without blocking the
   user's work.
@@ -392,6 +392,20 @@ Goal: move heavy, long-lived data out of renderer localStorage.
   byte sizes, normalized record counts, day/date ranges, category/source counts,
   and issue codes without writing SQLite, changing localStorage, or exposing
   memory text, IDs, source refs, or related IDs.
+- Slice 9 adds a confirmed, disabled-by-default memory migration service path.
+  It validates a content-bearing package, writes `memory-long-term` and
+  `memory-daily` SQLite domains in one transaction, exposes panel-only status
+  and readback IPC, records content-free aggregate audit metadata, and rolls
+  back both domains together. Renderer localStorage remains authoritative until
+  live write parity, import/export compatibility, and authority cutover tests
+  are complete.
+- Slice 10 adds the staged relationship/task migration path. It allowlists the
+  six relationship and six task storage keys, performs bounded SQLite writes,
+  exposes a content-free metadata comparison, and keeps localStorage
+  authoritative until explicit hidden consent enables dual-write authority.
+  Apply, compare, authority cutover, and rollback are all confirmation-gated;
+  the path requires `NEXUS_ENABLE_LOCAL_DATA_COMPANION_MIGRATION=1` and the
+  preview requires `VITE_NEXUS_ENABLE_LOCAL_DATA_COMPANION_MIGRATION_UI=1`.
 - Rollback: keep legacy localStorage snapshots until migration is verified.
 
 ### M6 - Desktop presence state machine

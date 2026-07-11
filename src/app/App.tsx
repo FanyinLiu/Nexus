@@ -1,6 +1,8 @@
 import { Component, Suspense, lazy } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import './App.css'
+import './styles/panel-notifications.css'
+import './styles/panel-toolbar-controls.css'
 import './styles/panel-companion.css'
 import { useAppController } from './controllers'
 import { PetView, PanelView } from './views'

@@ -1,6 +1,6 @@
-# GitHub Upload Prep - Nexus v0.4.1 release candidate
+# GitHub Upload Prep - Nexus v0.4.2 release candidate
 
-Date: 2026-07-03
+Date: 2026-07-10
 
 This document is the upload note for the current Nexus worktree. It is written
 for GitHub review and should be updated if another verification pass changes
@@ -8,14 +8,14 @@ the numbers below.
 
 ## Current state
 
-- Package version: `0.4.1`.
-- Current branch: `codex/core-path-smoke`.
+- Package version: `0.4.2`.
+- Current branch: `codex/v0.4.2-release-candidate`.
 - Remote: `origin` -> `https://github.com/FanyinLiu/Nexus`.
-- Release state: prepare the `v0.4.1` candidate for GitHub upload and review.
+- Release state: prepare the `v0.4.2` candidate for GitHub upload and review.
   Do not create the final tag or GitHub Release until the release checklist is
   run again on the final pushed commit.
-- Stable public entry point is moving from `v0.4.0` to `v0.4.1`; later
-  `v0.4.x` items remain draft review layers unless explicitly promoted.
+- `v0.4.2` is the current stable-entry candidate; later `v0.4.x` items remain
+  draft review layers unless explicitly promoted.
 
 ## Upload scope
 
@@ -34,14 +34,14 @@ This upload is mainly a source-quality, UI-foundation, and reliability pass:
 
 ## PR framing
 
-This should be opened as one large `v0.4.1` release-candidate PR. The branch is
+This should be opened as one large `v0.4.2` release-candidate PR. The branch is
 broader than a small patch: it changes UI source organization, Settings surface
 contracts, Image4 companion-panel structure, privacy/security audits, release
 docs, icon assets, and verification scripts in one prepared worktree.
 
 Use this framing in the PR description:
 
-- **What this PR is:** a `v0.4.1` companion UI, Settings, privacy, and
+- **What this PR is:** a `v0.4.2` companion UI, Settings, privacy, and
   reliability hardening candidate that prepares the codebase for GitHub release
   review.
 - **What this PR is not:** the final tag or GitHub Release publication. Those
@@ -56,7 +56,7 @@ Recommended review order:
 
 | Order | Area | Files to start with | What to check |
 |---:|---|---|---|
-| 1 | Release/upload framing | `docs/GITHUB_UPLOAD_PREP.md`, `CHANGELOG.md`, `README.md` | Stable entry moves to `v0.4.1`; tag and release still wait for final gates. |
+| 1 | Release/upload framing | `docs/GITHUB_UPLOAD_PREP.md`, `CHANGELOG.md`, `README.md` | Stable entry is aligned to `v0.4.2`; tag and release still wait for final gates. |
 | 2 | Panel and Settings UI | `src/app/views/PanelView.tsx`, `src/components/SettingsDrawer.tsx`, `src/app/styles/panel-companion.css`, `src/app/settingsDrawerEntry.ts` | UI source is organized, Settings stays lazy, and the visual direction is guarded without freezing future design work. |
 | 3 | UI contracts and references | `scripts/*surface-audit.mjs`, `scripts/image4-*`, `docs/*REFERENCE*.md`, `tests/*surface-audit.test.ts` | Source-only audits protect important surfaces without committing local screenshots. |
 | 4 | Companion awareness and wake word | `src/features/context/*`, `src/features/hearing/companionWakeWordSync.ts`, related tests | Rough time language, check-in policy, custom companion names, and privacy boundaries stay explicit. |
@@ -66,14 +66,14 @@ Recommended review order:
 
 Suggested reviewer notes:
 
-- `docs/ui-qa/` is intentionally ignored; local screenshots and metrics should
-  not be uploaded.
+- `docs/ui-qa/` and `artifacts/` are intentionally ignored; local screenshots,
+  audit reports, and metrics should not be uploaded.
 - The PR contains new generated-looking audit fixtures, but they are source
   tests and docs, not build output.
 - `npm audit --omit=dev` was checked separately and reported zero
   vulnerabilities.
 - Run the release gates listed below again on the final pushed commit before
-  creating `v0.4.1`.
+  creating `v0.4.2`.
 
 ## Performance baseline
 
@@ -81,20 +81,22 @@ Latest local `npm run performance:baseline` result:
 
 | Metric | Current | Budget |
 |---|---:|---:|
-| Total build assets | 27.64 MB | 35.00 MB |
-| JavaScript | 3.88 MB | 5.00 MB |
-| CSS | 852.4 KB | 900.0 KB |
+| Total build assets | 27.60 MB | 35.00 MB |
+| JavaScript | 3.95 MB | 5.00 MB |
+| CSS | 742.1 KB | 760.0 KB |
 | WASM | 21.60 MB | 25.00 MB |
 | Largest JS chunk | 868.7 KB | 1.20 MB |
-| Largest CSS chunk | 554.0 KB | 650.0 KB |
-| Initial CSS chunk | 298.4 KB | 450.0 KB |
-| Settings drawer lazy CSS | 554.0 KB | 600.0 KB |
-| Settings drawer lazy JS entry | 0.1 KB | 100.0 KB |
+| Largest CSS chunk | 448.3 KB | 480.0 KB |
+| Initial CSS chunk | 293.8 KB | 450.0 KB |
+| Settings drawer lazy CSS | 448.3 KB | 480.0 KB |
+| Settings drawer lazy JS entry | 51.5 KB | 100.0 KB |
+| Settings UI JS chunk | 325.3 KB | 390.0 KB |
 
 Important boundary: `settingsDrawerEntry` must keep producing both a lazy CSS
-chunk and a tiny lazy JS entry. If either disappears, `performance:baseline`
-fails because it likely means Settings styles moved back into the startup path
-or raw CSS was bundled into JavaScript again.
+chunk and a tiny lazy JS entry, and the build must keep producing a bounded
+`settings-ui` chunk for the main settings implementation. If any of these
+disappear, `performance:baseline` fails because it likely means Settings moved
+back into the startup path or the lazy settings boundary was collapsed.
 
 ## Five upload checks
 
@@ -110,7 +112,7 @@ full PR gate.
 | 4 | `npm run distribution:audit` | Release docs, installer config, privacy gates, and upload/release wiring stay aligned. | Pass |
 | 5 | `npm run verify:pr` | Full TypeScript, lint, tests, build, UI audits, privacy audits, IPC audit, and distribution gate. | Pass |
 
-Already passed locally on 2026-07-03:
+Already passed locally on 2026-07-10 for the current working tree:
 
 ```bash
 git diff --check
@@ -121,20 +123,20 @@ npm run verify:pr
 npm audit --omit=dev
 ```
 
-Release-candidate gates also passed locally on 2026-07-03:
+Release-candidate gates also need to be repeated on the final clean commit:
 
 ```bash
 npm run verify:release
-npm run prerelease-check -- v0.4.1 --skip=A --quick
+npm run prerelease-check -- v0.4.2 --skip=A --quick
 npm run package:dir:smoke
 ```
 
 `prerelease-check --skip=A --quick` finished with 24 pass, 0 warnings, and 0
 failures. Stage A remains final-branch/tag only, so before creating the real
-`v0.4.1` release tag on the final pushed commit, run:
+`v0.4.2` release tag on the final pushed commit, run:
 
 ```bash
-npm run prerelease-check -- v0.4.1
+npm run prerelease-check -- v0.4.2
 ```
 
 ## Git hygiene before push
@@ -151,20 +153,20 @@ npm run prerelease-check -- v0.4.1
 ## Suggested commit title
 
 ```text
-Release v0.4.1 companion UI and reliability hardening
+Release v0.4.2 companion UI and check-in policy hardening
 ```
 
 ## Suggested PR title
 
 ```text
-Release Nexus v0.4.1 companion UI, settings, and performance guardrails
+Release Nexus v0.4.2 companion UI, check-in policy, settings, and performance guardrails
 ```
 
 ## Suggested PR summary
 
 ```markdown
 ## Summary
-- prepare the v0.4.1 companion UI/settings/reliability release candidate
+- prepare the v0.4.2 companion UI/settings/check-in policy release candidate
 - organize panel, Settings, and Image4 companion UI source while keeping local UI QA screenshots ignored
 - add source-only audits and review docs for chat, Settings, composer, Image4, forms, focus, streaming, and agent-activity surfaces
 - keep Settings drawer styles lazy-loaded and guard startup/open-settings performance budgets

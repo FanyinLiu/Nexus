@@ -268,6 +268,234 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image
   stroke-width: 1.95 !important;
 }
 
+/* System Day uses the same companion-first composition as Warm Day, with a
+   cooler paper-and-sky palette. This keeps the selected theme visible on the
+   main panel instead of leaving Settings light and the companion panel black. */
+html[data-theme='system-day'] .desktop-pet-root--panel:has(.panel-window--image4) {
+  --image4-companion-bg: #e9f1f6;
+  --image4-companion-surface: #f3f7f9;
+  --image4-companion-surface-strong: #e4edf2;
+  --image4-companion-primary: #718eae;
+  --image4-companion-primary-soft: #dce8f1;
+  --image4-companion-secondary: #7e9f98;
+  --image4-companion-text: #344351;
+  --image4-companion-muted: #617281;
+  --image4-companion-border: rgba(77, 99, 118, 0.13);
+  --image4-companion-glow: rgba(126, 164, 213, 0.24);
+  --image4-companion-secondary-glow: rgba(121, 166, 156, 0.18);
+  background: var(--image4-companion-bg) !important;
+}
+
+html[data-theme='system-day'] .desktop-pet-root--panel:has(.panel-window--image4)::before {
+  background:
+    linear-gradient(180deg, rgba(241, 247, 250, 0.42), rgba(218, 231, 238, 0.52)),
+    url("../../features/panelScene/scenes/seaside.day.jpg") center bottom / cover no-repeat;
+  filter: blur(1px) saturate(0.78) brightness(1.03);
+}
+
+html[data-theme='system-day'] .desktop-pet-root--panel:has(.panel-window--image4)::after {
+  background:
+    radial-gradient(circle at 22% 18%, var(--image4-companion-glow), transparent 54%),
+    radial-gradient(circle at 82% 22%, var(--image4-companion-secondary-glow), transparent 58%);
+}
+
+html[data-theme='system-day'] .panel-window--image4.panel-window--simple {
+  border-color: var(--image4-companion-border);
+  background: rgba(239, 246, 249, 0.76);
+  color: var(--image4-companion-text);
+  box-shadow:
+    0 18px 42px rgba(73, 101, 129, 0.11),
+    inset 0 1px 0 rgba(255, 255, 255, 0.68);
+}
+
+html[data-theme='system-day'] .panel-window--image4.panel-window--simple::before {
+  background: var(--image4-companion-glow);
+  opacity: 0.32;
+}
+
+html[data-theme='system-day'] .desktop-pet-root--panel .panel-window--image4 .panel-window__shell--image4,
+html[data-theme='system-day'] .panel-window--image4 .image4-chat {
+  color: var(--image4-companion-text);
+}
+
+html[data-theme='system-day'] .desktop-pet-root--panel .panel-window--image4 .image4-chat {
+  border-color: var(--image4-companion-border);
+  background: rgba(242, 247, 249, 0.72) !important;
+}
+
+html[data-theme='system-day'] .panel-window--image4 {
+  --image4-toolbar-icon: rgba(64, 82, 102, 0.72);
+  --image4-toolbar-icon-hover: rgba(39, 49, 61, 0.94);
+  --image4-toolbar-border: rgba(66, 89, 116, 0.2);
+  --image4-toolbar-hover-bg: rgba(109, 143, 196, 0.08);
+  --image4-toolbar-hover-border: rgba(109, 143, 196, 0.32);
+  --image4-toolbar-focus-ring: 0 0 0 1px rgba(109, 143, 196, 0.24), 0 0 0 3px rgba(109, 143, 196, 0.12);
+  --image4-toolbar-danger: rgba(162, 77, 77, 0.72);
+  --image4-toolbar-danger-hover: rgba(132, 55, 55, 0.94);
+  --image4-toolbar-danger-border: rgba(178, 92, 92, 0.28);
+  --image4-toolbar-danger-bg: rgba(178, 92, 92, 0.08);
+}
+
+html[data-theme='system-day'] .panel-window--image4 :is(
+  .companion-presence__copy strong,
+  .empty-chat__copy > strong,
+  .empty-chat__prompt-copy span,
+  .companion-presence__dial strong,
+  .companion-presence__dial-meta,
+  .composer textarea
+) {
+  color: var(--image4-companion-text);
+}
+
+html[data-theme='system-day'] .panel-window--image4 :is(
+  .companion-presence__copy span,
+  .empty-chat p,
+  .empty-chat__prompt-copy small,
+  .companion-presence__dial-meta__date,
+  .companion-presence__dial-meta__weather,
+  .composer__hint
+) {
+  color: var(--image4-companion-muted);
+}
+
+html[data-theme='system-day'] .panel-window--image4 .composer textarea::placeholder {
+  color: color-mix(in srgb, var(--image4-companion-muted) 88%, transparent);
+  opacity: 1;
+}
+
+html[data-theme='system-day'] .panel-window--image4 .image4-action-list {
+  border-color: color-mix(in srgb, var(--image4-companion-border) 82%, transparent);
+}
+
+html[data-theme='system-day'] .panel-window--image4 .image4-action {
+  border-color: var(--image4-companion-border);
+  background: rgba(247, 250, 251, 0.48);
+  color: var(--image4-companion-text);
+  box-shadow: 0 4px 14px rgba(73, 101, 129, 0.055);
+}
+
+html[data-theme='system-day'] .panel-window--image4 .image4-action:hover {
+  border-color: color-mix(in srgb, var(--image4-companion-primary) 28%, var(--image4-companion-border));
+  background: rgba(250, 252, 252, 0.68);
+}
+
+html[data-theme='system-day'] .panel-window--image4 .empty-chat__prompt-icon,
+html[data-theme='system-day'] .panel-window--image4 .image4-action:nth-child(2) .empty-chat__prompt-icon,
+html[data-theme='system-day'] .panel-window--image4 .image4-action:nth-child(3) .empty-chat__prompt-icon {
+  border-color: var(--image4-companion-border);
+  background: color-mix(in srgb, var(--image4-companion-primary-soft) 54%, transparent);
+  color: var(--image4-companion-primary);
+}
+
+html[data-theme='system-day'] .panel-window--image4 .image4-action::after {
+  color: color-mix(in srgb, var(--image4-companion-muted) 58%, transparent);
+}
+
+html[data-theme='system-day'] .panel-window--image4 .image4-composer__field {
+  border-color: var(--image4-companion-border);
+  background: rgba(248, 251, 251, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+html[data-theme='system-day'] .panel-window--image4 .image4-composer__field textarea {
+  color: var(--image4-companion-text);
+  caret-color: var(--image4-companion-primary);
+}
+
+html[data-theme='system-day'] .panel-window--image4 .image4-composer__field textarea::placeholder {
+  color: color-mix(in srgb, var(--image4-companion-muted) 70%, transparent);
+}
+
+html[data-theme='system-day'] .panel-window--image4 .image4-composer__field :is(.image4-attachment-pill, .ghost-button, .primary-button) {
+  color: color-mix(in srgb, var(--image4-companion-muted) 84%, var(--image4-companion-text));
+}
+
+html[data-theme='system-day'] .panel-window--image4 .companion-presence__dial::before {
+  background: repeating-conic-gradient(
+    from -8deg,
+    color-mix(in srgb, var(--image4-companion-secondary) 22%, transparent) 0deg 1deg,
+    transparent 1deg 4deg
+  );
+  opacity: 0.14;
+}
+
+html[data-theme='system-day'] .panel-window--image4 .companion-presence__dial-layer--glow {
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--image4-companion-primary-soft) 18%, transparent),
+    color-mix(in srgb, var(--image4-companion-secondary) 7%, transparent) 44%,
+    transparent 70%
+  );
+}
+
+html[data-theme='system-day'] .panel-window--image4 .companion-presence__dial-layer--base {
+  background:
+    radial-gradient(circle at 42% 32%, rgba(255, 255, 255, 0.64), transparent 38%),
+    radial-gradient(
+      circle at 50% 52%,
+      color-mix(in srgb, var(--image4-companion-surface) 94%, transparent),
+      color-mix(in srgb, var(--image4-companion-surface-strong) 66%, transparent) 58%,
+      color-mix(in srgb, var(--image4-companion-primary-soft) 28%, transparent) 74%,
+      transparent 79%
+    );
+  box-shadow:
+    0 0 0 1px var(--image4-companion-border),
+    0 0 clamp(30px, 6.5vw, 64px) color-mix(in srgb, var(--image4-companion-primary-soft) 18%, transparent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.78);
+}
+
+html[data-theme='system-day'] .panel-window--image4 .companion-presence__dial-layer--arc {
+  background: conic-gradient(
+    from 180deg,
+    color-mix(in srgb, var(--image4-companion-secondary) 38%, transparent) 0 13%,
+    transparent 17% 50%,
+    color-mix(in srgb, var(--image4-companion-primary) 34%, transparent) 50% 61%,
+    transparent 66%
+  );
+  opacity: 0.44;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--image4-companion-primary) 10%, transparent));
+}
+
+html[data-theme='system-day'] .panel-window--image4 .companion-presence__dial-band {
+  color: color-mix(in srgb, var(--image4-companion-muted) 88%, transparent);
+  top: 35%;
+  font-size: clamp(11px, 2.2vw, 16px);
+  font-weight: 540;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+html[data-theme='system-day'] .panel-window--image4 .companion-presence__dial strong {
+  color: var(--image4-companion-text);
+  top: 51.5%;
+  font-size: clamp(31px, 7vw, 54px);
+  font-weight: 430;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-theme='system-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta,
+html[data-theme='system-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span + span {
+  color: color-mix(in srgb, var(--image4-companion-muted) 82%, transparent);
+  top: 68%;
+  font-size: clamp(10px, 2vw, 14px);
+  font-weight: 500;
+  line-height: 1;
+  text-shadow: none;
+}
+
+html[data-theme='system-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span:first-child {
+  color: color-mix(in srgb, var(--image4-companion-text) 84%, transparent);
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+html[data-theme='system-day'] .panel-window--image4 .companion-presence__dial-meta__weather {
+  display: none;
+}
+
 .panel-window--image4 .companion-presence__signal,
 html[data-theme='warm-day'] .panel-window--image4 .companion-presence__signal {
   margin-left: 0 !important;

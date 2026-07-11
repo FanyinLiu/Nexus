@@ -4,8 +4,11 @@ import { MemoryPanel } from '../../features/memory/components'
 import { MEMORY_EMBEDDING_MODEL_OPTIONS, SCREEN_VLM_MODEL_OPTIONS } from '../../features/memory/constants'
 import { resolveMemoryTransparencySummary } from '../../features/memory/memorySettingsView'
 import {
+  clearRecentCompanionCheckInDecision,
   clearRecentCompanionSummary,
+  loadRecentCompanionCheckInDecision,
   loadRecentCompanionSummary,
+  recentCompanionCheckInDecisionToDecision,
   recentCompanionSummaryToQuietObservation,
   resolveDesktopContextDiagnostics,
   type DesktopContextDiagnosticItem,
@@ -13,7 +16,10 @@ import {
 } from '../../features/context'
 import type { ChatMemoryTraceFocusTarget } from '../../features/memory/traceDetails.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
-import { NumberField, TextField, ToggleField } from '../settingsFields'
+import { MemoryMigrationPreviewPanel } from './MemoryMigrationPreviewPanel.tsx'
+import { CompanionMigrationPreviewPanel } from './CompanionMigrationPreviewPanel.tsx'
+import type { ConfirmFn } from '../useConfirm.ts'
+import { NumberField, SettingsToggle, TextField, ToggleField } from '../settingsFields'
 import type {
   AppSettings,
   DailyMemoryEntry,
@@ -36,6 +42,7 @@ type StatusMessage = {
 
 type MemorySectionProps = {
   active: boolean
+  confirm: ConfirmFn
   draft: AppSettings
   platformProfile: PlatformProfile
   setDraft: Dispatch<SetStateAction<AppSettings>>
@@ -64,6 +71,7 @@ type MemorySectionProps = {
 
 export const MemorySection = memo(function MemorySection({
   active,
+  confirm,
   draft,
   platformProfile,
   setDraft,
@@ -93,6 +101,7 @@ export const MemorySection = memo(function MemorySection({
   const companionAwarenessActive = draft.contextAwarenessEnabled && !draft.companionAwarenessPaused
   useEffect(() => {
     if (companionAwarenessActive) return
+    clearRecentCompanionCheckInDecision()
     clearRecentCompanionSummary()
   }, [companionAwarenessActive])
 
@@ -100,7 +109,12 @@ export const MemorySection = memo(function MemorySection({
     void recentCompanionSummaryRevision
     return companionAwarenessActive ? loadRecentCompanionSummary() : null
   }, [companionAwarenessActive, recentCompanionSummaryRevision])
+  const effectiveRecentCompanionCheckInDecision = useMemo(() => {
+    void recentCompanionSummaryRevision
+    return companionAwarenessActive ? loadRecentCompanionCheckInDecision() : null
+  }, [companionAwarenessActive, recentCompanionSummaryRevision])
   const clearCompanionSummaryState = () => {
+    clearRecentCompanionCheckInDecision()
     clearRecentCompanionSummary()
     refreshRecentCompanionSummary()
   }
@@ -151,8 +165,22 @@ export const MemorySection = memo(function MemorySection({
       effectiveRecentCompanionSummary,
       uiLanguage,
     ),
+    companionCheckInDecision: recentCompanionCheckInDecisionToDecision(
+      effectiveRecentCompanionCheckInDecision,
+    ),
   })
   const companionTransparencyView = memoryTransparencySummary.companionAwarenessView
+  const translateRecentSummaryText = () => {
+    const recentSummary = companionTransparencyView.recentSummary
+    const activityLabel = recentSummary.activityLabelKey ? ti(recentSummary.activityLabelKey) : ''
+    const params = recentSummary.bodyParams
+      ? {
+          ...recentSummary.bodyParams,
+          ...(activityLabel ? { activityLabel } : {}),
+        }
+      : undefined
+    return params ? tiParam(recentSummary.bodyKey, params) : ti(recentSummary.bodyKey)
+  }
 
   return (
     <section className={`settings-section settings-memory-section ${active ? 'is-active' : 'is-hidden'}`}>
@@ -207,6 +235,16 @@ export const MemorySection = memo(function MemorySection({
         </p>
       </div>
 
+      <MemoryMigrationPreviewPanel
+        uiLanguage={uiLanguage}
+        confirm={confirm}
+      />
+
+      <CompanionMigrationPreviewPanel
+        uiLanguage={uiLanguage}
+        confirm={confirm}
+      />
+
       <div className="settings-mini-group settings-memory-group">
         <div className="settings-mini-group__head">
           <h5>{ti('settings.memory.context.title')}</h5>
@@ -242,12 +280,32 @@ export const MemorySection = memo(function MemorySection({
             <span>{ti(companionTransparencyView.statusLabelKey)}</span>
           </div>
           <div className="settings-memory-context-transparency__rows">
+            <div className="settings-memory-context-transparency__row">
+              <strong>{ti(companionTransparencyView.recentSummary.labelKey)}</strong>
+              <p>
+                {ti(companionTransparencyView.recentSummary.statusKey)}
+                {' / '}
+                {translateRecentSummaryText()}
+              </p>
+            </div>
             {companionTransparencyView.detailRows.map((row) => (
               <div key={row.id} className="settings-memory-context-transparency__row">
                 <strong>{ti(row.labelKey)}</strong>
                 <p>{ti(row.bodyKey)}</p>
               </div>
             ))}
+            <div className="settings-memory-context-transparency__row">
+              <strong>{ti(companionTransparencyView.checkInStatus.labelKey)}</strong>
+              <p>
+                {ti(companionTransparencyView.checkInStatus.statusKey)}
+                {' / '}
+                {ti(companionTransparencyView.checkInStatus.bodyKey)}
+              </p>
+            </div>
+            <div className="settings-memory-context-transparency__row">
+              <strong>{ti(companionTransparencyView.privacyBoundary.labelKey)}</strong>
+              <p>{ti(companionTransparencyView.privacyBoundary.bodyKey)}</p>
+            </div>
           </div>
           <div className="settings-action-row settings-memory-context-actions">
             <button
@@ -263,34 +321,26 @@ export const MemorySection = memo(function MemorySection({
         </div>
 
         <div className="settings-control-card settings-memory-control">
-          <label className="settings-toggle">
-            <span>{ti('settings.memory.context.enable')}</span>
-            <input
-              type="checkbox"
-              checked={draft.contextAwarenessEnabled}
-              disabled={!contextAwarenessAvailable}
-              onChange={(event) => {
-                const enabled = event.target.checked
-                if (!enabled) clearCompanionSummaryState()
-                setDraft((prev) => ({ ...prev, contextAwarenessEnabled: enabled }))
-              }}
-            />
-          </label>
+          <SettingsToggle
+            label={ti('settings.memory.context.enable')}
+            checked={draft.contextAwarenessEnabled}
+            disabled={!contextAwarenessAvailable}
+            onChange={(enabled) => {
+              if (!enabled) clearCompanionSummaryState()
+              setDraft((prev) => ({ ...prev, contextAwarenessEnabled: enabled }))
+            }}
+          />
         </div>
         <div className="settings-control-card settings-memory-control">
-          <label className="settings-toggle">
-            <span>{ti('settings.memory.context.companion_pause')}</span>
-            <input
-              type="checkbox"
-              checked={draft.companionAwarenessPaused}
-              disabled={!draft.contextAwarenessEnabled}
-              onChange={(event) => {
-                const paused = event.target.checked
-                if (paused) clearCompanionSummaryState()
-                setDraft((prev) => ({ ...prev, companionAwarenessPaused: paused }))
-              }}
-            />
-          </label>
+          <SettingsToggle
+            label={ti('settings.memory.context.companion_pause')}
+            checked={draft.companionAwarenessPaused}
+            disabled={!draft.contextAwarenessEnabled}
+            onChange={(paused) => {
+              if (paused) clearCompanionSummaryState()
+              setDraft((prev) => ({ ...prev, companionAwarenessPaused: paused }))
+            }}
+          />
         </div>
         <div className="settings-control-card settings-memory-control">
           <ToggleField
@@ -561,7 +611,7 @@ export const MemorySection = memo(function MemorySection({
 
           <button
             type="button"
-            className="ghost-button"
+            className="settings-danger-button"
             onClick={onClearMemoryArchive}
             disabled={clearingMemoryArchive || chatBusy}
           >

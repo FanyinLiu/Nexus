@@ -7,7 +7,12 @@
 // `setDraft(prev => ({...prev, [field]: nextValue}))` shape.
 
 import { useId } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
+import type {
+  Dispatch,
+  KeyboardEvent as ReactKeyboardEvent,
+  ReactNode,
+  SetStateAction,
+} from 'react'
 import { parseNumberInput } from './settingsDrawerSupport'
 import { displaySecretInputValue } from '../lib/keyVaultBridge'
 import type { AppSettings } from '../types'
@@ -16,6 +21,192 @@ type FieldShared = {
   label: string
   draft: AppSettings
   setDraft: Dispatch<SetStateAction<AppSettings>>
+}
+
+type SettingsStatusMessageProps = {
+  ok?: boolean
+  tone?: 'success' | 'error' | 'loading'
+  compact?: boolean
+  children: ReactNode
+}
+
+export function SettingsStatusMessage({
+  ok,
+  tone,
+  compact = false,
+  children,
+}: SettingsStatusMessageProps) {
+  const resolvedTone = tone ?? (ok ? 'success' : 'error')
+  const role = resolvedTone === 'error' ? 'alert' : 'status'
+  const ariaLive = resolvedTone === 'error' ? 'assertive' : 'polite'
+
+  return (
+    <div
+      className={[
+        'settings-test-result',
+        compact ? 'settings-test-result--compact' : '',
+        `is-${resolvedTone}`,
+      ].filter(Boolean).join(' ')}
+      role={role}
+      aria-live={ariaLive}
+      aria-atomic="true"
+    >
+      {children}
+    </div>
+  )
+}
+
+type SettingsSegmentedControlOption<TValue extends string> = {
+  value: TValue
+  label: string
+}
+
+type SettingsSegmentedControlProps<TValue extends string> = {
+  label: string
+  value: TValue
+  options: readonly SettingsSegmentedControlOption<TValue>[]
+  onChange: (value: TValue) => void
+}
+
+export function SettingsSegmentedControl<TValue extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: SettingsSegmentedControlProps<TValue>) {
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, optionIndex: number) {
+    let nextIndex = -1
+
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        nextIndex = (optionIndex + 1) % options.length
+        break
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        nextIndex = (optionIndex - 1 + options.length) % options.length
+        break
+      case 'Home':
+        nextIndex = 0
+        break
+      case 'End':
+        nextIndex = options.length - 1
+        break
+      default:
+        return
+    }
+
+    event.preventDefault()
+    const nextOption = options[nextIndex]
+    if (!nextOption) return
+
+    onChange(nextOption.value)
+    event.currentTarget.parentElement
+      ?.querySelectorAll<HTMLButtonElement>('[data-settings-segment-option]')
+      .item(nextIndex)
+      ?.focus()
+  }
+
+  return (
+    <div className="settings-segmented-control" role="radiogroup" aria-label={label}>
+      {options.map((option, optionIndex) => {
+        const selected = option.value === value
+        return (
+          <button
+            key={option.value}
+            type="button"
+            className={`settings-segmented-control__option${selected ? ' is-active' : ''}`}
+            role="radio"
+            aria-checked={selected}
+            tabIndex={selected ? 0 : -1}
+            data-settings-segment-option
+            onClick={() => onChange(option.value)}
+            onKeyDown={(event) => handleKeyDown(event, optionIndex)}
+          >
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+type SettingsActionBarProps = {
+  cancelLabel: string
+  saveLabel: string
+  onCancel: () => void
+  onSave: () => void
+  cancelDisabled?: boolean
+  saveDisabled?: boolean
+  status?: ReactNode
+}
+
+export function SettingsActionBar({
+  cancelLabel,
+  saveLabel,
+  onCancel,
+  onSave,
+  cancelDisabled = false,
+  saveDisabled = false,
+  status,
+}: SettingsActionBarProps) {
+  return (
+    <div className="settings-drawer__actions sda settings-action-bar">
+      {status ? <div className="settings-action-bar__status">{status}</div> : null}
+      <button
+        type="button"
+        className="ghost-button"
+        onClick={onCancel}
+        disabled={cancelDisabled}
+        aria-label={cancelLabel}
+        title={cancelLabel}
+      >
+        {cancelLabel}
+      </button>
+      <button
+        type="button"
+        className="primary-button"
+        onClick={onSave}
+        disabled={saveDisabled}
+        aria-label={saveLabel}
+        title={saveLabel}
+      >
+        {saveLabel}
+      </button>
+    </div>
+  )
+}
+
+type SettingsToggleProps = {
+  label: ReactNode
+  checked: boolean
+  onChange: (checked: boolean) => void
+  hideLabel?: boolean
+  disabled?: boolean
+  className?: string
+}
+
+export function SettingsToggle({
+  label,
+  checked,
+  onChange,
+  hideLabel = false,
+  disabled = false,
+  className,
+}: SettingsToggleProps) {
+  return (
+    <label className={['settings-toggle', className].filter(Boolean).join(' ')}>
+      <span className={hideLabel ? 'settings-toggle__label settings-toggle__label--hidden' : 'settings-toggle__label'}>
+        {label}
+      </span>
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+    </label>
+  )
 }
 
 // ── Toggle (checkbox) ───────────────────────────────────────────────────────
@@ -29,15 +220,12 @@ type ToggleFieldProps = FieldShared & {
 
 export function ToggleField({ label, field, disabled, draft, setDraft }: ToggleFieldProps) {
   return (
-    <label className="settings-toggle">
-      <span>{label}</span>
-      <input
-        type="checkbox"
-        checked={draft[field] as boolean}
-        disabled={disabled}
-        onChange={(e) => setDraft((prev) => ({ ...prev, [field]: e.target.checked }))}
-      />
-    </label>
+    <SettingsToggle
+      label={label}
+      checked={draft[field] as boolean}
+      disabled={disabled}
+      onChange={(checked) => setDraft((prev) => ({ ...prev, [field]: checked }))}
+    />
   )
 }
 

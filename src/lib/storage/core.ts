@@ -14,6 +14,8 @@ export const LOREBOOK_ENTRIES_STORAGE_KEY = 'nexus:lorebooks'
 export const LEGACY_MEMORY_STORAGE_KEY = 'nexus:memory'
 export const MEMORY_STORAGE_KEY = 'nexus:memory:long-term'
 export const DAILY_MEMORY_STORAGE_KEY = 'nexus:memory:daily'
+export const MEMORY_LOCAL_DATA_AUTHORITY_CONSENT_KEY = 'nexus:memory:local-data-authority-consent'
+export const COMPANION_LOCAL_DATA_AUTHORITY_CONSENT_KEY = 'nexus:companion:local-data-authority-consent'
 export const SETTINGS_STORAGE_KEY = 'nexus:settings'
 export const SETTINGS_UPDATED_EVENT = 'nexus:settings-updated'
 export const PET_RUNTIME_STORAGE_KEY = 'nexus:runtime'
@@ -55,6 +57,59 @@ export const FUTURE_CAPSULE_STORE_STORAGE_KEY = 'nexus:capsule:future-self'
 export const OPEN_ARC_STORE_STORAGE_KEY = 'nexus:arc:open-threads'
 export const GUIDANCE_TELEMETRY_STORAGE_KEY = 'nexus:autonomy:guidance-telemetry'
 export const GUIDANCE_ANALYSIS_STORAGE_KEY = 'nexus:autonomy:guidance-analysis'
+
+export type CompanionLocalDataStorageKey =
+  | typeof AUTONOMY_RELATIONSHIP_STORAGE_KEY
+  | typeof AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY
+  | typeof AUTONOMY_EMOTION_STORAGE_KEY
+  | typeof AUTONOMY_EMOTION_HISTORY_STORAGE_KEY
+  | typeof AUTONOMY_RHYTHM_STORAGE_KEY
+  | typeof USER_AFFECT_HISTORY_STORAGE_KEY
+  | typeof PLAN_STORE_STORAGE_KEY
+  | typeof OPEN_GOALS_STORAGE_KEY
+  | typeof AGENT_TRACE_STORAGE_KEY
+  | typeof BACKGROUND_TASKS_STORAGE_KEY
+  | typeof ERRAND_STORE_STORAGE_KEY
+  | typeof REMINDER_TASKS_STORAGE_KEY
+
+export const COMPANION_RELATIONSHIP_STORAGE_KEYS = Object.freeze([
+  AUTONOMY_RELATIONSHIP_STORAGE_KEY,
+  AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY,
+  AUTONOMY_EMOTION_STORAGE_KEY,
+  AUTONOMY_EMOTION_HISTORY_STORAGE_KEY,
+  AUTONOMY_RHYTHM_STORAGE_KEY,
+  USER_AFFECT_HISTORY_STORAGE_KEY,
+])
+
+export const COMPANION_TASK_STORAGE_KEYS = Object.freeze([
+  PLAN_STORE_STORAGE_KEY,
+  OPEN_GOALS_STORAGE_KEY,
+  AGENT_TRACE_STORAGE_KEY,
+  BACKGROUND_TASKS_STORAGE_KEY,
+  ERRAND_STORE_STORAGE_KEY,
+  REMINDER_TASKS_STORAGE_KEY,
+])
+
+const COMPANION_LOCAL_DATA_STORAGE_KEYS = new Set([
+  ...COMPANION_RELATIONSHIP_STORAGE_KEYS,
+  ...COMPANION_TASK_STORAGE_KEYS,
+])
+
+function isCompanionLocalDataAuthorityActive(): boolean {
+  try {
+    return import.meta.env?.VITE_NEXUS_ENABLE_LOCAL_DATA_COMPANION_MIGRATION === '1'
+      && window.localStorage.getItem(COMPANION_LOCAL_DATA_AUTHORITY_CONSENT_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function mirrorCompanionLocalDataWrite(key: string, value: unknown): void {
+  if (!COMPANION_LOCAL_DATA_STORAGE_KEYS.has(key as CompanionLocalDataStorageKey) || !isCompanionLocalDataAuthorityActive()) return
+  const mirror = window.desktopPet?.localDataMirrorCompanionDataset
+  if (typeof mirror !== 'function') return
+  void mirror({ confirmed: true, storageKey: key as CompanionLocalDataStorageKey, value }).catch(() => undefined)
+}
 
 /**
  * One-shot cleanup of localStorage entries whose owning module was deleted
@@ -207,6 +262,7 @@ export function writeJson<T>(key: string, value: T): void {
     // (loadMemories / settings rewrite-on-load, etc.).
     console.error(`[storage] writeJson failed (${formatStorageKeyForLog(key)}):`, getRedactedLogErrorMessage(err))
   }
+  mirrorCompanionLocalDataWrite(key, value)
   broadcastWrite(key, value)
 }
 
@@ -222,6 +278,7 @@ function flushPendingWrites(): void {
     if (timerId) window.clearTimeout(timerId)
     try {
       window.localStorage.setItem(key, JSON.stringify(value))
+      mirrorCompanionLocalDataWrite(key, value)
       broadcastWrite(key, value)
     } catch { /* best-effort on unload */ }
   }

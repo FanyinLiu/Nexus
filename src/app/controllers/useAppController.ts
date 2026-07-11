@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  getInitialPanelSection,
-  getWindowView,
   getWindowViewSync,
 } from '../appSupport'
 import {
@@ -23,13 +21,12 @@ import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
 import { useDesktopContext } from '../../hooks/useDesktopContext'
 import { useGameIntegration } from '../../hooks/useGameIntegration'
 import { useMemory } from '../../hooks/useMemory'
+import { useCompanionLocalDataAuthority } from '../../hooks/useCompanionLocalDataAuthority.ts'
 import { usePetBehavior } from '../../hooks/usePetBehavior'
 import { useVoice } from '../../hooks/useVoice'
 import { useReminderController } from './useReminderController'
 import { getSettingsSnapshot } from '../store/settingsStore'
 import { useAppOverlays } from './useAppOverlays'
-import type { SettingsSectionId } from '../../components/settingsDrawerSupport.ts'
-import type { ChatMemoryTraceFocusTarget } from '../../features/memory/traceDetails.ts'
 import { useAutonomyController } from './useAutonomyController'
 import { useBudgetConfigSync } from './useBudgetConfigSync'
 import { useBackgroundSchedulers } from './useBackgroundSchedulers'
@@ -38,6 +35,7 @@ import { useDesktopBridge } from './useDesktopBridge'
 import { useIntegrationWhitelists } from './useIntegrationWhitelists'
 import { useMediaSessionController } from './useMediaSessionController'
 import { useReminderTaskStore } from './useReminderTaskStore'
+import { useSettingsNavigation } from './useSettingsNavigation'
 import { useSettingsSubscription } from './useSettingsSubscription'
 import { loadUserAffectWindow } from '../../features/autonomy/userAffectTimeline.ts'
 import { computeAffectSnapshot } from '../../features/autonomy/affectDynamics.ts'
@@ -60,28 +58,46 @@ type ReminderTaskStore = ReturnType<typeof useReminderTaskStore>
 export function useAppController() {
   const [view, setView] = useState<WindowView>(() => getWindowViewSync())
   const [settings, setSettings] = useState<AppSettings>(() => getSettingsSnapshot())
-  const [settingsOpen, setSettingsOpen] = useState(
-    () => view === 'panel' && getInitialPanelSection() === 'settings',
-  )
-  const [preferredSettingsSectionId, setPreferredSettingsSectionId] = useState<SettingsSectionId | null>(null)
-  const [preferredMemoryFocus, setPreferredMemoryFocus] = useState<ChatMemoryTraceFocusTarget | null>(null)
-
-  // Refine view from async preload bridge (only matters inside Electron)
-  useEffect(() => {
-    void getWindowView().then((resolved) => {
-      if (resolved !== view) setView(resolved)
-      if (resolved === 'panel' && getInitialPanelSection() === 'settings') {
-        setSettingsOpen(true)
-      }
-    })
-    // Sweep dead localStorage entries from the 3048bbd prune (scheduler /
-    // session-store / skills / agent-memory). Idempotent — no-op once gone.
-    pruneLegacyStorageKeys()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useCompanionLocalDataAuthority()
 
   const [panelWindowState, setPanelWindowState] = useState<PanelWindowState>({ collapsed: false })
   const [isPinned, setIsPinned] = useState(() => loadPetWindowPreferences().isPinned)
   const [clickThrough, setClickThrough] = useState(() => loadPetWindowPreferences().clickThrough)
+
+  const applyPanelWindowState = useCallback(async (partialState: Partial<PanelWindowState>) => {
+    if (!window.desktopPet?.setPanelWindowState) {
+      setPanelWindowState((current) => ({ ...current, ...partialState }))
+      return
+    }
+
+    try {
+      const nextState = await window.desktopPet.setPanelWindowState(partialState)
+      setPanelWindowState(nextState)
+    } catch {
+      setPanelWindowState((current) => ({ ...current, ...partialState }))
+    }
+  }, [])
+
+  const {
+    closePanelFallback,
+    openChatPanelForVoice,
+    openSettingsPanel,
+    openSettingsSection,
+    preferredMemoryFocus,
+    preferredSettingsSectionId,
+    setSettingsOpen,
+    settingsOpen,
+  } = useSettingsNavigation({
+    applyPanelWindowState,
+    setView,
+    view,
+  })
+
+  useEffect(() => {
+    // Sweep dead localStorage entries from the 3048bbd prune (scheduler /
+    // session-store / skills / agent-memory). Idempotent — no-op once gone.
+    pruneLegacyStorageKeys()
+  }, [])
 
   useSettingsSubscription(setSettings)
   useBudgetConfigSync(settings)
@@ -100,7 +116,7 @@ export function useAppController() {
   }, [goals])
 
   const settingsRef = useRef(settings)
-  const settingsOpenRef = useRef(view === 'panel' && getInitialPanelSection() === 'settings')
+  const settingsOpenRef = useRef(settingsOpen)
   const busyRef = useRef(false)
   const inputRef = useRef('')
   const messagesRef = useRef<ChatMessage[]>([])
@@ -118,7 +134,7 @@ export function useAppController() {
   const reminderTaskStore = useReminderTaskStore()
   const debugConsole = useDebugConsole()
   const memory = useMemory({ settings })
-  const desktopContext = useDesktopContext({ settingsRef, platformProfileRef })
+  const desktopContext = useDesktopContext({ settingsRef, platformProfileRef, isActiveChatSessionRef: busyRef })
   useGameIntegration({ settingsRef })
   const pet = usePetBehavior({
     settingsRef,
@@ -134,106 +150,23 @@ export function useAppController() {
 
   const panelCollapsed = panelWindowState.collapsed
 
-  const applyPanelWindowState = useCallback(async (partialState: Partial<PanelWindowState>) => {
-    if (!window.desktopPet?.setPanelWindowState) {
-      setPanelWindowState((current) => ({ ...current, ...partialState }))
-      return
-    }
-
-    try {
-      const nextState = await window.desktopPet.setPanelWindowState(partialState)
-      setPanelWindowState(nextState)
-    } catch {
-      setPanelWindowState((current) => ({ ...current, ...partialState }))
-    }
-  }, [])
-
   const togglePanelCollapse = useCallback(() => {
     const nextCollapsed = !panelCollapsed
     if (nextCollapsed) {
       setSettingsOpen(false)
     }
     void applyPanelWindowState({ collapsed: nextCollapsed })
-  }, [applyPanelWindowState, panelCollapsed])
-
-  const openSettingsPanel = useCallback(() => {
-    setPreferredSettingsSectionId(null)
-    setPreferredMemoryFocus(null)
-    if (view === 'pet') {
-      const openPanel = window.desktopPet?.openPanel
-      if (openPanel) {
-        void openPanel('settings').catch(() => {
-          setSettingsOpen(true)
-        })
-        return
-      }
-
-      setSettingsOpen(true)
-      return
-    }
-
-    if (panelCollapsed) {
-      void applyPanelWindowState({ collapsed: false })
-    }
-    setSettingsOpen(true)
-  }, [applyPanelWindowState, panelCollapsed, view])
-
-  const openSettingsSection = useCallback((sectionId: SettingsSectionId, memoryFocus?: ChatMemoryTraceFocusTarget | null) => {
-    setPreferredSettingsSectionId(sectionId)
-    setPreferredMemoryFocus(sectionId === 'memory' ? memoryFocus ?? null : null)
-    if (view === 'pet') {
-      const openPanel = window.desktopPet?.openPanel
-      if (openPanel) {
-        void openPanel('settings').catch(() => {
-          setSettingsOpen(true)
-        })
-        return
-      }
-
-      setSettingsOpen(true)
-      return
-    }
-
-    if (panelCollapsed) {
-      void applyPanelWindowState({ collapsed: false })
-    }
-    setSettingsOpen(true)
-  }, [applyPanelWindowState, panelCollapsed, view])
-
-  const openChatPanelForVoice = useCallback(() => {
-    if (view === 'panel') {
-      setSettingsOpen(false)
-      return
-    }
-
-    const openPanel = window.desktopPet?.openPanel
-    if (openPanel) {
-      void openPanel('chat').catch(() => {
-        setSettingsOpen(false)
-        void applyPanelWindowState({ collapsed: false })
-        setView('panel')
-      })
-      return
-    }
-
-    setSettingsOpen(false)
-    void applyPanelWindowState({ collapsed: false })
-    setView('panel')
-  }, [applyPanelWindowState, view])
+  }, [applyPanelWindowState, panelCollapsed, setSettingsOpen])
 
   const closePanel = useCallback(() => {
     const closePanelWindow = window.desktopPet?.closePanel
     if (closePanelWindow) {
-      void closePanelWindow().catch(() => {
-        setSettingsOpen(false)
-        setView('pet')
-      })
+      void closePanelWindow().catch(closePanelFallback)
       return
     }
 
-    setSettingsOpen(false)
-    setView('pet')
-  }, [])
+    closePanelFallback()
+  }, [closePanelFallback])
 
   const openPetMenu = useCallback(() => {
     const pending = window.desktopPet?.openPetMenu?.()

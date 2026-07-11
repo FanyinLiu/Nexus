@@ -2,46 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-const settingsSectionChunks = [
-  {
-    name: 'settings-section-console',
-    files: [
-      '/src/components/settingsSections/ConsoleSection.tsx',
-      '/src/components/settingsSections/AboutPanel.tsx',
-      '/src/components/settingsSections/CostHistoryPanel.tsx',
-      '/src/components/settingsSections/DiagnosticsPanel.tsx',
-      '/src/components/settingsSections/StateTimelinePanel.tsx',
-      '/src/components/settingsSections/UpdaterPanel.tsx',
-      '/src/components/settingsSections/WeeklyRecapPanel.tsx',
-    ],
-  },
-  {
-    name: 'settings-section-voice',
-    files: [
-      '/src/components/settingsSections/VoiceSection.tsx',
-      '/src/components/settingsSections/SpeechInputSection.tsx',
-      '/src/components/settingsSections/SpeechOutputSection.tsx',
-    ],
-  },
-  { name: 'settings-section-model', files: ['/src/components/settingsSections/ModelSection.tsx'] },
-  { name: 'settings-section-chat', files: ['/src/components/settingsSections/ChatSection.tsx'] },
-  { name: 'settings-section-context', files: ['/src/components/settingsSections/ContextSection.tsx'] },
-  { name: 'settings-section-history', files: ['/src/components/settingsSections/HistorySection.tsx'] },
-  { name: 'settings-section-memory', files: ['/src/components/settingsSections/MemorySection.tsx'] },
-  { name: 'settings-section-lorebooks', files: ['/src/components/settingsSections/LorebooksSection.tsx'] },
-  { name: 'settings-section-window', files: ['/src/components/settingsSections/WindowSection.tsx'] },
-  { name: 'settings-section-integrations', files: ['/src/components/settingsSections/IntegrationsSection.tsx'] },
-  { name: 'settings-section-tools', files: ['/src/components/settingsSections/ToolsSection.tsx'] },
-  { name: 'settings-section-autonomy', files: ['/src/components/settingsSections/AutonomySection.tsx'] },
-  { name: 'settings-section-shared', files: ['/src/components/settingsSections/UrlInput.tsx'] },
-]
-
-function resolveSettingsSectionChunk(normalizedId: string) {
-  return settingsSectionChunks.find((chunk) => (
-    chunk.files.some((file) => normalizedId.includes(file))
-  ))?.name
-}
-
 function resolveManualChunk(id: string) {
   const normalizedId = id.replace(/\\/g, '/')
 
@@ -90,6 +50,13 @@ function resolveManualChunk(id: string) {
 
   if (normalizedId.includes('/src/i18n/')) {
     return 'i18n-runtime'
+  }
+
+  // Settings sections are entered after the main surface is visible. Keep
+  // their shared UI code in one lazy chunk so the drawer entry remains small
+  // without creating an unbounded set of tiny section chunks.
+  if (normalizedId.includes('/src/components/settingsSections/')) {
+    return 'settings-ui'
   }
 
   // ── feature runtime chunks ─────────────────────────────────────
@@ -161,21 +128,6 @@ function resolveManualChunk(id: string) {
     return 'app-runtime'
   }
 
-  // ── UI chunks ──────────────────────────────────────────────────
-  const settingsSectionChunk = resolveSettingsSectionChunk(normalizedId)
-  if (settingsSectionChunk) {
-    return settingsSectionChunk
-  }
-
-  if (
-    normalizedId.includes('/src/components/SettingsDrawer')
-    || normalizedId.includes('/src/components/settingsSectionLoaders.ts')
-    || normalizedId.includes('/src/components/settingsDrawer')
-    || normalizedId.includes('/src/components/settingsFields.tsx')
-  ) {
-    return 'settings-ui'
-  }
-
   return undefined
 }
 
@@ -199,6 +151,7 @@ const chunkGroups = [
   { name: 'locale-ko', test: (id: string) => resolveManualChunk(id) === 'locale-ko', priority: 95 },
   { name: 'locale-zh-TW', test: (id: string) => resolveManualChunk(id) === 'locale-zh-TW', priority: 95 },
   { name: 'i18n-runtime', test: (id: string) => resolveManualChunk(id) === 'i18n-runtime', priority: 90 },
+  { name: 'settings-ui', test: (id: string) => resolveManualChunk(id) === 'settings-ui', priority: 50 },
   { name: 'hearing-runtime', test: (id: string) => resolveManualChunk(id) === 'hearing-runtime', priority: 70 },
   { name: 'vision-runtime', test: (id: string) => resolveManualChunk(id) === 'vision-runtime', priority: 70 },
   { name: 'autonomy-runtime', test: (id: string) => resolveManualChunk(id) === 'autonomy-runtime', priority: 70 },
@@ -206,12 +159,6 @@ const chunkGroups = [
   { name: 'voice-runtime', test: (id: string) => resolveManualChunk(id) === 'voice-runtime', priority: 60 },
   { name: 'assistant-runtime', test: (id: string) => resolveManualChunk(id) === 'assistant-runtime', priority: 60 },
   { name: 'app-runtime', test: (id: string) => resolveManualChunk(id) === 'app-runtime', priority: 40 },
-  { name: 'settings-ui', test: (id: string) => resolveManualChunk(id) === 'settings-ui', priority: 30 },
-  ...settingsSectionChunks.map((chunk) => ({
-    name: chunk.name,
-    test: (id: string) => resolveManualChunk(id) === chunk.name,
-    priority: 25,
-  })),
 ]
 
 // https://vite.dev/config/

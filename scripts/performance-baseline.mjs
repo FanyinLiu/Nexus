@@ -11,13 +11,23 @@ const DIST_ASSETS_DIR = join('dist', 'assets')
 const BUDGETS = {
   totalAssetBytes: 35_000_000,
   totalJavaScriptBytes: 5_000_000,
-  totalCssBytes: 900_000,
+  totalCssBytes: 760_000,
   totalWasmBytes: 25_000_000,
   maxJavaScriptChunkBytes: 1_200_000,
-  maxCssChunkBytes: 650_000,
+  maxCssChunkBytes: 480_000,
   maxInitialCssChunkBytes: 450_000,
-  maxSettingsDrawerCssChunkBytes: 600_000,
+  maxSettingsDrawerCssChunkBytes: 480_000,
   maxSettingsDrawerEntryChunkBytes: 100_000,
+  maxSettingsUiChunkBytes: 390_000,
+}
+
+const SETTINGS_UI_CHUNK_PATTERN = /^(?:settings-ui|AutonomySection|ChatSection|ConsoleSection|HistorySection|IntegrationsSection|LettersSection|LorebooksSection|MemorySection|ModelSection|SpeechInputSection|SpeechOutputSection|ToolsSection|VoiceSection|WindowSection)[-.]/
+
+const HEADROOM_WARNINGS = {
+  totalCssBytes: 0.9,
+  maxCssChunkBytes: 0.9,
+  maxSettingsDrawerCssChunkBytes: 0.9,
+  maxSettingsUiChunkBytes: 0.9,
 }
 
 function classifyAsset(fileName) {
@@ -71,6 +81,10 @@ function readAssetMetrics(root = ROOT) {
   const settingsDrawerEntryChunk = assets.find((asset) => (
     asset.kind === 'javascript' && /^settingsDrawerEntry[-.]/.test(asset.fileName)
   )) ?? null
+  const settingsUiChunks = assets.filter((asset) => (
+    asset.kind === 'javascript' && SETTINGS_UI_CHUNK_PATTERN.test(asset.fileName)
+  ))
+  const settingsUiChunk = settingsUiChunks[0] ?? null
   return {
     assetCount: assets.length,
     totals,
@@ -80,6 +94,8 @@ function readAssetMetrics(root = ROOT) {
     initialCssChunk,
     settingsDrawerCssChunk,
     settingsDrawerEntryChunk,
+    settingsUiChunks,
+    settingsUiChunk,
   }
 }
 
@@ -91,6 +107,9 @@ function budgetErrors(assetMetrics, heavyReport) {
   if (!assetMetrics.settingsDrawerEntryChunk) {
     errors.push({ metric: 'missingSettingsDrawerEntryChunk', actual: 0, budget: 1 })
   }
+  if (!assetMetrics.settingsUiChunk) {
+    errors.push({ metric: 'missingSettingsUiChunk', actual: 0, budget: 1 })
+  }
   for (const [key, budget] of Object.entries(BUDGETS)) {
     let actual = assetMetrics.totals[key]
     if (key === 'maxJavaScriptChunkBytes') actual = assetMetrics.largestJavaScriptChunk?.bytes ?? 0
@@ -98,6 +117,7 @@ function budgetErrors(assetMetrics, heavyReport) {
     if (key === 'maxInitialCssChunkBytes') actual = assetMetrics.initialCssChunk?.bytes ?? 0
     if (key === 'maxSettingsDrawerCssChunkBytes') actual = assetMetrics.settingsDrawerCssChunk?.bytes ?? 0
     if (key === 'maxSettingsDrawerEntryChunkBytes') actual = assetMetrics.settingsDrawerEntryChunk?.bytes ?? 0
+    if (key === 'maxSettingsUiChunkBytes') actual = assetMetrics.settingsUiChunk?.bytes ?? 0
     if (actual > budget) errors.push({ metric: key, actual, budget })
   }
   if (heavyReport.summary.errors > 0) {
@@ -106,19 +126,48 @@ function budgetErrors(assetMetrics, heavyReport) {
   return errors
 }
 
+function readBudgetMetric(assetMetrics, key) {
+  if (key === 'maxJavaScriptChunkBytes') return assetMetrics.largestJavaScriptChunk?.bytes ?? 0
+  if (key === 'maxCssChunkBytes') return assetMetrics.largestCssChunk?.bytes ?? 0
+  if (key === 'maxInitialCssChunkBytes') return assetMetrics.initialCssChunk?.bytes ?? 0
+  if (key === 'maxSettingsDrawerCssChunkBytes') return assetMetrics.settingsDrawerCssChunk?.bytes ?? 0
+  if (key === 'maxSettingsDrawerEntryChunkBytes') return assetMetrics.settingsDrawerEntryChunk?.bytes ?? 0
+  if (key === 'maxSettingsUiChunkBytes') return assetMetrics.settingsUiChunk?.bytes ?? 0
+  return assetMetrics.totals[key] ?? 0
+}
+
+function budgetWarnings(assetMetrics) {
+  return Object.entries(HEADROOM_WARNINGS).flatMap(([key, warningRatio]) => {
+    const budget = BUDGETS[key]
+    const warningAt = Math.floor(budget * warningRatio)
+    const actual = readBudgetMetric(assetMetrics, key)
+    if (actual <= warningAt || actual > budget) return []
+    return [{
+      metric: key,
+      actual,
+      budget,
+      warningAt,
+      usage: Number((actual / budget).toFixed(4)),
+    }]
+  })
+}
+
 export function buildPerformanceBaselineReport(root = ROOT) {
   const assetMetrics = readAssetMetrics(root)
   const heavyReport = buildHeavyModuleAuditReport(root)
   const errors = budgetErrors(assetMetrics, heavyReport)
+  const warnings = budgetWarnings(assetMetrics)
   return {
     schemaVersion: 1,
     budgets: BUDGETS,
     assetMetrics,
     heavyModuleSummary: heavyReport.summary,
     errors,
+    warnings,
     summary: {
       ok: errors.length === 0,
       errors: errors.length,
+      warnings: warnings.length,
     },
     privacy: {
       readsUserStorage: false,
@@ -145,6 +194,7 @@ function formatHumanReport(report) {
   lines.push(`- initial CSS chunk: ${report.assetMetrics.initialCssChunk?.fileName ?? 'none'} (${formatBytes(report.assetMetrics.initialCssChunk?.bytes ?? 0)} / ${formatBytes(report.budgets.maxInitialCssChunkBytes)})`)
   lines.push(`- settings drawer CSS: ${report.assetMetrics.settingsDrawerCssChunk?.fileName ?? 'none'} (${formatBytes(report.assetMetrics.settingsDrawerCssChunk?.bytes ?? 0)} / ${formatBytes(report.budgets.maxSettingsDrawerCssChunkBytes)})`)
   lines.push(`- settings drawer entry: ${report.assetMetrics.settingsDrawerEntryChunk?.fileName ?? 'none'} (${formatBytes(report.assetMetrics.settingsDrawerEntryChunk?.bytes ?? 0)} / ${formatBytes(report.budgets.maxSettingsDrawerEntryChunkBytes)})`)
+  lines.push(`- largest settings UI chunk: ${report.assetMetrics.settingsUiChunk?.fileName ?? 'none'} (${formatBytes(report.assetMetrics.settingsUiChunk?.bytes ?? 0)} / ${formatBytes(report.budgets.maxSettingsUiChunkBytes)}; ${report.assetMetrics.settingsUiChunks.length} lazy chunks)`)
   lines.push(`- heavy module audit errors: ${report.heavyModuleSummary.errors}`)
   lines.push('- largest assets:')
   for (const asset of report.assetMetrics.largestAssets) {
@@ -155,8 +205,12 @@ function formatHumanReport(report) {
   if (report.errors.length) {
     lines.push(`  ${report.errors.map((item) => `${item.metric} ${item.actual}/${item.budget}`).join(', ')}`)
   }
+  lines.push(`WARN budgetHeadroom: ${report.warnings.length}`)
+  if (report.warnings.length) {
+    lines.push(`  ${report.warnings.map((item) => `${item.metric} ${item.actual}/${item.budget} warn>${item.warningAt}`).join(', ')}`)
+  }
   lines.push('')
-  lines.push(`Summary: ok=${report.summary.ok} errors=${report.summary.errors}`)
+  lines.push(`Summary: ok=${report.summary.ok} errors=${report.summary.errors} warnings=${report.summary.warnings}`)
   return lines.join('\n')
 }
 

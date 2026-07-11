@@ -248,6 +248,7 @@ export type VoiceRestartRequestedEvent = VoiceEventCommon & {
   restartReason: string
   force: boolean
   delayMs?: number
+  statusText?: string
 }
 
 export type VoiceStopRequestedEvent = VoiceEventCommon & {

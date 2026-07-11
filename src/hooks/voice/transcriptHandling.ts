@@ -127,12 +127,11 @@ export async function handleRecognizedVoiceTranscriptRuntime(
   }
 
   logVoiceEvent('recognized transcript', {
-    traceId,
-    rawTranscript: options.rawTranscript,
-    normalizedTranscript,
-    transcript,
+    rawTranscriptLength: options.rawTranscript.length,
+    normalizedTranscriptLength: normalizedTranscript.length,
+    transcriptLength: transcript.length,
     triggerMode,
-    wakeWord: wakeWord || '(empty)',
+    wakeWordConfigured: Boolean(wakeWord),
     wakeWordAlreadyTriggered,
   })
   options.appendVoiceTrace('Recognition complete', `#${traceLabel} ${shorten(transcript, 30)}`)
@@ -177,9 +176,8 @@ export async function handleRecognizedVoiceTranscriptRuntime(
 
   if (transcriptDecision.kind === 'hold_incomplete') {
     logVoiceEvent('held incomplete voice transcript before sending', {
-      traceId,
-      transcript: transcriptDecision.transcript,
-      content: transcriptDecision.content,
+      transcriptLength: transcriptDecision.transcript.length,
+      contentLength: transcriptDecision.content.length,
       mode: transcriptDecision.mode,
     })
     // Transcript arrived even if we're holding it — counter should reset.
@@ -232,8 +230,8 @@ export async function handleRecognizedVoiceTranscriptRuntime(
 
   if (transcriptDecision.kind === 'blocked_unmatched_wake_word') {
     logVoiceEvent('wake word did not match, transcript was not forwarded', {
-      transcript: transcriptDecision.transcript,
-      wakeWord: transcriptDecision.wakeWord,
+      transcriptLength: transcriptDecision.transcript.length,
+      wakeWordLength: transcriptDecision.wakeWord.length,
     })
     options.dispatchVoiceSessionAndSync({ type: 'aborted' })
     options.setMood('idle')
@@ -290,8 +288,7 @@ export async function handleRecognizedVoiceTranscriptRuntime(
 
   if (options.shouldIgnoreRepeatedVoiceContent(transcriptDecision.content)) {
     logVoiceEvent('ignored repeated voice transcript', {
-      traceId,
-      content: transcriptDecision.content,
+      contentLength: transcriptDecision.content.length,
     })
     options.dispatchVoiceSessionAndSync({ type: 'session_completed' })
     options.setMood('idle')
@@ -347,8 +344,7 @@ export async function handleRecognizedVoiceTranscriptRuntime(
   )
   options.appendVoiceTrace('Wake word matched', `#${traceLabel} stripped wake word and preparing to send`)
   logVoiceEvent('wake word matched, forwarding stripped transcript', {
-    traceId,
-    content: transcriptDecision.content,
+    contentLength: transcriptDecision.content.length,
   })
   options.rememberSubmittedVoiceContent(transcriptDecision.content)
   const sent = await options.sendMessage(transcriptDecision.content, { source: 'voice', traceId })

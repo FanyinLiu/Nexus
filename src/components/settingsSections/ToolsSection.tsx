@@ -6,7 +6,7 @@ import {
 } from '../../lib/webSearchProviders'
 import { displaySecretInputValue } from '../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
-import { ToggleField } from '../settingsFields'
+import { SettingsToggle, ToggleField } from '../settingsFields'
 import type { AppSettings } from '../../types'
 import { UrlInput } from './UrlInput'
 
@@ -145,20 +145,13 @@ export const ToolsSection = memo(function ToolsSection({
         </label>
 
         <div className="settings-control-card settings-tools-control">
-          <label className="settings-toggle">
-            <span>{ti('settings.tools.fallback_bing')}</span>
-            <input
-              type="checkbox"
-              checked={draft.toolWebSearchFallbackToBing}
-              onChange={(event) =>
-                setDraft((prev) => ({
-                  ...prev,
-                  toolWebSearchFallbackToBing: event.target.checked,
-                }))
-              }
-              disabled={!draft.toolWebSearchEnabled}
-            />
-          </label>
+          <SettingsToggle
+            label={ti('settings.tools.fallback_bing')}
+            checked={draft.toolWebSearchFallbackToBing}
+            disabled={!draft.toolWebSearchEnabled}
+            onChange={(checked) =>
+              setDraft((prev) => ({ ...prev, toolWebSearchFallbackToBing: checked }))}
+          />
         </div>
       </div>
 

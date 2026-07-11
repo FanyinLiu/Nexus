@@ -11,17 +11,16 @@ harder to accidentally turn into monitoring language.
 
 ## What Changed
 
-- Added a local companion-feedback normalization helper that keeps only safe
-  labels for timing, tone, interaction context, privacy-boundary signals, and OS
-  permission friction.
+- Kept beta feedback collection in the structured issue template rather than
+  shipping an in-app normalization or storage helper.
 - Added structured v0.4 fields to the beta validation issue template.
 - Added five-locale copy guardrails for every desktop companion check-in
   reason.
 - Added a fixed safe fallback line so an unsafe future copy edit cannot silently
   remove the in-app check-in.
-- Kept the feedback path irreversible: no raw comments, timestamps, window
-  titles, clipboard bodies, screenshots, file paths, user IDs, or session traces
-  are retained by the helper.
+- Nexus does not retain an in-app feedback payload containing raw comments,
+  timestamps, window titles, clipboard bodies, screenshots, file paths, user
+  IDs, or session traces; issue submissions remain user-controlled.
 - Feedback labels are not used for training, personalization, scoring, adaptive
   behavior, or persistent analytics.
 

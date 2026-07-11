@@ -7,8 +7,10 @@ import {
   exportLogs,
   getLogEntries,
   getLogLevel,
+  sanitizeLogMeta,
   setConsolePassthrough,
   setLogLevel,
+  summarizeConsoleArguments,
   type LogEntry,
 } from '../src/lib/logger.ts'
 
@@ -24,14 +26,14 @@ describe('logger basics', () => {
 
   test('captures info logs with module + message + meta', () => {
     const log = createLogger('test.basic')
-    log.info('hello', { answer: 42 })
+    log.info('hello', { count: 42 })
 
     const entries = getLogEntries()
     assert.equal(entries.length, 1)
     assert.equal(entries[0].level, 'info')
     assert.equal(entries[0].module, 'test.basic')
     assert.equal(entries[0].message, 'hello')
-    assert.deepEqual(entries[0].meta, { answer: 42 })
+    assert.deepEqual(entries[0].meta, { count: 42 })
     assert.match(entries[0].ts, /^\d{4}-\d{2}-\d{2}T/)
   })
 
@@ -68,6 +70,51 @@ describe('logger basics', () => {
     log.info('x')
 
     assert.equal(getLogEntries()[0].module, 'a.b.c')
+  })
+
+  test('redacts private metadata while retaining safe operational fields', () => {
+    const log = createLogger('voice')
+    log.info('sending message', {
+      content: 'private chat body',
+      traceId: 'session-secret',
+      contentLength: 17,
+      source: 'voice',
+      provider: 'openai',
+    })
+
+    const entry = getLogEntries()[0]
+    assert.deepEqual(entry.meta, {
+      content: { redacted: true, type: 'string', length: 17 },
+      traceId: { redacted: true, type: 'string', length: 14 },
+      contentLength: 17,
+      source: 'voice',
+      provider: 'openai',
+    })
+    assert.doesNotMatch(JSON.stringify(entry), /private chat body|session-secret/)
+  })
+
+  test('console argument summaries never retain argument values', () => {
+    const summary = summarizeConsoleArguments([
+      '[Voice] transcript',
+      'private transcript',
+      new Error('private error'),
+      { content: 'private object' },
+    ])
+
+    assert.deepEqual(summary, {
+      argumentCount: 4,
+      stringCount: 2,
+      errorCount: 1,
+      objectCount: 2,
+    })
+    assert.doesNotMatch(JSON.stringify(summary), /private/)
+  })
+
+  test('sanitizeLogMeta defaults unknown keys to metadata-only summaries', () => {
+    assert.deepEqual(sanitizeLogMeta({ arbitrary: 'user value', responseLength: 9 }), {
+      arbitrary: { redacted: true, type: 'string', length: 10 },
+      responseLength: 9,
+    })
   })
 })
 
@@ -213,7 +260,7 @@ describe('exportLogs', () => {
 
   test('produces JSONL (one JSON object per line, oldest first)', () => {
     const log = createLogger('test.export')
-    log.info('first', { n: 1 })
+    log.info('first', { count: 1 })
     log.warn('second')
 
     const jsonl = exportLogs()
@@ -222,7 +269,7 @@ describe('exportLogs', () => {
 
     const parsed: LogEntry[] = lines.map((l) => JSON.parse(l))
     assert.equal(parsed[0].message, 'first')
-    assert.deepEqual(parsed[0].meta, { n: 1 })
+    assert.deepEqual(parsed[0].meta, { count: 1 })
     assert.equal(parsed[1].message, 'second')
     assert.equal(parsed[1].meta, undefined)
   })

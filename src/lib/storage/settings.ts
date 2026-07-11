@@ -331,6 +331,7 @@ function resolveThemeId(storedThemeId: unknown): AppSettings['themeId'] {
     case 'soft':
     case 'high-contrast':
     case 'nexus-default':
+    case 'system-black':
     case 'system-day':
     case 'warm-day':
     case 'system-dark':

@@ -17,13 +17,22 @@ release entry point.
   observe, what reaches the model, and what is stored locally.
 - Exposed explicit local reasons for blocked model reach and unavailable
   clear-summary actions.
-- Kept storage lifetime visible as a short-lived session summary that is purged
-  when awareness is paused or disabled.
+- Added a local check-in rationale model so Settings can explain whether Nexus
+  is staying quiet or allowed to appear gently without exposing raw signal keys.
+- Added visible Settings rows for the recent coarse companion summary and the
+  privacy boundary, so users can see what exists locally without seeing raw
+  desktop content.
+- Wired the chat desktop-context path to record the most recent local check-in
+  decision, so active chat turns explain why proactive companionship stays
+  quiet.
+- Kept storage lifetime visible as short-lived session companion state: the
+  recent summary plus a safe recent check-in decision are purged when awareness
+  is paused or disabled.
 - Preserved a hard `rawContentVisible: false` invariant for the transparency
   contract.
 - Added a lightweight invariant check so status labels, row ordering, clear
-  action state, coarse time language, and raw-content boundaries cannot drift
-  silently.
+  action state, check-in rationale, coarse time language, and raw-content
+  boundaries cannot drift silently.
 
 Paused awareness blocks model reach, but clearing an already-existing recent
 local summary remains available because it deletes local companion data.
@@ -33,6 +42,24 @@ local summary remains available because it deletes local companion data.
 The transparency view model must not carry raw window titles, screenshots,
 clipboard bodies, message bodies, file paths, exact minute/second durations, or
 desktop activity timelines.
+
+The check-in transparency model exposes only coarse reason groups such as active
+chat, quiet hours, focus protection, cooldown, duplicate suppression, or
+eligible gentle appearance. It does not carry raw window titles or raw signal
+keys.
+
+The recent check-in decision stored for Settings is ephemeral and contains only
+`reason`, `surface`, `priority`, and a boolean `signalKeyPresent`; it does not
+persist the raw signal key.
+
+The recent summary row shows only a coarse elapsed label and a broad activity
+label. The privacy boundary row is static copy that keeps screenshots,
+clipboard bodies, exact timers, file paths, and message bodies out of the UI
+contract.
+
+The current runtime writer is passive: it records the decision used for
+Settings transparency, but it does not emit a proactive line, notification, or
+message.
 
 ## Not Included
 

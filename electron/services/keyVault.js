@@ -8,20 +8,20 @@ const VAULT_FILE_NAME = 'vault.json'
 
 let vaultCache = null
 const withVaultLock = createAsyncLock()
+const decryptedVaultCache = new Map()
+let safeStorageAccessBlocked = false
+let safeStorageFailureLogged = false
 
 function getVaultPath() {
   return path.join(app.getPath('userData'), VAULT_FILE_NAME)
 }
 
-function formatVaultSlotLogLabel(slot) {
-  return `slotLength=${String(slot ?? '').length}`
-}
-
-// Dev-mode plaintext path: skip safeStorage entirely so unsigned dev binaries
-// don't trigger a Keychain password prompt on every rebuild. Hard-gated on
-// !app.isPackaged so packaged installers can never fall through to plaintext.
+// Dev-mode and smoke-only plaintext path: skip safeStorage entirely so unsigned
+// dev binaries and local packaged smoke do not trigger a Keychain password
+// prompt. SMOKE_TEST is set only by the local smoke harness; production
+// packaged installers still require safeStorage and never fall through here.
 function isDevPlaintextMode() {
-  return !app.isPackaged
+  return !app.isPackaged || process.env.SMOKE_TEST === '1'
 }
 
 function isEncryptionAvailable() {
@@ -30,6 +30,42 @@ function isEncryptionAvailable() {
     return safeStorage.isEncryptionAvailable()
   } catch {
     return false
+  }
+}
+
+function markSafeStorageAccessBlocked(error, operation) {
+  safeStorageAccessBlocked = true
+  if (safeStorageFailureLogged) return
+  safeStorageFailureLogged = true
+  console.warn(
+    `[KeyVault] safeStorage ${operation} failed; disabling further attempts for this process:`,
+    getRedactedErrorMessage(error),
+  )
+}
+
+function assertSafeStorageAccessAllowed() {
+  if (safeStorageAccessBlocked) {
+    throw new Error('系统钥匙串暂时不可用。本次启动不会重复请求钥匙串权限。')
+  }
+}
+
+function encryptWithSafeStorage(value) {
+  assertSafeStorageAccessAllowed()
+  try {
+    return safeStorage.encryptString(value)
+  } catch (error) {
+    markSafeStorageAccessBlocked(error, 'encryption')
+    throw new Error('系统钥匙串暂时不可用。本次启动不会重复请求钥匙串权限。')
+  }
+}
+
+function decryptWithSafeStorage(value) {
+  if (safeStorageAccessBlocked) return ''
+  try {
+    return safeStorage.decryptString(value)
+  } catch (error) {
+    markSafeStorageAccessBlocked(error, 'decryption')
+    return ''
   }
 }
 
@@ -60,16 +96,19 @@ export function vaultStore(slot, plaintext) {
 
 async function _vaultStore(slot, plaintext) {
   const value = String(plaintext ?? '')
+  const slotName = String(slot ?? '')
   const vault = await loadVault()
 
   if (!value) {
-    delete vault[slot]
+    delete vault[slotName]
+    decryptedVaultCache.delete(slotName)
     await persistVault()
     return
   }
 
   if (isDevPlaintextMode()) {
-    vault[slot] = { p: value, v: 0 }
+    vault[slotName] = { p: value, v: 0 }
+    decryptedVaultCache.set(slotName, value)
     await persistVault()
     return
   }
@@ -81,15 +120,25 @@ async function _vaultStore(slot, plaintext) {
     )
   }
 
-  const encrypted = safeStorage.encryptString(value)
-  vault[slot] = { e: encrypted.toString('base64'), v: 1 }
+  const encrypted = encryptWithSafeStorage(value)
+  vault[slotName] = { e: encrypted.toString('base64'), v: 1 }
+  decryptedVaultCache.set(slotName, value)
 
   await persistVault()
 }
 
-export async function vaultRetrieve(slot) {
+export function vaultRetrieve(slot) {
+  return withVaultLock(() => _vaultRetrieve(slot))
+}
+
+async function _vaultRetrieve(slot) {
+  const slotName = String(slot ?? '')
+  if (decryptedVaultCache.has(slotName)) {
+    return decryptedVaultCache.get(slotName)
+  }
+
   const vault = await loadVault()
-  const entry = vault[slot]
+  const entry = vault[slotName]
 
   if (!entry) return ''
 
@@ -102,20 +151,19 @@ export async function vaultRetrieve(slot) {
     }
 
     if (!isEncryptionAvailable()) {
-      console.warn(`[KeyVault] Encryption unavailable, cannot decrypt slot (${formatVaultSlotLogLabel(slot)})`)
+      console.warn('[KeyVault] Encryption unavailable; encrypted vault entries are unavailable')
       return ''
     }
 
-    try {
-      return safeStorage.decryptString(Buffer.from(entry.e, 'base64'))
-    } catch (error) {
-      console.warn(`[KeyVault] Failed to decrypt slot (${formatVaultSlotLogLabel(slot)}):`, getRedactedErrorMessage(error))
-      return ''
-    }
+    const plaintext = decryptWithSafeStorage(Buffer.from(entry.e, 'base64'))
+    if (plaintext) decryptedVaultCache.set(slotName, plaintext)
+    return plaintext
   }
 
   if (entry.v === 0 && entry.p != null) {
-    return entry.p
+    const plaintext = String(entry.p)
+    decryptedVaultCache.set(slotName, plaintext)
+    return plaintext
   }
 
   return ''
@@ -131,6 +179,7 @@ async function _vaultDelete(slot) {
   if (!(slot in vault)) return
 
   delete vault[slot]
+  decryptedVaultCache.delete(String(slot ?? ''))
   await persistVault()
 }
 
@@ -156,7 +205,7 @@ async function _vaultStoreMany(entries) {
     }
 
     if (isDevPlaintextMode()) {
-      operations.push({ slot, entry: { p: plaintext, v: 0 } })
+      operations.push({ slot, entry: { p: plaintext, v: 0 }, plaintext })
       continue
     }
 
@@ -167,8 +216,8 @@ async function _vaultStoreMany(entries) {
       )
     }
 
-    const encrypted = safeStorage.encryptString(plaintext)
-    operations.push({ slot, entry: { e: encrypted.toString('base64'), v: 1 } })
+    const encrypted = encryptWithSafeStorage(plaintext)
+    operations.push({ slot, entry: { e: encrypted.toString('base64'), v: 1 }, plaintext })
   }
 
   // Phase 2: apply all operations atomically (all encryptions succeeded)
@@ -176,8 +225,10 @@ async function _vaultStoreMany(entries) {
   for (const op of operations) {
     if (op.delete) {
       delete vault[op.slot]
+      decryptedVaultCache.delete(op.slot)
     } else {
       vault[op.slot] = op.entry
+      decryptedVaultCache.set(op.slot, op.plaintext)
     }
   }
 

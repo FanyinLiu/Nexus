@@ -16,6 +16,9 @@ import {
   validateLocalDataChatMigrationApplyPayload,
   validateLocalDataChatMigrationRollbackPayload,
   validateLocalDataChatRuntimeMirrorPayload,
+  validateLocalDataCompanionComparisonPayload,
+  validateLocalDataMemoryMigrationApplyPayload,
+  validateLocalDataMemoryMigrationRollbackPayload,
   validateLocalDataOnboardingMirrorPayload,
   validateMcpCallToolPayload,
   validateMcpSyncServersPayload,
@@ -49,6 +52,80 @@ import {
   validateWebSearchToolPayload,
   validateWindowDragPayload,
 } from '../electron/ipc/payloadSchemas.js'
+
+test('IPC memory migration schema bounds content-bearing records and rejects unknown fields', () => {
+  const migrationPackage = {
+    schemaVersion: 1,
+    createdAt: '2026-06-19T11:00:00.000Z',
+    source: {
+      longTermKeyPresent: true,
+      legacyLongTermKeyPresent: false,
+      dailyKeyPresent: true,
+      legacyLongTermUsed: false,
+    },
+    longTerm: [{
+      id: 'memory-1',
+      content: 'private content',
+      category: 'preference',
+      source: 'chat',
+      enabled: true,
+      createdAt: '2026-06-19T10:00:00.000Z',
+    }],
+    daily: [{
+      id: 'daily-1',
+      day: '2026-06-19',
+      role: 'user',
+      content: 'private daily content',
+      source: 'voice',
+      createdAt: '2026-06-19T10:30:00.000Z',
+    }],
+  }
+
+  assert.deepEqual(
+    validateLocalDataMemoryMigrationApplyPayload({ confirmed: true, migrationPackage }),
+    { confirmed: true, migrationPackage },
+  )
+  assert.deepEqual(validateLocalDataMemoryMigrationRollbackPayload({ confirmed: false }), { confirmed: false })
+  assert.throws(
+    () => validateLocalDataMemoryMigrationApplyPayload({
+      confirmed: true,
+      migrationPackage: {
+        ...migrationPackage,
+        longTerm: [{ ...migrationPackage.longTerm[0], secretField: 'must reject' }],
+      },
+    }),
+    /secretField is not allowed/,
+  )
+})
+
+test('IPC companion comparison schema accepts metadata only and rejects content fields', () => {
+  const source = {
+    schemaVersion: 1,
+    generatedAt: '2026-07-09T20:00:00.000Z',
+    relationship: [{
+      id: 'relationship-state',
+      storageKey: 'nexus:autonomy:relationship',
+      recordCount: 1,
+      payloadBytes: 48,
+    }],
+    tasks: [],
+  }
+
+  assert.deepEqual(
+    validateLocalDataCompanionComparisonPayload({ confirmed: true, source }),
+    { confirmed: true, source },
+  )
+  assert.throws(
+    () => validateLocalDataCompanionComparisonPayload({
+      confirmed: true,
+      source: {
+        ...source,
+        relationship: [{ ...source.relationship[0], value: 'must not cross comparison boundary' }],
+      },
+    }),
+    /value is not allowed/,
+  )
+})
 
 test('IPC window state schema strips unknown keys and rejects wrong types', () => {
   assert.deepEqual(

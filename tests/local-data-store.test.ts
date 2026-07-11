@@ -25,6 +25,14 @@ import {
   rollbackLocalDataStore,
 } from '../electron/services/localDataStore.js'
 import { buildChatStorageMigrationPackage } from '../src/lib/storage/chatMigrationDryRun.ts'
+import { buildMemoryLocalDataMigrationPackage } from '../src/lib/storage/memoryLocalDataMigration.ts'
+import {
+  applyMemoryLocalDataMigration,
+  getMemoryLocalDataMigrationStatus,
+  planMemoryLocalDataMigration,
+  readMemoryLocalData,
+  rollbackMemoryLocalDataMigration,
+} from '../electron/services/localDataMemoryStore.js'
 
 async function withTempUserData(run: (userDataPath: string) => Promise<void>) {
   const userDataPath = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-local-data-'))
@@ -92,7 +100,11 @@ test('local data store initializes a versioned manifest and migration ledger', a
     assert.equal(sqliteState.migrations.length, 3)
     assert.deepEqual(sqliteState.domains.map((domain) => domain.id), [
       'chat-sessions',
+      'companion-relationship',
+      'companion-tasks',
       'local-data-audit',
+      'memory-daily',
+      'memory-long-term',
       'onboarding',
     ])
   })
@@ -199,10 +211,14 @@ test('local data export and import scaffolding is metadata-only before migration
     assert.equal(snapshot.schemaVersion, 3)
     assert.equal(snapshot.recordPayloadsIncluded, false)
     assert.equal(snapshot.records, undefined)
-    assert.equal(snapshot.domains.length, 3)
+    assert.equal(snapshot.domains.length, 7)
     assert.deepEqual(snapshot.domains.map((domain) => domain.id), [
       'chat-sessions',
+      'companion-relationship',
+      'companion-tasks',
       'local-data-audit',
+      'memory-daily',
+      'memory-long-term',
       'onboarding',
     ])
     assert.equal(snapshot.migrations.length, 3)
@@ -211,7 +227,7 @@ test('local data export and import scaffolding is metadata-only before migration
     assert.deepEqual(planLocalDataImport(snapshot), {
       ok: true,
       schemaVersion: 3,
-      domainCount: 3,
+      domainCount: 7,
       migrationCount: 3,
       recordPayloadsIncluded: false,
       writesData: false,
@@ -219,7 +235,7 @@ test('local data export and import scaffolding is metadata-only before migration
     assert.deepEqual(await importLocalDataSnapshot({ userDataPath, snapshot }), {
       ok: true,
       schemaVersion: 3,
-      domainCount: 3,
+      domainCount: 7,
       migrationCount: 3,
       recordPayloadsIncluded: false,
       writesData: false,
@@ -356,6 +372,97 @@ test('local data chat migration requires confirmation, writes records, and rolls
     assert.equal(unconfirmedRollback.ok, false)
     assert.equal(unconfirmedRollback.recordsDeleted, 0)
     assert.equal(unconfirmedRollback.errorKind, 'local-data-chat-migration-confirmation-required')
+  })
+})
+
+test('local data memory migration requires confirmation, reads back content, and rolls back both domains', async () => {
+  await withTempUserData(async (userDataPath) => {
+    const migrationPackage = buildMemoryLocalDataMigrationPackage(new Date('2026-06-19T11:00:00.000Z'))
+    migrationPackage.longTerm = [{
+      id: 'memory-1',
+      content: 'private memory content',
+      category: 'preference',
+      source: 'chat',
+      kind: 'preference',
+      enabled: true,
+      createdAt: '2026-06-19T10:00:00.000Z',
+      importance: 'pinned',
+    }]
+    migrationPackage.daily = [{
+      id: 'daily-1',
+      day: '2026-06-19',
+      role: 'user',
+      content: 'private daily content',
+      source: 'voice',
+      createdAt: '2026-06-19T10:30:00.000Z',
+    }]
+
+    const plan = planMemoryLocalDataMigration(migrationPackage)
+    assert.equal(plan.ok, true)
+    assert.equal(plan.longTermRecordCount, 1)
+    assert.equal(plan.dailyEntryCount, 1)
+    assert.equal(JSON.stringify(plan).includes('private memory content'), false)
+
+    const unconfirmed = await applyMemoryLocalDataMigration({
+      userDataPath,
+      migrationPackage,
+      confirmed: false,
+    })
+    assert.equal(unconfirmed.ok, false)
+    assert.equal(unconfirmed.errorKind, 'local-data-memory-migration-confirmation-required')
+    assert.equal(await pathExists((await resolveLocalDataPaths({ userDataPath })).databasePath), false)
+
+    const applied = await applyMemoryLocalDataMigration({
+      userDataPath,
+      now: new Date('2026-06-19T11:01:00.000Z'),
+      migrationPackage,
+      confirmed: true,
+    })
+    assert.equal(applied.ok, true)
+    assert.equal(applied.applied, true)
+    assert.equal(applied.recordsWritten, 2)
+    assert.equal(applied.auditRecordId, 'memory-migration-2026-06-19T11-01-00-000Z')
+    assert.equal(JSON.stringify(applied).includes('private memory content'), false)
+
+    const status = await getMemoryLocalDataMigrationStatus({ userDataPath })
+    assert.equal(status.ok, true)
+    assert.equal(status.longTermRecordCount, 1)
+    assert.equal(status.dailyEntryCount, 1)
+    assert.equal(status.recordPayloadsIncluded, false)
+    assert.equal(status.lastAuditAction, 'memory-migration-applied')
+    assert.equal(JSON.stringify(status).includes('private memory content'), false)
+
+    const readBack = await readMemoryLocalData({ userDataPath })
+    assert.equal(readBack.ok, true)
+    assert.equal(readBack.recordPayloadsIncluded, true)
+    assert.equal(readBack.longTermRecordCount, 1)
+    assert.equal(readBack.dailyEntryCount, 1)
+    assert.equal(readBack.malformedRecordCount, 0)
+    assert.equal(readBack.memories[0].content, 'private memory content')
+    assert.equal(readBack.daily[0].content, 'private daily content')
+    assert.equal(JSON.stringify(readBack).includes(userDataPath), false)
+
+    const memoryRecords = await readLocalDataDomainRecords('memory-long-term', { userDataPath })
+    assert.equal(memoryRecords.length, 1)
+    assert.equal(memoryRecords[0].payload.content, 'private memory content')
+    const dailyRecords = await readLocalDataDomainRecords('memory-daily', { userDataPath })
+    assert.equal(dailyRecords.length, 1)
+    assert.equal(dailyRecords[0].payload.content, 'private daily content')
+    const auditRecords = await readLocalDataDomainRecords('local-data-audit', { userDataPath })
+    assert.equal(auditRecords.length, 1)
+    assert.equal(auditRecords[0].payload.action, 'memory-migration-applied')
+    assert.equal(JSON.stringify(auditRecords).includes('private memory content'), false)
+
+    const rolledBack = await rollbackMemoryLocalDataMigration({
+      userDataPath,
+      now: new Date('2026-06-19T11:02:00.000Z'),
+      confirmed: true,
+    })
+    assert.equal(rolledBack.ok, true)
+    assert.equal(rolledBack.recordsDeleted, 2)
+    assert.deepEqual(await readLocalDataDomainRecords('memory-long-term', { userDataPath }), [])
+    assert.deepEqual(await readLocalDataDomainRecords('memory-daily', { userDataPath }), [])
+    assert.equal((await readLocalDataDomainRecords('local-data-audit', { userDataPath })).length, 2)
   })
 })
 
@@ -576,7 +683,7 @@ test('local data onboarding mirror writes and deletes a low-risk domain record',
     assert.deepEqual(planLocalDataImport(snapshot), {
       ok: true,
       schemaVersion: 3,
-      domainCount: 3,
+      domainCount: 7,
       migrationCount: 3,
       recordPayloadsIncluded: true,
       writesData: false,

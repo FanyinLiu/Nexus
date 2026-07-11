@@ -1,4 +1,13 @@
 import { BrowserWindow } from 'electron'
+import {
+  isTopLevelRendererFrame,
+  isTrustedRendererFrameUrl,
+} from './trustedSenderPolicy.js'
+import {
+  getRendererViewKind,
+  getRequiredWindowCapability,
+  isWindowChannelAllowed,
+} from './windowCapabilities.js'
 
 /**
  * Lightweight IPC payload validators.
@@ -17,6 +26,19 @@ export function requireTrustedSender(event) {
   const ownerWindow = BrowserWindow.fromWebContents(sender)
   if (!ownerWindow) {
     throw new Error('IPC rejected: sender is not a known application window')
+  }
+
+  const senderFrame = event?.senderFrame
+  const ownerUrl = ownerWindow.webContents.getURL()
+  if (!senderFrame || !isTopLevelRendererFrame(senderFrame) || !isTrustedRendererFrameUrl(senderFrame.url, ownerUrl)) {
+    throw new Error('IPC rejected: sender frame is not the trusted renderer')
+  }
+
+  const viewKind = getRendererViewKind(ownerUrl)
+  const channel = Reflect.get(event ?? {}, 'channel')
+  if (!isWindowChannelAllowed(channel, viewKind)) {
+    const capability = getRequiredWindowCapability(channel)
+    throw new Error(`IPC rejected: ${capability} capability is unavailable to ${viewKind} window`)
   }
 }
 
@@ -57,7 +79,7 @@ export function requireObject(value, label = 'value') {
   if (value == null || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`${label} must be a plain object`)
   }
-  return value
+  return /** @type {Record<string, unknown>} */ (value)
 }
 
 /**
@@ -134,6 +156,7 @@ export function assertOptionalString(value, label = 'value') {
  */
 export function requireVaultEntries(value) {
   const entries = requireObject(value, 'entries')
+  /** @type {Record<string, string>} */
   const normalized = {}
 
   for (const [slot, plaintext] of Object.entries(entries)) {

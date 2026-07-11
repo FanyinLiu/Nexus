@@ -34,6 +34,7 @@ export type CompanionCheckInDecision = {
   surface: 'none' | 'in_app'
   priority: 'none' | 'low' | 'normal'
   signalKey?: string
+  signalKeyPresent?: boolean
 }
 
 export type CompanionCheckInLine = {
@@ -93,6 +94,25 @@ export const COMPANION_CHECK_IN_COPY_LANGUAGES: readonly UiLanguage[] = [
   'en-US',
   'ja',
   'ko',
+]
+
+export const COMPANION_CHECK_IN_REASONS: readonly CompanionCheckInReason[] = [
+  'disabled',
+  'paused',
+  'invalid_time',
+  'no_observation',
+  'active_chat',
+  'quiet_hours',
+  'cooldown',
+  'focused',
+  'recently_dismissed',
+  'duplicate_window',
+  'return_window_expired',
+  'not_enough_signal',
+  'return_to_nexus',
+  'long_continuous_activity',
+  'frequent_switching',
+  'long_idle_after_activity',
 ]
 
 export const COMPANION_CHECK_IN_TRIGGER_REASONS: readonly CompanionCheckInTriggerReason[] = [

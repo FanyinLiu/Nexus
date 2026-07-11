@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  SETTINGS_SECTION_OPTION_DEFINITIONS,
   getSettingsSectionOptions,
   normalizeSettingsSectionId,
 } from '../src/components/settingsDrawerSupport.ts'
@@ -30,6 +31,26 @@ test('settings home exposes only the main product path in a stable order', () =>
   assert.equal(options.find((option) => option.id === 'lorebooks')?.label, '背景与常用表达')
   assert.equal(options.find((option) => option.id === 'autonomy')?.label, '主动陪伴')
   assert.equal(options.find((option) => option.id === 'tools')?.label, '工具')
+})
+
+test('settings section registry carries stable product groups without showing legacy aliases', () => {
+  assert.deepEqual(
+    SETTINGS_SECTION_OPTION_DEFINITIONS.map((section) => `${section.groupId}:${section.id}`),
+    [
+      'modelConnections:model',
+      'companionBehavior:window',
+      'appearanceExperience:chat',
+      'maintenance:console',
+      'maintenance:history',
+      'appearanceExperience:letters',
+      'companionBehavior:voice',
+      'memoryContext:memory',
+      'memoryContext:lorebooks',
+      'companionBehavior:autonomy',
+      'modelConnections:tools',
+    ],
+  )
+  assert.equal(SETTINGS_SECTION_OPTION_DEFINITIONS.some((section) => section.id === 'integrations'), false)
 })
 
 test('legacy settings sections redirect to the active home entries', () => {

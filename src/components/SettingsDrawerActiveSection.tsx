@@ -1,20 +1,9 @@
-import type { Dispatch, SetStateAction } from 'react'
 import {
-  AutonomySection,
-  ChatSection,
-  ConsoleSection,
-  HistorySection,
-  IntegrationsSection,
-  LettersSection,
-  LorebooksSection,
-  MemorySection,
-  ModelSection,
-  SpeechInputSection,
-  SpeechOutputSection,
-  ToolsSection,
-  VoiceSection,
-  WindowSection,
-} from './settingsSections/index.ts'
+  lazy,
+  Suspense,
+  type Dispatch,
+  type SetStateAction,
+} from 'react'
 import type {
   getMemorySearchModeOptions,
   SettingsSectionId,
@@ -44,6 +33,38 @@ import type {
   VoiceState,
   VoiceTraceEntry,
 } from '../types/index.ts'
+import { pickTranslatedUiText } from '../lib/uiLanguage.ts'
+import {
+  loadAutonomySection,
+  loadChatSection,
+  loadConsoleSection,
+  loadHistorySection,
+  loadIntegrationsSection,
+  loadLettersSection,
+  loadLorebooksSection,
+  loadMemorySection,
+  loadModelSection,
+  loadSpeechInputSection,
+  loadSpeechOutputSection,
+  loadToolsSection,
+  loadVoiceSection,
+  loadWindowSection,
+} from './settingsSectionModules.ts'
+
+const AutonomySection = lazy(async () => ({ default: (await loadAutonomySection()).AutonomySection }))
+const ChatSection = lazy(async () => ({ default: (await loadChatSection()).ChatSection }))
+const ConsoleSection = lazy(async () => ({ default: (await loadConsoleSection()).ConsoleSection }))
+const HistorySection = lazy(async () => ({ default: (await loadHistorySection()).HistorySection }))
+const IntegrationsSection = lazy(async () => ({ default: (await loadIntegrationsSection()).IntegrationsSection }))
+const LettersSection = lazy(async () => ({ default: (await loadLettersSection()).LettersSection }))
+const LorebooksSection = lazy(async () => ({ default: (await loadLorebooksSection()).LorebooksSection }))
+const MemorySection = lazy(async () => ({ default: (await loadMemorySection()).MemorySection }))
+const ModelSection = lazy(async () => ({ default: (await loadModelSection()).ModelSection }))
+const SpeechInputSection = lazy(async () => ({ default: (await loadSpeechInputSection()).SpeechInputSection }))
+const SpeechOutputSection = lazy(async () => ({ default: (await loadSpeechOutputSection()).SpeechOutputSection }))
+const ToolsSection = lazy(async () => ({ default: (await loadToolsSection()).ToolsSection }))
+const VoiceSection = lazy(async () => ({ default: (await loadVoiceSection()).VoiceSection }))
+const WindowSection = lazy(async () => ({ default: (await loadWindowSection()).WindowSection }))
 
 type ConnectionTests = ReturnType<typeof useConnectionTests>
 type SpeechVoices = ReturnType<typeof useSpeechVoiceManagement>
@@ -66,6 +87,7 @@ export type SettingsDrawerActiveSectionProps = {
   debugConsoleEvents: DebugConsoleEvent[]
   draft: AppSettings
   liveTranscript: string
+  loadingLabel: string
   memories: MemoryItem[]
   memoryArchive: MemoryArchive
   memoryFocus?: ChatMemoryTraceFocusTarget | null
@@ -115,6 +137,7 @@ export function SettingsDrawerActiveSection({
   debugConsoleEvents,
   draft,
   liveTranscript,
+  loadingLabel,
   memories,
   memoryArchive,
   memoryFocus,
@@ -150,7 +173,10 @@ export function SettingsDrawerActiveSection({
   voiceTrace,
   windowState,
 }: SettingsDrawerActiveSectionProps) {
-  switch (activeSectionId) {
+  const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
+    pickTranslatedUiText(uiLanguage, key)
+  const content = (() => {
+    switch (activeSectionId) {
     case 'model':
       return (
         <ModelSection
@@ -227,6 +253,7 @@ export function SettingsDrawerActiveSection({
       return (
         <MemorySection
           active
+          confirm={confirm}
           draft={draft}
           platformProfile={platformProfile}
           setDraft={setDraft}
@@ -276,34 +303,56 @@ export function SettingsDrawerActiveSection({
             uiLanguage={uiLanguage}
           />
 
-          <SpeechInputSection
-            active
-            draft={draft}
-            platformProfile={platformProfile}
-            setDraft={setDraft}
-            testingTarget={connectionTests.testingTarget}
-            onRunSpeechInputConnectionTest={() => void connectionTests.runConnectionTest('speech-input')}
-            renderSpeechInputTestResult={() => connectionTests.renderTestResult('speech-input')}
-          />
+          <details className="settings-mini-group settings-voice-provider-disclosure">
+            <summary className="settings-mini-group__head">
+              <div>
+                <h5>{ti('settings.speech_input.title')}</h5>
+                <span>{ti('settings.speech_input.hint')}</span>
+              </div>
+            </summary>
+            <div className="settings-voice-provider-body">
+              <SpeechInputSection
+                active
+                showHeader={false}
+                draft={draft}
+                platformProfile={platformProfile}
+                setDraft={setDraft}
+                testingTarget={connectionTests.testingTarget}
+                onRunSpeechInputConnectionTest={() => void connectionTests.runConnectionTest('speech-input')}
+                renderSpeechInputTestResult={() => connectionTests.renderTestResult('speech-input')}
+              />
+            </div>
+          </details>
 
-          <SpeechOutputSection
-            active
-            draft={draft}
-            setDraft={setDraft}
-            speechVoiceOptions={speechVoices.speechVoiceOptions}
-            speechVoiceStatus={speechVoices.speechVoiceStatus}
-            loadingSpeechVoices={speechVoices.loadingSpeechVoices}
-            speechPreviewText={speechVoices.speechPreviewText}
-            setSpeechPreviewText={speechVoices.setSpeechPreviewText}
-            speechPreviewStatus={speechVoices.speechPreviewStatus}
-            previewingSpeech={speechVoices.previewingSpeech}
-            testingTarget={connectionTests.testingTarget}
-            onApplySpeechOutputPreset={onApplySpeechOutputPreset}
-            onLoadSpeechVoices={() => void speechVoices.handleLoadSpeechVoices()}
-            onPreviewSpeech={() => void speechVoices.handlePreviewSpeech()}
-            onRunSpeechOutputConnectionTest={() => void connectionTests.runConnectionTest('speech-output')}
-            renderSpeechOutputTestResult={() => connectionTests.renderTestResult('speech-output')}
-          />
+          <details className="settings-mini-group settings-voice-provider-disclosure">
+            <summary className="settings-mini-group__head">
+              <div>
+                <h5>{ti('settings.speech_output.title')}</h5>
+                <span>{ti('settings.speech_output.hint')}</span>
+              </div>
+            </summary>
+            <div className="settings-voice-provider-body">
+              <SpeechOutputSection
+                active
+                showHeader={false}
+                draft={draft}
+                setDraft={setDraft}
+                speechVoiceOptions={speechVoices.speechVoiceOptions}
+                speechVoiceStatus={speechVoices.speechVoiceStatus}
+                loadingSpeechVoices={speechVoices.loadingSpeechVoices}
+                speechPreviewText={speechVoices.speechPreviewText}
+                setSpeechPreviewText={speechVoices.setSpeechPreviewText}
+                speechPreviewStatus={speechVoices.speechPreviewStatus}
+                previewingSpeech={speechVoices.previewingSpeech}
+                testingTarget={connectionTests.testingTarget}
+                onApplySpeechOutputPreset={onApplySpeechOutputPreset}
+                onLoadSpeechVoices={() => void speechVoices.handleLoadSpeechVoices()}
+                onPreviewSpeech={() => void speechVoices.handlePreviewSpeech()}
+                onRunSpeechOutputConnectionTest={() => void connectionTests.runConnectionTest('speech-output')}
+                renderSpeechOutputTestResult={() => connectionTests.renderTestResult('speech-output')}
+              />
+            </div>
+          </details>
         </>
       )
     case 'window':
@@ -370,5 +419,23 @@ export function SettingsDrawerActiveSection({
           voiceTrace={voiceTrace}
         />
       )
-  }
+    }
+  })()
+
+  return (
+    <Suspense fallback={<SettingsSectionLoading label={loadingLabel} />}>
+      {content}
+    </Suspense>
+  )
+}
+
+function SettingsSectionLoading({ label }: { label: string }) {
+  return (
+    <div className="settings-section-loading" role="status" aria-live="polite" aria-busy="true">
+      <span className="settings-section-loading__label">{label}</span>
+      <span className="settings-section-loading__row settings-section-loading__row--wide" aria-hidden="true" />
+      <span className="settings-section-loading__row" aria-hidden="true" />
+      <span className="settings-section-loading__row settings-section-loading__row--short" aria-hidden="true" />
+    </div>
+  )
 }

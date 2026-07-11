@@ -147,15 +147,17 @@ if (!hasSingleInstanceLock) {
 
 // ── Media permission handlers ──
 
-function isTrustedRendererOrigin(origin) {
+function isTrustedRendererOrigin(origin, ownerUrl = getRendererServerUrl()) {
   const normalized = String(origin ?? '').trim()
   if (!normalized) return false
 
   try {
     const parsed = new URL(normalized)
-    return ['127.0.0.1', 'localhost'].includes(parsed.hostname)
+    const owner = new URL(String(ownerUrl ?? ''))
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
+    return parsed.origin === owner.origin
   } catch {
-    return normalized.startsWith('file://')
+    return false
   }
 }
 
@@ -291,9 +293,9 @@ function registerMediaPermissionHandlers() {
   const defaultSession = session.defaultSession
   if (!defaultSession) return
 
-  defaultSession.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
+  defaultSession.setPermissionCheckHandler((webContents, permission, requestingOrigin) => {
     if (permission === 'media' || permission === 'audioCapture') {
-      return isTrustedRendererOrigin(requestingOrigin)
+      return isTrustedRendererOrigin(requestingOrigin, webContents?.getURL?.())
     }
 
     return false
@@ -305,6 +307,7 @@ function registerMediaPermissionHandlers() {
         details?.requestingUrl
         ?? details?.embeddingOrigin
         ?? webContents?.getURL?.(),
+        webContents?.getURL?.(),
       ))
       return
     }

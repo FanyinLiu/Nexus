@@ -33,6 +33,10 @@ output/
 .playwright-cli/
 docs/ui-preview/
 
+# Generated audit reports and visual-regression screenshots. Keep local QA
+# evidence available without allowing it into a release commit.
+artifacts/
+
 # Local UI QA evidence. Keep screenshots/metrics on the working machine; commit
 # source-backed review docs instead.
 docs/ui-qa/

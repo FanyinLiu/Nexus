@@ -1,8 +1,6 @@
-// Factory that produces the high-level voice lifecycle controls — schedule
-// restart, speak the assistant reply (one-shot or streaming), toggle/start/
-// stop the user-facing voice conversation.  These functions form a small
-// internal cycle (scheduleVoiceRestart ↔ startVoiceConversation) which is
-// resolved by JS function-declaration hoisting inside this factory.
+// Factory that produces the high-level voice lifecycle controls — request a
+// restart through VoiceBus, speak the assistant reply (one-shot or streaming),
+// and toggle/start/stop the user-facing voice conversation.
 //
 // External cycles (bindings.startSpeechInterruptMonitor calls back into
 // scheduleVoiceRestart) are resolved at the bag level via lifecycleHolder.
@@ -11,7 +9,6 @@ import {
   startVoiceConversationEntrypoint,
   stopVoiceConversationEntrypoint,
 } from './conversationEntrypoints'
-import { scheduleVoiceRestart as scheduleContinuousVoiceRestart } from './continuousVoice'
 import { speakAssistantReplyRuntime, beginStreamingSpeechReplyRuntime } from './speechReply'
 import { combineVoiceInstructions, emotionToVoiceRate, emotionToVoiceStyle } from '../../features/autonomy/emotionModel.ts'
 import type { AppSettings } from '../../types'
@@ -58,25 +55,18 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
     }
   }
 
-  // ── scheduleVoiceRestart (calls startVoiceConversation, hoisted below) ──
+  // ── scheduleVoiceRestart (VoiceBus request facade) ─────────────────────
   function scheduleVoiceRestart(
     statusText = ti('voice.status.resume_listening'),
     delay = 520,
     force?: boolean,
   ) {
-    scheduleContinuousVoiceRestart({
-      restartVoiceTimerRef: refs.restartVoiceTimerRef,
-      recognitionRef: refs.recognitionRef,
-      vadSessionRef: refs.vadSessionRef,
-      busyRef: ctx.busyRef,
-      voiceStateRef: refs.voiceStateRef,
-      shouldAutoRestartVoice: bindings.shouldAutoRestartVoice,
-      showPetStatus: hookCallbacks.showPetStatus,
-      startVoiceConversation,
+    hookCallbacks.busEmit({
+      type: 'voice:restart_requested',
+      restartReason: force ? 'forced_restart' : 'continuous_restart',
+      force: force ?? false,
+      delayMs: delay,
       statusText,
-      delay,
-      force,
-      ti,
     })
   }
 

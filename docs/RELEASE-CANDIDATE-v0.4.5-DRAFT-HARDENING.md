@@ -9,11 +9,10 @@ README stable entry point.
 
 ## Release State Lock
 
-- Package version remains at the active stable `0.4.1` until a future release
+- Package version remains at the active stable `0.4.2` until a future release
   is explicitly promoted.
-- `v0.4.1` remains the current stable release entry point.
-- `v0.4.2`, `v0.4.3`, `v0.4.4`, and `v0.4.5` remain stacked draft review
-  layers.
+- `v0.4.2` remains the current stable release entry point.
+- `v0.4.3`, `v0.4.4`, and `v0.4.5` remain stacked draft review layers.
 - No package version bump.
 - No tag.
 - No GitHub Release.
@@ -23,13 +22,11 @@ README stable entry point.
 ## Stacked Draft Graph
 
 - v0.4.1 -> v0.4.0: coarse time language, no new sensing.
-- v0.4.2 -> v0.4.1: local check-in decision policy, no external notification
-  channel.
 - v0.4.3 -> v0.4.2: Settings transparency view model, no raw activity
   timeline.
 - v0.4.4 -> v0.4.3: beta feedback labels and copy safety, no feedback
   analytics or adaptive copy.
-- v0.4.5 -> v0.4.1-v0.4.4: release-state hardening only, no feature expansion.
+- v0.4.5 -> v0.4.2-v0.4.4: release-state hardening only, no feature expansion.
 
 If one draft layer is dropped or rewritten before release, every later draft in
 the graph must be rechecked against the same privacy and no-release invariants.
@@ -54,10 +51,10 @@ runtime copy, alter Settings layout, or introduce pet movement.
 
 The v0.4 draft stack is not ready for release review if any of these fail:
 
-- `package.json` version is still the active stable `0.4.1`.
-- Root and localized README files still link `RELEASE-NOTES-v0.4.1.md` as the
+- `package.json` version is still the active stable `0.4.2`.
+- Root and localized README files still link `RELEASE-NOTES-v0.4.2.md` as the
   stable entry point.
-- Draft release notes for `v0.4.2` through `v0.4.5` are marked Draft and include
+- Draft release notes for `v0.4.3` through `v0.4.5` are marked Draft and include
   the no package version bump, no tag, no GitHub Release, and no README stable
   switch boundary for future draft slices.
 - `docs/V0.4_DESKTOP_COMPANION_AWARENESS.md`, `docs/ROADMAP.md`,
@@ -90,6 +87,26 @@ Expected local smoke warnings remain acceptable when unchanged:
 - Optional KWS/SenseVoice models may be missing in local developer smoke.
 - Electron/Node deprecation warnings can appear during local packaging or
   launch.
+
+## Evidence Collected
+
+Local draft-hardening evidence collected for this handoff:
+
+- `npm run v04:draft-stack:audit` — passed locally with full mode, static source
+  only, stable release `v0.4.2`, draft releases `v0.4.3`, `v0.4.4`, and
+  `v0.4.5`, and 0 errors.
+- `npm run verify:release` — passed locally. This includes `npm run verify:pr`,
+  `npm run sqlite:smoke`, and `npm run core-path:smoke:built`; the test suite
+  reported 2511 tests, SQLite smoke passed, and core-path smoke passed.
+- `npm run package:dir:smoke` — passed locally. The unpacked macOS app launched
+  from `release-smoke`, loaded the renderer, and reported packaged app loaded
+  successfully.
+- `git diff --check` — passed locally.
+
+The expected local smoke warnings remained limited to ad-hoc macOS signing,
+skipped notarization, optional missing KWS/SenseVoice models, and Electron/Node
+deprecation warnings. Temporary smoke artifacts such as `release-smoke` and
+`output/core-path-smoke` were removed after verification.
 
 ## Privacy Assertions
 

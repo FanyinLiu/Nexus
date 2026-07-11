@@ -1,0 +1,28 @@
+{
+  "entry": [
+    "electron/main.js",
+    "electron/preload.js",
+    "scripts/**/*.mjs",
+    "scripts/**/*.cjs",
+    "tests/benchmarks.bench.ts",
+    "tests/fixtures/settingsSurfaceAuditBaseline.ts"
+  ],
+  "ignore": [
+    "artifacts/**",
+    "release-smoke/**",
+    "src/components/settingsSections/ContextSection.tsx",
+    "src/components/settingsSections/ErrandsSection.tsx",
+    "src/components/settingsSections/OpenArcsSection.tsx",
+    "src/components/settingsSections/index.ts"
+  ],
+  "ignoreDependencies": [
+    "onnxruntime-web",
+    "tinybench"
+  ],
+  "ignoreBinaries": [
+    "osascript",
+    "pgrep",
+    "playerctl",
+    "powershell.exe"
+  ]
+}

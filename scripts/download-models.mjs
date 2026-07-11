@@ -94,12 +94,13 @@ async function main() {
       ? [standaloneDir]
       : [modelsDir]
     const presence = checkModelPresence(model, rootsForCheck)
-    if (presence.present) {
+    if (presence.present && presence.verified) {
       console.log('  ✓ 已存在，跳过')
       skipped++
       console.log()
       continue
     }
+    if (presence.present) console.log('  ! 发现旧版未校验模型，将重新下载并验证')
 
     if (skipAsr && !model.required) {
       console.log('  ⊘ 使用了 --skip-asr，跳过可选模型')

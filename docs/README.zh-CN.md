@@ -24,13 +24,26 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **当前代码版本：** v0.4.1。Nexus 现在进入陪伴 UI、设置和可靠性加固阶段：桌面陪伴感知继续保持粗粒度和隐私优先，设置与对话界面更稳，上传前审计更完整。正式下载页仍以 GitHub Releases 的最新 tag 为准。
+> **当前代码版本：** v0.4.2。Nexus 继续保持桌面陪伴感知的粗粒度和隐私优先边界，并把温和 check-in 策略、设置视觉系统和发布前审计继续收紧。正式下载页仍以 GitHub Releases 的最新 tag 为准。
 
 > **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前短期开发以根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 为准：Phase 1 只收敛桌面常驻小窗口、极简头像、Ollama / DeepSeek 文本模型和简单对话。
 
 ---
 
-## 本次更新 — v0.4.1
+## 本次更新 — v0.4.2
+
+> **主题：Check-In 策略和发布门禁对齐。** 中文说明见 [RELEASE-NOTES-v0.4.2.zh-CN.md](RELEASE-NOTES-v0.4.2.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.2.md](RELEASE-NOTES-v0.4.2.md)。
+
+0.4.2 让温和 check-in 先形成可压制的本地 in-app 决策，而不是直接发消息、执行工具或创建外部通知。正在聊天、刚 dismiss、重复同类信号、过期回到 Nexus 信号都会保持安静；时间表达仍然是粗粒度，不把精确计时或原始桌面内容送进模型。
+
+一句话记住 0.4.2：
+
+- **check-in 决策和发出分开，重复调用不会变成反复打扰。**
+- **in-app payload 只是本地短 TTL 数据，不调度计时器、不写持久历史、不调用工具。**
+- **设置 UI、发布审计和性能预算继续由 `verify:pr` 与预发布门禁保护。**
+- **0.5 才做桌宠跟随鼠标、打字反应和窗口互动。**
+
+## 上次更新 — v0.4.1
 
 > **主题：陪伴 UI、设置和可靠性加固。** 中文说明见 [RELEASE-NOTES-v0.4.1.zh-CN.md](RELEASE-NOTES-v0.4.1.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.1.md](RELEASE-NOTES-v0.4.1.md)。
 
@@ -44,23 +57,22 @@
 - **新增多组 source-only 审计，上传前已跑完整 `verify:pr`。**
 - **0.5 才做桌宠跟随鼠标、打字反应和窗口互动。**
 
-## 上次更新 — v0.3.6
+## 更早更新 — v0.4.0
 
-> **主题：0.3 的地基收尾。** 这版不把 Nexus 做成替你干活的 Codex 式智能体，也不把 0.4 的桌面陪伴感知提前塞进来；它把安全、记忆、设置和桌面感知入口收清楚。中文说明见 [RELEASE-NOTES-v0.3.6.zh-CN.md](RELEASE-NOTES-v0.3.6.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.3.6.md](RELEASE-NOTES-v0.3.6.md)。
+> **主题：桌面陪伴感知地基。** 中文说明见 [RELEASE-NOTES-v0.4.0.zh-CN.md](RELEASE-NOTES-v0.4.0.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.0.md](RELEASE-NOTES-v0.4.0.md)。
 
-0.3.6 把 Memory 页里的桌面感知状态摆到台面上：当前窗口、剪贴板和 OCR 是否可用、是否启用，都能直接看到；同时白天和暖白设置页更清楚，隐私边界也写明“只传脱敏文本摘要，不传原始截图”。
+0.4.0 正式开始“打开 Nexus 后，它能安静理解时间流逝”的桌面陪伴感知。它会优先保持安静，只形成短期、粗粒度、可暂停和可清理的陪伴摘要；进入模型的是脱敏摘要，不是原始截图、完整剪贴板、私人消息或精确计时。
 
-一句话记住 0.3.6：
+一句话记住 0.4.0：
 
-- **0.3 的安全、记忆、设置和发布基础进入收尾。**
-- **Memory 页能看到当前窗口、剪贴板、OCR 的桌面感知状态。**
-- **隐私边界更明确：只传脱敏文本摘要，不传原始截图。**
-- **白天和暖白设置页更清楚，按钮和文字更稳。**
-- **0.4.0 才开始真正的桌面陪伴感知：时间流逝、安静观察和低频关心。**
+- **Nexus 打开时可以形成短期、粗粒度、可暂停的陪伴摘要。**
+- **时间语言保持“一会儿 / 半小时左右 / 一小时左右”，不精确到分秒。**
+- **原始截图、完整剪贴板、私人消息和精确计时不会进入模型边界。**
+- **0.5 才进入桌宠跟随鼠标、打字反应和窗口互动。**
 
 ## 旧版本记录
 
-README 只保留当前代码版本 v0.4.1 和上一稳定入口 v0.4.0 的重点；更早历史版本统一放在 [CHANGELOG](../CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 顶部继续滚动维护旧版本号。
+README 只保留当前代码版本 v0.4.2 和上一稳定入口 v0.4.1 的重点；更早历史版本统一放在 [CHANGELOG](../CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 顶部继续滚动维护旧版本号。
 
 ---
 
@@ -75,7 +87,7 @@ README 只保留当前代码版本 v0.4.1 和上一稳定入口 v0.4.0 的重点
 | 查看安全与隐私 | [安全与援助](#安全与援助) |
 | 参与社区内容 | [社区](#社区) · [Community Guide](COMMUNITY.md) |
 | 理解 0.4 方向 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 查看 0.4 最新稳定版 | [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 查看 0.4 最新稳定版 | [v0.4.2 Release Notes](RELEASE-NOTES-v0.4.2.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## 为什么是 Nexus？
 
@@ -280,7 +292,7 @@ npm run package:win     # 或 package:mac / package:linux
 
 Nexus 目前由个人维护，issue 和 PR 的处理速度取决于分流是否精准：
 
-社区文档会贯穿所有版本，不只属于某一次发布。0.3 收安全、记忆和设置地基；0.4 会进入桌面陪伴感知；0.5 会进入桌宠桌面行为。社区可以持续贡献文档、人格模板、桌宠包、模型配置菜谱、翻译和 beta 验证报告，让项目变大但不失控。长期入口见 [Community Guide](COMMUNITY.md)，0.4 方向见 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 最新稳定版说明见 [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md)，发布前加固清单见 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
+社区文档会贯穿所有版本，不只属于某一次发布。0.3 收安全、记忆和设置地基；0.4 会进入桌面陪伴感知；0.5 会进入桌宠桌面行为。社区可以持续贡献文档、人格模板、桌宠包、模型配置菜谱、翻译和 beta 验证报告，让项目变大但不失控。长期入口见 [Community Guide](COMMUNITY.md)，0.4 方向见 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 最新稳定版说明见 [v0.4.2 Release Notes](RELEASE-NOTES-v0.4.2.md)，发布前加固清单见 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
 
 - 🐛 **发现 Bug？** → [Bug 报告](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **有明确的功能想法？** → [功能请求](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

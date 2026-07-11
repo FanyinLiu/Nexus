@@ -11,6 +11,7 @@ import { buildErrorRedactionReport } from '../scripts/error-redaction-audit.mjs'
 import { buildHeavyModuleAuditReport } from '../scripts/heavy-module-audit.mjs'
 import { buildIpcContractReport } from '../scripts/ipc-contract-audit.mjs'
 import { buildMessagePrivacyReport } from '../scripts/message-privacy-audit.mjs'
+import { buildModelIntegrityReport } from '../scripts/model-integrity-audit.mjs'
 import { buildSourceSizeReport } from '../scripts/source-size-audit.mjs'
 import { buildStorageContractReport } from '../scripts/storage-contract-audit.mjs'
 import { buildVaultSecurityReport } from '../scripts/vault-security-audit.mjs'
@@ -22,6 +23,7 @@ const DISTRIBUTION_AUDIT_GATES = [
   ['ipc:audit', 'buildIpcContractReport', 'summarizeIpcContractReport'],
   ['storage:audit', 'buildStorageContractReport', null],
   ['heavy:audit', 'buildHeavyModuleAuditReport', null],
+  ['model:integrity:audit', 'buildModelIntegrityReport', null],
   ['architecture:audit', 'buildArchitectureBoundaryReport', null],
   ['source-size:audit', 'buildSourceSizeReport', null],
   ['performance:baseline', 'buildPerformanceBaselineReport', null],
@@ -63,6 +65,7 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
     'build',
     'storage:audit',
     'heavy:audit',
+    'model:integrity:audit',
     'architecture:audit',
     'source-size:audit',
     'ui:references:audit',
@@ -70,6 +73,8 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
     'v04:ui-route:audit',
     'chat:surface:audit',
     'settings:surface:audit',
+    'settings:css:audit',
+    'settings:visual',
     'forms:surface:audit',
     'focus:surface:audit',
     'streaming:surface:audit',
@@ -79,6 +84,7 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
     'image4:contract:report',
     'image4:visual-contract:audit',
     'performance:baseline',
+    'package:size:audit',
     'companion-boundary:audit',
     'message-privacy:audit',
     'desktop-context-privacy:audit',
@@ -86,6 +92,7 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
     'error-redaction:audit',
     'distribution:audit',
     'verify:pr',
+    'typecheck:electron-security',
     'verify:release',
   ]) {
     assert.equal(typeof pkg.scripts[scriptName], 'string', `missing npm script: ${scriptName}`)
@@ -101,6 +108,8 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
   assert.match(pkg.scripts['verify:pr'], /npm run build/)
   assert.match(pkg.scripts['verify:pr'], /npm run storage:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run heavy:audit/)
+  assert.match(pkg.scripts['verify:pr'], /npm run model:integrity:audit/)
+  assert.match(pkg.scripts['verify:pr'], /npm run typecheck:electron-security/)
   assert.match(pkg.scripts['verify:pr'], /npm run architecture:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run source-size:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run v04:ui-route:audit/)
@@ -108,6 +117,7 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
   assert.match(pkg.scripts['verify:pr'], /npm run composer:surface:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run chat:surface:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run settings:surface:audit/)
+  assert.match(pkg.scripts['verify:pr'], /npm run settings:css:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run forms:surface:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run focus:surface:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run streaming:surface:audit/)
@@ -115,6 +125,7 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
   assert.match(pkg.scripts['verify:pr'], /npm run image4:color:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run image4:contract:check/)
   assert.match(pkg.scripts['verify:pr'], /npm run performance:baseline/)
+  assert.match(pkg.scripts['package:dir:smoke'], /npm run package:size:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run companion-boundary:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run message-privacy:audit/)
   assert.match(pkg.scripts['verify:pr'], /npm run desktop-context-privacy:audit/)
@@ -124,6 +135,12 @@ test('engineering guardrail npm scripts stay wired into PR and release verificat
   assert.match(pkg.scripts['verify:pr'], /npm run distribution:audit/)
   assert.match(pkg.scripts['verify:release'], /npm run verify:pr/)
   assert.match(pkg.scripts['verify:release'], /npm run sqlite:smoke/)
+  assert.match(pkg.scripts['verify:ui-settings'], /npm run -s settings:visual/)
+
+  const ci = readWorkspaceFile('.github/workflows/ci.yml')
+  assert.match(ci, /npm run verify:pr/)
+  assert.match(ci, /npm run knip:production/)
+  assert.match(ci, /npm run i18n:audit/)
 })
 
 test('distribution audit stays wired to every release, performance, and privacy gate', () => {
@@ -247,6 +264,7 @@ test('source-only engineering audits are clean at the current baseline', () => {
   const ipcReport = buildIpcContractReport(ROOT)
   const storageReport = buildStorageContractReport(ROOT)
   const heavyReport = buildHeavyModuleAuditReport(ROOT)
+  const modelIntegrityReport = buildModelIntegrityReport(ROOT)
   const architectureReport = buildArchitectureBoundaryReport(ROOT)
   const sourceSizeReport = buildSourceSizeReport(ROOT)
   const boundaryReport = buildCompanionBoundaryReport(ROOT)
@@ -263,6 +281,7 @@ test('source-only engineering audits are clean at the current baseline', () => {
   assert.ok(storageReport.discoveredKeyReferences >= storageReport.discoveredKeys)
   assert.ok(storageReport.discoveredKeys >= 60)
   assert.equal(heavyReport.summary.errors, 0)
+  assert.equal(modelIntegrityReport.summary.errors, 0)
   assert.equal(architectureReport.summary.errors, 0)
   assert.equal(sourceSizeReport.summary.errors, 0)
   assert.equal(boundaryReport.summary.errors, 0)
@@ -288,16 +307,21 @@ test('performance baseline guards large CSS and lazy settings chunks', () => {
   assert.match(performanceBaseline, /maxInitialCssChunkBytes/)
   assert.match(performanceBaseline, /maxSettingsDrawerCssChunkBytes/)
   assert.match(performanceBaseline, /maxSettingsDrawerEntryChunkBytes/)
+  assert.match(performanceBaseline, /maxSettingsUiChunkBytes/)
   assert.match(performanceBaseline, /missingSettingsDrawerCssChunk/)
   assert.match(performanceBaseline, /missingSettingsDrawerEntryChunk/)
+  assert.match(performanceBaseline, /missingSettingsUiChunk/)
   assert.match(performanceBaseline, /largestCssChunk/)
   assert.match(performanceBaseline, /settingsDrawerCssChunk/)
   assert.match(performanceBaseline, /settingsDrawerEntryChunk/)
+  assert.match(performanceBaseline, /settingsUiChunk/)
   assert.match(architecture, /largest CSS chunk/)
   assert.match(architecture, /lazy settings drawer entry chunk/)
+  assert.match(architecture, /main settings UI chunk/)
   assert.match(optimizationChecklist, /最大 CSS chunk/)
   assert.match(optimizationChecklist, /Settings drawer lazy CSS/)
   assert.match(optimizationChecklist, /Settings drawer lazy JS entry/)
+  assert.match(optimizationChecklist, /Settings UI JS chunk/)
 })
 
 test('source size audit covers CSS source files', () => {
@@ -329,6 +353,7 @@ test('IPC schema primitives are split without changing public validators', () =>
   assert.match(assistantPayloadSchemas, /export function validateChatCompletionPayload/)
   assert.match(voicePayloadSchemas, /export function validateVadStartPayload/)
   assert.match(localDataPayloadSchemas, /export function validateLocalDataChatMigrationApplyPayload/)
+  assert.match(localDataPayloadSchemas, /export function validateLocalDataMemoryMigrationApplyPayload/)
   assert.match(payloadPrimitives, /export const SHORT_TEXT_MAX/)
   assert.match(payloadPrimitives, /export const SAFE_SKILL_ID_PATTERN/)
 })

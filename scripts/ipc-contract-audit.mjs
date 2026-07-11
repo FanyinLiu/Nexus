@@ -4,6 +4,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
+import { isWindowCapabilityClassified, getRequiredWindowCapability } from '../electron/ipc/windowCapabilities.js'
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const IPC_DIR = join('electron', 'ipc')
@@ -151,10 +152,10 @@ function classifyRisk(channel) {
   if (/^external-action-policy:sync$/.test(channel)) {
     return { level: 'high', domain: 'permission-control' }
   }
-  if (/^local-data:chat-migration-(apply|rollback)$|^local-data:chat-session-mirror$|^local-data:chat-comparison-preview$/.test(channel)) {
+  if (/^local-data:(?:chat-migration-(?:apply|rollback)|chat-session-mirror|chat-comparison-preview|memory-migration-(?:apply|rollback)|companion-(?:comparison-preview|dataset-mirror|migration-(?:apply|rollback)))$/.test(channel)) {
     return { level: 'high', domain: 'local-user-data' }
   }
-  if (/^local-data:chat-migration-status$/.test(channel)) {
+  if (/^local-data:(?:chat-migration-status|memory-migration-status|memory-read|companion-(?:migration-status|read))$/.test(channel)) {
     return { level: 'medium', domain: 'local-user-data' }
   }
   if (/^(telegram|discord):send-|^minecraft:send-command$|^factorio:execute$/.test(channel)) {
@@ -194,7 +195,7 @@ function extractMainHandlers(root) {
             location: { file, line: lineFor(sourceFile, node.getStart(sourceFile)) },
             trustedSender: /requireTrustedSender\s*\(\s*event\s*\)/.test(handlerSource),
             payloadValidation: detectHandlerValidation(handlerSource),
-            auditLogged: /\baudit\s*\(|runAuditedExternalAction\s*\(|runAuditedPetModelAction\s*\(|runAuditedPluginAction\s*\(|runAuditedVaultAction\s*\(|runAuditedVtsAction\s*\(|applyChatLocalDataMigration\s*\(|rollbackChatLocalDataMigration\s*\(|mirrorChatLocalDataSession\s*\(|compareChatLocalDataSessions\s*\(/.test(handlerSource),
+            auditLogged: /\baudit\s*\(|runAuditedExternalAction\s*\(|runAuditedPetModelAction\s*\(|runAuditedPluginAction\s*\(|runAuditedVaultAction\s*\(|runAuditedVtsAction\s*\(|applyChatLocalDataMigration\s*\(|rollbackChatLocalDataMigration\s*\(|mirrorChatLocalDataSession\s*\(|compareChatLocalDataSessions\s*\(|applyMemoryLocalDataMigration\s*\(|rollbackMemoryLocalDataMigration\s*\(|applyCompanionLocalDataMigration\s*\(|compareCompanionLocalData\s*\(|rollbackCompanionLocalDataMigration\s*\(|mirrorCompanionLocalDataDataset\s*\(/.test(handlerSource),
             permissionHint: /(dialog\.showMessageBox|dialog\.show(?:Save|Open)Dialog|saveTextFileFromDialog|openTextFileFromDialog|invokeRegisteredTool|normalizeDesktopContextPolicy|runAuditedExternalAction|runAuditedPetModelAction|runAuditedPluginAction|runAuditedVaultAction|runAuditedVtsAction|requireExternalActionPermission|syncExternalActionPolicy|requiresConfirmation|approve|policy|confirm)/.test(handlerSource),
             riskLevel: risk.level,
             riskDomain: risk.domain,
@@ -286,6 +287,9 @@ export function buildIpcContractReport(root = DEFAULT_ROOT) {
     .map(({ channel, location, riskLevel, riskDomain }) => ({ channel, location, riskLevel, riskDomain }))
 
   const highRiskHandlers = handlers.filter((handler) => handler.riskLevel === 'high')
+  const unclassifiedHighRiskCapabilities = highRiskHandlers
+    .filter((handler) => !isWindowCapabilityClassified(handler.channel))
+    .map(({ channel, location, riskDomain }) => ({ channel, location, riskDomain, capability: getRequiredWindowCapability(channel) }))
   const highRiskWithoutAudit = highRiskHandlers
     .filter((handler) => !handler.auditLogged)
     .map(({ channel, location, riskDomain }) => ({ channel, location, riskDomain }))
@@ -302,6 +306,7 @@ export function buildIpcContractReport(root = DEFAULT_ROOT) {
     duplicateHandlers,
     missingTrustedSender,
     missingSubscriptionSources,
+    unclassifiedHighRiskCapabilities,
   }
 
   const warnings = {
@@ -332,9 +337,17 @@ export function buildIpcContractReport(root = DEFAULT_ROOT) {
       riskLevel: countBy(handlers, 'riskLevel'),
       riskDomain: countBy(handlers, 'riskDomain'),
       payloadValidation: countBy(handlers, 'payloadValidation'),
+      windowCapability: countBy(
+        handlers.map((handler) => ({
+          ...handler,
+          channelCapability: getRequiredWindowCapability(handler.channel),
+        })),
+        'channelCapability',
+      ),
     },
     channels: handlers.map((handler) => ({
       ...handler,
+      channelCapability: getRequiredWindowCapability(handler.channel),
       exposedByPreload: invokeIndex.has(handler.channel),
       rendererPayload: payloadChannelSet.has(handler.channel),
     })),
