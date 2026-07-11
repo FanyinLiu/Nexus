@@ -2449,6 +2449,35 @@
   pointer-events: auto;
 }
 
+.pet-window__voice-state {
+  max-width: 132px;
+  padding: 4px 8px;
+  border: 1px solid rgba(94, 198, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(12, 16, 28, 0.68);
+  color: rgba(226, 238, 255, 0.88);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  text-align: right;
+  white-space: nowrap;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  animation: panel-enter 0.18s ease-out;
+}
+
+.pet-window__voice-state.is-listening,
+.pet-window__voice-state.is-speaking {
+  border-color: rgba(74, 234, 174, 0.28);
+  color: rgba(162, 248, 216, 0.94);
+}
+
+.pet-window__voice-state.is-thinking {
+  border-color: rgba(245, 166, 35, 0.26);
+  color: rgba(255, 212, 142, 0.94);
+}
+
 /* Free-mode roaming: tuck the controls away until the pet is hovered. */
 .pet-window__controls-island.is-tucked {
   opacity: 0;
@@ -7820,4 +7849,293 @@ html[data-theme='warm-day'] .panel-window--companion.is-collapsed .panel-window_
 .panel-window--simple::-webkit-scrollbar-track {
   border-radius: 999px;
   background: var(--nx-scrollbar-track);
+}
+
+/* Selected onboarding disclosure direction: keep the legally required first
+   step calm and spacious while the remaining v0.4.2 setup flow stays intact. */
+.desktop-pet-root .onboarding-backdrop--disclosure {
+  padding: 14px;
+}
+
+.desktop-pet-root .onboarding-card.onboarding-card--disclosure {
+  width: min(100%, 432px);
+  height: min(calc(100vh - 28px), 646px);
+  max-height: none;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0;
+  padding: 30px 20px 22px;
+  border: 1.5px solid rgba(153, 198, 255, 0.9);
+  border-radius: 13px;
+  background: #091320;
+  box-shadow:
+    0 0 0 1px rgba(115, 171, 242, 0.16),
+    0 20px 52px rgba(0, 7, 17, 0.72),
+    0 0 20px rgba(109, 168, 239, 0.14);
+}
+
+.desktop-pet-root .onboarding-card__header.onboarding-card__header--disclosure {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 0 6px;
+}
+
+.onboarding-disclosure__progress {
+  margin: 0;
+  color: rgba(225, 231, 241, 0.78);
+  font-size: 14px;
+  font-weight: 620;
+  letter-spacing: 0.01em;
+}
+
+.onboarding-disclosure__dismiss {
+  min-height: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #eab35e;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 680;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.onboarding-disclosure__dismiss:hover:not(:disabled) {
+  color: #f2c779;
+}
+
+.onboarding-disclosure__dismiss:focus-visible,
+.ai-disclosure-step__details summary:focus-visible {
+  outline: 2px solid rgba(232, 180, 96, 0.72);
+  outline-offset: 4px;
+}
+
+.desktop-pet-root .onboarding-card--disclosure .onboarding-card__body {
+  overflow-y: auto;
+  padding: 0;
+  scrollbar-gutter: auto;
+}
+
+.desktop-pet-root .onboarding-card--disclosure .onboarding-section--disclosure {
+  gap: 0;
+  min-height: 100%;
+  padding: 129px 22px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step {
+  display: block;
+}
+
+.desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step h2 {
+  margin: 0;
+  color: #f5f7fb;
+  font-size: 29px;
+  font-weight: 760;
+  line-height: 1.24;
+  letter-spacing: -0.03em;
+}
+
+.desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__accent {
+  display: block;
+  width: 22px;
+  height: 3px;
+  margin-top: 11px;
+  border-radius: 999px;
+  background: #e8ad56;
+  box-shadow: 0 0 9px rgba(232, 173, 86, 0.62);
+}
+
+.desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__summary {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__summary p {
+  margin: 0;
+  color: rgba(226, 231, 239, 0.8);
+  font-size: 15px;
+  line-height: 1.82;
+  letter-spacing: 0.01em;
+}
+
+.desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__details {
+  margin-top: 25px;
+  border-top: 1px solid rgba(210, 170, 106, 0.2);
+  border-bottom: 1px solid rgba(210, 170, 106, 0.16);
+}
+
+.desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__details summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  align-items: center;
+  min-height: 48px;
+  margin: 0;
+  padding: 0 2px 0 28px;
+  color: rgba(232, 235, 241, 0.8);
+  font-size: 14px;
+  line-height: 1.5;
+  list-style: none;
+  cursor: pointer;
+}
+
+.desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__details summary::-webkit-details-marker {
+  display: none;
+}
+
+.desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__chevron {
+  width: 18px;
+  height: 18px;
+  background: rgba(232, 235, 241, 0.78);
+  -webkit-mask: var(--nx-chevron-right-mask) center / 18px 18px no-repeat;
+  mask: var(--nx-chevron-right-mask) center / 18px 18px no-repeat;
+  transform: rotate(90deg);
+  transition: transform 160ms ease;
+}
+
+.desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__details[open] .ai-disclosure-step__chevron {
+  transform: rotate(-90deg);
+}
+
+.desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__bullets {
+  gap: 8px;
+  padding: 0 2px 14px;
+}
+
+.desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__bullets li {
+  padding: 0 0 0 12px;
+  border: 0;
+  border-left: 2px solid rgba(232, 173, 86, 0.5);
+  border-radius: 0;
+  background: transparent;
+  color: rgba(226, 231, 239, 0.7);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.desktop-pet-root .onboarding-card__actions.onboarding-card__actions--disclosure {
+  display: block;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.desktop-pet-root .onboarding-card__actions--disclosure .primary-button {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid rgba(212, 198, 255, 0.28);
+  border-radius: 8px;
+  background: var(--nx-me-gradient);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 720;
+  box-shadow:
+    0 9px 26px rgba(123, 87, 222, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.desktop-pet-root .onboarding-card__actions--disclosure .primary-button:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+@media (max-height: 620px) {
+  .desktop-pet-root .onboarding-card.onboarding-card--disclosure {
+    padding-top: 22px;
+    padding-bottom: 16px;
+  }
+
+  .desktop-pet-root .onboarding-card--disclosure .onboarding-section--disclosure {
+    padding-top: 68px;
+  }
+}
+
+/* Carry the selected disclosure screen's calm rhythm through every setup step. */
+.desktop-pet-root .onboarding-backdrop--calm {
+  padding: 14px;
+}
+
+.desktop-pet-root .onboarding-card.onboarding-card--calm {
+  width: min(100%, 432px);
+  height: min(calc(100vh - 28px), 646px);
+  max-height: none;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0;
+  padding: 26px 20px 20px;
+  border-color: rgba(153, 198, 255, 0.72);
+  border-radius: 13px;
+  background: #0b1624;
+  box-shadow: 0 20px 52px rgba(0, 7, 17, 0.66);
+}
+
+.desktop-pet-root .onboarding-card__header--calm {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px 18px;
+}
+
+.desktop-pet-root .onboarding-card--calm .onboarding-card__body {
+  padding: 0 4px 74px 0;
+  scroll-padding-bottom: 88px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+}
+
+.desktop-pet-root .onboarding-card--calm:not(.onboarding-card--disclosure) .onboarding-section {
+  gap: 16px;
+  min-height: 100%;
+  padding: 22px;
+  border-color: rgba(174, 202, 238, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: none;
+}
+
+.desktop-pet-root .onboarding-card--calm .onboarding-section__intro {
+  gap: 7px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(210, 170, 106, 0.18);
+}
+
+.desktop-pet-root .onboarding-card--calm .onboarding-section__intro h2 {
+  margin: 0;
+  color: #f5f7fb;
+  font-size: 22px;
+  font-weight: 740;
+  line-height: 1.24;
+  letter-spacing: -0.02em;
+}
+
+.desktop-pet-root .onboarding-card--calm .onboarding-section__intro p {
+  margin: 0;
+  color: rgba(226, 231, 239, 0.7);
+  font-size: 13px;
+  line-height: 1.62;
+}
+
+.desktop-pet-root .onboarding-card__actions--calm {
+  justify-content: space-between;
+  padding-top: 16px;
+  background: #0b1624;
+}
+
+.desktop-pet-root .onboarding-card__actions--calm :is(.ghost-button, .primary-button) {
+  min-height: 42px;
+  border-radius: 8px;
+}
+
+@media (max-height: 620px) {
+  .desktop-pet-root .onboarding-card.onboarding-card--calm {
+    padding-top: 20px;
+    padding-bottom: 14px;
+  }
+
+  .desktop-pet-root .onboarding-card--calm .onboarding-section {
+    padding: 16px;
+  }
 }

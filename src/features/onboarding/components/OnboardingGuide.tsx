@@ -70,7 +70,6 @@ export function OnboardingGuide({
   // language default.
   const [textProviderRegion, setTextProviderRegion] = useState<ApiProviderPreset['region'] | null>(null)
   const dialogRef = useRef<HTMLElement | null>(null)
-  const stepperItemRefs = useRef<Array<HTMLButtonElement | null>>([])
   useModalFocusTrap(dialogRef, open)
   const ti = (
     key: Parameters<typeof pickTranslatedUiText>[1],
@@ -79,6 +78,7 @@ export function OnboardingGuide({
 
   const onboardingSteps = useMemo(() => buildOnboardingSteps(draft.uiLanguage), [draft.uiLanguage])
   const step = onboardingSteps[stepIndex] ?? onboardingSteps[0]
+  const isAiDisclosureStep = step.id === 'ai_disclosure'
   const lastStepIndex = onboardingSteps.length - 1
   const speechInputProvider = getSpeechInputProviderPreset(draft.speechInputProviderId)
   const speechOutputProvider = getSpeechOutputProviderPreset(draft.speechOutputProviderId)
@@ -134,17 +134,6 @@ export function OnboardingGuide({
           }
     ))
   }, [petModelPresets])
-
-  useEffect(() => {
-    if (!open) return
-
-    window.requestAnimationFrame(() => {
-      stepperItemRefs.current[stepIndex]?.scrollIntoView({
-        block: 'nearest',
-        inline: 'nearest',
-      })
-    })
-  }, [open, stepIndex])
 
   function updateDraftFromStep(next: Parameters<typeof setDraft>[0]) {
     setDraft(next)
@@ -302,61 +291,39 @@ export function OnboardingGuide({
   }
 
   return (
-    <div className={`onboarding-backdrop onboarding-backdrop--${view}`}>
+    <div className={`onboarding-backdrop onboarding-backdrop--${view} onboarding-backdrop--calm ${isAiDisclosureStep ? 'onboarding-backdrop--disclosure' : ''}`}>
       <section
         ref={dialogRef}
-        className={`onboarding-card onboarding-card--${view}`}
+        className={`onboarding-card onboarding-card--${view} onboarding-card--calm ${isAiDisclosureStep ? 'onboarding-card--disclosure' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="onboarding-dialog-title"
         aria-describedby="onboarding-dialog-description"
         tabIndex={-1}
       >
-        <div className="onboarding-card__header">
-          <div>
-            <p className="eyebrow">{ti('onboarding.eyebrow')}</p>
-            <h2 id="onboarding-dialog-title">{ti('onboarding.title')}</h2>
-            <p id="onboarding-dialog-description" className="onboarding-card__copy">
-              {ti('onboarding.body')}
-            </p>
-          </div>
+        <div className={`onboarding-card__header onboarding-card__header--calm ${isAiDisclosureStep ? 'onboarding-card__header--disclosure' : ''}`}>
+          <p className="onboarding-disclosure__progress">
+            {stepIndex + 1} / {onboardingSteps.length} · {ti('onboarding.eyebrow')}
+          </p>
 
-          <button className="ghost-button" type="button" onClick={onDismiss} disabled={saving}>
+          <button
+            className="onboarding-disclosure__dismiss"
+            type="button"
+            onClick={onDismiss}
+            disabled={saving}
+          >
             {ti('onboarding.dismiss')}
           </button>
         </div>
 
-        <div className="onboarding-stepper">
-          {onboardingSteps.map((item, index) => (
-            <button
-              key={item.id}
-              ref={(node) => {
-                stepperItemRefs.current[index] = node
-              }}
-              type="button"
-              className={`onboarding-stepper__item ${index === stepIndex ? 'is-active' : ''} ${index < stepIndex ? 'is-complete' : ''}`}
-              aria-current={index === stepIndex ? 'step' : undefined}
-              onClick={() => {
-                if (index > stepIndex) return
-                setStepIndex(index)
-                setError(null)
-                setRepairNotice(null)
-              }}
-              disabled={index > stepIndex || saving}
-              title={item.title}
-            >
-              <span>{index + 1}</span>
-              <strong>{item.title}</strong>
-            </button>
-          ))}
-        </div>
-
         <div className="onboarding-card__body">
-          <div className="onboarding-section">
-            <div className="onboarding-section__intro">
-              <strong>{step.title}</strong>
-              <p>{step.description}</p>
-            </div>
+          <div className={`onboarding-section ${isAiDisclosureStep ? 'onboarding-section--disclosure' : ''}`}>
+            {isAiDisclosureStep ? null : (
+              <div className="onboarding-section__intro">
+                <h2 id="onboarding-dialog-title">{step.title}</h2>
+                <p id="onboarding-dialog-description">{step.description}</p>
+              </div>
+            )}
 
             {renderStepContent()}
 
@@ -396,23 +363,25 @@ export function OnboardingGuide({
           </div>
         </div>
 
-        <div className="onboarding-card__actions">
-          <button
-            className="ghost-button"
-            type="button"
-            onClick={() => {
-              setStepIndex((current) => Math.max(0, current - 1))
-              setError(null)
-              setRepairNotice(null)
-            }}
-            disabled={stepIndex === 0 || saving}
-          >
-            {ti('onboarding.prev')}
-          </button>
+        <div className={`onboarding-card__actions onboarding-card__actions--calm ${isAiDisclosureStep ? 'onboarding-card__actions--disclosure' : ''}`}>
+          {isAiDisclosureStep ? null : (
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => {
+                setStepIndex((current) => Math.max(0, current - 1))
+                setError(null)
+                setRepairNotice(null)
+              }}
+              disabled={stepIndex === 0 || saving}
+            >
+              {ti('onboarding.prev')}
+            </button>
+          )}
 
           {stepIndex < lastStepIndex ? (
             <button className="primary-button" type="button" onClick={goNextStep} disabled={saving}>
-              {ti('onboarding.next')}
+              {isAiDisclosureStep ? ti('onboarding.ai_disclosure.continue_note') : ti('onboarding.next')}
             </button>
           ) : (
             <button className="primary-button" type="button" onClick={() => void handleFinish()} disabled={saving}>

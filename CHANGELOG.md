@@ -8,6 +8,11 @@
 
 ### Added
 
+- **Official Live2D companion choices** — added the Live2D original sample
+  characters Haru and Hiyori as optional built-in avatars, localized their
+  Settings descriptions, verified both models in the desktop renderer, and
+  added the required Live2D sample-data attribution without bundling Haru's
+  sample voice files.
 - **v0.4.3 user-facing transparency draft** — added Settings-facing companion
   awareness transparency for recent coarse summaries, check-in rationale,
   model-reach state, clear-state reasons, and a visible privacy boundary without

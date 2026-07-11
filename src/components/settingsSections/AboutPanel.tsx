@@ -15,6 +15,7 @@ const CREDIT_ITEMS = [
   { name: 'React 19', descriptionKey: 'about.credits.item.react' },
   { name: 'Vite', descriptionKey: 'about.credits.item.vite' },
   { name: 'pixi.js + pixi-live2d-display', descriptionKey: 'about.credits.item.pixi' },
+  { name: 'Live2D sample characters', descriptionKey: 'about.credits.item.live2d_samples' },
   { name: 'sherpa-onnx', descriptionKey: 'about.credits.item.sherpa' },
   { name: 'Silero VAD', descriptionKey: 'about.credits.item.silero' },
   { name: 'Hugging Face Transformers.js', descriptionKey: 'about.credits.item.transformers' },

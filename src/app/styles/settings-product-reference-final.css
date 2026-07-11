@@ -1018,6 +1018,56 @@ html[data-theme] .sd:is(.sd-night, .sd-day, .sd-warm).sd-section .sp[data-sectio
 html[data-theme] .sb:has(.sd:is(.sd-home, .sd-section)) .confirm-dialog-card { width: min(360px, calc(100vw - 32px)); border: 1px solid var(--nx-settings-line); border-radius: 8px; background: var(--nx-settings-surface); color: var(--nx-settings-ink); box-shadow: var(--nx-settings-shell-shadow); }
 html[data-theme] .sb:has(.sd:is(.sd-home, .sd-section)) .confirm-dialog-card :is(.ghost-button, .confirm-dialog-card__confirm) { min-height: 30px; border-radius: 7px; font-size: 12px; box-shadow: var(--nx-settings-card-shadow); }
 
+/* Voice is readiness-first: provider and model internals stay available, but
+   they no longer dominate the first viewport. */
+html[data-theme] .sd.sd-section .sp[data-section='voice'] details.settings-voice-provider-disclosure {
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface-soft);
+  box-shadow: none;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] details.settings-voice-provider-disclosure > summary.settings-mini-group__head {
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] details.settings-voice-provider-disclosure[open] > summary.settings-mini-group__head {
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] .settings-voice-provider-body {
+  min-width: 0;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] .settings-voice-provider-body > .settings-speech-config-section {
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+html[data-theme] .sd.sd-section .sp[data-section='voice'] .settings-speech-config-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+}
+
+html[data-theme] .sd.sd-section .sp.sp .sdc.settings-drawer__sections {
+  padding-bottom: calc(var(--nx-settings-footer-height) + 58px);
+  scroll-padding-bottom: calc(var(--nx-settings-footer-height) + 66px);
+}
+
+html[data-theme] .sd.sd-section .sp.sp .sdc.settings-drawer__sections > :last-child {
+  scroll-margin-bottom: calc(var(--nx-settings-footer-height) + 66px);
+}
+
 /* Shared settings controls: one markup and focus contract across every section. */
 .sd .settings-toggle__label--hidden {
   position: absolute;

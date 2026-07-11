@@ -33,6 +33,7 @@ import type {
   VoiceState,
   VoiceTraceEntry,
 } from '../types/index.ts'
+import { pickTranslatedUiText } from '../lib/uiLanguage.ts'
 import {
   loadAutonomySection,
   loadChatSection,
@@ -172,6 +173,8 @@ export function SettingsDrawerActiveSection({
   voiceTrace,
   windowState,
 }: SettingsDrawerActiveSectionProps) {
+  const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
+    pickTranslatedUiText(uiLanguage, key)
   const content = (() => {
     switch (activeSectionId) {
     case 'model':
@@ -300,34 +303,56 @@ export function SettingsDrawerActiveSection({
             uiLanguage={uiLanguage}
           />
 
-          <SpeechInputSection
-            active
-            draft={draft}
-            platformProfile={platformProfile}
-            setDraft={setDraft}
-            testingTarget={connectionTests.testingTarget}
-            onRunSpeechInputConnectionTest={() => void connectionTests.runConnectionTest('speech-input')}
-            renderSpeechInputTestResult={() => connectionTests.renderTestResult('speech-input')}
-          />
+          <details className="settings-mini-group settings-voice-provider-disclosure">
+            <summary className="settings-mini-group__head">
+              <div>
+                <h5>{ti('settings.speech_input.title')}</h5>
+                <span>{ti('settings.speech_input.hint')}</span>
+              </div>
+            </summary>
+            <div className="settings-voice-provider-body">
+              <SpeechInputSection
+                active
+                showHeader={false}
+                draft={draft}
+                platformProfile={platformProfile}
+                setDraft={setDraft}
+                testingTarget={connectionTests.testingTarget}
+                onRunSpeechInputConnectionTest={() => void connectionTests.runConnectionTest('speech-input')}
+                renderSpeechInputTestResult={() => connectionTests.renderTestResult('speech-input')}
+              />
+            </div>
+          </details>
 
-          <SpeechOutputSection
-            active
-            draft={draft}
-            setDraft={setDraft}
-            speechVoiceOptions={speechVoices.speechVoiceOptions}
-            speechVoiceStatus={speechVoices.speechVoiceStatus}
-            loadingSpeechVoices={speechVoices.loadingSpeechVoices}
-            speechPreviewText={speechVoices.speechPreviewText}
-            setSpeechPreviewText={speechVoices.setSpeechPreviewText}
-            speechPreviewStatus={speechVoices.speechPreviewStatus}
-            previewingSpeech={speechVoices.previewingSpeech}
-            testingTarget={connectionTests.testingTarget}
-            onApplySpeechOutputPreset={onApplySpeechOutputPreset}
-            onLoadSpeechVoices={() => void speechVoices.handleLoadSpeechVoices()}
-            onPreviewSpeech={() => void speechVoices.handlePreviewSpeech()}
-            onRunSpeechOutputConnectionTest={() => void connectionTests.runConnectionTest('speech-output')}
-            renderSpeechOutputTestResult={() => connectionTests.renderTestResult('speech-output')}
-          />
+          <details className="settings-mini-group settings-voice-provider-disclosure">
+            <summary className="settings-mini-group__head">
+              <div>
+                <h5>{ti('settings.speech_output.title')}</h5>
+                <span>{ti('settings.speech_output.hint')}</span>
+              </div>
+            </summary>
+            <div className="settings-voice-provider-body">
+              <SpeechOutputSection
+                active
+                showHeader={false}
+                draft={draft}
+                setDraft={setDraft}
+                speechVoiceOptions={speechVoices.speechVoiceOptions}
+                speechVoiceStatus={speechVoices.speechVoiceStatus}
+                loadingSpeechVoices={speechVoices.loadingSpeechVoices}
+                speechPreviewText={speechVoices.speechPreviewText}
+                setSpeechPreviewText={speechVoices.setSpeechPreviewText}
+                speechPreviewStatus={speechVoices.speechPreviewStatus}
+                previewingSpeech={speechVoices.previewingSpeech}
+                testingTarget={connectionTests.testingTarget}
+                onApplySpeechOutputPreset={onApplySpeechOutputPreset}
+                onLoadSpeechVoices={() => void speechVoices.handleLoadSpeechVoices()}
+                onPreviewSpeech={() => void speechVoices.handlePreviewSpeech()}
+                onRunSpeechOutputConnectionTest={() => void connectionTests.runConnectionTest('speech-output')}
+                renderSpeechOutputTestResult={() => connectionTests.renderTestResult('speech-output')}
+              />
+            </div>
+          </details>
         </>
       )
     case 'window':

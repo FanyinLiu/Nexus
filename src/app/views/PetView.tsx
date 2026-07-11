@@ -311,6 +311,9 @@ export function PetView({
     : voice.voiceState === 'listening' ? 'listening'
     : voice.voiceState === 'processing' ? 'thinking'
     : 'speaking'
+  const voiceStateLabel = voice.voiceState === 'idle'
+    ? null
+    : ti(`voice_state.${voice.voiceState}`)
 
   const [railExpanded, setRailExpanded] = useState(false)
   const railCollapseTimerRef = useRef<number | null>(null)
@@ -605,6 +608,12 @@ export function PetView({
                     </button>
                   </div>
                 </div>
+              ) : null}
+
+              {voiceStateLabel ? (
+                <span className={`pet-window__voice-state is-${micDisplayState}`} role="status" aria-live="polite">
+                  {voiceStateLabel}
+                </span>
               ) : null}
 
               <div className="pet-window__island-anchors">

@@ -166,3 +166,216 @@
 - Keep static assets out of the opening/presence UI unless they are background textures, not live state indicators.
 
 final result: blocked
+
+---
+
+## 0.4.2 onboarding disclosure — scoped design QA
+
+**Source and state**
+
+- Source visual truth: `/Users/klein/Documents/New project/artifacts/design-redesign/2026-07-11-onboarding/selected-option-1.png`
+- Implementation screenshot: `/Users/klein/Documents/New project/artifacts/design-qa/2026-07-11-onboarding/implementation-0.4.2.png`
+- Same-input comparison: `/Users/klein/Documents/New project/artifacts/design-qa/2026-07-11-onboarding/comparison-0.4.2.png`
+- Viewport: `460 x 660`.
+- State: panel view, Simplified Chinese, disclosure collapsed, onboarding step 1.
+
+The full card is visible at a readable scale in the combined comparison, so a
+separate focused crop is not required. The implementation preserves the chosen
+portrait geometry, title and copy landmarks, cool border, deep-navy surface,
+amber accents, disclosure row, and full-width violet action.
+
+**Comparison history**
+
+- P1: none in the 0.4.2 implementation.
+- P2: the reference says `1 / 5`; the 0.4.2 flow correctly says `1 / 6`
+  because the release candidate includes the additional Message Action Demo
+  step. Hiding that step would be a functional regression, so this is an
+  intentional product-correct adaptation.
+- P2: none remaining. The card bounds, content alignment, disclosure row, and
+  primary action match the selected source at the same viewport.
+- P3: the source includes a tiny decorative shield glyph. The implementation
+  preserves its indentation and uses the existing Nexus chevron asset without
+  adding a new icon dependency or a handcrafted substitute.
+
+**Interaction and accessibility evidence**
+
+- Pointer click opens the full safety note.
+- Enter closes the focused disclosure summary through the explicit keyboard
+  handler while keeping native `details` state synchronized.
+- `知道了，继续` opens step 2.
+- Step 2 still exposes all six 0.4.2 steps, including `消息处理`.
+- The dialog heading and description resolve to the visible safety content.
+- Five locale dictionaries pass with no missing, extra, or duplicate keys.
+
+**Verification**
+
+- `npx tsc -b --pretty false`
+- Focused ESLint on both touched onboarding components
+- `npm run -s i18n:audit` — 2,461 keys per locale
+- Onboarding, safety disclosure, and i18n tests — 25 passed
+- Scoped `git diff --check`
+- In-app Browser verification at `460 x 660`
+
+final result: passed
+
+---
+
+## 0.4.2 System Day harmony correction
+
+- Source visual truth: `/Users/klein/Documents/New project/artifacts/design-qa/2026-07-11-implementation/05-system-day-panel-fixed.png`
+- Implementation screenshot: `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-harmony-review/05-after-stable.png`
+- Full-view comparison: `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-harmony-review/06-before-after.png`
+- Viewport: `460 x 660`; Simplified Chinese; System Day empty chat.
+
+**Findings**
+
+- No actionable P0/P1/P2 differences remain.
+- The previous near-white content sheet and individually elevated white cards
+  felt detached from the soft seaside scene. The correction uses a mist-blue
+  translucent sheet, quieter borders, and shallower card elevation while
+  retaining the same typography, content, spacing, and interactions.
+- Fonts/copy/icons/assets are unchanged. Color tokens and surface opacity are
+  the only visual changes; the existing seaside image remains sharp and
+  correctly cropped.
+- Browser console errors: none. Focused Image4 color and visual-contract audits,
+  TypeScript, performance baseline, and diff checks passed.
+
+final result: passed
+
+---
+
+## 0.4.2 audit implementation — calm companion UI QA
+
+**Source and implementation evidence**
+
+- Source visual truth: `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-optimization-review/03-onboarding-disclosure.png`
+- Audit baselines: `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-optimization-review/04-onboarding-step-2.png` and `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-optimization-review/05-voice-settings.png`
+- Implementation screenshots: `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-optimization-review/08-implemented-day-main-panel.png`, `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-optimization-review/09-implemented-onboarding-step-1.png`, `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-optimization-review/10-implemented-onboarding-step-2.png`, and `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-optimization-review/11-implemented-voice-settings.png`
+- Combined comparisons: `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-optimization-review/qa-onboarding-step-1.png`, `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-optimization-review/qa-onboarding-step-2.png`, and `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-optimization-review/qa-voice-settings.png`
+- Viewport: `460 x 660`.
+- States: Simplified Chinese; System Day main panel; onboarding disclosure collapsed; onboarding step 2; voice settings with advanced/provider disclosures collapsed.
+
+The full-screen comparisons keep all important text, controls, borders, and
+spacing readable, so a separate focused crop was not needed.
+
+**Findings**
+
+- No actionable P0/P1/P2 visual differences remain.
+- P3: System Day secondary copy stays intentionally quieter than titles and
+  primary controls. It remains visibly stronger than the pre-audit near-black
+  surface and does not prevent the main tasks.
+
+**Comparison history**
+
+1. The audit baseline showed a near-black main panel while Day was selected, a
+   six-card onboarding stepper competing with the current form, voice internals
+   filling the first viewport, and a VAD-on state while voice input was off.
+2. The first implementation carried the disclosure screen's portrait rhythm to
+   later steps, changed voice to readiness-first, and introduced a real System
+   Day panel. Browser review found two remaining P2 issues: the compact header
+   stacked at 460px, and VAD sensitivity remained visible for a disabled stored
+   state.
+3. The final implementation forces the compact header back to one row, derives
+   the displayed continuous/VAD state from its prerequisites, hides inactive
+   VAD sensitivity, and preserves the full provider controls behind disclosures.
+
+**Required fidelity surfaces**
+
+- Fonts and typography: the selected disclosure hierarchy, weight, line height,
+  and short-copy treatment are preserved; step 2 and voice use the same compact
+  system font hierarchy without clipping.
+- Spacing and layout rhythm: all primary actions remain visible at 460 x 660;
+  onboarding no longer spends vertical space on six future-step cards; settings
+  footer content does not cover the final visible section.
+- Colors and tokens: System Day now reaches the main panel with cool paper/sky
+  tokens; Warm Day keeps its existing companion palette; the disclosure navy,
+  amber, and violet landmarks remain intact.
+- Image quality and asset fidelity: the existing `seaside.day.jpg` scene is used
+  for the daylight panel; no placeholder or custom drawn image asset was added.
+- Copy and content: voice now leads with readiness and a single test; advanced,
+  STT, and TTS summaries clearly describe what is behind each disclosure.
+- Icons: existing Nexus icon components are retained and remain aligned at the
+  compact desktop size.
+- Behavior and accessibility: dialog heading/description semantics resolve to
+  visible content; provider disclosures, advanced voice controls, theme choice,
+  onboarding next/dismiss, and settings navigation were exercised. No browser
+  console errors appeared. Numerical contrast, screen-reader output, and full
+  WCAG conformance were not claimed from screenshots alone.
+
+**Verification**
+
+- `npm run verify:pr` — passed; 2,552 tests passed.
+- `npm run release:signing:readiness` — 11/11 checks passed.
+- In-app Browser interaction and screenshot review at `460 x 660` — passed.
+- Browser console errors — none.
+
+final result: passed
+
+---
+
+## 0.4.2 follow-up implementation — quiet voice-first polish QA
+
+**Source and implementation evidence**
+
+- Source visual truth: `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-follow-up-review/01-live2d-home.png`, `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-follow-up-review/02-day-main-panel.png`, and `/Users/klein/Documents/New project/artifacts/design-audit/2026-07-11-follow-up-review/03-settings-home.png`.
+- Implementation screenshots: `/Users/klein/Documents/New project/artifacts/design-qa/2026-07-11-implementation/01-live2d-idle.png`, `/Users/klein/Documents/New project/artifacts/design-qa/2026-07-11-implementation/02-settings-clean.png`, `/Users/klein/Documents/New project/artifacts/design-qa/2026-07-11-implementation/03-settings-dirty.png`, and `/Users/klein/Documents/New project/artifacts/design-qa/2026-07-11-implementation/05-system-day-panel-fixed.png`.
+- Full-view comparisons: `/Users/klein/Documents/New project/artifacts/design-qa/2026-07-11-implementation/compare/day-before-after.png`, `/Users/klein/Documents/New project/artifacts/design-qa/2026-07-11-implementation/compare/settings-before-after.png`, and `/Users/klein/Documents/New project/artifacts/design-qa/2026-07-11-implementation/compare/live2d-before-after.png`.
+- Viewport: `460 x 660`.
+- States: Simplified Chinese; Live2D idle; System Day main panel; settings clean; settings theme draft changed.
+
+The full views keep the affected labels, footer state, Live2D scale, and controls
+readable. No focused crop was required. The Live2D comparison has an intentional
+time/theme-state mismatch: the reference was captured in the dark scene and the
+implementation in the current System Day scene; character scale and control
+density, rather than scene color, are the comparable surfaces.
+
+**Findings**
+
+- No actionable P0/P1/P2 visual differences remain.
+- P3 test gap: the listening/processing/speaking label was not triggered in the
+  browser because doing so would request real microphone permission. Its
+  non-idle-only render condition, localized copy, live-region semantics, and
+  responsive styling passed type, lint, build, and source audits.
+
+**Comparison history**
+
+1. The source settings view permanently reserved a footer for Cancel and Save,
+   even with no edits. The first implementation removed that footer in the clean
+   state and restored it immediately after a theme draft changed.
+2. The first System Day implementation increased text contrast but browser QA
+   exposed a P2 cascade mismatch: dark companion-chat background rules still
+   overrode the daylight content layer, leaving dark text on a dark surface.
+3. The final implementation fixes the daylight content layer at its owning
+   Image4 selector. The post-fix comparison shows readable dark text on a cool
+   paper surface while preserving the existing hierarchy, scene, and layout.
+
+**Required fidelity surfaces**
+
+- Fonts and typography: existing family, weights, line heights, wrapping, and
+  hierarchy are unchanged; only the non-idle voice label introduces an 11px
+  compact status treatment beside the existing microphone control.
+- Spacing and layout rhythm: Live2D remains the dominant surface; clean settings
+  gains vertical space without reflowing cards; the footer returns only when an
+  edit requires a decision.
+- Colors and visual tokens: System Day now consistently maps cool paper, dark
+  text, and stronger muted text through the existing Image4 token contract.
+- Image quality and asset fidelity: the existing Live2D character and seaside
+  scene remain untouched; no new raster, placeholder, or approximate asset was
+  introduced.
+- Copy and content: existing dialogue prompts are unchanged. Voice feedback
+  reuses the localized `voice_state` copy and stays absent while idle.
+- Icons and controls: existing Nexus settings, microphone, and character
+  controls remain unchanged in size and position.
+- Behavior and accessibility: clean and dirty settings states were exercised;
+  Cancel restored the original theme and returned to the panel; no browser
+  console errors appeared. Full WCAG conformance is not claimed from this pass.
+
+**Verification**
+
+- `npm run verify:pr` — passed; 2,552 tests passed.
+- `npm run build` and `npm run performance:baseline` — passed; CSS remains under
+  budget at 757.0 KB / 760.0 KB.
+- In-app Browser interaction and screenshot review at `460 x 660` — passed.
+- Browser console errors — none.
+
+final result: passed

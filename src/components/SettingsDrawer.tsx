@@ -279,6 +279,7 @@ export function SettingsDrawer({
     mergeHydratedSecrets,
     ensurePetModelPreset,
     createSavePayload,
+    isDirty,
   } = useSettingsDraftState(settings)
   const [activeSectionId, setActiveSectionId] = useState<SettingsSectionId>('console')
   const [settingsView, setSettingsView] = useState<'home' | 'section'>('home')
@@ -999,12 +1000,14 @@ export function SettingsDrawer({
           )}
         </div>
 
-      <SettingsActionBar
-        cancelLabel={ti('common.cancel')}
-        saveLabel={ti('settings.save')}
-        onCancel={handleDismiss}
-        onSave={() => onSave(createSavePayload())}
-      />
+      {isDirty ? (
+        <SettingsActionBar
+          cancelLabel={ti('common.cancel')}
+          saveLabel={ti('settings.save')}
+          onCancel={handleDismiss}
+          onSave={() => onSave(createSavePayload())}
+        />
+      ) : null}
       </aside>
       <ConfirmDialog options={confirmOptions} onConfirm={handleConfirm} onCancel={handleCancel} />
     </div>

@@ -73,6 +73,8 @@ export const VoiceSection = memo(function VoiceSection({
   const voiceTriggerModeOptions = getVoiceTriggerModeOptions(uiLanguage)
   const selectedVoiceTriggerMode = voiceTriggerModeOptions.find((option) => option.value === draft.voiceTriggerMode)
     ?? voiceTriggerModeOptions[0]
+  const continuousVoiceEnabled = draft.speechInputEnabled && draft.continuousVoiceModeEnabled
+  const vadEnabled = continuousVoiceEnabled && draft.voiceActivityDetectionEnabled
 
   return (
     <section className={`settings-section settings-voice-section ${active ? 'is-active' : 'is-hidden'}`}>
@@ -108,7 +110,16 @@ export const VoiceSection = memo(function VoiceSection({
               label={ti('settings.voice.enable_input')}
               checked={draft.speechInputEnabled}
               disabled={!speechInputAvailable}
-              onChange={(checked) => setDraft((prev) => ({ ...prev, speechInputEnabled: checked }))}
+              onChange={(checked) => setDraft((prev) => ({
+                ...prev,
+                speechInputEnabled: checked,
+                ...(!checked
+                  ? {
+                      continuousVoiceModeEnabled: false,
+                      voiceActivityDetectionEnabled: false,
+                    }
+                  : {}),
+              }))}
             />
             <p>{speechInputAvailable ? ti('settings.voice.status_input_ready') : ti('settings.voice.status_input_unavailable')}</p>
           </div>
@@ -123,47 +134,7 @@ export const VoiceSection = memo(function VoiceSection({
             <p>{speechOutputAvailable ? ti('settings.voice.status_output_ready') : ti('settings.voice.status_output_unavailable')}</p>
           </div>
 
-          <div className="settings-control-card settings-voice-control">
-            <SettingsToggle
-              label={ti('settings.voice.enable_continuous')}
-              checked={draft.continuousVoiceModeEnabled}
-              disabled={!continuousVoiceAvailable}
-              onChange={(checked) =>
-                setDraft((prev) => ({ ...prev, continuousVoiceModeEnabled: checked }))}
-            />
-            <p>{draft.continuousVoiceModeEnabled ? ti('settings.voice.status_continuous_on') : ti('settings.voice.status_continuous_off')}</p>
-          </div>
-
-          <div className="settings-control-card settings-voice-control">
-            <SettingsToggle
-              label={ti('settings.voice.enable_vad')}
-              checked={draft.voiceActivityDetectionEnabled}
-              disabled={!vadAvailable}
-              onChange={(checked) =>
-                setDraft((prev) => ({ ...prev, voiceActivityDetectionEnabled: checked }))}
-            />
-            <p>{draft.voiceActivityDetectionEnabled ? ti('settings.voice.status_on') : ti('settings.voice.status_off')}</p>
-          </div>
         </div>
-
-        {draft.voiceActivityDetectionEnabled && (
-          <label className="settings-control-card settings-voice-field">
-            <span>{ti('settings.voice.vad_sensitivity')}</span>
-            <select
-              value={draft.vadSensitivity}
-              onChange={(event) =>
-                setDraft((prev) => ({
-                  ...prev,
-                  vadSensitivity: event.target.value as AppSettings['vadSensitivity'],
-                }))
-              }
-            >
-              <option value="low">{ti('settings.voice.vad.low')}</option>
-              <option value="medium">{ti('settings.voice.vad.medium')}</option>
-              <option value="high">{ti('settings.voice.vad.high')}</option>
-            </select>
-          </label>
-        )}
       </div>
 
       <details className="settings-mini-group settings-voice-advanced-card">
@@ -175,6 +146,51 @@ export const VoiceSection = memo(function VoiceSection({
         </summary>
 
         <div className="settings-voice-advanced-body">
+          <div className="settings-control-card settings-voice-advanced-control">
+            <SettingsToggle
+              label={ti('settings.voice.enable_continuous')}
+              checked={continuousVoiceEnabled}
+              disabled={!continuousVoiceAvailable || !draft.speechInputEnabled}
+              onChange={(checked) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  continuousVoiceModeEnabled: checked,
+                  ...(!checked ? { voiceActivityDetectionEnabled: false } : {}),
+                }))}
+            />
+            <p>{continuousVoiceEnabled ? ti('settings.voice.status_continuous_on') : ti('settings.voice.status_continuous_off')}</p>
+          </div>
+
+          <div className="settings-control-card settings-voice-advanced-control">
+            <SettingsToggle
+              label={ti('settings.voice.enable_vad')}
+              checked={vadEnabled}
+              disabled={!vadAvailable || !draft.speechInputEnabled || !draft.continuousVoiceModeEnabled}
+              onChange={(checked) =>
+                setDraft((prev) => ({ ...prev, voiceActivityDetectionEnabled: checked }))}
+            />
+            <p>{vadEnabled ? ti('settings.voice.status_on') : ti('settings.voice.status_off')}</p>
+          </div>
+
+          {vadEnabled ? (
+            <label className="settings-control-card settings-voice-field settings-voice-advanced-field">
+              <span>{ti('settings.voice.vad_sensitivity')}</span>
+              <select
+                value={draft.vadSensitivity}
+                onChange={(event) =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    vadSensitivity: event.target.value as AppSettings['vadSensitivity'],
+                  }))
+                }
+              >
+                <option value="low">{ti('settings.voice.vad.low')}</option>
+                <option value="medium">{ti('settings.voice.vad.medium')}</option>
+                <option value="high">{ti('settings.voice.vad.high')}</option>
+              </select>
+            </label>
+          ) : null}
+
           <div className="settings-control-card settings-voice-advanced-control">
             <SettingsToggle
               label={ti('settings.voice.allow_interruption')}

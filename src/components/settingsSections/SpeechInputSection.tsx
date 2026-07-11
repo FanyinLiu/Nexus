@@ -32,6 +32,7 @@ const speechInputSelectOptions = SPEECH_INPUT_PROVIDERS
 
 type SpeechInputSectionProps = {
   active: boolean
+  showHeader?: boolean
   draft: AppSettings
   platformProfile: PlatformProfile
   setDraft: Dispatch<SetStateAction<AppSettings>>
@@ -42,6 +43,7 @@ type SpeechInputSectionProps = {
 
 export const SpeechInputSection = memo(function SpeechInputSection({
   active,
+  showHeader = true,
   draft,
   platformProfile,
   setDraft,
@@ -106,24 +108,39 @@ export const SpeechInputSection = memo(function SpeechInputSection({
 
   return (
     <section className={`settings-section settings-speech-config-section ${active ? 'is-active' : 'is-hidden'}`}>
-      <div className="settings-section__title-row">
-        <div>
-          <h4>{ti('settings.speech_input.title')}</h4>
-          <p className="settings-drawer__hint">
-            {ti('settings.speech_input.hint')}
-          </p>
+      {showHeader ? (
+        <div className="settings-section__title-row">
+          <div>
+            <h4>{ti('settings.speech_input.title')}</h4>
+            <p className="settings-drawer__hint">
+              {ti('settings.speech_input.hint')}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={onRunSpeechInputConnectionTest}
+            disabled={testingTarget === 'speech-input' || !speechInputAvailable}
+          >
+            {testingTarget === 'speech-input'
+              ? ti('settings.speech_input.testing')
+              : ti('settings.speech_input.test')}
+          </button>
         </div>
-        <button
-          type="button"
-          className="ghost-button"
-          onClick={onRunSpeechInputConnectionTest}
-          disabled={testingTarget === 'speech-input' || !speechInputAvailable}
-        >
-          {testingTarget === 'speech-input'
-            ? ti('settings.speech_input.testing')
-            : ti('settings.speech_input.test')}
-        </button>
-      </div>
+      ) : (
+        <div className="settings-speech-config-actions">
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={onRunSpeechInputConnectionTest}
+            disabled={testingTarget === 'speech-input' || !speechInputAvailable}
+          >
+            {testingTarget === 'speech-input'
+              ? ti('settings.speech_input.testing')
+              : ti('settings.speech_input.test')}
+          </button>
+        </div>
+      )}
 
       {speechInputPlatformHint ? (
         <p className="settings-drawer__hint settings-speech-config-note">
