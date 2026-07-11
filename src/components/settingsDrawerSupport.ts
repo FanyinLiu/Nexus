@@ -69,7 +69,7 @@ const MEMORY_SEARCH_MODE_KEYS: Record<MemorySearchMode, { label: TranslationKey;
   vector: { label: 'memory_search.vector.label', hint: 'memory_search.vector.hint' },
 }
 
-export type SettingsAppearanceTone = 'night' | 'day' | 'warm-day'
+export type SettingsAppearanceTone = 'black' | 'night' | 'day' | 'warm-day'
 
 const THEME_TONE_BY_ID: Record<ThemeId, SettingsAppearanceTone> = {
   'nexus-default': 'day',
@@ -78,6 +78,7 @@ const THEME_TONE_BY_ID: Record<ThemeId, SettingsAppearanceTone> = {
   editorial: 'day',
   'system-day': 'day',
   'warm-day': 'warm-day',
+  'system-black': 'black',
   'system-dark': 'night',
 }
 
@@ -99,6 +100,7 @@ function buildAppearanceOption(
 }
 
 export const SETTINGS_APPEARANCE_OPTIONS = [
+  buildAppearanceOption('system-black', 'settings.appearance.black', 'black'),
   buildAppearanceOption('system-dark', 'settings.appearance.night', 'night'),
   buildAppearanceOption('system-day', 'settings.appearance.day', 'day'),
   buildAppearanceOption('warm-day', 'settings.appearance.warm_day', 'warm-day'),

@@ -59,6 +59,13 @@ passive in-app payload shape and integer TTL bounds
     const enPath = `docs/RELEASE-NOTES-v${version}.md`
     const zhPath = `docs/RELEASE-NOTES-v${version}.zh-CN.md`
 
+    const v045EnglishBoundary = version === '0.4.5'
+      ? 'stable entry point on v0.4.2\nRecorded local draft-hardening evidence\n'
+      : ''
+    const v045ChineseBoundary = version === '0.4.5'
+      ? '稳定入口继续停留在 v0.4.2\n本地硬化证据\n'
+      : ''
+
     writeFileSync(join(root, enPath), overrides[enPath] ?? `
 # Nexus v${version}
 Status: Draft
@@ -66,6 +73,7 @@ Do not publish until Klein explicitly asks.
 No package version bump
 No tag or GitHub Release
 No README stable-entry switch
+${v045EnglishBoundary}
 `)
     writeFileSync(join(root, zhPath), overrides[zhPath] ?? `
 # Nexus v${version}
@@ -74,6 +82,7 @@ No README stable-entry switch
 不改 package 版本号
 不打 tag，不创建 GitHub Release
 不切换 README 稳定版入口
+${v045ChineseBoundary}
 `)
   }
 
@@ -92,7 +101,10 @@ integer TTL bounds
 no package version bump past the active stable, no future-draft tag, no future-draft GitHub Release, and no README stable-entry switch past \`v0.4.2\`
 `,
     'CHANGELOG.md': `
+v0.4.3 user-facing transparency draft
 v0.4.5 release hardening draft
+v0.4.5 draft hardening evidence
+full v0.4 draft-stack audit
 keeps package version, tag, GitHub Release, and README stable-entry state unchanged
 `,
     'docs/RELEASE-CANDIDATE-v0.4-HARDENING.md': 'RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md',
@@ -109,6 +121,16 @@ v0.4.5 -> v0.4.2-v0.4.4
 npm run v04:draft-stack:audit
 npm run verify:release
 npm run package:dir:smoke
+## Evidence Collected
+npm run v04:draft-stack:audit\` — passed locally
+npm run verify:release\` — passed locally
+2511 tests
+SQLite smoke passed
+core-path smoke passed
+npm run package:dir:smoke\` — passed locally
+packaged app loaded successfully
+git diff --check\` — passed locally
+Temporary smoke artifacts such as \`release-smoke\` and \`output/core-path-smoke\` were removed after verification
 `,
   }
 
@@ -189,6 +211,33 @@ passive in-app payload shape and integer TTL bounds
 `,
       missingPhrase: '被动 in-app payload 结构和整数 TTL 边界',
     },
+    {
+      file: 'docs/RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md',
+      text: `
+Status: Draft hardening handoff; not a release.
+No package version bump
+No tag
+No GitHub Release
+No README stable-entry switch
+v0.4.1 -> v0.4.0
+v0.4.3 -> v0.4.2
+v0.4.4 -> v0.4.3
+v0.4.5 -> v0.4.2-v0.4.4
+npm run v04:draft-stack:audit
+npm run verify:release
+npm run package:dir:smoke
+`,
+      missingPhrase: '## Evidence Collected',
+    },
+    {
+      file: 'CHANGELOG.md',
+      text: `
+v0.4.5 release hardening draft
+keeps package version, tag, GitHub Release, and README stable-entry state unchanged
+No unreleased changes yet.
+`,
+      missingPhrase: 'v0.4.3 user-facing transparency draft',
+    },
   ]
 
   for (const item of cases) {
@@ -201,6 +250,40 @@ passive in-app payload shape and integer TTL bounds
     assert.equal(report.summary.ok, false, `${item.file} should fail the full audit`)
     assert.ok(missingPhrases.includes(item.missingPhrase), `${item.file} should report ${item.missingPhrase}`)
   }
+})
+
+test('v0.4 draft stack audit rejects stale v0.4.5 stable-entry release notes', (t) => {
+  const root = writeFullAuditFixtureRoot({
+    'docs/RELEASE-NOTES-v0.4.5.md': `
+# Nexus v0.4.5
+Status: Draft
+Do not publish until Klein explicitly asks.
+No package version bump
+No tag or GitHub Release
+No README stable-entry switch
+Kept the stable entry point on v0.4.1 while documenting v0.4.2 through v0.4.5 as draft-only review layers.
+`,
+    'docs/RELEASE-NOTES-v0.4.5.zh-CN.md': `
+# Nexus v0.4.5
+状态：草稿
+不要发布
+不改 package 版本号
+不打 tag，不创建 GitHub Release
+不切换 README 稳定版入口
+稳定入口继续停留在 v0.4.1，同时把 v0.4.2 到 v0.4.5 明确标为草稿评审层。
+`,
+  })
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+
+  const report = buildV04DraftStackReport(root)
+  const missingPhrases = report.errors.missingPhrases.map((entry) => entry.phrase)
+  const forbiddenLabels = report.errors.forbiddenPhrases.map((entry) => entry.phrase)
+
+  assert.equal(report.summary.ok, false)
+  assert.ok(missingPhrases.includes('stable entry point on v0.4.2'))
+  assert.ok(missingPhrases.includes('稳定入口继续停留在 v0.4.2'))
+  assert.ok(forbiddenLabels.includes('v0.4.5 release notes must not point the stable entry back to v0.4.1'))
+  assert.ok(forbiddenLabels.includes('v0.4.5 localized release notes must not point the stable entry back to v0.4.1'))
 })
 
 test('v0.4 draft stack audit rejects old v0.3 release-note links in public readmes', (t) => {

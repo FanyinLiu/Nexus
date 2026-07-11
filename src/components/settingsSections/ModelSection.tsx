@@ -37,6 +37,7 @@ import togetherLogo from '../../assets/provider-logos/together.svg'
 import veniceLogo from '../../assets/provider-logos/venice.svg'
 import xaiLogo from '../../assets/provider-logos/xai.svg'
 import zaiLogo from '../../assets/provider-logos/zai.svg'
+import { SettingsSegmentedControl, SettingsToggle } from '../settingsFields'
 import { UrlInput } from './UrlInput'
 
 type ModelProviderBrand = {
@@ -274,29 +275,15 @@ export const ModelSection = memo(function ModelSection({
             </div>
           </div>
 
-          <div className="onboarding-region-tabs" role="group" aria-label={ti('onboarding.text.region_filter_label')}>
-            {MODEL_PROVIDER_REGION_TABS.map((tab) => (
-              <button
-                key={tab.region}
-                type="button"
-                className={`onboarding-region-tabs__tab${activeRegion === tab.region ? ' is-active' : ''}`}
-                aria-pressed={activeRegion === tab.region}
-                onClick={() => setRegionOverride({ providerId: draft.apiProviderId, region: tab.region })}
-                onKeyDown={(e) => {
-                  const btns = Array.from(e.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>('button'))
-                  const i = btns.indexOf(e.currentTarget)
-                  let next = -1
-                  if (e.key === 'ArrowRight') next = (i + 1) % btns.length
-                  else if (e.key === 'ArrowLeft') next = (i - 1 + btns.length) % btns.length
-                  else if (e.key === 'Home') next = 0
-                  else if (e.key === 'End') next = btns.length - 1
-                  if (next >= 0) { e.preventDefault(); btns[next].focus() }
-                }}
-              >
-                {ti(tab.labelKey)}
-              </button>
-            ))}
-          </div>
+          <SettingsSegmentedControl
+            label={ti('onboarding.text.region_filter_label')}
+            value={activeRegion}
+            options={MODEL_PROVIDER_REGION_TABS.map((tab) => ({
+              value: tab.region,
+              label: ti(tab.labelKey),
+            }))}
+            onChange={(region) => setRegionOverride({ providerId: draft.apiProviderId, region })}
+          />
 
           <div className="settings-model-source-grid">
             {regionBrands.map((brand) => {
@@ -504,19 +491,12 @@ export const ModelSection = memo(function ModelSection({
                 </p>
 
                 <div className="settings-control-card settings-model-advanced__control">
-                  <label className="settings-toggle">
-                    <span>{ti('settings.model.failover_toggle')}</span>
-                    <input
-                      type="checkbox"
-                      checked={draft.chatFailoverEnabled}
-                      onChange={(event) =>
-                        setDraft((prev) => ({
-                          ...prev,
-                          chatFailoverEnabled: event.target.checked,
-                        }))
-                      }
-                    />
-                  </label>
+                  <SettingsToggle
+                    label={ti('settings.model.failover_toggle')}
+                    checked={draft.chatFailoverEnabled}
+                    onChange={(checked) =>
+                      setDraft((prev) => ({ ...prev, chatFailoverEnabled: checked }))}
+                  />
                   <p>{ti('settings.model.failover_hint')}</p>
                 </div>
 
@@ -527,19 +507,12 @@ export const ModelSection = memo(function ModelSection({
                 />
 
                 <div className="settings-control-card settings-model-advanced__control">
-                  <label className="settings-toggle">
-                    <span>{ti('settings.model.smart_routing_toggle')}</span>
-                    <input
-                      type="checkbox"
-                      checked={draft.smartModelRoutingEnabled}
-                      onChange={(event) =>
-                        setDraft((prev) => ({
-                          ...prev,
-                          smartModelRoutingEnabled: event.target.checked,
-                        }))
-                      }
-                    />
-                  </label>
+                  <SettingsToggle
+                    label={ti('settings.model.smart_routing_toggle')}
+                    checked={draft.smartModelRoutingEnabled}
+                    onChange={(checked) =>
+                      setDraft((prev) => ({ ...prev, smartModelRoutingEnabled: checked }))}
+                  />
                   <p>{ti('settings.model.smart_routing_hint')}</p>
                 </div>
 
@@ -626,19 +599,12 @@ export const ModelSection = memo(function ModelSection({
                 </div>
 
                 <div className="settings-control-card settings-model-advanced__control">
-                  <label className="settings-toggle">
-                    <span>{ti('settings.model.budget_hard_stop')}</span>
-                    <input
-                      type="checkbox"
-                      checked={draft.budgetHardStopEnabled}
-                      onChange={(event) =>
-                        setDraft((prev) => ({
-                          ...prev,
-                          budgetHardStopEnabled: event.target.checked,
-                        }))
-                      }
-                    />
-                  </label>
+                  <SettingsToggle
+                    label={ti('settings.model.budget_hard_stop')}
+                    checked={draft.budgetHardStopEnabled}
+                    onChange={(checked) =>
+                      setDraft((prev) => ({ ...prev, budgetHardStopEnabled: checked }))}
+                  />
                 </div>
               </div>
             </details>

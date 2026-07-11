@@ -16,13 +16,20 @@ test('IPC contract audit inventories the current preload and main handler surfac
 
   assert.equal(report.schemaVersion, 1)
   assert.equal(summary.errors, 0)
-  assert.equal(report.counts.preloadInvokeChannels, 183)
-  assert.equal(report.counts.mainHandlerChannels, 183)
+  assert.equal(report.counts.preloadInvokeChannels, 194)
+  assert.equal(report.counts.mainHandlerChannels, 194)
   assert.equal(report.counts.preloadSubscriptionChannels, 17)
   assert.equal(report.errors.missingHandlers.length, 0)
   assert.equal(report.errors.duplicateHandlers.length, 0)
   assert.equal(report.errors.missingTrustedSender.length, 0)
   assert.equal(report.errors.missingSubscriptionSources.length, 0)
+  assert.equal(report.errors.unclassifiedHighRiskCapabilities.length, 0)
+
+  const localDataChatSessionsRead = findChannel(report, 'local-data:chat-sessions-read')
+  assert.equal(localDataChatSessionsRead?.riskLevel, 'low')
+  assert.equal(localDataChatSessionsRead?.rendererPayload, false)
+  assert.equal(localDataChatSessionsRead?.channelCapability, 'panel')
+  assert.equal(localDataChatSessionsRead?.trustedSender, true)
 
   const localDataStatus = findChannel(report, 'local-data:status')
   assert.equal(localDataStatus?.riskLevel, 'low')
@@ -77,6 +84,53 @@ test('IPC contract audit inventories the current preload and main handler surfac
   assert.equal(localDataChatMigrationRollback?.trustedSender, true)
   assert.equal(localDataChatMigrationRollback?.auditLogged, true)
   assert.equal(localDataChatMigrationRollback?.permissionHint, true)
+
+  const localDataMemoryMigrationApply = findChannel(report, 'local-data:memory-migration-apply')
+  assert.equal(localDataMemoryMigrationApply?.riskLevel, 'high')
+  assert.equal(localDataMemoryMigrationApply?.riskDomain, 'local-user-data')
+  assert.equal(localDataMemoryMigrationApply?.rendererPayload, true)
+  assert.equal(localDataMemoryMigrationApply?.payloadValidation, 'schema')
+  assert.equal(localDataMemoryMigrationApply?.trustedSender, true)
+  assert.equal(localDataMemoryMigrationApply?.auditLogged, true)
+  assert.equal(localDataMemoryMigrationApply?.permissionHint, true)
+
+  const localDataMemoryRead = findChannel(report, 'local-data:memory-read')
+  assert.equal(localDataMemoryRead?.riskLevel, 'medium')
+  assert.equal(localDataMemoryRead?.riskDomain, 'local-user-data')
+  assert.equal(localDataMemoryRead?.rendererPayload, false)
+  assert.equal(localDataMemoryRead?.channelCapability, 'panel')
+  assert.equal(localDataMemoryRead?.trustedSender, true)
+
+  const localDataCompanionStatus = findChannel(report, 'local-data:companion-migration-status')
+  assert.equal(localDataCompanionStatus?.riskLevel, 'medium')
+  assert.equal(localDataCompanionStatus?.riskDomain, 'local-user-data')
+  assert.equal(localDataCompanionStatus?.rendererPayload, false)
+  assert.equal(localDataCompanionStatus?.channelCapability, 'shared')
+  assert.equal(localDataCompanionStatus?.trustedSender, true)
+
+  const localDataCompanionRead = findChannel(report, 'local-data:companion-read')
+  assert.equal(localDataCompanionRead?.riskLevel, 'medium')
+  assert.equal(localDataCompanionRead?.riskDomain, 'local-user-data')
+  assert.equal(localDataCompanionRead?.rendererPayload, false)
+  assert.equal(localDataCompanionRead?.channelCapability, 'panel')
+  assert.equal(localDataCompanionRead?.trustedSender, true)
+
+  for (const channel of [
+    'local-data:companion-comparison-preview',
+    'local-data:companion-dataset-mirror',
+    'local-data:companion-migration-apply',
+    'local-data:companion-migration-rollback',
+  ]) {
+    const item = findChannel(report, channel)
+    assert.equal(item?.riskLevel, 'high')
+    assert.equal(item?.riskDomain, 'local-user-data')
+    assert.equal(item?.rendererPayload, true)
+    assert.equal(item?.payloadValidation, 'schema')
+    assert.equal(item?.channelCapability, 'panel')
+    assert.equal(item?.trustedSender, true)
+    assert.equal(item?.auditLogged, true)
+    assert.equal(item?.permissionHint, true)
+  }
 })
 
 test('IPC contract audit classifies high-risk channels without reading secret values', () => {
@@ -96,6 +150,11 @@ test('IPC contract audit classifies high-risk channels without reading secret va
     'local-data:chat-session-mirror',
     'local-data:chat-migration-apply',
     'local-data:chat-migration-rollback',
+    'local-data:memory-migration-apply',
+    'local-data:memory-migration-rollback',
+    'local-data:companion-dataset-mirror',
+    'local-data:companion-migration-apply',
+    'local-data:companion-migration-rollback',
     'vts-bridge:migrate-legacy-token',
   ]) {
     assert.ok(highRiskChannels.includes(channel), `${channel} should be high risk`)

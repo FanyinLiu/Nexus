@@ -2,6 +2,7 @@ import type { ChatSession } from './chatSessions.ts'
 import { normalizeChatMessagesForStorage } from './chat.ts'
 
 export const CHAT_LOCAL_DATA_RUNTIME_MIRROR_CONSENT_KEY = 'nexus:chat:local-data-runtime-mirror-consent'
+export const CHAT_LOCAL_DATA_AUTHORITY_CONSENT_KEY = 'nexus:chat:local-data-authority-consent'
 
 type ChatLocalDataRuntimeMirrorMessage = {
   id: string
@@ -65,6 +66,61 @@ export function setChatLocalDataRuntimeMirrorConsent(enabled: boolean): void {
 
 export function isChatLocalDataRuntimeMirrorActive(): boolean {
   return isChatLocalDataRuntimeMirrorFeatureEnabled() && getChatLocalDataRuntimeMirrorConsent()
+}
+
+export function isChatLocalDataAuthorityFeatureEnabled(): boolean {
+  return import.meta.env?.VITE_NEXUS_ENABLE_LOCAL_DATA_CHAT_AUTHORITY === '1'
+}
+
+export function getChatLocalDataAuthorityConsent(): boolean {
+  return getStorage()?.getItem(CHAT_LOCAL_DATA_AUTHORITY_CONSENT_KEY) === '1'
+}
+
+export function setChatLocalDataAuthorityConsent(enabled: boolean): void {
+  const storage = getStorage()
+  if (!storage) return
+  if (enabled) {
+    storage.setItem(CHAT_LOCAL_DATA_AUTHORITY_CONSENT_KEY, '1')
+  } else {
+    storage.removeItem(CHAT_LOCAL_DATA_AUTHORITY_CONSENT_KEY)
+  }
+}
+
+export function isChatLocalDataAuthorityActive(): boolean {
+  return isChatLocalDataAuthorityFeatureEnabled()
+    && getChatLocalDataRuntimeMirrorConsent()
+    && getChatLocalDataAuthorityConsent()
+}
+
+export type ChatLocalDataAuthorityReadResult = {
+  attempted: boolean
+  sessions: ChatLocalDataRuntimeMirrorSession[] | null
+  reason: string | null
+}
+
+export async function readChatSessionsFromLocalData(): Promise<ChatLocalDataAuthorityReadResult> {
+  if (!isChatLocalDataAuthorityActive()) {
+    return { attempted: false, sessions: null, reason: 'chat-authority-disabled' }
+  }
+
+  const readSessions = window.desktopPet?.localDataReadChatSessions
+  if (typeof readSessions !== 'function') {
+    return { attempted: false, sessions: null, reason: 'chat-authority-bridge-unavailable' }
+  }
+
+  try {
+    const result = await readSessions()
+    if (!result.ok) {
+      return { attempted: true, sessions: null, reason: result.errorKind || result.errorMessage || 'chat-authority-read-failed' }
+    }
+    return {
+      attempted: true,
+      sessions: result.sessions,
+      reason: null,
+    }
+  } catch {
+    return { attempted: true, sessions: null, reason: 'chat-authority-read-failed' }
+  }
 }
 
 export function buildChatLocalDataRuntimeMirrorSession(session: ChatSession): ChatLocalDataRuntimeMirrorSession {

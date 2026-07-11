@@ -106,7 +106,13 @@ export type VoiceSessionEvent = VoiceBusEvent
 // executor.
 
 export type VoiceSessionEffect =
-  | { type: 'restart_voice'; delay: number }
+  | {
+      type: 'restart_voice'
+      delay: number
+      force?: boolean
+      statusText?: string
+      restartReason?: string
+    }
   | { type: 'set_mood'; mood: PetMood }
   | { type: 'show_status'; message: string; duration: number }
   | {
@@ -145,7 +151,7 @@ export type VoicePhase = 'idle' | 'listening' | 'transcribing' | 'speaking'
 // look like it's speaking. These two states exist for the reducer to reason
 // about, not for the UI to render.
 
-export const INTERNAL_TO_BUS_PHASE = {
+const INTERNAL_TO_BUS_PHASE = {
   [VoiceSessionStates.DISABLED]: 'idle',
   [VoiceSessionStates.IDLE]: 'idle',
   [VoiceSessionStates.ARMING_WAKEWORD]: 'idle',
@@ -176,7 +182,7 @@ export function toBusPhase(internal: VoiceSessionStateName): VoicePhase {
 // forces every internal state key to appear. Adding a new internal state
 // without updating this table is a compile error.
 
-export const INTERNAL_TO_UI_PHASE = {
+const INTERNAL_TO_UI_PHASE = {
   [VoiceSessionStates.DISABLED]: 'idle',
   [VoiceSessionStates.IDLE]: 'idle',
   [VoiceSessionStates.ARMING_WAKEWORD]: 'idle',

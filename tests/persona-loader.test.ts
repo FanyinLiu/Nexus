@@ -4,17 +4,15 @@ import { readFile } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import {
-  loadPersona,
-  parseExamplesMarkdown,
-  type FileReader,
-} from '../src/features/autonomy/v2/personaLoader.ts'
+import { loadPersonaProfileFromReader } from '../electron/services/personaProfileLoader.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(__dirname, '..')
 const XINGHUI_SEED_DIR = join(REPO_ROOT, 'src/features/autonomy/v2/personas/xinghui')
 
-function makeFsReader(rootDir: string): FileReader {
+type PersonaFileReader = (relativePath: string) => Promise<string | null>
+
+function makeFsReader(rootDir: string): PersonaFileReader {
   return async (relative) => {
     try {
       return await readFile(join(rootDir, relative), 'utf8')
@@ -25,30 +23,37 @@ function makeFsReader(rootDir: string): FileReader {
   }
 }
 
-function makeMapReader(files: Record<string, string>): FileReader {
+function makeMapReader(files: Record<string, string>): PersonaFileReader {
   return async (relative) => files[relative] ?? null
 }
 
-// ── parseExamplesMarkdown ────────────────────────────────────────────────
+async function loadExamples(raw: string) {
+  const loaded = await loadPersonaProfileFromReader({
+    id: 'examples',
+    rootDir: '/examples',
+    read: makeMapReader({ 'examples.md': raw }),
+  })
+  return loaded.examples
+}
 
-test('parseExamplesMarkdown returns [] for empty input', () => {
-  assert.deepEqual(parseExamplesMarkdown(''), [])
-  assert.deepEqual(parseExamplesMarkdown('\n\n  \n'), [])
+test('persona profile loader returns [] for empty examples input', async () => {
+  assert.deepEqual(await loadExamples(''), [])
+  assert.deepEqual(await loadExamples('\n\n  \n'), [])
 })
 
-test('parseExamplesMarkdown pairs adjacent User / Assistant turns', () => {
+test('persona profile loader pairs adjacent User / Assistant example turns', async () => {
   const md = `
 ### morning
 User: 早
 Assistant: 醒啦。
 `
-  const examples = parseExamplesMarkdown(md)
+  const examples = await loadExamples(md)
   assert.equal(examples.length, 1)
   assert.equal(examples[0].user, '早')
   assert.equal(examples[0].assistant, '醒啦。')
 })
 
-test('parseExamplesMarkdown accepts Chinese markers (用户/助手) and multi-line content', () => {
+test('persona profile loader accepts Chinese markers and multi-line example content', async () => {
   const md = `
 ### ex
 用户: 帮我看下
@@ -56,24 +61,24 @@ test('parseExamplesMarkdown accepts Chinese markers (用户/助手) and multi-li
 助手: 好
 第二行
 `
-  const examples = parseExamplesMarkdown(md)
+  const examples = await loadExamples(md)
   assert.equal(examples.length, 1)
   assert.equal(examples[0].user, '帮我看下\n这段代码')
   assert.equal(examples[0].assistant, '好\n第二行')
 })
 
-test('parseExamplesMarkdown drops an unpaired user turn', () => {
+test('persona profile loader drops an unpaired user example turn', async () => {
   const md = `
 User: hanging
 User: first
 Assistant: matched
 `
-  const examples = parseExamplesMarkdown(md)
+  const examples = await loadExamples(md)
   assert.equal(examples.length, 1)
   assert.equal(examples[0].user, 'first')
 })
 
-test('parseExamplesMarkdown handles headers as turn separators', () => {
+test('persona profile loader handles headers as example turn separators', async () => {
   const md = `
 ### a
 User: u1
@@ -83,7 +88,7 @@ Assistant: a1
 User: u2
 Assistant: a2
 `
-  const examples = parseExamplesMarkdown(md)
+  const examples = await loadExamples(md)
   assert.equal(examples.length, 2)
   assert.equal(examples[0].user, 'u1')
   assert.equal(examples[1].assistant, 'a2')
@@ -91,8 +96,8 @@ Assistant: a2
 
 // ── loadPersona: missing files ──────────────────────────────────────────
 
-test('loadPersona on a completely empty dir returns present=false', async () => {
-  const loaded = await loadPersona({
+test('persona profile loader on a completely empty dir returns present=false', async () => {
+  const loaded = await loadPersonaProfileFromReader({
     id: 'empty',
     rootDir: '/nowhere',
     read: async () => null,
@@ -105,8 +110,8 @@ test('loadPersona on a completely empty dir returns present=false', async () => 
   assert.deepEqual(loaded.examples, [])
 })
 
-test('loadPersona with only soul.md sets present=true and leaves other fields empty', async () => {
-  const loaded = await loadPersona({
+test('persona profile loader with only soul.md sets present=true and leaves other fields empty', async () => {
+  const loaded = await loadPersonaProfileFromReader({
     id: 'partial',
     rootDir: '/partial',
     read: makeMapReader({ 'soul.md': '# only the soul\n' }),
@@ -118,8 +123,8 @@ test('loadPersona with only soul.md sets present=true and leaves other fields em
   assert.deepEqual(loaded.voice, {})
 })
 
-test('loadPersona gracefully recovers from malformed JSON', async () => {
-  const loaded = await loadPersona({
+test('persona profile loader gracefully recovers from malformed JSON', async () => {
+  const loaded = await loadPersonaProfileFromReader({
     id: 'broken',
     rootDir: '/broken',
     read: makeMapReader({
@@ -138,8 +143,8 @@ test('loadPersona gracefully recovers from malformed JSON', async () => {
 
 // ── loadPersona: real Xinghui seed files ────────────────────────────────
 
-test('loadPersona loads the bundled Xinghui seed profile end-to-end', async () => {
-  const loaded = await loadPersona({
+test('persona profile loader loads the bundled Xinghui seed profile end-to-end', async () => {
+  const loaded = await loadPersonaProfileFromReader({
     id: 'xinghui',
     rootDir: XINGHUI_SEED_DIR,
     read: makeFsReader(XINGHUI_SEED_DIR),

@@ -21,6 +21,7 @@ import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
 import { useDesktopContext } from '../../hooks/useDesktopContext'
 import { useGameIntegration } from '../../hooks/useGameIntegration'
 import { useMemory } from '../../hooks/useMemory'
+import { useCompanionLocalDataAuthority } from '../../hooks/useCompanionLocalDataAuthority.ts'
 import { usePetBehavior } from '../../hooks/usePetBehavior'
 import { useVoice } from '../../hooks/useVoice'
 import { useReminderController } from './useReminderController'
@@ -57,6 +58,7 @@ type ReminderTaskStore = ReturnType<typeof useReminderTaskStore>
 export function useAppController() {
   const [view, setView] = useState<WindowView>(() => getWindowViewSync())
   const [settings, setSettings] = useState<AppSettings>(() => getSettingsSnapshot())
+  useCompanionLocalDataAuthority()
 
   const [panelWindowState, setPanelWindowState] = useState<PanelWindowState>({ collapsed: false })
   const [isPinned, setIsPinned] = useState(() => loadPetWindowPreferences().isPinned)
@@ -132,7 +134,7 @@ export function useAppController() {
   const reminderTaskStore = useReminderTaskStore()
   const debugConsole = useDebugConsole()
   const memory = useMemory({ settings })
-  const desktopContext = useDesktopContext({ settingsRef, platformProfileRef })
+  const desktopContext = useDesktopContext({ settingsRef, platformProfileRef, isActiveChatSessionRef: busyRef })
   useGameIntegration({ settingsRef })
   const pet = usePetBehavior({
     settingsRef,

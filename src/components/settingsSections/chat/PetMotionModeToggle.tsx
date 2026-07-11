@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { TranslationKey, TranslationParams } from '../../../types/i18n'
+import { SettingsToggle } from '../../settingsFields'
 
 type PetMotionModeToggleProps = {
   isSpriteAvatar: boolean
@@ -37,19 +38,15 @@ export function PetMotionModeToggle({ isSpriteAvatar, ti }: PetMotionModeToggleP
   return (
     <div className="settings-mini-group">
       <div className="settings-control-card settings-chat-advanced-control">
-        <label className="settings-toggle">
-          <span>{ti('settings.pet.free_mode')}</span>
-          <input
-            type="checkbox"
-            checked={freeMode === true}
-            disabled={freeMode === null}
-            onChange={(event) => {
-              const next = event.target.checked
-              setFreeMode(next)
-              window.desktopPet?.setPetFreeMode?.(next)?.catch(() => undefined)
-            }}
-          />
-        </label>
+        <SettingsToggle
+          label={ti('settings.pet.free_mode')}
+          checked={freeMode === true}
+          disabled={freeMode === null}
+          onChange={(next) => {
+            setFreeMode(next)
+            window.desktopPet?.setPetFreeMode?.(next)?.catch(() => undefined)
+          }}
+        />
         <p className="settings-drawer__hint">{ti('settings.pet.free_mode_hint')}</p>
       </div>
     </div>

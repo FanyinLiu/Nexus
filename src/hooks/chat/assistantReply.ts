@@ -163,9 +163,8 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
     } = options
 
     logVoiceEvent('sending message to assistant', {
-      traceId: traceId || undefined,
       source,
-      content,
+      contentLength: content.length,
       provider: currentSettings.apiProviderId,
       model: currentSettings.model,
     })
@@ -458,9 +457,8 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       }
 
       logVoiceEvent('assistant reply received', {
-        traceId: traceId || undefined,
         source,
-        preview: shorten(response.response.content, 40),
+        responseLength: response.response.content.length,
       })
 
       // Pass full message history (joined) as input text so contextMeter token
@@ -539,9 +537,8 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
 
       if (!isLatestTurn()) {
         logVoiceEvent('assistant reply ignored because a newer turn is active', {
-          traceId: traceId || undefined,
           source,
-          turnId,
+          turnPresent: Boolean(turnId),
         })
         return false
       }
@@ -665,9 +662,8 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
           if (!ttsWaitTimedOut && !streamingSpeechController.hasStarted()) {
             shouldFallbackToDirectSpeech = true
             logVoiceEvent('streaming speech finished without playback, falling back to direct speech', {
-              traceId: traceId || undefined,
               source,
-              preview: shorten(assistantSpeechOutput, 40),
+              speechLength: assistantSpeechOutput.length,
             })
           }
         } catch (speechError) {
@@ -683,9 +679,8 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
             } else {
               shouldFallbackToDirectSpeech = true
               logVoiceEvent('streaming speech failed before playback, falling back to direct speech', {
-                traceId: traceId || undefined,
                 source,
-                error: getSpeechOutputErrorMessage(speechError),
+                errorPresent: Boolean(getSpeechOutputErrorMessage(speechError)),
               })
             }
           } else {
@@ -779,9 +774,8 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       }
       const friendlyMessage = humanizeError(caught, 'chat')
       logVoiceEvent('assistant reply failed', {
-        traceId: traceId || undefined,
         source,
-        error: errorMessage,
+        errorPresent: Boolean(errorMessage),
       })
       // Streaming controller would otherwise sit in `finishRequested=false`
       // forever — its onEnd never fires, the upstream voiceSessionMachine

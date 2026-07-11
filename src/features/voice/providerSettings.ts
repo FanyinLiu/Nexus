@@ -22,7 +22,7 @@ import {
   type SpeechModelOption,
   type SpeechOutputAdjustmentSupport,
   type SpeechStyleOption,
-} from '../../lib/providerCatalog.ts'
+} from '../../lib/speechProviderCatalog.ts'
 import type {
   AppSettings,
   ServiceConnectionRequest,

@@ -21,6 +21,23 @@ export const defaultThemeTokens: ThemeTokens = {
   shadowAccent: 'rgba(168, 139, 255, 0.14)',
 }
 
+export const systemBlackThemeTokens: ThemeTokens = {
+  surface: '#0b0c0e',
+  surfaceMuted: '#111216',
+  surfaceGlass: 'rgba(11, 12, 14, 0.86)',
+  surfaceElevated: '#17181c',
+  textPrimary: '#f3f4f6',
+  textMuted: '#a3a8b1',
+  textSoft: '#6f747d',
+  accent: '#6f9cff',
+  accentSoft: 'rgba(111, 156, 255, 0.18)',
+  accentHover: '#8bb0ff',
+  border: 'rgba(255, 255, 255, 0.12)',
+  borderStrong: 'rgba(255, 255, 255, 0.2)',
+  shadow: 'rgba(0, 0, 0, 0.42)',
+  shadowAccent: 'rgba(111, 156, 255, 0.16)',
+}
+
 // system-dark — neutral dark surfaces, same violet accent.
 export const systemDarkThemeTokens: ThemeTokens = {
   surface: 'rgba(30, 24, 34, 0.96)',

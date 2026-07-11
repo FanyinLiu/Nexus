@@ -12,13 +12,14 @@ import './styles/settings-chat-final.css'
 import './styles/settings-chat-role-final.css'
 import './styles/settings-visual-system.css'
 import './styles/settings-visibility-final.css'
+import './styles/settings-product-reference-final.css'
 `
 
-test('settings style import order accepts the final visibility layer last', () => {
+test('settings style import order accepts the product reference layer last', () => {
   assert.deepEqual(findSettingsStyleImportOrderIssues(orderedEntry), [])
 })
 
-test('settings style import order rejects later settings layers after visibility final', () => {
+test('settings style import order rejects later settings layers after product reference final', () => {
   const report = findSettingsStyleImportOrderIssues(`
 import './styles/settings.css'
 import './styles/settings-home.css'
@@ -26,6 +27,7 @@ import './styles/settings-themes.css'
 import './styles/settings-chat-aligned.css'
 import './styles/settings-chat-final.css'
 import './styles/settings-visibility-final.css'
+import './styles/settings-product-reference-final.css'
 import './styles/settings-visual-system.css'
 import './styles/settings-chat-role-final.css'
 `)

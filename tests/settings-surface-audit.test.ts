@@ -41,9 +41,11 @@ test('settings surface audit passes the protected settings contract', () => {
     assert.equal(report.summary.errors, 0)
     assert.equal(report.privacy.staticSourceOnly, true)
     assert.deepEqual(report.duplicateContractPatterns, [])
+    assert.deepEqual(report.visualSystemCoverageIssues, [])
     assert.ok(report.settingsDom.trustGroupOccurrences >= 1)
     assert.ok(report.settingsDom.trustTraceOccurrences >= 5)
     assert.ok(report.settingsDom.focusVisibleOccurrences >= 3)
+    assert.ok(report.settingsDom.visualSystemFamilies >= 6)
   })
 })
 
@@ -62,6 +64,24 @@ test('settings surface audit detects duplicate contract patterns', () => {
     file: 'src/app/styles/settings.css',
     repeatedPatterns: ['.settings-drawer'],
   }])
+})
+
+test('settings surface audit rejects incomplete visual-system family coverage', () => {
+  withFixture({
+    'src/app/styles/settings-visual-system.css': BASELINE_FILES['src/app/styles/settings-visual-system.css'].replace(
+      '.sd-section .sda',
+      '.settings-drawer.settings-drawer--section .settings-drawer__footer-actions',
+    ),
+    'src/app/styles/settings-visibility-final.css': BASELINE_FILES['src/app/styles/settings-visibility-final.css'].replace(
+      '.sd-section .sda',
+      '.settings-drawer.settings-drawer--section .settings-drawer__footer-actions',
+    ),
+  }, (root) => {
+    const report = buildSettingsSurfaceReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(report.visualSystemCoverageIssues.some((item) => item.id === 'actions-and-dialogs'))
+  })
 })
 
 test('settings surface audit rejects missing trust-boundary groups', () => {
@@ -136,6 +156,19 @@ test('settings surface audit rejects the removed readability middle layer return
 
     assert.equal(report.summary.ok, false)
     assert.ok(report.forbiddenPatterns.some((item) => item.id === 'settings-visibility-old-readable-layer'))
+  })
+})
+
+test('settings surface audit rejects unreachable audit-only CSS anchors', () => {
+  withFixture({
+    'src/app/styles/settings-chat-final.css': `${BASELINE_FILES['src/app/styles/settings-chat-final.css']}
+.settings-chat-final-audit-anchor { min-height: 48px; }
+`,
+  }, (root) => {
+    const report = buildSettingsSurfaceReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(report.forbiddenPatterns.some((item) => item.id === 'settings-audit-only-css'))
   })
 })
 

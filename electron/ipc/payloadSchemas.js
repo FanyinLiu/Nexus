@@ -54,6 +54,12 @@ export {
   validateLocalDataChatMigrationApplyPayload,
   validateLocalDataChatMigrationRollbackPayload,
   validateLocalDataChatRuntimeMirrorPayload,
+  validateLocalDataMemoryMigrationApplyPayload,
+  validateLocalDataMemoryMigrationRollbackPayload,
+  validateLocalDataCompanionDatasetMirrorPayload,
+  validateLocalDataCompanionComparisonPayload,
+  validateLocalDataCompanionMigrationApplyPayload,
+  validateLocalDataCompanionMigrationRollbackPayload,
   validateLocalDataOnboardingMirrorPayload,
 } from './localDataPayloadSchemas.js'
 export {

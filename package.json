@@ -81,18 +81,27 @@
     "smoke:packaged": "node scripts/packaged-smoke.mjs",
     "package": "npm run package:win",
     "package:dir": "npm run build && electron-builder --dir",
-    "package:dir:smoke": "node -e \"require('fs').rmSync('release-smoke',{recursive:true,force:true})\" && npm run build && cross-env PACKAGED_SMOKE_RELEASE_DIR=release-smoke electron-builder --dir --publish never --config scripts/electron-builder.smoke.cjs && cross-env PACKAGED_SMOKE_RELEASE_DIR=release-smoke npm run smoke:packaged",
+    "package:dir:smoke": "node -e \"require('fs').rmSync('release-smoke',{recursive:true,force:true})\" && npm run build && cross-env PACKAGED_SMOKE_RELEASE_DIR=release-smoke electron-builder --dir --publish never --config scripts/electron-builder.smoke.cjs && cross-env PACKAGED_SMOKE_RELEASE_DIR=release-smoke npm run package:size:audit && cross-env PACKAGED_SMOKE_RELEASE_DIR=release-smoke npm run smoke:packaged",
     "prepackage:win": "node scripts/download-models.mjs --skip-asr",
     "package:win": "npm run build && electron-builder --win nsis",
     "prepackage:win:signed": "node scripts/download-models.mjs --skip-asr",
     "package:win:signed": "npm run build && electron-builder --win nsis",
-    "prepackage:mac": "node scripts/download-models.mjs --skip-asr",
+    "prepackage:mac": "node scripts/mac-release-preflight.mjs && node scripts/download-models.mjs --skip-asr",
     "package:mac": "npm run build && electron-builder --mac",
     "prepackage:linux": "node scripts/download-models.mjs --skip-asr",
     "package:linux": "npm run build && electron-builder --linux",
-    "verify:pr": "tsc -b --force && npm run lint && npm test && npm run build && npm run storage:audit && npm run heavy:audit && npm run architecture:audit && npm run source-size:audit && npm run v04:ui-route:audit && npm run ui:references:audit && npm run composer:surface:audit && npm run chat:surface:audit && npm run settings:surface:audit && npm run forms:surface:audit && npm run focus:surface:audit && npm run streaming:surface:audit && npm run agent-activity:surface:audit && npm run image4:color:audit && npm run image4:contract:check && npm run performance:baseline && npm run v04:draft-stack:audit:quick && npm run companion-boundary:audit && npm run message-privacy:audit && npm run desktop-context-privacy:audit && npm run vault-security:audit && npm run error-redaction:audit && npm run ipc:audit && npm run distribution:audit",
+    "verify:pr": "tsc -b --force && npm run typecheck:electron-security && npm run lint && npm run knip:check && npm run knip:production && npm run i18n:audit && npm test && npm run build && npm run storage:audit && npm run heavy:audit && npm run model:integrity:audit && npm run architecture:audit && npm run source-size:audit && npm run v04:ui-route:audit && npm run ui:references:audit && npm run composer:surface:audit && npm run chat:surface:audit && npm run settings:surface:audit && npm run settings:css:audit && npm run forms:surface:audit && npm run focus:surface:audit && npm run streaming:surface:audit && npm run agent-activity:surface:audit && npm run image4:color:audit && npm run image4:contract:check && npm run performance:baseline && npm run v04:draft-stack:audit:quick && npm run companion-boundary:audit && npm run message-privacy:audit && npm run desktop-context-privacy:audit && npm run vault-security:audit && npm run error-redaction:audit && npm run ipc:audit && npm run distribution:audit",
     "verify:release": "npm run verify:pr && npm run sqlite:smoke && npm run core-path:smoke:built",
-    "prerelease-check": "node scripts/prerelease-check.mjs"
+    "prerelease-check": "node scripts/prerelease-check.mjs",
+    "knip:check": "knip --no-progress --reporter compact --include files,dependencies,unlisted,binaries",
+    "knip:production": "knip --production --no-progress --reporter compact --include files,dependencies,unlisted,binaries",
+    "typecheck:electron-security": "tsc -p tsconfig.electron-security.json",
+    "model:integrity:audit": "node scripts/model-integrity-audit.mjs",
+    "package:size:audit": "node scripts/package-size-audit.mjs",
+    "settings:css:audit": "node scripts/settings-css-audit.mjs",
+    "settings:css:coverage": "node scripts/settings-css-coverage.mjs",
+    "settings:visual": "node scripts/settings-visual-regression.mjs",
+    "verify:ui-settings": "npx tsc -b --pretty false && npm run -s knip:check && npm run -s knip:production && npm run -s lint && npm run -s i18n:audit && npm test && npm run -s build && npm run -s settings:visual"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",
@@ -111,7 +120,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
-    "@stryker-mutator/core": "^9.6.1",
     "@tailwindcss/vite": "^4.2.4",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
@@ -130,7 +138,10 @@
     "tinybench": "^6.0.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.59.0",
-    "vite": "~8.0.9"
+    "vite": "~8.0.9",
+    "knip": "^6.25.0",
+    "playwright": "^1.61.1",
+    "postcss": "^8.5.15"
   },
   "overrides": {
     "axios": "^1.16.1",
@@ -159,7 +170,12 @@
       "scripts/send-message-webhook.mjs",
       "scripts/communication-adapters/**/*",
       "package.json",
-      "!node_modules/onnxruntime-node/bin/napi-v3/win32/arm64/**",
+      "!node_modules/onnxruntime-node/**",
+      "!node_modules/@huggingface/transformers/**",
+      "!node_modules/onnxruntime-web/**",
+      "!node_modules/protobufjs/**",
+      "!node_modules/tesseract.js/**",
+      "!node_modules/tesseract.js-core/**",
       "!**/*.map",
       "!**/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.*",
       "!**/onnxruntime-web/dist/ort-wasm-simd-threaded.jspi.*",
@@ -218,8 +234,8 @@
       "icon": "public/nexus-1024.png",
       "category": "public.app-category.utilities",
       "darkModeSupport": true,
-      "hardenedRuntime": false,
-      "gatekeeperAssess": false,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": true,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
@@ -250,7 +266,8 @@
           "from": "public/vendor/vad/silero_vad_v5.onnx",
           "to": "silero_vad_v5.onnx"
         }
-      ]
+      ],
+      "notarize": true
     },
     "linux": {
       "target": [
@@ -313,6 +330,17 @@
           "path": "/Applications"
         }
       ]
+    },
+    "forceCodeSigning": true,
+    "electronFuses": {
+      "resetAdHocDarwinSignature": true,
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "loadBrowserProcessSpecificV8Snapshot": false
     }
   }
 }

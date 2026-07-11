@@ -6,9 +6,16 @@
 
 ## [Unreleased]
 
-### Changed
+### Added
 
-- No unreleased changes yet.
+- **v0.4.3 user-facing transparency draft** — added Settings-facing companion
+  awareness transparency for recent coarse summaries, check-in rationale,
+  model-reach state, clear-state reasons, and a visible privacy boundary without
+  surfacing raw desktop content.
+- **v0.4.5 draft hardening evidence** — recorded local `verify:release`,
+  full v0.4 draft-stack audit, packaged smoke, and `git diff --check` evidence
+  while keeping package version, tag, GitHub Release, and README stable-entry
+  state unchanged.
 
 ## [0.4.2] - 2026-07-07
 
@@ -196,6 +203,11 @@
   legacy, and daily memory localStorage shapes so the next SQLite memory
   migration can be designed from counts, byte sizes, date ranges, and issue
   codes without exposing private memory text or writing storage.
+- **Confirmed memory migration foundation** — added a disabled-by-default,
+  confirmation-gated memory migration service that validates bounded content,
+  writes long-term and daily memory records transactionally into separate
+  SQLite domains, exposes panel-only status/readback IPC, records aggregate
+  audit metadata without memory text, and rolls back both domains together.
 
 ### Fixed
 - **Model setup preflight guidance** — first-run and settings connection tests

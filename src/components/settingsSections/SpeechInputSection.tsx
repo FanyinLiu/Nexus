@@ -12,7 +12,7 @@ import {
   isSpeechInputLocal,
   isVolcengineSpeechInputProvider,
 } from '../../lib/audioProviders'
-import { SPEECH_INPUT_PROVIDERS } from '../../lib/providerCatalog'
+import { SPEECH_INPUT_PROVIDERS } from '../../lib/speechProviderCatalog'
 import {
   switchSpeechInputProvider,
   updateCurrentSpeechInputProviderProfile,

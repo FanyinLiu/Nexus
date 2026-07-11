@@ -3,20 +3,22 @@
  *
  * Use this instead of `console.warn('[module]', ...)` sprinkles. Every
  * entry is captured into an in-memory ring (most recent 500 entries) so
- * bug reports can ship a `logs.jsonl` attachment with exact context.
+ * bug reports can ship a `logs.jsonl` attachment without private bodies.
  *
  * The console passthrough stays — developers still see logs live in
  * Chrome DevTools. The structured capture is additive.
  *
  * Usage:
  *   const log = createLogger('voice.vad')
- *   log.info('starting session', { sessionId, wakeword: true })
- *   log.warn('VAD detector unavailable — falling back', { error: err.message })
+ *   log.info('starting session', { triggerMode: 'wake_word' })
+ *   log.warn('VAD detector unavailable', { errorPresent: true })
  *
  * Export:
  *   const jsonl = exportLogs()                 // everything in the ring
  *   const voiceOnly = exportLogs({ module: /^voice/ })
  */
+
+import { redactSensitiveLogText } from './logRedaction.ts'
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -39,6 +41,20 @@ export interface Logger {
 }
 
 const RING_CAPACITY = 500
+const LOG_MESSAGE_MAX_LENGTH = 160
+const SAFE_STRING_META_KEYS = new Set([
+  'blocker',
+  'kind',
+  'mode',
+  'model',
+  'phase',
+  'provider',
+  'source',
+  'state',
+  'status',
+  'triggerMode',
+])
+const SAFE_SCALAR_META_KEY = /(?:available|bytes|configured|count|duration|enabled|index|length|ms|present|success|total|triggered)$/i
 const ring: LogEntry[] = []
 
 // Level gate — entries below this are not recorded OR printed. Configurable
@@ -59,39 +75,93 @@ export function getLogLevel(): LogLevel {
 // Optional console passthrough. Default on — developers want visibility.
 // Tests can disable to keep console output clean.
 let consolePassthrough = true
+let consoleOutput = {
+  debug: globalThis.console.debug.bind(globalThis.console),
+  info: globalThis.console.info.bind(globalThis.console),
+  warn: globalThis.console.warn.bind(globalThis.console),
+  error: globalThis.console.error.bind(globalThis.console),
+}
 
 export function setConsolePassthrough(enabled: boolean): void {
   consolePassthrough = enabled
 }
 
+function summarizePrivateValue(value: unknown): Record<string, unknown> {
+  if (typeof value === 'string') return { redacted: true, type: 'string', length: value.length }
+  if (Array.isArray(value)) return { redacted: true, type: 'array', length: value.length }
+  if (value instanceof Error) return { redacted: true, type: 'error', name: value.name }
+  if (value && typeof value === 'object') {
+    return { redacted: true, type: 'object', keyCount: Object.keys(value).length }
+  }
+  return { redacted: true, type: typeof value }
+}
+
+function sanitizeSafeScalar(value: unknown): unknown {
+  if (value == null || typeof value === 'boolean') return value
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value === 'string') {
+    return redactSensitiveLogText(value).replace(/\s+/g, ' ').slice(0, LOG_MESSAGE_MAX_LENGTH)
+  }
+  return summarizePrivateValue(value)
+}
+
+export function sanitizeLogMeta(meta?: Record<string, unknown>): Record<string, unknown> | undefined {
+  if (!meta) return undefined
+
+  const sanitized: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(meta)) {
+    if (value === undefined) continue
+    const allowsString = SAFE_STRING_META_KEYS.has(key)
+    const allowsScalar = allowsString || SAFE_SCALAR_META_KEY.test(key)
+    sanitized[key] = allowsScalar ? sanitizeSafeScalar(value) : summarizePrivateValue(value)
+  }
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined
+}
+
+function sanitizeLogMessage(message: string): string {
+  const normalized = redactSensitiveLogText(message).replace(/\s+/g, ' ').trim()
+  return (normalized || 'diagnostic event').slice(0, LOG_MESSAGE_MAX_LENGTH)
+}
+
+function sanitizeLogEntry(entry: LogEntry): LogEntry {
+  const meta = sanitizeLogMeta(entry.meta)
+  return {
+    ...entry,
+    module: entry.module.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || 'unknown',
+    message: sanitizeLogMessage(entry.message),
+    ...(meta ? { meta } : { meta: undefined }),
+  }
+}
+
 function pushEntry(entry: LogEntry): void {
   if (LEVEL_RANK[entry.level] < LEVEL_RANK[minLevel]) return
 
-  ring.push(entry)
+  const safeEntry = sanitizeLogEntry(entry)
+  ring.push(safeEntry)
   if (ring.length > RING_CAPACITY) {
     ring.shift()
   }
 
   if (!consolePassthrough) return
-  const prefix = `[${entry.module}]`
+  const prefix = `[${safeEntry.module}]`
   // Keep meta rendering cheap — structuredClone on every call bites at
   // scale. Print the object directly; devtools will expand on demand.
-  switch (entry.level) {
+  switch (safeEntry.level) {
     case 'debug':
-      if (entry.meta) console.debug(prefix, entry.message, entry.meta)
-      else console.debug(prefix, entry.message)
+      if (safeEntry.meta) consoleOutput.debug(prefix, safeEntry.message, safeEntry.meta)
+      else consoleOutput.debug(prefix, safeEntry.message)
       break
     case 'info':
-      if (entry.meta) console.info(prefix, entry.message, entry.meta)
-      else console.info(prefix, entry.message)
+      if (safeEntry.meta) consoleOutput.info(prefix, safeEntry.message, safeEntry.meta)
+      else consoleOutput.info(prefix, safeEntry.message)
       break
     case 'warn':
-      if (entry.meta) console.warn(prefix, entry.message, entry.meta)
-      else console.warn(prefix, entry.message)
+      if (safeEntry.meta) consoleOutput.warn(prefix, safeEntry.message, safeEntry.meta)
+      else consoleOutput.warn(prefix, safeEntry.message)
       break
     case 'error':
-      if (entry.meta) console.error(prefix, entry.message, entry.meta)
-      else console.error(prefix, entry.message)
+      if (safeEntry.meta) consoleOutput.error(prefix, safeEntry.message, safeEntry.meta)
+      else consoleOutput.error(prefix, safeEntry.message)
       break
   }
 }
@@ -143,10 +213,13 @@ function detectModuleFromArgs(args: unknown[]): string {
   return 'console'
 }
 
-function stringifyConsoleArg(value: unknown): string {
-  if (typeof value === 'string') return value
-  if (value instanceof Error) return value.stack ?? value.message
-  try { return JSON.stringify(value) } catch { return String(value) }
+export function summarizeConsoleArguments(args: unknown[]): Record<string, unknown> {
+  return {
+    argumentCount: args.length,
+    stringCount: args.filter((value) => typeof value === 'string').length,
+    errorCount: args.filter((value) => value instanceof Error).length,
+    objectCount: args.filter((value) => value !== null && typeof value === 'object').length,
+  }
 }
 
 /**
@@ -154,10 +227,9 @@ function stringifyConsoleArg(value: unknown): string {
  * `.error` also push a structured entry into the ring buffer. Idempotent —
  * safe to call from multiple entry points; only installs once.
  *
- * The original console behaviour is preserved (we still call the underlying
- * methods); we just shadow them. `consolePassthrough` here would create a
- * recursion loop, so the captured entries are pushed directly to the ring
- * with `consolePassthrough` virtually disabled for that path.
+ * Renderer console values may contain chat, transcript, path, or provider
+ * payloads. Capture and print metadata only; structured loggers retain their
+ * safe event label and sanitized fields through the original console methods.
  */
 export function installConsoleCapture(): void {
   if (consoleCaptureInstalled) return
@@ -171,22 +243,31 @@ export function installConsoleCapture(): void {
     error: globalThis.console.error.bind(globalThis.console),
     debug: globalThis.console.debug.bind(globalThis.console),
   }
+  consoleOutput = original
 
   function capture(level: LogLevel, args: unknown[]): void {
     const module = detectModuleFromArgs(args)
-    const message = args.map(stringifyConsoleArg).join(' ')
-    // Push directly; bypassing pushEntry's console branch so we don't
-    // recurse through the patched console.
     if (LEVEL_RANK[level] < LEVEL_RANK[minLevel]) return
-    ring.push({ ts: new Date().toISOString(), level, module, message })
+    ring.push({
+      ts: new Date().toISOString(),
+      level,
+      module,
+      message: `console ${level} event`,
+      meta: summarizeConsoleArguments(args),
+    })
     if (ring.length > RING_CAPACITY) ring.shift()
   }
 
-  globalThis.console.log = (...args) => { capture('info', args); original.log(...args) }
-  globalThis.console.info = (...args) => { capture('info', args); original.info(...args) }
-  globalThis.console.warn = (...args) => { capture('warn', args); original.warn(...args) }
-  globalThis.console.error = (...args) => { capture('error', args); original.error(...args) }
-  globalThis.console.debug = (...args) => { capture('debug', args); original.debug(...args) }
+  function captureAndPrint(level: LogLevel, args: unknown[]): void {
+    capture(level, args)
+    original[level](`[${detectModuleFromArgs(args)}]`, `console ${level} event`, summarizeConsoleArguments(args))
+  }
+
+  globalThis.console.log = (...args) => captureAndPrint('info', args)
+  globalThis.console.info = (...args) => captureAndPrint('info', args)
+  globalThis.console.warn = (...args) => captureAndPrint('warn', args)
+  globalThis.console.error = (...args) => captureAndPrint('error', args)
+  globalThis.console.debug = (...args) => captureAndPrint('debug', args)
 }
 
 // ── Buffer access ─────────────────────────────────────────────────────────

@@ -23,7 +23,7 @@ import {
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { loadLorebookEntries, saveLorebookEntries } from '../../lib/storage/lorebooks'
 import { savePendingGreeting } from '../../lib/storage/pendingGreeting'
-import { TextField } from '../settingsFields'
+import { SettingsToggle, TextField } from '../settingsFields'
 import type { AppSettings, CharacterProfile, CompanionRelationshipType } from '../../types'
 import {
   setCompanionNameWithWakeWordSync,
@@ -333,19 +333,12 @@ export const ChatSection = memo(function ChatSection({
           }
         />
         <div className="settings-control-card settings-chat-advanced-control">
-          <label className="settings-toggle">
-            <span>{ti('settings.chat.profile_persona_in_chat')}</span>
-            <input
-              type="checkbox"
-              checked={draft.profilePersonaInChatEnabled}
-              onChange={(event) =>
-                setDraft((prev) => ({
-                  ...prev,
-                  profilePersonaInChatEnabled: event.target.checked,
-                }))
-              }
-            />
-          </label>
+          <SettingsToggle
+            label={ti('settings.chat.profile_persona_in_chat')}
+            checked={draft.profilePersonaInChatEnabled}
+            onChange={(checked) =>
+              setDraft((prev) => ({ ...prev, profilePersonaInChatEnabled: checked }))}
+          />
           <p className="settings-drawer__hint">
             {ti('settings.chat.profile_persona_in_chat_hint')}
           </p>
@@ -406,16 +399,11 @@ export const ChatSection = memo(function ChatSection({
           </div>
         </summary>
         <div className="settings-control-card settings-chat-advanced-control">
-          <label className="settings-toggle">
-            <span>{ti('settings.chat.vts_enabled')}</span>
-            <input
-              type="checkbox"
-              checked={draft.vtsEnabled}
-              onChange={(event) =>
-                setDraft((prev) => ({ ...prev, vtsEnabled: event.target.checked }))
-              }
-            />
-          </label>
+          <SettingsToggle
+            label={ti('settings.chat.vts_enabled')}
+            checked={draft.vtsEnabled}
+            onChange={(checked) => setDraft((prev) => ({ ...prev, vtsEnabled: checked }))}
+          />
         </div>
         {draft.vtsEnabled ? (
           <label className="settings-control-card settings-chat-advanced-field">

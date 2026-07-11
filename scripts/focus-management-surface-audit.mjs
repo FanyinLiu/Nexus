@@ -120,7 +120,7 @@ const REQUIRED_CONTRACTS = [
     patterns: [
       ':focus-visible',
       '.settings-section-nav__button:focus-visible',
-      '.settings-drawer .ghost-button:focus-visible',
+      '.sd .ghost-button:focus-visible',
       '.settings-toggle input:focus-visible',
     ],
   },

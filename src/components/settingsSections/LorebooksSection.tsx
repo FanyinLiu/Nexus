@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo, useState } from 'react'
 import { PetControlIcon } from '../PetControlIcon'
 import { loadLorebookEntries, saveLorebookEntries } from '../../lib/storage/lorebooks'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { SettingsToggle } from '../settingsFields'
 import type { LorebookEntry, UiLanguage } from '../../types'
 
 type LorebooksSectionProps = {
@@ -103,14 +104,12 @@ export const LorebooksSection = memo(function LorebooksSection({
             return (
               <li key={entry.id} className="settings-lorebook-item">
                 <div className="settings-lorebook-item__toolbar">
-                  <label className="settings-toggle settings-lorebook-check">
-                    <span>{ti('settings.lorebooks.enabled')}</span>
-                    <input
-                      type="checkbox"
-                      checked={entry.enabled}
-                      onChange={(event) => updateEntry(entry.id, { enabled: event.target.checked })}
-                    />
-                  </label>
+                  <SettingsToggle
+                    className="settings-lorebook-check"
+                    label={ti('settings.lorebooks.enabled')}
+                    checked={entry.enabled}
+                    onChange={(enabled) => updateEntry(entry.id, { enabled })}
+                  />
                   <label className="settings-lorebook-field settings-lorebook-title-field">
                     <span>{ti('settings.lorebooks.label_label')}</span>
                     <input

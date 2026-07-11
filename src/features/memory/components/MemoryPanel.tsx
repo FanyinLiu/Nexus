@@ -223,7 +223,7 @@ export function MemoryPanel({
           <button type="button" className="ghost-button" onClick={handleAddMemory}>
             {ti('memory_panel.save_to_long_term')}
           </button>
-          <button type="button" className="ghost-button" onClick={onClearDaily}>
+          <button type="button" className="settings-danger-button" onClick={onClearDaily}>
             {ti('memory_panel.clear_diary')}
           </button>
         </div>

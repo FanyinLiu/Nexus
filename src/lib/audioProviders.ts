@@ -1,9 +1,8 @@
 /**
- * Audio provider API — re-exports and compatibility layer.
+ * Audio provider query API.
  *
- * All provider data now lives in providerCatalog.ts. This module preserves the
- * existing public API so consumers don't need to change. New code should import
- * directly from providerCatalog.ts when it only needs catalog queries.
+ * Provider data lives in speechProviderCatalog.ts. This module owns derived
+ * speech-provider lookups and protocol predicates used by settings and runtime.
  */
 
 import {
@@ -17,7 +16,7 @@ import {
   type SpeechVoiceOption,
   type SpeechStyleOption,
   type SpeechOutputAdjustmentSupport,
-} from './providerCatalog.ts'
+} from './speechProviderCatalog.ts'
 
 // ── Re-export types ──
 

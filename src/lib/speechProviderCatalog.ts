@@ -1,9 +1,9 @@
 /**
- * Unified provider catalog.
+ * Speech provider catalog.
  *
- * Every speech-input, speech-output, text, and web-search provider is registered
- * here with its full metadata. The rest of the codebase queries the catalog
- * instead of using scattered if-checks and switch statements.
+ * Every speech-input and speech-output provider is registered here with its
+ * full metadata. Text providers live under features/models and web-search
+ * providers stay in lib/webSearchProviders.
  *
  * User-facing text (`label`, `notes`, `description`, `note`) is stored as
  * TranslationKey literals. Consumers are responsible for resolving them via

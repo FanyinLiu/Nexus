@@ -1,5 +1,9 @@
-import { memo, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { loadChatSessions, removeChatSession, type ChatSession } from '../../lib'
+import {
+  isChatLocalDataAuthorityActive,
+  readChatSessionsFromLocalData,
+} from '../../lib/storage'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { ConfirmFn } from '../useConfirm.ts'
 import type { UiLanguage } from '../../types'
@@ -58,14 +62,37 @@ export const HistorySection = memo(function HistorySection({
   // in the useMemo deps so sessions refresh when the panel opens or the
   // active session grows.
   const [refreshKey, setRefreshKey] = useState(0)
+  const chatAuthorityActive = isChatLocalDataAuthorityActive()
+  const [authoritativeSessions, setAuthoritativeSessions] = useState<ChatSession[] | null>(null)
+
+  useEffect(() => {
+    if (!active || !chatAuthorityActive) {
+      setAuthoritativeSessions(null)
+      return
+    }
+
+    let cancelled = false
+    setAuthoritativeSessions(null)
+    void readChatSessionsFromLocalData().then(({ sessions }) => {
+      if (cancelled || !sessions) return
+      setAuthoritativeSessions(sessions as ChatSession[])
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [active, chatAuthorityActive, chatMessageCount, refreshKey])
 
   const sessions = useMemo<ChatSession[]>(
-    () => (active ? loadChatSessions() : []),
+    () => {
+      if (!active) return []
+      if (chatAuthorityActive && authoritativeSessions) return authoritativeSessions
+      return loadChatSessions()
+    },
     // chatMessageCount + refreshKey are invalidation keys — the memo body
     // doesn't read them, but they must trigger a fresh loadChatSessions()
     // when the active session grows or a destructive action fires.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [active, chatMessageCount, refreshKey],
+    [active, authoritativeSessions, chatAuthorityActive, chatMessageCount, refreshKey],
   )
 
   const archivedSessions = useMemo(
@@ -76,6 +103,15 @@ export const HistorySection = memo(function HistorySection({
   const handleRemove = async (id: string) => {
     if (!(await confirm({ message: ti('settings.history.delete_confirm'), tone: 'danger' }))) return
     removeChatSession(id)
+    if (chatAuthorityActive) {
+      const session = sessions.find((item) => item.id === id)
+      if (session) {
+        void window.desktopPet?.localDataMirrorChatSession({
+          confirmed: true,
+          session: { ...session, messages: [] },
+        })
+      }
+    }
     setRefreshKey((v) => v + 1)
     if (expandedId === id) setExpandedId(null)
   }

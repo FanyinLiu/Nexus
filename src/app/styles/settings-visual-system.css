@@ -2,8 +2,8 @@
    Keep shared 0.4.2 settings rules here so child pages, dialogs, fields,
    toggles, choice controls, status rows, and footer actions follow one rhythm. */
 
-.settings-backdrop,
-.settings-drawer {
+.sb,
+.sd {
   --nx-settings-radius-panel: 8px;
   --nx-settings-radius-control: 8px;
   --nx-settings-radius-row: 8px;
@@ -28,8 +28,8 @@
   --nx-settings-track-appearance: rgba(215, 124, 45, 0.9);
 }
 
-.settings-backdrop--night,
-.settings-drawer--night {
+.sb-night,
+.sd-night {
   --nx-settings-ink: rgba(245, 247, 255, 0.92);
   --nx-settings-muted: rgba(210, 217, 235, 0.64);
   --nx-settings-faint: rgba(210, 217, 235, 0.44);
@@ -50,8 +50,8 @@
   color-scheme: dark;
 }
 
-.settings-backdrop--day,
-.settings-drawer--day {
+.sb-day,
+.sd-day {
   --nx-settings-ink: rgba(31, 35, 44, 0.92);
   --nx-settings-muted: rgba(70, 76, 87, 0.66);
   --nx-settings-faint: rgba(70, 76, 87, 0.48);
@@ -72,8 +72,8 @@
   color-scheme: light;
 }
 
-.settings-backdrop--warm-day,
-.settings-drawer--warm-day {
+.sb-warm,
+.sd-warm {
   --nx-settings-ink: rgba(31, 27, 23, 0.92);
   --nx-settings-muted: rgba(91, 80, 69, 0.66);
   --nx-settings-faint: rgba(91, 80, 69, 0.46);
@@ -94,7 +94,7 @@
   color-scheme: light;
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] {
+.sd-section .sp.sp {
   --settings-child-control-height: var(--nx-settings-control-height);
   --settings-child-control-font-size: var(--nx-settings-font-body);
   --settings-child-meta-font-size: var(--nx-settings-font-meta);
@@ -102,18 +102,48 @@
   color: var(--nx-settings-ink);
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-drawer__content.settings-drawer__sections {
+.sd-section .sp.sp .sdc.settings-drawer__sections {
   gap: var(--nx-settings-gap-section);
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-section, .settings-mini-group, .settings-drawer__card, .settings-speech-config-section) {
+.sd-section .sp.sp :is(.settings-section, .settings-mini-group, .settings-drawer__card, .settings-speech-config-section) {
   border-color: var(--nx-settings-line);
   border-radius: var(--nx-settings-radius-panel);
   background: transparent;
   box-shadow: none;
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-section__title-row, .settings-mini-group__head:not(summary), summary.settings-mini-group__head) {
+.sd-section .settings-section-loading {
+  display: grid;
+  align-content: start;
+  gap: var(--nx-settings-gap-row);
+  min-height: 148px;
+  padding: 4px 3px;
+  color: var(--nx-settings-muted);
+}
+
+.sd-section .settings-section-loading__label {
+  font-size: var(--nx-settings-font-body);
+  line-height: 1.4;
+}
+
+.sd-section .settings-section-loading__row {
+  width: 76%;
+  height: var(--nx-settings-row-height);
+  border: 1px solid var(--nx-settings-line-soft);
+  border-radius: var(--nx-settings-radius-row);
+  background: var(--nx-settings-surface-soft);
+}
+
+.sd-section .settings-section-loading__row--wide {
+  width: 100%;
+}
+
+.sd-section .settings-section-loading__row--short {
+  width: 58%;
+}
+
+.sd-section .sp.sp :is(.settings-section__title-row, .settings-mini-group__head:not(summary), summary.settings-mini-group__head) {
   min-height: var(--nx-settings-row-height);
   padding: 5px 3px 7px;
   border-bottom: 1px solid var(--nx-settings-line);
@@ -122,7 +152,7 @@
   box-shadow: none;
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-control-card:not(.settings-metric-card):not(.settings-updater-panel), .settings-form-row, .settings-toggle:not(.settings-lorebook-check), .settings-choice-card, .settings-model-source-card) {
+.sd-section .sp.sp :is(.settings-control-card:not(.settings-metric-card):not(.settings-updater-panel), .settings-form-row, .settings-toggle:not(.settings-lorebook-check), .settings-choice-card, .settings-model-source-card) {
   min-height: var(--nx-settings-row-height);
   border-color: transparent;
   border-radius: var(--nx-settings-radius-row);
@@ -130,13 +160,13 @@
   box-shadow: none;
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-control-card:not(.settings-metric-card):not(.settings-updater-panel), .settings-form-row, .settings-toggle:not(.settings-lorebook-check), .settings-choice-card, .settings-model-source-card):hover {
+.sd-section .sp.sp :is(.settings-control-card:not(.settings-metric-card):not(.settings-updater-panel), .settings-form-row, .settings-toggle:not(.settings-lorebook-check), .settings-choice-card, .settings-model-source-card):hover {
   border-color: var(--nx-settings-line);
   background: var(--nx-settings-surface-hover);
   box-shadow: none;
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea, .settings-url-input) {
+.sd-section .sp.sp :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea, .settings-url-input) {
   min-height: var(--nx-settings-field-height);
   border-color: var(--nx-settings-line);
   border-radius: var(--nx-settings-radius-control);
@@ -147,34 +177,34 @@
   box-shadow: none;
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea, .settings-url-input):hover {
+.sd-section .sp.sp :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea, .settings-url-input):hover {
   border-color: color-mix(in srgb, var(--nx-settings-accent) 22%, var(--nx-settings-line));
   background: var(--nx-settings-field-hover);
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea, .settings-url-input):focus {
+.sd-section .sp.sp :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea, .settings-url-input):focus {
   border-color: color-mix(in srgb, var(--nx-settings-accent) 38%, var(--nx-settings-line));
   background: var(--nx-settings-field-hover);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-settings-accent) 13%, transparent);
   outline: none;
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] textarea {
+.sd-section .sp.sp textarea {
   min-height: 72px;
   max-height: 140px;
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-form-row__validation, .settings-model-advanced__error, .settings-test-result.is-error, .settings-url-input--invalid) {
+.sd-section .sp.sp :is(.settings-form-row__validation, .settings-model-advanced__error, .settings-test-result.is-error, .settings-url-input--invalid) {
   border-color: color-mix(in srgb, var(--nx-settings-danger) 38%, var(--nx-settings-line));
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-form-row__validation, .settings-model-advanced__error) {
+.sd-section .sp.sp :is(.settings-form-row__validation, .settings-model-advanced__error) {
   color: var(--nx-settings-danger);
   font-size: var(--nx-settings-font-meta);
   line-height: 1.3;
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-test-result {
+.sd-section .sp.sp .settings-test-result {
   border-color: var(--nx-settings-line);
   border-radius: var(--nx-settings-radius-row);
   background: var(--nx-settings-surface-soft);
@@ -182,33 +212,33 @@
   box-shadow: none;
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-test-result.is-success {
+.sd-section .sp.sp .settings-test-result.is-error {
+  background: color-mix(in srgb, var(--nx-settings-danger) 10%, transparent);
+  color: var(--nx-settings-ink);
+}
+
+.sd-section .sp.sp .settings-test-result.is-success {
   border-color: color-mix(in srgb, var(--nx-settings-success) 30%, var(--nx-settings-line));
   background: color-mix(in srgb, var(--nx-settings-success) 10%, transparent);
   color: var(--nx-settings-ink);
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-test-result.is-error {
-  background: color-mix(in srgb, var(--nx-settings-danger) 10%, transparent);
-  color: var(--nx-settings-ink);
-}
-
-.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-toggle input {
+.sd-section .sp.sp .settings-toggle input {
   background: color-mix(in srgb, var(--nx-settings-muted) 17%, transparent);
   box-shadow: inset 0 0 0 1px var(--nx-settings-line-soft);
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-toggle input::after {
+.sd-section .sp.sp .settings-toggle input::after {
   background: var(--nx-settings-surface);
   box-shadow: 0 1px 4px color-mix(in srgb, var(--nx-settings-ink) 14%, transparent);
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-toggle input:checked {
+.sd-section .sp.sp .settings-toggle input:checked {
   background: linear-gradient(135deg, var(--nx-settings-accent), color-mix(in srgb, var(--nx-settings-accent) 72%, white));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 24%, transparent);
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-appearance-switch__control, .onboarding-region-tabs, .onboarding-relationship__options, .settings-sprite-preview__states, .settings-companion-state-preview__states) {
+.sd-section .sp.sp :is(.settings-appearance-switch__control, .onboarding-region-tabs, .onboarding-relationship__options, .settings-sprite-preview__states, .settings-companion-state-preview__states) {
   gap: var(--nx-settings-segment-gap);
   padding: var(--nx-settings-segment-gap);
   border: 1px solid var(--nx-settings-line);
@@ -217,7 +247,21 @@
   box-shadow: none;
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-appearance-switch__option, .onboarding-region-tabs__tab, .onboarding-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button) {
+.sd-section .sp.sp .settings-toggle input:checked {
+  background: linear-gradient(135deg, var(--nx-settings-accent), color-mix(in srgb, var(--nx-settings-accent) 72%, white));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 24%, transparent);
+}
+
+.sd-section .sp.sp :is(.settings-appearance-switch__control, .onboarding-region-tabs, .onboarding-relationship__options, .settings-sprite-preview__states, .settings-companion-state-preview__states) {
+  gap: var(--nx-settings-segment-gap);
+  padding: var(--nx-settings-segment-gap);
+  border: 1px solid var(--nx-settings-line);
+  border-radius: calc(var(--nx-settings-radius-control) + 1px);
+  background: var(--nx-settings-segment-surface);
+  box-shadow: none;
+}
+
+.sd-section .sp.sp :is(.settings-appearance-switch__option, .onboarding-region-tabs__tab, .onboarding-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button) {
   min-height: var(--nx-settings-segment-height);
   border: 1px solid transparent;
   border-radius: var(--nx-settings-radius-control);
@@ -229,27 +273,34 @@
   box-shadow: none;
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-appearance-switch__option, .onboarding-region-tabs__tab, .onboarding-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button):is(:hover, :focus-visible):not(.is-active) {
-  border-color: color-mix(in srgb, var(--nx-settings-accent) 20%, var(--nx-settings-line));
-  background: color-mix(in srgb, var(--nx-settings-accent) 7%, transparent);
-  color: var(--nx-settings-ink);
+.sd-section .sp.sp .settings-choice-card.is-active,
+.sd-section .sp.sp .settings-model-source-card.is-selected {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 18%, var(--nx-settings-line));
+  background: var(--nx-settings-accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 14%, transparent);
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.settings-appearance-switch__option.is-active, .onboarding-region-tabs__tab.is-active, .onboarding-relationship__chip.is-active, .settings-sprite-preview__states button.is-active, .settings-companion-state-preview__states button.is-active) {
+.sd-section .sp.sp :is(.settings-appearance-switch__option.is-active, .onboarding-region-tabs__tab.is-active, .onboarding-relationship__chip.is-active, .settings-sprite-preview__states button.is-active, .settings-companion-state-preview__states button.is-active) {
   border-color: color-mix(in srgb, var(--nx-settings-accent) 24%, transparent);
   background: var(--nx-settings-segment-active);
   color: var(--nx-settings-ink);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 12%, transparent);
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-choice-card.is-active,
-.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-model-source-card.is-selected {
-  border-color: color-mix(in srgb, var(--nx-settings-accent) 18%, var(--nx-settings-line));
-  background: var(--nx-settings-accent-soft);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 14%, transparent);
+.sd-section .sp.sp :is(.settings-appearance-switch__option.is-active, .onboarding-region-tabs__tab.is-active, .onboarding-relationship__chip.is-active, .settings-sprite-preview__states button.is-active, .settings-companion-state-preview__states button.is-active) {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 24%, transparent);
+  background: var(--nx-settings-segment-active);
+  color: var(--nx-settings-ink);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 12%, transparent);
 }
 
-.settings-drawer.settings-drawer--section .settings-drawer__actions {
+.sd-section .sp.sp :is(.settings-appearance-switch__option, .onboarding-region-tabs__tab, .onboarding-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button):is(:hover, :focus-visible):not(.is-active) {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 20%, var(--nx-settings-line));
+  background: color-mix(in srgb, var(--nx-settings-accent) 7%, transparent);
+  color: var(--nx-settings-ink);
+}
+
+.sd-section .sda {
   min-height: var(--nx-settings-footer-height);
   padding: 6px 4px 0;
   border-top: 1px solid var(--nx-settings-line);
@@ -257,8 +308,8 @@
   box-shadow: none;
 }
 
-.settings-drawer.settings-drawer--section .settings-drawer__actions :is(.ghost-button, .primary-button),
-.settings-drawer.settings-drawer--section .settings-page[data-section] :is(.ghost-button, .primary-button, .settings-danger-button) {
+.sd-section .sda :is(.ghost-button, .primary-button),
+.sd-section .sp.sp :is(.ghost-button, .primary-button, .settings-danger-button) {
   min-height: var(--nx-settings-control-height);
   border-radius: var(--nx-settings-radius-control);
   font-size: var(--nx-settings-font-body);
@@ -266,17 +317,17 @@
   box-shadow: none;
 }
 
-.settings-drawer.settings-drawer--section .settings-page[data-section] .settings-danger-button {
+.sd-section .sp.sp .settings-danger-button {
   border-color: color-mix(in srgb, var(--nx-settings-danger) 22%, var(--nx-settings-line));
   background: color-mix(in srgb, var(--nx-settings-danger) 9%, transparent);
   color: var(--nx-settings-danger);
 }
 
-.settings-backdrop :is(.confirm-dialog-backdrop) {
+.sb :is(.confirm-dialog-backdrop) {
   background: color-mix(in srgb, var(--nx-settings-surface, rgba(14, 18, 28, 0.96)) 56%, transparent);
 }
 
-.settings-backdrop .confirm-dialog-card {
+.sb .confirm-dialog-card {
   width: min(360px, 100%);
   gap: var(--nx-settings-gap-section);
   padding: 16px;
@@ -287,23 +338,23 @@
   box-shadow: 0 18px 54px color-mix(in srgb, var(--nx-settings-ink) 18%, transparent);
 }
 
-.settings-backdrop .confirm-dialog-card__title {
+.sb .confirm-dialog-card__title {
   font-size: var(--nx-settings-font-label);
   line-height: 1.25;
 }
 
-.settings-backdrop .confirm-dialog-card__message {
+.sb .confirm-dialog-card__message {
   color: var(--nx-settings-muted);
   font-size: var(--nx-settings-font-body);
   line-height: 1.5;
 }
 
-.settings-backdrop .confirm-dialog-card__actions {
+.sb .confirm-dialog-card__actions {
   gap: var(--nx-settings-gap-row);
 }
 
-.settings-backdrop .confirm-dialog-card .ghost-button,
-.settings-backdrop .confirm-dialog-card__confirm {
+.sb .confirm-dialog-card .ghost-button,
+.sb .confirm-dialog-card__confirm {
   min-height: var(--nx-settings-control-height);
   padding: 0 12px;
   border-radius: var(--nx-settings-radius-control);
@@ -311,25 +362,25 @@
   box-shadow: none;
 }
 
-.settings-backdrop .confirm-dialog-card .ghost-button {
+.sb .confirm-dialog-card .ghost-button {
   border-color: var(--nx-settings-line);
   background: var(--nx-settings-field);
   color: var(--nx-settings-muted);
 }
 
-.settings-backdrop .confirm-dialog-card .ghost-button:hover:not(:disabled) {
+.sb .confirm-dialog-card .ghost-button:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--nx-settings-accent) 22%, var(--nx-settings-line));
   background: var(--nx-settings-field-hover);
   color: var(--nx-settings-ink);
 }
 
-.settings-backdrop .confirm-dialog-card__confirm {
+.sb .confirm-dialog-card__confirm {
   border-color: var(--nx-settings-accent);
   background: var(--nx-settings-accent);
   color: #ffffff;
 }
 
-.settings-backdrop .confirm-dialog-card__confirm.is-danger {
+.sb .confirm-dialog-card__confirm.is-danger {
   border-color: var(--nx-settings-danger);
   background: var(--nx-settings-danger);
   box-shadow: none;

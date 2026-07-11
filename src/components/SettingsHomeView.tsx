@@ -51,6 +51,7 @@ export type SettingsHomeViewProps = {
     optionIndex: number,
   ) => void
   onOpenHomeAction: (action: SettingsHomeActionEntry) => void
+  onPreloadSettingsSection: (sectionId: SettingsSectionId) => void
   onOpenSettingsSection: (sectionId: SettingsSectionId) => void
   onSelectAppearanceOption: (optionIndex: number) => void
 }
@@ -65,6 +66,7 @@ export function SettingsHomeView({
   ti,
   onAppearanceOptionKeyDown,
   onOpenHomeAction,
+  onPreloadSettingsSection,
   onOpenSettingsSection,
   onSelectAppearanceOption,
 }: SettingsHomeViewProps) {
@@ -85,6 +87,8 @@ export function SettingsHomeView({
         data-focus-return-section={card.sectionId}
         aria-label={cardLabel}
         title={cardLabel}
+        onPointerEnter={() => onPreloadSettingsSection(card.sectionId)}
+        onFocus={() => onPreloadSettingsSection(card.sectionId)}
         onClick={() => onOpenSettingsSection(card.sectionId)}
       >
         <span className="settings-home-card__glyph" aria-hidden="true">

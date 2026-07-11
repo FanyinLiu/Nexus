@@ -52,6 +52,14 @@ Use these states as the review vocabulary before adding visual changes:
 | `disabled` | A setting is unavailable because of dependency or mode. | Muted label/control relationship, visible reason text when needed. |
 | `high-trust` | A setting controls memory, desktop awareness, external action, or destructive cleanup. | Boundary copy plus explicit control; no warning-heavy dashboard treatment. |
 
+## v0.4.2 Settings Visual System Contract
+
+The settings UI uses one Nexus grammar across warm white, black-white/day, and night tones. Theme files may change color values, but they must not create separate component behavior for the same setting type.
+
+The shared visual-system layer must cover child pages, dialogs, fields, toggles, segmented controls, footer actions, error/validation states, active choices, and destructive actions. If a new settings section adds a control family, it should either reuse one of those families or extend the visual-system contract before adding page-specific CSS.
+
+The goal is practical consistency: opening any settings page should feel like the same product, with the same row height logic, radius, icon scale, control density, focus behavior, disabled behavior, and save/cancel footer rhythm.
+
 ## Structure Model
 
 Settings should use a section graph, not cards. Review settings as five trust groups:
@@ -91,6 +99,7 @@ These are suitable for source audits or deterministic tests:
 - High-trust settings preserve disable, clear, inspectable, or ask-every-time affordances.
 - History, memory, and external-tool settings keep source-visible export, clear, disable/remove, and confirmation controls.
 - Default settings do not introduce admin dashboard, provider-studio, workspace-management, agent-marketplace, or knowledge-base dashboard chrome.
+- `npm run settings:surface:audit` verifies the visual-system layer covers child pages, dialogs, fields, toggles, segmented controls, footer actions, validation, active choices, and destructive actions across the three settings tones.
 
 ## Human Review Checks
 

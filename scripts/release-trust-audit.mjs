@@ -46,6 +46,7 @@ function allPresent(text, values) {
 
 function classifyMacSigning(pkg, releaseWorkflow, releasingDoc) {
   const mac = pkg.build?.mac ?? {}
+  const macPackagePreflight = pkg.scripts?.['prepackage:mac'] ?? ''
   const targets = Array.isArray(mac.target) ? mac.target : []
   const explicitUnsigned =
     mac.hardenedRuntime === false &&
@@ -63,7 +64,7 @@ function classifyMacSigning(pkg, releaseWorkflow, releasingDoc) {
       'APPLE_API_ISSUER',
       'CSC_LINK',
       'CSC_KEY_PASSWORD',
-    ])
+    ]) && macPackagePreflight.includes('mac-release-preflight')
   const docsCurrentUnsigned =
     /macOS unsigned auto-update limitation/i.test(releasingDoc) &&
     /manual update downloads/i.test(releasingDoc)
@@ -118,6 +119,7 @@ function classifyLinuxIntegrity(releaseWorkflow) {
 
 function buildMacSignedReadiness(pkg, releaseWorkflow, releasingDoc) {
   const mac = pkg.build?.mac ?? {}
+  const macPackagePreflight = pkg.scripts?.['prepackage:mac'] ?? ''
   const blockers = []
 
   if (mac.hardenedRuntime !== true) {
@@ -131,6 +133,9 @@ function buildMacSignedReadiness(pkg, releaseWorkflow, releasingDoc) {
   }
   if (releaseWorkflow.includes('CSC_IDENTITY_AUTO_DISCOVERY') && releaseWorkflow.includes('false')) {
     blockers.push('release workflow must stop forcing CSC_IDENTITY_AUTO_DISCOVERY=false for the macOS job')
+  }
+  if (!macPackagePreflight.includes('mac-release-preflight')) {
+    blockers.push('package.json prepackage:mac must run scripts/mac-release-preflight.mjs')
   }
   for (const secretName of MAC_SIGNING_SECRET_NAMES) {
     if (!releaseWorkflow.includes(`secrets.${secretName}`)) {

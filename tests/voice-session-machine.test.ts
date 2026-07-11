@@ -5,10 +5,7 @@ import {
   createInitialVoiceSessionState,
   reduceVoiceSession,
 } from '../src/features/voice/session/voiceSessionMachine.ts'
-import { DEFAULT_VOICE_SESSION_POLICIES } from '../src/features/voice/session/voiceSessionPolicies.ts'
 import {
-  INTERNAL_TO_BUS_PHASE,
-  INTERNAL_TO_UI_PHASE,
   VoiceSessionStates,
   toBusPhase,
   toUiPhase,
@@ -279,13 +276,17 @@ test('voice:restart_requested emits restart_voice with requested delay', () => {
   const result = reduceVoiceSession(initial, {
     type: 'voice:restart_requested',
     restartReason: 'test',
-    force: false,
+    force: true,
     delayMs: 333,
+    statusText: 'resume now',
   })
   assert.equal(result.state.state, VoiceSessionStates.IDLE, 'state is unchanged')
   const restart = result.effects.find((e) => e.type === 'restart_voice')
   assert.ok(restart && restart.type === 'restart_voice')
   assert.equal(restart.delay, 333)
+  assert.equal(restart.force, true)
+  assert.equal(restart.statusText, 'resume now')
+  assert.equal(restart.restartReason, 'test')
 })
 
 test('voice:restart_requested without delayMs falls back to 60ms', () => {
@@ -506,27 +507,6 @@ test('toBusPhase differs from toUiPhase only on TRANSCRIBING/THINKING (transcrib
       assert.equal(ui, bus, `${internal} should map identically on both layers`)
     }
   }
-})
-
-test('INTERNAL_TO_UI_PHASE lookup table is consistent with toUiPhase', () => {
-  for (const internal of ALL_INTERNAL_STATES) {
-    assert.equal(INTERNAL_TO_UI_PHASE[internal], toUiPhase(internal))
-  }
-})
-
-test('INTERNAL_TO_BUS_PHASE lookup table is consistent with toBusPhase', () => {
-  for (const internal of ALL_INTERNAL_STATES) {
-    assert.equal(INTERNAL_TO_BUS_PHASE[internal], toBusPhase(internal))
-  }
-})
-
-// ── Default policies ──────────────────────────────────────────────────────
-
-test('DEFAULT_VOICE_SESSION_POLICIES match the roadmap-specified defaults', () => {
-  assert.equal(DEFAULT_VOICE_SESSION_POLICIES.listenRecovery, 'continue_listening')
-  assert.equal(DEFAULT_VOICE_SESSION_POLICIES.bargeIn, 'vad_only')
-  assert.equal(DEFAULT_VOICE_SESSION_POLICIES.echoGuard, 'soft')
-  assert.equal(DEFAULT_VOICE_SESSION_POLICIES.failureRecovery, 'retry_same_provider')
 })
 
 // ── End-to-end happy path through the reducer ─────────────────────────────

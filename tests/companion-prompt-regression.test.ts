@@ -7,14 +7,16 @@ import { fileURLToPath } from 'node:url'
 import { createDefaultEmotionState } from '../src/features/autonomy/emotionModel.ts'
 import type { AutonomyContextV2 } from '../src/features/autonomy/v2/contextGatherer.ts'
 import { buildDecisionPrompt } from '../src/features/autonomy/v2/decisionPrompt.ts'
-import { loadPersona, type FileReader } from '../src/features/autonomy/v2/personaLoader.ts'
+import { loadPersonaProfileFromReader } from '../electron/services/personaProfileLoader.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(__dirname, '..')
 const XINGHUI_SEED_DIR = join(REPO_ROOT, 'src/features/autonomy/v2/personas/xinghui')
 const RUNTIME_FEW_SHOT_LIMIT = 8
 
-function makeFsReader(rootDir: string): FileReader {
+type PersonaFileReader = (relativePath: string) => Promise<string | null>
+
+function makeFsReader(rootDir: string): PersonaFileReader {
   return async (relative) => {
     try {
       return await readFile(join(rootDir, relative), 'utf8')
@@ -58,7 +60,7 @@ function makeContext(): AutonomyContextV2 {
 }
 
 async function loadXinghui() {
-  return loadPersona({
+  return loadPersonaProfileFromReader({
     id: 'xinghui',
     rootDir: XINGHUI_SEED_DIR,
     read: makeFsReader(XINGHUI_SEED_DIR),

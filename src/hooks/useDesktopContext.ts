@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  buildQuietObservationSummary,
   buildDesktopContextRequest,
   createNexusInteractionState,
-  formatQuietObservationForPrompt,
+  resolveCompanionAwarenessRuntime,
+  saveRecentCompanionCheckInDecision,
   saveRecentCompanionSummary,
 } from '../features/context'
 import { analyzeScreenWithVlm, disposeScreenOcrWorker, enqueueScreenOcr } from '../features/vision'
@@ -19,9 +19,10 @@ import type { AppSettings, DesktopContextSnapshot, PlatformProfile } from '../ty
 type UseDesktopContextParams = {
   settingsRef: React.RefObject<AppSettings>
   platformProfileRef?: React.RefObject<PlatformProfile | null>
+  isActiveChatSessionRef?: React.RefObject<boolean>
 }
 
-export function useDesktopContext({ settingsRef, platformProfileRef }: UseDesktopContextParams) {
+export function useDesktopContext({ settingsRef, platformProfileRef, isActiveChatSessionRef }: UseDesktopContextParams) {
   const [interactionState] = useState(() => createNexusInteractionState())
   const nexusOpenSinceRef = useRef(interactionState.nexusOpenSince)
 
@@ -43,27 +44,27 @@ export function useDesktopContext({ settingsRef, platformProfileRef }: UseDeskto
   const withCompanionAwareness = useCallback((contentSnapshot: DesktopContextSnapshot | null): DesktopContextSnapshot | null => {
     if (!contentSnapshot) return null
 
-    const summary = buildQuietObservationSummary({
-      enabled: Boolean(settingsRef.current.contextAwarenessEnabled),
-      paused: !settingsRef.current.contextAwarenessEnabled
-        || settingsRef.current.companionAwarenessPaused,
+    const now = new Date()
+    const companionRuntime = resolveCompanionAwarenessRuntime({
+      contextAwarenessEnabled: Boolean(settingsRef.current.contextAwarenessEnabled),
+      companionAwarenessPaused: settingsRef.current.companionAwarenessPaused,
+      activeWindowContextEnabled: Boolean(settingsRef.current.activeWindowContextEnabled),
+      isActiveChatSession: Boolean(isActiveChatSessionRef?.current),
       nexusOpenSince: nexusOpenSinceRef.current,
       lastNexusInteractionAt: interactionState.getLastNexusInteractionAt(),
+      now,
       activeWindowTitle: contentSnapshot.activeWindowTitle,
       uiLanguage: settingsRef.current.uiLanguage,
     })
-    const companionAwarenessSummary = formatQuietObservationForPrompt(
-      summary,
-      settingsRef.current.uiLanguage,
-    )
+    saveRecentCompanionCheckInDecision(companionRuntime.checkInDecision, now)
 
-    if (!companionAwarenessSummary) return contentSnapshot
-    saveRecentCompanionSummary(summary!)
+    if (!companionRuntime.promptText) return contentSnapshot
+    saveRecentCompanionSummary(companionRuntime.summary!, now)
     return {
       ...contentSnapshot,
-      companionAwarenessSummary,
+      companionAwarenessSummary: companionRuntime.promptText,
     }
-  }, [interactionState, settingsRef])
+  }, [interactionState, isActiveChatSessionRef, settingsRef])
 
   const loadDesktopContextSnapshot = useCallback(async (): Promise<DesktopContextSnapshot | null> => {
     const currentSettings = settingsRef.current

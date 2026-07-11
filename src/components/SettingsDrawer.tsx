@@ -1,4 +1,5 @@
 ﻿import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap.ts'
 import {
   getMemorySearchModeOptions,
@@ -12,7 +13,6 @@ import {
 import {
   switchSpeechOutputProvider,
   switchTextProvider,
-  clampPresenceIntervalMinutes,
   UI_LANGUAGE_OPTIONS,
 } from '../lib/index.ts'
 import {
@@ -33,6 +33,7 @@ import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
 import { useTheme } from '../features/themes/index.ts'
 import { syncWakeWordWithCompanionNameChange } from '../features/hearing/companionWakeWordSync.ts'
 import { SettingsDrawerActiveSection } from './SettingsDrawerActiveSection.tsx'
+import { preloadSettingsSection } from './settingsSectionModules.ts'
 import { SettingsHomeView } from './SettingsHomeView.tsx'
 import type { ChatMemoryTraceFocusTarget } from '../features/memory/traceDetails.ts'
 import {
@@ -42,11 +43,13 @@ import {
   useMemoryArchiveActions,
   useWindowStateSync,
   usePetModelImport,
+  useSettingsDraftState,
 } from './settingsDrawerHooks/index.ts'
 import { ConfirmDialog } from './ConfirmDialog.tsx'
 import { useConfirm } from './useConfirm.ts'
 import { PetControlIcon } from './PetControlIcon.tsx'
 import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
+import { SettingsActionBar } from './settingsFields.tsx'
 import {
   buildSettingsSectionMeta,
   getSettingsTrustSurfaceGroupId,
@@ -268,7 +271,15 @@ export function SettingsDrawer({
   onUpdateNotificationChannel,
   onRemoveNotificationChannel,
 }: SettingsDrawerProps) {
-  const [draft, setDraft] = useState(settings)
+  const {
+    draft,
+    setDraft,
+    resetDraftForOpen,
+    getRollbackThemeId,
+    mergeHydratedSecrets,
+    ensurePetModelPreset,
+    createSavePayload,
+  } = useSettingsDraftState(settings)
   const [activeSectionId, setActiveSectionId] = useState<SettingsSectionId>('console')
   const [settingsView, setSettingsView] = useState<'home' | 'section'>('home')
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false)
@@ -286,7 +297,6 @@ export function SettingsDrawer({
   const languageOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
   const appearanceOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
   const settingsHomeCardRefs = useRef<Partial<Record<SettingsSectionId, HTMLButtonElement | null>>>({})
-  const initialThemeIdRef = useRef(settings.themeId)
   const drawerBodyRef = useRef<HTMLDivElement | null>(null)
   const settingsSectionsRef = useRef<HTMLDivElement | null>(null)
   const activeSectionHeadingRef = useRef<HTMLHeadingElement | null>(null)
@@ -463,18 +473,27 @@ export function SettingsDrawer({
   const petModel = petModelPresets.find((preset) => preset.id === draft.petModelId) ?? petModelPresets[0]
 
   const uiLanguage = draft.uiLanguage
-  const ti = (
+  const ti = useCallback((
     key: Parameters<typeof pickTranslatedUiText>[1],
     params?: Parameters<typeof pickTranslatedUiText>[2],
-  ) => pickTranslatedUiText(uiLanguage, key, params)
-  const memorySearchModeOptions = getMemorySearchModeOptions(uiLanguage)
-  const settingsSectionOptions = getSettingsSectionOptions(uiLanguage)
-  const selectedMemorySearchMode = memorySearchModeOptions.find((option) => option.value === draft.memorySearchMode)
-    ?? memorySearchModeOptions[1]
+  ) => pickTranslatedUiText(uiLanguage, key, params), [uiLanguage])
+  const memorySearchModeOptions = useMemo(
+    () => getMemorySearchModeOptions(uiLanguage),
+    [uiLanguage],
+  )
+  const settingsSectionOptions = useMemo(
+    () => getSettingsSectionOptions(uiLanguage),
+    [uiLanguage],
+  )
+  const selectedMemorySearchMode = useMemo(
+    () => memorySearchModeOptions.find((option) => option.value === draft.memorySearchMode)
+      ?? memorySearchModeOptions[1],
+    [draft.memorySearchMode, memorySearchModeOptions],
+  )
   const activeSectionLabel = settingsSectionOptions.find((section) => section.id === activeSectionId)?.label
     ?? settingsSectionOptions.find((section) => section.id === normalizeSettingsSectionId(activeSectionId))?.label
     ?? settingsSectionOptions[0].label
-  const { meta: settingsSectionMetaById } = buildSettingsSectionMeta({
+  const { meta: settingsSectionMetaById } = useMemo(() => buildSettingsSectionMeta({
     ti,
     uiLanguage,
     draft,
@@ -486,8 +505,20 @@ export function SettingsDrawer({
     debugConsoleEvents,
     continuousVoiceActive,
     clickThroughEnabled: windowState.petWindowState.clickThrough,
-  })
-  const settingsHomeCards = settingsSectionOptions.map((section) => {
+  }), [
+    chatMessageCount,
+    continuousVoiceActive,
+    dailyMemoryEntries,
+    debugConsoleEvents,
+    draft,
+    liveTranscript,
+    memories,
+    petModel,
+    ti,
+    uiLanguage,
+    windowState.petWindowState.clickThrough,
+  ])
+  const settingsHomeCards = useMemo(() => settingsSectionOptions.map((section) => {
     const sectionMeta = settingsSectionMetaById[section.id]
 
     return {
@@ -500,15 +531,18 @@ export function SettingsDrawer({
       preview: sectionMeta.preview,
       trustGroup: getSettingsTrustSurfaceGroupId(section.id),
     }
-  })
-  const settingsHomeCardsBySectionId = new Map(settingsHomeCards.map((card) => [card.sectionId, card]))
-  const settingsHomeGroups = SETTINGS_HOME_GROUPS.map((group) => ({
+  }), [settingsSectionMetaById, settingsSectionOptions])
+  const settingsHomeCardsBySectionId = useMemo(
+    () => new Map(settingsHomeCards.map((card) => [card.sectionId, card])),
+    [settingsHomeCards],
+  )
+  const settingsHomeGroups = useMemo(() => SETTINGS_HOME_GROUPS.map((group) => ({
     ...group,
     cards: group.sectionIds
       .map((sectionId) => settingsHomeCardsBySectionId.get(sectionId))
       .filter((card): card is (typeof settingsHomeCards)[number] => Boolean(card))
       .sort((first, second) => compareSettingsHomeSections(group.sectionIds, first, second)),
-  })).filter((group) => group.cards.length || group.actions?.length)
+  })).filter((group) => group.cards.length || group.actions?.length), [settingsHomeCardsBySectionId])
   const activeSectionMeta = settingsSectionMetaById[activeSectionId]
   const activeSectionDescription = activeSectionMeta.description
   const settingsThemeTone = getSettingsThemeTone(draft.themeId)
@@ -516,28 +550,30 @@ export function SettingsDrawer({
     0,
     SETTINGS_APPEARANCE_OPTIONS.findIndex((option) => option.tone === settingsThemeTone),
   )
+  const settingsUsesDarkChrome = settingsThemeTone === 'black' || settingsThemeTone === 'night'
   const settingsBackdropClassName = [
-    'settings-backdrop',
-    settingsThemeTone === 'night' ? 'settings-backdrop--night' : 'settings-backdrop--day',
-    settingsThemeTone === 'night' ? '' : 'settings-backdrop--light',
-    settingsThemeTone === 'warm-day' ? 'settings-backdrop--warm-day' : '',
+    'settings-backdrop sb',
+    settingsUsesDarkChrome ? 'settings-backdrop--night sb-night' : 'settings-backdrop--day sb-day',
+    settingsThemeTone === 'black' ? 'settings-backdrop--black sb-black' : '',
+    settingsUsesDarkChrome ? '' : 'settings-backdrop--light sb-light',
+    settingsThemeTone === 'warm-day' ? 'settings-backdrop--warm-day sb-warm' : '',
   ].filter(Boolean).join(' ')
   const settingsDrawerClassName = [
-    'settings-drawer',
-    settingsView === 'home' ? 'settings-drawer--home' : 'settings-drawer--section',
-    settingsThemeTone === 'night' ? 'settings-drawer--night' : 'settings-drawer--day',
-    settingsThemeTone === 'night' ? '' : 'settings-drawer--light',
-    settingsThemeTone !== 'night' && settingsView !== 'home' ? 'settings-drawer--light-section' : '',
-    settingsThemeTone === 'warm-day' ? 'settings-drawer--warm-day' : '',
-    settingsThemeTone === 'warm-day' && settingsView !== 'home' ? 'settings-drawer--warm-section' : '',
-    settingsThemeTone === 'day' && settingsView !== 'home' ? 'settings-drawer--day-section' : '',
+    'settings-drawer sd',
+    settingsView === 'home' ? 'settings-drawer--home sd-home' : 'settings-drawer--section sd-section',
+    settingsUsesDarkChrome ? 'settings-drawer--night sd-night' : 'settings-drawer--day sd-day',
+    settingsThemeTone === 'black' ? 'settings-drawer--black sd-black' : '',
+    settingsUsesDarkChrome ? '' : 'settings-drawer--light sd-light',
+    !settingsUsesDarkChrome && settingsView !== 'home' ? 'settings-drawer--light-section sd-light-section' : '',
+    settingsThemeTone === 'warm-day' ? 'settings-drawer--warm-day sd-warm' : '',
+    settingsThemeTone === 'warm-day' && settingsView !== 'home' ? 'settings-drawer--warm-section sd-warm-section' : '',
+    settingsThemeTone === 'day' && settingsView !== 'home' ? 'settings-drawer--day-section sd-day-section' : '',
   ].filter(Boolean).join(' ')
   // Sync draft from external settings ONLY when the drawer opens,
   // not while the user is actively editing.
   useEffect(() => {
     if (open) {
-      initialThemeIdRef.current = settings.themeId
-      setDraft(settings)
+      resetDraftForOpen(settings)
       themePreview.previewTheme(settings.themeId)
       speechVoices.syncPreviewText(settings.companionName)
       if (preferredSectionId) {
@@ -580,51 +616,12 @@ export function SettingsDrawer({
   // This handles the race where settings are loaded with empty keys before vault decrypts them.
   useEffect(() => {
     if (!open) return
-    const incomingKeyValues = {
-      apiKey: settings.apiKey,
-      speechInputApiKey: settings.speechInputApiKey,
-      speechOutputApiKey: settings.speechOutputApiKey,
-      toolWebSearchApiKey: settings.toolWebSearchApiKey,
-      screenVlmApiKey: settings.screenVlmApiKey,
-      telegramBotToken: settings.telegramBotToken,
-      discordBotToken: settings.discordBotToken,
-    } as const
-    const keyFields = Object.keys(incomingKeyValues) as Array<keyof typeof incomingKeyValues>
-
-    setDraft((current) => {
-      let changed = false
-      const patch = { ...current }
-      for (const field of keyFields) {
-        if (!current[field] && incomingKeyValues[field]) {
-          ;(patch as Record<string, unknown>)[field] = incomingKeyValues[field]
-          changed = true
-        }
-      }
-      return changed ? patch : current
-    })
-  }, [
-    open,
-    settings.apiKey,
-    settings.speechOutputApiKey,
-    settings.speechInputApiKey,
-    settings.toolWebSearchApiKey,
-    settings.screenVlmApiKey,
-    settings.telegramBotToken,
-    settings.discordBotToken,
-  ])
+    mergeHydratedSecrets(settings)
+  }, [mergeHydratedSecrets, open, settings])
 
   useEffect(() => {
-    if (!petModelPresets.length) return
-
-    setDraft((current) => (
-      petModelPresets.some((preset) => preset.id === current.petModelId)
-        ? current
-        : {
-            ...current,
-            petModelId: petModelPresets[0].id,
-          }
-    ))
-  }, [petModelPresets])
+    ensurePetModelPreset(petModelPresets)
+  }, [ensurePetModelPreset, petModelPresets])
 
   // Reset all transient state when drawer opens/closes or settings change
   useEffect(() => {
@@ -695,19 +692,21 @@ export function SettingsDrawer({
   }
 
   function handleDismiss() {
-    themePreview.previewTheme(initialThemeIdRef.current)
+    themePreview.previewTheme(getRollbackThemeId())
     windowState.rollbackWindowState()
     onClose()
     restoreSettingsOpenerFocus()
   }
 
   function handleOpenSettingsSection(sectionId: SettingsSectionId) {
-    setActiveSectionId(normalizeSettingsSectionId(sectionId))
+    const normalizedSectionId = normalizeSettingsSectionId(sectionId)
+    preloadSettingsSection(normalizedSectionId)
+    setActiveSectionId(normalizedSectionId)
     setSettingsView('section')
   }
 
   function handleOpenOnboardingGuide() {
-    themePreview.previewTheme(initialThemeIdRef.current)
+    themePreview.previewTheme(getRollbackThemeId())
     windowState.rollbackWindowState()
     onOpenOnboardingGuide()
   }
@@ -760,6 +759,7 @@ export function SettingsDrawer({
         debugConsoleEvents={debugConsoleEvents}
         draft={draft}
         liveTranscript={liveTranscript}
+        loadingLabel={ti('settings.section.loading')}
         memories={memories}
         memoryArchive={memoryArchive}
         memoryFocus={memoryFocus}
@@ -798,6 +798,35 @@ export function SettingsDrawer({
     )
   }
 
+  function renderSettingsSectionNav() {
+    return (
+      <nav className="settings-section-nav" aria-label={ti('settings.title')}>
+        {settingsSectionOptions.map((section) => {
+          const isActive = section.id === activeSectionId
+          const sectionMeta = settingsSectionMetaById[section.id]
+
+          return (
+            <button
+              key={section.id}
+              type="button"
+              className={`settings-section-nav__button ${isActive ? 'is-active' : ''}`}
+              data-section={section.id}
+              aria-current={isActive ? 'page' : undefined}
+              onPointerEnter={() => preloadSettingsSection(section.id)}
+              onFocus={() => preloadSettingsSection(section.id)}
+              onClick={() => handleOpenSettingsSection(section.id)}
+            >
+              <span className="settings-section-nav__marker" aria-hidden="true">
+                {renderSettingsCardIcon(sectionMeta.glyph)}
+              </span>
+              <span className="settings-section-nav__label">{section.label}</span>
+            </button>
+          )
+        })}
+      </nav>
+    )
+  }
+
   if (!open) return null
 
   return (
@@ -811,9 +840,9 @@ export function SettingsDrawer({
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="settings-drawer__header">
-          <div className="settings-drawer__header-main">
-            <div className="settings-drawer__title-stack">
+        <div className="settings-drawer__header sdh">
+          <div className="settings-drawer__header-main sdhm">
+            <div className="settings-drawer__title-stack sdt">
               <h3 className="settings-drawer__window-title">
                 <span className="settings-drawer__window-title-name">
                   {settingsView === 'home' ? ti('settings.home.presence.title') : activeSectionLabel}
@@ -824,7 +853,7 @@ export function SettingsDrawer({
               </h3>
             </div>
 
-            <div className="settings-drawer__toolbar">
+            <div className="settings-drawer__toolbar sdtb">
               <div className="settings-drawer__language-control" ref={languageMenuRef}>
                 <button
                   ref={languageButtonRef}
@@ -908,7 +937,7 @@ export function SettingsDrawer({
           </div>
         </div>
 
-        <div className="settings-drawer__body" ref={drawerBodyRef}>
+        <div className="settings-drawer__body sdb" ref={drawerBodyRef}>
           {settingsView === 'home' ? (
             <SettingsHomeView
               appearanceOptionRefs={appearanceOptionRefs}
@@ -924,71 +953,58 @@ export function SettingsDrawer({
               ti={ti}
               onAppearanceOptionKeyDown={handleAppearanceOptionKeyDown}
               onOpenHomeAction={handleOpenSettingsHomeAction}
+              onPreloadSettingsSection={preloadSettingsSection}
               onOpenSettingsSection={handleOpenSettingsSection}
               onSelectAppearanceOption={selectAppearanceOption}
             />
           ) : (
-            <div className="settings-page" data-section={activeSectionId}>
-              <div className="settings-page__header">
-                <button
-                  type="button"
-                  className="settings-page__back"
-                  onClick={handleReturnToSettingsHome}
-                  aria-label={ti('settings.page.back')}
-                  title={ti('settings.page.back')}
-                >
-                  <PetControlIcon name="back" />
-                  <span>{ti('settings.page.back')}</span>
-                </button>
+            <div className="settings-page sp" data-section={activeSectionId}>
+              <div className="settings-page__layout">
+                {renderSettingsSectionNav()}
 
-                <div className="settings-page__headline">
-                  {activeSectionMeta.eyebrow ? (
-                    <p className="eyebrow">{activeSectionMeta.eyebrow}</p>
-                  ) : null}
-                  <h4 ref={activeSectionHeadingRef} tabIndex={-1}>{activeSectionLabel}</h4>
-                  {activeSectionDescription ? (
-                    <p className="settings-section__note">{activeSectionDescription}</p>
-                  ) : null}
+                <div className="settings-page__main">
+                  <div className="settings-page__header sphd">
+                    <button
+                      type="button"
+                      className="settings-page__back"
+                      onClick={handleReturnToSettingsHome}
+                      aria-label={ti('settings.page.back')}
+                      title={ti('settings.page.back')}
+                    >
+                      <PetControlIcon name="back" />
+                      <span>{ti('settings.page.back')}</span>
+                    </button>
+
+                    <div className="settings-page__headline sph">
+                      {activeSectionMeta.eyebrow ? (
+                        <p className="eyebrow">{activeSectionMeta.eyebrow}</p>
+                      ) : null}
+                      <h4 ref={activeSectionHeadingRef} tabIndex={-1}>{activeSectionLabel}</h4>
+                      {activeSectionDescription ? (
+                        <p className="settings-section__note">{activeSectionDescription}</p>
+                      ) : null}
+                    </div>
+
+                    <span className="settings-page__mark" aria-hidden="true">
+                      {renderSettingsCardIcon(activeSectionMeta.glyph)}
+                    </span>
+                  </div>
+
+                  <div className="settings-drawer__content sdc settings-drawer__sections" ref={settingsSectionsRef}>
+                    {renderActiveSettingsSection()}
+                  </div>
                 </div>
-
-                <span className="settings-page__mark" aria-hidden="true">
-                  {renderSettingsCardIcon(activeSectionMeta.glyph)}
-                </span>
-              </div>
-
-              <div className="settings-drawer__content settings-drawer__sections" ref={settingsSectionsRef}>
-                {renderActiveSettingsSection()}
               </div>
             </div>
           )}
         </div>
 
-      <div className="settings-drawer__actions">
-        <button
-          type="button"
-          className="ghost-button"
-          onClick={handleDismiss}
-          aria-label={ti('common.cancel')}
-          title={ti('common.cancel')}
-        >
-          {ti('common.cancel')}
-        </button>
-        <button
-          type="button"
-          className="primary-button"
-          aria-label={ti('settings.save')}
-          title={ti('settings.save')}
-          onClick={() =>
-            onSave({
-              ...draft,
-              proactivePresenceIntervalMinutes: clampPresenceIntervalMinutes(
-                draft.proactivePresenceIntervalMinutes,
-              ),
-            })}
-        >
-          {ti('settings.save')}
-        </button>
-      </div>
+      <SettingsActionBar
+        cancelLabel={ti('common.cancel')}
+        saveLabel={ti('settings.save')}
+        onCancel={handleDismiss}
+        onSave={() => onSave(createSavePayload())}
+      />
       </aside>
       <ConfirmDialog options={confirmOptions} onConfirm={handleConfirm} onCancel={handleCancel} />
     </div>

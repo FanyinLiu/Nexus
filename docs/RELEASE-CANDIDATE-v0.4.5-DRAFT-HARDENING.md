@@ -88,6 +88,26 @@ Expected local smoke warnings remain acceptable when unchanged:
 - Electron/Node deprecation warnings can appear during local packaging or
   launch.
 
+## Evidence Collected
+
+Local draft-hardening evidence collected for this handoff:
+
+- `npm run v04:draft-stack:audit` — passed locally with full mode, static source
+  only, stable release `v0.4.2`, draft releases `v0.4.3`, `v0.4.4`, and
+  `v0.4.5`, and 0 errors.
+- `npm run verify:release` — passed locally. This includes `npm run verify:pr`,
+  `npm run sqlite:smoke`, and `npm run core-path:smoke:built`; the test suite
+  reported 2511 tests, SQLite smoke passed, and core-path smoke passed.
+- `npm run package:dir:smoke` — passed locally. The unpacked macOS app launched
+  from `release-smoke`, loaded the renderer, and reported packaged app loaded
+  successfully.
+- `git diff --check` — passed locally.
+
+The expected local smoke warnings remained limited to ad-hoc macOS signing,
+skipped notarization, optional missing KWS/SenseVoice models, and Electron/Node
+deprecation warnings. Temporary smoke artifacts such as `release-smoke` and
+`output/core-path-smoke` were removed after verification.
+
 ## Privacy Assertions
 
 v0.4.5 must preserve the v0.4 privacy boundary:

@@ -78,26 +78,23 @@ npm run release:signing:gate:mac
 npm run release:signing:gate:windows
 ```
 
-These gates are expected to fail today. Do not add them to the default release
-gate until Developer ID secrets, hardened runtime, notarization, signed updater
-mode, and Windows signing prerequisites are wired and verified.
+These gates are now part of the default release workflow. They verify that the
+signed configuration and secret wiring are present before any platform build
+starts; the actual Developer ID and Windows certificate values remain GitHub
+Actions secrets and are never stored in this repository.
 
 ## Signing and Update Trust
 
 Current release posture:
 
-- **macOS unsigned auto-update limitation.** Current macOS beta/local release
-  artifacts are explicit unsigned distribution: `hardenedRuntime` and
-  Gatekeeper assessment are disabled, CI disables automatic identity discovery,
-  and the artifacts should be treated as manual update downloads until
-  Developer ID signing is enabled. The app checks GitHub Releases for new
-  versions and opens the release page, but unsigned macOS packages are not a
-  trusted one-click auto-update path.
-- **Windows unsigned installer limitation.** Current Windows release CI
-  disables executable signing with `signAndEditExecutable=false`. NSIS
-  installers can still install and update through the existing release channel,
-  but SmartScreen warnings remain until a Windows signing certificate path is
-  wired.
+- **macOS signed release path.** Production configuration enables
+  `hardenedRuntime`, Gatekeeper assessment, notarization, signed updater mode,
+  and Electron Fuses. Local smoke artifacts intentionally use a separate
+  unsigned config and must not be used as production installers.
+- **Windows signed release path.** Production CI keeps executable signing
+  enabled and requires the configured Windows certificate secret group. A
+  missing certificate fails the release before packaging instead of silently
+  shipping an unsigned installer.
 - **Linux integrity path.** Linux artifacts include `SHA256SUMS`; detached GPG
   signatures are produced when `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` are
   configured.
@@ -116,6 +113,27 @@ Trusted macOS release prerequisites:
 - One beta cycle verifies `spctl -a -vv Nexus.app`, notarization, first launch,
   permissions, and update from the last unsigned build. The first unsigned to
   signed transition may require a manual download.
+
+Before any local production macOS package, run:
+
+```bash
+node scripts/mac-release-preflight.mjs
+```
+
+`npm run package:mac` runs this preflight automatically. It refuses to build
+when the Developer ID certificate, notarization credentials, or signed build
+flags are missing, so an ad-hoc artifact cannot be mistaken for a production
+installer. The unsigned `package:dir:smoke` path remains separate.
+
+After producing or extracting the signed app bundle, run the artifact checks:
+
+```bash
+node scripts/verify-mac-release.mjs "release/mac-arm64/Nexus.app"
+```
+
+This requires a valid Developer ID TeamIdentifier, a passing `spctl` assessment,
+and a stapled notarization ticket. It must pass before copying the bundle into
+`/Applications`.
 
 Trusted Windows release prerequisites:
 

@@ -150,6 +150,26 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
       )
     }
 
+    const v045Notes = requireFile('docs/RELEASE-NOTES-v0.4.5.md')
+    requirePhrase('docs/RELEASE-NOTES-v0.4.5.md', v045Notes, 'stable entry point on v0.4.2')
+    requirePhrase('docs/RELEASE-NOTES-v0.4.5.md', v045Notes, 'Recorded local draft-hardening evidence')
+    rejectPattern(
+      'docs/RELEASE-NOTES-v0.4.5.md',
+      v045Notes,
+      /stable entry point on v0\.4\.1/i,
+      'v0.4.5 release notes must not point the stable entry back to v0.4.1',
+    )
+
+    const v045LocalizedNotes = requireFile('docs/RELEASE-NOTES-v0.4.5.zh-CN.md')
+    requirePhrase('docs/RELEASE-NOTES-v0.4.5.zh-CN.md', v045LocalizedNotes, '稳定入口继续停留在 v0.4.2')
+    requirePhrase('docs/RELEASE-NOTES-v0.4.5.zh-CN.md', v045LocalizedNotes, '本地硬化证据')
+    rejectPattern(
+      'docs/RELEASE-NOTES-v0.4.5.zh-CN.md',
+      v045LocalizedNotes,
+      /稳定入口.{0,20}v0\.4\.1/,
+      'v0.4.5 localized release notes must not point the stable entry back to v0.4.1',
+    )
+
     const v04Plan = requireFile('docs/V0.4_DESKTOP_COMPANION_AWARENESS.md')
     requirePhrase(v04Plan ? 'docs/V0.4_DESKTOP_COMPANION_AWARENESS.md' : '', v04Plan, 'active stacked v0.4.x slice after `v0.4.2` remains `v0.4.5` Release Hardening Draft')
     requirePhrase('docs/V0.4_DESKTOP_COMPANION_AWARENESS.md', v04Plan, 'Do not publish `v0.4.5`')
@@ -172,8 +192,17 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
     requirePhrase('docs/ROADMAP.md', roadmap, 'no package version bump past the active stable, no future-draft tag, no future-draft GitHub Release, and no README stable-entry switch past `v0.4.2`')
 
     const changelog = requireFile('CHANGELOG.md')
+    requirePhrase('CHANGELOG.md', changelog, 'v0.4.3 user-facing transparency draft')
     requirePhrase('CHANGELOG.md', changelog, 'v0.4.5 release hardening draft')
+    requirePhrase('CHANGELOG.md', changelog, 'v0.4.5 draft hardening evidence')
+    requirePhrase('CHANGELOG.md', changelog, 'full v0.4 draft-stack audit')
     requirePhrase('CHANGELOG.md', changelog, 'keeps package version, tag, GitHub Release, and README stable-entry state unchanged')
+    rejectPattern(
+      'CHANGELOG.md',
+      changelog,
+      /No unreleased changes yet\./,
+      'CHANGELOG Unreleased must not claim empty while v0.4 draft work is staged',
+    )
 
     const hardening = requireFile('docs/RELEASE-CANDIDATE-v0.4-HARDENING.md')
     requirePhrase('docs/RELEASE-CANDIDATE-v0.4-HARDENING.md', hardening, 'RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md')
@@ -192,6 +221,16 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
       'npm run v04:draft-stack:audit',
       'npm run verify:release',
       'npm run package:dir:smoke',
+      '## Evidence Collected',
+      'npm run v04:draft-stack:audit` — passed locally',
+      'npm run verify:release` — passed locally',
+      '2511 tests',
+      'SQLite smoke passed',
+      'core-path smoke passed',
+      'npm run package:dir:smoke` — passed locally',
+      'packaged app loaded successfully',
+      'git diff --check` — passed locally',
+      'Temporary smoke artifacts such as `release-smoke` and `output/core-path-smoke` were removed after verification',
     ]) {
       requirePhrase('docs/RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md', draftHardening, phrase)
     }

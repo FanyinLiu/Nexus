@@ -7,6 +7,7 @@ import { buildIpcContractReport, summarizeIpcContractReport } from './ipc-contra
 import { buildReleaseTrustReport, summarizeReleaseTrustReport } from './release-trust-audit.mjs'
 import { buildStorageContractReport } from './storage-contract-audit.mjs'
 import { buildHeavyModuleAuditReport } from './heavy-module-audit.mjs'
+import { buildModelIntegrityReport } from './model-integrity-audit.mjs'
 import { buildCompanionBoundaryReport } from './companion-boundary-audit.mjs'
 import { buildArchitectureBoundaryReport } from './architecture-boundary-audit.mjs'
 import { buildSourceSizeReport } from './source-size-audit.mjs'
@@ -79,6 +80,7 @@ check('developer npm scripts cover run, package and release verification', () =>
     'package:win',
     'package:linux',
     'package:dir:smoke',
+    'package:size:audit',
     'core-path:smoke',
     'core-path:smoke:built',
     'lint',
@@ -86,9 +88,11 @@ check('developer npm scripts cover run, package and release verification', () =>
     'build',
     'verify:release',
     'verify:pr',
+    'typecheck:electron-security',
     'ipc:audit',
     'storage:audit',
     'heavy:audit',
+    'model:integrity:audit',
     'architecture:audit',
     'source-size:audit',
     'performance:baseline',
@@ -149,6 +153,21 @@ check('release workflow runs the pre-release gate before packaging', () => {
   assert(releaseWorkflow.includes('needs: [ensure-release, preflight]'), 'build job must depend on preflight')
 })
 
+check('pull requests run the complete policy gate', () => {
+  assert(ciWorkflow.includes('npm run verify:pr'), 'CI must run the complete verify:pr policy gate')
+  assert(ciWorkflow.includes('npm run knip:production'), 'CI must run the production dead-code audit')
+  assert(ciWorkflow.includes('npm run i18n:audit'), 'CI must run the localization contract audit')
+  assert(pkg.scripts?.['verify:pr']?.includes('npm run settings:css:audit'), 'verify:pr must run the settings CSS duplication audit')
+})
+
+check('trusted IPC boundary has a JavaScript typecheck gate', () => {
+  assert(pkg.scripts?.['typecheck:electron-security'], 'trusted IPC boundary typecheck script is missing')
+  assert(pkg.scripts?.verify?.includes?.('typecheck:electron-security') || pkg.scripts?.['verify:pr']?.includes('typecheck:electron-security'), 'PR verification must run the trusted IPC typecheck')
+  assert(existsSync(join(ROOT, 'electron/ipc/windowCapabilities.js')), 'window capability matrix must exist')
+  const validate = readText('electron/ipc/validate.js')
+  assert(validate.includes('isWindowChannelAllowed(channel, viewKind)'), 'IPC validation must enforce window capabilities')
+})
+
 check('pre-release gate docs include packaged smoke', () => {
   assert(
     releasingDoc.includes('### Stage B — Code quality (6 checks)'),
@@ -167,6 +186,11 @@ check('pre-release gate docs include packaged smoke', () => {
       releasingDoc.includes('Packaged smoke'),
     'RELEASING should explain what the packaged smoke gate validates',
   )
+})
+
+check('packaged smoke enforces app size and forbidden dependency budgets', () => {
+  assert(pkg.scripts?.['package:dir:smoke']?.includes('npm run package:size:audit'), 'packaged smoke must run package:size:audit')
+  assert(pkg.build?.files?.includes('!node_modules/onnxruntime-node/**'), 'packaging must exclude unused onnxruntime-node payloads')
 })
 
 check('core path smoke is release-gated and documented', () => {
@@ -238,6 +262,11 @@ check('renderer localStorage keys have a migration contract', () => {
 check('heavy renderer modules stay lazy-loaded', () => {
   const report = buildHeavyModuleAuditReport(ROOT)
   assert(report.summary.errors === 0, `heavy module audit has ${report.summary.errors} error(s); run npm run heavy:audit`)
+})
+
+check('remote model assets stay pinned and verified', () => {
+  const report = buildModelIntegrityReport(ROOT)
+  assert(report.summary.errors === 0, `model integrity audit has ${report.summary.errors} error(s); run npm run model:integrity:audit`)
 })
 
 check('renderer architecture boundaries do not invert', () => {

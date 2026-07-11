@@ -20,7 +20,7 @@ import {
   isVolcengineSpeechOutputProvider,
   supportsCustomSpeechOutputVoiceId,
 } from '../../lib/audioProviders'
-import { SPEECH_OUTPUT_PROVIDERS } from '../../lib/providerCatalog'
+import { SPEECH_OUTPUT_PROVIDERS } from '../../lib/speechProviderCatalog'
 import { updateCurrentSpeechOutputProviderProfile } from '../../lib/speechProviderProfiles'
 import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'

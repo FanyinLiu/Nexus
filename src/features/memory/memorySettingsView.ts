@@ -11,6 +11,7 @@ import {
   type CompanionTransparencyViewModel,
 } from '../context/companionTransparency.ts'
 import type { QuietObservationSummary } from '../context/companionAwareness.ts'
+import type { CompanionCheckInDecision } from '../context/companionCheckInPolicy.ts'
 
 export type MemoryKindCounts = Record<MemoryKind, number>
 
@@ -78,6 +79,7 @@ export function resolveMemoryTransparencySummary(input: {
   memoryLongTermRecallCount: number
   memoryPaused: boolean
   memorySemanticRecallCount: number
+  companionCheckInDecision?: CompanionCheckInDecision | null
   companionSummary?: QuietObservationSummary | null
   screenContextEnabled: boolean
   searchMode: MemorySearchMode
@@ -95,6 +97,7 @@ export function resolveMemoryTransparencySummary(input: {
     companionAwarenessPaused: input.companionAwarenessPaused ?? false,
     activeWindowContextEnabled: input.activeWindowContextEnabled,
     summary: input.companionSummary ?? null,
+    checkInDecision: input.companionCheckInDecision ?? null,
   })
 
   return {

@@ -17,6 +17,7 @@ export const REQUIRED_FILES = [
   'src/app/styles/settings-chat-role-final.css',
   'src/app/styles/settings-visual-system.css',
   'src/app/styles/settings-visibility-final.css',
+  'src/app/styles/settings-product-reference-final.css',
 ]
 
 export const SETTINGS_STYLE_IMPORT_ORDER = [
@@ -28,6 +29,95 @@ export const SETTINGS_STYLE_IMPORT_ORDER = [
   './styles/settings-chat-role-final.css',
   './styles/settings-visual-system.css',
   './styles/settings-visibility-final.css',
+  './styles/settings-product-reference-final.css',
+]
+
+export const SETTINGS_VISUAL_SYSTEM_COVERAGE = [
+  {
+    id: 'tone-tokens',
+    description: 'warm white, black-white/day, and night settings tones share token slots',
+    patterns: [
+      '.sb-night',
+      '.sd-night',
+      '.sb-day',
+      '.sd-day',
+      '.sb-warm',
+      '.sd-warm',
+    ],
+  },
+  {
+    id: 'home-shell-tone-parity',
+    description: 'settings home and child-page shells share one structure across night, day, and warm-day tones',
+    patterns: [
+      'v0.4.2 tone parity',
+      '.sd-home,',
+      '.sd-section',
+      '.sd-night.sd-home',
+      '.sd-day.sd-home',
+      '.sd-warm.sd-home',
+      '.sd-home .settings-home-card',
+      '.sd-home .sda',
+    ],
+  },
+  {
+    id: 'scale-tokens',
+    description: 'settings scale is centralized before page-specific overrides',
+    patterns: [
+      '--nx-settings-control-height:',
+      '--nx-settings-control-height-small:',
+      '--nx-settings-segment-height:',
+      '--nx-settings-footer-height:',
+      '--nx-settings-row-height:',
+      '--nx-settings-field-height:',
+      '--nx-settings-icon-size:',
+    ],
+  },
+  {
+    id: 'child-pages',
+    description: 'child settings pages inherit one row and section rhythm',
+    patterns: [
+      '.sd-section .sp.sp',
+      '.sdc.settings-drawer__sections',
+      '.settings-section__title-row',
+      '.settings-control-card:not(.settings-metric-card):not(.settings-updater-panel)',
+    ],
+  },
+  {
+    id: 'fields-and-validation',
+    description: 'inputs, selects, textareas, URL inputs, and validation states are covered together',
+    patterns: [
+      "input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file'])",
+      'select, textarea, .settings-url-input',
+      '.settings-form-row__validation',
+      '.settings-test-result.is-error',
+      '.settings-url-input--invalid',
+    ],
+  },
+  {
+    id: 'toggles-and-segments',
+    description: 'switches and segmented choices keep the same density and active-state grammar',
+    patterns: [
+      '.settings-toggle input:checked',
+      '.settings-appearance-switch__control',
+      '.onboarding-region-tabs',
+      '.settings-sprite-preview__states',
+      '.settings-companion-state-preview__states',
+      '--nx-settings-segment-surface',
+      '--nx-settings-segment-active',
+    ],
+  },
+  {
+    id: 'actions-and-dialogs',
+    description: 'footer actions, confirm dialogs, active choices, and destructive actions share the system',
+    patterns: [
+      '.sd-section .sda',
+      '--nx-settings-footer-surface',
+      '.settings-choice-card.is-active',
+      '.settings-danger-button',
+      '.sb .confirm-dialog-card',
+      '.sb .confirm-dialog-card__confirm.is-danger',
+    ],
+  },
 ]
 
 export const FORBIDDEN_SOURCE_PATTERNS = [
@@ -46,6 +136,7 @@ export const FORBIDDEN_SOURCE_PATTERNS = [
       'src/app/styles/settings-chat-role-final.css',
       'src/app/styles/settings-visual-system.css',
       'src/app/styles/settings-visibility-final.css',
+      'src/app/styles/settings-product-reference-final.css',
     ],
     description: 'Default settings must not add admin, marketplace, workspace, or provider-studio chrome.',
     patterns: [
@@ -73,6 +164,7 @@ export const FORBIDDEN_SOURCE_PATTERNS = [
       'src/app/styles/settings-chat-role-final.css',
       'src/app/styles/settings-visual-system.css',
       'src/app/styles/settings-visibility-final.css',
+      'src/app/styles/settings-product-reference-final.css',
     ],
     description: 'Settings must not inherit Image4 rhythm variables, dial chrome, speaking animation, or companion-scene tokens.',
     patterns: [
@@ -100,8 +192,8 @@ export const FORBIDDEN_SOURCE_PATTERNS = [
     files: ['src/app/styles/settings-chat-role-final.css'],
     description: 'Chat role parity must cover day and warm-day light themes, not only warm-day.',
     patterns: [
-      '.settings-drawer--warm-day.settings-drawer--section',
-      '.settings-drawer.settings-drawer--warm-day.settings-drawer--section',
+      '.sd-warm.sd-section',
+      '.sd-warm.sd-section',
     ],
   },
   {
@@ -113,6 +205,25 @@ export const FORBIDDEN_SOURCE_PATTERNS = [
       '--settings-readable-',
       'settings-readable-line',
       'content: ">";',
+    ],
+  },
+  {
+    id: 'settings-audit-only-css',
+    files: [
+      'src/app/styles/settings.css',
+      'src/app/styles/settings-home.css',
+      'src/app/styles/settings-themes.css',
+      'src/app/styles/settings-chat-aligned.css',
+      'src/app/styles/settings-chat-final.css',
+      'src/app/styles/settings-chat-role-final.css',
+      'src/app/styles/settings-visual-system.css',
+      'src/app/styles/settings-visibility-final.css',
+      'src/app/styles/settings-product-reference-final.css',
+    ],
+    description: 'Settings contracts must validate real runtime selectors instead of unreachable audit-only CSS.',
+    patterns: [
+      'audit-anchor',
+      'Audit contract references',
     ],
   },
 ]

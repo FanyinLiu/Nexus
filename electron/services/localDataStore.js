@@ -15,13 +15,16 @@ import {
   summarizeChatMigrationPackage,
   summarizeSqliteChatComparisonSessions,
 } from './localDataChatMigration.js'
-
 export const LOCAL_DATA_BACKEND = 'sqlite'
 export const LOCAL_DATA_SCHEMA_VERSION = 3
 export const LOCAL_DATA_MANIFEST_FORMAT = 'nexus-local-data-manifest'
 export const LOCAL_DATA_EXPORT_FORMAT = 'nexus-local-data-export'
 export const LOCAL_DATA_ONBOARDING_DOMAIN_ID = 'onboarding'
 export const LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID = 'chat-sessions'
+export const LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID = 'memory-long-term'
+export const LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID = 'memory-daily'
+export const LOCAL_DATA_COMPANION_RELATIONSHIP_DOMAIN_ID = 'companion-relationship'
+export const LOCAL_DATA_COMPANION_TASKS_DOMAIN_ID = 'companion-tasks'
 export const LOCAL_DATA_AUDIT_DOMAIN_ID = 'local-data-audit'
 
 const LEGACY_JSON_BACKEND = 'json-ledger'
@@ -54,6 +57,69 @@ const BUILT_IN_DOMAINS = [
       label: 'Chat sessions',
       sourceStorageKey: 'nexus:chat:sessions',
       legacySourceStorageKey: 'nexus:chat',
+      authority: 'renderer-localStorage',
+      migrationStrategy: 'explicit-confirmation-required',
+      containsUserContent: true,
+      containsSecrets: false,
+      userVisible: false,
+    },
+  },
+  {
+    id: LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID,
+    metadata: {
+      label: 'Long-term memory',
+      sourceStorageKey: 'nexus:memory:long-term',
+      legacySourceStorageKey: 'nexus:memory',
+      authority: 'renderer-localStorage',
+      migrationStrategy: 'explicit-confirmation-required',
+      containsUserContent: true,
+      containsSecrets: false,
+      userVisible: false,
+    },
+  },
+  {
+    id: LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID,
+    metadata: {
+      label: 'Daily memory',
+      sourceStorageKey: 'nexus:memory:daily',
+      authority: 'renderer-localStorage',
+      migrationStrategy: 'explicit-confirmation-required',
+      containsUserContent: true,
+      containsSecrets: false,
+      userVisible: false,
+    },
+  },
+  {
+    id: LOCAL_DATA_COMPANION_RELATIONSHIP_DOMAIN_ID,
+    metadata: {
+      label: 'Companion relationship state',
+      sourceStorageKeys: [
+        'nexus:autonomy:relationship',
+        'nexus:autonomy:relationship-history',
+        'nexus:autonomy:emotion',
+        'nexus:autonomy:emotion-history',
+        'nexus:autonomy:rhythm',
+        'nexus:autonomy:user-affect-history',
+      ],
+      authority: 'renderer-localStorage',
+      migrationStrategy: 'explicit-confirmation-required',
+      containsUserContent: true,
+      containsSecrets: false,
+      userVisible: false,
+    },
+  },
+  {
+    id: LOCAL_DATA_COMPANION_TASKS_DOMAIN_ID,
+    metadata: {
+      label: 'Companion tasks',
+      sourceStorageKeys: [
+        'nexus:plans',
+        'nexus:open-goals',
+        'nexus:agent-traces',
+        'nexus:background-tasks',
+        'nexus:agent:errands',
+        'nexus:reminder-tasks',
+      ],
       authority: 'renderer-localStorage',
       migrationStrategy: 'explicit-confirmation-required',
       containsUserContent: true,

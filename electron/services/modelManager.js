@@ -52,7 +52,8 @@ export function getInventory() {
       purpose: model.purpose,
       required: model.required,
       kind: model.kind,
-      present: presence.present,
+      present: presence.present && presence.verified,
+      verified: presence.verified,
       location: presence.location,
     }
   })
@@ -76,7 +77,8 @@ async function _downloadOne(modelId) {
   const model = MODEL_CATALOG.find(m => m.id === modelId)
   if (!model) throw new Error(`Unknown model id: ${modelId}`)
 
-  if (checkModelPresence(model, getModelsRoots()).present) {
+  const presence = checkModelPresence(model, getModelsRoots())
+  if (presence.present && presence.verified) {
     broadcast(PROGRESS_CHANNEL, { modelId, phase: 'installed' })
     return
   }

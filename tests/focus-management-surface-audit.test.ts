@@ -88,7 +88,7 @@ export function useModalFocusTrap() {
 `,
   'src/app/styles/settings.css': `
 .settings-section-nav__button:focus-visible { outline: 2px solid rgba(91, 129, 226, 0.6); }
-.settings-drawer .ghost-button:focus-visible { box-shadow: 0 0 0 3px rgba(91, 129, 226, 0.18); }
+.sd .ghost-button:focus-visible { box-shadow: 0 0 0 3px rgba(91, 129, 226, 0.18); }
 .settings-toggle input:focus-visible { border-color: rgba(91, 129, 226, 0.7); }
 `,
   'src/app/styles/settings-home.css': `

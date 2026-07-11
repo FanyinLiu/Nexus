@@ -142,8 +142,7 @@ export function buildSettingsSectionMeta(input: BuildSettingsSectionMetaInput): 
       glyph: 'letters',
       description: descriptions.letters,
       preview: [
-        ti('settings.letters.empty_state'),
-        ti('settings.letters.note'),
+        ti('settings.preview.letters.next'),
       ],
     },
     memory: {

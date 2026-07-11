@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-import { existsSync, readdirSync, statSync, chmodSync } from 'node:fs'
-import { spawn } from 'node:child_process'
+import { existsSync, readdirSync, statSync, chmodSync, mkdtempSync, rmSync } from 'node:fs'
+import { execFileSync, spawn } from 'node:child_process'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -129,10 +130,37 @@ function getAppArgs() {
   return []
 }
 
+function collectDescendantPids(pid, result = []) {
+  if (!pid || process.platform === 'win32') return result
+  let childPids = []
+  try {
+    childPids = execFileSync('pgrep', ['-P', String(pid)], { encoding: 'utf8' })
+      .split(/\s+/)
+      .map((value) => Number.parseInt(value, 10))
+      .filter((value) => Number.isInteger(value) && value > 0)
+  } catch {
+    return result
+  }
+  for (const childPid of childPids) {
+    collectDescendantPids(childPid, result)
+    result.push(childPid)
+  }
+  return result
+}
+
+function terminateChild(child) {
+  const descendants = collectDescendantPids(child.pid)
+  for (const pid of descendants) {
+    try { process.kill(pid, 'SIGKILL') } catch {}
+  }
+  try { child.kill('SIGKILL') } catch {}
+}
+
 function runSmoke(executable) {
   return new Promise((resolve, reject) => {
     let command = executable
-    let args = getAppArgs()
+    const smokeUserDataDir = mkdtempSync(path.join(os.tmpdir(), 'nexus-packaged-smoke-'))
+    let args = [...getAppArgs(), `--user-data-dir=${smokeUserDataDir}`]
 
     if (process.platform === 'linux' && !process.env.DISPLAY) {
       const xvfbRun = findCommand('xvfb-run')
@@ -152,25 +180,43 @@ function runSmoke(executable) {
       },
       stdio: 'inherit',
       windowsHide: true,
+      detached: false,
     })
 
+    let settled = false
+    const cleanup = () => {
+      try {
+        rmSync(smokeUserDataDir, { recursive: true, force: true })
+      } catch {
+        // Temporary smoke data is best-effort cleanup and must not mask a result.
+      }
+    }
+
+    const finish = (error) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      if (error) reject(error)
+      else resolve()
+    }
+
     const timeout = setTimeout(() => {
-      child.kill('SIGTERM')
-      reject(new Error(`packaged smoke timed out after ${TIMEOUT_MS}ms`))
+      terminateChild(child)
+      finish(new Error(`packaged smoke timed out after ${TIMEOUT_MS}ms`))
     }, TIMEOUT_MS)
 
     child.on('error', (error) => {
       clearTimeout(timeout)
-      reject(error)
+      finish(error)
     })
 
     child.on('exit', (code, signal) => {
       clearTimeout(timeout)
       if (code === 0) {
-        resolve()
+        finish()
         return
       }
-      reject(new Error(`packaged smoke exited with code=${code} signal=${signal || ''}`.trim()))
+      finish(new Error(`packaged smoke exited with code=${code} signal=${signal || ''}`.trim()))
     })
   })
 }

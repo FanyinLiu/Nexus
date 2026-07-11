@@ -64,6 +64,7 @@ test('performance baseline reports the largest CSS chunk without failing under b
     'index-abc123.css': 220_000,
     'settingsDrawerEntry-abc123.css': 320_000,
     'settingsDrawerEntry-abc123.js': 16_000,
+    'settings-ui-abc123.js': 340_000,
     'app.js': 64_000,
   }, (root) => {
     const report = buildPerformanceBaselineReport(root)
@@ -72,6 +73,7 @@ test('performance baseline reports the largest CSS chunk without failing under b
     assert.equal(report.assetMetrics.largestCssChunk?.bytes, 320_000)
     assert.equal(report.assetMetrics.initialCssChunk?.bytes, 220_000)
     assert.equal(report.assetMetrics.settingsDrawerCssChunk?.bytes, 320_000)
+    assert.equal(report.assetMetrics.settingsUiChunk?.bytes, 340_000)
     assert.equal(report.assetMetrics.totals.totalCssBytes, 540_000)
     assert.equal(report.summary.ok, true)
   })
@@ -80,8 +82,9 @@ test('performance baseline reports the largest CSS chunk without failing under b
 test('performance baseline fails when a single CSS chunk crosses the budget', () => {
   withBaselineFixture({
     'index-abc123.css': 220_000,
-    'settingsDrawerEntry-abc123.css': 585_001,
+    'settingsDrawerEntry-abc123.css': 480_001,
     'settingsDrawerEntry-abc123.js': 16_000,
+    'ModelSection-abc123.js': 340_000,
     'app.js': 64_000,
   }, (root) => {
     const report = buildPerformanceBaselineReport(root)
@@ -89,7 +92,7 @@ test('performance baseline fails when a single CSS chunk crosses the budget', ()
     assert.equal(report.assetMetrics.largestCssChunk?.fileName, 'settingsDrawerEntry-abc123.css')
     assert.deepEqual(
       report.errors.filter((error) => error.metric === 'maxCssChunkBytes'),
-      [{ metric: 'maxCssChunkBytes', actual: 585_001, budget: 585_000 }],
+      [{ metric: 'maxCssChunkBytes', actual: 480_001, budget: 480_000 }],
     )
     assert.equal(report.summary.ok, false)
   })
@@ -99,15 +102,16 @@ test('performance baseline fails when total CSS drifts above the tightened budge
   withBaselineFixture({
     'index-abc123.css': 440_000,
     'settingsDrawerEntry-abc123.css': 320_000,
-    'settings-extra.css': 125_001,
+    'settings-extra.css': 1,
     'settingsDrawerEntry-abc123.js': 16_000,
+    'ModelSection-abc123.js': 340_000,
     'app.js': 64_000,
   }, (root) => {
     const report = buildPerformanceBaselineReport(root)
 
     assert.deepEqual(
       report.errors.filter((error) => error.metric === 'totalCssBytes'),
-      [{ metric: 'totalCssBytes', actual: 885_001, budget: 885_000 }],
+      [{ metric: 'totalCssBytes', actual: 760_001, budget: 760_000 }],
     )
     assert.equal(report.summary.ok, false)
   })
@@ -115,9 +119,10 @@ test('performance baseline fails when total CSS drifts above the tightened budge
 
 test('performance baseline warns when CSS budget headroom is nearly exhausted', () => {
   withBaselineFixture({
-    'index-abc123.css': 280_000,
-    'settingsDrawerEntry-abc123.css': 530_000,
+    'index-abc123.css': 250_000,
+    'settingsDrawerEntry-abc123.css': 440_000,
     'settingsDrawerEntry-abc123.js': 16_000,
+    'ModelSection-abc123.js': 340_000,
     'app.js': 64_000,
   }, (root) => {
     const report = buildPerformanceBaselineReport(root)
@@ -136,6 +141,7 @@ test('performance baseline fails when initial CSS crosses the startup budget', (
     'index-abc123.css': 450_001,
     'settingsDrawerEntry-abc123.css': 320_000,
     'settingsDrawerEntry-abc123.js': 16_000,
+    'ModelSection-abc123.js': 340_000,
     'app.js': 64_000,
   }, (root) => {
     const report = buildPerformanceBaselineReport(root)
@@ -151,15 +157,16 @@ test('performance baseline fails when initial CSS crosses the startup budget', (
 test('performance baseline fails when settings lazy CSS crosses budget', () => {
   withBaselineFixture({
     'index-abc123.css': 220_000,
-    'settingsDrawerEntry-abc123.css': 585_001,
+    'settingsDrawerEntry-abc123.css': 480_001,
     'settingsDrawerEntry-abc123.js': 16_000,
+    'ModelSection-abc123.js': 340_000,
     'app.js': 64_000,
   }, (root) => {
     const report = buildPerformanceBaselineReport(root)
 
     assert.deepEqual(
       report.errors.filter((error) => error.metric === 'maxSettingsDrawerCssChunkBytes'),
-      [{ metric: 'maxSettingsDrawerCssChunkBytes', actual: 585_001, budget: 585_000 }],
+      [{ metric: 'maxSettingsDrawerCssChunkBytes', actual: 480_001, budget: 480_000 }],
     )
     assert.equal(report.summary.ok, false)
   })
@@ -169,6 +176,7 @@ test('performance baseline tracks the lazy settings drawer entry budget', () => 
   withBaselineFixture({
     'settingsDrawerEntry-abc123.css': 320_000,
     'settingsDrawerEntry-abc123.js': 64_000,
+    'ModelSection-abc123.js': 340_000,
     'app.js': 64_000,
   }, (root) => {
     const report = buildPerformanceBaselineReport(root)
@@ -183,6 +191,7 @@ test('performance baseline fails when the lazy settings drawer entry crosses bud
   withBaselineFixture({
     'settingsDrawerEntry-abc123.css': 320_000,
     'settingsDrawerEntry-abc123.js': 100_001,
+    'ModelSection-abc123.js': 340_000,
     'app.js': 64_000,
   }, (root) => {
     const report = buildPerformanceBaselineReport(root)
@@ -190,6 +199,23 @@ test('performance baseline fails when the lazy settings drawer entry crosses bud
     assert.deepEqual(
       report.errors.filter((error) => error.metric === 'maxSettingsDrawerEntryChunkBytes'),
       [{ metric: 'maxSettingsDrawerEntryChunkBytes', actual: 100_001, budget: 100_000 }],
+    )
+    assert.equal(report.summary.ok, false)
+  })
+})
+
+test('performance baseline fails when a lazy settings section chunk crosses budget', () => {
+  withBaselineFixture({
+    'settingsDrawerEntry-abc123.css': 320_000,
+    'settingsDrawerEntry-abc123.js': 16_000,
+    'ModelSection-abc123.js': 390_001,
+    'app.js': 64_000,
+  }, (root) => {
+    const report = buildPerformanceBaselineReport(root)
+
+    assert.deepEqual(
+      report.errors.filter((error) => error.metric === 'maxSettingsUiChunkBytes'),
+      [{ metric: 'maxSettingsUiChunkBytes', actual: 390_001, budget: 390_000 }],
     )
     assert.equal(report.summary.ok, false)
   })
@@ -203,10 +229,11 @@ test('performance baseline fails when settings drawer lazy assets disappear', ()
     const report = buildPerformanceBaselineReport(root)
 
     assert.deepEqual(
-      report.errors.filter((error) => error.metric.startsWith('missingSettingsDrawer')),
+      report.errors.filter((error) => error.metric.startsWith('missingSettings')),
       [
         { metric: 'missingSettingsDrawerCssChunk', actual: 0, budget: 1 },
         { metric: 'missingSettingsDrawerEntryChunk', actual: 0, budget: 1 },
+        { metric: 'missingSettingsUiChunk', actual: 0, budget: 1 },
       ],
     )
     assert.equal(report.summary.ok, false)

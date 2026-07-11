@@ -17,6 +17,10 @@ import {
   saveDailyMemories,
   saveMemories,
   saveTextFileWithFallback,
+  isMemoryLocalDataAuthorityActive,
+  MEMORY_LOCAL_DATA_AUTHORITY_CHANGED_EVENT,
+  readMemoryFromLocalData,
+  syncMemoryToLocalData,
 } from '../lib/index.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import type {
@@ -34,6 +38,15 @@ export function useMemory({ settings }: UseMemoryParams) {
   const { t } = useTranslation()
   const [memories, setMemories] = useState<MemoryItem[]>(() => loadMemories())
   const [dailyMemories, setDailyMemories] = useState<DailyMemoryStore>(() => loadDailyMemories())
+  const [memoryAuthorityActive, setMemoryAuthorityActive] = useState(() => isMemoryLocalDataAuthorityActive())
+  const memoryAuthorityHydratedRef = useRef(!memoryAuthorityActive)
+  const memoryAuthoritySyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const handleAuthorityChange = () => setMemoryAuthorityActive(isMemoryLocalDataAuthorityActive())
+    window.addEventListener(MEMORY_LOCAL_DATA_AUTHORITY_CHANGED_EVENT, handleAuthorityChange)
+    return () => window.removeEventListener(MEMORY_LOCAL_DATA_AUTHORITY_CHANGED_EVENT, handleAuthorityChange)
+  }, [])
   const memoriesRef = useRef(memories)
   const dailyMemoriesRef = useRef(dailyMemories)
   const settingsRef = useRef(settings)
@@ -68,6 +81,44 @@ export function useMemory({ settings }: UseMemoryParams) {
     }
     saveDailyMemories(dailyMemories)
   }, [dailyMemories])
+
+  useEffect(() => {
+    if (!memoryAuthorityActive) {
+      memoryAuthorityHydratedRef.current = true
+      return
+    }
+
+    let cancelled = false
+    memoryAuthorityHydratedRef.current = false
+    void readMemoryFromLocalData().then((result) => {
+      if (cancelled) return
+      if (result.memories && result.daily) {
+        memoriesRef.current = result.memories
+        dailyMemoriesRef.current = result.daily.reduce<DailyMemoryStore>((store, entry) => {
+          store[entry.day] = [...(store[entry.day] ?? []), entry]
+          return store
+        }, {})
+        setMemories(result.memories)
+        setDailyMemories(dailyMemoriesRef.current)
+      }
+      memoryAuthorityHydratedRef.current = true
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [memoryAuthorityActive])
+
+  useEffect(() => {
+    if (!memoryAuthorityActive || !memoryAuthorityHydratedRef.current) return
+    if (memoryAuthoritySyncTimerRef.current) clearTimeout(memoryAuthoritySyncTimerRef.current)
+    memoryAuthoritySyncTimerRef.current = setTimeout(() => {
+      void syncMemoryToLocalData(memoriesRef.current, dailyMemoriesRef.current)
+    }, 250)
+    return () => {
+      if (memoryAuthoritySyncTimerRef.current) clearTimeout(memoryAuthoritySyncTimerRef.current)
+    }
+  }, [dailyMemories, memories, memoryAuthorityActive])
 
   // Persist top memories to persona memory.md (debounced 30s)
   const personaPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)

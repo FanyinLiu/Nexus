@@ -21,6 +21,7 @@ import {
 } from '../settingsDrawerSupport'
 import { isWakeWordSupported } from '../../features/voice/providerSettings.ts'
 import { getDirectSendFallbackWakeWord } from '../../features/hearing/companionWakeWordSync.ts'
+import { SettingsStatusMessage, SettingsToggle } from '../settingsFields'
 
 type VoiceSectionProps = {
   active: boolean
@@ -96,80 +97,51 @@ export const VoiceSection = memo(function VoiceSection({
         ) : null}
 
         {audioSmokeStatus ? (
-          <div
-            className={audioSmokeStatus.ok ? 'settings-test-result is-success' : 'settings-test-result is-error'}
-            role={audioSmokeStatus.ok ? 'status' : 'alert'}
-            aria-live={audioSmokeStatus.ok ? 'polite' : 'assertive'}
-            aria-atomic="true"
-          >
+          <SettingsStatusMessage ok={audioSmokeStatus.ok}>
             {audioSmokeStatus.message}
-          </div>
+          </SettingsStatusMessage>
         ) : null}
 
         <div className="settings-control-grid settings-voice-control-grid">
           <div className="settings-control-card settings-voice-control">
-            <label className="settings-toggle">
-              <span>{ti('settings.voice.enable_input')}</span>
-              <input
-                type="checkbox"
-                checked={draft.speechInputEnabled}
-                disabled={!speechInputAvailable}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, speechInputEnabled: event.target.checked }))
-                }
-              />
-            </label>
+            <SettingsToggle
+              label={ti('settings.voice.enable_input')}
+              checked={draft.speechInputEnabled}
+              disabled={!speechInputAvailable}
+              onChange={(checked) => setDraft((prev) => ({ ...prev, speechInputEnabled: checked }))}
+            />
             <p>{speechInputAvailable ? ti('settings.voice.status_input_ready') : ti('settings.voice.status_input_unavailable')}</p>
           </div>
 
           <div className="settings-control-card settings-voice-control">
-            <label className="settings-toggle">
-              <span>{ti('settings.voice.enable_output')}</span>
-              <input
-                type="checkbox"
-                checked={draft.speechOutputEnabled}
-                disabled={!speechOutputAvailable}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, speechOutputEnabled: event.target.checked }))
-                }
-              />
-            </label>
+            <SettingsToggle
+              label={ti('settings.voice.enable_output')}
+              checked={draft.speechOutputEnabled}
+              disabled={!speechOutputAvailable}
+              onChange={(checked) => setDraft((prev) => ({ ...prev, speechOutputEnabled: checked }))}
+            />
             <p>{speechOutputAvailable ? ti('settings.voice.status_output_ready') : ti('settings.voice.status_output_unavailable')}</p>
           </div>
 
           <div className="settings-control-card settings-voice-control">
-            <label className="settings-toggle">
-              <span>{ti('settings.voice.enable_continuous')}</span>
-              <input
-                type="checkbox"
-                checked={draft.continuousVoiceModeEnabled}
-                disabled={!continuousVoiceAvailable}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    continuousVoiceModeEnabled: event.target.checked,
-                  }))
-                }
-              />
-            </label>
+            <SettingsToggle
+              label={ti('settings.voice.enable_continuous')}
+              checked={draft.continuousVoiceModeEnabled}
+              disabled={!continuousVoiceAvailable}
+              onChange={(checked) =>
+                setDraft((prev) => ({ ...prev, continuousVoiceModeEnabled: checked }))}
+            />
             <p>{draft.continuousVoiceModeEnabled ? ti('settings.voice.status_continuous_on') : ti('settings.voice.status_continuous_off')}</p>
           </div>
 
           <div className="settings-control-card settings-voice-control">
-            <label className="settings-toggle">
-              <span>{ti('settings.voice.enable_vad')}</span>
-              <input
-                type="checkbox"
-                checked={draft.voiceActivityDetectionEnabled}
-                disabled={!vadAvailable}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    voiceActivityDetectionEnabled: event.target.checked,
-                  }))
-                }
-              />
-            </label>
+            <SettingsToggle
+              label={ti('settings.voice.enable_vad')}
+              checked={draft.voiceActivityDetectionEnabled}
+              disabled={!vadAvailable}
+              onChange={(checked) =>
+                setDraft((prev) => ({ ...prev, voiceActivityDetectionEnabled: checked }))}
+            />
             <p>{draft.voiceActivityDetectionEnabled ? ti('settings.voice.status_on') : ti('settings.voice.status_off')}</p>
           </div>
         </div>
@@ -204,72 +176,43 @@ export const VoiceSection = memo(function VoiceSection({
 
         <div className="settings-voice-advanced-body">
           <div className="settings-control-card settings-voice-advanced-control">
-            <label className="settings-toggle">
-              <span>{ti('settings.voice.allow_interruption')}</span>
-              <input
-                type="checkbox"
-                checked={draft.voiceInterruptionEnabled}
-                disabled={!speechInputAvailable || !speechOutputAvailable}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    voiceInterruptionEnabled: event.target.checked,
-                  }))
-                }
-              />
-            </label>
+            <SettingsToggle
+              label={ti('settings.voice.allow_interruption')}
+              checked={draft.voiceInterruptionEnabled}
+              disabled={!speechInputAvailable || !speechOutputAvailable}
+              onChange={(checked) =>
+                setDraft((prev) => ({ ...prev, voiceInterruptionEnabled: checked }))}
+            />
             <p>{ti('settings.voice.interrupt_hint')}</p>
           </div>
 
           <div className="settings-control-card settings-voice-advanced-control">
-            <label className="settings-toggle">
-              <span>{ti('settings.voice.enable_stt_failover')}</span>
-              <input
-                type="checkbox"
-                checked={draft.speechInputFailoverEnabled}
-                disabled={!speechInputAvailable}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    speechInputFailoverEnabled: event.target.checked,
-                  }))
-                }
-              />
-            </label>
+            <SettingsToggle
+              label={ti('settings.voice.enable_stt_failover')}
+              checked={draft.speechInputFailoverEnabled}
+              disabled={!speechInputAvailable}
+              onChange={(checked) =>
+                setDraft((prev) => ({ ...prev, speechInputFailoverEnabled: checked }))}
+            />
           </div>
 
           <div className="settings-control-card settings-voice-advanced-control">
-            <label className="settings-toggle">
-              <span>{ti('settings.voice.enable_tts_failover')}</span>
-              <input
-                type="checkbox"
-                checked={draft.speechOutputFailoverEnabled}
-                disabled={!speechOutputAvailable}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    speechOutputFailoverEnabled: event.target.checked,
-                  }))
-                }
-              />
-            </label>
+            <SettingsToggle
+              label={ti('settings.voice.enable_tts_failover')}
+              checked={draft.speechOutputFailoverEnabled}
+              disabled={!speechOutputAvailable}
+              onChange={(checked) =>
+                setDraft((prev) => ({ ...prev, speechOutputFailoverEnabled: checked }))}
+            />
           </div>
 
           <div className="settings-control-card settings-voice-advanced-control">
-            <label className="settings-toggle">
-              <span>{ti('settings.voice.always_on_wakeword')}</span>
-              <input
-                type="checkbox"
-                checked={draft.wakewordAlwaysOn}
-                disabled={!wakewordAvailable}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    wakewordAlwaysOn: event.target.checked,
-                  }))
-                }
-              />
-            </label>
+            <SettingsToggle
+              label={ti('settings.voice.always_on_wakeword')}
+              checked={draft.wakewordAlwaysOn}
+              disabled={!wakewordAvailable}
+              onChange={(checked) => setDraft((prev) => ({ ...prev, wakewordAlwaysOn: checked }))}
+            />
             <p>{ti('settings.voice.always_on_wakeword_hint')}</p>
           </div>
 
