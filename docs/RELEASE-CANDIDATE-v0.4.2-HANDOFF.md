@@ -3,8 +3,9 @@
 Release state: `final_candidate`
 Evidence baseline head: `d99ba0b6`
 
-v0.4.2 promotes the Check-In Policy slice from the v0.4 draft stack into the
-current stable entry point. It keeps the desktop companion awareness line local,
+v0.4.2 is the local Check-In Policy code candidate from the v0.4 draft stack;
+it is not publicly released and does not replace the current public stable
+entry point, v0.4.1. It keeps the desktop companion awareness line local,
 coarse, and conservative: decide locally first, suppress repeats before any
 payload is built, and never turn the companion into a Codex-style work agent.
 

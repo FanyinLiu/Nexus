@@ -8,21 +8,25 @@
 
 | 指标 | 当前值 | 预算 | 说明 |
 |---|---:|---:|---|
-| 构建资产总量 | 27.64 MB | 35.00 MB | 只统计 `dist/assets`，不含 Electron、原生依赖和 extraResources。 |
-| JavaScript | 3.88 MB | 5.00 MB | 最大 JS chunk 是 `transformers-vendor`，当前仍在预算内。 |
-| CSS | 852.4 KB | 900.0 KB | 主入口 CSS 保持首屏轻量，Settings UI 通过延迟 CSS chunk 加载。 |
+| 构建资产总量 | 27.44 MB | 35.00 MB | 只统计 `dist/assets`，不含 Electron、原生依赖和 extraResources。 |
+| JavaScript | 3.93 MB | 5.00 MB | 最大 JS chunk 是 `transformers-vendor`，当前仍在预算内。 |
+| CSS | 611.8 KB | 710.0 KB | Settings 与 onboarding 均保持独立延迟 CSS 边界。 |
 | WASM | 21.60 MB | 25.00 MB | 最大资产是 `ort-wasm-simd-threaded.jsep.wasm`。 |
-| 最大 JS chunk | 868.7 KB | 1.20 MB | `transformers-vendor` 由记忆向量路径按需加载。 |
-| 最大 CSS chunk | 554.0 KB | 650.0 KB | 最大块是延迟加载的 Settings CSS，不进入首屏 CSS。 |
-| 首屏 CSS chunk | 298.4 KB | 450.0 KB | 主入口 CSS 的单块预算用于防止首屏样式无声膨胀。 |
-| Settings drawer lazy CSS | 554.0 KB | 600.0 KB | 设置抽屉样式作为 CSS 资源延迟加载，避免 raw CSS 打进 JS 后同步注入。 |
-| Settings drawer lazy JS entry | 0.1 KB | 100.0 KB | 设置入口 JS 只负责动态边界；若再次塞入 raw CSS 或重逻辑会触发预算。 |
+| 最大 JS chunk | 868.6 KB | 1.20 MB | `transformers-vendor` 由记忆向量路径按需加载。 |
+| 最大 CSS chunk | 234.2 KB | 480.0 KB | 当前最大块是首屏 `index.css`。 |
+| 首屏 CSS chunk | 234.2 KB | 260.0 KB | 预算约保留 11% 余量，防止低频界面样式回流首屏。 |
+| OnboardingGuide CSS | 22.7 KB | 30.0 KB | 三个源 CSS 文件按 shell、responsive、calm 顺序，仅随懒加载的 `OnboardingGuide` 加载。 |
+| Settings style CSS aggregate | 264.6 KB | 330.0 KB | 四个有序加载边界产出六个可识别 CSS chunk（含主题 fallback/alignment 子块）。 |
+| Largest Settings style CSS | 142.6 KB | 200.0 KB | 当前最大块是 `settingsStylesTheme.css`。 |
+| Settings drawer residual CSS | 11.4 KB | 20.0 KB | `settingsDrawerEntry.css` 仅保留现代组件残余；六个目标 chunk 缺失时仍 fail closed。 |
+| Settings drawer lazy JS entry | 69.1 KB | 100.0 KB | 源入口只负责动态边界；构建产物仍包含抽屉主体，若再次塞入 raw CSS 或重逻辑会触发预算。 |
+| Settings UI JS aggregate | 159.1 KB | 390.0 KB | Settings V3 子页继续按需拆分。 |
 
 本地目录快照：
 
 | 路径 | 当前大小 | 含义 |
 |---|---:|---|
-| `dist/` | 74 MB | Vite 构建输出，含 assets 和入口文件。 |
+| `dist/` | 85 MB | Vite 构建输出，含 assets 和入口文件。 |
 | `public/vendor/` | 36 MB | Live2D/Pixi/ORT/VAD 供应商文件来源。 |
 | `sherpa-models/` | 4 KB | 当前 checkout 只有 README；发布打包前脚本可能下载模型。 |
 
@@ -60,7 +64,7 @@
 
 1. **守住当前懒加载边界。** 继续让 `heavy:audit` 阻止 renderer 静态导入 `@huggingface/transformers`、`@ricky0123/vad-web`、`onnxruntime-web`、`pixi-live2d-display`、`pixi.js`、`tesseract.js`。
 2. **保持可选模型不进安装包。** `prepackage:win`、`prepackage:mac`、`prepackage:linux` 必须继续使用 `download-models.mjs --skip-asr`，避免可选 Paraformer / MeloTTS 被默认打包。
-3. **继续拆设置与守住设置打开速度。** `settingsDrawerEntry` 已避免污染首屏 CSS；设置 CSS 有 480 KB 预算，总 CSS 有 760 KB 预算，入口 JS 有 100 KB 预算，主 Settings UI JS chunk 有 390 KB 预算，并且这些懒加载资源必须继续存在。继续优化时优先拆掉过期设置规则、懒加载低频设置子页，或者把重面板延后到用户进入对应子页，而不是提高预算或把设置样式合回首屏。
+3. **继续守住低频 UI 的加载边界。** `settingsDrawerEntry` 通过四个有序边界产出六个 Settings CSS chunk，aggregate 预算为 330 KB，单 chunk 为 200 KB，残余入口 CSS 为 20 KB；OnboardingGuide 另有唯一 30 KB CSS chunk，且 `index.css` 禁止出现 onboarding/disclosure 选择器。总 CSS 预算为 710 KB，首屏 CSS 为 260 KB，入口 JS 为 100 KB，Settings UI JS aggregate 为 390 KB。继续优化时优先拆掉过期规则或延后低频子页，而不是提高预算或把样式合回首屏。
 4. **评估必需语音模型运行时下载。** 如果要进一步瘦安装包，优先把 required Sherpa 模型从 `extraResources` 迁到首次运行下载，同时保留下载进度、失败降级、离线说明和 `package:dir:smoke` 覆盖。
 5. **拆分供应商资源。** 若 WASM 或 vendor 继续增长，优先拆分 ORT/Live2D/OCR 的入口，而不是提高预算。
 6. **记录真实安装包体积。** 任何策略变更后，除了 `performance:baseline`，还要记录平台安装包大小和 `package:dir:smoke` 结果；`dist/assets` 不足以代表最终 installer。

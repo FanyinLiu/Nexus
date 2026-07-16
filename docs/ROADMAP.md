@@ -1,6 +1,6 @@
 # Nexus Roadmap — companion-first phases
 
-> Last updated 2026-06-21. Stewardship follows Klein's product direction.
+> Last updated 2026-07-13. Stewardship follows Klein's product direction.
 > For the short-term MVP and Chinese execution plan, see
 > [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md). When planning
 > near-term work, Phase 1 in that document is the active scope.
@@ -24,15 +24,17 @@ The larger product steps are:
   companionship. See
   [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md).
   The v0.4 line is split into quiet observation, companion UI/reliability
-  hardening, check-in policy, transparency UI, beta copy tuning, and release
-  hardening. `v0.4.0` is the stable quiet-observation foundation; `v0.4.1` is
-  the stable companion UI, Settings, and reliability hardening follow-up;
-  `v0.4.2` is the stable check-in policy follow-up; `v0.4.3` and `v0.4.4` are
-  draft stacked prerequisites; `v0.4.5` is the active stacked release-hardening
-  draft. It keeps package version, tag, GitHub Release, and README stable-entry
-  state unchanged for future draft slices: no package version bump past the
-  active stable, no future-draft tag, no future-draft GitHub Release, and no
-  README stable-entry switch past `v0.4.2`.
+  hardening, check-in policy, companion-surface cohesion and transparency,
+  beta copy tuning, and release
+  hardening. `v0.4.0` is the stable quiet-observation foundation; the current
+  public stable release is v0.4.3, covering the companion UI, Settings,
+  check-in policy, companion cohesion, transparency, and release hardening
+  completed for this slice. `v0.4.4` remains a draft
+  [Companion Surface Cohesion & Transparency](V0.4.3_OPTIMIZATION_AND_COMPETITOR_PLAN_2026-07-12.md)
+  follow-up layer and `v0.4.5` is a non-shipping release-hardening review
+  layer, not a second active product slice. Future work must not move the
+  package version, tag, GitHub Release, or README stable entry beyond
+  `v0.4.3` until a later release is explicitly prepared.
 - **v0.5.0 — desktop pet behavior.** The visible companion can react to mouse
   movement, typing rhythm, idleness, and desktop state without blocking the
   user's work.

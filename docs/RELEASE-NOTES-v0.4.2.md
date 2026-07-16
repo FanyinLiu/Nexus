@@ -1,11 +1,22 @@
 # Nexus v0.4.2 — Check-In Policy
 
-Status: Release candidate. Tag and publish only after the final release gate
-passes and Klein explicitly asks for the GitHub Release.
+Status: Release candidate. This local code candidate is not a public release;
+it has no tag or GitHub Release.
+No tag or GitHub Release
+No README stable-entry switch
+Tag and publish only after the final release gate passes and Klein explicitly
+asks for the GitHub Release.
 
 This follow-up release keeps the v0.4 desktop companion awareness line local and
 conservative. It hardens when a gentle in-app check-in may be considered; it
 does not send messages, trigger tools, or create external notifications.
+
+## Maintenance update
+
+- The main panel keeps a lightweight Live2D companion at the center, with text, voice, and the latest turn visible on one screen.
+- Settings and the companion panel share a calmer compact visual system with larger hit targets for critical icon controls.
+- Connection tests show when they were checked and become stale after request-relevant configuration changes instead of remaining falsely ready.
+- Live2D vendor/model failures can retry cleanly, and local runtime audits can read ready and first-frame milestones.
 
 ## What changes
 

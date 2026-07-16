@@ -1,5 +1,12 @@
 # Image4 Companion Field Reference Review
 
+> Historical pre-migration review — not the current UI contract. The dial and
+> its environment-lens behavior were retired in the July 2026 Live2D-first
+> redesign. Keep this file only as decision history; current work must not
+> reintroduce `Image4Dial`, the five-row rhythm, greeting cards, or suggestion
+> actions. Current acceptance is defined by the live `PanelView.tsx` route,
+> current Image4 contract checks, and the current-build visual evidence.
+
 Last checked: 2026-06-28.
 
 This note records the focused Image4 presence and dial review generated from:
@@ -67,7 +74,7 @@ Morning and normal daytime use the warm-day palette. Night/dark themes are inten
 
 This color direction is grounded in color-emotion research and accessibility rules, not only visual taste. A 2025 Psychonomic Bulletin & Review systematic review of 132 peer-reviewed articles reports that light colors skew positive, while blue, green, blue-green, and white are associated with positive low-arousal emotions such as comfort and relaxation. It also warns that yellow/orange tend toward higher arousal, so Nexus should use peach/apricot as a restrained emotional accent instead of a broad high-energy theme.
 
-For controls, the W3C non-text contrast guidance is the guardrail: available UI controls and meaningful icons need enough adjacent contrast to be identifiable, while inactive controls can stay quieter. In Image4 warm-day this means embedded plus, mic, send-ready, focus, and speaking cues should be legible through companion tokens before adding tiles, shadows, or larger button boxes.
+For controls, the W3C non-text contrast guidance is the guardrail: available UI controls and meaningful icons need enough adjacent contrast to be identifiable, while inactive controls can stay quieter. In Image4 warm-day this means the embedded attachment, send-ready, and focus cues should be legible through companion tokens. Voice runtime controls stay in Settings; the main companion composer has no voice-control role.
 
 References:
 
@@ -159,7 +166,7 @@ This keeps Image4 companion-first without making the surface feel like a dashboa
 
 These are suitable for source audits or deterministic tests:
 
-- `npm run image4:color:audit` verifies that the warm companionship tokens stay light, low-noise, and readable enough for text, embedded tools, send-ready, focus, and speaking cues.
+- `npm run image4:color:audit` verifies that the warm companionship tokens stay light, low-noise, and readable enough for text, embedded attachment, send-ready, and focus cues; presence speaking palette checks remain separate.
 - Presence remains a non-layout-affecting state layer and does not own row height.
 - Presence, dial, and signal use one companion state driver instead of separate state checks.
 - Resting derives from coarse elapsed buckets such as about an hour or two hours or more, never from exact minute/second labels.

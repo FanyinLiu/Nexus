@@ -22,7 +22,9 @@ src/
   hooks/        React-facing composition hooks built on top of features
   i18n/         Locale runtime, dictionaries, translation hook, OpenCC adapter
   lib/          Pure utilities, compatibility exports, persistence helpers
-  styles/       Global styles and token CSS
+  app/styles/   Global styles, panel layers, settings layers, and token CSS
+  features/onboarding/styles/
+                Onboarding shell, responsive, and calm CSS loaded with the lazy guide
   types/        Domain type definitions
 ```
 
@@ -77,8 +79,8 @@ Current baseline:
   Stage B packaged-smoke checklist in `docs/RELEASING.md`; if the actual
   `npm run package:dir:smoke` gate is removed from the release docs, the audit
   fails before release.
-- `docs/RELEASE-CANDIDATE-v0.3.6-HANDOFF.md` records the current release
-  candidate's foundation wrap-up scope, required evidence, residual
+- `docs/RELEASE-CANDIDATE-v0.3.6-HANDOFF.md` records the historical v0.3.6
+  foundation wrap-up scope, required evidence, residual
   signing/runtime risks, rollback path, and companion-first next phase. It is a
   per-release operator handoff, not a replacement for `docs/RELEASING.md`.
 - The updater runtime uses full `electron-updater` auto-download/install on
@@ -120,9 +122,11 @@ Current baseline:
 - `npm run performance:baseline` reads the production `dist/assets` output and
   static heavy-module audit result after `npm run build`. It records bundle
   size budgets for total assets, JavaScript, CSS, WASM, largest JS chunk,
-  largest CSS chunk, the lazy settings drawer CSS chunk, the lazy settings drawer entry chunk,
-  the main settings UI chunk, and eager heavy-module regressions without reading
-  runtime user data.
+  largest CSS chunk and the six recognized settings style chunks. It also tracks
+  the lazy settings drawer entry chunk and the main settings UI chunks, requires one
+  bounded `OnboardingGuide` CSS chunk and rejects onboarding/disclosure
+  selectors in `index.css`, so the lazy first-run guide cannot silently return
+  to the startup path. The audit reads no runtime user data.
 - `npm run companion-boundary:audit` keeps the repo aligned to companionship
   instead of work-agent expansion by requiring the companion task boundary to be
   documented in code-facing and release-facing docs.
@@ -159,9 +163,10 @@ Current baseline:
   reuses it and then adds the SQLite smoke check for release confidence.
 - The Image4 companion panel has a source-only UI contract system. Its hard
   gate, `npm run image4:contract:check`, runs inside `verify:pr` and protects
-  structural layout rules only: the five-row visual rhythm grid, explicit row
-  placement, short-height collapse behavior, and the separation of Image4 signal
-  rendering from `PanelView`. The stricter `npm run image4:visual-contract:audit`
+  the current four-part voice-first structure (header, Live2D stage, recap, and
+  composer), the absence of retired dial/greeting/action DOM, and the separation
+  of Image4 signal rendering from `PanelView`. The stricter
+  `npm run image4:visual-contract:audit`
   and non-blocking `npm run image4:contract:report` remain local design tools for
   tuning soft visual drift without freezing the evolving visual language.
   Cross-surface UI consistency for chat and settings is documented as a human
