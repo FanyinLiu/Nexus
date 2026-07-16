@@ -39,7 +39,7 @@ Release before choosing to run it.
 
 ## Evidence boundary
 
-The current source tree passed `npm run verify:release` with 2,983/2,983 tests.
+The current source tree passed `npm run verify:release` with 2,985/2,985 tests.
 Source and `dist` match fingerprint
 `7a2a880ccf170028413dd1acc1df92cc84b759f0fe42ea876010faf2e11601bb`
 across 986 inputs.

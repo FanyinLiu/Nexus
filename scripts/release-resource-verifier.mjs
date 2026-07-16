@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { closeSync, existsSync, openSync, readdirSync, readSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 
 import { extractFile, statFile } from '@electron/asar'
 
@@ -8,6 +8,13 @@ import { MODEL_CATALOG } from '../electron/services/modelDefinitions.js'
 
 export const BROWSER_VAD_ASAR_PATH = 'dist/vendor/vad/silero_vad_v5.onnx'
 export const BROWSER_VAD_WORKLET_ASAR_PATH = 'dist/vendor/vad/vad.worklet.bundle.min.js'
+
+export function asarApiPath(relativePath, pathSeparator = sep) {
+  // Archive paths are part of the release contract and always use `/`.
+  // @electron/asar 3.x traverses entries with the host path implementation,
+  // so only its API boundary receives the host-native representation.
+  return relativePath.split('/').join(pathSeparator)
+}
 
 const BROWSER_VAD_WORKLET_INTEGRITY = Object.freeze({
   // @ricky0123/vad-web 0.0.30, pinned by package-lock.json.
@@ -107,11 +114,12 @@ function sha256File(filePath) {
 }
 
 function inspectAsarFile(asarPath, relativePath) {
-  const entry = statFile(asarPath, relativePath, false)
+  const apiPath = asarApiPath(relativePath)
+  const entry = statFile(asarPath, apiPath, false)
   if ('files' in entry || 'link' in entry || entry.unpacked) {
     throw new Error(`${relativePath} must be a packed regular file`)
   }
-  const contents = extractFile(asarPath, relativePath, false)
+  const contents = extractFile(asarPath, apiPath, false)
   return {
     sizeBytes: contents.byteLength,
     sha256: createHash('sha256').update(contents).digest('hex'),

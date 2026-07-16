@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+  createPowerShellInspectionInvocation,
   inspectPeArchitecture,
   parsePowerShellInspection,
   verifyWindowsRelease,
@@ -58,6 +59,45 @@ function makeRecords({
 }
 
 const resourcesPass = () => ({ ok: true, errors: [] })
+
+test('Windows inspection isolates Windows PowerShell from pwsh module paths', () => {
+  const inheritedEnvironment = {
+    SystemRoot: String.raw`C:\Windows`,
+    Path: String.raw`C:\tools`,
+    PSModulePath: String.raw`C:\Program Files\PowerShell\7\Modules`,
+    pSmOdUlEpAtH: String.raw`C:\another-incompatible-module-root`,
+  }
+  const paths = {
+    installer: String.raw`C:\release\Nexus-Setup-0.4.3.exe`,
+    app: String.raw`C:\release\win-unpacked\Nexus.exe`,
+  }
+
+  const invocation = createPowerShellInspectionInvocation(paths, inheritedEnvironment)
+
+  assert.equal(
+    invocation.command,
+    String.raw`C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`,
+  )
+  assert.equal(invocation.env.NEXUS_VERIFY_WINDOWS_INSTALLER, paths.installer)
+  assert.equal(invocation.env.NEXUS_VERIFY_WINDOWS_APP, paths.app)
+  assert.equal(
+    Object.keys(invocation.env).some((key) => key.toLowerCase() === 'psmodulepath'),
+    false,
+  )
+  assert.deepEqual(invocation.args.slice(0, 6), [
+    '-NoLogo',
+    '-NoProfile',
+    '-NonInteractive',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+  ])
+  assert.match(invocation.args[6], /\$securityModule = Join-Path \$PSHOME/)
+  assert.match(invocation.args[6], /Import-Module -Name \$securityModule -Force -ErrorAction Stop/)
+  assert.match(invocation.args[6], /Microsoft\.PowerShell\.Security\\Get-AuthenticodeSignature/)
+  assert.match(invocation.args[6], /FileVersionInfo\]::GetVersionInfo/)
+  assert.equal(inheritedEnvironment.PSModulePath, String.raw`C:\Program Files\PowerShell\7\Modules`)
+})
 
 test('Windows release verifier parses strict PowerShell metadata and PE architectures', () => {
   const parsed = parsePowerShellInspection(JSON.stringify([
