@@ -1,6 +1,6 @@
 import { memo, type Dispatch, type ReactNode, type SetStateAction, useCallback, useEffect, useState } from 'react'
 import { parseNumberInput } from '../settingsDrawerSupport'
-import { NumberField, ToggleField } from '../settingsFields'
+import { NumberField, SettingsToggle, ToggleField } from '../settingsFields'
 import { PetControlIcon } from '../PetControlIcon'
 import { clampPresenceIntervalMinutes } from '../../lib/settings'
 import { humanizeError } from '../../lib/humanizeError'
@@ -192,14 +192,13 @@ function NotificationChannelsPanel({
             <span className="settings-autonomy-channel__interval">
               {ch.checkIntervalMinutes} {ti('settings.autonomy.notifications.minutes')}
             </span>
-            <label className="settings-toggle settings-autonomy-channel__toggle">
-              <input
-                type="checkbox"
-                checked={ch.enabled}
-                aria-label={toggleLabel}
-                onChange={() => void onUpdateChannel(ch.id, { enabled: !ch.enabled })}
-              />
-            </label>
+            <SettingsToggle
+              className="settings-autonomy-channel__toggle"
+              label={toggleLabel}
+              hideLabel
+              checked={ch.enabled}
+              onChange={(enabled) => void onUpdateChannel(ch.id, { enabled })}
+            />
             <button
               type="button"
               className="settings-autonomy-channel__delete"
@@ -319,22 +318,18 @@ function MacMessageWatcherCard({ draft, setDraft, ti }: {
           switch so message awareness is a single flip + the macOS Full Disk
           Access grant — nothing else to configure. Turning it off leaves the
           master alone (webhook/RSS may still want it). */}
-      <label className="settings-toggle">
-        <span>{ti('settings.autonomy.watcher.enable')}</span>
-        <input
-          type="checkbox"
-          checked={draft.macosMessageWatcherEnabled}
-          disabled={!platformSupported}
-          onChange={(e) => {
-            const enabled = e.target.checked
-            setDraft((prev) => ({
-              ...prev,
-              macosMessageWatcherEnabled: enabled,
-              autonomyNotificationsEnabled: enabled ? true : prev.autonomyNotificationsEnabled,
-            }))
-          }}
-        />
-      </label>
+      <SettingsToggle
+        label={ti('settings.autonomy.watcher.enable')}
+        checked={draft.macosMessageWatcherEnabled}
+        disabled={!platformSupported}
+        onChange={(enabled) => {
+          setDraft((prev) => ({
+            ...prev,
+            macosMessageWatcherEnabled: enabled,
+            autonomyNotificationsEnabled: enabled ? true : prev.autonomyNotificationsEnabled,
+          }))
+        }}
+      />
 
       {draft.macosMessageWatcherEnabled && statusKey === 'needs-permission' ? (
         <div className="settings-stack">

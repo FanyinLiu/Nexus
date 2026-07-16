@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { useTranslation } from '../i18n/useTranslation.ts'
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap.ts'
 import type { ConfirmOptions } from './useConfirm.ts'
 
 type ConfirmDialogProps = {
@@ -11,6 +12,10 @@ type ConfirmDialogProps = {
 export function ConfirmDialog({ options, onConfirm, onCancel }: ConfirmDialogProps) {
   const { t } = useTranslation()
   const cancelButtonRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+  const messageId = useId()
+  useModalFocusTrap(dialogRef, options !== null)
 
   useEffect(() => {
     if (!options) return
@@ -43,14 +48,16 @@ export function ConfirmDialog({ options, onConfirm, onCancel }: ConfirmDialogPro
       }}
     >
       <div
+        ref={dialogRef}
         className="confirm-dialog-card"
         role="alertdialog"
         aria-modal="true"
-        aria-label={options.title ?? options.message}
+        aria-labelledby={options.title ? titleId : messageId}
+        aria-describedby={options.title ? messageId : undefined}
         onClick={(event) => event.stopPropagation()}
       >
-        {options.title ? <h2 className="confirm-dialog-card__title">{options.title}</h2> : null}
-        <p className="confirm-dialog-card__message">{options.message}</p>
+        {options.title ? <h2 id={titleId} className="confirm-dialog-card__title">{options.title}</h2> : null}
+        <p id={messageId} className="confirm-dialog-card__message">{options.message}</p>
         <div className="confirm-dialog-card__actions">
           <button
             ref={cancelButtonRef}

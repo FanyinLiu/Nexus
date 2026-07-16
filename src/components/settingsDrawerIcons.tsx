@@ -1,6 +1,21 @@
 import type { ReactNode } from 'react'
 
-export function renderSettingsCardIcon(iconKey: string): ReactNode {
+export type SettingsCardIconKey =
+  | 'console'
+  | 'model'
+  | 'chat'
+  | 'history'
+  | 'letters'
+  | 'memory'
+  | 'lorebooks'
+  | 'voice'
+  | 'window'
+  | 'integrations'
+  | 'tools'
+  | 'autonomy'
+  | 'onboarding'
+
+export function renderSettingsCardIcon(iconKey: SettingsCardIconKey): ReactNode {
   switch (iconKey) {
     case 'console':
       return (
@@ -36,6 +51,12 @@ export function renderSettingsCardIcon(iconKey: string): ReactNode {
       return (
         <svg viewBox="0 0 32 32" aria-hidden="true">
           <path fill="currentColor" d="M16 4a1 1 0 0 1 .86.5C18.5 7.5 22 11.24 22 15a6 6 0 0 1-5 5.91V24h3a1 1 0 1 1 0 2h-3v2a1 1 0 1 1-2 0v-2h-3a1 1 0 1 1 0-2h3v-3.09A6 6 0 0 1 10 15c0-3.76 3.5-7.5 5.14-10.5A1 1 0 0 1 16 4Z" />
+        </svg>
+      )
+    case 'lorebooks':
+      return (
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path fill="currentColor" d="M7 4h16a4 4 0 0 1 4 4v18a2 2 0 0 1-2 2H9a4 4 0 0 1-4-4V8a4 4 0 0 1 2-3.46V4Zm2 3a1 1 0 0 0-1 1v12.13c.32-.09.65-.13 1-.13h15V8a1 1 0 0 0-1-1H9Zm0 16a1 1 0 1 0 0 2h15v-2H9Zm3-12h8a1 1 0 1 1 0 2h-8a1 1 0 1 1 0-2Zm0 4h6a1 1 0 1 1 0 2h-6a1 1 0 1 1 0-2Z" />
         </svg>
       )
     case 'voice':

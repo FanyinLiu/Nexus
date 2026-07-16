@@ -40,6 +40,7 @@ type DebugConsoleBridge = {
 export type UseTelegramBridgeOptions = {
   settingsRef: React.RefObject<AppSettings>
   enabled: boolean
+  runtimeOwner?: boolean
   botToken: string
   allowedChatIds: string
   chat: ChatBridge
@@ -85,6 +86,7 @@ async function transcribeTelegramVoice(
 export function useTelegramBridge({
   settingsRef,
   enabled,
+  runtimeOwner = true,
   botToken,
   allowedChatIds,
   chat,
@@ -172,6 +174,7 @@ export function useTelegramBridge({
     allowedChatIds,
     onMessage: handleTelegramMessage,
     enabled,
+    runtimeOwner,
   })
 
   useEffect(() => {

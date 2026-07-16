@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react'
+import { useSpeechLevelSnapshot } from '../../hooks/voice/speechLevelPublishing.ts'
 import { formatReminderScheduleSummaryForUi } from '../../features/reminders/schedule'
 import { getMeterSnapshot } from '../../features/metering/contextMeter'
 import { getArchiveStats } from '../../features/memory/coldArchive'
@@ -10,6 +11,7 @@ import type {
   AppSettings,
   DebugConsoleEvent,
   ReminderTask,
+  SpeechLevelSource,
   UiLanguage,
   VoicePipelineState,
   VoiceState,
@@ -23,6 +25,7 @@ import {
   formatReminderCenterNextLabel,
   formatVoicePipelineStepLabel,
   formatVoiceStateLabel,
+  type SettingsSectionId,
 } from '../settingsDrawerSupport'
 import { AboutPanel } from './AboutPanel'
 import { CostHistoryPanel } from './CostHistoryPanel'
@@ -49,7 +52,7 @@ type ConsoleSectionProps = {
   liveTranscript: string
   onClearDebugConsole: () => void
   reminderTasks: ReminderTask[]
-  speechLevel: number
+  speechLevelSource: SpeechLevelSource
   uiLanguage: UiLanguage
   draft: AppSettings
   petModel: PetModelDefinition | undefined
@@ -59,8 +62,19 @@ type ConsoleSectionProps = {
   emotionState?: EmotionSnapshot
   memoryCount?: number
   autonomyPhase?: string
-  onOpenSettingsSection?: (sectionId: 'memory' | 'chat') => void
+  onOpenSettingsSection?: (sectionId: SettingsSectionId) => void
 }
+
+const ConsoleSpeechLevelMeta = memo(function ConsoleSpeechLevelMeta({
+  label,
+  source,
+}: {
+  label: string
+  source: SpeechLevelSource
+}) {
+  const speechLevel = useSpeechLevelSnapshot(source)
+  return <span>{label} {Math.round(Math.max(0, Math.min(1, speechLevel)) * 100)}%</span>
+})
 
 export const ConsoleSection = memo(function ConsoleSection({
   active,
@@ -68,7 +82,7 @@ export const ConsoleSection = memo(function ConsoleSection({
   debugConsoleEvents,
   onClearDebugConsole,
   reminderTasks,
-  speechLevel,
+  speechLevelSource,
   uiLanguage,
   draft,
   petModel,
@@ -130,7 +144,10 @@ export const ConsoleSection = memo(function ConsoleSection({
           <p>{voicePipelineSummary}</p>
           <div className="settings-console-card__meta">
             <span>{ti('settings.console.updated')} {formatConsoleTimestamp(voicePipeline.updatedAt, uiLanguage)}</span>
-            <span>{ti('settings.console.level')} {Math.round(Math.max(0, Math.min(1, speechLevel)) * 100)}%</span>
+            <ConsoleSpeechLevelMeta
+              label={ti('settings.console.level')}
+              source={speechLevelSource}
+            />
           </div>
         </article>
 

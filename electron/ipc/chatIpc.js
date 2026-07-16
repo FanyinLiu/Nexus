@@ -21,10 +21,18 @@ import {
   trimRepeatedStreamingDelta as trimChatStreamingDelta,
 } from '../chatRuntime.js'
 import {
+  CHAT_CONNECTION_MESSAGE,
+  CHAT_CONNECTION_RECOMMENDATION,
+  buildChatConnectionResult,
+} from '../services/chatConnectionProof.js'
+import {
+  SPEECH_CONNECTION_MESSAGE,
+  buildSpeechConnectionResult,
+} from '../services/speechConnectionProof.js'
+import {
   normalizeBaseUrl,
   performNetworkRequest,
   performNetworkRequestWithRetry,
-  formatConnectionFailureMessage,
 } from '../net.js'
 import {
   isVolcengineSpeechInputProvider,
@@ -37,6 +45,7 @@ import {
   runSpeechInputConnectionSmokeTest,
   runSpeechOutputConnectionSmokeTest,
 } from '../services/sttService.js'
+import { getLocalServiceConnectionRoute } from '../services/serviceConnectionRouting.js'
 import { getRedactedErrorMessage, redactSensitiveErrorText } from '../services/errorRedaction.js'
 import { requireTrustedSender, expectString, assertArray } from './validate.js'
 import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
@@ -68,6 +77,22 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       throw new Error(`API Base URL 被拒绝（${safety.reason}）。请使用合法的 https/http 模型接口地址。`)
     }
     const providerId = normalizeChatProviderId(requestPayload.providerId, baseUrl)
+    const preflightFailure = getChatConnectionTestPreflightFailure({
+      providerId,
+      apiKey: requestPayload.apiKey,
+    })
+    if (preflightFailure) {
+      console.warn('[chat:complete] preflight blocked', {
+        traceId: requestPayload.traceId ?? '',
+        providerId,
+        model: requestPayload.model,
+        code: preflightFailure.code ?? 'chat_preflight_blocked',
+      })
+      const error = new Error(preflightFailure.message || '连接前检查未通过，请检查模型设置。')
+      if (preflightFailure.code) error.code = preflightFailure.code
+      if (preflightFailure.status) error.status = preflightFailure.status
+      throw error
+    }
     const requestSpec = buildChatRequest(requestPayload, { stream: false })
 
     console.info('[chat:complete] request', {
@@ -124,11 +149,14 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         message: redactSensitiveErrorText(data?.error?.message ?? data?.message ?? ''),
       })
       if (response.status === 401) {
-        throw new Error(
+        const error = new Error(
           requestPayload.apiKey || !chatProviderRequiresApiKey(providerId)
             ? 'API Key 好像不太对，去设置里看看？'
             : '还没填 API Key 呢，先去设置里填一个吧。',
         )
+        error.code = 'auth_failed'
+        error.status = 401
+        throw error
       }
 
       throw new Error(
@@ -436,18 +464,24 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     const providerId = normalizeChatProviderId(requestPayload.providerId, baseUrl)
 
     if (!baseUrl) {
-      return {
+      return buildChatConnectionResult({
         ok: false,
-        message: '还没填 API 地址呢。',
-      }
+        status: 'misconfigured',
+        code: 'missing_api_base_url',
+        messageKey: CHAT_CONNECTION_MESSAGE.MISSING_BASE_URL,
+      })
     }
 
     const safety = checkChatBaseUrlSafety(baseUrl)
     if (!safety.ok) {
-      return {
+      return buildChatConnectionResult({
         ok: false,
-        message: `这个地址不太安全，没法用哦（${safety.reason}）。`,
-      }
+        status: 'misconfigured',
+        code: 'invalid_api_base_url',
+        messageKey: CHAT_CONNECTION_MESSAGE.UNSAFE_BASE_URL,
+        // Reason codes from urlSafety are machine-safe (no host/path secrets).
+        messageParams: safety.reason ? { reason: safety.reason } : undefined,
+      })
     }
 
     const preflightFailure = getChatConnectionTestPreflightFailure({
@@ -623,6 +657,33 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     requireTrustedSender(event)
     payload = validateServiceConnectionTestPayload(payload)
     const requestPayload = await resolveVaultRefsForSender(event.sender, payload, ['apiKey'])
+
+    // Providers backed by local/runtime protocols do not have an HTTP Base
+    // URL. Route them before the generic URL gate so the UI never reports a
+    // fabricated configuration error.
+    const localConnectionRoute = getLocalServiceConnectionRoute(requestPayload)
+    if (localConnectionRoute === 'local-speech-output') {
+      try {
+        return await runSpeechOutputConnectionSmokeTest(requestPayload, '')
+      } catch (error) {
+        return buildSpeechConnectionResult({
+          ok: false,
+          messageKey: SPEECH_CONNECTION_MESSAGE.OUTPUT_INVALID_AUDIO,
+          code: 'local_runtime_unavailable',
+          diagnosticDetail: getRedactedErrorMessage(error),
+        })
+      }
+    }
+
+    if (localConnectionRoute === 'unsupported-speech-input-test') {
+      return buildSpeechConnectionResult({
+        ok: false,
+        status: 'unsupported',
+        messageKey: SPEECH_CONNECTION_MESSAGE.INPUT_UNSUPPORTED,
+        code: 'connection_test_unsupported',
+      })
+    }
+
     let baseUrl
     if (requestPayload.capability !== 'speech-output') {
       baseUrl = normalizeBaseUrl(requestPayload.baseUrl)
@@ -631,29 +692,35 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     }
 
     if (!baseUrl) {
-      return {
+      return buildChatConnectionResult({
         ok: false,
-        message: '还没填 API 地址呢。',
-      }
+        status: 'misconfigured',
+        code: 'missing_api_base_url',
+        messageKey: CHAT_CONNECTION_MESSAGE.MISSING_BASE_URL,
+      })
     }
 
     const safety = checkChatBaseUrlSafety(baseUrl)
     if (!safety.ok) {
-      return {
+      return buildChatConnectionResult({
         ok: false,
-        message: `这个地址不太安全，没法用哦（${safety.reason}）。`,
-      }
+        status: 'misconfigured',
+        code: 'invalid_api_base_url',
+        messageKey: CHAT_CONNECTION_MESSAGE.UNSAFE_BASE_URL,
+        messageParams: safety.reason ? { reason: safety.reason } : undefined,
+      })
     }
 
     if (isVolcengineSpeechInputProvider(requestPayload.providerId) || isVolcengineSpeechOutputProvider(requestPayload.providerId)) {
       const credentials = parseVolcengineSpeechCredentials(requestPayload.apiKey)
       if (!credentials.appId || !credentials.accessToken) {
-        return {
+        return buildSpeechConnectionResult({
           ok: false,
-          message: isVolcengineSpeechInputProvider(requestPayload.providerId)
-            ? '火山语音识别需要在 API Key 那里填 APP_ID:ACCESS_TOKEN 的格式哦。'
-            : '火山语音合成需要在 API Key 那里填 APP_ID:ACCESS_TOKEN 的格式哦。',
-        }
+          messageKey: isVolcengineSpeechInputProvider(requestPayload.providerId)
+            ? SPEECH_CONNECTION_MESSAGE.INPUT_PROVIDER_ERROR
+            : SPEECH_CONNECTION_MESSAGE.OUTPUT_INVALID_AUDIO,
+          code: 'missing_api_key',
+        })
       }
     }
 
@@ -663,10 +730,12 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       } catch (error) {
         const reason = getRedactedErrorMessage(error)
 
-        return {
+        return buildSpeechConnectionResult({
           ok: false,
-          message: formatConnectionFailureMessage(reason),
-        }
+          messageKey: SPEECH_CONNECTION_MESSAGE.OUTPUT_INVALID_AUDIO,
+          code: 'provider_unreachable',
+          diagnosticDetail: reason,
+        })
       }
     }
 
@@ -675,10 +744,12 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     } catch (error) {
       const reason = getRedactedErrorMessage(error)
 
-      return {
+      return buildSpeechConnectionResult({
         ok: false,
-        message: formatConnectionFailureMessage(reason),
-      }
+        messageKey: SPEECH_CONNECTION_MESSAGE.INPUT_PROVIDER_ERROR,
+        code: 'provider_unreachable',
+        diagnosticDetail: reason,
+      })
     }
   })
 }

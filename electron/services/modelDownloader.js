@@ -7,12 +7,28 @@
  * bar in the UI or stdout dots in the terminal.
  */
 
-import { existsSync, mkdirSync, createWriteStream, rmSync, statSync } from 'node:fs'
+import {
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
+import { createHash } from 'node:crypto'
 import { join, dirname } from 'node:path'
 import { get as httpsGet } from 'node:https'
-import { get as httpGet } from 'node:http'
 import { spawn } from 'node:child_process'
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import {
+  resolveModelDownloadRedirect,
+  validateModelArchiveListing,
+  validateModelDownloadUrl,
+  validateModelIntegrity,
+} from './modelDownloadSecurity.js'
 
 // ── Network probe (HuggingFace vs ModelScope fallback) ─────────────────
 
@@ -52,44 +68,109 @@ export async function canReachHuggingFace() {
 
 // ── HTTP download with redirect following ──────────────────────────────
 
-function downloadFile(url, destPath, onProgress, maxRedirects = 5) {
-  return new Promise((resolve, reject) => {
-    if (maxRedirects <= 0) return reject(new Error('Too many redirects'))
+function replaceFile(tempPath, destPath) {
+  const backupPath = `${destPath}.backup-${process.pid}-${Date.now()}`
+  const hadDestination = existsSync(destPath)
+  try {
+    if (hadDestination) renameSync(destPath, backupPath)
+    renameSync(tempPath, destPath)
+    if (hadDestination) rmSync(backupPath, { force: true })
+  } catch (error) {
+    if (!existsSync(destPath) && hadDestination && existsSync(backupPath)) {
+      try { renameSync(backupPath, destPath) } catch {}
+    }
+    throw error
+  }
+}
 
-    const getter = url.startsWith('https') ? httpsGet : httpGet
-    const req = getter(url, { timeout: 120_000 }, (res) => {
+export function downloadFile(url, destPath, onProgress, integrity, maxRedirects = 5) {
+  const safeUrl = validateModelDownloadUrl(url).toString()
+  const expected = validateModelIntegrity(integrity)
+  return new Promise((resolve, reject) => {
+    if (maxRedirects < 0) return reject(new Error('Too many model download redirects'))
+
+    const req = httpsGet(safeUrl, { timeout: 120_000 }, (res) => {
       if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location) {
         req.destroy()
-        return downloadFile(res.headers.location, destPath, onProgress, maxRedirects - 1)
+        let redirectUrl
+        try {
+          redirectUrl = resolveModelDownloadRedirect(safeUrl, res.headers.location)
+        } catch (error) {
+          reject(error)
+          return
+        }
+        return downloadFile(redirectUrl, destPath, onProgress, expected, maxRedirects - 1)
           .then(resolve)
           .catch(reject)
       }
 
       if (res.statusCode !== 200) {
         req.destroy()
-        return reject(new Error(`HTTP ${res.statusCode} for ${url}`))
+        return reject(new Error(`Model download failed with HTTP ${res.statusCode}`))
       }
 
       mkdirSync(dirname(destPath), { recursive: true })
-      const file = createWriteStream(destPath)
-      const totalBytes = parseInt(res.headers['content-length'] || '0', 10)
+      const tempPath = `${destPath}.partial-${process.pid}-${Date.now()}`
+      const file = createWriteStream(tempPath, { flags: 'wx' })
+      const hash = createHash('sha256')
+      const contentLength = Number.parseInt(res.headers['content-length'] || '0', 10)
       let downloaded = 0
+      let settled = false
+
+      const fail = (error) => {
+        if (settled) return
+        settled = true
+        res.unpipe(file)
+        res.destroy()
+        file.destroy()
+        try { rmSync(tempPath, { force: true }) } catch {}
+        reject(error)
+      }
+
+      if (contentLength > 0 && contentLength !== expected.sizeBytes) {
+        fail(new Error('Model download size does not match its integrity manifest'))
+        return
+      }
 
       res.on('data', (chunk) => {
         downloaded += chunk.length
+        if (downloaded > expected.sizeBytes) {
+          fail(new Error('Model download exceeded its integrity size limit'))
+          return
+        }
+        hash.update(chunk)
         if (typeof onProgress === 'function') {
           try {
-            onProgress({ downloaded, total: totalBytes })
+            onProgress({ downloaded, total: expected.sizeBytes })
           } catch { /* swallow — downloader must not die from callback errors */ }
         }
       })
 
       res.pipe(file)
       file.on('finish', () => {
-        file.close()
-        resolve()
+        file.close(() => {
+          if (settled) return
+          if (downloaded !== expected.sizeBytes) {
+            fail(new Error('Model download ended before the expected size'))
+            return
+          }
+          const digest = hash.digest('hex')
+          if (digest !== expected.sha256) {
+            fail(new Error('Model download SHA-256 verification failed'))
+            return
+          }
+          try {
+            replaceFile(tempPath, destPath)
+            settled = true
+            resolve({ sizeBytes: downloaded, sha256: digest })
+          } catch (error) {
+            fail(error)
+          }
+        })
       })
-      file.on('error', (err) => { file.close(); reject(err) })
+      file.on('error', fail)
+      res.on('aborted', () => fail(new Error('Model download response was aborted')))
+      res.on('error', fail)
     })
 
     req.on('error', reject)
@@ -99,51 +180,82 @@ function downloadFile(url, destPath, onProgress, maxRedirects = 5) {
 
 // ── Archive (tar.bz2) download + extract ───────────────────────────────
 
-function extractTarArchive(archivePath, parentDir) {
+function runTar(args) {
   return new Promise((resolve, reject) => {
-    // -xf (auto-detect compression from magic bytes) works on GNU tar,
-    // BSD tar, and the libarchive tar.exe bundled with Windows 10 1803+.
-    // `-xjf` hard-codes bzip2 and crashes on some BSD tar variants — auto-
-    // detection is both simpler and more portable.
-    // `spawn` (not `execSync`) keeps Electron's event loop responsive during
-    // the multi-second decompression of the larger models (SenseVoice is
-    // ~230 MB compressed); execSync would freeze the UI and stall the
-    // progress bar.
-    const child = spawn('tar', ['-xf', archivePath, '-C', parentDir], {
-      stdio: ['ignore', 'ignore', 'pipe'],
-    })
+    const child = spawn('tar', args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    let stdout = ''
     let stderr = ''
+    child.stdout?.on('data', (chunk) => {
+      stdout += String(chunk)
+      if (stdout.length > 5_000_000) child.kill()
+    })
     child.stderr?.on('data', (chunk) => { stderr += String(chunk) })
     child.on('error', (err) => reject(err))
     child.on('close', (code) => {
-      if (code === 0) resolve()
+      if (code === 0) resolve(stdout)
       else reject(new Error(`tar exited with code ${code}${stderr ? `: ${stderr.trim()}` : ''}`))
     })
   })
 }
 
-async function downloadAndExtractArchive(url, parentDir, onProgress) {
-  mkdirSync(parentDir, { recursive: true })
-  const archivePath = join(parentDir, `_download-${Date.now()}.tar.bz2`)
+async function extractTarArchive(archivePath, parentDir, expectedDirectory) {
+  const names = (await runTar(['-tf', archivePath])).split(/\r?\n/).filter(Boolean)
+  const verboseLines = (await runTar(['-tvf', archivePath])).split(/\r?\n/).filter(Boolean)
+  validateModelArchiveListing(names, verboseLines, expectedDirectory)
+  await runTar(['-xf', archivePath, '-C', parentDir])
+}
 
-  try {
-    await downloadFile(url, archivePath, onProgress)
-  } catch (err) {
-    try { rmSync(archivePath, { force: true }) } catch {}
-    throw err
+function writeModelReceipt(model, directory, checkFilePath) {
+  const receipt = {
+    schemaVersion: 1,
+    modelId: model.id,
+    installedAt: new Date().toISOString(),
+    checkFileSize: statSync(checkFilePath).size,
+    integrity: model.integrity,
   }
+  writeFileSync(join(directory, '.nexus-model.json'), `${JSON.stringify(receipt, null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600,
+  })
+}
+
+function replaceDirectory(sourceDir, destDir) {
+  const backupDir = `${destDir}.backup-${process.pid}-${Date.now()}`
+  const hadDestination = existsSync(destDir)
+  try {
+    if (hadDestination) renameSync(destDir, backupDir)
+    renameSync(sourceDir, destDir)
+    if (hadDestination) rmSync(backupDir, { recursive: true, force: true })
+  } catch (error) {
+    if (!existsSync(destDir) && hadDestination && existsSync(backupDir)) {
+      try { renameSync(backupDir, destDir) } catch {}
+    }
+    throw error
+  }
+}
+
+async function downloadAndExtractArchive(model, parentDir, onProgress) {
+  mkdirSync(parentDir, { recursive: true })
+  const installRoot = mkdtempSync(join(parentDir, `.nexus-${model.id}-`))
+  const archivePath = join(installRoot, 'model.tar.bz2')
 
   try {
-    await extractTarArchive(archivePath, parentDir)
+    await downloadFile(model.githubArchive, archivePath, onProgress, model.integrity.archive)
+    await extractTarArchive(archivePath, installRoot, model.directory)
+    const extractedDir = join(installRoot, model.directory)
+    const checkFilePath = join(extractedDir, model.checkFile)
+    if (!existsSync(checkFilePath)) throw new Error('Model archive is missing its required check file')
+    writeModelReceipt(model, extractedDir, checkFilePath)
+    replaceDirectory(extractedDir, join(parentDir, model.directory))
   } finally {
-    try { rmSync(archivePath, { force: true }) } catch {}
+    try { rmSync(installRoot, { recursive: true, force: true }) } catch {}
   }
 }
 
 // ── File-by-file download (HF resolve/main with ModelScope fallback) ───
 
 async function downloadModelFiles(model, destDir, onProgress) {
-  const hfBase = `https://huggingface.co/${model.hfRepo}/resolve/main`
+  const hfBase = `https://huggingface.co/${model.hfRepo}/resolve/${model.revision}`
   const msBase = `https://modelscope.cn/models/${model.hfRepo}/resolve/master`
 
   const useHfFirst = await canReachHuggingFace()
@@ -184,7 +296,7 @@ async function downloadModelFiles(model, destDir, onProgress) {
     let ok = false
     for (const base of [primaryBase, fallbackBase]) {
       try {
-        await downloadFile(`${base}/${fileName}`, fileDest, fileProgress)
+        await downloadFile(`${base}/${fileName}`, fileDest, fileProgress, model.integrity.files[fileName])
         ok = true
         break
       } catch {
@@ -196,6 +308,10 @@ async function downloadModelFiles(model, destDir, onProgress) {
       throw new Error(`Failed to fetch required file ${fileName}`)
     }
   }
+
+  const checkFilePath = join(destDir, model.checkFile)
+  if (!existsSync(checkFilePath)) throw new Error('Model download is missing its required check file')
+  writeModelReceipt(model, destDir, checkFilePath)
 }
 
 // ── Standalone single-file download with URL fallback list ─────────────
@@ -205,7 +321,7 @@ async function downloadStandalone(file, destPath, onProgress) {
   let lastError = null
   for (const url of file.urls) {
     try {
-      await downloadFile(url, destPath, onProgress)
+      await downloadFile(url, destPath, onProgress, file.integrity)
       return
     } catch (err) {
       lastError = err
@@ -238,7 +354,7 @@ export async function downloadModel(model, opts) {
 
   try {
     if (model.kind === 'archive') {
-      await downloadAndExtractArchive(model.githubArchive, modelsRoot, (p) => {
+      await downloadAndExtractArchive(model, modelsRoot, (p) => {
         emit({ phase: 'downloading', ...p })
       })
     } else if (model.kind === 'files') {
@@ -251,6 +367,7 @@ export async function downloadModel(model, opts) {
       await downloadStandalone(model.standalone, destPath, (p) => {
         emit({ phase: 'downloading', ...p })
       })
+      writeModelReceipt(model, dirname(destPath), destPath)
     } else {
       throw new Error(`Unknown model kind: ${model.kind}`)
     }
@@ -267,7 +384,7 @@ export async function downloadModel(model, opts) {
 /**
  * @param {object} model       catalog entry
  * @param {string[]} roots     candidate sherpa-models/ roots to probe
- * @returns {{present: boolean, location: string | null, sizeBytes: number | null}}
+ * @returns {{present: boolean, verified: boolean, location: string | null, sizeBytes: number | null}}
  */
 export function checkModelPresence(model, roots) {
   for (const root of roots) {
@@ -280,8 +397,16 @@ export function checkModelPresence(model, roots) {
     if (existsSync(candidate)) {
       let sizeBytes = null
       try { sizeBytes = statSync(candidate).size } catch {}
-      return { present: true, location: root, sizeBytes }
+      let verified = false
+      try {
+        const receiptDir = model.kind === 'standalone' ? dirname(candidate) : join(root, model.directory)
+        const receipt = JSON.parse(readFileSync(join(receiptDir, '.nexus-model.json'), 'utf8'))
+        verified = receipt?.schemaVersion === 1
+          && receipt?.modelId === model.id
+          && receipt?.checkFileSize === sizeBytes
+      } catch {}
+      return { present: true, verified, location: root, sizeBytes }
     }
   }
-  return { present: false, location: null, sizeBytes: null }
+  return { present: false, verified: false, location: null, sizeBytes: null }
 }

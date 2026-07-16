@@ -13,6 +13,7 @@ import {
 import { formatReminderScheduleSummaryForUi, type ReminderTaskDraftInput } from '../../features/reminders/schedule'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { SettingsToggle } from '../settingsFields'
 import type {
   ReminderTask,
   ReminderTaskAction,
@@ -407,14 +408,11 @@ export const ContextSection = memo(function ContextSection({
                 </label>
               ) : null}
 
-              <label className="settings-toggle">
-                <span>{ti('settings.context.field.enable_task')}</span>
-                <input
-                  type="checkbox"
-                  checked={task.enabled}
-                  onChange={(event) => onUpdateReminderTask(task.id, { enabled: event.target.checked })}
-                />
-              </label>
+              <SettingsToggle
+                label={ti('settings.context.field.enable_task')}
+                checked={task.enabled}
+                onChange={(enabled) => onUpdateReminderTask(task.id, { enabled })}
+              />
 
               <div className="settings-drawer__hint">
                 {formatReminderActionSummary(task, uiLanguage)} · {formatReminderScheduleSummaryForUi(task, uiLanguage)}

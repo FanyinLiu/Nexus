@@ -13,6 +13,7 @@ type ModelCatalogEntryLike = {
   sizeLabel: string
   required: boolean
   present: boolean
+  verified: boolean
 }
 type ModelInventoryLike = {
   models: ModelCatalogEntryLike[]

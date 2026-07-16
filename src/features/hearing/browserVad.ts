@@ -85,11 +85,17 @@ function shouldFallbackToScriptProcessor(error: unknown) {
     return false
   }
 
-  const message = error.message.toLowerCase()
+  const message = `${error.name} ${error.message}`.toLowerCase()
+  const stack = (error.stack ?? '').toLowerCase()
   return (
     message.includes('worklet')
-    || message.includes('audioworklet')
-    || message.includes('unable to load a worklet')
+    || message.includes('audio worklet')
+    || message.includes('addmodule')
+    || message.includes('module script')
+    || message.includes('content security policy')
+    || message.includes('script-src')
+    || stack.includes('getvadnodeasworklet')
+    || stack.includes('vad.worklet')
   )
 }
 
@@ -168,6 +174,7 @@ export async function createVoiceActivityDetector(
     })
   }
   let detector: MicVadInstance
+  let fallbackAttempted = false
 
   try {
     detector = await createDetector('auto')
@@ -177,13 +184,85 @@ export async function createVoiceActivityDetector(
     }
 
     console.warn('[Voice] AudioWorklet VAD unavailable, retrying with ScriptProcessor', error)
+    fallbackAttempted = true
     detector = await createDetector('ScriptProcessor')
   }
 
+  let startInFlight: Promise<void> | null = null
+
+  const disposeFailedDetector = async (failedDetector: MicVadInstance) => {
+    try {
+      await failedDetector.pause()
+    } catch (error) {
+      console.warn('[Voice] Unable to pause failed AudioWorklet VAD', error)
+    }
+
+    try {
+      await failedDetector.destroy()
+    } catch (error) {
+      console.warn('[Voice] Unable to destroy failed AudioWorklet VAD', error)
+    }
+  }
+
+  const startDetector = async () => {
+    const startingDetector = detector
+
+    try {
+      await startingDetector.start()
+    } catch (error) {
+      if (fallbackAttempted || !shouldFallbackToScriptProcessor(error)) {
+        throw error
+      }
+
+      fallbackAttempted = true
+      console.warn('[Voice] AudioWorklet VAD unavailable, retrying with ScriptProcessor', error)
+      await disposeFailedDetector(startingDetector)
+
+      const fallbackDetector = await createDetector('ScriptProcessor')
+      detector = fallbackDetector
+      await fallbackDetector.start()
+    }
+  }
+
+  const start = () => {
+    if (startInFlight) {
+      return startInFlight
+    }
+
+    const operation = startDetector()
+    startInFlight = operation
+    const clearStartOperation = () => {
+      if (startInFlight === operation) {
+        startInFlight = null
+      }
+    }
+    void operation.then(clearStartOperation, clearStartOperation)
+    return operation
+  }
+
+  const detectorAfterPendingStart = async () => {
+    const pendingStart = startInFlight
+    if (pendingStart) {
+      try {
+        await pendingStart
+      } catch {
+        // Lifecycle calls must still reach whichever detector remains current.
+      }
+    }
+
+    return detector
+  }
+
   return {
-    start: () => detector.start(),
-    pause: () => detector.pause(),
-    destroy: () => detector.destroy(),
+    start,
+    pause: async () => {
+      const currentDetector = await detectorAfterPendingStart()
+      await currentDetector.pause()
+    },
+    destroy: async () => {
+      const currentDetector = await detectorAfterPendingStart()
+      await currentDetector.destroy()
+    },
   }
 }
 

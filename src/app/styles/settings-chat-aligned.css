@@ -1,5 +1,6 @@
 /* Chat-aligned settings home layer. Keep this scoped to the warm home view. */
-.settings-backdrop--warm-day:has(.settings-drawer--home) {
+.sb-warm:has(.sd-home),
+.sb-warm:has(.sd-section) {
   padding: clamp(12px, 2vh, 18px) clamp(10px, 4vw, 22px);
   place-items: start center;
   background: rgba(246, 239, 229, 0.2);
@@ -7,15 +8,7 @@
   -webkit-backdrop-filter: blur(12px) saturate(1.02);
 }
 
-.settings-backdrop--warm-day:has(.settings-drawer--section) {
-  padding: clamp(12px, 2vh, 18px) clamp(10px, 4vw, 22px);
-  place-items: start center;
-  background: rgba(246, 239, 229, 0.2);
-  backdrop-filter: blur(12px) saturate(1.02);
-  -webkit-backdrop-filter: blur(12px) saturate(1.02);
-}
-
-.settings-drawer--warm-day.settings-drawer--home {
+.sd-warm.sd-home {
   --settings-surface: rgba(255, 250, 242, 0.985);
   --settings-surface-strong: rgba(255, 253, 249, 0.99);
   --settings-surface-soft: rgba(255, 253, 249, 0.74);
@@ -64,7 +57,7 @@
   -webkit-backdrop-filter: blur(24px) saturate(1.02);
 }
 
-.settings-drawer--warm-day.settings-drawer--section {
+.sd-warm.sd-section {
   --settings-surface: rgba(255, 250, 242, 0.985);
   --settings-surface-strong: rgba(255, 253, 249, 0.99);
   --settings-surface-soft: rgba(255, 253, 249, 0.74);
@@ -109,7 +102,8 @@
   -webkit-backdrop-filter: blur(24px) saturate(1.02);
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__header {
+.sd-warm.sd-home .sdh,
+.sd-warm.sd-section .sdh {
   padding: 0 0 7px;
   border: 0;
   border-bottom: 1px solid rgba(75, 62, 49, 0.08);
@@ -117,27 +111,15 @@
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__header {
-  padding: 0 0 7px;
-  border: 0;
-  border-bottom: 1px solid rgba(75, 62, 49, 0.08);
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__header-main {
+.sd-warm.sd-home .sdhm,
+.sd-warm.sd-section .sdhm {
   min-height: var(--settings-control-height);
   align-items: center;
   gap: 5px;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__header-main {
-  min-height: var(--settings-control-height);
-  align-items: center;
-  gap: 5px;
-}
-
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__window-title {
+.sd-warm.sd-home .settings-drawer__window-title,
+.sd-warm.sd-section .settings-drawer__window-title {
   align-items: center;
   gap: 5px;
   font-size: var(--settings-control-font-size);
@@ -145,37 +127,21 @@
   letter-spacing: 0;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__window-title {
-  align-items: center;
-  gap: 5px;
-  font-size: var(--settings-control-font-size);
-  line-height: 1;
-  letter-spacing: 0;
-}
-
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__window-title-name {
+.sd-warm.sd-home .settings-drawer__window-title-name,
+.sd-warm.sd-section .settings-drawer__window-title-name {
   color: rgba(36, 27, 22, 0.78);
   font-weight: 600;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__window-title-name {
-  color: rgba(36, 27, 22, 0.78);
-  font-weight: 600;
-}
-
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__window-title-label {
+.sd-warm.sd-home .settings-drawer__window-title-label,
+.sd-warm.sd-section .settings-drawer__window-title-label {
   color: rgba(36, 27, 22, 0.78);
   font-size: var(--settings-control-font-size);
   font-weight: 600;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__window-title-label {
-  color: rgba(36, 27, 22, 0.78);
-  font-size: var(--settings-control-font-size);
-  font-weight: 600;
-}
-
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__toolbar {
+.sd-warm.sd-home .sdtb,
+.sd-warm.sd-section .sdtb {
   gap: 6px;
   padding: 0;
   border: 0;
@@ -184,19 +150,10 @@
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__toolbar {
-  gap: 6px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__language-button,
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__icon-button,
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__language-button,
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__icon-button {
+.sd-warm.sd-home .settings-drawer__language-button,
+.sd-warm.sd-home .settings-drawer__icon-button,
+.sd-warm.sd-section .settings-drawer__language-button,
+.sd-warm.sd-section .settings-drawer__icon-button {
   width: var(--settings-control-height-small);
   height: var(--settings-control-height);
   min-width: var(--settings-control-height-small);
@@ -207,47 +164,47 @@
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__language-icon,
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__icon-button svg,
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__language-icon,
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__icon-button svg {
+.sd-warm.sd-home .settings-drawer__language-icon,
+.sd-warm.sd-home .settings-drawer__icon-button svg,
+.sd-warm.sd-section .settings-drawer__language-icon,
+.sd-warm.sd-section .settings-drawer__icon-button svg {
   width: 12px;
   height: 12px;
   opacity: 0.9;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__language-button:hover,
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__language-button[aria-expanded='true'],
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__icon-button:hover,
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__language-button:hover,
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__language-button[aria-expanded='true'],
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__icon-button:hover {
+.sd-warm.sd-home .settings-drawer__language-button:hover,
+.sd-warm.sd-home .settings-drawer__language-button[aria-expanded='true'],
+.sd-warm.sd-home .settings-drawer__icon-button:hover,
+.sd-warm.sd-section .settings-drawer__language-button:hover,
+.sd-warm.sd-section .settings-drawer__language-button[aria-expanded='true'],
+.sd-warm.sd-section .settings-drawer__icon-button:hover {
   border-color: rgba(75, 62, 49, 0.08);
   background: rgba(75, 62, 49, 0.055);
   color: rgba(36, 27, 22, 0.86);
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__icon-button--danger:hover,
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__icon-button--danger:hover {
+.sd-warm.sd-home .settings-drawer__icon-button--danger:hover,
+.sd-warm.sd-section .settings-drawer__icon-button--danger:hover {
   border-color: rgba(160, 62, 46, 0.1);
   background: rgba(160, 62, 46, 0.075);
   color: rgba(122, 48, 38, 0.88);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__body {
+.sd-warm.sd-section .sdb {
   max-height: none;
   min-height: 0;
   padding: 4px 0 0;
   overflow: hidden;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] {
+.sd-warm-section {
   gap: 10px;
   height: 100%;
   min-height: 0;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-page__header {
+.sd-warm-section .sphd {
   grid-template-columns: 30px minmax(0, 1fr);
   column-gap: 10px;
   row-gap: 4px;
@@ -256,7 +213,7 @@
   border-bottom: 1px solid rgba(75, 62, 49, 0.1);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-page__back {
+.sd-warm-section .settings-page__back {
   width: var(--settings-control-height-small);
   min-width: var(--settings-control-height-small);
   height: var(--settings-control-height-small);
@@ -271,44 +228,42 @@
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-page__back span {
+.sd-warm-section .settings-page__back span,
+.sd-warm-section .settings-page__mark {
   display: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-page__back svg {
+.sd-warm-section .settings-page__back svg,
+.sd-warm.sd-home .settings-home-card__glyph svg {
   width: 14px;
   height: 14px;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-page__back:hover {
+.sd-warm-section .settings-page__back:hover {
   border-color: rgba(75, 62, 49, 0.12);
   background: rgba(255, 253, 249, 0.62);
   color: rgba(36, 27, 22, 0.86);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-page__headline {
+.sd-warm-section .sph {
   gap: 4px;
   padding: 1px 2px 0 0;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-page__headline h4 {
+.sd-warm-section .sph h4 {
   color: rgba(36, 27, 22, 0.92);
   font-size: var(--settings-child-control-font-size);
   font-weight: 620;
   line-height: 1.18;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-page__headline .settings-section__note {
+.sd-warm-section .sph .settings-section__note {
   color: rgba(78, 64, 54, 0.64);
   font-size: var(--settings-meta-font-size);
   line-height: 1.42;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page__mark {
-  display: none;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-drawer__content.settings-drawer__sections {
+.sd-warm-section .sdc.settings-drawer__sections {
   display: grid;
   gap: 9px;
   height: 100%;
@@ -323,24 +278,24 @@
   mask-image: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-section,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-control-card,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-form-row,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-toggle,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-choice-card,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-model-source-card,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-model-detail-card,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-model-detail-fields,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-model-advanced,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-inline-note,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-test-result {
+.sd-warm-section .settings-section,
+.sd-warm-section .settings-control-card,
+.sd-warm-section .settings-form-row,
+.sd-warm-section .settings-toggle,
+.sd-warm-section .settings-choice-card,
+.sd-warm-section .settings-model-source-card,
+.sd-warm-section .settings-model-detail-card,
+.sd-warm-section .settings-model-detail-fields,
+.sd-warm-section .settings-model-advanced,
+.sd-warm-section .settings-inline-note,
+.sd-warm-section .settings-test-result {
   border-color: rgba(75, 62, 49, 0.08);
   border-radius: 10px;
   background: rgba(255, 253, 249, 0.16);
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-section {
+.sd-warm-section .settings-section {
   gap: 6px;
   padding: 7px 0;
   border-color: transparent;
@@ -348,21 +303,21 @@
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-control-card,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-form-row {
+.sd-warm-section .settings-control-card,
+.sd-warm-section .settings-form-row {
   border-radius: 10px;
   background: rgba(255, 253, 249, 0.18);
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-model-source-grid,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-choice-grid {
+.sd-warm-section .settings-model-source-grid,
+.sd-warm-section .settings-choice-grid {
   grid-template-columns: 1fr;
   gap: 7px;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-model-source-card,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-choice-card {
+.sd-warm-section .settings-model-source-card,
+.sd-warm-section .settings-choice-card {
   box-sizing: border-box;
   width: 100%;
   min-height: var(--settings-control-height-small);
@@ -372,59 +327,58 @@
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-choice-card.is-active,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-model-source-card.is-selected {
+.sd-warm-section .settings-choice-card.is-active,
+.sd-warm-section .settings-model-source-card.is-selected {
   border-color: rgba(185, 92, 60, 0.16);
   background: rgba(185, 92, 60, 0.08);
   box-shadow: inset 0 0 0 1px rgba(185, 92, 60, 0.1);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-model-source-card:hover,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-choice-card:hover,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-toggle:hover {
+.sd-warm-section .settings-model-source-card:hover,
+.sd-warm-section .settings-choice-card:hover,
+.sd-warm-section .settings-toggle:hover {
   border-color: rgba(75, 62, 49, 0.15);
   background: rgba(255, 253, 249, 0.34);
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-model-source-card:active,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-choice-card:active {
+.sd-warm-section .settings-model-source-card:active,
+.sd-warm-section .settings-choice-card:active {
   transform: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section='window'] label.settings-window-field {
+.sd-warm-section .sp[data-section='window'] label.settings-window-field {
   grid-template-columns: minmax(82px, 0.42fr) minmax(0, 1fr);
   min-height: var(--settings-control-height);
   padding: 0 8px 0 12px;
   background: rgba(255, 253, 249, 0.14);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section='window'] label.settings-window-field > span {
+.sd-warm-section .sp[data-section='window'] label.settings-window-field > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-section__title-row h4,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-section__title-row h5,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-model-source-card__name,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-choice-card__header strong {
+.sd-warm-section .settings-section__title-row h4,
+.sd-warm-section .settings-section__title-row h5,
+.sd-warm-section .settings-model-source-card__name,
+.sd-warm-section .settings-choice-card__header strong {
   color: rgba(36, 27, 22, 0.88);
   font-size: var(--settings-meta-font-size);
   font-weight: 620;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-section__note,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-choice-card__meta,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-choice-card__description,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-model-source-card__chevron {
+.sd-warm-section .settings-section__note,
+.sd-warm-section .settings-choice-card__description,
+.sd-warm-section .settings-model-source-card__chevron {
   color: rgba(78, 64, 54, 0.58);
   font-size: var(--settings-meta-font-size);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] input:not([type='checkbox']):not([type='radio']):not([type='range']),
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] select,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] textarea {
+.sd-warm-section input:not([type='checkbox']):not([type='radio']):not([type='range']),
+.sd-warm-section select,
+.sd-warm-section textarea {
   min-height: var(--settings-child-field-height);
   border-radius: 10px;
   border-color: rgba(75, 62, 49, 0.1);
@@ -435,25 +389,25 @@
   box-shadow: inset 0 -1px 0 rgba(170, 126, 84, 0.035);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] input:not([type='checkbox']):not([type='radio']):not([type='range']):focus,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] select:focus,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] textarea:focus {
+.sd-warm-section input:not([type='checkbox']):not([type='radio']):not([type='range']):focus,
+.sd-warm-section select:focus,
+.sd-warm-section textarea:focus {
   border-color: rgba(185, 92, 60, 0.24);
   outline: 2px solid rgba(185, 92, 60, 0.12);
   outline-offset: 1px;
   box-shadow: inset 0 -1px 0 rgba(185, 92, 60, 0.08);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] input:not([type='checkbox']):not([type='radio']):not([type='range']):disabled,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] select:disabled,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] textarea:disabled {
+.sd-warm-section input:not([type='checkbox']):not([type='radio']):not([type='range']):disabled,
+.sd-warm-section select:disabled,
+.sd-warm-section textarea:disabled {
   border-color: rgba(75, 62, 49, 0.08);
   background: rgba(255, 253, 249, 0.22);
   color: rgba(78, 64, 54, 0.34);
   box-shadow: inset 0 -1px 0 rgba(75, 62, 49, 0.035);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section='window'] label.settings-window-field > select {
+.sd-warm-section .sp[data-section='window'] label.settings-window-field > select {
   min-height: var(--settings-control-height-small);
   padding: 0 22px 0 6px;
   border-color: transparent;
@@ -462,45 +416,44 @@
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section='window'] label.settings-window-field:hover > select:not(:disabled) {
+.sd-warm-section .sp[data-section='window'] label.settings-window-field:hover > select:not(:disabled) {
   border-color: rgba(75, 62, 49, 0.08);
   background: rgba(255, 253, 249, 0.24);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section='window'] label.settings-window-field > select:focus {
+.sd-warm-section .sp[data-section='window'] label.settings-window-field > select:focus {
   border-color: rgba(185, 92, 60, 0.18);
   background: rgba(255, 253, 249, 0.34);
   outline: 2px solid rgba(185, 92, 60, 0.1);
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-section .ghost-button,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-section .primary-button,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-updater-panel__actions .ghost-button,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-updater-panel__actions .primary-button {
+.sd-warm-section .settings-section .ghost-button,
+.sd-warm-section .settings-section .primary-button,
+.sd-warm-section .settings-updater-panel__actions .ghost-button,
+.sd-warm-section .settings-updater-panel__actions .primary-button {
   min-height: var(--settings-child-control-height);
   border-radius: 10px;
   box-shadow: none;
   transform: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-section .ghost-button,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-updater-panel__actions .ghost-button {
+.sd-warm-section .settings-section .ghost-button,
+.sd-warm-section .settings-updater-panel__actions .ghost-button {
   border-color: rgba(75, 62, 49, 0.1);
   background: rgba(255, 253, 249, 0.62);
   color: rgba(72, 53, 40, 0.7);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-section .primary-button,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-updater-panel__actions .primary-button {
+.sd-warm-section .settings-section .primary-button,
+.sd-warm-section .settings-updater-panel__actions .primary-button {
   border-color: rgba(185, 92, 60, 0.16);
   background: rgba(185, 92, 60, 0.13);
   color: rgba(128, 62, 42, 0.92);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .onboarding-relationship__chip,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-summary-chip,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-model-chip {
+.sd-warm-section .settings-relationship__chip,
+.sd-warm-section .settings-summary-chip {
   border-radius: 10px;
   border-color: rgba(75, 62, 49, 0.08);
   background: rgba(255, 253, 249, 0.12);
@@ -509,190 +462,15 @@
   transform: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .onboarding-relationship__chip.is-active,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-model-chip.is-active {
+.sd-warm-section .settings-relationship__chip.is-active {
   border-color: rgba(185, 92, 60, 0.22);
   background: rgba(185, 92, 60, 0.12);
   color: rgba(36, 27, 22, 0.9);
   box-shadow: inset 0 0 0 1px rgba(185, 92, 60, 0.08);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-toggle:not(.settings-lorebook-check) {
-  min-height: var(--settings-child-control-height);
-  padding: 6px 9px;
-  border-radius: 10px;
-  border-color: rgba(75, 62, 49, 0.08);
-  background: rgba(255, 253, 249, 0.12);
-  color: rgba(36, 27, 22, 0.82);
-  box-shadow: none;
-  transform: none;
-}
 
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-toggle:not(.settings-lorebook-check):hover {
-  border-color: rgba(75, 62, 49, 0.14);
-  background: rgba(255, 253, 249, 0.36);
-  box-shadow: none;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-toggle:has(input:disabled):not(.settings-lorebook-check),
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-toggle:has(input:disabled):not(.settings-lorebook-check):hover,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-control-card:has(> .settings-toggle input:disabled),
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-mini-group:has(> .settings-toggle input:disabled) {
-  border-color: rgba(75, 62, 49, 0.07);
-  border-radius: 10px;
-  background: rgba(255, 253, 249, 0.16);
-  box-shadow: none;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-toggle > span {
-  color: rgba(36, 27, 22, 0.84);
-  font-size: var(--settings-child-control-font-size);
-  font-weight: 610;
-  line-height: 1.28;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-toggle input {
-  background: rgba(75, 62, 49, 0.14);
-  box-shadow:
-    inset 0 0 0 1px rgba(75, 62, 49, 0.06),
-    inset 0 1px 1px rgba(72, 53, 40, 0.05);
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-toggle input::after {
-  background: rgba(255, 253, 249, 0.94);
-  box-shadow: 0 1px 3px rgba(72, 53, 40, 0.18);
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-toggle input:checked {
-  background: rgba(185, 92, 60, 0.18);
-  box-shadow:
-    inset 0 0 0 1px rgba(185, 92, 60, 0.22),
-    inset 0 1px 1px rgba(72, 53, 40, 0.04);
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-toggle input:disabled {
-  background: rgba(75, 62, 49, 0.1);
-  cursor: default;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-toggle input:focus-visible {
-  outline: 2px solid rgba(185, 92, 60, 0.24);
-  outline-offset: 2px;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-metric-card,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-history-empty,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-history-item,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-letter-empty,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-letter-card,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-updater-panel {
-  border-radius: 10px;
-  border-color: rgba(75, 62, 49, 0.08);
-  background: rgba(255, 253, 249, 0.12);
-  box-shadow: none;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-metric-card {
-  min-height: var(--settings-control-height-small);
-  padding: 7px 10px;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-metric-card strong {
-  color: rgba(36, 27, 22, 0.88);
-  font-size: var(--settings-child-control-font-size);
-  font-weight: 640;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-metric-card span,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-history-item__meta,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-letter-empty__label,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-letter-card__meta,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-updater-panel__version,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-updater-panel__status {
-  color: rgba(78, 64, 54, 0.58);
-  font-size: var(--settings-child-meta-font-size);
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-history-empty,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-letter-empty {
-  padding: 12px;
-  color: rgba(78, 64, 54, 0.64);
-  text-align: center;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-letter-empty strong,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-letter-card__date,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-history-item__title,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-updater-panel__title {
-  color: rgba(36, 27, 22, 0.86);
-  font-size: var(--settings-meta-font-size);
-  font-weight: 640;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-history-messages,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-autonomy-channel__code,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-autonomy-channel__interval {
-  border: 1px solid rgba(75, 62, 49, 0.09);
-  border-radius: 10px;
-  background: rgba(255, 253, 249, 0.46);
-  color: rgba(72, 53, 40, 0.66);
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-action-row {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 88px), 1fr));
-  gap: 6px;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-action-row .ghost-button,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-action-row .primary-button,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-action-row button,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-autonomy-rss-form__actions button,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-autonomy-add-rss {
-  min-height: var(--settings-child-control-height);
-  padding-right: 8px;
-  padding-left: 8px;
-  border-radius: 10px;
-  border-color: rgba(75, 62, 49, 0.1);
-  background: rgba(255, 253, 249, 0.58);
-  color: rgba(72, 53, 40, 0.72);
-  font-size: var(--settings-child-control-font-size);
-  font-weight: 610;
-  box-shadow: none;
-  transform: none;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-action-row button:disabled {
-  border-color: rgba(75, 62, 49, 0.08);
-  background: rgba(255, 253, 249, 0.4);
-  color: rgba(78, 64, 54, 0.34);
-  opacity: 1;
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-action-row .ghost-button:hover,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-autonomy-rss-form__actions button:hover,
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-autonomy-add-rss:hover {
-  border-color: rgba(75, 62, 49, 0.14);
-  background: rgba(255, 253, 249, 0.76);
-  color: rgba(36, 27, 22, 0.86);
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-autonomy-channel {
-  padding: 9px 0;
-  border-bottom-color: rgba(75, 62, 49, 0.09);
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-autonomy-channel__badge {
-  min-height: var(--settings-control-height-small);
-  border-radius: 10px;
-  background: rgba(185, 92, 60, 0.13);
-  color: rgba(128, 62, 42, 0.9);
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-page[data-section] .settings-autonomy-channel__delete {
-  color: rgba(181, 72, 54, 0.78);
-}
-
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__actions {
+.sd-warm.sd-section .sda {
   display: grid;
   grid-template-columns: minmax(82px, 0.76fr) minmax(0, 1.24fr);
   gap: 8px;
@@ -706,8 +484,8 @@
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__actions .ghost-button,
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__actions .primary-button {
+.sd-warm.sd-section .sda .ghost-button,
+.sd-warm.sd-section .sda .primary-button {
   min-height: var(--settings-action-control-height, 34px);
   padding: 0 12px;
   border-radius: 10px;
@@ -717,41 +495,46 @@
   transform: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__actions .ghost-button {
+.sd-warm.sd-section .sda .ghost-button,
+.sd-warm.sd-home .sda .ghost-button {
   border-color: transparent;
   background: transparent;
   color: rgba(72, 53, 40, 0.68);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__actions .primary-button {
+.sd-warm.sd-section .sda .primary-button,
+.sd-warm.sd-home .sda .primary-button {
   border-color: transparent;
   background: rgba(185, 92, 60, 0.095);
   color: rgba(128, 62, 42, 0.86);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__actions .ghost-button:hover,
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__actions .primary-button:hover {
+.sd-warm.sd-section .sda .ghost-button:hover,
+.sd-warm.sd-section .sda .primary-button:hover,
+.sd-warm.sd-home .sda .ghost-button:hover,
+.sd-warm.sd-home .sda .primary-button:hover {
   border-color: rgba(75, 62, 49, 0.08);
   background: rgba(75, 62, 49, 0.055);
 }
 
-.settings-drawer--warm-day.settings-drawer--section .settings-drawer__actions .primary-button:hover {
+.sd-warm.sd-section .sda .primary-button:hover,
+.sd-warm.sd-home .sda .primary-button:hover {
   border-color: rgba(185, 92, 60, 0.12);
   background: rgba(185, 92, 60, 0.13);
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__body {
+.sd-warm.sd-home .sdb {
   max-height: none;
   gap: 6px;
   padding: 4px 0 0;
   overflow-y: auto;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-home {
+.sd-warm.sd-home .settings-home {
   gap: 4px;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-appearance-switch {
+.sd-warm.sd-home .settings-appearance-switch {
   min-height: var(--settings-control-height);
   grid-template-columns: auto minmax(0, 1fr);
   gap: 8px;
@@ -763,20 +546,20 @@
   box-shadow: inset 0 -1px 0 rgba(75, 62, 49, 0.045);
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-appearance-switch__label {
+.sd-warm.sd-home .settings-appearance-switch__label {
   color: rgba(72, 53, 40, 0.62);
   font-size: var(--settings-meta-font-size);
   font-weight: 560;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-appearance-switch__control {
+.sd-warm.sd-home .settings-appearance-switch__control {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 3px;
   padding: 0;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-appearance-switch__option {
+.sd-warm.sd-home .settings-appearance-switch__option {
   min-height: var(--settings-control-height-small);
   padding: 0 6px;
   border: 1px solid transparent;
@@ -787,17 +570,17 @@
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-appearance-switch__option.is-active {
+.sd-warm.sd-home .settings-appearance-switch__option.is-active {
   border-color: transparent;
   background: rgba(185, 92, 60, 0.09);
   color: rgba(36, 27, 22, 0.92);
   box-shadow: inset 0 0 0 1px rgba(185, 92, 60, 0.1);
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-home-card,
-.settings-drawer--warm-day.settings-drawer--home .settings-home-card:hover,
-.settings-drawer--warm-day.settings-drawer--home .settings-home-card:nth-child(even),
-.settings-drawer--warm-day.settings-drawer--home .settings-home-card:nth-child(even):hover {
+.sd-warm.sd-home .settings-home-card,
+.sd-warm.sd-home .settings-home-card:hover,
+.sd-warm.sd-home .settings-home-card:nth-child(even),
+.sd-warm.sd-home .settings-home-card:nth-child(even):hover {
   grid-template-columns: minmax(72px, 0.42fr) minmax(0, 1fr) 18px;
   box-sizing: border-box;
   column-gap: 8px;
@@ -812,53 +595,48 @@
   line-height: 1.28;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-home-card:hover,
-.settings-drawer--warm-day.settings-drawer--home .settings-home-card:nth-child(even):hover {
+.sd-warm.sd-home .settings-home-card:hover,
+.sd-warm.sd-home .settings-home-card:nth-child(even):hover {
   border-color: rgba(75, 62, 49, 0.11);
   border-left-color: var(--settings-home-row-trace-hover);
   background: rgba(255, 253, 249, 0.72);
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-home-card__label {
+.sd-warm.sd-home .settings-home-card__label {
   color: rgba(36, 27, 22, 0.88);
   font-size: var(--settings-control-font-size);
   font-weight: 620;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-home-card__value {
+.sd-warm.sd-home .settings-home-card__value {
   color: rgba(78, 64, 54, 0.63);
   font-size: var(--settings-child-meta-font-size);
   font-weight: 520;
   line-height: 1.3;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-home-card__glyph {
+.sd-warm.sd-home .settings-home-card__glyph {
   width: 14px;
   height: 18px;
   opacity: 0.58;
   color: var(--settings-home-row-glyph);
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-home-card__glyph svg {
-  width: 14px;
-  height: 14px;
-}
-
-.settings-drawer--warm-day.settings-drawer--home .settings-home-card:hover .settings-home-card__glyph,
-.settings-drawer--warm-day.settings-drawer--home .settings-home-card:nth-child(even):hover .settings-home-card__glyph {
+.sd-warm.sd-home .settings-home-card:hover .settings-home-card__glyph,
+.sd-warm.sd-home .settings-home-card:nth-child(even):hover .settings-home-card__glyph {
   color: var(--settings-home-row-glyph-hover);
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-home-card:focus-visible,
-.settings-drawer--warm-day.settings-drawer--home .settings-appearance-switch__option:focus-visible,
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__language-button:focus-visible,
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__icon-button:focus-visible {
+.sd-warm.sd-home .settings-home-card:focus-visible,
+.sd-warm.sd-home .settings-appearance-switch__option:focus-visible,
+.sd-warm.sd-home .settings-drawer__language-button:focus-visible,
+.sd-warm.sd-home .settings-drawer__icon-button:focus-visible {
   outline: 2px solid rgba(185, 92, 60, 0.28);
   outline-offset: 2px;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__actions {
+.sd-warm.sd-home .sda {
   display: grid;
   grid-template-columns: minmax(82px, 0.76fr) minmax(0, 1.24fr);
   gap: 8px;
@@ -872,8 +650,8 @@
   box-shadow: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__actions .ghost-button,
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__actions .primary-button {
+.sd-warm.sd-home .sda .ghost-button,
+.sd-warm.sd-home .sda .primary-button {
   min-height: var(--settings-control-height-small);
   padding: 0 12px;
   border-radius: 10px;
@@ -883,43 +661,20 @@
   transform: none;
 }
 
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__actions .ghost-button {
-  border-color: transparent;
-  background: transparent;
-  color: rgba(72, 53, 40, 0.68);
-}
-
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__actions .primary-button {
-  border-color: transparent;
-  background: rgba(185, 92, 60, 0.095);
-  color: rgba(128, 62, 42, 0.86);
-}
-
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__actions .ghost-button:hover,
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__actions .primary-button:hover {
-  border-color: rgba(75, 62, 49, 0.08);
-  background: rgba(75, 62, 49, 0.055);
-}
-
-.settings-drawer--warm-day.settings-drawer--home .settings-drawer__actions .primary-button:hover {
-  border-color: rgba(185, 92, 60, 0.12);
-  background: rgba(185, 92, 60, 0.13);
-}
-
-html[data-theme='warm-day'] .settings-drawer--warm-day.settings-drawer--home .settings-drawer__actions .ghost-button,
-html[data-theme='system-day'] .settings-drawer--warm-day.settings-drawer--home .settings-drawer__actions .ghost-button,
-html[data-theme='warm-day'] .settings-drawer--warm-day.settings-drawer--section .settings-drawer__actions .ghost-button,
-html[data-theme='system-day'] .settings-drawer--warm-day.settings-drawer--section .settings-drawer__actions .ghost-button {
+html[data-theme='warm-day'] .sd-warm.sd-home .sda .ghost-button,
+html[data-theme='system-day'] .sd-warm.sd-home .sda .ghost-button,
+html[data-theme='warm-day'] .sd-warm.sd-section .sda .ghost-button,
+html[data-theme='system-day'] .sd-warm.sd-section .sda .ghost-button {
   border-color: transparent;
   background: transparent;
   color: rgba(72, 53, 40, 0.68);
   box-shadow: none;
 }
 
-html[data-theme='warm-day'] .settings-drawer--warm-day.settings-drawer--home .settings-drawer__actions .primary-button,
-html[data-theme='system-day'] .settings-drawer--warm-day.settings-drawer--home .settings-drawer__actions .primary-button,
-html[data-theme='warm-day'] .settings-drawer--warm-day.settings-drawer--section .settings-drawer__actions .primary-button,
-html[data-theme='system-day'] .settings-drawer--warm-day.settings-drawer--section .settings-drawer__actions .primary-button {
+html[data-theme='warm-day'] .sd-warm.sd-home .sda .primary-button,
+html[data-theme='system-day'] .sd-warm.sd-home .sda .primary-button,
+html[data-theme='warm-day'] .sd-warm.sd-section .sda .primary-button,
+html[data-theme='system-day'] .sd-warm.sd-section .sda .primary-button {
   border-color: transparent;
   background: rgba(185, 92, 60, 0.095);
   color: rgba(128, 62, 42, 0.86);
@@ -927,8 +682,8 @@ html[data-theme='system-day'] .settings-drawer--warm-day.settings-drawer--sectio
 }
 
 @media (max-height: 720px) {
-  .settings-drawer--warm-day.settings-drawer--home,
-  .settings-drawer--warm-day.settings-drawer--section {
+  .sd-warm.sd-home,
+  .sd-warm.sd-section {
     --settings-control-height: 26px;
     --settings-control-height-small: 21px;
     --settings-child-control-height: 21px;
@@ -942,45 +697,42 @@ html[data-theme='system-day'] .settings-drawer--warm-day.settings-drawer--sectio
     padding: 5px;
   }
 
-  .settings-drawer--warm-day.settings-drawer--home .settings-drawer__body,
-  .settings-drawer--warm-day.settings-drawer--home .settings-home {
+  .sd-warm.sd-home .sdb,
+  .sd-warm.sd-home .settings-home {
     gap: 5px;
   }
 
-  .settings-drawer--warm-day.settings-drawer--home .settings-home-card,
-  .settings-drawer--warm-day.settings-drawer--home .settings-home-card:hover,
-  .settings-drawer--warm-day.settings-drawer--home .settings-home-card:nth-child(even),
-  .settings-drawer--warm-day.settings-drawer--home .settings-home-card:nth-child(even):hover {
+  .sd-warm.sd-home .settings-home-card,
+  .sd-warm.sd-home .settings-home-card:hover,
+  .sd-warm.sd-home .settings-home-card:nth-child(even),
+  .sd-warm.sd-home .settings-home-card:nth-child(even):hover {
     min-height: var(--settings-control-height-small);
     height: var(--settings-control-height-small);
   }
 }
 
 @media (max-width: 360px) {
-  .settings-backdrop--warm-day:has(.settings-drawer--home) {
+  .sb-warm:has(.sd-home),
+.sb-warm:has(.sd-section) {
     padding: 5px;
   }
 
-  .settings-backdrop--warm-day:has(.settings-drawer--section) {
-    padding: 5px;
-  }
-
-  .settings-drawer--warm-day.settings-drawer--home,
-  .settings-drawer--warm-day.settings-drawer--section {
+  .sd-warm.sd-home,
+  .sd-warm.sd-section {
     width: calc(100vw - 18px);
     padding: 5px;
   }
 
-  .settings-drawer--warm-day.settings-drawer--home .settings-home-card,
-  .settings-drawer--warm-day.settings-drawer--home .settings-home-card:hover,
-  .settings-drawer--warm-day.settings-drawer--home .settings-home-card:nth-child(even),
-  .settings-drawer--warm-day.settings-drawer--home .settings-home-card:nth-child(even):hover {
+  .sd-warm.sd-home .settings-home-card,
+  .sd-warm.sd-home .settings-home-card:hover,
+  .sd-warm.sd-home .settings-home-card:nth-child(even),
+  .sd-warm.sd-home .settings-home-card:nth-child(even):hover {
     grid-template-columns: minmax(60px, 0.42fr) minmax(0, 1fr) 16px;
     column-gap: 6px;
     padding-inline: 9px 8px;
   }
 
-  .settings-drawer--warm-day.settings-drawer--home .settings-home-card__value {
+  .sd-warm.sd-home .settings-home-card__value {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

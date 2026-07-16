@@ -22,6 +22,34 @@ export type ServiceConnectionCapability =
   | 'speech-input'
   | 'speech-output'
 
+export type ConnectionEvidenceKind =
+  | 'preflight'
+  | 'endpoint'
+  | 'model-list'
+  | 'model-response'
+  | 'audio-response'
+  | 'playback'
+  | 'local-runtime'
+
+export type ConnectionEvidence = {
+  kind: ConnectionEvidenceKind
+  providerId?: string
+  modelId?: string
+  voiceId?: string
+  /**
+   * Synthesis-only, preflight, endpoint, or identity-mismatch evidence is
+   * partial and must not be presented as full requested-target readiness.
+   */
+  partial?: boolean
+  /** True when observed identity differs from the requested target. */
+  identityMismatch?: boolean
+  /** True when the runtime only succeeded via an inferred fallback target. */
+  usedFallback?: boolean
+  observedProviderId?: string
+  observedModelId?: string
+  observedVoiceId?: string
+}
+
 export interface ServiceConnectionRequest {
   providerId: string
   baseUrl: string
@@ -34,11 +62,20 @@ export interface ServiceConnectionRequest {
 export interface ServiceConnectionResponse {
   ok: boolean
   message: string
+  /**
+   * Stable localization key for the main-process connection message. Prefer
+   * this over `message` when present so all five UI locales stay consistent.
+   * Params must never carry secrets, transcripts, or raw audio.
+   */
+  messageKey?: string
+  messageParams?: Record<string, string | number | boolean | null | undefined>
   status?: ProviderHealthStatus
   code?: ModelConnectionErrorCode
   recommendation?: string
+  recommendationKey?: string
   discoveredModels?: DiscoveredModel[]
   checkedAt?: string
+  evidence?: ConnectionEvidence
 }
 
 export interface ChatModelListRequest {
@@ -218,6 +255,19 @@ export interface TtsStreamErrorEvent {
 export type TtsStreamEvent = TtsStreamChunkEvent | TtsStreamEndEvent | TtsStreamErrorEvent
 
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking'
+
+/**
+ * Stable, per-voice-instance speech level channel.
+ *
+ * `current` is raw and is read by frame-rate consumers such as lip-sync and
+ * echo interruption. `getSnapshot`/`subscribe` are the throttled external
+ * store surface for visual meters.
+ */
+export type SpeechLevelSource = {
+  readonly current: number
+  readonly getSnapshot: () => number
+  readonly subscribe: (listener: () => void) => () => void
+}
 
 /**
  * Prosody-based emotion label produced by SenseVoice ASR's inline tags

@@ -12,6 +12,10 @@ type UseBackgroundSchedulersOptions = {
   messages: ChatMessage[]
   memories: MemoryItem[]
   panelCollapsed: boolean
+  /** Renderer-level scheduler switch; defaults on for isolated callers/tests. */
+  enabled?: boolean
+  /** Explicit owner switch kept separate from feature/settings enablement. */
+  runtimeOwner?: boolean
 }
 
 export function useBackgroundSchedulers({
@@ -19,18 +23,23 @@ export function useBackgroundSchedulers({
   messages,
   memories,
   panelCollapsed,
+  enabled = true,
+  runtimeOwner = true,
 }: UseBackgroundSchedulersOptions) {
   const panelOpen = !panelCollapsed
+  const schedulerEnabled = enabled && runtimeOwner
 
   useAwayNotificationScheduler({
     settings,
     messages,
     panelOpen,
+    enabled: schedulerEnabled,
   })
 
   useBracketScheduler({
     settings,
     panelOpen,
+    enabled: schedulerEnabled,
   })
 
   useLetterScheduler({
@@ -38,10 +47,11 @@ export function useBackgroundSchedulers({
     messages,
     memories,
     panelOpen,
+    enabled: schedulerEnabled,
   })
 
-  useErrandScheduler({ settings })
-  useFutureCapsuleScheduler({ settings })
-  useOpenArcScheduler({ settings })
-  useGuidanceAnalysisScheduler()
+  useErrandScheduler({ settings, enabled: schedulerEnabled })
+  useFutureCapsuleScheduler({ settings, enabled: schedulerEnabled })
+  useOpenArcScheduler({ settings, enabled: schedulerEnabled })
+  useGuidanceAnalysisScheduler({ enabled: schedulerEnabled })
 }

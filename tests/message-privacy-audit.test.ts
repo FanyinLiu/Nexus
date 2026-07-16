@@ -26,7 +26,7 @@ if (wasVoice && msg.voiceBase64 && isOwner) {
 }
 `,
   'src/app/controllers/useDiscordBridge.ts': 'export const bridge = true\n',
-  'src/app/views/PanelView.tsx': 'buildNotificationReplyDraftText(message, ti)\n',
+  'src/app/views/LegacyPanelView.tsx': 'buildNotificationReplyDraftText(message, ti)\n',
   'electron/services/notificationBridge.js': `
 const info = {
   requiresAuth: true,
@@ -51,9 +51,43 @@ function formatStreamTextLogMeta(text) {
 }
 console.warn('[TTS-Stream] remote pcmStream ended without emitting any data:', formatStreamTextLogMeta(text))
 `,
-  'src/hooks/useNotificationBridge.ts': 'writeJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, sanitizeNotificationMessagesForStorage(messages))\n',
+  'src/hooks/useNotificationBridge.ts': `
+commitNotificationMessages(
+  messages,
+  (persisted) => writeJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, persisted),
+  applyMessages,
+)
+`,
+  'src/hooks/chat/assistantReply.ts': `
+logVoiceEvent('sending message to assistant', { contentLength: content.length })
+logVoiceEvent('assistant reply received', { responseLength: response.response.content.length })
+`,
+  'src/hooks/useChat.ts': `
+logVoiceEvent('assistant is busy, voice transcript was not sent', { contentLength: content.length })
+`,
+  'src/hooks/voice/transcriptHandling.ts': `
+logVoiceEvent('recognized transcript', {
+  rawTranscriptLength: rawTranscript.length,
+  transcriptLength: transcript.length,
+  wakeWordConfigured: true,
+})
+`,
   'src/components/settingsSections/AutonomySection.tsx': 'Authorization: Bearer &lt;{webhookInfo.tokenFileName}\n',
+  'src/lib/logger.ts': `
+function summarizePrivateValue() {}
+export function sanitizeLogMeta() {}
+export function summarizeConsoleArguments() {}
+const entry = { message: \`console \${level} event\` }
+consoleOutput = original
+`,
   'src/lib/privacy/bridgeMessagePrivacy.ts': 'textLength=\nmedia=\n',
+  'src/lib/privacy/notificationMessageState.ts': `
+import { sanitizeNotificationMessagesForStorage } from './notificationPrivacy.ts'
+export function commitNotificationMessages(next, write, apply) {
+  write(sanitizeNotificationMessagesForStorage(next))
+  apply(next)
+}
+`,
   'src/lib/privacy/notificationPrivacy.ts': `
 body: '',
 summary: undefined
@@ -94,8 +128,11 @@ test('message privacy audit passes a minimal metadata-only fixture', () => {
 test('message privacy audit rejects raw notification message persistence', () => {
   withMessagePrivacyFixture({
     'src/hooks/useNotificationBridge.ts': `
-sanitizeNotificationMessagesForStorage(messages)
-writeJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, messages)
+commitNotificationMessages(
+  messages,
+  (persisted) => writeJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, messages),
+  applyMessages,
+)
 `,
   }, (root) => {
     const report = buildMessagePrivacyReport(root)
@@ -103,6 +140,37 @@ writeJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, messages)
     assert.equal(report.summary.ok, false)
     assert.ok(
       report.errors.unsafePatterns.some((item) => item.id === 'notification-message-storage-raw-write'),
+    )
+  })
+})
+
+test('message privacy audit requires the hook to use the commit helper', () => {
+  withMessagePrivacyFixture({
+    'src/hooks/useNotificationBridge.ts': 'writeJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, persisted)\n',
+  }, (root) => {
+    const report = buildMessagePrivacyReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(
+      report.errors.missingRequiredPhrases.some((item) => item.id === 'notification-storage-commit-helper-used'),
+    )
+  })
+})
+
+test('message privacy audit requires the commit helper to sanitize before writing', () => {
+  withMessagePrivacyFixture({
+    'src/lib/privacy/notificationMessageState.ts': `
+export function commitNotificationMessages(next, write, apply) {
+  write(next)
+  apply(next)
+}
+`,
+  }, (root) => {
+    const report = buildMessagePrivacyReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(
+      report.errors.missingRequiredPhrases.some((item) => item.id === 'notification-storage-sanitizer-used'),
     )
   })
 })
@@ -179,6 +247,22 @@ console.warn(
     assert.equal(report.summary.ok, false)
     assert.ok(
       report.errors.unsafePatterns.some((item) => item.id === 'tts-stream-raw-speech-log'),
+    )
+  })
+})
+
+test('message privacy audit rejects raw renderer chat metadata', () => {
+  withMessagePrivacyFixture({
+    'src/hooks/chat/assistantReply.ts': `
+logVoiceEvent('sending message to assistant', { content })
+logVoiceEvent('assistant reply received', { responseLength: response.response.content.length })
+`,
+  }, (root) => {
+    const report = buildMessagePrivacyReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(
+      report.errors.unsafePatterns.some((item) => item.id === 'renderer-private-log-metadata:content'),
     )
   })
 })

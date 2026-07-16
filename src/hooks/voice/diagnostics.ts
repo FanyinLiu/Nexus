@@ -13,14 +13,16 @@ import {
   isSenseVoiceSpeechInputProvider,
 } from '../../lib/audioProviders'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
-import type { AppSettings, TranslationKey, TranslationParams } from '../../types'
+import type {
+  AppSettings,
+  ServiceConnectionResponse,
+  TranslationKey,
+  TranslationParams,
+} from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
 
-export type VoiceDiagnosticResult = {
-  ok: boolean
-  message: string
-}
+export type VoiceDiagnosticResult = ServiceConnectionResponse
 
 export type TestSpeechInputReadinessRuntimeOptions = {
   draftSettings: AppSettings
@@ -134,7 +136,23 @@ export async function testSpeechInputReadinessRuntime(
       ? options.ti('voice.diagnostics.sensevoice_ready')
       : options.ti('voice.diagnostics.generic_ready')
 
-    return { ok: true, message }
+    return {
+      ok: true,
+      message,
+      ...(isSenseVoiceSpeechInputProvider(providerId)
+        ? {
+            checkedAt: new Date().toISOString(),
+            evidence: {
+              // Dependency and model presence are only a preflight. A real
+              // recognition result is required before the UI can claim that
+              // speech input is fully verified.
+              kind: 'preflight' as const,
+              providerId,
+              modelId: options.draftSettings.speechInputModel,
+            },
+          }
+        : {}),
+    }
   } catch (caught) {
     return {
       ok: false,
@@ -176,9 +194,21 @@ export async function testSpeechInputConnectionRuntime(
     return remoteSpeechCheck
   }
 
+  // Prefer structured main-process messageKey so non-zh locales never inherit
+  // Chinese fallbacks. Keep the local mic readiness note only when the remote
+  // path still returns free-text without a key.
+  const remoteMessage = remoteSpeechCheck.messageKey
+    ? options.ti(
+      remoteSpeechCheck.messageKey as TranslationKey,
+      remoteSpeechCheck.messageParams as TranslationParams | undefined,
+    )
+    : remoteSpeechCheck.message
+
   return {
-    ok: true,
-    message: `${localSpeechCheck.message} ${remoteSpeechCheck.message}`.trim(),
+    ...remoteSpeechCheck,
+    message: remoteSpeechCheck.messageKey
+      ? remoteMessage
+      : `${localSpeechCheck.message} ${remoteMessage}`.trim(),
   }
 }
 
@@ -278,9 +308,36 @@ export async function testSpeechOutputReadinessRuntime(
       options.options.sampleText?.trim() || buildSpeechOutputSmokeText(options.draftSettings, options.ti),
     )
 
+    const remoteEvidence = remoteSpeechCheck.evidence
     return {
+      ...remoteSpeechCheck,
       ok: true,
-      message: options.ti('voice.diagnostics.playback_confirmed_suffix', { message: remoteSpeechCheck.message }),
+      message: options.ti('voice.diagnostics.playback_confirmed_suffix', {
+        message: remoteSpeechCheck.message,
+      }),
+      // Drop synthesis-only structured keys so a future messageKey-first UI
+      // cannot keep claiming "speakers not checked" after playback was observed.
+      messageKey: undefined,
+      messageParams: undefined,
+      // Playback was actually observed on this device — not synthesis-only.
+      checkedAt: new Date().toISOString(),
+      evidence: {
+        kind: 'playback' as const,
+        providerId: options.draftSettings.speechOutputProviderId,
+        modelId: options.draftSettings.speechOutputModel,
+        voiceId: options.draftSettings.speechOutputVoice,
+        ...(remoteEvidence?.identityMismatch ? { identityMismatch: true as const } : {}),
+        ...(remoteEvidence?.usedFallback ? { usedFallback: true as const } : {}),
+        ...(remoteEvidence?.observedProviderId
+          ? { observedProviderId: remoteEvidence.observedProviderId }
+          : {}),
+        ...(remoteEvidence?.observedModelId
+          ? { observedModelId: remoteEvidence.observedModelId }
+          : {}),
+        ...(remoteEvidence?.observedVoiceId
+          ? { observedVoiceId: remoteEvidence.observedVoiceId }
+          : {}),
+      },
     }
   }
 

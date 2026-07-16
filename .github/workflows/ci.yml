@@ -7,6 +7,27 @@ on:
     branches: [main]
 
 jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run verify:pr
+        name: Full PR policy gate
+
+      - run: npm run knip:production
+        name: Production dead-code audit
+
+      - run: npm run i18n:audit
+        name: Localization contract audit
+
   build:
     strategy:
       # Keep the remaining matrix legs running even if one platform regresses

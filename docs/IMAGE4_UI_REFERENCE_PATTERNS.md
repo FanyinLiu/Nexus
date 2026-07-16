@@ -1,5 +1,12 @@
 # Image4 UI Reference Patterns
 
+> Historical design record — not the current UI contract. The July 2026
+> Live2D-first migration removed the dial, greeting cards, suggestion-action
+> row, and five-row layout described below. Current acceptance follows the live
+> `PanelView.tsx` route, current Image4 contract checks, and the four-part presence / Live2D stage /
+> conversation recap / composer structure. Do not restore retired elements from
+> this document.
+
 Last checked: 2026-06-28.
 
 This note keeps Image4 UI borrowing deliberate. Nexus should learn from mature open-source AI interfaces without copying their product shells or losing the companion-first identity.
@@ -35,7 +42,7 @@ Image4 uses a visual rhythm grid so the companion panel can be tuned without arb
 | System | Borrow pattern | Avoid pattern | Nexus mapping |
 | --- | --- | --- | --- |
 | Open WebUI | Low-noise chat message density and restrained utility affordances. | Sidebar-heavy workbench chrome, full platform density, or admin-style configuration surfaces. | Chat density stays calm; Image4 remains a companion panel. |
-| Chatbox | Compact composer ergonomics, practical desktop input affordances, local-first feel. | Floating action clusters that compete with the input. | Composer stays as one dock row with aligned mic/send/attachment controls. |
+| Chatbox | Compact composer ergonomics, practical desktop input affordances, local-first feel. | Floating action clusters that compete with the input. | Composer stays as one dock row with aligned input/send/attachment controls; voice controls remain in Settings. |
 | Cherry Studio | Dense settings/provider information can stay organized when sections are predictable. | Dashboard density, stacked provider panels, or feature chrome inside the companion surface. | Settings/integrations borrow structure only; Image4 actions stay secondary and scan-friendly. |
 | LobeHub / LobeChat lineage | Polished design-engineering culture, conversational spacing, agent/workspace mental model. | Avatar or agent chrome dominating the conversation surface. | Presence signal and dial support the companion identity without overpowering chat and input. |
 | Vercel AI Chatbot | Streaming-first chat composition, composer as the primary action surface, clean tool/result boundaries. | Generic web-chat layout copied into a desktop companion panel. | Chat flow stays readable while the composer remains the strongest input affordance. |
@@ -112,7 +119,7 @@ For reduced motion, Nexus uses a low-energy state model. System motion such as d
 
 - Borrow: Chatbox/Vercel-style composer primacy with obvious input affordance and aligned controls.
 - Avoid: floating action clusters, oversized buttons, faint borders that make the input disappear.
-- Acceptance: input, mic, send, and attachment controls share one center line; focus is visible without layout shift.
+- Acceptance: input, send, and attachment controls share one center line; focus is visible without layout shift; no voice button returns to the main composer.
 
 ### Chat Surface
 
@@ -156,7 +163,7 @@ Run `npm run ui:references:audit` when Image4 UI work changes the reference pool
 ## Borrow
 
 - Keep controls low-noise. Header buttons should read as one utility rail, not three competing objects.
-- Keep the composer clearly usable. Input, mic, send, and attachment controls need visible alignment and focus affordance even when the design is quiet.
+- Keep the composer clearly usable. Input, send, and attachment controls need visible alignment and focus affordance even when the design is quiet; voice controls remain in Settings.
 - Keep theme overrides scoped. Global theme CSS should not accidentally recolor Image4 placeholders, buttons, or focus rings.
 - Keep desktop density deliberate. Text rows, action suggestions, and utility controls should stay scan-friendly and stable across short viewports.
 - Keep debug tooling separate from product UI. The rhythm grid is a calibration layer, not a permanent visual decoration.

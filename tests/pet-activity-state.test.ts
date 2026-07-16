@@ -158,8 +158,8 @@ test('task state display actions do not rewrite the underlying runtime phase', (
   assert.equal(done.motionToken, 'breathe')
 })
 
-test('PetView renders display status separately from runtime phase status', () => {
-  const source = readFileSync(new URL('../src/app/views/PetView.tsx', import.meta.url), 'utf8')
+test('LegacyPetView renders display status separately from runtime phase status', () => {
+  const source = readFileSync(new URL('../src/app/views/LegacyPetView.tsx', import.meta.url), 'utf8')
 
   assert.match(source, /ti\(companionActivity\.displayStatusKey\)/)
   assert.doesNotMatch(source, /ti\(companionActivity\.statusKey\)/)

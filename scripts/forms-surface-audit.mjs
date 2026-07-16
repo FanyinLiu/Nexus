@@ -12,6 +12,9 @@ const REQUIRED_FILES = [
   'src/components/settingsSections',
   'src/app/styles/settings.css',
   'src/app/styles/settings-home.css',
+  'src/app/styles/settings-visual-system.css',
+  'src/app/styles/settings-product-reference-final.css',
+  'src/features/settingsV3/settings-v3.css',
 ]
 
 const REQUIRED_FILE_READS = [
@@ -22,6 +25,9 @@ const REQUIRED_FILE_READS = [
   'src/components/settingsSections/WindowSection.tsx',
   'src/app/styles/settings.css',
   'src/app/styles/settings-home.css',
+  'src/app/styles/settings-visual-system.css',
+  'src/app/styles/settings-product-reference-final.css',
+  'src/features/settingsV3/settings-v3.css',
 ]
 
 const REQUIRED_CONTRACTS = [
@@ -82,17 +88,35 @@ const REQUIRED_CONTRACTS = [
   },
   {
     id: 'settings-row-rhythm-css',
-    file: 'src/app/styles/settings.css',
-    description: 'Settings CSS preserves compact control and row rhythm.',
+    file: 'src/app/styles/settings-visual-system.css',
+    description: 'The 0.4.2 visual system owns the shared settings control and row rhythm.',
     patterns: [
-      '--settings-control-height: 24px;',
+      '--nx-settings-control-height: 30px;',
+      '--nx-settings-row-height: 38px;',
+      '--nx-settings-field-height: 32px;',
+      '--settings-child-control-height: var(--nx-settings-control-height);',
       '.settings-form-row',
-      '.settings-form-row__label',
-      '.settings-form-row__description',
       '.settings-form-row__validation',
-      '.settings-toggle',
-      '.settings-section__note',
-      ':focus-visible',
+    ],
+  },
+  {
+    id: 'legacy-settings-toggle-state-css',
+    file: 'src/app/styles/settings-product-reference-final.css',
+    description: 'The fallback settings lane owns its checked toggle treatment in the conditional legacy product layer.',
+    patterns: [
+      '.sd-section .sp.sp .settings-toggle input:checked',
+      'background: var(--nx-settings-accent);',
+      'box-shadow: none;',
+    ],
+  },
+  {
+    id: 'v3-settings-toggle-state-css',
+    file: 'src/features/settingsV3/settings-v3.css',
+    description: 'The active V3 settings lane owns its checked switch treatment without depending on the legacy product layer.',
+    patterns: [
+      '.settings-v3-switch input:checked + .settings-v3-switch__track',
+      'background: var(--sv3-accent);',
+      '.settings-v3-switch input:focus-visible + .settings-v3-switch__track',
     ],
   },
   {
@@ -208,7 +232,11 @@ export function buildFormsSurfaceReport(root = ROOT) {
     .map((file) => files.get(file) ?? '')
     .join('\n')
   const settingsFields = files.get('src/components/settingsFields.tsx') ?? ''
-  const css = `${files.get('src/app/styles/settings.css') ?? ''}\n${files.get('src/app/styles/settings-home.css') ?? ''}`
+  const css = [
+    files.get('src/app/styles/settings.css') ?? '',
+    files.get('src/app/styles/settings-home.css') ?? '',
+    files.get('src/app/styles/settings-visual-system.css') ?? '',
+  ].join('\n')
   const missingFiles = findMissingFiles(root)
   const missingContracts = findMissingContracts(files)
   const forbiddenPatterns = findForbiddenPatterns(files)

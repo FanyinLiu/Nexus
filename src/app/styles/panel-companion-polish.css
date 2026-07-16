@@ -33,10 +33,11 @@ html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions-
 html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
 html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
 html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
-  width: clamp(23px, 4vw, 29px) !important;
-  height: clamp(23px, 4vw, 29px) !important;
-  min-width: clamp(23px, 4vw, 29px) !important;
-  min-height: clamp(23px, 4vw, 29px) !important;
+  /* Match final/visual-lock 32px geometry; do not reintroduce competing clamps. */
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
   border-radius: 8px !important;
   border: 1px solid color-mix(in srgb, currentColor 34%, transparent 66%) !important;
   background: color-mix(in srgb, var(--image4-companion-surface, transparent) 20%, transparent) !important;
@@ -139,64 +140,4 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .compo
 html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill__plus {
   width: 15px;
   height: 15px;
-}
-
-.panel-window--image4 .companion-presence__dial,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial {
-  width: min(clamp(194px, 48vw, 352px), calc(var(--image4-rhythm-dial) - 2px));
-  gap: 2px;
-}
-
-.panel-window--image4 .companion-presence__dial-layer--ring,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--ring {
-  display: block;
-  inset: 9%;
-  border-color: color-mix(in srgb, currentColor 18%, transparent 82%);
-  box-shadow:
-    0 0 0 clamp(9px, 2vw, 14px) color-mix(in srgb, currentColor 8%, transparent 92%),
-    inset 0 0 18px color-mix(in srgb, currentColor 12%, transparent 88%);
-  opacity: 0.92;
-}
-
-.panel-window--image4 .companion-presence__dial .companion-presence__dial-layer--arc,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-layer--arc {
-  display: block;
-  animation-duration: 28s;
-  opacity: 0.76;
-}
-
-.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta {
-  width: 76%;
-  display: grid;
-  gap: 2px;
-  justify-items: center;
-}
-
-.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__date,
-.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__weather,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__date,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__weather {
-  display: block;
-}
-
-.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__date,
-.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span:first-child,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__date,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span:first-child {
-  color: inherit;
-}
-
-.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta__weather {
-  color: color-mix(in srgb, currentColor 84%, rgba(255, 219, 170, 0.72));
 }

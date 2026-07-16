@@ -18,7 +18,6 @@ export type Image4CompanionState = {
   contextTone: Image4ContextTone
   intensity: number
   signalActive: boolean
-  dialEmphasis: number
   presencePulse: number
 }
 
@@ -60,7 +59,6 @@ function deriveImage4PreviewState(mode: Image4CompanionMode): Image4CompanionSta
       contextTone: 'active',
       intensity: 1,
       signalActive: true,
-      dialEmphasis: 0.92,
       presencePulse: 1,
     }
   }
@@ -72,7 +70,6 @@ function deriveImage4PreviewState(mode: Image4CompanionMode): Image4CompanionSta
       contextTone: 'focus',
       intensity: 0.62,
       signalActive: false,
-      dialEmphasis: 1,
       presencePulse: 0.42,
     }
   }
@@ -84,7 +81,6 @@ function deriveImage4PreviewState(mode: Image4CompanionMode): Image4CompanionSta
       contextTone: 'calm',
       intensity: clamp01(0.18),
       signalActive: false,
-      dialEmphasis: 0.96,
       presencePulse: 0.12,
     }
   }
@@ -95,7 +91,6 @@ function deriveImage4PreviewState(mode: Image4CompanionMode): Image4CompanionSta
     contextTone: 'calm',
     intensity: clamp01(0.24),
     signalActive: false,
-    dialEmphasis: 1,
     presencePulse: 0.18,
   }
 }
@@ -111,7 +106,6 @@ export function deriveImage4CompanionState(input: Image4CompanionStateInput): Im
       contextTone: 'active',
       intensity: 1,
       signalActive: true,
-      dialEmphasis: 0.92,
       presencePulse: 1,
     }
   }
@@ -123,7 +117,6 @@ export function deriveImage4CompanionState(input: Image4CompanionStateInput): Im
       contextTone: 'focus',
       intensity: 0.62,
       signalActive: false,
-      dialEmphasis: 1,
       presencePulse: 0.42,
     }
   }
@@ -135,7 +128,6 @@ export function deriveImage4CompanionState(input: Image4CompanionStateInput): Im
       contextTone: 'active',
       intensity: 0.54,
       signalActive: false,
-      dialEmphasis: 1,
       presencePulse: 0.32,
     }
   }
@@ -147,7 +139,6 @@ export function deriveImage4CompanionState(input: Image4CompanionStateInput): Im
       contextTone: 'calm',
       intensity: clamp01(0.18),
       signalActive: false,
-      dialEmphasis: 0.96,
       presencePulse: 0.12,
     }
   }
@@ -158,7 +149,6 @@ export function deriveImage4CompanionState(input: Image4CompanionStateInput): Im
     contextTone: 'calm',
     intensity: clamp01(0.24),
     signalActive: false,
-    dialEmphasis: 1,
     presencePulse: 0.18,
   }
 }

@@ -1,24 +1,13 @@
-/* Image 4 layout, presence, and dial. */
+/* Image 4 layout and presence. */
 .panel-window--image4 .image4-chat,
 html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
   --image4-rhythm-presence: clamp(72px, 8.4vh, 138px);
-  --image4-rhythm-dial: clamp(188px, 21.5vh, 340px);
-  --image4-rhythm-greeting: clamp(92px, 10.6vh, 176px);
-  --image4-rhythm-actions: clamp(216px, 25vh, 432px);
   --image4-rhythm-composer: clamp(80px, 9vh, 132px);
   --image4-rhythm-gap: clamp(7px, 0.85vh, 15px);
   --image4-rhythm-padding-top: clamp(22px, 5.6vw, 50px);
   --image4-rhythm-padding-bottom: clamp(14px, 3.4vw, 30px);
   --image4-row-buffer-y: clamp(5px, 0.72vh, 9px);
   --image4-row-boundary-line: rgba(214, 231, 252, 0.06);
-  --image4-weight-actions-border: rgba(214, 231, 252, 0.035);
-  --image4-weight-actions-hover-border: rgba(214, 231, 252, 0.1);
-  --image4-weight-actions-surface:
-    linear-gradient(90deg, rgba(120, 170, 255, 0.02), rgba(255, 255, 255, 0.008) 48%, rgba(255, 255, 255, 0)),
-    rgba(255, 255, 255, 0.006);
-  --image4-weight-actions-hover:
-    linear-gradient(90deg, rgba(120, 170, 255, 0.026), rgba(255, 255, 255, 0.012) 48%, rgba(255, 255, 255, 0)),
-    rgba(255, 255, 255, 0.04);
   --image4-composer-base-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 10px 22px rgba(0, 0, 0, 0.2);
@@ -36,12 +25,6 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
   --image4-motion-reduced-signal-duration: 5.8s;
   --image4-motion-reduced-signal-opacity: 0.5;
   display: grid;
-  grid-template-rows:
-    [presence] var(--image4-rhythm-presence)
-    [dial] var(--image4-rhythm-dial)
-    [greeting] var(--image4-rhythm-greeting)
-    [actions] var(--image4-rhythm-actions)
-    [composer] var(--image4-rhythm-composer);
   align-content: stretch;
   gap: var(--image4-rhythm-gap);
   box-sizing: border-box;
@@ -58,14 +41,6 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
 
 html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
   --image4-row-boundary-line: rgba(255, 220, 180, 0.065);
-  --image4-weight-actions-border: rgba(255, 220, 180, 0.045);
-  --image4-weight-actions-hover-border: rgba(255, 196, 142, 0.13);
-  --image4-weight-actions-surface:
-    linear-gradient(90deg, rgba(255, 173, 116, 0.028), rgba(255, 240, 220, 0.01) 48%, rgba(255, 255, 255, 0)),
-    rgba(255, 235, 210, 0.007);
-  --image4-weight-actions-hover:
-    linear-gradient(90deg, rgba(255, 173, 116, 0.038), rgba(255, 240, 220, 0.016) 48%, rgba(255, 255, 255, 0)),
-    rgba(255, 235, 210, 0.045);
   --image4-composer-base-shadow:
     inset 0 1px 0 rgba(255, 244, 226, 0.055),
     0 10px 22px rgba(18, 8, 6, 0.24);
@@ -95,34 +70,6 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
   border: 0;
   background: transparent;
   box-shadow: none;
-}
-
-.panel-window--image4 .image4-dial-stage {
-  position: relative;
-  grid-row: dial;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  overflow: visible;
-  isolation: isolate;
-}
-
-.panel-window--image4 .image4-dial-stage::before {
-  content: "";
-  position: absolute;
-  inset: -18px;
-  z-index: 0;
-  border-radius: 999px;
-  background: radial-gradient(
-    circle at 50% 48%,
-    rgba(111, 226, 239, 0.075),
-    rgba(255, 213, 145, 0.045) 42%,
-    transparent 68%
-  );
-  filter: blur(10px);
-  opacity: 0.72;
-  pointer-events: none;
 }
 
 .panel-window--image4 .companion-presence__topline {
@@ -298,11 +245,8 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
 
 @media (min-aspect-ratio: 1 / 1) {
   .panel-window--image4 .image4-chat,
-  html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
+html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
     --image4-rhythm-presence: clamp(44px, 16cqw, 62px);
-    --image4-rhythm-dial: clamp(148px, 62cqw, 196px);
-    --image4-rhythm-greeting: clamp(58px, 22cqw, 82px);
-    --image4-rhythm-actions: clamp(152px, 58cqw, 198px);
     --image4-rhythm-composer: clamp(62px, 22cqw, 82px);
     --image4-rhythm-gap: clamp(4px, 1.9cqw, 8px);
     --image4-rhythm-padding-top: clamp(16px, 7cqw, 26px);
@@ -329,62 +273,12 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
     margin-left: 0;
     transform: translateY(-6px);
   }
-
-  .panel-window--image4 .companion-presence__dial {
-    gap: clamp(1px, 1.2cqw, 4px);
-    width: min(clamp(148px, 62cqw, 196px), calc(var(--image4-rhythm-dial) - 4px));
-    margin-top: -2px;
-    transform: translateY(-2px);
-  }
-
-  .panel-window--image4 .companion-presence__dial-layer--base {
-    box-shadow:
-      0 0 0 1px rgba(206, 224, 246, 0.2),
-      0 0 clamp(22px, 13cqw, 42px) rgba(111, 226, 239, 0.1),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  }
-
-  html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--base {
-    box-shadow:
-      0 0 0 1px rgba(255, 220, 178, 0.19),
-      0 0 clamp(22px, 13cqw, 42px) rgba(255, 185, 120, 0.1),
-      inset 0 0 0 1px rgba(255, 244, 226, 0.07);
-  }
-
-  .panel-window--image4 .companion-presence__dial-band {
-    font-size: clamp(9px, 3.9cqw, 13px);
-  }
-
-  .panel-window--image4 .companion-presence__dial strong {
-    font-size: clamp(24px, 12cqw, 34px);
-  }
-
-  .panel-window--image4 .companion-presence__dial-status {
-    font-size: clamp(9px, 3.8cqw, 13px);
-  }
-
-  .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta {
-    gap: clamp(2px, 0.9cqw, 4px);
-    font-size: clamp(7px, 2.7cqw, 9.5px);
-  }
-
-  .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span:first-child {
-    font-size: clamp(7.4px, 2.8cqw, 10px);
-  }
-
-  .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span + span {
-    font-size: clamp(7px, 2.55cqw, 9.2px);
-  }
 }
 
 /* Codex-like neutral pass for Image 4 layout and presence. */
 .panel-window--image4 .image4-chat,
 html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
   --image4-row-boundary-line: rgba(240, 246, 252, 0.08);
-  --image4-weight-actions-border: rgba(240, 246, 252, 0.09);
-  --image4-weight-actions-hover-border: rgba(240, 246, 252, 0.16);
-  --image4-weight-actions-surface: rgba(22, 27, 34, 0.54);
-  --image4-weight-actions-hover: rgba(48, 54, 61, 0.54);
   --image4-composer-base-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 10px 22px rgba(0, 0, 0, 0.22);
@@ -398,14 +292,6 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
   --image4-state-hover-neutral-bg: rgba(48, 54, 61, 0.64);
   --image4-state-hover-primary-bg: rgba(88, 166, 255, 0.16);
   --image4-state-hover-danger-bg: rgba(248, 81, 73, 0.1);
-}
-
-.panel-window--image4 .image4-dial-stage::before,
-html[data-theme='warm-day'] .panel-window--image4 .image4-dial-stage::before {
-  inset: -10px;
-  background: radial-gradient(circle at 50% 48%, rgba(88, 166, 255, 0.08), transparent 62%);
-  filter: blur(6px);
-  opacity: 0.16;
 }
 
 .panel-window--image4 .companion-presence__copy strong,
@@ -443,83 +329,9 @@ html[data-theme='warm-day'] .panel-window--image4 .companion-presence__signal.is
   box-shadow: 0 0 3px rgba(88, 166, 255, 0.22);
 }
 
-.panel-window--image4 .companion-presence__dial-layer--glow,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--glow {
-  background: radial-gradient(circle, rgba(88, 166, 255, 0.08), transparent 68%);
-  filter: blur(6px);
-  opacity: 0.18;
-}
-
-.panel-window--image4 .companion-presence__dial-layer--base,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--base {
-  background:
-    radial-gradient(circle at 42% 32%, rgba(240, 246, 252, 0.1), transparent 38%),
-    radial-gradient(circle at 50% 52%, rgba(22, 27, 34, 0.78), rgba(13, 17, 23, 0.76) 58%, rgba(3, 6, 10, 0.18) 76%, transparent 80%);
-  box-shadow:
-    0 0 0 1px rgba(240, 246, 252, 0.14),
-    0 0 clamp(18px, 4.8vw, 42px) rgba(88, 166, 255, 0.06),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-}
-
-.panel-window--image4 .companion-presence__dial-layer--arc,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--arc {
-  background:
-    conic-gradient(
-      from 180deg,
-      rgba(88, 166, 255, 0.28) 0 13%,
-      transparent 17% 50%,
-      rgba(139, 148, 158, 0.18) 50% 61%,
-      transparent 66%
-  );
-  opacity: 0.38;
-  filter: none;
-}
-
-.panel-window--image4 .companion-presence__dial-layer--moon,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--moon {
-  background:
-    radial-gradient(circle at 44% 32%, rgba(240, 246, 252, 0.06), transparent 34%),
-    radial-gradient(circle, rgba(22, 27, 34, 0.48), rgba(13, 17, 23, 0.08) 70%);
-}
-
-.panel-window--image4 .companion-presence__dial-band,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-band {
-  color: rgba(139, 148, 158, 0.96);
-}
-
-.panel-window--image4 .companion-presence__dial strong,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial strong {
-  color: rgba(240, 246, 252, 0.96);
-}
-
-.panel-window--image4 .companion-presence__dial-status,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-status {
-  color: rgba(201, 209, 217, 0.78);
-}
-
-.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta {
-  color: rgba(139, 148, 158, 0.82);
-  text-shadow: 0 1px 5px rgba(1, 4, 9, 0.8);
-}
-
-.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span:first-child,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span:first-child {
-  color: rgba(201, 209, 217, 0.82);
-}
-
-.panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span + span,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span + span {
-  color: rgba(139, 148, 158, 0.8);
-}
-
 /* Bright morning state for Image 4 presence. */
 html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
   --image4-row-boundary-line: rgba(72, 98, 121, 0.12);
-  --image4-weight-actions-border: rgba(76, 101, 125, 0.16);
-  --image4-weight-actions-hover-border: rgba(62, 90, 116, 0.24);
-  --image4-weight-actions-surface: rgba(255, 255, 255, 0.48);
-  --image4-weight-actions-hover: rgba(238, 247, 253, 0.74);
   --image4-composer-base-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.76),
     0 10px 22px rgba(60, 84, 106, 0.14);
@@ -533,13 +345,6 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
   --image4-state-hover-neutral-bg: rgba(231, 240, 247, 0.76);
   --image4-state-hover-primary-bg: rgba(65, 115, 154, 0.12);
   --image4-state-hover-danger-bg: rgba(214, 94, 88, 0.1);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .image4-dial-stage::before {
-  inset: -8px;
-  background: radial-gradient(circle at 50% 48%, rgba(111, 150, 179, 0.14), transparent 64%);
-  filter: blur(5px);
-  opacity: 0.28;
 }
 
 html[data-theme='warm-day'] .panel-window--image4 .companion-presence__copy strong {
@@ -569,70 +374,9 @@ html[data-theme='warm-day'] .panel-window--image4 .companion-presence__signal.is
   box-shadow: 0 0 4px rgba(65, 115, 154, 0.16);
 }
 
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--glow {
-  background: radial-gradient(circle, rgba(105, 145, 175, 0.14), transparent 68%);
-  filter: blur(6px);
-  opacity: 0.28;
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--base {
-  background:
-    radial-gradient(circle at 42% 32%, rgba(255, 255, 255, 0.62), transparent 38%),
-    radial-gradient(circle at 50% 52%, rgba(247, 252, 255, 0.86), rgba(221, 233, 243, 0.68) 58%, rgba(174, 197, 215, 0.18) 76%, transparent 80%);
-  box-shadow:
-    0 0 0 1px rgba(75, 103, 124, 0.2),
-    0 12px 34px rgba(50, 78, 101, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.74);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--arc {
-  background:
-    conic-gradient(
-      from 180deg,
-      rgba(65, 115, 154, 0.34) 0 13%,
-      transparent 17% 50%,
-      rgba(226, 160, 92, 0.2) 50% 61%,
-      transparent 66%
-  );
-  opacity: 0.5;
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--moon {
-  background:
-    radial-gradient(circle at 44% 32%, rgba(255, 255, 255, 0.28), transparent 34%),
-    radial-gradient(circle, rgba(233, 242, 249, 0.56), rgba(235, 244, 250, 0.1) 70%);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-band {
-  color: rgba(82, 100, 116, 0.78);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial strong {
-  color: rgba(25, 36, 48, 0.94);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-status {
-  color: rgba(68, 86, 102, 0.78);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta {
-  color: rgba(76, 92, 108, 0.76);
-  text-shadow: none;
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span:first-child {
-  color: rgba(48, 65, 82, 0.84);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span + span {
-  color: rgba(76, 92, 108, 0.74);
-}
-
 /* Xinghui companion palette: dial stays warm and calm, with blue-green as the trust accent. */
 html[data-theme='warm-day'] .panel-window--image4 .image4-chat {
   --image4-row-boundary-line: color-mix(in srgb, var(--image4-companion-border) 74%, transparent);
-  --image4-weight-actions-border: color-mix(in srgb, var(--image4-companion-border) 52%, transparent);
-  --image4-weight-actions-hover-border: color-mix(in srgb, var(--image4-companion-primary) 32%, transparent);
   --image4-state-focus-border: color-mix(in srgb, var(--image4-companion-secondary) 52%, transparent);
   --image4-state-focus-ring:
     0 0 0 1px color-mix(in srgb, var(--image4-companion-secondary) 42%, transparent),
@@ -683,102 +427,4 @@ html[data-theme='warm-day'] .panel-window--image4 .companion-presence__signal-ba
 html[data-theme='warm-day'] .panel-window--image4 .companion-presence__signal.is-speaking .companion-presence__signal-bar {
   background: color-mix(in srgb, var(--image4-companion-secondary) 68%, var(--image4-companion-primary));
   box-shadow: 0 0 4px color-mix(in srgb, var(--image4-companion-primary) 18%, transparent);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .image4-dial-stage::before {
-  background: radial-gradient(
-    circle at 50% 48%,
-    color-mix(in srgb, var(--image4-companion-primary-soft) 20%, transparent),
-    color-mix(in srgb, var(--image4-companion-secondary) 9%, transparent) 44%,
-    transparent 70%
-  );
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial::before {
-  background: repeating-conic-gradient(
-    from -8deg,
-    color-mix(in srgb, var(--image4-companion-secondary) 22%, transparent) 0deg 1deg,
-    transparent 1deg 4deg
-  );
-  opacity: 0.14;
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--glow {
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--image4-companion-primary-soft) 18%, transparent),
-    color-mix(in srgb, var(--image4-companion-secondary) 7%, transparent) 44%,
-    transparent 70%
-  );
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--base {
-  background:
-    radial-gradient(circle at 42% 32%, rgba(255, 255, 255, 0.52), transparent 38%),
-    radial-gradient(
-      circle at 50% 52%,
-      color-mix(in srgb, var(--image4-companion-surface) 90%, transparent),
-      color-mix(in srgb, var(--image4-companion-surface-strong) 62%, transparent) 58%,
-      color-mix(in srgb, var(--image4-companion-primary-soft) 28%, transparent) 74%,
-      transparent 79%
-    );
-  box-shadow:
-    0 0 0 1px var(--image4-companion-border),
-    0 0 clamp(30px, 6.5vw, 64px) color-mix(in srgb, var(--image4-companion-primary-soft) 18%, transparent),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.74);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--arc {
-  background:
-    conic-gradient(
-      from 180deg,
-      color-mix(in srgb, var(--image4-companion-secondary) 38%, transparent) 0 13%,
-      transparent 17% 50%,
-      color-mix(in srgb, var(--image4-companion-primary) 34%, transparent) 50% 61%,
-      transparent 66%
-    );
-  opacity: 0.44;
-  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--image4-companion-primary) 10%, transparent));
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-layer--moon {
-  background:
-    radial-gradient(circle at 44% 32%, rgba(255, 255, 255, 0.42), transparent 34%),
-    radial-gradient(
-      circle,
-      color-mix(in srgb, var(--image4-companion-surface) 74%, transparent),
-      color-mix(in srgb, var(--image4-companion-primary-soft) 18%, transparent) 68%
-    );
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--image4-companion-border) 62%, transparent),
-    inset 0 0 20px rgba(255, 255, 255, 0.42);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial-band {
-  color: color-mix(in srgb, var(--image4-companion-muted) 88%, transparent);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial strong {
-  color: var(--image4-companion-text);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta,
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span + span {
-  color: color-mix(in srgb, var(--image4-companion-muted) 82%, transparent);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .companion-presence__dial .companion-presence__dial-meta span:first-child {
-  color: color-mix(in srgb, var(--image4-companion-text) 84%, transparent);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__dial-voice-ring {
-  border-color: color-mix(in srgb, var(--image4-companion-primary) 48%, transparent);
-  box-shadow:
-    0 0 14px color-mix(in srgb, var(--image4-companion-primary) 14%, transparent),
-    inset 0 0 12px rgba(255, 255, 255, 0.09);
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__dial-voice-core {
-  background: color-mix(in srgb, var(--image4-companion-primary) 34%, transparent);
-  box-shadow: 0 0 20px color-mix(in srgb, var(--image4-companion-primary) 22%, transparent);
 }

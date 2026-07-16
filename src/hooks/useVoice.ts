@@ -34,6 +34,7 @@ import {
   RESTART_RETRY_LIMIT,
   evaluateRestartGuards,
   getRestartDelay,
+  shouldAutoRestart,
 } from '../features/voice/autoRestartPolicy'
 import { VoiceBus, type BusEffect } from '../features/voice/bus'
 import type { VoiceBusEvent } from '../features/voice/busEvents'
@@ -74,6 +75,10 @@ import { createVoiceBindings } from './voice/voiceBindings'
 import { createVoiceConversationStarters } from './voice/voiceConversationStarters'
 import { createVoiceLifecycleControls } from './voice/voiceLifecycleControls'
 import { createVoiceTestEntries } from './voice/voiceTestEntries'
+import {
+  createSpeechLevelPublisher,
+  type SpeechLevelPublisher,
+} from './voice/speechLevelPublishing.ts'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -83,6 +88,16 @@ const MAX_VOICE_TRACE_ENTRIES = 8
 const BROWSER_TTS_LIPSYNC_INTERVAL_MS = 88
 const AUDIO_TTS_ANALYSER_FFT_SIZE = 512
 
+function disposeSpeechLevelPublisherAfterEffectReplay(
+  publisher: SpeechLevelPublisher,
+  generationRef: { current: number },
+  disposeGeneration: number,
+) {
+  queueMicrotask(() => {
+    if (generationRef.current === disposeGeneration) publisher.dispose()
+  })
+}
+
 export type { UseVoiceContext } from './voice/types'
 
 export function useVoice(ctx: UseVoiceContext) {
@@ -91,7 +106,6 @@ export function useVoice(ctx: UseVoiceContext) {
   const [voiceState, setVoiceStateRaw] = useState<VoiceState>('idle')
   const [continuousVoiceActive, setContinuousVoiceActive] = useState(false)
   const [liveTranscript, setLiveTranscript] = useState('')
-  const [speechLevel, setSpeechLevel] = useState(0)
   const [wakewordState, setWakewordState] = useState<WakewordRuntimeState>(() => createInitialWakewordRuntimeState())
   const voiceEnabled = settings.speechInputEnabled || settings.speechOutputEnabled
   const [voicePipeline, setVoicePipeline] = useState<VoicePipelineState>(() => voiceEnabled ? loadVoicePipelineState() : { step: 'idle' as const, detail: '', transcript: '', updatedAt: '' })
@@ -111,7 +125,13 @@ export function useVoice(ctx: UseVoiceContext) {
   const audioPlaybackQueueRef = useRef<AudioPlaybackQueue<SpeechSegmentMeta> | null>(null)
   const streamAudioPlayerRef = useRef<StreamAudioPlayer | null>(null)
   const activeStreamingSpeechOutputRef = useRef<StreamingSpeechOutputController | null>(null)
-  const speechLevelValueRef = useRef(0)
+  const speechLevelPublisherRef = useRef<SpeechLevelPublisher | null>(null)
+  if (!speechLevelPublisherRef.current) {
+    speechLevelPublisherRef.current = createSpeechLevelPublisher()
+  }
+  const speechLevelPublisher = speechLevelPublisherRef.current
+  const speechLevelSource = speechLevelPublisher.source
+  const speechLevelPublisherDisposeGenerationRef = useRef(0)
   const paraformerSessionRef = useRef<ParaformerStreamSession | null>(null)
   const paraformerConversationRef = useRef<ParaformerConversationState | null>(null)
   const paraformerStartingRef = useRef(false)
@@ -184,12 +204,43 @@ export function useVoice(ctx: UseVoiceContext) {
 
   // ── Bus effect executor ────────────────────────────────────────────────
   //
-  // Bus-driven restarts funnel through the same guard evaluation as the
-  // legacy scheduleVoiceRestart path (Phase 1-2) so bus-originated restarts
-  // don't drift from scheduler-originated ones. Retries reuse the policy
-  // module's backoff curve.
-  function scheduleBusRestart(delay: number, retryCount: number) {
-    window.setTimeout(() => {
+  // VoiceBus owns the only restart timer. Every caller emits a restart request;
+  // this executor applies the shared policy, guards, and retry backoff.
+  function shouldRunBusRestart(force: boolean) {
+    if (force) return true
+
+    const decision = shouldAutoRestart({
+      continuousActive: continuousVoiceActiveRef.current,
+      settings: ctx.settingsRef.current,
+    })
+    if (!decision.allowed) {
+      voiceDebug('VoiceBus', 'restart_voice blocked by auto-restart policy:', decision.reason)
+    }
+    return decision.allowed
+  }
+
+  function scheduleBusRestart(
+    delay: number,
+    retryCount: number,
+    options: {
+      force?: boolean
+      statusText?: string
+      restartReason?: string
+    } = {},
+  ) {
+    const force = options.force ?? false
+    if (!shouldRunBusRestart(force)) return
+
+    if (restartVoiceTimerRef.current) {
+      voiceDebug('VoiceBus', 'restart_voice skipped — pending timer already exists')
+      return
+    }
+
+    restartVoiceTimerRef.current = window.setTimeout(() => {
+      restartVoiceTimerRef.current = null
+
+      if (!shouldRunBusRestart(force)) return
+
       const currentPhase = voiceBus.phase
       if (currentPhase !== 'idle') {
         voiceDebug('VoiceBus', 'restart_voice skipped — phase:', currentPhase)
@@ -210,12 +261,16 @@ export function useVoice(ctx: UseVoiceContext) {
           return
         }
         voiceDebug('VoiceBus', 'restart blocked (retry', retryCount + 1, '), blocker:', guard.blocker)
-        scheduleBusRestart(getRestartDelay('retry'), retryCount + 1)
+        scheduleBusRestart(getRestartDelay('retry'), retryCount + 1, options)
         return
       }
 
+      if (delay >= 1_000 && options.statusText) {
+        showPetStatus(options.statusText, 6_000, 4_500)
+      }
+
       try {
-        voiceDebug('VoiceBus', 'restart_voice — starting voice conversation')
+        voiceDebug('VoiceBus', 'restart_voice — starting voice conversation', options.restartReason ?? '')
         lifecycleHolder.current?.startVoiceConversation({ restart: true, passive: true })
       } catch (err) {
         console.warn('[VoiceBus] restart failed:', err)
@@ -228,7 +283,11 @@ export function useVoice(ctx: UseVoiceContext) {
     for (const effect of effects) {
       switch (effect.type) {
         case 'restart_voice':
-          scheduleBusRestart(getRestartDelay('bus_effect', { requested: effect.delay }), 0)
+          scheduleBusRestart(getRestartDelay('bus_effect', { requested: effect.delay }), 0, {
+            force: effect.force,
+            statusText: effect.statusText,
+            restartReason: effect.restartReason,
+          })
           break
         case 'set_mood':
           ctx.setMood(effect.mood)
@@ -436,7 +495,8 @@ export function useVoice(ctx: UseVoiceContext) {
       audioPlaybackQueueRef,
       streamAudioPlayerRef,
       activeStreamingSpeechOutputRef,
-      speechLevelValueRef,
+      speechLevelSource,
+      speechLevelPublisher,
       paraformerSessionRef,
       paraformerConversationRef,
       paraformerStartingRef,
@@ -459,7 +519,6 @@ export function useVoice(ctx: UseVoiceContext) {
       setVoiceState,
       setVoicePipeline,
       setVoiceTrace,
-      setSpeechLevel,
       setContinuousVoiceActive,
       setLiveTranscript,
       setWakewordState,
@@ -662,14 +721,14 @@ export function useVoice(ctx: UseVoiceContext) {
 
   // Cleanup on unmount
   useEffect(() => {
+    const disposeGeneration = ++speechLevelPublisherDisposeGenerationRef.current
     return () => {
       cleanupVoiceRuntimeResources({
         clearPendingVoiceRestart,
         recognitionRef,
         stopApiRecording: stopApiRecordingRef.current,
         stopVadListening: stopVadListeningRef.current,
-        speechLevelValueRef,
-        setSpeechLevel,
+        speechLevelPublisher,
         stopActiveSpeechOutput: stopActiveSpeechOutputRef.current,
         paraformerSessionRef,
         sensevoiceSessionRef,
@@ -679,8 +738,17 @@ export function useVoice(ctx: UseVoiceContext) {
         wakewordAcknowledgingRef,
         wakewordAckTimerRef,
       })
+      // React development effect replay runs cleanup and setup back-to-back.
+      // Defer permanent disposal by one microtask and cancel it when a new
+      // setup generation appears, while a real unmount still disposes the
+      // private publisher after every runtime producer has been stopped.
+      disposeSpeechLevelPublisherAfterEffectReplay(
+        speechLevelPublisher,
+        speechLevelPublisherDisposeGenerationRef,
+        disposeGeneration,
+      )
     }
-  }, [clearPendingVoiceRestart])
+  }, [clearPendingVoiceRestart, speechLevelPublisher])
 
   useEffect(() => {
     return () => {
@@ -711,7 +779,7 @@ export function useVoice(ctx: UseVoiceContext) {
     voiceState,
     continuousVoiceActive,
     liveTranscript,
-    speechLevel,
+    speechLevelSource,
     wakewordState,
     voicePipeline,
     voiceTrace,
@@ -771,7 +839,6 @@ export function useVoice(ctx: UseVoiceContext) {
     voiceState,
     continuousVoiceActive,
     liveTranscript,
-    speechLevel,
     wakewordState,
     voicePipeline,
     voiceTrace,
@@ -786,5 +853,6 @@ export function useVoice(ctx: UseVoiceContext) {
     busEmit,
     clearPendingVoiceRestart,
     ensureSupportedSpeechInputSettings,
+    speechLevelSource,
   ])
 }

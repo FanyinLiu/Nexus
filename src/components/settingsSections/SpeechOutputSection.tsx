@@ -20,7 +20,7 @@ import {
   isVolcengineSpeechOutputProvider,
   supportsCustomSpeechOutputVoiceId,
 } from '../../lib/audioProviders'
-import { SPEECH_OUTPUT_PROVIDERS } from '../../lib/providerCatalog'
+import { SPEECH_OUTPUT_PROVIDERS } from '../../lib/speechProviderCatalog'
 import { updateCurrentSpeechOutputProviderProfile } from '../../lib/speechProviderProfiles'
 import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
@@ -94,6 +94,7 @@ const speechOutputSelectOptions = SPEECH_OUTPUT_PROVIDERS
 
 type SpeechOutputSectionProps = {
   active: boolean
+  showHeader?: boolean
   draft: AppSettings
   setDraft: Dispatch<SetStateAction<AppSettings>>
   speechVoiceOptions: SpeechVoiceOption[]
@@ -113,6 +114,7 @@ type SpeechOutputSectionProps = {
 
 export const SpeechOutputSection = memo(function SpeechOutputSection({
   active,
+  showHeader = true,
   draft,
   setDraft,
   speechVoiceOptions,
@@ -181,24 +183,39 @@ export const SpeechOutputSection = memo(function SpeechOutputSection({
 
   return (
     <section className={`settings-section settings-speech-config-section ${active ? 'is-active' : 'is-hidden'}`}>
-      <div className="settings-section__title-row">
-        <div>
-          <h4>{ti('settings.speech_output.title')}</h4>
-          <p className="settings-drawer__hint">
-            {ti('settings.speech_output.hint')}
-          </p>
+      {showHeader ? (
+        <div className="settings-section__title-row">
+          <div>
+            <h4>{ti('settings.speech_output.title')}</h4>
+            <p className="settings-drawer__hint">
+              {ti('settings.speech_output.hint')}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={onRunSpeechOutputConnectionTest}
+            disabled={testingTarget === 'speech-output'}
+          >
+            {testingTarget === 'speech-output'
+              ? ti('settings.speech_output.testing')
+              : ti('settings.speech_output.test')}
+          </button>
         </div>
-        <button
-          type="button"
-          className="ghost-button"
-          onClick={onRunSpeechOutputConnectionTest}
-          disabled={testingTarget === 'speech-output'}
-        >
-          {testingTarget === 'speech-output'
-            ? ti('settings.speech_output.testing')
-            : ti('settings.speech_output.test')}
-        </button>
-      </div>
+      ) : (
+        <div className="settings-speech-config-actions">
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={onRunSpeechOutputConnectionTest}
+            disabled={testingTarget === 'speech-output'}
+          >
+            {testingTarget === 'speech-output'
+              ? ti('settings.speech_output.testing')
+              : ti('settings.speech_output.test')}
+          </button>
+        </div>
+      )}
 
       <label className="settings-control-card settings-speech-config-field">
         <span>{ti('settings.speech_output.provider')}</span>

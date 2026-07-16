@@ -3,6 +3,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import ts from 'typescript'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -13,17 +14,39 @@ const CHECKED_FILES = [
   'src/app/controllers/discordMessageRouter.ts',
   'src/app/controllers/useTelegramBridge.ts',
   'src/app/controllers/useDiscordBridge.ts',
-  'src/app/views/PanelView.tsx',
+  'src/app/views/LegacyPanelView.tsx',
   'electron/services/notificationBridge.js',
   'electron/services/tencentAsr.js',
   'electron/services/ttsService.js',
   'electron/ttsStreamService.js',
   'src/hooks/useNotificationBridge.ts',
+  'src/hooks/chat/assistantReply.ts',
+  'src/hooks/useChat.ts',
+  'src/hooks/voice/transcriptHandling.ts',
   'src/components/settingsSections/AutonomySection.tsx',
+  'src/lib/logger.ts',
   'src/lib/privacy/bridgeMessagePrivacy.ts',
+  'src/lib/privacy/notificationMessageState.ts',
   'src/lib/privacy/notificationPrivacy.ts',
   'src/vite-env.d.ts',
 ]
+
+const LOG_CALL_FILES = [
+  'src/hooks/chat/assistantReply.ts',
+  'src/hooks/useChat.ts',
+  'src/hooks/voice/transcriptHandling.ts',
+]
+
+const PRIVATE_LOG_META_KEYS = new Set([
+  'content',
+  'normalizedTranscript',
+  'preview',
+  'rawTranscript',
+  'traceId',
+  'transcript',
+  'turnId',
+  'wakeWord',
+])
 
 const UNSAFE_PATTERNS = [
   {
@@ -52,7 +75,7 @@ const UNSAFE_PATTERNS = [
   },
   {
     id: 'notification-reply-draft-copies-message-content',
-    file: 'src/app/views/PanelView.tsx',
+    file: 'src/app/views/LegacyPanelView.tsx',
     pattern: /handleNotificationDraft[\s\S]{0,500}(?:getNotificationSummary|message\.summary|message\.body)/,
     message: 'notification reply drafts must not copy third-party message content into the chat composer',
   },
@@ -142,9 +165,14 @@ const REQUIRED_PHRASES = [
     phrases: ['recordMessageFollowUp(buildNotificationMessageFollowUpInput(message))'],
   },
   {
-    id: 'notification-storage-sanitizer-used',
+    id: 'notification-storage-commit-helper-used',
     file: 'src/hooks/useNotificationBridge.ts',
-    phrases: ['sanitizeNotificationMessagesForStorage(messages)'],
+    phrases: ['commitNotificationMessages('],
+  },
+  {
+    id: 'notification-storage-sanitizer-used',
+    file: 'src/lib/privacy/notificationMessageState.ts',
+    phrases: ['sanitizeNotificationMessagesForStorage(next)'],
   },
   {
     id: 'notification-storage-body-stripped',
@@ -153,7 +181,7 @@ const REQUIRED_PHRASES = [
   },
   {
     id: 'notification-reply-draft-helper-used',
-    file: 'src/app/views/PanelView.tsx',
+    file: 'src/app/views/LegacyPanelView.tsx',
     phrases: ['buildNotificationReplyDraftText(message, ti)'],
   },
   {
@@ -201,7 +229,67 @@ const REQUIRED_PHRASES = [
     file: 'electron/ttsStreamService.js',
     phrases: ['formatStreamTextLogMeta(text)', 'chars=${String(text ?? \'\').length}'],
   },
+  {
+    id: 'renderer-diagnostics-use-privacy-safe-logger-boundary',
+    file: 'src/lib/logger.ts',
+    phrases: [
+      'export function sanitizeLogMeta',
+      'function summarizePrivateValue',
+      'export function summarizeConsoleArguments',
+      'message: `console ${level} event`',
+      'consoleOutput = original',
+    ],
+  },
+  {
+    id: 'chat-diagnostics-store-lengths-only',
+    file: 'src/hooks/chat/assistantReply.ts',
+    phrases: ['contentLength: content.length', 'responseLength: response.response.content.length'],
+  },
+  {
+    id: 'voice-diagnostics-store-lengths-only',
+    file: 'src/hooks/voice/transcriptHandling.ts',
+    phrases: ['rawTranscriptLength:', 'transcriptLength:', 'wakeWordConfigured:'],
+  },
+  {
+    id: 'busy-chat-diagnostics-store-length-only',
+    file: 'src/hooks/useChat.ts',
+    phrases: ['{ contentLength: content.length }'],
+  },
 ]
+
+function findPrivateLogMetadata(file, source) {
+  const findings = []
+  const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+
+  function visit(node) {
+    if (
+      ts.isCallExpression(node)
+      && ts.isIdentifier(node.expression)
+      && node.expression.text === 'logVoiceEvent'
+    ) {
+      const [message, metadata] = node.arguments
+      if (!message || (!ts.isStringLiteral(message) && !ts.isNoSubstitutionTemplateLiteral(message))) {
+        findings.push('dynamic-message')
+      }
+      if (metadata && ts.isObjectLiteralExpression(metadata)) {
+        for (const property of metadata.properties) {
+          if (ts.isSpreadAssignment(property)) {
+            findings.push('spread-metadata')
+            continue
+          }
+          const name = property.name && ts.isComputedPropertyName(property.name)
+            ? null
+            : property.name?.getText(sourceFile).replace(/^['"]|['"]$/g, '')
+          if (name && PRIVATE_LOG_META_KEYS.has(name)) findings.push(name)
+        }
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return [...new Set(findings)]
+}
 
 function readText(root, path) {
   return readFileSync(join(root, path), 'utf8')
@@ -230,6 +318,18 @@ export function buildMessagePrivacyReport(root = ROOT) {
         id: item.id,
         file: item.file,
         message: item.message,
+      })
+    }
+  }
+
+  for (const file of LOG_CALL_FILES) {
+    const source = sourceByFile.get(file)
+    if (!source) continue
+    for (const field of findPrivateLogMetadata(file, source)) {
+      unsafePatterns.push({
+        id: `renderer-private-log-metadata:${field}`,
+        file,
+        message: 'renderer diagnostics must keep chat and speech bodies out of support logs',
       })
     }
   }

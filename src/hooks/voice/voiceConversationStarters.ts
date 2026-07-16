@@ -54,6 +54,7 @@ export function createVoiceConversationStarters(bag: VoiceRuntimeBag): VoiceEngi
       appendVoiceTrace: hookCallbacks.appendVoiceTrace,
       showPetStatus: hookCallbacks.showPetStatus,
       setSpeechLevelValue: bindings.setSpeechLevelValue,
+      resetSpeechLevel: bindings.resetSpeechLevel,
       destroyVadSession: bindings.destroyVadSession,
       handleRecognizedVoiceTranscript: bindings.handleRecognizedVoiceTranscript,
       handleVoiceListeningFailure: bindings.handleVoiceListeningFailure,

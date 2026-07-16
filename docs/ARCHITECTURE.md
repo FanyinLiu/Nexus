@@ -22,7 +22,9 @@ src/
   hooks/        React-facing composition hooks built on top of features
   i18n/         Locale runtime, dictionaries, translation hook, OpenCC adapter
   lib/          Pure utilities, compatibility exports, persistence helpers
-  styles/       Global styles and token CSS
+  app/styles/   Global styles, panel layers, settings layers, and token CSS
+  features/onboarding/styles/
+                Onboarding shell, responsive, and calm CSS loaded with the lazy guide
   types/        Domain type definitions
 ```
 
@@ -77,8 +79,8 @@ Current baseline:
   Stage B packaged-smoke checklist in `docs/RELEASING.md`; if the actual
   `npm run package:dir:smoke` gate is removed from the release docs, the audit
   fails before release.
-- `docs/RELEASE-CANDIDATE-v0.3.6-HANDOFF.md` records the current release
-  candidate's foundation wrap-up scope, required evidence, residual
+- `docs/RELEASE-CANDIDATE-v0.3.6-HANDOFF.md` records the historical v0.3.6
+  foundation wrap-up scope, required evidence, residual
   signing/runtime risks, rollback path, and companion-first next phase. It is a
   per-release operator handoff, not a replacement for `docs/RELEASING.md`.
 - The updater runtime uses full `electron-updater` auto-download/install on
@@ -120,8 +122,11 @@ Current baseline:
 - `npm run performance:baseline` reads the production `dist/assets` output and
   static heavy-module audit result after `npm run build`. It records bundle
   size budgets for total assets, JavaScript, CSS, WASM, largest JS chunk,
-  largest CSS chunk, the lazy settings drawer CSS chunk, the lazy settings drawer entry chunk,
-  and eager heavy-module regressions without reading runtime user data.
+  largest CSS chunk and the six recognized settings style chunks. It also tracks
+  the lazy settings drawer entry chunk and the main settings UI chunks, requires one
+  bounded `OnboardingGuide` CSS chunk and rejects onboarding/disclosure
+  selectors in `index.css`, so the lazy first-run guide cannot silently return
+  to the startup path. The audit reads no runtime user data.
 - `npm run companion-boundary:audit` keeps the repo aligned to companionship
   instead of work-agent expansion by requiring the companion task boundary to be
   documented in code-facing and release-facing docs.
@@ -158,9 +163,10 @@ Current baseline:
   reuses it and then adds the SQLite smoke check for release confidence.
 - The Image4 companion panel has a source-only UI contract system. Its hard
   gate, `npm run image4:contract:check`, runs inside `verify:pr` and protects
-  structural layout rules only: the five-row visual rhythm grid, explicit row
-  placement, short-height collapse behavior, and the separation of Image4 signal
-  rendering from `PanelView`. The stricter `npm run image4:visual-contract:audit`
+  the current four-part voice-first structure (header, Live2D stage, recap, and
+  composer), the absence of retired dial/greeting/action DOM, and the separation
+  of Image4 signal rendering from `PanelView`. The stricter
+  `npm run image4:visual-contract:audit`
   and non-blocking `npm run image4:contract:report` remain local design tools for
   tuning soft visual drift without freezing the evolving visual language.
   Cross-surface UI consistency for chat and settings is documented as a human
@@ -328,18 +334,19 @@ Current baseline:
   `local-data:chat-migration-status`, a disabled-by-default no-payload IPC that
   returns only record/message counts and last migration audit metadata with
   `recordPayloadsIncluded: false`; it does not return chat record payloads,
-  session IDs, titles, message text, or userData paths. M5 has started with a
-  service-only `readChatLocalDataSessions()` repository readback: the main
-  process can normalize and return migrated SQLite chat-session content for
-  tests and future storage-authority work, but this content-bearing read path is
-  not exposed through preload/renderer IPC and the live chat runtime still uses
-  renderer `localStorage`. M5 also has a hidden runtime mirror for the current
-  live chat session: it requires the main-process migration flag, the renderer
+  session IDs, titles, message text, or userData paths. M5 now has a staged
+  `readChatLocalDataSessions()` repository readback: the main process normalizes
+  migrated SQLite chat-session content and exposes it through the panel-only
+  `local-data:chat-sessions-read` IPC path when
+  `NEXUS_ENABLE_LOCAL_DATA_CHAT_MIGRATION=1`. The renderer only selects this
+  path when the authority feature flag, runtime-mirror consent, and authority
+  consent are all present; failed or unavailable reads fall back to the
+  localStorage cache. M5 also has a hidden runtime mirror for the current live
+  chat session: it requires the main-process migration flag, the renderer
   runtime-mirror flag, and explicit hidden Settings consent before the renderer
   sends a debounced best-effort SQLite mirror write. The mirror reuses the
-  schema-validated high-risk IPC boundary and writes content-free audit records,
-  but it does not return SQLite chat records to the renderer and does not make
-  SQLite authoritative. A hidden `local-data:chat-comparison-preview` path can
+  schema-validated high-risk IPC boundary and writes content-free audit records.
+  A hidden `local-data:chat-comparison-preview` path can
   compare renderer localStorage chat-session metadata with SQLite metadata after
   explicit confirmation. The renderer sends session IDs, timestamps, counts, and
   byte sizes only; the main process returns aggregate alignment/difference
@@ -361,10 +368,27 @@ Current baseline:
   without changing stored data. A content-free memory migration dry-run can
   inspect `nexus:memory:long-term`, legacy `nexus:memory`, and
   `nexus:memory:daily` for storage shape, counts, date ranges, and issue codes
-  before any SQLite memory write path exists. It does not write SQLite, mutate
+  before any memory authority cutover. It does not write SQLite, mutate
   localStorage, or include memory text, memory IDs, source refs, related IDs, or
   diary content in the report. The short previews shown in chat are not written
-  back into chat metadata, audit logs, or SQLite.
+  back into chat metadata, audit logs, or SQLite. A separate confirmed memory
+  migration service path now validates a content-bearing package, writes the
+  `memory-long-term` and `memory-daily` domains transactionally, records only
+  aggregate content-free audit metadata, exposes panel-only status/readback
+  IPC, and rolls back both domains together. It requires
+  `NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION=1` and remains disabled by default;
+  renderer localStorage remains the live memory authority until read/write
+  parity and cutover verification are complete.
+  Relationship and task state now has the same staged path behind
+  `NEXUS_ENABLE_LOCAL_DATA_COMPANION_MIGRATION=1` and the hidden UI flag
+  `VITE_NEXUS_ENABLE_LOCAL_DATA_COMPANION_MIGRATION_UI=1`. The migration package
+  only accepts the twelve allowlisted storage keys, bounds nested JSON and byte
+  size, writes the relationship/task domains transactionally, and records
+  aggregate content-free audit metadata. A panel-only comparison returns counts
+  and byte-size differences without returning relationship or task content;
+  explicit confirmation is required before migration, authority cutover, or
+  rollback. Until cutover is explicitly enabled, renderer localStorage remains
+  authoritative and qualifying writes are best-effort mirrored to SQLite.
 
 Target v1.0 direction:
 
@@ -389,6 +413,12 @@ Required boundaries:
 - Every renderer-visible IPC method must have a named request contract. High-risk
   methods also need response contracts, permission classification, rate limits
   where appropriate, and audit categories.
+- The shared preload bridge is compatibility-only: high-impact file, vault,
+  plugin/MCP, external-action, persona/skill, pet-artifact, and local-data
+  write/read channels require a panel renderer. The exact-origin and top-level
+  sender check is followed by this window capability matrix; future high-risk
+  channels must be explicitly classified as panel-only or an intentional shared
+  exception before the IPC audit passes.
 - Storage migrations must be versioned, idempotent, test-covered, and reversible
   through retained legacy snapshots or explicit export.
 - High-risk tools must run through a task state machine: plan, preview,
@@ -552,7 +582,6 @@ example:
 
 ```text
 src/features/chat/index.ts
-src/features/character/index.ts
 src/features/memory/index.ts
 src/features/models/index.ts
 src/features/pet/index.ts

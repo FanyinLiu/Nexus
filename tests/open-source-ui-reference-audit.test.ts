@@ -86,7 +86,7 @@ Rules.
 
 | Surface | Governance model | Do not use |
 | --- | --- | --- |
-| Image4 | Strict five-row visual rhythm grid: presence, dial, greeting, actions, composer. | Generic dashboard grids. |
+| Image4 | Voice-first four-part rhythm: header, Live2D stage, conversation recap, composer. | Generic dashboard grids. |
 | Companion tone | LobeHub-style ambient identity plus Jan and Chatbox desktop-local restraint. | Copying reference palettes. |
 | Chat | Interaction density model: readable messages, stable composer anchoring, clear streaming/tool boundaries. | Image4 row grid. |
 | Settings | Structural density model: compact form rows, predictable section grouping, clear focus order. | Image4 rhythm variables. |

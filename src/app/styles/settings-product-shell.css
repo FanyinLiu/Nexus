@@ -1,0 +1,263 @@
+/* v0.4.2 product-settings reference pass:
+   system Settings / Linear / Notion structure with theme-owned palettes. */
+.sb:has(.sd-home),
+.sb:has(.sd-section) {
+  padding: clamp(10px, 3vw, 24px);
+  background: var(--nx-settings-backdrop);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.sd-home,
+.sd-section,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm),
+.sd-section:is(.sd-night, .sd-day, .sd-light, .sd-warm) {
+  --settings-shadow: var(--nx-settings-shell-shadow);
+  --settings-shadow-soft: var(--nx-settings-card-shadow);
+  --settings-accent: var(--nx-settings-accent);
+  --settings-concept-ink: var(--nx-settings-ink);
+  --settings-concept-muted: var(--nx-settings-muted);
+  --settings-concept-faint: var(--nx-settings-faint);
+  --settings-concept-line: var(--nx-settings-line);
+  --settings-concept-line-soft: var(--nx-settings-line-soft);
+  --settings-concept-row-hover: var(--nx-settings-surface-hover);
+  --settings-concept-presence: var(--nx-settings-surface-soft);
+  --settings-concept-presence-icon: var(--nx-settings-accent-soft);
+  width: min(720px, calc(100vw - 20px));
+  height: min(640px, calc(100vh - 20px));
+  max-height: min(640px, calc(100vh - 20px));
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: 8px;
+  background: var(--nx-settings-surface);
+  box-shadow: var(--nx-settings-shell-shadow);
+  color: var(--nx-settings-ink);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.sb-night:has(.sd-home),
+.sb-night:has(.sd-section),
+.sd-night:is(.sd-home, .sd-section) {
+  --nx-settings-backdrop: #0d0b11;
+  --nx-settings-ink: #f0edf2;
+  --nx-settings-muted: rgba(226, 218, 232, 0.68);
+  --nx-settings-faint: rgba(226, 218, 232, 0.44);
+  --nx-settings-line: rgba(255, 255, 255, 0.1);
+  --nx-settings-line-soft: rgba(255, 255, 255, 0.065);
+  --nx-settings-surface: #17151c;
+  --nx-settings-surface-soft: #211e27;
+  --nx-settings-surface-hover: #2a2531;
+  --nx-settings-sidebar-surface: #121017;
+  --nx-settings-field: #24202b;
+  --nx-settings-field-hover: #2b2633;
+  --nx-settings-segment-surface: #121016;
+  --nx-settings-segment-active: #302a39;
+  --nx-settings-accent: var(--color-accent, #a88bff);
+  --nx-settings-accent-soft: var(--color-accent-soft, rgba(168, 139, 255, 0.14));
+  --nx-settings-danger: #d9685d;
+  --nx-settings-success: #6fc17e;
+  --nx-settings-footer-surface: #17151c;
+  --nx-settings-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --nx-settings-shell-shadow:
+    0 24px 68px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --settings-shell-background: var(--nx-settings-surface);
+  --settings-surface: var(--nx-settings-surface);
+  --settings-surface-strong: var(--nx-settings-surface-soft);
+  --settings-surface-soft: var(--nx-settings-surface-soft);
+  --settings-border: var(--nx-settings-line);
+  --settings-border-strong: rgba(255, 255, 255, 0.16);
+  --settings-text: var(--nx-settings-ink);
+  --settings-text-muted: var(--nx-settings-muted);
+  color-scheme: dark;
+}
+
+.sb-black:has(.sd-home),
+.sb-black:has(.sd-section),
+.sd-black:is(.sd-home, .sd-section) {
+  --nx-settings-backdrop: #050506;
+  --nx-settings-ink: #f3f4f6;
+  --nx-settings-muted: rgba(218, 221, 227, 0.68);
+  --nx-settings-faint: rgba(218, 221, 227, 0.42);
+  --nx-settings-line: rgba(255, 255, 255, 0.12);
+  --nx-settings-line-soft: rgba(255, 255, 255, 0.075);
+  --nx-settings-surface: #0b0c0e;
+  --nx-settings-surface-soft: #15161a;
+  --nx-settings-surface-hover: #1d1f24;
+  --nx-settings-sidebar-surface: #08090b;
+  --nx-settings-field: #17191d;
+  --nx-settings-field-hover: #1d1f24;
+  --nx-settings-segment-surface: #07080a;
+  --nx-settings-segment-active: #20232a;
+  --nx-settings-accent: var(--color-accent, #6f9cff);
+  --nx-settings-accent-soft: var(--color-accent-soft, rgba(111, 156, 255, 0.16));
+  --nx-settings-danger: #ed7469;
+  --nx-settings-success: #70c58a;
+  --nx-settings-footer-surface: #0b0c0e;
+  --nx-settings-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.48);
+  --nx-settings-shell-shadow:
+    0 24px 68px rgba(0, 0, 0, 0.68),
+    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  --settings-shell-background: var(--nx-settings-surface);
+  --settings-surface: var(--nx-settings-surface);
+  --settings-surface-strong: var(--nx-settings-surface-soft);
+  --settings-surface-soft: var(--nx-settings-surface-soft);
+  --settings-border: var(--nx-settings-line);
+  --settings-border-strong: rgba(255, 255, 255, 0.2);
+  --settings-text: var(--nx-settings-ink);
+  --settings-text-muted: var(--nx-settings-muted);
+  color-scheme: dark;
+}
+
+.sb-day:not(.sb-warm):has(.sd-home),
+.sb-day:not(.sb-warm):has(.sd-section),
+.sd-day:not(.sd-warm):is(.sd-home, .sd-section) {
+  --nx-settings-backdrop: #e8edf3;
+  --nx-settings-ink: #17202a;
+  --nx-settings-muted: rgba(23, 32, 42, 0.66);
+  --nx-settings-faint: rgba(23, 32, 42, 0.48);
+  --nx-settings-line: rgba(30, 42, 58, 0.12);
+  --nx-settings-line-soft: rgba(30, 42, 58, 0.08);
+  --nx-settings-surface: #f7f9fc;
+  --nx-settings-surface-soft: #ffffff;
+  --nx-settings-surface-hover: #eef3f8;
+  --nx-settings-sidebar-surface: #edf2f7;
+  --nx-settings-field: #ffffff;
+  --nx-settings-field-hover: #ffffff;
+  --nx-settings-segment-surface: rgba(30, 42, 58, 0.06);
+  --nx-settings-segment-active: #ffffff;
+  --nx-settings-accent: var(--color-accent, #3478f6);
+  --nx-settings-accent-soft: var(--color-accent-soft, rgba(52, 120, 246, 0.1));
+  --nx-settings-danger: #b94739;
+  --nx-settings-success: #287a4a;
+  --nx-settings-footer-surface: #f7f9fc;
+  --nx-settings-card-shadow: 0 1px 2px rgba(65, 83, 110, 0.07);
+  --nx-settings-shell-shadow:
+    0 24px 68px rgba(65, 83, 110, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+  --settings-shell-background: var(--nx-settings-surface);
+  --settings-surface: var(--nx-settings-surface);
+  --settings-surface-strong: var(--nx-settings-surface-soft);
+  --settings-surface-soft: var(--nx-settings-surface-soft);
+  --settings-border: var(--nx-settings-line);
+  --settings-border-strong: rgba(30, 42, 58, 0.18);
+  --settings-text: var(--nx-settings-ink);
+  --settings-text-muted: var(--nx-settings-muted);
+  color-scheme: light;
+}
+
+.sb-warm:has(.sd-home),
+.sb-warm:has(.sd-section),
+.sd-warm:is(.sd-home, .sd-section) {
+  --nx-settings-backdrop: #efebe5;
+  --nx-settings-ink: #26211c;
+  --nx-settings-muted: rgba(72, 63, 55, 0.74);
+  --nx-settings-faint: rgba(72, 63, 55, 0.58);
+  --nx-settings-line: rgba(55, 45, 36, 0.12);
+  --nx-settings-line-soft: rgba(55, 45, 36, 0.08);
+  --nx-settings-surface: #fbf8f3;
+  --nx-settings-surface-soft: #ffffff;
+  --nx-settings-surface-hover: rgba(246, 241, 234, 0.92);
+  --nx-settings-sidebar-surface: #f4f0ea;
+  --nx-settings-field: #ffffff;
+  --nx-settings-field-hover: #ffffff;
+  --nx-settings-segment-surface: rgba(55, 45, 36, 0.06);
+  --nx-settings-segment-active: #ffffff;
+  --nx-settings-accent: var(--color-accent, #8f5b43);
+  --nx-settings-accent-soft: var(--color-accent-soft, rgba(143, 91, 67, 0.1));
+  --nx-settings-danger: #b94739;
+  --nx-settings-success: #397a45;
+  --nx-settings-footer-surface: #fbf8f3;
+  --nx-settings-card-shadow: 0 1px 2px rgba(44, 35, 27, 0.05);
+  --nx-settings-shell-shadow:
+    0 24px 68px rgba(44, 35, 27, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+  --settings-shell-background: var(--nx-settings-surface);
+  --settings-surface: var(--nx-settings-surface);
+  --settings-surface-strong: var(--nx-settings-surface-soft);
+  --settings-surface-soft: var(--nx-settings-surface-soft);
+  --settings-border: var(--nx-settings-line);
+  --settings-border-strong: rgba(55, 45, 36, 0.18);
+  --settings-text: var(--nx-settings-ink);
+  --settings-text-muted: var(--nx-settings-muted);
+  color-scheme: light;
+}
+
+.sb-night:has(.sd-home),
+.sb-night:has(.sd-section),
+.sb-day:not(.sb-warm):has(.sd-home),
+.sb-day:not(.sb-warm):has(.sd-section),
+.sb-warm:has(.sd-home),
+.sb-warm:has(.sd-section) {
+  background: var(--nx-settings-backdrop);
+}
+
+.sd-home::before,
+.sd-section::before,
+.sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm)::before,
+.sd-section:is(.sd-night, .sd-day, .sd-light, .sd-warm)::before {
+  background: var(--nx-settings-surface);
+}
+
+.sd-home .sdh,
+.sd-section .sdh,
+.sd-home:is(.sd-night, .sd-day, .sd-warm) .sdh,
+.sd-section:is(.sd-night, .sd-day, .sd-warm) .sdh {
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 1px solid var(--nx-settings-line-soft);
+  border-radius: 0;
+  background: var(--nx-settings-surface);
+  box-shadow: none;
+}
+
+.sd-home .sdhm,
+.sd-section .sdhm {
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.sd-home .settings-drawer__window-title,
+.sd-section .settings-drawer__window-title {
+  justify-self: start;
+  min-height: auto;
+  margin-left: 0;
+}
+
+.sd-home .settings-drawer__window-title-name,
+.sd-section .settings-drawer__window-title-name {
+  color: var(--nx-settings-ink);
+  font-size: 13px;
+  font-weight: 680;
+  line-height: 1.15;
+}
+
+.sd-home .sdtb,
+.sd-section .sdtb {
+  gap: 2px;
+}
+
+.sd-home .settings-drawer__language-button, .sd-home .settings-drawer__icon-button, .sd-section .settings-drawer__language-button, .sd-section .settings-drawer__icon-button {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nx-settings-muted);
+}
+
+.sd-home .settings-drawer__language-button:hover, .sd-home .settings-drawer__icon-button:hover, .sd-section .settings-drawer__language-button:hover, .sd-section .settings-drawer__icon-button:hover {
+  border-color: var(--nx-settings-line);
+  background: var(--nx-settings-surface-hover);
+  color: var(--nx-settings-ink);
+}
+.sd:is(.sd-home, .sd-section) .settings-drawer__language-menu :is(.settings-drawer__language-menu-item, .settings-drawer__language-menu-native, .settings-drawer__language-menu-meta) { color: var(--nx-settings-muted); }
+.sd:is(.sd-home, .sd-section) .settings-drawer__language-menu .settings-drawer__language-menu-item--active { border-color: var(--nx-settings-line); background: var(--nx-settings-surface-soft); color: var(--nx-settings-ink); box-shadow: var(--nx-settings-card-shadow); }
+.sd:is(.sd-home, .sd-section) .settings-drawer__language-menu .settings-drawer__language-menu-item--active :is(.settings-drawer__language-menu-native, .settings-drawer__language-menu-meta) { color: var(--nx-settings-ink); }

@@ -13,7 +13,7 @@ const REQUIRED_FILES = [
   'src/features/context/companionCheckInPolicy.ts',
   'src/features/context/companionTimeLanguage.ts',
   'src/features/pet/activityState.ts',
-  'src/app/views/PanelView.tsx',
+  'src/app/views/LegacyPanelView.tsx',
   'src/app/views/image4ActivityLabel.ts',
   'src/app/views/image4CompanionState.ts',
   'src/i18n/locales/en.ts',
@@ -60,7 +60,7 @@ const REQUIRED_CONTRACTS = [
   },
   {
     id: 'panel-shows-companion-state-not-task-run',
-    file: 'src/app/views/PanelView.tsx',
+    file: 'src/app/views/LegacyPanelView.tsx',
     patterns: [
       'assistantActivityLabel',
       'companionStatusChipLabel',
@@ -123,7 +123,7 @@ const FORBIDDEN_SOURCE_PATTERNS = [
       'src/features/context/companionAwareness.ts',
       'src/features/context/companionCheckInPolicy.ts',
       'src/features/context/companionTimeLanguage.ts',
-      'src/app/views/PanelView.tsx',
+      'src/app/views/LegacyPanelView.tsx',
       'src/app/views/image4CompanionState.ts',
     ],
     patterns: [
@@ -150,7 +150,7 @@ const FORBIDDEN_SOURCE_PATTERNS = [
     files: [
       'src/features/context/companionAwareness.ts',
       'src/features/context/companionCheckInPolicy.ts',
-      'src/app/views/PanelView.tsx',
+      'src/app/views/LegacyPanelView.tsx',
     ],
     patterns: [
       /\bmonitoring desktop\b/i,
@@ -167,7 +167,7 @@ const FORBIDDEN_SOURCE_PATTERNS = [
     files: [
       'src/features/context/companionAwareness.ts',
       'src/features/context/companionCheckInPolicy.ts',
-      'src/app/views/PanelView.tsx',
+      'src/app/views/LegacyPanelView.tsx',
       'src/app/views/image4CompanionState.ts',
     ],
     patterns: [
@@ -234,7 +234,7 @@ function findPreciseTimeUi(files) {
     /\b\d+\s*(?:seconds?|秒)\b/i,
     /\b\d+\s*(?:minutes?|分钟)\b/i,
   ]
-  for (const file of ['src/app/views/PanelView.tsx', 'src/features/context/companionTimeLanguage.ts']) {
+  for (const file of ['src/app/views/LegacyPanelView.tsx', 'src/features/context/companionTimeLanguage.ts']) {
     const text = files.get(file)
     if (text == null) continue
     const foundPatterns = precisePatterns
@@ -295,7 +295,7 @@ function buildSummary({ missingFiles, missingContracts, forbiddenPatterns, preci
 
 export function buildAgentActivitySurfaceReport(root = ROOT) {
   const files = readProjectFiles(root, REQUIRED_FILES)
-  const panelView = files.get('src/app/views/PanelView.tsx') ?? ''
+  const panelView = files.get('src/app/views/LegacyPanelView.tsx') ?? ''
   const timeLanguage = files.get('src/features/context/companionTimeLanguage.ts') ?? ''
   const awareness = files.get('src/features/context/companionAwareness.ts') ?? ''
   const image4ActivityLabel = files.get('src/app/views/image4ActivityLabel.ts') ?? ''

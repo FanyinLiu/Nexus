@@ -21,8 +21,9 @@ import {
   syncSpeechProviderProfiles,
   syncTextProviderProfiles,
 } from '../../lib'
-import { setSettingsSnapshot } from '../store/settingsStore'
+import { updateSettingsFromDraft } from '../store/settingsStore'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
+import { syncWindowViewToUrl } from '../appSupport'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import { runTextConnectionTestPreflight } from '../../features/models/connectionPreflight'
@@ -39,6 +40,51 @@ type ChatController = ReturnType<typeof import('../../hooks/useChat').useChat>
 type PetController = ReturnType<typeof import('../../hooks/usePetBehavior').usePetBehavior>
 type VoiceController = ReturnType<typeof import('../../hooks/useVoice').useVoice>
 type ReminderTaskStore = ReturnType<typeof import('./useReminderTaskStore').useReminderTaskStore>
+
+const PROVIDER_PROFILE_MAP_KEYS = [
+  'textProviderProfiles',
+  'speechInputProviderProfiles',
+  'speechOutputProviderProfiles',
+] as const
+
+type ProviderProfileMap = Record<string, Record<string, unknown>>
+
+function providerProfileMapsMatch(
+  left: ProviderProfileMap,
+  right: ProviderProfileMap,
+): boolean {
+  const leftProviderIds = Object.keys(left).sort()
+  const rightProviderIds = Object.keys(right).sort()
+  if (leftProviderIds.length !== rightProviderIds.length) return false
+
+  return leftProviderIds.every((providerId, index) => {
+    if (providerId !== rightProviderIds[index]) return false
+    const leftProfile = left[providerId] ?? {}
+    const rightProfile = right[providerId] ?? {}
+    const leftFields = Object.keys(leftProfile).sort()
+    const rightFields = Object.keys(rightProfile).sort()
+    if (leftFields.length !== rightFields.length) return false
+    return leftFields.every((field, fieldIndex) => (
+      field === rightFields[fieldIndex]
+      && Object.is(leftProfile[field], rightProfile[field])
+    ))
+  })
+}
+
+function reuseUnchangedProviderProfileMaps(
+  nextSettings: AppSettings,
+  baselineSettings: AppSettings,
+): AppSettings {
+  let normalized = nextSettings
+  for (const key of PROVIDER_PROFILE_MAP_KEYS) {
+    const nextProfiles = nextSettings[key] as unknown as ProviderProfileMap
+    const baselineProfiles = baselineSettings[key] as unknown as ProviderProfileMap
+    if (!providerProfileMapsMatch(nextProfiles, baselineProfiles)) continue
+    if (normalized === nextSettings) normalized = { ...nextSettings }
+    ;(normalized as unknown as Record<string, unknown>)[key] = baselineSettings[key]
+  }
+  return normalized
+}
 
 type UseAppOverlaysOptions = {
   view: 'pet' | 'panel'
@@ -79,6 +125,7 @@ type UseAppOverlaysOptions = {
     | 'setError'
     | 'appendSystemMessage'
     | 'appendChatMessage'
+    | 'cancelActiveTurn'
     | 'exportChatHistory'
     | 'importChatHistory'
     | 'clearChatHistory'
@@ -88,9 +135,11 @@ type UseAppOverlaysOptions = {
     VoiceController,
     | 'voiceState'
     | 'continuousVoiceActive'
+    | 'toggleVoiceConversation'
+    | 'stopVoiceConversation'
     | 'voiceStateRef'
     | 'liveTranscript'
-    | 'speechLevel'
+    | 'speechLevelSource'
     | 'voicePipeline'
     | 'voiceTrace'
     | 'stopActiveSpeechOutput'
@@ -145,23 +194,52 @@ export function useAppOverlays({
   const [onboardingPending, setOnboardingPending] = useState(onboardingPendingInitial)
   const [onboardingOpen, setOnboardingOpen] = useState(onboardingPendingInitial)
 
+  const closeSettingsSurface = useCallback(() => {
+    setSettingsOpen(false)
+    syncWindowViewToUrl(view === 'panel' ? 'panel' : 'pet', view === 'panel' ? 'chat' : undefined)
+    const closeSettings = window.desktopPet?.closeSettings
+    if (closeSettings) {
+      void closeSettings().catch(() => undefined)
+    }
+  }, [setSettingsOpen, view])
+
+  const closeSettingsDrawerForOnboarding = useCallback(() => {
+    setSettingsOpen(false)
+    if (view !== 'panel') {
+      syncWindowViewToUrl('pet')
+      return
+    }
+
+    const openPanel = window.desktopPet?.openPanel
+    if (openPanel) {
+      void openPanel('chat').catch(() => syncWindowViewToUrl('panel', 'chat'))
+      return
+    }
+
+    syncWindowViewToUrl('panel', 'chat')
+  }, [setSettingsOpen, view])
+
   const applySettingsSave = useCallback(async (
     nextSettings: AppSettings,
-    options?: {
+    options: {
+      baselineSettings: AppSettings
       closeSettings?: boolean
       completeOnboarding?: boolean
     },
   ) => {
-    const launchOnStartupRequested = platformProfile.startup.supported
-      ? nextSettings.launchOnStartup
-      : false
-    const launchOnStartup = platformProfile.startup.supported
-      ? (
-          await window.desktopPet?.setLaunchOnStartup?.(launchOnStartupRequested)
-            .catch(() => launchOnStartupRequested)
-          ?? launchOnStartupRequested
-        )
-      : false
+    const launchOnStartupChanged = !Object.is(
+      options.baselineSettings.launchOnStartup,
+      nextSettings.launchOnStartup,
+    )
+    let launchOnStartup = nextSettings.launchOnStartup
+    if (!platformProfile.startup.supported) {
+      launchOnStartup = false
+    } else if (launchOnStartupChanged) {
+      const launchOnStartupRequested = nextSettings.launchOnStartup
+      launchOnStartup = await window.desktopPet?.setLaunchOnStartup?.(launchOnStartupRequested)
+        .catch(() => launchOnStartupRequested)
+        ?? launchOnStartupRequested
+    }
 
     const normalizedSpeechOutputApiBaseUrl = normalizeSpeechOutputApiBaseUrl(
       nextSettings.speechOutputProviderId,
@@ -172,17 +250,17 @@ export function useAppOverlays({
       nextSettings.toolWebSearchApiBaseUrl,
     )
 
-    const finalSettings = syncTextProviderProfiles(syncSpeechProviderProfiles({
+    const finalSettings = reuseUnchangedProviderProfileMaps(syncTextProviderProfiles(syncSpeechProviderProfiles({
       ...nextSettings,
       speechOutputApiBaseUrl: normalizedSpeechOutputApiBaseUrl,
       toolWebSearchApiBaseUrl: normalizedWebSearchApiBaseUrl,
       launchOnStartup,
-    }))
-    await setSettingsSnapshot(finalSettings)
-    setSettings(finalSettings)
+    })), options.baselineSettings)
+    const committedSettings = await updateSettingsFromDraft(options.baselineSettings, finalSettings)
+    setSettings(committedSettings)
 
     if (options?.closeSettings ?? true) {
-      setSettingsOpen(false)
+      closeSettingsSurface()
     }
 
     if (options?.completeOnboarding ?? onboardingPending) {
@@ -198,11 +276,11 @@ export function useAppOverlays({
       if (chat.messages.length === 0) {
         try {
           const greeting = pickTranslatedUiText(
-            finalSettings.uiLanguage,
+            committedSettings.uiLanguage,
             'onboarding.first_greeting',
             {
-              userName: finalSettings.userName || 'there',
-              companionName: finalSettings.companionName || 'Nexus',
+              userName: committedSettings.userName || 'there',
+              companionName: committedSettings.companionName || 'Nexus',
             },
           )
           chat.appendChatMessage({
@@ -218,7 +296,7 @@ export function useAppOverlays({
         }
       }
     }
-  }, [chat, onboardingPending, platformProfile.startup.supported, setSettings, setSettingsOpen])
+  }, [chat, closeSettingsSurface, onboardingPending, platformProfile.startup.supported, setSettings])
 
   const chatMessageCount = useMemo(
     () => chat.messages.filter((message) => message.role !== 'system').length,
@@ -226,9 +304,9 @@ export function useAppOverlays({
   )
 
   const openOnboardingGuide = useCallback(() => {
-    setSettingsOpen(false)
+    closeSettingsDrawerForOnboarding()
     setOnboardingOpen(true)
-  }, [setSettingsOpen])
+  }, [closeSettingsDrawerForOnboarding])
 
   const settingsDailyMemoryEntries = useMemo(
     () => mergeFocusedDailyEntries({
@@ -252,16 +330,19 @@ export function useAppOverlays({
     petModelPresets,
     reminderTasks,
     voiceState: voice.voiceState,
+    onStartVoiceConversation: voice.toggleVoiceConversation,
+    onStopVoiceConversation: voice.stopVoiceConversation,
+    onCancelVoiceTurn: chat.cancelActiveTurn,
     continuousVoiceActive: (
       voice.continuousVoiceActive
       || (view === 'panel' && petRuntimeContinuousVoiceActive && !voice.continuousVoiceActive)
     ),
     liveTranscript: voice.liveTranscript,
-    speechLevel: voice.speechLevel,
+    speechLevelSource: voice.speechLevelSource,
     voicePipeline: voice.voicePipeline,
     voiceTrace: voice.voiceTrace,
     debugConsoleEvents,
-    onClose: () => setSettingsOpen(false),
+    onClose: closeSettingsSurface,
     onExportChatHistory: chat.exportChatHistory,
     onImportChatHistory: chat.importChatHistory,
     onClearChatHistory: chat.clearChatHistory,
@@ -283,9 +364,10 @@ export function useAppOverlays({
     onAddNotificationChannel,
     onUpdateNotificationChannel,
     onRemoveNotificationChannel,
-    onSave: async (nextSettings) => {
+    onSave: async (nextSettings, baselineSettings) => {
       try {
         await applySettingsSave(nextSettings, {
+          baselineSettings,
           closeSettings: true,
         })
       } catch (error) {
@@ -293,6 +375,7 @@ export function useAppOverlays({
         console.error('[Settings] save failed:', error)
         chat.setError(message)
         chat.appendSystemMessage(t('settings.save_failed_system', { error: message }), 'error')
+        throw error
       }
     },
     onImportPetModel: async () => {
@@ -498,6 +581,7 @@ export function useAppOverlays({
     onDismiss: () => setOnboardingOpen(false),
     onSave: async (nextSettings) => {
       await applySettingsSave(nextSettings, {
+        baselineSettings: settings,
         closeSettings: false,
         completeOnboarding: true,
       })

@@ -15,6 +15,7 @@ test('theme registry exposes unique ids and resolves unknown ids to the Nexus de
 
   assert.equal(new Set(ids).size, ids.length)
   assert.ok(ids.includes('nexus-default'))
+  assert.ok(ids.includes('system-black'))
   assert.ok(ids.includes('system-dark'))
   assert.equal(getTheme('system-day')?.id, 'system-day')
   assert.equal(getTheme('missing' as ThemeId), null)
@@ -35,12 +36,13 @@ test('theme registry returns defensive copies so callers cannot mutate global th
   assert.notEqual(resolveTheme('nexus-default').tokens.accent, '#00ff00')
 })
 
-test('settings appearance options expose only the effective drawer theme modes', () => {
+test('settings appearance options expose four distinct drawer theme modes', () => {
   const optionThemeIds = SETTINGS_APPEARANCE_OPTIONS.map((option) => option.id)
 
-  assert.deepEqual(optionThemeIds, ['system-dark', 'system-day', 'warm-day'])
-  assert.deepEqual(SETTINGS_APPEARANCE_OPTIONS.map((option) => option.tone), ['night', 'day', 'warm-day'])
+  assert.deepEqual(optionThemeIds, ['system-black', 'system-dark', 'system-day', 'warm-day'])
+  assert.deepEqual(SETTINGS_APPEARANCE_OPTIONS.map((option) => option.tone), ['black', 'night', 'day', 'warm-day'])
   assert.deepEqual(SETTINGS_APPEARANCE_OPTIONS.map((option) => option.labelKey), [
+    'settings.appearance.black',
     'settings.appearance.night',
     'settings.appearance.day',
     'settings.appearance.warm_day',
@@ -50,6 +52,7 @@ test('settings appearance options expose only the effective drawer theme modes',
   assert.equal(getSettingsThemeTone('soft'), 'day')
   assert.equal(getSettingsThemeTone('high-contrast'), 'day')
   assert.equal(getSettingsThemeTone('warm-day'), 'warm-day')
+  assert.equal(getSettingsThemeTone('system-black'), 'black')
   assert.equal(getSettingsThemeTone('system-dark'), 'night')
 })
 

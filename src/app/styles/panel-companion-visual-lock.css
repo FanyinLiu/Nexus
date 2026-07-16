@@ -39,69 +39,6 @@ html[data-theme='warm-day'] .panel-window--image4 {
 html[data-theme='warm-day'] .panel-window--image4 .companion-chat__toolbar.image4-header-controls {
   position: absolute !important;
   inset: 0 auto auto 0;
-  top: clamp(10px, 2.4vw, 16px) !important;
-  right: clamp(10px, 2.6vw, 16px) !important;
-  left: auto !important;
-  width: fit-content !important;
-  min-height: auto !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: flex-end !important;
-  pointer-events: auto !important;
-  gap: clamp(3px, 0.8vw, 6px) !important;
-  z-index: 12 !important;
-}
-
-.panel-window--image4 .panel-window__header-actions--image4,
-html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: flex-end !important;
-  gap: clamp(3px, 0.65vw, 6px) !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: var(--image4-toolbar-bg) !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
-.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
-.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
-.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger,
-html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
-html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
-html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
-html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
-  width: 23px !important;
-  height: 23px !important;
-  min-width: 23px !important;
-  min-height: 23px !important;
-  border-radius: 7px !important;
-  border: 1px solid transparent !important;
-  background: transparent !important;
-  color: var(--image4-toolbar-icon) !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  transition:
-    color 140ms ease,
-    border-color 140ms ease,
-    background-color 140ms ease !important;
-}
-
-.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button svg,
-.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings svg,
-.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse svg,
-.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger svg,
-html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button svg,
-html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings svg,
-html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse svg,
-html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger svg {
-  width: 12px !important;
-  height: 12px !important;
-  display: block !important;
 }
 
 .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button:hover,
@@ -149,123 +86,102 @@ html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions-
   -webkit-backdrop-filter: none !important;
 }
 
-.panel-window--image4 .ambient-weather-chip,
-html[data-theme='warm-day'] .panel-window--image4 .ambient-weather-chip {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  max-width: 230px !important;
-  height: 27px !important;
-  padding: 0 10px !important;
-  border-radius: 7px !important;
-  overflow: hidden !important;
+/* System Day uses the same companion-first composition as Warm Day, with a
+   cooler paper-and-sky palette. This keeps the selected theme visible on the
+   main panel instead of leaving Settings light and the companion panel black. */
+html[data-theme='system-day'] .desktop-pet-root--panel:has(.panel-window--image4) {
+  --image4-companion-bg: #e9f1f6;
+  --image4-companion-surface: #f3f7f9;
+  --image4-companion-surface-strong: #e4edf2;
+  --image4-companion-primary: #718eae;
+  --image4-companion-primary-soft: #dce8f1;
+  --image4-companion-secondary: #7e9f98;
+  --image4-companion-text: #344351;
+  --image4-companion-muted: #617281;
+  --image4-companion-border: rgba(77, 99, 118, 0.13);
+  --image4-companion-glow: rgba(126, 164, 213, 0.24);
+  --image4-companion-secondary-glow: rgba(121, 166, 156, 0.18);
+  background: var(--image4-companion-bg) !important;
 }
 
-.panel-window--image4 .ambient-weather-chip__top,
-html[data-theme='warm-day'] .panel-window--image4 .ambient-weather-chip__top {
-  white-space: nowrap !important;
-  display: inline-flex !important;
-  align-items: baseline !important;
-  gap: 6px !important;
-  flex: 0 0 auto;
+html[data-theme='system-day'] .desktop-pet-root--panel:has(.panel-window--image4)::before {
+  background:
+    linear-gradient(180deg, rgba(241, 247, 250, 0.42), rgba(218, 231, 238, 0.52)),
+    url("../../features/panelScene/scenes/seaside.day.jpg") center bottom / cover no-repeat;
+  filter: blur(1px) saturate(0.78) brightness(1.03);
 }
 
-.panel-window--image4 .ambient-weather-chip__place,
-html[data-theme='warm-day'] .panel-window--image4 .ambient-weather-chip__place {
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
+html[data-theme='system-day'] .desktop-pet-root--panel:has(.panel-window--image4)::after {
+  background:
+    radial-gradient(circle at 22% 18%, var(--image4-companion-glow), transparent 54%),
+    radial-gradient(circle at 82% 22%, var(--image4-companion-secondary-glow), transparent 58%);
 }
 
-.panel-window--image4 .image4-composer__field,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field {
-  --image4-composer-control: 29px;
-  --image4-composer-icon: 15px;
-  --image4-composer-rail-gap: 4px;
-  --image4-composer-side-inset: 11px;
-  --image4-composer-left-text-gap: 9px;
-  --image4-composer-right-text-gap: 8px;
-  --image4-composer-control-radius: 10px;
+html[data-theme='system-day'] .panel-window--image4.panel-window--simple {
+  border-color: var(--image4-companion-border);
+  background: rgba(239, 246, 249, 0.76);
+  color: var(--image4-companion-text);
+  box-shadow:
+    0 18px 42px rgba(73, 101, 129, 0.11),
+    inset 0 1px 0 rgba(255, 255, 255, 0.68);
 }
 
-.panel-window--image4 .image4-composer__field textarea,
-.panel-window--image4 .image4-composer__field .composer textarea,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field textarea,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer textarea {
-  padding-top: 17px !important;
-  padding-bottom: 13px !important;
-  font-size: 14px !important;
-  line-height: 1.44 !important;
+html[data-theme='system-day'] .panel-window--image4.panel-window--simple::before {
+  background: var(--image4-companion-glow);
+  opacity: 0.32;
 }
 
-.panel-window--image4 .image4-composer__field .composer__actions,
-.panel-window--image4 .image4-composer__field .composer__actions,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions {
-  position: absolute !important;
-  right: var(--image4-composer-side-inset) !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  height: var(--image4-composer-control) !important;
-  display: inline-grid !important;
-  grid-auto-flow: column !important;
-  grid-auto-columns: var(--image4-composer-control);
-  align-items: center !important;
-  justify-content: center !important;
-  gap: var(--image4-composer-rail-gap) !important;
-  width: auto !important;
-  padding: 0 !important;
+html[data-theme='system-day'] .desktop-pet-root--panel .panel-window--image4 .panel-window__shell--image4,
+html[data-theme='system-day'] .panel-window--image4 .image4-chat {
+  color: var(--image4-companion-text);
 }
 
-.panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
-.panel-window--image4 .image4-composer__field .composer__actions .primary-button,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button {
-  width: var(--image4-composer-control) !important;
-  height: var(--image4-composer-control) !important;
-  min-width: var(--image4-composer-control) !important;
-  min-height: var(--image4-composer-control) !important;
-  border-radius: 9px !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  display: inline-grid !important;
-  place-items: center !important;
+html[data-theme='system-day'] .desktop-pet-root--panel .panel-window--image4 .image4-chat {
+  border-color: var(--image4-companion-border);
+  background: rgba(242, 247, 249, 0.72) !important;
 }
 
-.panel-window--image4 .image4-composer__field .composer__actions .ghost-button span,
-.panel-window--image4 .image4-composer__field .composer__actions .primary-button span,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button span,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button span {
-  display: none !important;
+html[data-theme='system-day'] .panel-window--image4 {
+  --image4-toolbar-icon: rgba(64, 82, 102, 0.72);
+  --image4-toolbar-icon-hover: rgba(39, 49, 61, 0.94);
+  --image4-toolbar-border: rgba(66, 89, 116, 0.2);
+  --image4-toolbar-hover-bg: rgba(109, 143, 196, 0.08);
+  --image4-toolbar-hover-border: rgba(109, 143, 196, 0.32);
+  --image4-toolbar-focus-ring: 0 0 0 1px rgba(109, 143, 196, 0.24), 0 0 0 3px rgba(109, 143, 196, 0.12);
+  --image4-toolbar-danger: rgba(162, 77, 77, 0.72);
+  --image4-toolbar-danger-hover: rgba(132, 55, 55, 0.94);
+  --image4-toolbar-danger-border: rgba(178, 92, 92, 0.28);
+  --image4-toolbar-danger-bg: rgba(178, 92, 92, 0.08);
 }
 
-.panel-window--image4 .image4-composer__field .composer__actions .composer__action-icon,
-.panel-window--image4 .image4-composer__field .composer__actions .composer__action-icon,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .composer__action-icon {
-  width: var(--image4-composer-icon) !important;
-  height: var(--image4-composer-icon) !important;
-  stroke-width: 1.9 !important;
-  display: block !important;
+html[data-theme='system-day'] .panel-window--image4 .composer textarea::placeholder {
+  color: color-mix(in srgb, var(--image4-companion-muted) 88%, transparent);
+  opacity: 1;
 }
 
-.panel-window--image4 .image4-composer__field .image4-attachment-pill,
-.panel-window--image4 .image4-composer__field .image4-attachment-pill,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill {
-  width: var(--image4-composer-control) !important;
-  height: var(--image4-composer-control) !important;
-  min-width: var(--image4-composer-control) !important;
-  min-height: var(--image4-composer-control) !important;
-  border-radius: var(--image4-composer-control-radius) !important;
-  left: var(--image4-composer-side-inset) !important;
-  display: inline-grid !important;
-  place-items: center !important;
-  padding: 0 !important;
+html[data-theme='system-day'] .panel-window--image4 .empty-chat__prompt-icon {
+  border-color: var(--image4-companion-border);
+  background: color-mix(in srgb, var(--image4-companion-primary-soft) 54%, transparent);
+  color: var(--image4-companion-primary);
 }
 
-.panel-window--image4 .image4-composer__field .image4-attachment-pill__plus,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill__plus {
-  width: var(--image4-composer-icon) !important;
-  height: var(--image4-composer-icon) !important;
-  stroke-width: 1.95 !important;
+html[data-theme='system-day'] .panel-window--image4 .image4-composer__field {
+  border-color: var(--image4-companion-border);
+  background: rgba(248, 251, 251, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+html[data-theme='system-day'] .panel-window--image4 .image4-composer__field textarea {
+  color: var(--image4-companion-text);
+  caret-color: var(--image4-companion-primary);
+}
+
+html[data-theme='system-day'] .panel-window--image4 .image4-composer__field textarea::placeholder {
+  color: color-mix(in srgb, var(--image4-companion-muted) 70%, transparent);
+}
+
+html[data-theme='system-day'] .panel-window--image4 .image4-composer__field :is(.image4-attachment-pill, .ghost-button, .primary-button) {
+  color: color-mix(in srgb, var(--image4-companion-muted) 84%, var(--image4-companion-text));
 }
 
 .panel-window--image4 .companion-presence__signal,
@@ -326,10 +242,10 @@ html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions-
 html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
 html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
 html[data-theme='warm-day'] .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
-  width: 23px !important;
-  height: 23px !important;
-  min-width: 23px !important;
-  min-height: 23px !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
   border-radius: 7px !important;
   border: 1px solid transparent !important;
   background: transparent !important;
@@ -409,6 +325,7 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field {
   --image4-composer-side-inset: 10px;
   --image4-composer-left-text-gap: 11px;
   --image4-composer-right-text-gap: 8px;
+  --image4-composer-control-radius: 10px;
 }
 
 .panel-window--image4 .image4-composer__field textarea,

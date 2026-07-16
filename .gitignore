@@ -2,6 +2,7 @@
 logs
 .dev/
 *.log
+.nexus-build.lock
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -32,6 +33,10 @@ tmp-debug/
 output/
 .playwright-cli/
 docs/ui-preview/
+
+# Generated audit reports and visual-regression screenshots. Keep local QA
+# evidence available without allowing it into a release commit.
+artifacts/
 
 # Local UI QA evidence. Keep screenshots/metrics on the working machine; commit
 # source-backed review docs instead.

@@ -1,13 +1,14 @@
 import type { SettingsTrustSurfaceGroupId } from './settingsDrawerMetadata.ts'
 import type { SettingsSectionId } from './settingsDrawerSupport.ts'
 import type { TranslationKey } from '../types/i18n.ts'
+import type { SettingsCardIconKey } from './settingsDrawerIcons.tsx'
 
 export type SettingsHomeActionId = 'onboarding'
 
 export type SettingsHomeActionEntry = {
   actionId: SettingsHomeActionId
   ariaLabelKey: TranslationKey
-  glyph: string
+  glyph: SettingsCardIconKey
   titleKey: TranslationKey
   trustGroup: SettingsTrustSurfaceGroupId
   valueKey: TranslationKey

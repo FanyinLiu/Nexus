@@ -1,4 +1,4 @@
-import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
+import type { MutableRefObject } from 'react'
 import { AudioPlaybackQueue } from '../../features/voice/audioQueue.ts'
 import {
   createSpeechLevelController,
@@ -12,7 +12,6 @@ import {
   type VoiceSessionTransport,
 } from '../../features/voice/sessionMachine.ts'
 import { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer.ts'
-import { clamp } from '../../lib/common.ts'
 import { stopSpeaking as stopBrowserSpeaking } from '../../lib/voice.ts'
 import { createId } from '../../lib/index.ts'
 import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
@@ -59,8 +58,7 @@ type BeginVoiceListeningSessionRuntimeOptions = {
 
 type SetSpeechLevelValueRuntimeOptions = {
   nextLevel: number
-  speechLevelValueRef: MutableRefObject<number>
-  setSpeechLevel: Dispatch<SetStateAction<number>>
+  publishSpeechLevel: (level: number) => void
 }
 
 type GetSpeechLevelControllerRuntimeOptions = {
@@ -229,13 +227,7 @@ export function beginVoiceListeningSessionRuntime(
 export function setSpeechLevelValueRuntime(
   options: SetSpeechLevelValueRuntimeOptions,
 ) {
-  const normalizedLevel = clamp(options.nextLevel, 0, 1)
-  options.speechLevelValueRef.current = normalizedLevel
-  options.setSpeechLevel((current) => (
-    Math.abs(current - normalizedLevel) < 0.02
-      ? current
-      : normalizedLevel
-  ))
+  options.publishSpeechLevel(options.nextLevel)
 }
 
 export function getSpeechLevelControllerRuntime(

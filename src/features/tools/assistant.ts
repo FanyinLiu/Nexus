@@ -1,6 +1,6 @@
-import type { WebSearchResultItem } from '../../types'
+import type { UiLanguage, WebSearchResultItem } from '../../types'
 import type { BuiltInToolResult } from './toolTypes'
-import { formatWeatherPeriodSummary } from './weatherText.ts'
+import { stripLocalizedWeatherPeriodPrefix } from './weatherText.ts'
 
 const QUERY_FILLER_PATTERN = /(?:请|麻烦|帮我|给我|替我|我想|我想要|我要|我要的是|查一个|查一查|查找|查询|搜索|搜一个|搜一搜|找一个|找一找|看看|告诉我|一下|现在|目前|这个|那个)/giu
 
@@ -165,30 +165,77 @@ function buildWebSearchSpeechSummary(result: Extract<BuiltInToolResult, { kind: 
   return `好的，主人。我查到了“${truncateText(query, 28)}”的结果，这就为你展示。`
 }
 
-function buildWeatherSpeechSummary(result: Extract<BuiltInToolResult, { kind: 'weather' }>) {
-  const pieces = [
-    `${result.result.resolvedName}当前${result.result.currentSummary}`,
-    result.result.todaySummary ? formatWeatherPeriodSummary('今天', result.result.todaySummary) : '',
-    result.result.tomorrowSummary ? formatWeatherPeriodSummary('明天', result.result.tomorrowSummary) : '',
-  ].filter(Boolean)
+const WEATHER_ASSISTANT_COPY: Record<UiLanguage, {
+  today: string
+  tomorrow: string
+  locationSeparator: string
+  periodSeparator: string
+  pieceSeparator: string
+  speechPrefix: string
+  assistantPrefix: string
+  sentenceEnd: string
+}> = {
+  'zh-CN': { today: '今天', tomorrow: '明天', locationSeparator: '：', periodSeparator: '，', pieceSeparator: '，', speechPrefix: '好的，主人。', assistantPrefix: '我先总结一下：', sentenceEnd: '。' },
+  'zh-TW': { today: '今天', tomorrow: '明天', locationSeparator: '：', periodSeparator: '，', pieceSeparator: '，', speechPrefix: '好的，主人。', assistantPrefix: '我先總結一下：', sentenceEnd: '。' },
+  'en-US': { today: 'Today', tomorrow: 'Tomorrow', locationSeparator: ': ', periodSeparator: ': ', pieceSeparator: '. ', speechPrefix: 'Sure. ', assistantPrefix: 'Here is the weather summary: ', sentenceEnd: '.' },
+  ja: { today: '今日', tomorrow: '明日', locationSeparator: '：', periodSeparator: '：', pieceSeparator: '、', speechPrefix: 'はい。', assistantPrefix: '天気をまとめます：', sentenceEnd: '。' },
+  ko: { today: '오늘', tomorrow: '내일', locationSeparator: ': ', periodSeparator: ': ', pieceSeparator: '. ', speechPrefix: '좋아요. ', assistantPrefix: '날씨를 요약하면: ', sentenceEnd: '.' },
+}
 
-  const sentence = pieces.join('，').replace('，。', '。')
-  return `好的，主人。${sentence}`
+function normalizeWeatherLocale(locale?: UiLanguage): UiLanguage {
+  return locale && locale in WEATHER_ASSISTANT_COPY ? locale : 'zh-CN'
+}
+
+function formatLocalizedWeatherPeriod(
+  summary: string,
+  period: 'today' | 'tomorrow',
+  locale: UiLanguage,
+) {
+  const copy = WEATHER_ASSISTANT_COPY[locale]
+  const label = copy[period]
+  const detail = stripLocalizedWeatherPeriodPrefix(summary, period)
+  return detail ? `${label}${copy.periodSeparator}${detail}` : label
+}
+
+function buildWeatherSummaryPieces(
+  result: Extract<BuiltInToolResult, { kind: 'weather' }>,
+  locale: UiLanguage,
+) {
+  const copy = WEATHER_ASSISTANT_COPY[locale]
+  return [
+    `${result.result.resolvedName}${copy.locationSeparator}${result.result.currentSummary}`,
+    result.result.todaySummary
+      ? formatLocalizedWeatherPeriod(result.result.todaySummary, 'today', locale)
+      : '',
+    result.result.tomorrowSummary
+      ? formatLocalizedWeatherPeriod(result.result.tomorrowSummary, 'tomorrow', locale)
+      : '',
+  ].filter(Boolean)
+}
+
+function buildWeatherSpeechSummary(
+  result: Extract<BuiltInToolResult, { kind: 'weather' }>,
+  locale?: UiLanguage,
+) {
+  const normalizedLocale = normalizeWeatherLocale(locale)
+  const copy = WEATHER_ASSISTANT_COPY[normalizedLocale]
+  const pieces = [
+    ...buildWeatherSummaryPieces(result, normalizedLocale),
+  ]
+  const sentence = pieces.join(copy.pieceSeparator).replace(/[。.．]$/u, '')
+  return `${copy.speechPrefix}${sentence}${copy.sentenceEnd}`
 }
 
 function buildOpenExternalSpeechSummary() {
   return '好的，主人。我已经把这个链接打开了。'
 }
 
-export function buildBuiltInToolAssistantSummary(result: BuiltInToolResult) {
+export function buildBuiltInToolAssistantSummary(result: BuiltInToolResult, locale?: UiLanguage) {
   if (result.kind === 'weather') {
-    const pieces = [
-      `${result.result.resolvedName}当前${result.result.currentSummary}`,
-      result.result.todaySummary ? formatWeatherPeriodSummary('今天', result.result.todaySummary) : '',
-      result.result.tomorrowSummary ? formatWeatherPeriodSummary('明天', result.result.tomorrowSummary) : '',
-    ].filter(Boolean)
-
-    return `我先总结一下：${pieces.join('，')}。`
+    const normalizedLocale = normalizeWeatherLocale(locale)
+    const copy = WEATHER_ASSISTANT_COPY[normalizedLocale]
+    const pieces = buildWeatherSummaryPieces(result, normalizedLocale)
+    return `${copy.assistantPrefix}${pieces.join(copy.pieceSeparator).replace(/[。.．]$/u, '')}${copy.sentenceEnd}`
   }
 
   if (result.kind === 'open_external') {
@@ -198,9 +245,9 @@ export function buildBuiltInToolAssistantSummary(result: BuiltInToolResult) {
   return buildWebSearchSummary(result)
 }
 
-export function buildBuiltInToolSpeechSummary(result: BuiltInToolResult) {
+export function buildBuiltInToolSpeechSummary(result: BuiltInToolResult, locale?: UiLanguage) {
   if (result.kind === 'weather') {
-    return buildWeatherSpeechSummary(result)
+    return buildWeatherSpeechSummary(result, locale)
   }
 
   if (result.kind === 'open_external') {

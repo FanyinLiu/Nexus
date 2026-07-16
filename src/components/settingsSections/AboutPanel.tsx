@@ -3,11 +3,12 @@ import { useUpdater } from '../../features/updater/useUpdater'
 import { CURRENT_RELEASE_SPOTLIGHT } from '../../features/releaseNotes/index.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { UiLanguage } from '../../types'
+import type { SettingsSectionId } from '../settingsDrawerSupport'
 import { ReleaseSpotlightActions } from './ReleaseSpotlightActions'
 
 type AboutPanelProps = {
   uiLanguage: UiLanguage
-  onOpenSettingsSection?: (sectionId: 'memory' | 'chat') => void
+  onOpenSettingsSection?: (sectionId: SettingsSectionId) => void
 }
 
 const CREDIT_ITEMS = [
@@ -15,6 +16,7 @@ const CREDIT_ITEMS = [
   { name: 'React 19', descriptionKey: 'about.credits.item.react' },
   { name: 'Vite', descriptionKey: 'about.credits.item.vite' },
   { name: 'pixi.js + pixi-live2d-display', descriptionKey: 'about.credits.item.pixi' },
+  { name: 'Live2D sample characters', descriptionKey: 'about.credits.item.live2d_samples' },
   { name: 'sherpa-onnx', descriptionKey: 'about.credits.item.sherpa' },
   { name: 'Silero VAD', descriptionKey: 'about.credits.item.silero' },
   { name: 'Hugging Face Transformers.js', descriptionKey: 'about.credits.item.transformers' },

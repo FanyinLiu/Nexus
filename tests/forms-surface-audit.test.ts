@@ -63,7 +63,7 @@ export function ModelSection() {
   'src/components/settingsSections/ToolsSection.tsx': 'export function ToolsSection() { return <label htmlFor="tool"><input id="tool" /></label> }',
   'src/components/settingsSections/WindowSection.tsx': 'export function WindowSection() { return <label htmlFor="window"><input id="window" /></label> }',
   'src/app/styles/settings.css': `
-:root { --settings-control-height: 24px; }
+:root { --settings-control-height: 26px; }
 .settings-form-row {}
 .settings-form-row__label {}
 .settings-form-row__description {}
@@ -75,6 +75,28 @@ export function ModelSection() {
 .settings-control-card:focus-visible {}
 `,
   'src/app/styles/settings-home.css': '.settings-home-card:focus-visible {} .settings-appearance-switch {}',
+  'src/app/styles/settings-visual-system.css': `
+.sd, .sb {
+  --nx-settings-control-height: 30px;
+  --nx-settings-row-height: 38px;
+  --nx-settings-field-height: 32px;
+}
+.sd-section .sp.sp {
+  --settings-child-control-height: var(--nx-settings-control-height);
+}
+.sd-section .sp.sp .settings-form-row {}
+.sd-section .sp.sp .settings-form-row__validation {}
+`,
+  'src/app/styles/settings-product-reference-final.css': `
+.sd-section .sp.sp .settings-toggle input:checked {
+  background: var(--nx-settings-accent);
+  box-shadow: none;
+}
+`,
+  'src/features/settingsV3/settings-v3.css': `
+.settings-v3-switch input:checked + .settings-v3-switch__track { background: var(--sv3-accent); }
+.settings-v3-switch input:focus-visible + .settings-v3-switch__track {}
+`,
 }
 
 function createFixture(overrides: Record<string, string | null> = {}) {
@@ -162,6 +184,17 @@ test('forms surface audit rejects a split description and validation chain', () 
 
     assert.equal(report.summary.ok, false)
     assert.ok(report.missingContracts.some((item) => item.id === 'settings-form-row-describedby-chain'))
+  })
+})
+
+test('forms surface audit keeps active and fallback toggle states independently owned', () => {
+  withFixture({
+    'src/features/settingsV3/settings-v3.css': '',
+  }, (root) => {
+    const report = buildFormsSurfaceReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(report.missingContracts.some((item) => item.id === 'v3-settings-toggle-state-css'))
   })
 })
 

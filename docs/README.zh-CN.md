@@ -24,13 +24,26 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **当前代码版本：** v0.4.1。Nexus 现在进入陪伴 UI、设置和可靠性加固阶段：桌面陪伴感知继续保持粗粒度和隐私优先，设置与对话界面更稳，上传前审计更完整。正式下载页仍以 GitHub Releases 的最新 tag 为准。
+> **当前稳定版：** v0.4.3，稳定入口见 [RELEASE-NOTES-v0.4.3.md](RELEASE-NOTES-v0.4.3.md)。Nexus 继续保持桌面陪伴感知的粗粒度和隐私优先边界，并把温和 check-in 策略、设置视觉系统和发布审计继续收紧。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases。
 
 > **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前短期开发以根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 为准：Phase 1 只收敛桌面常驻小窗口、极简头像、Ollama / DeepSeek 文本模型和简单对话。
 
 ---
 
-## 本次更新 — v0.4.1
+## 本次更新 — v0.4.3
+
+> **主题：Check-In 策略和发布门禁对齐。** 中文说明见 [RELEASE-NOTES-v0.4.3.zh-CN.md](RELEASE-NOTES-v0.4.3.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.3.md](RELEASE-NOTES-v0.4.3.md)。
+
+0.4.3 让温和 check-in 先形成可压制的本地 in-app 决策，而不是直接发消息、执行工具或创建外部通知。正在聊天、刚 dismiss、重复同类信号、过期回到 Nexus 信号都会保持安静；时间表达仍然是粗粒度，不把精确计时或原始桌面内容送进模型。
+
+一句话记住 0.4.3：
+
+- **check-in 决策和发出分开，重复调用不会变成反复打扰。**
+- **in-app payload 只是本地短 TTL 数据，不调度计时器、不写持久历史、不调用工具。**
+- **设置 UI、发布审计和性能预算继续由 `verify:pr` 与预发布门禁保护。**
+- **0.5 才做桌宠跟随鼠标、打字反应和窗口互动。**
+
+## 上一公开版本 — v0.4.1
 
 > **主题：陪伴 UI、设置和可靠性加固。** 中文说明见 [RELEASE-NOTES-v0.4.1.zh-CN.md](RELEASE-NOTES-v0.4.1.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.1.md](RELEASE-NOTES-v0.4.1.md)。
 
@@ -44,23 +57,22 @@
 - **新增多组 source-only 审计，上传前已跑完整 `verify:pr`。**
 - **0.5 才做桌宠跟随鼠标、打字反应和窗口互动。**
 
-## 上次更新 — v0.3.6
+## 更早更新 — v0.4.0
 
-> **主题：0.3 的地基收尾。** 这版不把 Nexus 做成替你干活的 Codex 式智能体，也不把 0.4 的桌面陪伴感知提前塞进来；它把安全、记忆、设置和桌面感知入口收清楚。中文说明见 [RELEASE-NOTES-v0.3.6.zh-CN.md](RELEASE-NOTES-v0.3.6.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.3.6.md](RELEASE-NOTES-v0.3.6.md)。
+> **主题：桌面陪伴感知地基。** 中文说明见 [RELEASE-NOTES-v0.4.0.zh-CN.md](RELEASE-NOTES-v0.4.0.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.0.md](RELEASE-NOTES-v0.4.0.md)。
 
-0.3.6 把 Memory 页里的桌面感知状态摆到台面上：当前窗口、剪贴板和 OCR 是否可用、是否启用，都能直接看到；同时白天和暖白设置页更清楚，隐私边界也写明“只传脱敏文本摘要，不传原始截图”。
+0.4.0 正式开始“打开 Nexus 后，它能安静理解时间流逝”的桌面陪伴感知。它会优先保持安静，只形成短期、粗粒度、可暂停和可清理的陪伴摘要；进入模型的是脱敏摘要，不是原始截图、完整剪贴板、私人消息或精确计时。
 
-一句话记住 0.3.6：
+一句话记住 0.4.0：
 
-- **0.3 的安全、记忆、设置和发布基础进入收尾。**
-- **Memory 页能看到当前窗口、剪贴板、OCR 的桌面感知状态。**
-- **隐私边界更明确：只传脱敏文本摘要，不传原始截图。**
-- **白天和暖白设置页更清楚，按钮和文字更稳。**
-- **0.4.0 才开始真正的桌面陪伴感知：时间流逝、安静观察和低频关心。**
+- **Nexus 打开时可以形成短期、粗粒度、可暂停的陪伴摘要。**
+- **时间语言保持“一会儿 / 半小时左右 / 一小时左右”，不精确到分秒。**
+- **原始截图、完整剪贴板、私人消息和精确计时不会进入模型边界。**
+- **0.5 才进入桌宠跟随鼠标、打字反应和窗口互动。**
 
 ## 旧版本记录
 
-README 只保留当前代码版本 v0.4.1 和上一稳定入口 v0.4.0 的重点；更早历史版本统一放在 [CHANGELOG](../CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 顶部继续滚动维护旧版本号。
+README 只保留当前稳定版 v0.4.3 和上一公开版本 v0.4.1 的重点；更早历史版本统一放在 [CHANGELOG](../CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 顶部继续滚动维护旧版本号。
 
 ---
 
@@ -75,7 +87,7 @@ README 只保留当前代码版本 v0.4.1 和上一稳定入口 v0.4.0 的重点
 | 查看安全与隐私 | [安全与援助](#安全与援助) |
 | 参与社区内容 | [社区](#社区) · [Community Guide](COMMUNITY.md) |
 | 理解 0.4 方向 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 查看 0.4 最新稳定版 | [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 查看 0.4 当前稳定版 | [v0.4.3 Release Notes](RELEASE-NOTES-v0.4.3.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## 为什么是 Nexus？
 
@@ -172,23 +184,23 @@ README 只保留当前代码版本 v0.4.1 和上一稳定入口 v0.4.0 的重点
 
 从 [release 页面](https://github.com/FanyinLiu/Nexus/releases/latest) 下载最新安装包：
 
+> 下表是 v0.4.3 正式发行契约。安装包只以受保护的 tag 工作流成功发布到 GitHub Releases 后的实际资产为准；不要使用本地或第三方转载包。
+
 | 平台 | 文件 |
 |---|---|
-| Windows | `Nexus-Setup-<版本号>.exe`（NSIS，未签名） |
-| macOS | `.dmg` 或 `.zip`（未签名，arm64 + x64 universal） |
-| Linux | `.AppImage` / `.deb` / `.tar.gz` |
+| Windows x64 | `Nexus-Setup-<版本号>.exe`（NSIS，`NotSigned`）+ `SHA256SUMS-windows.txt` |
+| macOS arm64 | `.dmg` 或 `.zip`（ad-hoc；不提供 x64 / universal）+ `SHA256SUMS-macos.txt` |
+| Linux x64 | `.AppImage` / `.deb` / `.tar.gz` + `SHA256SUMS-linux.txt` |
 
 > **首次启动会看到安全警告，这是正常的。**
-> Nexus 的 release 不做代码签名——既没有 Apple Developer 证书，
-> 也没有 Windows EV 证书，是有意为之（个人项目，不收费，
-> 不承担经常性基础设施开销）。警告的意思是"这个开发者没付
-> 签名费"，不是"这是病毒"。源码在 GitHub 公开，每个版本
-> 都从公开 CI 构建出来，Linux 安装包还附带 SHA-256 和
-> GPG 分离签名，可以独立校验。
+> Nexus v0.4.3 不使用 Apple Developer ID / 公证或 Windows
+> 代码签名。macOS 的 ad-hoc 签名不等于 Apple 信任；Windows
+> 安装器会标记为 `NotSigned`。系统警告不是安全结论，用户仍需
+> 核对来源和 SHA-256。
 
 #### 未签名安装提示
 
-- **下载来源**：只从 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases/latest) 下载。不要从镜像或转载压缩包安装；如果你不确定文件来源，删除后重新从 GitHub Releases 下载。
+- **下载来源**：官方 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases/latest) 是唯一下载来源。不要从镜像或转载压缩包安装；如果你不确定文件来源，删除后重新从 GitHub Releases 下载。
 - **macOS / Gatekeeper**：如果系统拦截首次启动，按下面的 macOS 步骤右键打开，或运行 `xattr -dr com.apple.quarantine /Applications/Nexus.app`。
 - **Windows / SmartScreen**：如果看到 "Windows 已保护你的电脑"，点击 **"详细信息"**，再点击 **"仍要运行"**。
 
@@ -219,7 +231,15 @@ README 只保留当前代码版本 v0.4.1 和上一稳定入口 v0.4.0 的重点
 
 - **AppImage**：`chmod +x Nexus-<版本号>.AppImage` 然后双击或在终端运行。Linux 发行版不像 macOS / Windows 那样强制应用级签名，没有警告。
 - **.deb**：`sudo dpkg -i Nexus-<版本号>.deb`（或用发行版的包管理器打开）。
-- **校验下载**（可选）：每个 release 都附带 `SHA256SUMS` 文件和 `*.AppImage.asc` / `*.deb.asc` GPG 分离签名。从 [release 页面](https://github.com/FanyinLiu/Nexus/releases/latest) 导入公钥，运行 `gpg --verify Nexus-<版本号>.AppImage.asc` 即可确认完整性。
+- **校验下载**：Linux x64 资产附带 `SHA256SUMS-linux.txt`；只下载其中一种包格式时，在下载目录运行 `sha256sum --ignore-missing -c SHA256SUMS-linux.txt`，确认目标文件显示 `OK`，并确保校验文件来自同一官方 release。
+
+#### macOS unsigned auto-update limitation
+
+macOS arm64 未签名包只检查新版本并打开官方 release 页面，不会自动下载或替换应用。升级需要手动下载新 `.dmg` / `.zip`，重新处理 Gatekeeper 提示并替换 `/Applications/Nexus.app`。
+
+#### Windows unsigned installer limitation
+
+Windows x64 安装器状态为 `NotSigned`，无法提供发布者身份验证或稳定的 SmartScreen 声誉。确认文件来自官方 GitHub Releases 后，按上面的 SmartScreen 步骤手动运行。
 
 ---
 
@@ -280,7 +300,7 @@ npm run package:win     # 或 package:mac / package:linux
 
 Nexus 目前由个人维护，issue 和 PR 的处理速度取决于分流是否精准：
 
-社区文档会贯穿所有版本，不只属于某一次发布。0.3 收安全、记忆和设置地基；0.4 会进入桌面陪伴感知；0.5 会进入桌宠桌面行为。社区可以持续贡献文档、人格模板、桌宠包、模型配置菜谱、翻译和 beta 验证报告，让项目变大但不失控。长期入口见 [Community Guide](COMMUNITY.md)，0.4 方向见 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 最新稳定版说明见 [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md)，发布前加固清单见 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
+社区文档会贯穿所有版本，不只属于某一次发布。0.3 收安全、记忆和设置地基；0.4 会进入桌面陪伴感知；0.5 会进入桌宠桌面行为。社区可以持续贡献文档、人格模板、桌宠包、模型配置菜谱、翻译和 beta 验证报告，让项目变大但不失控。长期入口见 [Community Guide](COMMUNITY.md)，0.4 方向见 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 当前稳定版说明见 [v0.4.3 Release Notes](RELEASE-NOTES-v0.4.3.md)，发布加固清单见 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
 
 - 🐛 **发现 Bug？** → [Bug 报告](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **有明确的功能想法？** → [功能请求](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

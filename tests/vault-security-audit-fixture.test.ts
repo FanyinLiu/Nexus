@@ -18,10 +18,12 @@ rateLimitBulkOp(event, 'retrieve-many')
 `,
   'electron/services/keyVault.js': `
 import { getRedactedErrorMessage } from './errorRedaction.js'
-function formatVaultSlotLogLabel(slot) {}
+let safeStorageAccessBlocked = false
+function markSafeStorageAccessBlocked(error, operation) {}
 console.warn('[KeyVault] Failed to read vault file:', getRedactedErrorMessage(error))
-Encryption unavailable, cannot decrypt slot (${'${formatVaultSlotLogLabel(slot)}'})
-Failed to decrypt slot (${'${formatVaultSlotLogLabel(slot)}'}):
+console.warn('[KeyVault] Encryption unavailable; encrypted vault entries are unavailable')
+disabling further attempts for this process
+if (safeStorageAccessBlocked) return
 getRedactedErrorMessage(error)
 `,
   'electron/services/vaultRefs.js': `

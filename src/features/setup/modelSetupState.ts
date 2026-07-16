@@ -10,6 +10,7 @@ export type ModelEntry = {
   required: boolean
   kind: 'archive' | 'files' | 'standalone'
   present: boolean
+  verified: boolean
   location: string | null
 }
 

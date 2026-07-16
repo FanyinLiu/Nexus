@@ -161,6 +161,11 @@ const weatherLookupRequestSchema = {
   fields: {
     location: { type: 'string', maxLength: SHORT_TEXT_MAX },
     fallbackLocation: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
+    locale: {
+      type: 'enum',
+      optional: true,
+      values: ['zh-CN', 'zh-TW', 'en-US', 'ja', 'ko'],
+    },
     quiet: optionalBoolean,
     policy: rendererToolPolicySchema,
   },

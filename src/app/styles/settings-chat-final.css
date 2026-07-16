@@ -1,14 +1,14 @@
 /* Final chat-parity pass: settings borrows the chat surface's light command rhythm. */
-.settings-backdrop:is(.settings-backdrop--warm-day, .settings-backdrop--day):has(.settings-drawer--home),
-.settings-backdrop:is(.settings-backdrop--warm-day, .settings-backdrop--day):has(.settings-drawer--section) {
+.sb-light:has(.sd-home),
+.sb-light:has(.sd-section) {
   padding-block: clamp(20px, 3vh, 28px);
   background: rgba(241, 229, 211, 0.55);
   backdrop-filter: blur(16px) saturate(0.98);
   -webkit-backdrop-filter: blur(16px) saturate(0.98);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section {
+.sd-light.sd-home,
+.sd-light.sd-section {
   --settings-surface: #fffaf3;
   --settings-surface-strong: #fffdf9;
   --settings-surface-soft: rgba(255, 253, 249, 0.96);
@@ -18,12 +18,12 @@
   --settings-chat-parity-row-hover: rgba(255, 253, 249, 0.28);
   --settings-chat-parity-command: rgba(185, 92, 60, 0.062);
   --settings-chat-parity-command-hover: rgba(185, 92, 60, 0.095);
-  --settings-control-font-size: 10px;
-  --settings-body-font-size: 10px;
-  --settings-heading-small-font-size: 10px;
-  --settings-meta-font-size: 9px;
-  --settings-child-control-font-size: 10px;
-  --settings-child-meta-font-size: 9px;
+  --settings-control-font-size: 12px;
+  --settings-body-font-size: 12px;
+  --settings-heading-small-font-size: 12px;
+  --settings-meta-font-size: 11px;
+  --settings-child-control-font-size: 12px;
+  --settings-child-meta-font-size: 11px;
   --settings-control-height: 25px;
   --settings-control-height-small: 20px;
   width: min(340px, calc(100vw - 28px));
@@ -46,8 +46,8 @@
   -webkit-backdrop-filter: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home::before,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section::before {
+.sd-light.sd-home::before,
+.sd-light.sd-section::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -57,37 +57,35 @@
   pointer-events: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home > *,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section > * {
+.sd-light.sd-home > *,
+.sd-light.sd-section > * {
   position: relative;
   z-index: 1;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__body,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__body {
+.sd-light.sd-home .sdb,
+.sd-light.sd-section .sdb {
   min-height: 0;
   max-height: none;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
-.settings-drawer .settings-home-presence {
+.sd .settings-home-presence,
+.sd .settings-home-presence__copy {
   display: grid;
   min-width: 0;
 }
 
-.settings-drawer .settings-home-presence__copy {
-  display: grid;
+.sd .settings-home-presence__badge,
+.sd .settings-home-presence__copy strong,
+.sd .settings-home-presence__body,
+.sd-light-section .sp[data-section='voice'] details.settings-mini-group.settings-voice-advanced-card:not([open]) > summary.settings-mini-group__head > div,
+.sd-light-section .sp[data-section='autonomy'] .settings-drawer__card > .settings-section__title-row > div {
   min-width: 0;
 }
 
-.settings-drawer .settings-home-presence__badge,
-.settings-drawer .settings-home-presence__copy strong,
-.settings-drawer .settings-home-presence__body {
-  min-width: 0;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-presence {
+.sd-light.sd-home .settings-home-presence {
   display: grid;
   min-height: 82px;
   margin: 0 1px 8px;
@@ -101,14 +99,14 @@
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-presence__copy {
+.sd-light.sd-home .settings-home-presence__copy {
   display: grid;
   align-content: center;
   min-width: 0;
   gap: 6px;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-presence__badge {
+.sd-light.sd-home .settings-home-presence__badge {
   justify-self: start;
   max-width: 100%;
   overflow: hidden;
@@ -121,7 +119,7 @@
   white-space: nowrap;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-presence__copy strong {
+.sd-light.sd-home .settings-home-presence__copy strong {
   display: block;
   overflow: hidden;
   color: rgba(36, 27, 22, 0.9);
@@ -132,7 +130,7 @@
   white-space: nowrap;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-presence__body {
+.sd-light.sd-home .settings-home-presence__body {
   display: -webkit-box;
   overflow: hidden;
   max-width: 290px;
@@ -144,8 +142,8 @@
   -webkit-line-clamp: 2;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__window-title,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__window-title {
+.sd-light.sd-home .settings-drawer__window-title,
+.sd-light.sd-section .settings-drawer__window-title {
   align-items: center;
   gap: 5px;
   min-height: 24px;
@@ -153,8 +151,8 @@
   color: rgba(48, 39, 31, 0.66);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__window-title-name,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__window-title-name {
+.sd-light.sd-home .settings-drawer__window-title-name,
+.sd-light.sd-section .settings-drawer__window-title-name {
   display: inline;
   color: rgba(48, 39, 31, 0.68);
   font-size: 12px;
@@ -162,8 +160,8 @@
   line-height: 1;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__window-title-label,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__window-title-label {
+.sd-light.sd-home .settings-drawer__window-title-label,
+.sd-light.sd-section .settings-drawer__window-title-label {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -172,13 +170,13 @@
   white-space: nowrap;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__window-title-label::before,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__window-title-label::before {
+.sd-light.sd-home .settings-drawer__window-title-label::before,
+.sd-light.sd-section .settings-drawer__window-title-label::before {
   content: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__header,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__header {
+.sd-light.sd-home .sdh,
+.sd-light.sd-section .sdh {
   margin: 0 0 3px;
   padding: 1px 2px 2px;
   border: 0;
@@ -188,8 +186,8 @@
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__header-main,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__header-main {
+.sd-light.sd-home .sdhm,
+.sd-light.sd-section .sdhm {
   min-height: 28px;
   gap: 6px;
   padding: 0 1px 0 6px;
@@ -199,8 +197,8 @@
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__toolbar,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__toolbar {
+.sd-light.sd-home .sdtb,
+.sd-light.sd-section .sdtb {
   gap: 3px;
   padding: 0;
   border: 0;
@@ -209,14 +207,14 @@
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__language-button,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__icon-button,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__language-button,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__icon-button {
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
-  min-height: 20px;
+.sd-light.sd-home .settings-drawer__language-button,
+.sd-light.sd-home .settings-drawer__icon-button,
+.sd-light.sd-section .settings-drawer__language-button,
+.sd-light.sd-section .settings-drawer__icon-button {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
@@ -226,67 +224,71 @@
   transition: opacity 140ms ease, color 140ms ease, border-color 140ms ease, background 140ms ease;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__language-icon,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__icon-button svg,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__language-icon,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__icon-button svg {
-  width: 11px;
-  height: 11px;
+.sd-light.sd-home .settings-drawer__language-icon,
+.sd-light.sd-home .settings-drawer__icon-button svg,
+.sd-light.sd-section .settings-drawer__language-icon,
+.sd-light.sd-section .settings-drawer__icon-button svg {
+  width: 14px;
+  height: 14px;
   opacity: 0.84;
   stroke-width: 1.72;
   stroke: currentColor;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__language-button:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__language-button[aria-expanded='true'],
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__icon-button:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__language-button:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__language-button[aria-expanded='true'],
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__icon-button:hover {
+.sd-light.sd-home .settings-drawer__language-button:hover,
+.sd-light.sd-home .settings-drawer__language-button[aria-expanded='true'],
+.sd-light.sd-home .settings-drawer__icon-button:hover,
+.sd-light.sd-section .settings-drawer__language-button:hover,
+.sd-light.sd-section .settings-drawer__language-button[aria-expanded='true'],
+.sd-light.sd-section .settings-drawer__icon-button:hover {
   border-color: rgba(75, 62, 49, 0.052);
   background: rgba(75, 62, 49, 0.036);
   color: rgba(72, 58, 46, 0.9);
   opacity: 1;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__language-button:focus-visible,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__language-button:focus-visible,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__icon-button:focus-visible,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__icon-button:focus-visible {
+.sd-light.sd-home .settings-drawer__language-button:focus-visible,
+.sd-light.sd-section .settings-drawer__language-button:focus-visible,
+.sd-light.sd-home .settings-drawer__icon-button:focus-visible,
+.sd-light.sd-section .settings-drawer__icon-button:focus-visible,
+.sd-light.sd-home .sda .ghost-button:focus-visible,
+.sd-light.sd-section .sda .ghost-button:focus-visible,
+.sd-light.sd-home .sda .primary-button:focus-visible,
+.sd-light.sd-section .sda .primary-button:focus-visible,
+html[data-theme='warm-day'] .sd-light.sd-home .sda .ghost-button:focus-visible,
+html[data-theme='system-day'] .sd-light.sd-home .sda .ghost-button:focus-visible,
+html[data-theme='warm-day'] .sd-light.sd-section .sda .ghost-button:focus-visible,
+html[data-theme='system-day'] .sd-light.sd-section .sda .ghost-button:focus-visible,
+html[data-theme='warm-day'] .sd-light.sd-home .sda .primary-button:focus-visible,
+html[data-theme='system-day'] .sd-light.sd-home .sda .primary-button:focus-visible,
+html[data-theme='warm-day'] .sd-light.sd-section .sda .primary-button:focus-visible,
+html[data-theme='system-day'] .sd-light.sd-section .sda .primary-button:focus-visible {
   outline: none;
   border-color: rgba(185, 92, 60, 0.28);
   box-shadow: 0 0 0 2px rgba(185, 92, 60, 0.18);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__icon-button--danger:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__icon-button--danger:hover {
-  border-color: rgba(160, 62, 46, 0.12);
-  background: rgba(160, 62, 46, 0.08);
-  color: rgba(122, 48, 38, 0.9);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__icon-button--danger:focus-visible,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__icon-button--danger:focus-visible {
+.sd-light.sd-home .settings-drawer__icon-button--danger:focus-visible,
+.sd-light.sd-section .settings-drawer__icon-button--danger:focus-visible {
   border-color: rgba(185, 92, 60, 0.28);
   color: rgba(122, 48, 38, 0.95);
   box-shadow: 0 0 0 2px rgba(185, 92, 60, 0.18);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__icon-button--danger:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__icon-button--danger:hover {
+.sd-light.sd-home .settings-drawer__icon-button--danger:hover,
+.sd-light.sd-section .settings-drawer__icon-button--danger:hover {
   border-color: rgba(160, 62, 46, 0.12);
   background: rgba(160, 62, 46, 0.08);
   color: rgba(122, 48, 38, 0.88);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card:nth-child(even) {
+.sd-light.sd-home .settings-home-card,
+.sd-light.sd-home .settings-home-card:nth-child(even) {
   border-color: var(--settings-chat-parity-line);
-  background: var(--settings-chat-parity-row);
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-appearance-switch {
+.sd-light.sd-home .settings-appearance-switch {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   min-height: 34px;
@@ -298,12 +300,15 @@
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-appearance-switch__label {
+.sd-light.sd-home .settings-appearance-switch__label,
+.sd-light-section .sp[data-section='voice'] .settings-voice-loop-card .settings-voice-control > .settings-toggle > span,
+.sd-light-section .sp[data-section='voice'] .settings-voice-loop-card > label.settings-voice-field > span,
+.sd-light-section .sp[data-section='voice'] .settings-speech-config-section label.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)) > span {
   color: rgba(36, 27, 22, 0.78);
   font-weight: 620;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-appearance-switch__control {
+.sd-light.sd-home .settings-appearance-switch__control {
   justify-self: end;
   width: auto;
   min-width: 0;
@@ -313,7 +318,7 @@
   background: transparent;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-appearance-switch__option {
+.sd-light.sd-home .settings-appearance-switch__option {
   flex: 0 0 auto;
   min-width: 38px;
   min-height: 26px;
@@ -325,66 +330,65 @@
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-appearance-switch__option:hover {
+.sd-light.sd-home .settings-appearance-switch__option:hover {
   background: rgba(255, 253, 249, 0.2);
   color: rgba(36, 27, 22, 0.78);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-appearance-switch__option:focus-visible {
+.sd-light.sd-home .settings-appearance-switch__option:focus-visible {
   box-shadow:
     inset 0 0 0 1px rgba(185, 92, 60, 0.2),
     0 0 0 2px rgba(255, 253, 249, 0.72);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-appearance-switch__option.is-active {
+.sd-light.sd-home .settings-appearance-switch__option.is-active {
   background: transparent;
   color: rgba(128, 62, 42, 0.9);
   box-shadow: inset 0 -2px 0 rgba(185, 92, 60, 0.24);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-appearance-switch__swatch {
+.sd-light.sd-home .settings-appearance-switch__swatch,
+.sd-light-section .sph .eyebrow {
   display: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home {
+.sd-light.sd-home .settings-home {
   gap: 2px;
   padding: 0 1px 16px;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-group {
+.sd-light.sd-home .settings-home-group,
+.sd-light.sd-home .settings-home-group__list,
+.sd-light-section .sp[data-section='console'] details.settings-console-section > summary.settings-console-section__header > div {
   gap: 2px;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-group + .settings-home-group {
+.sd-light.sd-home .settings-home-group + .settings-home-group {
   margin-top: 4px;
   padding-top: 3px;
   border-top-color: var(--settings-chat-parity-line);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-group__head {
+.sd-light.sd-home .settings-home-group__head {
   min-height: 22px;
   padding: 3px 6px 1px;
   color: rgba(78, 64, 54, 0.72);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-group__title {
+.sd-light.sd-home .settings-home-group__title {
   color: rgba(78, 64, 54, 0.78);
   font-weight: 680;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-group__hint {
+.sd-light.sd-home .settings-home-group__hint {
   color: rgba(78, 64, 54, 0.52);
   font-size: 10px;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-group__list {
-  gap: 2px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card:nth-child(even),
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card:nth-child(even):hover {
+.sd-light.sd-home .settings-home-card,
+.sd-light.sd-home .settings-home-card:hover,
+.sd-light.sd-home .settings-home-card:nth-child(even),
+.sd-light.sd-home .settings-home-card:nth-child(even):hover {
   grid-template-columns: 18px minmax(0, 1fr) minmax(68px, min(48%, 176px));
   column-gap: 6px;
   min-height: 34px;
@@ -392,46 +396,40 @@
   border-top-color: transparent;
   border-right-color: transparent;
   border-bottom-color: var(--settings-chat-parity-line);
+  border-left-color: rgba(75, 62, 49, 0.055);
   border-radius: 0;
   background: transparent;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card__label {
+.sd-light.sd-home .settings-home-card__label {
   grid-column: 2;
   color: rgba(36, 27, 22, 0.82);
   font-weight: 650;
   letter-spacing: 0;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card__value {
+.sd-light.sd-home .settings-home-card__value {
   grid-column: 3;
   max-width: 190px;
   color: rgba(78, 64, 54, 0.66);
   font-weight: 560;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card__glyph {
+.sd-light.sd-home .settings-home-card__glyph {
   grid-column: 1;
   justify-self: center;
   color: var(--settings-trust-trace, rgba(185, 92, 60, 0.42));
   opacity: 0.62;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card:nth-child(even),
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card:nth-child(even):hover {
-  border-left-color: rgba(75, 62, 49, 0.055);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-appearance-switch:focus-within {
+.sd-light.sd-home .settings-appearance-switch:focus-within {
   border-bottom-color: var(--settings-chat-parity-line-strong);
   background: rgba(255, 253, 249, 0.12);
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-home-card:nth-child(even):hover {
+.sd-light.sd-home .settings-home-card:hover,
+.sd-light.sd-home .settings-home-card:nth-child(even):hover {
   border-color: transparent;
   border-bottom-color: var(--settings-chat-parity-line-strong);
   border-left-color: rgba(185, 92, 60, 0.11);
@@ -439,71 +437,43 @@
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-page__header {
+.sd-light-section .sphd {
   grid-template-columns: 24px minmax(0, 1fr);
   column-gap: 8px;
   padding: 0 2px 8px;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-page__back {
-  width: 22px;
-  min-width: 22px;
-  height: 22px;
-  min-height: 22px;
-  max-height: 22px;
-  border-radius: 8px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-page__headline {
+.sd-light-section .sph {
   gap: 3px;
   padding-top: 0;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-page__headline .eyebrow {
-  display: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-page__headline h4 {
+.sd-light-section .sph h4 {
   font-weight: 680;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-page__headline h4:focus,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-page__headline h4:focus-visible {
+.sd-light-section .sph h4:focus,
+.sd-light-section .sph h4:focus-visible {
   outline: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-page__headline .settings-section__note {
+.sd-light-section .sph .settings-section__note {
   max-width: 260px;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-control-card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-form-row,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-toggle:not(.settings-lorebook-check),
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-choice-card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-model-source-card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-metric-card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-history-empty,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-history-item,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-letter-empty,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-letter-card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-updater-panel {
-  border-color: var(--settings-chat-parity-line);
-  background: var(--settings-chat-parity-row);
-  box-shadow: none;
-}
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-section,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-mini-group,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-drawer__card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-speech-config-section {
+.sd-light-section .settings-section,
+.sd-light-section .settings-mini-group,
+.sd-light-section .settings-drawer__card,
+.sd-light-section .settings-speech-config-section {
   border-color: var(--settings-chat-parity-line);
   background: transparent;
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-section__title-row,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-mini-group__head:not(summary),
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] summary.settings-mini-group__head {
+.sd-light-section .settings-section__title-row,
+.sd-light-section .settings-mini-group__head:not(summary),
+.sd-light-section summary.settings-mini-group__head {
   min-height: 34px;
   padding: 4px 2px 7px;
   border: 0;
@@ -513,9 +483,9 @@
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-section__title-row > .ghost-button,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-mini-group__head > .ghost-button,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-voice-smoke-button {
+.sd-light-section .settings-section__title-row > .ghost-button,
+.sd-light-section .settings-mini-group__head > .ghost-button,
+.sd-light-section .settings-voice-smoke-button {
   min-height: 30px;
   padding: 0 10px;
   border-color: rgba(75, 62, 49, 0.075);
@@ -524,7 +494,7 @@
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section > .settings-section__title-row {
+.sd-light-section .sp[data-section='voice'] .settings-speech-config-section > .settings-section__title-row {
   grid-template-columns: minmax(0, 1fr) minmax(96px, auto);
   grid-template-rows: auto auto;
   align-items: center;
@@ -533,11 +503,11 @@
   padding: 5px 2px 6px;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section > .settings-section__title-row > div {
+.sd-light-section .sp[data-section='voice'] .settings-speech-config-section > .settings-section__title-row > div {
   display: contents;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section > .settings-section__title-row h4 {
+.sd-light-section .sp[data-section='voice'] .settings-speech-config-section > .settings-section__title-row h4 {
   grid-column: 1;
   grid-row: 1;
   min-width: 0;
@@ -546,7 +516,7 @@
   white-space: nowrap;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section > .settings-section__title-row .settings-drawer__hint {
+.sd-light-section .sp[data-section='voice'] .settings-speech-config-section > .settings-section__title-row .settings-drawer__hint {
   grid-column: 1 / -1;
   grid-row: 2;
   min-width: 0;
@@ -554,7 +524,7 @@
   line-height: 1.34;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section > .settings-section__title-row > .ghost-button {
+.sd-light-section .sp[data-section='voice'] .settings-speech-config-section > .settings-section__title-row > .ghost-button {
   grid-column: 2;
   grid-row: 1;
   justify-self: end;
@@ -562,12 +532,8 @@
   white-space: nowrap;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-preview-button {
-  min-height: 30px;
-  height: 30px;
-}
 
-.settings-drawer.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] details.settings-mini-group.settings-voice-advanced-card:not([open]) {
+.sd.sd-light-section .sp[data-section='voice'] details.settings-mini-group.settings-voice-advanced-card:not([open]) {
   gap: 0;
   min-height: 34px;
   padding: 0;
@@ -578,7 +544,7 @@
   box-shadow: none;
 }
 
-.settings-drawer.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] details.settings-mini-group.settings-voice-advanced-card:not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card):not([open]) > summary.settings-mini-group__head {
+.sd.sd-light-section .sp[data-section='voice'] details.settings-mini-group.settings-voice-advanced-card:not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card):not([open]) > summary.settings-mini-group__head {
   min-height: 34px;
   margin: 0;
   padding: 4px 2px 7px;
@@ -589,248 +555,60 @@
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-control-card:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-form-row:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-toggle:not(.settings-lorebook-check):hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-choice-card:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-model-source-card:hover {
-  border-color: var(--settings-chat-parity-line-strong);
-  background: var(--settings-chat-parity-row-hover);
-  box-shadow: none;
-}
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] input:not([type='checkbox']):not([type='radio']):not([type='range']),
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] select,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] textarea {
+.sd-light-section input:not([type='checkbox']):not([type='radio']):not([type='range']),
+.sd-light-section select,
+.sd-light-section textarea {
   border-color: var(--settings-chat-parity-line);
   background: rgba(255, 253, 249, 0.18);
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-toggle input {
+.sd-light-section .settings-toggle input {
   background: rgba(75, 62, 49, 0.11);
   box-shadow: inset 0 0 0 1px rgba(75, 62, 49, 0.055);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-toggle input::after {
+.sd-light-section .settings-toggle input::after {
   background: rgba(255, 253, 249, 0.94);
   box-shadow: 0 1px 4px rgba(72, 53, 40, 0.14);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-toggle input:checked {
+.sd-light-section .settings-toggle input:checked {
   background: linear-gradient(135deg, rgba(199, 102, 69, 0.82), rgba(224, 148, 93, 0.72));
   box-shadow: inset 0 0 0 1px rgba(185, 92, 60, 0.1);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-toggle input:focus-visible {
+.sd-light-section .settings-toggle input:focus-visible {
   outline: 2px solid rgba(185, 92, 60, 0.22);
   outline-offset: 2px;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-voice-loop-card {
-  gap: 5px;
-}
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-voice-loop-card .settings-voice-control {
+.sd-light-section .sp[data-section='voice'] .settings-voice-loop-card .settings-voice-control {
   min-height: 32px;
   padding: 2px 4px;
   border-radius: 0;
   border-bottom: 1px solid var(--settings-chat-parity-line);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-voice-loop-card .settings-voice-control > .settings-toggle {
+.sd-light-section .sp[data-section='voice'] .settings-voice-loop-card .settings-voice-control > .settings-toggle {
   min-height: 31px;
   padding: 0 2px;
   border: 0;
   background: transparent;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-voice-loop-card .settings-voice-control > .settings-toggle > span,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-voice-loop-card > label.settings-voice-field > span,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section label.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)) > span {
-  color: rgba(36, 27, 22, 0.78);
-  font-weight: 620;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-mini-group__head span,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-section__note,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-control-card > p,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-control-card > small {
+.sd-light-section .sp[data-section='voice'] .settings-mini-group__head span,
+.sd-light-section .sp[data-section='voice'] .settings-section__note,
+.sd-light-section .sp[data-section='voice'] .settings-control-card > p,
+.sd-light-section .sp[data-section='voice'] .settings-control-card > small,
+.sd-light-section .sp[data-section='tools'] .settings-mini-group__head span,
+.sd-light-section .sp[data-section='tools'] .settings-tools-note {
   color: rgba(78, 64, 54, 0.58);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-voice-loop-card > label.settings-voice-field,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section label.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)) {
-  min-height: 54px;
-  padding: 6px 5px 7px;
-  gap: 6px;
-  border-radius: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  background: transparent;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-voice-loop-card > label.settings-voice-field > select,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section label.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)) > :is(input:not([type='checkbox']):not([type='range']), select) {
-  min-height: 30px;
-  height: 30px;
-  padding: 0 28px 0 10px;
-  border-color: rgba(75, 62, 49, 0.07);
-  border-radius: 9px;
-  background: rgba(255, 253, 249, 0.32);
-  color: rgba(36, 27, 22, 0.84);
-  line-height: 1.2;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-voice-loop-card > label.settings-voice-field > select:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-voice-loop-card > label.settings-voice-field > select:focus,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section label.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)) > :is(input:not([type='checkbox']):not([type='range']), select):hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section label.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)) > :is(input:not([type='checkbox']):not([type='range']), select):focus {
-  border-color: rgba(185, 92, 60, 0.15);
-  background: rgba(255, 253, 249, 0.48);
-  outline: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-voice-loop-card > label.settings-control-card.settings-voice-field:not(.settings-metric-card):not(.settings-updater-panel) {
-  grid-template-columns: minmax(108px, 0.36fr) minmax(0, 1fr);
-  align-items: center;
-  min-height: 40px;
-  gap: 8px;
-  padding: 5px 2px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-voice-loop-card > label.settings-control-card.settings-voice-field:not(.settings-metric-card):not(.settings-updater-panel) > span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-voice-loop-card > label.settings-control-card.settings-voice-field:not(.settings-metric-card):not(.settings-updater-panel) > select {
-  min-width: 0;
-  min-height: 30px;
-  height: 30px;
-  padding: 0 28px 0 10px;
-  border-radius: 8px;
-  line-height: 1.2;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section > label.settings-control-card.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)):not(.settings-metric-card):not(.settings-updater-panel) {
-  grid-template-columns: minmax(108px, 0.36fr) minmax(0, 1fr);
-  align-items: center;
-  min-height: 40px;
-  gap: 8px;
-  padding: 5px 2px;
-  border-radius: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  background: transparent;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section > label.settings-control-card.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)):not(.settings-metric-card):not(.settings-updater-panel) > span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section > label.settings-control-card.settings-speech-config-field:not(:has(> textarea)):not(:has(> .settings-drawer__hint)):not(.settings-metric-card):not(.settings-updater-panel) > :is(input:not([type='checkbox']):not([type='range']), select, .settings-url-input) {
-  min-width: 0;
-  min-height: 30px;
-  height: 30px;
-  padding: 0 28px 0 10px;
-  border-radius: 8px;
-  line-height: 1.2;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-speech-config-section > .settings-speech-config-note {
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 0;
-  padding: 3px 2px 5px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  color: rgba(78, 64, 54, 0.54);
-  line-height: 1.34;
-  box-shadow: none;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-tts-tuning {
-  gap: 5px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-tts-tuning__item {
-  gap: 5px;
-  padding: 6px 2px 7px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-tts-tuning__header {
-  min-height: 24px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-tts-tuning__header strong {
-  min-width: 0;
-  overflow: hidden;
-  color: rgba(36, 27, 22, 0.76);
-  font-size: var(--settings-control-font-size);
-  font-weight: 620;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-tts-tuning__header span {
-  min-width: 48px;
-  min-height: 24px;
-  padding: 0 7px;
-  border-color: rgba(75, 62, 49, 0.07);
-  border-radius: 7px;
-  background: rgba(255, 253, 249, 0.16);
-  color: rgba(78, 64, 54, 0.62);
-  font-size: var(--settings-meta-font-size);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] .settings-tts-tuning__controls {
-  grid-template-columns: minmax(0, 1fr) 72px;
-  min-height: 30px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] input.settings-tts-tuning__range {
-  min-height: 30px;
-  height: 30px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] input.settings-tts-tuning__number:not([type='checkbox']):not([type='range']) {
-  min-width: 0;
-  min-height: 30px;
-  height: 30px;
-  padding: 0 8px;
-  border-color: rgba(75, 62, 49, 0.07);
-  border-radius: 8px;
-  background: rgba(255, 253, 249, 0.28);
-  line-height: 30px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] details.settings-mini-group.settings-voice-advanced-card:not([open]) > summary.settings-mini-group__head > div {
-  min-width: 0;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='voice'] details.settings-mini-group.settings-voice-advanced-card:not([open]) > summary.settings-mini-group__head span {
-  display: -webkit-box;
-  overflow: hidden;
-  line-height: 1.34;
-  white-space: normal;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-drawer__content.settings-drawer__sections {
+.sd-light-section .sdc.settings-drawer__sections {
   gap: 6px;
   padding-bottom: 104px;
   scroll-padding-bottom: 90px;
@@ -838,1343 +616,8 @@
   mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 22px), transparent 100%);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .onboarding-region-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 2px;
-  min-height: 30px;
-  padding: 1px;
-  border: 1px solid var(--settings-chat-parity-line);
-  border-radius: 9px;
-  background: rgba(255, 253, 249, 0.1);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .onboarding-region-tabs__tab {
-  min-height: 30px;
-  padding: 0 8px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  background: transparent;
-  box-shadow: none;
-  color: rgba(78, 64, 54, 0.66);
-  font-size: var(--settings-control-font-size);
-  font-weight: 520;
-  transform: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .onboarding-region-tabs__tab:hover:not(.is-active) {
-  background: rgba(255, 253, 249, 0.2);
-  color: rgba(36, 27, 22, 0.82);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .onboarding-region-tabs__tab.is-active {
-  border-color: rgba(185, 92, 60, 0.1);
-  background: rgba(185, 92, 60, 0.06);
-  color: rgba(128, 62, 42, 0.88);
-  box-shadow: inset 0 0 0 1px rgba(185, 92, 60, 0.1);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-grid {
-  grid-template-columns: 1fr;
-  gap: 0;
-  border-top: 1px solid var(--settings-chat-parity-line);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-card:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-card.is-selected {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) 14px;
-  grid-template-rows: minmax(14px, auto) minmax(12px, auto);
-  align-items: center;
-  column-gap: 6px;
-  row-gap: 1px;
-  width: 100%;
-  min-height: 44px;
-  padding: 6px 2px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-card:hover {
-  background: rgba(255, 253, 249, 0.18);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-card.is-selected {
-  border-left: 2px solid rgba(185, 92, 60, 0.18);
-  padding-left: 4px;
-  background: rgba(185, 92, 60, 0.045);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-card__logo,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-card__logoFallback {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
-  padding: 0;
-  border-radius: 5px;
-  font-size: 8px;
-  line-height: 1;
-  grid-column: 1;
-  grid-row: 1 / span 2;
-  overflow: visible;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-card__name {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: end;
-  overflow: hidden;
-  color: rgba(36, 27, 22, 0.78);
-  font-size: var(--settings-control-font-size);
-  font-weight: 620;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-card__meta {
-  grid-column: 2;
-  grid-row: 2;
-  align-self: start;
-  overflow: hidden;
-  color: rgba(78, 64, 54, 0.5);
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-card__chevron {
-  grid-column: 3;
-  grid-row: 1 / span 2;
-  align-self: center;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-control-card:not(.settings-metric-card):not(.settings-updater-panel),
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-form-row,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-toggle:not(.settings-lorebook-check),
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-model-source-card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-choice-card {
-  min-height: 34px;
-  border-color: transparent;
-  border-radius: 8px;
-  background: transparent;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-control-card:has(> .settings-toggle input:disabled),
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-control-card:has(> .settings-toggle input:disabled):hover {
-  border-color: transparent;
-  border-radius: 8px;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-control-card > .settings-toggle:has(input:disabled),
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-control-card > .settings-toggle:has(input:disabled):hover {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-control-card:not(.settings-metric-card):not(.settings-updater-panel):hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-form-row:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-toggle:not(.settings-lorebook-check):hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-model-source-card:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-choice-card:hover {
-  border-color: transparent;
-  border-color: var(--settings-chat-parity-line-strong);
-  background: rgba(255, 253, 249, 0.2);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-choice-card.is-active,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-model-source-card.is-selected {
-  border-color: rgba(185, 92, 60, 0.1);
-  background: rgba(185, 92, 60, 0.055);
-  box-shadow: inset 0 0 0 1px rgba(185, 92, 60, 0.1);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-card.is-selected {
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-left: 2px solid rgba(185, 92, 60, 0.18);
-  min-height: 44px;
-  padding: 6px 2px 6px 4px;
-  border-radius: 0;
-  background: rgba(185, 92, 60, 0.045);
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-card:not(.is-selected),
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-source-card:hover:not(.is-selected) {
-  min-height: 44px;
-  padding: 6px 2px;
-  border-radius: 0;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-card {
-  gap: 4px;
-  padding: 0 0 8px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-brand {
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
-  gap: 7px;
-  min-height: 38px;
-  padding: 4px 2px 6px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-card__logo,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-card__logoFallback {
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
-  padding: 0;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  box-shadow: none;
-  font-size: 8px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-title h4 {
-  font-size: var(--settings-control-font-size);
-  font-weight: 680;
-  line-height: 1.25;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-title span {
-  color: rgba(78, 64, 54, 0.52);
-  font-size: 10px;
-  line-height: 1.25;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-nav {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0;
-  padding: 3px 0 4px;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-nav .ghost-button {
-  min-height: 28px;
-  border-color: transparent;
-  border-radius: 7px;
-  background: transparent;
-  box-shadow: none;
-  color: rgba(72, 53, 40, 0.68);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-nav .ghost-button + .ghost-button {
-  border-left-color: var(--settings-chat-parity-line);
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-nav .ghost-button:hover:not(:disabled) {
-  background: rgba(255, 253, 249, 0.18);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-fields {
-  gap: 0;
-  border-top: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-fields > label {
-  grid-template-columns: minmax(92px, 0.32fr) minmax(0, 1fr);
-  align-items: center;
-  min-height: 38px;
-  padding: 5px 2px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-fields > label > span {
-  min-width: 0;
-  overflow: hidden;
-  color: rgba(36, 27, 22, 0.78);
-  font-size: var(--settings-control-font-size);
-  font-weight: 620;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-fields > label > :is(input:not([type='checkbox']):not([type='range']), select, .settings-url-input) {
-  min-width: 0;
-  min-height: 32px;
-  height: 32px;
-  padding: 0 28px 0 9px;
-  border-color: rgba(75, 62, 49, 0.045);
-  border-radius: 7px;
-  background: rgba(255, 253, 249, 0.12);
-  box-shadow: none;
-  line-height: 30px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-detail-fields > label > input:not([type='checkbox']):not([type='range']) {
-  padding-right: 9px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-advanced {
-  padding: 0;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='model'] .settings-model-advanced > summary {
-  min-height: 30px;
-  padding: 0 2px;
-  color: rgba(36, 27, 22, 0.82);
-  font-size: var(--settings-control-font-size);
-  font-weight: 650;
-  line-height: 30px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-tools-section > .settings-control-grid {
-  grid-template-columns: 1fr;
-  gap: 0;
-  border-top: 1px solid var(--settings-chat-parity-line);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-tools-section > .settings-control-grid > .settings-control-card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-tools-section > .settings-control-grid > .settings-control-card:has(> .settings-toggle + p) {
-  min-height: 32px;
-  padding: 3px 6px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-tools-section > .settings-control-grid > .settings-control-card > .settings-toggle {
-  min-height: 28px;
-  padding: 0;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-tools-section > .settings-control-grid > .settings-control-card:hover {
-  background: rgba(255, 253, 249, 0.18);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page:is([data-section='tools'], [data-section='window']) label:is(.settings-tools-field, .settings-window-field) {
-  display: grid;
-  grid-template-columns: minmax(84px, 0.38fr) minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 4px 6px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page:is([data-section='tools'], [data-section='window']) label:is(.settings-tools-field, .settings-window-field) > span {
-  min-width: 0;
-  overflow: hidden;
-  color: rgba(36, 27, 22, 0.76);
-  font-weight: 620;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page:is([data-section='tools'], [data-section='window']) label:is(.settings-tools-field, .settings-window-field) > select {
-  width: 100%;
-  min-width: 0;
-  min-height: 30px;
-  height: 30px;
-  padding: 0 18px 0 0;
-  border-color: transparent;
-  border-radius: 7px;
-  background: transparent;
-  color: rgba(78, 64, 54, 0.68);
-  text-align: right;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page:is([data-section='tools'], [data-section='window']) label:is(.settings-tools-field, .settings-window-field):has(> select):hover > select,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page:is([data-section='tools'], [data-section='window']) label:is(.settings-tools-field, .settings-window-field):has(> select):focus-within > select {
-  background: rgba(255, 253, 249, 0.24);
-  color: rgba(36, 27, 22, 0.84);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page:is([data-section='tools'], [data-section='window']) label:is(.settings-tools-field, .settings-window-field) > input:not([type='checkbox']):not([type='range']) {
-  min-height: 30px;
-  height: 30px;
-  border-radius: 7px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page:is([data-section='tools'], [data-section='window']) .settings-mini-group__note {
-  display: -webkit-box;
-  overflow: hidden;
-  color: rgba(78, 64, 54, 0.5);
-  line-height: 1.38;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-/* Tools permissions use disabled fields as readable status, not empty form holes. */
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-mini-group {
-  grid-template-columns: 1fr;
-  gap: 3px;
-  align-content: start;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-mini-group__head:not(summary) {
-  min-height: 30px;
-  padding: 2px 2px 1px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-mini-group__head span,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-tools-note {
-  color: rgba(78, 64, 54, 0.58);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-tools-note {
-  margin: 0;
-  padding: 0 6px 4px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] label.settings-tools-field {
-  grid-template-columns: minmax(88px, 0.36fr) minmax(0, 1fr);
-  min-height: 34px;
-  padding: 4px 6px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] label.settings-tools-field > :is(input, select, .settings-url-input) {
-  min-height: 30px;
-  height: 30px;
-  padding: 0 8px;
-  border: 1px solid rgba(75, 62, 49, 0.055);
-  border-radius: 8px;
-  background: rgba(255, 253, 249, 0.2);
-  color: rgba(36, 27, 22, 0.78);
-  text-align: right;
-  opacity: 1;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-tools-section .settings-mini-group > label.settings-tools-field > :is(input, select, .settings-url-input):not([type='checkbox']):not([type='range']) {
-  min-height: 30px;
-  height: 30px;
-  padding: 0 8px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] label.settings-tools-field > select {
-  padding-right: 22px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] label.settings-tools-field > :is(input, select, .settings-url-input):disabled {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-  color: rgba(78, 64, 54, 0.58);
-  -webkit-text-fill-color: rgba(78, 64, 54, 0.58);
-  opacity: 1;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-tools-section .settings-mini-group > label.settings-tools-field > :is(input, select, .settings-url-input):disabled {
-  color: rgba(78, 64, 54, 0.58);
-  -webkit-text-fill-color: rgba(78, 64, 54, 0.58);
-  opacity: 1;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] label.settings-tools-field > :is(input, .settings-url-input)::placeholder {
-  color: rgba(78, 64, 54, 0.46);
-  -webkit-text-fill-color: rgba(78, 64, 54, 0.46);
-  opacity: 1;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-tools-control {
-  align-items: center;
-  min-height: 34px;
-  padding: 0 6px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-tools-section > .settings-mini-group:has(> .settings-tools-control) > .settings-tools-control {
-  padding: 0 6px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='tools'] .settings-tools-control > .settings-toggle {
-  min-height: 30px;
-  padding: 0;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-section > .settings-console-grid {
-  grid-template-columns: 1fr;
-  gap: 0;
-  border-top: 1px solid var(--settings-chat-parity-line);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-section > .settings-console-grid > .settings-console-card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-section > .settings-console-grid > .settings-console-card--primary {
-  min-height: 54px;
-  gap: 2px;
-  padding: 6px 6px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-section > .settings-console-grid > .settings-console-card:hover {
-  background: rgba(255, 253, 249, 0.18);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-card__header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(56px, auto);
-  min-height: 18px;
-  gap: 6px;
-  align-items: center;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-badge,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-summary-chip {
-  justify-content: flex-start;
-  min-height: 18px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: rgba(78, 64, 54, 0.58);
-  font-size: 10px;
-  font-weight: 620;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-summary-chip,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-card__header > .settings-console-card__meta {
-  justify-self: end;
-  text-align: right;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-card__headline {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(72px, auto);
-  gap: 6px;
-  align-items: baseline;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-card__headline strong {
-  overflow: hidden;
-  color: rgba(36, 27, 22, 0.86);
-  font-size: var(--settings-control-font-size);
-  font-weight: 680;
-  line-height: 1.24;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-card__headline span,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-card p,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-card__meta {
-  color: rgba(78, 64, 54, 0.56);
-  font-size: 11px;
-  line-height: 1.3;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-card p {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-card__meta {
-  gap: 6px;
-  min-height: 0;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-sections {
-  gap: 0;
-  margin-top: 6px;
-  border-top: 1px solid var(--settings-chat-parity-line);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] details.settings-console-section {
-  padding: 0;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] details.settings-console-section[open] {
-  padding-bottom: 6px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] details.settings-console-section > summary.settings-console-section__header {
-  grid-template-columns: minmax(0, 1fr) minmax(36px, auto) 14px;
-  gap: 6px;
-  min-height: 44px;
-  height: auto;
-  padding: 6px 2px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] details.settings-console-section[open] > summary.settings-console-section__header {
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] details.settings-console-section > summary.settings-console-section__header > div {
-  gap: 2px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] details.settings-console-section > summary.settings-console-section__header h5 {
-  color: rgba(36, 27, 22, 0.78);
-  font-weight: 640;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] details.settings-console-section > summary.settings-console-section__header p {
-  color: rgba(78, 64, 54, 0.54);
-  line-height: 1.32;
-  -webkit-line-clamp: 2;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] details.settings-console-section > summary.settings-console-section__header .settings-console-section__meta {
-  min-width: 34px;
-  min-height: 24px;
-  padding: 0 7px;
-  border-color: rgba(75, 62, 49, 0.07);
-  border-radius: 7px;
-  background: rgba(255, 253, 249, 0.16);
-  color: rgba(78, 64, 54, 0.62);
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] details.settings-console-section > summary.settings-console-section__header::after {
-  width: 14px;
-  color: rgba(78, 64, 54, 0.48);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] details.settings-console-section[open] > summary.settings-console-section__header + * {
-  margin-top: 6px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] details.settings-console-section[open] > :not(summary) {
-  margin-right: 2px;
-  margin-left: 2px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-sections > section.settings-console-section {
-  gap: 0;
-  padding: 0 0 6px;
-  overflow: hidden;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-sections > section.settings-console-section > .settings-console-section__header {
-  grid-template-columns: minmax(0, 1fr) minmax(36px, auto);
-  min-height: 44px;
-  padding: 6px 2px;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  background: transparent;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-sections > section.settings-console-section > .settings-console-section__header h5 {
-  color: rgba(36, 27, 22, 0.78);
-  font-weight: 640;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-sections > section.settings-console-section > .settings-console-section__header p {
-  display: -webkit-box;
-  overflow: hidden;
-  color: rgba(78, 64, 54, 0.54);
-  line-height: 1.32;
-  white-space: normal;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-sections > section.settings-console-section > .settings-console-section__header .settings-console-section__meta {
-  min-width: 34px;
-  min-height: 24px;
-  padding: 0 7px;
-  border-color: rgba(75, 62, 49, 0.07);
-  border-radius: 7px;
-  background: rgba(255, 253, 249, 0.16);
-  color: rgba(78, 64, 54, 0.62);
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-sections > section.settings-console-section .settings-console-grid--spaced {
-  gap: 0;
-  margin: 0;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-sections > section.settings-console-section .settings-console-card {
-  min-height: 44px;
-  gap: 2px;
-  padding: 6px 2px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-sections > section.settings-console-section .settings-console-card:last-child {
-  border-bottom: 0;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-sections > section.settings-console-section .settings-console-card__headline strong {
-  color: rgba(36, 27, 22, 0.86);
-  font-size: var(--settings-control-font-size);
-  font-weight: 680;
-  line-height: 1.24;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-sections > section.settings-console-section .settings-console-card p,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-sections > section.settings-console-section .settings-console-card__meta {
-  color: rgba(78, 64, 54, 0.56);
-  font-size: 11px;
-  line-height: 1.34;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='console'] .settings-console-sections > section.settings-console-section > .settings-console-list {
-  margin: 0 2px 6px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-section {
-  gap: 6px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-group {
-  gap: 5px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-summary-grid {
-  grid-template-columns: 1fr;
-  gap: 0;
-  border-top: 1px solid var(--settings-chat-parity-line);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-summary-grid .settings-metric-card,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-summary-grid .settings-metric-card:hover {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(52px, auto);
-  align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  padding: 4px 2px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-summary-grid .settings-metric-card:hover {
-  background: rgba(255, 253, 249, 0.18);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-summary-grid .settings-metric-card > span {
-  overflow: hidden;
-  color: rgba(36, 27, 22, 0.76);
-  font-size: var(--settings-control-font-size);
-  font-weight: 620;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-summary-grid .settings-metric-card > strong {
-  justify-self: end;
-  min-width: 52px;
-  color: rgba(78, 64, 54, 0.6);
-  font-size: var(--settings-control-font-size);
-  font-weight: 650;
-  line-height: 1.2;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-note {
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 0;
-  padding: 0 2px 1px;
-  color: rgba(78, 64, 54, 0.5);
-  line-height: 1.36;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-actions {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-actions > button {
-  min-width: 0;
-  min-height: 30px;
-  padding: 0 8px;
-  overflow: hidden;
-  border-color: rgba(75, 62, 49, 0.07);
-  border-radius: 8px;
-  background: rgba(255, 253, 249, 0.16);
-  color: rgba(36, 27, 22, 0.76);
-  font-size: var(--settings-control-font-size);
-  font-weight: 580;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-actions > button:hover:not(:disabled) {
-  border-color: var(--settings-chat-parity-line-strong);
-  background: rgba(255, 253, 249, 0.24);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-actions .settings-history-clear-button {
-  grid-column: 1 / -1;
-  border-color: rgba(185, 92, 60, 0.1);
-  background: rgba(185, 92, 60, 0.055);
-  color: rgba(128, 62, 42, 0.82);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-actions .settings-history-clear-button:hover:not(:disabled) {
-  border-color: rgba(185, 92, 60, 0.14);
-  background: rgba(185, 92, 60, 0.08);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='history'] .settings-history-empty {
-  min-height: 32px;
-  padding: 8px 2px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='letters'] .settings-letter-section {
-  gap: 6px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='letters'] .settings-letter-group {
-  gap: 5px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='letters'] .settings-letter-empty {
-  display: grid;
-  align-content: center;
-  gap: 3px;
-  min-height: 50px;
-  padding: 8px 2px 9px;
-  border: 0;
-  border-top: 1px solid var(--settings-chat-parity-line);
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  text-align: left;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='letters'] .settings-letter-empty strong {
-  overflow: hidden;
-  color: rgba(36, 27, 22, 0.76);
-  font-size: var(--settings-control-font-size);
-  font-weight: 620;
-  line-height: 1.32;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='letters'] .settings-letter-empty__label {
-  display: -webkit-box;
-  overflow: hidden;
-  max-width: none;
-  color: rgba(78, 64, 54, 0.52);
-  font-size: var(--settings-meta-font-size);
-  font-weight: 500;
-  line-height: 1.34;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-section {
-  gap: 6px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-section__head {
-  gap: 5px;
-  padding: 0 2px 6px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-section__actions {
-  grid-template-columns: minmax(0, 1fr) minmax(104px, auto);
-  gap: 6px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-section__actions span,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-section__actions .ghost-button {
-  min-height: 30px;
-  height: 30px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-list {
-  gap: 0;
-  border-top: 1px solid var(--settings-chat-parity-line);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-item {
-  gap: 6px;
-  padding: 0 0 8px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-item__toolbar {
-  grid-template-columns: minmax(0, 1fr) minmax(128px, 0.52fr) 30px;
-  grid-template-areas:
-    "label label label"
-    "enabled priority delete";
-  gap: 6px;
-  align-items: center;
-  padding: 0 0 2px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-title-field,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-keywords-field {
-  display: grid;
-  grid-template-columns: minmax(72px, 0.3fr) minmax(0, 1fr);
-  align-items: center;
-  min-height: 36px;
-  gap: 8px;
-  padding: 4px 2px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-title-field {
-  grid-area: label;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-field > span,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-priority > span {
-  min-width: 0;
-  overflow: hidden;
-  color: rgba(36, 27, 22, 0.76);
-  font-size: var(--settings-control-font-size);
-  font-weight: 620;
-  line-height: 1.3;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-title-field > input,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-keywords-field > input {
-  min-width: 0;
-  min-height: 30px;
-  height: 30px;
-  padding: 0 9px;
-  border-color: rgba(75, 62, 49, 0.055);
-  border-radius: 8px;
-  background: rgba(255, 253, 249, 0.2);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-check {
-  grid-area: enabled;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px;
-  align-items: center;
-  gap: 4px;
-  min-height: 30px;
-  height: 30px;
-  padding: 0 6px;
-  border-color: rgba(75, 62, 49, 0.07);
-  border-radius: 8px;
-  background: rgba(255, 253, 249, 0.16);
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-priority {
-  grid-area: priority;
-  grid-template-columns: minmax(70px, 1fr) 50px;
-  min-width: 0;
-  min-height: 30px;
-  height: 30px;
-  gap: 0;
-  padding: 0 0 0 6px;
-  border-color: rgba(75, 62, 49, 0.07);
-  border-radius: 8px;
-  background: rgba(255, 253, 249, 0.16);
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-priority > input:not([type='checkbox']):not([type='range']) {
-  min-width: 0;
-  min-height: 30px;
-  height: 30px;
-  width: 50px;
-  padding: 0 6px;
-  border-color: transparent;
-  border-left: 1px solid rgba(75, 62, 49, 0.07);
-  border-radius: 0 8px 8px 0;
-  background: transparent;
-  text-align: center;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-item__delete {
-  grid-area: delete;
-  width: 30px;
-  min-width: 30px;
-  min-height: 30px;
-  height: 30px;
-  border-color: rgba(185, 92, 60, 0.1);
-  border-radius: 8px;
-  background: rgba(185, 92, 60, 0.055);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-content-field {
-  gap: 5px;
-  padding: 2px 2px 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-content-field > textarea {
-  min-height: 76px;
-  height: 76px;
-  padding: 7px 8px;
-  border-color: rgba(75, 62, 49, 0.055);
-  border-radius: 8px;
-  background: rgba(255, 253, 249, 0.2);
-  line-height: 1.38;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='lorebooks'] .settings-lorebook-empty {
-  min-height: 32px;
-  padding: 8px 2px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='autonomy'] .settings-autonomy-group {
-  gap: 6px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='autonomy'] .settings-autonomy-note {
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 0;
-  padding: 0 2px 2px;
-  color: rgba(78, 64, 54, 0.5);
-  line-height: 1.38;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='autonomy'] .settings-drawer__card {
-  gap: 6px;
-  padding: 0 0 8px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='autonomy'] .settings-drawer__card > .settings-section__title-row {
-  min-height: auto;
-  padding: 0 2px 3px;
-  border: 0;
-  background: transparent;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='autonomy'] .settings-drawer__card > .settings-section__title-row > div {
-  min-width: 0;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='autonomy'] .settings-drawer__card .settings-drawer__hint {
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 1px 0 0;
-  line-height: 1.36;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='autonomy'] .settings-drawer__card .settings-page__meta {
-  align-self: start;
-  min-height: auto;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: rgba(78, 64, 54, 0.5);
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='autonomy'] .settings-drawer__card .settings-page__meta > span {
-  min-height: auto;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='autonomy'] .settings-drawer__card > .settings-toggle {
-  min-height: 30px;
-  padding: 0 2px;
-  border: 0;
-  border-top: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-group {
-  gap: 5px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-note {
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 0;
-  padding: 0 2px;
-  color: rgba(78, 64, 54, 0.46);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-height: 1.38;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) > label > input,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-group > .settings-memory-field > .settings-form-row > input:not([type='checkbox']):not([type='radio']):not([type='range']),
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-recall-grid input:not([type='checkbox']):not([type='range']) {
-  min-height: 30px;
-  height: 30px;
-  line-height: 30px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-group > label.settings-memory-field > select {
-  min-height: 32px;
-  height: 32px;
-  line-height: 30px;
-  padding: 0 34px 0 8px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-transparency {
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-transparency__grid {
-  grid-template-columns: 1fr;
-  gap: 0;
-  border-top: 1px solid var(--settings-chat-parity-line);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-control-card.settings-memory-transparency__card:not(.settings-metric-card):not(.settings-updater-panel) {
-  grid-template-columns: minmax(72px, 0.28fr) minmax(0, 1fr);
-  align-items: center;
-  min-height: 36px;
-  gap: 6px;
-  padding: 5px 2px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-transparency__card strong {
-  color: rgba(36, 27, 22, 0.82);
-  font-size: var(--settings-control-font-size);
-  font-weight: 660;
-  line-height: 1.25;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-transparency__card span {
-  display: -webkit-box;
-  overflow: hidden;
-  color: rgba(78, 64, 54, 0.58);
-  font-size: var(--settings-meta-font-size);
-  line-height: 1.3;
-  text-overflow: ellipsis;
-  white-space: normal;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-status-grid {
-  gap: 0;
-  border-top: 1px solid var(--settings-chat-parity-line);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-status {
-  grid-template-rows: auto auto;
-  min-height: 40px;
-  gap: 2px;
-  padding: 5px 2px 6px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-control-card.settings-memory-context-status {
-  min-height: 44px;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  background: transparent;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-control-card.settings-memory-context-status:not(.settings-metric-card):not(.settings-updater-panel) {
-  min-height: 44px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-status__head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(42px, auto);
-  align-items: center;
-  gap: 6px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-status__head strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-status__head span {
-  display: inline-grid;
-  place-items: center;
-  min-width: 42px;
-  height: 18px;
-  padding: 0 6px;
-  border-color: rgba(78, 64, 54, 0.1);
-  background: rgba(255, 253, 249, 0.26);
-  color: rgba(78, 64, 54, 0.58);
-  font-size: var(--settings-meta-font-size);
-  line-height: 18px;
-  text-align: center;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-status p {
-  display: -webkit-box;
-  overflow: hidden;
-  color: rgba(78, 64, 54, 0.56);
-  line-height: 1.34;
-  white-space: normal;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-status.is-active .settings-memory-context-status__head span {
-  border-color: rgba(82, 136, 118, 0.16);
-  background: rgba(82, 136, 118, 0.08);
-  color: rgba(54, 104, 88, 0.86);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-status.is-unavailable {
-  opacity: 1;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-transparency {
-  gap: 4px;
-  padding: 5px 2px 6px;
-  border: 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-  border-radius: 0;
-  background: transparent;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-transparency__rows {
-  gap: 0;
-  border-top: 1px solid var(--settings-chat-parity-line);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-transparency__row {
-  display: grid;
-  grid-template-columns: minmax(80px, 0.33fr) minmax(0, 1fr);
-  align-items: start;
-  gap: 8px;
-  min-height: 30px;
-  padding: 4px 0;
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-transparency__row:last-child {
-  border-bottom: 0;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-transparency__row strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-transparency__row p {
-  display: -webkit-box;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: normal;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-context-actions .ghost-button,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .settings-memory-archive-actions .ghost-button,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section='memory'] .memory-card__actions .ghost-button {
-  min-height: 30px;
-  height: 30px;
-}
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions {
+.sd-light.sd-home .sda,
+.sd-light.sd-section .sda {
   display: flex;
   justify-content: flex-end;
   min-height: 31px;
@@ -2185,18 +628,18 @@
   box-shadow: none;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .ghost-button,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .primary-button,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .ghost-button,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .primary-button,
-html[data-theme='warm-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .ghost-button,
-html[data-theme='system-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .ghost-button,
-html[data-theme='warm-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .ghost-button,
-html[data-theme='system-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .ghost-button,
-html[data-theme='warm-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .primary-button,
-html[data-theme='system-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .primary-button,
-html[data-theme='warm-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .primary-button,
-html[data-theme='system-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .primary-button {
+.sd-light.sd-home .sda .ghost-button,
+.sd-light.sd-home .sda .primary-button,
+.sd-light.sd-section .sda .ghost-button,
+.sd-light.sd-section .sda .primary-button,
+html[data-theme='warm-day'] .sd-light.sd-home .sda .ghost-button,
+html[data-theme='system-day'] .sd-light.sd-home .sda .ghost-button,
+html[data-theme='warm-day'] .sd-light.sd-section .sda .ghost-button,
+html[data-theme='system-day'] .sd-light.sd-section .sda .ghost-button,
+html[data-theme='warm-day'] .sd-light.sd-home .sda .primary-button,
+html[data-theme='system-day'] .sd-light.sd-home .sda .primary-button,
+html[data-theme='warm-day'] .sd-light.sd-section .sda .primary-button,
+html[data-theme='system-day'] .sd-light.sd-section .sda .primary-button {
   width: auto;
   min-height: 30px;
   min-width: 54px;
@@ -2214,61 +657,34 @@ html[data-theme='system-day'] .settings-drawer:is(.settings-drawer--warm-day, .s
   transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-updater-panel__actions .ghost-button,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-page[data-section] .settings-updater-panel__actions .primary-button {
+.sd-light-section .settings-updater-panel__actions .ghost-button,
+.sd-light-section .settings-updater-panel__actions .primary-button {
   min-height: 30px;
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .primary-button,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .primary-button,
-html[data-theme='warm-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .primary-button,
-html[data-theme='system-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .primary-button,
-html[data-theme='warm-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .primary-button,
-html[data-theme='system-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .primary-button {
+.sd-light.sd-home .sda .primary-button,
+.sd-light.sd-section .sda .primary-button,
+html[data-theme='warm-day'] .sd-light.sd-home .sda .primary-button,
+html[data-theme='system-day'] .sd-light.sd-home .sda .primary-button,
+html[data-theme='warm-day'] .sd-light.sd-section .sda .primary-button,
+html[data-theme='system-day'] .sd-light.sd-section .sda .primary-button {
   min-width: 112px;
   border-color: rgba(185, 92, 60, 0.1);
   background: var(--settings-chat-parity-command);
   color: rgba(128, 62, 42, 0.8);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .ghost-button:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .primary-button:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .ghost-button:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .primary-button:hover {
+.sd-light.sd-home .sda .ghost-button:hover,
+.sd-light.sd-home .sda .primary-button:hover,
+.sd-light.sd-section .sda .ghost-button:hover,
+.sd-light.sd-section .sda .primary-button:hover {
   border-color: var(--settings-chat-parity-line-strong);
   background: rgba(75, 62, 49, 0.045);
 }
 
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .primary-button:hover,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .primary-button:hover {
+.sd-light.sd-home .sda .primary-button:hover,
+.sd-light.sd-section .sda .primary-button:hover {
   border-color: rgba(185, 92, 60, 0.14);
   background: var(--settings-chat-parity-command-hover);
   color: rgba(128, 62, 42, 0.9);
 }
-
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .ghost-button:focus-visible,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .ghost-button:focus-visible,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .primary-button:focus-visible,
-.settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .primary-button:focus-visible,
-html[data-theme='warm-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .ghost-button:focus-visible,
-html[data-theme='system-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .ghost-button:focus-visible,
-html[data-theme='warm-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .ghost-button:focus-visible,
-html[data-theme='system-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .ghost-button:focus-visible,
-html[data-theme='warm-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .primary-button:focus-visible,
-html[data-theme='system-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--home .settings-drawer__actions .primary-button:focus-visible,
-html[data-theme='warm-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .primary-button:focus-visible,
-html[data-theme='system-day'] .settings-drawer:is(.settings-drawer--warm-day, .settings-drawer--day).settings-drawer--section .settings-drawer__actions .primary-button:focus-visible {
-  outline: none;
-  border-color: rgba(185, 92, 60, 0.28);
-  box-shadow: 0 0 0 2px rgba(185, 92, 60, 0.18);
-}
-
-/* Audit contract anchors: keep canonical size references for static contract matching while compact runtime overrides apply elsewhere. */
-.settings-chat-final-audit-anchor {
-  min-height: 48px;
-}
-
-/* Audit contract references:
-  min-height: 42px;
-  min-height: 58px;
-*/

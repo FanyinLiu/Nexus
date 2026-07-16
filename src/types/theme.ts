@@ -5,6 +5,7 @@ export type ThemeId =
   | 'soft'
   | 'high-contrast'
   | 'editorial'
+  | 'system-black'
   | 'system-dark'
 
 export interface ThemeTokens {

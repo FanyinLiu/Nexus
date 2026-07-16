@@ -72,6 +72,10 @@ export type UseAutonomyControllerOptions = {
   setGoals: React.Dispatch<React.SetStateAction<Goal[]>>
   /** Shared busy ref — when true, a chat LLM call is in progress. */
   busyRef?: React.RefObject<boolean>
+  /** Stable renderer owner for background timers, bridges, and watchers. */
+  runtimeOwner?: boolean
+  /** Additional lifecycle switch for isolated harnesses and future callers. */
+  active?: boolean
   chat: ChatBridge
   debugConsole: DebugConsoleBridge
   /**
@@ -101,6 +105,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     debugConsole,
     assistantReplyDeliveredRef,
   } = opts
+  const backgroundRuntimeEnabled = opts.runtimeOwner !== false && opts.active !== false
   const { t } = useTranslation()
   // Bridges need a concrete busy ref; fall back to a never-busy one when the
   // caller doesn't provide it (tests / storybook-style harnesses).
@@ -108,7 +113,9 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   const bridgeBusyRef = busyRef ?? fallbackBusyRef
   const focusAwareness = useFocusAwareness({
     settingsRef,
-    enabled: settings.autonomyEnabled && settings.autonomyFocusAwarenessEnabled,
+    enabled: backgroundRuntimeEnabled
+      && settings.autonomyEnabled
+      && settings.autonomyFocusAwarenessEnabled,
   })
 
   const emotionState = useEmotionState()
@@ -132,8 +139,10 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     pushCompanionNotice: chat.pushCompanionNotice,
     triggerIdleGesture: opts.triggerIdleGesture,
     onDebugEvent: debugConsole.appendDebugConsoleEvent,
+    enabled: backgroundRuntimeEnabled,
   })
   const handleAutonomyTick = useCallback((tickState: AutonomyTickState) => {
+    if (!backgroundRuntimeEnabled) return
     const currentSettings = settingsRef.current
     if (!currentSettings.autonomyEnabled || currentSettings.autonomyLevelV2 === 'off') return
 
@@ -155,14 +164,14 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     }
     void evaluateTriggersRef.current()
     void v2Engine.considerTick(tickState)
-  }, [emotionState, platformProfile, relationshipState, rhythmState, settingsRef, v2Engine])
+  }, [backgroundRuntimeEnabled, emotionState, platformProfile, relationshipState, rhythmState, settingsRef, v2Engine])
 
   const autonomyTick = useAutonomyTick({
     settingsRef,
     focusStateRef: focusAwareness.focusStateRef,
     idleSecondsRef: focusAwareness.idleSecondsRef,
     onTick: handleAutonomyTick,
-    enabled: settings.autonomyEnabled,
+    enabled: backgroundRuntimeEnabled && settings.autonomyEnabled,
     tickIntervalSeconds: settings.autonomyTickIntervalSeconds,
   })
 
@@ -175,6 +184,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     exitDreaming: autonomyTick.exitDreaming,
     busyRef,
     appendDebugConsoleEvent: debugConsole.appendDebugConsoleEvent,
+    enabled: backgroundRuntimeEnabled,
   })
 
   useEffect(() => {
@@ -213,6 +223,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     focusStateRef: focusAwareness.focusStateRef,
     idleSecondsRef: focusAwareness.idleSecondsRef,
     onAction: handleContextAction,
+    enabled: backgroundRuntimeEnabled,
   })
 
   useEffect(() => {
@@ -317,6 +328,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   const notificationBridge = useNotificationBridge({
     onNotification: handleNotification,
     enabled: isNotificationBridgeEnabled(settings),
+    runtimeOwner: backgroundRuntimeEnabled,
   })
 
   // Keep the in-app macOS Notification Center watcher in sync with settings.
@@ -326,11 +338,12 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   const macWatcherEnabled = isNotificationBridgeEnabled(settings) && settings.macosMessageWatcherEnabled
   const macWatcherApps = settings.macosMessageWatcherApps
   useEffect(() => {
+    if (!backgroundRuntimeEnabled) return
     void window.desktopPet?.notificationWatcherSet?.({
       enabled: macWatcherEnabled,
       appsPattern: macWatcherApps,
     })
-  }, [macWatcherEnabled, macWatcherApps])
+  }, [backgroundRuntimeEnabled, macWatcherEnabled, macWatcherApps])
 
   const {
     gateway: telegramGateway,
@@ -339,6 +352,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   } = useTelegramBridge({
     settingsRef,
     enabled: settings.telegramIntegrationEnabled,
+    runtimeOwner: backgroundRuntimeEnabled,
     botToken: settings.telegramBotToken,
     allowedChatIds: settings.telegramAllowedChatIds,
     chat,
@@ -353,6 +367,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   } = useDiscordBridge({
     settingsRef,
     enabled: settings.discordIntegrationEnabled,
+    runtimeOwner: backgroundRuntimeEnabled,
     botToken: settings.discordBotToken,
     allowedChannelIds: settings.discordAllowedChannelIds,
     chat,
@@ -364,12 +379,16 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   // turn came from a bridge goes back out through that same bridge.
   useEffect(() => {
     if (!assistantReplyDeliveredRef) return
+    if (!backgroundRuntimeEnabled) {
+      assistantReplyDeliveredRef.current = null
+      return
+    }
     assistantReplyDeliveredRef.current = (payload) => {
       if (payload.source === 'telegram') void deliverTelegramReply(payload)
       else if (payload.source === 'discord') void deliverDiscordReply(payload)
     }
     return () => { assistantReplyDeliveredRef.current = null }
-  }, [assistantReplyDeliveredRef, deliverDiscordReply, deliverTelegramReply])
+  }, [assistantReplyDeliveredRef, backgroundRuntimeEnabled, deliverDiscordReply, deliverTelegramReply])
 
   /** Mark daily interaction — grants relationship score bonus and records rhythm. */
   const markInteraction = useCallback(() => {

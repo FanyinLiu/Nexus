@@ -7,7 +7,7 @@ import {
   type SetStateAction,
 } from 'react'
 import { parseNumberInput } from '../settingsDrawerSupport'
-import { TextField, ToggleField } from '../settingsFields'
+import { SettingsToggle, TextField, ToggleField } from '../settingsFields'
 import { getRovingNextIndex } from '../choiceRadioNav'
 import {
   getInspectableIntegrationModules,
@@ -433,14 +433,11 @@ export const IntegrationsSection = memo(function IntegrationsSection({
           </div>
         </div>
 
-        <label className="settings-toggle">
-          <span>{ti('settings.integrations.mcp.server_enabled')}</span>
-          <input
-            type="checkbox"
-            checked={server.enabled}
-            onChange={(event) => updateMcpServer(server.id, { enabled: event.target.checked })}
-          />
-        </label>
+        <SettingsToggle
+          label={ti('settings.integrations.mcp.server_enabled')}
+          checked={server.enabled}
+          onChange={(enabled) => updateMcpServer(server.id, { enabled })}
+        />
 
         <label>
           <span>{ti('settings.integrations.mcp.server_label')}</span>
@@ -492,7 +489,11 @@ export const IntegrationsSection = memo(function IntegrationsSection({
             </div>
             <div className="settings-page__meta">
               <span>{ti('settings.integrations.mcp.server_count', { count: String(draft.mcpServers.length) })}</span>
-              <span>{ti('settings.integrations.structure_aligned')}</span>
+              <span>
+                {draft.mcpServers.length > 0
+                  ? ti('settings.integrations.status.configured')
+                  : ti('settings.integrations.status.setup')}
+              </span>
             </div>
           </div>
 
@@ -541,21 +542,17 @@ export const IntegrationsSection = memo(function IntegrationsSection({
             </div>
           </div>
 
-          <label className="settings-toggle">
-            <span>{ti('settings.integrations.enable_game', { name: title })}</span>
-            <input
-              type="checkbox"
-              checked={enabled}
-              onChange={(event) => {
-                const nextValue = event.target.checked
-                setDraft((prev) => (
-                  isMinecraft
-                    ? { ...prev, minecraftIntegrationEnabled: nextValue }
-                    : { ...prev, factorioIntegrationEnabled: nextValue }
-                ))
-              }}
-            />
-          </label>
+          <SettingsToggle
+            label={ti('settings.integrations.enable_game', { name: title })}
+            checked={enabled}
+            onChange={(nextValue) => {
+              setDraft((prev) => (
+                isMinecraft
+                  ? { ...prev, minecraftIntegrationEnabled: nextValue }
+                  : { ...prev, factorioIntegrationEnabled: nextValue }
+              ))
+            }}
+          />
 
           <div className="settings-grid settings-grid--two">
             <label>

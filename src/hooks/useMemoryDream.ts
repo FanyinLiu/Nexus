@@ -37,10 +37,25 @@ import {
   AUTONOMY_DREAM_LOG_STORAGE_KEY,
   MEMORY_STORAGE_KEY,
   normalizeMemoryItemsForStorage,
+  onStorageChange,
   readJson,
   writeJson,
 } from '../lib/storage'
+import {
+  mutateDreamLogAtomically,
+  parseDreamLogSnapshot,
+  readDreamLogAtomically,
+  type DreamLogMutation,
+} from '../features/autonomy/dreamLogState.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import {
+  acquireBackgroundChatLease,
+  classifyBackgroundChatFailure,
+  getBackgroundChatGate,
+  recordBackgroundChatFailure,
+  recordBackgroundChatSuccess,
+  releaseBackgroundChatLease,
+} from '../features/autonomy/backgroundChatPolicy.ts'
 import type {
   AppSettings,
   DailyMemoryStore,
@@ -58,6 +73,8 @@ export type UseMemoryDreamOptions = {
   exitDreaming: () => void
   /** Shared busy ref — when true, another LLM call (e.g. chat) is in progress. */
   busyRef?: React.RefObject<boolean>
+  /** Only the background runtime owner may start Dream or call an LLM. */
+  enabled?: boolean
   appendDebugConsoleEvent: (event: { source: 'autonomy'; title: string; detail: string }) => void
 }
 
@@ -70,63 +87,156 @@ export function useMemoryDream({
   exitDreaming,
   busyRef,
   appendDebugConsoleEvent,
+  enabled = true,
 }: UseMemoryDreamOptions) {
-  const [dreamLog, setDreamLog] = useState<MemoryDreamLog>(
-    () => readJson(AUTONOMY_DREAM_LOG_STORAGE_KEY, createInitialDreamLog()),
-  )
+  const [dreamLog, setDreamLog] = useState<MemoryDreamLog>(() => {
+    const stored = readJson<unknown>(AUTONOMY_DREAM_LOG_STORAGE_KEY, createInitialDreamLog())
+    return parseDreamLogSnapshot(stored) ?? createInitialDreamLog()
+  })
   const dreamLogRef = useRef(dreamLog)
   const dreamRunningRef = useRef(false)
+  const dreamStartPendingRef = useRef(false)
+
+  const applyDreamLog = useCallback((next: MemoryDreamLog) => {
+    dreamLogRef.current = next
+    setDreamLog(next)
+  }, [])
 
   useEffect(() => {
     dreamLogRef.current = dreamLog
-    writeJson(AUTONOMY_DREAM_LOG_STORAGE_KEY, dreamLog)
   }, [dreamLog])
 
+  const readLatestDreamLog = useCallback(() => readDreamLogAtomically(
+    () => parseDreamLogSnapshot(
+      readJson<unknown>(AUTONOMY_DREAM_LOG_STORAGE_KEY, dreamLogRef.current),
+    ) ?? dreamLogRef.current,
+    applyDreamLog,
+  ), [applyDreamLog])
+
+  const mutateDreamLog = useCallback((mutate: DreamLogMutation) =>
+    mutateDreamLogAtomically(
+      () => parseDreamLogSnapshot(
+        readJson<unknown>(AUTONOMY_DREAM_LOG_STORAGE_KEY, dreamLogRef.current),
+      ) ?? dreamLogRef.current,
+      mutate,
+      (next) => writeJson(AUTONOMY_DREAM_LOG_STORAGE_KEY, next),
+      applyDreamLog,
+    ), [applyDreamLog])
+
+  useEffect(() => onStorageChange(
+    AUTONOMY_DREAM_LOG_STORAGE_KEY,
+    () => {
+      // Storage events can arrive out of order. Re-read the shared store while
+      // holding the same mutation lock, but never write here.
+      void readLatestDreamLog().catch(() => undefined)
+    },
+  ), [readLatestDreamLog])
+
   const runDream = useCallback(async () => {
+    if (!enabled) return
     if (dreamRunningRef.current) return
-    if (busyRef?.current) return
-    const settings = settingsRef.current
-    if (settings.memoryPaused) return
-    if (!settings.autonomyEnabled || !settings.autonomyDreamEnabled) return
-    if (!shouldRunDream(dreamLogRef.current, settings)) return
-
-    dreamRunningRef.current = true
-    enterDreaming()
-
-    const startedAt = new Date().toISOString()
-    // Flatten DailyMemoryStore into a flat array of DailyMemoryEntry
-    const dailyEntries = Object.values(dailyMemoriesRef.current).flat()
-
-    appendDebugConsoleEvent({
-      source: 'autonomy',
-      title: 'Starting memory consolidation (Dream)',
-      detail: `diary entries: ${dailyEntries.length}, existing memories: ${memoriesRef.current.length}`,
-    })
-
+    if (dreamStartPendingRef.current) return
+    dreamStartPendingRef.current = true
     try {
+      if (busyRef?.current) return
+      const settings = settingsRef.current
+      if (settings.memoryPaused) return
+      if (!settings.autonomyEnabled || !settings.autonomyDreamEnabled) return
+
+      // A user chat may have updated this log in the other renderer. Read the
+      // latest snapshot under the Dream-log lock before the run gate.
+      const latestDreamLog = await readLatestDreamLog()
+      if (!shouldRunDream(latestDreamLog, settings)) return
+      const startedSessionsSinceDream = latestDreamLog.sessionsSinceDream
+
+      const policyInput = {
+        providerId: settings.apiProviderId,
+        baseUrl: settings.apiBaseUrl,
+        model: settings.model,
+        apiKey: settings.apiKey,
+      }
+      const initialGate = getBackgroundChatGate(policyInput)
+      if (!initialGate.allowed) {
+        if (initialGate.shouldNotify) {
+          appendDebugConsoleEvent({
+            source: 'autonomy',
+            title: 'Background Dream skipped',
+            detail: `background:dream blocked: ${initialGate.reason}`,
+          })
+        }
+        return
+      }
+
+      const lease = acquireBackgroundChatLease()
+      if (!lease) return
+      dreamRunningRef.current = true
+
+      try {
+      enterDreaming()
+      const startedAt = new Date().toISOString()
+      // Flatten DailyMemoryStore into a flat array of DailyMemoryEntry
+      const dailyEntries = Object.values(dailyMemoriesRef.current).flat()
+
+      appendDebugConsoleEvent({
+        source: 'autonomy',
+        title: 'Starting memory consolidation (Dream)',
+        detail: `diary entries: ${dailyEntries.length}, existing memories: ${memoriesRef.current.length}`,
+      })
+
+      const runBackgroundChat = async (
+        traceId: 'background:dream' | 'background:dream-skill' | 'background:dream-reflection',
+        messages: Array<{ role: 'system' | 'user'; content: string }>,
+        temperature: number,
+        maxTokens: number,
+      ) => {
+        const gate = getBackgroundChatGate(policyInput)
+        if (!gate.allowed) {
+          if (gate.shouldNotify) {
+            appendDebugConsoleEvent({
+              source: 'autonomy',
+              title: 'Background Dream step skipped',
+              detail: `${traceId} blocked: ${gate.reason}`,
+            })
+          }
+          return null
+        }
+
+        try {
+          const response = await window.desktopPet?.completeChat?.({
+            providerId: policyInput.providerId,
+            baseUrl: policyInput.baseUrl,
+            apiKey: policyInput.apiKey,
+            model: policyInput.model,
+            messages,
+            temperature,
+            maxTokens,
+            traceId,
+          })
+          if (!response?.content) throw new Error('Background Dream returned empty response')
+          recordBackgroundChatSuccess(policyInput)
+          return response
+        } catch (error) {
+          recordBackgroundChatFailure(policyInput, classifyBackgroundChatFailure(error))
+          throw error
+        }
+      }
+
       const { system, user } = buildDreamPrompt(
         dailyEntries,
         memoriesRef.current,
         settings,
       )
 
-      // Use the existing chat completion bridge
-      const response = await window.desktopPet?.completeChat?.({
-        providerId: settings.apiProviderId,
-        baseUrl: settings.apiBaseUrl,
-        apiKey: settings.apiKey,
-        model: settings.model,
-        messages: [
+      const response = await runBackgroundChat(
+        'background:dream',
+        [
           { role: 'system', content: system },
           { role: 'user', content: user },
         ],
-        temperature: 0.3,
-        maxTokens: 2000,
-      })
-
-      if (!response?.content) {
-        throw new Error('Dream LLM returned empty response')
-      }
+        0.3,
+        2000,
+      )
+      if (!response?.content) return
 
       recordUsage('dream', `${system}\n${user}`, response.content, { modelId: settings.model })
       const ops = parseDreamResponse(response.content)
@@ -146,18 +256,15 @@ export function useMemoryDream({
         )
 
         if (skillPrompt) {
-          const skillResponse = await window.desktopPet?.completeChat?.({
-            providerId: settings.apiProviderId,
-            baseUrl: settings.apiBaseUrl,
-            apiKey: settings.apiKey,
-            model: settings.model,
-            messages: [
+          const skillResponse = await runBackgroundChat(
+            'background:dream-skill',
+            [
               { role: 'system', content: skillPrompt.system },
               { role: 'user', content: skillPrompt.user },
             ],
-            temperature: 0.3,
-            maxTokens: 1000,
-          })
+            0.3,
+            1000,
+          )
 
           if (skillResponse?.content) {
             recordUsage('skill_distillation', `${skillPrompt.system}\n${skillPrompt.user}`, skillResponse.content, { modelId: settings.model })
@@ -174,7 +281,7 @@ export function useMemoryDream({
         appendDebugConsoleEvent({
           source: 'autonomy',
           title: 'Skill distillation failed',
-          detail: skillError instanceof Error ? skillError.message : String(skillError),
+          detail: getRedactedLogErrorMessage(skillError),
         })
       }
 
@@ -196,18 +303,15 @@ export function useMemoryDream({
         })
 
         if (reflectionPrompt) {
-          const reflectionResponse = await window.desktopPet?.completeChat?.({
-            providerId: settings.apiProviderId,
-            baseUrl: settings.apiBaseUrl,
-            apiKey: settings.apiKey,
-            model: settings.model,
-            messages: [
+          const reflectionResponse = await runBackgroundChat(
+            'background:dream-reflection',
+            [
               { role: 'system', content: reflectionPrompt.system },
               { role: 'user', content: reflectionPrompt.user },
             ],
-            temperature: 0.4,
-            maxTokens: 600,
-          })
+            0.4,
+            600,
+          )
 
           if (reflectionResponse?.content) {
             recordUsage(
@@ -223,7 +327,7 @@ export function useMemoryDream({
         appendDebugConsoleEvent({
           source: 'autonomy',
           title: 'Reflection generation failed',
-          detail: reflectionError instanceof Error ? reflectionError.message : String(reflectionError),
+          detail: getRedactedLogErrorMessage(reflectionError),
         })
       }
 
@@ -362,7 +466,11 @@ export function useMemoryDream({
         completedAt: new Date().toISOString(),
       }
 
-      setDreamLog((prev) => recordDreamResult(prev, result))
+      // A panel renderer may have incremented sessions while this Dream was
+      // running. Never apply the result to this renderer's stale React state:
+      // merge against the latest persisted log, then update ref/state/storage
+      // from that single value.
+      await mutateDreamLog((latest) => recordDreamResult(latest, result, startedSessionsSinceDream))
 
       appendDebugConsoleEvent({
         source: 'autonomy',
@@ -377,14 +485,21 @@ export function useMemoryDream({
       })
     } finally {
       dreamRunningRef.current = false
-      exitDreaming()
+      try {
+        exitDreaming()
+      } finally {
+        releaseBackgroundChatLease(lease)
+      }
     }
-  }, [settingsRef, memoriesRef, dailyMemoriesRef, setMemories, enterDreaming, exitDreaming, busyRef, appendDebugConsoleEvent])
+    } finally {
+      dreamStartPendingRef.current = false
+    }
+  }, [enabled, settingsRef, memoriesRef, dailyMemoriesRef, setMemories, enterDreaming, exitDreaming, busyRef, appendDebugConsoleEvent, readLatestDreamLog, mutateDreamLog])
 
   /** Call after each chat session to track sessions-since-dream. */
   const incrementSessionCount = useCallback(() => {
-    setDreamLog((prev) => incrementDreamSessionCount(prev))
-  }, [])
+    void mutateDreamLog((latest) => incrementDreamSessionCount(latest)).catch(() => undefined)
+  }, [mutateDreamLog])
 
   return {
     dreamLog,

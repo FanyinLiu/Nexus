@@ -12,14 +12,21 @@ import {
 const BASELINE_PACKAGE = {
   name: 'nexus',
   version: '0.4.0',
+  description: 'Nexus desktop AI companion.',
   private: true,
   scripts: {
-    'package:win:signed': 'electron-builder --win nsis',
+    'release:unsigned:gate': 'node scripts/release-trust-audit.mjs --require-unsigned all',
+    'prepackage:mac': 'node scripts/mac-release-preflight.mjs',
+    'package:win': 'CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win nsis --config.forceCodeSigning=false --config.win.signAndEditExecutable=true',
+    'package:win:signed': 'electron-builder --win nsis --config.forceCodeSigning=true --config.win.signAndEditExecutable=true',
   },
   dependencies: {
     'electron-updater': '^6.8.3',
   },
   build: {
+    appId: 'ai.factory.desktoppet',
+    productName: 'Nexus',
+    forceCodeSigning: false,
     publish: [
       {
         provider: 'github',
@@ -29,11 +36,22 @@ const BASELINE_PACKAGE = {
     ],
     mac: {
       target: ['dmg', 'zip'],
+      identity: '-',
       hardenedRuntime: false,
       gatekeeperAssess: false,
+      notarize: false,
+      extraResources: [{ from: 'models', to: 'models' }],
     },
     win: {
       target: ['nsis'],
+      icon: 'public/nexus.ico',
+      signAndEditExecutable: true,
+      requestedExecutionLevel: 'asInvoker',
+      extraResources: [{ from: 'models', to: 'models' }],
+    },
+    electronFuses: {
+      onlyLoadAppFromAsar: true,
+      enableEmbeddedAsarIntegrityValidation: true,
     },
   },
 }
@@ -42,14 +60,21 @@ const BASELINE_RELEASE_WORKFLOW = `
 jobs:
   release:
     steps:
+      - name: Validate release tag matches package version
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          test "$TAG" = "v$PACKAGE_VERSION"
       - run: npm run release:trust:audit
-      - run: CSC_IDENTITY_AUTO_DISCOVERY=false npm run package:mac
-      - run: npm run package:win -- --config.win.signAndEditExecutable=false
-      - run: shasum -a 256 release/* > SHA256SUMS
-      - run: gpg --detach-sign SHA256SUMS
+      - run: npm run release:unsigned:gate
+      - run: configure release
         env:
-          GPG_PRIVATE_KEY: \${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: \${{ secrets.GPG_PASSPHRASE }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - run: CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --config.forceCodeSigning=false --config.mac.identity=-
+      - run: electron-builder --win nsis --x64 --config.forceCodeSigning=false --config.win.signAndEditExecutable=true
+      - run: node scripts/verify-windows-release.mjs --expect-unsigned
+      - run: upload SHA256SUMS-windows.txt
+      - run: upload SHA256SUMS-macos.txt
+      - run: upload SHA256SUMS-linux.txt
 `
 
 const BASELINE_RELEASING_DOC = `
@@ -161,17 +186,36 @@ export function installUpdate(autoUpdater) {
   })
 })
 
-test('release trust audit rejects release workflows without Linux integrity metadata', () => {
+test('release trust audit rejects release workflows without all platform integrity metadata', () => {
   withReleaseTrustFixture({
     '.github/workflows/release.yml': BASELINE_RELEASE_WORKFLOW
-      .replace('      - run: shasum -a 256 release/* > SHA256SUMS\n', '')
-      .replace('      - run: gpg --detach-sign SHA256SUMS\n', ''),
+      .replace('      - run: upload SHA256SUMS-macos.txt\n', ''),
   }, (root) => {
     const report = buildReleaseTrustReport(root)
     const summary = summarizeReleaseTrustReport(report)
 
     assert.ok(summary.error > 0)
     assert.equal(findCheck(report, 'linux.integrity')?.status, 'error')
+  })
+})
+
+test('release trust unsigned gate rejects ambiguous signing and smoke identity', () => {
+  const invalidPackage = structuredClone(BASELINE_PACKAGE)
+  invalidPackage.build.productName = 'Nexus Smoke'
+  invalidPackage.build.mac.identity = 'Developer ID Application'
+  invalidPackage.build.win.signAndEditExecutable = false
+  invalidPackage.build.win.requestedExecutionLevel = 'requireAdministrator'
+
+  withReleaseTrustFixture({
+    'package.json': `${JSON.stringify(invalidPackage, null, 2)}\n`,
+  }, (root) => {
+    const report = buildReleaseTrustReport(root, { requireUnsigned: 'all' })
+    const summary = summarizeReleaseTrustReport(report)
+
+    assert.ok(summary.error >= 3)
+    assert.equal(findCheck(report, 'release.formal-identity')?.status, 'error')
+    assert.equal(findCheck(report, 'mac.unsigned-gate')?.status, 'error')
+    assert.equal(findCheck(report, 'windows.unsigned-gate')?.status, 'error')
   })
 })
 

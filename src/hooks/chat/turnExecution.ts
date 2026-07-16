@@ -1,4 +1,5 @@
 import { t } from '../../i18n/runtime.ts'
+import type { AssistantRuntimeActivity } from '../../types/index.ts'
 import type { AssistantReplyRunnerOptions } from './assistantReply'
 import type { UseChatContext } from './types'
 
@@ -30,6 +31,34 @@ export type ExecuteAssistantTurnInput = Omit<
   AssistantReplyRunnerOptions,
   'turnId' | 'isLatestTurn'
 >
+
+export type ActiveTurnCancellationDeps = {
+  activeTurnIdRef: { current: number }
+  activeStreamAbortRef: { current: (() => Promise<void>) | null }
+  busyRef: { current: boolean }
+  setBusy: (value: boolean) => void
+  setAssistantActivity: (activity: AssistantRuntimeActivity) => void
+  onCancel: () => void
+}
+
+/**
+ * Invalidate the active turn before aborting its request. This ordering makes
+ * late stream/error continuations harmless even when the transport resolves
+ * after the user has already pressed cancel.
+ */
+export function cancelActiveTurn(deps: ActiveTurnCancellationDeps): boolean {
+  const abort = deps.activeStreamAbortRef.current
+  if (!deps.busyRef.current && !abort) return false
+
+  deps.activeTurnIdRef.current += 1
+  deps.activeStreamAbortRef.current = null
+  deps.busyRef.current = false
+  deps.setBusy(false)
+  deps.setAssistantActivity('idle')
+  deps.onCancel()
+  void abort?.().catch(() => undefined)
+  return true
+}
 
 export async function executeAssistantTurn(
   deps: ExecuteAssistantTurnDeps,
@@ -81,8 +110,10 @@ export async function executeAssistantTurn(
         hardTimeoutTimer = window.setTimeout(() => {
           hardTimeoutTimer = null
           console.warn('[Chat] Turn hard timeout — forcing busy=false')
-          void activeStreamAbortRef.current?.().catch(() => undefined)
-          activeStreamAbortRef.current = null
+          if (activeTurnIdRef.current === turnId) {
+            void activeStreamAbortRef.current?.().catch(() => undefined)
+            activeStreamAbortRef.current = null
+          }
           resolve(false)
         }, TURN_HARD_TIMEOUT_MS)
       }),
@@ -92,9 +123,12 @@ export async function executeAssistantTurn(
       window.clearTimeout(hardTimeoutTimer)
       hardTimeoutTimer = null
     }
-    busyRef.current = false
-    setBusy(false)
-    activeStreamAbortRef.current = null
+    const isCurrentTurn = activeTurnIdRef.current === turnId
+    if (isCurrentTurn) {
+      busyRef.current = false
+      setBusy(false)
+      activeStreamAbortRef.current = null
+    }
     // Safety reset: executeAssistantTurn sets voiceState='processing' on entry,
     // expecting the TTS lifecycle to transition it onward. When TTS is disabled,
     // text is empty, or the reply finishes without a tts:started event, the bus
@@ -102,7 +136,7 @@ export async function executeAssistantTurn(
     // voiceState stuck at 'processing' and the pet chip permanently showing
     // 理解中. If voice speaking took over, the state transitions before reaching
     // here, so this only fires on the stuck path.
-    if (ctx.voiceStateRef.current === 'processing') {
+    if (isCurrentTurn && ctx.voiceStateRef.current === 'processing') {
       ctx.setVoiceState('idle')
       ctx.busEmit({ type: 'session:completed' })
     }

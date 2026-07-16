@@ -24,25 +24,33 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **目前程式碼版本：** v0.4.1。Nexus 進入陪伴 UI、設定與可靠性加固階段：桌面陪伴感知維持粗粒度與隱私優先，設定與對話介面更穩，發布前審計更完整。
+> **目前穩定版：** v0.4.3，穩定入口見 [RELEASE-NOTES-v0.4.3.md](RELEASE-NOTES-v0.4.3.md)。Nexus 持續維持桌面陪伴感知的粗粒度與隱私優先邊界，並把溫和 check-in 策略、設定視覺系統與發布審計繼續收緊。正式安裝包只由受保護的 tag 工作流程發布到 GitHub Releases。
 
 > **開發範圍提示：** 這份多語 README 保留的是長期能力清單。當前短期開發以根目錄 [README](../README.md) 和 [Nexus 升級整合計畫](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 為準：Phase 1 只收斂桌面常駐小視窗、極簡頭像、Ollama / DeepSeek 文字模型和簡單對話。
 
 ---
 
-## 本次更新 — v0.4.1
+## 本次更新 — v0.4.3
+
+> **Check-In 策略與發布門檻對齊。** v0.4.3 讓溫和 check-in 先形成可被壓制的本地 in-app 決策，不直接發訊息、不執行工具，也不建立外部通知。完整說明見 [RELEASE-NOTES-v0.4.3.md](RELEASE-NOTES-v0.4.3.md)（英文）。
+
+正在聊天、剛 dismiss、重複同類信號、過期的「回到 Nexus」信號都會保持安靜；時間說法仍維持粗粒度，不把精確計時或原始桌面內容送進模型。設定 UI、發布審計與效能預算繼續由 `verify:pr` 和預發布門檻保護。
+
+## 上次更新 — v0.4.1
 
 > **陪伴 UI、設定與可靠性加固。** 這個穩定版整理主對話面板、設定頁與 Image4 伙伴場域，並加強 source-only UI、隱私、安全與效能審計。完整說明見 [RELEASE-NOTES-v0.4.1.md](RELEASE-NOTES-v0.4.1.md)（英文）。
 
 Nexus 會保持安靜、保守、可暫停，只形成短期粗粒度的陪伴摘要。v0.4.1 讓設定抽屜繼續懶載入，避免把大型設定樣式塞回啟動路徑；時間說法仍是「一會兒」「半小時左右」「一小時左右」，不把原始截圖、完整剪貼簿、私人訊息或精確計時送進模型。主動 check-in 擴展留到後續版本，0.5 才會做桌寵跟隨滑鼠、打字反應和視窗互動。
 
-## 上次更新 — v0.3.6
+## 更早更新 — v0.4.0
 
-> **0.3 的地基收尾。** 這版不把 Nexus 做成替你工作的 Codex 式智能體，也不把 0.4 的桌面陪伴感知提前塞進來；它把安全、記憶、設定和桌面感知入口收清楚。完整說明見 [RELEASE-NOTES-v0.3.6.md](RELEASE-NOTES-v0.3.6.md)（英文）。
+> **桌面陪伴感知地基。** 這個穩定版正式開始「打開 Nexus 後，它能安靜理解時間流逝」的桌面陪伴感知。完整說明見 [RELEASE-NOTES-v0.4.0.md](RELEASE-NOTES-v0.4.0.md)（英文）。
+
+Nexus 會優先保持安靜，只形成短期、粗粒度、可暫停和可清理的陪伴摘要；進入模型的是脫敏摘要，不是原始截圖、完整剪貼簿、私人訊息或精確計時。
 
 ## 舊版本記錄
 
-README 只保留目前程式碼版本 v0.4.1 和上一個穩定入口 v0.4.0 的重點；更早歷史版本統一放在 [CHANGELOG](../CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 頂部繼續滾動維護舊版本號。
+README 只保留目前穩定版 v0.4.3 和上一公開版本 v0.4.1 的重點；更早歷史版本統一放在 [CHANGELOG](../CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 頂部繼續滾動維護舊版本號。
 
 ---
 
@@ -57,7 +65,7 @@ README 只保留目前程式碼版本 v0.4.1 和上一個穩定入口 v0.4.0 的
 | 查看安全與隱私 | [安全與援助](#安全與援助) |
 | 參與社群內容 | [社群](#社群) · [Community Guide](COMMUNITY.md) |
 | 理解 0.4 方向 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 查看 0.4 最新穩定版 | [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 查看 0.4 目前穩定版 | [v0.4.3 Release Notes](RELEASE-NOTES-v0.4.3.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## 為什麼是 Nexus？
 
@@ -154,23 +162,23 @@ README 只保留目前程式碼版本 v0.4.1 和上一個穩定入口 v0.4.0 的
 
 從 [release 頁面](https://github.com/FanyinLiu/Nexus/releases/latest) 下載最新安裝包：
 
+> 下表是 v0.4.3 正式發行契約。安裝包只以受保護的 tag 工作流程成功發布到 GitHub Releases 後的實際資產為準；不要使用本地或第三方轉載包。
+
 | 平台 | 檔案 |
 |---|---|
-| Windows | `Nexus-Setup-<版本>.exe`（NSIS，未簽署） |
-| macOS | `.dmg` 或 `.zip`（未簽署，arm64 + x64 universal） |
-| Linux | `.AppImage` / `.deb` / `.tar.gz` |
+| Windows x64 | `Nexus-Setup-<版本>.exe`（NSIS，`NotSigned`）+ `SHA256SUMS-windows.txt` |
+| macOS arm64 | `.dmg` 或 `.zip`（ad-hoc；不提供 x64 / universal）+ `SHA256SUMS-macos.txt` |
+| Linux x64 | `.AppImage` / `.deb` / `.tar.gz` + `SHA256SUMS-linux.txt` |
 
 > **首次啟動會看到安全性警告，這是預期行為。**
-> Nexus 的 release 不做程式碼簽署——既沒有 Apple Developer 憑證，
-> 也沒有 Windows EV 憑證，這是刻意的決定（個人專案，不收費，
-> 不承擔經常性基礎設施開銷）。警告的意思是「這個開發者沒付
-> 簽署費」，而不是「這是病毒」。原始碼在 GitHub 公開，每個
-> 版本都由公開 CI 建構，Linux 安裝包還附帶 SHA-256 和
-> GPG 分離簽章，可以獨立校驗。
+> Nexus v0.4.3 不使用 Apple Developer ID / 公證或 Windows
+> 程式碼簽署。macOS 的 ad-hoc 簽署不等於 Apple 信任；Windows
+> 安裝程式會標記為 `NotSigned`。系統警告不是安全結論，使用者仍需
+> 核對來源和 SHA-256。
 
 #### 未簽署安裝提示
 
-- **下載來源**：只從 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases/latest) 下載。不要從鏡像或轉載壓縮包安裝；如果你不確定檔案來源，請刪除後重新從 GitHub Releases 下載。
+- **下載來源**：官方 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases/latest) 是唯一下載來源。不要從鏡像或轉載壓縮包安裝；如果你不確定檔案來源，請刪除後重新從 GitHub Releases 下載。
 - **macOS / Gatekeeper**：如果系統攔截首次啟動，按下面的 macOS 步驟按右鍵打開，或執行 `xattr -dr com.apple.quarantine /Applications/Nexus.app`。
 - **Windows / SmartScreen**：如果看到「Windows 已保護您的電腦」，點 **「其他資訊」**，再點 **「仍要執行」**。
 
@@ -201,7 +209,15 @@ README 只保留目前程式碼版本 v0.4.1 和上一個穩定入口 v0.4.0 的
 
 - **AppImage**：`chmod +x Nexus-<版本>.AppImage` 然後雙擊或在終端機執行。Linux 發行版不像 macOS / Windows 那樣強制應用程式層級的簽署，沒有警告。
 - **.deb**：`sudo dpkg -i Nexus-<版本>.deb`（或用發行版的套件管理員打開）。
-- **校驗下載**（選擇性）：每個 release 都附帶 `SHA256SUMS` 檔案和 `*.AppImage.asc` / `*.deb.asc` GPG 分離簽章。從 [release 頁面](https://github.com/FanyinLiu/Nexus/releases/latest) 匯入公鑰，執行 `gpg --verify Nexus-<版本>.AppImage.asc` 即可確認完整性。
+- **校驗下載**：Linux x64 資產附帶 `SHA256SUMS-linux.txt`；只下載其中一種套件格式時，在下載目錄執行 `sha256sum --ignore-missing -c SHA256SUMS-linux.txt`，確認目標檔案顯示 `OK`，並確保校驗檔來自同一個官方 release。
+
+#### macOS unsigned auto-update limitation
+
+macOS arm64 未簽署包只會檢查新版本並開啟官方 release 頁面，不會自動下載或替換應用程式。升級需要手動下載新 `.dmg` / `.zip`、重新處理 Gatekeeper 提示並替換 `/Applications/Nexus.app`。
+
+#### Windows unsigned installer limitation
+
+Windows x64 安裝程式狀態為 `NotSigned`，無法提供發布者身分驗證或穩定的 SmartScreen 聲譽。確認檔案來自官方 GitHub Releases 後，再依照上方 SmartScreen 步驟手動執行。
 
 ---
 
@@ -262,7 +278,7 @@ npm run package:win     # 或 package:mac / package:linux
 
 Nexus 目前由個人維護，issue 和 PR 的處理速度取決於分流是否精準：
 
-社群文件會貫穿所有版本，不只屬於某一次發布。0.3 收安全、記憶和設定地基；0.4 進入桌面陪伴感知；0.5 進入桌寵桌面行為。長期入口見 [Community Guide](COMMUNITY.md)，0.4 方向見 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 最新穩定版說明見 [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md)，發布前加固清單見 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
+社群文件會貫穿所有版本，不只屬於某一次發布。0.3 收安全、記憶和設定地基；0.4 進入桌面陪伴感知；0.5 進入桌寵桌面行為。長期入口見 [Community Guide](COMMUNITY.md)，0.4 方向見 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 目前穩定版說明見 [v0.4.3 Release Notes](RELEASE-NOTES-v0.4.3.md)，發布加固清單見 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
 
 - 🐛 **發現 Bug？** → [Bug 回報](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **有明確的功能想法？** → [功能請求](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

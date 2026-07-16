@@ -33,7 +33,7 @@ const dailyEntry: DailyMemoryEntry = {
 const companionSummary: QuietObservationSummary = {
   elapsedBucket: 'about_hour',
   elapsedLabel: 'about an hour',
-  activityClass: 'reading',
+  activityClass: 'documents',
   userDeepFocused: false,
   activeElsewhere: true,
   shouldStaySilent: true,
@@ -100,6 +100,12 @@ test('resolveMemoryTransparencySummary reports active recall, capture and storag
   assert.equal(summary.companionAwareness.status, 'watching_for_away_activity')
   assert.deepEqual(summary.companionAwareness.observes, ['active_window_class', 'coarse_elapsed_time'])
   assert.equal(summary.companionAwarenessView.statusLabelKey, 'settings.memory.context.transparency_status_waiting')
+  assert.equal(summary.companionAwareness.checkIn.state, 'silent')
+  assert.equal(summary.companionAwareness.checkIn.reason, 'no_observation')
+  assert.equal(summary.companionAwarenessView.checkInStatus.bodyKey, 'settings.memory.context.checkin_body_waiting')
+  assert.equal(summary.companionAwarenessView.recentSummary.state, 'empty')
+  assert.equal(summary.companionAwarenessView.recentSummary.statusKey, 'settings.memory.context.recent_summary_status_empty')
+  assert.equal(summary.companionAwarenessView.privacyBoundary.bodyKey, 'settings.memory.context.privacy_boundary_body')
   assert.deepEqual(summary.companionAwarenessView.detailRows.map((row) => row.id), [
     'observes',
     'reaches_model',
@@ -138,6 +144,10 @@ test('resolveMemoryTransparencySummary makes pause state explicit without deleti
   assert.equal(summary.companionAwareness.status, 'paused')
   assert.deepEqual(summary.companionAwareness.reachesModel, [])
   assert.equal(summary.companionAwarenessView.statusLabelKey, 'settings.memory.context.transparency_status_paused')
+  assert.equal(summary.companionAwarenessView.recentSummary.state, 'empty')
+  assert.equal(summary.companionAwareness.checkIn.state, 'silent')
+  assert.equal(summary.companionAwareness.checkIn.reason, 'paused')
+  assert.equal(summary.companionAwarenessView.checkInStatus.bodyKey, 'settings.memory.context.checkin_body_settings')
   assert.equal(summary.companionAwarenessView.clearRecentSummaryAction.enabled, false)
   assert.equal(summary.companionAwarenessView.clearRecentSummaryAction.unavailableReason, 'paused')
   assert.equal(summary.activeLongTermCount, 1)
@@ -159,13 +169,31 @@ test('resolveMemoryTransparencySummary includes companion transparency action st
     screenContextEnabled: false,
     searchMode: 'keyword',
     companionSummary,
+    companionCheckInDecision: {
+      shouldCheckIn: false,
+      reason: 'active_chat',
+      surface: 'none',
+      priority: 'none',
+    },
   })
 
   assert.equal(summary.companionAwareness.summaryPresent, true)
-  assert.equal(summary.companionAwareness.currentActivityClass, 'reading')
+  assert.equal(summary.companionAwareness.currentActivityClass, 'documents')
   assert.equal(summary.companionAwareness.modelReachBlockedReason, null)
   assert.equal(summary.companionAwareness.clearUnavailableReason, null)
   assert.equal(summary.companionAwarenessView.statusLabelKey, 'settings.memory.context.transparency_status_summarizing')
+  assert.equal(summary.companionAwareness.checkIn.state, 'silent')
+  assert.equal(summary.companionAwareness.checkIn.guard, 'conversation')
+  assert.equal(summary.companionAwarenessView.checkInStatus.statusKey, 'settings.memory.context.checkin_status_silent')
+  assert.equal(summary.companionAwarenessView.checkInStatus.bodyKey, 'settings.memory.context.checkin_body_active_chat')
+  assert.equal(summary.companionAwarenessView.recentSummary.state, 'present')
+  assert.equal(summary.companionAwarenessView.recentSummary.statusKey, 'settings.memory.context.recent_summary_status_present')
+  assert.equal(summary.companionAwarenessView.recentSummary.bodyKey, 'settings.memory.context.recent_summary_body_present')
+  assert.deepEqual(summary.companionAwarenessView.recentSummary.bodyParams, {
+    elapsedLabel: 'about an hour',
+  })
+  assert.equal(summary.companionAwarenessView.recentSummary.activityLabelKey, 'companion_awareness.activity_label.documents')
+  assert.equal(summary.companionAwarenessView.privacyBoundary.labelKey, 'settings.memory.context.privacy_boundary_row')
   assert.equal(summary.companionAwarenessView.clearRecentSummaryAction.enabled, true)
   assert.equal(summary.companionAwarenessView.clearRecentSummaryAction.unavailableReason, null)
   assert.equal(summary.companionAwarenessView.rawContentVisible, false)

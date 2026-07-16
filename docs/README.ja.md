@@ -24,25 +24,33 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **現在のコードバージョン：** v0.4.1。Nexus はコンパニオン UI、設定、信頼性の強化段階に入りました。デスクトップ・コンパニオン認識は粗い時間表現とプライバシー優先を保ち、設定と会話画面、アップロード前監査をより安定させます。
+> **現在の安定版：** v0.4.3。安定入口は [RELEASE-NOTES-v0.4.3.md](RELEASE-NOTES-v0.4.3.md) です。Nexus はデスクトップ・コンパニオン認識の粗い時間表現とプライバシー優先を保ちながら、穏やかな check-in ポリシー、設定の視覚システム、リリース監査をさらに締めます。正式なインストーラーは保護された tag ワークフローから GitHub Releases にのみ公開されます。
 
 > **開発スコープの注記：** この多言語 README は長期的な機能一覧を残しています。短期開発はルートの [README](../README.md) と [Nexus アップグレード統合計画](NEXUS_UPGRADE_INTEGRATION_PLAN.md) を基準にしてください。Phase 1 は常駐する小さなデスクトップウィンドウ、ミニマルなアバター、Ollama / DeepSeek のテキストモデル、シンプルな会話だけに絞ります。
 
 ---
 
-## 今回のアップデート — v0.4.1
+## 今回のアップデート — v0.4.3
+
+> **Check-In ポリシーとリリースゲートの同期。** v0.4.3 では、穏やかな check-in をまずローカルで抑制可能な in-app 判断として扱い、メッセージ送信、ツール実行、外部通知作成は行いません。詳細は [RELEASE-NOTES-v0.4.3.md](RELEASE-NOTES-v0.4.3.md)（英語）。
+
+Nexus と会話中のとき、直前に dismiss したとき、同じ種類の信号が重なるとき、古い「Nexus に戻った」信号のときは静かに抑制されます。時間表現は引き続き粗く、正確なタイマーや生のデスクトップ内容をモデル境界へ渡しません。設定 UI、リリース監査、パフォーマンス予算は `verify:pr` とリリース前ゲートで守ります。
+
+## 前回のアップデート — v0.4.1
 
 > **コンパニオン UI、設定、信頼性の強化。** この安定版では、メイン会話パネル、設定画面、Image4 コンパニオン領域を整理し、source-only の UI、プライバシー、セキュリティ、パフォーマンス監査を強化します。詳細は [RELEASE-NOTES-v0.4.1.md](RELEASE-NOTES-v0.4.1.md)（英語）。
 
 Nexus は静かで保守的、一時停止可能なまま、短期で粗いコンパニオン要約だけを作ります。v0.4.1 では設定ドロワーのスタイルを遅延読み込みに保ち、大きな CSS を起動パスへ戻さないようにします。時間表現は「しばらく」「30分くらい」「1時間くらい」のように粗く、生のスクリーンショット、完全なクリップボード、私的なメッセージ、正確なタイマーはモデルへ送りません。プロアクティブな check-in 拡張は後続版へ、マウス追従、タイピング反応、ウィンドウ操作は v0.5 の範囲です。
 
-## 前回のアップデート — v0.3.6
+## 以前のアップデート — v0.4.0
 
-> **0.3 の土台を締めくくる版。** このリリースは Nexus を Codex のような作業エージェントにするものではなく、0.4 のデスクトップ伴走感知を先取りするものでもありません。安全、記憶、設定、デスクトップ認識入口を整理します。詳細は [RELEASE-NOTES-v0.3.6.md](RELEASE-NOTES-v0.3.6.md)（英語）。
+> **デスクトップ・コンパニオン認識の土台。** この安定版から、Nexus を開いている間の時間の流れを静かに理解する v0.4 ラインが始まります。詳細は [RELEASE-NOTES-v0.4.0.md](RELEASE-NOTES-v0.4.0.md)（英語）。
+
+Nexus はまず静かでいることを優先し、短期で粗い、一時停止・削除可能なコンパニオン要約だけを作ります。モデルへ渡るのはサニタイズ済みの要約であり、生のスクリーンショット、完全なクリップボード、私的なメッセージ、正確なタイマーではありません。
 
 ## 旧バージョンの記録
 
-README には現在のコードバージョン v0.4.1 と直前の安定入口 v0.4.0 の要点だけを載せます。より古い履歴は [CHANGELOG](../CHANGELOG.md) と [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) に集約し、README 上部で古いバージョン番号を更新し続けません。
+README には現在の安定版 v0.4.3 と一つ前の公開版 v0.4.1 の要点だけを載せます。より古い履歴は [CHANGELOG](../CHANGELOG.md) と [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) に集約し、README 上部で古いバージョン番号を更新し続けません。
 
 ---
 
@@ -57,7 +65,7 @@ README には現在のコードバージョン v0.4.1 と直前の安定入口 v
 | 安全性とプライバシーを確認 | [セーフティとサポート](#セーフティとサポート) |
 | コミュニティに参加 | [コミュニティ](#コミュニティ) · [Community Guide](COMMUNITY.md) |
 | 0.4 の方向を理解 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 0.4 最新安定版を見る | [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 0.4 現在の安定版を見る | [v0.4.3 Release Notes](RELEASE-NOTES-v0.4.3.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## なぜ Nexus なのか？
 
@@ -152,25 +160,23 @@ README には現在のコードバージョン v0.4.1 と直前の安定入口 v
 
 [release ページ](https://github.com/FanyinLiu/Nexus/releases/latest) から最新インストーラーをダウンロード：
 
+> 次の表は v0.4.3 の正式リリース契約です。インストーラーは、保護された tag ワークフローが GitHub Releases へ正常に公開した実在アセットだけを基準にしてください。ローカル包や第三者の再配布物は使用しないでください。
+
 | プラットフォーム | ファイル |
 |---|---|
-| Windows | `Nexus-Setup-<バージョン>.exe`（NSIS、未署名） |
-| macOS | `.dmg` または `.zip`（未署名、arm64 + x64 ユニバーサル） |
-| Linux | `.AppImage` / `.deb` / `.tar.gz` |
+| Windows x64 | `Nexus-Setup-<バージョン>.exe`（NSIS、`NotSigned`）+ `SHA256SUMS-windows.txt` |
+| macOS arm64 | `.dmg` または `.zip`（ad-hoc、x64 / universal なし）+ `SHA256SUMS-macos.txt` |
+| Linux x64 | `.AppImage` / `.deb` / `.tar.gz` + `SHA256SUMS-linux.txt` |
 
 > **初回起動時にセキュリティ警告が表示されますが、これは想定内です。**
-> Nexus のリリースはコード署名されていません——Apple Developer
-> 証明書も Windows EV 証明書も使っていません。これは意図的な
-> 選択です（個人プロジェクトなので、有料化せず、継続的な
-> インフラコストも背負わない方針）。警告の意味は「この開発者は
-> 署名料を支払っていない」であって、「これはマルウェアだ」では
-> ありません。ソースコードは GitHub で公開、各リリースは公開
-> CI からビルドされており、Linux のアーティファクトには
-> SHA-256 と GPG 分離署名が付属しているため、独立に検証できます。
+> Nexus v0.4.3 は Apple Developer ID / notarization または Windows
+> コード署名を使用しません。macOS の ad-hoc 署名は Apple の信頼を
+> 意味せず、Windows インストーラーは `NotSigned` と表示されます。
+> システム警告は安全性の結論ではないため、配布元と SHA-256 を確認してください。
 
 #### 未署名インストール時の注意
 
-- **ダウンロード元**：必ず [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases/latest) からダウンロードしてください。ミラーサイトや再配布された ZIP からはインストールしないでください。入手元が不明な場合は削除し、GitHub Releases から再ダウンロードします。
+- **ダウンロード元**：公式 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases/latest) が唯一のダウンロード元です。ミラーサイトや再配布された ZIP からはインストールしないでください。入手元が不明な場合は削除し、GitHub Releases から再ダウンロードします。
 - **macOS / Gatekeeper**：初回起動がブロックされた場合は、下の macOS 手順に従って右クリックから開くか、`xattr -dr com.apple.quarantine /Applications/Nexus.app` を実行します。
 - **Windows / SmartScreen**：「Windows によって PC が保護されました」と表示されたら、**「詳細情報」**、続けて **「実行」** をクリックします。
 
@@ -202,7 +208,15 @@ README には現在のコードバージョン v0.4.1 と直前の安定入口 v
 
 - **AppImage**：`chmod +x Nexus-<バージョン>.AppImage` してダブルクリックまたはターミナルで実行。Linux ディストリは macOS / Windows のようなアプリレベルの署名を強制しないため、警告は出ません。
 - **.deb**：`sudo dpkg -i Nexus-<バージョン>.deb`（または、ディストロのパッケージマネージャーで開く）。
-- **ダウンロード検証**（オプション）：各リリースには `SHA256SUMS` ファイルと `*.AppImage.asc` / `*.deb.asc` GPG 分離署名が付属しています。[release ページ](https://github.com/FanyinLiu/Nexus/releases/latest) で公開された公開鍵をインポートし、`gpg --verify Nexus-<バージョン>.AppImage.asc` で完全性を確認できます。
+- **ダウンロード検証**：Linux x64 アセットには `SHA256SUMS-linux.txt` が付属します。パッケージ形式を 1 つだけダウンロードした場合は、ダウンロード先で `sha256sum --ignore-missing -c SHA256SUMS-linux.txt` を実行し、対象ファイルが `OK` になることを確認してください。チェックサムファイルも同じ公式 release から取得してください。
+
+#### macOS unsigned auto-update limitation
+
+macOS arm64 の未署名ビルドは新しいバージョンを確認して公式 release ページを開くだけで、アプリを自動ダウンロードまたは置換しません。更新時は新しい `.dmg` / `.zip` を手動で取得し、Gatekeeper の確認後に `/Applications/Nexus.app` を置き換えます。
+
+#### Windows unsigned installer limitation
+
+Windows x64 インストーラーは `NotSigned` で、発行元の本人確認や安定した SmartScreen 評価を提供できません。公式 GitHub Releases からのファイルであることを確認してから、上記の SmartScreen 手順で手動実行してください。
 
 ---
 
@@ -263,7 +277,7 @@ npm run package:win     # または package:mac / package:linux
 
 Nexus は個人メンテナンスのプロジェクトです。issue や PR の対応速度はトリアージの精度に左右されます：
 
-コミュニティ文書は特定の 1 リリースだけのものではなく、全バージョンをまたぐ入口です。0.3 は安全性、メモリ、設定の土台を締め、0.4 はデスクトップ・コンパニオン認識へ進み、0.5 はデスクトップペットの振る舞いへ進みます。長期入口は [Community Guide](COMMUNITY.md)、0.4 の方向は [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)、0.4 最新安定版の説明は [v0.4.1 Release Notes](RELEASE-NOTES-v0.4.1.md)、リリース前の hardening は [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) です。
+コミュニティ文書は特定の 1 リリースだけのものではなく、全バージョンをまたぐ入口です。0.3 は安全性、メモリ、設定の土台を締め、0.4 はデスクトップ・コンパニオン認識へ進み、0.5 はデスクトップペットの振る舞いへ進みます。長期入口は [Community Guide](COMMUNITY.md)、0.4 の方向は [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)、0.4 現在の安定版の説明は [v0.4.3 Release Notes](RELEASE-NOTES-v0.4.3.md)、リリース hardening は [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) です。
 
 - 🐛 **バグを見つけた？** → [バグ報告](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **明確な機能アイデア？** → [機能リクエスト](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

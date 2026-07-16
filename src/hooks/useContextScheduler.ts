@@ -29,6 +29,7 @@ export type UseContextSchedulerOptions = {
   focusStateRef: React.RefObject<FocusState>
   idleSecondsRef: React.RefObject<number>
   onAction: (action: AutonomousAction, task: ContextTriggeredTask) => void
+  enabled?: boolean
 }
 
 export function useContextScheduler({
@@ -37,6 +38,7 @@ export function useContextScheduler({
   focusStateRef,
   idleSecondsRef,
   onAction,
+  enabled = true,
 }: UseContextSchedulerOptions) {
   const [tasks, setTasks] = useState<ContextTriggeredTask[]>(
     () => readJson(AUTONOMY_CONTEXT_TRIGGERS_STORAGE_KEY, []),
@@ -61,6 +63,7 @@ export function useContextScheduler({
    * Call this on each autonomy tick to evaluate context triggers.
    */
   const evaluateTriggers = useCallback(async () => {
+    if (!enabled) return
     const settings = settingsRef.current
     if (!settings.autonomyEnabled || !settings.autonomyContextTriggersEnabled) return
     if (tasksRef.current.length === 0) return
@@ -133,7 +136,7 @@ export function useContextScheduler({
         onActionRef.current(task.action, task)
       }
     }
-  }, [settingsRef, focusStateRef, idleSecondsRef, platformProfile])
+  }, [enabled, settingsRef, focusStateRef, idleSecondsRef, platformProfile])
 
   const addTask = useCallback((task: ContextTriggeredTask) => {
     setTasks((prev) => [...prev, task])

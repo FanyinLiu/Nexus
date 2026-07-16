@@ -25,6 +25,7 @@ type BaseSpeechReplyOptions = {
   stopSpeechInterruptMonitor: () => void
   isSpeechInterrupted: (speechGeneration: number) => boolean
   clearSpeechInterruptedFlag: (speechGeneration: number) => void
+  resetSpeechLevel: () => void
 }
 
 export type SpeakAssistantReplyRuntimeOptions = BaseSpeechReplyOptions & {
@@ -79,6 +80,7 @@ function createSpeechReplyCallbacks(
       )
     },
     onEnd: () => {
+      options.resetSpeechLevel()
       voiceDebug('SpeechReply', 'onEnd fired — shouldResumeContinuousVoice:', options.shouldResumeContinuousVoice)
       options.stopSpeechInterruptMonitor()
 
@@ -100,6 +102,7 @@ function createSpeechReplyCallbacks(
       // Bus effects handle: setMood('idle'), restart_voice, voiceState → 'idle'
     },
     onError: (message: string) => {
+      options.resetSpeechLevel()
       voiceDebug('SpeechReply', 'onError:', message, 'shouldResumeContinuousVoice:', options.shouldResumeContinuousVoice)
       options.stopSpeechInterruptMonitor()
 
@@ -126,6 +129,7 @@ export async function speakAssistantReplyRuntime(
   options: SpeakAssistantReplyRuntimeOptions,
 ) {
   if (!options.currentSettings.speechOutputEnabled || !options.text.trim()) {
+    options.resetSpeechLevel()
     options.stopSpeechInterruptMonitor()
     options.clearSpeechInterruptedFlag(options.speechGeneration)
     // Bus drives voiceState → 'idle', setMood('idle'), and restart_voice if needed
@@ -147,6 +151,7 @@ export async function speakAssistantReplyRuntime(
       }),
     )
   } catch (error) {
+    options.resetSpeechLevel()
     options.stopSpeechInterruptMonitor()
 
     if (options.isSpeechInterrupted(options.speechGeneration)) {
@@ -164,6 +169,7 @@ export function beginStreamingSpeechReplyRuntime(
   options: BeginStreamingSpeechReplyRuntimeOptions,
 ): StreamingSpeechOutputController | null {
   if (!options.currentSettings.speechOutputEnabled) {
+    options.resetSpeechLevel()
     return null
   }
 
@@ -196,6 +202,7 @@ export function beginStreamingSpeechReplyRuntime(
       callbacks,
     )
   } catch (error) {
+    options.resetSpeechLevel()
     throw error instanceof Error ? error : new Error(
       error instanceof Error ? error.message : 'Streaming speech playback failed.',
     )

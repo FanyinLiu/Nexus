@@ -3,6 +3,7 @@ import { test } from 'node:test'
 
 import {
   canonicalizeLoopbackUrl,
+  buildSafeRedirectRequestOptions,
   isIpv6LoopbackHost,
   shouldLabelAsConnectionFailure,
 } from '../electron/netHelpers.js'
@@ -36,6 +37,41 @@ test('canonicalizeLoopbackUrl leaves non-localhost URLs untouched', () => {
 test('canonicalizeLoopbackUrl returns input unchanged for invalid URLs', () => {
   assert.equal(canonicalizeLoopbackUrl('not a url'), 'not a url')
   assert.equal(canonicalizeLoopbackUrl(''), '')
+})
+
+test('safe redirects strip credentials across origins', () => {
+  const result = buildSafeRedirectRequestOptions(
+    'https://api.example.com/audio',
+    'https://cdn.example.net/file',
+    307,
+    {
+      method: 'POST',
+      headers: { Authorization: 'Bearer secret', 'X-Api-Key': 'secret', Accept: 'audio/*' },
+      body: 'payload',
+    },
+  )
+  assert.deepEqual(result, {
+    method: 'POST',
+    headers: { Accept: 'audio/*' },
+    body: 'payload',
+  })
+})
+
+test('safe 302 POST redirects switch to GET and drop entity headers', () => {
+  const result = buildSafeRedirectRequestOptions(
+    'https://api.example.com/audio',
+    'https://api.example.com/result',
+    302,
+    {
+      method: 'POST',
+      headers: { Authorization: 'Bearer secret', 'Content-Type': 'application/json', 'Content-Length': '7' },
+      body: 'payload',
+    },
+  )
+  assert.deepEqual(result, {
+    method: 'GET',
+    headers: { Authorization: 'Bearer secret' },
+  })
 })
 
 test('isIpv6LoopbackHost detects ::1 forms', () => {

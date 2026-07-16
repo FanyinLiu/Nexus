@@ -4,10 +4,8 @@ import { test } from 'node:test'
 import {
   applyCharacterProfile,
   createCharacterProfile,
-  resolveCharacterSettingsSummary,
   syncCurrentToProfile,
-} from '../src/features/character/index.ts'
-import { PET_MODEL_PRESETS } from '../src/features/pet/models.ts'
+} from '../src/features/character/profiles.ts'
 import type { AppSettings, CharacterProfile } from '../src/types/app.ts'
 
 function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
@@ -99,31 +97,4 @@ test('syncCurrentToProfile writes current companion identity back to the active 
   assert.equal(synced.characterProfiles[0]?.userName, '主人')
   assert.equal(synced.characterProfiles[0]?.companionRelationshipType, 'mentor')
   assert.equal(synced.characterProfiles[0]?.petModelId, 'original-virtual-swordsman')
-})
-
-test('resolveCharacterSettingsSummary exposes compact labels for the settings page', () => {
-  const summary = resolveCharacterSettingsSummary(
-    makeSettings({
-      activeCharacterProfileId: 'char-a',
-      characterProfiles: [{
-        id: 'char-a',
-        label: '夜间伙伴',
-        companionName: '星绘',
-        petModelId: 'original-virtual-swordsman',
-        systemPrompt: 'warm',
-      }],
-      companionName: ' 星绘 ',
-      companionRelationshipType: 'quiet_companion',
-      userName: ' 主人 ',
-    }),
-    PET_MODEL_PRESETS[0],
-  )
-
-  assert.equal(summary.activeProfileLabel, '夜间伙伴')
-  assert.equal(summary.companionName, '星绘')
-  assert.equal(summary.userName, '主人')
-  assert.equal(summary.relationshipLabelKey, 'onboarding.companion.relationship_quiet_companion')
-  // Unknown petModelId falls back to the default preset — Live2D 星绘 now.
-  assert.equal(summary.petModelLabel, 'Mao 魔法少女')
-  assert.equal(summary.profileCount, 1)
 })

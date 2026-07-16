@@ -29,7 +29,8 @@ export function SettingsDrawer() {
   const settingsOpenerRef = useRef(null)
   const settingsHomeCardRefs = useRef({})
   const activeSectionHeadingRef = useRef(null)
-  useModalFocusTrap(settingsDialogRef, open)
+  const languageLoadGenerationRef = useRef(0)
+  useModalFocusTrap(settingsDialogRef, open && confirmOptions === null)
   function restoreSettingsOpenerFocus() {}
   function resetSettingsSectionScroll() {
     drawerBodyRef.current?.scrollTo({ top: 0, behavior: 'auto' })
@@ -40,23 +41,69 @@ export function SettingsDrawer() {
   function handleLanguageMenuItemKeyDown(event) {
     if (event.key === 'Escape') languageButtonRef.current?.focus()
   }
+  openLanguageMenuAt(selectedLanguageIndex)
   activeSectionHeadingRef.current?.focus({ preventScroll: true })
   return (
     <aside role="dialog" aria-modal="true" tabIndex={-1}>
-      <button data-focus-return-section="history" />
-      <button role="menuitemradio" aria-checked={isActive} />
+      <button role="menuitemradio" aria-checked={isActive} tabIndex={isActive ? 0 : -1} />
       <h4 ref={activeSectionHeadingRef} tabIndex={-1}>Privacy</h4>
     </aside>
   )
 }
 `,
+  'src/components/SettingsDrawerV2.tsx': `
+export function SettingsDrawerV2() {
+  onReturnToSettingsHome(false)
+}
+`,
+  'src/components/settingsDrawerHooks/useSettingsLanguageControl.ts': `
+export function useSettingsLanguageControl() {
+  const drawerOpenRef = useRef(open)
+  const languageLoadGenerationRef = useRef(0)
+  function openLanguageMenuAt(index) {}
+  openLanguageMenuAt(selectedLanguageIndex)
+  function handleLanguageMenuItemKeyDown(event) {
+    if (event.key === 'Escape') languageButtonRef.current?.focus()
+  }
+  return { languageButtonRef }
+}
+`,
+  'src/components/SettingsHomeView.tsx': `
+export function SettingsHomeView() {
+  settingsHomeCardRefs.current[card.sectionId] = node
+  return <button className="settings-home-card" data-focus-return-section={card.sectionId} onClick={() => onOpenSettingsSection(card.sectionId)} />
+}
+`,
+  'src/features/uiV2/SettingsShellV2.tsx': `
+export function SettingsShellV2() {
+  const homeCardRefs = useRef({})
+  const pendingHomeFocusGroupRef = useRef(null)
+  pendingHomeFocusGroupRef.current = !isHome && intent.moveFocus ? activeDestination : null
+  homeCardRefs.current[returnGroupId]?.focus()
+  handleReturnToHome(event.detail)
+  return <button ref={(node) => { homeCardRefs.current[group.id] = node }} data-focus-return-group={group.id} />
+}
+`,
   'src/components/ConfirmDialog.tsx': `
 export function ConfirmDialog() {
+  const dialogRef = useRef(null)
+  const titleId = useId()
+  const messageId = useId()
+  useModalFocusTrap(dialogRef, options !== null)
   cancelButtonRef.current?.focus()
   if (event.key === 'Escape') onCancel()
   return (
-    <div role="alertdialog" aria-modal="true">
-      <button data-focus-default="cancel">Cancel</button>
+    <div
+      ref={dialogRef}
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby={options.title ? titleId : messageId}
+      aria-describedby={options.title ? messageId : undefined}
+    >
+      <h2 id={titleId}>{options.title}</h2>
+      <p id={messageId}>{options.message}</p>
+      <button type="button" data-focus-default="cancel">Cancel</button>
+      <button type="button">Confirm</button>
     </div>
   )
 }
@@ -74,16 +121,25 @@ export function useConfirm() {
 `,
   'src/hooks/useModalFocusTrap.ts': `
 const FOCUSABLE_SELECTOR = '[aria-hidden="true"]'
+export function resolveModalTabFocusDecision() {
+  if (decision === 'first') return 'first'
+  if (decision === 'last') return 'last'
+  return null
+}
+export function getFocusableElements() {
+  return []
+}
 export function useModalFocusTrap() {
   if (event.key !== 'Tab') return
-  container.focus()
-  firstFocusable.focus()
-  lastFocusable.focus()
+  container.contains(activeElement)
+  focusInsideContainer
+  event.preventDefault()
+  target.focus()
 }
 `,
   'src/app/styles/settings.css': `
 .settings-section-nav__button:focus-visible { outline: 2px solid rgba(91, 129, 226, 0.6); }
-.settings-drawer .ghost-button:focus-visible { box-shadow: 0 0 0 3px rgba(91, 129, 226, 0.18); }
+.sd .ghost-button:focus-visible { box-shadow: 0 0 0 3px rgba(91, 129, 226, 0.18); }
 .settings-toggle input:focus-visible { border-color: rgba(91, 129, 226, 0.7); }
 `,
   'src/app/styles/settings-home.css': `
@@ -161,18 +217,43 @@ test('focus management surface audit rejects missing opener focus return', () =>
 
 test('focus management surface audit rejects missing settings home card focus return', () => {
   withFixture({
-    'src/components/SettingsDrawer.tsx': BASELINE_FILES['src/components/SettingsDrawer.tsx'].replace(
-      '  const settingsHomeCardRefs = useRef({})\n',
-      '',
-    ).replace(
-      '      <button data-focus-return-section="history" />\n',
+    'src/components/SettingsHomeView.tsx': BASELINE_FILES['src/components/SettingsHomeView.tsx'].replace(
+      ' data-focus-return-section={card.sectionId}',
       '',
     ),
   }, (root) => {
     const report = buildFocusManagementSurfaceReport(root)
 
     assert.equal(report.summary.ok, false)
-    assert.ok(report.missingContracts.some((item) => item.id === 'settings-drawer-focus-handoff'))
+    assert.ok(report.missingContracts.some((item) => item.id === 'settings-home-card-focus-return-targets'))
+  })
+})
+
+test('focus management surface audit rejects a missing Settings V2 group focus return target', () => {
+  withFixture({
+    'src/features/uiV2/SettingsShellV2.tsx': BASELINE_FILES['src/features/uiV2/SettingsShellV2.tsx'].replace(
+      ' data-focus-return-group={group.id}',
+      '',
+    ),
+  }, (root) => {
+    const report = buildFocusManagementSurfaceReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(report.missingContracts.some((item) => item.id === 'settings-v2-home-card-focus-return-targets'))
+  })
+})
+
+test('focus management surface audit rejects legacy focus stealing the Settings V2 return', () => {
+  withFixture({
+    'src/components/SettingsDrawerV2.tsx': BASELINE_FILES['src/components/SettingsDrawerV2.tsx'].replace(
+      'onReturnToSettingsHome(false)',
+      'onReturnToSettingsHome(intent.moveFocus)',
+    ),
+  }, (root) => {
+    const report = buildFocusManagementSurfaceReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(report.missingContracts.some((item) => item.id === 'settings-v2-focus-handoff-isolated'))
   })
 })
 
@@ -209,6 +290,21 @@ test('focus management surface audit rejects missing safe confirmation focus bou
       ' data-focus-default="cancel"',
       '',
     ),
+  }, (root) => {
+    const report = buildFocusManagementSurfaceReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(report.missingContracts.some((item) => item.id === 'confirm-dialog-safe-focus-boundary'))
+  })
+})
+
+test('focus management surface audit rejects an unnamed confirmation message', () => {
+  withFixture({
+    'src/components/ConfirmDialog.tsx': BASELINE_FILES['src/components/ConfirmDialog.tsx']
+      .replace('aria-labelledby={options.title ? titleId : messageId}', '')
+      .replace('aria-describedby={options.title ? messageId : undefined}', '')
+      .replace('id={titleId}', '')
+      .replace('id={messageId}', ''),
   }, (root) => {
     const report = buildFocusManagementSurfaceReport(root)
 

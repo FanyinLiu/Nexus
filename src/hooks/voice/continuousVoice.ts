@@ -1,18 +1,21 @@
 import type { MutableRefObject, RefObject } from 'react'
 import {
-  RESTART_RETRY_LIMIT,
   canInterruptSpeech as policyCanInterruptSpeech,
-  evaluateRestartGuards,
   getNoSpeechRestartDelay as policyGetNoSpeechRestartDelay,
-  getRestartDelay,
   shouldAutoRestart,
   shouldKeepContinuousSession,
 } from '../../features/voice/autoRestartPolicy'
 import { calculateAudioRms, requestVoiceInputStream } from '../../features/voice/runtimeSupport'
 import { voiceDebug } from '../../features/voice/voiceDebugLog'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
-import type { BrowserSpeechRecognition } from '../../lib/voice'
-import type { AppSettings, PetMood, TranslationKey, TranslationParams, VoiceState } from '../../types'
+import type {
+  AppSettings,
+  PetMood,
+  SpeechLevelSource,
+  TranslationKey,
+  TranslationParams,
+  VoiceState,
+} from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
 import {
@@ -22,11 +25,7 @@ import {
   SPEECH_INTERRUPT_RMS_THRESHOLD,
   SPEECH_INTERRUPT_TTS_LEVEL_GAIN,
 } from './constants'
-import type {
-  SpeechInterruptMonitorSession,
-  VadConversationSession,
-  VoiceConversationOptions,
-} from './types'
+import type { SpeechInterruptMonitorSession } from './types'
 
 type ShowPetStatus = (
   message: string,
@@ -41,24 +40,6 @@ type ShouldAutoRestartVoiceOptions = {
 
 type ContinuousVoiceOptions = {
   settingsRef: RefObject<AppSettings>
-}
-
-type ScheduleVoiceRestartOptions = {
-  restartVoiceTimerRef: MutableRefObject<number | null>
-  recognitionRef: MutableRefObject<BrowserSpeechRecognition | null>
-  vadSessionRef: MutableRefObject<VadConversationSession | null>
-  busyRef: RefObject<boolean>
-  voiceStateRef: MutableRefObject<VoiceState>
-  shouldAutoRestartVoice: () => boolean
-  showPetStatus: ShowPetStatus
-  startVoiceConversation: (options?: VoiceConversationOptions) => void
-  statusText?: string
-  delay?: number
-  /** When true, skip the shouldAutoRestartVoice() gate (used for voice-initiated turns). */
-  force?: boolean
-  /** Internal: tracks how many times the restart has been rescheduled. */
-  _retryCount?: number
-  ti: Translator
 }
 
 type PauseContinuousVoiceOptions = {
@@ -86,7 +67,7 @@ type StartSpeechInterruptMonitorOptions = {
    * threshold scales up while TTS is loud — prevents residual echo (after
    * WebRTC AEC) from being mistaken for the user speaking.
    */
-  speechLevelValueRef: MutableRefObject<number>
+  speechLevelSource: SpeechLevelSource
   /**
    * When the always-on KWS listener is live, monitor subscribes to its mic
    * frames instead of opening a second getUserMedia. On macOS a second
@@ -243,72 +224,6 @@ export function pauseContinuousVoice(options: PauseContinuousVoiceOptions) {
   options.showPetStatus(statusText, 3_200, 4_000)
 }
 
-/**
- * @deprecated Prefer emitting bus events (`tts:completed`, `tts:error`, `voice:restart_requested`)
- * via `busEmit()` — the bus effect executor in `useVoice` handles restart scheduling automatically.
- * This function is kept during the dual-write migration period and will be removed once all
- * callers have been migrated to the VoiceBus event path.
- */
-export function scheduleVoiceRestart(options: ScheduleVoiceRestartOptions) {
-  const statusText = options.statusText || options.ti('voice.status.resume_listening')
-  const delay = getRestartDelay('initial', { requested: options.delay })
-  const force = options.force ?? false
-  const retryCount = options._retryCount ?? 0
-
-  const autoRestart = force || options.shouldAutoRestartVoice()
-  const hasPendingTimer = Boolean(options.restartVoiceTimerRef.current)
-  if (!autoRestart || hasPendingTimer) {
-    voiceDebug('ContinuousVoice', 'scheduleVoiceRestart BLOCKED — autoRestart:', autoRestart, 'force:', force, 'hasPendingTimer:', hasPendingTimer)
-    return
-  }
-
-  voiceDebug('ContinuousVoice', 'scheduleVoiceRestart — delay:', delay, 'force:', force, 'retry:', retryCount)
-
-  options.restartVoiceTimerRef.current = window.setTimeout(() => {
-    options.restartVoiceTimerRef.current = null
-
-    if (!force && !options.shouldAutoRestartVoice()) {
-      voiceDebug('ContinuousVoice', 'timer — shouldAutoRestartVoice()=false, aborting')
-      return
-    }
-
-    const guard = evaluateRestartGuards({
-      hasActiveRecognition: Boolean(options.recognitionRef.current),
-      hasActiveVadSession: Boolean(options.vadSessionRef.current),
-      chatBusy: Boolean(options.busyRef.current),
-      voiceState: options.voiceStateRef.current,
-    })
-
-    if (!guard.ok) {
-      if (retryCount >= RESTART_RETRY_LIMIT) {
-        console.warn('[ContinuousVoice] restart gave up after', retryCount, 'retries — blocker:', guard.blocker)
-        options.showPetStatus(options.ti('voice.restart_timeout'), 4_000, 3_000)
-        return
-      }
-      voiceDebug('ContinuousVoice', 'timer — blocked (retry', retryCount + 1, '), blocker:', guard.blocker)
-      scheduleVoiceRestart({
-        ...options,
-        statusText,
-        delay: getRestartDelay('retry'),
-        _retryCount: retryCount + 1,
-      })
-      return
-    }
-
-    if (delay >= 1_000) {
-      options.showPetStatus(statusText, 6_000, 4_500)
-    }
-
-    try {
-      voiceDebug('ContinuousVoice', 'starting voice conversation (restart)')
-      options.startVoiceConversation({ restart: true, passive: true })
-    } catch (err) {
-      console.warn('[ContinuousVoice] restart failed:', err)
-      options.showPetStatus(options.ti('voice.restart_failed'), 4_000, 3_000)
-    }
-  }, delay)
-}
-
 export async function startSpeechInterruptMonitor(
   options: StartSpeechInterruptMonitorOptions,
 ) {
@@ -446,7 +361,7 @@ export async function startSpeechInterruptMonitor(
     // (sensitive enough for normal-volume user speech). When TTS is loud the
     // threshold rises so residual echo leaking past WebRTC AEC isn't mistaken
     // for the user speaking. The user has to actually speak *over* the TTS.
-    const ttsLevel = options.speechLevelValueRef.current
+    const ttsLevel = options.speechLevelSource.current
     const dynamicThreshold = SPEECH_INTERRUPT_RMS_THRESHOLD
       + ttsLevel * SPEECH_INTERRUPT_TTS_LEVEL_GAIN
 

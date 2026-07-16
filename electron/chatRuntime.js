@@ -1,3 +1,10 @@
+import {
+  CHAT_CONNECTION_MESSAGE,
+  CHAT_CONNECTION_RECOMMENDATION,
+  buildChatConnectionResult,
+  classifyChatMessageProbeIdentity,
+} from './services/chatConnectionProof.js'
+
 function normalizeBaseUrl(value) {
   return String(value ?? '').trim().replace(/\/+$/u, '')
 }
@@ -291,28 +298,34 @@ export function getChatConnectionTestPreflightFailure({ providerId, apiKey }) {
     try {
       normalizeChatApiKeyForHeader(normalizedProviderId, apiKey)
     } catch (error) {
-      return chatConnectionFailureResult({
+      return buildChatConnectionResult({
+        ok: false,
         status: 'needs_key',
         code: error?.code || 'api_key_header_unsafe',
-        message: error instanceof Error ? error.message : formatInvalidChatApiKeyMessage(normalizedProviderId),
-        recommendation: '重新去服务商那里复制一下原始 Key，只要 Key 本身就好。',
+        messageKey: CHAT_CONNECTION_MESSAGE.API_KEY_HEADER_UNSAFE,
+        recommendationKey: CHAT_CONNECTION_RECOMMENDATION.API_KEY_HEADER_UNSAFE,
+        diagnosticDetail: error instanceof Error ? error.message : undefined,
       })
     }
     return null
   }
 
   if (normalizedProviderId === 'deepseek') {
-    return chatConnectionFailureResult({
+    return buildChatConnectionResult({
+      ok: false,
       status: 'needs_key',
       code: 'missing_api_key',
-      message: 'DeepSeek 需要填 API Key，去控制台拿一个填在上面就好。',
+      messageKey: CHAT_CONNECTION_MESSAGE.MISSING_API_KEY_DEEPSEEK,
+      recommendationKey: CHAT_CONNECTION_RECOMMENDATION.MISSING_API_KEY,
     })
   }
 
-  return chatConnectionFailureResult({
+  return buildChatConnectionResult({
+    ok: false,
     status: 'needs_key',
     code: 'missing_api_key',
-    message: '先填一下 API Key 吧。',
+    messageKey: CHAT_CONNECTION_MESSAGE.MISSING_API_KEY,
+    recommendationKey: CHAT_CONNECTION_RECOMMENDATION.MISSING_API_KEY,
   })
 }
 
@@ -480,43 +493,25 @@ export function buildChatConnectionTestRequest(payload) {
   const providerId = normalizeChatProviderId(payload?.providerId, payload?.baseUrl)
   const baseUrl = normalizeBaseUrl(payload?.baseUrl)
   const protocol = getChatProviderProtocol(providerId, baseUrl)
-
-  if (protocol === 'anthropic') {
-    return {
-      providerId,
-      protocol,
-      successKind: 'message',
-      endpoint: resolveAnthropicEndpoint(baseUrl, '/v1/messages'),
-      request: {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...buildChatAuthorizationHeaders(providerId, payload?.apiKey, baseUrl),
-        },
-        body: JSON.stringify({
-          model: payload?.model,
-          max_tokens: 1,
-          temperature: 0,
-          ...(shouldDisableAnthropicThinking(providerId, payload?.model) ? { thinking: { type: 'disabled' } } : {}),
-          messages: [
-            {
-              role: 'user',
-              content: 'Ping.',
-            },
-          ],
-        }),
-      },
-    }
-  }
+  const probe = buildChatRequest({
+    providerId,
+    baseUrl,
+    apiKey: payload?.apiKey,
+    model: payload?.model,
+    maxTokens: 1,
+    temperature: 0,
+    messages: [{ role: 'user', content: 'Reply with OK.' }],
+  })
 
   return {
     providerId,
     protocol,
-    successKind: 'model_list',
-    endpoint: `${baseUrl}/models`,
+    successKind: 'message',
+    endpoint: probe.endpoint,
     request: {
-      method: 'GET',
-      headers: buildChatAuthorizationHeaders(providerId, payload?.apiKey, baseUrl),
+      method: 'POST',
+      headers: probe.headers,
+      body: probe.body,
     },
   }
 }
@@ -542,14 +537,60 @@ export function buildChatModelListRequest(payload) {
 export function summarizeChatConnectionTestSuccess({ providerId, successKind, data, model }) {
   const checkedAt = new Date().toISOString()
   if (successKind === 'message') {
-    return {
-      ok: true,
-      status: 'ready',
-      message: '连上了，模型已经回应啦。',
-      checkedAt,
+    const protocol = getChatProviderProtocol(providerId)
+    const hasTopLevelError = Boolean(data?.error)
+    const hasResponse = !hasTopLevelError && (protocol === 'anthropic'
+      ? Array.isArray(data?.content) && data.content.some((item) => (
+        item?.type === 'text' && typeof item.text === 'string' && item.text.trim().length > 0
+      ))
+      : Array.isArray(data?.choices) && data.choices.some((item) => {
+        const message = item?.message
+        if (!message || typeof message !== 'object' || item?.error) return false
+        return (typeof message.content === 'string' && message.content.trim().length > 0)
+          || (typeof message.reasoning_content === 'string' && message.reasoning_content.trim().length > 0)
+          || (Array.isArray(message.tool_calls) && message.tool_calls.length > 0)
+      }))
+
+    if (!hasResponse) {
+      return buildChatConnectionResult({
+        ok: false,
+        status: 'error',
+        code: 'invalid_probe_response',
+        messageKey: CHAT_CONNECTION_MESSAGE.INVALID_PROBE,
+        recommendationKey: CHAT_CONNECTION_RECOMMENDATION.INVALID_PROBE,
+        checkedAt,
+      })
     }
+
+    const { evidence } = classifyChatMessageProbeIdentity({
+      providerId,
+      modelId: model,
+      data,
+    })
+    const identityMismatch = Boolean(evidence.identityMismatch || evidence.usedFallback)
+    const identityUnverified = !evidence.observedModelId
+
+    return buildChatConnectionResult({
+      ok: true,
+      // Identity mismatch remains ok:true with partial evidence so the UI can
+      // show partial rather than hard error for a working path that answered
+      // with a different model than requested.
+      status: identityMismatch ? 'error' : identityUnverified ? 'partial' : 'ready',
+      messageKey: identityMismatch
+        ? CHAT_CONNECTION_MESSAGE.IDENTITY_MISMATCH
+        : identityUnverified
+          ? CHAT_CONNECTION_MESSAGE.IDENTITY_UNVERIFIED
+        : CHAT_CONNECTION_MESSAGE.READY,
+      recommendationKey: identityUnverified
+        ? CHAT_CONNECTION_RECOMMENDATION.IDENTITY_UNVERIFIED
+        : undefined,
+      evidence,
+      checkedAt,
+    })
   }
 
+  // Model-list success is discovery-only proof. It must never paint green
+  // connection readiness for the configured chat model.
   const discoveredModels = buildDiscoveredChatModels({ providerId, data })
   const modelIds = discoveredModels.map((item) => item.id)
   const requestedModel = String(model ?? '').trim()
@@ -557,45 +598,46 @@ export function summarizeChatConnectionTestSuccess({ providerId, successKind, da
 
   if (normalizedProviderId === 'ollama') {
     if (!modelIds.length) {
-      return chatConnectionFailureResult({
+      return buildChatConnectionResult({
+        ok: false,
         status: 'model_missing',
         code: 'missing_model',
-        message: 'Ollama 连上了，不过还没有模型呢。运行 ollama pull qwen3:8b 装一个吧。',
-        recommendation: '运行 ollama pull qwen3:8b 装一个，或者装好别的模型再来刷新。',
+        messageKey: CHAT_CONNECTION_MESSAGE.MODEL_MISSING_OLLAMA,
+        recommendationKey: CHAT_CONNECTION_RECOMMENDATION.MODEL_MISSING_OLLAMA,
         discoveredModels,
         checkedAt,
       })
     }
 
     if (requestedModel && !modelIds.includes(requestedModel)) {
-      return chatConnectionFailureResult({
+      return buildChatConnectionResult({
+        ok: false,
         status: 'model_missing',
         code: 'model_not_found',
-        message: `Ollama 连上了，不过没找到「${requestedModel}」。先 ollama pull ${requestedModel} 装一下，或者换个已有的模型。`,
-        recommendation: `运行 ollama pull ${requestedModel}，或者在模型列表里选一个已有的。`,
+        messageKey: CHAT_CONNECTION_MESSAGE.MODEL_NOT_FOUND_OLLAMA,
+        recommendationKey: CHAT_CONNECTION_RECOMMENDATION.MODEL_NOT_FOUND_OLLAMA,
+        messageParams: { model: requestedModel },
         discoveredModels,
         checkedAt,
       })
     }
   }
 
-  if (modelIds.length) {
-    return {
-      ok: true,
-      status: 'ready',
-      message: `连上了，发现了这些模型：${modelIds.slice(0, 3).join('、')}`,
-      discoveredModels,
-      checkedAt,
-    }
-  }
-
-  return {
+  return buildChatConnectionResult({
     ok: true,
-    status: 'ready',
-    message: '连上了，一切正常。',
+    status: 'error',
+    code: 'invalid_probe_response',
+    messageKey: CHAT_CONNECTION_MESSAGE.MODEL_LIST_NOT_PROOF,
+    recommendationKey: CHAT_CONNECTION_RECOMMENDATION.MODEL_LIST_NOT_PROOF,
+    evidence: {
+      kind: 'model-list',
+      providerId: normalizedProviderId,
+      ...(requestedModel ? { modelId: requestedModel } : {}),
+      partial: true,
+    },
     discoveredModels,
     checkedAt,
-  }
+  })
 }
 
 function extractConnectionFailureMessage(data) {
@@ -608,150 +650,156 @@ function extractConnectionFailureMessage(data) {
   return ''
 }
 
-function chatConnectionFailureResult({ status, code, message, recommendation, checkedAt, ...extra }) {
-  return {
-    ok: false,
-    status,
-    code,
-    message,
-    ...(recommendation === undefined ? {} : { recommendation }),
-    ...extra,
-    ...(checkedAt === undefined ? {} : { checkedAt }),
-  }
-}
-
 export function summarizeChatConnectionTestFailure({ providerId, status, data, hasApiKey, model }) {
   const checkedAt = new Date().toISOString()
   const normalizedProviderId = normalizeChatProviderId(providerId)
   const rawMessage = extractConnectionFailureMessage(data)
   const requestedModel = String(model ?? '').trim()
+  // Provider bodies stay diagnostic-only — never the primary UI message.
+  const diagnosticDetail = rawMessage || undefined
 
   if (status === 401) {
     if (normalizedProviderId === 'deepseek') {
-      return chatConnectionFailureResult({
+      return buildChatConnectionResult({
+        ok: false,
         status: 'needs_key',
         code: 'auth_failed',
-        message: hasApiKey
-          ? 'DeepSeek 的 API Key 好像不太对，去控制台看看是不是过期了？'
-          : 'DeepSeek 需要填 API Key 才能用哦，去控制台拿一个填在上面就好。',
-        recommendation: '可以去 DeepSeek 控制台重新生成一个，顺便看看余额和模型权限。',
+        messageKey: hasApiKey
+          ? CHAT_CONNECTION_MESSAGE.AUTH_FAILED_DEEPSEEK
+          : CHAT_CONNECTION_MESSAGE.AUTH_FAILED_DEEPSEEK_MISSING,
+        recommendationKey: CHAT_CONNECTION_RECOMMENDATION.AUTH_FAILED_DEEPSEEK,
         checkedAt,
+        diagnosticDetail,
       })
     }
 
-    return chatConnectionFailureResult({
+    return buildChatConnectionResult({
+      ok: false,
       status: 'needs_key',
       code: 'auth_failed',
-      message: hasApiKey
-        ? '地址能通，不过 API Key 好像不太对。'
-        : '地址能通，不过还没填 API Key 呢。',
-      recommendation: '看看 Key 有没有过期，或者重新复制一下。',
+      messageKey: hasApiKey
+        ? CHAT_CONNECTION_MESSAGE.AUTH_FAILED
+        : CHAT_CONNECTION_MESSAGE.AUTH_FAILED_MISSING_KEY,
+      recommendationKey: CHAT_CONNECTION_RECOMMENDATION.AUTH_FAILED,
       checkedAt,
+      diagnosticDetail,
     })
   }
 
   if (normalizedProviderId === 'deepseek') {
     if (status === 402 || status === 403) {
-      return chatConnectionFailureResult({
+      return buildChatConnectionResult({
+        ok: false,
         status: 'needs_key',
         code: 'quota_or_permission',
-        message: rawMessage || 'DeepSeek 好像遇到了权限或余额限制，看看账号还有没有额度？',
-        recommendation: '去控制台看看余额和模型权限。',
+        messageKey: CHAT_CONNECTION_MESSAGE.QUOTA_OR_PERMISSION_DEEPSEEK,
+        recommendationKey: CHAT_CONNECTION_RECOMMENDATION.QUOTA_OR_PERMISSION_DEEPSEEK,
         checkedAt,
+        diagnosticDetail,
       })
     }
 
     if (status === 404) {
-      return chatConnectionFailureResult({
+      return buildChatConnectionResult({
+        ok: false,
         status: 'misconfigured',
         code: 'invalid_api_base_url',
-        message: 'DeepSeek 的地址或模型名好像对不上，Base URL 填 https://api.deepseek.com，模型先选 deepseek-v4-flash 试试？',
-        recommendation: 'Base URL 改成 https://api.deepseek.com，模型先用 deepseek-v4-flash。',
+        messageKey: CHAT_CONNECTION_MESSAGE.INVALID_BASE_URL_DEEPSEEK,
+        recommendationKey: CHAT_CONNECTION_RECOMMENDATION.INVALID_BASE_URL_DEEPSEEK,
         checkedAt,
+        diagnosticDetail,
       })
     }
 
     if (requestedModel && /model|模型|not found|does not exist/i.test(rawMessage)) {
-      return chatConnectionFailureResult({
+      return buildChatConnectionResult({
+        ok: false,
         status: 'model_missing',
         code: 'model_not_found',
-        message: `DeepSeek 好像不认识「${requestedModel}」这个模型，先换成 deepseek-v4-flash 试试？`,
-        recommendation: '先用 deepseek-v4-flash，需要更强推理再切 deepseek-v4-pro。',
+        messageKey: CHAT_CONNECTION_MESSAGE.MODEL_NOT_FOUND_DEEPSEEK,
+        recommendationKey: CHAT_CONNECTION_RECOMMENDATION.MODEL_NOT_FOUND_DEEPSEEK,
+        messageParams: { model: requestedModel },
         checkedAt,
+        diagnosticDetail,
       })
     }
   }
 
   if (status === 429) {
-    return chatConnectionFailureResult({
+    return buildChatConnectionResult({
+      ok: false,
       status: 'error',
       code: 'rate_limited',
-      message: rawMessage || '请求有点太频繁了，歇一小会儿再试试。',
-      recommendation: '等几秒再试就好。如果老是这样，去看看服务商那边的调用限额。',
+      messageKey: CHAT_CONNECTION_MESSAGE.RATE_LIMITED,
+      recommendationKey: CHAT_CONNECTION_RECOMMENDATION.RATE_LIMITED,
       checkedAt,
+      diagnosticDetail,
     })
   }
 
   if ((status === 402 || status === 403) && normalizedProviderId !== 'deepseek') {
-    return chatConnectionFailureResult({
+    return buildChatConnectionResult({
+      ok: false,
       status: 'needs_key',
       code: 'quota_or_permission',
-      message: rawMessage || '服务商好像有权限或余额限制。',
-      recommendation: '看看 API Key 权限和账号余额，有些模型可能需要单独开通。',
+      messageKey: CHAT_CONNECTION_MESSAGE.QUOTA_OR_PERMISSION,
+      recommendationKey: CHAT_CONNECTION_RECOMMENDATION.QUOTA_OR_PERMISSION,
       checkedAt,
+      diagnosticDetail,
     })
   }
 
   if (status === 404 && requestedModel) {
-    return chatConnectionFailureResult({
+    return buildChatConnectionResult({
+      ok: false,
       status: 'model_missing',
       code: 'model_not_found',
-      message: rawMessage || `没找到「${requestedModel}」这个模型，可能名字不对或者账号没开通。`,
-      recommendation: '核对一下模型名，或者先换个服务商推荐的默认模型试试。',
+      messageKey: CHAT_CONNECTION_MESSAGE.MODEL_NOT_FOUND,
+      recommendationKey: CHAT_CONNECTION_RECOMMENDATION.MODEL_NOT_FOUND,
+      messageParams: { model: requestedModel },
       checkedAt,
+      diagnosticDetail,
     })
   }
 
   if (status === 408) {
-    return chatConnectionFailureResult({
+    return buildChatConnectionResult({
+      ok: false,
       status: 'unreachable',
       code: 'request_timeout',
-      message: rawMessage || '等了好一会儿都没回应，可能是网络不太顺畅。',
-      recommendation: '看看网络和代理设置，也可以稍后再试一下。',
+      messageKey: CHAT_CONNECTION_MESSAGE.REQUEST_TIMEOUT,
+      recommendationKey: CHAT_CONNECTION_RECOMMENDATION.REQUEST_TIMEOUT,
       checkedAt,
+      diagnosticDetail,
     })
   }
 
   if (status === 502 || status === 503) {
-    return chatConnectionFailureResult({
+    return buildChatConnectionResult({
+      ok: false,
       status: 'unreachable',
       code: 'provider_server_error',
-      message: rawMessage || '服务商那边暂时忙不过来，可能在维护或者流量太大。',
-      recommendation: '过一会儿再试试。如果一直这样，可以去看看服务商的状态页。',
+      messageKey: CHAT_CONNECTION_MESSAGE.PROVIDER_SERVER_ERROR,
+      recommendationKey: CHAT_CONNECTION_RECOMMENDATION.PROVIDER_SERVER_ERROR,
       checkedAt,
+      diagnosticDetail,
     })
   }
 
-  return chatConnectionFailureResult({
+  return buildChatConnectionResult({
+    ok: false,
     status: status >= 500 ? 'unreachable' : 'error',
     code: status >= 500 ? 'provider_server_error' : 'unknown_connection_error',
-    message: rawMessage || `接口返回了状态码 ${status}，不太确定哪里出了问题。`,
-    recommendation: '看看地址、网络和模型名，也可以关注一下服务商那边有没有公告。',
+    messageKey: status >= 500
+      ? CHAT_CONNECTION_MESSAGE.PROVIDER_SERVER_ERROR
+      : CHAT_CONNECTION_MESSAGE.UNKNOWN_ERROR,
+    recommendationKey: status >= 500
+      ? CHAT_CONNECTION_RECOMMENDATION.PROVIDER_SERVER_ERROR
+      : CHAT_CONNECTION_RECOMMENDATION.UNKNOWN_ERROR,
+    messageParams: Number.isFinite(status) ? { status } : undefined,
     checkedAt,
+    diagnosticDetail,
   })
-}
-
-function formatTransportFailureReason(reason) {
-  const message = String(reason ?? '').trim()
-  if (!message) {
-    return '没能连上，可能是地址或网络的问题。'
-  }
-
-  if (message.includes('没能连') || message.includes('超时')) {
-    return message
-  }
-
-  return `没能连上，可能是地址或网络的问题。具体原因：${message}`
 }
 
 function classifyOllamaTransportFailure(reason) {
@@ -776,27 +824,31 @@ function classifyOllamaTransportFailure(reason) {
 export function summarizeChatConnectionTransportFailure({ providerId, reason, baseUrl }) {
   const checkedAt = new Date().toISOString()
   const normalizedProviderId = normalizeChatProviderId(providerId, baseUrl)
+  const diagnosticDetail = String(reason ?? '').trim() || undefined
 
   if (normalizedProviderId === 'ollama') {
     const failureKind = classifyOllamaTransportFailure(reason)
-    const baseMessage = failureKind === 'timeout'
-      ? '本机 Ollama 一直没有回应。'
-      : '没能连上本机 Ollama。'
-    return chatConnectionFailureResult({
+    return buildChatConnectionResult({
+      ok: false,
       status: 'unreachable',
       code: failureKind === 'timeout' ? 'request_timeout' : 'provider_unreachable',
-      message: `${baseMessage}请先启动 Ollama，并确认 Nexus 的 Base URL 是 http://127.0.0.1:11434/v1。`,
-      recommendation: '打开 Ollama 应用，或在终端运行 ollama serve；启动后再点一次连接测试。如果还没有模型，运行 ollama pull qwen3:8b。',
+      messageKey: failureKind === 'timeout'
+        ? CHAT_CONNECTION_MESSAGE.PROVIDER_UNREACHABLE_OLLAMA_TIMEOUT
+        : CHAT_CONNECTION_MESSAGE.PROVIDER_UNREACHABLE_OLLAMA,
+      recommendationKey: CHAT_CONNECTION_RECOMMENDATION.PROVIDER_UNREACHABLE_OLLAMA,
       checkedAt,
+      diagnosticDetail,
     })
   }
 
-  return chatConnectionFailureResult({
+  return buildChatConnectionResult({
+    ok: false,
     status: 'unreachable',
     code: 'provider_unreachable',
-    message: formatTransportFailureReason(reason),
-    recommendation: '看看地址和网络，本地服务的话确认一下有没有在跑。',
+    messageKey: CHAT_CONNECTION_MESSAGE.PROVIDER_UNREACHABLE,
+    recommendationKey: CHAT_CONNECTION_RECOMMENDATION.PROVIDER_UNREACHABLE,
     checkedAt,
+    diagnosticDetail,
   })
 }
 

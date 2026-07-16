@@ -35,7 +35,7 @@ const panelSectionSchema = {
   type: 'enum',
   optional: true,
   default: 'chat',
-  values: ['chat', 'settings'],
+  values: ['chat', 'chat-text', 'chat-recent', 'settings'],
 }
 
 const dragDeltaSchema = {

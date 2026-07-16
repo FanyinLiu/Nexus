@@ -25,6 +25,7 @@ type UseAwayNotificationSchedulerOptions = {
   messages: ChatMessage[]
   /** Pause scheduling while the panel is open and visible to the user. */
   panelOpen: boolean
+  enabled?: boolean
 }
 
 /**
@@ -37,6 +38,7 @@ export function useAwayNotificationScheduler({
   settings,
   messages,
   panelOpen,
+  enabled = true,
 }: UseAwayNotificationSchedulerOptions) {
   // Stable ref so the interval handler always sees the latest values without
   // tearing the timer down on every chat-message change.
@@ -46,7 +48,7 @@ export function useAwayNotificationScheduler({
   }, [settings, messages, panelOpen])
 
   useEffect(() => {
-    if (!settings.proactiveAwayNotificationsEnabled) return
+    if (!enabled || !settings.proactiveAwayNotificationsEnabled) return
     if (typeof window === 'undefined') return
     if (!window.desktopPet?.showProactiveNotification) return
 
@@ -90,5 +92,5 @@ export function useAwayNotificationScheduler({
     void tick()
     const id = window.setInterval(() => { void tick() }, POLL_INTERVAL_MS)
     return () => window.clearInterval(id)
-  }, [settings.proactiveAwayNotificationsEnabled])
+  }, [enabled, settings.proactiveAwayNotificationsEnabled])
 }

@@ -38,6 +38,7 @@ type DebugConsoleBridge = {
 export type UseDiscordBridgeOptions = {
   settingsRef: React.RefObject<AppSettings>
   enabled: boolean
+  runtimeOwner?: boolean
   botToken: string
   allowedChannelIds: string
   chat: ChatBridge
@@ -50,6 +51,7 @@ type DiscordChannelEntry = { channelId: string; messageId: string; isOwner: bool
 export function useDiscordBridge({
   settingsRef,
   enabled,
+  runtimeOwner = true,
   botToken,
   allowedChannelIds,
   chat,
@@ -112,6 +114,7 @@ export function useDiscordBridge({
     allowedChannelIds,
     onMessage: handleDiscordMessage,
     enabled,
+    runtimeOwner,
   })
 
   useEffect(() => {

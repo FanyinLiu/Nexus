@@ -22,7 +22,7 @@ It is a design-planning record, not a source-code dump. It uses the public refer
 
 ## Pro Review Summary
 
-Pro accepted the composer direction as a single-surface intent gateway and streaming controller, not a normal chat input and not a toolbar. The bounded takeaway is hierarchy: textarea owns user intent, send becomes primary only when submit is available, mic and attachment are secondary input modes, and runtime/model/streaming hints stay tertiary.
+Pro accepted the composer direction as a single-surface intent gateway and streaming controller, not a normal chat input and not a toolbar. The bounded takeaway is hierarchy: textarea owns user intent, send becomes primary only when submit is available, attachment remains a secondary tool, and voice runtime controls stay in Settings.
 
 The review explicitly rejected default provider, agent, preset, tool-market, and runtime-dashboard controls inside the companion composer layer. Those capabilities may have boundaries elsewhere, but they must not become default composer chrome.
 
@@ -35,7 +35,8 @@ The composer must remain the primary input anchor, but it must not become the ce
 - Composer is a single-surface intent gateway, not a toolbar.
 - Textarea is the primary intent area.
 - Send is primary only when submit is available.
-- Mic and attachment are embedded secondary tools.
+- Attachment is an embedded secondary tool.
+- Voice runtime controls stay in Settings and out of the main composer.
 - Runtime/model/streaming hints are tertiary.
 - Image4 composer and normal chat composer must share alignment rhythm and control box rules.
 - Hover/focus may reveal lightweight affordance, but default tool controls must not read as separate tiles.
@@ -55,18 +56,18 @@ Use these states as the review vocabulary before adding visual changes:
 
 ## Embedded Tool Rule
 
-Attachment, mic, and send are composer tools, not separate default tiles. In Image4 warm-day they should visually belong to the input: transparent default state, stable icon weight, and lightweight button feedback only on hover, focus, active, or enabled-send states.
+Attachment and send are composer tools, not separate default tiles. In Image4 warm-day they should visually belong to the input: transparent default state, stable icon weight, and lightweight button feedback only on hover, focus, active, or enabled-send states. Voice runtime controls stay in Settings and out of the main composer.
 
 This keeps the text area as the visible boundary while preserving discoverable controls. If the tools need more visibility, tune icon contrast, spacing, tooltip/focus behavior, or enabled state first; do not add persistent button backplates inside the composer by default. Warm-day embedded tools should get contrast from the companion muted/text palette, not from larger buttons, stronger shadows, or separate tiles.
 
 ## Final Composer Rhythm
 
-The final Image4 composer layer owns the compact control rhythm. `panel-companion-composer.css` owns final attachment, mic, send, textarea, focus, and state styling; `panel-companion-chat.css` only owns the dock/container, empty state, action prompts, and hint text.
+The final Image4 composer layer owns the compact control rhythm. `panel-companion-composer.css` owns final attachment, send, textarea, focus, and state styling; `panel-companion-chat.css` only owns the dock/container, empty state, action prompts, and hint text.
 
-- field text padding: `17px 82px 13px 52px`;
-- attachment, mic, and send use a `29px control box`;
+- field text padding: `17px 51px 13px 52px`;
+- attachment and send use a `29px control box`;
 - icon glyphs use a `16px icon box`;
-- action rail uses a `2px action gap`;
+- attachment/send controls use a `2px control gap`;
 - default embedded controls stay transparent and do not carry persistent backplates.
 
 Do not use button resizing as an alignment fix. If alignment drifts, adjust the shared center line, reserved textarea padding, icon box, or state color before changing the control-box size.
@@ -74,7 +75,7 @@ Do not use button resizing as an alignment fix. If alignment drifts, adjust the 
 ## Implementation Route
 
 1. Define the composer state machine before changing visuals: `idle`, `drafting`, `streaming`, and `interrupted`.
-2. Keep exactly one primary input core. Secondary controls such as attach, mic, tools, and send must feed the same composer pipeline.
+2. Keep exactly one primary input core. Attachment and send feed the same composer pipeline; voice runtime controls stay in Settings.
 3. Keep tool entry collapsed by default. Do not add a persistent multi-button toolbar or default tool backplates that compete with the textarea.
 4. During streaming, keep composer geometry stable. State may change affordance, focus, cursor, or read-only behavior, but not height or row ownership.
 5. During interruption, return focus to the input path and treat the new input as a replacement intent, not a second parallel flow.
@@ -100,7 +101,7 @@ These require visual review:
 
 - The composer still feels like a companion intent surface, not a generic web chat input.
 - Tool affordances do not steal primary attention from text entry.
-- Attachment, mic, and send feel embedded in the input instead of floating beside it or becoming a row of mini buttons.
+- Attachment and send feel embedded in the input instead of floating beside it or becoming a row of mini buttons.
 - Streaming state reads as system behavior, not as a second message surface.
 - The input remains obvious without forcing the dial, presence, or companion identity into the background.
 - The surface does not copy Chatbox, Vercel AI Chatbot, or any other reference skin.

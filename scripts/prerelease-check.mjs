@@ -3,13 +3,13 @@
  *
  * Usage:
  *   npm run prerelease-check -- vX.Y.Z[-beta.N]          # full 6-stage check
- *   npm run prerelease-check -- vX.Y.Z --quick           # skip slow checks (smoke, packaged smoke, coverage, benchmarks)
+ *   npm run prerelease-check -- vX.Y.Z --quick           # skip npm smoke, Live2D three-model smoke, packaged smoke, packaged sustained, coverage, benchmarks
  *   npm run prerelease-check -- vX.Y.Z --skip C,D        # skip specific stages
  *   npm run prerelease-check -- vX.Y.Z --only A          # run only specific stages
  *
  * Stages:
  *   A. Process / version       (tag shape, package.json sync, working tree, CI)
- *   B. Code quality            (verify:release, smoke, packaged smoke, coverage, bundle, perf)
+ *   B. Code quality            (verify:release, smoke, Live2D smoke, packaged smoke, packaged sustained, coverage, bundle, benchmarks)
  *   C. Security                (npm audit, Electron config, electron versions, secrets, CSP)
  *   D. Asset integrity         (locale parity, models, dist artefacts)
  *   E. Docs + compliance       (release notes, README sync, license scan, AI disclosure)
@@ -18,7 +18,7 @@
  * Docs: docs/RELEASING.md.
  */
 
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -39,6 +39,8 @@ let passed = 0
 let warned = 0
 let failed = 0
 const failures = []
+const STABLE_RELEASE_NOTE_FORBIDDEN_MARKERS = /\bDraft\b|草稿|pre[-\s]?tag|尚未打\s*tag|Release candidate|not a public release|no tag|发布候选|尚未公开发布|不打\s*tag/i
+let packagedSmokePassed = false
 
 function check(stage, label, fn, { warnOnly = false } = {}) {
   total += 1
@@ -83,9 +85,12 @@ const skipArg = process.argv.find((a) => a.startsWith('--skip='))
 const onlyArg = process.argv.find((a) => a.startsWith('--only='))
 const skipped = new Set((skipArg?.split('=')[1] ?? '').split(',').filter(Boolean))
 const onlyStages = (onlyArg?.split('=')[1] ?? '').split(',').filter(Boolean)
+const QUICK_SKIPPED_LABEL = 'npm smoke, Live2D three-model smoke, packaged smoke, packaged sustained, coverage, benchmarks'
+const QUICK_SKIPPED_OUTPUT = 'npm smoke / Live2D three-model smoke / packaged smoke / packaged sustained / coverage / benchmarks'
 
 if (!tag) {
   console.error(COLOR.red('Usage: npm run prerelease-check -- <tag> [--quick] [--skip=B,C] [--only=A]'))
+  console.error(COLOR.dim(`--quick skips ${QUICK_SKIPPED_LABEL}; verify:release and bundle still run.`))
   process.exit(2)
 }
 
@@ -196,6 +201,18 @@ stage('B', 'Code quality', () => {
       }
     })
 
+    check('B', 'Live2D three-model smoke (owned Vite lifecycle + 7 screenshots)', () => {
+      try {
+        execFileSync(process.execPath, [join(ROOT, 'scripts/live2d-three-model-smoke.mjs')], {
+          cwd: ROOT,
+          timeout: 420_000,
+          stdio: 'inherit',
+        })
+      } catch (err) {
+        throw new Error(`Live2D three-model smoke failed: ${err.message?.split('\n')[0]}`)
+      }
+    })
+
     check('B', `Packaged smoke (electron-builder --dir + SMOKE_TEST)`, () => {
       try {
         sh('npm run package:dir:smoke', {
@@ -206,9 +223,29 @@ stage('B', 'Code quality', () => {
             CSC_IDENTITY_AUTO_DISCOVERY: 'false',
           },
         })
+        packagedSmokePassed = true
       } catch (err) {
         const detail = err.stderr?.toString()?.split('\n').slice(-8).join('\n') || err.message
         throw new Error(`packaged smoke failed:\n       ${detail.replace(/\n/g, '\n       ')}`)
+      }
+    })
+
+    check('B', 'Packaged sustained runtime (requires packaged smoke)', () => {
+      if (!packagedSmokePassed) {
+        throw new Error('packaged smoke did not pass; runtime:packaged-sustained was not started')
+      }
+      try {
+        sh('npm run runtime:packaged-sustained', {
+          stdio: ['ignore', 'ignore', 'pipe'],
+          timeout: 600_000,
+          env: {
+            ...process.env,
+            PACKAGED_SMOKE_RELEASE_DIR: 'release-smoke',
+          },
+        })
+      } catch (err) {
+        const detail = err.stderr?.toString()?.split('\n').slice(-8).join('\n') || err.message
+        throw new Error(`packaged sustained runtime failed:\n       ${detail.replace(/\n/g, '\n       ')}`)
       }
     })
 
@@ -226,7 +263,7 @@ stage('B', 'Code quality', () => {
       return `${pct}%`
     }, { warnOnly: true })
   } else {
-    console.log(COLOR.dim('       smoke / packaged smoke / coverage skipped (--quick)'))
+    console.log(COLOR.dim(`       ${QUICK_SKIPPED_OUTPUT} skipped (--quick)`))
   }
 
   check('B', 'Bundle: app-runtime ≤ 1700 KB', () => {
@@ -359,21 +396,32 @@ stage('D', 'Asset integrity', () => {
     if (errors.length > 0) throw new Error(errors.slice(0, 3).join('\n       '))
   })
 
-  check('D', 'sherpa models referenced (build extraResources)', () => {
+  check('D', 'sherpa models referenced with transient-download exclusions', () => {
     const pkg = readPkg()
-    const macExtras = pkg.build?.mac?.extraResources ?? []
-    const winExtras = pkg.build?.win?.extraResources ?? []
-    const linuxExtras = pkg.build?.linux?.extraResources ?? []
-    const sherpaInMac = macExtras.some((e) => e.from?.includes('sherpa-models'))
-    const sherpaInWin = winExtras.some((e) => e.from?.includes('sherpa-models'))
-    const sherpaInLinux = linuxExtras.some((e) => e.from?.includes('sherpa-models'))
-    if (!sherpaInMac || !sherpaInWin || !sherpaInLinux) {
-      throw new Error(`sherpa-models extraResources missing on ${[
-        !sherpaInMac && 'mac',
-        !sherpaInWin && 'win',
-        !sherpaInLinux && 'linux',
-      ].filter(Boolean).join('+')}`)
+    const requiredFilters = [
+      '!**/.nexus-*/**',
+      '!**/*.partial',
+      '!**/*.partial-*',
+      '!**/*.tar',
+      '!**/*.tar.*',
+      '!**/*.tgz',
+      '!**/*.tbz',
+      '!**/*.tbz2',
+      '!**/*.txz',
+    ]
+    const errors = []
+    for (const platform of ['mac', 'win', 'linux']) {
+      const extras = pkg.build?.[platform]?.extraResources ?? []
+      const matches = extras.filter((entry) => entry.from === 'sherpa-models' && entry.to === 'sherpa-models')
+      if (matches.length !== 1) {
+        errors.push(`${platform}: expected exactly one sherpa-models mapping`)
+        continue
+      }
+      const filters = Array.isArray(matches[0].filter) ? matches[0].filter : []
+      const missing = requiredFilters.filter((filter) => !filters.includes(filter))
+      if (missing.length > 0) errors.push(`${platform}: missing ${missing.join(', ')}`)
     }
+    if (errors.length > 0) throw new Error(errors.join('\n       '))
   })
 
   check('D', 'dist/ contains app-runtime + index.html + ort-wasm', () => {
@@ -402,10 +450,10 @@ stage('E', 'Docs + compliance', () => {
       const path = join(ROOT, 'docs', `RELEASE-NOTES-${tag}.md`)
       if (!existsSync(path)) return
       const notes = readFileSync(path, 'utf8')
-      if (/\bDraft\b|pre-tag|尚未打 tag/i.test(notes)) {
+      if (STABLE_RELEASE_NOTE_FORBIDDEN_MARKERS.test(notes)) {
         throw new Error(`release notes still contain draft/pre-tag markers`)
       }
-    }, { warnOnly: true })
+    })
 
     check('E', `docs/RELEASE-NOTES-${tag}.zh-CN.md exists and is not draft`, () => {
       const path = join(ROOT, 'docs', `RELEASE-NOTES-${tag}.zh-CN.md`)
@@ -413,10 +461,10 @@ stage('E', 'Docs + compliance', () => {
         throw new Error(`missing localized release notes — add docs/RELEASE-NOTES-${tag}.zh-CN.md`)
       }
       const notes = readFileSync(path, 'utf8')
-      if (/\bDraft\b|pre-tag|尚未打 tag/i.test(notes)) {
+      if (STABLE_RELEASE_NOTE_FORBIDDEN_MARKERS.test(notes)) {
         throw new Error(`localized release notes still contain draft/pre-tag markers`)
       }
-    }, { warnOnly: true })
+    })
 
     check('E', `README.md mentions ${tag}`, () => {
       const readme = readFileSync(join(ROOT, 'README.md'), 'utf8')

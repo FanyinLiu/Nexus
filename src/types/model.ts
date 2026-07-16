@@ -46,6 +46,8 @@ export type ModelConnectionErrorCode =
   | 'request_timeout'
   | 'provider_unreachable'
   | 'provider_server_error'
+  | 'provider_error'
+  | 'invalid_probe_response'
   | 'unknown_connection_error'
 
 export interface ProviderHealthResult {

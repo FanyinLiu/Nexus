@@ -8,7 +8,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const REQUIRED_FILES = [
   'docs/CHAT_SURFACE_REFERENCE_REVIEW.md',
-  'src/app/views/PanelView.tsx',
+  'src/app/views/LegacyPanelView.tsx',
   'src/app/views/image4ChatPreview.ts',
   'src/app/styles/panel-companion-messages.css',
   'src/components/MessageBubble.tsx',
@@ -58,7 +58,7 @@ const REQUIRED_CONTRACTS = [
   },
   {
     id: 'composer-priority-outside-message-list',
-    file: 'src/app/views/PanelView.tsx',
+    file: 'src/app/views/LegacyPanelView.tsx',
     description: 'Chat keeps messages and composer as distinct layers so composer priority can be preserved.',
     patterns: [
       'image4ChatPreviewMode',
@@ -116,7 +116,7 @@ const REQUIRED_CONTRACTS = [
 const FORBIDDEN_SOURCE_PATTERNS = [
   {
     id: 'chat-default-workspace-chrome',
-    files: ['src/app/views/PanelView.tsx', 'src/components/MessageBubble.tsx'],
+    files: ['src/app/views/LegacyPanelView.tsx', 'src/components/MessageBubble.tsx'],
     description: 'Default chat must not gain workspace, admin, provider, model, agent, tool-market, or artifact chrome.',
     patterns: [
       'workspace-sidebar',
@@ -217,7 +217,7 @@ function buildSummary({ missingFiles, missingContracts, forbiddenPatterns }) {
 export function buildChatSurfaceReport(root = ROOT) {
   const files = readProjectFiles(root, REQUIRED_FILES)
   const messageBubble = files.get('src/components/MessageBubble.tsx') ?? ''
-  const panelView = files.get('src/app/views/PanelView.tsx') ?? ''
+  const panelView = files.get('src/app/views/LegacyPanelView.tsx') ?? ''
   const missingFiles = findMissingFiles(files)
   const missingContracts = findMissingContracts(files)
   const forbiddenPatterns = findForbiddenPatterns(files)

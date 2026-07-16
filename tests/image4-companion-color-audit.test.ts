@@ -36,8 +36,7 @@ html[data-theme='warm-day'] .desktop-pet-root--panel:has(.panel-window--image4):
 }
 `,
   'src/app/styles/panel-companion-composer.css': `
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button {
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill {
   color: color-mix(in srgb, var(--image4-companion-muted) 88%, var(--image4-companion-text));
 }
 
@@ -45,13 +44,8 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-s
   color: color-mix(in srgb, var(--image4-companion-secondary) 82%, var(--image4-companion-text));
 }
 
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-has-attachment='true'] .image4-attachment-pill,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-voice-state='listening'] .composer__actions .ghost-button {
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-has-attachment='true'] .image4-attachment-pill {
   color: color-mix(in srgb, var(--image4-companion-secondary) 76%, var(--image4-companion-text));
-}
-
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-voice-state='speaking'] .composer__actions .ghost-button {
-  color: color-mix(in srgb, var(--image4-companion-primary) 76%, var(--image4-companion-text));
 }
 
 html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-send-state='disabled'] .composer__actions .primary-button:disabled {
@@ -96,7 +90,7 @@ html[data-theme='warm-day'] .panel-window--image4 .companion-presence__signal.is
 
 This color direction is grounded in color-emotion research and accessibility rules, not only visual taste. Light colors skew positive, while blue, green, blue-green, and white are associated with positive low-arousal emotions such as comfort and relaxation. Nexus should use peach/apricot as a restrained emotional accent instead of a broad high-energy theme.
 
-For controls, the W3C non-text contrast guidance is the guardrail. In Image4 warm-day this means embedded plus, mic, send-ready, focus, and speaking cues should be legible through companion tokens before adding tiles, shadows, or larger button boxes.
+For controls, the W3C non-text contrast guidance is the guardrail: available UI controls and meaningful icons need enough adjacent contrast to be identifiable, while inactive controls can stay quieter. In Image4 warm-day this means the embedded attachment, send-ready, and focus cues should be legible through companion tokens. Voice runtime controls stay in Settings; the main companion composer has no voice-control role.
 
 ## Companion Palette Time-Of-Day Model
 
@@ -145,8 +139,12 @@ test('Image4 companion color audit passes the warm companionship palette', () =>
     assert.equal(report.summary.ok, true)
     assert.equal(report.summary.errors, 0)
     assert.equal(report.privacy.staticSourceOnly, true)
+    const composerCss = BASELINE_FILES['src/app/styles/panel-companion-composer.css']
+    assert.doesNotMatch(composerCss, /ghost-button|data-voice-state/)
+    assert.equal(report.contrastChecks.some((item) => item.id === 'speaking-tool-on-surface'), false)
     assert.ok(findCheck(report, 'text-on-surface').ratio >= 7)
     assert.ok(findCheck(report, 'embedded-tool-icon-on-surface').ratio >= 3)
+    assert.ok(findCheck(report, 'active-attachment-on-surface').ratio >= 3)
     assert.ok(findCheck(report, 'send-ready-on-surface').ratio >= 3)
   })
 })
@@ -162,6 +160,22 @@ test('Image4 companion color audit rejects a too-light stabilizing accent', () =
 
     assert.equal(report.summary.ok, false)
     assert.ok(report.errors.contrastFailures.some((item) => item.id === 'send-ready-on-surface'))
+  })
+})
+
+test('Image4 companion color audit does not require composer mic or speaking colors', () => {
+  withFixture({
+    'src/app/styles/panel-companion-composer.css': `${BASELINE_FILES['src/app/styles/panel-companion-composer.css']}
+html[data-theme='warm-day'] .panel-window--image4 .composer__actions .voice-control,
+html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-phase='speaking'] .composer__actions {
+  color: color-mix(in srgb, var(--image4-companion-primary) 76%, var(--image4-companion-text));
+}
+`,
+  }, (root) => {
+    const report = buildImage4CompanionColorReport(root)
+
+    assert.equal(report.summary.ok, true)
+    assert.equal(report.contrastChecks.some((item) => item.id === 'speaking-tool-on-surface'), false)
   })
 })
 

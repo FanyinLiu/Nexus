@@ -11,6 +11,9 @@ import {
   setPetFreeModeForEvent,
   updatePanelWindowState,
   showPanelWindow,
+  closeSettingsWindow,
+  closePanelWindow,
+  getPanelSectionSnapshot,
   showPetContextMenu,
   getLaunchOnStartupState,
   setLaunchOnStartupState,
@@ -183,7 +186,14 @@ export function register() {
   ipcMain.handle('window:open-panel', (event, section) => {
     requireTrustedSender(event)
     section = validateOpenPanelPayload(section)
-    showPanelWindow(section)
+    const sourceView = getViewKind(event)
+    const settingsReturnTarget = section === 'settings' && sourceView === 'pet' ? 'pet' : 'panel'
+    showPanelWindow(section, { settingsReturnTarget })
+  })
+
+  ipcMain.handle('window:get-panel-section', (event) => {
+    requireTrustedSender(event)
+    return getPanelSectionSnapshot()
   })
 
   ipcMain.handle('window:open-pet-menu', (event) => {
@@ -194,7 +204,12 @@ export function register() {
 
   ipcMain.handle('window:close-panel', (event) => {
     requireTrustedSender(event)
-    panelWindow?.hide()
+    closePanelWindow()
+  })
+
+  ipcMain.handle('window:close-settings', (event) => {
+    requireTrustedSender(event)
+    closeSettingsWindow()
   })
 
   ipcMain.handle('panel-window:get-state', (event) => {

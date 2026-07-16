@@ -11,6 +11,7 @@ import type { TranslationKey } from '../types/i18n.ts'
 import type { ThemeId } from '../types/theme.ts'
 import type {
   DebugConsoleEvent,
+  ConnectionEvidence,
   DiscoveredModel,
   MemorySearchMode,
   ReminderTaskAction,
@@ -69,7 +70,7 @@ const MEMORY_SEARCH_MODE_KEYS: Record<MemorySearchMode, { label: TranslationKey;
   vector: { label: 'memory_search.vector.label', hint: 'memory_search.vector.hint' },
 }
 
-export type SettingsAppearanceTone = 'night' | 'day' | 'warm-day'
+export type SettingsAppearanceTone = 'black' | 'night' | 'day' | 'warm-day'
 
 const THEME_TONE_BY_ID: Record<ThemeId, SettingsAppearanceTone> = {
   'nexus-default': 'day',
@@ -78,6 +79,7 @@ const THEME_TONE_BY_ID: Record<ThemeId, SettingsAppearanceTone> = {
   editorial: 'day',
   'system-day': 'day',
   'warm-day': 'warm-day',
+  'system-black': 'black',
   'system-dark': 'night',
 }
 
@@ -99,6 +101,7 @@ function buildAppearanceOption(
 }
 
 export const SETTINGS_APPEARANCE_OPTIONS = [
+  buildAppearanceOption('system-black', 'settings.appearance.black', 'black'),
   buildAppearanceOption('system-dark', 'settings.appearance.night', 'night'),
   buildAppearanceOption('system-day', 'settings.appearance.day', 'day'),
   buildAppearanceOption('warm-day', 'settings.appearance.warm_day', 'warm-day'),
@@ -280,12 +283,16 @@ export function buildConsoleEventClusters(events: DebugConsoleEvent[]) {
 export type ConnectionResult = {
   ok: boolean
   message: string
+  messageKey?: string
+  messageParams?: Record<string, string | number | boolean | null | undefined>
   recommendation?: string
+  recommendationKey?: string
   status?: import('../types/model').ProviderHealthStatus
   code?: import('../types/model').ModelConnectionErrorCode
   repair?: ConnectionPreflightRepair
   discoveredModels?: DiscoveredModel[]
   checkedAt?: string
+  evidence?: ConnectionEvidence
 }
 
 type LabeledOption<T> = {
@@ -407,19 +414,54 @@ export function getReminderTemplatePresets(uiLanguage: UiLanguage): Array<{
 
 export type ReminderTaskActionKind = ReminderTaskAction['kind']
 
-export type SettingsSectionId =
-  | 'console'
-  | 'model'
-  | 'chat'
-  | 'history'
-  | 'letters'
-  | 'memory'
-  | 'lorebooks'
-  | 'voice'
-  | 'window'
-  | 'integrations'
-  | 'tools'
-  | 'autonomy'
+export const SETTINGS_SECTION_IDS = [
+  'console',
+  'model',
+  'chat',
+  'history',
+  'letters',
+  'memory',
+  'lorebooks',
+  'voice',
+  'window',
+  'integrations',
+  'tools',
+  'autonomy',
+] as const
+
+export type SettingsSectionId = typeof SETTINGS_SECTION_IDS[number]
+
+export function isSettingsSectionId(value: string | null | undefined): value is SettingsSectionId {
+  return SETTINGS_SECTION_IDS.includes(value as SettingsSectionId)
+}
+
+export type SettingsSectionOptionGroupId =
+  | 'appearanceExperience'
+  | 'companionBehavior'
+  | 'maintenance'
+  | 'memoryContext'
+  | 'modelConnections'
+
+type SettingsSectionLabelKey = Parameters<typeof pickTranslatedUiText>[1]
+
+export const SETTINGS_SECTION_OPTION_DEFINITIONS = [
+  { id: 'model', groupId: 'modelConnections', labelKey: 'settings.section.model' },
+  { id: 'window', groupId: 'companionBehavior', labelKey: 'settings.section.window' },
+  { id: 'chat', groupId: 'appearanceExperience', labelKey: 'settings.section.chat' },
+  { id: 'console', groupId: 'maintenance', labelKey: 'settings.section.console' },
+  { id: 'history', groupId: 'maintenance', labelKey: 'settings.section.history' },
+  { id: 'letters', groupId: 'appearanceExperience', labelKey: 'settings.section.letters' },
+  { id: 'voice', groupId: 'companionBehavior', labelKey: 'settings.section.voice' },
+  { id: 'memory', groupId: 'memoryContext', labelKey: 'settings.section.memory' },
+  { id: 'lorebooks', groupId: 'memoryContext', labelKey: 'settings.lorebooks.title' },
+  { id: 'integrations', groupId: 'modelConnections', labelKey: 'settings.section_eyebrow.integrations' },
+  { id: 'autonomy', groupId: 'companionBehavior', labelKey: 'settings.section.autonomy' },
+  { id: 'tools', groupId: 'modelConnections', labelKey: 'settings.section.tools' },
+] as const satisfies ReadonlyArray<{
+  groupId: SettingsSectionOptionGroupId
+  id: SettingsSectionId
+  labelKey: SettingsSectionLabelKey
+}>
 
 const SETTINGS_SECTION_DESCRIPTION_KEY_MAP: Record<SettingsSectionId, Parameters<typeof pickTranslatedUiText>[1]> = {
   console: 'settings.section_desc.console',
@@ -457,26 +499,18 @@ export type VolcengineCredentialParts = {
 }
 
 export function getSettingsSectionOptions(uiLanguage: UiLanguage): Array<{
+  groupId: SettingsSectionOptionGroupId
   id: SettingsSectionId
   label: string
 }> {
-  return [
-    { id: 'model', label: pickTranslatedUiText(uiLanguage, 'settings.section.model') },
-    { id: 'window', label: pickTranslatedUiText(uiLanguage, 'settings.section.window') },
-    { id: 'chat', label: pickTranslatedUiText(uiLanguage, 'settings.section.chat') },
-    { id: 'console', label: pickTranslatedUiText(uiLanguage, 'settings.section.console') },
-    { id: 'history', label: pickTranslatedUiText(uiLanguage, 'settings.section.history') },
-    { id: 'letters', label: pickTranslatedUiText(uiLanguage, 'settings.section.letters') },
-    { id: 'voice', label: pickTranslatedUiText(uiLanguage, 'settings.section.voice') },
-    { id: 'memory', label: pickTranslatedUiText(uiLanguage, 'settings.section.memory') },
-    { id: 'lorebooks', label: pickTranslatedUiText(uiLanguage, 'settings.lorebooks.title') },
-    { id: 'autonomy', label: pickTranslatedUiText(uiLanguage, 'settings.section.autonomy') },
-    { id: 'tools', label: pickTranslatedUiText(uiLanguage, 'settings.section.tools') },
-  ]
+  return SETTINGS_SECTION_OPTION_DEFINITIONS.map((section) => ({
+    groupId: section.groupId,
+    id: section.id,
+    label: pickTranslatedUiText(uiLanguage, section.labelKey),
+  }))
 }
 
 export function normalizeSettingsSectionId(sectionId: SettingsSectionId): SettingsSectionId {
-  if (sectionId === 'integrations') return 'tools'
   return sectionId
 }
 

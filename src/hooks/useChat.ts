@@ -30,6 +30,7 @@ import {
   getFreshPendingReminderDraft,
   handleSlashCommand,
   PENDING_REMINDER_DRAFT_TTL_MS,
+  cancelActiveTurn as cancelActiveTurnRuntime,
   getSpeechOutputErrorMessage,
   resolveReminderIntentWithPendingDraft,
   sanitizeLoadedMessages,
@@ -38,6 +39,11 @@ import {
   type PendingReminderDraftInput,
   type UseChatContext,
 } from './chat/index.ts'
+import {
+  releaseChatSubmission,
+  shouldClearSubmittedInput,
+  tryAcquireChatSubmission,
+} from './chat/submissionGuard.ts'
 import { useChatPersistence } from './chat/useChatPersistence.ts'
 import type {
   AssistantRuntimeActivity,
@@ -79,10 +85,17 @@ export function useChat(ctx: UseChatContext) {
 
   const messagesRef = useRef<ChatMessage[]>(messages)
   const inputRef = useRef('')
+  const setInputValue = useCallback((value: string) => {
+    inputRef.current = value
+    setInput(value)
+  }, [])
   const pendingImageRef = useRef<string | null>(null)
   const busyRef = useRef(false)
+  const submissionLockRef = useRef(false)
   const activeTurnIdRef = useRef(0)
   const activeStreamAbortRef = useRef<(() => Promise<void>) | null>(null)
+  const ctxRef = useRef(ctx)
+  ctxRef.current = ctx
   const pendingReminderDraftRef = useRef<PendingReminderDraft | null>(null)
   const petDialogHideTimerRef = useRef<number | null>(null)
   const petThoughtHideTimerRef = useRef<number | null>(null)
@@ -352,9 +365,8 @@ export function useChat(ctx: UseChatContext) {
   }) => {
     const speechErrorMessage = getSpeechOutputErrorMessage(speechError)
     logVoiceEvent('assistant reply speech output failed', {
-      traceId: options.traceId || undefined,
       source: options.source,
-      error: speechErrorMessage,
+      errorPresent: Boolean(speechErrorMessage),
     })
 
     if (options.fromVoice && options.traceLabel) {
@@ -413,9 +425,8 @@ export function useChat(ctx: UseChatContext) {
     messagesRef.current = nextMessages
     setMessages(nextMessages)
     setError(null)
-    setInput('')
-    inputRef.current = ''
-  }, [setError])
+    setInputValue('')
+  }, [setError, setInputValue])
 
   const exportChatHistory = useCallback(async () => {
     const fileNameDate = new Date().toISOString().slice(0, 10)
@@ -479,6 +490,7 @@ export function useChat(ctx: UseChatContext) {
     const fromVoice = source === 'voice'
     const traceId = fromVoice ? (options?.traceId ?? createId('voice')) : ''
     const traceLabel = traceId ? formatTraceLabel(traceId) : ''
+    const composerSnapshot = !rawContent ? inputRef.current : null
     const content = (rawContent ?? inputRef.current).trim()
     // Capture the pending image once at the top — we don't want it to disappear
     // mid-flight if the user clears it during send. Voice turns ignore images
@@ -487,25 +499,16 @@ export function useChat(ctx: UseChatContext) {
 
     if (!content && !attachedImage) {
       if (fromVoice) {
-        logVoiceEvent('voice transcript was empty, nothing was sent', { traceId })
+        logVoiceEvent('voice transcript was empty, nothing was sent')
         ctx.updateVoicePipeline('idle', t('chat.voice.empty_pipeline_detail'))
         ctx.appendVoiceTrace(t('chat.voice.empty_label'), t('chat.voice.empty_trace', { label: traceLabel }), 'error')
       }
       return false
     }
 
-    const slashResult = await handleSlashCommand(content)
-    if (slashResult.handled) {
-      if (slashResult.messages) {
-        setMessages((prev) => [...prev, ...slashResult.messages!])
-      }
-      setInput('')
-      return true
-    }
-
-    if (busyRef.current) {
+    const rejectBusySubmission = () => {
       if (fromVoice) {
-        logVoiceEvent('assistant is busy, voice transcript was not sent', { traceId, content })
+        logVoiceEvent('assistant is busy, voice transcript was not sent', { contentLength: content.length })
         ctx.fillComposerWithVoiceTranscript(content)
         ctx.updateVoicePipeline('blocked_busy', t('chat.voice.blocked_detail'), content)
         ctx.appendVoiceTrace(t('chat.voice.blocked_label'), t('chat.voice.blocked_trace', { label: traceLabel }), 'error')
@@ -514,6 +517,26 @@ export function useChat(ctx: UseChatContext) {
       }
       return false
     }
+
+    // Acquire synchronously before slash parsing or crisis classification so
+    // a second submit cannot enter while the safety pass is awaiting a reply.
+    if (!tryAcquireChatSubmission(submissionLockRef)) {
+      return rejectBusySubmission()
+    }
+
+    try {
+      const slashResult = await handleSlashCommand(content)
+      if (slashResult.handled) {
+        if (slashResult.messages) {
+          setMessages((prev) => [...prev, ...slashResult.messages!])
+        }
+        if (composerSnapshot !== null && shouldClearSubmittedInput(inputRef.current, composerSnapshot)) setInputValue('')
+        return true
+      }
+
+      if (busyRef.current) {
+        return rejectBusySubmission()
+      }
 
     // Resume the voice loop after TTS for ALL voice-originated turns. Even
     // in wake-word mode, this gives the user a brief VAD window to speak
@@ -606,9 +629,8 @@ export function useChat(ctx: UseChatContext) {
       appendSystemMessage(t('safety.disclosure.periodic_reminder'))
     }
 
-    if (!rawContent) {
-      inputRef.current = ''
-      setInput('')
+    if (composerSnapshot !== null && shouldClearSubmittedInput(inputRef.current, composerSnapshot)) {
+      setInputValue('')
     }
 
     const resolvedReminderIntent = resolveReminderIntentWithPendingDraft(
@@ -649,6 +671,10 @@ export function useChat(ctx: UseChatContext) {
       }
     }
 
+    // The lock only protects slash handling and preflight classification. The
+    // turn runtime synchronously marks busyRef on entry, so release before it
+    // starts; the finally below remains an idempotent safety release.
+    releaseChatSubmission(submissionLockRef)
     return executeAssistantTurn(
       {
         ctx,
@@ -673,6 +699,9 @@ export function useChat(ctx: UseChatContext) {
         shouldResumeContinuousVoice,
       },
     )
+    } finally {
+      releaseChatSubmission(submissionLockRef)
+    }
   }
 
   const sendMessageRef = useRef(sendMessage)
@@ -685,6 +714,29 @@ export function useChat(ctx: UseChatContext) {
     (...args: Parameters<typeof sendMessage>) => sendMessageRef.current(...args),
     [],
   )
+
+  const cancelActiveTurn = useCallback(() => {
+    cancelActiveTurnRuntime({
+      activeTurnIdRef,
+      activeStreamAbortRef,
+      busyRef,
+      setBusy,
+      setAssistantActivity,
+      onCancel: () => {
+        const currentCtx = ctxRef.current
+        hidePetDialogBubble()
+        currentCtx.clearPetPerformanceCue()
+        currentCtx.setLiveTranscript('')
+        currentCtx.setMood('idle')
+        if (currentCtx.voiceStateRef.current !== 'processing') return
+        currentCtx.setVoiceState('idle')
+        currentCtx.busEmit({
+          type: 'session:aborted',
+          abortReason: 'user_cancelled',
+        })
+      },
+    })
+  }, [hidePetDialogBubble])
 
   // Memoize the return bag so its identity is stable between renders that
   // don't change any observable state. Returning a fresh object literal each
@@ -709,7 +761,7 @@ export function useChat(ctx: UseChatContext) {
     sendMessageRef,
     setMessages,
     applyRemoteMessages,
-    setInput,
+    setInput: setInputValue,
     setBusy,
     setError,
     setPendingImage,
@@ -722,6 +774,7 @@ export function useChat(ctx: UseChatContext) {
     exportChatHistory,
     importChatHistory,
     clearChatHistory,
+    cancelActiveTurn,
     hidePetDialogBubble,
     sendMessage: stableSendMessage,
   }), [
@@ -736,7 +789,7 @@ export function useChat(ctx: UseChatContext) {
     pendingImage,
     setMessages,
     applyRemoteMessages,
-    setInput,
+    setInputValue,
     setBusy,
     setError,
     setPendingImage,
@@ -749,6 +802,7 @@ export function useChat(ctx: UseChatContext) {
     exportChatHistory,
     importChatHistory,
     clearChatHistory,
+    cancelActiveTurn,
     hidePetDialogBubble,
     stableSendMessage,
   ])

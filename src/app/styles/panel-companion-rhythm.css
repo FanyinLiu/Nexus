@@ -9,10 +9,8 @@
 }
 
 .panel-window--image4 .image4-presence,
-.panel-window--image4 .image4-dial-stage,
-.panel-window--image4 .image4-message-list,
-.panel-window--image4 .image4-greeting,
-.panel-window--image4 .image4-action-list,
+.panel-window--image4 .image4-live2d-stage,
+.panel-window--image4 .image4-conversation-recap,
 .panel-window--image4 .image4-composer {
   position: relative;
   z-index: 1;
@@ -23,12 +21,7 @@
   inset: 0;
   z-index: 0;
   display: grid;
-  grid-template-rows:
-    [presence] var(--image4-rhythm-presence)
-    [dial] var(--image4-rhythm-dial)
-    [greeting] var(--image4-rhythm-greeting)
-    [actions] var(--image4-rhythm-actions)
-    [composer] var(--image4-rhythm-composer);
+  grid-template-rows: 48px minmax(0, 1fr) auto 62px;
   gap: var(--image4-rhythm-gap);
   box-sizing: border-box;
   padding: var(--image4-rhythm-padding-top) 0 var(--image4-rhythm-padding-bottom);
@@ -75,12 +68,7 @@
   right: -23px;
   bottom: 0;
   display: grid;
-  grid-template-rows:
-    [presence] var(--image4-rhythm-presence)
-    [dial] var(--image4-rhythm-dial)
-    [greeting] var(--image4-rhythm-greeting)
-    [actions] var(--image4-rhythm-actions)
-    [composer] var(--image4-rhythm-composer);
+  grid-template-rows: 48px minmax(0, 1fr) auto 62px;
   gap: var(--image4-rhythm-gap);
   box-sizing: border-box;
   width: 20px;

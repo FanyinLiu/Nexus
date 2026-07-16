@@ -1,0 +1,9 @@
+@media (max-width: 719px) {
+  .settings-v3-integration-status-list .settings-v3-row { grid-template-columns: minmax(0, 1fr) max-content; }
+  .settings-v3-integration-status-list .settings-v3-row__meta {
+    grid-column: 2;
+    grid-row: 1;
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+}

@@ -179,6 +179,7 @@ type ModelCatalogEntry = {
   required: boolean
   kind: 'archive' | 'files' | 'standalone'
   present: boolean
+  verified: boolean
   location: string | null
 }
 
@@ -323,6 +324,20 @@ type LocalDataChatRuntimeMirrorResult = {
   errorMessage: string | null
 }
 
+type LocalDataChatSessionsReadResult = {
+  ok: boolean
+  targetDomainId: 'chat-sessions'
+  schemaVersion?: number
+  recordPayloadsIncluded: true
+  recordCount: number
+  validSessionCount: number
+  messageCount: number
+  malformedRecordCount: number
+  sessions: LocalDataChatMigrationSession[]
+  errorKind: string | null
+  errorMessage: string | null
+}
+
 type LocalDataChatComparisonSourceSession = {
   id: string
   startedAt: number
@@ -368,6 +383,118 @@ type LocalDataChatComparisonResult = {
   errorMessage: string | null
 }
 
+type LocalDataMemoryItem = {
+  id: string
+  content: string
+  category: string
+  source: string
+  kind?: string
+  enabled: boolean
+  sourceRef?: string
+  createdAt: string
+  lastUsedAt?: string
+  importance?: string
+  importanceScore?: number
+  recallCount?: number
+  lastRecalledAt?: string
+  relatedIds?: string[]
+  emotionSnapshot?: { energy: number; warmth: number; curiosity: number; concern: number }
+  emotionalValence?: string
+  significance?: number
+  reflectionTopic?: string
+  reflectionConfidence?: number
+}
+
+type LocalDataMemoryDailyEntry = {
+  id: string
+  day: string
+  role: 'user' | 'assistant'
+  content: string
+  source: 'chat' | 'voice'
+  createdAt: string
+}
+
+type LocalDataMemoryMigrationPackage = {
+  schemaVersion: 1
+  createdAt: string
+  source: {
+    longTermKeyPresent: boolean
+    legacyLongTermKeyPresent: boolean
+    dailyKeyPresent: boolean
+    legacyLongTermUsed: boolean
+  }
+  longTerm: LocalDataMemoryItem[]
+  daily: LocalDataMemoryDailyEntry[]
+}
+
+type LocalDataMemoryMigrationApplyResult = {
+  ok: boolean
+  targetDomainIds: ['memory-long-term', 'memory-daily']
+  schemaVersion?: number
+  longTermRecordCount?: number
+  dailyEntryCount?: number
+  payloadBytes?: number
+  legacyLongTermUsed?: boolean
+  requiresConfirmation?: boolean
+  writesData?: boolean
+  applied: boolean
+  recordsWritten: number
+  auditRecordId: string | null
+  errorKind: string | null
+  errorMessage: string | null
+}
+
+type LocalDataMemoryMigrationRollbackResult = {
+  ok: boolean
+  targetDomainIds: ['memory-long-term', 'memory-daily']
+  recordsDeleted: number
+  auditRecordId: string | null
+  errorKind: string | null
+  errorMessage: string | null
+}
+
+type LocalDataMemoryMigrationStatusResult = {
+  ok: boolean
+  targetDomainIds: ['memory-long-term', 'memory-daily']
+  schemaVersion?: number
+  longTermRecordCount: number
+  dailyEntryCount: number
+  recordPayloadsIncluded: false
+  lastAuditRecordId: string | null
+  lastAuditAction: 'memory-migration-applied' | 'memory-migration-rolled-back' | null
+  lastAuditAt: string | null
+  errorKind: string | null
+  errorMessage: string | null
+}
+
+type LocalDataMemoryReadResult = {
+  ok: boolean
+  targetDomainIds: ['memory-long-term', 'memory-daily']
+  schemaVersion?: number
+  recordPayloadsIncluded: true
+  longTermRecordCount: number
+  dailyEntryCount: number
+  malformedRecordCount: number
+  memories: LocalDataMemoryItem[]
+  daily: LocalDataMemoryDailyEntry[]
+  errorKind: string | null
+  errorMessage: string | null
+}
+
+type LocalDataCompanionStorageKey = 'nexus:autonomy:relationship' | 'nexus:autonomy:relationship-history' | 'nexus:autonomy:emotion' | 'nexus:autonomy:emotion-history' | 'nexus:autonomy:rhythm' | 'nexus:autonomy:user-affect-history' | 'nexus:plans' | 'nexus:open-goals' | 'nexus:agent-traces' | 'nexus:background-tasks' | 'nexus:agent:errands' | 'nexus:reminder-tasks'
+type LocalDataCompanionDataset = { id: string; storageKey: LocalDataCompanionStorageKey; value: unknown; recordCount?: number; payloadBytes?: number }
+type LocalDataCompanionMigrationPackage = { schemaVersion: 1; createdAt: string; source: { relationshipKeysPresent: string[]; taskKeysPresent: string[]; invalidKeys: string[] }; relationship: LocalDataCompanionDataset[]; tasks: LocalDataCompanionDataset[] }
+type LocalDataCompanionTarget = ['companion-relationship', 'companion-tasks']
+type LocalDataCompanionBaseResult = { ok: boolean; targetDomainIds: LocalDataCompanionTarget; schemaVersion?: number; errorKind: string | null; errorMessage: string | null }
+type LocalDataCompanionMigrationStatusResult = LocalDataCompanionBaseResult & { relationshipDatasetCount: number; taskDatasetCount: number; totalRecordCount: number; payloadBytes: number; recordPayloadsIncluded: false; lastAuditRecordId: string | null; lastAuditAction: 'companion-migration-applied' | 'companion-migration-compared' | 'companion-migration-rolled-back' | null; lastAuditAt: string | null }
+type LocalDataCompanionReadResult = LocalDataCompanionBaseResult & { recordPayloadsIncluded: true; relationship: LocalDataCompanionDataset[]; tasks: LocalDataCompanionDataset[]; malformedRecordCount: number }
+type LocalDataCompanionComparisonDataset = { id: string; storageKey: LocalDataCompanionStorageKey; recordCount: number; payloadBytes: number }
+type LocalDataCompanionComparisonSource = { schemaVersion: 1; generatedAt: string; relationship: LocalDataCompanionComparisonDataset[]; tasks: LocalDataCompanionComparisonDataset[] }
+type LocalDataCompanionComparisonResult = LocalDataCompanionBaseResult & { compared: boolean; recordPayloadsIncluded: false; status: 'aligned' | 'differences' | 'empty' | 'blocked'; sourceDatasetCount: number; sqliteDatasetCount: number; matchedDatasetCount: number; metadataMismatchCount: number; missingSqliteDatasetCount: number; extraSqliteDatasetCount: number; malformedSqliteRecordCount: number; sourceRecordCount: number; sqliteRecordCount: number; sourcePayloadBytes: number; sqlitePayloadBytes: number; issueCodes: string[]; auditRecordId: string | null }
+type LocalDataCompanionMirrorResult = { ok: boolean; mirrored: boolean; datasetId?: string; schemaVersion?: number; errorKind?: string; errorMessage?: string }
+type LocalDataCompanionMigrationApplyResult = LocalDataCompanionBaseResult & { relationshipDatasetCount?: number; taskDatasetCount?: number; relationshipRecordCount?: number; taskRecordCount?: number; totalRecordCount?: number; payloadBytes?: number; requiresConfirmation?: boolean; writesData?: boolean; applied: boolean; recordsWritten: number; auditRecordId: string | null }
+type LocalDataCompanionMigrationRollbackResult = LocalDataCompanionBaseResult & { recordsDeleted: number; auditRecordId: string | null }
+
 declare global {
   interface Window {
     desktopPet?: {
@@ -376,13 +503,16 @@ declare global {
       setPetFreeMode: (freeMode: boolean) => Promise<PetWindowState | null>
       subscribePetWindowState: (listener: (state: PetWindowState) => void) => () => void
       dragBy: (delta: { x: number; y: number }) => Promise<void>
-      openPanel: (section?: 'chat' | 'settings') => Promise<void>
+      openPanel: (section?: 'chat' | 'chat-text' | 'chat-recent' | 'settings') => Promise<void>
+      getPanelSection: () => Promise<{ section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null }>
       openPetMenu: () => Promise<void>
       closePanel: () => Promise<void>
+      closeSettings?: () => Promise<void>
       getPanelWindowState: () => Promise<PanelWindowState>
       setPanelWindowState: (state: Partial<PanelWindowState>) => Promise<PanelWindowState>
       isPanelWindow: () => Promise<boolean>
-      subscribePanelSection: (listener: (payload: { section: 'chat' | 'settings' }) => void) => () => void
+      subscribePanelSection: (listener: (payload: { section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null }) => void) => () => void
+      subscribeSettingsReturnFocus?: (listener: () => void) => () => void
       subscribePanelWindowState: (listener: (state: PanelWindowState) => void) => () => void
       subscribeRuntimeState: (listener: (state: {
         mood: 'idle' | 'thinking' | 'happy' | 'sleepy'
@@ -576,6 +706,7 @@ declare global {
       localDataStatus: () => Promise<LocalDataStatus>
       localDataMirrorOnboarding: (payload?: { state?: LocalDataOnboardingMirrorState }) => Promise<LocalDataOnboardingMirrorResult>
       localDataChatMigrationStatus: () => Promise<LocalDataChatMigrationStatusResult>
+      localDataReadChatSessions: () => Promise<LocalDataChatSessionsReadResult>
       localDataMirrorChatSession: (payload: {
         confirmed: boolean
         session: LocalDataChatMigrationSession
@@ -589,6 +720,29 @@ declare global {
         migrationPackage: LocalDataChatMigrationPackage
       }) => Promise<LocalDataChatMigrationApplyResult>
       localDataRollbackChatMigration: (payload: { confirmed: boolean }) => Promise<LocalDataChatMigrationRollbackResult>
+      localDataMemoryMigrationStatus: () => Promise<LocalDataMemoryMigrationStatusResult>
+      localDataReadMemory: () => Promise<LocalDataMemoryReadResult>
+      localDataApplyMemoryMigration: (payload: {
+        confirmed: boolean
+        migrationPackage: LocalDataMemoryMigrationPackage
+      }) => Promise<LocalDataMemoryMigrationApplyResult>
+      localDataRollbackMemoryMigration: (payload: { confirmed: boolean }) => Promise<LocalDataMemoryMigrationRollbackResult>
+      localDataCompanionMigrationStatus: () => Promise<LocalDataCompanionMigrationStatusResult>
+      localDataReadCompanion: () => Promise<LocalDataCompanionReadResult>
+      localDataCompareCompanion: (payload: {
+        confirmed: boolean
+        source: LocalDataCompanionComparisonSource
+      }) => Promise<LocalDataCompanionComparisonResult>
+      localDataMirrorCompanionDataset: (payload: {
+        confirmed: boolean
+        storageKey: LocalDataCompanionStorageKey
+        value: unknown
+      }) => Promise<LocalDataCompanionMirrorResult>
+      localDataApplyCompanionMigration: (payload: {
+        confirmed: boolean
+        migrationPackage: LocalDataCompanionMigrationPackage
+      }) => Promise<LocalDataCompanionMigrationApplyResult>
+      localDataRollbackCompanionMigration: (payload: { confirmed: boolean }) => Promise<LocalDataCompanionMigrationRollbackResult>
 
       // Plugin Host
       pluginScan: () => Promise<PluginStatus[]>
@@ -928,10 +1082,10 @@ declare global {
         currentVersion: string
         isPackaged: boolean
         updateMode?: string | null
-        last: import('./features/updater').UpdaterEvent
+        last: import('./features/updater/types').UpdaterEvent
       }>
       updaterInstall: () => Promise<boolean>
-      subscribeUpdaterEvent: (listener: (event: import('./features/updater').UpdaterEvent) => void) => () => void
+      subscribeUpdaterEvent: (listener: (event: import('./features/updater/types').UpdaterEvent) => void) => () => void
     }
   }
 }

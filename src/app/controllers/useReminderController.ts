@@ -128,7 +128,8 @@ export function useReminderController({
         await chat.pushCompanionNotice({
           chatContent: t('chat.prefix.reminder_task', { title: task.title, content: result.assistantSummary }),
           bubbleContent: result.assistantSummary,
-          speechContent: task.speechText?.trim() || buildBuiltInToolSpeechSummary(result),
+          speechContent: task.speechText?.trim()
+            || buildBuiltInToolSpeechSummary(result, currentSettings.uiLanguage),
           autoHideMs: 18_000,
           toolResult: toChatToolResult(result),
         })
@@ -183,7 +184,8 @@ export function useReminderController({
       await chat.pushCompanionNotice({
         chatContent: t('chat.prefix.reminder_task', { title: task.title, content: result.assistantSummary }),
         bubbleContent: result.assistantSummary,
-        speechContent: task.speechText?.trim() || buildBuiltInToolSpeechSummary(result),
+        speechContent: task.speechText?.trim()
+          || buildBuiltInToolSpeechSummary(result, currentSettings.uiLanguage),
         autoHideMs: 18_000,
         toolResult: toChatToolResult(result),
       })

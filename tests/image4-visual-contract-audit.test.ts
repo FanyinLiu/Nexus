@@ -22,9 +22,10 @@ export function getImage4StatePreviewSync() {
     : null
 }
 `,
-  'src/app/views/PanelView.tsx': `
-import { Image4Dial, Image4PresenceHeader } from './Image4CompanionField'
+  'src/app/views/LegacyPanelView.tsx': `
+import { Image4PresenceHeader } from './Image4CompanionField'
 import { Image4RhythmGrid } from './Image4RhythmGrid'
+import { Live2DCanvas } from '../../features/pet/components/Live2DCanvas'
 import { deriveImage4CompanionState } from './image4CompanionState'
 export function PanelView() {
   const image4RhythmGridMode = true
@@ -47,13 +48,14 @@ export function PanelView() {
       data-companion-tone={image4CompanionState.contextTone}
       style={{
         '--image4-companion-intensity': image4CompanionState.intensity.toFixed(2),
-        '--image4-dial-emphasis': image4CompanionState.dialEmphasis.toFixed(2),
         '--image4-presence-pulse': image4CompanionState.presencePulse.toFixed(2),
       }}
     >
       {image4RhythmGridMode ? <Image4RhythmGrid /> : null}
       <Image4PresenceHeader body="在这儿陪着你。" signalActive={image4CompanionState.signalActive} statusLabel={image4TopStatusLabel} title={image4HeaderTitle} />
-      <Image4Dial clockLabel="21:30" dateLabel="Sun, Jun 28" greeting="晚上好" speaking={image4CompanionState.mode === 'speaking'} weatherLabel="晴 · 22°" />
+      <div className="image4-live2d-stage"><Live2DCanvas isSpeaking={image4CompanionState.mode === 'speaking'} /></div>
+      <div className="image4-conversation-recap" />
+      <div className="image4-message-list--archive" />
     </section>
   )
 }
@@ -128,10 +130,6 @@ import { Image4Signal } from './Image4Signal'
 export function Image4PresenceHeader({ body, signalActive, statusLabel, title }) {
   return <section className="companion-presence image4-presence"><strong>{title}</strong><span>{body}</span><span>{statusLabel}</span><Image4Signal active={signalActive} /></section>
 }
-export function Image4Dial({ clockLabel, dateLabel, greeting, speaking, weatherLabel }) {
-  const metaLabel = \`\${dateLabel} · \${weatherLabel}\`
-  return <div className="image4-dial-stage"><span className="companion-presence__dial-layer--glow" /><span className="companion-presence__dial-layer--base" /><span className="companion-presence__dial-layer--arc" /><span className="companion-presence__dial-layer--moon" /><span className="companion-presence__dial-layer--ring" /><span className="companion-presence__dial-voice" data-dial-speaking={speaking}><span className="companion-presence__dial-voice-ring" /></span><span className="companion-presence__dial-band">{greeting}</span><strong>{clockLabel}</strong><span className="companion-presence__dial-meta">{metaLabel}</span></div>
-}
 `,
   'src/app/views/Image4Signal.tsx': `
 const IMAGE4_SIGNAL_BAR_COUNT = 64
@@ -147,10 +145,9 @@ export function Image4Signal() {
 `,
   'src/app/views/Image4RhythmGrid.tsx': `
 const IMAGE4_RHYTHM_ROWS = [
-  ['presence', 'P'],
-  ['dial', 'D'],
-  ['greeting', 'G'],
-  ['actions', 'A'],
+  ['header', 'H'],
+  ['stage', 'L'],
+  ['recap', 'R'],
   ['composer', 'C'],
 ] as const
 export function Image4RhythmGrid() {
@@ -585,32 +582,30 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-action:hover { transfo
 @keyframes image4-wave-bar-reduced { 0%, 100% { transform: scaleY(0.58); } 50% { transform: scaleY(0.68); } }
 @media (prefers-reduced-motion: reduce) {
   .panel-window--image4 .companion-presence__signal::before,
-  .panel-window--image4 .companion-presence__signal::after,
-  .panel-window--image4 .companion-presence__dial::before,
-  .panel-window--image4 .companion-presence__dial-layer--glow,
-  .panel-window--image4 .companion-presence__dial-layer--arc,
-  .panel-window--image4 .companion-presence__dial-voice-ring,
-  .panel-window--image4 .companion-presence__dial-voice-core {
-    animation: none;
+  .panel-window--image4 .companion-presence__signal::after {
+    animation: none !important;
     transition: none;
   }
   .panel-window--image4 .companion-presence__signal,
   .panel-window--image4 .companion-presence__signal-bar,
   .panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
-  .panel-window--image4 .image4-action,
   .panel-window--image4 .image4-attachment-pill,
   .panel-window--image4 .composer textarea,
   .panel-window--image4 .composer__actions .ghost-button,
   .panel-window--image4 .composer__actions .primary-button {
     transition-duration: 0ms;
   }
-  .panel-window--image4 .companion-presence__signal-bar {
-    animation: none;
+  .panel-window--image4 .companion-presence__signal-bar,
+  .panel-window--image4 .companion-presence__signal.is-speaking .companion-presence__signal-bar,
+  .panel-window--image4 .companion-presence__signal.is-speaking .companion-presence__signal-bar.is-live,
+  .panel-window--image4 .image4-chat[data-companion-mode='speaking'] .companion-presence__signal.is-speaking .companion-presence__signal-bar,
+  .panel-window--image4 .image4-chat[data-companion-mode='attentive'] .companion-presence__signal-bar {
+    animation: none !important;
+    animation-play-state: paused !important;
   }
   .panel-window--image4 .companion-presence__signal.is-speaking .companion-presence__signal-bar {
     opacity: var(--image4-motion-reduced-signal-opacity);
     transform: scaleY(0.58);
-    animation: image4-wave-bar-reduced var(--image4-motion-reduced-signal-duration) ease-out infinite;
   }
 }
 @media (max-height: 760px) {
@@ -647,6 +642,25 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-action:hover { transfo
   html[data-theme='warm-day'] .panel-window--image4 .empty-chat p {
     -webkit-line-clamp: 2;
   }
+}
+`,
+  'src/app/styles/panel-companion-final.css': `
+.panel-window--image4 .image4-chat {
+  grid-template-rows: 48px minmax(0, 1fr) auto 62px;
+}
+.panel-window--image4 .image4-live2d-stage { grid-row: 2; }
+.panel-window--image4 .image4-conversation-recap { grid-row: 3; }
+.panel-window--image4 .image4-message-list--archive { display: none !important; }
+html[data-theme='warm-day'] .panel-window--image4 .image4-live2d-subtitle { background: rgba(255, 255, 255, 0.68); }
+html[data-theme='warm-day'] .panel-window--image4 .image4-conversation-recap { background: rgba(255, 255, 255, 0.72); }
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--settings,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--collapse,
+.panel-window--image4 .panel-window__header-actions--image4 .panel-window__icon-button--danger {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
 }
 `,
   'docs/IMAGE4_COMPANION_FIELD_REFERENCE_REVIEW.md': `
@@ -747,34 +761,9 @@ test('image4 visual contract audit rejects missing Image4 field component bounda
     assertMissingContract(report, 'image4-companion-field-component-boundary')
   })
 })
-test('image4 visual contract audit rejects missing explicit composer row placement', () => {
-  withImage4VisualContractFixture({
-    'src/app/styles/panel-companion-chat.css': BASELINE_FILES['src/app/styles/panel-companion-chat.css'].replace(
-      '  grid-row: composer;',
-      '  align-self: end;',
-    ),
-  }, (root) => {
-    const report = buildImage4VisualContractReport(root)
-    assert.equal(report.summary.ok, false)
-    assertMissingContract(report, 'explicit-chat-row-placement')
-  })
-})
-test('image4 hard contract check rejects missing explicit composer row placement', () => {
-  withImage4VisualContractFixture({
-    'src/app/styles/panel-companion-chat.css': BASELINE_FILES['src/app/styles/panel-companion-chat.css'].replace(
-      '  grid-row: composer;',
-      '  align-self: end;',
-    ),
-  }, (root) => {
-    const report = buildImage4VisualContractReport(root, { mode: 'hard' })
-    assert.equal(report.summary.ok, false)
-    assert.equal(report.mode, 'hard')
-    assertMissingContract(report, 'explicit-chat-row-placement')
-  })
-})
 test('image4 visual contract audit rejects inlined signal bars in PanelView', () => {
   withImage4VisualContractFixture({
-    'src/app/views/PanelView.tsx': `${BASELINE_FILES['src/app/views/PanelView.tsx']}
+    'src/app/views/LegacyPanelView.tsx': `${BASELINE_FILES['src/app/views/LegacyPanelView.tsx']}
 const bars = Array.from({ length: 64 }, (_, index) => index)
 `,
   }, (root) => {
@@ -812,23 +801,6 @@ test('image4 visual contract audit rejects missing warm-day placeholder specific
     const report = buildImage4VisualContractReport(root)
     assert.equal(report.summary.ok, false)
     assertMissingContract(report, 'warm-day-image4-composer-specificity')
-  })
-})
-test('image4 visual contract audit rejects heavy suggestion action cards', () => {
-  withImage4VisualContractFixture({
-    'src/app/styles/panel-companion-chat.css': BASELINE_FILES['src/app/styles/panel-companion-chat.css']
-      .replace('grid-auto-rows: minmax(clamp(58px, 6.2vh, 72px), max-content);', '')
-      .replace('align-content: center;', 'align-content: stretch;')
-      .replace('content: none;', 'content: ""; width: 1px; background: rgba(111, 226, 239, 0.1);')
-      .replace('min-height: clamp(58px, 6.2vh, 72px);', 'min-height: clamp(66px, 7.2vh, 82px);')
-      .replace('width: clamp(30px, 5.4vw, 44px);', 'width: clamp(34px, 6.6vw, 58px);')
-      .replace('-webkit-line-clamp: 1;', '-webkit-line-clamp: 2;')
-      .replace('color: rgba(218, 227, 242, 0.34);', 'color: rgba(218, 227, 242, 0.64);')
-      .replace('font-size: clamp(20px, 3.4vw, 30px);', 'font-size: clamp(36px, 6vw, 56px);'),
-  }, (root) => {
-    const report = buildImage4VisualContractReport(root)
-    assert.equal(report.summary.ok, false)
-    assertMissingContract(report, 'suggestion-actions-lightweight-rows')
   })
 })
 test('image4 visual contract audit rejects loud rhythm-grid overlays', () => {
@@ -878,7 +850,7 @@ test('image4 visual contract audit rejects signal activation outside speaking st
 })
 test('image4 visual contract audit rejects missing elapsed bucket state input', () => {
   withImage4VisualContractFixture({
-    'src/app/views/PanelView.tsx': BASELINE_FILES['src/app/views/PanelView.tsx'].replace(
+    'src/app/views/LegacyPanelView.tsx': BASELINE_FILES['src/app/views/LegacyPanelView.tsx'].replace(
       '    elapsedBucket: image4ElapsedBucket,\n',
       '',
     ),
@@ -890,7 +862,7 @@ test('image4 visual contract audit rejects missing elapsed bucket state input', 
 })
 test('image4 visual contract audit rejects missing URL state preview input', () => {
   withImage4VisualContractFixture({
-    'src/app/views/PanelView.tsx': BASELINE_FILES['src/app/views/PanelView.tsx'].replace(
+    'src/app/views/LegacyPanelView.tsx': BASELINE_FILES['src/app/views/LegacyPanelView.tsx'].replace(
       '    statePreview: image4StatePreview,\n',
       '',
     ),
@@ -928,7 +900,7 @@ test('image4 visual contract audit rejects animated idle voice signal', () => {
 })
 test('image4 visual contract audit rejects expanded Image4 identity copy', () => {
   withImage4VisualContractFixture({
-    'src/app/views/PanelView.tsx': `${BASELINE_FILES['src/app/views/PanelView.tsx']}
+    'src/app/views/LegacyPanelView.tsx': `${BASELINE_FILES['src/app/views/LegacyPanelView.tsx']}
 const image4ExpandedIdentity = '星绘在身边'
 `,
   }, (root) => {
@@ -968,68 +940,14 @@ test('image4 visual contract audit rejects leading identity orb selectors', () =
     )
   })
 })
-test('image4 visual contract audit rejects dial orbit dot selectors', () => {
+test('image4 hard contract rejects retired dial markup returning', () => {
   withImage4VisualContractFixture({
-    'src/app/styles/panel-companion-dial.css': `${BASELINE_FILES['src/app/styles/panel-companion-dial.css']}
-.panel-window--image4 .companion-presence__dial-layer--dot {
-  content: "";
-}
-`,
+    'src/app/views/LegacyPanelView.tsx': `${BASELINE_FILES['src/app/views/LegacyPanelView.tsx']}\nconst retired = <Image4Dial />\n`,
   }, (root) => {
-    const report = buildImage4VisualContractReport(root)
+    const report = buildImage4VisualContractReport(root, { mode: 'hard' })
     assert.equal(report.summary.ok, false)
     assert.ok(
-      report.errors.forbiddenPatterns.some((item) => item.id === 'dial-orbit-dot-returned'),
-    )
-  })
-})
-test('image4 visual contract audit rejects horizontal dial meta layout', () => {
-  withImage4VisualContractFixture({
-    'src/app/styles/panel-companion-dial.css': BASELINE_FILES['src/app/styles/panel-companion-dial.css'].replace(
-      'display: grid;',
-      'display: flex;',
-    ),
-  }, (root) => {
-    const report = buildImage4VisualContractReport(root)
-    assert.equal(report.summary.ok, false)
-    assertMissingContract(report, 'dial-meta-two-line-stack')
-  })
-})
-test('image4 visual contract audit rejects unclipped dashboard-like dial meta', () => {
-  withImage4VisualContractFixture({
-    'src/app/styles/panel-companion-dial.css': BASELINE_FILES['src/app/styles/panel-companion-dial.css']
-      .replaceAll('overflow: hidden;', '')
-      .replaceAll('text-overflow: ellipsis;', '')
-      .replaceAll('white-space: nowrap;', ''),
-  }, (root) => {
-    const report = buildImage4VisualContractReport(root)
-    assert.equal(report.summary.ok, false)
-    assertMissingContract(report, 'dial-meta-two-line-stack')
-  })
-})
-test('image4 visual contract audit rejects fast dial gauge motion', () => {
-  withImage4VisualContractFixture({
-    'src/app/styles/panel-companion-dial.css': BASELINE_FILES['src/app/styles/panel-companion-dial.css']
-      .replace('animation: image4-dial-ticks 48s linear infinite;', 'animation: image4-dial-ticks 8s linear infinite;')
-      .replace('animation: image4-dial-arc 28s linear infinite;', 'animation: image4-dial-arc 12s linear infinite;'),
-  }, (root) => {
-    const report = buildImage4VisualContractReport(root)
-    assert.equal(report.summary.ok, false)
-    assertMissingContract(report, 'dial-ring-motion-stays-slow')
-  })
-})
-test('image4 visual contract audit rejects dial dashboard detail markup', () => {
-  withImage4VisualContractFixture({
-    'src/app/views/Image4CompanionField.tsx': `${BASELINE_FILES['src/app/views/Image4CompanionField.tsx']}
-export function Image4ForecastDetail() {
-  return <span className="companion-presence__dial-weather-card">forecast humidity wind</span>
-}
-`,
-  }, (root) => {
-    const report = buildImage4VisualContractReport(root)
-    assert.equal(report.summary.ok, false)
-    assert.ok(
-      report.errors.forbiddenPatterns.some((item) => item.id === 'dial-dashboard-details-returned'),
+      report.errors.forbiddenPatterns.some((item) => item.id === 'retired-panel-elements-returned'),
     )
   })
 })
@@ -1071,30 +989,6 @@ test('image4 visual contract audit rejects hover transform jumps', () => {
     assert.ok(report.errors.unsafeTransforms.some((item) => item.transform === 'translateY(-1px)'))
   })
 })
-test('image4 visual contract audit rejects missing short-height dial collapse', () => {
-  withImage4VisualContractFixture({
-    'src/app/styles/panel-companion-motion.css': BASELINE_FILES['src/app/styles/panel-companion-motion.css'].replace(
-      '.panel-window--image4 .image4-dial-stage { display: none; }',
-      '.panel-window--image4 .image4-dial-stage { display: grid; }',
-    ),
-  }, (root) => {
-    const report = buildImage4VisualContractReport(root)
-    assert.equal(report.summary.ok, false)
-    assertMissingContract(report, 'short-height-rhythm-collapse')
-  })
-})
-test('image4 visual contract audit rejects missing landscape short-height container rhythm', () => {
-  withImage4VisualContractFixture({
-    'src/app/styles/panel-companion-motion.css': BASELINE_FILES['src/app/styles/panel-companion-motion.css'].replace(
-      '@media (min-aspect-ratio: 1 / 1) and (max-height: 760px)',
-      '@media (min-aspect-ratio: 1 / 1) and (max-height: 760px-disabled)',
-    ),
-  }, (root) => {
-    const report = buildImage4VisualContractReport(root)
-    assert.equal(report.summary.ok, false)
-    assertMissingContract(report, 'landscape-short-height-container-rhythm')
-  })
-})
 test('image4 visual contract audit rejects presence wrapper elevation', () => {
   withImage4VisualContractFixture({
     'src/app/styles/panel-companion-layout.css': `${BASELINE_FILES['src/app/styles/panel-companion-layout.css']}
@@ -1109,35 +1003,34 @@ test('image4 visual contract audit rejects presence wrapper elevation', () => {
     assert.ok(report.errors.presenceWeightLeaks.some((item) => item.selector.includes('is-speaking')))
   })
 })
-test('image4 visual contract audit rejects action hover weight elevation', () => {
+test('image4 visual contract audit rejects recap hover weight elevation', () => {
   withImage4VisualContractFixture({
     'src/app/styles/panel-companion-chat.css': `${BASELINE_FILES['src/app/styles/panel-companion-chat.css']}
-.panel-window--image4 .image4-action:hover {
+.panel-window--image4 .image4-conversation-recap:hover {
   box-shadow: 0 10px 26px rgba(111, 226, 239, 0.22);
 }
 `,
   }, (root) => {
     const report = buildImage4VisualContractReport(root)
     assert.equal(report.summary.ok, false)
-    assert.ok(report.errors.visualWeightLeaks.some((item) => item.selector.includes('image4-action:hover')))
+    assert.ok(report.errors.visualWeightLeaks.some((item) => item.selector.includes('image4-conversation-recap:hover')))
   })
 })
 test('image4 visual contract audit rejects row container negative vertical shifts', () => {
   withImage4VisualContractFixture({
-    'src/app/styles/panel-companion-chat.css': BASELINE_FILES['src/app/styles/panel-companion-chat.css'].replace(
-      'transform: none;',
-      'transform: translateY(-6px);',
-    ),
+    'src/app/styles/panel-companion-chat.css': `${BASELINE_FILES['src/app/styles/panel-companion-chat.css']}
+.panel-window--image4 .image4-conversation-recap { transform: translateY(-6px); }
+`,
   }, (root) => {
     const report = buildImage4VisualContractReport(root)
     assert.equal(report.summary.ok, false)
-    assert.ok(report.errors.rowBoundaryLeaks.some((item) => item.selector.includes('image4-greeting')))
+    assert.ok(report.errors.rowBoundaryLeaks.some((item) => item.selector.includes('image4-conversation-recap')))
   })
 })
 test('image4 visual contract audit rejects wrapper state mutation leaks', () => {
   withImage4VisualContractFixture({
     'src/app/styles/panel-companion-chat.css': `${BASELINE_FILES['src/app/styles/panel-companion-chat.css']}
-.panel-window--image4 .image4-action:hover {
+.panel-window--image4 .image4-conversation-recap:hover {
   z-index: 3;
   filter: drop-shadow(0 0 12px rgba(111, 226, 239, 0.2));
 }
@@ -1145,19 +1038,7 @@ test('image4 visual contract audit rejects wrapper state mutation leaks', () => 
   }, (root) => {
     const report = buildImage4VisualContractReport(root)
     assert.equal(report.summary.ok, false)
-    assert.ok(report.errors.interactionStateLeaks.some((item) => item.selector.includes('image4-action:hover')))
-  })
-})
-test('image4 visual contract audit rejects missing reduced-motion classification', () => {
-  withImage4VisualContractFixture({
-    'src/app/styles/panel-companion-motion.css': BASELINE_FILES['src/app/styles/panel-companion-motion.css'].replace(
-      'animation: image4-wave-bar-reduced var(--image4-motion-reduced-signal-duration) ease-out infinite;',
-      'animation: none;',
-    ),
-  }, (root) => {
-    const report = buildImage4VisualContractReport(root)
-    assert.equal(report.summary.ok, false)
-    assertMissingContract(report, 'reduced-motion-classification')
+    assert.ok(report.errors.interactionStateLeaks.some((item) => item.selector.includes('image4-conversation-recap:hover')))
   })
 })
 test('image4 hard contract check ignores soft presence weight drift', () => {
@@ -1173,24 +1054,23 @@ test('image4 hard contract check ignores soft presence weight drift', () => {
     assert.equal(report.errors.presenceWeightLeaks.length, 0)
   })
 })
-test('image4 hard contract check ignores soft reduced-motion drift', () => {
+test('image4 hard contract rejects infinite speaking signal under reduced motion', () => {
   withImage4VisualContractFixture({
-    'src/app/styles/panel-companion-motion.css': BASELINE_FILES['src/app/styles/panel-companion-motion.css'].replace(
-      'animation: image4-wave-bar-reduced var(--image4-motion-reduced-signal-duration) ease-out infinite;',
-      'animation: none;',
-    ),
+    'src/app/styles/panel-companion-motion.css': BASELINE_FILES['src/app/styles/panel-companion-motion.css']
+      .replaceAll('animation: none !important;', 'animation: image4-wave-bar-reduced 900ms ease-out infinite;')
+      .replaceAll('animation-play-state: paused !important;', 'animation-play-state: running;'),
   }, (root) => {
     const report = buildImage4VisualContractReport(root, { mode: 'hard' })
-    assert.equal(report.summary.ok, true)
+    assert.equal(report.summary.ok, false)
     assert.ok(
-      !report.errors.missingContracts.some((item) => item.id === 'reduced-motion-classification'),
+      report.errors.missingContracts.some((item) => item.id === 'reduced-motion-stops-speaking-signal-animation'),
     )
   })
 })
 test('image4 hard contract check ignores soft visual weight and row-boundary drift', () => {
   withImage4VisualContractFixture({
     'src/app/styles/panel-companion-chat.css': `${BASELINE_FILES['src/app/styles/panel-companion-chat.css']}
-.panel-window--image4 .image4-action:hover {
+.panel-window--image4 .image4-conversation-recap:hover {
   box-shadow: 0 10px 26px rgba(111, 226, 239, 0.22);
 }
 `,
@@ -1204,7 +1084,7 @@ test('image4 hard contract check ignores soft visual weight and row-boundary dri
 test('image4 hard contract check ignores soft interaction-state drift', () => {
   withImage4VisualContractFixture({
     'src/app/styles/panel-companion-chat.css': `${BASELINE_FILES['src/app/styles/panel-companion-chat.css']}
-.panel-window--image4 .image4-action:hover {
+.panel-window--image4 .image4-conversation-recap:hover {
   z-index: 3;
   filter: drop-shadow(0 0 12px rgba(111, 226, 239, 0.2));
 }

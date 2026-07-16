@@ -23,6 +23,7 @@ type UseBracketSchedulerOptions = {
   settings: AppSettings
   /** Pause scheduling while the panel is open and visible to the user. */
   panelOpen: boolean
+  enabled?: boolean
 }
 
 /**
@@ -38,6 +39,7 @@ type UseBracketSchedulerOptions = {
 export function useBracketScheduler({
   settings,
   panelOpen,
+  enabled = true,
 }: UseBracketSchedulerOptions) {
   const liveRef = useRef({ settings, panelOpen })
   useEffect(() => {
@@ -45,7 +47,7 @@ export function useBracketScheduler({
   }, [settings, panelOpen])
 
   useEffect(() => {
-    if (!settings.proactiveBracketEnabled) return
+    if (!enabled || !settings.proactiveBracketEnabled) return
     if (typeof window === 'undefined') return
     if (!window.desktopPet?.showProactiveNotification) return
 
@@ -113,5 +115,5 @@ export function useBracketScheduler({
     void tick()
     const id = window.setInterval(() => { void tick() }, POLL_INTERVAL_MS)
     return () => window.clearInterval(id)
-  }, [settings.proactiveBracketEnabled])
+  }, [enabled, settings.proactiveBracketEnabled])
 }

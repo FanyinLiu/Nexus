@@ -2,44 +2,42 @@ import { randomUUID } from 'node:crypto'
 
 import { performNetworkRequest, readJsonSafe, getVolcengineStatus, buildMultipartBody, normalizeLanguageCode } from '../net.js'
 import { isVolcengineSpeechInputProvider, isOpenAiCompatibleSpeechInputProvider, parseVolcengineSpeechCredentials, buildAuthorizationHeaders, createSilentWavBase64, synthesizeRemoteTts } from './ttsService.js'
+import {
+  SPEECH_CONNECTION_MESSAGE,
+  buildSpeechConnectionEvidence,
+  buildSpeechConnectionResult,
+  classifyOpenAiCompatibleSpeechInputProbe,
+  classifySpeechOutputProbe,
+  classifyVolcengineSpeechInputProbe,
+  redactSpeechConnectionText,
+} from './speechConnectionProof.js'
 
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
 
-function isSpeechInputNoSpeechMessage(message) {
-  return /no[\s-]?speech|silence|empty transcript|no transcript|speech not detected|didn['']?t contain speech|未检测到语音|没有听到|静音|无语音|空文本/i.test(
-    String(message ?? '').trim(),
-  )
+function releaseSpeechOutputResult(result) {
+  if (result?.pcmStream && typeof result.pcmStream.destroy === 'function') {
+    try {
+      result.pcmStream.destroy()
+    } catch {
+      // ignore cleanup failures — proof classification already has bytes or not
+    }
+  }
 }
 
-function buildSpeechInputConnectionSuccessMessage(data) {
-  const text = String(data?.text ?? data?.transcript ?? data?.result?.text ?? '').trim()
-  if (text) {
-    return `连接成功，识别接口已返回文本：${text}`
+function extractObservedSpeechInputIdentity(data) {
+  return {
+    observedModelId: String(
+      data?.model
+      ?? data?.model_id
+      ?? data?.result?.model
+      ?? '',
+    ).trim() || undefined,
+    observedProviderId: String(
+      data?.provider
+      ?? data?.provider_id
+      ?? '',
+    ).trim() || undefined,
   }
-
-  return '连接成功，接口已收到测试音频；静音样本没有识别出文本，这属于预期现象。'
-}
-
-function buildSpeechOutputConnectionSuccessMessage(result) {
-  if (result?.pcmStream) {
-    return '连接成功，已拿到流式测试音频。'
-  }
-
-  if (result?.pcmBuffer instanceof Buffer) {
-    const sampleRate = Number(result.pcmSampleRate ?? 0)
-    const durationSeconds = sampleRate > 0
-      ? Number((result.pcmBuffer.length / (sampleRate * 2)).toFixed(1))
-      : 0
-    return durationSeconds > 0
-      ? `连接成功，已拿到测试音频（约 ${durationSeconds} 秒）。`
-      : '连接成功，已拿到测试音频。'
-  }
-
-  if (typeof result?.audioBase64 === 'string' && result.audioBase64.trim()) {
-    return '连接成功，已拿到测试音频。'
-  }
-
-  return '连接成功，语音接口已正常响应。'
 }
 
 async function runSpeechInputConnectionSmokeTest(payload, baseUrl) {
@@ -123,10 +121,11 @@ async function runSpeechInputConnectionSmokeTest(payload, baseUrl) {
       'Content-Length': String(multipart.body.length),
     }
   } else {
-    return {
+    return buildSpeechConnectionResult({
       ok: false,
-      message: '当前语音输入提供商暂未接通连接测试。',
-    }
+      messageKey: SPEECH_CONNECTION_MESSAGE.INPUT_UNSUPPORTED,
+      code: 'unknown_connection_error',
+    })
   }
 
   const response = await performNetworkRequest(endpoint, {
@@ -138,46 +137,107 @@ async function runSpeechInputConnectionSmokeTest(payload, baseUrl) {
     timeoutMessage: '连接测试等了好久，看看地址和网络对不对？',
   })
   const data = await readJsonSafe(response)
+  const observed = extractObservedSpeechInputIdentity(data)
 
   if (isVolcengineSpeechInputProvider(payload.providerId)) {
     const volcStatus = getVolcengineStatus(response, data)
-    if (volcStatus.code && !['20000000', '20000003'].includes(volcStatus.code)) {
-      return {
+    const classified = classifyVolcengineSpeechInputProbe({ statusCode: volcStatus.code })
+    if (!classified.ok) {
+      return buildSpeechConnectionResult({
         ok: false,
-        message: volcStatus.message || `火山语音识别接口返回异常状态：${volcStatus.code}`,
-      }
+        messageKey: classified.messageKey,
+        code: classified.code,
+        // Safe status code only — never raw provider body as the user message.
+        messageParams: classified.providerStatusCode
+          ? { statusCode: classified.providerStatusCode }
+          : undefined,
+        diagnosticDetail: volcStatus.message,
+      })
     }
 
-    return {
+    const evidence = buildSpeechConnectionEvidence({
+      kind: 'audio-response',
+      providerId: payload.providerId,
+      modelId: payload.model,
+      observedProviderId: observed.observedProviderId,
+      observedModelId: observed.observedModelId,
+    })
+
+    return buildSpeechConnectionResult({
       ok: true,
-      message: buildSpeechInputConnectionSuccessMessage(data),
-    }
+      messageKey: classified.messageKey,
+      evidence,
+      status: evidence.identityMismatch ? 'error' : 'ready',
+    })
   }
 
   if (!response.ok) {
-    const message =
+    const classified = classifyOpenAiCompatibleSpeechInputProbe({
+      status: response.status,
+      data,
+    })
+
+    if (classified.ok) {
+      const evidence = buildSpeechConnectionEvidence({
+        kind: 'audio-response',
+        providerId: payload.providerId,
+        modelId: payload.model,
+        observedProviderId: observed.observedProviderId,
+        observedModelId: observed.observedModelId,
+      })
+      return buildSpeechConnectionResult({
+        ok: true,
+        messageKey: classified.messageKey,
+        evidence,
+        status: evidence.identityMismatch ? 'error' : 'ready',
+      })
+    }
+
+    // Prefer structured code + key; keep a redacted transport fallback only when
+    // the provider did not yield a classifiable envelope.
+    const redactedDetail = redactSpeechConnectionText(
       data?.error?.message
       ?? data?.detail?.message
       ?? data?.message
-      ?? `语音识别那边回了个状态码 ${response.status}，不太确定哪里出了问题。`
+      ?? '',
+    )
 
-    if (isSpeechInputNoSpeechMessage(message)) {
-      return {
-        ok: true,
-        message: '连接成功，接口已收到测试音频；静音样本没有识别出文本，这属于预期现象。',
-      }
-    }
-
-    return {
+    return buildSpeechConnectionResult({
       ok: false,
-      message,
-    }
+      messageKey: classified.messageKey,
+      code: classified.code || 'provider_error',
+      messageParams: { status: response.status },
+      diagnosticDetail: redactedDetail,
+    })
   }
 
-  return {
-    ok: true,
-    message: buildSpeechInputConnectionSuccessMessage(data),
+  const classified = classifyOpenAiCompatibleSpeechInputProbe({
+    status: response.status,
+    data,
+  })
+
+  if (!classified.ok) {
+    return buildSpeechConnectionResult({
+      ok: false,
+      messageKey: classified.messageKey,
+      code: classified.code || 'invalid_probe_response',
+    })
   }
+
+  const evidence = buildSpeechConnectionEvidence({
+    kind: 'audio-response',
+    providerId: payload.providerId,
+    modelId: payload.model,
+    observedProviderId: observed.observedProviderId,
+    observedModelId: observed.observedModelId,
+  })
+
+  return buildSpeechConnectionResult({
+    ok: true,
+    messageKey: classified.messageKey,
+    evidence,
+    status: evidence.identityMismatch ? 'error' : 'ready',
+  })
 }
 
 async function runSpeechOutputConnectionSmokeTest(payload, baseUrl) {
@@ -189,20 +249,18 @@ async function runSpeechOutputConnectionSmokeTest(payload, baseUrl) {
     '你好，这是一次语音接口连通性测试。',
   )
 
-  if (result?.pcmStream && typeof result.pcmStream.destroy === 'function') {
-    result.pcmStream.destroy()
-  }
-
-  return {
-    ok: true,
-    message: buildSpeechOutputConnectionSuccessMessage(result),
+  try {
+    return classifySpeechOutputProbe(result, {
+      providerId: payload.providerId,
+      modelId: payload.model,
+      voiceId: payload.voice,
+    })
+  } finally {
+    releaseSpeechOutputResult(result)
   }
 }
 
 export {
-  isSpeechInputNoSpeechMessage,
-  buildSpeechInputConnectionSuccessMessage,
-  buildSpeechOutputConnectionSuccessMessage,
   runSpeechInputConnectionSmokeTest,
   runSpeechOutputConnectionSmokeTest,
 }

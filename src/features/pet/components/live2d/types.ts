@@ -53,6 +53,7 @@ declare global {
             source: string,
             options?: {
               autoInteract?: boolean
+              autoUpdate?: boolean
               motionPreload?: MotionPreloadValue
             },
           ) => Promise<Live2DModelType>
@@ -65,6 +66,15 @@ declare global {
       error?: string | null
       app?: PixiApplication | null
       model?: Live2DModelType | null
+      bootStartedAt?: number
+      vendorReadyAt?: number
+      appCreatedAt?: number
+      modelLoadedAt?: number
+      modelReadyAt?: number
+      firstFrameAt?: number
+      attempts?: number
+      readyMs?: number
+      firstFrameMs?: number
     }
   }
 }

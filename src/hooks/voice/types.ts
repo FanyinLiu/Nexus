@@ -7,6 +7,7 @@ import type {
   VoiceTraceEntry,
   VoicePipelineState,
   VoiceState,
+  SpeechLevelSource,
   WakewordRuntimeState,
   WindowView,
 } from '../../types'
@@ -138,7 +139,7 @@ export type UseVoiceSnapshot = {
   voiceState: VoiceState
   continuousVoiceActive: boolean
   liveTranscript: string
-  speechLevel: number
+  speechLevelSource: SpeechLevelSource
   wakewordState: WakewordRuntimeState
   voicePipeline: VoicePipelineState
   voiceTrace: VoiceTraceEntry[]

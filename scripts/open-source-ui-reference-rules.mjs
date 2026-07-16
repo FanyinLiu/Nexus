@@ -210,7 +210,7 @@ export const REQUIRED_CROSS_DOC_PHRASES = [
   },
   {
     file: OPEN_SOURCE_DOC,
-    text: 'Image4 | Strict five-row visual rhythm grid: presence, dial, greeting, actions, composer.',
+    text: 'Image4 | Voice-first four-part rhythm: header, Live2D stage, conversation recap, composer.',
   },
   {
     file: OPEN_SOURCE_DOC,

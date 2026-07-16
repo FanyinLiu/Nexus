@@ -1,3 +1,5 @@
+import type { UiLanguage } from './i18n.ts'
+
 export type WebSearchProviderId =
   | 'bing'
   | 'duckduckgo'
@@ -124,6 +126,7 @@ export interface WebSearchResponse {
 export interface WeatherLookupRequest {
   location: string
   fallbackLocation?: string
+  locale?: UiLanguage
   quiet?: boolean
   policy?: {
     enabled?: boolean
@@ -140,7 +143,7 @@ export interface WeatherLookupResponse {
   tomorrowSummary?: string
   /** Optional 3rd day summary (forecast_days=3 in the open-meteo call). */
   dayAfterSummary?: string
-  /** Hourly-derived intra-day shift hint, e.g. "傍晚18点起可能有降水（概率70%）".
+  /** Localized hourly-derived intra-day shift hint, e.g. "precipitation may begin around 18:00".
    *  Empty string when the next 12 hours show no significant change. */
   upcomingHourly?: string
   usedFallbackLocation?: boolean
@@ -148,7 +151,7 @@ export interface WeatherLookupResponse {
   // Structured fields for ambient weather UI (corner chip). The LLM-facing
   // *Summary strings above are the canonical narration path — these numeric
   // counterparts let non-LLM consumers render a compact widget without
-  // parsing Chinese prose.
+  // parsing localized prose.
   currentTemperature?: number | null
   /** Apparent / "feels-like" temperature in °C. */
   currentApparentTemperature?: number | null

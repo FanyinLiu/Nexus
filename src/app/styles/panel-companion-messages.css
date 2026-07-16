@@ -82,7 +82,7 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-message-list:not(.is-e
 
 @media (min-aspect-ratio: 1 / 1) {
   .panel-window--image4 .image4-message-list,
-  html[data-theme='warm-day'] .panel-window--image4 .image4-message-list {
+html[data-theme='warm-day'] .panel-window--image4 .image4-message-list {
     gap: clamp(8px, 3cqw, 14px);
     max-height: clamp(84px, 40cqw, 140px);
     padding: 0 clamp(6px, 3.6cqw, 16px);

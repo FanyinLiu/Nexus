@@ -36,15 +36,15 @@ Use `docs/OPEN_SOURCE_UI_REFERENCE_AUDIT.md` when a change borrows from external
 
 ## Image4 Panel
 
-- The five rows still read as presence, dial, greeting, actions, and composer.
-- The dial is the main visual anchor; greeting and actions support it instead of competing with it.
+- The four current regions read as header, Live2D stage, conversation recap, and composer.
+- Live2D is the main visual anchor; recap and composer support it without restoring a dial, greeting card, or suggestion-action row.
 - The rhythm-grid rail stays outside the content plane and never covers text.
 - Snapshot mode hides debug calibration marks.
-- Short-height views compress before clipping, and the dial disappears only at the intended very-short threshold.
+- Short-height views compress before clipping while the Live2D stage and composer remain reachable.
 - The Image4 rhythm grid does not expand into chat or settings surfaces.
 - Row content uses the Image4 boundary buffer instead of negative row-container transforms.
 - Visual weight changes are made through Image4 scoped tokens, not one-off shadows or glow.
-- Presence, dial, and signal derive from one Image4 companion state driver; they should not behave like independent widgets.
+- Presence, Live2D expression, and signal derive from one Image4 companion state driver; they should not behave like independent widgets.
 - Resting state comes from coarse elapsed-time buckets and should never show exact minutes or seconds.
 - URL state preview is only for visual review and must still route through the shared Image4 state driver.
 
@@ -105,7 +105,7 @@ Use `docs/OPEN_SOURCE_UI_REFERENCE_AUDIT.md` when a change borrows from external
 - Composer remains visually connected to the conversation.
 - Short and long Image4 active-chat messages should be checked with `?view=panel&image4Preview=1&image4ChatPreview=density`.
 - Normal chat changes do not require Image4 rhythm-grid CI.
-- Chat uses an interaction density model, not the Image4 five-row visual rhythm grid.
+- Chat uses an interaction density model, not the Image4 voice-first four-part rhythm.
 
 ## Settings Drawer
 

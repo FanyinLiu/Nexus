@@ -29,7 +29,7 @@ export function ReleaseSpotlightActions({
           onClick={() => onOpenSettingsSection(item.targetSectionId)}
         >
           <PetControlIcon
-            name={item.id === 'review_memory' ? 'thought' : 'sparkles'}
+            name={item.id === 'open_voice' ? 'mic' : 'sparkles'}
             className={iconClassName}
           />
           <span>{translate(item.labelKey)}</span>

@@ -29,7 +29,7 @@ export function RelationshipPanel({
         <span>{ti('settings.chat.relationship_type_hint')}</span>
       </div>
       <div
-        className="onboarding-relationship__options"
+        className="settings-relationship__options"
         role="radiogroup"
         aria-label={ti('settings.chat.relationship_type_label')}
       >
@@ -40,7 +40,7 @@ export function RelationshipPanel({
               id={getChoiceRadioId(RELATIONSHIP_RADIO_GROUP_ID, opt.value)}
               key={opt.value}
               type="button"
-              className={`onboarding-relationship__chip${isActive ? ' is-active' : ''}`}
+              className={`settings-relationship__chip${isActive ? ' is-active' : ''}`}
               role="radio"
               aria-checked={isActive}
               tabIndex={getChoiceTabIndex(opt.value, draft.companionRelationshipType, relationshipChoiceIds)}

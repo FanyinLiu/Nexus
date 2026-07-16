@@ -279,7 +279,13 @@ export function reduceVoiceSession(
       return { state: current, effects: [] }
 
     case 'voice:restart_requested':
-      effects.push({ type: 'restart_voice', delay: event.delayMs ?? 60 })
+      effects.push({
+        type: 'restart_voice',
+        delay: event.delayMs ?? 60,
+        force: event.force,
+        statusText: event.statusText,
+        restartReason: event.restartReason,
+      })
       return { state: current, effects }
 
     case 'voice:stop_requested':

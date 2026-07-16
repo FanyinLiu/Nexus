@@ -1,0 +1,203 @@
+.settings-v3-page {
+  --sv3-ink: var(--settings-v2-ink);
+  --sv3-muted: var(--settings-v2-muted);
+  --sv3-line: var(--settings-v2-line);
+  --sv3-surface: var(--settings-v2-surface);
+  --sv3-soft: var(--settings-v2-soft);
+  --sv3-accent: var(--settings-v2-accent);
+  --sv3-accent-soft: var(--settings-v2-accent-soft);
+  --sv3-field: var(--settings-v2-field);
+  --sv3-hover: var(--settings-v2-hover);
+  --sv3-danger: var(--settings-v2-danger);
+  --sv3-success: var(--settings-v2-success);
+  --sv3-warning: var(--settings-v2-warning);
+  display: grid;
+  gap: 24px;
+  align-content: start;
+  box-sizing: border-box;
+  min-height: 100%;
+  min-width: 0;
+  padding: 4px 2px 28px;
+  color: var(--sv3-ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.settings-v3-page--fill {
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 100%;
+}
+.settings-v3-section--fill {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+.settings-v3-section--fill.settings-v3-section--header-hidden {
+  grid-template-rows: minmax(0, 1fr);
+}
+.settings-v3-section--fill > .settings-v3-section__body {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+.settings-v3-section--fill > .settings-v3-section__body:has(> .settings-v3-collection-toolbar) {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.settings-v3-section--fill .settings-v3-empty { min-height: 0; transform: translateY(-7%); }
+
+.settings-v3-section {
+  min-width: 0;
+}
+
+.settings-v3-section__header {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 10px;
+}
+
+.settings-v3-section__header h3,
+.settings-v3-section__header p { margin: 0; }
+.settings-v3-section__header h3 { font-size: 15px; line-height: 1.4; }
+.settings-v3-section__header p { color: var(--sv3-muted); font-size: 12px; }
+
+.settings-v3-section__body {
+  overflow: visible;
+  background: var(--sv3-surface);
+  border: 1px solid var(--sv3-line);
+  border-radius: 14px;
+}
+
+.settings-v3-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 56px;
+  padding: 10px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--sv3-line) 72%, transparent);
+}
+
+.settings-v3-row:last-child { border-bottom: 0; }
+.settings-v3-row[data-disabled='true'] { color: color-mix(in srgb, var(--sv3-muted) 68%, transparent); }
+.settings-v3-row__icon { display: grid; width: 24px; height: 24px; place-items: center; color: var(--sv3-muted); }
+.settings-v3-row__icon svg { width: 20px; height: 20px; }
+.settings-v3-row__copy { display: grid; gap: 2px; min-width: 0; }
+.settings-v3-row__copy strong { font-size: 13px; font-weight: 680; }
+.settings-v3-row__copy span,
+.settings-v3-row__meta { color: var(--sv3-muted); font-size: 12px; overflow-wrap: anywhere; }
+.settings-v3-row__control { display: flex; min-height: 44px; align-items: center; justify-content: flex-end; }
+
+.settings-v3-switch { display: inline-grid; min-width: 44px; min-height: 44px; place-items: center; cursor: pointer; }
+.settings-v3-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.settings-v3-switch__track { position: relative; width: 38px; height: 22px; border-radius: 999px; background: color-mix(in srgb, var(--sv3-muted) 26%, var(--sv3-surface)); transition: background-color 150ms ease; }
+.settings-v3-switch__track > span { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--sv3-surface); box-shadow: 0 1px 3px color-mix(in srgb, var(--sv3-ink) 22%, transparent); transition: transform 150ms ease; }
+.settings-v3-switch input:checked + .settings-v3-switch__track { background: var(--sv3-accent); }
+.settings-v3-switch input:checked + .settings-v3-switch__track > span { transform: translateX(16px); }
+.settings-v3-switch input:focus-visible + .settings-v3-switch__track { outline: 3px solid var(--nx-v2-focus-ring); outline-offset: 3px; }
+.settings-v3-switch input:disabled + .settings-v3-switch__track { opacity: .45; }
+.settings-v3-editor:focus-visible { outline: 3px solid var(--nx-v2-focus-ring); outline-offset: 3px; }
+
+.settings-v3-notice {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  color: var(--sv3-accent);
+  background: color-mix(in srgb, var(--sv3-accent-soft) 74%, var(--sv3-surface));
+  border: 1px solid color-mix(in srgb, var(--sv3-accent) 20%, var(--sv3-line));
+  border-radius: 12px;
+}
+.settings-v3-notice.is-warning { color: var(--sv3-warning); background: color-mix(in srgb, var(--sv3-warning) 10%, var(--sv3-surface)); border-color: color-mix(in srgb, var(--sv3-warning) 28%, var(--sv3-line)); }
+.settings-v3-notice.is-error { color: var(--sv3-danger); background: color-mix(in srgb, var(--sv3-danger) 10%, var(--sv3-surface)); border-color: color-mix(in srgb, var(--sv3-danger) 28%, var(--sv3-line)); }
+.settings-v3-notice.is-success { color: var(--sv3-success); background: color-mix(in srgb, var(--sv3-success) 10%, var(--sv3-surface)); border-color: color-mix(in srgb, var(--sv3-success) 28%, var(--sv3-line)); }
+.settings-v3-notice svg { width: 19px; height: 19px; margin-top: 1px; }
+.settings-v3-notice > div { display: grid; gap: 2px; }
+.settings-v3-notice span { font-size: 12px; line-height: 1.5; }
+
+.settings-v3-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.settings-v3-connection-evidence { display: grid; gap: 8px; }
+.settings-v3-toolbar button,
+.settings-v3-action {
+  min-height: 44px;
+  padding: 8px 13px;
+  color: var(--sv3-ink);
+  background: var(--sv3-surface);
+  border: 1px solid var(--sv3-line);
+  border-radius: 10px;
+  font: inherit;
+  cursor: pointer;
+}
+.settings-v3-toolbar button:hover:not(:disabled),
+.settings-v3-action:hover:not(:disabled) { border-color: color-mix(in srgb, var(--sv3-accent) 34%, var(--sv3-line)); background: color-mix(in srgb, var(--sv3-accent-soft) 46%, var(--sv3-surface)); }
+.settings-v3-toolbar button:disabled,
+.settings-v3-action:disabled { cursor: not-allowed; opacity: .48; }
+.settings-v3-toolbar button:focus-visible,
+.settings-v3-action:focus-visible,
+.settings-v3-field :is(input, select, textarea):focus-visible { outline: 3px solid var(--nx-v2-focus-ring); outline-offset: 2px; }
+.settings-v3-disclosure summary:focus-visible { outline: 3px solid var(--nx-v2-focus-ring); outline-offset: -3px; border-radius: 12px; }
+
+.settings-v3-empty { display: grid; gap: 5px; min-height: 132px; padding: 24px; place-content: center; text-align: center; color: var(--sv3-muted); }
+.settings-v3-empty > :is(strong, span) { max-width: 38ch; margin-inline: auto; }
+.settings-v3-empty strong { color: var(--sv3-ink); }
+
+.settings-v3-disclosure { overflow: hidden; background: var(--sv3-surface); border: 1px solid var(--sv3-line); border-radius: 14px; }
+.settings-v3-disclosure summary { display: flex; min-height: 56px; padding: 10px 14px; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; }
+.settings-v3-disclosure summary::-webkit-details-marker { display: none; }
+.settings-v3-disclosure summary > span { display: grid; gap: 2px; }
+.settings-v3-disclosure summary small { color: var(--sv3-muted); font-size: 12px; font-weight: 400; }
+.settings-v3-disclosure summary svg { width: 19px; height: 19px; transition: transform 150ms ease; }
+.settings-v3-disclosure[open] summary svg { transform: rotate(180deg); }
+.settings-v3-disclosure__body { display: grid; gap: 12px; padding: 0 14px 14px; border-top: 1px solid var(--sv3-line); }
+
+.settings-v3-field { display: grid; gap: 6px; min-width: 0; padding-top: 12px; color: var(--sv3-ink); font-weight: 620; }
+.settings-v3-field :is(input, select, textarea) { width: 100%; min-height: 44px; padding: 9px 11px; color: var(--sv3-ink); background: var(--sv3-field, var(--sv3-surface)); border: 1px solid var(--sv3-line); border-radius: 10px; font: inherit; }
+.settings-v3-field textarea { min-height: 108px; resize: vertical; }
+.settings-v3-field small { color: var(--sv3-muted); font-size: 12px; font-weight: 400; }
+
+.settings-v3-editor { display: grid; gap: 12px; padding: 2px 14px 14px; }
+.settings-v3-toolbar .is-danger,
+.settings-v3-action.is-danger { color: var(--sv3-danger); border-color: color-mix(in srgb, var(--sv3-danger) 28%, var(--sv3-line)); background: color-mix(in srgb, var(--sv3-danger) 8%, var(--sv3-surface)); }
+
+.settings-v3-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+.settings-drawer--v2 .settings-v3-page :is(button, a[href], summary, select, textarea, input:not([type='hidden']):not([type='checkbox']):not([type='radio'])) {
+  min-height: 44px;
+}
+.settings-drawer--v2 .settings-v3-page a[href] { display: inline-flex; align-items: center; }
+
+@media (max-width: 719px) {
+  .settings-v3-page { gap: 20px; padding: 2px 0 24px; }
+  .settings-v3-row { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; padding: 10px 12px; }
+  .settings-v3-row__meta { grid-column: 2 / -1; }
+  .settings-v3-row__control { grid-column: 3; grid-row: 1 / span 2; }
+  .settings-v3-section__header p { font-size: 12px; line-height: 1.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-v3-page * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+
+@media (forced-colors: active) {
+  .settings-v3-section__body,
+  .settings-v3-disclosure,
+  .settings-v3-toolbar button,
+  .settings-v3-action { border: 1px solid CanvasText; }
+  .settings-v3-switch__track { border: 1px solid CanvasText; }
+  .settings-v3-switch input:checked + .settings-v3-switch__track { background: Highlight; }
+  .settings-v3-switch input:focus-visible + .settings-v3-switch__track {
+    outline: 3px solid Highlight;
+    outline-offset: 3px;
+  }
+  .settings-v3-page :is(button, input, select, textarea):focus-visible,
+  .settings-v3-page .settings-v3-editor:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+  .settings-v3-page .settings-v3-disclosure summary:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: -3px;
+  }
+}

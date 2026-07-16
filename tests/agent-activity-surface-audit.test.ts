@@ -37,7 +37,7 @@ export type CompanionActivityDisplayActionSource = 'task_state' | 'runtime_refle
 export const displayActionSource = 'task_state'
 export const displayStatusKey = 'pet.status.executing'
 `,
-  'src/app/views/PanelView.tsx': `
+  'src/app/views/LegacyPanelView.tsx': `
 const assistantActivityLabel = ''
 const companionStatusChipLabel = ''
 const statusKey = resolveImage4ActivityLabelKey(image4CompanionState)
@@ -133,7 +133,7 @@ test('agent activity surface audit rejects missing Pro contract phrases', () => 
 
 test('agent activity surface audit rejects coding-agent shell language', () => {
   withFixture({
-    'src/app/views/PanelView.tsx': `${BASELINE_FILES['src/app/views/PanelView.tsx']}
+    'src/app/views/LegacyPanelView.tsx': `${BASELINE_FILES['src/app/views/LegacyPanelView.tsx']}
 const label = 'agent cockpit task board'
 `,
   }, (root) => {
@@ -146,7 +146,7 @@ const label = 'agent cockpit task board'
 
 test('agent activity surface audit rejects missing Image4 companion activity marker', () => {
   withFixture({
-    'src/app/views/PanelView.tsx': BASELINE_FILES['src/app/views/PanelView.tsx'].replace(
+    'src/app/views/LegacyPanelView.tsx': BASELINE_FILES['src/app/views/LegacyPanelView.tsx'].replace(
       'data-companion-activity={image4CompanionState.activityState}',
       'data-companion-mode={image4CompanionState.mode}',
     ),

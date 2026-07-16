@@ -1,0 +1,346 @@
+/* Nexus settings visual system.
+   Keep shared 0.4.2 settings rules here so child pages, dialogs, fields,
+   toggles, choice controls, status rows, and footer actions follow one rhythm. */
+
+.sb,
+.sd {
+  --nx-settings-radius-panel: 8px;
+  --nx-settings-radius-control: 8px;
+  --nx-settings-radius-row: 8px;
+  --nx-settings-control-height: 30px;
+  --nx-settings-control-height-small: 24px;
+  --nx-settings-segment-height: 28px;
+  --nx-settings-footer-height: 36px;
+  --nx-settings-row-height: 38px;
+  --nx-settings-field-height: 32px;
+  --nx-settings-icon-size: 18px;
+  --nx-settings-font-body: 11px;
+  --nx-settings-font-label: 12px;
+  --nx-settings-font-meta: 10px;
+  --nx-settings-gap-tight: 4px;
+  --nx-settings-gap-row: 6px;
+  --nx-settings-gap-section: 10px;
+  --nx-settings-segment-gap: 3px;
+  --nx-settings-track-trust: rgba(220, 116, 87, 0.86);
+  --nx-settings-track-memory: rgba(90, 164, 76, 0.86);
+  --nx-settings-track-desktop: rgba(52, 124, 210, 0.86);
+  --nx-settings-track-permission: rgba(135, 82, 207, 0.82);
+  --nx-settings-track-appearance: rgba(215, 124, 45, 0.9);
+}
+
+.sb-night,
+.sd-night {
+  --nx-settings-ink: rgba(245, 247, 255, 0.92);
+  --nx-settings-muted: rgba(210, 217, 235, 0.64);
+  --nx-settings-faint: rgba(210, 217, 235, 0.44);
+  --nx-settings-line: rgba(235, 240, 255, 0.12);
+  --nx-settings-line-soft: rgba(235, 240, 255, 0.075);
+  --nx-settings-surface: rgba(14, 18, 28, 0.96);
+  --nx-settings-surface-soft: rgba(255, 255, 255, 0.045);
+  --nx-settings-surface-hover: rgba(255, 255, 255, 0.075);
+  --nx-settings-segment-surface: rgba(255, 255, 255, 0.055);
+  --nx-settings-segment-active: rgba(255, 255, 255, 0.14);
+  --nx-settings-field: rgba(255, 255, 255, 0.055);
+  --nx-settings-field-hover: rgba(255, 255, 255, 0.075);
+  --nx-settings-accent: rgba(168, 139, 255, 0.9);
+  --nx-settings-accent-soft: rgba(168, 139, 255, 0.15);
+  --nx-settings-danger: rgba(248, 113, 113, 0.9);
+  --nx-settings-success: rgba(88, 190, 136, 0.9);
+  --nx-settings-warning: rgba(242, 192, 120, 0.94);
+  --nx-settings-footer-surface: linear-gradient(to bottom, rgba(14, 18, 28, 0), rgba(14, 18, 28, 0.96) 42%);
+  color-scheme: dark;
+}
+
+.sb-day,
+.sd-day {
+  --nx-settings-ink: rgba(31, 35, 44, 0.92);
+  --nx-settings-muted: rgba(70, 76, 87, 0.66);
+  --nx-settings-faint: rgba(70, 76, 87, 0.48);
+  --nx-settings-line: rgba(56, 65, 78, 0.12);
+  --nx-settings-line-soft: rgba(56, 65, 78, 0.075);
+  --nx-settings-surface: rgba(250, 252, 255, 0.98);
+  --nx-settings-surface-soft: rgba(255, 255, 255, 0.58);
+  --nx-settings-surface-hover: rgba(245, 248, 252, 0.88);
+  --nx-settings-segment-surface: rgba(56, 65, 78, 0.055);
+  --nx-settings-segment-active: rgba(255, 255, 255, 0.86);
+  --nx-settings-field: rgba(255, 255, 255, 0.72);
+  --nx-settings-field-hover: rgba(255, 255, 255, 0.92);
+  --nx-settings-accent: rgba(77, 117, 198, 0.88);
+  --nx-settings-accent-soft: rgba(77, 117, 198, 0.11);
+  --nx-settings-danger: rgba(194, 74, 66, 0.9);
+  --nx-settings-success: rgba(57, 139, 93, 0.9);
+  --nx-settings-warning: rgba(151, 98, 37, 0.92);
+  --nx-settings-footer-surface: linear-gradient(to bottom, rgba(250, 252, 255, 0), rgba(250, 252, 255, 0.98) 42%);
+  color-scheme: light;
+}
+
+.sb-warm,
+.sd-warm {
+  --nx-settings-ink: rgba(31, 27, 23, 0.92);
+  --nx-settings-muted: rgba(91, 80, 69, 0.66);
+  --nx-settings-faint: rgba(91, 80, 69, 0.46);
+  --nx-settings-line: rgba(78, 62, 46, 0.12);
+  --nx-settings-line-soft: rgba(78, 62, 46, 0.075);
+  --nx-settings-surface: rgba(255, 250, 243, 0.98);
+  --nx-settings-surface-soft: rgba(255, 253, 249, 0.58);
+  --nx-settings-surface-hover: rgba(255, 248, 238, 0.72);
+  --nx-settings-segment-surface: rgba(78, 62, 46, 0.055);
+  --nx-settings-segment-active: rgba(255, 253, 249, 0.78);
+  --nx-settings-field: rgba(255, 253, 249, 0.62);
+  --nx-settings-field-hover: rgba(255, 253, 249, 0.86);
+  --nx-settings-accent: rgba(185, 92, 60, 0.86);
+  --nx-settings-accent-soft: rgba(185, 92, 60, 0.095);
+  --nx-settings-danger: rgba(189, 69, 54, 0.9);
+  --nx-settings-success: rgba(73, 145, 82, 0.9);
+  --nx-settings-warning: rgba(151, 91, 39, 0.92);
+  --nx-settings-footer-surface: linear-gradient(to bottom, rgba(255, 250, 243, 0), rgba(255, 250, 243, 0.99) 42%);
+  color-scheme: light;
+}
+
+.sd-section .sp.sp {
+  --settings-child-control-height: var(--nx-settings-control-height);
+  --settings-child-control-font-size: var(--nx-settings-font-body);
+  --settings-child-meta-font-size: var(--nx-settings-font-meta);
+  --settings-child-gap: var(--nx-settings-gap-row);
+  color: var(--nx-settings-ink);
+}
+
+.sd-section .settings-section-loading {
+  display: grid;
+  align-content: start;
+  gap: var(--nx-settings-gap-row);
+  min-height: 148px;
+  padding: 4px 3px;
+  color: var(--nx-settings-muted);
+}
+
+.sd-section .settings-section-loading__label {
+  font-size: var(--nx-settings-font-body);
+  line-height: 1.4;
+}
+
+.sd-section .settings-section-loading__row {
+  width: 76%;
+  height: var(--nx-settings-row-height);
+  border: 1px solid var(--nx-settings-line-soft);
+  border-radius: var(--nx-settings-radius-row);
+  background: var(--nx-settings-surface-soft);
+}
+
+.sd-section .settings-section-loading__row--wide {
+  width: 100%;
+}
+
+.sd-section .settings-section-loading__row--short {
+  width: 58%;
+}
+
+.sd-section .sp.sp :is(.settings-section__title-row, .settings-mini-group__head:not(summary), summary.settings-mini-group__head) {
+  min-height: var(--nx-settings-row-height);
+  padding: 5px 3px 7px;
+  border-bottom: 1px solid var(--nx-settings-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sd-section .sp.sp :is(.settings-control-card:not(.settings-metric-card):not(.settings-updater-panel), .settings-form-row, .settings-toggle:not(.settings-lorebook-check), .settings-choice-card, .settings-model-source-card) {
+  min-height: var(--nx-settings-row-height);
+  border-color: transparent;
+  border-radius: var(--nx-settings-radius-row);
+  background: transparent;
+  box-shadow: none;
+}
+
+.sd-section .sp.sp :is(.settings-control-card:not(.settings-metric-card):not(.settings-updater-panel), .settings-form-row, .settings-toggle:not(.settings-lorebook-check), .settings-choice-card, .settings-model-source-card):hover {
+  border-color: var(--nx-settings-line);
+  background: var(--nx-settings-surface-hover);
+  box-shadow: none;
+}
+
+.sd-section .sp.sp :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea, .settings-url-input) {
+  min-height: var(--nx-settings-field-height);
+  border-color: var(--nx-settings-line);
+  border-radius: var(--nx-settings-radius-control);
+  background: var(--nx-settings-field);
+  color: var(--nx-settings-ink);
+  font-size: var(--nx-settings-font-body);
+  line-height: 1.25;
+  box-shadow: none;
+}
+
+.sd-section .sp.sp :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea, .settings-url-input):hover {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 22%, var(--nx-settings-line));
+  background: var(--nx-settings-field-hover);
+}
+
+.sd-section .sp.sp :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea, .settings-url-input):focus {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 38%, var(--nx-settings-line));
+  background: var(--nx-settings-field-hover);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-settings-accent) 13%, transparent);
+  outline: none;
+}
+
+.sd-section .sp.sp textarea {
+  min-height: 72px;
+  max-height: 140px;
+}
+
+.sd-section .sp.sp :is(.settings-form-row__validation, .settings-model-advanced__error, .settings-test-result.is-error, .settings-url-input--invalid) {
+  border-color: color-mix(in srgb, var(--nx-settings-danger) 38%, var(--nx-settings-line));
+}
+
+.sd-section .sp.sp :is(.settings-form-row__validation, .settings-model-advanced__error) {
+  color: var(--nx-settings-danger);
+  font-size: var(--nx-settings-font-meta);
+  line-height: 1.3;
+}
+
+.sd-section .sp.sp .settings-test-result {
+  border-color: var(--nx-settings-line);
+  border-radius: var(--nx-settings-radius-row);
+  background: var(--nx-settings-surface-soft);
+  color: var(--nx-settings-muted);
+  box-shadow: none;
+}
+
+.sd-section .sp.sp .settings-test-result.is-error {
+  background: color-mix(in srgb, var(--nx-settings-danger) 10%, transparent);
+  color: var(--nx-settings-ink);
+}
+
+.sd-section .sp.sp .settings-test-result.is-stale {
+  border-color: var(--nx-settings-line);
+  background: var(--nx-settings-surface-soft);
+  color: var(--nx-settings-muted);
+}
+
+.sd-section .sp.sp .settings-test-result__meta {
+  display: block;
+  margin-top: 6px;
+  color: var(--nx-settings-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.sd-section .sp.sp .settings-toggle input {
+  background: color-mix(in srgb, var(--nx-settings-muted) 17%, transparent);
+  box-shadow: inset 0 0 0 1px var(--nx-settings-line-soft);
+}
+
+.sd-section .sp.sp .settings-toggle input::after {
+  background: var(--nx-settings-surface);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--nx-settings-ink) 14%, transparent);
+}
+
+.sd-section .sp.sp :is(.settings-appearance-switch__option, .settings-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button) {
+  min-height: var(--nx-settings-segment-height);
+  border: 1px solid transparent;
+  border-radius: var(--nx-settings-radius-control);
+  background: transparent;
+  color: var(--nx-settings-muted);
+  font-size: var(--nx-settings-font-body);
+  font-weight: 650;
+  line-height: 1.2;
+  box-shadow: none;
+}
+
+.sd-section .sp.sp .settings-choice-card.is-active,
+.sd-section .sp.sp .settings-model-source-card.is-selected {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 18%, var(--nx-settings-line));
+  background: var(--nx-settings-accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 14%, transparent);
+}
+
+.sd-section .sp.sp :is(.settings-appearance-switch__option, .settings-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button):is(:hover, :focus-visible):not(.is-active) {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 20%, var(--nx-settings-line));
+  background: color-mix(in srgb, var(--nx-settings-accent) 7%, transparent);
+  color: var(--nx-settings-ink);
+}
+
+.sd-section .sda {
+  min-height: var(--nx-settings-footer-height);
+  padding: 6px 4px 0;
+  border-top: 1px solid var(--nx-settings-line);
+  background: var(--nx-settings-footer-surface);
+  box-shadow: none;
+}
+
+.sd-section .sda :is(.ghost-button, .primary-button),
+.sd-section .sp.sp :is(.ghost-button, .primary-button, .settings-danger-button) {
+  min-height: var(--nx-settings-control-height);
+  border-radius: var(--nx-settings-radius-control);
+  font-size: var(--nx-settings-font-body);
+  line-height: 1.2;
+  box-shadow: none;
+}
+
+.sd-section .sp.sp .settings-danger-button {
+  border-color: color-mix(in srgb, var(--nx-settings-danger) 22%, var(--nx-settings-line));
+  background: color-mix(in srgb, var(--nx-settings-danger) 9%, transparent);
+  color: var(--nx-settings-danger);
+}
+
+.sb :is(.confirm-dialog-backdrop) {
+  background: color-mix(in srgb, var(--nx-settings-surface, rgba(14, 18, 28, 0.96)) 56%, transparent);
+}
+
+.sb .confirm-dialog-card {
+  width: min(360px, 100%);
+  gap: var(--nx-settings-gap-section);
+  padding: 16px;
+  border: 1px solid var(--nx-settings-line);
+  border-radius: var(--nx-settings-radius-panel);
+  background: var(--nx-settings-surface);
+  color: var(--nx-settings-ink);
+  box-shadow: 0 18px 54px color-mix(in srgb, var(--nx-settings-ink) 18%, transparent);
+}
+
+.sb .confirm-dialog-card__title {
+  font-size: var(--nx-settings-font-label);
+  line-height: 1.25;
+}
+
+.sb .confirm-dialog-card__message {
+  color: var(--nx-settings-muted);
+  font-size: var(--nx-settings-font-body);
+  line-height: 1.5;
+}
+
+.sb .confirm-dialog-card__actions {
+  gap: var(--nx-settings-gap-row);
+}
+
+.sb .confirm-dialog-card .ghost-button,
+.sb .confirm-dialog-card__confirm {
+  /* Practical minimum target size for confirm/cancel decisions in settings. */
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: var(--nx-settings-radius-control);
+  font-size: var(--nx-settings-font-body);
+  box-shadow: none;
+}
+
+.sb .confirm-dialog-card .ghost-button {
+  border-color: var(--nx-settings-line);
+  background: var(--nx-settings-field);
+  color: var(--nx-settings-muted);
+}
+
+.sb .confirm-dialog-card .ghost-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--nx-settings-accent) 22%, var(--nx-settings-line));
+  background: var(--nx-settings-field-hover);
+  color: var(--nx-settings-ink);
+}
+
+.sb .confirm-dialog-card__confirm {
+  border-color: var(--nx-settings-accent);
+  background: var(--nx-settings-accent);
+  color: #ffffff;
+}
+
+.sb .confirm-dialog-card__confirm.is-danger {
+  border-color: var(--nx-settings-danger);
+  background: var(--nx-settings-danger);
+  box-shadow: none;
+}

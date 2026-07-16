@@ -11,8 +11,10 @@ contextBridge.exposeInMainWorld('desktopPet', {
   },
   dragBy: (delta) => ipcRenderer.invoke('window:drag-by', delta),
   openPanel: (section) => ipcRenderer.invoke('window:open-panel', section),
+  getPanelSection: () => ipcRenderer.invoke('window:get-panel-section'),
   openPetMenu: () => ipcRenderer.invoke('window:open-pet-menu'),
   closePanel: () => ipcRenderer.invoke('window:close-panel'),
+  closeSettings: () => ipcRenderer.invoke('window:close-settings'),
   getPanelWindowState: () => ipcRenderer.invoke('panel-window:get-state'),
   setPanelWindowState: (state) => ipcRenderer.invoke('panel-window:set-state', state),
   isPanelWindow: () => ipcRenderer.invoke('window:get-view-kind').then((kind) => kind === 'panel'),
@@ -20,6 +22,11 @@ contextBridge.exposeInMainWorld('desktopPet', {
     const handler = (_event, payload) => listener(payload)
     ipcRenderer.on('panel-section:changed', handler)
     return () => ipcRenderer.removeListener('panel-section:changed', handler)
+  },
+  subscribeSettingsReturnFocus: (listener) => {
+    const handler = () => listener()
+    ipcRenderer.on('settings:return-focus', handler)
+    return () => ipcRenderer.removeListener('settings:return-focus', handler)
   },
   subscribePanelWindowState: (listener) => {
     const handler = (_event, payload) => listener(payload)
@@ -226,10 +233,21 @@ contextBridge.exposeInMainWorld('desktopPet', {
   localDataStatus: () => ipcRenderer.invoke('local-data:status'),
   localDataMirrorOnboarding: (payload) => ipcRenderer.invoke('local-data:mirror-onboarding', payload),
   localDataChatMigrationStatus: () => ipcRenderer.invoke('local-data:chat-migration-status'),
+  localDataReadChatSessions: () => ipcRenderer.invoke('local-data:chat-sessions-read'),
   localDataMirrorChatSession: (payload) => ipcRenderer.invoke('local-data:chat-session-mirror', payload),
   localDataCompareChatSessions: (payload) => ipcRenderer.invoke('local-data:chat-comparison-preview', payload),
   localDataApplyChatMigration: (payload) => ipcRenderer.invoke('local-data:chat-migration-apply', payload),
   localDataRollbackChatMigration: (payload) => ipcRenderer.invoke('local-data:chat-migration-rollback', payload),
+  localDataMemoryMigrationStatus: () => ipcRenderer.invoke('local-data:memory-migration-status'),
+  localDataReadMemory: () => ipcRenderer.invoke('local-data:memory-read'),
+  localDataApplyMemoryMigration: (payload) => ipcRenderer.invoke('local-data:memory-migration-apply', payload),
+  localDataRollbackMemoryMigration: (payload) => ipcRenderer.invoke('local-data:memory-migration-rollback', payload),
+  localDataCompanionMigrationStatus: () => ipcRenderer.invoke('local-data:companion-migration-status'),
+  localDataReadCompanion: () => ipcRenderer.invoke('local-data:companion-read'),
+  localDataCompareCompanion: (payload) => ipcRenderer.invoke('local-data:companion-comparison-preview', payload),
+  localDataMirrorCompanionDataset: (payload) => ipcRenderer.invoke('local-data:companion-dataset-mirror', payload),
+  localDataApplyCompanionMigration: (payload) => ipcRenderer.invoke('local-data:companion-migration-apply', payload),
+  localDataRollbackCompanionMigration: (payload) => ipcRenderer.invoke('local-data:companion-migration-rollback', payload),
 
   // Plugin Host
   pluginScan: () => ipcRenderer.invoke('plugin:scan'),

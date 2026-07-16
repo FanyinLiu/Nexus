@@ -2,7 +2,20 @@
 
 Nexus uses a **Beta → Validation → Stable** release flow to avoid shipping
 broken builds to installed users. Every feature-bearing release MUST pass
-through the beta stage — no direct-to-stable releases.
+through the beta stage unless an explicit, version-scoped maintainer exception
+is recorded below.
+
+### v0.4.3 maintainer exception — 2026-07-16
+
+For v0.4.3 only, the maintainer explicitly accepted a direct stable promotion
+after reviewing the complete automated release gate, local staging checks, and
+the protected cross-platform artifact contract. The normal multi-day beta
+window was waived; no multi-day conversation evidence or cross-platform
+physical-device validation is claimed. The earlier local DMG/ZIP outputs are
+superseded and are not releasable. Final v0.4.3 binaries must be rebuilt from
+the merged release commit by `.github/workflows/release.yml`, pass the clean
+remote asset/checksum closure gate, and only then become public. This exception
+does not change the default policy for v0.4.4 or later releases.
 
 This doc is the source of truth for every release. The short version:
 
@@ -32,12 +45,19 @@ gh run watch --repo FanyinLiu/Nexus
 
 Nexus is distributed as a desktop app, not as an npm-installed end-user app.
 
-- **Normal users** install `.dmg`, `.exe`, `.AppImage`, or `.deb` from GitHub
-  Releases and receive updates through `electron-updater`.
+- **Normal users** install platform artifacts from the official
+  [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) page. It is
+  the only official binary source; mirrors and re-hosted archives are not part
+  of the release contract.
+- **v0.4.3 platform scope** is macOS arm64, Windows x64, and Linux x64. Do not
+  describe the macOS asset as x64 or universal.
+- **Updates are platform-specific.** Windows and Linux may consume published
+  update metadata; unsigned macOS builds only check for a version and open the
+  official release page for a manual download.
 - **npm** is the developer path: `npm install`, `npm run electron:dev`,
   `npm run doctor`, packaging scripts, and release checks.
-- There is no npm installer in the current release plan. Keep the
-  end-user path focused on desktop installers and automatic updates.
+- There is no npm installer in the current release plan. Keep the end-user path
+  focused on desktop installers and the platform-specific update behavior above.
 
 Run `npm run distribution:audit` whenever changing packaging, update metadata,
 release workflow, installer docs, or npm scripts. `npm run verify:release`
@@ -52,19 +72,19 @@ npm run release:trust:audit
 
 `npm run distribution:audit` also runs this gate.
 
-To inspect signing readiness without changing the current unsigned release
-posture, run:
+To inspect optional future signing readiness without changing the supported
+unsigned release posture, run:
 
 ```bash
 npm run release:signing:readiness
 ```
 
-This report is non-blocking and is also printed in the release workflow
-preflight job. It is expected to warn until Apple Developer ID signing and a
-Windows signing provider are actually configured.
+This report is non-blocking. It is expected to warn until Apple Developer ID
+signing and a Windows signing provider are configured; those warnings do not
+block an explicitly unsigned v0.4.3 beta or stable release.
 
-When preparing a signed beta that should satisfy every signed release profile,
-run the hard gate:
+Only when intentionally preparing a future signed beta, run the signed-profile
+hard gate:
 
 ```bash
 npm run release:signing:gate
@@ -78,69 +98,65 @@ npm run release:signing:gate:mac
 npm run release:signing:gate:windows
 ```
 
-These gates are expected to fail today. Do not add them to the default release
-gate until Developer ID secrets, hardened runtime, notarization, signed updater
-mode, and Windows signing prerequisites are wired and verified.
+These gates are opt-in and are not part of the unsigned v0.4.3 release
+decision. They verify that signed configuration and secret wiring are present;
+actual certificate values remain GitHub Actions secrets and are never stored
+in this repository.
 
 ## Signing and Update Trust
 
-Current release posture:
+Current v0.4.3 release posture:
 
-- **macOS unsigned auto-update limitation.** Current macOS beta/local release
-  artifacts are explicit unsigned distribution: `hardenedRuntime` and
-  Gatekeeper assessment are disabled, CI disables automatic identity discovery,
-  and the artifacts should be treated as manual update downloads until
-  Developer ID signing is enabled. The app checks GitHub Releases for new
-  versions and opens the release page, but unsigned macOS packages are not a
-  trusted one-click auto-update path.
-- **Windows unsigned installer limitation.** Current Windows release CI
-  disables executable signing with `signAndEditExecutable=false`. NSIS
-  installers can still install and update through the existing release channel,
-  but SmartScreen warnings remain until a Windows signing certificate path is
-  wired.
-- **Linux integrity path.** Linux artifacts include `SHA256SUMS`; detached GPG
-  signatures are produced when `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` are
-  configured.
+- **macOS arm64 only.** The app is ad-hoc signed, which checks internal code
+  consistency but does not establish Apple Developer ID trust and is not
+  notarization. Gatekeeper may require right-click → Open or explicit
+  quarantine removal.
+- **Windows x64.** The NSIS installer is deliberately `NotSigned`. SmartScreen
+  may display an unknown-publisher warning; the release must never imply that
+  bypassing the warning is a security endorsement.
+- **Platform checksum files.** The release workflow publishes
+  `SHA256SUMS-windows.txt`, `SHA256SUMS-macos.txt`, and
+  `SHA256SUMS-linux.txt` beside the matching platform assets. Linux users who
+  download one package format can run
+  `sha256sum --ignore-missing -c SHA256SUMS-linux.txt`. SHA-256 is the current
+  integrity path; the current workflow does not generate GPG signature assets.
+- **Official source.** Only `https://github.com/FanyinLiu/Nexus/releases` is
+  official. Release notes and READMEs must tell users to delete artifacts from
+  mirrors or unknown sources and download again from GitHub.
 
-Trusted macOS release prerequisites:
+### macOS unsigned auto-update limitation
 
-- Apple Developer ID Application certificate exported as `CSC_LINK` with
-  `CSC_KEY_PASSWORD`.
-- App Store Connect API credentials in `APPLE_API_KEY`, `APPLE_API_KEY_ID`, and
-  `APPLE_API_ISSUER`.
-- `package.json > build.mac` switched to hardened runtime and notarization, and
-  the release workflow no longer forces `CSC_IDENTITY_AUTO_DISCOVERY=false`.
-- Release CI sets `NEXUS_MAC_AUTO_UPDATE_MODE=electron-updater` only for the
-  signed macOS job so the runtime uses the full auto-download/install updater
-  path.
-- One beta cycle verifies `spctl -a -vv Nexus.app`, notarization, first launch,
-  permissions, and update from the last unsigned build. The first unsigned to
-  signed transition may require a manual download.
+The macOS arm64 unsigned build may check whether a newer version exists and
+open the official GitHub Release page. It must not silently download, replace,
+or relaunch the application. Users manually download a new `.dmg` / `.zip`,
+handle Gatekeeper again, and replace `/Applications/Nexus.app`.
 
-Trusted Windows release prerequisites:
+Ad-hoc signing must never be described as Apple trust, Developer ID signing,
+notarization, or a passing `spctl` assessment. A future signed/notarized path
+requires a separate beta cycle and explicit signed-profile gates; it is not a
+v0.4.3 release prerequisite.
 
-- A Windows code-signing path is selected and documented. The release workflow
-  must wire either `WINDOWS_CSC_LINK` + `WINDOWS_CSC_KEY_PASSWORD` for a
-  certificate-file flow, or the `WINDOWS_SIGNING_*` cloud-signing secret group
-  for a managed signing flow.
-- Release CI stops passing `--config.win.signAndEditExecutable=false`.
-- A beta verifies installer launch, SmartScreen behavior, NSIS update, and
-  rollback through a higher version tag.
+### Windows unsigned installer limitation
+
+The Windows x64 NSIS artifact is `NotSigned`, so it cannot provide verified
+publisher identity or stable SmartScreen reputation. Users must verify that the
+file came from the official GitHub Release before choosing **More info → Run
+anyway**. A future signed path requires separate credentials and validation; it
+is not a v0.4.3 release prerequisite.
 
 Rollback and recovery:
 
-- If signing fails before publication, keep the release as a draft, fix the
-  configuration, and rerun the failed workflow job with the same tag.
+- If an explicitly signed future build fails before publication, keep the
+  release as a draft, fix the configuration, and rerun the failed workflow job
+  with the same tag. Do not silently relabel it as unsigned.
 - If a signed artifact is already published and broken, never replace it in
   place. Publish a higher version tag with a fixed artifact.
 - If update metadata is wrong, ship a higher version with corrected metadata;
   do not delete or rebuild a public release.
-- If `release:signing:gate` or a platform-specific signing gate fails, keep
-  the affected platform on the documented unsigned path. For macOS, stay on
-  manual update downloads and do not set
-  `NEXUS_MAC_AUTO_UPDATE_MODE=electron-updater` until the macOS gate passes in
-  CI. For Windows, keep the SmartScreen caveat visible until the Windows gate
-  passes with real signing prerequisites.
+- If an opt-in `release:signing:gate` fails, keep the documented unsigned path.
+  For macOS, stay on manual update downloads. For Windows, retain the
+  `NotSigned` and SmartScreen caveat. Signing-gate failure does not invalidate
+  the intentionally unsigned v0.4.3 artifacts.
 
 For first-run validation evidence, attach a local doctor report from:
 
@@ -219,6 +235,9 @@ The beta must accumulate real-world use time before stable ships. No fixed
 minimum, but **multiple days of actual conversation** is the expectation, not
 "it installs and the home screen loads."
 
+The v0.4.3 exception above explicitly waives this duration requirement for that
+version only; it does not invent or substitute multi-day evidence.
+
 - Anything user-facing found during validation → fix on `main` → bump to
   `vX.Y.Z-beta.N+1` (do NOT re-tag the same beta — GitHub will reject re-uploads to the existing release).
 - Internal-only fixes (tests, refactors, docs, tooling) do NOT require a
@@ -232,8 +251,9 @@ minimum, but **multiple days of actual conversation** is the expectation, not
 - electron-updater serves the new `latest.yml` / `latest-mac.yml` /
   `latest-linux.yml` metadata — both stable users AND beta users auto-upgrade on
   next app launch.
-- **Never** publish a feature release directly as stable. Skipping the beta
-  stage has burned version numbers in the past.
+- **Never** publish a feature release directly as stable unless a version-scoped
+  maintainer exception is documented before the release commit. The v0.4.3
+  exception above is the only current exception.
 
 ---
 
@@ -249,7 +269,9 @@ minimum, but **multiple days of actual conversation** is the expectation, not
 3. **Never delete and rebuild a published release.** If a release is already
    public, use a new version tag. The workflow is allowed to continue an
    existing draft only.
-4. **Never skip the beta stage.** Even for "small" features.
+4. **Never skip the beta stage** unless the source-of-truth exception section
+   names the exact version, evidence reviewed, risks accepted, and clean-build
+   publication boundary. Do not infer a waiver from urgency or verbal shorthand.
 5. **Never bypass `prerelease-check`.** The script is load-bearing — it
    catches the mistakes the release workflow can't recover from.
 6. **Before every push**, run `npm run verify:release`. CI runs the same
@@ -285,8 +307,10 @@ exit non-zero with a specific diagnostic. Some checks are warn-only
 should be reviewed manually.
 
 Flags:
-- `--quick` skips slow stages (smoke, packaged smoke, coverage, benchmarks).
-  Use when iterating; the full check runs before the actual tag push.
+- `--quick` skips only the full-only npm smoke, Live2D three-model smoke,
+  packaged smoke, packaged sustained runtime, coverage, and benchmarks.
+  `verify:release` and the bundle budget still run. Use when iterating; the
+  full check runs before the actual tag push.
 - `--skip=B,C` skips specific stages.
 - `--only=A` runs only specific stages.
 
@@ -299,7 +323,7 @@ Flags:
 6. `HEAD === origin/main` (after fetch).
 7. CI on HEAD success.
 
-### Stage B — Code quality (6 checks)
+### Stage B — Code quality (8 checks)
 1. `npm run verify:release` (`verify:pr` + SQLite smoke + core path smoke). `verify:pr` runs
    tsc, lint, tests, build, storage/heavy/architecture/source-size audits,
    v0.4 UI route and open-source reference audits, composer/chat/settings/forms/focus/
@@ -308,8 +332,9 @@ Flags:
    message privacy, desktop context privacy, vault security, error redaction,
    IPC, and distribution audits.
    - Image4 UI validation is split deliberately: `image4:contract:check` is the
-     release-blocking hard contract for the five-row visual rhythm grid and row
-     ownership, while `image4:contract:report` is a non-blocking drift summary to
+     release-blocking hard contract for the current header / Live2D stage / recap /
+     composer structure and retired-element boundary, while
+     `image4:contract:report` is a non-blocking drift summary to
      review during visual tuning. Chat/settings/composer and related surface
      changes are also PR-gated through their source-backed surface audits plus
      `docs/DESIGN_REVIEW_CHECKLIST.md` and `docs/OPEN_SOURCE_UI_REFERENCE_AUDIT.md`
@@ -317,11 +342,19 @@ Flags:
 2. `npm run smoke` — Electron actually launches + renderer loads. `npm run core-path:smoke`
    goes one step deeper by loading the panel, opening Settings, and reaching
    the model configuration path without real microphone or provider calls.
-3. `npm run package:dir:smoke` — package an unpacked app and launch it with
+3. `node scripts/live2d-three-model-smoke.mjs` — start an owned local Vite
+   server when no `--url` is supplied, run three-model cold starts and
+   same-page switches, and require seven screenshot evidence files. An
+   explicit `--url` is an external reachability check and is never closed by
+   the smoke harness.
+4. `npm run package:dir:smoke` — package an unpacked app and launch it with
    the packaged smoke runner.
-4. Coverage ≥ 80% lines (warn).
-5. `dist/assets/app-runtime-*.js` ≤ 1700 KB.
-6. Benchmarks complete without crash (warn).
+5. `npm run runtime:packaged-sustained` — run only after packaged smoke has
+   passed, with `PACKAGED_SMOKE_RELEASE_DIR=release-smoke`; this is a hard
+   gate.
+6. Coverage ≥ 80% lines (warn).
+7. `dist/assets/app-runtime-*.js` ≤ 1700 KB.
+8. Benchmarks complete without crash (warn).
 
 ### Stage C — Security (6 checks)
 1. `npm audit --omit=dev`: 0 critical + 0 high.
@@ -341,10 +374,12 @@ Flags:
 
 ### Stage E — Docs + compliance (beta: 3 checks; stable: 10 checks)
 1. `docs/RELEASE-NOTES-<tag>.md` exists.
-2. Stable only: English release notes no longer contain draft/pre-tag markers
-   (warn).
-3. Stable only: `docs/RELEASE-NOTES-<tag>.zh-CN.md` exists and is not draft
-   (warn).
+2. Stable only: English release notes contain none of the shared hard-gate
+   markers `Draft`, `草稿`, `pre-tag`, `尚未打 tag`, `Release candidate`,
+   `not a public release`, `no tag`, `发布候选`, `尚未公开发布`, or `不打 tag`.
+   This is a hard failure.
+3. Stable only: `docs/RELEASE-NOTES-<tag>.zh-CN.md` exists and contains none
+   of the same shared markers. This is a hard failure.
 4. Stable only: `README.md` links the release notes.
 5. Stable only: `docs/README.{zh-CN,zh-TW,ja,ko}.md` each link the release
    notes (4 checks).
@@ -367,18 +402,22 @@ and continue.
 
 ## `release.yml` workflow
 
-Tag push → `ensure-release` creates (or reuses) a draft release → three platform
-builds run in parallel → `publish` flips the draft to published once every
-platform succeeds.
+Tag push → `resolve-tag` proves the tag commit and `origin/main` ancestry →
+`preflight` runs without creating a release → `ensure-release` creates or
+reuses a draft → three platform builds run in parallel → `publish` downloads
+every remote asset into a clean directory, verifies the exact tag-bound
+artifact/checksum closure, and only then flips the draft to published.
 
 - **Pre-release detection**: the `ensure-release` job parses the tag. Any tag
   containing `-` gets `--prerelease` passed to `gh release create`.
 - **If a build fails**: the draft stays unpublished. You can fix the root
   cause (sherpa cache miss, etc.) and re-run the failed job through
   `workflow_dispatch` with the same tag.
-- **If the publish job fails after the builds succeeded**: rare, but
-  `gh release edit <tag> --draft=false` is safe to run manually — the release
-  object already exists and is immutable in terms of assets.
+- **If the publish job fails after the builds succeeded**: keep the release as
+  a draft and rerun the Release workflow through `workflow_dispatch` with the
+  same tag. Never run `gh release edit <tag> --draft=false` manually: that
+  bypasses the clean remote-download, tag/version binding, asset whitelist,
+  and checksum-closure gate.
 
 ---
 
@@ -406,8 +445,10 @@ not the underlying `X.Y.Z`.
    with the same tag input. `ensure-release` sees the existing draft and
    appends assets; `--clobber` flag is set so asset name collisions are safe
    to retry.
-3. **`publish` failed** → `gh release edit <tag> --draft=false` manually. The
-   release object is already there with all its assets.
+3. **`publish` failed** → keep the draft unpublished and rerun the Release
+   workflow with the same tag through `workflow_dispatch`. The protected
+   publish job must redownload and reverify every remote asset. Do not publish
+   with `gh release edit` or the web UI, even if the asset list looks complete.
 
 ---
 

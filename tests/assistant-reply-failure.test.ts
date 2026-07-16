@@ -7,6 +7,7 @@ import { loadSettings } from '../src/lib/storage.ts'
 import type { AppSettings } from '../src/types/app.ts'
 import type { ChatMessage } from '../src/types/chat.ts'
 import type { MemoryRecallContext } from '../src/types/memory.ts'
+import type { StreamingSpeechOutputController } from '../src/hooks/voice/types.ts'
 
 // Covers the catch-block wiring in createAssistantReplyRunner: the
 // user-facing surfaces (error banner, failure bubble, system message) must
@@ -77,7 +78,13 @@ type RecordedCalls = {
   busEvents: Array<Record<string, unknown>>
 }
 
-function createFailingRunner(failure: Error) {
+function createFailingRunner(
+  failure: Error,
+  options: {
+    beginStreamingSpeechReply?: () => StreamingSpeechOutputController | null
+    markStale?: () => void
+  } = {},
+) {
   const calls: RecordedCalls = {
     appendedMessages: [],
     dailyMemoryAppendCount: 0,
@@ -95,7 +102,7 @@ function createFailingRunner(failure: Error) {
   const ctx = {
     loadDesktopContextSnapshot: async () => null,
     suppressVoiceReplyRef: { current: false },
-    beginStreamingSpeechReply: () => null,
+    beginStreamingSpeechReply: options.beginStreamingSpeechReply ?? (() => null),
     setMood: () => {},
     busEmit: (event: Record<string, unknown>) => { calls.busEvents.push(event) },
     updateVoicePipeline: (stage: string, status: string) => { calls.voicePipeline.push({ stage, status }) },
@@ -120,7 +127,10 @@ function createFailingRunner(failure: Error) {
     handleSpeechPlaybackFailure: () => {},
     setError: (error: string | null) => { calls.setError.push(error) },
     setActiveStreamAbort: () => {},
-    requestStreaming: () => Promise.reject(failure),
+    requestStreaming: () => {
+      options.markStale?.()
+      return Promise.reject(failure)
+    },
   } as unknown as Parameters<typeof createAssistantReplyRunner>[0])
 
   return { runner, calls }
@@ -290,6 +300,60 @@ test('voice-source failure humanizes the system message and status, keeps the vo
 
   // Error banner: voice summary wrapping the humanized message.
   assert.match(calls.setError[0] ?? '', /(too many|wait|moment)/i)
+})
+
+test('stale streaming TTS turns attach the completion rejection before aborting', async () => {
+  let abortCount = 0
+  let finishCount = 0
+  let latestTurn = true
+  let completionListenerAttached = false
+  let completionReject: ((reason?: unknown) => void) | null = null
+  let completionRejected = false
+  let abortBeforeCompletionListener = false
+  const controller: StreamingSpeechOutputController = {
+    pushDelta: () => {},
+    flushPending: () => {},
+    finish: () => { finishCount += 1 },
+    waitForCompletion: () => new Promise<void>((_resolve, reject) => {
+      completionListenerAttached = true
+      completionReject = reject
+    }),
+    hasStarted: () => true,
+    abort: () => {
+      if (!completionListenerAttached) abortBeforeCompletionListener = true
+      abortCount += 1
+      completionRejected = true
+      completionReject?.(new Error('tts was aborted'))
+    },
+  }
+  const { runner, calls } = createFailingRunner(new Error('transport failed'), {
+    beginStreamingSpeechReply: () => controller,
+    markStale: () => { latestTurn = false },
+  })
+  const options = makeOptions(false)
+  options.currentSettings = { ...options.currentSettings, speechOutputEnabled: true }
+  options.isLatestTurn = () => latestTurn
+  const unhandledRejections: unknown[] = []
+  const onUnhandledRejection = (reason: unknown) => { unhandledRejections.push(reason) }
+  process.on('unhandledRejection', onUnhandledRejection)
+  try {
+    const result = await runner(options)
+    await new Promise((resolve) => setImmediate(resolve))
+
+    assert.equal(result, false)
+    assert.equal(abortCount, 1)
+    assert.equal(completionListenerAttached, true)
+    assert.equal(abortBeforeCompletionListener, false)
+    assert.equal(completionRejected, true)
+    assert.equal(finishCount, 0)
+    assert.deepEqual(calls.setError, [])
+    assert.deepEqual(calls.bubbles, [])
+    assert.deepEqual(calls.systemMessages, [])
+    assert.equal(calls.busEvents.some((event) => event.type === 'session:aborted'), false)
+    assert.deepEqual(unhandledRejections, [])
+  } finally {
+    process.removeListener('unhandledRejection', onUnhandledRejection)
+  }
 })
 
 test('memory pause sends an empty recall context and skips diary capture', async () => {

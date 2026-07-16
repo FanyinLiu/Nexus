@@ -2,19 +2,19 @@ import type { TranslationKey } from '../../types/i18n.ts'
 
 export type ReleaseSpotlightBullet = {
   id:
-    | 'memory_sources'
-    | 'memory_control'
     | 'companion_presence'
-    | 'first_run'
+    | 'transparent_surface'
+    | 'text_chat_support'
+    | 'voice_settings'
     | 'companion_boundary'
   titleKey: TranslationKey
   bodyKey: TranslationKey
 }
 
 export type ReleaseSpotlightAction = {
-  id: 'review_memory' | 'preview_companion'
+  id: 'open_voice' | 'preview_companion'
   labelKey: TranslationKey
-  targetSectionId: 'memory' | 'chat'
+  targetSectionId: 'voice' | 'chat'
 }
 
 export type ReleaseSpotlight = {
@@ -27,30 +27,30 @@ export type ReleaseSpotlight = {
 }
 
 export const CURRENT_RELEASE_SPOTLIGHT: ReleaseSpotlight = {
-  version: '0.4.1',
+  version: '0.4.3',
   eyebrowKey: 'about.release_spotlight.eyebrow',
   titleKey: 'about.release_spotlight.title',
   summaryKey: 'about.release_spotlight.summary',
   bullets: [
-    {
-      id: 'memory_sources',
-      titleKey: 'about.release_spotlight.bullet.memory_sources.title',
-      bodyKey: 'about.release_spotlight.bullet.memory_sources.body',
-    },
-    {
-      id: 'memory_control',
-      titleKey: 'about.release_spotlight.bullet.memory_control.title',
-      bodyKey: 'about.release_spotlight.bullet.memory_control.body',
-    },
     {
       id: 'companion_presence',
       titleKey: 'about.release_spotlight.bullet.companion_presence.title',
       bodyKey: 'about.release_spotlight.bullet.companion_presence.body',
     },
     {
-      id: 'first_run',
-      titleKey: 'about.release_spotlight.bullet.first_run.title',
-      bodyKey: 'about.release_spotlight.bullet.first_run.body',
+      id: 'transparent_surface',
+      titleKey: 'about.release_spotlight.bullet.transparent_surface.title',
+      bodyKey: 'about.release_spotlight.bullet.transparent_surface.body',
+    },
+    {
+      id: 'text_chat_support',
+      titleKey: 'about.release_spotlight.bullet.text_chat_support.title',
+      bodyKey: 'about.release_spotlight.bullet.text_chat_support.body',
+    },
+    {
+      id: 'voice_settings',
+      titleKey: 'about.release_spotlight.bullet.voice_settings.title',
+      bodyKey: 'about.release_spotlight.bullet.voice_settings.body',
     },
     {
       id: 'companion_boundary',
@@ -60,9 +60,9 @@ export const CURRENT_RELEASE_SPOTLIGHT: ReleaseSpotlight = {
   ],
   actions: [
     {
-      id: 'review_memory',
-      labelKey: 'about.release_spotlight.action.review_memory',
-      targetSectionId: 'memory',
+      id: 'open_voice',
+      labelKey: 'about.release_spotlight.action.open_voice',
+      targetSectionId: 'voice',
     },
     {
       id: 'preview_companion',

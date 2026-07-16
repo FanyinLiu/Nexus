@@ -6,7 +6,71 @@
 
 ## [Unreleased]
 
-No changes yet.
+### Added
+
+- **v0.4.4 beta feedback and copy tuning draft** — kept later feedback review
+  separate from the current stable release.
+- **v0.4.5 draft hardening evidence** — recorded local `verify:release`,
+  full v0.4 draft-stack audit, packaged smoke, and `git diff --check` evidence
+  while keeping package version, tag, GitHub Release, and README stable-entry
+  state unchanged.
+
+## [0.4.3] - 2026-07-16
+
+v0.4.3 carries forward the v0.4.2 check-in-policy and settings/UI hardening history.
+The release commit is published only through the protected stable-tag workflow.
+
+### Added
+
+- **Official Live2D companion choices** — added the Live2D original sample
+  characters Haru and Hiyori as optional built-in avatars, localized their
+  Settings descriptions, verified both models in the desktop renderer, and
+  added the required Live2D sample-data attribution without bundling Haru's
+  sample voice files.
+- **Companion surface cohesion and transparency** — added Settings-facing
+  companion-awareness transparency for recent coarse summaries, check-in
+  rationale, model-reach state, clear-state reasons, and a visible privacy
+  boundary without surfacing raw desktop content.
+
+- **Companion panel self-audit follow-up** — bounded the Live2D panel to the real
+  sidebar viewport, prevented unanswered turns from inheriting an older reply,
+  restored visible crisis guidance, added polite assistant-reply announcements,
+  and aligned compact header hit areas and composer type size.
+- **Connection truth and UI budget follow-up** — recommended repairs now require
+  a fresh network test before reporting ready, stale concurrent test responses are
+  ignored, failed Live2D vendor tags can retry cleanly, and the duplicate companion
+  visual-lock layer was reduced by 8 KB without changing the rendered panel.
+- **Runtime evidence and settings semantics** — connection results now show their
+  check time and become stale when request-relevant configuration changes; Live2D
+  exposes ready/first-frame milestones for sidebar measurement; Settings uses
+  typed icon keys, a distinct Lorebooks icon, and shared disclosure glyphs.
+
+### Changed
+
+- **Check-In policy hardening** — carried the local check-in policy slice into
+  v0.4.3, keeping decisions local, suppressing repeated
+  or stale signals, and leaving external notifications, message sending, tool
+  execution, activity-history UI, and pet window behavior out of scope.
+- **Settings visual-system follow-up** — extended the 0.4.3 settings visual
+  layer across segmented controls, confirmation dialogs, and footer actions so
+  warm/day settings pages share the same compact surface contract as chat.
+- **Release documentation sync** — aligned package version 0.4.3, root README,
+  localized README files, release notes, documentation consistency anchors, and
+  the v0.4 draft-stack audit around v0.4.3 as the current stable release.
+- **Release evidence** — refreshed source-size, performance, settings,
+  privacy, security, IPC, distribution, SQLite, and core-path smoke checks for
+  the v0.4.3 release path.
+- **Localized README release context** — aligned Simplified Chinese,
+  Traditional Chinese, Japanese, and Korean README top sections on v0.4.3 as
+  the current stable entry point.
+- **Settings visibility and preview routing** — tightened the warm Settings
+  drawer boundary, moved final readability overrides into a dedicated lazy
+  Settings stylesheet guarded by `settings:surface:audit`, restored an
+  unmistakable Settings-center identity on the home surface, added visible
+  Settings header chips and section page headers, isolated that identity block
+  from the large drawer renderer, split the shared panel toolbar
+  icon button out of `PanelView`, and kept browser preview URLs synchronized
+  when moving between pet, panel, and Settings states.
 
 ## [0.4.1] - 2026-07-03
 
@@ -164,6 +228,11 @@ No changes yet.
   legacy, and daily memory localStorage shapes so the next SQLite memory
   migration can be designed from counts, byte sizes, date ranges, and issue
   codes without exposing private memory text or writing storage.
+- **Confirmed memory migration foundation** — added a disabled-by-default,
+  confirmation-gated memory migration service that validates bounded content,
+  writes long-term and daily memory records transactionally into separate
+  SQLite domains, exposes panel-only status/readback IPC, records aggregate
+  audit metadata without memory text, and rolls back both domains together.
 
 ### Fixed
 - **Model setup preflight guidance** — first-run and settings connection tests

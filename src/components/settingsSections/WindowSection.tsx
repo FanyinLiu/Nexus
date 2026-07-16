@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
-import { TextField, ToggleField } from '../settingsFields'
+import { SettingsToggle, TextField, ToggleField } from '../settingsFields'
 import type {
   AppSettings,
   PetSceneLocation,
@@ -101,26 +101,20 @@ export const WindowSection = memo(function WindowSection({
         </div>
 
         <div className="settings-control-card">
-          <label className="settings-toggle">
-            <span>{petWindowState.isPinned ? ti('settings.window.pinned_on_top') : ti('settings.window.free_window')}</span>
-            <input
-              type="checkbox"
-              checked={petWindowState.isPinned}
-              onChange={() => void updateWindowState({ isPinned: !petWindowState.isPinned })}
-            />
-          </label>
+          <SettingsToggle
+            label={petWindowState.isPinned ? ti('settings.window.pinned_on_top') : ti('settings.window.free_window')}
+            checked={petWindowState.isPinned}
+            onChange={(isPinned) => void updateWindowState({ isPinned })}
+          />
           <p>{ti('settings.window.pinned_note')}</p>
         </div>
 
         <div className="settings-control-card">
-          <label className="settings-toggle">
-            <span>{petWindowState.clickThrough ? ti('settings.window.click_through_enabled') : ti('settings.window.interactive')}</span>
-            <input
-              type="checkbox"
-              checked={petWindowState.clickThrough}
-              onChange={() => void updateWindowState({ clickThrough: !petWindowState.clickThrough })}
-            />
-          </label>
+          <SettingsToggle
+            label={petWindowState.clickThrough ? ti('settings.window.click_through_enabled') : ti('settings.window.interactive')}
+            checked={petWindowState.clickThrough}
+            onChange={(clickThrough) => void updateWindowState({ clickThrough })}
+          />
           <p>{ti('settings.window.click_through_note')}</p>
         </div>
       </div>

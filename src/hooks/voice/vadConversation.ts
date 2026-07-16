@@ -78,6 +78,7 @@ export type StartVadConversationOptions = {
   appendVoiceTrace: (title: string, detail: string) => void
   showPetStatus: ShowPetStatus
   setSpeechLevelValue: (level: number) => void
+  resetSpeechLevel: () => void
   destroyVadSession: (session: VadConversationSession | null) => Promise<void>
   handleRecognizedVoiceTranscript: (
     transcript: string,
@@ -186,7 +187,7 @@ export async function startVadConversation(
     // still guards against truly empty sessions.
     console.warn('[VAD] onMisfire — ignoring, keep listening')
     session.speechDetected = false
-    params.setSpeechLevelValue(0)
+    params.resetSpeechLevel()
   }
 
   const handleSpeechEnd = async (audio: Float32Array) => {
@@ -199,7 +200,7 @@ export async function startVadConversation(
     if (session.maxDurationTimer) {
       window.clearTimeout(session.maxDurationTimer)
     }
-    params.setSpeechLevelValue(0)
+    params.resetSpeechLevel()
     params.busEmit?.({
       type: 'vad:speech_end',
       reason: VoiceReasonCodes.VAD_SPEECH_END,
@@ -454,7 +455,7 @@ export async function startVadConversation(
 
     params.setVoiceState('idle')
     params.setMood('idle')
-    params.setSpeechLevelValue(0)
+    params.resetSpeechLevel()
     const originalMessage = (
       error instanceof Error
         ? error.message
