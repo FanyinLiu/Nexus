@@ -16,13 +16,16 @@ the numbers below.
   the protected tag workflow. This preparation document does not claim that
   the tag or GitHub assets exist before that workflow succeeds.
 - v0.4.4 and v0.4.5 remain separate drafts and are not part of this release.
+  Their minimal release-state entries remain in this branch only as forward
+  audit fixtures that prevent either draft from being presented as stable;
+  they are not executable v0.4.3 product content.
 - For v0.4.3 only, the maintainer explicitly waived the normal multi-day beta
   window after reviewing the complete automated gate, local staging checks,
   and the protected cross-platform artifact contract. No multi-day use or
   cross-platform physical-device evidence is claimed.
 
 This document is an upload/review inventory. The 2026-07-14 evidence snapshot
-below remains historical and fingerprint-bound. A separate 2026-07-15 local
+below remains historical and fingerprint-bound. A separate 2026-07-16 local
 acceptance record covers the current source tree. Earlier local package outputs
 were later disqualified and do not substitute for gates on the final clean
 pushed tag.
@@ -60,7 +63,7 @@ final GitHub assets already exist:
   suites, fresh build, SQLite smoke, and the packaged Electron core-path smoke.
 - Source and `dist` shared build
   fingerprint
-  `81d717c4c44d342c701205f02d8e5b772e3f4ef15053e23bc50901357b8deb65`
+  `00d009678f1ad1e6b3c93a991ad813a2afacd1216d236660bf39ad0101771b23`
   across 986 deterministic inputs.
 - Current performance baseline: 27.45 MB total assets, 3.93 MB JavaScript,
   612.0 KB CSS, 21.60 MB WASM, and a 69.3 KB Settings drawer entry; every
@@ -69,6 +72,15 @@ final GitHub assets already exist:
   ZIP, and their recorded hashes are not releasable. Inspection found a
   residual `.nexus-sensevoice-*/model.tar.bz2.partial-*` download fragment in
   the package resources. Those containers must not be staged or uploaded.
+- **Current clean local macOS evidence:** after the transient-resource guard
+  landed, the arm64 staging app, DMG, and ZIP were rebuilt from the matching
+  `00d009...` source/dist fingerprint. App and both containers passed the
+  explicit unsigned verifier; no `.nexus-*`, `.partial*`, or model archive
+  residue was present. The local DMG SHA-256 is
+  `fbba5df0db10c8376f71bd974175114fef415df33289273267435b75215f20d3` and
+  the ZIP SHA-256 is
+  `e7f566778115fa97d1dcf22e17fdd9cdd7beedb72614eaed827967db92c435a7`.
+  These hashes are local acceptance evidence only, not publishable assets.
 - Final macOS, Windows, and Linux packages must be rebuilt from the merged
   release commit by the protected workflow. Only the workflow-generated assets
   and checksum files that pass the remote closure gate are release evidence.

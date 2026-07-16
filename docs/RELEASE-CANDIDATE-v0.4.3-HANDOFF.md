@@ -41,7 +41,7 @@ Release before choosing to run it.
 
 The current source tree passed `npm run verify:release` with 2,983/2,983 tests.
 Source and `dist` match fingerprint
-`81d717c4c44d342c701205f02d8e5b772e3f4ef15053e23bc50901357b8deb65`
+`00d009678f1ad1e6b3c93a991ad813a2afacd1216d236660bf39ad0101771b23`
 across 986 inputs.
 
 The earlier local macOS staging app, DMG, ZIP, and recorded hashes are
@@ -49,6 +49,17 @@ The earlier local macOS staging app, DMG, ZIP, and recorded hashes are
 `.nexus-sensevoice-*/model.tar.bz2.partial-*` download fragment in package
 resources. Final macOS, Windows, and Linux assets must be rebuilt from the
 merged release commit by protected CI and pass the remote checksum closure.
+
+After the transient-resource guard landed, a clean local arm64 staging app,
+DMG, and ZIP were rebuilt from the matching `00d009...` source/dist
+fingerprint. App and both containers passed the explicit unsigned verifier;
+no `.nexus-*`, `.partial*`, or model archive residue was found. The local
+acceptance hashes are
+`fbba5df0db10c8376f71bd974175114fef415df33289273267435b75215f20d3`
+for the DMG and
+`e7f566778115fa97d1dcf22e17fdd9cdd7beedb72614eaed827967db92c435a7`
+for the ZIP. They remain local evidence only and must not be uploaded in place
+of protected-CI artifacts.
 
 ### Historical snapshot
 
@@ -64,14 +75,19 @@ tag.
 
 - Human studies and multi-day real-user validation were explicitly waived for
   v0.4.3; they are not represented as completed evidence.
-- The automated gates passed locally but must be rerun on the final clean
-  pushed commit, including fresh build, performance, distribution, prerelease
-  wiring, unsigned platform artifacts, and the packaged Electron cutover.
-- Stable Stage E must pass on the clean release commit.
+- The automated gates passed locally on the pushed release branch, including
+  fresh build, performance, distribution, prerelease wiring, unsigned macOS
+  containers, and the packaged Electron cutover. PR CI and the protected tag
+  workflow must reproduce the applicable gates from clean checkouts.
+- Stable Stage E passed locally and must pass again on the clean release
+  commit used by the protected workflow.
 - Tag creation and GitHub publication remain explicit maintainer actions after
   the matching gates pass and the release commit reaches `main`.
 
 ## Handoff rule
 
-Keep v0.4.3 separate from the later v0.4.4/v0.4.5 drafts. Publish v0.4.3 only
-through the protected workflow and retain all unsigned-platform caveats.
+Keep v0.4.3 separate from the later v0.4.4/v0.4.5 drafts. Their minimal
+release-state entries in this branch are forward audit fixtures only, used to
+prevent either draft from claiming stable status; they are not executable
+v0.4.3 product content. Publish v0.4.3 only through the protected workflow and
+retain all unsigned-platform caveats.
