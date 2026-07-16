@@ -3,7 +3,12 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import test from 'node:test'
 
-import { verifyPackagedResources } from '../scripts/release-resource-verifier.mjs'
+import {
+  asarApiPath,
+  BROWSER_VAD_ASAR_PATH,
+  BROWSER_VAD_WORKLET_ASAR_PATH,
+  verifyPackagedResources,
+} from '../scripts/release-resource-verifier.mjs'
 
 const VAD_SIZE = 2_243_022
 const VAD_SHA256 = 'a4a068cd6cf1ea8355b84327595838ca748ec29a25bc91fc82e6c299ccdc5808'
@@ -30,6 +35,19 @@ function fakeDirent(name: string, kind: 'directory' | 'file' | 'symlink') {
     isSymbolicLink: () => kind === 'symlink',
   }
 }
+
+test('ASAR release paths stay POSIX while the asar API receives Windows separators', () => {
+  assert.equal(BROWSER_VAD_ASAR_PATH, 'dist/vendor/vad/silero_vad_v5.onnx')
+  assert.equal(BROWSER_VAD_WORKLET_ASAR_PATH, 'dist/vendor/vad/vad.worklet.bundle.min.js')
+  assert.equal(
+    asarApiPath(BROWSER_VAD_ASAR_PATH, '\\'),
+    String.raw`dist\vendor\vad\silero_vad_v5.onnx`,
+  )
+  assert.equal(
+    asarApiPath(BROWSER_VAD_WORKLET_ASAR_PATH, '\\'),
+    String.raw`dist\vendor\vad\vad.worklet.bundle.min.js`,
+  )
+})
 
 test('packaged resource verifier requires app.asar, all voice models, and both VAD copies', () => {
   const result = verifyPackagedResources('/release/resources', validOptions())

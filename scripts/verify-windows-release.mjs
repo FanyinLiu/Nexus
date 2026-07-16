@@ -2,7 +2,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs'
-import { basename, dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve, win32 } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { verifyPackagedResources } from './release-resource-verifier.mjs'
@@ -15,6 +15,8 @@ const POWERSHELL_INSPECTION = String.raw`
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $OutputEncoding = [Console]::OutputEncoding
+$securityModule = Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1'
+Import-Module -Name $securityModule -Force -ErrorAction Stop
 $targets = @(
   [pscustomobject]@{ Role = 'installer'; Path = $env:NEXUS_VERIFY_WINDOWS_INSTALLER },
   [pscustomobject]@{ Role = 'app'; Path = $env:NEXUS_VERIFY_WINDOWS_APP }
@@ -30,7 +32,7 @@ $records = foreach ($target in $targets) {
     throw "$($target.Role) path is a directory"
   }
 
-  $signature = Get-AuthenticodeSignature -LiteralPath $item.FullName -ErrorAction Stop
+  $signature = Microsoft.PowerShell.Security\Get-AuthenticodeSignature -LiteralPath $item.FullName -ErrorAction Stop
   $version = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($item.FullName)
 
   [pscustomobject]@{
@@ -51,18 +53,45 @@ $records = foreach ($target in $targets) {
 @($records) | ConvertTo-Json -Compress -Depth 4
 `
 
+function environmentValue(environment, name) {
+  const key = Object.keys(environment).find((candidate) => candidate.toLowerCase() === name.toLowerCase())
+  return key ? cleanText(environment[key]) : ''
+}
+
+export function createPowerShellInspectionInvocation(paths, inheritedEnvironment = process.env) {
+  const env = {}
+  for (const [key, value] of Object.entries(inheritedEnvironment)) {
+    // A pwsh 7 parent exports its own module roots. Passing those roots into
+    // Windows PowerShell 5.1 can make Security-module autoload select an
+    // incompatible module on current GitHub Windows runners.
+    if (key.toLowerCase() !== 'psmodulepath') env[key] = value
+  }
+
+  const systemRoot = environmentValue(env, 'SystemRoot') || environmentValue(env, 'WINDIR')
+  const command = systemRoot
+    ? win32.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+    : 'powershell.exe'
+
+  return {
+    command,
+    args: ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', POWERSHELL_INSPECTION],
+    env: {
+      ...env,
+      NEXUS_VERIFY_WINDOWS_INSTALLER: paths.installer,
+      NEXUS_VERIFY_WINDOWS_APP: paths.app,
+    },
+  }
+}
+
 function runPowerShellInspection(paths) {
+  const invocation = createPowerShellInspectionInvocation(paths)
   const result = spawnSync(
-    'powershell.exe',
-    ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', POWERSHELL_INSPECTION],
+    invocation.command,
+    invocation.args,
     {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: {
-        ...process.env,
-        NEXUS_VERIFY_WINDOWS_INSTALLER: paths.installer,
-        NEXUS_VERIFY_WINDOWS_APP: paths.app,
-      },
+      env: invocation.env,
     },
   )
 

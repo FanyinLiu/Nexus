@@ -59,7 +59,7 @@ choosing to run it.
 This is source and staging evidence for the release commit, not evidence that
 final GitHub assets already exist:
 
-- `npm run verify:release`: pass, including **2,983/2,983** tests across 69
+- `npm run verify:release`: pass, including **2,985/2,985** tests across 69
   suites, fresh build, SQLite smoke, and the packaged Electron core-path smoke.
 - Source and `dist` shared build
   fingerprint
