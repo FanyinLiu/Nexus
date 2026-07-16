@@ -3,11 +3,12 @@ import { useUpdater } from '../../features/updater/useUpdater'
 import { CURRENT_RELEASE_SPOTLIGHT } from '../../features/releaseNotes/index.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage'
 import type { UiLanguage } from '../../types'
+import type { SettingsSectionId } from '../settingsDrawerSupport'
 import { ReleaseSpotlightActions } from './ReleaseSpotlightActions'
 
 type AboutPanelProps = {
   uiLanguage: UiLanguage
-  onOpenSettingsSection?: (sectionId: 'memory' | 'chat') => void
+  onOpenSettingsSection?: (sectionId: SettingsSectionId) => void
 }
 
 const CREDIT_ITEMS = [

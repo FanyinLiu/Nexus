@@ -8,7 +8,14 @@ import {
 import { calculateAudioRms, requestVoiceInputStream } from '../../features/voice/runtimeSupport'
 import { voiceDebug } from '../../features/voice/voiceDebugLog'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
-import type { AppSettings, PetMood, TranslationKey, TranslationParams, VoiceState } from '../../types'
+import type {
+  AppSettings,
+  PetMood,
+  SpeechLevelSource,
+  TranslationKey,
+  TranslationParams,
+  VoiceState,
+} from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
 import {
@@ -60,7 +67,7 @@ type StartSpeechInterruptMonitorOptions = {
    * threshold scales up while TTS is loud — prevents residual echo (after
    * WebRTC AEC) from being mistaken for the user speaking.
    */
-  speechLevelValueRef: MutableRefObject<number>
+  speechLevelSource: SpeechLevelSource
   /**
    * When the always-on KWS listener is live, monitor subscribes to its mic
    * frames instead of opening a second getUserMedia. On macOS a second
@@ -354,7 +361,7 @@ export async function startSpeechInterruptMonitor(
     // (sensitive enough for normal-volume user speech). When TTS is loud the
     // threshold rises so residual echo leaking past WebRTC AEC isn't mistaken
     // for the user speaking. The user has to actually speak *over* the TTS.
-    const ttsLevel = options.speechLevelValueRef.current
+    const ttsLevel = options.speechLevelSource.current
     const dynamicThreshold = SPEECH_INTERRUPT_RMS_THRESHOLD
       + ttsLevel * SPEECH_INTERRUPT_TTS_LEVEL_GAIN
 

@@ -78,6 +78,29 @@ npm run build
 ## Acceptance
 `
 
+const PANEL_VIEW_SOURCE = `
+const useCompanionV2 = new URLSearchParams(window.location.search).get('uiV2') !== '0'
+  && (settings.vtsEnabled || Boolean(petModel.spriteAtlas) || Boolean(petModel.modelPath))
+return useCompanionV2 ? <CompanionPanelV2 /> : <LegacyPanelView />
+`
+
+const PET_VIEW_SOURCE = `
+const useCompanionV2 = new URLSearchParams(window.location.search).get('uiV2') !== '0'
+  && !settings.vtsEnabled
+  && !petModel.spriteAtlas
+  && Boolean(petModel.modelPath)
+return useCompanionV2 ? <FramelessCompanionSurface /> : <LegacyPetView />
+`
+
+const SETTINGS_DRAWER_SOURCE = `
+if (new URLSearchParams(window.location.search).get('uiV2') !== '0') return <SettingsDrawerV2 />
+`
+
+const SETTINGS_SECTION_MODULES_SOURCE = `
+export const loadMemorySection = () => import('../features/settingsV3/MemorySectionV3.tsx')
+const routes = { memory: loadMemorySection }
+`
+
 const BASELINE_FILES: Record<string, string> = {
   'docs/V0.4_UI_IMPLEMENTATION_ROUTE.md': ROUTE_DOC,
   'docs/OPEN_SOURCE_UI_REFERENCE_AUDIT.md': 'See docs/V0.4_UI_IMPLEMENTATION_ROUTE.md for the implementation route.',
@@ -91,6 +114,10 @@ const BASELINE_FILES: Record<string, string> = {
   'docs/FOCUS_MANAGEMENT_REFERENCE_REVIEW.md': '# Focus',
   'docs/STREAMING_SURFACE_REFERENCE_REVIEW.md': '# Streaming',
   'docs/AGENT_ACTIVITY_SURFACE_REFERENCE_REVIEW.md': '# Agent Activity',
+  'src/app/views/PanelView.tsx': PANEL_VIEW_SOURCE,
+  'src/app/views/PetView.tsx': PET_VIEW_SOURCE,
+  'src/components/SettingsDrawer.tsx': SETTINGS_DRAWER_SOURCE,
+  'src/components/settingsSectionModules.ts': SETTINGS_SECTION_MODULES_SOURCE,
   'package.json': JSON.stringify({
     scripts: {
       'v04:ui-route:audit': 'node scripts/v04-ui-implementation-route-audit.mjs',
@@ -136,6 +163,51 @@ test('0.4 UI implementation route audit rejects missing surface coverage', () =>
 
     assert.equal(report.summary.ok, false)
     assert.ok(report.missingSurfaceDocs.includes('docs/CHAT_SURFACE_REFERENCE_REVIEW.md'))
+  })
+})
+
+test('0.4 UI implementation route audit rejects a missing active route source file', () => {
+  withFixture({
+    'src/app/views/PanelView.tsx': null,
+  }, (root) => {
+    const report = buildV04UiImplementationRouteReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(report.activeRouteIssues.some((issue) => (
+      issue.contract === 'panel-v2-route'
+      && issue.file === 'src/app/views/PanelView.tsx'
+      && issue.missingFragment === '[source file missing]'
+    )))
+  })
+})
+
+test('0.4 UI implementation route audit rejects a Panel route without its V2 surface', () => {
+  withFixture({
+    'src/app/views/PanelView.tsx': PANEL_VIEW_SOURCE.replace('<CompanionPanelV2', ''),
+  }, (root) => {
+    const report = buildV04UiImplementationRouteReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(report.activeRouteIssues.some((issue) => (
+      issue.contract === 'panel-v2-route'
+      && issue.file === 'src/app/views/PanelView.tsx'
+      && issue.missingFragment === '<CompanionPanelV2'
+    )))
+  })
+})
+
+test('0.4 UI implementation route audit rejects a Memory route that falls back from V3', () => {
+  withFixture({
+    'src/components/settingsSectionModules.ts': SETTINGS_SECTION_MODULES_SOURCE.replace('MemorySectionV3.tsx', 'MemorySectionV2.tsx'),
+  }, (root) => {
+    const report = buildV04UiImplementationRouteReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(report.activeRouteIssues.some((issue) => (
+      issue.contract === 'memory-v3-route'
+      && issue.file === 'src/components/settingsSectionModules.ts'
+      && issue.missingFragment.includes('MemorySectionV3.tsx')
+    )))
   })
 })
 

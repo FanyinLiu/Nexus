@@ -44,16 +44,32 @@ function allPresent(text, values) {
   return values.every((value) => text.includes(value))
 }
 
+function anyPresent(text, values) {
+  return values.some((value) => text.includes(value))
+}
+
+const ALL_SIGNING_SECRET_NAMES = [
+  ...MAC_SIGNING_SECRET_NAMES,
+  ...WINDOWS_CERT_SIGNING_SECRET_NAMES,
+  ...WINDOWS_CLOUD_SIGNING_SECRET_NAMES,
+]
+
 function classifyMacSigning(pkg, releaseWorkflow, releasingDoc) {
+  const build = pkg.build ?? {}
   const mac = pkg.build?.mac ?? {}
   const macPackagePreflight = pkg.scripts?.['prepackage:mac'] ?? ''
   const targets = Array.isArray(mac.target) ? mac.target : []
   const explicitUnsigned =
+    build.forceCodeSigning === false &&
+    mac.identity === '-' &&
     mac.hardenedRuntime === false &&
     mac.gatekeeperAssess === false &&
-    !mac.notarize &&
+    mac.notarize === false &&
     releaseWorkflow.includes('CSC_IDENTITY_AUTO_DISCOVERY') &&
-    releaseWorkflow.includes('false')
+    releaseWorkflow.includes('false') &&
+    releaseWorkflow.includes('--config.mac.identity=-') &&
+    !anyPresent(releaseWorkflow, ALL_SIGNING_SECRET_NAMES.map((name) => `secrets.${name}`)) &&
+    !releaseWorkflow.includes('NEXUS_MAC_AUTO_UPDATE_MODE')
   const signedReady =
     mac.hardenedRuntime === true &&
     mac.notarize === true &&
@@ -66,7 +82,7 @@ function classifyMacSigning(pkg, releaseWorkflow, releasingDoc) {
       'CSC_KEY_PASSWORD',
     ]) && macPackagePreflight.includes('mac-release-preflight')
   const docsCurrentUnsigned =
-    /macOS unsigned auto-update limitation/i.test(releasingDoc) &&
+    /current unsigned release\s+posture|unsigned macOS|macOS[\s\S]{0,80}unsigned/i.test(releasingDoc) &&
     /manual update downloads/i.test(releasingDoc)
   const docsSigningPrereqs =
     allPresent(releasingDoc, [
@@ -80,6 +96,8 @@ function classifyMacSigning(pkg, releaseWorkflow, releasingDoc) {
   return {
     targets,
     posture: signedReady ? 'signed-ready' : explicitUnsigned ? 'unsigned-explicit' : 'ambiguous',
+    identity: mac.identity ?? null,
+    forceCodeSigning: build.forceCodeSigning ?? null,
     hardenedRuntime: mac.hardenedRuntime ?? null,
     gatekeeperAssess: mac.gatekeeperAssess ?? null,
     notarize: mac.notarize ?? null,
@@ -90,30 +108,61 @@ function classifyMacSigning(pkg, releaseWorkflow, releasingDoc) {
 }
 
 function classifyWindowsSigning(pkg, releaseWorkflow, releasingDoc) {
+  const build = pkg.build ?? {}
+  const win = build.win ?? {}
+  const unsignedPackageScript = pkg.scripts?.['package:win'] ?? ''
   const targets = Array.isArray(pkg.build?.win?.target) ? pkg.build.win.target : []
-  const ciDisablesSigning = releaseWorkflow.includes('--config.win.signAndEditExecutable=false')
+  const verifierCommand = 'node scripts/verify-windows-release.mjs --expect-unsigned'
+  const packageCommandIndex = releaseWorkflow.indexOf('electron-builder --win')
+  const verifierCommandIndex = releaseWorkflow.indexOf(verifierCommand)
+  const verifiesUnsignedArtifacts =
+    verifierCommandIndex > packageCommandIndex &&
+    packageCommandIndex >= 0
+  const explicitUnsigned =
+    build.forceCodeSigning === false &&
+    win.signAndEditExecutable === true &&
+    unsignedPackageScript.includes('CSC_IDENTITY_AUTO_DISCOVERY=false') &&
+    unsignedPackageScript.includes('--config.forceCodeSigning=false') &&
+    unsignedPackageScript.includes('--config.win.signAndEditExecutable=true') &&
+    releaseWorkflow.includes('--config.forceCodeSigning=false') &&
+    releaseWorkflow.includes('--config.win.signAndEditExecutable=true') &&
+    releaseWorkflow.includes("CSC_IDENTITY_AUTO_DISCOVERY: 'false'") &&
+    verifiesUnsignedArtifacts &&
+    !anyPresent(releaseWorkflow, ALL_SIGNING_SECRET_NAMES.map((name) => `secrets.${name}`))
   const hasSignedScript = hasScript(pkg, 'package:win:signed')
   const docsCurrentUnsigned =
-    /Windows unsigned installer limitation/i.test(releasingDoc) &&
+    /current unsigned release\s+posture|unsigned Windows|Windows[\s\S]{0,80}unsigned/i.test(releasingDoc) &&
     /SmartScreen/i.test(releasingDoc)
-  const signedReady = !ciDisablesSigning && /WINDOWS_|AZURE_|TRUSTED_SIGNING|CSC_LINK/i.test(releaseWorkflow)
+  const signedReady = !explicitUnsigned && /WINDOWS_|AZURE_|TRUSTED_SIGNING|CSC_LINK/i.test(releaseWorkflow)
 
   return {
     targets,
-    posture: signedReady ? 'signed-ready' : ciDisablesSigning ? 'unsigned-explicit' : 'ambiguous',
-    ciDisablesSigning,
+    posture: signedReady ? 'signed-ready' : explicitUnsigned ? 'unsigned-explicit' : 'ambiguous',
+    explicitUnsigned,
+    verifiesUnsignedArtifacts,
+    packageScriptPreservesMetadata:
+      unsignedPackageScript.includes('--config.win.signAndEditExecutable=true'),
+    forceCodeSigning: build.forceCodeSigning ?? null,
+    signAndEditExecutable: win.signAndEditExecutable ?? null,
+    requestedExecutionLevel: win.requestedExecutionLevel ?? null,
     hasSignedScript,
     docsCurrentUnsigned,
   }
 }
 
 function classifyLinuxIntegrity(releaseWorkflow) {
+  const checksumFiles = [
+    'SHA256SUMS-windows.txt',
+    'SHA256SUMS-macos.txt',
+    'SHA256SUMS-linux.txt',
+  ]
   return {
-    sha256Sums: releaseWorkflow.includes('SHA256SUMS'),
-    optionalGpg:
-      releaseWorkflow.includes('GPG_PRIVATE_KEY') &&
-      releaseWorkflow.includes('GPG_PASSPHRASE') &&
-      releaseWorkflow.includes('--detach-sign'),
+    sha256Sums: checksumFiles.every((name) => releaseWorkflow.includes(name)),
+    checksumFiles,
+    gpgRemoved:
+      !releaseWorkflow.includes('GPG_PRIVATE_KEY') &&
+      !releaseWorkflow.includes('GPG_PASSPHRASE') &&
+      !releaseWorkflow.includes('--detach-sign'),
   }
 }
 
@@ -167,12 +216,18 @@ function buildWindowsSignedReadiness(pkg, releaseWorkflow, releasingDoc) {
   const blockers = []
   const supportsCertificateFile = hasCompleteSecretGroup(releaseWorkflow, WINDOWS_CERT_SIGNING_SECRET_NAMES)
   const supportsCloudSigning = hasCompleteSecretGroup(releaseWorkflow, WINDOWS_CLOUD_SIGNING_SECRET_NAMES)
+  const signedPackageScript = pkg.scripts?.['package:win:signed'] ?? ''
 
   if (!hasScript(pkg, 'package:win:signed')) {
     blockers.push('package.json must keep package:win:signed for signed Windows packaging')
   }
-  if (releaseWorkflow.includes('--config.win.signAndEditExecutable=false')) {
-    blockers.push('release workflow must stop passing --config.win.signAndEditExecutable=false for the Windows job')
+  if (
+    hasScript(pkg, 'package:win:signed') &&
+    (!signedPackageScript.includes('--config.forceCodeSigning=true') ||
+      !signedPackageScript.includes('--config.win.signAndEditExecutable=true') ||
+      signedPackageScript.includes('CSC_IDENTITY_AUTO_DISCOVERY=false'))
+  ) {
+    blockers.push('package:win:signed must require code signing, keep metadata editing enabled, and permit certificate discovery')
   }
   if (!supportsCertificateFile && !supportsCloudSigning) {
     blockers.push('release workflow must wire one Windows signing secret group: WINDOWS_CSC_LINK/WINDOWS_CSC_KEY_PASSWORD or WINDOWS_SIGNING_* cloud signing secrets')
@@ -198,6 +253,110 @@ function buildWindowsSignedReadiness(pkg, releaseWorkflow, releasingDoc) {
   }
 }
 
+function buildFormalReleaseIdentity(pkg, releaseWorkflow) {
+  const build = pkg.build ?? {}
+  const forbiddenSmokeWiring = [
+    'electron-builder.smoke',
+    'Nexus Smoke',
+    'SMOKE_TEST=1',
+    'ai.factory.desktoppet.smoke',
+  ]
+  const blockers = []
+
+  if (pkg.name !== 'nexus') blockers.push('package name must remain nexus')
+  if (build.productName !== 'Nexus') blockers.push('build.productName must remain Nexus')
+  if (build.appId !== 'ai.factory.desktoppet') blockers.push('build.appId must remain ai.factory.desktoppet')
+  if (typeof pkg.description !== 'string' || !pkg.description.trim()) blockers.push('package description must remain present for Windows VersionInfo')
+  if (build.win?.icon !== 'public/nexus.ico') blockers.push('build.win.icon must remain the formal Nexus ICO resource')
+  if (build.win?.requestedExecutionLevel !== 'asInvoker') blockers.push('build.win.requestedExecutionLevel must remain asInvoker')
+  if (!Array.isArray(build.mac?.extraResources) || build.mac.extraResources.length === 0) {
+    blockers.push('build.mac.extraResources must preserve production runtime resources')
+  }
+  if (!Array.isArray(build.win?.extraResources) || build.win.extraResources.length === 0) {
+    blockers.push('build.win.extraResources must preserve production runtime resources')
+  }
+  if (build.electronFuses?.onlyLoadAppFromAsar !== true || build.electronFuses?.enableEmbeddedAsarIntegrityValidation !== true) {
+    blockers.push('production Electron Fuse isolation must remain enabled')
+  }
+  if (anyPresent(releaseWorkflow, forbiddenSmokeWiring)) {
+    blockers.push('release workflow must not reference the smoke identity or smoke builder config')
+  }
+
+  return { ready: blockers.length === 0, blockers }
+}
+
+function buildUnsignedWorkflowReadiness(pkg, releaseWorkflow) {
+  const blockers = []
+  const windowsPackageScript = pkg.scripts?.['package:win'] ?? ''
+  const checksumFiles = [
+    'SHA256SUMS-windows.txt',
+    'SHA256SUMS-macos.txt',
+    'SHA256SUMS-linux.txt',
+  ]
+
+  if (!hasScript(pkg, 'release:unsigned:gate')) {
+    blockers.push('package.json must define release:unsigned:gate')
+  }
+  if (pkg.build?.forceCodeSigning !== false) {
+    blockers.push('package.json must keep build.forceCodeSigning=false for the explicit unsigned release profile')
+  }
+  if (!releaseWorkflow.includes('npm run release:unsigned:gate')) {
+    blockers.push('release workflow preflight must run release:unsigned:gate')
+  }
+  if (!releaseWorkflow.includes('--config.forceCodeSigning=false')) {
+    blockers.push('release workflow must force code signing off at package time')
+  }
+  if (!releaseWorkflow.includes('--config.mac.identity=-')) {
+    blockers.push("release workflow must force macOS identity '-' at package time")
+  }
+  if (pkg.build?.win?.signAndEditExecutable !== true) {
+    blockers.push('package.json must keep build.win.signAndEditExecutable=true so icon and VersionInfo metadata are embedded')
+  }
+  if (pkg.build?.win?.requestedExecutionLevel !== 'asInvoker') {
+    blockers.push('package.json must keep the Windows execution level at asInvoker')
+  }
+  if (
+    !windowsPackageScript.includes('CSC_IDENTITY_AUTO_DISCOVERY=false') ||
+    !windowsPackageScript.includes('--config.forceCodeSigning=false') ||
+    !windowsPackageScript.includes('--config.win.signAndEditExecutable=true')
+  ) {
+    blockers.push('package:win must disable certificate discovery while preserving Windows metadata editing')
+  }
+  if (!releaseWorkflow.includes('--config.win.signAndEditExecutable=true')) {
+    blockers.push('release workflow must preserve Windows executable metadata editing at package time')
+  }
+  if (!releaseWorkflow.includes('electron-builder --win nsis --x64')) {
+    blockers.push('release workflow must build the formal Windows x64 package')
+  }
+  const windowsPackageIndex = releaseWorkflow.indexOf('electron-builder --win')
+  const windowsVerifierIndex = releaseWorkflow.indexOf('node scripts/verify-windows-release.mjs --expect-unsigned')
+  if (windowsPackageIndex < 0 || windowsVerifierIndex <= windowsPackageIndex) {
+    blockers.push('release workflow must verify unsigned Windows Authenticode and VersionInfo after packaging')
+  }
+  if (!releaseWorkflow.includes('CSC_IDENTITY_AUTO_DISCOVERY') || !releaseWorkflow.includes('false')) {
+    blockers.push('release workflow must disable certificate identity auto-discovery')
+  }
+  for (const name of checksumFiles) {
+    if (!releaseWorkflow.includes(name)) blockers.push(`release workflow must upload ${name}`)
+  }
+  for (const secretName of ALL_SIGNING_SECRET_NAMES) {
+    if (releaseWorkflow.includes(`secrets.${secretName}`)) {
+      blockers.push(`release workflow must not wire signing secret secrets.${secretName}`)
+    }
+  }
+  if (releaseWorkflow.includes('NEXUS_MAC_AUTO_UPDATE_MODE')) {
+    blockers.push('unsigned macOS workflow must not enable the signed auto-update mode')
+  }
+  if (releaseWorkflow.includes('GPG_PRIVATE_KEY') || releaseWorkflow.includes('GPG_PASSPHRASE') || releaseWorkflow.includes('--detach-sign')) {
+    blockers.push('release workflow must use SHA256 metadata without the optional GPG branch')
+  }
+  if (!releaseWorkflow.includes('PACKAGE_VERSION=$(node -p') || !releaseWorkflow.includes('v$PACKAGE_VERSION')) {
+    blockers.push('release workflow must fail when the tag does not match package.json version')
+  }
+
+  return { ready: blockers.length === 0, blockers, checksumFiles }
+}
+
 export function summarizeReleaseTrustReport(report) {
   return report.checks.reduce(
     (summary, check) => {
@@ -212,8 +371,13 @@ function normalizeRequiredSignedProfile(value) {
   return value === 'mac' || value === 'windows' || value === 'all' ? value : null
 }
 
+function normalizeRequiredUnsignedProfile(value) {
+  return value === 'mac' || value === 'windows' || value === 'all' ? value : null
+}
+
 export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
   const requiredSignedProfile = normalizeRequiredSignedProfile(options.requireSigned)
+  const requiredUnsignedProfile = normalizeRequiredUnsignedProfile(options.requireUnsigned)
   const includeSigningReadiness = options.includeSigningReadiness === true || requiredSignedProfile !== null
   const pkg = readJson(root, 'package.json')
   const releaseWorkflow = readText(root, '.github/workflows/release.yml')
@@ -228,8 +392,29 @@ export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
   const linux = classifyLinuxIntegrity(releaseWorkflow)
   const macSignedReadiness = buildMacSignedReadiness(pkg, releaseWorkflow, releasingDoc)
   const windowsSignedReadiness = buildWindowsSignedReadiness(pkg, releaseWorkflow, releasingDoc)
+  const formalIdentity = buildFormalReleaseIdentity(pkg, releaseWorkflow)
+  const unsignedWorkflow = buildUnsignedWorkflowReadiness(pkg, releaseWorkflow)
 
   const publish = pkg.build?.publish?.[0] ?? {}
+  addCheck(
+    checks,
+    'release.formal-identity',
+    'Production release identity is isolated from packaged smoke',
+    formalIdentity.ready ? 'ok' : 'error',
+    formalIdentity.ready
+      ? 'Nexus product name, app id, runtime resources, and Electron Fuses are preserved'
+      : `not ready: ${formalIdentity.blockers.join('; ')}`,
+  )
+  addCheck(
+    checks,
+    'release.unsigned-workflow',
+    'Release workflow is explicitly unsigned and checksum-backed',
+    unsignedWorkflow.ready ? 'ok' : 'error',
+    unsignedWorkflow.ready
+      ? 'signing secrets are absent, package flags are explicit, tag/version match is enforced, and every platform uploads SHA256 metadata'
+      : `not ready: ${unsignedWorkflow.blockers.join('; ')}`,
+  )
+
   const githubPublish =
     publish.provider === 'github' &&
     publish.owner === 'FanyinLiu' &&
@@ -270,7 +455,7 @@ export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
 
   if (mac.posture === 'signed-ready') {
     addCheck(checks, 'mac.signing', 'macOS signing posture is ready', 'ok', 'hardened runtime, notarization, and signing secrets are wired')
-  } else if (mac.posture === 'unsigned-explicit' && mac.docsCurrentUnsigned && mac.docsSigningPrereqs) {
+  } else if (mac.posture === 'unsigned-explicit' && mac.docsCurrentUnsigned) {
     addCheck(
       checks,
       'mac.signing',
@@ -285,6 +470,19 @@ export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
       'macOS signing posture is explicit and documented',
       'error',
       'macOS config is neither signed-ready nor documented as explicit unsigned distribution',
+    )
+  }
+
+  if (requiredUnsignedProfile === 'mac' || requiredUnsignedProfile === 'all') {
+    const ready = mac.posture === 'unsigned-explicit'
+    addCheck(
+      checks,
+      'mac.unsigned-gate',
+      'macOS release must use the explicit unsigned profile',
+      ready ? 'ok' : 'error',
+      ready
+        ? "forceCodeSigning=false, identity='-', hardened runtime/Gatekeeper/notarization disabled, and CI auto-discovery disabled"
+        : 'macOS release configuration is not the explicit unsigned profile',
     )
   }
 
@@ -338,7 +536,7 @@ export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
       'windows.signing',
       'Windows unsigned posture is explicit and documented',
       'warning',
-      'current CI disables executable signing; signed package script and SmartScreen docs remain present',
+      'certificate discovery is disabled; metadata editing stays enabled and post-package verification requires NotSigned binaries',
     )
   } else {
     addCheck(
@@ -347,6 +545,19 @@ export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
       'Windows signing posture is explicit and documented',
       'error',
       'Windows config is neither signed-ready nor documented as explicit unsigned distribution',
+    )
+  }
+
+  if (requiredUnsignedProfile === 'windows' || requiredUnsignedProfile === 'all') {
+    const ready = windows.posture === 'unsigned-explicit'
+    addCheck(
+      checks,
+      'windows.unsigned-gate',
+      'Windows release must use the explicit unsigned profile',
+      ready ? 'ok' : 'error',
+      ready
+        ? 'forceCodeSigning=false, metadata editing, x64 packaging, and post-package NotSigned verification are enforced'
+        : 'Windows release configuration is not the explicit unsigned profile',
     )
   }
 
@@ -368,10 +579,10 @@ export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
     checks,
     'linux.integrity',
     'Linux release artifacts have integrity metadata',
-    linux.sha256Sums && linux.optionalGpg ? 'ok' : 'error',
-    linux.sha256Sums && linux.optionalGpg
-      ? 'SHA256SUMS and optional GPG detached signatures are wired'
-      : 'Linux SHA256SUMS or optional GPG signing path is missing',
+    linux.sha256Sums && linux.gpgRemoved ? 'ok' : 'error',
+    linux.sha256Sums && linux.gpgRemoved
+      ? 'Windows, macOS, and Linux SHA256 checksum files are wired without an optional GPG branch'
+      : 'per-platform SHA256 checksum files are missing or the obsolete optional GPG branch remains',
   )
 
   const docsExist =
@@ -417,6 +628,11 @@ export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
         integrity: linux,
       },
     },
+    releaseProfile: {
+      formalIdentity,
+      unsignedWorkflow,
+      requiredUnsignedProfile,
+    },
     privacy: {
       readsEnvironment: false,
       readsKeychain: false,
@@ -435,8 +651,6 @@ export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
         'WINDOWS_SIGNING_CLIENT_SECRET',
         'WINDOWS_SIGNING_ACCOUNT',
         'WINDOWS_SIGNING_CERTIFICATE_PROFILE',
-        'GPG_PRIVATE_KEY',
-        'GPG_PASSPHRASE',
       ],
     },
     checks,
@@ -456,11 +670,20 @@ function formatHumanReport(report) {
   return lines.join('\n')
 }
 
-function parseArgs(argv) {
+function parseRequiredProfile(value, flag, normalize) {
+  const normalized = normalize(value)
+  if (!normalized) {
+    throw new Error(`${flag} requires one of: mac, windows, all`)
+  }
+  return normalized
+}
+
+export function parseReleaseTrustArgs(argv) {
   const options = {
     json: false,
     includeSigningReadiness: false,
     requireSigned: null,
+    requireUnsigned: null,
   }
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -470,13 +693,35 @@ function parseArgs(argv) {
     } else if (arg === '--signed-readiness') {
       options.includeSigningReadiness = true
     } else if (arg === '--require-signed') {
-      options.requireSigned = normalizeRequiredSignedProfile(argv[index + 1])
+      if (options.requireSigned) throw new Error('--require-signed may only be provided once')
+      options.requireSigned = parseRequiredProfile(argv[index + 1], '--require-signed', normalizeRequiredSignedProfile)
       index += 1
     } else if (arg.startsWith('--require-signed=')) {
-      options.requireSigned = normalizeRequiredSignedProfile(arg.slice('--require-signed='.length))
+      if (options.requireSigned) throw new Error('--require-signed may only be provided once')
+      options.requireSigned = parseRequiredProfile(
+        arg.slice('--require-signed='.length),
+        '--require-signed',
+        normalizeRequiredSignedProfile,
+      )
+    } else if (arg === '--require-unsigned') {
+      if (options.requireUnsigned) throw new Error('--require-unsigned may only be provided once')
+      options.requireUnsigned = parseRequiredProfile(argv[index + 1], '--require-unsigned', normalizeRequiredUnsignedProfile)
+      index += 1
+    } else if (arg.startsWith('--require-unsigned=')) {
+      if (options.requireUnsigned) throw new Error('--require-unsigned may only be provided once')
+      options.requireUnsigned = parseRequiredProfile(
+        arg.slice('--require-unsigned='.length),
+        '--require-unsigned',
+        normalizeRequiredUnsignedProfile,
+      )
+    } else {
+      throw new Error(`unknown argument: ${arg}`)
     }
   }
 
+  if (options.requireSigned && options.requireUnsigned) {
+    throw new Error('--require-signed and --require-unsigned are mutually exclusive')
+  }
   if (options.requireSigned) {
     options.includeSigningReadiness = true
   }
@@ -485,7 +730,13 @@ function parseArgs(argv) {
 }
 
 function main(argv) {
-  const options = parseArgs(argv)
+  let options
+  try {
+    options = parseReleaseTrustArgs(argv)
+  } catch (error) {
+    console.error(`Release trust audit argument error: ${error instanceof Error ? error.message : String(error)}`)
+    process.exit(2)
+  }
   const report = buildReleaseTrustReport(DEFAULT_ROOT, options)
   const summary = summarizeReleaseTrustReport(report)
 

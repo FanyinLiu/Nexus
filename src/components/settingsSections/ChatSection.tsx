@@ -358,7 +358,6 @@ export const ChatSection = memo(function ChatSection({
       />
 
       <PetMotionModeToggle isSpriteAvatar={Boolean(petModel?.spriteAtlas)} ti={ti} />
-
       <details className="settings-mini-group settings-chat-advanced-card">
         <summary className="settings-mini-group__head">
           <div>
@@ -418,7 +417,6 @@ export const ChatSection = memo(function ChatSection({
           </label>
         ) : null}
       </details>
-
       <div className="settings-pet-tools">
       <div className="settings-inline-row settings-pet-action-row">
         <button

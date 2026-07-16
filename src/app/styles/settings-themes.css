@@ -111,10 +111,6 @@
   box-shadow: 0 0 0 3px rgba(90, 120, 200, 0.08);
 }
 
-.sd-day .memory-pill.is-disabled p {
-  color: rgba(23, 32, 42, 0.5);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.5);
-}
 
 .sd-day .settings-timeline-placeholder strong,
 .sd-day .settings-cost-breakdown__table th[scope='row'],
@@ -128,6 +124,7 @@
   gap: 5px;
   align-content: flex-start;
   justify-content: flex-start;
+  max-width: 100%;
 }
 
 .settings-page__meta span {
@@ -145,6 +142,10 @@
 }
 
 .sp.sp {
+  --settings-child-control-height: var(--settings-control-height);
+  --settings-child-control-font-size: var(--settings-control-font-size);
+  --settings-child-meta-font-size: var(--settings-meta-font-size);
+  --settings-child-gap: 4px;
   display: grid;
   gap: 16px;
   padding: 2px 2px 6px 0;
@@ -258,10 +259,6 @@
   font-size: 32px;
   line-height: 1.02;
   letter-spacing: 0;
-}
-
-.settings-page__meta {
-  max-width: 100%;
 }
 
 .sdc {
@@ -1207,11 +1204,6 @@
   background: rgba(255, 255, 255, 0.92);
 }
 
-.sd-day .settings-lorebook-empty {
-  border-color: rgba(28, 42, 60, 0.1);
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 6px 16px rgba(65, 83, 110, 0.06);
-}
 
 .sd-day .settings-lorebook-empty strong,
 .sd-day .settings-drawer__window-title-name,
@@ -1229,10 +1221,6 @@
   color: #17202a;
 }
 
-.sd-day .settings-lorebook-empty p,
-.sd-day .settings-lorebook-field span {
-  color: rgba(23, 32, 42, 0.64);
-}
 
 .sd-day .settings-choice-card__label-input {
   border-color: rgba(30, 42, 58, 0.1);
@@ -1670,13 +1658,6 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   overflow-wrap: anywhere;
 }
 
-.sp.sp textarea {
-  max-height: 260px;
-  overflow-y: auto;
-  resize: vertical;
-  scrollbar-width: thin;
-}
-
 .sp.sp textarea[rows='3'] {
   min-height: 66px;
 }
@@ -1891,7 +1872,7 @@ html[data-theme='system-day'] .sd-warm .primary-button {
 }
 
 .sp.sp .settings-section button,
-.sp.sp .onboarding-relationship__chip,
+.sp.sp .settings-relationship__chip,
 .sd .sp.sp .settings-community-links a,
 .sd .sp.sp .settings-community-links__text,
 .sp.sp button.settings-choice-card,
@@ -1903,13 +1884,13 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   line-height: 1.25;
 }
 
-.sp.sp .settings-chat-relationship-card .onboarding-relationship__options {
+.sp.sp .settings-chat-relationship-card .settings-relationship__options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px;
 }
 
-.sp.sp .onboarding-relationship__chip {
+.sp.sp .settings-relationship__chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2105,13 +2086,6 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   -webkit-text-fill-color: rgba(78, 64, 54, 0.62);
 }
 
-.sd-warm .memory-pill__category,
-.sd-warm .memory-pill {
-  border-color: rgba(72, 53, 40, 0.1);
-  background: rgba(255, 253, 249, 0.7);
-  color: rgba(72, 53, 40, 0.72);
-  box-shadow: 0 4px 14px rgba(72, 53, 40, 0.06);
-}
 
 .sd-warm .memory-card__composer textarea,
 .sd-warm-section input:not([type='checkbox']):not([type='range']),
@@ -2184,21 +2158,21 @@ html[data-theme='system-day'] .sd-warm .primary-button {
 }
 
 .sd-warm-section .settings-sprite-preview__states button.is-active,
-.sd-warm-section .onboarding-relationship__chip.is-active {
+.sd-warm-section .settings-relationship__chip.is-active {
   border-color: rgba(199, 102, 69, 0.34);
   background: rgba(199, 102, 69, 0.14);
   color: rgba(93, 45, 28, 0.94);
   box-shadow: 0 8px 18px rgba(199, 102, 69, 0.12);
 }
 
-.sd-warm-section .onboarding-relationship__chip {
+.sd-warm-section .settings-relationship__chip {
   border-color: rgba(72, 53, 40, 0.12);
   background: rgba(255, 253, 249, 0.72);
   color: rgba(72, 53, 40, 0.74);
   box-shadow: 0 3px 10px rgba(72, 53, 40, 0.06);
 }
 
-.sd-warm-section .onboarding-relationship__chip:hover {
+.sd-warm-section .settings-relationship__chip:hover {
   border-color: rgba(199, 102, 69, 0.24);
   background: rgba(255, 253, 249, 0.9);
   color: rgba(36, 27, 22, 0.92);
@@ -2307,18 +2281,7 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.sp.sp .settings-history-summary-grid .settings-metric-card {
-  min-height: 58px;
-  align-content: start;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: 8px;
-}
 
-.sp.sp .settings-history-summary-grid .settings-metric-card strong {
-  font-size: var(--settings-child-control-font-size);
-  line-height: 1.24;
-}
 
 .sp.sp .settings-history-note,
 .sp.sp .settings-voice-note,
@@ -2335,67 +2298,12 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   box-shadow: none;
 }
 
-.sp.sp .settings-history-actions .ghost-button,
-.sp.sp .settings-history-actions .settings-danger-button {
-  min-height: var(--settings-child-control-height);
-  padding-right: 8px;
-  padding-left: 8px;
-  font-size: var(--settings-child-control-font-size);
-  line-height: 1.25;
-  white-space: normal;
-}
 
-.sp.sp .settings-history-actions .settings-history-clear-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.48;
-  box-shadow: none;
-  transform: none;
-}
 
-.sp.sp .settings-history-empty {
-  display: flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-  border-style: solid;
-  border-radius: 8px;
-  font-weight: 500;
-  line-height: 1.45;
-  text-align: center;
-}
 
-.sp.sp .settings-history-item {
-  min-width: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
-}
 
-.sp.sp .settings-history-item__header {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
-  align-items: start;
-}
 
-.sp.sp .settings-history-item__actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 118px), 1fr));
-  width: 100%;
-  min-width: 0;
-  gap: 8px;
-}
 
-.sp.sp .settings-history-item__actions .ghost-button,
-.sp.sp .settings-letter-card__actions .ghost-button {
-  width: 100%;
-  min-width: 0;
-  min-height: var(--settings-child-control-height);
-  padding-right: 10px;
-  padding-left: 10px;
-  font-size: var(--settings-child-control-font-size);
-  line-height: 1.25;
-  white-space: normal;
-}
 
 /* Final pass for child settings pages: keep sections as layout, not nested cards. */
 .sp.sp .settings-section {
@@ -2435,18 +2343,7 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   padding-left: 12px;
 }
 
-.sp.sp .settings-lorebook-section__head {
-  display: grid;
-}
 
-.sp.sp .settings-section__title-row > .settings-lorebook-section__actions {
-  justify-items: end;
-}
-
-.sp.sp .settings-section__title-row > .settings-lorebook-section__actions .ghost-button {
-  padding-right: 12px;
-  padding-left: 12px;
-}
 
 .sp.sp .settings-updater-panel {
   gap: 0;
@@ -2914,46 +2811,11 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   min-height: 42px;
 }
 
-.sp.sp .settings-letter-empty {
-  align-content: center;
-  gap: 6px;
-  min-height: 92px;
-  padding: 14px;
-}
 
-.sp.sp .settings-letter-empty__label {
-  max-width: 30rem;
-  font-size: var(--settings-child-meta-font-size);
-  font-weight: 500;
-  line-height: 1.45;
-}
 
-.sp.sp .settings-letter-card__date {
-  min-width: 0;
-  font-size: var(--settings-child-control-font-size);
-  overflow-wrap: anywhere;
-}
 
-.sp.sp .settings-letter-card__header {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
-}
 
-.sp.sp .settings-letter-card__actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr));
-  width: 100%;
-  min-width: 0;
-  gap: 8px;
-}
 
-.sp.sp .settings-letter-card__body {
-  min-width: 0;
-  gap: 8px;
-  font-size: var(--settings-child-meta-font-size);
-  line-height: 1.55;
-  overflow-wrap: anywhere;
-}
 
 .sd-night .settings-model-source-card[data-brand='anthropic'] .settings-model-source-card__logo,
 .sd-night .settings-model-source-card[data-brand='moonshot'] .settings-model-source-card__logo,
@@ -2996,65 +2858,11 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   background: color-mix(in srgb, var(--settings-accent) 7%, var(--settings-surface-soft));
 }
 
-.sp.sp .settings-lorebook-check input[type='checkbox'] {
-  appearance: none;
-  position: relative;
-  width: 44px;
-  height: 24px;
-  min-width: 44px;
-  border: 0;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--text-soft) 22%, transparent);
-  cursor: pointer;
-  transition:
-    background 0.2s ease,
-    box-shadow 0.2s ease;
-}
 
-.sp.sp .settings-lorebook-check input[type='checkbox']::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 18px;
-  height: 18px;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.26);
-  transform: translateX(0);
-  transition:
-    background 0.2s ease,
-    transform 0.2s ease;
-}
 
-.sp.sp .settings-lorebook-check input[type='checkbox']:checked {
-  background: linear-gradient(
-    135deg,
-    var(--settings-accent),
-    color-mix(in srgb, var(--settings-accent) 72%, #ffffff)
-  );
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--settings-accent) 18%, transparent);
-}
 
-.sp.sp .settings-lorebook-check input[type='checkbox']:checked::after {
-  background: #ffffff;
-  transform: translateX(20px);
-}
 
-.sp.sp .settings-lorebook-check input[type='checkbox']:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--settings-accent) 48%, transparent);
-  outline-offset: 2px;
-}
 
-.sp.sp .settings-lorebook-check {
-  grid-column: 1;
-}
-
-.sp.sp .settings-lorebook-item__delete {
-  grid-column: 2;
-  grid-row: 1;
-}
 
 .sd-night .sp.sp label > span,
 .sd-night .sp.sp .settings-control-card > p,
@@ -3120,13 +2928,7 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   outline-color: rgba(199, 102, 69, 0.6);
 }
 
-.sd-warm-section .settings-lorebook-check input[type='checkbox'] {
-  background: rgba(72, 53, 40, 0.18);
-}
 
-.sd-warm-section .settings-lorebook-check input[type='checkbox']:checked {
-  background: linear-gradient(135deg, #c76645, #df9a69);
-}
 
 .sd-night .sp.sp .settings-section,
 .sd-day .sp.sp .settings-section,
@@ -3140,13 +2942,6 @@ html[data-theme='system-day'] .sd-warm .primary-button {
    The home list is intentionally compact; once inside a child page the controls
    need one shared scale so labels, buttons, fields, and disclosure rows do not
    look like they came from different UI generations. */
-.sp.sp {
-  --settings-child-control-height: var(--settings-control-height);
-  --settings-child-control-font-size: var(--settings-control-font-size);
-  --settings-child-meta-font-size: var(--settings-meta-font-size);
-  --settings-child-gap: 4px;
-}
-
 .sp.sp .sphd {
   padding-bottom: 2px;
 }
@@ -3230,86 +3025,22 @@ html[data-theme='system-day'] .sd-warm .primary-button {
 .sp.sp textarea {
   padding-top: 7px;
   padding-bottom: 7px;
+  max-height: 260px;
+  overflow-y: auto;
+  resize: vertical;
+  scrollbar-width: thin;
 }
 
-.sp.sp .settings-lorebook-section__head {
-  grid-template-columns: 1fr;
-  gap: 8px;
-  align-items: stretch;
-  padding: 0 2px 2px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
 
-.sp.sp .settings-section__title-row > .settings-lorebook-section__actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(112px, auto);
-  align-items: center;
-  width: 100%;
-  gap: 8px;
-}
 
-.sp.sp .settings-lorebook-section__actions span {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  height: var(--settings-child-control-height);
-  padding: 0 10px;
-  font-size: var(--settings-child-meta-font-size);
-  font-weight: 650;
-  line-height: 1.25;
-}
 
-.sp.sp .settings-section__title-row > .settings-lorebook-section__actions .ghost-button {
-  width: 100%;
-  min-width: 112px;
-  min-height: var(--settings-child-control-height);
-  justify-content: center;
-  font-size: var(--settings-child-control-font-size);
-  font-weight: 650;
-}
 
 @media (max-width: 360px) {
-  .sp.sp .settings-section__title-row > .settings-lorebook-section__actions {
-    grid-template-columns: 1fr;
-  }
 }
 
-.sp.sp .settings-lorebook-item {
-  gap: 8px;
-  padding: 10px 12px;
-}
 
-.sp.sp .settings-lorebook-item__toolbar {
-  grid-template-columns: minmax(0, 1fr) var(--settings-child-control-height);
-  grid-template-areas:
-    "label label"
-    "enabled delete"
-    "priority priority";
-  align-items: stretch;
-  min-height: 0;
-}
 
-.sp.sp .settings-lorebook-title-field {
-  grid-area: label;
-  gap: 5px;
-  min-width: 0;
-}
 
-.sp.sp .settings-lorebook-check {
-  box-sizing: border-box;
-  grid-area: enabled;
-  width: 100%;
-  justify-self: stretch;
-  border: 1px solid var(--settings-border);
-  border-radius: 8px;
-  font-size: var(--settings-child-control-font-size);
-  font-weight: 650;
-  line-height: 1.25;
-}
 
 .sp.sp .settings-lorebook-item__label,
 .sp.sp .settings-lorebook-title-field > input,
@@ -3346,77 +3077,17 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   width: 100%;
 }
 
-.sp.sp .settings-lorebook-priority {
-  box-sizing: border-box;
-  grid-area: priority;
-  display: grid;
-  justify-self: stretch;
-  width: 100%;
-  border-radius: 8px;
-}
 
-.sp.sp .settings-lorebook-priority span {
-  font-size: var(--settings-child-meta-font-size);
-  font-weight: 650;
-  line-height: 1.35;
-  white-space: nowrap;
-}
 
-.sd .sp.sp .settings-lorebook-priority input:not([type='checkbox']):not([type='range']) {
-  border-top: 0;
-  border-right: 0;
-  border-bottom: 0;
-}
 
-.sp.sp .settings-lorebook-item__delete {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  grid-area: delete;
-  width: var(--settings-child-control-height);
-  min-width: var(--settings-child-control-height);
-  padding: 0;
-  justify-self: end;
-}
 
-.sp.sp .settings-lorebook-item__delete svg {
-  width: 16px;
-  height: 16px;
-}
 
 @media (max-width: 390px) {
-  .sp.sp .settings-lorebook-item__toolbar {
-    grid-template-columns: minmax(0, 1fr) var(--settings-child-control-height);
-    grid-template-areas:
-      "label label"
-      "enabled delete"
-      "priority priority";
-  }
 
-  .sp.sp .settings-lorebook-priority {
-    grid-template-columns: minmax(0, 1fr) 54px;
-  }
 
-  .sd .sp.sp .settings-lorebook-priority input:not([type='checkbox']):not([type='range']) {
-    width: 54px;
-  }
 }
 
-.sp.sp .settings-lorebook-title-field,
-.sp.sp .settings-lorebook-keywords-field,
-.sp.sp .settings-lorebook-content-field {
-  padding: 9px 10px;
-  border: 1px solid var(--settings-border);
-  border-radius: 8px;
-  background: var(--settings-surface-soft);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
-}
 
-.sp.sp .settings-lorebook-field textarea {
-  min-height: 112px;
-  resize: vertical;
-}
 
 .sp.sp .settings-tts-tuning,
 .sp.sp .settings-voice-control,
@@ -3797,68 +3468,15 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   padding: 8px 10px;
 }
 
-.sp.sp .settings-memory-recall-grid > .settings-memory-field > label {
-  grid-template-columns: minmax(118px, 0.44fr) minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
 
 @media (max-width: 360px) {
-  .sd .sp.sp .settings-memory-recall-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
-.sp.sp .settings-section .memory-card {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  gap: 10px;
-  padding: 12px;
-}
 
-.sp.sp .memory-card__header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-  min-width: 0;
-  gap: 10px;
-}
 
-.sp.sp .memory-card__header h3 {
-  min-width: 0;
-  margin-top: 1px;
-  font-size: var(--settings-child-control-font-size);
-  font-weight: 660;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
 
-.sp.sp .memory-card__hint {
-  min-width: 0;
-  margin-top: 4px;
-  font-size: var(--settings-child-meta-font-size);
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
 
-.sp.sp .memory-pill__category {
-  min-width: 0;
-  max-width: 100%;
-  min-height: 28px;
-  line-height: 1.2;
-  text-align: center;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  text-overflow: clip;
-}
 
-.sp.sp .memory-card__daily {
-  gap: 8px;
-  padding-top: 10px;
-}
 
 .sp.sp .memory-card__daily h4,
 .sp.sp .settings-mini-group__head h5,
@@ -3877,46 +3495,13 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   line-height: 1.35;
 }
 
-.sp.sp .settings-memory-archive-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr));
-}
 
-.sp.sp .settings-memory-archive-actions .ghost-button {
-  width: 100%;
-  min-width: 0;
-  padding-right: 8px;
-  padding-left: 8px;
-  white-space: normal;
-}
 
 @media (min-width: 390px) {
-  .sd .sp[data-section='history'] .settings-history-actions,
-  .sd .sp[data-section='memory'] .settings-memory-archive-actions {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 
-  .sd .sp[data-section='history'] .settings-history-actions .settings-history-clear-button,
-  .sd .sp[data-section='memory'] .settings-memory-archive-actions > :last-child:nth-child(odd) {
-    grid-column: auto;
-  }
 }
 
-.sp.sp .memory-pill__actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 86px), 1fr));
-  gap: 8px;
-  min-width: 0;
-}
 
-.sp.sp .memory-pill__actions button {
-  width: 100%;
-  min-width: 0;
-  padding-right: 8px;
-  padding-left: 8px;
-  text-align: center;
-  white-space: normal;
-}
 
 .sp.sp .settings-autonomy-group > .settings-autonomy-control,
 .sp.sp .settings-tools-section > .settings-control-grid > .settings-control-card {
@@ -3924,18 +3509,7 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   align-content: center;
 }
 
-.sp.sp .settings-autonomy-group > .settings-autonomy-field {
-  min-height: 66px;
-  align-content: start;
-  padding: 9px 10px;
-}
 
-.sp.sp .settings-autonomy-group > .settings-autonomy-control > .settings-toggle,
-.sp.sp .settings-autonomy-group > .settings-autonomy-field > label {
-  grid-template-columns: minmax(0, 1fr) 44px;
-  min-height: var(--settings-child-control-height);
-  gap: 7px;
-}
 
 .sp.sp .settings-autonomy-group > .settings-autonomy-control > .settings-toggle > span,
 .sp.sp .settings-tools-section > .settings-control-grid > .settings-control-card > .settings-toggle > span,
@@ -3976,23 +3550,8 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   line-height: 1.35;
 }
 
-.sp.sp .settings-autonomy-note {
-  margin: 0;
-  padding: 0 2px 2px;
-  border: 0;
-  background: transparent;
-  color: var(--text-soft);
-  box-shadow: none;
-}
 
-.sp.sp .settings-autonomy-notifications {
-  gap: 8px;
-  margin-top: 0;
-}
 
-.sp.sp .settings-autonomy-rss-form {
-  padding: 8px 0 0;
-}
 
 .sp.sp .settings-autonomy-rss-form__row,
 .sp.sp .settings-section__title-row {
@@ -4000,26 +3559,8 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   align-items: stretch;
 }
 
-.sp.sp .settings-autonomy-rss-form__interval {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  justify-self: stretch;
-  align-items: center;
-  width: 100%;
-  gap: 8px;
-}
 
-.sp.sp .settings-autonomy-rss-form__actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
 
-.sp.sp .settings-autonomy-rss-form__actions button {
-  width: 100%;
-  min-width: 0;
-  font-size: var(--settings-child-control-font-size);
-  font-weight: 650;
-}
 
 .sp.sp .settings-window-section > .settings-control-grid > .settings-control-card:not(.settings-window-field):not(.settings-window-control) {
   min-height: 108px;
@@ -4308,45 +3849,11 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   -webkit-line-clamp: unset;
 }
 
-.sp.sp .settings-lorebook-check {
-  grid-template-columns: minmax(0, 1fr) 44px;
-  height: 44px;
-  min-height: 44px;
-}
 
-.sp.sp .settings-lorebook-priority,
-.sp.sp .settings-lorebook-item__delete,
-.sd .sp.sp .settings-lorebook-priority input:not([type='checkbox']):not([type='range']) {
-  height: 44px;
-  min-height: 44px;
-}
 
-.sp.sp .settings-lorebook-check,
-.sp.sp .settings-lorebook-priority {
-  border-color: var(--settings-border);
-  background: var(--settings-surface-soft);
-  color: color-mix(in srgb, var(--text-h) 76%, var(--text-soft));
-}
 
-.sd .sp.sp .settings-lorebook-priority input[type='number']::-webkit-outer-spin-button,
-.sd .sp.sp .settings-lorebook-priority input[type='number']::-webkit-inner-spin-button {
-  margin: 0;
-  appearance: none;
-}
 
-.sd .sp.sp .settings-lorebook-item__delete.settings-danger-button {
-  width: var(--settings-child-control-height);
-  min-width: var(--settings-child-control-height);
-  border-color: var(--settings-border);
-  background: var(--settings-surface-soft);
-  color: color-mix(in srgb, var(--text-soft) 82%, var(--text-h));
-}
 
-.sd .sp.sp .settings-lorebook-item__delete.settings-danger-button:hover {
-  border-color: color-mix(in srgb, #b03030 34%, var(--settings-border));
-  background: color-mix(in srgb, #b03030 9%, var(--settings-surface-soft));
-  color: #9b2d2d;
-}
 
 .sp.sp .settings-voice-control {
   min-height: var(--settings-child-control-height);
@@ -4384,11 +3891,6 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   gap: 7px;
 }
 
-.sp.sp .settings-memory-section > .settings-memory-group:first-of-type > .settings-memory-control:nth-of-type(n + 2):nth-of-type(-n + 5) {
-  grid-column: 1 / -1;
-  min-height: var(--settings-child-control-height);
-  align-content: center;
-}
 
 @media (max-width: 360px) {
   .sp.sp .settings-voice-control-grid,
@@ -4416,10 +3918,6 @@ html[data-theme='system-day'] .sd-warm .primary-button {
     grid-column: 1 / -1;
   }
 
-  .sp.sp .settings-memory-section > .settings-memory-group:first-of-type > .settings-memory-control:nth-of-type(n + 2):nth-of-type(-n + 5) {
-    grid-column: 1 / -1;
-    min-height: 50px;
-  }
 }
 
 .sp.sp .settings-choice-grid,
@@ -4450,10 +3948,6 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   min-height: var(--settings-child-control-height);
   padding: 7px 9px;
   border-radius: 8px;
-}
-
-.sp.sp .settings-choice-card__header {
-  flex-wrap: wrap;
 }
 
 .sp.sp .settings-choice-card__badge,
@@ -5132,137 +4626,22 @@ html[data-theme='system-day'] .sd-warm .primary-button {
 }
 
 /* Lorebook child page final pass: align form controls to the shared subpage scale. */
-.sp[data-section='lorebooks'] .settings-lorebook-section__head {
-  grid-template-columns: 1fr;
-  gap: 8px;
-  padding: 0 2px 2px;
-}
 
-.sp[data-section='lorebooks'] .settings-lorebook-section__intro h4 {
-  margin: 0;
-  color: color-mix(in srgb, var(--text-h) 90%, var(--text-soft));
-  font-size: var(--settings-heading-small-font-size);
-  font-weight: 700;
-  line-height: 1.35;
-}
 
-.sp[data-section='lorebooks'] .settings-lorebook-section__intro .settings-drawer__hint {
-  margin: 0;
-  color: color-mix(in srgb, var(--text-soft) 88%, transparent);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.45;
-}
 
-.sp[data-section='lorebooks'] .settings-lorebook-section__actions span,
-.sp[data-section='lorebooks'] .settings-lorebook-section__actions .ghost-button {
-  width: 100%;
-  min-width: 0;
-  min-height: var(--settings-child-control-height);
-  height: auto;
-  border-radius: 8px;
-  font-size: var(--settings-control-font-size);
-  font-weight: 650;
-  line-height: 1.25;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
 
-.sp[data-section='lorebooks'] .settings-lorebook-section__actions span {
-  justify-content: center;
-  border: 1px solid var(--settings-border);
-  background: var(--settings-surface-soft);
-  color: color-mix(in srgb, var(--text-h) 78%, var(--text-soft));
-  font-variant-numeric: tabular-nums;
-}
 
-.sp[data-section='lorebooks'] .settings-lorebook-item {
-  gap: 8px;
-  padding: 10px;
-  border-radius: 8px;
-}
 
-.sp[data-section='lorebooks'] .settings-lorebook-item__toolbar {
-  grid-template-columns: minmax(0, 1fr) var(--settings-child-control-height);
-  grid-template-areas:
-    "label label"
-    "enabled delete"
-    "priority priority";
-  gap: 8px;
-  align-items: stretch;
-}
 
-.sp[data-section='lorebooks'] .settings-lorebook-title-field,
-.sp[data-section='lorebooks'] .settings-lorebook-keywords-field,
-.sp[data-section='lorebooks'] .settings-lorebook-content-field {
-  gap: 6px;
-  padding: 9px 10px;
-  border-radius: 8px;
-}
 
-.sp[data-section='lorebooks'] .settings-lorebook-field > span,
-.sp[data-section='lorebooks'] .settings-lorebook-check > span,
-.sp[data-section='lorebooks'] .settings-lorebook-priority > span {
-  margin: 0;
-  color: color-mix(in srgb, var(--text-h) 72%, var(--text-soft));
-  font-size: var(--settings-control-font-size);
-  font-weight: 650;
-  line-height: 1.35;
-}
 
-.sp[data-section='lorebooks'] .settings-lorebook-check,
-.sp[data-section='lorebooks'] .settings-lorebook-priority,
-.sp[data-section='lorebooks'] .settings-lorebook-item__delete {
-  height: 44px;
-  min-height: 44px;
-  border-radius: 8px;
-}
 
-.sp[data-section='lorebooks'] .settings-lorebook-check {
-  grid-template-columns: minmax(0, 1fr) 42px;
-  padding: 0 10px;
-}
 
-.sp[data-section='lorebooks'] .settings-lorebook-priority {
-  grid-template-columns: minmax(0, 1fr) 54px;
-  gap: 8px;
-  padding: 0 10px;
-}
 
-.sd .sp[data-section='lorebooks'] .settings-lorebook-priority input:not([type='checkbox']):not([type='range']) {
-  width: 54px;
-  height: var(--settings-child-control-height);
-  min-height: var(--settings-child-control-height);
-  padding: 0 6px;
-  border: 1px solid var(--settings-border);
-  border-radius: 8px;
-  background: var(--settings-surface);
-  font-size: var(--settings-control-font-size);
-  line-height: 1.25;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
 
-.sd .sp[data-section='lorebooks'] .settings-lorebook-item__delete.settings-danger-button {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  padding: 0;
-}
 
-.sp[data-section='lorebooks'] .settings-lorebook-content-field > textarea {
-  height: 76px;
-  min-height: 76px;
-}
 
 @media (min-width: 380px) {
-  .sp[data-section='lorebooks'] .settings-lorebook-item__toolbar {
-    grid-template-columns: minmax(0, 1fr) var(--settings-child-control-height);
-    grid-template-areas:
-      "label label"
-      "enabled delete"
-      "priority priority";
-  }
 }
 
 /* Final child-page type scale pass: section titles, toggles, and hints should not drift by page. */
@@ -5391,10 +4770,6 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   background-color: color-mix(in srgb, var(--settings-surface-soft) 78%, var(--settings-surface));
 }
 
-.sp.sp .settings-lorebook-check {
-  gap: 10px;
-  padding: 0 12px;
-}
 
 .sp.sp .settings-control-card > .settings-toggle > span,
 .sp.sp .settings-window-section > .settings-control-grid > .settings-control-card:not(.settings-window-field):not(.settings-window-control) > .settings-toggle > span,
@@ -5425,14 +4800,6 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   white-space: normal;
 }
 
-.sd .sp.sp .settings-lorebook-priority input:not([type='checkbox']):not([type='range']) {
-  padding: 0 6px;
-  color: var(--text-h);
-  font-size: var(--settings-child-control-font-size);
-  line-height: 1.25;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
 
 .sp.sp .settings-metric-card strong {
   overflow: visible;
@@ -5443,79 +4810,17 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   word-break: break-word;
 }
 
-.sp.sp .memory-card__actions {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 156px), 1fr));
-}
 
-.sp.sp .memory-pill__actions button {
-  box-sizing: border-box;
-  height: var(--settings-child-control-height);
-  min-height: var(--settings-child-control-height);
-  font-size: var(--settings-child-control-font-size);
-  font-weight: 650;
-  line-height: 1.25;
-}
 
-.sp.sp .memory-card__actions .ghost-button {
-  box-sizing: border-box;
-  height: var(--settings-child-control-height);
-}
 
-.sp.sp .settings-lorebook-priority {
-  height: auto;
-  min-height: var(--settings-child-control-height);
-  grid-template-columns: minmax(0, 1fr) 54px;
-  align-items: center;
-  gap: 8px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
 
-.sp.sp .settings-lorebook-priority > span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--settings-child-control-height);
-  padding: 0 8px;
-  border: 1px solid var(--settings-border);
-  border-radius: 8px;
-  background: var(--settings-surface-soft);
-  overflow: hidden;
-  text-overflow: clip;
-  white-space: nowrap;
-  overflow-wrap: anywhere;
-}
 
-.sd .sp.sp .settings-lorebook-priority input:not([type='checkbox']):not([type='range']) {
-  box-sizing: border-box;
-  width: 54px;
-  height: var(--settings-child-control-height);
-  min-height: var(--settings-child-control-height);
-  border: 1px solid var(--settings-border);
-  border-radius: 8px;
-  background: var(--settings-surface-soft);
-}
 
 /* Keep the main empty panel layout stable after the lazy settings CSS loads. */
 .panel-window--companion .companion-chat__messages:has(> .empty-chat--nexus):not(:has(> .crisis-hotline-panel)) {
   display: grid;
   align-items: center;
   align-content: center;
-}
-
-/* Keep the onboarding dialog aligned with the compact settings scale when the
-   lazy settings stylesheet is present, without duplicating the full dialog CSS. */
-.onboarding-card {
-  --onboarding-control-height: var(--settings-control-height);
-  --onboarding-font-size: var(--settings-control-font-size);
-  --onboarding-heading-small-font-size: var(--settings-heading-small-font-size);
-}
-
-.onboarding-card .ghost-button,
-.onboarding-card .primary-button {
-  min-height: var(--onboarding-control-height);
-  font-size: var(--onboarding-font-size);
 }
 
 .music-popup-card__dismiss,
@@ -5645,6 +4950,7 @@ html[data-theme='system-day'] .sd-warm .primary-button {
 
 .sp.sp .settings-choice-card__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
@@ -5766,19 +5072,7 @@ html[data-theme='system-day'] .sd-warm .primary-button {
 
 /* Memory page: direct config and recall fields should match the compact
    child-page form rows used by tools, voice, and window. */
-.sd .sp[data-section='memory'] .settings-memory-group > label.settings-memory-field,
-.sd .sp[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) {
-  align-items: center;
-  min-height: 36px;
-  padding: 3px 5px;
-}
 
-.sd .sp[data-section='memory'] .settings-memory-group > label.settings-memory-field,
-.sd .sp[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) > label {
-  grid-template-columns: minmax(92px, 0.42fr) minmax(0, 1fr);
-  align-items: center;
-  gap: 6px;
-}
 
 .sd .sp[data-section='memory'] .settings-memory-group > label.settings-memory-field > span,
 .sd .sp[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) > label > span,
@@ -5793,27 +5087,8 @@ html[data-theme='system-day'] .sd-warm .primary-button {
 }
 
 @media (max-width: 430px) {
-  .sd .sp[data-section='memory'] .settings-memory-group > label.settings-memory-field,
-  .sd .sp[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])),
-  .sd .sp[data-section='memory'] .settings-memory-recall-grid > .settings-memory-field {
-    min-height: 62px;
-  }
 
-  .sd .sp[data-section='memory'] .settings-memory-group > label.settings-memory-field,
-  .sd .sp[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) > label,
-  .sd .sp[data-section='memory'] .settings-memory-recall-grid > .settings-memory-field > label {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-    gap: 7px;
-  }
 
-  .sd .sp[data-section='memory'] .settings-memory-group > label.settings-memory-field > span,
-  .sd .sp[data-section='memory'] .settings-memory-group > .settings-memory-field:has(> label > input:not([type='checkbox']):not([type='range'])) > label > span,
-  .sd .sp[data-section='memory'] .settings-memory-recall-grid > .settings-memory-field > label > span {
-    overflow: visible;
-    text-overflow: clip;
-    white-space: normal;
-  }
 }
 
 /* About is nested inside a console accordion here, so keep the outer card as the only shell. */
@@ -5866,10 +5141,6 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   padding: 3px 5px;
 }
 
-.sd .sp[data-section='memory'] .settings-memory-section > .settings-memory-group:first-of-type > .settings-memory-control:has(> .settings-toggle):not(:has(> p)) {
-  min-height: 34px;
-  padding: 3px 5px;
-}
 
 .sd .sp.sp .settings-toggle:has(input:disabled):not(.settings-lorebook-check),
 .sd .sp.sp .settings-toggle:has(input:disabled):not(.settings-lorebook-check):hover {
@@ -6082,19 +5353,7 @@ html[data-theme='system-day'] .sd-warm .primary-button {
 
 /* Autonomy tuning reveals many number inputs after enabling proactive modes;
    keep those tuning rows compact so the page does not jump back to tall cards. */
-.sd .sp[data-section='autonomy'] .settings-autonomy-field {
-  align-items: center;
-  min-height: 38px;
-  padding: 4px 6px;
-}
 
-.sd .sp[data-section='autonomy'] label.settings-autonomy-field,
-.sd .sp[data-section='autonomy'] .settings-autonomy-field > label {
-  grid-template-columns: minmax(122px, 0.56fr) minmax(72px, 0.44fr);
-  align-items: center;
-  gap: 8px;
-  min-height: var(--settings-control-height);
-}
 
 /* Model advanced fields expose long tier and budget labels; keep inputs compact
    while letting labels use up to two lines instead of cutting off mid-phrase. */
@@ -6194,53 +5453,12 @@ html[data-theme='system-day'] .sd-warm .primary-button {
 
 /* Lorebook entries: short text fields should read like compact form rows, not
    full text-area cards. This keeps the editable entry visible above the footer. */
-.sd .sp[data-section='lorebooks'] .settings-lorebook-title-field,
-.sd .sp[data-section='lorebooks'] .settings-lorebook-keywords-field {
-  grid-template-columns: minmax(74px, 0.32fr) minmax(0, 1fr);
-  align-items: center;
-  min-height: 46px;
-  padding: 6px 8px;
-}
 
-.sd .sp[data-section='lorebooks'] .settings-lorebook-title-field > input,
-.sd .sp[data-section='lorebooks'] .settings-lorebook-keywords-field > input {
-  grid-area: auto;
-  width: 100%;
-  min-width: 0;
-  min-height: var(--settings-child-control-height);
-  height: var(--settings-child-control-height);
-  margin: 0;
-}
 
 @media (min-width: 390px) {
-  .sp[data-section='lorebooks'] .settings-lorebook-item__toolbar {
-    grid-template-columns: minmax(104px, 0.82fr) minmax(118px, 1fr) 44px;
-    grid-template-areas:
-      "label label label"
-      "enabled priority delete";
-    align-items: stretch;
-  }
 
-  .sp[data-section='lorebooks'] .settings-lorebook-priority {
-    box-sizing: border-box;
-    grid-template-columns: minmax(0, 1fr) 54px;
-    height: 44px;
-    min-width: 118px;
-    min-height: 44px;
-    font-size: var(--settings-control-font-size);
-    line-height: 1.25;
-  }
 
-  .sp[data-section='lorebooks'] .settings-lorebook-priority > span {
-    font-size: var(--settings-control-font-size);
-    line-height: 1.25;
-  }
 
-  .sd .sp[data-section='lorebooks'] .settings-lorebook-priority input:not([type='checkbox']):not([type='range']) {
-    height: var(--settings-child-control-height);
-    min-height: var(--settings-child-control-height);
-    margin-block: 0;
-  }
 }
 
 @media (max-width: 430px) {
@@ -6248,23 +5466,8 @@ html[data-theme='system-day'] .sd-warm .primary-button {
     -webkit-line-clamp: 3;
   }
 
-  .sp[data-section='lorebooks'] .settings-lorebook-item__toolbar {
-    grid-template-columns: minmax(0, 1fr) var(--settings-child-control-height);
-    grid-template-areas:
-      "label label"
-      "enabled delete"
-      "priority priority";
-  }
 
-  .sp[data-section='lorebooks'] .settings-lorebook-priority {
-    min-width: 0;
-  }
 
-  .sp[data-section='lorebooks'] .settings-lorebook-priority > span {
-    overflow: visible;
-    text-overflow: clip;
-    white-space: normal;
-  }
 }
 
 @media (max-height: 420px) {
@@ -6408,227 +5611,12 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   --settings-surface: rgba(255, 252, 247, 0.995);
   --settings-surface-strong: #fffdf9;
   --settings-surface-soft: rgba(248, 241, 232, 0.96);
-  --text-h: rgba(36, 27, 22, 0.9);
-  --text-soft: rgba(78, 64, 54, 0.66);
-  background: #fffaf3;
-}
-
-.sd-day .sda,
-.sd-warm .sda {
-  margin: 0 -1px;
-  padding: 5px 1px 0;
-  border-top: 1px solid var(--settings-border);
-  background:
-    linear-gradient(to bottom, color-mix(in srgb, var(--settings-surface) 72%, transparent), var(--settings-surface) 32%),
-    var(--settings-surface);
-  box-shadow: 0 -14px 22px color-mix(in srgb, var(--settings-surface) 76%, transparent);
-}
-
-.sd-day:not(.sd-warm) .settings-memory-transparency__card strong {
-  color: rgba(23, 32, 42, 0.88);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.88);
-}
-
-.sd-day:not(.sd-warm) .settings-memory-transparency__card span {
-  color: rgba(23, 32, 42, 0.64);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.64);
-}
-
-.sd-day-section .settings-toggle:has(input:disabled) > span {
-  color: rgba(23, 32, 42, 0.46);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.46);
-}
-
-.sd-warm .settings-memory-transparency__card strong {
-  color: rgba(36, 27, 22, 0.9);
-  -webkit-text-fill-color: rgba(36, 27, 22, 0.9);
-}
-
-.sd-warm .settings-memory-transparency__card span,
-.sd-warm-section .settings-mini-group__head span,
-.sd-warm .sp[data-section='window'] .settings-window-section .settings-control-card > p {
-  color: rgba(78, 64, 54, 0.66);
-  -webkit-text-fill-color: rgba(78, 64, 54, 0.66);
-}
-
-.sd-warm-section .settings-toggle > span,
-.sd-warm .sp[data-section='window'] .settings-control-card > .settings-toggle > span,
-.sd-warm .sp[data-section='window'] .settings-window-section .settings-control-card > .settings-toggle > span {
-  color: rgba(36, 27, 22, 0.82);
-  -webkit-text-fill-color: rgba(36, 27, 22, 0.82);
-}
-
-.sd-warm-section .settings-toggle:has(input:disabled) > span {
-  color: rgba(78, 64, 54, 0.48);
-  -webkit-text-fill-color: rgba(78, 64, 54, 0.48);
-}
-
-.sd .sp.sp .settings-mini-group__head span,
-.sd .sp.sp .settings-section__note,
-.sd .sp.sp .settings-drawer__hint,
-.sd .sp.sp .settings-control-card > p,
-.sd .sp.sp .settings-control-card > small,
-.sd .sp.sp .settings-memory-transparency__card span,
-.sd .sp.sp .settings-section p:not([class]) {
-  font-size: var(--settings-child-meta-font-size);
-  line-height: 1.32;
-}
-
-.sd .sp.sp .settings-memory-context-status-grid {
-  gap: 4px;
-}
-
-.sd .sp.sp .settings-memory-context-status {
-  gap: 3px;
-  min-height: 32px;
-  padding: 3px 5px;
-}
-
-.sd .sp.sp .settings-memory-context-status p {
-  line-height: 1.3;
-}
-
-.sd .sp[data-section='memory'] .settings-memory-transparency__grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-}
-
-.sd .sp[data-section='memory'] .settings-memory-transparency__card {
-  min-height: 34px;
-  padding: 4px 5px;
-  align-content: center;
-}
-
-.sd .sp[data-section='memory'] .settings-memory-transparency__card strong {
-  font-size: 11px;
-  line-height: 1.12;
-}
-
-.sd .sp[data-section='memory'] .settings-memory-transparency__card span {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-  line-height: 1.24;
-}
-
-.sd .sp[data-section='memory'] .settings-memory-context-transparency__row {
-  gap: 1px;
-}
-
-.sd .sp[data-section='memory'] .settings-memory-context-transparency__row p {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-height: 1.3;
-}
-
-/* Nexus Trace pass for the warm companion settings surface. */
-.sd-warm {
   --settings-trace-cool: rgba(80, 125, 198, 0.56);
   --settings-trace-warm: rgba(206, 122, 76, 0.54);
   --settings-trace-memory: rgba(82, 136, 118, 0.56);
   --settings-trace-permission: rgba(136, 104, 176, 0.48);
   --settings-trace-muted: rgba(72, 53, 40, 0.12);
-}
-
-.sd-warm .sda {
-  background: rgba(255, 253, 249, 0.68);
-  box-shadow: none;
-}
-
-.sd-warm .sda .primary-button,
-html[data-theme='warm-day'] .sd-warm .sda .primary-button,
-html[data-theme='system-day'] .sd-warm .sda .primary-button {
-  border-color: rgba(178, 91, 61, 0.24);
-  background: rgba(186, 92, 60, 0.92);
-  box-shadow: none;
-}
-
-.sd-warm .settings-section-nav__button,
-.sd-warm .settings-home-card,
-.sd-warm .settings-home-card:hover,
-.sd-warm .settings-home-card:nth-child(even),
-.sd-warm .settings-home-card:nth-child(even):hover {
-  border-color: var(--settings-trace-muted);
-  border-left: 2px solid transparent;
-  background: transparent;
-  box-shadow: none;
-}
-
-.sd-warm .settings-section-nav__button:hover,
-.sd-warm .settings-home-card:hover,
-.sd-warm .settings-home-card:nth-child(even):hover {
-  border-color: rgba(72, 53, 40, 0.16);
-  border-left-color: var(--settings-trust-trace, var(--settings-trace-warm));
-  background: rgba(255, 253, 249, 0.46);
-  box-shadow: none;
-}
-
-.sd-warm .settings-section-nav__button.is-active {
-  border-color: rgba(72, 53, 40, 0.18);
-  border-left-color: var(--settings-trace-cool);
-  background: rgba(255, 253, 249, 0.58);
-  box-shadow: none;
-}
-
-.sd-warm .settings-section-nav__marker {
-  width: 2px;
-  height: 18px;
-  border-radius: 999px;
-  background: rgba(72, 53, 40, 0.18);
-}
-
-.sd-warm .settings-section-nav__button.is-active .settings-section-nav__marker {
-  background: var(--settings-trace-cool);
-  transform: none;
-}
-
-.sd-warm .settings-home-card,
-.sd-warm .settings-home-card[data-trust-group] {
-  border-left-color: color-mix(in srgb, var(--settings-trust-trace, var(--settings-trace-cool)) 64%, transparent);
-}
-
-.sd-warm .settings-home-card[data-trust-group='trustSafety'] {
-  --settings-trust-trace: var(--settings-trace-warm);
-}
-
-.sd-warm .settings-home-card[data-trust-group='memoryContext'] {
-  --settings-trust-trace: var(--settings-trace-memory);
-}
-
-.sd-warm .settings-home-card[data-trust-group='desktopAwareness'] {
-  --settings-trust-trace: var(--settings-trace-cool);
-}
-
-.sd-warm .settings-home-card[data-trust-group='permissionsIntegrations'] {
-  --settings-trust-trace: var(--settings-trace-permission);
-}
-
-.sd-warm .settings-home-card[data-trust-group='appearanceInteraction'] {
-  --settings-trust-trace: rgba(196, 139, 68, 0.52);
-}
-
-.sd-warm .settings-home-card__glyph {
-  color: var(--settings-trust-trace, var(--settings-trace-cool));
-  opacity: 0.68;
-}
-
-.sd-warm .sdc,
-.sd-warm .settings-section {
-  border-color: rgba(72, 53, 40, 0.12);
-  background: rgba(255, 253, 249, 0.38);
-  box-shadow: none;
-}
-
-.sd-warm .settings-section {
-  border-left: 2px solid rgba(80, 125, 198, 0.24);
-}
-
-.sd-warm .settings-section:hover {
-  border-color: rgba(72, 53, 40, 0.16);
-  border-left-color: var(--settings-trace-warm);
-  background: rgba(255, 253, 249, 0.52);
-  box-shadow: none;
+  --text-h: rgba(36, 27, 22, 0.9);
+  --text-soft: rgba(78, 64, 54, 0.66);
+  background: #fffaf3;
 }

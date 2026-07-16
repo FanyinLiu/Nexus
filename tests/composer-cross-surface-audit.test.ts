@@ -10,7 +10,7 @@ import { buildComposerCrossSurfaceReport } from '../scripts/composer-cross-surfa
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const BASELINE_FILES: Record<string, string> = {
-  'src/app/views/PanelView.tsx': `
+  'src/app/views/LegacyPanelView.tsx': `
 import { deriveImage4ComposerState } from './image4ComposerState'
 
 export function PanelView() {
@@ -34,10 +34,9 @@ export function PanelView() {
         <textarea className="composer__input" />
         <input className="composer__file-input" />
         <button className="image4-attachment-pill" type="button">
-          <PetControlIcon name="plus" className="image4-attachment-pill__plus" />
+          <PetControlIcon name="image" className="image4-attachment-pill__plus" />
         </button>
         <div className="composer__actions">
-          <PetControlIcon name="mic" />
           <button disabled={image4ComposerState.sendDisabled}><PetControlIcon name="send" /></button>
         </div>
       </div>
@@ -138,15 +137,11 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field:focus-
 .panel-window--image4 .image4-composer__field[data-composer-state='drafting'] {}
 .panel-window--image4 .image4-composer__field[data-composer-state='streaming'] {}
 .panel-window--image4 .image4-composer__field[data-composer-state='interrupted'] {}
-.panel-window--image4 .image4-composer__field[data-voice-state='listening'] .composer__actions .ghost-button {}
-.panel-window--image4 .image4-composer__field[data-voice-state='processing'] .composer__actions .ghost-button {}
-.panel-window--image4 .image4-composer__field[data-voice-state='speaking'] .composer__actions .ghost-button {}
-
 .panel-window--image4 .image4-composer__field textarea,
 html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field textarea {
   padding:
     17px
-    calc((var(--image4-composer-control) * 2) + var(--image4-composer-rail-gap) + var(--image4-composer-side-inset) + var(--image4-composer-right-text-gap))
+    calc(var(--image4-composer-control) + var(--image4-composer-side-inset) + var(--image4-composer-right-text-gap))
     13px
     calc(var(--image4-composer-control) + var(--image4-composer-side-inset) + var(--image4-composer-left-text-gap));
 }
@@ -202,10 +197,8 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .compo
 }
 
 .panel-window--image4 .image4-composer__field .image4-attachment-pill,
-.panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
 .panel-window--image4 .image4-composer__field .composer__actions .primary-button,
 html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
 html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button {
   width: var(--image4-composer-control);
   height: var(--image4-composer-control);
@@ -216,9 +209,7 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .compo
   box-shadow: none;
 }
 
-.panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
 .panel-window--image4 .image4-composer__field .composer__actions .primary-button,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button,
 html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button {
   display: grid;
   place-items: center;
@@ -230,7 +221,6 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .compo
   order: 3;
 }
 
-.panel-window--image4 .image4-composer__field .composer__actions .ghost-button span,
 .panel-window--image4 .image4-composer__field .composer__actions .primary-button span {
   display: none;
 }
@@ -254,10 +244,8 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-s
 }
 
 .panel-window--image4 .image4-composer__field .image4-attachment-pill:hover,
-.panel-window--image4 .image4-composer__field .composer__actions .ghost-button:hover,
 .panel-window--image4 .image4-composer__field .composer__actions .primary-button:hover,
 html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill:hover,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button:hover,
 html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button:hover {
   background: rgba(73, 94, 114, 0.08);
   transform: none;
@@ -265,10 +253,8 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .compo
 }
 
 .panel-window--image4 .image4-composer__field .image4-attachment-pill:focus-visible,
-.panel-window--image4 .image4-composer__field .composer__actions .ghost-button:focus-visible,
 .panel-window--image4 .image4-composer__field .composer__actions .primary-button:focus-visible,
 html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill:focus-visible,
-html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button:focus-visible,
 html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button:focus-visible {
   box-shadow: var(--image4-state-focus-ring);
 }
@@ -289,7 +275,8 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-s
 - Composer is a single-surface intent gateway, not a toolbar.
 - Textarea is the primary intent area.
 - Send is primary only when submit is available.
-- Mic and attachment are embedded secondary tools.
+- Attachment is an embedded secondary tool.
+- Voice runtime controls stay in Settings and out of the main composer.
 - Runtime/model/streaming hints are tertiary.
 - Image4 composer and normal chat composer must share alignment rhythm and control box rules.
 - Hover/focus may reveal lightweight affordance, but default tool controls must not read as separate tiles.
@@ -298,13 +285,18 @@ html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field[data-s
 
 ## Final Composer Rhythm
 
-The final Image4 composer layer owns the compact control rhythm. \`panel-companion-composer.css\` owns final attachment, mic, send, textarea, focus, and state styling; \`panel-companion-chat.css\` only owns the dock/container, empty state, action prompts, and hint text.
+The final Image4 composer layer owns the compact control rhythm. \`panel-companion-composer.css\` owns final attachment, send, textarea, focus, and state styling; \`panel-companion-chat.css\` only owns the dock/container, empty state, action prompts, and hint text.
 
-- field text padding: \`17px 82px 13px 52px\`;
-- attachment, mic, and send use a \`29px control box\`;
+- field text padding: \`17px 51px 13px 52px\`;
+- attachment and send use a \`29px control box\`;
 - icon glyphs use a \`16px icon box\`;
-- action rail uses a \`2px action gap\`;
+- attachment/send controls use a \`2px control gap\`;
 - default embedded controls stay transparent and do not carry persistent backplates.
+
+## Composer Surface Contract
+
+- Attachment is an embedded secondary tool.
+- Voice runtime controls stay in Settings and out of the main composer.
 
 Do not use button resizing as an alignment fix.
 `,
@@ -341,7 +333,23 @@ test('composer cross-surface audit passes the protected shared composer structur
     assert.equal(report.summary.errors, 0)
     assert.equal(report.privacy.staticSourceOnly, true)
     assert.equal(report.composerDom.sharedHookOccurrences, 1)
+    assert.equal(report.composerDom.hasMicAction, false)
+    assert.equal(report.composerDom.hasSendAction, true)
     assert.equal(report.unsafeActionElevation.length, 0)
+  })
+})
+
+test('composer cross-surface audit rejects a Legacy Panel mic action', () => {
+  withComposerFixture({
+    'src/app/views/LegacyPanelView.tsx': `${BASELINE_FILES['src/app/views/LegacyPanelView.tsx']}
+<PetControlIcon name="mic" />
+`,
+  }, (root) => {
+    const report = buildComposerCrossSurfaceReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.equal(report.composerDom.hasMicAction, true)
+    assert.ok(report.forbiddenPatterns.some((item) => item.id === 'legacy-composer-forbids-mic-action'))
   })
 })
 
@@ -385,10 +393,10 @@ test('composer cross-surface audit rejects final compact control rhythm drift', 
   })
 })
 
-test('composer cross-surface audit rejects restoring the Image4 attachment image or dropdown icon', () => {
+test('composer cross-surface audit rejects adding dropdown chrome to the Image4 attachment icon', () => {
   withComposerFixture({
-    'src/app/views/PanelView.tsx': BASELINE_FILES['src/app/views/PanelView.tsx'].replace(
-      '<PetControlIcon name="plus" className="image4-attachment-pill__plus" />',
+    'src/app/views/LegacyPanelView.tsx': BASELINE_FILES['src/app/views/LegacyPanelView.tsx'].replace(
+      '<PetControlIcon name="image" className="image4-attachment-pill__plus" />',
       `<PetControlIcon name="image" className="image4-attachment-pill__image" />
         <PetControlIcon name="chevron-down" className="image4-attachment-pill__chevron" />`,
     ),
@@ -396,13 +404,13 @@ test('composer cross-surface audit rejects restoring the Image4 attachment image
     const report = buildComposerCrossSurfaceReport(root)
 
     assert.equal(report.summary.ok, false)
-    assert.ok(report.forbiddenPatterns.some((item) => item.id === 'image4-attachment-stays-pure-plus'))
+    assert.ok(report.forbiddenPatterns.some((item) => item.id === 'image4-attachment-stays-single-purpose'))
   })
 })
 
 test('composer cross-surface audit rejects default provider or runtime controls in the composer layer', () => {
   withComposerFixture({
-    'src/app/views/PanelView.tsx': BASELINE_FILES['src/app/views/PanelView.tsx'].replace(
+    'src/app/views/LegacyPanelView.tsx': BASELINE_FILES['src/app/views/LegacyPanelView.tsx'].replace(
       '<div className="composer__actions">',
       '<div className="composer__provider-dashboard" />\n      <div className="composer__actions">',
     ),
@@ -530,7 +538,7 @@ test('design docs keep Image4 rhythm grid scoped away from chat and settings', (
   assert.match(openSourceAudit, /Image4 is an ambient companion panel, so it can use a strict visual rhythm grid/)
   assert.match(openSourceAudit, /Chat \| Interaction density model/)
   assert.match(openSourceAudit, /Settings \| Structural density model/)
-  assert.match(designChecklist, /Chat uses an interaction density model, not the Image4 five-row visual rhythm grid/)
+  assert.match(designChecklist, /Chat uses an interaction density model, not the Image4 voice-first four-part rhythm/)
   assert.match(designChecklist, /Settings use form-row density and hierarchy rules, not Image4 visual rhythm rows/)
   assert.match(image4Patterns, /do not extend this grid to chat or settings/)
 })

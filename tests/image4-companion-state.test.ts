@@ -18,7 +18,6 @@ test('deriveImage4CompanionState treats speaking as the only active signal state
   assert.equal(state.contextTone, 'active')
   assert.equal(state.signalActive, true)
   assert.ok(state.presencePulse > 0.9)
-  assert.ok(state.dialEmphasis < 1)
 })
 
 test('deriveImage4CompanionState can preview speaking for visual review', () => {
@@ -46,7 +45,6 @@ test('deriveImage4CompanionState keeps listening attentive without activating vo
   assert.equal(state.activityState, 'context_available')
   assert.equal(state.contextTone, 'focus')
   assert.equal(state.signalActive, false)
-  assert.equal(state.dialEmphasis, 1)
 })
 
 test('deriveImage4CompanionState folds busy assistant work into the same attentive field', () => {
@@ -78,7 +76,6 @@ test('deriveImage4CompanionState settles into resting after a longer quiet sessi
   assert.equal(state.signalActive, false)
   assert.ok(state.intensity < 0.2)
   assert.ok(state.presencePulse < 0.18)
-  assert.ok(state.dialEmphasis < 1)
 })
 
 test('coerceImage4CompanionMode rejects unknown preview states', () => {
@@ -98,6 +95,5 @@ test('deriveImage4CompanionState leaves idle as a calm companion field', () => {
   assert.equal(state.activityState, 'idle')
   assert.equal(state.contextTone, 'calm')
   assert.equal(state.signalActive, false)
-  assert.equal(state.dialEmphasis, 1)
   assert.ok(state.intensity < 0.3)
 })

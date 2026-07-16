@@ -2,7 +2,7 @@ export const SURFACE_EVIDENCE = {
   chat: {
     docs: ['docs/CHAT_SURFACE_REFERENCE_REVIEW.md', 'docs/OPEN_SOURCE_UI_REFERENCE_AUDIT.md'],
     sourceFiles: [
-      'src/app/views/PanelView.tsx',
+      'src/app/views/LegacyPanelView.tsx',
       'src/components/MessageBubble.tsx',
       'src/hooks/chat/useChatPersistence.ts',
     ],
@@ -17,7 +17,7 @@ export const SURFACE_EVIDENCE = {
   composer: {
     docs: ['docs/COMPOSER_SURFACE_REFERENCE_REVIEW.md', 'docs/OPEN_SOURCE_UI_REFERENCE_AUDIT.md'],
     sourceFiles: [
-      'src/app/views/PanelView.tsx',
+      'src/app/views/LegacyPanelView.tsx',
       'src/app/styles/panel-companion-chat.css',
       'src/app/App.css',
     ],
@@ -164,7 +164,7 @@ export const SURFACE_EVIDENCE = {
       'docs/OPEN_SOURCE_UI_REFERENCE_AUDIT.md',
     ],
     sourceFiles: [
-      'src/app/views/PanelView.tsx',
+      'src/app/views/LegacyPanelView.tsx',
       'src/components/MessageBubble.tsx',
       'src/features/chat/systemPromptBuilder.ts',
     ],
@@ -186,7 +186,7 @@ export const SURFACE_EVIDENCE = {
     sourceFiles: [
       'src/features/context/companionAwareness.ts',
       'src/features/context/companionCheckInPolicy.ts',
-      'src/app/views/PanelView.tsx',
+      'src/app/views/LegacyPanelView.tsx',
       'src/app/views/image4CompanionState.ts',
     ],
     commands: [

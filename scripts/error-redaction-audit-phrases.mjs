@@ -560,8 +560,9 @@ export const REQUIRED_PHRASES = [
     file: 'src/components/SettingsDrawer.tsx',
     phrases: [
       "import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'",
-      "console.error('[settings] Failed to load locale:', nextLanguage, getRedactedLogErrorMessage(error))",
-      "console.error('[settings] Failed to load locale:', draft.uiLanguage, getRedactedLogErrorMessage(error))",
+      'useSettingsLanguageControl',
+      'onLocaleLoadFailure: (locale, error) => {',
+      "console.error('[settings] Failed to load locale:', locale, getRedactedLogErrorMessage(error))",
     ],
   },
   {

@@ -45,6 +45,28 @@ export type RecentCompanionCheckInDecision = {
   signalKeyPresent: boolean
 }
 
+export const COMPANION_DISCLOSURE_CATEGORIES = {
+  coarseShortLivedSummary: 'coarse_short_lived_summary',
+  recentLocalCheckInDecision: 'recent_local_check_in_decision',
+  sessionLifecycleExpiryMetadata: 'session_lifecycle_expiry_metadata',
+} as const
+
+export type DisclosureCategory = typeof COMPANION_DISCLOSURE_CATEGORIES[keyof typeof COMPANION_DISCLOSURE_CATEGORIES]
+
+export const RECENT_COMPANION_CHECK_IN_DECISION_DISCLOSURE: Record<
+  keyof RecentCompanionCheckInDecision,
+  DisclosureCategory
+> = {
+  sessionId: COMPANION_DISCLOSURE_CATEGORIES.sessionLifecycleExpiryMetadata,
+  lifecycleId: COMPANION_DISCLOSURE_CATEGORIES.sessionLifecycleExpiryMetadata,
+  savedAt: COMPANION_DISCLOSURE_CATEGORIES.sessionLifecycleExpiryMetadata,
+  shouldCheckIn: COMPANION_DISCLOSURE_CATEGORIES.recentLocalCheckInDecision,
+  reason: COMPANION_DISCLOSURE_CATEGORIES.recentLocalCheckInDecision,
+  surface: COMPANION_DISCLOSURE_CATEGORIES.recentLocalCheckInDecision,
+  priority: COMPANION_DISCLOSURE_CATEGORIES.recentLocalCheckInDecision,
+  signalKeyPresent: COMPANION_DISCLOSURE_CATEGORIES.recentLocalCheckInDecision,
+}
+
 const ACTIVITY_CLASSES: ActivityClass[] = [
   'coding',
   'browsing',

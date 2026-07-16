@@ -29,11 +29,11 @@ import type {
   NotificationChannel,
   PlatformProfile,
   ReminderTask,
+  SpeechLevelSource,
   VoicePipelineState,
   VoiceState,
   VoiceTraceEntry,
 } from '../types/index.ts'
-import { pickTranslatedUiText } from '../lib/uiLanguage.ts'
 import {
   loadAutonomySection,
   loadChatSection,
@@ -44,27 +44,24 @@ import {
   loadLorebooksSection,
   loadMemorySection,
   loadModelSection,
-  loadSpeechInputSection,
-  loadSpeechOutputSection,
   loadToolsSection,
   loadVoiceSection,
   loadWindowSection,
 } from './settingsSectionModules.ts'
 
-const AutonomySection = lazy(async () => ({ default: (await loadAutonomySection()).AutonomySection }))
-const ChatSection = lazy(async () => ({ default: (await loadChatSection()).ChatSection }))
-const ConsoleSection = lazy(async () => ({ default: (await loadConsoleSection()).ConsoleSection }))
-const HistorySection = lazy(async () => ({ default: (await loadHistorySection()).HistorySection }))
-const IntegrationsSection = lazy(async () => ({ default: (await loadIntegrationsSection()).IntegrationsSection }))
-const LettersSection = lazy(async () => ({ default: (await loadLettersSection()).LettersSection }))
-const LorebooksSection = lazy(async () => ({ default: (await loadLorebooksSection()).LorebooksSection }))
-const MemorySection = lazy(async () => ({ default: (await loadMemorySection()).MemorySection }))
-const ModelSection = lazy(async () => ({ default: (await loadModelSection()).ModelSection }))
-const SpeechInputSection = lazy(async () => ({ default: (await loadSpeechInputSection()).SpeechInputSection }))
-const SpeechOutputSection = lazy(async () => ({ default: (await loadSpeechOutputSection()).SpeechOutputSection }))
-const ToolsSection = lazy(async () => ({ default: (await loadToolsSection()).ToolsSection }))
-const VoiceSection = lazy(async () => ({ default: (await loadVoiceSection()).VoiceSection }))
-const WindowSection = lazy(async () => ({ default: (await loadWindowSection()).WindowSection }))
+const AutonomySectionV3 = lazy(async () => ({ default: (await loadAutonomySection()).AutonomySectionV3 }))
+const ChatSectionV3 = lazy(async () => ({ default: (await loadChatSection()).ChatSectionV3 }))
+const ConsoleSectionV3 = lazy(async () => ({ default: (await loadConsoleSection()).ConsoleSectionV3 }))
+const HistorySectionV3 = lazy(async () => ({ default: (await loadHistorySection()).HistorySectionV3 }))
+const IntegrationsSectionV3 = lazy(async () => ({ default: (await loadIntegrationsSection()).IntegrationsSectionV3 }))
+const LettersSectionV3 = lazy(async () => ({ default: (await loadLettersSection()).LettersSectionV3 }))
+const LorebooksSectionV3 = lazy(async () => ({ default: (await loadLorebooksSection()).LorebooksSectionV3 }))
+const MemorySectionV3 = lazy(async () => ({ default: (await loadMemorySection()).MemorySectionV3 }))
+const ModelSectionV3 = lazy(async () => ({ default: (await loadModelSection()).ModelSectionV3 }))
+const ToolsSectionV3 = lazy(async () => ({ default: (await loadToolsSection()).ToolsSectionV3 }))
+const VoiceSectionV3 = lazy(async () => ({ default: (await loadVoiceSection()).VoiceSectionV3 }))
+const WindowSectionV3 = lazy(async () => ({ default: (await loadWindowSection()).WindowSectionV3 }))
+
 
 type ConnectionTests = ReturnType<typeof useConnectionTests>
 type SpeechVoices = ReturnType<typeof useSpeechVoiceManagement>
@@ -86,6 +83,7 @@ export type SettingsDrawerActiveSectionProps = {
   dailyMemoryEntries: DailyMemoryEntry[]
   debugConsoleEvents: DebugConsoleEvent[]
   draft: AppSettings
+  isDirty: boolean
   liveTranscript: string
   loadingLabel: string
   memories: MemoryItem[]
@@ -104,6 +102,9 @@ export type SettingsDrawerActiveSectionProps = {
   onRemoveDailyEntry?: (id: string, day: string) => void
   onRemoveMemory: (id: string) => void
   onRemoveNotificationChannel?: (id: string) => Promise<void>
+  onStartVoiceConversation: () => Promise<void>
+  onStopVoiceConversation: () => void
+  onCancelVoiceTurn: () => void
   onSetMemoryEnabled: (id: string, enabled: boolean) => void
   onUpdateDailyEntry?: (id: string, day: string, content: string) => void
   onUpdateMemory: (id: string, content: string) => void
@@ -113,13 +114,16 @@ export type SettingsDrawerActiveSectionProps = {
   petModelPresets: PetModelDefinition[]
   platformProfile: PlatformProfile
   reminderTasks: ReminderTask[]
+  saveError: boolean
+  saving: boolean
   selectedMemorySearchMode: MemorySearchModeOptions[number]
   setDraft: Dispatch<SetStateAction<AppSettings>>
-  speechLevel: number
+  speechLevelSource: SpeechLevelSource
   speechVoices: SpeechVoices
   uiLanguage: AppSettings['uiLanguage']
   voicePipeline: VoicePipelineState
   voiceState: VoiceState
+  voiceActionPending: boolean
   voiceTrace: VoiceTraceEntry[]
   windowState: WindowState
 }
@@ -136,7 +140,7 @@ export function SettingsDrawerActiveSection({
   dailyMemoryEntries,
   debugConsoleEvents,
   draft,
-  liveTranscript,
+  isDirty,
   loadingLabel,
   memories,
   memoryArchive,
@@ -154,6 +158,9 @@ export function SettingsDrawerActiveSection({
   onRemoveDailyEntry,
   onRemoveMemory,
   onRemoveNotificationChannel,
+  onStartVoiceConversation,
+  onStopVoiceConversation,
+  onCancelVoiceTurn,
   onSetMemoryEnabled,
   onUpdateDailyEntry,
   onUpdateMemory,
@@ -163,37 +170,49 @@ export function SettingsDrawerActiveSection({
   petModelPresets,
   platformProfile,
   reminderTasks,
+  saveError,
+  saving,
   selectedMemorySearchMode,
   setDraft,
-  speechLevel,
+  speechLevelSource,
   speechVoices,
   uiLanguage,
   voicePipeline,
   voiceState,
+  voiceActionPending,
   voiceTrace,
   windowState,
 }: SettingsDrawerActiveSectionProps) {
-  const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
-    pickTranslatedUiText(uiLanguage, key)
+  const routeParams = new URLSearchParams(window.location.search)
+  const isPetView = routeParams.get('view') === 'pet'
+  const supportsPanelCompanionV2 = draft.vtsEnabled || Boolean(petModel.spriteAtlas) || Boolean(petModel.modelPath)
+  // PetView can only use V2 for a local Live2D model. Settings intentionally
+  // treats configured VTS as legacy even before its asynchronous bridge becomes
+  // ready, so VTS/sprite users never lose controls that their active path uses.
+  const supportsPetCompanionV2 = !draft.vtsEnabled && !petModel.spriteAtlas && Boolean(petModel.modelPath)
+  const supportsCompanionV2 = isPetView ? supportsPetCompanionV2 : supportsPanelCompanionV2
+  const showLegacyEnvironmentControls = routeParams.get('uiV2') === '0' || !supportsCompanionV2
+
   const content = (() => {
     switch (activeSectionId) {
     case 'model':
       return (
-        <ModelSection
+        <ModelSectionV3
           active
           draft={draft}
           setDraft={setDraft}
-          testingTarget={connectionTests.testingTarget}
+          testingTarget={connectionTests.isTesting('text') ? 'text' : null}
           uiLanguage={uiLanguage}
           onApplyTextProviderPreset={onApplyTextProviderPreset}
           onRunTextConnectionTest={() => void connectionTests.runConnectionTest('text')}
-          renderTextTestResult={() => connectionTests.renderTestResult('text')}
+          connectionEvidence={connectionTests.getTestEvidence('text')}
         />
       )
     case 'chat':
       return (
-        <ChatSection
+        <ChatSectionV3
           active
+          confirm={confirm}
           draft={draft}
           setDraft={setDraft}
           petModelPresets={petModelPresets}
@@ -226,7 +245,7 @@ export function SettingsDrawerActiveSection({
       )
     case 'history':
       return (
-        <HistorySection
+        <HistorySectionV3
           active
           uiLanguage={draft.uiLanguage}
           chatMessageCount={chatMessageCount}
@@ -244,14 +263,14 @@ export function SettingsDrawerActiveSection({
       )
     case 'letters':
       return (
-        <LettersSection
+        <LettersSectionV3
           active
           uiLanguage={draft.uiLanguage}
         />
       )
     case 'memory':
       return (
-        <MemorySection
+        <MemorySectionV3
           active
           confirm={confirm}
           draft={draft}
@@ -282,82 +301,53 @@ export function SettingsDrawerActiveSection({
       )
     case 'lorebooks':
       return (
-        <LorebooksSection
+        <LorebooksSectionV3
           active
           uiLanguage={draft.uiLanguage}
+          confirm={confirm}
         />
       )
     case 'voice':
       return (
-        <>
-          <VoiceSection
-            active
-            audioSmokeStatus={speechVoices.audioSmokeStatus}
-            draft={draft}
-            onRunAudioSmokeTest={() => void speechVoices.handleRunAudioSmokeTest()}
-            previewingSpeech={speechVoices.previewingSpeech}
-            runningAudioSmoke={speechVoices.runningAudioSmoke}
-            setDraft={setDraft}
-            platformProfile={platformProfile}
-            testingTarget={connectionTests.testingTarget}
-            uiLanguage={uiLanguage}
-          />
-
-          <details className="settings-mini-group settings-voice-provider-disclosure">
-            <summary className="settings-mini-group__head">
-              <div>
-                <h5>{ti('settings.speech_input.title')}</h5>
-                <span>{ti('settings.speech_input.hint')}</span>
-              </div>
-            </summary>
-            <div className="settings-voice-provider-body">
-              <SpeechInputSection
-                active
-                showHeader={false}
-                draft={draft}
-                platformProfile={platformProfile}
-                setDraft={setDraft}
-                testingTarget={connectionTests.testingTarget}
-                onRunSpeechInputConnectionTest={() => void connectionTests.runConnectionTest('speech-input')}
-                renderSpeechInputTestResult={() => connectionTests.renderTestResult('speech-input')}
-              />
-            </div>
-          </details>
-
-          <details className="settings-mini-group settings-voice-provider-disclosure">
-            <summary className="settings-mini-group__head">
-              <div>
-                <h5>{ti('settings.speech_output.title')}</h5>
-                <span>{ti('settings.speech_output.hint')}</span>
-              </div>
-            </summary>
-            <div className="settings-voice-provider-body">
-              <SpeechOutputSection
-                active
-                showHeader={false}
-                draft={draft}
-                setDraft={setDraft}
-                speechVoiceOptions={speechVoices.speechVoiceOptions}
-                speechVoiceStatus={speechVoices.speechVoiceStatus}
-                loadingSpeechVoices={speechVoices.loadingSpeechVoices}
-                speechPreviewText={speechVoices.speechPreviewText}
-                setSpeechPreviewText={speechVoices.setSpeechPreviewText}
-                speechPreviewStatus={speechVoices.speechPreviewStatus}
-                previewingSpeech={speechVoices.previewingSpeech}
-                testingTarget={connectionTests.testingTarget}
-                onApplySpeechOutputPreset={onApplySpeechOutputPreset}
-                onLoadSpeechVoices={() => void speechVoices.handleLoadSpeechVoices()}
-                onPreviewSpeech={() => void speechVoices.handlePreviewSpeech()}
-                onRunSpeechOutputConnectionTest={() => void connectionTests.runConnectionTest('speech-output')}
-                renderSpeechOutputTestResult={() => connectionTests.renderTestResult('speech-output')}
-              />
-            </div>
-          </details>
-        </>
+        <VoiceSectionV3
+          active
+          audioSmokeStatus={speechVoices.audioSmokeStatus}
+          draft={draft}
+          dirty={isDirty}
+          loadingSpeechVoices={speechVoices.loadingSpeechVoices}
+          onApplySpeechOutputPreset={onApplySpeechOutputPreset}
+          onLoadSpeechVoices={() => void speechVoices.handleLoadSpeechVoices()}
+          onPreviewSpeech={() => void speechVoices.handlePreviewSpeech()}
+          onRunAudioSmokeTest={() => void speechVoices.handleRunAudioSmokeTest()}
+          onRunSpeechInputConnectionTest={() => void connectionTests.runConnectionTest('speech-input')}
+          onRunSpeechOutputConnectionTest={() => void connectionTests.runConnectionTest('speech-output')}
+          onStartVoiceConversation={onStartVoiceConversation}
+          onStopVoiceConversation={onStopVoiceConversation}
+          onCancelVoiceTurn={onCancelVoiceTurn}
+          continuousVoiceActive={continuousVoiceActive}
+          platformProfile={platformProfile}
+          previewingSpeech={speechVoices.previewingSpeech}
+          speechInputEvidence={connectionTests.getTestEvidence('speech-input')}
+          speechOutputEvidence={connectionTests.getTestEvidence('speech-output')}
+          runningAudioSmoke={speechVoices.runningAudioSmoke}
+          saveError={saveError}
+          saving={saving}
+          voiceActionPending={voiceActionPending}
+          setDraft={setDraft}
+          setSpeechPreviewText={speechVoices.setSpeechPreviewText}
+          speechPreviewStatus={speechVoices.speechPreviewStatus}
+          speechPreviewText={speechVoices.speechPreviewText}
+          speechVoiceOptions={speechVoices.speechVoiceOptions}
+          speechVoiceStatus={speechVoices.speechVoiceStatus}
+          testingInputTarget={connectionTests.isTesting('speech-input') ? 'speech-input' : null}
+          testingOutputTarget={connectionTests.isTesting('speech-output') ? 'speech-output' : null}
+          uiLanguage={uiLanguage}
+          voiceState={voiceState}
+        />
       )
     case 'window':
       return (
-        <WindowSection
+        <WindowSectionV3
           active
           draft={draft}
           petWindowState={windowState.petWindowState}
@@ -366,12 +356,14 @@ export function SettingsDrawerActiveSection({
           updateWindowState={windowState.updateWindowState}
           windowStatusMessage={windowState.windowStatusMessage}
           launchOnStartupSupported={platformProfile.startup.supported}
+          showLegacyEnvironmentControls={showLegacyEnvironmentControls}
         />
       )
     case 'integrations':
       return (
-        <IntegrationsSection
+        <IntegrationsSectionV3
           active
+          confirm={confirm}
           draft={draft}
           setDraft={setDraft}
           uiLanguage={uiLanguage}
@@ -379,8 +371,9 @@ export function SettingsDrawerActiveSection({
       )
     case 'autonomy':
       return (
-        <AutonomySection
+        <AutonomySectionV3
           active
+          confirm={confirm}
           draft={draft}
           setDraft={setDraft}
           uiLanguage={uiLanguage}
@@ -393,7 +386,7 @@ export function SettingsDrawerActiveSection({
       )
     case 'tools':
       return (
-        <ToolsSection
+        <ToolsSectionV3
           active
           draft={draft}
           setDraft={setDraft}
@@ -402,17 +395,17 @@ export function SettingsDrawerActiveSection({
     case 'console':
     default:
       return (
-        <ConsoleSection
+        <ConsoleSectionV3
           active
+          confirm={confirm}
           draft={draft}
           petModel={petModel}
           continuousVoiceActive={continuousVoiceActive}
           debugConsoleEvents={debugConsoleEvents}
-          liveTranscript={liveTranscript}
           onClearDebugConsole={onClearDebugConsole}
           onOpenSettingsSection={onOpenSettingsSection}
           reminderTasks={reminderTasks}
-          speechLevel={speechLevel}
+          speechLevelSource={speechLevelSource}
           uiLanguage={uiLanguage}
           voicePipeline={voicePipeline}
           voiceState={voiceState}

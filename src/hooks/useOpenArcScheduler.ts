@@ -9,6 +9,7 @@ const POLL_INTERVAL_MS = 5 * 60 * 1000  // 5 min — matches bracket / errand / 
 
 interface UseOpenArcSchedulerOptions {
   settings: AppSettings
+  enabled?: boolean
 }
 
 /**
@@ -23,14 +24,14 @@ interface UseOpenArcSchedulerOptions {
  * Manual contract: the runner only follows arcs the user explicitly
  * opened. Same shape as errand and capsule schedulers.
  */
-export function useOpenArcScheduler({ settings }: UseOpenArcSchedulerOptions) {
+export function useOpenArcScheduler({ settings, enabled = true }: UseOpenArcSchedulerOptions) {
   const liveRef = useRef({ settings })
   useEffect(() => {
     liveRef.current = { settings }
   }, [settings])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (!enabled || typeof window === 'undefined') return
     if (!window.desktopPet?.showProactiveNotification) return
 
     let stopped = false
@@ -74,5 +75,5 @@ export function useOpenArcScheduler({ settings }: UseOpenArcSchedulerOptions) {
       stopped = true
       window.clearInterval(id)
     }
-  }, [])
+  }, [enabled])
 }

@@ -77,10 +77,17 @@ test('SettingsDrawer delegates draft normalization to useSettingsDraftState', as
     new URL('../src/components/SettingsDrawer.tsx', import.meta.url),
     'utf8',
   )
+  const draftStateSource = await readFile(
+    new URL('../src/components/settingsDrawerHooks/useSettingsDraftState.ts', import.meta.url),
+    'utf8',
+  )
 
   assert.match(drawerSource, /useSettingsDraftState\(settings\)/)
   assert.match(drawerSource, /createSavePayload/)
   assert.match(drawerSource, /mergeHydratedSecrets\(settings\)/)
   assert.match(drawerSource, /ensurePetModelPreset\(petModelPresets\)/)
+  assert.match(draftStateSource, /return \{[\s\S]*baseline,/)
+  assert.match(drawerSource, /onSave: \(settings: AppSettings, baseline: AppSettings\) => Promise<void>/)
+  assert.match(drawerSource, /committed: baseline,[\s\S]*onSave: \(nextDraft\) => onSave\(nextDraft, baseline\)/)
   assert.equal(drawerSource.includes('clampPresenceIntervalMinutes'), false)
 })

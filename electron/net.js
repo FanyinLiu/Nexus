@@ -2,6 +2,7 @@ import { net } from 'electron'
 import { randomUUID } from 'node:crypto'
 import {
   canonicalizeLoopbackUrl,
+  buildSafeRedirectRequestOptions,
   formatConnectionFailureMessage as _formatConnectionFailureMessage,
   isIpv6LoopbackHost as _isIpv6LoopbackHost,
   isLoopbackUrl,
@@ -77,7 +78,7 @@ export async function performNetworkRequest(url, options = {}) {
   // fetches. User-configured model / voice provider base URLs can opt into
   // loopback/LAN with allowPrivateNetwork after their caller has already
   // validated that address as a chat/API base URL.
-  const fetchValidatedHop = async (hopUrl, redirectMode) => {
+  const fetchValidatedHop = async (hopUrl, redirectMode, hopOptions = {}) => {
     const safety = allowPrivateNetwork
       ? checkChatBaseUrlSafety(hopUrl)
       : await checkUrlSafetyWithDns(hopUrl, { allowHttp: true })
@@ -101,19 +102,21 @@ export async function performNetworkRequest(url, options = {}) {
     // every other tool succeeds. Routing the request through Node's undici
     // fetch picks up Node's OpenSSL + the OS/NSS trust store, which restores
     // the working cert path without weakening verification anywhere else.
+    const hopBody = Object.hasOwn(hopOptions, 'body') ? hopOptions.body : body
     const isBinaryBody =
-      body instanceof Uint8Array ||
-      (typeof Buffer !== 'undefined' && Buffer.isBuffer?.(body))
+      hopBody instanceof Uint8Array ||
+      (typeof Buffer !== 'undefined' && Buffer.isBuffer?.(hopBody))
     const loopback = isLoopbackUrl(hopUrl)
-    const useNativeFetch = forceNativeFetch || body instanceof FormData || isBinaryBody || loopback
+    const useNativeFetch = forceNativeFetch || hopBody instanceof FormData || isBinaryBody || loopback
     const targetUrl = loopback ? canonicalizeLoopbackUrl(hopUrl) : hopUrl
 
     return withRequestTimeout(
       () => (useNativeFetch ? fetch : net.fetch)(targetUrl, {
         ...rest,
+        ...hopOptions,
         ...(redirectMode ? { redirect: redirectMode } : {}),
         signal: requestSignal,
-        ...(body != null ? { body } : {}),
+        ...(hopBody != null ? { body: hopBody } : {}),
       }),
       timeoutMs,
       timeoutMessage,
@@ -131,8 +134,9 @@ export async function performNetworkRequest(url, options = {}) {
   // poisoned 30x to 169.254.169.254 or a private host can't slip past the
   // first-hop check. Mirrors fetchRssWithSafety in notificationBridge.js.
   let currentUrl = url
+  let currentOptions = { ...rest, ...(body != null ? { body } : {}) }
   for (let hop = 0; hop <= MAX_SAFE_REDIRECTS; hop += 1) {
-    const response = await fetchValidatedHop(currentUrl, 'manual')
+    const response = await fetchValidatedHop(currentUrl, 'manual', currentOptions)
     if (![301, 302, 303, 307, 308].includes(response.status)) {
       return response
     }
@@ -140,7 +144,9 @@ export async function performNetworkRequest(url, options = {}) {
     if (!location) {
       throw new Error(`redirect (${response.status}) missing Location header`)
     }
-    currentUrl = new URL(location, currentUrl).toString()
+    const nextUrl = new URL(location, currentUrl).toString()
+    currentOptions = buildSafeRedirectRequestOptions(currentUrl, nextUrl, response.status, currentOptions)
+    currentUrl = nextUrl
   }
   throw new Error(`too many redirects (>${MAX_SAFE_REDIRECTS})`)
 }

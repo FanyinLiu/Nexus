@@ -6,17 +6,17 @@ function readWorkspaceFile(path: string) {
   return readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 }
 
-test('lazy settings sections preload from both home cards and section navigation', () => {
+test('lazy settings sections load only after the user enters a section', () => {
   const modules = readWorkspaceFile('src/components/settingsSectionModules.ts')
   const drawer = readWorkspaceFile('src/components/SettingsDrawer.tsx')
   const home = readWorkspaceFile('src/components/SettingsHomeView.tsx')
 
-  assert.match(modules, /export function preloadSettingsSection/)
-  assert.match(modules, /voice:\s*\(\) => Promise\.all/)
-  assert.match(drawer, /onPointerEnter=\{\(\) => preloadSettingsSection\(section\.id\)\}/)
-  assert.match(drawer, /onFocus=\{\(\) => preloadSettingsSection\(section\.id\)\}/)
-  assert.match(home, /onPointerEnter=\{\(\) => onPreloadSettingsSection\(card\.sectionId\)\}/)
-  assert.match(home, /onFocus=\{\(\) => onPreloadSettingsSection\(card\.sectionId\)\}/)
+  assert.match(modules, /export const loadVoiceSection\s*=\s*\(\)\s*=>\s*import/)
+  assert.doesNotMatch(modules, /preloadSettingsSection|SETTINGS_SECTION_PRELOADERS/)
+  assert.doesNotMatch(drawer, /preloadSettingsSection/)
+  assert.doesNotMatch(home, /onPreloadSettingsSection/)
+  assert.match(drawer, /onClick=\{\(\) => handleOpenSettingsSection\(section\.id\)\}/)
+  assert.match(home, /onClick=\{\(\) => onOpenSettingsSection\(card\.sectionId\)\}/)
 })
 
 test('lazy settings sections render a themed non-empty loading state', () => {
@@ -32,6 +32,35 @@ test('lazy settings sections render a themed non-empty loading state', () => {
 test('settings CSS coverage waits for lazy section content before sampling rules', () => {
   const coverage = readWorkspaceFile('scripts/settings-css-coverage.mjs')
 
-  assert.match(coverage, /content\.children\.length > 0/)
+  assert.match(coverage, /\.settings-v3-page:not\(\.is-hidden\)/)
+  assert.match(coverage, /activePage\.children\.length > 0/)
   assert.match(coverage, /!content\.querySelector\('\.settings-section-loading'\)/)
+  assert.match(coverage, /section\.id === 'console'/)
+  assert.match(coverage, /node\.open = true/)
+  assert.match(coverage, /\.settings-plan-panel__empty', \{ state: 'visible' \}/)
+})
+
+test('V3 section-owned CSS follows the lazy section module boundary', () => {
+  const shared = readWorkspaceFile('src/features/settingsV3/settings-v3.css')
+  const chat = readWorkspaceFile('src/features/settingsV3/ChatSectionV3.tsx')
+  const voice = readWorkspaceFile('src/features/settingsV3/VoiceSectionV3.tsx')
+  const integrations = readWorkspaceFile('src/features/settingsV3/IntegrationsSectionV3.tsx')
+  const consoleSection = readWorkspaceFile('src/features/settingsV3/ConsoleSectionV3.tsx')
+  const memory = readWorkspaceFile('src/features/settingsV3/MemorySectionV3.tsx')
+
+  assert.doesNotMatch(shared, /\.settings-v3-(?:choice|studio|provider|tuning|integration-status-list)/)
+  assert.match(chat, /import '\.\/settings-v3-collection\.css'/)
+  assert.match(chat, /import '\.\/chat-section-v3\.css'/)
+  assert.match(voice, /import '\.\/voice-section-v3\.css'/)
+  assert.match(integrations, /import '\.\/integrations-section-v3\.css'/)
+  assert.match(consoleSection, /import '\.\/settings-v3-collection\.css'/)
+  assert.match(consoleSection, /import '\.\/console-section-v3\.css'/)
+  assert.match(memory, /import '\.\/settings-v3-collection\.css'/)
+})
+
+test('the production CSS pipeline normalizes media ranges before final compression', () => {
+  const minifier = readWorkspaceFile('scripts/minify-built-css.mjs')
+
+  assert.match(minifier, /width\|height\|aspect-ratio\|resolution/)
+  assert.match(minifier, /operator === '>=' \? 'min' : 'max'/)
 })

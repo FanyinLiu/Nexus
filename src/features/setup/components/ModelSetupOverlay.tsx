@@ -1,9 +1,20 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ConnectionResult } from '../../../components/settingsDrawerSupport.ts'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { formatConsoleTimestamp, type ConnectionResult } from '../../../components/settingsDrawerSupport.ts'
+import {
+  buildConnectionTestFingerprint,
+  getConnectionTestResultPresentation,
+  getNextConnectionResultExpiryMs,
+  resolveConnectionResultMessage,
+  resolveConnectionResultRecommendation,
+  shouldAcceptConnectionTestResult,
+  withConnectionCheckedAt,
+} from '../../models/connectionTestFreshness'
 import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap'
 import { useTranslation } from '../../../i18n/useTranslation.ts'
 import { humanizeError } from '../../../lib/humanizeError.ts'
+import { pickTranslatedUiText } from '../../../lib/uiLanguage'
 import type { AppSettings } from '../../../types/app.ts'
+import type { TranslationKey } from '../../../types'
 import {
   MODEL_SETUP_DISMISSED_STORAGE_KEY,
   buildTextModelSetupSnapshot,
@@ -22,6 +33,7 @@ import {
 type Props = {
   /** Hide the overlay even when inventory is incomplete — used while the pet view is active. */
   suppressed?: boolean
+  onVisibilityChange?: (visible: boolean) => void
   settings?: AppSettings
   onOpenOnboardingGuide?: () => void
   onTestTextConnection?: (settings: AppSettings) => Promise<ConnectionResult>
@@ -37,6 +49,7 @@ function formatBytes(bytes: number): string {
 
 export function ModelSetupOverlay({
   suppressed = false,
+  onVisibilityChange,
   settings,
   onOpenOnboardingGuide,
   onTestTextConnection,
@@ -47,9 +60,10 @@ export function ModelSetupOverlay({
   const [busy, setBusy] = useState(false)
   const [textConnectionBusy, setTextConnectionBusy] = useState(false)
   const [textConnectionResult, setTextConnectionResult] = useState<{
-    key: string
+    fingerprint: string
     result: ConnectionResult
   } | null>(null)
+  const [connectionFreshnessTick, setConnectionFreshnessTick] = useState(0)
   const [dismissed, setDismissed] = useState(() => {
     try { return sessionStorage.getItem(MODEL_SETUP_DISMISSED_STORAGE_KEY) === '1' } catch { return false }
   })
@@ -63,23 +77,33 @@ export function ModelSetupOverlay({
   const [errorBanner, setErrorBanner] = useState<string | null>(null)
 
   const dialogRef = useRef<HTMLElement | null>(null)
+  const dismissButtonRef = useRef<HTMLButtonElement | null>(null)
+  const overlayVisibilityRef = useRef<boolean | null>(null)
+  const overlayWasVisibleRef = useRef(false)
+  const openerRef = useRef<HTMLElement | null>(null)
+  const mountedRef = useRef(true)
+  const connectionGenerationRef = useRef(0)
   const refreshInventoryRef = useRef<() => Promise<void>>(() => Promise.resolve())
   const textModelSetup = useMemo(
     () => settings ? buildTextModelSetupSnapshot(settings) : null,
     [settings],
   )
 
-  const textConnectionKey = settings
-    ? [
-        settings.apiProviderId,
-        settings.apiBaseUrl,
-        settings.model,
-        settings.apiKey ? 'key-present' : 'key-empty',
-      ].join('|')
+  const textConnectionFingerprint = settings
+    ? buildConnectionTestFingerprint('text', settings)
     : ''
 
-  const displayedTextConnection = textConnectionResult?.key === textConnectionKey
-    ? textConnectionResult.result
+  const displayedTextConnection = textConnectionResult?.result ?? null
+  const textConnectionFingerprintMatches = Boolean(
+    textConnectionResult
+    && textConnectionResult.fingerprint === textConnectionFingerprint,
+  )
+  const textConnectionPresentation = displayedTextConnection
+    ? getConnectionTestResultPresentation({
+      result: displayedTextConnection,
+      fingerprintMatches: textConnectionFingerprintMatches,
+      capability: 'text',
+    })
     : null
   const preflightTextConnection = !displayedTextConnection && textModelSetup?.message
     ? {
@@ -89,6 +113,93 @@ export function ModelSetupOverlay({
       }
     : null
   const activeTextConnection = displayedTextConnection ?? preflightTextConnection
+  const textConnectionVerified = Boolean(textConnectionPresentation?.verified)
+  const textConnectionToneClass = textConnectionPresentation
+    ? textConnectionPresentation.tone === 'success'
+      ? 'is-ok'
+      : `is-${textConnectionPresentation.tone}`
+    : activeTextConnection
+      ? 'is-error'
+      : ''
+  const textConnectionLooksFailed = Boolean(
+    activeTextConnection
+    && !textConnectionVerified
+    && (
+      textConnectionPresentation
+        ? textConnectionPresentation.tone === 'error'
+        : !activeTextConnection.ok
+    ),
+  )
+  const translateConnection = (
+    language: AppSettings['uiLanguage'],
+    key: string,
+    params?: Record<string, string | number | boolean | null | undefined>,
+  ) => pickTranslatedUiText(language, key as TranslationKey, params)
+  const activeTextConnectionMessage = displayedTextConnection && settings && textConnectionPresentation
+    ? textConnectionPresentation.tone === 'stale'
+      ? pickTranslatedUiText(
+        settings.uiLanguage,
+        textConnectionPresentation.freshness === 'config-stale'
+          ? 'settings.test_connection.stale'
+          : textConnectionPresentation.freshness === 'time-stale'
+            ? 'settings.test_connection.expired'
+            : 'settings.test_connection.unverified',
+      )
+      : textConnectionPresentation.tone === 'partial' && !displayedTextConnection.messageKey
+        ? pickTranslatedUiText(settings.uiLanguage, 'settings.test_connection.partial')
+        : resolveConnectionResultMessage(
+          displayedTextConnection,
+          settings.uiLanguage,
+          translateConnection,
+        )
+    : activeTextConnection?.message
+  const activeTextConnectionRecommendation = displayedTextConnection
+    && settings
+    && textConnectionPresentation
+    && textConnectionPresentation.tone !== 'stale'
+    ? resolveConnectionResultRecommendation(
+      displayedTextConnection,
+      settings.uiLanguage,
+      translateConnection,
+    )
+    : activeTextConnection?.recommendation
+
+  void connectionFreshnessTick
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      connectionGenerationRef.current += 1
+    }
+  }, [])
+
+  useEffect(() => {
+    const nextExpiry = getNextConnectionResultExpiryMs([displayedTextConnection])
+    if (nextExpiry === null) return undefined
+    const timer = window.setTimeout(
+      () => {
+        if (mountedRef.current) setConnectionFreshnessTick((current) => current + 1)
+      },
+      Math.max(0, nextExpiry - Date.now()) + 25,
+    )
+    return () => window.clearTimeout(timer)
+  }, [displayedTextConnection, connectionFreshnessTick])
+
+  useEffect(() => {
+    const refresh = () => {
+      if (mountedRef.current) setConnectionFreshnessTick((current) => current + 1)
+    }
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [])
 
   const refreshInventory = useCallback(async () => {
     try {
@@ -146,23 +257,38 @@ export function ModelSetupOverlay({
 
   const testTextConnection = useCallback(async () => {
     if (!settings || !onTestTextConnection) return
+    const generation = connectionGenerationRef.current + 1
+    connectionGenerationRef.current = generation
+    const fingerprint = buildConnectionTestFingerprint('text', settings)
     setTextConnectionBusy(true)
     setTextConnectionResult(null)
     try {
-      const result = await onTestTextConnection(settings)
-      setTextConnectionResult({ key: textConnectionKey, result })
+      const result = withConnectionCheckedAt(await onTestTextConnection(settings))
+      if (!mountedRef.current || !shouldAcceptConnectionTestResult({
+        requestGeneration: generation,
+        activeGeneration: connectionGenerationRef.current,
+      })) return
+      setTextConnectionResult({ fingerprint, result })
     } catch (err) {
+      if (!mountedRef.current || !shouldAcceptConnectionTestResult({
+        requestGeneration: generation,
+        activeGeneration: connectionGenerationRef.current,
+      })) return
       setTextConnectionResult({
-        key: textConnectionKey,
-        result: {
+        fingerprint,
+        result: withConnectionCheckedAt<ConnectionResult>({
           ok: false,
           message: humanizeError(err, 'chat'),
-        },
+          messageKey: 'settings.test_connection.failed',
+        }),
       })
     } finally {
-      setTextConnectionBusy(false)
+      if (mountedRef.current && shouldAcceptConnectionTestResult({
+        requestGeneration: generation,
+        activeGeneration: connectionGenerationRef.current,
+      })) setTextConnectionBusy(false)
     }
-  }, [onTestTextConnection, settings, textConnectionKey])
+  }, [onTestTextConnection, settings])
 
   const handleDismiss = useCallback(() => {
     try { sessionStorage.setItem(MODEL_SETUP_DISMISSED_STORAGE_KEY, '1') } catch { /* no session storage (sandboxed) */ }
@@ -172,13 +298,70 @@ export function ModelSetupOverlay({
   const overlayVisible = shouldShowModelSetupOverlay({ suppressed, dismissed, inventoryReady: inventory?.ready })
   useModalFocusTrap(dialogRef, overlayVisible)
 
-  useEffect(() => {
-    if (!overlayVisible) return
+  useLayoutEffect(() => {
+    const focusSafeInitialTarget = () => {
+      if (overlayVisibilityRef.current !== true) return
+      const dialog = dialogRef.current
+      if (!dialog?.isConnected) return
+      const dismissButton = dismissButtonRef.current
+      const target = dismissButton?.isConnected
+        && !dismissButton.disabled
+        && dialog.contains(dismissButton)
+        ? dismissButton
+        : dialog
+      target.focus({ preventScroll: true })
+    }
 
-    window.requestAnimationFrame(() => {
-      dialogRef.current?.focus()
-    })
-  }, [overlayVisible])
+    if (overlayVisibilityRef.current !== overlayVisible) {
+      overlayVisibilityRef.current = overlayVisible
+      onVisibilityChange?.(overlayVisible)
+    }
+
+    if (overlayVisible && !overlayWasVisibleRef.current) {
+      const activeElement = document.activeElement
+      openerRef.current = activeElement instanceof HTMLElement
+        && activeElement !== document.body
+        && activeElement !== document.documentElement
+        && activeElement.isConnected
+        ? activeElement
+        : null
+      overlayWasVisibleRef.current = true
+      focusSafeInitialTarget()
+    }
+
+    if (overlayVisible) {
+      const openingFrameId = window.requestAnimationFrame(() => {
+        focusSafeInitialTarget()
+      })
+      return () => window.cancelAnimationFrame(openingFrameId)
+    }
+
+    if (!overlayVisible && overlayWasVisibleRef.current) {
+      overlayWasVisibleRef.current = false
+      const opener = openerRef.current
+      openerRef.current = null
+      if (suppressed) return undefined
+
+      const closingFrameId = window.requestAnimationFrame(() => {
+        const openerIsAvailable = Boolean(
+          opener?.isConnected
+          && !opener.closest('[inert], [aria-hidden="true"]'),
+        )
+        const chatSheetInput = document.querySelector<HTMLElement>('.chat-sheet-v2__input:not([disabled])')
+        const composerInput = document.querySelector<HTMLElement>('.image4-composer textarea:not([disabled])')
+        const fallback = [chatSheetInput, composerInput].find((candidate) => {
+          if (!candidate?.isConnected || candidate.closest('[inert], [aria-hidden="true"]')) return false
+          const style = window.getComputedStyle(candidate)
+          return style.display !== 'none' && style.visibility !== 'hidden'
+        })
+        const target = openerIsAvailable && opener ? opener : fallback
+        if (target) target.focus({ preventScroll: true })
+      })
+      return () => window.cancelAnimationFrame(closingFrameId)
+    }
+
+    return undefined
+  }, [onVisibilityChange, overlayVisible, suppressed])
 
   useEffect(() => {
     if (!overlayVisible || busy) return undefined
@@ -300,7 +483,7 @@ export function ModelSetupOverlay({
               ) : modelSetupDescription}
             </p>
           </div>
-          <button className="ghost-button" type="button" onClick={handleDismiss} disabled={busy}>
+          <button ref={dismissButtonRef} className="ghost-button" type="button" onClick={handleDismiss} disabled={busy}>
             {t('model_setup.dismiss')}
           </button>
         </header>
@@ -320,7 +503,7 @@ export function ModelSetupOverlay({
 
           {textModelSetup ? (
             <div
-              className={`model-setup__text-check${activeTextConnection?.ok ? ' is-ok' : activeTextConnection ? ' is-warning' : ''}`}
+              className={`model-setup__text-check${textConnectionToneClass ? ` ${textConnectionToneClass}` : ''}`}
             >
               <div className="model-setup__text-check-main">
                 <strong>{t('model_setup.text_check_title')}</strong>
@@ -332,13 +515,20 @@ export function ModelSetupOverlay({
                 </p>
                 {activeTextConnection ? (
                   <div
-                    className={`model-setup__text-check-status${activeTextConnection.ok ? ' is-ok' : ' is-warning'}`}
-                    role={activeTextConnection.ok ? 'status' : 'alert'}
-                    aria-live={activeTextConnection.ok ? 'polite' : 'assertive'}
+                    className={`model-setup__text-check-status ${textConnectionToneClass || 'is-error'}`}
+                    role={textConnectionLooksFailed ? 'alert' : 'status'}
+                    aria-live={textConnectionLooksFailed ? 'assertive' : 'polite'}
                   >
-                    {activeTextConnection.message}
-                    {activeTextConnection.recommendation ? (
-                      <span>{activeTextConnection.recommendation}</span>
+                    {activeTextConnectionMessage}
+                    {activeTextConnectionRecommendation ? (
+                      <span>{activeTextConnectionRecommendation}</span>
+                    ) : null}
+                    {displayedTextConnection?.checkedAt && settings ? (
+                      <time dateTime={displayedTextConnection.checkedAt}>
+                        {pickTranslatedUiText(settings.uiLanguage, 'settings.test_connection.checked_at', {
+                          time: formatConsoleTimestamp(displayedTextConnection.checkedAt, settings.uiLanguage),
+                        })}
+                      </time>
                     ) : null}
                   </div>
                 ) : (

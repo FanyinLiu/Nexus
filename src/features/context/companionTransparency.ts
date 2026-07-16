@@ -6,6 +6,10 @@ import type {
   CompanionCheckInReason,
 } from './companionCheckInPolicy.ts'
 import {
+  COMPANION_DISCLOSURE_CATEGORIES,
+  type DisclosureCategory,
+} from './companionSummaryStore.ts'
+import {
   coerceCompanionElapsedLabel,
   containsPreciseCompanionTimeLanguage,
 } from './companionTimeLanguage.ts'
@@ -19,7 +23,7 @@ export type CompanionTransparencyStatus =
 
 export type CompanionModelReachBlockedReason = 'off' | 'paused' | 'no_observation' | null
 export type CompanionClearUnavailableReason = 'off' | 'paused' | 'no_summary' | null
-export type CompanionStorageTtlKind = 'none' | 'session_purged_on_pause'
+export type CompanionStorageTtlKind = 'none' | 'session_short_lived'
 export type CompanionCheckInTransparencyState = 'not_evaluated' | 'silent' | 'eligible'
 export type CompanionCheckInTransparencyGuard =
   | 'not_evaluated'
@@ -74,8 +78,9 @@ export type CompanionTransparencySummary = {
   active: boolean
   paused: boolean
   summaryPresent: boolean
+  decisionPresent: boolean
   observes: ReadonlyArray<'active_window_class' | 'coarse_elapsed_time'>
-  stores: ReadonlyArray<'short_lived_summary_only'>
+  stores: ReadonlyArray<DisclosureCategory>
   reachesModel: ReadonlyArray<'coarse_elapsed_time' | 'activity_class' | 'quiet_instruction'>
   modelReachBlockedReason: CompanionModelReachBlockedReason
   canPause: boolean
@@ -317,12 +322,30 @@ function resolveModelReachBlockedReason(
 
 function resolveClearUnavailableReason(
   status: CompanionTransparencyStatus,
-  summaryPresent: boolean,
+  recentStatePresent: boolean,
 ): CompanionClearUnavailableReason {
-  if (summaryPresent) return null
+  if (recentStatePresent) return null
   if (status === 'paused') return 'paused'
   if (status === 'off') return 'off'
   return 'no_summary'
+}
+
+function resolveDisclosureCategories(input: {
+  active: boolean
+  summaryPresent: boolean
+  decisionPresent: boolean
+}): ReadonlyArray<DisclosureCategory> {
+  const categories: DisclosureCategory[] = []
+  if (input.summaryPresent) {
+    categories.push(COMPANION_DISCLOSURE_CATEGORIES.coarseShortLivedSummary)
+  }
+  if (input.decisionPresent) {
+    categories.push(COMPANION_DISCLOSURE_CATEGORIES.recentLocalCheckInDecision)
+  }
+  if (input.active || input.summaryPresent || input.decisionPresent) {
+    categories.push(COMPANION_DISCLOSURE_CATEGORIES.sessionLifecycleExpiryMetadata)
+  }
+  return categories
 }
 
 export function resolveCompanionTransparencySummary(
@@ -332,26 +355,27 @@ export function resolveCompanionTransparencySummary(
     && input.activeWindowContextEnabled
     && !input.companionAwarenessPaused
   const summaryPresent = Boolean(input.summary)
+  const decisionPresent = Boolean(input.checkInDecision)
+  const recentStatePresent = summaryPresent || decisionPresent
 
   const base = {
     active,
     paused: input.companionAwarenessPaused,
     summaryPresent,
+    decisionPresent,
     observes: input.contextAwarenessEnabled && input.activeWindowContextEnabled
       ? ['active_window_class', 'coarse_elapsed_time'] as const
       : [],
-    stores: active || input.summary
-      ? ['short_lived_summary_only'] as const
-      : [],
+    stores: resolveDisclosureCategories({ active, summaryPresent, decisionPresent }),
     reachesModel: input.summary && active
       ? ['coarse_elapsed_time', 'activity_class', 'quiet_instruction'] as const
       : [],
     canPause: input.contextAwarenessEnabled,
-    canClearRecentSummary: summaryPresent,
+    canClearRecentSummary: recentStatePresent,
     currentActivityClass: input.summary?.activityClass ?? null,
     currentElapsedLabel: resolveVisibleElapsedLabel(input.summary),
     checkIn: resolveCompanionCheckInTransparency(resolveFallbackCheckInDecision(input)),
-    storageTtlKind: active || input.summary ? 'session_purged_on_pause' as const : 'none' as const,
+    storageTtlKind: active || recentStatePresent ? 'session_short_lived' as const : 'none' as const,
     rawContentVisible: false as const,
   }
 
@@ -361,7 +385,7 @@ export function resolveCompanionTransparencySummary(
   >): CompanionTransparencySummary => ({
     ...summary,
     modelReachBlockedReason: resolveModelReachBlockedReason(summary.status, summary.reachesModel),
-    clearUnavailableReason: resolveClearUnavailableReason(summary.status, summary.summaryPresent),
+    clearUnavailableReason: resolveClearUnavailableReason(summary.status, summary.canClearRecentSummary),
   })
 
   if (!input.contextAwarenessEnabled || !input.activeWindowContextEnabled) {
@@ -423,16 +447,16 @@ export function assertCompanionTransparencyInvariant(
     failCompanionTransparencyInvariant('current elapsed label must stay coarse')
   }
 
-  if (summary.summaryPresent !== summary.canClearRecentSummary) {
-    failCompanionTransparencyInvariant('clear action availability must follow summary presence')
+  if (summary.summaryPresent && !summary.canClearRecentSummary) {
+    failCompanionTransparencyInvariant('present summaries must remain clearable')
   }
 
-  if (summary.summaryPresent && summary.clearUnavailableReason !== null) {
-    failCompanionTransparencyInvariant('present summaries must be clearable')
+  if (summary.canClearRecentSummary && summary.clearUnavailableReason !== null) {
+    failCompanionTransparencyInvariant('clearable recent state cannot have an unavailable reason')
   }
 
-  if (!summary.summaryPresent && summary.clearUnavailableReason === null) {
-    failCompanionTransparencyInvariant('missing summaries need a clear unavailable reason')
+  if (!summary.canClearRecentSummary && summary.clearUnavailableReason === null) {
+    failCompanionTransparencyInvariant('unavailable clear action needs a reason')
   }
 
   if (summary.reachesModel.length > 0 && summary.modelReachBlockedReason !== null) {
@@ -455,8 +479,17 @@ export function assertCompanionTransparencyInvariant(
     failCompanionTransparencyInvariant('none storage TTL cannot report stored summary fields')
   }
 
-  if (summary.storageTtlKind !== 'none' && !summary.stores.includes('short_lived_summary_only')) {
-    failCompanionTransparencyInvariant('active storage TTL must stay short-lived summary only')
+  const hasSummaryCategory = summary.stores.includes(COMPANION_DISCLOSURE_CATEGORIES.coarseShortLivedSummary)
+  const hasDecisionCategory = summary.stores.includes(COMPANION_DISCLOSURE_CATEGORIES.recentLocalCheckInDecision)
+  const hasLifecycleCategory = summary.stores.includes(COMPANION_DISCLOSURE_CATEGORIES.sessionLifecycleExpiryMetadata)
+  if (hasSummaryCategory !== summary.summaryPresent) {
+    failCompanionTransparencyInvariant('summary disclosure category must match summary presence')
+  }
+  if (hasDecisionCategory !== summary.decisionPresent) {
+    failCompanionTransparencyInvariant('decision disclosure category must match decision presence')
+  }
+  if (hasLifecycleCategory !== (summary.storageTtlKind !== 'none')) {
+    failCompanionTransparencyInvariant('lifecycle disclosure category must match storage lifetime')
   }
 
   if (viewModel.checkInStatus.state !== summary.checkIn.state) {

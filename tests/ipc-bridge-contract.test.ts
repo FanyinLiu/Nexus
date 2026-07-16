@@ -204,25 +204,37 @@ test('weather IPC accepts quiet ambient lookup payloads', () => {
   const payload = validateWeatherToolPayload({
     location: 'Tokyo',
     fallbackLocation: 'Kyoto',
+    locale: 'ja',
     quiet: true,
-  }) as { location: string; fallbackLocation?: string; quiet?: boolean }
+    policy: { enabled: true, requiresConfirmation: false },
+  }) as {
+    location: string
+    fallbackLocation?: string
+    locale?: string
+    quiet?: boolean
+    policy?: { enabled?: boolean; requiresConfirmation?: boolean }
+  }
 
   assert.equal(payload.location, 'Tokyo')
   assert.equal(payload.fallbackLocation, 'Kyoto')
+  assert.equal(payload.locale, 'ja')
   assert.equal(payload.quiet, true)
+  assert.equal(payload.policy?.enabled, true)
+  assert.equal(payload.policy?.requiresConfirmation, false)
+  assert.throws(() => validateWeatherToolPayload({ location: 'Paris', locale: 'fr-FR' }))
 })
 
 test('ambient weather is quiet without muting explicit weather tool failures', () => {
   const hook = fs.readFileSync(path.join(ROOT, 'src', 'hooks', 'useAmbientWeather.ts'), 'utf8')
   assert.match(
     hook,
-    /loadAmbientWeatherSnapshot\(trimmedLocation\)/,
+    /loadAmbientWeatherSnapshot\(trimmedLocation, \{ locale \}\)/,
     'ambient weather hook should use the shared weather loader',
   )
   assert.match(
     hook,
-    /getWeather\?\.\(\{\s*location:\s*normalizedLocation,\s*quiet:\s*true\s*\}\)/s,
-    'ambient weather should pass quiet: true to the IPC bridge',
+    /getWeather\?\.\(\{\s*location:\s*normalizedLocation,\s*locale,\s*quiet:\s*true,?\s*policy:\s*\{\s*enabled:\s*true,\s*requiresConfirmation:\s*false\s*\},?\s*\}\)/s,
+    'ambient weather should pass locale and quiet: true to the IPC bridge',
   )
 
   const windowIpc = fs.readFileSync(path.join(ROOT, 'electron', 'ipc', 'windowIpc.js'), 'utf8')

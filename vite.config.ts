@@ -167,12 +167,18 @@ export default defineConfig({
   plugins: [tailwindcss(), react()],
   build: {
     minify: 'esbuild',
+    cssMinify: 'lightningcss',
     target: 'esnext',
     cssCodeSplit: true,
     // Remaining large chunks are optional local-ML runtimes that stay lazy.
     chunkSizeWarningLimit: 950,
     rolldownOptions: {
       output: {
+        assetFileNames: (assetInfo) => (
+          assetInfo.names[0]?.endsWith('.css')
+            ? 'assets/[name][extname]'
+            : 'assets/[name]-[hash][extname]'
+        ),
         codeSplitting: {
           groups: chunkGroups,
         },

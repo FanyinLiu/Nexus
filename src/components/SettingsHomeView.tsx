@@ -11,6 +11,8 @@ import {
   type SettingsSectionId,
 } from './settingsDrawerSupport.ts'
 import { SettingsHomePresence } from './SettingsHomePresence.tsx'
+import { PetControlIcon } from './PetControlIcon.tsx'
+import type { SettingsCardIconKey } from './settingsDrawerIcons.tsx'
 import type {
   SettingsHomeActionEntry,
   SettingsHomeGroupId,
@@ -21,7 +23,7 @@ export type SettingsHomeCardViewModel = {
   key: string
   sectionId: SettingsSectionId
   title: string
-  glyph: string
+  glyph: SettingsCardIconKey
   preview: readonly string[]
   trustGroup: SettingsTrustSurfaceGroupId
 }
@@ -51,7 +53,6 @@ export type SettingsHomeViewProps = {
     optionIndex: number,
   ) => void
   onOpenHomeAction: (action: SettingsHomeActionEntry) => void
-  onPreloadSettingsSection: (sectionId: SettingsSectionId) => void
   onOpenSettingsSection: (sectionId: SettingsSectionId) => void
   onSelectAppearanceOption: (optionIndex: number) => void
 }
@@ -66,7 +67,6 @@ export function SettingsHomeView({
   ti,
   onAppearanceOptionKeyDown,
   onOpenHomeAction,
-  onPreloadSettingsSection,
   onOpenSettingsSection,
   onSelectAppearanceOption,
 }: SettingsHomeViewProps) {
@@ -87,8 +87,6 @@ export function SettingsHomeView({
         data-focus-return-section={card.sectionId}
         aria-label={cardLabel}
         title={cardLabel}
-        onPointerEnter={() => onPreloadSettingsSection(card.sectionId)}
-        onFocus={() => onPreloadSettingsSection(card.sectionId)}
         onClick={() => onOpenSettingsSection(card.sectionId)}
       >
         <span className="settings-home-card__glyph" aria-hidden="true">
@@ -99,7 +97,7 @@ export function SettingsHomeView({
           <span className="settings-home-card__value">{previewText}</span>
         </span>
         <span className="settings-home-card__chevron" aria-hidden="true">
-          &gt;
+          <PetControlIcon name="chevron-down" />
         </span>
       </button>
     )
@@ -169,7 +167,7 @@ export function SettingsHomeView({
           <span className="settings-home-card__value">{actionValue}</span>
         </span>
         <span className="settings-home-card__chevron" aria-hidden="true">
-          &gt;
+          <PetControlIcon name="chevron-down" />
         </span>
       </button>
     )

@@ -11,6 +11,7 @@ import type { TranslationKey } from '../types/i18n.ts'
 import type { ThemeId } from '../types/theme.ts'
 import type {
   DebugConsoleEvent,
+  ConnectionEvidence,
   DiscoveredModel,
   MemorySearchMode,
   ReminderTaskAction,
@@ -282,12 +283,16 @@ export function buildConsoleEventClusters(events: DebugConsoleEvent[]) {
 export type ConnectionResult = {
   ok: boolean
   message: string
+  messageKey?: string
+  messageParams?: Record<string, string | number | boolean | null | undefined>
   recommendation?: string
+  recommendationKey?: string
   status?: import('../types/model').ProviderHealthStatus
   code?: import('../types/model').ModelConnectionErrorCode
   repair?: ConnectionPreflightRepair
   discoveredModels?: DiscoveredModel[]
   checkedAt?: string
+  evidence?: ConnectionEvidence
 }
 
 type LabeledOption<T> = {
@@ -449,6 +454,7 @@ export const SETTINGS_SECTION_OPTION_DEFINITIONS = [
   { id: 'voice', groupId: 'companionBehavior', labelKey: 'settings.section.voice' },
   { id: 'memory', groupId: 'memoryContext', labelKey: 'settings.section.memory' },
   { id: 'lorebooks', groupId: 'memoryContext', labelKey: 'settings.lorebooks.title' },
+  { id: 'integrations', groupId: 'modelConnections', labelKey: 'settings.section_eyebrow.integrations' },
   { id: 'autonomy', groupId: 'companionBehavior', labelKey: 'settings.section.autonomy' },
   { id: 'tools', groupId: 'modelConnections', labelKey: 'settings.section.tools' },
 ] as const satisfies ReadonlyArray<{
@@ -505,7 +511,6 @@ export function getSettingsSectionOptions(uiLanguage: UiLanguage): Array<{
 }
 
 export function normalizeSettingsSectionId(sectionId: SettingsSectionId): SettingsSectionId {
-  if (sectionId === 'integrations') return 'tools'
   return sectionId
 }
 

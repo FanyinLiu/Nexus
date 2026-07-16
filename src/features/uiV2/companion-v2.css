@@ -1,0 +1,329 @@
+.nexus-companion-v2 {
+  --nx-v2-ink: var(--color-text-primary, #302b39);
+  --nx-v2-muted: var(--color-text-muted, #746d7e);
+  --nx-v2-accent: var(--color-accent, #7d67d9);
+  --nx-v2-focus-ring: color-mix(in srgb, var(--nx-v2-ink) 78%, var(--nx-v2-accent) 22%);
+  --nx-v2-accent-soft: var(--color-accent-soft, rgb(125 103 217 / 26%));
+  --nx-v2-secondary: var(--color-accent-secondary, var(--color-accent-hover, #e98a57));
+  --nx-v2-surface: var(--color-surface-elevated, #fffcf9);
+  --nx-v2-border: var(--color-border, rgb(67 56 80 / 14%));
+  --nx-v2-border-strong: var(--color-border-strong, rgb(67 56 80 / 22%));
+  --nx-v2-shadow: var(--color-shadow, rgb(48 43 57 / 8%));
+  --nx-v2-danger: var(--color-danger, #a5443d);
+  --nx-v2-on-accent: var(--color-on-accent, #fff);
+  --nexus-v2-ink: var(--nx-v2-ink);
+  --nexus-v2-muted: var(--nx-v2-muted);
+  --nexus-v2-lavender: var(--nx-v2-accent);
+  --nexus-v2-lavender-soft: var(--nx-v2-accent-soft);
+  --nexus-v2-apricot: var(--nx-v2-secondary);
+  --nexus-v2-surface: color-mix(in srgb, var(--nx-v2-surface) 94%, transparent);
+  --nexus-v2-border: var(--nx-v2-border);
+  --nexus-v2-border-strong: color-mix(in srgb, var(--nx-v2-border-strong) 78%, transparent);
+  position: relative;
+  inline-size: 100vw;
+  block-size: 100vh;
+  min-inline-size: 260px;
+  min-block-size: 340px;
+  overflow: hidden;
+  container-type: size;
+  color: var(--nexus-v2-ink);
+  font-family: inherit;
+  isolation: isolate;
+  user-select: none;
+}
+
+.nexus-companion-v2__character-hit {
+  position: absolute;
+  inset: 0 0 42px;
+}
+
+.nexus-companion-v2__character-hit {
+  z-index: 2;
+  inset-inline: 12px;
+  inset-block-start: 42px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.nexus-companion-v2__character-hit:active {
+  cursor: grabbing;
+}
+
+.nexus-companion-v2__character-hit .live2d-shell,
+.nexus-companion-v2__character-hit .live2d-canvas {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.nexus-companion-v2__character-hit .live2d-shell {
+  transform: scale(1.2);
+  transform-origin: 50% 100%;
+}
+
+.nexus-companion-v2__character-hit .live2d-canvas {
+  filter:
+    drop-shadow(0 1px 1px rgb(255 255 255 / 16%))
+    drop-shadow(0 -1px 1px rgb(28 22 33 / 14%));
+}
+
+.nexus-companion-v2__character-hit .live2d-fallback {
+  position: absolute;
+  inset: 50% 12px auto;
+  transform: translateY(-50%);
+  color: var(--nexus-v2-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.nexus-v2-control {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  padding: 0;
+  border: 1px solid var(--nexus-v2-border-strong);
+  border-radius: 50%;
+  background: var(--nexus-v2-surface);
+  color: var(--nexus-v2-ink);
+  box-shadow: 0 8px 22px var(--nx-v2-shadow);
+  cursor: pointer;
+}
+
+.nexus-v2-control svg {
+  inline-size: 21px;
+  block-size: 21px;
+}
+
+.nexus-v2-control:focus-visible,
+.nexus-companion-v2__utility-item:focus-visible,
+.nexus-companion-v2__caption-expand:focus-visible {
+  outline: 3px solid var(--nx-v2-focus-ring);
+  outline-offset: 2px;
+}
+
+.nexus-companion-v2__utility-trigger {
+  position: absolute;
+  z-index: 8;
+  inset-block-start: 12px;
+  inset-inline-end: 12px;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.nexus-companion-v2__utility-trigger::before {
+  position: absolute;
+  inset: 3px;
+  content: "";
+  background: var(--nexus-v2-surface);
+  border: 1px solid var(--nexus-v2-border-strong);
+  border-radius: 50%;
+  box-shadow: 0 3px 12px var(--nx-v2-shadow);
+}
+
+.nexus-companion-v2__utility-trigger:hover::before {
+  background: color-mix(in srgb, var(--nx-v2-accent) 7%, var(--nx-v2-surface));
+}
+
+.nexus-companion-v2__utility-trigger svg {
+  position: relative;
+  z-index: 1;
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+.nexus-companion-v2__voice {
+  position: absolute;
+  z-index: 8;
+  inset-inline-start: 50%;
+  inset-block-end: 8px;
+  inline-size: 52px;
+  block-size: 52px;
+  transform: translateX(-50%);
+}
+
+.nexus-companion-v2__voice:is(.is-listening, .is-thinking, .is-speaking) {
+  border-color: color-mix(in srgb, var(--nx-v2-accent) 56%, transparent);
+  color: var(--nexus-v2-lavender);
+}
+
+.nexus-companion-v2__voice:is(.is-error, .is-offline) {
+  display: flex;
+  inline-size: auto;
+  min-inline-size: 52px;
+  padding-inline: 13px;
+  gap: 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.nexus-companion-v2__utility-menu {
+  position: absolute;
+  z-index: 10;
+  inset-block-start: auto;
+  inset-block-end: 60px;
+  inset-inline-end: 12px;
+  inline-size: min(176px, calc(100% - 24px));
+  max-block-size: calc(100% - 120px);
+  padding: 6px;
+  overflow: auto;
+  border: 1px solid var(--nexus-v2-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--nx-v2-surface) 98%, transparent);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--nx-v2-shadow) 72%, transparent);
+}
+
+.nexus-companion-v2__utility-item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  inline-size: 100%;
+  min-block-size: 44px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--nexus-v2-ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.nexus-companion-v2__utility-item:hover,
+.nexus-companion-v2__utility-item[aria-pressed='true'] {
+  background: var(--nx-v2-accent-soft);
+}
+
+.nexus-companion-v2__utility-item.is-danger {
+  color: var(--nx-v2-danger);
+  border-block-start: 1px solid var(--nexus-v2-border);
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+}
+
+.nexus-companion-v2__utility-item svg {
+  inline-size: 20px;
+  block-size: 20px;
+}
+
+.nexus-companion-v2__caption {
+  position: absolute;
+  z-index: 7;
+  inset-block-start: 98px;
+  inset-inline-start: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 6px;
+  max-inline-size: min(264px, calc(100% - 24px));
+  min-block-size: 54px;
+  padding: 10px 8px 10px 13px;
+  border: 1px solid var(--nexus-v2-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--nx-v2-surface) 94%, transparent);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--nx-v2-shadow) 78%, transparent);
+  user-select: text;
+}
+
+.nexus-companion-v2__caption > span {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--nexus-v2-ink);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.nexus-companion-v2__caption-expand {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--nexus-v2-lavender);
+  cursor: pointer;
+}
+
+.nexus-companion-v2__caption-expand svg {
+  inline-size: 17px;
+  block-size: 17px;
+}
+
+.nexus-companion-v2__state-label {
+  position: absolute;
+  z-index: 5;
+  inset-inline-start: 50%;
+  inset-block-end: 55px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--nx-v2-surface) 78%, transparent);
+  color: var(--nexus-v2-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  transform: translateX(-50%);
+}
+
+.nexus-v2-sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@container (max-width: 280px) or (max-height: 380px) {
+  .nexus-companion-v2__character-hit {
+    inset-inline: 10px;
+    inset-block-start: 34px;
+    inset-block-end: 42px;
+  }
+
+  .nexus-companion-v2__utility-trigger {
+    inset-block-start: 8px;
+    inset-inline-end: 8px;
+  }
+
+  .nexus-companion-v2__voice {
+    inset-block-end: 6px;
+  }
+
+  .nexus-companion-v2__caption {
+    inset-block-start: 82px;
+    inset-inline-start: 8px;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    max-inline-size: min(228px, calc(100% - 16px));
+    min-block-size: 48px;
+    padding-block: 8px;
+  }
+
+  .nexus-companion-v2__caption > span {
+    -webkit-line-clamp: 1;
+  }
+
+  .nexus-companion-v2__utility-menu {
+    inset-block-start: 118px;
+    inset-block-end: 58px;
+    inset-inline-end: 8px;
+    inline-size: min(160px, calc(100% - 16px));
+    max-block-size: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .nexus-companion-v2 :is(button, textarea):focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+}

@@ -23,6 +23,11 @@ if (!existsSync(ortDir)) {
   mkdirSync(ortDir, { recursive: true })
 }
 
+const vadDir = join(vendorDir, 'vad')
+if (!existsSync(vadDir)) {
+  mkdirSync(vadDir, { recursive: true })
+}
+
 // Copy from node_modules
 const copies = [
   {
@@ -49,6 +54,18 @@ for (const { src, dest, label } of copies) {
   copyFileSync(src, dest)
   console.log(`[vendor] ✓ ${label} (copied from node_modules)`)
 }
+
+// @ricky0123/vad-web resolves the AudioWorklet relative to baseAssetPath.
+// MicVAD uses startOnLoad:false in Nexus, so a missing worklet is only exposed
+// when listening starts. Always refresh this lockfile-pinned runtime asset so
+// an old public/vendor cache cannot silently force legacy recording.
+const vadWorkletSource = join(root, 'node_modules', '@ricky0123', 'vad-web', 'dist', 'vad.worklet.bundle.min.js')
+const vadWorkletDest = join(vadDir, 'vad.worklet.bundle.min.js')
+if (!existsSync(vadWorkletSource)) {
+  throw new Error(`[vendor] required VAD worklet source not found: ${vadWorkletSource}`)
+}
+copyFileSync(vadWorkletSource, vadWorkletDest)
+console.log('[vendor] ✓ vad/vad.worklet.bundle.min.js (refreshed from node_modules)')
 
 // onnxruntime-web wasm + mjs bundles — browserVad.ts sets
 // `onnxWASMBasePath: resolvePublicAssetPath('vendor/ort/')`, so vad-web

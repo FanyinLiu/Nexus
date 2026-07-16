@@ -22,7 +22,53 @@ const REQUIRED_FILES = [
   'docs/FOCUS_MANAGEMENT_REFERENCE_REVIEW.md',
   'docs/STREAMING_SURFACE_REFERENCE_REVIEW.md',
   'docs/AGENT_ACTIVITY_SURFACE_REFERENCE_REVIEW.md',
+  'src/app/views/PanelView.tsx',
+  'src/app/views/PetView.tsx',
+  'src/components/SettingsDrawer.tsx',
+  'src/components/settingsSectionModules.ts',
   'package.json',
+]
+
+const ACTIVE_ROUTE_CONTRACTS = [
+  {
+    id: 'panel-v2-route',
+    file: 'src/app/views/PanelView.tsx',
+    fragments: [
+      "new URLSearchParams(window.location.search).get('uiV2') !== '0'",
+      'const useCompanionV2',
+      '&& (settings.vtsEnabled || Boolean(petModel.spriteAtlas) || Boolean(petModel.modelPath))',
+      '<CompanionPanelV2',
+      '<LegacyPanelView',
+    ],
+  },
+  {
+    id: 'pet-v2-route',
+    file: 'src/app/views/PetView.tsx',
+    fragments: [
+      "new URLSearchParams(window.location.search).get('uiV2') !== '0'",
+      'const useCompanionV2',
+      '&& !settings.vtsEnabled',
+      '&& !petModel.spriteAtlas',
+      '&& Boolean(petModel.modelPath)',
+      '<FramelessCompanionSurface',
+      '<LegacyPetView',
+    ],
+  },
+  {
+    id: 'settings-v2-route',
+    file: 'src/components/SettingsDrawer.tsx',
+    fragments: [
+      "if (new URLSearchParams(window.location.search).get('uiV2') !== '0')",
+      '<SettingsDrawerV2',
+    ],
+  },
+  {
+    id: 'memory-v3-route',
+    file: 'src/components/settingsSectionModules.ts',
+    fragments: [
+      "loadMemorySection = () => import('../features/settingsV3/MemorySectionV3.tsx')",
+    ],
+  },
 ]
 
 const REQUIRED_ROUTE_PATTERNS = [
@@ -128,6 +174,31 @@ function findMissingFragments(text, fragments) {
   return fragments.filter((fragment) => !text.includes(fragment))
 }
 
+function findActiveRouteIssues(root) {
+  const issues = []
+  for (const contract of ACTIVE_ROUTE_CONTRACTS) {
+    const source = readProjectFile(root, contract.file)
+    if (source == null) {
+      issues.push({
+        contract: contract.id,
+        file: contract.file,
+        missingFragment: '[source file missing]',
+      })
+      continue
+    }
+    for (const fragment of contract.fragments) {
+      if (!source.includes(fragment)) {
+        issues.push({
+          contract: contract.id,
+          file: contract.file,
+          missingFragment: fragment,
+        })
+      }
+    }
+  }
+  return issues
+}
+
 function findForbiddenPatterns(text) {
   if (text == null) return []
   const matches = []
@@ -164,6 +235,7 @@ function buildSummary(report) {
     + report.forbiddenPatterns.length
     + report.packageScriptIssues.length
     + report.auditBacklinkIssues.length
+    + report.activeRouteIssues.length
 
   return { ok: errors === 0, errors }
 }
@@ -179,6 +251,7 @@ export function buildV04UiImplementationRouteReport(root = ROOT) {
   const missingGuardrails = findMissingFragments(routeText, REQUIRED_GUARDRAILS)
   const forbiddenPatterns = findForbiddenPatterns(routeText)
   const packageScriptIssues = findPackageScriptIssues(packageText)
+  const activeRouteIssues = findActiveRouteIssues(root)
   const auditBacklinkIssues = referenceAuditText?.includes(ROUTE_DOC)
     ? []
     : [{ id: 'missing-reference-audit-backlink', detail: `${REFERENCE_AUDIT_DOC} should link ${ROUTE_DOC}` }]
@@ -196,6 +269,7 @@ export function buildV04UiImplementationRouteReport(root = ROOT) {
     forbiddenPatterns,
     packageScriptIssues,
     auditBacklinkIssues,
+    activeRouteIssues,
   }
 
   return {
@@ -216,12 +290,18 @@ function formatHumanReport(report) {
     missingSurfaceDocs: report.missingSurfaceDocs,
     missingCommands: report.missingCommands,
     missingGuardrails: report.missingGuardrails,
+    activeRouteIssues: report.activeRouteIssues,
     forbiddenPatterns: report.forbiddenPatterns,
     packageScriptIssues: report.packageScriptIssues,
     auditBacklinkIssues: report.auditBacklinkIssues,
   })) {
     lines.push(`ERROR ${name}: ${items.length}`)
     for (const item of items) {
+      if (item.contract) {
+        lines.push(`  - contract=${item.contract} file=${item.file}`)
+        lines.push(`    missing fragment: ${item.missingFragment}`)
+        continue
+      }
       if (typeof item === 'string') {
         lines.push(`  - ${item}`)
       } else {

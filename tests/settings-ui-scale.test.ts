@@ -47,10 +47,10 @@ test('settings drawer keeps the agreed compact scale tokens', () => {
     '--settings-toggle-thumb-size: 10px;',
     '--settings-control-height: 26px;',
     '--settings-control-height-small: 21px;',
-    '--settings-control-font-size: 10px;',
-    '--settings-body-font-size: 10px;',
-    '--settings-heading-small-font-size: 10px;',
-    '--settings-meta-font-size: 9px;',
+    '--settings-control-font-size: 12px;',
+    '--settings-body-font-size: 12px;',
+    '--settings-heading-small-font-size: 12px;',
+    '--settings-meta-font-size: 11px;',
   ]) {
     assert.ok(settings.includes(token), `missing settings size token: ${token}`)
   }
@@ -125,16 +125,73 @@ test('settings home keeps maintenance utilities in one low-frequency group', () 
   assert.doesNotMatch(metadata, /letters:\s*\{[\s\S]*?preview:\s*\[[\s\S]*?settings\.letters\.(?:empty_state|note)/m, 'settings home rows should not reuse long letters section copy')
 })
 
-test('settings visual system defines the 0.4.2 shared child-page contract', () => {
+test('every settings home destination remains available in child-page navigation', () => {
+  const support = readWorkspaceFile('src/components/settingsDrawerSupport.ts')
+  const architecture = readWorkspaceFile('src/components/settingsHomeArchitecture.ts')
+
+  for (const sectionId of [
+    'console', 'model', 'chat', 'history', 'letters', 'memory',
+    'lorebooks', 'voice', 'window', 'integrations', 'tools', 'autonomy',
+  ]) {
+    assertContains(architecture, `'${sectionId}'`, `settings home should expose ${sectionId}`)
+    assertSourcePattern(
+      support,
+      new RegExp(`\\{ id: '${sectionId}', groupId:`),
+      `child-page navigation should keep ${sectionId} reachable`,
+    )
+  }
+})
+
+test('lorebooks uses a distinct document icon instead of the onboarding glyph', () => {
+  const metadata = readWorkspaceFile('src/components/settingsDrawerMetadata.ts')
+  const icons = readWorkspaceFile('src/components/settingsDrawerIcons.tsx')
+  const lorebooksRange = extractSourceRange(metadata, '    lorebooks: {', '    voice: {')
+
+  assertContains(lorebooksRange, "glyph: 'lorebooks'", 'lorebooks should use its semantic icon key')
+  assert.doesNotMatch(lorebooksRange, /glyph:\s*'onboarding'/, 'lorebooks must not reuse the onboarding icon')
+  assertContains(icons, "case 'lorebooks':", 'the icon registry should render a distinct lorebooks glyph')
+})
+
+test('settings visual system defines the 0.4.3 shared child-page contract', () => {
   const visualSystem = readWorkspaceFile('src/app/styles/settings-visual-system.css')
+  const productReferenceFinal = readWorkspaceFile('src/app/styles/settings-product-reference-final.css')
   const entry = readWorkspaceFile('src/app/settingsDrawerEntry.ts')
+  const styleBundles = [
+    'src/app/settingsStylesFoundation.ts',
+    'src/app/settingsStylesTheme.ts',
+    'src/app/settingsStylesThemeLegacy.ts',
+    'src/app/settingsStylesThemeAligned.ts',
+    'src/app/settingsStylesSurface.ts',
+    'src/app/settingsStylesFinal.ts',
+  ].map(readWorkspaceFile).join('\n')
 
   assertSourceOrder(
-    entry,
+    styleBundles,
     "import './styles/settings-visual-system.css'",
     "import './styles/settings-visibility-final.css'",
     'settings visual system should load before the final readability layer',
   )
+  assert.doesNotMatch(entry, /import\s+['"]\.\/styles\/settings-[^'"\n]+\.css['"]/, 'settings drawer entry should not aggregate CSS statically')
+  const orderedCssImports = [
+    './styles/settings.css',
+    './styles/settings-home.css',
+    './styles/settings-themes.css',
+    './styles/settings-themes-legacy.css',
+    './styles/settings-chat-aligned.css',
+    './styles/settings-chat-final.css',
+    './styles/settings-visual-system.css',
+    './styles/settings-visibility-final.css',
+    './styles/settings-product-shell.css',
+    './styles/settings-product-reference-modern-bridge.css',
+  ]
+  for (let index = 0; index < orderedCssImports.length - 1; index += 1) {
+    assertSourceOrder(
+      styleBundles,
+      orderedCssImports[index],
+      orderedCssImports[index + 1],
+      `settings CSS import order should remain canonical at ${orderedCssImports[index]}`,
+    )
+  }
 
   for (const token of [
     '--nx-settings-control-height: 30px;',
@@ -169,19 +226,34 @@ test('settings visual system defines the 0.4.2 shared child-page contract', () =
     'text inputs, selects, textareas, and URL inputs should share one field treatment',
   )
   assertSourcePattern(
-    visualSystem,
-    /\.sd-section \.sp\.sp \.settings-toggle input:checked\s*\{[\s\S]*?background:\s*linear-gradient\(135deg,\s*var\(--nx-settings-accent\),/m,
-    'toggle checked state should use the visual-system accent rather than per-page colors',
+    productReferenceFinal,
+    /\.sd-section \.sp\.sp \.settings-toggle input:checked\s*\{[\s\S]*?background:\s*var\(--nx-settings-accent\);[\s\S]*?box-shadow:\s*none;/m,
+    'the final product layer should own the effective checked-toggle treatment',
   )
   assertSourcePattern(
-    visualSystem,
-    /\.sd-section \.sp\.sp :is\(\.settings-appearance-switch__control, \.onboarding-region-tabs, \.onboarding-relationship__options, \.settings-sprite-preview__states, \.settings-companion-state-preview__states\)\s*\{[\s\S]*?gap:\s*var\(--nx-settings-segment-gap\);[\s\S]*?background:\s*var\(--nx-settings-segment-surface\);/m,
-    'segmented controls should share one visual-system track treatment',
+    productReferenceFinal,
+    /\.sd-section \.sp\.sp :is\(\.settings-appearance-switch__control, \.settings-relationship__options, \.settings-sprite-preview__states, \.settings-companion-state-preview__states\)\s*\{[\s\S]*?gap:\s*2px;[\s\S]*?background:\s*var\(--nx-settings-segment-surface\);/m,
+    'the final product layer should own the effective segmented track treatment',
   )
   assertSourcePattern(
-    visualSystem,
-    /\.sd-section \.sp\.sp :is\(\.settings-appearance-switch__option\.is-active, \.onboarding-region-tabs__tab\.is-active, \.onboarding-relationship__chip\.is-active, \.settings-sprite-preview__states button\.is-active, \.settings-companion-state-preview__states button\.is-active\)\s*\{[\s\S]*?background:\s*var\(--nx-settings-segment-active\);/m,
-    'segmented active states should share one active surface',
+    productReferenceFinal,
+    /\.sd-section \.sp\.sp :is\(\.settings-appearance-switch__option\.is-active, \.settings-relationship__chip\.is-active, \.settings-sprite-preview__states button\.is-active, \.settings-companion-state-preview__states button\.is-active\)\s*\{[\s\S]*?background:\s*var\(--nx-settings-segment-active\);/m,
+    'the final product layer should own the effective segmented active surface',
+  )
+  assertSourcePattern(
+    productReferenceFinal,
+    /html\[data-theme\] \.sd-section \.settings-segmented-control\s*\{[\s\S]*?display:\s*grid;[\s\S]*?gap:\s*2px;[\s\S]*?background:\s*var\(--nx-settings-segment-surface\);/m,
+    'the final product layer should preserve the shared Settings segmented-control track',
+  )
+  assertSourcePattern(
+    productReferenceFinal,
+    /html\[data-theme\] \.sd-section \.settings-segmented-control__option\s*\{[\s\S]*?min-height:\s*32px;[\s\S]*?border:\s*1px solid transparent;[\s\S]*?color:\s*var\(--nx-settings-muted\);/m,
+    'the final product layer should preserve the shared Settings segmented-control option',
+  )
+  assertSourcePattern(
+    productReferenceFinal,
+    /html\[data-theme\] \.sd-section \.settings-segmented-control__option\.is-active\s*\{[\s\S]*?background:\s*var\(--nx-settings-surface-soft\);[\s\S]*?color:\s*var\(--nx-settings-ink\);/m,
+    'the final product layer should preserve the shared Settings segmented-control active state',
   )
   assertSourcePattern(
     visualSystem,
@@ -200,6 +272,11 @@ test('settings visual system defines the 0.4.2 shared child-page contract', () =
   )
   assertSourcePattern(
     visualSystem,
+    /\.sb \.confirm-dialog-card \.ghost-button,[\s\S]*?\.sb \.confirm-dialog-card__confirm\s*\{[\s\S]*?min-height:\s*38px;/m,
+    'settings confirmation actions must meet the practical 38px minimum target size',
+  )
+  assertSourcePattern(
+    visualSystem,
     /\.sb \.confirm-dialog-card__confirm\.is-danger\s*\{[\s\S]*?border-color:\s*var\(--nx-settings-danger\);[\s\S]*?background:\s*var\(--nx-settings-danger\);/m,
     'danger confirmations should use the shared danger token',
   )
@@ -209,6 +286,108 @@ test('settings visual system defines the 0.4.2 shared child-page contract', () =
     visibilityFinal,
     /\.sd-home \.sda,[\s\S]*?\.sd-section \.sda\s*\{[\s\S]*?min-height:\s*var\(--nx-settings-footer-height\);[\s\S]*?background:\s*var\(--nx-settings-footer-surface\);/m,
     'final visibility layer should keep every settings tone footer on the visual-system token after per-theme overrides',
+  )
+  assertSourcePattern(
+    visibilityFinal,
+    /\.sd-home \.settings-home-card,[\s\S]*?\.sd-home \.settings-home-card:nth-child\(even\):hover\s*\{[\s\S]*?grid-template-columns:\s*28px minmax\(0,\s*1fr\) 14px;/m,
+    'settings home cards should use the product 3-column glyph/copy/chevron grid, not a 4-column ghost track',
+  )
+  assert.doesNotMatch(
+    visibilityFinal,
+    /grid-template-columns:\s*4px\s+\d+px\s+minmax\(0,\s*1fr\)\s+\d+px/,
+    'settings visibility final must not revive the stale 4-column ghost-card home layout',
+  )
+  assertSourcePattern(
+    visibilityFinal,
+    /\.sd-home \.settings-home-card__glyph\s*\{[\s\S]*?grid-column:\s*1;[\s\S]*?\.sd-home \.settings-home-card__copy\s*\{[\s\S]*?grid-column:\s*2;[\s\S]*?\.sd-home \.settings-home-card__chevron\s*\{[\s\S]*?grid-column:\s*3;/m,
+    'settings home-card children must map to the 3-column product tracks',
+  )
+})
+
+test('chat settings use the active V3 route and its real responsive choice contract', () => {
+  const routes = readWorkspaceFile('src/components/settingsSectionModules.ts')
+  const chat = readWorkspaceFile('src/features/settingsV3/ChatSectionV3.tsx')
+  const styles = readWorkspaceFile('src/features/settingsV3/chat-section-v3.css')
+
+  assert.match(routes, /loadChatSection\s*=\s*\(\)\s*=>\s*import\('\.\.\/features\/settingsV3\/ChatSectionV3\.tsx'\)/)
+  assert.match(chat, /<SettingsV3Page className="settings-v3-chat">/)
+  assert.match(chat, /className="settings-v3-editor settings-v3-chat-identity"/)
+  assert.match(chat, /className="settings-v3-choice-grid" role="radiogroup"/)
+  assert.match(chat, /import '\.\/chat-section-v3\.css'/)
+  assert.match(chat, /data-selected=\{draft\.companionRelationshipType === option\.value \? 'true' : undefined\}/)
+  assert.match(styles, /\.settings-v3-choice-grid \{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/)
+  assert.match(styles, /\.settings-v3-choice\[data-selected='true'\]/)
+  assert.match(styles, /\.settings-v3-choice:focus-visible\s*\{[\s\S]*?outline: 3px solid var\(--nx-v2-focus-ring\)/)
+  assert.match(styles, /\.settings-v3-choice-grid \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/)
+})
+
+test('settings home stacks title and preview inside one text block at <=320px', () => {
+  const productFinal = readWorkspaceFile('src/app/styles/settings-product-reference-final.css')
+  const productNarrow = extractSourceRange(
+    productFinal,
+    '@media (max-width: 320px) {',
+    '.sd-section .sp.sp {',
+  )
+
+  // Final product layer wins cascade and must re-assert the narrow stack.
+  // Distinct grid-row assignments are required: base CSS pins both to row 1
+  // for the wide side-by-side copy layout; without an explicit value row-2
+  // override, both land in the same cell at one copy column.
+  assertSourcePattern(
+    productNarrow,
+    /\.sd-home(?::is\(\.sd-night,\s*\.sd-day,\s*\.sd-light,\s*\.sd-warm\))? \.settings-home-card(?:[^{]*\{[\s\S]*?grid-template-columns:\s*28px minmax\(0,\s*1fr\) 14px;[\s\S]*?min-height:\s*38px;)/m,
+    'narrow settings home cards must keep the product 3-column glyph/copy/chevron grid with a practical 38px row target',
+  )
+  assert.doesNotMatch(
+    productNarrow,
+    /grid-template-columns:\s*4px\s+\d+px\s+minmax\(0,\s*1fr\)\s+\d+px/,
+    'narrow settings home must not revive the retired 4-column ghost track',
+  )
+  assertSourcePattern(
+    productNarrow,
+    /\.settings-home-card__copy[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\);[\s\S]*?grid-template-rows:\s*auto auto;[\s\S]*?grid-auto-flow:\s*row;/m,
+    'narrow settings home copy must be a single stacked text block, not side-by-side title/preview columns',
+  )
+  assertSourcePattern(
+    productNarrow,
+    /\.settings-home-card__label[\s\S]*?grid-column:\s*1;[\s\S]*?grid-row:\s*1;[\s\S]*?font-size:\s*13px;[\s\S]*?white-space:\s*normal;[\s\S]*?overflow-wrap:\s*break-word;[\s\S]*?word-break:\s*normal;/m,
+    'narrow title must occupy copy row 1 at 13px with word/phrase wrapping (not mid-token splits)',
+  )
+  assertSourcePattern(
+    productNarrow,
+    /\.settings-home-card__value[\s\S]*?grid-column:\s*1;[\s\S]*?grid-row:\s*2;[\s\S]*?font-size:\s*11px;[\s\S]*?white-space:\s*normal;[\s\S]*?overflow-wrap:\s*break-word;[\s\S]*?word-break:\s*normal;[\s\S]*?-webkit-line-clamp:\s*unset;/m,
+    'narrow preview must occupy copy row 2 under the title — not share row 1 with the label',
+  )
+  // Scope to the value rule block so :is(...__value) selectors do not false-positive.
+  assert.doesNotMatch(
+    productNarrow,
+    /\.settings-home-card__value[^{]*\{[^}]*grid-row:\s*1\b/,
+    'narrow preview rule must not pin grid-row:1 (that collapses onto the title)',
+  )
+  assert.doesNotMatch(
+    productNarrow,
+    /:is\(\.settings-home-card__label,\s*\.settings-home-card__value\)[^{]*\{[^}]*grid-row:\s*/,
+    'narrow label/value must not share a combined grid-row assignment',
+  )
+  assertSourcePattern(
+    productNarrow,
+    /\.settings-home-card[^{]*\{[\s\S]*?align-items:\s*center;/,
+    'narrow home card keeps glyph/copy/chevron vertically centered as a row',
+  )
+  assert.doesNotMatch(
+    productNarrow,
+    /\.settings-home-card__label[^{]*\{[^}]*font-size:\s*(?:9|10|11)px;/,
+    'narrow title must not shrink below the shared home label scale',
+  )
+  assert.doesNotMatch(
+    productNarrow,
+    /\.settings-home-card__value[^{]*\{[^}]*font-size:\s*(?:8|9|10)px;/,
+    'narrow preview must not shrink below the shared home meta scale',
+  )
+  assert.doesNotMatch(
+    productNarrow,
+    /overflow-wrap:\s*anywhere/,
+    'narrow home text should prefer break-word over anywhere so EN tokens and CJK phrases do not fragment arbitrarily',
   )
 })
 
@@ -227,7 +406,7 @@ test('final warm settings top bar stays calm and readable', () => {
   )
   assertSourcePattern(
     finalSettings,
-    /\.sd-light\.sd-home \.sdtb,[\s\S]*?\.sd-light\.sd-section \.sdtb\s*\{[\s\S]*?gap:\s*1px;[\s\S]*?padding:\s*0;[\s\S]*?border:\s*0;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
+    /\.sd-light\.sd-home \.sdtb,[\s\S]*?\.sd-light\.sd-section \.sdtb\s*\{[\s\S]*?gap:\s*3px;[\s\S]*?padding:\s*0;[\s\S]*?border:\s*0;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
     'final warm settings title buttons should be simple app-bar glyph buttons instead of a shared capsule',
   )
   assertSourcePattern(
@@ -242,7 +421,7 @@ test('final warm settings top bar stays calm and readable', () => {
   )
   assertSourcePattern(
     finalSettings,
-    /\.sd-light\.sd-home \.settings-drawer__language-button,[\s\S]*?\.sd-light\.sd-section \.settings-drawer__icon-button\s*\{[\s\S]*?width:\s*20px;[\s\S]*?height:\s*20px;[\s\S]*?min-width:\s*20px;[\s\S]*?min-height:\s*20px;[\s\S]*?border-radius:\s*6px;/m,
+    /\.sd-light\.sd-home \.settings-drawer__language-button,[\s\S]*?\.sd-light\.sd-section \.settings-drawer__icon-button\s*\{[\s\S]*?width:\s*36px;[\s\S]*?height:\s*36px;[\s\S]*?min-width:\s*36px;[\s\S]*?min-height:\s*36px;[\s\S]*?border-radius:\s*6px;/m,
     'final warm settings top controls should use compact Codex-like glyph hit targets',
   )
   assertSourcePattern(
@@ -267,7 +446,7 @@ test('final warm settings top bar stays calm and readable', () => {
   )
   assertSourcePattern(
     finalSettings,
-    /\.sd-light\.sd-home \.settings-home-card,[\s\S]*?\.sd-light\.sd-home \.settings-home-card:nth-child\(even\):hover\s*\{[\s\S]*?grid-template-columns:\s*18px minmax\(0,\s*1fr\) minmax\(68px,\s*min\(48%,\s*176px\)\);[\s\S]*?min-height:\s*38px;/m,
+    /\.sd-light\.sd-home \.settings-home-card,[\s\S]*?\.sd-light\.sd-home \.settings-home-card:nth-child\(even\):hover\s*\{[\s\S]*?grid-template-columns:\s*18px minmax\(0,\s*1fr\) minmax\(68px,\s*min\(48%,\s*176px\)\);[\s\S]*?min-height:\s*34px;/m,
     'final warm settings home rows should reserve a left glyph lane like the companion chat action rows',
   )
   assertSourcePattern(
@@ -351,9 +530,10 @@ test('settings responsive rules do not re-inflate compact controls', () => {
   )
 })
 
-test('settings child pages and onboarding inherit shared control scale', () => {
+test('settings child pages inherit the shared control scale', () => {
   const settings = readWorkspaceFile('src/app/styles/settings.css')
   const themes = readWorkspaceFile('src/app/styles/settings-themes.css')
+  const legacyThemes = readWorkspaceFile('src/app/styles/settings-themes-legacy.css')
 
   assertSourcePattern(
     settings,
@@ -451,12 +631,12 @@ test('settings child pages and onboarding inherit shared control scale', () => {
     'pet model cards should not keep the older tall choice-card rhythm',
   )
   assertSourcePattern(
-    themes,
+    legacyThemes,
     /\.sd \.sp\[data-section='memory'\] \.settings-memory-transparency__card\s*\{[\s\S]*?min-height:\s*34px;[\s\S]*?padding:\s*4px 5px;[\s\S]*?align-content:\s*center;/m,
     'memory transparency summary cards should be short status tiles',
   )
   assertSourcePattern(
-    themes,
+    legacyThemes,
     /\.sd \.sp\.sp \.settings-memory-context-status\s*\{[\s\S]*?gap:\s*3px;[\s\S]*?min-height:\s*32px;[\s\S]*?padding:\s*3px 5px;/m,
     'memory context status rows should not keep the older 53px card height',
   )
@@ -474,16 +654,6 @@ test('settings child pages and onboarding inherit shared control scale', () => {
     themes,
     /\.sd \.sp\.sp \.settings-model-source-card:last-child:nth-child\(odd\)\s*\{[\s\S]*?grid-column:\s*auto;/m,
     'odd model source cards should not stretch across the full source grid',
-  )
-  assertSourcePattern(
-    themes,
-    /\.onboarding-card\s*\{[\s\S]*?--onboarding-control-height:\s*var\(--settings-control-height\);[\s\S]*?--onboarding-font-size:\s*var\(--settings-control-font-size\);[\s\S]*?--onboarding-heading-small-font-size:\s*var\(--settings-heading-small-font-size\);/m,
-    'nested onboarding settings flow should inherit the settings control scale',
-  )
-  assertSourcePattern(
-    themes,
-    /\.onboarding-card \.ghost-button,[\s\S]*?\.onboarding-card \.primary-button\s*\{[\s\S]*?min-height:\s*var\(--onboarding-control-height\);[\s\S]*?font-size:\s*var\(--onboarding-font-size\);/m,
-    'onboarding buttons should use the inherited onboarding scale',
   )
 })
 
@@ -514,259 +684,32 @@ test('memory transparency storage note stays user-facing', () => {
   )
 })
 
-test('final warm child setting choices use soft segmented controls', () => {
-  const finalSettings = [
-    readWorkspaceFile('src/app/styles/settings-chat-final.css'),
-    readWorkspaceFile('src/app/styles/settings-chat-role-final.css'),
-  ].join('\n')
-  const modelSection = readWorkspaceFile('src/components/settingsSections/ModelSection.tsx')
+test('active V3 child pages do not depend on retired legacy page overrides', () => {
+  const finalSettings = readWorkspaceFile('src/app/styles/settings-chat-final.css')
+  const routes = readWorkspaceFile('src/components/settingsSectionModules.ts')
 
-  assertSourcePattern(
-    modelSection,
-    /const \[detailsOpen, setDetailsOpen\] = useState\(true\)/m,
-    'model settings should open the current provider detail first instead of a sparse provider list',
-  )
-
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='model'\] \.onboarding-region-tabs\s*\{[\s\S]*?gap:\s*2px;[\s\S]*?border:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?border-radius:\s*9px;/m,
-    'model region tabs should read as a soft segmented control rather than a table row',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='model'\] \.onboarding-region-tabs__tab\s*\{[\s\S]*?min-height:\s*30px;[\s\S]*?border:\s*1px solid transparent;[\s\S]*?border-radius:\s*7px;/m,
-    'model region tab buttons should not keep square 0px corners',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='model'\] \.settings-model-detail-card\s*\{[\s\S]*?padding:\s*0 0 8px;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
-    'model detail surface should flatten into the settings list rhythm instead of a raised nested card',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='model'\] \.settings-model-detail-brand\s*\{[\s\S]*?display:\s*grid;[\s\S]*?border:\s*0;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
-    'model detail provider header should be a flat list header, not a white nested provider card',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='model'\] \.settings-model-detail-nav\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);[\s\S]*?gap:\s*0;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);/m,
-    'model detail action row should read as a quiet command strip, not two separated button boxes',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='model'\] \.settings-model-detail-nav \.ghost-button\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?border-color:\s*transparent;[\s\S]*?border-radius:\s*7px;[\s\S]*?background:\s*transparent;/m,
-    'model detail action buttons should stay text-light and avoid raised button floors',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='model'\] \.settings-model-detail-fields\s*\{[\s\S]*?border-top:\s*0;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
-    'model detail field group should stay transparent instead of becoming a rounded form card',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='model'\] \.settings-model-detail-fields > label\s*\{[\s\S]*?grid-template-columns:\s*minmax\(92px,\s*0\.32fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*42px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
-    'model detail fields should use compact label plus native-safe value rows',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='model'\] \.settings-model-detail-fields > label > :is\(input:not\(\[type='checkbox'\]\):not\(\[type='range'\]\), select, \.settings-url-input\)\s*\{[\s\S]*?min-height:\s*32px;[\s\S]*?height:\s*32px;[\s\S]*?border-radius:\s*7px;[\s\S]*?background:\s*rgba\(255,\s*253,\s*249,\s*0\.12\);[\s\S]*?line-height:\s*30px;/m,
-    'model detail native controls should be tall enough for Chinese text without becoming large cards',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='voice'\] \.settings-voice-loop-card > label\.settings-control-card\.settings-voice-field:not\(\.settings-metric-card\):not\(\.settings-updater-panel\)\s*\{[\s\S]*?grid-template-columns:\s*minmax\(108px,\s*0\.36fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*44px;[\s\S]*?padding:\s*5px 2px;/m,
-    'voice select rows should give VAD and trigger fields enough value space without becoming tall cards',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='voice'\] \.settings-voice-loop-card > label\.settings-control-card\.settings-voice-field:not\(\.settings-metric-card\):not\(\.settings-updater-panel\) > select(?:\s*,|\s*\{)[\s\S]*?min-height:\s*34px;[\s\S]*?height:\s*34px;[\s\S]*?line-height:\s*1\.2;/m,
-    'voice select controls should use native-safe vertical room for Chinese option text',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='voice'\] \.settings-speech-config-section > label\.settings-control-card\.settings-speech-config-field:not\(:has\(> textarea\)\):not\(:has\(> \.settings-drawer__hint\)\):not\(\.settings-metric-card\):not\(\.settings-updater-panel\)\s*\{[\s\S]*?grid-template-columns:\s*minmax\(108px,\s*0\.36fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*44px;[\s\S]*?padding:\s*5px 2px;/m,
-    'speech provider select rows should use the same wider value column as the VAD field',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='voice'\] \.settings-speech-config-section > label\.settings-control-card\.settings-speech-config-field:not\(:has\(> textarea\)\):not\(:has\(> \.settings-drawer__hint\)\):not\(\.settings-metric-card\):not\(\.settings-updater-panel\) > :is\(input:not\(\[type='checkbox'\]\):not\(\[type='range'\]\), select, \.settings-url-input\)\s*\{[\s\S]*?min-height:\s*34px;[\s\S]*?height:\s*34px;[\s\S]*?line-height:\s*1\.2;/m,
-    'speech provider controls should keep the same native-safe vertical room as VAD selects',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='console'\] details\.settings-console-section > summary\.settings-console-section__header\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(36px,\s*auto\) 14px;[\s\S]*?min-height:\s*48px;[\s\S]*?height:\s*auto;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;/m,
-    'console detail rows should not keep the older 84px raised-card rhythm',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='console'\] details\.settings-console-section > summary\.settings-console-section__header p\s*\{[\s\S]*?line-height:\s*1\.32;[\s\S]*?-webkit-line-clamp:\s*2;/m,
-    'console detail summaries should stay readable without forcing three-line cards',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='console'\] \.settings-console-sections > section\.settings-console-section\s*\{[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
-    'console observability details should use the same lightweight list shell as other diagnostics',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='console'\] \.settings-console-sections > section\.settings-console-section \.settings-console-card\s*\{[\s\S]*?min-height:\s*48px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
-    'console observability metric rows should not render as nested dashboard cards',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='lorebooks'\] \.settings-lorebook-check\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\) 44px;[\s\S]*?gap:\s*4px;[\s\S]*?padding:\s*0 6px;/m,
-    'lorebook enable rows should leave enough room for the rendered 44px switch without horizontal overflow',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.settings-choice-card\.is-active,[\s\S]*?\.sd-light-section \.settings-model-source-card\.is-selected\s*\{[\s\S]*?border-color:\s*rgba\(185,\s*92,\s*60,\s*0\.1\);[\s\S]*?box-shadow:\s*inset 0 0 0 1px rgba\(185,\s*92,\s*60,\s*0\.1\);/m,
-    'selected child-page choices should use a soft inset outline instead of a side stripe or underline',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-chat-identity-field > \.settings-form-row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(70px,\s*0\.36fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*30px;/m,
-    'chat identity inputs should use compact label plus field rows instead of tall stacked cards',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-chat-identity-field > \.settings-form-row > input:not\(\[type='checkbox'\]\):not\(\[type='radio'\]\):not\(\[type='range'\]\)\s*\{[\s\S]*?border-color:\s*rgba\(75,\s*62,\s*49,\s*0\.045\);[\s\S]*?background:\s*rgba\(255,\s*253,\s*249,\s*0\.16\);[\s\S]*?box-shadow:\s*none;/m,
-    'chat identity text inputs should stay low-contrast instead of returning to heavy form boxes',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.onboarding-relationship__chip\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?border:\s*1px solid transparent;[\s\S]*?border-radius:\s*6px;/m,
-    'relationship chips should stay lighter than the model tabs and avoid thick pill buttons',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-mini-group:has\(> \.settings-chat-system-prompt\)\s*\{[\s\S]*?padding:\s*0 0 8px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
-    'chat system prompt should read as one light settings group rather than a raised form card',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-mini-group:not\(\.settings-pet-model-card\):not\(\.settings-pet-preview-card\):not\(\.settings-pet-workflow-card\):has\(> \.settings-chat-system-prompt\):has\(> \.settings-control-card\)\s*\{[\s\S]*?border:\s*0;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);/m,
-    'chat system prompt group should beat the generic nested-control mini-group reset without using important',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-chat-system-prompt\s*\{[\s\S]*?height:\s*68px;[\s\S]*?min-height:\s*58px;[\s\S]*?max-height:\s*72px;[\s\S]*?border-color:\s*rgba\(75,\s*62,\s*49,\s*0\.045\);[\s\S]*?background:\s*rgba\(255,\s*253,\s*249,\s*0\.14\);/m,
-    'chat system prompt textarea should stay visually lighter and shorter than a large editor',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-mini-group:has\(> \.settings-chat-system-prompt\) \.settings-chat-advanced-control > \.settings-toggle\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?padding:\s*0 3px;/m,
-    'chat role-driven toggle should stay in the prompt group on the compact row scale',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-pet-model-card\s*\{[\s\S]*?padding:\s*0 0 6px;[\s\S]*?border-bottom-color:\s*var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
-    'chat pet model chooser should read as a compact row list rather than a raised nested card',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-pet-model-card > \.settings-mini-group__head > span\s*\{[\s\S]*?display:\s*-webkit-box;[\s\S]*?white-space:\s*normal;[\s\S]*?-webkit-line-clamp:\s*2;/m,
-    'chat pet model helper copy should wrap to two lines instead of clipping long companion descriptions',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-pet-model-card \.settings-choice-grid\s*\{[\s\S]*?gap:\s*1px;[\s\S]*?border:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?border-radius:\s*9px;/m,
-    'chat pet model choices should read as one compact segmented list instead of stacked cards',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-pet-model-card \.settings-choice-card\s*\{[\s\S]*?grid-template-columns:\s*minmax\(78px,\s*0\.34fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*46px;[\s\S]*?padding:\s*5px 6px;[\s\S]*?border-radius:\s*7px;/m,
-    'chat pet model options should use compact but readable label plus description rows',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-pet-model-card \.settings-choice-card__description\s*\{[\s\S]*?color:\s*rgba\(78,\s*64,\s*54,\s*0\.62\);[\s\S]*?text-align:\s*left;[\s\S]*?white-space:\s*normal;[\s\S]*?-webkit-line-clamp:\s*2;/m,
-    'chat pet model descriptions should stay subdued and readable inside the compact row',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-pet-preview-card\s*\{[\s\S]*?padding:\s*0 0 8px;[\s\S]*?border-bottom-color:\s*var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
-    'chat pet previews should read as embedded settings groups rather than raised debug cards',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-sprite-preview__stage\s*\{[\s\S]*?min-height:\s*118px;[\s\S]*?border-color:\s*var\(--settings-chat-parity-line\);[\s\S]*?background:\s*[\s\S]*?rgba\(255,\s*253,\s*249,\s*0\.12\);/m,
-    'chat sprite preview stage should stay compact and visually attached to the warm settings surface',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-sprite-preview__states button,[\s\S]*?\.sd-light-section \.sp\[data-section='chat'\] \.settings-companion-state-preview__states button\s*\{[\s\S]*?min-height:\s*28px;[\s\S]*?padding:\s*0 5px;[\s\S]*?border-radius:\s*7px;/m,
-    'chat preview state buttons should use the same compact segmented scale as the role chips',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-pet-action-row\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);[\s\S]*?gap:\s*4px;[\s\S]*?border:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?border-radius:\s*9px;/m,
-    'chat pet import commands should read as one compact segmented command row rather than stacked tool cards',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-pet-tools > \.settings-mini-group__note\s*\{[\s\S]*?max-height:\s*50px;[\s\S]*?border:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?-webkit-line-clamp:\s*3;/m,
-    'chat pet import hint should stay a subdued note rather than a raised explanatory card',
-  )
-  assertSourcePattern(finalSettings, /\.sd-light-section \.sp\[data-section='chat'\] \.settings-pet-workflow-card--community \.settings-mini-group__head span\s*\{[\s\S]*?-webkit-line-clamp:\s*3;/m, 'community pet import source hint should fit compact Chinese URL guidance')
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-pet-workflow-card\s*\{[\s\S]*?padding:\s*0 0 8px;[\s\S]*?border-bottom-color:\s*var\(--settings-chat-parity-line\);[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*transparent;/m,
-    'chat pet workflow panels should flatten into the settings list rhythm instead of raised developer cards',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-community-links\s*\{[\s\S]*?display:\s*flex;[\s\S]*?flex-wrap:\s*wrap;[\s\S]*?gap:\s*4px;[\s\S]*?padding:\s*0;[\s\S]*?border:\s*0;[\s\S]*?background:\s*transparent;/m,
-    'community pet sources should stay in a compact settings link group instead of a tall stacked directory',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-community-links a\s*\{[\s\S]*?flex:\s*1 1 132px;[\s\S]*?min-height:\s*28px;[\s\S]*?font-size:\s*11px;/m,
-    'community pet source links should use a stable two-column width so source labels do not clip',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='chat'\] \.settings-community-links__text\s*\{[\s\S]*?overflow:\s*visible;[\s\S]*?text-overflow:\s*clip;[\s\S]*?white-space:\s*normal;/m,
-    'community pet source labels should wrap instead of being ellipsized inside narrow link buttons',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='memory'\] \.settings-memory-context-status-grid(?:\s*,|\s*\{)[\s\S]*?gap:\s*0;[\s\S]*?border-top:\s*1px solid var\(--settings-chat-parity-line\);/m,
-    'memory context diagnostics should read as a compact trust-status row list',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='memory'\] \.settings-memory-transparency__grid\s*\{[\s\S]*?grid-template-columns:\s*1fr;[\s\S]*?gap:\s*0;[\s\S]*?border-top:\s*1px solid var\(--settings-chat-parity-line\);/m,
-    'memory transparency summary should use one status list instead of a dashboard tile grid',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='memory'\] \.settings-control-card\.settings-memory-transparency__card:not\(\.settings-metric-card\):not\(\.settings-updater-panel\)\s*\{[\s\S]*?grid-template-columns:\s*minmax\(72px,\s*0\.28fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*36px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
-    'memory transparency summary rows should align with the chat-style settings row rhythm',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='memory'\] \.settings-memory-context-status\s*\{[\s\S]*?min-height:\s*44px;[\s\S]*?border-bottom:\s*1px solid var\(--settings-chat-parity-line\);[\s\S]*?background:\s*transparent;/m,
-    'memory context status rows should not look like dashboard cards',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='memory'\] \.settings-memory-context-transparency__row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(80px,\s*0\.33fr\) minmax\(0,\s*1fr\);[\s\S]*?min-height:\s*30px;/m,
-    'memory transparency detail rows should use compact label plus detail structure',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='memory'\] \.settings-memory-group > label\.settings-memory-field > select\s*\{[\s\S]*?min-height:\s*32px;[\s\S]*?height:\s*32px;[\s\S]*?line-height:\s*30px;[\s\S]*?padding:\s*0 34px 0 8px;/m,
-    'memory select rows should be tall enough for native dropdown text without breaking the compact settings rhythm',
-  )
-  assertSourcePattern(
-    finalSettings,
-    /\.sd-light-section \.sp\[data-section='memory'\] \.settings-memory-group > \.settings-memory-field > \.settings-form-row > input:not\(\[type='checkbox'\]\):not\(\[type='radio'\]\):not\(\[type='range'\]\),[\s\S]*?\.settings-memory-recall-grid input:not\(\[type='checkbox'\]\):not\(\[type='range'\]\)\s*\{[\s\S]*?height:\s*30px;/m,
-    'memory text inputs should stay at the shared compact row height while selects get their own native-safe height',
-  )
+  for (const selectorFragment of [
+    'settings-model-detail-card',
+    'settings-tools-section >',
+    'settings-console-sections > section',
+    'settings-history-summary-grid',
+    'settings-lorebook-item',
+    'settings-memory-context-status',
+    'settings-voice-loop-card > label.settings-control-card',
+  ]) {
+    assert.ok(
+      !finalSettings.includes(selectorFragment),
+      `retired selector block should not stay in the global final settings layer: ${selectorFragment}`,
+    )
+  }
+  assert.match(routes, /loadModelSection\s*=\s*\(\)\s*=>\s*import\('\.\.\/features\/settingsV3\/ModelSectionV3\.tsx'\)/)
+  assert.match(routes, /loadVoiceSection\s*=\s*\(\)\s*=>\s*import\('\.\.\/features\/settingsV3\/VoiceSectionV3\.tsx'\)/)
+  assert.match(routes, /loadMemorySection\s*=\s*\(\)\s*=>\s*import\('\.\.\/features\/settingsV3\/MemorySectionV3\.tsx'\)/)
 })
 
 test('warm-day settings drawer uses trace-list surfaces', () => {
   const themes = readWorkspaceFile('src/app/styles/settings-themes.css')
+  const legacyThemes = readWorkspaceFile('src/app/styles/settings-themes-legacy.css')
   const finalSettings = readWorkspaceFile('src/app/styles/settings-chat-final.css')
 
   assertSourcePattern(
@@ -781,7 +724,7 @@ test('warm-day settings drawer uses trace-list surfaces', () => {
   )
   assertSourcePattern(
     finalSettings,
-    /\.settings-drawer__language-button,[\s\S]*?\.settings-drawer__icon-button\s*\{[\s\S]*?width:\s*20px;[\s\S]*?height:\s*20px;[\s\S]*?min-width:\s*20px;/m,
+    /\.settings-drawer__language-button,[\s\S]*?\.settings-drawer__icon-button\s*\{[\s\S]*?width:\s*36px;[\s\S]*?height:\s*36px;[\s\S]*?min-width:\s*36px;/m,
     'warm-day settings toolbar buttons should stay compact icon glyph controls',
   )
   assertSourcePattern(
@@ -791,47 +734,47 @@ test('warm-day settings drawer uses trace-list surfaces', () => {
   )
   assert.ok(!themes.includes('settings-home-release'), 'warm-day theme should not keep settings-home release-card styles')
   assertSourcePattern(
-    themes,
+    legacyThemes,
     /\.sd-warm \.sda\s*\{[\s\S]*?background:\s*rgba\(255,\s*253,\s*249,\s*0\.68\);[\s\S]*?box-shadow:\s*none;/m,
     'warm-day settings footer should not cast a raised panel shadow over trace rows',
   )
   assertSourcePattern(
-    themes,
+    legacyThemes,
     /\.sd-warm \.sda \.primary-button,[\s\S]*?html\[data-theme='warm-day'\] \.sd-warm \.sda \.primary-button,[\s\S]*?html\[data-theme='system-day'\] \.sd-warm \.sda \.primary-button\s*\{[\s\S]*?background:\s*rgba\(186,\s*92,\s*60,\s*0\.92\);[\s\S]*?box-shadow:\s*none;/m,
     'warm-day settings save action should keep primary color without orange lift',
   )
   assertSourcePattern(
-    themes,
+    legacyThemes,
     /\.sd-warm \.settings-section-nav__button,[\s\S]*?\.sd-warm \.settings-home-card:nth-child\(even\):hover\s*\{[\s\S]*?border-left:\s*2px solid transparent;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/m,
     'warm-day settings nav and home rows should start as flat trace rows',
   )
   assertSourcePattern(
-    themes,
+    legacyThemes,
     /\.sd-warm \.settings-section-nav__button\.is-active\s*\{[\s\S]*?border-left-color:\s*var\(--settings-trace-cool\);[\s\S]*?background:\s*rgba\(255,\s*253,\s*249,\s*0\.58\);[\s\S]*?box-shadow:\s*none;/m,
     'active warm-day settings nav item should use a cool trace edge rather than a raised card',
   )
   assertSourcePattern(
-    themes,
+    legacyThemes,
     /\.sd-warm \.settings-home-card,[\s\S]*?\.sd-warm \.settings-home-card\[data-trust-group\]\s*\{[\s\S]*?border-left-color:\s*color-mix\(in srgb,\s*var\(--settings-trust-trace,\s*var\(--settings-trace-cool\)\)\s*64%,\s*transparent\);/m,
     'warm-day settings home rows should use section trust traces without becoming raised cards',
   )
   assertSourcePattern(
-    themes,
+    legacyThemes,
     /\.sd-warm \.settings-home-card\[data-trust-group='memoryContext'\]\s*\{[\s\S]*?--settings-trust-trace:\s*var\(--settings-trace-memory\);/m,
     'warm-day memory settings rows should expose a distinct trust trace',
   )
   assertSourcePattern(
-    themes,
+    legacyThemes,
     /\.sd-warm \.settings-home-card\[data-trust-group='permissionsIntegrations'\]\s*\{[\s\S]*?--settings-trust-trace:\s*var\(--settings-trace-permission\);/m,
     'warm-day permissions and integration settings rows should expose a distinct trust trace',
   )
   assertSourcePattern(
-    themes,
+    legacyThemes,
     /\.sd-warm \.sdc,[\s\S]*?\.sd-warm \.settings-section\s*\{[\s\S]*?background:\s*rgba\(255,\s*253,\s*249,\s*0\.38\);[\s\S]*?box-shadow:\s*none;/m,
     'warm-day settings content and sections should stay flat enough for trace-list styling',
   )
   assertSourcePattern(
-    themes,
+    legacyThemes,
     /\.sd-warm \.settings-section:hover\s*\{[\s\S]*?border-left-color:\s*var\(--settings-trace-warm\);[\s\S]*?background:\s*rgba\(255,\s*253,\s*249,\s*0\.52\);[\s\S]*?box-shadow:\s*none;/m,
     'warm-day settings section hover should clarify edge state without lift',
   )
@@ -842,7 +785,7 @@ test('panel window controls stay compact, icon-only, and visually distinct', () 
   const toolbarControls = readWorkspaceFile('src/app/styles/panel-toolbar-controls.css')
   const panelCompanion = readWorkspaceFile('src/app/styles/panel-companion-shell.css')
   const panelFinal = readWorkspaceFile('src/app/styles/panel-companion-final.css')
-  const panelView = readWorkspaceFile('src/app/views/PanelView.tsx')
+  const panelView = readWorkspaceFile('src/app/views/LegacyPanelView.tsx')
   const simpleToolbarSource = extractSourceRange(
     panelView,
     'panel-window__header-actions panel-window__header-actions--simple',
@@ -1006,23 +949,38 @@ test('panel window controls stay compact, icon-only, and visually distinct', () 
   )
   assertSourcePattern(
     panelFinal,
-    /\.panel-window--image4 \.companion-chat__toolbar\.image4-header-controls,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.companion-chat__toolbar\.image4-header-controls\s*\{[\s\S]*?top:\s*clamp\(58px,\s*15\.8cqw,\s*66px\);[\s\S]*?right:\s*clamp\(12px,\s*3\.2cqw,\s*18px\);/m,
+    /html\[data-theme\] \.desktop-pet-root--panel \.panel-window--image4 \.companion-chat__toolbar\.image4-header-controls\s*\{[\s\S]*?top:\s*14px !important;[\s\S]*?right:\s*10px !important;/m,
     'final Image4 top controls should sit on the companion identity line',
   )
   assertSourcePattern(
     panelFinal,
-    /\.panel-window--image4 \.panel-window__header-actions--image4,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.panel-window__header-actions--image4\s*\{[\s\S]*?gap:\s*3px !important;[\s\S]*?padding:\s*0 !important;[\s\S]*?border:\s*0 !important;[\s\S]*?background:\s*transparent !important;[\s\S]*?backdrop-filter:\s*none;/m,
+    /\.panel-window--image4 \.panel-window__header-actions--image4\s*\{[\s\S]*?gap:\s*4px !important;[\s\S]*?opacity:\s*1;/m,
     'final Image4 top controls should not render as a separate floating tray',
   )
   assertSourcePattern(
     panelFinal,
-    /\.panel-window--image4 \.panel-window__header-actions--image4 \.panel-window__icon-button,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.panel-window__header-actions--image4 \.panel-window__icon-button--danger\s*\{[\s\S]*?width:\s*clamp\(23px,\s*3\.1vw,\s*26px\)[\s\S]*?border:\s*1px solid transparent !important;[\s\S]*?background:\s*transparent !important;[\s\S]*?box-shadow:\s*none !important;/m,
+    /html\[data-theme\] \.desktop-pet-root--panel \.panel-window--image4 \.panel-window__header-actions--image4 \.panel-window__icon-button\s*\{[\s\S]*?width:\s*32px !important;[\s\S]*?background:\s*transparent !important;[\s\S]*?box-shadow:\s*none !important;/m,
     'final Image4 top control buttons should stay compact and tray-free',
   )
   assertSourcePattern(
     panelFinal,
-    /html\[data-theme='warm-day'\] \.panel-window--image4 \.panel-window__header-actions--image4 \.panel-window__icon-button--danger:hover\s*\{[\s\S]*?background:\s*rgba\(160,\s*62,\s*46,\s*0\.08\) !important;[\s\S]*?color:\s*rgba\(122,\s*48,\s*38,\s*0\.9\);/m,
-    'final warm-day close hover should reveal danger without a permanent red button',
+    /\.panel-window--image4 \.panel-window__header-actions--image4 \.panel-window__icon-button,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.panel-window__header-actions--image4 \.panel-window__icon-button--danger\s*\{[\s\S]*?width:\s*32px !important;[\s\S]*?height:\s*32px !important;[\s\S]*?min-width:\s*32px !important;[\s\S]*?min-height:\s*32px !important;/m,
+    'final cascade should lock every primary Image4 toolbar icon button to intentional 32px geometry',
+  )
+  assertSourcePattern(
+    readWorkspaceFile('src/app/styles/panel-companion-polish.css'),
+    /\.panel-window--image4 \.panel-window__header-actions--image4 \.panel-window__icon-button,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.panel-window__header-actions--image4 \.panel-window__icon-button--danger\s*\{[\s\S]*?width:\s*32px !important;[\s\S]*?height:\s*32px !important;[\s\S]*?min-width:\s*32px !important;[\s\S]*?min-height:\s*32px !important;/m,
+    'polish layer must share the intentional 32px toolbar geometry instead of a competing clamp cascade',
+  )
+  assertSourcePattern(
+    readWorkspaceFile('src/app/styles/panel-companion-motion.css'),
+    /@media \(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.panel-window--image4 \.companion-presence__signal\.is-speaking \.companion-presence__signal-bar,[\s\S]*?animation:\s*none !important;[\s\S]*?animation-play-state:\s*paused !important;/m,
+    'reduced-motion must stop infinite speaking/listening decorative signal animation',
+  )
+  assertSourcePattern(
+    panelFinal,
+    /html\[data-theme\] \.desktop-pet-root--panel \.panel-window--image4 \.panel-window__header-actions--image4 \.panel-window__icon-button--settings\s*\{[\s\S]*?width:\s*32px !important;[\s\S]*?background:\s*rgba\(255,\s*255,\s*255,\s*0\.46\) !important;/m,
+    'final settings control should remain the clearest utility without becoming loud',
   )
   assert.doesNotMatch(
     app,
@@ -1102,231 +1060,34 @@ test('panel window controls stay compact, icon-only, and visually distinct', () 
   )
 })
 
-test('Image4 companion surface keeps the selected rhythm-grid preview structure', () => {
-  const app = readWorkspaceFile('src/app/App.css')
-  const appView = readWorkspaceFile('src/app/App.tsx')
+test('Image4 companion surface keeps the selected voice-first Live2D structure', () => {
   const panelCompanionHub = readWorkspaceFile('src/app/styles/panel-companion.css')
-  const panelCompanionShell = readWorkspaceFile('src/app/styles/panel-companion-shell.css')
-  const panelCompanionCollapsed = readWorkspaceFile('src/app/styles/panel-companion-collapsed.css')
-  const panelCompanionDial = readWorkspaceFile('src/app/styles/panel-companion-dial.css')
-  const panelCompanionLayout = readWorkspaceFile('src/app/styles/panel-companion-layout.css')
-  const panelCompanionChat = readWorkspaceFile('src/app/styles/panel-companion-chat.css')
-  const panelCompanionMessages = readWorkspaceFile('src/app/styles/panel-companion-messages.css')
-  const panelCompanionComposer = readWorkspaceFile('src/app/styles/panel-companion-composer.css')
-  const panelCompanionRhythm = readWorkspaceFile('src/app/styles/panel-companion-rhythm.css')
-  const panelCompanionMotion = readWorkspaceFile('src/app/styles/panel-companion-motion.css')
-  const panelView = readWorkspaceFile('src/app/views/PanelView.tsx')
+  const panelCompanionFinal = readWorkspaceFile('src/app/styles/panel-companion-final.css')
+  const panelView = readWorkspaceFile('src/app/views/LegacyPanelView.tsx')
   const image4CompanionField = readWorkspaceFile('src/app/views/Image4CompanionField.tsx')
 
-  assertContains(appView, "import './styles/panel-companion.css'", 'companion redesign should load after the base app stylesheet')
-  assertContains(panelCompanionHub, "@import './panel-companion-shell.css';", 'Image4 shell styles should stay split from the import hub')
-  assertContains(panelCompanionHub, "@import './panel-companion-collapsed.css';", 'collapsed companion shell styles should stay split from Image4 chat styles')
-  assertContains(panelCompanionHub, "@import './panel-companion-dial.css';", 'Image4 dial styles should stay split from the import hub')
-  assertContains(panelCompanionHub, "@import './panel-companion-layout.css';", 'Image4 layout styles should stay split from the import hub')
-  assertContains(panelCompanionHub, "@import './panel-companion-chat.css';", 'Image4 chat styles should stay split from the import hub')
-  assertContains(panelCompanionHub, "@import './panel-companion-messages.css';", 'Image4 active-chat message styles should stay split from the import hub')
-  assertContains(panelCompanionHub, "@import './panel-companion-composer.css';", 'Image4 composer styles should stay split from the import hub')
-  assertContains(panelCompanionHub, "@import './panel-companion-rhythm.css';", 'Image4 rhythm-grid styles should stay split from the import hub')
-  assertContains(panelCompanionHub, "@import './panel-companion-motion.css';", 'Image4 motion styles should stay split from the import hub')
-  assert.doesNotMatch(
-    app,
-    /\/\* Companion panel redesign: match the selected night-glass preview\. \*\//m,
-    'companion redesign overrides should live outside App.css to keep the base stylesheet under budget',
-  )
-  assertContains(panelView, 'panel-window--image4', 'expanded panel should opt into the Image4 visual route')
-  assertContains(panelView, 'panel-window__shell--image4 image4-layout', 'Image4 panel should use the dedicated shell hook')
-  assertContains(panelView, 'panel-window__header-actions--image4', 'Image4 panel should use the dedicated top-control hook')
-  assertContains(panelView, 'Image4RhythmGrid', 'Image4 rhythm grid should stay renderable for calibration')
+  assertContains(panelCompanionHub, "@import './panel-companion-final.css';", 'voice-first final layout should stay in the companion import spine')
   assertContains(panelView, 'Image4PresenceHeader', 'Image4 presence should stay componentized')
-  assertContains(panelView, 'Image4Dial', 'Image4 dial should stay componentized')
-  assertContains(image4CompanionField, 'Image4Signal', 'Image4 signal should stay componentized')
-  assertContains(image4CompanionField, 'const presenceLabel = statusLabel ? `${title} · ${statusLabel}` : title', 'Image4 status should stay available as a non-visual accessible label')
-  assertContains(image4CompanionField, 'className="companion-presence image4-presence"', 'field component should render the Image4 presence area')
-  assertContains(image4CompanionField, 'className="image4-dial-stage"', 'field component should render the Image4 dial stage')
-  assert.doesNotMatch(
-    image4CompanionField,
-    /className="companion-presence__online"/m,
-    'Image4 presence should not put a status dot or status word beside the companion name',
-  )
-  assert.doesNotMatch(
-    panelCompanionLayout,
-    /companion-presence__online/m,
-    'Image4 layout should not keep dead online-dot styling after the top identity was simplified',
-  )
-  assertContains(panelView, 'empty-chat__prompt-grid image4-action-list', 'quick prompts should render as Image4 action rows')
-  assertContains(panelView, 'companion-chat__composer image4-composer', 'composer should use the Image4 dock hook')
-  assertContains(panelView, "ti('panel.composer.placeholder_short'", 'compact companion composer should use the short placeholder copy')
-  assertContains(panelCompanionCollapsed, '.desktop-pet-root--panel-collapsed', 'collapsed panel layout should live in its own CSS module')
-  assert.doesNotMatch(
-    panelCompanionChat,
-    /\.panel-window--companion\.panel-window--simple\.is-collapsed/m,
-    'Image4 chat styles should not own the collapsed companion shell',
-  )
-
+  assertContains(panelView, 'Live2DCanvas', 'Live2D should remain the primary companion presence')
+  assertContains(panelView, 'image4-conversation-recap', 'conversation recap should remain compact and visible')
+  assertContains(panelView, 'companion-chat__composer image4-composer', 'composer should remain separate from the Live2D stage')
+  assertContains(image4CompanionField, 'Image4Signal', 'voice signal should stay componentized')
+  assert.doesNotMatch(panelView, /image4-greeting|image4-action-list|className="empty-chat__prompt image4-action"/m, 'retired greeting and quick-action DOM should not return')
+  assert.doesNotMatch(image4CompanionField, /Image4Dial|image4-dial-stage|companion-presence__dial/m, 'retired dial markup should not return')
   assertSourcePattern(
-    panelCompanionShell,
-    /\.desktop-pet-root--panel:has\(\.panel-window--image4\)\s*\{[\s\S]*?display:\s*grid;[\s\S]*?align-items:\s*start;[\s\S]*?justify-items:\s*center;[\s\S]*?background:\s*#07101b;/m,
-    'Image4 expanded panel should sit on the dedicated dark scene layer',
+    panelCompanionFinal,
+    /\.panel-window--image4 \.image4-chat\s*\{[\s\S]*?grid-template-rows:\s*48px minmax\(0, 1fr\) auto 62px;/m,
+    'voice-first panel should keep one bounded header-stage-recap-composer grid',
   )
   assertSourcePattern(
-    panelCompanionShell,
-    /\.panel-window--image4\.panel-window--simple,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4\.panel-window--simple\s*\{[\s\S]*?width:\s*min\(742px,\s*calc\(100vw - 50px\)\);[\s\S]*?aspect-ratio:\s*742 \/ 1738;[\s\S]*?max-height:\s*calc\(100vh - 58px\);[\s\S]*?linear-gradient\(180deg,\s*rgba\(18,\s*26,\s*44,\s*0\.62\),\s*rgba\(8,\s*12,\s*20,\s*0\.7\)\);/m,
-    'Image4 outer shell should keep the selected tall glass panel proportions',
+    panelCompanionFinal,
+    /\.panel-window--image4 \.image4-live2d-stage\s*\{[\s\S]*?min-height:\s*0;[\s\S]*?overflow:\s*hidden;/m,
+    'Live2D stage should remain bounded inside the panel',
   )
   assertSourcePattern(
-    panelCompanionLayout,
-    /\.panel-window--image4 \.image4-chat,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-chat\s*\{[\s\S]*?--image4-rhythm-presence:[\s\S]*?--image4-rhythm-dial:[\s\S]*?--image4-rhythm-greeting:[\s\S]*?--image4-rhythm-actions:[\s\S]*?--image4-rhythm-composer:[\s\S]*?grid-template-rows:[\s\S]*?\[presence\] var\(--image4-rhythm-presence\)[\s\S]*?\[composer\] var\(--image4-rhythm-composer\);/m,
-    'Image4 chat should be driven by the five named rhythm rows',
-  )
-  assertSourcePattern(
-    panelCompanionLayout,
-    /--image4-row-boundary-line:[\s\S]*?--image4-weight-actions-surface:[\s\S]*?--image4-composer-base-shadow:/m,
-    'Image4 rhythm rows should expose scoped boundary and visual weight tokens',
-  )
-  assertSourcePattern(
-    panelCompanionLayout,
-    /\.panel-window--image4 \.image4-presence\s*\{[\s\S]*?grid-row:\s*presence;[\s\S]*?grid-template-areas:[\s\S]*?"topline"[\s\S]*?"signal";/m,
-    'Image4 presence should stay pinned to the presence rhythm row',
-  )
-  assertSourcePattern(
-    panelCompanionLayout,
-    /\.panel-window--image4 \.image4-dial-stage\s*\{[\s\S]*?grid-row:\s*dial;[\s\S]*?display:\s*flex;[\s\S]*?justify-content:\s*center;/m,
-    'Image4 dial stage should stay centered in the dial rhythm row',
-  )
-  assertSourcePattern(
-    panelCompanionDial,
-    /\.panel-window--image4 \.companion-presence__dial\s*\{[\s\S]*?place-items:\s*center;[\s\S]*?width:\s*min\(clamp\(180px,\s*46vw,\s*340px\),\s*calc\(var\(--image4-rhythm-dial\) - 4px\)\);/m,
-    'Image4 dial body should stay isolated in the dial stylesheet',
-  )
-  assertSourcePattern(
-    panelCompanionLayout,
-    /\.panel-window--image4 \.companion-presence__signal::after\s*\{[\s\S]*?content:\s*none;/m,
-    'Image4 signal should not restore the mismatched scan-light pseudo layer',
-  )
-  assertSourcePattern(
-    panelCompanionLayout,
-    /\.panel-window--image4 \.companion-presence__signal\s*\{[\s\S]*?opacity:\s*0\.24;[\s\S]*?pointer-events:\s*none;/m,
-    'Image4 idle voice signal wrapper should stay low-noise and non-interactive',
-  )
-  assertSourcePattern(
-    panelCompanionLayout,
-    /html\[data-theme='warm-day'\] \.panel-window--image4 \.companion-presence__signal\s*\{[\s\S]*?opacity:\s*0\.22;/m,
-    'warm-day Image4 idle signal should stay quieter after the softened topbar pass',
-  )
-  assertSourcePattern(
-    panelCompanionLayout,
-    /\.panel-window--image4 \.companion-presence__signal\.is-idle \.companion-presence__signal-bar\s*\{[\s\S]*?opacity:\s*0\.14;[\s\S]*?transform:\s*scaleY\(0\.32\);/m,
-    'Image4 idle voice bars should stay visually quiet until speaking',
-  )
-  assertSourcePattern(
-    panelCompanionMessages,
-    /\.panel-window--image4 \.image4-message-list,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-message-list\s*\{[\s\S]*?grid-row:\s*greeting \/ actions;/m,
-    'Image4 message list should occupy the greeting/action span from the active-chat message stylesheet',
-  )
-  assertSourcePattern(
-    panelCompanionChat,
-    /\.panel-window--image4 \.image4-greeting,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-greeting\s*\{[\s\S]*?grid-row:\s*greeting;/m,
-    'Image4 greeting should stay pinned to the greeting rhythm row',
-  )
-  assertSourcePattern(
-    panelCompanionChat,
-    /\.panel-window--image4 \.image4-action-list\s*\{[\s\S]*?grid-row:\s*actions;[\s\S]*?grid-auto-rows:\s*minmax\(clamp\(58px,\s*6\.2vh,\s*72px\),\s*max-content\);[\s\S]*?align-content:\s*center;[\s\S]*?border-top:\s*1px solid var\(--image4-row-boundary-line\);/m,
-    'Image4 action rows should stay in the actions rhythm row with a quiet separator',
-  )
-  assertSourcePattern(
-    panelCompanionChat,
-    /\.panel-window--image4 \.image4-action-list::before\s*\{[\s\S]*?content:\s*none;/m,
-    'Image4 suggestion actions should not use timeline-style decoration',
-  )
-  assertSourcePattern(
-    panelCompanionChat,
-    /\.panel-window--image4 \.image4-action,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-action\s*\{[\s\S]*?grid-template-columns:\s*clamp\(34px,\s*6\.6vw,\s*48px\) minmax\(0,\s*1fr\) clamp\(16px,\s*2\.5vw,\s*24px\);[\s\S]*?min-height:\s*clamp\(58px,\s*6\.2vh,\s*72px\);/m,
-    'Image4 suggestion actions should stay as lightweight prompt rows instead of heavy cards',
-  )
-  assertSourcePattern(
-    panelCompanionChat,
-    /\.panel-window--image4 \.empty-chat__prompt-icon,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.empty-chat__prompt-icon\s*\{[\s\S]*?width:\s*clamp\(30px,\s*5\.4vw,\s*44px\);[\s\S]*?height:\s*clamp\(30px,\s*5\.4vw,\s*44px\);/m,
-    'Image4 suggestion icons should stay below the old card-scale icon size',
-  )
-  assertSourcePattern(
-    panelCompanionChat,
-    /\.panel-window--image4 \.empty-chat__prompt-copy small,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.empty-chat__prompt-copy small\s*\{[\s\S]*?font-size:\s*clamp\(10\.5px,\s*2vw,\s*16px\);[\s\S]*?-webkit-line-clamp:\s*1;/m,
-    'Image4 suggestion descriptions should stay as one-line previews',
-  )
-  assertSourcePattern(
-    panelCompanionChat,
-    /\.panel-window--image4 \.image4-action::after,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-action::after\s*\{[\s\S]*?color:\s*rgba\(218,\s*227,\s*242,\s*0\.34\);[\s\S]*?font-size:\s*clamp\(20px,\s*3\.4vw,\s*30px\);/m,
-    'Image4 suggestion chevrons should stay tertiary and not read as oversized controls',
-  )
-  assertSourcePattern(
-    panelCompanionChat,
-    /\.panel-window--image4 \.image4-action:hover,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-action:hover\s*\{[\s\S]*?transform:\s*none;/m,
-    'Image4 action hover should not add lift or scale',
-  )
-  assertSourcePattern(
-    panelCompanionChat,
-    /\/\* Image 4 concise button pass\. \*\/[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-action:hover\s*\{[\s\S]*?background:\s*color-mix\(in srgb,\s*var\(--image4-companion-surface\) 52%,\s*transparent\);[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.empty-chat__prompt-icon,[\s\S]*?background:\s*color-mix\(in srgb,\s*var\(--image4-companion-surface-strong\) 56%,\s*transparent\);[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-action::after\s*\{[\s\S]*?color:\s*color-mix\(in srgb,\s*var\(--image4-companion-muted\) 50%,\s*transparent\);/m,
-    'Image4 warm-day suggestion rows should stay quiet but still read as clickable actions',
-  )
-  assertSourcePattern(
-    panelCompanionChat,
-    /\.panel-window--image4 \.image4-composer\s*\{[\s\S]*?grid-row:\s*composer;[\s\S]*?grid-template-areas:\s*"input";/m,
-    'Image4 composer should stay pinned to the composer rhythm row',
-  )
-  assertSourcePattern(
-    panelCompanionComposer,
-    /\.panel-window--image4 \.image4-composer__field,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-composer__field\s*\{[\s\S]*?height:\s*clamp\(58px,\s*6\.7vh,\s*76px\);[\s\S]*?border:\s*1px solid rgba\(240,\s*246,\s*252,\s*0\.16\);/m,
-    'Image4 composer dock should keep its selected input height and boundary',
-  )
-  assertSourcePattern(
-    panelCompanionComposer,
-    /\.panel-window--image4 \.image4-composer__field \.composer textarea,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-composer__field textarea\s*\{[\s\S]*?padding:\s*17px 82px 13px 52px;/m,
-    'Image4 composer textarea should reserve stable space for the right action rail',
-  )
-  assertSourcePattern(
-    panelCompanionComposer,
-    /\.panel-window--image4 \.image4-composer__field textarea::placeholder,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-composer__field textarea::placeholder\s*\{[\s\S]*?color:\s*rgba\(58,\s*74,\s*90,\s*0\.68\);[\s\S]*?opacity:\s*1;/m,
-    'Image4 composer placeholder should keep the dark preview text color in warm-day',
-  )
-  assertSourcePattern(
-    panelCompanionComposer,
-    /\.panel-window--image4 \.image4-composer__field \.composer__actions,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-composer__field \.composer__actions\s*\{[\s\S]*?right:\s*12px;[\s\S]*?display:\s*inline-grid;[\s\S]*?grid-auto-flow:\s*column;[\s\S]*?grid-auto-columns:\s*29px;[\s\S]*?height:\s*29px;/m,
-    'Image4 composer mic and send controls should share a compact action rail',
-  )
-  assertSourcePattern(
-    panelCompanionComposer,
-    /\.panel-window--image4 \.image4-composer__field \.composer__actions \.ghost-button,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-composer__field \.composer__actions \.primary-button\s*\{[\s\S]*?width:\s*29px;[\s\S]*?height:\s*29px;/m,
-    'Image4 composer action buttons should keep equal compact hit boxes',
-  )
-  assertSourcePattern(
-    panelCompanionComposer,
-    /\.panel-window--image4 \.image4-composer__field\[data-send-state='disabled'\] \.composer__actions \.primary-button:disabled,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-composer__field\[data-send-state='disabled'\] \.composer__actions \.primary-button:disabled\s*\{[\s\S]*?background:\s*transparent;[\s\S]*?color:\s*rgba\(76,\s*92,\s*108,\s*0\.36\);[\s\S]*?cursor:\s*default;/m,
-    'Image4 disabled send should stay tertiary and not read as the active send action',
-  )
-  assertSourcePattern(
-    panelCompanionRhythm,
-    /\.panel-window--image4 \.image4-rhythm-grid\s*\{[\s\S]*?opacity:\s*0\.24;[\s\S]*?pointer-events:\s*none;/m,
-    'Image4 rhythm grid should remain a low-noise pointer-transparent calibration layer',
-  )
-  assertSourcePattern(
-    panelCompanionRhythm,
-    /\.panel-window--image4 \.image4-chat\.is-image4-snapshot \.image4-rhythm-grid\s*\{[\s\S]*?display:\s*none;/m,
-    'Image4 snapshot mode should hide the rhythm grid for clean review',
-  )
-  assertSourcePattern(
-    panelCompanionRhythm,
-    /\.panel-window--image4 \.image4-rhythm-grid__rail\s*\{[\s\S]*?right:\s*-23px;[\s\S]*?width:\s*20px;[\s\S]*?opacity:\s*0\.66;/m,
-    'Image4 rhythm labels should stay in the right rail rather than inside content',
-  )
-  assertSourcePattern(
-    panelCompanionMotion,
-    /@media \(max-height:\s*620px\)\s*\{[\s\S]*?--image4-rhythm-dial:\s*0px;[\s\S]*?\.panel-window--image4 \.image4-dial-stage,[\s\S]*?html\[data-theme='warm-day'\] \.panel-window--image4 \.image4-dial-stage\s*\{[\s\S]*?display:\s*none;/m,
-    'short viewports should collapse the dial rhythm row instead of overflowing the panel',
-  )
-  assert.doesNotMatch(
-    panelCompanionMotion,
-    /image4-wave-scan/m,
-    'Image4 motion should not restore the rejected scan-light animation',
+    panelCompanionFinal,
+    /\.panel-window--image4 \.image4-message-list--archive\s*\{[\s\S]*?display:\s*none !important;/m,
+    'the full message archive should stay hidden behind the compact recap',
   )
 })
 

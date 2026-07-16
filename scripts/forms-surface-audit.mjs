@@ -13,6 +13,8 @@ const REQUIRED_FILES = [
   'src/app/styles/settings.css',
   'src/app/styles/settings-home.css',
   'src/app/styles/settings-visual-system.css',
+  'src/app/styles/settings-product-reference-final.css',
+  'src/features/settingsV3/settings-v3.css',
 ]
 
 const REQUIRED_FILE_READS = [
@@ -24,6 +26,8 @@ const REQUIRED_FILE_READS = [
   'src/app/styles/settings.css',
   'src/app/styles/settings-home.css',
   'src/app/styles/settings-visual-system.css',
+  'src/app/styles/settings-product-reference-final.css',
+  'src/features/settingsV3/settings-v3.css',
 ]
 
 const REQUIRED_CONTRACTS = [
@@ -93,7 +97,26 @@ const REQUIRED_CONTRACTS = [
       '--settings-child-control-height: var(--nx-settings-control-height);',
       '.settings-form-row',
       '.settings-form-row__validation',
-      '.settings-toggle input:checked',
+    ],
+  },
+  {
+    id: 'legacy-settings-toggle-state-css',
+    file: 'src/app/styles/settings-product-reference-final.css',
+    description: 'The fallback settings lane owns its checked toggle treatment in the conditional legacy product layer.',
+    patterns: [
+      '.sd-section .sp.sp .settings-toggle input:checked',
+      'background: var(--nx-settings-accent);',
+      'box-shadow: none;',
+    ],
+  },
+  {
+    id: 'v3-settings-toggle-state-css',
+    file: 'src/features/settingsV3/settings-v3.css',
+    description: 'The active V3 settings lane owns its checked switch treatment without depending on the legacy product layer.',
+    patterns: [
+      '.settings-v3-switch input:checked + .settings-v3-switch__track',
+      'background: var(--sv3-accent);',
+      '.settings-v3-switch input:focus-visible + .settings-v3-switch__track',
     ],
   },
   {

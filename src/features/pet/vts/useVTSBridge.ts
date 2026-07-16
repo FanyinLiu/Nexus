@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PetExpressionSlot } from '../models'
 import type { GazeTarget } from '../components/live2d/types'
+import type { SpeechLevelSource } from '../../../types/index.ts'
 import { getRedactedLogErrorMessage } from '../../../lib/logRedaction'
 
 const LEGACY_STORAGE_KEY = 'nexus:vts-auth-token'
@@ -15,7 +16,11 @@ type VTSBridgeInput = {
   isListening: boolean
 }
 
-export function useVTSBridge(enabled: boolean, port: number) {
+export function useVTSBridge(
+  enabled: boolean,
+  port: number,
+  speechLevelSource?: SpeechLevelSource,
+) {
   const [state, setState] = useState<VTSBridgeState>('disconnected')
   const [modelName, setModelName] = useState('')
   const inputRef = useRef<VTSBridgeInput>({
@@ -53,6 +58,18 @@ export function useVTSBridge(enabled: boolean, port: number) {
       console.warn('[VTS] Failed to update bridge input:', getRedactedLogErrorMessage(error))
     })
   }, [])
+
+  // VTS is an imperative IPC sink, so subscribe without making its PetView
+  // owner render at the meter cadence. The bridge keeps the existing numeric
+  // `speechLevel` payload semantics while consuming the throttled snapshot.
+  useEffect(() => {
+    if (!enabled || !speechLevelSource) return undefined
+    const publishSnapshot = () => {
+      updateInput({ speechLevel: speechLevelSource.getSnapshot() })
+    }
+    publishSnapshot()
+    return speechLevelSource.subscribe(publishSnapshot)
+  }, [enabled, speechLevelSource, updateInput])
 
   useEffect(() => {
     const applyStatus = (status: { state: VTSBridgeState; modelName?: string }) => {

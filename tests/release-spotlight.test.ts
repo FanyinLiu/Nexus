@@ -21,16 +21,18 @@ function normalizeMarkdownProse(text: string) {
   return text.replace(/[>\s]+/g, ' ').trim()
 }
 
-test('current release spotlight keeps the v0.4.2 check-in policy hardening explicit', () => {
-  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, '0.4.2')
+test('current release spotlight keeps the v0.4.3 stable structure explicit', () => {
+  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, '0.4.3')
+  const packageJson = JSON.parse(readWorkspaceFile('package.json')) as { version: string }
+  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, packageJson.version)
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.bullets.map((item) => item.id),
-    ['memory_sources', 'memory_control', 'companion_presence', 'first_run', 'companion_boundary'],
+    ['companion_presence', 'transparent_surface', 'text_chat_support', 'voice_settings', 'companion_boundary'],
   )
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.actions.map((item) => [item.id, item.targetSectionId]),
     [
-      ['review_memory', 'memory'],
+      ['open_voice', 'voice'],
       ['preview_companion', 'chat'],
     ],
   )
@@ -60,29 +62,177 @@ test('current release spotlight translation keys are registered for every locale
   }
 })
 
-test('current release spotlight names check-in policy hardening in user copy', async () => {
+test('current release spotlight describes the quieter voice-first surface', async () => {
   const en = await ensureLocaleLoaded('en-US')
   const zhCN = await ensureLocaleLoaded('zh-CN')
 
-  assert.match(en['about.release_spotlight.title'], /Check-in policy/i)
-  assert.match(en['about.release_spotlight.summary'], /stable follow-up/)
-  assert.match(en['about.release_spotlight.summary'], /local, suppressible/i)
-  assert.match(en['about.release_spotlight.bullet.first_run.body'], /External notifications/i)
-  assert.match(en['about.release_spotlight.bullet.memory_control.body'], /recent dismissals/i)
-  assert.match(en['about.release_spotlight.bullet.companion_presence.body'], /rough time buckets/)
-  assert.match(en['about.release_spotlight.bullet.companion_presence.body'], /raw screens/)
-  assert.equal(en['about.release_spotlight.action.review_memory'], 'Review Memory')
+  assert.equal(en['about.release_spotlight.title'], 'Companion-first, with a quieter surface.')
+  assert.match(en['about.release_spotlight.summary'], /stable companion-first release/i)
+  assert.match(en['about.release_spotlight.summary'], /unsigned macOS builds.*manually.*release page/i)
+  assert.match(en['about.release_spotlight.bullet.companion_presence.body'], /temporary states and captions/i)
+  assert.doesNotMatch(en['about.release_spotlight.bullet.companion_presence.body'], /Mao.*Haru.*Hiyori/)
+  assert.match(en['about.release_spotlight.bullet.companion_boundary.body'], /Mao.*Haru.*Hiyori/)
+  assert.match(en['about.release_spotlight.bullet.companion_boundary.body'], /included Live2D choices.*Preview and switch/i)
+  assert.doesNotMatch(en['about.release_spotlight.bullet.companion_boundary.body'], /candidate|release gate/i)
+  assert.doesNotMatch(en['about.release_spotlight.bullet.transparent_surface.body'], /smoke|first-frame/i)
+  assert.match(en['about.release_spotlight.bullet.transparent_surface.body'], /character.*temporary captions.*controls/i)
+  assert.match(en['about.release_spotlight.bullet.text_chat_support.body'], /available when needed/)
+  assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /main window has no voice button/)
+  assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /frameless companions and desktop pets/)
+  assert.equal(en['about.release_spotlight.action.open_voice'], 'Open Voice Settings')
   assert.equal(en['about.release_spotlight.action.preview_companion'], 'Preview Companion')
 
-  assert.match(zhCN['about.release_spotlight.title'], /Check-in 策略/)
-  assert.match(zhCN['about.release_spotlight.summary'], /稳定跟进版/)
-  assert.match(zhCN['about.release_spotlight.summary'], /本地、可压制/)
-  assert.match(zhCN['about.release_spotlight.bullet.first_run.body'], /外部通知/)
-  assert.match(zhCN['about.release_spotlight.bullet.memory_control.body'], /刚 dismiss/)
-  assert.match(zhCN['about.release_spotlight.bullet.companion_presence.body'], /粗粒度时间桶/)
-  assert.match(zhCN['about.release_spotlight.bullet.companion_presence.body'], /原始屏幕/)
-  assert.equal(zhCN['about.release_spotlight.action.review_memory'], '查看记忆')
+  assert.equal(zhCN['about.release_spotlight.title'], '陪伴优先，界面更克制')
+  assert.match(zhCN['about.release_spotlight.summary'], /正式稳定版/)
+  assert.match(zhCN['about.release_spotlight.summary'], /macOS 版本未签名.*发布页.*手动/)
+  assert.match(zhCN['about.release_spotlight.bullet.companion_presence.body'], /临时状态.*字幕/)
+  assert.doesNotMatch(zhCN['about.release_spotlight.bullet.companion_presence.body'], /Mao.*Haru.*Hiyori/)
+  assert.match(zhCN['about.release_spotlight.bullet.companion_boundary.body'], /Mao.*Haru.*Hiyori/)
+  assert.match(zhCN['about.release_spotlight.bullet.companion_boundary.body'], /可选.*预览.*切换/)
+  assert.doesNotMatch(zhCN['about.release_spotlight.bullet.companion_boundary.body'], /候选|发布门禁/)
+  assert.doesNotMatch(zhCN['about.release_spotlight.bullet.transparent_surface.body'], /smoke|首帧/)
+  assert.match(zhCN['about.release_spotlight.bullet.transparent_surface.body'], /角色.*临时字幕.*必要控制/)
+  assert.match(zhCN['about.release_spotlight.bullet.text_chat_support.body'], /辅助界面/)
+  assert.match(zhCN['about.release_spotlight.bullet.voice_settings.body'], /主界面没有常驻语音按钮/)
+  assert.match(zhCN['about.release_spotlight.bullet.voice_settings.body'], /无框伙伴与桌宠/)
+  assert.equal(zhCN['about.release_spotlight.action.open_voice'], '打开语音设置')
   assert.equal(zhCN['about.release_spotlight.action.preview_companion'], '预览伙伴')
+})
+
+test('release spotlight presents v0.4.3 as stable while keeping unsigned macOS updates explicit', async () => {
+  const contracts = [
+    ['en-US', /stable companion-first release/i, /unsigned macOS.*manually.*release page/i, /code candidate|unpublished|not published|no (?:tag|GitHub Release)/i],
+    ['zh-CN', /正式稳定版/, /macOS 版本未签名.*发布页.*手动/, /代码候选|尚未公开|未发布|不打 tag|没有 tag/],
+    ['zh-TW', /正式穩定版/, /macOS 版本未簽署.*發布頁.*手動/, /程式碼候選|尚未公開|未發布|不打 tag|沒有 tag/],
+    ['ja', /安定版/, /署名なし.*macOS.*リリースページ.*手動/, /コード候補|未公開|未リリース|タグなし/],
+    ['ko', /안정 버전/, /서명되지 않은 macOS.*릴리스 페이지.*수동/, /코드 후보|미공개|출시되지|태그 없음/],
+  ] as const
+
+  for (const [locale, stablePattern, unsignedUpdatePattern, forbiddenPattern] of contracts) {
+    const dictionary = await ensureLocaleLoaded(locale)
+    const copy = [
+      dictionary['about.release_spotlight.summary'],
+      ...CURRENT_RELEASE_SPOTLIGHT.bullets.flatMap((item) => [
+        dictionary[item.titleKey],
+        dictionary[item.bodyKey],
+      ]),
+    ].join(' ')
+    assert.match(copy, stablePattern, `${locale} must present v0.4.3 as stable`)
+    assert.match(copy, unsignedUpdatePattern, `${locale} must keep the unsigned macOS manual-update boundary`)
+    assert.doesNotMatch(copy, forbiddenPattern, `${locale} must not retain prerelease publication copy`)
+  }
+})
+
+test('five locales keep natural presence and boundary vocabulary', async () => {
+  const contracts = [
+    ['en-US', /listening.*thinking.*replying/i, /Mao.*Haru.*Hiyori/i],
+    ['zh-CN', /倾听.*思考.*回应/, /Mao.*Haru.*Hiyori/],
+    ['zh-TW', /傾聽.*思考.*回應/, /Mao.*Haru.*Hiyori/],
+    ['ja', /聴く.*考える.*応答/, /Mao.*Haru.*Hiyori/],
+    ['ko', /듣기.*생각하기.*응답하기/, /Mao.*Haru.*Hiyori/],
+  ] as const
+
+  for (const [locale, presencePattern, boundaryPattern] of contracts) {
+    const dictionary = await ensureLocaleLoaded(locale)
+    const presence = dictionary['about.release_spotlight.bullet.companion_presence.body']
+    const boundary = dictionary['about.release_spotlight.bullet.companion_boundary.body']
+    const transparent = dictionary['about.release_spotlight.bullet.transparent_surface.body']
+    assert.match(presence, presencePattern, `${locale} must describe temporary listening/thinking/replying states`)
+    assert.match(boundary, boundaryPattern, `${locale} must name the three Live2D choices`)
+    assert.doesNotMatch(boundary, /candidate|release gate|候选|候選|发布门禁|發布門檻|候補|リリースゲート|후보|릴리스 게이트/i)
+    assert.doesNotMatch(transparent, /smoke|first-frame|首帧|首幀|初回フレーム|첫 프레임/i)
+    if (locale !== 'en-US') {
+      const copy = [
+        dictionary['about.release_spotlight.summary'],
+        ...CURRENT_RELEASE_SPOTLIGHT.bullets.flatMap((item) => [dictionary[item.titleKey], dictionary[item.bodyKey]]),
+      ].join(' ')
+      assert.doesNotMatch(copy, /Panel|smoke|Frameless|Pet/)
+    }
+  }
+})
+
+test('English Spotlight copy stays concise and product-facing', async () => {
+  const dictionary = await ensureLocaleLoaded('en-US')
+  const summaryWords = dictionary['about.release_spotlight.summary'].trim().split(/\s+/)
+  assert.ok(summaryWords.length <= 30)
+  for (const item of CURRENT_RELEASE_SPOTLIGHT.bullets) {
+    const words = dictionary[item.bodyKey].trim().split(/\s+/)
+    assert.ok(words.length <= 24, `${item.id} must stay within the concise English body budget`)
+  }
+  const englishCopy = [
+    dictionary['about.release_spotlight.summary'],
+    ...CURRENT_RELEASE_SPOTLIGHT.bullets.flatMap((item) => [dictionary[item.titleKey], dictionary[item.bodyKey]]),
+  ].join(' ')
+  assert.doesNotMatch(englishCopy, /support surface|resident voice button|local-smoke|code candidate|unpublished|no tag/i)
+  assert.doesNotMatch(dictionary['about.release_spotlight.bullet.transparent_surface.body'], /smoke|first-frame/i)
+})
+
+test('release spotlight actions use the voice section and existing icon vocabulary', () => {
+  const aboutPanel = readWorkspaceFile('src/components/settingsSections/AboutPanel.tsx')
+  const consoleSection = readWorkspaceFile('src/components/settingsSections/ConsoleSection.tsx')
+  const actions = readWorkspaceFile('src/components/settingsSections/ReleaseSpotlightActions.tsx')
+
+  assert.match(aboutPanel, /onOpenSettingsSection\?: \(sectionId: SettingsSectionId\) => void/)
+  assert.match(consoleSection, /type SettingsSectionId/)
+  assert.match(consoleSection, /onOpenSettingsSection\?: \(sectionId: SettingsSectionId\) => void/)
+  assert.doesNotMatch(aboutPanel, /bivarianceHack|AboutSettingsSectionHandler|onOpenSettingsSection=\{onOpenSettingsSection as/)
+  assert.match(actions, /item\.id === 'open_voice' \? 'mic' : 'sparkles'/)
+  assert.doesNotMatch(actions, /emoji|<path|<svg/i)
+})
+
+test('V3 Console exposes the real About panel and keeps only Weekly Recap beside it', () => {
+  const consoleSection = readWorkspaceFile('src/features/settingsV3/ConsoleSectionV3.tsx')
+  const disclosureStart = consoleSection.indexOf("<SettingsV3Disclosure title={ti('settings.console.about_recap')}")
+  const disclosureEnd = consoleSection.indexOf('</SettingsV3Disclosure>', disclosureStart)
+  assert.ok(disclosureStart >= 0)
+  assert.ok(disclosureEnd > disclosureStart)
+  const aboutDisclosure = consoleSection.slice(disclosureStart, disclosureEnd)
+
+  assert.match(consoleSection, /type SettingsSectionId/)
+  assert.match(consoleSection, /onOpenSettingsSection\?: \(sectionId: SettingsSectionId\) => void/)
+  assert.match(aboutDisclosure, /<AboutPanel uiLanguage=\{uiLanguage\} onOpenSettingsSection=\{onOpenSettingsSection\}/)
+  assert.match(aboutDisclosure, /weekly_recap\.title/)
+  assert.doesNotMatch(aboutDisclosure, /about\.links\.github|about\.links\.report_issue|settings\.section\.chat/)
+})
+
+test('v0.4.3 release notes preserve stable unsigned boundaries and spotlight facts', () => {
+  const notes = [
+    {
+      text: readWorkspaceFile('docs/RELEASE-NOTES-v0.4.3.md'),
+      required: {
+        stable: /Status: Stable unsigned release/i,
+        protectedPublication: /created only from the release commit by the protected tag workflow/i,
+        unsignedMac: /macOS arm64 app is ad-hoc signed, not Apple Developer ID signed or\s+notarized/i,
+        manualUpdate: /opens the official release page; users manually[\s\S]*download and replace the app/i,
+        panelVoice: /resident voice button/i,
+        settingsVoice: /Settings → Voice[\s\S]*save, start, stop, and cancel/i,
+        directVoice: /Frameless and Pet keep[\s\S]*direct voice entry/i,
+        models: /Mao, Haru, and Hiyori/i,
+      },
+      forbidden: /Status: Release candidate|not a public release|no tag or GitHub Release/i,
+    },
+    {
+      text: readWorkspaceFile('docs/RELEASE-NOTES-v0.4.3.zh-CN.md'),
+      required: {
+        stable: /状态：正式未签名稳定版/,
+        protectedPublication: /只会从发布提交经受保护的 tag 工作流生成/,
+        unsignedMac: /macOS arm64 应用采用 ad-hoc 签名，不是 Apple Developer ID 签名或公证/,
+        manualUpdate: /打开官方 release 页面；用户需要手动下载并替换应用/,
+        panelVoice: /主 Panel 不再常驻语音按钮/,
+        settingsVoice: /设置 → 语音[\s\S]*保存、开始、停止和取消/,
+        directVoice: /Frameless 与 Pet[\s\S]*直接语音入口/,
+        models: /Mao、Haru 和 Hiyori/,
+      },
+      forbidden: /状态：发布候选|尚未公开发布|不打 tag，不创建 GitHub Release/,
+    },
+  ] as const
+
+  for (const { text, required, forbidden } of notes) {
+    for (const [label, pattern] of Object.entries(required)) {
+      assert.match(text, pattern, `${label} must remain in the stable notes`)
+    }
+    assert.doesNotMatch(text, forbidden, 'stable notes must not retain candidate publication copy')
+  }
 })
 
 test('human-facing v0.3.6 docs keep foundation wrap-up aligned', () => {
@@ -95,8 +245,8 @@ test('human-facing v0.3.6 docs keep foundation wrap-up aligned', () => {
     readWorkspaceFile('docs/RELEASE-NOTES-v0.3.6.zh-CN.md'),
   )
 
-  assert.match(rootReadme, /本次更新 — v0\.4\.2/)
-  assert.match(rootReadme, /上次更新 — v0\.4\.1/)
+  assert.match(rootReadme, /当前稳定版：\*{0,2}\s*v0\.4\.3/)
+  assert.match(rootReadme, /上一公开版本 — v0\.4\.1/)
   assert.doesNotMatch(rootReadme, /## 上次更新 — v0\.3\.6/)
 
   assert.match(englishReleaseNotes, /The foundation is ready for the next companion step\./)

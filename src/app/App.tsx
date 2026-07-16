@@ -1,4 +1,4 @@
-import { Component, Suspense, lazy } from 'react'
+import { Component, Suspense, lazy, useCallback, useState } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import './App.css'
 import './styles/panel-notifications.css'
@@ -66,6 +66,7 @@ const OnboardingGuide = lazy(async () => {
 
 function App() {
   const controller = useAppController()
+  const [modelSetupOverlayOpen, setModelSetupOverlayOpen] = useState(false)
 
   const onboardingGuide = controller.overlays.onboardingGuideProps.open ? (
     <Suspense fallback={null}>
@@ -78,16 +79,26 @@ function App() {
       <SettingsDrawer {...controller.overlays.settingsDrawerProps} />
     </Suspense>
   ) : null
+  const competingModalOpen = Boolean(settingsDrawer || onboardingGuide)
+  const handleModelSetupVisibilityChange = useCallback((visible: boolean) => {
+    setModelSetupOverlayOpen(visible)
+  }, [])
+  const modelSetupOverlayActive = controller.view === 'panel'
+    && modelSetupOverlayOpen
+    && !competingModalOpen
 
   if (controller.view === 'pet') {
     return (
       <AppErrorBoundary>
         <PetView
           {...controller.petView}
+          settingsDrawer={settingsDrawer}
           onboardingGuide={onboardingGuide}
         />
-        {settingsDrawer}
-        <ModelSetupOverlay suppressed />
+        <ModelSetupOverlay
+          suppressed
+          onVisibilityChange={handleModelSetupVisibilityChange}
+        />
       </AppErrorBoundary>
     )
   }
@@ -98,8 +109,11 @@ function App() {
         {...controller.panelView}
         settingsDrawer={settingsDrawer}
         onboardingGuide={onboardingGuide}
+        modelSetupOverlayOpen={modelSetupOverlayActive}
       />
       <ModelSetupOverlay
+        suppressed={competingModalOpen}
+        onVisibilityChange={handleModelSetupVisibilityChange}
         settings={controller.panelView.settings}
         onOpenOnboardingGuide={controller.overlays.openOnboardingGuide}
         onTestTextConnection={controller.overlays.onboardingGuideProps.onTestTextConnection}

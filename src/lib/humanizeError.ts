@@ -101,7 +101,7 @@ const CONTEXT_PATTERNS: Record<HumanizeContext, KnownPattern[]> = {
  * translations the fallback below stops mattering.
  */
 const ENGLISH_FALLBACKS: Partial<Record<TranslationKey, string>> = {
-  'humanize.auth_failed': 'She can\'t sign in to her brain — the API key may be wrong or expired.',
+  'humanize.auth_failed': 'Authentication failed. Check whether the API key is correct and still valid.',
   'humanize.forbidden': 'The provider declined the request. Your account may not have access to this model.',
   'humanize.not_found': 'The address came back empty — double-check the API URL or the model name.',
   'humanize.rate_limited': 'Too many requests in a short time. Wait a moment and try again.',

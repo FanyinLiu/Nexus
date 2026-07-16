@@ -1,0 +1,20 @@
+/* Modern settings only needs the narrow outer-shell bounds from the legacy product reference. */
+@media (max-width: 679px) {
+  .sb-night:has(.sd-home),
+  .sb-night:has(.sd-section),
+  .sb-day:has(.sd-home),
+  .sb-day:has(.sd-section),
+  .sb-warm:has(.sd-home),
+  .sb-warm:has(.sd-section) {
+    padding: 8px;
+  }
+
+  .sd-home,
+  .sd-section,
+  .sd-home:is(.sd-night, .sd-day, .sd-light, .sd-warm),
+  .sd-section:is(.sd-night, .sd-day, .sd-light, .sd-warm) {
+    width: min(392px, calc(100vw - 16px));
+    height: min(784px, calc(100vh - 16px));
+    max-height: min(784px, calc(100vh - 16px));
+  }
+}

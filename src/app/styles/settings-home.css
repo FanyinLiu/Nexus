@@ -6,15 +6,6 @@
   color: rgba(255, 255, 255, 0.92);
 }
 
-.settings-appearance-switch__option {
-  line-height: 1.25;
-  outline: none;
-  transition:
-    background 0.14s ease,
-    color 0.14s ease,
-    box-shadow 0.14s ease;
-}
-
 .settings-appearance-switch__option:hover {
   color: rgba(255, 255, 255, 0.86);
 }
@@ -103,9 +94,15 @@
   background: transparent;
   color: rgba(255, 255, 255, 0.54);
   font: inherit;
+  line-height: 1.25;
+  outline: none;
   font-size: var(--settings-meta-font-size);
   font-weight: 520;
   cursor: pointer;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease,
+    box-shadow 0.14s ease;
 }
 
 .settings-home-card,
@@ -516,7 +513,7 @@
 
   .sd .settings-appearance-switch__control {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .sd .settings-appearance-switch__option {

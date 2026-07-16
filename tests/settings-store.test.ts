@@ -88,6 +88,55 @@ test('subscribeToSettings hydrates one settings update once for all subscribers'
   assert.equal(retrieveCalls, 1)
 })
 
+test('setSettingsSnapshot persists then hydrates and notifies through one local policy pipeline', async () => {
+  let retrieveCalls = 0
+  let policySyncCalls = 0
+  const vaultWrites: Record<string, string> = {}
+  const win = installWindow({
+    vaultStore: async () => undefined,
+    vaultStoreMany: async (entries: Record<string, string>) => {
+      Object.assign(vaultWrites, entries)
+    },
+    vaultRetrieveMany: async () => {
+      retrieveCalls += 1
+      return { 'settings:apiKey': 'hydrated-key' }
+    },
+    externalActionPolicySync: async () => {
+      policySyncCalls += 1
+    },
+  })
+  const store = await importFreshSettingsStore()
+  let customEventCalls = 0
+  win.addEventListener(SETTINGS_UPDATED_EVENT, () => {
+    customEventCalls += 1
+  })
+  const seen: Array<{ apiKey: string; notifications: boolean }> = []
+  const unsubscribe = store.subscribeToSettings((settings) => {
+    seen.push({
+      apiKey: settings.apiKey,
+      notifications: settings.autonomyNotificationsEnabled,
+    })
+  })
+
+  const nextSettings = {
+    ...loadSettings(),
+    apiKey: 'local-secret',
+    autonomyNotificationsEnabled: true,
+  }
+  await store.setSettingsSnapshot(nextSettings)
+
+  assert.equal(customEventCalls, 0)
+  assert.equal(retrieveCalls, 2)
+  assert.equal(policySyncCalls, 1)
+  assert.deepEqual(seen, [{ apiKey: 'hydrated-key', notifications: true }])
+  assert.equal(vaultWrites['settings:apiKey'], 'local-secret')
+  const persisted = JSON.parse(win.localStorage.getItem('nexus:settings') ?? '{}') as Record<string, unknown>
+  assert.equal(persisted.apiKey, '')
+  assert.equal(persisted.autonomyNotificationsEnabled, true)
+
+  unsubscribe()
+})
+
 test('initializeSettingsWithVault shares concurrent vault hydration', async () => {
   let retrieveCalls = 0
   installWindow({

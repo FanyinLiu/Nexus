@@ -1,5 +1,4 @@
-﻿import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { useCallback, useMemo } from 'react'
+﻿import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap.ts'
 import {
   getMemorySearchModeOptions,
@@ -23,7 +22,6 @@ import {
   pickTranslatedUiText,
 } from '../lib/uiLanguage.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
-import { ensureLocaleLoaded, isLocaleLoaded } from '../i18n/index.ts'
 import type {
   CodexPetGalleryCatalogResult,
   PetModelDefinition,
@@ -33,7 +31,6 @@ import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
 import { useTheme } from '../features/themes/index.ts'
 import { syncWakeWordWithCompanionNameChange } from '../features/hearing/companionWakeWordSync.ts'
 import { SettingsDrawerActiveSection } from './SettingsDrawerActiveSection.tsx'
-import { preloadSettingsSection } from './settingsSectionModules.ts'
 import { SettingsHomeView } from './SettingsHomeView.tsx'
 import type { ChatMemoryTraceFocusTarget } from '../features/memory/traceDetails.ts'
 import {
@@ -44,6 +41,7 @@ import {
   useWindowStateSync,
   usePetModelImport,
   useSettingsDraftState,
+  useSettingsLanguageControl,
 } from './settingsDrawerHooks/index.ts'
 import { ConfirmDialog } from './ConfirmDialog.tsx'
 import { useConfirm } from './useConfirm.ts'
@@ -60,6 +58,12 @@ import {
   type SettingsHomeActionEntry,
 } from './settingsHomeArchitecture.ts'
 import { applyConnectionTestRepairDraft } from '../features/models/connectionRepair.ts'
+import {
+  clearRecentCompanionCheckInDecision,
+  clearRecentCompanionSummary,
+} from '../features/context/index.ts'
+import { commitSettingsDraft } from './settingsSaveEffects.ts'
+import { SettingsDrawerV2 } from './SettingsDrawerV2.tsx'
 import type {
   AppSettings,
   DailyMemoryEntry,
@@ -68,6 +72,7 @@ import type {
   PlatformProfile,
   ReminderTask,
   ServiceConnectionCapability,
+  SpeechLevelSource,
   SpeechVoiceListResponse,
   VoicePipelineState,
   VoiceState,
@@ -90,12 +95,15 @@ export type SettingsDrawerProps = {
   voiceState: VoiceState
   continuousVoiceActive: boolean
   liveTranscript: string
-  speechLevel: number
+  speechLevelSource: SpeechLevelSource
   voicePipeline: VoicePipelineState
   voiceTrace: VoiceTraceEntry[]
   debugConsoleEvents: DebugConsoleEvent[]
   onClose: () => void
-  onSave: (settings: AppSettings) => void
+  onStartVoiceConversation: () => void
+  onStopVoiceConversation: () => void
+  onCancelVoiceTurn: () => void
+  onSave: (settings: AppSettings, baseline: AppSettings) => Promise<void>
   onExportChatHistory: () => Promise<{
     canceled: boolean
     filePath?: string
@@ -230,11 +238,14 @@ export function SettingsDrawer({
   voiceState,
   continuousVoiceActive,
   liveTranscript,
-  speechLevel,
+  speechLevelSource,
   voicePipeline,
   voiceTrace,
   debugConsoleEvents,
   onClose,
+  onStartVoiceConversation,
+  onStopVoiceConversation,
+  onCancelVoiceTurn,
   onSave,
   onExportChatHistory,
   onImportChatHistory,
@@ -273,6 +284,7 @@ export function SettingsDrawer({
 }: SettingsDrawerProps) {
   const {
     draft,
+    baseline,
     setDraft,
     resetDraftForOpen,
     getRollbackThemeId,
@@ -283,71 +295,22 @@ export function SettingsDrawer({
   } = useSettingsDraftState(settings)
   const [activeSectionId, setActiveSectionId] = useState<SettingsSectionId>('console')
   const [settingsView, setSettingsView] = useState<'home' | 'section'>('home')
-  const [languageMenuOpen, setLanguageMenuOpen] = useState(false)
-  const [, setLocaleLoadTick] = useState(0)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(false)
+  const [voiceActionPending, setVoiceActionPending] = useState(false)
   const themePreview = useTheme()
-  const selectedLanguageIndex = Math.max(
-    0,
-    UI_LANGUAGE_OPTIONS.findIndex((option) => option.value === draft.uiLanguage),
-  )
-  const languageMenuId = 'settings-language-menu'
   const settingsDialogRef = useRef<HTMLElement | null>(null)
   const settingsOpenerRef = useRef<HTMLElement | null>(null)
-  const languageButtonRef = useRef<HTMLButtonElement | null>(null)
-  const languageMenuRef = useRef<HTMLDivElement | null>(null)
-  const languageOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
   const appearanceOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
   const settingsHomeCardRefs = useRef<Partial<Record<SettingsSectionId, HTMLButtonElement | null>>>({})
   const drawerBodyRef = useRef<HTMLDivElement | null>(null)
   const settingsSectionsRef = useRef<HTMLDivElement | null>(null)
   const activeSectionHeadingRef = useRef<HTMLHeadingElement | null>(null)
-  useModalFocusTrap(settingsDialogRef, open)
+  const shouldFocusActiveSectionHeadingRef = useRef(true)
+  const saveInFlightRef = useRef<Promise<void> | null>(null)
+  const voiceActionPendingRef = useRef(false)
 
-  function focusLanguageOption(index: number) {
-    window.requestAnimationFrame(() => {
-      languageOptionRefs.current[index]?.focus()
-    })
-  }
-
-  function openLanguageMenuAt(index: number) {
-    setLanguageMenuOpen(true)
-    focusLanguageOption(index)
-  }
-
-  function handleLanguageButtonKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
-    if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      openLanguageMenuAt(selectedLanguageIndex)
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      openLanguageMenuAt(UI_LANGUAGE_OPTIONS.length - 1)
-    }
-  }
-
-  function handleLanguageMenuItemKeyDown(
-    event: ReactKeyboardEvent<HTMLButtonElement>,
-    index: number,
-  ) {
-    if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      focusLanguageOption((index + 1) % UI_LANGUAGE_OPTIONS.length)
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      focusLanguageOption((index - 1 + UI_LANGUAGE_OPTIONS.length) % UI_LANGUAGE_OPTIONS.length)
-    } else if (event.key === 'Home') {
-      event.preventDefault()
-      focusLanguageOption(0)
-    } else if (event.key === 'End') {
-      event.preventDefault()
-      focusLanguageOption(UI_LANGUAGE_OPTIONS.length - 1)
-    } else if (event.key === 'Escape') {
-      event.preventDefault()
-      setLanguageMenuOpen(false)
-      languageButtonRef.current?.focus()
-    }
-  }
-
-  function applyDraftLanguage(nextLanguage: AppSettings['uiLanguage']) {
+  const applyDraftLanguage = useCallback((nextLanguage: AppSettings['uiLanguage']) => {
     setDraft((prev) => syncWakeWordWithCompanionNameChange(prev, {
       ...prev,
       uiLanguage: nextLanguage,
@@ -358,48 +321,41 @@ export function SettingsDrawer({
         ? getDefaultUserName(nextLanguage)
         : prev.userName,
     }))
-    setLocaleLoadTick((tick) => tick + 1)
-  }
+  }, [setDraft])
 
-  function handleSelectLanguage(nextLanguage: AppSettings['uiLanguage']) {
-    setLanguageMenuOpen(false)
-    if (isLocaleLoaded(nextLanguage)) {
-      applyDraftLanguage(nextLanguage)
-      return
-    }
+  const languageControl = useSettingsLanguageControl({
+    open,
+    language: draft.uiLanguage,
+    applyDraftLanguage,
+    onLocaleLoadFailure: (locale, error) => {
+      console.error('[settings] Failed to load locale:', locale, getRedactedLogErrorMessage(error))
+    },
+  })
+  const {
+    languageMenuOpen,
+    selectedLanguageIndex,
+    languageMenuId,
+    languageButtonRef,
+    languageMenuRef,
+    languageOptionRefs,
+    openLanguageMenuAt,
+    closeLanguageMenuAndRestoreFocus,
+    handleLanguageButtonKeyDown,
+    handleLanguageMenuItemKeyDown,
+    handleSelectLanguage,
+  } = languageControl
 
-    void ensureLocaleLoaded(nextLanguage)
-      .then(() => applyDraftLanguage(nextLanguage))
-      .catch((error) => {
-        console.error('[settings] Failed to load locale:', nextLanguage, getRedactedLogErrorMessage(error))
-        applyDraftLanguage(nextLanguage)
-      })
-  }
-
-  useEffect(() => {
-    if (!languageMenuOpen) return undefined
-    function handlePointerDown(event: MouseEvent) {
-      if (!languageMenuRef.current) return
-      if (!languageMenuRef.current.contains(event.target as Node)) setLanguageMenuOpen(false)
-    }
-    function handleKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') setLanguageMenuOpen(false)
-    }
-    document.addEventListener('mousedown', handlePointerDown)
-    document.addEventListener('keydown', handleKey)
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown)
-      document.removeEventListener('keydown', handleKey)
-    }
-  }, [languageMenuOpen])
-
-  function restoreSettingsOpenerFocus() {
+  function restoreSettingsOpenerFocus(afterFocus?: () => void) {
     const opener = settingsOpenerRef.current
-    if (!opener?.isConnected) return
-
-    window.requestAnimationFrame(() => {
-      opener.focus()
-    })
+    window.setTimeout(() => {
+      const focusTarget = opener?.isConnected
+        && opener !== document.body
+        && opener !== document.documentElement
+        ? opener
+        : document.querySelector<HTMLElement>('[data-settings-opener="true"]')
+      focusTarget?.focus()
+      afterFocus?.()
+    }, 100)
   }
 
   useEffect(() => {
@@ -408,6 +364,8 @@ export function SettingsDrawer({
     const activeElement = document.activeElement
     if (
       activeElement instanceof HTMLElement
+      && activeElement !== document.body
+      && activeElement !== document.documentElement
       && !settingsDialogRef.current?.contains(activeElement)
     ) {
       settingsOpenerRef.current = activeElement
@@ -437,6 +395,7 @@ export function SettingsDrawer({
   })
 
   const { confirm, confirmOptions, handleConfirm, handleCancel } = useConfirm()
+  useModalFocusTrap(settingsDialogRef, open && confirmOptions === null)
 
   const chatHistory = useChatHistoryActions({
     chatMessageCount,
@@ -578,6 +537,7 @@ export function SettingsDrawer({
       themePreview.previewTheme(settings.themeId)
       speechVoices.syncPreviewText(settings.companionName)
       if (preferredSectionId) {
+        shouldFocusActiveSectionHeadingRef.current = true
         setActiveSectionId(normalizeSettingsSectionId(preferredSectionId))
         setSettingsView('section')
       } else {
@@ -591,27 +551,10 @@ export function SettingsDrawer({
 
   useEffect(() => {
     if (!open || !preferredSectionId) return
+    shouldFocusActiveSectionHeadingRef.current = true
     setActiveSectionId(normalizeSettingsSectionId(preferredSectionId))
     setSettingsView('section')
   }, [open, preferredSectionId])
-
-  useEffect(() => {
-    if (!open || isLocaleLoaded(draft.uiLanguage)) return
-    let canceled = false
-    void ensureLocaleLoaded(draft.uiLanguage)
-      .then(() => {
-        if (!canceled) {
-          setLocaleLoadTick((tick) => tick + 1)
-        }
-      })
-      .catch((error) => {
-        console.error('[settings] Failed to load locale:', draft.uiLanguage, getRedactedLogErrorMessage(error))
-      })
-
-    return () => {
-      canceled = true
-    }
-  }, [draft.uiLanguage, open])
 
   // Re-sync API keys when vault hydration completes after drawer is already open.
   // This handles the race where settings are loaded with empty keys before vault decrypts them.
@@ -692,20 +635,81 @@ export function SettingsDrawer({
     focusAppearanceOption(nextIndex)
   }
 
-  function handleDismiss() {
+  async function handleDismiss() {
+    if (saving) return
+    if (isDirty && !await confirm({ title: ti('settings.unsaved_changes'), message: ti('settings.discard_changes_confirm'), confirmLabel: ti('settings.discard_changes'), tone: 'danger' })) return
     themePreview.previewTheme(getRollbackThemeId())
     windowState.rollbackWindowState()
     onClose()
     restoreSettingsOpenerFocus()
   }
 
-  function handleOpenSettingsSection(sectionId: SettingsSectionId) {
+  function commitDraft(): Promise<void> {
+    if (saveInFlightRef.current) return saveInFlightRef.current
+
+    setSaveError(false)
+    setSaving(true)
+    const savePromise = commitSettingsDraft({
+      committed: baseline,
+      draft: createSavePayload(),
+      onSave: (nextDraft) => onSave(nextDraft, baseline),
+      onContextAwarenessDisabled: () => {
+        clearRecentCompanionCheckInDecision()
+        clearRecentCompanionSummary()
+      },
+    }).catch((error) => {
+      setSaveError(true)
+      throw error
+    }).finally(() => {
+      if (saveInFlightRef.current !== savePromise) return
+      saveInFlightRef.current = null
+      setSaving(false)
+    })
+    saveInFlightRef.current = savePromise
+    return savePromise
+  }
+
+  async function handleSaveDraft() {
+    try {
+      await commitDraft()
+    } catch (error) {
+      console.error('[SettingsDrawer] save failed:', getRedactedLogErrorMessage(error))
+    }
+  }
+
+  async function handleStartVoiceConversation() {
+    if (voiceActionPendingRef.current || saveInFlightRef.current) return
+    voiceActionPendingRef.current = true
+    setVoiceActionPending(true)
+    setSaveError(false)
+    try {
+      if (isDirty) {
+        await commitDraft()
+      } else {
+        onClose()
+      }
+
+      restoreSettingsOpenerFocus(() => {
+        window.requestAnimationFrame(() => onStartVoiceConversation())
+      })
+    } catch (error) {
+      console.error('[SettingsDrawer] voice start save failed:', getRedactedLogErrorMessage(error))
+    } finally {
+      voiceActionPendingRef.current = false
+      setVoiceActionPending(false)
+    }
+  }
+
+  function handleOpenSettingsSection(sectionId: SettingsSectionId, moveFocus = true) {
     const normalizedSectionId = normalizeSettingsSectionId(sectionId)
-    preloadSettingsSection(normalizedSectionId)
+    if (settingsView === 'section' && normalizedSectionId === activeSectionId) {
+      if (moveFocus) activeSectionHeadingRef.current?.focus({ preventScroll: true })
+      return
+    }
+    shouldFocusActiveSectionHeadingRef.current = moveFocus
     setActiveSectionId(normalizedSectionId)
     setSettingsView('section')
   }
-
   function handleOpenOnboardingGuide() {
     themePreview.previewTheme(getRollbackThemeId())
     windowState.rollbackWindowState()
@@ -718,9 +722,10 @@ export function SettingsDrawer({
     }
   }
 
-  function handleReturnToSettingsHome() {
+  function handleReturnToSettingsHome(moveFocus = true) {
     const returnSectionId = activeSectionId
     setSettingsView('home')
+    if (!moveFocus) return
     window.requestAnimationFrame(() => {
       settingsHomeCardRefs.current[returnSectionId]?.focus()
     })
@@ -739,11 +744,24 @@ export function SettingsDrawer({
   useEffect(() => {
     if (!open || settingsView !== 'section') return undefined
 
+    const shouldMoveFocus = shouldFocusActiveSectionHeadingRef.current
+    shouldFocusActiveSectionHeadingRef.current = true
+    if (!shouldMoveFocus) return undefined
+
     const frame = window.requestAnimationFrame(() => {
       activeSectionHeadingRef.current?.focus({ preventScroll: true })
     })
     return () => window.cancelAnimationFrame(frame)
   }, [activeSectionId, open, settingsView])
+
+  useEffect(() => {
+    setSaveError(false)
+  }, [open])
+
+  function handleSettingsDialogKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
+    if (event.key !== 'Escape' || event.defaultPrevented) return
+    void handleDismiss()
+  }
 
   function renderActiveSettingsSection() {
     return (
@@ -759,6 +777,7 @@ export function SettingsDrawer({
         dailyMemoryEntries={dailyMemoryEntries}
         debugConsoleEvents={debugConsoleEvents}
         draft={draft}
+        isDirty={isDirty}
         liveTranscript={liveTranscript}
         loadingLabel={ti('settings.section.loading')}
         memories={memories}
@@ -777,6 +796,9 @@ export function SettingsDrawer({
         onRemoveDailyEntry={onRemoveDailyEntry}
         onRemoveMemory={onRemoveMemory}
         onRemoveNotificationChannel={onRemoveNotificationChannel}
+        onStartVoiceConversation={handleStartVoiceConversation}
+        onStopVoiceConversation={onStopVoiceConversation}
+        onCancelVoiceTurn={onCancelVoiceTurn}
         onSetMemoryEnabled={onSetMemoryEnabled}
         onUpdateDailyEntry={onUpdateDailyEntry}
         onUpdateMemory={onUpdateMemory}
@@ -787,12 +809,15 @@ export function SettingsDrawer({
         platformProfile={platformProfile}
         reminderTasks={reminderTasks}
         selectedMemorySearchMode={selectedMemorySearchMode}
+        saveError={saveError}
+        saving={saving}
         setDraft={setDraft}
-        speechLevel={speechLevel}
+        speechLevelSource={speechLevelSource}
         speechVoices={speechVoices}
         uiLanguage={uiLanguage}
         voicePipeline={voicePipeline}
         voiceState={voiceState}
+        voiceActionPending={voiceActionPending}
         voiceTrace={voiceTrace}
         windowState={windowState}
       />
@@ -813,8 +838,6 @@ export function SettingsDrawer({
               className={`settings-section-nav__button ${isActive ? 'is-active' : ''}`}
               data-section={section.id}
               aria-current={isActive ? 'page' : undefined}
-              onPointerEnter={() => preloadSettingsSection(section.id)}
-              onFocus={() => preloadSettingsSection(section.id)}
               onClick={() => handleOpenSettingsSection(section.id)}
             >
               <span className="settings-section-nav__marker" aria-hidden="true">
@@ -830,6 +853,37 @@ export function SettingsDrawer({
 
   if (!open) return null
 
+  if (new URLSearchParams(window.location.search).get('uiV2') !== '0') {
+    return (
+      <SettingsDrawerV2
+        settingsView={settingsView}
+        activeSectionId={activeSectionId}
+        activeSectionLabel={activeSectionLabel}
+        activeSectionDescription={activeSectionDescription}
+        voiceSectionDescription={settingsSectionMetaById.voice.description}
+        settingsSectionOptions={settingsSectionOptions}
+        settingsBackdropClassName={settingsBackdropClassName}
+        settingsDrawerClassName={settingsDrawerClassName}
+        settingsDialogRef={settingsDialogRef}
+        settingsSectionsRef={settingsSectionsRef}
+        activeSectionHeadingRef={activeSectionHeadingRef}
+        companionName={draft.companionName}
+        dirty={isDirty}
+        ti={ti}
+        renderActiveSettingsSection={renderActiveSettingsSection}
+        confirmOptions={confirmOptions}
+        onReturnToSettingsHome={handleReturnToSettingsHome}
+        onOpenSettingsSection={handleOpenSettingsSection}
+        onClose={handleDismiss}
+        onDialogKeyDown={handleSettingsDialogKeyDown}
+        onDiscardDraft={() => { resetDraftForOpen(settings); themePreview.previewTheme(settings.themeId); windowState.rollbackWindowState() }}
+        onSaveDraft={handleSaveDraft}
+        saving={saving}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
+    )
+  }
   return (
     <div className={settingsBackdropClassName} onClick={handleDismiss}>
       <aside
@@ -839,17 +893,24 @@ export function SettingsDrawer({
         aria-modal="true"
         aria-label={ti('settings.panel', { name: draft.companionName })}
         tabIndex={-1}
+        onKeyDown={handleSettingsDialogKeyDown}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="settings-drawer__header sdh">
+        <div
+          className="settings-drawer__header sdh"
+          // Body and header share z-index:1; later body paints over the absolute
+          // language menu. Elevate only while the menu is open so menuitemradio
+          // clicks hit the options instead of settings-home-presence.
+          style={languageMenuOpen ? { zIndex: 5 } : undefined}
+        >
           <div className="settings-drawer__header-main sdhm">
             <div className="settings-drawer__title-stack sdt">
               <h3 className="settings-drawer__window-title">
                 <span className="settings-drawer__window-title-name">
-                  {settingsView === 'home' ? ti('settings.home.presence.title') : activeSectionLabel}
+                  {ti('settings.title')}
                 </span>
                 <span className="settings-drawer__window-title-label">
-                  {settingsView === 'home' ? draft.companionName : ti('settings.title')}
+                  {settingsView === 'home' ? draft.companionName : activeSectionLabel}
                 </span>
               </h3>
             </div>
@@ -865,7 +926,13 @@ export function SettingsDrawer({
                   aria-controls={languageMenuId}
                   aria-label={ti('settings.language_menu.aria_label')}
                   title={ti('settings.language_menu.aria_label')}
-                  onClick={() => setLanguageMenuOpen((open) => !open)}
+                  onClick={() => {
+                    if (languageMenuOpen) {
+                      closeLanguageMenuAndRestoreFocus()
+                      return
+                    }
+                    openLanguageMenuAt(selectedLanguageIndex)
+                  }}
                   onKeyDown={handleLanguageButtonKeyDown}
                 >
                   <svg
@@ -901,6 +968,7 @@ export function SettingsDrawer({
                             type="button"
                             role="menuitemradio"
                             aria-checked={isActive}
+                            tabIndex={isActive ? 0 : -1}
                             className={
                               'settings-drawer__language-menu-item'
                               + (isActive ? ' settings-drawer__language-menu-item--active' : '')
@@ -954,7 +1022,6 @@ export function SettingsDrawer({
               ti={ti}
               onAppearanceOptionKeyDown={handleAppearanceOptionKeyDown}
               onOpenHomeAction={handleOpenSettingsHomeAction}
-              onPreloadSettingsSection={preloadSettingsSection}
               onOpenSettingsSection={handleOpenSettingsSection}
               onSelectAppearanceOption={selectAppearanceOption}
             />
@@ -968,7 +1035,7 @@ export function SettingsDrawer({
                     <button
                       type="button"
                       className="settings-page__back"
-                      onClick={handleReturnToSettingsHome}
+                      onClick={() => handleReturnToSettingsHome()}
                       aria-label={ti('settings.page.back')}
                       title={ti('settings.page.back')}
                     >
@@ -1005,7 +1072,7 @@ export function SettingsDrawer({
           cancelLabel={ti('common.cancel')}
           saveLabel={ti('settings.save')}
           onCancel={handleDismiss}
-          onSave={() => onSave(createSavePayload())}
+          onSave={handleSaveDraft}
         />
       ) : null}
       </aside>

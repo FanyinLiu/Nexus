@@ -7,7 +7,7 @@ import type {
   WebSearchResponse,
   WebSearchResultItem,
 } from '../types'
-import { stripWeatherPeriodPrefix } from '../features/tools/weatherText.ts'
+import { stripLocalizedWeatherPeriodPrefix } from '../features/tools/weatherText.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
 type TranslateFn = ReturnType<typeof useTranslation>['t']
 
@@ -396,12 +396,12 @@ export const ToolResultCard = memo(function ToolResultCard({ toolResult, variant
         <p className="tool-result-card__summary">{toolResult.result.currentSummary}</p>
         {toolResult.result.todaySummary ? (
           <p className="tool-result-card__meta">
-            {todayLabel}：{stripWeatherPeriodPrefix(toolResult.result.todaySummary, '今天')}
+            {todayLabel}：{stripLocalizedWeatherPeriodPrefix(toolResult.result.todaySummary, 'today')}
           </p>
         ) : null}
         {toolResult.result.tomorrowSummary ? (
           <p className="tool-result-card__meta">
-            {tomorrowLabel}：{stripWeatherPeriodPrefix(toolResult.result.tomorrowSummary, '明天')}
+            {tomorrowLabel}：{stripLocalizedWeatherPeriodPrefix(toolResult.result.tomorrowSummary, 'tomorrow')}
           </p>
         ) : null}
       </section>

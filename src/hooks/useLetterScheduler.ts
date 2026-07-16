@@ -23,6 +23,15 @@ import {
   type LoadedPersona,
 } from '../features/autonomy/v2/personaTypes.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import {
+  acquireBackgroundChatLease,
+  classifyBackgroundChatFailure,
+  getBackgroundChatGate,
+  isBackgroundChatLeaseAvailable,
+  recordBackgroundChatFailure,
+  recordBackgroundChatSuccess,
+  releaseBackgroundChatLease,
+} from '../features/autonomy/backgroundChatPolicy.ts'
 import type { AppSettings, ChatMessage, MemoryItem } from '../types'
 
 const POLL_INTERVAL_MS = 30 * 60_000
@@ -35,6 +44,8 @@ type UseLetterSchedulerOptions = {
   messages: ChatMessage[]
   memories: MemoryItem[]
   panelOpen: boolean
+  /** Only the background runtime owner may create timers or call IPC. */
+  enabled?: boolean
   onEvent?: (event: {
     title: string
     detail: string
@@ -108,6 +119,7 @@ async function callLetterLLM(
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
     temperature: LETTER_TEMPERATURE,
     maxTokens: LETTER_MAX_TOKENS,
+    traceId: 'background:letter',
   })
   return resp.content ?? null
 }
@@ -123,6 +135,7 @@ export function useLetterScheduler({
   messages,
   memories,
   panelOpen,
+  enabled = true,
   onEvent,
 }: UseLetterSchedulerOptions) {
   const liveRef = useRef({ settings, messages, memories, panelOpen, onEvent })
@@ -131,6 +144,7 @@ export function useLetterScheduler({
   }, [settings, messages, memories, panelOpen, onEvent])
 
   useEffect(() => {
+    if (!enabled) return
     if (!settings.proactiveLetterEnabled) return
     if (typeof window === 'undefined') return
 
@@ -178,6 +192,25 @@ export function useLetterScheduler({
         return
       }
 
+      const policyInput = {
+        providerId: s.apiProviderId,
+        baseUrl: s.apiBaseUrl,
+        model: s.model,
+        apiKey: s.apiKey,
+      }
+      const gate = getBackgroundChatGate(policyInput)
+      if (!gate.allowed) {
+        if (gate.shouldNotify) {
+          live.onEvent?.({
+            title: '[letter] skipped',
+            detail: `background:letter blocked: ${gate.reason}`,
+            tone: 'info',
+          })
+        }
+        return
+      }
+      if (!isBackgroundChatLeaseAvailable()) return
+
       const persona = await loadActivePersona(s)
       if (!persona) {
         live.onEvent?.({
@@ -190,15 +223,21 @@ export function useLetterScheduler({
 
       const letterDate = new Date().toISOString().slice(0, 10)
       let raw: string | null
+      const lease = acquireBackgroundChatLease()
+      if (!lease) return
       try {
         raw = await callLetterLLM(s, aggregate, persona, letterDate)
+        recordBackgroundChatSuccess(policyInput)
       } catch (err) {
+        recordBackgroundChatFailure(policyInput, classifyBackgroundChatFailure(err))
         live.onEvent?.({
           title: '[letter] LLM call failed',
           detail: getRedactedLogErrorMessage(err),
           tone: 'warn',
         })
         return
+      } finally {
+        releaseBackgroundChatLease(lease)
       }
 
       const parsed = raw ? parseLetterResponse(raw) : null
@@ -242,5 +281,5 @@ export function useLetterScheduler({
     void tick()
     const id = window.setInterval(() => { void tick() }, POLL_INTERVAL_MS)
     return () => window.clearInterval(id)
-  }, [settings.proactiveLetterEnabled])
+  }, [enabled, settings.proactiveLetterEnabled])
 }

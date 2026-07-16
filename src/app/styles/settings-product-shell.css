@@ -54,8 +54,8 @@
   --nx-settings-field-hover: #2b2633;
   --nx-settings-segment-surface: #121016;
   --nx-settings-segment-active: #302a39;
-  --nx-settings-accent: #a88bff;
-  --nx-settings-accent-soft: rgba(168, 139, 255, 0.14);
+  --nx-settings-accent: var(--color-accent, #a88bff);
+  --nx-settings-accent-soft: var(--color-accent-soft, rgba(168, 139, 255, 0.14));
   --nx-settings-danger: #d9685d;
   --nx-settings-success: #6fc17e;
   --nx-settings-footer-surface: #17151c;
@@ -91,8 +91,8 @@
   --nx-settings-field-hover: #1d1f24;
   --nx-settings-segment-surface: #07080a;
   --nx-settings-segment-active: #20232a;
-  --nx-settings-accent: #6f9cff;
-  --nx-settings-accent-soft: rgba(111, 156, 255, 0.16);
+  --nx-settings-accent: var(--color-accent, #6f9cff);
+  --nx-settings-accent-soft: var(--color-accent-soft, rgba(111, 156, 255, 0.16));
   --nx-settings-danger: #ed7469;
   --nx-settings-success: #70c58a;
   --nx-settings-footer-surface: #0b0c0e;
@@ -117,7 +117,7 @@
   --nx-settings-backdrop: #e8edf3;
   --nx-settings-ink: #17202a;
   --nx-settings-muted: rgba(23, 32, 42, 0.66);
-  --nx-settings-faint: rgba(23, 32, 42, 0.42);
+  --nx-settings-faint: rgba(23, 32, 42, 0.48);
   --nx-settings-line: rgba(30, 42, 58, 0.12);
   --nx-settings-line-soft: rgba(30, 42, 58, 0.08);
   --nx-settings-surface: #f7f9fc;
@@ -128,8 +128,8 @@
   --nx-settings-field-hover: #ffffff;
   --nx-settings-segment-surface: rgba(30, 42, 58, 0.06);
   --nx-settings-segment-active: #ffffff;
-  --nx-settings-accent: #3478f6;
-  --nx-settings-accent-soft: rgba(52, 120, 246, 0.1);
+  --nx-settings-accent: var(--color-accent, #3478f6);
+  --nx-settings-accent-soft: var(--color-accent-soft, rgba(52, 120, 246, 0.1));
   --nx-settings-danger: #b94739;
   --nx-settings-success: #287a4a;
   --nx-settings-footer-surface: #f7f9fc;
@@ -153,8 +153,8 @@
 .sd-warm:is(.sd-home, .sd-section) {
   --nx-settings-backdrop: #efebe5;
   --nx-settings-ink: #26211c;
-  --nx-settings-muted: rgba(72, 63, 55, 0.66);
-  --nx-settings-faint: rgba(72, 63, 55, 0.42);
+  --nx-settings-muted: rgba(72, 63, 55, 0.74);
+  --nx-settings-faint: rgba(72, 63, 55, 0.58);
   --nx-settings-line: rgba(55, 45, 36, 0.12);
   --nx-settings-line-soft: rgba(55, 45, 36, 0.08);
   --nx-settings-surface: #fbf8f3;
@@ -165,8 +165,8 @@
   --nx-settings-field-hover: #ffffff;
   --nx-settings-segment-surface: rgba(55, 45, 36, 0.06);
   --nx-settings-segment-active: #ffffff;
-  --nx-settings-accent: #8f5b43;
-  --nx-settings-accent-soft: rgba(143, 91, 67, 0.1);
+  --nx-settings-accent: var(--color-accent, #8f5b43);
+  --nx-settings-accent-soft: var(--color-accent-soft, rgba(143, 91, 67, 0.1));
   --nx-settings-danger: #b94739;
   --nx-settings-success: #397a45;
   --nx-settings-footer-surface: #fbf8f3;
@@ -243,10 +243,10 @@
 }
 
 .sd-home .settings-drawer__language-button, .sd-home .settings-drawer__icon-button, .sd-section .settings-drawer__language-button, .sd-section .settings-drawer__icon-button {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  min-height: 28px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;

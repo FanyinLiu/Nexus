@@ -86,7 +86,16 @@ export function ModelSection() {
 }
 .sd-section .sp.sp .settings-form-row {}
 .sd-section .sp.sp .settings-form-row__validation {}
-.sd-section .sp.sp .settings-toggle input:checked {}
+`,
+  'src/app/styles/settings-product-reference-final.css': `
+.sd-section .sp.sp .settings-toggle input:checked {
+  background: var(--nx-settings-accent);
+  box-shadow: none;
+}
+`,
+  'src/features/settingsV3/settings-v3.css': `
+.settings-v3-switch input:checked + .settings-v3-switch__track { background: var(--sv3-accent); }
+.settings-v3-switch input:focus-visible + .settings-v3-switch__track {}
 `,
 }
 
@@ -175,6 +184,17 @@ test('forms surface audit rejects a split description and validation chain', () 
 
     assert.equal(report.summary.ok, false)
     assert.ok(report.missingContracts.some((item) => item.id === 'settings-form-row-describedby-chain'))
+  })
+})
+
+test('forms surface audit keeps active and fallback toggle states independently owned', () => {
+  withFixture({
+    'src/features/settingsV3/settings-v3.css': '',
+  }, (root) => {
+    const report = buildFormsSurfaceReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(report.missingContracts.some((item) => item.id === 'v3-settings-toggle-state-css'))
   })
 })
 

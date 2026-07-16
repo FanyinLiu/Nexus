@@ -128,7 +128,9 @@ test('chat auth headers trim keys and reject pasted non-header text', () => {
     apiKey: 'test-key 模型说明',
   })
   assert.equal(preflight?.ok, false)
-  assert.match(preflight?.message ?? '', /MiniMax Token Plan API Key 格式好像不太对/)
+  assert.equal(preflight?.messageKey, 'settings.chat_connection.api_key_header_unsafe')
+  // Provider-specific diagnostic text stays out of the primary UI message.
+  assert.doesNotMatch(preflight?.message ?? '', /MiniMax Token Plan/)
 })
 
 test('anthropic-compatible base URL infers messages protocol for custom providers', () => {
@@ -182,6 +184,132 @@ test('anthropic connection tests use a lightweight messages probe', () => {
   assert.equal(request.successKind, 'message')
 })
 
+test('OpenAI-compatible connection tests probe the configured model response', () => {
+  const request = buildChatConnectionTestRequest({
+    providerId: 'deepseek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    apiKey: 'test-key',
+    model: 'deepseek-chat',
+  })
+
+  assert.equal(request.endpoint, 'https://api.deepseek.com/v1/chat/completions')
+  assert.equal(request.request.method, 'POST')
+  assert.equal(request.successKind, 'message')
+  assert.equal(JSON.parse(request.request.body).model, 'deepseek-chat')
+  assert.equal(JSON.parse(request.request.body).max_tokens, 1)
+})
+
+test('message connection probes require a real provider response shape', () => {
+  const empty = summarizeChatConnectionTestSuccess({
+    providerId: 'deepseek',
+    successKind: 'message',
+    model: 'deepseek-chat',
+    data: {},
+  })
+  const valid = summarizeChatConnectionTestSuccess({
+    providerId: 'deepseek',
+    successKind: 'message',
+    model: 'deepseek-chat',
+    data: {
+      model: 'deepseek-chat',
+      choices: [{ message: { role: 'assistant', content: 'OK' } }],
+    },
+  })
+  const emptyChoice = summarizeChatConnectionTestSuccess({
+    providerId: 'deepseek',
+    successKind: 'message',
+    model: 'deepseek-chat',
+    data: { choices: [{}] },
+  })
+  const topLevelError = summarizeChatConnectionTestSuccess({
+    providerId: 'deepseek',
+    successKind: 'message',
+    model: 'deepseek-chat',
+    data: { error: { message: 'bad key' }, choices: [{ message: { content: 'OK' } }] },
+  })
+
+  assert.equal(empty.ok, false)
+  assert.equal(empty.code, 'invalid_probe_response')
+  assert.equal(empty.messageKey, 'settings.chat_connection.invalid_probe')
+  assert.equal(emptyChoice.ok, false)
+  assert.equal(topLevelError.ok, false)
+  assert.equal(valid.ok, true)
+  assert.equal(valid.status, 'ready')
+  assert.equal(valid.messageKey, 'settings.chat_connection.ready')
+  assert.equal(valid.evidence?.kind, 'model-response')
+})
+
+test('message connection probes bind observed model identity and refuse silent fallback green', () => {
+  const matched = summarizeChatConnectionTestSuccess({
+    providerId: 'openai',
+    successKind: 'message',
+    model: 'gpt-4o-mini',
+    data: {
+      model: 'gpt-4o-mini',
+      choices: [{ message: { role: 'assistant', content: 'OK' } }],
+    },
+  })
+  const mismatched = summarizeChatConnectionTestSuccess({
+    providerId: 'openai',
+    successKind: 'message',
+    model: 'gpt-4o-mini',
+    data: {
+      model: 'gpt-4o',
+      choices: [{ message: { role: 'assistant', content: 'OK' } }],
+    },
+  })
+
+  assert.equal(matched.ok, true)
+  assert.equal(matched.status, 'ready')
+  assert.equal(matched.evidence?.identityMismatch, undefined)
+  assert.equal(mismatched.ok, true)
+  assert.equal(mismatched.status, 'error')
+  assert.equal(mismatched.evidence?.identityMismatch, true)
+  assert.equal(mismatched.evidence?.partial, true)
+  assert.equal(mismatched.messageKey, 'settings.chat_connection.identity_mismatch')
+  assert.equal(mismatched.evidence?.observedModelId, 'gpt-4o')
+})
+
+test('message connection probes do not claim requested model identity when response omits it', () => {
+  const result = summarizeChatConnectionTestSuccess({
+    providerId: 'xai',
+    successKind: 'message',
+    model: 'grok-4.3',
+    data: { choices: [{ message: { role: 'assistant', content: 'OK' } }] },
+  })
+
+  assert.equal(result.ok, true)
+  assert.equal(result.status, 'partial')
+  assert.equal(result.messageKey, 'settings.chat_connection.identity_unverified')
+  assert.equal(result.recommendationKey, 'settings.chat_connection.identity_unverified_rec')
+  assert.equal(result.evidence?.partial, true)
+  assert.equal(result.evidence?.observedModelId, undefined)
+})
+
+test('model-list success is discovery-only and never green-ready for chat', () => {
+  const listed = summarizeChatConnectionTestSuccess({
+    providerId: 'openai',
+    successKind: 'model_list',
+    model: 'gpt-4o-mini',
+    data: { data: [{ id: 'gpt-4o-mini' }, { id: 'gpt-4o' }] },
+  })
+  const emptyReadyLooking = summarizeChatConnectionTestSuccess({
+    providerId: 'custom',
+    successKind: 'model_list',
+    model: 'local-model',
+    data: { data: [] },
+  })
+
+  assert.equal(listed.ok, true)
+  assert.equal(listed.evidence?.kind, 'model-list')
+  assert.equal(listed.evidence?.partial, true)
+  assert.equal(listed.messageKey, 'settings.chat_connection.model_list_not_proof')
+  assert.equal(emptyReadyLooking.ok, true)
+  assert.equal(emptyReadyLooking.evidence?.kind, 'model-list')
+  assert.equal(emptyReadyLooking.evidence?.partial, true)
+  assert.notEqual(emptyReadyLooking.status, 'ready')
+})
+
 test('ollama connection test reports a missing configured model clearly', () => {
   const result = summarizeChatConnectionTestSuccess({
     providerId: 'ollama',
@@ -195,7 +323,8 @@ test('ollama connection test reports a missing configured model clearly', () => 
   })
 
   assert.equal(result.ok, false)
-  assert.match(result.message, /ollama pull qwen3:8b/i)
+  assert.equal(result.messageKey, 'settings.chat_connection.model_not_found_ollama')
+  assert.equal(result.messageParams?.model, 'qwen3:8b')
 })
 
 test('ollama connection test reports an empty local model list clearly', () => {
@@ -207,7 +336,7 @@ test('ollama connection test reports an empty local model list clearly', () => {
   })
 
   assert.equal(result.ok, false)
-  assert.match(result.message, /还没有模型/)
+  assert.equal(result.messageKey, 'settings.chat_connection.model_missing_ollama')
   assert.equal(result.status, 'model_missing')
 })
 
@@ -260,7 +389,7 @@ test('deepseek connection test asks for an API key before probing the network', 
   assert.equal(result?.ok, false)
   assert.equal(result?.status, 'needs_key')
   assert.equal(result?.code, 'missing_api_key')
-  assert.match(result?.message ?? '', /DeepSeek.*API Key/)
+  assert.equal(result?.messageKey, 'settings.chat_connection.missing_api_key_deepseek')
 })
 
 test('connection test preflight gives unsafe header characters a stable code', () => {
@@ -272,7 +401,7 @@ test('connection test preflight gives unsafe header characters a stable code', (
   assert.equal(result?.ok, false)
   assert.equal(result?.status, 'needs_key')
   assert.equal(result?.code, 'api_key_contains_whitespace')
-  assert.match(result?.message ?? '', /HTTP Header/)
+  assert.equal(result?.messageKey, 'settings.chat_connection.api_key_header_unsafe')
 })
 
 test('deepseek connection test reports model mismatches with a recommended fallback', () => {
@@ -290,7 +419,10 @@ test('deepseek connection test reports model mismatches with a recommended fallb
 
   assert.equal(result.ok, false)
   assert.equal(result.code, 'model_not_found')
-  assert.match(result.message, /deepseek-v4-flash/)
+  assert.equal(result.messageKey, 'settings.chat_connection.model_not_found_deepseek')
+  assert.equal(result.recommendationKey, 'settings.chat_connection.model_not_found_deepseek_rec')
+  // Provider body must not become the primary UI message.
+  assert.doesNotMatch(result.message, /model not found/i)
 })
 
 test('429 rate-limit returns actionable recommendation', () => {
@@ -304,7 +436,9 @@ test('429 rate-limit returns actionable recommendation', () => {
 
   assert.equal(result.ok, false)
   assert.equal(result.code, 'rate_limited')
-  assert.match(result.message, /Rate limit/)
+  assert.equal(result.messageKey, 'settings.chat_connection.rate_limited')
+  assert.equal(result.recommendationKey, 'settings.chat_connection.rate_limited_rec')
+  assert.doesNotMatch(result.message, /Rate limit exceeded/)
 })
 
 test('404 with model returns model_missing status for non-deepseek providers', () => {
@@ -319,7 +453,8 @@ test('404 with model returns model_missing status for non-deepseek providers', (
   assert.equal(result.ok, false)
   assert.equal(result.status, 'model_missing')
   assert.equal(result.code, 'model_not_found')
-  assert.match(result.message, /gpt-99/)
+  assert.equal(result.messageKey, 'settings.chat_connection.model_not_found')
+  assert.equal(result.messageParams?.model, 'gpt-99')
 })
 
 test('402 returns needs_key for non-deepseek providers', () => {
@@ -361,10 +496,11 @@ test('ollama transport failure tells the user to start the local service', () =>
   assert.equal(result.ok, false)
   assert.equal(result.status, 'unreachable')
   assert.equal(result.code, 'provider_unreachable')
-  assert.match(result.message, /本机 Ollama/)
-  assert.match(result.message, /http:\/\/127\.0\.0\.1:11434\/v1/)
-  assert.match(result.recommendation ?? '', /ollama serve/)
-  assert.match(result.recommendation ?? '', /ollama pull qwen3:8b/)
+  assert.equal(result.messageKey, 'settings.chat_connection.provider_unreachable_ollama')
+  assert.equal(result.recommendationKey, 'settings.chat_connection.provider_unreachable_ollama_rec')
+  // Raw host/path from the transport error must not appear in the primary message.
+  assert.doesNotMatch(result.message, /127\.0\.0\.1/)
+  assert.doesNotMatch(result.message, /ECONNREFUSED/)
 })
 
 test('ollama transport timeout keeps the same actionable startup path', () => {
@@ -377,8 +513,8 @@ test('ollama transport timeout keeps the same actionable startup path', () => {
   assert.equal(result.ok, false)
   assert.equal(result.status, 'unreachable')
   assert.equal(result.code, 'request_timeout')
-  assert.match(result.message, /一直没有回应/)
-  assert.match(result.recommendation ?? '', /连接测试/)
+  assert.equal(result.messageKey, 'settings.chat_connection.provider_unreachable_ollama_timeout')
+  assert.equal(result.recommendationKey, 'settings.chat_connection.provider_unreachable_ollama_rec')
 })
 
 test('non-local transport failures keep generic network repair guidance', () => {
@@ -391,8 +527,10 @@ test('non-local transport failures keep generic network repair guidance', () => 
   assert.equal(result.ok, false)
   assert.equal(result.status, 'unreachable')
   assert.equal(result.code, 'provider_unreachable')
-  assert.match(result.message, /fetch failed/)
-  assert.match(result.recommendation ?? '', /地址和网络/)
+  assert.equal(result.messageKey, 'settings.chat_connection.provider_unreachable')
+  // Raw transport text stays diagnostic-only, not the primary UI message.
+  assert.doesNotMatch(result.message, /fetch failed/)
+  assert.equal(result.recommendationKey, 'settings.chat_connection.provider_unreachable_rec')
 })
 
 test('502 returns unreachable with maintenance hint', () => {

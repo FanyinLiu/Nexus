@@ -9,7 +9,10 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const REQUIRED_FILES = [
   'docs/FOCUS_MANAGEMENT_REFERENCE_REVIEW.md',
   'src/components/SettingsDrawer.tsx',
+  'src/components/SettingsDrawerV2.tsx',
+  'src/components/settingsDrawerHooks/useSettingsLanguageControl.ts',
   'src/components/SettingsHomeView.tsx',
+  'src/features/uiV2/SettingsShellV2.tsx',
   'src/components/ConfirmDialog.tsx',
   'src/components/useConfirm.ts',
   'src/hooks/useModalFocusTrap.ts',
@@ -39,7 +42,7 @@ const REQUIRED_CONTRACTS = [
     file: 'src/components/SettingsDrawer.tsx',
     description: 'SettingsDrawer owns a local focus trap, opener return, and section heading handoff.',
     patterns: [
-      'useModalFocusTrap(settingsDialogRef, open)',
+      'useModalFocusTrap(settingsDialogRef, open && confirmOptions === null)',
       'settingsOpenerRef',
       'restoreSettingsOpenerFocus',
       'settingsHomeCardRefs',
@@ -65,40 +68,85 @@ const REQUIRED_CONTRACTS = [
     ],
   },
   {
+    id: 'settings-v2-home-card-focus-return-targets',
+    file: 'src/features/uiV2/SettingsShellV2.tsx',
+    description: 'Settings V2 returns keyboard and assistive Back activation to the matching V2 group card without suppressing scroll.',
+    patterns: [
+      'pendingHomeFocusGroupRef.current = !isHome && intent.moveFocus ? activeDestination : null',
+      'homeCardRefs.current[returnGroupId]?.focus()',
+      'homeCardRefs.current[group.id] = node',
+      'data-focus-return-group={group.id}',
+      'handleReturnToHome(event.detail)',
+    ],
+  },
+  {
+    id: 'settings-v2-focus-handoff-isolated',
+    file: 'src/components/SettingsDrawerV2.tsx',
+    description: 'Settings V2 owns its Home focus target instead of allowing the legacy Settings home ref to steal focus.',
+    patterns: [
+      'onReturnToSettingsHome(false)',
+    ],
+  },
+  {
     id: 'settings-menu-keyboard-exit',
-    file: 'src/components/SettingsDrawer.tsx',
-    description: 'Menu-like controls keep keyboard exit and trigger focus return.',
+    file: 'src/components/settingsDrawerHooks/useSettingsLanguageControl.ts',
+    description: 'The language controller keeps latest-wins loading, keyboard exit, and trigger focus return.',
     patterns: [
       'handleLanguageMenuItemKeyDown',
+      'openLanguageMenuAt(selectedLanguageIndex)',
+      'languageLoadGenerationRef',
       "event.key === 'Escape'",
       'languageButtonRef.current?.focus()',
+    ],
+  },
+  {
+    id: 'settings-menu-dom-contract',
+    file: 'src/components/SettingsDrawer.tsx',
+    description: 'The SettingsDrawer preserves the language menu DOM and radio semantics.',
+    patterns: [
       'role="menuitemradio"',
       'aria-checked={isActive}',
+      'tabIndex={isActive ? 0 : -1}',
     ],
   },
   {
     id: 'modal-focus-trap-boundary',
     file: 'src/hooks/useModalFocusTrap.ts',
-    description: 'Modal focus trap keeps Tab traversal local and skips hidden keyboard targets.',
+    description: 'Modal focus trap keeps Tab traversal local via a pure boundary decision helper and skips hidden keyboard targets.',
     patterns: [
       'FOCUSABLE_SELECTOR',
       "event.key !== 'Tab'",
-      'container.focus()',
-      'firstFocusable',
-      'lastFocusable',
+      'export function resolveModalTabFocusDecision',
+      'export function getFocusableElements',
+      'container.contains(activeElement)',
+      'focusInsideContainer',
+      "decision === 'first'",
+      "decision === 'last'",
       '[aria-hidden="true"]',
+      'event.preventDefault()',
+      'target.focus()',
     ],
   },
   {
     id: 'confirm-dialog-safe-focus-boundary',
     file: 'src/components/ConfirmDialog.tsx',
-    description: 'ConfirmDialog focuses the safe cancel decision and lets Escape dismiss the prompt.',
+    description: 'ConfirmDialog owns the topmost modal trap, names itself from visible title/body ids, focuses the safe cancel decision, and lets Escape dismiss the prompt.',
     patterns: [
+      'useId()',
+      'useModalFocusTrap(dialogRef, options !== null)',
+      'ref={dialogRef}',
+      'const titleId = useId()',
+      'const messageId = useId()',
       'cancelButtonRef.current?.focus()',
       "event.key === 'Escape'",
       'data-focus-default="cancel"',
       'role="alertdialog"',
       'aria-modal="true"',
+      'aria-labelledby={options.title ? titleId : messageId}',
+      'aria-describedby={options.title ? messageId : undefined}',
+      'id={titleId}',
+      'id={messageId}',
+      'type="button"',
     ],
   },
   {
@@ -290,6 +338,7 @@ export function buildFocusManagementSurfaceReport(root = ROOT) {
   const combinedCss = [...cssByFile.values()].filter(Boolean).join('\n')
   const settingsDrawer = files.get('src/components/SettingsDrawer.tsx') ?? ''
   const settingsHomeView = files.get('src/components/SettingsHomeView.tsx') ?? ''
+  const settingsShellV2 = files.get('src/features/uiV2/SettingsShellV2.tsx') ?? ''
   const confirmDialog = files.get('src/components/ConfirmDialog.tsx') ?? ''
   const useConfirm = files.get('src/components/useConfirm.ts') ?? ''
   const missingFiles = findMissingFiles(root)
@@ -314,7 +363,8 @@ export function buildFocusManagementSurfaceReport(root = ROOT) {
       focusReturnOccurrences: countOccurrences(settingsDrawer, 'restoreSettingsOpenerFocus'),
       homeCardFocusReturnOccurrences:
         countOccurrences(settingsDrawer, 'data-focus-return-section')
-        + countOccurrences(settingsHomeView, 'data-focus-return-section'),
+        + countOccurrences(settingsHomeView, 'data-focus-return-section')
+        + countOccurrences(settingsShellV2, 'data-focus-return-group'),
       confirmFocusReturnOccurrences: countOccurrences(useConfirm, 'restoreConfirmOpenerFocus'),
       safeConfirmFocusOccurrences: countOccurrences(confirmDialog, 'data-focus-default="cancel"'),
       sectionHeadingFocusOccurrences: countOccurrences(settingsDrawer, 'activeSectionHeadingRef'),

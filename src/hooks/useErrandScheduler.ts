@@ -40,6 +40,7 @@ const EMPTY_MEMORY: MemoryRecallContext = {
 
 interface UseErrandSchedulerOptions {
   settings: AppSettings
+  enabled?: boolean
 }
 
 /**
@@ -54,14 +55,14 @@ interface UseErrandSchedulerOptions {
  * Manual approval is the contract: the runner never invents tasks. It
  * only executes ones the user explicitly added to the queue.
  */
-export function useErrandScheduler({ settings }: UseErrandSchedulerOptions) {
+export function useErrandScheduler({ settings, enabled = true }: UseErrandSchedulerOptions) {
   const liveRef = useRef({ settings })
   useEffect(() => {
     liveRef.current = { settings }
   }, [settings])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (!enabled || typeof window === 'undefined') return
 
     let stopped = false
 
@@ -128,5 +129,5 @@ export function useErrandScheduler({ settings }: UseErrandSchedulerOptions) {
     }
     // Empty deps: scheduler runs for the lifetime of the app. liveRef
     // already gives the tick the latest settings.
-  }, [])
+  }, [enabled])
 }

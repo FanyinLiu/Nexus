@@ -2,35 +2,96 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
-  REQUIRED_MAC_RELEASE_ENV,
+  FORBIDDEN_MAC_SIGNING_ENV,
   validateMacBuildConfig,
   validateMacReleaseEnvironment,
 } from '../scripts/mac-release-preflight.mjs'
 
-test('mac release preflight requires every signing and notarization secret', () => {
-  const result = validateMacReleaseEnvironment({})
-
-  assert.equal(result.ok, false)
-  assert.deepEqual(result.missing, REQUIRED_MAC_RELEASE_ENV)
-  assert.match(result.errors[0], /signing\/notarization environment/)
+const makeUnsignedPackage = () => ({
+  build: {
+    appId: 'ai.factory.desktoppet',
+    productName: 'Nexus',
+    forceCodeSigning: false,
+    electronFuses: {
+      runAsNode: false,
+      enableCookieEncryption: true,
+      enableNodeOptionsEnvironmentVariable: false,
+      enableNodeCliInspectArguments: false,
+      onlyLoadAppFromAsar: true,
+      enableEmbeddedAsarIntegrityValidation: true,
+    },
+    mac: {
+      identity: '-',
+      hardenedRuntime: false,
+      gatekeeperAssess: false,
+      notarize: false,
+      extraResources: [
+        { from: 'sherpa-models', to: 'sherpa-models' },
+        { from: 'public/vendor/vad/silero_vad_v5.onnx', to: 'silero_vad_v5.onnx' },
+      ],
+    },
+  },
 })
 
-test('mac release preflight rejects smoke and disabled identity discovery modes', () => {
+test('mac unsigned release preflight rejects signing and notarization secrets', () => {
+  const result = validateMacReleaseEnvironment(
+    Object.fromEntries(FORBIDDEN_MAC_SIGNING_ENV.map((name) => [name, 'present'])),
+  )
+
+  assert.equal(result.ok, false)
+  assert.deepEqual(result.configuredSigningEnvironment, FORBIDDEN_MAC_SIGNING_ENV)
+  assert.match(result.errors[0], /must not receive signing\/notarization environment/)
+})
+
+test('mac unsigned release preflight rejects smoke and enabled identity discovery modes', () => {
   const result = validateMacReleaseEnvironment({
-    CSC_IDENTITY_AUTO_DISCOVERY: 'false',
+    CSC_IDENTITY_AUTO_DISCOVERY: 'true',
     SMOKE_TEST: '1',
-    ...Object.fromEntries(REQUIRED_MAC_RELEASE_ENV.map((name) => [name, 'present'])),
   })
 
   assert.equal(result.ok, false)
-  assert.match(result.errors.join('\n'), /CSC_IDENTITY_AUTO_DISCOVERY=false/)
+  assert.match(result.errors.join('\n'), /must be false/)
   assert.match(result.errors.join('\n'), /SMOKE_TEST=1/)
 })
 
-test('mac release preflight validates the production electron-builder profile', () => {
-  assert.equal(validateMacBuildConfig({ build: { mac: { hardenedRuntime: true, gatekeeperAssess: true, notarize: true } } }).ok, true)
+test('mac unsigned release preflight accepts absent or explicitly disabled identity discovery', () => {
+  assert.equal(validateMacReleaseEnvironment({}).ok, true)
+  assert.equal(validateMacReleaseEnvironment({ CSC_IDENTITY_AUTO_DISCOVERY: 'false' }).ok, true)
+})
 
-  const result = validateMacBuildConfig({ build: { mac: { hardenedRuntime: false, gatekeeperAssess: false, notarize: false } } })
+test('mac release preflight validates the formal explicit unsigned builder profile', () => {
+  assert.equal(validateMacBuildConfig(makeUnsignedPackage()).ok, true)
+
+  const invalid = makeUnsignedPackage()
+  invalid.build.productName = 'Nexus Smoke'
+  invalid.build.forceCodeSigning = true
+  invalid.build.mac.identity = 'Developer ID Application'
+  invalid.build.mac.hardenedRuntime = true
+  invalid.build.mac.gatekeeperAssess = true
+  invalid.build.mac.notarize = true
+
+  const result = validateMacBuildConfig(invalid)
   assert.equal(result.ok, false)
-  assert.equal(result.errors.length, 3)
+  assert.equal(result.errors.length, 6)
+})
+
+test('mac release preflight requires both production runtime resources exactly once', () => {
+  const missingVad = makeUnsignedPackage()
+  missingVad.build.mac.extraResources.pop()
+  assert.match(validateMacBuildConfig(missingVad).errors.join('\n'), /silero_vad_v5\.onnx/)
+
+  const duplicateModels = makeUnsignedPackage()
+  duplicateModels.build.mac.extraResources.push({ from: 'sherpa-models', to: 'sherpa-models' })
+  assert.match(validateMacBuildConfig(duplicateModels).errors.join('\n'), /exactly one sherpa-models/)
+})
+
+test('mac release preflight requires the production security fuse profile', () => {
+  const invalid = makeUnsignedPackage()
+  invalid.build.electronFuses.enableCookieEncryption = false
+  invalid.build.electronFuses.runAsNode = true
+
+  const result = validateMacBuildConfig(invalid)
+  assert.equal(result.ok, false)
+  assert.match(result.errors.join('\n'), /enableCookieEncryption must be true/)
+  assert.match(result.errors.join('\n'), /runAsNode must be false/)
 })

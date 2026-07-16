@@ -139,11 +139,12 @@ export function createInitialDreamLog(): MemoryDreamLog {
 export function recordDreamResult(
   log: MemoryDreamLog,
   result: MemoryDreamResult,
+  startedSessionsSinceDream = log.sessionsSinceDream,
 ): MemoryDreamLog {
   const history = [...log.history, result].slice(-10) // Keep last 10
   return {
     lastDreamAt: result.completedAt,
-    sessionsSinceDream: 0,
+    sessionsSinceDream: Math.max(0, log.sessionsSinceDream - startedSessionsSinceDream),
     history,
   }
 }

@@ -25,8 +25,10 @@ function installWeatherStub(handler: (payload: Record<string, unknown>) => Promi
 
 test('loadAmbientWeatherSnapshot shares concurrent requests for the same location', async () => {
   let callCount = 0
+  const payloads: Array<Record<string, unknown>> = []
   const now = 1_000
-  installWeatherStub(async () => {
+  installWeatherStub(async (payload) => {
+    payloads.push(payload)
     callCount += 1
     await Promise.resolve()
     return {
@@ -44,10 +46,38 @@ test('loadAmbientWeatherSnapshot shares concurrent requests for the same locatio
   const [firstSnapshot, secondSnapshot] = await Promise.all([first, second])
 
   assert.equal(callCount, 1)
+  assert.equal((payloads[0].policy as Record<string, unknown>).enabled, true)
+  assert.equal((payloads[0].policy as Record<string, unknown>).requiresConfirmation, false)
   assert.equal(firstSnapshot, secondSnapshot)
   assert.equal(firstSnapshot?.resolvedName, 'Shenzhen')
   assert.equal(firstSnapshot?.temperatureC, 26.4)
   assert.equal(firstSnapshot?.forLocation, 'Shenzhen')
+  assert.equal(firstSnapshot?.forLocale, 'zh-CN')
+})
+
+test('loadAmbientWeatherSnapshot scopes requests and cache entries by locale', async () => {
+  const payloads: Array<Record<string, unknown>> = []
+  installWeatherStub(async (payload) => {
+    payloads.push(payload)
+    return {
+      resolvedName: 'Tokyo',
+      currentTemperature: 20,
+      currentConditionLabel: payload.locale === 'ja' ? '晴れ' : 'clear',
+      currentSummary: payload.locale === 'ja' ? '現在20°C、晴れ' : 'Currently 20°C, clear',
+      currentWeatherCode: 0,
+      currentWindSpeedKmh: 2,
+    }
+  })
+
+  const english = await loadAmbientWeatherSnapshot('Tokyo', { locale: 'en-US', now: () => 1_000 })
+  const japanese = await loadAmbientWeatherSnapshot('Tokyo', { locale: 'ja', now: () => 1_000 })
+  const englishCached = await loadAmbientWeatherSnapshot('Tokyo', { locale: 'en-US', now: () => 1_001 })
+
+  assert.equal(payloads.length, 2)
+  assert.deepEqual(payloads.map((payload) => payload.locale), ['en-US', 'ja'])
+  assert.equal(english?.conditionLabel, 'clear')
+  assert.equal(japanese?.conditionLabel, '晴れ')
+  assert.equal(englishCached, english)
 })
 
 test('loadAmbientWeatherSnapshot reuses a fresh cached snapshot then refreshes after ttl', async () => {

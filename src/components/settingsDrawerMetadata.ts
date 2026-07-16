@@ -1,4 +1,5 @@
 import type { SettingsSectionId } from './settingsDrawerSupport.ts'
+import type { SettingsCardIconKey } from './settingsDrawerIcons.tsx'
 import type { PetModelDefinition } from '../features/pet/index.ts'
 import { getWebSearchProviderPreset } from '../lib/webSearchProviders.ts'
 import { getApiProviderPreset } from '../lib/index.ts'
@@ -12,7 +13,7 @@ export type SettingsSectionDescriptionMap = Record<SettingsSectionId, string>
 
 export type SettingsSectionMetaEntry = {
   eyebrow: string
-  glyph: string
+  glyph: SettingsCardIconKey
   description: string
   preview: string[]
 }
@@ -156,7 +157,7 @@ export function buildSettingsSectionMeta(input: BuildSettingsSectionMetaInput): 
     },
     lorebooks: {
       eyebrow: ti('settings.section_eyebrow.lorebooks'),
-      glyph: 'memory',
+      glyph: 'lorebooks',
       description: descriptions.lorebooks,
       preview: [
         ti('settings.preview.lorebooks.tagline_1'),

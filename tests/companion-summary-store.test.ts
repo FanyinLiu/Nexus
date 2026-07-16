@@ -4,12 +4,14 @@ import { beforeEach, test } from 'node:test'
 import {
   clearRecentCompanionCheckInDecision,
   clearRecentCompanionSummary,
+  COMPANION_DISCLOSURE_CATEGORIES,
   COMPANION_CHECK_IN_DECISION_STORAGE_KEY,
   COMPANION_SUMMARY_STORAGE_KEY,
   loadRecentCompanionCheckInDecision,
   loadRecentCompanionSummary,
   recentCompanionCheckInDecisionToDecision,
   recentCompanionSummaryToQuietObservation,
+  RECENT_COMPANION_CHECK_IN_DECISION_DISCLOSURE,
   saveRecentCompanionCheckInDecision,
   saveRecentCompanionSummary,
 } from '../src/features/context/companionSummaryStore.ts'
@@ -133,6 +135,36 @@ test('recent companion check-in decision store saves only safe rationale fields'
   assert.equal(raw?.includes('clipboard'), false)
 })
 
+test('recent companion check-in decision disclosure allowlist classifies every persisted key', () => {
+  const saved = saveRecentCompanionCheckInDecision(checkInDecision, new Date('2026-06-21T17:00:00.000Z'))
+  assert.ok(saved)
+  const raw = window.localStorage.getItem(COMPANION_CHECK_IN_DECISION_STORAGE_KEY)
+  assert.ok(raw)
+  const persisted = JSON.parse(raw) as Record<string, unknown>
+
+  assert.deepEqual(
+    Object.keys(persisted).sort(),
+    Object.keys(RECENT_COMPANION_CHECK_IN_DECISION_DISCLOSURE).sort(),
+  )
+  for (const key of ['sessionId', 'lifecycleId', 'savedAt'] as const) {
+    assert.equal(
+      RECENT_COMPANION_CHECK_IN_DECISION_DISCLOSURE[key],
+      COMPANION_DISCLOSURE_CATEGORIES.sessionLifecycleExpiryMetadata,
+    )
+  }
+  for (const key of ['shouldCheckIn', 'reason', 'surface', 'priority', 'signalKeyPresent'] as const) {
+    assert.equal(
+      RECENT_COMPANION_CHECK_IN_DECISION_DISCLOSURE[key],
+      COMPANION_DISCLOSURE_CATEGORIES.recentLocalCheckInDecision,
+    )
+  }
+  assert.equal(
+    Object.values(RECENT_COMPANION_CHECK_IN_DECISION_DISCLOSURE)
+      .some((category) => String(category) === ['short', 'lived', 'summary', 'only'].join('_')),
+    false,
+  )
+})
+
 test('recent companion check-in decision store loads without restoring raw signal keys', () => {
   saveRecentCompanionCheckInDecision(checkInDecision, new Date('2026-06-21T17:00:00.000Z'))
 
@@ -182,6 +214,19 @@ test('recent companion check-in decision store clears local state explicitly', (
   clearRecentCompanionCheckInDecision()
 
   assert.equal(loadRecentCompanionCheckInDecision(new Date('2026-06-21T17:05:00.000Z')), null)
+  assert.equal(window.localStorage.getItem(COMPANION_CHECK_IN_DECISION_STORAGE_KEY), null)
+})
+
+test('recent companion data clear coverage keeps summary and decision deletion explicit', () => {
+  saveRecentCompanionSummary(summary, new Date('2026-06-21T17:00:00.000Z'))
+  saveRecentCompanionCheckInDecision(checkInDecision, new Date('2026-06-21T17:00:00.000Z'))
+  assert.ok(window.localStorage.getItem(COMPANION_SUMMARY_STORAGE_KEY))
+  assert.ok(window.localStorage.getItem(COMPANION_CHECK_IN_DECISION_STORAGE_KEY))
+
+  clearRecentCompanionCheckInDecision()
+  clearRecentCompanionSummary()
+
+  assert.equal(window.localStorage.getItem(COMPANION_SUMMARY_STORAGE_KEY), null)
   assert.equal(window.localStorage.getItem(COMPANION_CHECK_IN_DECISION_STORAGE_KEY), null)
 })
 
@@ -335,6 +380,51 @@ test('recent companion check-in decision store clears decisions from a previous 
   })
 
   assert.equal(loadRecentCompanionCheckInDecision(), null)
+  assert.equal(window.localStorage.getItem(COMPANION_CHECK_IN_DECISION_STORAGE_KEY), null)
+})
+
+test('recent companion check-in decision store clears stale decisions beyond the short-lived TTL', () => {
+  const lifecycleId = resolveCurrentLifecycleId()
+  Object.defineProperty(globalThis, 'window', {
+    value: {
+      localStorage: window.localStorage,
+      sessionStorage: createSessionStorageMock(new Map([
+        ['nexus:companion-awareness:session-id', 'test-session'],
+        ['nexus:companion-awareness:session-started-at', '2026-06-20T00:00:00.000Z'],
+      ])),
+    },
+    configurable: true,
+    writable: true,
+  })
+  window.localStorage.setItem(COMPANION_CHECK_IN_DECISION_STORAGE_KEY, JSON.stringify({
+    sessionId: 'test-session',
+    lifecycleId,
+    savedAt: '2026-06-20T16:55:00.000Z',
+    shouldCheckIn: false,
+    reason: 'active_chat',
+    surface: 'none',
+    priority: 'none',
+    signalKeyPresent: false,
+  }))
+
+  assert.equal(loadRecentCompanionCheckInDecision(new Date('2026-06-21T17:05:00.000Z')), null)
+  assert.equal(window.localStorage.getItem(COMPANION_CHECK_IN_DECISION_STORAGE_KEY), null)
+})
+
+test('recent companion check-in decision store clears future-dated decisions', () => {
+  const lifecycleId = resolveCurrentLifecycleId()
+  window.localStorage.setItem(COMPANION_CHECK_IN_DECISION_STORAGE_KEY, JSON.stringify({
+    sessionId: 'test-session',
+    lifecycleId,
+    savedAt: '2026-06-21T17:10:00.000Z',
+    shouldCheckIn: false,
+    reason: 'active_chat',
+    surface: 'none',
+    priority: 'none',
+    signalKeyPresent: false,
+  }))
+
+  assert.equal(loadRecentCompanionCheckInDecision(new Date('2026-06-21T17:05:00.000Z')), null)
   assert.equal(window.localStorage.getItem(COMPANION_CHECK_IN_DECISION_STORAGE_KEY), null)
 })
 

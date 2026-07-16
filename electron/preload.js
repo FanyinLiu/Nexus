@@ -11,8 +11,10 @@ contextBridge.exposeInMainWorld('desktopPet', {
   },
   dragBy: (delta) => ipcRenderer.invoke('window:drag-by', delta),
   openPanel: (section) => ipcRenderer.invoke('window:open-panel', section),
+  getPanelSection: () => ipcRenderer.invoke('window:get-panel-section'),
   openPetMenu: () => ipcRenderer.invoke('window:open-pet-menu'),
   closePanel: () => ipcRenderer.invoke('window:close-panel'),
+  closeSettings: () => ipcRenderer.invoke('window:close-settings'),
   getPanelWindowState: () => ipcRenderer.invoke('panel-window:get-state'),
   setPanelWindowState: (state) => ipcRenderer.invoke('panel-window:set-state', state),
   isPanelWindow: () => ipcRenderer.invoke('window:get-view-kind').then((kind) => kind === 'panel'),
@@ -20,6 +22,11 @@ contextBridge.exposeInMainWorld('desktopPet', {
     const handler = (_event, payload) => listener(payload)
     ipcRenderer.on('panel-section:changed', handler)
     return () => ipcRenderer.removeListener('panel-section:changed', handler)
+  },
+  subscribeSettingsReturnFocus: (listener) => {
+    const handler = () => listener()
+    ipcRenderer.on('settings:return-focus', handler)
+    return () => ipcRenderer.removeListener('settings:return-focus', handler)
   },
   subscribePanelWindowState: (listener) => {
     const handler = (_event, payload) => listener(payload)

@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import '../styles/onboarding-guide-shell.css'
+import '../styles/onboarding-guide-responsive.css'
+import '../styles/onboarding-guide-calm.css'
 import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap'
 import {
   apiProviderRequiresApiKey,
@@ -19,6 +22,11 @@ import {
 import { switchTextProvider } from '../../../lib/textProviderProfiles'
 import type { AppSettings, PlatformProfile, WindowView } from '../../../types'
 import type { PetModelDefinition } from '../../pet'
+import {
+  getNextConnectionResultExpiryMs,
+  isConnectionVerificationCurrent,
+  type ConnectionVerificationRecord,
+} from '../../models/connectionTestFreshness'
 import {
   AiDisclosureStep,
   CompanionStep,
@@ -64,7 +72,10 @@ export function OnboardingGuide({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<OnboardingStepIssue | null>(null)
   const [repairNotice, setRepairNotice] = useState<string | null>(null)
-  const [textConnectionVerified, setTextConnectionVerified] = useState(false)
+  // Store fingerprint/evidence/checkedAt so readiness is derived from the
+  // current draft + wall clock (not a sticky boolean that outlives the TTL).
+  const [textConnectionVerification, setTextConnectionVerification] = useState<ConnectionVerificationRecord | null>(null)
+  const [verificationFreshnessTick, setVerificationFreshnessTick] = useState(0)
   // Lives here (not in TextStep) because inactive steps unmount: the picked
   // tab must survive Next/Back. null = untouched, TextStep derives the
   // language default.
@@ -92,6 +103,15 @@ export function OnboardingGuide({
     apiProviderRequiresApiKey(draft.apiProviderId),
     draft.uiLanguage,
   )
+  // Derived at render time from the verification record + current draft + wall clock
+  // (not a sticky boolean, not memoized). Timer/focus updates bump
+  // verificationFreshnessTick only to force a re-render so this call re-evaluates
+  // TTL even when the record and draft object references are unchanged.
+  const textConnectionVerified = isConnectionVerificationCurrent(
+    textConnectionVerification,
+    'text',
+    draft,
+  )
 
   useEffect(() => {
     if (!open) return
@@ -101,11 +121,37 @@ export function OnboardingGuide({
     setSaving(false)
     setError(null)
     setRepairNotice(null)
-    setTextConnectionVerified(false)
+    setTextConnectionVerification(null)
+    setVerificationFreshnessTick(0)
     window.requestAnimationFrame(() => {
       dialogRef.current?.focus()
     })
   }, [open, settings])
+
+  useEffect(() => {
+    if (!open || !textConnectionVerification?.ok) return undefined
+    const nextExpiry = getNextConnectionResultExpiryMs([textConnectionVerification])
+    if (nextExpiry === null) return undefined
+    const timer = window.setTimeout(
+      () => setVerificationFreshnessTick((current) => current + 1),
+      Math.max(0, nextExpiry - Date.now()) + 25,
+    )
+    return () => window.clearTimeout(timer)
+  }, [open, textConnectionVerification, verificationFreshnessTick])
+
+  useEffect(() => {
+    if (!open) return undefined
+    const refreshOnReturn = () => setVerificationFreshnessTick((current) => current + 1)
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refreshOnReturn()
+    }
+    window.addEventListener('focus', refreshOnReturn)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      window.removeEventListener('focus', refreshOnReturn)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open || saving) return undefined
@@ -142,7 +188,7 @@ export function OnboardingGuide({
   }
 
   function applyTextProviderPreset(providerId: string) {
-    setTextConnectionVerified(false)
+    setTextConnectionVerification(null)
     setDraft((current) => switchTextProvider(current, providerId))
     setError(null)
     setRepairNotice(null)
@@ -163,7 +209,7 @@ export function OnboardingGuide({
   function applyOnboardingRepair(repair: OnboardingStepIssue['repair']) {
     if (!repair) return
     if (step.id === 'text') {
-      setTextConnectionVerified(false)
+      setTextConnectionVerification(null)
     }
     const nextDraft = applyOnboardingStepRepairDraft(draft, repair)
     const remainingIssue = getOnboardingStepIssue(nextDraft, step.id, nextDraft.uiLanguage)
@@ -219,15 +265,7 @@ export function OnboardingGuide({
     if (!onTestTextConnection) {
       return { ok: false, message: ti('settings.test_connection.unsupported') }
     }
-
-    try {
-      const result = await onTestTextConnection(nextDraft)
-      setTextConnectionVerified(result.ok)
-      return result
-    } catch (caught) {
-      setTextConnectionVerified(false)
-      throw caught
-    }
+    return onTestTextConnection(nextDraft)
   }
 
   function renderStepContent() {
@@ -250,7 +288,7 @@ export function OnboardingGuide({
             regionTab={textProviderRegion}
             onRegionTabChange={setTextProviderRegion}
             onTestConnection={onTestTextConnection ? testOnboardingTextConnection : undefined}
-            onTextConnectionConfigChanged={() => setTextConnectionVerified(false)}
+            onTextConnectionVerificationChange={setTextConnectionVerification}
           />
         )
       case 'voice':

@@ -52,7 +52,7 @@ export function MessageBubble({ message }) {
   )
 }
 `,
-  'src/app/views/PanelView.tsx': `
+  'src/app/views/LegacyPanelView.tsx': `
 import { deriveImage4ComposerState } from './image4ComposerState'
 
 export function PanelView({ chat }) {
@@ -174,7 +174,7 @@ test('streaming surface audit rejects hidden message run status UI', () => {
 
 test('streaming surface audit rejects global loading overlays', () => {
   withFixture({
-    'src/app/views/PanelView.tsx': `${BASELINE_FILES['src/app/views/PanelView.tsx']}
+    'src/app/views/LegacyPanelView.tsx': `${BASELINE_FILES['src/app/views/LegacyPanelView.tsx']}
 export const bad = <div className="companion-chat__streaming-overlay" />
 `,
   }, (root) => {

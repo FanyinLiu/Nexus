@@ -3,8 +3,9 @@ name: Release Build
 # Two trigger modes:
 #
 #  - Automatic: push a `v*.*.*` tag (`git tag vX.Y.Z && git push origin vX.Y.Z`).
-#    Creates a GitHub Release for the tag if one doesn't already exist,
-#    then builds + uploads installers for all three platforms in parallel.
+#    Validates that the tag resolves to the checked-out commit and that the
+#    commit is already reachable from origin/main, then runs the full preflight
+#    before creating or reusing a draft release.
 #
 #  - Manual (`workflow_dispatch` with a `tag` input): lets you continue an
 #    existing draft release after a platform build failed. Published releases
@@ -14,11 +15,11 @@ name: Release Build
 # because GitHub marks a published release as immutable — you can't add
 # new assets after it's out. The flow:
 #
-#   ensure-release → creates a draft release, or reuses an existing draft.
-#                    If the tag already has a published release, the workflow
-#                    fails and asks for a new version tag.
-#   preflight     → runs the tag-safe pre-release gate before any platform
-#                   installer is built or uploaded.
+#   resolve-tag    → resolves and validates the tag without mutating GitHub.
+#   preflight      → runs the tag-safe pre-release gate. No draft exists yet.
+#   ensure-release → only after preflight succeeds, creates a draft release
+#                    or reuses an existing draft. Published releases are never
+#                    deleted or rewritten.
 #   build (×3)    → builds Windows / macOS / Linux installers and
 #                   uploads them to the draft. `gh release upload
 #                   --clobber` overwrites any name collision, so retries
@@ -28,8 +29,11 @@ name: Release Build
 #                   release stays as a draft so you can inspect the
 #                   partial uploads and fix before going out.
 #
-# The release workflow requires production signing prerequisites. Local smoke
-# packaging uses a separate config and never represents a trusted release.
+# The current public release profile is deliberately unsigned. macOS uses an
+# ad-hoc signature and manual-download updates; Windows preserves executable
+# metadata editing but supplies no signing certificate, then verifies the
+# result is unsigned. The production Nexus identity is still isolated from the
+# separate packaged-smoke configuration, and every platform ships SHA256 data.
 
 on:
   push:
@@ -44,11 +48,16 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.repository }}-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
-  ensure-release:
+  resolve-tag:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.resolve.outputs.tag }}
+      tag_commit: ${{ steps.provenance.outputs.tag_commit }}
     steps:
       - name: Resolve tag
         id: resolve
@@ -66,43 +75,218 @@ jobs:
             echo "Tag is empty or looks like a branch name (got '$tag'). Specify the tag via workflow_dispatch input." >&2
             exit 1
           fi
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Release tag '$tag' is not a supported version tag."
+            exit 1
+          fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.resolve.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Validate tag commit provenance
+        id: provenance
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+        shell: bash
+        run: |
+          git fetch --force origin +refs/heads/main:refs/remotes/origin/main
+          if ! git show-ref --verify --quiet "refs/tags/$TAG"; then
+            echo "::error::Release ref $TAG is not an existing Git tag."
+            exit 1
+          fi
+          TAG_COMMIT=$(git rev-list -n 1 "refs/tags/$TAG")
+          CHECKOUT_COMMIT=$(git rev-parse HEAD)
+
+          if [ -z "$TAG_COMMIT" ]; then
+            echo "::error::Release tag $TAG does not resolve to a commit."
+            exit 1
+          fi
+          if [ "$TAG_COMMIT" != "$CHECKOUT_COMMIT" ]; then
+            echo "::error::Release tag commit $TAG_COMMIT does not match checked-out commit $CHECKOUT_COMMIT."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$TAG_COMMIT" origin/main; then
+            echo "::error::Release tag commit $TAG_COMMIT is not an ancestor of origin/main. Merge the release commit before tagging."
+            exit 1
+          fi
+
+          echo "tag_commit=$TAG_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "Validated $TAG at $TAG_COMMIT on origin/main."
+
+      - name: Validate release tag matches package version
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+        shell: bash
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "v$PACKAGE_VERSION" ]; then
+            echo "::error::Release tag $TAG does not match package.json version v$PACKAGE_VERSION"
+            exit 1
+          fi
+          echo "Release tag matches package version: $TAG"
+
+  preflight:
+    needs: resolve-tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-tag.outputs.tag_commit }}
+          fetch-depth: 0
+
+      - name: Revalidate checkout and main ancestry
+        env:
+          TAG: ${{ needs.resolve-tag.outputs.tag }}
+          EXPECTED_COMMIT: ${{ needs.resolve-tag.outputs.tag_commit }}
+        shell: bash
+        run: |
+          git fetch --force origin +refs/heads/main:refs/remotes/origin/main
+          if ! git show-ref --verify --quiet "refs/tags/$TAG"; then
+            echo "::error::Validated release tag $TAG is no longer available."
+            exit 1
+          fi
+          TAG_COMMIT=$(git rev-list -n 1 "refs/tags/$TAG")
+          CHECKOUT_COMMIT=$(git rev-parse HEAD)
+
+          test "$TAG_COMMIT" = "$EXPECTED_COMMIT" || {
+            echo "::error::Tag $TAG moved from validated commit $EXPECTED_COMMIT to $TAG_COMMIT."
+            exit 1
+          }
+          test "$CHECKOUT_COMMIT" = "$EXPECTED_COMMIT" || {
+            echo "::error::Preflight checkout $CHECKOUT_COMMIT does not match tag commit $EXPECTED_COMMIT."
+            exit 1
+          }
+          git merge-base --is-ancestor "$EXPECTED_COMMIT" origin/main || {
+            echo "::error::Tag commit $EXPECTED_COMMIT is not an ancestor of origin/main."
+            exit 1
+          }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run SQLite smoke
+        run: npm run sqlite:smoke
+
+      - name: Run tag-safe pre-release gate under Xvfb
+        env:
+          TAG: ${{ needs.resolve-tag.outputs.tag }}
+        run: xvfb-run -a npm run prerelease-check -- "$TAG" --skip=A --quick
+
+      - name: Report future signing readiness (non-blocking profile)
+        run: npm run release:signing:readiness
+
+      - name: Enforce explicit unsigned release profile
+        run: npm run release:unsigned:gate
+
+  ensure-release:
+    needs: [resolve-tag, preflight]
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ needs.resolve-tag.outputs.tag }}
+      tag_commit: ${{ needs.resolve-tag.outputs.tag_commit }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-tag.outputs.tag_commit }}
+          fetch-depth: 0
 
       - name: Ensure draft release exists
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.resolve.outputs.tag }}
+          TAG: ${{ needs.resolve-tag.outputs.tag }}
+          TAG_COMMIT: ${{ needs.resolve-tag.outputs.tag_commit }}
+          REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
           # GitHub marks a published release as immutable. If this tag already
           # has a published release, stop here instead of deleting it. Reusing
           # a published version breaks update semantics and can strand users
           # on mismatched latest.yml metadata.
-          existing_json=$(gh release view "$TAG" --repo "${{ github.repository }}" --json isDraft,name,body 2>/dev/null || echo "")
-          if [ -n "$existing_json" ]; then
-            is_draft=$(echo "$existing_json" | jq -r '.isDraft')
-            if [ "$is_draft" = "true" ]; then
-              echo "Draft release $TAG already exists — will append assets to it."
-              exit 0
-            fi
-            echo "::error::Published release $TAG already exists. Do not rebuild or delete published releases; bump to a new tag instead."
+          EXPECTED_PRERELEASE=false
+          PRERELEASE_ARGS=()
+          if [[ "$TAG" == *-* ]]; then
+            EXPECTED_PRERELEASE=true
+            PRERELEASE_ARGS=(--prerelease)
+            echo "Tag '$TAG' looks like a pre-release — marking release as pre-release."
+          fi
+
+          if [[ ! "$REPOSITORY" =~ ^[^/]+/[^/]+$ ]]; then
+            echo "::error::Invalid GitHub repository identity '$REPOSITORY'."
             exit 1
           fi
 
-          # SemVer convention: any tag containing '-' (e.g. v1.0.0-beta.1,
-          # v1.0.0-rc.2, v1.0.0-alpha.3) is a pre-release. electron-builder
-          # picks up on the pre-release identifier and publishes to the
-          # `beta.yml` channel instead of `latest.yml`, so stable users
-          # aren't auto-upgraded to unstable builds.
-          PRERELEASE_FLAG=""
-          if [[ "$TAG" == *-* ]]; then
-            PRERELEASE_FLAG="--prerelease"
-            echo "Tag '$TAG' looks like a pre-release — marking release as pre-release."
+          # Check the REST response status explicitly, so only a real 404
+          # means "no draft yet". Authorization, network, and API failures
+          # must not fall through into release creation.
+          encoded_tag=$(jq -rn --arg value "$TAG" '$value | @uri')
+          set +e
+          release_headers=$(gh api --silent --include "repos/$REPOSITORY/releases/tags/$encoded_tag" 2>&1)
+          lookup_exit=$?
+          set -e
+          http_status=$(printf '%s\n' "$release_headers" | awk 'NR == 1 { print $2 }')
+          if [ "$lookup_exit" -eq 0 ] && [ "$http_status" = "200" ]; then
+            existing_json=$(gh api "repos/$REPOSITORY/releases/tags/$encoded_tag" \
+              --jq '{isDraft: .draft, isPrerelease: .prerelease, tagName: .tag_name, targetCommitish: .target_commitish}')
+          elif [ "$http_status" = "404" ]; then
+            existing_json=""
+          else
+            printf '%s\n' "$release_headers" >&2
+            echo "::error::Could not safely query the existing GitHub Release for $TAG (HTTP ${http_status:-unknown}, exit $lookup_exit)."
+            exit 1
           fi
+
+          if [ -n "$existing_json" ]; then
+            is_draft=$(printf '%s' "$existing_json" | jq -r 'if .isDraft == true then "true" elif .isDraft == false then "false" else "invalid" end')
+            is_prerelease=$(printf '%s' "$existing_json" | jq -r 'if .isPrerelease == true then "true" elif .isPrerelease == false then "false" else "invalid" end')
+            release_tag=$(printf '%s' "$existing_json" | jq -r '.tagName | if type == "string" then . else "" end')
+            target_commitish=$(printf '%s' "$existing_json" | jq -r '.targetCommitish | if type == "string" then . else "" end')
+
+            if [ "$is_draft" != "true" ]; then
+              echo "::error::Published release $TAG already exists or its draft state is invalid. Do not rebuild or delete published releases; bump to a new tag instead."
+              exit 1
+            fi
+            if [ "$release_tag" != "$TAG" ]; then
+              echo "::error::Existing draft identity '$release_tag' does not match requested tag $TAG."
+              exit 1
+            fi
+            if [ "$is_prerelease" != "$EXPECTED_PRERELEASE" ]; then
+              echo "::error::Existing draft $TAG prerelease=$is_prerelease, expected $EXPECTED_PRERELEASE from the tag."
+              exit 1
+            fi
+            if [ -z "$target_commitish" ]; then
+              echo "::error::Existing draft $TAG has no targetCommitish."
+              exit 1
+            fi
+
+            # targetCommitish may be a full/short SHA, branch, or tag. Resolve
+            # it through GitHub instead of comparing the field text directly.
+            encoded_target=$(jq -rn --arg value "$target_commitish" '$value | @uri')
+            if ! target_commit=$(gh api "repos/$REPOSITORY/commits/$encoded_target" --jq '.sha'); then
+              echo "::error::Existing draft $TAG targetCommitish '$target_commitish' cannot be resolved."
+              exit 1
+            fi
+            if [[ ! "$target_commit" =~ ^[0-9a-f]{40}$ ]] || [ "$target_commit" != "$TAG_COMMIT" ]; then
+              echo "::error::Existing draft $TAG targets $target_commitish ($target_commit), expected validated tag commit $TAG_COMMIT."
+              exit 1
+            fi
+
+            echo "Draft release $TAG matches the validated tag, commit, and prerelease identity — will append assets to it."
+            exit 0
+          fi
+
+          # SemVer convention: any tag containing '-' (e.g. v1.0.0-beta.1,
+          # v1.0.0-rc.2, v1.0.0-alpha.3) is a pre-release. For the GitHub
+          # provider electron-builder keeps the configured/default update
+          # metadata channel (`latest*.yml` here); GitHub's pre-release flag
+          # keeps the stable latest-release API from selecting this release.
 
           notes_file="docs/RELEASE-NOTES-${TAG}.md"
           notes_args=(--notes "## Nexus $TAG")
@@ -116,50 +300,24 @@ jobs:
             --repo "${{ github.repository }}" \
             --title "$TAG" \
             "${notes_args[@]}" \
-            --target "${{ github.sha }}" \
+            --target "$TAG_COMMIT" \
             --draft \
-            $PRERELEASE_FLAG
-
-  preflight:
-    needs: ensure-release
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.ensure-release.outputs.tag }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
-      - name: Run SQLite smoke
-        run: npm run sqlite:smoke
-
-      - name: Run tag-safe pre-release gate
-        run: npm run prerelease-check -- ${{ needs.ensure-release.outputs.tag }} --skip=A --quick
-
-      - name: Report signing readiness
-        run: npm run release:signing:readiness
-
-      - name: Enforce signed release profile
-        run: npm run release:signing:gate
+            "${PRERELEASE_ARGS[@]}"
 
   build:
-    needs: [ensure-release, preflight]
+    needs: ensure-release
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            cmd: npx electron-builder --win nsis --publish never
+            platform: windows
+            cmd: npx electron-builder --win nsis --x64 --publish never --config.forceCodeSigning=false --config.win.signAndEditExecutable=true
             assets: |
               release/*.exe
               release/*.exe.blockmap
               release/latest.yml
+              release/SHA256SUMS-windows.txt
           # Apple Silicon only. Intel Mac (macos-13) was dropped in v0.2.8 —
           # GitHub deprecated the free-tier `macos-13` runner pool and queue
           # times climbed to many hours, stalling every release. Apple
@@ -171,21 +329,23 @@ jobs:
           # x64 .dmg because npm 10+ skips platform-mismatched optional
           # dependencies.
           - os: macos-latest
-            cmd: node scripts/mac-release-preflight.mjs && npx electron-builder --mac dmg zip --arm64 --publish never
+            platform: macos
+            cmd: node scripts/mac-release-preflight.mjs && npx electron-builder --mac dmg zip --arm64 --publish never --config.forceCodeSigning=false --config.mac.identity=- --config.mac.hardenedRuntime=false --config.mac.gatekeeperAssess=false --config.mac.notarize=false
             assets: |
               release/*.dmg
               release/*.dmg.blockmap
               release/*.zip
               release/*.zip.blockmap
               release/latest-mac.yml
+              release/SHA256SUMS-macos.txt
           - os: ubuntu-latest
-            cmd: npx electron-builder --linux AppImage deb tar.gz --publish never
+            platform: linux
+            cmd: npx electron-builder --linux AppImage deb tar.gz --publish never --config.forceCodeSigning=false
             assets: |
               release/*.AppImage
               release/*.deb
               release/*.tar.gz
-              release/SHA256SUMS
-              release/*.asc
+              release/SHA256SUMS-linux.txt
               release/latest-linux*.yml
 
     runs-on: ${{ matrix.os }}
@@ -194,7 +354,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.ensure-release.outputs.tag }}
+          ref: ${{ needs.ensure-release.outputs.tag_commit }}
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -206,16 +367,13 @@ jobs:
       - name: Run SQLite smoke
         run: npm run sqlite:smoke
 
-      - run: npm run build
-        name: Vite build
-
       - name: Cache sherpa models
         uses: actions/cache@v4
         with:
           path: |
             sherpa-models
             public/vendor/vad
-          key: sherpa-models-skip-asr-${{ hashFiles('electron/services/modelDefinitions.js') }}
+          key: sherpa-models-skip-asr-${{ hashFiles('package-lock.json', 'electron/services/modelDefinitions.js') }}
 
       - name: Cache electron-builder
         uses: actions/cache@v4
@@ -232,68 +390,107 @@ jobs:
       - name: Download sherpa models
         run: node scripts/download-models.mjs --skip-asr
 
+      - name: Refresh deterministic browser VAD vendor assets
+        run: node scripts/setup-vendor.mjs
+
+      - run: npm run build
+        name: Vite build
+
+      - name: Verify browser VAD asset in built renderer
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto'
+          import { readFileSync, statSync } from 'node:fs'
+          import { MODEL_CATALOG } from './electron/services/modelDefinitions.js'
+
+          const assetPath = 'dist/vendor/vad/silero_vad_v5.onnx'
+          const workletPath = 'dist/vendor/vad/vad.worklet.bundle.min.js'
+          const sourceWorkletPath = 'node_modules/@ricky0123/vad-web/dist/vad.worklet.bundle.min.js'
+          const vad = MODEL_CATALOG.find((model) => model.id === 'vad')
+          const integrity = vad?.standalone?.integrity
+          if (!integrity || !Number.isSafeInteger(integrity.sizeBytes) || integrity.sizeBytes <= 0 || !/^[0-9a-f]{64}$/.test(integrity.sha256)) {
+            throw new Error('VAD catalog integrity metadata is missing or invalid')
+          }
+
+          function requireNonEmptyFile(path, label) {
+            let stat
+            try {
+              stat = statSync(path)
+            } catch {
+              throw new Error(`${label} is missing: ${path}`)
+            }
+            if (!stat.isFile() || stat.size === 0) {
+              throw new Error(`${label} is empty or not a file: ${path}`)
+            }
+            return stat
+          }
+
+          const stat = requireNonEmptyFile(assetPath, 'Built browser VAD model')
+          const workletStat = requireNonEmptyFile(workletPath, 'Built browser VAD worklet')
+          const sourceWorkletStat = requireNonEmptyFile(sourceWorkletPath, 'Installed browser VAD worklet')
+          if (stat.size !== integrity.sizeBytes) {
+            throw new Error(`Built browser VAD size ${stat.size} does not match catalog ${integrity.sizeBytes}`)
+          }
+
+          const modelDigest = createHash('sha256').update(readFileSync(assetPath)).digest('hex')
+          if (modelDigest !== integrity.sha256) {
+            throw new Error(`Built browser VAD SHA-256 ${modelDigest} does not match catalog ${integrity.sha256}`)
+          }
+          if (workletStat.size !== sourceWorkletStat.size) {
+            throw new Error(`Built browser VAD worklet size ${workletStat.size} does not match installed source ${sourceWorkletStat.size}`)
+          }
+          const workletDigest = createHash('sha256').update(readFileSync(workletPath)).digest('hex')
+          const sourceWorkletDigest = createHash('sha256').update(readFileSync(sourceWorkletPath)).digest('hex')
+          if (workletDigest !== sourceWorkletDigest) {
+            throw new Error(`Built browser VAD worklet SHA-256 ${workletDigest} does not match installed source ${sourceWorkletDigest}`)
+          }
+          console.log(`Verified ${assetPath}: ${stat.size} bytes, SHA-256 ${modelDigest}`)
+          console.log(`Verified ${workletPath}: ${workletStat.size} bytes, SHA-256 ${workletDigest}`)
+          NODE
+
+      - name: Verify formal identity and unsigned posture before packaging
+        run: npm run release:unsigned:gate
+
       - name: Package installer
         env:
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          WINDOWS_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
-          WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
-          NEXUS_MAC_AUTO_UPDATE_MODE: ${{ matrix.os == 'macos-latest' && 'electron-updater' || '' }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: ${{ matrix.cmd }}
+
+      - name: Verify unsigned macOS release bundle
+        if: matrix.platform == 'macos'
+        run: node scripts/verify-mac-release.mjs --expect-unsigned release/mac-arm64/Nexus.app
+
+      - name: Verify unsigned macOS release containers
+        if: matrix.platform == 'macos'
+        run: node scripts/verify-mac-release-containers.mjs --expect-unsigned release
+
+      - name: Verify unsigned Windows release artifacts
+        if: matrix.platform == 'windows'
+        run: node scripts/verify-windows-release.mjs --expect-unsigned
+
+      - name: Verify Linux release artifacts
+        if: matrix.platform == 'linux'
+        run: node scripts/verify-linux-release.mjs --release-dir release
+
+      - name: Reject smoke-named release artifacts
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readdirSync } from 'node:fs'
+          const smokeArtifacts = readdirSync('release').filter((name) => /smoke/i.test(name))
+          if (smokeArtifacts.length) {
+            console.error(`Smoke identity leaked into release artifacts: ${smokeArtifacts.join(', ')}`)
+            process.exit(1)
+          }
+          NODE
 
       - name: List built artifacts
         shell: bash
         run: ls -lh release/ || true
 
-      - name: Generate SHA256SUMS (Linux only)
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: |
-          cd release
-          # Hash every Linux artifact in one canonical file. Users can
-          # then run `sha256sum -c SHA256SUMS` after downloading.
-          sha256sum *.AppImage *.deb *.tar.gz > SHA256SUMS
-          echo "::group::SHA256SUMS contents"
-          cat SHA256SUMS
-          echo "::endgroup::"
-
-      - name: GPG-sign Linux artifacts (if key configured)
-        if: matrix.os == 'ubuntu-latest'
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        shell: bash
-        run: |
-          if [ -z "$GPG_PRIVATE_KEY" ]; then
-            echo "::warning::GPG_PRIVATE_KEY secret not set — Linux artifacts will ship without GPG signatures (SHA256SUMS still produced)."
-            echo "To enable detached signing:"
-            echo "  1. Generate a key: gpg --full-generate-key (RSA 4096, no expiry, name=Nexus Releases)"
-            echo "  2. Export private: gpg --export-secret-keys --armor <KEY_ID> > key.asc"
-            echo "  3. Add repo secrets: GPG_PRIVATE_KEY = file contents; GPG_PASSPHRASE = passphrase"
-            echo "  4. Publish public key alongside the README so users can import + verify."
-            exit 0
-          fi
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
-          KEY_ID=$(gpg --list-secret-keys --keyid-format=long --with-colons | awk -F: '/^sec:/ { print $5; exit }')
-          if [ -z "$KEY_ID" ]; then
-            echo "::error::Failed to extract key ID from imported GPG key"
-            exit 1
-          fi
-          echo "Signing with key $KEY_ID"
-          cd release
-          for f in *.AppImage *.deb *.tar.gz SHA256SUMS; do
-            [ -f "$f" ] || continue
-            echo "Signing $f"
-            echo "$GPG_PASSPHRASE" | gpg --batch --pinentry-mode loopback \
-              --passphrase-fd 0 --local-user "$KEY_ID" \
-              --detach-sign --armor "$f"
-          done
-          echo "::group::Signature files produced"
-          ls -la *.asc
-          echo "::endgroup::"
+      - name: Generate platform SHA256 checksums
+        run: node scripts/release-artifact-audit.mjs --platform ${{ matrix.platform }} --release-dir release --tag "${{ needs.ensure-release.outputs.tag }}" --write-checksums
 
       - name: Upload assets to release
         env:
@@ -324,11 +521,95 @@ jobs:
     needs: [ensure-release, build]
     runs-on: ubuntu-latest
     steps:
-      - name: Publish draft release
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.ensure-release.outputs.tag_commit }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - name: Publish verified draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.ensure-release.outputs.tag }}
+          EXPECTED_COMMIT: ${{ needs.ensure-release.outputs.tag_commit }}
+          REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
+          # Revalidate draft identity before the final tag check. GitHub's
+          # targetCommitish can be a branch, tag, or SHA, so resolve it through
+          # the commits API before comparing it with the validated tag commit.
+          release_json=$(gh release view "$TAG" --repo "$REPOSITORY" --json isDraft,isPrerelease,tagName,targetCommitish)
+          is_draft=$(printf '%s' "$release_json" | jq -r 'if .isDraft == true then "true" elif .isDraft == false then "false" else "invalid" end')
+          is_prerelease=$(printf '%s' "$release_json" | jq -r 'if .isPrerelease == true then "true" elif .isPrerelease == false then "false" else "invalid" end')
+          release_tag=$(printf '%s' "$release_json" | jq -r '.tagName | if type == "string" then . else "" end')
+          target_commitish=$(printf '%s' "$release_json" | jq -r '.targetCommitish | if type == "string" then . else "" end')
+          expected_prerelease=false
+          [[ "$TAG" == *-* ]] && expected_prerelease=true
+
+          if [ "$is_draft" != "true" ] || [ "$release_tag" != "$TAG" ] || [ "$is_prerelease" != "$expected_prerelease" ] || [ -z "$target_commitish" ]; then
+            echo "::error::Draft release identity changed before publication (draft=$is_draft, tag=$release_tag, prerelease=$is_prerelease, target=$target_commitish)."
+            exit 1
+          fi
+          encoded_target=$(jq -rn --arg value "$target_commitish" '$value | @uri')
+          if ! release_target_commit=$(gh api "repos/$REPOSITORY/commits/$encoded_target" --jq '.sha'); then
+            echo "::error::Draft targetCommitish '$target_commitish' cannot be resolved immediately before publication."
+            exit 1
+          fi
+          if [[ ! "$release_target_commit" =~ ^[0-9a-f]{40}$ ]] || [ "$release_target_commit" != "$EXPECTED_COMMIT" ]; then
+            echo "::error::Draft target $target_commitish resolves to $release_target_commit, expected $EXPECTED_COMMIT."
+            exit 1
+          fi
+
+          # Re-read and force-fetch the remote tag as the final check before
+          # publication. A forced tag update after preflight must never publish
+          # artifacts for the previously validated commit under the moved tag.
+          if ! REMOTE_TAG_OUTPUT=$(git ls-remote --exit-code origin "refs/tags/$TAG" "refs/tags/$TAG^{}"); then
+            echo "::error::Remote release tag $TAG is missing immediately before publication."
+            exit 1
+          fi
+          REMOTE_TAG_COMMIT=$(printf '%s\n' "$REMOTE_TAG_OUTPUT" | awk -v peeled="refs/tags/$TAG^{}" '$2 == peeled { print $1; exit }')
+          if [ -z "$REMOTE_TAG_COMMIT" ]; then
+            REMOTE_TAG_COMMIT=$(printf '%s\n' "$REMOTE_TAG_OUTPUT" | awk -v exact="refs/tags/$TAG" '$2 == exact { print $1; exit }')
+          fi
+
+          git fetch --force origin \
+            "+refs/heads/main:refs/remotes/origin/main" \
+            "+refs/tags/$TAG:refs/tags/$TAG"
+          FETCHED_TAG_COMMIT=$(git rev-list -n 1 "refs/tags/$TAG")
+          CHECKOUT_COMMIT=$(git rev-parse HEAD)
+
+          if [[ ! "$REMOTE_TAG_COMMIT" =~ ^[0-9a-f]{40}$ ]] || [ "$REMOTE_TAG_COMMIT" != "$EXPECTED_COMMIT" ]; then
+            echo "::error::Remote tag $TAG moved to $REMOTE_TAG_COMMIT after validation; expected $EXPECTED_COMMIT."
+            exit 1
+          fi
+          if [ "$FETCHED_TAG_COMMIT" != "$EXPECTED_COMMIT" ]; then
+            echo "::error::Fetched tag $TAG resolves to $FETCHED_TAG_COMMIT, expected $EXPECTED_COMMIT."
+            exit 1
+          fi
+          if [ "$CHECKOUT_COMMIT" != "$EXPECTED_COMMIT" ]; then
+            echo "::error::Publish checkout $CHECKOUT_COMMIT does not match validated tag commit $EXPECTED_COMMIT."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$EXPECTED_COMMIT" origin/main; then
+            echo "::error::Validated tag commit $EXPECTED_COMMIT is no longer an ancestor of origin/main."
+            exit 1
+          fi
+
+          # Download after the final draft/tag checks and verify immediately
+          # before publication. Keeping this in the same shell step closes the
+          # workflow-level gap where an asset could otherwise be replaced
+          # between a successful verification step and `gh release edit`.
+          VERIFY_DIR="$RUNNER_TEMP/nexus-release-assets-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          rm -rf "$VERIFY_DIR"
+          mkdir -p "$VERIFY_DIR"
+          gh release download "$TAG" --repo "$REPOSITORY" --dir "$VERIFY_DIR"
+          node scripts/release-artifact-audit.mjs --release-dir "$VERIFY_DIR" --tag "$TAG" --verify-all
+
           echo "Publishing draft release $TAG"
-          gh release edit "$TAG" --repo "${{ github.repository }}" --draft=false
+          gh release edit "$TAG" --repo "$REPOSITORY" --draft=false

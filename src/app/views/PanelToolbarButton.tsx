@@ -5,6 +5,7 @@ type PanelToolbarButtonProps = {
   label: string
   onClick: () => void
   tone?: 'default' | 'settings' | 'collapse' | 'danger'
+  settingsOpener?: boolean
 }
 
 export function PanelToolbarButton({
@@ -12,6 +13,7 @@ export function PanelToolbarButton({
   label,
   onClick,
   tone = 'default',
+  settingsOpener = false,
 }: PanelToolbarButtonProps) {
   const toneClass = tone === 'default' ? '' : ` panel-window__icon-button--${tone}`
 
@@ -22,6 +24,7 @@ export function PanelToolbarButton({
       onClick={onClick}
       aria-label={label}
       title={label}
+      data-settings-opener={settingsOpener ? 'true' : undefined}
     >
       <PetControlIcon name={icon} />
     </button>

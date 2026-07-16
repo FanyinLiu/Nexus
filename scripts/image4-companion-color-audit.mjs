@@ -33,7 +33,7 @@ const REQUIRED_PATTERNS = [
       'positive low-arousal emotions such as comfort and relaxation',
       'peach/apricot as a restrained emotional accent',
       'W3C non-text contrast guidance',
-      'embedded plus, mic, send-ready, focus, and speaking cues should be legible through companion tokens',
+      'the embedded attachment, send-ready, and focus cues should be legible through companion tokens. Voice runtime controls stay in Settings; the main companion composer has no voice-control role',
     ],
   },
   {
@@ -54,7 +54,6 @@ const REQUIRED_PATTERNS = [
       'color: color-mix(in srgb, var(--image4-companion-muted) 88%, var(--image4-companion-text));',
       'color: color-mix(in srgb, var(--image4-companion-secondary) 82%, var(--image4-companion-text));',
       'color: color-mix(in srgb, var(--image4-companion-secondary) 76%, var(--image4-companion-text));',
-      'color: color-mix(in srgb, var(--image4-companion-primary) 76%, var(--image4-companion-text));',
       'color: color-mix(in srgb, var(--image4-companion-muted) 36%, transparent);',
     ],
   },
@@ -136,7 +135,6 @@ function buildContrastChecks(colors) {
   const text = colors['--image4-companion-text']
   const muted = colors['--image4-companion-muted']
   const secondary = colors['--image4-companion-secondary']
-  const primary = colors['--image4-companion-primary']
 
   return [
     {
@@ -153,7 +151,7 @@ function buildContrastChecks(colors) {
     },
     {
       id: 'embedded-tool-icon-on-surface',
-      role: 'Available plus and mic icons inside the composer.',
+      role: 'Available attachment icon inside the composer.',
       ratio: contrastRatio(mixColors(muted, text, 0.88), surface),
       minimum: 3,
     },
@@ -164,15 +162,9 @@ function buildContrastChecks(colors) {
       minimum: 3,
     },
     {
-      id: 'active-secondary-tool-on-surface',
-      role: 'Attachment and listening states inside the composer.',
+      id: 'active-attachment-on-surface',
+      role: 'Active attachment state inside the composer.',
       ratio: contrastRatio(mixColors(secondary, text, 0.76), surface),
-      minimum: 3,
-    },
-    {
-      id: 'speaking-tool-on-surface',
-      role: 'Speaking-state warm accent inside the composer.',
-      ratio: contrastRatio(mixColors(primary, text, 0.76), surface),
       minimum: 3,
     },
   ]

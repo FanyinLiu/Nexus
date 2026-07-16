@@ -38,6 +38,7 @@ import {
 import { synthesizeLocalTts } from '../services/localTts.js'
 import { encodeWavFromFloat32 } from '../services/audioEncoding.js'
 import { getRedactedErrorMessage, redactSensitiveErrorText } from '../services/errorRedaction.js'
+import { extractSpeechInputText } from '../services/speechConnectionProof.js'
 import { requireTrustedSender, requireString } from './validate.js'
 import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
 import {
@@ -167,7 +168,6 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
     console.info('[audio:transcribe] request', {
       traceId: payload.traceId ?? '',
       providerId: payload.providerId,
-      baseUrl,
       model: payload.model,
       language: payload.language ?? '',
       mimeType: payload.mimeType,
@@ -280,6 +280,9 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         method: 'POST',
         headers,
         body,
+        // Validate every redirect target so a public provider cannot bounce
+        // an audio upload into metadata or a private-network endpoint.
+        followRedirectsSafely: true,
         timeoutMs: AUDIO_TRANSCRIBE_TIMEOUT_MS,
         timeoutMessage: '语音识别那边等了好久都没回应，看看网络和代理对不对？',
       })
@@ -288,7 +291,6 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
       console.error('[audio:transcribe] network failure', {
         traceId: payload.traceId ?? '',
         providerId: payload.providerId,
-        baseUrl,
         model: payload.model,
         reason,
       })
@@ -318,7 +320,9 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
       )
     }
 
-    const text = String(data?.text ?? data?.transcript ?? '').trim()
+    // Keep real recognition parsing correlated with connection-test proof
+    // (text / transcript / nested result.text).
+    const text = extractSpeechInputText(data)
 
     if (!text) {
       throw new Error('语音识别回来了但是没听到什么内容，可以再说一遍试试。')
@@ -484,6 +488,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         method: 'POST',
         headers,
         body: requestBody,
+        followRedirectsSafely: true,
         timeoutMs: synthTimeoutMs,
         timeoutMessage: synthTimeoutMessage,
       })
@@ -531,6 +536,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
       try {
         audioResponse = await performNetworkRequest(audioUrl, {
           method: 'GET',
+          followRedirectsSafely: true,
           timeoutMs: synthTimeoutMs,
           timeoutMessage: '语音文件下载有点久，看看网络或者稍后再试试？',
         })

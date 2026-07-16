@@ -1,12 +1,9 @@
-import './styles/settings.css'
-import './styles/settings-home.css'
-import './styles/settings-themes.css'
-import './styles/settings-chat-aligned.css'
-import './styles/settings-chat-final.css'
-import './styles/settings-chat-role-final.css'
-import './styles/settings-visual-system.css'
-import './styles/settings-visibility-final.css'
-import './styles/settings-product-shell.css'
-import './styles/settings-product-reference-final.css'
+import { loadSettingsStyleBundles } from './settingsStyleBundles'
+
+await loadSettingsStyleBundles()
+
+if (new URLSearchParams(window.location.search).get('uiV2') === '0') {
+  await import('./settingsStylesLegacyProductReference')
+}
 
 export { SettingsDrawer } from '../components/SettingsDrawer'

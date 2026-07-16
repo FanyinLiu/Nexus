@@ -145,6 +145,7 @@ export async function executeBuiltInTool(
     const result = await window.desktopPet.getWeather({
       location: weatherLocation.location,
       fallbackLocation: settings?.toolWeatherDefaultLocation,
+      locale: settings?.uiLanguage,
       policy,
     })
     if (!result) {
@@ -156,7 +157,7 @@ export async function executeBuiltInTool(
       promptContext: '',
       assistantSummary: '',
       result,
-    })
+    }, settings?.uiLanguage)
 
     return {
       kind: 'weather',

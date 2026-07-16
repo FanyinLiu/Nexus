@@ -276,3 +276,18 @@ emit(session.sender, {
     )
   })
 })
+
+test('error redaction audit rejects raw settings drawer locale error logs', () => {
+  withErrorRedactionFixture({
+    'src/components/SettingsDrawer.tsx': `${buildBaselineContentByFile().get('src/components/SettingsDrawer.tsx')?.join('\n')}
+console.error('[settings] Failed to load locale:', locale, error)
+`,
+  }, (root) => {
+    const report = buildErrorRedactionReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(
+      report.errors.unsafePatterns.some((item) => item.id === 'settings-drawer-raw-locale-error-log'),
+    )
+  })
+})

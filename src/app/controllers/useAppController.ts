@@ -57,6 +57,7 @@ type ReminderTaskStore = ReturnType<typeof useReminderTaskStore>
 
 export function useAppController() {
   const [view, setView] = useState<WindowView>(() => getWindowViewSync())
+  const backgroundRuntimeOwner = view === 'pet'
   const [settings, setSettings] = useState<AppSettings>(() => getSettingsSnapshot())
   useCompanionLocalDataAuthority()
 
@@ -381,6 +382,8 @@ export function useAppController() {
     messages: chat.messages,
     memories: memory.memories,
     panelCollapsed,
+    enabled: backgroundRuntimeOwner,
+    runtimeOwner: backgroundRuntimeOwner,
   })
 
   useEffect(() => {
@@ -454,6 +457,8 @@ export function useAppController() {
     settings,
     settingsRef,
     platformProfile,
+    runtimeOwner: backgroundRuntimeOwner,
+    active: backgroundRuntimeOwner,
     messagesRef,
     memory,
     reminderTasksRef: reminderTaskStore.reminderTasksRef,

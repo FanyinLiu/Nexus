@@ -1,8 +1,7 @@
 const IMAGE4_RHYTHM_ROWS = [
-  ['presence', 'P'],
-  ['dial', 'D'],
-  ['greeting', 'G'],
-  ['actions', 'A'],
+  ['header', 'H'],
+  ['stage', 'L'],
+  ['recap', 'R'],
   ['composer', 'C'],
 ] as const
 

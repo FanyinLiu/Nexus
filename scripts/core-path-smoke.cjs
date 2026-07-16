@@ -58,6 +58,15 @@ function cleanupTempUserData() {
 async function snapshot(window) {
   return window.webContents.executeJavaScript(`
     (() => {
+      const v2Root = document.querySelector('.nexus-panel-v2')
+      const v2Stage = document.querySelector('.nexus-panel-v2__stage')
+      const v2Utility = document.querySelector('.nexus-panel-v2__utility[data-settings-opener="true"]')
+      const v2Menu = document.querySelector('.nexus-panel-v2__menu')
+      const v2MenuButtons = document.querySelectorAll('.nexus-panel-v2__menu button')
+      const chatSheet = document.querySelector('.chat-sheet-v2')
+      const chatInput = document.querySelector('.chat-sheet-v2__input')
+      const chatSend = document.querySelector('.chat-sheet-v2__send')
+      const chatBack = document.querySelector('.chat-sheet-v2__back')
       const root = document.querySelector('.desktop-pet-root--panel')
       const panel = document.querySelector('.panel-window')
       const toolbar = document.querySelector('.companion-chat__toolbar')
@@ -65,16 +74,63 @@ async function snapshot(window) {
       const composer = document.querySelector('.companion-chat__composer textarea')
       const sendButton = document.querySelector('.composer__actions .primary-button')
       const settingsDrawer = document.querySelector('.settings-drawer')
+      const settingsV2 = document.querySelector('.settings-v2')
+      const settingsV2Home = document.querySelector('.settings-v2__home')
+      const settingsV2HomeCards = Array.from(document.querySelectorAll('.settings-v2__home-card'))
+      const settingsV2LastHomeCard = settingsV2HomeCards[settingsV2HomeCards.length - 1]
       const settingsHome = document.querySelector('.settings-home')
       const modelCard = document.querySelector('.settings-home-card[data-section="model"]')
       const modelPage = document.querySelector('.settings-page[data-section="model"]')
-      const modelGrid = document.querySelector('.settings-model-source-grid')
-      const selectedProvider = document.querySelector('.settings-model-source-card.is-selected')
-      const modelDetail = document.querySelector('.settings-model-detail-card')
-      const modelTestButton = document.querySelector('.settings-model-test-button')
-      const modelFieldCount = document.querySelectorAll('.settings-model-detail-fields :is(input, select)').length
-      const panelRect = panel?.getBoundingClientRect()
+      const isVisible = (element) => {
+        if (!element) return false
+        const style = getComputedStyle(element)
+        const rect = element.getBoundingClientRect()
+        return style.display !== 'none'
+          && style.visibility !== 'hidden'
+          && rect.width > 0
+          && rect.height > 0
+      }
+      const activeModelSection = document.querySelector('.settings-model-section.is-active')
+      const modelGrid = Array.from(document.querySelectorAll('.settings-model-source-grid'))
+        .find((element) => isVisible(element))
+      const selectedProvider = Array.from(document.querySelectorAll('.settings-model-source-card.is-selected'))
+        .find((element) => isVisible(element) && !element.disabled)
+      const modelDetail = Array.from(document.querySelectorAll('.settings-model-detail-card'))
+        .find((element) => isVisible(element))
+      const modelTestButton = Array.from(document.querySelectorAll('.settings-model-test-button'))
+        .find((element) => isVisible(element) && !element.disabled)
+      const modelFieldCount = Array.from(document.querySelectorAll('.settings-model-detail-fields :is(input, select)'))
+        .filter((element) => isVisible(element)).length
+      const modelV3Page = document.querySelector('.settings-v3-page')
+      const modelV3Fields = modelV3Page
+        ? Array.from(modelV3Page.querySelectorAll('select.settings-v3-action, input, textarea'))
+          .filter((element) => isVisible(element) && !element.disabled)
+        : []
+      const modelV3TestButton = modelV3Page
+        ? Array.from(modelV3Page.querySelectorAll('.settings-v3-toolbar button'))
+          .find((element) => isVisible(element) && !element.disabled)
+        : null
+      const hasV3ModelContent = Boolean(isVisible(modelV3Page) && modelV3Fields.length >= 2)
+      const settingsV2Destination = settingsV2?.getAttribute('data-settings-v2-destination') ?? null
+      const hasV2ModelContent = Boolean(
+        settingsV2Destination === 'advanced'
+        && (isVisible(activeModelSection) || modelGrid || modelDetail || hasV3ModelContent),
+      )
+      const panelSurface = v2Root ? 'v2' : (root || panel ? 'legacy' : 'unknown')
+      const panelRect = (v2Root || panel)?.getBoundingClientRect()
       return {
+        panelSurface,
+        hasV2Root: Boolean(v2Root),
+        hasV2Stage: Boolean(v2Stage),
+        hasV2Utility: Boolean(v2Utility),
+        hasV2Menu: Boolean(v2Menu),
+        v2MenuButtonCount: v2MenuButtons.length,
+        chatEntry: {
+          hasSheet: Boolean(chatSheet),
+          hasInput: Boolean(chatInput),
+          hasSend: Boolean(chatSend),
+          hasBack: Boolean(chatBack),
+        },
         hasRoot: Boolean(root),
         hasPanel: Boolean(panel),
         hasToolbar: Boolean(toolbar),
@@ -82,14 +138,23 @@ async function snapshot(window) {
         hasComposer: Boolean(composer),
         hasSendButton: Boolean(sendButton),
         hasSettingsDrawer: Boolean(settingsDrawer),
+        hasSettingsV2: Boolean(settingsV2),
+        hasSettingsV2Home: Boolean(settingsV2Home),
+        hasSettingsV2AdvancedCard: Boolean(settingsV2Home && settingsV2LastHomeCard),
+        settingsV2HomeCardCount: settingsV2HomeCards.length,
+        settingsV2Destination,
+        hasV2ModelContent,
         hasSettingsHome: Boolean(settingsHome),
         hasModelCard: Boolean(modelCard),
-        hasModelPage: Boolean(modelPage),
+        hasModelPage: Boolean(modelPage || hasV2ModelContent),
         hasModelGrid: Boolean(modelGrid),
         hasSelectedProvider: Boolean(selectedProvider),
         hasModelDetail: Boolean(modelDetail),
-        hasModelTestButton: Boolean(modelTestButton),
-        modelFieldCount,
+        hasModelTestButton: Boolean(modelTestButton || modelV3TestButton),
+        hasV3ModelContent,
+        hasV3ModelTestButton: Boolean(modelV3TestButton),
+        v3ModelFieldCount: modelV3Fields.length,
+        modelFieldCount: Math.max(modelFieldCount, modelV3Fields.length),
         hasOnboarding: Boolean(document.querySelector('.onboarding-backdrop, .onboarding-card')),
         hasModelSetup: Boolean(document.querySelector('.model-setup-backdrop, .model-setup-card')),
         hasErrorFallback: Boolean(document.querySelector('.app-error-fallback')),
@@ -138,6 +203,34 @@ async function click(window, selector, label) {
   }
 }
 
+function isV2PanelReady(state) {
+  return state.panelSurface === 'v2'
+    ? state.hasV2Root
+      && state.hasV2Stage
+      && state.hasV2Utility
+      && state.panelWidth >= 240
+      && state.panelHeight >= 500
+    : state.hasRoot
+      && state.hasPanel
+      && state.hasToolbar
+      && state.hasSettingsButton
+      && state.hasComposer
+      && state.hasSendButton
+      && state.panelWidth >= 240
+      && state.panelHeight >= 500
+}
+
+function isSettingsEntryReady(state) {
+  const v2Ready = state.hasSettingsV2
+    && (
+      (state.hasSettingsV2Home && state.hasSettingsV2AdvancedCard)
+      || (state.settingsV2Destination === 'advanced' && state.hasV2ModelContent)
+    )
+  const legacyReady = state.hasSettingsHome && state.hasModelCard
+    || state.hasModelPage && !state.hasSettingsV2
+  return state.hasSettingsDrawer && (v2Ready || legacyReady)
+}
+
 async function main() {
   if (!fs.existsSync(DIST_INDEX)) {
     throw new Error('dist/index.html is missing. Run `npm run build` before the core path smoke.')
@@ -169,52 +262,72 @@ async function main() {
 
   try {
     await window.loadFile(DIST_INDEX, { query: { view: 'panel' } })
-    const panelReady = await waitFor(window, 'panel ready', (state) => (
-      state.hasRoot
-      && state.hasPanel
-      && state.hasToolbar
-      && state.hasSettingsButton
-      && state.hasComposer
-      && state.hasSendButton
-      && state.panelWidth >= 240
-      && state.panelHeight >= 500
-    ))
+    const panelReady = await waitFor(window, 'panel ready', isV2PanelReady)
+    let chatEntry = null
+    let settingsPath = 'legacy-settings-button'
 
-    await click(window, '.panel-window__header-actions--hero .panel-window__icon-button', 'open settings')
-    const settingsEntry = await waitFor(window, 'settings entry ready', (state) => (
-      state.hasSettingsDrawer
-      && (
-        (state.hasSettingsHome && state.hasModelCard)
-        || state.hasModelPage
-      )
-    ))
+    if (panelReady.panelSurface === 'v2') {
+      await click(window, '.nexus-panel-v2__utility[data-settings-opener="true"]', 'open V2 utility menu')
+      await waitFor(window, 'V2 utility menu ready', (state) => (
+        state.hasV2Menu && state.v2MenuButtonCount >= 2
+      ))
+      await click(window, '.nexus-panel-v2__menu button:first-of-type', 'open V2 text chat')
+      chatEntry = await waitFor(window, 'V2 chat sheet ready', (state) => (
+        state.chatEntry.hasSheet
+        && state.chatEntry.hasInput
+        && state.chatEntry.hasSend
+        && state.chatEntry.hasBack
+      ))
+      await click(window, '.chat-sheet-v2__back', 'return from V2 text chat')
+      await waitFor(window, 'V2 companion surface restored', (state) => (
+        state.hasV2Root && state.hasV2Utility && !state.chatEntry.hasSheet
+      ))
+      await click(window, '.nexus-panel-v2__utility[data-settings-opener="true"]', 'reopen V2 utility menu')
+      await waitFor(window, 'V2 settings menu ready', (state) => (
+        state.hasV2Menu && state.v2MenuButtonCount >= 2
+      ))
+      await click(window, '.nexus-panel-v2__menu button:nth-of-type(2)', 'open V2 settings')
+      settingsPath = 'v2-menu-settings-button'
+    } else {
+      await click(window, '.panel-window__header-actions--hero .panel-window__icon-button', 'open legacy settings')
+    }
 
-    if (!settingsEntry.hasModelPage) {
-      await click(window, '.settings-home-card[data-section="model"]', 'open model settings')
+    const settingsEntry = await waitFor(window, 'settings entry ready', isSettingsEntryReady)
+    const settingsSurface = settingsEntry.hasSettingsV2 ? 'v2' : 'legacy'
+
+    if (settingsSurface === 'v2' && settingsEntry.hasSettingsV2Home) {
+      await click(window, '.settings-v2__home-card:last-of-type', 'open V2 advanced settings')
+    } else if (settingsSurface === 'legacy' && !settingsEntry.hasModelPage) {
+      await click(window, '.settings-home-card[data-section="model"]', 'open legacy model settings')
     }
 
     const modelPage = await waitFor(window, 'model settings ready', (state) => (
       state.hasSettingsDrawer
       && state.hasModelPage
+      && (state.settingsV2Destination !== 'home' || !state.hasSettingsV2)
       && (
         (state.hasModelGrid && state.hasSelectedProvider)
         || (state.hasModelDetail && state.hasModelTestButton)
+        || (state.hasV3ModelContent && state.hasV3ModelTestButton && state.v3ModelFieldCount >= 2)
       )
     ))
 
-    if (!modelPage.hasModelDetail) {
+    if (!modelPage.hasModelDetail && !modelPage.hasV3ModelTestButton) {
       await click(window, '.settings-model-source-card.is-selected', 'open selected provider detail')
     }
 
     const modelDetail = await waitFor(window, 'model detail ready', (state) => (
-      state.hasModelDetail
-      && state.hasModelTestButton
-      && state.modelFieldCount >= 2
+      (state.hasModelDetail && state.hasModelTestButton && state.modelFieldCount >= 2)
+      || (state.hasV3ModelContent && state.hasV3ModelTestButton && state.v3ModelFieldCount >= 2)
     ))
 
     const report = {
       ok: true,
       panelReady,
+      panelSurface: panelReady.panelSurface,
+      chatEntry,
+      settingsPath,
+      settingsSurface,
       settingsEntry,
       modelPage,
       modelDetail,

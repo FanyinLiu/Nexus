@@ -10,7 +10,7 @@ const REQUIRED_FILES = [
   'docs/STREAMING_SURFACE_REFERENCE_REVIEW.md',
   'src/types/chat.ts',
   'src/components/MessageBubble.tsx',
-  'src/app/views/PanelView.tsx',
+  'src/app/views/LegacyPanelView.tsx',
   'src/app/App.css',
 ]
 
@@ -66,7 +66,7 @@ const REQUIRED_CONTRACTS = [
   },
   {
     id: 'composer-remains-mounted',
-    file: 'src/app/views/PanelView.tsx',
+    file: 'src/app/views/LegacyPanelView.tsx',
     description: 'Composer stays mounted in the companion chat surface while busy state only gates send behavior.',
     patterns: [
       "import { deriveImage4ComposerState } from './image4ComposerState'",
@@ -111,7 +111,7 @@ const REQUIRED_CONTRACTS = [
 const FORBIDDEN_SOURCE_PATTERNS = [
   {
     id: 'streaming-global-overlay',
-    files: ['src/app/views/PanelView.tsx', 'src/app/App.css'],
+    files: ['src/app/views/LegacyPanelView.tsx', 'src/app/App.css'],
     description: 'Streaming should not introduce a global overlay or page-level loading surface.',
     patterns: [
       'streaming-overlay',
@@ -123,7 +123,7 @@ const FORBIDDEN_SOURCE_PATTERNS = [
   },
   {
     id: 'streaming-workbench-chrome',
-    files: ['src/components/MessageBubble.tsx', 'src/app/views/PanelView.tsx', 'src/app/App.css'],
+    files: ['src/components/MessageBubble.tsx', 'src/app/views/LegacyPanelView.tsx', 'src/app/App.css'],
     description: 'Streaming and tool-result UI must not become terminal, diff, cockpit, artifact workspace, or task-board chrome.',
     patterns: [
       'terminal-log',
@@ -227,7 +227,7 @@ function buildSummary({ missingFiles, missingContracts, forbiddenPatterns, wrapp
 
 export function buildStreamingSurfaceReport(root = ROOT) {
   const files = readProjectFiles(root, REQUIRED_FILES)
-  const panelView = files.get('src/app/views/PanelView.tsx') ?? ''
+  const panelView = files.get('src/app/views/LegacyPanelView.tsx') ?? ''
   const messageBubble = files.get('src/components/MessageBubble.tsx') ?? ''
   const appCss = files.get('src/app/App.css') ?? ''
   const missingFiles = findMissingFiles(root)

@@ -49,6 +49,16 @@ import {
   computeConsiderationCadence,
   resolveAutonomyV2Config,
 } from '../../features/autonomy/v2/providerResolution.ts'
+import {
+  acquireBackgroundChatLease,
+  classifyBackgroundChatFailure,
+  getBackgroundChatGate,
+  isBackgroundChatLeaseAvailable,
+  recordBackgroundChatFailure,
+  recordBackgroundChatSuccess,
+  releaseBackgroundChatLease,
+} from '../../features/autonomy/backgroundChatPolicy.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 
 const DEFAULT_PROFILE_ID = DEFAULT_PERSONA_PROFILE_ID
@@ -73,6 +83,8 @@ export type UseAutonomyV2EngineOptions = {
    *  the idle_motion decision-engine action so the pet shows a peripheral
    *  sign of life without interrupting. */
   triggerIdleGesture?: (gestureName: string) => void
+  /** Only the background owner may load persona or consume V2 cadence. */
+  enabled?: boolean
   onDebugEvent?: (event: {
     source: DebugConsoleEventSource
     title: string
@@ -92,6 +104,7 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
   // on disk won't hot-reload until the user restarts Nexus. We expose
   // reloadPersona() below for manual refreshing.
   const reloadPersona = useCallback(async () => {
+    if (opts.enabled === false) return
     try {
       const desktopPet = window.desktopPet
       if (!desktopPet?.personaLoadProfile) return
@@ -132,11 +145,33 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
   }, [reloadPersona])
 
   const considerTick = useCallback(async (tickState: AutonomyTickState) => {
+    if (opts.enabled === false) return
     const settings = opts.settingsRef.current
     if (!settings) return
 
     const cfg = resolveAutonomyV2Config(settings)
     if (!cfg.enabled) return
+
+    const policyInput = {
+      providerId: cfg.decisionConfig.providerId,
+      baseUrl: cfg.decisionConfig.baseUrl,
+      model: cfg.decisionConfig.model,
+      apiKey: cfg.decisionConfig.apiKey,
+    }
+    const initialGate = getBackgroundChatGate(policyInput)
+    if (!initialGate.allowed) {
+      if (initialGate.shouldNotify) {
+        opts.onDebugEvent?.({
+          source: 'autonomy',
+          title: '[V2] background chat blocked',
+          detail: `background:autonomy-v2 blocked: ${initialGate.reason}`,
+        })
+      }
+      return
+    }
+    // Do not consume cadence while Dream/Letter owns the shared background
+    // request lease. The next tick gets a fair chance to run.
+    if (!isBackgroundChatLeaseAvailable()) return
 
     // Tick-rate gate. Base cadence comes from the user-set level (high=3,
     // med=8, low=20 ticks). computeConsiderationCadence scales that by the
@@ -197,25 +232,53 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
 
     // Bridge the renderer's IPC shape into the pure ChatCaller interface.
     const chat: ChatCaller = async (payload) => {
-      const desktopPet = window.desktopPet
-      if (!desktopPet?.completeChat) {
-        throw new Error('window.desktopPet.completeChat is not available')
-      }
-      const resp = await desktopPet.completeChat({
+      const requestInput = {
         providerId: payload.providerId,
         baseUrl: payload.baseUrl,
-        apiKey: payload.apiKey,
         model: payload.model,
-        messages: payload.messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-        temperature: payload.temperature,
-        maxTokens: payload.maxTokens,
-      })
-      return {
-        content: resp.content ?? '',
-        finishReason: resp.finish_reason,
+        apiKey: payload.apiKey,
+      }
+      const gate = getBackgroundChatGate(requestInput)
+      if (!gate.allowed) {
+        if (gate.shouldNotify) {
+          opts.onDebugEvent?.({
+            source: 'autonomy',
+            title: '[V2] background chat blocked',
+            detail: `background:autonomy-v2 blocked: ${gate.reason}`,
+          })
+        }
+        throw new Error(`background chat blocked: ${gate.reason}`)
+      }
+      const lease = acquireBackgroundChatLease()
+      if (!lease) throw new Error('background chat lease busy')
+      const desktopPet = window.desktopPet
+      try {
+        if (!desktopPet?.completeChat) {
+          throw new Error('window.desktopPet.completeChat is not available')
+        }
+        const resp = await desktopPet.completeChat({
+          providerId: payload.providerId,
+          baseUrl: payload.baseUrl,
+          apiKey: payload.apiKey,
+          model: payload.model,
+          messages: payload.messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          temperature: payload.temperature,
+          maxTokens: payload.maxTokens,
+          traceId: 'background:autonomy-v2',
+        })
+        recordBackgroundChatSuccess(requestInput)
+        return {
+          content: resp.content ?? '',
+          finishReason: resp.finish_reason,
+        }
+      } catch (error) {
+        recordBackgroundChatFailure(requestInput, classifyBackgroundChatFailure(error))
+        throw error
+      } finally {
+        releaseBackgroundChatLease(lease)
       }
     }
 
@@ -240,7 +303,7 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
           opts.onDebugEvent?.({
             source: 'autonomy',
             title: `[V2] ${origin} call failed`,
-            detail: error instanceof Error ? error.message : String(error),
+            detail: getRedactedLogErrorMessage(error),
           })
         },
       })
@@ -270,7 +333,7 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
           opts.onDebugEvent?.({
             source: 'autonomy',
             title: '[V2] idle gesture failed',
-            detail: error instanceof Error ? error.message : String(error),
+            detail: getRedactedLogErrorMessage(error),
           })
         }
       } else if (outcome.result.kind === 'speak') {
@@ -287,7 +350,7 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
           opts.onDebugEvent?.({
             source: 'autonomy',
             title: '[V2] delivery failed',
-            detail: error instanceof Error ? error.message : String(error),
+            detail: getRedactedLogErrorMessage(error),
           })
         }
       }
@@ -298,7 +361,7 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
       opts.onDebugEvent?.({
         source: 'autonomy',
         title: '[V2] engine crashed',
-        detail: error instanceof Error ? error.message : String(error),
+        detail: getRedactedLogErrorMessage(error),
       })
     } finally {
       inflightRef.current = false

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { WeatherLookupResponse } from '../types'
+import type { UiLanguage, WeatherLookupResponse } from '../types'
 
 /**
  * Compact view of the full weather response, tailored for the corner chip.
@@ -21,7 +21,7 @@ export type AmbientWeatherSnapshot = {
 // the render pass can silently ignore stale data after the user edits the
 // location setting (rather than flashing yesterday's weather for the wrong
 // city while the next fetch is in flight).
-type TaggedSnapshot = AmbientWeatherSnapshot & { forLocation: string }
+type TaggedSnapshot = AmbientWeatherSnapshot & { forLocation: string; forLocale: UiLanguage }
 type AmbientWeatherCacheEntry = {
   snapshot: TaggedSnapshot | null
   fetchedAt: number
@@ -49,6 +49,7 @@ function normalizeAmbientWeatherLocation(location: string) {
 function buildAmbientWeatherSnapshot(
   response: WeatherLookupResponse,
   location: string,
+  locale: UiLanguage,
   fetchedAt: number,
 ): TaggedSnapshot {
   const temperature = typeof response.currentTemperature === 'number'
@@ -56,6 +57,7 @@ function buildAmbientWeatherSnapshot(
     : null
   return {
     forLocation: location,
+    forLocale: locale,
     resolvedName: response.resolvedName || location,
     temperatureC: temperature,
     conditionLabel: response.currentConditionLabel ?? '',
@@ -68,6 +70,7 @@ function buildAmbientWeatherSnapshot(
 
 type AmbientWeatherLoadOptions = {
   now?: () => number
+  locale?: UiLanguage
 }
 
 export async function loadAmbientWeatherSnapshot(
@@ -78,8 +81,10 @@ export async function loadAmbientWeatherSnapshot(
   if (!normalizedLocation) return null
 
   const now = options.now ?? Date.now
+  const locale = options.locale ?? 'zh-CN'
+  const cacheKey = `${locale}\u0000${normalizedLocation}`
   const currentTime = now()
-  const cached = ambientWeatherCache.get(normalizedLocation)
+  const cached = ambientWeatherCache.get(cacheKey)
   if (cached?.pending) {
     return cached.pending
   }
@@ -94,18 +99,23 @@ export async function loadAmbientWeatherSnapshot(
     const previousSnapshot = cached?.snapshot ?? null
     const fetchedAt = now()
     try {
-      const response = await window.desktopPet?.getWeather?.({ location: normalizedLocation, quiet: true })
+      const response = await window.desktopPet?.getWeather?.({
+        location: normalizedLocation,
+        locale,
+        quiet: true,
+        policy: { enabled: true, requiresConfirmation: false },
+      })
       const snapshot = response
-        ? buildAmbientWeatherSnapshot(response as WeatherLookupResponse, normalizedLocation, fetchedAt)
+        ? buildAmbientWeatherSnapshot(response as WeatherLookupResponse, normalizedLocation, locale, fetchedAt)
         : previousSnapshot
-      ambientWeatherCache.set(normalizedLocation, {
+      ambientWeatherCache.set(cacheKey, {
         snapshot,
         fetchedAt,
         pending: null,
       })
       return snapshot
     } catch {
-      ambientWeatherCache.set(normalizedLocation, {
+      ambientWeatherCache.set(cacheKey, {
         snapshot: previousSnapshot,
         fetchedAt,
         pending: null,
@@ -114,7 +124,7 @@ export async function loadAmbientWeatherSnapshot(
     }
   })()
 
-  ambientWeatherCache.set(normalizedLocation, {
+  ambientWeatherCache.set(cacheKey, {
     snapshot: cached?.snapshot ?? null,
     fetchedAt: cached?.fetchedAt ?? 0,
     pending,
@@ -139,6 +149,7 @@ export function __test_resetAmbientWeatherCache() {
 export function useAmbientWeather(
   location: string,
   enabled: boolean,
+  locale: UiLanguage = 'zh-CN',
 ): AmbientWeatherSnapshot | null {
   const [taggedSnapshot, setTaggedSnapshot] = useState<TaggedSnapshot | null>(null)
   // Track in-flight requests so rapid setting edits don't race each other.
@@ -157,7 +168,7 @@ export function useAmbientWeather(
     const runFetch = async () => {
       if (disposed) return
       const requestId = ++requestIdRef.current
-      const snapshot = await loadAmbientWeatherSnapshot(trimmedLocation)
+      const snapshot = await loadAmbientWeatherSnapshot(trimmedLocation, { locale })
       if (disposed || requestId !== requestIdRef.current) return
       if (!snapshot) return
       lastFetchedAt = snapshot.fetchedAt
@@ -190,14 +201,18 @@ export function useAmbientWeather(
       if (pollTimer !== null) window.clearInterval(pollTimer)
       window.removeEventListener('focus', handleFocus)
     }
-  }, [enabled, trimmedLocation])
+  }, [enabled, locale, trimmedLocation])
 
   // Derive the visible snapshot during render. Hides the chip immediately
   // when the feature is disabled or the location was edited to something
   // other than what we last fetched, instead of flashing stale data.
   return useMemo<AmbientWeatherSnapshot | null>(() => {
     if (!enabled || !trimmedLocation) return null
-    if (!taggedSnapshot || taggedSnapshot.forLocation !== trimmedLocation) return null
+    if (
+      !taggedSnapshot
+      || taggedSnapshot.forLocation !== trimmedLocation
+      || taggedSnapshot.forLocale !== locale
+    ) return null
     return {
       resolvedName: taggedSnapshot.resolvedName,
       temperatureC: taggedSnapshot.temperatureC,
@@ -207,5 +222,5 @@ export function useAmbientWeather(
       windSpeedKmh: taggedSnapshot.windSpeedKmh,
       fetchedAt: taggedSnapshot.fetchedAt,
     }
-  }, [enabled, trimmedLocation, taggedSnapshot])
+  }, [enabled, locale, trimmedLocation, taggedSnapshot])
 }

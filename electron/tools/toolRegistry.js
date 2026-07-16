@@ -22,6 +22,16 @@ function assertRendererToolAllowed(toolDefinition, payload) {
   const policy = normalizeRendererToolPolicy(payload?.policy)
 
   if (!policy.enabled) {
+    if (toolDefinition.id === 'weather_lookup') {
+      const weatherDisabledMessages = {
+        'zh-CN': '天气查询已在当前设置中禁用。',
+        'zh-TW': '天氣查詢已在目前設定中停用。',
+        'en-US': 'Weather lookup is disabled in the current settings.',
+        ja: '天気検索は現在の設定で無効になっています。',
+        ko: '현재 설정에서 날씨 조회가 꺼져 있습니다.',
+      }
+      throw new Error(weatherDisabledMessages[payload?.locale] ?? weatherDisabledMessages['zh-CN'])
+    }
     throw new Error(`${toolDefinition.label} 已在当前设置中禁用。`)
   }
 
@@ -64,7 +74,7 @@ export const BUILT_IN_TOOL_REGISTRY = Object.freeze({
     id: 'weather_lookup',
     label: '天气查询',
     riskLevel: 'low',
-    handler: (payload) => lookupWeatherByLocation(payload?.location, payload?.fallbackLocation),
+    handler: (payload) => lookupWeatherByLocation(payload?.location, payload?.fallbackLocation, payload?.locale),
   },
   open_external_link: {
     id: 'open_external_link',

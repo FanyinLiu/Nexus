@@ -1,0 +1,211 @@
+/* Legacy settings shell theme tail. Loaded only for uiV2=0, before chat alignment. */
+.sd-day .sda,
+.sd-warm .sda {
+  margin: 0 -1px;
+  padding: 5px 1px 0;
+  border-top: 1px solid var(--settings-border);
+  background:
+    linear-gradient(to bottom, color-mix(in srgb, var(--settings-surface) 72%, transparent), var(--settings-surface) 32%),
+    var(--settings-surface);
+  box-shadow: 0 -14px 22px color-mix(in srgb, var(--settings-surface) 76%, transparent);
+}
+
+.sd-day:not(.sd-warm) .settings-memory-transparency__card strong {
+  color: rgba(23, 32, 42, 0.88);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.88);
+}
+
+.sd-day:not(.sd-warm) .settings-memory-transparency__card span {
+  color: rgba(23, 32, 42, 0.64);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.64);
+}
+
+.sd-day-section .settings-toggle:has(input:disabled) > span {
+  color: rgba(23, 32, 42, 0.46);
+  -webkit-text-fill-color: rgba(23, 32, 42, 0.46);
+}
+
+.sd-warm .settings-memory-transparency__card strong {
+  color: rgba(36, 27, 22, 0.9);
+  -webkit-text-fill-color: rgba(36, 27, 22, 0.9);
+}
+
+.sd-warm .settings-memory-transparency__card span,
+.sd-warm-section .settings-mini-group__head span,
+.sd-warm .sp[data-section='window'] .settings-window-section .settings-control-card > p {
+  color: rgba(78, 64, 54, 0.66);
+  -webkit-text-fill-color: rgba(78, 64, 54, 0.66);
+}
+
+.sd-warm-section .settings-toggle > span,
+.sd-warm .sp[data-section='window'] .settings-control-card > .settings-toggle > span,
+.sd-warm .sp[data-section='window'] .settings-window-section .settings-control-card > .settings-toggle > span {
+  color: rgba(36, 27, 22, 0.82);
+  -webkit-text-fill-color: rgba(36, 27, 22, 0.82);
+}
+
+.sd-warm-section .settings-toggle:has(input:disabled) > span {
+  color: rgba(78, 64, 54, 0.48);
+  -webkit-text-fill-color: rgba(78, 64, 54, 0.48);
+}
+
+.sd .sp.sp .settings-mini-group__head span,
+.sd .sp.sp .settings-section__note,
+.sd .sp.sp .settings-drawer__hint,
+.sd .sp.sp .settings-control-card > p,
+.sd .sp.sp .settings-control-card > small,
+.sd .sp.sp .settings-memory-transparency__card span,
+.sd .sp.sp .settings-section p:not([class]) {
+  font-size: var(--settings-child-meta-font-size);
+  line-height: 1.32;
+}
+
+.sd .sp.sp .settings-memory-context-status-grid {
+  gap: 4px;
+}
+
+.sd .sp.sp .settings-memory-context-status {
+  gap: 3px;
+  min-height: 32px;
+  padding: 3px 5px;
+}
+
+.sd .sp.sp .settings-memory-context-status p {
+  line-height: 1.3;
+}
+
+.sd .sp[data-section='memory'] .settings-memory-transparency__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.sd .sp[data-section='memory'] .settings-memory-transparency__card {
+  min-height: 34px;
+  padding: 4px 5px;
+  align-content: center;
+}
+
+.sd .sp[data-section='memory'] .settings-memory-transparency__card strong {
+  font-size: 11px;
+  line-height: 1.12;
+}
+
+.sd .sp[data-section='memory'] .settings-memory-transparency__card span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-height: 1.24;
+}
+
+.sd .sp[data-section='memory'] .settings-memory-context-transparency__row {
+  gap: 1px;
+}
+
+.sd .sp[data-section='memory'] .settings-memory-context-transparency__row p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.3;
+}
+
+.sd-warm .sda {
+  background: rgba(255, 253, 249, 0.68);
+  box-shadow: none;
+}
+
+.sd-warm .sda .primary-button,
+html[data-theme='warm-day'] .sd-warm .sda .primary-button,
+html[data-theme='system-day'] .sd-warm .sda .primary-button {
+  border-color: rgba(178, 91, 61, 0.24);
+  background: rgba(186, 92, 60, 0.92);
+  box-shadow: none;
+}
+
+.sd-warm .settings-section-nav__button,
+.sd-warm .settings-home-card,
+.sd-warm .settings-home-card:hover,
+.sd-warm .settings-home-card:nth-child(even),
+.sd-warm .settings-home-card:nth-child(even):hover {
+  border-color: var(--settings-trace-muted);
+  border-left: 2px solid transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sd-warm .settings-section-nav__button:hover,
+.sd-warm .settings-home-card:hover,
+.sd-warm .settings-home-card:nth-child(even):hover {
+  border-color: rgba(72, 53, 40, 0.16);
+  border-left-color: var(--settings-trust-trace, var(--settings-trace-warm));
+  background: rgba(255, 253, 249, 0.46);
+  box-shadow: none;
+}
+
+.sd-warm .settings-section-nav__button.is-active {
+  border-color: rgba(72, 53, 40, 0.18);
+  border-left-color: var(--settings-trace-cool);
+  background: rgba(255, 253, 249, 0.58);
+  box-shadow: none;
+}
+
+.sd-warm .settings-section-nav__marker {
+  width: 2px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(72, 53, 40, 0.18);
+}
+
+.sd-warm .settings-section-nav__button.is-active .settings-section-nav__marker {
+  background: var(--settings-trace-cool);
+  transform: none;
+}
+
+.sd-warm .settings-home-card,
+.sd-warm .settings-home-card[data-trust-group] {
+  border-left-color: color-mix(in srgb, var(--settings-trust-trace, var(--settings-trace-cool)) 64%, transparent);
+}
+
+.sd-warm .settings-home-card[data-trust-group='trustSafety'] {
+  --settings-trust-trace: var(--settings-trace-warm);
+}
+
+.sd-warm .settings-home-card[data-trust-group='memoryContext'] {
+  --settings-trust-trace: var(--settings-trace-memory);
+}
+
+.sd-warm .settings-home-card[data-trust-group='desktopAwareness'] {
+  --settings-trust-trace: var(--settings-trace-cool);
+}
+
+.sd-warm .settings-home-card[data-trust-group='permissionsIntegrations'] {
+  --settings-trust-trace: var(--settings-trace-permission);
+}
+
+.sd-warm .settings-home-card[data-trust-group='appearanceInteraction'] {
+  --settings-trust-trace: rgba(196, 139, 68, 0.52);
+}
+
+.sd-warm .settings-home-card__glyph {
+  color: var(--settings-trust-trace, var(--settings-trace-cool));
+  opacity: 0.68;
+}
+
+.sd-warm .sdc,
+.sd-warm .settings-section {
+  border-color: rgba(72, 53, 40, 0.12);
+  background: rgba(255, 253, 249, 0.38);
+  box-shadow: none;
+}
+
+.sd-warm .settings-section {
+  border-left: 2px solid rgba(80, 125, 198, 0.24);
+}
+
+.sd-warm .settings-section:hover {
+  border-color: rgba(72, 53, 40, 0.16);
+  border-left-color: var(--settings-trace-warm);
+  background: rgba(255, 253, 249, 0.52);
+  box-shadow: none;
+}

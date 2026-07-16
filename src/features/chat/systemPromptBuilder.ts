@@ -69,6 +69,8 @@ export type AssistantReplyRequestOptions = {
   responseProfile?: 'default' | 'voice_balanced'
   traceId?: string
   requestId?: string
+  /** Optional deterministic clock for request construction and tests. */
+  currentTime?: Date
   desktopContext?: DesktopContextSnapshot | null
   gameContext?: string
   toolContext?: string
@@ -458,9 +460,8 @@ function detectUserCorrection(
   return ''
 }
 
-function formatCurrentTimeReminder(settings: AppSettings): string {
+function formatCurrentTimeReminder(settings: AppSettings, now: Date = new Date()): string {
   const prompts = getChatPromptStrings(settings.uiLanguage)
-  const now = new Date()
   const currentDateTime = now.toLocaleString(prompts.timeLocaleTag, {
     year: 'numeric',
     month: '2-digit',
@@ -468,6 +469,7 @@ function formatCurrentTimeReminder(settings: AppSettings): string {
     weekday: 'long',
     hour: '2-digit',
     minute: '2-digit',
+    timeZoneName: 'long',
   })
   return prompts.currentTimeReminder(currentDateTime)
 }
@@ -503,7 +505,7 @@ async function toRequestMessages(
   // message so the cached system prefix stays byte-stable. Only the last user
   // turn carries the reminder; earlier turns keep their historical content
   // so conversation replay remains coherent.
-  const timeReminder = formatCurrentTimeReminder(settings)
+  const timeReminder = formatCurrentTimeReminder(settings, options.currentTime)
   const augmentedMessages = contextMessages.slice()
   for (let i = augmentedMessages.length - 1; i >= 0; i -= 1) {
     if (augmentedMessages[i].role === 'user') {

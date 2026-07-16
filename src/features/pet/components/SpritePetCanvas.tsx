@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion.ts'
-import type { PetMood, PetTouchZone } from '../../../types/index.ts'
+import type { PetMood, PetTouchZone, SpeechLevelSource } from '../../../types/index.ts'
+import { useSpeechLevelSnapshot } from '../../../hooks/voice/speechLevelPublishing.ts'
 import type { GazeTarget } from './live2d/types.ts'
 import type { PetPerformanceCue } from '../performance.ts'
 import {
@@ -25,7 +26,7 @@ type SpritePetCanvasProps = {
   isSpeaking?: boolean
   isListening?: boolean
   isBusy?: boolean
-  speechLevel?: number
+  speechLevelSource?: SpeechLevelSource
   gazeTarget?: GazeTarget
   performanceCue?: PetPerformanceCue | null
   overrideState?: SpritePetAnimationState | null
@@ -45,13 +46,19 @@ export function SpritePetCanvas({
   isSpeaking = false,
   isListening = false,
   isBusy = false,
-  speechLevel = 0,
+  speechLevelSource,
   gazeTarget = { x: 0, y: 0 },
   performanceCue = null,
   overrideState = null,
   placement = 'panel-card',
   label = 'Nexus sprite pet',
 }: SpritePetCanvasProps) {
+  const emptySpeechLevelSource = useMemo<SpeechLevelSource>(() => ({
+    current: 0,
+    getSnapshot: () => 0,
+    subscribe: () => () => undefined,
+  }), [])
+  const subscribedSpeechLevel = useSpeechLevelSnapshot(speechLevelSource ?? emptySpeechLevelSource)
   const prefersReducedMotion = usePrefersReducedMotion()
   const requestedState = overrideState ?? mapPetInputsToSpriteState({
     mood,
@@ -153,7 +160,9 @@ export function SpritePetCanvas({
   const renderFrame = resolveSpritePetRenderFrame(atlas, cursor)
   const { frame } = renderFrame
   const resolvedImagePath = useMemo(() => resolveAssetPath(atlas.imagePath), [atlas.imagePath])
-  const clampedSpeechLevel = Math.max(0, Math.min(1, speechLevel))
+  const clampedSpeechLevel = isSpeaking
+    ? Math.max(0, Math.min(1, subscribedSpeechLevel))
+    : 0
 
   const style: CSSProperties & Record<string, string> = {
     '--sprite-pet-aspect': renderFrame.aspectRatio,

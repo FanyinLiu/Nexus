@@ -14,7 +14,7 @@ const CHECKED_FILES = [
   'src/app/controllers/discordMessageRouter.ts',
   'src/app/controllers/useTelegramBridge.ts',
   'src/app/controllers/useDiscordBridge.ts',
-  'src/app/views/PanelView.tsx',
+  'src/app/views/LegacyPanelView.tsx',
   'electron/services/notificationBridge.js',
   'electron/services/tencentAsr.js',
   'electron/services/ttsService.js',
@@ -26,6 +26,7 @@ const CHECKED_FILES = [
   'src/components/settingsSections/AutonomySection.tsx',
   'src/lib/logger.ts',
   'src/lib/privacy/bridgeMessagePrivacy.ts',
+  'src/lib/privacy/notificationMessageState.ts',
   'src/lib/privacy/notificationPrivacy.ts',
   'src/vite-env.d.ts',
 ]
@@ -74,7 +75,7 @@ const UNSAFE_PATTERNS = [
   },
   {
     id: 'notification-reply-draft-copies-message-content',
-    file: 'src/app/views/PanelView.tsx',
+    file: 'src/app/views/LegacyPanelView.tsx',
     pattern: /handleNotificationDraft[\s\S]{0,500}(?:getNotificationSummary|message\.summary|message\.body)/,
     message: 'notification reply drafts must not copy third-party message content into the chat composer',
   },
@@ -164,9 +165,14 @@ const REQUIRED_PHRASES = [
     phrases: ['recordMessageFollowUp(buildNotificationMessageFollowUpInput(message))'],
   },
   {
-    id: 'notification-storage-sanitizer-used',
+    id: 'notification-storage-commit-helper-used',
     file: 'src/hooks/useNotificationBridge.ts',
-    phrases: ['sanitizeNotificationMessagesForStorage(messages)'],
+    phrases: ['commitNotificationMessages('],
+  },
+  {
+    id: 'notification-storage-sanitizer-used',
+    file: 'src/lib/privacy/notificationMessageState.ts',
+    phrases: ['sanitizeNotificationMessagesForStorage(next)'],
   },
   {
     id: 'notification-storage-body-stripped',
@@ -175,7 +181,7 @@ const REQUIRED_PHRASES = [
   },
   {
     id: 'notification-reply-draft-helper-used',
-    file: 'src/app/views/PanelView.tsx',
+    file: 'src/app/views/LegacyPanelView.tsx',
     phrases: ['buildNotificationReplyDraftText(message, ti)'],
   },
   {

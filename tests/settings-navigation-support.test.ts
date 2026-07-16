@@ -36,9 +36,9 @@ test('settings navigation opens settings only when the panel URL asks for settin
   })
 })
 
-test('settings navigation normalizes legacy integrations section to tools', () => {
+test('settings navigation keeps integrations as its own connection surface', () => {
   withFakeWindow('http://127.0.0.1:47821/?view=panel&section=settings&settingsSection=integrations', () => {
-    assert.equal(getInitialPreferredSettingsSectionId(), 'tools')
+    assert.equal(getInitialPreferredSettingsSectionId(), 'integrations')
   })
 })
 

@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import { beforeEach, test } from 'node:test'
 
 import { bindStreamingAbort } from '../src/hooks/chat/streamAbort.ts'
+import {
+  releaseChatSubmission,
+  shouldClearSubmittedInput,
+  tryAcquireChatSubmission,
+} from '../src/hooks/chat/submissionGuard.ts'
+import { cancelActiveTurn } from '../src/hooks/chat/turnExecution.ts'
 import { shouldIgnoreAssistantTurnResult } from '../src/hooks/chat/turnGuards.ts'
 
 beforeEach(() => {
@@ -86,4 +93,76 @@ test('bindStreamingAbort clears abort on rejection', async () => {
 
   await assert.rejects(trackedRequest, { message: 'stopped' })
   assert.equal(activeAbort, null)
+})
+
+test('cancelActiveTurn invalidates the turn before invoking the active stream abort', async () => {
+  let aborted = false
+  let busyState = true
+  let activity: 'thinking' | 'idle' = 'thinking'
+  let cleanupCount = 0
+  const activeTurnIdRef = { current: 9 }
+  const activeStreamAbortRef: { current: (() => Promise<void>) | null } = {
+    current: async () => {
+      aborted = true
+    },
+  }
+  const busyRef = { current: true }
+
+  assert.equal(cancelActiveTurn({
+    activeTurnIdRef,
+    activeStreamAbortRef,
+    busyRef,
+    setBusy: (value) => { busyState = value },
+    setAssistantActivity: (value) => { activity = value },
+    onCancel: () => { cleanupCount += 1 },
+  }), true)
+
+  assert.equal(activeTurnIdRef.current, 10)
+  assert.equal(activeStreamAbortRef.current, null)
+  assert.equal(busyRef.current, false)
+  assert.equal(busyState, false)
+  assert.equal(activity, 'idle')
+  assert.equal(cleanupCount, 1)
+  await Promise.resolve()
+  assert.equal(aborted, true)
+  assert.equal(shouldIgnoreAssistantTurnResult(activeTurnIdRef, 9), true)
+})
+
+test('submission lock rejects classification-pending duplicates, preserves a new draft, and releases in finally', async () => {
+  const lock = { current: false }
+
+  assert.equal(tryAcquireChatSubmission(lock), true)
+  assert.equal(tryAcquireChatSubmission(lock), false)
+  assert.equal(shouldClearSubmittedInput('new draft', 'submitted content'), false)
+  assert.equal(shouldClearSubmittedInput('submitted content', 'submitted content'), true)
+  assert.equal(shouldClearSubmittedInput('hello ', 'hello '), true)
+  assert.equal(shouldClearSubmittedInput('hello', 'hello '), false)
+
+  let classificationRejected = false
+  try {
+    await Promise.reject(new Error('classification failed'))
+  } catch {
+    classificationRejected = true
+  } finally {
+    releaseChatSubmission(lock)
+  }
+
+  assert.equal(classificationRejected, true)
+  assert.equal(lock.current, false)
+  assert.equal(tryAcquireChatSubmission(lock), true)
+})
+
+test('submission lock releases before the assistant turn and clears against the raw composer snapshot', async () => {
+  const source = await readFile(new URL('../src/hooks/useChat.ts', import.meta.url), 'utf8')
+  const executeIndex = source.indexOf('return executeAssistantTurn(')
+  const releaseBeforeExecuteIndex = source.lastIndexOf('releaseChatSubmission(submissionLockRef)', executeIndex)
+  const finallyReleaseIndex = source.indexOf('releaseChatSubmission(submissionLockRef)', executeIndex)
+  const snapshotIndex = source.indexOf('const composerSnapshot = !rawContent ? inputRef.current : null')
+
+  assert.ok(executeIndex >= 0)
+  assert.ok(releaseBeforeExecuteIndex > snapshotIndex)
+  assert.ok(releaseBeforeExecuteIndex < executeIndex)
+  assert.ok(finallyReleaseIndex > executeIndex)
+  assert.match(source, /composerSnapshot !== null && shouldClearSubmittedInput\(inputRef\.current, composerSnapshot\)/)
+  assert.match(source, /The lock only protects slash handling and preflight classification/)
 })

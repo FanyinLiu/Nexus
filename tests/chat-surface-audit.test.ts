@@ -54,7 +54,7 @@ export function MessageBubble({ message }) {
   )
 }
 `,
-  'src/app/views/PanelView.tsx': `
+  'src/app/views/LegacyPanelView.tsx': `
 export function PanelView() {
   const image4ChatPreviewMode = true
   const image4ChatPreviewVariant = 'density'
@@ -168,7 +168,7 @@ test('chat surface audit rejects missing message state grammar', () => {
 
 test('chat surface audit rejects default workspace or agent chrome', () => {
   withFixture({
-    'src/app/views/PanelView.tsx': `${BASELINE_FILES['src/app/views/PanelView.tsx']}
+    'src/app/views/LegacyPanelView.tsx': `${BASELINE_FILES['src/app/views/LegacyPanelView.tsx']}
 <div className="workspace-sidebar agent-cockpit" />
 `,
   }, (root) => {

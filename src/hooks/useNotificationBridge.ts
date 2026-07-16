@@ -1,75 +1,75 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY,
+  onStorageChange,
   readJson,
   writeJson,
 } from '../lib/storage'
-import { sanitizeNotificationMessagesForStorage } from '../lib/privacy/notificationPrivacy'
+import {
+  clearExpiredNotificationSnoozes,
+  commitNotificationMessages,
+  prependNotificationMessage,
+  sanitizeNotificationMessageSnapshot,
+} from '../lib/privacy/notificationMessageState'
 import type { NotificationChannel, NotificationMessage } from '../types'
-
-const MAX_STORED_MESSAGES = 50
 
 export type UseNotificationBridgeOptions = {
   onNotification: (message: NotificationMessage) => void
   /** Pass actual value (not from ref) so effects re-run when toggled. */
   enabled: boolean
-}
-
-function clearExpiredSnoozes(
-  messages: NotificationMessage[],
-  now: number,
-) {
-  return messages.map((message) => {
-    if (!message.snoozedUntil) return message
-
-    const expiredAt = Date.parse(message.snoozedUntil)
-    if (Number.isNaN(expiredAt) || expiredAt <= now) {
-      return { ...message, snoozedUntil: undefined }
-    }
-
-    return message
-  })
+  /** Only the background owner may touch the shared main-process bridge. */
+  runtimeOwner?: boolean
 }
 
 export function useNotificationBridge({
   onNotification,
   enabled,
+  runtimeOwner = true,
 }: UseNotificationBridgeOptions) {
-  const [messages, setMessages] = useState<NotificationMessage[]>(
-    () => {
-      const initialMessages = readJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, [])
-      const now = Date.now()
-      return clearExpiredSnoozes(initialMessages, now)
-    },
-  )
+  const [messages, setMessages] = useState<NotificationMessage[]>(() => {
+    const initialMessages = sanitizeNotificationMessageSnapshot(
+      readJson<unknown>(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, []),
+    )
+    return clearExpiredNotificationSnoozes(initialMessages, Date.now())
+  })
+  const messagesRef = useRef(messages)
   const onNotificationRef = useRef(onNotification)
 
   useEffect(() => {
     onNotificationRef.current = onNotification
   }, [onNotification])
 
-  // Persist messages
-  useEffect(() => {
-    writeJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, sanitizeNotificationMessagesForStorage(messages))
-  }, [messages])
+  const applyMessages = useCallback((next: NotificationMessage[]) => {
+    messagesRef.current = next
+    setMessages(next)
+  }, [])
+
+  const commitMessages = useCallback((next: readonly NotificationMessage[]) => {
+    commitNotificationMessages(
+      next,
+      (persisted) => writeJson(AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY, persisted),
+      applyMessages,
+    )
+  }, [applyMessages])
+
+  useEffect(() => onStorageChange(
+    AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY,
+    (value) => applyMessages(sanitizeNotificationMessageSnapshot(value)),
+  ), [applyMessages])
 
   // Clean up expired snoozes so "later" notifications reappear automatically.
   const pruneExpiredSnoozes = useCallback(() => {
-    const now = Date.now()
-    setMessages((prev) => {
-      let changed = false
-      const next = clearExpiredSnoozes(prev, now)
-      changed = next.some((message, index) => message !== prev[index])
-
-      if (!changed) return prev
-      return next
-    })
-  }, [])
+    const current = messagesRef.current
+    const next = clearExpiredNotificationSnoozes(current, Date.now())
+    const changed = next.some((message, index) => message !== current[index])
+    if (changed) commitMessages(next)
+  }, [commitMessages])
 
   useEffect(() => {
+    if (!runtimeOwner) return
     const intervalId = window.setInterval(pruneExpiredSnoozes, 30_000)
     return () => { window.clearInterval(intervalId) }
-  }, [pruneExpiredSnoozes])
+  }, [pruneExpiredSnoozes, runtimeOwner])
 
   // ── Channel management (via IPC to main process) ───────────────────────────
 
@@ -78,7 +78,9 @@ export function useNotificationBridge({
     () => Boolean(window.desktopPet?.getNotificationChannels),
   )
 
-  // Load channels on mount (independent of enabled toggle)
+  // Channel configuration is a settings data query, not a bridge lifecycle
+  // operation. Both renderers may read it so Panel settings can display and
+  // edit existing channels; only the lifecycle effects below are owner-gated.
   useEffect(() => {
     const getNotificationChannels = window.desktopPet?.getNotificationChannels
     if (!getNotificationChannels) {
@@ -123,10 +125,17 @@ export function useNotificationBridge({
     setChannels(next)
   }, [])
 
+  const handleIncomingNotification = useCallback((message: NotificationMessage) => {
+    const next = prependNotificationMessage(messagesRef.current, message)
+    commitMessages(next)
+    onNotificationRef.current(message)
+  }, [commitMessages])
+
   // ── Bridge lifecycle ───────────────────────────────────────────────────────
 
   // Start/stop the bridge based on settings — re-runs when enabled changes
   useEffect(() => {
+    if (!runtimeOwner) return
     if (!enabled) return
 
     void window.desktopPet?.startNotificationBridge?.()
@@ -134,57 +143,73 @@ export function useNotificationBridge({
     return () => {
       void window.desktopPet?.stopNotificationBridge?.()
     }
-  }, [enabled])
+  }, [enabled, runtimeOwner])
 
   // Subscribe to incoming notifications
   useEffect(() => {
+    if (!runtimeOwner) return
     if (!enabled) return
 
-    const unsubscribe = window.desktopPet?.subscribeNotifications?.((message: NotificationMessage) => {
-      setMessages((prev) => {
-        const next = [message, ...prev].slice(0, MAX_STORED_MESSAGES)
-        return next
-      })
-      onNotificationRef.current(message)
-    })
+    const unsubscribe = window.desktopPet?.subscribeNotifications?.(handleIncomingNotification)
 
     return () => {
       unsubscribe?.()
     }
-  }, [enabled])
+  }, [enabled, handleIncomingNotification, runtimeOwner])
 
   // ── Message helpers ────────────────────────────────────────────────────────
 
   const unreadCount = messages.filter((m) => !m.read).length
 
   const markRead = useCallback((messageId: string) => {
-    setMessages((prev) =>
-      prev.map((m) => m.id === messageId ? { ...m, read: true } : m),
-    )
-  }, [])
+    const current = messagesRef.current
+    let changed = false
+    const next = current.map((message) => {
+      if (message.id !== messageId || message.read) return message
+      changed = true
+      return { ...message, read: true }
+    })
+    if (changed) commitMessages(next)
+  }, [commitMessages])
 
   const markAllRead = useCallback(() => {
-    setMessages((prev) => prev.map((m) => ({ ...m, read: true })))
-  }, [])
+    const current = messagesRef.current
+    let changed = false
+    const next = current.map((message) => {
+      if (message.read) return message
+      changed = true
+      return { ...message, read: true }
+    })
+    if (changed) commitMessages(next)
+  }, [commitMessages])
 
   const markImportant = useCallback((messageId: string) => {
-    setMessages((prev) => prev.map((message) => {
+    const current = messagesRef.current
+    let changed = false
+    const next = current.map((message) => {
       if (message.id !== messageId) return message
+      changed = true
       return { ...message, isImportant: !message.isImportant }
-    }))
-  }, [])
+    })
+    if (changed) commitMessages(next)
+  }, [commitMessages])
 
   const snoozeMessage = useCallback((messageId: string, delayMinutes: number) => {
     const snoozedUntil = new Date(Date.now() + delayMinutes * 60_000).toISOString()
-    setMessages((prev) => prev.map((message) => {
+    const current = messagesRef.current
+    let changed = false
+    const next = current.map((message) => {
       if (message.id !== messageId) return message
+      changed = true
       return { ...message, snoozedUntil }
-    }))
-  }, [])
+    })
+    if (changed) commitMessages(next)
+  }, [commitMessages])
 
   const clearMessages = useCallback(() => {
-    setMessages([])
-  }, [])
+    if (messagesRef.current.length === 0) return
+    commitMessages([])
+  }, [commitMessages])
 
   return {
     // Messages

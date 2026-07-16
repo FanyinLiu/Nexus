@@ -43,16 +43,54 @@ Settings is a companion control surface, not a dashboard.
 - grouped by user meaning
 `,
   'src/app/settingsDrawerEntry.ts': `
+import { loadSettingsStyleBundles } from './settingsStyleBundles'
+await loadSettingsStyleBundles()
+if (new URLSearchParams(window.location.search).get('uiV2') === '0') {
+  await import('./settingsStylesLegacyProductReference')
+}
+export { SettingsDrawer } from '../components/SettingsDrawer'
+`,
+  'src/app/settingsStyleBundles.ts': `
+export const SETTINGS_STYLE_BUNDLES = [
+  { id: 'foundation', load: () => import('./settingsStylesFoundation') },
+  { id: 'theme', load: () => import('./settingsStylesTheme') },
+  { id: 'surface', load: () => import('./settingsStylesSurface') },
+  { id: 'final', load: () => import('./settingsStylesFinal') },
+]
+export async function loadSettingsStyleBundles() {
+  for (const bundle of SETTINGS_STYLE_BUNDLES) {
+    await bundle.load()
+  }
+}
+`,
+  'src/app/settingsStylesFoundation.ts': `
 import './styles/settings.css'
 import './styles/settings-home.css'
+`,
+  'src/app/settingsStylesTheme.ts': `
 import './styles/settings-themes.css'
+if (new URLSearchParams(window.location.search).get('uiV2') === '0') {
+  await import('./settingsStylesThemeLegacy')
+}
+await import('./settingsStylesThemeAligned')
+`,
+  'src/app/settingsStylesThemeLegacy.ts': `
+import './styles/settings-themes-legacy.css'
+`,
+  'src/app/settingsStylesThemeAligned.ts': `
 import './styles/settings-chat-aligned.css'
+`,
+  'src/app/settingsStylesSurface.ts': `
 import './styles/settings-chat-final.css'
-import './styles/settings-chat-role-final.css'
 import './styles/settings-visual-system.css'
+`,
+  'src/app/settingsStylesFinal.ts': `
 import './styles/settings-visibility-final.css'
+import './styles/settings-product-shell.css'
+import './styles/settings-product-reference-modern-bridge.css'
+`,
+  'src/app/settingsStylesLegacyProductReference.ts': `
 import './styles/settings-product-reference-final.css'
-export { SettingsDrawer } from '../components/SettingsDrawer'
 `,
   'src/components/settingsDrawerMetadata.ts': `
 export const SETTINGS_TRUST_SURFACE_GROUPS = {
@@ -173,10 +211,60 @@ export function ToolsSection({ draft }) {
   )
 }
 `,
+  'src/features/settingsV3/settings-v3.css': `
+.settings-v3-page {}
+.settings-v3-row {}
+.settings-v3-editor {}
+@media (max-width: 719px) {}
+@media (prefers-reduced-motion: reduce) {}
+@media (forced-colors: active) {}
+`,
+  'src/features/settingsV3/settings-v3-collection.css': `
+.settings-v3-collection {}
+.settings-v3-letter-body {}
+.settings-v3-chip-line {}
+@media (forced-colors: active) {}
+`,
+  'src/features/settingsV3/chat-section-v3.css': `
+.settings-v3-choice-grid {}
+.settings-v3-studio {}
+@media (max-width: 719px) {}
+`,
+  'src/features/settingsV3/voice-section-v3.css': `
+.settings-v3-provider {}
+.settings-v3-tuning {}
+@media (max-width: 719px) {}
+`,
+  'src/features/settingsV3/integrations-section-v3.css': `
+@media (max-width: 719px) {}
+`,
+  'src/features/settingsV3/console-section-v3.css': `
+/* Console V3 owns plan and agent activity surfaces; loaded with the lazy console route. */
+.settings-plan-panel {}
+.settings-agent-panel {}
+@media (max-width: 640px) {}
+`,
+  'src/features/settingsV3/ChatSectionV3.tsx': `
+import './settings-v3-collection.css'
+import './chat-section-v3.css'
+`,
+  'src/features/settingsV3/VoiceSectionV3.tsx': `
+import './voice-section-v3.css'
+`,
+  'src/features/settingsV3/MemorySectionV3.tsx': `
+import './settings-v3-collection.css'
+`,
+  'src/features/settingsV3/IntegrationsSectionV3.tsx': `
+import './integrations-section-v3.css'
+`,
+  'src/features/settingsV3/ConsoleSectionV3.tsx': `
+import './settings-v3-collection.css'
+import './console-section-v3.css'
+`,
   'src/app/styles/settings.css': `
 :root {
   --settings-control-height: 26px;
-  --settings-body-font-size: 10px;
+  --settings-body-font-size: 12px;
 }
 .sd {
   width: min(300px, calc(100vw - 18px));
@@ -204,6 +292,9 @@ export function ToolsSection({ draft }) {
 `,
   'src/app/styles/settings-themes.css': `
 .settings-page__back:focus-visible {}
+`,
+  'src/app/styles/settings-themes-legacy.css': `
+.sd-warm .settings-home-card {}
 `,
   'src/app/styles/settings-chat-aligned.css': `
 .sd-warm.sd-home {
@@ -301,7 +392,7 @@ export function ToolsSection({ draft }) {
 .sd-warm-section .settings-control-card {
   background: rgba(255, 253, 249, 0.18);
 }
-.sd-warm-section .onboarding-relationship__chip {}
+.sd-warm-section .settings-relationship__chip {}
 .sd-warm-section .settings-toggle:not(.settings-lorebook-check) {}
 .sd-warm-section .settings-control-card:has(> .settings-toggle input:disabled) {
   background: rgba(255, 253, 249, 0.16);
@@ -336,10 +427,17 @@ html[data-theme='warm-day'] .sd-warm.sd-home .sda .primary-button {}
 /* Final chat-parity pass: settings borrows the chat surface's light command rhythm. */
 .sd-light.sd-home,
 .sd-light.sd-section {
+  --settings-chat-parity-line: rgba(75, 62, 49, 0.065);
+  --settings-chat-parity-row: rgba(255, 253, 249, 0.08);
+  --settings-chat-parity-command: rgba(185, 92, 60, 0.062);
+  width: min(340px, calc(100vw - 28px));
   height: min(640px, calc(100vh - 48px));
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
 .sd-light.sd-home .sdb {}
+.sd-light.sd-home .settings-home-presence {}
+.sd-light.sd-home .settings-appearance-switch {}
+.sd-light.sd-home .settings-home-card { min-height: 34px; }
 .sd-light.sd-home .settings-drawer__window-title-name {}
 .sd-light.sd-home .settings-drawer__window-title-label {}
 .sd-light.sd-home .sdh {}
@@ -355,10 +453,7 @@ html[data-theme='warm-day'] .sd-warm.sd-home .sda .primary-button {}
 .sd-light.sd-home .settings-home-group__list {}
 .sd-light-section .settings-control-card {}
 .sd-light-section .settings-form-row {}
-.sd-light-section .sdc.settings-drawer__sections {}
-.sd-light-section .sp[data-section='model'] .onboarding-region-tabs {}
-.sd-light-section .sp[data-section='model'] .onboarding-region-tabs__tab {}
-.sd-light-section .sp[data-section='model'] .onboarding-region-tabs__tab.is-active {}
+.sd-light-section .sdc.settings-drawer__sections { padding-bottom: 104px; }
 .sd-light-section .sp[data-section='model'] .settings-model-source-grid {
   grid-template-columns: 1fr;
 }
@@ -421,6 +516,10 @@ html[data-theme='warm-day'] .sd-warm.sd-home .sda .primary-button {}
 }
 .sd-light-section .sph h4:focus {
   outline: none;
+}
+.sd-light.sd-home .sda {}
+.sd-light.sd-home .sda .primary-button {
+  background: var(--settings-chat-parity-command);
 }
 /* Tools permissions use disabled fields as readable status, not empty form holes. */
 .sd-light-section .sp[data-section='tools'] .settings-mini-group {
@@ -617,8 +716,8 @@ html[data-theme='warm-day'] .sd-warm.sd-home .sda .primary-button {}
   --settings-chat-parity-line: rgba(75, 62, 49, 0.065);
   --settings-chat-parity-row: rgba(255, 253, 249, 0.08);
   --settings-chat-parity-command: rgba(185, 92, 60, 0.062);
-  --settings-control-font-size: 10px;
-  --settings-meta-font-size: 9px;
+  --settings-control-font-size: 12px;
+  --settings-meta-font-size: 11px;
   width: min(340px, calc(100vw - 28px));
   height: min(640px, calc(100vh - 48px));
   position: relative;
@@ -671,8 +770,8 @@ html[data-theme='warm-day'] .sd-warm.sd-home .sda .primary-button {}
 }
 .sd-warm.sd-home .settings-drawer__icon-button,
 .sd-warm.sd-section .settings-drawer__icon-button {
-  width: 20px;
-  height: 20px;
+  width: 36px;
+  height: 36px;
   border-radius: 6px;
 }
 .sd-warm.sd-home .settings-home {
@@ -713,18 +812,6 @@ html[data-theme='warm-day'] .sd-warm.sd-home .sda .primary-button {}
   scroll-padding-bottom: 90px;
   mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 22px), transparent 100%);
 }
-.sd-warm-section .sp[data-section='model'] .onboarding-region-tabs {
-  gap: 2px;
-  border: 1px solid var(--settings-chat-parity-line);
-  border-radius: 9px;
-}
-.sd-warm-section .sp[data-section='model'] .onboarding-region-tabs__tab {
-  min-height: 30px;
-  border-radius: 7px;
-}
-.sd-warm-section .sp[data-section='model'] .onboarding-region-tabs__tab.is-active {
-  box-shadow: inset 0 0 0 1px rgba(185, 92, 60, 0.1);
-}
 .sd-warm-section .sp[data-section='model'] .settings-model-source-grid {
   gap: 4px;
 }
@@ -747,13 +834,13 @@ html[data-theme='warm-day'] .sd-warm.sd-home .sda .primary-button {}
 .settings-drawer.sd-warm-section .sp[data-section='chat'] .settings-chat-relationship-card > .settings-mini-group__head:not(summary) {
   min-height: auto;
 }
-.sd-warm-section .sp[data-section='chat'] .onboarding-relationship__options {
+.sd-warm-section .sp[data-section='chat'] .settings-relationship__options {
   border: 1px solid rgba(75, 62, 49, 0.045);
   gap: 1px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   border-radius: 8px;
 }
-.sd-warm-section .sp[data-section='chat'] .onboarding-relationship__chip.is-active {
+.sd-warm-section .sp[data-section='chat'] .settings-relationship__chip.is-active {
   box-shadow: inset 0 0 0 1px rgba(185, 92, 60, 0.07);
 }
 .sd-warm-section .sp[data-section='chat'] .settings-pet-model-card,
@@ -953,112 +1040,6 @@ html[data-theme='warm-day'] .sd-warm.sd-home .sda .primary-button {}
   background: var(--settings-chat-parity-command);
 }
 `,
-  'src/app/styles/settings-chat-role-final.css': `
-/* Chat-section parity pass: role, companion preview, and pet workflow settings. */
-.sd-light-section .sp[data-section='chat'] .settings-chat-identity-field > .settings-form-row {
-  grid-template-columns: minmax(70px, 0.36fr) minmax(0, 1fr);
-  min-height: 30px;
-}
-.sd-light-section .sp[data-section='chat'] .settings-chat-identity-field > .settings-form-row > input:not([type='checkbox']):not([type='radio']):not([type='range']) {
-  height: 30px;
-  border-color: rgba(75, 62, 49, 0.045);
-  background: rgba(255, 253, 249, 0.16);
-}
-.sd-light-section .sp[data-section='chat'] .settings-mini-group:has(> .settings-chat-system-prompt) {
-  border-bottom: 1px solid var(--settings-chat-parity-line);
-}
-.sd-light-section .sp[data-section='chat'] .settings-mini-group:not(.settings-pet-model-card):not(.settings-pet-preview-card):not(.settings-pet-workflow-card):has(> .settings-chat-system-prompt):has(> .settings-control-card) {
-  border: 0;
-}
-.sd-light-section .sp[data-section='chat'] .settings-chat-system-prompt {
-  height: 68px;
-  min-height: 58px;
-  max-height: 72px;
-  border-color: rgba(75, 62, 49, 0.045);
-  background: rgba(255, 253, 249, 0.14);
-}
-.sd-light-section .sp[data-section='chat'] .settings-mini-group:has(> .settings-chat-system-prompt) .settings-chat-advanced-control > .settings-toggle {
-  min-height: 28px;
-}
-.sd-light-section .sp[data-section='chat'] .settings-chat-relationship-card,
-.sd-light-section .sp[data-section='chat'] .settings-chat-relationship-card {
-  border-bottom-color: var(--settings-chat-parity-line);
-}
-.sd-light-section .sp[data-section='chat'] .settings-chat-relationship-card > .settings-mini-group__head:not(summary) {
-  min-height: auto;
-}
-.sd-light-section .sp[data-section='chat'] .onboarding-relationship__options {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1px;
-  border: 1px solid rgba(75, 62, 49, 0.045);
-  border-radius: 8px;
-}
-.sd-light-section .sp[data-section='chat'] .onboarding-relationship__chip.is-active {
-  box-shadow: inset 0 0 0 1px rgba(185, 92, 60, 0.07);
-}
-.sd-light-section .sp[data-section='chat'] .settings-pet-model-card,
-.sd-light-section .sp[data-section='chat'] .settings-pet-preview-card,
-.sd-light-section .sp[data-section='chat'] .settings-pet-workflow-card {
-  background: rgba(255, 253, 249, 0.1);
-}
-.sd-light-section .sp[data-section='chat'] .settings-pet-model-card {
-  padding: 0 0 6px;
-}
-.sd-light-section .sp[data-section='chat'] .settings-pet-model-card > .settings-mini-group__head > span {
-  display: -webkit-box;
-  white-space: normal;
-  -webkit-line-clamp: 2;
-}
-.sd-light-section .sp[data-section='chat'] .settings-pet-model-card .settings-choice-grid {
-  border: 1px solid var(--settings-chat-parity-line);
-}
-.sd-light-section .sp[data-section='chat'] .settings-pet-model-card .settings-choice-card {
-  grid-template-columns: minmax(78px, 0.34fr) minmax(0, 1fr);
-  min-height: 46px;
-}
-.sd-light-section .sp[data-section='chat'] .settings-pet-model-card .settings-choice-card__description {
-  color: rgba(78, 64, 54, 0.62);
-  text-align: left;
-  -webkit-line-clamp: 2;
-}
-.sd-light-section .sp[data-section='chat'] .settings-pet-preview-card {
-  padding: 0 0 8px;
-  border-bottom-color: var(--settings-chat-parity-line);
-}
-.sd-light-section .sp[data-section='chat'] .settings-sprite-preview__stage {
-  min-height: 118px;
-}
-.sd-light-section .sp[data-section='chat'] .settings-sprite-preview__states button,
-.sd-light-section .sp[data-section='chat'] .settings-companion-state-preview__states button {
-  min-height: 28px;
-}
-.sd-light-section .sp[data-section='chat'] .settings-pet-action-row {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-}
-.sd-light-section .sp[data-section='chat'] .settings-pet-action-row .ghost-button {
-  min-height: 30px;
-}
-.sd-light-section .sp[data-section='chat'] .settings-pet-tools > .settings-mini-group__note {
-  -webkit-line-clamp: 3;
-}
-.sd-light-section .sp[data-section='chat'] .settings-pet-workflow-grid {}
-.sd-light-section .sp[data-section='chat'] .settings-pet-workflow-card {}
-.sd-light-section .sp[data-section='chat'] .settings-pet-workflow-card > .settings-inline-row:not(.settings-pet-creator-actions) input {
-  height: 30px;
-}
-.sd-light-section .sp[data-section='chat'] .settings-community-links {
-  display: flex;
-  flex-wrap: wrap;
-}
-.sd-light-section .sp[data-section='chat'] .settings-community-links a {
-  flex: 1 1 132px;
-  min-height: 28px;
-}
-.sd-light-section .sp[data-section='chat'] .settings-community-links__text {
-  white-space: normal;
-}
-`,
   'src/app/styles/settings-visual-system.css': `
 /* Nexus settings visual system. */
 .sb,
@@ -1110,7 +1091,7 @@ html[data-theme='warm-day'] .sd-warm.sd-home .sda .primary-button {}
   background: linear-gradient(135deg, var(--nx-settings-accent), white);
 }
 .sd-section .sp.sp .settings-appearance-switch__control {}
-.sd-section .sp.sp :is(.onboarding-region-tabs, .onboarding-relationship__options, .settings-sprite-preview__states, .settings-companion-state-preview__states) {
+.sd-section .sp.sp :is(.settings-relationship__options, .settings-sprite-preview__states, .settings-companion-state-preview__states) {
   background: var(--nx-settings-segment-surface);
 }
 .sd-section .sp.sp .settings-choice-card.is-active {
@@ -1151,6 +1132,15 @@ html[data-theme='warm-day'] .sd-warm.sd-home .sda .primary-button {}
 .sd-section .sp.sp :is(.settings-section, .settings-mini-group, .settings-drawer__card, .settings-speech-config-section) {}
 .sd-section .sda { background: var(--nx-settings-footer-surface); }
 `,
+  'src/app/styles/settings-product-shell.css': `
+.settings-product-shell {}
+`,
+  'src/app/styles/settings-product-reference-modern-bridge.css': `
+/* Modern settings only needs the narrow outer-shell bounds from the legacy product reference. */
+@media (max-width: 679px) {
+  .sd-home { width: min(392px, calc(100vw - 16px)); height: min(784px, calc(100vh - 16px)); }
+}
+`,
   'src/app/styles/settings-product-reference-final.css': `
 /* v0.4.2 product-settings reference pass. */
 .settings-backdrop:has(.settings-drawer--home),
@@ -1159,6 +1149,14 @@ html[data-theme='warm-day'] .sd-warm.sd-home .sda .primary-button {}
 .sd-section { width: min(720px, calc(100vw - 20px)); background: #fbf8f3; }
 .sd-section .settings-page__layout { grid-template-columns: 168px minmax(0, 1fr); }
 .sd-section .settings-section-nav__button.is-active { background: #ffffff; }
+.sd-section .sp.sp .sphd { min-height: 74px; }
+.sd-section .sp.sp .sph h4 { font-size: 17px; }
+.sd-section .sp.sp :is(.settings-appearance-switch__control, .settings-relationship__options, .settings-sprite-preview__states, .settings-companion-state-preview__states) {}
+.sd-section .sp.sp .settings-toggle input:checked { background: var(--nx-settings-accent); }
+.sd-section .settings-segmented-control { background: var(--nx-settings-segment-surface); }
+.sd-section .settings-segmented-control__option { color: var(--nx-settings-muted); }
+.sd-section .settings-segmented-control__option.is-active { background: var(--nx-settings-surface-soft); }
+.sd-section .sp.sp .settings-test-result.is-success { color: var(--nx-settings-success); }
 .sd-section .sp[data-section='chat'] .settings-chat-relationship-card { height: auto !important; }
 .sd-section .sp[data-section='chat'] .settings-mini-group:has(> .settings-chat-system-prompt) { height: auto !important; }
 `,

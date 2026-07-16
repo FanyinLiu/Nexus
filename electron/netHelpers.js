@@ -41,6 +41,31 @@ export function canonicalizeLoopbackUrl(urlString) {
   return urlString
 }
 
+const CROSS_ORIGIN_SENSITIVE_HEADERS = new Set([
+  'authorization', 'proxy-authorization', 'cookie', 'x-api-key', 'xi-api-key',
+  'api-key', 'x-api-app-key', 'x-api-access-key', 'x-api-access-token',
+])
+
+export function buildSafeRedirectRequestOptions(currentUrl, nextUrl, status, options = {}) {
+  const next = { ...options, headers: { ...(options.headers ?? {}) } }
+  const crossOrigin = new URL(currentUrl).origin !== new URL(nextUrl).origin
+  if (crossOrigin) {
+    for (const name of Object.keys(next.headers)) {
+      if (CROSS_ORIGIN_SENSITIVE_HEADERS.has(name.toLowerCase())) delete next.headers[name]
+    }
+  }
+
+  const method = String(next.method ?? 'GET').toUpperCase()
+  if (status === 303 || ([301, 302].includes(status) && method === 'POST')) {
+    next.method = 'GET'
+    delete next.body
+    for (const name of Object.keys(next.headers)) {
+      if (['content-length', 'content-type'].includes(name.toLowerCase())) delete next.headers[name]
+    }
+  }
+  return next
+}
+
 export function shouldLabelAsConnectionFailure(reason) {
   const message = String(reason ?? '').trim()
   const normalized = message.toLowerCase()

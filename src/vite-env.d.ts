@@ -503,13 +503,16 @@ declare global {
       setPetFreeMode: (freeMode: boolean) => Promise<PetWindowState | null>
       subscribePetWindowState: (listener: (state: PetWindowState) => void) => () => void
       dragBy: (delta: { x: number; y: number }) => Promise<void>
-      openPanel: (section?: 'chat' | 'settings') => Promise<void>
+      openPanel: (section?: 'chat' | 'chat-text' | 'chat-recent' | 'settings') => Promise<void>
+      getPanelSection: () => Promise<{ section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null }>
       openPetMenu: () => Promise<void>
       closePanel: () => Promise<void>
+      closeSettings?: () => Promise<void>
       getPanelWindowState: () => Promise<PanelWindowState>
       setPanelWindowState: (state: Partial<PanelWindowState>) => Promise<PanelWindowState>
       isPanelWindow: () => Promise<boolean>
-      subscribePanelSection: (listener: (payload: { section: 'chat' | 'settings' }) => void) => () => void
+      subscribePanelSection: (listener: (payload: { section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null }) => void) => () => void
+      subscribeSettingsReturnFocus?: (listener: () => void) => () => void
       subscribePanelWindowState: (listener: (state: PanelWindowState) => void) => () => void
       subscribeRuntimeState: (listener: (state: {
         mood: 'idle' | 'thinking' | 'happy' | 'sleepy'

@@ -93,9 +93,12 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
   function setSpeechLevelValue(nextLevel: number) {
     setSpeechLevelValueRuntime({
       nextLevel,
-      speechLevelValueRef: refs.speechLevelValueRef,
-      setSpeechLevel: setters.setSpeechLevel,
+      publishSpeechLevel: refs.speechLevelPublisher.publish,
     })
+  }
+
+  function resetSpeechLevel() {
+    refs.speechLevelPublisher.reset()
   }
 
   function getSpeechLevelController() {
@@ -111,6 +114,7 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
     stopSpeechTrackingRuntime({
       getSpeechLevelController,
     })
+    resetSpeechLevel()
   }
 
   // ── Continuous voice toggle ─────────────────────────────────────────────
@@ -145,14 +149,19 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       apiRecordingRef: refs.apiRecordingRef,
       cancel,
     })
+    if (cancel) resetSpeechLevel()
   }
 
   async function destroyVadSession(session: VadConversationSession | null) {
-    await destroyVadSessionRuntime({
-      session,
-      vadSessionRef: refs.vadSessionRef,
-      setSpeechLevelValue,
-    })
+    try {
+      await destroyVadSessionRuntime({
+        session,
+        vadSessionRef: refs.vadSessionRef,
+        setSpeechLevelValue,
+      })
+    } finally {
+      resetSpeechLevel()
+    }
   }
 
   async function stopVadListening(cancel = false) {
@@ -169,6 +178,7 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       paraformerConversationRef: refs.paraformerConversationRef,
       setSpeechLevelValue,
     })
+    resetSpeechLevel()
   }
 
   function clearSenseVoiceConversationState() {
@@ -176,6 +186,7 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       sensevoiceConversationRef: refs.sensevoiceConversationRef,
       setSpeechLevelValue,
     })
+    resetSpeechLevel()
   }
 
   function clearTencentConversationState() {
@@ -183,6 +194,7 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       tencentConversationRef: refs.tencentConversationRef,
       setSpeechLevelValue,
     })
+    resetSpeechLevel()
   }
 
   // ── Speech output plumbing ──────────────────────────────────────────────
@@ -195,6 +207,7 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       streamAudioPlayerRef: refs.streamAudioPlayerRef,
       audioPlaybackQueueRef: refs.audioPlaybackQueueRef,
     })
+    resetSpeechLevel()
   }
 
   function getStreamAudioPlayer() {
@@ -310,7 +323,7 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       voiceStateRef: refs.voiceStateRef,
       continuousVoiceActiveRef: refs.continuousVoiceActiveRef,
       settingsRef: ctx.settingsRef,
-      speechLevelValueRef: refs.speechLevelValueRef,
+      speechLevelSource: refs.speechLevelSource,
       // When KWS is listening, the monitor subscribes to its existing mic
       // frames instead of opening a second getUserMedia. See
       // `startSpeechInterruptMonitor` for the full rationale.
@@ -423,6 +436,7 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
   }
 
   function handleVoiceListeningFailure(message: string, errorCode?: string) {
+    resetSpeechLevel()
     handleVoiceListeningFailureRuntime({
       message,
       errorCode,
@@ -455,6 +469,7 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
     dispatchVoiceSessionAndSync,
     beginVoiceListeningSession,
     setSpeechLevelValue,
+    resetSpeechLevel,
     getSpeechLevelController,
     stopSpeechTracking,
     setContinuousVoiceSession,

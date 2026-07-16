@@ -21,7 +21,12 @@ function loadClassicScript(descriptor: Live2DVendorScript) {
 
   return new Promise<void>((resolve, reject) => {
     const selector = `script[${LIVE2D_VENDOR_SCRIPT_ATTRIBUTE}="${descriptor.id}"]`
-    const existingScript = document.querySelector<HTMLScriptElement>(selector)
+    let existingScript = document.querySelector<HTMLScriptElement>(selector)
+
+    if (existingScript?.dataset.failed === 'true') {
+      existingScript.remove()
+      existingScript = null
+    }
 
     function resolveIfReady() {
       if (!descriptor.globalReady()) {
@@ -32,7 +37,12 @@ function loadClassicScript(descriptor: Live2DVendorScript) {
       resolve()
     }
 
-    function rejectWithLoadError() {
+    function rejectWithLoadError(event: Event) {
+      const failedScript = event.currentTarget as HTMLScriptElement | null
+      if (failedScript) {
+        failedScript.dataset.failed = 'true'
+        failedScript.remove()
+      }
       reject(new Error(`Failed to load Live2D vendor script "${descriptor.id}".`))
     }
 

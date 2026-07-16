@@ -1,4 +1,9 @@
 import { performNetworkRequest, readJsonSafe } from '../net.js'
+import {
+  formatWeatherContentForLocale,
+  getWeatherLocalizationCopy,
+  normalizeWeatherLocale,
+} from './weatherLocalization.js'
 
 const TOOL_WEATHER_TIMEOUT_MS = 12_000
 
@@ -48,166 +53,6 @@ const WEATHER_LOCATION_ALIAS_MAP = new Map([
   ['제주', ['제주특별자치도', 'Jeju']],
 ])
 const LOCATION_ADMIN_SUFFIX_PATTERN = /(特别行政区|特別行政區|自治州|自治县|自治縣|地区|地區|省|市|区|區|县|縣|镇|鎮|乡|鄉|州|盟|旗|都|道|府|県|町|村|郡|특별시|광역시|특별자치도|특별자치시|시|도|군|구)$/u
-
-function getWeatherCodeDescription(code) {
-  const normalizedCode = Number(code)
-  const weatherCodeMap = {
-    0: '晴朗',
-    1: '大致晴',
-    2: '局部多云',
-    3: '阴天',
-    45: '有雾',
-    48: '雾凇',
-    51: '小毛毛雨',
-    53: '毛毛雨',
-    55: '强毛毛雨',
-    56: '小冻毛毛雨',
-    57: '强冻毛毛雨',
-    61: '小雨',
-    63: '中雨',
-    65: '大雨',
-    66: '小冻雨',
-    67: '强冻雨',
-    71: '小雪',
-    73: '中雪',
-    75: '大雪',
-    77: '冰粒',
-    80: '小阵雨',
-    81: '阵雨',
-    82: '强阵雨',
-    85: '小阵雪',
-    86: '强阵雪',
-    95: '雷阵雨',
-    96: '雷阵雨伴小冰雹',
-    99: '强雷阵雨伴冰雹',
-  }
-
-  return weatherCodeMap[normalizedCode] ?? '天气变化中'
-}
-
-function spokenTemperature(value) {
-  if (!Number.isFinite(value)) return ''
-  const rounded = Math.round(value)
-  return rounded < 0 ? `零下${Math.abs(rounded)}度` : `${rounded}度`
-}
-
-function spokenWindSpeed(kmh) {
-  if (!Number.isFinite(kmh)) return ''
-  const rounded = Math.round(kmh)
-  if (rounded <= 1) return '几乎无风'
-  if (rounded <= 10) return '微风'
-  if (rounded <= 20) return `风速${rounded}公里每小时`
-  if (rounded <= 40) return '风比较大'
-  return '大风'
-}
-
-function spokenPrecipitation(percent) {
-  if (!Number.isFinite(percent)) return ''
-  if (percent <= 5) return '基本不会下雨'
-  if (percent <= 20) return '可能有零星小雨'
-  if (percent <= 50) return `降水概率百分之${percent}`
-  if (percent <= 80) return `降水概率比较高，百分之${percent}`
-  return `很可能会下雨，降水概率百分之${percent}`
-}
-
-function spokenHumidity(percent) {
-  if (!Number.isFinite(percent)) return ''
-  const rounded = Math.round(percent)
-  if (rounded < 30) return `空气干燥（湿度${rounded}%）`
-  if (rounded < 60) return `湿度${rounded}%`
-  if (rounded < 80) return `湿度偏高${rounded}%`
-  return `空气湿润（湿度${rounded}%）`
-}
-
-function spokenApparentDelta(actual, apparent) {
-  if (!Number.isFinite(actual) || !Number.isFinite(apparent)) return ''
-  const delta = apparent - actual
-  if (Math.abs(delta) < 1.5) return ''
-  // Feels-like only mentioned when meaningfully different from actual.
-  return `体感${spokenTemperature(apparent)}`
-}
-
-// Inspect the next 12 hours of hourly data and extract intra-day shifts —
-// the difference between "今天阵雨" (single daily code) and "傍晚 18 点起
-// 有阵雨" (intra-day precision).
-function summarizeUpcomingHourly(hourly, currentIsoTime) {
-  if (!hourly?.time?.length) return ''
-  const startMs = currentIsoTime ? Date.parse(currentIsoTime) : Date.now()
-  if (!Number.isFinite(startMs)) return ''
-  // Find first index at or after the current hour.
-  let startIdx = -1
-  for (let i = 0; i < hourly.time.length; i += 1) {
-    const ts = Date.parse(hourly.time[i])
-    if (Number.isFinite(ts) && ts >= startMs) { startIdx = i; break }
-  }
-  if (startIdx === -1) return ''
-
-  const PRECIP_PROB_THRESHOLD = 50
-  const nextHours = Math.min(12, hourly.time.length - startIdx)
-  let firstRainIdx = -1
-  let firstRainProb = 0
-  for (let offset = 0; offset < nextHours; offset += 1) {
-    const idx = startIdx + offset
-    const prob = Number(hourly.precipitation_probability?.[idx])
-    const code = Number(hourly.weather_code?.[idx])
-    const isRainCode = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95 && code <= 99)
-    if ((Number.isFinite(prob) && prob >= PRECIP_PROB_THRESHOLD) || isRainCode) {
-      firstRainIdx = offset
-      firstRainProb = Number.isFinite(prob) ? prob : firstRainProb
-      break
-    }
-  }
-  if (firstRainIdx === -1) return ''
-
-  const rainTimeMs = Date.parse(hourly.time[startIdx + firstRainIdx])
-  if (!Number.isFinite(rainTimeMs)) return ''
-  const rainHour = new Date(rainTimeMs).getHours()
-  const periodLabel = (
-    rainHour < 6 ? '凌晨'
-    : rainHour < 11 ? '上午'
-    : rainHour < 14 ? '中午'
-    : rainHour < 18 ? '下午'
-    : rainHour < 22 ? '傍晚'
-    : '深夜'
-  )
-  const probText = firstRainProb > 0 ? `（概率${Math.round(firstRainProb)}%）` : ''
-  if (firstRainIdx === 0) {
-    return `现在就在下雨${probText}`
-  }
-  return `${periodLabel}${rainHour}点起可能有降水${probText}`
-}
-
-function formatDailyWeatherSummary(label, daily, index) {
-  if (!daily?.time?.[index]) {
-    return ''
-  }
-
-  const min = daily.temperature_2m_min?.[index]
-  const max = daily.temperature_2m_max?.[index]
-  const precipitation = daily.precipitation_probability_max?.[index]
-  const precipitationSum = Number(daily.precipitation_sum?.[index])
-  const weatherCode = daily.weather_code?.[index]
-  const pieces = [
-    label,
-    getWeatherCodeDescription(weatherCode),
-  ]
-
-  if (Number.isFinite(min) && Number.isFinite(max)) {
-    pieces.push(`${spokenTemperature(min)}到${spokenTemperature(max)}`)
-  }
-
-  const precipitationText = spokenPrecipitation(precipitation)
-  if (precipitationText) {
-    pieces.push(precipitationText)
-  }
-  // Append exact mm only when there is actual rain expected — keeps the
-  // dry-day summary clean.
-  if (Number.isFinite(precipitationSum) && precipitationSum >= 0.5) {
-    pieces.push(`累计${precipitationSum.toFixed(1)}mm`)
-  }
-
-  return pieces.join('，')
-}
 
 function normalizeWeatherLocationCompareKey(value) {
   return String(value ?? '')
@@ -579,21 +424,23 @@ function formatResolvedWeatherPlaceName(place) {
     .join(' · ')
 }
 
-export async function lookupWeatherByLocation(location, fallbackLocation = '') {
+export async function lookupWeatherByLocation(location, fallbackLocation = '', locale = 'zh-CN') {
+  const normalizedLocale = normalizeWeatherLocale(locale)
+  const copy = getWeatherLocalizationCopy(normalizedLocale)
   const requestedLocation = String(location ?? '').trim()
   const trimmedLocation = requestedLocation || String(fallbackLocation ?? '').trim()
   const usedFallbackLocation = !requestedLocation && Boolean(trimmedLocation)
   if (!trimmedLocation) {
-    throw new Error('天气查询需要城市或地区名称。')
+    throw new Error(copy.locationRequired)
   }
 
   if (WEATHER_LOCATION_TIME_WORD_PATTERN.test(normalizeWeatherLocationFragment(trimmedLocation))) {
-    throw new Error('天气查询需要明确的城市或地区名称。')
+    throw new Error(copy.explicitLocationRequired)
   }
 
   const locationCandidates = buildWeatherLocationCandidates(trimmedLocation)
   if (!locationCandidates.length) {
-    throw new Error('天气查询需要明确的城市或地区名称。')
+    throw new Error(copy.explicitLocationRequired)
   }
 
   let place = null
@@ -617,13 +464,13 @@ export async function lookupWeatherByLocation(location, fallbackLocation = '') {
     // Nominatim's usage policy requires a User-Agent that identifies this
     // app, and throttles anonymous callers to ~1 req/sec. Occasional
     // user-driven weather lookups easily fit inside that budget.
-    const acceptLang = detectWeatherQueryLanguage(candidate)
+    const acceptLang = copy.nominatimLanguage || detectWeatherQueryLanguage(candidate)
     const geocodingResponse = await performNetworkRequest(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(candidate)}&format=jsonv2&limit=5&addressdetails=1&accept-language=${acceptLang}`,
       {
         method: 'GET',
         timeoutMs: TOOL_WEATHER_TIMEOUT_MS,
-        timeoutMessage: '天气定位超时，请稍后再试。',
+        timeoutMessage: copy.geocodeTimeout,
         headers: {
           'User-Agent': 'Nexus-Companion/0.2.8 (https://github.com/FanyinLiu/Nexus)',
           Accept: 'application/json',
@@ -636,7 +483,7 @@ export async function lookupWeatherByLocation(location, fallbackLocation = '') {
     )
 
     if (!geocodingResponse.ok) {
-      throw new Error(`天气定位没成功，服务那边回了个 ${geocodingResponse.status}。`)
+      throw new Error(copy.geocodeStatus(geocodingResponse.status))
     }
 
     const geocodingData = await readJsonSafe(geocodingResponse)
@@ -655,7 +502,7 @@ export async function lookupWeatherByLocation(location, fallbackLocation = '') {
   }
 
   if (!place) {
-    throw new Error(`没有找到"${trimmedLocation}"对应的天气地点。`)
+    throw new Error(copy.placeNotFound(trimmedLocation))
   }
 
   const forecastResponse = await performNetworkRequest(
@@ -667,14 +514,14 @@ export async function lookupWeatherByLocation(location, fallbackLocation = '') {
     {
       method: 'GET',
       timeoutMs: TOOL_WEATHER_TIMEOUT_MS,
-      timeoutMessage: '天气查询超时，请稍后再试。',
+      timeoutMessage: copy.forecastTimeout,
       // Same CA-bundle workaround as the geocoding call above.
       forceNativeFetch: true,
     },
   )
 
   if (!forecastResponse.ok) {
-    throw new Error(`天气查不出来，服务那边回了个 ${forecastResponse.status}。`)
+    throw new Error(copy.forecastStatus(forecastResponse.status))
   }
 
   const forecastData = await readJsonSafe(forecastResponse)
@@ -682,47 +529,17 @@ export async function lookupWeatherByLocation(location, fallbackLocation = '') {
   const daily = forecastData?.daily ?? {}
   const hourly = forecastData?.hourly ?? {}
   const resolvedName = formatResolvedWeatherPlaceName(place)
-  const currentTemperature = Number(current.temperature_2m)
-  const currentApparent = Number(current.apparent_temperature)
-  const currentHumidity = Number(current.relative_humidity_2m)
-  const currentPrecipitation = Number(current.precipitation)
-  const currentWind = Number(current.wind_speed_10m)
-  const upcomingHourlyHint = summarizeUpcomingHourly(hourly, current.time)
-  const currentSummary = [
-    Number.isFinite(currentTemperature) ? `当前${spokenTemperature(currentTemperature)}` : '当前气温未知',
-    spokenApparentDelta(currentTemperature, currentApparent),
-    getWeatherCodeDescription(current.weather_code),
-    Number.isFinite(currentPrecipitation) && currentPrecipitation > 0.1
-      ? `正在下雨（过去1小时${currentPrecipitation.toFixed(1)}mm）`
-      : '',
-    spokenHumidity(currentHumidity),
-    spokenWindSpeed(currentWind),
-    upcomingHourlyHint,
-  ]
-    .filter(Boolean)
-    .join('，')
+  const localizedWeather = formatWeatherContentForLocale(
+    { current, daily, hourly },
+    normalizedLocale,
+  )
 
   return {
     location: resolvedLocation,
     resolvedName,
     timezone: forecastData?.timezone,
-    currentSummary,
-    todaySummary: formatDailyWeatherSummary('今天', daily, 0),
-    tomorrowSummary: formatDailyWeatherSummary('明天', daily, 1),
-    dayAfterSummary: formatDailyWeatherSummary('后天', daily, 2),
-    upcomingHourly: upcomingHourlyHint || '',
+    ...localizedWeather,
     usedFallbackLocation,
-    message: `已获取 ${resolvedName} 的天气。`,
-    // Structured fields consumed by the ambient weather chip in the panel —
-    // the LLM-facing summary strings above stay untouched so existing tool
-    // calls keep returning exactly the text the model was trained on.
-    currentTemperature: Number.isFinite(currentTemperature) ? currentTemperature : null,
-    currentApparentTemperature: Number.isFinite(currentApparent) ? currentApparent : null,
-    currentHumidity: Number.isFinite(currentHumidity) ? currentHumidity : null,
-    currentPrecipitationMm: Number.isFinite(currentPrecipitation) ? currentPrecipitation : null,
-    currentWeatherCode: Number.isFinite(Number(current.weather_code)) ? Number(current.weather_code) : null,
-    currentConditionLabel: getWeatherCodeDescription(current.weather_code),
-    currentWindSpeedKmh: Number.isFinite(currentWind) ? currentWind : null,
-    currentIsDay: current.is_day === 1 || current.is_day === true,
+    message: copy.success(resolvedName),
   }
 }

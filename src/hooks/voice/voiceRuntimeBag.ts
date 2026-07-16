@@ -21,6 +21,7 @@ import type {
   TranslationKey,
   TranslationParams,
   VoicePipelineState,
+  SpeechLevelSource,
   VoiceState,
   VoiceTraceEntry,
   WakewordRuntimeState,
@@ -54,6 +55,7 @@ import type {
   VadConversationSession,
   VoiceConversationOptions,
 } from './types'
+import type { SpeechLevelPublisher } from './speechLevelPublishing.ts'
 
 // ── Refs ────────────────────────────────────────────────────────────────────
 
@@ -71,7 +73,8 @@ export type VoiceRefs = {
   audioPlaybackQueueRef: MutableRefObject<AudioPlaybackQueue<SpeechSegmentMeta> | null>
   streamAudioPlayerRef: MutableRefObject<StreamAudioPlayer | null>
   activeStreamingSpeechOutputRef: MutableRefObject<StreamingSpeechOutputController | null>
-  speechLevelValueRef: MutableRefObject<number>
+  speechLevelSource: SpeechLevelSource
+  speechLevelPublisher: SpeechLevelPublisher
   paraformerSessionRef: MutableRefObject<ParaformerStreamSession | null>
   paraformerConversationRef: MutableRefObject<ParaformerConversationState | null>
   /** True while the Paraformer availability check → start sequence is in flight. */
@@ -100,7 +103,6 @@ export type VoiceSetters = {
   setVoiceState: (next: VoiceState) => void
   setVoicePipeline: Dispatch<SetStateAction<VoicePipelineState>>
   setVoiceTrace: Dispatch<SetStateAction<VoiceTraceEntry[]>>
-  setSpeechLevel: Dispatch<SetStateAction<number>>
   setContinuousVoiceActive: Dispatch<SetStateAction<boolean>>
   setLiveTranscript: Dispatch<SetStateAction<string>>
   setWakewordState: Dispatch<SetStateAction<WakewordRuntimeState>>
@@ -137,6 +139,7 @@ export type VoiceBindings = {
   beginVoiceListeningSession: (transport: VoiceSessionTransport) => VoiceSessionState
   // Speech level / tracking
   setSpeechLevelValue: (nextLevel: number) => void
+  resetSpeechLevel: () => void
   getSpeechLevelController: () => SpeechLevelController
   stopSpeechTracking: () => void
   // Continuous voice mode toggle

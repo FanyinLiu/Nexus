@@ -98,7 +98,7 @@ export function useSettingsNavigation({
     openSettingsSectionFallback(sectionId)
   }, [openSettingsSectionFallback, view])
 
-  const openChatPanelForVoice = useCallback(() => {
+  const openChatPanelForVoice = useCallback((intent?: 'text' | 'recent') => {
     if (view === 'panel') {
       setSettingsOpen(false)
       return
@@ -106,7 +106,7 @@ export function useSettingsNavigation({
 
     const openPanel = window.desktopPet?.openPanel
     if (openPanel) {
-      void openPanel('chat').catch(openChatFallback)
+      void openPanel(intent === 'text' ? 'chat-text' : intent === 'recent' ? 'chat-recent' : 'chat').catch(openChatFallback)
       return
     }
 

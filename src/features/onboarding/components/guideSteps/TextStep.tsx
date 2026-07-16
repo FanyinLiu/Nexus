@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MODEL_PROVIDER_REGION_TABS,
   getApiProviderPreset,
@@ -12,6 +12,17 @@ import {
   applyConnectionTestRepairDraft,
   buildConnectionTestRepairAction,
 } from '../../../models/connectionRepair'
+import {
+  createConnectionVerificationRecord,
+  getConnectionTestResultPresentation,
+  getNextConnectionResultExpiryMs,
+  resolveConnectionResultMessage,
+  resolveConnectionResultRecommendation,
+  shouldAcceptConnectionTestResult,
+  type ConnectionVerificationRecord,
+  withConnectionCheckedAt,
+} from '../../../models/connectionTestFreshness'
+import type { TranslationKey } from '../../../../types'
 import { getLocalizedApiProviderNote } from '../../../models/providerNotes'
 import type { ConnectionResult } from '../../../../components/settingsDrawerSupport'
 import type { AppSettings } from '../../../../types'
@@ -30,7 +41,8 @@ type TextStepProps = {
   regionTab: ApiProviderPreset['region'] | null
   onRegionTabChange: (region: ApiProviderPreset['region']) => void
   onTestConnection?: (settings: AppSettings) => Promise<ConnectionResult>
-  onTextConnectionConfigChanged: () => void
+  /** Clear or replace the parent verification record (fingerprint/evidence/time). */
+  onTextConnectionVerificationChange: (record: ConnectionVerificationRecord | null) => void
 }
 
 export function TextStep({
@@ -40,7 +52,7 @@ export function TextStep({
   regionTab,
   onRegionTabChange,
   onTestConnection,
-  onTextConnectionConfigChanged,
+  onTextConnectionVerificationChange,
 }: TextStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
@@ -49,23 +61,110 @@ export function TextStep({
 
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<ConnectionResult | null>(null)
+  const [repairNotice, setRepairNotice] = useState<string | null>(null)
+  const [freshnessTick, setFreshnessTick] = useState(0)
+  const requestGenerationRef = useRef(0)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      // Bump generation so an in-flight request started here never updates
+      // parent verified state or local UI after unmount.
+      requestGenerationRef.current += 1
+    }
+  }, [])
+
+  useEffect(() => {
+    const nextExpiry = getNextConnectionResultExpiryMs([testResult])
+    if (nextExpiry === null) return undefined
+    const timer = window.setTimeout(
+      () => {
+        if (!mountedRef.current) return
+        setFreshnessTick((current) => current + 1)
+      },
+      Math.max(0, nextExpiry - Date.now()) + 25,
+    )
+    return () => window.clearTimeout(timer)
+  }, [testResult, freshnessTick])
+
+  useEffect(() => {
+    const refreshOnReturn = () => {
+      if (!mountedRef.current) return
+      setFreshnessTick((current) => current + 1)
+    }
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refreshOnReturn()
+    }
+    window.addEventListener('focus', refreshOnReturn)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      window.removeEventListener('focus', refreshOnReturn)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [])
 
   function clearTextConnectionResult() {
-    onTextConnectionConfigChanged()
+    requestGenerationRef.current += 1
+    onTextConnectionVerificationChange(null)
+    setTesting(false)
     setTestResult(null)
+    setRepairNotice(null)
   }
 
   async function handleTestConnection() {
     if (!onTestConnection || testing) return
+    const requestGeneration = requestGenerationRef.current + 1
+    requestGenerationRef.current = requestGeneration
     setTesting(true)
     setTestResult(null)
+    setRepairNotice(null)
     try {
       const result = await onTestConnection(draft)
-      setTestResult(result)
+      if (
+        !mountedRef.current
+        || !shouldAcceptConnectionTestResult({
+          requestGeneration,
+          activeGeneration: requestGenerationRef.current,
+        })
+      ) {
+        return
+      }
+      const stamped = withConnectionCheckedAt(result)
+      setTestResult(stamped)
+      const nextPresentation = getConnectionTestResultPresentation({
+        result: stamped,
+        fingerprintMatches: true,
+        capability: 'text',
+      })
+      onTextConnectionVerificationChange(
+        nextPresentation.verified
+          ? createConnectionVerificationRecord('text', draft, stamped)
+          : null,
+      )
     } catch {
-      setTestResult({ ok: false, message: '这次没能连上，可能是网络打了个盹，稍后再试试吧。' })
+      if (
+        !mountedRef.current
+        || !shouldAcceptConnectionTestResult({
+          requestGeneration,
+          activeGeneration: requestGenerationRef.current,
+        })
+      ) {
+        return
+      }
+      setTestResult({ ok: false, message: ti('settings.test_connection.failed') })
+      onTextConnectionVerificationChange(null)
     } finally {
-      setTesting(false)
+      if (
+        mountedRef.current
+        && shouldAcceptConnectionTestResult({
+          requestGeneration,
+          activeGeneration: requestGenerationRef.current,
+        })
+      ) {
+        setTesting(false)
+      }
     }
   }
 
@@ -75,11 +174,7 @@ export function TextStep({
     if (!repair) return
     clearTextConnectionResult()
     setDraft((current) => applyConnectionTestRepairDraft(current, repair))
-    setTestResult({
-      ok: true,
-      status: 'ready',
-      message: repair.appliedMessage,
-    })
+    setRepairNotice(`${repair.appliedMessage} ${ti('settings.test_connection.stale')}`)
   }
 
   // The currently-selected provider stays visible regardless of the active tab.
@@ -91,6 +186,36 @@ export function TextStep({
   const testRepair = testResult
     ? buildConnectionTestRepairAction(testResult, draft)
     : null
+  // Recomputed each render (including after freshnessTick TTL / focus refresh)
+  // so the visible card never keeps success styling past expiry.
+  const presentation = getConnectionTestResultPresentation({
+    testing,
+    result: testResult,
+    fingerprintMatches: true,
+    capability: 'text',
+  })
+  const testResultClassName = presentation.className ?? ''
+  const translate = (
+    language: AppSettings['uiLanguage'],
+    key: string,
+    params?: Record<string, string | number | boolean | null | undefined>,
+  ) => pickTranslatedUiText(language, key as TranslationKey, params)
+  const testResultMessage = testResult
+    ? presentation.tone === 'stale'
+      ? ti(
+        presentation.freshness === 'config-stale'
+          ? 'settings.test_connection.stale'
+          : presentation.freshness === 'time-stale'
+            ? 'settings.test_connection.expired'
+            : 'settings.test_connection.unverified',
+      )
+      : presentation.tone === 'partial' && !testResult.messageKey
+        ? ti('settings.test_connection.partial')
+        : resolveConnectionResultMessage(testResult, draft.uiLanguage, translate)
+    : ''
+  const testResultRecommendation = testResult && presentation.tone !== 'stale'
+    ? resolveConnectionResultRecommendation(testResult, draft.uiLanguage, translate)
+    : undefined
 
   return (
     <div className="onboarding-grid onboarding-grid--stack">
@@ -214,16 +339,16 @@ export function TextStep({
           </button>
           {testResult ? (
             <div
-              className={testResult.ok ? 'settings-test-result is-success' : 'settings-test-result is-error'}
-              role={testResult.ok ? 'status' : 'alert'}
-              aria-live={testResult.ok ? 'polite' : 'assertive'}
+              className={testResultClassName}
+              role={presentation.tone === 'error' ? 'alert' : 'status'}
+              aria-live={presentation.tone === 'error' ? 'assertive' : 'polite'}
               aria-atomic="true"
             >
-              <p>{testResult.message}</p>
-              {testResult.recommendation ? (
-                <p className="settings-test-result__recommendation">{testResult.recommendation}</p>
+              <p>{testResultMessage}</p>
+              {testResultRecommendation ? (
+                <p className="settings-test-result__recommendation">{testResultRecommendation}</p>
               ) : null}
-              {testRepair ? (
+              {testRepair && presentation.tone === 'error' ? (
                 <button
                   type="button"
                   className="ghost-button settings-test-result__action"
@@ -232,6 +357,11 @@ export function TextStep({
                   {testRepair.label}
                 </button>
               ) : null}
+            </div>
+          ) : null}
+          {repairNotice ? (
+            <div className="settings-test-result" role="status" aria-live="polite" aria-atomic="true">
+              <p>{repairNotice}</p>
             </div>
           ) : null}
         </div>

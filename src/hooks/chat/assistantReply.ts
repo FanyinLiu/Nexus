@@ -280,6 +280,8 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         dependencies.onMemoryRecalled(memoryContext.recalledLongTermIds)
       }
 
+      if (!isLatestTurn()) return false
+
       // Tool calls now flow through native function calling, which means the
       // model itself speaks about the tool result in the final text round.
       // No need to decouple speech from display like the pre-LLM planner did.
@@ -760,6 +762,19 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
 
       return true
     } catch (caught) {
+      if (!isLatestTurn()) {
+        // A user cancellation invalidates the turn before aborting transport.
+        // Stop any already-created TTS controller too, but never surface the
+        // transport error or append an assistant failure message for a stale turn.
+        if (streamingTtsControllerHolder) {
+          void streamingTtsControllerHolder.waitForCompletion().catch(() => undefined)
+          try { streamingTtsControllerHolder.abort() } catch (abortError) {
+            console.warn('[assistantReply] stale streaming TTS abort failed', abortError)
+          }
+        }
+        return false
+      }
+
       // errorMessage = raw provider/runtime text, kept for diagnostic surfaces
       // (logs, voice trace, bus abort reason). friendlyMessage = the same error
       // mapped to localized, actionable companion copy with secrets redacted —

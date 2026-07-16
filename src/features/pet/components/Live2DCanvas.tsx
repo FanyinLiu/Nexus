@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Live2DModel as Live2DModelType } from 'pixi-live2d-display/cubism4'
-import type { PetMood, PetTouchZone } from '../../../types/index.ts'
+import type { PetMood, PetTouchZone, SpeechLevelSource } from '../../../types/index.ts'
 import {
   buildRuntimePetModelDefinition,
   type CubismModelFile,
@@ -14,6 +14,16 @@ import { applyLive2DFrame, type FrameRenderState } from './live2d/frameRender.ts
 import { layoutLive2DModel, MIN_CANVAS_HEIGHT, MIN_CANVAS_WIDTH } from './live2d/layout.ts'
 import { clamp } from '../../../lib/common.ts'
 import {
+  attachLive2DModelTicker,
+  clearLive2DAsyncHandles,
+  createLive2DAsyncOwnershipCoordinator,
+  syncLive2DPlayback,
+  shouldAbortLive2DBoot,
+  shouldContinueLive2DModelAttempt,
+  shouldDestroyLateLive2DModel,
+  trackLive2DAsyncHandle,
+} from './live2d/lifecycle.ts'
+import {
   resolveAssetPath,
   type GazeTarget,
   type Live2DModelHandle,
@@ -23,6 +33,7 @@ import {
 import { ensureLive2DVendorScripts } from './live2d/vendor.ts'
 
 const MODEL_LOAD_TIMEOUT_MS = 15_000
+const MODEL_LOAD_MAX_ATTEMPTS = 3
 const MOTION_TRIGGER_COOLDOWN_MS = 1500
 
 type Live2DCanvasProps = {
@@ -32,9 +43,11 @@ type Live2DCanvasProps = {
   isSpeaking?: boolean
   isListening?: boolean
   speechLevel?: number
+  speechLevelSource?: SpeechLevelSource
   gazeTarget?: GazeTarget
   performanceCue?: PetPerformanceCue | null
   placement?: 'pet-stage' | 'panel-card'
+  paused?: boolean
 }
 
 export function Live2DCanvas({
@@ -44,14 +57,18 @@ export function Live2DCanvas({
   isSpeaking = false,
   isListening = false,
   speechLevel = 0,
+  speechLevelSource,
   gazeTarget = { x: 0, y: 0 },
   performanceCue = null,
   placement = 'panel-card',
+  paused = false,
 }: Live2DCanvasProps) {
   const resolvedModelPath = resolveAssetPath(modelDefinition.modelPath)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const modelRef = useRef<Live2DModelType | null>(null)
   const appRef = useRef<PixiApplication | null>(null)
+  const pausedRef = useRef(paused)
+  const modelTickerCleanupRef = useRef<(() => void) | null>(null)
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
   const cleanupBeforeModelUpdateRef = useRef<(() => void) | null>(null)
   const currentExpressionRef = useRef<string | null>(null)
@@ -60,7 +77,11 @@ export function Live2DCanvas({
   const lastMotionAtRef = useRef(0)
   const performanceCueRef = useRef<PetPerformanceCue | null>(null)
   const performanceCueStartedAtRef = useRef(0)
+  const isSpeakingRef = useRef(isSpeaking)
+  isSpeakingRef.current = isSpeaking
   const speechLevelTargetRef = useRef(clamp(speechLevel, 0, 1))
+  const speechLevelSourceRef = useRef<SpeechLevelSource | null>(speechLevelSource ?? null)
+  speechLevelSourceRef.current = speechLevelSource ?? null
   const gazeTargetRef = useRef<GazeTarget>({
     x: clamp(gazeTarget.x, -1, 1),
     y: clamp(gazeTarget.y, -1, 1),
@@ -73,6 +94,19 @@ export function Live2DCanvas({
   const activeModelDefinitionRef = useRef(buildRuntimePetModelDefinition(modelDefinition))
   const [error, setError] = useState<string | null>(null)
   const [modelReady, setModelReady] = useState(false)
+
+  const syncPlayback = useCallback((app: PixiApplication | null, disposed: boolean) => {
+    syncLive2DPlayback(app, {
+      disposed,
+      visibilityState: document.visibilityState,
+      paused: pausedRef.current,
+    })
+  }, [])
+
+  useEffect(() => {
+    pausedRef.current = paused
+    syncPlayback(appRef.current, false)
+  }, [paused, syncPlayback])
 
   function setDebugState(partialState: Partial<NonNullable<Window['__desktopPetLive2DDebug']>>) {
     const nextState = {
@@ -161,7 +195,9 @@ export function Live2DCanvas({
         internalModel,
         activeExpressionSlot: currentExpressionSlotRef.current,
         gazeTarget: gazeTargetRef.current,
-        speechLevelTarget: speechLevelTargetRef.current,
+        speechLevelTarget: isSpeakingRef.current
+          ? (speechLevelSourceRef.current?.current ?? speechLevelTargetRef.current)
+          : 0,
         performanceCue: performanceCueRef.current,
         performanceCueStartedAt: performanceCueStartedAtRef.current,
         state: frameStateRef.current,
@@ -254,11 +290,71 @@ export function Live2DCanvas({
   }, [performanceCue])
 
   useEffect(() => {
-    let disposed = false
+    const ownership = createLive2DAsyncOwnershipCoordinator()
+    let attempts = 0
+    let handleVisibilityChange: (() => void) | null = null
+    const pendingTimeoutIds = new Set<number>()
+    const pendingRafIds = new Set<number>()
     const frameState = frameStateRef.current
+    const bootStartedAt = performance.now()
+
+    function isDisposed() {
+      return ownership.isDisposed
+    }
+
+    function clearPendingBootWork() {
+      clearLive2DAsyncHandles(pendingTimeoutIds, (id) => window.clearTimeout(id))
+      clearLive2DAsyncHandles(pendingRafIds, (id) => window.cancelAnimationFrame(id))
+      // Settle waits + reject load races exactly once (see lifecycle coordinator).
+      ownership.dispose()
+    }
+
+    function waitForTimeout(ms: number) {
+      const { promise, settle } = ownership.createTrackedWait()
+      const timeoutId = trackLive2DAsyncHandle(
+        pendingTimeoutIds,
+        window.setTimeout(() => {
+          pendingTimeoutIds.delete(timeoutId)
+          settle()
+        }, ms),
+      )
+      return promise
+    }
+
+    function waitForAnimationFrame() {
+      const { promise, settle } = ownership.createTrackedWait()
+      const rafId = trackLive2DAsyncHandle(
+        pendingRafIds,
+        window.requestAnimationFrame(() => {
+          pendingRafIds.delete(rafId)
+          settle()
+        }),
+      )
+      return promise
+    }
+
+    function destroyOwnedRuntime() {
+      resizeObserverRef.current?.disconnect()
+      resizeObserverRef.current = null
+      if (handleVisibilityChange) {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+        handleVisibilityChange = null
+      }
+      modelTickerCleanupRef.current?.()
+      modelTickerCleanupRef.current = null
+      cleanupBeforeModelUpdateRef.current?.()
+      cleanupBeforeModelUpdateRef.current = null
+      // Teardown policy lives in LIVE2D_TEARDOWN / ownership.destroyOwnedRuntime.
+      ownership.destroyOwnedRuntime({
+        model: modelRef.current,
+        app: appRef.current,
+      })
+      modelRef.current = null
+      appRef.current = null
+    }
 
     async function boot() {
-      if (!containerRef.current) return
+      if (shouldAbortLive2DBoot(isDisposed(), Boolean(containerRef.current))) return
 
       async function loadModelWithRetry(
         Live2DModelCtor: {
@@ -266,6 +362,7 @@ export function Live2DCanvas({
             source: string,
             options?: {
               autoInteract?: boolean
+              autoUpdate?: boolean
               motionPreload?: MotionPreloadValue
             },
           ) => Promise<Live2DModelType>
@@ -273,57 +370,145 @@ export function Live2DCanvas({
       ) {
         let lastError: unknown = null
 
-        for (let attempt = 1; attempt <= 3; attempt += 1) {
+        for (let attempt = 1; attempt <= MODEL_LOAD_MAX_ATTEMPTS; attempt += 1) {
+          if (!shouldContinueLive2DModelAttempt({
+            disposed: isDisposed(),
+            attempt,
+            maxAttempts: MODEL_LOAD_MAX_ATTEMPTS,
+          })) {
+            break
+          }
+
+          attempts = attempt
+          let timedOut = false
+          let timeoutId: number | null = null
           try {
             setDebugState({ phase: `loading-model-${attempt}` })
+            setDebugState({ attempts: attempt })
 
             if (attempt > 1) {
-              await new Promise((resolve) => window.setTimeout(resolve, attempt * 300))
+              await waitForTimeout(attempt * 300)
             } else {
-              await new Promise((resolve) => window.requestAnimationFrame(() => resolve(undefined)))
+              await waitForAnimationFrame()
             }
 
-            const model = await Promise.race([
-              Live2DModelCtor.from(resolvedModelPath, {
+            if (shouldAbortLive2DBoot(isDisposed(), Boolean(containerRef.current))) {
+              break
+            }
+
+            const model = await ownership.raceModelLoad({
+              loadPromise: Live2DModelCtor.from(resolvedModelPath, {
                 autoInteract: false,
+                autoUpdate: false,
                 motionPreload: window.PIXI?.live2d?.MotionPreloadStrategy?.NONE ?? 'NONE',
               }),
-              new Promise<never>((_resolve, reject) => {
-                window.setTimeout(() => reject(new Error('Live2D model load timed out.')), MODEL_LOAD_TIMEOUT_MS)
+              shouldDiscard: () => shouldDestroyLateLive2DModel({
+                disposed: isDisposed(),
+                timedOut,
               }),
-            ])
+              registerAbort: (abort) => {
+                timeoutId = trackLive2DAsyncHandle(
+                  pendingTimeoutIds,
+                  window.setTimeout(() => {
+                    timedOut = true
+                    pendingTimeoutIds.delete(timeoutId as number)
+                    abort(new Error('Live2D model load timed out.'))
+                  }, MODEL_LOAD_TIMEOUT_MS),
+                )
+              },
+            })
 
+            if (shouldAbortLive2DBoot(isDisposed(), Boolean(containerRef.current))) {
+              ownership.destroyLateModel(model)
+              break
+            }
+
+            const modelLoadedAt = performance.now()
+            if (containerRef.current) {
+              containerRef.current.dataset.live2dModelLoadedMs = (modelLoadedAt - bootStartedAt).toFixed(1)
+            }
+            setDebugState({ modelLoadedAt })
             return model
           } catch (caught) {
             lastError = caught
+            if (isDisposed()) {
+              break
+            }
             setDebugState({
               phase: `loading-model-retry-${attempt}`,
               error: caught instanceof Error ? caught.message : 'unknown-error',
             })
+          } finally {
+            if (timeoutId !== null) {
+              pendingTimeoutIds.delete(timeoutId)
+              window.clearTimeout(timeoutId)
+            }
           }
+        }
+
+        if (isDisposed()) {
+          throw new Error('Live2D boot aborted.')
         }
 
         throw lastError instanceof Error ? lastError : new Error('Live2D model failed to initialize.')
       }
 
       try {
-        setDebugState({ phase: 'booting', error: null, app: null, model: null })
+        const bootContainer = containerRef.current
+        if (shouldAbortLive2DBoot(isDisposed(), Boolean(bootContainer)) || !bootContainer) return
+
+        // Visible boot state is initialized synchronously before any await so a
+        // remount never inherits a stale ready/error surface. Cleanup must not
+        // call React setters — only ownership invalidation + resource destroy.
+        setDebugState({
+          phase: 'booting',
+          error: null,
+          app: null,
+          model: null,
+          bootStartedAt,
+          vendorReadyAt: undefined,
+          appCreatedAt: undefined,
+          modelLoadedAt: undefined,
+          modelReadyAt: undefined,
+          firstFrameAt: undefined,
+          attempts: 0,
+          readyMs: undefined,
+          firstFrameMs: undefined,
+        })
         setError(null)
         setModelReady(false)
+        delete bootContainer.dataset.live2dReadyMs
+        delete bootContainer.dataset.live2dFirstFrameMs
+        delete bootContainer.dataset.live2dAttempts
+        delete bootContainer.dataset.live2dVendorMs
+        delete bootContainer.dataset.live2dAppCreatedMs
+        delete bootContainer.dataset.live2dModelLoadedMs
+        bootContainer.dataset.live2dPhase = 'booting'
+        bootContainer.dataset.live2dModelId = modelDefinition.id
+        bootContainer.dataset.live2dError = '0'
         currentExpressionRef.current = null
         activeModelDefinitionRef.current = buildRuntimePetModelDefinition(modelDefinition)
 
         await ensureLive2DVendorScripts()
+        const containerAfterVendor = containerRef.current
+        if (shouldAbortLive2DBoot(isDisposed(), Boolean(containerAfterVendor)) || !containerAfterVendor) return
+        const vendorReadyAt = performance.now()
+        containerAfterVendor.dataset.live2dVendorMs = (vendorReadyAt - bootStartedAt).toFixed(1)
+        setDebugState({ vendorReadyAt })
 
         try {
           const modelResponse = await fetch(resolvedModelPath)
+          if (shouldAbortLive2DBoot(isDisposed(), Boolean(containerRef.current))) return
           if (modelResponse.ok) {
             const modelFile = (await modelResponse.json()) as CubismModelFile
+            if (shouldAbortLive2DBoot(isDisposed(), Boolean(containerRef.current))) return
             activeModelDefinitionRef.current = buildRuntimePetModelDefinition(modelDefinition, modelFile)
           }
         } catch {
+          if (shouldAbortLive2DBoot(isDisposed(), Boolean(containerRef.current))) return
           activeModelDefinitionRef.current = buildRuntimePetModelDefinition(modelDefinition)
         }
+        if (shouldAbortLive2DBoot(isDisposed(), Boolean(containerRef.current))) return
 
         const pixiRuntime = window.PIXI
         if (!pixiRuntime) {
@@ -340,38 +525,93 @@ export function Live2DCanvas({
         }
 
         setDebugState({ phase: 'app-creating' })
+        const hostContainer = containerRef.current
+        if (shouldAbortLive2DBoot(isDisposed(), Boolean(hostContainer)) || !hostContainer) return
+
         const app = new pixiRuntime.Application({
           autoStart: true,
-          resizeTo: containerRef.current,
+          resizeTo: hostContainer,
           backgroundAlpha: 0,
           antialias: true,
         })
 
-        appRef.current = app
-        containerRef.current.appendChild(app.view as HTMLCanvasElement)
+        // Effect cleanup can only interleave at await points; still destroy any
+        // app that became ownerless before refs are published.
+        const containerAfterApp = containerRef.current
+        if (isDisposed() || !containerAfterApp) {
+          ownership.destroyApplication(app)
+          return
+        }
 
-        const { width, height } = containerRef.current.getBoundingClientRect()
+        const appCreatedAt = performance.now()
+        containerAfterApp.dataset.live2dAppCreatedMs = (appCreatedAt - bootStartedAt).toFixed(1)
+        setDebugState({ appCreatedAt })
+
+        appRef.current = app
+        containerAfterApp.appendChild(app.view as HTMLCanvasElement)
+        handleVisibilityChange = () => {
+          syncPlayback(app, isDisposed())
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        // Respect the document's current visibility; do not invent a visible start
+        // when the host document is already hidden.
+        handleVisibilityChange()
+
+        const { width, height } = containerAfterApp.getBoundingClientRect()
         app.renderer.resize(Math.max(width, MIN_CANVAS_WIDTH), Math.max(height, MIN_CANVAS_HEIGHT))
 
         const model = await loadModelWithRetry(Live2DModel)
-        if (disposed) {
-          model.destroy()
+        const containerAfterModel = containerRef.current
+        if (isDisposed() || !containerAfterModel || appRef.current !== app) {
+          ownership.destroyLateModel(model)
+          // If dispose already ran, cleanup owns refs. Otherwise tear down the
+          // app this boot published so a failed/aborted boot leaves no canvas.
+          if (!isDisposed() && appRef.current === app) {
+            destroyOwnedRuntime()
+          }
           return
         }
 
         modelRef.current = model
         app.stage.addChild(model)
+        modelTickerCleanupRef.current = attachLive2DModelTicker({
+          ticker: app.ticker,
+          model,
+          shouldUpdate: () => !isDisposed()
+            && appRef.current === app
+            && modelRef.current === model
+            && !pausedRef.current
+            && document.visibilityState !== 'hidden',
+        })
         app.renderer.render(app.stage)
-        setDebugState({ phase: 'model-ready', error: null, app, model })
-
         layoutModel(model as Live2DModelHandle, app)
         bindModelRuntime(model)
         app.renderer.render(app.stage)
+        if (isDisposed() || appRef.current !== app) {
+          ownership.destroyLateModel(model)
+          if (!isDisposed() && appRef.current === app) {
+            destroyOwnedRuntime()
+          }
+          return
+        }
+        const modelReadyAt = performance.now()
+        containerAfterModel.dataset.live2dReadyMs = (modelReadyAt - bootStartedAt).toFixed(1)
+        containerAfterModel.dataset.live2dAttempts = String(attempts || 1)
+        containerAfterModel.dataset.live2dPhase = 'model-ready'
+        setDebugState({
+          phase: 'model-ready',
+          error: null,
+          app,
+          model,
+          modelReadyAt,
+          readyMs: modelReadyAt - bootStartedAt,
+        })
         setModelReady(true)
         frameState.blink = createBlinkState()
         frameState.smoothedGaze = { x: 0, y: 0 }
 
         resizeObserverRef.current = new ResizeObserver(() => {
+          if (isDisposed()) return
           const activeContainer = containerRef.current
           const activeApp = appRef.current
           const activeModel = modelRef.current
@@ -386,13 +626,39 @@ export function Live2DCanvas({
           layoutModel(activeModel as Live2DModelHandle, activeApp)
         })
 
-        resizeObserverRef.current.observe(containerRef.current)
+        resizeObserverRef.current.observe(containerAfterModel)
+
+        const firstFrameRafId = trackLive2DAsyncHandle(
+          pendingRafIds,
+          window.requestAnimationFrame(() => {
+            pendingRafIds.delete(firstFrameRafId)
+            if (isDisposed()) return
+            const firstFrameAt = performance.now()
+            if (containerRef.current) {
+              containerRef.current.dataset.live2dFirstFrameMs = (firstFrameAt - bootStartedAt).toFixed(1)
+              containerRef.current.dataset.live2dPhase = 'first-frame'
+            }
+            setDebugState({
+              phase: 'first-frame',
+              firstFrameAt,
+              firstFrameMs: firstFrameAt - bootStartedAt,
+            })
+          }),
+        )
       } catch (caught) {
+        if (isDisposed()) {
+          return
+        }
         console.error('Live2D boot failed:', caught)
+        destroyOwnedRuntime()
         setDebugState({
           phase: 'boot-failed',
           error: caught instanceof Error ? caught.message : 'Live2D failed to load.',
         })
+        if (containerRef.current) {
+          containerRef.current.dataset.live2dPhase = 'boot-failed'
+          containerRef.current.dataset.live2dError = '1'
+        }
         setError(caught instanceof Error ? caught.message : 'Live2D failed to load.')
         setModelReady(false)
       }
@@ -401,15 +667,9 @@ export function Live2DCanvas({
     void boot()
 
     return () => {
-      disposed = true
-      resizeObserverRef.current?.disconnect()
-      resizeObserverRef.current = null
-      cleanupBeforeModelUpdateRef.current?.()
-      cleanupBeforeModelUpdateRef.current = null
-      modelRef.current?.destroy()
-      appRef.current?.destroy(true, { children: true, texture: false, baseTexture: false })
-      modelRef.current = null
-      appRef.current = null
+      // Cleanup only invalidates ownership and destroys resources — no React state.
+      clearPendingBootWork()
+      destroyOwnedRuntime()
       currentExpressionRef.current = null
       currentExpressionSlotRef.current = 'idle'
       lastMotionKeyRef.current = ''
@@ -418,7 +678,6 @@ export function Live2DCanvas({
       performanceCueStartedAtRef.current = 0
       frameState.smoothedGaze = { x: 0, y: 0 }
       frameState.blink = createBlinkState()
-      setModelReady(false)
       window.__desktopPetLive2DDebug = {
         phase: 'destroyed',
         error: null,
@@ -431,6 +690,7 @@ export function Live2DCanvas({
     layoutModel,
     modelDefinition,
     resolvedModelPath,
+    syncPlayback,
   ])
 
   useEffect(() => {

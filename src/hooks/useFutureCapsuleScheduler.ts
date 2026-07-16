@@ -11,6 +11,7 @@ const POLL_INTERVAL_MS = 5 * 60 * 1000  // 5 min — same cadence as bracket / e
 
 interface UseFutureCapsuleSchedulerOptions {
   settings: AppSettings
+  enabled?: boolean
 }
 
 /**
@@ -26,14 +27,14 @@ interface UseFutureCapsuleSchedulerOptions {
  * contract is enforced upstream: the runner only delivers entries the
  * user explicitly created.
  */
-export function useFutureCapsuleScheduler({ settings }: UseFutureCapsuleSchedulerOptions) {
+export function useFutureCapsuleScheduler({ settings, enabled = true }: UseFutureCapsuleSchedulerOptions) {
   const liveRef = useRef({ settings })
   useEffect(() => {
     liveRef.current = { settings }
   }, [settings])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (!enabled || typeof window === 'undefined') return
     if (!window.desktopPet?.showProactiveNotification) return
 
     let stopped = false
@@ -68,5 +69,5 @@ export function useFutureCapsuleScheduler({ settings }: UseFutureCapsuleSchedule
       stopped = true
       window.clearInterval(id)
     }
-  }, [])
+  }, [enabled])
 }

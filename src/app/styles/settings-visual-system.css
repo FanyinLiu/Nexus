@@ -46,6 +46,7 @@
   --nx-settings-accent-soft: rgba(168, 139, 255, 0.15);
   --nx-settings-danger: rgba(248, 113, 113, 0.9);
   --nx-settings-success: rgba(88, 190, 136, 0.9);
+  --nx-settings-warning: rgba(242, 192, 120, 0.94);
   --nx-settings-footer-surface: linear-gradient(to bottom, rgba(14, 18, 28, 0), rgba(14, 18, 28, 0.96) 42%);
   color-scheme: dark;
 }
@@ -68,6 +69,7 @@
   --nx-settings-accent-soft: rgba(77, 117, 198, 0.11);
   --nx-settings-danger: rgba(194, 74, 66, 0.9);
   --nx-settings-success: rgba(57, 139, 93, 0.9);
+  --nx-settings-warning: rgba(151, 98, 37, 0.92);
   --nx-settings-footer-surface: linear-gradient(to bottom, rgba(250, 252, 255, 0), rgba(250, 252, 255, 0.98) 42%);
   color-scheme: light;
 }
@@ -90,6 +92,7 @@
   --nx-settings-accent-soft: rgba(185, 92, 60, 0.095);
   --nx-settings-danger: rgba(189, 69, 54, 0.9);
   --nx-settings-success: rgba(73, 145, 82, 0.9);
+  --nx-settings-warning: rgba(151, 91, 39, 0.92);
   --nx-settings-footer-surface: linear-gradient(to bottom, rgba(255, 250, 243, 0), rgba(255, 250, 243, 0.99) 42%);
   color-scheme: light;
 }
@@ -100,17 +103,6 @@
   --settings-child-meta-font-size: var(--nx-settings-font-meta);
   --settings-child-gap: var(--nx-settings-gap-row);
   color: var(--nx-settings-ink);
-}
-
-.sd-section .sp.sp .sdc.settings-drawer__sections {
-  gap: var(--nx-settings-gap-section);
-}
-
-.sd-section .sp.sp :is(.settings-section, .settings-mini-group, .settings-drawer__card, .settings-speech-config-section) {
-  border-color: var(--nx-settings-line);
-  border-radius: var(--nx-settings-radius-panel);
-  background: transparent;
-  box-shadow: none;
 }
 
 .sd-section .settings-section-loading {
@@ -217,10 +209,18 @@
   color: var(--nx-settings-ink);
 }
 
-.sd-section .sp.sp .settings-test-result.is-success {
-  border-color: color-mix(in srgb, var(--nx-settings-success) 30%, var(--nx-settings-line));
-  background: color-mix(in srgb, var(--nx-settings-success) 10%, transparent);
-  color: var(--nx-settings-ink);
+.sd-section .sp.sp .settings-test-result.is-stale {
+  border-color: var(--nx-settings-line);
+  background: var(--nx-settings-surface-soft);
+  color: var(--nx-settings-muted);
+}
+
+.sd-section .sp.sp .settings-test-result__meta {
+  display: block;
+  margin-top: 6px;
+  color: var(--nx-settings-muted);
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .sd-section .sp.sp .settings-toggle input {
@@ -233,35 +233,7 @@
   box-shadow: 0 1px 4px color-mix(in srgb, var(--nx-settings-ink) 14%, transparent);
 }
 
-.sd-section .sp.sp .settings-toggle input:checked {
-  background: linear-gradient(135deg, var(--nx-settings-accent), color-mix(in srgb, var(--nx-settings-accent) 72%, white));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 24%, transparent);
-}
-
-.sd-section .sp.sp :is(.settings-appearance-switch__control, .onboarding-region-tabs, .onboarding-relationship__options, .settings-sprite-preview__states, .settings-companion-state-preview__states) {
-  gap: var(--nx-settings-segment-gap);
-  padding: var(--nx-settings-segment-gap);
-  border: 1px solid var(--nx-settings-line);
-  border-radius: calc(var(--nx-settings-radius-control) + 1px);
-  background: var(--nx-settings-segment-surface);
-  box-shadow: none;
-}
-
-.sd-section .sp.sp .settings-toggle input:checked {
-  background: linear-gradient(135deg, var(--nx-settings-accent), color-mix(in srgb, var(--nx-settings-accent) 72%, white));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 24%, transparent);
-}
-
-.sd-section .sp.sp :is(.settings-appearance-switch__control, .onboarding-region-tabs, .onboarding-relationship__options, .settings-sprite-preview__states, .settings-companion-state-preview__states) {
-  gap: var(--nx-settings-segment-gap);
-  padding: var(--nx-settings-segment-gap);
-  border: 1px solid var(--nx-settings-line);
-  border-radius: calc(var(--nx-settings-radius-control) + 1px);
-  background: var(--nx-settings-segment-surface);
-  box-shadow: none;
-}
-
-.sd-section .sp.sp :is(.settings-appearance-switch__option, .onboarding-region-tabs__tab, .onboarding-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button) {
+.sd-section .sp.sp :is(.settings-appearance-switch__option, .settings-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button) {
   min-height: var(--nx-settings-segment-height);
   border: 1px solid transparent;
   border-radius: var(--nx-settings-radius-control);
@@ -280,21 +252,7 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 14%, transparent);
 }
 
-.sd-section .sp.sp :is(.settings-appearance-switch__option.is-active, .onboarding-region-tabs__tab.is-active, .onboarding-relationship__chip.is-active, .settings-sprite-preview__states button.is-active, .settings-companion-state-preview__states button.is-active) {
-  border-color: color-mix(in srgb, var(--nx-settings-accent) 24%, transparent);
-  background: var(--nx-settings-segment-active);
-  color: var(--nx-settings-ink);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 12%, transparent);
-}
-
-.sd-section .sp.sp :is(.settings-appearance-switch__option.is-active, .onboarding-region-tabs__tab.is-active, .onboarding-relationship__chip.is-active, .settings-sprite-preview__states button.is-active, .settings-companion-state-preview__states button.is-active) {
-  border-color: color-mix(in srgb, var(--nx-settings-accent) 24%, transparent);
-  background: var(--nx-settings-segment-active);
-  color: var(--nx-settings-ink);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 12%, transparent);
-}
-
-.sd-section .sp.sp :is(.settings-appearance-switch__option, .onboarding-region-tabs__tab, .onboarding-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button):is(:hover, :focus-visible):not(.is-active) {
+.sd-section .sp.sp :is(.settings-appearance-switch__option, .settings-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button):is(:hover, :focus-visible):not(.is-active) {
   border-color: color-mix(in srgb, var(--nx-settings-accent) 20%, var(--nx-settings-line));
   background: color-mix(in srgb, var(--nx-settings-accent) 7%, transparent);
   color: var(--nx-settings-ink);
@@ -355,7 +313,8 @@
 
 .sb .confirm-dialog-card .ghost-button,
 .sb .confirm-dialog-card__confirm {
-  min-height: var(--nx-settings-control-height);
+  /* Practical minimum target size for confirm/cancel decisions in settings. */
+  min-height: 38px;
   padding: 0 12px;
   border-radius: var(--nx-settings-radius-control);
   font-size: var(--nx-settings-font-body);

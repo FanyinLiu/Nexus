@@ -30,3 +30,23 @@ export function formatWeatherPeriodSummary(label: string, summary: string) {
 
   return `${normalizedLabel}，${strippedSummary}`
 }
+
+const WEATHER_PERIOD_LABELS = {
+  today: ['今天', '今日', 'Today', '오늘'],
+  tomorrow: ['明天', '明日', 'Tomorrow', '내일'],
+} as const
+
+export function stripLocalizedWeatherPeriodPrefix(
+  summary: string,
+  period: keyof typeof WEATHER_PERIOD_LABELS,
+) {
+  let normalizedSummary = normalizeWeatherText(summary)
+  for (const label of WEATHER_PERIOD_LABELS[period]) {
+    const stripped = stripWeatherPeriodPrefix(normalizedSummary, label)
+    if (stripped !== normalizedSummary) {
+      return stripped
+    }
+    normalizedSummary = stripped
+  }
+  return normalizedSummary
+}

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { getPreloadPath, getRendererEntry } from './rendererServer.js'
 import { buildPlatformProfile } from './platformProfile.js'
 import { clampWindowPosition, getPanelWindowPosition } from './windowManagerHelpers.js'
+import { createSettingsReturnFocusCoordinator } from './settingsReturnFocus.js'
 import {
   applyWindowIcon,
   applyWindowsAppDetails,
@@ -155,9 +156,18 @@ const PET_ALWAYS_ON_TOP_LEVEL = 'floating'
 const WINDOWS_TRAY_GUID = '4cf28656-71be-4e31-8f33-b83f76e8db10'
 
 export let mainWindow = null
+let petHiddenForPanel = false
 export let panelWindow = null
 let tray = null
 let panelBlurTimer = null
+let settingsReturnTarget = null
+const settingsReturnFocus = createSettingsReturnFocusCoordinator(() => {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  mainWindow.show()
+  mainWindow.focus()
+  mainWindow.moveTop()
+  mainWindow.webContents.send('settings:return-focus')
+})
 
 export let runtimeState = {
   mood: 'idle',
@@ -197,6 +207,7 @@ configurePanelWindowController({
 })
 
 export let panelSection = 'chat'
+let panelChatIntent = null
 
 export function hasSystemTray() {
   return Boolean(tray && !tray.isDestroyed?.())
@@ -416,6 +427,7 @@ function petWindowConstructorOptions({ x, y, width, height }) {
     x,
     y,
     show: false,
+    paintWhenInitiallyHidden: false,
     frame: false,
     transparent: true,
     hasShadow: false,
@@ -587,9 +599,10 @@ export function createPanelWindow() {
     x,
     y,
     show: false,
+    paintWhenInitiallyHidden: false,
     frame: false,
-    transparent: false,
-    hasShadow: true,
+    transparent: true,
+    hasShadow: false,
     alwaysOnTop: false,
     skipTaskbar: false,
     resizable,
@@ -598,7 +611,7 @@ export function createPanelWindow() {
     maximizable: false,
     minimizable: true,
     fullscreenable: false,
-    backgroundColor: '#f3f3f3',
+    backgroundColor: '#00000000',
     icon: getPetIconPath(),
     webPreferences: trustedRendererWebPreferences(),
   })
@@ -628,8 +641,25 @@ export function createPanelWindow() {
     releaseDock()
   }
 
-  win.on('show', holdDock)
-  win.on('hide', releaseDockForPanel)
+  win.on('show', () => {
+    holdDock()
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
+      petHiddenForPanel = true
+      mainWindow.hide()
+    }
+  })
+  win.on('hide', () => {
+    releaseDockForPanel()
+    if (settingsReturnFocus.isPending()) {
+      petHiddenForPanel = false
+      settingsReturnFocus.consume()
+      return
+    }
+    if (mainWindow && !mainWindow.isDestroyed() && petHiddenForPanel) {
+      petHiddenForPanel = false
+      mainWindow.showInactive()
+    }
+  })
 
   win.on('close', (event) => {
     const canHideToBackground = process.platform === 'darwin' || hasSystemTray()
@@ -644,6 +674,15 @@ export function createPanelWindow() {
       panelBlurTimer = null
     }
     releaseDockForPanel()
+    if (!app.isQuitting) {
+      if (settingsReturnFocus.isPending()) {
+        petHiddenForPanel = false
+        settingsReturnFocus.consume()
+      } else if (mainWindow && !mainWindow.isDestroyed() && petHiddenForPanel) {
+        petHiddenForPanel = false
+        mainWindow.showInactive()
+      }
+    }
     panelWindow = null
   })
 
@@ -676,6 +715,7 @@ export function createPanelWindow() {
     syncRuntimeState()
     syncPetWindowState()
     emitPanelWindowState()
+    emitPanelSection()
   })
 
   win.loadURL(getRendererEntry('panel'))
@@ -687,14 +727,27 @@ export function createPanelWindow() {
 
 function emitPanelSection() {
   if (!panelWindow || panelWindow.isDestroyed()) return
-  panelWindow.webContents.send('panel-section:changed', { section: panelSection })
+  panelWindow.webContents.send('panel-section:changed', { section: panelSection, intent: panelChatIntent })
 }
 
 export function setPanelSection(section) {
+  panelChatIntent = section === 'chat-text' ? 'text' : section === 'chat-recent' ? 'recent' : null
   panelSection = section === 'settings' ? 'settings' : 'chat'
 }
 
-export function showPanelWindow(section = 'chat') {
+export function getPanelSectionSnapshot() {
+  const snapshot = { section: panelSection, intent: panelChatIntent }
+  panelChatIntent = null
+  return snapshot
+}
+
+export function showPanelWindow(section = 'chat', options = {}) {
+  if (section === 'settings') {
+    settingsReturnTarget = options?.settingsReturnTarget === 'pet' ? 'pet' : 'panel'
+  } else {
+    settingsReturnTarget = null
+    settingsReturnFocus.cancel()
+  }
   setPanelSection(section)
   const win = createPanelWindow()
 
@@ -719,6 +772,32 @@ export function showPanelWindow(section = 'chat') {
   emitPanelSection()
 }
 
+export function closeSettingsWindow() {
+  const returnTarget = settingsReturnTarget
+  settingsReturnTarget = null
+  setPanelSection('chat')
+
+  if (returnTarget !== 'pet') {
+    settingsReturnFocus.cancel()
+    emitPanelSection()
+    return
+  }
+
+  settingsReturnFocus.request()
+  if (!panelWindow || panelWindow.isDestroyed() || !panelWindow.isVisible()) {
+    settingsReturnFocus.consume()
+    return
+  }
+
+  panelWindow.hide()
+}
+
+export function closePanelWindow() {
+  settingsReturnTarget = null
+  settingsReturnFocus.cancel()
+  panelWindow?.hide()
+}
+
 export function showPetContextMenu(sourceWindow = mainWindow) {
   if (!sourceWindow || sourceWindow.isDestroyed()) return
 
@@ -734,7 +813,7 @@ export function showPetContextMenu(sourceWindow = mainWindow) {
     {
       label: '设置',
       click: () => {
-        showPanelWindow('settings')
+        showPanelWindow('settings', { settingsReturnTarget: 'pet' })
       },
     },
     {
@@ -815,6 +894,7 @@ export function createApplicationMenu() {
         {
           label: '显示桌宠',
           click: () => {
+            if (panelWindow && !panelWindow.isDestroyed()) panelWindow.hide()
             if (!mainWindow || mainWindow.isDestroyed()) {
               createMainWindow()
               return
@@ -941,6 +1021,7 @@ export function createTray() {
   tray.setToolTip('Nexus')
   tray.setContextMenu(contextMenu)
   tray.on('click', () => {
+    if (panelWindow && !panelWindow.isDestroyed()) panelWindow.hide()
     if (!mainWindow) {
       createMainWindow()
       return

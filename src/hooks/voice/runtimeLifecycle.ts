@@ -5,14 +5,14 @@ import type { SenseVoiceStreamSession } from '../../features/hearing/localSenseV
 import type { TencentAsrStreamSession } from '../../features/hearing/tencentAsr.ts'
 import type { BrowserSpeechRecognition } from '../../lib/voice'
 import { cancelPendingWakewordAck } from './wakewordIntegration.ts'
+import type { SpeechLevelPublisher } from './speechLevelPublishing.ts'
 
 export type CleanupVoiceRuntimeResourcesOptions = {
   clearPendingVoiceRestart: () => void
   recognitionRef: MutableRefObject<BrowserSpeechRecognition | null>
   stopApiRecording: (cancel?: boolean) => void
   stopVadListening: (cancel?: boolean) => Promise<void>
-  speechLevelValueRef: MutableRefObject<number>
-  setSpeechLevel: (level: number) => void
+  speechLevelPublisher: Pick<SpeechLevelPublisher, 'reset'>
   stopActiveSpeechOutput: () => void
   paraformerSessionRef: MutableRefObject<ParaformerStreamSession | null>
   sensevoiceSessionRef: MutableRefObject<SenseVoiceStreamSession | null>
@@ -31,8 +31,7 @@ export function cleanupVoiceRuntimeResources(
   options.stopApiRecording(true)
   void options.stopVadListening(true)
 
-  options.speechLevelValueRef.current = 0
-  options.setSpeechLevel(0)
+  options.speechLevelPublisher.reset()
   options.stopActiveSpeechOutput()
   options.paraformerSessionRef.current?.abort()
   options.paraformerSessionRef.current = null

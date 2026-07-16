@@ -489,7 +489,11 @@ export const IntegrationsSection = memo(function IntegrationsSection({
             </div>
             <div className="settings-page__meta">
               <span>{ti('settings.integrations.mcp.server_count', { count: String(draft.mcpServers.length) })}</span>
-              <span>{ti('settings.integrations.structure_aligned')}</span>
+              <span>
+                {draft.mcpServers.length > 0
+                  ? ti('settings.integrations.status.configured')
+                  : ti('settings.integrations.status.setup')}
+              </span>
             </div>
           </div>
 

@@ -102,6 +102,169 @@ test('createVoiceActivityDetector falls back to ScriptProcessor for worklet fail
   }
 })
 
+test('createVoiceActivityDetector falls back once when AudioWorklet fails during start', async () => {
+  const originalWarn = console.warn
+  const processorTypes: string[] = []
+  const calls = {
+    auto: { start: 0, pause: 0, destroy: 0 },
+    scriptProcessor: { start: 0, pause: 0, destroy: 0 },
+  }
+  const vadModule = createVadModule(async (config) => {
+    processorTypes.push(String(config.processorType))
+    if (config.processorType === 'auto') {
+      return {
+        start: async () => {
+          calls.auto.start += 1
+          throw new Error('Refused to load module script because it violates Content Security Policy')
+        },
+        pause: async () => {
+          calls.auto.pause += 1
+        },
+        destroy: async () => {
+          calls.auto.destroy += 1
+        },
+      }
+    }
+
+    return {
+      start: async () => {
+        calls.scriptProcessor.start += 1
+      },
+      pause: async () => {
+        calls.scriptProcessor.pause += 1
+      },
+      destroy: async () => {
+        calls.scriptProcessor.destroy += 1
+      },
+    }
+  })
+
+  console.warn = () => undefined
+
+  try {
+    const detector = await createVoiceActivityDetector({
+      onSpeechEnd: () => undefined,
+    }, 'medium', { vadModule })
+
+    assert.deepEqual(processorTypes, ['auto'])
+    const firstStart = detector.start()
+    const concurrentStart = detector.start()
+    assert.equal(concurrentStart, firstStart)
+    await firstStart
+
+    assert.deepEqual(processorTypes, ['auto', 'ScriptProcessor'])
+    assert.deepEqual(calls.auto, { start: 1, pause: 1, destroy: 1 })
+    assert.deepEqual(calls.scriptProcessor, { start: 1, pause: 0, destroy: 0 })
+
+    await detector.pause()
+    await detector.start()
+    await detector.destroy()
+
+    assert.deepEqual(processorTypes, ['auto', 'ScriptProcessor'])
+    assert.deepEqual(calls.scriptProcessor, { start: 2, pause: 1, destroy: 1 })
+  } finally {
+    console.warn = originalWarn
+  }
+})
+
+test('createVoiceActivityDetector propagates non-worklet start failures without fallback', async () => {
+  const processorTypes: string[] = []
+  const calls = { start: 0, pause: 0, destroy: 0 }
+  const vadModule = createVadModule(async (config) => {
+    processorTypes.push(String(config.processorType))
+    return {
+      start: async () => {
+        calls.start += 1
+        throw new Error('NotAllowedError: permission denied')
+      },
+      pause: async () => {
+        calls.pause += 1
+      },
+      destroy: async () => {
+        calls.destroy += 1
+      },
+    }
+  })
+
+  const detector = await createVoiceActivityDetector({
+    onSpeechEnd: () => undefined,
+  }, 'medium', { vadModule })
+
+  await assert.rejects(detector.start(), /permission denied/)
+  assert.deepEqual(processorTypes, ['auto'])
+  assert.deepEqual(calls, { start: 1, pause: 0, destroy: 0 })
+
+  await detector.destroy()
+  assert.deepEqual(calls, { start: 1, pause: 0, destroy: 1 })
+})
+
+test('createVoiceActivityDetector routes lifecycle calls after an in-flight fallback', async () => {
+  const originalWarn = console.warn
+  let fallbackStartEnteredResolve: (() => void) | null = null
+  let releaseFallbackStart: (() => void) | null = null
+  const fallbackStartEntered = new Promise<void>((resolve) => {
+    fallbackStartEnteredResolve = resolve
+  })
+  const fallbackStartGate = new Promise<void>((resolve) => {
+    releaseFallbackStart = resolve
+  })
+  const calls = {
+    auto: { pause: 0, destroy: 0 },
+    scriptProcessor: { pause: 0, destroy: 0 },
+  }
+  const vadModule = createVadModule(async (config) => {
+    if (config.processorType === 'auto') {
+      return {
+        start: async () => {
+          throw new Error('AudioWorklet module failed to load')
+        },
+        pause: async () => {
+          calls.auto.pause += 1
+        },
+        destroy: async () => {
+          calls.auto.destroy += 1
+        },
+      }
+    }
+
+    return {
+      start: async () => {
+        fallbackStartEnteredResolve?.()
+        await fallbackStartGate
+      },
+      pause: async () => {
+        calls.scriptProcessor.pause += 1
+      },
+      destroy: async () => {
+        calls.scriptProcessor.destroy += 1
+      },
+    }
+  })
+
+  console.warn = () => undefined
+
+  try {
+    const detector = await createVoiceActivityDetector({
+      onSpeechEnd: () => undefined,
+    }, 'medium', { vadModule })
+    const start = detector.start()
+    await fallbackStartEntered
+
+    const pause = detector.pause()
+    assert.deepEqual(calls.scriptProcessor, { pause: 0, destroy: 0 })
+    releaseFallbackStart?.()
+    await Promise.all([start, pause])
+
+    assert.deepEqual(calls.auto, { pause: 1, destroy: 1 })
+    assert.deepEqual(calls.scriptProcessor, { pause: 1, destroy: 0 })
+
+    await detector.destroy()
+    assert.deepEqual(calls.scriptProcessor, { pause: 1, destroy: 1 })
+  } finally {
+    console.warn = originalWarn
+  }
+})
+
 test('createVoiceActivityDetector does not retry non-worklet startup failures', async () => {
   const processorTypes: string[] = []
   const vadModule = createVadModule(async (config) => {

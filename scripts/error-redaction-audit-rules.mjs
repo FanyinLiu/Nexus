@@ -573,7 +573,7 @@ export const UNSAFE_PATTERNS = [
   {
     id: 'settings-drawer-raw-locale-error-log',
     file: 'src/components/SettingsDrawer.tsx',
-    pattern: /console\.error\('\[settings\] Failed to load locale:',\s*(?:nextLanguage|draft\.uiLanguage),\s*error\)/,
+    pattern: /console\.error\('\[settings\] Failed to load locale:',\s*(?:locale|nextLanguage|draft\.uiLanguage),\s*error\)/,
     message: 'settings locale loading logs must redact locale-loader errors before console output',
   },
   {

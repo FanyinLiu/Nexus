@@ -23,9 +23,9 @@ const MIN_TELEMETRY_TO_BOTHER = 5
  * surfaced. See feedback_nexus_silent_emotion — adaptation stays
  * invisible to the user.
  */
-export function useGuidanceAnalysisScheduler(): void {
+export function useGuidanceAnalysisScheduler({ enabled = true }: { enabled?: boolean } = {}): void {
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (!enabled || typeof window === 'undefined') return
 
     const last = loadGuidanceAnalysis()
     if (last) {
@@ -41,5 +41,5 @@ export function useGuidanceAnalysisScheduler(): void {
     const samples = loadUserAffectHistory()
     const report = analyzeGuidance(telemetry, samples, new Date())
     saveGuidanceAnalysis(report)
-  }, [])
+  }, [enabled])
 }

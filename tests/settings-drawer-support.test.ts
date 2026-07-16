@@ -22,6 +22,7 @@ test('settings home exposes only the main product path in a stable order', () =>
       'voice',
       'memory',
       'lorebooks',
+      'integrations',
       'autonomy',
       'tools',
     ],
@@ -29,6 +30,7 @@ test('settings home exposes only the main product path in a stable order', () =>
   assert.equal(options.find((option) => option.id === 'memory')?.label, '记忆')
   assert.equal(options.find((option) => option.id === 'letters')?.label, '信')
   assert.equal(options.find((option) => option.id === 'lorebooks')?.label, '背景与常用表达')
+  assert.equal(options.find((option) => option.id === 'integrations')?.label, '连接')
   assert.equal(options.find((option) => option.id === 'autonomy')?.label, '主动陪伴')
   assert.equal(options.find((option) => option.id === 'tools')?.label, '工具')
 })
@@ -46,17 +48,18 @@ test('settings section registry carries stable product groups without showing le
       'companionBehavior:voice',
       'memoryContext:memory',
       'memoryContext:lorebooks',
+      'modelConnections:integrations',
       'companionBehavior:autonomy',
       'modelConnections:tools',
     ],
   )
-  assert.equal(SETTINGS_SECTION_OPTION_DEFINITIONS.some((section) => section.id === 'integrations'), false)
+  assert.equal(SETTINGS_SECTION_OPTION_DEFINITIONS.some((section) => section.id === 'integrations'), true)
 })
 
-test('legacy settings sections redirect to the active home entries', () => {
+test('settings sections preserve their active home entries', () => {
   assert.equal(normalizeSettingsSectionId('lorebooks'), 'lorebooks')
   assert.equal(normalizeSettingsSectionId('letters'), 'letters')
-  assert.equal(normalizeSettingsSectionId('integrations'), 'tools')
+  assert.equal(normalizeSettingsSectionId('integrations'), 'integrations')
   assert.equal(normalizeSettingsSectionId('autonomy'), 'autonomy')
   assert.equal(normalizeSettingsSectionId('model'), 'model')
 })

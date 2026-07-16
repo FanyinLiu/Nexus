@@ -108,6 +108,7 @@ export type StopVoiceConversationEntrypointOptions = {
   clearPendingVoiceRestart: () => void
   setContinuousVoiceSession: (active: boolean) => void
   resetNoSpeechRestartCount: () => void
+  resetSpeechLevel: () => void
   clearParaformerConversationState: () => void
   clearSenseVoiceConversationState: () => void
   clearTencentConversationState: () => void
@@ -245,6 +246,7 @@ export function stopVoiceConversationEntrypoint(
   const wasContinuousVoiceActive = params.continuousVoiceActiveRef.current
 
   params.clearPendingVoiceRestart()
+  params.resetSpeechLevel()
   params.setContinuousVoiceSession(false)
   params.resetNoSpeechRestartCount()
   params.suppressVoiceReplyRef.current = true

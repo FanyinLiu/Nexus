@@ -25,6 +25,8 @@ export type UseDiscordGatewayOptions = {
   allowedChannelIds: string
   onMessage: (msg: DiscordIncoming) => void
   enabled: boolean
+  /** Only the background owner may touch the shared main-process gateway. */
+  runtimeOwner?: boolean
 }
 
 export function useDiscordGateway({
@@ -32,20 +34,22 @@ export function useDiscordGateway({
   allowedChannelIds,
   onMessage,
   enabled,
+  runtimeOwner = true,
 }: UseDiscordGatewayOptions) {
+  const featureEnabled = enabled && runtimeOwner
   // Status updates are made during render (on enabled-prop transitions) or from
   // async callbacks — never synchronously inside an effect — so the React 19
   // set-state-in-effect rule stays satisfied. The effect below only owns the
   // side effect of calling into the desktop bridge.
   const [status, setStatus] = useState<DiscordStatus>(() => (
-    enabled
+    featureEnabled
       ? { state: 'connecting', botUsername: null, lastError: null }
       : { state: 'disconnected', botUsername: null, lastError: null }
   ))
-  const [prevEnabled, setPrevEnabled] = useState(enabled)
-  if (enabled !== prevEnabled) {
-    setPrevEnabled(enabled)
-    if (enabled) {
+  const [prevFeatureEnabled, setPrevFeatureEnabled] = useState(featureEnabled)
+  if (featureEnabled !== prevFeatureEnabled) {
+    setPrevFeatureEnabled(featureEnabled)
+    if (featureEnabled) {
       setStatus((prev) => ({ ...prev, state: 'connecting', lastError: null }))
     } else {
       setStatus({ state: 'disconnected', botUsername: null, lastError: null })
@@ -61,6 +65,7 @@ export function useDiscordGateway({
   // the bot token or allow-list while enabled re-applies to the live connection
   // (reconnect = disconnect-then-connect) instead of keeping stale credentials.
   useEffect(() => {
+    if (!runtimeOwner) return
     if (!enabled) {
       void window.desktopPet?.discordDisconnect?.()
       return
@@ -90,10 +95,11 @@ export function useDiscordGateway({
     return () => {
       void window.desktopPet?.discordDisconnect?.()
     }
-  }, [enabled, botToken, allowedChannelIds])
+  }, [runtimeOwner, enabled, botToken, allowedChannelIds])
 
   // Subscribe to incoming messages
   useEffect(() => {
+    if (!runtimeOwner) return
     if (!enabled) return
 
     const unsubscribe = window.desktopPet?.subscribeDiscordMessage?.((msg) => {
@@ -103,7 +109,7 @@ export function useDiscordGateway({
     return () => {
       unsubscribe?.()
     }
-  }, [enabled])
+  }, [runtimeOwner, enabled])
 
   const sendMessage = useCallback(async (channelId: string, text: string, replyToMessageId?: string) => {
     await window.desktopPet?.discordSendMessage?.({ channelId, text, replyToMessageId })

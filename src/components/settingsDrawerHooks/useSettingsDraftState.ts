@@ -43,6 +43,7 @@ export function useSettingsDraftState(settings: AppSettings) {
 
   return {
     draft,
+    baseline,
     setDraft,
     resetDraftForOpen,
     getRollbackThemeId,

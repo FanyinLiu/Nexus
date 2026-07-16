@@ -6,7 +6,8 @@ import {
   resolveTheme,
   ThemeContext,
 } from '../../features/themes'
-import { getSettingsSnapshot, setSettingsSnapshot, subscribeToSettings } from '../store/settingsStore'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction'
+import { getSettingsSnapshot, subscribeToSettings, updateSettingsSnapshot } from '../store/settingsStore'
 import type { ThemeContextValue, ThemeId } from '../../types/theme'
 
 type ThemeProviderProps = {
@@ -64,13 +65,13 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       const normalizedThemeId = normalizeThemeId(nextThemeId)
       setThemeId(normalizedThemeId)
 
-      const currentSettings = getSettingsSnapshot()
-      if (currentSettings.themeId !== normalizedThemeId) {
-        void setSettingsSnapshot({
-          ...currentSettings,
-          themeId: normalizedThemeId,
-        })
-      }
+      void updateSettingsSnapshot((currentSettings) => (
+        currentSettings.themeId === normalizedThemeId
+          ? currentSettings
+          : { ...currentSettings, themeId: normalizedThemeId }
+      )).catch((error) => {
+        console.error('[ThemeProvider] Failed to persist theme:', getRedactedLogErrorMessage(error))
+      })
     },
     theme,
     availableThemes: listThemes(),

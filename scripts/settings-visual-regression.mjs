@@ -5,31 +5,17 @@ import { createServer } from 'node:net'
 import path from 'node:path'
 import { chromium } from 'playwright'
 import sharp from 'sharp'
+import {
+  SETTINGS_VISUAL_DEFAULT_LANGUAGE_CASES as LANGUAGE_CASES,
+  SETTINGS_VISUAL_SECTIONS as SECTIONS,
+  SETTINGS_VISUAL_THEMES as THEMES,
+  SETTINGS_VISUAL_VIEWPORTS as VIEWPORTS,
+  resolveSettingsVisualLanguageCases,
+} from './settings-visual-matrix.mjs'
 
 const SETTINGS_STORAGE_KEY = 'nexus:settings'
 const DEFAULT_PORT = 47821
 const DEFAULT_HOST = '127.0.0.1'
-
-const THEMES = [
-  { id: 'system-dark', label: 'night' },
-  { id: 'system-black', label: 'black' },
-  { id: 'system-day', label: 'day' },
-  { id: 'warm-day', label: 'warm-day' },
-]
-
-const SECTIONS = [
-  { id: 'home', query: {} },
-  { id: 'history', query: { settingsSection: 'history' } },
-  { id: 'model', query: { settingsSection: 'model' } },
-  { id: 'voice', query: { settingsSection: 'voice' } },
-  { id: 'memory', query: { settingsSection: 'memory' } },
-  { id: 'window', query: { settingsSection: 'window' } },
-]
-
-const VIEWPORTS = [
-  { id: 'desktop', width: 1280, height: 860 },
-  { id: 'narrow', width: 390, height: 760 },
-]
 
 function parseArgs(argv) {
   const options = {
@@ -38,6 +24,11 @@ function parseArgs(argv) {
     channel: '',
     headed: false,
     keepServer: false,
+    quick: false,
+    sections: [],
+    locales: [],
+    themes: [],
+    viewports: [],
   }
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -55,6 +46,12 @@ function parseArgs(argv) {
       options.headed = true
     } else if (arg === '--keep-server') {
       options.keepServer = true
+    } else if (arg === '--quick') {
+      options.quick = true
+    } else if (['--sections', '--locales', '--themes', '--viewports'].includes(arg)) {
+      const key = arg.slice(2)
+      options[key] = (argv[i + 1] ?? '').split(',').map((value) => value.trim()).filter(Boolean)
+      i += 1
     } else if (arg === '--help' || arg === '-h') {
       printHelp()
       process.exit(0)
@@ -67,12 +64,22 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  console.log(`Usage: npm run settings:visual -- [--url http://127.0.0.1:47821] [--out artifacts/settings-visual/latest] [--channel chrome] [--headed]
+  console.log(`Usage: npm run settings:visual -- [--url http://127.0.0.1:47821] [--out artifacts/settings-visual/latest] [--channel chrome] [--headed] [--quick]
+
+Optional comma-separated filters:
+  --sections home,chat,voice
+  --locales zh-CN,en-US
+  --themes warm-day,system-dark
+  --viewports desktop-720,short
+
+Quick mode checks home + all 12 subpages at 720x640 and 300x480 in zh-CN/warm-day.
+The default remains the complete locale/theme/viewport matrix.
 
 Captures settings screenshots for:
   sections: ${SECTIONS.map((section) => section.id).join(', ')}
   themes:   ${THEMES.map((theme) => theme.id).join(', ')}
   sizes:    ${VIEWPORTS.map((viewport) => `${viewport.id}:${viewport.width}x${viewport.height}`).join(', ')}
+  locales:  ${LANGUAGE_CASES.map((languageCase) => languageCase.id).join(', ')}
 `)
 }
 
@@ -198,7 +205,10 @@ async function auditLayout(page, sectionId) {
     ) {
       issues.push('settings backdrop does not cover viewport')
     }
-    if (backdropStyle.backgroundColor === 'rgba(0, 0, 0, 0)') {
+    const allowsTransparentV2HomeBackdrop = expectedSectionId === 'home'
+      && backdrop.classList.contains('settings-backdrop--v2')
+      && Boolean(backdrop.querySelector('.settings-drawer--home.settings-drawer--v2'))
+    if (backdropStyle.backgroundColor === 'rgba(0, 0, 0, 0)' && !allowsTransparentV2HomeBackdrop) {
       issues.push('settings backdrop is transparent')
     }
 
@@ -216,23 +226,76 @@ async function auditLayout(page, sectionId) {
       issues.push('settings drawer extends outside viewport')
     }
 
-    if (expectedSectionId !== 'home' && !document.querySelector(`.settings-page[data-section="${expectedSectionId}"]`)) {
-      issues.push(`expected settings section did not render: ${expectedSectionId}`)
+    if (drawer.classList.contains('settings-drawer--v2')) {
+      const shell = drawer.querySelector(':scope > .settings-v2')
+      const shellRect = rectFor(shell)
+      if (!shellRect) {
+        issues.push('settings V2 shell did not render')
+      } else if (Math.abs(shellRect.height - drawerRect.height) > 2 || Math.abs(shellRect.bottom - drawerRect.bottom) > 2) {
+        issues.push(`settings V2 shell does not fill drawer (${Math.round(shellRect.height)}px / ${Math.round(drawerRect.height)}px)`)
+      }
+
+      const content = drawer.querySelector('.settings-v2__content')
+      const sections = drawer.querySelector('.settings-v2__active-section > .settings-drawer__sections')
+      if (content && getComputedStyle(content).overflowY !== 'clip') {
+        issues.push('settings V2 content must delegate scrolling to the active sections wrapper')
+      }
+      if (sections && !['auto', 'scroll'].includes(getComputedStyle(sections).overflowY)) {
+        issues.push('settings active sections wrapper is not the scroll container')
+      }
     }
 
-    const headerRect = rectFor(document.querySelector('.settings-drawer__header'))
-    const bodyRect = rectFor(document.querySelector('.settings-drawer__body'))
-    const actionsRect = rectFor(document.querySelector('.settings-drawer__actions'))
+    const shellHeadings = [...drawer.querySelectorAll('.settings-v2__heading h1')]
+      .filter((element) => element instanceof HTMLElement && element.offsetParent !== null)
+    if (shellHeadings.length !== 1 || !shellHeadings[0]?.textContent?.trim()) {
+      issues.push(`settings shell must expose exactly one visible h1 (found ${shellHeadings.length})`)
+    }
+
+    const visibleV3Pages = [...drawer.querySelectorAll('.settings-v3-page:not(.is-hidden)')]
+      .filter((element) => element instanceof HTMLElement && element.offsetParent !== null)
+    if (expectedSectionId === 'home') {
+      const homes = [...drawer.querySelectorAll('.settings-v2__home')]
+        .filter((element) => element instanceof HTMLElement && element.offsetParent !== null)
+      if (homes.length !== 1) issues.push(`settings home contract did not render exactly once (found ${homes.length})`)
+      if (visibleV3Pages.length) issues.push('a V3 subpage is visible while settings home is active')
+    } else {
+      if (visibleV3Pages.length !== 1) {
+        issues.push(`expected exactly one V3 settings root for ${expectedSectionId} (found ${visibleV3Pages.length})`)
+      }
+      const activePage = visibleV3Pages[0]
+      const pageHeadings = activePage
+        ? [...activePage.querySelectorAll('h2, h3')].filter((element) => element instanceof HTMLElement && element.offsetParent !== null && element.textContent?.trim())
+        : []
+      const groupHeading = drawer.querySelector('.settings-v2__active-heading h2')
+      if (!pageHeadings.length && (!(groupHeading instanceof HTMLElement) || groupHeading.offsetParent === null || !groupHeading.textContent?.trim())) {
+        issues.push(`V3 page heading is missing: ${expectedSectionId}`)
+      }
+      const activeContent = drawer.querySelector('.settings-drawer__sections')
+      const visibleLegacyRoots = activeContent
+        ? [...activeContent.children].filter((element) => (
+          element instanceof HTMLElement
+          && element.offsetParent !== null
+          && !element.classList.contains('settings-v3-page')
+        ))
+        : []
+      if (visibleLegacyRoots.length) {
+        issues.push(`legacy settings root is mounted instead of V3: ${visibleLegacyRoots[0].className || visibleLegacyRoots[0].tagName}`)
+      }
+    }
+
+    const headerRect = rectFor(document.querySelector('.settings-v2__header'))
+    const bodyRect = rectFor(document.querySelector('.settings-v2__content'))
+    const actionsRect = rectFor(document.querySelector('.settings-v2__draft-bar'))
     if (overlaps(headerRect, bodyRect)) issues.push('settings header overlaps body')
     if (overlaps(bodyRect, actionsRect)) issues.push('settings body overlaps save area')
 
-    const title = document.querySelector('.settings-drawer__window-title')
+    const title = document.querySelector('.settings-v2__heading h1')
     if (title && title.scrollWidth > title.clientWidth + 2) {
       issues.push('settings title is horizontally clipped')
     }
 
-    const page = document.querySelector('.settings-page, .settings-home')
-    const pageRect = rectFor(page)
+    const activeSettingsPage = document.querySelector('.settings-v3-page:not(.is-hidden), .settings-v2__home')
+    const pageRect = rectFor(activeSettingsPage)
     if (pageRect && drawerRect && (pageRect.left < drawerRect.left - 1 || pageRect.right > drawerRect.right + 1)) {
       issues.push('settings page content escapes drawer horizontally')
     }
@@ -247,11 +310,48 @@ async function auditLayout(page, sectionId) {
       'textarea',
       'button',
     ]
+    const escapesDrawerBounds = (rect) => Boolean(
+      rect.width > drawerRect.width + 2
+      || rect.left < drawerRect.left - 2
+      || rect.right > drawerRect.right + 2,
+    )
+    const inlineScrollContainers = [...drawer.querySelectorAll('*')]
+      .filter((element) => {
+        if (!(element instanceof HTMLElement) || element.offsetParent === null) return false
+        const overflowX = getComputedStyle(element).overflowX
+        return overflowX === 'auto' || overflowX === 'scroll'
+      })
+    for (const scrollContainer of inlineScrollContainers) {
+      const scrollContainerRect = rectFor(scrollContainer)
+      if (!scrollContainerRect || !escapesDrawerBounds(scrollContainerRect)) continue
+      const label = scrollContainer.className || scrollContainer.tagName.toLowerCase()
+      issues.push(`horizontal scroll container escapes drawer bounds: ${String(label).slice(0, 80)}`)
+      break
+    }
+    const isContainedInlineScrollClip = (element, rect) => {
+      if (!(element instanceof HTMLButtonElement)) return false
+      let ancestor = element.parentElement
+      while (ancestor && ancestor !== drawer) {
+        const overflowX = getComputedStyle(ancestor).overflowX
+        if (overflowX === 'auto' || overflowX === 'scroll') {
+          const ancestorRect = rectFor(ancestor)
+          if (
+            ancestorRect
+            && !escapesDrawerBounds(ancestorRect)
+            && (rect.left < ancestorRect.left - 2 || rect.right > ancestorRect.right + 2)
+          ) {
+            return true
+          }
+        }
+        ancestor = ancestor.parentElement
+      }
+      return false
+    }
     for (const element of drawer.querySelectorAll(checkedSelectors.join(','))) {
       const rect = rectFor(element)
       if (!rect) continue
       if (rect.width < 1 || rect.height < 1) continue
-      if (rect.width > drawerRect.width + 2 || rect.left < drawerRect.left - 2 || rect.right > drawerRect.right + 2) {
+      if (escapesDrawerBounds(rect) && !isContainedInlineScrollClip(element, rect)) {
         const label = element.className || element.tagName.toLowerCase()
         issues.push(`control escapes drawer bounds: ${String(label).slice(0, 80)}`)
         break
@@ -260,6 +360,48 @@ async function auditLayout(page, sectionId) {
 
     if (document.documentElement.scrollWidth > window.innerWidth + 2) {
       issues.push('document has horizontal page overflow')
+    }
+
+    const body = document.querySelector('.settings-v2__content')
+    if (body && body.scrollWidth > body.clientWidth + 2) {
+      issues.push('settings body has horizontal overflow')
+    }
+
+    for (const element of drawer.querySelectorAll('button, label, [role="menuitemradio"], [role="tab"]')) {
+      if (!(element instanceof HTMLElement) || element.offsetParent === null) continue
+      const style = getComputedStyle(element)
+      const clipsInline = style.overflowX === 'hidden' || style.overflowX === 'clip'
+      if (clipsInline && element.scrollWidth > element.clientWidth + 2) {
+        issues.push(`visible control text is clipped: ${(element.textContent ?? element.className).trim().slice(0, 80)}`)
+        break
+      }
+    }
+
+    const touchScope = expectedSectionId === 'home'
+      ? drawer.querySelector('.settings-v2__home')
+      : visibleV3Pages[0]
+    if (touchScope) {
+      const touchSelectors = [
+        'button',
+        'a[href]',
+        'summary',
+        'select',
+        'textarea',
+        'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"])',
+        'label.settings-v3-switch',
+        '[role="button"]',
+        '[role="tab"]',
+      ]
+      for (const element of touchScope.querySelectorAll(touchSelectors.join(','))) {
+        if (!(element instanceof HTMLElement) || element.offsetParent === null) continue
+        if (element.matches(':disabled, [aria-disabled="true"]')) continue
+        const rect = element.getBoundingClientRect()
+        if (rect.width < 43.5 || rect.height < 43.5) {
+          const label = element.getAttribute('aria-label') || element.textContent || element.className || element.tagName
+          issues.push(`interactive target is smaller than 44px (${Math.round(rect.width)}x${Math.round(rect.height)}): ${String(label).trim().slice(0, 80)}`)
+          break
+        }
+      }
     }
 
     return issues
@@ -271,12 +413,21 @@ function parseRgb(color) {
   return channels?.length === 3 ? channels : null
 }
 
-async function backdropPixelsMatch(page, screenshot) {
-  const expected = await page.evaluate(() => {
+async function backdropPixelsMatch(page, screenshot, sectionId) {
+  const backdropState = await page.evaluate((expectedSectionId) => {
     const backdrop = document.querySelector('.settings-backdrop')
-    return backdrop ? getComputedStyle(backdrop).backgroundColor : ''
-  })
-  const expectedRgb = parseRgb(expected)
+    const backgroundColor = backdrop ? getComputedStyle(backdrop).backgroundColor : ''
+    return {
+      backgroundColor,
+      allowsTransparentV2HomeBackdrop: expectedSectionId === 'home'
+        && backgroundColor === 'rgba(0, 0, 0, 0)'
+        && Boolean(backdrop?.classList.contains('settings-backdrop--v2'))
+        && Boolean(backdrop?.querySelector('.settings-drawer--home.settings-drawer--v2')),
+    }
+  }, sectionId)
+  if (backdropState.allowsTransparentV2HomeBackdrop) return true
+
+  const expectedRgb = parseRgb(backdropState.backgroundColor)
   if (!expectedRgb) return false
 
   const { data, info } = await sharp(screenshot)
@@ -298,13 +449,13 @@ async function backdropPixelsMatch(page, screenshot) {
   })
 }
 
-async function captureStableScreenshot(page, screenshotPath) {
+async function captureStableScreenshot(page, screenshotPath, sectionId) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     await page.evaluate(() => new Promise((resolve) => {
       window.requestAnimationFrame(() => window.requestAnimationFrame(resolve))
     }))
     const screenshot = await page.screenshot({ fullPage: false })
-    if (await backdropPixelsMatch(page, screenshot)) {
+    if (await backdropPixelsMatch(page, screenshot, sectionId)) {
       await writeFile(screenshotPath, screenshot)
       return
     }
@@ -314,71 +465,99 @@ async function captureStableScreenshot(page, screenshotPath) {
   throw new Error('settings screenshot contains compositor holes in the backdrop')
 }
 
-async function captureMatrix({ browser, baseUrl, outDir }) {
+async function withSettingsContext({ browser, viewport, theme, languageCase }, run) {
+  const context = await browser.newContext({
+    viewport: { width: viewport.width, height: viewport.height },
+    deviceScaleFactor: 1,
+    colorScheme: theme.id === 'system-dark' ? 'dark' : 'light',
+  })
+  await context.addInitScript(({ settingsKey, themeId, uiLanguage }) => {
+    window.localStorage.setItem(settingsKey, JSON.stringify({
+      themeId,
+      uiLanguage,
+      companionName: 'Nexus',
+      userName: 'User',
+    }))
+  }, { settingsKey: SETTINGS_STORAGE_KEY, themeId: theme.id, uiLanguage: languageCase.id })
+
+  try {
+    return await run(context)
+  } finally {
+    await context.close()
+  }
+}
+
+async function captureMatrix({ browser, baseUrl, outDir, languageCases }) {
   const manifest = {
     generatedAt: new Date().toISOString(),
     baseUrl,
     screenshots: [],
   }
 
-  for (const viewport of VIEWPORTS) {
-    for (const theme of THEMES) {
-      const context = await browser.newContext({
-        viewport: { width: viewport.width, height: viewport.height },
-        deviceScaleFactor: 1,
-        colorScheme: theme.id === 'system-dark' ? 'dark' : 'light',
-      })
-      await context.addInitScript(({ settingsKey, themeId }) => {
-        window.localStorage.setItem(settingsKey, JSON.stringify({
-          themeId,
-          uiLanguage: 'zh-CN',
-          companionName: 'Nexus',
-          userName: 'User',
-        }))
-      }, { settingsKey: SETTINGS_STORAGE_KEY, themeId: theme.id })
+  for (const languageCase of languageCases) {
+    for (const viewport of languageCase.viewports) {
+      for (const theme of languageCase.themes) {
+        for (const section of languageCase.sections) {
+          await withSettingsContext({ browser, viewport, theme, languageCase }, async (context) => {
+            const page = await context.newPage()
+            try {
+              page.setDefaultTimeout(10_000)
+              const url = settingsUrl(baseUrl, section)
+              let readyError = null
+              for (let attempt = 0; attempt < 2; attempt += 1) {
+                try {
+                  await page.goto(url, { waitUntil: 'networkidle' })
+                  await page.waitForSelector('.settings-drawer')
+                  if (section.id !== 'home') {
+                    await page.waitForSelector('.settings-v3-page:not(.is-hidden)')
+                  }
+                  await page.waitForFunction(() => {
+                    const drawer = document.querySelector('.settings-drawer')
+                    if (!drawer) return false
+                    const style = getComputedStyle(drawer)
+                    return style.visibility === 'visible' && style.display !== 'none' && Number(style.opacity) >= 0.98
+                  })
+                  readyError = null
+                  break
+                } catch (error) {
+                  readyError = error
+                }
+              }
+              if (readyError) {
+                const message = readyError instanceof Error ? readyError.message : String(readyError)
+                throw new Error(`${languageCase.id}/${viewport.id}/${theme.label}/${section.id}: settings did not become ready after 2 attempts: ${message}`)
+              }
+              await page.waitForTimeout(120)
+              await page.evaluate(async () => { await document.fonts.ready })
 
-      const page = await context.newPage()
-      page.setDefaultTimeout(10_000)
+              const issues = await auditLayout(page, section.id)
+              if (issues.length) {
+                throw new Error(`${languageCase.id}/${viewport.id}/${theme.label}/${section.id}: ${issues.join('; ')}`)
+              }
 
-      for (const section of SECTIONS) {
-        const url = settingsUrl(baseUrl, section)
-        await page.goto(url, { waitUntil: 'networkidle' })
-        await page.waitForSelector('.settings-drawer')
-        if (section.id !== 'home') {
-          await page.waitForSelector(`.settings-page[data-section="${section.id}"]`)
+              const relativePath = path.join(languageCase.id, viewport.id, theme.label, `${section.id}.png`)
+              const screenshotPath = path.join(outDir, relativePath)
+              await mkdir(path.dirname(screenshotPath), { recursive: true })
+              try {
+                await captureStableScreenshot(page, screenshotPath, section.id)
+              } catch (error) {
+                const message = error instanceof Error ? error.message : String(error)
+                throw new Error(`${languageCase.id}/${viewport.id}/${theme.label}/${section.id}: ${message}`)
+              }
+              manifest.screenshots.push({
+                language: languageCase.id,
+                viewport: viewport.id,
+                theme: theme.id,
+                themeLabel: theme.label,
+                section: section.id,
+                path: relativePath,
+              })
+            } finally {
+              await page.close()
+            }
+          })
         }
-        await page.waitForFunction(() => {
-          const drawer = document.querySelector('.settings-drawer')
-          if (!drawer) return false
-          const style = getComputedStyle(drawer)
-          return style.visibility === 'visible' && style.display !== 'none' && Number(style.opacity) >= 0.98
-        })
-        await page.waitForTimeout(120)
-
-        const issues = await auditLayout(page, section.id)
-        if (issues.length) {
-          throw new Error(`${viewport.id}/${theme.label}/${section.id}: ${issues.join('; ')}`)
-        }
-
-        const relativePath = path.join(viewport.id, theme.label, `${section.id}.png`)
-        const screenshotPath = path.join(outDir, relativePath)
-        await mkdir(path.dirname(screenshotPath), { recursive: true })
-        try {
-          await captureStableScreenshot(page, screenshotPath)
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-          throw new Error(`${viewport.id}/${theme.label}/${section.id}: ${message}`)
-        }
-        manifest.screenshots.push({
-          viewport: viewport.id,
-          theme: theme.id,
-          themeLabel: theme.label,
-          section: section.id,
-          path: relativePath,
-        })
       }
-
-      await context.close()
     }
   }
 
@@ -389,7 +568,6 @@ async function captureMatrix({ browser, baseUrl, outDir }) {
 async function launchBrowser(options) {
   const launchOptions = {
     headless: !options.headed,
-    args: ['--disable-gpu', '--disable-gpu-compositing'],
   }
   if (options.channel) {
     return chromium.launch({ ...launchOptions, channel: options.channel })
@@ -412,6 +590,7 @@ async function launchBrowser(options) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2))
+  const languageCases = resolveSettingsVisualLanguageCases(options)
   const defaultOutDir = path.join(
     process.cwd(),
     'artifacts',
@@ -426,7 +605,7 @@ async function main() {
     server = resolved.server
     const browser = await launchBrowser(options)
     try {
-      const manifest = await captureMatrix({ browser, baseUrl: resolved.baseUrl, outDir })
+      const manifest = await captureMatrix({ browser, baseUrl: resolved.baseUrl, outDir, languageCases })
       console.log(`settings visual check passed: ${manifest.screenshots.length} screenshots`)
       console.log(`manifest: ${path.join(outDir, 'manifest.json')}`)
     } finally {

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const REQUIRED_FILES = [
-  'src/app/views/PanelView.tsx',
+  'src/app/views/LegacyPanelView.tsx',
   'src/app/views/image4ComposerState.ts',
   'src/app/App.css',
   'src/app/styles/panel-companion-chat.css',
@@ -19,7 +19,7 @@ const REQUIRED_FILES = [
 const REQUIRED_CONTRACTS = [
   {
     id: 'shared-composer-dom',
-    file: 'src/app/views/PanelView.tsx',
+    file: 'src/app/views/LegacyPanelView.tsx',
     description: 'PanelView keeps one shared composer DOM with explicit companion and Image4 hooks.',
     patterns: [
       'className="composer composer--minimal companion-chat__composer image4-composer"',
@@ -31,11 +31,10 @@ const REQUIRED_CONTRACTS = [
       '<textarea',
       'className="composer__file-input"',
       'className="image4-attachment-pill"',
-      'PetControlIcon name="plus"',
+      'PetControlIcon name="image"',
       'className="image4-attachment-pill__plus"',
       'className="companion-chat__composer-meta"',
       'className="composer__actions"',
-      'PetControlIcon name="mic"',
       'PetControlIcon name="send"',
     ],
   },
@@ -58,7 +57,7 @@ const REQUIRED_CONTRACTS = [
   },
   {
     id: 'panel-view-uses-composer-state-helper',
-    file: 'src/app/views/PanelView.tsx',
+    file: 'src/app/views/LegacyPanelView.tsx',
     description: 'PanelView consumes Image4 composer state instead of inlining state rules.',
     patterns: [
       "import { deriveImage4ComposerState } from './image4ComposerState'",
@@ -121,19 +120,15 @@ const REQUIRED_CONTRACTS = [
       "data-composer-state='interrupted'",
       '.panel-window--image4 .image4-composer__field textarea',
       '.panel-window--image4 .image4-composer__field .image4-attachment-pill',
-      '.panel-window--image4 .image4-composer__field .composer__actions .ghost-button',
       "data-send-state='ready'",
       "data-send-state='disabled'",
       "data-send-state='busy'",
-      "data-voice-state='listening'",
-      "data-voice-state='processing'",
-      "data-voice-state='speaking'",
     ],
   },
   {
     id: 'image4-action-rail-alignment',
     file: 'src/app/styles/panel-companion-composer.css',
-    description: 'Image4 mic and send controls share one compact action rail with equal centers.',
+    description: 'Image4 attachment and send controls share the compact field alignment.',
     patterns: [
       '.panel-window--image4 .image4-composer__field .image4-attachment-pill',
       '.panel-window--image4 .image4-composer__field .composer__actions',
@@ -147,7 +142,6 @@ const REQUIRED_CONTRACTS = [
       'display: inline-grid;',
       'grid-auto-flow: column;',
       'width: auto;',
-      '.panel-window--image4 .image4-composer__field .composer__actions .ghost-button',
       '.panel-window--image4 .image4-composer__field .composer__actions .primary-button',
       'display: grid;',
       'place-items: center;',
@@ -167,7 +161,6 @@ const REQUIRED_CONTRACTS = [
       "html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field textarea::placeholder",
       "html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field textarea:focus",
       "html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .image4-attachment-pill",
-      "html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .ghost-button",
       "html[data-theme='warm-day'] .panel-window--image4 .image4-composer__field .composer__actions .primary-button",
     ],
   },
@@ -214,7 +207,6 @@ const REQUIRED_CONTRACTS = [
     description: 'Image4 composer actions do not gain lift or elevation on hover.',
     patterns: [
       '.panel-window--image4 .image4-composer__field .image4-attachment-pill:hover',
-      '.panel-window--image4 .image4-composer__field .composer__actions .ghost-button:hover',
       '.panel-window--image4 .image4-composer__field .composer__actions .primary-button:hover',
       'transform: none;',
       'box-shadow: none;',
@@ -236,7 +228,7 @@ const REQUIRED_CONTRACTS = [
   {
     id: 'image4-field-tools-stay-embedded',
     file: 'src/app/styles/panel-companion-composer.css',
-    description: 'Image4 attachment, mic, and send default to embedded controls instead of persistent button tiles.',
+    description: 'Image4 attachment and send default to embedded controls instead of persistent button tiles.',
     patterns: [
       'border-color: transparent;',
       'background: transparent;',
@@ -257,7 +249,7 @@ const REQUIRED_CONTRACTS = [
       '--image4-composer-side-inset: 12px;',
       '--image4-composer-left-text-gap: 11px;',
       '--image4-composer-right-text-gap: 10px;',
-      'calc((var(--image4-composer-control) * 2) + var(--image4-composer-rail-gap) + var(--image4-composer-side-inset) + var(--image4-composer-right-text-gap))',
+      'calc(var(--image4-composer-control) + var(--image4-composer-side-inset) + var(--image4-composer-right-text-gap))',
       'calc(var(--image4-composer-control) + var(--image4-composer-side-inset) + var(--image4-composer-left-text-gap))',
       'left: var(--image4-composer-side-inset);',
       'right: var(--image4-composer-side-inset);',
@@ -280,9 +272,9 @@ const REQUIRED_CONTRACTS = [
       'Final Composer Rhythm',
       '29px control box',
       '16px icon box',
-      '2px action gap',
-      '17px 82px 13px 52px',
-      '`panel-companion-composer.css` owns final attachment, mic, send, textarea, focus, and state styling',
+      '2px control gap',
+      '17px 51px 13px 52px',
+      '`panel-companion-composer.css` owns final attachment, send, textarea, focus, and state styling',
       '`panel-companion-chat.css` only owns the dock/container, empty state, action prompts, and hint text',
       'Do not use button resizing as an alignment fix.',
     ],
@@ -294,7 +286,8 @@ const REQUIRED_CONTRACTS = [
     patterns: [
       'single-surface intent gateway',
       'Send is primary only when submit is available.',
-      'Mic and attachment are embedded secondary tools.',
+      'Attachment is an embedded secondary tool.',
+      'Voice runtime controls stay in Settings and out of the main composer.',
       'Runtime/model/streaming hints are tertiary.',
       'Do not add provider, agent, preset, tool-market, or runtime-dashboard controls to the default composer layer.',
       'Do not change Image4 button dimensions to repair alignment.',
@@ -334,19 +327,18 @@ const FORBIDDEN_PATTERNS = [
     ],
   },
   {
-    id: 'image4-attachment-stays-pure-plus',
-    file: 'src/app/views/PanelView.tsx',
-    description: 'The Image4 attachment affordance stays a single plus icon, not an image or dropdown control.',
+    id: 'image4-attachment-stays-single-purpose',
+    file: 'src/app/views/LegacyPanelView.tsx',
+    description: 'The Image4 attachment affordance stays a single image-attachment icon without dropdown chrome.',
     patterns: [
       'image4-attachment-pill__image',
       'image4-attachment-pill__chevron',
-      'PetControlIcon name="image"',
       'PetControlIcon name="chevron-down"',
     ],
   },
   {
     id: 'composer-forbids-default-dashboard-controls',
-    file: 'src/app/views/PanelView.tsx',
+    file: 'src/app/views/LegacyPanelView.tsx',
     description: 'Provider, agent, preset, tool-market, and runtime-dashboard controls must not enter the default composer layer.',
     patterns: [
       'className="composer__provider',
@@ -357,6 +349,25 @@ const FORBIDDEN_PATTERNS = [
       'className="runtime-dashboard',
       'className="provider-dashboard',
       'className="agent-preset',
+    ],
+  },
+  {
+    id: 'legacy-composer-forbids-mic-action',
+    file: 'src/app/views/LegacyPanelView.tsx',
+    description: 'Legacy Panel keeps runtime voice controls in Settings instead of the main composer.',
+    patterns: [
+      'PetControlIcon name="mic"',
+    ],
+  },
+  {
+    id: 'image4-css-forbids-removed-voice-controls',
+    file: 'src/app/styles/panel-companion-composer.css',
+    description: 'Image4 CSS contains no dead mic button or voice-state styling after voice controls moved to Settings.',
+    patterns: [
+      '.ghost-button',
+      "[data-voice-state='listening']",
+      "[data-voice-state='processing']",
+      "[data-voice-state='speaking']",
     ],
   },
   {
@@ -378,7 +389,7 @@ const FORBIDDEN_PATTERNS = [
   {
     id: 'composer-chat-css-forbids-final-control-ownership',
     file: 'src/app/styles/panel-companion-chat.css',
-    description: 'The chat stylesheet must not own Image4 textarea, attachment, mic, or send final control styling.',
+    description: 'The chat stylesheet must not own Image4 textarea, attachment, or send final control styling.',
     patterns: [
       '.panel-window--image4 .composer textarea',
       "html[data-theme='warm-day'] .panel-window--image4 .composer textarea",
@@ -551,7 +562,7 @@ function buildSummary({ missingFiles, missingContracts, forbiddenPatterns, unsaf
 
 export function buildComposerCrossSurfaceReport(root = ROOT) {
   const files = readProjectFiles(root, REQUIRED_FILES)
-  const panelView = files.get('src/app/views/PanelView.tsx') ?? ''
+  const panelView = files.get('src/app/views/LegacyPanelView.tsx') ?? ''
   const missingFiles = findMissingFiles(files)
   const missingContracts = findMissingContracts(files)
   const forbiddenPatterns = findForbiddenPatterns(files)

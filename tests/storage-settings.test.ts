@@ -419,6 +419,7 @@ test('commitSettingsUpdate stores secret settings in vault and persists stripped
 
   let appliedSettings = null as Awaited<ReturnType<typeof loadSettings>> | null
   let storedVaultEntries: Record<string, string> | null = null
+  let storedSpeechOutputApiKey = ''
 
   Object.defineProperty(globalThis, 'window', {
     value: {
@@ -428,8 +429,11 @@ test('commitSettingsUpdate stores secret settings in vault and persists stripped
         vaultStore: async () => {},
         vaultStoreMany: async (entries: Record<string, string>) => {
           storedVaultEntries = entries
+          storedSpeechOutputApiKey = entries['settings:speechOutputApiKey'] ?? storedSpeechOutputApiKey
         },
-        vaultRetrieveMany: async () => ({}),
+        vaultRetrieveMany: async () => ({
+          'settings:speechOutputApiKey': storedSpeechOutputApiKey,
+        }),
       },
     },
     configurable: true,

@@ -85,6 +85,7 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       stopSpeechInterruptMonitor: bindings.stopSpeechInterruptMonitor,
       isSpeechInterrupted: bindings.isSpeechInterrupted,
       clearSpeechInterruptedFlag: bindings.clearSpeechInterruptedFlag,
+      resetSpeechLevel: bindings.resetSpeechLevel,
     })
   }
 
@@ -108,6 +109,7 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       stopSpeechInterruptMonitor: bindings.stopSpeechInterruptMonitor,
       isSpeechInterrupted: bindings.isSpeechInterrupted,
       clearSpeechInterruptedFlag: bindings.clearSpeechInterruptedFlag,
+      resetSpeechLevel: bindings.resetSpeechLevel,
       streamingRuntime: {
         getPlayer: bindings.getStreamAudioPlayer,
         setActiveController: (nextController: StreamingSpeechOutputController | null) => {
@@ -191,6 +193,7 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       console.error('[Voice] startVoiceConversation failed:', err)
       ctx.setError(err instanceof Error ? err.message : ti('voice.start_failed'))
       setters.setVoiceState('idle')
+      bindings.resetSpeechLevel()
     }
   }
 
@@ -207,6 +210,7 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       clearPendingVoiceRestart: hookCallbacks.clearPendingVoiceRestart,
       setContinuousVoiceSession: bindings.setContinuousVoiceSession,
       resetNoSpeechRestartCount: bindings.resetNoSpeechRestartCount,
+      resetSpeechLevel: bindings.resetSpeechLevel,
       clearParaformerConversationState: bindings.clearParaformerConversationState,
       clearSenseVoiceConversationState: bindings.clearSenseVoiceConversationState,
       clearTencentConversationState: bindings.clearTencentConversationState,

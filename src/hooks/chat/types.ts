@@ -1,5 +1,6 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react'
 import type { PetPerformanceCue } from '../../features/pet/performance.ts'
+import type { StreamingSpeechOutputController } from '../voice/types.ts'
 import type {
   AssistantRuntimeActivity,
   AppSettings,
@@ -69,13 +70,7 @@ export type UseChatContext = {
   updateVoicePipeline: (step: VoicePipelineState['step'], detail: string, transcript?: string) => void
   appendVoiceTrace: (title: string, detail: string, status?: 'success' | 'error' | 'info') => void
   speakAssistantReply: (text: string, shouldRestart: boolean) => Promise<void>
-  beginStreamingSpeechReply: (shouldRestart: boolean) => {
-    pushDelta: (delta: string) => void
-    flushPending: () => void
-    finish: () => void
-    waitForCompletion: () => Promise<void>
-    hasStarted: () => boolean
-  } | null
+  beginStreamingSpeechReply: (shouldRestart: boolean) => StreamingSpeechOutputController | null
   scheduleVoiceRestart: (statusText: string, delayMs: number, force?: boolean) => void
   busEmit: (event: import('../../features/voice/busEvents').VoiceBusEvent) => void
   shouldAutoRestartVoice: () => boolean

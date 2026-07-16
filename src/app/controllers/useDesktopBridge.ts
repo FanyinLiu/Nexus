@@ -536,6 +536,21 @@ export function useDesktopBridge({
   }, [setSettingsOpen, view])
 
   useEffect(() => {
+    if (view !== 'pet') {
+      return
+    }
+
+    const unsubscribe = window.desktopPet?.subscribeSettingsReturnFocus?.(() => {
+      window.requestAnimationFrame(() => {
+        const opener = document.querySelector<HTMLElement>('[data-settings-opener="true"]')
+        opener?.focus()
+      })
+    })
+
+    return () => unsubscribe?.()
+  }, [view])
+
+  useEffect(() => {
     if (view !== 'panel') {
       return
     }

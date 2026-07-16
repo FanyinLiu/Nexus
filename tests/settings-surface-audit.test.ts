@@ -84,6 +84,21 @@ test('settings surface audit rejects incomplete visual-system family coverage', 
   })
 })
 
+test('settings surface audit protects the shared segmented-control states', () => {
+  withFixture({
+    'src/app/styles/settings-product-reference-final.css': BASELINE_FILES['src/app/styles/settings-product-reference-final.css'].replace(
+      '.sd-section .settings-segmented-control__option.is-active {',
+      '.sd-section .settings-option.is-active {',
+    ),
+  }, (root) => {
+    const report = buildSettingsSurfaceReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(report.missingContracts.some((item) => item.id === 'settings-product-final-control-layer'))
+    assert.ok(report.visualSystemCoverageIssues.some((item) => item.id === 'toggles-and-segments'))
+  })
+})
+
 test('settings surface audit rejects missing trust-boundary groups', () => {
   withFixture({
     'src/components/settingsDrawerMetadata.ts': 'export const SETTINGS_SECTION_GROUPS = {}',
