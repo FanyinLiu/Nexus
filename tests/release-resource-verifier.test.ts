@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import test from 'node:test'
 
 import { verifyPackagedResources } from '../scripts/release-resource-verifier.mjs'
@@ -87,8 +88,8 @@ test('packaged resource verifier rejects a missing browser VAD AudioWorklet', ()
 })
 
 test('packaged resource verifier rejects transient model download trees and partial archives', () => {
-  const modelsRoot = '/release/resources/sherpa-models'
-  const temporaryDirectory = `${modelsRoot}/.nexus-sensevoice-4LEvAY`
+  const modelsRoot = join('/release/resources', 'sherpa-models')
+  const temporaryDirectory = join(modelsRoot, '.nexus-sensevoice-4LEvAY')
   const result = verifyPackagedResources('/release/resources', {
     ...validOptions(),
     readDirectory: (directory: string) => {
@@ -124,7 +125,7 @@ test('packaged resource verifier rejects transient model download trees and part
 })
 
 test('packaged resource verifier accepts a clean model tree and does not follow symlinks', () => {
-  const modelsRoot = '/release/resources/sherpa-models'
+  const modelsRoot = join('/release/resources', 'sherpa-models')
   let reads = 0
   const result = verifyPackagedResources('/release/resources', {
     ...validOptions(),

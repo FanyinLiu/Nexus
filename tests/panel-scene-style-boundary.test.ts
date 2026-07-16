@@ -2,12 +2,13 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-const appCss = readFileSync(new URL('../src/app/App.css', import.meta.url), 'utf8')
-const appSource = readFileSync(new URL('../src/app/App.tsx', import.meta.url), 'utf8')
-const panelSceneCss = readFileSync(new URL('../src/features/panelScene/panel-scene.css', import.meta.url), 'utf8')
-const panelSceneIndex = readFileSync(new URL('../src/features/panelScene/index.ts', import.meta.url), 'utf8')
-const legacyPanelSource = readFileSync(new URL('../src/app/views/LegacyPanelView.tsx', import.meta.url), 'utf8')
-const legacyPetSource = readFileSync(new URL('../src/app/views/LegacyPetView.tsx', import.meta.url), 'utf8')
+const readSource = (url: URL) => readFileSync(url, 'utf8').replace(/\r\n?/g, '\n')
+const appCss = readSource(new URL('../src/app/App.css', import.meta.url))
+const appSource = readSource(new URL('../src/app/App.tsx', import.meta.url))
+const panelSceneCss = readSource(new URL('../src/features/panelScene/panel-scene.css', import.meta.url))
+const panelSceneIndex = readSource(new URL('../src/features/panelScene/index.ts', import.meta.url))
+const legacyPanelSource = readSource(new URL('../src/app/views/LegacyPanelView.tsx', import.meta.url))
+const legacyPetSource = readSource(new URL('../src/app/views/LegacyPetView.tsx', import.meta.url))
 
 test('legacy panel scene owns one lazy feature CSS boundary', () => {
   assert.match(panelSceneIndex, /^import '\.\/panel-scene\.css'\n/)

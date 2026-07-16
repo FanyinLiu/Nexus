@@ -2,15 +2,16 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
-const memoryV3Source = readFileSync(
+const readSource = (url: URL) => readFileSync(url, 'utf8').replace(/\r\n?/g, '\n')
+
+const memoryV3Source = readSource(
   new URL('../src/features/settingsV3/MemorySectionV3.tsx', import.meta.url),
-  'utf8',
 )
 
 const localeContracts = [
   {
     name: 'en',
-    source: readFileSync(new URL('../src/i18n/locales/en.ts', import.meta.url), 'utf8'),
+    source: readSource(new URL('../src/i18n/locales/en.ts', import.meta.url)),
     enabledLabel: 'Memory recall and learning',
     summary: /coarse companion summary/,
     decision: /local (?:decision|quiet\/check-in decision)/,
@@ -21,7 +22,7 @@ const localeContracts = [
   },
   {
     name: 'zh-CN',
-    source: readFileSync(new URL('../src/i18n/locales/zh-CN.ts', import.meta.url), 'utf8'),
+    source: readSource(new URL('../src/i18n/locales/zh-CN.ts', import.meta.url)),
     enabledLabel: '记忆召回和学习',
     summary: /粗粒度陪伴摘要/,
     decision: /本地决定/,
@@ -32,7 +33,7 @@ const localeContracts = [
   },
   {
     name: 'zh-TW',
-    source: readFileSync(new URL('../src/i18n/locales/zh-TW.ts', import.meta.url), 'utf8'),
+    source: readSource(new URL('../src/i18n/locales/zh-TW.ts', import.meta.url)),
     enabledLabel: '記憶召回與學習',
     summary: /粗略的陪伴摘要/,
     decision: /本機決定/,
@@ -43,7 +44,7 @@ const localeContracts = [
   },
   {
     name: 'ja',
-    source: readFileSync(new URL('../src/i18n/locales/ja.ts', import.meta.url), 'utf8'),
+    source: readSource(new URL('../src/i18n/locales/ja.ts', import.meta.url)),
     enabledLabel: '記憶の呼び出しと学習',
     summary: /寄り添いの粗い要約/,
     decision: /ローカル判断/,
@@ -54,7 +55,7 @@ const localeContracts = [
   },
   {
     name: 'ko',
-    source: readFileSync(new URL('../src/i18n/locales/ko.ts', import.meta.url), 'utf8'),
+    source: readSource(new URL('../src/i18n/locales/ko.ts', import.meta.url)),
     enabledLabel: '기억 불러오기 및 학습',
     summary: /대략적인 동행 요약/,
     decision: /로컬 판단/,

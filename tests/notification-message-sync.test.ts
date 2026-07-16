@@ -13,7 +13,7 @@ import type { NotificationMessage } from '../src/types/autonomy.ts'
 const hookSource = readFileSync(
   new URL('../src/hooks/useNotificationBridge.ts', import.meta.url),
   'utf8',
-)
+).replace(/\r\n?/g, '\n')
 
 function makeMessage(overrides: Partial<NotificationMessage> = {}): NotificationMessage {
   return {

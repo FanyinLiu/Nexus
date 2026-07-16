@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { readFile as readFileRaw } from 'node:fs/promises'
 import test from 'node:test'
+
+function readFile(path: URL, encoding: 'utf8') {
+  return readFileRaw(path, encoding).then((source) => source.replace(/\r\n?/g, '\n'))
+}
 
 const voiceSectionPath = new URL('../src/features/settingsV3/VoiceSectionV3.tsx', import.meta.url)
 const activeSectionPath = new URL('../src/components/SettingsDrawerActiveSection.tsx', import.meta.url)

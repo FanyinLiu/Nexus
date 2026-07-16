@@ -63,7 +63,7 @@ final GitHub assets already exist:
   suites, fresh build, SQLite smoke, and the packaged Electron core-path smoke.
 - Source and `dist` shared build
   fingerprint
-  `00d009678f1ad1e6b3c93a991ad813a2afacd1216d236660bf39ad0101771b23`
+  `7a2a880ccf170028413dd1acc1df92cc84b759f0fe42ea876010faf2e11601bb`
   across 986 deterministic inputs.
 - Current performance baseline: 27.45 MB total assets, 3.93 MB JavaScript,
   612.0 KB CSS, 21.60 MB WASM, and a 69.3 KB Settings drawer entry; every
@@ -74,12 +74,13 @@ final GitHub assets already exist:
   the package resources. Those containers must not be staged or uploaded.
 - **Current clean local macOS evidence:** after the transient-resource guard
   landed, the arm64 staging app, DMG, and ZIP were rebuilt from the matching
-  `00d009...` source/dist fingerprint. App and both containers passed the
-  explicit unsigned verifier; no `.nexus-*`, `.partial*`, or model archive
-  residue was present. The local DMG SHA-256 is
-  `fbba5df0db10c8376f71bd974175114fef415df33289273267435b75215f20d3` and
+  `7a2a880c...` source/dist fingerprint. App and both containers passed the
+  explicit unsigned verifier; no transient `.nexus-*` directory or symlink,
+  `.partial*` file, or model archive residue was present. The local DMG
+  SHA-256 is
+  `1365bd12b1882f08bddbfe531982d09dc5682c2293bff6dd7727823e380087b1` and
   the ZIP SHA-256 is
-  `e7f566778115fa97d1dcf22e17fdd9cdd7beedb72614eaed827967db92c435a7`.
+  `86a116ae8157ad18ca51d62ebf8d595a9ac744ddaaca4c863e56f714f649d885`.
   These hashes are local acceptance evidence only, not publishable assets.
 - Final macOS, Windows, and Linux packages must be rebuilt from the merged
   release commit by the protected workflow. Only the workflow-generated assets

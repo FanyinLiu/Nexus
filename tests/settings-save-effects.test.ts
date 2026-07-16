@@ -5,6 +5,8 @@ import { test } from 'node:test'
 import { commitSettingsDraft, shouldPurgeRecentCompanionData } from '../src/components/settingsSaveEffects.ts'
 import type { AppSettings } from '../src/types/index.ts'
 
+const readSource = (url: URL) => readFile(url, 'utf8').then((source) => source.replace(/\r\n?/g, '\n'))
+
 function makeSettings(contextAwarenessEnabled: boolean): AppSettings {
   return { contextAwarenessEnabled } as AppSettings
 }
@@ -86,10 +88,10 @@ test('failed save rejects and never purges awareness data', async () => {
 })
 
 test('settings commits use the serial functional mutation authority', async () => {
-  const commitSource = await readFile(new URL('../src/app/store/commitSettingsUpdate.ts', import.meta.url), 'utf8')
-  const themeSource = await readFile(new URL('../src/app/providers/ThemeProvider.tsx', import.meta.url), 'utf8')
-  const drawerSource = await readFile(new URL('../src/components/SettingsDrawer.tsx', import.meta.url), 'utf8')
-  const overlaysSource = await readFile(new URL('../src/app/controllers/useAppOverlays.ts', import.meta.url), 'utf8')
+  const commitSource = await readSource(new URL('../src/app/store/commitSettingsUpdate.ts', import.meta.url))
+  const themeSource = await readSource(new URL('../src/app/providers/ThemeProvider.tsx', import.meta.url))
+  const drawerSource = await readSource(new URL('../src/components/SettingsDrawer.tsx', import.meta.url))
+  const overlaysSource = await readSource(new URL('../src/app/controllers/useAppOverlays.ts', import.meta.url))
   const setThemeSource = themeSource.match(/setTheme:\s*\([\s\S]*?\n\s*\},\n\s*theme,/)?.[0] ?? ''
   const settingsOnSaveSource = overlaysSource.match(/onSave: async \(nextSettings, baselineSettings\) => \{[\s\S]*?\n\s*\},\n\s*onImportPetModel/)?.[0] ?? ''
   const commitDraftSource = drawerSource.match(/function commitDraft\(\): Promise<void> \{[\s\S]*?\n\s*\}\n\n\s*async function handleSaveDraft/)?.[0] ?? ''

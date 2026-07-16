@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { readFile as readFileRaw } from 'node:fs/promises'
 import test from 'node:test'
+
+function readFile(path: URL, encoding: 'utf8') {
+  return readFileRaw(path, encoding).then((source) => source.replace(/\r\n?/g, '\n'))
+}
 
 const panelViewPath = new URL('../src/app/views/LegacyPanelView.tsx', import.meta.url)
 const panelStylesPath = new URL('../src/app/styles/panel-companion-final.css', import.meta.url)

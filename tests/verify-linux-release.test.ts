@@ -153,7 +153,7 @@ test('AppImage and deb inspectors extract in isolation and verify their unique p
       cwd: undefined,
     },
   ])
-  assert.deepEqual(verifiedRoots, [
+  assert.deepEqual(verifiedRoots.map((path) => path.replaceAll('\\', '/')), [
     '/virtual/appimage/squashfs-root/Nexus/resources',
     '/virtual/deb/Nexus/resources',
   ])

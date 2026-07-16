@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium, type Browser, type Page } from 'playwright'
 
 const PROJECT_ROOT = fileURLToPath(new URL('..', import.meta.url))
+const VITE_CLI_PATH = fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import.meta.url))
 const HOST = '127.0.0.1'
 
 async function reservePort(): Promise<number> {
@@ -80,8 +81,8 @@ test('active Memory V3 preserves paused recent state and clears it explicitly', 
   const port = await reservePort()
   const baseUrl = `http://${HOST}:${port}`
   const vite = spawn(
-    'npm',
-    ['run', 'dev', '--', '--host', HOST, '--port', String(port), '--strictPort'],
+    process.execPath,
+    [VITE_CLI_PATH, '--host', HOST, '--port', String(port), '--strictPort'],
     {
       cwd: PROJECT_ROOT,
       detached: process.platform !== 'win32',

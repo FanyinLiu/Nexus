@@ -46,7 +46,7 @@ export async function minifyBuiltCss(distDirectory) {
     await writeFile(cssPath, minified)
     assets.push({
       bytes: Buffer.byteLength(minified),
-      file: path.relative(distDirectory, cssPath),
+      file: path.relative(distDirectory, cssPath).split(path.sep).join(path.posix.sep),
       sha256: getContentHash(minified),
     })
   }

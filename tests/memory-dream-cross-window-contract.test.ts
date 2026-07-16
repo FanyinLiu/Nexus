@@ -16,8 +16,9 @@ import {
 import type { MemoryDreamLog, MemoryDreamResult } from '../src/types/autonomy.ts'
 
 const ROOT = join(import.meta.dirname, '..')
-const source = readFileSync(join(ROOT, 'src/hooks/useMemoryDream.ts'), 'utf8')
-const dreamLogStateSource = readFileSync(join(ROOT, 'src/features/autonomy/dreamLogState.ts'), 'utf8')
+const readSource = (path: string) => readFileSync(path, 'utf8').replace(/\r\n?/g, '\n')
+const source = readSource(join(ROOT, 'src/hooks/useMemoryDream.ts'))
+const dreamLogStateSource = readSource(join(ROOT, 'src/features/autonomy/dreamLogState.ts'))
 
 function makeResult(completedAt = '2026-07-13T00:01:00.000Z'): MemoryDreamResult {
   return {

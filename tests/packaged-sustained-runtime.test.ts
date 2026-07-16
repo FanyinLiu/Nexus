@@ -765,17 +765,40 @@ function makeFakeMacApp(releaseRoot: string, platformDir: string, appName: strin
   return { appPath, executable }
 }
 
+function makeFakeWindowsApp(releaseRoot: string, mtimeSec: number) {
+  const appPath = path.join(releaseRoot, 'win-unpacked')
+  mkdirSync(appPath, { recursive: true })
+  const executable = path.join(appPath, 'Nexus.exe')
+  writeFileSync(executable, 'fixture')
+  utimesSync(executable, mtimeSec, mtimeSec)
+  utimesSync(appPath, mtimeSec, mtimeSec)
+  return { appPath, executable }
+}
+
+function makeFakeHostPackage(
+  releaseRoot: string,
+  appName: string,
+  executableName: string,
+  mtimeSec: number,
+) {
+  return process.platform === 'win32'
+    ? makeFakeWindowsApp(releaseRoot, mtimeSec)
+    : makeFakeMacApp(releaseRoot, 'mac-arm64', appName, executableName, mtimeSec)
+}
+
+const HOST_FIXTURE_PLATFORM = process.platform === 'win32' ? 'win32' : 'darwin'
+
 test('selectPackagedExecutable prefers newest package and rejects stale older package', () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), 'nexus-pkg-select-'))
   try {
     const smokeRoot = path.join(tmp, 'release-smoke')
     const releaseRoot = path.join(tmp, 'release')
-    const older = makeFakeMacApp(releaseRoot, 'mac-arm64', 'Nexus', 'Nexus', 1_700_000_000)
-    const newer = makeFakeMacApp(smokeRoot, 'mac-arm64', 'Nexus Smoke', 'Nexus Smoke', 1_800_000_000)
+    const older = makeFakeHostPackage(releaseRoot, 'Nexus', 'Nexus', 1_700_000_000)
+    const newer = makeFakeHostPackage(smokeRoot, 'Nexus Smoke', 'Nexus Smoke', 1_800_000_000)
 
     const result = selectPackagedExecutable({
       root: tmp,
-      platform: 'darwin',
+      platform: HOST_FIXTURE_PLATFORM,
       forcedReleaseDir: undefined,
       candidateDirsEnv: undefined,
       defaultDirs: ['release-smoke', 'release'],
@@ -796,12 +819,12 @@ test('selectPackagedExecutable forced dir does not silently pick another root', 
   try {
     const smokeRoot = path.join(tmp, 'release-smoke')
     const releaseRoot = path.join(tmp, 'release')
-    makeFakeMacApp(smokeRoot, 'mac-arm64', 'Nexus Smoke', 'Nexus Smoke', 1_800_000_000)
-    const forced = makeFakeMacApp(releaseRoot, 'mac-arm64', 'Nexus', 'Nexus', 1_700_000_000)
+    makeFakeHostPackage(smokeRoot, 'Nexus Smoke', 'Nexus Smoke', 1_800_000_000)
+    const forced = makeFakeHostPackage(releaseRoot, 'Nexus', 'Nexus', 1_700_000_000)
 
     const result = selectPackagedExecutable({
       root: tmp,
-      platform: 'darwin',
+      platform: HOST_FIXTURE_PLATFORM,
       forcedReleaseDir: 'release',
       defaultDirs: DEFAULT_CANDIDATE_RELEASE_DIRS,
     })
@@ -820,7 +843,7 @@ test('discoverPackagedCandidates reports missing roots without inventing package
   try {
     const discovery = discoverPackagedCandidates({
       root: tmp,
-      platform: 'darwin',
+      platform: HOST_FIXTURE_PLATFORM,
       forcedReleaseDir: undefined,
       candidateDirsEnv: undefined,
       defaultDirs: ['release-smoke', 'release'],

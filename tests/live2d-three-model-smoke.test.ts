@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import test from 'node:test'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { tmpdir } from 'node:os'
@@ -271,7 +271,7 @@ test('Live2D smoke owns a dynamic Vite server but never closes external mode', a
   assert.equal(listenCalls, 1)
   assert.equal(
     configs[0].root,
-    fileURLToPath(new URL('..', new URL('../scripts/live2d-three-model-smoke.mjs', import.meta.url))).replace(/\/$/, ''),
+    resolve(fileURLToPath(new URL('..', new URL('../scripts/live2d-three-model-smoke.mjs', import.meta.url)))),
   )
   assert.deepEqual(configs[0].server, { host: '127.0.0.1', port: 0, strictPort: true })
   assert.deepEqual(await owned.close(), { closed: true, skipped: false })
@@ -469,7 +469,11 @@ test('signal waits for a bounded report write before terminating', async () => {
   assert.equal(terminated, 143)
 })
 
-test('real child signal handlers exit 130/143 after browser-server-report cleanup order', () => {
+test('real child signal handlers exit 130/143 after browser-server-report cleanup order', {
+  skip: process.platform === 'win32'
+    ? 'Windows does not provide POSIX SIGINT/SIGTERM child exit-code semantics'
+    : false,
+}, () => {
   assert.equal(process.exitCode, undefined, 'test worker starts without a termination code')
   const smokeUrl = pathToFileURL(fileURLToPath(new URL('../scripts/live2d-three-model-smoke.mjs', import.meta.url))).href
   const evidenceDir = mkdtempSync(join(tmpdir(), 'nexus-live2d-signal-'))

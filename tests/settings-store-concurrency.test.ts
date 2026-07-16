@@ -67,7 +67,10 @@ function deferred() {
 }
 
 test('identity no-op guard precedes persistence and therefore broadcast work', async () => {
-  const source = await readFile(new URL('../src/app/store/settingsStore.ts', import.meta.url), 'utf8')
+  const source = (await readFile(
+    new URL('../src/app/store/settingsStore.ts', import.meta.url),
+    'utf8',
+  )).replace(/\r\n?/g, '\n')
   const mutationSource = source.match(/async function runLocalSettingsMutation[\s\S]*?\n\}\n\nexport function updateSettingsSnapshot/)?.[0] ?? ''
   const guardStart = mutationSource.indexOf('Object.is(preflightNext, previous)')
   const saveStart = mutationSource.indexOf('saveSettings(')

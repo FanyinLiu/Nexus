@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, posix } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 
@@ -29,7 +29,7 @@ const EAGER_STYLE_ENTRY_MODULES = [
 
 function collectRelativeStyleImports(relativeModulePath: string, source: string) {
   return [...source.matchAll(/(?:import\s+|@import\s+)["']([^"']+\.css)["']/g)]
-    .map((match) => join(dirname(relativeModulePath), match[1]))
+    .map((match) => posix.join(posix.dirname(relativeModulePath), match[1]))
 }
 
 function collectEagerStyleGraph() {
