@@ -391,7 +391,7 @@ test('commitSettingsUpdate persists settings changes and applies them in memory'
     writable: true,
   })
 
-  commitSettingsUpdate(
+  await commitSettingsUpdate(
     (current) => ({
       ...current,
       continuousVoiceModeEnabled: true,
@@ -400,8 +400,6 @@ test('commitSettingsUpdate persists settings changes and applies them in memory'
       appliedSettings = nextSettings
     },
   )
-
-  await Promise.resolve()
 
   assert.equal(appliedSettings?.continuousVoiceModeEnabled, true)
   assert.equal(
