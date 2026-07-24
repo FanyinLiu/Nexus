@@ -2,7 +2,7 @@
 // Pulled out of Live2DCanvas.tsx so the component file can stay focused on
 // React state, effects, and JSX.
 
-import type { Live2DModel as Live2DModelType } from 'pixi-live2d-display/cubism4'
+import type { Live2DModel as Live2DModelType } from '@jannchie/pixi-live2d-display/cubism4'
 
 export type PixiRuntime = typeof import('pixi.js')
 export type PixiApplication = import('pixi.js').Application

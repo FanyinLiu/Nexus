@@ -3,7 +3,9 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import ts from 'typescript'
+// TypeScript 7 removed the classic compiler API from the main export.
+// Audit tooling keeps using the TS 6 API via the typescript6 alias.
+import ts from 'typescript6'
 import { isWindowCapabilityClassified, getRequiredWindowCapability } from '../electron/ipc/windowCapabilities.js'
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')

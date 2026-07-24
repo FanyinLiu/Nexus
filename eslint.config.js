@@ -34,6 +34,9 @@ export default defineConfig([
       'no-empty': 'off',
       'no-extra-boolean-cast': 'off',
       'no-useless-escape': 'off',
+      // ESLint 10 recommended additions — enable gradually after migration.
+      'no-useless-assignment': 'off',
+      'preserve-caught-error': 'off',
     },
   },
   {
@@ -47,6 +50,13 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+    },
+    rules: {
+      // ESLint 10 recommended additions — enable gradually after migration.
+      // Existing code patterns (rethrow without cause, intentional reassignment
+      // before overwrite) are widespread; track adoption separately.
+      'no-useless-assignment': 'off',
+      'preserve-caught-error': 'off',
     },
   },
 ])

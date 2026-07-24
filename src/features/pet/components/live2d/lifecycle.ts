@@ -4,12 +4,13 @@
 
 export type Live2DVisibilityPlayback = 'start' | 'stop'
 
-export type Live2DModelTickerCallback = (delta: number) => void
+/** Pixi 6 passed delta; Pixi 8 passes the Ticker instance. We ignore the arg. */
+export type Live2DModelTickerCallback = (...args: unknown[]) => void
 
 export type Live2DModelTickerHost = {
   deltaMS: number
-  add: (callback: Live2DModelTickerCallback) => unknown
-  remove: (callback: Live2DModelTickerCallback) => unknown
+  add: (callback: Live2DModelTickerCallback, context?: unknown, priority?: number) => unknown
+  remove: (callback: Live2DModelTickerCallback, context?: unknown) => unknown
 }
 
 export type Live2DDestroyOptions = {

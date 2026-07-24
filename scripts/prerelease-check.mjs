@@ -315,16 +315,15 @@ stage('C', 'Security', () => {
     if (missing.length > 0) throw new Error(`missing in windowManager.js: ${missing.join(', ')}`)
   })
 
-  check('C', 'electron ≥ 41.3 (latest stable; April 2026 security rollups)', () => {
-    // Latest stable electron at time of writing is 41.3.0 (released
-    // 2026-04-22), which carries forward the 41.2.2 security patch line.
-    // Bump this floor when a new security-relevant minor lands.
+  check('C', 'electron ≥ 43.2 (latest stable; security rollups)', () => {
+    // Floor tracks the currently declared Electron major. Bump when a new
+    // security-relevant minor lands on the active line.
     const pkg = readPkg()
     const range = pkg.devDependencies?.electron ?? pkg.dependencies?.electron ?? ''
     const m = /\d+\.\d+/.exec(range)
     if (!m) throw new Error(`could not parse electron version range: ${range}`)
     const [maj, min] = m[0].split('.').map(Number)
-    if (maj < 41 || (maj === 41 && min < 3)) throw new Error(`electron ${range} < 41.3 — bump devDependencies.electron`)
+    if (maj < 43 || (maj === 43 && min < 2)) throw new Error(`electron ${range} < 43.2 — bump devDependencies.electron`)
     return range
   })
 

@@ -3,7 +3,9 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import ts from 'typescript'
+// TypeScript 7 removed the classic compiler API from the main export.
+// Audit tooling keeps using the TS 6 API via the typescript6 alias.
+import ts from 'typescript6'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 

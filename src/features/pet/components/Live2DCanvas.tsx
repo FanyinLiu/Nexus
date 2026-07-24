@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Live2DModel as Live2DModelType } from 'pixi-live2d-display/cubism4'
+import type { Live2DModel as Live2DModelType } from '@jannchie/pixi-live2d-display/cubism4'
 import type { PetMood, PetTouchZone, SpeechLevelSource } from '../../../types/index.ts'
 import {
   buildRuntimePetModelDefinition,
@@ -528,12 +528,19 @@ export function Live2DCanvas({
         const hostContainer = containerRef.current
         if (shouldAbortLive2DBoot(isDisposed(), Boolean(hostContainer)) || !hostContainer) return
 
-        const app = new pixiRuntime.Application({
+        // PixiJS v8: construct empty Application, then await init().
+        // Browser global build still exposes Application on window.PIXI.
+        const app = new pixiRuntime.Application()
+        const initOptions = {
           autoStart: true,
           resizeTo: hostContainer,
           backgroundAlpha: 0,
           antialias: true,
-        })
+          preference: 'webgl' as const,
+        }
+        if (typeof (app as { init?: (opts: typeof initOptions) => Promise<void> }).init === 'function') {
+          await (app as { init: (opts: typeof initOptions) => Promise<void> }).init(initOptions)
+        }
 
         // Effect cleanup can only interleave at await points; still destroy any
         // app that became ownerless before refs are published.
@@ -548,7 +555,13 @@ export function Live2DCanvas({
         setDebugState({ appCreatedAt })
 
         appRef.current = app
-        containerAfterApp.appendChild(app.view as HTMLCanvasElement)
+        // Pixi v8 uses app.canvas; older builds exposed app.view.
+        const canvas = (app as { canvas?: HTMLCanvasElement; view?: HTMLCanvasElement }).canvas
+          ?? (app as { view?: HTMLCanvasElement }).view
+        if (!canvas) {
+          throw new Error('PIXI Application did not expose a canvas view.')
+        }
+        containerAfterApp.appendChild(canvas)
         handleVisibilityChange = () => {
           syncPlayback(app, isDisposed())
         }

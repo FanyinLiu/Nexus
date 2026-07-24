@@ -31,12 +31,14 @@ if (!existsSync(vadDir)) {
 // Copy from node_modules
 const copies = [
   {
-    src: join(root, 'node_modules', 'pixi.js', 'dist', 'browser', 'pixi.min.js'),
+    // PixiJS v8 ships the browser bundle at dist/pixi.min.js (no dist/browser/).
+    src: join(root, 'node_modules', 'pixi.js', 'dist', 'pixi.min.js'),
     dest: join(vendorDir, 'pixi.min.js'),
     label: 'pixi.min.js',
   },
   {
-    src: join(root, 'node_modules', 'pixi-live2d-display', 'dist', 'cubism4.min.js'),
+    // Pixi v8 Live2D plugin (fork of guansss/pixi-live2d-display).
+    src: join(root, 'node_modules', '@jannchie', 'pixi-live2d-display', 'dist', 'cubism4.min.js'),
     dest: join(vendorDir, 'pixi-live2d-display.cubism4.min.js'),
     label: 'pixi-live2d-display.cubism4.min.js',
   },

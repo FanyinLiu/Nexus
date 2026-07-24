@@ -10,7 +10,7 @@
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
-    "postinstall": "node scripts/setup-vendor.mjs",
+    "postinstall": "node scripts/setup-vendor.mjs && node scripts/typescript-classic-shim.mjs",
     "download-models": "node scripts/download-models.mjs",
     "download-models:all": "node scripts/download-models.mjs",
     "download-models:lite": "node scripts/download-models.mjs --skip-asr",
@@ -107,59 +107,91 @@
     "verify:ui-settings": "npx tsc -b --pretty false && npm run -s knip:check && npm run -s knip:production && npm run -s lint && npm run -s i18n:audit && npm test && npm run -s build && npm run -s settings:visual"
   },
   "dependencies": {
-    "@huggingface/transformers": "^3.8.1",
+    "@huggingface/transformers": "^4.2.0",
+    "@jannchie/pixi-live2d-display": "^1.4.0",
     "@ricky0123/vad-web": "^0.0.30",
     "electron-updater": "^6.8.3",
     "onnxruntime-web": "^1.24.3",
     "pinyin-pro": "^3.28.1",
-    "pixi-live2d-display": "^0.4.0",
-    "pixi.js": "^6.5.10",
+    "pixi.js": "^8.19.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.3",
     "sherpa-onnx-node": "^1.12.39",
     "tesseract.js": "^7.0.0",
     "ws": "^8.21.0"
   },
   "devDependencies": {
     "@electron/asar": "^3.4.1",
-    "@eslint/js": "^9.39.4",
+    "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.2.4",
-    "@types/node": "^24.12.0",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "~6.0.1",
+    "@vitejs/plugin-react": "~6.0.4",
     "cross-env": "^10.1.0",
     "csso": "^5.0.5",
-    "electron": "^41.3.0",
+    "electron": "^43.2.0",
     "electron-builder": "^26.0.12",
     "esbuild": "^0.28.1",
-    "eslint": "^9.39.4",
-    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint": "^10.7.0",
+    "eslint-plugin-react-hooks": "~7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "fast-check": "^4.7.0",
     "globals": "^17.5.0",
-    "tailwindcss": "^4.2.4",
-    "tinybench": "^6.0.0",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.59.0",
-    "vite": "~8.0.9",
-    "yaml": "^2.9.0",
     "knip": "^6.25.0",
     "playwright": "^1.61.1",
-    "postcss": "^8.5.15"
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.2.4",
+    "tinybench": "^6.0.0",
+    "typescript": "^7.0.2",
+    "typescript-eslint": "^8.59.0",
+    "typescript6": "npm:typescript@^6.0.3",
+    "vite": "~8.1.5",
+    "yaml": "^2.9.0"
   },
   "overrides": {
     "axios": "^1.16.1",
+    "brace-expansion@1": "1.1.16",
+    "brace-expansion@2": "2.1.2",
+    "brace-expansion@5": "5.0.7",
     "fast-uri": "^3.1.2",
     "gh-pages": "^6.3.0",
     "ip-address": "^10.2.0",
+    "js-yaml": "^4.3.0",
     "minimatch@10.2.4": {
-      "brace-expansion": "^5.0.6"
+      "brace-expansion": "5.0.7"
     },
-    "protobufjs": "^7.6.1",
+    "protobufjs": "^7.6.5",
     "qs": "^6.15.2",
-    "tmp": "^0.2.7"
+    "sharp": "^0.35.3",
+    "tar": "^7.5.21",
+    "tmp": "^0.2.7",
+    "typescript-eslint": {
+      "typescript": "6.0.3"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "typescript": "6.0.3"
+    },
+    "@typescript-eslint/utils": {
+      "typescript": "6.0.3"
+    },
+    "@typescript-eslint/type-utils": {
+      "typescript": "6.0.3"
+    },
+    "@typescript-eslint/parser": {
+      "typescript": "6.0.3"
+    },
+    "@typescript-eslint/eslint-plugin": {
+      "typescript": "6.0.3"
+    },
+    "@typescript-eslint/project-service": {
+      "typescript": "6.0.3"
+    },
+    "@typescript-eslint/tsconfig-utils": {
+      "typescript": "6.0.3"
+    },
+    "adm-zip": "^0.6.0"
   },
   "build": {
     "appId": "ai.factory.desktoppet",
