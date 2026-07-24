@@ -4,7 +4,7 @@
  * Run automatically via postinstall, or manually: node scripts/setup-vendor.mjs
  */
 
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createWriteStream } from 'node:fs'
 import { get } from 'node:https'
 import { join, dirname } from 'node:path'
@@ -45,15 +45,25 @@ const copies = [
 ]
 
 for (const { src, dest, label } of copies) {
-  if (existsSync(dest)) {
-    console.log(`[vendor] ✓ ${label} (already exists)`)
-    continue
-  }
   if (!existsSync(src)) {
     console.warn(`[vendor] ✗ ${label} — source not found: ${src}`)
     continue
   }
-  copyFileSync(src, dest)
+  // Always rewrite so post-processing below stays in sync with node_modules.
+  let contents = readFileSync(src)
+  if (label === 'pixi-live2d-display.cubism4.min.js') {
+    // The jannchie UMD bundle references process.env.NODE_ENV, but we load it
+    // as a classic <script> where `process` does not exist. Inline the value.
+    const text = contents.toString('utf8')
+    if (text.includes('process.env.NODE_ENV')) {
+      contents = Buffer.from(text.replaceAll('process.env.NODE_ENV', '"production"'), 'utf8')
+    }
+  }
+  if (existsSync(dest) && readFileSync(dest).equals(contents)) {
+    console.log(`[vendor] ✓ ${label} (already exists)`)
+    continue
+  }
+  writeFileSync(dest, contents)
   console.log(`[vendor] ✓ ${label} (copied from node_modules)`)
 }
 
