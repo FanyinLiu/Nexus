@@ -109,8 +109,9 @@ Nexus 是 Electron 桌面伴侣应用（Live2D/sprite 宠物 + 聊天 + 语音 +
 
 1. **TS7 双栈**：`package.json` 主依赖 `typescript@^7.0.2`（给 `npx tsc` 用）；`scripts/typescript-classic-shim.mjs`（postinstall）让 `require('typescript')` 解析到 TS 6.0.3 经典 API（ESLint/脚本/测试依赖）。跟踪 typescript-eslint #10940，支持 TS7 后删 shim。
 2. **Live2D on pixi.js 8**：用的是 jannchie 的 pixi-live2d 兼容包（非官方 pixi-live2d-display）。自动化测试不覆盖 GPU 渲染，改动 `live2d/` 后必须真实窗口冒烟。
-3. **ESLint 10**：`no-useless-assignment`、`preserve-caught-error` 在 `eslint.config.js` 中被关闭（62 处历史违规），可分批打开修。
-4. i18n locale 已按域拆目录（P2），新增文案键要进对应域文件，不要新建单文件 locale。
+3. ~~ESLint 10 新规则~~（已解决 2026-07-24：`no-useless-assignment` 38 处 + `preserve-caught-error` 24 处已修，规则已重新打开，commit eb220bf / 6468106）。
+4. **jannchie UMD 的 process.env**：`scripts/setup-vendor.mjs` 会在拷贝时把 `process.env.NODE_ENV` 内联为 `"production"`（经典 script 无 process）。升级该包后必须重跑 `node scripts/setup-vendor.mjs` + `live2d:three-model:smoke`（commit 538a646）。
+5. i18n locale 已按域拆目录（P2），新增文案键要进对应域文件，不要新建单文件 locale。
 
 ## 4. 使用规程（给 coding agent）
 
