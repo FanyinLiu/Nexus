@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process'
 
 function collectDescendantPids(pid, result = []) {
   if (!pid || process.platform === 'win32') return result
-  let childPids = []
+  let childPids
   try {
     childPids = execFileSync('pgrep', ['-P', String(pid)], { encoding: 'utf8' })
       .split(/\s+/)
@@ -124,7 +124,7 @@ export function buildChildExitReport({
     disposition = 'not_observed'
   }
 
-  let note = null
+  let note
   if (terminatedByHarness) {
     note = termination?.note || 'harness terminated the packaged app process tree'
     if (exitCode === 0) {
@@ -167,7 +167,7 @@ export function sampleProcessTree(rootPid) {
   const unique = [...new Set(pids)].filter((pid) => Number.isInteger(pid) && pid > 0)
   if (unique.length === 0) return null
 
-  let stdout = ''
+  let stdout
   try {
     if (process.platform === 'win32') {
       stdout = execFileSync(

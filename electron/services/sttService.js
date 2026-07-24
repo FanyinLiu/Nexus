@@ -42,9 +42,9 @@ function extractObservedSpeechInputIdentity(data) {
 
 async function runSpeechInputConnectionSmokeTest(payload, baseUrl) {
   const testAudioBase64 = createSilentWavBase64(1_200)
-  let endpoint = ''
-  let body = null
-  let headers = {}
+  let endpoint
+  let body
+  let headers
 
   if (isVolcengineSpeechInputProvider(payload.providerId)) {
     const credentials = parseVolcengineSpeechCredentials(payload.apiKey)

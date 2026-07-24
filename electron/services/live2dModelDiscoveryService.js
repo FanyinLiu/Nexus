@@ -76,7 +76,7 @@ export async function listPetModelsFromRoot({
   idPrefix = '',
   modelPathBuilder,
 }) {
-  let modelFiles = []
+  let modelFiles
 
   try {
     modelFiles = await collectLive2dModelFiles(rootPath)

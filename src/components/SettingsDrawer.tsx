@@ -609,7 +609,7 @@ export function SettingsDrawer({
     event: ReactKeyboardEvent<HTMLButtonElement>,
     index: number,
   ) {
-    let nextIndex: number | null = null
+    let nextIndex: number
 
     switch (event.key) {
       case 'ArrowRight':

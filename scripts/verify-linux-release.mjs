@@ -47,7 +47,7 @@ function commandSucceeded(result) {
 
 export function selectLinuxReleaseArtifacts(releaseDir, listFiles = readdirSync) {
   const errors = []
-  let files = []
+  let files
   try {
     files = listFiles(releaseDir)
   } catch (error) {

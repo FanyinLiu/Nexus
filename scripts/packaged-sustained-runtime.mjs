@@ -318,8 +318,8 @@ async function runHarness() {
   let live2dPage = null
   let live2dReadyObserved = false
   let termination = null
-  let finalExitCode = null
-  let finalSignalCode = null
+  let finalExitCode
+  let finalSignalCode
   const limitations = [
     'GPU VRAM / Metal private memory is not measured; macOS and Electron do not expose a stable cross-process VRAM counter usable here.',
     'CPU% from ps is scheduler-relative and machine-load-sensitive; gates use RSS plateau and remount growth, not absolute CPU budgets.',
@@ -875,7 +875,7 @@ async function runHarness() {
   } finally {
     try { await browser?.close() } catch { /* ignore */ }
     if (!termination && child.pid) {
-      termination = terminateTree(child.pid)
+      terminateTree(child.pid)
       try {
         if (child.exitCode == null) child.kill('SIGKILL')
       } catch { /* ignore */ }

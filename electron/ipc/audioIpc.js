@@ -173,9 +173,9 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
       mimeType: payload.mimeType,
     })
 
-    let endpoint = ''
-    let body = null
-    let headers = {}
+    let endpoint
+    let body
+    let headers
 
     if (isVolcengineSpeechInputProvider(payload.providerId)) {
       const credentials = parseVolcengineSpeechCredentials(payload.apiKey)
@@ -371,9 +371,9 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
     }
     assertSpeechOutputCredentials(payload.providerId, payload.apiKey)
 
-    let endpoint = ''
-    let requestBody = ''
-    let headers = {}
+    let endpoint
+    let requestBody
+    let headers
 
     if (payload.providerId === 'elevenlabs-tts') {
       if (!payload.voice) {

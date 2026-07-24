@@ -75,7 +75,7 @@ export function SettingsSegmentedControl<TValue extends string>({
   onChange,
 }: SettingsSegmentedControlProps<TValue>) {
   function handleKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, optionIndex: number) {
-    let nextIndex = -1
+    let nextIndex: number
 
     switch (event.key) {
       case 'ArrowRight':

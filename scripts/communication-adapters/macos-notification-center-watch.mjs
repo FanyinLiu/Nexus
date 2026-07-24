@@ -251,7 +251,7 @@ function normalizeSqliteError(error, dbPath) {
 
 async function runSqliteJson(sqlitePath, dbPath, sql) {
   const command = resolveSqliteCommand(sqlitePath)
-  let stdout = ''
+  let stdout
   try {
     const result = await execFileAsync(command.executable, [...command.args, '-json', dbPath, sql], {
       maxBuffer: 10 * 1024 * 1024,

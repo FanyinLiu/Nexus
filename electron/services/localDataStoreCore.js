@@ -439,7 +439,7 @@ export function ensureBuiltInDomains(db, now) {
 }
 
 function parseRecordPayload(row) {
-  let payload = null
+  let payload
   try {
     payload = JSON.parse(row.payloadJson)
   } catch {

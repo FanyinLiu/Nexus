@@ -52,7 +52,7 @@ export async function listSpritePetModelsFromRoot({
   idPrefix = '',
   imagePathBuilder,
 }) {
-  let manifestFiles = []
+  let manifestFiles
 
   try {
     manifestFiles = await collectSpritePetManifestFiles(rootPath)

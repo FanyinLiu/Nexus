@@ -143,7 +143,7 @@ function readSettingsStyleBundleContract(repoRoot, entrySource) {
 
   const bundleImports = []
   for (const bundle of SETTINGS_STYLE_BUNDLES) {
-    let moduleSource = ''
+    let moduleSource
     try {
       moduleSource = readFileSync(join(repoRoot, bundle.module), 'utf8')
     } catch {

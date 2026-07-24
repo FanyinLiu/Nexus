@@ -254,7 +254,7 @@ export async function postMessageWebhookPayload(payload, {
     body: JSON.stringify(payload),
   })
   const text = await response.text()
-  let parsed = null
+  let parsed
   try {
     parsed = text ? JSON.parse(text) : null
   } catch {

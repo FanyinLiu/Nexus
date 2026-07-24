@@ -34,8 +34,7 @@ export default defineConfig([
       'no-empty': 'off',
       'no-extra-boolean-cast': 'off',
       'no-useless-escape': 'off',
-      // ESLint 10 recommended additions — enable gradually after migration.
-      'no-useless-assignment': 'off',
+      // ESLint 10: re-enable rules one at a time (preserve-caught-error still deferred).
       'preserve-caught-error': 'off',
     },
   },
@@ -52,10 +51,7 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
-      // ESLint 10 recommended additions — enable gradually after migration.
-      // Existing code patterns (rethrow without cause, intentional reassignment
-      // before overwrite) are widespread; track adoption separately.
-      'no-useless-assignment': 'off',
+      // ESLint 10: re-enable rules one at a time (preserve-caught-error still deferred).
       'preserve-caught-error': 'off',
     },
   },

@@ -79,7 +79,7 @@ export function parseCrisisSecondPassResponse(raw: string): CrisisSecondPassDeci
   const trimmed = raw.trim()
   if (!trimmed) return null
 
-  let parsed: unknown = null
+  let parsed: unknown
   try {
     parsed = JSON.parse(trimmed)
   } catch {

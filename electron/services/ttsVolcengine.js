@@ -244,7 +244,7 @@ async function performVolcengineSpeechOutputAttempt({
     timeoutMessage,
   })
   const contentType = response.headers.get('content-type') ?? ''
-  let data = null
+  let data
   let responseText = ''
 
   if (contentType.includes('application/json')) {

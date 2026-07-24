@@ -97,7 +97,7 @@ export async function executeAssistantTurn(
     fromVoice ? t('chat.turn.voice_status') : t('chat.turn.text_status'),
   )
 
-  let sendSucceeded = false
+  let sendSucceeded: boolean
   let hardTimeoutTimer: number | null = null
   try {
     sendSucceeded = await Promise.race([
@@ -121,7 +121,6 @@ export async function executeAssistantTurn(
   } finally {
     if (hardTimeoutTimer != null) {
       window.clearTimeout(hardTimeoutTimer)
-      hardTimeoutTimer = null
     }
     const isCurrentTurn = activeTurnIdRef.current === turnId
     if (isCurrentTurn) {

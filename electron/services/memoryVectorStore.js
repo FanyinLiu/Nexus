@@ -332,7 +332,7 @@ async function compactSnapshot() {
  * needed (one fs.stat).
  */
 async function compactIfNeeded() {
-  let size = 0
+  let size
   try {
     const s = await stat(getLogPath())
     size = s.size

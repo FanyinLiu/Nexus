@@ -132,7 +132,7 @@ function getAppArgs() {
 
 function collectDescendantPids(pid, result = []) {
   if (!pid || process.platform === 'win32') return result
-  let childPids = []
+  let childPids
   try {
     childPids = execFileSync('pgrep', ['-P', String(pid)], { encoding: 'utf8' })
       .split(/\s+/)

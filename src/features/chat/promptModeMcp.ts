@@ -196,9 +196,8 @@ export class PromptModeStreamFilter {
 
   private drain(forceEmitTail: boolean): string {
     let output = ''
-    let progress = true
-    while (progress) {
-      progress = false
+    // Keep scanning while we complete open/close marker pairs in the buffer.
+    for (;;) {
       if (this.mode === 'normal') {
         const openIdx = this.buffer.indexOf(TOOL_CALL_OPEN)
         if (openIdx === -1) {
@@ -215,17 +214,16 @@ export class PromptModeStreamFilter {
         output += this.buffer.slice(0, openIdx)
         this.buffer = this.buffer.slice(openIdx + TOOL_CALL_OPEN.length)
         this.mode = 'inside'
-        progress = true
-      } else {
-        const closeIdx = findToolCallClose(this.buffer, 0)
-        if (closeIdx === -1) {
-          // Need more text — keep buffering, emit nothing.
-          break
-        }
-        this.buffer = this.buffer.slice(closeIdx + TOOL_CALL_CLOSE.length)
-        this.mode = 'normal'
-        progress = true
+        continue
       }
+
+      const closeIdx = findToolCallClose(this.buffer, 0)
+      if (closeIdx === -1) {
+        // Need more text — keep buffering, emit nothing.
+        break
+      }
+      this.buffer = this.buffer.slice(closeIdx + TOOL_CALL_CLOSE.length)
+      this.mode = 'normal'
     }
     return output
   }

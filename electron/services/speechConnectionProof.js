@@ -221,8 +221,8 @@ export function inspectSpeechOutputAudio(result) {
     }
   }
 
-  let buffer = null
-  let declaredPcm = false
+  let buffer
+  let declaredPcm
 
   if (result.pcmBuffer instanceof Buffer) {
     buffer = result.pcmBuffer

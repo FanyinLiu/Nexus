@@ -31,7 +31,7 @@ export const UpdaterPanel = memo(function UpdaterPanel({ uiLanguage }: UpdaterPa
   const { event, busy, currentVersion, isPackaged, updateMode } = updater
 
   let statusText: string
-  let statusTone: 'idle' | 'info' | 'success' | 'warning' | 'error' = 'idle'
+  let statusTone: 'idle' | 'info' | 'success' | 'warning' | 'error'
 
   switch (event.type) {
     case 'idle':

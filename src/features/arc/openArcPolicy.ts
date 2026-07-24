@@ -89,13 +89,11 @@ export function decideNextCheckIn(
   const sorted = [...open].sort((a, b) => a.startedAt.localeCompare(b.startedAt))
   const nowMs = now.getTime()
 
-  let sawAnyFireable = false
   for (const arc of sorted) {
     const daysSoFar = daysSince(arc.startedAt, nowMs)
     if (daysSoFar == null) continue
     const milestone = nextDueMilestone(arc, daysSoFar)
     if (milestone == null) continue
-    sawAnyFireable = true
     return {
       shouldFire: true,
       arcId: arc.id,
@@ -106,9 +104,9 @@ export function decideNextCheckIn(
   }
 
   // No arc had a due milestone — all open arcs are either pre-day-3 or
-  // already caught up on their pings.
+  // already caught up on their pings. (A fireable arc always returns above.)
   return {
     shouldFire: false,
-    reason: sawAnyFireable ? 'no-milestone-due' : 'all-checked-in',
+    reason: 'all-checked-in',
   }
 }

@@ -41,7 +41,7 @@ function handleTraceFilterKeyDown(
   onSelect: (filter: TraceStatusFilter) => void,
 ) {
   const currentIndex = Math.max(TRACE_FILTER_OPTIONS.indexOf(currentFilter), 0)
-  let nextIndex: number | null = null
+  let nextIndex: number
 
   switch (event.key) {
     case 'ArrowRight':
