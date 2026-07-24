@@ -123,9 +123,11 @@ test('error redaction audit rejects raw window manager support logs', () => {
     'electron/windowManager.js': `${buildBaselineContentByFile().get('electron/windowManager.js')?.join('\n')}
 console.warn('[macOS] Failed to show dock icon:', err?.message)
 console.warn('[macOS] Failed to hide dock icon:', err?.message)
+console.warn('[tray] failed to create system tray:', err?.message)
+`,
+    'electron/windowCreation.js': `${buildBaselineContentByFile().get('electron/windowCreation.js')?.join('\n')}
 console.warn('[pet-window] setVisibleOnAllWorkspaces failed:', err?.message)
 console.warn('[pet-window:linux] setVisibleOnAllWorkspaces failed:', err?.message)
-console.warn('[tray] failed to create system tray:', err?.message)
 `,
   }, (root) => {
     const report = buildErrorRedactionReport(root)

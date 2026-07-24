@@ -17,17 +17,17 @@ const petViewPath = new URL('../src/app/views/PetView.tsx', import.meta.url)
 const optimizationPlanPath = new URL('../docs/V0.4.3_OPTIMIZATION_AND_COMPETITOR_PLAN_2026-07-12.md', import.meta.url)
 const chatSheetStylesPath = new URL('../src/features/uiV2/chat-sheet-v2.css', import.meta.url)
 const appStylesPath = new URL('../src/app/App.css', import.meta.url)
-const windowManagerPath = new URL('../electron/windowManager.js', import.meta.url)
+const windowCreationPath = new URL('../electron/windowCreation.js', import.meta.url)
 
 test('panel window and root surfaces remain fully transparent', async () => {
-  const [windowManager, panelV2Styles, chatSheetStyles, appStyles] = await Promise.all([
-    readFile(windowManagerPath, 'utf8'),
+  const [windowCreation, panelV2Styles, chatSheetStyles, appStyles] = await Promise.all([
+    readFile(windowCreationPath, 'utf8'),
     readFile(panelV2StylesPath, 'utf8'),
     readFile(chatSheetStylesPath, 'utf8'),
     readFile(appStylesPath, 'utf8'),
   ])
 
-  const panelWindowOptions = windowManager.match(
+  const panelWindowOptions = windowCreation.match(
     /export function createPanelWindow\(\)[\s\S]*?const win = new BrowserWindow\(\{([\s\S]*?)\n {2}\}\)/,
   )?.[1]
   assert.ok(panelWindowOptions, 'panel BrowserWindow options should remain explicit')
@@ -36,12 +36,12 @@ test('panel window and root surfaces remain fully transparent', async () => {
   assert.match(panelWindowOptions, /hasShadow:\s*false/)
   assert.match(panelWindowOptions, /backgroundColor:\s*'#00000000'/)
 
-  const petWindowOptions = windowManager.match(
+  const petWindowOptions = windowCreation.match(
     /function petWindowConstructorOptions\([^)]*\)\s*\{[\s\S]*?return \{([\s\S]*?)\n {2}\}\n\}/,
   )?.[1]
   assert.ok(petWindowOptions, 'pet BrowserWindow options should remain explicit')
   assert.match(petWindowOptions, /show:\s*false,\s*\n\s*paintWhenInitiallyHidden:\s*false/)
-  assert.doesNotMatch(windowManager, /backgroundThrottling:\s*false/)
+  assert.doesNotMatch(windowCreation, /backgroundThrottling:\s*false/)
 
   const panelV2Root = panelV2Styles.match(/\.nexus-panel-v2\s*\{([\s\S]*?)\n\}/)?.[1]
   assert.ok(panelV2Root, 'the V2 panel root should remain explicit')

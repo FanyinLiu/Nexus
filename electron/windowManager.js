@@ -1,6 +1,5 @@
 import { promises as fsp } from 'node:fs'
 import { app, BrowserWindow, Menu, nativeImage, screen, shell, Tray } from 'electron'
-import nodeNet from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getPreloadPath, getRendererEntry } from './rendererServer.js'
@@ -18,9 +17,6 @@ import {
   getLaunchOnStartupState,
   setLaunchOnStartupState,
 } from './launchOnStartup.js'
-import {
-  sanitizeRuntimeStatePatch,
-} from './windowStateSanitizers.js'
 import {
   createRendererRuntimeLogEntry,
   RUNTIME_LOG_DISPLAY_PATH,
@@ -56,6 +52,24 @@ import {
   rememberPanelWindowBounds,
   updatePanelWindowState,
 } from './panelWindowController.js'
+
+import {
+  bindRuntimeWindows,
+} from './windowRuntimeState.js'
+export {
+  runtimeState,
+  runtimeClientHeartbeat,
+  buildRuntimeStateSnapshot,
+  syncRuntimeState,
+  updateRuntimeState,
+  updateHeartbeat,
+} from './windowRuntimeState.js'
+import {
+  configureWindowCreation,
+  createMainWindow,
+  createPanelWindow,
+} from './windowCreation.js'
+export { createMainWindow, createPanelWindow } from './windowCreation.js'
 
 export {
   getLaunchOnStartupState,
@@ -143,7 +157,6 @@ function attachRendererLogCapture(webContents, label) {
   })
 }
 
-const RUNTIME_CLIENT_TTL_MS = 25_000
 // macOS Dock overlaps transparent windows near the bottom edge even within
 // workArea bounds. Use a larger bottom margin on macOS to keep the pet's
 // action buttons (mic, menu) above the Dock hit region.
@@ -169,32 +182,6 @@ const settingsReturnFocus = createSettingsReturnFocusCoordinator(() => {
   mainWindow.webContents.send('settings:return-focus')
 })
 
-export let runtimeState = {
-  mood: 'idle',
-  continuousVoiceActive: false,
-  panelSettingsOpen: false,
-  voiceState: 'idle',
-  wakewordPhase: 'disabled',
-  wakewordActive: false,
-  wakewordAvailable: false,
-  wakewordWakeWord: '',
-  wakewordReason: '',
-  wakewordLastTriggeredAt: '',
-  wakewordError: '',
-  wakewordUpdatedAt: '',
-  assistantActivity: 'idle',
-  searchInProgress: false,
-  ttsInProgress: false,
-  schedulerArmed: false,
-  schedulerNextRunAt: '',
-  activeTaskLabel: '',
-  updatedAt: new Date().toISOString(),
-}
-
-export let runtimeClientHeartbeat = {
-  pet: 0,
-  panel: 0,
-}
 
 configurePetWindowInstances({
   getMainWindow: () => mainWindow,
@@ -204,6 +191,34 @@ configurePetWindowInstances({
 configurePanelWindowController({
   getMainWindow: () => mainWindow,
   getPanelWindow: () => panelWindow,
+})
+bindRuntimeWindows({
+  getMainWindow: () => mainWindow,
+  getPanelWindow: () => panelWindow,
+})
+configureWindowCreation({
+  getMainWindow: () => mainWindow,
+  getPanelWindow: () => panelWindow,
+  setMainWindow: (win) => { mainWindow = win },
+  setPanelWindow: (win) => { panelWindow = win },
+  getPetHiddenForPanel: () => petHiddenForPanel,
+  setPetHiddenForPanel: (v) => { petHiddenForPanel = v },
+  getPanelBlurTimer: () => panelBlurTimer,
+  setPanelBlurTimer: (t) => { panelBlurTimer = t },
+  attachRendererLogCapture,
+  acquireDock,
+  releaseDock,
+  hasSystemTray,
+  syncPetWindowState: () => applyPetWindowInstances(),
+  // Function declaration is hoisted; safe to pass before its source location.
+  emitPanelSection,
+  isDev,
+  isSmokeTest,
+  SMOKE_RENDERER_TIMEOUT_MS,
+  SMOKE_SUCCESS_GRACE_MS,
+  SMOKE_FORCE_EXIT_GRACE_MS,
+  flushRuntimeLogWriteBuffer,
+  settingsReturnFocus,
 })
 
 export let panelSection = 'chat'
@@ -243,70 +258,6 @@ function releaseDock() {
   }
 }
 
-export function buildRuntimeStateSnapshot() {
-  const now = Date.now()
-  const petLastSeenAt = runtimeClientHeartbeat.pet
-  const panelLastSeenAt = runtimeClientHeartbeat.panel
-
-  return {
-    ...runtimeState,
-    petOnline: now - petLastSeenAt <= RUNTIME_CLIENT_TTL_MS,
-    panelOnline: now - panelLastSeenAt <= RUNTIME_CLIENT_TTL_MS,
-    petLastSeenAt: petLastSeenAt ? new Date(petLastSeenAt).toISOString() : '',
-    panelLastSeenAt: panelLastSeenAt ? new Date(panelLastSeenAt).toISOString() : '',
-  }
-}
-
-// Broadcast the latest runtime-state snapshot to every live window EXCEPT the
-// one that originated this change.
-//
-// Skipping the sender is the classical sender-ID pattern for cross-context
-// pub-sub (see e.g. BroadcastChannel tutorials). The renderer-side React
-// effect that handles `runtime-state:changed` unconditionally calls
-// setRuntimeSnapshotState, which forces a re-render, which re-runs the
-// upstream `useEffect` that pushed this very state. Without sender-skip,
-// every renderer-originated update bounces back to itself at wakeword-frame
-// cadence and trips React's "Maximum update depth exceeded" guard. A
-// shallow-equal guard on the receive side doesn't help because `updatedAt`
-// is stamped on every update, so the echo is never byte-equal to what the
-// sender already has.
-//
-// Windows that DIDN'T originate the change still need to see it (that's the
-// whole point of cross-window sync), so we only skip the exact sender.
-export function syncRuntimeState(originWebContentsId = null) {
-  const snapshot = buildRuntimeStateSnapshot()
-  for (const win of [mainWindow, panelWindow]) {
-    if (!win || win.isDestroyed()) continue
-    if (originWebContentsId !== null && win.webContents.id === originWebContentsId) continue
-    win.webContents.send('runtime-state:changed', snapshot)
-  }
-}
-
-export function syncPetWindowState() {
-  syncPetWindowInstances()
-}
-
-export function updateRuntimeState(partialState, originWebContentsId = null) {
-  const safe = sanitizeRuntimeStatePatch(partialState)
-  runtimeState = {
-    ...runtimeState,
-    ...safe,
-    updatedAt: new Date().toISOString(),
-  }
-  syncRuntimeState(originWebContentsId)
-}
-
-export function updateHeartbeat(view, originWebContentsId = null) {
-  runtimeClientHeartbeat = {
-    ...runtimeClientHeartbeat,
-    [view]: Date.now(),
-  }
-  // Heartbeat broadcasts only matter for the OTHER window's
-  // `petOnline`/`panelOnline` flags; the originator already knows it is
-  // online, so skipping it avoids a pointless re-render on every 10 s tick.
-  syncRuntimeState(originWebContentsId)
-}
-
 export function applyPetWindowState() {
   applyPetWindowInstances()
 }
@@ -320,67 +271,6 @@ export function getPlatformProfile() {
     trayActive,
     launchOnStartupEnabled: getLaunchOnStartupState(),
   })
-}
-
-function openExternalUrlFromWindow(url, label) {
-  try {
-    const safeUrl = normalizeExternalWindowOpenUrl(url)
-    shell.openExternal(safeUrl).catch((err) => {
-      console.warn(
-        `[security] failed to open ${label} external URL:`,
-        summarizeWindowNavigationUrlForLog(safeUrl),
-        summarizeWindowNavigationErrorForLog(err),
-      )
-    })
-  } catch (err) {
-    console.warn(
-      `[security] blocked ${label} external URL:`,
-      summarizeWindowNavigationUrlForLog(url),
-      summarizeWindowNavigationErrorForLog(err),
-    )
-  }
-}
-
-function attachNavigationGuards(win, label, view) {
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    openExternalUrlFromWindow(url, label)
-    return { action: 'deny' }
-  })
-
-  // Prevent the renderer from navigating away from the app origin.
-  // If an attacker manages to redirect the webContents, the preload bridge
-  // would be exposed to an untrusted page.
-  win.webContents.on('will-navigate', (event, url) => {
-    const allowed = getRendererEntry(view)
-    if (!isAllowedRendererNavigation(url, allowed)) {
-      console.warn(`[security] blocked ${label} navigation to`, summarizeWindowNavigationUrlForLog(url))
-      event.preventDefault()
-    }
-  })
-}
-
-function attachDevToolsShortcut(win) {
-  if (app.isPackaged) return
-
-  win.webContents.on('before-input-event', (event, input) => {
-    if (input.type !== 'keyDown') return
-    const isF12 = input.key === 'F12'
-    const isCtrlShiftI = (input.control || input.meta) && input.shift && input.key.toLowerCase() === 'i'
-    if (isF12 || isCtrlShiftI) {
-      win.webContents.toggleDevTools()
-      event.preventDefault()
-    }
-  })
-}
-
-function trustedRendererWebPreferences() {
-  return {
-    preload: getPreloadPath(),
-    contextIsolation: true,
-    nodeIntegration: false,
-    sandbox: true,
-    webSecurity: true,
-  }
 }
 
 export function moveMainWindowBy(deltaX, deltaY) {
@@ -416,313 +306,6 @@ export function dragWindowBy(event, delta) {
     display.workArea,
   )
   sourceWindow.setPosition(nextPosition.x, nextPosition.y)
-}
-
-// Shared BrowserWindow options for every pet window (primary + clones):
-// frameless, transparent, click-through-capable, always-on-top floating.
-function petWindowConstructorOptions({ x, y, width, height }) {
-  return {
-    width,
-    height,
-    x,
-    y,
-    show: false,
-    paintWhenInitiallyHidden: false,
-    frame: false,
-    transparent: true,
-    hasShadow: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    resizable: true,
-    minWidth: PET_WINDOW_MIN_WIDTH,
-    minHeight: PET_WINDOW_MIN_HEIGHT,
-    maxWidth: 1400,
-    maxHeight: 1400,
-    maximizable: false,
-    minimizable: true,
-    fullscreenable: false,
-    backgroundColor: '#00000000',
-    icon: getPetIconPath(),
-    webPreferences: trustedRendererWebPreferences(),
-  }
-}
-
-export function createMainWindow({ showOnReady = true } = {}) {
-  const { workArea } = screen.getPrimaryDisplay()
-  const saved = getSavedBounds('pet')
-  const width = saved?.width ?? PET_WINDOW_DEFAULT_WIDTH
-  const height = saved?.height ?? PET_WINDOW_DEFAULT_HEIGHT
-  const { x, y } = saved
-    ? clampWindowPosition(width, height, saved.x, saved.y, workArea)
-    : clampWindowPosition(
-        width,
-        height,
-        workArea.x + workArea.width - width - PET_WINDOW_SCREEN_MARGIN_PX,
-        workArea.y + workArea.height - height - PET_WINDOW_SCREEN_MARGIN_PX,
-        workArea,
-      )
-
-  const win = new BrowserWindow(petWindowConstructorOptions({ x, y, width, height }))
-
-  applyWindowsAppDetails(win)
-  applyWindowIcon(win)
-  win.setAlwaysOnTop(true, PET_ALWAYS_ON_TOP_LEVEL)
-
-  attachNavigationGuards(win, 'main-window', 'pet')
-
-  const inst = registerPetInstance(win)
-
-  win.on('close', (event) => {
-    const canHideToBackground = process.platform === 'darwin' || hasSystemTray()
-    if (app.isQuitting || !canHideToBackground) return
-    event.preventDefault()
-    win.hide()
-  })
-
-  win.on('closed', () => {
-    destroyPetInstance(inst)
-    mainWindow = null
-  })
-
-  win.webContents.on('did-finish-load', () => {
-    const bounds = win.getBounds()
-    console.log('[pet-window] position on show:', bounds)
-    // Keep the companion visible across workspaces where the platform supports
-    // it. macOS uses visibleOnFullScreen; Linux maps to the same API without
-    // that option. Windows does not support this API.
-    if (process.platform === 'darwin') {
-      try {
-        win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-      } catch (err) {
-        console.warn('[pet-window] setVisibleOnAllWorkspaces failed:', getRedactedErrorMessage(err))
-      }
-    } else if (process.platform === 'linux') {
-      try {
-        win.setVisibleOnAllWorkspaces(true)
-      } catch (err) {
-        console.warn('[pet-window:linux] setVisibleOnAllWorkspaces failed:', getRedactedErrorMessage(err))
-      }
-    }
-    if (showOnReady) {
-      win.show()
-      win.focus()
-      win.moveTop()
-    }
-    syncRuntimeState()
-    syncPetWindowState()
-    inst.loco.start()
-  })
-
-  win.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
-    console.error('Renderer failed to load:', errorCode, errorDescription)
-    win.show()
-  })
-
-  win.webContents.on('console-message', (details) => {
-    if (details.level === 'warning' || details.level === 'error') {
-      console.error('Renderer console:', sanitizeRuntimeLogMessage(details.message))
-    }
-  })
-
-  // Tail every renderer console.* into <projectRoot>/.dev/runtime.log so a
-  // remote helper (or `tail -F`) can watch the lifecycle live without
-  // anyone opening DevTools. dev-only.
-  attachRendererLogCapture(win.webContents, 'pet')
-
-  attachDevToolsShortcut(win)
-
-  win.loadURL(getRendererEntry('pet'))
-
-  if (isSmokeTest) {
-    let smokeDone = false
-    let forceExitTimer = null
-    const watchdog = setTimeout(() => {
-      finishSmoke(1, `renderer did not finish loading within ${SMOKE_RENDERER_TIMEOUT_MS}ms`)
-    }, SMOKE_RENDERER_TIMEOUT_MS)
-
-    const finishSmoke = (exitCode, reason) => {
-      if (smokeDone) return
-      smokeDone = true
-      clearTimeout(watchdog)
-      if (forceExitTimer) clearTimeout(forceExitTimer)
-      process.exitCode = exitCode
-      if (exitCode === 0) {
-        console.info('[smoke] renderer loaded; quitting')
-      } else {
-        console.error(`[smoke] ${reason}`)
-      }
-      forceExitTimer = setTimeout(() => app.exit(exitCode), SMOKE_FORCE_EXIT_GRACE_MS)
-      forceExitTimer.unref?.()
-      app.quit()
-    }
-
-    win.webContents.once('did-finish-load', () => {
-      setTimeout(() => {
-        finishSmoke(0, 'renderer loaded')
-      }, SMOKE_SUCCESS_GRACE_MS)
-    })
-
-    win.webContents.once('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
-      if (isMainFrame === false) return
-      finishSmoke(1, `renderer failed to load ${validatedURL || ''}: ${errorCode} ${errorDescription}`.trim())
-    })
-
-    win.once('closed', () => {
-      clearTimeout(watchdog)
-      if (forceExitTimer) clearTimeout(forceExitTimer)
-    })
-  }
-
-  mainWindow = win
-  trackWindow(win, 'pet')
-  return win
-}
-
-export function createPanelWindow() {
-  if (panelWindow && !panelWindow.isDestroyed()) {
-    return panelWindow
-  }
-
-  const {
-    width,
-    height,
-    x,
-    y,
-    resizable,
-    minWidth,
-    minHeight,
-  } = getPanelWindowCreationState()
-
-  const win = new BrowserWindow({
-    width,
-    height,
-    x,
-    y,
-    show: false,
-    paintWhenInitiallyHidden: false,
-    frame: false,
-    transparent: true,
-    hasShadow: false,
-    alwaysOnTop: false,
-    skipTaskbar: false,
-    resizable,
-    minWidth,
-    minHeight,
-    maximizable: false,
-    minimizable: true,
-    fullscreenable: false,
-    backgroundColor: '#00000000',
-    icon: getPetIconPath(),
-    webPreferences: trustedRendererWebPreferences(),
-  })
-
-  applyWindowsAppDetails(win)
-  applyWindowIcon(win)
-  attachNavigationGuards(win, 'panel-window', 'panel')
-
-  // Mirror the pet-window log capture for the panel's renderer.
-  attachRendererLogCapture(win.webContents, 'panel')
-
-  attachDevToolsShortcut(win)
-
-  // Track dock refcount for this panel window: acquire when it becomes
-  // visible, release when it hides or is closed. This restores a dock icon
-  // during "app-like" interactions (chat / settings panel) and pulls it back
-  // out of sight when the user is only seeing the pet overlay.
-  let dockHeldForPanel = false
-  const holdDock = () => {
-    if (dockHeldForPanel) return
-    dockHeldForPanel = true
-    acquireDock()
-  }
-  const releaseDockForPanel = () => {
-    if (!dockHeldForPanel) return
-    dockHeldForPanel = false
-    releaseDock()
-  }
-
-  win.on('show', () => {
-    holdDock()
-    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
-      petHiddenForPanel = true
-      mainWindow.hide()
-    }
-  })
-  win.on('hide', () => {
-    releaseDockForPanel()
-    if (settingsReturnFocus.isPending()) {
-      petHiddenForPanel = false
-      settingsReturnFocus.consume()
-      return
-    }
-    if (mainWindow && !mainWindow.isDestroyed() && petHiddenForPanel) {
-      petHiddenForPanel = false
-      mainWindow.showInactive()
-    }
-  })
-
-  win.on('close', (event) => {
-    const canHideToBackground = process.platform === 'darwin' || hasSystemTray()
-    if (app.isQuitting || !canHideToBackground) return
-    event.preventDefault()
-    win.hide()
-  })
-
-  win.on('closed', () => {
-    if (panelBlurTimer) {
-      clearTimeout(panelBlurTimer)
-      panelBlurTimer = null
-    }
-    releaseDockForPanel()
-    if (!app.isQuitting) {
-      if (settingsReturnFocus.isPending()) {
-        petHiddenForPanel = false
-        settingsReturnFocus.consume()
-      } else if (mainWindow && !mainWindow.isDestroyed() && petHiddenForPanel) {
-        petHiddenForPanel = false
-        mainWindow.showInactive()
-      }
-    }
-    panelWindow = null
-  })
-
-  win.on('blur', () => {
-    if (!win.webContents.isDevToolsOpened()) {
-      panelBlurTimer = setTimeout(() => {
-        if (!win.isDestroyed() && !win.isFocused()) {
-          win.hide()
-        }
-      }, 180)
-    }
-  })
-
-  win.on('focus', () => {
-    if (panelBlurTimer) {
-      clearTimeout(panelBlurTimer)
-      panelBlurTimer = null
-    }
-  })
-
-  win.on('resize', () => {
-    rememberPanelWindowBounds()
-  })
-
-  win.on('move', () => {
-    rememberPanelWindowBounds()
-  })
-
-  win.webContents.on('did-finish-load', () => {
-    syncRuntimeState()
-    syncPetWindowState()
-    emitPanelWindowState()
-    emitPanelSection()
-  })
-
-  win.loadURL(getRendererEntry('panel'))
-
-  panelWindow = win
-  trackWindow(win, 'panel', { isTrackable: isPanelWindowTrackable })
-  return win
 }
 
 function emitPanelSection() {
@@ -1037,105 +620,7 @@ export function createTray() {
   })
 }
 
-// ── Local service probe ──
-
-function formatLocalServiceProbeError(error, host, port, timeoutMs) {
-  const code = String(error?.code || '')
-  if (code === 'ECONNREFUSED') {
-    return `${host}:${port} 当前拒绝连接，服务可能没有启动。`
-  }
-  if (code === 'EHOSTUNREACH' || code === 'ENETUNREACH') {
-    return `${host}:${port} 当前不可达，看看本地网络栈或绑定地址对不对？`
-  }
-  if (code === 'ETIMEDOUT') {
-    return `${host}:${port} 连接超时（${timeoutMs}ms）。`
-  }
-
-  return `${host}:${port} 没能连上：${error instanceof Error ? error.message : '未知原因'}`
-}
-
-// Host allowlist for local-service probes. The doctor panel's only legit use
-// case is "is Ollama / LM Studio / a local provider running on this loopback
-// port?", so anything outside loopback is renderer-driven LAN port scanning
-// and gets pinned back to 127.0.0.1 before any TCP connect happens. Without
-// this, a hostile renderer (XSS / plugin) could turn this IPC into a SSRF
-// timing oracle against the user's LAN.
-const LOCAL_PROBE_HOST_ALLOWLIST = new Set(['127.0.0.1', 'localhost', '::1'])
-
-function normalizeLocalServiceProbeTarget(target = {}) {
-  const rawHost = typeof target.host === 'string' && target.host.trim()
-    ? target.host.trim().toLowerCase()
-    : '127.0.0.1'
-  const host = LOCAL_PROBE_HOST_ALLOWLIST.has(rawHost) ? rawHost : '127.0.0.1'
-  const parsedPort = Number(target.port)
-  const port = Number.isFinite(parsedPort) ? Math.trunc(parsedPort) : NaN
-  const timeoutMs = Math.min(
-    8_000,
-    Math.max(400, Number.isFinite(Number(target.timeoutMs)) ? Math.trunc(Number(target.timeoutMs)) : 1_600),
-  )
-
-  return {
-    id: typeof target.id === 'string' && target.id.trim() ? target.id.trim() : `${host}:${target.port ?? ''}`,
-    label: typeof target.label === 'string' && target.label.trim() ? target.label.trim() : `${host}:${target.port ?? ''}`,
-    host,
-    port,
-    timeoutMs,
-  }
-}
-
-export function probeLocalServiceTarget(target = {}) {
-  const normalized = normalizeLocalServiceProbeTarget(target)
-
-  if (!Number.isInteger(normalized.port) || normalized.port <= 0 || normalized.port > 65_535) {
-    return Promise.resolve({
-      ...normalized,
-      ok: false,
-      latencyMs: null,
-      message: '端口好像不对，没法做本地探测。',
-    })
-  }
-
-  return new Promise((resolve) => {
-    const startedAt = Date.now()
-    let settled = false
-    let socket = null
-
-    const finish = (ok, message) => {
-      if (settled) {
-        return
-      }
-      settled = true
-
-      if (socket) {
-        socket.removeAllListeners()
-        socket.destroy()
-      }
-
-      resolve({
-        ...normalized,
-        ok,
-        latencyMs: ok ? Date.now() - startedAt : null,
-        message,
-      })
-    }
-
-    socket = nodeNet.createConnection({
-      host: normalized.host,
-      port: normalized.port,
-    })
-
-    socket.setTimeout(normalized.timeoutMs)
-    socket.once('connect', () => {
-      finish(true, `${normalized.host}:${normalized.port} 可连接。`)
-    })
-    socket.once('timeout', () => {
-      finish(false, `${normalized.host}:${normalized.port} 连接超时（${normalized.timeoutMs}ms）。`)
-    })
-    socket.once('error', (error) => {
-      finish(false, formatLocalServiceProbeError(error, normalized.host, normalized.port, normalized.timeoutMs))
-    })
-  })
-}
+export { probeLocalServiceTarget } from './localServiceProbe.js'
 
 export function getViewKind(event) {
   return BrowserWindow.fromWebContents(event.sender) === panelWindow ? 'panel' : 'pet'

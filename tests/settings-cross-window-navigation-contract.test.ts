@@ -85,9 +85,10 @@ test('production settings return coordinator consumes every return event exactly
 })
 
 test('settings IPC derives Pet origin and closes through the main-process return policy', async () => {
-  const [ipc, manager, schemas] = await Promise.all([
+  const [ipc, manager, creation, schemas] = await Promise.all([
     read('electron/ipc/windowIpc.js'),
     read('electron/windowManager.js'),
+    read('electron/windowCreation.js'),
     read('electron/ipc/windowPayloadSchemas.js'),
   ])
   const coordinatorSource = await read('electron/settingsReturnFocus.js')
@@ -126,13 +127,17 @@ test('settings IPC derives Pet origin and closes through the main-process return
   const directPetReturn = petReturn.slice(0, petReturn.indexOf('panelWindow.hide'))
   assert.match(directPetReturn, /settingsReturnFocus\.consume\(\)/)
 
-  const panelManager = manager.slice(manager.indexOf('export function createPanelWindow'))
+  const panelManager = creation.slice(creation.indexOf('export function createPanelWindow'))
   const hideHandler = sliceBetween(panelManager, "win.on('hide', () => {", "win.on('close', (event) => {")
   const hidePendingStart = hideHandler.indexOf('if (settingsReturnFocus.isPending())')
   assert.ok(hidePendingStart >= 0, 'hide handler should consume the production coordinator')
-  assert.doesNotMatch(hideHandler.slice(0, hidePendingStart), /if \(mainWindow && !mainWindow\.isDestroyed\(\)/)
+  // After extraction, live window reads go through injected getters.
+  assert.doesNotMatch(hideHandler.slice(0, hidePendingStart), /if \(getMainWindow\(\) && !getMainWindow\(\)\.isDestroyed\(\)/)
   assert.match(hideHandler.slice(hidePendingStart), /settingsReturnFocus\.consume\(\)/)
-  assert.match(hideHandler, /if \(mainWindow && !mainWindow\.isDestroyed\(\) && petHiddenForPanel\) \{[\s\S]*mainWindow\.showInactive\(\)/)
+  assert.match(
+    hideHandler,
+    /if \(getMainWindow\(\) && !getMainWindow\(\)\.isDestroyed\(\) && getPetHiddenForPanel\(\)\) \{[\s\S]*getMainWindow\(\)\.showInactive\(\)/,
+  )
 
   const focusReturnStart = manager.indexOf('const settingsReturnFocus = createSettingsReturnFocusCoordinator(() => {')
   const focusReturnEnd = manager.indexOf('\n})', focusReturnStart)
@@ -149,7 +154,10 @@ test('settings IPC derives Pet origin and closes through the main-process return
   assert.ok(closedPendingStart >= 0, 'closed handler should consume the production coordinator')
   assert.doesNotMatch(closedHandler.slice(0, closedPendingStart), /mainWindow && !mainWindow\.isDestroyed\(\)/)
   assert.match(closedHandler.slice(closedPendingStart), /settingsReturnFocus\.consume\(\)/)
-  assert.match(closedHandler, /else if \(mainWindow && !mainWindow\.isDestroyed\(\) && petHiddenForPanel\) \{[\s\S]*mainWindow\.showInactive\(\)/)
+  assert.match(
+    closedHandler,
+    /else if \(getMainWindow\(\) && !getMainWindow\(\)\.isDestroyed\(\) && getPetHiddenForPanel\(\)\) \{[\s\S]*getMainWindow\(\)\.showInactive\(\)/,
+  )
 
   const closePanel = sliceBetween(manager, 'export function closePanelWindow', 'export function showPetContextMenu')
   assert.match(closePanel, /settingsReturnFocus\.cancel\(\)/)

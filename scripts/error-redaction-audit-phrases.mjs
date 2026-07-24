@@ -47,9 +47,16 @@ export const REQUIRED_PHRASES = [
       "import { getRedactedErrorMessage } from './services/errorRedaction.js'",
       "console.warn('[macOS] Failed to show dock icon:', getRedactedErrorMessage(err))",
       "console.warn('[macOS] Failed to hide dock icon:', getRedactedErrorMessage(err))",
+      "console.warn('[tray] failed to create system tray:', getRedactedErrorMessage(err))",
+    ],
+  },
+  {
+    id: 'window-creation-redacts-support-logs',
+    file: 'electron/windowCreation.js',
+    phrases: [
+      "import { getRedactedErrorMessage } from './services/errorRedaction.js'",
       "console.warn('[pet-window] setVisibleOnAllWorkspaces failed:', getRedactedErrorMessage(err))",
       "console.warn('[pet-window:linux] setVisibleOnAllWorkspaces failed:', getRedactedErrorMessage(err))",
-      "console.warn('[tray] failed to create system tray:', getRedactedErrorMessage(err))",
     ],
   },
   {
@@ -89,7 +96,7 @@ export const REQUIRED_PHRASES = [
   },
   {
     id: 'window-navigation-security-logs-stay-shaped',
-    file: 'electron/windowManager.js',
+    file: 'electron/windowCreation.js',
     phrases: [
       'summarizeWindowNavigationUrlForLog',
       'summarizeWindowNavigationErrorForLog',
@@ -107,8 +114,14 @@ export const REQUIRED_PHRASES = [
       'RUNTIME_LOG_DISPLAY_PATH',
       'console.info(`[runtime-log] capturing renderer console to ${RUNTIME_LOG_DISPLAY_PATH}`)',
       'getRuntimeLogWriteBuffer()?.enqueue(serializeRuntimeLogEntry(entry))',
-      'sanitizeRuntimeLogMessage(details.message)',
       'sanitizeRuntimeLogMessage(err?.message ?? err)',
+    ],
+  },
+  {
+    id: 'window-creation-renderer-console-logs-stay-sanitized',
+    file: 'electron/windowCreation.js',
+    phrases: [
+      'sanitizeRuntimeLogMessage(details.message)',
     ],
   },
   {
@@ -704,7 +717,7 @@ export const REQUIRED_PHRASES = [
   },
   {
     id: 'local-data-status-uses-renderer-safe-fields',
-    file: 'electron/services/localDataStore.js',
+    file: 'electron/services/localDataStoreCore.js',
     phrases: [
       'function statusFromSqliteState(state, initialized = true)',
       'function statusFromError(error)',
