@@ -659,11 +659,11 @@ test('settings child pages inherit the shared control scale', () => {
 
 test('memory transparency storage note stays user-facing', () => {
   const localeFiles = [
-    'src/i18n/locales/zh-CN.ts',
-    'src/i18n/locales/zh-TW.ts',
-    'src/i18n/locales/en.ts',
-    'src/i18n/locales/ja.ts',
-    'src/i18n/locales/ko.ts',
+    'src/i18n/locales/zh-CN/settings-memory.ts',
+    'src/i18n/locales/zh-TW/settings-memory.ts',
+    'src/i18n/locales/en/settings-memory.ts',
+    'src/i18n/locales/ja/settings-memory.ts',
+    'src/i18n/locales/ko/settings-memory.ts',
   ]
 
   for (const localeFile of localeFiles) {
@@ -678,7 +678,7 @@ test('memory transparency storage note stays user-facing', () => {
   }
 
   assertContains(
-    readWorkspaceFile('src/i18n/locales/zh-CN.ts'),
+    readWorkspaceFile('src/i18n/locales/zh-CN/settings-memory.ts'),
     "'settings.memory.transparency.storage_note': '当前记忆和日记保存在本机；暂停后不会继续召回、写入或更新。'",
     'Chinese memory storage note should explain the privacy boundary in user-facing language',
   )

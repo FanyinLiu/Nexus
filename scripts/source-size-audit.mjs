@@ -11,13 +11,9 @@ const SOURCE_PATTERN = /\.(ts|tsx|js|mjs|cjs|css)$/
 const IGNORED_DIRECTORIES = new Set(['node_modules', 'dist', 'release', 'release-smoke', '.git'])
 
 const FILE_BUDGETS = {
-  'src/i18n/locales/en.ts': 2600,
-  'src/i18n/locales/zh-CN.ts': 2600,
-  'src/i18n/locales/zh-TW.ts': 2600,
-  'src/i18n/locales/ja.ts': 2600,
-  'src/i18n/locales/ko.ts': 2600,
+  // Locale messages are split under src/i18n/locales/<locale>/*.ts (≤500 lines each).
+  // localDataStore is a thin facade; SQLite core + chat domain live in sibling modules.
   'src/i18n/keys.ts': 2600,
-  'electron/services/localDataStore.js': 1800,
   'src/app/App.css': 8400,
   'src/app/styles/settings.css': 7300,
   'src/app/styles/settings-themes.css': 11000,

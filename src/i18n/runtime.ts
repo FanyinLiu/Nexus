@@ -1,4 +1,4 @@
-import { zhCNMessages } from './locales/zh-CN.ts'
+import { zhCNMessages } from './locales/zh-CN/index.ts'
 import { toTraditional } from './opencc.ts'
 import type {
   AppLocale,
@@ -26,10 +26,10 @@ const pendingLoads: Partial<Record<AppLocale, Promise<TranslationDictionary>>> =
 
 const localeLoaders: Record<AppLocale, () => Promise<TranslationDictionary>> = {
   'zh-CN': async () => zhCNMessages,
-  'zh-TW': async () => (await import('./locales/zh-TW.ts')).zhTWMessages,
-  'en-US': async () => (await import('./locales/en.ts')).enMessages,
-  ja: async () => (await import('./locales/ja.ts')).jaMessages,
-  ko: async () => (await import('./locales/ko.ts')).koMessages,
+  'zh-TW': async () => (await import('./locales/zh-TW/index.ts')).zhTWMessages,
+  'en-US': async () => (await import('./locales/en/index.ts')).enMessages,
+  ja: async () => (await import('./locales/ja/index.ts')).jaMessages,
+  ko: async () => (await import('./locales/ko/index.ts')).koMessages,
 }
 
 function interpolateMessage(template: string, params?: TranslationParams) {

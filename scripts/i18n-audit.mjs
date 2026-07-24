@@ -1,14 +1,16 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 
 const root = process.cwd()
 const keyFile = resolve(root, 'src/i18n/keys.ts')
+
+/** Locale id → directory of per-namespace message modules. */
 const locales = {
-  'zh-CN': 'src/i18n/locales/zh-CN.ts',
-  'zh-TW': 'src/i18n/locales/zh-TW.ts',
-  'en-US': 'src/i18n/locales/en.ts',
-  ja: 'src/i18n/locales/ja.ts',
-  ko: 'src/i18n/locales/ko.ts',
+  'zh-CN': 'src/i18n/locales/zh-CN',
+  'zh-TW': 'src/i18n/locales/zh-TW',
+  'en-US': 'src/i18n/locales/en',
+  ja: 'src/i18n/locales/ja',
+  ko: 'src/i18n/locales/ko',
 }
 
 function readText(path) {
@@ -28,17 +30,28 @@ function unescapeStringLiteral(value) {
     .replace(/\\\\/g, '\\')
 }
 
-function extractLocaleEntries(path) {
-  const text = readText(path)
+function listLocaleSourceFiles(dirRel) {
+  const abs = resolve(root, dirRel)
+  return readdirSync(abs)
+    .filter((name) => name.endsWith('.ts') && name !== 'index.ts')
+    .map((name) => join(dirRel, name))
+}
+
+function extractLocaleEntries(dirRel) {
   const entries = new Map()
   const duplicates = []
   const pattern = /^\s*'([^']+)'\s*:\s*(['"])((?:\\.|[\s\S])*?)\2\s*,/gm
-  for (const match of text.matchAll(pattern)) {
-    const key = match[1]
-    if (entries.has(key)) duplicates.push(key)
-    entries.set(key, unescapeStringLiteral(match[3]))
+
+  for (const file of listLocaleSourceFiles(dirRel)) {
+    const text = readText(file)
+    for (const match of text.matchAll(pattern)) {
+      const key = match[1]
+      if (entries.has(key)) duplicates.push(key)
+      entries.set(key, unescapeStringLiteral(match[3]))
+    }
   }
-  return { entries, duplicates }
+
+  return { entries, duplicates, files: listLocaleSourceFiles(dirRel) }
 }
 
 function placeholders(value) {
@@ -49,6 +62,20 @@ function placeholders(value) {
 
 function sameList(left, right) {
   return left.length === right.length && left.every((value, index) => value === right[index])
+}
+
+// Fail fast if a locale directory is missing (e.g. incomplete split).
+for (const [locale, dir] of Object.entries(locales)) {
+  const abs = resolve(root, dir)
+  try {
+    if (!statSync(abs).isDirectory()) {
+      throw new Error(`${locale} locale path is not a directory: ${dir}`)
+    }
+  } catch (error) {
+    console.error(`i18n audit failed: missing locale directory for ${locale}: ${dir}`)
+    console.error(error instanceof Error ? error.message : error)
+    process.exit(1)
+  }
 }
 
 const keys = extractTranslationKeys()
@@ -100,7 +127,7 @@ for (const [locale, result] of localeEntries) {
   }
 
   console.log(
-    `${locale}: keys=${result.entries.size} missing=${missing.length} extra=${extra.length} duplicate=${result.duplicates.length}`,
+    `${locale}: keys=${result.entries.size} files=${result.files.length} missing=${missing.length} extra=${extra.length} duplicate=${result.duplicates.length}`,
   )
 }
 

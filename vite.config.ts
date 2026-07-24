@@ -32,19 +32,21 @@ function resolveManualChunk(id: string) {
     return 'tesseract-vendor'
   }
 
-  if (normalizedId.includes('/src/i18n/locales/en.ts')) {
+  // Per-locale message trees live under locales/<id>/; keep each locale in its
+  // own async chunk so switching language does not pull every dictionary.
+  if (normalizedId.includes('/src/i18n/locales/en/')) {
     return 'locale-en-US'
   }
 
-  if (normalizedId.includes('/src/i18n/locales/ja.ts')) {
+  if (normalizedId.includes('/src/i18n/locales/ja/')) {
     return 'locale-ja'
   }
 
-  if (normalizedId.includes('/src/i18n/locales/ko.ts')) {
+  if (normalizedId.includes('/src/i18n/locales/ko/')) {
     return 'locale-ko'
   }
 
-  if (normalizedId.includes('/src/i18n/locales/zh-TW.ts')) {
+  if (normalizedId.includes('/src/i18n/locales/zh-TW/')) {
     return 'locale-zh-TW'
   }
 

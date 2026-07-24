@@ -6,11 +6,11 @@ import {
   type CompanionSurfaceCaptionInput,
 } from '../src/features/uiV2/state.ts'
 import { getCaptionReadingDurationMs } from '../src/features/uiV2/caption.ts'
-import { enMessages } from '../src/i18n/locales/en.ts'
-import { jaMessages } from '../src/i18n/locales/ja.ts'
-import { koMessages } from '../src/i18n/locales/ko.ts'
-import { zhCNMessages } from '../src/i18n/locales/zh-CN.ts'
-import { zhTWMessages } from '../src/i18n/locales/zh-TW.ts'
+import { enMessages } from '../src/i18n/locales/en/index.ts'
+import { jaMessages } from '../src/i18n/locales/ja/index.ts'
+import { koMessages } from '../src/i18n/locales/ko/index.ts'
+import { zhCNMessages } from '../src/i18n/locales/zh-CN/index.ts'
+import { zhTWMessages } from '../src/i18n/locales/zh-TW/index.ts'
 
 test('V2 companion phase follows real voice capture and playback', () => {
   assert.equal(resolveCompanionSurfaceBasePhase({ voiceState: 'idle' }), 'idle')

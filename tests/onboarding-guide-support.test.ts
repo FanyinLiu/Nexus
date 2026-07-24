@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
 import { buildOnboardingMessageActionDemo } from '../src/features/onboarding/messageActionDemo.ts'
-import { enMessages } from '../src/i18n/locales/en.ts'
-import { jaMessages } from '../src/i18n/locales/ja.ts'
-import { koMessages } from '../src/i18n/locales/ko.ts'
-import { zhCNMessages } from '../src/i18n/locales/zh-CN.ts'
-import { zhTWMessages } from '../src/i18n/locales/zh-TW.ts'
+import { enMessages } from '../src/i18n/locales/en/index.ts'
+import { jaMessages } from '../src/i18n/locales/ja/index.ts'
+import { koMessages } from '../src/i18n/locales/ko/index.ts'
+import { zhCNMessages } from '../src/i18n/locales/zh-CN/index.ts'
+import { zhTWMessages } from '../src/i18n/locales/zh-TW/index.ts'
 import {
   applyOnboardingStepRepairDraft,
   buildOnboardingSteps,

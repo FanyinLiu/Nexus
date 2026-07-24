@@ -16,11 +16,11 @@ const REQUIRED_FILES = [
   'src/app/views/LegacyPanelView.tsx',
   'src/app/views/image4ActivityLabel.ts',
   'src/app/views/image4CompanionState.ts',
-  'src/i18n/locales/en.ts',
-  'src/i18n/locales/zh-CN.ts',
-  'src/i18n/locales/zh-TW.ts',
-  'src/i18n/locales/ja.ts',
-  'src/i18n/locales/ko.ts',
+  'src/i18n/locales/en/core.ts',
+  'src/i18n/locales/zh-CN/core.ts',
+  'src/i18n/locales/zh-TW/core.ts',
+  'src/i18n/locales/ja/core.ts',
+  'src/i18n/locales/ko/core.ts',
 ]
 
 const REQUIRED_CONTRACTS = [
@@ -109,11 +109,11 @@ const REQUIRED_CONTRACTS = [
 ]
 
 const PET_ACTIVITY_COPY_FILES = [
-  'src/i18n/locales/en.ts',
-  'src/i18n/locales/zh-CN.ts',
-  'src/i18n/locales/zh-TW.ts',
-  'src/i18n/locales/ja.ts',
-  'src/i18n/locales/ko.ts',
+  'src/i18n/locales/en/core.ts',
+  'src/i18n/locales/zh-CN/core.ts',
+  'src/i18n/locales/zh-TW/core.ts',
+  'src/i18n/locales/ja/core.ts',
+  'src/i18n/locales/ko/core.ts',
 ]
 
 const FORBIDDEN_SOURCE_PATTERNS = [
@@ -250,11 +250,11 @@ function findPreciseTimeUi(files) {
 function findTaskExecutionCopy(files) {
   const matches = []
   const forbiddenCopyByFile = {
-    'src/i18n/locales/en.ts': /\b(?:Executing|Execution failed|Failed|Running)\b/,
-    'src/i18n/locales/zh-CN.ts': /执行|任务/,
-    'src/i18n/locales/zh-TW.ts': /執行|任務/,
-    'src/i18n/locales/ja.ts': /実行/,
-    'src/i18n/locales/ko.ts': /실행/,
+    'src/i18n/locales/en/core.ts': /\b(?:Executing|Execution failed|Failed|Running)\b/,
+    'src/i18n/locales/zh-CN/core.ts': /执行|任务/,
+    'src/i18n/locales/zh-TW/core.ts': /執行|任務/,
+    'src/i18n/locales/ja/core.ts': /実行/,
+    'src/i18n/locales/ko/core.ts': /실행/,
   }
 
   for (const file of PET_ACTIVITY_COPY_FILES) {

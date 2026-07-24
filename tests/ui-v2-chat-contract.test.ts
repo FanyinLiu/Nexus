@@ -17,7 +17,7 @@ const panelStylesPath = new URL('../src/features/uiV2/panel-v2.css', import.meta
 const companionStylesPath = new URL('../src/features/uiV2/companion-v2.css', import.meta.url)
 const chatSettingsPath = new URL('../src/features/settingsV3/ChatSectionV3.tsx', import.meta.url)
 const localePaths = ['en', 'zh-CN', 'zh-TW', 'ja', 'ko'].map(
-  (locale) => new URL(`../src/i18n/locales/${locale}.ts`, import.meta.url),
+  (locale) => new URL(`../src/i18n/locales/${locale}/core.ts`, import.meta.url),
 )
 
 test('V2 companion menus expose one auxiliary chat destination', async () => {

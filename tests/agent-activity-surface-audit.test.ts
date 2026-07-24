@@ -58,27 +58,27 @@ export function deriveImage4CompanionState() {
   return { activityState: 'context_available', contextTone: 'calm', signalActive: false }
 }
 `,
-  'src/i18n/locales/en.ts': `
+  'src/i18n/locales/en/core.ts': `
 'pet.status.executing': 'Preparing',
 'pet.status.done': 'All set',
 'pet.status.failed': 'Could not finish',
 `,
-  'src/i18n/locales/zh-CN.ts': `
+  'src/i18n/locales/zh-CN/core.ts': `
 'pet.status.executing': '准备中',
 'pet.status.done': '好了',
 'pet.status.failed': '没完成',
 `,
-  'src/i18n/locales/zh-TW.ts': `
+  'src/i18n/locales/zh-TW/core.ts': `
 'pet.status.executing': '準備中',
 'pet.status.done': '好了',
 'pet.status.failed': '沒完成',
 `,
-  'src/i18n/locales/ja.ts': `
+  'src/i18n/locales/ja/core.ts': `
 'pet.status.executing': '準備中',
 'pet.status.done': 'できました',
 'pet.status.failed': '未完了',
 `,
-  'src/i18n/locales/ko.ts': `
+  'src/i18n/locales/ko/core.ts': `
 'pet.status.executing': '준비 중',
 'pet.status.done': '다 됐어요',
 'pet.status.failed': '완료하지 못함',
@@ -186,7 +186,7 @@ export const bad = '3 minutes'
 
 test('agent activity surface audit rejects task-execution copy in pet companion status', () => {
   withFixture({
-    'src/i18n/locales/zh-CN.ts': `
+    'src/i18n/locales/zh-CN/core.ts': `
 'pet.status.executing': '执行中',
 'pet.status.done': '已完成',
 'pet.status.failed': '执行失败',
