@@ -2,7 +2,7 @@
  * Chat system-prompt strings — en-US locale.
  */
 
-import type { ChatPromptStrings } from './index.ts'
+import type { ChatPromptStrings } from './types.ts'
 
 export const enUSChatPrompts: ChatPromptStrings = {
   personaMemoryHeader: (memory) =>

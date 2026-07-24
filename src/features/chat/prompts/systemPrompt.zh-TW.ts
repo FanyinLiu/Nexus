@@ -2,7 +2,7 @@
  * Chat system-prompt strings — zh-TW locale (Traditional Chinese).
  */
 
-import type { ChatPromptStrings } from './index.ts'
+import type { ChatPromptStrings } from './types.ts'
 
 export const zhTWChatPrompts: ChatPromptStrings = {
   personaMemoryHeader: (memory) =>

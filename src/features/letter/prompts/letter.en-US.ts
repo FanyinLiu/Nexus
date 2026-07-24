@@ -1,4 +1,4 @@
-import type { LetterPromptStrings } from './index.ts'
+import type { LetterPromptStrings } from './types.ts'
 
 export const enUSLetterPrompts: LetterPromptStrings = {
   taskFraming:

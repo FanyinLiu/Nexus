@@ -2,7 +2,7 @@
  * Chat system-prompt strings — ko locale.
  */
 
-import type { ChatPromptStrings } from './index.ts'
+import type { ChatPromptStrings } from './types.ts'
 
 export const koChatPrompts: ChatPromptStrings = {
   personaMemoryHeader: (memory) =>

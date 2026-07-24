@@ -11,22 +11,9 @@ import { zhTWLetterPrompts } from './letter.zh-TW.ts'
 import { enUSLetterPrompts } from './letter.en-US.ts'
 import { jaLetterPrompts } from './letter.ja.ts'
 import { koLetterPrompts } from './letter.ko.ts'
+import type { LetterPromptStrings } from './types.ts'
 
-export interface LetterPromptStrings {
-  taskFraming: string
-  signaturePhrasesHeader: string
-  toneHeader: string
-  responseContract: string
-
-  sectionWeekHeader: (isoDate: string, weekDayCount: number) => string
-  sectionThemesHeader: string
-  sectionHighlightsHeader: string
-  sectionStressorsHeader: string
-  sectionReflectionsHeader: string
-  sectionMilestonesHeader: string
-
-  finalInstruction: string
-}
+export type { LetterPromptStrings } from './types.ts'
 
 const REGISTRY: Record<UiLanguage, LetterPromptStrings> = {
   'zh-CN': zhCNLetterPrompts,

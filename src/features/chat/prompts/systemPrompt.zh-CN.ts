@@ -6,7 +6,7 @@
  * preserved across locales — other parsers/regex rely on them.
  */
 
-import type { ChatPromptStrings } from './index.ts'
+import type { ChatPromptStrings } from './types.ts'
 
 export const zhCNChatPrompts: ChatPromptStrings = {
   personaMemoryHeader: (memory) =>

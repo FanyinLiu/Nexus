@@ -2,7 +2,7 @@
  * Autonomy V2 decision-engine prompt strings — zh-CN locale (original).
  */
 
-import type { DecisionPromptStrings } from './index.ts'
+import type { DecisionPromptStrings } from './types.ts'
 
 export const zhCNDecisionPrompts: DecisionPromptStrings = {
   responseContractBase: `# Response contract

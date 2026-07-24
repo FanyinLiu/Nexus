@@ -2,7 +2,7 @@
  * Autonomy V2 decision-engine prompt strings — en-US locale.
  */
 
-import type { DecisionPromptStrings } from './index.ts'
+import type { DecisionPromptStrings } from './types.ts'
 
 export const enUSDecisionPrompts: DecisionPromptStrings = {
   responseContractBase: `# Response contract
