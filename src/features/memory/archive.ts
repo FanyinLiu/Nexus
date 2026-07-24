@@ -142,7 +142,7 @@ export function parseMemoryArchive(raw: string) {
     parsed = JSON.parse(raw)
   } catch (error) {
     const detail = error instanceof Error ? error.message : t('memory.error.json_parse_unknown')
-    throw new Error(t('memory.error.json_parse_failed', { detail }))
+    throw new Error(t('memory.error.json_parse_failed', { detail }), { cause: error })
   }
 
   const rawMemories = Array.isArray(parsed)

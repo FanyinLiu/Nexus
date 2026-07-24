@@ -198,7 +198,7 @@ export async function readWebhookToken(options = {}, context = {}) {
       if (token) return token
     } catch (error) {
       if (error?.code !== 'ENOENT') {
-        throw new Error(`Failed to read webhook token from ${candidate}: ${error.message}`)
+        throw new Error(`Failed to read webhook token from ${candidate}: ${error.message}`, { cause: error })
       }
     }
   }

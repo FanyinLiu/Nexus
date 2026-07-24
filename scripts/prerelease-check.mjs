@@ -169,7 +169,7 @@ stage('A', 'Process & version', () => {
     try {
       status = sh(`gh run list --commit ${sha} --limit 1 --json status,conclusion --jq '.[0] | "\\(.status):\\(.conclusion)"'`)
     } catch (err) {
-      throw new Error(`gh run list failed: ${err.message?.split('\n')[0]}`)
+      throw new Error(`gh run list failed: ${err.message?.split('\n')[0]}`, { cause: err })
     }
     if (!status || status === ':null') throw new Error(`No CI run for ${sha.slice(0,10)}. Push and wait.`)
     const [s, c] = status.split(':')
@@ -188,7 +188,7 @@ stage('B', 'Code quality', () => {
       sh('npm run verify:release', { stdio: ['ignore', 'ignore', 'pipe'] })
     } catch (err) {
       const hint = err.stderr?.toString()?.split('\n').slice(0, 10).join('\n') ?? err.message
-      throw new Error(`verify:release failed:\n       ${hint.replace(/\n/g, '\n       ')}`)
+      throw new Error(`verify:release failed:\n       ${hint.replace(/\n/g, '\n       ')}`, { cause: err })
     }
   })
 
@@ -197,7 +197,7 @@ stage('B', 'Code quality', () => {
       try {
         sh('npm run smoke', { stdio: ['ignore', 'ignore', 'pipe'], timeout: 90_000 })
       } catch (err) {
-        throw new Error(`smoke failed: ${err.message?.split('\n')[0]}`)
+        throw new Error(`smoke failed: ${err.message?.split('\n')[0]}`, { cause: err })
       }
     })
 
@@ -209,7 +209,7 @@ stage('B', 'Code quality', () => {
           stdio: 'inherit',
         })
       } catch (err) {
-        throw new Error(`Live2D three-model smoke failed: ${err.message?.split('\n')[0]}`)
+        throw new Error(`Live2D three-model smoke failed: ${err.message?.split('\n')[0]}`, { cause: err })
       }
     })
 
@@ -226,7 +226,7 @@ stage('B', 'Code quality', () => {
         packagedSmokePassed = true
       } catch (err) {
         const detail = err.stderr?.toString()?.split('\n').slice(-8).join('\n') || err.message
-        throw new Error(`packaged smoke failed:\n       ${detail.replace(/\n/g, '\n       ')}`)
+        throw new Error(`packaged smoke failed:\n       ${detail.replace(/\n/g, '\n       ')}`, { cause: err })
       }
     })
 
@@ -245,7 +245,7 @@ stage('B', 'Code quality', () => {
         })
       } catch (err) {
         const detail = err.stderr?.toString()?.split('\n').slice(-8).join('\n') || err.message
-        throw new Error(`packaged sustained runtime failed:\n       ${detail.replace(/\n/g, '\n       ')}`)
+        throw new Error(`packaged sustained runtime failed:\n       ${detail.replace(/\n/g, '\n       ')}`, { cause: err })
       }
     })
 
@@ -284,7 +284,7 @@ stage('B', 'Code quality', () => {
       try {
         sh('node --experimental-strip-types tests/benchmarks.bench.ts', { stdio: ['ignore', 'pipe', 'ignore'], timeout: 300_000 })
       } catch (err) {
-        throw new Error(`benchmark crashed: ${err.message?.split('\n')[0]}`)
+        throw new Error(`benchmark crashed: ${err.message?.split('\n')[0]}`, { cause: err })
       }
     }, { warnOnly: true })
   }
@@ -493,7 +493,7 @@ stage('E', 'Docs + compliance', () => {
     try {
       out = sh('npx -y license-checker --production --summary 2>/dev/null', { stdio: ['ignore', 'pipe', 'ignore'], timeout: 60_000 })
     } catch (err) {
-      throw new Error(`license-checker failed: ${err.message?.split('\n')[0]}`)
+      throw new Error(`license-checker failed: ${err.message?.split('\n')[0]}`, { cause: err })
     }
     const bad = out.split('\n').filter((l) => /\b(GPL-|AGPL-|SSPL)/i.test(l) && !/LGPL/i.test(l))
     if (bad.length > 0) throw new Error(`copyleft licences:\n       ${bad.join('\n       ')}`)

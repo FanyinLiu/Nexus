@@ -263,7 +263,7 @@ export async function acquireBuildLock(
       const existingOwner = await readBuildLockOwner(lockPath, io)
       if (!existingOwner) {
         if (attempt === 1) {
-          throw new Error(`Build lock changed while checking ${lockPath}`)
+          throw new Error(`Build lock changed while checking ${lockPath}`, { cause: error })
         }
         continue
       }

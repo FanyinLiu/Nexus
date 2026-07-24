@@ -542,7 +542,7 @@ async function captureMatrix({ browser, baseUrl, outDir, languageCases }) {
                 await captureStableScreenshot(page, screenshotPath, section.id)
               } catch (error) {
                 const message = error instanceof Error ? error.message : String(error)
-                throw new Error(`${languageCase.id}/${viewport.id}/${theme.label}/${section.id}: ${message}`)
+                throw new Error(`${languageCase.id}/${viewport.id}/${theme.label}/${section.id}: ${message}`, { cause: error })
               }
               manifest.screenshots.push({
                 language: languageCase.id,

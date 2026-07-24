@@ -34,8 +34,6 @@ export default defineConfig([
       'no-empty': 'off',
       'no-extra-boolean-cast': 'off',
       'no-useless-escape': 'off',
-      // ESLint 10: re-enable rules one at a time (preserve-caught-error still deferred).
-      'preserve-caught-error': 'off',
     },
   },
   {
@@ -49,10 +47,6 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
-    },
-    rules: {
-      // ESLint 10: re-enable rules one at a time (preserve-caught-error still deferred).
-      'preserve-caught-error': 'off',
     },
   },
 ])

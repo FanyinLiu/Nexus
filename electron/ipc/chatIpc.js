@@ -131,7 +131,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         model: requestPayload.model,
         reason,
       })
-      throw new Error(`没能连上模型接口，看看地址和网络对不对？具体原因：${reason}`)
+      throw new Error(`没能连上模型接口，看看地址和网络对不对？具体原因：${reason}`, { cause: error })
     }
 
     const data = await response.json().catch((parseErr) => {
@@ -242,7 +242,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       const reason = getRedactedErrorMessage(error)
       activeChatStreamControllers.delete(requestId)
       console.error('[chat:stream] network failure', { requestId, reason })
-      throw new Error(`没能连上模型接口，看看地址和网络对不对？具体原因：${reason}`)
+      throw new Error(`没能连上模型接口，看看地址和网络对不对？具体原因：${reason}`, { cause: error })
     }
 
     if (!response.ok) {

@@ -102,7 +102,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
       })
     } catch (error) {
       const reason = getRedactedErrorMessage(error)
-      throw new Error(`音色列表没能拉到，看看地址和网络对不对？具体原因：${reason}`)
+      throw new Error(`音色列表没能拉到，看看地址和网络对不对？具体原因：${reason}`, { cause: error })
     }
 
     const data = await readJsonSafe(response)
@@ -294,7 +294,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         model: payload.model,
         reason,
       })
-      throw new Error(`没能连上语音识别接口，看看地址和网络对不对？具体原因：${reason}`)
+      throw new Error(`没能连上语音识别接口，看看地址和网络对不对？具体原因：${reason}`, { cause: error })
     }
 
     const data = await readJsonSafe(response)
@@ -440,7 +440,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         })
       } catch (error) {
         const reason = getRedactedErrorMessage(error)
-        throw new Error(`没能连上语音播报接口，看看地址和网络对不对？具体原因：${reason}`)
+        throw new Error(`没能连上语音播报接口，看看地址和网络对不对？具体原因：${reason}`, { cause: error })
       }
 
       if (!result.ok) {
@@ -494,7 +494,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
       })
     } catch (error) {
       const reason = getRedactedErrorMessage(error)
-      throw new Error(`没能连上语音播报接口，看看地址和网络对不对？具体原因：${reason}`)
+      throw new Error(`没能连上语音播报接口，看看地址和网络对不对？具体原因：${reason}`, { cause: error })
     }
 
     if (!response.ok) {
@@ -542,7 +542,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, 
         })
       } catch (error) {
         const reason = getRedactedErrorMessage(error)
-        throw new Error(`百炼音频文件没下下来，具体原因：${reason}`)
+        throw new Error(`百炼音频文件没下下来，具体原因：${reason}`, { cause: error })
       }
 
       if (!audioResponse.ok) {

@@ -325,7 +325,7 @@ class McpInstance {
       this.state = 'crashed'
       this.process = null
       child.kill()
-      throw new Error(`MCP handshake failed: ${getRedactedErrorMessage(err)}`)
+      throw new Error(`MCP handshake failed: ${getRedactedErrorMessage(err)}`, { cause: err })
     }
   }
 

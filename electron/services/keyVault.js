@@ -55,7 +55,7 @@ function encryptWithSafeStorage(value) {
     return safeStorage.encryptString(value)
   } catch (error) {
     markSafeStorageAccessBlocked(error, 'encryption')
-    throw new Error('系统钥匙串暂时不可用。本次启动不会重复请求钥匙串权限。')
+    throw new Error('系统钥匙串暂时不可用。本次启动不会重复请求钥匙串权限。', { cause: error })
   }
 }
 

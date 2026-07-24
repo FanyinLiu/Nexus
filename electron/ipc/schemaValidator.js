@@ -165,6 +165,6 @@ export function validateIpcPayload(channel, value, schema) {
     return validateSchemaValue(value, schema, 'payload')
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error)
-    throw new Error(`Invalid IPC payload for ${channel}: ${reason}`)
+    throw new Error(`Invalid IPC payload for ${channel}: ${reason}`, { cause: error })
   }
 }

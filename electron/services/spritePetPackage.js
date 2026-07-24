@@ -418,7 +418,7 @@ export async function extractSpritePetZipArchive(archivePath, targetDirectory) {
       try {
         fileBytes = inflateRawSync(compressed, { maxOutputLength: entry.uncompressedSize })
       } catch (error) {
-        throw new Error(`ZIP 文件 ${entry.safeName} 解压没成功：${error?.message ?? error}`)
+        throw new Error(`ZIP 文件 ${entry.safeName} 解压没成功：${error?.message ?? error}`, { cause: error })
       }
     } else {
       throw new Error(`不支持 ZIP 压缩方式：${entry.compressionMethod}。`)
