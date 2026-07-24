@@ -1,5 +1,8 @@
 import type { TranslationKey } from '../../types/i18n'
-import type { SpritePetAtlasDefinition } from './spriteAtlas'
+import type { PetExpressionSlot, SpritePetAtlasDefinition } from './types'
+
+/** @deprecated Import from `./types` — re-exported for backward compatibility. */
+export type { PetExpressionSlot } from './types'
 
 /**
  * One entry in a model's idle fidget pool. When the pet is in `idle` mood
@@ -32,20 +35,6 @@ export interface IdleFidgetDefinition {
    */
   weight?: number
 }
-
-export type PetExpressionSlot =
-  | 'idle'
-  | 'thinking'
-  | 'happy'
-  | 'sleepy'
-  | 'surprised'
-  | 'confused'
-  | 'embarrassed'
-  | 'listening'
-  | 'speaking'
-  | 'touchHead'
-  | 'touchFace'
-  | 'touchBody'
 
 export interface PetModelDefinition {
   id: string

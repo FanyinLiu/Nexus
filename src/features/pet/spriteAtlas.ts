@@ -1,6 +1,8 @@
 import type { PetMood, PetTouchZone } from '../../types/index.ts'
-import type { PetExpressionSlot } from './models.ts'
-import type { PetPerformanceCue } from './performance.ts'
+import type { PetExpressionSlot, PetPerformanceCue } from './types.ts'
+
+/** @deprecated Import from `./types` — re-exported for backward compatibility. */
+export type { SpritePetAtlasDefinition } from './types.ts'
 
 export const SPRITE_PET_COLUMNS = 8
 export const SPRITE_PET_ROWS = 9
@@ -24,22 +26,6 @@ export const SPRITE_PET_ANIMATION_STATES = [
 ] as const
 
 export type SpritePetAnimationState = (typeof SPRITE_PET_ANIMATION_STATES)[number]
-
-export interface SpritePetAtlasDefinition {
-  imagePath: string
-  columns?: number
-  rows?: number
-  cellWidth?: number
-  cellHeight?: number
-  imageRendering?: 'pixelated' | 'auto'
-  stageSize?: string
-  stageMinSize?: string
-  stageMaxSize?: string
-  stageMarginBottom?: string
-  previewSize?: string
-  previewMinSize?: string
-  previewMaxSize?: string
-}
 
 export type SpritePetFrame = {
   row: number

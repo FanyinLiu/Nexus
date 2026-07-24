@@ -1,31 +1,15 @@
-import type { PetExpressionSlot } from './models'
+import type {
+  PetExpressionSlot,
+  PetPerformanceAccent,
+  PetPerformancePlan,
+} from './types'
 
-export type PetPerformanceAccent =
-  | 'peek'
-  | 'search'
-  | 'organize'
-  | 'write'
-  | 'deliver'
-  | 'confirm'
-  | 'sparkle'
-  | 'listen'
-  | 'shy'
-
-export type PetPerformancePlan = {
-  expressionSlot?: PetExpressionSlot
-  motionSlot?: PetExpressionSlot
-  // Model-defined gesture name (e.g. 'wave', 'nod'). Looked up in
-  // motionGroups.gestures at apply time; unknown names are silent no-ops
-  // so personas on gesture-poor models don't break.
-  gestureName?: string
-  accentStyle?: PetPerformanceAccent
-  durationMs: number
-  stageDirection: string
-}
-
-export type PetPerformanceCue = PetPerformancePlan & {
-  id: string
-}
+/** @deprecated Import from `./types` — re-exported for backward compatibility. */
+export type {
+  PetPerformanceAccent,
+  PetPerformanceCue,
+  PetPerformancePlan,
+} from './types'
 
 type ParsedAssistantPerformance = {
   cue: PetPerformancePlan | null
