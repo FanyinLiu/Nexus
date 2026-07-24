@@ -12,7 +12,7 @@
 // `executeBuiltInToolByName`.
 
 import type { AppSettings } from '../../types'
-import type { McpToolDescriptor } from '../chat/toolCallLoop'
+import type { McpToolDescriptor } from '../chat/mcpToolTypes'
 import type { BuiltInToolId } from './toolTypes'
 
 export const BUILT_IN_TOOL_NAMES = ['web_search', 'weather', 'open_external', 'set_tool_enabled'] as const

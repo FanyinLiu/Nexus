@@ -30,21 +30,9 @@ import {
 import { executeWithProtection } from '../tools/circuitBreaker.ts'
 import { runPostToolHooks, runPreToolHooks } from '../tools/hooks.ts'
 import { extractPromptModeToolCalls } from './promptModeMcp.ts'
+import type { McpToolDescriptor } from './mcpToolTypes.ts'
 
-export type McpToolDescriptor = {
-  name: string
-  description: string
-  serverId: string
-  inputSchema?: Record<string, unknown>
-  skillGuide?: string
-  /**
-   * When true, this descriptor is always included in the payload regardless
-   * of keyword relevance. Used by built-in tools (web_search / weather /
-   * open_external) so the LLM can invoke them even when the user's phrasing
-   * doesn't lexically overlap with the tool name or description.
-   */
-  alwaysInclude?: boolean
-}
+export type { McpToolDescriptor } from './mcpToolTypes.ts'
 
 const MAX_TOOL_DEFINITIONS_PER_REQUEST = 12
 const MAX_TOOL_RESULT_CHARS = 8000
