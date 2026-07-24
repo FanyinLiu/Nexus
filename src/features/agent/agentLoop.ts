@@ -12,33 +12,13 @@ import { normalizeUiLanguage } from '../../lib/uiLanguage'
 import { planStore, type Plan } from '../plan/planStore'
 import { openGoalsStore } from './openGoalsStore'
 import { agentTraceStore } from './agentTraceStore'
+import type { AgentStep, AgentStopReason } from './types'
 
-export type AgentStepType =
-  | 'start'
-  | 'thinking'
-  | 'tool_round'
-  | 'plan_created'
-  | 'plan_step_done'
-  | 'reflect'
-  | 'continue'
-  | 'done'
-  | 'abort'
-
-export type AgentStep = {
-  iteration: number
-  type: AgentStepType
-  content?: string
-  toolCallNames?: string[]
-  reason?: string
-  timestamp: number
-}
-
-export type AgentStopReason =
-  | 'done'
-  | 'aborted'
-  | 'max_iterations'
-  | 'cost_cap'
-  | 'error'
+export type {
+  AgentStep,
+  AgentStepType,
+  AgentStopReason,
+} from './types'
 
 export type AgentExecuteTurn = (
   history: ChatMessage[],

@@ -4,7 +4,7 @@ import {
   readJsonValidated,
   writeJsonDebounced,
 } from '../../lib/storage/core.ts'
-import type { AgentStep, AgentStopReason, AgentStepType } from './agentLoop.ts'
+import type { AgentStep, AgentStopReason, AgentStepType } from './types.ts'
 
 export type AgentTrace = {
   id: string

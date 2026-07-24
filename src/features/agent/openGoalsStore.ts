@@ -6,7 +6,7 @@ import {
 } from '../../lib/storage/core.ts'
 import { planStore } from '../plan/planStore.ts'
 import { t } from '../../i18n/runtime.ts'
-import type { AgentStopReason } from './agentLoop'
+import type { AgentStopReason } from './types'
 
 export type OpenGoalStatus = 'paused' | 'aborted'
 
