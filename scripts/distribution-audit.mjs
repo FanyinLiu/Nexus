@@ -280,11 +280,13 @@ check('release workflow builds only after required browser VAD is present', () =
   const setupVendorIndex = buildWorkflow.indexOf('node scripts/setup-vendor.mjs')
   const viteIndex = buildWorkflow.indexOf('name: Vite build')
   const vadGateIndex = buildWorkflow.indexOf('name: Verify browser VAD asset in built renderer')
+  const ortGateIndex = buildWorkflow.indexOf('name: Verify browser ORT runtime assets in built renderer')
   const packageIndex = buildWorkflow.indexOf('run: ${{ matrix.cmd }}')
 
   assert(downloadIndex >= 0 && downloadIndex < setupVendorIndex, 'required models must download before deterministic vendor refresh')
   assert(setupVendorIndex < viteIndex, 'browser VAD vendor assets must refresh after cache restore and before Vite copies public assets')
   assert(viteIndex < vadGateIndex && vadGateIndex < packageIndex, 'built browser VAD integrity must pass before packaging')
+  assert(viteIndex < ortGateIndex && ortGateIndex < packageIndex, 'built browser ORT runtime integrity must pass before packaging')
   assert(buildWorkflow.includes("hashFiles('package-lock.json', 'electron/services/modelDefinitions.js')"), 'model/VAD cache must be invalidated by package-lock changes')
   assert(buildWorkflow.includes('dist/vendor/vad/vad.worklet.bundle.min.js'), 'built browser VAD worklet must be present in the renderer output')
   assert(buildWorkflow.includes('node_modules/@ricky0123/vad-web/dist/vad.worklet.bundle.min.js'), 'browser VAD worklet must be compared with its installed dependency source')
@@ -294,6 +296,10 @@ check('release workflow builds only after required browser VAD is present', () =
   assert(buildWorkflow.includes('stat.size !== integrity.sizeBytes'), 'browser VAD verification must enforce catalog byte size')
   assert(buildWorkflow.includes("createHash('sha256')"), 'browser VAD verification must compute SHA-256')
   assert(buildWorkflow.includes('modelDigest !== integrity.sha256'), 'browser VAD verification must enforce catalog SHA-256')
+  assert(buildWorkflow.includes("'ort-wasm-simd-threaded.jsep.wasm'"), 'built browser ORT runtime assets must be enumerated in the renderer output check')
+  assert(buildWorkflow.includes('node_modules/onnxruntime-web/dist/${file}'), 'browser ORT runtime must be compared with its installed dependency source')
+  assert(buildWorkflow.includes('builtStat.size !== sourceStat.size'), 'browser ORT runtime must match the dependency byte size')
+  assert(buildWorkflow.includes('builtDigest !== sourceDigest'), 'browser ORT runtime must match the dependency SHA-256')
 })
 
 check('pull requests run the complete policy gate', () => {

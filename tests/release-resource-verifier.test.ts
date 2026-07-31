@@ -5,6 +5,7 @@ import test from 'node:test'
 
 import {
   asarApiPath,
+  BROWSER_ORT_ASAR_PATHS,
   BROWSER_VAD_ASAR_PATH,
   BROWSER_VAD_WORKLET_ASAR_PATH,
   verifyPackagedResources,
@@ -14,16 +15,22 @@ const VAD_SIZE = 2_243_022
 const VAD_SHA256 = 'a4a068cd6cf1ea8355b84327595838ca748ec29a25bc91fc82e6c299ccdc5808'
 const WORKLET_SIZE = 2_480
 const WORKLET_SHA256 = '8a48fdc7429948a2fde3d29a84bb1a64c1f67b4ba578ccaa7548b7f989f06a74'
+const ORT_SIZE = 12_345_678
+const ORT_SHA256 = '0f'.repeat(32)
 
 function validOptions() {
   return {
     pathExists: () => true,
-    fileSize: (path: string) => path.endsWith('silero_vad_v5.onnx') ? VAD_SIZE : 1,
-    fileSha256: () => VAD_SHA256,
+    fileSize: (path: string) => path.endsWith('silero_vad_v5.onnx')
+      ? VAD_SIZE
+      : path.includes('ort-wasm-simd-threaded') ? ORT_SIZE : 1,
+    fileSha256: (path: string) => path.includes('ort-wasm-simd-threaded') ? ORT_SHA256 : VAD_SHA256,
     readDirectory: () => [],
     inspectPackedFile: (_asarPath: string, relativePath: string) => relativePath.endsWith('vad.worklet.bundle.min.js')
       ? { sizeBytes: WORKLET_SIZE, sha256: WORKLET_SHA256 }
-      : { sizeBytes: VAD_SIZE, sha256: VAD_SHA256 },
+      : relativePath.includes('/ort/')
+        ? { sizeBytes: ORT_SIZE, sha256: ORT_SHA256 }
+        : { sizeBytes: VAD_SIZE, sha256: VAD_SHA256 },
   }
 }
 
@@ -47,6 +54,12 @@ test('ASAR release paths stay POSIX while the asar API receives Windows separato
     asarApiPath(BROWSER_VAD_WORKLET_ASAR_PATH, '\\'),
     String.raw`dist\vendor\vad\vad.worklet.bundle.min.js`,
   )
+  assert.deepEqual(BROWSER_ORT_ASAR_PATHS, [
+    'dist/vendor/ort/ort-wasm-simd-threaded.mjs',
+    'dist/vendor/ort/ort-wasm-simd-threaded.wasm',
+    'dist/vendor/ort/ort-wasm-simd-threaded.jsep.mjs',
+    'dist/vendor/ort/ort-wasm-simd-threaded.jsep.wasm',
+  ])
 })
 
 test('packaged resource verifier requires app.asar, all voice models, and both VAD copies', () => {
@@ -56,6 +69,7 @@ test('packaged resource verifier requires app.asar, all voice models, and both V
   assert.deepEqual(result.requiredResources, ['app-asar', 'kws-en', 'kws-zh', 'sensevoice', 'vad'])
   assert.equal(result.browserVadPath, 'dist/vendor/vad/silero_vad_v5.onnx')
   assert.equal(result.browserVadWorkletPath, 'dist/vendor/vad/vad.worklet.bundle.min.js')
+  assert.deepEqual(result.browserOrtPaths, BROWSER_ORT_ASAR_PATHS)
 })
 
 test('packaged resource verifier rejects missing model and tampered external VAD', () => {
@@ -97,12 +111,45 @@ test('packaged resource verifier rejects a missing browser VAD AudioWorklet', ()
     ...validOptions(),
     inspectPackedFile: (_asarPath: string, relativePath: string) => {
       if (relativePath.endsWith('vad.worklet.bundle.min.js')) throw new Error('file not found')
+      if (relativePath.includes('/ort/')) return { sizeBytes: ORT_SIZE, sha256: ORT_SHA256 }
       return { sizeBytes: VAD_SIZE, sha256: VAD_SHA256 }
     },
   })
 
   assert.equal(result.ok, false)
   assert.match(result.errors.join('\n'), /browser VAD worklet is missing or unreadable in app\.asar/)
+})
+
+test('packaged resource verifier rejects missing or tampered browser ORT runtime inside app.asar', () => {
+  const missing = verifyPackagedResources('/release/resources', {
+    ...validOptions(),
+    inspectPackedFile: (_asarPath: string, relativePath: string) => {
+      if (relativePath.includes('/ort/')) throw new Error('file not found')
+      return relativePath.endsWith('vad.worklet.bundle.min.js')
+        ? { sizeBytes: WORKLET_SIZE, sha256: WORKLET_SHA256 }
+        : { sizeBytes: VAD_SIZE, sha256: VAD_SHA256 }
+    },
+  })
+  assert.equal(missing.ok, false)
+  assert.match(missing.errors.join('\n'), /browser ORT runtime ort-wasm-simd-threaded\.wasm is missing or unreadable in app\.asar/)
+
+  const tampered = verifyPackagedResources('/release/resources', {
+    ...validOptions(),
+    inspectPackedFile: (_asarPath: string, relativePath: string) => relativePath.includes('/ort/')
+      ? { sizeBytes: ORT_SIZE, sha256: '0'.repeat(64) }
+      : relativePath.endsWith('vad.worklet.bundle.min.js')
+        ? { sizeBytes: WORKLET_SIZE, sha256: WORKLET_SHA256 }
+        : { sizeBytes: VAD_SIZE, sha256: VAD_SHA256 },
+  })
+  assert.equal(tampered.ok, false)
+  assert.match(tampered.errors.join('\n'), /browser ORT runtime ort-wasm-simd-threaded\.mjs in app\.asar has the wrong sha256/)
+
+  const missingSource = verifyPackagedResources('/release/resources', {
+    ...validOptions(),
+    pathExists: (path: string) => !path.includes('onnxruntime-web'),
+  })
+  assert.equal(missingSource.ok, false)
+  assert.match(missingSource.errors.join('\n'), /browser ORT runtime ort-wasm-simd-threaded\.mjs source is missing from node_modules/)
 })
 
 test('packaged resource verifier rejects transient model download trees and partial archives', () => {

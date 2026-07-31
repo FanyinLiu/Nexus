@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { closeSync, existsSync, openSync, readdirSync, readSync, statSync } from 'node:fs'
-import { join, sep } from 'node:path'
+import { dirname, join, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { extractFile, statFile } from '@electron/asar'
 
@@ -8,6 +9,15 @@ import { MODEL_CATALOG } from '../electron/services/modelDefinitions.js'
 
 export const BROWSER_VAD_ASAR_PATH = 'dist/vendor/vad/silero_vad_v5.onnx'
 export const BROWSER_VAD_WORKLET_ASAR_PATH = 'dist/vendor/vad/vad.worklet.bundle.min.js'
+export const BROWSER_ORT_ASAR_PATHS = Object.freeze([
+  'dist/vendor/ort/ort-wasm-simd-threaded.mjs',
+  'dist/vendor/ort/ort-wasm-simd-threaded.wasm',
+  'dist/vendor/ort/ort-wasm-simd-threaded.jsep.mjs',
+  'dist/vendor/ort/ort-wasm-simd-threaded.jsep.wasm',
+])
+
+const REPOSITORY_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const ORT_SOURCE_DIRECTORY = join(REPOSITORY_ROOT, 'node_modules', 'onnxruntime-web', 'dist')
 
 export function asarApiPath(relativePath, pathSeparator = sep) {
   // Archive paths are part of the release contract and always use `/`.
@@ -205,6 +215,32 @@ export function verifyPackagedResources(resourcesRoot, options = {}) {
     }
   }
 
+  if (appAsar && pathExists(appAsar.path)) {
+    // ORT runtime files are copied verbatim from the lockfile-pinned
+    // onnxruntime-web package, so the installed dependency is the integrity
+    // reference instead of a hardcoded digest.
+    for (const assetPath of BROWSER_ORT_ASAR_PATHS) {
+      const fileName = assetPath.slice(assetPath.lastIndexOf('/') + 1)
+      const label = `browser ORT runtime ${fileName}`
+      const sourcePath = join(ORT_SOURCE_DIRECTORY, fileName)
+      if (!pathExists(sourcePath)) {
+        errors.push(`${label} source is missing from node_modules`)
+        continue
+      }
+      try {
+        const inspected = inspectPackedFile(appAsar.path, assetPath)
+        if (!inspected || inspected.sizeBytes !== fileSize(sourcePath)) {
+          errors.push(`${label} in app.asar has the wrong size`)
+        }
+        if (!inspected || inspected.sha256 !== fileSha256(sourcePath)) {
+          errors.push(`${label} in app.asar has the wrong sha256`)
+        }
+      } catch (error) {
+        errors.push(`${label} is missing or unreadable in app.asar: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+  }
+
   return {
     ok: errors.length === 0,
     errors,
@@ -213,5 +249,6 @@ export function verifyPackagedResources(resourcesRoot, options = {}) {
     transientModelArtifacts: modelTreeReport.artifacts,
     browserVadPath: BROWSER_VAD_ASAR_PATH,
     browserVadWorkletPath: BROWSER_VAD_WORKLET_ASAR_PATH,
+    browserOrtPaths: BROWSER_ORT_ASAR_PATHS,
   }
 }

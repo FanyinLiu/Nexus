@@ -449,6 +449,50 @@ jobs:
           console.log(`Verified ${workletPath}: ${workletStat.size} bytes, SHA-256 ${workletDigest}`)
           NODE
 
+      - name: Verify browser ORT runtime assets in built renderer
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto'
+          import { readFileSync, statSync } from 'node:fs'
+
+          const ortFiles = [
+            'ort-wasm-simd-threaded.mjs',
+            'ort-wasm-simd-threaded.wasm',
+            'ort-wasm-simd-threaded.jsep.mjs',
+            'ort-wasm-simd-threaded.jsep.wasm',
+          ]
+
+          function requireNonEmptyFile(path, label) {
+            let stat
+            try {
+              stat = statSync(path)
+            } catch {
+              throw new Error(`${label} is missing: ${path}`)
+            }
+            if (!stat.isFile() || stat.size === 0) {
+              throw new Error(`${label} is empty or not a file: ${path}`)
+            }
+            return stat
+          }
+
+          for (const file of ortFiles) {
+            const builtPath = `dist/vendor/ort/${file}`
+            const sourcePath = `node_modules/onnxruntime-web/dist/${file}`
+            const builtStat = requireNonEmptyFile(builtPath, `Built browser ORT runtime ${file}`)
+            const sourceStat = requireNonEmptyFile(sourcePath, `Installed browser ORT runtime ${file}`)
+            if (builtStat.size !== sourceStat.size) {
+              throw new Error(`Built browser ORT runtime ${file} size ${builtStat.size} does not match installed source ${sourceStat.size}`)
+            }
+            const builtDigest = createHash('sha256').update(readFileSync(builtPath)).digest('hex')
+            const sourceDigest = createHash('sha256').update(readFileSync(sourcePath)).digest('hex')
+            if (builtDigest !== sourceDigest) {
+              throw new Error(`Built browser ORT runtime ${file} SHA-256 ${builtDigest} does not match installed source ${sourceDigest}`)
+            }
+            console.log(`Verified ${builtPath}: ${builtStat.size} bytes, SHA-256 ${builtDigest}`)
+          }
+          NODE
+
       - name: Verify formal identity and unsigned posture before packaging
         run: npm run release:unsigned:gate
 
