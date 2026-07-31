@@ -50,6 +50,7 @@ import {
   handleWakewordRuntimeStateChangeRuntime,
 } from './voice'
 import type {
+  AppSettings,
   VoiceTraceEntry,
   VoicePipelineState,
   VoiceState,
@@ -98,6 +99,14 @@ function disposeSpeechLevelPublisherAfterEffectReplay(
   })
 }
 
+// Read the current UI language out of the settings ref. Kept at module level
+// so the React Compiler treats the ref read as opaque: the memoized callbacks
+// below must see the *latest* language at call time while keeping a stable
+// identity keyed on the ref object itself.
+function currentUiLanguage(settingsRef: { current: AppSettings }) {
+  return settingsRef.current.uiLanguage
+}
+
 export type { UseVoiceContext } from './voice/types'
 
 export function useVoice(ctx: UseVoiceContext) {
@@ -125,11 +134,11 @@ export function useVoice(ctx: UseVoiceContext) {
   const audioPlaybackQueueRef = useRef<AudioPlaybackQueue<SpeechSegmentMeta> | null>(null)
   const streamAudioPlayerRef = useRef<StreamAudioPlayer | null>(null)
   const activeStreamingSpeechOutputRef = useRef<StreamingSpeechOutputController | null>(null)
-  const speechLevelPublisherRef = useRef<SpeechLevelPublisher | null>(null)
-  if (!speechLevelPublisherRef.current) {
-    speechLevelPublisherRef.current = createSpeechLevelPublisher()
-  }
-  const speechLevelPublisher = speechLevelPublisherRef.current
+  // Created once per hook instance via a lazy useState initializer — the
+  // publisher must keep a stable identity for the whole mount (producers and
+  // the unmount cleanup below capture it), and react-hooks/refs forbids the
+  // equivalent ref lazy-init during render.
+  const [speechLevelPublisher] = useState(() => createSpeechLevelPublisher())
   const speechLevelSource = speechLevelPublisher.source
   const speechLevelPublisherDisposeGenerationRef = useRef(0)
   const paraformerSessionRef = useRef<ParaformerStreamSession | null>(null)
@@ -176,18 +185,11 @@ export function useVoice(ctx: UseVoiceContext) {
   const setContinuousVoiceSessionRef = useRef<(value: boolean) => void>(() => undefined)
 
   // ── Hearing runtime (unified input-side store) ──────────────────────────
-  const hearingRuntimeRef = useRef<HearingRuntime | null>(null)
-  if (!hearingRuntimeRef.current) {
-    hearingRuntimeRef.current = new HearingRuntime()
-  }
-  const hearingRuntime = hearingRuntimeRef.current
+  // Same one-per-mount singleton pattern as the publisher above.
+  const [hearingRuntime] = useState(() => new HearingRuntime())
 
   // ── Voice event bus ──────────────────────────────────────────────────────
-  const voiceBusRef = useRef<VoiceBus | null>(null)
-  if (!voiceBusRef.current) {
-    voiceBusRef.current = new VoiceBus()
-  }
-  const voiceBus = voiceBusRef.current
+  const [voiceBus] = useState(() => new VoiceBus())
 
   const setSettings = ctx.setSettings
 
@@ -201,6 +203,40 @@ export function useVoice(ctx: UseVoiceContext) {
   const bindingsHolder: Holder<VoiceBindings> = { current: null }
   const enginesHolder: Holder<VoiceEngines> = { current: null }
   const lifecycleHolder: Holder<VoiceLifecycle> = { current: null }
+
+  // ── Shared callbacks used by the bus executor below ─────────────────────
+  // Declared before the executor so nothing is accessed before its
+  // declaration (react-hooks/immutability).
+  const showPetStatus = useCallback((
+    message: string,
+    duration = 2_600,
+    dedupeWindowMs = 2_200,
+  ) => {
+    const text = message.trim()
+    if (!text) return
+
+    const now = Date.now()
+    if (
+      lastPetStatusRef.current.text === text
+      && now - lastPetStatusRef.current.at < dedupeWindowMs
+    ) {
+      return
+    }
+
+    lastPetStatusRef.current = { text, at: now }
+    ctx.updatePetStatus(text, duration)
+  }, [ctx])
+
+  const clearPendingVoiceRestart = useCallback(() => {
+    clearPendingVoiceRestartTimer(restartVoiceTimerRef)
+  }, [])
+
+  const ti = useCallback(
+    (key: TranslationKey, params?: TranslationParams) => (
+      pickTranslatedUiText(currentUiLanguage(ctx.settingsRef), key, params)
+    ),
+    [ctx.settingsRef],
+  )
 
   // ── Bus effect executor ────────────────────────────────────────────────
   //
@@ -418,7 +454,7 @@ export function useVoice(ctx: UseVoiceContext) {
     detail: string,
     tone: VoiceTraceEntry['tone'] = 'info',
   ) => {
-    const timestamp = new Intl.DateTimeFormat(ctx.settingsRef.current.uiLanguage, {
+    const timestamp = new Intl.DateTimeFormat(currentUiLanguage(ctx.settingsRef), {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -434,37 +470,6 @@ export function useVoice(ctx: UseVoiceContext) {
 
     setVoiceTrace((current) => [entry, ...current].slice(0, MAX_VOICE_TRACE_ENTRIES))
   }, [ctx.settingsRef])
-
-  const showPetStatus = useCallback((
-    message: string,
-    duration = 2_600,
-    dedupeWindowMs = 2_200,
-  ) => {
-    const text = message.trim()
-    if (!text) return
-
-    const now = Date.now()
-    if (
-      lastPetStatusRef.current.text === text
-      && now - lastPetStatusRef.current.at < dedupeWindowMs
-    ) {
-      return
-    }
-
-    lastPetStatusRef.current = { text, at: now }
-    ctx.updatePetStatus(text, duration)
-  }, [ctx])
-
-  const clearPendingVoiceRestart = useCallback(() => {
-    clearPendingVoiceRestartTimer(restartVoiceTimerRef)
-  }, [])
-
-  const ti = useCallback(
-    (key: TranslationKey, params?: TranslationParams) => (
-      pickTranslatedUiText(ctx.settingsRef.current.uiLanguage, key, params)
-    ),
-    [ctx.settingsRef],
-  )
 
   const ensureSupportedSpeechInputSettings = useCallback((announce = false) => {
     return ensureSupportedSpeechInputSettingsRuntime({
@@ -545,9 +550,19 @@ export function useVoice(ctx: UseVoiceContext) {
     },
   }
 
+  // Deliberate architecture: the factories receive the ref bag during render
+  // but only ever dereference refs inside the callbacks they return (events,
+  // effects, timers) — never synchronously. Rebuilding the layers every
+  // render while consumers hold stable identities is part of the 2026-04
+  // render-storm fix documented below; there is no equivalent rewrite that
+  // keeps the late-binding holder cycle working.
+  // eslint-disable-next-line react-hooks/refs -- factories dereference refs only inside returned callbacks, never during render
   bindingsHolder.current = createVoiceBindings(runtimeBag)
+  // eslint-disable-next-line react-hooks/refs -- factories dereference refs only inside returned callbacks, never during render
   enginesHolder.current = createVoiceConversationStarters(runtimeBag)
+  // eslint-disable-next-line react-hooks/refs -- factories dereference refs only inside returned callbacks, never during render
   lifecycleHolder.current = createVoiceLifecycleControls(runtimeBag)
+  // eslint-disable-next-line react-hooks/refs -- factories dereference refs only inside returned callbacks, never during render
   const testEntries = createVoiceTestEntries(runtimeBag)
 
   const bindings = bindingsHolder.current
@@ -625,13 +640,18 @@ export function useVoice(ctx: UseVoiceContext) {
     })
   }, [settings.wakewordAlwaysOn, ti])
 
-  // Keep refs current — intentionally no deps to capture latest closures.
-  // Use a layout-time assignment instead of useEffect to avoid extra render cycles.
-  startVoiceConversationRef.current = lifecycle.startVoiceConversation
-  stopApiRecordingRef.current = bindings.stopApiRecording
-  stopVadListeningRef.current = bindings.stopVadListening
-  stopActiveSpeechOutputRef.current = bindings.stopActiveSpeechOutput
-  setContinuousVoiceSessionRef.current = bindings.setContinuousVoiceSession
+  // Keep refs current — intentionally no dep array so the effect re-runs
+  // after every commit and always captures the latest closures. The writes
+  // live in an effect (react-hooks/refs forbids ref writes during render);
+  // all readers are effects / event handlers / timers that run after commit,
+  // so this is timing-equivalent to the previous render-time assignment.
+  useEffect(() => {
+    startVoiceConversationRef.current = lifecycle.startVoiceConversation
+    stopApiRecordingRef.current = bindings.stopApiRecording
+    stopVadListeningRef.current = bindings.stopVadListening
+    stopActiveSpeechOutputRef.current = bindings.stopActiveSpeechOutput
+    setContinuousVoiceSessionRef.current = bindings.setContinuousVoiceSession
+  })
 
   // ── Effects ────────────────────────────────────────────────────────────────
 

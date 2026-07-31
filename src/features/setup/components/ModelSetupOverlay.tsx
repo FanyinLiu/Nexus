@@ -201,21 +201,32 @@ export function ModelSetupOverlay({
     }
   }, [])
 
-  const refreshInventory = useCallback(async () => {
+  const fetchInventory = useCallback(async (): Promise<Inventory | null> => {
     try {
-      const inv = await window.desktopPet?.modelsGetInventory?.()
-      if (inv) setInventory(inv)
+      return (await window.desktopPet?.modelsGetInventory?.()) ?? null
     } catch (err) {
       console.warn('[ModelSetup] inventory fetch failed:', err)
+      return null
     }
   }, [])
-  refreshInventoryRef.current = refreshInventory
+  const refreshInventory = useCallback(async () => {
+    const inv = await fetchInventory()
+    if (inv) setInventory(inv)
+  }, [fetchInventory])
+  useEffect(() => {
+    refreshInventoryRef.current = refreshInventory
+  }, [refreshInventory])
 
   useEffect(() => {
-    refreshInventory()
+    // Initial load: setState happens inside the promise callback (the pattern
+    // react-hooks/set-state-in-effect sanctions), not via a direct call to
+    // the async refresher from the effect body.
+    void fetchInventory().then((inv) => {
+      if (inv) setInventory(inv)
+    })
     window.desktopPet?.modelsNetworkProbe?.().then(setNetworkProbe).catch(() => {})
     window.desktopPet?.pythonRuntimeStatus?.().then(setPythonStatus).catch(() => {})
-  }, [refreshInventory])
+  }, [fetchInventory])
 
   useEffect(() => {
     const unsubscribe = window.desktopPet?.subscribeModelsProgress?.((event: ProgressEvent) => {

@@ -30,7 +30,11 @@ export function useSpeechVoiceManagement({
   onRunAudioSmokeTest,
 }: UseSpeechVoiceManagementOptions) {
   const { t } = useTranslation()
-  const [speechVoiceOptions, setSpeechVoiceOptions] = useState<SpeechVoiceOption[]>([])
+  // Mount with the persisted provider's fallbacks (replaces the old
+  // mount-time effect setState), then adjust during render on transitions.
+  const [speechVoiceOptions, setSpeechVoiceOptions] = useState<SpeechVoiceOption[]>(() =>
+    getFallbackSpeechOutputVoices(settings.speechOutputProviderId),
+  )
   const [speechVoiceStatus, setSpeechVoiceStatus] = useState<ConnectionResult | null>(null)
   const [loadingSpeechVoices, setLoadingSpeechVoices] = useState(false)
   const [speechPreviewText, setSpeechPreviewText] = useState(() =>
@@ -52,25 +56,19 @@ export function useSpeechVoiceManagement({
 
   const fallbackSpeechVoiceOptions = getFallbackSpeechOutputVoices(draft.speechOutputProviderId)
 
-  // Sync fallback voice options when the external speech output provider changes
-  useEffect(() => {
+  // Sync fallback voice options when the external speech output provider
+  // changes — render-time adjust replacing a synchronous effect setState.
+  const [previousSettingsProviderId, setPreviousSettingsProviderId] = useState(settings.speechOutputProviderId)
+  if (previousSettingsProviderId !== settings.speechOutputProviderId) {
+    setPreviousSettingsProviderId(settings.speechOutputProviderId)
     setSpeechVoiceOptions(getFallbackSpeechOutputVoices(settings.speechOutputProviderId))
-  }, [settings.speechOutputProviderId])
+  }
 
-  // Fill voice options from fallbacks when the draft provider changes
-  useEffect(() => {
-    setSpeechVoiceOptions((current) => {
-      if (!fallbackSpeechVoiceOptions.length) {
-        return current
-      }
-
-      if (current.length) {
-        return current
-      }
-
-      return fallbackSpeechVoiceOptions
-    })
-  }, [fallbackSpeechVoiceOptions])
+  // Fill voice options from fallbacks when the draft provider changes and no
+  // options are loaded yet — self-terminating render-time adjust.
+  if (fallbackSpeechVoiceOptions.length && !speechVoiceOptions.length) {
+    setSpeechVoiceOptions(fallbackSpeechVoiceOptions)
+  }
 
   // Listen for browser speechSynthesis voice changes
   useEffect(() => {

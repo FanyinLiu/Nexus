@@ -95,7 +95,11 @@ export function useChat(ctx: UseChatContext) {
   const activeTurnIdRef = useRef(0)
   const activeStreamAbortRef = useRef<(() => Promise<void>) | null>(null)
   const ctxRef = useRef(ctx)
-  ctxRef.current = ctx
+  // Only read from callbacks (cancelActiveTurn), so the write can live in an
+  // every-commit effect instead of render (react-hooks/refs).
+  useEffect(() => {
+    ctxRef.current = ctx
+  })
   const pendingReminderDraftRef = useRef<PendingReminderDraft | null>(null)
   const petDialogHideTimerRef = useRef<number | null>(null)
   const petThoughtHideTimerRef = useRef<number | null>(null)
@@ -105,7 +109,7 @@ export function useChat(ctx: UseChatContext) {
 
   const {
     applyRemoteMessages: applyRemoteMessagesToState,
-    currentSessionIdRef,
+    currentSessionId,
   } = useChatPersistence({
     messages,
     setMessages,
@@ -124,9 +128,19 @@ export function useChat(ctx: UseChatContext) {
     setPendingImageState(dataUrl)
   }, [])
 
+  // Track busy → assistantActivity with the render-time adjust pattern
+  // (setState during render, guarded by a previous-value snapshot) instead of
+  // an effect — react-hooks/set-state-in-effect forbids the synchronous
+  // effect-body setState, and the guarded render adjust is equivalent here:
+  // it fires exactly on busy transitions, including the mount no-op.
+  const [previousBusy, setPreviousBusy] = useState(busy)
+  if (previousBusy !== busy) {
+    setPreviousBusy(busy)
+    setAssistantActivity(busy ? 'thinking' : 'idle')
+  }
+
   useEffect(() => {
     busyRef.current = busy
-    setAssistantActivity(busy ? 'thinking' : 'idle')
   }, [busy])
 
   // Called by useDesktopBridge when a BroadcastChannel message says another
@@ -387,6 +401,7 @@ export function useChat(ctx: UseChatContext) {
     setAssistantActivity(busyRef.current ? 'thinking' : 'idle')
   }, [])
 
+  // eslint-disable-next-line react-hooks/refs -- runner factory receives ctx (which holds refs) but only dereferences them inside the returned async callbacks, never during this render
   const runLocalReminderAction = useMemo(() => createLocalReminderActionRunner({
       ctx,
       clearPendingReminderDraft,
@@ -396,6 +411,7 @@ export function useChat(ctx: UseChatContext) {
       syncAssistantActivity,
     }), [clearPendingReminderDraft, ctx, pushCompanionNotice, setPendingReminderDraft, syncAssistantActivity])
 
+  // eslint-disable-next-line react-hooks/refs -- runner factory receives ctx (which holds refs) but only dereferences them inside the returned async callbacks, never during this render
   const runAssistantReplyTurn = useMemo(() => createAssistantReplyRunner({
       ctx,
       appendChatMessage,
@@ -747,7 +763,7 @@ export function useChat(ctx: UseChatContext) {
   // render storm. Stabilizing here cuts the cascade at its source.
   return useMemo(() => ({
     messages,
-    currentSessionId: currentSessionIdRef.current,
+    currentSessionId,
     input,
     busy,
     error,
@@ -783,7 +799,7 @@ export function useChat(ctx: UseChatContext) {
     busy,
     error,
     assistantActivity,
-    currentSessionIdRef,
+    currentSessionId,
     petDialogBubble,
     petThoughtBubble,
     pendingImage,

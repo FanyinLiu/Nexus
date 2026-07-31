@@ -23,7 +23,9 @@ export function useChatPersistence({
   messages: ChatMessage[]
   setMessages: (messages: ChatMessage[]) => void
 }) {
-  const currentSessionIdRef = useRef<string>(createId('chat-session'))
+  // Stable for the whole mount — a lazy useState (not a ref) so the value can
+  // be read during render without tripping react-hooks/refs.
+  const [currentSessionId] = useState(() => createId('chat-session'))
   const [currentSessionStartedAt] = useState(() => Date.now())
   const sessionIdRef = useRef<string | null>(null)
   const mirroredMessageIdsRef = useRef<Set<string>>(new Set())
@@ -53,7 +55,7 @@ export function useChatPersistence({
 
     const title = inferSessionTitle(messages)
     const sessionSnapshot: ChatSession = {
-      id: currentSessionIdRef.current,
+      id: currentSessionId,
       startedAt: currentSessionStartedAt,
       lastActiveAt: Date.now(),
       ...(title ? { title } : {}),
@@ -100,7 +102,7 @@ export function useChatPersistence({
       })
       mirrored.add(msg.id)
     }
-  }, [currentSessionStartedAt, messages])
+  }, [currentSessionId, currentSessionStartedAt, messages])
 
   useEffect(() => () => {
     if (runtimeMirrorTimerRef.current) {
@@ -131,6 +133,6 @@ export function useChatPersistence({
 
   return {
     applyRemoteMessages,
-    currentSessionIdRef,
+    currentSessionId,
   }
 }

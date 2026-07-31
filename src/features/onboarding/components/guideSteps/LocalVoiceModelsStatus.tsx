@@ -56,19 +56,32 @@ export function LocalVoiceModelsStatus({ uiLanguage }: LocalVoiceModelsStatusPro
   const [progressText, setProgressText] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const refreshInventory = useCallback(async () => {
+  const fetchInventory = useCallback(async (): Promise<ModelInventoryLike | null> => {
     try {
-      const next = await window.desktopPet?.modelsGetInventory?.()
-      if (next) setInventory(next)
+      return (await window.desktopPet?.modelsGetInventory?.()) ?? null
     } catch (err) {
       console.warn('[onboarding] modelsGetInventory failed:', err)
-    } finally {
-      setLoaded(true)
+      return null
     }
   }, [])
 
+  const refreshInventory = useCallback(async () => {
+    try {
+      const next = await fetchInventory()
+      if (next) setInventory(next)
+    } finally {
+      setLoaded(true)
+    }
+  }, [fetchInventory])
+
   useEffect(() => {
-    void refreshInventory()
+    // Initial load applies state inside the promise callback (the pattern
+    // react-hooks/set-state-in-effect sanctions) instead of calling the async
+    // refresher directly from the effect body.
+    void fetchInventory().then((next) => {
+      if (next) setInventory(next)
+      setLoaded(true)
+    })
 
     const unsubscribe = window.desktopPet?.subscribeModelsProgress?.((event) => {
       if (event.phase === 'downloading' && event.total && event.total > 0) {
@@ -83,7 +96,7 @@ export function LocalVoiceModelsStatus({ uiLanguage }: LocalVoiceModelsStatusPro
       }
     })
     return () => unsubscribe?.()
-  }, [refreshInventory, ti])
+  }, [fetchInventory, refreshInventory, ti])
 
   const handleDownload = useCallback(async () => {
     setDownloading(true)

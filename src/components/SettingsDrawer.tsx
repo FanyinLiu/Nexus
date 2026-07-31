@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap.ts'
 import {
   getMemorySearchModeOptions,
@@ -529,6 +529,32 @@ export function SettingsDrawer({
     settingsThemeTone === 'warm-day' && settingsView !== 'home' ? 'settings-drawer--warm-section sd-warm-section' : '',
     settingsThemeTone === 'day' && settingsView !== 'home' ? 'settings-drawer--day-section sd-day-section' : '',
   ].filter(Boolean).join(' ')
+  // Adjust-on-transition (React docs pattern) replacing effect-body setState:
+  // when the drawer toggles or the preferred section changes while open,
+  // derive the view/section state during render. Ref writes and external
+  // draft/theme sync stay in the effects below. The snapshots init to
+  // "closed / no preference" so a first render that already has open=true
+  // (deep links like ?section=settings&settingsSection=memory) is treated as
+  // an opening transition — the original mount effect covered that case.
+  const [previousOpen, setPreviousOpen] = useState(false)
+  const [previousPreferredSectionId, setPreviousPreferredSectionId] = useState<SettingsSectionId | null | undefined>(undefined)
+  if (previousOpen !== open || previousPreferredSectionId !== preferredSectionId) {
+    const openTransitioned = previousOpen !== open
+    setPreviousOpen(open)
+    setPreviousPreferredSectionId(preferredSectionId)
+    if (openTransitioned) {
+      setSaveError(false)
+    }
+    if (open) {
+      if (preferredSectionId) {
+        setActiveSectionId(normalizeSettingsSectionId(preferredSectionId))
+        setSettingsView('section')
+      } else if (openTransitioned) {
+        setSettingsView('home')
+      }
+    }
+  }
+
   // Sync draft from external settings ONLY when the drawer opens,
   // not while the user is actively editing.
   useEffect(() => {
@@ -538,10 +564,6 @@ export function SettingsDrawer({
       speechVoices.syncPreviewText(settings.companionName)
       if (preferredSectionId) {
         shouldFocusActiveSectionHeadingRef.current = true
-        setActiveSectionId(normalizeSettingsSectionId(preferredSectionId))
-        setSettingsView('section')
-      } else {
-        setSettingsView('home')
       }
     } else {
       themePreview.previewTheme(settings.themeId)
@@ -552,8 +574,6 @@ export function SettingsDrawer({
   useEffect(() => {
     if (!open || !preferredSectionId) return
     shouldFocusActiveSectionHeadingRef.current = true
-    setActiveSectionId(normalizeSettingsSectionId(preferredSectionId))
-    setSettingsView('section')
   }, [open, preferredSectionId])
 
   // Re-sync API keys when vault hydration completes after drawer is already open.
@@ -754,9 +774,7 @@ export function SettingsDrawer({
     return () => window.cancelAnimationFrame(frame)
   }, [activeSectionId, open, settingsView])
 
-  useEffect(() => {
-    setSaveError(false)
-  }, [open])
+  // saveError reset moved into the open-transition render adjust above.
 
   function handleSettingsDialogKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
     if (event.key !== 'Escape' || event.defaultPrevented) return

@@ -78,10 +78,8 @@ export function Live2DCanvas({
   const performanceCueRef = useRef<PetPerformanceCue | null>(null)
   const performanceCueStartedAtRef = useRef(0)
   const isSpeakingRef = useRef(isSpeaking)
-  isSpeakingRef.current = isSpeaking
   const speechLevelTargetRef = useRef(clamp(speechLevel, 0, 1))
   const speechLevelSourceRef = useRef<SpeechLevelSource | null>(speechLevelSource ?? null)
-  speechLevelSourceRef.current = speechLevelSource ?? null
   const gazeTargetRef = useRef<GazeTarget>({
     x: clamp(gazeTarget.x, -1, 1),
     y: clamp(gazeTarget.y, -1, 1),
@@ -107,6 +105,16 @@ export function Live2DCanvas({
     pausedRef.current = paused
     syncPlayback(appRef.current, false)
   }, [paused, syncPlayback])
+
+  // Mirror latest props into refs from effects (not render) — readers are the
+  // ticker/subscription callbacks, which all run after commit.
+  useEffect(() => {
+    isSpeakingRef.current = isSpeaking
+  }, [isSpeaking])
+
+  useEffect(() => {
+    speechLevelSourceRef.current = speechLevelSource ?? null
+  }, [speechLevelSource])
 
   function setDebugState(partialState: Partial<NonNullable<Window['__desktopPetLive2DDebug']>>) {
     const nextState = {

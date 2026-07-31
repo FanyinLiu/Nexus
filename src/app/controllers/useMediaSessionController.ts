@@ -63,9 +63,14 @@ export function useMediaSessionController({
     }
   }, [appendSystemMessage, mediaSessionAvailable, refreshMediaSession, t])
 
+  // Reset the snapshot when polling context is lost — render-time adjust
+  // (self-terminating guard) instead of a synchronous effect-body setState.
+  if ((view !== 'pet' || !pollingActive || !mediaSessionAvailable) && mediaSession !== null) {
+    setMediaSession(null)
+  }
+
   useEffect(() => {
     if (view !== 'pet' || !pollingActive || !mediaSessionAvailable) {
-      setMediaSession(null)
       return
     }
 
@@ -101,13 +106,11 @@ export function useMediaSessionController({
     }
   }, [refreshMediaSession, view, pollingActive, mediaSessionAvailable])
 
-  useEffect(() => {
-    if (mediaSession?.sessionKey || !dismissedMusicSessionKey) {
-      return
-    }
-
+  // Clear the dismissal once there is no active session to dismiss —
+  // self-terminating render-time adjust instead of an effect.
+  if (!mediaSession?.sessionKey && dismissedMusicSessionKey) {
     setDismissedMusicSessionKey('')
-  }, [dismissedMusicSessionKey, mediaSession])
+  }
 
   const dismissCurrentMediaSession = useCallback(() => {
     const activeMediaSessionKey = mediaSession?.sessionKey

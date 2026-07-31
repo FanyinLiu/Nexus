@@ -30,6 +30,36 @@ function joinKitPath(base: string, relative: string) {
   return `${base.replace(/[\\/]+$/u, '')}${separator}${relative.split('/').join(separator)}`
 }
 
+type TiFn = (
+  key: Parameters<typeof pickTranslatedUiText>[1],
+  params?: Parameters<typeof pickTranslatedUiText>[2],
+) => ReturnType<typeof pickTranslatedUiText>
+
+// Module-level on purpose: defining this inside ChatStudioV3 created a new
+// component type every render (react-hooks: "Cannot create components during
+// render"), remounting the output block on each parent render.
+function PackageResult({ output, generated = false, onOpenPath, onInstallGenerated, onInstallKit, ti }: {
+  output: PackageOutput
+  generated?: boolean
+  onOpenPath: ChatSectionV3Props['onOpenCodexPetCreatorKitPath']
+  onInstallGenerated: ChatSectionV3Props['onInstallGeneratedSpritePetPackageToCodex']
+  onInstallKit: ChatSectionV3Props['onInstallCodexPetCreatorKitToCodex']
+  ti: TiFn
+}) {
+  const open = (targetPath: string, mode: 'open' | 'reveal' = 'open') => onOpenPath({ kitDirectory: output.packageDirectory, targetPath, mode })
+  return (
+    <div className="settings-v3-studio-output" role="status" aria-live="polite">
+      <strong>{ti('settings.chat.codex_pet_creator_final_package')}</strong>
+      <code>{output.packageDirectoryDisplay ?? output.packageDirectory}</code>
+      <SettingsV3Toolbar>
+        <button type="button" onClick={() => open(output.packageDirectory)}>{ti('settings.chat.codex_pet_creator_open_final_package')}</button>
+        {output.archivePath ? <button type="button" onClick={() => open(output.archivePath ?? '', 'reveal')}>{ti('settings.chat.codex_pet_creator_open_archive')}</button> : null}
+        <button type="button" onClick={generated ? onInstallGenerated : onInstallKit}>{ti('settings.chat.codex_pet_creator_install_codex')}</button>
+      </SettingsV3Toolbar>
+    </div>
+  )
+}
+
 export function ChatStudioV3(props: ChatSectionV3Props) {
   const { draft, setDraft } = props
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1], params?: Parameters<typeof pickTranslatedUiText>[2]) => pickTranslatedUiText(draft.uiLanguage, key, params)
@@ -108,21 +138,6 @@ export function ChatStudioV3(props: ChatSectionV3Props) {
     }
   }
 
-  function PackageResult({ output, generated = false }: { output: PackageOutput; generated?: boolean }) {
-    const open = (targetPath: string, mode: 'open' | 'reveal' = 'open') => props.onOpenCodexPetCreatorKitPath({ kitDirectory: output.packageDirectory, targetPath, mode })
-    return (
-      <div className="settings-v3-studio-output" role="status" aria-live="polite">
-        <strong>{ti('settings.chat.codex_pet_creator_final_package')}</strong>
-        <code>{output.packageDirectoryDisplay ?? output.packageDirectory}</code>
-        <SettingsV3Toolbar>
-          <button type="button" onClick={() => open(output.packageDirectory)}>{ti('settings.chat.codex_pet_creator_open_final_package')}</button>
-          {output.archivePath ? <button type="button" onClick={() => open(output.archivePath ?? '', 'reveal')}>{ti('settings.chat.codex_pet_creator_open_archive')}</button> : null}
-          <button type="button" onClick={generated ? props.onInstallGeneratedSpritePetPackageToCodex : props.onInstallCodexPetCreatorKitToCodex}>{ti('settings.chat.codex_pet_creator_install_codex')}</button>
-        </SettingsV3Toolbar>
-      </div>
-    )
-  }
-
   return (
     <div className="settings-v3-studio">
       <div className="settings-v3-studio__head">
@@ -173,7 +188,7 @@ export function ChatStudioV3(props: ChatSectionV3Props) {
         {cardStatus ? <SettingsV3Notice tone={cardStatus.ok ? 'success' : 'error'} title={cardStatus.message} announce /> : null}
       </div>
 
-      {props.generatedSpritePetPackage ? <PackageResult output={props.generatedSpritePetPackage} generated /> : null}
+      {props.generatedSpritePetPackage ? <PackageResult output={props.generatedSpritePetPackage} generated onOpenPath={props.onOpenCodexPetCreatorKitPath} onInstallGenerated={props.onInstallGeneratedSpritePetPackageToCodex} onInstallKit={props.onInstallCodexPetCreatorKitToCodex} ti={ti} /> : null}
 
       <section className="settings-v3-studio-pane" aria-labelledby="settings-v3-gallery-title">
         <header><strong id="settings-v3-gallery-title">{ti('settings.chat.codex_pet_import')}</strong><span>{ti('settings.chat.codex_pet_import_hint')}</span></header>
@@ -224,7 +239,7 @@ export function ChatStudioV3(props: ChatSectionV3Props) {
             </SettingsV3Toolbar>
           </div>
         ) : null}
-        {props.assembledCreatorKitPackage ? <PackageResult output={props.assembledCreatorKitPackage} /> : null}
+        {props.assembledCreatorKitPackage ? <PackageResult output={props.assembledCreatorKitPackage} onOpenPath={props.onOpenCodexPetCreatorKitPath} onInstallGenerated={props.onInstallGeneratedSpritePetPackageToCodex} onInstallKit={props.onInstallCodexPetCreatorKitToCodex} ti={ti} /> : null}
         {props.creatorKitInspection ? (
           <div className="settings-v3-studio-output" role="status">
             <strong>{props.creatorKitInspection.displayName}</strong>

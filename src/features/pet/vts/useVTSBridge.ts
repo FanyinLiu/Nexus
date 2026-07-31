@@ -84,14 +84,34 @@ export function useVTSBridge(
     return window.desktopPet?.subscribeVtsBridgeStatus?.(applyStatus)
   }, [])
 
+  async function migrateLegacyAuthToken() {
+    const legacyToken = localStorage.getItem(LEGACY_STORAGE_KEY)
+    if (!legacyToken) return
+    try {
+      await window.desktopPet?.vtsBridgeMigrateLegacyToken?.(legacyToken)
+    } catch (error) {
+      console.warn('[VTS] Failed to migrate legacy auth token:', getRedactedLogErrorMessage(error))
+    } finally {
+      localStorage.removeItem(LEGACY_STORAGE_KEY)
+    }
+  }
+
+  // 'connecting' / 'disconnected' derive directly from (enabled, port) —
+  // adjust during render on transitions instead of synchronously inside the
+  // connect effect (react-hooks/set-state-in-effect).
+  const connectKey = enabled ? `on:${port}` : 'off'
+  const [previousConnectKey, setPreviousConnectKey] = useState<string | null>(null)
+  if (previousConnectKey !== connectKey) {
+    setPreviousConnectKey(connectKey)
+    setState(enabled ? 'connecting' : 'disconnected')
+  }
+
   useEffect(() => {
     if (!enabled) {
       window.desktopPet?.vtsBridgeDisconnect?.().catch(() => {})
-      setState('disconnected')
       return
     }
 
-    setState('connecting')
     void migrateLegacyAuthToken()
       .then(() => window.desktopPet?.vtsBridgeConnect?.({ port }))
       .then((status) => {
@@ -108,18 +128,6 @@ export function useVTSBridge(
       window.desktopPet?.vtsBridgeDisconnect?.().catch(() => {})
     }
   }, [enabled, port])
-
-  async function migrateLegacyAuthToken() {
-    const legacyToken = localStorage.getItem(LEGACY_STORAGE_KEY)
-    if (!legacyToken) return
-    try {
-      await window.desktopPet?.vtsBridgeMigrateLegacyToken?.(legacyToken)
-    } catch (error) {
-      console.warn('[VTS] Failed to migrate legacy auth token:', getRedactedLogErrorMessage(error))
-    } finally {
-      localStorage.removeItem(LEGACY_STORAGE_KEY)
-    }
-  }
 
   return { state, modelName, updateInput }
 }

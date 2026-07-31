@@ -107,13 +107,18 @@ export function useAppController() {
 
   const [goals, setGoals] = useState<Goal[]>(() => loadAutonomyGoals())
   const goalsRef = useRef(goals)
+  // Render-time adjust (React docs pattern): when the loaded/edited goals are
+  // not in normalized form, fix state immediately during render instead of
+  // synchronously inside an effect (react-hooks/set-state-in-effect). The
+  // comparison guard terminates the loop because normalization is idempotent.
+  const normalizedGoals = normalizeAutonomyGoals(goals)
+  if (JSON.stringify(normalizedGoals) !== JSON.stringify(goals)) {
+    setGoals(normalizedGoals)
+  }
   useEffect(() => {
     const normalized = normalizeAutonomyGoals(goals)
     goalsRef.current = normalized
     saveAutonomyGoals(normalized)
-    if (JSON.stringify(normalized) !== JSON.stringify(goals)) {
-      setGoals(normalized)
-    }
   }, [goals])
 
   const settingsRef = useRef(settings)

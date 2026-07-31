@@ -113,16 +113,28 @@ export function OnboardingGuide({
     draft,
   )
 
+  // Reset the wizard whenever it (re)opens or the underlying settings change
+  // while open — render-time adjust keyed on an "open ? settings : null"
+  // signal, replacing the synchronous effect-body setState. All reset values
+  // match the initial useState values, so skipping the mount pass is a no-op.
+  const resetSignal = open ? settings : null
+  const [previousResetSignal, setPreviousResetSignal] = useState(resetSignal)
+  if (previousResetSignal !== resetSignal) {
+    setPreviousResetSignal(resetSignal)
+    if (resetSignal) {
+      setDraft(resetSignal)
+      setStepIndex(0)
+      setSaving(false)
+      setError(null)
+      setRepairNotice(null)
+      setTextConnectionVerification(null)
+      setVerificationFreshnessTick(0)
+    }
+  }
+
   useEffect(() => {
     if (!open) return
 
-    setDraft(settings)
-    setStepIndex(0)
-    setSaving(false)
-    setError(null)
-    setRepairNotice(null)
-    setTextConnectionVerification(null)
-    setVerificationFreshnessTick(0)
     window.requestAnimationFrame(() => {
       dialogRef.current?.focus()
     })
@@ -168,18 +180,14 @@ export function OnboardingGuide({
     }
   }, [onDismiss, open, saving])
 
-  useEffect(() => {
-    if (!petModelPresets.length) return
-
-    setDraft((current) => (
-      petModelPresets.some((preset) => preset.id === current.petModelId)
-        ? current
-        : {
-            ...current,
-            petModelId: petModelPresets[0].id,
-          }
-    ))
-  }, [petModelPresets])
+  // Keep the draft's pet model pointed at an existing preset — self-
+  // terminating render-time adjust (once fixed, the guard stays false).
+  if (petModelPresets.length && !petModelPresets.some((preset) => preset.id === draft.petModelId)) {
+    setDraft({
+      ...draft,
+      petModelId: petModelPresets[0].id,
+    })
+  }
 
   function updateDraftFromStep(next: Parameters<typeof setDraft>[0]) {
     setDraft(next)
