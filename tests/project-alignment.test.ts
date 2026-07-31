@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url'
 import { CURRENT_RELEASE_SPOTLIGHT } from '../src/features/releaseNotes/index.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const CURRENT_STABLE_RELEASE = '0.4.3'
-const PREVIOUS_PUBLIC_RELEASE = '0.4.1'
+const CURRENT_STABLE_RELEASE = '0.4.4'
+const PREVIOUS_PUBLIC_RELEASE = '0.4.3'
 
 function readWorkspaceFile(relativePath: string) {
   return readFileSync(join(ROOT, relativePath), 'utf8')
@@ -39,16 +39,16 @@ test('stable release version and theme surfaces stay aligned', () => {
   assert.equal(version, CURRENT_STABLE_RELEASE)
   assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, CURRENT_STABLE_RELEASE)
   assert.match(rootReadme, new RegExp(`当前稳定版：\\*{0,2}\\s*v${escapedStable}`))
-  assert.match(rootReadme, /上一公开版本 — v0\.4\.1/)
-  assert.match(rootReadme, /RELEASE-NOTES-v0\.4\.3\.md/)
+  assert.match(rootReadme, /上一公开版本 — v0\.4\.3/)
+  assert.match(rootReadme, /RELEASE-NOTES-v0\.4\.4\.md/)
   assert.match(releaseNotes, new RegExp(`# Nexus v${escapedStable}`))
   assert.match(chineseReleaseNotes, new RegExp(`# Nexus v${escapedStable}`))
   assert.match(releaseNotes, /Status: Stable unsigned release/)
   assert.match(chineseReleaseNotes, /状态：正式未签名稳定版/)
-  assert.match(previousReleaseNotes, /# Nexus v0\.4\.1/)
+  assert.match(previousReleaseNotes, /# Nexus v0\.4\.3/)
   assert.match(changelog, /^## \[Unreleased\]/m)
-  assert.match(changelog, new RegExp(`^## \\[${escapedStable}\\] - 2026-07-16`, 'm'))
-  assert.doesNotMatch(changelog, /^##\s+\[0\.4\.2\]/m)
+  assert.match(changelog, new RegExp(`^## \\[${escapedStable}\\] - 2026-07-31`, 'm'))
+  assert.doesNotMatch(changelog, /^##\s+\[0\.4\.4-beta\.1\]/m)
   assert.match(changelog, /^## \[0\.4\.1\] - /m)
   assert.match(handoff, new RegExp(`# Nexus v${escapedStable} Stable Release Handoff`))
   assert.match(handoff, /Status: Stable unsigned release handoff/)
@@ -66,11 +66,11 @@ test('public readmes identify the current 0.4 stable entry point', () => {
 
   for (const [path, readme] of readmes) {
     assert.match(readme, new RegExp(`v${escapeRegExp(CURRENT_STABLE_RELEASE)}`), `${path} should name the current stable release`)
-    assert.match(readme, /v0\.4\.1/, `${path} should name the previous public release`)
+    assert.match(readme, /v0\.4\.3/, `${path} should name the previous public release`)
     assert.match(
       readme,
-      /\[[^\]]+\]\([^)]*RELEASE-NOTES-v0\.4\.3\.md(?:#[^)]*)?\)/,
-      `${path} should link the current stable v0.4.3 release notes`,
+      /\[[^\]]+\]\([^)]*RELEASE-NOTES-v0\.4\.4\.md(?:#[^)]*)?\)/,
+      `${path} should link the current stable v0.4.4 release notes`,
     )
   }
 })
@@ -158,7 +158,7 @@ test('v0.4 desktop companion awareness hardening stays documented', () => {
   assert.match(v04Plan, /`v0\.4\.0` is the stable Quiet Observation Foundation release/)
   assert.match(v04Plan, new RegExp('current public stable release v' + ESCAPED_CURRENT_STABLE))
   assert.doesNotMatch(v04Plan, /stable Check-In Policy follow-up.{0,30}v0\.4\.2/)
-  assert.match(v04Plan, /v0\.4\.3` is the\s+current public stable release|current public stable release v0\.4\.3/)
+  assert.match(v04Plan, /v0\.4\.4` is the\s+current public stable release|current public stable release v0\.4\.4/)
   assert.match(v04Plan, /`v0\.4\.5` Release Hardening Draft is a non-shipping review layer only/)
   assert.match(v04Plan, /Do not publish `v0\.4\.5`/)
   assert.match(v04Plan, /README stable-entry switch/)
@@ -316,26 +316,25 @@ test('v0.4 desktop companion awareness hardening stays documented', () => {
   assert.match(memorySectionV3, /companionTransparencyView\.checkInStatus\.labelKey/)
   assert.match(memorySectionV3, /companionTransparencyView\.checkInStatus\.statusKey/)
   assert.match(memorySectionV3, /companionTransparencyView\.checkInStatus\.bodyKey/)
-  assert.match(feedbackReleaseNotes, /Draft/)
-  assert.match(feedbackReleaseNotes, /Beta Feedback And Copy Tuning/)
-  assert.match(feedbackReleaseNotes, /Do not publish until/)
-  assert.match(feedbackReleaseNotes, /issue template rather than[\s\S]*in-app normalization or storage helper/)
-  assert.match(feedbackReleaseNotes, /No README stable-entry switch/)
-  assert.match(feedbackReleaseNotes, /No feedback analytics engine/)
-  assert.match(feedbackReleaseNotesZh, /草稿/)
-  assert.match(feedbackReleaseNotesZh, /Beta 反馈与文案调优/)
-  assert.match(feedbackReleaseNotesZh, /不要发布/)
-  assert.match(feedbackReleaseNotesZh, /issue template[\s\S]*不再随应用发布反馈归一化或存储 helper/)
-  assert.match(feedbackReleaseNotesZh, /不切换 README 稳定版入口/)
-  assert.match(feedbackReleaseNotesZh, /不做反馈分析引擎/)
+  assert.match(feedbackReleaseNotes, /Status: Stable unsigned release/)
+  assert.match(feedbackReleaseNotes, /Maintenance And Hardening|Maintenance and Hardening|maintenance and hardening/)
+  assert.match(feedbackReleaseNotes, /current stable version/)
+  assert.match(feedbackReleaseNotes, /protected tag workflow/)
+  assert.match(feedbackReleaseNotes, /CVE-2026-14257/)
+  assert.doesNotMatch(feedbackReleaseNotes, /\bDraft\b|pre-tag|Release candidate|not a public release|no tag/i)
+  assert.match(feedbackReleaseNotesZh, /正式未签名稳定版/)
+  assert.match(feedbackReleaseNotesZh, /当前稳定版本/)
+  assert.match(feedbackReleaseNotesZh, /受保护的 tag 工作流/)
+  assert.match(feedbackReleaseNotesZh, /CVE-2026-14257/)
+  assert.doesNotMatch(feedbackReleaseNotesZh, /草稿|尚未打 tag|发布候选|尚未公开发布|不打 tag/)
   assert.match(draftHardeningReleaseNotes, /Draft/)
   assert.match(draftHardeningReleaseNotes, /Release Hardening Draft/)
   assert.match(draftHardeningReleaseNotes, /Do not publish until/)
   assert.match(draftHardeningReleaseNotes, /No package version bump/)
   assert.match(draftHardeningReleaseNotes, /No tag or GitHub Release/)
   assert.match(draftHardeningReleaseNotes, /No README stable-entry switch/)
-  assert.match(draftHardeningReleaseNotes, /public stable entry point on v0\.4\.3/)
-  assert.doesNotMatch(draftHardeningReleaseNotes, /stable entry point on v0\.4\.2/i)
+  assert.match(draftHardeningReleaseNotes, /public stable entry point on v0\.4\.4/)
+  assert.doesNotMatch(draftHardeningReleaseNotes, /stable entry point on v0\.4\.3/i)
   assert.match(draftHardeningReleaseNotes, /Recorded local draft-hardening evidence/)
   assert.match(draftHardeningReleaseNotes, /v0\.5 is the next desktop pet behavior line/)
   assert.doesNotMatch(draftHardeningReleaseNotes, /\bStable\b/)
@@ -345,8 +344,8 @@ test('v0.4 desktop companion awareness hardening stays documented', () => {
   assert.match(draftHardeningReleaseNotesZh, /不改 package 版本号/)
   assert.match(draftHardeningReleaseNotesZh, /不打 tag，不创建 GitHub Release/)
   assert.match(draftHardeningReleaseNotesZh, /不切换 README 稳定版入口/)
-  assert.match(draftHardeningReleaseNotesZh, /公开稳定入口继续停留在 v0\.4\.3/)
-  assert.doesNotMatch(draftHardeningReleaseNotesZh, /稳定入口.{0,20}v0\.4\.2/)
+  assert.match(draftHardeningReleaseNotesZh, /公开稳定入口继续停留在 v0\.4\.4/)
+  assert.doesNotMatch(draftHardeningReleaseNotesZh, /稳定入口.{0,20}v0\.4\.3/)
   assert.match(draftHardeningReleaseNotesZh, /本地硬化证据/)
   assert.doesNotMatch(draftHardeningReleaseNotesZh, /v0\.4\.5\s*(?:是|为|已成为)\s*稳定版|稳定版(?:是|：|:)\s*v0\.4\.5/)
   assert.match(draftHardeningHandoff, /Status: Draft hardening handoff; not a release\./)
@@ -354,7 +353,7 @@ test('v0.4 desktop companion awareness hardening stays documented', () => {
   assert.match(draftHardeningHandoff, /No tag/)
   assert.match(draftHardeningHandoff, /No GitHub Release/)
   assert.match(draftHardeningHandoff, /No README stable-entry switch/)
-  assert.match(draftHardeningHandoff, new RegExp(`v0\\.4\\.5 -> v${ESCAPED_CURRENT_STABLE}-v0\\.4\\.4`))
+  assert.match(draftHardeningHandoff, /v0\.4\.5 -> v0\.4\.4/)
   assert.match(draftHardeningHandoff, /npm run v04:draft-stack:audit/)
   assert.match(draftHardeningHandoff, /CI only enforces quick audit; full audit is non-blocking release evidence\./)
   assert.match(draftHardeningHandoff, /## Evidence Collected/)
@@ -400,11 +399,17 @@ test('v0.4 desktop companion awareness hardening stays documented', () => {
   assert.match(betaReleaseNotes, /clears the\s+recent local companion summary/)
   assert.match(betaReleaseNotes, /No v0\.5 desktop pet mouse-following or typing reactions yet/)
 
-  const unreleasedSection = changelog.split('## [0.4.3]')[0] ?? ''
+  const unreleasedSection = changelog.split('## [0.4.4]')[0] ?? ''
   assert.match(unreleasedSection, /v0\.4\.5 draft hardening evidence/)
   assert.match(unreleasedSection, /full v0\.4 draft-stack audit/)
   assert.doesNotMatch(unreleasedSection, /No unreleased changes yet\./)
   assert.doesNotMatch(unreleasedSection, /v0\.4\.3 code candidate|local v0\.4\.3 code candidate/)
+
+  const stableV044Section = changelog.split('## [0.4.4] - 2026-07-31')[1]?.split('\n## [0.4.3]')[0] ?? ''
+  assert.match(stableV044Section, /maintenance and hardening/)
+  assert.match(stableV044Section, /Toolchain upgrade/)
+  assert.match(stableV044Section, /CVE-2026-14257/)
+  assert.doesNotMatch(stableV044Section, /code candidate|not publicly released/)
 
   const stableV043Section = changelog.split('## [0.4.3] - 2026-07-16')[1]?.split('\n## [0.4.1]')[0] ?? ''
   assert.match(stableV043Section, /v0\.4\.3 carries forward the v0\.4\.2 check-in-policy/)
@@ -414,6 +419,7 @@ test('v0.4 desktop companion awareness hardening stays documented', () => {
   assert.match(stableV043Section, /Release evidence/)
   assert.doesNotMatch(stableV043Section, /code candidate|not publicly released/)
   assert.doesNotMatch(changelog, /^##\s+\[0\.4\.2\]/m)
+  assert.match(changelog, /^## \[0\.4\.4\] - 2026-07-31/m)
   assert.match(changelog, /^## \[0\.4\.3\] - 2026-07-16/m)
   assert.match(changelog, /^## \[0\.4\.1\] - /m)
 

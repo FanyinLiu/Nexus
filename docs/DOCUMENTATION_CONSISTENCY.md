@@ -4,9 +4,9 @@
 
 ## 当前锚点
 
-- 当前代码候选来自 `package.json`：v0.4.3。
-- 最新公开稳定版是 v0.4.1；README 同时说明本地代码候选 v0.4.3，并把稳定入口指向 v0.4.1。
-- v0.4.3 采用明确的未签名发行策略，并继续走 Beta → Validation → Stable；签名准备度不是这个版本的阻塞项。
+- 当前代码候选来自 `package.json`：v0.4.4。
+- 最新公开稳定版是 v0.4.4；README 把稳定入口指向 v0.4.4，上一公开版本为 v0.4.3。
+- v0.4.4 采用明确的未签名发行策略；本版为维护与加固切片，经维护者例外直接晋升 stable（例外记录见 `docs/RELEASING.md`），签名准备度不是这个版本的阻塞项。
 - 官方 GitHub Releases 是唯一二进制来源；平台范围固定为 macOS arm64、Windows x64、Linux x64。
 - v0.3.6 这类更早历史只作为归档 release note / changelog 节点保留。
 - 更早历史放在 GitHub Releases 和 `docs/RELEASE-NOTES-v*.md`，不在 README 顶部继续滚动维护旧版本号。
@@ -15,8 +15,8 @@
 
 | 文档 | 检查重点 |
 |---|---|
-| `README.md` | 顶部当前代码候选必须和 `package.json` 一致，最新公开稳定入口必须指向 v0.4.1。 |
-| `docs/README.zh-CN.md` / `docs/README.zh-TW.md` / `docs/README.ja.md` / `docs/README.ko.md` | 多语言顶部代码候选必须和 `package.json` 一致，稳定入口必须指向公开 v0.4.1，旧版本记录不能继续点名维护过旧版本号。 |
+| `README.md` | 顶部当前代码候选必须和 `package.json` 一致，最新公开稳定入口必须指向 v0.4.4。 |
+| `docs/README.zh-CN.md` / `docs/README.zh-TW.md` / `docs/README.ja.md` / `docs/README.ko.md` | 多语言顶部代码候选必须和 `package.json` 一致，稳定入口必须指向公开 v0.4.4，旧版本记录不能继续点名维护过旧版本号。 |
 | `docs/ROADMAP.md` | 近期版本边界、0.4.x draft stack、0.5.0 方向必须和当前规划一致。 |
 | `docs/NEXUS_UPGRADE_INTEGRATION_PLAN.md` | Phase 1 / P0-P3 范围和 README 的短期边界不能冲突。 |
 | `FEATURES.md` | 继续保持“能力库存”定位，不能被读成当前稳定版承诺全部交付。 |

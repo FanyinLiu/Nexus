@@ -8,12 +8,61 @@
 
 ### Added
 
-- **v0.4.4 beta feedback and copy tuning draft** — kept later feedback review
-  separate from the current stable release.
 - **v0.4.5 draft hardening evidence** — recorded local `verify:release`,
   full v0.4 draft-stack audit, packaged smoke, and `git diff --check` evidence
   while keeping package version, tag, GitHub Release, and README stable-entry
   state unchanged.
+- **Deferred beta feedback and copy tuning scope** — the slice once planned
+  under the v0.4.4 number never merged into main and stays queued for a later
+  release.
+
+## [0.4.4] - 2026-07-31
+
+v0.4.4 maintenance and hardening release on top of stable v0.4.3
+with no new features and no user-facing behavior changes. The release commit
+is published only through the protected stable-tag workflow. Full detail in
+[`docs/RELEASE-NOTES-v0.4.4.md`](docs/RELEASE-NOTES-v0.4.4.md).
+
+### Added
+
+- **Behavior map for coding agents** — added `docs/BEHAVIOR_MAP.md`, a
+  navigation document tying user-visible behaviors to their implementing
+  source modules.
+- **Cross-window chat sync tests** — added a focused suite (3 cases) covering
+  `BroadcastChannel` chat synchronization between windows and echo prevention;
+  the full suite now passes with 2989 tests.
+- **Release pipeline runtime verification** — the release workflow now checks
+  size and SHA-256 for the four `dist/vendor/ort/` WebAssembly files so a
+  truncated or corrupted inference runtime cannot ship silently.
+
+### Changed
+
+- **Toolchain upgrade** — moved to ESLint 10.7.0, TypeScript 7.0.2 (keeping
+  the `typescript6@6.0.3` dual-stack shim), Electron 43.2.0,
+  `@huggingface/transformers` 4.2.0, pixi.js 8.19.0, and
+  `@jannchie/pixi-live2d-display` 1.4.0.
+- **Circular-dependency elimination** — extracted shared type modules for the
+  pet, agent, chat, and prompts areas to break import cycles.
+- **Large-file splits** — split i18n locales per namespace, split
+  `localDataStore` into core and chat domains, and extracted window creation
+  and runtime state out of `windowManager`.
+- **Lint rule upgrades** — enabled ESLint 10's `no-useless-assignment` (38
+  sites) and `preserve-caught-error` (24 sites) and cleaned both to zero
+  violations.
+
+### Fixed
+
+- **Live2D boot failure** — the Live2D UMD vendor bundle now inlines
+  `process.env`, fixing a boot-failed startup path.
+- **Lockfile sync** — relaxed the stale `minimatch` override key to
+  `minimatch@10` so `npm ci` stays in sync, and added a repo-root `.npmrc`
+  with `legacy-peer-deps=true` to fix strict `npm ci` in CI.
+
+### Security
+
+- **CVE-2026-14257** — raised `brace-expansion` overrides to 1.1.18 / 2.1.4 /
+  5.0.9 to close a denial-of-service issue in the transitive dependency
+  chain.
 
 ## [0.4.3] - 2026-07-16
 

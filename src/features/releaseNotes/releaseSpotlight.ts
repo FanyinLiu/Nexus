@@ -7,6 +7,11 @@ export type ReleaseSpotlightBullet = {
     | 'text_chat_support'
     | 'voice_settings'
     | 'companion_boundary'
+    | 'toolchain_refresh'
+    | 'security_hardening'
+    | 'code_health'
+    | 'quality_gates'
+    | 'release_pipeline'
   titleKey: TranslationKey
   bodyKey: TranslationKey
 }
@@ -27,35 +32,35 @@ export type ReleaseSpotlight = {
 }
 
 export const CURRENT_RELEASE_SPOTLIGHT: ReleaseSpotlight = {
-  version: '0.4.3',
+  version: '0.4.4',
   eyebrowKey: 'about.release_spotlight.eyebrow',
   titleKey: 'about.release_spotlight.title',
   summaryKey: 'about.release_spotlight.summary',
   bullets: [
     {
-      id: 'companion_presence',
-      titleKey: 'about.release_spotlight.bullet.companion_presence.title',
-      bodyKey: 'about.release_spotlight.bullet.companion_presence.body',
+      id: 'toolchain_refresh',
+      titleKey: 'about.release_spotlight.bullet.toolchain_refresh.title',
+      bodyKey: 'about.release_spotlight.bullet.toolchain_refresh.body',
     },
     {
-      id: 'transparent_surface',
-      titleKey: 'about.release_spotlight.bullet.transparent_surface.title',
-      bodyKey: 'about.release_spotlight.bullet.transparent_surface.body',
+      id: 'security_hardening',
+      titleKey: 'about.release_spotlight.bullet.security_hardening.title',
+      bodyKey: 'about.release_spotlight.bullet.security_hardening.body',
     },
     {
-      id: 'text_chat_support',
-      titleKey: 'about.release_spotlight.bullet.text_chat_support.title',
-      bodyKey: 'about.release_spotlight.bullet.text_chat_support.body',
+      id: 'code_health',
+      titleKey: 'about.release_spotlight.bullet.code_health.title',
+      bodyKey: 'about.release_spotlight.bullet.code_health.body',
     },
     {
-      id: 'voice_settings',
-      titleKey: 'about.release_spotlight.bullet.voice_settings.title',
-      bodyKey: 'about.release_spotlight.bullet.voice_settings.body',
+      id: 'quality_gates',
+      titleKey: 'about.release_spotlight.bullet.quality_gates.title',
+      bodyKey: 'about.release_spotlight.bullet.quality_gates.body',
     },
     {
-      id: 'companion_boundary',
-      titleKey: 'about.release_spotlight.bullet.companion_boundary.title',
-      bodyKey: 'about.release_spotlight.bullet.companion_boundary.body',
+      id: 'release_pipeline',
+      titleKey: 'about.release_spotlight.bullet.release_pipeline.title',
+      bodyKey: 'about.release_spotlight.bullet.release_pipeline.body',
     },
   ],
   actions: [

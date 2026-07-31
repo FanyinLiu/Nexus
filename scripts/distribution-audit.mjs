@@ -511,11 +511,11 @@ check('v0.4 draft stack stays in quick PR-safe state', () => {
   assert(report.summary.errors === 0, `v0.4 draft stack audit has ${report.summary.errors} error(s); run npm run v04:draft-stack:audit:quick`)
   assert(report.schemaVersion === 3, 'v0.4 draft stack audit must report schema version 3')
   assert(report.currentStableRelease === currentVersion, `v0.4 draft stack audit must report current stable release ${currentVersion}`)
-  assert(report.previousPublicRelease === 'v0.4.1', 'v0.4 draft stack audit must retain v0.4.1 as the previous public release')
+  assert(report.previousPublicRelease === 'v0.4.3', 'v0.4 draft stack audit must retain v0.4.3 as the previous public release')
   assert(report.releaseState === 'stable', 'v0.4 draft stack audit must report stable release state')
   assert(
-    JSON.stringify(report.draftReleases) === JSON.stringify(['v0.4.4', 'v0.4.5']),
-    'v0.4 draft stack audit must report the v0.4.4-v0.4.5 draft stack',
+    JSON.stringify(report.draftReleases) === JSON.stringify(['v0.4.5']),
+    'v0.4 draft stack audit must report the v0.4.5 draft stack',
   )
 })
 

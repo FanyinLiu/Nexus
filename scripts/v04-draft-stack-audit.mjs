@@ -6,10 +6,10 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-const CURRENT_STABLE_RELEASE = '0.4.3'
-const PREVIOUS_PUBLIC_RELEASE = '0.4.1'
-const DRAFT_RELEASES = ['0.4.4', '0.4.5']
-const LOCALIZED_DRAFT_RELEASES = ['0.4.4', '0.4.5']
+const CURRENT_STABLE_RELEASE = '0.4.4'
+const PREVIOUS_PUBLIC_RELEASE = '0.4.3'
+const DRAFT_RELEASES = ['0.4.5']
+const LOCALIZED_DRAFT_RELEASES = ['0.4.5']
 
 function escapedVersion(version) {
   return version.replaceAll('.', '\\.')
@@ -197,7 +197,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
     }
     for (const [pattern, label] of [
       [/Status:\s*Release candidate/i, 'stable release notes must not retain release-candidate status'],
-      [/not a public release/i, 'stable release notes must not call v0.4.3 unpublished'],
+      [/not a public release/i, `stable release notes must not call ${versionTag(CURRENT_STABLE_RELEASE)} unpublished`],
       [/No tag or GitHub Release/i, 'stable release notes must not retain the no-release boundary'],
       [/No README stable-entry switch/i, 'stable release notes must not retain the pre-release README boundary'],
     ]) {
@@ -218,7 +218,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
     }
     for (const [pattern, label] of [
       [/状态\s*[:：]\s*发布候选/, '中文稳定版说明不得保留发布候选状态'],
-      [/尚未公开发布/, '中文稳定版说明不得称 v0.4.3 尚未公开发布'],
+      [/尚未公开发布/, `中文稳定版说明不得称 ${versionTag(CURRENT_STABLE_RELEASE)} 尚未公开发布`],
       [/不打 tag，不创建 GitHub Release/, '中文稳定版说明不得保留不发布边界'],
       [/不切换 README 稳定版入口/, '中文稳定版说明不得保留候选 README 边界'],
     ]) {
@@ -314,7 +314,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
       optimizationPlan,
       'current public stable release is `' + versionTag(CURRENT_STABLE_RELEASE) + '`',
     )
-    requirePhrase(optimizationPlanFile, optimizationPlan, '`v0.4.4` remains a draft')
+    requirePhrase(optimizationPlanFile, optimizationPlan, '`v0.4.5` remains a draft')
     rejectPattern(
       optimizationPlanFile,
       optimizationPlan,
@@ -325,7 +325,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
     const roadmap = requireFile('docs/ROADMAP.md')
     for (const phrase of [
       `current public stable release is ${versionTag(CURRENT_STABLE_RELEASE)}`,
-      '`v0.4.4` remains a draft',
+      '`v0.4.5` remains a draft',
       '`v0.4.5` is a non-shipping release-hardening review layer',
       'package version, tag, GitHub Release, or README stable entry beyond',
     ]) {
@@ -340,8 +340,8 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
 
     const changelog = requireFile('CHANGELOG.md')
     for (const phrase of [
-      `## [${CURRENT_STABLE_RELEASE}] - 2026-07-16`,
-      'v0.4.4 beta feedback and copy tuning draft',
+      `## [${CURRENT_STABLE_RELEASE}] - 2026-07-31`,
+      `${versionTag(CURRENT_STABLE_RELEASE)} maintenance and hardening release`,
       'v0.4.5 draft hardening evidence',
       'full v0.4 draft-stack audit',
       'The release commit is published only through the protected stable-tag workflow',
@@ -369,14 +369,14 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
     for (const phrase of [
       'Status: Draft hardening handoff; not a release.',
       `current public stable release ${versionTag(CURRENT_STABLE_RELEASE)}`,
-      '`v0.4.3` remains the current public stable release entry point',
-      '`v0.4.4` and `v0.4.5` remain stacked draft review layers',
+      `\`${versionTag(CURRENT_STABLE_RELEASE)}\` remains the current public stable release entry point`,
+      '`v0.4.5` remains the only stacked draft review layer',
       'No package version bump',
       'No tag',
       'No GitHub Release',
       'No README stable-entry switch',
       'v0.4.4 -> v0.4.3',
-      'v0.4.5 -> v0.4.3-v0.4.4',
+      'v0.4.5 -> v0.4.4',
       'npm run v04:draft-stack:audit',
       'npm run verify:release',
       '## Evidence Collected',
@@ -386,7 +386,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
     rejectPattern(
       draftHardeningFile,
       draftHardening,
-      /latest public release v0\.4\.1|local code candidate v0\.4\.3|v0\.4\.3 is a release candidate/i,
+      /latest public release v0\.4\.3|local code candidate v0\.4\.4|v0\.4\.4 is a release candidate/i,
       'v0.4.5 hardening handoff must not retain the superseded candidate boundary',
     )
     rejectPattern(
@@ -405,7 +405,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
       'maintainer explicitly waived',
       'No multi-day conversation evidence',
       'protected tag workflow',
-      'v0.4.4/v0.4.5 drafts',
+      'v0.4.5 draft',
     ]) {
       requirePhrase(stableHandoffFile, stableHandoff, phrase)
     }

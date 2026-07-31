@@ -25,16 +25,17 @@ The larger product steps are:
   [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md).
   The v0.4 line is split into quiet observation, companion UI/reliability
   hardening, check-in policy, companion-surface cohesion and transparency,
-  beta copy tuning, and release
+  maintenance and hardening, and release
   hardening. `v0.4.0` is the stable quiet-observation foundation; the current
-  public stable release is v0.4.3, covering the companion UI, Settings,
-  check-in policy, companion cohesion, transparency, and release hardening
-  completed for this slice. `v0.4.4` remains a draft
+  public stable release is v0.4.4, a maintenance and hardening release
+  covering the toolchain refresh, security fixes, and code-structure cleanup
+  completed for this slice. The beta feedback and copy tuning scope once
+  planned for v0.4.4 is deferred to a later release. `v0.4.5` remains a draft
   [Companion Surface Cohesion & Transparency](V0.4.3_OPTIMIZATION_AND_COMPETITOR_PLAN_2026-07-12.md)
   follow-up layer and `v0.4.5` is a non-shipping release-hardening review
   layer, not a second active product slice. Future work must not move the
   package version, tag, GitHub Release, or README stable entry beyond
-  `v0.4.3` until a later release is explicitly prepared.
+  `v0.4.4` until a later release is explicitly prepared.
 - **v0.5.0 — desktop pet behavior.** The visible companion can react to mouse
   movement, typing rhythm, idleness, and desktop state without blocking the
   user's work.

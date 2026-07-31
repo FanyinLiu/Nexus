@@ -4,7 +4,7 @@ Status: Draft. Do not publish until Klein explicitly asks for the final release
 gate, tag, and GitHub Release.
 
 v0.4.5 does not ship a new runtime feature. It consolidates the current public
-stable v0.4.3 release and the v0.4.4 draft into a
+stable v0.4.4 release into a
 release-hardening review layer so the project can prove the 0.4 line is
 coherent before any future release decision.
 
@@ -14,8 +14,8 @@ coherent before any future release decision.
   source files only, with a quick PR guard and a full release-review mode.
 - Added a v0.4.5 draft hardening handoff with stacked PR traceability,
   rollback notes, privacy assertions, and verification commands.
-- Kept the public stable entry point on v0.4.3 while documenting v0.4.4 and
-  v0.4.5 as draft-only review layers.
+- Kept the public stable entry point on v0.4.4 while documenting v0.4.5 as
+  the only draft-only review layer.
 - Added tests around the draft-stack boundary so future documentation edits do
   not accidentally promote v0.4.5 to a release.
 - Recorded local draft-hardening evidence for `verify:release`, packaged smoke,

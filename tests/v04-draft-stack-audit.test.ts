@@ -9,9 +9,9 @@ import {
   summarizeV04DraftStackReport,
 } from '../scripts/v04-draft-stack-audit.mjs'
 
-const CURRENT_STABLE_RELEASE = '0.4.3'
-const PREVIOUS_PUBLIC_RELEASE = '0.4.1'
-const DRAFT_RELEASES = ['0.4.4', '0.4.5'] as const
+const CURRENT_STABLE_RELEASE = '0.4.4'
+const PREVIOUS_PUBLIC_RELEASE = '0.4.3'
+const DRAFT_RELEASES = ['0.4.5'] as const
 
 const README_BOUNDARY_FIXTURES: Record<string, string> = {
   'README.md': `
@@ -92,22 +92,6 @@ No multi-day or cross-platform physical-device evidence is claimed.
 维护者明确豁免通常的 beta 时长。
 不会虚构多日使用或跨平台实体设备验证证据。
 `,
-    'docs/RELEASE-NOTES-v0.4.4.md': `
-# Nexus v0.4.4
-Status: Draft. Do not publish until Klein explicitly asks.
-v${CURRENT_STABLE_RELEASE} is the current public stable release.
-No package version bump
-No tag or GitHub Release
-No README stable-entry switch
-`,
-    'docs/RELEASE-NOTES-v0.4.4.zh-CN.md': `
-# Nexus v0.4.4
-状态：草稿。不要发布。
-当前公开稳定版是 v${CURRENT_STABLE_RELEASE}。
-不改 package 版本号
-不打 tag，不创建 GitHub Release
-不切换 README 稳定版入口
-`,
     'docs/RELEASE-NOTES-v0.4.5.md': `
 # Nexus v0.4.5
 Status: Draft. Do not publish until Klein explicitly asks.
@@ -139,38 +123,38 @@ integer TTL bounds
     'docs/V0.4.3_OPTIMIZATION_AND_COMPETITOR_PLAN_2026-07-12.md': `
 Status: historical implementation and review plan.
 The current public stable release is \`v${CURRENT_STABLE_RELEASE}\`.
-\`v0.4.4\` remains a draft.
+\`v0.4.5\` remains a draft.
 `,
     'docs/ROADMAP.md': `
 current public stable release is v${CURRENT_STABLE_RELEASE}
-\`v0.4.4\` remains a draft
+\`v0.4.5\` remains a draft
 \`v0.4.5\` is a non-shipping release-hardening review layer
 package version, tag, GitHub Release, or README stable entry beyond \`v${CURRENT_STABLE_RELEASE}\`
 `,
     'CHANGELOG.md': `
 ## [Unreleased]
-v0.4.4 beta feedback and copy tuning draft
+v${CURRENT_STABLE_RELEASE} maintenance and hardening release
 v0.4.5 draft hardening evidence
 full v0.4 draft-stack audit
 
-## [${CURRENT_STABLE_RELEASE}] - 2026-07-16
+## [${CURRENT_STABLE_RELEASE}] - 2026-07-31
 The release commit is published only through the protected stable-tag workflow.
 v${CURRENT_STABLE_RELEASE} is the current stable release.
 
-## [${PREVIOUS_PUBLIC_RELEASE}] - 2026-07-03
+## [${PREVIOUS_PUBLIC_RELEASE}] - 2026-07-16
 `,
     'docs/RELEASE-CANDIDATE-v0.4-HARDENING.md': 'RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md',
     'docs/RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md': `
 Status: Draft hardening handoff; not a release.
 Boundary anchor: current public stable release v${CURRENT_STABLE_RELEASE}.
 \`v${CURRENT_STABLE_RELEASE}\` remains the current public stable release entry point.
-\`v0.4.4\` and \`v0.4.5\` remain stacked draft review layers.
+\`v0.4.5\` remains the only stacked draft review layer.
 No package version bump
 No tag
 No GitHub Release
 No README stable-entry switch
 v0.4.4 -> v0.4.3
-v0.4.5 -> v0.4.3-v0.4.4
+v0.4.5 -> v0.4.4
 npm run v04:draft-stack:audit
 npm run verify:release
 ## Evidence Collected
@@ -182,7 +166,7 @@ v${CURRENT_STABLE_RELEASE} is the current stable version.
 The maintainer explicitly waived the normal beta window.
 No multi-day conversation evidence is claimed.
 The protected tag workflow creates assets.
-Keep v${CURRENT_STABLE_RELEASE} separate from the v0.4.4/v0.4.5 drafts.
+Keep v${CURRENT_STABLE_RELEASE} separate from the v0.4.5 draft.
 `,
   }
 
@@ -214,7 +198,7 @@ test('v0.4 draft stack quick audit guards the stable release boundary', () => {
   })
 })
 
-test('v0.4 draft stack full audit guards stable v0.4.3 and later drafts', () => {
+test('v0.4 draft stack full audit guards stable v0.4.4 and later drafts', () => {
   const report = buildV04DraftStackReport()
 
   assert.equal(report.mode, 'full')
@@ -230,7 +214,7 @@ test('v0.4 draft stack full audit guards stable v0.4.3 and later drafts', () => 
   assert.ok(report.checkedFiles.includes(`docs/RELEASE-CANDIDATE-v${CURRENT_STABLE_RELEASE}-HANDOFF.md`))
 })
 
-test('full fixture models v0.4.3 as dated stable before v0.4.1', (t) => {
+test('full fixture models v0.4.4 as dated stable before v0.4.3', (t) => {
   const root = writeFullAuditFixtureRoot()
   t.after(() => rmSync(root, { recursive: true, force: true }))
 
@@ -276,13 +260,13 @@ Current stable release: v0.4.3
   const missing = report.errors.missingPhrases
     .filter((entry) => entry.file === 'docs/README.ja.md')
     .map((entry) => entry.phrase)
-  assert.ok(missing.includes('README must identify v0.4.3 as the current stable release'))
+  assert.ok(missing.includes(`README must identify v${CURRENT_STABLE_RELEASE} as the current stable release`))
 })
 
 test('full audit rejects a stable release note that still calls itself a candidate', (t) => {
   const root = writeFullAuditFixtureRoot({
-    'docs/RELEASE-NOTES-v0.4.3.md': `
-# Nexus v0.4.3
+    [`docs/RELEASE-NOTES-v${CURRENT_STABLE_RELEASE}.md`]: `
+# Nexus v${CURRENT_STABLE_RELEASE}
 Status: Release candidate. This is not a public release.
 `,
   })
@@ -292,16 +276,16 @@ Status: Release candidate. This is not a public release.
   const labels = report.errors.forbiddenPhrases.map((entry) => entry.phrase)
   assert.equal(report.summary.ok, false)
   assert.ok(labels.includes('stable release notes must not retain release-candidate status'))
-  assert.ok(labels.includes('stable release notes must not call v0.4.3 unpublished'))
+  assert.ok(labels.includes(`stable release notes must not call v${CURRENT_STABLE_RELEASE} unpublished`))
 })
 
 test('full audit rejects superseded candidate wording in later draft notes', (t) => {
   const root = writeFullAuditFixtureRoot({
-    'docs/RELEASE-NOTES-v0.4.4.md': `
-# Nexus v0.4.4
+    'docs/RELEASE-NOTES-v0.4.5.md': `
+# Nexus v0.4.5
 Status: Draft. Do not publish until Klein explicitly asks.
-v0.4.3 is the current public stable release.
-The local v0.4.3 code candidate remains unpublished.
+v0.4.4 is the current public stable release.
+The local v0.4.4 code candidate remains unpublished.
 No package version bump
 No tag or GitHub Release
 No README stable-entry switch
@@ -311,7 +295,7 @@ No README stable-entry switch
 
   const report = buildV04DraftStackReport(root)
   const labels = report.errors.forbiddenPhrases.map((entry) => entry.phrase)
-  assert.ok(labels.includes('v0.4.4 release notes must not retain the superseded candidate boundary'))
+  assert.ok(labels.includes('v0.4.5 release notes must not retain the superseded candidate boundary'))
 })
 
 test('full audit rejects a future draft claiming stable status', (t) => {
@@ -319,7 +303,7 @@ test('full audit rejects a future draft claiming stable status', (t) => {
     'docs/RELEASE-NOTES-v0.4.5.md': `
 # Nexus v0.4.5
 Status: Draft. Do not publish until Klein explicitly asks.
-The current public stable release is v0.4.3.
+The current public stable release is v0.4.4.
 No package version bump
 No tag or GitHub Release
 No README stable-entry switch
@@ -337,10 +321,10 @@ v0.4.5 is now stable.
 test('full audit rejects a roadmap that restores the v0.4.3 candidate boundary', (t) => {
   const root = writeFullAuditFixtureRoot({
     'docs/ROADMAP.md': `
-current public stable release is v0.4.3
-\`v0.4.4\` remains a draft
+current public stable release is v0.4.4
+\`v0.4.5\` remains a draft
 \`v0.4.5\` is a non-shipping release-hardening review layer
-package version, tag, GitHub Release, or README stable entry beyond \`v0.4.3\`
+package version, tag, GitHub Release, or README stable entry beyond \`v0.4.4\`
 The local code candidate is v0.4.3.
 `,
   })
@@ -351,26 +335,26 @@ The local code candidate is v0.4.3.
   assert.ok(labels.includes('ROADMAP must not retain the v0.4.3 candidate boundary'))
 })
 
-test('full audit rejects an undated v0.4.3 changelog heading', (t) => {
+test('full audit rejects an undated v0.4.4 changelog heading', (t) => {
   const root = writeFullAuditFixtureRoot({
     'CHANGELOG.md': `
 ## [Unreleased]
-v0.4.4 beta feedback and copy tuning draft
+v0.4.4 maintenance and hardening release
 v0.4.5 draft hardening evidence
 full v0.4 draft-stack audit
 
-## [0.4.3]
+## [0.4.4]
 The release commit is published only through the protected stable-tag workflow.
-v0.4.3 is the current stable release.
+v0.4.4 is the current stable release.
 
-## [0.4.1] - 2026-07-03
+## [0.4.3] - 2026-07-16
 `,
   })
   t.after(() => rmSync(root, { recursive: true, force: true }))
 
   const report = buildV04DraftStackReport(root)
   const missing = report.errors.missingPhrases.map((entry) => entry.phrase)
-  assert.ok(missing.includes('## [0.4.3] - 2026-07-16'))
+  assert.ok(missing.includes('## [0.4.4] - 2026-07-31'))
 })
 
 test('quick audit rejects old v0.3 release-note links and expanded sections', (t) => {

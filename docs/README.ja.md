@@ -24,19 +24,23 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **現在の安定版：** v0.4.3。安定入口は [RELEASE-NOTES-v0.4.3.md](RELEASE-NOTES-v0.4.3.md) です。Nexus はデスクトップ・コンパニオン認識の粗い時間表現とプライバシー優先を保ちながら、穏やかな check-in ポリシー、設定の視覚システム、リリース監査をさらに締めます。正式なインストーラーは保護された tag ワークフローから GitHub Releases にのみ公開されます。
+> **現在の安定版：** v0.4.4。安定入口は [RELEASE-NOTES-v0.4.4.md](RELEASE-NOTES-v0.4.4.md) です。Nexus はデスクトップ・コンパニオン認識の粗い時間表現とプライバシー優先を保ちながら、今回はメンテナンスと強化のみで、ユーザーから見える動作変更はありません。正式なインストーラーは保護された tag ワークフローから GitHub Releases にのみ公開されます。
 
 > **開発スコープの注記：** この多言語 README は長期的な機能一覧を残しています。短期開発はルートの [README](../README.md) と [Nexus アップグレード統合計画](NEXUS_UPGRADE_INTEGRATION_PLAN.md) を基準にしてください。Phase 1 は常駐する小さなデスクトップウィンドウ、ミニマルなアバター、Ollama / DeepSeek のテキストモデル、シンプルな会話だけに絞ります。
 
 ---
 
-## 今回のアップデート — v0.4.3
+## 今回のアップデート — v0.4.4
+
+> **メンテナンスと強化（ツールチェーン更新、セキュリティ修正、コード構造の整理）。** 新機能や動作変更はなく、基盤依存関係のアップグレード（brace-expansion の CVE-2026-14257 修正を含む）、Live2D 起動修正、内部コード構造の整理だけを行います。詳細は [RELEASE-NOTES-v0.4.4.md](RELEASE-NOTES-v0.4.4.md)（英語）。
+
+## 前回のアップデート — v0.4.3
 
 > **Check-In ポリシーとリリースゲートの同期。** v0.4.3 では、穏やかな check-in をまずローカルで抑制可能な in-app 判断として扱い、メッセージ送信、ツール実行、外部通知作成は行いません。詳細は [RELEASE-NOTES-v0.4.3.md](RELEASE-NOTES-v0.4.3.md)（英語）。
 
 Nexus と会話中のとき、直前に dismiss したとき、同じ種類の信号が重なるとき、古い「Nexus に戻った」信号のときは静かに抑制されます。時間表現は引き続き粗く、正確なタイマーや生のデスクトップ内容をモデル境界へ渡しません。設定 UI、リリース監査、パフォーマンス予算は `verify:pr` とリリース前ゲートで守ります。
 
-## 前回のアップデート — v0.4.1
+## 以前のアップデート — v0.4.1
 
 > **コンパニオン UI、設定、信頼性の強化。** この安定版では、メイン会話パネル、設定画面、Image4 コンパニオン領域を整理し、source-only の UI、プライバシー、セキュリティ、パフォーマンス監査を強化します。詳細は [RELEASE-NOTES-v0.4.1.md](RELEASE-NOTES-v0.4.1.md)（英語）。
 
@@ -50,7 +54,7 @@ Nexus はまず静かでいることを優先し、短期で粗い、一時停�
 
 ## 旧バージョンの記録
 
-README には現在の安定版 v0.4.3 と一つ前の公開版 v0.4.1 の要点だけを載せます。より古い履歴は [CHANGELOG](../CHANGELOG.md) と [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) に集約し、README 上部で古いバージョン番号を更新し続けません。
+README には現在の安定版 v0.4.4 と一つ前の公開版 v0.4.3 の要点だけを載せます。より古い履歴は [CHANGELOG](../CHANGELOG.md) と [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) に集約し、README 上部で古いバージョン番号を更新し続けません。
 
 ---
 
@@ -65,7 +69,7 @@ README には現在の安定版 v0.4.3 と一つ前の公開版 v0.4.1 の要点
 | 安全性とプライバシーを確認 | [セーフティとサポート](#セーフティとサポート) |
 | コミュニティに参加 | [コミュニティ](#コミュニティ) · [Community Guide](COMMUNITY.md) |
 | 0.4 の方向を理解 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 0.4 現在の安定版を見る | [v0.4.3 Release Notes](RELEASE-NOTES-v0.4.3.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 0.4 現在の安定版を見る | [v0.4.4 Release Notes](RELEASE-NOTES-v0.4.4.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## なぜ Nexus なのか？
 
@@ -160,7 +164,7 @@ README には現在の安定版 v0.4.3 と一つ前の公開版 v0.4.1 の要点
 
 [release ページ](https://github.com/FanyinLiu/Nexus/releases/latest) から最新インストーラーをダウンロード：
 
-> 次の表は v0.4.3 の正式リリース契約です。インストーラーは、保護された tag ワークフローが GitHub Releases へ正常に公開した実在アセットだけを基準にしてください。ローカル包や第三者の再配布物は使用しないでください。
+> 次の表は v0.4.4 の正式リリース契約です。インストーラーは、保護された tag ワークフローが GitHub Releases へ正常に公開した実在アセットだけを基準にしてください。ローカル包や第三者の再配布物は使用しないでください。
 
 | プラットフォーム | ファイル |
 |---|---|
@@ -169,7 +173,7 @@ README には現在の安定版 v0.4.3 と一つ前の公開版 v0.4.1 の要点
 | Linux x64 | `.AppImage` / `.deb` / `.tar.gz` + `SHA256SUMS-linux.txt` |
 
 > **初回起動時にセキュリティ警告が表示されますが、これは想定内です。**
-> Nexus v0.4.3 は Apple Developer ID / notarization または Windows
+> Nexus v0.4.4 は Apple Developer ID / notarization または Windows
 > コード署名を使用しません。macOS の ad-hoc 署名は Apple の信頼を
 > 意味せず、Windows インストーラーは `NotSigned` と表示されます。
 > システム警告は安全性の結論ではないため、配布元と SHA-256 を確認してください。
@@ -277,7 +281,7 @@ npm run package:win     # または package:mac / package:linux
 
 Nexus は個人メンテナンスのプロジェクトです。issue や PR の対応速度はトリアージの精度に左右されます：
 
-コミュニティ文書は特定の 1 リリースだけのものではなく、全バージョンをまたぐ入口です。0.3 は安全性、メモリ、設定の土台を締め、0.4 はデスクトップ・コンパニオン認識へ進み、0.5 はデスクトップペットの振る舞いへ進みます。長期入口は [Community Guide](COMMUNITY.md)、0.4 の方向は [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)、0.4 現在の安定版の説明は [v0.4.3 Release Notes](RELEASE-NOTES-v0.4.3.md)、リリース hardening は [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) です。
+コミュニティ文書は特定の 1 リリースだけのものではなく、全バージョンをまたぐ入口です。0.3 は安全性、メモリ、設定の土台を締め、0.4 はデスクトップ・コンパニオン認識へ進み、0.5 はデスクトップペットの振る舞いへ進みます。長期入口は [Community Guide](COMMUNITY.md)、0.4 の方向は [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)、0.4 現在の安定版の説明は [v0.4.4 Release Notes](RELEASE-NOTES-v0.4.4.md)、リリース hardening は [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) です。
 
 - 🐛 **バグを見つけた？** → [バグ報告](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **明確な機能アイデア？** → [機能リクエスト](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

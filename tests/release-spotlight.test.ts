@@ -21,13 +21,13 @@ function normalizeMarkdownProse(text: string) {
   return text.replace(/[>\s]+/g, ' ').trim()
 }
 
-test('current release spotlight keeps the v0.4.3 stable structure explicit', () => {
-  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, '0.4.3')
+test('current release spotlight keeps the v0.4.4 stable structure explicit', () => {
+  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, '0.4.4')
   const packageJson = JSON.parse(readWorkspaceFile('package.json')) as { version: string }
   assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, packageJson.version)
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.bullets.map((item) => item.id),
-    ['companion_presence', 'transparent_surface', 'text_chat_support', 'voice_settings', 'companion_boundary'],
+    ['toolchain_refresh', 'security_hardening', 'code_health', 'quality_gates', 'release_pipeline'],
   )
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.actions.map((item) => [item.id, item.targetSectionId]),
@@ -38,7 +38,7 @@ test('current release spotlight keeps the v0.4.3 stable structure explicit', () 
   )
   assert.ok(
     getReleaseSpotlightTranslationKeys().includes(
-      'about.release_spotlight.bullet.companion_presence.title',
+      'about.release_spotlight.bullet.toolchain_refresh.title',
     ),
   )
 })
@@ -62,13 +62,22 @@ test('current release spotlight translation keys are registered for every locale
   }
 })
 
-test('current release spotlight describes the quieter voice-first surface', async () => {
+test('current release spotlight describes the v0.4.4 maintenance release and keeps v0.4.3 keys', async () => {
   const en = await ensureLocaleLoaded('en-US')
   const zhCN = await ensureLocaleLoaded('zh-CN')
 
-  assert.equal(en['about.release_spotlight.title'], 'Companion-first, with a quieter surface.')
+  assert.equal(en['about.release_spotlight.title'], 'Maintenance and hardening, same companion.')
+  assert.match(en['about.release_spotlight.summary'], /maintenance and hardening/i)
   assert.match(en['about.release_spotlight.summary'], /stable companion-first release/i)
   assert.match(en['about.release_spotlight.summary'], /unsigned macOS builds.*manually.*release page/i)
+  assert.match(en['about.release_spotlight.bullet.toolchain_refresh.body'], /Electron.*inference.*Live2D/i)
+  assert.match(en['about.release_spotlight.bullet.security_hardening.body'], /CVE-2026-14257/)
+  assert.match(en['about.release_spotlight.bullet.code_health.body'], /cycle/i)
+  assert.match(en['about.release_spotlight.bullet.quality_gates.body'], /lint/i)
+  assert.match(en['about.release_spotlight.bullet.release_pipeline.body'], /checksum/i)
+  assert.equal(en['about.release_spotlight.action.open_voice'], 'Open Voice Settings')
+  assert.equal(en['about.release_spotlight.action.preview_companion'], 'Preview Companion')
+
   assert.match(en['about.release_spotlight.bullet.companion_presence.body'], /temporary states and captions/i)
   assert.doesNotMatch(en['about.release_spotlight.bullet.companion_presence.body'], /Mao.*Haru.*Hiyori/)
   assert.match(en['about.release_spotlight.bullet.companion_boundary.body'], /Mao.*Haru.*Hiyori/)
@@ -79,12 +88,15 @@ test('current release spotlight describes the quieter voice-first surface', asyn
   assert.match(en['about.release_spotlight.bullet.text_chat_support.body'], /available when needed/)
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /main window has no voice button/)
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /frameless companions and desktop pets/)
-  assert.equal(en['about.release_spotlight.action.open_voice'], 'Open Voice Settings')
-  assert.equal(en['about.release_spotlight.action.preview_companion'], 'Preview Companion')
 
-  assert.equal(zhCN['about.release_spotlight.title'], '陪伴优先，界面更克制')
+  assert.equal(zhCN['about.release_spotlight.title'], '维护与加固，陪伴体验不变')
   assert.match(zhCN['about.release_spotlight.summary'], /正式稳定版/)
   assert.match(zhCN['about.release_spotlight.summary'], /macOS 版本未签名.*发布页.*手动/)
+  assert.match(zhCN['about.release_spotlight.bullet.toolchain_refresh.body'], /Electron.*Live2D/)
+  assert.match(zhCN['about.release_spotlight.bullet.security_hardening.body'], /CVE-2026-14257/)
+  assert.equal(zhCN['about.release_spotlight.action.open_voice'], '打开语音设置')
+  assert.equal(zhCN['about.release_spotlight.action.preview_companion'], '预览伙伴')
+
   assert.match(zhCN['about.release_spotlight.bullet.companion_presence.body'], /临时状态.*字幕/)
   assert.doesNotMatch(zhCN['about.release_spotlight.bullet.companion_presence.body'], /Mao.*Haru.*Hiyori/)
   assert.match(zhCN['about.release_spotlight.bullet.companion_boundary.body'], /Mao.*Haru.*Hiyori/)
@@ -95,11 +107,9 @@ test('current release spotlight describes the quieter voice-first surface', asyn
   assert.match(zhCN['about.release_spotlight.bullet.text_chat_support.body'], /辅助界面/)
   assert.match(zhCN['about.release_spotlight.bullet.voice_settings.body'], /主界面没有常驻语音按钮/)
   assert.match(zhCN['about.release_spotlight.bullet.voice_settings.body'], /无框伙伴与桌宠/)
-  assert.equal(zhCN['about.release_spotlight.action.open_voice'], '打开语音设置')
-  assert.equal(zhCN['about.release_spotlight.action.preview_companion'], '预览伙伴')
 })
 
-test('release spotlight presents v0.4.3 as stable while keeping unsigned macOS updates explicit', async () => {
+test('release spotlight presents v0.4.4 as stable while keeping unsigned macOS updates explicit', async () => {
   const contracts = [
     ['en-US', /stable companion-first release/i, /unsigned macOS.*manually.*release page/i, /code candidate|unpublished|not published|no (?:tag|GitHub Release)/i],
     ['zh-CN', /正式稳定版/, /macOS 版本未签名.*发布页.*手动/, /代码候选|尚未公开|未发布|不打 tag|没有 tag/],
@@ -117,7 +127,7 @@ test('release spotlight presents v0.4.3 as stable while keeping unsigned macOS u
         dictionary[item.bodyKey],
       ]),
     ].join(' ')
-    assert.match(copy, stablePattern, `${locale} must present v0.4.3 as stable`)
+    assert.match(copy, stablePattern, `${locale} must present v0.4.4 as stable`)
     assert.match(copy, unsignedUpdatePattern, `${locale} must keep the unsigned macOS manual-update boundary`)
     assert.doesNotMatch(copy, forbiddenPattern, `${locale} must not retain prerelease publication copy`)
   }
@@ -245,8 +255,8 @@ test('human-facing v0.3.6 docs keep foundation wrap-up aligned', () => {
     readWorkspaceFile('docs/RELEASE-NOTES-v0.3.6.zh-CN.md'),
   )
 
-  assert.match(rootReadme, /当前稳定版：\*{0,2}\s*v0\.4\.3/)
-  assert.match(rootReadme, /上一公开版本 — v0\.4\.1/)
+  assert.match(rootReadme, /当前稳定版：\*{0,2}\s*v0\.4\.4/)
+  assert.match(rootReadme, /上一公开版本 — v0\.4\.3/)
   assert.doesNotMatch(rootReadme, /## 上次更新 — v0\.3\.6/)
 
   assert.match(englishReleaseNotes, /The foundation is ready for the next companion step\./)
