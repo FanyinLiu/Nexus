@@ -52,6 +52,9 @@
     "onnxruntime-web",
     "tinybench"
   ],
+  "ignoreUnresolved": [
+    "^/src/lib/storage/settings\\.ts$"
+  ],
   "ignoreBinaries": [
     "osascript",
     "pgrep",
