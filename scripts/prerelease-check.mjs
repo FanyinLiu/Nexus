@@ -310,9 +310,10 @@ stage('C', 'Security', () => {
 
   check('C', 'Electron webPreferences: contextIsolation+sandbox+!nodeIntegration+webSecurity', () => {
     const wm = readFileSync(join(ROOT, 'electron/windowManager.js'), 'utf8')
+      + readFileSync(join(ROOT, 'electron/windowCreation.js'), 'utf8')
     const required = ['contextIsolation: true', 'sandbox: true', 'nodeIntegration: false', 'webSecurity: true']
     const missing = required.filter((r) => !wm.includes(r))
-    if (missing.length > 0) throw new Error(`missing in windowManager.js: ${missing.join(', ')}`)
+    if (missing.length > 0) throw new Error(`missing in windowManager.js/windowCreation.js: ${missing.join(', ')}`)
   })
 
   check('C', 'electron ≥ 43.2 (latest stable; security rollups)', () => {
