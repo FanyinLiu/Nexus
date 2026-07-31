@@ -5,7 +5,8 @@
     "scripts/**/*.mjs",
     "scripts/**/*.cjs",
     "tests/benchmarks.bench.ts",
-    "tests/fixtures/settingsSurfaceAuditBaseline.ts"
+    "tests/fixtures/settingsSurfaceAuditBaseline.ts",
+    "tests/helpers/bundler-import-hooks.mjs"
   ],
   "ignore": [
     "artifacts/**",
