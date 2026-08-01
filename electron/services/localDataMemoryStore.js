@@ -1,14 +1,28 @@
-import fs from 'node:fs/promises'
-import { createRequire } from 'node:module'
+/**
+ * Memory-domain local-data operations (migration plan/apply/rollback, status, readback).
+ * Mirrors the chat-domain module structure so the SQLite foundation stays in core.
+ */
 import {
   LOCAL_DATA_AUDIT_DOMAIN_ID,
   LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID,
   LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID,
   initializeLocalDataStore,
-  readLocalDataDomainRecords,
-  readLocalDataSqliteState,
   resolveLocalDataPaths,
-} from './localDataStore.js'
+  setLocalDataRuntimeStatus,
+  nowIso,
+  openSqliteDatabase,
+  ensureSqliteTables,
+  ensureBuiltInDomains,
+  auditRecordId,
+  insertLocalDataAuditRecord,
+  setMeta,
+  readSqliteState,
+  readSqliteRecords,
+  atomicWriteJson,
+  manifestFromSqliteState,
+  statusFromSqliteState,
+  statusFromError,
+} from './localDataStoreCore.js'
 import {
   MEMORY_MIGRATION_PACKAGE_SCHEMA_VERSION,
   normalizeMemoryMigrationDailyEntry,
@@ -17,51 +31,11 @@ import {
   summarizeMemoryMigrationPackage,
 } from './localDataMemoryMigration.js'
 
-const require = createRequire(import.meta.url)
-
-function nowIso(now = new Date()) {
-  return now instanceof Date ? now.toISOString() : new Date(now).toISOString()
-}
-function openDatabase(databasePath) {
-  const db = new (require('node:sqlite').DatabaseSync)(databasePath)
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;')
-  return db
+function targetDomainIds() {
+  return [LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID, LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID]
 }
 
-function ensureTables(db) {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS local_data_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS domain_registry (
-      id TEXT PRIMARY KEY,
-      metadata_json TEXT NOT NULL DEFAULT '{}',
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS local_data_records (
-      domain_id TEXT NOT NULL,
-      record_id TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      source TEXT NOT NULL,
-      mirrored_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      PRIMARY KEY (domain_id, record_id),
-      FOREIGN KEY (domain_id) REFERENCES domain_registry(id) ON DELETE CASCADE
-    );
-  `)
-}
-
-function setMeta(db, key, value) {
-  db.prepare(`
-    INSERT INTO local_data_meta (key, value) VALUES (?, ?)
-    ON CONFLICT(key) DO UPDATE SET value = excluded.value
-  `).run(key, String(value))
-}
-
-function auditRecordId(prefix, timestamp) {
-  return `${prefix}-${timestamp.replace(/[:.]/g, '-')}`
-}
-
-function insertRecord(db, domainId, recordId, payload, source, timestamp) {
+function insertMemoryRecord(db, domainId, recordId, payload, timestamp) {
   db.prepare(`
     INSERT INTO local_data_records (domain_id, record_id, payload_json, source, mirrored_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -70,34 +44,7 @@ function insertRecord(db, domainId, recordId, payload, source, timestamp) {
       source = excluded.source,
       mirrored_at = excluded.mirrored_at,
       updated_at = excluded.updated_at
-  `).run(domainId, recordId, JSON.stringify(payload), source, timestamp, timestamp)
-}
-
-function insertAuditRecord(db, recordId, payload, timestamp) {
-  insertRecord(db, LOCAL_DATA_AUDIT_DOMAIN_ID, recordId, payload, 'main-process-local-data-service', timestamp)
-}
-
-async function refreshManifest(options, updatedAt) {
-  const state = await readLocalDataSqliteState(options)
-  const { manifestPath } = await resolveLocalDataPaths(options)
-  const manifest = {
-    format: 'nexus-local-data-manifest',
-    formatVersion: 1,
-    backend: state.backend,
-    schemaVersion: state.schemaVersion,
-    createdAt: state.createdAt,
-    updatedAt,
-    migrations: state.migrations,
-    domains: Object.fromEntries(state.domains.map((domain) => [domain.id, domain.metadata])),
-  }
-  const tempPath = `${manifestPath}.${process.pid}.${Date.now()}.tmp`
-  await fs.writeFile(tempPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
-  await fs.rename(tempPath, manifestPath)
-  return state
-}
-
-function targetDomainIds() {
-  return [LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID, LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID]
+  `).run(domainId, recordId, JSON.stringify(payload), 'renderer-localStorage-memory-migration', timestamp, timestamp)
 }
 
 export function planMemoryLocalDataMigration(migrationPackage) {
@@ -150,20 +97,22 @@ export async function applyMemoryLocalDataMigration(options = {}) {
   let db = null
   try {
     const appliedAt = nowIso(options.now)
-    const { databasePath } = await resolveLocalDataPaths(options)
-    db = openDatabase(databasePath)
-    ensureTables(db)
+    const { manifestPath, databasePath } = await resolveLocalDataPaths(options)
+    db = openSqliteDatabase(databasePath)
+    ensureSqliteTables(db)
+
     const auditId = auditRecordId('memory-migration', appliedAt)
     db.exec('BEGIN')
     try {
+      ensureBuiltInDomains(db, appliedAt)
       db.prepare('DELETE FROM local_data_records WHERE domain_id IN (?, ?)').run(...targetDomainIds())
       for (const memory of normalized.migrationPackage.longTerm) {
-        insertRecord(db, LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID, memory.id, memory, 'renderer-localStorage-memory-migration', appliedAt)
+        insertMemoryRecord(db, LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID, memory.id, memory, appliedAt)
       }
       for (const entry of normalized.migrationPackage.daily) {
-        insertRecord(db, LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID, entry.id, entry, 'renderer-localStorage-memory-migration', appliedAt)
+        insertMemoryRecord(db, LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID, entry.id, entry, appliedAt)
       }
-      insertAuditRecord(db, auditId, {
+      insertLocalDataAuditRecord(db, auditId, {
         action: 'memory-migration-applied',
         appliedAt,
         longTermRecordCount: planned.longTermRecordCount,
@@ -178,9 +127,14 @@ export async function applyMemoryLocalDataMigration(options = {}) {
       try { db.exec('ROLLBACK') } catch {}
       throw error
     }
-    const state = await refreshManifest(options, appliedAt)
+
+    const state = readSqliteState(db)
+    await atomicWriteJson(manifestPath, manifestFromSqliteState(state))
+    setLocalDataRuntimeStatus(statusFromSqliteState(state))
+
     return { ...planned, ok: true, applied: true, recordsWritten: normalized.migrationPackage.longTerm.length + normalized.migrationPackage.daily.length, schemaVersion: state.schemaVersion, auditRecordId: auditId, errorKind: null, errorMessage: null }
-  } catch {
+  } catch (error) {
+    setLocalDataRuntimeStatus(statusFromError(error))
     return { ...planned, ok: false, applied: false, recordsWritten: 0, auditRecordId: null, errorKind: 'local-data-memory-migration-failed', errorMessage: 'Memory migration could not be completed.' }
   } finally {
     if (db) db.close()
@@ -200,33 +154,39 @@ export async function rollbackMemoryLocalDataMigration(options = {}) {
   let db = null
   try {
     const rolledBackAt = nowIso(options.now)
-    const { databasePath } = await resolveLocalDataPaths(options)
-    db = openDatabase(databasePath)
-    ensureTables(db)
+    const { manifestPath, databasePath } = await resolveLocalDataPaths(options)
+    db = openSqliteDatabase(databasePath)
+    ensureSqliteTables(db)
+
     const existing = db.prepare('SELECT COUNT(*) AS count FROM local_data_records WHERE domain_id IN (?, ?)').get(...domains)?.count ?? 0
     const auditId = auditRecordId('memory-migration-rollback', rolledBackAt)
+
     db.exec('BEGIN')
     try {
       db.prepare('DELETE FROM local_data_records WHERE domain_id IN (?, ?)').run(...domains)
-      insertAuditRecord(db, auditId, { action: 'memory-migration-rolled-back', rolledBackAt, recordsDeleted: existing }, rolledBackAt)
+      insertLocalDataAuditRecord(db, auditId, { action: 'memory-migration-rolled-back', rolledBackAt, recordsDeleted: existing }, rolledBackAt)
       setMeta(db, 'updatedAt', rolledBackAt)
       db.exec('COMMIT')
     } catch (error) {
       try { db.exec('ROLLBACK') } catch {}
       throw error
     }
-    const state = await refreshManifest(options, rolledBackAt)
+
+    const state = readSqliteState(db)
+    await atomicWriteJson(manifestPath, manifestFromSqliteState(state))
+    setLocalDataRuntimeStatus(statusFromSqliteState(state))
+
     return { ok: true, targetDomainIds: domains, recordsDeleted: existing, schemaVersion: state.schemaVersion, auditRecordId: auditId, errorKind: null, errorMessage: null }
-  } catch {
+  } catch (error) {
+    setLocalDataRuntimeStatus(statusFromError(error))
     return { ok: false, targetDomainIds: domains, recordsDeleted: 0, auditRecordId: null, errorKind: 'local-data-memory-migration-failed', errorMessage: 'Memory migration rollback could not be completed.' }
   } finally {
     if (db) db.close()
   }
 }
 
-async function readMemoryAudit(options) {
-  const records = await readLocalDataDomainRecords(LOCAL_DATA_AUDIT_DOMAIN_ID, options)
-  return records
+function readMemoryAudit(db) {
+  return readSqliteRecords(db, LOCAL_DATA_AUDIT_DOMAIN_ID)
     .filter((record) => record.payload?.action === 'memory-migration-applied' || record.payload?.action === 'memory-migration-rolled-back')
     .sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)))[0] ?? null
 }
@@ -237,15 +197,23 @@ export async function getMemoryLocalDataMigrationStatus(options = {}) {
   if (!status.healthy) {
     return { ok: false, targetDomainIds: domains, schemaVersion: status.schemaVersion, longTermRecordCount: 0, dailyEntryCount: 0, recordPayloadsIncluded: false, lastAuditRecordId: null, lastAuditAction: null, lastAuditAt: null, errorKind: status.errorKind, errorMessage: status.errorMessage }
   }
+
+  let db = null
   try {
-    const [longTerm, daily, audit] = await Promise.all([
-      readLocalDataDomainRecords(LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID, options),
-      readLocalDataDomainRecords(LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID, options),
-      readMemoryAudit(options),
-    ])
+    const { databasePath } = await resolveLocalDataPaths(options)
+    db = openSqliteDatabase(databasePath)
+    ensureSqliteTables(db)
+
+    const longTerm = readSqliteRecords(db, LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID)
+    const daily = readSqliteRecords(db, LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID)
+    const audit = readMemoryAudit(db)
+
     return { ok: true, targetDomainIds: domains, schemaVersion: status.schemaVersion, longTermRecordCount: longTerm.length, dailyEntryCount: daily.length, recordPayloadsIncluded: false, lastAuditRecordId: audit?.recordId ?? null, lastAuditAction: audit?.payload?.action ?? null, lastAuditAt: audit?.payload?.appliedAt || audit?.payload?.rolledBackAt || audit?.updatedAt || null, errorKind: null, errorMessage: null }
-  } catch {
+  } catch (error) {
+    setLocalDataRuntimeStatus(statusFromError(error))
     return { ok: false, targetDomainIds: domains, schemaVersion: status.schemaVersion, longTermRecordCount: 0, dailyEntryCount: 0, recordPayloadsIncluded: false, lastAuditRecordId: null, lastAuditAction: null, lastAuditAt: null, errorKind: 'local-data-memory-migration-failed', errorMessage: 'Memory migration status is unavailable.' }
+  } finally {
+    if (db) db.close()
   }
 }
 
@@ -255,11 +223,15 @@ export async function readMemoryLocalData(options = {}) {
   if (!status.healthy) {
     return { ok: false, targetDomainIds: domains, schemaVersion: status.schemaVersion, recordPayloadsIncluded: true, longTermRecordCount: 0, dailyEntryCount: 0, malformedRecordCount: 0, memories: [], daily: [], errorKind: status.errorKind, errorMessage: status.errorMessage }
   }
+
+  let db = null
   try {
-    const [longTermRows, dailyRows] = await Promise.all([
-      readLocalDataDomainRecords(LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID, options),
-      readLocalDataDomainRecords(LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID, options),
-    ])
+    const { databasePath } = await resolveLocalDataPaths(options)
+    db = openSqliteDatabase(databasePath)
+    ensureSqliteTables(db)
+
+    const longTermRows = readSqliteRecords(db, LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID)
+    const dailyRows = readSqliteRecords(db, LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID)
     const memories = []
     const daily = []
     let malformedRecordCount = 0
@@ -272,7 +244,10 @@ export async function readMemoryLocalData(options = {}) {
     memories.sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
     daily.sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
     return { ok: true, targetDomainIds: domains, schemaVersion: status.schemaVersion, recordPayloadsIncluded: true, longTermRecordCount: longTermRows.length, dailyEntryCount: dailyRows.length, malformedRecordCount, memories, daily, errorKind: null, errorMessage: null }
-  } catch {
+  } catch (error) {
+    setLocalDataRuntimeStatus(statusFromError(error))
     return { ok: false, targetDomainIds: domains, schemaVersion: status.schemaVersion, recordPayloadsIncluded: true, longTermRecordCount: 0, dailyEntryCount: 0, malformedRecordCount: 0, memories: [], daily: [], errorKind: 'local-data-memory-migration-failed', errorMessage: 'Memory records are unavailable.' }
+  } finally {
+    if (db) db.close()
   }
 }

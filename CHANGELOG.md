@@ -8,6 +8,14 @@
 
 ### Added
 
+- **Memory local-data store core alignment** — `localDataMemoryStore.js` now
+  reuses the shared SQLite helpers from `localDataStoreCore.js` (database
+  opening, table creation, domain registry, audit records, manifest refresh,
+  runtime-status writes on failure) instead of maintaining private duplicates,
+  matching the chat-domain module structure; function signatures, result
+  shapes, error semantics, domain ids, source strings, and audit payload
+  formats are unchanged, with no IPC/UI changes.
+
 - **Memory local-data domain registration and confirmed migration coverage** —
   schema migration `0004-register-memory-domain` (schema version 3 → 4)
   registers the `memory-long-term` and `memory-daily` domains as

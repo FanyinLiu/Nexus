@@ -1032,3 +1032,76 @@ Suggested next M5 slice:
 - Design the confirmation UX and backup flow that would call this service path
   from a hidden settings surface, including pre-migration export/backup and
   post-migration comparison reporting, before any authority switch.
+
+## Implementation Slice 10 - Memory Store Core Alignment Cleanup
+
+Status: implemented in this branch; full validation passed.
+
+Problem:
+
+- `localDataMemoryStore.js` maintained private duplicates of the SQLite
+  foundation (`openDatabase`, `ensureTables`, `setMeta`, `auditRecordId`,
+  `insertRecord`, `refreshManifest`) while the chat-domain module reuses the
+  shared `localDataStoreCore.js` helpers, and memory failure paths did not
+  write the local-data runtime status the way chat paths do.
+
+Design:
+
+- Pure structural alignment; no behavior change. The memory store now imports
+  database opening, table creation, built-in domain registration, audit record
+  writing, manifest refresh, and status helpers from `localDataStoreCore.js`
+  exactly like `localDataChatStore.js`, opens one database handle per
+  operation instead of reopening per domain read, and calls
+  `setLocalDataRuntimeStatus(statusFromError(error))` on failure paths.
+- All exported function signatures, result shapes, error kinds/messages,
+  domain ids, record `source` strings, and audit payload formats are
+  unchanged; no test assertions were modified.
+
+Impact scope:
+
+- `electron/services/localDataMemoryStore.js` rewrite onto core helpers.
+- M5/CHANGELOG documentation. No IPC, UI, schema, or storage-key changes.
+
+Migration:
+
+- None. SQLite schema version stays `4`; existing databases and records are
+  read and written identically.
+
+Rollback:
+
+- Revert the module rewrite; the behavior contract is unchanged either way.
+
+Known risks:
+
+- Failure paths now also update the shared local-data runtime status (matching
+  chat); returned error kinds and messages are unchanged.
+
+Validation results:
+
+- `npx node --experimental-strip-types --test tests/local-data-store.test.ts tests/memory-migration-dry-run.test.ts tests/memory-local-data-migration.test.ts`
+  - 24 focused tests passed with zero assertion changes.
+- `npm run sqlite:smoke`
+  - passed.
+- `npm run lint`
+  - passed.
+- `npx tsc -b --force`
+  - passed.
+- `npm run ipc:audit`
+  - passed with 0 errors and 0 warnings; channel count unchanged.
+- `npm test`
+  - 2997 tests passed.
+- `npm run storage:audit`
+  - passed with 0 errors.
+- `npm run build`
+  - `tsc -b` and Vite production build passed; post-build CSS hashes verified.
+
+Acceptance results:
+
+- Memory migration plan/apply/rollback, status, and readback behave byte-for-
+  byte identically against the existing focused test suites.
+- The memory module no longer duplicates SQLite foundation code.
+
+Suggested next M5 slice:
+
+- Confirmation UX and backup flow for the hidden memory migration surface, as
+  queued at the end of slice 9.
