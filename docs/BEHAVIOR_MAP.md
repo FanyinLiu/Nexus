@@ -112,6 +112,7 @@ Nexus 是 Electron 桌面伴侣应用（Live2D/sprite 宠物 + 聊天 + 语音 +
 3. ~~ESLint 10 新规则~~（已解决 2026-07-24：`no-useless-assignment` 38 处 + `preserve-caught-error` 24 处已修，规则已重新打开，commit eb220bf / 6468106）。
 4. **jannchie UMD 的 process.env**：`scripts/setup-vendor.mjs` 会在拷贝时把 `process.env.NODE_ENV` 内联为 `"production"`（经典 script 无 process）。升级该包后必须重跑 `node scripts/setup-vendor.mjs` + `live2d:three-model:smoke`（commit 538a646）。
 5. i18n locale 已按域拆目录（P2），新增文案键要进对应域文件，不要新建单文件 locale。
+6. **vault IPC 已 schema 化**（2026-08-01）：`vault:*` 通道收对象 payload（preload 内部把不变的位置参数签名包装成对象，渲染侧 0 调用点改动、明文不经新层），校验在 `electron/ipc/vaultPayloadSchemas.js`（`unknown:'reject'`）；store-many 线上格式为 `{slot, plaintext}` 数组。选 schema 化而非保留 manual，是为与其余 high-risk 通道的 strip→reject 收口一致。
 
 ## 4. 使用规程（给 coding agent）
 

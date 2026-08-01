@@ -42,6 +42,14 @@
 
 ### Security
 
+- **Vault IPC payload schemas** — all six `vault:*` invoke channels now take
+  schema-validated object payloads with `unknown: 'reject'`
+  (`electron/ipc/vaultPayloadSchemas.js`), replacing positional-argument
+  manual checks; preload wraps the unchanged positional bridge methods into
+  objects (`vault:store-many` crosses the wire as a `{slot, plaintext}`
+  entry list, bounded at 256 entries), so renderer call sites, the
+  opaque-ref retrieval boundary, and per-sender rate limits are unchanged.
+  This completes schema validation across every high-risk IPC channel.
 - **High-risk IPC schemas reject unknown fields** — plugin, plugin-bus,
   telegram/discord send, game command, text file, VTS legacy token, MCP
   call/sync, external action policy, open-external tool policy, desktop

@@ -50,6 +50,12 @@ export {
   validateVtsBridgeLegacyTokenPayload,
 } from './vtsPayloadSchemas.js'
 export {
+  validateVaultRetrieveManyPayload,
+  validateVaultSlotPayload,
+  validateVaultStoreManyPayload,
+  validateVaultStorePayload,
+} from './vaultPayloadSchemas.js'
+export {
   validateLocalDataChatComparisonPayload,
   validateLocalDataChatMigrationApplyPayload,
   validateLocalDataChatMigrationRollbackPayload,

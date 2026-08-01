@@ -52,6 +52,10 @@ import {
   validateTtsStreamPushTextPayload,
   validateTtsStreamStartPayload,
   validateVadStartPayload,
+  validateVaultRetrieveManyPayload,
+  validateVaultSlotPayload,
+  validateVaultStoreManyPayload,
+  validateVaultStorePayload,
   validateVtsBridgeLegacyTokenPayload,
   validateWebSearchToolPayload,
   validateWindowDragPayload,
@@ -1256,6 +1260,49 @@ test('IPC skill schemas bound persisted skill payloads and file ids', () => {
   )
 })
 
+test('IPC vault schemas validate slots plaintexts and bulk payloads', () => {
+  // Slot names are trimmed and pattern-checked (mirrors legacy requireSlotName);
+  // plaintext passes through verbatim, empty string allowed (legacy expectString).
+  const store = (payload: unknown) => validateVaultStorePayload(payload)
+  assert.deepEqual(store({ slot: ' settings:apiKey ', plaintext: 'sk-test' }), {
+    slot: 'settings:apiKey',
+    plaintext: 'sk-test',
+  })
+  assert.deepEqual(store({ slot: 'settings:apiKey', plaintext: '' }), { slot: 'settings:apiKey', plaintext: '' })
+  assert.throws(() => store({ slot: 'settings:apiKey' }), /vault:store: payload\.plaintext is required/)
+  assert.throws(() => store({ slot: 'settings:apiKey', plaintext: 42 }), /vault:store: payload\.plaintext must be a string/)
+  assert.throws(() => store({ slot: '../escape', plaintext: 'sk-test' }), /vault:store: payload\.slot has an invalid format/)
+  assert.throws(
+    () => store({ slot: 'settings:apiKey', plaintext: 'x'.repeat(20_001) }),
+    /vault:store: payload\.plaintext must be at most 20000 characters/,
+  )
+  const slot = (channel: string, payload: unknown) => validateVaultSlotPayload(channel, payload)
+  assert.deepEqual(slot('vault:retrieve', { slot: 'profile:text:openai:apiKey' }), { slot: 'profile:text:openai:apiKey' })
+  assert.throws(() => slot('vault:retrieve', { slot: '' }), /vault:retrieve: payload\.slot must be a non-empty string/)
+  assert.throws(() => slot('vault:delete', { slot: 'ok', rogue: true }), /vault:delete: payload\.rogue is not allowed/)
+  // store-many crosses the wire as a {slot, plaintext} entry list so every
+  // field stays schema-validated; bulk payloads are item-count bounded.
+  const storeMany = (payload: unknown) => validateVaultStoreManyPayload(payload)
+  const entry = { slot: 'settings:apiKey', plaintext: 'sk-a' }
+  assert.deepEqual(storeMany({ entries: [entry] }), { entries: [entry] })
+  assert.throws(() => storeMany({ entries: { 'settings:apiKey': 'sk-a' } }), /payload\.entries must be an array/)
+  assert.throws(() => storeMany({ entries: [{ slot: 'settings:apiKey' }] }), /payload\.entries\[0\]\.plaintext is required/)
+  assert.throws(() => storeMany({ entries: [{ slot: 'bad slot', plaintext: 'sk-a' }] }), /payload\.entries\[0\]\.slot has an invalid format/)
+  assert.throws(() => storeMany({ entries: [{ ...entry, rogue: true }] }), /payload\.entries\[0\]\.rogue is not allowed/)
+  assert.throws(
+    () => storeMany({ entries: Array.from({ length: 257 }, (_, i) => ({ slot: `s${i}`, plaintext: 'x' })) }),
+    /payload\.entries must contain at most 256 items/,
+  )
+  const retrieveMany = (payload: unknown) => validateVaultRetrieveManyPayload(payload)
+  assert.deepEqual(retrieveMany({ slots: ['a', 'b:c'] }), { slots: ['a', 'b:c'] })
+  assert.throws(() => retrieveMany({ slots: 'settings:apiKey' }), /payload\.slots must be an array/)
+  assert.throws(() => retrieveMany({ slots: ['bad slot'] }), /payload\.slots\[0\] has an invalid format/)
+  assert.throws(
+    () => retrieveMany({ slots: Array.from({ length: 257 }, (_, i) => `s${i}`) }),
+    /payload\.slots must contain at most 256 items/,
+  )
+})
+
 // Regression gate for the high-risk IPC payload rollout: every channel below
 // is classified 'high' by classifyRisk in scripts/ipc-contract-audit.mjs and
 // must keep `unknown: 'reject'` on its top-level object schema. classifyRisk
@@ -1301,6 +1348,12 @@ test('IPC high-risk schemas reject unknown top-level fields', () => {
     })],
     ['file:open-text', () => validateTextFileOpenPayload({ title: 'Open', rogue: true })],
     ['vts-bridge:migrate-legacy-token', () => validateVtsBridgeLegacyTokenPayload({ token: 'secret', rogue: true })],
+    // vault 域：位置参数已在 preload 包装为对象 payload；store-many 为 {slot, plaintext} 数组
+    ['vault:store', () => validateVaultStorePayload({ slot: 'settings:apiKey', plaintext: 'sk', rogue: true })],
+    ['vault:retrieve', () => validateVaultSlotPayload('vault:retrieve', { slot: 'settings:apiKey', rogue: true })],
+    ['vault:delete', () => validateVaultSlotPayload('vault:delete', { slot: 'settings:apiKey', rogue: true })],
+    ['vault:store-many', () => validateVaultStoreManyPayload({ entries: [], rogue: true })],
+    ['vault:retrieve-many', () => validateVaultRetrieveManyPayload({ slots: [], rogue: true })],
     ['mcp:call-tool', () => validateMcpCallToolPayload({ name: 'search', rogue: true })],
     ['mcp:sync-servers', () => validateMcpSyncServersPayload({ servers: [], rogue: true })],
     // 第二批：external-action-policy / tool / desktop-context / pet-model creator-kit

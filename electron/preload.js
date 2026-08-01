@@ -335,14 +335,18 @@ contextBridge.exposeInMainWorld('desktopPet', {
   showProactiveNotification: (payload) => ipcRenderer.invoke('proactive:show-notification', payload),
 
   // Key vault (safeStorage encryption). Retrieval returns opaque refs;
-  // plaintext secret values stay in main-process handlers.
+  // plaintext secret values stay in main-process handlers. Arguments are
+  // wrapped into object payloads so the main-process schema validation
+  // (electron/ipc/vaultPayloadSchemas.js) can reject unknown fields.
   vaultIsAvailable: () => ipcRenderer.invoke('vault:is-available'),
-  vaultStore: (slot, plaintext) => ipcRenderer.invoke('vault:store', slot, plaintext),
-  vaultRetrieve: (slot) => ipcRenderer.invoke('vault:retrieve', slot),
-  vaultDelete: (slot) => ipcRenderer.invoke('vault:delete', slot),
+  vaultStore: (slot, plaintext) => ipcRenderer.invoke('vault:store', { slot, plaintext }),
+  vaultRetrieve: (slot) => ipcRenderer.invoke('vault:retrieve', { slot }),
+  vaultDelete: (slot) => ipcRenderer.invoke('vault:delete', { slot }),
   vaultListSlots: () => ipcRenderer.invoke('vault:list-slots'),
-  vaultStoreMany: (entries) => ipcRenderer.invoke('vault:store-many', entries),
-  vaultRetrieveMany: (slots) => ipcRenderer.invoke('vault:retrieve-many', slots),
+  vaultStoreMany: (entries) => ipcRenderer.invoke('vault:store-many', {
+    entries: Object.entries(entries).map(([slot, plaintext]) => ({ slot, plaintext })),
+  }),
+  vaultRetrieveMany: (slots) => ipcRenderer.invoke('vault:retrieve-many', { slots }),
 
   // VTube Studio bridge. The renderer sends companion state only; VTS
   // WebSocket authentication and token persistence stay in the main process.

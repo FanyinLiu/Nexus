@@ -89,6 +89,9 @@ const REQUIRED_PHRASES = [
     file: 'electron/ipc/vaultIpc.js',
     phrases: [
       "import { issueVaultRefForSender } from '../services/vaultRefs.js'",
+      'validateVaultStorePayload(payload)',
+      "validateVaultSlotPayload('vault:retrieve', payload)",
+      'validateVaultRetrieveManyPayload(payload)',
       "ipcMain.handle('vault:retrieve'",
       'return issueVaultRefForSender(event.sender, name)',
       "ipcMain.handle('vault:retrieve-many'",
@@ -170,8 +173,8 @@ const REQUIRED_PHRASES = [
     phrases: [
       'Retrieval returns opaque refs;',
       'plaintext secret values stay in main-process handlers.',
-      "vaultRetrieve: (slot) => ipcRenderer.invoke('vault:retrieve', slot)",
-      "vaultRetrieveMany: (slots) => ipcRenderer.invoke('vault:retrieve-many', slots)",
+      "vaultRetrieve: (slot) => ipcRenderer.invoke('vault:retrieve', { slot })",
+      "vaultRetrieveMany: (slots) => ipcRenderer.invoke('vault:retrieve-many', { slots })",
     ],
   },
   {

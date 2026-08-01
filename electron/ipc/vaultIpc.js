@@ -7,13 +7,13 @@ import {
   vaultIsAvailable,
 } from '../services/keyVault.js'
 import { issueVaultRefForSender } from '../services/vaultRefs.js'
+import { requireTrustedSender } from './validate.js'
 import {
-  requireTrustedSender,
-  requireSlotName,
-  requireSlotNames,
-  requireVaultEntries,
-  expectString,
-} from './validate.js'
+  validateVaultRetrieveManyPayload,
+  validateVaultSlotPayload,
+  validateVaultStoreManyPayload,
+  validateVaultStorePayload,
+} from './payloadSchemas.js'
 import { audit } from '../services/auditLog.js'
 import {
   summarizeVaultRequest,
@@ -94,25 +94,24 @@ export function register() {
     return runAuditedVaultAction('vault:is-available', {}, () => vaultIsAvailable())
   })
 
-  ipcMain.handle('vault:store', async (event, slot, plaintext) => {
+  ipcMain.handle('vault:store', async (event, payload) => {
     requireTrustedSender(event)
-    const name = requireSlotName(slot)
-    const value = expectString(plaintext, 'plaintext')
-    return runAuditedVaultAction('vault:store', { slot: name, plaintext: value }, () => vaultStore(name, value))
+    const input = validateVaultStorePayload(payload)
+    return runAuditedVaultAction('vault:store', { slot: input.slot, plaintext: input.plaintext }, () => vaultStore(input.slot, input.plaintext))
   })
 
-  ipcMain.handle('vault:retrieve', async (event, slot) => {
+  ipcMain.handle('vault:retrieve', async (event, payload) => {
     requireTrustedSender(event)
-    const name = requireSlotName(slot)
+    const { slot: name } = validateVaultSlotPayload('vault:retrieve', payload)
     return runAuditedVaultAction('vault:retrieve', { slot: name }, () => {
       rateLimitSingleRetrieve(event, name)
       return issueVaultRefForSender(event.sender, name)
     })
   })
 
-  ipcMain.handle('vault:delete', async (event, slot) => {
+  ipcMain.handle('vault:delete', async (event, payload) => {
     requireTrustedSender(event)
-    const name = requireSlotName(slot)
+    const { slot: name } = validateVaultSlotPayload('vault:delete', payload)
     return runAuditedVaultAction('vault:delete', { slot: name }, () => vaultDelete(name))
   })
 
@@ -124,15 +123,23 @@ export function register() {
     })
   })
 
-  ipcMain.handle('vault:store-many', async (event, entries) => {
+  ipcMain.handle('vault:store-many', async (event, payload) => {
     requireTrustedSender(event)
-    const validated = requireVaultEntries(entries)
+    const input = validateVaultStoreManyPayload(payload)
+    // Collapse the wire entry list back into the slot -> plaintext map the
+    // vault service expects; duplicate slots keep the last write, matching
+    // plain-object semantics of the legacy map payload.
+    /** @type {Record<string, string>} */
+    const validated = {}
+    for (const entry of input.entries) {
+      validated[entry.slot] = entry.plaintext
+    }
     return runAuditedVaultAction('vault:store-many', { entries: validated }, () => vaultStoreMany(validated))
   })
 
-  ipcMain.handle('vault:retrieve-many', async (event, slots) => {
+  ipcMain.handle('vault:retrieve-many', async (event, payload) => {
     requireTrustedSender(event)
-    const names = requireSlotNames(slots)
+    const { slots: names } = validateVaultRetrieveManyPayload(payload)
     return runAuditedVaultAction('vault:retrieve-many', { slots: names }, () => {
       rateLimitBulkOp(event, 'retrieve-many')
       /** @type {Record<string, string>} */
