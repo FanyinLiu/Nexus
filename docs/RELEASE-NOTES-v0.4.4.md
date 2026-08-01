@@ -69,11 +69,11 @@ v0.4.3. What users get is a safer, more current foundation.
 ## Deferred scope
 
 - The beta feedback and copy tuning slice once planned under the v0.4.4
-  number never merged into main; it is deferred to a later release and plays
-  no part in this version.
-- The `eslint-plugin-react-hooks` 7.1.1 upgrade remains pending: the new
-  `react-hooks/refs` rule reports sites that still need cleanup before the
-  upgrade can land.
+  number never merged into main; it was later evaluated and dropped because
+  no beta program is planned and its copy guardrails already shipped in other
+  form with v0.4.3.
+- The `eslint-plugin-react-hooks` 7.1.1 upgrade was pending at release time
+  and landed on main shortly after (all 58 new-rule violations cleared).
 
 ## Unsigned Distribution Contract
 

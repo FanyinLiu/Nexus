@@ -30,7 +30,8 @@ The larger product steps are:
   public stable release is v0.4.4, a maintenance and hardening release
   covering the toolchain refresh, security fixes, and code-structure cleanup
   completed for this slice. The beta feedback and copy tuning scope once
-  planned for v0.4.4 is deferred to a later release. `v0.4.5` remains a draft
+  planned for v0.4.4 was evaluated and dropped: no beta program is planned,
+  and its copy guardrails already shipped in other form with v0.4.3. `v0.4.5` remains a draft
   [Companion Surface Cohesion & Transparency](V0.4.3_OPTIMIZATION_AND_COMPETITOR_PLAN_2026-07-12.md)
   follow-up layer and `v0.4.5` is a non-shipping release-hardening review
   layer, not a second active product slice; it now also collects the

@@ -54,9 +54,10 @@
   full v0.4 draft-stack audit, packaged smoke, and `git diff --check` evidence
   while keeping package version, tag, GitHub Release, and README stable-entry
   state unchanged.
-- **Deferred beta feedback and copy tuning scope** — the slice once planned
-  under the v0.4.4 number never merged into main and stays queued for a later
-  release.
+- **Dropped beta feedback and copy tuning scope** — the slice once planned
+  under the v0.4.4 number never merged into main; it was evaluated and dropped
+  because no beta program is planned and its copy guardrails already shipped
+  in other form with v0.4.3.
 
 ### Changed
 

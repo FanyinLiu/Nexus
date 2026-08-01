@@ -141,8 +141,9 @@ v0.4.5 must preserve the v0.4 privacy boundary:
   payloads.
 - Drop v0.4.3: keep existing Settings controls; do not expose a partial
   transparency view model.
-- Drop the deferred feedback slice: keep community feedback qualitative; do
-  not use structured labels or copy guardrails as release evidence.
+- The deferred feedback slice is dropped (decided 2026-08-01): keep community
+  feedback qualitative; do not use structured labels or copy guardrails as
+  release evidence.
 - Drop v0.4.5: release review must manually prove every no-release invariant
   before any future tag.
 
