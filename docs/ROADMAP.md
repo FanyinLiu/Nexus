@@ -309,6 +309,11 @@ Goal: introduce durable local storage without a large data migration.
   `3`: migration `0003-create-domain-records-and-onboarding-mirror` creates the
   generic record table and mirrors normalized onboarding completion timing from
   renderer `localStorage` without making it authoritative.
+- Memory domain registration landed in schema version `4`: migration
+  `0004-register-memory-domain` registers the `memory-long-term` and
+  `memory-daily` domains as renderer-localStorage-authoritative user-content
+  domains ahead of the confirmed memory migration path, preserving the
+  0001-0003 ledger chain for existing profiles.
 - `local-data:status` is available as a read-only renderer IPC status surface,
   and `local-data:mirror-onboarding` is available as a narrow schema-validated
   write surface; neither returns userData paths or record payloads.

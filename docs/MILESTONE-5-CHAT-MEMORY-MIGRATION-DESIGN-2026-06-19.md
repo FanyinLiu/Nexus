@@ -897,3 +897,138 @@ Suggested next M5 slice:
   and a service-only migration package builder, still hidden from production UI
   until backup, confirmation, rollback, and content-free audit behavior are
   tested.
+
+## Implementation Slice 9 - Confirmed Memory Migration Service Path and Domain Registration
+
+Status: implemented in this branch; full validation passed.
+
+Product boundary:
+
+- This slice keeps Nexus companion-first and memory-safe. It does not add
+  autonomous task execution, tool calls, planner/executor behavior, or a
+  Codex-style work-agent surface.
+- Renderer `localStorage` remains the authoritative memory store. The SQLite
+  records written here are a migration target only; nothing reads them back
+  into the runtime memory path, and no automatic migration runs.
+
+Problem:
+
+- The memory dry-run (slice 8) audits localStorage shape but nothing can move
+  normalized memory into the main-process SQLite store under an explicit,
+  reversible contract.
+- The domain registry registered `memory-long-term` and `memory-daily`
+  opportunistically, without a schema-ledger migration marking when the memory
+  domain became a first-class local-data domain.
+- Any memory write path must require explicit confirmation, stay content-free
+  in plans/status/audit, and roll back without touching other domains.
+
+Design:
+
+- Add migration `0004-register-memory-domain` (schema version 3 -> 4) to the
+  SQLite migration ledger. It registers the memory domains as
+  renderer-localStorage-authoritative, user-content, non-secret domains;
+  registration stays idempotent through `ensureBuiltInDomains`, and existing
+  0001-0003 ledger entries keep their original `appliedAt` timestamps.
+- Reuse the slice 8 normalizers (`normalizeMemoryItemsForStorage`,
+  `normalizeDailyMemoryStore`) in the renderer-side package builder
+  `memoryLocalDataMigration.ts` to produce a content-bearing migration package
+  (`schemaVersion: 1`, source key-presence flags, normalized long-term and
+  flattened daily entries). Content exists only inside the package; plans,
+  statuses, and audit records carry counts, bytes, and action kinds only.
+- Main-process service functions in `localDataMemoryStore.js`
+  (`planMemoryLocalDataMigration` / `applyMemoryLocalDataMigration` /
+  `rollbackMemoryLocalDataMigration`) formalize the confirmed service path.
+  This slice adds no IPC, UI, or runtime read/write change; the pre-existing
+  feature-flag-gated IPC surface is untouched:
+  - `planMemoryLocalDataMigration()` validates and normalizes the package and
+    returns content-free counts (`longTermRecordCount`, `dailyEntryCount`,
+    `payloadBytes`, `legacyLongTermUsed`) or `errorKind`
+    `local-data-memory-migration-invalid`.
+  - `applyMemoryLocalDataMigration()` refuses to write unless
+    `confirmed: true` (`local-data-memory-migration-confirmation-required`),
+    then replaces `memory-long-term`/`memory-daily` records in one transaction
+    and appends a content-free `local-data-audit` record
+    (`memory-migration-applied` with counts, bytes, and timestamp).
+  - `rollbackMemoryLocalDataMigration()` also requires `confirmed: true` and
+    deletes only the two memory domains, appending a content-free
+    `memory-migration-rolled-back` audit record; onboarding, chat-sessions,
+    and audit records are untouched.
+
+Impact scope:
+
+- New schema migration `0004-register-memory-domain`; schema version 3 -> 4.
+- Focused memory migration service tests plus schema-version assertion updates
+  in the existing local-data store tests.
+- M5/ROADMAP/CHANGELOG documentation.
+
+No new dependency:
+
+- The slice reuses the existing SQLite foundation, domain registry, audit
+  domain, and memory normalizers.
+
+Migration:
+
+- Fresh profiles apply `0001`-`0004` in order; existing schema version 3
+  profiles apply only `0004`, preserving the 0001-0003 ledger chain and all
+  existing records.
+- Renderer localStorage keys, runtime memory read/write paths, and IPC
+  contracts are unchanged; no data moves without an explicit confirmed call.
+
+Rollback:
+
+- `rollbackMemoryLocalDataMigration({ confirmed: true })` removes the migrated
+  memory records while leaving other domains and the audit trail intact;
+  renderer localStorage remains authoritative throughout.
+- The whole local-data directory can still be renamed aside via
+  `rollbackLocalDataStore` for a full store rollback.
+
+Known risks:
+
+- The package is content-bearing in memory between renderer and main process;
+  it is never persisted outside the SQLite records and never included in
+  plans, statuses, or audit payloads.
+- `applyMemoryLocalDataMigration` replaces the memory domains wholesale, so a
+  confirmed re-apply discards previously migrated memory records (by design,
+  while localStorage remains the authority).
+- A production UI entry point still needs backup, confirmation copy, and
+  rollback surfacing before the migration can be user-facing.
+
+Validation results:
+
+- `npx node --experimental-strip-types --test tests/local-data-store.test.ts tests/memory-migration-dry-run.test.ts tests/memory-local-data-migration.test.ts`
+  - 24 focused local-data/memory migration tests passed.
+- `npm run sqlite:smoke`
+  - passed.
+- `npm run lint`
+  - passed.
+- `npx tsc -b --force`
+  - passed.
+- `npm run ipc:audit`
+  - passed with 0 errors and 0 warnings; channel count unchanged.
+- `npm test`
+  - 2997 tests passed.
+- `npm run storage:audit`
+  - passed with 0 errors.
+
+Acceptance results:
+
+- Package building covers long-term, daily, legacy-fallback, empty, and
+  malformed localStorage shapes; malformed JSON fails before any package is
+  produced.
+- `planMemoryLocalDataMigration` returns counts and issue kinds without memory
+  content, memory IDs, or daily text.
+- Unconfirmed apply/rollback calls write nothing and do not create the
+  database.
+- Confirmed apply writes `memory-long-term`/`memory-daily` records and a
+  content-free audit record; re-applying the same package is idempotent.
+- Rollback deletes only the two memory domains and leaves onboarding,
+  chat-sessions, and audit records intact.
+- Schema version 3 profiles upgrade to 4 through `0004-register-memory-domain`
+  with the 0001-0003 ledger chain preserved and repeat initialization
+  byte-identical.
+
+Suggested next M5 slice:
+
+- Design the confirmation UX and backup flow that would call this service path
+  from a hidden settings surface, including pre-migration export/backup and
+  post-migration comparison reporting, before any authority switch.

@@ -67,10 +67,10 @@ test('local data store initializes a versioned manifest and migration ledger', a
       initialized: true,
       healthy: true,
       backend: 'sqlite',
-      schemaVersion: 3,
-      targetSchemaVersion: 3,
-      migrationCount: 3,
-      lastMigrationId: '0003-create-domain-records-and-onboarding-mirror',
+      schemaVersion: 4,
+      targetSchemaVersion: 4,
+      migrationCount: 4,
+      lastMigrationId: '0004-register-memory-domain',
       storageDirectoryName: 'local-data',
       errorKind: null,
       errorMessage: null,
@@ -80,24 +80,37 @@ test('local data store initializes a versioned manifest and migration ledger', a
     const manifest = await readLocalDataManifest({ userDataPath })
     assert.equal(manifest.format, 'nexus-local-data-manifest')
     assert.equal(manifest.backend, 'sqlite')
-    assert.equal(manifest.schemaVersion, 3)
+    assert.equal(manifest.schemaVersion, 4)
     assert.equal(manifest.createdAt, '2026-06-19T08:00:00.000Z')
-    assert.equal(manifest.migrations.length, 3)
+    assert.equal(manifest.migrations.length, 4)
     assert.equal(manifest.migrations[0].id, '0001-create-local-data-manifest')
     assert.equal(manifest.migrations[1].id, '0002-create-sqlite-local-data-foundation')
     assert.equal(manifest.migrations[2].id, '0003-create-domain-records-and-onboarding-mirror')
+    assert.equal(manifest.migrations[3].id, '0004-register-memory-domain')
+    assert.equal(manifest.migrations[3].fromVersion, 3)
+    assert.equal(manifest.migrations[3].toVersion, 4)
+    assert.equal(manifest.migrations[3].reversible, true)
     assert.equal(manifest.domains.onboarding.sourceStorageKey, 'nexus:onboarding')
     assert.equal(manifest.domains.onboarding.authority, 'renderer-localStorage')
     assert.equal(manifest.domains.onboarding.containsSecrets, false)
     assert.equal(manifest.domains['chat-sessions'].sourceStorageKey, 'nexus:chat:sessions')
     assert.equal(manifest.domains['chat-sessions'].containsUserContent, true)
+    assert.equal(manifest.domains['memory-long-term'].sourceStorageKey, 'nexus:memory:long-term')
+    assert.equal(manifest.domains['memory-long-term'].legacySourceStorageKey, 'nexus:memory')
+    assert.equal(manifest.domains['memory-long-term'].authority, 'renderer-localStorage')
+    assert.equal(manifest.domains['memory-long-term'].migrationStrategy, 'explicit-confirmation-required')
+    assert.equal(manifest.domains['memory-long-term'].containsUserContent, true)
+    assert.equal(manifest.domains['memory-long-term'].containsSecrets, false)
+    assert.equal(manifest.domains['memory-daily'].sourceStorageKey, 'nexus:memory:daily')
+    assert.equal(manifest.domains['memory-daily'].authority, 'renderer-localStorage')
+    assert.equal(manifest.domains['memory-daily'].containsUserContent, true)
     assert.equal(manifest.domains['local-data-audit'].authority, 'main-process')
 
     const paths = await resolveLocalDataPaths({ userDataPath })
     assert.equal(await pathExists(paths.databasePath), true)
     const sqliteState = await readLocalDataSqliteState({ userDataPath })
-    assert.equal(sqliteState.schemaVersion, 3)
-    assert.equal(sqliteState.migrations.length, 3)
+    assert.equal(sqliteState.schemaVersion, 4)
+    assert.equal(sqliteState.migrations.length, 4)
     assert.deepEqual(sqliteState.domains.map((domain) => domain.id), [
       'chat-sessions',
       'companion-relationship',
@@ -126,7 +139,7 @@ test('local data initialization is idempotent once migrations are applied', asyn
     const secondRaw = await fs.readFile(paths.manifestPath, 'utf8')
 
     assert.equal(status.healthy, true)
-    assert.equal(status.migrationCount, 3)
+    assert.equal(status.migrationCount, 4)
     assert.equal(secondRaw, firstRaw)
   })
 })
@@ -159,22 +172,24 @@ test('local data initialization migrates an existing json-ledger manifest into S
 
     assert.equal(status.healthy, true)
     assert.equal(status.backend, 'sqlite')
-    assert.equal(status.schemaVersion, 3)
-    assert.equal(status.migrationCount, 3)
+    assert.equal(status.schemaVersion, 4)
+    assert.equal(status.migrationCount, 4)
 
     const manifest = await readLocalDataManifest({ userDataPath })
     assert.equal(manifest.backend, 'sqlite')
-    assert.equal(manifest.schemaVersion, 3)
+    assert.equal(manifest.schemaVersion, 4)
     assert.equal(manifest.createdAt, '2026-06-19T07:00:00.000Z')
     assert.equal(manifest.migrations[0].appliedAt, '2026-06-19T07:00:00.000Z')
     assert.equal(manifest.migrations[1].appliedAt, '2026-06-19T09:00:00.000Z')
     assert.equal(manifest.migrations[2].appliedAt, '2026-06-19T09:00:00.000Z')
+    assert.equal(manifest.migrations[3].appliedAt, '2026-06-19T09:00:00.000Z')
 
     const sqliteState = await readLocalDataSqliteState({ userDataPath })
-    assert.equal(sqliteState.schemaVersion, 3)
+    assert.equal(sqliteState.schemaVersion, 4)
     assert.equal(sqliteState.migrations[0].id, '0001-create-local-data-manifest')
     assert.equal(sqliteState.migrations[1].id, '0002-create-sqlite-local-data-foundation')
     assert.equal(sqliteState.migrations[2].id, '0003-create-domain-records-and-onboarding-mirror')
+    assert.equal(sqliteState.migrations[3].id, '0004-register-memory-domain')
   })
 })
 
@@ -208,7 +223,7 @@ test('local data export and import scaffolding is metadata-only before migration
 
     assert.equal(snapshot.format, 'nexus-local-data-export')
     assert.equal(snapshot.backend, 'sqlite')
-    assert.equal(snapshot.schemaVersion, 3)
+    assert.equal(snapshot.schemaVersion, 4)
     assert.equal(snapshot.recordPayloadsIncluded, false)
     assert.equal(snapshot.records, undefined)
     assert.equal(snapshot.domains.length, 7)
@@ -221,22 +236,22 @@ test('local data export and import scaffolding is metadata-only before migration
       'memory-long-term',
       'onboarding',
     ])
-    assert.equal(snapshot.migrations.length, 3)
+    assert.equal(snapshot.migrations.length, 4)
     assert.equal(JSON.stringify(snapshot).includes(userDataPath), false)
 
     assert.deepEqual(planLocalDataImport(snapshot), {
       ok: true,
-      schemaVersion: 3,
+      schemaVersion: 4,
       domainCount: 7,
-      migrationCount: 3,
+      migrationCount: 4,
       recordPayloadsIncluded: false,
       writesData: false,
     })
     assert.deepEqual(await importLocalDataSnapshot({ userDataPath, snapshot }), {
       ok: true,
-      schemaVersion: 3,
+      schemaVersion: 4,
       domainCount: 7,
-      migrationCount: 3,
+      migrationCount: 4,
       recordPayloadsIncluded: false,
       writesData: false,
       applied: false,
@@ -297,7 +312,7 @@ test('local data chat migration requires confirmation, writes records, and rolls
     const statusAfterApply = await getChatLocalDataMigrationStatus({ userDataPath })
     assert.equal(statusAfterApply.ok, true)
     assert.equal(statusAfterApply.targetDomainId, 'chat-sessions')
-    assert.equal(statusAfterApply.schemaVersion, 3)
+    assert.equal(statusAfterApply.schemaVersion, 4)
     assert.equal(statusAfterApply.recordCount, 1)
     assert.equal(statusAfterApply.messageCount, 2)
     assert.equal(statusAfterApply.recordPayloadsIncluded, false)
@@ -312,7 +327,7 @@ test('local data chat migration requires confirmation, writes records, and rolls
     const readBack = await readChatLocalDataSessions({ userDataPath })
     assert.equal(readBack.ok, true)
     assert.equal(readBack.targetDomainId, 'chat-sessions')
-    assert.equal(readBack.schemaVersion, 3)
+    assert.equal(readBack.schemaVersion, 4)
     assert.equal(readBack.recordPayloadsIncluded, true)
     assert.equal(readBack.recordCount, 1)
     assert.equal(readBack.validSessionCount, 1)
@@ -656,7 +671,7 @@ test('local data onboarding mirror writes and deletes a low-risk domain record',
       recordId: 'state',
       mirrored: true,
       deleted: false,
-      schemaVersion: 3,
+      schemaVersion: 4,
       errorKind: null,
       errorMessage: null,
     })
@@ -682,9 +697,9 @@ test('local data onboarding mirror writes and deletes a low-risk domain record',
     assert.deepEqual(snapshot.records.onboarding[0].payload, records[0].payload)
     assert.deepEqual(planLocalDataImport(snapshot), {
       ok: true,
-      schemaVersion: 3,
+      schemaVersion: 4,
       domainCount: 7,
-      migrationCount: 3,
+      migrationCount: 4,
       recordPayloadsIncluded: true,
       writesData: false,
     })

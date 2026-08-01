@@ -3,7 +3,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { safeParseJsonObject } from './localDataChatMigration.js'
 export const LOCAL_DATA_BACKEND = 'sqlite'
-export const LOCAL_DATA_SCHEMA_VERSION = 3
+export const LOCAL_DATA_SCHEMA_VERSION = 4
 export const LOCAL_DATA_MANIFEST_FORMAT = 'nexus-local-data-manifest'
 export const LOCAL_DATA_EXPORT_FORMAT = 'nexus-local-data-export'
 export const LOCAL_DATA_ONBOARDING_DOMAIN_ID = 'onboarding'
@@ -149,6 +149,14 @@ const MIGRATIONS = [
     toVersion: 3,
     description: 'Create the generic domain record table and register a low-risk onboarding localStorage mirror domain.',
     rollback: 'Rename the local-data directory out of the active userData path; renderer localStorage remains authoritative.',
+    reversible: true,
+  },
+  {
+    id: '0004-register-memory-domain',
+    fromVersion: 3,
+    toVersion: 4,
+    description: 'Register the memory local-data domains (long-term and daily) as renderer-localStorage-authoritative user-content domains ahead of the confirmed memory migration service path.',
+    rollback: 'Delete the memory-long-term and memory-daily domain records via rollbackMemoryLocalDataMigration; renderer localStorage remains authoritative.',
     reversible: true,
   },
 ]

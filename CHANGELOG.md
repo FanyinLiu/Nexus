@@ -8,6 +8,16 @@
 
 ### Added
 
+- **Memory local-data domain registration and confirmed migration coverage** —
+  schema migration `0004-register-memory-domain` (schema version 3 → 4)
+  registers the `memory-long-term` and `memory-daily` domains as
+  renderer-localStorage-authoritative user-content domains in the SQLite
+  domain registry, preserving the 0001-0003 ledger chain for existing
+  profiles; new focused tests lock the confirmed memory migration contract
+  (content-free plans and audit records, confirmation-gated apply/rollback,
+  rollback limited to the memory domains, idempotent re-apply) while renderer
+  localStorage remains authoritative and no new IPC/UI is added.
+
 - **v0.4.5 draft hardening evidence** — recorded local `verify:release`,
   full v0.4 draft-stack audit, packaged smoke, and `git diff --check` evidence
   while keeping package version, tag, GitHub Release, and README stable-entry
