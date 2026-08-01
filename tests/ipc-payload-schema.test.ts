@@ -11,6 +11,7 @@ import {
   validateExternalLinkToolPayload,
   validateExternalActionPolicySyncPayload,
   validateGameCommandPayload,
+  validateGameConnectPayload,
   validateIntegrationInspectPayload,
   validateKwsOptionsPayload,
   validateLocalDataChatComparisonPayload,
@@ -1290,6 +1291,8 @@ test('IPC high-risk schemas reject unknown top-level fields', () => {
     })],
     ['minecraft:send-command', () => validateGameCommandPayload('minecraft:send-command', { command: 'say hi', rogue: true })],
     ['factorio:execute', () => validateGameCommandPayload('factorio:execute', { command: 'help', rogue: true })],
+    ['minecraft:connect', () => validateGameConnectPayload('minecraft:connect', { address: 'localhost', rogue: true })],
+    ['factorio:connect', () => validateGameConnectPayload('factorio:connect', { address: 'localhost', rogue: true })],
     ['file:save-text', () => validateTextFileSavePayload({
       title: 'Save',
       defaultFileName: 'a.json',

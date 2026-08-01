@@ -110,6 +110,7 @@ const externalActionPolicySyncSchema = {
 
 const gameConnectSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     address: { type: 'string', maxLength: URL_TEXT_MAX },
     port: { type: 'number', optional: true, min: 1, max: 65_535 },
