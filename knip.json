@@ -1,6 +1,5 @@
 {
   "entry": [
-    "electron/main.js",
     "electron/preload.js",
     "scripts/**/*.mjs",
     "scripts/**/*.cjs",
@@ -9,8 +8,6 @@
     "tests/helpers/bundler-import-hooks.mjs"
   ],
   "ignore": [
-    "artifacts/**",
-    "release-smoke/**",
     "src/components/settingsSections/ContextSection.tsx",
     "src/components/settingsSections/ErrandsSection.tsx",
     "src/components/settingsSections/OpenArcsSection.tsx",
@@ -50,17 +47,14 @@
     "src/features/yearbook/**"
   ],
   "ignoreDependencies": [
-    "onnxruntime-web",
-    "tinybench"
-  ],
-  "ignoreUnresolved": [
-    "^/src/lib/storage/settings\\.ts$"
+    "onnxruntime-web"
   ],
   "ignoreBinaries": [
     "osascript",
     "pgrep",
-    "playerctl",
-    "powershell.exe",
-    "ps"
+    "playerctl"
+  ],
+  "ignoreUnresolved": [
+    "^/src/lib/storage/settings\\.ts$"
   ]
 }
