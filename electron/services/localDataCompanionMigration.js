@@ -5,6 +5,7 @@ import {
   initializeLocalDataStore,
   readLocalDataDomainRecords,
   resolveLocalDataPaths,
+  setLocalDataRuntimeStatus,
   nowIso,
   openSqliteDatabase,
   ensureSqliteTables,
@@ -14,6 +15,8 @@ import {
   readSqliteState,
   atomicWriteJson,
   manifestFromSqliteState,
+  statusFromSqliteState,
+  statusFromError,
 } from './localDataStoreCore.js'
 
 const COMPANION_MIGRATION_PACKAGE_SCHEMA_VERSION = 1
@@ -278,8 +281,10 @@ export async function applyCompanionLocalDataMigration(options = {}) {
     }
     const state = readSqliteState(db)
     await atomicWriteJson(manifestPath, manifestFromSqliteState(state))
+    setLocalDataRuntimeStatus(statusFromSqliteState(state))
     return { ...planned, ok: true, applied: true, recordsWritten: normalized.migrationPackage.relationship.length + normalized.migrationPackage.tasks.length, schemaVersion: state.schemaVersion, auditRecordId: auditId, errorKind: null, errorMessage: null }
-  } catch {
+  } catch (error) {
+    setLocalDataRuntimeStatus(statusFromError(error))
     return { ...planned, ok: false, applied: false, recordsWritten: 0, auditRecordId: null, errorKind: 'local-data-companion-migration-failed', errorMessage: 'Companion migration could not be completed.' }
   } finally {
     if (db) db.close()
@@ -392,8 +397,10 @@ export async function mirrorCompanionLocalDataDataset(options = {}) {
     }
     const state = readSqliteState(db)
     await atomicWriteJson(manifestPath, manifestFromSqliteState(state))
+    setLocalDataRuntimeStatus(statusFromSqliteState(state))
     return { ok: true, mirrored: true, datasetId: dataset.id, schemaVersion: state.schemaVersion, errorKind: null, errorMessage: null }
-  } catch {
+  } catch (error) {
+    setLocalDataRuntimeStatus(statusFromError(error))
     return { ok: false, mirrored: false, errorKind: 'local-data-companion-migration-failed', errorMessage: 'Companion dataset could not be mirrored.' }
   } finally {
     if (db) db.close()
@@ -425,8 +432,10 @@ export async function rollbackCompanionLocalDataMigration(options = {}) {
     }
     const state = readSqliteState(db)
     await atomicWriteJson(manifestPath, manifestFromSqliteState(state))
+    setLocalDataRuntimeStatus(statusFromSqliteState(state))
     return { ok: true, targetDomainIds: domains, recordsDeleted: existing, schemaVersion: state.schemaVersion, auditRecordId: auditId, errorKind: null, errorMessage: null }
-  } catch {
+  } catch (error) {
+    setLocalDataRuntimeStatus(statusFromError(error))
     return { ok: false, targetDomainIds: domains, recordsDeleted: 0, auditRecordId: null, errorKind: 'local-data-companion-migration-failed', errorMessage: 'Companion migration rollback could not be completed.' }
   } finally {
     if (db) db.close()
