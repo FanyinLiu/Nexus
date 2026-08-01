@@ -319,7 +319,7 @@ check('trusted IPC boundary has a JavaScript typecheck gate', () => {
 
 check('pre-release gate docs include packaged smoke', () => {
   assert(
-    releasingDoc.includes('### Stage B — Code quality (8 checks)'),
+    releasingDoc.includes('### Stage B — Code quality (9 checks)'),
     'RELEASING should keep Stage B count aligned with prerelease-check',
   )
   assert(

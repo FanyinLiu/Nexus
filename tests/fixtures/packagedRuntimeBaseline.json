@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "kind": "packaged-runtime-baseline",
+  "note": "本机参考值：基线记录于特定机器（platform/arch/Node/Electron 见 machine 字段），RSS 与冷启动的绝对值随硬件与系统负载变化，不是跨机器承诺；仅在记录基线的同环境机器上做回归比较才有意义。",
+  "recordedAt": "2026-08-01T16:03:29.888Z",
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.13.1",
+    "electron": "^43.2.0",
+    "cpuCount": 10,
+    "totalMemBytes": 17179869184
+  },
+  "sourceReport": {
+    "capturedAt": "2026-08-01T16:02:39.539Z",
+    "productVersion": "0.4.4",
+    "reportSchemaVersion": 4
+  },
+  "metrics": {
+    "coldStartMs": 435,
+    "mainRendererRssKb": {
+      "peak": 519824,
+      "median": 517440
+    },
+    "plateau": {
+      "ok": true,
+      "ratio": 0.9548
+    }
+  }
+}

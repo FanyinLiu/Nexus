@@ -154,8 +154,8 @@ test('distribution audit stays wired to every release, performance, and privacy 
   assert.equal(pkg.scripts['distribution:audit'], 'node scripts/distribution-audit.mjs')
   assert.match(
     distributionAudit,
-    /releasingDoc\.includes\('### Stage B — Code quality \(8 checks\)'\)/,
-    'distribution audit must expect the current eight-check Stage B contract',
+    /releasingDoc\.includes\('### Stage B — Code quality \(9 checks\)'\)/,
+    'distribution audit must expect the current nine-check Stage B contract',
   )
   assert.match(distributionAudit, /'lint'/)
   assert.match(distributionAudit, /'test'/)
@@ -207,7 +207,7 @@ test('prerelease check keeps the packaged smoke release gate visible', () => {
   assert.match(prereleaseCheck, /--quick\s+.*skip npm smoke, Live2D three-model smoke, packaged smoke, packaged sustained, coverage, benchmarks/)
   assert.match(prereleaseCheck, /const QUICK_SKIPPED_OUTPUT = 'npm smoke \/ Live2D three-model smoke \/ packaged smoke \/ packaged sustained \/ coverage \/ benchmarks'/)
   assert.match(prereleaseCheck, /\$\{QUICK_SKIPPED_OUTPUT\} skipped \(--quick\)/)
-  assert.match(releasingDoc, /### Stage B — Code quality \(8 checks\)/)
+  assert.match(releasingDoc, /### Stage B — Code quality \(9 checks\)/)
   assert.match(releasingDoc, /`npm run package:dir:smoke`/)
   assert.match(releasingDoc, /npm smoke,\s+Live2D three-model smoke,\s+packaged smoke,\s+packaged sustained runtime,\s+coverage, and benchmarks/)
   assert.match(releasingDoc, /`node scripts\/live2d-three-model-smoke\.mjs`/)
@@ -246,8 +246,13 @@ test('prerelease check keeps the packaged smoke release gate visible', () => {
   assert.match(prereleaseCheck, /timeout: 600_000/)
   assert.match(prereleaseCheck, /env: \{\s*\.\.\.process\.env,\s*PACKAGED_SMOKE_RELEASE_DIR: 'release-smoke'/)
   assert.doesNotMatch(
-    stageBSource.slice(stageBSource.indexOf("'Packaged sustained runtime"), stageBSource.indexOf("'Coverage")),
+    stageBSource.slice(stageBSource.indexOf("'Packaged sustained runtime"), stageBSource.indexOf("'Packaged runtime regression")),
     /warnOnly/,
+  )
+  assert.match(
+    stageBSource.slice(stageBSource.indexOf("'Packaged runtime regression"), stageBSource.indexOf("'Coverage")),
+    /warnOnly: true/,
+    'packaged runtime baseline regression compare must stay warn-only',
   )
   for (const phrase of [
     'storage/heavy/architecture/source-size audits',

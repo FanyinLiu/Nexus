@@ -23,6 +23,12 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
+import {
+  compareRuntimeToBaseline,
+  extractRuntimeMetrics,
+  formatComparedEntry,
+} from './lib/packaged-runtime-baseline.mjs'
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const COLOR = {
@@ -248,6 +254,29 @@ stage('B', 'Code quality', () => {
         throw new Error(`packaged sustained runtime failed:\n       ${detail.replace(/\n/g, '\n       ')}`, { cause: err })
       }
     })
+
+    check('B', 'Packaged runtime regression vs local baseline (RSS peak x1.25 / cold start x1.5)', () => {
+      const reportPath = join(ROOT, 'output', 'packaged-sustained-runtime', 'report.json')
+      const baselinePath = join(ROOT, 'tests', 'fixtures', 'packagedRuntimeBaseline.json')
+      if (!existsSync(reportPath)) return 'skipped (no report.json)'
+      const report = JSON.parse(readFileSync(reportPath, 'utf8'))
+      const samplesPath = join(ROOT, 'output', 'packaged-sustained-runtime', 'samples.jsonl')
+      const samples = existsSync(samplesPath)
+        ? readFileSync(samplesPath, 'utf8').split('\n').filter((line) => line.trim()).map((line) => JSON.parse(line))
+        : []
+      const baseline = existsSync(baselinePath)
+        ? JSON.parse(readFileSync(baselinePath, 'utf8'))
+        : null
+      const result = compareRuntimeToBaseline({
+        metrics: extractRuntimeMetrics({ report, samples }),
+        baseline,
+      })
+      if (result.status === 'inconclusive') return `skipped (${result.reason})`
+      if (result.regression) {
+        throw new Error(`regression vs local baseline: ${result.exceeded.map(formatComparedEntry).join('; ')}`)
+      }
+      return result.compared.map((entry) => `${entry.metric} ${entry.ratio}x`).join(', ')
+    }, { warnOnly: true })
 
     check('B', 'Coverage ≥ 80% lines', () => {
       let out

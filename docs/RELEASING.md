@@ -316,8 +316,8 @@ Work through the matching column when preparing a release.
 
 Run before every tag push. Organised into 6 stages (A–F); HARD-fails
 exit non-zero with a specific diagnostic. Some checks are warn-only
-(coverage, license, AI disclosure) — they don't block the tag but
-should be reviewed manually.
+(packaged runtime regression vs the local baseline, coverage, license,
+AI disclosure) — they don't block the tag but should be reviewed manually.
 
 Flags:
 - `--quick` skips only the full-only npm smoke, Live2D three-model smoke,
@@ -336,7 +336,7 @@ Flags:
 6. `HEAD === origin/main` (after fetch).
 7. CI on HEAD success.
 
-### Stage B — Code quality (8 checks)
+### Stage B — Code quality (9 checks)
 1. `npm run verify:release` (`verify:pr` + SQLite smoke + core path smoke). `verify:pr` runs
    tsc, lint, tests, build, storage/heavy/architecture/source-size audits,
    v0.4 UI route and open-source reference audits, composer/chat/settings/forms/focus/
@@ -365,9 +365,19 @@ Flags:
 5. `npm run runtime:packaged-sustained` — run only after packaged smoke has
    passed, with `PACKAGED_SMOKE_RELEASE_DIR=release-smoke`; this is a hard
    gate.
-6. Coverage ≥ 80% lines (warn).
-7. `dist/assets/app-runtime-*.js` ≤ 1700 KB.
-8. Benchmarks complete without crash (warn).
+6. Packaged runtime regression vs the local baseline (warn-only, full mode
+   only) — compares the fresh sustained report against
+   `tests/fixtures/packagedRuntimeBaseline.json`: sustained main+renderer RSS
+   peak > baseline × 1.25 or cold start > baseline × 1.5 flags a regression;
+   a missing baseline, a platform/arch mismatch, or missing metrics skip the
+   verdict as inconclusive (never a hard failure). The baseline is a
+   **local machine reference, not a cross-machine promise** — refresh it on
+   the machine that runs the gate with
+   `node scripts/packaged-runtime-baseline.mjs record` after a green
+   sustained run.
+7. Coverage ≥ 80% lines (warn).
+8. `dist/assets/app-runtime-*.js` ≤ 1700 KB.
+9. Benchmarks complete without crash (warn).
 
 ### Stage C — Security (6 checks)
 1. `npm audit --omit=dev`: 0 critical + 0 high.

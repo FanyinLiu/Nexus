@@ -8,6 +8,19 @@
 
 ### Added
 
+- **Packaged runtime baseline + warn-only regression compare** —
+  `scripts/packaged-runtime-baseline.mjs` (`record` / `compare`) plus the
+  unit-testable `scripts/lib/packaged-runtime-baseline.mjs` turn a green
+  packaged sustained runtime report into the versioned local baseline
+  `tests/fixtures/packagedRuntimeBaseline.json` (schemaVersion, record date,
+  platform/arch, Node/Electron versions) and compare later runs against it:
+  sustained main+renderer RSS peak > baseline × 1.25 or cold start > baseline
+  × 1.5 flags a regression, while a missing baseline, platform/arch mismatch,
+  or missing metrics skip the verdict as inconclusive. `prerelease-check`
+  Stage B runs the compare as a warn-only check after the packaged sustained
+  runtime hard gate (full mode only); the baseline is a local machine
+  reference, not a cross-machine promise.
+
 - **Memory migration backup export** — the hidden memory migration preview
   panel now matches the chat chain with a content backup section:
   `buildMemoryMigrationBackupEnvelope` / `buildMemoryMigrationBackupFileName`
