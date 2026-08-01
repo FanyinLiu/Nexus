@@ -12,13 +12,6 @@ import type {
   WakewordRuntimePhase,
 } from './voice.ts'
 
-export type AppBootstrapStatus = 'idle' | 'initializing' | 'ready' | 'error'
-
-export interface RuntimeStoreState {
-  initialized: boolean
-  hydratedAt?: string
-}
-
 export interface TextProviderProfile {
   apiBaseUrl: string
   apiKey: string
@@ -89,7 +82,7 @@ export interface IdentitySettings {
   companionRelationshipType: CompanionRelationshipType
 }
 
-export interface AppearanceSettings {
+interface AppearanceSettings {
   uiLanguage: AppLocale
   themeId: ThemeId
   /**
@@ -161,7 +154,7 @@ export type PetWeatherPreview =
   | 'breeze'
   | 'gale'
 
-export interface TextProviderSettings {
+interface TextProviderSettings {
   apiProviderId: string
   apiBaseUrl: string
   apiKey: string
@@ -215,7 +208,7 @@ export interface ChatOutputTransformRule {
   enabled: boolean
 }
 
-export interface SpeechInputSettings {
+interface SpeechInputSettings {
   speechInputEnabled: boolean
   speechInputProviderId: string
   speechInputApiBaseUrl: string
@@ -227,7 +220,7 @@ export interface SpeechInputSettings {
   speechInputProviderProfiles: Record<string, SpeechInputProviderProfile>
 }
 
-export interface SpeechOutputSettings {
+interface SpeechOutputSettings {
   speechOutputEnabled: boolean
   speechOutputProviderId: string
   speechOutputApiBaseUrl: string
@@ -243,7 +236,7 @@ export interface SpeechOutputSettings {
   speechOutputProviderProfiles: Record<string, SpeechOutputProviderProfile>
 }
 
-export interface VoiceControlSettings {
+interface VoiceControlSettings {
   continuousVoiceModeEnabled: boolean
   voiceActivityDetectionEnabled: boolean
   vadSensitivity: VadSensitivity
@@ -255,7 +248,7 @@ export interface VoiceControlSettings {
   wakewordSessionIdleTimeoutMs: number
 }
 
-export interface MemorySettings {
+interface MemorySettings {
   memoryPaused: boolean
   memorySearchMode: MemorySearchMode
   memoryEmbeddingModel: string
@@ -273,7 +266,7 @@ export interface MemorySettings {
   lorebookRewriteQueryEnabled: boolean
 }
 
-export interface ContextSettings {
+interface ContextSettings {
   contextAwarenessEnabled: boolean
   companionAwarenessPaused: boolean
   activeWindowContextEnabled: boolean
@@ -287,7 +280,7 @@ export interface ContextSettings {
   screenVlmModel: string
 }
 
-export interface ToolSettings {
+interface ToolSettings {
   toolWebSearchEnabled: boolean
   toolWebSearchProviderId: WebSearchProviderId
   toolWebSearchApiBaseUrl: string
@@ -335,7 +328,7 @@ export interface McpServerConfig {
   enabled: boolean
 }
 
-export interface SystemSettings {
+interface SystemSettings {
   launchOnStartup: boolean
   mcpServers: McpServerConfig[]
 }
@@ -343,7 +336,7 @@ export interface SystemSettings {
 /** Trust level controlling what an integration can do autonomously. */
 export type IntegrationPermissionMode = 'read-only' | 'confirm' | 'auto'
 
-export interface IntegrationSettings {
+interface IntegrationSettings {
   minecraftIntegrationEnabled: boolean
   minecraftServerAddress: string
   minecraftServerPort: number
@@ -382,7 +375,7 @@ export interface IntegrationSettings {
   mcpPermissionMode: IntegrationPermissionMode
 }
 
-export interface SettingsSchema {
+interface SettingsSchema {
   settingsSchemaVersion: number
 }
 
@@ -420,8 +413,8 @@ export interface PanelWindowState {
 
 export type WindowView = 'pet' | 'panel'
 
-export type StartupMechanism = 'login_item' | 'xdg_autostart' | 'unsupported'
-export type MediaSessionBackend = 'playerctl' | 'osascript' | 'windows_media_session' | 'unsupported'
+type StartupMechanism = 'login_item' | 'xdg_autostart' | 'unsupported'
+type MediaSessionBackend = 'playerctl' | 'osascript' | 'windows_media_session' | 'unsupported'
 
 export interface PlatformProfile {
   platform: string

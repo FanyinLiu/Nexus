@@ -9,7 +9,7 @@ import type { TranslationKey, TranslationParams } from '../../types/i18n.ts'
 import { FIRST_CONVERSATION_TARGET_MINUTES } from './companionReadiness.ts'
 import type { FirstConversationTelemetryStatus } from './firstConversationTelemetry.ts'
 
-export type StartupStatusLevel = 'ok' | 'warning'
+type StartupStatusLevel = 'ok' | 'warning'
 
 export type StartupStatusItem = {
   id: 'preview' | 'bridge' | 'model' | 'avatar' | 'voice' | 'firstConversation'

@@ -54,28 +54,11 @@ function toOutputPreset(entry: SpeechOutputProviderEntry): SpeechOutputProviderP
   return { id: entry.id, label: entry.label, baseUrl: entry.baseUrl, defaultModel: entry.defaultModel, defaultVoice: entry.defaultVoice, notes: entry.notes }
 }
 
-export const SPEECH_INPUT_PROVIDER_PRESETS: SpeechInputProviderPreset[] =
-  SPEECH_INPUT_PROVIDERS.map(toInputPreset)
-
 export const USER_VISIBLE_SPEECH_INPUT_PROVIDER_PRESETS: SpeechInputProviderPreset[] =
   SPEECH_INPUT_PROVIDERS.filter((p) => !p.hidden).map(toInputPreset)
 
-export const SPEECH_OUTPUT_PROVIDER_PRESETS: SpeechOutputProviderPreset[] =
-  SPEECH_OUTPUT_PROVIDERS.map(toOutputPreset)
-
 export const USER_VISIBLE_SPEECH_OUTPUT_PROVIDER_PRESETS: SpeechOutputProviderPreset[] =
   SPEECH_OUTPUT_PROVIDERS.filter((p) => !p.hidden).map(toOutputPreset)
-
-// ── Model & voice option arrays (delegated to catalog entries) ──
-
-export const MINIMAX_TTS_MODEL_OPTIONS: SpeechModelOption[] =
-  getSpeechOutputProvider('minimax-tts').modelOptions
-
-export const MINIMAX_FALLBACK_VOICE_OPTIONS: SpeechVoiceOption[] =
-  getSpeechOutputProvider('minimax-tts').fallbackVoiceOptions
-
-export const VOLCENGINE_FALLBACK_VOICE_OPTIONS: SpeechVoiceOption[] =
-  getSpeechOutputProvider('volcengine-tts').fallbackVoiceOptions
 
 // ── Preset lookup ──
 
@@ -127,10 +110,6 @@ export function isSpeechOutputKeyless(providerId: string): boolean {
   return entry.kind === 'local' || entry.protocol === 'edge-tts'
 }
 
-export function isSpeechInputKeyless(providerId: string): boolean {
-  return getSpeechInputProvider(providerId).kind === 'local'
-}
-
 export function isSpeechInputLocal(providerId: string): boolean {
   return getSpeechInputProvider(providerId).kind === 'local'
 }
@@ -151,10 +130,6 @@ export function isParaformerSpeechInputProvider(providerId: string) {
 
 export function isTencentAsrSpeechInputProvider(providerId: string) {
   return getSpeechInputProvider(providerId).protocol === 'tencent'
-}
-
-export function isElevenLabsSpeechProvider(providerId: string) {
-  return providerId === 'elevenlabs-stt' || providerId === 'elevenlabs-tts'
 }
 
 export function isOpenAiCompatibleSpeechInputProvider(providerId: string) {

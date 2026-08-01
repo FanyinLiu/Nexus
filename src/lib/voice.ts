@@ -1,27 +1,27 @@
 import { t } from '../i18n/runtime.ts'
 
-export interface BrowserSpeechRecognitionAlternative {
+interface BrowserSpeechRecognitionAlternative {
   transcript: string
   confidence: number
 }
 
-export interface BrowserSpeechRecognitionResult {
+interface BrowserSpeechRecognitionResult {
   isFinal: boolean
   length: number
   [index: number]: BrowserSpeechRecognitionAlternative
 }
 
-export interface BrowserSpeechRecognitionResultList {
+interface BrowserSpeechRecognitionResultList {
   length: number
   [index: number]: BrowserSpeechRecognitionResult
 }
 
-export interface BrowserSpeechRecognitionEvent extends Event {
+interface BrowserSpeechRecognitionEvent extends Event {
   resultIndex: number
   results: BrowserSpeechRecognitionResultList
 }
 
-export interface BrowserSpeechRecognitionErrorEvent extends Event {
+interface BrowserSpeechRecognitionErrorEvent extends Event {
   error: string
   message?: string
 }
@@ -40,7 +40,7 @@ export interface BrowserSpeechRecognition {
   abort: () => void
 }
 
-export interface BrowserSpeechRecognitionCtor {
+interface BrowserSpeechRecognitionCtor {
   new (): BrowserSpeechRecognition
 }
 
@@ -49,10 +49,6 @@ declare global {
     SpeechRecognition?: BrowserSpeechRecognitionCtor
     webkitSpeechRecognition?: BrowserSpeechRecognitionCtor
   }
-}
-
-export function getSpeechRecognitionCtor() {
-  return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null
 }
 
 export function getAvailableSpeechSynthesisVoices() {

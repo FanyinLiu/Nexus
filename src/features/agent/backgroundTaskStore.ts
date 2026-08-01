@@ -22,7 +22,7 @@ export type BackgroundTask = {
   summary?: string
 }
 
-export type BackgroundTaskListener = (tasks: BackgroundTask[]) => void
+type BackgroundTaskListener = (tasks: BackgroundTask[]) => void
 
 const BACKGROUND_TASK_STATUSES = new Set<BackgroundTaskStatus>([
   'running',

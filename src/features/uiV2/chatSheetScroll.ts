@@ -1,4 +1,4 @@
-export type ChatSheetScrollRole = 'user' | 'assistant'
+type ChatSheetScrollRole = 'user' | 'assistant'
 
 export interface ChatSheetScrollMessage {
   id: string

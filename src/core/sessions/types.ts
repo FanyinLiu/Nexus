@@ -1,4 +1,4 @@
-export type SessionMessageRole = 'system' | 'user' | 'assistant' | 'tool'
+type SessionMessageRole = 'system' | 'user' | 'assistant' | 'tool'
 
 export type SessionMessage = {
   role: SessionMessageRole

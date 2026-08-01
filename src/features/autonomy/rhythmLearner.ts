@@ -151,7 +151,7 @@ export function shouldAllowProactiveSpeech(profile: RhythmProfile): boolean {
 }
 
 /** Get the top N most active hours for display / debugging. */
-export function getTopActiveHours(profile: RhythmProfile, n = 5): number[] {
+function getTopActiveHours(profile: RhythmProfile, n = 5): number[] {
   return profile.slots
     .map((count, hour) => ({ hour, count }))
     .sort((a, b) => b.count - a.count)

@@ -13,7 +13,7 @@
 // hooks, the bus reducer, or background services. Storage is in-memory only
 // — a resume offer that survives a full app restart is not the goal.
 
-export type VoiceResumeSnapshot = {
+type VoiceResumeSnapshot = {
   originalText: string
   remainingText: string
   interruptedAt: number

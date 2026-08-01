@@ -80,7 +80,7 @@ export function normalizeBudgetConfig(value: unknown): BudgetConfig {
   return config
 }
 
-export function normalizeCostEntry(value: unknown): CostEntry | null {
+function normalizeCostEntry(value: unknown): CostEntry | null {
   if (!value || typeof value !== 'object') return null
   const raw = value as Partial<CostEntry>
   const id = normalizeOptionalText(raw.id)

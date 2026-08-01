@@ -4,7 +4,7 @@
 
 import type { Live2DModel as Live2DModelType } from '@jannchie/pixi-live2d-display/cubism4'
 
-export type PixiRuntime = typeof import('pixi.js')
+type PixiRuntime = typeof import('pixi.js')
 export type PixiApplication = import('pixi.js').Application
 export type MotionPreloadValue = number | string
 

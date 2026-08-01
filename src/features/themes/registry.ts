@@ -26,7 +26,7 @@ function cloneThemeDefinition(theme: ThemeDefinition): ThemeDefinition {
   }
 }
 
-export const themeRegistry = Object.freeze(Object.values(themeMap).map(cloneThemeDefinition))
+const themeRegistry = Object.freeze(Object.values(themeMap).map(cloneThemeDefinition))
 
 export function listThemes() {
   return themeRegistry.map(cloneThemeDefinition)

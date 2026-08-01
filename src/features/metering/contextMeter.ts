@@ -16,14 +16,6 @@ const METER_STORAGE_PREFIX = 'nexus:metering:day:'
 
 export type MeterSource = 'chat' | 'dream' | 'monologue' | 'skill_distillation' | 'reflection' | 'tool' | 'other'
 
-export interface MeterEntry {
-  source: MeterSource
-  inputTokens: number
-  outputTokens: number
-  costUsd: number
-  timestamp: string
-}
-
 export interface DailyMeterRecord {
   date: string
   totalInputTokens: number
@@ -64,7 +56,7 @@ function cjkRatio(text: string): number {
   return cjk / text.length
 }
 
-export function estimateTokens(text: string): number {
+function estimateTokens(text: string): number {
   if (!text) return 0
   const divisor = cjkRatio(text) > 0.3 ? 1.5 : 3.5
   return Math.ceil(text.length / divisor)
@@ -120,7 +112,7 @@ function lookupPrice(modelId: string): ModelPrice | null {
   return best?.price ?? null
 }
 
-export function computeCostUsd(modelId: string, inputTokens: number, outputTokens: number): number {
+function computeCostUsd(modelId: string, inputTokens: number, outputTokens: number): number {
   const price = lookupPrice(modelId)
   if (!price) return 0
   return (inputTokens / 1_000_000) * price.inputPerM + (outputTokens / 1_000_000) * price.outputPerM

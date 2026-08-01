@@ -42,7 +42,7 @@ export type CompanionCheckInLine = {
   reason: CompanionCheckInTriggerReason
 }
 
-export type CompanionCheckInCopyToneIssue =
+type CompanionCheckInCopyToneIssue =
   | 'empty'
   | 'missing_soft_invitation'
   | 'imperative_language'

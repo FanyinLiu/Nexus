@@ -219,11 +219,6 @@ export function recordGuidanceFired(input: RecordGuidanceFiredInput): void {
   writeJsonBestEffort(GUIDANCE_TELEMETRY_STORAGE_KEY, capped)
 }
 
-/** Test-only reset. */
-export function __resetGuidanceTelemetry(): void {
-  writeJson(GUIDANCE_TELEMETRY_STORAGE_KEY, [])
-}
-
 // ── Latest analysis report (written by the weekly scheduler) ─────────────
 
 export function loadGuidanceAnalysis(): GuidanceAnalysisReport | null {

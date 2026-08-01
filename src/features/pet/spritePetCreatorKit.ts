@@ -9,7 +9,7 @@ import {
   SPRITE_PET_ROWS,
 } from './spriteAtlas.ts'
 
-export type SpritePetCreatorKitRowStatus = {
+type SpritePetCreatorKitRowStatus = {
   row: number
   state: string
   frameCount: number

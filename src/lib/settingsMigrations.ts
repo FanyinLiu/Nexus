@@ -15,7 +15,7 @@ import { normalizeUiLanguage } from './uiLanguage.ts'
 
 export const CURRENT_SETTINGS_SCHEMA_VERSION = 5
 
-export interface SettingsMigration {
+interface SettingsMigration {
   toVersion: number
   description: string
   migrate: (raw: Record<string, unknown>) => Record<string, unknown>

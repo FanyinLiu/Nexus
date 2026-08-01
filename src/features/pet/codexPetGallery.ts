@@ -1,4 +1,4 @@
-export type CodexPetGalleryCatalogItem = {
+type CodexPetGalleryCatalogItem = {
   id: string
   slug: string
   displayName: string

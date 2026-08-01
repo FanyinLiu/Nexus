@@ -31,7 +31,7 @@ export function estimateTokensFromText(text: string): number {
 // OpenAI "low" detail = 85 tokens. We always request detail:'low' in our code.
 const IMAGE_LOW_DETAIL_TOKENS = 85
 
-export function estimateImageTokens(imageUrl: string): number {
+function estimateImageTokens(imageUrl: string): number {
   if (!imageUrl) return 0
   // base64 data URI — size is embedded in the string but we requested low detail
   // so the model downsamples; billing is fixed at 85 tokens regardless of size.

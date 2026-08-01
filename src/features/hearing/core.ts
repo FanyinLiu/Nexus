@@ -95,7 +95,7 @@ function splitWakeWordInput(value: string) {
     .filter(Boolean)
 }
 
-export function getWakeWordCandidates(wakeWord: string) {
+function getWakeWordCandidates(wakeWord: string) {
   const splitWakeWords = splitWakeWordInput(wakeWord)
   if (!splitWakeWords.length) return []
 
@@ -153,7 +153,7 @@ function hasUnmatchedOpeningBracket(text: string) {
  * rather than actual user speech — e.g. subtitle watermarks, video
  * credits, or short non-CJK fragments from media playing nearby.
  */
-export function looksLikeBackgroundAudioArtifact(text: string) {
+function looksLikeBackgroundAudioArtifact(text: string) {
   const trimmed = text.trim()
   if (!trimmed) return false
 
@@ -226,7 +226,7 @@ export function normalizeRecognizedVoiceTranscript(text: string) {
   return withoutLeadingFillers || normalized
 }
 
-export function looksLikeIncompleteVoiceInput(text: string) {
+function looksLikeIncompleteVoiceInput(text: string) {
   const normalized = text.trim()
   if (!normalized) {
     return false

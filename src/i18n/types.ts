@@ -4,6 +4,5 @@ export type {
   TranslationDictionary,
   TranslationKey,
   TranslationParams,
-  TranslationPrimitive,
   Translator,
 } from '../types/i18n'

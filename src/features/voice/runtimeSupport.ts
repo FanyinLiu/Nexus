@@ -5,15 +5,6 @@ type Translator = (key: TranslationKey, params?: TranslationParams) => string
 
 export const AUDIO_SMOKE_PLAYBACK_TIMEOUT_MS = 15_000
 
-export const MICROPHONE_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
-  channelCount: { ideal: 1 },
-  sampleRate: { ideal: 16000 },
-  sampleSize: { ideal: 16 },
-  echoCancellation: false,
-  noiseSuppression: false,
-  autoGainControl: false,
-}
-
 export type VoiceInputPurpose = 'stt' | 'wakeword' | 'interrupt' | 'vad'
 
 export type VoiceInputStreamHandle = {

@@ -7,7 +7,7 @@ import type {
   TranslationParams,
 } from '../types/i18n'
 
-export const DEFAULT_LOCALE: AppLocale = 'zh-CN'
+const DEFAULT_LOCALE: AppLocale = 'zh-CN'
 
 export const AVAILABLE_LOCALES: AppLocale[] = [
   'zh-CN',

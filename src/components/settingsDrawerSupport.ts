@@ -232,7 +232,7 @@ export function formatVoicePipelineStepLabel(
   return pickTranslatedUiText(uiLanguage, VOICE_PIPELINE_STEP_KEY[step])
 }
 
-export type ConsoleEventCluster = {
+type ConsoleEventCluster = {
   id: string
   source: DebugConsoleEvent['source']
   tone: DebugConsoleEvent['tone']
@@ -414,7 +414,7 @@ export function getReminderTemplatePresets(uiLanguage: UiLanguage): Array<{
 
 export type ReminderTaskActionKind = ReminderTaskAction['kind']
 
-export const SETTINGS_SECTION_IDS = [
+const SETTINGS_SECTION_IDS = [
   'console',
   'model',
   'chat',
@@ -463,36 +463,6 @@ export const SETTINGS_SECTION_OPTION_DEFINITIONS = [
   labelKey: SettingsSectionLabelKey
 }>
 
-const SETTINGS_SECTION_DESCRIPTION_KEY_MAP: Record<SettingsSectionId, Parameters<typeof pickTranslatedUiText>[1]> = {
-  console: 'settings.section_desc.console',
-  model: 'settings.section_desc.model',
-  chat: 'settings.section_desc.chat',
-  history: 'settings.section_desc.history',
-  letters: 'settings.section_desc.letters',
-  memory: 'settings.section_desc.memory',
-  lorebooks: 'settings.section_desc.lorebooks',
-  voice: 'settings.section_desc.voice',
-  window: 'settings.section_desc.window',
-  integrations: 'settings.section_desc.integrations',
-  tools: 'settings.section_desc.tools',
-  autonomy: 'settings.section_desc.autonomy',
-}
-
-const SETTINGS_SECTION_EYEBROW_KEY_MAP: Record<SettingsSectionId, Parameters<typeof pickTranslatedUiText>[1]> = {
-  console: 'settings.section_eyebrow.console',
-  model: 'settings.section_eyebrow.model',
-  chat: 'settings.section_eyebrow.chat',
-  history: 'settings.section_eyebrow.history',
-  letters: 'settings.section_eyebrow.letters',
-  memory: 'settings.section_eyebrow.memory',
-  lorebooks: 'settings.section_eyebrow.lorebooks',
-  voice: 'settings.section_eyebrow.voice',
-  window: 'settings.section_eyebrow.window',
-  integrations: 'settings.section_eyebrow.integrations',
-  tools: 'settings.section_eyebrow.tools',
-  autonomy: 'settings.section_eyebrow.autonomy',
-}
-
 export type VolcengineCredentialParts = {
   appId: string
   accessToken: string
@@ -512,14 +482,6 @@ export function getSettingsSectionOptions(uiLanguage: UiLanguage): Array<{
 
 export function normalizeSettingsSectionId(sectionId: SettingsSectionId): SettingsSectionId {
   return sectionId
-}
-
-export function getSettingsSectionDescription(sectionId: SettingsSectionId, uiLanguage: UiLanguage) {
-  return pickTranslatedUiText(uiLanguage, SETTINGS_SECTION_DESCRIPTION_KEY_MAP[sectionId])
-}
-
-export function getSettingsSectionEyebrow(sectionId: SettingsSectionId, uiLanguage: UiLanguage) {
-  return pickTranslatedUiText(uiLanguage, SETTINGS_SECTION_EYEBROW_KEY_MAP[sectionId])
 }
 
 export function parseVolcengineCredentialParts(value: string): VolcengineCredentialParts {

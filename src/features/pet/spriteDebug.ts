@@ -3,12 +3,12 @@ import {
   type SpritePetAnimationState,
 } from './spriteAtlas.ts'
 
-export const SPRITE_PET_DEBUG_STATE_QUERY_PARAMS = [
+const SPRITE_PET_DEBUG_STATE_QUERY_PARAMS = [
   'spritePetState',
   'spriteState',
 ] as const
 
-export const SPRITE_PET_DEBUG_IMAGE_QUERY_PARAMS = [
+const SPRITE_PET_DEBUG_IMAGE_QUERY_PARAMS = [
   'spritePetImage',
   'spriteImage',
 ] as const

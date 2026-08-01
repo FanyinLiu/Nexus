@@ -17,14 +17,14 @@ type Translator = (key: TranslationKey, params?: TranslationParams) => string
 
 type TimerHandle = ReturnType<typeof globalThis.setTimeout>
 
-export type WakewordRuntimeConfig = {
+type WakewordRuntimeConfig = {
   enabled: boolean
   wakeWord: string
   suspended?: boolean
   suspendReason?: string
 }
 
-export type WakewordAvailabilityStatus = Awaited<ReturnType<typeof checkWakewordAvailability>>
+type WakewordAvailabilityStatus = Awaited<ReturnType<typeof checkWakewordAvailability>>
 
 export type WakewordRuntimeController = {
   update: (config: WakewordRuntimeConfig) => Promise<void>

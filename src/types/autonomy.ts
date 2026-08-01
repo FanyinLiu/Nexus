@@ -69,7 +69,7 @@ export interface ContextTriggeredTask {
 
 // ── Notification channels ─────────────────────────────────────────────────────
 
-export type NotificationChannelKind = 'rss' | 'webhook' | 'calendar'
+type NotificationChannelKind = 'rss' | 'webhook' | 'calendar'
 
 export interface NotificationChannel {
   id: string

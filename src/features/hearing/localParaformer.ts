@@ -22,7 +22,7 @@ export type ParaformerStreamCallbacks = {
   onError?: (message: string) => void
 }
 
-export type ParaformerStreamStopResult = {
+type ParaformerStreamStopResult = {
   text: string
 }
 

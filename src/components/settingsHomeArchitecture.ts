@@ -3,7 +3,7 @@ import type { SettingsSectionId } from './settingsDrawerSupport.ts'
 import type { TranslationKey } from '../types/i18n.ts'
 import type { SettingsCardIconKey } from './settingsDrawerIcons.tsx'
 
-export type SettingsHomeActionId = 'onboarding'
+type SettingsHomeActionId = 'onboarding'
 
 export type SettingsHomeActionEntry = {
   actionId: SettingsHomeActionId
@@ -75,7 +75,7 @@ export const SETTINGS_HOME_GROUPS: readonly SettingsHomeGroup[] = [
 export const SETTINGS_HOME_SECTION_ORDER = SETTINGS_HOME_GROUPS
   .flatMap((group) => group.sectionIds)
 
-export function getSettingsHomeSectionOrder(
+function getSettingsHomeSectionOrder(
   sectionOrder: readonly SettingsSectionId[],
   sectionId: SettingsSectionId,
 ) {

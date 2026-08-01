@@ -36,7 +36,7 @@ function isLocalSpeechOutputProvider(providerId: string) {
   return providerId === 'omnivoice-tts'
 }
 
-export function resolveSpeechInputProviderProfile(
+function resolveSpeechInputProviderProfile(
   providerId: string,
   profile?: PartialSpeechInputProviderProfile,
 ): SpeechInputProviderProfile {
@@ -54,7 +54,7 @@ export function resolveSpeechInputProviderProfile(
   }
 }
 
-export function resolveSpeechOutputProviderProfile(
+function resolveSpeechOutputProviderProfile(
   providerId: string,
   profile?: PartialSpeechOutputProviderProfile,
 ): SpeechOutputProviderProfile {

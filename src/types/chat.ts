@@ -17,9 +17,9 @@ export type ChatMessageRunStatus =
   | 'interrupted'
   | 'error_recoverable'
 
-export type ChatMemoryTraceStatus = 'active' | 'paused'
+type ChatMemoryTraceStatus = 'active' | 'paused'
 
-export type ChatMemoryTraceSearchMode = 'keyword' | 'hybrid' | 'vector'
+type ChatMemoryTraceSearchMode = 'keyword' | 'hybrid' | 'vector'
 
 export interface ChatMemoryTrace {
   status: ChatMemoryTraceStatus

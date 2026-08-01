@@ -43,7 +43,7 @@ export type StartSpeechOutputRuntimeOptions = {
   ti: Translator
 }
 
-export async function playSpeechOutputWithSettingsRuntime(
+async function playSpeechOutputWithSettingsRuntime(
   text: string,
   speechSettings: AppSettings,
   runtime: SpeechOutputPlaybackRuntime,

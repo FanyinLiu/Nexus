@@ -15,9 +15,9 @@ import {
   writeJsonDebounced,
 } from '../../lib/storage/core.ts'
 
-export type PlanStepStatus = 'pending' | 'in_progress' | 'completed' | 'skipped' | 'failed'
+type PlanStepStatus = 'pending' | 'in_progress' | 'completed' | 'skipped' | 'failed'
 
-export type PlanStep = {
+type PlanStep = {
   id: string
   text: string
   status: PlanStepStatus
@@ -26,7 +26,7 @@ export type PlanStep = {
   completedAt?: number
 }
 
-export type PlanStatus = 'draft' | 'active' | 'completed' | 'aborted'
+type PlanStatus = 'draft' | 'active' | 'completed' | 'aborted'
 
 export type Plan = {
   id: string
@@ -37,7 +37,7 @@ export type Plan = {
   updatedAt: number
 }
 
-export type PlanListener = (plans: Plan[]) => void
+type PlanListener = (plans: Plan[]) => void
 
 const PLAN_STEP_STATUSES = new Set<PlanStepStatus>([
   'pending',

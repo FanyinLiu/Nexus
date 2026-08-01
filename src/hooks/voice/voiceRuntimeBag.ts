@@ -59,7 +59,7 @@ import type { SpeechLevelPublisher } from './speechLevelPublishing.ts'
 
 // ── Refs ────────────────────────────────────────────────────────────────────
 
-export type VoiceRefs = {
+type VoiceRefs = {
   voiceStateRef: MutableRefObject<VoiceState>
   voiceSessionRef: MutableRefObject<VoiceSessionState>
   continuousVoiceActiveRef: MutableRefObject<boolean>
@@ -99,7 +99,7 @@ export type VoiceRefs = {
 
 // ── Setters ─────────────────────────────────────────────────────────────────
 
-export type VoiceSetters = {
+type VoiceSetters = {
   setVoiceState: (next: VoiceState) => void
   setVoicePipeline: Dispatch<SetStateAction<VoicePipelineState>>
   setVoiceTrace: Dispatch<SetStateAction<VoiceTraceEntry[]>>
@@ -112,7 +112,7 @@ export type VoiceSetters = {
 
 // These live in the hook (because they use useCallback / close over hook
 // state) and are exposed to the factories via the runtime bag.
-export type VoiceHookCallbacks = {
+type VoiceHookCallbacks = {
   showPetStatus: (message: string, duration?: number, dedupeWindowMs?: number) => void
   updateVoicePipeline: (
     step: VoicePipelineState['step'],

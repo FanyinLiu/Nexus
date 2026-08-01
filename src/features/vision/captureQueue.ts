@@ -11,8 +11,8 @@ type CaptureJob = {
 
 const MAX_CONCURRENCY = 1
 const DEDUP_WINDOW_MS = 2_000
-export const MAX_CAPTURE_QUEUE_PENDING = 6
-export const MAX_CAPTURE_IMAGE_DATA_URL_CHARS = 12_000_000
+const MAX_CAPTURE_QUEUE_PENDING = 6
+const MAX_CAPTURE_IMAGE_DATA_URL_CHARS = 12_000_000
 
 const SUPPORTED_CAPTURE_IMAGE_PATTERN = /^data:image\/(?:png|jpe?g|webp);base64,[a-z0-9+/=]+$/iu
 
@@ -24,7 +24,7 @@ export function hashCaptureImageData(input: string) {
   return `${input.length}:${(hash >>> 0).toString(36)}`
 }
 
-export function normalizeCaptureLanguage(language: string) {
+function normalizeCaptureLanguage(language: string) {
   return String(language ?? '').trim().toLowerCase() || 'auto'
 }
 
@@ -153,8 +153,4 @@ const defaultScreenOcrQueue = createScreenOcrQueue()
 
 export function enqueueScreenOcr(imageDataUrl: string, language: string): Promise<string> {
   return defaultScreenOcrQueue.enqueue(imageDataUrl, language)
-}
-
-export function clearCaptureQueue() {
-  defaultScreenOcrQueue.clear()
 }

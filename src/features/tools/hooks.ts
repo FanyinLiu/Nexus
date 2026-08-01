@@ -12,7 +12,7 @@ import type { BuiltInToolId, BuiltInToolResult, MatchedBuiltInTool } from './too
 
 // ── Types ──
 
-export type ToolHookPhase = 'pre' | 'post'
+type ToolHookPhase = 'pre' | 'post'
 
 export type PreToolHookContext = {
   phase: 'pre'
@@ -32,11 +32,11 @@ export type PostToolHookContext = {
   durationMs: number
 }
 
-export type ToolHookHandler = (
+type ToolHookHandler = (
   context: PreToolHookContext | PostToolHookContext,
 ) => void | Promise<void>
 
-export type ToolHookEntry = {
+type ToolHookEntry = {
   id: string
   phase: ToolHookPhase
   /** Optional glob/regex pattern to match tool IDs. '*' matches all. */
@@ -51,7 +51,7 @@ export type ToolHookEntry = {
 
 const _hooks: ToolHookEntry[] = []
 
-export function registerToolHook(entry: ToolHookEntry) {
+function registerToolHook(entry: ToolHookEntry) {
   _hooks.push(entry)
   _hooks.sort((a, b) => b.priority - a.priority)
 }

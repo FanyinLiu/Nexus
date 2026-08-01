@@ -3,7 +3,7 @@ import { clamp } from '../../lib/common.ts'
 import type { SpeechLevelSource } from '../../types/voice.ts'
 
 export const SPEECH_LEVEL_REACT_INTERVAL_MS = 50
-export const SPEECH_LEVEL_QUANTIZATION_STEP = 0.05
+const SPEECH_LEVEL_QUANTIZATION_STEP = 0.05
 
 export type SpeechLevelPublisher = {
   source: SpeechLevelSource

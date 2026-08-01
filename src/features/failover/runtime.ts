@@ -55,16 +55,6 @@ export function isFailoverCoolingDown(key: string, now = Date.now()) {
   return Number.isFinite(cooldownAt) && cooldownAt > now
 }
 
-export function getFailoverCooldownLabel(key: string) {
-  const entry = readState().entries[key]
-  const cooldownAt = Date.parse(entry?.cooldownUntil ?? '')
-  if (!Number.isFinite(cooldownAt)) {
-    return ''
-  }
-
-  return new Date(cooldownAt).toISOString()
-}
-
 export function recordFailoverSuccess(key: string) {
   const state = readState()
   state.entries[key] = {

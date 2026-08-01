@@ -5,7 +5,7 @@ export type SkillBackend = {
   save(skills: Skill[]): Promise<void>
 }
 
-export class InMemorySkillBackend implements SkillBackend {
+class InMemorySkillBackend implements SkillBackend {
   private stored: Skill[] = []
   async load(): Promise<Skill[]> {
     return this.stored.map((s) => ({ ...s }))

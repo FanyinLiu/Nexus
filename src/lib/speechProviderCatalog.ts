@@ -54,7 +54,7 @@ export type SpeechOutputAdjustmentSupport = {
 
 // ── Speech input provider catalog ──
 
-export type SpeechInputProtocol =
+type SpeechInputProtocol =
   | 'sensevoice'
   | 'paraformer'
   | 'openai-compatible'
@@ -203,7 +203,7 @@ export const SPEECH_INPUT_PROVIDERS: SpeechInputProviderEntry[] = [
 
 // ── Speech output provider catalog ──
 
-export type SpeechOutputProtocol =
+type SpeechOutputProtocol =
   | 'openai-compatible'
   | 'minimax'
   | 'volcengine'
@@ -535,24 +535,6 @@ export function getSpeechInputProvider(id: string): SpeechInputProviderEntry {
 
 export function getSpeechOutputProvider(id: string): SpeechOutputProviderEntry {
   return speechOutputIndex.get(id) ?? SPEECH_OUTPUT_PROVIDERS[0]
-}
-
-export function getSpeechInputProtocol(id: string): SpeechInputProtocol {
-  return getSpeechInputProvider(id).protocol
-}
-
-export function getSpeechOutputProtocol(id: string): SpeechOutputProtocol {
-  return getSpeechOutputProvider(id).protocol
-}
-
-export function isSpeechProviderLocal(id: string): boolean {
-  const input = speechInputIndex.get(id)
-  if (input) return input.kind === 'local'
-
-  const output = speechOutputIndex.get(id)
-  if (output) return output.kind === 'local'
-
-  return false
 }
 
 export function isElevenLabsProvider(id: string): boolean {

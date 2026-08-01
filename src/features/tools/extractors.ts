@@ -95,7 +95,7 @@ const STT_NOISE_PATTERN = new RegExp(
   'iu',
 )
 
-export function normalizeToolText(content: string) {
+function normalizeToolText(content: string) {
   return normalizeIntentText(content)
 }
 

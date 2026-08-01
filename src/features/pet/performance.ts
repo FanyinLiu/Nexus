@@ -702,17 +702,17 @@ const PUBLIC_EXPRESSION_SLOTS: ReadonlySet<PetExpressionSlot> = new Set([
 
 const TAG_KEYS = ['expr', 'motion', 'tts', 'recall', 'mood'] as const
 
-export type MotionCue = {
+type MotionCue = {
   gestureName: string
   stageDirection: string
 }
 
-export type TtsCue = {
+type TtsCue = {
   mode: string
   stageDirection: string
 }
 
-export type RecallCue = {
+type RecallCue = {
   memoryId: string
   stageDirection: string
 }
@@ -723,9 +723,9 @@ export type RecallCue = {
  * regex keyword matching can never reach: "我今天被裁了" carries no sad
  * keyword). Intensity defaults to 5 when omitted. Unknown words drop.
  */
-export type MoodReadCue = { mood: UserMoodWord; intensity: number; stageDirection: string }
+type MoodReadCue = { mood: UserMoodWord; intensity: number; stageDirection: string }
 
-export const USER_MOOD_WORDS = [
+const USER_MOOD_WORDS = [
   'happy', 'excited', 'calm', 'neutral', 'tired', 'sad', 'anxious', 'frustrated', 'angry',
 ] as const
 export type UserMoodWord = (typeof USER_MOOD_WORDS)[number]

@@ -7,7 +7,7 @@
 import { isSameLocalDay } from '../../lib/localDate.ts'
 import type { CompanionRelationshipType } from '../../types'
 
-export type BracketKind = 'morning' | 'evening'
+type BracketKind = 'morning' | 'evening'
 
 export type BracketDecision =
   | { shouldFire: true; bracket: BracketKind; reason: 'fire' }

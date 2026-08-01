@@ -48,7 +48,7 @@ export interface AutonomyDecisionOptions {
   retryOnGuardFail?: boolean
 }
 
-export interface AutonomyDecisionTelemetry {
+interface AutonomyDecisionTelemetry {
   attempts: number
   /** Populated after each decision-engine call. Length === attempts. */
   decisions: DecisionResult[]

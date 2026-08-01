@@ -242,10 +242,6 @@ export function getGlobalVoiceTransitionLog(): VoiceTransitionLog {
   return globalLog
 }
 
-export function resetGlobalVoiceTransitionLog(): void {
-  globalLog?.clear()
-}
-
 declare global {
   interface Window {
     __voiceLog?: () => readonly VoiceTransitionRecord[]

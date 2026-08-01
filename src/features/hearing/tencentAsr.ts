@@ -30,7 +30,7 @@ export type TencentAsrConnectOptions = {
   hotwordList?: string
 }
 
-export type TencentAsrStreamStopResult = {
+type TencentAsrStreamStopResult = {
   text: string
   audioSamples: Float32Array | null
   sampleRate: number

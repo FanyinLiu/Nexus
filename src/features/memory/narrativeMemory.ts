@@ -11,7 +11,7 @@ import { t } from '../../i18n/runtime.ts'
 
 // ── Types ──────────────────────────────────────────────────────��──────────
 
-export interface NarrativeThread {
+interface NarrativeThread {
   id: string
   title: string
   /** Memory IDs in this thread, ordered by creation time. */

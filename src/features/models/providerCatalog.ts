@@ -11,7 +11,7 @@ import type {
   ModelRunLocation,
 } from '../../types/model.ts'
 
-export type ApiProviderProtocol = 'openai-compatible' | 'anthropic'
+type ApiProviderProtocol = 'openai-compatible' | 'anthropic'
 
 export type ApiProviderPreset = {
   id: string
@@ -658,7 +658,7 @@ export const API_PROVIDER_PRESETS: ApiProviderPreset[] = [
   },
 ]
 
-export const COMMON_TEXT_PROVIDER_IDS = ['deepseek', 'ollama', 'openai', 'custom'] as const
+const COMMON_TEXT_PROVIDER_IDS = ['deepseek', 'ollama', 'openai', 'custom'] as const
 
 // The providers that get a brand-new user to a working chat fastest, in
 // recommended try-order. Surfaced first in the first-run provider picker so
@@ -828,17 +828,8 @@ export function getTextProviderCatalogOptions(
   return includeSelectedTextProvider(scopedProviders, selectedProviderId)
 }
 
-export function getApiProviderRuntimeMeta(providerId: string) {
-  const preset = getApiProviderPreset(providerId)
-  return { requiresApiKey: preset.requiresApiKey, protocol: preset.protocol }
-}
-
 export function apiProviderRequiresApiKey(providerId: string) {
   return getApiProviderPreset(providerId).requiresApiKey
-}
-
-export function getApiProviderProtocol(providerId: string): ApiProviderProtocol {
-  return getApiProviderPreset(providerId).protocol
 }
 
 export function inferApiProviderId(baseUrl: string, model?: string) {

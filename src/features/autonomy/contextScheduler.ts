@@ -1,5 +1,4 @@
 import type {
-  AutonomousAction,
   ContextTriggerCondition,
   ContextTriggeredTask,
   FocusState,
@@ -140,37 +139,4 @@ export function markTaskTriggered(
   now: Date = new Date(),
 ): ContextTriggeredTask {
   return { ...task, lastTriggeredAt: now.toISOString() }
-}
-
-// ── Task factory ──────────────────────────────────────────────────────────────
-
-export function createContextTriggeredTask(input: {
-  name: string
-  condition: ContextTriggerCondition
-  action: AutonomousAction
-  cooldownMinutes?: number
-}): ContextTriggeredTask {
-  // Validate regex pattern at creation time to catch errors early
-  if (input.condition.kind === 'clipboard_changed' && input.condition.pattern) {
-    if (input.condition.pattern.length > 200) {
-      throw new Error(`Regex pattern too long (max 200 chars): ${input.condition.pattern.slice(0, 40)}...`)
-    }
-    if (/(\+\)\+|\*\)\*|\+\}\+|\*\}\*)/.test(input.condition.pattern)) {
-      throw new Error(`Regex pattern contains potentially catastrophic backtracking constructs: ${input.condition.pattern.slice(0, 40)}`)
-    }
-    try {
-      new RegExp(input.condition.pattern, 'i')
-    } catch {
-      throw new Error(`Invalid regex pattern: ${input.condition.pattern}`)
-    }
-  }
-
-  return {
-    id: crypto.randomUUID().slice(0, 8),
-    name: input.name,
-    condition: input.condition,
-    action: input.action,
-    enabled: true,
-    cooldownMinutes: input.cooldownMinutes ?? 30,
-  }
 }

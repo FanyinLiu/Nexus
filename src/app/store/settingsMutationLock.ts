@@ -1,4 +1,4 @@
-export const SETTINGS_MUTATION_LOCK_NAME = 'nexus:settings:mutation'
+const SETTINGS_MUTATION_LOCK_NAME = 'nexus:settings:mutation'
 
 export type SettingsMutationLock = <T>(work: () => Promise<T> | T) => Promise<T>
 

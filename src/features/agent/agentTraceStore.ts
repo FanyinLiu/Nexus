@@ -17,7 +17,7 @@ export type AgentTrace = {
   planId?: string
 }
 
-export type AgentTraceListener = (traces: AgentTrace[]) => void
+type AgentTraceListener = (traces: AgentTrace[]) => void
 
 const MAX_TRACES = 20
 const AGENT_STEP_TYPES = new Set<AgentStepType>([

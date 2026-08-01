@@ -292,10 +292,6 @@ export function resolveCompanionActivityState(input: CompanionActivityInput): Co
   }
 }
 
-export function getCompanionActivityStatusKey(phase: CompanionActivityPhase): TranslationKey {
-  return COMPANION_ACTIVITY_METADATA[phase].statusKey
-}
-
 export function getCompanionActivityDisplayActionStatusKey(
   action: CompanionActivityDisplayAction,
 ): TranslationKey {

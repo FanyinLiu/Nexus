@@ -21,7 +21,7 @@ export type SenseVoiceStreamCallbacks = {
   onError?: (message: string) => void
 }
 
-export type SenseVoiceStreamStopResult = {
+type SenseVoiceStreamStopResult = {
   text: string
   audioSamples: Float32Array | null
   sampleRate: number

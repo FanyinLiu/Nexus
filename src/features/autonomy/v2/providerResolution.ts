@@ -23,7 +23,6 @@ import type { GuardrailStrictness } from './personaGuardrail.ts'
 // AutonomySettings inlines these unions under the field name; re-export
 // for orchestrator + tick-loop consumers that want to pass values around.
 export type AutonomyLevelV2 = AppSettings['autonomyLevelV2']
-export type AutonomyPersonaStrictnessV2 = AppSettings['autonomyPersonaStrictnessV2']
 
 export interface AutonomyV2ResolvedConfig {
   /**

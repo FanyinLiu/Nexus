@@ -20,15 +20,6 @@ export type AuthProfileSnapshot = {
 
 export type ModelTier = 'cheap' | 'standard' | 'heavy'
 
-export type ModelDescriptor = {
-  providerId: ProviderId
-  modelId: string
-  tier: ModelTier
-  supportsTools: boolean
-  supportsVision: boolean
-  contextWindow: number
-}
-
 export type RoutingRequest = {
   userMessage: string
   historyLength: number

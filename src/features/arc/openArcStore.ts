@@ -23,7 +23,7 @@ import {
   writeJson,
 } from '../../lib/storage/core.ts'
 
-export type OpenArcStatus = 'open' | 'resolved' | 'dropped'
+type OpenArcStatus = 'open' | 'resolved' | 'dropped'
 
 export interface OpenArcRecord {
   id: string
@@ -250,9 +250,4 @@ export function autoDropExpiredArcs(now: Date = new Date()): OpenArcRecord[] {
   }
   if (changed) persist(all)
   return dropped
-}
-
-/** Test-only reset. */
-export function __resetOpenArcs(): void {
-  writeJson(OPEN_ARC_STORE_STORAGE_KEY, [])
 }

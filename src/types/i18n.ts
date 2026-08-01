@@ -851,7 +851,7 @@ export type TranslationKey =
   | 'settings.home.group.privacy_safety_hint'
   | 'settings.home.group.about_diagnostics'
   | 'settings.home.group.about_diagnostics_hint'
-export type TranslationPrimitive = string | number | boolean | null | undefined
+type TranslationPrimitive = string | number | boolean | null | undefined
 
 export type TranslationParams = Record<string, TranslationPrimitive>
 

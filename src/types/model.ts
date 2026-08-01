@@ -9,7 +9,7 @@ export interface ModelCapability {
   requiresApiKey: boolean
 }
 
-export type DiscoveredModelSource = 'preset' | 'ollama' | 'custom'
+type DiscoveredModelSource = 'preset' | 'ollama' | 'custom'
 
 export interface DiscoveredModel {
   id: string

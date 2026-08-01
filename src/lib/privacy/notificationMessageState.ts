@@ -1,7 +1,7 @@
 import type { NotificationMessage } from '../../types'
 import { sanitizeNotificationMessagesForStorage } from './notificationPrivacy.ts'
 
-export const MAX_STORED_NOTIFICATION_MESSAGES = 50
+const MAX_STORED_NOTIFICATION_MESSAGES = 50
 
 function isNotificationMessage(value: unknown): value is NotificationMessage {
   if (typeof value !== 'object' || value === null) return false

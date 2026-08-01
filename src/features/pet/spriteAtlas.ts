@@ -197,7 +197,7 @@ function mapExpressionSlotToState(slot?: PetExpressionSlot): SpritePetAnimationS
   }
 }
 
-export function mapPetMoodToSpriteState(mood: PetMood): SpritePetAnimationState {
+function mapPetMoodToSpriteState(mood: PetMood): SpritePetAnimationState {
   switch (mood) {
     case 'thinking':
     case 'curious':

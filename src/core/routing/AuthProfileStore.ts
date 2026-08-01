@@ -37,7 +37,7 @@ export function isHttpHeaderSafeCredential(value: unknown): boolean {
   return credential.length > 0 && HTTP_HEADER_SAFE_CREDENTIAL_PATTERN.test(credential)
 }
 
-export function formatUnsafeCredentialError(label = 'API key'): string {
+function formatUnsafeCredentialError(label = 'API key'): string {
   return `${label} must not contain spaces, newlines, Chinese text, or other characters that cannot be sent in an HTTP header.`
 }
 

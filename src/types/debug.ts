@@ -1,6 +1,6 @@
 export type DebugConsoleEventSource = 'voice' | 'reminder' | 'scheduler' | 'tool' | 'system' | 'autonomy'
 
-export type DebugConsoleEventTone = 'info' | 'success' | 'warning' | 'error'
+type DebugConsoleEventTone = 'info' | 'success' | 'warning' | 'error'
 
 export interface DebugConsoleEvent {
   id: string

@@ -8,7 +8,7 @@
 import type { PetPerformanceAccent, PetPerformanceCue } from '../../performance.ts'
 import { clamp } from '../../../../lib/common.ts'
 
-export const PERFORMANCE_ACCENT_WINDOW_MS = 1_150
+const PERFORMANCE_ACCENT_WINDOW_MS = 1_150
 
 export function resolvePerformanceAccentWindowMs(performanceCue: PetPerformanceCue | null) {
   if (!performanceCue) return PERFORMANCE_ACCENT_WINDOW_MS

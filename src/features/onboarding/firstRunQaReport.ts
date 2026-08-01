@@ -3,12 +3,12 @@ import { FIRST_CONVERSATION_TARGET_MINUTES } from './companionReadiness.ts'
 import type { FirstConversationTelemetryStatus } from './firstConversationTelemetry.ts'
 import type { StartupStatusItem, StartupStatusSummary } from './startupStatusView.ts'
 
-export type FirstRunQaReportTranslator = (
+type FirstRunQaReportTranslator = (
   key: TranslationKey,
   params?: TranslationParams,
 ) => string
 
-export type FirstRunQaReportItem = {
+type FirstRunQaReportItem = {
   id: StartupStatusItem['id']
   status: StartupStatusItem['status']
   labelKey: TranslationKey

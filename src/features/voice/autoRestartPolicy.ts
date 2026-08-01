@@ -29,7 +29,7 @@ export const AutoRestartDecisionReasons = {
   OK: 'ok',
 } as const
 
-export type AutoRestartDecisionReason =
+type AutoRestartDecisionReason =
   (typeof AutoRestartDecisionReasons)[keyof typeof AutoRestartDecisionReasons]
 
 export const RestartGuardBlockers = {
@@ -40,7 +40,7 @@ export const RestartGuardBlockers = {
   VOICE_SPEAKING: 'voice_speaking',
 } as const
 
-export type RestartGuardBlocker =
+type RestartGuardBlocker =
   (typeof RestartGuardBlockers)[keyof typeof RestartGuardBlockers]
 
 // ── Inputs ─────────────────────────────────────────────────────────────────

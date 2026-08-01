@@ -4,7 +4,7 @@ import {
 } from '../../lib/storage/onboarding.ts'
 import { FIRST_CONVERSATION_TARGET_MINUTES } from './companionReadiness.ts'
 
-export const FIRST_CONVERSATION_TARGET_MS = FIRST_CONVERSATION_TARGET_MINUTES * 60 * 1000
+const FIRST_CONVERSATION_TARGET_MS = FIRST_CONVERSATION_TARGET_MINUTES * 60 * 1000
 
 export type FirstConversationTelemetry = {
   completedAt: string

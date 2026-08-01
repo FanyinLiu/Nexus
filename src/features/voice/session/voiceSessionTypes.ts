@@ -63,7 +63,7 @@ export const VoiceSessionStates = {
   ERROR: 'error',
 } as const
 
-export type VoiceSessionStateKey = keyof typeof VoiceSessionStates
+type VoiceSessionStateKey = keyof typeof VoiceSessionStates
 export type VoiceSessionStateName = (typeof VoiceSessionStates)[VoiceSessionStateKey]
 
 // ── Session state object ───────────────────────────────────────────────────

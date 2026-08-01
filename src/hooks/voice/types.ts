@@ -4,11 +4,6 @@ import type {
   PetMood,
   TtsStreamEvent,
   VoiceEmotionLabel,
-  VoiceTraceEntry,
-  VoicePipelineState,
-  VoiceState,
-  SpeechLevelSource,
-  WakewordRuntimeState,
   WindowView,
 } from '../../types'
 import type { VoiceActivityDetector } from '../../features/hearing/browserVad.ts'
@@ -133,16 +128,6 @@ export type UseVoiceContext = {
    * emotion state — is created after useVoice.
    */
   getEmotionSnapshot?: () => EmotionState | undefined
-}
-
-export type UseVoiceSnapshot = {
-  voiceState: VoiceState
-  continuousVoiceActive: boolean
-  liveTranscript: string
-  speechLevelSource: SpeechLevelSource
-  wakewordState: WakewordRuntimeState
-  voicePipeline: VoicePipelineState
-  voiceTrace: VoiceTraceEntry[]
 }
 
 export type VoiceStreamEvent = TtsStreamEvent

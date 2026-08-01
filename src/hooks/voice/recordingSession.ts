@@ -7,14 +7,14 @@ import {
 import { createAdaptiveRmsGate } from './support'
 import type { ApiRecordingSession } from './types'
 
-export type RecordingSessionSpeechEvent = {
+type RecordingSessionSpeechEvent = {
   firstDetectedSpeech: boolean
   now: number
   rms: number
   session: ApiRecordingSession
 }
 
-export type RecordingSessionStopEvent = {
+type RecordingSessionStopEvent = {
   audioBlob: Blob
   session: ApiRecordingSession
 }

@@ -1,6 +1,6 @@
 export type InspectableIntegrationModuleId = 'mcp' | 'minecraft' | 'factorio' | 'telegram' | 'discord'
 
-export type IntegrationRuntimeStatus =
+type IntegrationRuntimeStatus =
   | 'disabled'
   | 'unconfigured'
   | 'configured'
@@ -19,7 +19,7 @@ export interface IntegrationInspectRequest {
   factorioUsername: string
 }
 
-export interface IntegrationEndpointProbe {
+interface IntegrationEndpointProbe {
   host: string
   port: number
   ok: boolean

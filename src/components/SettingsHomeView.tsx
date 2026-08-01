@@ -28,7 +28,7 @@ export type SettingsHomeCardViewModel = {
   trustGroup: SettingsTrustSurfaceGroupId
 }
 
-export type SettingsHomeGroupViewModel = {
+type SettingsHomeGroupViewModel = {
   id: SettingsHomeGroupId
   titleKey: TranslationKey
   hintKey: TranslationKey

@@ -17,7 +17,7 @@ function normalizeFallback(value: string | undefined, fallback: string): string 
   return normalized || fallback
 }
 
-export function getLocalMessagingAnnouncementSettings(
+function getLocalMessagingAnnouncementSettings(
   settings: LocalMessagingAnnouncementSettings,
 ): MessagingAnnouncementSettings {
   return {

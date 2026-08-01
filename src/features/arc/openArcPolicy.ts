@@ -14,7 +14,7 @@
 
 import type { OpenArcRecord } from './openArcStore.ts'
 
-export type CheckInDecisionReason =
+type CheckInDecisionReason =
   | 'fire'
   | 'no-arcs'
   | 'quiet-hours'

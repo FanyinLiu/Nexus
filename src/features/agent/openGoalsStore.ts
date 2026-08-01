@@ -8,9 +8,9 @@ import { planStore } from '../plan/planStore.ts'
 import { t } from '../../i18n/runtime.ts'
 import type { AgentStopReason } from './types'
 
-export type OpenGoalStatus = 'paused' | 'aborted'
+type OpenGoalStatus = 'paused' | 'aborted'
 
-export type OpenGoal = {
+type OpenGoal = {
   id: string
   goal: string
   status: OpenGoalStatus
@@ -24,7 +24,7 @@ export type OpenGoal = {
   nudgeCount: number
 }
 
-export type OpenGoalListener = (goals: OpenGoal[]) => void
+type OpenGoalListener = (goals: OpenGoal[]) => void
 
 const NUDGE_BACKOFF_MS = 30 * 60 * 1000
 const MAX_NUDGES_PER_GOAL = 3

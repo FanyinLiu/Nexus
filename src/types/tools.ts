@@ -13,32 +13,6 @@ export type WebSearchProviderId =
 
 export type ToolPermissionLevel = 'safe' | 'confirm' | 'restricted'
 
-export type TaskRunStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled'
-
-export interface TaskRunLogStep {
-  id: string
-  label: string
-  toolId?: string
-  permissionLevel: ToolPermissionLevel
-  status: TaskRunStatus
-  startedAt?: string
-  finishedAt?: string
-  message?: string
-  reversible?: boolean
-  confirmedAt?: string
-}
-
-export interface TaskRunLog {
-  id: string
-  goal: string
-  status: TaskRunStatus
-  steps: TaskRunLogStep[]
-  createdAt: string
-  updatedAt: string
-  resultSummary?: string
-  failureReason?: string
-}
-
 export interface WebSearchRequest {
   query: string
   limit?: number
@@ -69,7 +43,7 @@ export interface WebSearchResultItem {
   contentPreview?: string
 }
 
-export type WebSearchDisplayMode = 'lyrics' | 'answer' | 'search_list'
+type WebSearchDisplayMode = 'lyrics' | 'answer' | 'search_list'
 
 export interface WebSearchDisplaySource {
   title: string
@@ -95,7 +69,7 @@ export interface WebSearchDisplay {
   sources?: WebSearchDisplaySource[]
 }
 
-export interface WebSearchProviderTraceEntry {
+interface WebSearchProviderTraceEntry {
   providerId: string
   providerLabel: string
   status: 'ok' | 'empty' | 'error'

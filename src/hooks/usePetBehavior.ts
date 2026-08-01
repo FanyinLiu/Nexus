@@ -55,8 +55,6 @@ type UsePetBehaviorContext = {
   view: WindowView
 }
 
-export { getDefaultPetStatusText }
-
 export function usePetBehavior(ctx: UsePetBehaviorContext) {
   const [mood, setMood] = useState<PetMood>(() => loadPetRuntimeState().mood)
   const [gazeTarget, setGazeTarget] = useState<{ x: number; y: number }>({ x: 0, y: 0 })

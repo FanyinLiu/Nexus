@@ -12,7 +12,7 @@ export type MemoryEntry = {
   updatedAt: number
 }
 
-export type MemoryBackend = {
+type MemoryBackend = {
   write(entry: Omit<MemoryEntry, 'id' | 'createdAt' | 'updatedAt'>): Promise<MemoryEntry>
   read(scope: MemoryScope, ownerId: string, key: string): Promise<MemoryEntry | undefined>
   search(query: string, options?: {

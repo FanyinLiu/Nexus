@@ -130,11 +130,3 @@ export function consumeCallback(memoryId: string): void {
   if (next.length === existing.length) return
   persist(next)
 }
-
-/**
- * Clear all pending callbacks. Used when the user resets state or the
- * persona changes.
- */
-export function clearCallbackQueue(): void {
-  persist([])
-}

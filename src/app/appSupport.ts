@@ -131,7 +131,7 @@ export function getImage4StatePreviewSync(): string | null {
     : null
 }
 
-export function getTimeGreeting(ti: Translator): string {
+function getTimeGreeting(ti: Translator): string {
   const hour = new Date().getHours()
 
   if (hour < 5) return ti('time_greeting.deep_night')
@@ -139,28 +139,6 @@ export function getTimeGreeting(ti: Translator): string {
   if (hour < 14) return ti('time_greeting.noon')
   if (hour < 18) return ti('time_greeting.afternoon')
   return ti('time_greeting.evening')
-}
-
-/**
- * Decorative emoji that pairs with the current time-greeting. Rendered
- * only in visual UI (welcome panel) — never concatenated into copy that
- * could end up in TTS, since "☀️" gets read as "sun emoji" by some
- * speech engines.
- */
-export function getTimeGreetingEmoji(date = new Date()): string {
-  const hour = date.getHours()
-  if (hour < 5) return '🌙'
-  if (hour < 11) return '☀️'
-  if (hour < 14) return '🌤️'
-  if (hour < 18) return '⛅'
-  if (hour < 22) return '🌇'
-  return '🌃'
-}
-
-export function getLiveTranscriptLabel(voiceState: VoiceState, ti: Translator): string {
-  return voiceState === 'listening'
-    ? ti('live_transcript.recognizing')
-    : ti('live_transcript.result')
 }
 
 export function buildStartupGreetingText(

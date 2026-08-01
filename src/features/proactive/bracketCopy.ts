@@ -277,7 +277,7 @@ export function pickFromPool(
 
 // ── Last-pick tracking ───────────────────────────────────────────────────
 
-export type BracketLastPicks = {
+type BracketLastPicks = {
   morning?: number | null
   highlight?: number | null
   stressful?: number | null

@@ -1,6 +1,6 @@
 export type SkillId = string
 
-export type SkillTrigger = {
+type SkillTrigger = {
   keywords?: string[]
   intents?: string[]
   channels?: string[]
@@ -8,7 +8,7 @@ export type SkillTrigger = {
   hasToolCalls?: boolean
 }
 
-export type SkillStatus = 'draft' | 'active' | 'deprecated'
+type SkillStatus = 'draft' | 'active' | 'deprecated'
 
 export type Skill = {
   id: SkillId
@@ -37,12 +37,4 @@ export type SkillMatchResult = {
   skill: Skill
   score: number
   reasons: string[]
-}
-
-export type SkillOutcomeSignal = {
-  skillId: SkillId
-  success: boolean
-  reason?: string
-  conversationId?: string
-  timestamp?: number
 }

@@ -9,7 +9,7 @@ export type BackgroundChatInput = {
 
 export type BackgroundChatFailureKind = 'auth' | 'transient'
 
-export type BackgroundChatGateReason =
+type BackgroundChatGateReason =
   | 'ready'
   | 'invalid_config'
   | 'missing_api_key'

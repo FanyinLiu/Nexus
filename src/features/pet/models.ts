@@ -162,7 +162,6 @@ export const DEFAULT_PET_MODEL_ID = 'mao'
 // Gesture names surfaced to the LLM via system prompt. Per-model coverage
 // lives in motionGroups.gestures; unknown names fall through to no-op.
 export const PUBLIC_GESTURE_NAMES = ['wave', 'nod', 'shake', 'tilt', 'point'] as const
-export type PublicGestureName = (typeof PUBLIC_GESTURE_NAMES)[number]
 
 export const PET_MODEL_PRESETS: PetModelDefinition[] = [
   {

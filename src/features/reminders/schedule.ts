@@ -253,7 +253,7 @@ export function refreshReminderTask(task: ReminderTask, from = new Date()) {
   }
 }
 
-export function createReminderTask(
+function createReminderTask(
   createId: (prefix: string) => string,
   input: ReminderTaskDraftInput,
   now = new Date(),

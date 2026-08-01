@@ -53,10 +53,6 @@ export function normalizeUiLanguage(value: unknown): UiLanguage {
   return normalizeLocale(value) as UiLanguage
 }
 
-export function isChineseUiLanguage(language: UiLanguage) {
-  return language === 'zh-CN' || language === 'zh-TW'
-}
-
 export function resolveLocalizedText(language: UiLanguage, copy: LocalizedText) {
   const normalized = normalizeUiLanguage(language)
 
@@ -73,10 +69,6 @@ export function resolveLocalizedText(language: UiLanguage, copy: LocalizedText) 
     default:
       return copy['zh-CN']
   }
-}
-
-export function pickUiText(language: UiLanguage, zhCN: string, enUS: string) {
-  return isChineseUiLanguage(normalizeUiLanguage(language)) ? zhCN : enUS
 }
 
 export function pickTranslatedUiText(

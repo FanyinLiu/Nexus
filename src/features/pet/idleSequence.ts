@@ -15,7 +15,7 @@ import type { PetPerformanceCue, PetPerformancePlan } from './performance.ts'
 import type { IdleFidgetDefinition } from './models.ts'
 import { createId } from '../../lib/storage.ts'
 
-export const IDLE_TICK_MS = 3_000
+const IDLE_TICK_MS = 3_000
 /** Per-tick probability that we actually emit a fidget. Keeps the pet quiet
  *  most of the time — too-frequent motion reads as "busy" instead of "idle".
  */

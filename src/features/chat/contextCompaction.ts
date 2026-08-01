@@ -15,7 +15,7 @@ const SAFETY_MARGIN = 1.2
  * Rough token estimate: 1 CJK char ≈ 2 tokens, 1 English word ≈ 1.3 tokens.
  * Not exact, but sufficient for budget decisions.
  */
-export function estimateTokenCount(text: string): number {
+function estimateTokenCount(text: string): number {
   const cjkPattern = /[\u3400-\u9fff\uf900-\ufaff]/g
   const cjkChars = (text.match(cjkPattern) || []).length
   const nonCjkText = text.replace(cjkPattern, '')
@@ -36,7 +36,7 @@ export function getMessageText(content: ChatMessageContent): string {
     .join(' ')
 }
 
-export function estimateMessagesTokenCount(
+function estimateMessagesTokenCount(
   messages: Array<{ role: string; content: ChatMessageContent }>,
 ): number {
   return messages.reduce((sum, msg) => sum + estimateTokenCount(getMessageText(msg.content)) + 4, 0)
@@ -216,7 +216,7 @@ export function compactMessagesForRequest(
  * Generate a summary of older conversation messages using the LLM.
  * Returns the summary text to prepend as a system message.
  */
-export function buildCompactionSummaryPrompt(olderConversationText: string): Array<{ role: string; content: string }> {
+function buildCompactionSummaryPrompt(olderConversationText: string): Array<{ role: string; content: string }> {
   return [
     { role: 'system', content: COMPACTION_SYSTEM_PROMPT },
     { role: 'user', content: olderConversationText },

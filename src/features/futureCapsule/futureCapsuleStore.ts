@@ -21,7 +21,7 @@ import {
   writeJson,
 } from '../../lib/storage/core.ts'
 
-export type FutureCapsuleStatus = 'pending' | 'delivered'
+type FutureCapsuleStatus = 'pending' | 'delivered'
 
 export interface FutureCapsuleRecord {
   id: string
@@ -172,22 +172,9 @@ export function markDelivered(id: string, now: Date = new Date()): FutureCapsule
   return updated
 }
 
-export function removeFutureCapsule(id: string): boolean {
-  const all = loadFutureCapsules()
-  const next = all.filter((c) => c.id !== id)
-  if (next.length === all.length) return false
-  persist(next)
-  return true
-}
-
 function formatLocalDate(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
-}
-
-/** Test-only reset. */
-export function __resetFutureCapsules(): void {
-  writeJson(FUTURE_CAPSULE_STORE_STORAGE_KEY, [])
 }

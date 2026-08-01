@@ -72,7 +72,7 @@ const IMPORTANCE_WEIGHTS: Record<MemoryImportance, number> = {
 
 const TIME_DECAY_HALF_LIFE_DAYS = 30
 
-export function computeTimeDecay(memoryTimestamp: string, nowMs = Date.now()) {
+function computeTimeDecay(memoryTimestamp: string, nowMs = Date.now()) {
   const parsed = Date.parse(memoryTimestamp)
   if (Number.isNaN(parsed)) return 1
   const ageMs = nowMs - parsed
@@ -81,7 +81,7 @@ export function computeTimeDecay(memoryTimestamp: string, nowMs = Date.now()) {
   return Math.pow(0.5, ageDays / TIME_DECAY_HALF_LIFE_DAYS)
 }
 
-export function computeMemoryRetentionScore(memory: MemoryItem, nowMs = Date.now()) {
+function computeMemoryRetentionScore(memory: MemoryItem, nowMs = Date.now()) {
   const importance = memory.importance ?? 'normal'
   if (importance === 'pinned') return 1
 
@@ -124,7 +124,7 @@ function inferCategory(content: string): MemoryCategory {
   return 'profile'
 }
 
-export function inferMemoryKind(category: MemoryCategory): MemoryKind {
+function inferMemoryKind(category: MemoryCategory): MemoryKind {
   if (category === 'preference' || category === 'habit') return 'preference'
   if (category === 'goal' || category === 'project' || category === 'reference') return 'fact'
   if (category === 'feedback' || category === 'manual') return 'relationship'

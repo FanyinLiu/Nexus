@@ -7,7 +7,7 @@
  * no few-shot examples, global voice defaults, etc.).
  */
 
-export interface PersonaStyle {
+interface PersonaStyle {
   /** Phrases the character is known to say. Positive anchor for the guardrail. */
   signaturePhrases?: string[]
   /** Phrases the character is NOT allowed to say. Hard negative anchor. */
@@ -16,7 +16,7 @@ export interface PersonaStyle {
   toneTags?: string[]
 }
 
-export interface PersonaFewShotExample {
+interface PersonaFewShotExample {
   user: string
   assistant: string
 }
@@ -26,7 +26,7 @@ export interface PersonaFewShotExample {
  * global speechOutput* settings, so a persona can override just the voice
  * without also overriding the provider/model.
  */
-export interface PersonaVoice {
+interface PersonaVoice {
   providerId?: string
   voice?: string
   model?: string
@@ -39,7 +39,7 @@ export interface PersonaVoice {
  * global tool settings; explicit allowlist wins over blocklist when both
  * are specified.
  */
-export interface PersonaTools {
+interface PersonaTools {
   allowlist?: string[]
   blocklist?: string[]
 }

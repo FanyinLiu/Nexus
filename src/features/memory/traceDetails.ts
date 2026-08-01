@@ -6,9 +6,9 @@ import type {
   MemoryItem,
 } from '../../types'
 
-export type ChatMemoryTraceDetailStatus = 'available' | 'missing'
+type ChatMemoryTraceDetailStatus = 'available' | 'missing'
 
-export type ChatMemoryTraceDetailKind = 'long_term' | 'daily' | 'semantic'
+type ChatMemoryTraceDetailKind = 'long_term' | 'daily' | 'semantic'
 
 export type ChatMemoryTraceDetailItem = {
   id: string

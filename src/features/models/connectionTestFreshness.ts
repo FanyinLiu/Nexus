@@ -5,7 +5,7 @@ import type {
 } from '../../types'
 
 export const DEFAULT_CONNECTION_RESULT_TTL_MS = 10 * 60 * 1000
-export const CONNECTION_CLOCK_SKEW_TOLERANCE_MS = 30 * 1000
+const CONNECTION_CLOCK_SKEW_TOLERANCE_MS = 30 * 1000
 // Leave headroom for the +25 ms used by renderer expiry timers while staying
 // below the browser's signed 32-bit setTimeout ceiling.
 export const MAX_CONNECTION_EXPIRY_DELAY_MS = 2_147_000_000
@@ -16,7 +16,7 @@ export type ConnectionResultFreshness =
   | 'time-stale'
   | 'unverified'
 
-export type ConnectionTestResultTone =
+type ConnectionTestResultTone =
   | 'none'
   | 'loading'
   | 'success'
@@ -148,7 +148,7 @@ export function getNextConnectionResultExpiryMs(
  * is still an error. Config change, TTL expiry, and future-dated clocks still
  * neutralize the card so old failures cannot outlive the config they tested.
  */
-export function getConnectionFailureFreshness(
+function getConnectionFailureFreshness(
   result: { checkedAt?: string },
   fingerprintMatches: boolean,
   now = new Date(),

@@ -53,7 +53,7 @@ function withFallbackDreamLogLock<T>(work: () => Promise<T> | T): Promise<T> {
   return previous.then(work).finally(release)
 }
 
-export const withDreamLogMutationLock: DreamLogLock = <T>(work: () => Promise<T> | T) => {
+const withDreamLogMutationLock: DreamLogLock = <T>(work: () => Promise<T> | T) => {
   const lockManager = typeof navigator !== 'undefined'
     ? (navigator as NavigatorWithLocks).locks
     : undefined

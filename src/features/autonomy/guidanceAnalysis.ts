@@ -27,7 +27,7 @@ const HOUR_MS = 60 * 60 * 1000
 const DEFAULT_WINDOW_HOURS = 24
 const DEFAULT_MIN_FIRES = 3
 
-export interface GuidanceKindReport {
+interface GuidanceKindReport {
   kind: GuidanceKind
   /** How many times this kind fired inside the analysis window. */
   fireCount: number

@@ -122,22 +122,3 @@ export function recordSttUsage(input: {
   })
 }
 
-export function recordEmbeddingUsage(input: {
-  providerId: string
-  modelId: string
-  tokens: number
-}): void {
-  if (!input.tokens) return
-  // OpenAI text-embedding-3-small rate as a conservative default.
-  const ratePerMillion = 0.1
-  const costUsd = (input.tokens / 1_000_000) * ratePerMillion
-  const modelId = normalizeMeteringId(input.modelId) || normalizeMeteringId(input.providerId) || 'embedding'
-  recordAuxiliaryUsage({
-    kind: 'embedding',
-    providerId: input.providerId,
-    modelId,
-    fallbackModelId: 'embedding',
-    units: input.tokens,
-    costUsd,
-  })
-}

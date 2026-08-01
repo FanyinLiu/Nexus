@@ -2,9 +2,9 @@ import type { TranslationKey } from '../../types'
 
 export type CompanionReadinessStatus = 'ready' | 'warning' | 'blocked'
 
-export type CompanionReadinessItemId = 'identity' | 'text' | 'pet' | 'voice'
+type CompanionReadinessItemId = 'identity' | 'text' | 'pet' | 'voice'
 
-export type CompanionReadinessItem = {
+type CompanionReadinessItem = {
   id: CompanionReadinessItemId
   status: CompanionReadinessStatus
   messageKey: TranslationKey

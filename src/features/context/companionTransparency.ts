@@ -15,17 +15,17 @@ import {
 } from './companionTimeLanguage.ts'
 import type { TranslationKey, TranslationParams } from '../../types/i18n.ts'
 
-export type CompanionTransparencyStatus =
+type CompanionTransparencyStatus =
   | 'off'
   | 'paused'
   | 'watching_for_away_activity'
   | 'summarizing_quietly'
 
-export type CompanionModelReachBlockedReason = 'off' | 'paused' | 'no_observation' | null
-export type CompanionClearUnavailableReason = 'off' | 'paused' | 'no_summary' | null
-export type CompanionStorageTtlKind = 'none' | 'session_short_lived'
-export type CompanionCheckInTransparencyState = 'not_evaluated' | 'silent' | 'eligible'
-export type CompanionCheckInTransparencyGuard =
+type CompanionModelReachBlockedReason = 'off' | 'paused' | 'no_observation' | null
+type CompanionClearUnavailableReason = 'off' | 'paused' | 'no_summary' | null
+type CompanionStorageTtlKind = 'none' | 'session_short_lived'
+type CompanionCheckInTransparencyState = 'not_evaluated' | 'silent' | 'eligible'
+type CompanionCheckInTransparencyGuard =
   | 'not_evaluated'
   | 'settings'
   | 'time_quality'
@@ -49,7 +49,7 @@ export type CompanionCheckInTransparency = {
   rawContentVisible: false
 }
 
-export type CompanionCheckInTransparencyView = {
+type CompanionCheckInTransparencyView = {
   state: CompanionCheckInTransparencyState
   labelKey: TranslationKey
   statusKey: TranslationKey
@@ -57,7 +57,7 @@ export type CompanionCheckInTransparencyView = {
   rawContentVisible: false
 }
 
-export type CompanionRecentSummaryView = {
+type CompanionRecentSummaryView = {
   state: 'empty' | 'present'
   labelKey: TranslationKey
   statusKey: TranslationKey
@@ -67,7 +67,7 @@ export type CompanionRecentSummaryView = {
   rawContentVisible: false
 }
 
-export type CompanionPrivacyBoundaryView = {
+type CompanionPrivacyBoundaryView = {
   labelKey: TranslationKey
   bodyKey: TranslationKey
   rawContentVisible: false
@@ -93,13 +93,13 @@ export type CompanionTransparencySummary = {
   rawContentVisible: false
 }
 
-export type CompanionTransparencyDetailRow = {
+type CompanionTransparencyDetailRow = {
   id: 'observes' | 'reaches_model' | 'stores'
   labelKey: TranslationKey
   bodyKey: TranslationKey
 }
 
-export type CompanionTransparencyActionView = {
+type CompanionTransparencyActionView = {
   id: 'clear_recent_summary'
   enabled: boolean
   labelKey: TranslationKey

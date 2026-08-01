@@ -20,7 +20,6 @@ export {
 } from './frames.ts'
 export type {
   Frame,
-  FrameBase,
   StartFrame,
   TextDeltaFrame,
   TextSentenceFrame,

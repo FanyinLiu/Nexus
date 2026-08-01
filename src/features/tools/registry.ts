@@ -5,7 +5,7 @@ import { resolveWeatherLocationFallback, rewriteSearchQuery } from './queryRewri
 import { resolveWebSearchApiKey } from '../../lib/webSearchProviders.ts'
 import type { BuiltInToolPolicy, BuiltInToolResult, MatchedBuiltInTool } from './toolTypes'
 
-export { extractLikelyWeatherLocation, extractSearchQuery, normalizeToolText } from './extractors.ts'
+export { extractLikelyWeatherLocation, extractSearchQuery } from './extractors.ts'
 
 function formatWebSearchSystemMessage(result: WebSearchResponse) {
   return t('tools.call_done.web_search', { query: result.query })

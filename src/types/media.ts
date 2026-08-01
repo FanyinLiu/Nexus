@@ -1,4 +1,4 @@
-export interface MediaSessionPlaybackSupport {
+interface MediaSessionPlaybackSupport {
   play: boolean
   pause: boolean
   toggle: boolean

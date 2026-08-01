@@ -34,7 +34,7 @@ export const FOLLOW_UP_DAILY_CAP = 2
 
 // ── Pure list operations (injectable clock, fully unit-testable) ────────────
 
-export function pruneFollowUps(list: MessageFollowUpEntry[], now: number): MessageFollowUpEntry[] {
+function pruneFollowUps(list: MessageFollowUpEntry[], now: number): MessageFollowUpEntry[] {
   const alive = list.filter((entry) => now - entry.receivedAt <= FOLLOW_UP_MAX_AGE_MS
     // Keep recently-fired entries around briefly so the daily cap can count them.
     || (entry.firedAt !== undefined && now - entry.firedAt <= FOLLOW_UP_MAX_AGE_MS))
@@ -126,7 +126,7 @@ export function loadMessageFollowUps(): MessageFollowUpEntry[] {
   return Array.isArray(stored) ? stored.filter((entry) => entry && typeof entry.conversationKey === 'string') : []
 }
 
-export function saveMessageFollowUps(list: MessageFollowUpEntry[]): void {
+function saveMessageFollowUps(list: MessageFollowUpEntry[]): void {
   writeJson(STORE_KEY, list)
 }
 

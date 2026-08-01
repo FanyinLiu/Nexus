@@ -56,7 +56,7 @@ function hasChanged(normalized: unknown, raw: unknown): boolean {
   return JSON.stringify(normalized) !== JSON.stringify(raw)
 }
 
-export function normalizeDisclosureState(raw: unknown): DisclosureState {
+function normalizeDisclosureState(raw: unknown): DisclosureState {
   if (!isObject(raw)) return DEFAULT_STATE
 
   const acknowledgedAt = normalizeIso(raw.acknowledgedAt)

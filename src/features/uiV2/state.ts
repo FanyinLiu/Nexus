@@ -11,7 +11,7 @@ export type CompanionSurfacePhase =
   | 'error'
   | 'offline'
 
-export const COMPANION_DONE_DURATION_MS = 550
+const COMPANION_DONE_DURATION_MS = 550
 
 export type CompanionSurfaceStateInput = {
   voiceState: VoiceState

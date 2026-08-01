@@ -10,7 +10,7 @@ export type VoiceSessionTransport =
   | 'local_sensevoice'
   | 'local_paraformer'
 
-export type VoiceSessionCloseReason =
+type VoiceSessionCloseReason =
   | 'completed'
   | 'aborted'
   | 'interrupted'

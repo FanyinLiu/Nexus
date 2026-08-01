@@ -11,7 +11,7 @@ import type { AppSettings, DailyMemoryEntry, DebugConsoleEvent, MemoryItem, UiLa
 
 export type SettingsSectionDescriptionMap = Record<SettingsSectionId, string>
 
-export type SettingsSectionMetaEntry = {
+type SettingsSectionMetaEntry = {
   eyebrow: string
   glyph: SettingsCardIconKey
   description: string
@@ -60,7 +60,7 @@ export type BuildSettingsSectionMetaInput = {
   clickThroughEnabled: boolean
 }
 
-export function buildSettingsSectionDescriptions(ti: Translator): SettingsSectionDescriptionMap {
+function buildSettingsSectionDescriptions(ti: Translator): SettingsSectionDescriptionMap {
   return {
     console: ti('settings.section_desc.console'),
     model: ti('settings.section_desc.model'),

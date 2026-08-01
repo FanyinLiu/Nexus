@@ -17,7 +17,7 @@ export function getNotificationSourceLabel(message: NotificationMessage): string
   return normalizeLabel(message.sourceName, message.channelName || 'Notification')
 }
 
-export function getNotificationSenderLabel(message: NotificationMessage): string {
+function getNotificationSenderLabel(message: NotificationMessage): string {
   return normalizeLabel(message.sender, message.title || getNotificationSourceLabel(message))
 }
 

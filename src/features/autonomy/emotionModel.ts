@@ -177,7 +177,7 @@ export function userMoodReadToEmotionSignal(mood: UserMoodWord, intensity: numbe
   }
 }
 
-export const LONG_IDLE_THRESHOLD_SECONDS = 600
+const LONG_IDLE_THRESHOLD_SECONDS = 600
 export const LONG_ABSENCE_THRESHOLD_SECONDS = 4 * 60 * 60
 
 export type IdleArcTracker = {

@@ -28,16 +28,16 @@ export interface ErrandWindow {
   endHour: number    // exclusive (local hour 0..23). Wraps when endHour <= startHour.
 }
 
-export const DEFAULT_ERRAND_WINDOW: ErrandWindow = {
+const DEFAULT_ERRAND_WINDOW: ErrandWindow = {
   startHour: 22,
   endHour: 6,
 }
 
 /** Wait this long between successive errand runs even when the queue is full. */
-export const DEFAULT_RUN_COOLDOWN_MS = 15 * 60 * 1000  // 15 min
+const DEFAULT_RUN_COOLDOWN_MS = 15 * 60 * 1000  // 15 min
 
 /** Cap on how many errands can run in a single overnight window. */
-export const DEFAULT_PER_NIGHT_BUDGET = 4
+const DEFAULT_PER_NIGHT_BUDGET = 4
 
 /**
  * Is the given local hour inside `[start, end)`, accounting for windows

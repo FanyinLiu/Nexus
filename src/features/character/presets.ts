@@ -1,7 +1,7 @@
 import type { PetMood, VoiceState } from '../../types'
 import type { TranslationKey } from '../../types/i18n'
 
-export interface CharacterPreset {
+interface CharacterPreset {
   id: string
   themeClassName: string
   heroEyebrow: TranslationKey

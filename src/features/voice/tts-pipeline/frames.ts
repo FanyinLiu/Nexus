@@ -8,7 +8,7 @@
 // drop any frame whose turnId does not match the one they're currently
 // processing.
 
-export type FrameBase = {
+type FrameBase = {
   id: string
   ts: number
   turnId: string

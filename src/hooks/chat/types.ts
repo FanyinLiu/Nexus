@@ -2,19 +2,14 @@ import type { Dispatch, RefObject, SetStateAction } from 'react'
 import type { PetPerformanceCue } from '../../features/pet/performance.ts'
 import type { StreamingSpeechOutputController } from '../voice/types.ts'
 import type {
-  AssistantRuntimeActivity,
   AppSettings,
-  ChatMessage,
-  ChatMessageTone,
   ChatToolResult,
   DailyMemoryEntry,
   DailyMemoryStore,
   DebugConsoleEventDraft,
   DesktopContextSnapshot,
   MemoryItem,
-  PetDialogBubbleState,
   PetMood,
-  PetThoughtBubbleState,
   ReminderTask,
   VoicePipelineState,
   VoiceState,
@@ -187,18 +182,4 @@ export type CompanionNoticePayload = {
   autoHideMs?: number
   toolResult?: ChatToolResult
   shouldResumeContinuousVoice?: boolean
-}
-
-export type UseChatSnapshot = {
-  messages: ChatMessage[]
-  input: string
-  busy: boolean
-  error: string | null
-  petDialogBubble: PetDialogBubbleState | null
-  petThoughtBubble: PetThoughtBubbleState | null
-  assistantActivity: AssistantRuntimeActivity
-}
-
-export type AppendSystemMessageOptions = {
-  tone?: ChatMessageTone
 }

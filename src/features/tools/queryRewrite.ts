@@ -46,12 +46,6 @@ const SEARCH_STOP_WORDS = new Set([
   'bing',
   'google',
 ])
-const WEATHER_RELATIVE_DAY_PATTERNS: Array<{ key: string; pattern: RegExp }> = [
-  { key: 'tomorrow', pattern: /明天/u },
-  { key: 'day_after_tomorrow', pattern: /后天/u },
-  { key: 'today', pattern: /今天|现在|当前/u },
-]
-
 function normalizeWhitespace(text: string) {
   return normalizeIntentText(text)
 }
@@ -168,7 +162,7 @@ function buildCandidateQueries(result: {
   return [...queries].filter(Boolean).slice(0, 6)
 }
 
-export function extractSearchKeywords(text: string) {
+function extractSearchKeywords(text: string) {
   return tokenizeForKeywords(text)
 }
 
@@ -281,11 +275,6 @@ export function rewriteSearchQuery(query: string): SearchQueryRewriteResult {
     hasLyricsFacet: isLyricsQuery,
     isLyricsQuery,
   }
-}
-
-export function extractWeatherRelativeDay(text: string) {
-  const normalized = normalizeWhitespace(text)
-  return WEATHER_RELATIVE_DAY_PATTERNS.find((entry) => entry.pattern.test(normalized))?.key ?? ''
 }
 
 export function resolveWeatherLocationFallback(

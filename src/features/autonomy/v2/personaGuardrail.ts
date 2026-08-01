@@ -33,7 +33,7 @@ import type { LoadedPersona } from './personaTypes.ts'
 
 export type GuardrailStrictness = 'loose' | 'med' | 'strict'
 
-export type GuardrailVerdict = 'pass' | 'fail'
+type GuardrailVerdict = 'pass' | 'fail'
 
 export interface GuardrailOutcome {
   verdict: GuardrailVerdict
