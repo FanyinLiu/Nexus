@@ -1,17 +1,17 @@
 export const DEFAULT_PROVIDER_ID = 'duckduckgo'
-export const DEFAULT_BRAVE_BASE_URL = 'https://api.search.brave.com/res/v1/web/search'
-export const DEFAULT_TAVILY_BASE_URL = 'https://api.tavily.com'
+const DEFAULT_BRAVE_BASE_URL = 'https://api.search.brave.com/res/v1/web/search'
+const DEFAULT_TAVILY_BASE_URL = 'https://api.tavily.com'
 export const DEFAULT_DUCKDUCKGO_HTML_ENDPOINT = 'https://html.duckduckgo.com/html'
-export const DEFAULT_EXA_BASE_URL = 'https://api.exa.ai'
-export const DEFAULT_FIRECRAWL_BASE_URL = 'https://api.firecrawl.dev'
-export const DEFAULT_GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
+const DEFAULT_EXA_BASE_URL = 'https://api.exa.ai'
+const DEFAULT_FIRECRAWL_BASE_URL = 'https://api.firecrawl.dev'
+const DEFAULT_GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 export const DEFAULT_GEMINI_SEARCH_MODEL = 'gemini-2.5-flash'
-export const DEFAULT_PERPLEXITY_BASE_URL = 'https://api.perplexity.ai'
-export const DEFAULT_PERPLEXITY_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
-export const DEFAULT_PERPLEXITY_MODEL = 'perplexity/sonar-pro'
+const DEFAULT_PERPLEXITY_BASE_URL = 'https://api.perplexity.ai'
+const DEFAULT_PERPLEXITY_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
+const DEFAULT_PERPLEXITY_MODEL = 'perplexity/sonar-pro'
 // CN endpoint is the default (matches the first-success provider audience);
 // global users override the base URL to https://api.minimax.io
-export const DEFAULT_MINIMAX_SEARCH_BASE_URL = 'https://api.minimaxi.com'
+const DEFAULT_MINIMAX_SEARCH_BASE_URL = 'https://api.minimaxi.com'
 
 export const WEB_SEARCH_PROVIDER_METADATA = Object.freeze({
   bing: {
@@ -71,7 +71,7 @@ export function normalizeWhitespace(text) {
     .trim()
 }
 
-export function normalizeSearchFacet(value) {
+function normalizeSearchFacet(value) {
   const normalized = normalizeWhitespace(value)
   if (!normalized) return ''
   if (/(?:最新|最近|new|latest)/iu.test(normalized)) return 'latest'
@@ -181,11 +181,11 @@ export function normalizeWebSearchProviderId(value) {
   }
 }
 
-export function normalizeBaseUrl(value) {
+function normalizeBaseUrl(value) {
   return String(value ?? '').trim().replace(/\/+$/u, '')
 }
 
-export function resolveEndpointWithSuffix(baseUrl, defaultBase, suffix = '/search') {
+function resolveEndpointWithSuffix(baseUrl, defaultBase, suffix = '/search') {
   const normalized = normalizeBaseUrl(baseUrl)
   if (!normalized) return `${defaultBase}${suffix}`
   const suffixPattern = new RegExp(`${suffix.replace(/\//g, '\\/')}$`, 'iu')
@@ -386,7 +386,7 @@ export function extractPerplexityCitations(payload) {
   return [...new Set(citations)]
 }
 
-export function decodeHtmlEntities(text) {
+function decodeHtmlEntities(text) {
   return String(text ?? '')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
@@ -404,14 +404,14 @@ export function decodeHtmlEntities(text) {
     .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
 }
 
-export function stripHtml(html) {
+function stripHtml(html) {
   return String(html ?? '')
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }
 
-export function decodeDuckDuckGoUrl(rawUrl) {
+function decodeDuckDuckGoUrl(rawUrl) {
   try {
     const normalized = rawUrl.startsWith('//') ? `https:${rawUrl}` : rawUrl
     const parsed = new URL(normalized)

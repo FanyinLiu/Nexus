@@ -98,20 +98,3 @@ export function shouldLabelAsConnectionFailure(reason) {
   )
 }
 
-export function formatConnectionFailureMessage(reason, prefix = '没能连上，可能是地址或网络的问题。') {
-  const message = String(reason ?? '').trim()
-
-  if (!message) {
-    return prefix
-  }
-
-  if (!shouldLabelAsConnectionFailure(message)) {
-    return message
-  }
-
-  if (message.includes('没能连') || message.includes('超时')) {
-    return message
-  }
-
-  return `${prefix}具体原因：${message}`
-}

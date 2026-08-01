@@ -11,7 +11,7 @@ let mainWindowRef = null
 /** @type {{ get: () => import('electron').BrowserWindow | null } | null} */
 let panelWindowRef = null
 
-export let runtimeState = {
+let runtimeState = {
   mood: 'idle',
   continuousVoiceActive: false,
   panelSettingsOpen: false,
@@ -33,7 +33,7 @@ export let runtimeState = {
   updatedAt: new Date().toISOString(),
 }
 
-export let runtimeClientHeartbeat = {
+let runtimeClientHeartbeat = {
   pet: 0,
   panel: 0,
 }

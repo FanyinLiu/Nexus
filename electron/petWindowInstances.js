@@ -19,7 +19,7 @@ export function configurePetWindowInstances({
   if (typeof nextAlwaysOnTopLevel === 'string') alwaysOnTopLevel = nextAlwaysOnTopLevel
 }
 
-export function makePetWindowState() {
+function makePetWindowState() {
   return {
     isPinned: true,
     clickThrough: false,
@@ -61,7 +61,7 @@ export function getPetInstanceForWindow(win) {
   return petInstances.get(win.webContents.id) ?? null
 }
 
-export function petInstanceForEvent(event) {
+function petInstanceForEvent(event) {
   const win = BrowserWindow.fromWebContents(event.sender)
   return getPetInstanceForWindow(win)
 }
@@ -81,7 +81,7 @@ export function syncPetWindowInstances() {
   for (const inst of petInstances.values()) syncPetInstance(inst)
 }
 
-export function applyPetInstance(inst) {
+function applyPetInstance(inst) {
   const { win, state } = inst
   if (!win || win.isDestroyed()) return
   win.setAlwaysOnTop(Boolean(state.isPinned), alwaysOnTopLevel)

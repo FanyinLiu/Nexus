@@ -3,8 +3,6 @@ import { randomUUID } from 'node:crypto'
 import {
   canonicalizeLoopbackUrl,
   buildSafeRedirectRequestOptions,
-  formatConnectionFailureMessage as _formatConnectionFailureMessage,
-  isIpv6LoopbackHost as _isIpv6LoopbackHost,
   isLoopbackUrl,
   normalizeBaseUrl as _normalizeBaseUrl,
   shouldLabelAsConnectionFailure as _shouldLabelAsConnectionFailure,
@@ -18,12 +16,10 @@ import { redactSensitiveErrorText } from './services/errorRedaction.js'
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
 const MAX_SAFE_REDIRECTS = 5
 
-// Re-export pure helpers so existing import sites (e.g. ipcRegistry, chatIpc,
-// ttsService, sttService) keep working without touching every call site.
+// normalizeBaseUrl is re-exported so existing import sites (e.g. ttsHelpers)
+// keep working without touching every call site.
 export const normalizeBaseUrl = _normalizeBaseUrl
-export const isIpv6LoopbackHost = _isIpv6LoopbackHost
-export const shouldLabelAsConnectionFailure = _shouldLabelAsConnectionFailure
-export const formatConnectionFailureMessage = _formatConnectionFailureMessage
+const shouldLabelAsConnectionFailure = _shouldLabelAsConnectionFailure
 
 export async function readJsonSafe(response) {
   return response.json().catch(() => ({}))
@@ -33,7 +29,7 @@ export async function readTextSafe(response) {
   return response.text().catch(() => '')
 }
 
-export async function withRequestTimeout(
+async function withRequestTimeout(
   promiseFactory,
   timeoutMs,
   timeoutMessage,
@@ -272,7 +268,7 @@ export async function extractResponseErrorMessage(response, fallbackMessage) {
 }
 
 // Pure network helpers (normalizeBaseUrl / isLoopbackUrl / canonicalizeLoopbackUrl
-// / shouldLabelAsConnectionFailure / formatConnectionFailureMessage) live in
+// / shouldLabelAsConnectionFailure) live in
 // ./netHelpers.js so they're unit-testable without Electron at import time.
 
 export function getVolcengineStatus(response, data) {
@@ -287,7 +283,7 @@ export function getVolcengineStatus(response, data) {
   }
 }
 
-export function sanitizeMultipartHeaderValue(value) {
+function sanitizeMultipartHeaderValue(value) {
   return String(value ?? '').replace(/[\r\n"]/g, '_')
 }
 

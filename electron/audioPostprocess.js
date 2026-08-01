@@ -32,37 +32,6 @@ export function decodePcm16LeBufferToFloat32(input) {
   return samples
 }
 
-export function encodeFloat32ToWav(samples, sampleRate) {
-  const normalizedSamples = samples instanceof Float32Array
-    ? samples
-    : new Float32Array(samples)
-  const pcmBytes = normalizedSamples.length * 2
-  const buffer = Buffer.alloc(44 + pcmBytes)
-
-  buffer.write('RIFF', 0)
-  buffer.writeUInt32LE(36 + pcmBytes, 4)
-  buffer.write('WAVE', 8)
-  buffer.write('fmt ', 12)
-  buffer.writeUInt32LE(16, 16)
-  buffer.writeUInt16LE(1, 20)
-  buffer.writeUInt16LE(1, 22)
-  buffer.writeUInt32LE(sampleRate, 24)
-  buffer.writeUInt32LE(sampleRate * 2, 28)
-  buffer.writeUInt16LE(2, 32)
-  buffer.writeUInt16LE(16, 34)
-  buffer.write('data', 36)
-  buffer.writeUInt32LE(pcmBytes, 40)
-
-  for (let index = 0; index < normalizedSamples.length; index += 1) {
-    buffer.writeInt16LE(
-      Math.round(clampSample(normalizedSamples[index]) * 32767),
-      44 + index * 2,
-    )
-  }
-
-  return buffer
-}
-
 function removeDcOffsetInPlace(samples) {
   if (!samples.length) return
 

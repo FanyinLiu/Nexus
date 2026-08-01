@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-export const DESKTOP_PLATFORMS = new Set(['darwin', 'win32', 'linux'])
+const DESKTOP_PLATFORMS = new Set(['darwin', 'win32', 'linux'])
 
 function splitSearchPath(rawPath, platform) {
   const delimiter = platform === 'win32' ? ';' : ':'
@@ -51,17 +51,13 @@ export function isExecutableOnPath(
   return false
 }
 
-export function isAnyExecutableOnPath(commands, options = {}) {
-  return commands.some((command) => isExecutableOnPath(command, options))
-}
-
-export function getStartupMechanism(platform = process.platform) {
+function getStartupMechanism(platform = process.platform) {
   if (platform === 'linux') return 'xdg_autostart'
   if (platform === 'darwin' || platform === 'win32') return 'login_item'
   return 'unsupported'
 }
 
-export function getMediaSessionBackend(platform = process.platform) {
+function getMediaSessionBackend(platform = process.platform) {
   if (platform === 'linux') return 'playerctl'
   if (platform === 'darwin') return 'osascript'
   if (platform === 'win32') return 'windows_media_session'

@@ -16,7 +16,7 @@ function normalizeComparableText(text) {
     .toLowerCase()
 }
 
-export function isLyricsLikeQuery(query) {
+function isLyricsLikeQuery(query) {
   return LYRICS_QUERY_PATTERN.test(String(query ?? ''))
 }
 

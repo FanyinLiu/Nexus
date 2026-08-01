@@ -57,10 +57,7 @@ import {
   bindRuntimeWindows,
 } from './windowRuntimeState.js'
 export {
-  runtimeState,
-  runtimeClientHeartbeat,
   buildRuntimeStateSnapshot,
-  syncRuntimeState,
   updateRuntimeState,
   updateHeartbeat,
 } from './windowRuntimeState.js'
@@ -273,23 +270,6 @@ export function getPlatformProfile() {
   })
 }
 
-export function moveMainWindowBy(deltaX, deltaY) {
-  if (!mainWindow || mainWindow.isDestroyed()) return
-
-  const bounds = mainWindow.getBounds()
-  const { workArea } = screen.getDisplayMatching(bounds)
-  const nextX = Math.min(
-    Math.max(bounds.x + Math.round(deltaX), workArea.x),
-    workArea.x + workArea.width - bounds.width,
-  )
-  const nextY = Math.min(
-    Math.max(bounds.y + Math.round(deltaY), workArea.y),
-    workArea.y + workArea.height - bounds.height,
-  )
-
-  mainWindow.setPosition(nextX, nextY)
-}
-
 export function dragWindowBy(event, delta) {
   const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
   if (!sourceWindow || sourceWindow.isDestroyed()) return
@@ -313,7 +293,7 @@ function emitPanelSection() {
   panelWindow.webContents.send('panel-section:changed', { section: panelSection, intent: panelChatIntent })
 }
 
-export function setPanelSection(section) {
+function setPanelSection(section) {
   panelChatIntent = section === 'chat-text' ? 'text' : section === 'chat-recent' ? 'recent' : null
   panelSection = section === 'settings' ? 'settings' : 'chat'
 }

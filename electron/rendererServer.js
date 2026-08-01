@@ -56,7 +56,7 @@ export function getPreloadPath() {
   return path.join(__dirname, 'preload.js')
 }
 
-export function getRendererUrl() {
+function getRendererUrl() {
   if (_isDev && _useDevServer) {
     return _devServerUrl
   }

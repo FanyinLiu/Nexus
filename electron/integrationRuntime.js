@@ -9,7 +9,7 @@ import { getStatus as getFactorioStatus } from './services/factorioRcon.js'
 import { getStatus as getTelegramStatus } from './services/telegramGateway.js'
 import { getStatus as getDiscordStatus } from './services/discordGateway.js'
 
-export function splitCommandLine(rawValue = '') {
+function splitCommandLine(rawValue = '') {
   const result = []
   let current = ''
   let quote = ''

@@ -3,12 +3,12 @@ import { clampWindowPosition, getPanelWindowPosition } from './windowManagerHelp
 import { getSavedBounds } from './services/windowBoundsStore.js'
 import { sanitizePanelWindowStatePatch } from './windowStateSanitizers.js'
 
-export const PANEL_WINDOW_DEFAULT_WIDTH = 460
-export const PANEL_WINDOW_DEFAULT_HEIGHT = 660
-export const PANEL_WINDOW_MIN_WIDTH = 400
-export const PANEL_WINDOW_MIN_HEIGHT = 540
-export const PANEL_WINDOW_COLLAPSED_WIDTH = 380
-export const PANEL_WINDOW_COLLAPSED_HEIGHT = 92
+const PANEL_WINDOW_DEFAULT_WIDTH = 460
+const PANEL_WINDOW_DEFAULT_HEIGHT = 660
+const PANEL_WINDOW_MIN_WIDTH = 400
+const PANEL_WINDOW_MIN_HEIGHT = 540
+const PANEL_WINDOW_COLLAPSED_WIDTH = 380
+const PANEL_WINDOW_COLLAPSED_HEIGHT = 92
 
 export let panelWindowState = {
   collapsed: false,
