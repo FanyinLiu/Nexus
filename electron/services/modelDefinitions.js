@@ -144,5 +144,3 @@ export const MODEL_CATALOG = [
     purpose: '免费离线语音合成（语音输出选「本地 TTS」时使用），无需 API Key',
   },
 ]
-
-export const REQUIRED_MODEL_IDS = MODEL_CATALOG.filter(m => m.required).map(m => m.id)

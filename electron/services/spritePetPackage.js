@@ -10,8 +10,8 @@ export const SPRITE_PET_ATLAS_WIDTH = SPRITE_PET_COLUMNS * SPRITE_PET_CELL_WIDTH
 export const SPRITE_PET_ATLAS_HEIGHT = SPRITE_PET_ROWS * SPRITE_PET_CELL_HEIGHT
 export const SPRITE_PET_MAX_BYTES = 20 * 1024 * 1024
 export const SPRITE_PET_ARCHIVE_MAX_BYTES = 50 * 1024 * 1024
-export const SPRITE_PET_ARCHIVE_MAX_ENTRIES = 200
-export const SPRITE_PET_ARCHIVE_MAX_UNCOMPRESSED_BYTES = 60 * 1024 * 1024
+const SPRITE_PET_ARCHIVE_MAX_ENTRIES = 200
+const SPRITE_PET_ARCHIVE_MAX_UNCOMPRESSED_BYTES = 60 * 1024 * 1024
 export const SPRITE_PET_ROW_CONTRACT = [
   { state: 'idle', row: 0, frameCount: 6, durationsMs: [280, 110, 110, 140, 140, 320] },
   { state: 'running-right', row: 1, frameCount: 8, durationsMs: [120, 120, 120, 120, 120, 120, 120, 220] },
@@ -23,7 +23,7 @@ export const SPRITE_PET_ROW_CONTRACT = [
   { state: 'running', row: 7, frameCount: 6, durationsMs: [120, 120, 120, 120, 120, 220] },
   { state: 'review', row: 8, frameCount: 6, durationsMs: [150, 150, 150, 150, 150, 280] },
 ]
-export const SPRITE_PET_USED_COLUMNS_BY_ROW = SPRITE_PET_ROW_CONTRACT.map(({ frameCount }) => frameCount)
+const SPRITE_PET_USED_COLUMNS_BY_ROW = SPRITE_PET_ROW_CONTRACT.map(({ frameCount }) => frameCount)
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 const ZIP_END_OF_CENTRAL_DIRECTORY_SIGNATURE = 0x06054b50
@@ -642,7 +642,7 @@ function assertPngUnusedCellsTransparent(buffer) {
   }
 }
 
-export function readWebpInfo(buffer) {
+function readWebpInfo(buffer) {
   if (
     buffer.length < 30
     || buffer.toString('ascii', 0, 4) !== 'RIFF'
@@ -725,7 +725,7 @@ export function readWebpDimensions(buffer) {
   }
 }
 
-export async function readImageDimensions(imagePath) {
+async function readImageDimensions(imagePath) {
   const buffer = await fs.readFile(imagePath)
   const extension = path.extname(imagePath).toLowerCase()
 

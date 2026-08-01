@@ -49,32 +49,6 @@ export function issueVaultRefForSender(sender, slot) {
   return `${VAULT_REF_PREFIX}${token}`
 }
 
-export async function resolveVaultRefForSender(
-  sender,
-  value,
-  { allowPlaintext = true, label = 'value' } = {},
-) {
-  const normalized = String(value ?? '')
-  const token = decodeVaultRefToken(normalized)
-  if (!token) {
-    if (allowPlaintext) return normalized
-    throw new Error(`${label} must be a vault ref`)
-  }
-
-  const refs = sender ? _refsBySender.get(sender) : null
-  if (!refs) {
-    throw new Error(`${label} references an unknown vault token`)
-  }
-
-  const entry = refs.get(token)
-  if (!entry) {
-    throw new Error(`${label} references an expired vault token`)
-  }
-
-  const values = await vaultRetrieveMany([entry.slot])
-  return String(values?.[entry.slot] ?? '')
-}
-
 export async function resolveVaultRefsForSender(sender, source, fields) {
   if (!source || typeof source !== 'object' || Array.isArray(source)) {
     return source

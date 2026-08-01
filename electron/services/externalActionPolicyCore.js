@@ -1,6 +1,6 @@
-export const EXTERNAL_ACTION_INTEGRATIONS = ['telegram', 'discord', 'minecraft', 'factorio', 'mcp']
-export const EXTERNAL_ACTION_MODES = ['read-only', 'confirm', 'auto']
-export const EXTERNAL_ACTION_GRANT_SCOPES = ['once', 'session', 'always']
+const EXTERNAL_ACTION_INTEGRATIONS = ['telegram', 'discord', 'minecraft', 'factorio', 'mcp']
+const EXTERNAL_ACTION_MODES = ['read-only', 'confirm', 'auto']
+const EXTERNAL_ACTION_GRANT_SCOPES = ['once', 'session', 'always']
 
 const DEFAULT_MODE = 'confirm'
 const DEFAULT_GRANT_SCOPE = 'once'
@@ -24,7 +24,7 @@ function isValidGrantScope(value) {
   return EXTERNAL_ACTION_GRANT_SCOPES.includes(value)
 }
 
-export function normalizeExternalActionMode(value, fallback = DEFAULT_MODE) {
+function normalizeExternalActionMode(value, fallback = DEFAULT_MODE) {
   return isValidMode(value) ? value : fallback
 }
 

@@ -10,7 +10,7 @@ import {
   resolveLocalDataPaths,
 } from './localDataStore.js'
 
-export const COMPANION_MIGRATION_PACKAGE_SCHEMA_VERSION = 1
+const COMPANION_MIGRATION_PACKAGE_SCHEMA_VERSION = 1
 const MAX_DATASET_BYTES = 2_000_000
 const MAX_TOTAL_BYTES = 20_000_000
 const MAX_ARRAY_ITEMS = 2_000
@@ -86,7 +86,7 @@ export function normalizeCompanionDataset(dataset) {
   }
 }
 
-export function normalizeCompanionMigrationPackage(input) {
+function normalizeCompanionMigrationPackage(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('companion migration package must be an object')
   if (input.schemaVersion !== COMPANION_MIGRATION_PACKAGE_SCHEMA_VERSION) throw new Error('companion migration package schema is unsupported')
   if (typeof input.createdAt !== 'string' || !input.createdAt.trim()) throw new Error('companion migration package timestamp is invalid')
@@ -109,7 +109,7 @@ export function normalizeCompanionMigrationPackage(input) {
   }
 }
 
-export function summarizeCompanionMigrationPackage(migrationPackage, payloadBytes) {
+function summarizeCompanionMigrationPackage(migrationPackage, payloadBytes) {
   const relationshipRecordCount = migrationPackage.relationship.reduce((total, dataset) => total + dataset.recordCount, 0)
   const taskRecordCount = migrationPackage.tasks.reduce((total, dataset) => total + dataset.recordCount, 0)
   return {

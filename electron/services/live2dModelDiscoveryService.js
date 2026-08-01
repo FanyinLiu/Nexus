@@ -12,7 +12,7 @@ function getPathSegment(segments, indexFromEnd) {
   return segments[segments.length - indexFromEnd] ?? ''
 }
 
-export function pickDiscoveredModelName(relativeModelPath) {
+function pickDiscoveredModelName(relativeModelPath) {
   const withoutExtension = relativeModelPath.replace(/\.model3\.json$/i, '')
   const segments = withoutExtension.split('/').filter(Boolean)
   const fileName = getPathSegment(segments, 1) || 'Live2D'
@@ -46,7 +46,7 @@ export function formatDiscoveredModelLabel(name) {
     .replace(/\b\w/g, (character) => character.toUpperCase())
 }
 
-export async function collectLive2dModelFiles(directoryPath) {
+async function collectLive2dModelFiles(directoryPath) {
   const entries = await fs.readdir(directoryPath, { withFileTypes: true })
   const modelFiles = []
 

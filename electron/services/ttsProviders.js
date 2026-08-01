@@ -1,4 +1,4 @@
-export const SPEECH_PROVIDER_IDS = Object.freeze({
+const SPEECH_PROVIDER_IDS = Object.freeze({
   volcengineSTT:  'volcengine-stt',
   volcengineTTS:  'volcengine-tts',
   minimax:        'minimax-tts',

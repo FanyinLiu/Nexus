@@ -164,7 +164,7 @@ function normalizeId(value) {
  * Observed model identity from OpenAI-compatible / Anthropic message envelopes.
  * Missing fields are unknown (not a mismatch).
  */
-export function extractObservedChatModelId(data) {
+function extractObservedChatModelId(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return undefined
   return normalizeId(
     data.model
@@ -235,7 +235,7 @@ export function buildChatConnectionResult({
  * Build text connection evidence bound to the requested provider/model.
  * When the protocol returns a model id that differs, force partial.
  */
-export function buildChatModelResponseEvidence({
+function buildChatModelResponseEvidence({
   providerId,
   modelId,
   observedModelId,

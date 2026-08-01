@@ -410,8 +410,6 @@ async function auditSpritePetPackage(manifestPath, options = {}) {
 
 export {
   DEFAULT_SPRITE_PET_VISUAL_AUDIT_OPTIONS,
-  normalizeAuditOptions,
   resolveSpritePetManifestPath,
-  auditPixels,
   auditSpritePetPackage,
 }

@@ -21,18 +21,12 @@ try {
   console.warn('[LocalTTS] sherpa-onnx-node is not installed or failed to load.')
 }
 
-export const LOCAL_TTS_MODEL_DIR = 'vits-melo-tts-zh_en'
+const LOCAL_TTS_MODEL_DIR = 'vits-melo-tts-zh_en'
 
 let _tts = null
 let _ttsModelDir = null
 /** @type {Promise<unknown>|null} */
 let _creating = null
-
-export function isLocalTtsAvailable() {
-  if (!sherpa?.OfflineTts) return false
-  const dir = findModelDir(LOCAL_TTS_MODEL_DIR)
-  return Boolean(dir && fs.existsSync(path.join(dir, 'model.onnx')))
-}
 
 async function getTts() {
   if (!sherpa?.OfflineTts) {

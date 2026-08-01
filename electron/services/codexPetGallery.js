@@ -3,7 +3,6 @@ const CODEX_PET_GALLERY_BASE_URL = 'https://codex-pet.com/pets/'
 const CODEX_PET_ORG_HOME_URL = 'https://codex-pet.org/'
 const CODEX_PET_ORG_BASE_URL = 'https://codex-pet.org/pets/'
 const CODING_PETS_GALLERY_HOME_URL = 'https://codingpets.com/'
-const CODING_PETS_GALLERY_BASE_URL = 'https://codingpets.com/pets/'
 const CODEX_PETS_NET_GALLERY_HOME_URL = 'https://codexpets.net/gallery'
 const CODEX_PETS_NET_BASE_URL = 'https://codexpets.net'
 const OPENPETS_CATALOG_URL = 'https://openpets.dev/pets/catalog.v3.json'
@@ -583,15 +582,11 @@ function mergeCatalogs(catalogs) {
 
 export {
   CODEX_PET_GALLERY_HOME_URL,
-  CODEX_PET_GALLERY_BASE_URL,
   CODEX_PET_ORG_HOME_URL,
   CODEX_PET_ORG_BASE_URL,
   CODING_PETS_GALLERY_HOME_URL,
-  CODING_PETS_GALLERY_BASE_URL,
   CODEX_PETS_NET_GALLERY_HOME_URL,
-  CODEX_PETS_NET_BASE_URL,
   OPENPETS_CATALOG_URL,
-  OPENPETS_GALLERY_URL,
   slugifyCodexPetId,
   isHttpUrl,
   resolveCodexPetGalleryUrl,
@@ -603,7 +598,6 @@ export {
   parseCodingPetsCatalog,
   parseCodingPetsPage,
   parseCodexPetsNetCatalog,
-  parseOpenPetsCatalog,
   filterCodexPetGalleryCatalog,
   fetchCodexPetGalleryCatalog,
 }

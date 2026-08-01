@@ -98,7 +98,7 @@ export async function isMcpServerApproved(serverId, commandHash) {
  * Persist a new approval entry. Should only be called after the user has
  * explicitly granted approval (e.g. via the dialog below).
  */
-export async function recordMcpApproval(serverId, commandHash) {
+async function recordMcpApproval(serverId, commandHash) {
   await withWriteLock(async () => {
     const approvals = await loadApprovals()
     const existing = approvals[serverId]
@@ -137,7 +137,7 @@ export async function revokeMcpApproval(serverId) {
  *   (b) The server is approved but no tools have been snapshotted yet
  *       (caller should snapshot the discovered tool set on first run).
  */
-export async function getApprovedToolsForServer(serverId) {
+async function getApprovedToolsForServer(serverId) {
   const approvals = await loadApprovals()
   return approvals[serverId]?.approvedTools ?? []
 }
@@ -173,7 +173,7 @@ export async function snapshotInitialTools(serverId, toolNames) {
  * Add a single tool name to the approved set. Used after the user
  * explicitly approves a previously-unknown tool through the dialog.
  */
-export async function recordToolApproval(serverId, toolName) {
+async function recordToolApproval(serverId, toolName) {
   await withWriteLock(async () => {
     const approvals = await loadApprovals()
     const entry = approvals[serverId]
@@ -269,12 +269,4 @@ export async function promptMcpApproval(serverId, command, args = []) {
 
   await recordMcpApproval(serverId, hashMcpCommand(command, argsArr))
   return true
-}
-
-/**
- * Test helper. Resets the in-memory cache so subsequent calls re-read the
- * approval file from disk. Production code never needs this.
- */
-export function __resetMcpApprovalsCache() {
-  _approvalsCache = null
 }

@@ -83,7 +83,7 @@ function replaceFile(tempPath, destPath) {
   }
 }
 
-export function downloadFile(url, destPath, onProgress, integrity, maxRedirects = 5) {
+function downloadFile(url, destPath, onProgress, integrity, maxRedirects = 5) {
   const safeUrl = validateModelDownloadUrl(url).toString()
   const expected = validateModelIntegrity(integrity)
   return new Promise((resolve, reject) => {

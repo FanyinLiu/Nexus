@@ -10,11 +10,11 @@ import {
 
 const DEFAULT_PET_MODEL_FALLBACK_IMAGE_PATH = ''
 
-export function normalizeSpritePetAssetRelativePath(rootPath, assetPath) {
+function normalizeSpritePetAssetRelativePath(rootPath, assetPath) {
   return path.relative(rootPath, assetPath).split(path.sep).join('/')
 }
 
-export function slugifySpritePetModelId(value) {
+function slugifySpritePetModelId(value) {
   const normalized = String(value ?? '')
     .trim()
     .replace(/[\\/]+/g, '-')

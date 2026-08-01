@@ -6,14 +6,6 @@
  * Memory and companion domains live in their own modules already.
  */
 export {
-  LOCAL_DATA_BACKEND,
-  LOCAL_DATA_SCHEMA_VERSION,
-  LOCAL_DATA_MANIFEST_FORMAT,
-  LOCAL_DATA_EXPORT_FORMAT,
-  LOCAL_DATA_ONBOARDING_DOMAIN_ID,
-  LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID,
-  LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID,
-  LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID,
   LOCAL_DATA_COMPANION_RELATIONSHIP_DOMAIN_ID,
   LOCAL_DATA_COMPANION_TASKS_DOMAIN_ID,
   LOCAL_DATA_AUDIT_DOMAIN_ID,
@@ -29,7 +21,6 @@ export {
   planLocalDataImport,
   importLocalDataSnapshot,
   rollbackLocalDataStore,
-  getLocalDataMigrationPlan,
 } from './localDataStoreCore.js'
 
 export {

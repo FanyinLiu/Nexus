@@ -6,11 +6,11 @@ export const MIN_RSS_INTERVAL_MINUTES = 5
 export const MAX_RSS_INTERVAL_MINUTES = 24 * 60
 export const DEFAULT_RSS_INTERVAL_MINUTES = 30
 export const WEBHOOK_MAX_BODY_BYTES = 64 * 1024
-export const WEBHOOK_MAX_BODY_CHARS = 500
-export const WEBHOOK_MAX_TITLE_CHARS = 160
-export const WEBHOOK_MAX_META_CHARS = 120
-export const NOTIFICATION_SUMMARY_MAX_CHARS = 150
-export const WEBHOOK_MAX_SUMMARY_CHARS = 180
+const WEBHOOK_MAX_BODY_CHARS = 500
+const WEBHOOK_MAX_TITLE_CHARS = 160
+const WEBHOOK_MAX_META_CHARS = 120
+const NOTIFICATION_SUMMARY_MAX_CHARS = 150
+const WEBHOOK_MAX_SUMMARY_CHARS = 180
 
 const WEBHOOK_MESSAGE_KINDS = new Set(['message', 'chat', 'chat_message'])
 
@@ -45,7 +45,7 @@ function clampText(value, maxChars) {
   return text.length <= maxChars ? text : `${text.slice(0, Math.max(0, maxChars - 3))}...`
 }
 
-export function inferNotificationPriority(message) {
+function inferNotificationPriority(message) {
   const haystack = [
     message?.title,
     message?.sender,

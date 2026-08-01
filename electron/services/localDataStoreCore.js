@@ -2,11 +2,11 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { safeParseJsonObject } from './localDataChatMigration.js'
-export const LOCAL_DATA_BACKEND = 'sqlite'
-export const LOCAL_DATA_SCHEMA_VERSION = 4
-export const LOCAL_DATA_MANIFEST_FORMAT = 'nexus-local-data-manifest'
-export const LOCAL_DATA_EXPORT_FORMAT = 'nexus-local-data-export'
-export const LOCAL_DATA_ONBOARDING_DOMAIN_ID = 'onboarding'
+const LOCAL_DATA_BACKEND = 'sqlite'
+const LOCAL_DATA_SCHEMA_VERSION = 4
+const LOCAL_DATA_MANIFEST_FORMAT = 'nexus-local-data-manifest'
+const LOCAL_DATA_EXPORT_FORMAT = 'nexus-local-data-export'
+const LOCAL_DATA_ONBOARDING_DOMAIN_ID = 'onboarding'
 export const LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID = 'chat-sessions'
 export const LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID = 'memory-long-term'
 export const LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID = 'memory-daily'
@@ -295,10 +295,6 @@ function createEmptyManifest(appliedAt) {
     migrations: [],
     domains: {},
   }
-}
-
-function migrationById(id) {
-  return MIGRATIONS.find((migration) => migration.id === id) ?? null
 }
 
 function legacyAppliedAt(manifest, migrationId, fallback) {
@@ -977,11 +973,4 @@ export async function rollbackLocalDataStore(options = {}) {
     runtimeStatus = statusFromError(error)
     return { ok: false, action: 'error', disabledDirectoryName: null, errorMessage: runtimeStatus.errorMessage }
   }
-}
-
-export function getLocalDataMigrationPlan() {
-  return MIGRATIONS.map((migration) => ({
-    ...migration,
-    known: migrationById(migration.id) != null,
-  }))
 }

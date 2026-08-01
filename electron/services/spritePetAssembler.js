@@ -664,7 +664,6 @@ async function assembleSpritePetCreatorKit({
 }
 
 export {
-  DEFAULT_PACKAGE_DIRNAME,
   inspectSpritePetCreatorKit,
   assembleSpritePetCreatorKit,
 }

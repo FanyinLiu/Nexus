@@ -20,7 +20,7 @@ export function getUserModelsRoot() {
   return path.join(app.getPath('userData'), 'sherpa-models')
 }
 
-export function getBundledModelsRoot() {
+function getBundledModelsRoot() {
   return app.isPackaged
     ? path.join(process.resourcesPath, 'sherpa-models')
     : path.join(app.getAppPath(), 'sherpa-models')

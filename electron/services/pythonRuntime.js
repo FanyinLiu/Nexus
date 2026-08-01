@@ -182,5 +182,3 @@ function logStatus(status) {
     console.info(`[Python] GLM-ASR disabled — missing modules: ${status.glmAsr.missingImports.join(', ')}`)
   }
 }
-
-export { spawn }

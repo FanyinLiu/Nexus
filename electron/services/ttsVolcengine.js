@@ -10,11 +10,11 @@ import { buildAuthorizationHeaders, AUDIO_SYNTH_TIMEOUT_MS } from './ttsHelpers.
 const VOLCENGINE_TTS_DEFAULT_CLUSTER = 'volcano_tts'
 const VOLCENGINE_TTS_DEFAULT_VOICE = 'BV001_streaming'
 
-export function normalizeVolcengineSpeechOutputCluster(cluster) {
+function normalizeVolcengineSpeechOutputCluster(cluster) {
   return String(cluster ?? '').trim() || VOLCENGINE_TTS_DEFAULT_CLUSTER
 }
 
-export function normalizeVolcengineSpeechOutputVoice(voice) {
+function normalizeVolcengineSpeechOutputVoice(voice) {
   return String(voice ?? '').trim() || VOLCENGINE_TTS_DEFAULT_VOICE
 }
 

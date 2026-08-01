@@ -170,7 +170,7 @@ function handleMessage(rawData) {
 
 // ── Public API ──
 
-export function configure(credentials) {
+function configure(credentials) {
   _credentials = {
     appId: String(credentials.appId ?? '').trim(),
     secretId: String(credentials.secretId ?? '').trim(),
@@ -345,8 +345,4 @@ export async function disconnect() {
 
 export function getStatus() {
   return { state: _state }
-}
-
-export function isStreaming() {
-  return _state === 'streaming'
 }

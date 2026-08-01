@@ -81,10 +81,6 @@ async function persistApprovedPlugins() {
   )
 }
 
-export function isPluginApproved(pluginId) {
-  return _approvedPlugins.has(pluginId)
-}
-
 /** Check if a plugin's command still matches its approved hash. */
 function isPluginCommandTrusted(plugin) {
   return _isPluginCommandTrusted(plugin, _approvedPlugins)
@@ -343,16 +339,6 @@ export async function autoStartPlugins() {
   }))
 
   return results
-}
-
-/**
- * Check whether a plugin has a specific capability.
- * Used by MCP IPC layer to enforce capability-based access control.
- */
-export function hasCapability(pluginId, capability) {
-  const plugin = _plugins.get(pluginId)
-  if (!plugin) return false
-  return (plugin.capabilities || ['tools']).includes(capability)
 }
 
 export function getPluginsDir_() {

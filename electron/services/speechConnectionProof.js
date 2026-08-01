@@ -25,11 +25,6 @@ export const VOLCENGINE_STT_STATUS = Object.freeze({
   SILENT_OR_NO_SPEECH: '20000003',
 })
 
-const VOLCENGINE_STT_ACCEPTED = new Set([
-  VOLCENGINE_STT_STATUS.SUCCESS,
-  VOLCENGINE_STT_STATUS.SILENT_OR_NO_SPEECH,
-])
-
 /** Minimum non-empty audio payload that can carry one PCM sample (int16). */
 const MIN_AUDIO_BYTES = 2
 
@@ -86,7 +81,7 @@ function idsEqual(left, right) {
   return a === b
 }
 
-export function getSpeechInputResponseCode(data) {
+function getSpeechInputResponseCode(data) {
   return String(
     data?.error?.code
     ?? data?.code
@@ -155,10 +150,6 @@ export function classifyVolcengineSpeechInputStatus(code) {
   }
 }
 
-export function isAcceptedVolcengineSpeechInputStatus(code) {
-  return VOLCENGINE_STT_ACCEPTED.has(String(code ?? '').trim())
-}
-
 export function detectAudioSignature(buffer) {
   if (!Buffer.isBuffer(buffer) || buffer.length < MIN_AUDIO_BYTES) return null
   for (const check of AUDIO_SIGNATURE_CHECKS) {
@@ -177,7 +168,7 @@ function normalizeMimeType(mimeType) {
   return String(mimeType ?? '').split(';')[0].trim().toLowerCase()
 }
 
-export function isDeclaredPcmMimeType(mimeType) {
+function isDeclaredPcmMimeType(mimeType) {
   const mime = normalizeMimeType(mimeType)
   // Only explicit PCM mime types count as declared PCM. Opaque
   // application/octet-stream still requires a known container signature.
@@ -186,7 +177,7 @@ export function isDeclaredPcmMimeType(mimeType) {
     || mime === 'audio/s16le'
 }
 
-export function isAudioMimeType(mimeType) {
+function isAudioMimeType(mimeType) {
   const mime = normalizeMimeType(mimeType)
   if (!mime) return false
   if (mime.startsWith('audio/')) return true

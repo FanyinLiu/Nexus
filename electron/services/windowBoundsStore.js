@@ -62,7 +62,7 @@ export function getSavedBounds(key) {
   return validate(all[key])
 }
 
-export function saveBounds(key, bounds) {
+function saveBounds(key, bounds) {
   if (!bounds) return
   const all = load()
   all[key] = bounds

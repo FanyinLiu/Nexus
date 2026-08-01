@@ -10,7 +10,6 @@ import {
 import { synthesizeEdgeTts } from './edgeTts.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
 import {
-  SPEECH_PROVIDER_IDS,
   isElevenLabsProvider,
   isVolcengineSpeechInputProvider,
   isVolcengineSpeechOutputProvider,
@@ -331,7 +330,6 @@ async function warmupRemoteTtsSession(_sessionPayload) {
 }
 
 export {
-  SPEECH_PROVIDER_IDS,
   synthesizeRemoteTts,
   warmupRemoteTtsSession,
   buildAuthorizationHeaders,

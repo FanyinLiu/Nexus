@@ -259,8 +259,3 @@ export async function requireExternalActionPermission(channel) {
 
   return true
 }
-
-export function __resetExternalActionPolicyForTests() {
-  policyCache = null
-  sessionGrantKeys.clear()
-}

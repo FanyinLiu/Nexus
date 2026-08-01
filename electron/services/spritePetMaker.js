@@ -29,7 +29,7 @@ const ATLAS_FRAME_SIZE = {
 }
 const SUPPORTED_SOURCE_LAYOUTS = new Set(['auto', 'single', 'atlas'])
 
-export function slugifySpritePetId(value) {
+function slugifySpritePetId(value) {
   const normalized = String(value ?? '')
     .trim()
     .replace(/[\\/]+/g, '-')

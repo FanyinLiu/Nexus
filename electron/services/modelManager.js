@@ -145,5 +145,3 @@ export function initModelManager() {
     }
   }
 }
-
-export { PROGRESS_CHANNEL }

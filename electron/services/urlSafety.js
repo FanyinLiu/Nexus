@@ -65,7 +65,7 @@ function isPrivateIpv6(host) {
   return false
 }
 
-export function isPrivateOrLoopbackHost(hostname) {
+function isPrivateOrLoopbackHost(hostname) {
   const host = normalizeHost(hostname)
   if (!host) return true
   if (BLOCKED_HOSTS.has(host)) return true
