@@ -23,6 +23,28 @@ coherent before any future release decision.
 - Clarified that v0.5 is the next desktop pet behavior line, not a workaround
   for any v0.4 release-state issue.
 
+## Accumulated Since v0.4.4
+
+The following maintenance work has landed on `main` after the v0.4.4 stable
+release and belongs to this draft layer. None of it changes user-facing
+behavior.
+
+- **eslint-plugin-react-hooks 7.1.1** — adopted the React Compiler-era rules
+  (`react-hooks/refs`, `set-state-in-effect`, component creation) and cleared
+  all 58 violations with behavior-preserving rewrites: lazy ref init moved to
+  `useState` initializers, render-time ref writes moved to commit-phase
+  effects, synchronous effect `setState` became render-phase adjust with
+  prior-value snapshots. The v0.2.7 render-storm invariants (memoized hook
+  bags, no store-to-render `setState` loops) are preserved.
+- **High-risk IPC schemas reject unknown fields** — the phase-three IPC
+  payload schema rollout switched plugin, plugin-bus, telegram/discord send,
+  game command, text file, VTS legacy token, MCP call/sync, external action
+  policy, open-external tool policy, desktop context policy, and pet-model
+  creator kit channels from silently stripping undeclared payload fields to
+  rejecting them. The `mcp:sync-servers` caller now sanitizes stored server
+  entries to the schema whitelist before sending, and a guard test keeps every
+  high-risk schema on reject.
+
 ## Not Included
 
 - No formal v0.4.5 release yet.

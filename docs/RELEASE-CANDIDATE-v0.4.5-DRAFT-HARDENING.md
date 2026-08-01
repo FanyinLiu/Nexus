@@ -28,7 +28,9 @@ only later draft.
   timeline.
 - v0.4.4 -> v0.4.3: maintenance and hardening only, no user-visible
   behavior change; shipped as the current stable release.
-- v0.4.5 -> v0.4.4: release-state hardening only, no feature expansion.
+- v0.4.5 -> v0.4.4: release-state hardening plus accumulated maintenance
+  (eslint-plugin-react-hooks 7.1.1 with 58 violations cleared, high-risk IPC
+  schemas switched from strip to reject), no feature expansion.
 
 If one draft layer is dropped or rewritten before release, every later draft in
 the graph must be rechecked against the same privacy and no-release invariants.
@@ -45,6 +47,15 @@ v0.4.5 exists to keep release state coherent:
 - rollback notes for disabling desktop companion awareness while leaving chat,
   memory, and settings usable
 - v0.5 handoff boundary for later desktop pet behavior
+
+Maintenance accumulated on `main` after the v0.4.4 stable release also belongs
+to this layer, still with no user-facing behavior change:
+
+- eslint-plugin-react-hooks 7.1.1 upgrade with all 58 React Compiler-era lint
+  violations cleared through behavior-preserving rewrites
+- high-risk IPC payload schemas tightened from stripping unknown fields to
+  rejecting them, with the `mcp:sync-servers` caller sanitizing persisted
+  entries and a guard test preventing regression
 
 It must not tune check-in behavior, add sensing sources, add analytics, change
 runtime copy, alter Settings layout, or introduce pet movement.

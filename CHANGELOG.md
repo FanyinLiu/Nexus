@@ -16,6 +16,22 @@
   under the v0.4.4 number never merged into main and stays queued for a later
   release.
 
+### Changed
+
+- **eslint-plugin-react-hooks 7.1.1** — adopted the React Compiler-era lint
+  rules and cleared all 58 violations with behavior-preserving rewrites,
+  keeping the v0.2.7 render-storm invariants intact.
+
+### Security
+
+- **High-risk IPC schemas reject unknown fields** — plugin, plugin-bus,
+  telegram/discord send, game command, text file, VTS legacy token, MCP
+  call/sync, external action policy, open-external tool policy, desktop
+  context policy, and pet-model creator kit channels now reject undeclared
+  payload fields instead of silently stripping them; the `mcp:sync-servers`
+  caller sanitizes persisted server entries to the schema whitelist before
+  sending.
+
 ## [0.4.4] - 2026-07-31
 
 v0.4.4 maintenance and hardening release on top of stable v0.4.3

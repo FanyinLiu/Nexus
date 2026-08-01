@@ -33,7 +33,10 @@ The larger product steps are:
   planned for v0.4.4 is deferred to a later release. `v0.4.5` remains a draft
   [Companion Surface Cohesion & Transparency](V0.4.3_OPTIMIZATION_AND_COMPETITOR_PLAN_2026-07-12.md)
   follow-up layer and `v0.4.5` is a non-shipping release-hardening review
-  layer, not a second active product slice. Future work must not move the
+  layer, not a second active product slice; it now also collects the
+  post-v0.4.4 maintenance already on main (the eslint-plugin-react-hooks 7.1.1
+  upgrade and the high-risk IPC schema strip-to-reject rollout), still with no
+  user-facing behavior change. Future work must not move the
   package version, tag, GitHub Release, or README stable entry beyond
   `v0.4.4` until a later release is explicitly prepared.
 - **v0.5.0 — desktop pet behavior.** The visible companion can react to mouse
