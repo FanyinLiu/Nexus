@@ -5,7 +5,6 @@ import {
   type SpeechLevelController,
 } from '../../features/voice/lipSync.ts'
 import {
-  createVoiceSessionState,
   reduceVoiceSessionState,
   type VoiceSessionEvent,
   type VoiceSessionState,
@@ -138,10 +137,6 @@ type GetAudioPlaybackQueueRuntimeOptions = {
   audioPlaybackQueueRef: MutableRefObject<AudioPlaybackQueue<SpeechSegmentMeta> | null>
   getSpeechLevelController: () => SpeechLevelController
   stopSpeechTracking: () => void
-}
-
-export function createInitialVoiceSessionState() {
-  return createVoiceSessionState()
 }
 
 export function dispatchVoiceSessionRuntime(

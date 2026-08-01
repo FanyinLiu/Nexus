@@ -312,11 +312,9 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
   // ── Speech interrupt monitor (cyclic — needs lifecycle.scheduleVoiceRestart)
   async function startSpeechInterruptMonitor(
     speechGeneration: number,
-    shouldResumeContinuousVoice: boolean,
   ) {
     await startSpeechInterruptMonitorRuntime({
       speechGeneration,
-      shouldResumeContinuousVoice,
       speechInterruptMonitorRef: refs.speechInterruptMonitorRef,
       assistantSpeechGenerationRef: refs.assistantSpeechGenerationRef,
       interruptedSpeechGenerationRef: refs.interruptedSpeechGenerationRef,

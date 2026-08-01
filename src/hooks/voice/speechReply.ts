@@ -20,7 +20,6 @@ type BaseSpeechReplyOptions = {
   busEmit: (event: import('../../features/voice/busEvents').VoiceBusEvent) => void
   startSpeechInterruptMonitor: (
     speechGeneration: number,
-    shouldResumeContinuousVoice: boolean,
   ) => Promise<void>
   stopSpeechInterruptMonitor: () => void
   isSpeechInterrupted: (speechGeneration: number) => boolean
@@ -73,10 +72,9 @@ function createSpeechReplyCallbacks(
       // Bus effect handles setMood('happy') and voiceState → 'speaking'.
       // Start the interrupt monitor so the user can speak over the TTS to
       // cancel it. The monitor self-checks settings.voiceInterruptionEnabled
-      // and shouldResumeContinuousVoice — if either is off it just no-ops.
+      // — if it's off it just no-ops.
       void options.startSpeechInterruptMonitor(
         options.speechGeneration,
-        options.shouldResumeContinuousVoice,
       )
     },
     onEnd: () => {

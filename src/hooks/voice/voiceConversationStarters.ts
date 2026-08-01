@@ -6,7 +6,7 @@
 
 import { startApiRecordingConversation } from './recordingConversations'
 import { startParaformerConversation } from './paraformerConversation'
-import { startSenseVoiceConversation } from './sensevoiceConversation'
+import { startSenseVoiceConversation as startSenseVoiceConversationRuntime } from './sensevoiceConversation'
 import { startTencentConversation } from './tencentConversation'
 import { startVadConversation } from './vadConversation'
 import { expectHolderValue, type VoiceEngines, type VoiceRuntimeBag } from './voiceRuntimeBag'
@@ -101,9 +101,9 @@ export function createVoiceConversationStarters(bag: VoiceRuntimeBag): VoiceEngi
   }
 
   // ── SenseVoice offline conversation ─────────────────────────────────────
-  async function startSenseVoiceVoiceConversation(options?: VoiceConversationOptions) {
+  async function startSenseVoiceConversation(options?: VoiceConversationOptions) {
     hearingRuntime.activateEngine('sensevoice')
-    await startSenseVoiceConversation({
+    await startSenseVoiceConversationRuntime({
       options,
       currentSettings: ctx.settingsRef.current,
       voiceStateRef: refs.voiceStateRef,
@@ -206,7 +206,7 @@ export function createVoiceConversationStarters(bag: VoiceRuntimeBag): VoiceEngi
   return {
     startVadVoiceConversation,
     startParaformerVoiceConversation,
-    startSenseVoiceVoiceConversation,
+    startSenseVoiceConversation,
     startTencentAsrConversation,
     startApiVoiceConversation,
   }

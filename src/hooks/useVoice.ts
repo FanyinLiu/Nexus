@@ -657,7 +657,7 @@ export function useVoice(ctx: UseVoiceContext) {
   // Ensure supported speech input settings on mount
   useEffect(() => {
     ensureSupportedSpeechInputSettings()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- mount-only: one-time settings normalization, ensureSupportedSpeechInputSettings is a stable useCallback
 
   // Disable continuous voice when setting is off.
   // IMPORTANT: do NOT depend on `bindings` here — `bindings` is recreated on
@@ -775,7 +775,7 @@ export function useVoice(ctx: UseVoiceContext) {
       voiceBus.destroy()
       hearingRuntime.dispose()
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- unmount-only teardown: voiceBus and hearingRuntime are useState singletons with stable identity
 
   // Phase 1-1 observability: mirror every bus transition into the log.
   // The log is a pure observer — it never blocks or mutates events.

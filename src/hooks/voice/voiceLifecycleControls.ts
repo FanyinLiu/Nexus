@@ -183,7 +183,7 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
         scheduleVoiceRestart,
         ensureSupportedSpeechInputSettings: hookCallbacks.ensureSupportedSpeechInputSettings,
         startParaformerConversation: engines.startParaformerVoiceConversation,
-        startSenseVoiceConversation: engines.startSenseVoiceVoiceConversation,
+        startSenseVoiceConversation: engines.startSenseVoiceConversation,
         startTencentAsrConversation: engines.startTencentAsrConversation,
         startVadVoiceConversation: engines.startVadVoiceConversation,
         startApiVoiceConversation: engines.startApiVoiceConversation,

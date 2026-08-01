@@ -54,7 +54,6 @@ type PauseContinuousVoiceOptions = {
 
 type StartSpeechInterruptMonitorOptions = {
   speechGeneration: number
-  shouldResumeContinuousVoice: boolean
   speechInterruptMonitorRef: MutableRefObject<SpeechInterruptMonitorSession | null>
   assistantSpeechGenerationRef: MutableRefObject<number>
   interruptedSpeechGenerationRef: MutableRefObject<number | null>
@@ -197,16 +196,13 @@ export function clearSpeechInterruptedFlag(
 }
 
 function shouldMonitorSpeechInterruptions(
-  options: {
-    shouldResumeContinuousVoice: boolean
-  } & ContinuousVoiceOptions,
+  options: ContinuousVoiceOptions,
 ) {
   // Monitor activation decoupled from `shouldResumeContinuousVoice`: previously
   // barge-in only worked when the turn originated from a continuous voice
   // session, which made typed-text TTS un-interruptible. Now the monitor
   // spawns whenever the user has opted in (`voiceInterruptionEnabled`) and a
-  // mic is available. The flag is still threaded through to influence the
-  // post-interrupt restart decision via shouldAutoRestartVoice.
+  // mic is available.
   return (
     canInterruptSpeech(options)
     && options.settingsRef.current.speechInputEnabled
@@ -231,7 +227,6 @@ export async function startSpeechInterruptMonitor(
 
   if (!shouldMonitorSpeechInterruptions({
     settingsRef: options.settingsRef,
-    shouldResumeContinuousVoice: options.shouldResumeContinuousVoice,
   })) {
     return
   }

@@ -149,7 +149,6 @@ export type VoiceBindings = {
   stopSpeechInterruptMonitor: () => void
   startSpeechInterruptMonitor: (
     speechGeneration: number,
-    shouldResumeContinuousVoice: boolean,
   ) => Promise<void>
   // Recording / VAD teardown
   stopApiRecording: (cancel?: boolean) => void
@@ -208,7 +207,7 @@ export type VoiceEngines = {
     options?: VoiceConversationOptions,
   ) => Promise<void>
   startParaformerVoiceConversation: (options?: VoiceConversationOptions) => Promise<void>
-  startSenseVoiceVoiceConversation: (options?: VoiceConversationOptions) => Promise<void>
+  startSenseVoiceConversation: (options?: VoiceConversationOptions) => Promise<void>
   startTencentAsrConversation: (options?: VoiceConversationOptions) => Promise<void>
   startApiVoiceConversation: (options?: VoiceConversationOptions) => Promise<void>
 }
