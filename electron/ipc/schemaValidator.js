@@ -2,7 +2,7 @@
  * @param {unknown} value
  * @returns {value is Record<string, unknown>}
  */
-export function isPlainObject(value) {
+function isPlainObject(value) {
   if (value == null || typeof value !== 'object' || Array.isArray(value)) {
     return false
   }
