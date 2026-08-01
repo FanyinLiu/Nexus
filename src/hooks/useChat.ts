@@ -393,7 +393,7 @@ export function useChat(ctx: UseChatContext) {
       type: 'tts:error',
       message: speechErrorMessage,
       speechGeneration: 0,
-      shouldResumeContinuousVoice: options.shouldResumeContinuousVoice ?? false,
+      shouldResumeContinuousVoice: options.shouldResumeContinuousVoice,
     })
   }, [ctx, setError, t])
 
@@ -546,7 +546,9 @@ export function useChat(ctx: UseChatContext) {
         if (slashResult.messages) {
           setMessages((prev) => [...prev, ...slashResult.messages!])
         }
-        if (composerSnapshot !== null && shouldClearSubmittedInput(inputRef.current, composerSnapshot)) setInputValue('')
+        if (composerSnapshot !== null && shouldClearSubmittedInput(inputRef.current, composerSnapshot)) {
+          setInputValue('')
+        }
         return true
       }
 

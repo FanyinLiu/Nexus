@@ -254,7 +254,7 @@ export async function startVadConversation(
         }
         params.appendVoiceTrace(
           'STT failover',
-          `#${formatTraceLabel(traceId)} cloud transcription failed, falling back to local SenseVoice`,
+          `#${traceLabel} cloud transcription failed, falling back to local SenseVoice`,
         )
         const local = await window.desktopPet.sensevoiceTranscribe({ samples: audio, sampleRate: 16_000 })
         transcript = (local.text ?? '').trim()

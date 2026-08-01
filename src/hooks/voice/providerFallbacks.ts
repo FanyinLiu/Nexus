@@ -76,9 +76,10 @@ function createSpeechOutputFallbackSettings(
 }
 
 /**
- * Same invariant as `applySpeechInputProviderFallbackRuntime` — TTS
- * turns must capture settings at `startSpeechOutputRuntime` entry and
- * not re-read `settingsRef.current` for the rest of that turn.
+ * Input-side counterpart: `ensureSupportedSpeechInputSettingsRuntime`.
+ * Like it, a fallback only updates the runtime ref — never persisted
+ * storage — so the next turn still starts from the user's configured
+ * provider when the primary recovers.
  */
 export function applySpeechOutputProviderFallbackRuntime(
   options: ApplySpeechOutputProviderFallbackRuntimeOptions,

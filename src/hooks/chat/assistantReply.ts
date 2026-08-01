@@ -544,8 +544,6 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         })
         return false
       }
-      const finalAssistantMessageContent = assistantMessageContent
-      const finalAssistantReplyForStatus = assistantReplyForStatus
       const assistantSpeechOutput = assistantPerformance.spokenContent || assistantMessageContent
 
       if (assistantMessageContent || chatToolResult) {
@@ -562,7 +560,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       const assistantMessage: ChatMessage = {
         id: createId('msg'),
         role: 'assistant',
-        content: finalAssistantMessageContent,
+        content: assistantMessageContent,
         createdAt: new Date().toISOString(),
         memoryTrace: buildChatMemoryTrace({ memoryContext, memoryPaused }),
         ...(response.response.reasoning_content
@@ -590,7 +588,7 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
         // failures must never break the chat turn itself.
         dependencies.ctx.onAssistantReplyDelivered?.({
           source,
-          displayText: finalAssistantMessageContent,
+          displayText: assistantMessageContent,
           spokenText: assistantSpeechOutput,
         })
       } catch (listenerError) {
@@ -620,12 +618,12 @@ export function createAssistantReplyRunner(dependencies: AssistantReplyRunnerDep
       }
 
       if (fromVoice) {
-        dependencies.ctx.updateVoicePipeline('reply_received', t('chat.assistant.voice_reply_received', { preview: shorten(finalAssistantReplyForStatus, 36) }), content)
-        dependencies.ctx.appendVoiceTrace(t('chat.assistant.voice_reply_label'), `#${traceLabel} ${shorten(finalAssistantReplyForStatus, 32)}`, 'success')
+        dependencies.ctx.updateVoicePipeline('reply_received', t('chat.assistant.voice_reply_received', { preview: shorten(assistantReplyForStatus, 36) }), content)
+        dependencies.ctx.appendVoiceTrace(t('chat.assistant.voice_reply_label'), `#${traceLabel} ${shorten(assistantReplyForStatus, 32)}`, 'success')
       }
 
-      if (!assistantMessageContent && !chatToolResult && finalAssistantReplyForStatus) {
-        dependencies.ctx.updatePetStatus(shorten(finalAssistantReplyForStatus, 24), 2_400)
+      if (!assistantMessageContent && !chatToolResult && assistantReplyForStatus) {
+        dependencies.ctx.updatePetStatus(shorten(assistantReplyForStatus, 24), 2_400)
       }
 
       const activeStreamingTtsController = streamingTtsController && assistantSpeechOutput

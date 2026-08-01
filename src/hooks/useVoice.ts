@@ -23,6 +23,13 @@ import {
   saveVoicePipelineState,
   type BrowserSpeechRecognition,
 } from '../lib'
+import {
+  AUDIO_TTS_ANALYSER_FFT_SIZE,
+  BROWSER_TTS_LIPSYNC_INTERVAL_MS,
+  MAX_CONTINUOUS_NO_SPEECH_RESTARTS,
+  MAX_VOICE_TRACE_ENTRIES,
+  VOICE_TRANSCRIPT_DEDUP_WINDOW_MS,
+} from './voice/constants.ts'
 import { clearPendingVoiceRestart as clearPendingVoiceRestartTimer } from './voice/continuousVoice'
 import { ensureSupportedSpeechInputSettingsRuntime } from './voice/providerFallbacks'
 import { pickTranslatedUiText } from '../lib/uiLanguage'
@@ -80,14 +87,6 @@ import {
   createSpeechLevelPublisher,
   type SpeechLevelPublisher,
 } from './voice/speechLevelPublishing.ts'
-
-// ── Constants ──────────────────────────────────────────────────────────────────
-
-const MAX_CONTINUOUS_NO_SPEECH_RESTARTS = 5
-const VOICE_TRANSCRIPT_DEDUP_WINDOW_MS = 6_000
-const MAX_VOICE_TRACE_ENTRIES = 8
-const BROWSER_TTS_LIPSYNC_INTERVAL_MS = 88
-const AUDIO_TTS_ANALYSER_FFT_SIZE = 512
 
 function disposeSpeechLevelPublisherAfterEffectReplay(
   publisher: SpeechLevelPublisher,
@@ -368,7 +367,7 @@ export function useVoice(ctx: UseVoiceContext) {
   }, [voiceBus, setVoiceState])
 
   // ── Ref sync ───────────────────────────────────────────────────────────────
-  // All voice-state changes should go through setVoiceStateSync so the ref
+  // All voice-state changes should go through setVoiceState so the ref
   // is updated synchronously (scheduleVoiceRestart reads the ref, not React state).
   // The useEffect is kept only as a safety net for edge cases.
 

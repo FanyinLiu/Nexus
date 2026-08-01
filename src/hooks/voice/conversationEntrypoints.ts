@@ -36,17 +36,11 @@ type ShowPetStatus = (
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
 
-type ActiveVoiceConversationOptions = {
-  restart?: boolean
-  passive?: boolean
-  wakewordTriggered?: boolean
-}
-
 export type StartVoiceConversationEntrypointOptions = {
   options?: VoiceConversationOptions
   settingsRef: RefObject<AppSettings>
   busyRef: RefObject<boolean>
-  activeVoiceConversationOptionsRef: MutableRefObject<ActiveVoiceConversationOptions>
+  activeVoiceConversationOptionsRef: MutableRefObject<VoiceConversationOptions>
   voiceStateRef: MutableRefObject<VoiceState>
   suppressVoiceReplyRef: MutableRefObject<boolean>
   recognitionRef: MutableRefObject<BrowserSpeechRecognition | null>

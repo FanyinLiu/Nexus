@@ -271,7 +271,7 @@ export type VoiceRuntimeBag = {
   bindingsHolder: Holder<VoiceBindings>
   enginesHolder: Holder<VoiceEngines>
   lifecycleHolder: Holder<VoiceLifecycle>
-  // Tunables (constants from useVoice)
+  // Tunables (from voice/constants.ts)
   tunables: {
     voiceTranscriptDedupWindowMs: number
     maxContinuousNoSpeechRestarts: number

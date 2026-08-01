@@ -203,8 +203,6 @@ export function beginStreamingSpeechReplyRuntime(
     )
   } catch (error) {
     options.resetSpeechLevel()
-    throw error instanceof Error ? error : new Error(
-      error instanceof Error ? error.message : 'Streaming speech playback failed.',
-    )
+    throw error instanceof Error ? error : new Error('Streaming speech playback failed.')
   }
 }

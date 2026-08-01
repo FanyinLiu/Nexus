@@ -8,12 +8,11 @@ export function bindStreamingAbort<T>(
   request: Promise<T> & { abort?: () => Promise<void> },
   setAbort: AbortSetter,
 ) {
-  const abort = request.abort?.bind(request)
-  setAbort(abort ?? null)
-  const capturedAbort = abort ?? null
+  const boundAbort = request.abort?.bind(request) ?? null
+  setAbort(boundAbort)
 
   return request.finally(() => {
     // Only clear if this is still OUR abort function, not a newer turn's
-    setAbort((current) => (current === capturedAbort ? null : current))
+    setAbort((current) => (current === boundAbort ? null : current))
   })
 }
