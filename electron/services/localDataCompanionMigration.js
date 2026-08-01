@@ -1,14 +1,20 @@
-import fs from 'node:fs/promises'
-import { createRequire } from 'node:module'
 import {
   LOCAL_DATA_AUDIT_DOMAIN_ID,
   LOCAL_DATA_COMPANION_RELATIONSHIP_DOMAIN_ID,
   LOCAL_DATA_COMPANION_TASKS_DOMAIN_ID,
   initializeLocalDataStore,
   readLocalDataDomainRecords,
-  readLocalDataSqliteState,
   resolveLocalDataPaths,
-} from './localDataStore.js'
+  nowIso,
+  openSqliteDatabase,
+  ensureSqliteTables,
+  setMeta,
+  auditRecordId,
+  insertLocalDataAuditRecord,
+  readSqliteState,
+  atomicWriteJson,
+  manifestFromSqliteState,
+} from './localDataStoreCore.js'
 
 const COMPANION_MIGRATION_PACKAGE_SCHEMA_VERSION = 1
 const MAX_DATASET_BYTES = 2_000_000
@@ -16,7 +22,6 @@ const MAX_TOTAL_BYTES = 20_000_000
 const MAX_ARRAY_ITEMS = 2_000
 const MAX_OBJECT_KEYS = 128
 const MAX_DEPTH = 8
-const require = createRequire(import.meta.url)
 
 const RELATIONSHIP_DATASETS = Object.freeze([
   ['relationship-state', 'nexus:autonomy:relationship'],
@@ -39,10 +44,6 @@ const TASK_DATASETS = Object.freeze([
 const DATASET_SPECS = new Map(
   [...RELATIONSHIP_DATASETS, ...TASK_DATASETS].map(([id, storageKey]) => [storageKey, { id, storageKey }]),
 )
-
-function nowIso(now = new Date()) {
-  return now instanceof Date ? now.toISOString() : new Date(now).toISOString()
-}
 
 function byteLength(value) {
   return Buffer.byteLength(JSON.stringify(value), 'utf8')
@@ -173,13 +174,13 @@ function emptyCompanionComparison(errorKind = null, errorMessage = null) {
 async function writeCompanionComparisonAudit(options, result, comparedAt) {
   let db = null
   try {
-    const { databasePath } = await resolveLocalDataPaths(options)
-    db = openDatabase(databasePath)
-    ensureTables(db)
+    const { manifestPath, databasePath } = await resolveLocalDataPaths(options)
+    db = openSqliteDatabase(databasePath)
+    ensureSqliteTables(db)
     const auditId = auditRecordId('companion-comparison', comparedAt)
     db.exec('BEGIN')
     try {
-      insertAuditRecord(db, auditId, {
+      insertLocalDataAuditRecord(db, auditId, {
         action: 'companion-migration-compared',
         comparedAt,
         status: result.status,
@@ -203,7 +204,7 @@ async function writeCompanionComparisonAudit(options, result, comparedAt) {
       try { db.exec('ROLLBACK') } catch {}
       throw error
     }
-    await refreshManifest(options, comparedAt)
+    await atomicWriteJson(manifestPath, manifestFromSqliteState(readSqliteState(db)))
     return auditId
   } catch {
     return null
@@ -212,66 +213,12 @@ async function writeCompanionComparisonAudit(options, result, comparedAt) {
   }
 }
 
-function openDatabase(databasePath) {
-  const db = new (require('node:sqlite').DatabaseSync)(databasePath)
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;')
-  return db
-}
-
-function ensureTables(db) {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS local_data_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS domain_registry (id TEXT PRIMARY KEY, metadata_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS local_data_records (
-      domain_id TEXT NOT NULL,
-      record_id TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      source TEXT NOT NULL,
-      mirrored_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      PRIMARY KEY (domain_id, record_id),
-      FOREIGN KEY (domain_id) REFERENCES domain_registry(id) ON DELETE CASCADE
-    );
-  `)
-}
-
-function setMeta(db, key, value) {
-  db.prepare('INSERT INTO local_data_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value))
-}
-
 function insertRecord(db, domainId, recordId, payload, source, timestamp) {
   db.prepare(`
     INSERT INTO local_data_records (domain_id, record_id, payload_json, source, mirrored_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(domain_id, record_id) DO UPDATE SET payload_json = excluded.payload_json, source = excluded.source, mirrored_at = excluded.mirrored_at, updated_at = excluded.updated_at
   `).run(domainId, recordId, JSON.stringify(payload), source, timestamp, timestamp)
-}
-
-function auditRecordId(prefix, timestamp) {
-  return `${prefix}-${timestamp.replace(/[:.]/g, '-')}`
-}
-
-function insertAuditRecord(db, recordId, payload, timestamp) {
-  insertRecord(db, LOCAL_DATA_AUDIT_DOMAIN_ID, recordId, payload, 'main-process-local-data-service', timestamp)
-}
-
-async function refreshManifest(options, updatedAt) {
-  const state = await readLocalDataSqliteState(options)
-  const { manifestPath } = await resolveLocalDataPaths(options)
-  const manifest = {
-    format: 'nexus-local-data-manifest',
-    formatVersion: 1,
-    backend: state.backend,
-    schemaVersion: state.schemaVersion,
-    createdAt: state.createdAt,
-    updatedAt,
-    migrations: state.migrations,
-    domains: Object.fromEntries(state.domains.map((domain) => [domain.id, domain.metadata])),
-  }
-  const tempPath = `${manifestPath}.${process.pid}.${Date.now()}.tmp`
-  await fs.writeFile(tempPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
-  await fs.rename(tempPath, manifestPath)
-  return state
 }
 
 function domainForDataset(dataset) {
@@ -312,9 +259,9 @@ export async function applyCompanionLocalDataMigration(options = {}) {
   let db = null
   try {
     const appliedAt = nowIso(options.now)
-    const { databasePath } = await resolveLocalDataPaths(options)
-    db = openDatabase(databasePath)
-    ensureTables(db)
+    const { manifestPath, databasePath } = await resolveLocalDataPaths(options)
+    db = openSqliteDatabase(databasePath)
+    ensureSqliteTables(db)
     const auditId = auditRecordId('companion-migration', appliedAt)
     db.exec('BEGIN')
     try {
@@ -322,14 +269,15 @@ export async function applyCompanionLocalDataMigration(options = {}) {
       for (const dataset of [...normalized.migrationPackage.relationship, ...normalized.migrationPackage.tasks]) {
         insertRecord(db, domainForDataset(dataset), dataset.id, { storageKey: dataset.storageKey, value: dataset.value }, 'renderer-localStorage-companion-migration', appliedAt)
       }
-      insertAuditRecord(db, auditId, { action: 'companion-migration-applied', appliedAt, relationshipDatasetCount: planned.relationshipDatasetCount, taskDatasetCount: planned.taskDatasetCount, totalRecordCount: planned.totalRecordCount, payloadBytes: planned.payloadBytes, confirmed: true }, appliedAt)
+      insertLocalDataAuditRecord(db, auditId, { action: 'companion-migration-applied', appliedAt, relationshipDatasetCount: planned.relationshipDatasetCount, taskDatasetCount: planned.taskDatasetCount, totalRecordCount: planned.totalRecordCount, payloadBytes: planned.payloadBytes, confirmed: true }, appliedAt)
       setMeta(db, 'updatedAt', appliedAt)
       db.exec('COMMIT')
     } catch (error) {
       try { db.exec('ROLLBACK') } catch {}
       throw error
     }
-    const state = await refreshManifest(options, appliedAt)
+    const state = readSqliteState(db)
+    await atomicWriteJson(manifestPath, manifestFromSqliteState(state))
     return { ...planned, ok: true, applied: true, recordsWritten: normalized.migrationPackage.relationship.length + normalized.migrationPackage.tasks.length, schemaVersion: state.schemaVersion, auditRecordId: auditId, errorKind: null, errorMessage: null }
   } catch {
     return { ...planned, ok: false, applied: false, recordsWritten: 0, auditRecordId: null, errorKind: 'local-data-companion-migration-failed', errorMessage: 'Companion migration could not be completed.' }
@@ -340,7 +288,7 @@ export async function applyCompanionLocalDataMigration(options = {}) {
 
 export async function compareCompanionLocalData(options = {}) {
   if (options.confirmed !== true) {
-    return { ...emptyCompanionComparison(), ok: false, errorKind: 'local-data-companion-migration-confirmation-required', errorMessage: 'Companion comparison requires explicit confirmation.' }
+    return emptyCompanionComparison('local-data-companion-migration-confirmation-required', 'Companion comparison requires explicit confirmation.')
   }
 
   let source
@@ -430,9 +378,9 @@ export async function mirrorCompanionLocalDataDataset(options = {}) {
   let db = null
   try {
     const mirroredAt = nowIso(options.now)
-    const { databasePath } = await resolveLocalDataPaths(options)
-    db = openDatabase(databasePath)
-    ensureTables(db)
+    const { manifestPath, databasePath } = await resolveLocalDataPaths(options)
+    db = openSqliteDatabase(databasePath)
+    ensureSqliteTables(db)
     db.exec('BEGIN')
     try {
       insertRecord(db, domainForDataset(dataset), dataset.id, { storageKey: dataset.storageKey, value: dataset.value }, 'renderer-localStorage-companion-authority', mirroredAt)
@@ -442,7 +390,8 @@ export async function mirrorCompanionLocalDataDataset(options = {}) {
       try { db.exec('ROLLBACK') } catch {}
       throw error
     }
-    const state = await refreshManifest(options, mirroredAt)
+    const state = readSqliteState(db)
+    await atomicWriteJson(manifestPath, manifestFromSqliteState(state))
     return { ok: true, mirrored: true, datasetId: dataset.id, schemaVersion: state.schemaVersion, errorKind: null, errorMessage: null }
   } catch {
     return { ok: false, mirrored: false, errorKind: 'local-data-companion-migration-failed', errorMessage: 'Companion dataset could not be mirrored.' }
@@ -459,22 +408,23 @@ export async function rollbackCompanionLocalDataMigration(options = {}) {
   let db = null
   try {
     const rolledBackAt = nowIso(options.now)
-    const { databasePath } = await resolveLocalDataPaths(options)
-    db = openDatabase(databasePath)
-    ensureTables(db)
+    const { manifestPath, databasePath } = await resolveLocalDataPaths(options)
+    db = openSqliteDatabase(databasePath)
+    ensureSqliteTables(db)
     const existing = db.prepare('SELECT COUNT(*) AS count FROM local_data_records WHERE domain_id IN (?, ?)').get(...domains)?.count ?? 0
     const auditId = auditRecordId('companion-migration-rollback', rolledBackAt)
     db.exec('BEGIN')
     try {
       db.prepare('DELETE FROM local_data_records WHERE domain_id IN (?, ?)').run(...domains)
-      insertAuditRecord(db, auditId, { action: 'companion-migration-rolled-back', rolledBackAt, recordsDeleted: existing }, rolledBackAt)
+      insertLocalDataAuditRecord(db, auditId, { action: 'companion-migration-rolled-back', rolledBackAt, recordsDeleted: existing }, rolledBackAt)
       setMeta(db, 'updatedAt', rolledBackAt)
       db.exec('COMMIT')
     } catch (error) {
       try { db.exec('ROLLBACK') } catch {}
       throw error
     }
-    const state = await refreshManifest(options, rolledBackAt)
+    const state = readSqliteState(db)
+    await atomicWriteJson(manifestPath, manifestFromSqliteState(state))
     return { ok: true, targetDomainIds: domains, recordsDeleted: existing, schemaVersion: state.schemaVersion, auditRecordId: auditId, errorKind: null, errorMessage: null }
   } catch {
     return { ok: false, targetDomainIds: domains, recordsDeleted: 0, auditRecordId: null, errorKind: 'local-data-companion-migration-failed', errorMessage: 'Companion migration rollback could not be completed.' }

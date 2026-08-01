@@ -18,6 +18,7 @@ import {
 } from './localDataChatMigration.js'
 import {
   LOCAL_DATA_CHAT_SESSIONS_DOMAIN_ID,
+  LOCAL_DATA_AUDIT_DOMAIN_ID,
   initializeLocalDataStore,
   resolveLocalDataPaths,
   setLocalDataRuntimeStatus,
@@ -35,7 +36,6 @@ import {
   statusFromSqliteState,
   statusFromError,
   readSqliteRecords,
-  readLastChatMigrationAudit,
   getMeta,
   isPlainObject,
 } from './localDataStoreCore.js'
@@ -253,6 +253,36 @@ export async function rollbackChatLocalDataMigration(options = {}) {
   } finally {
     if (db) db.close()
   }
+}
+
+function readLastChatMigrationAudit(db) {
+  const rows = db.prepare(`
+    SELECT record_id AS recordId, payload_json AS payloadJson, updated_at AS updatedAt
+    FROM local_data_records
+    WHERE domain_id = ?
+    ORDER BY updated_at DESC, record_id DESC
+    LIMIT 20
+  `).all(LOCAL_DATA_AUDIT_DOMAIN_ID)
+
+  for (const row of rows) {
+    const payload = safeParseJsonObject(row.payloadJson)
+    if (payload?.action === 'chat-sessions-migration-applied') {
+      return {
+        recordId: row.recordId,
+        action: payload.action,
+        at: typeof payload.appliedAt === 'string' ? payload.appliedAt : row.updatedAt,
+      }
+    }
+    if (payload?.action === 'chat-sessions-migration-rolled-back') {
+      return {
+        recordId: row.recordId,
+        action: payload.action,
+        at: typeof payload.rolledBackAt === 'string' ? payload.rolledBackAt : row.updatedAt,
+      }
+    }
+  }
+
+  return null
 }
 
 export async function getChatLocalDataMigrationStatus(options = {}) {

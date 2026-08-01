@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { createRequire } from 'node:module'
-import { safeParseJsonObject } from './localDataChatMigration.js'
 const LOCAL_DATA_BACKEND = 'sqlite'
 const LOCAL_DATA_SCHEMA_VERSION = 4
 const LOCAL_DATA_MANIFEST_FORMAT = 'nexus-local-data-manifest'
@@ -476,36 +475,6 @@ export function readSqliteRecords(db, domainId = null) {
     `
   const rows = domainId ? db.prepare(sql).all(domainId) : db.prepare(sql).all()
   return rows.map(parseRecordPayload)
-}
-
-export function readLastChatMigrationAudit(db) {
-  const rows = db.prepare(`
-    SELECT record_id AS recordId, payload_json AS payloadJson, updated_at AS updatedAt
-    FROM local_data_records
-    WHERE domain_id = ?
-    ORDER BY updated_at DESC, record_id DESC
-    LIMIT 20
-  `).all(LOCAL_DATA_AUDIT_DOMAIN_ID)
-
-  for (const row of rows) {
-    const payload = safeParseJsonObject(row.payloadJson)
-    if (payload?.action === 'chat-sessions-migration-applied') {
-      return {
-        recordId: row.recordId,
-        action: payload.action,
-        at: typeof payload.appliedAt === 'string' ? payload.appliedAt : row.updatedAt,
-      }
-    }
-    if (payload?.action === 'chat-sessions-migration-rolled-back') {
-      return {
-        recordId: row.recordId,
-        action: payload.action,
-        at: typeof payload.rolledBackAt === 'string' ? payload.rolledBackAt : row.updatedAt,
-      }
-    }
-  }
-
-  return null
 }
 
 function recordsByDomain(records) {
