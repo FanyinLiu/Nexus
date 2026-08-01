@@ -7,6 +7,7 @@ import {
 
 const fileDialogFilterSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     name: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
     extensions: {
@@ -25,6 +26,7 @@ const fileDialogFilterSchema = {
 
 const textFileSaveSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     title: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
     defaultFileName: { type: 'string', maxLength: 255, trim: true, allowEmpty: false, clamp: true },
@@ -40,6 +42,7 @@ const textFileSaveSchema = {
 
 const textFileOpenSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     title: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false, clamp: true },
     filters: {

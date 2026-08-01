@@ -19,14 +19,16 @@ export function useMcpServerSync(mcpServers: McpServerConfig[] | undefined) {
     if (!bridge?.mcpSyncServers) return
 
     const list = Array.isArray(mcpServers) ? mcpServers : []
-    const signature = JSON.stringify(
-      list.map((server) => ({
-        id: server.id,
-        command: server.command,
-        args: server.args,
-        enabled: server.enabled,
-      })),
-    )
+    // The mcp:sync-servers schema rejects unknown fields, and persisted
+    // legacy entries may carry extra keys — send only whitelisted fields.
+    const sanitized = list.map((server) => ({
+      id: server.id,
+      label: server.label,
+      command: server.command,
+      args: server.args,
+      enabled: server.enabled,
+    }))
+    const signature = JSON.stringify(sanitized)
     if (signature === lastSignatureRef.current) return
     if (list.length === 0 && lastSignatureRef.current === '') {
       lastSignatureRef.current = signature
@@ -34,7 +36,7 @@ export function useMcpServerSync(mcpServers: McpServerConfig[] | undefined) {
     }
     lastSignatureRef.current = signature
 
-    void bridge.mcpSyncServers({ servers: list }).catch((error: unknown) => {
+    void bridge.mcpSyncServers({ servers: sanitized }).catch((error: unknown) => {
       console.warn('[MCP] sync failed:', getRedactedLogErrorMessage(error))
     })
   }, [mcpServers])

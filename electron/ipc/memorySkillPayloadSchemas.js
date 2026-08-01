@@ -121,6 +121,7 @@ const mcpIdSchema = {
 
 const mcpCallToolSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     serverId: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
     name: { type: 'string', maxLength: SHORT_TEXT_MAX },
@@ -132,6 +133,7 @@ const mcpSyncServersSchema = {
   type: 'object',
   optional: true,
   default: { servers: [] },
+  unknown: 'reject',
   fields: {
     servers: {
       type: 'array',
@@ -140,6 +142,7 @@ const mcpSyncServersSchema = {
       maxItems: 32,
       items: {
         type: 'object',
+        unknown: 'reject',
         fields: {
           id: { type: 'string', maxLength: SHORT_TEXT_MAX },
           label: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },

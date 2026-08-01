@@ -21,6 +21,10 @@ const FILE_BUDGETS = {
   'tests/image4-visual-contract-audit.test.ts': 1300,
   'tests/settings-surface-audit.test.ts': 1300,
   'tests/settings-ui-scale.test.ts': 1400,
+  // IPC payload schema suite keeps one test per domain plus the high-risk
+  // unknown-field rejection gate; batch 2 of the rollout (external-action-policy /
+  // tool / desktop-context / pet-model creator-kit) pushed it past 1300.
+  'tests/ipc-payload-schema.test.ts': 1400,
 }
 
 function normalizePath(path) {

@@ -26,6 +26,7 @@ const petModelCreatorKitCreateSchema = {
   type: 'object',
   optional: true,
   default: {},
+  unknown: 'reject',
   fields: {
     id: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
     displayName: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true, clamp: true },
@@ -39,6 +40,7 @@ const petModelCreatorKitOptionalPathSchema = {
   type: 'object',
   optional: true,
   default: {},
+  unknown: 'reject',
   fields: {
     kitDirectory: { type: 'string', optional: true, maxLength: PATH_TEXT_MAX, trim: true, clamp: true },
   },
@@ -46,6 +48,7 @@ const petModelCreatorKitOptionalPathSchema = {
 
 const petModelCreatorKitInstallSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     kitDirectory: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },
     manifestPath: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },
@@ -54,6 +57,7 @@ const petModelCreatorKitInstallSchema = {
 
 const petModelCreatorKitOpenPathSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     kitDirectory: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },
     targetPath: { type: 'string', maxLength: PATH_TEXT_MAX, trim: true, allowEmpty: false },

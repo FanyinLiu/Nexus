@@ -12,6 +12,7 @@ const vtsBridgeConnectSchema = {
 
 const vtsBridgeLegacyTokenSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     token: { type: 'string', maxLength: SECRET_TEXT_MAX },
   },

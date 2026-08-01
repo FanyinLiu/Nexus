@@ -10,6 +10,7 @@ import {
   validateDiscordSendVoicePayload,
   validateExternalLinkToolPayload,
   validateExternalActionPolicySyncPayload,
+  validateGameCommandPayload,
   validateIntegrationInspectPayload,
   validateKwsOptionsPayload,
   validateLocalDataChatComparisonPayload,
@@ -26,6 +27,7 @@ import {
   validateMemoryVectorIndexPayload,
   validateModelDownloadPayload,
   validatePluginBusRecentPayload,
+  validatePluginBusTopicPayload,
   validatePluginIdPayload,
   validatePetWindowStatePayload,
   validatePetModelCreatorKitCreatePayload,
@@ -49,6 +51,7 @@ import {
   validateTtsStreamPushTextPayload,
   validateTtsStreamStartPayload,
   validateVadStartPayload,
+  validateVtsBridgeLegacyTokenPayload,
   validateWebSearchToolPayload,
   validateWindowDragPayload,
 } from '../electron/ipc/payloadSchemas.js'
@@ -193,7 +196,6 @@ test('IPC desktop context schema accepts policy booleans only', () => {
         activeWindow: true,
         clipboard: false,
         screenshot: true,
-        unknown: 'ignored',
       },
     }),
     {
@@ -210,6 +212,16 @@ test('IPC desktop context schema accepts policy booleans only', () => {
   assert.throws(
     () => validateDesktopContextRequestPayload({ includeScreenshot: 'yes' }),
     /payload\.includeScreenshot must be a boolean/,
+  )
+  assert.throws(
+    () => validateDesktopContextRequestPayload({ includeActiveWindow: true, rogue: true }),
+    /payload\.rogue is not allowed/,
+  )
+  assert.throws(
+    () => validateDesktopContextRequestPayload({
+      policy: { activeWindow: true, rogue: true },
+    }),
+    /payload\.policy\.rogue is not allowed/,
   )
 })
 
@@ -333,7 +345,7 @@ test('IPC tool schemas reject oversized or invalid renderer tool payloads', () =
       query: 'nexus desktop',
       limit: 5,
       keywords: ['nexus'],
-      policy: { enabled: true, requiresConfirmation: false, extra: 'ignored' },
+      policy: { enabled: true, requiresConfirmation: false },
     }),
     {
       query: 'nexus desktop',
@@ -348,9 +360,30 @@ test('IPC tool schemas reject oversized or invalid renderer tool payloads', () =
     /payload\.limit must be <= 20/,
   )
 
+  // rendererToolPolicySchema is shared with tool:open-external — unknown
+  // policy keys are rejected on every channel that nests it.
+  assert.throws(
+    () => validateWebSearchToolPayload({
+      query: 'nexus desktop',
+      policy: { enabled: true, rogue: true },
+    }),
+    /payload\.policy\.rogue is not allowed/,
+  )
+
   assert.deepEqual(
     validateExternalLinkToolPayload({ url: 'https://example.test', policy: { requiresConfirmation: true } }),
     { url: 'https://example.test', policy: { requiresConfirmation: true } },
+  )
+  assert.throws(
+    () => validateExternalLinkToolPayload({ url: 'https://example.test', rogue: true }),
+    /payload\.rogue is not allowed/,
+  )
+  assert.throws(
+    () => validateExternalLinkToolPayload({
+      url: 'https://example.test',
+      policy: { requiresConfirmation: true, rogue: true },
+    }),
+    /payload\.policy\.rogue is not allowed/,
   )
 })
 
@@ -360,8 +393,7 @@ test('IPC text file schemas bound file dialog payloads without reading files', (
       title: 'Save chat history',
       defaultFileName: 'nexus-chat-history.json',
       content: '{"messages":[]}',
-      filters: [{ name: 'JSON', extensions: ['json'], ignored: true }],
-      ignored: true,
+      filters: [{ name: 'JSON', extensions: ['json'] }],
     }),
     {
       title: 'Save chat history',
@@ -375,12 +407,29 @@ test('IPC text file schemas bound file dialog payloads without reading files', (
     validateTextFileOpenPayload({
       title: 'Open memory archive',
       filters: [{ name: 'JSON', extensions: ['json'] }],
-      ignored: true,
     }),
     {
       title: 'Open memory archive',
       filters: [{ name: 'JSON', extensions: ['json'] }],
     },
+  )
+
+  assert.throws(
+    () => validateTextFileSavePayload({
+      title: 'Save chat history',
+      defaultFileName: 'nexus-chat-history.json',
+      content: '{"messages":[]}',
+      ignored: true,
+    }),
+    /payload\.ignored is not allowed/,
+  )
+
+  assert.throws(
+    () => validateTextFileOpenPayload({
+      title: 'Open memory archive',
+      filters: [{ name: 'JSON', extensions: ['json'], ignored: true }],
+    }),
+    /payload\.filters\[0\]\.ignored is not allowed/,
   )
 
   assert.throws(
@@ -434,7 +483,6 @@ test('IPC MCP and plugin schemas bound command and plugin surfaces', () => {
       serverId: 'srv',
       name: 'search',
       arguments: { query: 'nexus' },
-      ignored: true,
     }),
     {
       serverId: 'srv',
@@ -442,11 +490,19 @@ test('IPC MCP and plugin schemas bound command and plugin surfaces', () => {
       arguments: { query: 'nexus' },
     },
   )
+  assert.throws(
+    () => validateMcpCallToolPayload({
+      serverId: 'srv',
+      name: 'search',
+      ignored: true,
+    }),
+    /payload\.ignored is not allowed/,
+  )
 
   assert.deepEqual(
     validateMcpSyncServersPayload({
       servers: [
-        { id: 'srv', label: 'Server', command: 'node', args: 'server.js', enabled: true, ignored: true },
+        { id: 'srv', label: 'Server', command: 'node', args: 'server.js', enabled: true },
       ],
     }),
     {
@@ -455,8 +511,24 @@ test('IPC MCP and plugin schemas bound command and plugin surfaces', () => {
       ],
     },
   )
+  assert.throws(
+    () => validateMcpSyncServersPayload({
+      servers: [
+        { id: 'srv', label: 'Server', command: 'node', args: 'server.js', enabled: true, ignored: true },
+      ],
+    }),
+    /payload\.servers\[0\]\.ignored is not allowed/,
+  )
+  assert.throws(
+    () => validateMcpSyncServersPayload({ servers: [], ignored: true }),
+    /payload\.ignored is not allowed/,
+  )
 
-  assert.deepEqual(validatePluginIdPayload('plugin:start', { id: 'plugin-a', ignored: true }), { id: 'plugin-a' })
+  assert.deepEqual(validatePluginIdPayload('plugin:start', { id: 'plugin-a' }), { id: 'plugin-a' })
+  assert.throws(
+    () => validatePluginIdPayload('plugin:start', { id: 'plugin-a', ignored: true }),
+    /payload\.ignored is not allowed/,
+  )
   assert.deepEqual(validatePluginBusRecentPayload({ limit: 50 }), { limit: 50 })
   assert.throws(
     () => validatePluginBusRecentPayload({ limit: 500 }),
@@ -471,7 +543,6 @@ test('IPC external action schemas bound outbound message payloads', () => {
       text: '  hello  ',
       replyToMessageId: 42,
       parseMode: ' Markdown ',
-      ignored: 'drop',
     }),
     {
       chatId: -100123456,
@@ -479,6 +550,23 @@ test('IPC external action schemas bound outbound message payloads', () => {
       replyToMessageId: 42,
       parseMode: 'Markdown',
     },
+  )
+  assert.throws(
+    () => validateTelegramSendMessagePayload({
+      chatId: -100123456,
+      text: 'hello',
+      ignored: 'drop',
+    }),
+    /payload\.ignored is not allowed/,
+  )
+  assert.throws(
+    () => validateDiscordSendVoicePayload({
+      channelId: '123456789012345678',
+      audioBase64: 'YWJj',
+      mimeType: 'audio/ogg',
+      ignored: true,
+    }),
+    /payload\.ignored is not allowed/,
   )
 
   assert.deepEqual(
@@ -534,12 +622,11 @@ test('IPC external action policy schema accepts modes and active flags only', ()
   assert.deepEqual(
     validateExternalActionPolicySyncPayload({
       policies: {
-        telegram: { mode: 'auto', active: true, token: 'secret' },
+        telegram: { mode: 'auto', active: true },
         discord: { mode: 'confirm', active: false },
         minecraft: { mode: 'read-only' },
         factorio: undefined,
         mcp: { mode: 'auto', active: true },
-        ignored: { mode: 'auto', active: true },
       },
     }),
     {
@@ -559,6 +646,27 @@ test('IPC external action policy schema accepts modes and active flags only', ()
       },
     }),
     /payload\.policies\.telegram\.mode must be one of: read-only, confirm, auto/,
+  )
+  assert.throws(
+    () => validateExternalActionPolicySyncPayload({ policies: {}, rogue: true }),
+    /payload\.rogue is not allowed/,
+  )
+  assert.throws(
+    () => validateExternalActionPolicySyncPayload({
+      policies: {
+        telegram: { mode: 'auto', active: true },
+        rogue: { mode: 'auto', active: true },
+      },
+    }),
+    /payload\.policies\.rogue is not allowed/,
+  )
+  assert.throws(
+    () => validateExternalActionPolicySyncPayload({
+      policies: {
+        telegram: { mode: 'auto', active: true, token: 'secret' },
+      },
+    }),
+    /payload\.policies\.telegram\.token is not allowed/,
   )
 })
 
@@ -853,13 +961,30 @@ test('IPC pet model schemas bound local artifact payloads', () => {
       id: ' pet-1 ',
       displayName: '  Private Pet  ',
       concept: '  tiny helper  ',
-      ignored: 'drop',
     }),
     {
       id: 'pet-1',
       displayName: 'Private Pet',
       concept: 'tiny helper',
     },
+  )
+  assert.throws(
+    () => validatePetModelCreatorKitCreatePayload({ displayName: 'Pet', rogue: true }),
+    /payload\.rogue is not allowed/,
+  )
+  assert.throws(
+    () => validatePetModelCreatorKitOptionalPathPayload('pet-model:inspect-creator-kit', {
+      kitDirectory: '/Users/me/private-kit',
+      rogue: true,
+    }),
+    /payload\.rogue is not allowed/,
+  )
+  assert.throws(
+    () => validatePetModelCreatorKitOptionalPathPayload('pet-model:assemble-creator-kit', {
+      kitDirectory: '/Users/me/private-kit',
+      rogue: true,
+    }),
+    /payload\.rogue is not allowed/,
   )
   assert.deepEqual(
     validatePetModelCreatorKitOptionalPathPayload('pet-model:inspect-creator-kit', {
@@ -901,12 +1026,28 @@ test('IPC pet model schemas bound local artifact payloads', () => {
     /payload\.limit must be >= 1/,
   )
   assert.throws(
+    () => validatePetModelCreatorKitInstallPayload({
+      kitDirectory: '/Users/me/private-kit',
+      manifestPath: '/Users/me/private-kit/pet.json',
+      rogue: true,
+    }),
+    /payload\.rogue is not allowed/,
+  )
+  assert.throws(
     () => validatePetModelCreatorKitOpenPathPayload({
       kitDirectory: '/Users/me/private-kit',
       targetPath: '/Users/me/private-kit/pet.json',
       mode: 'launch',
     }),
     /payload\.mode must be one of: open, reveal/,
+  )
+  assert.throws(
+    () => validatePetModelCreatorKitOpenPathPayload({
+      kitDirectory: '/Users/me/private-kit',
+      targetPath: '/Users/me/private-kit/pet.json',
+      rogue: true,
+    }),
+    /payload\.rogue is not allowed/,
   )
 })
 
@@ -1112,4 +1253,89 @@ test('IPC skill schemas bound persisted skill payloads and file ids', () => {
     () => validateSkillIdPayload('skill:mark-used', { id: '.hidden' }),
     /Invalid IPC payload for skill:mark-used: payload\.id has an invalid format/,
   )
+})
+
+// Regression gate for the high-risk IPC payload rollout: every channel below
+// is classified 'high' by classifyRisk in scripts/ipc-contract-audit.mjs and
+// must keep `unknown: 'reject'` on its top-level object schema. classifyRisk
+// is not exported (the audit script pulls in the typescript6 parser), so the
+// channel list is hardcoded here — keep it in sync when later batches tighten
+// more channels. Each case sends an otherwise valid payload plus one
+// undeclared key and asserts rejection instead of the legacy silent strip
+// behavior.
+test('IPC high-risk schemas reject unknown top-level fields', () => {
+  const cases: Array<[string, () => unknown]> = [
+    // plugin 域：pluginIdSchema 服务 plugin:start/stop/restart/enable/disable/approve/revoke
+    ['plugin:start', () => validatePluginIdPayload('plugin:start', { id: 'plugin-a', rogue: true })],
+    // plugin-bus:publish/subscribe/unsubscribe 共用 topic schema
+    ['plugin-bus:publish', () => validatePluginBusTopicPayload('plugin-bus:publish', {
+      serverId: 'srv',
+      topic: 'topic',
+      rogue: true,
+    })],
+    ['plugin-bus:recent', () => validatePluginBusRecentPayload({ limit: 10, rogue: true })],
+    ['telegram:send-message', () => validateTelegramSendMessagePayload({ chatId: 1, text: 'hi', rogue: true })],
+    ['telegram:send-voice', () => validateTelegramSendVoicePayload({
+      chatId: 1,
+      audioBase64: 'YWJj',
+      mimeType: 'audio/ogg',
+      rogue: true,
+    })],
+    ['discord:send-message', () => validateDiscordSendMessagePayload({ channelId: '123', text: 'hi', rogue: true })],
+    ['discord:send-voice', () => validateDiscordSendVoicePayload({
+      channelId: '123',
+      audioBase64: 'YWJj',
+      mimeType: 'audio/ogg',
+      rogue: true,
+    })],
+    ['minecraft:send-command', () => validateGameCommandPayload('minecraft:send-command', { command: 'say hi', rogue: true })],
+    ['factorio:execute', () => validateGameCommandPayload('factorio:execute', { command: 'help', rogue: true })],
+    ['file:save-text', () => validateTextFileSavePayload({
+      title: 'Save',
+      defaultFileName: 'a.json',
+      content: '{}',
+      rogue: true,
+    })],
+    ['file:open-text', () => validateTextFileOpenPayload({ title: 'Open', rogue: true })],
+    ['vts-bridge:migrate-legacy-token', () => validateVtsBridgeLegacyTokenPayload({ token: 'secret', rogue: true })],
+    ['mcp:call-tool', () => validateMcpCallToolPayload({ name: 'search', rogue: true })],
+    ['mcp:sync-servers', () => validateMcpSyncServersPayload({ servers: [], rogue: true })],
+    // 第二批：external-action-policy / tool / desktop-context / pet-model creator-kit
+    ['external-action-policy:sync', () => validateExternalActionPolicySyncPayload({
+      policies: {},
+      rogue: true,
+    })],
+    ['tool:open-external', () => validateExternalLinkToolPayload({
+      url: 'https://example.test',
+      rogue: true,
+    })],
+    ['desktop-context:get', () => validateDesktopContextRequestPayload({
+      includeActiveWindow: true,
+      rogue: true,
+    })],
+    ['pet-model:create-creator-kit', () => validatePetModelCreatorKitCreatePayload({ rogue: true })],
+    // inspect/assemble 共用 petModelCreatorKitOptionalPathSchema
+    ['pet-model:inspect-creator-kit', () => validatePetModelCreatorKitOptionalPathPayload(
+      'pet-model:inspect-creator-kit',
+      { rogue: true },
+    )],
+    ['pet-model:assemble-creator-kit', () => validatePetModelCreatorKitOptionalPathPayload(
+      'pet-model:assemble-creator-kit',
+      { rogue: true },
+    )],
+    ['pet-model:install-creator-kit-codex', () => validatePetModelCreatorKitInstallPayload({
+      kitDirectory: '/tmp/kit',
+      manifestPath: '/tmp/kit/pet.json',
+      rogue: true,
+    })],
+    ['pet-model:open-creator-kit-path', () => validatePetModelCreatorKitOpenPathPayload({
+      kitDirectory: '/tmp/kit',
+      targetPath: '/tmp/kit/pet.json',
+      rogue: true,
+    })],
+  ]
+
+  for (const [channel, run] of cases) {
+    assert.throws(run, /is not allowed/, `${channel} must reject unknown top-level fields`)
+  }
 })

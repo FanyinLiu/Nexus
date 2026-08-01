@@ -11,6 +11,7 @@ import {
 const rendererToolPolicySchema = {
   type: 'object',
   optional: true,
+  unknown: 'reject',
   fields: {
     enabled: optionalBoolean,
     requiresConfirmation: optionalBoolean,
@@ -173,6 +174,7 @@ const weatherLookupRequestSchema = {
 
 const externalLinkRequestSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     url: { type: 'string', maxLength: URL_TEXT_MAX },
     policy: rendererToolPolicySchema,

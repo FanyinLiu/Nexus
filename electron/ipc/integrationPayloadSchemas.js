@@ -12,6 +12,7 @@ import {
 const externalActionPolicyItemSchema = {
   type: 'object',
   optional: true,
+  unknown: 'reject',
   fields: {
     mode: integrationPermissionModeSchema,
     active: { type: 'boolean', optional: true },
@@ -48,6 +49,7 @@ const integrationInspectSchema = {
 
 const telegramSendMessageSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     chatId: { type: 'number', integer: true },
     text: { type: 'string', maxLength: BODY_TEXT_MAX, trim: true, allowEmpty: false },
@@ -58,6 +60,7 @@ const telegramSendMessageSchema = {
 
 const telegramSendVoiceSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     chatId: { type: 'number', integer: true },
     audioBase64: { type: 'string', maxLength: AUDIO_BASE64_MAX, allowEmpty: false },
@@ -68,6 +71,7 @@ const telegramSendVoiceSchema = {
 
 const discordSendMessageSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     channelId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
     text: { type: 'string', maxLength: BODY_TEXT_MAX, trim: true, allowEmpty: false },
@@ -77,6 +81,7 @@ const discordSendMessageSchema = {
 
 const discordSendVoiceSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     channelId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
     audioBase64: { type: 'string', maxLength: 34_000_000, allowEmpty: false },
@@ -87,9 +92,11 @@ const discordSendVoiceSchema = {
 
 const externalActionPolicySyncSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     policies: {
       type: 'object',
+      unknown: 'reject',
       fields: {
         telegram: externalActionPolicyItemSchema,
         discord: externalActionPolicyItemSchema,
@@ -113,6 +120,7 @@ const gameConnectSchema = {
 
 const gameCommandSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     command: { type: 'string', maxLength: 4_000 },
   },

@@ -5,6 +5,7 @@ import {
 
 const pluginIdSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     id: { type: 'string', maxLength: SHORT_TEXT_MAX },
   },
@@ -12,6 +13,7 @@ const pluginIdSchema = {
 
 const pluginBusTopicSchema = {
   type: 'object',
+  unknown: 'reject',
   fields: {
     serverId: { type: 'string', maxLength: SHORT_TEXT_MAX },
     topic: { type: 'string', maxLength: SHORT_TEXT_MAX },
@@ -23,6 +25,7 @@ const pluginBusRecentSchema = {
   type: 'object',
   optional: true,
   default: {},
+  unknown: 'reject',
   fields: {
     limit: { type: 'number', optional: true, min: 1, max: 200 },
   },

@@ -91,6 +91,7 @@ const runtimeStateUpdateSchema = {
 const desktopContextPolicySchema = {
   type: 'object',
   optional: true,
+  unknown: 'reject',
   fields: {
     activeWindow: optionalBoolean,
     clipboard: optionalBoolean,
@@ -102,6 +103,7 @@ const desktopContextRequestSchema = {
   type: 'object',
   optional: true,
   default: {},
+  unknown: 'reject',
   fields: {
     includeActiveWindow: optionalBoolean,
     includeClipboard: optionalBoolean,
