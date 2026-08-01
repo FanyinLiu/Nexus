@@ -556,167 +556,167 @@ export function useChat(ctx: UseChatContext) {
         return rejectBusySubmission()
       }
 
-    // Resume the voice loop after TTS for ALL voice-originated turns. Even
-    // in wake-word mode, this gives the user a brief VAD window to speak
-    // again immediately after the companion replies, without re-waking.
-    // If they don't speak, the noSpeechTimer (3 s, see constants.ts)
-    // closes the session and the wake word listener takes over normally.
-    const shouldResumeContinuousVoice = fromVoice
+      // Resume the voice loop after TTS for ALL voice-originated turns. Even
+      // in wake-word mode, this gives the user a brief VAD window to speak
+      // again immediately after the companion replies, without re-waking.
+      // If they don't speak, the noSpeechTimer (3 s, see constants.ts)
+      // closes the session and the wake word listener takes over normally.
+      const shouldResumeContinuousVoice = fromVoice
 
-    if (ctx.voiceStateRef.current === 'speaking') {
-      if (!ctx.canInterruptSpeech()) {
-        setError(t('chat.voice.no_interrupt_error'))
-        ctx.updatePetStatus(t('chat.voice.no_interrupt_pet_status'), 3_000)
-        return false
+      if (ctx.voiceStateRef.current === 'speaking') {
+        if (!ctx.canInterruptSpeech()) {
+          setError(t('chat.voice.no_interrupt_error'))
+          ctx.updatePetStatus(t('chat.voice.no_interrupt_pet_status'), 3_000)
+          return false
+        }
+
+        ctx.stopActiveSpeechOutput()
+        ctx.setVoiceState('idle')
+        ctx.setMood('happy')
       }
 
-      ctx.stopActiveSpeechOutput()
-      ctx.setVoiceState('idle')
-      ctx.setMood('happy')
-    }
+      hidePetDialogBubble()
+      ctx.markPresenceActivity()
+      if (fromVoice) {
+        ctx.appendVoiceTrace(t('chat.voice.sent_label'), t('chat.voice.sent_trace', { label: traceLabel }))
+      }
 
-    hidePetDialogBubble()
-    ctx.markPresenceActivity()
-    if (fromVoice) {
-      ctx.appendVoiceTrace(t('chat.voice.sent_label'), t('chat.voice.sent_trace', { label: traceLabel }))
-    }
+      // Surface the non-persona hotline panel only for medium/high crisis
+      // signals. Low signals still soften the persona reply in the reply path
+      // without interrupting the conversation with a hotline panel.
+      const patternCrisisSignal = detectCrisisSignal(content, currentSettings.uiLanguage)
+      const crisisSignal = await classifyCrisisSecondPass({
+        locale: currentSettings.uiLanguage,
+        text: content,
+        patternSignal: patternCrisisSignal,
+        runner: patternCrisisSignal
+          ? async ({ system, user }) => {
+            const response = await window.desktopPet?.completeChat?.({
+              providerId: currentSettings.apiProviderId,
+              baseUrl: currentSettings.apiBaseUrl,
+              apiKey: currentSettings.apiKey,
+              model: currentSettings.model,
+              messages: [
+                { role: 'system', content: system },
+                { role: 'user', content: user },
+              ],
+              temperature: 0,
+              maxTokens: 120,
+            })
+            return response?.content ?? null
+          }
+          : undefined,
+      })
+      if (shouldPresentCrisisPanel(crisisSignal)) {
+        presentCrisis(crisisSignal)
+      }
 
-    // Surface the non-persona hotline panel only for medium/high crisis
-    // signals. Low signals still soften the persona reply in the reply path
-    // without interrupting the conversation with a hotline panel.
-    const patternCrisisSignal = detectCrisisSignal(content, currentSettings.uiLanguage)
-    const crisisSignal = await classifyCrisisSecondPass({
-      locale: currentSettings.uiLanguage,
-      text: content,
-      patternSignal: patternCrisisSignal,
-      runner: patternCrisisSignal
-        ? async ({ system, user }) => {
-          const response = await window.desktopPet?.completeChat?.({
-            providerId: currentSettings.apiProviderId,
-            baseUrl: currentSettings.apiBaseUrl,
-            apiKey: currentSettings.apiKey,
-            model: currentSettings.model,
-            messages: [
-              { role: 'system', content: system },
-              { role: 'user', content: user },
-            ],
-            temperature: 0,
-            maxTokens: 120,
+      const userMessage: ChatMessage = {
+        id: createId('msg'),
+        role: 'user',
+        content,
+        createdAt: new Date().toISOString(),
+        ...(attachedImage ? { images: [attachedImage] } : {}),
+      }
+
+      // Consume the pending image as soon as it's attached to the outgoing
+      // message — both the ref (for reentrancy) and React state (for the UI chip).
+      if (attachedImage) {
+        pendingImageRef.current = null
+        setPendingImageState(null)
+      }
+
+      const nextMessages = [...messagesRef.current, userMessage]
+      const nextMemories = mergeMemories(ctx.memoriesRef.current, extractMemoriesFromMessage(userMessage, ctx.getEmotionSnapshot?.()))
+      const nextDailyMemories = ctx.appendDailyMemoryEntries(
+        [createDailyMemoryEntry(userMessage, fromVoice ? 'voice' : 'chat')].filter(
+          (entry): entry is DailyMemoryEntry => Boolean(entry),
+        ),
+      )
+
+      messagesRef.current = nextMessages
+      ctx.memoriesRef.current = nextMemories
+      ctx.setMemories(nextMemories)
+      setMessages(nextMessages)
+
+      // Periodic AI-disclosure reminder (Tier 1.1 chunk E). Fires every
+      // 30 user messages AND every 3 hours of wall-clock since the last
+      // reminder, whichever comes second. The check is gated on having
+      // ack'd the onboarding disclosure step.
+      if (noteUserMessageAndCheckReminder()) {
+        appendSystemMessage(t('safety.disclosure.periodic_reminder'))
+      }
+
+      if (composerSnapshot !== null && shouldClearSubmittedInput(inputRef.current, composerSnapshot)) {
+        setInputValue('')
+      }
+
+      const resolvedReminderIntent = resolveReminderIntentWithPendingDraft(
+        content,
+        getPendingReminderDraft(),
+      )
+      const parsedReminderIntent = resolvedReminderIntent.intent
+      if (resolvedReminderIntent.shouldClearPendingDraft) {
+        clearPendingReminderDraft()
+      }
+
+      if (parsedReminderIntent) {
+        try {
+          await runLocalReminderAction({
+            intent: parsedReminderIntent,
+            content,
+            fromVoice,
+            traceLabel,
+            shouldResumeContinuousVoice,
           })
-          return response?.content ?? null
+          return true
+        } catch (localIntentError) {
+          const errorMessage = localIntentError instanceof Error ? localIntentError.message : t('chat.local_intent.failed')
+          appendSystemMessage(errorMessage, 'error')
+          setError(errorMessage)
+          ctx.appendDebugConsoleEvent({
+            source: 'reminder',
+            title: 'Local reminder handling failed',
+            detail: errorMessage,
+            tone: 'error',
+          })
+          ctx.updatePetStatus(errorMessage, 3_200)
+          if (fromVoice) {
+            ctx.updateVoicePipeline('reply_failed', t('chat.local_intent.voice_detail', { preview: shorten(errorMessage, 36) }), content)
+            ctx.appendVoiceTrace(t('chat.local_intent.voice_label'), t('chat.local_intent.voice_trace', { label: traceLabel, preview: shorten(errorMessage, 40) }), 'error')
+          }
+          return false
         }
-        : undefined,
-    })
-    if (shouldPresentCrisisPanel(crisisSignal)) {
-      presentCrisis(crisisSignal)
-    }
+      }
 
-    const userMessage: ChatMessage = {
-      id: createId('msg'),
-      role: 'user',
-      content,
-      createdAt: new Date().toISOString(),
-      ...(attachedImage ? { images: [attachedImage] } : {}),
-    }
-
-    // Consume the pending image as soon as it's attached to the outgoing
-    // message — both the ref (for reentrancy) and React state (for the UI chip).
-    if (attachedImage) {
-      pendingImageRef.current = null
-      setPendingImageState(null)
-    }
-
-    const nextMessages = [...messagesRef.current, userMessage]
-    const nextMemories = mergeMemories(ctx.memoriesRef.current, extractMemoriesFromMessage(userMessage, ctx.getEmotionSnapshot?.()))
-    const nextDailyMemories = ctx.appendDailyMemoryEntries(
-      [createDailyMemoryEntry(userMessage, fromVoice ? 'voice' : 'chat')].filter(
-        (entry): entry is DailyMemoryEntry => Boolean(entry),
-      ),
-    )
-
-    messagesRef.current = nextMessages
-    ctx.memoriesRef.current = nextMemories
-    ctx.setMemories(nextMemories)
-    setMessages(nextMessages)
-
-    // Periodic AI-disclosure reminder (Tier 1.1 chunk E). Fires every
-    // 30 user messages AND every 3 hours of wall-clock since the last
-    // reminder, whichever comes second. The check is gated on having
-    // ack'd the onboarding disclosure step.
-    if (noteUserMessageAndCheckReminder()) {
-      appendSystemMessage(t('safety.disclosure.periodic_reminder'))
-    }
-
-    if (composerSnapshot !== null && shouldClearSubmittedInput(inputRef.current, composerSnapshot)) {
-      setInputValue('')
-    }
-
-    const resolvedReminderIntent = resolveReminderIntentWithPendingDraft(
-      content,
-      getPendingReminderDraft(),
-    )
-    const parsedReminderIntent = resolvedReminderIntent.intent
-    if (resolvedReminderIntent.shouldClearPendingDraft) {
-      clearPendingReminderDraft()
-    }
-
-    if (parsedReminderIntent) {
-      try {
-        await runLocalReminderAction({
-          intent: parsedReminderIntent,
+      // The lock only protects slash handling and preflight classification. The
+      // turn runtime synchronously marks busyRef on entry, so release before it
+      // starts; the finally below remains an idempotent safety release.
+      releaseChatSubmission(submissionLockRef)
+      return executeAssistantTurn(
+        {
+          ctx,
+          setBusy,
+          setError,
+          busyRef,
+          activeTurnIdRef,
+          activeStreamAbortRef,
+          runAssistantReplyTurn,
+          flushDeferredCompanionNotices,
+        },
+        {
+          currentSettings,
+          nextMessages,
+          nextMemories,
+          nextDailyMemories,
           content,
+          source,
           fromVoice,
+          traceId,
           traceLabel,
           shouldResumeContinuousVoice,
-        })
-        return true
-      } catch (localIntentError) {
-        const errorMessage = localIntentError instanceof Error ? localIntentError.message : t('chat.local_intent.failed')
-        appendSystemMessage(errorMessage, 'error')
-        setError(errorMessage)
-        ctx.appendDebugConsoleEvent({
-          source: 'reminder',
-          title: 'Local reminder handling failed',
-          detail: errorMessage,
-          tone: 'error',
-        })
-        ctx.updatePetStatus(errorMessage, 3_200)
-        if (fromVoice) {
-          ctx.updateVoicePipeline('reply_failed', t('chat.local_intent.voice_detail', { preview: shorten(errorMessage, 36) }), content)
-          ctx.appendVoiceTrace(t('chat.local_intent.voice_label'), t('chat.local_intent.voice_trace', { label: traceLabel, preview: shorten(errorMessage, 40) }), 'error')
-        }
-        return false
-      }
-    }
-
-    // The lock only protects slash handling and preflight classification. The
-    // turn runtime synchronously marks busyRef on entry, so release before it
-    // starts; the finally below remains an idempotent safety release.
-    releaseChatSubmission(submissionLockRef)
-    return executeAssistantTurn(
-      {
-        ctx,
-        setBusy,
-        setError,
-        busyRef,
-        activeTurnIdRef,
-        activeStreamAbortRef,
-        runAssistantReplyTurn,
-        flushDeferredCompanionNotices,
-      },
-      {
-        currentSettings,
-        nextMessages,
-        nextMemories,
-        nextDailyMemories,
-        content,
-        source,
-        fromVoice,
-        traceId,
-        traceLabel,
-        shouldResumeContinuousVoice,
-      },
-    )
+        },
+      )
     } finally {
       releaseChatSubmission(submissionLockRef)
     }
