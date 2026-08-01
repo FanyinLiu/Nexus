@@ -29,7 +29,14 @@ import {
   LEGACY_MEMORY_STORAGE_KEY,
   MEMORY_STORAGE_KEY,
 } from '../src/lib/storage/core.ts'
-import { buildMemoryLocalDataMigrationPackage } from '../src/lib/storage/memoryLocalDataMigration.ts'
+import {
+  buildMemoryLocalDataMigrationPackage,
+  buildMemoryMigrationBackupEnvelope,
+  buildMemoryMigrationBackupFileName,
+  canExportMemoryMigrationBackup,
+  isMemoryLocalDataMigrationUiEnabled,
+} from '../src/lib/storage/memoryLocalDataMigration.ts'
+import { buildMemoryStorageMigrationDryRun } from '../src/lib/storage/memoryMigrationDryRun.ts'
 import type { MemoryLocalDataMigrationPackage } from '../src/lib/storage/memoryLocalDataMigration.ts'
 
 type LongTermPackageEntry = MemoryLocalDataMigrationPackage['longTerm'][number]
@@ -437,4 +444,72 @@ test('migration 0004 upgrades an existing schema version 3 profile and preserves
     const secondRaw = await fs.readFile(paths.manifestPath, 'utf8')
     assert.equal(secondRaw, firstRaw)
   })
+})
+
+test('memory migration backup envelope carries full content with an explicit warning', () => {
+  installStorage({
+    [MEMORY_STORAGE_KEY]: JSON.stringify([longTermFixture('lt-1', 'private long term content')]),
+    [DAILY_MEMORY_STORAGE_KEY]: JSON.stringify({
+      '2026-06-19': [dailyFixture('d-1', 'private daily content')],
+    }),
+  })
+  try {
+    const migrationPackage = buildMemoryLocalDataMigrationPackage(new Date('2026-06-19T11:00:00.000Z'))
+    const envelope = buildMemoryMigrationBackupEnvelope(migrationPackage, {
+      now: '2026-06-19T12:34:56.789Z',
+    })
+
+    assert.equal(envelope.format, 'nexus-memory-migration-backup')
+    assert.equal(envelope.schemaVersion, 1)
+    assert.equal(envelope.includesMessageContent, true)
+    assert.equal(envelope.warning, 'This backup contains full memory content.')
+    assert.equal(envelope.exportedAt, '2026-06-19T12:34:56.789Z')
+    assert.equal(envelope.totals.longTermMemoryCount, 1)
+    assert.equal(envelope.totals.dailyEntryCount, 1)
+    assert.equal(envelope.totals.payloadBytes > 0, true)
+    assert.deepEqual(envelope.source, migrationPackage.source)
+    assert.equal(envelope.migrationPackage.longTerm[0].content, 'private long term content')
+    assert.equal(envelope.migrationPackage.daily[0].content, 'private daily content')
+
+    const metadataOnly = JSON.stringify({
+      format: envelope.format,
+      totals: envelope.totals,
+      source: envelope.source,
+    })
+    assert.equal(metadataOnly.includes('private long term content'), false)
+    assert.equal(metadataOnly.includes('private daily content'), false)
+    assert.equal(
+      buildMemoryMigrationBackupFileName(envelope.exportedAt),
+      'nexus-memory-migration-backup-2026-06-19T12-34-56-789Z.json',
+    )
+  } finally {
+    delete (globalThis as Record<string, unknown>).window
+  }
+})
+
+test('memory migration backup export gating follows the ui flag, data presence, and blocked status', () => {
+  const longTermReport = buildMemoryStorageMigrationDryRun({
+    longTermRaw: JSON.stringify([longTermFixture('lt-1', 'content')]),
+  })
+  assert.equal(canExportMemoryMigrationBackup(longTermReport, true), true)
+  assert.equal(canExportMemoryMigrationBackup(longTermReport, false), false)
+
+  const dailyOnlyReport = buildMemoryStorageMigrationDryRun({
+    dailyRaw: JSON.stringify({ '2026-06-19': [dailyFixture('d-1', 'daily')] }),
+  })
+  assert.equal(canExportMemoryMigrationBackup(dailyOnlyReport, true), true)
+
+  const emptyReport = buildMemoryStorageMigrationDryRun({})
+  assert.equal(emptyReport.status, 'empty')
+  assert.equal(canExportMemoryMigrationBackup(emptyReport, true), false)
+
+  const blockedReport = buildMemoryStorageMigrationDryRun({ longTermRaw: '{invalid json' })
+  assert.equal(blockedReport.status, 'blocked')
+  assert.equal(canExportMemoryMigrationBackup(blockedReport, true), false)
+})
+
+test('memory migration ui flag gate only accepts the explicit opt-in value', () => {
+  assert.equal(isMemoryLocalDataMigrationUiEnabled({}), false)
+  assert.equal(isMemoryLocalDataMigrationUiEnabled({ VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION_UI: '1' }), true)
+  assert.equal(isMemoryLocalDataMigrationUiEnabled({ VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION_UI: 'true' }), false)
 })

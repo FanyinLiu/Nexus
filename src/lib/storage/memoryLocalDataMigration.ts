@@ -9,6 +9,9 @@ import {
   normalizeMemoryItemsForStorage,
 } from './memory.ts'
 import type { DailyMemoryEntry, MemoryItem } from '../../types/memory.ts'
+import type { MemoryMigrationDryRunReport } from './memoryMigrationDryRun.ts'
+
+type EnvLike = Record<string, string | boolean | undefined>
 
 const MEMORY_MIGRATION_PACKAGE_SCHEMA_VERSION = 1 as const
 export const MEMORY_LOCAL_DATA_AUTHORITY_CHANGED_EVENT = 'nexus:memory-local-data-authority-changed'
@@ -36,12 +39,16 @@ function flattenDailyMemories(store: Record<string, DailyMemoryEntry[]>): DailyM
     .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
 }
 
+function getImportMetaEnv(): EnvLike | undefined {
+  return (import.meta as ImportMeta & { env?: EnvLike }).env
+}
+
 export function isMemoryLocalDataMigrationFeatureEnabled(): boolean {
   return import.meta.env?.VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION === '1'
 }
 
-export function isMemoryLocalDataMigrationUiEnabled(): boolean {
-  return import.meta.env?.VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION_UI === '1'
+export function isMemoryLocalDataMigrationUiEnabled(env: EnvLike | undefined = getImportMetaEnv()): boolean {
+  return env?.VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION_UI === '1'
 }
 
 export function getMemoryLocalDataAuthorityConsent(): boolean {
@@ -123,6 +130,64 @@ export function buildMemoryLocalDataMigrationPackageFromState(
     longTerm,
     daily: flattenDailyMemories(daily),
   }
+}
+
+export interface MemoryMigrationBackupEnvelope {
+  format: 'nexus-memory-migration-backup'
+  schemaVersion: 1
+  exportedAt: string
+  includesMessageContent: true
+  warning: 'This backup contains full memory content.'
+  source: MemoryLocalDataMigrationPackage['source']
+  totals: {
+    longTermMemoryCount: number
+    dailyEntryCount: number
+    payloadBytes: number
+  }
+  migrationPackage: MemoryLocalDataMigrationPackage
+}
+
+export function canExportMemoryMigrationBackup(
+  report: MemoryMigrationDryRunReport,
+  uiEnabled: boolean = isMemoryLocalDataMigrationUiEnabled(),
+): boolean {
+  return uiEnabled
+    && report.status !== 'blocked'
+    && (report.migrationPlan.wouldCreateLongTermRecords > 0
+      || report.migrationPlan.wouldCreateDailyEntryRecords > 0)
+}
+
+export function buildMemoryMigrationBackupEnvelope(
+  migrationPackage: MemoryLocalDataMigrationPackage,
+  options: { now?: Date | string | number } = {},
+): MemoryMigrationBackupEnvelope {
+  const payloadBytes = new TextEncoder().encode(JSON.stringify(migrationPackage)).length
+
+  return {
+    format: 'nexus-memory-migration-backup',
+    schemaVersion: 1,
+    exportedAt: nowIso(options.now),
+    includesMessageContent: true,
+    warning: 'This backup contains full memory content.',
+    source: { ...migrationPackage.source },
+    totals: {
+      longTermMemoryCount: migrationPackage.longTerm.length,
+      dailyEntryCount: migrationPackage.daily.length,
+      payloadBytes,
+    },
+    migrationPackage,
+  }
+}
+
+function nowIso(now: Date | string | number = new Date()): string {
+  return now instanceof Date ? now.toISOString() : new Date(now).toISOString()
+}
+
+export function buildMemoryMigrationBackupFileName(exportedAt: string): string {
+  const stamp = exportedAt
+    .replace(/[:.]/g, '-')
+    .replace(/[^0-9A-Za-zTZ-]/g, '-')
+  return `nexus-memory-migration-backup-${stamp}.json`
 }
 
 export type MemoryLocalDataReadResult = {

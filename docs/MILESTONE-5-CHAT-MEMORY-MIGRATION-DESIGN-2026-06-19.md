@@ -1105,3 +1105,94 @@ Suggested next M5 slice:
 
 - Confirmation UX and backup flow for the hidden memory migration surface, as
   queued at the end of slice 9.
+
+## Implementation Slice 11 - Memory Migration Backup Export
+
+Status: implemented in this branch; full validation passed.
+
+Problem:
+
+- The chat migration chain ships a complete hidden preview panel with a
+  content backup export step, but the memory migration panel only offered
+  preview, status, apply, and rollback. There was no way to export a local
+  backup of full memory content before applying the SQLite migration, even
+  though apply copies long-term memory and daily diary entries into the
+  main-process store.
+
+Design:
+
+- Mirror the chat backup contract exactly, scoped to the memory domain.
+  `buildMemoryMigrationBackupEnvelope` in
+  `src/lib/storage/memoryLocalDataMigration.ts` wraps the existing
+  `MemoryLocalDataMigrationPackage` in a versioned
+  `nexus-memory-migration-backup` envelope that explicitly marks
+  `includesMessageContent: true`, carries a fixed English warning string, and
+  keeps all memory content inside the single `migrationPackage` field so the
+  metadata-only fields (`format`, `totals`, `source`) stay content-free.
+  `buildMemoryMigrationBackupFileName` reuses the chat timestamp-sanitizing
+  filename scheme with the memory prefix.
+- `canExportMemoryMigrationBackup` gates export on the hidden UI flag, a
+  non-blocked dry-run, and at least one migratable long-term or daily record;
+  `isMemoryLocalDataMigrationUiEnabled` now accepts an injectable env object
+  (same pattern as `isChatMigrationPreviewEnabled`) so the gate is testable.
+- `MemoryMigrationPreviewPanel.tsx` gains a backup section with an explicit
+  full-memory-content warning, a danger-tone confirmation dialog on every
+  export, and a renderer-local JSON download. The export builds the migration
+  package from renderer localStorage only: no new IPC channel and no SQLite
+  read. Other panel actions are disabled while an export is in flight,
+  matching the chat panel.
+
+Impact scope:
+
+- `src/lib/storage/memoryLocalDataMigration.ts` (envelope/filename/gating
+  helpers), `src/lib/storage/index.ts` header comment,
+  `src/components/settingsSections/MemoryMigrationPreviewPanel.tsx` (backup
+  section), i18n keys `settings.memory.migration.backup_*` /
+  `export*_backup` in the five `settings-memory.ts` locale domain files plus
+  `src/i18n/keys.ts` and `src/types/i18nKeys/settingsMemory.ts`, three new
+  focused tests in `tests/memory-local-data-migration.test.ts`, and
+  M5/CHANGELOG documentation. No main-process, IPC, schema, or storage-key
+  changes.
+
+Migration:
+
+- None. SQLite schema version stays `4`; the export only reads renderer
+  localStorage and writes a user-saved JSON file.
+
+Rollback:
+
+- Revert the panel section and helper functions; the migration dry-run,
+  apply, authority, and rollback contracts are unchanged.
+
+Known risks:
+
+- The exported file contains full memory content by design; the envelope
+  marks this explicitly and the UI requires a danger-tone confirmation that
+  warns the user to keep the file private, matching the chat backup flow.
+
+Validation results:
+
+- `npx node --experimental-strip-types --test tests/memory-local-data-migration.test.ts`
+  - 10 focused tests passed (3 new: envelope content/warning/filename,
+    export gating, UI flag gate).
+- `npm run lint`
+  - passed.
+- `npx tsc -b --force`
+  - passed.
+- `npm run i18n:audit`
+  - passed; five locales at 2606 keys each with 0 missing/extra/duplicate.
+- `npm test`
+  - 3001 tests passed (baseline 2998 plus 3 new).
+- `npm run storage:audit`
+  - passed with 0 errors.
+
+Acceptance results:
+
+- The hidden memory migration surface now offers the same backup-then-apply
+  safety flow as the chat chain: gated, confirmed, content-marked, and fully
+  renderer-local.
+
+Suggested next M5 slice:
+
+- Companion (relationship/task) migration backup export, if the companion
+  chain should offer the same pre-apply safety net.

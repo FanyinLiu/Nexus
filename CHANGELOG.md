@@ -8,6 +8,17 @@
 
 ### Added
 
+- **Memory migration backup export** — the hidden memory migration preview
+  panel now matches the chat chain with a content backup section:
+  `buildMemoryMigrationBackupEnvelope` / `buildMemoryMigrationBackupFileName`
+  in `src/lib/storage/memoryLocalDataMigration.ts` produce a versioned
+  `nexus-memory-migration-backup` envelope that explicitly marks
+  `includesMessageContent: true` and carries the full migration package in a
+  single content-bearing field, and the panel gates export behind the UI flag,
+  a non-empty/non-blocked dry-run, and a danger-tone confirmation dialog
+  before downloading the JSON locally in the renderer (no new IPC, no SQLite
+  reads).
+
 - **Memory local-data store core alignment** — `localDataMemoryStore.js` now
   reuses the shared SQLite helpers from `localDataStoreCore.js` (database
   opening, table creation, domain registry, audit records, manifest refresh,

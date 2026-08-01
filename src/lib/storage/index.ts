@@ -9,7 +9,7 @@
 //   chatLocalDataRuntimeMirror.ts — hidden chat SQLite runtime mirror consent
 //   memory.ts        — long-term + daily memory persistence
 //   memoryMigrationDryRun.ts — content-free memory localStorage migration audit
-//   memoryLocalDataMigration.ts — confirmed memory SQLite migration/readback boundary
+//   memoryLocalDataMigration.ts — confirmed memory SQLite migration/readback/backup boundary
 //   voice.ts         — voice pipeline state + trace
 //   reminders.ts     — reminder task persistence
 //   debugConsole.ts  — debug console event log

@@ -1,6 +1,9 @@
 import { memo, useCallback, useMemo, useState } from 'react'
 import {
   buildMemoryLocalDataMigrationPackage,
+  buildMemoryMigrationBackupEnvelope,
+  buildMemoryMigrationBackupFileName,
+  canExportMemoryMigrationBackup,
   getMemoryLocalDataAuthorityConsent,
   isMemoryLocalDataMigrationFeatureEnabled,
   isMemoryLocalDataMigrationUiEnabled,
@@ -23,6 +26,18 @@ function formatCount(value: number, language: UiLanguage): string {
   return value.toLocaleString(language)
 }
 
+function downloadJsonFile(fileName: string, value: unknown): void {
+  const blob = new Blob([`${JSON.stringify(value, null, 2)}\n`], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = fileName
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
+  URL.revokeObjectURL(url)
+}
+
 export const MemoryMigrationPreviewPanel = memo(function MemoryMigrationPreviewPanel({
   uiLanguage,
   confirm,
@@ -43,8 +58,10 @@ export const MemoryMigrationPreviewPanel = memo(function MemoryMigrationPreviewP
   const [loadingStatus, setLoadingStatus] = useState(false)
   const [applying, setApplying] = useState(false)
   const [rollingBack, setRollingBack] = useState(false)
+  const [exportingBackup, setExportingBackup] = useState(false)
   const [status, setStatus] = useState<StatusMessage>(null)
   const hasData = report.totals.longTermMemoryCount > 0 || report.totals.dailyEntryCount > 0
+  const canExportBackup = canExportMemoryMigrationBackup(report, uiEnabled)
   const statusLabel = useMemo(() => ti(`settings.memory.migration.status.${report.status}` as Parameters<typeof pickTranslatedUiText>[1]), [report.status, ti])
 
   const refresh = useCallback(() => {
@@ -105,6 +122,28 @@ export const MemoryMigrationPreviewPanel = memo(function MemoryMigrationPreviewP
       setApplying(false)
     }
   }, [applying, confirmed, confirm, hasData, migrationEnabled, readStatus, report.totals.dailyEntryCount, report.totals.longTermMemoryCount, ti, uiLanguage])
+
+  const exportBackup = useCallback(async () => {
+    if (!canExportBackup || exportingBackup) return
+    if (!(await confirm({ message: ti('settings.memory.migration.backup_confirm'), tone: 'danger' }))) return
+    setExportingBackup(true)
+    setStatus(null)
+    try {
+      const envelope = buildMemoryMigrationBackupEnvelope(buildMemoryLocalDataMigrationPackage())
+      downloadJsonFile(buildMemoryMigrationBackupFileName(envelope.exportedAt), envelope)
+      setStatus({
+        ok: true,
+        message: ti('settings.memory.migration.backup_success', {
+          longTerm: formatCount(envelope.totals.longTermMemoryCount, uiLanguage),
+          daily: formatCount(envelope.totals.dailyEntryCount, uiLanguage),
+        }),
+      })
+    } catch (error) {
+      setStatus({ ok: false, message: ti('settings.memory.migration.backup_error', { error: formatError(error) }) })
+    } finally {
+      setExportingBackup(false)
+    }
+  }, [canExportBackup, confirm, exportingBackup, ti, uiLanguage])
 
   const toggleAuthority = useCallback(async () => {
     if (!migrationEnabled) return
@@ -186,6 +225,21 @@ export const MemoryMigrationPreviewPanel = memo(function MemoryMigrationPreviewP
         {ti('settings.memory.migration.safety_note')}
       </p>
 
+      <div className="settings-memory-migration-backup">
+        <strong>{ti('settings.memory.migration.backup_title')}</strong>
+        <p className="settings-mini-group__note settings-memory-note">
+          {ti('settings.memory.migration.backup_note')}
+        </p>
+        <button
+          type="button"
+          className="ghost-button"
+          onClick={() => void exportBackup()}
+          disabled={!canExportBackup || exportingBackup || applying || rollingBack}
+        >
+          {exportingBackup ? ti('settings.memory.migration.exporting_backup') : ti('settings.memory.migration.export_backup')}
+        </button>
+      </div>
+
       {report.issues.length ? (
         <ul className="settings-memory-migration-issues">
           {report.issues.map((issue) => <li key={issue.code}>{issue.code}{issue.count ? ` (${issue.count})` : ''}</li>)}
@@ -196,10 +250,10 @@ export const MemoryMigrationPreviewPanel = memo(function MemoryMigrationPreviewP
         <button type="button" className="ghost-button" onClick={refresh}>
           {ti('settings.memory.migration.refresh')}
         </button>
-        <button type="button" className="ghost-button" onClick={() => void readStatus()} disabled={loadingStatus || !migrationEnabled}>
+        <button type="button" className="ghost-button" onClick={() => void readStatus()} disabled={loadingStatus || !migrationEnabled || exportingBackup}>
           {loadingStatus ? ti('settings.memory.migration.status_refreshing') : ti('settings.memory.migration.status_refresh')}
         </button>
-        <button type="button" className="ghost-button" onClick={() => void applyMigration()} disabled={!migrationEnabled || !hasData || !confirmed || applying}>
+        <button type="button" className="ghost-button" onClick={() => void applyMigration()} disabled={!migrationEnabled || !hasData || !confirmed || applying || exportingBackup}>
           {applying ? ti('settings.memory.migration.applying') : ti('settings.memory.migration.apply')}
         </button>
       </div>
@@ -220,10 +274,10 @@ export const MemoryMigrationPreviewPanel = memo(function MemoryMigrationPreviewP
       ) : null}
 
       <div className="settings-action-row settings-memory-archive-actions">
-        <button type="button" className="ghost-button" onClick={() => void toggleAuthority()} disabled={!migrationEnabled || !statusResult?.ok}>
+        <button type="button" className="ghost-button" onClick={() => void toggleAuthority()} disabled={!migrationEnabled || !statusResult?.ok || exportingBackup}>
           {authorityEnabled ? ti('settings.memory.migration.authority_disable') : ti('settings.memory.migration.authority_enable')}
         </button>
-        <button type="button" className="settings-danger-button" onClick={() => void rollback()} disabled={!migrationEnabled || !rollbackConfirmed || rollingBack}>
+        <button type="button" className="settings-danger-button" onClick={() => void rollback()} disabled={!migrationEnabled || !rollbackConfirmed || rollingBack || exportingBackup}>
           {rollingBack ? ti('settings.memory.migration.rolling_back') : ti('settings.memory.migration.rollback')}
         </button>
       </div>
