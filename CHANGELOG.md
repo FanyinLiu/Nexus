@@ -64,6 +64,44 @@
 - **eslint-plugin-react-hooks 7.1.1** — adopted the React Compiler-era lint
   rules and cleared all 58 violations with behavior-preserving rewrites,
   keeping the v0.2.7 render-storm invariants intact.
+- **Legacy settings panels removed** — the superseded
+  `src/components/settingsSections` tree (36 files, ~12 k lines) was deleted;
+  the three still-referenced components (About panel, release spotlight
+  actions, URL input) moved into `settingsV3`. Error-redaction,
+  message-privacy, and forms/settings-surface audit baselines now track the
+  V3 implementation; checks for features that no longer exist in V3 were
+  dropped with their code.
+- **TTS pipeline removed** — the flag-gated pipecat-style pipeline
+  (`tts-pipeline/`, `pipelineStreamingSpeechOutput.ts`, 3 test files) was
+  deleted after it stalled `waitForCompletion` without audio; the legacy
+  streaming controller is the single TTS path and the removed
+  `nexus:useTtsPipeline` key left the storage contract.
+- **Import extensions unified** — every file-level relative import now uses
+  an explicit `.ts` / `.tsx` extension (826 sites, 221 files); directory
+  imports stay extensionless. Audit scripts and fixtures that match import
+  strings verbatim were updated in lockstep.
+
+### Fixed
+
+- **Storage resurrection** — deleting all chat sessions or memories no
+  longer pulls the legacy flat storage keys back on the next load, and the
+  memory migration package / dry-run report fall back to legacy data only
+  when the current key is genuinely absent.
+- **Errand recovery** — background errands interrupted by a process exit are
+  re-queued on the next boot instead of staying stuck in `running`.
+- **Voice / VAD** — VAD frame subscriptions survive wake-word listener
+  rebuilds; stale `onstop` events from a superseded recorder are ignored;
+  the wake-word runtime's unreachable cooldown state was removed.
+- **Chat turn guards** — the 90 s hard timeout invalidates the turn id
+  before aborting; the tool-call loop carries earlier rounds' tool exchanges
+  into later continuation payloads.
+- **Memory decay** — the decay anchor advances on each dream cycle so decay
+  is not compounded across cycles.
+- **IPC startup** — deferred IPC modules that fail to load are logged and
+  retried instead of failing silently.
+- **Build** — the `settings-ui` manual chunk now targets the settingsV3
+  primitives, restoring the performance-baseline chunk contract after the
+  legacy settings tree was removed.
 
 ### Security
 
@@ -82,6 +120,11 @@
   payload fields instead of silently stripping them; the `mcp:sync-servers`
   caller sanitizes persisted server entries to the schema whitelist before
   sending.
+- **SSRF hardening on chat completion paths** — closed server-side request
+  forgery bypasses in the chat completion flow; proxy-style URL handling now
+  validates targets before any outbound request.
+- **Vault integrity** — a corrupted `vault.json` is never overwritten in
+  place; the failure is surfaced instead of silently destroying the vault.
 
 ## [0.4.4] - 2026-07-31
 
