@@ -128,7 +128,7 @@ test('memory migration package builds from long-term, daily, and legacy localSto
   }
 })
 
-test('memory migration package falls back to legacy long-term memory only when current is empty', () => {
+test('memory migration package falls back to legacy long-term memory only when current key is absent', () => {
   installStorage({
     [LEGACY_MEMORY_STORAGE_KEY]: JSON.stringify([longTermFixture('legacy-1', 'private legacy content')]),
   })
@@ -138,6 +138,24 @@ test('memory migration package falls back to legacy long-term memory only when c
     assert.equal(migrationPackage.longTerm.length, 1)
     assert.equal(migrationPackage.longTerm[0].id, 'legacy-1')
     assert.equal(migrationPackage.daily.length, 0)
+  } finally {
+    delete (globalThis as Record<string, unknown>).window
+  }
+})
+
+test('memory migration package does not resurrect legacy memories when current key exists but empty', () => {
+  // Key present but empty: the user explicitly deleted every memory. The
+  // migration package must stay empty instead of pulling the untouched
+  // legacy key back in (same rule as loadMemories in memory.ts).
+  installStorage({
+    [MEMORY_STORAGE_KEY]: JSON.stringify([]),
+    [LEGACY_MEMORY_STORAGE_KEY]: JSON.stringify([longTermFixture('legacy-1', 'private legacy content')]),
+  })
+  try {
+    const migrationPackage = buildMemoryLocalDataMigrationPackage(new Date('2026-06-19T11:00:00.000Z'))
+    assert.equal(migrationPackage.source.legacyLongTermUsed, false)
+    assert.deepEqual(migrationPackage.longTerm, [])
+    assert.deepEqual(migrationPackage.daily, [])
   } finally {
     delete (globalThis as Record<string, unknown>).window
   }

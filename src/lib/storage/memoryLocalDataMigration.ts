@@ -91,18 +91,24 @@ export function buildMemoryLocalDataMigrationPackage(
   const longTermRaw = storage?.getItem(MEMORY_STORAGE_KEY) ?? null
   const legacyRaw = storage?.getItem(LEGACY_MEMORY_STORAGE_KEY) ?? null
   const dailyRaw = storage?.getItem(DAILY_MEMORY_STORAGE_KEY) ?? null
+  // Only fall back to the legacy key when the current key is genuinely absent
+  // (first launch after the store split). A key that exists but holds an
+  // empty array means the user deleted every memory — falling back here
+  // would resurrect the legacy memories they just removed. Same rule as
+  // loadMemories in memory.ts.
+  const longTermKeyPresent = storage?.getItem(MEMORY_STORAGE_KEY) !== null
   const current = normalizeMemoryItemsForStorage(parseRaw(longTermRaw, []))
   const legacy = normalizeMemoryItemsForStorage(parseRaw(legacyRaw, []))
   const daily = normalizeDailyMemoryStore(parseRaw(dailyRaw, {}))
   return buildMemoryLocalDataMigrationPackageFromState(
-    current.length > 0 ? current : legacy,
+    longTermKeyPresent ? current : legacy,
     daily,
     now,
     {
       longTermKeyPresent: Boolean(longTermRaw),
       legacyLongTermKeyPresent: Boolean(legacyRaw),
       dailyKeyPresent: Boolean(dailyRaw),
-      legacyLongTermUsed: current.length === 0 && legacy.length > 0,
+      legacyLongTermUsed: !longTermKeyPresent && legacy.length > 0,
     },
   )
 }

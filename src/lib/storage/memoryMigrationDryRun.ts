@@ -370,8 +370,13 @@ export function buildMemoryStorageMigrationDryRun(
     issues.push(issue('legacy-memory-present', 'info', legacySummary.normalizedRecordCount))
   }
 
-  const legacyMemoryWouldMigrate = normalizedLongTerm.length === 0 && normalizedLegacy.length > 0
-  const legacyMemoryIgnoredBecauseCurrentExists = normalizedLongTerm.length > 0 && normalizedLegacy.length > 0
+  // Only fall back to the legacy key when the current key is genuinely absent
+  // (first migration). A key that exists but holds an empty array means the
+  // user deleted every memory — migrating here would resurrect the legacy
+  // memories they just removed (same rule as loadMemories in memory.ts).
+  const longTermKeyPresent = longTermSummary.present
+  const legacyMemoryWouldMigrate = !longTermKeyPresent && normalizedLegacy.length > 0
+  const legacyMemoryIgnoredBecauseCurrentExists = longTermKeyPresent && normalizedLegacy.length > 0
   if (legacyMemoryWouldMigrate) {
     issues.push(issue('legacy-memory-would-migrate', 'info', normalizedLegacy.length))
   }
@@ -379,7 +384,7 @@ export function buildMemoryStorageMigrationDryRun(
     issues.push(issue('legacy-memory-ignored-because-current-exists', 'info', normalizedLegacy.length))
   }
 
-  const plannedLongTerm = normalizedLongTerm.length > 0 ? normalizedLongTerm : normalizedLegacy
+  const plannedLongTerm = longTermKeyPresent ? normalizedLongTerm : normalizedLegacy
   const totals = summarizeTotals(plannedLongTerm, normalizedDaily)
 
   if (totals.longTermMemoryCount === 0 && totals.dailyEntryCount === 0) {

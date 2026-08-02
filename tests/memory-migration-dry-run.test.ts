@@ -152,6 +152,29 @@ test('memory migration dry-run plans legacy memory only when current memory is a
 
   assert.equal(currentAndLegacy.migrationPlan.legacyMemoryWouldMigrate, false)
   assert.equal(currentAndLegacy.migrationPlan.legacyMemoryIgnoredBecauseCurrentExists, true)
+
+  // Key present but empty: the user explicitly deleted every memory. The
+  // plan must not migrate the untouched legacy key (same rule as
+  // loadMemories in memory.ts).
+  const deletedAll = buildMemoryStorageMigrationDryRun({
+    longTermRaw: JSON.stringify([]),
+    legacyRaw: JSON.stringify([
+      {
+        id: 'legacy-secret-id',
+        content: 'legacy private memory',
+        category: 'manual',
+        source: 'manual',
+        createdAt: '2026-06-01T00:00:00.000Z',
+      },
+    ]),
+    dailyRaw: null,
+  })
+
+  assert.equal(deletedAll.migrationPlan.legacyMemoryWouldMigrate, false)
+  assert.equal(deletedAll.migrationPlan.legacyMemoryIgnoredBecauseCurrentExists, true)
+  assert.equal(deletedAll.totals.longTermMemoryCount, 0)
+  assert.equal(deletedAll.migrationPlan.wouldCreateLongTermRecords, 0)
+  assert.equal(JSON.stringify(deletedAll).includes('legacy private memory'), false)
   assert.equal(currentAndLegacy.totals.longTermMemoryCount, 1)
   assert.equal(currentAndLegacy.totals.categoryCounts.goal, 1)
 })

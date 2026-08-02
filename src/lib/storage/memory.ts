@@ -121,7 +121,10 @@ export function normalizeMemoryItem(value: unknown, index: number): MemoryItem |
   const sourceRef = normalizeText(value.sourceRef, 240)
   const relatedIds = normalizeRelatedIds(value.relatedIds)
   const emotionSnapshot = normalizeEmotionSnapshot(value.emotionSnapshot)
-  const importanceScore = normalizeScore(value.importanceScore, 2)
+  // importanceScore ceiling matches markRecalled's cap in decay.ts (1.5) —
+  // the runtime never produces higher values, so persisting anything above
+  // would re-introduce scores the recall path can't reason about.
+  const importanceScore = normalizeScore(value.importanceScore, 1.5)
   const significance = normalizeScore(value.significance, 1)
   const recallCount = normalizeNonNegativeInteger(value.recallCount)
   const reflectionTopic = normalizeText(value.reflectionTopic, 120)

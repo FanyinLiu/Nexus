@@ -78,7 +78,7 @@ test('normalizeMemoryItemsForStorage sanitizes rich memory metadata and dedupes 
     enabled: true,
     createdAt: '2026-06-04T00:00:00.000Z',
     importance: 'pinned',
-    importanceScore: 2,
+    importanceScore: 1.5,
     recallCount: 0,
     lastRecalledAt: '2026-06-04T01:00:00.000Z',
     relatedIds: ['a', 'b'],
