@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { getRedactedErrorMessage } from './services/errorRedaction.js'
 import { synthesizeRemoteTts, warmupRemoteTtsSession } from './services/ttsService.js'
 import { createTtsStreamService } from './ttsStreamService.js'
 
@@ -55,6 +56,14 @@ function loadDeferredModules() {
       skillIpc.register()
 
       console.info('[IPC] Deferred modules loaded')
+    }).catch((error) => {
+      // A failed dynamic import or register() must not leave the promise
+      // permanently rejected with no trace: that turned one bad module into
+      // "No handler registered" for the tts/plugin/memory/skill IPC groups
+      // until restart, with no logged root cause. Log the (redacted) cause
+      // and reset the cached promise so the next call retries the load.
+      _deferredModulesPromise = null
+      console.error('[IPC] Failed to load deferred modules:', getRedactedErrorMessage(error))
     })
   }
   return _deferredModulesPromise

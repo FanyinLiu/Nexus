@@ -5,7 +5,8 @@
     "scripts/**/*.cjs",
     "tests/benchmarks.bench.ts",
     "tests/fixtures/settingsSurfaceAuditBaseline.ts",
-    "tests/helpers/bundler-import-hooks.mjs"
+    "tests/helpers/bundler-import-hooks.mjs",
+    "tests/helpers/electron-main-stub-hooks.mjs"
   ],
   "ignore": [
     "src/components/settingsSections/ContextSection.tsx",
