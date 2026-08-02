@@ -390,6 +390,11 @@ export async function runToolCallLoop(
   let round = 0
   let lastContinuationPayload: ChatCompletionRequest | null = null
   const executedToolCallSignatures = new Set<string>()
+  // rebuildPayload() restarts from the original conversation history, so the
+  // assistant/tool exchanges of every completed round are accumulated here and
+  // re-appended after each rebuild — otherwise round N+1 would be answered
+  // without round N's tool calls and results.
+  const toolConversationTail: ChatCompletionRequest['messages'] = []
 
   while (round < MAX_TOOL_CALL_ROUNDS) {
     const resolved = resolveResponseToolCalls(response, promptModeEnabled)
@@ -434,20 +439,22 @@ export async function runToolCallLoop(
     // Forward `reasoning_content` for thinking-mode models that require it on
     // every assistant turn — the second LLM call (after tool results) would
     // otherwise be rejected with "reasoning_content must be passed back".
-    const payload = await rebuildPayload()
-    payload.messages.push({
+    toolConversationTail.push({
       role: 'assistant',
       content: assistantContent,
       tool_calls: executableToolCalls,
       ...(response.reasoning_content ? { reasoning_content: response.reasoning_content } : {}),
     })
     for (const tr of toolResults) {
-      payload.messages.push({
+      toolConversationTail.push({
         role: 'tool',
         content: tr.result,
         tool_call_id: tr.id,
       })
     }
+
+    const payload = await rebuildPayload()
+    payload.messages.push(...toolConversationTail)
 
     // Suppress nested tool_calls in the cleaned response so the loop can
     // detect that this round closed (the next executeContinuation result

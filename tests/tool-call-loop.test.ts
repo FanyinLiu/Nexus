@@ -193,7 +193,12 @@ test('runToolCallLoop skips duplicate tool calls with the same normalized argume
 
   assert.equal(result.content, 'done')
   assert.equal(executedToolArgs.length, 1)
-  const secondRoundToolMessage = continuationPayloads[1]?.messages.find((message) => message.role === 'tool')
+  // Pin by tool_call_id: the round-2 payload now also carries round 1's tool
+  // result (accumulated tool history), so the first role==='tool' message is
+  // no longer the duplicate-skip note.
+  const secondRoundToolMessage = continuationPayloads[1]?.messages.find(
+    (message) => message.role === 'tool' && message.tool_call_id === 'call-1',
+  )
   assert.match(String(secondRoundToolMessage?.content ?? ''), /Duplicate tool call skipped/)
 })
 
@@ -237,4 +242,57 @@ test('runToolCallLoop still executes repeated tool names when arguments differ',
   )
 
   assert.equal(executedToolArgs.length, 2)
+})
+
+test('runToolCallLoop carries earlier rounds\' tool exchanges into later payloads', async () => {
+  const continuationPayloads: ChatCompletionRequest[] = []
+
+  const result = await runToolCallLoop(
+    {
+      content: '',
+      tool_calls: [makeToolCall('call-round-1', '{ "city": "上海" }')],
+    },
+    async () => ({
+      baseUrl: 'https://example.test',
+      apiKey: 'test-key',
+      model: 'test-model',
+      messages: [{ role: 'user', content: '先查上海天气，再查北京天气' }],
+    }),
+    async (payload) => {
+      continuationPayloads.push(payload)
+      if (continuationPayloads.length === 1) {
+        return {
+          content: '',
+          tool_calls: [makeToolCall('call-round-2', '{ "city": "北京" }')],
+        }
+      }
+      return { content: 'done' }
+    },
+  )
+
+  assert.equal(result.content, 'done')
+  assert.equal(continuationPayloads.length, 2)
+
+  const roundTwoMessages = continuationPayloads[1]?.messages ?? []
+  // The rebuilt payload starts from the original history, so the round-1
+  // assistant tool_calls message and its tool result must be re-appended —
+  // otherwise the model answers round 2 without seeing round 1's tool output.
+  const roundOneAssistant = roundTwoMessages.find(
+    (message) => message.role === 'assistant' && message.tool_calls?.some((tc) => tc.id === 'call-round-1'),
+  )
+  assert.ok(roundOneAssistant, 'round-2 payload must include the round-1 assistant tool_calls message')
+  const roundOneToolResult = roundTwoMessages.find(
+    (message) => message.role === 'tool' && message.tool_call_id === 'call-round-1',
+  )
+  assert.ok(roundOneToolResult, 'round-2 payload must include the round-1 tool result')
+  // Ordering: original history first, then round 1 exchange, then round 2.
+  const userIndex = roundTwoMessages.findIndex((message) => message.role === 'user')
+  const roundOneAssistantIndex = roundTwoMessages.indexOf(roundOneAssistant)
+  const roundOneToolIndex = roundTwoMessages.indexOf(roundOneToolResult)
+  const roundTwoAssistantIndex = roundTwoMessages.findIndex(
+    (message) => message.role === 'assistant' && message.tool_calls?.some((tc) => tc.id === 'call-round-2'),
+  )
+  assert.ok(userIndex < roundOneAssistantIndex)
+  assert.ok(roundOneAssistantIndex < roundOneToolIndex)
+  assert.ok(roundOneToolIndex < roundTwoAssistantIndex)
 })
