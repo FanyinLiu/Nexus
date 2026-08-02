@@ -175,7 +175,7 @@ test('loadChatSessions compacts persisted sessions and writes normalized store',
   assert.deepEqual(JSON.parse(storage.getItem(CHAT_SESSIONS_STORAGE_KEY) ?? '[]'), sessions)
 })
 
-test('loadChatSessions migrates legacy flat chat using message timestamps', async () => {
+test('loadChatSessions migrates legacy flat chat when sessions key is absent (first migration)', async () => {
   const storage = installStorage({
     [CHAT_STORAGE_KEY]: JSON.stringify([
       { id: 'legacy-1', role: 'user', content: 'first topic', createdAt: '2026-06-01T00:00:00Z' },
@@ -192,6 +192,22 @@ test('loadChatSessions migrates legacy flat chat using message timestamps', asyn
   assert.equal(sessions[0]?.lastActiveAt, Date.parse('2026-06-02T00:00:00Z'))
   assert.equal(sessions[0]?.title, 'first topic')
   assert.deepEqual(JSON.parse(storage.getItem(CHAT_SESSIONS_STORAGE_KEY) ?? '[]'), sessions)
+})
+
+test('loadChatSessions does not resurrect legacy flat chat after the user deleted all sessions', async () => {
+  const storage = installStorage({
+    // Key present but empty: the user explicitly deleted every session.
+    [CHAT_SESSIONS_STORAGE_KEY]: JSON.stringify([]),
+    [CHAT_STORAGE_KEY]: JSON.stringify([
+      { id: 'legacy-1', role: 'user', content: 'first topic', createdAt: '2026-06-01T00:00:00Z' },
+    ]),
+  })
+
+  const sessions = loadChatSessions()
+  await new Promise((resolve) => setTimeout(resolve, 5))
+
+  assert.deepEqual(sessions, [])
+  assert.equal(storage.getItem(CHAT_SESSIONS_STORAGE_KEY), '[]')
 })
 
 test('loadChatSessions redacts legacy migration failure logs', () => {

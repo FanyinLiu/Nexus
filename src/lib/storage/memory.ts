@@ -228,6 +228,12 @@ export function loadMemories(): MemoryItem[] {
     return next
   }
 
+  // Only fall back to the legacy key when the current key is genuinely absent
+  // (first launch after the store was split). A key that exists but holds an
+  // empty array means the user deleted every memory — falling back here would
+  // resurrect the legacy memories they just removed.
+  if (window.localStorage.getItem(MEMORY_STORAGE_KEY) !== null) return []
+
   const rawLegacy = readJson<unknown>(LEGACY_MEMORY_STORAGE_KEY, [])
   const legacy = normalizeMemoryItemsForStorage(rawLegacy)
   if (legacy.length) {

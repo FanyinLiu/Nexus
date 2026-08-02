@@ -109,7 +109,7 @@ test('loadMemories compacts current store and writes normalized values back', ()
   assert.deepEqual(JSON.parse(storage.getItem(MEMORY_STORAGE_KEY) ?? '[]'), memories)
 })
 
-test('loadMemories migrates sanitized legacy memories when current store is empty', () => {
+test('loadMemories migrates sanitized legacy memories when current store key is absent (first migration)', () => {
   const storage = installStorage({
     [LEGACY_MEMORY_STORAGE_KEY]: JSON.stringify([
       { id: 'legacy-1', content: 'legacy memory', category: 'preference', source: 'chat', createdAt: '2026-06-04T00:00:00Z' },
@@ -122,6 +122,19 @@ test('loadMemories migrates sanitized legacy memories when current store is empt
   assert.equal(memories.length, 1)
   assert.equal(memories[0]?.id, 'legacy-1')
   assert.deepEqual(JSON.parse(storage.getItem(MEMORY_STORAGE_KEY) ?? '[]'), memories)
+})
+
+test('loadMemories does not resurrect legacy memories after the user deleted all memories', () => {
+  const storage = installStorage({
+    // Key present but empty: the user explicitly deleted every memory.
+    [MEMORY_STORAGE_KEY]: JSON.stringify([]),
+    [LEGACY_MEMORY_STORAGE_KEY]: JSON.stringify([
+      { id: 'legacy-1', content: 'legacy memory', category: 'preference', source: 'chat', createdAt: '2026-06-04T00:00:00Z' },
+    ]),
+  })
+
+  assert.deepEqual(loadMemories(), [])
+  assert.equal(storage.getItem(MEMORY_STORAGE_KEY), '[]')
 })
 
 test('normalizeDailyMemoryStore repairs day keys, filters entries, and caps per day', () => {

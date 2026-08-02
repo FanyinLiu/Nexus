@@ -150,6 +150,12 @@ export function loadChatSessions(): ChatSession[] {
     return stored
   }
 
+  // Only run the legacy migration when the sessions key is genuinely absent
+  // (first launch after bucketing rolled out). A key that exists but holds an
+  // empty array means the user deleted every session — migrating here would
+  // resurrect the legacy flat chat they just removed.
+  if (window.localStorage.getItem(CHAT_SESSIONS_STORAGE_KEY) !== null) return []
+
   const migrated = migrateLegacyFlatChat()
   if (!migrated) return []
   const seeded = [migrated]
