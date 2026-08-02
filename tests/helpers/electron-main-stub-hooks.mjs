@@ -8,8 +8,6 @@
 // IPC module / TTS service the registry pulls in is swapped for a no-op
 // stub so no real handlers, windows, or network services start.
 
-let skillIpcImportAttempts = 0
-
 export async function resolve(specifier, context, nextResolve) {
   if (specifier === 'electron') {
     return { url: 'electron-stub:electron', shortCircuit: true }
@@ -23,14 +21,22 @@ export async function load(url, context, nextLoad) {
     return { format: 'module', shortCircuit: true, source: 'export const app = { once() {} }\n' }
   }
   if (url.endsWith('/electron/ipc/skillIpc.js')) {
-    // First deferred import fails (simulated broken module on disk). Node
-    // does not cache failed module loads, so a retried import() re-enters
-    // this hook and succeeds on the second attempt.
-    skillIpcImportAttempts += 1
-    if (skillIpcImportAttempts === 1) {
-      throw new Error('simulated skillIpc import failure for /Users/nexus-test-user with key sk-0123456789abcdef')
+    // Simulated flaky module: the module itself loads fine (so Node caches
+    // it identically on every version), but its register() throws while the
+    // test keeps globalThis.__nexusTestSkillIpcFail set. Node 22 caches
+    // *failed* module loads, so throwing from the load hook made the retry
+    // path untestable there (the second import() never re-entered this hook);
+    // throwing from register() exercises the same catch-and-retry path in
+    // loadDeferredModules on every Node version.
+    return {
+      format: 'module',
+      shortCircuit: true,
+      source: `export function register() {
+        if (globalThis.__nexusTestSkillIpcFail) {
+          throw new Error('simulated skillIpc import failure for /Users/nexus-test-user with key sk-0123456789abcdef')
+        }
+      }\n`,
     }
-    return { format: 'module', shortCircuit: true, source: 'export function register() {}\n' }
   }
   if (url.includes('/electron/ipc/')) {
     return { format: 'module', shortCircuit: true, source: 'export function register() {}\n' }

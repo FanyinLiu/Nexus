@@ -47,7 +47,10 @@ test('loadDeferredModules logs a redacted error and retries after a failed impor
   try {
     const { registerIpc } = await import('../electron/ipcRegistry.js')
 
-    // First attempt: the skillIpc dynamic import fails inside the stub hook.
+    // First attempt: skillIpc.register() throws while the failure flag is
+    // set (the stub module loads fine — see electron-main-stub-hooks.mjs —
+    // so the retry works identically on Node 22 and Node 24).
+    ;(globalThis as Record<string, unknown>).__nexusTestSkillIpcFail = true
     registerIpc()
     await waitFor(() => errors.calls.length > 0, 'deferred-load failure log')
 
@@ -60,6 +63,7 @@ test('loadDeferredModules logs a redacted error and retries after a failed impor
     assert.equal(infos.calls.length, 0, 'failed attempt must not log success')
 
     // The rejected promise must not be cached: a second kick retries the load.
+    ;(globalThis as Record<string, unknown>).__nexusTestSkillIpcFail = false
     registerIpc()
     await waitFor(
       () => infos.calls.includes('[IPC] Deferred modules loaded'),
@@ -67,6 +71,7 @@ test('loadDeferredModules logs a redacted error and retries after a failed impor
     )
     assert.equal(errors.calls.length, 1, 'retry must succeed without another failure')
   } finally {
+    ;(globalThis as Record<string, unknown>).__nexusTestSkillIpcFail = false
     errors.restore()
     infos.restore()
   }
