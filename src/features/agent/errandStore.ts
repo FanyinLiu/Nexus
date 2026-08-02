@@ -61,6 +61,42 @@ const ERRAND_STATUSES = new Set<ErrandStatus>([
   'delivered',
 ])
 
+/**
+ * runErrand persists status 'running' *before* the agent loop starts. If
+ * the process exits mid-run, nothing ever moves that record again —
+ * findRunnableErrand only picks 'queued' — so the user's errand would
+ * neither execute nor surface as failed. Recovery mirrors the
+ * backgroundTaskStore.hydrate orphan pattern: on the first load after
+ * boot, any 'running' whose startedAt predates this process belongs to a
+ * dead run and is reset to 'queued'.
+ *
+ * Re-queueing (instead of failing) is the right retry semantic for
+ * errandPolicy: the crashed run never reached recordRun, so it consumed
+ * no nightly budget and no cooldown — failing it would punish the user
+ * for a crash. The scheduler's window/cooldown/budget gates still apply
+ * before the recovered errand runs again.
+ */
+const bootedAt = Date.now()
+let recoveredAfterBoot = false
+
+function recoverInterruptedErrands(errands: ErrandRecord[]): ErrandRecord[] {
+  if (recoveredAfterBoot) return errands
+  recoveredAfterBoot = true
+  let changed = false
+  const recovered = errands.map((errand) => {
+    if (errand.status !== 'running') return errand
+    const startedMs = errand.startedAt ? Date.parse(errand.startedAt) : Number.NaN
+    // A run started at-or-after this process booted is live — leave it alone.
+    if (Number.isFinite(startedMs) && startedMs >= bootedAt) return errand
+    changed = true
+    const next: ErrandRecord = { ...errand, status: 'queued' }
+    delete next.startedAt
+    return next
+  })
+  if (changed) persist(recovered)
+  return recovered
+}
+
 function isValidTimestamp(value: string): boolean {
   return Number.isFinite(Date.parse(value))
 }
@@ -127,7 +163,7 @@ export function loadErrands(): ErrandRecord[] {
       ...(iterationsUsed !== undefined ? { iterationsUsed } : {}),
     })
   }
-  return out
+  return recoverInterruptedErrands(out)
 }
 
 function persist(errands: ErrandRecord[]): void {
@@ -203,4 +239,5 @@ export function markDelivered(id: string): ErrandRecord | null {
 /** Test-only reset. Production code never calls this. */
 export function __resetErrands(): void {
   writeJson(ERRAND_STORE_STORAGE_KEY, [])
+  recoveredAfterBoot = false
 }

@@ -115,6 +115,7 @@ const { openGoalsStore } = await import('../src/features/agent/openGoalsStore.ts
 const {
   __resetErrands,
   enqueueErrand,
+  findRunnableErrand,
   loadErrands,
   updateErrand,
 } = await import('../src/features/agent/errandStore.ts')
@@ -341,4 +342,53 @@ test('errand store filters invalid runtime patches before persisting', () => {
   assert.equal(valid?.startedAt, '2026-06-04T12:00:00.000Z')
   assert.equal(valid?.iterationsUsed, 2)
   assert.deepEqual(JSON.parse(window.localStorage.getItem(ERRAND_STORE_STORAGE_KEY) ?? '[]'), loadErrands())
+})
+
+test('errand store recovers an errand stuck running after a process crash', () => {
+  resetStores()
+  // Simulates a restart: the previous process persisted status 'running'
+  // (errandRunner does this before the agent loop starts) and then died.
+  // Its startedAt necessarily predates this process's boot.
+  window.localStorage.setItem(ERRAND_STORE_STORAGE_KEY, JSON.stringify([
+    {
+      id: 'errand-stuck',
+      prompt: 'research espresso grinders',
+      status: 'running',
+      createdAt: '2026-06-04T01:00:00.000Z',
+      startedAt: '2026-06-04T01:05:00.000Z',
+    },
+  ]))
+
+  const recovered = loadErrands()
+  assert.equal(recovered.length, 1)
+  assert.equal(recovered[0].status, 'queued')
+  assert.equal(recovered[0].startedAt, undefined)
+
+  // Recovery is persisted, and the errand is schedulable again —
+  // before the fix findRunnableErrand only matched 'queued' and the
+  // stuck record could never run or fail.
+  const persisted = JSON.parse(window.localStorage.getItem(ERRAND_STORE_STORAGE_KEY) ?? '[]')
+  assert.equal(persisted[0].status, 'queued')
+  assert.equal(findRunnableErrand()?.id, 'errand-stuck')
+})
+
+test('errand store leaves a live in-process run untouched', () => {
+  resetStores()
+  // A run started *after* this process booted belongs to the live runner;
+  // recovery must not reset it back to queued while it is executing.
+  const now = new Date().toISOString()
+  window.localStorage.setItem(ERRAND_STORE_STORAGE_KEY, JSON.stringify([
+    {
+      id: 'errand-live',
+      prompt: 'in flight',
+      status: 'running',
+      createdAt: now,
+      startedAt: now,
+    },
+  ]))
+
+  const loaded = loadErrands()
+  assert.equal(loaded[0].status, 'running')
+  assert.equal(loaded[0].startedAt, now)
+  assert.equal(findRunnableErrand(), null)
 })
