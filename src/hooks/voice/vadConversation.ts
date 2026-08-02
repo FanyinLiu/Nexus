@@ -141,10 +141,19 @@ export async function startVadConversation(
   // MicVAD path only when the wakeword listener isn't available (e.g.,
   // manual voice start while wake word is off, or the listener is in an
   // error/retry state and has no active ScriptProcessor).
+  //
+  // hasActiveFrameSource() matters here: the 'paused' phase is ambiguous.
+  // Paused *with* a kept-alive listener still captures frames (continuous
+  // voice restarts rely on that), but paused *without* one (listener died
+  // before the voice turn) used to pass this check — subscribeMicFrames()
+  // then attached to nothing, mainVAD starved, and the 3s noSpeechTimer
+  // silently dropped the turn. No live frame source → MicVAD path instead.
   const wakewordRuntime = params.wakewordRuntimeRef.current
   const wakewordPhase = wakewordRuntime?.getState().phase
   const useFrameDriver = Boolean(
-    wakewordRuntime && (wakewordPhase === 'listening' || wakewordPhase === 'paused'),
+    wakewordRuntime
+    && (wakewordPhase === 'listening' || wakewordPhase === 'paused')
+    && wakewordRuntime.hasActiveFrameSource()
   )
 
   // Declare up front so the shared VAD event handlers below can close over

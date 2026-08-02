@@ -28,7 +28,7 @@ export type WakewordListenerOptions = {
   AudioContextCtor?: typeof AudioContext
 }
 
-type WakewordFrameSubscriber = (samples: Float32Array, sampleRate: number) => void
+export type WakewordFrameSubscriber = (samples: Float32Array, sampleRate: number) => void
 
 export type WakewordListener = {
   stop: () => void

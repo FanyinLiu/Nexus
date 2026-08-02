@@ -285,3 +285,170 @@ test('runtime schedules retry when availability status check throws', async () =
   assert.ok(phases.includes('checking'))
   runtime.destroy()
 })
+
+// Harness for the frame-subscription tests: each startListener call returns
+// a fake listener whose frame taps can be pumped manually, so a test can
+// simulate "listener dies mid-VAD-session, retry loop rebuilds it".
+function createControllableListenerHarness() {
+  type FrameTap = (samples: Float32Array, sampleRate: number) => void
+  const listeners: Array<{ taps: Set<FrameTap>; stopped: boolean }> = []
+  let listenerCallbacks: { onError?: (message: string) => void } | null = null
+
+  const startListener = async (callbacks: { onError?: (message: string) => void }) => {
+    listenerCallbacks = callbacks
+    const entry = { taps: new Set<FrameTap>(), stopped: false }
+    listeners.push(entry)
+    return {
+      stop: () => { entry.stopped = true },
+      subscribeFrames: (subscriber: FrameTap) => {
+        entry.taps.add(subscriber)
+        return () => { entry.taps.delete(subscriber) }
+      },
+    }
+  }
+
+  const pump = (listenerIndex: number, frameLength: number) => {
+    const samples = new Float32Array(frameLength)
+    for (const tap of listeners[listenerIndex].taps) {
+      tap(samples, 16_000)
+    }
+  }
+
+  return {
+    listeners,
+    startListener,
+    pump,
+    fireListenerError: (message: string) => listenerCallbacks?.onError?.(message),
+  }
+}
+
+test('mic frame subscribers survive a mid-session listener error and are re-attached to the rebuilt listener', async () => {
+  const harness = createControllableListenerHarness()
+  const timers: Array<{ callback: () => void; delayMs: number }> = []
+
+  const runtime = createWakewordRuntime({
+    checkAvailability: async () => ({
+      installed: true,
+      modelFound: true,
+      modelKind: 'zh',
+      modelsDir: '',
+      reason: '',
+    }),
+    startListener: harness.startListener,
+    setTimeoutFn: (callback, delayMs) => {
+      timers.push({ callback, delayMs })
+      return timers.length
+    },
+    clearTimeoutFn: () => undefined,
+  })
+
+  await runtime.update({ enabled: true, wakeWord: '小猫', suspended: false })
+  assert.equal(runtime.getState().phase, 'listening')
+  assert.equal(harness.listeners.length, 1)
+
+  const received: number[] = []
+  const unsubscribe = runtime.subscribeMicFrames((samples) => {
+    received.push(samples.length)
+  })
+
+  harness.pump(0, 3)
+  assert.deepEqual(received, [3])
+
+  // The wakeword listener dies mid-VAD-session (mic track ended, KWS feed
+  // failure, ...): the runtime tears it down and schedules a retry.
+  harness.fireListenerError('Microphone track ended unexpectedly — triggering recovery.')
+  assert.equal(runtime.getState().phase, 'error')
+  assert.equal(harness.listeners[0].stopped, true)
+  assert.equal(timers.length, 1)
+
+  // Retry timer fires → reconcile builds a fresh listener.
+  timers[0].callback()
+  await new Promise((resolve) => setImmediate(resolve))
+  await new Promise((resolve) => setImmediate(resolve))
+
+  assert.equal(harness.listeners.length, 2)
+  assert.equal(runtime.getState().phase, 'listening')
+  // The live subscriber must be migrated onto the rebuilt listener. Before
+  // the fix nothing re-subscribed, so mainVAD starved from here on and the
+  // 3s noSpeechTimer silently dropped the voice turn.
+  assert.equal(harness.listeners[1].taps.size, 1)
+
+  harness.pump(1, 5)
+  assert.deepEqual(received, [3, 5])
+
+  unsubscribe()
+  assert.equal(harness.listeners[1].taps.size, 0)
+  runtime.destroy()
+})
+
+test('frames subscribed during a paused window with no live listener flow once the listener is rebuilt', async () => {
+  const harness = createControllableListenerHarness()
+
+  const runtime = createWakewordRuntime({
+    checkAvailability: async () => ({
+      installed: true,
+      modelFound: true,
+      modelKind: 'zh',
+      modelsDir: '',
+      reason: '',
+    }),
+    startListener: harness.startListener,
+  })
+
+  // VAD session starts while the runtime is paused *without* a listener
+  // (e.g. the listener errored out before the voice turn began, so the
+  // suspend path had nothing to keep alive).
+  await runtime.update({ enabled: true, wakeWord: '小猫', suspended: true, suspendReason: 'voice turn' })
+  assert.equal(runtime.getState().phase, 'paused')
+  assert.equal(harness.listeners.length, 0)
+  assert.equal(runtime.hasActiveFrameSource(), false)
+
+  const received: number[] = []
+  runtime.subscribeMicFrames((samples) => {
+    received.push(samples.length)
+  })
+
+  await runtime.update({ enabled: true, wakeWord: '小猫', suspended: false })
+  assert.equal(runtime.getState().phase, 'listening')
+  assert.equal(runtime.hasActiveFrameSource(), true)
+  assert.equal(harness.listeners.length, 1)
+
+  harness.pump(0, 4)
+  assert.deepEqual(received, [4])
+  runtime.destroy()
+})
+
+test('hasActiveFrameSource stays true while paused with a kept-alive listener', async () => {
+  const harness = createControllableListenerHarness()
+
+  const runtime = createWakewordRuntime({
+    checkAvailability: async () => ({
+      installed: true,
+      modelFound: true,
+      modelKind: 'zh',
+      modelsDir: '',
+      reason: '',
+    }),
+    startListener: harness.startListener,
+  })
+
+  await runtime.update({ enabled: true, wakeWord: '小猫', suspended: false })
+  assert.equal(runtime.getState().phase, 'listening')
+  assert.equal(runtime.hasActiveFrameSource(), true)
+
+  // Suspend keeps the listener alive (mic stream stays up, KWS hits are
+  // muted) — the shared-frame path VAD relies on during continuous voice
+  // restarts must keep reporting a live source and delivering frames.
+  await runtime.update({ enabled: true, wakeWord: '小猫', suspended: true, suspendReason: 'voice turn' })
+  assert.equal(runtime.getState().phase, 'paused')
+  assert.equal(harness.listeners.length, 1)
+  assert.equal(runtime.hasActiveFrameSource(), true)
+
+  const received: number[] = []
+  runtime.subscribeMicFrames((samples) => {
+    received.push(samples.length)
+  })
+  harness.pump(0, 2)
+  assert.deepEqual(received, [2])
+  runtime.destroy()
+})

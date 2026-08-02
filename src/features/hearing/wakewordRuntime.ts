@@ -7,6 +7,7 @@ import type {
 import {
   checkWakewordAvailability,
   startWakewordListener,
+  type WakewordFrameSubscriber,
   type WakewordListener,
   type WakewordListenerCallbacks,
   type WakewordListenerOptions,
@@ -34,9 +35,20 @@ export type WakewordRuntimeController = {
   // Subscribe to the mic audio frames the wakeword listener is capturing.
   // VAD sessions register here so they can run Silero on the exact same
   // samples KWS is decoding — a single mic stream, no getUserMedia race.
+  // The registration lives on the runtime, not on a listener instance: if
+  // the listener errors mid-session and the retry loop rebuilds it, the
+  // subscriber is re-attached to the new listener automatically instead of
+  // starving silently.
   subscribeMicFrames: (
     subscriber: (samples: Float32Array, sampleRate: number) => void,
   ) => () => void
+  // True while a listener is actively capturing mic frames — i.e. a
+  // subscribeMicFrames() registration receives audio right now. False when
+  // no listener is live (error/retry backoff, or a paused window after the
+  // listener was torn down); VAD sessions must treat that as "shared-frame
+  // path unavailable" and fall back to their own mic capture instead of
+  // subscribing into silence.
+  hasActiveFrameSource: () => boolean
 }
 
 type WakewordRuntimeOptions = {
@@ -210,6 +222,35 @@ export function createWakewordRuntime(
   // 之后就不行" warmup regression. Also acts as a mute so queued detections
   // during the transition window are swallowed.
   let micReleased = false
+  // Frame subscribers are registered on the runtime, not on a listener
+  // instance. Previously subscribeMicFrames() forwarded to the *current*
+  // listener, so when that listener errored mid-VAD-session and stopListener()
+  // tore it down, the mainVAD subscription died with it and nothing re-
+  // subscribed after the retry loop rebuilt the listener — mainVAD starved
+  // and the 3s noSpeechTimer silently dropped the voice turn. The bridge
+  // below is detached on every teardown and re-attached to every rebuilt
+  // listener, so a subscription lives as long as its caller wants it to.
+  const frameSubscribers = new Set<WakewordFrameSubscriber>()
+  let frameBridgeUnsubscribe: (() => void) | null = null
+
+  function detachFrameBridge() {
+    frameBridgeUnsubscribe?.()
+    frameBridgeUnsubscribe = null
+  }
+
+  function attachFrameBridge(nextListener: WakewordListener) {
+    detachFrameBridge()
+    if (frameSubscribers.size === 0) return
+    frameBridgeUnsubscribe = nextListener.subscribeFrames((samples, sampleRate) => {
+      for (const subscriber of frameSubscribers) {
+        try {
+          subscriber(samples, sampleRate)
+        } catch (error) {
+          console.warn('[Wake] frame subscriber error:', error)
+        }
+      }
+    })
+  }
 
   function emitState(patch: Partial<WakewordRuntimeState>) {
     const previousState = state
@@ -236,6 +277,7 @@ export function createWakewordRuntime(
   function stopListener() {
     const currentListener = listener
     listener = null
+    detachFrameBridge()
     currentActiveListenerId = 0
     activeListenerWakeWord = ''
     currentListener?.stop()
@@ -534,6 +576,7 @@ export function createWakewordRuntime(
       }
 
       listener = nextListener
+      attachFrameBridge(nextListener)
       currentActiveListenerId = myListenerId
       activeListenerWakeWord = activeKeywords || primaryWakeWord
       clearRetryTimer()
@@ -601,8 +644,19 @@ export function createWakewordRuntime(
       stopListener()
     },
     subscribeMicFrames(subscriber) {
-      if (!listener) return () => undefined
-      return listener.subscribeFrames(subscriber)
+      frameSubscribers.add(subscriber)
+      if (listener && !frameBridgeUnsubscribe) {
+        attachFrameBridge(listener)
+      }
+      return () => {
+        frameSubscribers.delete(subscriber)
+        if (frameSubscribers.size === 0) {
+          detachFrameBridge()
+        }
+      }
+    },
+    hasActiveFrameSource() {
+      return listener != null
     },
   }
 }
