@@ -34,10 +34,12 @@ const BLOCKED_HOSTS = new Set([
 // IPv6 ranges to block. Each entry is a regex tested against the
 // bracket-stripped lowercased host string.
 //   ::1         loopback
+//   ::          unspecified address (the IPv6 equivalent of 0.0.0.0)
 //   fc00::/7    unique-local (any host starting with fc or fd)
 //   fe80::/10   link-local (fe80 / fe90 / fea0 / feb0; we just match fe8/fe9/fea/feb prefix)
 const BLOCKED_IPV6_PATTERNS = [
   /^::1$/,
+  /^::$/,
   /^fc[0-9a-f]/i,
   /^fd[0-9a-f]/i,
   /^fe[89ab]/i,
@@ -48,7 +50,10 @@ function normalizeHost(rawHost) {
   const bracketStripped = normalized.startsWith('[') && normalized.endsWith(']')
     ? normalized.slice(1, -1)
     : normalized
-  return bracketStripped.split('%')[0]
+  const zoneStripped = bracketStripped.split('%')[0]
+  // Strip trailing dots: DNS treats 'metadata.google.internal.' (FQDN form) as
+  // the same name as 'metadata.google.internal', so blocklists must too.
+  return zoneStripped.replace(/\.+$/, '')
 }
 
 function isPrivateIpv4(host) {
@@ -230,10 +235,7 @@ export function checkChatBaseUrlSafety(input) {
     return { ok: false, reason: `disallowed scheme: ${parsed.protocol}` }
   }
 
-  const rawHost = parsed.hostname.toLowerCase()
-  const host = rawHost.startsWith('[') && rawHost.endsWith(']')
-    ? rawHost.slice(1, -1)
-    : rawHost
+  const host = normalizeHost(parsed.hostname)
 
   if (IMDS_BLOCK_HOSTS.has(host)) {
     return { ok: false, reason: `blocked metadata host: ${host}` }
@@ -241,6 +243,70 @@ export function checkChatBaseUrlSafety(input) {
   for (const pattern of IMDS_BLOCK_IPV4_PATTERNS) {
     if (pattern.test(host)) {
       return { ok: false, reason: `blocked metadata-range IP: ${host}` }
+    }
+  }
+
+  return { ok: true }
+}
+
+// DNS re-check for the permissive chat/API path: only link-local and IMDS
+// ranges are rejected — RFC1918 / loopback resolutions stay allowed because
+// Ollama / LM Studio / LAN providers legitimately resolve there.
+function isLinkLocalOrImdsAddress(address) {
+  if (IMDS_BLOCK_IPV4_PATTERNS.some((pattern) => pattern.test(address))) return true
+  // fe80::/10 (IPv6 link-local)
+  if (/^fe[89ab]/i.test(address)) return true
+  return false
+}
+
+/**
+ * checkChatBaseUrlSafety + DNS resolution re-check for hostname inputs.
+ *
+ * The lexical check alone can be bypassed by any hostname that resolves to
+ * 169.254.169.254 (or another link-local address): a renderer-supplied base
+ * URL like http://attacker-controlled.example/v1 passes the literal-host
+ * blocklist, then DNS sends the request to IMDS. This variant resolves the
+ * hostname and refuses when ANY record lands in a link-local/IMDS range.
+ *
+ * Unlike checkUrlSafetyWithDns this does NOT block RFC1918/loopback
+ * resolutions — local-provider workflows (Ollama on 127.0.0.1, LM Studio on
+ * a LAN hostname) must keep working.
+ *
+ * @param {string} input
+ * @param {object} options
+ * @param {(hostname: string, options: { all: true, verbatim: true }) => Promise<Array<{ address: string, family: number }>>} [options.lookupFn]
+ */
+export async function checkChatBaseUrlSafetyWithDns(input, options = {}) {
+  const base = checkChatBaseUrlSafety(input)
+  if (!base.ok) return base
+
+  const parsed = new URL(input)
+  const host = normalizeHost(parsed.hostname)
+
+  // Literal IPs are already covered by the lexical checks above.
+  if (isIP(host) !== 0 || /^::ffff:\d+\.\d+\.\d+\.\d+$/i.test(host)) {
+    return base
+  }
+
+  const lookupFn = options.lookupFn ?? dnsLookup
+  let records
+  try {
+    records = await lookupFn(host, { all: true, verbatim: true })
+  } catch (error) {
+    return {
+      ok: false,
+      reason: `dns lookup failed for ${host}: ${error?.code ?? error?.message ?? 'unknown error'}`,
+    }
+  }
+
+  if (!Array.isArray(records) || records.length === 0) {
+    return { ok: false, reason: `dns lookup returned no addresses for ${host}` }
+  }
+
+  for (const record of records) {
+    const address = normalizeHost(record?.address)
+    if (isLinkLocalOrImdsAddress(address)) {
+      return { ok: false, reason: `dns resolved to link-local/metadata address: ${address}` }
     }
   }
 

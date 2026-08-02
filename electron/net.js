@@ -8,7 +8,7 @@ import {
   shouldLabelAsConnectionFailure as _shouldLabelAsConnectionFailure,
 } from './netHelpers.js'
 import {
-  checkChatBaseUrlSafety,
+  checkChatBaseUrlSafetyWithDns,
   checkUrlSafetyWithDns,
 } from './services/urlSafety.js'
 import { redactSensitiveErrorText } from './services/errorRedaction.js'
@@ -73,10 +73,13 @@ export async function performNetworkRequest(url, options = {}) {
   // default for tools, provider-returned download URLs, and other main-process
   // fetches. User-configured model / voice provider base URLs can opt into
   // loopback/LAN with allowPrivateNetwork after their caller has already
-  // validated that address as a chat/API base URL.
+  // validated that address as a chat/API base URL — but even then the hostname
+  // is DNS re-checked for link-local/IMDS resolutions, so a domain pointing at
+  // 169.254.169.254 can't ride the private-network allowance. RFC1918/loopback
+  // resolutions stay allowed (Ollama / LAN providers).
   const fetchValidatedHop = async (hopUrl, redirectMode, hopOptions = {}) => {
     const safety = allowPrivateNetwork
-      ? checkChatBaseUrlSafety(hopUrl)
+      ? await checkChatBaseUrlSafetyWithDns(hopUrl)
       : await checkUrlSafetyWithDns(hopUrl, { allowHttp: true })
     if (!safety.ok) {
       throw new Error(`refusing to fetch from this URL: ${safety.reason}`)

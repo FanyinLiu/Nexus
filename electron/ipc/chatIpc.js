@@ -116,6 +116,9 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         method: 'POST',
         headers: requestSpec.headers,
         body: requestSpec.body,
+        // Re-check every redirect hop so a poisoned 30x can't reach IMDS/private
+        // hosts past the first-hop SSRF check (see chat:test-connection).
+        followRedirectsSafely: true,
         timeoutMs: CHAT_REQUEST_TIMEOUT_MS,
         timeoutMessage: '模型回复太慢了，看看网络和服务有没有问题？',
         maxAttempts: 2,
@@ -232,6 +235,10 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         headers: requestSpec.headers,
         body: requestSpec.body,
         signal: abortController.signal,
+        // Re-check every redirect hop so a poisoned 30x can't reach IMDS/private
+        // hosts past the first-hop SSRF check (see chat:test-connection). Only
+        // headers are exchanged during redirects — the 200 stream is untouched.
+        followRedirectsSafely: true,
         timeoutMs: CHAT_REQUEST_TIMEOUT_MS,
         timeoutMessage: '模型回复太慢了，看看网络和服务有没有问题？',
         maxAttempts: 2,

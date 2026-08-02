@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 
-import { checkChatBaseUrlSafety, checkUrlSafety, checkUrlSafetyWithDns } from '../electron/services/urlSafety.js'
+import { checkChatBaseUrlSafety, checkChatBaseUrlSafetyWithDns, checkUrlSafety, checkUrlSafetyWithDns } from '../electron/services/urlSafety.js'
 
 describe('checkUrlSafety scheme guard', () => {
   test('accepts https:// by default', () => {
@@ -92,6 +92,14 @@ describe('checkUrlSafety private-IP blocklist', () => {
 
   test('rejects GCP metadata host', () => {
     assert.equal(checkUrlSafety('https://metadata.google.internal/').ok, false)
+  })
+
+  test('rejects trailing-dot FQDN variants of blocked hosts', () => {
+    assert.equal(checkUrlSafety('https://metadata.google.internal./').ok, false)
+  })
+
+  test('rejects IPv6 unspecified address ::', () => {
+    assert.equal(checkUrlSafety('https://[::]:8080/').ok, false)
   })
 
   test('rejects IPv6 loopback ::1', () => {
@@ -185,6 +193,12 @@ describe('checkChatBaseUrlSafety (permissive — allows local LLM URLs)', () => 
     assert.equal(checkChatBaseUrlSafety('http://metadata.google.internal/').ok, false)
   })
 
+  test('blocks trailing-dot FQDN variant of GCP metadata host', () => {
+    const r = checkChatBaseUrlSafety('http://metadata.google.internal./')
+    assert.equal(r.ok, false)
+    assert.match(r.reason ?? '', /blocked metadata host/)
+  })
+
   test('blocks Azure metadata host', () => {
     assert.equal(checkChatBaseUrlSafety('http://metadata.azure.com/').ok, false)
   })
@@ -200,5 +214,92 @@ describe('checkChatBaseUrlSafety (permissive — allows local LLM URLs)', () => 
   test('rejects malformed URLs', () => {
     assert.equal(checkChatBaseUrlSafety('not-a-url').ok, false)
     assert.equal(checkChatBaseUrlSafety('').ok, false)
+  })
+})
+
+describe('checkChatBaseUrlSafetyWithDns (permissive + DNS re-check for link-local/IMDS)', () => {
+  const throwIfCalled = async () => {
+    throw new Error('lookupFn should not be called for literal IPs')
+  }
+
+  test('rejects a hostname that resolves to AWS IMDS (169.254.169.254)', async () => {
+    const r = await checkChatBaseUrlSafetyWithDns('http://sneaky.example.com/v1', {
+      lookupFn: async () => [{ address: '169.254.169.254', family: 4 }],
+    })
+    assert.equal(r.ok, false)
+    assert.match(r.reason ?? '', /link-local\/metadata/)
+  })
+
+  test('rejects a hostname that resolves to any 169.254.0.0/16 link-local address', async () => {
+    const r = await checkChatBaseUrlSafetyWithDns('http://sneaky.example.com/v1', {
+      lookupFn: async () => [
+        { address: '203.0.113.10', family: 4 },
+        { address: '169.254.10.20', family: 4 },
+      ],
+    })
+    assert.equal(r.ok, false)
+  })
+
+  test('rejects a hostname that resolves to IPv6 link-local (fe80::/10)', async () => {
+    const r = await checkChatBaseUrlSafetyWithDns('http://sneaky.example.com/v1', {
+      lookupFn: async () => [{ address: 'fe80::1', family: 6 }],
+    })
+    assert.equal(r.ok, false)
+  })
+
+  test('still allows hostnames that resolve to RFC1918 LAN (Ollama/LM Studio)', async () => {
+    const r = await checkChatBaseUrlSafetyWithDns('http://ollama.lan:11434/v1', {
+      lookupFn: async () => [{ address: '192.168.1.50', family: 4 }],
+    })
+    assert.equal(r.ok, true)
+  })
+
+  test('still allows hostnames that resolve to loopback (local providers)', async () => {
+    const r = await checkChatBaseUrlSafetyWithDns('http://ollama.local:11434/v1', {
+      lookupFn: async () => [{ address: '127.0.0.1', family: 4 }],
+    })
+    assert.equal(r.ok, true)
+  })
+
+  test('allows hostnames that resolve to public IPs', async () => {
+    const r = await checkChatBaseUrlSafetyWithDns('https://api.openai.com/v1', {
+      lookupFn: async () => [{ address: '104.18.7.192', family: 4 }],
+    })
+    assert.equal(r.ok, true)
+  })
+
+  test('fails closed when DNS lookup throws', async () => {
+    const r = await checkChatBaseUrlSafetyWithDns('http://sneaky.example.com/v1', {
+      lookupFn: async () => { throw new Error('dns failed') },
+    })
+    assert.equal(r.ok, false)
+    assert.match(r.reason ?? '', /dns lookup failed/i)
+  })
+
+  test('fails closed when DNS returns no addresses', async () => {
+    const r = await checkChatBaseUrlSafetyWithDns('http://sneaky.example.com/v1', {
+      lookupFn: async () => [],
+    })
+    assert.equal(r.ok, false)
+    assert.match(r.reason ?? '', /no addresses/i)
+  })
+
+  test('skips DNS for literal IPs (Ollama on 127.0.0.1 stays allowed)', async () => {
+    assert.equal(
+      (await checkChatBaseUrlSafetyWithDns('http://127.0.0.1:11434/v1', { lookupFn: throwIfCalled })).ok,
+      true,
+    )
+    assert.equal(
+      (await checkChatBaseUrlSafetyWithDns('http://192.168.1.50:11434/v1', { lookupFn: throwIfCalled })).ok,
+      true,
+    )
+  })
+
+  test('skips DNS for lexically blocked URLs (302 redirect target to IMDS)', async () => {
+    const r = await checkChatBaseUrlSafetyWithDns('http://169.254.169.254/latest/meta-data/', {
+      lookupFn: throwIfCalled,
+    })
+    assert.equal(r.ok, false)
+    assert.match(r.reason ?? '', /metadata-range/)
   })
 })
