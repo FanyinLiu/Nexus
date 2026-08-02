@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from 'react'
 import { useTranslation } from '../i18n/useTranslation.ts'
-import { planStore, type Plan } from '../features/plan/planStore'
+import { planStore, type Plan } from '../features/plan/planStore.ts'
 
 function pickActivePlan(plans: Plan[]): Plan | undefined {
   return plans.find((p) => p.status === 'active')

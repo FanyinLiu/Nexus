@@ -1,12 +1,12 @@
 import { memo, useEffect, useMemo, useState } from 'react'
-import { PetControlIcon } from '../../components/PetControlIcon'
-import type { ConfirmFn } from '../../components/useConfirm'
+import { PetControlIcon } from '../../components/PetControlIcon.tsx'
+import type { ConfirmFn } from '../../components/useConfirm.ts'
 import { loadChatSessions, removeChatSession, type ChatSession } from '../../lib'
 import {
   isChatLocalDataAuthorityActive,
   readChatSessionsFromLocalData,
-} from '../../lib/storage'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+} from '../../lib/storage.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { UiLanguage } from '../../types'
 import {
   SettingsV3Empty,
@@ -15,7 +15,7 @@ import {
   SettingsV3Row,
   SettingsV3Section,
   SettingsV3Toolbar,
-} from './SettingsV3Primitives'
+} from './SettingsV3Primitives.tsx'
 import './settings-v3-collection.css'
 
 export type HistorySectionV3Status = {

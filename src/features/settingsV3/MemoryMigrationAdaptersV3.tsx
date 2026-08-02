@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react'
-import type { ConfirmFn } from '../../components/useConfirm'
-import { getRedactedLogErrorMessage } from '../../lib/logRedaction'
+import type { ConfirmFn } from '../../components/useConfirm.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import {
   buildCompanionLocalDataComparisonSource,
   buildCompanionLocalDataMigrationPackage,
@@ -8,7 +8,7 @@ import {
   isCompanionLocalDataMigrationFeatureEnabled,
   isCompanionLocalDataMigrationUiEnabled,
   setCompanionLocalDataAuthorityConsent,
-} from '../../lib/storage/companionLocalDataMigration'
+} from '../../lib/storage/companionLocalDataMigration.ts'
 import {
   buildMemoryLocalDataMigrationPackage,
   getMemoryLocalDataAuthorityConsent,
@@ -16,8 +16,8 @@ import {
   isMemoryLocalDataMigrationUiEnabled,
   loadMemoryStorageMigrationDryRun,
   setMemoryLocalDataAuthorityConsent,
-} from '../../lib/storage'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+} from '../../lib/storage.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { UiLanguage } from '../../types'
 import {
   SettingsV3Notice,
@@ -25,7 +25,7 @@ import {
   SettingsV3Section,
   SettingsV3Switch,
   SettingsV3Toolbar,
-} from './SettingsV3Primitives'
+} from './SettingsV3Primitives.tsx'
 
 type StatusMessage = { ok: boolean; message: string } | null
 type MemoryStatus = Awaited<ReturnType<NonNullable<Window['desktopPet']>['localDataMemoryMigrationStatus']>>

@@ -1,4 +1,4 @@
-import { useAwayNotificationScheduler } from '../../hooks/useAwayNotificationScheduler'
+import { useAwayNotificationScheduler } from '../../hooks/useAwayNotificationScheduler.ts'
 import { useBracketScheduler } from '../../hooks/useBracketScheduler.ts'
 import { useErrandScheduler } from '../../hooks/useErrandScheduler.ts'
 import { useFutureCapsuleScheduler } from '../../hooks/useFutureCapsuleScheduler.ts'

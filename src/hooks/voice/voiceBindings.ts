@@ -24,17 +24,17 @@ import {
   shouldKeepContinuousVoiceSession as shouldKeepContinuousVoiceSessionForSettings,
   startSpeechInterruptMonitor as startSpeechInterruptMonitorRuntime,
   stopSpeechInterruptMonitor as stopSpeechInterruptMonitorSession,
-} from './continuousVoice'
-import { testSpeechInputReadinessRuntime } from './diagnostics'
+} from './continuousVoice.ts'
+import { testSpeechInputReadinessRuntime } from './diagnostics.ts'
 import {
   applySpeechOutputProviderFallbackRuntime,
   buildSpeechOutputFailoverCandidatesRuntime,
-} from './providerFallbacks'
-import { startSpeechOutputRuntime } from './speechOutputRuntime'
+} from './providerFallbacks.ts'
+import { startSpeechOutputRuntime } from './speechOutputRuntime.ts'
 import {
   handleRecognizedVoiceTranscriptRuntime,
   handleVoiceListeningFailureRuntime,
-} from './transcriptHandling'
+} from './transcriptHandling.ts'
 import {
   clearParaformerConversationStateRuntime,
   clearSenseVoiceConversationStateRuntime,
@@ -54,8 +54,8 @@ import {
   stopSpeechTrackingRuntime,
   stopVadListeningRuntime,
 } from './'
-import type { VadConversationSession } from './types'
-import type { VoiceBindings, VoiceRuntimeBag } from './voiceRuntimeBag'
+import type { VadConversationSession } from './types.ts'
+import type { VoiceBindings, VoiceRuntimeBag } from './voiceRuntimeBag.ts'
 
 export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
   const { ctx, refs, setters, hookCallbacks, lifecycleHolder, tunables, voiceBus } = bag

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
-import { humanizeError } from '../../../../lib/humanizeError'
+import { pickTranslatedUiText } from '../../../../lib/uiLanguage.ts'
+import { humanizeError } from '../../../../lib/humanizeError.ts'
 import type { UiLanguage } from '../../../../types'
 
 // Mirror the bridge-side types locally. `ModelInventory` + co. are

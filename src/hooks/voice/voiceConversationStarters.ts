@@ -4,13 +4,13 @@
 // `hearingRuntime.activateEngine(...)` then forwards a large bag of refs and
 // callbacks to the corresponding `start*Conversation` runtime helper.
 
-import { startApiRecordingConversation } from './recordingConversations'
-import { startParaformerConversation } from './paraformerConversation'
-import { startSenseVoiceConversation as startSenseVoiceConversationRuntime } from './sensevoiceConversation'
-import { startTencentConversation } from './tencentConversation'
-import { startVadConversation } from './vadConversation'
-import { expectHolderValue, type VoiceEngines, type VoiceRuntimeBag } from './voiceRuntimeBag'
-import type { VoiceConversationOptions } from './types'
+import { startApiRecordingConversation } from './recordingConversations.ts'
+import { startParaformerConversation } from './paraformerConversation.ts'
+import { startSenseVoiceConversation as startSenseVoiceConversationRuntime } from './sensevoiceConversation.ts'
+import { startTencentConversation } from './tencentConversation.ts'
+import { startVadConversation } from './vadConversation.ts'
+import { expectHolderValue, type VoiceEngines, type VoiceRuntimeBag } from './voiceRuntimeBag.ts'
+import type { VoiceConversationOptions } from './types.ts'
 
 export function createVoiceConversationStarters(bag: VoiceRuntimeBag): VoiceEngines {
   const { ctx, refs, setters, hearingRuntime, hookCallbacks, bindingsHolder, voiceBus } = bag

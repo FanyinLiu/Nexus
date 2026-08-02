@@ -1,11 +1,11 @@
-import type { VoiceBusEvent, VoiceBusEventType } from './busEvents'
+import type { VoiceBusEvent, VoiceBusEventType } from './busEvents.ts'
 import type { VoicePhase } from './session/voiceSessionTypes.ts'
-import type { VoiceReasonCode } from './voiceReasonCodes'
+import type { VoiceReasonCode } from './voiceReasonCodes.ts'
 import type {
   VoiceLatencyBreakdown,
   VoiceSessionTimeline,
   VoiceTransitionRecord,
-} from './voiceTransitionTypes'
+} from './voiceTransitionTypes.ts'
 
 const DEFAULT_MAX_ENTRIES = 200
 const DEFAULT_TIMELINE_LIMIT = 16

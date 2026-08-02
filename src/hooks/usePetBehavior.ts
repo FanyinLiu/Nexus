@@ -6,8 +6,8 @@ import {
   type PetPerformanceCue,
   type PresenceLine,
 } from '../features/pet'
-import { getPetModelPreset } from '../features/pet/models'
-import { createIdleSequenceController, type IdleSequenceController } from '../features/pet/idleSequence'
+import { getPetModelPreset } from '../features/pet/models.ts'
+import { createIdleSequenceController, type IdleSequenceController } from '../features/pet/idleSequence.ts'
 import {
   createId,
   loadAmbientPresence,

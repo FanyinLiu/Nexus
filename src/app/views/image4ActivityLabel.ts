@@ -2,7 +2,7 @@ import type { TranslationKey } from '../../types'
 import type {
   Image4CompanionActivityState,
   Image4CompanionState,
-} from './image4CompanionState'
+} from './image4CompanionState.ts'
 
 export const IMAGE4_ACTIVITY_LABEL_KEYS: Record<Image4CompanionActivityState, TranslationKey> = {
   idle: 'panel.activity.idle',

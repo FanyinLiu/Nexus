@@ -3,11 +3,11 @@ import {
   getWebSearchProviderPreset,
   resolveWebSearchApiBaseUrl,
   WEB_SEARCH_PROVIDER_PRESETS,
-} from '../../lib/webSearchProviders'
-import { displaySecretInputValue } from '../../lib/keyVaultBridge'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+} from '../../lib/webSearchProviders.ts'
+import { displaySecretInputValue } from '../../lib/keyVaultBridge.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { AppSettings } from '../../types'
-import { SettingsV3Disclosure, SettingsV3Field, SettingsV3Notice, SettingsV3Page, SettingsV3Row, SettingsV3Section, SettingsV3Switch } from './SettingsV3Primitives'
+import { SettingsV3Disclosure, SettingsV3Field, SettingsV3Notice, SettingsV3Page, SettingsV3Row, SettingsV3Section, SettingsV3Switch } from './SettingsV3Primitives.tsx'
 
 type ToolsSectionV3Props = {
   active: boolean

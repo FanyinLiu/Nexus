@@ -1,7 +1,7 @@
 import { t } from '../../i18n/runtime.ts'
 import type { AssistantRuntimeActivity } from '../../types/index.ts'
-import type { AssistantReplyRunnerOptions } from './assistantReply'
-import type { UseChatContext } from './types'
+import type { AssistantReplyRunnerOptions } from './assistantReply.ts'
+import type { UseChatContext } from './types.ts'
 
 const TURN_HARD_TIMEOUT_MS = 90_000
 

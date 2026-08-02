@@ -30,7 +30,7 @@ import { QUESTION_PACING_GUIDANCE } from './questionPacingGuidance.ts'
 import { TOPIC_EXHAUSTION_GUIDANCE } from './topicExhaustionGuidance.ts'
 import { SELF_DISCLOSURE_GUIDANCE } from './selfDisclosureGuidance.ts'
 import { getChatPromptStrings } from './prompts/index.ts'
-import type { BuiltInToolResult } from '../tools/toolTypes'
+import type { BuiltInToolResult } from '../tools/toolTypes.ts'
 import {
   compactMessagesForRequest,
   formatCompactionContext,

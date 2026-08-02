@@ -5,13 +5,13 @@ import {
   useMemo,
   useState,
 } from 'react'
-import type { SettingsDrawerProps } from '../../components/SettingsDrawer'
+import type { SettingsDrawerProps } from '../../components/SettingsDrawer.tsx'
 import type { SettingsSectionId } from '../../components/settingsDrawerSupport.ts'
 import {
   mergeFocusedDailyEntries,
   type ChatMemoryTraceFocusTarget,
 } from '../../features/memory/traceDetails.ts'
-import type { OnboardingGuideProps } from '../../features/onboarding/components/OnboardingGuide'
+import type { OnboardingGuideProps } from '../../features/onboarding/components/OnboardingGuide.tsx'
 import type { PetModelDefinition } from '../../features/pet'
 import {
   loadOnboardingCompleted,
@@ -21,12 +21,12 @@ import {
   syncSpeechProviderProfiles,
   syncTextProviderProfiles,
 } from '../../lib'
-import { updateSettingsFromDraft } from '../store/settingsStore'
-import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
-import { syncWindowViewToUrl } from '../appSupport'
+import { updateSettingsFromDraft } from '../store/settingsStore.ts'
+import { commitSettingsUpdate } from '../store/commitSettingsUpdate.ts'
+import { syncWindowViewToUrl } from '../appSupport.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
-import { runTextConnectionTestPreflight } from '../../features/models/connectionPreflight'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
+import { runTextConnectionTestPreflight } from '../../features/models/connectionPreflight.ts'
 import type {
   AppSettings,
   DebugConsoleEvent,

@@ -1,5 +1,5 @@
-import type { VoiceBusEvent, VoiceBusEventType } from './busEvents'
-import { voiceDebug } from './voiceDebugLog'
+import type { VoiceBusEvent, VoiceBusEventType } from './busEvents.ts'
+import { voiceDebug } from './voiceDebugLog.ts'
 import {
   createInitialVoiceSessionState,
   reduceVoiceSession,

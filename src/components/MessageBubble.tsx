@@ -2,9 +2,9 @@ import { memo } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import { segmentStageDirections } from '../features/pet/performance.ts'
-import type { ChatMemoryTraceDetailItem, ChatMemoryTraceDetails } from '../features/memory/traceDetails'
+import type { ChatMemoryTraceDetailItem, ChatMemoryTraceDetails } from '../features/memory/traceDetails.ts'
 import type { ChatMessage } from '../types'
-import { ToolResultCard } from './ToolResultCard'
+import { ToolResultCard } from './ToolResultCard.tsx'
 
 type MessageBubbleProps = {
   message: ChatMessage

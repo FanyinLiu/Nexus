@@ -118,8 +118,8 @@ const REQUIRED_PHRASES = [
     id: 'renderer-strips-screenshot-payload-before-runtime-return',
     file: 'src/hooks/useDesktopContext.ts',
     phrases: [
-      "import { getRedactedLogErrorMessage } from '../lib/logRedaction'",
-      "import { stripDesktopContextScreenshotPayload } from '../lib/privacy/desktopContextPrivacy'",
+      "import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'",
+      "import { stripDesktopContextScreenshotPayload } from '../lib/privacy/desktopContextPrivacy.ts'",
       'const strippedSnapshot = stripDesktopContextScreenshotPayload(snapshot)',
       'const strippedEnrichedSnapshot = stripDesktopContextScreenshotPayload(enrichedSnapshot)',
       "console.warn('[screen-ocr] failed to recognize screenshot text', getRedactedLogErrorMessage(error))",

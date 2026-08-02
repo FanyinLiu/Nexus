@@ -1,6 +1,6 @@
-import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
-import type { UiLanguage } from '../../../../types/i18n'
-import { buildOnboardingMessageActionDemo } from '../../messageActionDemo'
+import { pickTranslatedUiText } from '../../../../lib/uiLanguage.ts'
+import type { UiLanguage } from '../../../../types/i18n.ts'
+import { buildOnboardingMessageActionDemo } from '../../messageActionDemo.ts'
 
 type MessageActionDemoStepProps = {
   uiLanguage: UiLanguage

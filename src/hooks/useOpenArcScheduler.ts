@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { autoDropExpiredArcs, loadOpenArcs, recordCheckInFired } from '../features/arc/openArcStore'
-import { decideNextCheckIn } from '../features/arc/openArcPolicy'
-import { buildArcCheckIn } from '../features/arc/openArcDelivery'
+import { autoDropExpiredArcs, loadOpenArcs, recordCheckInFired } from '../features/arc/openArcStore.ts'
+import { decideNextCheckIn } from '../features/arc/openArcPolicy.ts'
+import { buildArcCheckIn } from '../features/arc/openArcDelivery.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings } from '../types'
 

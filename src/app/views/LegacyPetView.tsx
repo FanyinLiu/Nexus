@@ -8,11 +8,11 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { pickHoverReaction } from '../appSupport'
-import { MusicPopupCard } from '../../components/MusicPopupCard'
-import { PetControlIcon } from '../../components/PetControlIcon'
-import { PetDialogBubble } from '../../components/PetDialogBubble'
-import { PetThoughtBubble } from '../../components/PetThoughtBubble'
+import { pickHoverReaction } from '../appSupport.ts'
+import { MusicPopupCard } from '../../components/MusicPopupCard.tsx'
+import { PetControlIcon } from '../../components/PetControlIcon.tsx'
+import { PetDialogBubble } from '../../components/PetDialogBubble.tsx'
+import { PetThoughtBubble } from '../../components/PetThoughtBubble.tsx'
 import {
   classifyWeatherCondition,
   getTimeOfDayBand,
@@ -22,26 +22,26 @@ import {
   SunlightTint,
   WeatherAmbient,
 } from '../../features/panelScene'
-import { useAmbientWeather } from '../../hooks/useAmbientWeather'
+import { useAmbientWeather } from '../../hooks/useAmbientWeather.ts'
 import { useSpeechLevelSnapshot } from '../../hooks/voice/speechLevelPublishing.ts'
 import { clamp } from '../../lib'
 import {
   pickTranslatedUiText,
   pickTranslatedUiTextOrFallback,
-} from '../../lib/uiLanguage'
+} from '../../lib/uiLanguage.ts'
 import type { PetTouchZone, SpeechLevelSource } from '../../types'
-import { useVTSBridge } from '../../features/pet/vts/useVTSBridge'
-import { resolveCompanionActivityState } from '../../features/pet/activityState'
-import { resolveExpressionSlot } from '../../features/pet/components/live2d/expressions'
+import { useVTSBridge } from '../../features/pet/vts/useVTSBridge.ts'
+import { resolveCompanionActivityState } from '../../features/pet/activityState.ts'
+import { resolveExpressionSlot } from '../../features/pet/components/live2d/expressions.ts'
 import {
   SpritePetCanvas,
-} from '../../features/pet/components/SpritePetCanvas'
+} from '../../features/pet/components/SpritePetCanvas.tsx'
 import {
   getSpritePetDebugImagePathFromSearch,
   getSpritePetDebugStateFromSearch,
-} from '../../features/pet/spriteDebug'
-import type { SpritePetAnimationState } from '../../features/pet/spriteAtlas'
-import type { UseAppControllerResult } from '../controllers/useAppController'
+} from '../../features/pet/spriteDebug.ts'
+import type { SpritePetAnimationState } from '../../features/pet/spriteAtlas.ts'
+import type { UseAppControllerResult } from '../controllers/useAppController.ts'
 
 const Live2DCanvas = lazy(async () => {
   const module = await import('../../features/pet/components/Live2DCanvas')

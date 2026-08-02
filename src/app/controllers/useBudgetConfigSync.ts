@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { getCoreRuntime } from '../../lib/coreRuntime'
+import { getCoreRuntime } from '../../lib/coreRuntime.ts'
 import type { AppSettings } from '../../types'
 
 /**

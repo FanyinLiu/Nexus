@@ -4,13 +4,13 @@ import {
   onStorageChange,
   readJson,
   writeJson,
-} from '../lib/storage'
+} from '../lib/storage.ts'
 import {
   clearExpiredNotificationSnoozes,
   commitNotificationMessages,
   prependNotificationMessage,
   sanitizeNotificationMessageSnapshot,
-} from '../lib/privacy/notificationMessageState'
+} from '../lib/privacy/notificationMessageState.ts'
 import type { NotificationChannel, NotificationMessage } from '../types'
 
 export type UseNotificationBridgeOptions = {

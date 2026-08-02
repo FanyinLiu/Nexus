@@ -1,8 +1,8 @@
 import { Suspense, lazy, useEffect, type ReactNode } from 'react'
 import { CrisisHotlinePanel } from '../../features/safety'
-import { modelSupportsVision } from '../../lib/modelCapabilities'
-import { CompanionPanelV2 } from '../../features/uiV2/CompanionPanelV2'
-import type { UseAppControllerResult } from '../controllers/useAppController'
+import { modelSupportsVision } from '../../lib/modelCapabilities.ts'
+import { CompanionPanelV2 } from '../../features/uiV2/CompanionPanelV2.tsx'
+import type { UseAppControllerResult } from '../controllers/useAppController.ts'
 
 const LegacyPanelView = lazy(() => import('./LegacyPanelView'))
 

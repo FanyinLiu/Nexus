@@ -11,9 +11,9 @@ import {
   isDesktopContextActiveWindowAvailable,
   isDesktopContextClipboardAvailable,
   isDesktopContextScreenshotAvailable,
-} from '../lib/platformProfile'
-import { stripDesktopContextScreenshotPayload } from '../lib/privacy/desktopContextPrivacy'
-import { getRedactedLogErrorMessage } from '../lib/logRedaction'
+} from '../lib/platformProfile.ts'
+import { stripDesktopContextScreenshotPayload } from '../lib/privacy/desktopContextPrivacy.ts'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings, DesktopContextSnapshot, PlatformProfile } from '../types'
 
 type UseDesktopContextParams = {

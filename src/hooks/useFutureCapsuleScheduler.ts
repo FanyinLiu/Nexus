@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react'
 import {
   findDueCapsule,
   markDelivered,
-} from '../features/futureCapsule/futureCapsuleStore'
-import { buildFutureCapsuleDelivery } from '../features/futureCapsule/futureCapsuleDelivery'
+} from '../features/futureCapsule/futureCapsuleStore.ts'
+import { buildFutureCapsuleDelivery } from '../features/futureCapsule/futureCapsuleDelivery.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings } from '../types'
 

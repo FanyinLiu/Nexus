@@ -8,7 +8,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { PetControlIcon, type PetControlIconName } from '../../components/PetControlIcon'
+import { PetControlIcon, type PetControlIconName } from '../../components/PetControlIcon.tsx'
 import { clamp, pickTranslatedUiText } from '../../lib'
 import type {
   AppSettings,
@@ -20,16 +20,16 @@ import type {
   SpeechLevelSource,
   VoiceState,
 } from '../../types'
-import type { PetModelDefinition } from '../pet/models'
-import type { GazeTarget } from '../pet/components/live2d/types'
-import { useReadableCaption } from './caption'
-import { buildMotionSafeModelDefinition } from './motionSafeModel'
+import type { PetModelDefinition } from '../pet/models.ts'
+import type { GazeTarget } from '../pet/components/live2d/types.ts'
+import { useReadableCaption } from './caption.ts'
+import { buildMotionSafeModelDefinition } from './motionSafeModel.ts'
 import {
   resolveCompanionSurfaceCaption,
   resolveCompanionSurfaceBasePhase,
   useCompanionSurfacePhase,
   type CompanionSurfacePhase,
-} from './state'
+} from './state.ts'
 import './companion-v2.css'
 
 const Live2DCanvas = lazy(async () => {

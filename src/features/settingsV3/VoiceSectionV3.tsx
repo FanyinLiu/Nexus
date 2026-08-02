@@ -2,9 +2,9 @@ import { memo, type Dispatch, type SetStateAction } from 'react'
 import {
   getVoiceTriggerModeOptions,
   type ConnectionResult,
-} from '../../components/settingsDrawerSupport'
-import { getDirectSendFallbackWakeWord } from '../hearing/companionWakeWordSync'
-import { isWakeWordSupported } from '../voice/providerSettings'
+} from '../../components/settingsDrawerSupport.ts'
+import { getDirectSendFallbackWakeWord } from '../hearing/companionWakeWordSync.ts'
+import { isWakeWordSupported } from '../voice/providerSettings.ts'
 import {
   getPlatformDependencyHint,
   isVoiceContinuousAvailable,
@@ -12,8 +12,8 @@ import {
   isVoiceSpeechOutputAvailable,
   isVoiceVadAvailable,
   isVoiceWakewordAvailable,
-} from '../../lib/platformProfile'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+} from '../../lib/platformProfile.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type {
   AppSettings,
   PlatformProfile,
@@ -32,9 +32,9 @@ import {
   SettingsV3Section,
   SettingsV3Switch,
   SettingsV3Toolbar,
-} from './SettingsV3Primitives'
-import { SpeechInputProviderV3 } from './SpeechInputProviderV3'
-import { SpeechOutputProviderV3 } from './SpeechOutputProviderV3'
+} from './SettingsV3Primitives.tsx'
+import { SpeechInputProviderV3 } from './SpeechInputProviderV3.tsx'
+import { SpeechOutputProviderV3 } from './SpeechOutputProviderV3.tsx'
 import './voice-section-v3.css'
 
 export type VoiceSectionV3Props = {

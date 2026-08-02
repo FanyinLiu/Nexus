@@ -12,7 +12,7 @@ import {
   VOICE_TRIGGER_DIRECT_SEND_MIGRATION_KEY,
   buildStartupGreetingText,
   makeTranslator,
-} from '../appSupport'
+} from '../appSupport.ts'
 import { getDirectSendFallbackWakeWord } from '../../features/hearing/companionWakeWordSync.ts'
 import {
   DEFAULT_PET_MODEL_ID,
@@ -34,7 +34,7 @@ import type {
   ReminderTask,
   RuntimeStateSnapshot,
 } from '../../types'
-import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
+import { commitSettingsUpdate } from '../store/commitSettingsUpdate.ts'
 
 const DEFAULT_RUNTIME_SNAPSHOT: RuntimeStateSnapshot = {
   mood: 'idle',

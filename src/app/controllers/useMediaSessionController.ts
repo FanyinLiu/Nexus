@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
-import { isMediaSessionAvailable } from '../../lib/platformProfile'
+import { isMediaSessionAvailable } from '../../lib/platformProfile.ts'
 import type { ChatMessageTone, MediaSessionSnapshot, PlatformProfile } from '../../types'
 
 type UseMediaSessionControllerOptions = {

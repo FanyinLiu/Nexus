@@ -8,13 +8,13 @@
 import {
   startVoiceConversationEntrypoint,
   stopVoiceConversationEntrypoint,
-} from './conversationEntrypoints'
-import { speakAssistantReplyRuntime, beginStreamingSpeechReplyRuntime } from './speechReply'
+} from './conversationEntrypoints.ts'
+import { speakAssistantReplyRuntime, beginStreamingSpeechReplyRuntime } from './speechReply.ts'
 import { combineVoiceInstructions, emotionToVoiceRate, emotionToVoiceStyle } from '../../features/autonomy/emotionModel.ts'
 import type { AppSettings } from '../../types'
-import type { StreamingSpeechOutputController } from './types'
-import type { VoiceConversationOptions } from './types'
-import { expectHolderValue, type VoiceLifecycle, type VoiceRuntimeBag } from './voiceRuntimeBag'
+import type { StreamingSpeechOutputController } from './types.ts'
+import type { VoiceConversationOptions } from './types.ts'
+import { expectHolderValue, type VoiceLifecycle, type VoiceRuntimeBag } from './voiceRuntimeBag.ts'
 
 export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecycle {
   const {

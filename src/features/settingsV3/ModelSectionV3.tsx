@@ -1,12 +1,12 @@
 import { memo, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
-import { API_PROVIDER_PRESETS, getApiProviderPreset } from '../../lib/apiProviders'
-import { getCoreRuntime, removeAuthProfileFromRuntime, upsertAuthProfileInRuntime } from '../../lib/coreRuntime'
-import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
-import { getLocalizedApiProviderNote } from '../models/providerNotes'
-import { isHttpHeaderSafeCredential } from '../../core/routing/AuthProfileStore'
+import { API_PROVIDER_PRESETS, getApiProviderPreset } from '../../lib/apiProviders.ts'
+import { getCoreRuntime, removeAuthProfileFromRuntime, upsertAuthProfileInRuntime } from '../../lib/coreRuntime.ts'
+import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
+import { getLocalizedApiProviderNote } from '../models/providerNotes.ts'
+import { isHttpHeaderSafeCredential } from '../../core/routing/AuthProfileStore.ts'
 import type { AppSettings, ServiceConnectionCapability, UiLanguage } from '../../types'
-import { UrlInput } from '../../components/settingsSections/UrlInput'
+import { UrlInput } from './UrlInput.tsx'
 import {
   SettingsV3ConnectionEvidence,
   type SettingsV3ConnectionEvidenceValue,
@@ -18,7 +18,7 @@ import {
   SettingsV3Section,
   SettingsV3Switch,
   SettingsV3Toolbar,
-} from './SettingsV3Primitives'
+} from './SettingsV3Primitives.tsx'
 
 type Props = {
   active: boolean

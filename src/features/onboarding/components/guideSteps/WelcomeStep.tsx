@@ -5,13 +5,13 @@ import {
   isLocaleDefaultCompanionName,
   isLocaleDefaultUserName,
   pickTranslatedUiText,
-} from '../../../../lib/uiLanguage'
+} from '../../../../lib/uiLanguage.ts'
 import {
   setCompanionNameWithWakeWordSync,
   syncWakeWordWithCompanionNameChange,
 } from '../../../hearing/companionWakeWordSync.ts'
 import type { AppSettings } from '../../../../types'
-import type { OnboardingDraftSetter } from './types'
+import type { OnboardingDraftSetter } from './types.ts'
 
 type WelcomeStepProps = {
   draft: AppSettings

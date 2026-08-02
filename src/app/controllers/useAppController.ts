@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   getWindowViewSync,
-} from '../appSupport'
+} from '../appSupport.ts'
 import {
   loadPetWindowPreferences,
 } from '../../lib'
@@ -16,41 +16,41 @@ import type {
   VoiceState,
   WindowView,
 } from '../../types'
-import { useChat } from '../../hooks/useChat'
+import { useChat } from '../../hooks/useChat.ts'
 import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
-import { useDesktopContext } from '../../hooks/useDesktopContext'
-import { useGameIntegration } from '../../hooks/useGameIntegration'
-import { useMemory } from '../../hooks/useMemory'
+import { useDesktopContext } from '../../hooks/useDesktopContext.ts'
+import { useGameIntegration } from '../../hooks/useGameIntegration.ts'
+import { useMemory } from '../../hooks/useMemory.ts'
 import { useCompanionLocalDataAuthority } from '../../hooks/useCompanionLocalDataAuthority.ts'
-import { usePetBehavior } from '../../hooks/usePetBehavior'
-import { useVoice } from '../../hooks/useVoice'
-import { useReminderController } from './useReminderController'
-import { getSettingsSnapshot } from '../store/settingsStore'
-import { useAppOverlays } from './useAppOverlays'
-import { useAutonomyController } from './useAutonomyController'
-import { useBudgetConfigSync } from './useBudgetConfigSync'
-import { useBackgroundSchedulers } from './useBackgroundSchedulers'
-import { useDebugConsole } from './useDebugConsole'
-import { useDesktopBridge } from './useDesktopBridge'
-import { useIntegrationWhitelists } from './useIntegrationWhitelists'
-import { useMediaSessionController } from './useMediaSessionController'
-import { useReminderTaskStore } from './useReminderTaskStore'
-import { useSettingsNavigation } from './useSettingsNavigation'
-import { useSettingsSubscription } from './useSettingsSubscription'
+import { usePetBehavior } from '../../hooks/usePetBehavior.ts'
+import { useVoice } from '../../hooks/useVoice.ts'
+import { useReminderController } from './useReminderController.ts'
+import { getSettingsSnapshot } from '../store/settingsStore.ts'
+import { useAppOverlays } from './useAppOverlays.ts'
+import { useAutonomyController } from './useAutonomyController.ts'
+import { useBudgetConfigSync } from './useBudgetConfigSync.ts'
+import { useBackgroundSchedulers } from './useBackgroundSchedulers.ts'
+import { useDebugConsole } from './useDebugConsole.ts'
+import { useDesktopBridge } from './useDesktopBridge.ts'
+import { useIntegrationWhitelists } from './useIntegrationWhitelists.ts'
+import { useMediaSessionController } from './useMediaSessionController.ts'
+import { useReminderTaskStore } from './useReminderTaskStore.ts'
+import { useSettingsNavigation } from './useSettingsNavigation.ts'
+import { useSettingsSubscription } from './useSettingsSubscription.ts'
 import { loadUserAffectWindow } from '../../features/autonomy/userAffectTimeline.ts'
 import { computeAffectSnapshot } from '../../features/autonomy/affectDynamics.ts'
 import { buildAffectGuidance, classifyAffectGuidance } from '../../features/autonomy/affectGuidance.ts'
 import { recordGuidanceFired } from '../../features/autonomy/guidanceTelemetry.ts'
-import { useMcpServerSync } from '../../hooks/useMcpServerSync'
-import { commitSettingsUpdate } from '../store/commitSettingsUpdate'
+import { useMcpServerSync } from '../../hooks/useMcpServerSync.ts'
+import { commitSettingsUpdate } from '../store/commitSettingsUpdate.ts'
 import {
   loadAutonomyGoals,
   normalizeAutonomyGoals,
   pruneLegacyStorageKeys,
   saveAutonomyGoals,
-} from '../../lib/storage'
-import { classifyMessageSignals, voiceEmotionToSignal } from '../../features/autonomy/emotionModel'
-import type { EmotionState as AppEmotionState } from '../../features/autonomy/emotionModel'
+} from '../../lib/storage.ts'
+import { classifyMessageSignals, voiceEmotionToSignal } from '../../features/autonomy/emotionModel.ts'
+import type { EmotionState as AppEmotionState } from '../../features/autonomy/emotionModel.ts'
 
 type ChatController = ReturnType<typeof useChat>
 type ReminderTaskStore = ReturnType<typeof useReminderTaskStore>

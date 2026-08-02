@@ -1,4 +1,4 @@
-import type { ThemeTokens } from '../../types/theme'
+import type { ThemeTokens } from '../../types/theme.ts'
 
 // Default theme — neutral surfaces, violet accent ONLY. The previous
 // pass tinted everything violet which read as "purple-saturated" and

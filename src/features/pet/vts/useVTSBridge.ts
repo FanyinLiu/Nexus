@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PetExpressionSlot } from '../models'
-import type { GazeTarget } from '../components/live2d/types'
+import type { PetExpressionSlot } from '../models.ts'
+import type { GazeTarget } from '../components/live2d/types.ts'
 import type { SpeechLevelSource } from '../../../types/index.ts'
-import { getRedactedLogErrorMessage } from '../../../lib/logRedaction'
+import { getRedactedLogErrorMessage } from '../../../lib/logRedaction.ts'
 
 const LEGACY_STORAGE_KEY = 'nexus:vts-auth-token'
 

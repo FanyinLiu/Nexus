@@ -2,14 +2,14 @@ import type {
   PetExpressionSlot,
   PetPerformanceAccent,
   PetPerformancePlan,
-} from './types'
+} from './types.ts'
 
 /** @deprecated Import from `./types` — re-exported for backward compatibility. */
 export type {
   PetPerformanceAccent,
   PetPerformanceCue,
   PetPerformancePlan,
-} from './types'
+} from './types.ts'
 
 type ParsedAssistantPerformance = {
   cue: PetPerformancePlan | null

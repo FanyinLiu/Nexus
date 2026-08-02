@@ -1,5 +1,5 @@
 import type { InspectableIntegrationModuleId } from '../../types'
-import type { TranslationKey } from '../../types/i18n'
+import type { TranslationKey } from '../../types/i18n.ts'
 
 export type IntegrationModuleId =
   | InspectableIntegrationModuleId

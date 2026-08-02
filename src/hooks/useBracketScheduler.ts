@@ -13,7 +13,7 @@ import {
   loadBracketState,
   recordBracketFire,
   writeJson,
-} from '../lib/storage'
+} from '../lib/storage.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings } from '../types'
 

@@ -1,8 +1,8 @@
-import type { ParaformerStreamSession } from './localParaformer'
-import type { SenseVoiceStreamSession } from './localSenseVoice'
-import type { TencentAsrStreamSession } from './tencentAsr'
-import type { WakewordRuntimeController } from './wakewordRuntime'
-import type { VoiceActivityDetector } from './browserVad'
+import type { ParaformerStreamSession } from './localParaformer.ts'
+import type { SenseVoiceStreamSession } from './localSenseVoice.ts'
+import type { TencentAsrStreamSession } from './tencentAsr.ts'
+import type { WakewordRuntimeController } from './wakewordRuntime.ts'
+import type { VoiceActivityDetector } from './browserVad.ts'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 

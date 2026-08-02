@@ -4,7 +4,7 @@ import { pickAwayNotificationCopy } from '../features/proactive/awayNotification
 import {
   loadAwayLastFiredMs,
   saveAwayLastFiredMs,
-} from '../lib/storage'
+} from '../lib/storage.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings, ChatMessage } from '../types'
 

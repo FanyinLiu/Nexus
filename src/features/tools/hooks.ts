@@ -8,7 +8,7 @@
  *   - Follow-up action triggers
  */
 
-import type { BuiltInToolId, BuiltInToolResult, MatchedBuiltInTool } from './toolTypes'
+import type { BuiltInToolId, BuiltInToolResult, MatchedBuiltInTool } from './toolTypes.ts'
 
 // ── Types ──
 

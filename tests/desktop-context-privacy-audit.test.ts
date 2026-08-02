@@ -30,8 +30,8 @@ console.warn('[desktop-context:get] active window parse failed:', formatDesktopC
 console.warn('[desktop-context:get] screenshot capture failed:', formatDesktopContextErrorForLog(error))
 `,
   'src/hooks/useDesktopContext.ts': `
-import { getRedactedLogErrorMessage } from '../lib/logRedaction'
-import { stripDesktopContextScreenshotPayload } from '../lib/privacy/desktopContextPrivacy'
+import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import { stripDesktopContextScreenshotPayload } from '../lib/privacy/desktopContextPrivacy.ts'
 const strippedSnapshot = stripDesktopContextScreenshotPayload(snapshot)
 const strippedEnrichedSnapshot = stripDesktopContextScreenshotPayload(enrichedSnapshot)
 console.warn('[screen-ocr] failed to recognize screenshot text', getRedactedLogErrorMessage(error))

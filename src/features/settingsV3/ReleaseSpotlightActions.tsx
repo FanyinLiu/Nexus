@@ -1,6 +1,6 @@
-import type { ReleaseSpotlightAction } from '../../features/releaseNotes'
-import type { TranslationKey } from '../../types/i18n'
-import { PetControlIcon } from '../PetControlIcon'
+import type { ReleaseSpotlightAction } from '../releaseNotes'
+import type { TranslationKey } from '../../types/i18n.ts'
+import { PetControlIcon } from '../../components/PetControlIcon.tsx'
 
 type ReleaseSpotlightActionsProps = {
   actions: readonly ReleaseSpotlightAction[]

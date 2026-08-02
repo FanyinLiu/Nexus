@@ -2,11 +2,11 @@ import { createElement, useEffect, useRef, useState, type ReactNode } from 'reac
 import {
   isMiniMaxSpeechOutputProvider,
 } from '../../lib'
-import { formatConsoleTimestamp, type ConnectionResult } from '../settingsDrawerSupport'
+import { formatConsoleTimestamp, type ConnectionResult } from '../settingsDrawerSupport.ts'
 import {
   buildConnectionTestRepairAction,
   type ConnectionTestRepairAction,
-} from '../../features/models/connectionRepair'
+} from '../../features/models/connectionRepair.ts'
 import {
   buildConnectionTestFingerprint,
   connectionEvidenceMeetsCapability,
@@ -16,9 +16,9 @@ import {
   resolveConnectionResultRecommendation,
   shouldAcceptConnectionTestResult,
   withConnectionCheckedAt,
-} from '../../features/models/connectionTestFreshness'
+} from '../../features/models/connectionTestFreshness.ts'
 import type { AppSettings, ServiceConnectionCapability, TranslationKey } from '../../types'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 
 function resolveConnectionResultMessage(
   result: ConnectionResult,

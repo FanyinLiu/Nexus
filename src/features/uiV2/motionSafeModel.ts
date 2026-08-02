@@ -1,4 +1,4 @@
-import type { PetModelDefinition } from '../pet/models'
+import type { PetModelDefinition } from '../pet/models.ts'
 
 export function buildMotionSafeModelDefinition(
   model: PetModelDefinition,

@@ -1,5 +1,5 @@
 import type { AppSettings } from '../../types'
-import type { VadSensitivity, VoiceTriggerMode } from '../../types/voice'
+import type { VadSensitivity, VoiceTriggerMode } from '../../types/voice.ts'
 
 export type HearingConfig = {
   speechInputEnabled: boolean

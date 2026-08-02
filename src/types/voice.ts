@@ -2,7 +2,7 @@ import type {
   DiscoveredModel,
   ModelConnectionErrorCode,
   ProviderHealthStatus,
-} from './model'
+} from './model.ts'
 
 export type VoiceTriggerMode = 'direct_send' | 'wake_word' | 'manual_confirm'
 

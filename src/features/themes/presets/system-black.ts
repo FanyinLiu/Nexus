@@ -1,5 +1,5 @@
 import { systemBlackThemeTokens } from '../tokens.ts'
-import type { ThemeDefinition } from '../../../types/theme'
+import type { ThemeDefinition } from '../../../types/theme.ts'
 
 export const systemBlackTheme: ThemeDefinition = {
   id: 'system-black',

@@ -3,14 +3,14 @@ import {
   isParaformerSpeechInputProvider,
   isSenseVoiceSpeechInputProvider,
   isTencentAsrSpeechInputProvider,
-} from '../../lib/audioProviders'
-import { voiceDebug } from '../../features/voice/voiceDebugLog'
+} from '../../lib/audioProviders.ts'
+import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
 import { checkParaformerAvailability } from '../../features/hearing/localParaformer.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import type {
   VoiceSessionEvent,
   VoiceSessionTransport,
-} from '../../features/voice/sessionMachine'
+} from '../../features/voice/sessionMachine.ts'
 import type {
   AppSettings,
   PetMood,
@@ -22,8 +22,8 @@ import type {
 import type {
   VadConversationSession,
   VoiceConversationOptions,
-} from './types'
-import type { BrowserSpeechRecognition } from '../../lib/voice'
+} from './types.ts'
+import type { BrowserSpeechRecognition } from '../../lib/voice.ts'
 import type { ParaformerStreamSession } from '../../features/hearing/localParaformer.ts'
 import type { TencentAsrStreamSession } from '../../features/hearing/tencentAsr.ts'
 import type { SenseVoiceStreamSession } from '../../features/hearing/localSenseVoice.ts'

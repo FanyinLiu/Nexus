@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import {
   setDiscordKnownChannelIds,
   setTelegramKnownChatIds,
-} from '../../lib/coreRuntime'
+} from '../../lib/coreRuntime.ts'
 import {
   parseDiscordChannelIdList,
   parseTelegramChatIdList,

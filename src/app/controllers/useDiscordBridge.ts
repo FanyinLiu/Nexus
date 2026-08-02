@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { AppSettings, DebugConsoleEventSource } from '../../types'
 import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
-import { useDiscordGateway, type DiscordIncoming } from '../../hooks/useDiscordGateway'
-import { rememberDiscordChannelId } from '../../lib/coreRuntime'
-import { isActionAllowed } from '../../features/integrations/permissions'
+import { useDiscordGateway, type DiscordIncoming } from '../../hooks/useDiscordGateway.ts'
+import { rememberDiscordChannelId } from '../../lib/coreRuntime.ts'
+import { isActionAllowed } from '../../features/integrations/permissions.ts'
 import {
   type BridgeForwardQueue,
   createBridgeForwardQueue,
   decideBridgeAutoReply,
   resolveBridgeReplyTarget,
-} from './bridgeUtils'
-import { routeDiscordMessage } from './discordMessageRouter'
+} from './bridgeUtils.ts'
+import { routeDiscordMessage } from './discordMessageRouter.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 
 type ChatBridge = {

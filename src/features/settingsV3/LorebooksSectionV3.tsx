@@ -1,9 +1,9 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { loadLorebookEntries, saveLorebookEntries } from '../../lib/storage/lorebooks'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { loadLorebookEntries, saveLorebookEntries } from '../../lib/storage/lorebooks.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { LorebookEntry, UiLanguage } from '../../types'
-import type { ConfirmFn } from '../../components/useConfirm'
-import { SettingsV3Disclosure, SettingsV3Empty, SettingsV3Field, SettingsV3Page, SettingsV3Section, SettingsV3Switch, SettingsV3Toolbar } from './SettingsV3Primitives'
+import type { ConfirmFn } from '../../components/useConfirm.ts'
+import { SettingsV3Disclosure, SettingsV3Empty, SettingsV3Field, SettingsV3Page, SettingsV3Section, SettingsV3Switch, SettingsV3Toolbar } from './SettingsV3Primitives.tsx'
 import './settings-v3-collection.css'
 
 type LorebooksSectionV3Props = { active: boolean; uiLanguage: UiLanguage; confirm: ConfirmFn }

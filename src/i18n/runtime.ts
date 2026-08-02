@@ -5,7 +5,7 @@ import type {
   TranslationDictionary,
   TranslationKey,
   TranslationParams,
-} from '../types/i18n'
+} from '../types/i18n.ts'
 
 const DEFAULT_LOCALE: AppLocale = 'zh-CN'
 

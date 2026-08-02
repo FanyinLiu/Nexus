@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from 'react'
-import { planStore, type Plan } from '../features/plan/planStore'
+import { planStore, type Plan } from '../features/plan/planStore.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
-import type { TranslationKey } from '../types/i18n'
+import type { TranslationKey } from '../types/i18n.ts'
 
 const STATUS_LABEL_KEY: Record<Plan['status'], TranslationKey> = {
   draft: 'plan.status.draft',

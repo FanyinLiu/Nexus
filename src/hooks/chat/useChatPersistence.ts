@@ -4,11 +4,11 @@ import {
   inferSessionTitle,
   upsertChatSession,
 } from '../../lib'
-import { mirrorChatSessionToLocalData, saveChatMessages, takePendingGreeting } from '../../lib/storage'
-import { getCoreRuntime } from '../../lib/coreRuntime'
-import { getRedactedLogErrorMessage } from '../../lib/logRedaction'
+import { mirrorChatSessionToLocalData, saveChatMessages, takePendingGreeting } from '../../lib/storage.ts'
+import { getCoreRuntime } from '../../lib/coreRuntime.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import type { ChatMessage } from '../../types'
-import type { ChatSession } from '../../lib/storage'
+import type { ChatSession } from '../../lib/storage.ts'
 
 function messagesSignature(msgs: ChatMessage[]): string {
   if (!msgs.length) return '0:'

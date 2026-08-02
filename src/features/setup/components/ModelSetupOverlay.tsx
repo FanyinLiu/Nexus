@@ -8,11 +8,11 @@ import {
   resolveConnectionResultRecommendation,
   shouldAcceptConnectionTestResult,
   withConnectionCheckedAt,
-} from '../../models/connectionTestFreshness'
-import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap'
+} from '../../models/connectionTestFreshness.ts'
+import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap.ts'
 import { useTranslation } from '../../../i18n/useTranslation.ts'
 import { humanizeError } from '../../../lib/humanizeError.ts'
-import { pickTranslatedUiText } from '../../../lib/uiLanguage'
+import { pickTranslatedUiText } from '../../../lib/uiLanguage.ts'
 import type { AppSettings } from '../../../types/app.ts'
 import type { TranslationKey } from '../../../types'
 import {

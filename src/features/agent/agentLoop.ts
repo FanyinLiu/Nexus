@@ -5,20 +5,20 @@ import type {
   MemoryRecallContext,
   UiLanguage,
 } from '../../types'
-import { requestAssistantReply, type AssistantReplyRequestOptions } from '../chat/runtime'
-import { getCoreRuntime } from '../../lib/coreRuntime'
+import { requestAssistantReply, type AssistantReplyRequestOptions } from '../chat/runtime.ts'
+import { getCoreRuntime } from '../../lib/coreRuntime.ts'
 import { createId } from '../../lib'
-import { normalizeUiLanguage } from '../../lib/uiLanguage'
-import { planStore, type Plan } from '../plan/planStore'
-import { openGoalsStore } from './openGoalsStore'
-import { agentTraceStore } from './agentTraceStore'
-import type { AgentStep, AgentStopReason } from './types'
+import { normalizeUiLanguage } from '../../lib/uiLanguage.ts'
+import { planStore, type Plan } from '../plan/planStore.ts'
+import { openGoalsStore } from './openGoalsStore.ts'
+import { agentTraceStore } from './agentTraceStore.ts'
+import type { AgentStep, AgentStopReason } from './types.ts'
 
 export type {
   AgentStep,
   AgentStepType,
   AgentStopReason,
-} from './types'
+} from './types.ts'
 
 export type AgentExecuteTurn = (
   history: ChatMessage[],

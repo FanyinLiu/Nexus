@@ -6,7 +6,7 @@
  * top-N terms formatted for Tencent Cloud ASR's hotword_list parameter.
  */
 
-import { loadChatMessages, loadMemories, loadSettings } from '../../lib/storage'
+import { loadChatMessages, loadMemories, loadSettings } from '../../lib/storage.ts'
 
 /** Maximum number of recent chat messages to scan. */
 const MAX_CHAT_MESSAGES = 200

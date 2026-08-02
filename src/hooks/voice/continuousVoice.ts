@@ -4,9 +4,9 @@ import {
   getNoSpeechRestartDelay as policyGetNoSpeechRestartDelay,
   shouldAutoRestart,
   shouldKeepContinuousSession,
-} from '../../features/voice/autoRestartPolicy'
-import { calculateAudioRms, requestVoiceInputStream } from '../../features/voice/runtimeSupport'
-import { voiceDebug } from '../../features/voice/voiceDebugLog'
+} from '../../features/voice/autoRestartPolicy.ts'
+import { calculateAudioRms, requestVoiceInputStream } from '../../features/voice/runtimeSupport.ts'
+import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
 import type {
   AppSettings,
@@ -24,8 +24,8 @@ import {
   SPEECH_INTERRUPT_MIN_SPEECH_MS,
   SPEECH_INTERRUPT_RMS_THRESHOLD,
   SPEECH_INTERRUPT_TTS_LEVEL_GAIN,
-} from './constants'
-import type { SpeechInterruptMonitorSession } from './types'
+} from './constants.ts'
+import type { SpeechInterruptMonitorSession } from './types.ts'
 
 type ShowPetStatus = (
   message: string,

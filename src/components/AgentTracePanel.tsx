@@ -1,14 +1,14 @@
 import { memo, useEffect, useMemo, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { agentTraceStore, type AgentTrace } from '../features/agent/agentTraceStore'
+import { agentTraceStore, type AgentTrace } from '../features/agent/agentTraceStore.ts'
 import {
   backgroundTaskStore,
   type BackgroundTask,
   type BackgroundTaskStatus,
-} from '../features/agent/backgroundTaskStore'
-import type { AgentStep } from '../features/agent/agentLoop'
+} from '../features/agent/backgroundTaskStore.ts'
+import type { AgentStep } from '../features/agent/agentLoop.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
-import type { TranslationKey } from '../types/i18n'
+import type { TranslationKey } from '../types/i18n.ts'
 
 type TraceStatusFilter = 'all' | 'running' | 'done' | 'error'
 

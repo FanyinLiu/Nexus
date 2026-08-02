@@ -1,5 +1,5 @@
 import { memo, type Dispatch, type SetStateAction } from 'react'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type {
   AppSettings,
   PetSceneLocation,
@@ -16,7 +16,7 @@ import {
   SettingsV3Row,
   SettingsV3Section,
   SettingsV3Switch,
-} from './SettingsV3Primitives'
+} from './SettingsV3Primitives.tsx'
 
 const SCENE_OPTIONS: Array<{ id: PetSceneLocation; labelKey: TranslationKey }> = [
   { id: 'off', labelKey: 'settings.window.pet_scene.off' },

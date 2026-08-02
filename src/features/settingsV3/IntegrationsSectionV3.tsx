@@ -1,9 +1,9 @@
 import { memo, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
-import { appendIdToCsvList } from '../integrations/allowlists'
-import { getRedactedLogErrorMessage } from '../../lib/logRedaction'
-import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
-import type { ConfirmFn } from '../../components/useConfirm'
+import { appendIdToCsvList } from '../integrations/allowlists.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
+import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
+import type { ConfirmFn } from '../../components/useConfirm.ts'
 import type {
   AppSettings,
   InspectableIntegrationModuleId,
@@ -22,7 +22,7 @@ import {
   SettingsV3Section,
   SettingsV3Switch,
   SettingsV3Toolbar,
-} from './SettingsV3Primitives'
+} from './SettingsV3Primitives.tsx'
 import './integrations-section-v3.css'
 
 type Props = {

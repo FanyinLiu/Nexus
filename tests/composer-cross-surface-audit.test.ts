@@ -11,7 +11,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const BASELINE_FILES: Record<string, string> = {
   'src/app/views/LegacyPanelView.tsx': `
-import { deriveImage4ComposerState } from './image4ComposerState'
+import { deriveImage4ComposerState } from './image4ComposerState.ts'
 
 export function PanelView() {
   const image4ComposerState = deriveImage4ComposerState({

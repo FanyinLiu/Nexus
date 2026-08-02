@@ -1,12 +1,12 @@
 import {
   isBrowserSpeechInputProvider,
   resolveSpeechInputModel,
-} from '../../lib/audioProviders'
+} from '../../lib/audioProviders.ts'
 import {
   switchSpeechInputProvider,
   switchSpeechOutputProvider,
   syncSpeechProviderProfiles,
-} from '../../lib/speechProviderProfiles'
+} from '../../lib/speechProviderProfiles.ts'
 import type { AppSettings, TranslationKey, TranslationParams } from '../../types'
 
 type ShowPetStatus = (

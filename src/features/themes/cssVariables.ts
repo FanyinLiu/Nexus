@@ -1,4 +1,4 @@
-import type { ThemeDefinition, ThemeTokens } from '../../types/theme'
+import type { ThemeDefinition, ThemeTokens } from '../../types/theme.ts'
 
 type CssVariableRecord = Record<`--color-${string}`, string>
 

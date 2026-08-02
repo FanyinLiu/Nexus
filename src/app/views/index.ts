@@ -1,2 +1,2 @@
-export * from './PanelView'
-export * from './PetView'
+export * from './PanelView.tsx'
+export * from './PetView.tsx'

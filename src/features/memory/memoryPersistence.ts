@@ -1,5 +1,5 @@
 import type { MemoryItem } from '../../types'
-import { getDecayedScore } from './decay'
+import { getDecayedScore } from './decay.ts'
 
 const MARKER_START = '<!-- nexus:auto-memory -->'
 const MARKER_END = '<!-- /nexus:auto-memory -->'

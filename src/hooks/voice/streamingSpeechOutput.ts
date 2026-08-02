@@ -1,10 +1,10 @@
-import type { VoiceBusEvent } from '../../features/voice/busEvents'
-import type { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer'
-import { voiceDebug } from '../../features/voice/voiceDebugLog'
-import { prepareTextForTts } from '../../features/voice/text'
-import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes'
+import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
+import type { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer.ts'
+import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
+import { prepareTextForTts } from '../../features/voice/text.ts'
+import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes.ts'
 import { createId } from '../../lib'
-import { recordTtsUsage } from '../../features/metering/speechCost'
+import { recordTtsUsage } from '../../features/metering/speechCost.ts'
 import type { AppSettings, TranslationKey, TranslationParams } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
@@ -12,7 +12,7 @@ import {
   getMaxRequestCharsForProvider,
   splitLongTextAtSentences,
 } from './speechTextSegmentation.ts'
-import type { StreamingSpeechOutputController, VoiceStreamEvent } from './types'
+import type { StreamingSpeechOutputController, VoiceStreamEvent } from './types.ts'
 
 export type StreamingSpeechOutputOptions = {
   onStart?: () => void

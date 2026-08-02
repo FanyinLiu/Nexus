@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
-import { initializeSettingsWithVault, subscribeToSettings } from '../store/settingsStore'
+import { initializeSettingsWithVault, subscribeToSettings } from '../store/settingsStore.ts'
 import type { AppSettings } from '../../types'
 
 /**

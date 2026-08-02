@@ -1,6 +1,6 @@
 import type { VoicePhase } from './session/voiceSessionTypes.ts'
-import type { VoiceBusEventType } from './busEvents'
-import type { VoiceReasonCode } from './voiceReasonCodes'
+import type { VoiceBusEventType } from './busEvents.ts'
+import type { VoiceReasonCode } from './voiceReasonCodes.ts'
 
 /**
  * Single entry in the voice transition log ring buffer.

@@ -60,7 +60,7 @@ const REQUIRED_CONTRACTS = [
     file: 'src/app/views/LegacyPanelView.tsx',
     description: 'PanelView consumes Image4 composer state instead of inlining state rules.',
     patterns: [
-      "import { deriveImage4ComposerState } from './image4ComposerState'",
+      "import { deriveImage4ComposerState } from './image4ComposerState.ts'",
       'const image4ComposerState = deriveImage4ComposerState({',
       'data-composer-state={image4ComposerState.mode}',
       'data-send-state={image4ComposerState.sendState}',

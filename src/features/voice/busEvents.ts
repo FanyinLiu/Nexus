@@ -1,4 +1,4 @@
-import type { VoiceReasonCode } from './voiceReasonCodes'
+import type { VoiceReasonCode } from './voiceReasonCodes.ts'
 
 /**
  * Common metadata fields carried by most bus events. Kept optional so

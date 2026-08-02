@@ -37,8 +37,8 @@ import {
   writeJson,
   writeJsonDebounced,
 } from '../../lib/storage/core.ts'
-import type { EmotionState } from './emotionModel'
-import type { RelationshipLevel, RelationshipState } from './relationshipTracker'
+import type { EmotionState } from './emotionModel.ts'
+import type { RelationshipLevel, RelationshipState } from './relationshipTracker.ts'
 import { getRelationshipLevel } from './relationshipTracker.ts'
 
 const RETENTION_MS = 365 * 24 * 60 * 60 * 1000  // hard 1-year window

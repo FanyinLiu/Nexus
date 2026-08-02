@@ -1,16 +1,16 @@
 import { memo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
-import { RELATIONSHIP_OPTIONS } from '../../lib/relationshipTypes'
-import { ChatStudioV3 } from './ChatStudioV3'
+import { RELATIONSHIP_OPTIONS } from '../../lib/relationshipTypes.ts'
+import { ChatStudioV3 } from './ChatStudioV3.tsx'
 import type {
   CodexPetGalleryCatalogResult,
   PetModelDefinition,
   SpritePetCreatorKitInspection,
 } from '../pet'
-import { pickTranslatedUiText, pickTranslatedUiTextOrFallback } from '../../lib/uiLanguage'
-import { setCompanionNameWithWakeWordSync } from '../hearing/companionWakeWordSync'
+import { pickTranslatedUiText, pickTranslatedUiTextOrFallback } from '../../lib/uiLanguage.ts'
+import { setCompanionNameWithWakeWordSync } from '../hearing/companionWakeWordSync.ts'
 import type { AppSettings, CompanionRelationshipType } from '../../types'
-import type { ConfirmFn } from '../../components/useConfirm'
+import type { ConfirmFn } from '../../components/useConfirm.ts'
 import {
   SettingsV3Disclosure,
   SettingsV3Field,
@@ -19,7 +19,7 @@ import {
   SettingsV3Row,
   SettingsV3Section,
   SettingsV3Switch,
-} from './SettingsV3Primitives'
+} from './SettingsV3Primitives.tsx'
 import './settings-v3-collection.css'
 import './chat-section-v3.css'
 

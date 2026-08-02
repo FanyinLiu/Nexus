@@ -5,7 +5,7 @@ import {
   createInitialTickState,
   shouldTick,
   wakeUpState,
-} from '../features/autonomy/tickLoop'
+} from '../features/autonomy/tickLoop.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings, AutonomyPhase, AutonomyTickState, FocusState } from '../types'
 

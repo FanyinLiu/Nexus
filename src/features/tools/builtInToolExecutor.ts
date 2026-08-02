@@ -12,7 +12,7 @@ import { isBuiltInToolName, isSelfEnableableBuiltInToolId, type BuiltInToolName 
 import { runPostToolHooks, runPreToolHooks } from './hooks.ts'
 import { confirmBuiltInToolExecution, resolveBuiltInToolPolicy } from './permissions.ts'
 import { executeBuiltInTool, isBuiltInToolAvailable } from './registry.ts'
-import type { BuiltInToolResult, MatchedBuiltInTool } from './toolTypes'
+import type { BuiltInToolResult, MatchedBuiltInTool } from './toolTypes.ts'
 
 export { isBuiltInToolName }
 export type { BuiltInToolName }

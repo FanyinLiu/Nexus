@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, type ReactNode } from 'react'
-import { resolveCharacterPreset } from '../../features/character/presets'
-import { FramelessCompanionSurface } from '../../features/uiV2/FramelessCompanionSurface'
-import type { UseAppControllerResult } from '../controllers/useAppController'
+import { resolveCharacterPreset } from '../../features/character/presets.ts'
+import { FramelessCompanionSurface } from '../../features/uiV2/FramelessCompanionSurface.tsx'
+import type { UseAppControllerResult } from '../controllers/useAppController.ts'
 
 const LegacyPetView = lazy(() => import('./LegacyPetView'))
 

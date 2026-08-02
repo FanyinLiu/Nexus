@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { PetControlIcon, type PetControlIconName } from '../../components/PetControlIcon'
+import { PetControlIcon, type PetControlIconName } from '../../components/PetControlIcon.tsx'
 import './settings-v3.css'
 
 export function SettingsV3Page({ children, className = '' }: { children: ReactNode; className?: string }) {

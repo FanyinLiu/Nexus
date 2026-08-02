@@ -12,7 +12,7 @@
 
 import { memo, useCallback } from 'react'
 
-import { PetControlIcon } from '../../components/PetControlIcon'
+import { PetControlIcon } from '../../components/PetControlIcon.tsx'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import type { AppLocale } from '../../types/i18n.ts'
 import { useCrisisPanelState, dismissCrisis } from './crisisPanelState.ts'

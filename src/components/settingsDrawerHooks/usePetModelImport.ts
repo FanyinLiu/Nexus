@@ -7,7 +7,7 @@ import type {
   PetModelDefinition,
   SpritePetCreatorKitInspection,
 } from '../../features/pet'
-import type { ConnectionResult } from '../settingsDrawerSupport'
+import type { ConnectionResult } from '../settingsDrawerSupport.ts'
 import type { AppSettings } from '../../types'
 
 export type UsePetModelImportOptions = {

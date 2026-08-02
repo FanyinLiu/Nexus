@@ -1,6 +1,6 @@
-import { normalizeUiLanguage, resolveLocalizedText } from '../../lib/uiLanguage'
+import { normalizeUiLanguage, resolveLocalizedText } from '../../lib/uiLanguage.ts'
 import type { UiLanguage } from '../../types'
-import type { ApiProviderPreset } from './providerCatalog'
+import type { ApiProviderPreset } from './providerCatalog.ts'
 
 function fillTemplate(template: string, params: Record<string, string>) {
   return template.replace(/\{(\w+)\}/g, (_, key: string) => params[key] ?? `{${key}}`)

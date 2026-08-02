@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { ThemeContextValue } from '../../types/theme'
+import type { ThemeContextValue } from '../../types/theme.ts'
 import { listThemes, resolveTheme } from './registry.ts'
 
 const fallbackTheme = resolveTheme('nexus-default')

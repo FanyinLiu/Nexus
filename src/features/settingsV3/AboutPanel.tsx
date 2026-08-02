@@ -1,10 +1,10 @@
 import { memo, useState } from 'react'
-import { useUpdater } from '../../features/updater/useUpdater'
+import { useUpdater } from '../../features/updater/useUpdater.ts'
 import { CURRENT_RELEASE_SPOTLIGHT } from '../../features/releaseNotes/index.ts'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { UiLanguage } from '../../types'
-import type { SettingsSectionId } from '../settingsDrawerSupport'
-import { ReleaseSpotlightActions } from './ReleaseSpotlightActions'
+import { ReleaseSpotlightActions } from './ReleaseSpotlightActions.tsx'
+import type { SettingsSectionId } from '../../components/settingsDrawerSupport.ts'
 
 type AboutPanelProps = {
   uiLanguage: UiLanguage

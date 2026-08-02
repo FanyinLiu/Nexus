@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react'
-import { applyCharacterProfile, createCharacterProfile, removeCharacterProfile, syncCurrentToProfile, updateCharacterProfile } from '../character/profiles'
+import { applyCharacterProfile, createCharacterProfile, removeCharacterProfile, syncCurrentToProfile, updateCharacterProfile } from '../character/profiles.ts'
 import { buildCodexPetCreatorPrompt } from '../pet'
-import { syncWakeWordWithCompanionNameChange } from '../hearing/companionWakeWordSync'
-import { getRedactedLogErrorMessage } from '../../lib/logRedaction'
-import { loadLorebookEntries, saveLorebookEntries } from '../../lib/storage/lorebooks'
-import { savePendingGreeting } from '../../lib/storage/pendingGreeting'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { syncWakeWordWithCompanionNameChange } from '../hearing/companionWakeWordSync.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
+import { loadLorebookEntries, saveLorebookEntries } from '../../lib/storage/lorebooks.ts'
+import { savePendingGreeting } from '../../lib/storage/pendingGreeting.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { CharacterProfile } from '../../types'
-import type { ChatSectionV3Props } from './ChatSectionV3'
-import { SettingsV3Empty, SettingsV3Field, SettingsV3Notice, SettingsV3Toolbar } from './SettingsV3Primitives'
+import type { ChatSectionV3Props } from './ChatSectionV3.tsx'
+import { SettingsV3Empty, SettingsV3Field, SettingsV3Notice, SettingsV3Toolbar } from './SettingsV3Primitives.tsx'
 
 const COMMUNITY_SOURCES = [
   ['https://codex-pet.com/', 'settings.chat.codex_pet_source_gallery'],

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import type { ConfirmFn } from '../useConfirm.ts'
-import type { ConnectionResult } from '../settingsDrawerSupport'
+import type { ConnectionResult } from '../settingsDrawerSupport.ts'
 import type { DailyMemoryEntry, MemoryItem } from '../../types'
 
 export type UseMemoryArchiveActionsOptions = {

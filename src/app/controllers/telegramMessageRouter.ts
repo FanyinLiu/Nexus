@@ -1,5 +1,5 @@
 import type { AppSettings, DebugConsoleEventSource, TranslationKey } from '../../types'
-import type { TelegramIncoming } from '../../hooks/useTelegramGateway'
+import type { TelegramIncoming } from '../../hooks/useTelegramGateway.ts'
 import {
   buildBridgeAnnouncementDebugDetail,
   buildBridgeIncomingDebugDetail,

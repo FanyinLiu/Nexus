@@ -4,16 +4,16 @@ import {
   isSpeechOutputKeyless,
   USER_VISIBLE_SPEECH_INPUT_PROVIDER_PRESETS,
   USER_VISIBLE_SPEECH_OUTPUT_PROVIDER_PRESETS,
-} from '../../../../lib/audioProviders'
+} from '../../../../lib/audioProviders.ts'
 import {
   updateCurrentSpeechInputProviderProfile,
   updateCurrentSpeechOutputProviderProfile,
-} from '../../../../lib/speechProviderProfiles'
-import { displaySecretInputValue } from '../../../../lib/keyVaultBridge'
-import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
+} from '../../../../lib/speechProviderProfiles.ts'
+import { displaySecretInputValue } from '../../../../lib/keyVaultBridge.ts'
+import { pickTranslatedUiText } from '../../../../lib/uiLanguage.ts'
 import type { AppSettings, SpeechVoiceOption, TranslationKey } from '../../../../types'
-import { LocalVoiceModelsStatus } from './LocalVoiceModelsStatus'
-import type { OnboardingDraftSetter } from './types'
+import { LocalVoiceModelsStatus } from './LocalVoiceModelsStatus.tsx'
+import type { OnboardingDraftSetter } from './types.ts'
 
 type VoiceStepProps = {
   draft: AppSettings

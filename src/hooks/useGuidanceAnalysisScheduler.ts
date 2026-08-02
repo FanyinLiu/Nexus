@@ -1,11 +1,11 @@
 import { useEffect } from 'react'
-import { analyzeGuidance } from '../features/autonomy/guidanceAnalysis'
+import { analyzeGuidance } from '../features/autonomy/guidanceAnalysis.ts'
 import {
   loadGuidanceAnalysis,
   loadGuidanceTelemetry,
   saveGuidanceAnalysis,
-} from '../features/autonomy/guidanceTelemetry'
-import { loadUserAffectHistory } from '../features/autonomy/userAffectTimeline'
+} from '../features/autonomy/guidanceTelemetry.ts'
+import { loadUserAffectHistory } from '../features/autonomy/userAffectTimeline.ts'
 
 const RERUN_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000  // 7 days
 const MIN_TELEMETRY_TO_BOTHER = 5

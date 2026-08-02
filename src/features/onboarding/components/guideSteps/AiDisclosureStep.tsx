@@ -4,7 +4,7 @@
 // companion or wiring providers.
 
 import { useState } from 'react'
-import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
+import { pickTranslatedUiText } from '../../../../lib/uiLanguage.ts'
 import type { AppSettings } from '../../../../types'
 
 interface Props {

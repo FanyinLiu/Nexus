@@ -1,5 +1,5 @@
 import type { AssistantRuntimeActivity, VoiceState } from '../../types'
-import type { CompanionElapsedBucket } from '../../features/context/companionTimeLanguage'
+import type { CompanionElapsedBucket } from '../../features/context/companionTimeLanguage.ts'
 
 export type Image4CompanionMode = 'idle' | 'attentive' | 'speaking' | 'resting'
 export type Image4ContextTone = 'calm' | 'active' | 'night' | 'focus'

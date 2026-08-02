@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
-import { PetControlIcon } from '../../components/PetControlIcon'
-import { useModalFocusTrap } from '../../hooks/useModalFocusTrap'
+import { PetControlIcon } from '../../components/PetControlIcon.tsx'
+import { useModalFocusTrap } from '../../hooks/useModalFocusTrap.ts'
 import {
   getChatAssistantMessageKey,
   shouldAnnounceChatAssistantReply,
-} from './chatSheetAnnouncements'
-import { getChatSheetScrollDecision, isChatSheetNearBottom } from './chatSheetScroll'
+} from './chatSheetAnnouncements.ts'
+import { getChatSheetScrollDecision, isChatSheetNearBottom } from './chatSheetScroll.ts'
 import './chat-sheet-v2.css'
 
 export type ChatSheetV2MessageRole = 'user' | 'assistant'

@@ -7,7 +7,7 @@ import {
   type SenseVoiceStreamSession,
   type WakewordRuntimeController,
 } from '../features/hearing'
-import type { TencentAsrStreamSession } from '../features/hearing/tencentAsr'
+import type { TencentAsrStreamSession } from '../features/hearing/tencentAsr.ts'
 import {
   createVoiceSessionState,
   voiceDebug,
@@ -30,25 +30,25 @@ import {
   MAX_VOICE_TRACE_ENTRIES,
   VOICE_TRANSCRIPT_DEDUP_WINDOW_MS,
 } from './voice/constants.ts'
-import { clearPendingVoiceRestart as clearPendingVoiceRestartTimer } from './voice/continuousVoice'
-import { ensureSupportedSpeechInputSettingsRuntime } from './voice/providerFallbacks'
-import { pickTranslatedUiText } from '../lib/uiLanguage'
-import type { TranslationKey, TranslationParams } from '../types/i18n'
-import type { ParaformerConversationState } from './voice/paraformerConversation'
-import type { TencentConversationState } from './voice/tencentConversation'
-import type { SenseVoiceConversationState } from './voice/sensevoiceConversation'
+import { clearPendingVoiceRestart as clearPendingVoiceRestartTimer } from './voice/continuousVoice.ts'
+import { ensureSupportedSpeechInputSettingsRuntime } from './voice/providerFallbacks.ts'
+import { pickTranslatedUiText } from '../lib/uiLanguage.ts'
+import type { TranslationKey, TranslationParams } from '../types/i18n.ts'
+import type { ParaformerConversationState } from './voice/paraformerConversation.ts'
+import type { TencentConversationState } from './voice/tencentConversation.ts'
+import type { SenseVoiceConversationState } from './voice/sensevoiceConversation.ts'
 import {
   RESTART_RETRY_LIMIT,
   evaluateRestartGuards,
   getRestartDelay,
   shouldAutoRestart,
-} from '../features/voice/autoRestartPolicy'
-import { VoiceBus, type BusEffect } from '../features/voice/bus'
-import type { VoiceBusEvent } from '../features/voice/busEvents'
+} from '../features/voice/autoRestartPolicy.ts'
+import { VoiceBus, type BusEffect } from '../features/voice/bus.ts'
+import type { VoiceBusEvent } from '../features/voice/busEvents.ts'
 import {
   getGlobalVoiceTransitionLog,
   installVoiceLogDevHooks,
-} from '../features/voice/voiceTransitionLog'
+} from '../features/voice/voiceTransitionLog.ts'
 import {
   acknowledgeWakewordAndStartListeningRuntime,
   cleanupVoiceRuntimeResources,
@@ -71,18 +71,18 @@ import type {
   UseVoiceContext,
   VadConversationSession,
   VoiceConversationOptions,
-} from './voice/types'
+} from './voice/types.ts'
 import type {
   Holder,
   VoiceBindings,
   VoiceEngines,
   VoiceLifecycle,
   VoiceRuntimeBag,
-} from './voice/voiceRuntimeBag'
-import { createVoiceBindings } from './voice/voiceBindings'
-import { createVoiceConversationStarters } from './voice/voiceConversationStarters'
-import { createVoiceLifecycleControls } from './voice/voiceLifecycleControls'
-import { createVoiceTestEntries } from './voice/voiceTestEntries'
+} from './voice/voiceRuntimeBag.ts'
+import { createVoiceBindings } from './voice/voiceBindings.ts'
+import { createVoiceConversationStarters } from './voice/voiceConversationStarters.ts'
+import { createVoiceLifecycleControls } from './voice/voiceLifecycleControls.ts'
+import { createVoiceTestEntries } from './voice/voiceTestEntries.ts'
 import {
   createSpeechLevelPublisher,
   type SpeechLevelPublisher,
@@ -106,7 +106,7 @@ function currentUiLanguage(settingsRef: { current: AppSettings }) {
   return settingsRef.current.uiLanguage
 }
 
-export type { UseVoiceContext } from './voice/types'
+export type { UseVoiceContext } from './voice/types.ts'
 
 export function useVoice(ctx: UseVoiceContext) {
   const settings = ctx.settings

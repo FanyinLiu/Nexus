@@ -26,11 +26,11 @@ import type {
   VoiceTraceEntry,
   WakewordRuntimeState,
 } from '../../types'
-import type { VoiceDiagnosticResult } from './diagnostics'
+import type { VoiceDiagnosticResult } from './diagnostics.ts'
 import type { HearingRuntime } from '../../features/hearing'
 import type { ParaformerStreamSession } from '../../features/hearing/localParaformer.ts'
 import type { SenseVoiceStreamSession } from '../../features/hearing/localSenseVoice.ts'
-import type { TencentAsrStreamSession } from '../../features/hearing/tencentAsr'
+import type { TencentAsrStreamSession } from '../../features/hearing/tencentAsr.ts'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
 import type {
   AudioPlaybackQueue,
@@ -40,12 +40,12 @@ import type {
   VoiceSessionState,
   VoiceSessionTransport,
 } from '../../features/voice'
-import type { VoiceBus } from '../../features/voice/bus'
-import type { VoiceBusEvent } from '../../features/voice/busEvents'
+import type { VoiceBus } from '../../features/voice/bus.ts'
+import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
 import type { BrowserSpeechRecognition } from '../../lib'
-import type { ParaformerConversationState } from './paraformerConversation'
-import type { SenseVoiceConversationState } from './sensevoiceConversation'
-import type { TencentConversationState } from './tencentConversation'
+import type { ParaformerConversationState } from './paraformerConversation.ts'
+import type { SenseVoiceConversationState } from './sensevoiceConversation.ts'
+import type { TencentConversationState } from './tencentConversation.ts'
 import type {
   ApiRecordingSession,
   SpeechInterruptMonitorSession,
@@ -54,7 +54,7 @@ import type {
   UseVoiceContext,
   VadConversationSession,
   VoiceConversationOptions,
-} from './types'
+} from './types.ts'
 import type { SpeechLevelPublisher } from './speechLevelPublishing.ts'
 
 // ── Refs ────────────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { getAnalyticsConsent } from './consent.ts'
 import { getAnalyticsSessionId } from './session.ts'
 import { consoleSink } from './sinks/consoleSink.ts'
-import type { AnalyticsEvent, AnalyticsEventName, AnalyticsSink } from '../../types/analytics'
+import type { AnalyticsEvent, AnalyticsEventName, AnalyticsSink } from '../../types/analytics.ts'
 
 export function createTracker(sinks: AnalyticsSink[] = [consoleSink]) {
   return async function trackEvent(name: AnalyticsEventName, payload?: Record<string, unknown>) {

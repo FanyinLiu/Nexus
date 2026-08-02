@@ -3,23 +3,23 @@ import {
   buildVolcengineCredential,
   parseVolcengineCredentialParts,
   type VolcengineCredentialParts,
-} from '../../components/settingsDrawerSupport'
-import { UrlInput } from '../../components/settingsSections/UrlInput'
+} from '../../components/settingsDrawerSupport.ts'
+import { UrlInput } from './UrlInput.tsx'
 import {
   getSpeechInputModelOptions,
   getSpeechInputProviderPreset,
   isSenseVoiceSpeechInputProvider,
   isSpeechInputLocal,
   isVolcengineSpeechInputProvider,
-} from '../../lib/audioProviders'
-import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge'
-import { getPlatformDependencyHint, isVoiceSpeechInputAvailable } from '../../lib/platformProfile'
-import { SPEECH_INPUT_PROVIDERS } from '../../lib/speechProviderCatalog'
+} from '../../lib/audioProviders.ts'
+import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge.ts'
+import { getPlatformDependencyHint, isVoiceSpeechInputAvailable } from '../../lib/platformProfile.ts'
+import { SPEECH_INPUT_PROVIDERS } from '../../lib/speechProviderCatalog.ts'
 import {
   switchSpeechInputProvider,
   updateCurrentSpeechInputProviderProfile,
-} from '../../lib/speechProviderProfiles'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+} from '../../lib/speechProviderProfiles.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type {
   AppSettings,
   PlatformProfile,
@@ -32,7 +32,7 @@ import {
   SettingsV3Field,
   SettingsV3Notice,
   SettingsV3Toolbar,
-} from './SettingsV3Primitives'
+} from './SettingsV3Primitives.tsx'
 
 type SpeechInputProviderV3Props = {
   draft: AppSettings

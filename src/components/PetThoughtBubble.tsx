@@ -1,5 +1,5 @@
 import type { PetThoughtBubbleState } from '../types'
-import { PetControlIcon } from './PetControlIcon'
+import { PetControlIcon } from './PetControlIcon.tsx'
 
 type PetThoughtBubbleProps = {
   bubble: PetThoughtBubbleState

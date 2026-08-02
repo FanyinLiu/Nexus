@@ -5,4 +5,4 @@ export type {
   TranslationKey,
   TranslationParams,
   Translator,
-} from '../types/i18n'
+} from '../types/i18n.ts'

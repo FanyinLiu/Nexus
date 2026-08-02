@@ -1,4 +1,4 @@
-import { getNotificationCardPrimaryActions, type NotificationCardPrimaryActionId } from '../../features/notifications/notificationCardActions'
+import { getNotificationCardPrimaryActions, type NotificationCardPrimaryActionId } from '../../features/notifications/notificationCardActions.ts'
 import { shorten } from '../../lib'
 import type { NotificationMessage, TranslationKey, TranslationParams } from '../../types'
 

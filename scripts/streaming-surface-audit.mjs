@@ -69,7 +69,7 @@ const REQUIRED_CONTRACTS = [
     file: 'src/app/views/LegacyPanelView.tsx',
     description: 'Composer stays mounted in the companion chat surface while busy state only gates send behavior.',
     patterns: [
-      "import { deriveImage4ComposerState } from './image4ComposerState'",
+      "import { deriveImage4ComposerState } from './image4ComposerState.ts'",
       'const image4ComposerState = deriveImage4ComposerState({',
       'companion-chat__composer',
       'composerTextareaRef',

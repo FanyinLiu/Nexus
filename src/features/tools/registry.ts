@@ -3,7 +3,7 @@ import type { AppSettings, ExternalLinkResponse, WeatherLookupResponse, WebSearc
 import { buildBuiltInToolAssistantSummary } from './assistant.ts'
 import { resolveWeatherLocationFallback, rewriteSearchQuery } from './queryRewrite.ts'
 import { resolveWebSearchApiKey } from '../../lib/webSearchProviders.ts'
-import type { BuiltInToolPolicy, BuiltInToolResult, MatchedBuiltInTool } from './toolTypes'
+import type { BuiltInToolPolicy, BuiltInToolResult, MatchedBuiltInTool } from './toolTypes.ts'
 
 export { extractLikelyWeatherLocation, extractSearchQuery } from './extractors.ts'
 

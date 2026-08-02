@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   classifyFocusState,
   detectFocusTransition,
-} from '../features/autonomy/focusAwareness'
+} from '../features/autonomy/focusAwareness.ts'
 import type { AppSettings, FocusState } from '../types'
 
 const POLL_INTERVAL_MS = 10_000 // poll system idle every 10 seconds

@@ -4,14 +4,14 @@ import {
   mapMicrophoneDiagnosticError,
   pickRecordingMimeType,
   requestVoiceInputStream,
-} from '../../features/voice/runtimeSupport'
+} from '../../features/voice/runtimeSupport.ts'
 import {
   buildSpeechInputServiceConnectionRequest,
   buildSpeechOutputServiceConnectionRequest,
 } from '../../features/voice/providerSettings.ts'
 import {
   isSenseVoiceSpeechInputProvider,
-} from '../../lib/audioProviders'
+} from '../../lib/audioProviders.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import type {
   AppSettings,

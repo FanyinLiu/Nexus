@@ -1,4 +1,4 @@
-import { Image4Signal } from './Image4Signal'
+import { Image4Signal } from './Image4Signal.tsx'
 
 type Image4PresenceHeaderProps = {
   body: string

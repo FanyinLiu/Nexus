@@ -1,7 +1,7 @@
 import { useEffect, useMemo, type ReactNode } from 'react'
 import { getAnalyticsConsent, track } from '../../features/analytics'
-import type { AnalyticsContextValue } from '../../types/analytics'
-import { AnalyticsContext } from './analyticsContext'
+import type { AnalyticsContextValue } from '../../types/analytics.ts'
+import { AnalyticsContext } from './analyticsContext.ts'
 
 type AnalyticsProviderProps = {
   children: ReactNode

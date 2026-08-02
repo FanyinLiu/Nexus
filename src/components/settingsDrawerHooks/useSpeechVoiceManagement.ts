@@ -5,7 +5,7 @@ import {
 } from '../../lib'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
-import type { ConnectionResult } from '../settingsDrawerSupport'
+import type { ConnectionResult } from '../settingsDrawerSupport.ts'
 import type {
   AppSettings,
   SpeechVoiceListResponse,

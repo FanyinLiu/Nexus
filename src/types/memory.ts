@@ -1,4 +1,4 @@
-import type { ChatRole } from './chat'
+import type { ChatRole } from './chat.ts'
 
 export type MemoryCategory =
   | 'profile'

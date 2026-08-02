@@ -3,7 +3,7 @@ import type { WakewordRuntimeController } from '../../features/hearing/wakewordR
 import type { ParaformerStreamSession } from '../../features/hearing/localParaformer.ts'
 import type { SenseVoiceStreamSession } from '../../features/hearing/localSenseVoice.ts'
 import type { TencentAsrStreamSession } from '../../features/hearing/tencentAsr.ts'
-import type { BrowserSpeechRecognition } from '../../lib/voice'
+import type { BrowserSpeechRecognition } from '../../lib/voice.ts'
 import { cancelPendingWakewordAck } from './wakewordIntegration.ts'
 import type { SpeechLevelPublisher } from './speechLevelPublishing.ts'
 

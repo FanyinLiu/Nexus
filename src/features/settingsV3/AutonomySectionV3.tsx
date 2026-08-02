@@ -6,12 +6,12 @@ import {
   useEffect,
   useState,
 } from 'react'
-import { clampPresenceIntervalMinutes } from '../../lib/settings'
-import { humanizeError } from '../../lib/humanizeError'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { clampPresenceIntervalMinutes } from '../../lib/settings.ts'
+import { humanizeError } from '../../lib/humanizeError.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { AppSettings, NotificationChannel, UiLanguage } from '../../types'
-import { PetControlIcon } from '../../components/PetControlIcon'
-import type { ConfirmFn } from '../../components/useConfirm'
+import { PetControlIcon } from '../../components/PetControlIcon.tsx'
+import type { ConfirmFn } from '../../components/useConfirm.ts'
 import {
   SettingsV3Disclosure,
   SettingsV3Field,
@@ -21,7 +21,7 @@ import {
   SettingsV3Section,
   SettingsV3Switch,
   SettingsV3Toolbar,
-} from './SettingsV3Primitives'
+} from './SettingsV3Primitives.tsx'
 
 type ChannelManagerProps = {
   channels: NotificationChannel[]

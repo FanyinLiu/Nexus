@@ -17,7 +17,7 @@
  * layer.
  */
 
-import type { VoiceBusEvent } from '../busEvents'
+import type { VoiceBusEvent } from '../busEvents.ts'
 import type { PetMood, VoiceState } from '../../../types'
 
 // ── Internal state set (13 states) ─────────────────────────────────────────

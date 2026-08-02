@@ -32,9 +32,9 @@ import type {
   MemoryItem,
   ReminderTask,
 } from '../../types'
-import type { EmotionState } from '../../features/autonomy/emotionModel'
-import type { RelationshipState } from '../../features/autonomy/relationshipTracker'
-import type { RhythmProfile } from '../../features/autonomy/rhythmLearner'
+import type { EmotionState } from '../../features/autonomy/emotionModel.ts'
+import type { RelationshipState } from '../../features/autonomy/relationshipTracker.ts'
+import type { RhythmProfile } from '../../features/autonomy/rhythmLearner.ts'
 import {
   type AutonomyContextV2,
   gatherAutonomyContext,

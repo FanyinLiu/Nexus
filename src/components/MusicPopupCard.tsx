@@ -1,6 +1,6 @@
-import { pickTranslatedUiText } from '../lib/uiLanguage'
+import { pickTranslatedUiText } from '../lib/uiLanguage.ts'
 import type { MediaSessionControlRequest, MediaSessionSnapshot, UiLanguage } from '../types'
-import { PetControlIcon } from './PetControlIcon'
+import { PetControlIcon } from './PetControlIcon.tsx'
 
 type MusicPopupCardProps = {
   session: MediaSessionSnapshot

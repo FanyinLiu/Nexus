@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import type { PetDialogBubbleState } from '../types'
-import { ToolResultCard } from './ToolResultCard'
+import { ToolResultCard } from './ToolResultCard.tsx'
 
 type PetDialogBubbleProps = {
   bubble: PetDialogBubbleState

@@ -19,7 +19,7 @@
 // or `<` inside a JSON string value never accidentally closes the block.
 
 import type { ChatCompletionToolCall } from '../../types'
-import type { McpToolDescriptor } from './toolCallLoop'
+import type { McpToolDescriptor } from './toolCallLoop.ts'
 
 const TOOL_CALL_OPEN = '<tool_call>'
 const TOOL_CALL_CLOSE = '</tool_call>'

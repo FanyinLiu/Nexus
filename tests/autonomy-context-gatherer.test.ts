@@ -10,7 +10,7 @@ import {
 import { createDefaultEmotionState } from '../src/features/autonomy/emotionModel.ts'
 import { createDefaultRelationshipState } from '../src/features/autonomy/relationshipTracker.ts'
 import { createDefaultRhythmProfile } from '../src/features/autonomy/rhythmLearner.ts'
-import type { AutonomyTickState } from '../src/types/autonomy'
+import type { AutonomyTickState } from '../src/types/autonomy.ts'
 
 function baseInput(overrides: Partial<ContextGathererInput> = {}): ContextGathererInput {
   const tickState: AutonomyTickState = {

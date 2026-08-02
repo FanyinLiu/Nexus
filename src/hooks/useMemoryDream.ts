@@ -6,11 +6,11 @@ import {
   parseDreamResponse,
   recordDreamResult,
   shouldRunDream,
-} from '../features/autonomy/memoryDream'
-import { applyDecayBatch } from '../features/memory/decay'
-import { clusterMemories, findBestCluster } from '../features/memory/clustering'
-import { archiveMemories, identifyArchiveCandidates } from '../features/memory/coldArchive'
-import { rebuildNarrative } from '../features/memory/narrativeMemory'
+} from '../features/autonomy/memoryDream.ts'
+import { applyDecayBatch } from '../features/memory/decay.ts'
+import { clusterMemories, findBestCluster } from '../features/memory/clustering.ts'
+import { archiveMemories, identifyArchiveCandidates } from '../features/memory/coldArchive.ts'
+import { rebuildNarrative } from '../features/memory/narrativeMemory.ts'
 import {
   buildReflectionPrompt,
   extractReflectionsFromMemories,
@@ -18,21 +18,21 @@ import {
   parseReflectionResponse,
   selectCallbackCandidates,
   type ReflectionCandidate,
-} from '../features/memory/reflectionGenerator'
+} from '../features/memory/reflectionGenerator.ts'
 import {
   enqueueCallbacks,
   loadCallbackQueue,
-} from '../features/memory/callbackStore'
-import { recordUsage } from '../features/metering/contextMeter'
+} from '../features/memory/callbackStore.ts'
+import { recordUsage } from '../features/metering/contextMeter.ts'
 import {
   loadEmotionHistory,
   loadRelationshipHistory,
-} from '../features/autonomy/stateTimeline'
+} from '../features/autonomy/stateTimeline.ts'
 import {
   buildSkillDistillationPrompt,
   formatSkillAsMemory,
   parseSkillDistillationResponse,
-} from '../features/autonomy/skillDistillation'
+} from '../features/autonomy/skillDistillation.ts'
 import {
   AUTONOMY_DREAM_LOG_STORAGE_KEY,
   MEMORY_STORAGE_KEY,
@@ -40,7 +40,7 @@ import {
   onStorageChange,
   readJson,
   writeJson,
-} from '../lib/storage'
+} from '../lib/storage.ts'
 import {
   mutateDreamLogAtomically,
   parseDreamLogSnapshot,

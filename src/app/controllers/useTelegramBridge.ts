@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { AppSettings, DebugConsoleEventSource } from '../../types'
 import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
-import { useTelegramGateway, type TelegramIncoming } from '../../hooks/useTelegramGateway'
-import { rememberTelegramChatId } from '../../lib/coreRuntime'
-import { isActionAllowed } from '../../features/integrations/permissions'
+import { useTelegramGateway, type TelegramIncoming } from '../../hooks/useTelegramGateway.ts'
+import { rememberTelegramChatId } from '../../lib/coreRuntime.ts'
+import { isActionAllowed } from '../../features/integrations/permissions.ts'
 import {
   type BridgeForwardQueue,
   createBridgeForwardQueue,
@@ -11,8 +11,8 @@ import {
   isTelegramVoiceCompatibleMime,
   parseCsvIdSet,
   resolveBridgeReplyTarget,
-} from './bridgeUtils'
-import { routeTelegramMessage } from './telegramMessageRouter'
+} from './bridgeUtils.ts'
+import { routeTelegramMessage } from './telegramMessageRouter.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 
 type ChatBridge = {

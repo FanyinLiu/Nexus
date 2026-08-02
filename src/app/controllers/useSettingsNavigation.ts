@@ -6,7 +6,7 @@ import { getWindowView, syncWindowViewToUrl } from '../appSupport.ts'
 import {
   getInitialPreferredSettingsSectionId,
   shouldOpenInitialSettingsPanel,
-} from './settingsNavigationSupport'
+} from './settingsNavigationSupport.ts'
 
 type ApplyPanelWindowState = (partialState: Partial<PanelWindowState>) => Promise<void> | void
 

@@ -1,5 +1,5 @@
 import type { AppSettings, DebugConsoleEventSource, TranslationKey } from '../../types'
-import type { DiscordIncoming } from '../../hooks/useDiscordGateway'
+import type { DiscordIncoming } from '../../hooks/useDiscordGateway.ts'
 import {
   buildBridgeAnnouncementDebugDetail,
   buildBridgeIncomingDebugDetail,

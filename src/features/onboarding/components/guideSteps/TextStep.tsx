@@ -4,14 +4,14 @@ import {
   getApiProviderPreset,
   getDefaultOnboardingRegion,
   getOnboardingTextProviderOptionsByRegion,
-} from '../../../../lib/apiProviders'
-import type { ApiProviderPreset } from '../../../../lib/apiProviders'
-import { displaySecretInputValue } from '../../../../lib/keyVaultBridge'
-import { pickTranslatedUiText } from '../../../../lib/uiLanguage'
+} from '../../../../lib/apiProviders.ts'
+import type { ApiProviderPreset } from '../../../../lib/apiProviders.ts'
+import { displaySecretInputValue } from '../../../../lib/keyVaultBridge.ts'
+import { pickTranslatedUiText } from '../../../../lib/uiLanguage.ts'
 import {
   applyConnectionTestRepairDraft,
   buildConnectionTestRepairAction,
-} from '../../../models/connectionRepair'
+} from '../../../models/connectionRepair.ts'
 import {
   createConnectionVerificationRecord,
   getConnectionTestResultPresentation,
@@ -21,12 +21,12 @@ import {
   shouldAcceptConnectionTestResult,
   type ConnectionVerificationRecord,
   withConnectionCheckedAt,
-} from '../../../models/connectionTestFreshness'
+} from '../../../models/connectionTestFreshness.ts'
 import type { TranslationKey } from '../../../../types'
-import { getLocalizedApiProviderNote } from '../../../models/providerNotes'
-import type { ConnectionResult } from '../../../../components/settingsDrawerSupport'
+import { getLocalizedApiProviderNote } from '../../../models/providerNotes.ts'
+import type { ConnectionResult } from '../../../../components/settingsDrawerSupport.ts'
 import type { AppSettings } from '../../../../types'
-import type { OnboardingDraftSetter } from './types'
+import type { OnboardingDraftSetter } from './types.ts'
 
 type TextStepProps = {
   draft: AppSettings

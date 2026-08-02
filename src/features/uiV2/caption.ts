@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useRef, useState } from 'react'
-import type { CompanionSurfacePhase } from './state'
+import type { CompanionSurfacePhase } from './state.ts'
 
 export function getCaptionReadingDurationMs(text: string): number {
   const cjkCount = (text.match(/[\u3400-\u9fff\uf900-\ufaff]/g) ?? []).length

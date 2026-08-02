@@ -10,33 +10,33 @@ import type {
   NotificationMessage,
   PlatformProfile,
 } from '../../types'
-import { useFocusAwareness } from '../../hooks/useFocusAwareness'
-import { useAutonomyTick } from '../../hooks/useAutonomyTick'
-import { useMemoryDream } from '../../hooks/useMemoryDream'
-import { useContextScheduler } from '../../hooks/useContextScheduler'
-import { useNotificationBridge } from '../../hooks/useNotificationBridge'
-import { useEmotionState } from './useEmotionState'
-import { useRelationshipState } from './useRelationshipState'
-import { useRhythmState } from './useRhythmState'
-import { useAutonomyV2Engine } from './useAutonomyV2Engine'
-import { useTelegramBridge } from './useTelegramBridge'
-import { useDiscordBridge } from './useDiscordBridge'
+import { useFocusAwareness } from '../../hooks/useFocusAwareness.ts'
+import { useAutonomyTick } from '../../hooks/useAutonomyTick.ts'
+import { useMemoryDream } from '../../hooks/useMemoryDream.ts'
+import { useContextScheduler } from '../../hooks/useContextScheduler.ts'
+import { useNotificationBridge } from '../../hooks/useNotificationBridge.ts'
+import { useEmotionState } from './useEmotionState.ts'
+import { useRelationshipState } from './useRelationshipState.ts'
+import { useRhythmState } from './useRhythmState.ts'
+import { useAutonomyV2Engine } from './useAutonomyV2Engine.ts'
+import { useTelegramBridge } from './useTelegramBridge.ts'
+import { useDiscordBridge } from './useDiscordBridge.ts'
 import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
-import { type BridgeForwardQueue, createBridgeForwardQueue } from './bridgeUtils'
+import { type BridgeForwardQueue, createBridgeForwardQueue } from './bridgeUtils.ts'
 import { consumeMessageFollowUpPromptText, recordMessageFollowUp } from '../../lib/storage/messageFollowUps.ts'
 import { relationshipLevelToCloseness } from '../../features/autonomy/emotionModel.ts'
 import { getRelationshipLevel } from '../../features/autonomy/relationshipTracker.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
-import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile'
+import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile.ts'
 import type { DailyMemoryStore, Goal, ReminderTask } from '../../types'
-import { buildLocalMessagingAnnouncementContent } from './localMessagingAnnouncement'
-import { isNotificationBridgeEnabled } from './notificationBridgeActivation'
+import { buildLocalMessagingAnnouncementContent } from './localMessagingAnnouncement.ts'
+import { isNotificationBridgeEnabled } from './notificationBridgeActivation.ts'
 import {
   buildNotificationHistorySafeNoticeContent,
   buildNotificationMessageChatForwardText,
   buildNotificationMessageFollowUpInput,
   getNotificationConversationKey,
-} from '../../lib/privacy/notificationPrivacy'
+} from '../../lib/privacy/notificationPrivacy.ts'
 
 type ChatBridge = {
   pushCompanionNotice: (payload: {

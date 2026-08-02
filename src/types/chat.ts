@@ -2,7 +2,7 @@ import type {
   ExternalLinkResponse,
   WeatherLookupResponse,
   WebSearchResponse,
-} from './tools'
+} from './tools.ts'
 
 export type ChatRole = 'user' | 'assistant' | 'system'
 

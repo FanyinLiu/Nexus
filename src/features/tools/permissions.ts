@@ -1,6 +1,6 @@
 import { loadSettings } from '../../lib/index.ts'
 import type { ToolPermissionLevel } from '../../types'
-import type { BuiltInToolId, BuiltInToolPolicy, MatchedBuiltInTool } from './toolTypes'
+import type { BuiltInToolId, BuiltInToolPolicy, MatchedBuiltInTool } from './toolTypes.ts'
 
 type ToolPolicySettingsKeys = {
   enabledKey: string

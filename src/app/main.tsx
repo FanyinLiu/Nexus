@@ -4,7 +4,7 @@ import App from './App.tsx'
 import { AppProviders } from './providers'
 import { ErrorBoundary } from './ErrorBoundary.tsx'
 import { initApp } from './bootstrap'
-import { installConsoleCapture } from '../lib/logger'
+import { installConsoleCapture } from '../lib/logger.ts'
 
 // Capture every console.* call into the diagnostics ring buffer so the
 // in-app "Copy to clipboard" button (Settings → Console → Diagnostics)

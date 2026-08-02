@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useReducer, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
-import { PetControlIcon } from '../../components/PetControlIcon'
-import type { ConfirmFn } from '../../components/useConfirm'
+import { PetControlIcon } from '../../components/PetControlIcon.tsx'
+import type { ConfirmFn } from '../../components/useConfirm.ts'
 import {
   clearRecentCompanionCheckInDecision,
   clearRecentCompanionSummary,
@@ -15,10 +15,10 @@ import {
 import {
   MEMORY_EMBEDDING_MODEL_OPTIONS,
   SCREEN_VLM_MODEL_OPTIONS,
-} from '../../features/memory/constants'
-import { resolveMemoryTransparencySummary } from '../../features/memory/memorySettingsView'
-import type { ChatMemoryTraceFocusTarget } from '../../features/memory/traceDetails'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+} from '../../features/memory/constants.ts'
+import { resolveMemoryTransparencySummary } from '../../features/memory/memorySettingsView.ts'
+import type { ChatMemoryTraceFocusTarget } from '../../features/memory/traceDetails.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type {
   AppSettings,
   DailyMemoryEntry,
@@ -38,8 +38,8 @@ import {
   SettingsV3Section,
   SettingsV3Switch,
   SettingsV3Toolbar,
-} from './SettingsV3Primitives'
-import { CompanionMigrationAdapterV3, MemoryMigrationAdapterV3 } from './MemoryMigrationAdaptersV3'
+} from './SettingsV3Primitives.tsx'
+import { CompanionMigrationAdapterV3, MemoryMigrationAdapterV3 } from './MemoryMigrationAdaptersV3.tsx'
 import './settings-v3-collection.css'
 
 type MemorySearchModeOption = {

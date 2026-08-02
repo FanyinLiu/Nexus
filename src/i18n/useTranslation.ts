@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 import { AVAILABLE_LOCALES, getLocale, setLocale, t } from './runtime.ts'
-import type { I18nContextValue } from '../types/i18n'
+import type { I18nContextValue } from '../types/i18n.ts'
 
 export const I18nContext = createContext<I18nContextValue | null>(null)
 

@@ -1,1 +1,1 @@
-export * from './initApp'
+export * from './initApp.ts'

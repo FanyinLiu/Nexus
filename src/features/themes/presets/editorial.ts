@@ -1,5 +1,5 @@
 import { defaultThemeTokens } from '../tokens.ts'
-import type { ThemeDefinition } from '../../../types/theme'
+import type { ThemeDefinition } from '../../../types/theme.ts'
 
 export const editorialTheme: ThemeDefinition = {
   id: 'editorial',

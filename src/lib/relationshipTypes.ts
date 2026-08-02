@@ -1,5 +1,5 @@
 import type { CompanionRelationshipType } from '../types'
-import type { TranslationKey } from '../types/i18n'
+import type { TranslationKey } from '../types/i18n.ts'
 
 export const RELATIONSHIP_OPTIONS: ReadonlyArray<{
   value: CompanionRelationshipType

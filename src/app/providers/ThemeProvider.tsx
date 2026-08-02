@@ -6,9 +6,9 @@ import {
   resolveTheme,
   ThemeContext,
 } from '../../features/themes'
-import { getRedactedLogErrorMessage } from '../../lib/logRedaction'
-import { getSettingsSnapshot, subscribeToSettings, updateSettingsSnapshot } from '../store/settingsStore'
-import type { ThemeContextValue, ThemeId } from '../../types/theme'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
+import { getSettingsSnapshot, subscribeToSettings, updateSettingsSnapshot } from '../store/settingsStore.ts'
+import type { ThemeContextValue, ThemeId } from '../../types/theme.ts'
 
 type ThemeProviderProps = {
   children: ReactNode

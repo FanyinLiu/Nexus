@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { PetControlIcon } from '../../components/PetControlIcon'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { PetControlIcon } from '../../components/PetControlIcon.tsx'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type {
   AppSettings,
   AssistantRuntimeActivity,
@@ -11,17 +11,17 @@ import type {
   SpeechLevelSource,
   VoiceState,
 } from '../../types'
-import type { GazeTarget } from '../pet/components/live2d/types'
-import type { PetModelDefinition } from '../pet/models'
-import { SpritePetCanvas } from '../pet/components/SpritePetCanvas'
-import { ChatSheetV2, type ChatSheetV2Message } from './ChatSheetV2'
-import { useReadableCaption } from './caption'
-import { buildMotionSafeModelDefinition } from './motionSafeModel'
+import type { GazeTarget } from '../pet/components/live2d/types.ts'
+import type { PetModelDefinition } from '../pet/models.ts'
+import { SpritePetCanvas } from '../pet/components/SpritePetCanvas.tsx'
+import { ChatSheetV2, type ChatSheetV2Message } from './ChatSheetV2.tsx'
+import { useReadableCaption } from './caption.ts'
+import { buildMotionSafeModelDefinition } from './motionSafeModel.ts'
 import {
   resolveCompanionSurfaceBasePhase,
   resolveCompanionSurfaceCaption,
   useCompanionSurfacePhase,
-} from './state'
+} from './state.ts'
 import './companion-v2.css'
 import './panel-v2.css'
 

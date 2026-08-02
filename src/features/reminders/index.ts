@@ -1,3 +1,3 @@
-export * from './parseReminderIntent'
-export * from './runtime'
-export * from './schedule'
+export * from './parseReminderIntent.ts'
+export * from './runtime.ts'
+export * from './schedule.ts'

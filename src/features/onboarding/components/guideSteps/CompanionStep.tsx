@@ -1,20 +1,20 @@
-import { apiProviderRequiresApiKey } from '../../../../lib/apiProviders'
+import { apiProviderRequiresApiKey } from '../../../../lib/apiProviders.ts'
 import {
   isSenseVoiceSpeechInputProvider,
   isSpeechOutputKeyless,
-} from '../../../../lib/audioProviders'
-import { RELATIONSHIP_OPTIONS } from '../../../../lib/relationshipTypes'
+} from '../../../../lib/audioProviders.ts'
+import { RELATIONSHIP_OPTIONS } from '../../../../lib/relationshipTypes.ts'
 import {
   pickTranslatedUiText,
   pickTranslatedUiTextOrFallback,
-} from '../../../../lib/uiLanguage'
+} from '../../../../lib/uiLanguage.ts'
 import type { AppSettings } from '../../../../types'
 import {
   buildCompanionReadiness,
   type CompanionReadinessStatus,
-} from '../../companionReadiness'
+} from '../../companionReadiness.ts'
 import type { PetModelDefinition } from '../../../pet'
-import type { OnboardingDraftSetter } from './types'
+import type { OnboardingDraftSetter } from './types.ts'
 
 type CompanionStepProps = {
   draft: AppSettings

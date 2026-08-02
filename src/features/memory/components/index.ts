@@ -1,1 +1,1 @@
-export * from './MemoryPanel'
+export * from './MemoryPanel.tsx'

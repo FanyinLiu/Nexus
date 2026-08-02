@@ -1,5 +1,5 @@
 import { useState, type InputHTMLAttributes } from 'react'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { UiLanguage } from '../../types'
 
 const URL_PROTOCOL_RE = /^https?:\/\//i

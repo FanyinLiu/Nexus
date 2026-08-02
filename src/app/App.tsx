@@ -6,7 +6,7 @@ import './styles/panel-toolbar-controls.css'
 import './styles/panel-companion.css'
 import { useAppController } from './controllers'
 import { PetView, PanelView } from './views'
-import { ModelSetupOverlay } from '../features/setup/components/ModelSetupOverlay'
+import { ModelSetupOverlay } from '../features/setup/components/ModelSetupOverlay.tsx'
 import { t as translate } from '../i18n/runtime.ts'
 import { formatComponentStackForLog, formatErrorBoundaryDetail } from './errorBoundarySupport.ts'
 

@@ -1,10 +1,10 @@
 import { memo, useEffect, useState } from 'react'
-import { loadLetters, type SavedLetter } from '../letter/letterStore'
-import { saveTextFileWithFallback } from '../../lib/textFiles'
-import { getRedactedLogErrorMessage } from '../../lib/logRedaction'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
+import { loadLetters, type SavedLetter } from '../letter/letterStore.ts'
+import { saveTextFileWithFallback } from '../../lib/textFiles.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { UiLanguage } from '../../types'
-import { SettingsV3Empty, SettingsV3Page, SettingsV3Section, SettingsV3Toolbar } from './SettingsV3Primitives'
+import { SettingsV3Empty, SettingsV3Page, SettingsV3Section, SettingsV3Toolbar } from './SettingsV3Primitives.tsx'
 import './settings-v3-collection.css'
 
 type LettersSectionV3Props = { active: boolean; uiLanguage: UiLanguage }

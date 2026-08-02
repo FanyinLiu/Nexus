@@ -18,32 +18,32 @@ import {
   getImage4SnapshotModeSync,
   getImage4StatePreviewSync,
   getVoiceStateLabel,
-} from '../appSupport'
-import { Image4PresenceHeader } from './Image4CompanionField'
-import { Image4RhythmGrid } from './Image4RhythmGrid'
+} from '../appSupport.ts'
+import { Image4PresenceHeader } from './Image4CompanionField.tsx'
+import { Image4RhythmGrid } from './Image4RhythmGrid.tsx'
 import {
   buildImage4ChatPreviewMessages,
   getImage4ChatPreviewModeSync,
   getImage4ChatPreviewVariantSync,
-} from './image4ChatPreview'
-import { resolveImage4ActivityLabelKey } from './image4ActivityLabel'
-import { deriveImage4CompanionState } from './image4CompanionState'
-import { deriveImage4ComposerState } from './image4ComposerState'
-import { PanelNotificationSummary } from './PanelNotificationSummary'
-import { PanelToolbarButton } from './PanelToolbarButton'
-import { ActivePlanStrip } from '../../components/ActivePlanStrip'
-import { MessageBubble } from '../../components/MessageBubble'
-import { resolveCharacterPreset } from '../../features/character/presets'
+} from './image4ChatPreview.ts'
+import { resolveImage4ActivityLabelKey } from './image4ActivityLabel.ts'
+import { deriveImage4CompanionState } from './image4CompanionState.ts'
+import { deriveImage4ComposerState } from './image4ComposerState.ts'
+import { PanelNotificationSummary } from './PanelNotificationSummary.tsx'
+import { PanelToolbarButton } from './PanelToolbarButton.tsx'
+import { ActivePlanStrip } from '../../components/ActivePlanStrip.tsx'
+import { MessageBubble } from '../../components/MessageBubble.tsx'
+import { resolveCharacterPreset } from '../../features/character/presets.ts'
 import {
   buildChatMemoryTraceFocus,
   resolveChatMemoryTraceDetails,
   type ChatMemoryTraceDetails,
-} from '../../features/memory/traceDetails'
-import type { NotificationCardPrimaryActionId } from '../../features/notifications/notificationCardActions'
+} from '../../features/memory/traceDetails.ts'
+import type { NotificationCardPrimaryActionId } from '../../features/notifications/notificationCardActions.ts'
 import {
   formatCompanionElapsedBucket,
   type CompanionElapsedBucket,
-} from '../../features/context/companionTimeLanguage'
+} from '../../features/context/companionTimeLanguage.ts'
 import {
   classifyWeatherCondition,
   getTimeOfDayBand,
@@ -55,13 +55,13 @@ import {
 } from '../../features/panelScene'
 import { CrisisHotlinePanel, useCrisisPanelState } from '../../features/safety'
 import type { CrisisSignal } from '../../features/safety'
-import { useAmbientWeather } from '../../hooks/useAmbientWeather'
+import { useAmbientWeather } from '../../hooks/useAmbientWeather.ts'
 import { shorten } from '../../lib'
-import { modelSupportsVision } from '../../lib/modelCapabilities'
-import { buildNotificationReplyDraftText } from '../../lib/privacy/notificationPrivacy'
-import { pickTranslatedUiText } from '../../lib/uiLanguage'
-import { PetControlIcon } from '../../components/PetControlIcon'
-import type { UseAppControllerResult } from '../controllers/useAppController'
+import { modelSupportsVision } from '../../lib/modelCapabilities.ts'
+import { buildNotificationReplyDraftText } from '../../lib/privacy/notificationPrivacy.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
+import { PetControlIcon } from '../../components/PetControlIcon.tsx'
+import type { UseAppControllerResult } from '../controllers/useAppController.ts'
 import type { NotificationMessage } from '../../types'
 
 const Live2DCanvas = lazy(async () => {

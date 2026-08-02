@@ -4,7 +4,7 @@
 // fire on slot transitions.
 
 import type { PetMood, PetTouchZone } from '../../../../types'
-import type { PetExpressionSlot, PetModelDefinition } from '../../models'
+import type { PetExpressionSlot, PetModelDefinition } from '../../models.ts'
 
 export function resolveExpressionSlot(
   mood: PetMood,

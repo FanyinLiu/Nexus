@@ -13,8 +13,8 @@ import type {
   ReactNode,
   SetStateAction,
 } from 'react'
-import { parseNumberInput } from './settingsDrawerSupport'
-import { displaySecretInputValue } from '../lib/keyVaultBridge'
+import { parseNumberInput } from './settingsDrawerSupport.ts'
+import { displaySecretInputValue } from '../lib/keyVaultBridge.ts'
 import type { AppSettings } from '../types'
 
 type FieldShared = {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion.ts'
 import type { WeatherCondition, TimeOfDayBand } from './weatherCondition.ts'
 import { getTimeOfDayBand } from './weatherCondition.ts'
 

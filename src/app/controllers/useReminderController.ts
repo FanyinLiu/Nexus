@@ -14,8 +14,8 @@ import {
   toChatToolResult,
 } from '../../features/tools'
 import { shouldRunReminderScheduler } from '../../features/reminders'
-import { useReminderScheduler } from '../../hooks/useReminderScheduler'
-import { broadcastToChannels } from '../../lib/coreRuntime'
+import { useReminderScheduler } from '../../hooks/useReminderScheduler.ts'
+import { broadcastToChannels } from '../../lib/coreRuntime.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 
 type ChatBridge = {

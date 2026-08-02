@@ -16,7 +16,7 @@
  *      `src/types/i18n.ts`, and every locale file under `src/i18n/locales/`.
  */
 
-import type { TranslationKey } from '../types/i18n'
+import type { TranslationKey } from '../types/i18n.ts'
 
 
 // ── Shared types ──

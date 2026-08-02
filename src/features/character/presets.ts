@@ -1,5 +1,5 @@
 import type { PetMood, VoiceState } from '../../types'
-import type { TranslationKey } from '../../types/i18n'
+import type { TranslationKey } from '../../types/i18n.ts'
 
 interface CharacterPreset {
   id: string

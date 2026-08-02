@@ -1,1 +1,1 @@
-export { recognizeScreenText, disposeScreenOcrWorker } from '../vision/ocrWorker'
+export { recognizeScreenText, disposeScreenOcrWorker } from '../vision/ocrWorker.ts'

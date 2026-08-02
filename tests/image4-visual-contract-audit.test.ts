@@ -126,7 +126,7 @@ export function deriveImage4ComposerState(input) {
 }
 `,
   'src/app/views/Image4CompanionField.tsx': `
-import { Image4Signal } from './Image4Signal'
+import { Image4Signal } from './Image4Signal.tsx'
 export function Image4PresenceHeader({ body, signalActive, statusLabel, title }) {
   return <section className="companion-presence image4-presence"><strong>{title}</strong><span>{body}</span><span>{statusLabel}</span><Image4Signal active={signalActive} /></section>
 }

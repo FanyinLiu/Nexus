@@ -3,7 +3,7 @@
 // expose their globals (window.PIXI, window.Live2DCubismCore, etc.) before
 // the canvas tries to instantiate a model.
 
-import { resolveAssetPath } from './types'
+import { resolveAssetPath } from './types.ts'
 
 type Live2DVendorScript = {
   id: string

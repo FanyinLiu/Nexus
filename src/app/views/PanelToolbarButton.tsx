@@ -1,4 +1,4 @@
-import { PetControlIcon, type PetControlIconName } from '../../components/PetControlIcon'
+import { PetControlIcon, type PetControlIconName } from '../../components/PetControlIcon.tsx'
 
 type PanelToolbarButtonProps = {
   icon: PetControlIconName

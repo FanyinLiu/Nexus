@@ -7,8 +7,8 @@ import {
   normalizeRhythmProfile,
   recordInteraction,
   shouldAllowProactiveSpeech,
-} from '../../features/autonomy/rhythmLearner'
-import { AUTONOMY_RHYTHM_STORAGE_KEY, readJson, writeJson } from '../../lib/storage'
+} from '../../features/autonomy/rhythmLearner.ts'
+import { AUTONOMY_RHYTHM_STORAGE_KEY, readJson, writeJson } from '../../lib/storage.ts'
 
 function loadInitialRhythmProfile(): RhythmProfile {
   const raw = readJson<unknown>(AUTONOMY_RHYTHM_STORAGE_KEY, createDefaultRhythmProfile())

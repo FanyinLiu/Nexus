@@ -10,8 +10,8 @@ import {
   t,
 } from '../../i18n'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
-import { getSettingsSnapshot, subscribeToSettings } from '../store/settingsStore'
-import type { AppLocale, I18nContextValue } from '../../types/i18n'
+import { getSettingsSnapshot, subscribeToSettings } from '../store/settingsStore.ts'
+import type { AppLocale, I18nContextValue } from '../../types/i18n.ts'
 
 type I18nProviderProps = {
   children: ReactNode

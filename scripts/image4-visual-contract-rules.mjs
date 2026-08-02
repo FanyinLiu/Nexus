@@ -72,7 +72,7 @@ export const REQUIRED_CONTRACTS = [
     file: 'src/app/views/Image4CompanionField.tsx',
     description: 'The Image4 identity header and signal markup stay isolated from the main PanelView file.',
     patterns: [
-      "import { Image4Signal } from './Image4Signal'",
+      "import { Image4Signal } from './Image4Signal.tsx'",
       'export function Image4PresenceHeader',
       'className="companion-presence image4-presence"',
       '<strong>{title}</strong>',

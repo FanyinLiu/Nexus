@@ -6,7 +6,7 @@ import { systemBlackTheme } from './presets/system-black.ts'
 import { systemDarkTheme } from './presets/system-dark.ts'
 import { systemDayTheme } from './presets/system-day.ts'
 import { warmDayTheme } from './presets/warm-day.ts'
-import type { ThemeDefinition, ThemeId } from '../../types/theme'
+import type { ThemeDefinition, ThemeId } from '../../types/theme.ts'
 
 const themeMap: Record<ThemeId, ThemeDefinition> = {
   'nexus-default': nexusDefaultTheme,

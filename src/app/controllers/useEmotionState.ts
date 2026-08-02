@@ -11,14 +11,14 @@ import {
   createIdleArcTracker,
   resolveIdleArcSignals,
   type RelationshipCloseness,
-} from '../../features/autonomy/emotionModel'
+} from '../../features/autonomy/emotionModel.ts'
 import { captureEmotionSample } from '../../features/autonomy/stateTimeline.ts'
 import {
   captureUserAffectSample,
   textSignalToVAD,
   voiceEmotionToVAD,
 } from '../../features/autonomy/userAffectTimeline.ts'
-import { AUTONOMY_EMOTION_STORAGE_KEY, readJson, writeJson } from '../../lib/storage'
+import { AUTONOMY_EMOTION_STORAGE_KEY, readJson, writeJson } from '../../lib/storage.ts'
 
 /**
  * Map an emotion-model signal to a user-affect sample, or `null` if the

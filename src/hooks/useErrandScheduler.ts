@@ -2,12 +2,12 @@ import { useEffect, useRef } from 'react'
 import {
   decideErrandRun,
   recordRun,
-} from '../features/agent/errandPolicy'
-import { findRunnableErrand } from '../features/agent/errandStore'
+} from '../features/agent/errandPolicy.ts'
+import { findRunnableErrand } from '../features/agent/errandStore.ts'
 import {
   readErrandRunnerState,
   writeErrandRunnerState,
-} from '../features/agent/errandRunnerState'
+} from '../features/agent/errandRunnerState.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type { AppSettings, MemoryRecallContext } from '../types'
 

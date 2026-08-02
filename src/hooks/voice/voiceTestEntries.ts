@@ -7,9 +7,9 @@ import {
   runAudioSmokeTestRuntime,
   testSpeechInputConnectionRuntime,
   testSpeechOutputReadinessRuntime,
-} from './diagnostics'
+} from './diagnostics.ts'
 import type { AppSettings } from '../../types'
-import { expectHolderValue, type VoiceRuntimeBag, type VoiceTestEntries } from './voiceRuntimeBag'
+import { expectHolderValue, type VoiceRuntimeBag, type VoiceTestEntries } from './voiceRuntimeBag.ts'
 
 export function createVoiceTestEntries(bag: VoiceRuntimeBag): VoiceTestEntries {
   const { bindingsHolder, hookCallbacks } = bag

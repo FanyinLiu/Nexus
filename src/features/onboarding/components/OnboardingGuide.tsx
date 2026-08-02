@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import '../styles/onboarding-guide-shell.css'
 import '../styles/onboarding-guide-responsive.css'
 import '../styles/onboarding-guide-calm.css'
-import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap'
+import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap.ts'
 import {
   apiProviderRequiresApiKey,
-} from '../../../lib/apiProviders'
-import type { ApiProviderPreset } from '../../../lib/apiProviders'
+} from '../../../lib/apiProviders.ts'
+import type { ApiProviderPreset } from '../../../lib/apiProviders.ts'
 import {
   getFallbackSpeechOutputVoices,
   getSpeechInputModelOptions,
@@ -14,19 +14,19 @@ import {
   getSpeechOutputModelOptions,
   getSpeechOutputProviderPreset,
   isVolcengineSpeechOutputProvider,
-} from '../../../lib/audioProviders'
+} from '../../../lib/audioProviders.ts'
 import {
   switchSpeechInputProvider,
   switchSpeechOutputProvider,
-} from '../../../lib/speechProviderProfiles'
-import { switchTextProvider } from '../../../lib/textProviderProfiles'
+} from '../../../lib/speechProviderProfiles.ts'
+import { switchTextProvider } from '../../../lib/textProviderProfiles.ts'
 import type { AppSettings, PlatformProfile, WindowView } from '../../../types'
 import type { PetModelDefinition } from '../../pet'
 import {
   getNextConnectionResultExpiryMs,
   isConnectionVerificationCurrent,
   type ConnectionVerificationRecord,
-} from '../../models/connectionTestFreshness'
+} from '../../models/connectionTestFreshness.ts'
 import {
   AiDisclosureStep,
   CompanionStep,
@@ -35,7 +35,7 @@ import {
   VoiceStep,
   WelcomeStep,
 } from './guideSteps'
-import { recordDisclosureAck } from '../../safety/disclosureState'
+import { recordDisclosureAck } from '../../safety/disclosureState.ts'
 import {
   applyOnboardingStepRepairDraft,
   buildOnboardingSteps,
@@ -43,8 +43,8 @@ import {
   getOnboardingStepIssue,
   sanitizeOnboardingSettings,
   type OnboardingStepIssue,
-} from './onboardingGuideSupport'
-import { pickTranslatedUiText } from '../../../lib/uiLanguage'
+} from './onboardingGuideSupport.ts'
+import { pickTranslatedUiText } from '../../../lib/uiLanguage.ts'
 
 export type OnboardingGuideProps = {
   open: boolean

@@ -1,5 +1,5 @@
 import { createId } from '../../lib'
-import { getCoreRuntime } from '../../lib/coreRuntime'
+import { getCoreRuntime } from '../../lib/coreRuntime.ts'
 import { t } from '../../i18n/runtime.ts'
 import type { ChatMessage } from '../../types'
 

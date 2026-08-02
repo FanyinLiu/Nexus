@@ -5,16 +5,16 @@ import {
   findTriggeredTasks,
   markTaskTriggered,
   type ContextSnapshot,
-} from '../features/autonomy/contextScheduler'
+} from '../features/autonomy/contextScheduler.ts'
 import {
   AUTONOMY_CONTEXT_TRIGGERS_STORAGE_KEY,
   readJson,
   writeJson,
-} from '../lib/storage'
+} from '../lib/storage.ts'
 import {
   isDesktopContextActiveWindowAvailable,
   isDesktopContextClipboardAvailable,
-} from '../lib/platformProfile'
+} from '../lib/platformProfile.ts'
 import type {
   AppSettings,
   AutonomousAction,

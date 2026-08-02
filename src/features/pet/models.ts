@@ -1,8 +1,8 @@
-import type { TranslationKey } from '../../types/i18n'
-import type { PetExpressionSlot, SpritePetAtlasDefinition } from './types'
+import type { TranslationKey } from '../../types/i18n.ts'
+import type { PetExpressionSlot, SpritePetAtlasDefinition } from './types.ts'
 
 /** @deprecated Import from `./types` — re-exported for backward compatibility. */
-export type { PetExpressionSlot } from './types'
+export type { PetExpressionSlot } from './types.ts'
 
 /**
  * One entry in a model's idle fidget pool. When the pet is in `idle` mood

@@ -1,5 +1,5 @@
 import type { AppSettings, AutonomyPhase, AutonomyTickState, FocusState } from '../../types'
-import { shouldSuppressAutonomy } from './focusAwareness'
+import { shouldSuppressAutonomy } from './focusAwareness.ts'
 
 // ── Initial state factory ─────────────────────────────────────────────────────
 

@@ -3,8 +3,8 @@ import {
   createWakewordRuntime,
   type WakewordRuntimeController,
 } from '../../features/hearing/wakewordRuntime.ts'
-import type { VoiceBusEvent } from '../../features/voice/busEvents'
-import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes'
+import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
+import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes.ts'
 import type {
   TranslationKey,
   TranslationParams,
@@ -15,11 +15,11 @@ import type {
 } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
-import type { BrowserSpeechRecognition } from '../../lib/voice'
+import type { BrowserSpeechRecognition } from '../../lib/voice.ts'
 import type { ParaformerStreamSession } from '../../features/hearing/localParaformer.ts'
 import type { SenseVoiceStreamSession } from '../../features/hearing/localSenseVoice.ts'
 import type { TencentAsrStreamSession } from '../../features/hearing/tencentAsr.ts'
-import type { VadConversationSession, VoiceConversationOptions } from './types'
+import type { VadConversationSession, VoiceConversationOptions } from './types.ts'
 
 type BusEmit = (event: VoiceBusEvent) => void
 

@@ -53,7 +53,7 @@ export function MessageBubble({ message }) {
 }
 `,
   'src/app/views/LegacyPanelView.tsx': `
-import { deriveImage4ComposerState } from './image4ComposerState'
+import { deriveImage4ComposerState } from './image4ComposerState.ts'
 
 export function PanelView({ chat }) {
   const image4ComposerState = deriveImage4ComposerState({
