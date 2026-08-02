@@ -1,8 +1,25 @@
-import { app, safeStorage } from 'electron'
+import { createRequire } from 'node:module'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { createAsyncLock } from './asyncLock.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
+
+// Electron's app/safeStorage when running inside the app; absent under plain
+// node:test (requiring 'electron' there yields the binary path string, not
+// the API). This is what makes the vault loadable in tests — they point
+// NEXUS_VAULT_USER_DATA_DIR at a temp dir instead.
+const require = createRequire(import.meta.url)
+let electronApp = null
+let safeStorage = null
+try {
+  const electron = require('electron')
+  if (typeof electron?.app?.getPath === 'function') {
+    electronApp = electron.app
+    safeStorage = electron.safeStorage ?? null
+  }
+} catch {
+  // plain node — fall through; getVaultPath uses NEXUS_VAULT_USER_DATA_DIR
+}
 
 const VAULT_FILE_NAME = 'vault.json'
 
@@ -11,9 +28,16 @@ const withVaultLock = createAsyncLock()
 const decryptedVaultCache = new Map()
 let safeStorageAccessBlocked = false
 let safeStorageFailureLogged = false
+// Set when vault.json exists but fails to parse: writes stay blocked for the
+// rest of the process so a truncated file is never overwritten with an
+// empty-cache-plus-one-entry vault.
+let vaultWriteBlocked = false
 
 function getVaultPath() {
-  return path.join(app.getPath('userData'), VAULT_FILE_NAME)
+  const userDataDirOverride = process.env.NEXUS_VAULT_USER_DATA_DIR
+  if (userDataDirOverride) return path.join(userDataDirOverride, VAULT_FILE_NAME)
+  if (!electronApp) throw new Error('Electron app path API is unavailable')
+  return path.join(electronApp.getPath('userData'), VAULT_FILE_NAME)
 }
 
 // Dev-mode and smoke-only plaintext path: skip safeStorage entirely so unsigned
@@ -21,7 +45,7 @@ function getVaultPath() {
 // prompt. SMOKE_TEST is set only by the local smoke harness; production
 // packaged installers still require safeStorage and never fall through here.
 function isDevPlaintextMode() {
-  return !app.isPackaged || process.env.SMOKE_TEST === '1'
+  return !electronApp?.isPackaged || process.env.SMOKE_TEST === '1'
 }
 
 function isEncryptionAvailable() {
@@ -72,22 +96,60 @@ function decryptWithSafeStorage(value) {
 async function loadVault() {
   if (vaultCache) return vaultCache
 
+  let raw
   try {
-    const raw = await fs.readFile(getVaultPath(), 'utf8')
-    vaultCache = JSON.parse(raw)
+    raw = await fs.readFile(getVaultPath(), 'utf8')
   } catch (error) {
     if (error?.code !== 'ENOENT') {
       console.warn('[KeyVault] Failed to read vault file:', getRedactedErrorMessage(error))
     }
+    vaultCache = {}
+    return vaultCache
+  }
+
+  try {
+    vaultCache = JSON.parse(raw)
+  } catch (error) {
+    await quarantineCorruptVaultFile(error)
     vaultCache = {}
   }
 
   return vaultCache
 }
 
+// A crash mid-write can leave vault.json as truncated JSON. Treating it as an
+// empty vault would let the next persist overwrite the file with
+// empty-cache-plus-one-entry and silently destroy every stored key, so
+// preserve a timestamped backup and refuse all writes for this process.
+async function quarantineCorruptVaultFile(parseError) {
+  vaultWriteBlocked = true
+  const backupPath = `${getVaultPath()}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`
+  try {
+    await fs.copyFile(getVaultPath(), backupPath)
+    console.warn(
+      '[KeyVault] Vault file is corrupted; backed it up and disabled vault writes for this process:',
+      getRedactedErrorMessage(parseError),
+    )
+  } catch (backupError) {
+    console.warn(
+      '[KeyVault] Vault file is corrupted and the backup copy failed; vault writes are disabled for this process:',
+      getRedactedErrorMessage(backupError),
+    )
+  }
+}
+
 async function persistVault() {
+  if (vaultWriteBlocked) {
+    const error = new Error(
+      '密钥库文件已损坏，为保护已存密钥，本次启动已禁止写入。请重启应用后重新设置密钥。',
+    )
+    error.code = 'VAULT_CORRUPT_WRITE_BLOCKED'
+    throw error
+  }
   const vaultPath = getVaultPath()
-  await fs.writeFile(vaultPath, JSON.stringify(vaultCache, null, 2), { encoding: 'utf8', mode: 0o600 })
+  const tempPath = `${vaultPath}.${process.pid}.${Date.now()}.tmp`
+  await fs.writeFile(tempPath, JSON.stringify(vaultCache, null, 2), { encoding: 'utf8', mode: 0o600 })
+  await fs.rename(tempPath, vaultPath)
 }
 
 export function vaultStore(slot, plaintext) {
@@ -247,4 +309,13 @@ export async function vaultRetrieveMany(slots) {
 
 export function vaultIsAvailable() {
   return isEncryptionAvailable()
+}
+
+/** @internal Test-only: reset in-memory vault state between test cases. */
+export function resetKeyVaultStateForTests() {
+  vaultCache = null
+  decryptedVaultCache.clear()
+  vaultWriteBlocked = false
+  safeStorageAccessBlocked = false
+  safeStorageFailureLogged = false
 }
