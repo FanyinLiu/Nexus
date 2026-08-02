@@ -467,49 +467,27 @@ export const REQUIRED_PHRASES = [
     ],
   },
   {
-    id: 'chat-migration-preview-panel-uses-redacted-ui-errors',
-    file: 'src/components/settingsSections/ChatMigrationPreviewPanel.tsx',
+    id: 'chat-studio-redacts-character-card-errors',
+    file: 'src/features/settingsV3/ChatStudioV3.tsx',
     phrases: [
-      'formatChatMigrationUiError',
-      'result: createMigrationStatusError(error)',
-      'result: createMigrationComparisonError(error)',
-      'error: formatChatMigrationUiError(error)',
-      'error: formatChatMigrationUiError(result.errorMessage || result.errorKind || \'unknown\')',
-      'error: formatChatMigrationUiError(localStatusResult.errorMessage || localStatusResult.errorKind || \'unknown\')',
-      'error: formatChatMigrationUiError(comparisonResult.errorMessage || comparisonResult.errorKind || \'unknown\')',
+      "import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'",
+      'error: getRedactedLogErrorMessage(error)',
     ],
   },
   {
-    id: 'chat-section-redacts-character-card-errors',
-    file: 'src/components/settingsSections/ChatSection.tsx',
+    id: 'console-v3-redacts-copy-errors',
+    file: 'src/features/settingsV3/ConsoleSectionV3.tsx',
     phrases: [
       "import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'",
-      'error: getRedactedLogErrorMessage(err)',
-    ],
-  },
-  {
-    id: 'diagnostics-panel-redacts-copy-errors',
-    file: 'src/components/settingsSections/DiagnosticsPanel.tsx',
-    phrases: [
-      "import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'",
-      'message: getRedactedLogErrorMessage(err)',
+      'getRedactedLogErrorMessage(error)',
     ],
   },
   {
     id: 'settings-integrations-redacts-inspection-errors',
-    file: 'src/components/settingsSections/IntegrationsSection.tsx',
+    file: 'src/features/settingsV3/IntegrationsSectionV3.tsx',
     phrases: [
       "import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'",
       'setInspectionError(getRedactedLogErrorMessage(error))',
-    ],
-  },
-  {
-    id: 'settings-context-redacts-reminder-errors',
-    file: 'src/components/settingsSections/ContextSection.tsx',
-    phrases: [
-      "import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'",
-      "message: getRedactedLogErrorMessage(error) || ti('settings.context.error.save_failed')",
-      "message: getRedactedLogErrorMessage(error) || ti('settings.context.error.template_failed')",
     ],
   },
   {
@@ -554,18 +532,10 @@ export const REQUIRED_PHRASES = [
   },
   {
     id: 'settings-export-panels-redact-support-logs',
-    file: 'src/components/settingsSections/LettersSection.tsx',
+    file: 'src/features/settingsV3/LettersSectionV3.tsx',
     phrases: [
       "import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'",
-      "console.warn('[letter-export] failed:', getRedactedLogErrorMessage(err))",
-    ],
-  },
-  {
-    id: 'settings-yearbook-redacts-support-logs',
-    file: 'src/components/settingsSections/MoodMapPanel.tsx',
-    phrases: [
-      "import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'",
-      "console.warn('[yearbook] failed:', getRedactedLogErrorMessage(err))",
+      "console.warn('[letter-export] failed:', getRedactedLogErrorMessage(error))",
     ],
   },
   {
@@ -758,7 +728,7 @@ export const REQUIRED_PHRASES = [
     id: 'chat-runtime-mirror-redacts-support-logs',
     file: 'src/hooks/chat/useChatPersistence.ts',
     phrases: [
-      "import { getRedactedLogErrorMessage } from '../../lib/logRedaction'",
+      "import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'",
       "console.warn('[chatLocalDataRuntimeMirror] mirror failed:', getRedactedLogErrorMessage(reason))",
       "console.warn('[chatLocalDataRuntimeMirror] mirror failed:', getRedactedLogErrorMessage(error))",
     ],
@@ -776,7 +746,7 @@ export const REQUIRED_PHRASES = [
     id: 'renderer-vts-redacts-support-logs',
     file: 'src/features/pet/vts/useVTSBridge.ts',
     phrases: [
-      "import { getRedactedLogErrorMessage } from '../../../lib/logRedaction'",
+      "import { getRedactedLogErrorMessage } from '../../../lib/logRedaction.ts'",
       "console.warn('[VTS] Failed to update bridge input:', getRedactedLogErrorMessage(error))",
       "console.warn('[VTS]', getRedactedLogErrorMessage(error))",
       "console.warn('[VTS] Failed to migrate legacy auth token:', getRedactedLogErrorMessage(error))",

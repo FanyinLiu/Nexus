@@ -258,26 +258,24 @@ export type RunToolCallLoopOptions = {
 function resolveResponseToolCalls(
   response: ChatCompletionResponse,
   promptModeEnabled: boolean,
-): { toolCalls: ChatCompletionToolCall[]; cleanedContent: string; usedPromptMode: boolean } {
+): { toolCalls: ChatCompletionToolCall[]; cleanedContent: string } {
   if (response.tool_calls?.length) {
     return {
       toolCalls: response.tool_calls,
       cleanedContent: response.content ?? '',
-      usedPromptMode: false,
     }
   }
   if (!promptModeEnabled || !response.content) {
-    return { toolCalls: [], cleanedContent: response.content ?? '', usedPromptMode: false }
+    return { toolCalls: [], cleanedContent: response.content ?? '' }
   }
 
   const extracted = extractPromptModeToolCalls(response.content)
   if (!extracted.toolCalls.length) {
-    return { toolCalls: [], cleanedContent: response.content, usedPromptMode: false }
+    return { toolCalls: [], cleanedContent: response.content }
   }
   return {
     toolCalls: extracted.toolCalls,
     cleanedContent: extracted.cleanedContent,
-    usedPromptMode: true,
   }
 }
 
@@ -408,7 +406,7 @@ export async function runToolCallLoop(
     }
 
     round++
-    const { toolCalls, cleanedContent, usedPromptMode } = resolved
+    const { toolCalls, cleanedContent } = resolved
     const executableToolCalls = toolCalls.slice(0, MAX_TOOL_CALLS_PER_ROUND)
     const skippedToolCallCount = Math.max(0, toolCalls.length - executableToolCalls.length)
     const assistantContent = skippedToolCallCount > 0
@@ -455,11 +453,6 @@ export async function runToolCallLoop(
 
     const payload = await rebuildPayload()
     payload.messages.push(...toolConversationTail)
-
-    // Suppress nested tool_calls in the cleaned response so the loop can
-    // detect that this round closed (the next executeContinuation result
-    // becomes the new `response`).
-    void usedPromptMode
 
     lastContinuationPayload = payload
     response = await executeContinuation(payload)

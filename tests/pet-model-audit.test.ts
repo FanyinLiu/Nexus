@@ -82,8 +82,7 @@ test('pet model audit summaries exclude paths urls slugs and model content', () 
 test('pet model creator-kit UI renders display paths instead of raw artifact paths', () => {
   const pathSource = readSource('electron/services/petModelPaths.js')
   const serviceSource = readSource('electron/services/petModelService.js')
-  const chatSectionSource = readSource('src/components/settingsSections/ChatSection.tsx')
-  const creatorPanelSource = readSource('src/components/settingsSections/chat/SpriteCreatorKitPanel.tsx')
+  const chatStudioSource = readSource('src/features/settingsV3/ChatStudioV3.tsx')
 
   assert.match(pathSource, /USER_DATA_DISPLAY_ROOT = 'app-user-data'/)
   assert.match(pathSource, /CODEX_HOME_DISPLAY_ROOT = 'codex-home'/)
@@ -98,24 +97,16 @@ test('pet model creator-kit UI renders display paths instead of raw artifact pat
   assert.doesNotMatch(serviceSource, /已打开制作包文件：\$\{targetRealPath\}/)
 
   assert.match(
-    chatSectionSource,
-    /generatedSpritePetPackage\.packageDirectoryDisplay \?\? generatedSpritePetPackage\.packageDirectory/,
+    chatStudioSource,
+    /output\.packageDirectoryDisplay \?\? output\.packageDirectory/,
   )
   assert.match(
-    chatSectionSource,
-    /generatedSpritePetPackage\.archivePathDisplay \?\? generatedSpritePetPackage\.archivePath/,
+    chatStudioSource,
+    /props\.lastCreatorKitDirectoryDisplay \|\| props\.lastCreatorKitDirectory/,
   )
   assert.match(
-    creatorPanelSource,
-    /lastCreatorKitDirectoryDisplay \|\| lastCreatorKitDirectory/,
-  )
-  assert.match(
-    creatorPanelSource,
-    /assembledCreatorKitPackage\.packageDirectoryDisplay \?\? assembledCreatorKitPackage\.packageDirectory/,
-  )
-  assert.match(
-    creatorPanelSource,
-    /creatorKitInspection\.contactSheetPathDisplay \?\? creatorKitInspection\.contactSheetPath/,
+    chatStudioSource,
+    /props\.lastCreatorKitDirectoryDisplay \|\| props\.lastCreatorKitDirectory/,
   )
 })
 

@@ -105,7 +105,7 @@ test('onboarding CSS modules stay bounded and preserve their responsibilities', 
 })
 
 test('Settings relationship chooser no longer depends on onboarding class names', () => {
-  const relationship = readWorkspaceFile('src/components/settingsSections/chat/RelationshipPanel.tsx')
+  const relationship = readWorkspaceFile('src/features/settingsV3/ChatSectionV3.tsx')
   const settingsSources = [
     relationship,
     readWorkspaceFile('src/app/styles/settings.css'),
@@ -115,8 +115,8 @@ test('Settings relationship chooser no longer depends on onboarding class names'
     readWorkspaceFile('src/app/styles/settings-visual-system.css'),
   ].join('\n')
 
-  assert.match(relationship, /className="settings-relationship__options"/)
-  assert.match(relationship, /className=\{`settings-relationship__chip/)
+  assert.match(relationship, /className="settings-v3-choice-grid"/)
+  assert.match(relationship, /className="settings-v3-choice"/)
   assert.doesNotMatch(settingsSources, /onboarding-relationship__/)
   assert.doesNotMatch(settingsSources, /\.onboarding-region-tabs(?:__[\w-]+)?/)
   assert.doesNotMatch(

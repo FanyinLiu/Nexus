@@ -238,8 +238,8 @@ test('settings surface audit rejects missing home trust traces', () => {
 
 test('settings surface audit rejects missing external action confirmation control', () => {
   withFixture({
-    'src/components/settingsSections/ToolsSection.tsx': BASELINE_FILES['src/components/settingsSections/ToolsSection.tsx'].replace(
-      '<ToggleField field="toolOpenExternalRequiresConfirmation" disabled={!draft.toolOpenExternalEnabled} />',
+    'src/features/settingsV3/ToolsSectionV3.tsx': BASELINE_FILES['src/features/settingsV3/ToolsSectionV3.tsx'].replace(
+      '<SettingsV3Toggle checked={draft.toolOpenExternalRequiresConfirmation} disabled={!draft.toolOpenExternalEnabled} />',
       '',
     ),
   }, (root) => {

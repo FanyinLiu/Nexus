@@ -1,7 +1,4 @@
 import {
-  type ReminderTaskDraftInput,
-} from '../features/reminders/schedule.ts'
-import {
   pickTranslatedUiText,
 } from '../lib/uiLanguage.ts'
 import {
@@ -14,9 +11,7 @@ import type {
   ConnectionEvidence,
   DiscoveredModel,
   MemorySearchMode,
-  ReminderTaskAction,
   ReminderTask,
-  ReminderScheduleKind,
   UiLanguage,
   VoicePipelineState,
   VoiceState,
@@ -51,11 +46,6 @@ const VOICE_PIPELINE_STEP_KEY: Record<VoicePipelineState['step'], TranslationKey
   blocked_wake_word: 'voice_pipeline.blocked_wake_word',
   reply_received: 'voice_pipeline.reply_received',
   reply_failed: 'voice_pipeline.reply_failed',
-}
-
-const REMINDER_SCHEDULE_OPTION_KEY: Record<Exclude<ReminderScheduleKind, 'cron'>, TranslationKey> = {
-  at: 'reminder_schedule.at',
-  every: 'reminder_schedule.every',
 }
 
 const VOICE_TRIGGER_MODE_KEYS: Record<VoiceTriggerMode, { label: TranslationKey; hint: TranslationKey }> = {
@@ -134,7 +124,7 @@ export function formatTtsAdjustmentValue(kind: 'rate' | 'pitch' | 'volume', valu
   return `${clampNumber(value, 0.5, 2).toFixed(2)}x`
 }
 
-export function toDatetimeLocalValue(value: string | null | undefined) {
+function toDatetimeLocalValue(value: string | null | undefined) {
   const timestamp = Date.parse(String(value ?? ''))
   if (Number.isNaN(timestamp)) {
     return ''
@@ -148,16 +138,6 @@ export function toDatetimeLocalValue(value: string | null | undefined) {
   const minutes = String(date.getMinutes()).padStart(2, '0')
 
   return `${year}-${month}-${day}T${hours}:${minutes}`
-}
-
-export function fromDatetimeLocalValue(value: string) {
-  const normalized = value.trim()
-  if (!normalized) {
-    return ''
-  }
-
-  const timestamp = Date.parse(normalized)
-  return Number.isNaN(timestamp) ? '' : new Date(timestamp).toISOString()
 }
 
 function resolveUiLocale(uiLanguage: UiLanguage) {
@@ -294,125 +274,6 @@ export type ConnectionResult = {
   checkedAt?: string
   evidence?: ConnectionEvidence
 }
-
-type LabeledOption<T> = {
-  value: T
-  label: string
-}
-
-export function getReminderScheduleOptions(uiLanguage: UiLanguage): Array<LabeledOption<ReminderScheduleKind>> {
-  return [
-    { value: 'at', label: pickTranslatedUiText(uiLanguage, REMINDER_SCHEDULE_OPTION_KEY.at) },
-    { value: 'every', label: pickTranslatedUiText(uiLanguage, REMINDER_SCHEDULE_OPTION_KEY.every) },
-    { value: 'cron', label: 'Cron' },
-  ]
-}
-
-export function getReminderTemplatePresets(uiLanguage: UiLanguage): Array<{
-  id: string
-  label: string
-  hint: string
-  buildDraft: (now: Date) => ReminderTaskDraftInput
-}> {
-  const ti = (key: TranslationKey) => pickTranslatedUiText(uiLanguage, key)
-
-  return [
-    {
-      id: 'hydrate',
-      label: ti('reminder_template.hydrate.label'),
-      hint: ti('reminder_template.hydrate.hint'),
-      buildDraft: (now) => ({
-        title: ti('reminder_template.hydrate.title'),
-        prompt: ti('reminder_template.hydrate.prompt'),
-        speechText: ti('reminder_template.hydrate.speech'),
-        action: { kind: 'notice' },
-        enabled: true,
-        schedule: {
-          kind: 'every',
-          everyMinutes: 60,
-          anchorAt: now.toISOString(),
-        },
-      }),
-    },
-    {
-      id: 'focus-break',
-      label: ti('reminder_template.focus_break.label'),
-      hint: ti('reminder_template.focus_break.hint'),
-      buildDraft: (now) => ({
-        title: ti('reminder_template.focus_break.title'),
-        prompt: ti('reminder_template.focus_break.prompt'),
-        speechText: ti('reminder_template.focus_break.speech'),
-        action: { kind: 'notice' },
-        enabled: true,
-        schedule: {
-          kind: 'every',
-          everyMinutes: 50,
-          anchorAt: now.toISOString(),
-        },
-      }),
-    },
-    {
-      id: 'night-wrap',
-      label: ti('reminder_template.night_wrap.label'),
-      hint: ti('reminder_template.night_wrap.hint'),
-      buildDraft: () => ({
-        title: ti('reminder_template.night_wrap.title'),
-        prompt: ti('reminder_template.night_wrap.prompt'),
-        speechText: ti('reminder_template.night_wrap.speech'),
-        action: { kind: 'notice' },
-        enabled: true,
-        schedule: {
-          kind: 'cron',
-          expression: '0 23 * * *',
-        },
-      }),
-    },
-    {
-      id: 'weather-brief',
-      label: ti('reminder_template.weather_brief.label'),
-      hint: ti('reminder_template.weather_brief.hint'),
-      buildDraft: () => ({
-        title: ti('reminder_template.weather_brief.title'),
-        prompt: ti('reminder_template.weather_brief.title'),
-        speechText: '',
-        action: {
-          kind: 'weather',
-          location: '',
-        },
-        enabled: true,
-        schedule: {
-          kind: 'cron',
-          expression: '0 9 * * *',
-        },
-      }),
-    },
-    {
-      id: 'ai-news',
-      label: 'AI News',
-      hint: ti('reminder_template.ai_news.hint'),
-      buildDraft: () => ({
-        title: 'AI News',
-        prompt: ti('reminder_template.ai_news.prompt'),
-        speechText: '',
-        action: {
-          // Query stays Chinese because the backend web search expects a
-          // Chinese query for this preset; localizing the query itself
-          // would change the search behavior for zh users too.
-          kind: 'web_search',
-          query: 'AI 新闻',
-          limit: 5,
-        },
-        enabled: true,
-        schedule: {
-          kind: 'cron',
-          expression: '0 10 * * *',
-        },
-      }),
-    },
-  ]
-}
-
-export type ReminderTaskActionKind = ReminderTaskAction['kind']
 
 const SETTINGS_SECTION_IDS = [
   'console',

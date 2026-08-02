@@ -72,7 +72,7 @@ logVoiceEvent('recognized transcript', {
   wakeWordConfigured: true,
 })
 `,
-  'src/components/settingsSections/AutonomySection.tsx': 'Authorization: Bearer &lt;{webhookInfo.tokenFileName}\n',
+  'src/features/settingsV3/AutonomySectionV3.tsx': 'tokenFileName || \'notification-webhook-token.txt\'\n',
   'src/lib/logger.ts': `
 function summarizePrivateValue() {}
 export function sanitizeLogMeta() {}

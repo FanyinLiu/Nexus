@@ -178,9 +178,9 @@ test('English Spotlight copy stays concise and product-facing', async () => {
 })
 
 test('release spotlight actions use the voice section and existing icon vocabulary', () => {
-  const aboutPanel = readWorkspaceFile('src/components/settingsSections/AboutPanel.tsx')
-  const consoleSection = readWorkspaceFile('src/components/settingsSections/ConsoleSection.tsx')
-  const actions = readWorkspaceFile('src/components/settingsSections/ReleaseSpotlightActions.tsx')
+  const aboutPanel = readWorkspaceFile('src/features/settingsV3/AboutPanel.tsx')
+  const consoleSection = readWorkspaceFile('src/features/settingsV3/ConsoleSectionV3.tsx')
+  const actions = readWorkspaceFile('src/features/settingsV3/ReleaseSpotlightActions.tsx')
 
   assert.match(aboutPanel, /onOpenSettingsSection\?: \(sectionId: SettingsSectionId\) => void/)
   assert.match(consoleSection, /type SettingsSectionId/)

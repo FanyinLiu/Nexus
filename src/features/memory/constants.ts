@@ -1,4 +1,4 @@
-import type { TranslationKey } from '../../types/i18n'
+import type { TranslationKey } from '../../types/i18n.ts'
 
 export const LOCAL_HASH_MEMORY_MODEL_ID = 'local-hash-v1'
 
@@ -26,6 +26,10 @@ export const MEMORY_EMBEDDING_MODEL_OPTIONS: readonly MemoryEmbeddingModelOption
   },
 ] as const
 
+// Alias for the settings default — the local-hash model id doubles as the
+// fallback embedding model when no remote model is configured. Kept as a
+// separate name so the two call sites (model selection vs settings default)
+// stay semantically distinct.
 export const DEFAULT_MEMORY_EMBEDDING_MODEL = LOCAL_HASH_MEMORY_MODEL_ID
 
 export type ScreenVlmModelOption = {

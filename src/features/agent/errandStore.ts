@@ -26,7 +26,7 @@ import {
   createId,
 } from '../../lib/storage/core.ts'
 
-export type ErrandStatus = 'queued' | 'running' | 'completed' | 'failed' | 'delivered'
+type ErrandStatus = 'queued' | 'running' | 'completed' | 'failed' | 'delivered'
 
 export interface ErrandRecord {
   id: string
@@ -211,14 +211,6 @@ export function updateErrand(id: string, patch: Partial<ErrandRecord>): ErrandRe
   all[idx] = next
   persist(all)
   return next
-}
-
-export function removeErrand(id: string): boolean {
-  const all = loadErrands()
-  const next = all.filter((e) => e.id !== id)
-  if (next.length === all.length) return false
-  persist(next)
-  return true
 }
 
 export function findRunnableErrand(): ErrandRecord | null {

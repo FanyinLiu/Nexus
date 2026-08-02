@@ -168,39 +168,6 @@ export function openArc(input: OpenArcInput, now: Date = new Date()): OpenArcRec
   return arc
 }
 
-export function resolveArc(
-  id: string,
-  closingNote?: string,
-  now: Date = new Date(),
-): OpenArcRecord | null {
-  const all = loadOpenArcs()
-  const idx = all.findIndex((a) => a.id === id)
-  if (idx === -1) return null
-  const updated: OpenArcRecord = {
-    ...all[idx],
-    status: 'resolved',
-    resolvedAt: now.toISOString(),
-    ...(closingNote?.trim() ? { closingNote: closingNote.trim() } : {}),
-  }
-  all[idx] = updated
-  persist(all)
-  return updated
-}
-
-export function dropArc(id: string, now: Date = new Date()): OpenArcRecord | null {
-  const all = loadOpenArcs()
-  const idx = all.findIndex((a) => a.id === id)
-  if (idx === -1) return null
-  const updated: OpenArcRecord = {
-    ...all[idx],
-    status: 'dropped',
-    droppedAt: now.toISOString(),
-  }
-  all[idx] = updated
-  persist(all)
-  return updated
-}
-
 export function recordCheckInFired(id: string, now: Date = new Date()): OpenArcRecord | null {
   const all = loadOpenArcs()
   const idx = all.findIndex((a) => a.id === id)
@@ -213,14 +180,6 @@ export function recordCheckInFired(id: string, now: Date = new Date()): OpenArcR
   all[idx] = updated
   persist(all)
   return updated
-}
-
-export function removeArc(id: string): boolean {
-  const all = loadOpenArcs()
-  const next = all.filter((a) => a.id !== id)
-  if (next.length === all.length) return false
-  persist(next)
-  return true
 }
 
 /**

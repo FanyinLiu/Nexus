@@ -25,7 +25,7 @@ const CHECKED_FILES = [
   'src/hooks/chat/assistantReply.ts',
   'src/hooks/useChat.ts',
   'src/hooks/voice/transcriptHandling.ts',
-  'src/components/settingsSections/AutonomySection.tsx',
+  'src/features/settingsV3/AutonomySectionV3.tsx',
   'src/lib/logger.ts',
   'src/lib/privacy/bridgeMessagePrivacy.ts',
   'src/lib/privacy/notificationMessageState.ts',
@@ -131,7 +131,7 @@ const UNSAFE_PATTERNS = [
   },
   {
     id: 'webhook-token-rendered-in-settings',
-    file: 'src/components/settingsSections/AutonomySection.tsx',
+    file: 'src/features/settingsV3/AutonomySectionV3.tsx',
     pattern: /webhookInfo\?\.authHeader|Authorization:\s*\{webhookInfo/,
     message: 'settings UI must not render the plaintext notification webhook token',
   },
@@ -213,8 +213,8 @@ const REQUIRED_PHRASES = [
   },
   {
     id: 'webhook-settings-token-placeholder',
-    file: 'src/components/settingsSections/AutonomySection.tsx',
-    phrases: ['Authorization: Bearer &lt;{webhookInfo.tokenFileName'],
+    file: 'src/features/settingsV3/AutonomySectionV3.tsx',
+    phrases: ['tokenFileName || \'notification-webhook-token.txt\''],
   },
   {
     id: 'tencent-asr-transcript-log-metadata',

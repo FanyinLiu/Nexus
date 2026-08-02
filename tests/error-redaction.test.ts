@@ -317,16 +317,15 @@ test('error redaction audit covers diagnostics feedback errors', () => {
   const report = buildErrorRedactionReport()
 
   assert.equal(report.summary.errors, 0)
-  assert.ok(report.checkedFiles.includes('src/components/settingsSections/DiagnosticsPanel.tsx'))
+  assert.ok(report.checkedFiles.includes('src/features/settingsV3/ConsoleSectionV3.tsx'))
 })
 
-test('error redaction audit covers settings reminder and integration feedback errors', () => {
+test('error redaction audit covers settings integration feedback errors', () => {
   const report = buildErrorRedactionReport()
 
   assert.equal(report.summary.errors, 0)
-  assert.ok(report.checkedFiles.includes('src/components/settingsSections/ChatSection.tsx'))
-  assert.ok(report.checkedFiles.includes('src/components/settingsSections/ContextSection.tsx'))
-  assert.ok(report.checkedFiles.includes('src/components/settingsSections/IntegrationsSection.tsx'))
+  assert.ok(report.checkedFiles.includes('src/features/settingsV3/ChatStudioV3.tsx'))
+  assert.ok(report.checkedFiles.includes('src/features/settingsV3/IntegrationsSectionV3.tsx'))
 })
 
 test('error redaction audit covers settings archive action feedback errors', () => {
@@ -355,8 +354,7 @@ test('error redaction audit covers settings export and locale support logs', () 
   const report = buildErrorRedactionReport()
 
   assert.equal(report.summary.errors, 0)
-  assert.ok(report.checkedFiles.includes('src/components/settingsSections/LettersSection.tsx'))
-  assert.ok(report.checkedFiles.includes('src/components/settingsSections/MoodMapPanel.tsx'))
+  assert.ok(report.checkedFiles.includes('src/features/settingsV3/LettersSectionV3.tsx'))
   assert.ok(report.checkedFiles.includes('src/components/SettingsDrawer.tsx'))
   assert.ok(report.checkedFiles.includes('src/app/providers/I18nProvider.tsx'))
 })

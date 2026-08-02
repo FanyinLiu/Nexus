@@ -158,7 +158,7 @@ test('desktop context diagnostics is stable for identical capability inputs', ()
 })
 
 test('MemorySection consumes the diagnostics view model instead of inline platform logic', () => {
-  const source = readFileSync(join(process.cwd(), 'src/components/settingsSections/MemorySection.tsx'), 'utf8')
+  const source = readFileSync(join(process.cwd(), 'src/features/settingsV3/MemorySectionV3.tsx'), 'utf8')
 
   assert.match(source, /resolveDesktopContextDiagnostics\(/)
   assert.doesNotMatch(source, /getPlatformDependencyHint/)

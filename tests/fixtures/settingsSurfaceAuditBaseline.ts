@@ -195,18 +195,20 @@ export function SettingsDrawerActiveSection({ confirm }) {
   )
 }
 `,
-  'src/components/settingsSections/ToolsSection.tsx': `
-export function ToolsSection({ draft }) {
+  'src/features/settingsV3/ToolsSectionV3.tsx': `
+export function ToolsSectionV3({ draft }) {
   const webSearchApiKeyInputValue = displaySecretInputValue(draft.toolWebSearchApiKey)
   return (
     <>
-      <ToggleField field="toolWebSearchEnabled" />
-      <ToggleField field="toolWeatherEnabled" />
-      <ToggleField field="toolOpenExternalEnabled" />
-      <ToggleField field="toolOpenExternalRequiresConfirmation" disabled={!draft.toolOpenExternalEnabled} />
+      <SettingsV3Toggle checked={draft.toolWebSearchEnabled} />
+      <SettingsV3Toggle checked={draft.toolWeatherEnabled} />
+      <SettingsV3Toggle checked={draft.toolOpenExternalEnabled} />
+      <SettingsV3Toggle checked={draft.toolOpenExternalRequiresConfirmation} disabled={!draft.toolOpenExternalEnabled} />
       <select disabled={!draft.toolWebSearchEnabled} />
       <input value={webSearchApiKeyInputValue} disabled={!draft.toolWebSearchEnabled || !webSearchProvider.requiresApiKey} />
-      <input disabled={!draft.toolWeatherEnabled} />
+      {draft.toolWeatherEnabled ? (
+        <input disabled={!draft.toolWeatherEnabled} />
+      ) : null}
     </>
   )
 }

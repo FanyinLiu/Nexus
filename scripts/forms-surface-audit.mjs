@@ -9,7 +9,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const REQUIRED_FILES = [
   'docs/FORMS_SURFACE_REFERENCE_REVIEW.md',
   'src/components/settingsFields.tsx',
-  'src/components/settingsSections',
+  'src/features/settingsV3',
   'src/app/styles/settings.css',
   'src/app/styles/settings-home.css',
   'src/app/styles/settings-visual-system.css',
@@ -19,10 +19,10 @@ const REQUIRED_FILES = [
 
 const REQUIRED_FILE_READS = [
   'src/components/settingsFields.tsx',
-  'src/components/settingsSections/ModelSection.tsx',
-  'src/components/settingsSections/MemorySection.tsx',
-  'src/components/settingsSections/ToolsSection.tsx',
-  'src/components/settingsSections/WindowSection.tsx',
+  'src/features/settingsV3/ModelSectionV3.tsx',
+  'src/features/settingsV3/MemorySectionV3.tsx',
+  'src/features/settingsV3/ToolsSectionV3.tsx',
+  'src/features/settingsV3/WindowSectionV3.tsx',
   'src/app/styles/settings.css',
   'src/app/styles/settings-home.css',
   'src/app/styles/settings-visual-system.css',
@@ -228,7 +228,7 @@ export function buildFormsSurfaceReport(root = ROOT) {
     ...REQUIRED_FILE_READS,
   ])
   const combinedSections = REQUIRED_FILE_READS
-    .filter((file) => file.startsWith('src/components/settingsSections/'))
+    .filter((file) => file.startsWith('src/features/settingsV3/'))
     .map((file) => files.get(file) ?? '')
     .join('\n')
   const settingsFields = files.get('src/components/settingsFields.tsx') ?? ''

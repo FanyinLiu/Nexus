@@ -1,15 +1,11 @@
 import type { AppSettings, PetMood } from '../../types'
-import { voiceDebug } from '../../features/voice/voiceDebugLog'
-import { voiceResumeStore } from '../../features/voice/voiceResumeStore'
+import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
+import { voiceResumeStore } from '../../features/voice/voiceResumeStore.ts'
 import {
   createStreamingSpeechOutputController,
   type StreamingSpeechOutputRuntime,
-} from './streamingSpeechOutput'
-import {
-  createPipelineStreamingSpeechController,
-  isPipelineTtsEnabled,
-} from './pipelineStreamingSpeechOutput.ts'
-import type { StreamingSpeechOutputController } from './types'
+} from './streamingSpeechOutput.ts'
+import type { StreamingSpeechOutputController } from './types.ts'
 
 type BaseSpeechReplyOptions = {
   speechGeneration: number
@@ -181,19 +177,12 @@ export function beginStreamingSpeechReplyRuntime(
       speechGeneration: options.speechGeneration,
     }
 
-    // Feature-flag gate for the new pipecat-style pipeline. Flip via
-    //   localStorage.setItem('nexus:useTtsPipeline', 'true')
-    // then reload. Default false keeps the legacy controller active
-    // until the migration lands for everyone.
-    if (isPipelineTtsEnabled()) {
-      voiceDebug('SpeechReply', 'using pipeline TTS controller (flag: nexus:useTtsPipeline)')
-      return createPipelineStreamingSpeechController(
-        options.currentSettings,
-        options.streamingRuntime,
-        callbacks,
-      )
-    }
-
+    // The pipecat-style pipeline (SentenceAggregator → TTSStreamService →
+    // AudioPlayerSink) was removed in this cleanup pass: it was gated behind
+    // the nexus:useTtsPipeline flag (default off) because it stalled
+    // waitForCompletion without emitting audio, and the legacy controller
+    // below has been reliable since v0.2.x. The pipeline code lives on in
+    // git history if the architecture is ever revisited.
     return createStreamingSpeechOutputController(
       options.currentSettings,
       options.streamingRuntime,

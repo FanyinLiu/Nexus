@@ -58,7 +58,7 @@ test('visual amplitude leaves subscribe to the throttled snapshot only', async (
   const [sprite, petView, consoleSection, consoleV3, vts] = await Promise.all([
     read('src/features/pet/components/SpritePetCanvas.tsx'),
     read('src/app/views/LegacyPetView.tsx'),
-    read('src/components/settingsSections/ConsoleSection.tsx'),
+    read('src/features/settingsV3/ConsoleSectionV3.tsx'),
     read('src/features/settingsV3/ConsoleSectionV3.tsx'),
     read('src/features/pet/vts/useVTSBridge.ts'),
   ])
@@ -67,7 +67,7 @@ test('visual amplitude leaves subscribe to the throttled snapshot only', async (
   assert.match(sprite, /const clampedSpeechLevel = isSpeaking[\s\S]*subscribedSpeechLevel[\s\S]*:\s*0/)
   assert.match(petView, /function PetMicBars[\s\S]*useSpeechLevelSnapshot\(/)
   assert.match(consoleSection, /function ConsoleSpeechLevelMeta[\s\S]*useSpeechLevelSnapshot\(source\)/)
-  assert.doesNotMatch(consoleSection.slice(consoleSection.indexOf('export const ConsoleSection')), /useSpeechLevelSnapshot\(/)
+  assert.doesNotMatch(consoleSection.slice(consoleSection.indexOf('export const ConsoleSectionV3')), /useSpeechLevelSnapshot\(/)
   assert.match(consoleV3, /function ConsoleSpeechLevelMeta[\s\S]*useSpeechLevelSnapshot\(source\)/)
   assert.doesNotMatch(consoleV3.slice(consoleV3.indexOf('export const ConsoleSectionV3')), /useSpeechLevelSnapshot\(/)
   assert.match(vts, /speechLevelSource\.getSnapshot\(\)/)

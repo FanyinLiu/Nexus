@@ -46,8 +46,8 @@ export function TextField() {
   )
 }
 `,
-  'src/components/settingsSections/ModelSection.tsx': `
-export function ModelSection() {
+  'src/features/settingsV3/ModelSectionV3.tsx': `
+export function ModelSectionV3() {
   return (
     <label>
       <span>Provider</span>
@@ -59,9 +59,9 @@ export function ModelSection() {
   )
 }
 `,
-  'src/components/settingsSections/MemorySection.tsx': 'export function MemorySection() { return <label htmlFor="memory"><input id="memory" /></label> }',
-  'src/components/settingsSections/ToolsSection.tsx': 'export function ToolsSection() { return <label htmlFor="tool"><input id="tool" /></label> }',
-  'src/components/settingsSections/WindowSection.tsx': 'export function WindowSection() { return <label htmlFor="window"><input id="window" /></label> }',
+  'src/features/settingsV3/MemorySectionV3.tsx': 'export function MemorySectionV3() { return <label htmlFor="memory"><input id="memory" /></label> }',
+  'src/features/settingsV3/ToolsSectionV3.tsx': 'export function ToolsSectionV3() { return <label htmlFor="tool"><input id="tool" /></label> }',
+  'src/features/settingsV3/WindowSectionV3.tsx': 'export function WindowSectionV3() { return <label htmlFor="window"><input id="window" /></label> }',
   'src/app/styles/settings.css': `
 :root { --settings-control-height: 26px; }
 .settings-form-row {}
@@ -101,7 +101,7 @@ export function ModelSection() {
 
 function createFixture(overrides: Record<string, string | null> = {}) {
   const root = mkdtempSync(join(tmpdir(), 'nexus-forms-surface-audit-'))
-  mkdirSync(join(root, 'src/components/settingsSections'), { recursive: true })
+  mkdirSync(join(root, 'src/features/settingsV3'), { recursive: true })
   for (const [relativePath, baseline] of Object.entries(BASELINE_FILES)) {
     if (overrides[relativePath] === null) continue
     const absolutePath = join(root, relativePath)

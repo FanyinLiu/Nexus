@@ -124,7 +124,7 @@ export const SURFACE_EVIDENCE = {
   forms: {
     docs: ['docs/FORMS_SURFACE_REFERENCE_REVIEW.md', 'docs/SETTINGS_SURFACE_REFERENCE_REVIEW.md', 'docs/OPEN_SOURCE_UI_REFERENCE_AUDIT.md'],
     sourceFiles: [
-      'src/components/settingsSections',
+      'src/features/settingsV3',
       'src/app/styles/settings.css',
       'src/app/styles/settings-home.css',
     ],
@@ -146,7 +146,7 @@ export const SURFACE_EVIDENCE = {
       'src/components/SettingsDrawer.tsx',
       'src/components/SettingsDrawerActiveSection.tsx',
       'src/hooks/useModalFocusTrap.ts',
-      'src/components/settingsSections',
+      'src/features/settingsV3',
     ],
     commands: [
       'npm run focus:surface:audit',

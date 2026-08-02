@@ -16,7 +16,7 @@ export const REQUIRED_FILES = [
   'src/components/SettingsHomePresence.tsx',
   'src/components/SettingsHomeView.tsx',
   'src/components/SettingsDrawerActiveSection.tsx',
-  'src/components/settingsSections/ToolsSection.tsx',
+  'src/features/settingsV3/ToolsSectionV3.tsx',
   'src/features/settingsV3/settings-v3.css',
   'src/features/settingsV3/settings-v3-collection.css',
   'src/features/settingsV3/chat-section-v3.css',
