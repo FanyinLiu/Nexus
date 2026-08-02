@@ -30,6 +30,10 @@
 
 ---
 
+## 预览版 — v0.4.5-beta.1
+
+> **主题：维护与加固 Beta（无用户可见变化）。** 在正式 v0.4.5 稳定版之前发布，用于验证大批内部清理：可靠性修复（errand 恢复、删除不复活、衰减锚点、语音/聊天边界）、安全加固（SSRF、vault 完整性、IPC schema 拒绝未知字段）以及大规模死代码删除（旧设置面板约 1.2 万行、TTS 管线、import 后缀统一）。稳定版用户不会被自动升级；如需体验请手动下载并反馈。说明见 [RELEASE-NOTES-v0.4.5-beta.1.md](RELEASE-NOTES-v0.4.5-beta.1.md)（英文）与 [RELEASE-NOTES-v0.4.5-beta.1.zh-CN.md](RELEASE-NOTES-v0.4.5-beta.1.zh-CN.md)。
+
 ## 本次更新 — v0.4.4
 
 > **主题：维护与加固（工具链升级、安全修复、代码结构整理）。** 没有新功能、没有行为变化，只做底层依赖升级（含 brace-expansion CVE-2026-14257 修复）、Live2D 启动修复和内部代码结构整理。中文说明见 [RELEASE-NOTES-v0.4.4.zh-CN.md](RELEASE-NOTES-v0.4.4.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.4.md](RELEASE-NOTES-v0.4.4.md)。

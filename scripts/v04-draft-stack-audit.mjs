@@ -10,6 +10,10 @@ const CURRENT_STABLE_RELEASE = '0.4.4'
 const PREVIOUS_PUBLIC_RELEASE = '0.4.3'
 const DRAFT_RELEASES = ['0.4.5']
 const LOCALIZED_DRAFT_RELEASES = ['0.4.5']
+// While a draft-layer beta is in flight (v0.4.5-beta.N), the package version
+// legitimately leaves the stable release number; the draft invariants below
+// still hold because the stable entry point and draft status never change.
+const DRAFT_BETA_VERSION_PATTERN = /^0\.4\.5-beta\.\d+$/
 
 function escapedVersion(version) {
   return version.replaceAll('.', '\\.')
@@ -110,7 +114,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
   }
 
   const packageJson = readJson(root, 'package.json')
-  if (packageJson.version !== CURRENT_STABLE_RELEASE) {
+  if (packageJson.version !== CURRENT_STABLE_RELEASE && !DRAFT_BETA_VERSION_PATTERN.test(packageJson.version)) {
     versionMismatches.push({
       file: 'package.json',
       expected: CURRENT_STABLE_RELEASE,

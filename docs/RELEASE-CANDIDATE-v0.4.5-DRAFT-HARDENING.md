@@ -12,13 +12,20 @@ only later draft.
 
 ## Release State Lock
 
-- Package version remains the current stable release `0.4.4`.
+- Package version: `0.4.5-beta.1` — the v0.4.5 draft layer entered the
+  standard beta flow (RELEASING.md Stage 1) on 2026-08-02. The beta carries
+  the accumulated maintenance below; it is a manual-download validation
+  slice, never an auto-update target.
 - `v0.4.4` remains the current public stable release entry point.
-- `v0.4.5` remains the only stacked draft review layer.
-- No package version bump.
-- No tag.
-- No GitHub Release.
-- No README stable-entry switch.
+- `v0.4.5` remains the only stacked draft review layer — the beta slice is
+  part of that layer, not a stable promotion.
+- No package version bump to `0.4.5` stable yet — the stable bump happens
+  only when the beta window closes and the protected tag is pushed.
+- No tag for the stable `v0.4.5` yet.
+- No GitHub Release for the stable `v0.4.5` yet (the beta tag goes through
+  the same protected workflow and stays a GitHub pre-release).
+- No README stable-entry switch — READMEs keep `v0.4.4` as the stable
+  entry point and list the beta as a preview block.
 - No new product behavior.
 
 ## Stacked Draft Graph
