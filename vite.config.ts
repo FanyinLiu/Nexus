@@ -55,9 +55,11 @@ function resolveManualChunk(id: string) {
   }
 
   // Settings sections are entered after the main surface is visible. Keep
-  // their shared UI code in one lazy chunk so the drawer entry remains small
-  // without creating an unbounded set of tiny section chunks.
-  if (normalizedId.includes('/src/components/settingsSections/')) {
+  // their shared UI primitives in one lazy chunk so the drawer entry remains
+  // small without creating an unbounded set of tiny section chunks. The
+  // per-section files stay individual lazy chunks (performance-baseline
+  // requires one chunk per section).
+  if (normalizedId.includes('/src/features/settingsV3/SettingsV3Primitives.tsx')) {
     return 'settings-ui'
   }
 
