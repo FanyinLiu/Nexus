@@ -79,10 +79,13 @@ test('store retrieve delete roundtrip persists plaintext entries atomically', as
   assert.deepEqual(onDisk, { 'settings:apiKey': { p: 'sk-test-key', v: 0 } })
 
   // Writes go through a temp file + rename, leaving no temp files behind and
-  // keeping the vault readable only by the owner.
+  // keeping the vault readable only by the owner (POSIX only; Windows does not
+  // honor POSIX file modes).
   const names = await fs.readdir(userDataDir)
   assert.deepEqual(names, ['vault.json'])
-  assert.equal((await fs.stat(vaultPath())).mode & 0o777, 0o600)
+  if (process.platform !== 'win32') {
+    assert.equal((await fs.stat(vaultPath())).mode & 0o777, 0o600)
+  }
 
   await vaultStoreMany({
     'settings:telegramBotToken': 'telegram-token',
