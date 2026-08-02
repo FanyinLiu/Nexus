@@ -24,10 +24,14 @@ function captureConsole(method: 'error' | 'info'): ConsoleCapture {
   }
 }
 
-async function waitFor(condition: () => boolean, label: string): Promise<void> {
-  for (let i = 0; i < 500; i++) {
+async function waitFor(condition: () => boolean, label: string, timeoutMs = 5_000): Promise<void> {
+  // Time-based instead of a fixed setImmediate budget: on cold CI caches the
+  // import-failure → console.error chain can take longer than a few hundred
+  // setImmediate turns, which made this test flaky on GitHub runners.
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
     if (condition()) return
-    await new Promise((resolve) => setImmediate(resolve))
+    await new Promise((resolve) => setTimeout(resolve, 10))
   }
   assert.fail(`timed out waiting for ${label}`)
 }

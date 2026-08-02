@@ -21,8 +21,7 @@ function normalizeMarkdownProse(text: string) {
   return text.replace(/[>\s]+/g, ' ').trim()
 }
 
-test('current release spotlight keeps the v0.4.4 stable structure explicit', () => {
-  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, '0.4.4')
+test('current release spotlight keeps the package version explicit', () => {
   const packageJson = JSON.parse(readWorkspaceFile('package.json')) as { version: string }
   assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, packageJson.version)
   assert.deepEqual(

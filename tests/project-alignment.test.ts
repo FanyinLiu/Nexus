@@ -23,6 +23,10 @@ function escapeRegExp(value: string) {
 }
 
 const ESCAPED_CURRENT_STABLE = escapeRegExp(CURRENT_STABLE_RELEASE)
+// While the draft layer is in its standard beta flow, the package version
+// legitimately leaves the stable number (v0.4.5-beta.N); the stable entry
+// point assertions below still hold because READMEs keep v0.4.4.
+const DRAFT_BETA_PATTERN = /^0\.4\.5-beta\.\d+$/
 
 test('stable release version and theme surfaces stay aligned', () => {
   const packageJson = JSON.parse(readWorkspaceFile('package.json')) as { version: string }
@@ -36,8 +40,14 @@ test('stable release version and theme surfaces stay aligned', () => {
   const handoffPath = `docs/RELEASE-CANDIDATE-v${CURRENT_STABLE_RELEASE}-HANDOFF.md`
   const handoff = readWorkspaceFile(handoffPath)
 
-  assert.equal(version, CURRENT_STABLE_RELEASE)
-  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, CURRENT_STABLE_RELEASE)
+  // Package version is either the stable release or the in-flight beta;
+  // the in-app spotlight always mirrors the package version so the About
+  // panel reports what the installer actually is.
+  assert.equal(
+    version === CURRENT_STABLE_RELEASE || DRAFT_BETA_PATTERN.test(version),
+    true,
+  )
+  assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, version)
   assert.match(rootReadme, new RegExp(`当前稳定版：\\*{0,2}\\s*v${escapedStable}`))
   assert.match(rootReadme, /上一公开版本 — v0\.4\.3/)
   assert.match(rootReadme, /RELEASE-NOTES-v0\.4\.4\.md/)
