@@ -111,8 +111,28 @@ export async function executeAssistantTurn(
           hardTimeoutTimer = null
           console.warn('[Chat] Turn hard timeout — forcing busy=false')
           if (activeTurnIdRef.current === turnId) {
-            void activeStreamAbortRef.current?.().catch(() => undefined)
+            // Same invalidate-before-abort ordering as cancelActiveTurn: once
+            // the turnId is stale, the aborted turn's late continuations take
+            // the silent stale-turn path in assistantReply instead of
+            // surfacing a pseudo 'aborted' error bubble, issuing follow-up
+            // requests, or landing late messages.
+            activeTurnIdRef.current += 1
+            const abort = activeStreamAbortRef.current
             activeStreamAbortRef.current = null
+            void abort?.().catch(() => undefined)
+            // The finally below only resets busy/voice for the current turn,
+            // so a self-invalidated timeout must do its own cleanup here.
+            busyRef.current = false
+            setBusy(false)
+            // Timeout gets its own user-facing copy — distinct from the
+            // user-cancel path, which stays silent (session:aborted).
+            ctx.setMood('confused')
+            setError(t('humanize.timeout'))
+            ctx.updatePetStatus(t('humanize.timeout'))
+            if (ctx.voiceStateRef.current === 'processing') {
+              ctx.setVoiceState('idle')
+              ctx.busEmit({ type: 'session:completed' })
+            }
           }
           resolve(false)
         }, TURN_HARD_TIMEOUT_MS)
