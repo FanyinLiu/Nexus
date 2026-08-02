@@ -33,6 +33,11 @@ export interface MemoryItem {
   recallCount?: number
   /** ISO timestamp of the most recent recall. */
   lastRecalledAt?: string
+  /**
+   * ISO timestamp up to which time decay has already been persisted into
+   * importanceScore. Absent on legacy data — fall back to createdAt.
+   */
+  decayedAt?: string
   /** IDs of semantically related memories (cross-session linking). */
   relatedIds?: string[]
   /** Emotion snapshot at creation time — enables emotion-aware recall. */

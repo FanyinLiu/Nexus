@@ -24,12 +24,36 @@ const IMPORTANCE_SEED: Record<MemoryImportance, number> = {
   low: 0.25,
 }
 
+/**
+ * Latest usable timestamp among the candidates, skipping missing or
+ * malformed values. Decay must anchor at the most recent write of
+ * importanceScore (recall boost OR persisted decay) — otherwise the same
+ * elapsed span gets decayed twice.
+ */
+function latestTimestamp(...candidates: Array<string | undefined>): string | undefined {
+  let best: string | undefined
+  let bestMs = Number.NEGATIVE_INFINITY
+  for (const candidate of candidates) {
+    if (!candidate) continue
+    const ms = Date.parse(candidate)
+    if (!Number.isFinite(ms)) continue
+    if (ms > bestMs) {
+      bestMs = ms
+      best = candidate
+    }
+  }
+  return best
+}
+
 /** Get the effective importance score, applying time-based decay. */
 export function getDecayedScore(memory: MemoryItem, now = Date.now()): number {
   const base = memory.importanceScore ?? IMPORTANCE_SEED[memory.importance ?? 'normal']
 
-  const referenceTime = memory.lastRecalledAt ?? memory.createdAt
-  const elapsedMs = Math.max(0, now - Date.parse(referenceTime))
+  const referenceTime = latestTimestamp(memory.lastRecalledAt, memory.decayedAt, memory.createdAt)
+  const referenceMs = referenceTime ? Date.parse(referenceTime) : Number.NaN
+  // Malformed timestamp → no decay (same guard as computeTimeDecay in memory.ts)
+  if (!Number.isFinite(referenceMs)) return base
+  const elapsedMs = Math.max(0, now - referenceMs)
   const elapsedDays = elapsedMs / MS_PER_DAY
 
   // Pinned memories don't decay
@@ -41,11 +65,15 @@ export function getDecayedScore(memory: MemoryItem, now = Date.now()): number {
 /**
  * Apply decay to all memories, returning a new array with updated scores.
  * Call this periodically (e.g. during dream cycles) to persist decayed values.
+ * Also advances the decay anchor (decayedAt) to `now` so repeated calls
+ * decay only the newly elapsed span instead of compounding from createdAt.
  */
 export function applyDecayBatch(memories: MemoryItem[], now = Date.now()): MemoryItem[] {
+  const decayedAt = new Date(now).toISOString()
   return memories.map((m) => ({
     ...m,
     importanceScore: getDecayedScore(m, now),
+    decayedAt,
   }))
 }
 
