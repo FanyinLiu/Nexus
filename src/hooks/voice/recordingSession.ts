@@ -3,9 +3,9 @@ import {
   getRecordingFileName,
   pickRecordingMimeType,
   requestVoiceInputStream,
-} from '../../features/voice/runtimeSupport'
-import { createAdaptiveRmsGate } from './support'
-import type { ApiRecordingSession } from './types'
+} from '../../features/voice/runtimeSupport.ts'
+import { createAdaptiveRmsGate } from './support.ts'
+import type { ApiRecordingSession } from './types.ts'
 
 type RecordingSessionSpeechEvent = {
   firstDetectedSpeech: boolean
@@ -150,11 +150,19 @@ export async function startRecordingSession(
   }
 
   mediaRecorder.onstop = async () => {
-    if (options.sessionRef.current === session) {
+    const isCurrentSession = options.sessionRef.current === session
+    if (isCurrentSession) {
       options.sessionRef.current = null
     }
 
     cleanupApiRecordingSession(session)
+
+    // Generation guard: when a cancelled session was already superseded by a
+    // newer recording, its late onstop must not run onStop — the 'aborted'
+    // dispatch would knock the new session's LISTENING state back to IDLE.
+    if (session.cancelled && !isCurrentSession) {
+      return
+    }
 
     await options.onStop?.({
       audioBlob: new Blob(session.chunks, { type: session.mimeType }),
