@@ -218,8 +218,6 @@ export function createMainWindow({ showOnReady = true } = {}) {
   })
 
   win.webContents.on('did-finish-load', () => {
-    const bounds = win.getBounds()
-    console.log('[pet-window] position on show:', bounds)
     // Keep the companion visible across workspaces where the platform supports
     // it. macOS uses visibleOnFullScreen; Linux maps to the same API without
     // that option. Windows does not support this API.

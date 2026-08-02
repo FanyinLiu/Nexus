@@ -162,7 +162,6 @@ export function createInitialWakewordRuntimeState(): WakewordRuntimeState {
     lastKeyword: '',
     lastTriggeredAt: '',
     lastStartedAt: '',
-    cooldownUntil: '',
     updatedAt: toIso(Date.now()),
   }
 }
@@ -208,7 +207,6 @@ export function createWakewordRuntime(
   })
   let listener: WakewordListener | null = null
   let retryTimer: TimerHandle | null = null
-  let cooldownTimer: TimerHandle | null = null
   let disposed = false
   let generation = 0
   let activeListenerId = 0
@@ -268,12 +266,6 @@ export function createWakewordRuntime(
     retryTimer = null
   }
 
-  function clearCooldownTimer() {
-    if (cooldownTimer == null) return
-    clearTimeoutFn(cooldownTimer)
-    cooldownTimer = null
-  }
-
   function stopListener() {
     const currentListener = listener
     listener = null
@@ -300,14 +292,6 @@ export function createWakewordRuntime(
     })
   }
 
-  function scheduleCooldown(untilMs: number) {
-    clearCooldownTimer()
-    cooldownTimer = setTimeoutFn(() => {
-      cooldownTimer = null
-      void reconcile()
-    }, Math.max(0, untilMs - now()))
-  }
-
   function handleRecoverableError(message: string, modelKind: WakewordModelKind) {
     stopListener()
 
@@ -325,7 +309,6 @@ export function createWakewordRuntime(
           : ti('voice.wakeword.retry_max_attempts_failed', { max: retryMaxAttempts, message }),
         error: message,
         retryCount: 0,
-        cooldownUntil: '',
       })
       return
     }
@@ -380,7 +363,6 @@ export function createWakewordRuntime(
       retryCount: 0,
       lastKeyword: normalizedKeyword,
       lastTriggeredAt: toIso(nowMs),
-      cooldownUntil: '',
     })
 
     options.onKeywordDetected?.(normalizedKeyword, state)
@@ -402,7 +384,6 @@ export function createWakewordRuntime(
 
     if (!currentConfig.enabled || !primaryWakeWord) {
       clearRetryTimer()
-      clearCooldownTimer()
       micReleased = false
       stopListener()
       emitState({
@@ -414,7 +395,6 @@ export function createWakewordRuntime(
         reason: '',
         error: '',
         retryCount: 0,
-        cooldownUntil: '',
       })
       return
     }
@@ -461,25 +441,6 @@ export function createWakewordRuntime(
     // were already dropped by the handleKeywordDetected mute check.
     micReleased = false
 
-    if (state.cooldownUntil) {
-      const cooldownUntilMs = Date.parse(state.cooldownUntil)
-      if (Number.isFinite(cooldownUntilMs) && cooldownUntilMs > now()) {
-        stopListener()
-        scheduleCooldown(cooldownUntilMs)
-        emitState({
-          ...basePatch,
-          phase: 'cooldown',
-          active: false,
-          available: true,
-          reason: ti('voice.wakeword.cooldown'),
-          error: '',
-        })
-        return
-      }
-    }
-
-    clearCooldownTimer()
-
     if (
       listener
       && (state.phase === 'listening' || state.phase === 'paused')
@@ -494,7 +455,6 @@ export function createWakewordRuntime(
         available: true,
         reason: '',
         error: '',
-        cooldownUntil: '',
         retryCount: 0,
       })
       return
@@ -510,7 +470,6 @@ export function createWakewordRuntime(
       reason: ti('voice.wakeword.checking_model'),
       error: '',
       modelKind: null,
-      cooldownUntil: '',
     })
 
     let availability: WakewordAvailabilityStatus
@@ -538,7 +497,6 @@ export function createWakewordRuntime(
         reason: availability.reason?.trim() || ti('voice.wakeword.model_unavailable'),
         error: '',
         retryCount: 0,
-        cooldownUntil: '',
       })
       return
     }
@@ -617,7 +575,6 @@ export function createWakewordRuntime(
         suspendReason: '',
       })
       clearRetryTimer()
-      clearCooldownTimer()
       micReleased = false
       activeListenerWakeWord = ''
       stopListener()
@@ -630,7 +587,6 @@ export function createWakewordRuntime(
         reason: '',
         error: '',
         retryCount: 0,
-        cooldownUntil: '',
       })
     },
     destroy() {
@@ -638,7 +594,6 @@ export function createWakewordRuntime(
       disposed = true
       generation += 1
       clearRetryTimer()
-      clearCooldownTimer()
       micReleased = false
       activeListenerWakeWord = ''
       stopListener()
