@@ -63,6 +63,10 @@ const localizedReadmes = {
 const desktopShortcutInstaller = readText('scripts/install-desktop-shortcut.ps1')
 const hiddenLauncher = readText('scripts/launch-nexus-hidden.vbs')
 const currentVersion = `v${pkg.version}`
+// While a draft-layer beta is in flight (v0.4.5-beta.N), the package version
+// leaves the stable number; the draft-stack report still anchors on the
+// stable entry point v0.4.4 until the beta window closes.
+const DRAFT_BETA_VERSION_PATTERN = /^v0\.4\.5-beta\.\d+$/
 const readmeFiles = {
   'README.md': readme,
   ...localizedReadmes,
@@ -510,7 +514,11 @@ check('v0.4 draft stack stays in quick PR-safe state', () => {
   const report = buildV04DraftStackReport(ROOT, { mode: 'quick' })
   assert(report.summary.errors === 0, `v0.4 draft stack audit has ${report.summary.errors} error(s); run npm run v04:draft-stack:audit:quick`)
   assert(report.schemaVersion === 3, 'v0.4 draft stack audit must report schema version 3')
-  assert(report.currentStableRelease === currentVersion, `v0.4 draft stack audit must report current stable release ${currentVersion}`)
+  assert(
+    report.currentStableRelease === 'v0.4.4'
+      && (currentVersion === 'v0.4.4' || DRAFT_BETA_VERSION_PATTERN.test(currentVersion)),
+    `v0.4 draft stack audit must report current stable release v0.4.4 (package is ${currentVersion})`,
+  )
   assert(report.previousPublicRelease === 'v0.4.3', 'v0.4 draft stack audit must retain v0.4.3 as the previous public release')
   assert(report.releaseState === 'stable', 'v0.4 draft stack audit must report stable release state')
   assert(

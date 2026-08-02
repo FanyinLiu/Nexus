@@ -37,7 +37,11 @@ The larger product steps are:
   layer, not a second active product slice; it now also collects the
   post-v0.4.4 maintenance already on main (the eslint-plugin-react-hooks 7.1.1
   upgrade and the high-risk IPC schema strip-to-reject rollout), still with no
-  user-facing behavior change. Future work must not move the
+  user-facing behavior change. As of 2026-08-02 the layer entered the standard
+  beta flow (`v0.4.5-beta.1`, RELEASING.md Stage 1): the beta slice is
+  published as a GitHub pre-release for manual validation, while the stable
+  `v0.4.5` bump, tag, and README stable-entry switch stay locked. Future work
+  must not move the
   package version, tag, GitHub Release, or README stable entry beyond
   `v0.4.4` until a later release is explicitly prepared.
 - **v0.5.0 — desktop pet behavior.** The visible companion can react to mouse

@@ -4,8 +4,9 @@
 
 ## 当前锚点
 
-- 当前代码候选来自 `package.json`：v0.4.4。
+- 当前代码候选来自 `package.json`：v0.4.5-beta.1（v0.4.5 维护层的标准 beta 流程；stable 版本仍为 v0.4.4）。
 - 最新公开稳定版是 v0.4.4；README 把稳定入口指向 v0.4.4，上一公开版本为 v0.4.3。
+- v0.4.5-beta.1 走标准 beta 流程（RELEASING.md Stage 1）：无用户可见行为变化的维护与加固切片，含可靠性修复、安全加固与大规模内部清理；稳定版用户不会被自动升级。
 - v0.4.4 采用明确的未签名发行策略；本版为维护与加固切片，经维护者例外直接晋升 stable（例外记录见 `docs/RELEASING.md`），签名准备度不是这个版本的阻塞项。
 - 官方 GitHub Releases 是唯一二进制来源；平台范围固定为 macOS arm64、Windows x64、Linux x64。
 - v0.3.6 这类更早历史只作为归档 release note / changelog 节点保留。
