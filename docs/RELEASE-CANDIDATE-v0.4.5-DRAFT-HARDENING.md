@@ -123,6 +123,26 @@ Local draft-hardening evidence collected for this handoff:
   successfully.
 - `git diff --check` — passed locally.
 
+Beta flow evidence (2026-08-03):
+
+- `prerelease-check -- v0.4.5-beta.1` — 30/30 checks passed, 0 warnings,
+  including packaged smoke, packaged sustained runtime (RSS 1.0033x vs
+  baseline), coverage 90.58%, and bundle 83 KB.
+- CI green on all three platforms (macOS / Windows / Linux) at the release
+  commit.
+- `v0.4.5-beta.1` published as a GitHub pre-release with full platform asset
+  closure (dmg/zip, exe, AppImage/deb/tar.gz, latest*.yml, SHA256SUMS-*).
+
+Two release-path defects were found and fixed during the beta:
+
+- Linux deb verification: Debian forbids `-` in version numbers, so
+  electron-builder emits `0.4.5~beta.1`; the verifier now compares the
+  Debian-normalized form (`scripts/verify-linux-release.mjs`, with a
+  regression test).
+- A draft created before a tag force-move failed publish's tag-binding
+  check; the stale draft was deleted (tag kept) and the workflow rerun so
+  `ensure-release` rebinds the draft to the current tag commit.
+
 The expected local smoke warnings remained limited to ad-hoc macOS signing,
 skipped notarization, optional missing KWS/SenseVoice models, and Electron/Node
 deprecation warnings. Temporary smoke artifacts such as `release-smoke` and

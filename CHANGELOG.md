@@ -6,6 +6,11 @@
 
 ## [Unreleased]
 
+> v0.4.5-beta.1 published as a GitHub pre-release on 2026-08-03 (standard
+> beta flow, no maintainer exception). Stable v0.4.5 waits for the beta
+> validation window; details in
+> [`docs/RELEASE-NOTES-v0.4.5-beta.1.md`](docs/RELEASE-NOTES-v0.4.5-beta.1.md).
+
 ### Added
 
 - **Packaged runtime baseline + warn-only regression compare** —

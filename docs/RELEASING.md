@@ -30,6 +30,26 @@ release commit by `.github/workflows/release.yml`, pass the clean remote
 asset/checksum closure gate, and only then become public. This exception does
 not change the default policy for v0.4.5 or later releases.
 
+### v0.4.5-beta.1 beta record — 2026-08-03
+
+v0.4.5 followed the **standard beta flow** (no maintainer exception):
+`v0.4.5-beta.1` was published as a GitHub pre-release on 2026-08-03 after the
+full automated gate (prerelease-check 30/30, verify:release, CI green on all
+three platforms). The v0.4.5 layer is a maintenance slice — no user-visible
+behavior change — covering reliability fixes, security hardening, and the
+large internal cleanup (legacy settings panels, never-enabled TTS pipeline,
+import extension unification). Stable v0.4.5 requires the beta validation
+window to close first; the stable bump, tag, and README stable-entry switch
+stay locked until then.
+
+Two release-path defects were found and fixed during this beta:
+- Linux deb verification compared `0.4.5-beta.1` against electron-builder's
+  Debian-normalized `0.4.5~beta.1` (Debian forbids `-` in versions); the
+  verifier now compares the normalized form (`scripts/verify-linux-release.mjs`).
+- A draft release created before a tag was force-moved to a fix commit
+  failed the publish tag-binding check; the fix is to delete the stale draft
+  (tag stays) and rerun the workflow so `ensure-release` rebinds the draft.
+
 This doc is the source of truth for every release. The short version:
 
 ```
