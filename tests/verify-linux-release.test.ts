@@ -299,6 +299,29 @@ test('Linux release verifier accepts one complete formal x64 artifact set', () =
   assert.ok(commands.some((command) => command.startsWith('dpkg-deb --field')))
 })
 
+test('Linux release verifier accepts the Debian-normalized pre-release version', () => {
+  // Debian forbids '-' in version numbers; electron-builder emits the
+  // pre-release separator as '~' (0.4.5-beta.1 -> 0.4.5~beta.1). The
+  // verifier must compare against the normalized form.
+  const report = verifyLinuxRelease('/release', {
+    expectedVersion: '0.4.5-beta.1',
+    executableName: 'nexus',
+    listFiles: () => RELEASE_FILES,
+    pathExists: () => true,
+    getMode: () => 0o100755,
+    runCommand: (command: string) => {
+      if (command === 'file') return commandResult('ELF 64-bit LSB pie executable, x86-64')
+      if (command === 'dpkg-deb') return commandResult('Package: nexus\nVersion: 0.4.5~beta.1\nArchitecture: amd64\n')
+      return failedCommand()
+    },
+    inspectAppImage: () => ({ ok: true, errors: [], resourcesRoot: '/extract/AppImage/resources' }),
+    inspectDeb: () => ({ ok: true, errors: [], resourcesRoot: '/extract/deb/resources' }),
+    inspectTarball: () => ({ ok: true, errors: [], executablePath: '/extract/Nexus/nexus' }),
+  })
+
+  assert.equal(report.ok, true)
+})
+
 test('Linux release verifier rejects permissions, architecture, deb identity, tar failure, and tool absence', () => {
   const report = verifyLinuxRelease('/release', {
     expectedVersion: '0.4.3',

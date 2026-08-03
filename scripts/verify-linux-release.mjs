@@ -457,9 +457,13 @@ export function verifyLinuxRelease(releaseDir, options = {}) {
   } else {
     try {
       const fields = parseDebFields(debFields.stdout)
+      // Debian version numbers cannot contain '-' — electron-builder emits the
+      // pre-release separator as '~' (0.4.5-beta.1 -> 0.4.5~beta.1). Compare
+      // against the Debian-normalized form.
+      const debExpectedVersion = expectedVersion.replaceAll('-', '~')
       const expected = {
         package: FORMAL_PACKAGE_NAME,
-        version: expectedVersion,
+        version: debExpectedVersion,
         architecture: 'amd64',
       }
       for (const [field, expectedValue] of Object.entries(expected)) {
