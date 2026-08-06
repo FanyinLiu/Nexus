@@ -1,3 +1,25 @@
+import { LOCAL_DATA_COMPANION_STORAGE_KEYS } from '../shared/localDataStorageKeys.js'
+
+// The 12 companion localData keys are single-sourced in
+// shared/localDataStorageKeys.js (tuple order: relationship group, then task
+// group — pinned by tests/shared-contract.test.ts). Entries below reference
+// them through these aliases so each contract `constant` name stays bound to
+// the same key string the renderer registry declares.
+const [
+  AUTONOMY_RELATIONSHIP_STORAGE_KEY,
+  AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY,
+  AUTONOMY_EMOTION_STORAGE_KEY,
+  AUTONOMY_EMOTION_HISTORY_STORAGE_KEY,
+  AUTONOMY_RHYTHM_STORAGE_KEY,
+  USER_AFFECT_HISTORY_STORAGE_KEY,
+  PLAN_STORE_STORAGE_KEY,
+  OPEN_GOALS_STORAGE_KEY,
+  AGENT_TRACE_STORAGE_KEY,
+  BACKGROUND_TASKS_STORAGE_KEY,
+  ERRAND_STORE_STORAGE_KEY,
+  REMINDER_TASKS_STORAGE_KEY,
+] = LOCAL_DATA_COMPANION_STORAGE_KEYS
+
 export const STORAGE_CONTRACT_VERSION = 1
 
 export const STORAGE_KEY_CONTRACTS = [
@@ -19,7 +41,7 @@ export const STORAGE_KEY_CONTRACTS = [
   { constant: 'VOICE_PIPELINE_STORAGE_KEY', key: 'nexus:voice-pipeline', domain: 'voice', classification: 'settings', authority: 'renderer-localStorage', migration: 'keep-renderer-cache' },
   { constant: 'VOICE_TRACE_STORAGE_KEY', key: 'nexus:voice-trace', domain: 'voice', classification: 'debug', authority: 'renderer-localStorage', migration: 'do-not-migrate' },
   { constant: 'ONBOARDING_STORAGE_KEY', key: 'nexus:onboarding', domain: 'onboarding', classification: 'settings', authority: 'renderer-localStorage-with-sqlite-mirror', migration: 'keep-mirror-until-authority-cutover' },
-  { constant: 'REMINDER_TASKS_STORAGE_KEY', key: 'nexus:reminder-tasks', domain: 'reminders', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
+  { constant: 'REMINDER_TASKS_STORAGE_KEY', key: REMINDER_TASKS_STORAGE_KEY, domain: 'reminders', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'DEBUG_CONSOLE_EVENTS_STORAGE_KEY', key: 'nexus:debug-console-events', domain: 'debug', classification: 'debug', authority: 'renderer-localStorage', migration: 'do-not-migrate' },
   { constant: 'AUTONOMY_DREAM_LOG_STORAGE_KEY', key: 'nexus:autonomy:dream-log', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'AUTONOMY_CONTEXT_TRIGGERS_STORAGE_KEY', key: 'nexus:autonomy:context-triggers', domain: 'companion-rhythm', classification: 'settings', authority: 'renderer-localStorage', migration: 'keep-renderer-cache' },
@@ -29,26 +51,26 @@ export const STORAGE_KEY_CONTRACTS = [
   { constant: 'COMPANION_SUMMARY_SESSION_STARTED_AT_KEY', key: 'nexus:companion-awareness:session-started-at', domain: 'companion-awareness', classification: 'session', authority: 'renderer-sessionStorage', migration: 'do-not-migrate' },
   { constant: 'AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY', key: 'nexus:autonomy:notification-messages', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'AUTONOMY_GOALS_STORAGE_KEY', key: 'nexus:autonomy:goals', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
-  { constant: 'AUTONOMY_RELATIONSHIP_STORAGE_KEY', key: 'nexus:autonomy:relationship', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
-  { constant: 'AUTONOMY_RHYTHM_STORAGE_KEY', key: 'nexus:autonomy:rhythm', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
-  { constant: 'AUTONOMY_EMOTION_STORAGE_KEY', key: 'nexus:autonomy:emotion', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
-  { constant: 'AUTONOMY_EMOTION_HISTORY_STORAGE_KEY', key: 'nexus:autonomy:emotion-history', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
-  { constant: 'AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY', key: 'nexus:autonomy:relationship-history', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
+  { constant: 'AUTONOMY_RELATIONSHIP_STORAGE_KEY', key: AUTONOMY_RELATIONSHIP_STORAGE_KEY, domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
+  { constant: 'AUTONOMY_RHYTHM_STORAGE_KEY', key: AUTONOMY_RHYTHM_STORAGE_KEY, domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
+  { constant: 'AUTONOMY_EMOTION_STORAGE_KEY', key: AUTONOMY_EMOTION_STORAGE_KEY, domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
+  { constant: 'AUTONOMY_EMOTION_HISTORY_STORAGE_KEY', key: AUTONOMY_EMOTION_HISTORY_STORAGE_KEY, domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
+  { constant: 'AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY', key: AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY, domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'PROACTIVE_AWAY_LAST_FIRED_STORAGE_KEY', key: 'nexus:proactive:away-last-fired', domain: 'companion-rhythm', classification: 'ephemeral', authority: 'renderer-localStorage', migration: 'do-not-migrate' },
   { constant: 'PROACTIVE_BRACKET_STATE_STORAGE_KEY', key: 'nexus:proactive:bracket-state', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'LETTER_STORE_STORAGE_KEY', key: 'nexus:letters', domain: 'letters', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'AUTH_PROFILES_STORAGE_KEY', key: 'nexus:auth-profiles', domain: 'auth', classification: 'settings', authority: 'renderer-localStorage-with-main-vault-for-secrets', migration: 'migrate-non-secret-settings-later' },
   { constant: 'COST_ENTRIES_STORAGE_KEY', key: 'nexus:cost-entries', domain: 'metering', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'BUDGET_CONFIG_STORAGE_KEY', key: 'nexus:budget-config', domain: 'metering', classification: 'settings', authority: 'renderer-localStorage', migration: 'keep-renderer-cache' },
-  { constant: 'PLAN_STORE_STORAGE_KEY', key: 'nexus:plans', domain: 'companion-tasks', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite-before-task-expansion' },
-  { constant: 'OPEN_GOALS_STORAGE_KEY', key: 'nexus:open-goals', domain: 'companion-tasks', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite-before-task-expansion' },
-  { constant: 'AGENT_TRACE_STORAGE_KEY', key: 'nexus:agent-traces', domain: 'companion-tasks', classification: 'audit-adjacent', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite-before-task-expansion' },
-  { constant: 'BACKGROUND_TASKS_STORAGE_KEY', key: 'nexus:background-tasks', domain: 'companion-tasks', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite-before-task-expansion' },
+  { constant: 'PLAN_STORE_STORAGE_KEY', key: PLAN_STORE_STORAGE_KEY, domain: 'companion-tasks', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite-before-task-expansion' },
+  { constant: 'OPEN_GOALS_STORAGE_KEY', key: OPEN_GOALS_STORAGE_KEY, domain: 'companion-tasks', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite-before-task-expansion' },
+  { constant: 'AGENT_TRACE_STORAGE_KEY', key: AGENT_TRACE_STORAGE_KEY, domain: 'companion-tasks', classification: 'audit-adjacent', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite-before-task-expansion' },
+  { constant: 'BACKGROUND_TASKS_STORAGE_KEY', key: BACKGROUND_TASKS_STORAGE_KEY, domain: 'companion-tasks', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite-before-task-expansion' },
   { constant: 'MEMORY_CALLBACK_QUEUE_STORAGE_KEY', key: 'nexus:memory:callback-queue', domain: 'memory', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'MEMORY_ON_THIS_DAY_FIRED_STORAGE_KEY', key: 'nexus:memory:on-this-day-fired', domain: 'memory', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
-  { constant: 'ERRAND_STORE_STORAGE_KEY', key: 'nexus:agent:errands', domain: 'companion-tasks', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite-before-task-expansion' },
+  { constant: 'ERRAND_STORE_STORAGE_KEY', key: ERRAND_STORE_STORAGE_KEY, domain: 'companion-tasks', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite-before-task-expansion' },
   { constant: 'ERRAND_RUNNER_STATE_STORAGE_KEY', key: 'nexus:agent:errand-runner-state', domain: 'companion-tasks', classification: 'ephemeral', authority: 'renderer-localStorage', migration: 'do-not-migrate' },
-  { constant: 'USER_AFFECT_HISTORY_STORAGE_KEY', key: 'nexus:autonomy:user-affect-history', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
+  { constant: 'USER_AFFECT_HISTORY_STORAGE_KEY', key: USER_AFFECT_HISTORY_STORAGE_KEY, domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'FUTURE_CAPSULE_STORE_STORAGE_KEY', key: 'nexus:capsule:future-self', domain: 'letters', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'OPEN_ARC_STORE_STORAGE_KEY', key: 'nexus:arc:open-threads', domain: 'memory', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'GUIDANCE_TELEMETRY_STORAGE_KEY', key: 'nexus:autonomy:guidance-telemetry', domain: 'companion-rhythm', classification: 'debug', authority: 'renderer-localStorage', migration: 'do-not-migrate' },

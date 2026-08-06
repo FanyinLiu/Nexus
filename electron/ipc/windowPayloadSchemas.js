@@ -1,4 +1,6 @@
 import { validateIpcPayload } from './schemaValidator.js'
+import { RUNTIME_STATE_FIELD_NAMES } from '../../shared/runtimeStateFields.js'
+import { COMPANION_PRESENCE_PHASES } from '../../shared/runtimeStateSnapshot.js'
 
 const SHORT_TEXT_MAX = 256
 
@@ -60,31 +62,45 @@ const runtimeHeartbeatSchema = {
   },
 }
 
+// Boolean fields reject non-boolean values; string fields clamp to
+// SHORT_TEXT_MAX. Field names stay pinned to the shared contract tuple.
+const RUNTIME_STATE_BOOLEAN_FIELDS = new Set([
+  'continuousVoiceActive',
+  'panelSettingsOpen',
+  'wakewordActive',
+  'wakewordAvailable',
+  'searchInProgress',
+  'ttsInProgress',
+  'schedulerArmed',
+])
+
+// companionPresence is the only non-primitive runtime-state field: a nested
+// CompanionPresenceState object, enum-pinned to the shared phase tuple.
+// Unknown nested keys are stripped by the object validator.
+const companionPresenceSchema = {
+  type: 'object',
+  optional: true,
+  fields: {
+    phase: { type: 'enum', values: [...COMPANION_PRESENCE_PHASES] },
+    mood: { type: 'string', maxLength: SHORT_TEXT_MAX, clamp: true },
+    activeTaskLabel: optionalShortString,
+    reason: optionalShortString,
+    updatedAt: { type: 'string', maxLength: SHORT_TEXT_MAX, clamp: true },
+  },
+}
+
 const runtimeStateUpdateSchema = {
   type: 'object',
   optional: true,
   default: {},
   fields: {
-    mood: optionalShortString,
-    continuousVoiceActive: optionalBoolean,
-    panelSettingsOpen: optionalBoolean,
-    voiceState: optionalShortString,
-    hearingEngine: optionalShortString,
-    hearingPhase: optionalShortString,
-    wakewordPhase: optionalShortString,
-    wakewordActive: optionalBoolean,
-    wakewordAvailable: optionalBoolean,
-    wakewordWakeWord: optionalShortString,
-    wakewordReason: optionalShortString,
-    wakewordLastTriggeredAt: optionalShortString,
-    wakewordError: optionalShortString,
-    wakewordUpdatedAt: optionalShortString,
-    assistantActivity: optionalShortString,
-    searchInProgress: optionalBoolean,
-    ttsInProgress: optionalBoolean,
-    schedulerArmed: optionalBoolean,
-    schedulerNextRunAt: optionalShortString,
-    activeTaskLabel: optionalShortString,
+    ...Object.fromEntries(
+      RUNTIME_STATE_FIELD_NAMES.map((name) => [
+        name,
+        RUNTIME_STATE_BOOLEAN_FIELDS.has(name) ? optionalBoolean : optionalShortString,
+      ]),
+    ),
+    companionPresence: companionPresenceSchema,
   },
 }
 

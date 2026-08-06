@@ -8,6 +8,7 @@ import {
   SPRITE_PET_CELL_HEIGHT,
   SPRITE_PET_CELL_WIDTH,
   SPRITE_PET_COLUMNS,
+  SPRITE_PET_ROW_CONTRACT,
   SPRITE_PET_ROWS,
   readSpritePetPackage,
 } from '../electron/services/spritePetPackage.js'
@@ -17,17 +18,8 @@ const LEFT_MARGIN = 168
 const TOP_MARGIN = 56
 const RIGHT_MARGIN = 24
 const BOTTOM_MARGIN = 24
-const ROW_LABELS = [
-  'idle',
-  'running-right',
-  'running-left',
-  'waving',
-  'jumping',
-  'failed',
-  'waiting',
-  'running',
-  'review',
-]
+// Row labels mirror the shared atlas contract, in row order.
+const ROW_LABELS = SPRITE_PET_ROW_CONTRACT.map((entry) => entry.state)
 
 function printUsage() {
   console.error([

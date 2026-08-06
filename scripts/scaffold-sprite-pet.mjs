@@ -9,23 +9,15 @@ import {
   SPRITE_PET_CELL_HEIGHT,
   SPRITE_PET_CELL_WIDTH,
   SPRITE_PET_COLUMNS,
+  SPRITE_PET_ROW_CONTRACT,
   SPRITE_PET_ROWS,
   formatSpritePetDisplayName,
   readSpritePetPackage,
 } from '../electron/services/spritePetPackage.js'
 
 const DEFAULT_OUTPUT_DIR = 'output/pets'
-const ROW_LABELS = [
-  'idle',
-  'running-right',
-  'running-left',
-  'waving',
-  'jumping',
-  'failed',
-  'waiting',
-  'running',
-  'review',
-]
+// Row labels mirror the shared atlas contract, in row order.
+const ROW_LABELS = SPRITE_PET_ROW_CONTRACT.map((entry) => entry.state)
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 const CRC32_TABLE = makeCrc32Table()
 

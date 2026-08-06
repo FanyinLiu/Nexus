@@ -2,6 +2,8 @@ import { app } from 'electron'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
 import { synthesizeRemoteTts } from './services/ttsService.js'
 import { createTtsStreamService } from './ttsStreamService.js'
+import { createCompanionPresenceTracker } from './companionPresenceTracker.js'
+import { buildRuntimeStateSnapshot, updateRuntimeState } from './windowRuntimeState.js'
 
 import * as windowIpc from './ipc/windowIpc.js'
 import * as chatIpc from './ipc/chatIpc.js'
@@ -27,6 +29,14 @@ const AUDIO_TRANSCRIBE_TIMEOUT_MS = 20_000
 const AUDIO_VOICE_LIST_TIMEOUT_MS = 15_000
 
 const activeChatStreamControllers = new Map()
+
+// The main process owns companion presence: it is computed from the chat
+// request lifecycle and broadcast through the runtime-state channel. The mood
+// mirror rides whatever the renderer last reported.
+const companionPresence = createCompanionPresenceTracker({
+  publishPresence: (presence) => updateRuntimeState({ companionPresence: presence }),
+  getMood: () => buildRuntimeStateSnapshot().mood,
+})
 
 // Lazy-loaded modules — loaded on first use, not at startup.
 // Anything the renderer might invoke immediately on mount must go through the
@@ -74,6 +84,7 @@ export function registerIpc() {
     activeChatStreamControllers,
     CHAT_REQUEST_TIMEOUT_MS,
     CONNECTION_TEST_TIMEOUT_MS,
+    companionPresence,
   })
 
   audioIpc.register({

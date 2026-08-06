@@ -86,9 +86,9 @@ import {
   validateWebSearchToolPayload,
   validateWindowDragPayload,
 } from './payloadSchemas.js'
+import { POWER_EVENT_KINDS } from '../../shared/powerEventKinds.js'
 
 const POWER_EVENT_CHANNEL = 'app:power-event'
-const POWER_EVENT_KINDS = ['suspend', 'resume', 'lock-screen', 'unlock-screen', 'shutdown']
 let powerEventForwardingRegistered = false
 
 function summarizeFileDialogPayload(payload) {

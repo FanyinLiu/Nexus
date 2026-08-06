@@ -7,6 +7,8 @@
 // Domain modules under ./ build on top of these primitives.
 
 import { getRedactedLogErrorMessage } from '../logRedaction.ts'
+import { LOCAL_DATA_COMPANION_STORAGE_KEYS } from '../../../shared/localDataStorageKeys.js'
+import type { LocalDataCompanionStorageKey } from '../../../shared/localDataStorageKeys.js'
 
 export const CHAT_STORAGE_KEY = 'nexus:chat'
 export const CHAT_SESSIONS_STORAGE_KEY = 'nexus:chat:sessions'
@@ -58,37 +60,18 @@ export const OPEN_ARC_STORE_STORAGE_KEY = 'nexus:arc:open-threads'
 export const GUIDANCE_TELEMETRY_STORAGE_KEY = 'nexus:autonomy:guidance-telemetry'
 export const GUIDANCE_ANALYSIS_STORAGE_KEY = 'nexus:autonomy:guidance-analysis'
 
-export type CompanionLocalDataStorageKey =
-  | typeof AUTONOMY_RELATIONSHIP_STORAGE_KEY
-  | typeof AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY
-  | typeof AUTONOMY_EMOTION_STORAGE_KEY
-  | typeof AUTONOMY_EMOTION_HISTORY_STORAGE_KEY
-  | typeof AUTONOMY_RHYTHM_STORAGE_KEY
-  | typeof USER_AFFECT_HISTORY_STORAGE_KEY
-  | typeof PLAN_STORE_STORAGE_KEY
-  | typeof OPEN_GOALS_STORAGE_KEY
-  | typeof AGENT_TRACE_STORAGE_KEY
-  | typeof BACKGROUND_TASKS_STORAGE_KEY
-  | typeof ERRAND_STORE_STORAGE_KEY
-  | typeof REMINDER_TASKS_STORAGE_KEY
+// The 12 companion keys are single-sourced in shared/localDataStorageKeys.js
+// (tuple order: relationship group first, then task group — pinned by
+// tests/shared-contract.test.ts). The groupings below slice at that boundary.
+export type CompanionLocalDataStorageKey = LocalDataCompanionStorageKey
 
-export const COMPANION_RELATIONSHIP_STORAGE_KEYS = Object.freeze([
-  AUTONOMY_RELATIONSHIP_STORAGE_KEY,
-  AUTONOMY_RELATIONSHIP_HISTORY_STORAGE_KEY,
-  AUTONOMY_EMOTION_STORAGE_KEY,
-  AUTONOMY_EMOTION_HISTORY_STORAGE_KEY,
-  AUTONOMY_RHYTHM_STORAGE_KEY,
-  USER_AFFECT_HISTORY_STORAGE_KEY,
-])
+export const COMPANION_RELATIONSHIP_STORAGE_KEYS = Object.freeze(
+  LOCAL_DATA_COMPANION_STORAGE_KEYS.slice(0, 6),
+)
 
-export const COMPANION_TASK_STORAGE_KEYS = Object.freeze([
-  PLAN_STORE_STORAGE_KEY,
-  OPEN_GOALS_STORAGE_KEY,
-  AGENT_TRACE_STORAGE_KEY,
-  BACKGROUND_TASKS_STORAGE_KEY,
-  ERRAND_STORE_STORAGE_KEY,
-  REMINDER_TASKS_STORAGE_KEY,
-])
+export const COMPANION_TASK_STORAGE_KEYS = Object.freeze(
+  LOCAL_DATA_COMPANION_STORAGE_KEYS.slice(6),
+)
 
 const COMPANION_LOCAL_DATA_STORAGE_KEYS = new Set([
   ...COMPANION_RELATIONSHIP_STORAGE_KEYS,

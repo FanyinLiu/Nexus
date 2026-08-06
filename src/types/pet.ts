@@ -1,3 +1,11 @@
+// The phase enum lives in shared/runtimeStateSnapshot.js: the main process
+// emits these values (electron/companionPresenceTracker.js) and the renderer
+// branches on them, so the inventory is single-sourced across processes and
+// re-exported here for existing pet.ts consumers.
+import type { CompanionPresencePhase } from '../../shared/runtimeStateSnapshot.js'
+
+export type { CompanionPresencePhase }
+
 export interface AmbientPresenceState {
   text: string
   createdAt: string
@@ -40,17 +48,6 @@ export type PetMood =
   | 'playful'      // high energy + high warmth + low concern — bouncy/teasing
 
 export type PetTouchZone = 'head' | 'face' | 'body'
-
-export type CompanionPresencePhase =
-  | 'idle'
-  | 'online'
-  | 'thinking'
-  | 'speaking'
-  | 'listening'
-  | 'resting'
-  | 'waiting'
-  | 'error'
-  | 'offline'
 
 export interface CompanionPresenceState {
   phase: CompanionPresencePhase

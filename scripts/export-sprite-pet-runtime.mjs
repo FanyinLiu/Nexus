@@ -466,16 +466,10 @@ function buildCss() {
 }
 
 function buildRuntimeTypes() {
+  // The emitted state union mirrors the shared atlas contract row order.
+  const animationStateUnion = SPRITE_PET_ROW_CONTRACT.map(({ state }) => `  | '${state}'`).join('\n')
   return `export type SpritePetAnimationState =
-  | 'idle'
-  | 'running-right'
-  | 'running-left'
-  | 'waving'
-  | 'jumping'
-  | 'failed'
-  | 'waiting'
-  | 'running'
-  | 'review'
+${animationStateUnion}
 
 export type SpritePetFrame = {
   row: number

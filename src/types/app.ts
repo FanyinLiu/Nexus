@@ -4,6 +4,7 @@ import type { MemorySearchMode } from './memory.ts'
 import type { CompanionPresenceState, PetMood } from './pet.ts'
 import type { ThemeId } from './theme.ts'
 import type { WebSearchProviderId } from './tools.ts'
+import type { RuntimeStateSnapshotFieldName } from '../../shared/runtimeStateSnapshot.js'
 import type {
   AssistantRuntimeActivity,
   VadSensitivity,
@@ -490,3 +491,16 @@ export interface RuntimeStateSnapshot {
   panelLastSeenAt?: string
   updatedAt?: string
 }
+
+// Compile-time pin: the interface keys and the shared snapshot field tuple
+// (shared/runtimeStateSnapshot.js) must stay the same fact. Drift in either
+// direction fails `tsc -b` here instead of silently desynchronizing the two
+// processes.
+type AssertExactSnapshotShape<Condition extends true> = Condition
+export type RuntimeStateSnapshotShapePin = AssertExactSnapshotShape<
+  [RuntimeStateSnapshotFieldName] extends [keyof RuntimeStateSnapshot]
+    ? [keyof RuntimeStateSnapshot] extends [RuntimeStateSnapshotFieldName]
+      ? true
+      : false
+    : false
+>

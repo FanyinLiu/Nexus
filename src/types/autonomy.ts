@@ -7,11 +7,12 @@ export type AutonomyPhase = 'awake' | 'drowsy' | 'sleeping' | 'dreaming'
 export type FocusState = 'active' | 'idle' | 'away' | 'locked'
 
 /**
- * OS power event kinds from Electron's powerMonitor.
+ * OS power event kinds from Electron's powerMonitor — values single-sourced
+ * in shared/powerEventKinds.js and forwarded by electron/ipc/windowIpc.js.
  * @public consumed through the Electron bridge typing in src/vite-env.d.ts
  * (knip cannot see .d.ts consumers); also pinned by tests/ipc-bridge-contract.test.ts.
  */
-export type PowerEventKind = 'suspend' | 'resume' | 'lock-screen' | 'unlock-screen' | 'shutdown'
+export type { PowerEventKind } from '../../shared/powerEventKinds.js'
 
 // ── Tick state ────────────────────────────────────────────────────────────────
 

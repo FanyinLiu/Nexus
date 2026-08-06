@@ -95,7 +95,7 @@ function buildPreflightIpcError(preflightFailure) {
   return error
 }
 
-export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS, CONNECTION_TEST_TIMEOUT_MS }) {
+export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS, CONNECTION_TEST_TIMEOUT_MS, companionPresence }) {
   ipcMain.handle('chat:complete', async (event, payload) => {
     requireTrustedSender(event)
     payload = validateChatCompletionPayload('chat:complete', payload)
@@ -137,6 +137,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     })
 
     let response
+    companionPresence?.begin()
     try {
       // Bounded retry on transient 429/5xx/network blips before surfacing a
       // failure (the higher-level key/provider failover then takes over). One
@@ -158,6 +159,12 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       })
     } catch (error) {
       const reason = getRedactedErrorMessage(error)
+      const ipcCode = error?.code === 'request_timeout'
+        ? CHAT_IPC_ERROR_CODES.TIMEOUT
+        : CHAT_IPC_ERROR_CODES.UNREACHABLE
+      // Transport-level failure: the provider never answered, so presence is
+      // 'offline' rather than 'error'.
+      companionPresence?.fail('offline', ipcCode)
       console.error('[chat:complete] network failure', {
         traceId: requestPayload.traceId ?? '',
         providerId,
@@ -166,9 +173,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         reason,
       })
       throw buildChatIpcError(
-        error?.code === 'request_timeout'
-          ? CHAT_IPC_ERROR_CODES.TIMEOUT
-          : CHAT_IPC_ERROR_CODES.UNREACHABLE,
+        ipcCode,
         `chat request failed: ${reason}`,
         { cause: error },
       )
@@ -180,6 +185,9 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     })
 
     if (!response.ok) {
+      // The provider answered with an error status — a request error, not an
+      // reachability problem, so presence is 'error'.
+      companionPresence?.fail('error')
       console.warn('[chat:complete] request failed', {
         traceId: requestPayload.traceId ?? '',
         providerId,
@@ -215,6 +223,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     const reasoning = extractChatResponseReasoning(requestSpec.protocol, data)
 
     if (!content && !toolCalls) {
+      companionPresence?.fail('error', CHAT_IPC_ERROR_CODES.EMPTY_CONTENT)
       throw buildEmptyChatContentError({
         reasoningLength: reasoning.length,
         finishReason,
@@ -230,6 +239,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       reasoningLength: reasoning.length,
     })
 
+    companionPresence?.succeed()
     return {
       content: content || '',
       ...(toolCalls ? { tool_calls: toolCalls } : {}),
@@ -268,6 +278,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     activeChatStreamControllers.set(requestId, abortController)
 
     let response
+    companionPresence?.begin()
     try {
       // The retry wrapper only re-issues on a non-ok status (known at header
       // time) or an initial connection error — never once a 200 body has begun
@@ -292,11 +303,19 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     } catch (error) {
       const reason = getRedactedErrorMessage(error)
       activeChatStreamControllers.delete(requestId)
+      const ipcCode = error?.code === 'request_timeout'
+        ? CHAT_IPC_ERROR_CODES.TIMEOUT
+        : CHAT_IPC_ERROR_CODES.UNREACHABLE
+      // A user abort is a neutral wind-down; only genuine transport failures
+      // mark presence 'offline'.
+      if (abortController.signal.aborted) {
+        companionPresence?.cancel()
+      } else {
+        companionPresence?.fail('offline', ipcCode)
+      }
       console.error('[chat:stream] network failure', { requestId, reason })
       throw buildChatIpcError(
-        error?.code === 'request_timeout'
-          ? CHAT_IPC_ERROR_CODES.TIMEOUT
-          : CHAT_IPC_ERROR_CODES.UNREACHABLE,
+        ipcCode,
         `chat stream request failed: ${reason}`,
         { cause: error },
       )
@@ -304,6 +323,9 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
 
     if (!response.ok) {
       activeChatStreamControllers.delete(requestId)
+      // The provider answered with an error status — a request error, not a
+      // reachability problem, so presence is 'error'.
+      companionPresence?.fail('error')
       const data = await response.json().catch(() => ({}))
       if (response.status === 401) {
         throw buildChatIpcError(
@@ -458,6 +480,16 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       }
     }
 
+    if (streamError) {
+      // A user abort is a neutral wind-down; a genuine mid-stream break after
+      // a 200 answer counts as a request error — the provider was demonstrably
+      // reachable when headers arrived.
+      if (abortController.signal.aborted) {
+        companionPresence?.cancel()
+      } else {
+        companionPresence?.fail('error')
+      }
+    }
     // Re-surface the original error to the invoker promise so callers
     // see the rejection just like before — the change above is purely
     // additive on the streaming side.
@@ -480,6 +512,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       : null
 
     if (!content && !(toolCalls && toolCalls.length)) {
+      companionPresence?.fail('error', CHAT_IPC_ERROR_CODES.EMPTY_CONTENT)
       throw buildEmptyChatContentError({
         reasoningLength: fullReasoning.length,
         finishReason,
@@ -494,6 +527,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       reasoningLength: fullReasoning.length,
     })
 
+    companionPresence?.succeed()
     return {
       content: content || '',
       ...(toolCalls && toolCalls.length ? { tool_calls: toolCalls } : {}),

@@ -1,15 +1,7 @@
 import type { UiLanguage } from './i18n.ts'
+import type { WebSearchProviderIdName } from '../../shared/webSearchProviderIds.js'
 
-export type WebSearchProviderId =
-  | 'bing'
-  | 'duckduckgo'
-  | 'brave'
-  | 'tavily'
-  | 'exa'
-  | 'firecrawl'
-  | 'gemini'
-  | 'perplexity'
-  | 'minimax'
+export type WebSearchProviderId = WebSearchProviderIdName
 
 export type ToolPermissionLevel = 'safe' | 'confirm' | 'restricted'
 

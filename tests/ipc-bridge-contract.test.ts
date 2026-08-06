@@ -5,6 +5,7 @@ import path from 'node:path'
 import vm from 'node:vm'
 import ts from 'typescript'
 import { validateWeatherToolPayload } from '../electron/ipc/payloadSchemas.js'
+import { POWER_EVENT_KINDS } from '../shared/powerEventKinds.js'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const PRELOAD_PATH = path.join(ROOT, 'electron', 'preload.js')
@@ -181,15 +182,13 @@ test('preload power event subscription forwards payloads and unregisters handler
 test('power event kinds stay aligned between main bridge and renderer types', () => {
   const windowIpc = fs.readFileSync(WINDOW_IPC_PATH, 'utf8')
   const autonomyTypes = fs.readFileSync(AUTONOMY_TYPES_PATH, 'utf8')
-  const powerKinds = [...(windowIpc.match(/POWER_EVENT_KINDS = \[([^\]]+)\]/)?.[1] ?? '').matchAll(/'([^']+)'/g)]
-    .map((match) => match[1])
-    .sort()
-  const typedKinds = [...(autonomyTypes.match(/export type PowerEventKind = ([^\n]+)/)?.[1] ?? '').matchAll(/'([^']+)'/g)]
-    .map((match) => match[1])
-    .sort()
 
-  assert.ok(powerKinds.length > 0, 'POWER_EVENT_KINDS not found in main bridge')
-  assert.deepEqual(powerKinds, typedKinds)
+  // Both sides derive from shared/powerEventKinds.js: the main bridge wires
+  // the tuple into powerMonitor forwarding, the renderer re-exports the type.
+  assert.match(windowIpc, /from '\.\.\/\.\.\/shared\/powerEventKinds\.js'/)
+  assert.match(windowIpc, /for \(const kind of POWER_EVENT_KINDS\)/)
+  assert.match(autonomyTypes, /export type \{ PowerEventKind \} from '\.\.\/\.\.\/shared\/powerEventKinds\.js'/)
+  assert.deepEqual([...POWER_EVENT_KINDS], ['suspend', 'resume', 'lock-screen', 'unlock-screen', 'shutdown'])
 })
 
 test('idle time IPC clamps negative powerMonitor values before reaching renderer', () => {

@@ -3,6 +3,7 @@ import {
   CHAT_MESSAGE_TEXT_MAX,
   SHORT_TEXT_MAX,
 } from './payloadSchemaPrimitives.js'
+import { LOCAL_DATA_COMPANION_STORAGE_KEYS } from '../../shared/localDataStorageKeys.js'
 
 const localDataOnboardingStateSchema = {
   type: 'object',
@@ -244,27 +245,12 @@ const localDataMemoryMigrationRollbackSchema = {
   },
 }
 
-const companionStorageKeys = [
-  'nexus:autonomy:relationship',
-  'nexus:autonomy:relationship-history',
-  'nexus:autonomy:emotion',
-  'nexus:autonomy:emotion-history',
-  'nexus:autonomy:rhythm',
-  'nexus:autonomy:user-affect-history',
-  'nexus:plans',
-  'nexus:open-goals',
-  'nexus:agent-traces',
-  'nexus:background-tasks',
-  'nexus:agent:errands',
-  'nexus:reminder-tasks',
-]
-
 const localDataCompanionDatasetSchema = {
   type: 'object',
   unknown: 'reject',
   fields: {
     id: { type: 'string', optional: true, maxLength: 64, trim: true, allowEmpty: false },
-    storageKey: { type: 'enum', values: companionStorageKeys },
+    storageKey: { type: 'enum', values: LOCAL_DATA_COMPANION_STORAGE_KEYS },
     value: { type: 'any' },
   },
 }
@@ -295,7 +281,7 @@ const localDataCompanionDatasetMirrorSchema = {
   unknown: 'reject',
   fields: {
     confirmed: { type: 'boolean' },
-    storageKey: { type: 'enum', values: companionStorageKeys },
+    storageKey: { type: 'enum', values: LOCAL_DATA_COMPANION_STORAGE_KEYS },
     value: { type: 'any' },
   },
 }
@@ -305,7 +291,7 @@ const localDataCompanionComparisonDatasetSchema = {
   unknown: 'reject',
   fields: {
     id: { type: 'string', maxLength: 64, trim: true, allowEmpty: false },
-    storageKey: { type: 'enum', values: companionStorageKeys },
+    storageKey: { type: 'enum', values: LOCAL_DATA_COMPANION_STORAGE_KEYS },
     recordCount: { type: 'number', integer: true, min: 0, max: 2_000 },
     payloadBytes: { type: 'number', integer: true, min: 0, max: 2_000_000 },
   },

@@ -145,7 +145,10 @@ Verified against the tree at v0.4.5 (2026-08). Canonical gate: `npm run verify:p
   root — `verify:pr` already executes every audit. Audit-logic regression
   coverage uses fixtures; one representative fixture file per audit family.
 - **TEST-4** Meta/process tests (asserting `package.json` wiring, CI YAML text,
-  version strings in docs) are prohibited.
+  version strings in docs) are prohibited. Exception: gate-wiring tripwires
+  that keep `verify:pr` itself honest (the chain's executed `scripts/*.mjs`
+  set must match the on-disk inventory minus an explicit, justified exclusion
+  list, e.g. `tests/verify-pr-chain.test.ts`) are allowed.
 - **TEST-5** The IPC channel inventory in `tests/ipc-contract-audit.test.ts` is a
   security baseline and MUST be updated in the same change that adds/removes a
   channel.

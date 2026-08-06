@@ -50,6 +50,7 @@ import type {
   TtsStreamStartRequest,
   TtsStreamStartResponse,
 } from './types'
+import type { LocalDataCompanionStorageKey } from '../shared/localDataStorageKeys.js'
 
 
 type MinecraftGatewayEvent = {
@@ -481,7 +482,6 @@ type LocalDataMemoryReadResult = {
   errorMessage: string | null
 }
 
-type LocalDataCompanionStorageKey = 'nexus:autonomy:relationship' | 'nexus:autonomy:relationship-history' | 'nexus:autonomy:emotion' | 'nexus:autonomy:emotion-history' | 'nexus:autonomy:rhythm' | 'nexus:autonomy:user-affect-history' | 'nexus:plans' | 'nexus:open-goals' | 'nexus:agent-traces' | 'nexus:background-tasks' | 'nexus:agent:errands' | 'nexus:reminder-tasks'
 type LocalDataCompanionDataset = { id: string; storageKey: LocalDataCompanionStorageKey; value: unknown; recordCount?: number; payloadBytes?: number }
 type LocalDataCompanionMigrationPackage = { schemaVersion: 1; createdAt: string; source: { relationshipKeysPresent: string[]; taskKeysPresent: string[]; invalidKeys: string[] }; relationship: LocalDataCompanionDataset[]; tasks: LocalDataCompanionDataset[] }
 type LocalDataCompanionTarget = ['companion-relationship', 'companion-tasks']
@@ -514,11 +514,7 @@ declare global {
       subscribePanelSection: (listener: (payload: { section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null }) => void) => () => void
       subscribeSettingsReturnFocus?: (listener: () => void) => () => void
       subscribePanelWindowState: (listener: (state: PanelWindowState) => void) => () => void
-      subscribeRuntimeState: (listener: (state: {
-        mood: 'idle' | 'thinking' | 'happy' | 'sleepy'
-        continuousVoiceActive?: boolean
-        panelSettingsOpen?: boolean
-      } & RuntimeStateSnapshot) => void) => () => void
+      subscribeRuntimeState: (listener: (state: RuntimeStateSnapshot) => void) => () => void
       getRuntimeState: () => Promise<RuntimeStateSnapshot>
       heartbeatRuntimeState: (payload: { view: 'pet' | 'panel' }) => Promise<RuntimeStateSnapshot>
       updateRuntimeState: (state: Partial<RuntimeStateSnapshot>) => Promise<void>

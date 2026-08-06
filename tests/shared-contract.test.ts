@@ -8,6 +8,8 @@ import {
   normalizeWebSearchProviderId,
   WEB_SEARCH_PROVIDER_IDS,
 } from '../shared/webSearchProviderIds.js'
+import { LOCAL_DATA_COMPANION_STORAGE_KEYS } from '../shared/localDataStorageKeys.js'
+import { RUNTIME_STATE_FIELD_NAMES } from '../shared/runtimeStateFields.js'
 
 // Source-level single-source contract for the root shared/ modules. Each
 // entry pins the literals that used to be copied verbatim between the
@@ -126,4 +128,51 @@ test('web search provider id whitelist keeps the 9-provider contract', () => {
   assert.equal(normalizeWebSearchProviderId('brave'), 'brave')
   assert.equal(normalizeWebSearchProviderId('unknown'), 'duckduckgo')
   assert.equal(normalizeWebSearchProviderId(undefined), 'duckduckgo')
+})
+
+test('localData companion storage keys keep the 12-key ordered contract', () => {
+  // Order is contractual: relationship group (6) first, then task group (6) —
+  // the renderer slices the tuple at that boundary and the storage contract
+  // destructures by position.
+  assert.deepEqual([...LOCAL_DATA_COMPANION_STORAGE_KEYS], [
+    'nexus:autonomy:relationship',
+    'nexus:autonomy:relationship-history',
+    'nexus:autonomy:emotion',
+    'nexus:autonomy:emotion-history',
+    'nexus:autonomy:rhythm',
+    'nexus:autonomy:user-affect-history',
+    'nexus:plans',
+    'nexus:open-goals',
+    'nexus:agent-traces',
+    'nexus:background-tasks',
+    'nexus:agent:errands',
+    'nexus:reminder-tasks',
+  ])
+})
+
+test('runtime state field names keep the 20-field ordered contract', () => {
+  // Order matches the historical schema declaration order shared by the
+  // sanitizer and the IPC validator.
+  assert.deepEqual([...RUNTIME_STATE_FIELD_NAMES], [
+    'mood',
+    'continuousVoiceActive',
+    'panelSettingsOpen',
+    'voiceState',
+    'hearingEngine',
+    'hearingPhase',
+    'wakewordPhase',
+    'wakewordActive',
+    'wakewordAvailable',
+    'wakewordWakeWord',
+    'wakewordReason',
+    'wakewordLastTriggeredAt',
+    'wakewordError',
+    'wakewordUpdatedAt',
+    'assistantActivity',
+    'searchInProgress',
+    'ttsInProgress',
+    'schedulerArmed',
+    'schedulerNextRunAt',
+    'activeTaskLabel',
+  ])
 })
