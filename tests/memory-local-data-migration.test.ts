@@ -526,8 +526,11 @@ test('memory migration backup export gating follows the ui flag, data presence, 
   assert.equal(canExportMemoryMigrationBackup(blockedReport, true), false)
 })
 
-test('memory migration ui flag gate only accepts the explicit opt-in value', () => {
-  assert.equal(isMemoryLocalDataMigrationUiEnabled({}), false)
+test('memory migration ui flag is default-on with an explicit opt-out', () => {
+  // Default-on since v0.4.6: unset env shows the panel; '0' hides it;
+  // '1' is accepted but redundant.
+  assert.equal(isMemoryLocalDataMigrationUiEnabled({}), true)
   assert.equal(isMemoryLocalDataMigrationUiEnabled({ VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION_UI: '1' }), true)
-  assert.equal(isMemoryLocalDataMigrationUiEnabled({ VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION_UI: 'true' }), false)
+  assert.equal(isMemoryLocalDataMigrationUiEnabled({ VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION_UI: 'true' }), true)
+  assert.equal(isMemoryLocalDataMigrationUiEnabled({ VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION_UI: '0' }), false)
 })

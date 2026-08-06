@@ -44,11 +44,19 @@ function getImportMetaEnv(): EnvLike | undefined {
 }
 
 export function isMemoryLocalDataMigrationFeatureEnabled(): boolean {
-  return import.meta.env?.VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION === '1'
+  // Default-on since v0.4.6: the build-time opt-in flag is retired. A
+  // build may still force the feature off with
+  // VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION=0 as an emergency
+  // circuit breaker. The runtime consent layer
+  // (getMemoryLocalDataAuthorityConsent) remains the user-facing
+  // control — nothing migrates until the user authorises it.
+  return import.meta.env?.VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION !== '0'
 }
 
 export function isMemoryLocalDataMigrationUiEnabled(env: EnvLike | undefined = getImportMetaEnv()): boolean {
-  return env?.VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION_UI === '1'
+  // Default-on since v0.4.6, mirroring the feature flag: the migration
+  // panel is a normal settings entry now. Set ..._UI=0 to hide it.
+  return env?.VITE_NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION_UI !== '0'
 }
 
 export function getMemoryLocalDataAuthorityConsent(): boolean {

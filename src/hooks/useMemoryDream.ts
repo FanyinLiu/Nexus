@@ -10,7 +10,13 @@ import {
 import { applyDecayBatch } from '../features/memory/decay.ts'
 import { clusterMemories, findBestCluster } from '../features/memory/clustering.ts'
 import { archiveMemories, identifyArchiveCandidates } from '../features/memory/coldArchive.ts'
+import {
+  applyContradictionResolutions,
+  detectContradictions,
+} from '../features/memory/contradictionDetector.ts'
 import { rebuildNarrative } from '../features/memory/narrativeMemory.ts'
+import { rankMemories } from '../features/memory/memory.ts'
+import { cosineSimilarity, embedMemorySearchText } from '../features/memory/vectorSearch.ts'
 import {
   buildReflectionPrompt,
   extractReflectionsFromMemories,
@@ -393,6 +399,44 @@ export function useMemoryDream({
 
       // 5. Apply importance decay
       updated = applyDecayBatch(updated)
+
+      // 5b. Contradiction detection (Memory Integrity) — new memories
+      // from this dream run may supersede older stances. Conservative:
+      // only `likely` judgements (high similarity + opposite valence)
+      // auto-supersede; `possible` judgements are recorded as pending
+      // for the memory panel. Embedding failures degrade to a debug
+      // event and never block the rest of the dream.
+      const snapshotIds = new Set(snapshot.map((memory) => memory.id))
+      const newMemories = updated.filter((memory) => !snapshotIds.has(memory.id))
+      if (newMemories.length > 0) {
+        try {
+          const contradictionResolutions = await detectContradictions(
+            newMemories,
+            updated.filter((memory) => snapshotIds.has(memory.id)),
+            {
+              embedText: (text) => embedMemorySearchText(text, settings.memoryEmbeddingModel),
+              cosine: cosineSimilarity,
+              keywordRank: rankMemories,
+            },
+          )
+          if (contradictionResolutions.length > 0) {
+            updated = applyContradictionResolutions(updated, contradictionResolutions, now)
+            appendDebugConsoleEvent({
+              source: 'autonomy',
+              title: `Contradiction check: ${contradictionResolutions.length} supersession(s)`,
+              detail: contradictionResolutions
+                .map((r) => `${r.judgement}: ${r.existingId} <- ${r.newId}`)
+                .join('; '),
+            })
+          }
+        } catch (contradictionError) {
+          appendDebugConsoleEvent({
+            source: 'autonomy',
+            title: 'Contradiction detection failed',
+            detail: getRedactedLogErrorMessage(contradictionError),
+          })
+        }
+      }
 
       // 6. Semantic clustering + cold archiving (side-effecting; must
       // run exactly once)

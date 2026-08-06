@@ -60,6 +60,22 @@ export interface MemoryItem {
   reflectionTopic?: string
   /** Confidence 0–1 asserted by the generator. */
   reflectionConfidence?: number
+  /**
+   * Contradiction detection (Memory Integrity): id of a newer memory that
+   * supersedes this one — set on the OLD memory when a contradiction is
+   * judged likely. Recall ranking applies a penalty so superseded
+   * memories surface less often (or not at all once confirmed).
+   */
+  supersededBy?: string
+  /** ISO timestamp when `supersededBy` was written. */
+  supersededAt?: string
+  /**
+   * True when the supersession is low-confidence (`possible` judgement)
+   * and receives a milder recall penalty than a confirmed supersession.
+   * Kept on the record for debugging; no user interaction is required —
+   * both tiers are fully automatic (v0.4.6 decision: no confirmation UI).
+   */
+  supersededPending?: boolean
 }
 
 export interface DailyMemoryEntry {

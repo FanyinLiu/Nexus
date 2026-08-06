@@ -15,6 +15,7 @@ import {
 } from './memory.ts'
 import { cosineSimilarity, embedMemorySearchText } from './vectorSearch.ts'
 import { getDecayedScore } from './decay.ts'
+import { getSupersededRecallPenalty } from './contradictionDetector.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import {
   computeEmotionResonance,
@@ -124,11 +125,18 @@ function scoreItem<T extends {
       })
     : 0
 
+  // Superseded memories (contradiction resolution) lose recall weight so
+  // the newer stance wins in conversation. Both tiers are automatic:
+  // confirmed ×0.3, low-confidence ×0.6.
+  const supersededPenalty = 'supersededBy' in item
+    ? getSupersededRecallPenalty(item as unknown as MemoryItem)
+    : 1
+
   if (mode === 'vector') {
     return {
       keywordScore,
       vectorScore,
-      finalScore: vectorScore + recencyBoost + categoryBoost + decayBoost + emotionBoost,
+      finalScore: (vectorScore + recencyBoost + categoryBoost + decayBoost + emotionBoost) * supersededPenalty,
     }
   }
 
@@ -136,7 +144,8 @@ function scoreItem<T extends {
     keywordScore,
     vectorScore,
     finalScore:
-      keywordScore * 0.3 + vectorScore * 0.7 + recencyBoost + categoryBoost + decayBoost + emotionBoost,
+      (keywordScore * 0.3 + vectorScore * 0.7 + recencyBoost + categoryBoost + decayBoost + emotionBoost)
+      * supersededPenalty,
   }
 }
 

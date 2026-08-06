@@ -10,6 +10,7 @@ import type {
 } from '../../types/index.ts'
 import type { EmotionState } from '../autonomy/emotionModel.ts'
 import { computeMemorySignificance } from './decay.ts'
+import { getSupersededRecallPenalty } from './contradictionDetector.ts'
 import { createId } from '../../lib/index.ts'
 
 const longTermDuplicateThreshold = 0.72
@@ -243,9 +244,13 @@ export function rankMemories(memories: MemoryItem[], query: string) {
     .map((memory) => {
       const relevance = scoreLexicalSimilarity(memory.content, query)
       const retention = computeMemoryRetentionScore(memory, nowMs)
+      // Superseded memories (contradiction resolution) surface less
+      // often so the newer stance wins in conversation. Both tiers are
+      // automatic: confirmed ×0.3, low-confidence ×0.6.
+      const supersededPenalty = getSupersededRecallPenalty(memory)
       return {
         memory,
-        score: relevance * (0.7 + 0.3 * retention),
+        score: relevance * (0.7 + 0.3 * retention) * supersededPenalty,
       }
     })
     .sort((left, right) => right.score - left.score)

@@ -129,6 +129,11 @@ export function normalizeMemoryItem(value: unknown, index: number): MemoryItem |
   const recallCount = normalizeNonNegativeInteger(value.recallCount)
   const reflectionTopic = normalizeText(value.reflectionTopic, 120)
   const reflectionConfidence = normalizeScore(value.reflectionConfidence, 1)
+  const supersededBy = normalizeText(value.supersededBy, 120)
+  const supersededAt = normalizeIsoTimestamp(value.supersededAt)
+  const supersededPending = typeof value.supersededPending === 'boolean'
+    ? value.supersededPending
+    : undefined
 
   return {
     id,
@@ -150,6 +155,9 @@ export function normalizeMemoryItem(value: unknown, index: number): MemoryItem |
     ...(significance !== undefined ? { significance } : {}),
     ...(reflectionTopic ? { reflectionTopic } : {}),
     ...(reflectionConfidence !== undefined ? { reflectionConfidence } : {}),
+    ...(supersededBy ? { supersededBy } : {}),
+    ...(supersededAt ? { supersededAt } : {}),
+    ...(supersededPending !== undefined ? { supersededPending } : {}),
   }
 }
 
