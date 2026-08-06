@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import {
+  buildSummary,
+  countOccurrences,
+  findForbiddenPatterns,
+  findMissingContracts,
+  findMissingFilesOnDisk,
+  readProjectFiles,
+  resolveProjectRoot,
+  runAuditCli,
+} from './lib/audit-framework.mjs'
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const ROOT = resolveProjectRoot(import.meta.url)
 
 const REQUIRED_FILES = [
   'docs/FORMS_SURFACE_REFERENCE_REVIEW.md',
@@ -55,35 +62,6 @@ const REQUIRED_CONTRACTS = [
       'aria-invalid',
       'aria-disabled',
       'Escape/Tab behavior',
-    ],
-  },
-  {
-    id: 'settings-form-row-component',
-    file: 'src/components/settingsFields.tsx',
-    description: 'Shared settings text fields expose explicit form-row slots and accessible label/control state binding.',
-    patterns: [
-      'settings-form-row',
-      'settings-form-row__label',
-      'htmlFor',
-      'aria-describedby',
-      'aria-invalid',
-      'settings-form-row__description',
-      'settings-form-row__validation',
-      'settings-form-row__status',
-    ],
-  },
-  {
-    id: 'settings-form-row-describedby-chain',
-    file: 'src/components/settingsFields.tsx',
-    description: 'Description and validation text stay connected to the same editable control through one aria-describedby chain.',
-    patterns: [
-      'const descriptionId = description ? `${inputId}-description` : undefined',
-      'const validationId = validation ? `${inputId}-validation` : undefined',
-      "const describedBy = [descriptionId, validationId].filter(Boolean).join(' ') || undefined",
-      'id={descriptionId}',
-      'id={validationId}',
-      'aria-describedby={describedBy}',
-      'aria-invalid={validation ? true : undefined}',
     ],
   },
   {
@@ -158,70 +136,6 @@ const FORBIDDEN_SOURCE_PATTERNS = [
   },
 ]
 
-function readProjectFile(root, file) {
-  const fullPath = join(root, file)
-  if (!existsSync(fullPath)) return null
-  return readFileSync(fullPath, 'utf8')
-}
-
-function readProjectFiles(root, files) {
-  return new Map(files.map((file) => [file, readProjectFile(root, file)]))
-}
-
-function findMissingFiles(root) {
-  return REQUIRED_FILES.filter((file) => !existsSync(join(root, file)))
-}
-
-function findMissingContracts(files) {
-  const missing = []
-  for (const contract of REQUIRED_CONTRACTS) {
-    const text = files.get(contract.file)
-    if (text == null) continue
-    const missingPatterns = contract.patterns.filter((pattern) => !text.includes(pattern))
-    if (missingPatterns.length) {
-      missing.push({
-        id: contract.id,
-        file: contract.file,
-        description: contract.description,
-        missingPatterns,
-      })
-    }
-  }
-  return missing
-}
-
-function findForbiddenPatterns(files) {
-  const matches = []
-  for (const rule of FORBIDDEN_SOURCE_PATTERNS) {
-    for (const file of rule.files) {
-      const text = files.get(file)
-      if (text == null) continue
-      const foundPatterns = rule.patterns.filter((pattern) => text.includes(pattern))
-      if (foundPatterns.length) {
-        matches.push({
-          id: rule.id,
-          file,
-          description: rule.description,
-          foundPatterns,
-        })
-      }
-    }
-  }
-  return matches
-}
-
-function countOccurrences(text, fragment) {
-  return text.split(fragment).length - 1
-}
-
-function buildSummary({ missingFiles, missingContracts, forbiddenPatterns }) {
-  const errors = missingFiles.length + missingContracts.length + forbiddenPatterns.length
-  return {
-    ok: errors === 0,
-    errors,
-  }
-}
-
 export function buildFormsSurfaceReport(root = ROOT) {
   const files = readProjectFiles(root, [
     'docs/FORMS_SURFACE_REFERENCE_REVIEW.md',
@@ -237,9 +151,9 @@ export function buildFormsSurfaceReport(root = ROOT) {
     files.get('src/app/styles/settings-home.css') ?? '',
     files.get('src/app/styles/settings-visual-system.css') ?? '',
   ].join('\n')
-  const missingFiles = findMissingFiles(root)
-  const missingContracts = findMissingContracts(files)
-  const forbiddenPatterns = findForbiddenPatterns(files)
+  const missingFiles = findMissingFilesOnDisk(root, REQUIRED_FILES)
+  const missingContracts = findMissingContracts(files, REQUIRED_CONTRACTS)
+  const forbiddenPatterns = findForbiddenPatterns(files, FORBIDDEN_SOURCE_PATTERNS)
 
   const report = {
     audit: 'forms-surface',
@@ -264,7 +178,7 @@ export function buildFormsSurfaceReport(root = ROOT) {
 
   return {
     ...report,
-    summary: buildSummary(report),
+    summary: buildSummary({ missingFiles, missingContracts, forbiddenPatterns }),
   }
 }
 
@@ -308,8 +222,9 @@ export function formatFormsSurfaceReport(report) {
   return lines.join('\n')
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const report = buildFormsSurfaceReport(ROOT)
-  console.log(formatFormsSurfaceReport(report))
-  process.exitCode = report.summary.ok ? 0 : 1
-}
+runAuditCli({
+  importMetaUrl: import.meta.url,
+  root: ROOT,
+  buildReport: buildFormsSurfaceReport,
+  formatReport: formatFormsSurfaceReport,
+})

@@ -301,7 +301,8 @@ test('speech output: synthesis evidence is not playback proof', () => {
     connectionEvidenceMeetsCapability('speech-output', result.evidence),
     true,
   )
-  assert.match(String(result.message), /尚未验证本机扬声器播放|合成音频/)
+  // Primary message mirrors the stable key — renderers translate it.
+  assert.equal(result.message, SPEECH_CONNECTION_MESSAGE.OUTPUT_SYNTHESIS_READY)
 })
 
 // ── Evidence identity ───────────────────────────────────────────────────
@@ -419,10 +420,10 @@ test('structured results use stable codes and never embed transcripts or secrets
   assert.doesNotMatch(String(withSecret.messageParams?.hint), /sk-[A-Za-z0-9]{10,}/)
   assert.doesNotMatch(String(withSecret.message), /hello world/)
   assert.doesNotMatch(JSON.stringify(withSecret), /sk-abcdefghijklmnopqrstuvwxyz012345/)
-  // Primary message is the safe fallback, never the raw diagnostic body.
+  // Primary message mirrors the stable key, never the raw diagnostic body.
   assert.equal(
     withSecret.message,
-    '语音识别服务返回了异常状态，请检查接口和凭据。',
+    SPEECH_CONNECTION_MESSAGE.INPUT_PROVIDER_ERROR,
   )
 
   const redacted = redactSpeechConnectionText(

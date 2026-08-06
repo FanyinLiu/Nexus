@@ -16,7 +16,6 @@ import {
   normalizeSubDimensions,
 } from './relationshipDimensions.ts'
 import { normalizeEmotionState } from './emotionModel.ts'
-export type { SubDimensions } from './relationshipDimensions.ts'
 
 export interface RelationshipState {
   score: number

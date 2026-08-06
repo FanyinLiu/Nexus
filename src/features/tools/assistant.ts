@@ -1,12 +1,9 @@
 import type { UiLanguage, WebSearchResultItem } from '../../types'
 import type { BuiltInToolResult } from './toolTypes.ts'
 import { stripLocalizedWeatherPeriodPrefix } from './weatherText.ts'
+import { normalizeWhitespace } from '../../lib/normalize.ts'
 
 const QUERY_FILLER_PATTERN = /(?:请|麻烦|帮我|给我|替我|我想|我想要|我要|我要的是|查一个|查一查|查找|查询|搜索|搜一个|搜一搜|找一个|找一找|看看|告诉我|一下|现在|目前|这个|那个)/giu
-
-function normalizeWhitespace(text: string) {
-  return String(text ?? '').replace(/\s+/g, ' ').trim()
-}
 
 function truncateText(text: string, maxLength: number) {
   if (text.length <= maxLength) {

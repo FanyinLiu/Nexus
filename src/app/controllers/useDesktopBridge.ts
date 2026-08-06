@@ -1,4 +1,5 @@
 import {
+  type DependencyList,
   type Dispatch,
   type SetStateAction,
   useCallback,
@@ -30,152 +31,17 @@ import type {
   AppSettings,
   DebugConsoleEvent,
   PanelWindowState,
+  PetWindowState,
   PlatformProfile,
   ReminderTask,
   RuntimeStateSnapshot,
 } from '../../types'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate.ts'
-
-const DEFAULT_RUNTIME_SNAPSHOT: RuntimeStateSnapshot = {
-  mood: 'idle',
-  continuousVoiceActive: false,
-  panelSettingsOpen: false,
-  voiceState: 'idle',
-  wakewordPhase: 'disabled',
-  wakewordActive: false,
-  wakewordAvailable: false,
-  wakewordWakeWord: '',
-  wakewordReason: '',
-  wakewordLastTriggeredAt: '',
-  wakewordError: '',
-  wakewordUpdatedAt: '',
-  assistantActivity: 'idle',
-  searchInProgress: false,
-  ttsInProgress: false,
-  schedulerArmed: false,
-  schedulerNextRunAt: '',
-  activeTaskLabel: '',
-  petOnline: false,
-  panelOnline: false,
-  petLastSeenAt: '',
-  panelLastSeenAt: '',
-  updatedAt: '',
-}
-
-const DEFAULT_PLATFORM_PROFILE: PlatformProfile = {
-  platform: 'unknown',
-  packaged: false,
-  startup: {
-    supported: false,
-    enabled: false,
-    requiresPackagedBuild: true,
-    mechanism: 'unsupported',
-  },
-  tray: {
-    active: false,
-    hideToBackgroundOnClose: false,
-  },
-  window: {
-    supportsVisibleOnAllWorkspaces: false,
-    usesTaskbarIcon: false,
-    supportsTransparentOverlay: true,
-  },
-  mediaSession: {
-    supported: false,
-    available: false,
-    backend: 'unsupported',
-    dependencyHint: null,
-  },
-  desktopContext: {
-    activeWindowSupported: false,
-    activeWindowAvailable: false,
-    activeWindowDependencyHint: null,
-    screenshotSupported: true,
-    screenshotAvailable: true,
-    screenshotDependencyHint: null,
-    clipboardSupported: true,
-    clipboardAvailable: true,
-  },
-  voice: {
-    speechInputSupported: false,
-    speechInputAvailable: false,
-    speechOutputSupported: false,
-    speechOutputAvailable: false,
-    continuousVoiceSupported: false,
-    vadSupported: false,
-    wakewordSupported: false,
-    dependencyHint: null,
-  },
-}
-
-function normalizePlatformProfile(input: Partial<PlatformProfile> | null | undefined): PlatformProfile {
-  if (!input || typeof input !== 'object') {
-    return DEFAULT_PLATFORM_PROFILE
-  }
-
-  const platform = input.platform ?? DEFAULT_PLATFORM_PROFILE.platform
-  const desktopPlatform = platform === 'darwin' || platform === 'win32' || platform === 'linux'
-  const mediaSession: Partial<PlatformProfile['mediaSession']> = input.mediaSession ?? {}
-  const desktopContext: Partial<PlatformProfile['desktopContext']> = input.desktopContext ?? {}
-  const voice: Partial<PlatformProfile['voice']> = input.voice ?? {}
-  const mediaSessionSupported = mediaSession.supported ?? DEFAULT_PLATFORM_PROFILE.mediaSession.supported
-  const activeWindowSupported = desktopContext.activeWindowSupported
-    ?? DEFAULT_PLATFORM_PROFILE.desktopContext.activeWindowSupported
-  const screenshotSupported = desktopContext.screenshotSupported
-    ?? DEFAULT_PLATFORM_PROFILE.desktopContext.screenshotSupported
-  const clipboardSupported = desktopContext.clipboardSupported
-    ?? DEFAULT_PLATFORM_PROFILE.desktopContext.clipboardSupported
-  const speechInputSupported = voice.speechInputSupported ?? desktopPlatform
-  const speechOutputSupported = voice.speechOutputSupported ?? desktopPlatform
-  const continuousVoiceSupported = voice.continuousVoiceSupported ?? speechInputSupported
-  const vadSupported = voice.vadSupported ?? speechInputSupported
-  const wakewordSupported = voice.wakewordSupported ?? speechInputSupported
-
-  return {
-    ...DEFAULT_PLATFORM_PROFILE,
-    ...input,
-    platform,
-    startup: {
-      ...DEFAULT_PLATFORM_PROFILE.startup,
-      ...(input.startup ?? {}),
-    },
-    tray: {
-      ...DEFAULT_PLATFORM_PROFILE.tray,
-      ...(input.tray ?? {}),
-    },
-    window: {
-      ...DEFAULT_PLATFORM_PROFILE.window,
-      ...(input.window ?? {}),
-    },
-    mediaSession: {
-      ...DEFAULT_PLATFORM_PROFILE.mediaSession,
-      ...mediaSession,
-      supported: mediaSessionSupported,
-      available: mediaSession.available ?? mediaSessionSupported,
-    },
-    desktopContext: {
-      ...DEFAULT_PLATFORM_PROFILE.desktopContext,
-      ...desktopContext,
-      activeWindowSupported,
-      activeWindowAvailable: desktopContext.activeWindowAvailable ?? activeWindowSupported,
-      screenshotSupported,
-      screenshotAvailable: desktopContext.screenshotAvailable ?? screenshotSupported,
-      clipboardSupported,
-      clipboardAvailable: desktopContext.clipboardAvailable ?? clipboardSupported,
-    },
-    voice: {
-      ...DEFAULT_PLATFORM_PROFILE.voice,
-      ...voice,
-      speechInputSupported,
-      speechInputAvailable: voice.speechInputAvailable ?? speechInputSupported,
-      speechOutputSupported,
-      speechOutputAvailable: voice.speechOutputAvailable ?? speechOutputSupported,
-      continuousVoiceSupported,
-      vadSupported,
-      wakewordSupported,
-    },
-  }
-}
+import {
+  DEFAULT_PLATFORM_PROFILE,
+  DEFAULT_RUNTIME_SNAPSHOT,
+  normalizePlatformProfile,
+} from './desktopBridgeDefaults.ts'
 
 type MemoryController = ReturnType<typeof import('../../hooks/useMemory').useMemory>
 type ChatController = ReturnType<typeof import('../../hooks/useChat').useChat>
@@ -223,6 +89,46 @@ type UseDesktopBridgeOptions = {
   >
 }
 
+type BridgeSubscriptionOptions<T> = {
+  /** When false, neither the initial fetch nor the subscription runs —
+   * mirrors the `if (view !== '…') return` guard at the top of the effects
+   * this helper replaces. */
+  enabled?: boolean
+  /** One-shot initial fetch; mirrors `pending?.then(apply).catch(() => undefined)`. */
+  getInitial?: () => Promise<T> | undefined
+  /** Live push subscription; mirrors `window.desktopPet?.subscribeXxx?.(apply)`. */
+  subscribe?: (listener: (value: T) => void) => (() => void) | undefined
+  /** Mirror a fetched/pushed value into local state. */
+  apply: (value: T) => void
+}
+
+/**
+ * Converge the bridge's repeated "fetch initial value + subscribe to pushes +
+ * mirror into state" effects. The call site keeps ownership of the dependency
+ * list, passed through verbatim, so re-subscription timing is identical to
+ * the inline effects this replaces.
+ */
+function useBridgeSubscription<T>(
+  { enabled = true, getInitial, subscribe, apply }: BridgeSubscriptionOptions<T>,
+  deps: DependencyList,
+): void {
+  useEffect(() => {
+    if (!enabled) {
+      return undefined
+    }
+
+    const pending = getInitial?.()
+    pending?.then(apply).catch(() => undefined)
+
+    const unsubscribe = subscribe?.(apply)
+    return () => unsubscribe?.()
+    // Deps arrive as a parameter by design — each call site mirrors the dep
+    // list of the inline effect it replaces, and there is nothing local to
+    // verify them against.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps)
+}
+
 export function useDesktopBridge({
   view,
   settings,
@@ -264,22 +170,20 @@ export function useDesktopBridge({
     savePetWindowPreferences({ isPinned, clickThrough })
   }, [clickThrough, isPinned])
 
-  useEffect(() => {
-    const pending = window.desktopPet?.getPlatformProfile?.()
-    pending?.then((profile) => {
-      setPlatformProfile(normalizePlatformProfile(profile))
-    }).catch(() => undefined)
+  useBridgeSubscription({
+    getInitial: () => window.desktopPet?.getPlatformProfile?.(),
+    apply: (profile) => setPlatformProfile(normalizePlatformProfile(profile)),
   }, [])
 
-  useEffect(() => {
-    const pending = window.desktopPet?.getLaunchOnStartup?.()
-    pending?.then((launchOnStartup) => {
+  useBridgeSubscription({
+    getInitial: () => window.desktopPet?.getLaunchOnStartup?.(),
+    apply: (launchOnStartup) => {
       setSettings((current) => (
         current.launchOnStartup === launchOnStartup
           ? current
           : { ...current, launchOnStartup }
       ))
-    }).catch(() => undefined)
+    },
   }, [setSettings])
 
   useEffect(() => {
@@ -403,24 +307,19 @@ export function useDesktopBridge({
   // → effect re-subscribes → pending promise fires again → setMood called
   // again. `pet.setMood` is a React useState setter and referentially stable
   // by contract — safe to depend on.
-  useEffect(() => {
-    const setMood = pet.setMood
-    const applyRuntimeState = (state: RuntimeStateSnapshot) => {
+  useBridgeSubscription<RuntimeStateSnapshot>({
+    apply: (state) => {
       setRuntimeSnapshotState(state)
 
       if (state.mood) {
-        setMood(state.mood)
+        pet.setMood(state.mood)
       }
 
       setPetRuntimeContinuousVoiceActive(Boolean(state.continuousVoiceActive))
       setRemotePanelSettingsOpen(Boolean(state.panelSettingsOpen))
-    }
-
-    const pendingSnapshot = window.desktopPet?.getRuntimeState?.()
-    pendingSnapshot?.then(applyRuntimeState).catch(() => undefined)
-
-    const unsubscribe = window.desktopPet?.subscribeRuntimeState?.(applyRuntimeState)
-    return () => unsubscribe?.()
+    },
+    getInitial: () => window.desktopPet?.getRuntimeState?.(),
+    subscribe: (listener) => window.desktopPet?.subscribeRuntimeState?.(listener),
   }, [pet.setMood])
 
   useEffect(() => {
@@ -490,18 +389,14 @@ export function useDesktopBridge({
   // (rather than the whole pet memo) prevents the subscriber from being
   // torn down and re-subscribed on every mood / gaze / cue rotation.
   const setPetHotspotActive = pet.setPetHotspotActive
-  useEffect(() => {
-    const applyPetWindowState = (state: import('../../types').PetWindowState) => {
+  useBridgeSubscription<PetWindowState>({
+    apply: (state) => {
       setIsPinned(state.isPinned)
       setClickThrough(state.clickThrough)
       setPetHotspotActive(state.petHotspotActive)
-    }
-
-    const pendingState = window.desktopPet?.getPetWindowState?.()
-    pendingState?.then(applyPetWindowState).catch(() => undefined)
-
-    const unsubscribe = window.desktopPet?.subscribePetWindowState?.(applyPetWindowState)
-    return () => unsubscribe?.()
+    },
+    getInitial: () => window.desktopPet?.getPetWindowState?.(),
+    subscribe: (listener) => window.desktopPet?.subscribePetWindowState?.(listener),
   }, [setClickThrough, setIsPinned, setPetHotspotActive])
 
   useEffect(() => {
@@ -523,16 +418,10 @@ export function useDesktopBridge({
     pendingUpdate?.catch(() => undefined)
   }, [pet.petHotspotActive, view])
 
-  useEffect(() => {
-    if (view !== 'panel') {
-      return
-    }
-
-    const unsubscribe = window.desktopPet?.subscribePanelSection?.(({ section }) => {
-      setSettingsOpen(section === 'settings')
-    })
-
-    return () => unsubscribe?.()
+  useBridgeSubscription<{ section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null }>({
+    enabled: view === 'panel',
+    subscribe: (listener) => window.desktopPet?.subscribePanelSection?.(listener),
+    apply: ({ section }) => setSettingsOpen(section === 'settings'),
   }, [setSettingsOpen, view])
 
   useEffect(() => {
@@ -550,23 +439,16 @@ export function useDesktopBridge({
     return () => unsubscribe?.()
   }, [view])
 
-  useEffect(() => {
-    if (view !== 'panel') {
-      return
-    }
-
-    const applyState = (state: PanelWindowState) => {
+  useBridgeSubscription<PanelWindowState>({
+    enabled: view === 'panel',
+    apply: (state) => {
       setPanelWindowState(state)
       if (state.collapsed) {
         setSettingsOpen(false)
       }
-    }
-
-    const pendingState = window.desktopPet?.getPanelWindowState?.()
-    pendingState?.then(applyState).catch(() => undefined)
-
-    const unsubscribe = window.desktopPet?.subscribePanelWindowState?.(applyState)
-    return () => unsubscribe?.()
+    },
+    getInitial: () => window.desktopPet?.getPanelWindowState?.(),
+    subscribe: (listener) => window.desktopPet?.subscribePanelWindowState?.(listener),
   }, [setPanelWindowState, setSettingsOpen, view])
 
   useEffect(() => {

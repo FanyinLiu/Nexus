@@ -12,8 +12,10 @@
  * To add a new provider:
  *   1. Append an entry to the relevant array below.
  *   2. If the provider uses a new protocol, add the protocol literal.
- *   3. Register the new translation keys in `src/i18n/keys.ts`,
- *      `src/types/i18n.ts`, and every locale file under `src/i18n/locales/`.
+ *   3. Register the new translation keys in `src/types/i18n.ts` (or the
+ *      matching `src/types/i18nKeys/*` module) and every locale file under
+ *      `src/i18n/locales/`, then run `npm run i18n:gen` to regenerate the
+ *      generated `src/i18n/keys.ts` (do not edit it manually).
  */
 
 import type { TranslationKey } from '../types/i18n.ts'
@@ -535,14 +537,4 @@ export function getSpeechInputProvider(id: string): SpeechInputProviderEntry {
 
 export function getSpeechOutputProvider(id: string): SpeechOutputProviderEntry {
   return speechOutputIndex.get(id) ?? SPEECH_OUTPUT_PROVIDERS[0]
-}
-
-export function isElevenLabsProvider(id: string): boolean {
-  const input = speechInputIndex.get(id)
-  if (input) return input.protocol === 'elevenlabs'
-
-  const output = speechOutputIndex.get(id)
-  if (output) return output.protocol === 'elevenlabs'
-
-  return false
 }

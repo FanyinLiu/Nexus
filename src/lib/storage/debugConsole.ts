@@ -5,27 +5,12 @@ import {
   writeJson,
   writeJsonDebounced,
 } from './core.ts'
+import { isObject } from '../guards.ts'
+import { normalizeIso } from '../localDate.ts'
+import { hasChanged, normalizeNullableString } from '../normalize.ts'
 
 const defaultDebugConsoleEvents: DebugConsoleEvent[] = []
 const MAX_DEBUG_CONSOLE_EVENTS = 60
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
-
-function normalizeString(value: unknown, collapseWhitespace = true): string | null {
-  if (typeof value !== 'string') return null
-  const normalized = collapseWhitespace
-    ? value.replace(/\s+/g, ' ').trim()
-    : value.trim()
-  return normalized.length > 0 ? normalized : null
-}
-
-function normalizeIso(value: unknown): string | null {
-  if (typeof value !== 'string' && typeof value !== 'number') return null
-  const parsed = typeof value === 'number' ? value : Date.parse(value)
-  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null
-}
 
 function normalizeDebugConsoleEvent(raw: unknown): DebugConsoleEvent | null {
   if (!isObject(raw)) return null
@@ -49,9 +34,9 @@ function normalizeDebugConsoleEvent(raw: unknown): DebugConsoleEvent | null {
     ? raw.tone
     : 'info'
 
-  const id = normalizeString(raw.id)
-  const title = normalizeString(raw.title)
-  const detail = normalizeString(raw.detail, false)
+  const id = normalizeNullableString(raw.id)
+  const title = normalizeNullableString(raw.title)
+  const detail = normalizeNullableString(raw.detail, false)
   const createdAt = normalizeIso(raw.createdAt)
   if (!id || !title || !detail || !createdAt) return null
 
@@ -64,14 +49,10 @@ function normalizeDebugConsoleEvent(raw: unknown): DebugConsoleEvent | null {
     createdAt,
   }
 
-  const relatedTaskId = normalizeString(raw.relatedTaskId)
+  const relatedTaskId = normalizeNullableString(raw.relatedTaskId)
   if (relatedTaskId) event.relatedTaskId = relatedTaskId
 
   return event
-}
-
-function hasChanged(normalized: unknown, raw: unknown): boolean {
-  return JSON.stringify(normalized) !== JSON.stringify(raw)
 }
 
 export function normalizeDebugConsoleEvents(raw: unknown): DebugConsoleEvent[] {

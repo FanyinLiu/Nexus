@@ -23,6 +23,13 @@ const CHECKED_FILES = [
   'electron/ttsStreamService.js',
   'src/hooks/useNotificationBridge.ts',
   'src/hooks/chat/assistantReply.ts',
+  'src/hooks/chat/assistantReply/promptAssembly.ts',
+  'src/hooks/chat/assistantReply/streamConsumption.ts',
+  'src/hooks/chat/assistantReply/postProcessing.ts',
+  'src/hooks/chat/sendMessage.ts',
+  'src/hooks/chat/useCompanionNotices.ts',
+  'src/hooks/chat/useChatHistoryArchive.ts',
+  'src/hooks/chat/usePetDialogBubbles.ts',
   'src/hooks/useChat.ts',
   'src/hooks/voice/transcriptHandling.ts',
   'src/features/settingsV3/AutonomySectionV3.tsx',
@@ -35,6 +42,8 @@ const CHECKED_FILES = [
 
 const LOG_CALL_FILES = [
   'src/hooks/chat/assistantReply.ts',
+  'src/hooks/chat/assistantReply/postProcessing.ts',
+  'src/hooks/chat/sendMessage.ts',
   'src/hooks/useChat.ts',
   'src/hooks/voice/transcriptHandling.ts',
 ]
@@ -245,7 +254,12 @@ const REQUIRED_PHRASES = [
   {
     id: 'chat-diagnostics-store-lengths-only',
     file: 'src/hooks/chat/assistantReply.ts',
-    phrases: ['contentLength: content.length', 'responseLength: response.response.content.length'],
+    phrases: ['contentLength: content.length'],
+  },
+  {
+    id: 'chat-diagnostics-store-lengths-only',
+    file: 'src/hooks/chat/assistantReply/postProcessing.ts',
+    phrases: ['responseLength: response.response.content.length'],
   },
   {
     id: 'voice-diagnostics-store-lengths-only',
@@ -254,7 +268,7 @@ const REQUIRED_PHRASES = [
   },
   {
     id: 'busy-chat-diagnostics-store-length-only',
-    file: 'src/hooks/useChat.ts',
+    file: 'src/hooks/chat/sendMessage.ts',
     phrases: ['{ contentLength: content.length }'],
   },
 ]

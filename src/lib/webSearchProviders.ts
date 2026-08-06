@@ -1,4 +1,5 @@
 import type { AppSettings, TranslationKey, WebSearchProviderId } from '../types'
+import { normalizeWebSearchProviderId as normalizeProviderId } from '../../shared/webSearchProviderIds.js'
 
 export type WebSearchProviderPreset = {
   id: WebSearchProviderId
@@ -102,29 +103,9 @@ export const WEB_SEARCH_PROVIDER_PRESETS: WebSearchProviderPreset[] = [
   },
 ]
 
+// Thin wrapper over the canonical whitelist in shared/webSearchProviderIds.js.
 export function normalizeWebSearchProviderId(value: string | null | undefined): WebSearchProviderId {
-  switch (String(value ?? '').trim()) {
-    case 'duckduckgo':
-      return 'duckduckgo'
-    case 'brave':
-      return 'brave'
-    case 'tavily':
-      return 'tavily'
-    case 'exa':
-      return 'exa'
-    case 'firecrawl':
-      return 'firecrawl'
-    case 'gemini':
-      return 'gemini'
-    case 'perplexity':
-      return 'perplexity'
-    case 'minimax':
-      return 'minimax'
-    case 'bing':
-      return 'bing'
-    default:
-      return 'duckduckgo'
-  }
+  return normalizeProviderId(value)
 }
 
 export function getWebSearchProviderPreset(value: string | null | undefined) {

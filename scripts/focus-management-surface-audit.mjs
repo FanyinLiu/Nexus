@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import {
+  buildSummary,
+  countOccurrences,
+  findForbiddenPatterns,
+  findMissingContracts,
+  findMissingFilesOnDisk,
+  readProjectFiles,
+  resolveProjectRoot,
+  runAuditCli,
+} from './lib/audit-framework.mjs'
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const ROOT = resolveProjectRoot(import.meta.url)
 
 const REQUIRED_FILES = [
   'docs/FOCUS_MANAGEMENT_REFERENCE_REVIEW.md',
@@ -212,58 +219,6 @@ const FORBIDDEN_SOURCE_PATTERNS = [
   },
 ]
 
-function readProjectFile(root, file) {
-  const fullPath = join(root, file)
-  if (!existsSync(fullPath)) return null
-  return readFileSync(fullPath, 'utf8')
-}
-
-function readProjectFiles(root, files) {
-  return new Map(files.map((file) => [file, readProjectFile(root, file)]))
-}
-
-function findMissingFiles(root) {
-  return REQUIRED_FILES.filter((file) => !existsSync(join(root, file)))
-}
-
-function findMissingContracts(files) {
-  const missing = []
-  for (const contract of REQUIRED_CONTRACTS) {
-    const text = files.get(contract.file)
-    if (text == null) continue
-    const missingPatterns = contract.patterns.filter((pattern) => !text.includes(pattern))
-    if (missingPatterns.length) {
-      missing.push({
-        id: contract.id,
-        file: contract.file,
-        description: contract.description,
-        missingPatterns,
-      })
-    }
-  }
-  return missing
-}
-
-function findForbiddenPatterns(files) {
-  const matches = []
-  for (const rule of FORBIDDEN_SOURCE_PATTERNS) {
-    for (const file of rule.files) {
-      const text = files.get(file)
-      if (text == null) continue
-      const foundPatterns = rule.patterns.filter((pattern) => text.includes(pattern))
-      if (foundPatterns.length) {
-        matches.push({
-          id: rule.id,
-          file,
-          description: rule.description,
-          foundPatterns,
-        })
-      }
-    }
-  }
-  return matches
-}
-
 function findFocusVisibleMotionRules(cssByFile) {
   const matches = []
   const motionPattern = /\b(?:transform|translate|scale|z-index|filter)\s*:/
@@ -310,24 +265,6 @@ function findWeakFocusVisibleRules(cssByFile) {
   return matches
 }
 
-function countOccurrences(text, fragment) {
-  return text.split(fragment).length - 1
-}
-
-function buildSummary({ missingFiles, missingContracts, forbiddenPatterns, focusVisibleMotionRules, weakFocusVisibleRules }) {
-  const errors = (
-    missingFiles.length
-    + missingContracts.length
-    + forbiddenPatterns.length
-    + focusVisibleMotionRules.length
-    + weakFocusVisibleRules.length
-  )
-  return {
-    ok: errors === 0,
-    errors,
-  }
-}
-
 export function buildFocusManagementSurfaceReport(root = ROOT) {
   const files = readProjectFiles(root, REQUIRED_FILES)
   const cssByFile = new Map([
@@ -341,9 +278,9 @@ export function buildFocusManagementSurfaceReport(root = ROOT) {
   const settingsShellV2 = files.get('src/features/uiV2/SettingsShellV2.tsx') ?? ''
   const confirmDialog = files.get('src/components/ConfirmDialog.tsx') ?? ''
   const useConfirm = files.get('src/components/useConfirm.ts') ?? ''
-  const missingFiles = findMissingFiles(root)
-  const missingContracts = findMissingContracts(files)
-  const forbiddenPatterns = findForbiddenPatterns(files)
+  const missingFiles = findMissingFilesOnDisk(root, REQUIRED_FILES)
+  const missingContracts = findMissingContracts(files, REQUIRED_CONTRACTS)
+  const forbiddenPatterns = findForbiddenPatterns(files, FORBIDDEN_SOURCE_PATTERNS)
   const focusVisibleMotionRules = findFocusVisibleMotionRules(cssByFile)
   const weakFocusVisibleRules = findWeakFocusVisibleRules(cssByFile)
 
@@ -378,7 +315,7 @@ export function buildFocusManagementSurfaceReport(root = ROOT) {
 
   return {
     ...report,
-    summary: buildSummary(report),
+    summary: buildSummary({ missingFiles, missingContracts, forbiddenPatterns, focusVisibleMotionRules, weakFocusVisibleRules }),
   }
 }
 
@@ -441,8 +378,9 @@ export function formatFocusManagementSurfaceReport(report) {
   return lines.join('\n')
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const report = buildFocusManagementSurfaceReport(ROOT)
-  console.log(formatFocusManagementSurfaceReport(report))
-  process.exitCode = report.summary.ok ? 0 : 1
-}
+runAuditCli({
+  importMetaUrl: import.meta.url,
+  root: ROOT,
+  buildReport: buildFocusManagementSurfaceReport,
+  formatReport: formatFocusManagementSurfaceReport,
+})

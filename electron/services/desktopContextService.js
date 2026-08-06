@@ -130,18 +130,6 @@ function normalizeActiveWindowSnapshot(rawSnapshot) {
   }
 }
 
-const MACOS_ACTIVE_WINDOW_SCRIPT = [
-  'tell application "System Events"',
-  '  set frontApp to first application process whose frontmost is true',
-  '  set appName to name of frontApp',
-  '  set windowTitle to ""',
-  '  try',
-  '    set windowTitle to name of front window of frontApp',
-  '  end try',
-  '  return "{" & quoted form of ("\"appName\":" & quoted form of appName & ",\"title\":" & quoted form of windowTitle) & "}"',
-  'end tell',
-].join('\n')
-
 function captureActiveWindowContextMac() {
   const now = Date.now()
   if (

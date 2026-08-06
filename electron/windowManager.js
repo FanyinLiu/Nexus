@@ -1,22 +1,16 @@
 import { promises as fsp } from 'node:fs'
-import { app, BrowserWindow, Menu, nativeImage, screen, shell, Tray } from 'electron'
+import { app, BrowserWindow, Menu, nativeImage, screen, Tray } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { getPreloadPath, getRendererEntry } from './rendererServer.js'
 import { buildPlatformProfile } from './platformProfile.js'
 import { clampWindowPosition, getPanelWindowPosition } from './windowManagerHelpers.js'
 import { createSettingsReturnFocusCoordinator } from './settingsReturnFocus.js'
 import {
-  applyWindowIcon,
-  applyWindowsAppDetails,
   createNativeImageFromCandidates,
   getPetIconCandidates,
   getPetIconPath,
 } from './windowAssets.js'
-import {
-  getLaunchOnStartupState,
-  setLaunchOnStartupState,
-} from './launchOnStartup.js'
+import { getLaunchOnStartupState } from './launchOnStartup.js'
 import {
   createRendererRuntimeLogEntry,
   RUNTIME_LOG_DISPLAY_PATH,
@@ -24,34 +18,13 @@ import {
   sanitizeRuntimeLogMessage,
   serializeRuntimeLogEntry,
 } from './runtimeLogSanitizer.js'
-import { getSavedBounds, trackWindow } from './services/windowBoundsStore.js'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
-import {
-  isAllowedRendererNavigation,
-  normalizeExternalWindowOpenUrl,
-  summarizeWindowNavigationErrorForLog,
-  summarizeWindowNavigationUrlForLog,
-} from './windowNavigation.js'
 import {
   applyPetWindowInstances,
   configurePetWindowInstances,
-  destroyPetInstance,
   getPetInstanceForWindow,
-  getPetWindowStateForEvent,
-  registerPetInstance,
-  syncPetInstance,
-  syncPetWindowInstances,
-  updatePetWindowStateForEvent,
 } from './petWindowInstances.js'
-import {
-  configurePanelWindowController,
-  emitPanelWindowState,
-  getPanelWindowCreationState,
-  isPanelWindowTrackable,
-  panelWindowState,
-  rememberPanelWindowBounds,
-  updatePanelWindowState,
-} from './panelWindowController.js'
+import { configurePanelWindowController } from './panelWindowController.js'
 
 import {
   bindRuntimeWindows,
@@ -154,14 +127,6 @@ function attachRendererLogCapture(webContents, label) {
   })
 }
 
-// macOS Dock overlaps transparent windows near the bottom edge even within
-// workArea bounds. Use a larger bottom margin on macOS to keep the pet's
-// action buttons (mic, menu) above the Dock hit region.
-const PET_WINDOW_SCREEN_MARGIN_PX = process.platform === 'darwin' ? 80 : 24
-const PET_WINDOW_DEFAULT_WIDTH = 320
-const PET_WINDOW_DEFAULT_HEIGHT = 460
-const PET_WINDOW_MIN_WIDTH = 260
-const PET_WINDOW_MIN_HEIGHT = 340
 const PET_ALWAYS_ON_TOP_LEVEL = 'floating'
 const WINDOWS_TRAY_GUID = '4cf28656-71be-4e31-8f33-b83f76e8db10'
 
@@ -209,12 +174,10 @@ configureWindowCreation({
   syncPetWindowState: () => applyPetWindowInstances(),
   // Function declaration is hoisted; safe to pass before its source location.
   emitPanelSection,
-  isDev,
   isSmokeTest,
   SMOKE_RENDERER_TIMEOUT_MS,
   SMOKE_SUCCESS_GRACE_MS,
   SMOKE_FORCE_EXIT_GRACE_MS,
-  flushRuntimeLogWriteBuffer,
   settingsReturnFocus,
 })
 

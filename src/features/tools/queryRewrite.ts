@@ -1,4 +1,5 @@
-import { normalizeIntentText, stripConversationPrefix } from '../intent/preprocess.ts'
+import { stripConversationPrefix } from '../intent/preprocess.ts'
+import { normalizeWhitespace } from '../../lib/normalize.ts'
 import { stripSearchCommandFraming } from './extractors.ts'
 
 export type SearchQueryRewriteResult = {
@@ -46,10 +47,6 @@ const SEARCH_STOP_WORDS = new Set([
   'bing',
   'google',
 ])
-function normalizeWhitespace(text: string) {
-  return normalizeIntentText(text)
-}
-
 function stripSearchDecorations(text: string) {
   return normalizeWhitespace(
     stripConversationPrefix(text)

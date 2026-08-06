@@ -1,4 +1,4 @@
-import type { VoiceBusEvent, VoiceBusEventType } from './busEvents.ts'
+import type { VoiceBusEvent } from './busEvents.ts'
 import type { VoicePhase } from './session/voiceSessionTypes.ts'
 import type { VoiceReasonCode } from './voiceReasonCodes.ts'
 import type {
@@ -257,7 +257,3 @@ export function installVoiceLogDevHooks(): void {
   window.__voiceLogExport = () => log.exportNdjson()
   window.__voiceLogClear = () => log.clear()
 }
-
-// Keep the known VoiceBusEventType import alive so bundlers don't drop it
-// when only the value re-exports are consumed downstream.
-export type { VoiceBusEventType }

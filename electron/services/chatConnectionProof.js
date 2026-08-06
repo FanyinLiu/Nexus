@@ -5,8 +5,9 @@
  * response from the requested provider/model. Model-list, endpoint reachability,
  * empty 2xx envelopes, and gateway fallback identity must not paint green ready.
  *
- * Message payloads use stable messageKey + safe params. Chinese strings remain
- * only as main-process fallbacks when a renderer has not yet mapped a key.
+ * Message payloads use stable messageKey + safe params. The `message` field
+ * mirrors the key itself — renderers always translate the key, so no
+ * human-readable fallback copy lives in the main process.
  */
 
 import {
@@ -69,92 +70,6 @@ export const CHAT_CONNECTION_RECOMMENDATION = Object.freeze({
   IDENTITY_UNVERIFIED: 'settings.chat_connection.identity_unverified_rec',
 })
 
-const MESSAGE_FALLBACKS = Object.freeze({
-  [CHAT_CONNECTION_MESSAGE.READY]: '连上了，模型已经回应啦。',
-  [CHAT_CONNECTION_MESSAGE.IDENTITY_UNVERIFIED]:
-    '服务有响应，但返回结果没有提供模型身份，暂时无法确认是当前模型。',
-  [CHAT_CONNECTION_MESSAGE.IDENTITY_MISMATCH]:
-    '服务有响应，但返回的模型与请求目标不一致，请复核设置。',
-  [CHAT_CONNECTION_MESSAGE.INVALID_PROBE]:
-    '服务返回了成功状态，但没有有效的模型回复。请检查接口地址和模型名后重试。',
-  [CHAT_CONNECTION_MESSAGE.MODEL_LIST_NOT_PROOF]:
-    '接口能返回模型列表，但这还不能证明当前配置的模型可以聊天。请用连接测试验证一次真实回复。',
-  [CHAT_CONNECTION_MESSAGE.MISSING_BASE_URL]: '还没填 API 地址呢。',
-  [CHAT_CONNECTION_MESSAGE.UNSAFE_BASE_URL]: '这个地址不太安全，没法用哦。',
-  [CHAT_CONNECTION_MESSAGE.MISSING_API_KEY]: '先填一下 API Key 吧。',
-  [CHAT_CONNECTION_MESSAGE.MISSING_API_KEY_DEEPSEEK]:
-    'DeepSeek 需要填 API Key，去控制台拿一个填在上面就好。',
-  [CHAT_CONNECTION_MESSAGE.AUTH_FAILED]: '地址能通，不过 API Key 好像不太对。',
-  [CHAT_CONNECTION_MESSAGE.AUTH_FAILED_MISSING_KEY]: '地址能通，不过还没填 API Key 呢。',
-  [CHAT_CONNECTION_MESSAGE.AUTH_FAILED_DEEPSEEK]:
-    'DeepSeek 的 API Key 好像不太对，去控制台看看是不是过期了？',
-  [CHAT_CONNECTION_MESSAGE.AUTH_FAILED_DEEPSEEK_MISSING]:
-    'DeepSeek 需要填 API Key 才能用哦，去控制台拿一个填在上面就好。',
-  [CHAT_CONNECTION_MESSAGE.QUOTA_OR_PERMISSION]: '服务商好像有权限或余额限制。',
-  [CHAT_CONNECTION_MESSAGE.QUOTA_OR_PERMISSION_DEEPSEEK]:
-    'DeepSeek 好像遇到了权限或余额限制，看看账号还有没有额度？',
-  [CHAT_CONNECTION_MESSAGE.INVALID_BASE_URL_DEEPSEEK]:
-    'DeepSeek 的地址或模型名好像对不上，Base URL 填 https://api.deepseek.com，模型先选 deepseek-v4-flash 试试？',
-  [CHAT_CONNECTION_MESSAGE.MODEL_NOT_FOUND]: '没找到当前模型，可能名字不对或者账号没开通。',
-  [CHAT_CONNECTION_MESSAGE.MODEL_NOT_FOUND_DEEPSEEK]:
-    'DeepSeek 好像不认识当前模型，先换成 deepseek-v4-flash 试试？',
-  [CHAT_CONNECTION_MESSAGE.MODEL_MISSING_OLLAMA]:
-    'Ollama 连上了，不过还没有模型呢。运行 ollama pull qwen3:8b 装一个吧。',
-  [CHAT_CONNECTION_MESSAGE.MODEL_NOT_FOUND_OLLAMA]:
-    'Ollama 连上了，不过没找到当前配置的模型。先 ollama pull 装一下，或者换个已有的模型。',
-  [CHAT_CONNECTION_MESSAGE.RATE_LIMITED]: '请求有点太频繁了，歇一小会儿再试试。',
-  [CHAT_CONNECTION_MESSAGE.REQUEST_TIMEOUT]: '等了好一会儿都没回应，可能是网络不太顺畅。',
-  [CHAT_CONNECTION_MESSAGE.PROVIDER_SERVER_ERROR]:
-    '服务商那边暂时忙不过来，可能在维护或者流量太大。',
-  [CHAT_CONNECTION_MESSAGE.PROVIDER_UNREACHABLE]: '没能连上，可能是地址或网络的问题。',
-  [CHAT_CONNECTION_MESSAGE.PROVIDER_UNREACHABLE_OLLAMA]:
-    '没能连上本机 Ollama。请先启动 Ollama，并确认 Base URL 使用本机 OpenAI 兼容端点。',
-  [CHAT_CONNECTION_MESSAGE.PROVIDER_UNREACHABLE_OLLAMA_TIMEOUT]:
-    '本机 Ollama 一直没有回应。请先启动 Ollama，并确认 Base URL 使用本机 OpenAI 兼容端点。',
-  [CHAT_CONNECTION_MESSAGE.UNKNOWN_ERROR]: '接口返回了异常状态，不太确定哪里出了问题。',
-  [CHAT_CONNECTION_MESSAGE.API_KEY_HEADER_UNSAFE]:
-    'API Key 里有不适合放进 HTTP Header 的字符。',
-})
-
-const RECOMMENDATION_FALLBACKS = Object.freeze({
-  [CHAT_CONNECTION_RECOMMENDATION.INVALID_PROBE]:
-    '确认这个地址支持聊天补全接口，并检查当前模型名是否正确。',
-  [CHAT_CONNECTION_RECOMMENDATION.MISSING_API_KEY]: '重新去服务商那里复制一下原始 Key，只要 Key 本身就好。',
-  [CHAT_CONNECTION_RECOMMENDATION.AUTH_FAILED]: '看看 Key 有没有过期，或者重新复制一下。',
-  [CHAT_CONNECTION_RECOMMENDATION.AUTH_FAILED_DEEPSEEK]:
-    '可以去 DeepSeek 控制台重新生成一个，顺便看看余额和模型权限。',
-  [CHAT_CONNECTION_RECOMMENDATION.QUOTA_OR_PERMISSION]:
-    '看看 API Key 权限和账号余额，有些模型可能需要单独开通。',
-  [CHAT_CONNECTION_RECOMMENDATION.QUOTA_OR_PERMISSION_DEEPSEEK]: '去控制台看看余额和模型权限。',
-  [CHAT_CONNECTION_RECOMMENDATION.INVALID_BASE_URL_DEEPSEEK]:
-    'Base URL 改成 https://api.deepseek.com，模型先用 deepseek-v4-flash。',
-  [CHAT_CONNECTION_RECOMMENDATION.MODEL_NOT_FOUND]:
-    '核对一下模型名，或者先换个服务商推荐的默认模型试试。',
-  [CHAT_CONNECTION_RECOMMENDATION.MODEL_NOT_FOUND_DEEPSEEK]:
-    '先用 deepseek-v4-flash，需要更强推理再切 deepseek-v4-pro。',
-  [CHAT_CONNECTION_RECOMMENDATION.MODEL_MISSING_OLLAMA]:
-    '运行 ollama pull qwen3:8b 装一个，或者装好别的模型再来刷新。',
-  [CHAT_CONNECTION_RECOMMENDATION.MODEL_NOT_FOUND_OLLAMA]:
-    '运行 ollama pull 安装当前模型，或者在模型列表里选一个已有的。',
-  [CHAT_CONNECTION_RECOMMENDATION.RATE_LIMITED]:
-    '等几秒再试就好。如果老是这样，去看看服务商那边的调用限额。',
-  [CHAT_CONNECTION_RECOMMENDATION.REQUEST_TIMEOUT]: '看看网络和代理设置，也可以稍后再试一下。',
-  [CHAT_CONNECTION_RECOMMENDATION.PROVIDER_SERVER_ERROR]:
-    '过一会儿再试试。如果一直这样，可以去看看服务商的状态页。',
-  [CHAT_CONNECTION_RECOMMENDATION.PROVIDER_UNREACHABLE]:
-    '看看地址和网络，本地服务的话确认一下有没有在跑。',
-  [CHAT_CONNECTION_RECOMMENDATION.PROVIDER_UNREACHABLE_OLLAMA]:
-    '打开 Ollama 应用，或在终端运行 ollama serve；启动后再点一次连接测试。如果还没有模型，运行 ollama pull qwen3:8b。',
-  [CHAT_CONNECTION_RECOMMENDATION.UNKNOWN_ERROR]:
-    '看看地址、网络和模型名，也可以关注一下服务商那边有没有公告。',
-  [CHAT_CONNECTION_RECOMMENDATION.API_KEY_HEADER_UNSAFE]:
-    '重新去服务商那里复制一下原始 Key，只要 Key 本身就好。',
-  [CHAT_CONNECTION_RECOMMENDATION.MODEL_LIST_NOT_PROOF]:
-    '在设置里对当前模型再跑一次连接测试，确认能返回真实回复。',
-  [CHAT_CONNECTION_RECOMMENDATION.IDENTITY_UNVERIFIED]:
-    '检查服务是否会返回模型标识；兼容网关可能需要单独确认实际路由。',
-})
-
 function normalizeId(value) {
   const text = String(value ?? '').trim()
   return text || undefined
@@ -202,26 +117,20 @@ export function buildChatConnectionResult({
     )
     : undefined
 
-  const fallbackMessage = MESSAGE_FALLBACKS[key]
-    || (ok
-      ? MESSAGE_FALLBACKS[CHAT_CONNECTION_MESSAGE.READY]
-      : MESSAGE_FALLBACKS[CHAT_CONNECTION_MESSAGE.UNKNOWN_ERROR])
-
   const recKey = recommendationKey
-  const fallbackRecommendation = recKey
-    ? (RECOMMENDATION_FALLBACKS[recKey] || recommendation)
-    : recommendation
 
   void diagnosticDetail
 
   return {
     ok: Boolean(ok),
-    message: fallbackMessage,
+    // `message` mirrors the stable messageKey — renderers translate the key,
+    // so the main process ships no human-readable fallback copy.
+    message: key,
     messageKey: key,
     ...(safeParams && Object.keys(safeParams).length > 0 ? { messageParams: safeParams } : {}),
     ...(recKey ? { recommendationKey: recKey } : {}),
-    ...(fallbackRecommendation
-      ? { recommendation: redactSpeechConnectionText(fallbackRecommendation) }
+    ...(recommendation
+      ? { recommendation: redactSpeechConnectionText(recommendation) }
       : {}),
     ...(code ? { code } : {}),
     ...(status ? { status } : {}),

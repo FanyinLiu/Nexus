@@ -74,72 +74,112 @@ describe('humanizeError — context-specific', () => {
   })
 })
 
-// These are the EXACT strings electron/ipc/chatIpc.js throws on a failed chat
-// send. assistantReply.ts now routes the caught error through
-// humanizeError(caught, 'chat') for every user-facing surface. Two layers
-// keep this honest: the source-pinning test below asserts the literals still
-// exist in chatIpc.js (so rewording the backend copy fails HERE, not silently
-// in front of the user), and the mapping tests assert each pinned string
-// resolves to the right advice.
-describe('humanizeError — real chat-send backend strings', () => {
-  test('pinned backend strings still exist in chatIpc.js source', () => {
+// electron/ipc/chatIpc.js throws stable NEXUS_ERR_CHAT_* codes embedded in
+// the error message (Electron IPC serialization drops custom properties, so
+// the token rides in the message — see shared/chatErrorCodes.js).
+// assistantReply.ts routes the caught error through humanizeError(caught,
+// 'chat') for every user-facing surface. Two layers keep this honest: the
+// source-pinning test below asserts chatIpc.js still throws the codes, and
+// the mapping tests assert each code resolves to the same advice the old
+// Chinese copy mapped to.
+describe('humanizeError — chat IPC error codes', () => {
+  test('pinned backend error codes still exist in chatIpc.js source', () => {
     // chatIpc.js imports 'electron' so it can't be imported under node:test —
-    // pin the copy at the source-text level instead.
+    // pin the codes at the source-text level instead.
     const source = readFileSync(new URL('../electron/ipc/chatIpc.js', import.meta.url), 'utf8')
     const pinned = [
-      'API Key 好像不太对，去设置里看看？',
-      '还没填 API Key 呢，先去设置里填一个吧。',
-      '模型那边回了个状态码',
-      '没能连上模型接口，看看地址和网络对不对？具体原因：',
-      '模型回复太慢了，看看网络和服务有没有问题？',
+      'CHAT_IPC_ERROR_CODES.AUTH_FAILED',
+      'CHAT_IPC_ERROR_CODES.MISSING_API_KEY',
+      'CHAT_IPC_ERROR_CODES.UNREACHABLE',
+      'CHAT_IPC_ERROR_CODES.TIMEOUT',
+      'CHAT_IPC_ERROR_CODES.EMPTY_CONTENT',
     ]
     for (const literal of pinned) {
-      assert.ok(source.includes(literal), `chatIpc.js no longer contains pinned copy: ${literal}`)
+      assert.ok(source.includes(literal), `chatIpc.js no longer throws pinned code: ${literal}`)
     }
   })
 
-  test('401 auth message (contains "API Key") → bad-key advice, key text dropped', () => {
-    const out = humanizeError('API Key 好像不太对，去设置里看看？', 'chat')
+  test('401 auth code → bad-key advice', () => {
+    const out = humanizeError(new Error('NEXUS_ERR_CHAT_AUTH_FAILED: provider returned HTTP 401'), 'chat')
     assert.match(out, /(API key|Settings)/i)
   })
 
-  test('missing-key 401 message also maps to bad-key advice', () => {
-    const out = humanizeError('还没填 API Key 呢，先去设置里填一个吧。', 'chat')
+  test('missing-key code also maps to bad-key advice', () => {
+    const out = humanizeError(new Error('NEXUS_ERR_CHAT_MISSING_API_KEY: provider returned HTTP 401'), 'chat')
     assert.match(out, /(API key|Settings)/i)
   })
 
-  test('404 status-code fallback → "check URL / model" advice', () => {
-    const out = humanizeError('模型那边回了个状态码 404，不太确定怎么回事。', 'chat')
+  test('header-unsafe key code also maps to bad-key advice', () => {
+    const out = humanizeError('NEXUS_ERR_CHAT_API_KEY_HEADER_UNSAFE: settings.chat_connection.api_key_header_unsafe', 'chat')
+    assert.match(out, /(API key|Settings)/i)
+  })
+
+  test('404 status code → "check URL / model" advice', () => {
+    const out = humanizeError('NEXUS_ERR_CHAT_NOT_FOUND: provider returned HTTP 404 without an error body', 'chat')
     assert.match(out, /(URL|model|address)/i)
   })
 
-  test('429 status-code fallback → rate-limit advice', () => {
-    const out = humanizeError('模型那边回了个状态码 429，不太确定怎么回事。', 'chat')
+  test('429 status code → rate-limit advice', () => {
+    const out = humanizeError('NEXUS_ERR_CHAT_RATE_LIMITED: provider returned HTTP 429 without an error body', 'chat')
     assert.match(out, /(too many|wait|moment)/i)
   })
 
-  test('connection-failure wrapper → reachability advice, raw host dropped', () => {
-    const out = humanizeError('没能连上模型接口，看看地址和网络对不对？具体原因：ECONNREFUSED 127.0.0.1:11434', 'chat')
+  test('5xx status code → server-side advice', () => {
+    const out = humanizeError('NEXUS_ERR_CHAT_PROVIDER_SERVER_ERROR: provider returned HTTP 502 without an error body', 'chat')
+    assert.match(out, /(provider|trouble|usually)/i)
+  })
+
+  test('unbucketed status code → generic fallback keeping the status detail', () => {
+    const out = humanizeError('NEXUS_ERR_CHAT_PROVIDER_STATUS: provider returned HTTP 302 without an error body', 'chat')
+    assert.match(out, /Something went wrong/)
+    assert.match(out, /302/)
+  })
+
+  test('unreachable code → reachability advice, raw host dropped', () => {
+    const out = humanizeError('NEXUS_ERR_CHAT_UNREACHABLE: chat request failed: ECONNREFUSED 127.0.0.1:11434', 'chat')
     assert.match(out, /(reach|connect|server)/i)
     assert.doesNotMatch(out, /ECONNREFUSED/)
   })
 
-  test('backend timeout copy maps to the dedicated timeout advice, not the generic fallback', () => {
-    const out = humanizeError('模型回复太慢了，看看网络和服务有没有问题？', 'chat')
+  test('timeout code maps to the dedicated timeout advice, not the generic fallback', () => {
+    const out = humanizeError('NEXUS_ERR_CHAT_TIMEOUT: chat request failed: request timed out', 'chat')
     assert.match(out, /(too long|faster|try)/i)
     assert.doesNotMatch(out, /Something went wrong/)
   })
 
-  test('the REAL chat-send timeout shape (wrapped in the 没能连上 copy) still maps to timeout advice', () => {
-    // net.js rejects with the timeout copy INSIDE chatIpc's catch, so the
-    // renderer always receives it wrapped — the timeout pattern must outrank
-    // the connection-failure pattern for this, the most common failure shape.
+  test('codes survive Electron "Error invoking remote method" wrapping', () => {
+    // ipcMain.handle serializes thrown errors as
+    // `Error invoking remote method '<channel>': Error: <message>` — the code
+    // token inside the message is the only part that must keep classifying.
     const out = humanizeError(
-      '没能连上模型接口，看看地址和网络对不对？具体原因：模型回复太慢了，看看网络和服务有没有问题？',
+      new Error("Error invoking remote method 'chat:complete': Error: NEXUS_ERR_CHAT_TIMEOUT: chat request failed: request timed out"),
       'chat',
     )
     assert.match(out, /(too long|faster)/i)
     assert.doesNotMatch(out, /reach the server/i)
+  })
+
+  test('same-process errors classify on the code property', () => {
+    const out = humanizeError(Object.assign(new Error('safe'), { code: 'NEXUS_ERR_CHAT_AUTH_FAILED' }), 'chat')
+    assert.match(out, /(API key|Settings)/i)
+  })
+
+  test('unknown NEXUS codes fall through to the generic fallback', () => {
+    const out = humanizeError('NEXUS_ERR_CHAT_FUTURE_CODE: something new happened', 'chat')
+    assert.match(out, /Something went wrong/)
+    assert.match(out, /something new happened/)
+  })
+
+  test('empty-content code → compatibility advice', () => {
+    const out = humanizeError('NEXUS_ERR_CHAT_EMPTY_CONTENT: model returned empty content (finishReason=stop)', 'chat')
+    assert.match(out, /(empty|compatible|different model)/i)
+    assert.doesNotMatch(out, /Something went wrong/)
+  })
+
+  test('unsafe-base-url code keeps the redacted detail in the fallback', () => {
+    const out = humanizeError('NEXUS_ERR_CHAT_UNSAFE_BASE_URL: API base URL rejected (private-network)', 'chat')
+    assert.match(out, /Something went wrong/)
+    assert.match(out, /private-network/)
   })
 
   test('a provider body merely containing "terminated" is not misread as a dropped connection', () => {
@@ -149,8 +189,8 @@ describe('humanizeError — real chat-send backend strings', () => {
     assert.match(out, /terminated for violating/)
   })
 
-  test('backend connection-failure copy maps to reachability advice even without an ASCII errno', () => {
-    const out = humanizeError('没能连上模型接口，看看地址和网络对不对？具体原因：terminated', 'chat')
+  test('unreachable code maps to reachability advice even without an ASCII errno', () => {
+    const out = humanizeError('NEXUS_ERR_CHAT_UNREACHABLE: chat stream request failed: terminated', 'chat')
     assert.match(out, /(reach|connect|server)/i)
     assert.doesNotMatch(out, /Something went wrong/)
   })

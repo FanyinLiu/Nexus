@@ -8,7 +8,6 @@ import {
   SPRITE_PET_CELL_WIDTH,
   SPRITE_PET_ROW_CONTRACT,
   formatSpritePetDisplayName,
-  readJsonFile,
   readSpritePetPackage,
   writeSpritePetZipArchive,
 } from './spritePetPackage.js'
@@ -18,6 +17,7 @@ import {
 import {
   auditSpritePetPackage,
 } from './spritePetVisualAudit.js'
+import { pathExists, readJsonFile } from './fsUtils.js'
 
 const DEFAULT_PACKAGE_DIRNAME = 'final-package'
 const DEFAULT_CREATOR_KIT_QA_DIRNAME = 'qa'
@@ -39,15 +39,6 @@ const IMAGE_MIME_TYPES = {
   '.jpeg': 'image/jpeg',
   '.png': 'image/png',
   '.webp': 'image/webp',
-}
-
-async function pathExists(targetPath) {
-  try {
-    await fs.access(targetPath)
-    return true
-  } catch {
-    return false
-  }
 }
 
 function normalizeText(value) {

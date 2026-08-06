@@ -6,6 +6,8 @@
  */
 
 import { LETTER_STORE_STORAGE_KEY, readJson, writeJson } from '../../lib/storage/core.ts'
+import { isValidIsoTimestamp } from '../../lib/localDate.ts'
+import { normalizeText } from '../../lib/normalize.ts'
 import type { LetterContent } from './letterPromptBuilder.ts'
 import type { UiLanguage } from '../../types'
 
@@ -35,10 +37,6 @@ const LETTER_CONTENT_KEYS: ReadonlyArray<keyof LetterContent> = [
   'closing',
 ]
 
-function isValidIsoTimestamp(value: string): boolean {
-  return Number.isFinite(Date.parse(value))
-}
-
 function isValidLocalDate(value: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
   if (!match) return false
@@ -49,12 +47,6 @@ function isValidLocalDate(value: string): boolean {
   return date.getUTCFullYear() === year
     && date.getUTCMonth() === month - 1
     && date.getUTCDate() === day
-}
-
-function normalizeText(value: unknown): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed ? trimmed : null
 }
 
 function normalizeLetterContent(value: unknown): LetterContent | null {

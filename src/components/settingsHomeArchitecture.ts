@@ -72,6 +72,7 @@ export const SETTINGS_HOME_GROUPS: readonly SettingsHomeGroup[] = [
   },
 ]
 
+/** @public kept exported as part of the settings home architecture contract (scripts/settings-surface-audit.mjs). */
 export const SETTINGS_HOME_SECTION_ORDER = SETTINGS_HOME_GROUPS
   .flatMap((group) => group.sectionIds)
 

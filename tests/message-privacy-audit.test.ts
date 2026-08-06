@@ -60,10 +60,30 @@ commitNotificationMessages(
 `,
   'src/hooks/chat/assistantReply.ts': `
 logVoiceEvent('sending message to assistant', { contentLength: content.length })
+`,
+  'src/hooks/chat/assistantReply/promptAssembly.ts': `
+const memoryContext = buildMemoryRecallContext({ query: content })
+`,
+  'src/hooks/chat/assistantReply/streamConsumption.ts': `
+const request = bindStreamingAbort(requestStreaming(currentSettings, nextMessages, memoryContext))
+`,
+  'src/hooks/chat/assistantReply/postProcessing.ts': `
 logVoiceEvent('assistant reply received', { responseLength: response.response.content.length })
 `,
-  'src/hooks/useChat.ts': `
+  'src/hooks/chat/sendMessage.ts': `
 logVoiceEvent('assistant is busy, voice transcript was not sent', { contentLength: content.length })
+`,
+  'src/hooks/chat/useCompanionNotices.ts': `
+appendChatMessage({ id: createId('msg'), role: 'assistant', content: chatContent, createdAt })
+`,
+  'src/hooks/chat/useChatHistoryArchive.ts': `
+const exportContent = serializeChatHistoryArchive(messagesRef.current, { companionName, userName })
+`,
+  'src/hooks/chat/usePetDialogBubbles.ts': `
+setPetDialogBubble({ ...bubble, createdAt: bubble.createdAt ?? new Date().toISOString() })
+`,
+  'src/hooks/useChat.ts': `
+logVoiceEvent('assistant reply speech output failed', { errorPresent: Boolean(speechErrorMessage) })
 `,
   'src/hooks/voice/transcriptHandling.ts': `
 logVoiceEvent('recognized transcript', {

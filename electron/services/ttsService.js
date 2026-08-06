@@ -1,5 +1,4 @@
 import {
-  performNetworkRequest,
   performNetworkRequestWithRetry,
   readJsonSafe,
   readResponseBufferWithLimit,
@@ -10,7 +9,6 @@ import {
 import { synthesizeEdgeTts } from './edgeTts.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
 import {
-  isElevenLabsProvider,
   isVolcengineSpeechInputProvider,
   isVolcengineSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
@@ -325,20 +323,13 @@ async function synthesizeRemoteTts(sessionPayload, text) {
   throw new Error('当前语音输出提供商暂未接通流式播放。')
 }
 
-async function warmupRemoteTtsSession(_sessionPayload) {
-  // No-op: previously used for local Qwen3-TTS service warm-up.
-}
-
 export {
   synthesizeRemoteTts,
-  warmupRemoteTtsSession,
   buildAuthorizationHeaders,
   parseVolcengineSpeechCredentials,
-  isElevenLabsProvider,
   isOpenAiCompatibleSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
   isDashScopeSpeechOutputProvider,
-  isOmniVoiceSpeechOutputProvider,
   isVolcengineSpeechOutputProvider,
   isVolcengineSpeechInputProvider,
   isOpenAiCompatibleSpeechInputProvider,

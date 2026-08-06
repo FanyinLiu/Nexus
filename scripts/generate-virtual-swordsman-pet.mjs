@@ -97,15 +97,6 @@ async function pathExists(targetPath) {
   }
 }
 
-function escapeXml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;')
-}
-
 function isHexColor(value) {
   return /^#[0-9a-f]{6}$/i.test(value)
 }

@@ -214,7 +214,7 @@ export async function loadActiveProfilePersona(
   }
 }
 
-export async function buildSystemPrompt(
+async function buildSystemPrompt(
   settings: AppSettings,
   memoryContext: MemoryRecallContext,
   options: AssistantReplyRequestOptions,

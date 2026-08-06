@@ -20,6 +20,7 @@
 
 import type { UiLanguage } from '../../types'
 import type { RuptureKind } from './ruptureDetection.ts'
+import { pickLocale } from '../../lib/normalize.ts'
 
 export interface BuildRepairGuidanceInput {
   uiLanguage: UiLanguage
@@ -87,10 +88,6 @@ const STONEWALLING_PROSE: Record<UiLanguage, string> = {
     '<rupture_repair>\nユーザーの最後の発言は、最近のリズムよりずっと短くなっています — 不満ではなく、退きのサイン。「どうしたの？大丈夫？」と訊くのは、相手にパフォーマンスを要求する形になります。この一往復では：\n- 短くなったリズムに合わせること。長く返さないこと。\n- 「なぜ黙っているの」と詮索しないこと。変化を名指ししないこと。\n- 短い温かい受け止めと余白（「ここにいるよ、ゆっくりで」）の方が、問いより効きます。\n- 追わないこと。相手のペースで戻ってくるのを待つこと。\n</rupture_repair>',
   'ko':
     '<rupture_repair>\n사용자의 마지막 말이 최근 호흡보다 훨씬 짧아 — 불만이 아니라 물러남의 신호야. "무슨 일 있어?"라고 물으면 상대에게 연기하라고 요구하는 셈이 돼. 이번 턴에서는:\n- 짧아진 호흡에 맞춰라. 길게 답하지 마라.\n- "왜 말이 없어"라고 캐묻지 마라. 그 변화를 짚지도 마라.\n- 짧은 따뜻한 수용과 여백("여기 있어, 천천히")이 질문보다 잘 들어.\n- 쫓지 마라. 상대의 속도로 돌아오게 둬.\n</rupture_repair>',
-}
-
-function pickLocale(table: Record<UiLanguage, string>, uiLanguage: UiLanguage): string {
-  return table[uiLanguage] ?? table['en-US']
 }
 
 export function buildRepairGuidance(input: BuildRepairGuidanceInput): string {

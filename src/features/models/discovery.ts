@@ -11,6 +11,7 @@ import {
   getProviderPresetModels,
   getTextProviderCatalogOptions,
 } from './providerCatalog.ts'
+import { normalizeString } from '../../lib/normalize.ts'
 
 export type ModelConnectionSettings = Pick<
   AppSettings,
@@ -31,10 +32,6 @@ export type ProviderCredentialStatus =
 
 function hasSecretValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0
-}
-
-function normalizeString(value: unknown) {
-  return typeof value === 'string' ? value.trim() : ''
 }
 
 export function resolveProviderConnectionRequest(

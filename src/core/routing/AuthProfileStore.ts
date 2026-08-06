@@ -4,6 +4,7 @@ import type {
   AuthProfileStatus,
   ProviderId,
 } from './types.ts'
+import { normalizeNonNegativeInteger } from '../../lib/normalize.ts'
 
 const DEFAULT_COOLDOWN_MS = 60_000
 const AUTH_PROFILE_STATUSES = new Set<AuthProfileStatus>(['active', 'cooldown', 'failed'])
@@ -14,12 +15,6 @@ export type RegisterProfileInput = {
   providerId: ProviderId
   apiKey: string
   label?: string
-}
-
-function normalizeNonNegativeInteger(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0
-    ? Math.floor(value)
-    : 0
 }
 
 function normalizeOptionalNumber(value: unknown): number | undefined {

@@ -83,9 +83,6 @@ process.on('uncaughtException', (err) => {
 
 // ── Paths & feature flags ──
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
 const isDev = !app.isPackaged
 const useDevServer = process.env.DESKTOP_PET_USE_DEV_SERVER === '1'
 const devServerUrl = 'http://127.0.0.1:47821'

@@ -1,6 +1,6 @@
 import type { MemoryDreamLog, MemoryDreamResult } from '../../types'
 
-export const DREAM_LOG_MUTATION_LOCK_NAME = 'nexus:autonomy:dream-log:mutation'
+const DREAM_LOG_MUTATION_LOCK_NAME = 'nexus:autonomy:dream-log:mutation'
 
 export type DreamLogLock = <T>(work: () => Promise<T> | T) => Promise<T>
 export type DreamLogMutation = (latest: MemoryDreamLog) => MemoryDreamLog

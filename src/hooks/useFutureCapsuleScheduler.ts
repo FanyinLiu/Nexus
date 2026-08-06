@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react'
 import {
   findDueCapsule,
   markDelivered,
 } from '../features/futureCapsule/futureCapsuleStore.ts'
 import { buildFutureCapsuleDelivery } from '../features/futureCapsule/futureCapsuleDelivery.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import { usePollingScheduler } from './usePollingScheduler.ts'
 import type { AppSettings } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000  // 5 min — same cadence as bracket / errand
@@ -28,23 +28,15 @@ interface UseFutureCapsuleSchedulerOptions {
  * user explicitly created.
  */
 export function useFutureCapsuleScheduler({ settings, enabled = true }: UseFutureCapsuleSchedulerOptions) {
-  const liveRef = useRef({ settings })
-  useEffect(() => {
-    liveRef.current = { settings }
-  }, [settings])
-
-  useEffect(() => {
-    if (!enabled || typeof window === 'undefined') return
-    if (!window.desktopPet?.showProactiveNotification) return
-
-    let stopped = false
-
-    const tick = async () => {
-      if (stopped) return
+  usePollingScheduler({
+    enabled,
+    intervalMs: POLL_INTERVAL_MS,
+    requireNotificationBridge: true,
+    live: { settings },
+    tick: async ({ settings: s }, isStopped) => {
       const due = findDueCapsule()
       if (!due) return
 
-      const { settings: s } = liveRef.current
       const delivery = buildFutureCapsuleDelivery({
         uiLanguage: s.uiLanguage,
         companionName: s.companionName,
@@ -53,21 +45,11 @@ export function useFutureCapsuleScheduler({ settings, enabled = true }: UseFutur
 
       try {
         await window.desktopPet?.showProactiveNotification?.(delivery)
-        if (stopped) return
+        if (isStopped()) return
         markDelivered(due.id)
       } catch (err) {
         console.warn('[future-capsule] delivery failed:', getRedactedLogErrorMessage(err))
       }
-    }
-
-    void tick()
-    const id = window.setInterval(() => {
-      void tick()
-    }, POLL_INTERVAL_MS)
-
-    return () => {
-      stopped = true
-      window.clearInterval(id)
-    }
-  }, [enabled])
+    },
+  })
 }

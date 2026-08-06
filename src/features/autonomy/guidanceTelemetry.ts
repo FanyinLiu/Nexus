@@ -25,6 +25,8 @@ import {
   writeJson,
 } from '../../lib/storage/core.ts'
 import type { GuidanceAnalysisReport } from './guidanceAnalysis.ts'
+import { isObject } from '../../lib/guards.ts'
+import { hasChanged } from '../../lib/normalize.ts'
 
 export type GuidanceKind =
   | 'affect:stuck-low'
@@ -78,10 +80,6 @@ function isValidKind(s: unknown): s is GuidanceKind {
   return typeof s === 'string' && VALID_KINDS.has(s)
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
-
 function normalizeIso(value: unknown, options: { allowFuture?: boolean; nowMs?: number } = {}): string | null {
   if (typeof value !== 'string' && typeof value !== 'number') return null
   const parsed = typeof value === 'number' ? value : Date.parse(value)
@@ -105,10 +103,6 @@ function normalizePositiveNumber(value: unknown, fallback: number): number {
   const numeric = typeof value === 'number' ? value : Number(value)
   if (!Number.isFinite(numeric) || numeric <= 0) return fallback
   return numeric
-}
-
-function hasChanged(normalized: unknown, raw: unknown): boolean {
-  return JSON.stringify(normalized) !== JSON.stringify(raw)
 }
 
 function writeJsonBestEffort<T>(key: string, value: T): void {

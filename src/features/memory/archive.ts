@@ -1,5 +1,6 @@
 import type { DailyMemoryEntry, DailyMemoryStore, MemoryItem } from '../../types/index.ts'
 import { createId } from '../../lib/index.ts'
+import { isObject } from '../../lib/guards.ts'
 import { t } from '../../i18n/runtime.ts'
 
 type MemoryArchivePayload = {
@@ -10,10 +11,6 @@ type MemoryArchivePayload = {
   dailyDayCount: number
   memories: MemoryItem[]
   dailyMemories: DailyMemoryStore
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
 function normalizeMemory(value: unknown, index: number): MemoryItem | null {

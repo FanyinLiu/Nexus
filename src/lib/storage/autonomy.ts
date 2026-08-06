@@ -6,6 +6,8 @@ import {
   readJson,
   writeJson,
 } from './core.ts'
+import { isObject } from '../guards.ts'
+import { hasChanged, normalizeNullableString } from '../normalize.ts'
 
 export type BracketState = {
   lastMorningFiredMs: number | null
@@ -26,18 +28,8 @@ const EMPTY_BRACKET_STATE: BracketState = {
   lastEveningFiredMs: null,
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
-
-function normalizeString(value: unknown): string | null {
-  if (typeof value !== 'string') return null
-  const normalized = value.replace(/\s+/g, ' ').trim()
-  return normalized.length > 0 ? normalized : null
-}
-
 function normalizeOptionalString(value: unknown): string | undefined {
-  return normalizeString(value) ?? undefined
+  return normalizeNullableString(value) ?? undefined
 }
 
 function normalizeIso(value: unknown, fallback?: string): string | undefined {
@@ -61,8 +53,8 @@ function normalizeGoalStatus(value: unknown): GoalStatus {
 
 function normalizeGoalSubtask(raw: unknown): GoalSubtask | null {
   if (!isObject(raw)) return null
-  const id = normalizeString(raw.id)
-  const title = normalizeString(raw.title)
+  const id = normalizeNullableString(raw.id)
+  const title = normalizeNullableString(raw.title)
   if (!id || !title) return null
   return {
     id,
@@ -73,8 +65,8 @@ function normalizeGoalSubtask(raw: unknown): GoalSubtask | null {
 
 function normalizeGoal(raw: unknown, nowIso: string): Goal | null {
   if (!isObject(raw)) return null
-  const id = normalizeString(raw.id)
-  const title = normalizeString(raw.title)
+  const id = normalizeNullableString(raw.id)
+  const title = normalizeNullableString(raw.title)
   if (!id || !title) return null
 
   const subtasks = Array.isArray(raw.subtasks)
@@ -125,10 +117,6 @@ function normalizeTimestamp(value: unknown): number | null {
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
   }
   return null
-}
-
-function hasChanged(normalized: unknown, raw: unknown): boolean {
-  return JSON.stringify(normalized) !== JSON.stringify(raw)
 }
 
 export function normalizeAutonomyGoals(raw: unknown, nowMs = Date.now()): Goal[] {

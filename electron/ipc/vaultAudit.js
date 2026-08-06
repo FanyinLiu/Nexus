@@ -1,4 +1,4 @@
-const VAULT_REF_PREFIX = 'nexus-vault-ref:'
+import { isVaultRef } from '../../shared/vaultRefs.js'
 
 function summarizeSlot(slot) {
   return {
@@ -32,10 +32,6 @@ function summarizeEntries(entries) {
     nonEmptyValueCount: normalizedEntries.filter(([, value]) => String(value ?? '').length > 0).length,
     valueTotalLength: normalizedEntries.reduce((sum, [, value]) => sum + String(value ?? '').length, 0),
   }
-}
-
-function isVaultRef(value) {
-  return typeof value === 'string' && value.startsWith(VAULT_REF_PREFIX)
 }
 
 function summarizeVaultRef(value) {

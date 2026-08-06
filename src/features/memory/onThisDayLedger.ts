@@ -17,16 +17,13 @@ import {
   readJson,
   writeJson,
 } from '../../lib/storage/core.ts'
+import { hasChanged } from '../../lib/normalize.ts'
 
 interface Ledger {
   [memoryId: string]: string
 }
 
 const LEDGER_RETENTION_MS = 400 * 24 * 60 * 60 * 1000  // ~13 months — longer than the year window
-
-function hasChanged(normalized: unknown, raw: unknown): boolean {
-  return JSON.stringify(normalized) !== JSON.stringify(raw)
-}
 
 export function normalizeOnThisDayLedger(raw: unknown, nowMs: number = Date.now()): Ledger {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}

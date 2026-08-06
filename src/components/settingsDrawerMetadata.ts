@@ -20,7 +20,7 @@ type SettingsSectionMetaEntry = {
 
 export type SettingsSectionMetaMap = Record<SettingsSectionId, SettingsSectionMetaEntry>
 
-export const SETTINGS_TRUST_SURFACE_GROUPS = {
+const SETTINGS_TRUST_SURFACE_GROUPS = {
   trustSafety: ['console', 'history'],
   memoryContext: ['memory', 'lorebooks'],
   desktopAwareness: ['window', 'autonomy', 'voice'],

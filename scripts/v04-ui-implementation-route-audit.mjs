@@ -25,7 +25,7 @@ const REQUIRED_FILES = [
   'src/app/views/PanelView.tsx',
   'src/app/views/PetView.tsx',
   'src/components/SettingsDrawer.tsx',
-  'src/components/settingsSectionModules.ts',
+  'src/components/SettingsDrawerActiveSection.tsx',
   'package.json',
 ]
 
@@ -64,9 +64,9 @@ const ACTIVE_ROUTE_CONTRACTS = [
   },
   {
     id: 'memory-v3-route',
-    file: 'src/components/settingsSectionModules.ts',
+    file: 'src/components/SettingsDrawerActiveSection.tsx',
     fragments: [
-      "loadMemorySection = () => import('../features/settingsV3/MemorySectionV3.tsx')",
+      "default: (await import('../features/settingsV3/MemorySectionV3.tsx')).MemorySectionV3",
     ],
   },
 ]

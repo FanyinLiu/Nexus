@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { normalizePath } from './lib/audit-framework.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -31,10 +32,6 @@ const FIXED_BUILD_INPUTS = [
   'scripts/glm_asr_server.py',
   'scripts/send-message-webhook.mjs',
 ]
-
-function normalizePath(path) {
-  return path.split('\\').join('/')
-}
 
 function walkFiles(root, relativeDirectory) {
   const absoluteDirectory = join(root, relativeDirectory)

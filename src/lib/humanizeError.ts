@@ -1,5 +1,10 @@
 import { t } from '../i18n/runtime.ts'
 import type { TranslationKey } from '../types/i18n.ts'
+import { redactSensitiveText } from '../../shared/redaction.js'
+import {
+  CHAT_IPC_ERROR_CODES,
+  extractChatIpcErrorCode,
+} from '../../shared/chatErrorCodes.js'
 
 /**
  * humanizeError — translate raw runtime errors into companion-voice
@@ -41,6 +46,29 @@ interface KnownPattern {
   withDetail?: boolean
 }
 
+/**
+ * Stable chat-IPC error codes (shared/chatErrorCodes.js) — the main process
+ * embeds these tokens in thrown error messages because Electron's IPC error
+ * serialization drops custom properties. Code mappings are authoritative and
+ * checked before every regex below; the Chinese copy they replaced is gone.
+ */
+const CHAT_IPC_CODE_KEYS: Record<string, { key: TranslationKey; withDetail?: boolean }> = {
+  [CHAT_IPC_ERROR_CODES.MISSING_API_KEY]: { key: 'humanize.chat.bad_api_key' },
+  [CHAT_IPC_ERROR_CODES.API_KEY_HEADER_UNSAFE]: { key: 'humanize.chat.bad_api_key' },
+  [CHAT_IPC_ERROR_CODES.AUTH_FAILED]: { key: 'humanize.chat.bad_api_key' },
+  [CHAT_IPC_ERROR_CODES.UNREACHABLE]: { key: 'humanize.connection_refused' },
+  [CHAT_IPC_ERROR_CODES.TIMEOUT]: { key: 'humanize.timeout' },
+  [CHAT_IPC_ERROR_CODES.FORBIDDEN]: { key: 'humanize.forbidden' },
+  [CHAT_IPC_ERROR_CODES.NOT_FOUND]: { key: 'humanize.not_found' },
+  [CHAT_IPC_ERROR_CODES.RATE_LIMITED]: { key: 'humanize.rate_limited' },
+  [CHAT_IPC_ERROR_CODES.PROVIDER_SERVER_ERROR]: { key: 'humanize.server_error' },
+  [CHAT_IPC_ERROR_CODES.EMPTY_CONTENT]: { key: 'humanize.chat.empty_response' },
+  // Fallback-mapped codes keep the (redacted) raw detail visible, matching
+  // how these errors used to fall through every pattern.
+  [CHAT_IPC_ERROR_CODES.UNSAFE_BASE_URL]: { key: 'humanize.fallback', withDetail: true },
+  [CHAT_IPC_ERROR_CODES.PROVIDER_STATUS]: { key: 'humanize.fallback', withDetail: true },
+}
+
 // Patterns are checked in order, first match wins. More specific patterns
 // MUST come before more generic ones (e.g. "401" before "fetch failed").
 const COMMON_PATTERNS: KnownPattern[] = [
@@ -49,15 +77,10 @@ const COMMON_PATTERNS: KnownPattern[] = [
   { match: /\b(404|not\s*found)/i, key: 'humanize.not_found' },
   { match: /\b(429|rate.?limit|quota.?exceed)/i, key: 'humanize.rate_limited' },
   { match: /\b5\d{2}\b|server.?error|internal.?error/i, key: 'humanize.server_error' },
-  // 没能连上/太慢: electron/ipc/chatIpc.js throws its own Chinese copy for
-  // connection and timeout failures; without these the most common real-world
-  // failures fall through to the generic fallback instead of targeted advice.
-  // 太慢 must outrank 没能连上: backend timeouts reach the renderer wrapped as
-  // `没能连上…具体原因：模型回复太慢…` (net.js rejects inside chatIpc's catch),
-  // and first-match-wins would otherwise classify every timeout as a
-  // connection failure.
-  { match: /ETIMEDOUT|timeout|timed out|超时|太慢|等了好久|逾時/i, key: 'humanize.timeout' },
-  { match: /ECONNREFUSED|connection refused|没能连上|连接失败/i, key: 'humanize.connection_refused' },
+  // 等了好久 stays: it is net.js's default timeoutMessage for non-chat fetch
+  // paths (model downloads, tools), which still arrive as plain text.
+  { match: /ETIMEDOUT|timeout|timed out|超时|等了好久|逾時/i, key: 'humanize.timeout' },
+  { match: /ECONNREFUSED|connection refused/i, key: 'humanize.connection_refused' },
   { match: /ENOTFOUND|getaddrinfo|dns/i, key: 'humanize.dns_failed' },
   // 'terminated' / 'other side closed' are undici's wording for a connection
   // dropped mid-stream. 'terminated' is anchored to the end of the text so a
@@ -73,7 +96,7 @@ const CONTEXT_PATTERNS: Record<HumanizeContext, KnownPattern[]> = {
     { match: /API key|apikey|invalid.?key/i, key: 'humanize.chat.bad_api_key' },
     { match: /model.{0,15}(not.?found|invalid|unavailable|does not exist)/i, key: 'humanize.chat.model_unavailable' },
     { match: /context.{0,5}length|too.?many.?tokens|max.?tokens/i, key: 'humanize.chat.context_too_long' },
-    { match: /empty.?content|空内容/i, key: 'humanize.chat.empty_response' },
+    { match: /empty.?content/i, key: 'humanize.chat.empty_response' },
   ],
   voice: [
     { match: /Requested device not found|NotFoundError/i, key: 'humanize.voice.no_mic_device' },
@@ -151,28 +174,13 @@ function lookupTranslation(key: TranslationKey, detail?: string): string {
  * neither belongs in front of the user. Applied to the fallback branch
  * (the path that surfaces unmatched raw text) and to any pattern that
  * embeds the raw string via `withDetail: true`.
+ *
+ * The chain itself is the canonical shared/redaction.js rule set — the
+ * union of the three previously drifted copies, so this also covers
+ * vault-slot names and generic key/token/secret/password parameters now.
  */
 function redactSensitive(raw: string): string {
-  return raw
-    // macOS / Linux home dirs
-    .replace(/\/Users\/[^/\s'"]+/g, '~')
-    .replace(/\/home\/[^/\s'"]+/g, '~')
-    // Windows user dirs
-    .replace(/[A-Z]:\\Users\\[^\\\s'"]+/gi, '~')
-    // URL userinfo credentials (authenticated proxies / custom base URLs)
-    .replace(/(\w+:\/\/)[^/\s:@]+:[^/\s@]+@/g, '$1***:***@')
-    // OpenAI / Anthropic / generic bearer tokens
-    .replace(/sk-[A-Za-z0-9_-]{16,}/g, 'sk-***')
-    .replace(/Bearer\s+[A-Za-z0-9._~+/-]{16,}=*/gi, 'Bearer ***')
-    // Google AIza keys (Gemini), xAI keys
-    .replace(/AIza[0-9A-Za-z_-]{30,}/g, 'AIza***')
-    .replace(/\bxai-[A-Za-z0-9_-]{16,}/g, 'xai-***')
-    // JWTs (MiniMax and other providers hand these out as API keys)
-    .replace(/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}/g, 'jwt***')
-    // Secrets passed as query/body parameters, echoed back in error text.
-    // Suffix-based (any param name ending in key/token/secret) because \b
-    // fails after '_' — client_secret= / refresh_token= must be caught too.
-    .replace(/([A-Za-z0-9_-]*(?:key|token|secret))=[^&\s'"]+/gi, '$1=***')
+  return redactSensitiveText(raw)
 }
 
 /**
@@ -196,6 +204,19 @@ export function humanizeError(error: unknown, context: HumanizeContext = 'generi
   const classifyTarget = raw.includes('\n')
     ? (raw.split('\n').find((line) => line.trim()) ?? raw)
     : raw
+
+  // Stable main-process error codes outrank every regex — they are
+  // authoritative. `error.code` only survives same-process calls; across IPC
+  // the token rides inside the message (shared/chatErrorCodes.js), so the
+  // first line is scanned for it.
+  const codeProperty = (error as { code?: unknown } | null)?.code
+  const ipcCode = (typeof codeProperty === 'string' && codeProperty in CHAT_IPC_CODE_KEYS
+    ? codeProperty
+    : null) ?? extractChatIpcErrorCode(classifyTarget)
+  const codeMapping = ipcCode ? CHAT_IPC_CODE_KEYS[ipcCode] : undefined
+  if (codeMapping) {
+    return lookupTranslation(codeMapping.key, codeMapping.withDetail ? redactSensitive(raw) : undefined)
+  }
 
   // Context-specific patterns first (more specific), then common.
   const patterns = [...(CONTEXT_PATTERNS[context] ?? []), ...COMMON_PATTERNS]

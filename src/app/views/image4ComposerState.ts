@@ -1,7 +1,10 @@
 import type { VoiceState } from '../../types'
 
+/** @public kept exported for the image4 visual contract audit (scripts/image4-visual-contract-rules.mjs). */
 export type Image4ComposerMode = 'idle' | 'drafting' | 'streaming' | 'interrupted'
+/** @public kept exported for the image4 visual contract audit (scripts/image4-visual-contract-rules.mjs). */
 export type Image4ComposerSendState = 'disabled' | 'ready' | 'busy'
+/** @public kept exported for the image4 visual contract audit (scripts/image4-visual-contract-rules.mjs). */
 export type Image4ComposerVoiceMode = 'idle' | 'listening' | 'processing' | 'speaking'
 
 export type Image4ComposerStateInput = {

@@ -59,7 +59,7 @@ export type CompanionRelationshipType =
   | 'mentor'
   | 'quiet_companion'
 
-export interface IdentitySettings {
+interface IdentitySettings {
   companionName: string
   userName: string
   systemPrompt: string
@@ -292,7 +292,7 @@ interface ToolSettings {
   toolOpenExternalRequiresConfirmation: boolean
 }
 
-export interface PresenceSettings {
+interface PresenceSettings {
   proactivePresenceEnabled: boolean
   proactivePresenceIntervalMinutes: number
   /**

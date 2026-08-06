@@ -41,7 +41,6 @@ import {
 } from './tokenEstimate.ts'
 import { runToolCallLoop } from './toolCallLoop.ts'
 
-export type { AssistantReplyRuntimeResult } from './failoverChain.ts'
 export type { AssistantReplyRequestOptions } from './systemPromptBuilder.ts'
 
 type AbortableChatRequest = Promise<AssistantReplyRuntimeResult> & {

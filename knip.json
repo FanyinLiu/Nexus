@@ -9,10 +9,10 @@
     "tests/helpers/electron-main-stub-hooks.mjs"
   ],
   "ignore": [
+    "shared/**/*.d.ts",
     "src/features/autonomy/coregulation.ts",
     "src/features/autonomy/moodMapBinning.ts",
     "src/features/integrations/registry.ts",
-    "src/features/releaseNotes/**",
     "src/features/yearbook/**"
   ],
   "ignoreDependencies": [
@@ -22,8 +22,5 @@
     "osascript",
     "pgrep",
     "playerctl"
-  ],
-  "ignoreUnresolved": [
-    "^/src/lib/storage/settings\\.ts$"
   ]
 }

@@ -9,7 +9,7 @@ import {
   normalizeSpeechOutputApiBaseUrl,
   resolveSpeechInputModel,
 } from '../audioProviders.ts'
-import { inferApiProviderId } from '../apiProviders.ts'
+import { inferApiProviderId } from '../../features/models/providerCatalog.ts'
 import {
   normalizePetSceneLocation,
   normalizePetTimePreview,

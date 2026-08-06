@@ -4,6 +4,7 @@
 
 export const CHECKED_FILES = [
   '.gitignore',
+  'shared/redaction.js',
   'electron/services/errorRedaction.js',
   'electron/services/auditLog.js',
   'electron/ipc/chatIpc.js',

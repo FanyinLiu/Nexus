@@ -1,4 +1,6 @@
-export const GITHUB_RELEASES_URL = 'https://github.com/FanyinLiu/Nexus/releases/latest'
+import { NEXUS_GITHUB_RELEASES_URL } from '../../shared/updates.js'
+
+export const GITHUB_RELEASES_URL = NEXUS_GITHUB_RELEASES_URL
 export const GITHUB_RELEASES_API_URL = 'https://api.github.com/repos/FanyinLiu/Nexus/releases/latest'
 
 export function resolveUpdaterMode({

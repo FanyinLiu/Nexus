@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import {
+  buildSummary,
+  countOccurrences,
+  findForbiddenPatterns,
+  findMissingContracts,
+  findMissingFiles,
+  readProjectFiles,
+  resolveProjectRoot,
+  runAuditCli,
+} from './lib/audit-framework.mjs'
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const ROOT = resolveProjectRoot(import.meta.url)
 
 const REQUIRED_FILES = [
   'docs/CHAT_SURFACE_REFERENCE_REVIEW.md',
@@ -148,79 +155,13 @@ const FORBIDDEN_SOURCE_PATTERNS = [
   },
 ]
 
-function readProjectFile(root, file) {
-  const fullPath = join(root, file)
-  if (!existsSync(fullPath)) return null
-  return readFileSync(fullPath, 'utf8')
-}
-
-function readProjectFiles(root, files) {
-  return new Map(files.map((file) => [file, readProjectFile(root, file)]))
-}
-
-function findMissingFiles(files) {
-  return [...files.entries()]
-    .filter(([, text]) => text == null)
-    .map(([file]) => file)
-}
-
-function findMissingContracts(files) {
-  const missing = []
-  for (const contract of REQUIRED_CONTRACTS) {
-    const text = files.get(contract.file)
-    if (text == null) continue
-    const missingPatterns = contract.patterns.filter((pattern) => !text.includes(pattern))
-    if (missingPatterns.length) {
-      missing.push({
-        id: contract.id,
-        file: contract.file,
-        description: contract.description,
-        missingPatterns,
-      })
-    }
-  }
-  return missing
-}
-
-function findForbiddenPatterns(files) {
-  const matches = []
-  for (const rule of FORBIDDEN_SOURCE_PATTERNS) {
-    for (const file of rule.files) {
-      const text = files.get(file)
-      if (text == null) continue
-      const foundPatterns = rule.patterns.filter((pattern) => text.includes(pattern))
-      if (foundPatterns.length) {
-        matches.push({
-          id: rule.id,
-          file,
-          description: rule.description,
-          foundPatterns,
-        })
-      }
-    }
-  }
-  return matches
-}
-
-function countOccurrences(text, fragment) {
-  return text.split(fragment).length - 1
-}
-
-function buildSummary({ missingFiles, missingContracts, forbiddenPatterns }) {
-  const errors = missingFiles.length + missingContracts.length + forbiddenPatterns.length
-  return {
-    ok: errors === 0,
-    errors,
-  }
-}
-
 export function buildChatSurfaceReport(root = ROOT) {
   const files = readProjectFiles(root, REQUIRED_FILES)
   const messageBubble = files.get('src/components/MessageBubble.tsx') ?? ''
   const panelView = files.get('src/app/views/LegacyPanelView.tsx') ?? ''
   const missingFiles = findMissingFiles(files)
-  const missingContracts = findMissingContracts(files)
-  const forbiddenPatterns = findForbiddenPatterns(files)
+  const missingContracts = findMissingContracts(files, REQUIRED_CONTRACTS)
+  const forbiddenPatterns = findForbiddenPatterns(files, FORBIDDEN_SOURCE_PATTERNS)
 
   const report = {
     audit: 'chat-surface',
@@ -245,7 +186,7 @@ export function buildChatSurfaceReport(root = ROOT) {
 
   return {
     ...report,
-    summary: buildSummary(report),
+    summary: buildSummary({ missingFiles, missingContracts, forbiddenPatterns }),
   }
 }
 
@@ -286,8 +227,9 @@ export function formatChatSurfaceReport(report) {
   return lines.join('\n')
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const report = buildChatSurfaceReport(ROOT)
-  console.log(formatChatSurfaceReport(report))
-  process.exitCode = report.summary.ok ? 0 : 1
-}
+runAuditCli({
+  importMetaUrl: import.meta.url,
+  root: ROOT,
+  buildReport: buildChatSurfaceReport,
+  formatReport: formatChatSurfaceReport,
+})

@@ -256,7 +256,7 @@ test('submission lock rejects classification-pending duplicates, preserves a new
 })
 
 test('submission lock releases before the assistant turn and clears against the raw composer snapshot', async () => {
-  const source = await readFile(new URL('../src/hooks/useChat.ts', import.meta.url), 'utf8')
+  const source = await readFile(new URL('../src/hooks/chat/sendMessage.ts', import.meta.url), 'utf8')
   const executeIndex = source.indexOf('return executeAssistantTurn(')
   const releaseBeforeExecuteIndex = source.lastIndexOf('releaseChatSubmission(submissionLockRef)', executeIndex)
   const finallyReleaseIndex = source.indexOf('releaseChatSubmission(submissionLockRef)', executeIndex)

@@ -2,7 +2,6 @@ import { app, dialog, BrowserWindow, shell } from 'electron'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import {
   performNetworkRequest,
   readResponseBufferWithLimit,
@@ -74,9 +73,7 @@ import {
   listPetModelsFromRoot,
   readAndValidateLive2dModelFile,
 } from './live2dModelDiscoveryService.js'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+import { pathExists } from './fsUtils.js'
 
 const IMPORTED_PET_MODEL_DESCRIPTION = '已导入到应用本地目录的 Live2D 模型，可直接切换。'
 const BUNDLED_SPRITE_PET_MODEL_DESCRIPTION = '内置 Sprite 宠物包，可直接切换。'
@@ -121,15 +118,6 @@ async function fetchBytes(url, options = {}) {
   }
 
   return readResponseBufferWithLimit(response, { maxBytes, label })
-}
-
-async function pathExists(targetPath) {
-  try {
-    await fs.access(targetPath)
-    return true
-  } catch {
-    return false
-  }
 }
 
 async function resolveUniqueChildDirectory(root, baseName) {

@@ -2,6 +2,7 @@ import type { AssistantRuntimeActivity, VoiceState } from '../../types'
 import type { CompanionElapsedBucket } from '../../features/context/companionTimeLanguage.ts'
 
 export type Image4CompanionMode = 'idle' | 'attentive' | 'speaking' | 'resting'
+/** @public kept exported for the image4 visual contract audit (scripts/image4-visual-contract-rules.mjs). */
 export type Image4ContextTone = 'calm' | 'active' | 'night' | 'focus'
 export type Image4CompanionActivityState =
   | 'idle'

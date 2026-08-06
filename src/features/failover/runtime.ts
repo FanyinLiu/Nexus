@@ -1,3 +1,8 @@
+import {
+  CHAT_IPC_ERROR_CODES,
+  extractChatIpcErrorCode,
+} from '../../../shared/chatErrorCodes.js'
+
 export type FailoverDomain = 'chat' | 'speech-input' | 'speech-output'
 
 type FailoverEntry = {
@@ -90,6 +95,17 @@ export function isFailoverEligibleError(error: unknown) {
 
   if (
     /aborterror|aborted|已取消|已中止|cancell?ed/u.test(message)
+  ) {
+    return false
+  }
+
+  // Auth-class chat-IPC codes are permanent for every candidate on the same
+  // account — fail fast instead of rotating providers/keys.
+  const ipcCode = extractChatIpcErrorCode(message)
+  if (
+    ipcCode === CHAT_IPC_ERROR_CODES.AUTH_FAILED
+    || ipcCode === CHAT_IPC_ERROR_CODES.MISSING_API_KEY
+    || ipcCode === CHAT_IPC_ERROR_CODES.API_KEY_HEADER_UNSAFE
   ) {
     return false
   }

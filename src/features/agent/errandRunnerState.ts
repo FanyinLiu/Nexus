@@ -4,10 +4,7 @@ import {
   writeJson,
 } from '../../lib/storage.ts'
 import type { ErrandRunnerState } from './errandPolicy.ts'
-
-function hasChanged(normalized: unknown, raw: unknown): boolean {
-  return JSON.stringify(normalized) !== JSON.stringify(raw)
-}
+import { hasChanged } from '../../lib/normalize.ts'
 
 function parseIsoTimestamp(value: unknown): string | null {
   if (typeof value !== 'string') return null

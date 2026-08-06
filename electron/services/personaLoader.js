@@ -140,7 +140,7 @@ const V2_PERSONAS_DIR = 'personas'
  * flat: userData/personas/<profileId>/. Missing directory is fine — the
  * v2 loader treats every file as optional.
  */
-export function getPersonaProfileDir(profileId) {
+function getPersonaProfileDir(profileId) {
   const safe = String(profileId ?? '').replace(/[^A-Za-z0-9_-]/g, '')
   return path.join(app.getPath('userData'), V2_PERSONAS_DIR, safe || 'default')
 }

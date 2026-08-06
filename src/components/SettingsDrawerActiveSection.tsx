@@ -34,33 +34,19 @@ import type {
   VoiceState,
   VoiceTraceEntry,
 } from '../types/index.ts'
-import {
-  loadAutonomySection,
-  loadChatSection,
-  loadConsoleSection,
-  loadHistorySection,
-  loadIntegrationsSection,
-  loadLettersSection,
-  loadLorebooksSection,
-  loadMemorySection,
-  loadModelSection,
-  loadToolsSection,
-  loadVoiceSection,
-  loadWindowSection,
-} from './settingsSectionModules.ts'
 
-const AutonomySectionV3 = lazy(async () => ({ default: (await loadAutonomySection()).AutonomySectionV3 }))
-const ChatSectionV3 = lazy(async () => ({ default: (await loadChatSection()).ChatSectionV3 }))
-const ConsoleSectionV3 = lazy(async () => ({ default: (await loadConsoleSection()).ConsoleSectionV3 }))
-const HistorySectionV3 = lazy(async () => ({ default: (await loadHistorySection()).HistorySectionV3 }))
-const IntegrationsSectionV3 = lazy(async () => ({ default: (await loadIntegrationsSection()).IntegrationsSectionV3 }))
-const LettersSectionV3 = lazy(async () => ({ default: (await loadLettersSection()).LettersSectionV3 }))
-const LorebooksSectionV3 = lazy(async () => ({ default: (await loadLorebooksSection()).LorebooksSectionV3 }))
-const MemorySectionV3 = lazy(async () => ({ default: (await loadMemorySection()).MemorySectionV3 }))
-const ModelSectionV3 = lazy(async () => ({ default: (await loadModelSection()).ModelSectionV3 }))
-const ToolsSectionV3 = lazy(async () => ({ default: (await loadToolsSection()).ToolsSectionV3 }))
-const VoiceSectionV3 = lazy(async () => ({ default: (await loadVoiceSection()).VoiceSectionV3 }))
-const WindowSectionV3 = lazy(async () => ({ default: (await loadWindowSection()).WindowSectionV3 }))
+const AutonomySectionV3 = lazy(async () => ({ default: (await import('../features/settingsV3/AutonomySectionV3.tsx')).AutonomySectionV3 }))
+const ChatSectionV3 = lazy(async () => ({ default: (await import('../features/settingsV3/ChatSectionV3.tsx')).ChatSectionV3 }))
+const ConsoleSectionV3 = lazy(async () => ({ default: (await import('../features/settingsV3/ConsoleSectionV3.tsx')).ConsoleSectionV3 }))
+const HistorySectionV3 = lazy(async () => ({ default: (await import('../features/settingsV3/HistorySectionV3.tsx')).HistorySectionV3 }))
+const IntegrationsSectionV3 = lazy(async () => ({ default: (await import('../features/settingsV3/IntegrationsSectionV3.tsx')).IntegrationsSectionV3 }))
+const LettersSectionV3 = lazy(async () => ({ default: (await import('../features/settingsV3/LettersSectionV3.tsx')).LettersSectionV3 }))
+const LorebooksSectionV3 = lazy(async () => ({ default: (await import('../features/settingsV3/LorebooksSectionV3.tsx')).LorebooksSectionV3 }))
+const MemorySectionV3 = lazy(async () => ({ default: (await import('../features/settingsV3/MemorySectionV3.tsx')).MemorySectionV3 }))
+const ModelSectionV3 = lazy(async () => ({ default: (await import('../features/settingsV3/ModelSectionV3.tsx')).ModelSectionV3 }))
+const ToolsSectionV3 = lazy(async () => ({ default: (await import('../features/settingsV3/ToolsSectionV3.tsx')).ToolsSectionV3 }))
+const VoiceSectionV3 = lazy(async () => ({ default: (await import('../features/settingsV3/VoiceSectionV3.tsx')).VoiceSectionV3 }))
+const WindowSectionV3 = lazy(async () => ({ default: (await import('../features/settingsV3/WindowSectionV3.tsx')).WindowSectionV3 }))
 
 
 type ConnectionTests = ReturnType<typeof useConnectionTests>

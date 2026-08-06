@@ -209,10 +209,10 @@ memory 目录是 Nexus **唯一一个完全接通的子系统**。基本上每�
 - 状态：类型定义存在，prompt 拼接代码存在，但**永远是空字符串**，被 `.filter(Boolean)` 过滤掉
 - **决策**：要么填实现（如果你真要做游戏感知），要么删除
 
-### ❌ `browserScreenOcr.ts` — 浏览器 OCR（dead stub）
+### ✅ `browserScreenOcr.ts` — 浏览器 OCR（已删除）
 - 文件仅 82 字节
 - 未被任何地方调用
-- **决策**：删除或填实现
+- **结果**：已删除
 
 ### N/A `index.ts`
 - 模块出口
@@ -262,7 +262,7 @@ const relationshipSection = options.relationshipState
 
 - `goalTracker.ts`：决定接通还是删除
 - `gameContext.ts`：决定填实现还是删除
-- `browserScreenOcr.ts`：决定填实现还是删除
+- ~~`browserScreenOcr.ts`~~：已删除
 - `useAutonomyController.ts:597-600`：getEmotionPrompt / getRelationshipPrompt 这两个 getter 在修复 1 之后变得多余，也可以删
 
 ### 🔍 验证 5：确认 vectorSearchRuntime 是否真的在跑

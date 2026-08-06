@@ -1,5 +1,6 @@
 import type { ChatMessage, ChatToolResult, WebSearchDisplay } from '../../types'
 import { createId } from '../../lib/index.ts'
+import { isObject } from '../../lib/guards.ts'
 import { t } from '../../i18n/runtime.ts'
 
 type ChatArchiveMeta = {
@@ -14,10 +15,6 @@ type ChatArchivePayload = {
   meta: ChatArchiveMeta
   messageCount: number
   messages: ChatMessage[]
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
 function isValidRole(value: unknown): value is ChatMessage['role'] {

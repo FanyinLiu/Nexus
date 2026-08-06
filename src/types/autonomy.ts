@@ -6,7 +6,11 @@ export type AutonomyPhase = 'awake' | 'drowsy' | 'sleeping' | 'dreaming'
 /** Desktop focus state derived from system idle time + power events. */
 export type FocusState = 'active' | 'idle' | 'away' | 'locked'
 
-/** OS power event kinds from Electron's powerMonitor. */
+/**
+ * OS power event kinds from Electron's powerMonitor.
+ * @public consumed through the Electron bridge typing in src/vite-env.d.ts
+ * (knip cannot see .d.ts consumers); also pinned by tests/ipc-bridge-contract.test.ts.
+ */
 export type PowerEventKind = 'suspend' | 'resume' | 'lock-screen' | 'unlock-screen' | 'shutdown'
 
 // ── Tick state ────────────────────────────────────────────────────────────────
@@ -160,7 +164,7 @@ export interface AutonomySettings {
   /**
    * Which chat provider/model to use for autonomy decisions. Empty string means
    * reuse the primary chat provider; otherwise a provider preset id (see
-   * apiProviders.ts). Kept as a free-form string so self-hosted setups can
+   * features/models/providerCatalog.ts). Kept as a free-form string so self-hosted setups can
    * point at any OpenAI-compatible endpoint.
    */
   autonomyModelV2: string

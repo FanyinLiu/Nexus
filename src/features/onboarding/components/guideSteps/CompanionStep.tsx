@@ -1,4 +1,4 @@
-import { apiProviderRequiresApiKey } from '../../../../lib/apiProviders.ts'
+import { apiProviderRequiresApiKey } from '../../../models/providerCatalog.ts'
 import {
   isSenseVoiceSpeechInputProvider,
   isSpeechOutputKeyless,

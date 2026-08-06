@@ -120,7 +120,7 @@ test('chat auth headers trim keys and reject pasted non-header text', () => {
       model: 'MiniMax-M3',
       messages: [{ role: 'user', content: 'Ping' }],
     }),
-    /MiniMax Token Plan API Key 格式好像不太对/,
+    /MiniMax Token Plan API Key is not safe for HTTP headers \(api_key_contains_cjk\)/,
   )
 
   const preflight = getChatConnectionTestPreflightFailure({
@@ -483,7 +483,7 @@ test('408 timeout returns unreachable with recommendation', () => {
   assert.equal(result.ok, false)
   assert.equal(result.status, 'unreachable')
   assert.equal(result.code, 'request_timeout')
-  assert.ok(result.recommendation)
+  assert.equal(result.recommendationKey, 'settings.chat_connection.request_timeout_rec')
 })
 
 test('ollama transport failure tells the user to start the local service', () => {

@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import {
+  buildSummary,
+  countOccurrences,
+  findForbiddenPatterns,
+  findMissingContracts,
+  findMissingFilesOnDisk,
+  isInvokedAsScript,
+  readProjectFiles,
+  resolveProjectRoot,
+} from './lib/audit-framework.mjs'
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const ROOT = resolveProjectRoot(import.meta.url)
 
 const REQUIRED_FILES = [
   'docs/AGENT_ACTIVITY_SURFACE_REFERENCE_REVIEW.md',
@@ -179,53 +186,6 @@ const FORBIDDEN_SOURCE_PATTERNS = [
   },
 ]
 
-function readProjectFile(root, file) {
-  const fullPath = join(root, file)
-  if (!existsSync(fullPath)) return null
-  return readFileSync(fullPath, 'utf8')
-}
-
-function readProjectFiles(root, files) {
-  return new Map(files.map((file) => [file, readProjectFile(root, file)]))
-}
-
-function findMissingFiles(root) {
-  return REQUIRED_FILES.filter((file) => !existsSync(join(root, file)))
-}
-
-function findMissingContracts(files) {
-  const missing = []
-  for (const contract of REQUIRED_CONTRACTS) {
-    const text = files.get(contract.file)
-    if (text == null) continue
-    const missingPatterns = contract.patterns.filter((pattern) => !text.includes(pattern))
-    if (missingPatterns.length) {
-      missing.push({ id: contract.id, file: contract.file, missingPatterns })
-    }
-  }
-  return missing
-}
-
-function findForbiddenPatterns(files) {
-  const matches = []
-  for (const rule of FORBIDDEN_SOURCE_PATTERNS) {
-    for (const file of rule.files) {
-      const text = (files.get(file) ?? '')
-        .split(/\r?\n/)
-        .filter((line) => !/^\s*surveillance:\s*\[/.test(line))
-        .join('\n')
-      if (text == null) continue
-      const foundPatterns = rule.patterns
-        .filter((pattern) => pattern.test(text))
-        .map((pattern) => pattern.source)
-      if (foundPatterns.length) {
-        matches.push({ id: rule.id, file, foundPatterns })
-      }
-    }
-  }
-  return matches
-}
-
 function findPreciseTimeUi(files) {
   const matches = []
   const precisePatterns = [
@@ -278,21 +238,6 @@ function findTaskExecutionCopy(files) {
   return matches
 }
 
-function countOccurrences(text, fragment) {
-  return text.split(fragment).length - 1
-}
-
-function buildSummary({ missingFiles, missingContracts, forbiddenPatterns, preciseTimeUi, taskExecutionCopy }) {
-  const errors = (
-    missingFiles.length
-    + missingContracts.length
-    + forbiddenPatterns.length
-    + preciseTimeUi.length
-    + taskExecutionCopy.length
-  )
-  return { ok: errors === 0, errors }
-}
-
 export function buildAgentActivitySurfaceReport(root = ROOT) {
   const files = readProjectFiles(root, REQUIRED_FILES)
   const panelView = files.get('src/app/views/LegacyPanelView.tsx') ?? ''
@@ -300,9 +245,14 @@ export function buildAgentActivitySurfaceReport(root = ROOT) {
   const awareness = files.get('src/features/context/companionAwareness.ts') ?? ''
   const image4ActivityLabel = files.get('src/app/views/image4ActivityLabel.ts') ?? ''
   const image4CompanionState = files.get('src/app/views/image4CompanionState.ts') ?? ''
-  const missingFiles = findMissingFiles(root)
-  const missingContracts = findMissingContracts(files)
-  const forbiddenPatterns = findForbiddenPatterns(files)
+  const missingFiles = findMissingFilesOnDisk(root, REQUIRED_FILES)
+  const missingContracts = findMissingContracts(files, REQUIRED_CONTRACTS)
+  const forbiddenPatterns = findForbiddenPatterns(files, FORBIDDEN_SOURCE_PATTERNS, {
+    transformText: (text) => text
+      .split(/\r?\n/)
+      .filter((line) => !/^\s*surveillance:\s*\[/.test(line))
+      .join('\n'),
+  })
   const preciseTimeUi = findPreciseTimeUi(files)
   const taskExecutionCopy = findTaskExecutionCopy(files)
 
@@ -334,7 +284,7 @@ export function buildAgentActivitySurfaceReport(root = ROOT) {
 
   return {
     ...report,
-    summary: buildSummary(report),
+    summary: buildSummary({ missingFiles, missingContracts, forbiddenPatterns, preciseTimeUi, taskExecutionCopy }),
   }
 }
 
@@ -376,7 +326,6 @@ function main(argv) {
   if (!report.summary.ok) process.exit(1)
 }
 
-const invokedPath = process.argv[1] ? resolve(process.argv[1]) : null
-if (invokedPath && resolve(fileURLToPath(import.meta.url)) === invokedPath) {
+if (isInvokedAsScript(import.meta.url)) {
   main(process.argv.slice(2))
 }

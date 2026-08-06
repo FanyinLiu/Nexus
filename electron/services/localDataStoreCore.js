@@ -222,10 +222,15 @@ async function readJsonFile(filePath) {
   return JSON.parse(raw)
 }
 
-export async function atomicWriteJson(filePath, value) {
+export async function atomicWriteJson(filePath, value, options = {}) {
   await fs.mkdir(path.dirname(filePath), { recursive: true })
   const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`
-  await fs.writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
+  // fileMode (e.g. 0o600) applies to the freshly created temp file; the
+  // rename then carries it onto the destination.
+  const writeOptions = Number.isInteger(options.fileMode)
+    ? { encoding: 'utf8', mode: options.fileMode }
+    : 'utf8'
+  await fs.writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, writeOptions)
   await fs.rename(tempPath, filePath)
 }
 

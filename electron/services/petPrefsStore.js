@@ -1,48 +1,29 @@
 import { app } from 'electron'
-import fs from 'node:fs'
-import fsp from 'node:fs/promises'
 import path from 'node:path'
 
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { createSyncJsonFileStore } from './jsonFileStore.js'
 
 // Small persisted key/value store for desktop-pet UI preferences that are owned
 // by the main process (toggled from the native context menu, not the renderer
-// settings) — currently just free/fixed mode. Mirrors windowBoundsStore's
-// sync-load-once + debounced-write idiom.
+// settings) — currently just free/fixed mode. Built on the shared sync
+// load-once + debounced-write JSON store skeleton.
 
 const FILE_NAME = 'pet-prefs.json'
 
-let cache = null
-let writeTimer = null
-
-function getStorePath() {
-  return path.join(app.getPath('userData'), FILE_NAME)
-}
-
-function load() {
-  if (cache !== null) return cache
-  try {
-    const parsed = JSON.parse(fs.readFileSync(getStorePath(), 'utf8'))
-    cache = parsed && typeof parsed === 'object' ? parsed : {}
-  } catch {
-    cache = {}
-  }
-  return cache
-}
+const store = createSyncJsonFileStore({
+  getStorePath: () => path.join(app.getPath('userData'), FILE_NAME),
+  onPersistError: (err) => {
+    console.warn('[petPrefs] persist failed:', getRedactedErrorMessage(err))
+  },
+})
 
 export function getSavedPetPref(key) {
-  return load()[key]
+  return store.load()[key]
 }
 
 export function savePetPref(key, value) {
-  const all = load()
+  const all = store.load()
   all[key] = value
-  if (writeTimer) clearTimeout(writeTimer)
-  writeTimer = setTimeout(() => {
-    writeTimer = null
-    fsp.writeFile(getStorePath(), JSON.stringify(cache, null, 2), 'utf8')
-      .catch((err) => {
-        console.warn('[petPrefs] persist failed:', getRedactedErrorMessage(err))
-      })
-  }, 400)
+  store.persistDebounced()
 }

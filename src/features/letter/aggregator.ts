@@ -41,7 +41,7 @@ export interface AggregateLetterInput {
   affectShift?: AffectShift
 }
 
-export interface MemoryHighlight {
+interface MemoryHighlight {
   id: string
   content: string
   significance: number

@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import {
   FORBIDDEN_SOURCE_PATTERNS,
   REQUIRED_FILES,
@@ -10,8 +7,18 @@ import {
   SETTINGS_STYLE_IMPORT_ORDER,
   SETTINGS_VISUAL_SYSTEM_COVERAGE,
 } from './settings-surface-boundaries.mjs'
+import {
+  buildSummary,
+  countOccurrences,
+  findForbiddenPatterns,
+  findMissingContracts,
+  findMissingFiles,
+  readProjectFiles,
+  resolveProjectRoot,
+  runAuditCli,
+} from './lib/audit-framework.mjs'
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const ROOT = resolveProjectRoot(import.meta.url)
 
 const REQUIRED_CONTRACTS = [
   {
@@ -590,60 +597,6 @@ const REQUIRED_CONTRACTS = [
   },
 ]
 
-function readProjectFile(root, file) {
-  const fullPath = join(root, file)
-  if (!existsSync(fullPath)) return null
-  return readFileSync(fullPath, 'utf8').replace(/\r\n/g, '\n')
-}
-
-function readProjectFiles(root, files) {
-  return new Map(files.map((file) => [file, readProjectFile(root, file)]))
-}
-
-function findMissingFiles(files) {
-  return [...files.entries()]
-    .filter(([, text]) => text == null)
-    .map(([file]) => file)
-}
-
-function findMissingContracts(files) {
-  const missing = []
-  for (const contract of REQUIRED_CONTRACTS) {
-    const text = files.get(contract.file)
-    if (text == null) continue
-    const missingPatterns = contract.patterns.filter((pattern) => !text.includes(pattern))
-    if (missingPatterns.length) {
-      missing.push({
-        id: contract.id,
-        file: contract.file,
-        description: contract.description,
-        missingPatterns,
-      })
-    }
-  }
-  return missing
-}
-
-function findForbiddenPatterns(files) {
-  const matches = []
-  for (const rule of FORBIDDEN_SOURCE_PATTERNS) {
-    for (const file of rule.files) {
-      const text = files.get(file)
-      if (text == null) continue
-      const foundPatterns = rule.patterns.filter((pattern) => text.includes(pattern))
-      if (foundPatterns.length) {
-        matches.push({
-          id: rule.id,
-          file,
-          description: rule.description,
-          foundPatterns,
-        })
-      }
-    }
-  }
-  return matches
-}
-
 export function findSettingsStyleImportOrderIssues(entryText, bundleText = '', styleSources = new Map()) {
   const entryCssImports = [...entryText.matchAll(/^import ['"](.\/styles\/settings[^'"]*\.css)['"]$/gm)]
     .map((match) => match[1])
@@ -740,32 +693,8 @@ export function findVisualSystemCoverageIssues(visualSystemCss) {
   return issues
 }
 
-function countOccurrences(text, fragment) {
-  return text.split(fragment).length - 1
-}
-
-function buildSummary({
-  missingFiles,
-  missingContracts,
-  forbiddenPatterns,
-  duplicateContractPatterns,
-  styleImportOrderIssues,
-  visualSystemCoverageIssues,
-}) {
-  const errors = missingFiles.length
-    + missingContracts.length
-    + forbiddenPatterns.length
-    + duplicateContractPatterns.length
-    + styleImportOrderIssues.length
-    + visualSystemCoverageIssues.length
-  return {
-    ok: errors === 0,
-    errors,
-  }
-}
-
 export function buildSettingsSurfaceReport(root = ROOT) {
-  const files = readProjectFiles(root, REQUIRED_FILES)
+  const files = readProjectFiles(root, REQUIRED_FILES, { normalizeLineEndings: true })
   const metadata = files.get('src/components/settingsDrawerMetadata.ts') ?? ''
   const settingsCss = files.get('src/app/styles/settings.css') ?? ''
   const homeCss = files.get('src/app/styles/settings-home.css') ?? ''
@@ -779,8 +708,8 @@ export function buildSettingsSurfaceReport(root = ROOT) {
     files.get('src/app/styles/settings-product-reference-final.css') ?? '',
   ].join('\n')
   const missingFiles = findMissingFiles(files)
-  const missingContracts = findMissingContracts(files)
-  const forbiddenPatterns = findForbiddenPatterns(files)
+  const missingContracts = findMissingContracts(files, REQUIRED_CONTRACTS)
+  const forbiddenPatterns = findForbiddenPatterns(files, FORBIDDEN_SOURCE_PATTERNS)
   const duplicateContractPatterns = findDuplicateContractPatterns()
   const styleImportOrderIssues = findSettingsStyleImportOrderIssues(
     files.get('src/app/settingsDrawerEntry.ts') ?? '',
@@ -814,7 +743,14 @@ export function buildSettingsSurfaceReport(root = ROOT) {
 
   return {
     ...report,
-    summary: buildSummary(report),
+    summary: buildSummary({
+      missingFiles,
+      missingContracts,
+      forbiddenPatterns,
+      duplicateContractPatterns,
+      styleImportOrderIssues,
+      visualSystemCoverageIssues,
+    }),
   }
 }
 
@@ -888,8 +824,9 @@ export function formatSettingsSurfaceReport(report) {
   return lines.join('\n')
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const report = buildSettingsSurfaceReport(ROOT)
-  console.log(formatSettingsSurfaceReport(report))
-  process.exitCode = report.summary.ok ? 0 : 1
-}
+runAuditCli({
+  importMetaUrl: import.meta.url,
+  root: ROOT,
+  buildReport: buildSettingsSurfaceReport,
+  formatReport: formatSettingsSurfaceReport,
+})

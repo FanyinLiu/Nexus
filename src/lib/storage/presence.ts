@@ -7,6 +7,8 @@ import {
   readJson,
   writeJson,
 } from './core.ts'
+import { isObject } from '../guards.ts'
+import { normalizeBoundedText } from '../normalize.ts'
 
 const MAX_PRESENCE_HISTORY_ITEMS = 6
 const VALID_PRESENCE_CATEGORIES = new Set<PresenceCategory>([
@@ -16,16 +18,6 @@ const VALID_PRESENCE_CATEGORIES = new Set<PresenceCategory>([
   'mood',
   'neutral',
 ])
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
-
-function normalizeText(value: unknown, limit: number): string {
-  return typeof value === 'string'
-    ? value.replace(/\s+/g, ' ').trim().slice(0, limit).trim()
-    : ''
-}
 
 function normalizeIsoTimestamp(value: unknown): string | null {
   if (typeof value === 'string') {
@@ -52,7 +44,7 @@ export function normalizeAmbientPresenceState(
   nowMs = Date.now(),
 ): AmbientPresenceState | null {
   if (!isObject(raw)) return null
-  const text = normalizeText(raw.text, 240)
+  const text = normalizeBoundedText(raw.text, 240, true)
   const createdAt = normalizeIsoTimestamp(raw.createdAt)
   const expiresAt = normalizeIsoTimestamp(raw.expiresAt)
   if (!text || !createdAt || !expiresAt) return null
@@ -69,7 +61,7 @@ function normalizePresenceCategory(value: unknown): PresenceCategory | null {
 
 export function normalizePresenceHistoryItem(value: unknown): PresenceHistoryItem | null {
   if (!isObject(value)) return null
-  const text = normalizeText(value.text, 240)
+  const text = normalizeBoundedText(value.text, 240, true)
   const category = normalizePresenceCategory(value.category)
   const createdAt = normalizeIsoTimestamp(value.createdAt)
   if (!text || !category || !createdAt) return null

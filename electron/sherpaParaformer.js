@@ -123,7 +123,7 @@ class SherpaParaformerService {
   }
 
   /** Feed audio and return partial text + endpoint flag. */
-  feedAudio(samples, _sampleRate = SAMPLE_RATE) {
+  feedAudio(samples) {
     if (!this.recognizer || !this.stream) {
       return { text: '', isEndpoint: false }
     }

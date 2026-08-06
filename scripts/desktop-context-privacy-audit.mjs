@@ -9,6 +9,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const CHECKED_FILES = [
   'electron/ipc/windowIpc.js',
   'electron/services/desktopContextService.js',
+  'shared/desktopContextPrivacy.js',
   'electron/services/desktopContextPrivacy.js',
   'src/hooks/useDesktopContext.ts',
   'src/hooks/useContextScheduler.ts',
@@ -81,12 +82,21 @@ const REQUIRED_PHRASES = [
     ],
   },
   {
-    id: 'main-desktop-context-redaction-helper',
-    file: 'electron/services/desktopContextPrivacy.js',
+    // The pattern set and helpers are single-sourced in
+    // shared/desktopContextPrivacy.js; both boundary files wrap it.
+    id: 'shared-desktop-context-redaction-helper',
+    file: 'shared/desktopContextPrivacy.js',
     phrases: [
       'DESKTOP_CONTEXT_REDACTION',
       'containsSensitiveDesktopContext',
       'redactSensitiveDesktopContextText',
+      'sanitizeDesktopContextSnapshot',
+    ],
+  },
+  {
+    id: 'main-desktop-context-redaction-helper',
+    file: 'electron/services/desktopContextPrivacy.js',
+    phrases: [
       'sanitizeDesktopContextSnapshot',
     ],
   },
@@ -154,8 +164,6 @@ const REQUIRED_PHRASES = [
     file: 'src/lib/privacy/desktopContextPrivacy.ts',
     phrases: [
       'DESKTOP_CONTEXT_REDACTION',
-      'containsSensitiveDesktopContext',
-      'redactSensitiveDesktopContextText',
       'sanitizeDesktopContextSnapshotForPrompt',
       'stripDesktopContextScreenshotPayload',
     ],

@@ -1,5 +1,9 @@
 import { ipcMain } from 'electron'
 import {
+  CHAT_IPC_ERROR_CODES,
+  buildChatIpcError,
+} from '../../shared/chatErrorCodes.js'
+import {
   buildChatConnectionTestRequest,
   buildChatModelListRequest,
   buildChatRequest,
@@ -22,7 +26,6 @@ import {
 } from '../chatRuntime.js'
 import {
   CHAT_CONNECTION_MESSAGE,
-  CHAT_CONNECTION_RECOMMENDATION,
   buildChatConnectionResult,
 } from '../services/chatConnectionProof.js'
 import {
@@ -56,12 +59,40 @@ import {
   validateServiceConnectionTestPayload,
 } from './payloadSchemas.js'
 
-function formatEmptyChatContentMessage({ reasoningLength = 0, finishReason = '' } = {}) {
+// Errors thrown here cross IPC as plain `Error: <message>` strings, so the
+// stable NEXUS_ERR_CHAT_* code rides inside the message (shared/chatErrorCodes.js).
+// The renderer classifies by that code — never by human-readable copy.
+function buildEmptyChatContentError({ reasoningLength = 0, finishReason = '' } = {}) {
   const details = []
   if (reasoningLength > 0) details.push(`reasoningLength=${reasoningLength}`)
   if (finishReason) details.push(`finishReason=${finishReason}`)
-  const suffix = details.length ? `（${details.join('，')}）` : ''
-  return `模型回来了但是内容是空的${suffix}，看看接口兼容性或者试试关掉 Thinking？`
+  const suffix = details.length ? ` (${details.join(', ')})` : ''
+  return buildChatIpcError(
+    CHAT_IPC_ERROR_CODES.EMPTY_CONTENT,
+    `model returned empty content${suffix}`,
+  )
+}
+
+// Status-only failures (no provider error body) classify by status class —
+// mirrors the buckets humanizeError used to regex out of the old copy.
+function chatIpcErrorCodeForStatus(status) {
+  if (status === 403) return CHAT_IPC_ERROR_CODES.FORBIDDEN
+  if (status === 404) return CHAT_IPC_ERROR_CODES.NOT_FOUND
+  if (status === 429) return CHAT_IPC_ERROR_CODES.RATE_LIMITED
+  if (status >= 500) return CHAT_IPC_ERROR_CODES.PROVIDER_SERVER_ERROR
+  return CHAT_IPC_ERROR_CODES.PROVIDER_STATUS
+}
+
+function buildPreflightIpcError(preflightFailure) {
+  const code = preflightFailure.code === 'missing_api_key'
+    ? CHAT_IPC_ERROR_CODES.MISSING_API_KEY
+    : CHAT_IPC_ERROR_CODES.API_KEY_HEADER_UNSAFE
+  const error = buildChatIpcError(
+    code,
+    preflightFailure.messageKey || 'chat preflight check failed',
+  )
+  if (preflightFailure.status) error.status = preflightFailure.status
+  return error
 }
 
 export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS, CONNECTION_TEST_TIMEOUT_MS }) {
@@ -74,9 +105,12 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     const baseUrl = normalizeBaseUrl(requestPayload.baseUrl)
     const safety = checkChatBaseUrlSafety(baseUrl)
     if (!safety.ok) {
-      throw new Error(`API Base URL 被拒绝（${safety.reason}）。请使用合法的 https/http 模型接口地址。`)
+      throw buildChatIpcError(
+        CHAT_IPC_ERROR_CODES.UNSAFE_BASE_URL,
+        `API base URL rejected (${safety.reason})`,
+      )
     }
-    const providerId = normalizeChatProviderId(requestPayload.providerId, baseUrl)
+    const providerId = normalizeChatProviderId(requestPayload.providerId, baseUrl, requestPayload.model)
     const preflightFailure = getChatConnectionTestPreflightFailure({
       providerId,
       apiKey: requestPayload.apiKey,
@@ -88,10 +122,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         model: requestPayload.model,
         code: preflightFailure.code ?? 'chat_preflight_blocked',
       })
-      const error = new Error(preflightFailure.message || '连接前检查未通过，请检查模型设置。')
-      if (preflightFailure.code) error.code = preflightFailure.code
-      if (preflightFailure.status) error.status = preflightFailure.status
-      throw error
+      throw buildPreflightIpcError(preflightFailure)
     }
     const requestSpec = buildChatRequest(requestPayload, { stream: false })
 
@@ -134,7 +165,13 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         model: requestPayload.model,
         reason,
       })
-      throw new Error(`没能连上模型接口，看看地址和网络对不对？具体原因：${reason}`, { cause: error })
+      throw buildChatIpcError(
+        error?.code === 'request_timeout'
+          ? CHAT_IPC_ERROR_CODES.TIMEOUT
+          : CHAT_IPC_ERROR_CODES.UNREACHABLE,
+        `chat request failed: ${reason}`,
+        { cause: error },
+      )
     }
 
     const data = await response.json().catch((parseErr) => {
@@ -152,19 +189,23 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         message: redactSensitiveErrorText(data?.error?.message ?? data?.message ?? ''),
       })
       if (response.status === 401) {
-        const error = new Error(
+        const error = buildChatIpcError(
           requestPayload.apiKey || !chatProviderRequiresApiKey(providerId)
-            ? 'API Key 好像不太对，去设置里看看？'
-            : '还没填 API Key 呢，先去设置里填一个吧。',
+            ? CHAT_IPC_ERROR_CODES.AUTH_FAILED
+            : CHAT_IPC_ERROR_CODES.MISSING_API_KEY,
+          'provider returned HTTP 401',
         )
-        error.code = 'auth_failed'
         error.status = 401
         throw error
       }
 
-      throw new Error(
-        redactSensitiveErrorText(data?.error?.message ?? data?.message) ||
-          `模型那边回了个状态码 ${response.status}，不太确定怎么回事。`,
+      const providerMessage = redactSensitiveErrorText(data?.error?.message ?? data?.message)
+      if (providerMessage) {
+        throw new Error(providerMessage)
+      }
+      throw buildChatIpcError(
+        chatIpcErrorCodeForStatus(response.status),
+        `provider returned HTTP ${response.status} without an error body`,
       )
     }
 
@@ -174,10 +215,10 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     const reasoning = extractChatResponseReasoning(requestSpec.protocol, data)
 
     if (!content && !toolCalls) {
-      throw new Error(formatEmptyChatContentMessage({
+      throw buildEmptyChatContentError({
         reasoningLength: reasoning.length,
         finishReason,
-      }))
+      })
     }
 
     console.info('[chat:complete] success', {
@@ -207,9 +248,12 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     const baseUrl = normalizeBaseUrl(chatPayload.baseUrl)
     const safety = checkChatBaseUrlSafety(baseUrl)
     if (!safety.ok) {
-      throw new Error(`API Base URL 被拒绝（${safety.reason}）。请使用合法的 https/http 模型接口地址。`)
+      throw buildChatIpcError(
+        CHAT_IPC_ERROR_CODES.UNSAFE_BASE_URL,
+        `API base URL rejected (${safety.reason})`,
+      )
     }
-    const providerId = normalizeChatProviderId(chatPayload.providerId, baseUrl)
+    const providerId = normalizeChatProviderId(chatPayload.providerId, baseUrl, chatPayload.model)
     const requestSpec = buildChatRequest(chatPayload, { stream: true })
 
     console.info('[chat:stream] request', {
@@ -249,22 +293,33 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       const reason = getRedactedErrorMessage(error)
       activeChatStreamControllers.delete(requestId)
       console.error('[chat:stream] network failure', { requestId, reason })
-      throw new Error(`没能连上模型接口，看看地址和网络对不对？具体原因：${reason}`, { cause: error })
+      throw buildChatIpcError(
+        error?.code === 'request_timeout'
+          ? CHAT_IPC_ERROR_CODES.TIMEOUT
+          : CHAT_IPC_ERROR_CODES.UNREACHABLE,
+        `chat stream request failed: ${reason}`,
+        { cause: error },
+      )
     }
 
     if (!response.ok) {
       activeChatStreamControllers.delete(requestId)
       const data = await response.json().catch(() => ({}))
       if (response.status === 401) {
-        throw new Error(
+        throw buildChatIpcError(
           chatPayload.apiKey || !chatProviderRequiresApiKey(providerId)
-            ? 'API Key 好像不太对，去设置里看看？'
-            : '还没填 API Key 呢，先去设置里填一个吧。',
+            ? CHAT_IPC_ERROR_CODES.AUTH_FAILED
+            : CHAT_IPC_ERROR_CODES.MISSING_API_KEY,
+          'provider returned HTTP 401',
         )
       }
-      throw new Error(
-        redactSensitiveErrorText(data?.error?.message ?? data?.message)
-          || `模型那边回了个状态码 ${response.status}，不太确定怎么回事。`,
+      const providerMessage = redactSensitiveErrorText(data?.error?.message ?? data?.message)
+      if (providerMessage) {
+        throw new Error(providerMessage)
+      }
+      throw buildChatIpcError(
+        chatIpcErrorCodeForStatus(response.status),
+        `provider returned HTTP ${response.status} without an error body`,
       )
     }
 
@@ -425,10 +480,10 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       : null
 
     if (!content && !(toolCalls && toolCalls.length)) {
-      throw new Error(formatEmptyChatContentMessage({
+      throw buildEmptyChatContentError({
         reasoningLength: fullReasoning.length,
         finishReason,
-      }))
+      })
     }
 
     console.info('[chat:stream] success', {
@@ -468,7 +523,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     })
     const requestPayload = await resolveVaultRefsForSender(event.sender, payload, ['apiKey'])
     const baseUrl = normalizeBaseUrl(requestPayload.baseUrl)
-    const providerId = normalizeChatProviderId(requestPayload.providerId, baseUrl)
+    const providerId = normalizeChatProviderId(requestPayload.providerId, baseUrl, requestPayload.model)
 
     if (!baseUrl) {
       return buildChatConnectionResult({
@@ -550,7 +605,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
     payload = validateChatModelListPayload(payload)
     const requestPayload = await resolveVaultRefsForSender(event.sender, payload, ['apiKey'])
     const baseUrl = normalizeBaseUrl(requestPayload.baseUrl)
-    const providerId = normalizeChatProviderId(requestPayload.providerId, baseUrl)
+    const providerId = normalizeChatProviderId(requestPayload.providerId, baseUrl, requestPayload.model)
 
     if (!baseUrl) {
       return {

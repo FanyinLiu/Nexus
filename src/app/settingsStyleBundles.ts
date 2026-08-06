@@ -1,4 +1,4 @@
-export const SETTINGS_STYLE_BUNDLES = [
+const SETTINGS_STYLE_BUNDLES = [
   { id: 'foundation', load: () => import('./settingsStylesFoundation') },
   { id: 'theme', load: () => import('./settingsStylesTheme') },
   { id: 'surface', load: () => import('./settingsStylesSurface') },

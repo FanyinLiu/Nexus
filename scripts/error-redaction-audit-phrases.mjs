@@ -16,6 +16,16 @@ export const REQUIRED_PHRASES = [
     phrases: [
       'export function redactSensitiveErrorText',
       'export function getRedactedErrorMessage',
+    ],
+  },
+  {
+    // The regex chain itself is single-sourced in shared/redaction.js; both
+    // the main-process and renderer helpers are thin wrappers over it.
+    id: 'shared-redaction-chain-canonical',
+    file: 'shared/redaction.js',
+    phrases: [
+      'export function redactSensitiveText',
+      'export function getRedactedMessage',
       'Bearer ***',
       'sk-***',
       'AIza***',
@@ -413,11 +423,6 @@ export const REQUIRED_PHRASES = [
     phrases: [
       'export function redactSensitiveLogText',
       'export function getRedactedLogErrorMessage',
-      'Bearer ***',
-      'sk-***',
-      'AIza***',
-      'jwt***',
-      '[vault-slot]',
     ],
   },
   {

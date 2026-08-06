@@ -4,10 +4,11 @@
  * Each skill has a trigger phrase and summary for retrieval.
  */
 
-import { readFile, writeFile, readdir, mkdir, unlink, rename } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { app } from 'electron'
-import { tokenize, Bm25Index } from './bm25Search.js'
+import { Bm25Index } from './bm25Search.js'
+import { createAsyncJsonFileStore } from './jsonFileStore.js'
 
 const SKILLS_DIR = 'skills'
 const INDEX_FILE = 'skills-index.json'
@@ -43,17 +44,6 @@ function serialMutation(fn) {
   return next
 }
 
-// Write to a sibling temp file and then rename — rename is atomic on POSIX
-// and reliably atomic on modern Windows filesystems. Prevents a crash
-// mid-writeFile from leaving a zero-length or truncated skills-index.json,
-// which the load path silently recovers by resetting _entries to [] (i.e.
-// losing every skill the user has ever added).
-async function atomicWriteFile(destPath, data) {
-  const tmpPath = `${destPath}.tmp-${process.pid}-${Date.now()}`
-  await writeFile(tmpPath, data)
-  await rename(tmpPath, destPath)
-}
-
 function getSkillsDir() {
   return path.join(app.getPath('userData'), SKILLS_DIR)
 }
@@ -70,21 +60,21 @@ function getSkillPath(id) {
   return path.join(getSkillsDir(), `${id}.md`)
 }
 
+// The index file wraps the raw entries array in a versioned envelope;
+// normalize/serialize translate between the cache and on-disk shapes.
+const indexStore = createAsyncJsonFileStore({
+  getStorePath: getIndexPath,
+  normalize: (parsed) => (parsed && Array.isArray(parsed.entries) ? parsed.entries : []),
+  serialize: (entries) => ({ version: 1, entries }),
+})
+
 async function ensureLoaded() {
   if (_loaded) return
 
   const dir = getSkillsDir()
   await mkdir(dir, { recursive: true })
 
-  try {
-    const raw = await readFile(getIndexPath(), 'utf8')
-    const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed.entries)) {
-      _entries = parsed.entries
-    }
-  } catch {
-    _entries = []
-  }
+  _entries = await indexStore.ensureLoaded()
 
   _loaded = true
   _bm25Dirty = true
@@ -92,7 +82,7 @@ async function ensureLoaded() {
 
 async function saveIndex() {
   await mkdir(getSkillsDir(), { recursive: true })
-  await atomicWriteFile(getIndexPath(), JSON.stringify({ version: 1, entries: _entries }))
+  await indexStore.save()
 }
 
 function ensureBm25() {

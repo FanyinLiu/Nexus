@@ -13,7 +13,7 @@ function normalizeLabel(value: string | undefined, fallback: string): string {
   return normalized || fallback
 }
 
-export function getNotificationSourceLabel(message: NotificationMessage): string {
+function getNotificationSourceLabel(message: NotificationMessage): string {
   return normalizeLabel(message.sourceName, message.channelName || 'Notification')
 }
 

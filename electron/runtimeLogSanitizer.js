@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { redactSensitiveErrorText } from './services/errorRedaction.js'
 
-export const RUNTIME_LOG_MESSAGE_MAX_LENGTH = 2_000
+const RUNTIME_LOG_MESSAGE_MAX_LENGTH = 2_000
 export const RUNTIME_LOG_DISPLAY_PATH = '.dev/runtime.log'
 export const RUNTIME_LOG_FLUSH_INTERVAL_MS = 250
 export const RUNTIME_LOG_FLUSH_BATCH_SIZE = 32

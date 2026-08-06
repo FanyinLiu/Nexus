@@ -1,4 +1,5 @@
 import { t } from '../../i18n/runtime.ts'
+import { normalizeBoundedText } from '../normalize.ts'
 import type { VoicePipelineState, VoicePipelineStep, VoiceTraceEntry, VoiceTraceTone } from '../../types'
 import {
   readJson,
@@ -33,12 +34,6 @@ const VALID_PIPELINE_STEPS: ReadonlySet<VoicePipelineStep> = new Set([
 ])
 const VALID_TRACE_TONES: ReadonlySet<VoiceTraceTone> = new Set(['info', 'success', 'error'])
 
-function normalizeText(value: unknown, limit: number): string {
-  return typeof value === 'string'
-    ? value.replace(/\s+/g, ' ').trim().slice(0, limit)
-    : ''
-}
-
 function normalizeUpdatedAt(value: unknown): string {
   if (typeof value !== 'string') return ''
   const parsed = Date.parse(value)
@@ -57,8 +52,8 @@ export function normalizeVoicePipelineState(raw: unknown): VoicePipelineState {
   const obj = raw as Record<string, unknown>
   return {
     step: normalizePipelineStep(obj.step),
-    transcript: normalizeText(obj.transcript, 2_000),
-    detail: normalizeText(obj.detail, 500) || fallback.detail,
+    transcript: normalizeBoundedText(obj.transcript, 2_000),
+    detail: normalizeBoundedText(obj.detail, 500) || fallback.detail,
     updatedAt: normalizeUpdatedAt(obj.updatedAt),
   }
 }
@@ -80,11 +75,11 @@ function normalizeTraceCreatedAt(value: unknown, index: number): string {
 function normalizeVoiceTraceEntry(value: unknown, index: number): VoiceTraceEntry | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   const obj = value as Record<string, unknown>
-  const title = normalizeText(obj.title, 120)
-  const detail = normalizeText(obj.detail, 800)
+  const title = normalizeBoundedText(obj.title, 120)
+  const detail = normalizeBoundedText(obj.detail, 800)
   if (!title || !detail) return null
   const createdAt = normalizeTraceCreatedAt(obj.createdAt, index)
-  const id = normalizeText(obj.id, 120) || `voice-trace-recovered-${index}-${Date.parse(createdAt)}`
+  const id = normalizeBoundedText(obj.id, 120) || `voice-trace-recovered-${index}-${Date.parse(createdAt)}`
   return {
     id,
     title,

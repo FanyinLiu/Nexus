@@ -37,6 +37,7 @@ import {
   writeJson,
   writeJsonDebounced,
 } from '../../lib/storage/core.ts'
+import { clamp } from '../../lib/common.ts'
 import type { EmotionState } from './emotionModel.ts'
 import type { RelationshipLevel, RelationshipState } from './relationshipTracker.ts'
 import { getRelationshipLevel } from './relationshipTracker.ts'
@@ -105,10 +106,6 @@ function loadRelationshipHistoryInternal(): RelationshipSample[] {
 
 function finiteNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value))
 }
 
 function clampFinite(value: unknown, min: number, max: number): number | null {

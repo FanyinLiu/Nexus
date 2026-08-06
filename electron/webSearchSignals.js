@@ -1,16 +1,4 @@
-function normalizeWhitespace(text) {
-  return String(text ?? '')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function normalizeSearchableText(value) {
-  return String(value ?? '')
-    .toLowerCase()
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/[\s,.;:!?()[\]{}"'`~!@#$%^&*_+=|\\/<>-]+/g, ' ')
-    .trim()
-}
+import { normalizeWhitespace, normalizeSearchableText } from './textNormalize.js'
 
 function normalizeFacet(value) {
   const normalized = normalizeWhitespace(value)

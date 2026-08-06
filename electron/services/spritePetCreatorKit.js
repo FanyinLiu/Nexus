@@ -10,6 +10,7 @@ import {
   SPRITE_PET_ROWS,
   formatSpritePetDisplayName,
 } from './spritePetPackage.js'
+import { pathExists } from './fsUtils.js'
 
 const DEFAULT_OUTPUT_DIR = 'output/pet-creator-kits'
 
@@ -69,15 +70,6 @@ function slugifySpritePetId(value) {
     .toLowerCase()
 
   return normalized || 'sprite-pet'
-}
-
-async function pathExists(targetPath) {
-  try {
-    await fs.access(targetPath)
-    return true
-  } catch {
-    return false
-  }
 }
 
 function normalizeText(value) {

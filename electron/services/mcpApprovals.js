@@ -22,16 +22,15 @@
  */
 
 import { BrowserWindow, app, dialog } from 'electron'
-import fs from 'node:fs/promises'
 import path from 'node:path'
 import { hashMcpCommand } from './mcpApprovalsHash.js'
 import { createAsyncLock } from './asyncLock.js'
+import { createAsyncJsonFileStore } from './jsonFileStore.js'
 
 export { hashMcpCommand }
 
 const APPROVALS_FILE_NAME = 'mcp-approvals.json'
 
-let _approvalsCache = null
 const withWriteLock = createAsyncLock()
 
 function getApprovalsPath() {
@@ -56,33 +55,32 @@ function migrateApprovalEntry(value) {
   return null
 }
 
-async function loadApprovals() {
-  if (_approvalsCache) return _approvalsCache
-  try {
-    const raw = await fs.readFile(getApprovalsPath(), 'utf8')
-    const parsed = JSON.parse(raw)
-    if (parsed && typeof parsed === 'object') {
-      const normalised = {}
-      for (const [serverId, value] of Object.entries(parsed)) {
-        const entry = migrateApprovalEntry(value)
-        if (entry) normalised[serverId] = entry
-      }
-      _approvalsCache = normalised
-      return _approvalsCache
+// Missing / corrupt / non-object files normalise to an empty ledger.
+function normalizeApprovals(parsed) {
+  const normalised = {}
+  if (parsed && typeof parsed === 'object') {
+    for (const [serverId, value] of Object.entries(parsed)) {
+      const entry = migrateApprovalEntry(value)
+      if (entry) normalised[serverId] = entry
     }
-  } catch {
-    // Missing / corrupt — start with empty ledger.
   }
-  _approvalsCache = {}
-  return _approvalsCache
+  return normalised
 }
 
-async function saveApprovals(approvals) {
-  await fs.writeFile(
-    getApprovalsPath(),
-    JSON.stringify(approvals, null, 2),
-    { encoding: 'utf8', mode: 0o600 },
-  )
+// fileMode 0o600 keeps the ledger of user-trusted local binaries readable
+// only by the user; mutations stay serialised through withWriteLock.
+const approvalsStore = createAsyncJsonFileStore({
+  getStorePath: getApprovalsPath,
+  normalize: normalizeApprovals,
+  fileMode: 0o600,
+})
+
+async function loadApprovals() {
+  return approvalsStore.ensureLoaded()
+}
+
+async function saveApprovals() {
+  await approvalsStore.save()
 }
 
 /**
@@ -112,7 +110,7 @@ async function recordMcpApproval(serverId, commandHash) {
         ? (existing.approvedTools ?? [])
         : [],
     }
-    await saveApprovals(approvals)
+    await saveApprovals()
   })
 }
 
@@ -125,7 +123,7 @@ export async function revokeMcpApproval(serverId) {
     const approvals = await loadApprovals()
     if (serverId in approvals) {
       delete approvals[serverId]
-      await saveApprovals(approvals)
+      await saveApprovals()
     }
   })
 }
@@ -165,7 +163,7 @@ export async function snapshotInitialTools(serverId, toolNames) {
     if (!entry) return // Not approved — nothing to snapshot onto.
     if (entry.approvedTools && entry.approvedTools.length > 0) return // Already snapshotted.
     entry.approvedTools = [...new Set(toolNames.map(String))]
-    await saveApprovals(approvals)
+    await saveApprovals()
   })
 }
 
@@ -182,7 +180,7 @@ async function recordToolApproval(serverId, toolName) {
     const name = String(toolName)
     if (!entry.approvedTools.includes(name)) {
       entry.approvedTools.push(name)
-      await saveApprovals(approvals)
+      await saveApprovals()
     }
   })
 }

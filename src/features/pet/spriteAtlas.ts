@@ -1,29 +1,24 @@
 import type { PetMood, PetTouchZone } from '../../types/index.ts'
 import type { PetExpressionSlot, PetPerformanceCue } from './types.ts'
+import { SPRITE_PET_ROW_CONTRACT } from '../../../shared/spriteAtlasContract.js'
 
 /** @deprecated Import from `./types` — re-exported for backward compatibility. */
 export type { SpritePetAtlasDefinition } from './types.ts'
 
-export const SPRITE_PET_COLUMNS = 8
-export const SPRITE_PET_ROWS = 9
-export const SPRITE_PET_CELL_WIDTH = 192
-export const SPRITE_PET_CELL_HEIGHT = 208
-export const SPRITE_PET_ATLAS_WIDTH = SPRITE_PET_COLUMNS * SPRITE_PET_CELL_WIDTH
-export const SPRITE_PET_ATLAS_HEIGHT = SPRITE_PET_ROWS * SPRITE_PET_CELL_HEIGHT
+// Atlas geometry is single-sourced in shared/spriteAtlasContract.js and
+// re-exported here so existing renderer imports keep working.
+export {
+  SPRITE_PET_ATLAS_HEIGHT,
+  SPRITE_PET_ATLAS_WIDTH,
+  SPRITE_PET_CELL_HEIGHT,
+  SPRITE_PET_CELL_WIDTH,
+  SPRITE_PET_COLUMNS,
+  SPRITE_PET_ROWS,
+} from '../../../shared/spriteAtlasContract.js'
 export const SPRITE_PET_ACTIVE_LOOP_COUNT = 3
-export const SPRITE_PET_SLOW_IDLE_DURATION_MULTIPLIER = 2
+const SPRITE_PET_SLOW_IDLE_DURATION_MULTIPLIER = 2
 
-export const SPRITE_PET_ANIMATION_STATES = [
-  'idle',
-  'running-right',
-  'running-left',
-  'waving',
-  'jumping',
-  'failed',
-  'waiting',
-  'running',
-  'review',
-] as const
+export const SPRITE_PET_ANIMATION_STATES = SPRITE_PET_ROW_CONTRACT.map((entry) => entry.state)
 
 export type SpritePetAnimationState = (typeof SPRITE_PET_ANIMATION_STATES)[number]
 
@@ -51,53 +46,17 @@ export type SpritePetAnimationDefinition = {
   durationsMs: number[]
 }
 
-export const SPRITE_PET_ANIMATIONS: Record<SpritePetAnimationState, SpritePetAnimationDefinition> = {
-  idle: {
-    row: 0,
-    columns: [0, 1, 2, 3, 4, 5],
-    durationsMs: [280, 110, 110, 140, 140, 320],
-  },
-  'running-right': {
-    row: 1,
-    columns: [0, 1, 2, 3, 4, 5, 6, 7],
-    durationsMs: [120, 120, 120, 120, 120, 120, 120, 220],
-  },
-  'running-left': {
-    row: 2,
-    columns: [0, 1, 2, 3, 4, 5, 6, 7],
-    durationsMs: [120, 120, 120, 120, 120, 120, 120, 220],
-  },
-  waving: {
-    row: 3,
-    columns: [0, 1, 2, 3],
-    durationsMs: [140, 140, 140, 280],
-  },
-  jumping: {
-    row: 4,
-    columns: [0, 1, 2, 3, 4],
-    durationsMs: [140, 140, 140, 140, 280],
-  },
-  failed: {
-    row: 5,
-    columns: [0, 1, 2, 3, 4, 5, 6, 7],
-    durationsMs: [140, 140, 140, 140, 140, 140, 140, 240],
-  },
-  waiting: {
-    row: 6,
-    columns: [0, 1, 2, 3, 4, 5],
-    durationsMs: [150, 150, 150, 150, 150, 260],
-  },
-  running: {
-    row: 7,
-    columns: [0, 1, 2, 3, 4, 5],
-    durationsMs: [120, 120, 120, 120, 120, 220],
-  },
-  review: {
-    row: 8,
-    columns: [0, 1, 2, 3, 4, 5],
-    durationsMs: [150, 150, 150, 150, 150, 280],
-  },
-}
+// Derived from the shared row contract so frame timings have one source.
+export const SPRITE_PET_ANIMATIONS: Record<SpritePetAnimationState, SpritePetAnimationDefinition> = Object.fromEntries(
+  SPRITE_PET_ROW_CONTRACT.map((entry) => [
+    entry.state,
+    {
+      row: entry.row,
+      columns: Array.from({ length: entry.frameCount }, (_, column) => column),
+      durationsMs: [...entry.durationsMs],
+    },
+  ]),
+) as Record<SpritePetAnimationState, SpritePetAnimationDefinition>
 
 export function getSpritePetFrame(state: SpritePetAnimationState, frameIndex: number): SpritePetFrame {
   const animation = SPRITE_PET_ANIMATIONS[state]
@@ -112,7 +71,7 @@ export function getSpritePetFrame(state: SpritePetAnimationState, frameIndex: nu
   }
 }
 
-export function getSpritePetFrameCount(state: SpritePetAnimationState): number {
+function getSpritePetFrameCount(state: SpritePetAnimationState): number {
   return SPRITE_PET_ANIMATIONS[state].columns.length
 }
 

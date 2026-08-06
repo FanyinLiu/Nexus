@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import { decideAwayNotification } from '../features/proactive/awayScheduler.ts'
 import { pickAwayNotificationCopy } from '../features/proactive/awayNotificationCopy.ts'
 import {
@@ -6,6 +5,7 @@ import {
   saveAwayLastFiredMs,
 } from '../lib/storage.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import { usePollingScheduler } from './usePollingScheduler.ts'
 import type { AppSettings, ChatMessage } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60_000 // every 5 minutes — coarse enough that startup cost is nil
@@ -40,21 +40,16 @@ export function useAwayNotificationScheduler({
   panelOpen,
   enabled = true,
 }: UseAwayNotificationSchedulerOptions) {
-  // Stable ref so the interval handler always sees the latest values without
-  // tearing the timer down on every chat-message change.
-  const liveRef = useRef({ settings, messages, panelOpen })
-  useEffect(() => {
-    liveRef.current = { settings, messages, panelOpen }
-  }, [settings, messages, panelOpen])
-
-  useEffect(() => {
-    if (!enabled || !settings.proactiveAwayNotificationsEnabled) return
-    if (typeof window === 'undefined') return
-    if (!window.desktopPet?.showProactiveNotification) return
-
-    const tick = async () => {
-      // Read latest values via ref so the closure isn't stale.
-      const { settings: s, messages: msgs, panelOpen: open } = liveRef.current
+  // Live values ride the scheduler's ref so the interval handler always
+  // sees the latest ones without tearing the timer down on every
+  // chat-message change. The immediate tick covers the case where the
+  // user re-opens the app after a long absence.
+  usePollingScheduler({
+    enabled: enabled && settings.proactiveAwayNotificationsEnabled,
+    intervalMs: POLL_INTERVAL_MS,
+    requireNotificationBridge: true,
+    live: { settings, messages, panelOpen },
+    tick: async ({ settings: s, messages: msgs, panelOpen: open }) => {
       if (!s.proactiveAwayNotificationsEnabled) return
       if (open) return
 
@@ -85,12 +80,6 @@ export function useAwayNotificationScheduler({
       } catch (err) {
         console.warn('[awayNotification] fire failed:', getRedactedLogErrorMessage(err))
       }
-    }
-
-    // Run once immediately (covers the case where user re-opens the app
-    // after a long absence), then on a coarse interval.
-    void tick()
-    const id = window.setInterval(() => { void tick() }, POLL_INTERVAL_MS)
-    return () => window.clearInterval(id)
-  }, [enabled, settings.proactiveAwayNotificationsEnabled])
+    },
+  })
 }

@@ -428,37 +428,15 @@ export const SPEECH_CONNECTION_MESSAGE = Object.freeze({
   IDENTITY_MISMATCH: 'settings.speech_connection.identity_mismatch',
 })
 
-/** Fallback Chinese copy when renderer has not yet mapped a key. */
-const MESSAGE_FALLBACKS = Object.freeze({
-  [SPEECH_CONNECTION_MESSAGE.INPUT_READY]:
-    '连接成功，语音识别接口返回了可验证的识别结果。',
-  [SPEECH_CONNECTION_MESSAGE.INPUT_READY_SILENT]:
-    '连接成功，接口已收到测试音频；静音样本没有识别出文本，这属于预期现象。',
-  [SPEECH_CONNECTION_MESSAGE.INPUT_INVALID_PROBE]:
-    '语音识别服务返回了成功状态，但没有可验证的识别结果。请检查接口地址、模型和凭据。',
-  [SPEECH_CONNECTION_MESSAGE.INPUT_PROVIDER_ERROR]:
-    '语音识别服务返回了异常状态，请检查接口和凭据。',
-  [SPEECH_CONNECTION_MESSAGE.INPUT_UNSUPPORTED]:
-    '当前语音输入提供商暂未接通连接测试。',
-  [SPEECH_CONNECTION_MESSAGE.OUTPUT_SYNTHESIS_READY]:
-    '连接成功，已拿到可验证的合成音频（尚未验证本机扬声器播放）。',
-  [SPEECH_CONNECTION_MESSAGE.OUTPUT_SYNTHESIS_FALLBACK]:
-    '连接成功，已拿到合成音频，但实际音色/集群与请求目标不一致，请复核设置。',
-  [SPEECH_CONNECTION_MESSAGE.OUTPUT_INVALID_AUDIO]:
-    '语音服务返回了成功状态，但音频内容无法验证。请检查接口、音色和模型设置。',
-  [SPEECH_CONNECTION_MESSAGE.OUTPUT_EMPTY_AUDIO]:
-    '语音服务返回了成功状态，但没有收到有效音频。请检查接口、音色和模型设置。',
-  [SPEECH_CONNECTION_MESSAGE.IDENTITY_MISMATCH]:
-    '服务有响应，但返回的提供商/模型/音色与请求目标不一致。',
-})
-
 export function redactSpeechConnectionText(value) {
   return redactSensitiveErrorText(value)
 }
 
 /**
  * Build a connection-result payload with stable messageKey + safe params.
- * Never includes transcripts, secrets, or raw audio.
+ * Never includes transcripts, secrets, or raw audio. The `message` field
+ * mirrors the key itself — renderers always translate the key, so no
+ * human-readable fallback copy lives in the main process.
  */
 export function buildSpeechConnectionResult({
   ok,
@@ -486,16 +464,12 @@ export function buildSpeechConnectionResult({
     )
     : undefined
 
-  const fallback = MESSAGE_FALLBACKS[key]
-    || (ok ? MESSAGE_FALLBACKS[SPEECH_CONNECTION_MESSAGE.INPUT_READY]
-      : MESSAGE_FALLBACKS[SPEECH_CONNECTION_MESSAGE.INPUT_INVALID_PROBE])
-
   // Never surface raw provider diagnostic bodies as the primary user message.
   void diagnosticDetail
 
   return {
     ok: Boolean(ok),
-    message: fallback,
+    message: key,
     messageKey: key,
     ...(safeParams && Object.keys(safeParams).length > 0 ? { messageParams: safeParams } : {}),
     ...(code ? { code } : {}),

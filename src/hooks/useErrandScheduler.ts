@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import {
   decideErrandRun,
   recordRun,
@@ -9,6 +8,7 @@ import {
   writeErrandRunnerState,
 } from '../features/agent/errandRunnerState.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import { usePollingScheduler } from './usePollingScheduler.ts'
 import type { AppSettings, MemoryRecallContext } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000  // 5 min — gentle on CPU and on the LLM bill
@@ -56,18 +56,11 @@ interface UseErrandSchedulerOptions {
  * only executes ones the user explicitly added to the queue.
  */
 export function useErrandScheduler({ settings, enabled = true }: UseErrandSchedulerOptions) {
-  const liveRef = useRef({ settings })
-  useEffect(() => {
-    liveRef.current = { settings }
-  }, [settings])
-
-  useEffect(() => {
-    if (!enabled || typeof window === 'undefined') return
-
-    let stopped = false
-
-    const tick = async () => {
-      if (stopped) return
+  usePollingScheduler({
+    enabled,
+    intervalMs: POLL_INTERVAL_MS,
+    live: { settings },
+    tick: async ({ settings: s }, isStopped) => {
       if (runningTick) return  // already running an errand from a prior tick
 
       const errand = findRunnableErrand()
@@ -83,7 +76,6 @@ export function useErrandScheduler({ settings, enabled = true }: UseErrandSchedu
 
       runningTick = true
       try {
-        const { settings: s } = liveRef.current
         const [
           { createChatAgentExecutor },
           { runErrand },
@@ -101,7 +93,7 @@ export function useErrandScheduler({ settings, enabled = true }: UseErrandSchedu
           uiLanguage: s.uiLanguage,
         })
 
-        if (stopped) return
+        if (isStopped()) return
         // Re-read the runner state inside the lock so any concurrent
         // writes outside the scheduler (none today, defensive) don't get
         // overwritten by our stale snapshot. Then record this run.
@@ -116,18 +108,6 @@ export function useErrandScheduler({ settings, enabled = true }: UseErrandSchedu
       } finally {
         runningTick = false
       }
-    }
-
-    void tick()
-    const id = window.setInterval(() => {
-      void tick()
-    }, POLL_INTERVAL_MS)
-
-    return () => {
-      stopped = true
-      window.clearInterval(id)
-    }
-    // Empty deps: scheduler runs for the lifetime of the app. liveRef
-    // already gives the tick the latest settings.
-  }, [enabled])
+    },
+  })
 }

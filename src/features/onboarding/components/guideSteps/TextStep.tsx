@@ -4,8 +4,8 @@ import {
   getApiProviderPreset,
   getDefaultOnboardingRegion,
   getOnboardingTextProviderOptionsByRegion,
-} from '../../../../lib/apiProviders.ts'
-import type { ApiProviderPreset } from '../../../../lib/apiProviders.ts'
+} from '../../../models/providerCatalog.ts'
+import type { ApiProviderPreset } from '../../../models/providerCatalog.ts'
 import { displaySecretInputValue } from '../../../../lib/keyVaultBridge.ts'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage.ts'
 import {

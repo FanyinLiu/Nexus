@@ -20,6 +20,7 @@ import {
   readJson,
   writeJson,
 } from '../../lib/storage/core.ts'
+import { isValidIsoTimestamp } from '../../lib/localDate.ts'
 
 type FutureCapsuleStatus = 'pending' | 'delivered'
 
@@ -51,10 +52,6 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/u
 
 function isValidStatus(s: unknown): s is FutureCapsuleStatus {
   return s === 'pending' || s === 'delivered'
-}
-
-function isValidIsoTimestamp(value: string): boolean {
-  return Number.isFinite(Date.parse(value))
 }
 
 function isValidLocalDate(value: string): boolean {

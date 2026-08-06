@@ -13,6 +13,9 @@
 // triggering.
 
 import { readJson, writeJson } from '../../lib/storage/core.ts'
+import { isObject } from '../../lib/guards.ts'
+import { normalizeIso } from '../../lib/localDate.ts'
+import { hasChanged } from '../../lib/normalize.ts'
 
 const STORAGE_KEY = 'nexus:safety:disclosure'
 
@@ -35,25 +38,10 @@ const DEFAULT_STATE: DisclosureState = {
   userMessagesSinceReminder: 0,
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
-
-function normalizeIso(value: unknown): string | null {
-  if (value == null) return null
-  if (typeof value !== 'string' && typeof value !== 'number') return null
-  const parsed = typeof value === 'number' ? value : Date.parse(value)
-  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null
-}
-
 function normalizeMessageCount(value: unknown): number {
   const count = typeof value === 'number' ? value : Number(value)
   if (!Number.isFinite(count)) return 0
   return Math.max(0, Math.floor(count))
-}
-
-function hasChanged(normalized: unknown, raw: unknown): boolean {
-  return JSON.stringify(normalized) !== JSON.stringify(raw)
 }
 
 function normalizeDisclosureState(raw: unknown): DisclosureState {

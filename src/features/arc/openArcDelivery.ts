@@ -11,6 +11,7 @@
 
 import type { UiLanguage } from '../../types'
 import type { OpenArcRecord } from './openArcStore.ts'
+import { pickLocale } from '../../lib/normalize.ts'
 
 export interface BuildArcCheckInInput {
   arc: OpenArcRecord
@@ -65,13 +66,6 @@ const MAX_THEME_LEN = 80
 function trimTheme(theme: string): string {
   if (theme.length <= MAX_THEME_LEN) return theme
   return theme.slice(0, MAX_THEME_LEN - 1).trimEnd() + '…'
-}
-
-function pickLocale<T extends string>(
-  table: Record<UiLanguage, T>,
-  uiLanguage: UiLanguage,
-): T {
-  return table[uiLanguage] ?? table['en-US']
 }
 
 export function buildArcCheckIn(input: BuildArcCheckInInput): BuildArcCheckInOutput {

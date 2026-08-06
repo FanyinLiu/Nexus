@@ -5,8 +5,8 @@ import '../styles/onboarding-guide-calm.css'
 import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap.ts'
 import {
   apiProviderRequiresApiKey,
-} from '../../../lib/apiProviders.ts'
-import type { ApiProviderPreset } from '../../../lib/apiProviders.ts'
+} from '../../models/providerCatalog.ts'
+import type { ApiProviderPreset } from '../../models/providerCatalog.ts'
 import {
   getFallbackSpeechOutputVoices,
   getSpeechInputModelOptions,

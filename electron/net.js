@@ -43,7 +43,11 @@ async function withRequestTimeout(
       new Promise((_, reject) => {
         timer = setTimeout(() => {
           abortController?.abort?.()
-          reject(new Error(timeoutMessage))
+          // Tag timeout rejections with a stable code so IPC callers can
+          // classify them without matching the (localized) timeoutMessage.
+          const error = new Error(timeoutMessage)
+          error.code = 'request_timeout'
+          reject(error)
         }, timeoutMs)
       }),
     ])

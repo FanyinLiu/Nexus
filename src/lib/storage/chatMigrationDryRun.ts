@@ -4,6 +4,7 @@ import {
 } from './core.ts'
 import { normalizeChatMessagesForStorage } from './chat.ts'
 import { normalizeChatSessionsForStorage, type ChatSession } from './chatSessions.ts'
+import { nowIso } from '../localDate.ts'
 import type { ChatMessage, ChatRole } from '../../types'
 
 export type ChatMigrationDryRunStatus = 'empty' | 'ready' | 'needs_review' | 'blocked'
@@ -111,10 +112,6 @@ interface ChatStorageMigrationDryRunOptions {
 interface ParsedJson {
   ok: boolean
   value: unknown
-}
-
-function nowIso(now: Date | string | number = new Date()) {
-  return now instanceof Date ? now.toISOString() : new Date(now).toISOString()
 }
 
 function byteLength(value: string | null | undefined): number {

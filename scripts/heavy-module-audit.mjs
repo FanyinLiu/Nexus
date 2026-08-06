@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import { readdirSync, readFileSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { walkFiles } from './lib/audit-framework.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -37,25 +38,6 @@ const REQUIRED_LAZY_PATTERNS = [
     reason: 'Live2D runtime is loaded through vendor scripts on demand',
   },
 ]
-
-function normalizePath(path) {
-  return path.split('\\').join('/')
-}
-
-function walkFiles(root, directory, predicate) {
-  const base = join(root, directory)
-  const files = []
-  for (const entry of readdirSync(base, { withFileTypes: true })) {
-    const fullPath = join(base, entry.name)
-    const rel = normalizePath(relative(root, fullPath))
-    if (entry.isDirectory()) {
-      files.push(...walkFiles(root, rel, predicate))
-    } else if (entry.isFile() && predicate(rel)) {
-      files.push(rel)
-    }
-  }
-  return files
-}
 
 function stripTypeOnlyImports(source) {
   return source

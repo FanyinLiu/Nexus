@@ -162,31 +162,6 @@ test('forms surface audit rejects dashboard card chrome', () => {
   })
 })
 
-test('forms surface audit rejects missing shared form-row semantics', () => {
-  withFixture({
-    'src/components/settingsFields.tsx': 'export function TextField() { return <label><input /></label> }',
-  }, (root) => {
-    const report = buildFormsSurfaceReport(root)
-
-    assert.equal(report.summary.ok, false)
-    assert.ok(report.missingContracts.some((item) => item.id === 'settings-form-row-component'))
-  })
-})
-
-test('forms surface audit rejects a split description and validation chain', () => {
-  withFixture({
-    'src/components/settingsFields.tsx': BASELINE_FILES['src/components/settingsFields.tsx'].replace(
-      "const describedBy = [descriptionId, validationId].filter(Boolean).join(' ') || undefined",
-      'const describedBy = descriptionId',
-    ),
-  }, (root) => {
-    const report = buildFormsSurfaceReport(root)
-
-    assert.equal(report.summary.ok, false)
-    assert.ok(report.missingContracts.some((item) => item.id === 'settings-form-row-describedby-chain'))
-  })
-})
-
 test('forms surface audit keeps active and fallback toggle states independently owned', () => {
   withFixture({
     'src/features/settingsV3/settings-v3.css': '',

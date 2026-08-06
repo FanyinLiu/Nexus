@@ -6,6 +6,7 @@ import type {
 } from './chatMigrationDryRun.ts'
 import { getRedactedLogErrorMessage } from '../logRedaction.ts'
 import { loadChatStorageMigrationPackage } from './chatMigrationDryRun.ts'
+import { nowIso } from '../localDate.ts'
 
 type EnvLike = Record<string, string | boolean | undefined>
 
@@ -95,10 +96,6 @@ function getImportMetaEnv(): EnvLike | undefined {
 
 export function isChatMigrationPreviewEnabled(env: EnvLike | undefined = getImportMetaEnv()): boolean {
   return env?.VITE_NEXUS_ENABLE_LOCAL_DATA_CHAT_MIGRATION_UI === '1'
-}
-
-function nowIso(now: Date | string | number = new Date()): string {
-  return now instanceof Date ? now.toISOString() : new Date(now).toISOString()
 }
 
 function byteLength(value: string): number {

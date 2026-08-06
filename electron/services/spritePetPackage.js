@@ -1,28 +1,34 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { inflateRawSync, inflateSync } from 'node:zlib'
+import { readJsonFile } from './fsUtils.js'
+import {
+  SPRITE_PET_ATLAS_HEIGHT,
+  SPRITE_PET_ATLAS_WIDTH,
+  SPRITE_PET_CELL_HEIGHT,
+  SPRITE_PET_CELL_WIDTH,
+  SPRITE_PET_COLUMNS,
+  SPRITE_PET_ROW_CONTRACT,
+  SPRITE_PET_ROWS,
+} from '../../shared/spriteAtlasContract.js'
 
-export const SPRITE_PET_COLUMNS = 8
-export const SPRITE_PET_ROWS = 9
-export const SPRITE_PET_CELL_WIDTH = 192
-export const SPRITE_PET_CELL_HEIGHT = 208
-export const SPRITE_PET_ATLAS_WIDTH = SPRITE_PET_COLUMNS * SPRITE_PET_CELL_WIDTH
-export const SPRITE_PET_ATLAS_HEIGHT = SPRITE_PET_ROWS * SPRITE_PET_CELL_HEIGHT
+// Re-exported so the other electron spritePet*.js services keep importing the
+// atlas contract through this module; the single source is
+// shared/spriteAtlasContract.js.
+export {
+  SPRITE_PET_ATLAS_HEIGHT,
+  SPRITE_PET_ATLAS_WIDTH,
+  SPRITE_PET_CELL_HEIGHT,
+  SPRITE_PET_CELL_WIDTH,
+  SPRITE_PET_COLUMNS,
+  SPRITE_PET_ROW_CONTRACT,
+  SPRITE_PET_ROWS,
+}
+
 export const SPRITE_PET_MAX_BYTES = 20 * 1024 * 1024
 export const SPRITE_PET_ARCHIVE_MAX_BYTES = 50 * 1024 * 1024
 const SPRITE_PET_ARCHIVE_MAX_ENTRIES = 200
 const SPRITE_PET_ARCHIVE_MAX_UNCOMPRESSED_BYTES = 60 * 1024 * 1024
-export const SPRITE_PET_ROW_CONTRACT = [
-  { state: 'idle', row: 0, frameCount: 6, durationsMs: [280, 110, 110, 140, 140, 320] },
-  { state: 'running-right', row: 1, frameCount: 8, durationsMs: [120, 120, 120, 120, 120, 120, 120, 220] },
-  { state: 'running-left', row: 2, frameCount: 8, durationsMs: [120, 120, 120, 120, 120, 120, 120, 220] },
-  { state: 'waving', row: 3, frameCount: 4, durationsMs: [140, 140, 140, 280] },
-  { state: 'jumping', row: 4, frameCount: 5, durationsMs: [140, 140, 140, 140, 280] },
-  { state: 'failed', row: 5, frameCount: 8, durationsMs: [140, 140, 140, 140, 140, 140, 140, 240] },
-  { state: 'waiting', row: 6, frameCount: 6, durationsMs: [150, 150, 150, 150, 150, 260] },
-  { state: 'running', row: 7, frameCount: 6, durationsMs: [120, 120, 120, 120, 120, 220] },
-  { state: 'review', row: 8, frameCount: 6, durationsMs: [150, 150, 150, 150, 150, 280] },
-]
 const SPRITE_PET_USED_COLUMNS_BY_ROW = SPRITE_PET_ROW_CONTRACT.map(({ frameCount }) => frameCount)
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
@@ -43,11 +49,6 @@ for (let index = 0; index < CRC32_TABLE.length; index += 1) {
 export function isPathInsideRoot(rootPath, candidatePath) {
   const relativePath = path.relative(rootPath, candidatePath)
   return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))
-}
-
-export async function readJsonFile(filePath) {
-  const rawFile = await fs.readFile(filePath, 'utf8')
-  return JSON.parse(rawFile.replace(/^\uFEFF/, ''))
 }
 
 function normalizeZipEntryPath(entryName) {

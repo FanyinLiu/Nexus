@@ -33,7 +33,6 @@ let _credentials = null
 
 const CONNECTION_TIMEOUT_MS = 8_000
 const FINISH_TIMEOUT_MS = 6_000
-const SUPPORTED_SAMPLE_RATE = 16000
 
 function formatTranscriptLogMeta(text) {
   return `chars=${String(text ?? '').length}`

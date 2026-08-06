@@ -1,50 +1,37 @@
-import { getApiProviderPreset } from '../features/models/index.ts'
+import { getApiProviderPreset, type ApiProviderPreset } from '../features/models/index.ts'
 import { isHttpHeaderSafeCredential } from '../core/routing/AuthProfileStore.ts'
 import type { AppSettings, TextProviderProfile } from '../types'
+import { normalizeString } from './normalize.ts'
+import {
+  readStoredProviderProfiles,
+  resolveProviderProfile,
+  type ResolveProviderProfileOptions,
+} from './providerProfileResolve.ts'
 
 type PartialTextProviderProfile = Partial<TextProviderProfile> | null | undefined
-
-function normalizeString(value: unknown) {
-  return typeof value === 'string' ? value.trim() : ''
-}
 
 export function normalizeTextProviderApiKey(value: unknown) {
   const apiKey = normalizeString(value)
   return apiKey && isHttpHeaderSafeCredential(apiKey) ? apiKey : ''
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
+const textProviderProfileResolveOptions: ResolveProviderProfileOptions<
+  Partial<TextProviderProfile>,
+  ApiProviderPreset
+> = {
+  getPreset: getApiProviderPreset,
+  normalizeApiKey: normalizeTextProviderApiKey,
 }
 
 function resolveTextProviderProfile(
   providerId: string,
   profile?: PartialTextProviderProfile,
 ): TextProviderProfile {
-  const preset = getApiProviderPreset(providerId)
-
-  return {
-    apiBaseUrl: normalizeString(profile?.apiBaseUrl) || preset.baseUrl || '',
-    apiKey: normalizeTextProviderApiKey(profile?.apiKey),
-    model: normalizeString(profile?.model) || preset.defaultModel || '',
-  }
+  return resolveProviderProfile(providerId, profile, textProviderProfileResolveOptions)
 }
 
 export function readStoredTextProviderProfiles(value: unknown) {
-  if (!isRecord(value)) {
-    return {} as Record<string, TextProviderProfile>
-  }
-
-  return Object.entries(value).reduce<Record<string, TextProviderProfile>>(
-    (accumulator, [providerId, profile]) => {
-      accumulator[providerId] = resolveTextProviderProfile(
-        providerId,
-        profile as PartialTextProviderProfile,
-      )
-      return accumulator
-    },
-    {},
-  )
+  return readStoredProviderProfiles(value, resolveTextProviderProfile)
 }
 
 export function syncTextProviderProfiles(settings: AppSettings): AppSettings {

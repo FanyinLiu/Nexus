@@ -206,7 +206,7 @@ function executeWindowsMediaSessionScript(args = []) {
 }
 
 function executeMacOsaScript(source, args = []) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     execFile(
       '/usr/bin/osascript',
       ['-l', 'JavaScript', '-e', source, ...args],

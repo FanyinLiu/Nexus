@@ -1,57 +1,34 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createId,
-  openTextFileWithFallback,
-  saveTextFileWithFallback,
   shorten,
 } from '../lib/index.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
-import { parseChatHistoryArchive, serializeChatHistoryArchive } from '../features/chat/index.ts'
-import { clearCompactionCache } from '../features/chat/contextCompaction.ts'
 import {
-  createDailyMemoryEntry,
-  extractMemoriesFromMessage,
   markRecalled,
-  mergeMemories,
 } from '../features/memory/index.ts'
-import { formatTraceLabel, logVoiceEvent } from '../features/voice/index.ts'
-import {
-  classifyCrisisSecondPass,
-  detectCrisisSignal,
-  presentCrisis,
-  shouldPresentCrisisPanel,
-} from '../features/safety/index.ts'
-import { noteUserMessageAndCheckReminder } from '../features/safety/disclosureState.ts'
+import { logVoiceEvent } from '../features/voice/index.ts'
 import {
   createAssistantReplyRunner,
   createLocalReminderActionRunner,
   createPendingReminderDraft,
-  executeAssistantTurn,
   getFreshPendingReminderDraft,
-  handleSlashCommand,
   PENDING_REMINDER_DRAFT_TTL_MS,
   cancelActiveTurn as cancelActiveTurnRuntime,
   getSpeechOutputErrorMessage,
-  resolveReminderIntentWithPendingDraft,
-  sanitizeLoadedMessages,
-  type CompanionNoticePayload,
   type PendingReminderDraft,
   type PendingReminderDraftInput,
   type UseChatContext,
 } from './chat/index.ts'
-import {
-  releaseChatSubmission,
-  shouldClearSubmittedInput,
-  tryAcquireChatSubmission,
-} from './chat/submissionGuard.ts'
 import { useChatPersistence } from './chat/useChatPersistence.ts'
+import { createSendMessageHandler } from './chat/sendMessage.ts'
+import { usePetDialogBubbles } from './chat/usePetDialogBubbles.ts'
+import { useCompanionNotices } from './chat/useCompanionNotices.ts'
+import { useChatHistoryArchive } from './chat/useChatHistoryArchive.ts'
 import type {
   AssistantRuntimeActivity,
   ChatMessage,
   ChatMessageTone,
-  DailyMemoryEntry,
-  PetDialogBubbleState,
-  PetThoughtBubbleState,
 } from '../types/index.ts'
 
 export type { UseChatContext } from './chat/index.ts'
@@ -78,8 +55,6 @@ export function useChat(ctx: UseChatContext) {
       }, 8_000)
     }
   }, [])
-  const [petDialogBubble, setPetDialogBubble] = useState<PetDialogBubbleState | null>(null)
-  const [petThoughtBubble, setPetThoughtBubble] = useState<PetThoughtBubbleState | null>(null)
   const [assistantActivity, setAssistantActivity] = useState<AssistantRuntimeActivity>('idle')
   const [pendingImage, setPendingImageState] = useState<string | null>(null)
 
@@ -101,11 +76,6 @@ export function useChat(ctx: UseChatContext) {
     ctxRef.current = ctx
   })
   const pendingReminderDraftRef = useRef<PendingReminderDraft | null>(null)
-  const petDialogHideTimerRef = useRef<number | null>(null)
-  const petThoughtHideTimerRef = useRef<number | null>(null)
-  const deferredCompanionNoticesRef = useRef<CompanionNoticePayload[]>([])
-  const flushingDeferredCompanionNoticesRef = useRef(false)
-  const recentCompanionNoticesRef = useRef<Map<string, number>>(new Map())
 
   const {
     applyRemoteMessages: applyRemoteMessagesToState,
@@ -153,72 +123,14 @@ export function useChat(ctx: UseChatContext) {
     applyRemoteMessagesToState(next)
   }, [applyRemoteMessagesToState])
 
-  const clearPetDialogHideTimer = useCallback(() => {
-    if (petDialogHideTimerRef.current) {
-      window.clearTimeout(petDialogHideTimerRef.current)
-      petDialogHideTimerRef.current = null
-    }
-  }, [])
-
-  const hidePetDialogBubble = useCallback(() => {
-    clearPetDialogHideTimer()
-    setPetDialogBubble(null)
-  }, [clearPetDialogHideTimer])
-
-  const presentPetDialogBubble = useCallback((
-    bubble: PetDialogBubbleState,
-    options?: { autoHideMs?: number },
-  ) => {
-    clearPetDialogHideTimer()
-    setPetDialogBubble({
-      ...bubble,
-      createdAt: bubble.createdAt ?? new Date().toISOString(),
-    })
-
-    if ((options?.autoHideMs ?? 0) > 0) {
-      petDialogHideTimerRef.current = window.setTimeout(() => {
-        petDialogHideTimerRef.current = null
-        setPetDialogBubble(null)
-      }, options!.autoHideMs)
-    }
-  }, [clearPetDialogHideTimer])
-
-  useEffect(() => () => {
-    clearPetDialogHideTimer()
-  }, [clearPetDialogHideTimer])
-
-  const clearPetThoughtHideTimer = useCallback(() => {
-    if (petThoughtHideTimerRef.current) {
-      window.clearTimeout(petThoughtHideTimerRef.current)
-      petThoughtHideTimerRef.current = null
-    }
-  }, [])
-
-  const pushInnerThought = useCallback((thought: string, urgency: number, autoHideMs = 8_000) => {
-    const trimmed = thought.trim()
-    if (!trimmed) return
-    clearPetThoughtHideTimer()
-    setPetThoughtBubble({
-      thought: trimmed,
-      urgency: Math.max(0, Math.min(100, Math.round(urgency))),
-      createdAt: new Date().toISOString(),
-    })
-    if (autoHideMs > 0) {
-      petThoughtHideTimerRef.current = window.setTimeout(() => {
-        petThoughtHideTimerRef.current = null
-        setPetThoughtBubble(null)
-      }, autoHideMs)
-    }
-  }, [clearPetThoughtHideTimer])
-
-  const hideInnerThought = useCallback(() => {
-    clearPetThoughtHideTimer()
-    setPetThoughtBubble(null)
-  }, [clearPetThoughtHideTimer])
-
-  useEffect(() => () => {
-    clearPetThoughtHideTimer()
-  }, [clearPetThoughtHideTimer])
+  const {
+    petDialogBubble,
+    petThoughtBubble,
+    presentPetDialogBubble,
+    hidePetDialogBubble,
+    pushInnerThought,
+    hideInnerThought,
+  } = usePetDialogBubbles()
 
   useEffect(() => () => {
     if (errorTimerRef.current) {
@@ -257,96 +169,17 @@ export function useChat(ctx: UseChatContext) {
     })
   }, [appendChatMessage])
 
-  const pushCompanionNotice = useCallback(async (options: CompanionNoticePayload) => {
-    const chatContent = options.chatContent.trim()
-    const bubbleContent = (options.bubbleContent ?? chatContent).trim()
-    const speechContent = options.speechContent?.trim() ?? ''
-    const createdAt = new Date().toISOString()
-
-    // Dedupe gate: drop near-identical broadcasts within 10min. StrictMode
-    // double-mount and cross-category autonomy paths (proactive speak /
-    // scheduled / context trigger / brief) can otherwise produce twin
-    // notices for the same underlying thought. We key on bubbleContent —
-    // the label-free core text — so 【早报】X and 【自主】X collapse to
-    // one entry instead of bypassing the gate through their prefix.
-    const DEDUPE_WINDOW_MS = 10 * 60_000
-    const dedupeKey = options.dedupeKey?.trim() || bubbleContent || speechContent || chatContent
-    if (dedupeKey) {
-      const now = Date.now()
-      const recent = recentCompanionNoticesRef.current
-      for (const [key, ts] of recent) {
-        if (now - ts > DEDUPE_WINDOW_MS) recent.delete(key)
-      }
-      const lastTs = recent.get(dedupeKey)
-      if (lastTs !== undefined && now - lastTs < DEDUPE_WINDOW_MS) {
-        return
-      }
-      recent.set(dedupeKey, now)
-    }
-
-    if (chatContent) {
-      appendChatMessage({
-        id: createId('msg'),
-        role: 'assistant',
-        content: chatContent,
-        toolResult: options.toolResult,
-        createdAt,
-      })
-    }
-
-    if (bubbleContent) {
-      presentPetDialogBubble(
-        {
-          content: bubbleContent,
-          toolResult: options.toolResult,
-          streaming: false,
-          createdAt,
-        },
-        { autoHideMs: options.autoHideMs ?? 14_000 },
-      )
-    }
-
-    ctx.markPresenceActivity()
-    ctx.setMood('happy')
-
-    if (!speechContent) {
-      return
-    }
-
-    try {
-      await ctx.speakAssistantReply(speechContent, options.shouldResumeContinuousVoice ?? false)
-    } catch (speechError) {
-      const speechErrorMessage = getSpeechOutputErrorMessage(speechError)
-      setError(t('chat.error.speech_with_detail', { error: speechErrorMessage }))
-    }
-  }, [appendChatMessage, ctx, presentPetDialogBubble, setError, t])
-
-  const canDeliverDeferredCompanionNotice = useCallback(() => (
-    !busyRef.current
-    && ctx.voiceStateRef.current !== 'processing'
-    && ctx.voiceStateRef.current !== 'speaking'
-  ), [ctx.voiceStateRef])
-
-  const flushDeferredCompanionNotices = useCallback(async () => {
-    if (flushingDeferredCompanionNoticesRef.current || !canDeliverDeferredCompanionNotice()) {
-      return
-    }
-
-    flushingDeferredCompanionNoticesRef.current = true
-
-    try {
-      while (deferredCompanionNoticesRef.current.length && canDeliverDeferredCompanionNotice()) {
-        const nextNotice = deferredCompanionNoticesRef.current.shift()
-        if (!nextNotice) {
-          continue
-        }
-
-        await pushCompanionNotice(nextNotice)
-      }
-    } finally {
-      flushingDeferredCompanionNoticesRef.current = false
-    }
-  }, [canDeliverDeferredCompanionNotice, pushCompanionNotice])
+  const {
+    pushCompanionNotice,
+    flushDeferredCompanionNotices,
+  } = useCompanionNotices({
+    ctx,
+    t,
+    busyRef,
+    appendChatMessage,
+    presentPetDialogBubble,
+    setError,
+  })
 
   function getPendingReminderDraft() {
     const draft = getFreshPendingReminderDraft(
@@ -437,290 +270,44 @@ export function useChat(ctx: UseChatContext) {
       },
     }), [appendChatMessage, appendSystemMessage, ctx, handleSpeechPlaybackFailure, presentPetDialogBubble, setError])
 
-  const replaceChatHistory = useCallback((nextMessages: ChatMessage[]) => {
-    messagesRef.current = nextMessages
-    setMessages(nextMessages)
-    setError(null)
-    setInputValue('')
-  }, [setError, setInputValue])
+  const {
+    replaceChatHistory,
+    exportChatHistory,
+    importChatHistory,
+    clearChatHistory,
+  } = useChatHistoryArchive({
+    ctx,
+    t,
+    messagesRef,
+    setMessages,
+    setError,
+    setInputValue,
+  })
 
-  const exportChatHistory = useCallback(async () => {
-    const fileNameDate = new Date().toISOString().slice(0, 10)
-    const exportContent = serializeChatHistoryArchive(messagesRef.current, {
-      companionName: ctx.settingsRef.current.companionName,
-      userName: ctx.settingsRef.current.userName,
-    })
-
-    return saveTextFileWithFallback({
-      title: t('chat.export.title'),
-      defaultFileName: `nexus-chat-history-${fileNameDate}.json`,
-      content: exportContent,
-      filters: [{ name: 'JSON', extensions: ['json'] }],
-    })
-  }, [ctx.settingsRef, t])
-
-  const importChatHistory = useCallback(async () => {
-    const result = await openTextFileWithFallback({
-      title: t('chat.import.title'),
-      filters: [{ name: 'JSON', extensions: ['json'] }],
-    })
-
-    if (result.canceled || !result.content) {
-      return result
-    }
-
-    const importedMessages = sanitizeLoadedMessages(parseChatHistoryArchive(result.content))
-    replaceChatHistory(importedMessages)
-
-    return {
-      canceled: false,
-      filePath: result.filePath,
-      message: t('chat.import.success', { count: importedMessages.length }),
-    }
-  }, [replaceChatHistory, t])
-
-  const clearChatHistory = useCallback(async () => {
-    replaceChatHistory([])
-    // Invalidate the older-message LLM-summary cache — its key is
-    // hashOlderText(...) of the prior conversation tail, but on a hard
-    // clear the next compaction is logically a fresh start, and we
-    // don't want a stale summary leaking in if the user's first new
-    // message happens to produce the same hash window.
-    clearCompactionCache()
-
-    return {
-      canceled: false,
-      message: t('chat.clear.success'),
-    }
-  }, [replaceChatHistory, t])
-
-  async function sendMessage(
-    rawContent?: string,
-    options?: {
-      source?: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'
-      traceId?: string
-    },
-  ) {
-    const currentSettings = ctx.settingsRef.current
-    const source = options?.source ?? 'text'
-    const fromVoice = source === 'voice'
-    const traceId = fromVoice ? (options?.traceId ?? createId('voice')) : ''
-    const traceLabel = traceId ? formatTraceLabel(traceId) : ''
-    const composerSnapshot = !rawContent ? inputRef.current : null
-    const content = (rawContent ?? inputRef.current).trim()
-    // Capture the pending image once at the top — we don't want it to disappear
-    // mid-flight if the user clears it during send. Voice turns ignore images
-    // (they go through the STT pipeline with no composer attachment).
-    const attachedImage = !fromVoice && !rawContent ? pendingImageRef.current : null
-
-    if (!content && !attachedImage) {
-      if (fromVoice) {
-        logVoiceEvent('voice transcript was empty, nothing was sent')
-        ctx.updateVoicePipeline('idle', t('chat.voice.empty_pipeline_detail'))
-        ctx.appendVoiceTrace(t('chat.voice.empty_label'), t('chat.voice.empty_trace', { label: traceLabel }), 'error')
-      }
-      return false
-    }
-
-    const rejectBusySubmission = () => {
-      if (fromVoice) {
-        logVoiceEvent('assistant is busy, voice transcript was not sent', { contentLength: content.length })
-        ctx.fillComposerWithVoiceTranscript(content)
-        ctx.updateVoicePipeline('blocked_busy', t('chat.voice.blocked_detail'), content)
-        ctx.appendVoiceTrace(t('chat.voice.blocked_label'), t('chat.voice.blocked_trace', { label: traceLabel }), 'error')
-        setError(t('chat.voice.blocked_error'))
-        ctx.updatePetStatus(t('chat.voice.blocked_pet_status'), 2_600)
-      }
-      return false
-    }
-
-    // Acquire synchronously before slash parsing or crisis classification so
-    // a second submit cannot enter while the safety pass is awaiting a reply.
-    if (!tryAcquireChatSubmission(submissionLockRef)) {
-      return rejectBusySubmission()
-    }
-
-    try {
-      const slashResult = await handleSlashCommand(content)
-      if (slashResult.handled) {
-        if (slashResult.messages) {
-          setMessages((prev) => [...prev, ...slashResult.messages!])
-        }
-        if (composerSnapshot !== null && shouldClearSubmittedInput(inputRef.current, composerSnapshot)) {
-          setInputValue('')
-        }
-        return true
-      }
-
-      if (busyRef.current) {
-        return rejectBusySubmission()
-      }
-
-      // Resume the voice loop after TTS for ALL voice-originated turns. Even
-      // in wake-word mode, this gives the user a brief VAD window to speak
-      // again immediately after the companion replies, without re-waking.
-      // If they don't speak, the noSpeechTimer (3 s, see constants.ts)
-      // closes the session and the wake word listener takes over normally.
-      const shouldResumeContinuousVoice = fromVoice
-
-      if (ctx.voiceStateRef.current === 'speaking') {
-        if (!ctx.canInterruptSpeech()) {
-          setError(t('chat.voice.no_interrupt_error'))
-          ctx.updatePetStatus(t('chat.voice.no_interrupt_pet_status'), 3_000)
-          return false
-        }
-
-        ctx.stopActiveSpeechOutput()
-        ctx.setVoiceState('idle')
-        ctx.setMood('happy')
-      }
-
-      hidePetDialogBubble()
-      ctx.markPresenceActivity()
-      if (fromVoice) {
-        ctx.appendVoiceTrace(t('chat.voice.sent_label'), t('chat.voice.sent_trace', { label: traceLabel }))
-      }
-
-      // Surface the non-persona hotline panel only for medium/high crisis
-      // signals. Low signals still soften the persona reply in the reply path
-      // without interrupting the conversation with a hotline panel.
-      const patternCrisisSignal = detectCrisisSignal(content, currentSettings.uiLanguage)
-      const crisisSignal = await classifyCrisisSecondPass({
-        locale: currentSettings.uiLanguage,
-        text: content,
-        patternSignal: patternCrisisSignal,
-        runner: patternCrisisSignal
-          ? async ({ system, user }) => {
-            const response = await window.desktopPet?.completeChat?.({
-              providerId: currentSettings.apiProviderId,
-              baseUrl: currentSettings.apiBaseUrl,
-              apiKey: currentSettings.apiKey,
-              model: currentSettings.model,
-              messages: [
-                { role: 'system', content: system },
-                { role: 'user', content: user },
-              ],
-              temperature: 0,
-              maxTokens: 120,
-            })
-            return response?.content ?? null
-          }
-          : undefined,
-      })
-      if (shouldPresentCrisisPanel(crisisSignal)) {
-        presentCrisis(crisisSignal)
-      }
-
-      const userMessage: ChatMessage = {
-        id: createId('msg'),
-        role: 'user',
-        content,
-        createdAt: new Date().toISOString(),
-        ...(attachedImage ? { images: [attachedImage] } : {}),
-      }
-
-      // Consume the pending image as soon as it's attached to the outgoing
-      // message — both the ref (for reentrancy) and React state (for the UI chip).
-      if (attachedImage) {
-        pendingImageRef.current = null
-        setPendingImageState(null)
-      }
-
-      const nextMessages = [...messagesRef.current, userMessage]
-      const nextMemories = mergeMemories(ctx.memoriesRef.current, extractMemoriesFromMessage(userMessage, ctx.getEmotionSnapshot?.()))
-      const nextDailyMemories = ctx.appendDailyMemoryEntries(
-        [createDailyMemoryEntry(userMessage, fromVoice ? 'voice' : 'chat')].filter(
-          (entry): entry is DailyMemoryEntry => Boolean(entry),
-        ),
-      )
-
-      messagesRef.current = nextMessages
-      ctx.memoriesRef.current = nextMemories
-      ctx.setMemories(nextMemories)
-      setMessages(nextMessages)
-
-      // Periodic AI-disclosure reminder (Tier 1.1 chunk E). Fires every
-      // 30 user messages AND every 3 hours of wall-clock since the last
-      // reminder, whichever comes second. The check is gated on having
-      // ack'd the onboarding disclosure step.
-      if (noteUserMessageAndCheckReminder()) {
-        appendSystemMessage(t('safety.disclosure.periodic_reminder'))
-      }
-
-      if (composerSnapshot !== null && shouldClearSubmittedInput(inputRef.current, composerSnapshot)) {
-        setInputValue('')
-      }
-
-      const resolvedReminderIntent = resolveReminderIntentWithPendingDraft(
-        content,
-        getPendingReminderDraft(),
-      )
-      const parsedReminderIntent = resolvedReminderIntent.intent
-      if (resolvedReminderIntent.shouldClearPendingDraft) {
-        clearPendingReminderDraft()
-      }
-
-      if (parsedReminderIntent) {
-        try {
-          await runLocalReminderAction({
-            intent: parsedReminderIntent,
-            content,
-            fromVoice,
-            traceLabel,
-            shouldResumeContinuousVoice,
-          })
-          return true
-        } catch (localIntentError) {
-          const errorMessage = localIntentError instanceof Error ? localIntentError.message : t('chat.local_intent.failed')
-          appendSystemMessage(errorMessage, 'error')
-          setError(errorMessage)
-          ctx.appendDebugConsoleEvent({
-            source: 'reminder',
-            title: 'Local reminder handling failed',
-            detail: errorMessage,
-            tone: 'error',
-          })
-          ctx.updatePetStatus(errorMessage, 3_200)
-          if (fromVoice) {
-            ctx.updateVoicePipeline('reply_failed', t('chat.local_intent.voice_detail', { preview: shorten(errorMessage, 36) }), content)
-            ctx.appendVoiceTrace(t('chat.local_intent.voice_label'), t('chat.local_intent.voice_trace', { label: traceLabel, preview: shorten(errorMessage, 40) }), 'error')
-          }
-          return false
-        }
-      }
-
-      // The lock only protects slash handling and preflight classification. The
-      // turn runtime synchronously marks busyRef on entry, so release before it
-      // starts; the finally below remains an idempotent safety release.
-      releaseChatSubmission(submissionLockRef)
-      return executeAssistantTurn(
-        {
-          ctx,
-          setBusy,
-          setError,
-          busyRef,
-          activeTurnIdRef,
-          activeStreamAbortRef,
-          runAssistantReplyTurn,
-          flushDeferredCompanionNotices,
-        },
-        {
-          currentSettings,
-          nextMessages,
-          nextMemories,
-          nextDailyMemories,
-          content,
-          source,
-          fromVoice,
-          traceId,
-          traceLabel,
-          shouldResumeContinuousVoice,
-        },
-      )
-    } finally {
-      releaseChatSubmission(submissionLockRef)
-    }
-  }
+  // eslint-disable-next-line react-hooks/refs -- handler factory receives refs but only dereferences them inside the returned async sendMessage, never during this render
+  const sendMessage = createSendMessageHandler({
+    ctx,
+    t,
+    messagesRef,
+    inputRef,
+    pendingImageRef,
+    busyRef,
+    submissionLockRef,
+    activeTurnIdRef,
+    activeStreamAbortRef,
+    setMessages,
+    setBusy,
+    setError,
+    setInputValue,
+    setPendingImageState,
+    hidePetDialogBubble,
+    appendSystemMessage,
+    getPendingReminderDraft,
+    clearPendingReminderDraft,
+    runLocalReminderAction,
+    runAssistantReplyTurn,
+    flushDeferredCompanionNotices,
+  })
 
   const sendMessageRef = useRef(sendMessage)
   useEffect(() => {

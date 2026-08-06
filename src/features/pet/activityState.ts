@@ -17,7 +17,7 @@ export type CompanionActivityPhase =
   | 'error'
   | 'offline'
 
-export type CompanionActivityMotion =
+type CompanionActivityMotion =
   | 'breathe'
   | 'think'
   | 'listen'

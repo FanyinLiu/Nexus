@@ -1,3 +1,4 @@
+import { normalizeWhitespace } from './textNormalize.js'
 import {
   DEFAULT_DUCKDUCKGO_HTML_ENDPOINT,
   DEFAULT_GEMINI_SEARCH_MODEL,
@@ -7,7 +8,6 @@ import {
   fetchSearchJson,
   isDuckDuckGoBotChallenge,
   normalizeContentPreview,
-  normalizeWhitespace,
   parseDuckDuckGoHtml,
   pickExaSnippet,
   rankAndFilterItems,

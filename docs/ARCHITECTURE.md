@@ -669,8 +669,6 @@ tests remain authoritative for service reachability, model availability, quota,
 and invalid credentials; Ollama transport failures are classified there so the
 renderer receives the same "start Ollama / check 11434 / pull a model" guidance
 from onboarding, settings, and model-list refresh flows.
-`src/lib/apiProviders.ts` remains a compatibility export only; new code should
-import from `src/features/models`.
 
 ### Desktop context flow
 

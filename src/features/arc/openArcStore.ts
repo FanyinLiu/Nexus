@@ -22,6 +22,7 @@ import {
   readJson,
   writeJson,
 } from '../../lib/storage/core.ts'
+import { isValidIsoTimestamp } from '../../lib/localDate.ts'
 
 type OpenArcStatus = 'open' | 'resolved' | 'dropped'
 
@@ -60,10 +61,6 @@ const DEFAULT_CHECK_IN_DAYS = [3, 5]
 
 function isValidStatus(s: unknown): s is OpenArcStatus {
   return s === 'open' || s === 'resolved' || s === 'dropped'
-}
-
-function isValidIsoTimestamp(value: string): boolean {
-  return Number.isFinite(Date.parse(value))
 }
 
 function normalizeCheckInDays(value: unknown): number[] {

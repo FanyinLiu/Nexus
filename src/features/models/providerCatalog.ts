@@ -3,6 +3,7 @@ import {
   modelSupportsSpeech,
   modelSupportsVision,
 } from '../../lib/modelCapabilities.ts'
+import { inferProviderIdFromHost } from '../../../shared/providerHostInference.js'
 import { normalizeUiLanguage } from '../../lib/uiLanguage.ts'
 import type { TranslationKey, UiLanguage } from '../../types/i18n.ts'
 import type {
@@ -832,46 +833,9 @@ export function apiProviderRequiresApiKey(providerId: string) {
   return getApiProviderPreset(providerId).requiresApiKey
 }
 
+// Host inference table lives in shared/providerHostInference.js (single
+// source of truth, shared with the main process' normalizeChatProviderId).
+// The renderer keeps its historical 'custom' fallback for unmatched hosts.
 export function inferApiProviderId(baseUrl: string, model?: string) {
-  const normalized = String(baseUrl ?? '').toLowerCase()
-  const normalizedModel = String(model ?? '').trim().toLowerCase()
-
-  if (normalized.includes('api.openai.com')) return 'openai'
-  if (normalized.includes('api.anthropic.com')) return 'anthropic'
-  if (normalized.includes('generativelanguage.googleapis.com')) return 'gemini'
-  if (normalized.includes('api.x.ai')) return 'xai'
-  if (normalized.includes('api.deepseek.com')) return 'deepseek'
-  if (normalized.includes('api.moonshot.ai/anthropic')) return 'kimi-coding-global'
-  if (normalized.includes('api.moonshot.cn/anthropic')) return 'kimi-coding'
-  if (normalized.includes('api.moonshot.ai')) return 'moonshot-global'
-  if (normalized.includes('api.moonshot.cn')) return 'moonshot'
-  if (normalized.includes('api.minimax.io/anthropic')) {
-    return normalizedModel === 'minimax-m3' ? 'minimax-coding-global' : 'minimax-global'
-  }
-  if (normalized.includes('api.minimaxi.com/anthropic')) {
-    return normalizedModel === 'minimax-m3' ? 'minimax-coding' : 'minimax'
-  }
-  if (normalized.includes('api.minimax.io')) return 'minimax-global'
-  if (normalized.includes('api.minimaxi.com')) return 'minimax'
-  if (normalized.includes('coding.dashscope.aliyuncs.com')) return 'modelstudio-coding'
-  if (normalized.includes('dashscope-intl.aliyuncs.com')) return 'dashscope-global'
-  if (normalized.includes('dashscope.aliyuncs.com')) return 'dashscope'
-  if (normalized.includes('api.siliconflow.com')) return 'siliconflow-global'
-  if (normalized.includes('api.siliconflow.cn')) return 'siliconflow'
-  if (normalized.includes('openrouter.ai')) return 'openrouter'
-  if (normalized.includes('api.together.xyz')) return 'together'
-  if (normalized.includes('api.mistral.ai')) return 'mistral'
-  if (normalized.includes('qianfan.baidubce.com')) return 'qianfan'
-  if (normalized.includes('api.z.ai') || normalized.includes('open.bigmodel.cn')) return 'zai'
-  if (normalized.includes('ark.cn-beijing.volces.com/api/coding')) return 'doubao-coding'
-  if (normalized.includes('ark.cn-beijing.volces.com')) return 'doubao'
-  if (normalized.includes('bytepluses.com/api/coding')) return 'byteplus-coding'
-  if (normalized.includes('bytepluses.com')) return 'byteplus'
-  if (normalized.includes('integrate.api.nvidia.com')) return 'nvidia'
-  if (normalized.includes('api.venice.ai')) return 'venice'
-  if (normalized.includes('127.0.0.1:11434') || normalized.includes('localhost:11434')) {
-    return 'ollama'
-  }
-
-  return 'custom'
+  return inferProviderIdFromHost(baseUrl, model) ?? 'custom'
 }

@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { analyzeGuidance } from '../features/autonomy/guidanceAnalysis.ts'
 import {
   loadGuidanceAnalysis,
@@ -6,6 +5,7 @@ import {
   saveGuidanceAnalysis,
 } from '../features/autonomy/guidanceTelemetry.ts'
 import { loadUserAffectHistory } from '../features/autonomy/userAffectTimeline.ts'
+import { usePollingScheduler } from './usePollingScheduler.ts'
 
 const RERUN_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000  // 7 days
 const MIN_TELEMETRY_TO_BOTHER = 5
@@ -24,22 +24,24 @@ const MIN_TELEMETRY_TO_BOTHER = 5
  * invisible to the user.
  */
 export function useGuidanceAnalysisScheduler({ enabled = true }: { enabled?: boolean } = {}): void {
-  useEffect(() => {
-    if (!enabled || typeof window === 'undefined') return
-
-    const last = loadGuidanceAnalysis()
-    if (last) {
-      const lastMs = Date.parse(last.generatedAt)
-      if (Number.isFinite(lastMs) && Date.now() - lastMs < RERUN_INTERVAL_MS) {
-        return  // recent report exists; nothing to do
+  usePollingScheduler({
+    enabled,
+    live: undefined,
+    tick: () => {
+      const last = loadGuidanceAnalysis()
+      if (last) {
+        const lastMs = Date.parse(last.generatedAt)
+        if (Number.isFinite(lastMs) && Date.now() - lastMs < RERUN_INTERVAL_MS) {
+          return  // recent report exists; nothing to do
+        }
       }
-    }
 
-    const telemetry = loadGuidanceTelemetry()
-    if (telemetry.length < MIN_TELEMETRY_TO_BOTHER) return  // not enough data yet
+      const telemetry = loadGuidanceTelemetry()
+      if (telemetry.length < MIN_TELEMETRY_TO_BOTHER) return  // not enough data yet
 
-    const samples = loadUserAffectHistory()
-    const report = analyzeGuidance(telemetry, samples, new Date())
-    saveGuidanceAnalysis(report)
-  }, [enabled])
+      const samples = loadUserAffectHistory()
+      const report = analyzeGuidance(telemetry, samples, new Date())
+      saveGuidanceAnalysis(report)
+    },
+  })
 }

@@ -14,11 +14,7 @@ import { openGoalsStore } from './openGoalsStore.ts'
 import { agentTraceStore } from './agentTraceStore.ts'
 import type { AgentStep, AgentStopReason } from './types.ts'
 
-export type {
-  AgentStep,
-  AgentStepType,
-  AgentStopReason,
-} from './types.ts'
+export type { AgentStep } from './types.ts'
 
 export type AgentExecuteTurn = (
   history: ChatMessage[],

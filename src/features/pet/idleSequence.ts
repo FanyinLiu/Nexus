@@ -26,7 +26,7 @@ const DEFAULT_FIDGET_TRIGGER_RATE = 0.25
  * mirror the old IDLE_SEQUENCE actions so models that relied on the legacy
  * behaviour keep working without change.
  */
-export const DEFAULT_IDLE_FIDGET_POOL: IdleFidgetDefinition[] = [
+const DEFAULT_IDLE_FIDGET_POOL: IdleFidgetDefinition[] = [
   // Short blink, no motion — low-impact and works on every model.
   { id: 'blink', expressionSlot: 'idle', durationMs: 600, stageDirection: '(眨眼)', weight: 5 },
   // Light "fidget" using the happy motion slot (Mao: exp_06 / TapBody).

@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import {
   decideBracket,
 } from '../features/proactive/bracketScheduler.ts'
@@ -15,6 +14,7 @@ import {
   writeJson,
 } from '../lib/storage.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import { usePollingScheduler } from './usePollingScheduler.ts'
 import type { AppSettings } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60_000
@@ -41,18 +41,12 @@ export function useBracketScheduler({
   panelOpen,
   enabled = true,
 }: UseBracketSchedulerOptions) {
-  const liveRef = useRef({ settings, panelOpen })
-  useEffect(() => {
-    liveRef.current = { settings, panelOpen }
-  }, [settings, panelOpen])
-
-  useEffect(() => {
-    if (!enabled || !settings.proactiveBracketEnabled) return
-    if (typeof window === 'undefined') return
-    if (!window.desktopPet?.showProactiveNotification) return
-
-    const tick = async () => {
-      const { settings: s, panelOpen: open } = liveRef.current
+  usePollingScheduler({
+    enabled: enabled && settings.proactiveBracketEnabled,
+    intervalMs: POLL_INTERVAL_MS,
+    requireNotificationBridge: true,
+    live: { settings, panelOpen },
+    tick: async ({ settings: s, panelOpen: open }) => {
       if (!s.proactiveBracketEnabled) return
       if (open) return
 
@@ -110,10 +104,6 @@ export function useBracketScheduler({
       } catch (err) {
         console.warn('[bracket] fire failed:', getRedactedLogErrorMessage(err))
       }
-    }
-
-    void tick()
-    const id = window.setInterval(() => { void tick() }, POLL_INTERVAL_MS)
-    return () => window.clearInterval(id)
-  }, [enabled, settings.proactiveBracketEnabled])
+    },
+  })
 }

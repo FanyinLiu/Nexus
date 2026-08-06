@@ -5,22 +5,15 @@ import {
   writeJson,
   writeJsonDebounced,
 } from './core.ts'
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
+import { isObject } from '../guards.ts'
+import { normalizeIsoOr } from '../localDate.ts'
+import { hasChanged } from '../normalize.ts'
 
 function normalizeString(value: unknown, collapseWhitespace = true): string {
   if (typeof value !== 'string') return ''
   return collapseWhitespace
     ? value.replace(/\s+/g, ' ').trim()
     : value.trim()
-}
-
-function normalizeIso(value: unknown, fallback: string): string {
-  if (typeof value !== 'string' && typeof value !== 'number') return fallback
-  const parsed = typeof value === 'number' ? value : Date.parse(value)
-  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : fallback
 }
 
 function normalizeKeywords(value: unknown): string[] {
@@ -70,7 +63,7 @@ function normalizeLorebookEntry(raw: unknown, now: string, index: number): Loreb
   const content = normalizeString(raw.content, false)
   if (!id && !label && keywords.length === 0 && !content) return null
 
-  const createdAt = normalizeIso(raw.createdAt, now)
+  const createdAt = normalizeIsoOr(raw.createdAt, now)
   const entry = {
     id,
     label,
@@ -79,16 +72,12 @@ function normalizeLorebookEntry(raw: unknown, now: string, index: number): Loreb
     enabled: typeof raw.enabled === 'boolean' ? raw.enabled : true,
     priority: normalizePriority(raw.priority),
     createdAt,
-    updatedAt: normalizeIso(raw.updatedAt, createdAt),
+    updatedAt: normalizeIsoOr(raw.updatedAt, createdAt),
   }
   return {
     ...entry,
     id: entry.id || makeStableLorebookId(entry, index),
   }
-}
-
-function hasChanged(normalized: unknown, raw: unknown): boolean {
-  return JSON.stringify(normalized) !== JSON.stringify(raw)
 }
 
 export function normalizeLorebookEntries(raw: unknown, nowMs = Date.now()): LorebookEntry[] {

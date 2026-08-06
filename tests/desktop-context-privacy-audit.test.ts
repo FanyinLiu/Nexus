@@ -12,10 +12,13 @@ import { sanitizeDesktopContextSnapshot } from '../services/desktopContextPrivac
 const sanitizedSnapshot = sanitizeDesktopContextSnapshot(snapshot)
 return sanitizedSnapshot
 `,
-  'electron/services/desktopContextPrivacy.js': `
+  'shared/desktopContextPrivacy.js': `
 DESKTOP_CONTEXT_REDACTION
 containsSensitiveDesktopContext
 redactSensitiveDesktopContextText
+sanitizeDesktopContextSnapshot
+`,
+  'electron/services/desktopContextPrivacy.js': `
 sanitizeDesktopContextSnapshot
 `,
   'electron/services/desktopContextService.js': `
@@ -59,8 +62,6 @@ normalizeObservedText(sanitizedSnapshot.screenText)
 `,
   'src/lib/privacy/desktopContextPrivacy.ts': `
 DESKTOP_CONTEXT_REDACTION
-containsSensitiveDesktopContext
-redactSensitiveDesktopContextText
 sanitizeDesktopContextSnapshotForPrompt
 stripDesktopContextScreenshotPayload
 `,

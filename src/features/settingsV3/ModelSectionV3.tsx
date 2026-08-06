@@ -1,5 +1,5 @@
 import { memo, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
-import { API_PROVIDER_PRESETS, getApiProviderPreset } from '../../lib/apiProviders.ts'
+import { API_PROVIDER_PRESETS, getApiProviderPreset } from '../models/providerCatalog.ts'
 import { getCoreRuntime, removeAuthProfileFromRuntime, upsertAuthProfileInRuntime } from '../../lib/coreRuntime.ts'
 import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'

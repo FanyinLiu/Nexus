@@ -1,4 +1,10 @@
 import {
+  estimateModelContextWindowTokens,
+  modelSupportsSpeech,
+  modelSupportsVision,
+} from '../shared/modelCapabilities.js'
+import { inferProviderIdFromHost } from '../shared/providerHostInference.js'
+import {
   CHAT_CONNECTION_MESSAGE,
   CHAT_CONNECTION_RECOMMENDATION,
   buildChatConnectionResult,
@@ -57,11 +63,13 @@ function isMiniMaxTokenPlanProvider(providerId) {
     || normalizedProviderId === 'minimax-coding-global'
 }
 
-function formatInvalidChatApiKeyMessage(providerId) {
+function formatInvalidChatApiKeyMessage(providerId, code) {
   const label = isMiniMaxTokenPlanProvider(providerId)
     ? 'MiniMax Token Plan API Key'
     : 'API Key'
-  return `${label} 格式好像不太对：里面有中文、换行、空格之类不能用于 HTTP Header 的字符。只填服务商控制台生成的原始 Key 就好，不要包含套餐说明、模型名或备注。`
+  // Kept in English so the message can cross IPC as a diagnostic string; the
+  // renderer classifies on the embedded code/`API Key` token, not this copy.
+  return `${label} is not safe for HTTP headers (${code}). Paste the raw key from the provider console only — no plan notes, model names, or comments.`
 }
 
 function classifyInvalidChatApiKeyCode(apiKey) {
@@ -76,69 +84,13 @@ function normalizeChatApiKeyForHeader(providerId, apiKey) {
   if (!value) return ''
 
   if (/[^\x21-\x7E]/u.test(value)) {
-    const error = new Error(formatInvalidChatApiKeyMessage(providerId))
-    error.code = classifyInvalidChatApiKeyCode(value)
+    const code = classifyInvalidChatApiKeyCode(value)
+    const error = new Error(formatInvalidChatApiKeyMessage(providerId, code))
+    error.code = code
     throw error
   }
 
   return value
-}
-
-function modelSupportsVision(model) {
-  const id = String(model ?? '').trim()
-  if (!id) return false
-  return [
-    /gpt-4o(?!-mini-tts|-mini-transcribe|-transcribe)/i,
-    /gpt-4\.1/i,
-    /gpt-4-vision/i,
-    /gpt-4-turbo/i,
-    /gpt-5/i,
-    /\bo3\b|\bo4\b/i,
-    /claude-3/i,
-    /claude-4/i,
-    /claude-5/i,
-    /claude-(opus|sonnet|haiku)/i,
-    /gemini/i,
-    /qwen.*-vl/i,
-    /qwen2(\.5)?-vl/i,
-    /\bvl-/i,
-    /-vl\b/i,
-    /\bvision\b/i,
-    /pixtral/i,
-    /llava/i,
-    /llama-?\d+(\.\d+)?-vision/i,
-    /minicpm-?v/i,
-    /moondream/i,
-    /internvl/i,
-    /cogvlm/i,
-    /yi-vl/i,
-    /glm-4v/i,
-    /step-1v/i,
-  ].some((pattern) => pattern.test(id))
-}
-
-function modelSupportsSpeech(model) {
-  const id = String(model ?? '').trim().toLowerCase()
-  return Boolean(id && /realtime|audio|voice|tts|transcribe|speech/.test(id))
-}
-
-function estimateModelContextWindowTokens(model) {
-  const id = String(model ?? '').trim().toLowerCase()
-  if (!id) return null
-  if (/2m|2000k|grok-4\.20|grok-4-1-fast|grok-4-fast/.test(id)) return 2_000_000
-  if (/gpt-5\.4-mini/.test(id)) return 400_000
-  if (/gpt-5\.4-nano/.test(id)) return 128_000
-  if (/qwen3\.6-max/.test(id)) return 256_000
-  if (/1m|1000k|minimax-m3|grok-4\.3|gpt-5\.5|gpt-5\.4|gemini-(3|2\.5)|deepseek-v4|deepseek-chat|deepseek-reasoner|qwen3\.7|qwen[.-]3[.-]7|qwen[.-]3[.-]6-(plus|flash)|qwen3\.6|qwen3\.5-(plus|flash)|qwen3-coder-(plus|flash)|claude-opus-4-8|claude-opus-4-7|claude-sonnet-4-6/.test(id)) return 1_000_000
-  if (/260k|256k|250k|grok-build|qwen3-max|qwen3-coder-(next|480)|qwen3-(235b|next|32b|30b|14b|8b|6|5|4b|1\.7b|0\.6b)|qwen3\.5-\d|kimi-k2|moonshotai\/kimi-k2|doubao-seed-2|seed-2|dola-seed-2|mistral-(large|medium-3-5)|mistral-small-2603|magistral|devstral/.test(id)) return 256_000
-  if (/200k|claude|sonnet|opus|haiku|minimax-m2|glm-5|glm-4\.7/.test(id)) return 200_000
-  if (/128k|qwen3|max|gpt-5|gpt-4\.1|o3|o4|ernie-5|llama-3\.3|nemotron/.test(id)) return 128_000
-  if (/ernie-x1\.1/.test(id)) return 64_000
-  if (/64k/.test(id)) return 64_000
-  if (/32k|codestral|qwen.*coder|coder/.test(id)) return 32_000
-  if (/16k|llama-3|mistral-small/.test(id)) return 16_000
-  if (/8k|qwen3:8b|qwen2|llama|mistral-7b/.test(id)) return 8_000
-  return null
 }
 
 function getProviderRunLocation(providerId) {
@@ -212,54 +164,16 @@ const CHAT_PROVIDER_API_KEY_POLICY = Object.freeze({
   ollama: false,
 })
 
-const CHAT_PROVIDER_BASE_URL_MATCHERS = Object.freeze([
-  ['api.anthropic.com', 'anthropic'],
-  ['api.minimax.io/anthropic', 'minimax-global'],
-  ['api.minimaxi.com/anthropic', 'minimax'],
-  ['openrouter.ai', 'openrouter'],
-  ['api.together.xyz', 'together'],
-  ['api.mistral.ai', 'mistral'],
-  ['api.groq.com', 'groq'],
-  ['api.deepseek.com', 'deepseek'],
-  ['api.moonshot.ai/anthropic', 'kimi-coding-global'],
-  ['api.moonshot.cn/anthropic', 'kimi-coding'],
-  ['api.moonshot.ai', 'moonshot-global'],
-  ['api.moonshot.cn', 'moonshot'],
-  ['coding.dashscope.aliyuncs.com', 'modelstudio-coding'],
-  ['dashscope-intl.aliyuncs.com', 'dashscope-global'],
-  ['dashscope.aliyuncs.com', 'dashscope'],
-  ['api.siliconflow.com', 'siliconflow-global'],
-  ['api.siliconflow.cn', 'siliconflow'],
-  ['api.x.ai', 'xai'],
-  ['qianfan.baidubce.com', 'qianfan'],
-  ['api.z.ai', 'zai'],
-  ['open.bigmodel.cn', 'zai'],
-  ['ark.cn-beijing.volces.com/api/coding', 'doubao-coding'],
-  ['ark.cn-beijing.volces.com', 'doubao'],
-  ['bytepluses.com/api/coding', 'byteplus-coding'],
-  ['bytepluses.com', 'byteplus'],
-  ['integrate.api.nvidia.com', 'nvidia'],
-  ['api.venice.ai', 'venice'],
-  ['127.0.0.1:11434', 'ollama'],
-  ['localhost:11434', 'ollama'],
-])
-
-export function normalizeChatProviderId(providerId, baseUrl = '') {
+// Host inference table lives in shared/providerHostInference.js (single
+// source of truth, shared with the renderer's inferApiProviderId). The main
+// process keeps its historical 'openai' fallback for unmatched hosts.
+export function normalizeChatProviderId(providerId, baseUrl = '', model = '') {
   const explicit = String(providerId ?? '').trim().toLowerCase()
   if (explicit) {
     return explicit
   }
 
-  const normalized = normalizeBaseUrl(baseUrl).toLowerCase()
-  if (!normalized) {
-    return 'openai'
-  }
-
-  for (const [needle, inferredProviderId] of CHAT_PROVIDER_BASE_URL_MATCHERS) {
-    if (normalized.includes(needle)) return inferredProviderId
-  }
-
-  return 'openai'
+  return inferProviderIdFromHost(normalizeBaseUrl(baseUrl), model) ?? 'openai'
 }
 
 export function getChatProviderProtocol(providerId, baseUrl = '') {
@@ -408,7 +322,7 @@ function shouldDisableAnthropicThinking(providerId, model) {
 }
 
 export function buildChatRequest(payload, options = {}) {
-  const providerId = normalizeChatProviderId(payload?.providerId, payload?.baseUrl)
+  const providerId = normalizeChatProviderId(payload?.providerId, payload?.baseUrl, payload?.model)
   const baseUrl = normalizeBaseUrl(payload?.baseUrl)
   const protocol = getChatProviderProtocol(providerId, baseUrl)
   const stream = options.stream === true
@@ -490,7 +404,7 @@ export function buildChatRequest(payload, options = {}) {
 }
 
 export function buildChatConnectionTestRequest(payload) {
-  const providerId = normalizeChatProviderId(payload?.providerId, payload?.baseUrl)
+  const providerId = normalizeChatProviderId(payload?.providerId, payload?.baseUrl, payload?.model)
   const baseUrl = normalizeBaseUrl(payload?.baseUrl)
   const protocol = getChatProviderProtocol(providerId, baseUrl)
   const probe = buildChatRequest({
@@ -517,7 +431,7 @@ export function buildChatConnectionTestRequest(payload) {
 }
 
 export function buildChatModelListRequest(payload) {
-  const providerId = normalizeChatProviderId(payload?.providerId, payload?.baseUrl)
+  const providerId = normalizeChatProviderId(payload?.providerId, payload?.baseUrl, payload?.model)
   const baseUrl = normalizeBaseUrl(payload?.baseUrl)
   const protocol = getChatProviderProtocol(providerId, baseUrl)
 

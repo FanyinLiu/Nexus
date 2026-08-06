@@ -8,7 +8,7 @@ export type ChatRole = 'user' | 'assistant' | 'system'
 
 export type ChatMessageTone = 'neutral' | 'error'
 
-export type ChatMessageRunStatus =
+type ChatMessageRunStatus =
   | 'waiting'
   | 'streaming_text'
   | 'tool_pending'

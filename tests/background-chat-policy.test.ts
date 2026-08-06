@@ -74,9 +74,9 @@ test('identity buckets have a bounded in-memory footprint', () => {
   assert.equal(getBackgroundChatGate(identityA, 0).allowed, true)
 })
 
-test('current Chinese 401 safe message is classified as auth', () => {
+test('chat IPC auth codes and provider-raw key messages are classified as auth', () => {
   assert.equal(
-    classifyBackgroundChatFailure(new Error('API Key 好像不太对，去设置里看看？')),
+    classifyBackgroundChatFailure(new Error('NEXUS_ERR_CHAT_AUTH_FAILED: provider returned HTTP 401')),
     'auth',
   )
   assert.equal(
@@ -90,7 +90,7 @@ test('safe preflight codes/status and missing-key fallbacks are auth', () => {
     Object.assign(new Error('safe'), { code: 'auth_failed', status: 401 }),
     Object.assign(new Error('safe'), { code: 'missing_api_key', status: 'needs_key' }),
     Object.assign(new Error('safe'), { code: 'api_key_header_unsafe', status: 'needs_key' }),
-    Object.assign(new Error('还没填 API Key 呢，先去设置里填一个吧。'), { status: 'needs_key' }),
+    Object.assign(new Error('NEXUS_ERR_CHAT_MISSING_API_KEY: provider returned HTTP 401'), { status: 'needs_key' }),
     new Error('Missing API key; open settings to configure it.'),
   ]
   for (const error of authErrors) {
@@ -101,17 +101,19 @@ test('safe preflight codes/status and missing-key fallbacks are auth', () => {
   assert.equal(classifyBackgroundChatFailure(new Error('network connection reset')), 'transient')
 })
 
-test('real minimax preflight missing-key message stays auth through Electron prefixes', () => {
+test('preflight missing-key failure stays auth through the coded IPC shape', () => {
   const preflight = getChatConnectionTestPreflightFailure({
     providerId: 'minimax-coding',
     apiKey: '',
   })
-  const message = preflight?.message
-  assert.equal(typeof message, 'string')
-  assert.match(message ?? '', /先填一下 API Key/)
-  assert.equal(classifyBackgroundChatFailure(new Error(message ?? '')), 'auth')
+  assert.equal(preflight?.code, 'missing_api_key')
+  assert.equal(preflight?.messageKey, 'settings.chat_connection.missing_api_key')
+  // chat:complete wraps this preflight as a coded IPC error; classify on the
+  // token, with and without Electron's "Error invoking remote method" prefix.
+  const thrown = new Error(`NEXUS_ERR_CHAT_MISSING_API_KEY: ${preflight?.messageKey}`)
+  assert.equal(classifyBackgroundChatFailure(thrown), 'auth')
   assert.equal(
-    classifyBackgroundChatFailure(new Error(`Error invoking remote method 'chat:complete': ${message}`)),
+    classifyBackgroundChatFailure(new Error(`Error invoking remote method 'chat:complete': ${thrown.message}`)),
     'auth',
   )
   assert.equal(classifyBackgroundChatFailure(new Error('request timeout')), 'transient')

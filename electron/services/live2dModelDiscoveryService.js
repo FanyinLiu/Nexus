@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { readJsonFile } from './spritePetPackage.js'
+import { readJsonFile } from './fsUtils.js'
 import {
   normalizeAssetRelativePath,
   slugifyPetModelId,

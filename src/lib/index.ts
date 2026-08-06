@@ -1,4 +1,4 @@
-export * from './apiProviders.ts'
+export * from '../features/models/providerCatalog.ts'
 export * from './audioProviders.ts'
 export * from './common.ts'
 export * from './settings.ts'

@@ -4,7 +4,7 @@ import type {
   Image4CompanionState,
 } from './image4CompanionState.ts'
 
-export const IMAGE4_ACTIVITY_LABEL_KEYS: Record<Image4CompanionActivityState, TranslationKey> = {
+const IMAGE4_ACTIVITY_LABEL_KEYS: Record<Image4CompanionActivityState, TranslationKey> = {
   idle: 'panel.activity.idle',
   context_available: 'panel.activity.context_available',
   preparing_reply: 'panel.activity.preparing_reply',

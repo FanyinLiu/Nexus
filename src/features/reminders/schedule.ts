@@ -296,7 +296,7 @@ export function addReminderTaskToCollection(
   }
 }
 
-export function updateReminderTask(
+function updateReminderTask(
   task: ReminderTask,
   updates: ReminderTaskUpdateInput,
   now = new Date(),

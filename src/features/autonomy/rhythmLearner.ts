@@ -130,7 +130,7 @@ export function getHourlyProbability(profile: RhythmProfile, hour: number): numb
 export type ActivityWindow = 'high' | 'medium' | 'low'
 
 /** Classify the current hour as high/medium/low activity based on learned pattern. */
-export function classifyCurrentWindow(profile: RhythmProfile): ActivityWindow {
+function classifyCurrentWindow(profile: RhythmProfile): ActivityWindow {
   const hour = new Date().getHours()
   const prob = getHourlyProbability(profile, hour)
 

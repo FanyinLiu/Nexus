@@ -1,4 +1,5 @@
 import { dedupeSearchItems } from './webSearchSignals.js'
+import { normalizeWhitespace } from './textNormalize.js'
 import {
   DEFAULT_PROVIDER_ID,
   WEB_SEARCH_PROVIDER_METADATA,
@@ -7,7 +8,6 @@ import {
   isHighRiskRecallQuery,
   isLyricsLikeQuery,
   normalizeWebSearchProviderId,
-  normalizeWhitespace,
   rankAndFilterItems,
 } from './webSearchHelpers.js'
 import { SEARCH_PROVIDER_RUNNERS } from './webSearchProviderRunners.js'

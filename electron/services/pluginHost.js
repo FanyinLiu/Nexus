@@ -341,10 +341,6 @@ export async function autoStartPlugins() {
   return results
 }
 
-export function getPluginsDir_() {
-  return getPluginsDir()
-}
-
 export function getPluginsDisplayDir_() {
   return getPluginsDisplayDir()
 }

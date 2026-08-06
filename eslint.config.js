@@ -27,10 +27,6 @@ export default defineConfig([
       },
     },
     rules: {
-      // Existing main-process JS predates this gate. Keep the first pass
-      // focused on real undefined/runtime hazards, then tighten unused symbols
-      // after the Electron files move toward typed modules.
-      'no-unused-vars': 'off',
       'no-empty': 'off',
       'no-extra-boolean-cast': 'off',
       'no-useless-escape': 'off',

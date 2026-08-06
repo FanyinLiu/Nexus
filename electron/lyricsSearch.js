@@ -1,14 +1,10 @@
+import { normalizeWhitespace } from './textNormalize.js'
+
 const LRCLIB_SEARCH_ENDPOINT = 'https://lrclib.net/api/search'
 const LRCLIB_GET_ENDPOINT = 'https://lrclib.net/api/get'
 const LYRICS_QUERY_PATTERN = /(?:歌词|歌詞|lyrics?|lyric)/iu
 const LYRICS_FILLER_PATTERN = /(?:请问|麻烦|帮我|给我|替我|搜索一下|搜一下|搜索|搜|查一下|查一查|查询|查找一下|查找|查|找一下|找|展示一下|展示|显示一下|显示|看看|告诉我|一下|完整|全文|原文|内容|版本|这首歌|那首歌|这首|那首|歌曲?)/giu
 const CJK_PATTERN = /[\u3400-\u9fff]/u
-
-function normalizeWhitespace(text) {
-  return String(text ?? '')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
 
 function normalizeComparableText(text) {
   return normalizeWhitespace(text)

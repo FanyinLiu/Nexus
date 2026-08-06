@@ -1,3 +1,4 @@
+import { isObject } from '../guards.ts'
 import {
   CHAT_STORAGE_KEY,
   DAILY_MEMORY_STORAGE_KEY,
@@ -15,10 +16,6 @@ export type OnboardingState = {
 }
 
 let lastMirroredOnboardingState: string | null = null
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
 
 export function normalizeOnboardingState(raw: unknown): OnboardingState | null {
   if (!isObject(raw)) return null

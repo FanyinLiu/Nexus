@@ -1,4 +1,6 @@
 import type { UpdaterEvent } from './types.ts'
+import { normalizeText } from '../../lib/normalize.ts'
+import { NEXUS_GITHUB_RELEASES_URL } from '../../../shared/updates.js'
 
 const INVALID_UPDATER_EVENT_MESSAGE = 'Invalid updater event'
 const MAX_VERSION_CHARS = 80
@@ -49,13 +51,6 @@ export function createInitialUpdaterState(): UpdaterState {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
-}
-
-function normalizeText(value: unknown, maxLength: number): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  if (!trimmed) return null
-  return trimmed.length > maxLength ? trimmed.slice(0, maxLength) : trimmed
 }
 
 function normalizeRequiredText(value: unknown, fallback: string, maxLength: number): string {
@@ -148,7 +143,7 @@ export function normalizeUpdaterEvent(
       return {
         type: 'manual-update',
         version: normalizeOptionalVersion(event.version),
-        releaseUrl: normalizeReleaseUrl(event.releaseUrl) ?? 'https://github.com/FanyinLiu/Nexus/releases/latest',
+        releaseUrl: normalizeReleaseUrl(event.releaseUrl) ?? NEXUS_GITHUB_RELEASES_URL,
         reason: normalizeText(event.reason, MAX_ERROR_MESSAGE_CHARS),
       }
     case 'not-available':
@@ -269,7 +264,7 @@ export function reduceUpdaterCheckResult(
       event: {
         type: 'manual-update',
         version: latestVersion,
-        releaseUrl: normalizeReleaseUrl(result.releaseUrl) ?? 'https://github.com/FanyinLiu/Nexus/releases/latest',
+        releaseUrl: normalizeReleaseUrl(result.releaseUrl) ?? NEXUS_GITHUB_RELEASES_URL,
         reason: normalizeText(result.reason, MAX_ERROR_MESSAGE_CHARS),
       },
     }

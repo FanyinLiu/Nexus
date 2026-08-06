@@ -8,6 +8,8 @@
 
 import type { ArchivedMemory, MemoryCategory, MemoryImportance, MemoryItem } from '../../types/memory.ts'
 import { getDecayedScore } from './decay.ts'
+import { isValidIsoTimestamp } from '../../lib/localDate.ts'
+import { normalizeText } from '../../lib/normalize.ts'
 
 const ARCHIVE_SCORE_THRESHOLD = 0.15
 const MAX_ARCHIVED = 500
@@ -30,16 +32,6 @@ function getArchiveStorage(): Storage | null {
   if (typeof localStorage !== 'undefined') return localStorage
   if (typeof window !== 'undefined') return window.localStorage
   return null
-}
-
-function isValidIsoTimestamp(value: string): boolean {
-  return Number.isFinite(Date.parse(value))
-}
-
-function normalizeText(value: unknown): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed ? trimmed : null
 }
 
 function normalizeArchivedMemory(item: unknown): ArchivedMemory | null {

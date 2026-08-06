@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { normalizePath, walkFiles } from './lib/audit-framework.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']
@@ -39,25 +40,6 @@ const LAYER_RULES = [
     reason: 'type contracts must not depend on runtime surfaces',
   },
 ]
-
-function walkFiles(root, directory, predicate) {
-  const base = join(root, directory)
-  const files = []
-  for (const entry of readdirSync(base, { withFileTypes: true })) {
-    const fullPath = join(base, entry.name)
-    const rel = normalizePath(relative(root, fullPath))
-    if (entry.isDirectory()) {
-      files.push(...walkFiles(root, rel, predicate))
-    } else if (entry.isFile() && predicate(rel)) {
-      files.push(rel)
-    }
-  }
-  return files
-}
-
-function normalizePath(path) {
-  return path.split('\\').join('/')
-}
 
 function classifyLayer(file) {
   const normalized = normalizePath(file)

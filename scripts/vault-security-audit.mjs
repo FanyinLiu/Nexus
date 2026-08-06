@@ -9,6 +9,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const CHECKED_FILES = [
   'electron/ipc/vaultIpc.js',
   'electron/services/keyVault.js',
+  'shared/vaultRefs.js',
   'electron/services/vaultRefs.js',
   'electron/ipc/vaultAudit.js',
   'electron/preload.js',
@@ -115,10 +116,20 @@ const REQUIRED_PHRASES = [
     ],
   },
   {
+    // The prefix literal is single-sourced in shared/vaultRefs.js; both the
+    // main-process service and the renderer bridge re-export it from there.
+    id: 'shared-vault-refs-canonical-prefix',
+    file: 'shared/vaultRefs.js',
+    phrases: [
+      "export const VAULT_REF_PREFIX = 'nexus-vault-ref:'",
+      'export function isVaultRef',
+    ],
+  },
+  {
     id: 'vault-refs-resolve-only-for-sender',
     file: 'electron/services/vaultRefs.js',
     phrases: [
-      'export const VAULT_REF_PREFIX',
+      "export { VAULT_REF_PREFIX } from '../../shared/vaultRefs.js'",
       'const _refsBySender = new WeakMap()',
       'export function issueVaultRefForSender(sender, slot)',
       'export async function resolveVaultRefsForSender(sender, source, fields)',
@@ -141,7 +152,7 @@ const REQUIRED_PHRASES = [
     id: 'renderer-vault-bridge-keeps-ref-in-state',
     file: 'src/lib/keyVaultBridge.ts',
     phrases: [
-      'export const VAULT_REF_PREFIX',
+      "export { VAULT_REF_PREFIX } from '../../shared/vaultRefs.js'",
       'displaySecretInputValue',
       'if (isVaultRefString(value)) return',
       'await window.desktopPet!.vaultRetrieveMany(allSlots)',

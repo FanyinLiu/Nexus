@@ -14,6 +14,7 @@ import {
   shouldFetchSearchPreviews,
 } from '../webSearchSignals.js'
 import { runWebSearchWithProviders } from '../webSearchRuntime.js'
+import { normalizeSearchableText } from '../textNormalize.js'
 
 const TOOL_SEARCH_TIMEOUT_MS = 12_000
 const SEARCH_PREVIEW_MAX_REDIRECTS = 4
@@ -32,14 +33,6 @@ function decodeXmlEntities(value) {
 function getXmlTagValue(block, tagName) {
   const match = String(block).match(new RegExp(`<${tagName}>([\\s\\S]*?)</${tagName}>`, 'i'))
   return match ? decodeXmlEntities(match[1]) : ''
-}
-
-function normalizeSearchableText(value) {
-  return String(value ?? '')
-    .toLowerCase()
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/[\s,.;:!?()[\]{}"'`~!@#$%^&*_+=|\\/<>-]+/g, ' ')
-    .trim()
 }
 
 function isLyricsLikeSearchQuery(query) {
@@ -91,7 +84,7 @@ function extractLyricsTopic(query) {
     .trim()
 }
 
-export function buildCandidateSearchQueries(query) {
+function buildCandidateSearchQueries(query) {
   const trimmedQuery = String(query ?? '').trim()
   const queries = new Set([trimmedQuery])
 
@@ -126,7 +119,7 @@ function looksLikeLatestResult(item) {
   return /(?:最新|最近|刚刚|今日|本周|today|latest|new)/iu.test(haystack)
 }
 
-export function scoreSearchResultItem(item, query, options = {}) {
+function scoreSearchResultItem(item, query, options = {}) {
   const normalizedTitle = normalizeSearchableText(item.title)
   const normalizedSnippet = normalizeSearchableText(item.snippet)
   const normalizedUrl = normalizeSearchableText(item.url)
@@ -222,7 +215,7 @@ export function scoreSearchResultItem(item, query, options = {}) {
   return score
 }
 
-export async function fetchBingRssItems(query, limit = 5) {
+async function fetchBingRssItems(query, limit = 5) {
   const response = await performNetworkRequest(
     `https://cn.bing.com/search?format=rss&q=${encodeURIComponent(query)}`,
     {

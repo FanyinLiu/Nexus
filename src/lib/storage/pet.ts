@@ -1,4 +1,5 @@
 import type { PetMood, PetWindowPreferences } from '../../types'
+import { isObject } from '../guards.ts'
 import {
   PET_RUNTIME_STORAGE_KEY,
   PET_WINDOW_PREFERENCES_STORAGE_KEY,
@@ -34,10 +35,6 @@ const VALID_PET_MOODS = new Set<PetMood>([
   'worried',
   'playful',
 ])
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
 
 export function normalizePetWindowPreferences(raw: unknown): PetWindowPreferences {
   if (!isObject(raw)) return defaultPetWindowPreferences

@@ -6,23 +6,23 @@ import {
   isSenseVoiceSpeechInputProvider,
   normalizeSpeechOutputApiBaseUrl,
   resolveSpeechInputModel,
+  type SpeechInputProviderPreset,
+  type SpeechOutputProviderPreset,
 } from './audioProviders.ts'
 import type {
   AppSettings,
   SpeechInputProviderProfile,
   SpeechOutputProviderProfile,
 } from '../types'
+import { normalizeString } from './normalize.ts'
+import {
+  readStoredProviderProfiles,
+  resolveProviderProfile,
+  type ResolveProviderProfileOptions,
+} from './providerProfileResolve.ts'
 
 type PartialSpeechInputProviderProfile = Partial<SpeechInputProviderProfile> | null | undefined
 type PartialSpeechOutputProviderProfile = Partial<SpeechOutputProviderProfile> | null | undefined
-
-function normalizeString(value: unknown) {
-  return typeof value === 'string' ? value.trim() : ''
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 function isLocalSpeechInputProvider(providerId: string) {
   return (
@@ -36,75 +36,49 @@ function isLocalSpeechOutputProvider(providerId: string) {
   return providerId === 'omnivoice-tts'
 }
 
+const speechInputProfileResolveOptions: ResolveProviderProfileOptions<
+  Partial<SpeechInputProviderProfile>,
+  SpeechInputProviderPreset
+> = {
+  getPreset: getSpeechInputProviderPreset,
+  isLocal: isLocalSpeechInputProvider,
+  resolveModel: resolveSpeechInputModel,
+}
+
+const speechOutputProfileResolveOptions: ResolveProviderProfileOptions<
+  Partial<SpeechOutputProviderProfile>,
+  SpeechOutputProviderPreset,
+  { voice: string, instructions: string }
+> = {
+  getPreset: getSpeechOutputProviderPreset,
+  isLocal: isLocalSpeechOutputProvider,
+  normalizeApiBaseUrl: normalizeSpeechOutputApiBaseUrl,
+  resolveExtra: (stored, preset) => ({
+    voice: normalizeString(stored?.voice) || preset.defaultVoice || '',
+    instructions: normalizeString(stored?.instructions),
+  }),
+}
+
 function resolveSpeechInputProviderProfile(
   providerId: string,
   profile?: PartialSpeechInputProviderProfile,
 ): SpeechInputProviderProfile {
-  const preset = getSpeechInputProviderPreset(providerId)
-  const requestedModel = normalizeString(profile?.model) || preset.defaultModel
-
-  return {
-    apiBaseUrl: isLocalSpeechInputProvider(providerId)
-      ? ''
-      : (normalizeString(profile?.apiBaseUrl) || preset.baseUrl || ''),
-    apiKey: isLocalSpeechInputProvider(providerId)
-      ? ''
-      : normalizeString(profile?.apiKey),
-    model: resolveSpeechInputModel(providerId, requestedModel),
-  }
+  return resolveProviderProfile(providerId, profile, speechInputProfileResolveOptions)
 }
 
 function resolveSpeechOutputProviderProfile(
   providerId: string,
   profile?: PartialSpeechOutputProviderProfile,
 ): SpeechOutputProviderProfile {
-  const preset = getSpeechOutputProviderPreset(providerId)
-  const requestedVoice = normalizeString(profile?.voice)
-    || preset.defaultVoice
-    || ''
-
-  return {
-    apiBaseUrl: isLocalSpeechOutputProvider(providerId)
-      ? ''
-      : normalizeSpeechOutputApiBaseUrl(
-        providerId,
-        normalizeString(profile?.apiBaseUrl) || preset.baseUrl || '',
-      ),
-    apiKey: isLocalSpeechOutputProvider(providerId)
-      ? ''
-      : normalizeString(profile?.apiKey),
-    model: normalizeString(profile?.model) || preset.defaultModel || '',
-    voice: requestedVoice,
-    instructions: normalizeString(profile?.instructions),
-  }
+  return resolveProviderProfile(providerId, profile, speechOutputProfileResolveOptions)
 }
 
 export function readStoredSpeechInputProviderProfiles(value: unknown) {
-  if (!isRecord(value)) {
-    return {}
-  }
-
-  return Object.entries(value).reduce<Record<string, SpeechInputProviderProfile>>((accumulator, [providerId, profile]) => {
-    accumulator[providerId] = resolveSpeechInputProviderProfile(
-      providerId,
-      isRecord(profile) ? profile : undefined,
-    )
-    return accumulator
-  }, {})
+  return readStoredProviderProfiles(value, resolveSpeechInputProviderProfile)
 }
 
 export function readStoredSpeechOutputProviderProfiles(value: unknown) {
-  if (!isRecord(value)) {
-    return {}
-  }
-
-  return Object.entries(value).reduce<Record<string, SpeechOutputProviderProfile>>((accumulator, [providerId, profile]) => {
-    accumulator[providerId] = resolveSpeechOutputProviderProfile(
-      providerId,
-      isRecord(profile) ? profile : undefined,
-    )
-    return accumulator
-  }, {})
+  return readStoredProviderProfiles(value, resolveSpeechOutputProviderProfile)
 }
 
 export function syncSpeechProviderProfiles(settings: AppSettings): AppSettings {

@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
-import { synthesizeRemoteTts, warmupRemoteTtsSession } from './services/ttsService.js'
+import { synthesizeRemoteTts } from './services/ttsService.js'
 import { createTtsStreamService } from './ttsStreamService.js'
 
 import * as windowIpc from './ipc/windowIpc.js'
@@ -24,7 +24,6 @@ import * as localDataIpc from './ipc/localDataIpc.js'
 const CHAT_REQUEST_TIMEOUT_MS = 25_000
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
 const AUDIO_TRANSCRIBE_TIMEOUT_MS = 20_000
-const AUDIO_SYNTH_TIMEOUT_MS = 25_000
 const AUDIO_VOICE_LIST_TIMEOUT_MS = 15_000
 
 const activeChatStreamControllers = new Map()
@@ -47,7 +46,6 @@ function loadDeferredModules() {
     ]).then(async ([pluginIpc, memoryIpc, skillIpc]) => {
       const ttsStreamService = createTtsStreamService({
         synthesizeRemote: synthesizeRemoteTts,
-        warmupRemote: warmupRemoteTtsSession,
       })
 
       ttsStreamIpc.register({ ttsStreamService })
@@ -80,7 +78,6 @@ export function registerIpc() {
 
   audioIpc.register({
     AUDIO_TRANSCRIBE_TIMEOUT_MS,
-    AUDIO_SYNTH_TIMEOUT_MS,
     AUDIO_VOICE_LIST_TIMEOUT_MS,
   })
 

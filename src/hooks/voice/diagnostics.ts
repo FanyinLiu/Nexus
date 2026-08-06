@@ -309,11 +309,19 @@ export async function testSpeechOutputReadinessRuntime(
     )
 
     const remoteEvidence = remoteSpeechCheck.evidence
+    // Translate the structured messageKey — the raw `message` field now
+    // mirrors the key itself, so it must never reach the suffix verbatim.
+    const remoteMessage = remoteSpeechCheck.messageKey
+      ? options.ti(
+        remoteSpeechCheck.messageKey as TranslationKey,
+        remoteSpeechCheck.messageParams as TranslationParams | undefined,
+      )
+      : remoteSpeechCheck.message
     return {
       ...remoteSpeechCheck,
       ok: true,
       message: options.ti('voice.diagnostics.playback_confirmed_suffix', {
-        message: remoteSpeechCheck.message,
+        message: remoteMessage,
       }),
       // Drop synthesis-only structured keys so a future messageKey-first UI
       // cannot keep claiming "speakers not checked" after playback was observed.

@@ -1,5 +1,3 @@
-export type ReminderScheduleKind = 'at' | 'every' | 'cron'
-
 export type ReminderTaskAction =
   | {
       kind: 'notice'

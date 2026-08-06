@@ -7,6 +7,8 @@ import {
   normalizeDailyMemoryStore,
   normalizeMemoryItemsForStorage,
 } from './memory.ts'
+import { isObject } from '../guards.ts'
+import { nowIso } from '../localDate.ts'
 import type {
   DailyMemoryEntry,
   DailyMemoryStore,
@@ -128,10 +130,6 @@ const MEMORY_CATEGORIES: readonly MemoryCategory[] = [
 const MEMORY_KINDS: readonly MemoryKind[] = ['preference', 'fact', 'relationship', 'knowledge']
 const MEMORY_IMPORTANCE_LEVELS: readonly MemoryImportance[] = ['low', 'normal', 'high', 'pinned', 'reflection']
 
-function nowIso(now: Date | string | number = new Date()) {
-  return now instanceof Date ? now.toISOString() : new Date(now).toISOString()
-}
-
 function byteLength(value: string | null | undefined): number {
   if (!value) return 0
   return new TextEncoder().encode(value).length
@@ -144,10 +142,6 @@ function parseJson(raw: string | null | undefined, emptyValue: unknown): ParsedJ
   } catch {
     return { ok: false, value: emptyValue }
   }
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
 function rawArrayCount(value: unknown): number {

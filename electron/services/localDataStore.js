@@ -6,9 +6,6 @@
  * Memory and companion domains live in their own modules already.
  */
 export {
-  LOCAL_DATA_COMPANION_RELATIONSHIP_DOMAIN_ID,
-  LOCAL_DATA_COMPANION_TASKS_DOMAIN_ID,
-  LOCAL_DATA_AUDIT_DOMAIN_ID,
   resolveLocalDataPaths,
   normalizeOnboardingMirrorState,
   getLocalDataStatus,

@@ -1,4 +1,11 @@
-export const DEFAULT_PROVIDER_ID = 'duckduckgo'
+import { normalizeWhitespace, stripHtml } from './textNormalize.js'
+import { DEFAULT_WEB_SEARCH_PROVIDER_ID } from '../shared/webSearchProviderIds.js'
+
+// Provider id whitelist + normalization are single-sourced in
+// shared/webSearchProviderIds.js and re-exported here for electron consumers.
+export { normalizeWebSearchProviderId } from '../shared/webSearchProviderIds.js'
+
+export const DEFAULT_PROVIDER_ID = DEFAULT_WEB_SEARCH_PROVIDER_ID
 const DEFAULT_BRAVE_BASE_URL = 'https://api.search.brave.com/res/v1/web/search'
 const DEFAULT_TAVILY_BASE_URL = 'https://api.tavily.com'
 export const DEFAULT_DUCKDUCKGO_HTML_ENDPOINT = 'https://html.duckduckgo.com/html'
@@ -63,12 +70,6 @@ export const WEB_SEARCH_PROVIDER_METADATA = Object.freeze({
 
 export function clampResultCount(limit, max = 8) {
   return Math.max(1, Math.min(Number(limit) || 5, max))
-}
-
-export function normalizeWhitespace(text) {
-  return String(text ?? '')
-    .replace(/\s+/g, ' ')
-    .trim()
 }
 
 function normalizeSearchFacet(value) {
@@ -154,31 +155,6 @@ export function rankTrustedItems(items, request, helpers) {
     subject: request.subject,
     trusted: true,
   })
-}
-
-export function normalizeWebSearchProviderId(value) {
-  switch (String(value ?? '').trim()) {
-    case 'duckduckgo':
-      return 'duckduckgo'
-    case 'brave':
-      return 'brave'
-    case 'tavily':
-      return 'tavily'
-    case 'exa':
-      return 'exa'
-    case 'firecrawl':
-      return 'firecrawl'
-    case 'gemini':
-      return 'gemini'
-    case 'perplexity':
-      return 'perplexity'
-    case 'minimax':
-      return 'minimax'
-    case 'bing':
-      return 'bing'
-    default:
-      return DEFAULT_PROVIDER_ID
-  }
 }
 
 function normalizeBaseUrl(value) {
@@ -386,6 +362,8 @@ export function extractPerplexityCitations(payload) {
   return [...new Set(citations)]
 }
 
+// DuckDuckGo result parsing decodes an extended named-entity set (&ndash;, &mdash;,
+// &hellip;, &#x2F;) that textNormalize.js decodeHtmlEntities intentionally lacks.
 function decodeHtmlEntities(text) {
   return String(text ?? '')
     .replace(/&amp;/g, '&')
@@ -402,13 +380,6 @@ function decodeHtmlEntities(text) {
     .replace(/&hellip;/g, '...')
     .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
     .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
-}
-
-function stripHtml(html) {
-  return String(html ?? '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
 }
 
 function decodeDuckDuckGoUrl(rawUrl) {

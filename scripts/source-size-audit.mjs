@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import { readdirSync, readFileSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { walkFiles } from './lib/audit-framework.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DEFAULT_MAX_LINES = 1200
@@ -18,33 +19,11 @@ const FILE_BUDGETS = {
   'src/app/styles/settings.css': 7300,
   'src/app/styles/settings-themes.css': 11000,
   'src/app/styles/settings-chat-final.css': 2600,
-  'tests/image4-visual-contract-audit.test.ts': 1300,
   'tests/settings-surface-audit.test.ts': 1300,
-  'tests/settings-ui-scale.test.ts': 1400,
   // IPC payload schema suite keeps one test per domain plus the high-risk
   // unknown-field rejection gate; batch 2 of the rollout (external-action-policy /
   // tool / desktop-context / pet-model creator-kit) pushed it past 1300.
   'tests/ipc-payload-schema.test.ts': 1400,
-}
-
-function normalizePath(path) {
-  return path.split('\\').join('/')
-}
-
-function walkFiles(root, directory, predicate) {
-  const base = join(root, directory)
-  const files = []
-  for (const entry of readdirSync(base, { withFileTypes: true })) {
-    if (IGNORED_DIRECTORIES.has(entry.name)) continue
-    const fullPath = join(base, entry.name)
-    const rel = normalizePath(relative(root, fullPath))
-    if (entry.isDirectory()) {
-      files.push(...walkFiles(root, rel, predicate))
-    } else if (entry.isFile() && predicate(rel)) {
-      files.push(rel)
-    }
-  }
-  return files
 }
 
 function countLines(source) {
@@ -53,7 +32,7 @@ function countLines(source) {
 }
 
 export function buildSourceSizeReport(root = ROOT) {
-  const files = SOURCE_ROOTS.flatMap((directory) => walkFiles(root, directory, (file) => SOURCE_PATTERN.test(file))).sort()
+  const files = SOURCE_ROOTS.flatMap((directory) => walkFiles(root, directory, (file) => SOURCE_PATTERN.test(file), { ignoreDirectories: IGNORED_DIRECTORIES })).sort()
   const overBudget = []
   const watchedLargeFiles = []
   let totalLines = 0

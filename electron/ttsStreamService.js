@@ -136,7 +136,7 @@ function buildLeadInOptions(session, options = {}) {
   }
 }
 
-export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
+export function createTtsStreamService({ synthesizeRemote }) {
   const sessions = new Map()
 
   function emit(sender, event) {
@@ -145,15 +145,7 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     }
   }
 
-  function getSession(requestId) {
-    const session = sessions.get(requestId)
-    if (!session) {
-      throw new Error('流式 TTS 会话不存在或已结束。')
-    }
-    return session
-  }
-
-  // Same lookup as getSession but returns null instead of throwing.
+  // Session lookup that returns null instead of throwing.
   // pushText/finish/abort must use this because an earlier synthesize failure
   // (or an out-of-order IPC arriving after `end`/`error`) can clear the
   // session before the renderer's next call lands — throwing surfaces to the

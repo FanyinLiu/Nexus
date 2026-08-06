@@ -1,3 +1,5 @@
+import { decodeHtmlEntities, normalizeSearchableText } from './textNormalize.js'
+
 const META_DESCRIPTION_PATTERNS = [
   /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"]+)["'][^>]*>/iu,
   /<meta[^>]+name=["']description["'][^>]+content=["']([^"]+)["'][^>]*>/iu,
@@ -10,40 +12,6 @@ const BLOCK_BREAK_PATTERN = /<\/(?:p|div|li|section|article|main|h1|h2|h3|h4|blo
 const BOILERPLATE_TEXT_PATTERN = /(?:contact us|customer service|support|help center|account help|privacy policy|cookie|terms(?: of use| of service)?|all rights reserved|copyright|免责声明|版权声明|展开全部|阅读全文|更多内容|查看原文|查看详情|相关阅读|相关推荐|猜你喜欢|上一篇|下一篇|登录|注册|打开app|下载app|广告|赞助|返回顶部|相关搜索|热门搜索)/iu
 const URLISH_PATTERN = /(?:https?:\/\/|www\.)/iu
 const SEARCH_QUERY_NOISE_PATTERN = /(?:帮我|请|搜索|搜一下|查一下|查询|网页|网页搜索|一下|给我|看看|关于|相关|内容|结果|最新|帮忙)/giu
-
-function safeCodePointFromNumber(value, radix) {
-  const parsed = Number.parseInt(value, radix)
-  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 0x10ffff) {
-    return ''
-  }
-
-  try {
-    return String.fromCodePoint(parsed)
-  } catch {
-    return ''
-  }
-}
-
-function decodeHtmlEntities(value) {
-  return String(value ?? '')
-    .replace(/&#x([0-9a-f]+);/giu, (_, hex) => safeCodePointFromNumber(hex, 16))
-    .replace(/&#([0-9]+);/g, (_, dec) => safeCodePointFromNumber(dec, 10))
-    .replace(/&nbsp;/giu, ' ')
-    .replace(/&ensp;|&emsp;/giu, ' ')
-    .replace(/&amp;/giu, '&')
-    .replace(/&quot;/giu, '"')
-    .replace(/&apos;|&#39;/giu, '\'')
-    .replace(/&lt;/giu, '<')
-    .replace(/&gt;/giu, '>')
-}
-
-function normalizeSearchableText(value) {
-  return decodeHtmlEntities(String(value ?? ''))
-    .toLowerCase()
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/[\s,.;:!?()[\]{}"'`~!@#$%^&*_+=|\\/<>-]+/g, ' ')
-    .trim()
-}
 
 function buildSearchTokens(query) {
   const normalized = decodeHtmlEntities(String(query ?? ''))
@@ -179,8 +147,8 @@ function isValidCandidateText(text, minLength = 10) {
 }
 
 function scoreCandidateText(text, query, baseScore = 0) {
-  const normalizedText = normalizeSearchableText(text)
-  const normalizedQuery = normalizeSearchableText(query)
+  const normalizedText = normalizeSearchableText(text, { decodeEntities: true })
+  const normalizedQuery = normalizeSearchableText(query, { decodeEntities: true })
   const compactText = normalizedText.replace(/\s+/g, '')
   const compactQuery = normalizedQuery.replace(/\s+/g, '')
   const tokens = buildSearchTokens(query)
@@ -265,7 +233,7 @@ export function extractRelevantSegmentsFromHtml(html, query, options = {}) {
         continue
       }
 
-      const normalizedKey = normalizeSearchableText(cleaned).replace(/\s+/g, '')
+      const normalizedKey = normalizeSearchableText(cleaned, { decodeEntities: true }).replace(/\s+/g, '')
       if (!normalizedKey || seen.has(normalizedKey)) {
         continue
       }
@@ -312,7 +280,7 @@ export function collectSearchContentBodyLines(items, maxLines = 5) {
             continue
           }
 
-          const normalizedKey = normalizeSearchableText(cleaned).replace(/\s+/g, '')
+          const normalizedKey = normalizeSearchableText(cleaned, { decodeEntities: true }).replace(/\s+/g, '')
           if (!normalizedKey || seen.has(normalizedKey)) {
             continue
           }

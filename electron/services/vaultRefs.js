@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto'
+import { isVaultRef, VAULT_REF_PREFIX } from '../../shared/vaultRefs.js'
 import { vaultRetrieveMany } from './keyVault.js'
 
-export const VAULT_REF_PREFIX = 'nexus-vault-ref:'
+/** @public kept exported for the vault security audit contract (scripts/vault-security-audit.mjs). */
+export { VAULT_REF_PREFIX } from '../../shared/vaultRefs.js'
+
 const MAX_REFS_PER_SENDER = 512
 
 /** @type {WeakMap<object, Map<string, { slot: string, issuedAt: number }>>} */
@@ -22,10 +25,6 @@ function trimSenderRefs(refs) {
     if (!oldest) break
     refs.delete(oldest)
   }
-}
-
-export function isVaultRef(value) {
-  return typeof value === 'string' && value.startsWith(VAULT_REF_PREFIX)
 }
 
 function decodeVaultRefToken(value) {

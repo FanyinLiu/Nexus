@@ -27,22 +27,15 @@ export type {
   SpeechOutputAdjustmentSupport,
 }
 
-export type SpeechInputProviderPreset = {
-  id: string
-  label: string
-  baseUrl: string
-  defaultModel: string
-  notes: string
-}
+export type SpeechInputProviderPreset = Pick<
+  SpeechInputProviderEntry,
+  'id' | 'label' | 'baseUrl' | 'defaultModel' | 'notes'
+>
 
-export type SpeechOutputProviderPreset = {
-  id: string
-  label: string
-  baseUrl: string
-  defaultModel: string
-  defaultVoice: string
-  notes: string
-}
+export type SpeechOutputProviderPreset = Pick<
+  SpeechOutputProviderEntry,
+  'id' | 'label' | 'baseUrl' | 'defaultModel' | 'defaultVoice' | 'notes'
+>
 
 // ── Preset arrays (derived from catalog) ──
 
@@ -132,14 +125,6 @@ export function isTencentAsrSpeechInputProvider(providerId: string) {
   return getSpeechInputProvider(providerId).protocol === 'tencent'
 }
 
-export function isOpenAiCompatibleSpeechInputProvider(providerId: string) {
-  return getSpeechInputProvider(providerId).protocol === 'openai-compatible'
-}
-
-export function isOpenAiCompatibleSpeechOutputProvider(providerId: string) {
-  return getSpeechOutputProvider(providerId).protocol === 'openai-compatible'
-}
-
 export function isVolcengineSpeechInputProvider(providerId: string) {
   return getSpeechInputProvider(providerId).protocol === 'volcengine'
 }
@@ -150,10 +135,6 @@ export function isVolcengineSpeechOutputProvider(providerId: string) {
 
 export function isMiniMaxSpeechOutputProvider(providerId: string) {
   return getSpeechOutputProvider(providerId).protocol === 'minimax'
-}
-
-export function isDashScopeSpeechOutputProvider(providerId: string) {
-  return getSpeechOutputProvider(providerId).protocol === 'dashscope'
 }
 
 export function isEdgeTtsSpeechOutputProvider(providerId: string) {

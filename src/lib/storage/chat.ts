@@ -1,11 +1,8 @@
 import type { ChatMemoryTrace, ChatMessage, ChatToolResult, WebSearchDisplay } from '../../types'
+import { isObject } from '../guards.ts'
 import { CHAT_STORAGE_KEY, readJson, writeJson, writeJsonDebounced } from './core.ts'
 
 const MAX_PERSISTED_CHAT_MESSAGES = 500
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
 
 function isValidRole(value: unknown): value is ChatMessage['role'] {
   return value === 'user' || value === 'assistant' || value === 'system'

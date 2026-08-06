@@ -4,7 +4,6 @@
  */
 import {
   CHAT_MIGRATION_PACKAGE_SCHEMA_VERSION,
-  byteLength,
   chatComparisonIssueCodes,
   compareChatSessionMetadata,
   countChatMessagesFromPayloadJson,
@@ -36,8 +35,6 @@ import {
   statusFromSqliteState,
   statusFromError,
   readSqliteRecords,
-  getMeta,
-  isPlainObject,
 } from './localDataStoreCore.js'
 
 export function planChatLocalDataMigration(migrationPackage) {

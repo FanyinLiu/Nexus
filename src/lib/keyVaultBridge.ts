@@ -1,4 +1,5 @@
 import type { AppSettings } from '../types'
+import { isVaultRef } from '../../shared/vaultRefs.js'
 
 /**
  * Maps settings field names to vault slot names for API key encryption.
@@ -17,8 +18,9 @@ const SETTINGS_KEY_FIELDS: readonly (keyof AppSettings)[] = [
 
 const VAULT_SLOT_PREFIX = 'settings:'
 const PROFILE_SLOT_PREFIX = 'profile:'
-// Mirror electron/services/vaultRefs.js.
-export const VAULT_REF_PREFIX = 'nexus-vault-ref:'
+// Single-sourced in shared/vaultRefs.js (mirrored by electron/services/vaultRefs.js).
+/** @public kept exported for the vault security audit contract (scripts/vault-security-audit.mjs). */
+export { VAULT_REF_PREFIX } from '../../shared/vaultRefs.js'
 
 function settingsSlot(field: string) {
   return `${VAULT_SLOT_PREFIX}${field}`
@@ -29,7 +31,7 @@ function profileSlot(category: string, providerId: string) {
 }
 
 export function isVaultRefString(value: unknown): boolean {
-  return typeof value === 'string' && value.startsWith(VAULT_REF_PREFIX)
+  return isVaultRef(value)
 }
 
 /**

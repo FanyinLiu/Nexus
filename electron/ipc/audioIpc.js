@@ -14,11 +14,9 @@ import {
 import {
   buildAuthorizationHeaders,
   parseVolcengineSpeechCredentials,
-  isElevenLabsProvider,
   isOpenAiCompatibleSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
   isDashScopeSpeechOutputProvider,
-  isOmniVoiceSpeechOutputProvider,
   isVolcengineSpeechOutputProvider,
   isVolcengineSpeechInputProvider,
   isOpenAiCompatibleSpeechInputProvider,
@@ -47,7 +45,7 @@ import {
   validateSpeechVoiceListPayload,
 } from './payloadSchemas.js'
 
-export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_SYNTH_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT_MS }) {
+export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT_MS }) {
   ipcMain.handle('audio:list-voices', async (event, payload) => {
     requireTrustedSender(event)
     payload = validateSpeechVoiceListPayload(payload)

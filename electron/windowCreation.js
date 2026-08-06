@@ -4,7 +4,7 @@
  */
 import { app, BrowserWindow, screen, shell } from 'electron'
 import { getPreloadPath, getRendererEntry } from './rendererServer.js'
-import { clampWindowPosition, getPanelWindowPosition } from './windowManagerHelpers.js'
+import { clampWindowPosition } from './windowManagerHelpers.js'
 import {
   applyWindowIcon,
   applyWindowsAppDetails,
@@ -45,12 +45,10 @@ let releaseDock = () => {}
 let hasSystemTray = () => false
 let syncPetWindowState = () => {}
 let emitPanelSection = () => {}
-let isDev = false
 let isSmokeTest = false
 let SMOKE_RENDERER_TIMEOUT_MS = 15_000
 let SMOKE_SUCCESS_GRACE_MS = 1_200
 let SMOKE_FORCE_EXIT_GRACE_MS = 3_000
-let flushRuntimeLogWriteBuffer = async () => {}
 let settingsReturnFocus = {
   isPending: () => false,
   consume: () => {},
@@ -58,6 +56,9 @@ let settingsReturnFocus = {
   request: () => {},
 }
 
+// macOS Dock overlaps transparent windows near the bottom edge even within
+// workArea bounds. Use a larger bottom margin on macOS to keep the pet's
+// action buttons (mic, menu) above the Dock hit region.
 const PET_WINDOW_SCREEN_MARGIN_PX = process.platform === 'darwin' ? 80 : 24
 const PET_WINDOW_DEFAULT_WIDTH = 320
 const PET_WINDOW_DEFAULT_HEIGHT = 460
@@ -80,12 +81,10 @@ export function configureWindowCreation(deps) {
   hasSystemTray = deps.hasSystemTray
   syncPetWindowState = deps.syncPetWindowState
   emitPanelSection = deps.emitPanelSection
-  isDev = deps.isDev
   isSmokeTest = deps.isSmokeTest
   SMOKE_RENDERER_TIMEOUT_MS = deps.SMOKE_RENDERER_TIMEOUT_MS
   SMOKE_SUCCESS_GRACE_MS = deps.SMOKE_SUCCESS_GRACE_MS
   SMOKE_FORCE_EXIT_GRACE_MS = deps.SMOKE_FORCE_EXIT_GRACE_MS
-  flushRuntimeLogWriteBuffer = deps.flushRuntimeLogWriteBuffer
   settingsReturnFocus = deps.settingsReturnFocus
 }
 

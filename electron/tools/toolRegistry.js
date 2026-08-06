@@ -4,7 +4,7 @@ import { lookupWeatherByLocation } from './weatherTool.js'
 import { normalizeExternalUrl } from './toolRegistryUtils.js'
 import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
 
-export function normalizeRendererToolPolicy(policy) {
+function normalizeRendererToolPolicy(policy) {
   if (!policy || typeof policy !== 'object') {
     return {
       enabled: true,
@@ -62,7 +62,7 @@ async function openExternalLinkWithShell(payload, context = {}) {
   }
 }
 
-export const BUILT_IN_TOOL_REGISTRY = Object.freeze({
+const BUILT_IN_TOOL_REGISTRY = Object.freeze({
   web_search: {
     id: 'web_search',
     label: '网页搜索',

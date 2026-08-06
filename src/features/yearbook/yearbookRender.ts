@@ -23,6 +23,7 @@ import {
   ARTIFACT_SANS_FONT_STACK,
   ARTIFACT_SERIF_FONT_STACK,
 } from '../../lib/artifactStyles.ts'
+import { pickLocale } from '../../lib/normalize.ts'
 
 interface LocaleStrings {
   pageHeader: string
@@ -206,10 +207,6 @@ const LOCALES: Record<UiLanguage, LocaleStrings> = {
     dateLocale: 'ko-KR',
     monthLocale: 'ko-KR',
   },
-}
-
-function pickLocale(uiLanguage: UiLanguage): LocaleStrings {
-  return LOCALES[uiLanguage] ?? LOCALES['en-US']
 }
 
 function formatRange(startIso: string, endIso: string, dateLocale: string): string {
@@ -667,7 +664,7 @@ export function renderYearbookHtml(
   snapshot: YearbookSnapshot,
   uiLanguage: UiLanguage,
 ): string {
-  const locale = pickLocale(uiLanguage)
+  const locale = pickLocale(LOCALES, uiLanguage)
   const range = formatRange(snapshot.windowStart, snapshot.windowEnd, locale.dateLocale)
 
   return `<!DOCTYPE html>

@@ -1,4 +1,8 @@
 import { apiProviderRequiresApiKey } from '../models/providerCatalog.ts'
+import {
+  CHAT_IPC_ERROR_CODES,
+  extractChatIpcErrorCode,
+} from '../../../shared/chatErrorCodes.js'
 
 export type BackgroundChatInput = {
   providerId?: string
@@ -207,6 +211,15 @@ export function classifyBackgroundChatFailure(error: unknown): BackgroundChatFai
     || normalizedCode === 'auth_failed'
     || normalizedCode === 'missing_api_key'
     || normalizedCode === 'api_key_header_unsafe'
+  ) return 'auth'
+
+  // Stable chat-IPC codes survive Electron's error serialization inside the
+  // message (shared/chatErrorCodes.js) — match them before any free text.
+  const ipcCode = extractChatIpcErrorCode(error)
+  if (
+    ipcCode === CHAT_IPC_ERROR_CODES.AUTH_FAILED
+    || ipcCode === CHAT_IPC_ERROR_CODES.MISSING_API_KEY
+    || ipcCode === CHAT_IPC_ERROR_CODES.API_KEY_HEADER_UNSAFE
   ) return 'auth'
 
   const message = error instanceof Error ? error.message : String(error ?? '')

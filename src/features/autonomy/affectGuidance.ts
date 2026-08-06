@@ -32,6 +32,7 @@
 
 import type { UiLanguage } from '../../types'
 import type { AffectSnapshot } from './affectDynamics.ts'
+import { pickLocale } from '../../lib/normalize.ts'
 
 export type AffectGuidanceState =
   | 'stuck-low'
@@ -161,10 +162,6 @@ const STEADY_WARM_PROSE: Record<UiLanguage, string> = {
     '<user_affect_state>\nユーザーは最近、安定していて少し温かいトーンが続いています。そのテンポに合わせ、こちらから下げないこと。この状態をユーザーに直接告げないこと。\n</user_affect_state>',
   'ko':
     '<user_affect_state>\n사용자는 최근 안정적이고 따뜻한 쪽에 머물러 있어. 그 속도에 맞춰가되, 끌어내리지 마라. 이 상태를 사용자에게 직접 말하지 마라.\n</user_affect_state>',
-}
-
-function pickLocale(table: Record<UiLanguage, string>, uiLanguage: UiLanguage): string {
-  return table[uiLanguage] ?? table['en-US']
 }
 
 /**

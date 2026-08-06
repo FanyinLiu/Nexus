@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import {
+  buildSummary,
+  countOccurrences,
+  findForbiddenPatterns,
+  findMissingContracts,
+  findMissingFiles,
+  readProjectFiles,
+  resolveProjectRoot,
+  runAuditCli,
+} from './lib/audit-framework.mjs'
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const ROOT = resolveProjectRoot(import.meta.url)
 
 const REQUIRED_FILES = [
   'src/app/views/LegacyPanelView.tsx',
@@ -425,58 +432,6 @@ const TRANSFORM_SCOPE_FILES = [
   'src/app/styles/panel-companion-composer.css',
 ]
 
-function readProjectFile(root, file) {
-  const fullPath = join(root, file)
-  if (!existsSync(fullPath)) return null
-  return readFileSync(fullPath, 'utf8')
-}
-
-function readProjectFiles(root, files) {
-  return new Map(files.map((file) => [file, readProjectFile(root, file)]))
-}
-
-function findMissingFiles(files) {
-  return [...files.entries()]
-    .filter(([, text]) => text == null)
-    .map(([file]) => file)
-}
-
-function findMissingContracts(files) {
-  const missing = []
-  for (const contract of REQUIRED_CONTRACTS) {
-    const text = files.get(contract.file)
-    if (text == null) continue
-    const missingPatterns = contract.patterns.filter((pattern) => !text.includes(pattern))
-    if (missingPatterns.length) {
-      missing.push({
-        id: contract.id,
-        file: contract.file,
-        description: contract.description,
-        missingPatterns,
-      })
-    }
-  }
-  return missing
-}
-
-function findForbiddenPatterns(files) {
-  const matches = []
-  for (const rule of FORBIDDEN_PATTERNS) {
-    const text = files.get(rule.file)
-    if (text == null) continue
-    const foundPatterns = rule.patterns.filter((pattern) => text.includes(pattern))
-    if (foundPatterns.length) {
-      matches.push({
-        id: rule.id,
-        file: rule.file,
-        description: rule.description,
-        foundPatterns,
-      })
-    }
-  }
-  return matches
-}
-
 function lineNumberForIndex(text, index) {
   return text.slice(0, index).split('\n').length
 }
@@ -544,28 +499,12 @@ function collectUnsafeActionElevation(files) {
   return unsafe
 }
 
-function countOccurrences(text, fragment) {
-  return text.split(fragment).length - 1
-}
-
-function buildSummary({ missingFiles, missingContracts, forbiddenPatterns, unsafeTransforms, unsafeActionElevation }) {
-  const errors = missingFiles.length
-    + missingContracts.length
-    + forbiddenPatterns.length
-    + unsafeTransforms.length
-    + unsafeActionElevation.length
-  return {
-    ok: errors === 0,
-    errors,
-  }
-}
-
 export function buildComposerCrossSurfaceReport(root = ROOT) {
   const files = readProjectFiles(root, REQUIRED_FILES)
   const panelView = files.get('src/app/views/LegacyPanelView.tsx') ?? ''
   const missingFiles = findMissingFiles(files)
-  const missingContracts = findMissingContracts(files)
-  const forbiddenPatterns = findForbiddenPatterns(files)
+  const missingContracts = findMissingContracts(files, REQUIRED_CONTRACTS)
+  const forbiddenPatterns = findForbiddenPatterns(files, FORBIDDEN_PATTERNS)
   const unsafeTransforms = collectUnsafeComposerTransforms(files)
   const unsafeActionElevation = collectUnsafeActionElevation(files)
 
@@ -593,7 +532,7 @@ export function buildComposerCrossSurfaceReport(root = ROOT) {
 
   return {
     ...report,
-    summary: buildSummary(report),
+    summary: buildSummary({ missingFiles, missingContracts, forbiddenPatterns, unsafeTransforms, unsafeActionElevation }),
   }
 }
 
@@ -654,8 +593,9 @@ export function formatComposerCrossSurfaceReport(report) {
   return lines.join('\n')
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const report = buildComposerCrossSurfaceReport(ROOT)
-  console.log(formatComposerCrossSurfaceReport(report))
-  process.exitCode = report.summary.ok ? 0 : 1
-}
+runAuditCli({
+  importMetaUrl: import.meta.url,
+  root: ROOT,
+  buildReport: buildComposerCrossSurfaceReport,
+  formatReport: formatComposerCrossSurfaceReport,
+})

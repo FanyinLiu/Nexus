@@ -391,10 +391,11 @@ Flags:
    peak > baseline × 1.25 or cold start > baseline × 1.5 flags a regression;
    a missing baseline, a platform/arch mismatch, or missing metrics skip the
    verdict as inconclusive (never a hard failure). The baseline is a
-   **local machine reference, not a cross-machine promise** — refresh it on
-   the machine that runs the gate with
-   `node scripts/packaged-runtime-baseline.mjs record` after a green
-   sustained run.
+   **local machine reference, not a cross-machine promise** — refresh
+   `tests/fixtures/packagedRuntimeBaseline.json` on the machine that runs
+   the gate after a green sustained run via `buildBaseline` from
+   `scripts/lib/packaged-runtime-baseline.mjs` (the comparison itself runs
+   inside `npm run prerelease-check`).
 7. Coverage ≥ 80% lines (warn).
 8. `dist/assets/app-runtime-*.js` ≤ 1700 KB.
 9. Benchmarks complete without crash (warn).

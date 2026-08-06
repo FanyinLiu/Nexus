@@ -23,6 +23,7 @@ import {
   ARTIFACT_SANS_FONT_STACK,
   ARTIFACT_SERIF_FONT_STACK,
 } from '../../lib/artifactStyles.ts'
+import { pickLocale } from '../../lib/normalize.ts'
 
 interface LocaleStrings {
   /** Header label rendered above the date. */
@@ -59,10 +60,6 @@ const LOCALE_STRINGS: Record<UiLanguage, LocaleStrings> = {
     footerCredit: 'Nexus 생성 — 로컬에 머무는 당신의 동반자.',
     dateLocale: 'ko-KR',
   },
-}
-
-function pickLocale(uiLanguage: UiLanguage): LocaleStrings {
-  return LOCALE_STRINGS[uiLanguage] ?? LOCALE_STRINGS['en-US']
 }
 
 /**
@@ -192,7 +189,7 @@ export function buildLetterFilename(letter: SavedLetter): string {
  * Render a SavedLetter as a self-contained HTML document.
  */
 export function renderLetterHtml(letter: SavedLetter): string {
-  const locale = pickLocale(letter.uiLanguage)
+  const locale = pickLocale(LOCALE_STRINGS, letter.uiLanguage)
   const formattedDate = formatLetterDate(letter.letterDate, locale.dateLocale)
 
   const paragraphs: ReadonlyArray<{ text: string; closing?: boolean }> = [

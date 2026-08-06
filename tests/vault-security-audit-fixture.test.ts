@@ -29,8 +29,12 @@ disabling further attempts for this process
 if (safeStorageAccessBlocked) return
 getRedactedErrorMessage(error)
 `,
-  'electron/services/vaultRefs.js': `
+  'shared/vaultRefs.js': `
 export const VAULT_REF_PREFIX = 'nexus-vault-ref:'
+export function isVaultRef
+`,
+  'electron/services/vaultRefs.js': `
+export { VAULT_REF_PREFIX } from '../../shared/vaultRefs.js'
 const _refsBySender = new WeakMap()
 export function issueVaultRefForSender(sender, slot) {}
 export async function resolveVaultRefsForSender(sender, source, fields) {}
@@ -86,7 +90,7 @@ console.error('[settingsStore] Failed to sync external action policy:', getRedac
 console.error('[settingsStore] Vault hydration failed, API keys may be unavailable:', getRedactedLogErrorMessage(err))
 `,
   'src/lib/keyVaultBridge.ts': `
-export const VAULT_REF_PREFIX = 'nexus-vault-ref:'
+export { VAULT_REF_PREFIX } from '../../shared/vaultRefs.js'
 displaySecretInputValue
 if (isVaultRefString(value)) return
 await window.desktopPet!.vaultRetrieveMany(allSlots)

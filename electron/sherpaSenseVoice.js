@@ -159,7 +159,7 @@ class SherpaSenseVoiceService {
   }
 
   /** Feed audio samples (accumulates internally). Returns null — no partial results for offline model. */
-  feedAudio(samples, _sampleRate = SAMPLE_RATE) {
+  feedAudio(samples) {
     if (!this.recognizer) return null
     const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
     this._audioBuffer.push(float32)

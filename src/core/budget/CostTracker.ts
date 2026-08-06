@@ -1,6 +1,7 @@
 import type { ProviderId } from '../routing/types.ts'
 import type { BudgetConfig, BudgetStatus, CostEntry, CostEntryKind } from './types.ts'
 import { UsagePricingTable } from './UsagePricing.ts'
+import { normalizeNonNegativeInteger } from '../../lib/normalize.ts'
 
 export type RecordUsageInput = {
   providerId: ProviderId
@@ -35,11 +36,6 @@ function normalizeNonNegativeNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0
     ? value
     : undefined
-}
-
-function normalizeNonNegativeInteger(value: unknown): number {
-  const normalized = normalizeNonNegativeNumber(value)
-  return normalized === undefined ? 0 : Math.floor(normalized)
 }
 
 function normalizeOptionalText(value: unknown): string | undefined {

@@ -26,7 +26,7 @@ export type DesktopContextDiagnosticItemId =
   | 'clipboard'
   | 'screen-ocr'
 
-export type DesktopContextDiagnosticItem = {
+type DesktopContextDiagnosticItem = {
   id: DesktopContextDiagnosticItemId
   source: 'capability_flag' | 'ui_label_only'
   label: DesktopContextDiagnosticText

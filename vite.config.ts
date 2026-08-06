@@ -116,7 +116,7 @@ function resolveManualChunk(id: string) {
     || normalizedId.includes('/src/features/chat/')
     || normalizedId.includes('/src/features/tools/')
     || normalizedId.includes('/src/features/memory/')
-    || normalizedId.includes('/src/lib/apiProviders.ts')
+    || normalizedId.includes('/src/features/models/providerCatalog.ts')
     || normalizedId.includes('/src/lib/webSearchProviders.ts')
   ) {
     return 'assistant-runtime'

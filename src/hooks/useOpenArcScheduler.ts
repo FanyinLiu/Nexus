@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react'
 import { autoDropExpiredArcs, loadOpenArcs, recordCheckInFired } from '../features/arc/openArcStore.ts'
 import { decideNextCheckIn } from '../features/arc/openArcPolicy.ts'
 import { buildArcCheckIn } from '../features/arc/openArcDelivery.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import { usePollingScheduler } from './usePollingScheduler.ts'
 import type { AppSettings } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000  // 5 min — matches bracket / errand / capsule
@@ -25,22 +25,14 @@ interface UseOpenArcSchedulerOptions {
  * opened. Same shape as errand and capsule schedulers.
  */
 export function useOpenArcScheduler({ settings, enabled = true }: UseOpenArcSchedulerOptions) {
-  const liveRef = useRef({ settings })
-  useEffect(() => {
-    liveRef.current = { settings }
-  }, [settings])
-
-  useEffect(() => {
-    if (!enabled || typeof window === 'undefined') return
-    if (!window.desktopPet?.showProactiveNotification) return
-
-    let stopped = false
-
-    const tick = async () => {
-      if (stopped) return
+  usePollingScheduler({
+    enabled,
+    intervalMs: POLL_INTERVAL_MS,
+    requireNotificationBridge: true,
+    live: { settings },
+    tick: async ({ settings: s }, isStopped) => {
       autoDropExpiredArcs()
       const arcs = loadOpenArcs()
-      const { settings: s } = liveRef.current
       const decision = decideNextCheckIn(arcs, new Date(), {
         quietHoursStart: s.autonomyQuietHoursStart,
         quietHoursEnd: s.autonomyQuietHoursEnd,
@@ -59,21 +51,11 @@ export function useOpenArcScheduler({ settings, enabled = true }: UseOpenArcSche
 
       try {
         await window.desktopPet?.showProactiveNotification?.(payload)
-        if (stopped) return
+        if (isStopped()) return
         recordCheckInFired(arc.id)
       } catch (err) {
         console.warn('[open-arc] check-in delivery failed:', getRedactedLogErrorMessage(err))
       }
-    }
-
-    void tick()
-    const id = window.setInterval(() => {
-      void tick()
-    }, POLL_INTERVAL_MS)
-
-    return () => {
-      stopped = true
-      window.clearInterval(id)
-    }
-  }, [enabled])
+    },
+  })
 }

@@ -8,6 +8,8 @@
 
 import type { MemoryItem } from '../../types/memory.ts'
 import { t } from '../../i18n/runtime.ts'
+import { isValidIsoTimestamp } from '../../lib/localDate.ts'
+import { normalizeText } from '../../lib/normalize.ts'
 
 // ── Types ──────────────────────────────────────────────────────��──────────
 
@@ -41,16 +43,6 @@ function getNarrativeStorage(): Storage | null {
   if (typeof localStorage !== 'undefined') return localStorage
   if (typeof window !== 'undefined') return window.localStorage
   return null
-}
-
-function isValidIsoTimestamp(value: string): boolean {
-  return Number.isFinite(Date.parse(value))
-}
-
-function normalizeText(value: unknown): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed ? trimmed : null
 }
 
 function normalizeMemoryIds(value: unknown): string[] {

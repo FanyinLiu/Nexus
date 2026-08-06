@@ -19,7 +19,9 @@ test('missing-key preflight is a safe local failure', () => {
   })
   assert.equal(failure?.ok, false)
   assert.equal(failure?.code, 'missing_api_key')
-  assert.match(failure?.message ?? '', /API Key/)
+  assert.equal(failure?.messageKey, 'settings.chat_connection.missing_api_key')
+  // No human-readable fallback copy leaves the main process anymore.
+  assert.equal(failure?.message, failure?.messageKey)
 })
 
 test('chat:complete gates before request construction and network', () => {
@@ -41,5 +43,5 @@ test('chat:complete gates before request construction and network', () => {
     safeLog,
     /apiKey|messages|prompt|baseUrl/s,
   )
-  assert.match(completeHandler, /error\.code = 'auth_failed'\s*\n\s*error\.status = 401/)
+  assert.match(completeHandler, /buildChatIpcError\([\s\S]*CHAT_IPC_ERROR_CODES\.AUTH_FAILED[\s\S]*error\.status = 401/)
 })
