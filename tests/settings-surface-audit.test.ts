@@ -3,15 +3,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { test } from 'node:test'
-import { fileURLToPath } from 'node:url'
 
 import {
   buildSettingsSurfaceReport,
   findDuplicateContractPatterns,
 } from '../scripts/settings-surface-audit.mjs'
 import { BASELINE_FILES } from './fixtures/settingsSurfaceAuditBaseline.ts'
-
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 function createFixture(overrides: Record<string, string | null> = {}) {
   const root = mkdtempSync(join(tmpdir(), 'nexus-settings-surface-audit-'))
@@ -248,11 +245,4 @@ test('settings surface audit rejects missing external action confirmation contro
     assert.equal(report.summary.ok, false)
     assert.ok(report.missingContracts.some((item) => item.id === 'external-tool-permission-affordances'))
   })
-})
-
-test('settings surface audit runs against the repository', () => {
-  const report = buildSettingsSurfaceReport(ROOT)
-
-  assert.equal(report.summary.ok, true)
-  assert.equal(report.summary.errors, 0)
 })

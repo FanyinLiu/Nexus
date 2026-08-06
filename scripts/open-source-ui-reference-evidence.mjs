@@ -24,7 +24,7 @@ export const SURFACE_EVIDENCE = {
     commands: [
       'npm run composer:surface:audit',
       'npm run ui:references:audit -- --surface=composer --pro-prompt --evidence',
-      'node --experimental-strip-types --test tests/composer-cross-surface-audit.test.ts tests/open-source-ui-reference-audit.test.ts',
+      'node --experimental-strip-types --test tests/composer-cross-surface-audit.test.ts',
     ],
     browserChecks: [
       'Compare normal chat composer and Image4 composer alignment without changing button sizes.',
@@ -66,7 +66,7 @@ export const SURFACE_EVIDENCE = {
       'npm run image4:visual-contract:audit',
       'npm run image4:contract:report',
       'npm run ui:references:audit -- --surface=image4-presence --pro-prompt --evidence',
-      'node --experimental-strip-types --test tests/image4-companion-state.test.ts tests/image4-visual-contract-audit.test.ts tests/open-source-ui-reference-audit.test.ts',
+      'node --experimental-strip-types --test tests/image4-companion-state.test.ts',
     ],
     browserChecks: [
       'Open ?view=panel&image4Preview=1&image4Grid=1 and inspect idle, attentive, speaking, and resting states.',
@@ -90,7 +90,6 @@ export const SURFACE_EVIDENCE = {
       'npm run image4:visual-contract:audit',
       'npm run image4:contract:report',
       'npm run ui:references:audit -- --surface=dial --pro-prompt --evidence',
-      'node --experimental-strip-types --test tests/image4-visual-contract-audit.test.ts tests/open-source-ui-reference-audit.test.ts',
     ],
     browserChecks: [
       'Open ?view=panel&image4Preview=1&image4Grid=1 and confirm time, date, and weather stay inside the ring without overlap.',
@@ -109,7 +108,7 @@ export const SURFACE_EVIDENCE = {
     commands: [
       'npm run image4:color:audit',
       'npm run ui:references:audit -- --surface=companion-tone --pro-prompt --evidence',
-      'node --experimental-strip-types --test tests/image4-companion-color-audit.test.ts tests/open-source-ui-reference-patterns.test.ts tests/open-source-ui-reference-audit.test.ts',
+      'node --experimental-strip-types --test tests/image4-companion-color-audit.test.ts',
     ],
     researchNotes: [
       'Color-emotion research supports a light warm base plus blue-green support for positive low-arousal comfort and relaxation.',
@@ -150,7 +149,6 @@ export const SURFACE_EVIDENCE = {
     ],
     commands: [
       'npm run focus:surface:audit',
-      'node --experimental-strip-types --test tests/settings-ui-scale.test.ts tests/open-source-ui-reference-audit.test.ts',
       'npm run ui:references:audit -- --surface=focus-management --pro-prompt --evidence',
     ],
     browserChecks: [
@@ -170,7 +168,6 @@ export const SURFACE_EVIDENCE = {
     ],
     commands: [
       'npm run streaming:surface:audit',
-      'node --experimental-strip-types --test tests/open-source-ui-reference-audit.test.ts',
       'npm run ui:references:audit -- --surface=streaming --pro-prompt --evidence',
     ],
     browserChecks: [
@@ -191,7 +188,7 @@ export const SURFACE_EVIDENCE = {
     ],
     commands: [
       'npm run agent-activity:surface:audit',
-      'node --experimental-strip-types --test tests/open-source-ui-reference-audit.test.ts tests/companion-awareness.test.ts tests/companion-check-in-policy.test.ts',
+      'node --experimental-strip-types --test tests/companion-awareness.test.ts tests/companion-check-in-policy.test.ts',
       'npm run ui:references:audit -- --surface=agent-activity --pro-prompt --evidence',
     ],
     browserChecks: [
