@@ -22,3 +22,13 @@ export declare const RUNTIME_STATE_FIELD_NAMES: readonly [
 ]
 
 export type RuntimeStateFieldName = (typeof RUNTIME_STATE_FIELD_NAMES)[number]
+
+export declare const RUNTIME_STATE_BOOLEAN_FIELD_NAMES: readonly [
+  'continuousVoiceActive',
+  'panelSettingsOpen',
+  'wakewordActive',
+  'wakewordAvailable',
+  'searchInProgress',
+  'ttsInProgress',
+  'schedulerArmed',
+]

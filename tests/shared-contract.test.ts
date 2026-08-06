@@ -9,7 +9,7 @@ import {
   WEB_SEARCH_PROVIDER_IDS,
 } from '../shared/webSearchProviderIds.js'
 import { LOCAL_DATA_COMPANION_STORAGE_KEYS } from '../shared/localDataStorageKeys.js'
-import { RUNTIME_STATE_FIELD_NAMES } from '../shared/runtimeStateFields.js'
+import { RUNTIME_STATE_BOOLEAN_FIELD_NAMES, RUNTIME_STATE_FIELD_NAMES } from '../shared/runtimeStateFields.js'
 
 // Source-level single-source contract for the root shared/ modules. Each
 // entry pins the literals that used to be copied verbatim between the
@@ -175,4 +175,23 @@ test('runtime state field names keep the 20-field ordered contract', () => {
     'schedulerNextRunAt',
     'activeTaskLabel',
   ])
+})
+
+test('runtime state boolean fields keep the 7-item subset contract', () => {
+  assert.deepEqual([...RUNTIME_STATE_BOOLEAN_FIELD_NAMES], [
+    'continuousVoiceActive',
+    'panelSettingsOpen',
+    'wakewordActive',
+    'wakewordAvailable',
+    'searchInProgress',
+    'ttsInProgress',
+    'schedulerArmed',
+  ])
+  // The boolean subset must stay inside the patchable field inventory.
+  for (const name of RUNTIME_STATE_BOOLEAN_FIELD_NAMES) {
+    assert.ok(
+      (RUNTIME_STATE_FIELD_NAMES as readonly string[]).includes(name),
+      `boolean field ${name} must be part of the 20-field inventory`,
+    )
+  }
 })

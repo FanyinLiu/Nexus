@@ -1,18 +1,10 @@
-import { RUNTIME_STATE_FIELD_NAMES } from '../shared/runtimeStateFields.js'
+import { RUNTIME_STATE_BOOLEAN_FIELD_NAMES, RUNTIME_STATE_FIELD_NAMES } from '../shared/runtimeStateFields.js'
 import { COMPANION_PRESENCE_PHASES } from '../shared/runtimeStateSnapshot.js'
 
 // Boolean fields pass through untouched; string fields clamp to
-// RUNTIME_STATE_STRING_MAX. Field names stay pinned to the shared contract
-// tuple; the boolean subset mirrors the IPC validator's type assignment.
-const RUNTIME_STATE_BOOLEAN_FIELDS = new Set([
-  'continuousVoiceActive',
-  'panelSettingsOpen',
-  'wakewordActive',
-  'wakewordAvailable',
-  'searchInProgress',
-  'ttsInProgress',
-  'schedulerArmed',
-])
+// RUNTIME_STATE_STRING_MAX. Field names and the boolean subset stay pinned
+// to the shared contract tuples.
+const RUNTIME_STATE_BOOLEAN_FIELDS = new Set(RUNTIME_STATE_BOOLEAN_FIELD_NAMES)
 
 const RUNTIME_STATE_SCHEMA = Object.fromEntries(
   RUNTIME_STATE_FIELD_NAMES.map((name) => [name, RUNTIME_STATE_BOOLEAN_FIELDS.has(name) ? 'boolean' : 'string']),

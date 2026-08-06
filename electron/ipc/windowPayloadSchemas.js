@@ -1,5 +1,5 @@
 import { validateIpcPayload } from './schemaValidator.js'
-import { RUNTIME_STATE_FIELD_NAMES } from '../../shared/runtimeStateFields.js'
+import { RUNTIME_STATE_BOOLEAN_FIELD_NAMES, RUNTIME_STATE_FIELD_NAMES } from '../../shared/runtimeStateFields.js'
 import { COMPANION_PRESENCE_PHASES } from '../../shared/runtimeStateSnapshot.js'
 
 const SHORT_TEXT_MAX = 256
@@ -63,16 +63,9 @@ const runtimeHeartbeatSchema = {
 }
 
 // Boolean fields reject non-boolean values; string fields clamp to
-// SHORT_TEXT_MAX. Field names stay pinned to the shared contract tuple.
-const RUNTIME_STATE_BOOLEAN_FIELDS = new Set([
-  'continuousVoiceActive',
-  'panelSettingsOpen',
-  'wakewordActive',
-  'wakewordAvailable',
-  'searchInProgress',
-  'ttsInProgress',
-  'schedulerArmed',
-])
+// SHORT_TEXT_MAX. Field names and the boolean subset stay pinned to the
+// shared contract tuples.
+const RUNTIME_STATE_BOOLEAN_FIELDS = new Set(RUNTIME_STATE_BOOLEAN_FIELD_NAMES)
 
 // companionPresence is the only non-primitive runtime-state field: a nested
 // CompanionPresenceState object, enum-pinned to the shared phase tuple.
