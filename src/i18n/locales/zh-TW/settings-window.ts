@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `settings-window` (92 keys). */
+/** zh-TW messages — namespace `settings-window`. */
 export const zhTWSettingsWindow = {
   'settings.appearance.label': '主題',
   'settings.appearance.black': '黑天',

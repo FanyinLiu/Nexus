@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `settings-integrations` (184 keys). */
+/** en messages — namespace `settings-integrations`. */
 export const enSettingsIntegrations = {
   'settings.tools.web_search': 'Web search',
   'settings.tools.web_search_hint': 'When off, answers use training data only and may be stale.',

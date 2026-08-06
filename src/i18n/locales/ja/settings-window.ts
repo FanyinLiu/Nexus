@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `settings-window` (92 keys). */
+/** ja messages — namespace `settings-window`. */
 export const jaSettingsWindow = {
   'settings.appearance.label': 'テーマ',
   'settings.appearance.black': '漆黒',

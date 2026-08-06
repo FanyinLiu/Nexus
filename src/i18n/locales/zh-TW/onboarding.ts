@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `onboarding` (153 keys). */
+/** zh-TW messages — namespace `onboarding`. */
 export const zhTWOnboarding = {
   'model_setup.eyebrow': '首次啟動',
   'model_setup.title': '安裝本機語音模型',

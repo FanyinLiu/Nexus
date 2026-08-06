@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `settings-memory` (189 keys). */
+/** en messages — namespace `settings-memory`. */
 export const enSettingsMemory = {
   'settings.memory.custom_option': 'Keep custom value',
   'settings.memory.transparency.title': 'Memory transparency',

@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `provider` (239 keys). */
+/** en messages — namespace `provider`. */
 export const enProvider = {
   'provider.stt.local-sensevoice.label': '[Local] SenseVoice high-accuracy recognition',
   'provider.stt.local-sensevoice.notes': 'Alibaba SenseVoice-Small offline recognition — 10s audio processed in ~70ms (15x faster than Whisper), excellent Chinese accuracy. Download the model into the sherpa-models directory first.',

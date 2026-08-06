@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `provider` (239 keys). */
+/** ja messages — namespace `provider`. */
 export const jaProvider = {
   'provider.stt.local-sensevoice.label': '[ローカル] SenseVoice 高精度認識',
   'provider.stt.local-sensevoice.notes': 'アリババ SenseVoice-Small によるオフライン認識。10 秒の音声を約 70ms で処理（Whisper の約 15 倍速）、中国語の精度が非常に高い。sherpa-models ディレクトリにモデルを事前にダウンロードしてください。',

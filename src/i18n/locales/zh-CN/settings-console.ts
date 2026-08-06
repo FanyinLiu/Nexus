@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `settings-console` (124 keys). */
+/** zh-CN messages — namespace `settings-console`. */
 export const zhCNSettingsConsole = {
   'settings.console.clear': '清空事件记录',
   'settings.console.current_session': '运行状态',
@@ -126,4 +124,4 @@ export const zhCNSettingsConsole = {
   'settings.console.token_input': '输入',
   'settings.console.token_output': '输出',
   'settings.console.memories_suffix': '条记忆',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

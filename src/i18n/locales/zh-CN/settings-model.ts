@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `settings-model` (160 keys). */
+/** zh-CN messages — namespace `settings-model`. */
 export const zhCNSettingsModel = {
   'settings.startup_status.title': '基础检查',
   'settings.startup_status.note': '只看能不能启动和对话；详细日志在下面折叠区。',
@@ -162,4 +160,4 @@ export const zhCNSettingsModel = {
   'settings.context.success.template_added': '已添加模板任务：{name}',
   'settings.context.error.template_failed': '模板任务没能添加。',
   'settings.context.error.save_failed': '提醒没能保存。',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

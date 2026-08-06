@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `settings-history` (119 keys). */
+/** ko messages — namespace `settings-history`. */
 export const koSettingsHistory = {
   'settings.history.message_count': '메시지 수',
   'settings.history.current_status': '현재 상태',

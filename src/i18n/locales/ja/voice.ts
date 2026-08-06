@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `voice` (199 keys). */
+/** ja messages — namespace `voice`. */
 export const jaVoice = {
   'voice_pipeline.idle': '待機',
   'voice_pipeline.listening': '聞き取り中',

@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `panel` (90 keys). */
+/** en messages — namespace `panel`. */
 export const enPanel = {
   'panel.next_task_prefix': 'Next task: {name}',
   'panel.timer_suspended': 'Scheduled tasks paused',

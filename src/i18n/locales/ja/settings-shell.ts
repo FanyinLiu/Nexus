@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `settings-shell` (80 keys). */
+/** ja messages — namespace `settings-shell`. */
 export const jaSettingsShell = {
   'settings.discard_changes': '変更を破棄',
   'settings.discard_changes_confirm': '変更はまだ保存されていません。破棄して設定を閉じますか？',

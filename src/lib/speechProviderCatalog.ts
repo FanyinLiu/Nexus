@@ -12,9 +12,9 @@
  * To add a new provider:
  *   1. Append an entry to the relevant array below.
  *   2. If the provider uses a new protocol, add the protocol literal.
- *   3. Register the new translation keys in `src/types/i18n.ts` (or the
- *      matching `src/types/i18nKeys/*` module) and every locale file under
- *      `src/i18n/locales/` — tsc pins the zh-CN key set to the union, and
+ *   3. Register the new translation keys in the zh-CN locale module and the
+ *      matching module of every other locale under `src/i18n/locales/` —
+ *      `TranslationKey` is derived from the zh-CN dictionary, and
  *      `npm run i18n:audit` keeps the other locales at parity.
  */
 

@@ -116,13 +116,17 @@ Verified against the tree at v0.4.5 (2026-08). Canonical gate: `npm run verify:p
 
 ## I18N — Translations
 
-- **I18N-1** The key set is owned by the zh-CN reference locale and the
-  `TranslationKey` union (`src/types/i18nKeys/*`). tsc pins them equal in both
-  directions (`as const satisfies Partial<TranslationDictionary>` per namespace
-  module, `satisfies TranslationDictionary` on the assembled dictionary), so
-  generated key manifests are prohibited: adding a key means editing the union
-  and all 5 locale files, nothing else. *Enforced by tsc + `i18n:audit`
-  (cross-locale parity) in `verify:pr`.*
+- **I18N-1** The key set is owned by the zh-CN reference locale alone;
+  `TranslationKey` (`src/types/i18n.ts`) is derived from it as
+  `keyof typeof zhCNMessages` — there is no hand-maintained union. The other
+  4 locales are pinned to that set by tsc (`as const satisfies
+  Partial<TranslationDictionary>` per namespace module, `satisfies
+  TranslationDictionary` on each assembled dictionary); zh-CN modules only
+  satisfy `Record<string, string>`, since referencing the derived key set
+  from its own source dictionary would be a type cycle. Generated key
+  manifests are prohibited: adding a key means editing the zh-CN namespace
+  module and the matching module of the other 4 locales, nothing else.
+  *Enforced by tsc + `i18n:audit` (cross-locale parity) in `verify:pr`.*
 - **I18N-2** User-visible strings MUST go through `t()` / message keys — in every
   process, including error paths (see ERR-1/ERR-2).
 - **I18N-3** The runtime key list is `src/i18n/translationKeys.ts`, derived from

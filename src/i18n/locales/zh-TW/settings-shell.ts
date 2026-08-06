@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `settings-shell` (80 keys). */
+/** zh-TW messages — namespace `settings-shell`. */
 export const zhTWSettingsShell = {
   'settings.discard_changes': '放棄變更',
   'settings.discard_changes_confirm': '這些變更尚未儲存。要放棄變更並關閉設定嗎？',

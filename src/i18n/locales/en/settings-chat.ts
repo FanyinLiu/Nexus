@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `settings-chat` (179 keys). */
+/** en messages — namespace `settings-chat`. */
 export const enSettingsChat = {
   'settings.chat.profiles': 'Profiles',
   'settings.chat.profiles_hint': 'Switch companion profiles; save edits with "Update current profile".',

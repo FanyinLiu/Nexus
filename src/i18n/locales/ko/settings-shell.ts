@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `settings-shell` (80 keys). */
+/** ko messages — namespace `settings-shell`. */
 export const koSettingsShell = {
   'settings.discard_changes': '변경 사항 버리기',
   'settings.discard_changes_confirm': '변경 사항이 저장되지 않았습니다. 버리고 설정을 닫을까요?',

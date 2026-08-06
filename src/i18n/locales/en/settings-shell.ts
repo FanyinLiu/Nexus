@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `settings-shell` (80 keys). */
+/** en messages — namespace `settings-shell`. */
 export const enSettingsShell = {
   'settings.discard_changes': 'Discard changes',
   'settings.discard_changes_confirm': 'These changes have not been saved. Discard them and close settings?',

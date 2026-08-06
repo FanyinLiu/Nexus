@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `chat` (159 keys). */
+/** en messages — namespace `chat`. */
 export const enChat = {
   'message_bubble.role.assistant_default': 'Companion',
   'message_bubble.role.system': 'System',

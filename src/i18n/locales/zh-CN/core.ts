@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `core` (458 keys). */
+/** zh-CN messages — namespace `core`. */
 export const zhCNCore = {
   'common.ok': '确定',
   'common.cancel': '取消',
@@ -470,4 +468,4 @@ export const zhCNCore = {
   'weekly_recap.vibe.warmth': '一个温暖的星期 —— 对话感觉很近。',
   'weekly_recap.vibe.curiosity': '一个好奇的星期 —— 出现了很多新问题。',
   'weekly_recap.vibe.concern': '比较沉的一周 —— 她感觉到你心里装着事。',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

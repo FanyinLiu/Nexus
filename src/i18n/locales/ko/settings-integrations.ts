@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `settings-integrations` (184 keys). */
+/** ko messages — namespace `settings-integrations`. */
 export const koSettingsIntegrations = {
   'settings.tools.web_search': '웹 검색',
   'settings.tools.web_search_hint': '끄면 답변이 학습 데이터에만 의존하며 오래된 정보일 수 있습니다.',

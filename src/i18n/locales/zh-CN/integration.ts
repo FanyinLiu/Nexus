@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `integration` (50 keys). */
+/** zh-CN messages — namespace `integration`. */
 export const zhCNIntegration = {
   'integration.mcp.title': 'MCP 服务',
   'integration.mcp.badge': '本地工具',
@@ -52,4 +50,4 @@ export const zhCNIntegration = {
   'integration.controls-island.summary': '轻量浮动控制岛，用于精简 Nexus 桌宠按钮层。',
   'integration.controls-island.design_pattern': '基于 controls-island store 与 InteractiveArea 操作区设计。',
   'integration.controls-island.next_step': '把固定、穿透、语音与设置入口继续收束成更轻的外部卡片岛。',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

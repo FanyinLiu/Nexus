@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `core` (458 keys). */
+/** ja messages — namespace `core`. */
 export const jaCore = {
   'common.ok': 'OK',
   'common.cancel': 'キャンセル',

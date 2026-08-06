@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `chat` (159 keys). */
+/** ko messages — namespace `chat`. */
 export const koChat = {
   'message_bubble.role.assistant_default': '컴패니언',
   'message_bubble.role.system': '시스템',

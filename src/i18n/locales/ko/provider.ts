@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `provider` (239 keys). */
+/** ko messages — namespace `provider`. */
 export const koProvider = {
   'provider.stt.local-sensevoice.label': '[로컬] SenseVoice 고정밀 인식',
   'provider.stt.local-sensevoice.notes': '알리바바 SenseVoice-Small 오프라인 인식. 10초 오디오를 약 70ms에 처리(Whisper 대비 약 15배 빠름), 중국어 정확도가 매우 높음. sherpa-models 디렉터리에 모델을 먼저 다운로드하세요.',

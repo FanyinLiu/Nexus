@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `settings-history` (119 keys). */
+/** ja messages — namespace `settings-history`. */
 export const jaSettingsHistory = {
   'settings.history.message_count': 'メッセージ数',
   'settings.history.current_status': '現在の状態',

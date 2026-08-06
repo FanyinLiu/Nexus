@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `settings-history` (119 keys). */
+/** zh-CN messages — namespace `settings-history`. */
 export const zhCNSettingsHistory = {
   'settings.history.message_count': '当前消息数',
   'settings.history.current_status': '当前状态',
@@ -121,4 +119,4 @@ export const zhCNSettingsHistory = {
   'settings.history.migration.package_blocked': '当前预演已阻塞。请先修复本地聊天存储再应用。',
   'settings.history.migration.bridge_unavailable': '当前窗口没有可用的桌面迁移桥。',
   'settings.history.migration.no_action': '此预览状态下没有可安全应用的数据。',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

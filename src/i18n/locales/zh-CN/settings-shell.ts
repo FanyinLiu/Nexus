@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `settings-shell` (80 keys). */
+/** zh-CN messages — namespace `settings-shell`. */
 export const zhCNSettingsShell = {
   'settings.discard_changes': '放弃更改',
   'settings.discard_changes_confirm': '这些更改还没有保存。要放弃更改并关闭设置吗？',
@@ -82,4 +80,4 @@ export const zhCNSettingsShell = {
   'settings.section.autonomy': '主动陪伴',
   'settings.section_desc.autonomy': '空闲问候、离开提醒和后台主动能力。',
   'settings.section_eyebrow.autonomy': '主动陪伴',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

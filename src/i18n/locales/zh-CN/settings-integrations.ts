@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `settings-integrations` (184 keys). */
+/** zh-CN messages — namespace `settings-integrations`. */
 export const zhCNSettingsIntegrations = {
   'settings.tools.web_search': '网页搜索',
   'settings.tools.web_search_hint': '关闭后只用训练数据回答，可能过时。',
@@ -186,4 +184,4 @@ export const zhCNSettingsIntegrations = {
   'settings.autonomy.away_notification.hint': '你离开桌面太久时，她会按你设定的关系类型，给你发一条系统通知。23 点到次日 8 点不打扰。',
   'settings.autonomy.away_notification.threshold': '触发阈值（分钟）',
   'settings.integrations.mcp_name_placeholder': '我的 MCP 服务器',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

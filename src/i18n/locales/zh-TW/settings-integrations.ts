@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `settings-integrations` (184 keys). */
+/** zh-TW messages — namespace `settings-integrations`. */
 export const zhTWSettingsIntegrations = {
   'settings.tools.web_search': '網頁搜尋',
   'settings.tools.web_search_hint': '關閉後只用訓練資料回答，可能過時。',

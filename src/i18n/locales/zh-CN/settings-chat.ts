@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `settings-chat` (179 keys). */
+/** zh-CN messages — namespace `settings-chat`. */
 export const zhCNSettingsChat = {
   'settings.chat.profiles': '角色档案',
   'settings.chat.profiles_hint': '切换不同伙伴设定；编辑后用「更新当前档案」写回。',
@@ -181,4 +179,4 @@ export const zhCNSettingsChat = {
   'settings.letters.active_days_label': '本周活跃 {n} 天',
   'settings.letters.export': '保存',
   'settings.letters.export_title': '把这封信导出为独立的 HTML 文件',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

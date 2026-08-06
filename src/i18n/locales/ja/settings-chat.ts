@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `settings-chat` (179 keys). */
+/** ja messages — namespace `settings-chat`. */
 export const jaSettingsChat = {
   'settings.chat.profiles': 'プロファイル',
   'settings.chat.profiles_hint': 'コンパニオンの設定を切り替えます。編集の保存は「現在のプロファイルを更新」から。',

@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `settings-console` (124 keys). */
+/** en messages — namespace `settings-console`. */
 export const enSettingsConsole = {
   'settings.console.clear': 'Clear event log',
   'settings.console.current_session': 'Runtime status',

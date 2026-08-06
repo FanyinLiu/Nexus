@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `onboarding` (153 keys). */
+/** zh-CN messages — namespace `onboarding`. */
 export const zhCNOnboarding = {
   'model_setup.eyebrow': '首次启动',
   'model_setup.title': '安装本地语音模型',
@@ -155,4 +153,4 @@ export const zhCNOnboarding = {
   'onboarding.ai_disclosure.bullet_not_clinical': 'Nexus 不替代医疗、心理健康或危机干预服务。',
   'onboarding.ai_disclosure.bullet_panel': '遇到沉重话题时，我们会提供真人援助渠道。',
   'onboarding.ai_disclosure.continue_note': '知道了，继续',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

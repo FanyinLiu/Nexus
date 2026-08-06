@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `onboarding` (153 keys). */
+/** ko messages — namespace `onboarding`. */
 export const koOnboarding = {
   'model_setup.eyebrow': '첫 실행',
   'model_setup.title': '로컬 음성 모델 설치',

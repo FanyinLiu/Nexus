@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `settings-memory` (189 keys). */
+/** zh-TW messages — namespace `settings-memory`. */
 export const zhTWSettingsMemory = {
   'settings.memory.custom_option': '保留自訂值',
   'settings.memory.transparency.title': '記憶透明度',

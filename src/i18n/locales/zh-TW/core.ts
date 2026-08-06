@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `core` (458 keys). */
+/** zh-TW messages — namespace `core`. */
 export const zhTWCore = {
   'common.ok': '確定',
   'common.cancel': '取消',

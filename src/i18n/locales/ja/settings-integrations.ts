@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `settings-integrations` (184 keys). */
+/** ja messages — namespace `settings-integrations`. */
 export const jaSettingsIntegrations = {
   'settings.tools.web_search': 'ウェブ検索',
   'settings.tools.web_search_hint': 'オフにすると、回答は学習データのみに基づき、情報が古くなる場合があります。',

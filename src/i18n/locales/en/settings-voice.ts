@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `settings-voice` (114 keys). */
+/** en messages — namespace `settings-voice`. */
 export const enSettingsVoice = {
   'settings.voice.loop_title': 'Voice readiness',
   'settings.voice.loop_hint': 'Turn listening and speaking on, then run one quick test.',

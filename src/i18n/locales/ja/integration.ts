@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `integration` (50 keys). */
+/** ja messages — namespace `integration`. */
 export const jaIntegration = {
   'integration.mcp.title': 'MCP サービス',
   'integration.mcp.badge': 'ローカルツール',

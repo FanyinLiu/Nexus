@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `onboarding` (153 keys). */
+/** ja messages — namespace `onboarding`. */
 export const jaOnboarding = {
   'model_setup.eyebrow': '初回起動',
   'model_setup.title': 'ローカル音声モデルのインストール',

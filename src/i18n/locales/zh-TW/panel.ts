@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `panel` (90 keys). */
+/** zh-TW messages — namespace `panel`. */
 export const zhTWPanel = {
   'panel.next_task_prefix': '下個任務：{name}',
   'panel.timer_suspended': '定時任務已暫停',

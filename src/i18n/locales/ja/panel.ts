@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `panel` (90 keys). */
+/** ja messages — namespace `panel`. */
 export const jaPanel = {
   'panel.next_task_prefix': '次のタスク：{name}',
   'panel.timer_suspended': '定時タスクは一時停止中',

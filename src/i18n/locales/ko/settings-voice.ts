@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `settings-voice` (114 keys). */
+/** ko messages — namespace `settings-voice`. */
 export const koSettingsVoice = {
   'settings.voice.loop_title': '음성 준비 상태',
   'settings.voice.loop_hint': '듣기와 말하기를 켠 다음 한 번만 빠르게 테스트하세요.',

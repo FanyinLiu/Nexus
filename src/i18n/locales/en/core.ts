@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `core` (458 keys). */
+/** en messages — namespace `core`. */
 export const enCore = {
   'common.ok': 'OK',
   'common.cancel': 'Cancel',

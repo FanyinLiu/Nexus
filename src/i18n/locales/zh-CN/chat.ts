@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `chat` (159 keys). */
+/** zh-CN messages — namespace `chat`. */
 export const zhCNChat = {
   'message_bubble.role.assistant_default': '星绘',
   'message_bubble.role.system': '系统',
@@ -161,4 +159,4 @@ export const zhCNChat = {
   'chat.slash.search.no_hits': '没有在本地聊天历史中找到与「{query}」相关的片段。',
   'chat.failover.no_api_base': '请先在设置里填写接口地址和模型名称。',
   'chat.failover.no_api_key': '请先在设置里填写当前文本提供商的接口密钥。',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

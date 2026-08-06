@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `settings-console` (124 keys). */
+/** ja messages — namespace `settings-console`. */
 export const jaSettingsConsole = {
   'settings.console.clear': 'イベントログをクリア',
   'settings.console.current_session': '実行ステータス',

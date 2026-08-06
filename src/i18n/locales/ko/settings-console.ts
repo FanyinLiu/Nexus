@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `settings-console` (124 keys). */
+/** ko messages — namespace `settings-console`. */
 export const koSettingsConsole = {
   'settings.console.clear': '이벤트 로그 지우기',
   'settings.console.current_session': '실행 상태',

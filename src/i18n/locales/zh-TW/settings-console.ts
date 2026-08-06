@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `settings-console` (124 keys). */
+/** zh-TW messages — namespace `settings-console`. */
 export const zhTWSettingsConsole = {
   'settings.console.clear': '清空事件記錄',
   'settings.console.current_session': '執行狀態',

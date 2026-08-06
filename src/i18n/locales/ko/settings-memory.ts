@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `settings-memory` (189 keys). */
+/** ko messages — namespace `settings-memory`. */
 export const koSettingsMemory = {
   'settings.memory.custom_option': '사용자 값 유지',
   'settings.memory.transparency.title': '기억 투명성',

@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `onboarding` (153 keys). */
+/** en messages — namespace `onboarding`. */
 export const enOnboarding = {
   'model_setup.eyebrow': 'First launch',
   'model_setup.title': 'Install local voice models',

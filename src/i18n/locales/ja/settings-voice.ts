@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `settings-voice` (114 keys). */
+/** ja messages — namespace `settings-voice`. */
 export const jaSettingsVoice = {
   'settings.voice.loop_title': '音声の準備',
   'settings.voice.loop_hint': '聞き取りと読み上げを有効にして、1回だけ簡単にテストします。',

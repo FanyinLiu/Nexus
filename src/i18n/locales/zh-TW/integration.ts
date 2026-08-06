@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `integration` (50 keys). */
+/** zh-TW messages — namespace `integration`. */
 export const zhTWIntegration = {
   'integration.mcp.title': 'MCP 服務',
   'integration.mcp.badge': '本機工具',

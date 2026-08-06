@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `chat` (159 keys). */
+/** ja messages — namespace `chat`. */
 export const jaChat = {
   'message_bubble.role.assistant_default': 'コンパニオン',
   'message_bubble.role.system': 'システム',

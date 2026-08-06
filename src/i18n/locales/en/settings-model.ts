@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `settings-model` (160 keys). */
+/** en messages — namespace `settings-model`. */
 export const enSettingsModel = {
   'settings.startup_status.title': 'Basic Check',
   'settings.startup_status.note': 'Shows whether Nexus can open and chat. Detailed logs stay folded below.',

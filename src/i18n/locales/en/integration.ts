@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `integration` (50 keys). */
+/** en messages — namespace `integration`. */
 export const enIntegration = {
   'integration.mcp.title': 'MCP servers',
   'integration.mcp.badge': 'Local tools',

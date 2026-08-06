@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `settings-model` (160 keys). */
+/** ko messages — namespace `settings-model`. */
 export const koSettingsModel = {
   'settings.startup_status.title': '기본 점검',
   'settings.startup_status.note': 'Nexus를 열고 대화할 수 있는지만 확인합니다. 자세한 로그는 아래에 접어둡니다.',

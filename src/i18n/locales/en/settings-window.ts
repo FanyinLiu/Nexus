@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `settings-window` (92 keys). */
+/** en messages — namespace `settings-window`. */
 export const enSettingsWindow = {
   'settings.appearance.label': 'Theme',
   'settings.appearance.black': 'Black',

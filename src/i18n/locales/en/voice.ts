@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `voice` (199 keys). */
+/** en messages — namespace `voice`. */
 export const enVoice = {
   'voice_pipeline.idle': 'Idle',
   'voice_pipeline.listening': 'Listening',

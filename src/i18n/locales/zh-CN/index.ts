@@ -3,7 +3,6 @@
  * Split so individual files stay under the source-size budget and can be
  * reviewed/edited without loading a 2600-line monolith.
  */
-import type { TranslationDictionary } from '../../../types/i18n.ts'
 import { zhCNCore } from './core.ts'
 import { zhCNSettingsShell } from './settings-shell.ts'
 import { zhCNSettingsMemory } from './settings-memory.ts'
@@ -38,4 +37,4 @@ export const zhCNMessages = {
   ...zhCNOnboarding,
   ...zhCNPanel,
   ...zhCNIntegration,
-} satisfies TranslationDictionary
+} satisfies Record<string, string>

@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `voice` (199 keys). */
+/** zh-TW messages — namespace `voice`. */
 export const zhTWVoice = {
   'voice_pipeline.idle': '待命',
   'voice_pipeline.listening': '聆聽中',

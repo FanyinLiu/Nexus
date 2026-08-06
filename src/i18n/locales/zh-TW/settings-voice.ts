@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `settings-voice` (114 keys). */
+/** zh-TW messages — namespace `settings-voice`. */
 export const zhTWSettingsVoice = {
   'settings.voice.loop_title': '語音是否就緒',
   'settings.voice.loop_hint': '開啟聽你說和開口回應，再做一次快速測試。',

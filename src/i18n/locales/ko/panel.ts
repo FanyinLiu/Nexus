@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `panel` (90 keys). */
+/** ko messages — namespace `panel`. */
 export const koPanel = {
   'panel.next_task_prefix': '다음 작업: {name}',
   'panel.timer_suspended': '예약 작업이 일시 중지됨',

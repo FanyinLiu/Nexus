@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `settings-voice` (114 keys). */
+/** zh-CN messages — namespace `settings-voice`. */
 export const zhCNSettingsVoice = {
   'settings.voice.loop_title': '语音是否就绪',
   'settings.voice.loop_hint': '打开听你说和开口回应，再做一次快速测试。',
@@ -116,4 +114,4 @@ export const zhCNSettingsVoice = {
   'settings.speech_connection.output_invalid_audio': '语音服务返回了成功状态，但音频内容无法验证。请检查接口、音色和模型设置。',
   'settings.speech_connection.output_empty_audio': '语音服务返回了成功状态，但没有收到有效音频。请检查接口、音色和模型设置。',
   'settings.speech_connection.identity_mismatch': '服务有响应，但返回的提供商/模型/音色与请求目标不一致。',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

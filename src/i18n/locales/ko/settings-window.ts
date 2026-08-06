@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `settings-window` (92 keys). */
+/** ko messages — namespace `settings-window`. */
 export const koSettingsWindow = {
   'settings.appearance.label': '테마',
   'settings.appearance.black': '블랙',

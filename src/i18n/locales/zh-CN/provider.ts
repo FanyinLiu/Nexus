@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `provider` (239 keys). */
+/** zh-CN messages — namespace `provider`. */
 export const zhCNProvider = {
   'provider.stt.local-sensevoice.label': '[本地] SenseVoice 高精度识别',
   'provider.stt.local-sensevoice.notes': '阿里 SenseVoice-Small 离线识别，10 秒音频仅需 70ms 处理（比 Whisper 快 15 倍），中文准确率极高。需先下载模型到 sherpa-models 目录。',
@@ -241,4 +239,4 @@ export const zhCNProvider = {
   'provider.tts.voice.volcengine.BV057_ParaTaco.description': '偏童趣、带引导感，适合可爱人设或讲故事。',
   'provider.tts.voice.volcengine.needs_auth_suffix': '(需授权)',
   'provider.tts.voice.volcengine.needs_auth_fallback': '如果控制台还没给这个音色授权，程序会自动回退到 BV001_streaming 或 BV002_streaming。',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

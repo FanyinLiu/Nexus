@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `chat` (159 keys). */
+/** zh-TW messages — namespace `chat`. */
 export const zhTWChat = {
   'message_bubble.role.assistant_default': '星繪',
   'message_bubble.role.system': '系統',

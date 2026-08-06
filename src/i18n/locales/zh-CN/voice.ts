@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `voice` (199 keys). */
+/** zh-CN messages — namespace `voice`. */
 export const zhCNVoice = {
   'voice_pipeline.idle': '待命',
   'voice_pipeline.listening': '正在听',
@@ -201,4 +199,4 @@ export const zhCNVoice = {
   'voice.stt.error.generic': '语音识别没成功，稍后再试试？',
   'voice.vad.unavailable': '当前环境无法启动主进程 VAD。',
   'voice.vad.start_failed': '主进程 VAD 没能启动。',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

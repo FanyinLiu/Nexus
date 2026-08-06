@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `provider` (239 keys). */
+/** zh-TW messages — namespace `provider`. */
 export const zhTWProvider = {
   'provider.stt.local-sensevoice.label': '[本地] SenseVoice 高精度識別',
   'provider.stt.local-sensevoice.notes': '阿里 SenseVoice-Small 離線識別，10 秒音訊僅需 70ms 處理（比 Whisper 快 15 倍），中文準確率極高。需先下載模型到 sherpa-models 目錄。',

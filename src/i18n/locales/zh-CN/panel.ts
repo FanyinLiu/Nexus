@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `panel` (90 keys). */
+/** zh-CN messages — namespace `panel`. */
 export const zhCNPanel = {
   'panel.next_task_prefix': '下个任务：{name}',
   'panel.timer_suspended': '定时任务已挂起',
@@ -92,4 +90,4 @@ export const zhCNPanel = {
   'panel.notification.unmark_important': '取消重要',
   'panel.notification.snooze_10m': '稍后 10 分钟',
   'panel.notification.snooze_30m': '稍后 30 分钟',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

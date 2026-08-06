@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `settings-memory` (189 keys). */
+/** ja messages — namespace `settings-memory`. */
 export const jaSettingsMemory = {
   'settings.memory.custom_option': 'カスタム値を保持',
   'settings.memory.transparency.title': '記憶の透明性',

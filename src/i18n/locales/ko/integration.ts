@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `integration` (50 keys). */
+/** ko messages — namespace `integration`. */
 export const koIntegration = {
   'integration.mcp.title': 'MCP 서비스',
   'integration.mcp.badge': '로컬 도구',

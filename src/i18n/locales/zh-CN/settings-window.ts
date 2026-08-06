@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `settings-window` (92 keys). */
+/** zh-CN messages — namespace `settings-window`. */
 export const zhCNSettingsWindow = {
   'settings.appearance.label': '主题',
   'settings.appearance.black': '黑天',
@@ -94,4 +92,4 @@ export const zhCNSettingsWindow = {
   'settings.home.group.privacy_safety_hint': '记录、清理、边界',
   'settings.home.group.about_diagnostics': '关于与诊断',
   'settings.home.group.about_diagnostics_hint': '检查、引导、排错',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

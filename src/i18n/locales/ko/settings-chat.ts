@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `settings-chat` (179 keys). */
+/** ko messages — namespace `settings-chat`. */
 export const koSettingsChat = {
   'settings.chat.profiles': '프로필',
   'settings.chat.profiles_hint': '동반자 설정을 전환합니다. 편집 저장은 "현재 프로필 업데이트".',

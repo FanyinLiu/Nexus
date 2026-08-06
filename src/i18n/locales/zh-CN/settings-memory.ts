@@ -1,6 +1,4 @@
-import type { TranslationDictionary } from '../../../types/i18n.ts'
-
-/** zh-CN messages — namespace `settings-memory` (189 keys). */
+/** zh-CN messages — namespace `settings-memory`. */
 export const zhCNSettingsMemory = {
   'settings.memory.custom_option': '保留自定义值',
   'settings.memory.transparency.title': '记忆透明度',
@@ -198,4 +196,4 @@ export const zhCNSettingsMemory = {
   'settings.memory.import_confirm': '导入会替换当前长期记忆和每日日志。要继续吗？',
   'settings.memory.nothing_to_clear': '当前没有可清空的记忆内容。',
   'settings.memory.clear_confirm': '确认清空当前长期记忆和每日日志吗？',
-} as const satisfies Partial<TranslationDictionary>
+} as const satisfies Record<string, string>

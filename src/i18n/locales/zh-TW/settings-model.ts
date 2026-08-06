@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `settings-model` (160 keys). */
+/** zh-TW messages — namespace `settings-model`. */
 export const zhTWSettingsModel = {
   'settings.startup_status.title': '基礎檢查',
   'settings.startup_status.note': '只看能不能啟動和對話；詳細日誌在下面摺疊區。',

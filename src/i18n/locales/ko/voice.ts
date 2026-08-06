@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `voice` (199 keys). */
+/** ko messages — namespace `voice`. */
 export const koVoice = {
   'voice_pipeline.idle': '대기',
   'voice_pipeline.listening': '듣는 중',

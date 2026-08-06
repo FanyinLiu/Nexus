@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ja messages — namespace `settings-model` (160 keys). */
+/** ja messages — namespace `settings-model`. */
 export const jaSettingsModel = {
   'settings.startup_status.title': '基本チェック',
   'settings.startup_status.note': 'Nexus を開いて会話できるかだけを確認します。詳細ログは下に折りたたみます。',

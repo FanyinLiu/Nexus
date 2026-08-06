@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** ko messages — namespace `core` (458 keys). */
+/** ko messages — namespace `core`. */
 export const koCore = {
   'common.ok': '확인',
   'common.cancel': '취소',

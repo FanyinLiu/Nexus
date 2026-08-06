@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `settings-chat` (179 keys). */
+/** zh-TW messages — namespace `settings-chat`. */
 export const zhTWSettingsChat = {
   'settings.chat.profiles': '角色檔案',
   'settings.chat.profiles_hint': '切換不同夥伴設定；編輯後用「更新當前檔案」寫回。',

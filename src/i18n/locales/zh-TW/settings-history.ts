@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** zh-TW messages — namespace `settings-history` (119 keys). */
+/** zh-TW messages — namespace `settings-history`. */
 export const zhTWSettingsHistory = {
   'settings.history.message_count': '當前訊息數',
   'settings.history.current_status': '當前狀態',

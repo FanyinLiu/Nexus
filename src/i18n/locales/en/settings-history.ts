@@ -1,6 +1,6 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 
-/** en messages — namespace `settings-history` (119 keys). */
+/** en messages — namespace `settings-history`. */
 export const enSettingsHistory = {
   'settings.history.message_count': 'Message count',
   'settings.history.current_status': 'Current status',
