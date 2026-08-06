@@ -8,7 +8,7 @@ import {
   CURRENT_RELEASE_SPOTLIGHT,
   getReleaseSpotlightTranslationKeys,
 } from '../src/features/releaseNotes/index.ts'
-import { translationKeys } from '../src/i18n/keys.ts'
+import { translationKeys } from '../src/i18n/translationKeys.ts'
 import { AVAILABLE_LOCALES, ensureLocaleLoaded } from '../src/i18n/runtime.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')

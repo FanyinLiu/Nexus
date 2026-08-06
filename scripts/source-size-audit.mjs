@@ -14,7 +14,6 @@ const IGNORED_DIRECTORIES = new Set(['node_modules', 'dist', 'release', 'release
 const FILE_BUDGETS = {
   // Locale messages are split under src/i18n/locales/<locale>/*.ts (≤500 lines each).
   // localDataStore is a thin facade; SQLite core + chat domain live in sibling modules.
-  'src/i18n/keys.ts': 2620,
   'src/app/App.css': 8400,
   'src/app/styles/settings.css': 7300,
   'src/app/styles/settings-themes.css': 11000,

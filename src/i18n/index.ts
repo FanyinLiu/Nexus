@@ -1,4 +1,4 @@
 export * from './runtime.ts'
 export * from './useTranslation.ts'
 export * from './opencc.ts'
-export * from './keys.ts'
+export * from './translationKeys.ts'

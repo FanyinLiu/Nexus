@@ -2,7 +2,6 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const root = process.cwd()
-const keyFile = resolve(root, 'src/i18n/keys.ts')
 
 /** Locale id → directory of per-namespace message modules. */
 const locales = {
@@ -15,11 +14,6 @@ const locales = {
 
 function readText(path) {
   return readFileSync(resolve(root, path), 'utf8')
-}
-
-function extractTranslationKeys() {
-  const text = readFileSync(keyFile, 'utf8')
-  return [...text.matchAll(/^\s*'([^']+)'\s*,/gm)].map((match) => match[1])
 }
 
 function unescapeStringLiteral(value) {
@@ -78,18 +72,16 @@ for (const [locale, dir] of Object.entries(locales)) {
   }
 }
 
-const keys = extractTranslationKeys()
-const keySet = new Set(keys)
-const duplicateKeys = keys.filter((key, index) => keys.indexOf(key) !== index)
 const localeEntries = new Map(
   Object.entries(locales).map(([locale, path]) => [locale, { path, ...extractLocaleEntries(path) }]),
 )
+// zh-CN is the baseline: tsc pins its key set to the TranslationKey union via
+// `satisfies TranslationDictionary` on the assembled dictionary, so no
+// separate key manifest is needed.
 const sourceEntries = localeEntries.get('zh-CN')?.entries ?? new Map()
+const keys = [...sourceEntries.keys()].sort()
+const keySet = new Set(keys)
 const issues = []
-
-if (duplicateKeys.length) {
-  issues.push(`translationKeys duplicates: ${[...new Set(duplicateKeys)].join(', ')}`)
-}
 
 for (const [locale, result] of localeEntries) {
   const localeKeys = [...result.entries.keys()]

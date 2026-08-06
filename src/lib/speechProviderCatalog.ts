@@ -14,8 +14,8 @@
  *   2. If the provider uses a new protocol, add the protocol literal.
  *   3. Register the new translation keys in `src/types/i18n.ts` (or the
  *      matching `src/types/i18nKeys/*` module) and every locale file under
- *      `src/i18n/locales/`, then run `npm run i18n:gen` to regenerate the
- *      generated `src/i18n/keys.ts` (do not edit it manually).
+ *      `src/i18n/locales/` — tsc pins the zh-CN key set to the union, and
+ *      `npm run i18n:audit` keeps the other locales at parity.
  */
 
 import type { TranslationKey } from '../types/i18n.ts'

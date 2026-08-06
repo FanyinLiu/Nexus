@@ -116,13 +116,18 @@ Verified against the tree at v0.4.5 (2026-08). Canonical gate: `npm run verify:p
 
 ## I18N — Translations
 
-- **I18N-1** `src/i18n/keys.ts` is generated. Hand-editing it is prohibited.
-  Workflow: add the key to `src/types/i18nKeys/*` and all 5 locales, then run
-  `npm run i18n:gen`. *Enforced by `i18n:gen:check` in `verify:pr`.*
+- **I18N-1** The key set is owned by the zh-CN reference locale and the
+  `TranslationKey` union (`src/types/i18nKeys/*`). tsc pins them equal in both
+  directions (`as const satisfies Partial<TranslationDictionary>` per namespace
+  module, `satisfies TranslationDictionary` on the assembled dictionary), so
+  generated key manifests are prohibited: adding a key means editing the union
+  and all 5 locale files, nothing else. *Enforced by tsc + `i18n:audit`
+  (cross-locale parity) in `verify:pr`.*
 - **I18N-2** User-visible strings MUST go through `t()` / message keys — in every
   process, including error paths (see ERR-1/ERR-2).
-- **I18N-3** When `keys.ts` reaches its line budget, bump the `FILE_BUDGETS`
-  entry in `scripts/source-size-audit.mjs` in the same change.
+- **I18N-3** The runtime key list is `src/i18n/translationKeys.ts`, derived from
+  `zhCNMessages`. It MUST stay a thin derivation — no hand-maintained key lists
+  anywhere.
 
 ## TEST — Testing
 
