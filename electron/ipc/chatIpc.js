@@ -154,8 +154,11 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         timeoutMs: CHAT_REQUEST_TIMEOUT_MS,
         timeoutMessage: '模型回复太慢了，看看网络和服务有没有问题？',
         maxAttempts: 2,
-        onRetry: ({ attempt, reason }) =>
-          console.warn('[chat:complete] transient failure, retrying', { attempt, reason }),
+        onAttempt: () => companionPresence?.retryResume(),
+        onRetry: ({ attempt, reason }) => {
+          companionPresence?.retryWait(reason)
+          console.warn('[chat:complete] transient failure, retrying', { attempt, reason })
+        },
       })
     } catch (error) {
       const reason = getRedactedErrorMessage(error)
@@ -297,8 +300,11 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         timeoutMs: CHAT_REQUEST_TIMEOUT_MS,
         timeoutMessage: '模型回复太慢了，看看网络和服务有没有问题？',
         maxAttempts: 2,
-        onRetry: ({ attempt, reason }) =>
-          console.warn('[chat:stream] transient failure, retrying', { attempt, reason }),
+        onAttempt: () => companionPresence?.retryResume(),
+        onRetry: ({ attempt, reason }) => {
+          companionPresence?.retryWait(reason)
+          console.warn('[chat:stream] transient failure, retrying', { attempt, reason })
+        },
       })
     } catch (error) {
       const reason = getRedactedErrorMessage(error)

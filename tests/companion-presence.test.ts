@@ -112,6 +112,55 @@ test('presence tracker maps the chat request lifecycle onto phases', () => {
   assert.equal(published.at(-1)?.phase, 'idle')
 })
 
+test('presence tracker covers retry backoff with the waiting phase', () => {
+  const { published, tracker } = createRecordingTracker()
+
+  tracker.begin()
+  tracker.retryWait('network_error')
+  assert.deepEqual(published.at(-1), {
+    phase: 'waiting',
+    mood: 'happy',
+    reason: 'network_error',
+    updatedAt: '2026-08-06T00:00:00.000Z',
+  })
+
+  // The next attempt resumes the request — back to 'thinking'.
+  tracker.retryResume()
+  assert.equal(published.at(-1)?.phase, 'thinking')
+
+  // A retry that ends in a terminal failure publishes the failure phase.
+  tracker.retryWait('http_429')
+  assert.equal(published.at(-1)?.phase, 'waiting')
+  tracker.retryResume()
+  tracker.fail('offline', 'NEXUS_ERR_CHAT_UNREACHABLE')
+  assert.equal(published.at(-1)?.phase, 'offline')
+})
+
+test('presence tracker reports waiting only when every in-flight request is parked', () => {
+  const { published, tracker } = createRecordingTracker()
+
+  tracker.begin()
+  tracker.begin()
+  tracker.retryWait('network_error')
+  // One request is still actively in flight — presence stays 'thinking'.
+  assert.equal(published.at(-1)?.phase, 'thinking')
+  tracker.retryWait('http_500')
+  assert.equal(published.at(-1)?.phase, 'waiting')
+  tracker.retryResume()
+  assert.equal(published.at(-1)?.phase, 'thinking')
+  tracker.retryResume()
+  tracker.succeed()
+  tracker.succeed()
+  assert.equal(published.at(-1)?.phase, 'idle')
+
+  for (const entry of published) {
+    assert.ok(
+      (COMPANION_PRESENCE_PHASES as readonly string[]).includes(String(entry.phase)),
+      `tracker emitted unknown phase ${String(entry.phase)}`,
+    )
+  }
+})
+
 test('presence tracker coalesces overlapping requests and treats abort as neutral', () => {
   const { published, tracker } = createRecordingTracker()
 

@@ -53,6 +53,10 @@ export interface CompanionPresenceState {
   phase: CompanionPresencePhase
   mood: PetMood
   activeTaskLabel?: string
+  // Stable diagnostic code (never prose) for the error/offline/waiting phases,
+  // emitted only by the main-process tracker: NEXUS_ERR_CHAT_* codes and
+  // net.js retry reasons. The renderer's local activity resolver leaves it
+  // unset — `phase` alone already carries that side's state.
   reason?: string
   updatedAt: string
 }

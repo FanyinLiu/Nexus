@@ -207,6 +207,15 @@ export async function readResponseBufferWithLimit(response, options = {}) {
  *  - The final attempt, which surfaces its error/response to the caller as-is.
  *
  * Backoff is exponential with a small jitter so parallel requests don't burst.
+ *
+ * Observers:
+ *  - onAttempt({ attempt }) fires at the top of every attempt, first one
+ *    included. Pairing guarantee: after every onRetry exactly one onAttempt
+ *    fires before any terminal outcome (return/throw) reaches the caller, so
+ *    a "waiting for retry" state can always be cleared against it.
+ *  - onRetry({ attempt, reason, url, error? }) fires only when a retryable
+ *    failure will actually be followed by another attempt, before the
+ *    backoff sleep.
  */
 export async function performNetworkRequestWithRetry(url, options = {}) {
   const {
@@ -214,6 +223,7 @@ export async function performNetworkRequestWithRetry(url, options = {}) {
     baseBackoffMs = 300,
     maxBackoffMs = 2_000,
     onRetry,
+    onAttempt,
     ...requestOptions
   } = options
 
@@ -223,6 +233,7 @@ export async function performNetworkRequestWithRetry(url, options = {}) {
   while (true) {
     attempt += 1
     const isFinalAttempt = attempt >= maxAttempts
+    onAttempt?.({ attempt })
 
     try {
       const response = await performNetworkRequest(url, requestOptions)

@@ -30,7 +30,7 @@ export const RUNTIME_STATE_SNAPSHOT_FIELD_NAMES = Object.freeze([
   ...RUNTIME_STATE_MAIN_ONLY_FIELDS,
 ])
 
-/** The 9 companion presence phases, in src/types/pet.ts declaration order. */
+/** The 9 companion presence phases, declared in surface-branching order. */
 export const COMPANION_PRESENCE_PHASES = Object.freeze([
   'idle',
   'online',

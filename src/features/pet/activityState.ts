@@ -271,7 +271,6 @@ export function resolveCompanionActivityState(input: CompanionActivityInput): Co
     phase: phase as CompanionPresencePhase,
     mood: input.mood,
     activeTaskLabel: input.activeTaskLabel?.trim() || undefined,
-    reason: phase,
     updatedAt: toUpdatedAt(input.now),
   }
 

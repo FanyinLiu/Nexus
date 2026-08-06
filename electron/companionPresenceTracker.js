@@ -5,16 +5,18 @@
  *
  * Phase mapping — only signals the main process can observe today:
  *   request start (chat:complete / chat:complete-stream) -> 'thinking'
+ *   retry backoff (net.js onRetry)                       -> 'waiting'  (transient failure, attempt parked)
+ *   next attempt started (net.js onAttempt)              -> 'thinking'
  *   transport failure or request timeout                 -> 'offline'  (provider unreachable)
  *   HTTP error status / empty or broken answer           -> 'error'    (provider answered, request failed)
  *   user abort (chat:abort-stream)                       -> neutral    (not a failure)
  *   successful completion                                -> 'idle'     (provider proven reachable)
  *
- * 'waiting' is never emitted: the main process has no request queue, and the
- * sub-second retry backoff inside net.js has no "attempt resumed" hook to
- * clear the phase against, so an in-flight retry honestly stays 'thinking'.
- * 'listening'/'speaking' stay renderer-owned (voiceState); 'online' and
- * 'resting' have no main-process signal either.
+ * 'waiting' covers exactly the bounded backoff between retry attempts:
+ * net.js guarantees one onAttempt after every onRetry before any terminal
+ * outcome, so each retryWait pairs with exactly one retryResume and the
+ * phase cannot stick. 'listening'/'speaking' stay renderer-owned
+ * (voiceState); 'online' and 'resting' have no main-process signal.
  *
  * Failure phases are sticky until a later request succeeds — one success
  * proves reachability again. The phase recomputes on every transition and is
@@ -23,11 +25,14 @@
  */
 export function createCompanionPresenceTracker({ publishPresence, getMood, nowIso = () => new Date().toISOString() }) {
   let inFlight = 0
+  let waitingRetry = 0
   let lastFailureKind = null
   let lastPublishedPhase = null
 
   function currentPhase() {
-    if (inFlight > 0) return 'thinking'
+    // A retrying request is still in-flight, so 'waiting' applies only when
+    // every in-flight request is parked in retry backoff.
+    if (inFlight > 0) return waitingRetry >= inFlight ? 'waiting' : 'thinking'
     if (lastFailureKind) return lastFailureKind
     return 'idle'
   }
@@ -48,6 +53,20 @@ export function createCompanionPresenceTracker({ publishPresence, getMood, nowIs
     /** A provider request started; presence becomes 'thinking'. */
     begin() {
       inFlight += 1
+      publishCurrentPhase()
+    },
+    /**
+     * A retryable attempt failed and the request is parked in backoff.
+     * `reason` carries net.js's stable retry code ('network_error',
+     * 'http_<status>'), never prose and never the request URL.
+     */
+    retryWait(reason) {
+      waitingRetry += 1
+      publishCurrentPhase(reason)
+    },
+    /** The next attempt started; the request left retry backoff. */
+    retryResume() {
+      waitingRetry = Math.max(0, waitingRetry - 1)
       publishCurrentPhase()
     },
     /** The request produced a complete answer; clears any sticky failure. */
