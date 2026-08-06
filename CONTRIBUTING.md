@@ -118,6 +118,8 @@ Nexus/
 
 ## Code style
 
+The full conventions live in [`AGENTS.md`](AGENTS.md) — read that first. The short version:
+
 - **TypeScript strict mode** — no `any` without justification
 - **Functional React components** with hooks — class components are out
 - **ESLint** — run `npm run lint` before pushing
