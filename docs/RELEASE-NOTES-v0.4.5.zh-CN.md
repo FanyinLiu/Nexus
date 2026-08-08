@@ -37,7 +37,7 @@ v0.4.5 建立在 v0.4.4 维护与硬化稳定版之上。它带来一组用户�
 
 - Linux deb 验证改为与 electron-builder 产出的 Debian 规范化预发布版本号
   （`0.4.5~beta.1`）比较，而不是原始 semver（`scripts/verify-linux-release.mjs`）。
-- tag 被强制移动到修复提交后遗留的过期 draft release 现在会被删除并重建，
+- tag 被强制移动到修复提交后遗留的过期预发布条目现在会被删除并重建，
   发布 tag 绑定检查得以通过。
 
 ### 工具链与代码风格

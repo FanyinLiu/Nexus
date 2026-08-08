@@ -47,7 +47,7 @@ accumulated on `main` since v0.4.4.
 - Linux deb verification now compares the Debian-normalized pre-release
   version (`0.4.5~beta.1`) that electron-builder produces, instead of the raw
   semver (`scripts/verify-linux-release.mjs`).
-- A stale draft release left behind when a tag was force-moved to a fix
+- A stale pre-release entry left behind when a tag was force-moved to a fix
   commit now gets deleted and recreated, so the publish tag-binding check
   passes.
 
