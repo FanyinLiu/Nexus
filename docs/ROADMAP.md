@@ -27,23 +27,18 @@ The larger product steps are:
   hardening, check-in policy, companion-surface cohesion and transparency,
   maintenance and hardening, and release
   hardening. `v0.4.0` is the stable quiet-observation foundation; the current
-  public stable release is v0.4.4, a maintenance and hardening release
-  covering the toolchain refresh, security fixes, and code-structure cleanup
-  completed for this slice. The beta feedback and copy tuning scope once
-  planned for v0.4.4 was evaluated and dropped: no beta program is planned,
-  and its copy guardrails already shipped in other form with v0.4.3. `v0.4.5` remains a draft
-  [Companion Surface Cohesion & Transparency](V0.4.3_OPTIMIZATION_AND_COMPETITOR_PLAN_2026-07-12.md)
-  follow-up layer and `v0.4.5` is a non-shipping release-hardening review
-  layer, not a second active product slice; it now also collects the
-  post-v0.4.4 maintenance already on main (the eslint-plugin-react-hooks 7.1.1
-  upgrade and the high-risk IPC schema strip-to-reject rollout), still with no
-  user-facing behavior change. As of 2026-08-02 the layer entered the standard
-  beta flow (`v0.4.5-beta.1`, RELEASING.md Stage 1): the beta slice is
-  published as a GitHub pre-release for manual validation, while the stable
-  `v0.4.5` bump, tag, and README stable-entry switch stay locked. Future work
-  must not move the
+  public stable release is v0.4.5, which shipped as the current stable release
+  on 2026-08-06 through the standard beta flow (`v0.4.5-beta.1`, published
+  2026-08-03, then the beta validation window) as a memory integrity and
+  maintenance release. `v0.4.4` was the previous maintenance and hardening
+  release (toolchain refresh, security fixes, code-structure cleanup). The
+  beta feedback and copy tuning scope once planned for v0.4.4 was evaluated
+  and dropped: no beta program is planned, and its copy guardrails already
+  shipped in other form with v0.4.3. The former `v0.4.5` draft review layer
+  (the [Companion Surface Cohesion & Transparency](V0.4.3_OPTIMIZATION_AND_COMPETITOR_PLAN_2026-07-12.md)
+  follow-up) is closed. Future work must not move the
   package version, tag, GitHub Release, or README stable entry beyond
-  `v0.4.4` until a later release is explicitly prepared.
+  `v0.4.5` until a later release is explicitly prepared.
 - **v0.5.0 — desktop pet behavior.** The visible companion can react to mouse
   movement, typing rhythm, idleness, and desktop state without blocking the
   user's work.

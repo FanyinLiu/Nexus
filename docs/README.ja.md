@@ -24,21 +24,21 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **現在の安定版：** v0.4.4。安定入口は [RELEASE-NOTES-v0.4.4.md](RELEASE-NOTES-v0.4.4.md) です。Nexus はデスクトップ・コンパニオン認識の粗い時間表現とプライバシー優先を保ちながら、今回はメンテナンスと強化のみで、ユーザーから見える動作変更はありません。正式なインストーラーは保護された tag ワークフローから GitHub Releases にのみ公開されます。
+> **現在の安定版：** v0.4.5。安定入口は [RELEASE-NOTES-v0.4.5.md](RELEASE-NOTES-v0.4.5.md) です。Nexus はデスクトップ・コンパニオン認識の粗い時間表現とプライバシー優先を保ちながら、今回は記憶の信頼性スライスとメンテナンス強化を届け、記憶の矛盾検出は完全にローカルで動作します。正式なインストーラーは保護された tag ワークフローから GitHub Releases にのみ公開されます。
 
 > **開発スコープの注記：** この多言語 README は長期的な機能一覧を残しています。短期開発はルートの [README](../README.md) と [Nexus アップグレード統合計画](NEXUS_UPGRADE_INTEGRATION_PLAN.md) を基準にしてください。Phase 1 は常駐する小さなデスクトップウィンドウ、ミニマルなアバター、Ollama / DeepSeek のテキストモデル、シンプルな会話だけに絞ります。
 
 ---
 
-## プレビュー版 — v0.4.5-beta.1
+## 今回のアップデート — v0.4.5
 
-> **メンテナンスと強化の Beta（ユーザーから見える変更なし）。** 正式な v0.4.5 安定版の前に、大規模な内部整理を検証するために公開します：信頼性修正（errand 再キュー、削除後の復活防止、減衰アンカー、音声/チャット境界）、セキュリティ強化（SSRF、vault 整合性、IPC schema の未知フィールド拒否）、大規模なデッドコード削除（旧設定パネル約 1.2 万行、TTS パイプライン、import 拡張子統一）。安定版ユーザーは自動アップグレードされません。体験したい場合は手動ダウンロードしてフィードバックしてください。詳細は [RELEASE-NOTES-v0.4.5-beta.1.md](RELEASE-NOTES-v0.4.5-beta.1.md)（英語）。
+> **テーマ：記憶の信頼性とメンテナンス。** より正確に記憶し、自己矛盾が減ります：夜間の dream サイクルで新旧メモリの矛盾を自動検出し、2 段階で降格（メモリは削除なし、確認 UI なし）。メモリ領域の SQLite 移行がデフォルト有効化（ロールバックと同意の経路は不変）。ペットの状態（思考/待機/オフライン/エラー）がメインプロセスの実際のチャット要求ライフサイクルで駆動されるように。信頼性・セキュリティ修正と大規模な内部契約の単一ソース化クリーンアップも同梱。詳細は [RELEASE-NOTES-v0.4.5.md](RELEASE-NOTES-v0.4.5.md)（英語）。
 
-## 今回のアップデート — v0.4.4
+## 前回のアップデート — v0.4.4
 
 > **メンテナンスと強化（ツールチェーン更新、セキュリティ修正、コード構造の整理）。** 新機能や動作変更はなく、基盤依存関係のアップグレード（brace-expansion の CVE-2026-14257 修正を含む）、Live2D 起動修正、内部コード構造の整理だけを行います。詳細は [RELEASE-NOTES-v0.4.4.md](RELEASE-NOTES-v0.4.4.md)（英語）。
 
-## 前回のアップデート — v0.4.3
+## 以前のアップデート — v0.4.3
 
 > **Check-In ポリシーとリリースゲートの同期。** v0.4.3 では、穏やかな check-in をまずローカルで抑制可能な in-app 判断として扱い、メッセージ送信、ツール実行、外部通知作成は行いません。詳細は [RELEASE-NOTES-v0.4.3.md](RELEASE-NOTES-v0.4.3.md)（英語）。
 
@@ -58,7 +58,7 @@ Nexus はまず静かでいることを優先し、短期で粗い、一時停�
 
 ## 旧バージョンの記録
 
-README には現在の安定版 v0.4.4 と一つ前の公開版 v0.4.3 の要点だけを載せます。より古い履歴は [CHANGELOG](../CHANGELOG.md) と [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) に集約し、README 上部で古いバージョン番号を更新し続けません。
+README には現在の安定版 v0.4.5 と一つ前の公開版 v0.4.4 の要点だけを載せます。より古い履歴は [CHANGELOG](../CHANGELOG.md) と [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) に集約し、README 上部で古いバージョン番号を更新し続けません。
 
 ---
 
@@ -73,7 +73,7 @@ README には現在の安定版 v0.4.4 と一つ前の公開版 v0.4.3 の要点
 | 安全性とプライバシーを確認 | [セーフティとサポート](#セーフティとサポート) |
 | コミュニティに参加 | [コミュニティ](#コミュニティ) · [Community Guide](COMMUNITY.md) |
 | 0.4 の方向を理解 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 0.4 現在の安定版を見る | [v0.4.4 Release Notes](RELEASE-NOTES-v0.4.4.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 0.4 現在の安定版を見る | [v0.4.5 Release Notes](RELEASE-NOTES-v0.4.5.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## なぜ Nexus なのか？
 
@@ -285,7 +285,7 @@ npm run package:win     # または package:mac / package:linux
 
 Nexus は個人メンテナンスのプロジェクトです。issue や PR の対応速度はトリアージの精度に左右されます：
 
-コミュニティ文書は特定の 1 リリースだけのものではなく、全バージョンをまたぐ入口です。0.3 は安全性、メモリ、設定の土台を締め、0.4 はデスクトップ・コンパニオン認識へ進み、0.5 はデスクトップペットの振る舞いへ進みます。長期入口は [Community Guide](COMMUNITY.md)、0.4 の方向は [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)、0.4 現在の安定版の説明は [v0.4.4 Release Notes](RELEASE-NOTES-v0.4.4.md)、リリース hardening は [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) です。
+コミュニティ文書は特定の 1 リリースだけのものではなく、全バージョンをまたぐ入口です。0.3 は安全性、メモリ、設定の土台を締め、0.4 はデスクトップ・コンパニオン認識へ進み、0.5 はデスクトップペットの振る舞いへ進みます。長期入口は [Community Guide](COMMUNITY.md)、0.4 の方向は [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)、0.4 現在の安定版の説明は [v0.4.5 Release Notes](RELEASE-NOTES-v0.4.5.md)、リリース hardening は [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) です。
 
 - 🐛 **バグを見つけた？** → [バグ報告](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **明確な機能アイデア？** → [機能リクエスト](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

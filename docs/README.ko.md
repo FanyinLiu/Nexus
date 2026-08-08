@@ -24,21 +24,21 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **현재 안정 버전:** v0.4.4. 안정 진입점은 [RELEASE-NOTES-v0.4.4.md](RELEASE-NOTES-v0.4.4.md)입니다. Nexus는 데스크톱 동반자 인식의 대략적인 시간 표현과 개인정보 우선 경계를 유지하며, 이번 버전은 유지 관리와 강화만 담아 사용자에게 보이는 동작 변경이 없습니다. 정식 설치 파일은 보호된 tag 워크플로를 통해서만 GitHub Releases에 게시됩니다.
+> **현재 안정 버전:** v0.4.5. 안정 진입점은 [RELEASE-NOTES-v0.4.5.md](RELEASE-NOTES-v0.4.5.md)입니다. Nexus는 데스크톱 동반자 인식의 대략적인 시간 표현과 개인정보 우선 경계를 유지하며, 이번 버전은 메모리 무결성 슬라이스와 유지 관리 강화를 담고 메모리 모순 감지는 완전히 로컬에서 동작합니다. 정식 설치 파일은 보호된 tag 워크플로를 통해서만 GitHub Releases에 게시됩니다.
 
 > **개발 범위 안내:** 이 다국어 README는 장기 기능 목록을 보존합니다. 단기 개발 기준은 루트 [README](../README.md)와 [Nexus 업그레이드 통합 계획](NEXUS_UPGRADE_INTEGRATION_PLAN.md)입니다. Phase 1은 상주하는 작은 데스크톱 창, 미니멀 아바타, Ollama / DeepSeek 텍스트 모델, 간단한 대화에만 집중합니다.
 
 ---
 
-## 미리보기 — v0.4.5-beta.1
+## 이번 업데이트 — v0.4.5
 
-> **유지 관리와 강화 Beta(사용자에게 보이는 변경 없음).** 공식 v0.4.5 안정 버전 전에 대규모 내부 정리를 검증하기 위해 배포합니다: 신뢰성 수정(errand 재큐, 삭제 후 부활 방지, 감쇠 앵커, 음성/채팅 경계), 보안 강화(SSRF, vault 무결성, IPC schema 알 수 없는 필드 거부), 대규모 데드 코드 제거(구 설정 패널 약 1.2만 줄, TTS 파이프라인, import 확장자 통일). 안정 버전 사용자는 자동 업그레이드되지 않습니다. 체험하려면 수동 다운로드 후 피드백해 주세요. 자세한 내용은 [RELEASE-NOTES-v0.4.5-beta.1.md](RELEASE-NOTES-v0.4.5-beta.1.md)(영어).
+> **테마: 메모리 무결성과 유지 관리.** 더 정확하게 기억하고 자기모순이 줄어듭니다: 야간 dream 사이클에서 신규/기존 메모리의 모순을 자동 감지해 두 단계로 강등(메모리 삭제 없음, 확인 UI 없음). 메모리 도메인의 SQLite 마이그레이션이 기본 활성화(롤백 및 동의 경로는 그대로). 펫 상태(생각/대기/오프라인/오류)가 메인 프로세스의 실제 채팅 요청 라이프사이클로 구동. 신뢰성·보안 수정과 대규모 내부 계약 단일 소스화 정리도 포함. 자세한 내용은 [RELEASE-NOTES-v0.4.5.md](RELEASE-NOTES-v0.4.5.md)(영어).
 
-## 이번 업데이트 — v0.4.4
+## 이전 업데이트 — v0.4.4
 
 > **유지 관리와 강화(툴체인 업그레이드, 보안 수정, 코드 구조 정리).** 새 기능이나 동작 변경 없이 기반 의존성 업그레이드(brace-expansion CVE-2026-14257 수정 포함), Live2D 시작 오류 수정, 내부 코드 구조 정리만 포함합니다. 자세한 내용은 [RELEASE-NOTES-v0.4.4.md](RELEASE-NOTES-v0.4.4.md)(영어).
 
-## 이전 업데이트 — v0.4.3
+## 더 이전 업데이트 — v0.4.3
 
 > **Check-In 정책과 릴리스 게이트 정렬.** v0.4.3은 부드러운 check-in을 먼저 로컬에서 억제 가능한 in-app 결정으로 다루며, 메시지를 보내거나 도구를 실행하거나 외부 알림을 만들지 않습니다. 자세한 내용은 [RELEASE-NOTES-v0.4.3.md](RELEASE-NOTES-v0.4.3.md)(영어).
 
@@ -58,7 +58,7 @@ Nexus는 먼저 조용히 있는 것을 우선하며, 짧고 대략적이고 일
 
 ## 이전 버전 기록
 
-README에는 현재 안정 버전 v0.4.4와 이전 공개 버전 v0.4.3의 핵심만 남깁니다. 더 오래된 기록은 [CHANGELOG](../CHANGELOG.md)와 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)에 모으고, README 상단에서 오래된 버전 번호를 계속 관리하지 않습니다.
+README에는 현재 안정 버전 v0.4.5와 이전 공개 버전 v0.4.4의 핵심만 남깁니다. 더 오래된 기록은 [CHANGELOG](../CHANGELOG.md)와 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)에 모으고, README 상단에서 오래된 버전 번호를 계속 관리하지 않습니다.
 
 ---
 
@@ -73,7 +73,7 @@ README에는 현재 안정 버전 v0.4.4와 이전 공개 버전 v0.4.3의 핵�
 | 안전/개인정보 확인 | [안전 및 지원](#안전-및-지원) |
 | 커뮤니티 참여 | [커뮤니티](#커뮤니티) · [Community Guide](COMMUNITY.md) |
 | 0.4 방향 이해 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 0.4 현재 안정 버전 보기 | [v0.4.4 Release Notes](RELEASE-NOTES-v0.4.4.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 0.4 현재 안정 버전 보기 | [v0.4.5 Release Notes](RELEASE-NOTES-v0.4.5.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## 왜 Nexus인가?
 
@@ -286,7 +286,7 @@ npm run package:win     # 또는 package:mac / package:linux
 
 Nexus는 개인 유지 프로젝트로, issue와 PR 처리 속도는 정확한 분류에 달려 있습니다:
 
-커뮤니티 문서는 특정 릴리스 하나에만 속하지 않고 모든 버전을 관통하는 입구입니다. 0.3은 안전, 기억, 설정 기반을 마무리하고, 0.4는 데스크톱 동반자 인식으로 들어가며, 0.5는 데스크톱 펫 행동으로 이어집니다. 장기 입구는 [Community Guide](COMMUNITY.md), 0.4 방향은 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md), 0.4 현재 안정 버전 설명은 [v0.4.4 Release Notes](RELEASE-NOTES-v0.4.4.md), 릴리스 hardening은 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)입니다.
+커뮤니티 문서는 특정 릴리스 하나에만 속하지 않고 모든 버전을 관통하는 입구입니다. 0.3은 안전, 기억, 설정 기반을 마무리하고, 0.4는 데스크톱 동반자 인식으로 들어가며, 0.5는 데스크톱 펫 행동으로 이어집니다. 장기 입구는 [Community Guide](COMMUNITY.md), 0.4 방향은 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md), 0.4 현재 안정 버전 설명은 [v0.4.5 Release Notes](RELEASE-NOTES-v0.4.5.md), 릴리스 hardening은 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)입니다.
 
 - 🐛 **버그를 발견했나요?** → [버그 신고](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **명확한 기능 아이디어?** → [기능 요청](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

@@ -50,6 +50,20 @@ Two release-path defects were found and fixed during this beta:
   failed the publish tag-binding check; the fix is to delete the stale draft
   (tag stays) and rerun the workflow so `ensure-release` rebinds the draft.
 
+### v0.4.5 stable record — 2026-08-06
+
+The beta validation window (2026-08-03 → 2026-08-06) closed with no
+outstanding defects: the two release-path fixes above shipped during the
+window, and the memory integrity slice (contradiction detection, default-on
+local-data migration) plus the presence pipeline landed on `main` inside the
+window as planned scope. `v0.4.5` was promoted to the current stable release
+through the standard beta flow — stable bump, README stable-entry switch,
+`prerelease-check -- v0.4.5`, then the protected stable tag — with no
+maintainer exception (unlike the v0.4.4 waiver). The former v0.4.5
+draft-hardening review layer is closed; its evidence stays in
+`RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md` as a historical record, and the
+stable handoff lives in `RELEASE-CANDIDATE-v0.4.5-HANDOFF.md`.
+
 This doc is the source of truth for every release. The short version:
 
 ```

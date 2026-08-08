@@ -6,14 +6,14 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-const CURRENT_STABLE_RELEASE = '0.4.4'
-const PREVIOUS_PUBLIC_RELEASE = '0.4.3'
-const DRAFT_RELEASES = ['0.4.5']
-const LOCALIZED_DRAFT_RELEASES = ['0.4.5']
-// While a draft-layer beta is in flight (v0.4.5-beta.N), the package version
-// legitimately leaves the stable release number; the draft invariants below
-// still hold because the stable entry point and draft status never change.
-const DRAFT_BETA_VERSION_PATTERN = /^0\.4\.5-beta\.\d+$/
+const CURRENT_STABLE_RELEASE = '0.4.5'
+const PREVIOUS_PUBLIC_RELEASE = '0.4.4'
+const DRAFT_RELEASES = []
+const LOCALIZED_DRAFT_RELEASES = []
+// v0.4.5 shipped as the current stable release, so no draft layer is in
+// flight; the next beta line (v0.4.6-beta.N) may legitimately leave the
+// stable release number while the stable entry point stays on v0.4.5.
+const DRAFT_BETA_VERSION_PATTERN = /^0\.4\.6-beta\.\d+$/
 
 function escapedVersion(version) {
   return version.replaceAll('.', '\\.')
@@ -194,8 +194,8 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
       `${versionTag(CURRENT_STABLE_RELEASE)} is the current stable version`,
       'formal release record',
       'protected tag workflow',
-      'maintainer explicitly waived',
-      'No multi-day or cross-platform physical-device evidence is claimed',
+      'standard beta flow',
+      'No cross-platform physical-device evidence is claimed',
     ]) {
       requirePhrase(stableNotesFile, stableNotes, phrase)
     }
@@ -215,8 +215,8 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
       `${versionTag(CURRENT_STABLE_RELEASE)} 是当前稳定版本`,
       '正式发行记录',
       '受保护的 tag 工作流',
-      '明确豁免',
-      '不会虚构多日使用或跨平台实体设备验证证据',
+      '标准 beta 流程',
+      '不会虚构跨平台实体设备验证证据',
     ]) {
       requirePhrase(stableLocalizedFile, stableLocalizedNotes, phrase)
     }
@@ -287,14 +287,10 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
       )
     }
 
-    requirePhrase('docs/RELEASE-NOTES-v0.4.5.md', requireFile('docs/RELEASE-NOTES-v0.4.5.md'), 'Recorded local draft-hardening evidence')
-    requirePhrase('docs/RELEASE-NOTES-v0.4.5.zh-CN.md', requireFile('docs/RELEASE-NOTES-v0.4.5.zh-CN.md'), '本地硬化证据')
-
     const v04Plan = requireFile('docs/V0.4_DESKTOP_COMPANION_AWARENESS.md')
     for (const phrase of [
       `current public stable release ${versionTag(CURRENT_STABLE_RELEASE)}`,
-      '`v0.4.5` Release Hardening Draft is a non-shipping review layer only',
-      'Do not publish `v0.4.5`',
+      'shipped as the current stable release',
       'RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md',
       'no new product behavior',
       'multilingual numeric-unit, written-number, and half-unit leaks',
@@ -318,7 +314,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
       optimizationPlan,
       'current public stable release is `' + versionTag(CURRENT_STABLE_RELEASE) + '`',
     )
-    requirePhrase(optimizationPlanFile, optimizationPlan, '`v0.4.5` remains a draft')
+    requirePhrase(optimizationPlanFile, optimizationPlan, '`v0.4.5` shipped as stable')
     rejectPattern(
       optimizationPlanFile,
       optimizationPlan,
@@ -329,8 +325,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
     const roadmap = requireFile('docs/ROADMAP.md')
     for (const phrase of [
       `current public stable release is ${versionTag(CURRENT_STABLE_RELEASE)}`,
-      '`v0.4.5` remains a draft',
-      '`v0.4.5` is a non-shipping release-hardening review layer',
+      'shipped as the current stable release',
       'package version, tag, GitHub Release, or README stable entry beyond',
     ]) {
       requirePhrase('docs/ROADMAP.md', roadmap, phrase)
@@ -344,9 +339,8 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
 
     const changelog = requireFile('CHANGELOG.md')
     for (const phrase of [
-      `## [${CURRENT_STABLE_RELEASE}] - 2026-07-31`,
-      `${versionTag(CURRENT_STABLE_RELEASE)} maintenance and hardening release`,
-      'v0.4.5 draft hardening evidence',
+      `## [${CURRENT_STABLE_RELEASE}] - 2026-08-06`,
+      `${versionTag(CURRENT_STABLE_RELEASE)} memory integrity and maintenance release`,
       'full v0.4 draft-stack audit',
       'The release commit is published only through the protected stable-tag workflow',
       'current stable release',
@@ -371,34 +365,12 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
     const draftHardeningFile = 'docs/RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md'
     const draftHardening = requireFile(draftHardeningFile)
     for (const phrase of [
-      'Status: Draft hardening handoff; not a release.',
-      `current public stable release ${versionTag(CURRENT_STABLE_RELEASE)}`,
-      `\`${versionTag(CURRENT_STABLE_RELEASE)}\` remains the current public stable release entry point`,
-      '`v0.4.5` remains the only stacked draft review layer',
-      'No package version bump',
-      'No tag',
-      'No GitHub Release',
-      'No README stable-entry switch',
-      'v0.4.4 -> v0.4.3',
-      'v0.4.5 -> v0.4.4',
-      'npm run v04:draft-stack:audit',
-      'npm run verify:release',
+      'Status: Closed',
+      'v0.4.5 shipped as the current stable release',
       '## Evidence Collected',
     ]) {
       requirePhrase(draftHardeningFile, draftHardening, phrase)
     }
-    rejectPattern(
-      draftHardeningFile,
-      draftHardening,
-      /latest public release v0\.4\.3|local code candidate v0\.4\.4|v0\.4\.4 is a release candidate/i,
-      'v0.4.5 hardening handoff must not retain the superseded candidate boundary',
-    )
-    rejectPattern(
-      draftHardeningFile,
-      draftHardening,
-      /v0\.4\.5\s+stable|stable\s+v0\.4\.5|v0\.4\.5\s+is\s+now\s+stable/i,
-      'draft hardening doc must not claim v0.4.5 stable',
-    )
 
     const stableHandoffFile = `docs/RELEASE-CANDIDATE-v${CURRENT_STABLE_RELEASE}-HANDOFF.md`
     const stableHandoff = requireFile(stableHandoffFile)
@@ -406,10 +378,10 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
       `# Nexus ${versionTag(CURRENT_STABLE_RELEASE)} Stable Release Handoff`,
       'Status: Stable unsigned release handoff.',
       `${versionTag(CURRENT_STABLE_RELEASE)} is the current stable version`,
-      'maintainer explicitly waived',
-      'No multi-day conversation evidence',
+      'standard beta flow',
+      'beta validation window',
       'protected tag workflow',
-      'v0.4.5 draft',
+      'v0.4.5 beta',
     ]) {
       requirePhrase(stableHandoffFile, stableHandoff, phrase)
     }

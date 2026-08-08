@@ -1,6 +1,11 @@
 # Nexus v0.4.5 Draft Release Hardening Handoff
 
-Status: Draft hardening handoff; not a release.
+Status: Closed — v0.4.5 shipped as the current stable release on 2026-08-06
+through the standard beta flow. This document is kept as a historical record
+of the draft-hardening review layer; the sections below describe the frozen
+draft state exactly as it was before the stable promotion.
+
+Historical status at freeze time: Draft hardening handoff; not a release.
 
 This document freezes the current v0.4 draft stack so it can be reviewed before
 Klein decides whether to prepare another release. It does not publish v0.4.5,

@@ -254,8 +254,8 @@ test('human-facing v0.3.6 docs keep foundation wrap-up aligned', () => {
     readWorkspaceFile('docs/RELEASE-NOTES-v0.3.6.zh-CN.md'),
   )
 
-  assert.match(rootReadme, /当前稳定版：\*{0,2}\s*v0\.4\.4/)
-  assert.match(rootReadme, /上一公开版本 — v0\.4\.3/)
+  assert.match(rootReadme, /当前稳定版：\*{0,2}\s*v0\.4\.5/)
+  assert.match(rootReadme, /上一公开版本 — v0\.4\.4/)
   assert.doesNotMatch(rootReadme, /## 上次更新 — v0\.3\.6/)
 
   assert.match(englishReleaseNotes, /The foundation is ready for the next companion step\./)

@@ -24,21 +24,21 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **目前穩定版：** v0.4.4，穩定入口見 [RELEASE-NOTES-v0.4.4.md](RELEASE-NOTES-v0.4.4.md)。Nexus 持續維持桌面陪伴感知的粗粒度與隱私優先邊界，本版為維護與加固切片，沒有使用者可見的行為變化。正式安裝包只由受保護的 tag 工作流程發布到 GitHub Releases。
+> **目前穩定版：** v0.4.5，穩定入口見 [RELEASE-NOTES-v0.4.5.md](RELEASE-NOTES-v0.4.5.md)。Nexus 持續維持桌面陪伴感知的粗粒度與隱私優先邊界，本版帶來記憶可信度切片與維護加固，記憶矛盾檢測完全在本機運行。正式安裝包只由受保護的 tag 工作流程發布到 GitHub Releases。
 
 > **開發範圍提示：** 這份多語 README 保留的是長期能力清單。當前短期開發以根目錄 [README](../README.md) 和 [Nexus 升級整合計畫](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 為準：Phase 1 只收斂桌面常駐小視窗、極簡頭像、Ollama / DeepSeek 文字模型和簡單對話。
 
 ---
 
-## 預覽版 — v0.4.5-beta.1
+## 本次更新 — v0.4.5
 
-> **主題：維護與加固 Beta（無使用者可見變化）。** 在正式 v0.4.5 穩定版之前發布，用於驗證大批內部清理：可靠性修復（errand 恢復、刪除不復活、衰減錨點、語音/聊天邊界）、安全加固（SSRF、vault 完整性、IPC schema 拒絕未知欄位）以及大規模死程式碼刪除（舊設定面板約 1.2 萬行、TTS 管線、import 後綴統一）。穩定版使用者不會被自動升級；如需體驗請手動下載並回饋。說明見 [RELEASE-NOTES-v0.4.5-beta.1.md](RELEASE-NOTES-v0.4.5-beta.1.md)（英文）。
+> **主題：記憶可信度與維護。** 她記得更準、更少自相矛盾：夜間 dream 週期自動檢測新舊記憶矛盾並兩檔降權（不刪除任何記憶、無確認 UI）；記憶域 SQLite 遷移預設開啟（回滾與授權路徑不變）；桌寵狀態（思考/等待/離線/錯誤）改由主程序真實聊天請求生命週期驅動。另含可靠性、安全修復與大規模內部契約單源化清理。完整說明見 [RELEASE-NOTES-v0.4.5.md](RELEASE-NOTES-v0.4.5.md)（英文）。
 
-## 本次更新 — v0.4.4
+## 上次更新 — v0.4.4
 
 > **維護與加固（工具鏈升級、安全修復、程式碼結構整理）。** 沒有新功能、沒有行為變化，只做底層依賴升級（含 brace-expansion CVE-2026-14257 修復）、Live2D 啟動修復與內部程式碼結構整理。完整說明見 [RELEASE-NOTES-v0.4.4.md](RELEASE-NOTES-v0.4.4.md)（英文）。
 
-## 上次更新 — v0.4.3
+## 更早更新 — v0.4.3
 
 > **Check-In 策略與發布門檻對齊。** v0.4.3 讓溫和 check-in 先形成可被壓制的本地 in-app 決策，不直接發訊息、不執行工具，也不建立外部通知。完整說明見 [RELEASE-NOTES-v0.4.3.md](RELEASE-NOTES-v0.4.3.md)（英文）。
 
@@ -58,7 +58,7 @@ Nexus 會優先保持安靜，只形成短期、粗粒度、可暫停和可清�
 
 ## 舊版本記錄
 
-README 只保留目前穩定版 v0.4.4 和上一公開版本 v0.4.3 的重點；更早歷史版本統一放在 [CHANGELOG](../CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 頂部繼續滾動維護舊版本號。
+README 只保留目前穩定版 v0.4.5 和上一公開版本 v0.4.4 的重點；更早歷史版本統一放在 [CHANGELOG](../CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 頂部繼續滾動維護舊版本號。
 
 ---
 
@@ -73,7 +73,7 @@ README 只保留目前穩定版 v0.4.4 和上一公開版本 v0.4.3 的重點；
 | 查看安全與隱私 | [安全與援助](#安全與援助) |
 | 參與社群內容 | [社群](#社群) · [Community Guide](COMMUNITY.md) |
 | 理解 0.4 方向 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 查看 0.4 目前穩定版 | [v0.4.4 Release Notes](RELEASE-NOTES-v0.4.4.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 查看 0.4 目前穩定版 | [v0.4.5 Release Notes](RELEASE-NOTES-v0.4.5.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## 為什麼是 Nexus？
 
@@ -286,7 +286,7 @@ npm run package:win     # 或 package:mac / package:linux
 
 Nexus 目前由個人維護，issue 和 PR 的處理速度取決於分流是否精準：
 
-社群文件會貫穿所有版本，不只屬於某一次發布。0.3 收安全、記憶和設定地基；0.4 進入桌面陪伴感知；0.5 進入桌寵桌面行為。長期入口見 [Community Guide](COMMUNITY.md)，0.4 方向見 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 目前穩定版說明見 [v0.4.4 Release Notes](RELEASE-NOTES-v0.4.4.md)，發布加固清單見 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
+社群文件會貫穿所有版本，不只屬於某一次發布。0.3 收安全、記憶和設定地基；0.4 進入桌面陪伴感知；0.5 進入桌寵桌面行為。長期入口見 [Community Guide](COMMUNITY.md)，0.4 方向見 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 目前穩定版說明見 [v0.4.5 Release Notes](RELEASE-NOTES-v0.4.5.md)，發布加固清單見 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
 
 - 🐛 **發現 Bug？** → [Bug 回報](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **有明確的功能想法？** → [功能請求](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

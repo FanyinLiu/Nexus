@@ -8,7 +8,7 @@ Nexus 是一个 **本地优先的 AI 桌面伙伴**。
 
 一句话：**Nexus 是一个住在电脑里的 AI 伙伴。**
 
-> **当前稳定版：** v0.4.4，与 `package.json` 保持一致；发行说明见 [RELEASE-NOTES-v0.4.4.md](docs/RELEASE-NOTES-v0.4.4.md)。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases；更早历史统一放在 Releases。
+> **当前稳定版：** v0.4.5，与 `package.json` 保持一致；发行说明见 [RELEASE-NOTES-v0.4.5.md](docs/RELEASE-NOTES-v0.4.5.md)。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases；更早历史统一放在 Releases。
 
 ## 这个项目是什么
 
@@ -118,11 +118,18 @@ Phase 1 已经开始落地，当前默认体验正在收敛到最小闭环：
 - 基础检查可以下载本地首次运行 QA 报告，包含检查项、首次对话耗时和隐私标记；不会导出聊天内容、模型输出、API Key 或 provider secret。
 - 本地开发时，Nexus 网页预览地址是 `http://127.0.0.1:47821/`；`11434/v1` 是 Ollama API，不是网页预览。
 
-## 预览版 — v0.4.5-beta.1
+## 本次更新 — v0.4.5
 
-> **主题：维护与加固 Beta（无用户可见变化）。** 在正式 v0.4.5 稳定版之前发布，用于验证大批内部清理：可靠性修复（errand 恢复、删除不复活、衰减锚点、语音/聊天边界）、安全加固（SSRF、vault 完整性、IPC schema 拒绝未知字段）以及大规模死代码删除（旧设置面板约 1.2 万行、TTS 管线、import 后缀统一）。稳定版用户不会被自动升级；如需体验请手动下载并反馈。说明见 [RELEASE-NOTES-v0.4.5-beta.1.md](docs/RELEASE-NOTES-v0.4.5-beta.1.md)（英文）与 [RELEASE-NOTES-v0.4.5-beta.1.zh-CN.md](docs/RELEASE-NOTES-v0.4.5-beta.1.zh-CN.md)。
+> **主题：记忆可信度与维护。** 中文说明见 [RELEASE-NOTES-v0.4.5.zh-CN.md](docs/RELEASE-NOTES-v0.4.5.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.5.md](docs/RELEASE-NOTES-v0.4.5.md)。本版走标准 beta 流程晋升（v0.4.5-beta.1 预发布后经验证窗口关闭），发布记录见 [RELEASING.md](docs/RELEASING.md)。
 
-## 本次更新 — v0.4.4
+一句话记住 0.4.5：
+
+- **她记得更准、更少自相矛盾：夜间 dream 周期自动检测新旧记忆矛盾并两档降权，不删除任何记忆。**
+- **记忆域 SQLite 迁移默认开启，回滚与授权路径不变。**
+- **桌宠状态（思考/等待/离线/错误）改由主进程真实聊天请求生命周期驱动，不再靠界面侧猜测。**
+- **另含可靠性、安全修复与大规模内部契约单源化清理；签名/公证仍未做：macOS 首次启动可能需右键打开，Windows 可能出现 SmartScreen 提示。**
+
+## 上一公开版本 — v0.4.4
 
 > **主题：维护与加固（工具链升级、安全修复、代码结构整理）。** 中文说明见 [RELEASE-NOTES-v0.4.4.zh-CN.md](docs/RELEASE-NOTES-v0.4.4.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.4.md](docs/RELEASE-NOTES-v0.4.4.md)。本版经维护者例外直接晋升为稳定版，例外记录见 [RELEASING.md](docs/RELEASING.md)。
 
@@ -134,7 +141,7 @@ Phase 1 已经开始落地，当前默认体验正在收敛到最小闭环：
 - **代码内部做了循环依赖消除、大文件拆分和 ESLint 10 新规则清零，全量 2989 测试通过。**
 - **签名/公证仍未做：macOS 首次启动可能需右键打开，Windows 可能出现 SmartScreen 提示。**
 
-## 上一公开版本 — v0.4.3
+## 更早更新 — v0.4.3
 
 > **主题：Check-In 策略和发布门禁对齐。** 中文说明见 [RELEASE-NOTES-v0.4.3.zh-CN.md](docs/RELEASE-NOTES-v0.4.3.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.3.md](docs/RELEASE-NOTES-v0.4.3.md)。
 
@@ -178,7 +185,7 @@ Phase 1 已经开始落地，当前默认体验正在收敛到最小闭环：
 
 ## 旧版本记录
 
-README 顶部只保留当前稳定版 v0.4.4 和上一公开版本 v0.4.3 的重点。更早版本的完整历史统一放在 [CHANGELOG](CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，避免首页继续滚动维护旧版本号。
+README 顶部只保留当前稳定版 v0.4.5 和上一公开版本 v0.4.4 的重点。更早版本的完整历史统一放在 [CHANGELOG](CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，避免首页继续滚动维护旧版本号。
 
 ## 设计原则
 

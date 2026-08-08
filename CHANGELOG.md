@@ -6,12 +6,35 @@
 
 ## [Unreleased]
 
-> v0.4.5-beta.1 published as a GitHub pre-release on 2026-08-03 (standard
-> beta flow, no maintainer exception). Stable v0.4.5 waits for the beta
-> validation window; details in
-> [`docs/RELEASE-NOTES-v0.4.5-beta.1.md`](docs/RELEASE-NOTES-v0.4.5-beta.1.md).
+## [0.4.5] - 2026-08-06
+
+v0.4.5 memory integrity and maintenance release on top of stable v0.4.4,
+promoted through the standard beta flow (`v0.4.5-beta.1` published as a GitHub
+pre-release on 2026-08-03, beta validation window 2026-08-03 → 2026-08-06, no
+maintainer exception). The release commit is published only through the
+protected stable-tag workflow. v0.4.5 is the current stable release; the full
+v0.4 draft-stack audit anchors on it with no draft layer in flight. Full
+detail in
+[`docs/RELEASE-NOTES-v0.4.5.md`](docs/RELEASE-NOTES-v0.4.5.md).
 
 ### Added
+
+- **Memory contradiction detection** — the dream pipeline ranks, judges, and
+  applies contradiction candidates between decay and clustering; superseded
+  memories are demoted automatically in two tiers (likely ×0.3, possible ×0.6)
+  in keyword and vector recall with no confirmation UI, and each demoted item
+  records `supersededBy` / `supersededAt` / `supersededPending` for
+  transparency.
+- **Memory local-data migration default-on** — the migration flags now default
+  to on, keeping the environment kill switches, the rollback path, and the
+  explicit user authorization gate before any data moves.
+- **Companion presence pipeline** — presence phases (`thinking` / `waiting` /
+  `offline` / `error`) are derived in the main process from the real chat
+  request lifecycle (`companionPresenceTracker`); `waiting` reports only while
+  every in-flight request is parked in bounded retry backoff and always
+  clears, and the reason is a stable diagnostic code, never a URL.
+- **Normative code conventions** — added the root `AGENTS.md` with numbered
+  conventions (ARCH/SRC/FILE/IMP/DOC/ERR/STORE/I18N/TEST/CSS/GIT/AGT).
 
 - **Packaged runtime baseline + warn-only regression compare** —
   `scripts/packaged-runtime-baseline.mjs` (`record` / `compare`) plus the
@@ -55,10 +78,6 @@
   rollback limited to the memory domains, idempotent re-apply) while renderer
   localStorage remains authoritative and no new IPC/UI is added.
 
-- **v0.4.5 draft hardening evidence** — recorded local `verify:release`,
-  full v0.4 draft-stack audit, packaged smoke, and `git diff --check` evidence
-  while keeping package version, tag, GitHub Release, and README stable-entry
-  state unchanged.
 - **Dropped beta feedback and copy tuning scope** — the slice once planned
   under the v0.4.4 number never merged into main; it was evaluated and dropped
   because no beta program is planned and its copy guardrails already shipped
@@ -66,6 +85,13 @@
 
 ### Changed
 
+- **Mirrored contracts single-sourced (~2,600 lines)** — localData storage
+  keys, runtime-state field names, and power event kinds now live in shared
+  tuples; the former hand-written mirrors (main payload schemas, renderer
+  storage groups, vite-env types, storage contract, web-search/sprite id
+  unions) derive from them. The five `RuntimeStateSnapshot` declarations
+  converge on one shared schema (26 fields), and translation keys derive from
+  the zh-CN catalog via `keyof typeof` instead of a generated manifest.
 - **eslint-plugin-react-hooks 7.1.1** — adopted the React Compiler-era lint
   rules and cleared all 58 violations with behavior-preserving rewrites,
   keeping the v0.2.7 render-storm invariants intact.
