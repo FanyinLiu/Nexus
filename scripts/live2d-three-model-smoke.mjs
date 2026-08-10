@@ -334,7 +334,7 @@ export function createLive2DSmokeReport(outDir) {
 }
 
 export function evaluateLive2DContextRecoveryEvidence({ identity, recoveries } = {}) {
-  const unchanged = ['appChanged', 'modelChanged', 'canvasChanged']
+  const unchanged = ['oldCanvasDetached', 'newCanvasObject', 'appChanged', 'modelChanged']
     .filter((field) => identity?.[field] !== true)
   const errors = []
   if (unchanged.length > 0) errors.push(`unchanged=${unchanged.join(',')}`)

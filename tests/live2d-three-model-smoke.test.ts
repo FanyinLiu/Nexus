@@ -56,16 +56,26 @@ test('three-model catalog and same-page sequence are exact', () => {
 
 test('three-model smoke requires one complete context-loss recovery', () => {
   assert.deepEqual(evaluateLive2DContextRecoveryEvidence({
-    identity: { appChanged: true, modelChanged: true, canvasChanged: true },
+    identity: {
+      oldCanvasDetached: true,
+      newCanvasObject: true,
+      appChanged: true,
+      modelChanged: true,
+    },
     recoveries: 1,
   }), { ok: true, errors: [] })
 
   assert.deepEqual(evaluateLive2DContextRecoveryEvidence({
-    identity: { appChanged: true, modelChanged: false, canvasChanged: true },
+    identity: {
+      oldCanvasDetached: true,
+      newCanvasObject: false,
+      appChanged: true,
+      modelChanged: false,
+    },
     recoveries: 2,
   }), {
     ok: false,
-    errors: ['unchanged=modelChanged', 'recoveries=2'],
+    errors: ['unchanged=newCanvasObject,modelChanged', 'recoveries=2'],
   })
   assert.equal(createLive2DSmokeReport('/tmp/live2d-context-recovery').schemaVersion, 3)
 })
