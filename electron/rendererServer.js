@@ -217,7 +217,9 @@ export async function ensureRendererServer() {
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob:",
             "font-src 'self' data:",
-            "connect-src 'self' https: http:",
+            // PixiJS fetches a tiny data URL once to detect ImageBitmap
+            // support before choosing its texture upload path.
+            "connect-src 'self' data: https: http:",
             "media-src 'self' blob:",
             "worker-src 'self' blob:",
             "object-src 'none'",

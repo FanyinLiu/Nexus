@@ -6,6 +6,22 @@
 
 ## [Unreleased]
 
+### [0.4.6-beta.1] - 2026-08-09
+
+Beta candidate for avatar runtime reliability; v0.4.5 remains the current
+stable release. Full detail in
+[`docs/RELEASE-NOTES-v0.4.6-beta.1.md`](docs/RELEASE-NOTES-v0.4.6-beta.1.md).
+
+- Live2D uses straight-alpha WebGL output to remove white fringes in
+  transparent Electron window compositing.
+- Renderer CSP permits Pixi's local data-URL ImageBitmap capability probe.
+- Lost WebGL contexts rebuild the owned canvas, app, and model with a bounded
+  two-attempt recovery budget, then keep a five-locale readable fallback.
+- The durable three-model visual smoke now forces context loss and proves the
+  old runtime is replaced with exactly one recovered canvas.
+- Package and in-app spotlight move to `0.4.6-beta.1`; no tag or stable README
+  switch is implied.
+
 ## [0.4.5] - 2026-08-06
 
 v0.4.5 memory integrity and maintenance release on top of stable v0.4.4,

@@ -12,6 +12,7 @@ import {
   createLive2DSmokeReport,
   createLive2DSmokeServer,
   createLive2DSmokeSignalController,
+  evaluateLive2DContextRecoveryEvidence,
 } from '../scripts/live2d-three-model-smoke.mjs'
 import {
   LIVE2D_SMOKE_MODEL_IDS,
@@ -51,6 +52,22 @@ const READY_SNAPSHOT = {
 test('three-model catalog and same-page sequence are exact', () => {
   assert.deepEqual(LIVE2D_SMOKE_MODEL_IDS, ['mao', 'haru', 'hiyori'])
   assert.deepEqual(LIVE2D_SMOKE_SWITCH_SEQUENCE, ['mao', 'haru', 'hiyori', 'mao'])
+})
+
+test('three-model smoke requires one complete context-loss recovery', () => {
+  assert.deepEqual(evaluateLive2DContextRecoveryEvidence({
+    identity: { appChanged: true, modelChanged: true, canvasChanged: true },
+    recoveries: 1,
+  }), { ok: true, errors: [] })
+
+  assert.deepEqual(evaluateLive2DContextRecoveryEvidence({
+    identity: { appChanged: true, modelChanged: false, canvasChanged: true },
+    recoveries: 2,
+  }), {
+    ok: false,
+    errors: ['unchanged=modelChanged', 'recoveries=2'],
+  })
+  assert.equal(createLive2DSmokeReport('/tmp/live2d-context-recovery').schemaVersion, 3)
 })
 
 test('Live2D snapshot gate requires first-frame, one owned canvas, and ordered timing', () => {

@@ -59,3 +59,36 @@ test('renderer server serves Codex custom sprite pet assets from their own read-
     assert.deepEqual([...body], [0x89, 0x50, 0x4e, 0x47])
   })
 })
+
+test('renderer server allows Pixi ImageBitmap capability probes in its CSP', async () => {
+  await withTempDirectory(async (directoryPath) => {
+    const codexSpriteRoot = path.join(directoryPath, 'codex-pets')
+    const probePath = path.join(codexSpriteRoot, 'csp-probe', 'index.html')
+    await fs.mkdir(path.dirname(probePath), { recursive: true })
+    await fs.writeFile(probePath, '<!doctype html><title>CSP probe</title>')
+
+    initRendererServer({
+      isDev: false,
+      useDevServer: false,
+      devServerUrl: 'http://127.0.0.1:47821',
+      getPanelSection: () => 'chat',
+      getImportedPetModelsRoot: () => path.join(directoryPath, 'live2d'),
+      getImportedSpritePetModelsRoot: () => path.join(directoryPath, 'imported-sprites'),
+      getCodexCustomSpritePetModelsRoot: () => codexSpriteRoot,
+      isPathInsideRoot: (rootPath: string, candidatePath: string) => {
+        const relativePath = path.relative(rootPath, candidatePath)
+        return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))
+      },
+      importedPetModelsRoute: '/__imported_live2d__',
+      importedSpritePetModelsRoute: '/__imported_sprite_pets__',
+      codexCustomSpritePetModelsRoute: '/__codex_sprite_pets__',
+    })
+
+    const serverUrl = await ensureRendererServer()
+    const response = await fetch(`${serverUrl}/__codex_sprite_pets__/csp-probe/index.html`)
+    const contentSecurityPolicy = response.headers.get('content-security-policy')
+
+    assert.equal(response.status, 200)
+    assert.match(contentSecurityPolicy ?? '', /connect-src 'self' data: https: http:/)
+  })
+})

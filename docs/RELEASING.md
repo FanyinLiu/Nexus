@@ -64,6 +64,16 @@ draft-hardening review layer is closed; its evidence stays in
 `RELEASE-CANDIDATE-v0.4.5-DRAFT-HARDENING.md` as a historical record, and the
 stable handoff lives in `RELEASE-CANDIDATE-v0.4.5-HANDOFF.md`.
 
+### v0.4.6-beta.1 preparation record — 2026-08-09
+
+v0.4.6 returns to the standard beta flow with no maintainer exception. The
+first candidate is an avatar-runtime reliability slice: straight-alpha Live2D
+compositing, the minimal Pixi data-URL CSP allowance, bounded WebGL
+context-loss recovery, localized fallback copy, and a forced context-loss
+probe in the three-model visual smoke. v0.4.5 remains the current public
+stable release. The candidate version, notes, and handoff may be prepared
+locally, but no tag, push, or GitHub Release is authorized by this record.
+
 This doc is the source of truth for every release. The short version:
 
 ```

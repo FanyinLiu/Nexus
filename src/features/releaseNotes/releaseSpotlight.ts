@@ -12,6 +12,11 @@ export type ReleaseSpotlightBullet = {
     | 'code_health'
     | 'quality_gates'
     | 'release_pipeline'
+    | 'transparent_compositing'
+    | 'content_security'
+    | 'context_recovery'
+    | 'graceful_fallback'
+    | 'runtime_proof'
   titleKey: TranslationKey
   bodyKey: TranslationKey
 }
@@ -32,35 +37,35 @@ export type ReleaseSpotlight = {
 }
 
 export const CURRENT_RELEASE_SPOTLIGHT: ReleaseSpotlight = {
-  version: '0.4.5',
+  version: '0.4.6-beta.1',
   eyebrowKey: 'about.release_spotlight.eyebrow',
   titleKey: 'about.release_spotlight.title',
   summaryKey: 'about.release_spotlight.summary',
   bullets: [
     {
-      id: 'toolchain_refresh',
-      titleKey: 'about.release_spotlight.bullet.toolchain_refresh.title',
-      bodyKey: 'about.release_spotlight.bullet.toolchain_refresh.body',
+      id: 'transparent_compositing',
+      titleKey: 'about.release_spotlight.bullet.transparent_compositing.title',
+      bodyKey: 'about.release_spotlight.bullet.transparent_compositing.body',
     },
     {
-      id: 'security_hardening',
-      titleKey: 'about.release_spotlight.bullet.security_hardening.title',
-      bodyKey: 'about.release_spotlight.bullet.security_hardening.body',
+      id: 'content_security',
+      titleKey: 'about.release_spotlight.bullet.content_security.title',
+      bodyKey: 'about.release_spotlight.bullet.content_security.body',
     },
     {
-      id: 'code_health',
-      titleKey: 'about.release_spotlight.bullet.code_health.title',
-      bodyKey: 'about.release_spotlight.bullet.code_health.body',
+      id: 'context_recovery',
+      titleKey: 'about.release_spotlight.bullet.context_recovery.title',
+      bodyKey: 'about.release_spotlight.bullet.context_recovery.body',
     },
     {
-      id: 'quality_gates',
-      titleKey: 'about.release_spotlight.bullet.quality_gates.title',
-      bodyKey: 'about.release_spotlight.bullet.quality_gates.body',
+      id: 'graceful_fallback',
+      titleKey: 'about.release_spotlight.bullet.graceful_fallback.title',
+      bodyKey: 'about.release_spotlight.bullet.graceful_fallback.body',
     },
     {
-      id: 'release_pipeline',
-      titleKey: 'about.release_spotlight.bullet.release_pipeline.title',
-      bodyKey: 'about.release_spotlight.bullet.release_pipeline.body',
+      id: 'runtime_proof',
+      titleKey: 'about.release_spotlight.bullet.runtime_proof.title',
+      bodyKey: 'about.release_spotlight.bullet.runtime_proof.body',
     },
   ],
   actions: [

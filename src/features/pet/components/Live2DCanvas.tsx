@@ -12,7 +12,12 @@ import { createBlinkState } from './live2d/blink.ts'
 import { resolveExpressionSlot, resolveGestureGroup, resolveMotionGroup } from './live2d/expressions.ts'
 import { applyLive2DFrame, type FrameRenderState } from './live2d/frameRender.ts'
 import { layoutLive2DModel, MIN_CANVAS_HEIGHT, MIN_CANVAS_WIDTH } from './live2d/layout.ts'
+import {
+  createLive2DApplicationOptions,
+  planLive2DContextRecovery,
+} from './live2d/rendering.ts'
 import { clamp } from '../../../lib/common.ts'
+import { useTranslation } from '../../../i18n/index.ts'
 import {
   attachLive2DModelTicker,
   clearLive2DAsyncHandles,
@@ -63,6 +68,7 @@ export function Live2DCanvas({
   placement = 'panel-card',
   paused = false,
 }: Live2DCanvasProps) {
+  const { t } = useTranslation()
   const resolvedModelPath = resolveAssetPath(modelDefinition.modelPath)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const modelRef = useRef<Live2DModelType | null>(null)
@@ -89,9 +95,11 @@ export function Live2DCanvas({
     smoothedSpeechLevel: 0,
     blink: createBlinkState(),
   })
+  const contextRecoveryAttemptsRef = useRef(0)
   const activeModelDefinitionRef = useRef(buildRuntimePetModelDefinition(modelDefinition))
   const [error, setError] = useState<string | null>(null)
   const [modelReady, setModelReady] = useState(false)
+  const [runtimeRevision, setRuntimeRevision] = useState(0)
 
   const syncPlayback = useCallback((app: PixiApplication | null, disposed: boolean) => {
     syncLive2DPlayback(app, {
@@ -221,6 +229,7 @@ export function Live2DCanvas({
 
   useEffect(() => {
     activeModelDefinitionRef.current = buildRuntimePetModelDefinition(modelDefinition)
+    contextRecoveryAttemptsRef.current = 0
   }, [modelDefinition])
 
   useEffect(() => {
@@ -301,6 +310,7 @@ export function Live2DCanvas({
     const ownership = createLive2DAsyncOwnershipCoordinator()
     let attempts = 0
     let handleVisibilityChange: (() => void) | null = null
+    let detachContextLossListener: (() => void) | null = null
     const pendingTimeoutIds = new Set<number>()
     const pendingRafIds = new Set<number>()
     const frameState = frameStateRef.current
@@ -342,6 +352,8 @@ export function Live2DCanvas({
     }
 
     function destroyOwnedRuntime() {
+      detachContextLossListener?.()
+      detachContextLossListener = null
       resizeObserverRef.current?.disconnect()
       resizeObserverRef.current = null
       if (handleVisibilityChange) {
@@ -539,13 +551,7 @@ export function Live2DCanvas({
         // PixiJS v8: construct empty Application, then await init().
         // Browser global build still exposes Application on window.PIXI.
         const app = new pixiRuntime.Application()
-        const initOptions = {
-          autoStart: true,
-          resizeTo: hostContainer,
-          backgroundAlpha: 0,
-          antialias: true,
-          preference: 'webgl' as const,
-        }
+        const initOptions = createLive2DApplicationOptions(hostContainer)
         if (typeof (app as { init?: (opts: typeof initOptions) => Promise<void> }).init === 'function') {
           await (app as { init: (opts: typeof initOptions) => Promise<void> }).init(initOptions)
         }
@@ -570,6 +576,42 @@ export function Live2DCanvas({
           throw new Error('PIXI Application did not expose a canvas view.')
         }
         containerAfterApp.appendChild(canvas)
+        const handleContextLost = (event: Event) => {
+          event.preventDefault()
+          if (isDisposed() || appRef.current !== app) return
+
+          const decision = planLive2DContextRecovery(contextRecoveryAttemptsRef.current)
+          contextRecoveryAttemptsRef.current = decision.attempts
+          containerRef.current?.setAttribute(
+            'data-live2d-context-recoveries',
+            String(decision.attempts),
+          )
+
+          if (decision.action === 'restart') {
+            setDebugState({ phase: 'context-recovering', error: null })
+            if (containerRef.current) {
+              containerRef.current.dataset.live2dPhase = 'context-recovering'
+            }
+            setError(null)
+            setModelReady(false)
+            setRuntimeRevision((revision) => revision + 1)
+            return
+          }
+
+          const recoveryError = 'Live2D graphics context could not recover.'
+          setDebugState({ phase: 'context-recovery-failed', error: recoveryError })
+          if (containerRef.current) {
+            containerRef.current.dataset.live2dPhase = 'context-recovery-failed'
+            containerRef.current.dataset.live2dError = '1'
+          }
+          destroyOwnedRuntime()
+          setError(recoveryError)
+          setModelReady(false)
+        }
+        canvas.addEventListener('webglcontextlost', handleContextLost)
+        detachContextLossListener = () => {
+          canvas.removeEventListener('webglcontextlost', handleContextLost)
+        }
         handleVisibilityChange = () => {
           syncPlayback(app, isDisposed())
         }
@@ -664,6 +706,7 @@ export function Live2DCanvas({
               firstFrameAt,
               firstFrameMs: firstFrameAt - bootStartedAt,
             })
+            contextRecoveryAttemptsRef.current = 0
           }),
         )
       } catch (caught) {
@@ -711,6 +754,7 @@ export function Live2DCanvas({
     layoutModel,
     modelDefinition,
     resolvedModelPath,
+    runtimeRevision,
     syncPlayback,
   ])
 
@@ -728,7 +772,16 @@ export function Live2DCanvas({
   return (
     <div className="live2d-shell">
       <div ref={containerRef} className={`live2d-canvas ${modelReady ? 'is-ready' : ''}`} />
-      {error ? <div className="live2d-fallback">{error}</div> : null}
+      {error ? (
+        <div
+          className="live2d-fallback"
+          data-live2d-fallback="true"
+          role="status"
+        >
+          <strong>{t('pet.live2d.fallback.title')}</strong>
+          <span>{t('pet.live2d.fallback.body')}</span>
+        </div>
+      ) : null}
     </div>
   )
 }

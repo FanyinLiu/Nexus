@@ -26,11 +26,17 @@
 
 > **当前稳定版：** v0.4.5，稳定入口见 [RELEASE-NOTES-v0.4.5.md](RELEASE-NOTES-v0.4.5.md)。Nexus 继续保持桌面陪伴感知的粗粒度和隐私优先边界，本版带来记忆可信度切片与维护加固，记忆矛盾检测完全在本地运行。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases。
 
+> **Beta 候选：** `v0.4.6-beta.1` 正在验证透明 Live2D 合成、WebGL 自动恢复和可读降级，尚未成为稳定版。详见 [中文候选说明](RELEASE-NOTES-v0.4.6-beta.1.zh-CN.md)。
+
 > **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前短期开发以根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 为准：Phase 1 只收敛桌面常驻小窗口、极简头像、Ollama / DeepSeek 文本模型和简单对话。
 
 ---
 
-## 本次更新 — v0.4.5
+## Beta 预览 — v0.4.6-beta.1
+
+> **主题：形象运行时可靠性。** 修复透明白边与 Pixi CSP，加入有界 WebGL 上下文恢复、五语言降级，以及强制 context loss 的三模型烟测。v0.4.5 仍是稳定版。
+
+## 本次稳定更新 — v0.4.5
 
 > **主题：记忆可信度与维护。** 她记得更准、更少自相矛盾：夜间 dream 周期自动检测新旧记忆矛盾并两档降权（不删除任何记忆、无确认 UI）；记忆域 SQLite 迁移默认开启（回滚与授权路径不变）；桌宠状态（思考/等待/离线/错误）改由主进程真实聊天请求生命周期驱动。另含可靠性、安全修复与大规模内部契约单源化清理。中文说明见 [RELEASE-NOTES-v0.4.5.zh-CN.md](RELEASE-NOTES-v0.4.5.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.5.md](RELEASE-NOTES-v0.4.5.md)。
 

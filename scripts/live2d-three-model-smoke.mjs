@@ -313,7 +313,7 @@ export function createLive2DSmokeSignalController({
 
 export function createLive2DSmokeReport(outDir) {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     generatedAt: new Date().toISOString(),
     serverMode: null,
     baseUrl: null,
@@ -331,6 +331,15 @@ export function createLive2DSmokeReport(outDir) {
     },
     ok: false,
   }
+}
+
+export function evaluateLive2DContextRecoveryEvidence({ identity, recoveries } = {}) {
+  const unchanged = ['appChanged', 'modelChanged', 'canvasChanged']
+    .filter((field) => identity?.[field] !== true)
+  const errors = []
+  if (unchanged.length > 0) errors.push(`unchanged=${unchanged.join(',')}`)
+  if (recoveries !== 1) errors.push(`recoveries=${String(recoveries)}`)
+  return { ok: errors.length === 0, errors }
 }
 
 function panelChatUrl(baseUrl) {
@@ -490,6 +499,7 @@ async function snapshotLive2D(page) {
       error: container?.dataset.live2dError ?? null,
       readyMs: container?.dataset.live2dReadyMs ?? null,
       firstFrameMs: container?.dataset.live2dFirstFrameMs ?? null,
+      contextRecoveries: container?.dataset.live2dContextRecoveries ?? null,
       shellCount: document.querySelectorAll('.live2d-shell').length,
       canvasCount: document.querySelectorAll('.live2d-canvas canvas').length,
       fallbackCount: document.querySelectorAll('.live2d-fallback').length,
@@ -730,6 +740,46 @@ async function readRuntimeIdentityChange(page) {
   })
 }
 
+async function triggerWebGLContextLoss(page) {
+  return page.evaluate(() => {
+    const canvas = document.querySelector('.live2d-canvas canvas')
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      throw new Error('Live2D canvas is unavailable for the context-loss probe.')
+    }
+
+    const context = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
+    if (!context) {
+      throw new Error('Live2D canvas did not expose a WebGL context.')
+    }
+    const extension = context.getExtension('WEBGL_lose_context')
+    if (!extension) {
+      throw new Error('WEBGL_lose_context is unavailable.')
+    }
+
+    extension.loseContext()
+    return {
+      contextType: context instanceof WebGL2RenderingContext ? 'webgl2' : 'webgl',
+    }
+  })
+}
+
+async function waitForContextRecovery(page, expectedModelId) {
+  await page.waitForFunction((modelId) => {
+    const previous = window.__live2dThreeModelSmokePrevious
+    const container = document.querySelector('.live2d-canvas')
+    const canvas = container?.querySelector('canvas') ?? null
+    return Boolean(
+      previous?.canvas
+      && canvas
+      && canvas !== previous.canvas
+      && !previous.canvas.isConnected
+      && container?.dataset.live2dPhase === 'first-frame'
+      && container?.dataset.live2dModelId === modelId
+      && container?.dataset.live2dContextRecoveries === '1',
+    )
+  }, expectedModelId, { timeout: LIVE2D_SMOKE_MAX_FIRST_FRAME_MS })
+}
+
 async function readCanvasObserver(page) {
   return page.evaluate(() => {
     window.__live2dThreeModelSmokeObserver?.sample()
@@ -745,6 +795,7 @@ async function readCanvasObserver(page) {
 async function runSwitchSequence(browser, baseUrl, outDir, settings) {
   const runtime = await openSeededPage(browser, baseUrl, settings, 'mao', true)
   const steps = []
+  let contextRecovery = null
   try {
     for (let index = 0; index < LIVE2D_SMOKE_SWITCH_SEQUENCE.length; index += 1) {
       const modelId = LIVE2D_SMOKE_SWITCH_SEQUENCE[index]
@@ -754,6 +805,18 @@ async function runSwitchSequence(browser, baseUrl, outDir, settings) {
       }
 
       await waitForFirstFrame(runtime.page, modelId)
+      if (index === 0) {
+        await stashRuntimeIdentity(runtime.page)
+        const trigger = await triggerWebGLContextLoss(runtime.page)
+        await waitForContextRecovery(runtime.page, modelId)
+        const identity = await readRuntimeIdentityChange(runtime.page)
+        contextRecovery = {
+          modelId,
+          trigger,
+          identity,
+          recoveries: Number((await snapshotLive2D(runtime.page)).contextRecoveries ?? 0),
+        }
+      }
       await runtime.page.waitForTimeout(1000)
       const snapshot = await snapshotLive2D(runtime.page)
       const evaluation = evaluateLive2DSnapshot(snapshot, modelId)
@@ -798,7 +861,11 @@ async function runSwitchSequence(browser, baseUrl, outDir, settings) {
       modelId: step.modelId,
       live2dSha256: step.screenshot.live2dSha256,
     }))))
-    return { steps, browserFailures: runtime.gate.failures }
+    const contextRecoveryEvaluation = evaluateLive2DContextRecoveryEvidence(contextRecovery ?? {})
+    if (!contextRecoveryEvaluation.ok) {
+      throw new Error(`context recovery probe failed (${contextRecoveryEvaluation.errors.join('; ')})`)
+    }
+    return { steps, contextRecovery, browserFailures: runtime.gate.failures }
   } finally {
     runtime.gate.dispose()
     await runtime.page.close().catch(() => {})
