@@ -26,15 +26,15 @@
 
 > **当前稳定版：** v0.4.5，稳定入口见 [RELEASE-NOTES-v0.4.5.md](RELEASE-NOTES-v0.4.5.md)。Nexus 继续保持桌面陪伴感知的粗粒度和隐私优先边界，本版带来记忆可信度切片与维护加固，记忆矛盾检测完全在本地运行。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases。
 
-> **Beta 候选：** `v0.4.6-beta.1` 正在验证透明 Live2D 合成、WebGL 自动恢复和可读降级，尚未成为稳定版。详见 [中文候选说明](RELEASE-NOTES-v0.4.6-beta.1.zh-CN.md)。
+> **Beta 候选：** `v0.4.7-beta.1` 正在验证 Live2D 导入兼容性、修复提示和资源诊断，尚未成为稳定版。详见 [中文候选说明](RELEASE-NOTES-v0.4.7-beta.1.zh-CN.md)。
 
 > **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前短期开发以根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 为准：Phase 1 只收敛桌面常驻小窗口、极简头像、Ollama / DeepSeek 文本模型和简单对话。
 
 ---
 
-## Beta 预览 — v0.4.6-beta.1
+## Beta 预览 — v0.4.7-beta.1
 
-> **主题：形象运行时可靠性。** 修复透明白边与 Pixi CSP，加入有界 WebGL 上下文恢复、五语言降级，以及强制 context loss 的三模型烟测。v0.4.5 仍是稳定版。
+> **主题：形象兼容性与诊断。** 激活前检查 Moc、纹理与已声明资源；缺动作或表情的模型仍可显示并提示互动限制，三模型切换报告会留存资源数量。v0.4.5 仍是稳定版。
 
 ## 本次稳定更新 — v0.4.5
 

@@ -16,6 +16,7 @@ import {
 } from '../scripts/live2d-three-model-smoke.mjs'
 import {
   LIVE2D_SMOKE_MODEL_IDS,
+  LIVE2D_SMOKE_RESOURCE_PROFILES,
   LIVE2D_SMOKE_SWITCH_SEQUENCE,
   evaluateBrowserFailureGate,
   evaluateLive2DSnapshot,
@@ -47,11 +48,23 @@ const READY_SNAPSHOT = {
   canvasHeight: 520,
   readyMs: '1250.5',
   firstFrameMs: '1300.5',
+  resourceStatus: 'ready',
+  mocDeclared: '1',
+  textureCount: '1',
+  motionCount: '8',
+  expressionCount: '8',
 }
 
 test('three-model catalog and same-page sequence are exact', () => {
   assert.deepEqual(LIVE2D_SMOKE_MODEL_IDS, ['mao', 'haru', 'hiyori'])
   assert.deepEqual(LIVE2D_SMOKE_SWITCH_SEQUENCE, ['mao', 'haru', 'hiyori', 'mao'])
+  assert.deepEqual(LIVE2D_SMOKE_RESOURCE_PROFILES.hiyori, {
+    status: 'limited',
+    mocDeclared: '1',
+    textures: 2,
+    motions: 10,
+    expressions: 0,
+  })
 })
 
 test('three-model smoke requires one complete context-loss recovery', () => {
@@ -77,7 +90,7 @@ test('three-model smoke requires one complete context-loss recovery', () => {
     ok: false,
     errors: ['unchanged=newCanvasObject,modelChanged', 'recoveries=2'],
   })
-  assert.equal(createLive2DSmokeReport('/tmp/live2d-context-recovery').schemaVersion, 3)
+  assert.equal(createLive2DSmokeReport('/tmp/live2d-context-recovery').schemaVersion, 4)
 })
 
 test('Live2D snapshot gate requires first-frame, one owned canvas, and ordered timing', () => {
@@ -102,6 +115,13 @@ test('Live2D snapshot gate requires first-frame, one owned canvas, and ordered t
   }, 'mao')
   assert.equal(invertedTiming.ok, false)
   assert.ok(invertedTiming.errors.includes('readyMs>1500'))
+
+  const staleResources = evaluateLive2DSnapshot({
+    ...READY_SNAPSHOT,
+    textureCount: '0',
+  }, 'mao')
+  assert.equal(staleResources.ok, false)
+  assert.ok(staleResources.errors.includes('textureCount=0'))
 })
 
 test('screenshot and browser failure gates reject weak or noisy evidence', () => {
@@ -570,6 +590,7 @@ test('packaged CDP snapshot reads real canvas markers and only first-frame is re
   assert.equal(isLive2DFirstFrameReady(null), false)
   assert.match(LIVE2D_SNAPSHOT_SCRIPT, /document\.querySelector\('\.live2d-canvas'\)/)
   assert.match(LIVE2D_SNAPSHOT_SCRIPT, /document\.querySelectorAll\('\.live2d-canvas canvas'\)/)
+  assert.match(LIVE2D_SNAPSHOT_SCRIPT, /live2dTextureCount/)
   assert.match(LIVE2D_SNAPSHOT_SCRIPT, /const ready = phase === "first-frame"/)
   assert.doesNotMatch(LIVE2D_SNAPSHOT_SCRIPT, /phase === 'model-ready'/)
   assert.doesNotMatch(LIVE2D_SNAPSHOT_SCRIPT, /Boolean\(container\?\.dataset\?\.live2dReadyMs\)/)

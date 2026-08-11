@@ -388,10 +388,15 @@ export function useAppOverlays({
         return null
       }
 
+      if (!result.model) {
+        return result
+      }
+
+      const importedModel = result.model
       const refreshedModels = await loadPetModels()
       return {
         ...result,
-        model: refreshedModels.find((model) => model.id === result.model.id) ?? result.model,
+        model: refreshedModels.find((model) => model.id === importedModel.id) ?? importedModel,
       }
     },
     onImportCodexPetGallery: async (input) => {

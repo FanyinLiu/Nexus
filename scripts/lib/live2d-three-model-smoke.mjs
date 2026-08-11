@@ -1,6 +1,11 @@
 export const LIVE2D_SMOKE_MODEL_IDS = ['mao', 'haru', 'hiyori']
 export const LIVE2D_SMOKE_SWITCH_SEQUENCE = ['mao', 'haru', 'hiyori', 'mao']
 export const LIVE2D_SMOKE_MAX_FIRST_FRAME_MS = 45_000
+export const LIVE2D_SMOKE_RESOURCE_PROFILES = {
+  mao: { status: 'ready', mocDeclared: '1', textures: 1, motions: 8, expressions: 8 },
+  haru: { status: 'ready', mocDeclared: '1', textures: 2, motions: 6, expressions: 8 },
+  hiyori: { status: 'limited', mocDeclared: '1', textures: 2, motions: 10, expressions: 0 },
+}
 
 export function parseRgbChannels(color) {
   const channels = String(color ?? '').match(/[\d.]+/g)?.slice(0, 3).map(Number)
@@ -139,6 +144,7 @@ export function evaluateLive2DSnapshot(
   const errors = []
   const readyMs = finiteNumber(snapshot?.readyMs)
   const firstFrameMs = finiteNumber(snapshot?.firstFrameMs)
+  const resourceProfile = LIVE2D_SMOKE_RESOURCE_PROFILES[expectedModelId]
 
   if (snapshot?.phase !== 'first-frame') errors.push(`phase=${snapshot?.phase ?? 'missing'}`)
   if (snapshot?.debugPhase !== 'first-frame') errors.push(`debugPhase=${snapshot?.debugPhase ?? 'missing'}`)
@@ -164,6 +170,22 @@ export function evaluateLive2DSnapshot(
   }
   if (firstFrameMs !== null && firstFrameMs > maxFirstFrameMs) {
     errors.push(`firstFrameMs>${maxFirstFrameMs}`)
+  }
+  if (resourceProfile) {
+    if (snapshot?.resourceStatus !== resourceProfile.status) {
+      errors.push(`resourceStatus=${snapshot?.resourceStatus ?? 'missing'}`)
+    }
+    if (snapshot?.mocDeclared !== resourceProfile.mocDeclared) {
+      errors.push(`mocDeclared=${snapshot?.mocDeclared ?? 'missing'}`)
+    }
+    for (const [field, expected] of [
+      ['textureCount', resourceProfile.textures],
+      ['motionCount', resourceProfile.motions],
+      ['expressionCount', resourceProfile.expressions],
+    ]) {
+      const actual = finiteNumber(snapshot?.[field])
+      if (actual !== expected) errors.push(`${field}=${snapshot?.[field] ?? 'missing'}`)
+    }
   }
 
   return {

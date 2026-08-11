@@ -3,6 +3,7 @@ import type { Live2DModel as Live2DModelType } from '@jannchie/pixi-live2d-displ
 import type { PetMood, PetTouchZone, SpeechLevelSource } from '../../../types/index.ts'
 import {
   buildRuntimePetModelDefinition,
+  summarizeCubismDeclaredResources,
   type CubismModelFile,
   type PetModelDefinition,
   type PetExpressionSlot,
@@ -503,6 +504,11 @@ export function Live2DCanvas({
         delete bootContainer.dataset.live2dVendorMs
         delete bootContainer.dataset.live2dAppCreatedMs
         delete bootContainer.dataset.live2dModelLoadedMs
+        delete bootContainer.dataset.live2dResourceStatus
+        delete bootContainer.dataset.live2dMocDeclared
+        delete bootContainer.dataset.live2dTextureCount
+        delete bootContainer.dataset.live2dMotionCount
+        delete bootContainer.dataset.live2dExpressionCount
         bootContainer.dataset.live2dPhase = 'booting'
         bootContainer.dataset.live2dModelId = modelDefinition.id
         bootContainer.dataset.live2dError = '0'
@@ -523,6 +529,16 @@ export function Live2DCanvas({
             const modelFile = (await modelResponse.json()) as CubismModelFile
             if (shouldAbortLive2DBoot(isDisposed(), Boolean(containerRef.current))) return
             activeModelDefinitionRef.current = buildRuntimePetModelDefinition(modelDefinition, modelFile)
+            const resourceSummary = summarizeCubismDeclaredResources(modelFile)
+            const resourceContainer = containerRef.current
+            if (resourceContainer) {
+              resourceContainer.dataset.live2dResourceStatus = modelDefinition.compatibility?.status
+                ?? resourceSummary.status
+              resourceContainer.dataset.live2dMocDeclared = resourceSummary.mocDeclared ? '1' : '0'
+              resourceContainer.dataset.live2dTextureCount = String(resourceSummary.textureCount)
+              resourceContainer.dataset.live2dMotionCount = String(resourceSummary.motionCount)
+              resourceContainer.dataset.live2dExpressionCount = String(resourceSummary.expressionCount)
+            }
           }
         } catch {
           if (shouldAbortLive2DBoot(isDisposed(), Boolean(containerRef.current))) return

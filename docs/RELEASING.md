@@ -72,7 +72,22 @@ compositing, the minimal Pixi data-URL CSP allowance, bounded WebGL
 context-loss recovery, localized fallback copy, and a forced context-loss
 probe in the three-model visual smoke. v0.4.5 remains the current public
 stable release. The candidate version, notes, and handoff may be prepared
-locally, but no tag, push, or GitHub Release is authorized by this record.
+locally. The protected workflow subsequently published `v0.4.6-beta.1` from
+commit `44dd91c` on 2026-08-10 after prerelease-check 30/30 and successful
+cross-platform release jobs. This publication starts the validation window; it
+does not authorize or imply stable v0.4.6 promotion.
+
+### v0.4.7-beta.1 preparation record — 2026-08-10
+
+The owner authorized continuing follow-up work and preparing the v0.4.7 beta
+after automated validation. This record does not waive the standard release
+flow and does not promote v0.4.6: v0.4.6-beta.1 was published on 2026-08-10 and
+still lacks a multi-day real-use window or user feedback, so v0.4.5 remains
+stable. v0.4.7-beta.1 is an isolated compatibility candidate covering imported
+Cubism resource validation, localized repair guidance, privacy-safe diagnostic
+summaries, and retained resource profiles in switch evidence. Its protected tag
+may be pushed only after the release commit passes the full local gate and
+cross-platform CI.
 
 This doc is the source of truth for every release. The short version:
 

@@ -27,10 +27,10 @@ test('current release spotlight keeps the package version explicit', () => {
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.bullets.map((item) => item.id),
     [
-      'transparent_compositing',
-      'content_security',
-      'context_recovery',
-      'graceful_fallback',
+      'import_validation',
+      'repair_guidance',
+      'limited_compatibility',
+      'private_diagnostics',
       'runtime_proof',
     ],
   )
@@ -43,7 +43,7 @@ test('current release spotlight keeps the package version explicit', () => {
   )
   assert.ok(
     getReleaseSpotlightTranslationKeys().includes(
-      'about.release_spotlight.bullet.context_recovery.title',
+      'about.release_spotlight.bullet.import_validation.title',
     ),
   )
 })
@@ -67,19 +67,19 @@ test('current release spotlight translation keys are registered for every locale
   }
 })
 
-test('current release spotlight describes the v0.4.6 avatar runtime beta and keeps historical keys', async () => {
+test('current release spotlight describes the v0.4.7 compatibility beta and keeps historical keys', async () => {
   const en = await ensureLocaleLoaded('en-US')
   const zhCN = await ensureLocaleLoaded('zh-CN')
 
-  assert.equal(en['about.release_spotlight.title'], 'A steadier avatar on every surface.')
-  assert.match(en['about.release_spotlight.summary'], /v0\.4\.6-beta\.1.*Live2D runtime/i)
+  assert.equal(en['about.release_spotlight.title'], 'A safer path from model folder to companion.')
+  assert.match(en['about.release_spotlight.summary'], /v0\.4\.7-beta\.1.*Live2D compatibility diagnostics/i)
   assert.match(en['about.release_spotlight.summary'], /v0\.4\.5 remains stable/i)
   assert.match(en['about.release_spotlight.summary'], /unsigned macOS beta builds.*manually.*release page/i)
-  assert.match(en['about.release_spotlight.bullet.transparent_compositing.body'], /Straight-alpha WebGL.*white fringes.*macOS/i)
-  assert.match(en['about.release_spotlight.bullet.content_security.body'], /Pixi.*data-URL.*remote access/i)
-  assert.match(en['about.release_spotlight.bullet.context_recovery.body'], /lost WebGL context.*canvas.*app.*model/i)
-  assert.match(en['about.release_spotlight.bullet.graceful_fallback.body'], /localized status.*raw technical errors/i)
-  assert.match(en['about.release_spotlight.bullet.runtime_proof.body'], /three-model visual smoke.*context loss.*one clean canvas/i)
+  assert.match(en['about.release_spotlight.bullet.import_validation.body'], /Moc.*textures.*declared local resource.*before/i)
+  assert.match(en['about.release_spotlight.bullet.repair_guidance.body'], /Five localized messages.*missing textures.*unsafe paths/i)
+  assert.match(en['about.release_spotlight.bullet.limited_compatibility.body'], /without motions or expressions.*still display/i)
+  assert.match(en['about.release_spotlight.bullet.private_diagnostics.body'], /categories and counts.*never private local file paths/i)
+  assert.match(en['about.release_spotlight.bullet.runtime_proof.body'], /Three-model cold starts.*Moc.*texture.*motion.*expression counts/i)
   assert.equal(en['about.release_spotlight.action.open_voice'], 'Open Voice Settings')
   assert.equal(en['about.release_spotlight.action.preview_companion'], 'Preview Companion')
 
@@ -94,15 +94,15 @@ test('current release spotlight describes the v0.4.6 avatar runtime beta and kee
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /main window has no voice button/)
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /frameless companions and desktop pets/)
 
-  assert.equal(zhCN['about.release_spotlight.title'], '每个界面，伙伴形象都更稳。')
-  assert.match(zhCN['about.release_spotlight.summary'], /v0\.4\.6-beta\.1.*Live2D/)
+  assert.equal(zhCN['about.release_spotlight.title'], '从模型文件夹到桌面伙伴，切换更安全。')
+  assert.match(zhCN['about.release_spotlight.summary'], /v0\.4\.7-beta\.1.*Live2D 兼容性诊断/)
   assert.match(zhCN['about.release_spotlight.summary'], /v0\.4\.5 仍是稳定版/)
   assert.match(zhCN['about.release_spotlight.summary'], /macOS beta 未签名.*发布页.*手动/)
-  assert.match(zhCN['about.release_spotlight.bullet.transparent_compositing.body'], /直通 Alpha.*macOS.*白边/)
-  assert.match(zhCN['about.release_spotlight.bullet.content_security.body'], /Pixi.*data URL.*远程访问/)
-  assert.match(zhCN['about.release_spotlight.bullet.context_recovery.body'], /WebGL 上下文丢失.*画布.*应用.*模型/)
-  assert.match(zhCN['about.release_spotlight.bullet.graceful_fallback.body'], /五语言.*技术错误.*窗口继续可用/)
-  assert.match(zhCN['about.release_spotlight.bullet.runtime_proof.body'], /三模型.*上下文丢失.*一个干净画布/)
+  assert.match(zhCN['about.release_spotlight.bullet.import_validation.body'], /Moc.*纹理.*本地资源.*再切换/)
+  assert.match(zhCN['about.release_spotlight.bullet.repair_guidance.body'], /五语言.*纹理.*动作.*表情.*不安全路径/)
+  assert.match(zhCN['about.release_spotlight.bullet.limited_compatibility.body'], /没有动作或表情.*仍可显示/)
+  assert.match(zhCN['about.release_spotlight.bullet.private_diagnostics.body'], /资源类别和数量.*不暴露.*路径/)
+  assert.match(zhCN['about.release_spotlight.bullet.runtime_proof.body'], /三模型.*Moc.*纹理.*动作.*表情数量/)
   assert.equal(zhCN['about.release_spotlight.action.open_voice'], '打开语音设置')
   assert.equal(zhCN['about.release_spotlight.action.preview_companion'], '预览伙伴')
 
@@ -118,13 +118,13 @@ test('current release spotlight describes the v0.4.6 avatar runtime beta and kee
   assert.match(zhCN['about.release_spotlight.bullet.voice_settings.body'], /无框伙伴与桌宠/)
 })
 
-test('release spotlight presents v0.4.6 as beta while keeping v0.4.5 stable and unsigned macOS updates explicit', async () => {
+test('release spotlight presents v0.4.7 as beta while keeping v0.4.5 stable and unsigned macOS updates explicit', async () => {
   const contracts = [
-    ['en-US', /v0\.4\.6-beta\.1.*v0\.4\.5 remains stable/i, /unsigned macOS beta.*manually.*release page/i],
-    ['zh-CN', /v0\.4\.6-beta\.1.*v0\.4\.5 仍是稳定版/, /macOS beta 未签名.*发布页.*手动/],
-    ['zh-TW', /v0\.4\.6-beta\.1.*v0\.4\.5 仍是穩定版/, /macOS beta 未簽署.*發布頁.*手動/],
-    ['ja', /v0\.4\.6-beta\.1.*安定版は v0\.4\.5/, /署名なし macOS beta.*リリースページ.*手動/],
-    ['ko', /v0\.4\.6-beta\.1.*안정 버전은 v0\.4\.5/, /서명되지 않은 macOS beta.*릴리스 페이지.*수동/],
+    ['en-US', /v0\.4\.7-beta\.1.*v0\.4\.5 remains stable/i, /unsigned macOS beta.*manually.*release page/i],
+    ['zh-CN', /v0\.4\.7-beta\.1.*v0\.4\.5 仍是稳定版/, /macOS beta 未签名.*发布页.*手动/],
+    ['zh-TW', /v0\.4\.7-beta\.1.*v0\.4\.5 仍是穩定版/, /macOS beta 未簽署.*發布頁.*手動/],
+    ['ja', /v0\.4\.7-beta\.1.*安定版は v0\.4\.5/, /署名なし macOS beta.*リリースページ.*手動/],
+    ['ko', /v0\.4\.7-beta\.1.*안정 버전은 v0\.4\.5/, /서명되지 않은 macOS beta.*릴리스 페이지.*수동/],
   ] as const
 
   for (const [locale, releaseStatePattern, unsignedUpdatePattern] of contracts) {

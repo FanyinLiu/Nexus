@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import {
   buildRuntimePetModelDefinition,
   getPetModelPreset,
+  summarizeCubismDeclaredResources,
   type CubismModelFile,
 } from '../src/features/pet/models.ts'
 
@@ -31,4 +32,26 @@ test('buildRuntimePetModelDefinition preserves authored non-positional expressio
   // Standard positional slots still resolve (authored fallback wins).
   assert.ok(runtime.expressionMap.idle)
   assert.ok(runtime.expressionMap.happy)
+})
+
+test('summarizeCubismDeclaredResources distinguishes ready, limited, and blocked declarations', () => {
+  assert.deepEqual(summarizeCubismDeclaredResources({
+    FileReferences: {
+      Moc: 'avatar.moc3',
+      Textures: ['texture.png'],
+      Expressions: [{ Name: 'smile', File: 'smile.exp3.json' }],
+      Motions: { Idle: [{ File: 'idle.motion3.json' }] },
+    },
+  }), {
+    status: 'ready',
+    mocDeclared: true,
+    textureCount: 1,
+    motionCount: 1,
+    expressionCount: 1,
+  })
+
+  assert.equal(summarizeCubismDeclaredResources({
+    FileReferences: { Moc: 'avatar.moc3', Textures: ['texture.png'] },
+  }).status, 'limited')
+  assert.equal(summarizeCubismDeclaredResources({ FileReferences: {} }).status, 'blocked')
 })

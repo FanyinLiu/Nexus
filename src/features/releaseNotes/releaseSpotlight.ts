@@ -16,6 +16,10 @@ export type ReleaseSpotlightBullet = {
     | 'content_security'
     | 'context_recovery'
     | 'graceful_fallback'
+    | 'import_validation'
+    | 'repair_guidance'
+    | 'limited_compatibility'
+    | 'private_diagnostics'
     | 'runtime_proof'
   titleKey: TranslationKey
   bodyKey: TranslationKey
@@ -37,30 +41,30 @@ export type ReleaseSpotlight = {
 }
 
 export const CURRENT_RELEASE_SPOTLIGHT: ReleaseSpotlight = {
-  version: '0.4.6-beta.1',
+  version: '0.4.7-beta.1',
   eyebrowKey: 'about.release_spotlight.eyebrow',
   titleKey: 'about.release_spotlight.title',
   summaryKey: 'about.release_spotlight.summary',
   bullets: [
     {
-      id: 'transparent_compositing',
-      titleKey: 'about.release_spotlight.bullet.transparent_compositing.title',
-      bodyKey: 'about.release_spotlight.bullet.transparent_compositing.body',
+      id: 'import_validation',
+      titleKey: 'about.release_spotlight.bullet.import_validation.title',
+      bodyKey: 'about.release_spotlight.bullet.import_validation.body',
     },
     {
-      id: 'content_security',
-      titleKey: 'about.release_spotlight.bullet.content_security.title',
-      bodyKey: 'about.release_spotlight.bullet.content_security.body',
+      id: 'repair_guidance',
+      titleKey: 'about.release_spotlight.bullet.repair_guidance.title',
+      bodyKey: 'about.release_spotlight.bullet.repair_guidance.body',
     },
     {
-      id: 'context_recovery',
-      titleKey: 'about.release_spotlight.bullet.context_recovery.title',
-      bodyKey: 'about.release_spotlight.bullet.context_recovery.body',
+      id: 'limited_compatibility',
+      titleKey: 'about.release_spotlight.bullet.limited_compatibility.title',
+      bodyKey: 'about.release_spotlight.bullet.limited_compatibility.body',
     },
     {
-      id: 'graceful_fallback',
-      titleKey: 'about.release_spotlight.bullet.graceful_fallback.title',
-      bodyKey: 'about.release_spotlight.bullet.graceful_fallback.body',
+      id: 'private_diagnostics',
+      titleKey: 'about.release_spotlight.bullet.private_diagnostics.title',
+      bodyKey: 'about.release_spotlight.bullet.private_diagnostics.body',
     },
     {
       id: 'runtime_proof',
