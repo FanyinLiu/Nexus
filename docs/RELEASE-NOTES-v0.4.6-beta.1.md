@@ -1,9 +1,9 @@
 # Nexus v0.4.6-beta.1 — Avatar Runtime Reliability
 
-**Status: Beta release candidate; not a public stable release.** v0.4.5 remains
-the current stable version. This candidate has no tag or GitHub Release until
-the release commit is reviewed, CI is green, and the protected tag workflow is
-explicitly authorized.
+**Status: Published GitHub pre-release on 2026-08-10; not a public stable
+release.** v0.4.5 remains the current stable version. The protected tag
+workflow published `v0.4.6-beta.1` from commit `44dd91c`; its real-use
+validation window remains open.
 
 v0.4.6-beta.1 is a focused Live2D reliability slice. It fixes transparent
 window compositing, makes graphics-context loss recoverable, and strengthens

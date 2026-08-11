@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { readJsonFile } from './fsUtils.js'
+import { inspectLive2dModelFile } from './live2dModelCompatibility.js'
 import {
   normalizeAssetRelativePath,
   slugifyPetModelId,
@@ -66,10 +66,6 @@ async function collectLive2dModelFiles(directoryPath) {
   return modelFiles
 }
 
-export async function readAndValidateLive2dModelFile(filePath) {
-  return readJsonFile(filePath)
-}
-
 export async function listPetModelsFromRoot({
   rootPath,
   description,
@@ -85,7 +81,10 @@ export async function listPetModelsFromRoot({
       return []
     }
 
-    console.error(`Failed to scan Live2D models in ${rootPath}:`, error)
+    console.error('Failed to scan Live2D model root.', {
+      errorName: error instanceof Error ? error.name : 'UnknownError',
+      errorCode: typeof error?.code === 'string' ? error.code : undefined,
+    })
     return []
   }
 
@@ -96,36 +95,46 @@ export async function listPetModelsFromRoot({
     const relativeModelPath = normalizeAssetRelativePath(rootPath, modelFilePath)
 
     try {
-      await readAndValidateLive2dModelFile(modelFilePath)
+      const inspection = await inspectLive2dModelFile(modelFilePath)
+      if (inspection.compatibility.status === 'blocked') {
+        console.warn('Skipping incompatible Live2D model definition.')
+        continue
+      }
+
+      const { compatibility } = inspection
+
+      const modelName = pickDiscoveredModelName(relativeModelPath)
+      const label = formatDiscoveredModelLabel(modelName)
+      const baseId = idPrefix
+        ? `${idPrefix}-${slugifyPetModelId(relativeModelPath)}`
+        : slugifyPetModelId(modelName)
+      let modelId = baseId
+      let collisionIndex = 2
+
+      while (usedIds.has(modelId)) {
+        modelId = `${baseId}-${collisionIndex}`
+        collisionIndex += 1
+      }
+
+      usedIds.add(modelId)
+      discoveredModels.push({
+        id: modelId,
+        label,
+        description,
+        modelPath: modelPathBuilder(relativeModelPath),
+        fallbackImagePath: DEFAULT_PET_MODEL_FALLBACK_IMAGE_PATH,
+        motionGroups: {},
+        expressionMap: {},
+        mouthParams: {},
+        compatibility,
+      })
     } catch (error) {
-      console.warn(`Skipping invalid Live2D model definition: ${relativeModelPath}`, error)
+      console.warn('Skipping invalid Live2D model definition.', {
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+        errorCode: typeof error?.code === 'string' ? error.code : undefined,
+      })
       continue
     }
-
-    const modelName = pickDiscoveredModelName(relativeModelPath)
-    const label = formatDiscoveredModelLabel(modelName)
-    const baseId = idPrefix
-      ? `${idPrefix}-${slugifyPetModelId(relativeModelPath)}`
-      : slugifyPetModelId(modelName)
-    let modelId = baseId
-    let collisionIndex = 2
-
-    while (usedIds.has(modelId)) {
-      modelId = `${baseId}-${collisionIndex}`
-      collisionIndex += 1
-    }
-
-    usedIds.add(modelId)
-    discoveredModels.push({
-      id: modelId,
-      label,
-      description,
-      modelPath: modelPathBuilder(relativeModelPath),
-      fallbackImagePath: DEFAULT_PET_MODEL_FALLBACK_IMAGE_PATH,
-      motionGroups: {},
-      expressionMap: {},
-      mouthParams: {},
-    })
   }
 
   return discoveredModels.sort((left, right) => (

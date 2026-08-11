@@ -145,10 +145,7 @@ export type SettingsDrawerProps = {
     updates: Partial<Omit<ReminderTask, 'id' | 'createdAt'>>,
   ) => void
   onRemoveReminderTask: (id: string) => void
-  onImportPetModel: () => Promise<{
-    model: PetModelDefinition
-    message: string
-  } | null>
+  onImportPetModel: () => Promise<import('../features/pet').PetModelImportResult | null>
   onSelectImportedPetModel?: (petModelId: string) => Promise<void> | void
   onImportCodexPetGallery?: (input: string) => Promise<{
     model: PetModelDefinition

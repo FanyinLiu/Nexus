@@ -313,7 +313,7 @@ export function createLive2DSmokeSignalController({
 
 export function createLive2DSmokeReport(outDir) {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     generatedAt: new Date().toISOString(),
     serverMode: null,
     baseUrl: null,
@@ -500,6 +500,11 @@ async function snapshotLive2D(page) {
       readyMs: container?.dataset.live2dReadyMs ?? null,
       firstFrameMs: container?.dataset.live2dFirstFrameMs ?? null,
       contextRecoveries: container?.dataset.live2dContextRecoveries ?? null,
+      resourceStatus: container?.dataset.live2dResourceStatus ?? null,
+      mocDeclared: container?.dataset.live2dMocDeclared ?? null,
+      textureCount: container?.dataset.live2dTextureCount ?? null,
+      motionCount: container?.dataset.live2dMotionCount ?? null,
+      expressionCount: container?.dataset.live2dExpressionCount ?? null,
       shellCount: document.querySelectorAll('.live2d-shell').length,
       canvasCount: document.querySelectorAll('.live2d-canvas canvas').length,
       fallbackCount: document.querySelectorAll('.live2d-fallback').length,

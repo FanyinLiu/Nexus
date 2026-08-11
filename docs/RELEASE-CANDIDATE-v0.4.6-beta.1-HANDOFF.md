@@ -1,6 +1,7 @@
 # Nexus v0.4.6-beta.1 Release Candidate Handoff
 
-Status: local beta candidate prepared; not tagged, pushed, or published.
+Status: closed; published as GitHub pre-release on 2026-08-10 from commit
+`44dd91c` through the protected tag workflow.
 
 Current public stable release: v0.4.5. Candidate package version:
 `0.4.6-beta.1`.
@@ -30,7 +31,7 @@ telemetry, v0.5 behavior, tag, push, or GitHub Release belongs to this handoff.
 | Packaged sustained runtime | Passed | plateau 0.9517 / 1.4; remount growth 1.0096 / 1.5; 5/5 remounts; 4/4 visibility cycles; errors 0 |
 | `prerelease-check -- v0.4.6-beta.1 --skip=A` | Passed | Stages B–F: 23/23, warnings 0; coverage 90.64%; app runtime 83 KB |
 | `prerelease-check -- v0.4.6-beta.1 --only=A` | Expected local blocker | 6/7 passed; only clean-worktree check fails before the release changes are committed |
-| Cross-platform CI | Pending release commit | Must be green before tag authorization |
+| Cross-platform CI | Passed | Protected prerelease flow completed 30/30 and uploaded 15 release assets |
 
 The temporary visual smoke reports, `dist`, unpacked package, core-path report,
 and sustained-runtime report were moved to Trash after the final gate. The
@@ -46,12 +47,6 @@ smoke implementation and behavior tests remain as durable regression coverage.
 
 ## Promotion Lock
 
-Do not create or push `v0.4.6-beta.1` until all of the following are true:
-
-1. the reviewed release changes are committed on the intended release commit;
-2. the working tree is clean and HEAD equals `origin/main`;
-3. macOS, Windows, and Linux CI are green on that commit;
-4. `npm run prerelease-check -- v0.4.6-beta.1` passes without blockers;
-5. the maintainer explicitly authorizes the tag and push.
-
-Stable `v0.4.6` requires a separate validation window and promotion update.
+The beta tag is immutable and must not be reused or rebuilt. Stable `v0.4.6`
+requires a separate multi-day validation window and promotion update; that
+window has not closed.

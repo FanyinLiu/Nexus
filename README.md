@@ -10,7 +10,7 @@ Nexus 是一个 **本地优先的 AI 桌面伙伴**。
 
 > **当前稳定版：** v0.4.5；发行说明见 [RELEASE-NOTES-v0.4.5.md](docs/RELEASE-NOTES-v0.4.5.md)。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases；更早历史统一放在 Releases。
 
-> **Beta 候选：** `v0.4.6-beta.1` 正在做形象运行时可靠性验证，尚未成为稳定版；候选说明见 [RELEASE-NOTES-v0.4.6-beta.1.zh-CN.md](docs/RELEASE-NOTES-v0.4.6-beta.1.zh-CN.md)。
+> **Beta 候选：** `v0.4.7-beta.1` 正在验证 Live2D 导入兼容性、修复提示和可留档的资源诊断，尚未成为稳定版；候选说明见 [RELEASE-NOTES-v0.4.7-beta.1.zh-CN.md](docs/RELEASE-NOTES-v0.4.7-beta.1.zh-CN.md)。
 
 ## 这个项目是什么
 
@@ -120,9 +120,9 @@ Phase 1 已经开始落地，当前默认体验正在收敛到最小闭环：
 - 基础检查可以下载本地首次运行 QA 报告，包含检查项、首次对话耗时和隐私标记；不会导出聊天内容、模型输出、API Key 或 provider secret。
 - 本地开发时，Nexus 网页预览地址是 `http://127.0.0.1:47821/`；`11434/v1` 是 Ollama API，不是网页预览。
 
-## Beta 预览 — v0.4.6-beta.1
+## Beta 预览 — v0.4.7-beta.1
 
-> **主题：形象运行时可靠性。** 修复透明 Live2D 白边与 Pixi 能力探测 CSP，加入有界 WebGL 上下文恢复、五语言可读降级，以及会主动触发 context loss 的三模型可视化烟测。v0.4.5 仍是稳定版；详见 [中文候选说明](docs/RELEASE-NOTES-v0.4.6-beta.1.zh-CN.md) 与 [English release notes](docs/RELEASE-NOTES-v0.4.6-beta.1.md)。
+> **主题：形象兼容性与诊断。** 导入 Cubism 模型会在激活前检查 Moc、纹理和已声明资源，缺动作/表情时保留显示并说明互动限制；三模型切换报告会留存资源数量。v0.4.5 仍是稳定版；详见 [中文候选说明](docs/RELEASE-NOTES-v0.4.7-beta.1.zh-CN.md) 与 [English release notes](docs/RELEASE-NOTES-v0.4.7-beta.1.md)。
 
 ## 本次稳定更新 — v0.4.5
 

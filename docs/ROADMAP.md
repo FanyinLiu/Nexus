@@ -1,6 +1,6 @@
 # Nexus Roadmap — companion-first phases
 
-> Last updated 2026-08-09. Stewardship follows Klein's product direction.
+> Last updated 2026-08-11. Stewardship follows Klein's product direction.
 > For the short-term MVP and Chinese execution plan, see
 > [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md). When planning
 > near-term work, Phase 1 in that document is the active scope.
@@ -38,9 +38,11 @@ The larger product steps are:
   (the [Companion Surface Cohesion & Transparency](V0.4.3_OPTIMIZATION_AND_COMPETITOR_PLAN_2026-07-12.md)
   follow-up) is closed. Future work must not move the
   package version, tag, GitHub Release, or README stable entry beyond
-  `v0.4.5` until a later release is explicitly prepared. That authorization is
-  now active for the `v0.4.6-beta.1` candidate only: v0.4.5 remains the public
-  stable entry while the beta passes the standard release gate.
+  `v0.4.5` until a later release is explicitly prepared. `v0.4.6-beta.1`
+  remains in its standard multi-day validation window and is not eligible for
+  stable promotion yet. `v0.4.7-beta.1` is the active compatibility candidate;
+  v0.4.5 remains the public stable entry while both beta lines keep candidate
+  semantics.
 - **v0.4.6 — avatar runtime reliability.** Fix transparent Live2D compositing,
   recover boundedly from WebGL context loss, keep a localized readable
   fallback, and prove Mao/Haru/Hiyori cold start, switching, and recovery in
@@ -49,7 +51,10 @@ The larger product steps are:
 - **v0.4.7 — avatar compatibility and diagnostics.** Validate imported Cubism
   resources before activation, explain missing textures/motions/expressions,
   surface actionable repair guidance, and retain packaged switch diagnostics.
-  This remains a compatibility/maintenance release, not a behavior release.
+  The `v0.4.7-beta.1` slice implements this boundary with path-contained
+  resource inspection, five-locale guidance, limited-versus-blocked results,
+  and schema-4 switch evidence. This remains a compatibility/maintenance
+  release, not a behavior release.
 - **v0.5.0 — adaptive desktop presence.** Extend the existing sprite
   locomotion foundation into a shared sprite/Live2D behavior layer. The visible
   companion may react to mouse proximity, coarse typing rhythm, idleness, and

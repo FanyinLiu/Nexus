@@ -71,9 +71,9 @@ import {
 import {
   formatDiscoveredModelLabel,
   listPetModelsFromRoot,
-  readAndValidateLive2dModelFile,
 } from './live2dModelDiscoveryService.js'
-import { pathExists } from './fsUtils.js'
+import { inspectLive2dModelFile } from './live2dModelCompatibility.js'
+import { pathExists, readJsonFile } from './fsUtils.js'
 
 const IMPORTED_PET_MODEL_DESCRIPTION = '已导入到应用本地目录的 Live2D 模型，可直接切换。'
 const BUNDLED_SPRITE_PET_MODEL_DESCRIPTION = '内置 Sprite 宠物包，可直接切换。'
@@ -170,7 +170,7 @@ function petArtifactDisplayFields(paths = {}) {
 }
 
 async function readAndValidateJsonFile(filePath) {
-  return readAndValidateLive2dModelFile(filePath)
+  return readJsonFile(filePath)
 }
 
 async function listBundledPetModels() {
@@ -243,7 +243,14 @@ async function listAvailablePetModels() {
 
 async function importLive2dPetModelFromPath(selectedModelPath) {
   assertNotPrivateCodexPetSource(selectedModelPath)
-  await readAndValidateJsonFile(selectedModelPath)
+  const inspection = await inspectLive2dModelFile(selectedModelPath)
+  if (inspection.compatibility.status === 'blocked') {
+    return {
+      model: null,
+      message: '',
+      compatibility: inspection.compatibility,
+    }
+  }
 
   const importedRoot = getImportedPetModelsRoot()
   if (isPathInsideRoot(importedRoot, selectedModelPath)) {
@@ -277,6 +284,7 @@ async function importLive2dPetModelFromPath(selectedModelPath) {
   return {
     model: importedModel,
     message: `已导入 ${importedModel.label}，现在可以直接切换。`,
+    compatibility: importedModel.compatibility ?? inspection.compatibility,
   }
 }
 

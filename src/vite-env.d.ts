@@ -3,6 +3,7 @@
 import type {
   CodexPetGalleryCatalogResult,
   PetModelDefinition,
+  PetModelImportResult,
   SpritePetCreatorKitInspection,
 } from './features/pet'
 import type { VoiceEmotionLabel } from './types'
@@ -522,10 +523,7 @@ declare global {
       setLaunchOnStartup: (value: boolean) => Promise<boolean>
       getPlatformProfile: () => Promise<PlatformProfile>
       listPetModels: () => Promise<PetModelDefinition[]>
-      importPetModel: () => Promise<{
-        model: PetModelDefinition
-        message: string
-      } | null>
+      importPetModel: () => Promise<PetModelImportResult | null>
       importCodexPetGallery: (input: string) => Promise<{
         model: PetModelDefinition
         message: string

@@ -102,10 +102,46 @@ export interface PetModelDefinition {
    * `src/features/pet/idleSequence.ts` for the draw logic.
    */
   idleFidgets?: IdleFidgetDefinition[]
+  compatibility?: Live2dModelCompatibility
+}
+
+export type Live2dCompatibilityErrorCode =
+  | 'invalid-model-file'
+  | 'missing-moc'
+  | 'missing-texture'
+  | 'missing-motion'
+  | 'missing-expression'
+  | 'missing-optional-resource'
+  | 'unsafe-resource-path'
+
+export type Live2dCompatibilityWarningCode = 'no-motions' | 'no-expressions'
+
+export interface Live2dModelCompatibility {
+  status: 'ready' | 'limited' | 'blocked'
+  errors: Live2dCompatibilityErrorCode[]
+  warnings: Live2dCompatibilityWarningCode[]
+  summary: {
+    textureCount: number
+    motionCount: number
+    expressionCount: number
+    missingMocCount: number
+    missingTextureCount: number
+    missingMotionCount: number
+    missingExpressionCount: number
+    missingOptionalCount: number
+    unsafeResourceCount: number
+  }
+}
+
+export interface PetModelImportResult {
+  model: PetModelDefinition | null
+  message: string
+  compatibility?: Live2dModelCompatibility
 }
 
 export interface CubismModelFile {
   FileReferences?: {
+    Moc?: string
     Textures?: string[]
     Expressions?: Array<{
       Name: string
@@ -117,6 +153,39 @@ export interface CubismModelFile {
     Name?: string
     Ids?: string[]
   }>
+}
+
+export interface CubismDeclaredResourceSummary {
+  status: 'ready' | 'limited' | 'blocked'
+  mocDeclared: boolean
+  textureCount: number
+  motionCount: number
+  expressionCount: number
+}
+
+/** Summarize the resource declarations used by runtime and smoke diagnostics. */
+export function summarizeCubismDeclaredResources(
+  modelFile?: CubismModelFile,
+): CubismDeclaredResourceSummary {
+  const references = modelFile?.FileReferences
+  const mocDeclared = Boolean(references?.Moc?.trim())
+  const textureCount = Array.isArray(references?.Textures) ? references.Textures.length : 0
+  const expressionCount = Array.isArray(references?.Expressions) ? references.Expressions.length : 0
+  const motionCount = references?.Motions
+    ? Object.values(references.Motions).reduce((count, group) => (
+      count + (Array.isArray(group) ? group.length : 0)
+    ), 0)
+    : 0
+
+  return {
+    status: !mocDeclared || textureCount === 0
+      ? 'blocked'
+      : (motionCount === 0 || expressionCount === 0 ? 'limited' : 'ready'),
+    mocDeclared,
+    textureCount,
+    motionCount,
+    expressionCount,
+  }
 }
 
 function pickMotionGroup(motions: Record<string, unknown[]> | undefined, candidates: string[]) {

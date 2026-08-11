@@ -64,9 +64,9 @@ const desktopShortcutInstaller = readText('scripts/install-desktop-shortcut.ps1'
 const hiddenLauncher = readText('scripts/launch-nexus-hidden.vbs')
 const currentVersion = `v${pkg.version}`
 // v0.4.5 shipped as the current stable release, so no draft layer is in
-// flight; the next beta line (v0.4.6-beta.N) may legitimately leave the
+// flight; the active compatibility beta (v0.4.7-beta.N) may legitimately leave the
 // stable release number while the stable entry point stays on v0.4.5.
-const DRAFT_BETA_VERSION_PATTERN = /^v0\.4\.6-beta\.\d+$/
+const DRAFT_BETA_VERSION_PATTERN = /^v0\.4\.7-beta\.\d+$/
 const readmeFiles = {
   'README.md': readme,
   ...localizedReadmes,
