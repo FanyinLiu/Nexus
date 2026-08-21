@@ -194,15 +194,6 @@ export type SettingsDrawerProps = {
     ok: boolean
     message: string
   }>
-  onCreateSpritePetFromImage?: () => Promise<{
-    model: PetModelDefinition
-    message: string
-    packageDirectory?: string
-    manifestPath?: string
-    spritesheetPath?: string
-    visualAuditPath?: string
-    archivePath?: string
-  } | null>
   onTestConnection: (
     capability: ServiceConnectionCapability,
     settings: AppSettings,
@@ -269,7 +260,6 @@ export function SettingsDrawer({
   onAssembleCodexPetCreatorKit,
   onInstallCodexPetCreatorKitToCodex,
   onOpenCodexPetCreatorKitPath,
-  onCreateSpritePetFromImage,
   onTestConnection,
   onLoadSpeechVoices,
   onPreviewSpeech,
@@ -425,7 +415,6 @@ export function SettingsDrawer({
     onAssembleCodexPetCreatorKit,
     onInstallCodexPetCreatorKitToCodex,
     onOpenCodexPetCreatorKitPath,
-    onCreateSpritePetFromImage,
     onSelectImportedPetModel,
     setDraft,
   })

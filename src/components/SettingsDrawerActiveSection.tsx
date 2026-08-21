@@ -216,7 +216,6 @@ export function SettingsDrawerActiveSection({
           lastCreatorKitSourceRowsDirectory={petModelImport.lastCreatorKitSourceRowsDirectory}
           lastCreatorKitSourceRowsDirectoryDisplay={petModelImport.lastCreatorKitSourceRowsDirectoryDisplay}
           assembledCreatorKitPackage={petModelImport.assembledCreatorKitPackage}
-          generatedSpritePetPackage={petModelImport.generatedSpritePetPackage}
           onImportPetModel={() => void petModelImport.handleImportPetModel()}
           onImportCodexPetGallery={(input) => void petModelImport.handleImportCodexPetGallery(input)}
           onLoadCodexPetGallery={(query) => void petModelImport.handleLoadCodexPetGallery(query)}
@@ -224,9 +223,7 @@ export function SettingsDrawerActiveSection({
           onInspectCodexPetCreatorKit={() => void petModelImport.handleInspectCodexPetCreatorKit()}
           onAssembleCodexPetCreatorKit={() => void petModelImport.handleAssembleCodexPetCreatorKit()}
           onInstallCodexPetCreatorKitToCodex={() => void petModelImport.handleInstallCodexPetCreatorKitToCodex()}
-          onInstallGeneratedSpritePetPackageToCodex={() => void petModelImport.handleInstallGeneratedSpritePetPackageToCodex()}
           onOpenCodexPetCreatorKitPath={(payload) => void petModelImport.handleOpenCodexPetCreatorKitPath(payload)}
-          onCreateSpritePetFromImage={() => void petModelImport.handleCreateSpritePetFromImage()}
         />
       )
     case 'history':

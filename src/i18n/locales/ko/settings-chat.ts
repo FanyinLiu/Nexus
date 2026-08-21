@@ -23,7 +23,6 @@ export const koSettingsChat = {
   'settings.chat.speaking_instructions_placeholder': '예: "부드럽고 약간 허스키하게" — 일부 제공자에서 지원',
   'settings.chat.importing_model': '가져오는 중...',
   'settings.chat.import_model': '로컬 아바타 모델 가져오기',
-  'settings.chat.create_sprite_pet_from_image': '이미지/Atlas로 펫 만들기',
   'settings.chat.sprite_pet_fallback_label': 'Sprite 펫',
   'settings.chat.codex_pet_import': 'Codex 펫 가져오기',
   'settings.chat.codex_pet_import_hint': 'codex-pet.org 상세 URL를 먼저 사용하세요. 이후 codex-pet.com slug 또는 CodexPets.net 상세 페이지도 사용 가능합니다. ZIP 다운로드 URL도 사용할 수 있습니다. Nexus는 호환 spritesheet를 로컬 펫 라이브러리에 저장합니다.',

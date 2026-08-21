@@ -57,16 +57,6 @@ export type ChatSectionV3Props = {
     archivePath?: string
     archivePathDisplay?: string
   } | null
-  generatedSpritePetPackage: {
-    packageDirectory: string
-    packageDirectoryDisplay?: string
-    manifestPath: string
-    manifestPathDisplay?: string
-    visualAuditPath?: string
-    visualAuditPathDisplay?: string
-    archivePath?: string
-    archivePathDisplay?: string
-  } | null
   onImportPetModel: () => void
   onImportCodexPetGallery: (input: string) => void
   onLoadCodexPetGallery: (query?: string) => void
@@ -74,13 +64,11 @@ export type ChatSectionV3Props = {
   onInspectCodexPetCreatorKit: () => void
   onAssembleCodexPetCreatorKit: () => void
   onInstallCodexPetCreatorKitToCodex: () => void
-  onInstallGeneratedSpritePetPackageToCodex: () => void
   onOpenCodexPetCreatorKitPath: (payload: {
     kitDirectory: string
     targetPath: string
     mode?: 'open' | 'reveal'
   }) => void
-  onCreateSpritePetFromImage: () => void
 }
 
 export const ChatSectionV3 = memo(function ChatSectionV3(props: ChatSectionV3Props) {

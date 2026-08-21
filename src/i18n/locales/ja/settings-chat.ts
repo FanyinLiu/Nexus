@@ -23,7 +23,6 @@ export const jaSettingsChat = {
   'settings.chat.speaking_instructions_placeholder': '例: 「やさしく、少しハスキー」— 一部のプロバイダーで対応',
   'settings.chat.importing_model': 'インポート中...',
   'settings.chat.import_model': 'ローカルアバターモデルをインポート',
-  'settings.chat.create_sprite_pet_from_image': '画像/Atlasからペット作成',
   'settings.chat.sprite_pet_fallback_label': 'Sprite ペット',
   'settings.chat.codex_pet_import': 'Codex ペットをインポート',
   'settings.chat.codex_pet_import_hint': 'codex-pet.org の詳細ページ URL を優先してください。次に codex-pet.com の slug、または CodexPets.net の詳細ページを利用できます。ZIP ダウンロード URL も使えます。Nexus は互換 spritesheet をローカルペットライブラリに保存します。',

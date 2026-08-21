@@ -583,20 +583,6 @@ declare global {
         ok: boolean
         message: string
       }>
-      createSpritePetFromImage: () => Promise<{
-        model: PetModelDefinition
-        message: string
-        packageDirectory?: string
-        packageDirectoryDisplay?: string
-        manifestPath?: string
-        manifestPathDisplay?: string
-        spritesheetPath?: string
-        spritesheetPathDisplay?: string
-        visualAuditPath?: string
-        visualAuditPathDisplay?: string
-        archivePath?: string
-        archivePathDisplay?: string
-      } | null>
       showConfirmDialog: (message: string) => Promise<boolean>
       saveTextFile: (payload: TextFileSaveRequest) => Promise<TextFileSaveResponse>
       openTextFile: (payload: TextFileOpenRequest) => Promise<TextFileOpenResponse>

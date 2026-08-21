@@ -34,29 +34,16 @@ The spritesheet must be PNG or WebP, transparent where unused, and exactly `1536
 - `9` rows
 - `192x208` pixels per frame
 
-## Easy Creator Flow
+## Stable product boundary
 
-Most users should not have to learn the atlas details first. Start from one character image: in the app, use Settings -> Companion -> Avatar -> `Make pet from image/atlas`. Nexus creates the local package, validates it, and switches the active avatar to the generated Sprite pet. If the selected image already looks like a full Codex `8x9` atlas, Nexus detects that automatically. A valid native `1536x1872` Codex atlas is preserved instead of being reanimated from a single frame; a scaled AI-style atlas is split into rows and cells before packaging.
+The stable Nexus UI does not create a pet directly from a character image or
+an existing image atlas. That image/atlas-to-pet path was removed from the
+v0.4.6 stable surface. Users can import an existing validated package, import a
+community `.codex-pet.zip`, or use the Creator Kit below to author original art
+outside Nexus and assemble it into the supported package shape.
 
-This produces a ready-to-import package:
-
-- `pet.json`
-- `spritesheet.png`
-- `my-pet.codex-pet.zip`
-- `README.md`
-
-The maker removes a simple solid background, creates the required `8x9` atlas, fills unused cells transparently, applies starter row motion, validates the result with the same parser Nexus uses in the app, and writes a shareable `.codex-pet.zip`. After the app flow finishes, the settings panel shows the generated package with actions to open the folder, reveal the ZIP, or install the pet into `${CODEX_HOME:-$HOME/.codex}/pets/`. It does not add speed lines, glow, stars, floor shadows, checkmarks, detached props, or other decorative effects. Start from art that already looks like a Codex digital pet: compact silhouette, thick dark outline, limited palette, flat shading, and a transparent or clean chroma-key background.
-
-For better motion, generate or draw a source image that is already an `8x9` action sheet and let the maker package it. The settings UI detects this automatically.
-
-The user-facing product flow should be:
-
-1. Pick or generate a character image.
-2. Nexus builds a starter pet automatically.
-3. Preview the 9 action rows.
-4. Import/share the generated folder or `.codex-pet.zip`.
-
-Advanced users can still edit `spritesheet.png` frame by frame, but the ecosystem should treat that as optional polish, not the default path.
+Advanced users can edit `spritesheet.png` frame by frame, but the package must
+still satisfy the same manifest and `8x9` atlas contract before import.
 
 ## Prompt Creator Kit
 
@@ -140,7 +127,6 @@ Nexus should treat existing Codex pet sites as part of the product ecosystem ins
 - `https://codexpets.org/` - lightweight browser, preview, install, and hatch-pet prompt builder. This is useful for users who need to understand the format before creating a package.
 - `https://openpets.dev/` - broader open-source desktop-pet ecosystem for AI coding tools, with a large pet gallery and MCP/tool integrations. Use this as inspiration and a conversion source, not as a guaranteed Codex package source.
 - `https://openpets.app/pets` - reviewed-pack gallery plus validator-style tooling. Use it to sanity-check package shape and download known-good ZIPs when a direct ZIP is available.
-- `https://www.getyourownpet.com/` - PetForge, a third-party photo-to-Codex-pet generator that outputs files users can install under `~/.codex/pets/`.
 - `https://spritesheep.com/` or another pixel/sprite editor - use these for hand-editing the row strips before assembly.
 
 Keep these as user-selected sources. Do not bundle community artwork into Nexus unless the asset's license or owner explicitly allows that distribution.
@@ -149,7 +135,7 @@ Shimeji and eSheep are useful background ecosystems because they have many deskt
 
 In the app, open Settings -> Companion -> Avatar -> `Import Codex pet`. Users can:
 
-1. Click a community source link to browse or generate a pet.
+1. Click a community source link to browse an existing pet package.
 2. Paste a `codex-pet.com` slug, a `codex-pet.com` detail page, a `codex-pet.org` detail page, or a `codexpets.net` detail page and import it directly.
 3. Paste a Coding Pets or CodexPets.net ZIP download URL and let Nexus download, validate, and import it directly.
 4. Use `Browse gallery` to load searchable entries from `codex-pet.com`, `codex-pet.org`, CodexPets.net, and Coding Pets inside Nexus, then click `Import`.

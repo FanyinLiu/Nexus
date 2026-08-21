@@ -125,7 +125,6 @@ test('pet model error summaries omit private error messages', () => {
 
 test('pet model confirmation policy distinguishes dialog-backed and direct actions', () => {
   assert.equal(petModelActionNeedsConfirmation('pet-model:import', {}), false)
-  assert.equal(petModelActionNeedsConfirmation('pet-model:create-from-image', {}), false)
   assert.equal(petModelActionNeedsConfirmation('pet-model:inspect-creator-kit', {}), false)
   assert.equal(
     petModelActionNeedsConfirmation('pet-model:inspect-creator-kit', { kitDirectory: '/tmp/private-kit' }),

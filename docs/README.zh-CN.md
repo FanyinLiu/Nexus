@@ -24,19 +24,17 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **当前稳定版：** v0.4.5，稳定入口见 [RELEASE-NOTES-v0.4.5.md](RELEASE-NOTES-v0.4.5.md)。Nexus 继续保持桌面陪伴感知的粗粒度和隐私优先边界，本版带来记忆可信度切片与维护加固，记忆矛盾检测完全在本地运行。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases。
-
-> **Beta 候选：** `v0.4.6-beta.1` 正在验证透明 Live2D 合成、WebGL 自动恢复和可读降级，尚未成为稳定版。详见 [中文候选说明](RELEASE-NOTES-v0.4.6-beta.1.zh-CN.md)。
+> **当前稳定版：** v0.4.6，稳定入口见 [RELEASE-NOTES-v0.4.6.md](RELEASE-NOTES-v0.4.6.md)。本版改善透明 Live2D 合成、WebGL 自动恢复和可读降级，并移除从图片/Atlas制作宠物的界面路径。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases。
 
 > **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前短期开发以根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 为准：Phase 1 只收敛桌面常驻小窗口、极简头像、Ollama / DeepSeek 文本模型和简单对话。
 
 ---
 
-## Beta 预览 — v0.4.6-beta.1
+## 本次稳定更新 — v0.4.6
 
-> **主题：形象运行时可靠性。** 修复透明白边与 Pixi CSP，加入有界 WebGL 上下文恢复、五语言降级，以及强制 context loss 的三模型烟测。v0.4.5 仍是稳定版。
+> **主题：形象运行时可靠性。** 修复透明白边与 Pixi CSP，加入有界 WebGL 上下文恢复、五语言降级，以及强制 context loss 的三模型烟测；稳定版不再提供从图片/Atlas制作宠物。详见 [中文发行说明](RELEASE-NOTES-v0.4.6.zh-CN.md) 与 [English release notes](RELEASE-NOTES-v0.4.6.md)。
 
-## 本次稳定更新 — v0.4.5
+## 上一公开版本 — v0.4.5
 
 > **主题：记忆可信度与维护。** 她记得更准、更少自相矛盾：夜间 dream 周期自动检测新旧记忆矛盾并两档降权（不删除任何记忆、无确认 UI）；记忆域 SQLite 迁移默认开启（回滚与授权路径不变）；桌宠状态（思考/等待/离线/错误）改由主进程真实聊天请求生命周期驱动。另含可靠性、安全修复与大规模内部契约单源化清理。中文说明见 [RELEASE-NOTES-v0.4.5.zh-CN.md](RELEASE-NOTES-v0.4.5.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.5.md](RELEASE-NOTES-v0.4.5.md)。
 
@@ -86,7 +84,7 @@
 
 ## 旧版本记录
 
-README 只保留当前稳定版 v0.4.5 和上一公开版本 v0.4.4 的重点；更早历史版本统一放在 [CHANGELOG](../CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 顶部继续滚动维护旧版本号。
+README 只保留当前稳定版 v0.4.6 和上一公开版本 v0.4.5 的重点；更早历史版本统一放在 [CHANGELOG](../CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 顶部继续滚动维护旧版本号。
 
 ---
 
@@ -101,7 +99,7 @@ README 只保留当前稳定版 v0.4.5 和上一公开版本 v0.4.4 的重点；
 | 查看安全与隐私 | [安全与援助](#安全与援助) |
 | 参与社区内容 | [社区](#社区) · [Community Guide](COMMUNITY.md) |
 | 理解 0.4 方向 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 查看 0.4 当前稳定版 | [v0.4.5 Release Notes](RELEASE-NOTES-v0.4.5.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 查看 0.4 当前稳定版 | [v0.4.6 Release Notes](RELEASE-NOTES-v0.4.6.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## 为什么是 Nexus？
 
@@ -198,7 +196,7 @@ README 只保留当前稳定版 v0.4.5 和上一公开版本 v0.4.4 的重点；
 
 从 [release 页面](https://github.com/FanyinLiu/Nexus/releases/latest) 下载最新安装包：
 
-> 下表是 v0.4.4 正式发行契约。安装包只以受保护的 tag 工作流成功发布到 GitHub Releases 后的实际资产为准；不要使用本地或第三方转载包。
+> 下表是 v0.4.6 正式发行契约。安装包只以受保护的 tag 工作流成功发布到 GitHub Releases 后的实际资产为准；不要使用本地或第三方转载包。
 
 | 平台 | 文件 |
 |---|---|
@@ -207,7 +205,7 @@ README 只保留当前稳定版 v0.4.5 和上一公开版本 v0.4.4 的重点；
 | Linux x64 | `.AppImage` / `.deb` / `.tar.gz` + `SHA256SUMS-linux.txt` |
 
 > **首次启动会看到安全警告，这是正常的。**
-> Nexus v0.4.4 不使用 Apple Developer ID / 公证或 Windows
+> Nexus v0.4.6 不使用 Apple Developer ID / 公证或 Windows
 > 代码签名。macOS 的 ad-hoc 签名不等于 Apple 信任；Windows
 > 安装器会标记为 `NotSigned`。系统警告不是安全结论，用户仍需
 > 核对来源和 SHA-256。
@@ -314,7 +312,7 @@ npm run package:win     # 或 package:mac / package:linux
 
 Nexus 目前由个人维护，issue 和 PR 的处理速度取决于分流是否精准：
 
-社区文档会贯穿所有版本，不只属于某一次发布。0.3 收安全、记忆和设置地基；0.4 会进入桌面陪伴感知；0.5 会进入桌宠桌面行为。社区可以持续贡献文档、人格模板、桌宠包、模型配置菜谱、翻译和 beta 验证报告，让项目变大但不失控。长期入口见 [Community Guide](COMMUNITY.md)，0.4 方向见 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 当前稳定版说明见 [v0.4.5 Release Notes](RELEASE-NOTES-v0.4.5.md)，发布加固清单见 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
+社区文档会贯穿所有版本，不只属于某一次发布。0.3 收安全、记忆和设置地基；0.4 会进入桌面陪伴感知；0.5 会进入桌宠桌面行为。社区可以持续贡献文档、人格模板、桌宠包、模型配置菜谱、翻译和 beta 验证报告，让项目变大但不失控。长期入口见 [Community Guide](COMMUNITY.md)，0.4 方向见 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，0.4 当前稳定版说明见 [v0.4.6 Release Notes](RELEASE-NOTES-v0.4.6.md)，发布加固清单见 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
 
 - 🐛 **发现 Bug？** → [Bug 报告](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **有明确的功能想法？** → [功能请求](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

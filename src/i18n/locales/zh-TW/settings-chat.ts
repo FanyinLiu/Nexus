@@ -23,7 +23,6 @@ export const zhTWSettingsChat = {
   'settings.chat.speaking_instructions_placeholder': '例如「溫柔，略帶沙啞」——部分提供商支援',
   'settings.chat.importing_model': '匯入模型中...',
   'settings.chat.import_model': '匯入本地形象模型',
-  'settings.chat.create_sprite_pet_from_image': '從圖片/Atlas 製作寵物',
   'settings.chat.sprite_pet_fallback_label': 'Sprite 寵物',
   'settings.chat.codex_pet_import': '匯入 Codex 寵物',
   'settings.chat.codex_pet_import_hint': '優先複製 codex-pet.org 詳情頁 URL，或使用 codex-pet.com slug、CodexPets.net 詳情頁；也可以貼上 ZIP 下載 URL。Nexus 會把相容 spritesheet 保存到本地寵物庫。',

@@ -38,11 +38,9 @@ type TiFn = (
 // Module-level on purpose: defining this inside ChatStudioV3 created a new
 // component type every render (react-hooks: "Cannot create components during
 // render"), remounting the output block on each parent render.
-function PackageResult({ output, generated = false, onOpenPath, onInstallGenerated, onInstallKit, ti }: {
+function PackageResult({ output, onOpenPath, onInstallKit, ti }: {
   output: PackageOutput
-  generated?: boolean
   onOpenPath: ChatSectionV3Props['onOpenCodexPetCreatorKitPath']
-  onInstallGenerated: ChatSectionV3Props['onInstallGeneratedSpritePetPackageToCodex']
   onInstallKit: ChatSectionV3Props['onInstallCodexPetCreatorKitToCodex']
   ti: TiFn
 }) {
@@ -54,7 +52,7 @@ function PackageResult({ output, generated = false, onOpenPath, onInstallGenerat
       <SettingsV3Toolbar>
         <button type="button" onClick={() => open(output.packageDirectory)}>{ti('settings.chat.codex_pet_creator_open_final_package')}</button>
         {output.archivePath ? <button type="button" onClick={() => open(output.archivePath ?? '', 'reveal')}>{ti('settings.chat.codex_pet_creator_open_archive')}</button> : null}
-        <button type="button" onClick={generated ? onInstallGenerated : onInstallKit}>{ti('settings.chat.codex_pet_creator_install_codex')}</button>
+        <button type="button" onClick={onInstallKit}>{ti('settings.chat.codex_pet_creator_install_codex')}</button>
       </SettingsV3Toolbar>
     </div>
   )
@@ -183,12 +181,9 @@ export function ChatStudioV3(props: ChatSectionV3Props) {
         <SettingsV3Toolbar>
           <button type="button" onClick={() => void importCharacterCard()} disabled={importingCard}>{importingCard ? ti('settings.chat.importing_card') : ti('settings.chat.import_card')}</button>
           <button type="button" onClick={props.onImportPetModel} disabled={props.importingPetModel}>{props.importingPetModel ? ti('settings.chat.importing_model') : ti('settings.chat.import_model')}</button>
-          <button type="button" onClick={props.onCreateSpritePetFromImage} disabled={props.importingPetModel}>{ti('settings.chat.create_sprite_pet_from_image')}</button>
         </SettingsV3Toolbar>
         {cardStatus ? <SettingsV3Notice tone={cardStatus.ok ? 'success' : 'error'} title={cardStatus.message} announce /> : null}
       </div>
-
-      {props.generatedSpritePetPackage ? <PackageResult output={props.generatedSpritePetPackage} generated onOpenPath={props.onOpenCodexPetCreatorKitPath} onInstallGenerated={props.onInstallGeneratedSpritePetPackageToCodex} onInstallKit={props.onInstallCodexPetCreatorKitToCodex} ti={ti} /> : null}
 
       <section className="settings-v3-studio-pane" aria-labelledby="settings-v3-gallery-title">
         <header><strong id="settings-v3-gallery-title">{ti('settings.chat.codex_pet_import')}</strong><span>{ti('settings.chat.codex_pet_import_hint')}</span></header>
@@ -239,7 +234,7 @@ export function ChatStudioV3(props: ChatSectionV3Props) {
             </SettingsV3Toolbar>
           </div>
         ) : null}
-        {props.assembledCreatorKitPackage ? <PackageResult output={props.assembledCreatorKitPackage} onOpenPath={props.onOpenCodexPetCreatorKitPath} onInstallGenerated={props.onInstallGeneratedSpritePetPackageToCodex} onInstallKit={props.onInstallCodexPetCreatorKitToCodex} ti={ti} /> : null}
+        {props.assembledCreatorKitPackage ? <PackageResult output={props.assembledCreatorKitPackage} onOpenPath={props.onOpenCodexPetCreatorKitPath} onInstallKit={props.onInstallCodexPetCreatorKitToCodex} ti={ti} /> : null}
         {props.creatorKitInspection ? (
           <div className="settings-v3-studio-output" role="status">
             <strong>{props.creatorKitInspection.displayName}</strong>

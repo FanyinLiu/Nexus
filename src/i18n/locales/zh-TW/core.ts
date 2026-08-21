@@ -413,7 +413,7 @@ export const zhTWCore = {
   'about.links.changelog': '更新紀錄',
   'about.release_spotlight.eyebrow': '版本主題 · v{version}',
   'about.release_spotlight.title': '每個介面，夥伴形象都更穩。',
-  'about.release_spotlight.summary': 'Nexus v0.4.6-beta.1 預覽更可靠的 Live2D 執行環境；v0.4.5 仍是穩定版。macOS beta 未簽署，需從發布頁手動更新。',
+  'about.release_spotlight.summary': 'Nexus v0.4.6 透過有界 WebGL 恢復與易讀降級狀態，讓 Live2D 執行環境更可靠。macOS 建置未簽署，需從發布頁手動更新。',
   'about.release_spotlight.action.open_voice': '開啟語音設定',
   'about.release_spotlight.action.preview_companion': '預覽夥伴',
   'about.release_spotlight.bullet.companion_presence.title': '陪伴存在仍是主線',

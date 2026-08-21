@@ -413,7 +413,7 @@ export const koCore = {
   'about.links.changelog': '변경 내역',
   'about.release_spotlight.eyebrow': '버전 테마 · v{version}',
   'about.release_spotlight.title': '모든 화면에서 더 안정적인 아바타.',
-  'about.release_spotlight.summary': 'Nexus v0.4.6-beta.1은 더 안정적인 Live2D 런타임을 미리 검증합니다. 안정 버전은 v0.4.5입니다. 서명되지 않은 macOS beta는 릴리스 페이지에서 수동으로 업데이트합니다.',
+  'about.release_spotlight.summary': 'Nexus v0.4.6은 제한된 WebGL 복구와 읽기 쉬운 대체 상태로 Live2D 런타임을 더 안정적으로 만듭니다. 서명되지 않은 macOS 빌드는 릴리스 페이지에서 수동으로 업데이트합니다.',
   'about.release_spotlight.action.open_voice': '음성 설정 열기',
   'about.release_spotlight.action.preview_companion': '동반자 미리보기',
   'about.release_spotlight.bullet.companion_presence.title': '동반자 존재감을 중심에',

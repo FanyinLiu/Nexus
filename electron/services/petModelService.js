@@ -19,9 +19,6 @@ import {
   listSpritePetModelsFromRoot,
 } from './spritePetModelDiscovery.js'
 import {
-  createSpritePetPackageFromImage,
-} from './spritePetMaker.js'
-import {
   createSpritePetCreatorKit,
 } from './spritePetCreatorKit.js'
 import {
@@ -69,7 +66,6 @@ import {
   IMPORTED_SPRITE_PET_MODELS_ROUTE,
 } from './petModelUrlBuilders.js'
 import {
-  formatDiscoveredModelLabel,
   listPetModelsFromRoot,
   readAndValidateLive2dModelFile,
 } from './live2dModelDiscoveryService.js'
@@ -384,68 +380,6 @@ async function importSpritePetModelFromCodexGalleryUrlCandidates(candidateUrls, 
     ? '已尝试 codex-pet.com 详情页和 codex-pet.org 详情页。'
     : ''
   throw new Error(`没能导入 ${fallbackContext}。${detailHint}${lastError?.message ? `详情：${lastError.message}` : ''}`)
-}
-
-async function createSpritePetModelFromImagePath(selectedImagePath) {
-  assertNotPrivateCodexPetSource(selectedImagePath)
-  const importedRoot = getImportedSpritePetModelsRoot()
-  const packageId = slugifyPetModelId(path.basename(selectedImagePath, path.extname(selectedImagePath)))
-  const displayName = formatDiscoveredModelLabel(packageId)
-  const importDirectoryBaseName = `${packageId}-${Date.now()}`
-
-  await fs.mkdir(importedRoot, { recursive: true })
-  const targetDirectory = await resolveUniqueChildDirectory(importedRoot, importDirectoryBaseName)
-
-  const {
-    spritePath,
-    manifestPath,
-    targetDirectory: packageDirectory,
-    visualAuditPath,
-    archivePath,
-    sourceLayout = 'single',
-    nativeAtlasPreserved = false,
-    visualWarnings = [],
-  } = await createSpritePetPackageFromImage({
-    sourcePath: selectedImagePath,
-    targetDirectory,
-    id: packageId,
-    displayName,
-    description: '从一张图片生成的 Codex 风格 Sprite 宠物包。',
-  })
-  const importedModels = await listImportedSpritePetModels()
-  const importedSpriteUrl = buildImportedSpritePetAssetUrl(
-    normalizeAssetRelativePath(importedRoot, spritePath),
-  )
-  const importedModel = importedModels.find((model) => model.spriteAtlas?.imagePath === importedSpriteUrl)
-
-  if (!importedModel) {
-    throw new Error('宠物包已生成，但未能在应用内完成注册。')
-  }
-
-  const sourceMessage = sourceLayout === 'atlas'
-    ? nativeAtlasPreserved
-      ? '已原样导入有效 8x9 atlas'
-      : '已从 8x9 atlas 生成'
-    : '已从图片生成'
-
-  return {
-    model: importedModel,
-    packageDirectory,
-    manifestPath,
-    spritesheetPath: spritePath,
-    visualAuditPath,
-    archivePath,
-    ...petArtifactDisplayFields({
-      packageDirectory,
-      manifestPath,
-      spritesheetPath: spritePath,
-      visualAuditPath,
-      archivePath,
-    }),
-    message: visualWarnings.length
-      ? `${sourceMessage} ${importedModel.label}，现在可以直接切换。可分享 ZIP：${getPetArtifactDisplayPath(archivePath)}。视觉审计有 ${visualWarnings.length} 条提醒，建议预览后再分享。`
-      : `${sourceMessage} ${importedModel.label}，现在可以直接切换。可分享 ZIP：${getPetArtifactDisplayPath(archivePath)}。视觉审计通过。`,
-  }
 }
 
 async function importSpritePetModelFromCodexGallery(input) {
@@ -805,32 +739,6 @@ async function importPetModelFromDialog() {
   throw new Error('请选择 Live2D 的 .model3.json 文件，或 Sprite 宠物包的 pet.json / ZIP。')
 }
 
-async function createSpritePetModelFromImageDialog() {
-  const panelWindow = _getPanelWindow()
-  const mainWindow = _getMainWindow()
-  const sourceWindow = BrowserWindow.getFocusedWindow() ?? panelWindow ?? mainWindow ?? undefined
-  const dialogOptions = {
-    title: '选择图片或 8x9 atlas 制作 Codex 宠物',
-    buttonLabel: '制作宠物',
-    properties: ['openFile'],
-    filters: [
-      {
-        name: 'Image',
-        extensions: ['png', 'jpg', 'jpeg', 'webp'],
-      },
-    ],
-  }
-  const selection = sourceWindow
-    ? await dialog.showOpenDialog(sourceWindow, dialogOptions)
-    : await dialog.showOpenDialog(dialogOptions)
-
-  if (selection.canceled || !selection.filePaths.length) {
-    return null
-  }
-
-  return createSpritePetModelFromImagePath(path.resolve(selection.filePaths[0]))
-}
-
 async function saveTextFileFromDialog(sourceWindow, payload = {}) {
   const defaultFileName = String(payload.defaultFileName ?? '').trim() || `desktop-pet-${Date.now()}.json`
   const content = String(payload.content ?? '')
@@ -930,7 +838,6 @@ export {
   assembleSpritePetCreatorKitFromDialog,
   installSpritePetCreatorKitPackageToCodex,
   openSpritePetCreatorKitPathFromPayload,
-  createSpritePetModelFromImageDialog,
   saveTextFileFromDialog,
   openTextFileFromDialog,
 }

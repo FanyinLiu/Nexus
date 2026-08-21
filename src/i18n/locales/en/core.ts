@@ -413,7 +413,7 @@ export const enCore = {
   'about.links.changelog': 'What\'s Changed',
   'about.release_spotlight.eyebrow': 'Version theme · v{version}',
   'about.release_spotlight.title': 'A steadier avatar on every surface.',
-  'about.release_spotlight.summary': 'Nexus v0.4.6-beta.1 previews a more reliable Live2D runtime while v0.4.5 remains stable. Unsigned macOS beta builds update manually from the release page.',
+  'about.release_spotlight.summary': 'Nexus v0.4.6 makes the Live2D runtime more reliable with bounded WebGL recovery and readable fallback states. Unsigned macOS builds update manually from the release page.',
   'about.release_spotlight.action.open_voice': 'Open Voice Settings',
   'about.release_spotlight.action.preview_companion': 'Preview Companion',
   'about.release_spotlight.bullet.companion_presence.title': 'The companion stays present',

@@ -76,6 +76,18 @@ locally, but no tag, push, or GitHub Release is authorized by this record.
 
 This doc is the source of truth for every release. The short version:
 
+### v0.4.6 stable record — 2026-08-21
+
+The v0.4.6 beta validation window closed with the avatar runtime reliability
+scope intact. The stable promotion keeps straight-alpha Live2D compositing,
+bounded WebGL context-loss recovery, localized fallback states, and the
+three-model visual proof. The image/atlas-to-pet generator was removed from the
+stable UI and IPC surface; existing package import and Creator Kit authoring
+remain supported. The stable handoff lives in
+`RELEASE-CANDIDATE-v0.4.6-HANDOFF.md`. Official binaries must still be rebuilt
+from the release commit by the protected workflow; no physical-device evidence
+is claimed.
+
 ```
 # 1. Make sure main is clean and CI is green.
 git checkout main && git pull --ff-only

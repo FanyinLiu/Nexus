@@ -67,14 +67,13 @@ test('current release spotlight translation keys are registered for every locale
   }
 })
 
-test('current release spotlight describes the v0.4.6 avatar runtime beta and keeps historical keys', async () => {
+test('current release spotlight describes the v0.4.6 stable avatar runtime and keeps historical keys', async () => {
   const en = await ensureLocaleLoaded('en-US')
   const zhCN = await ensureLocaleLoaded('zh-CN')
 
   assert.equal(en['about.release_spotlight.title'], 'A steadier avatar on every surface.')
-  assert.match(en['about.release_spotlight.summary'], /v0\.4\.6-beta\.1.*Live2D runtime/i)
-  assert.match(en['about.release_spotlight.summary'], /v0\.4\.5 remains stable/i)
-  assert.match(en['about.release_spotlight.summary'], /unsigned macOS beta builds.*manually.*release page/i)
+  assert.match(en['about.release_spotlight.summary'], /v0\.4\.6.*Live2D runtime/i)
+  assert.match(en['about.release_spotlight.summary'], /unsigned macOS builds.*manually.*release page/i)
   assert.match(en['about.release_spotlight.bullet.transparent_compositing.body'], /Straight-alpha WebGL.*white fringes.*macOS/i)
   assert.match(en['about.release_spotlight.bullet.content_security.body'], /Pixi.*data-URL.*remote access/i)
   assert.match(en['about.release_spotlight.bullet.context_recovery.body'], /lost WebGL context.*canvas.*app.*model/i)
@@ -95,9 +94,8 @@ test('current release spotlight describes the v0.4.6 avatar runtime beta and kee
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /frameless companions and desktop pets/)
 
   assert.equal(zhCN['about.release_spotlight.title'], '每个界面，伙伴形象都更稳。')
-  assert.match(zhCN['about.release_spotlight.summary'], /v0\.4\.6-beta\.1.*Live2D/)
-  assert.match(zhCN['about.release_spotlight.summary'], /v0\.4\.5 仍是稳定版/)
-  assert.match(zhCN['about.release_spotlight.summary'], /macOS beta 未签名.*发布页.*手动/)
+  assert.match(zhCN['about.release_spotlight.summary'], /v0\.4\.6.*Live2D/)
+  assert.match(zhCN['about.release_spotlight.summary'], /macOS 构建未签名.*发布页.*手动/)
   assert.match(zhCN['about.release_spotlight.bullet.transparent_compositing.body'], /直通 Alpha.*macOS.*白边/)
   assert.match(zhCN['about.release_spotlight.bullet.content_security.body'], /Pixi.*data URL.*远程访问/)
   assert.match(zhCN['about.release_spotlight.bullet.context_recovery.body'], /WebGL 上下文丢失.*画布.*应用.*模型/)
@@ -118,13 +116,13 @@ test('current release spotlight describes the v0.4.6 avatar runtime beta and kee
   assert.match(zhCN['about.release_spotlight.bullet.voice_settings.body'], /无框伙伴与桌宠/)
 })
 
-test('release spotlight presents v0.4.6 as beta while keeping v0.4.5 stable and unsigned macOS updates explicit', async () => {
+test('release spotlight presents v0.4.6 as stable and keeps unsigned macOS updates explicit', async () => {
   const contracts = [
-    ['en-US', /v0\.4\.6-beta\.1.*v0\.4\.5 remains stable/i, /unsigned macOS beta.*manually.*release page/i],
-    ['zh-CN', /v0\.4\.6-beta\.1.*v0\.4\.5 仍是稳定版/, /macOS beta 未签名.*发布页.*手动/],
-    ['zh-TW', /v0\.4\.6-beta\.1.*v0\.4\.5 仍是穩定版/, /macOS beta 未簽署.*發布頁.*手動/],
-    ['ja', /v0\.4\.6-beta\.1.*安定版は v0\.4\.5/, /署名なし macOS beta.*リリースページ.*手動/],
-    ['ko', /v0\.4\.6-beta\.1.*안정 버전은 v0\.4\.5/, /서명되지 않은 macOS beta.*릴리스 페이지.*수동/],
+    ['en-US', /v0\.4\.6.*Live2D runtime/i, /unsigned macOS builds.*manually.*release page/i],
+    ['zh-CN', /v0\.4\.6.*Live2D/, /macOS 构建未签名.*发布页.*手动/],
+    ['zh-TW', /v0\.4\.6.*Live2D/, /macOS 建置未簽署.*發布頁.*手動/],
+    ['ja', /v0\.4\.6.*Live2D/, /署名なし macOS ビルド.*リリースページ.*手動/],
+    ['ko', /v0\.4\.6.*Live2D/, /서명되지 않은 macOS 빌드.*릴리스 페이지.*수동/],
   ] as const
 
   for (const [locale, releaseStatePattern, unsignedUpdatePattern] of contracts) {
@@ -263,8 +261,8 @@ test('human-facing v0.3.6 docs keep foundation wrap-up aligned', () => {
     readWorkspaceFile('docs/RELEASE-NOTES-v0.3.6.zh-CN.md'),
   )
 
-  assert.match(rootReadme, /当前稳定版：\*{0,2}\s*v0\.4\.5/)
-  assert.match(rootReadme, /上一公开版本 — v0\.4\.4/)
+  assert.match(rootReadme, /当前稳定版：\*{0,2}\s*v0\.4\.6/)
+  assert.match(rootReadme, /上一公开版本 — v0\.4\.5/)
   assert.doesNotMatch(rootReadme, /## 上次更新 — v0\.3\.6/)
 
   assert.match(englishReleaseNotes, /The foundation is ready for the next companion step\./)
