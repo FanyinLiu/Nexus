@@ -27,10 +27,11 @@ The larger product steps are:
   hardening, check-in policy, companion-surface cohesion and transparency,
   maintenance and hardening, and release
   hardening. `v0.4.0` is the stable quiet-observation foundation; the current
-  public stable release is v0.4.5, which shipped as the current stable release
-  on 2026-08-06 through the standard beta flow (`v0.4.5-beta.1`, published
-  2026-08-03, then the beta validation window) as a memory integrity and
-  maintenance release. `v0.4.4` was the previous maintenance and hardening
+  public stable release is v0.4.6, which shipped as the current stable release
+  on 2026-08-21 through the standard beta flow (`v0.4.6-beta.1`, followed by
+  the beta validation window) as an avatar runtime reliability release.
+  `v0.4.5` was the previous memory integrity and maintenance release, and
+  `v0.4.4` was the previous maintenance and hardening
   release (toolchain refresh, security fixes, code-structure cleanup). The
   beta feedback and copy tuning scope once planned for v0.4.4 was evaluated
   and dropped: no beta program is planned, and its copy guardrails already
@@ -38,9 +39,9 @@ The larger product steps are:
   (the [Companion Surface Cohesion & Transparency](V0.4.3_OPTIMIZATION_AND_COMPETITOR_PLAN_2026-07-12.md)
   follow-up) is closed. Future work must not move the
   package version, tag, GitHub Release, or README stable entry beyond
-  `v0.4.5` until a later release is explicitly prepared. That authorization is
-  now active for the `v0.4.6-beta.1` candidate only: v0.4.5 remains the public
-  stable entry while the beta passes the standard release gate.
+  `v0.4.6` until a later release is explicitly prepared. The v0.4.6 stable
+  promotion is the current release boundary; future compatibility work belongs
+  to a separately validated release line.
 - **v0.4.6 — avatar runtime reliability.** Fix transparent Live2D compositing,
   recover boundedly from WebGL context loss, keep a localized readable
   fallback, and prove Mao/Haru/Hiyori cold start, switching, and recovery in

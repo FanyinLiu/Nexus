@@ -21,7 +21,6 @@ export const zhCNSettingsChat = {
   'settings.chat.speaking_instructions_placeholder': '例如 "温柔，略带沙哑" —— 部分提供商支持',
   'settings.chat.importing_model': '导入模型中...',
   'settings.chat.import_model': '导入本地形象模型',
-  'settings.chat.create_sprite_pet_from_image': '从图片/Atlas 制作宠物',
   'settings.chat.sprite_pet_fallback_label': 'Sprite 宠物',
   'settings.chat.codex_pet_import': '导入 Codex 宠物',
   'settings.chat.codex_pet_import_hint': '优先复制 codex-pet.org 详情页 URL，再辅以 codex-pet.com slug 或 CodexPets.net 详情页；也可以粘贴 ZIP 下载 URL。Nexus 会保存兼容 spritesheet 到本地宠物库。',

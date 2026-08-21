@@ -6,6 +6,23 @@
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-08-21
+
+v0.4.6 is the current stable avatar runtime reliability release, promoted
+through the standard beta flow. Full detail in
+[`docs/RELEASE-NOTES-v0.4.6.md`](docs/RELEASE-NOTES-v0.4.6.md).
+
+- Live2D uses straight-alpha WebGL output to remove white fringes in
+  transparent Electron window compositing.
+- Lost WebGL contexts recover within a bounded restart budget and keep a
+  localized readable fallback after repeated failure.
+- The three-model visual smoke proves cold start, switching, transparency, and
+  forced context-loss recovery for Mao, Haru, and Hiyori.
+- The image/atlas-to-pet generator is removed from the stable UI and IPC
+  surface; existing package import and Creator Kit authoring remain supported.
+
+The release commit is published only through the protected stable-tag workflow.
+
 ### [0.4.6-beta.1] - 2026-08-09
 
 Beta candidate for avatar runtime reliability; v0.4.5 remains the current

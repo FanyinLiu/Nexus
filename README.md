@@ -8,9 +8,7 @@ Nexus 是一个 **本地优先的 AI 桌面伙伴**。
 
 一句话：**Nexus 是一个住在电脑里的 AI 伙伴。**
 
-> **当前稳定版：** v0.4.5；发行说明见 [RELEASE-NOTES-v0.4.5.md](docs/RELEASE-NOTES-v0.4.5.md)。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases；更早历史统一放在 Releases。
-
-> **Beta 候选：** `v0.4.6-beta.1` 正在做形象运行时可靠性验证，尚未成为稳定版；候选说明见 [RELEASE-NOTES-v0.4.6-beta.1.zh-CN.md](docs/RELEASE-NOTES-v0.4.6-beta.1.zh-CN.md)。
+> **当前稳定版：** v0.4.6；发行说明见 [RELEASE-NOTES-v0.4.6.md](docs/RELEASE-NOTES-v0.4.6.md)。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases；更早历史统一放在 Releases。
 
 ## 这个项目是什么
 
@@ -120,22 +118,22 @@ Phase 1 已经开始落地，当前默认体验正在收敛到最小闭环：
 - 基础检查可以下载本地首次运行 QA 报告，包含检查项、首次对话耗时和隐私标记；不会导出聊天内容、模型输出、API Key 或 provider secret。
 - 本地开发时，Nexus 网页预览地址是 `http://127.0.0.1:47821/`；`11434/v1` 是 Ollama API，不是网页预览。
 
-## Beta 预览 — v0.4.6-beta.1
+## 本次稳定更新 — v0.4.6
 
-> **主题：形象运行时可靠性。** 修复透明 Live2D 白边与 Pixi 能力探测 CSP，加入有界 WebGL 上下文恢复、五语言可读降级，以及会主动触发 context loss 的三模型可视化烟测。v0.4.5 仍是稳定版；详见 [中文候选说明](docs/RELEASE-NOTES-v0.4.6-beta.1.zh-CN.md) 与 [English release notes](docs/RELEASE-NOTES-v0.4.6-beta.1.md)。
+> **主题：形象运行时可靠性。** 修复透明 Live2D 白边与 Pixi 能力探测 CSP，加入有界 WebGL 上下文恢复、五语言可读降级，以及会主动触发 context loss 的三模型可视化烟测；同时剔除从图片/Atlas制作宠物的界面路径。详见 [中文发行说明](docs/RELEASE-NOTES-v0.4.6.zh-CN.md) 与 [English release notes](docs/RELEASE-NOTES-v0.4.6.md)。
 
-## 本次稳定更新 — v0.4.5
+## 上一公开版本 — v0.4.5
 
 > **主题：记忆可信度与维护。** 中文说明见 [RELEASE-NOTES-v0.4.5.zh-CN.md](docs/RELEASE-NOTES-v0.4.5.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.5.md](docs/RELEASE-NOTES-v0.4.5.md)。本版走标准 beta 流程晋升（v0.4.5-beta.1 预发布后经验证窗口关闭），发布记录见 [RELEASING.md](docs/RELEASING.md)。
 
-一句话记住 0.4.5：
+一句话记住 0.4.6：
 
-- **她记得更准、更少自相矛盾：夜间 dream 周期自动检测新旧记忆矛盾并两档降权，不删除任何记忆。**
-- **记忆域 SQLite 迁移默认开启，回滚与授权路径不变。**
-- **桌宠状态（思考/等待/离线/错误）改由主进程真实聊天请求生命周期驱动，不再靠界面侧猜测。**
-- **另含可靠性、安全修复与大规模内部契约单源化清理；签名/公证仍未做：macOS 首次启动可能需右键打开，Windows 可能出现 SmartScreen 提示。**
+- **透明 Live2D 合成更干净，WebGL 上下文丢失会在有界预算内自动恢复。**
+- **图形恢复失败时显示五语言可读降级状态，不把原始技术错误直接暴露给用户。**
+- **三模型烟测主动验证上下文恢复后只保留一个干净画布，并覆盖打包运行时门禁。**
+- **稳定版不再提供从图片/Atlas制作宠物；仍支持导入现有宠物包与 Creator Kit。**
 
-## 上一公开版本 — v0.4.4
+## 更早更新 — v0.4.4
 
 > **主题：维护与加固（工具链升级、安全修复、代码结构整理）。** 中文说明见 [RELEASE-NOTES-v0.4.4.zh-CN.md](docs/RELEASE-NOTES-v0.4.4.zh-CN.md)，英文完整说明见 [RELEASE-NOTES-v0.4.4.md](docs/RELEASE-NOTES-v0.4.4.md)。本版经维护者例外直接晋升为稳定版，例外记录见 [RELEASING.md](docs/RELEASING.md)。
 
@@ -191,7 +189,7 @@ Phase 1 已经开始落地，当前默认体验正在收敛到最小闭环：
 
 ## 旧版本记录
 
-README 顶部只保留当前稳定版 v0.4.5 和上一公开版本 v0.4.4 的重点。更早版本的完整历史统一放在 [CHANGELOG](CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，避免首页继续滚动维护旧版本号。
+README 顶部只保留当前稳定版 v0.4.6 和上一公开版本 v0.4.5 的重点。更早版本的完整历史统一放在 [CHANGELOG](CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，避免首页继续滚动维护旧版本号。
 
 ## 设计原则
 
@@ -217,10 +215,10 @@ README 顶部只保留当前稳定版 v0.4.5 和上一公开版本 v0.4.4 的重
 
 普通用户的安装主路径不是 npm，而是桌面安装包：
 
-> 以下文件名是 v0.4.4 正式发行契约。安装包只以受保护的 tag 工作流成功发布到 GitHub Releases 后的实际资产为准；不要使用本地或第三方转载包。
+> 以下文件名是 v0.4.6 正式发行契约。安装包只以受保护的 tag 工作流成功发布到 GitHub Releases 后的实际资产为准；不要使用本地或第三方转载包。
 
 - Windows x64：从官方 GitHub Releases 下载 `Nexus-Setup-<版本号>.exe`；同一 release 的校验清单是 `SHA256SUMS-windows.txt`。
-- macOS arm64：下载 `.dmg` 或 `.zip`，把 `Nexus.app` 放进 `/Applications`；同一 release 的校验清单是 `SHA256SUMS-macos.txt`；v0.4.4 不提供 macOS x64 / universal 包。
+- macOS arm64：下载 `.dmg` 或 `.zip`，把 `Nexus.app` 放进 `/Applications`；同一 release 的校验清单是 `SHA256SUMS-macos.txt`；v0.4.6 不提供 macOS x64 / universal 包。
 - Linux x64：下载 `.AppImage`、`.deb` 或 `.tar.gz`，并使用同一 release 的 `SHA256SUMS-linux.txt` 校验 SHA-256。只下载其中一种格式时，可在下载目录直接运行：
 
   ```bash
@@ -231,8 +229,8 @@ README 顶部只保留当前稳定版 v0.4.5 和上一公开版本 v0.4.4 的重
 
 当前桌面安装包还没有 Apple Developer ID、公证和 Windows 代码签名证书，所以首次启动会看到系统信任提示。这是当前发行策略，不代表系统已经信任安装包。官方 GitHub Releases 是唯一下载来源；如果你不确定文件来源，删除它并从 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases/latest) 重新下载，不要从镜像或转载压缩包安装。
 
-- **macOS / Gatekeeper**：v0.4.4 的 macOS arm64 应用采用 ad-hoc 签名。ad-hoc 只保证包内代码一致性，不等于 Apple Developer ID 信任或公证；Gatekeeper 仍可能拦截首次启动。把 `Nexus.app` 放进 `/Applications` 后，可右键点击 Nexus.app -> 打开 -> 在弹窗中确认；也可以在终端运行 `xattr -dr com.apple.quarantine /Applications/Nexus.app`。
-- **Windows / SmartScreen**：v0.4.4 的 Windows x64 安装器状态为 `NotSigned`。运行 `Nexus-Setup-<版本号>.exe` 后，SmartScreen 可能显示“Windows 已保护你的电脑”；确认文件来自官方 GitHub Releases 后，点击“详细信息”，再点击“仍要运行”。
+- **macOS / Gatekeeper**：v0.4.6 的 macOS arm64 应用采用 ad-hoc 签名。ad-hoc 只保证包内代码一致性，不等于 Apple Developer ID 信任或公证；Gatekeeper 仍可能拦截首次启动。把 `Nexus.app` 放进 `/Applications` 后，可右键点击 Nexus.app -> 打开 -> 在弹窗中确认；也可以在终端运行 `xattr -dr com.apple.quarantine /Applications/Nexus.app`。
+- **Windows / SmartScreen**：v0.4.6 的 Windows x64 安装器状态为 `NotSigned`。运行 `Nexus-Setup-<版本号>.exe` 后，SmartScreen 可能显示“Windows 已保护你的电脑”；确认文件来自官方 GitHub Releases 后，点击“详细信息”，再点击“仍要运行”。
 
 #### macOS unsigned auto-update limitation
 
@@ -255,7 +253,7 @@ Nexus 仍在活跃开发，更适合愿意测试本地 AI 桌面伙伴、能接�
 | 未签名安装包 | Windows / macOS 首次启动会出现 SmartScreen 或 Gatekeeper 提示。 | 只从 GitHub Releases 下载；不确定来源时删除后重新下载。 |
 | 资源占用 | Electron、Live2D、语音、OCR、WASM 和本地模型会带来一定内存、包体和首次运行下载成本。 | 先用文本模型主路径；语音、本地识别和桌面感知按需开启。 |
 | provider 联网 | Ollama 可以本地运行；DeepSeek、OpenAI-compatible 和其他云 provider 会把请求发给对应服务商。 | 使用前确认 provider 的数据政策；API Key 只保存在本机加密存储里。 |
-| 桌面感知 | v0.4.4 保持短期、粗粒度、可暂停和可清理的陪伴摘要，并继续阻止精确计时和原始桌面内容进入模型边界。 | 在 Memory 设置里查看说明，按需要暂停或清理近期陪伴摘要。 |
+| 桌面感知 | v0.4.6 保持短期、粗粒度、可暂停和可清理的陪伴摘要，并继续阻止精确计时和原始桌面内容进入模型边界。 | 在 Memory 设置里查看说明，按需要暂停或清理近期陪伴摘要。 |
 | 语音和本地模型 | 本地语音模型、麦克风权限和平台音频设备可能影响语音链路。 | 语音失败时先回到文字对话；用设置里的自检和模型向导排查。 |
 
 ## 本地开发

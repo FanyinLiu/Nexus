@@ -69,20 +69,6 @@ export type UsePetModelImportOptions = {
     ok: boolean
     message: string
   }>
-  onCreateSpritePetFromImage?: () => Promise<{
-    model: PetModelDefinition
-    message: string
-    packageDirectory?: string
-    packageDirectoryDisplay?: string
-    manifestPath?: string
-    manifestPathDisplay?: string
-    spritesheetPath?: string
-    spritesheetPathDisplay?: string
-    visualAuditPath?: string
-    visualAuditPathDisplay?: string
-    archivePath?: string
-    archivePathDisplay?: string
-  } | null>
   onSelectImportedPetModel?: (petModelId: string) => Promise<void> | void
   setDraft: Dispatch<SetStateAction<AppSettings>>
 }
@@ -96,7 +82,6 @@ export function usePetModelImport({
   onAssembleCodexPetCreatorKit,
   onInstallCodexPetCreatorKitToCodex,
   onOpenCodexPetCreatorKitPath,
-  onCreateSpritePetFromImage,
   onSelectImportedPetModel,
   setDraft,
 }: UsePetModelImportOptions) {
@@ -115,16 +100,6 @@ export function usePetModelImport({
   const [lastCreatorKitSourceRowsDirectory, setLastCreatorKitSourceRowsDirectory] = useState('')
   const [lastCreatorKitSourceRowsDirectoryDisplay, setLastCreatorKitSourceRowsDirectoryDisplay] = useState('')
   const [assembledCreatorKitPackage, setAssembledCreatorKitPackage] = useState<{
-    packageDirectory: string
-    packageDirectoryDisplay?: string
-    manifestPath: string
-    manifestPathDisplay?: string
-    visualAuditPath?: string
-    visualAuditPathDisplay?: string
-    archivePath?: string
-    archivePathDisplay?: string
-  } | null>(null)
-  const [generatedSpritePetPackage, setGeneratedSpritePetPackage] = useState<{
     packageDirectory: string
     packageDirectoryDisplay?: string
     manifestPath: string
@@ -225,52 +200,6 @@ export function usePetModelImport({
       })
     } finally {
       setCodexPetCatalogLoading(false)
-    }
-  }
-
-  async function handleCreateSpritePetFromImage() {
-    if (!onCreateSpritePetFromImage) {
-      return
-    }
-
-    setImportingPetModel(true)
-    setPetModelStatus(null)
-
-    try {
-      const result = await onCreateSpritePetFromImage()
-
-      if (!result) {
-        return
-      }
-
-      setDraft((current) => ({
-        ...current,
-        petModelId: result.model.id,
-      }))
-      await onSelectImportedPetModel?.(result.model.id)
-      if (result.packageDirectory && result.manifestPath) {
-        setGeneratedSpritePetPackage({
-          packageDirectory: result.packageDirectory,
-          packageDirectoryDisplay: result.packageDirectoryDisplay,
-          manifestPath: result.manifestPath,
-          manifestPathDisplay: result.manifestPathDisplay,
-          visualAuditPath: result.visualAuditPath,
-          visualAuditPathDisplay: result.visualAuditPathDisplay,
-          archivePath: result.archivePath,
-          archivePathDisplay: result.archivePathDisplay,
-        })
-      }
-      setPetModelStatus({
-        ok: true,
-        message: result.message,
-      })
-    } catch (error) {
-      setPetModelStatus({
-        ok: false,
-        message: getPetImportErrorMessage(error),
-      })
-    } finally {
-      setImportingPetModel(false)
     }
   }
 
@@ -438,30 +367,6 @@ export function usePetModelImport({
     }
   }
 
-  async function handleInstallGeneratedSpritePetPackageToCodex() {
-    if (!onInstallCodexPetCreatorKitToCodex || !generatedSpritePetPackage) {
-      return
-    }
-
-    setPetModelStatus(null)
-
-    try {
-      const result = await onInstallCodexPetCreatorKitToCodex({
-        kitDirectory: generatedSpritePetPackage.packageDirectory,
-        manifestPath: generatedSpritePetPackage.manifestPath,
-      })
-      setPetModelStatus({
-        ok: result.ok,
-        message: result.message,
-      })
-    } catch (error) {
-      setPetModelStatus({
-        ok: false,
-        message: getPetImportErrorMessage(error),
-      })
-    }
-  }
-
   function resetPetModelImport() {
     setPetModelStatus(null)
     setImportingPetModel(false)
@@ -477,7 +382,6 @@ export function usePetModelImport({
     setLastCreatorKitSourceRowsDirectory('')
     setLastCreatorKitSourceRowsDirectoryDisplay('')
     setAssembledCreatorKitPackage(null)
-    setGeneratedSpritePetPackage(null)
   }
 
   return {
@@ -495,7 +399,6 @@ export function usePetModelImport({
     lastCreatorKitSourceRowsDirectory,
     lastCreatorKitSourceRowsDirectoryDisplay,
     assembledCreatorKitPackage,
-    generatedSpritePetPackage,
     handleImportPetModel,
     handleImportCodexPetGallery,
     handleLoadCodexPetGallery,
@@ -503,9 +406,7 @@ export function usePetModelImport({
     handleInspectCodexPetCreatorKit,
     handleAssembleCodexPetCreatorKit,
     handleInstallCodexPetCreatorKitToCodex,
-    handleInstallGeneratedSpritePetPackageToCodex,
     handleOpenCodexPetCreatorKitPath,
-    handleCreateSpritePetFromImage,
     resetPetModelImport,
   }
 }

@@ -6,14 +6,13 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-const CURRENT_STABLE_RELEASE = '0.4.5'
-const PREVIOUS_PUBLIC_RELEASE = '0.4.4'
+const CURRENT_STABLE_RELEASE = '0.4.6'
+const PREVIOUS_PUBLIC_RELEASE = '0.4.5'
 const DRAFT_RELEASES = []
 const LOCALIZED_DRAFT_RELEASES = []
-// v0.4.5 shipped as the current stable release, so no draft layer is in
-// flight; the next beta line (v0.4.6-beta.N) may legitimately leave the
-// stable release number while the stable entry point stays on v0.4.5.
-const DRAFT_BETA_VERSION_PATTERN = /^0\.4\.6-beta\.\d+$/
+// v0.4.6 is the current stable release; future beta work may legitimately
+// leave the stable release number while the stable entry point stays here.
+const DRAFT_BETA_VERSION_PATTERN = /^0\.4\.7-beta\.\d+$/
 
 function escapedVersion(version) {
   return version.replaceAll('.', '\\.')
@@ -339,8 +338,8 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
 
     const changelog = requireFile('CHANGELOG.md')
     for (const phrase of [
-      `## [${CURRENT_STABLE_RELEASE}] - 2026-08-06`,
-      `${versionTag(CURRENT_STABLE_RELEASE)} memory integrity and maintenance release`,
+      `## [${CURRENT_STABLE_RELEASE}] - 2026-08-21`,
+      'current stable avatar runtime reliability release',
       'full v0.4 draft-stack audit',
       'The release commit is published only through the protected stable-tag workflow',
       'current stable release',
@@ -381,7 +380,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
       'standard beta flow',
       'beta validation window',
       'protected tag workflow',
-      'v0.4.5 beta',
+      'v0.4.6-beta.1',
     ]) {
       requirePhrase(stableHandoffFile, stableHandoff, phrase)
     }

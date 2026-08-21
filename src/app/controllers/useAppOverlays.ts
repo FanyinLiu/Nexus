@@ -472,22 +472,6 @@ export function useAppOverlays({
 
       return window.desktopPet.openCodexPetCreatorKitPath(payload)
     },
-    onCreateSpritePetFromImage: async () => {
-      if (!window.desktopPet?.createSpritePetFromImage) {
-        throw new Error(t('settings.import_pet_model_unsupported'))
-      }
-
-      const result = await window.desktopPet.createSpritePetFromImage()
-      if (!result) {
-        return null
-      }
-
-      const refreshedModels = await loadPetModels()
-      return {
-        ...result,
-        model: refreshedModels.find((model) => model.id === result.model.id) ?? result.model,
-      }
-    },
     onTestConnection: async (capability, draftSettings) => {
       if (capability === 'text') {
         if (!window.desktopPet?.testChatConnection) {

@@ -26,7 +26,6 @@ function resultPathSummary(result = {}) {
 export function summarizePetModelRequest(channel, payload = {}) {
   switch (channel) {
     case 'pet-model:import':
-    case 'pet-model:create-from-image':
       return { channel, dialogBacked: true }
     case 'pet-model:import-codex-gallery':
       return {

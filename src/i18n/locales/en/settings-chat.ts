@@ -23,7 +23,6 @@ export const enSettingsChat = {
   'settings.chat.speaking_instructions_placeholder': 'e.g. "gentle, slightly husky" — supported by some providers',
   'settings.chat.importing_model': 'Importing...',
   'settings.chat.import_model': 'Import local avatar model',
-  'settings.chat.create_sprite_pet_from_image': 'Make pet from image/atlas',
   'settings.chat.sprite_pet_fallback_label': 'Sprite pet',
   'settings.chat.codex_pet_import': 'Import Codex pet',
   'settings.chat.codex_pet_import_hint': 'Copy a codex-pet.org detail URL (recommended), a codex-pet.com slug, or a CodexPets.net detail page from a community gallery. ZIP download URLs also work. Nexus saves the compatible spritesheet into your local pet library.',

@@ -413,7 +413,7 @@ export const jaCore = {
   'about.links.changelog': '変更履歴',
   'about.release_spotlight.eyebrow': 'バージョンテーマ · v{version}',
   'about.release_spotlight.title': 'どの画面でも、より安定したアバター。',
-  'about.release_spotlight.summary': 'Nexus v0.4.6-beta.1 では Live2D ランタイムの信頼性を先行検証します。安定版は v0.4.5 のままです。署名なし macOS beta はリリースページから手動で更新します。',
+  'about.release_spotlight.summary': 'Nexus v0.4.6 では、有界 WebGL 復旧と読みやすいフォールバックにより Live2D ランタイムの信頼性を高めます。署名なし macOS ビルドはリリースページから手動で更新します。',
   'about.release_spotlight.action.open_voice': '音声設定を開く',
   'about.release_spotlight.action.preview_companion': 'コンパニオンをプレビュー',
   'about.release_spotlight.bullet.companion_presence.title': 'コンパニオンの存在感を主軸に',

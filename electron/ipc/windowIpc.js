@@ -32,7 +32,6 @@ import {
   assembleSpritePetCreatorKitFromDialog,
   installSpritePetCreatorKitPackageToCodex,
   openSpritePetCreatorKitPathFromPayload,
-  createSpritePetModelFromImageDialog,
   saveTextFileFromDialog,
   openTextFileFromDialog,
 } from '../services/petModelService.js'
@@ -339,11 +338,6 @@ export function register() {
     return runAuditedPetModelAction(event, 'pet-model:open-creator-kit-path', payload, () => (
       openSpritePetCreatorKitPathFromPayload(payload)
     ))
-  })
-
-  ipcMain.handle('pet-model:create-from-image', async (event) => {
-    requireTrustedSender(event)
-    return runAuditedPetModelAction(event, 'pet-model:create-from-image', {}, () => createSpritePetModelFromImageDialog())
   })
 
   ipcMain.handle('dialog:confirm', async (event, message) => {
