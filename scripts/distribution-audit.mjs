@@ -17,6 +17,7 @@ import { buildMessagePrivacyReport } from './message-privacy-audit.mjs'
 import { buildDesktopContextPrivacyReport } from './desktop-context-privacy-audit.mjs'
 import { buildVaultSecurityReport } from './vault-security-audit.mjs'
 import { buildErrorRedactionReport } from './error-redaction-audit.mjs'
+import { findReadmeReleaseIssues } from './lib/readme-release-contract.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -63,6 +64,7 @@ const localizedReadmes = {
 const desktopShortcutInstaller = readText('scripts/install-desktop-shortcut.ps1')
 const hiddenLauncher = readText('scripts/launch-nexus-hidden.vbs')
 const currentVersion = `v${pkg.version}`
+const CURRENT_STABLE_VERSION = 'v0.4.7'
 // v0.4.7 is the current stable release; future beta work may legitimately
 // leave the stable release number while the stable entry point stays here.
 const DRAFT_BETA_VERSION_PATTERN = /^v0\.4\.8-beta\.\d+$/
@@ -518,9 +520,9 @@ check('v0.4 draft stack stays in quick PR-safe state', () => {
   assert(report.summary.errors === 0, `v0.4 draft stack audit has ${report.summary.errors} error(s); run npm run v04:draft-stack:audit:quick`)
   assert(report.schemaVersion === 3, 'v0.4 draft stack audit must report schema version 3')
   assert(
-    report.currentStableRelease === 'v0.4.7'
-      && (currentVersion === 'v0.4.7' || DRAFT_BETA_VERSION_PATTERN.test(currentVersion)),
-    `v0.4 draft stack audit must report current stable release v0.4.7 (package is ${currentVersion})`,
+    report.currentStableRelease === CURRENT_STABLE_VERSION
+      && (currentVersion === CURRENT_STABLE_VERSION || DRAFT_BETA_VERSION_PATTERN.test(currentVersion)),
+    `v0.4 draft stack audit must report current stable release ${CURRENT_STABLE_VERSION} (package is ${currentVersion})`,
   )
   assert(report.previousPublicRelease === 'v0.4.6', 'v0.4 draft stack audit must retain v0.4.6 as the previous public release')
   assert(report.releaseState === 'stable', 'v0.4 draft stack audit must report stable release state')
@@ -607,17 +609,9 @@ check('README known limitations are visible before developer setup', () => {
   )
 })
 
-check('README version framing follows package version', () => {
-  for (const [file, text] of Object.entries(readmeFiles)) {
-    assert(text.includes(currentVersion), `${file} missing current package version ${currentVersion}`)
-    assert(!text.includes('v0.2.7'), `${file} should move v0.2.7 history to release notes or GitHub Releases`)
-  }
-
-  assert(readme.includes('当前稳定版') && readme.includes('RELEASE-NOTES-v0.4.3.md'), 'README should link the package-aligned current stable v0.4.3 release')
-  assert(localizedReadmes['docs/README.zh-CN.md'].includes('当前稳定版') && localizedReadmes['docs/README.zh-CN.md'].includes('RELEASE-NOTES-v0.4.3.md'), 'zh-CN README should link current stable v0.4.3')
-  assert(localizedReadmes['docs/README.zh-TW.md'].includes('目前穩定版') && localizedReadmes['docs/README.zh-TW.md'].includes('RELEASE-NOTES-v0.4.3.md'), 'zh-TW README should link current stable v0.4.3')
-  assert(localizedReadmes['docs/README.ja.md'].includes('現在の安定版') && localizedReadmes['docs/README.ja.md'].includes('RELEASE-NOTES-v0.4.3.md'), 'ja README should link current stable v0.4.3')
-  assert(localizedReadmes['docs/README.ko.md'].includes('현재 안정 버전') && localizedReadmes['docs/README.ko.md'].includes('RELEASE-NOTES-v0.4.3.md'), 'ko README should link current stable v0.4.3')
+check('README entry links the public stable release independently of the package candidate', () => {
+  const issues = findReadmeReleaseIssues({ readmeFiles, currentVersion, stableVersion: CURRENT_STABLE_VERSION })
+  assert(issues.length === 0, issues.join('; '))
 })
 
 check('documentation consistency workflow is documented', () => {
