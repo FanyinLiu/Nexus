@@ -554,8 +554,11 @@ const round = (value) => Math.round(value * 1000) / 1000
  * @param {{ rgb: Uint8Array, alpha?: Uint8Array | null, width: number, height: number, pixelScale?: number }} image
  *   `pixelScale` = original px per raster px (when the raster was downsized).
  * @param {{ detect: (variant: 'original' | 'normalized') => Promise<Array<{ bbox: number[], keypoints: number[][] }>> }} detector
+ * @param {{ keepKeypoints?: boolean }} [options] `keepKeypoints`: an accepted
+ *   verdict also carries the 28 landmarks (raster px) the decision used, for
+ *   the layering step. Never set on the image-check path.
  */
-export async function evaluatePortraitLandmarks(image, detector) {
+export async function evaluatePortraitLandmarks(image, detector, options = {}) {
   const limits = PORTRAIT_LANDMARK_GATE_LIMITS
   const R = PORTRAIT_LANDMARK_GATE_REASONS
   const metrics = {}
@@ -606,7 +609,9 @@ export async function evaluatePortraitLandmarks(image, detector) {
   const handBlob = analysis ? handBlobFeature(image, analysis) : 0
   metrics.handBlob = round(handBlob)
   if (handBlob > limits.maxHandBlob) return verdict(R.HANDS_NEAR_FACE, null, metrics)
-  return verdict(null, null, metrics)
+  const accepted = verdict(null, null, metrics)
+  if (options.keepKeypoints) accepted.keypoints = keypoints.map((point) => [...point])
+  return accepted
 }
 
 /** Result when the landmark models/runtime are not available: the caller keeps the stage-A verdict. */

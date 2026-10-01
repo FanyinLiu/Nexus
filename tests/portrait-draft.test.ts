@@ -1,0 +1,186 @@
+import assert from 'node:assert/strict'
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
+import { after, before, test } from 'node:test'
+import sharp from 'sharp'
+
+import {
+  PORTRAIT_DRAFT_KEEP,
+  generatePortraitDraftFromPayload,
+  resolvePortraitDraftRoot,
+} from '../electron/services/portraitGenerator/portraitDraft.js'
+import { evaluatePortraitLandmarks } from '../electron/services/portraitGenerator/landmarkGate.js'
+import { summarizePetModelResult } from '../electron/ipc/petModelAudit.js'
+import { PORTRAIT_LANDMARK_GATE_REASONS as R } from '../shared/portraitLandmarkGate.js'
+
+let workDir = ''
+before(async () => { workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-portrait-draft-')) })
+after(async () => { if (workDir) await fs.rm(workDir, { recursive: true, force: true }) })
+
+type Point = [number, number, number]
+type RGB = [number, number, number]
+
+function frontalKeypoints(cx = 300, cy = 300): Point[] {
+  const p = (dx: number, dy: number): Point => [cx + dx, cy + dy, 0.9]
+  const eye = (ex: number) => [p(ex - 15, -35), p(ex - 8, -42), p(ex + 8, -42), p(ex + 15, -35), p(ex + 8, -28), p(ex - 8, -28)]
+  return [
+    p(-100, -50), p(-85, 50), p(0, 100), p(85, 50), p(100, -50),
+    p(-70, -85), p(-50, -88), p(-30, -85), p(30, -85), p(50, -88), p(70, -85),
+    ...eye(-50), ...eye(50), p(0, 20), p(-15, 60), p(0, 55), p(15, 60), p(0, 65),
+  ]
+}
+
+function insidePolygon(points: number[][], x: number, y: number) {
+  let inside = false
+  for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
+    const [xi, yi] = points[i]
+    const [xj, yj] = points[j]
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside
+  }
+  return inside
+}
+
+/** Flat half-body character on white (same layout as tests/portrait-layers.test.ts). */
+function paintCharacter() {
+  const width = 600
+  const height = 700
+  const rgb = new Uint8Array(width * height * 3).fill(255)
+  const kp = frontalKeypoints()
+  const facePoly = [...kp.slice(0, 5).map((q) => [q[0], q[1]]), [400, 185], [200, 185]]
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let c: RGB | null = null
+      if ((x - 300) ** 2 / 130 ** 2 + (y - 230) ** 2 / 140 ** 2 < 1 && y < 330) c = [214, 112, 160]
+      if (y >= 200 && y < 360 && ((x >= 172 && x < 205) || (x >= 395 && x < 428))) c = [214, 112, 160]
+      if (y >= 380 && y < 470 && x >= 265 && x < 335) c = [220, 186, 164]
+      if (y >= 460 && x >= 150 && x < 450) c = [40, 70, 160]
+      if (insidePolygon(facePoly, x + 0.5, y + 0.5)) {
+        c = [246, 214, 190]
+        for (const ex of [250, 350]) if ((x - ex) ** 2 / 15 ** 2 + (y - 265) ** 2 / 10 ** 2 < 1) c = [60, 40, 80]
+        if ((x - 300) ** 2 / 14 ** 2 + (y - 360) ** 2 / 4 ** 2 < 1) c = [200, 110, 110]
+      }
+      if (c) rgb.set(c, (y * width + x) * 3)
+    }
+  }
+  return { rgb, width, height, kp }
+}
+
+/** Character scaled x4 (2400x2800) so the landmark raster is downsized (pixelScale != 1). */
+async function writeCharacter(name: string, factor = 4) {
+  const { rgb, width, height } = paintCharacter()
+  const filePath = path.join(workDir, name)
+  await sharp(Buffer.from(rgb), { raw: { width, height, channels: 3 } }).resize(width * factor, height * factor, { kernel: 'nearest' }).png().toFile(filePath)
+  return filePath
+}
+
+/** Engine stub: answers like the worker would, with landmarks in raster pixels. */
+function fakeEngine(verdictFor: (image: { width: number, height: number }) => object, status = 'ready') {
+  const calls: Array<{ width: number, height: number, options: unknown }> = []
+  return {
+    calls,
+    engine: {
+      prepare: async () => ({ status }),
+      evaluate: async (image: { width: number, height: number }, options: unknown) => { calls.push({ width: image.width, height: image.height, options }); return verdictFor(image) },
+    },
+  }
+}
+
+const accepted = (keypoints: number[][]) => ({ accepted: true, reasonCode: null, detail: null, messageKey: 'settings.pet.portrait_gate.accepted', messageParams: {}, metrics: { faces: 1 }, keypoints })
+
+test('generation: gate -> landmarks (original px) -> hair/head/body PNGs + draft.json, result without paths', async () => {
+  const filePath = await writeCharacter('character.png')
+  const { kp } = paintCharacter()
+  const root = path.join(workDir, 'drafts-a')
+  const { engine, calls } = fakeEngine((image) => {
+    const k = image.width / 2400
+    return accepted(kp.map(([x, y, c]) => [x * 4 * k, y * 4 * k, c]))
+  })
+  const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, draftRoot: root, now: () => 1_700_000_000_000 })
+  assert.equal(result?.accepted, true, JSON.stringify(result))
+  if (!result?.accepted) return
+  assert.deepEqual(calls.map((c) => c.options), [{ keepKeypoints: true }])
+  assert.equal(calls[0].width, 1755, 'the landmark raster is downsized to 2048 px')
+  assert.match(result.draftId, /^draft-1700000000000-[0-9a-f]{8}$/)
+  assert.deepEqual([result.width, result.height], [658, 768])
+  assert.equal(result.alphaSource, 'plain_background')
+  assert.ok(result.layers.hair.share > 0.1 && result.layers.head.share > 0.1 && result.layers.body.share > 0.1, JSON.stringify(result.layers))
+  assert.ok(!JSON.stringify(result).includes(workDir), 'no paths in the result')
+
+  const dir = path.join(root, result.draftId)
+  assert.deepEqual((await fs.readdir(dir)).sort(), ['body.png', 'draft.json', 'hair.png', 'head.png'])
+  for (const name of ['hair', 'head', 'body']) {
+    const meta = await sharp(path.join(dir, `${name}.png`)).metadata()
+    assert.deepEqual([meta.width, meta.height, meta.channels], [658, 768, 4], name)
+  }
+  // The head layer is opaque at the face centre and transparent on the white border.
+  const { data } = await sharp(path.join(dir, 'head.png')).raw().toBuffer({ resolveWithObject: true })
+  const at = (x: number, y: number) => data[(Math.round(y * 768 / 2800 * 4) * 658 + Math.round(x * 658 / 2400 * 4)) * 4 + 3]
+  assert.equal(at(300, 300), 255)
+  assert.equal(at(20, 20), 0)
+  const manifest = JSON.parse(await fs.readFile(path.join(dir, 'draft.json'), 'utf8'))
+  assert.equal(manifest.version, 1)
+  assert.deepEqual(Object.keys(manifest.layers), ['hair', 'head', 'body'])
+  assert.ok(!JSON.stringify(manifest).includes(workDir), 'no source path in the manifest')
+})
+
+test('generation stops at stage A, at missing models, and at a landmark rejection, without writing a draft', async () => {
+  const tiny = path.join(workDir, 'tiny.png')
+  await sharp({ create: { width: 64, height: 64, channels: 3, background: '#ffffff' } }).png().toFile(tiny)
+  const root = path.join(workDir, 'drafts-b')
+  const untouched = fakeEngine(() => { throw new Error('not reached') })
+  const small = await generatePortraitDraftFromPayload({ imagePath: tiny }, { pickImagePath: async () => null, getEngine: () => untouched.engine, draftRoot: root })
+  assert.equal(small?.accepted, false)
+  assert.equal(small && !small.accepted && small.stage, 'image')
+  assert.equal(untouched.calls.length, 0)
+
+  const filePath = await writeCharacter('character-b.png', 2)
+  const missing = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => fakeEngine(() => ({}), 'missing').engine, draftRoot: root })
+  assert.deepEqual(missing && !missing.accepted && [missing.stage, missing.reasonCode, missing.detail], ['landmarks', R.MODELS_UNAVAILABLE, 'missing'], 'generation needs the landmarks')
+
+  const hands = fakeEngine(() => ({ accepted: false, reasonCode: R.HANDS_NEAR_FACE, detail: null, messageKey: 'settings.pet.portrait_gate.hands_near_face', messageParams: {}, metrics: {} }))
+  const rejected = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => hands.engine, draftRoot: root })
+  assert.equal(rejected && !rejected.accepted && rejected.reasonCode, R.HANDS_NEAR_FACE)
+  await assert.rejects(fs.stat(root), 'no draft directory is created for a rejected image')
+
+  assert.equal(await generatePortraitDraftFromPayload({}, { pickImagePath: async () => null, getEngine: () => hands.engine, draftRoot: root }), null, 'a cancelled picker returns null')
+})
+
+test(`only the newest ${PORTRAIT_DRAFT_KEEP} drafts are kept; other folders are left alone`, async () => {
+  const filePath = await writeCharacter('character-c.png', 2)
+  const { kp } = paintCharacter()
+  const root = path.join(workDir, 'drafts-c')
+  await fs.mkdir(path.join(root, 'keep-me'), { recursive: true })
+  const { engine } = fakeEngine(() => accepted(kp.map(([x, y, c]) => [x * 2, y * 2, c])))
+  const ids: string[] = []
+  for (let i = 0; i < PORTRAIT_DRAFT_KEEP + 2; i += 1) {
+    const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, draftRoot: root, now: () => 1_700_000_000_000 + i })
+    if (result?.accepted) ids.push(result.draftId)
+  }
+  assert.equal(ids.length, PORTRAIT_DRAFT_KEEP + 2)
+  assert.deepEqual((await fs.readdir(root)).sort(), [...ids.slice(-PORTRAIT_DRAFT_KEEP), 'keep-me'].sort())
+  assert.equal(resolvePortraitDraftRoot('/u'), path.join('/u', 'portrait-drafts'))
+})
+
+test('the gate returns landmarks only when asked and only on acceptance', async () => {
+  const { rgb, width, height, kp } = paintCharacter()
+  const face = { bbox: [180, 160, 420, 420, 0.95], keypoints: kp }
+  const detector = { detect: async () => [face] }
+  const plain = await evaluatePortraitLandmarks({ rgb, alpha: null, width, height }, detector)
+  assert.equal(plain.accepted, true, JSON.stringify(plain))
+  assert.equal('keypoints' in plain, false)
+  const kept = await evaluatePortraitLandmarks({ rgb, alpha: null, width, height }, detector, { keepKeypoints: true })
+  assert.deepEqual(kept.keypoints, kp)
+  const blank = await evaluatePortraitLandmarks({ rgb, alpha: null, width, height }, { detect: async () => [] }, { keepKeypoints: true })
+  assert.equal('keypoints' in blank, false)
+})
+
+test('the audit trail records the draft verdict and reason, never paths', () => {
+  const ok = summarizePetModelResult('pet-model:generate-portrait-draft', { accepted: true, draftId: 'draft-1', layers: {} })
+  assert.equal(ok.gateAccepted, true)
+  assert.equal(ok.draftCreated, true)
+  const rejected = summarizePetModelResult('pet-model:generate-portrait-draft', { accepted: false, reasonCode: R.HANDS_NEAR_FACE })
+  assert.equal(rejected.gateReasonCode, R.HANDS_NEAR_FACE)
+  assert.equal(rejected.draftCreated, false)
+  assert.equal(summarizePetModelResult('pet-model:generate-portrait-draft', { accepted: false, reasonCode: '/Users/me/a.png' }).gateReasonCode, undefined)
+})

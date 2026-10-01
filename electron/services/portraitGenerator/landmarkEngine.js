@@ -106,8 +106,9 @@ export function contrastNormalizeRgb(rgb, width, height, tiles = 8, clipLimit = 
  * Run the gate on a decoded raster with ready model sessions.
  * @param {{ rgb: Uint8Array, alpha: Uint8Array | null, width: number, height: number, pixelScale?: number }} image
  * @param {{ detector: { run: Function }, landmarks: { run: Function } }} sessions
+ * @param {{ keepKeypoints?: boolean }} [options] see `evaluatePortraitLandmarks`
  */
-export async function evaluateLandmarksWithSessions(image, sessions) {
+export async function evaluateLandmarksWithSessions(image, sessions, options = {}) {
   const cache = new Map()
   const detect = (variant) => {
     if (!cache.has(variant)) {
@@ -118,7 +119,7 @@ export async function evaluateLandmarksWithSessions(image, sessions) {
     }
     return cache.get(variant)
   }
-  return evaluatePortraitLandmarks(image, { detect })
+  return evaluatePortraitLandmarks(image, { detect }, options)
 }
 
 /**

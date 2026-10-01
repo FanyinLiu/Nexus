@@ -599,6 +599,11 @@ declare global {
         archivePathDisplay?: string
       } | null>
       checkPortraitImage: (payload?: { imagePath?: string }) => Promise<PortraitImageGateResult | null>
+      generatePortraitDraft: (payload?: { imagePath?: string }) => Promise<
+        | null
+        | { accepted: false, stage: 'image' | 'landmarks', reasonCode: string, detail: string | null, messageKey: string, messageParams: Record<string, string | number> }
+        | { accepted: true, draftId: string, width: number, height: number, alphaSource: 'image' | 'plain_background', layers: Record<'hair' | 'head' | 'body', { share: number }> }
+      >
       getPortraitModelStatus: () => Promise<{
         releaseTag: string
         releasePublished: boolean

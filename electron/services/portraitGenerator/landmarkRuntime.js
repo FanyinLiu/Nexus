@@ -70,7 +70,7 @@ export function createWorkerLandmarkEngine(options) {
   const withLock = createAsyncLock()
   let modelPaths = null
 
-  function runInWorker(image) {
+  function runInWorker(image, keepKeypoints) {
     return new Promise((resolve) => {
       let worker
       try {
@@ -94,7 +94,7 @@ export function createWorkerLandmarkEngine(options) {
       worker.once('error', () => finish(landmarkStageUnavailable('analysis_failed')))
       worker.once('exit', () => finish(landmarkStageUnavailable('analysis_failed')))
       const transfer = [image.rgb.buffer, image.alpha?.buffer].filter(Boolean)
-      worker.postMessage({ threads, wasmPaths, modelPaths, image }, transfer)
+      worker.postMessage({ threads, wasmPaths, modelPaths, image, keepKeypoints }, transfer)
     })
   }
 
@@ -109,9 +109,13 @@ export function createWorkerLandmarkEngine(options) {
       modelPaths = { detector: inspection.files.detector.filePath, landmarks: inspection.files.landmarks.filePath }
       return { status: 'ready' }
     },
-    evaluate(image) {
+    /**
+     * @param {object} image decoded raster (its buffers are transferred)
+     * @param {{ keepKeypoints?: boolean }} [options]
+     */
+    evaluate(image, options = {}) {
       if (!modelPaths) return Promise.resolve(landmarkStageUnavailable('missing'))
-      return withLock(() => runInWorker(image))
+      return withLock(() => runInWorker(image, options.keepKeypoints === true))
     },
   }
 }

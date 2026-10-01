@@ -32,7 +32,7 @@ async function loadRuntime(job) {
 }
 
 /**
- * @param {{ threads: number, wasmPaths: object | null, modelPaths: { detector: string, landmarks: string }, image: object }} job
+ * @param {{ threads: number, wasmPaths: object | null, modelPaths: { detector: string, landmarks: string }, image: object, keepKeypoints?: boolean }} job
  */
 async function runJob(job) {
   const ort = await loadRuntime(job)
@@ -48,7 +48,7 @@ async function runJob(job) {
         throw new StageFailure('load_failed')
       }
     }
-    return await evaluateLandmarksWithSessions(job.image, sessions)
+    return await evaluateLandmarksWithSessions(job.image, sessions, { keepKeypoints: job.keepKeypoints === true })
   } finally {
     for (const session of opened) await session.release().catch(() => {})
   }

@@ -779,6 +779,10 @@ than presenting Nexus as a Codex-style work agent.
   models are downloaded on first use by `portraitModelDownloader.js` from the
   pinned catalog in `shared/portraitModels.js` (see
   `docs/PORTRAIT_LANDMARK_MODELS.md`). Without them, stage A's verdict stands.
+  The generation entry `portraitDraft.js` (`pet-model:generate-portrait-draft`,
+  no UI yet) chains stage A, stage B with landmarks, and the hair/head/body
+  layering (`portraitLayers.js`, `portraitLayerStage.js`) into a same-canvas
+  RGBA draft under `<userData>/portrait-drafts/` (newest 3 kept).
 - `features/releaseNotes/` owns small release-communication contracts used by the
   app shell, such as the current About/Help release spotlight. It must stay
   content-only: no updater logic, IPC, migrations, or background checks.

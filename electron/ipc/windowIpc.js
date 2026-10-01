@@ -44,6 +44,10 @@ import { resolveLandmarkModelDirectory } from '../services/portraitGenerator/lan
 import { createWorkerLandmarkEngine } from '../services/portraitGenerator/landmarkRuntime.js'
 import { createPortraitLandmarkStage } from '../services/portraitGenerator/landmarkStage.js'
 import {
+  generatePortraitDraftFromPayload,
+  resolvePortraitDraftRoot,
+} from '../services/portraitGenerator/portraitDraft.js'
+import {
   getPortraitModelStatus,
   runPortraitModelDownload,
 } from '../services/portraitGenerator/portraitModelDownloader.js'
@@ -88,6 +92,7 @@ import {
   validatePetModelCreatorKitOptionalPathPayload,
   validatePetModelGalleryImportPayload,
   validatePetModelGalleryListPayload,
+  validatePetModelPortraitDraftPayload,
   validatePetModelPortraitImageCheckPayload,
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
@@ -107,10 +112,11 @@ const POWER_EVENT_CHANNEL = 'app:power-event'
 const PORTRAIT_MODELS_PROGRESS_CHANNEL = 'pet-model:portrait-models-progress'
 const portraitModelDirectory = () => resolveLandmarkModelDirectory(app.getPath('userData'))
 let portraitLandmarkEngine = null
-const portraitLandmarkStage = createPortraitLandmarkStage(() => {
+const getPortraitLandmarkEngine = () => {
   portraitLandmarkEngine ??= createWorkerLandmarkEngine({ directory: portraitModelDirectory() })
   return portraitLandmarkEngine
-})
+}
+const portraitLandmarkStage = createPortraitLandmarkStage(getPortraitLandmarkEngine)
 let portraitModelDownload = null
 const PET_MODEL_LIBRARY_CHANGED_CHANNEL = 'pet-model:library-changed'
 let powerEventForwardingRegistered = false
@@ -409,6 +415,18 @@ export function register() {
       checkPortraitImageFromPayload(payload, {
         pickImagePath: () => pickPortraitImagePath(event),
         landmarkStage: portraitLandmarkStage,
+      })
+    ))
+  })
+
+  ipcMain.handle('pet-model:generate-portrait-draft', async (event, payload = {}) => {
+    requireTrustedSender(event)
+    payload = validatePetModelPortraitDraftPayload(payload)
+    return runAuditedPetModelAction(event, 'pet-model:generate-portrait-draft', payload, () => (
+      generatePortraitDraftFromPayload(payload, {
+        pickImagePath: () => pickPortraitImagePath(event),
+        getEngine: getPortraitLandmarkEngine,
+        draftRoot: resolvePortraitDraftRoot(app.getPath('userData')),
       })
     ))
   })

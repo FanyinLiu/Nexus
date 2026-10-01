@@ -1,4 +1,5 @@
 import { isPortraitImageGateReason } from '../../shared/portraitImageGate.js'
+import { isPortraitLandmarkGateReason } from '../../shared/portraitLandmarkGate.js'
 
 function textLength(value) {
   return typeof value === 'string' ? value.length : 0
@@ -18,11 +19,14 @@ function pathSummary(value) {
 // Only the verdict and a known reason code are logged; image metrics stay
 // out of the audit trail with the path and pixels.
 function portraitImageGateSummary(result = {}) {
+  const known = isPortraitImageGateReason(result?.reasonCode) || isPortraitLandmarkGateReason(result?.reasonCode)
   return {
     gateAccepted: typeof result?.accepted === 'boolean' ? result.accepted : undefined,
-    gateReasonCode: isPortraitImageGateReason(result?.reasonCode) ? result.reasonCode : undefined,
+    gateReasonCode: known ? result.reasonCode : undefined,
   }
 }
+
+const PORTRAIT_GATE_CHANNELS = new Set(['pet-model:check-portrait-image', 'pet-model:generate-portrait-draft'])
 
 function resultPathSummary(result = {}) {
   return {
@@ -72,6 +76,7 @@ export function summarizePetModelRequest(channel, payload = {}) {
         manifestPath: pathSummary(payload?.manifestPath),
       }
     case 'pet-model:check-portrait-image':
+    case 'pet-model:generate-portrait-draft':
       return {
         channel,
         imagePath: pathSummary(payload?.imagePath),
@@ -100,7 +105,8 @@ export function summarizePetModelResult(channel, result = {}, error = null) {
     warningCount: !failed && typeof result?.warningCount === 'number' ? result.warningCount : undefined,
     messageLength: !failed ? textLength(result?.message) : 0,
     ...(!failed ? resultPathSummary(result) : {}),
-    ...(!failed && channel === 'pet-model:check-portrait-image' ? portraitImageGateSummary(result) : {}),
+    ...(!failed && PORTRAIT_GATE_CHANNELS.has(channel) ? portraitImageGateSummary(result) : {}),
+    ...(!failed && channel === 'pet-model:generate-portrait-draft' ? { draftCreated: typeof result?.draftId === 'string' } : {}),
     errorName: failed && error instanceof Error ? error.name : undefined,
     errorMessageLength: failed && error instanceof Error ? textLength(error.message) : 0,
   }
@@ -117,6 +123,7 @@ export function petModelActionNeedsConfirmation(channel, payload = {}) {
     case 'pet-model:assemble-creator-kit':
       return hasText(payload?.kitDirectory)
     case 'pet-model:check-portrait-image':
+    case 'pet-model:generate-portrait-draft':
       return hasText(payload?.imagePath)
     default:
       return false

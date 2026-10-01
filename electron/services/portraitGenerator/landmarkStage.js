@@ -45,9 +45,11 @@ async function decode(source) {
 
 /**
  * @param {{ filePath?: string, buffer?: Buffer }} source
- * @param {{ prepare: () => Promise<{ status: string }>, evaluate: (image: object) => Promise<object> }} engine
+ * @param {{ prepare: () => Promise<{ status: string }>, evaluate: (image: object, options?: object) => Promise<object> }} engine
+ * @param {{ keepKeypoints?: boolean }} [options] accepted verdicts then carry
+ *   `keypoints` in original-image pixels (generation path only)
  */
-export async function runPortraitLandmarkStage(source, engine) {
+export async function runPortraitLandmarkStage(source, engine, options = {}) {
   const prepared = await engine.prepare()
   if (prepared.status !== 'ready') return landmarkStageUnavailable(prepared.status)
   let image
@@ -56,8 +58,13 @@ export async function runPortraitLandmarkStage(source, engine) {
   } catch {
     return landmarkStageUnavailable('analysis_failed')
   }
+  const pixelScale = image.pixelScale
   try {
-    return await engine.evaluate(image)
+    const verdict = await engine.evaluate(image, options)
+    if (Array.isArray(verdict?.keypoints)) {
+      verdict.keypoints = verdict.keypoints.map(([x, y, confidence]) => [x * pixelScale, y * pixelScale, confidence])
+    }
+    return verdict
   } catch {
     return landmarkStageUnavailable('analysis_failed')
   }

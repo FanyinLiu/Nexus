@@ -103,3 +103,7 @@ export function validatePetModelCreatorKitOpenPathPayload(payload) {
 export function validatePetModelPortraitImageCheckPayload(payload) {
   return validateIpcPayload('pet-model:check-portrait-image', payload, petModelPortraitImageCheckSchema)
 }
+
+export function validatePetModelPortraitDraftPayload(payload) {
+  return validateIpcPayload('pet-model:generate-portrait-draft', payload, petModelPortraitImageCheckSchema)
+}
