@@ -21,6 +21,9 @@ import {
 } from '../shared/portraitImageGate.js'
 import { zhCNSettingsWindow } from '../src/i18n/locales/zh-CN/settings-window.ts'
 import { enSettingsWindow } from '../src/i18n/locales/en/settings-window.ts'
+import { zhTWSettingsWindow } from '../src/i18n/locales/zh-TW/settings-window.ts'
+import { jaSettingsWindow } from '../src/i18n/locales/ja/settings-window.ts'
+import { koSettingsWindow } from '../src/i18n/locales/ko/settings-window.ts'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 let workDir = ''
@@ -104,7 +107,9 @@ test('accepts a sharp, portrait-shaped PNG from a file path', async () => {
 })
 
 test('accepts JPEG and WebP buffers and judges EXIF-oriented dimensions', async () => {
-  const jpeg = await checkerboardRaw(600, 800).jpeg({ quality: 92 }).withMetadata({ orientation: 6 }).toBuffer()
+  // Stored sideways (600x800); EXIF orientation 6 turns it back upright to 800x600.
+  const sideways = await checkerboardRaw(800, 600).rotate(-90).png().toBuffer()
+  const jpeg = await sharp(sideways).jpeg({ quality: 92 }).withMetadata({ orientation: 6 }).toBuffer()
   const jpegResult = await rejectPortraitImage({ buffer: jpeg })
   assert.equal(jpegResult.accepted, true)
   assert.equal(jpegResult.metrics.format, 'jpeg')
@@ -139,13 +144,30 @@ test('rejects images narrower than the minimum width', async () => {
   assert.equal(justWideEnough.accepted, true)
 })
 
-test('rejects banner and strip aspect ratios', async () => {
+test('rejects wide banners as extreme_aspect_ratio', async () => {
   const wide = await rejectPortraitImage({ buffer: await checkerboardPng(2000, 600) })
   assert.equal(wide.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.EXTREME_ASPECT_RATIO)
-  assert.deepEqual(wide.messageParams, { maxRatio: PORTRAIT_IMAGE_GATE_LIMITS.maxAspectRatio })
+  assert.deepEqual(wide.messageParams, { maxRatio: PORTRAIT_IMAGE_GATE_LIMITS.maxWideAspectRatio })
 
-  const tall = await rejectPortraitImage({ buffer: await checkerboardPng(560, 1600) })
-  assert.equal(tall.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.EXTREME_ASPECT_RATIO)
+  const landscapeBust = await rejectPortraitImage({ buffer: await checkerboardPng(1200, 600) })
+  assert.equal(landscapeBust.accepted, true)
+})
+
+test('tall full-body strips get the narrowed-scope half_body_only answer', async () => {
+  assert.equal(PORTRAIT_IMAGE_GATE_LIMITS.maxTallAspectRatio, 2)
+  // 2.86 tall: used to be extreme_aspect_ratio, now says what v0.5 supports.
+  const strip = await rejectPortraitImage({ buffer: await checkerboardPng(560, 1600) })
+  assert.equal(strip.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.HALF_BODY_ONLY)
+  assert.equal(strip.messageKey, PORTRAIT_IMAGE_GATE_MESSAGE_KEYS.half_body_only)
+  assert.equal(strip.metrics.laplacianVariance, undefined, 'shape check must short-circuit before decoding pixels')
+
+  // 2.2 tall (a typical full-body sprite) was accepted under the old 2.5 limit.
+  const fullBody = await rejectPortraitImage({ buffer: await checkerboardPng(600, 1320) })
+  assert.equal(fullBody.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.HALF_BODY_ONLY)
+
+  // 1.9 tall is still a plausible long half-body crop.
+  const longBust = await rejectPortraitImage({ buffer: await checkerboardPng(600, 1140) })
+  assert.equal(longBust.accepted, true)
 })
 
 test('rejects oversized files from their size alone without reading them', async () => {
@@ -242,16 +264,49 @@ test('background metric treats transparency and one dominant colour as plain', (
   const size = 64
   const solid = new Uint8Array(size * size * 4)
   for (let index = 0; index < size * size; index += 1) solid.set([30, 120, 200, 255], index * 4)
-  assert.deepEqual(measurePortraitImageBackground(solid, size, size), { plainBorderRatio: 1, transparentBorderRatio: 0 })
+  assert.deepEqual(measurePortraitImageBackground(solid, size, size), { plainBorderRatio: 1, transparentBorderRatio: 0, transparentPixelRatio: 0 })
 
   const clear = new Uint8Array(size * size * 4)
-  assert.deepEqual(measurePortraitImageBackground(clear, size, size), { plainBorderRatio: 1, transparentBorderRatio: 1 })
+  assert.deepEqual(measurePortraitImageBackground(clear, size, size), { plainBorderRatio: 1, transparentBorderRatio: 1, transparentPixelRatio: 1 })
 
   const noisy = new Uint8Array(size * size * 4)
   for (let index = 0; index < size * size; index += 1) {
     noisy.set([(index * 67) % 256, (index * 131) % 256, (index * 29) % 256, 255], index * 4)
   }
   assert.ok(measurePortraitImageBackground(noisy, size, size).plainBorderRatio < PORTRAIT_IMAGE_GATE_LIMITS.minPlainBorderRatio)
+})
+
+test('background metric ignores the bottom band, where half-body crops meet the frame', () => {
+  const size = 400
+  const band = Math.round(size * PORTRAIT_IMAGE_GATE_LIMITS.borderBandFraction)
+  const rgba = new Uint8Array(size * size * 4)
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      // Plain top and sides; the whole bottom band is a noisy "torso".
+      const value = y >= size - band ? [(x * 67) % 256, (x * 131 + y) % 256, (x * 29) % 256] : [240, 240, 240]
+      rgba.set([...value, 255], (y * size + x) * 4)
+    }
+  }
+  assert.equal(measurePortraitImageBackground(rgba, size, size).plainBorderRatio, 1)
+})
+
+test('mostly transparent images skip the busy-border check even when the character fills the edges', async () => {
+  const width = 768
+  const height = 1024
+  const { data: pattern } = await checkerboardRaw(width, height, 'busy').raw().toBuffer({ resolveWithObject: true })
+  const rgba = Buffer.alloc(width * height * 4)
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = y * width + x
+      // Opaque everywhere except a transparent block in the top centre (~8%).
+      const clear = y < 160 && x >= 192 && x < width - 192
+      rgba.set([pattern[index * 3], pattern[index * 3 + 1], pattern[index * 3 + 2], clear ? 0 : 255], index * 4)
+    }
+  }
+  const result = await rejectPortraitImage({ buffer: await sharp(rgba, { raw: { width, height, channels: 4 } }).png().toBuffer() })
+  assert.ok((result.metrics.plainBorderRatio ?? 1) < PORTRAIT_IMAGE_GATE_LIMITS.minPlainBorderRatio)
+  assert.ok((result.metrics.transparentPixelRatio ?? 0) >= PORTRAIT_IMAGE_GATE_LIMITS.transparentImageMinRatio)
+  assert.equal(result.accepted, true)
 })
 
 test('sharpness metric is zero for flat images and high for hard edges', () => {
@@ -289,7 +344,7 @@ test('IPC entry uses the payload path, falls back to the picker, and returns nul
   assert.ok(!serialized.includes('private-character-name'))
 })
 
-test('every reason code has a message key with copy in zh-CN and en', () => {
+test('every reason code has a message key with copy in all five locales', () => {
   const zh = zhCNSettingsWindow as Record<string, string>
   const en = enSettingsWindow as Record<string, string>
   for (const code of Object.values(PORTRAIT_IMAGE_GATE_REASONS)) {
@@ -297,7 +352,13 @@ test('every reason code has a message key with copy in zh-CN and en', () => {
     const key = PORTRAIT_IMAGE_GATE_MESSAGE_KEYS[code]
     assert.ok(zh[key], `${key} needs zh-CN copy`)
     assert.ok(en[key], `${key} needs en copy`)
+    for (const [locale, table] of Object.entries({ zhTWSettingsWindow, jaSettingsWindow, koSettingsWindow })) {
+      assert.ok((table as Record<string, string>)[key], `${key} needs ${locale} copy`)
+    }
   }
+  const halfBodyKey = PORTRAIT_IMAGE_GATE_MESSAGE_KEYS.half_body_only
+  assert.match(zh[halfBodyKey], /0\.5 暂时只支持半身立绘/)
+  assert.match(en[halfBodyKey], /0\.5 currently supports half-body illustrations only/)
   assert.ok(zh[PORTRAIT_IMAGE_GATE_MESSAGE_KEYS.accepted])
   assert.equal(isPortraitImageGateReason('/Users/me/private.png'), false)
 })

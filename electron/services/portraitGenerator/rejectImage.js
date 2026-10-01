@@ -8,8 +8,10 @@
  * code and a renderer messageKey only — no prose, no paths, no pixels — so
  * they are safe to audit. The image is read locally and never forwarded to
  * chat, desktop context, or any model prompt. Small images are never
- * upscaled. Thresholds start from the round-1/2 spikes and are provisional
- * until the round-3 spike recalibrates them.
+ * upscaled. Thresholds are recalibrated against the round-1..4 spike images
+ * (see the PR description); v0.5 is narrowed to half-body illustrations, so
+ * tall full-body strips get a plain "half-body only" answer instead of a
+ * generic aspect-ratio complaint.
  */
 
 import fs from 'node:fs/promises'
@@ -33,8 +35,14 @@ export const PORTRAIT_IMAGE_GATE_LIMITS = Object.freeze({
   maxInputPixels: 64_000_000,
   /** Narrower images cannot carry face / eye detail for layering. */
   minWidthPx: 512,
-  /** Long side / short side above this is a strip or banner, not a portrait. */
-  maxAspectRatio: 2.5,
+  /** Width / height above this is a banner, not a portrait. */
+  maxWideAspectRatio: 2.5,
+  /**
+   * Height / width above this is a full-body (or longer) strip. v0.5 only
+   * supports half-body illustrations; on the spike set every half-body image
+   * was at most 1.6 tall, while full-body sprites ran 1.7-2.8.
+   */
+  maxTallAspectRatio: 2.0,
   /** Analysis raster long side; larger images shrink, smaller never grow. */
   analysisLongSidePx: 1024,
   /** Laplacian variance below this reads as a blurry, soft-edged image. */
@@ -49,10 +57,22 @@ export const PORTRAIT_IMAGE_GATE_LIMITS = Object.freeze({
   minBorderBandPx: 4,
   /** Alpha below this counts as a transparent background pixel. */
   transparentAlphaMax: 16,
+  /** Alpha below this counts toward the image-wide transparency share. */
+  transparentImageAlphaMax: 26,
+  /**
+   * When at least this share of all pixels is transparent the background is
+   * transparent by construction, so the plain-border check is skipped (any
+   * opaque border pixels are the character itself, cropped by the frame).
+   */
+  transparentImageMinRatio: 0.05,
   /** Max per-channel distance from the dominant border colour to count as plain. */
   borderColorTolerance: 20,
-  /** Share of border pixels that must be transparent or the dominant colour. */
-  minPlainBorderRatio: 0.8,
+  /**
+   * Share of top/side border pixels that must be transparent or the dominant
+   * colour. Spike: opaque plain-background illustrations scored >= 0.936,
+   * sparkle/pattern/photo backgrounds <= 0.878.
+   */
+  minPlainBorderRatio: 0.9,
 })
 
 /** Formats the generator accepts; matches the existing pet image picker. */
@@ -148,11 +168,13 @@ export function measurePortraitImageSharpness(gray, width, height) {
  * A plain or transparent background dominates the border band even where the
  * character touches an edge; photos, patterns, speed lines, and scenery split
  * it across many colours. The dominant colour is the mode of 5-bit-per-channel
- * bins over opaque border pixels.
+ * bins over opaque border pixels. Only the top and side bands count: a
+ * half-body illustration is cropped through the torso, so its bottom band is
+ * the character, not the background.
  * @param {Uint8Array} rgba RGBA raster
  * @param {number} width
  * @param {number} height
- * @returns {{ plainBorderRatio: number, transparentBorderRatio: number }}
+ * @returns {{ plainBorderRatio: number, transparentBorderRatio: number, transparentPixelRatio: number }}
  */
 export function measurePortraitImageBackground(rgba, width, height) {
   const limits = PORTRAIT_IMAGE_GATE_LIMITS
@@ -160,7 +182,7 @@ export function measurePortraitImageBackground(rgba, width, height) {
     limits.minBorderBandPx,
     Math.round(Math.min(width, height) * limits.borderBandFraction),
   )
-  const isBorder = (x, y) => x < band || y < band || x >= width - band || y >= height - band
+  const isBorder = (x, y) => y < height - band && (x < band || y < band || x >= width - band)
   const bins = new Map()
   let total = 0
   let transparent = 0
@@ -177,7 +199,7 @@ export function measurePortraitImageBackground(rgba, width, height) {
       bins.set(bin, (bins.get(bin) ?? 0) + 1)
     }
   }
-  if (total === 0) return { plainBorderRatio: 0, transparentBorderRatio: 0 }
+  if (total === 0) return { plainBorderRatio: 0, transparentBorderRatio: 0, transparentPixelRatio: 0 }
 
   let dominantBin = -1
   let dominantCount = 0
@@ -186,6 +208,10 @@ export function measurePortraitImageBackground(rgba, width, height) {
       dominantBin = bin
       dominantCount = count
     }
+  }
+  let transparentPixels = 0
+  for (let index = 3; index < rgba.length; index += 4) {
+    if (rgba[index] < limits.transparentImageAlphaMax) transparentPixels += 1
   }
   let nearDominant = 0
   if (dominantBin >= 0) {
@@ -211,6 +237,7 @@ export function measurePortraitImageBackground(rgba, width, height) {
   return {
     plainBorderRatio: (transparent + nearDominant) / total,
     transparentBorderRatio: transparent / total,
+    transparentPixelRatio: transparentPixels / (width * height),
   }
 }
 
@@ -295,9 +322,12 @@ export async function rejectPortraitImage(source) {
   if (width < limits.minWidthPx) {
     return buildResult(PORTRAIT_IMAGE_GATE_REASONS.TOO_SMALL, metrics, { minWidth: limits.minWidthPx })
   }
-  const shortSide = Math.min(width, height)
-  if (Math.max(width, height) / shortSide > limits.maxAspectRatio) {
-    return buildResult(PORTRAIT_IMAGE_GATE_REASONS.EXTREME_ASPECT_RATIO, metrics, { maxRatio: limits.maxAspectRatio })
+  if (width / height > limits.maxWideAspectRatio) {
+    return buildResult(PORTRAIT_IMAGE_GATE_REASONS.EXTREME_ASPECT_RATIO, metrics, { maxRatio: limits.maxWideAspectRatio })
+  }
+  // A tall strip is almost always a full-body sprite; say what v0.5 supports.
+  if (height / width > limits.maxTallAspectRatio) {
+    return buildResult(PORTRAIT_IMAGE_GATE_REASONS.HALF_BODY_ONLY, metrics)
   }
 
   let analysis
@@ -312,13 +342,17 @@ export async function rejectPortraitImage(source) {
   metrics.edgeDensity = roundMetric(sharpness.edgeDensity, 4)
   metrics.plainBorderRatio = roundMetric(background.plainBorderRatio, 3)
   metrics.transparentBorderRatio = roundMetric(background.transparentBorderRatio, 3)
+  metrics.transparentPixelRatio = roundMetric(background.transparentPixelRatio, 3)
   if (
     sharpness.laplacianVariance < limits.minLaplacianVariance
     || sharpness.edgeDensity < limits.minEdgeDensity
   ) {
     return buildResult(PORTRAIT_IMAGE_GATE_REASONS.TOO_BLURRY, metrics)
   }
-  if (background.plainBorderRatio < limits.minPlainBorderRatio) {
+  if (
+    background.transparentPixelRatio < limits.transparentImageMinRatio
+    && background.plainBorderRatio < limits.minPlainBorderRatio
+  ) {
     return buildResult(PORTRAIT_IMAGE_GATE_REASONS.BUSY_BACKGROUND, metrics)
   }
 
