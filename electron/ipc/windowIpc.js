@@ -36,6 +36,10 @@ import {
   saveTextFileFromDialog,
   openTextFileFromDialog,
 } from '../services/petModelService.js'
+import {
+  PORTRAIT_IMAGE_GATE_FILE_EXTENSIONS,
+  checkPortraitImageFromPayload,
+} from '../services/portraitGenerator/rejectImage.js'
 import { invokeRegisteredTool } from '../tools/toolRegistry.js'
 import {
   captureActiveWindowContext,
@@ -77,6 +81,7 @@ import {
   validatePetModelCreatorKitOptionalPathPayload,
   validatePetModelGalleryImportPayload,
   validatePetModelGalleryListPayload,
+  validatePetModelPortraitImageCheckPayload,
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
@@ -108,6 +113,15 @@ function summarizeTextFileResult(result) {
     extension: extension.slice(0, 32),
     contentLength: typeof result?.content === 'string' ? result.content.length : undefined,
   }
+}
+
+async function pickPortraitImagePath(event) {
+  const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+  const selection = await dialog.showOpenDialog(parentWindow, {
+    properties: ['openFile'],
+    filters: [{ name: 'Image', extensions: [...PORTRAIT_IMAGE_GATE_FILE_EXTENSIONS] }],
+  })
+  return selection.canceled ? null : selection.filePaths[0] ?? null
 }
 
 async function confirmPetModelAction(event, channel, payload) {
@@ -367,6 +381,14 @@ export function register() {
     payload = validatePetModelCreatorKitOpenPathPayload(payload)
     return runAuditedPetModelAction(event, 'pet-model:open-creator-kit-path', payload, () => (
       openSpritePetCreatorKitPathFromPayload(payload)
+    ))
+  })
+
+  ipcMain.handle('pet-model:check-portrait-image', async (event, payload = {}) => {
+    requireTrustedSender(event)
+    payload = validatePetModelPortraitImageCheckPayload(payload)
+    return runAuditedPetModelAction(event, 'pet-model:check-portrait-image', payload, () => (
+      checkPortraitImageFromPayload(payload, { pickImagePath: () => pickPortraitImagePath(event) })
     ))
   })
 

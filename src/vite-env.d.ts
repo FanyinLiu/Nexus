@@ -52,6 +52,7 @@ import type {
   TtsStreamStartResponse,
 } from './types'
 import type { LocalDataCompanionStorageKey } from '../shared/localDataStorageKeys.js'
+import type { PortraitImageGateResult } from '../shared/portraitImageGate.js'
 
 
 type MinecraftGatewayEvent = {
@@ -596,6 +597,7 @@ declare global {
         archivePath?: string
         archivePathDisplay?: string
       } | null>
+      checkPortraitImage: (payload?: { imagePath?: string }) => Promise<PortraitImageGateResult | null>
       showConfirmDialog: (message: string) => Promise<boolean>
       saveTextFile: (payload: TextFileSaveRequest) => Promise<TextFileSaveResponse>
       openTextFile: (payload: TextFileOpenRequest) => Promise<TextFileOpenResponse>

@@ -1,3 +1,5 @@
+import { isPortraitImageGateReason } from '../../shared/portraitImageGate.js'
+
 function textLength(value) {
   return typeof value === 'string' ? value.length : 0
 }
@@ -10,6 +12,15 @@ function pathSummary(value) {
   return {
     present: hasText(value),
     length: textLength(value),
+  }
+}
+
+// Only the verdict and a known reason code are logged; image metrics stay
+// out of the audit trail with the path and pixels.
+function portraitImageGateSummary(result = {}) {
+  return {
+    gateAccepted: typeof result?.accepted === 'boolean' ? result.accepted : undefined,
+    gateReasonCode: isPortraitImageGateReason(result?.reasonCode) ? result.reasonCode : undefined,
   }
 }
 
@@ -60,6 +71,12 @@ export function summarizePetModelRequest(channel, payload = {}) {
         kitDirectory: pathSummary(payload?.kitDirectory),
         manifestPath: pathSummary(payload?.manifestPath),
       }
+    case 'pet-model:check-portrait-image':
+      return {
+        channel,
+        imagePath: pathSummary(payload?.imagePath),
+        dialogBacked: !hasText(payload?.imagePath),
+      }
     case 'pet-model:open-creator-kit-path':
       return {
         channel,
@@ -83,6 +100,7 @@ export function summarizePetModelResult(channel, result = {}, error = null) {
     warningCount: !failed && typeof result?.warningCount === 'number' ? result.warningCount : undefined,
     messageLength: !failed ? textLength(result?.message) : 0,
     ...(!failed ? resultPathSummary(result) : {}),
+    ...(!failed && channel === 'pet-model:check-portrait-image' ? portraitImageGateSummary(result) : {}),
     errorName: failed && error instanceof Error ? error.name : undefined,
     errorMessageLength: failed && error instanceof Error ? textLength(error.message) : 0,
   }
@@ -98,6 +116,8 @@ export function petModelActionNeedsConfirmation(channel, payload = {}) {
     case 'pet-model:inspect-creator-kit':
     case 'pet-model:assemble-creator-kit':
       return hasText(payload?.kitDirectory)
+    case 'pet-model:check-portrait-image':
+      return hasText(payload?.imagePath)
     default:
       return false
   }

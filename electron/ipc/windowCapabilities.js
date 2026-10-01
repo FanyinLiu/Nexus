@@ -19,7 +19,7 @@ const PANEL_ONLY_PATTERNS = Object.freeze([
   /^minecraft:(?:connect|send-command)$/,
   /^models:download$/,
   /^notification:(?:set-channels|start)$/,
-  /^pet-model:(?:assemble-creator-kit|create-(?:creator-kit|from-image)|import(?:-codex-gallery)?|install-creator-kit-codex|open-creator-kit-path)$/,
+  /^pet-model:(?:assemble-creator-kit|check-portrait-image|create-(?:creator-kit|from-image)|import(?:-codex-gallery)?|install-creator-kit-codex|open-creator-kit-path)$/,
   /^plugin:(?:approve|disable|enable|restart|revoke|start|stop)$/,
   /^plugin-bus:(?:publish|subscribe|unsubscribe)$/,
   /^persona:(?:save-|open-dir$|init$|import-card$|profile-dir$)/,
