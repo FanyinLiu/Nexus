@@ -17,6 +17,7 @@ export const PORTRAIT_IMAGE_GATE_REASONS = Object.freeze({
   TOO_SMALL: 'too_small',
   EXTREME_ASPECT_RATIO: 'extreme_aspect_ratio',
   TOO_BLURRY: 'too_blurry',
+  BUSY_BACKGROUND: 'busy_background',
 })
 
 /** Renderer copy keys, one per reason code plus the accepted verdict. */
@@ -31,6 +32,7 @@ export const PORTRAIT_IMAGE_GATE_MESSAGE_KEYS = Object.freeze({
   too_small: 'settings.pet.portrait_gate.too_small',
   extreme_aspect_ratio: 'settings.pet.portrait_gate.extreme_aspect_ratio',
   too_blurry: 'settings.pet.portrait_gate.too_blurry',
+  busy_background: 'settings.pet.portrait_gate.busy_background',
 })
 
 const REASON_SET = new Set(Object.values(PORTRAIT_IMAGE_GATE_REASONS))

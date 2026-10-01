@@ -769,9 +769,10 @@ than presenting Nexus as a Codex-style work agent.
   toward the companion-style presentation layer.
 - `electron/services/portraitGenerator/` holds the in-progress v0.5
   one-image pet generator. Stage A (`rejectImage.js`) is a heuristic-only
-  `sharp` gate (decode, format, size, aspect ratio, blur) that returns a stable
-  reason code and `messageKey` from `shared/portraitImageGate.js`; the image is
-  read locally and never reaches chat, desktop context, or model prompts. Its
+  `sharp` gate (decode, format, size, minimum width, aspect ratio, blur, plain
+  or transparent background) that returns a stable reason code and
+  `messageKey` from `shared/portraitImageGate.js`; the image is read locally
+  and never reaches chat, desktop context, or model prompts. Its
   `pet-model:check-portrait-image` IPC has no stable UI entry yet.
 - `features/releaseNotes/` owns small release-communication contracts used by the
   app shell, such as the current About/Help release spotlight. It must stay

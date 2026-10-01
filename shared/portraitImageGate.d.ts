@@ -8,6 +8,7 @@ export declare const PORTRAIT_IMAGE_GATE_REASONS: Readonly<{
   TOO_SMALL: 'too_small'
   EXTREME_ASPECT_RATIO: 'extreme_aspect_ratio'
   TOO_BLURRY: 'too_blurry'
+  BUSY_BACKGROUND: 'busy_background'
 }>
 
 export type PortraitImageGateReason =
@@ -24,6 +25,7 @@ export declare const PORTRAIT_IMAGE_GATE_MESSAGE_KEYS: Readonly<{
   too_small: 'settings.pet.portrait_gate.too_small'
   extreme_aspect_ratio: 'settings.pet.portrait_gate.extreme_aspect_ratio'
   too_blurry: 'settings.pet.portrait_gate.too_blurry'
+  busy_background: 'settings.pet.portrait_gate.busy_background'
 }>
 
 export type PortraitImageGateMessageKey =
@@ -37,6 +39,8 @@ export type PortraitImageGateMetrics = {
   height?: number
   laplacianVariance?: number
   edgeDensity?: number
+  plainBorderRatio?: number
+  transparentBorderRatio?: number
 }
 
 export type PortraitImageGateResult = {

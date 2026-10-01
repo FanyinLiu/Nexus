@@ -10,6 +10,7 @@ import sharp from 'sharp'
 import {
   PORTRAIT_IMAGE_GATE_LIMITS,
   checkPortraitImageFromPayload,
+  measurePortraitImageBackground,
   measurePortraitImageSharpness,
   rejectPortraitImage,
 } from '../electron/services/portraitGenerator/rejectImage.js'
@@ -32,12 +33,23 @@ after(async () => {
   if (workDir) await fs.rm(workDir, { recursive: true, force: true })
 })
 
-/** Hard-edged checkerboard: plenty of outline detail, like line art. */
-function checkerboardRaw(width: number, height: number, cell = 16) {
+type FixtureBackground = 'plain' | 'busy'
+
+/**
+ * Hard-edged checkerboard "character" (plenty of outline detail, like line
+ * art) on a plain off-white background, touching the bottom edge like a bust
+ * crop. `busy` lets the pattern fill the whole frame instead.
+ */
+function checkerboardRaw(width: number, height: number, background: FixtureBackground = 'plain', cell = 16) {
   const data = Buffer.alloc(width * height * 3)
+  const insetX = Math.round(width * 0.15)
+  const insetTop = Math.round(height * 0.15)
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
-      const value = (Math.floor(x / cell) + Math.floor(y / cell)) % 2 === 0 ? 24 : 232
+      const inCharacter = x >= insetX && x < width - insetX && y >= insetTop
+      const value = background === 'plain' && !inCharacter
+        ? 245
+        : (Math.floor(x / cell) + Math.floor(y / cell)) % 2 === 0 ? 24 : 232
       data.fill(value, (y * width + x) * 3, (y * width + x) * 3 + 3)
     }
   }
@@ -115,12 +127,16 @@ test('rejects a blurry image with the too_blurry reason', async () => {
   assert.ok((result.metrics.laplacianVariance ?? Infinity) < PORTRAIT_IMAGE_GATE_LIMITS.minLaplacianVariance)
 })
 
-test('rejects images whose shorter side is below the illustration minimum', async () => {
+test('rejects images narrower than the minimum width', async () => {
   const result = await rejectPortraitImage({ buffer: await checkerboardPng(400, 900) })
 
   assert.equal(result.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.TOO_SMALL)
-  assert.deepEqual(result.messageParams, { minSide: PORTRAIT_IMAGE_GATE_LIMITS.minShortSidePx })
+  assert.deepEqual(result.messageParams, { minWidth: 512 })
+  assert.equal(PORTRAIT_IMAGE_GATE_LIMITS.minWidthPx, 512)
   assert.equal(result.metrics.laplacianVariance, undefined, 'cheap checks must short-circuit before decoding pixels')
+
+  const justWideEnough = await rejectPortraitImage({ buffer: await checkerboardPng(512, 700) })
+  assert.equal(justWideEnough.accepted, true)
 })
 
 test('rejects banner and strip aspect ratios', async () => {
@@ -189,6 +205,53 @@ test('rejects decodable but unsupported or animated formats', async () => {
     .webp({ loop: 0, delay: [100, 100] })
     .toBuffer()
   assert.equal((await rejectPortraitImage({ buffer: animated })).reasonCode, PORTRAIT_IMAGE_GATE_REASONS.ANIMATED)
+})
+
+test('rejects busy backgrounds and accepts plain or transparent ones', async () => {
+  const busy = await rejectPortraitImage({ buffer: await checkerboardRaw(768, 1024, 'busy').png().toBuffer() })
+  assert.equal(busy.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.BUSY_BACKGROUND)
+  assert.equal(busy.messageKey, PORTRAIT_IMAGE_GATE_MESSAGE_KEYS.busy_background)
+  assert.ok((busy.metrics.plainBorderRatio ?? 1) < PORTRAIT_IMAGE_GATE_LIMITS.minPlainBorderRatio)
+
+  const plain = await rejectPortraitImage({ buffer: await checkerboardPng(768, 1024) })
+  assert.equal(plain.accepted, true)
+  assert.ok((plain.metrics.plainBorderRatio ?? 0) >= PORTRAIT_IMAGE_GATE_LIMITS.minPlainBorderRatio)
+
+  // Transparent background: the hidden RGB under alpha 0 is deliberately noisy.
+  const width = 768
+  const height = 1024
+  const { data: pattern } = await checkerboardRaw(width, height, 'busy').raw().toBuffer({ resolveWithObject: true })
+  const rgba = Buffer.alloc(width * height * 4)
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = y * width + x
+      const inCharacter = x >= 160 && x < width - 160 && y >= 160 && y < height - 160
+      rgba[index * 4] = pattern[index * 3]
+      rgba[index * 4 + 1] = pattern[index * 3 + 1]
+      rgba[index * 4 + 2] = pattern[index * 3 + 2]
+      rgba[index * 4 + 3] = inCharacter ? 255 : 0
+    }
+  }
+  const transparentPng = await sharp(rgba, { raw: { width, height, channels: 4 } }).png().toBuffer()
+  const transparent = await rejectPortraitImage({ buffer: transparentPng })
+  assert.equal(transparent.accepted, true)
+  assert.equal(transparent.metrics.transparentBorderRatio, 1)
+})
+
+test('background metric treats transparency and one dominant colour as plain', () => {
+  const size = 64
+  const solid = new Uint8Array(size * size * 4)
+  for (let index = 0; index < size * size; index += 1) solid.set([30, 120, 200, 255], index * 4)
+  assert.deepEqual(measurePortraitImageBackground(solid, size, size), { plainBorderRatio: 1, transparentBorderRatio: 0 })
+
+  const clear = new Uint8Array(size * size * 4)
+  assert.deepEqual(measurePortraitImageBackground(clear, size, size), { plainBorderRatio: 1, transparentBorderRatio: 1 })
+
+  const noisy = new Uint8Array(size * size * 4)
+  for (let index = 0; index < size * size; index += 1) {
+    noisy.set([(index * 67) % 256, (index * 131) % 256, (index * 29) % 256, 255], index * 4)
+  }
+  assert.ok(measurePortraitImageBackground(noisy, size, size).plainBorderRatio < PORTRAIT_IMAGE_GATE_LIMITS.minPlainBorderRatio)
 })
 
 test('sharpness metric is zero for flat images and high for hard edges', () => {
