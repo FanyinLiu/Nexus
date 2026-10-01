@@ -366,8 +366,12 @@ export async function rejectPortraitImage(source) {
  * @param {{ imagePath?: string }} payload
  * @param {{ pickImagePath: () => Promise<string | null | undefined> }} deps
  */
-export async function checkPortraitImageFromPayload(payload, { pickImagePath }) {
+export async function checkPortraitImageFromPayload(payload, { pickImagePath, landmarkStage = null }) {
   const imagePath = payload?.imagePath || await pickImagePath()
   if (!imagePath) return null
-  return rejectPortraitImage({ filePath: imagePath })
+  const result = await rejectPortraitImage({ filePath: imagePath })
+  // Stage B (landmarks) only runs on images stage A accepted; it keeps stage
+  // A's verdict whenever its models or runtime are unavailable.
+  if (!result.accepted || !landmarkStage) return result
+  return landmarkStage({ filePath: imagePath }, result)
 }

@@ -1,3 +1,5 @@
+import type { PortraitLandmarkGateMessageKey, PortraitLandmarkGateReason } from './portraitLandmarkGate.js'
+
 export declare const PORTRAIT_IMAGE_GATE_REASONS: Readonly<{
   UNREADABLE: 'unreadable'
   FILE_TOO_LARGE: 'file_too_large'
@@ -48,10 +50,13 @@ export type PortraitImageGateMetrics = {
 
 export type PortraitImageGateResult = {
   accepted: boolean
-  reasonCode: PortraitImageGateReason | null
-  messageKey: PortraitImageGateMessageKey
+  /** Stage A reasons, or stage B (landmark) reasons once that stage runs. */
+  reasonCode: PortraitImageGateReason | PortraitLandmarkGateReason | null
+  messageKey: PortraitImageGateMessageKey | PortraitLandmarkGateMessageKey
   messageParams: Record<string, string | number>
-  metrics: PortraitImageGateMetrics
+  metrics: PortraitImageGateMetrics & { landmarks?: Record<string, number | boolean> }
+  /** Stage B status: 'ok', a rejection detail, or why it could not run. */
+  landmarkStatus?: string
 }
 
 export declare function isPortraitImageGateReason(value: unknown): value is PortraitImageGateReason

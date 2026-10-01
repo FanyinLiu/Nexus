@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
 import {
   mainWindow,
   panelWindow,
@@ -40,6 +40,11 @@ import {
   PORTRAIT_IMAGE_GATE_FILE_EXTENSIONS,
   checkPortraitImageFromPayload,
 } from '../services/portraitGenerator/rejectImage.js'
+import {
+  createLandmarkModelLoader,
+  resolveLandmarkModelDirectory,
+} from '../services/portraitGenerator/landmarkModels.js'
+import { createPortraitLandmarkStage } from '../services/portraitGenerator/landmarkStage.js'
 import { invokeRegisteredTool } from '../tools/toolRegistry.js'
 import {
   captureActiveWindowContext,
@@ -94,6 +99,17 @@ import {
 import { POWER_EVENT_KINDS } from '../../shared/powerEventKinds.js'
 
 const POWER_EVENT_CHANNEL = 'app:power-event'
+
+// Portrait stage B. No ONNX runtime is injected yet (see
+// docs/PORTRAIT_LANDMARK_MODELS.md), so the loader answers
+// `runtime_unavailable` without touching disk and stage A's verdict stands.
+let portraitLandmarkLoader = null
+const portraitLandmarkStage = createPortraitLandmarkStage(() => {
+  portraitLandmarkLoader ??= createLandmarkModelLoader({
+    directory: resolveLandmarkModelDirectory(app.getPath('userData')),
+  })
+  return portraitLandmarkLoader
+})
 const PET_MODEL_LIBRARY_CHANGED_CHANNEL = 'pet-model:library-changed'
 let powerEventForwardingRegistered = false
 
@@ -388,7 +404,10 @@ export function register() {
     requireTrustedSender(event)
     payload = validatePetModelPortraitImageCheckPayload(payload)
     return runAuditedPetModelAction(event, 'pet-model:check-portrait-image', payload, () => (
-      checkPortraitImageFromPayload(payload, { pickImagePath: () => pickPortraitImagePath(event) })
+      checkPortraitImageFromPayload(payload, {
+        pickImagePath: () => pickPortraitImagePath(event),
+        landmarkStage: portraitLandmarkStage,
+      })
     ))
   })
 
