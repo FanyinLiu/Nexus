@@ -45,8 +45,10 @@ after(async () => {
 
 // ------------------------------------------------------------ catalog
 
-test('catalog: pinned release URLs on allowlisted hosts, valid integrity, licences, and a placeholder release', () => {
-  assert.equal(PORTRAIT_MODEL_RELEASE.published, false, 'stays false until the owner publishes the release')
+test('catalog: pinned release URLs on allowlisted hosts, valid integrity, licences, and the published release', () => {
+  assert.equal(PORTRAIT_MODEL_RELEASE.published, true, 'portrait-models-v1 was published on 2026-10-02')
+  assert.equal(PORTRAIT_MODEL_RELEASE.tag, 'portrait-models-v1')
+  assert.equal(PORTRAIT_MODEL_RELEASE.baseUrl, 'https://github.com/FanyinLiu/Nexus/releases/download/portrait-models-v1')
   assert.equal(PORTRAIT_MODEL_RELEASE.baseUrl, `https://github.com/FanyinLiu/Nexus/releases/download/${PORTRAIT_MODEL_RELEASE.tag}`)
   const ids = new Set()
   for (const model of PORTRAIT_MODEL_CATALOG) {
@@ -146,7 +148,7 @@ const noSleep = { sleeps: [] as number[], sleep: async function (ms: number) { t
 
 test('download refuses while the release is unpublished and never fetches', async () => {
   let fetched = 0
-  const options = { directory: await freshDir(), fetchImpl: (async () => { fetched += 1; return respond(200, Buffer.alloc(1)) }) as unknown as typeof fetch }
+  const options = { directory: await freshDir(), release: { published: false }, fetchImpl: (async () => { fetched += 1; return respond(200, Buffer.alloc(1)) }) as unknown as typeof fetch }
   await assert.rejects(downloadPortraitModels(options), (error: unknown) => error instanceof PortraitModelDownloadError && error.code === E.RELEASE_UNPUBLISHED)
   assert.deepEqual(await runPortraitModelDownload(options), { ok: false, code: E.RELEASE_UNPUBLISHED })
   assert.equal(fetched, 0)
@@ -173,6 +175,21 @@ test('download installs verified files with progress events, then reports them a
   const again = await runPortraitModelDownload({ directory: dir, models: [a.model, b.model] as never, release: published, fetchImpl: impl })
   assert.deepEqual(again, { ok: true, installed: [], alreadyPresent: ['a', 'b'] })
   assert.equal(calls.length, 2, 'verified files are not fetched again')
+})
+
+test('backpressure waits do not pile up stream listeners (no MaxListenersExceededWarning on large files)', async () => {
+  const a = fakeModel('big', 6 * 1024 * 1024, 3)
+  const { impl } = fakeFetch(new Map([[a.model.url, a.bytes]]))
+  const warnings: string[] = []
+  const onWarning = (warning: Error) => { warnings.push(warning.name) }
+  process.on('warning', onWarning)
+  try {
+    await downloadPortraitModels({ directory: await freshDir(), models: [a.model] as never, release: published, fetchImpl: impl })
+    await new Promise((resolve) => setImmediate(resolve))
+  } finally {
+    process.off('warning', onWarning)
+  }
+  assert.deepEqual(warnings.filter((name) => name === 'MaxListenersExceededWarning'), [])
 })
 
 test('an interrupted download resumes with Range from the partial file; a server ignoring Range restarts it', async () => {
@@ -285,7 +302,7 @@ test('a stalled transfer is reported as stalled and retried', async () => {
 test('model status lists attribution and install state without paths; planned models do not count towards the download', async () => {
   const dir = await freshDir()
   const status = await getPortraitModelStatus({ directory: dir })
-  assert.equal(status.releasePublished, false)
+  assert.equal(status.releasePublished, true)
   assert.equal(status.releaseTag, PORTRAIT_MODEL_RELEASE.tag)
   assert.deepEqual(status.models.map((m: { id: string, installed: string }) => [m.id, m.installed]), [['anime-face-yolov3', 'missing'], ['anime-face-hrnetv2', 'missing'], ['isnet-anime', 'missing']])
   assert.equal(status.downloadBytes, 246_035_424 + 39_046_070)

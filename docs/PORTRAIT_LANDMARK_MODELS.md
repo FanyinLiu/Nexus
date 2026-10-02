@@ -6,13 +6,15 @@ runs an anime face detector and a 28-point landmark model on images that stage A
 This document covers where the models come from, how the app downloads, verifies and
 runs them, and what the owner still has to do.
 
-> **Status:** nothing is bundled. The app downloads the models on first use from a
-> Nexus GitHub Release. **That release does not exist yet.** `PORTRAIT_MODEL_RELEASE`
-> in `shared/portraitModels.js` is a placeholder with `published: false`. Until the
-> owner publishes the assets below under that exact tag and flips the flag, the
-> downloader refuses to run (`release_unpublished`). Stage B then reports
+> **Status:** nothing is bundled. The app downloads the models on first use from the
+> Nexus GitHub Release
+> [`portrait-models-v1`](https://github.com/FanyinLiu/Nexus/releases/tag/portrait-models-v1)
+> (published 2026-10-02, not marked latest), and `PORTRAIT_MODEL_RELEASE.published`
+> in `shared/portraitModels.js` is `true`. The download is user-initiated, never
+> automatic. Until the files are installed, stage B reports
 > `landmark_models_unavailable` and stage A's verdict stands. Nothing is rejected
-> because of a missing model.
+> because of a missing model. Setting `published` back to `false` makes the
+> downloader refuse to run (`release_unpublished`).
 
 ## Models and attribution
 
@@ -108,10 +110,11 @@ assets) into `<userData>/models/portrait-landmarks/`. No code changes are needed
 
 ## Owner checklist before release
 
-1. Create the GitHub Release `portrait-models-v1` with exactly the three files above
-   plus `SHA256SUMS`, the licence texts and the provenance README (prepared locally,
-   not uploaded).
-2. Set `PORTRAIT_MODEL_RELEASE.published = true` in a PR.
+1. ~~Create the GitHub Release `portrait-models-v1`~~ Done 2026-10-02: the three files
+   above plus `SHA256SUMS`, both licence texts, the provenance README and
+   `export_onnx.py`. The release assets must never be replaced in place; a changed
+   model needs a new tag and new pins.
+2. ~~Set `PORTRAIT_MODEL_RELEASE.published = true`~~ Done.
 3. Decide where the portrait UI shows the download consent and the attribution
    table.
 4. Run a fresh frozen acceptance round (20 images, at least 2 good dark-skinned
