@@ -773,7 +773,12 @@ than presenting Nexus as a Codex-style work agent.
   or transparent background) that returns a stable reason code and
   `messageKey` from `shared/portraitImageGate.js`; the image is read locally
   and never reaches chat, desktop context, or model prompts. Its
-  `pet-model:check-portrait-image` IPC has no stable UI entry yet.
+  `pet-model:check-portrait-image` IPC has no stable UI entry yet. Stage B
+  (`landmarkGate.js`) runs anime face/landmark models with `onnxruntime-web`
+  in a per-job worker thread (`landmarkRuntime.js`, `landmarkWorker.js`). The
+  models are downloaded on first use by `portraitModelDownloader.js` from the
+  pinned catalog in `shared/portraitModels.js` (see
+  `docs/PORTRAIT_LANDMARK_MODELS.md`). Without them, stage A's verdict stands.
 - `features/releaseNotes/` owns small release-communication contracts used by the
   app shell, such as the current About/Help release spotlight. It must stay
   content-only: no updater logic, IPC, migrations, or background checks.

@@ -210,7 +210,8 @@
       "package.json",
       "!node_modules/onnxruntime-node/**",
       "!node_modules/@huggingface/transformers/**",
-      "!node_modules/onnxruntime-web/**",
+      "!node_modules/onnxruntime-web/{docs,lib}/**",
+      "!node_modules/onnxruntime-web/dist/!(ort.node.min.mjs|ort-wasm-simd-threaded.mjs|ort-wasm-simd-threaded.wasm)",
       "!node_modules/protobufjs/**",
       "!node_modules/tesseract.js/**",
       "!node_modules/tesseract.js-core/**",
@@ -224,6 +225,7 @@
     "asarUnpack": [
       "node_modules/sherpa-onnx-node/**",
       "node_modules/sharp/**",
+      "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.{mjs,wasm}",
       "node_modules/@img/**",
       "scripts/omnivoice_server.py",
       "scripts/glm_asr_server.py",

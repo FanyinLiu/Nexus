@@ -20,7 +20,6 @@ import {
 } from '../electron/services/portraitGenerator/animeFaceModel.js'
 import {
   LANDMARK_MODEL_FILES,
-  createLandmarkModelLoader,
   inspectLandmarkModels,
   resolveLandmarkModelDirectory,
 } from '../electron/services/portraitGenerator/landmarkModels.js'
@@ -32,10 +31,10 @@ import {
 } from '../electron/services/portraitGenerator/landmarkGate.js'
 import {
   combinePortraitGateStages,
-  contrastNormalizeRgb,
   createPortraitLandmarkStage,
   runPortraitLandmarkStage,
 } from '../electron/services/portraitGenerator/landmarkStage.js'
+import { contrastNormalizeRgb, evaluateLandmarksWithSessions } from '../electron/services/portraitGenerator/landmarkEngine.js'
 import { checkPortraitImageFromPayload } from '../electron/services/portraitGenerator/rejectImage.js'
 import {
   PORTRAIT_LANDMARK_GATE_MESSAGE_KEYS,
@@ -117,7 +116,7 @@ function insidePolygon(points: number[][], x: number, y: number) {
  * eyes, a shadowed neck and a shirt, on white. Options add a fan across the
  * mouth or a raised hand beside the face.
  */
-function paintFace(skin: RGB, options: { fan?: boolean, hand?: boolean } = {}) {
+function paintFace(skin: RGB, options: { fan?: boolean, hand?: boolean | 'far' | 'shoulder' } = {}) {
   const width = 600
   const height = 700
   const rgb = new Uint8Array(width * height * 3).fill(255)
@@ -144,7 +143,13 @@ function paintFace(skin: RGB, options: { fan?: boolean, hand?: boolean } = {}) {
         const edge = x < 173 || x >= 427 || y < 348 || y >= 467
         set(x, y, edge ? [30, 20, 40] : [120, 70, 170])
       }
-      if (options.hand && x >= 425 && x < 475 && y >= 300 && y < 470) set(x, y, skin)
+      if (options.hand === true && x >= 425 && x < 475 && y >= 300 && y < 470) set(x, y, skin)
+      // an arm raised out beside the body: same blob, 0.35 face widths clear of the face box
+      if (options.hand === 'far' && x >= 470 && x < 520 && y >= 300 && y < 470) set(x, y, skin)
+      // bare shoulder rising beside the jaw, joined to the neck skin across a thin outline stroke
+      if (options.hand === 'shoulder' && ((x >= 425 && x < 475 && y >= 300 && y < 470) || (x >= 300 && x < 475 && y >= 430 && y < 470))) {
+        set(x, y, x >= 380 && x < 383 ? [30, 20, 25] : skin)
+      }
     }
   }
   return { rgb, alpha: null, width, height }
@@ -258,7 +263,7 @@ test('model spec pins both files by size and SHA-256 and lives under userData/mo
   assert.equal(resolveLandmarkModelDirectory('/u'), path.join('/u', 'models', 'portrait-landmarks'))
 })
 
-test('model inspection reports missing, size, and hash problems; the loader is lazy, cached, and never throws', async () => {
+test('model inspection reports missing, size, and hash problems and remembers a verified file', async () => {
   const dir = path.join(workDir, 'models')
   await fs.mkdir(dir, { recursive: true })
   const bytes = { detector: Buffer.from('detector-bytes'), landmarks: Buffer.from('landmark-bytes!') }
@@ -275,24 +280,17 @@ test('model inspection reports missing, size, and hash problems; the loader is l
   await fs.writeFile(path.join(dir, 'l.onnx'), Buffer.from('short'))
   assert.equal((await inspectLandmarkModels(dir, { files })).files.landmarks.status, 'size_mismatch')
 
-  assert.deepEqual(await createLandmarkModelLoader({ directory: dir, files }).load(), { status: 'runtime_unavailable' })
-  let created = 0
-  const createSession = async (filePath: string) => { created += 1; return { run: async () => ({}), filePath } }
-  assert.deepEqual(await createLandmarkModelLoader({ directory: dir, files, createSession }).load(), { status: 'invalid' })
-  assert.equal(created, 0, 'no session is created for invalid files')
 
   await fs.writeFile(path.join(dir, 'l.onnx'), bytes.landmarks)
-  let failNext = true
-  const flaky = async (filePath: string) => {
-    if (failNext) { failNext = false; throw new Error('boom') }
-    return createSession(filePath)
-  }
-  const loader = createLandmarkModelLoader({ directory: dir, files, createSession: flaky })
-  assert.deepEqual(await loader.load(), { status: 'load_failed' })
-  const ready = await loader.load()
-  assert.equal(ready.status, 'ready', 'a failed load is retried')
-  assert.equal(await loader.load(), ready, 'a ready load is cached')
-  assert.equal(created, 2)
+  let hashed = 0
+  const hashFile = async (filePath: string) => { hashed += 1; return createHash('sha256').update(await fs.readFile(filePath)).digest('hex') }
+  assert.equal((await inspectLandmarkModels(dir, { files, hashFile })).ready, true)
+  const first = hashed
+  assert.equal((await inspectLandmarkModels(dir, { files, hashFile })).ready, true)
+  assert.equal(hashed, first, 'an unchanged verified file is not re-hashed')
+  await fs.writeFile(path.join(dir, 'l.onnx'), Buffer.from('landmark-bytes?'))
+  await fs.utimes(path.join(dir, 'l.onnx'), new Date(), new Date(Date.now() + 5000))
+  assert.equal((await inspectLandmarkModels(dir, { files, hashFile })).files.landmarks.status, 'hash_mismatch', 'a rewritten file is hashed again')
 })
 
 // ------------------------------------------------------------ rules
@@ -393,13 +391,23 @@ test('a raised hand beside the face is caught for every skin tone', async () => 
   }
 })
 
+test('an arm raised out beside the body and bare shoulders joined to the neck are not hands, for every skin tone', async () => {
+  for (const [name, skin] of Object.entries(SKIN_TONES)) {
+    const far = await evaluatePortraitLandmarks(paintFace(skin, { hand: 'far' }), detectorReturning({ original: [faceAt()] }))
+    assert.equal(far.reasonCode, null, `far ${name}: ${JSON.stringify(far)}`)
+    const shoulder = await evaluatePortraitLandmarks(paintFace(skin, { hand: 'shoulder' }), detectorReturning({ original: [faceAt()] }))
+    assert.equal(shoulder.reasonCode, null, `shoulder ${name}: ${JSON.stringify(shoulder)}`)
+  }
+})
+
 // ------------------------------------------------------------ stage runner
 
 test('stage runner: missing models keep the stage-A verdict; a no-face image runs both passes', async () => {
   const filePath = path.join(workDir, 'plain.png')
   await sharp({ create: { width: 640, height: 800, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } } }).png().toFile(filePath)
 
-  const missing = await runPortraitLandmarkStage({ filePath }, { load: async () => ({ status: 'missing' }) })
+  const engineOver = (sessions: object) => ({ prepare: async () => ({ status: 'ready' }), evaluate: (image: object) => evaluateLandmarksWithSessions(image as never, sessions as never) })
+  const missing = await runPortraitLandmarkStage({ filePath }, { prepare: async () => ({ status: 'missing' }), evaluate: async () => { throw new Error('not reached') } })
   assert.equal(missing.reasonCode, R.MODELS_UNAVAILABLE)
   assert.equal(missing.detail, 'missing')
 
@@ -413,13 +421,15 @@ test('stage runner: missing models keep the stage-A verdict; a no-face image run
     } },
     landmarks: { run: async () => { throw new Error('not reached') } },
   }
-  const result = await runPortraitLandmarkStage({ filePath }, { load: async () => ({ status: 'ready', sessions }) })
+  const result = await runPortraitLandmarkStage({ filePath }, engineOver(sessions))
   assert.equal(result.reasonCode, R.HALF_BODY_ONLY)
   assert.equal(detectorRuns, 2)
 
-  const broken = await runPortraitLandmarkStage({ buffer: Buffer.from('nope') }, { load: async () => ({ status: 'ready', sessions }) })
+  const broken = await runPortraitLandmarkStage({ buffer: Buffer.from('nope') }, engineOver(sessions))
   assert.equal(broken.reasonCode, R.MODELS_UNAVAILABLE)
   assert.equal(broken.detail, 'analysis_failed')
+  const throwing = await runPortraitLandmarkStage({ filePath }, { prepare: async () => ({ status: 'ready' }), evaluate: async () => { throw new Error('worker died') } })
+  assert.equal(throwing.detail, 'analysis_failed', 'an engine failure never rejects the image')
 })
 
 test('contrast normalisation stretches a dim, low-contrast image and keeps a flat image flat', () => {
@@ -444,7 +454,7 @@ test('stage B is lazy, only runs after stage A accepts, and unavailable models n
   assert.deepEqual(rejected.metrics, { width: 800, landmarks: { eyeSpacing: 0.02 } })
 
   let loaderBuilt = 0
-  const stage = createPortraitLandmarkStage(() => { loaderBuilt += 1; return { load: async () => ({ status: 'runtime_unavailable' }) } })
+  const stage = createPortraitLandmarkStage(() => { loaderBuilt += 1; return { prepare: async () => ({ status: 'runtime_unavailable' }), evaluate: async () => ({}) } })
   assert.equal(loaderBuilt, 0, 'nothing is built until an image is checked')
 
   const good = path.join(workDir, 'stage-a-good.png')
@@ -476,13 +486,16 @@ test('every landmark reason has a message key with copy in all five locales', ()
   assert.equal(isPortraitLandmarkGateReason('/Users/me/private.png'), false)
 })
 
-test('privacy boundary: landmark modules import only the shared contract, sharp, and node fs/crypto/path', async () => {
+test('privacy boundary: landmark modules import only the shared contracts, sharp, onnxruntime-web, and node built-ins', async () => {
   const importsOf = async (file: string) => {
     const source = await fs.readFile(path.join(ROOT, 'electron/services/portraitGenerator', file), 'utf8')
     return [...source.matchAll(/^import[^'"]*['"]([^'"]+)['"]/gm)].map((m) => m[1]).sort()
   }
   assert.deepEqual(await importsOf('animeFaceModel.js'), [])
   assert.deepEqual(await importsOf('landmarkGate.js'), ['../../../shared/portraitLandmarkGate.js'])
-  assert.deepEqual(await importsOf('landmarkModels.js'), ['node:crypto', 'node:fs', 'node:fs/promises', 'node:path'])
-  assert.deepEqual(await importsOf('landmarkStage.js'), ['../../../shared/portraitLandmarkGate.js', './animeFaceModel.js', './landmarkGate.js', 'sharp'])
+  assert.deepEqual(await importsOf('landmarkModels.js'), ['../../../shared/portraitModels.js', 'node:crypto', 'node:fs', 'node:fs/promises', 'node:path'])
+  assert.deepEqual(await importsOf('landmarkStage.js'), ['../../../shared/portraitLandmarkGate.js', './landmarkGate.js', 'sharp'])
+  assert.deepEqual(await importsOf('landmarkEngine.js'), ['./animeFaceModel.js', './landmarkGate.js'])
+  assert.deepEqual(await importsOf('landmarkWorker.js'), ['./landmarkEngine.js', 'node:fs/promises', 'node:worker_threads'])
+  assert.deepEqual(await importsOf('landmarkRuntime.js'), ['../asyncLock.js', './landmarkGate.js', './landmarkModels.js', 'node:module', 'node:os', 'node:url', 'node:worker_threads'])
 })

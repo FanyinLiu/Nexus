@@ -40,11 +40,13 @@ import {
   PORTRAIT_IMAGE_GATE_FILE_EXTENSIONS,
   checkPortraitImageFromPayload,
 } from '../services/portraitGenerator/rejectImage.js'
-import {
-  createLandmarkModelLoader,
-  resolveLandmarkModelDirectory,
-} from '../services/portraitGenerator/landmarkModels.js'
+import { resolveLandmarkModelDirectory } from '../services/portraitGenerator/landmarkModels.js'
+import { createWorkerLandmarkEngine } from '../services/portraitGenerator/landmarkRuntime.js'
 import { createPortraitLandmarkStage } from '../services/portraitGenerator/landmarkStage.js'
+import {
+  getPortraitModelStatus,
+  runPortraitModelDownload,
+} from '../services/portraitGenerator/portraitModelDownloader.js'
 import { invokeRegisteredTool } from '../tools/toolRegistry.js'
 import {
   captureActiveWindowContext,
@@ -100,16 +102,16 @@ import { POWER_EVENT_KINDS } from '../../shared/powerEventKinds.js'
 
 const POWER_EVENT_CHANNEL = 'app:power-event'
 
-// Portrait stage B. No ONNX runtime is injected yet (see
-// docs/PORTRAIT_LANDMARK_MODELS.md), so the loader answers
-// `runtime_unavailable` without touching disk and stage A's verdict stands.
-let portraitLandmarkLoader = null
+// Portrait stage B runs onnxruntime-web in a worker thread. Until the face
+// models are downloaded it answers `missing` and stage A's verdict stands.
+const PORTRAIT_MODELS_PROGRESS_CHANNEL = 'pet-model:portrait-models-progress'
+const portraitModelDirectory = () => resolveLandmarkModelDirectory(app.getPath('userData'))
+let portraitLandmarkEngine = null
 const portraitLandmarkStage = createPortraitLandmarkStage(() => {
-  portraitLandmarkLoader ??= createLandmarkModelLoader({
-    directory: resolveLandmarkModelDirectory(app.getPath('userData')),
-  })
-  return portraitLandmarkLoader
+  portraitLandmarkEngine ??= createWorkerLandmarkEngine({ directory: portraitModelDirectory() })
+  return portraitLandmarkEngine
 })
+let portraitModelDownload = null
 const PET_MODEL_LIBRARY_CHANGED_CHANNEL = 'pet-model:library-changed'
 let powerEventForwardingRegistered = false
 
@@ -409,6 +411,25 @@ export function register() {
         landmarkStage: portraitLandmarkStage,
       })
     ))
+  })
+
+  ipcMain.handle('pet-model:portrait-models-status', async (event) => {
+    requireTrustedSender(event)
+    return getPortraitModelStatus({ directory: portraitModelDirectory() })
+  })
+
+  ipcMain.handle('pet-model:download-portrait-models', async (event) => {
+    requireTrustedSender(event)
+    return runAuditedPetModelAction(event, 'pet-model:download-portrait-models', {}, () => {
+      // A second click joins the running download instead of starting another.
+      portraitModelDownload ??= runPortraitModelDownload({
+        directory: portraitModelDirectory(),
+        onProgress: (progress) => {
+          if (!event.sender.isDestroyed()) event.sender.send(PORTRAIT_MODELS_PROGRESS_CHANNEL, progress)
+        },
+      }).finally(() => { portraitModelDownload = null })
+      return portraitModelDownload
+    })
   })
 
   ipcMain.handle('pet-model:create-from-image', async (event) => {

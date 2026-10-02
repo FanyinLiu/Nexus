@@ -1,17 +1,15 @@
 /**
- * Model files for the portrait landmark gate, loaded lazily.
+ * Model files for the portrait landmark gate.
  *
  * The two ONNX files (anime face detector ~246 MB, landmarks ~39 MB) are NOT
- * bundled or committed. They live in `<userData>/models/portrait-landmarks/`
- * and are pinned by exact byte size + SHA-256. Until there is a vetted
- * download source (see docs/PORTRAIT_LANDMARK_MODELS.md), a missing file
- * simply reports `missing`, and the caller skips the landmark stage instead of
- * failing the image.
+ * bundled or committed. `portraitModelDownloader.js` fetches them on first
+ * use into `<userData>/models/portrait-landmarks/`; both are pinned by exact
+ * byte size + SHA-256 in `shared/portraitModels.js`. A missing or modified
+ * file reports `missing` / `invalid`, and the caller skips the landmark
+ * stage instead of failing the image.
  *
- * The ONNX runtime is injected (`createSession(filePath)`), so this module
- * adds no dependency. Sessions are created once, on first use, and cached;
- * a failed load is not cached, so a later call can retry after the files
- * are fixed.
+ * Hashing 285 MB takes about a second, so a successful verification is
+ * remembered for the life of the process, keyed by path + size + mtime.
  */
 
 import { createHash } from 'node:crypto'
@@ -19,20 +17,33 @@ import { createReadStream } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
+import { PORTRAIT_MODEL_CATALOG } from '../../../shared/portraitModels.js'
+
 export const LANDMARK_MODEL_DIRECTORY_NAME = 'portrait-landmarks'
 
+const catalogFile = (role) => {
+  const model = PORTRAIT_MODEL_CATALOG.find((entry) => entry.role === role)
+  return Object.freeze({ fileName: model.fileName, sizeBytes: model.sizeBytes, sha256: model.sha256 })
+}
+
+/** The files the landmark gate needs, by role. */
 export const LANDMARK_MODEL_FILES = Object.freeze({
-  detector: Object.freeze({
-    fileName: 'anime_face_yolov3.onnx',
-    sizeBytes: 246_035_424,
-    sha256: 'f44b484f59c3aaf113c4dea57338163fef1c9e470bee7bcfd95a69ff1ed9f1a9',
-  }),
-  landmarks: Object.freeze({
-    fileName: 'anime_face_hrnetv2_flip.onnx',
-    sizeBytes: 39_046_070,
-    sha256: '3c2eb13d89cde5ab5b668de710bec81d08264f8db2df5200e6dd3fb7ecdadf54',
-  }),
+  detector: catalogFile('detector'),
+  landmarks: catalogFile('landmarks'),
 })
+
+const verifiedFiles = new Map()
+
+/**
+ * Remember that `filePath` (at this size and mtime) matched `sha256`, e.g.
+ * right after the downloader verified it.
+ * @param {string} filePath
+ * @param {{ size: number, mtimeMs: number }} stat
+ * @param {string} sha256
+ */
+export function rememberVerifiedModelFile(filePath, stat, sha256) {
+  verifiedFiles.set(filePath, `${stat.size}:${stat.mtimeMs}:${sha256}`)
+}
 
 /** @param {string} userDataDir */
 export function resolveLandmarkModelDirectory(userDataDir) {
@@ -68,49 +79,14 @@ export async function inspectLandmarkModels(directory, options = {}) {
       const stat = await fs.stat(filePath)
       if (!stat.isFile()) status = 'missing'
       else if (stat.size !== spec.sizeBytes) status = 'size_mismatch'
-      else if (verifyHash && (await hashFile(filePath)) !== spec.sha256) status = 'hash_mismatch'
+      else if (verifyHash && verifiedFiles.get(filePath) !== `${stat.size}:${stat.mtimeMs}:${spec.sha256}`) {
+        if ((await hashFile(filePath)) === spec.sha256) rememberVerifiedModelFile(filePath, stat, spec.sha256)
+        else status = 'hash_mismatch'
+      }
     } catch {
       status = 'missing'
     }
     report[role] = { filePath, status }
   }
   return { ready: Object.values(report).every((entry) => entry.status === 'ok'), files: report }
-}
-
-/**
- * Lazy, cached loader. `load()` resolves to `{ status: 'ready', sessions }`
- * or `{ status: 'missing' | 'invalid' | 'runtime_unavailable' | 'load_failed' }`
- * and never throws.
- * @param {{ directory: string, createSession?: (filePath: string) => Promise<{ run: Function }>, files?: typeof LANDMARK_MODEL_FILES, verifyHash?: boolean, hashFile?: (p: string) => Promise<string> }} options
- */
-export function createLandmarkModelLoader(options) {
-  let pending = null
-  async function loadOnce() {
-    if (typeof options.createSession !== 'function') return { status: 'runtime_unavailable' }
-    const inspection = await inspectLandmarkModels(options.directory, options)
-    if (!inspection.ready) {
-      const statuses = Object.values(inspection.files).map((entry) => entry.status)
-      return { status: statuses.includes('missing') ? 'missing' : 'invalid' }
-    }
-    try {
-      const sessions = {}
-      for (const [role, entry] of Object.entries(inspection.files)) {
-        sessions[role] = await options.createSession(entry.filePath)
-      }
-      return { status: 'ready', sessions }
-    } catch {
-      return { status: 'load_failed' }
-    }
-  }
-  return {
-    load() {
-      if (!pending) {
-        pending = loadOnce().then((result) => {
-          if (result.status !== 'ready') pending = null
-          return result
-        })
-      }
-      return pending
-    },
-  }
 }

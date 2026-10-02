@@ -53,6 +53,7 @@ import type {
 } from './types'
 import type { LocalDataCompanionStorageKey } from '../shared/localDataStorageKeys.js'
 import type { PortraitImageGateResult } from '../shared/portraitImageGate.js'
+import type { PortraitModelAttribution } from '../shared/portraitModels.js'
 
 
 type MinecraftGatewayEvent = {
@@ -598,6 +599,24 @@ declare global {
         archivePathDisplay?: string
       } | null>
       checkPortraitImage: (payload?: { imagePath?: string }) => Promise<PortraitImageGateResult | null>
+      getPortraitModelStatus: () => Promise<{
+        releaseTag: string
+        releasePublished: boolean
+        downloadBytes: number
+        models: Array<PortraitModelAttribution & { installed: 'present' | 'missing' | 'invalid' }>
+      }>
+      downloadPortraitModels: () => Promise<
+        | { ok: true, installed: string[], alreadyPresent: string[] }
+        | { ok: false, code: string }
+      >
+      subscribePortraitModelProgress: (listener: (event: {
+        phase: 'start' | 'downloading' | 'verifying' | 'retrying' | 'installed' | 'error' | 'done'
+        modelId?: string
+        receivedBytes?: number
+        totalBytes?: number
+        attempt?: number
+        code?: string
+      }) => void) => () => void
       showConfirmDialog: (message: string) => Promise<boolean>
       saveTextFile: (payload: TextFileSaveRequest) => Promise<TextFileSaveResponse>
       openTextFile: (payload: TextFileOpenRequest) => Promise<TextFileOpenResponse>

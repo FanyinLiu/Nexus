@@ -47,6 +47,18 @@ export const PORTRAIT_LANDMARK_GATE_LIMITS = Object.freeze({
   occluderMinWidth: 0.6,
   occluderMinOutside: 1.0,
   maxHandBlob: 0.1,
+  /**
+   * A hand must reach within this distance (face widths) of the face box
+   * horizontally; an arm raised out in empty space beside the body is fine.
+   */
+  handMaxGapFw: 0.25,
+  /**
+   * Skin joined to the neck/chest skin (fw x fh units inside the neck base)
+   * is body skin: an off-centre neck in 3/4 view, bare shoulders.
+   */
+  handMaxNeckContact: 0.03,
+  /** Gaps up to this size (face widths) are bridged so outline strokes do not split body skin. */
+  handStrokeBridgeFw: 0.05,
   /** Near-neutral skin (chroma below this) cannot separate hands from white props. */
   handMinSkinChroma: 7,
 })
@@ -456,14 +468,20 @@ function foregroundMask(image, win) {
 }
 
 /**
- * Hand next to the face / across the neck: a tight own-skin blob outside
- * the (dilated) face and the neck column that starts above the chin and
- * continues below it. Ears (entirely above) and shoulders (entirely below)
- * do not qualify. Returns its area in face units (fw x fh).
+ * Hand next to the face: a tight own-skin blob outside the (dilated) face and
+ * the neck column that starts above the chin and continues below it. Ears
+ * (entirely above) do not qualify. Two geometric (skin-tone independent)
+ * exclusions keep body skin out:
+ * - the blob must come within `handMaxGapFw` of the face box horizontally
+ *   (a hand raised out beside the body is not "near the face");
+ * - the blob must not be joined to the skin of the neck base once thin
+ *   outline strokes are bridged (off-centre neck in 3/4 view, bare shoulders).
+ * Returns the largest qualifying area in face units (fw x fh).
  */
 export function handBlobFeature(image, analysis) {
+  const limits = PORTRAIT_LANDMARK_GATE_LIMITS
   const { g, win, lab, tone } = analysis
-  if (tone.chroma < PORTRAIT_LANDMARK_GATE_LIMITS.handMinSkinChroma) return 0
+  if (tone.chroma < limits.handMinSkinChroma) return 0
   const { width, height } = win
   const fg = foregroundMask(image, win)
   const tight = skinLikeMask(lab, tone, TIGHT_SKIN)
@@ -474,20 +492,45 @@ export function handBlobFeature(image, analysis) {
   const headDilated = dilateMask(head, width, height, Math.max(3, Math.floor(0.04 * g.fw)))
   const cx = (g.x0 + g.x1) / 2
   const split = g.chin + 0.15 * g.fh
-  let candidates = maskFrom(win, (x, y) => {
-    const inZone = x > g.x0 - 0.7 * g.fw && x < g.x1 + 0.7 * g.fw && y > g.brow - 0.3 * g.fh && y < split + 0.5 * g.fh
-    const inNeck = Math.abs(x - cx) < 0.3 * g.fw && y > g.chin - 0.05 * g.fh
-    return inZone && !inNeck
-  })
-  candidates = candidates.map((v, i) => v & fg[i] & tight[i] & (headDilated[i] ? 0 : 1))
-  candidates = openMask(candidates, width, height, 3)
-  const { stats } = connectedComponents(candidates, width, height)
-  let best = 0
+  const inZone = (x, y, bottom) => x > g.x0 - 0.7 * g.fw && x < g.x1 + 0.7 * g.fw && y > g.brow - 0.3 * g.fh && y < bottom
+  const inNeck = (x, y) => Math.abs(x - cx) < 0.3 * g.fw && y > g.chin - 0.05 * g.fh
+  const skin = (mask) => openMask(mask.map((v, i) => v & fg[i] & tight[i] & (headDilated[i] ? 0 : 1)), width, height, 3)
+
+  const candidates = skin(maskFrom(win, (x, y) => inZone(x, y, split + 0.5 * g.fh) && !inNeck(x, y)))
+  const { labels, stats } = connectedComponents(candidates, width, height)
+
+  // Body skin: same skin incl. the neck column, strokes bridged, reaching the neck base.
+  const body = skin(maskFrom(win, (x, y) => inZone(x, y, split + g.fh)))
+  const bridge = Math.max(3, Math.round(limits.handStrokeBridgeFw * g.fw)) | 1
+  const bodyLabels = connectedComponents(dilateMask(body, width, height, bridge), width, height).labels
+  const neckPixels = new Map()
+  for (let y = 0; y < height; y += 1) {
+    const wy = win.top + y
+    if (wy <= g.chin + 0.05 * g.fh || wy >= split + 0.3 * g.fh) continue
+    for (let x = 0; x < width; x += 1) {
+      const i = y * width + x
+      if (body[i] && bodyLabels[i] && Math.abs(win.left + x - cx) < 0.3 * g.fw) neckPixels.set(bodyLabels[i], (neckPixels.get(bodyLabels[i]) ?? 0) + 1)
+    }
+  }
+  const unit = g.fw * g.fh
+  const qualifying = []
   for (let label = 1; label < stats.length; label += 1) {
     const s = stats[label]
-    const area = s.area / (g.fw * g.fh)
-    if (win.top + s.minY < g.chin - 0.1 * g.fh && win.top + s.maxY + 1 > g.chin + 0.05 * g.fh && area > 0.04) best = Math.max(best, area)
+    const area = s.area / unit
+    if (area <= 0.04 || win.top + s.minY >= g.chin - 0.1 * g.fh || win.top + s.maxY + 1 <= g.chin + 0.05 * g.fh) continue
+    const gap = Math.max(0, (win.left + s.minX - g.x1) / g.fw, (g.x0 - (win.left + s.maxX + 1)) / g.fw)
+    if (gap > limits.handMaxGapFw) continue
+    qualifying[label] = area
   }
+  if (qualifying.length === 0) return 0
+  const joined = new Set()
+  for (let i = 0; i < labels.length; i += 1) {
+    const label = labels[i]
+    if (qualifying[label] === undefined || joined.has(label)) continue
+    if ((neckPixels.get(bodyLabels[i]) ?? 0) / unit >= limits.handMaxNeckContact) joined.add(label)
+  }
+  let best = 0
+  qualifying.forEach((area, label) => { if (!joined.has(label)) best = Math.max(best, area) })
   return best
 }
 
