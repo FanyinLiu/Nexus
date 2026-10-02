@@ -29,12 +29,9 @@ function writeFileWithParents(root: string, relativePath: string, content: strin
   writeFileSync(absolutePath, content)
 }
 
-const ASAR_UNPACK = ['node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.{mjs,wasm}']
-
 function createHeavyModuleFixture(
   files: Record<string, string> = {},
   packageExclusions = PACKAGE_EXCLUSIONS,
-  asarUnpack = ASAR_UNPACK,
 ) {
   const root = mkdtempSync(join(tmpdir(), 'nexus-heavy-module-audit-'))
 
@@ -45,7 +42,6 @@ function createHeavyModuleFixture(
   writeFileSync(join(root, 'package.json'), JSON.stringify({
     build: {
       files: packageExclusions,
-      asarUnpack,
     },
   }))
 
@@ -56,9 +52,8 @@ function withHeavyModuleFixture<T>(
   files: Record<string, string>,
   callback: (root: string) => T,
   packageExclusions = PACKAGE_EXCLUSIONS,
-  asarUnpack = ASAR_UNPACK,
 ): T {
-  const root = createHeavyModuleFixture(files, packageExclusions, asarUnpack)
+  const root = createHeavyModuleFixture(files, packageExclusions)
   try {
     return callback(root)
   } finally {
@@ -102,7 +97,7 @@ test('heavy module audit rejects missing unused ORT packaging exclusions', () =>
   }, PACKAGE_EXCLUSIONS.filter((item) => !item.includes('ort.webgpu')))
 })
 
-test('heavy module audit keeps the Node ORT runtime packaged and the WASM pair unpacked', () => {
+test('heavy module audit keeps the Node ORT runtime files packaged', () => {
   withHeavyModuleFixture({}, (root) => {
     const report = buildHeavyModuleAuditReport(root)
     assert.equal(report.summary.ok, false)
@@ -113,19 +108,9 @@ test('heavy module audit keeps the Node ORT runtime packaged and the WASM pair u
     const report = buildHeavyModuleAuditReport(root)
     assert.deepEqual(report.errors.excludedNodeRuntimeFiles, ['node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm'])
   }, [...PACKAGE_EXCLUSIONS, '!**/*.wasm'].filter((item) => !item.includes('/dist/!(')))
-
-  withHeavyModuleFixture({}, (root) => {
-    const report = buildHeavyModuleAuditReport(root)
-    assert.equal(report.summary.ok, false)
-    assert.deepEqual(report.errors.packedWasmRuntimeFiles, [
-      'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs',
-      'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm',
-    ])
-  }, PACKAGE_EXCLUSIONS, [])
 })
 
 test('heavy module audit passes the real package.json', () => {
   const report = buildHeavyModuleAuditReport()
   assert.deepEqual(report.errors.excludedNodeRuntimeFiles, [])
-  assert.deepEqual(report.errors.packedWasmRuntimeFiles, [])
 })

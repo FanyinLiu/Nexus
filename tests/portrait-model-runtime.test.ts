@@ -385,13 +385,15 @@ test('real worker thread loads onnxruntime-web and reports load_failed for unrea
   assert.equal(verdict.detail, 'load_failed')
 })
 
-test('WASM runtime paths resolve to real files and are redirected out of app.asar', () => {
+test('WASM runtime paths resolve the subpath exports to real files', () => {
   const resolved = resolveOrtWasmPaths()
   assert.ok(resolved)
   for (const href of Object.values(resolved)) assert.ok(existsSync(fileURLToPath(href)), href)
-  const packaged = resolveOrtWasmPaths((specifier: string) => `/opt/Nexus/resources/app.asar/node_modules/${specifier.replace('onnxruntime-web/', 'onnxruntime-web/dist/')}`)
-  assert.equal(packaged?.mjs, 'file:///opt/Nexus/resources/app.asar.unpacked/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs')
-  assert.equal(packaged?.wasm, 'file:///opt/Nexus/resources/app.asar.unpacked/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm')
+  assert.match(resolved.mjs, /onnxruntime-web\/dist\/ort-wasm-simd-threaded\.mjs$/)
+  assert.match(resolved.wasm, /onnxruntime-web\/dist\/ort-wasm-simd-threaded\.wasm$/)
+  const asked: string[] = []
+  resolveOrtWasmPaths((specifier: string) => { asked.push(specifier); return path.join(os.tmpdir(), specifier) })
+  assert.deepEqual(asked, ['onnxruntime-web/ort-wasm-simd-threaded.mjs', 'onnxruntime-web/ort-wasm-simd-threaded.wasm'], 'never the excluded CJS entry')
   assert.equal(resolveOrtWasmPaths(() => { throw new Error('MODULE_NOT_FOUND') }), null)
   assert.deepEqual([1, 2, 3, 8, 32].map((cores) => defaultLandmarkThreads(cores)), [1, 1, 2, 4, 4])
 })

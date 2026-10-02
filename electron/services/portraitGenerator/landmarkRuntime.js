@@ -10,9 +10,9 @@
  *   ~1.5 GB in the round-2 measurement). Jobs are serialised so two checks
  *   never hold two copies of the models.
  *
- * Packaged builds keep the runtime files in `app.asar.unpacked` (see
- * `build.asarUnpack`), because the WASM loader and its thread workers need
- * real files on disk.
+ * Packaged builds load the runtime straight from `app.asar`: Electron's asar
+ * support covers the WASM file reads and the loader's thread workers
+ * (verified in a packaged build), so nothing is unpacked.
  */
 
 import { createRequire } from 'node:module'
@@ -29,19 +29,17 @@ export const LANDMARK_WORKER_TIMEOUT_MS = 180_000
 const WORKER_URL = new URL('./landmarkWorker.js', import.meta.url)
 
 /**
- * File URLs of the onnxruntime-web WASM loader + binary, redirected from
- * `app.asar` to `app.asar.unpacked` in packaged builds. Null when the
- * runtime is not installed.
+ * File URLs of the onnxruntime-web WASM loader + binary (inside `app.asar`
+ * in packaged builds). Null when the runtime files are not installed.
  * @param {(specifier: string) => string} [resolveModule]
  */
 export function resolveOrtWasmPaths(resolveModule = createRequire(import.meta.url).resolve) {
-  const unpacked = (file) => file.replace(/app\.asar(?=[\\/])/, 'app.asar.unpacked')
   try {
     // Resolve the WASM subpath exports themselves: the package's CJS entry
     // is deliberately not packaged (see package.json build.files).
     return {
-      mjs: pathToFileURL(unpacked(resolveModule('onnxruntime-web/ort-wasm-simd-threaded.mjs'))).href,
-      wasm: pathToFileURL(unpacked(resolveModule('onnxruntime-web/ort-wasm-simd-threaded.wasm'))).href,
+      mjs: pathToFileURL(resolveModule('onnxruntime-web/ort-wasm-simd-threaded.mjs')).href,
+      wasm: pathToFileURL(resolveModule('onnxruntime-web/ort-wasm-simd-threaded.wasm')).href,
     }
   } catch {
     return null

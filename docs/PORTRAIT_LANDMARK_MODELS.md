@@ -97,10 +97,11 @@ the main process or the companion windows:
 
 Packaging: `package.json` `build.files` keeps only
 `onnxruntime-web/dist/{ort.node.min.mjs, ort-wasm-simd-threaded.mjs, ort-wasm-simd-threaded.wasm}`
-(about 12 MB) plus `onnxruntime-common`. `build.asarUnpack` puts the two
-`ort-wasm-simd-threaded.*` files in `app.asar.unpacked`, because the WASM loader and
-its thread workers need real files. `resolveOrtWasmPaths()` points the runtime there.
-`npm run heavy:audit` checks this.
+(about 12 MB) plus `onnxruntime-common`. These stay inside `app.asar`. Electron's asar
+support covers the WASM read and the loader's thread workers; this was verified in a
+packaged `electron-builder --linux dir` build, including 4 threads. Nothing is
+unpacked, so the `app.asar.unpacked` size budget is unaffected. `npm run heavy:audit`
+fails if `build.files` excludes any of these files.
 
 For a local developer test, copy the files from the spike (or from the release
 assets) into `<userData>/models/portrait-landmarks/`. No code changes are needed.
