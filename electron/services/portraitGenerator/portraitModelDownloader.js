@@ -95,10 +95,14 @@ async function fetchFollowingRedirects(fetchImpl, url, headers, signal) {
   throw fail(E.HTTP_STATUS, 310)
 }
 
+/** Write with backpressure; both listeners are removed again, so a long download never piles them up. */
 async function writeChunk(stream, chunk) {
-  if (!stream.write(chunk)) await new Promise((resolve, reject) => {
-    stream.once('drain', resolve)
-    stream.once('error', reject)
+  if (stream.write(chunk)) return
+  await new Promise((resolve, reject) => {
+    const onDrain = () => { stream.off('error', onError); resolve() }
+    const onError = (error) => { stream.off('drain', onDrain); reject(error) }
+    stream.once('drain', onDrain)
+    stream.once('error', onError)
   })
 }
 
