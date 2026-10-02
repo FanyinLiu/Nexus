@@ -25,6 +25,7 @@ type Props = {
   draft: AppSettings
   setDraft: Dispatch<SetStateAction<AppSettings>>
   testingTarget: ServiceConnectionCapability | null
+  saveError: boolean
   uiLanguage: UiLanguage
   onApplyTextProviderPreset: (providerId: string) => void
   onRunTextConnectionTest: () => void
@@ -80,6 +81,7 @@ export const ModelSectionV3 = memo(function ModelSectionV3({
   draft,
   setDraft,
   testingTarget,
+  saveError,
   uiLanguage,
   onApplyTextProviderPreset,
   onRunTextConnectionTest,
@@ -111,6 +113,7 @@ export const ModelSectionV3 = memo(function ModelSectionV3({
 
   return (
     <SettingsV3Page>
+      {saveError ? <SettingsV3Notice tone="error" title={ti('settings.save_failed_fallback')} /> : null}
       <SettingsV3Notice tone={keyError ? 'error' : 'info'} title={`${preset.label} · ${draft.model || ti('settings.model.custom')}`}>
         {keyError || `${secretState} · ${ti('settings.model.test_endpoint')}`}
       </SettingsV3Notice>
