@@ -4,6 +4,8 @@ import { getSettingsV2NavigationIntent } from '../features/uiV2/settingsNavigati
 import { getSettingsTabScrollLeft } from '../features/uiV2/settingsTabScroll.ts'
 import type { Translator } from '../types/index.ts'
 import { ConfirmDialog } from './ConfirmDialog.tsx'
+import { PetControlIcon } from './PetControlIcon.tsx'
+import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
 import type { ConfirmOptions } from './useConfirm.ts'
 import type { SettingsSectionId } from './settingsDrawerSupport.ts'
 
@@ -56,6 +58,7 @@ export type SettingsDrawerV2Props = {
   confirmOptions: ConfirmOptions | null
   onReturnToSettingsHome: (moveFocus?: boolean) => void
   onOpenSettingsSection: (sectionId: SettingsSectionId, moveFocus?: boolean) => void
+  onOpenOnboardingGuide: () => void
   onClose: () => void
   onDiscardDraft: () => void
   onSaveDraft: () => void | Promise<void>
@@ -84,6 +87,7 @@ export function SettingsDrawerV2({
   confirmOptions,
   onReturnToSettingsHome,
   onOpenSettingsSection,
+  onOpenOnboardingGuide,
   onClose,
   onDiscardDraft,
   onSaveDraft,
@@ -163,6 +167,24 @@ export function SettingsDrawerV2({
           onClose={onClose}
           onDiscardDraft={onDiscardDraft}
           onSaveDraft={onSaveDraft}
+          homeActions={(
+            <button
+              type="button"
+              className="settings-v2__home-card"
+              aria-label={ti('settings.home.onboarding.aria_label')}
+              disabled={saving}
+              onClick={onOpenOnboardingGuide}
+            >
+              <span className="settings-v2__home-icon" aria-hidden="true">
+                {renderSettingsCardIcon('onboarding')}
+              </span>
+              <span className="settings-v2__home-copy">
+                <strong>{ti('settings.home.onboarding.title')}</strong>
+                <span>{ti('settings.home.onboarding.value')}</span>
+              </span>
+              <PetControlIcon name="chevron-down" className="settings-v2__home-chevron" aria-hidden="true" />
+            </button>
+          )}
         >
           {activeV2Sections.length > 1 ? <nav className="settings-v2__section-tabs" aria-label={activeSectionLabel}>
             {settingsSectionOptions

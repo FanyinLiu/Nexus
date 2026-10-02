@@ -70,6 +70,21 @@ jobs:
         name: Core path smoke (Linux)
         if: runner.os == 'Linux'
 
+      - run: npm run first-use:smoke:built
+        name: First use and restart smoke
+        if: runner.os != 'Linux'
+
+      - run: xvfb-run -a npm run first-use:smoke:built
+        name: First use and restart smoke (Linux)
+        if: runner.os == 'Linux'
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: first-use-smoke-${{ runner.os }}
+          path: output/first-use-smoke/
+          if-no-files-found: ignore
+
       - run: npm run package:dir:smoke
         name: Packaged smoke
         env:

@@ -47,6 +47,7 @@ export type SettingsShellV2Props = {
   saving?: boolean
   saveDisabled?: boolean
   headerActions?: ReactNode
+  homeActions?: ReactNode
   onNavigate: (destination: SettingsV2Destination, intent: SettingsV2NavigationIntent) => void
   onClose: () => void
   onDiscardDraft?: () => void
@@ -68,6 +69,7 @@ export function SettingsShellV2({
   saving = false,
   saveDisabled = false,
   headerActions,
+  homeActions,
   onNavigate,
   onClose,
   onDiscardDraft,
@@ -210,6 +212,7 @@ export function SettingsShellV2({
                   />
                 </button>
               ))}
+              {homeActions}
             </div>
           ) : (
             <div className="settings-v2__section">{children}</div>
