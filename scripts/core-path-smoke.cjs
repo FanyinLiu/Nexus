@@ -77,7 +77,7 @@ async function snapshot(window) {
       const settingsV2 = document.querySelector('.settings-v2')
       const settingsV2Home = document.querySelector('.settings-v2__home')
       const settingsV2HomeCards = Array.from(document.querySelectorAll('.settings-v2__home-card'))
-      const settingsV2LastHomeCard = settingsV2HomeCards[settingsV2HomeCards.length - 1]
+      const settingsV2AdvancedCard = document.querySelector('.settings-v2__home-card[data-focus-return-group="advanced"]')
       const settingsHome = document.querySelector('.settings-home')
       const modelCard = document.querySelector('.settings-home-card[data-section="model"]')
       const modelPage = document.querySelector('.settings-page[data-section="model"]')
@@ -140,7 +140,7 @@ async function snapshot(window) {
         hasSettingsDrawer: Boolean(settingsDrawer),
         hasSettingsV2: Boolean(settingsV2),
         hasSettingsV2Home: Boolean(settingsV2Home),
-        hasSettingsV2AdvancedCard: Boolean(settingsV2Home && settingsV2LastHomeCard),
+        hasSettingsV2AdvancedCard: Boolean(settingsV2Home && settingsV2AdvancedCard),
         settingsV2HomeCardCount: settingsV2HomeCards.length,
         settingsV2Destination,
         hasV2ModelContent,
@@ -296,7 +296,7 @@ async function main() {
     const settingsSurface = settingsEntry.hasSettingsV2 ? 'v2' : 'legacy'
 
     if (settingsSurface === 'v2' && settingsEntry.hasSettingsV2Home) {
-      await click(window, '.settings-v2__home-card:last-of-type', 'open V2 advanced settings')
+      await click(window, '.settings-v2__home-card[data-focus-return-group="advanced"]', 'open V2 advanced settings')
     } else if (settingsSurface === 'legacy' && !settingsEntry.hasModelPage) {
       await click(window, '.settings-home-card[data-section="model"]', 'open legacy model settings')
     }

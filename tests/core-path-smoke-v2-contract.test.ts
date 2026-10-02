@@ -25,7 +25,7 @@ test('core path smoke verifies V2 first and keeps legacy fallback', async () => 
   assert.match(source, /\.nexus-panel-v2__menu button:first-of-type/)
   assert.match(source, /\.nexus-panel-v2__menu button:nth-of-type\(2\)/)
   assert.match(source, /\.chat-sheet-v2__back/)
-  assert.match(source, /\.settings-v2__home-card:last-of-type/)
+  assert.match(source, /\.settings-v2__home-card\[data-focus-return-group="advanced"\]/)
   assert.match(source, /data-settings-v2-destination/)
   assert.match(source, /settings-model-section\.is-active/)
   assert.match(source, /settings-v3-page/)

@@ -188,6 +188,7 @@ export function SettingsDrawerActiveSection({
           draft={draft}
           setDraft={setDraft}
           testingTarget={connectionTests.isTesting('text') ? 'text' : null}
+          saveError={saveError}
           uiLanguage={uiLanguage}
           onApplyTextProviderPreset={onApplyTextProviderPreset}
           onRunTextConnectionTest={() => void connectionTests.runConnectionTest('text')}
