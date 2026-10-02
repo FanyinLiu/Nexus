@@ -102,6 +102,16 @@ async function nextGuideStep(page) {
   }, before)
 }
 
+async function waitForVisibleGuide(page) {
+  await page.locator('.onboarding-card').waitFor()
+  // Playwright's visible state includes a zero-opacity animation frame. Wait
+  // for the real entry animation so screenshots and Escape exercise visible UI.
+  await page.waitForFunction(() => {
+    const elements = document.querySelectorAll('.onboarding-card, .onboarding-backdrop')
+    return elements.length === 2 && [...elements].every((element) => getComputedStyle(element).opacity === '1')
+  })
+}
+
 async function finishRemainingGuide(page) {
   for (let count = 0; count < 6 && await page.locator('.onboarding-card').isVisible(); count += 1) {
     await nextGuideStep(page)
@@ -211,7 +221,7 @@ async function openGuideFromSettings(page) {
   const entry = page.locator('.settings-v2__home-card:not([data-focus-return-group])')
   assert.ok((await entry.getAttribute('aria-label'))?.trim(), 'Guide entry must have a localized accessible name')
   await entry.click()
-  await page.locator('.onboarding-card').waitFor()
+  await waitForVisibleGuide(page)
   assert.match(await page.locator('.onboarding-disclosure__progress').innerText(), /^1\s*\/\s*6/)
 }
 
@@ -226,7 +236,7 @@ async function run() {
   let panel = await waitForPanel(petPage)
 
   await record('clean default startup routes first-use guide to panel without seeded completion or conversation', async () => {
-    await panel.locator('.onboarding-card').waitFor()
+    await waitForVisibleGuide(panel)
     assert.equal(await petPage.locator('.onboarding-card').count(), 0, 'The restricted pet surface must not expose an unsavable guide')
     const onboarding = await panel.evaluate(() => JSON.parse(localStorage.getItem('nexus:onboarding') || '{}'))
     assert.equal(onboarding.completedAt, undefined)
