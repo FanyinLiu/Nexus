@@ -80,6 +80,8 @@
     "smoke": "npm run build && cross-env SMOKE_TEST=1 electron .",
     "core-path:smoke": "npm run build && npm run core-path:smoke:built",
     "core-path:smoke:built": "electron --no-sandbox scripts/core-path-smoke.cjs",
+    "first-use:smoke": "npm run build && npm run first-use:smoke:built",
+    "first-use:smoke:built": "node scripts/first-use-smoke.mjs",
     "smoke:packaged": "node scripts/packaged-smoke.mjs",
     "package": "npm run package:win",
     "package:dir": "npm run build && electron-builder --dir",

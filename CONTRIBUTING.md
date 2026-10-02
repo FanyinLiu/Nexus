@@ -95,9 +95,25 @@ npm run package:linux          # Linux AppImage
 npm run lint
 npm test
 npm run verify:release         # lint + test + build (run this before opening a PR)
+npm run first-use:smoke        # isolated Electron setup, send, recovery, and restart
 ```
 
 ---
+
+The first-use smoke runs the built app against a deterministic loopback provider
+in a fresh temporary profile. It follows the default first-run handoff from the
+pet to the panel, where onboarding can use the existing credential permissions.
+It drives connection testing, settings save rejection/retry, a real chat
+submission, request failure/retry, and normal
+quit/restart with persisted configuration and conversation. Screenshots and the
+result report are written to `output/first-use-smoke/`; the temporary profile is
+removed after the run. On headless Linux, run it with `xvfb-run -a`.
+
+The harness replaces OS permission prompts and the optional network probe in its
+test bootstrap, and disables Python sidecars. It uses a synthetic API key; it does
+not read the normal user profile, call paid providers, or verify production
+Keychain encryption, installer signing, or external voice services. Three-platform
+PR CI runs the built smoke and uploads its evidence separately from unit tests.
 
 ## Project layout
 
