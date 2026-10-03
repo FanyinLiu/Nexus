@@ -779,10 +779,29 @@ than presenting Nexus as a Codex-style work agent.
   models are downloaded on first use by `portraitModelDownloader.js` from the
   pinned catalog in `shared/portraitModels.js` (see
   `docs/PORTRAIT_LANDMARK_MODELS.md`). Without them, stage A's verdict stands.
-  The generation entry `portraitDraft.js` (`pet-model:generate-portrait-draft`,
-  no UI yet) chains stage A, stage B with landmarks, and the hair/head/body
+  The generation entry `portraitDraft.js` (`pet-model:generate-portrait-draft`)
+  chains stage A, stage B with landmarks, local ISNet cutout for opaque input
+  (`cutoutRuntime.js`, `cutoutWorker.js`), and the hair/head/body
   layering (`portraitLayers.js`, `portraitLayerStage.js`) into a same-canvas
-  RGBA draft under `<userData>/portrait-drafts/` (newest 3 kept).
+  RGBA draft and transparent union preview under `<userData>/portrait-drafts/`
+  (newest 3 kept, failed new drafts removed, final JSON written atomically). The companion
+  settings disclosure (`components/PortraitDraftSetup.tsx`) exposes explicit
+  model-download consent, attribution, progress/retry and native image selection.
+  `features/pet/portraitDraftFlow.ts` owns its state transitions; the host hook
+  manages subscriptions. `shared/portraitPreview.js` bounds the optional PNG
+  response to the trusted requesting panel; no arbitrary local-file read API is
+  exposed and pixels are excluded from audit records. The preview renders one
+  union texture, starts static and offers explicit limited-motion start/pause.
+  Hidden/reduced-motion/inactive states stay static, and closing clears pixels.
+  `portraitDraftExport.js` explicitly exports a current preview through the
+  panel-only `pet-model:export-portrait-draft` channel. Renderer input contains a
+  validated draft ID, optional name and attribution, never source/destination
+  paths. A native save dialog owns the destination; staged ZIP publication is
+  atomic and exclusive. The format-2 package has zero motion intensity and no
+  expression/part layers. Export does not install or activate an avatar.
+  `shared/portraitDraftExport.js` owns the cross-process payload/error contract.
+  The frozen local acceptance runner
+  validates all fixture hashes before any model executes.
 - `features/releaseNotes/` owns small release-communication contracts used by the
   app shell, such as the current About/Help release spotlight. It must stay
   content-only: no updater logic, IPC, migrations, or background checks.

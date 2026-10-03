@@ -146,12 +146,62 @@ test('a raised sleeve beside the face counts as body at face level (armBody)', (
   assert.ok(result.metrics.armBody > 0.1, `armBody ${result.metrics.armBody}`)
 })
 
+/** Similar-but-distinct hair and garment colours whose acceptance ranges overlap. */
+function paintColourOverlap(hairColour: RGB, garmentColour: RGB, longHair: boolean, slopedCollar: boolean) {
+  const { image, kp, regions } = paintCharacter()
+  const { width, height, rgb } = image
+  const belowHair = new Uint8Array(width * height)
+  const belowGarment = new Uint8Array(width * height)
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const i = y * width + x
+      if (regions.hair[i]) rgb.set(hairColour, i * 3)
+      let garment = Boolean(regions.shirt[i])
+      if (y >= 360 && y < 460 && !regions.face[i]) {
+        const spread = slopedCollar ? (y - 360) * 0.2 : 0
+        garment ||= (x >= 160 && x < 220 + spread) || (x >= 380 - spread && x < 440)
+      }
+      if (garment) rgb.set(garmentColour, i * 3)
+      const hangingHair = longHair && y >= 350 && y < 650 && ((x >= 182 && x < 198) || (x >= 402 && x < 418))
+      if (hangingHair) { rgb.set(hairColour, i * 3); garment = false }
+      if (y >= 435) {
+        belowHair[i] = hangingHair ? 1 : 0
+        belowGarment[i] = garment ? 1 : 0
+      }
+    }
+  }
+  const alpha = plainBackgroundAlpha(image).map((value) => value ? 200 : 0)
+  return { image: { ...image, alpha }, kp, belowHair, belowGarment }
+}
+
+for (const variant of [
+  { name: 'neutral short hair and straight collar', hair: [140, 140, 140], garment: [175, 175, 175], longHair: false, sloped: false },
+  { name: 'cool long side locks and sloped collar', hair: [105, 135, 155], garment: [145, 165, 180], longHair: true, sloped: true },
+  { name: 'warm long side locks and straight collar', hair: [175, 135, 160], garment: [205, 170, 185], longHair: true, sloped: false },
+  { name: 'dark short hair and sloped collar', hair: [70, 70, 70], garment: [103, 103, 103], longHair: false, sloped: true },
+]) {
+  test(`stronger torso colour evidence keeps clothing out of hair: ${variant.name}`, () => {
+    const { image, kp, belowHair, belowGarment } = paintColourOverlap(variant.hair as RGB, variant.garment as RGB, variant.longHair, variant.sloped)
+    const originalAlpha = image.alpha.slice()
+    const result = segmentPortraitLayers(image, kp)
+    assert.equal(share(result.hair, belowGarment), 0, 'head prior and morphology cannot grow hair back into clearly observed torso colours')
+    assert.equal(share(result.body, belowGarment), 1)
+    if (variant.longHair) assert.ok(share(result.hair, belowHair) > 0.95, 'distinct hanging hair remains hair')
+    for (let i = 0; i < image.alpha.length; i += 1) {
+      assert.equal(result.hair[i] + result.head[i] + result.body[i], image.alpha[i] > 127 ? 1 : 0, 'layer masks are disjoint and their union preserves the cutout')
+    }
+    assert.deepEqual(image.alpha, originalAlpha, 'segmentation never edits the supplied soft alpha')
+  })
+}
+
 test('stage wrapper decodes, scales landmarks to the working size, and picks the alpha source', async () => {
   const { image, kp, regions } = paintCharacter()
   const big = path.join(workDir, 'big.png')
   await sharp(Buffer.from(image.rgb), { raw: { width: 600, height: 700, channels: 3 } }).resize(1200, 1400, { kernel: 'nearest' }).png().toFile(big)
-  const result = await splitPortraitLayers({ filePath: big }, kp.map((p) => [p[0] * 2, p[1] * 2, p[2]]))
-  assert.equal(result.alphaSource, 'plain_background')
+  const result = await splitPortraitLayers({ filePath: big }, kp.map((p) => [p[0] * 2, p[1] * 2, p[2]]), {
+    getCutoutEngine: () => ({ prepare: async () => ({ status: 'ready' }), evaluate: async (raster) => ({ accepted: true, alpha: plainBackgroundAlpha(raster) }) }),
+  })
+  assert.equal(result.alphaSource, 'isnet')
   assert.equal(result.width, 658)
   assert.ok(Math.abs(result.scale - 768 / 1400) < 1e-9)
   const scaledHair = resizeMaskNearest(result.hair, result.width, result.height, 600, 700)
@@ -164,4 +214,49 @@ test('stage wrapper decodes, scales landmarks to the working size, and picks the
   }
   const transparent = await sharp(Buffer.from(rgba), { raw: { width: 600, height: 700, channels: 4 } }).png().toBuffer()
   assert.equal((await splitPortraitLayers({ buffer: transparent }, kp)).alphaSource, 'image')
+})
+
+test('layer stage aligns neck split and masks with the actual integer raster dimensions', async () => {
+  const width = 1400, height = 1201
+  const foreground = await sharp({ create: { width: width - 100, height: height - 100, channels: 4, background: '#dcbeaa' } }).png().toBuffer()
+  const buffer = await sharp({ create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: foreground, left: 50, top: 50 }]).png().toBuffer()
+  const kp = frontalKeypoints(700, 900)
+  for (let i = 5; i < 11; i += 1) kp[i][1] = 800
+  const result = await splitPortraitLayers({ buffer }, kp)
+  assert.equal(result.width, 768)
+  assert.equal(result.height, 658)
+  assert.equal(result.split, 564, 'chin 1000 and brow 800 map the neck line to row 564, not nominal-scale row 565')
+  const expected = segmentPortraitLayers(result, kp.map(([x, y, confidence]) => [x * 768 / width, y * 658 / height, confidence]))
+  assert.deepEqual(result.hair, expected.hair)
+  assert.deepEqual(result.head, expected.head)
+  assert.deepEqual(result.body, expected.body)
+  assert.equal(result.scale, 768 / 1400, 'legacy scale metadata remains the nominal resize factor')
+  assert.deepEqual(result.geometry.source, { width, height })
+  assert.deepEqual(result.geometry.sourceToWork, { x: 768 / width, y: 658 / height })
+  const recorded = segmentPortraitLayers(result, result.geometry.workPoints)
+  assert.equal(recorded.split, 564)
+  for (const layer of ['hair', 'head', 'body']) assert.deepEqual(recorded[layer], result[layer], 'saved points replay the actual split')
+})
+
+test('layer geometry retains EXIF-oriented source dimensions and the actual work points without rounding scores', async () => {
+  const buffer = await sharp({ create: { width: 1400, height: 1201, channels: 4, background: { r: 140, g: 120, b: 100, alpha: 0.5 } } })
+    .withMetadata({ orientation: 6 }).png().toBuffer()
+  const kp = frontalKeypoints(600, 700)
+  kp[0][2] = -0.01
+  kp[1][2] = 1.25
+  const result = await splitPortraitLayers({ buffer }, kp, {
+    getCutoutEngine: () => ({ prepare: async () => ({ status: 'ready' }), evaluate: async ({ width, height }) => {
+      const alpha = new Uint8Array(width * height).fill(180)
+      alpha.fill(0, 0, width * 10)
+      return { accepted: true, alpha }
+    } }),
+  })
+  assert.equal(result.accepted, true)
+  assert.deepEqual(result.geometry.source, { width: 1201, height: 1400 })
+  assert.deepEqual([result.width, result.height], [658, 768])
+  assert.deepEqual(result.geometry.sourceToWork, { x: 658 / 1201, y: 768 / 1400 })
+  assert.deepEqual(result.geometry.workPoints, kp.map(([x, y, score]) => [x * (658 / 1201), y * (768 / 1400), score]))
+  const replay = segmentPortraitLayers(result, result.geometry.workPoints)
+  for (const layer of ['hair', 'head', 'body']) assert.deepEqual(replay[layer], result[layer])
 })

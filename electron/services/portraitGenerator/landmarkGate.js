@@ -551,8 +551,9 @@ const round = (value) => Math.round(value * 1000) / 1000
 
 /**
  * Decide on an RGB raster (flattened on white) plus optional alpha.
- * @param {{ rgb: Uint8Array, alpha?: Uint8Array | null, width: number, height: number, pixelScale?: number }} image
- *   `pixelScale` = original px per raster px (when the raster was downsized).
+ * @param {{ rgb: Uint8Array, alpha?: Uint8Array | null, width: number, height: number, pixelScale?: number, pixelScaleX?: number, pixelScaleY?: number }} image
+ *   Axis scales are original px per raster px; `pixelScale` is the legacy
+ *   fallback for callers that used one uniform scale.
  * @param {{ detect: (variant: 'original' | 'normalized') => Promise<Array<{ bbox: number[], keypoints: number[][] }>> }} detector
  * @param {{ keepKeypoints?: boolean }} [options] `keepKeypoints`: an accepted
  *   verdict also carries the 28 landmarks (raster px) the decision used, for
@@ -571,7 +572,10 @@ export async function evaluatePortraitLandmarks(image, detector, options = {}) {
   if (faces.length === 0) return verdict(R.HALF_BODY_ONLY, 'no_face', metrics)
   if (faces.length > 1) return verdict(R.MULTIPLE_CHARACTERS, null, metrics, { count: faces.length })
   const face = faces[0]
-  const facePx = Math.min(face.bbox[2] - face.bbox[0], face.bbox[3] - face.bbox[1]) * (image.pixelScale ?? 1)
+  const facePx = Math.min(
+    (face.bbox[2] - face.bbox[0]) * (image.pixelScaleX ?? image.pixelScale ?? 1),
+    (face.bbox[3] - face.bbox[1]) * (image.pixelScaleY ?? image.pixelScale ?? 1),
+  )
   metrics.facePx = Math.round(facePx)
   if (facePx < limits.minFacePx) return verdict(R.HALF_BODY_ONLY, 'face_small', metrics)
 

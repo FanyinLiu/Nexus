@@ -3,22 +3,24 @@
  *
  * None of these are bundled. They are downloaded on first use from a Nexus
  * GitHub Release, pinned by exact byte size and SHA-256, and shown to the
- * user together with their source and licence. The release does not exist
- * yet: `PORTRAIT_MODEL_RELEASE.published` stays false (and the downloader
- * refuses to run) until the owner publishes the assets listed in
- * `docs/PORTRAIT_LANDMARK_MODELS.md` under exactly this tag.
+ * user together with their source and licence. The release
+ * `portrait-models-v1` was published by the owner on 2026-10-02 with exactly
+ * the assets listed in `docs/PORTRAIT_LANDMARK_MODELS.md`. Setting
+ * `PORTRAIT_MODEL_RELEASE.published` back to false makes the downloader
+ * refuse to run (`release_unpublished`).
  *
- * `wired: false` marks a model that is planned but not used by the app yet
- * (isnet-anime cutout); the downloader skips it unless asked explicitly.
+ * `trainingDataDocumented: false` means full provenance of the pinned weights
+ * has not been verified; upstream may still document partial dataset sources.
+ * `wired: false` marks a model that is planned but not used by the app yet;
+ * the downloader skips it unless asked explicitly.
  */
 
 const RELEASE_TAG = 'portrait-models-v1'
 
 export const PORTRAIT_MODEL_RELEASE = Object.freeze({
   tag: RELEASE_TAG,
-  /** PLACEHOLDER until the owner creates this release; see `published`. */
   baseUrl: `https://github.com/FanyinLiu/Nexus/releases/download/${RELEASE_TAG}`,
-  published: false,
+  published: true,
 })
 
 const releaseUrl = (fileName) => `${PORTRAIT_MODEL_RELEASE.baseUrl}/${fileName}`
@@ -59,7 +61,7 @@ export const PORTRAIT_MODEL_CATALOG = Object.freeze([
   Object.freeze({
     id: 'isnet-anime',
     role: 'cutout',
-    wired: false,
+    wired: true,
     fileName: 'isnetis.onnx',
     sizeBytes: 176_069_933,
     sha256: 'f15622d853e8260172812b657053460e20806f04b9e05147d49af7bed31a6e99',

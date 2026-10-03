@@ -1,5 +1,6 @@
 import { isPortraitImageGateReason } from '../../shared/portraitImageGate.js'
 import { isPortraitLandmarkGateReason } from '../../shared/portraitLandmarkGate.js'
+import { isPortraitCutoutGateReason } from '../../shared/portraitCutoutGate.js'
 
 function textLength(value) {
   return typeof value === 'string' ? value.length : 0
@@ -19,7 +20,7 @@ function pathSummary(value) {
 // Only the verdict and a known reason code are logged; image metrics stay
 // out of the audit trail with the path and pixels.
 function portraitImageGateSummary(result = {}) {
-  const known = isPortraitImageGateReason(result?.reasonCode) || isPortraitLandmarkGateReason(result?.reasonCode)
+  const known = isPortraitImageGateReason(result?.reasonCode) || isPortraitLandmarkGateReason(result?.reasonCode) || isPortraitCutoutGateReason(result?.reasonCode)
   return {
     gateAccepted: typeof result?.accepted === 'boolean' ? result.accepted : undefined,
     gateReasonCode: known ? result.reasonCode : undefined,
@@ -42,6 +43,8 @@ export function summarizePetModelRequest(channel, payload = {}) {
   switch (channel) {
     case 'pet-model:import':
       return { channel, dialogBacked: true }
+    case 'pet-model:export-portrait-draft':
+      return { channel, dialogBacked: true, displayNameLength: textLength(payload?.displayName), attributionLength: textLength(payload?.attributionText) }
     case 'pet-model:import-codex-gallery':
       return {
         channel,
@@ -107,6 +110,7 @@ export function summarizePetModelResult(channel, result = {}, error = null) {
     ...(!failed ? resultPathSummary(result) : {}),
     ...(!failed && PORTRAIT_GATE_CHANNELS.has(channel) ? portraitImageGateSummary(result) : {}),
     ...(!failed && channel === 'pet-model:generate-portrait-draft' ? { draftCreated: typeof result?.draftId === 'string' } : {}),
+    ...(!failed && channel === 'pet-model:export-portrait-draft' ? { exported: result?.exported === true } : {}),
     errorName: failed && error instanceof Error ? error.name : undefined,
     errorMessageLength: failed && error instanceof Error ? textLength(error.message) : 0,
   }

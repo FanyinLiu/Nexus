@@ -326,6 +326,34 @@ test('two characters, small faces, and weak or tiny detections', async () => {
   assert.notEqual(scaled.detail, 'face_small', 'face size is judged in original pixels')
 })
 
+test('face size measures both original-image axes at the unchanged 96-pixel boundary', async () => {
+  const face = { ...faceAt(), bbox: [200, 200, 400, 248, 0.95] }
+  for (const [pixelScaleX, pixelScaleY, expectedSize, small] of [
+    [1, 1.99, 96, true], [1, 2, 96, false], [0.47, 3, 94, true], [0.48, 3, 96, false],
+  ] as const) {
+    const result = await evaluatePortraitLandmarks(
+      { ...blankImage(), pixelScale: 3, pixelScaleX, pixelScaleY },
+      detectorReturning({ original: [face] }),
+    )
+    assert.equal(result.metrics.facePx, expectedSize)
+    assert.equal(result.detail === 'face_small', small, `${pixelScaleX}, ${pixelScaleY}`)
+  }
+})
+
+test('each absent original-image axis keeps the legacy pixelScale fallback', async () => {
+  const face = { ...faceAt(), bbox: [200, 200, 400, 248, 0.95] }
+  for (const [scales, expectedSize] of [
+    [{ pixelScale: 2 }, 96],
+    [{ pixelScale: 2, pixelScaleX: 3 }, 96],
+    [{ pixelScale: 2, pixelScaleY: 4 }, 192],
+    [{ pixelScaleY: 3 }, 144],
+  ] as const) {
+    const result = await evaluatePortraitLandmarks({ ...blankImage(), ...scales }, detectorReturning({ original: [face] }))
+    assert.equal(result.metrics.facePx, expectedSize)
+    assert.notEqual(result.detail, 'face_small')
+  }
+})
+
 test('broken eye landmarks say eyes_unclear, never side_view; only real profiles get side_view', async () => {
   const broken = faceAt()
   broken.keypoints = broken.keypoints.map((k, i) => (i >= 17 && i < 23 ? [k[0] + 800, k[1], 0.1] : k)) as Point[]
@@ -401,6 +429,24 @@ test('an arm raised out beside the body and bare shoulders joined to the neck ar
 })
 
 // ------------------------------------------------------------ stage runner
+
+for (const [width, height, orientation] of [[1705, 2375, 1], [2375, 1705, 1], [1705, 2375, 6], [675, 900, 1]]) {
+  test(`stage runner returns the source-image centre after integer resize: ${width}x${height}, EXIF ${orientation}`, async () => {
+    const buffer = await sharp({ create: { width, height, channels: 4, background: '#ffffff' } })
+      .withMetadata({ orientation }).png().toBuffer()
+    const result = await runPortraitLandmarkStage({ buffer }, {
+      prepare: async () => ({ status: 'ready' }),
+      evaluate: async (image) => ({ accepted: true, keypoints: [[image.width / 2, image.height / 2, 0.75]] }),
+    }, { keepKeypoints: true })
+    const expected = orientation >= 5 ? [height / 2, width / 2, 0.75] : [width / 2, height / 2, 0.75]
+    assert.ok(Math.abs(result.keypoints[0][0] - expected[0]) < 1e-9)
+    assert.ok(Math.abs(result.keypoints[0][1] - expected[1]) < 1e-9)
+    assert.equal(result.keypoints[0][2], expected[2], 'confidence is not a coordinate')
+    assert.deepEqual(result.geometry.source, { width: expected[0] * 2, height: expected[1] * 2 })
+    const decoded = await sharp(buffer).rotate().resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true }).raw().toBuffer({ resolveWithObject: true })
+    assert.deepEqual(result.geometry.analysis, { width: decoded.info.width, height: decoded.info.height })
+  })
+}
 
 test('stage runner: missing models keep the stage-A verdict; a no-face image runs both passes', async () => {
   const filePath = path.join(workDir, 'plain.png')

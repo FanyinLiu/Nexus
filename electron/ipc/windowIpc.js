@@ -42,6 +42,8 @@ import {
 } from '../services/portraitGenerator/rejectImage.js'
 import { resolveLandmarkModelDirectory } from '../services/portraitGenerator/landmarkModels.js'
 import { createWorkerLandmarkEngine } from '../services/portraitGenerator/landmarkRuntime.js'
+import { createWorkerCutoutEngine } from '../services/portraitGenerator/cutoutRuntime.js'
+import { exportPortraitDraftFromPayload } from '../services/portraitGenerator/portraitDraftExport.js'
 import { createPortraitLandmarkStage } from '../services/portraitGenerator/landmarkStage.js'
 import {
   generatePortraitDraftFromPayload,
@@ -93,6 +95,7 @@ import {
   validatePetModelGalleryImportPayload,
   validatePetModelGalleryListPayload,
   validatePetModelPortraitDraftPayload,
+  validatePetModelPortraitDraftExportPayload,
   validatePetModelPortraitImageCheckPayload,
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
@@ -117,6 +120,11 @@ const getPortraitLandmarkEngine = () => {
   return portraitLandmarkEngine
 }
 const portraitLandmarkStage = createPortraitLandmarkStage(getPortraitLandmarkEngine)
+let portraitCutoutEngine = null
+function getPortraitCutoutEngine() {
+  portraitCutoutEngine ??= createWorkerCutoutEngine({ directory: portraitModelDirectory() })
+  return portraitCutoutEngine
+}
 let portraitModelDownload = null
 const PET_MODEL_LIBRARY_CHANGED_CHANNEL = 'pet-model:library-changed'
 let powerEventForwardingRegistered = false
@@ -426,7 +434,27 @@ export function register() {
       generatePortraitDraftFromPayload(payload, {
         pickImagePath: () => pickPortraitImagePath(event),
         getEngine: getPortraitLandmarkEngine,
+        getCutoutEngine: getPortraitCutoutEngine,
+        includePreview: true,
         draftRoot: resolvePortraitDraftRoot(app.getPath('userData')),
+      })
+    ))
+  })
+
+  ipcMain.handle('pet-model:export-portrait-draft', async (event, payload) => {
+    requireTrustedSender(event)
+    payload = validatePetModelPortraitDraftExportPayload(payload)
+    return runAuditedPetModelAction(event, 'pet-model:export-portrait-draft', payload, () => (
+      exportPortraitDraftFromPayload(payload, {
+        draftRoot: resolvePortraitDraftRoot(app.getPath('userData')),
+        chooseArchivePath: async ({ defaultFileName }) => {
+          const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+          const selection = await dialog.showSaveDialog(parentWindow, {
+            defaultPath: defaultFileName,
+            filters: [{ name: 'Nexus', extensions: ['zip'] }],
+          })
+          return selection.canceled ? null : selection.filePath ?? null
+        },
       })
     ))
   })

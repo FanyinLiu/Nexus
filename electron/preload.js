@@ -67,6 +67,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   createSpritePetFromImage: () => ipcRenderer.invoke('pet-model:create-from-image'),
   checkPortraitImage: (payload) => ipcRenderer.invoke('pet-model:check-portrait-image', payload),
   generatePortraitDraft: (payload) => ipcRenderer.invoke('pet-model:generate-portrait-draft', payload),
+  exportPortraitDraft: (payload) => ipcRenderer.invoke('pet-model:export-portrait-draft', payload),
   getPortraitModelStatus: () => ipcRenderer.invoke('pet-model:portrait-models-status'),
   downloadPortraitModels: () => ipcRenderer.invoke('pet-model:download-portrait-models'),
   subscribePortraitModelProgress: (listener) => {

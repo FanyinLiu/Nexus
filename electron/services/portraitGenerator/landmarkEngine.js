@@ -104,7 +104,7 @@ export function contrastNormalizeRgb(rgb, width, height, tiles = 8, clipLimit = 
 
 /**
  * Run the gate on a decoded raster with ready model sessions.
- * @param {{ rgb: Uint8Array, alpha: Uint8Array | null, width: number, height: number, pixelScale?: number }} image
+ * @param {{ rgb: Uint8Array, alpha: Uint8Array | null, width: number, height: number, pixelScale?: number, pixelScaleX?: number, pixelScaleY?: number }} image
  * @param {{ detector: { run: Function }, landmarks: { run: Function } }} sessions
  * @param {{ keepKeypoints?: boolean }} [options] see `evaluatePortraitLandmarks`
  */

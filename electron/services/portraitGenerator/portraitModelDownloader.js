@@ -30,7 +30,7 @@ import {
   validateModelDownloadUrl,
   validateModelIntegrity,
 } from '../modelDownloadSecurity.js'
-import { rememberVerifiedModelFile, sha256File } from './landmarkModels.js'
+import { inspectLandmarkModels, rememberVerifiedModelFile, sha256File } from './landmarkModels.js'
 
 export const PORTRAIT_MODEL_DOWNLOAD_ERRORS = Object.freeze({
   RELEASE_UNPUBLISHED: 'release_unpublished',
@@ -95,10 +95,14 @@ async function fetchFollowingRedirects(fetchImpl, url, headers, signal) {
   throw fail(E.HTTP_STATUS, 310)
 }
 
+/** Write with backpressure; both listeners are removed again, so a long download never piles them up. */
 async function writeChunk(stream, chunk) {
-  if (!stream.write(chunk)) await new Promise((resolve, reject) => {
-    stream.once('drain', resolve)
-    stream.once('error', reject)
+  if (stream.write(chunk)) return
+  await new Promise((resolve, reject) => {
+    const onDrain = () => { stream.off('error', onError); resolve() }
+    const onError = (error) => { stream.off('drain', onDrain); reject(error) }
+    stream.once('drain', onDrain)
+    stream.once('error', onError)
   })
 }
 
@@ -292,19 +296,19 @@ export async function downloadPortraitModels(options) {
 }
 
 /**
- * Attribution + install state for every catalog model (size check only; the
- * landmark runtime verifies SHA-256 before it loads anything).
- * @param {{ directory: string, release?: { tag: string, published: boolean } }} options
+ * Verify install state before offering generation, so a same-size corrupt file
+ * remains repairable from the download UI. Runtime and UI reuse the hash cache.
+ * @param {{ directory: string, release?: { tag: string, published: boolean }, inspect?: typeof inspectLandmarkModels }} options
  */
 export async function getPortraitModelStatus(options) {
   const release = options.release ?? PORTRAIT_MODEL_RELEASE
+  const inspection = await (options.inspect ?? inspectLandmarkModels)(options.directory, {
+    files: Object.fromEntries(PORTRAIT_MODEL_CATALOG.map((model) => [model.id, model])),
+  })
   const models = []
   for (const model of PORTRAIT_MODEL_CATALOG) {
-    let installed = 'missing'
-    try {
-      const stat = await fs.stat(path.join(options.directory, model.fileName))
-      installed = stat.isFile() && stat.size === model.sizeBytes ? 'present' : 'invalid'
-    } catch { /* missing */ }
+    const status = inspection.files[model.id]?.status ?? 'missing'
+    const installed = status === 'ok' ? 'present' : status === 'missing' ? 'missing' : 'invalid'
     models.push({ ...describePortraitModel(model), installed })
   }
   const downloadBytes = models

@@ -171,3 +171,26 @@ test('portrait image check audit records verdict and reason code but no path or 
     true,
   )
 })
+
+test('portrait draft audit records known cutout failure codes without exception details or pixels', () => {
+  for (const reasonCode of ['cutout_models_unavailable', 'cutout_mask_invalid']) {
+    const result = summarizePetModelResult('pet-model:generate-portrait-draft', { accepted: false, reasonCode, detail: '/private/model.onnx', alpha: [0, 255] })
+    assert.equal(result.gateReasonCode, reasonCode)
+    assert.equal(result.draftCreated, false)
+    assert.ok(!JSON.stringify(result).includes('/private'))
+    assert.equal('alpha' in result, false)
+  }
+})
+
+test('portrait draft audit omits inline preview pixels and private paths from successful results', () => {
+  const dataUrl = 'data:image/png;base64,cHJpdmF0ZS1waXhlbHM='
+  const result = summarizePetModelResult('pet-model:generate-portrait-draft', {
+    accepted: true, draftId: 'draft-123', layers: {},
+    preview: { dataUrl, width: 600, height: 700, path: '/private/portrait-preview.png' },
+  })
+  assert.equal(result.draftCreated, true)
+  assert.equal(result.gateAccepted, true)
+  assert.equal('preview' in result, false)
+  const serialized = JSON.stringify(result)
+  for (const secret of [dataUrl, 'cHJpdmF0ZS1waXhlbHM=', '/private/portrait-preview.png']) assert.ok(!serialized.includes(secret))
+})

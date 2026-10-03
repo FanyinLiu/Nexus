@@ -25,6 +25,29 @@
 .settings-v3-studio-output code { overflow: hidden; padding: 6px 8px; color: var(--sv3-accent); background: var(--sv3-accent-soft); border-radius: 7px; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .settings-v3-studio-output .settings-v3-chip-line span[data-warning='true'] { color: var(--sv3-warning); background: color-mix(in srgb, var(--sv3-warning) 12%, var(--sv3-surface)); }
 
+
+.settings-v3-portrait a { overflow-wrap: anywhere; }
+.settings-v3-portrait-consent { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 9px; align-items: start; min-height: 44px; padding: 10px 0; color: var(--sv3-ink); font-size: 13px; cursor: pointer; }
+.settings-v3-portrait-consent input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--sv3-accent); }
+.settings-v3-portrait-consent input:focus-visible { outline: 3px solid var(--nx-v2-focus-ring); outline-offset: 3px; }
+.settings-v3-portrait-preview { display: grid; gap: 10px; min-width: 0; margin: 0; }
+.settings-v3-portrait-preview__stage { display: grid; place-items: center; min-width: 0; padding: 16px; overflow: hidden; background: var(--sv3-soft); border: 1px solid var(--sv3-line); border-radius: 12px; }
+.settings-v3-portrait-preview__stage img { display: block; width: auto; height: auto; max-width: 100%; max-height: 320px; object-fit: contain; transform-origin: center bottom; }
+.settings-v3-portrait-preview__stage img[data-moving='true'] { animation: portrait-draft-breathe 5s ease-in-out infinite; }
+.settings-v3-portrait-preview figcaption { color: var(--sv3-muted); font-size: 12px; }
+.settings-v3-portrait-preview figcaption strong { color: var(--sv3-ink); }
+.settings-v3-portrait-preview figcaption p { margin: 5px 0 0; }
+
+@keyframes portrait-draft-breathe {
+  0%, 100% { transform: translate(0, 0) scale(1, 1); }
+  25% { transform: translate(1px, -2px) scale(1.005, 1.012); }
+  75% { transform: translate(-1px, -1px) scale(1.003, 1.006); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-v3-portrait-preview__stage img[data-moving='true'] { animation: none; transform: none; }
+}
+
 @media (max-width: 719px) {
   .settings-v3-choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .settings-v3-studio__head { align-items: flex-start; flex-direction: column; }

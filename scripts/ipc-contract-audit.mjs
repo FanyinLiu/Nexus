@@ -163,7 +163,7 @@ function classifyRisk(channel) {
   if (/^(telegram|discord):send-|^minecraft:send-command$|^factorio:execute$/.test(channel)) {
     return { level: 'high', domain: 'external-action' }
   }
-  if (/^pet-model:(import|create|assemble|install|open)/.test(channel)) {
+  if (/^pet-model:(import|create|assemble|install|open|export)/.test(channel)) {
     return { level: 'high', domain: 'local-artifact' }
   }
   if (/^chat:|^audio:|^service:test-connection$|^tencent-asr:connect$/.test(channel)) {

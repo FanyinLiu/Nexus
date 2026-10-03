@@ -54,6 +54,8 @@ import type {
 import type { LocalDataCompanionStorageKey } from '../shared/localDataStorageKeys.js'
 import type { PortraitImageGateResult } from '../shared/portraitImageGate.js'
 import type { PortraitModelAttribution } from '../shared/portraitModels.js'
+import type { PortraitPreview } from '../shared/portraitPreview.js'
+import type { PortraitDraftExportPayload, PortraitDraftExportResult } from '../shared/portraitDraftExport.js'
 
 
 type MinecraftGatewayEvent = {
@@ -601,8 +603,8 @@ declare global {
       checkPortraitImage: (payload?: { imagePath?: string }) => Promise<PortraitImageGateResult | null>
       generatePortraitDraft: (payload?: { imagePath?: string }) => Promise<
         | null
-        | { accepted: false, stage: 'image' | 'landmarks', reasonCode: string, detail: string | null, messageKey: string, messageParams: Record<string, string | number> }
-        | { accepted: true, draftId: string, width: number, height: number, alphaSource: 'image' | 'plain_background', layers: Record<'hair' | 'head' | 'body', { share: number }> }
+        | { accepted: false, stage: 'image' | 'landmarks' | 'cutout', reasonCode: string, detail: string | null, messageKey: string, messageParams: Record<string, string | number> }
+        | { accepted: true, draftId: string, width: number, height: number, alphaSource: 'image' | 'isnet', layers: Record<'hair' | 'head' | 'body', { share: number }>, preview?: PortraitPreview }
       >
       getPortraitModelStatus: () => Promise<{
         releaseTag: string
@@ -610,6 +612,7 @@ declare global {
         downloadBytes: number
         models: Array<PortraitModelAttribution & { installed: 'present' | 'missing' | 'invalid' }>
       }>
+      exportPortraitDraft: (payload: PortraitDraftExportPayload) => Promise<PortraitDraftExportResult | null>
       downloadPortraitModels: () => Promise<
         | { ok: true, installed: string[], alreadyPresent: string[] }
         | { ok: false, code: string }

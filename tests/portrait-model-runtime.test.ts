@@ -45,8 +45,10 @@ after(async () => {
 
 // ------------------------------------------------------------ catalog
 
-test('catalog: pinned release URLs on allowlisted hosts, valid integrity, licences, and a placeholder release', () => {
-  assert.equal(PORTRAIT_MODEL_RELEASE.published, false, 'stays false until the owner publishes the release')
+test('catalog: pinned release URLs on allowlisted hosts, valid integrity, licences, and the published release', () => {
+  assert.equal(PORTRAIT_MODEL_RELEASE.published, true, 'portrait-models-v1 was published on 2026-10-02')
+  assert.equal(PORTRAIT_MODEL_RELEASE.tag, 'portrait-models-v1')
+  assert.equal(PORTRAIT_MODEL_RELEASE.baseUrl, 'https://github.com/FanyinLiu/Nexus/releases/download/portrait-models-v1')
   assert.equal(PORTRAIT_MODEL_RELEASE.baseUrl, `https://github.com/FanyinLiu/Nexus/releases/download/${PORTRAIT_MODEL_RELEASE.tag}`)
   const ids = new Set()
   for (const model of PORTRAIT_MODEL_CATALOG) {
@@ -58,9 +60,9 @@ test('catalog: pinned release URLs on allowlisted hosts, valid integrity, licenc
     assert.match(model.license.url, /^https:\/\//)
     assert.match(model.source.url, /^https:\/\/huggingface\.co\//)
     assert.match(model.source.revision, /^[0-9a-f]{40}$/, 'source pinned to a commit')
-    assert.equal(model.trainingDataDocumented, false, 'upstream does not document training data')
+    assert.equal(model.trainingDataDocumented, false, 'full provenance of the pinned weights has not been verified')
   }
-  assert.deepEqual(selectPortraitModels().map((m) => m.id), ['anime-face-yolov3', 'anime-face-hrnetv2'])
+  assert.deepEqual(selectPortraitModels().map((m) => m.id), ['anime-face-yolov3', 'anime-face-hrnetv2', 'isnet-anime'])
   assert.deepEqual(selectPortraitModels({ includePlanned: true }).map((m) => m.id), ['anime-face-yolov3', 'anime-face-hrnetv2', 'isnet-anime'])
   assert.equal(PORTRAIT_MODEL_CATALOG.find((m) => m.id === 'isnet-anime')?.license.spdx, 'Apache-2.0')
   assert.deepEqual(Object.values(LANDMARK_MODEL_FILES).map((f) => f.fileName), ['anime_face_yolov3.onnx', 'anime_face_hrnetv2_flip.onnx'])
@@ -146,7 +148,7 @@ const noSleep = { sleeps: [] as number[], sleep: async function (ms: number) { t
 
 test('download refuses while the release is unpublished and never fetches', async () => {
   let fetched = 0
-  const options = { directory: await freshDir(), fetchImpl: (async () => { fetched += 1; return respond(200, Buffer.alloc(1)) }) as unknown as typeof fetch }
+  const options = { directory: await freshDir(), release: { published: false }, fetchImpl: (async () => { fetched += 1; return respond(200, Buffer.alloc(1)) }) as unknown as typeof fetch }
   await assert.rejects(downloadPortraitModels(options), (error: unknown) => error instanceof PortraitModelDownloadError && error.code === E.RELEASE_UNPUBLISHED)
   assert.deepEqual(await runPortraitModelDownload(options), { ok: false, code: E.RELEASE_UNPUBLISHED })
   assert.equal(fetched, 0)
@@ -173,6 +175,21 @@ test('download installs verified files with progress events, then reports them a
   const again = await runPortraitModelDownload({ directory: dir, models: [a.model, b.model] as never, release: published, fetchImpl: impl })
   assert.deepEqual(again, { ok: true, installed: [], alreadyPresent: ['a', 'b'] })
   assert.equal(calls.length, 2, 'verified files are not fetched again')
+})
+
+test('backpressure waits do not pile up stream listeners (no MaxListenersExceededWarning on large files)', async () => {
+  const a = fakeModel('big', 6 * 1024 * 1024, 3)
+  const { impl } = fakeFetch(new Map([[a.model.url, a.bytes]]))
+  const warnings: string[] = []
+  const onWarning = (warning: Error) => { warnings.push(warning.name) }
+  process.on('warning', onWarning)
+  try {
+    await downloadPortraitModels({ directory: await freshDir(), models: [a.model] as never, release: published, fetchImpl: impl })
+    await new Promise((resolve) => setImmediate(resolve))
+  } finally {
+    process.off('warning', onWarning)
+  }
+  assert.deepEqual(warnings.filter((name) => name === 'MaxListenersExceededWarning'), [])
 })
 
 test('an interrupted download resumes with Range from the partial file; a server ignoring Range restarts it', async () => {
@@ -282,13 +299,13 @@ test('a stalled transfer is reported as stalled and retried', async () => {
   assert.deepEqual(events.filter((e) => e.phase === 'retrying').map((e) => e.code), [E.STALLED])
 })
 
-test('model status lists attribution and install state without paths; planned models do not count towards the download', async () => {
+test('model status lists attribution and install state without paths; all three wired models count towards the download', async () => {
   const dir = await freshDir()
   const status = await getPortraitModelStatus({ directory: dir })
-  assert.equal(status.releasePublished, false)
+  assert.equal(status.releasePublished, true)
   assert.equal(status.releaseTag, PORTRAIT_MODEL_RELEASE.tag)
   assert.deepEqual(status.models.map((m: { id: string, installed: string }) => [m.id, m.installed]), [['anime-face-yolov3', 'missing'], ['anime-face-hrnetv2', 'missing'], ['isnet-anime', 'missing']])
-  assert.equal(status.downloadBytes, 246_035_424 + 39_046_070)
+  assert.equal(status.downloadBytes, 246_035_424 + 39_046_070 + 176_069_933)
   await fs.writeFile(path.join(dir, 'anime_face_hrnetv2_flip.onnx'), Buffer.alloc(10))
   const partial = await getPortraitModelStatus({ directory: dir })
   assert.equal(partial.models[1].installed, 'invalid')

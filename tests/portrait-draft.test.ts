@@ -11,8 +11,10 @@ import {
   resolvePortraitDraftRoot,
 } from '../electron/services/portraitGenerator/portraitDraft.js'
 import { evaluatePortraitLandmarks } from '../electron/services/portraitGenerator/landmarkGate.js'
+import { plainBackgroundAlpha } from '../electron/services/portraitGenerator/portraitLayers.js'
 import { summarizePetModelResult } from '../electron/ipc/petModelAudit.js'
 import { PORTRAIT_LANDMARK_GATE_REASONS as R } from '../shared/portraitLandmarkGate.js'
+import { normalizePortraitPreview } from '../shared/portraitPreview.js'
 
 let workDir = ''
 before(async () => { workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-portrait-draft-')) })
@@ -87,6 +89,8 @@ function fakeEngine(verdictFor: (image: { width: number, height: number }) => ob
 }
 
 const accepted = (keypoints: number[][]) => ({ accepted: true, reasonCode: null, detail: null, messageKey: 'settings.pet.portrait_gate.accepted', messageParams: {}, metrics: { faces: 1 }, keypoints })
+// The deterministic fixture mask exercises draft wiring, not real ISNet quality.
+const getCutoutEngine = () => ({ prepare: async () => ({ status: 'ready' }), evaluate: async (image: object) => ({ accepted: true, alpha: plainBackgroundAlpha(image) }) })
 
 test('generation: gate -> landmarks (original px) -> hair/head/body PNGs + draft.json, result without paths', async () => {
   const filePath = await writeCharacter('character.png')
@@ -96,20 +100,20 @@ test('generation: gate -> landmarks (original px) -> hair/head/body PNGs + draft
     const k = image.width / 2400
     return accepted(kp.map(([x, y, c]) => [x * 4 * k, y * 4 * k, c]))
   })
-  const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, draftRoot: root, now: () => 1_700_000_000_000 })
+  const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, getCutoutEngine, draftRoot: root, now: () => 1_700_000_000_000 })
   assert.equal(result?.accepted, true, JSON.stringify(result))
   if (!result?.accepted) return
   assert.deepEqual(calls.map((c) => c.options), [{ keepKeypoints: true }])
   assert.equal(calls[0].width, 1755, 'the landmark raster is downsized to 2048 px')
   assert.match(result.draftId, /^draft-1700000000000-[0-9a-f]{8}$/)
   assert.deepEqual([result.width, result.height], [658, 768])
-  assert.equal(result.alphaSource, 'plain_background')
+  assert.equal(result.alphaSource, 'isnet')
   assert.ok(result.layers.hair.share > 0.1 && result.layers.head.share > 0.1 && result.layers.body.share > 0.1, JSON.stringify(result.layers))
   assert.ok(!JSON.stringify(result).includes(workDir), 'no paths in the result')
 
   const dir = path.join(root, result.draftId)
-  assert.deepEqual((await fs.readdir(dir)).sort(), ['body.png', 'draft.json', 'hair.png', 'head.png'])
-  for (const name of ['hair', 'head', 'body']) {
+  assert.deepEqual((await fs.readdir(dir)).sort(), ['body.png', 'draft.json', 'hair.png', 'head.png', 'preview.png'])
+  for (const name of ['hair', 'head', 'body', 'preview']) {
     const meta = await sharp(path.join(dir, `${name}.png`)).metadata()
     assert.deepEqual([meta.width, meta.height, meta.channels], [658, 768, 4], name)
   }
@@ -120,7 +124,18 @@ test('generation: gate -> landmarks (original px) -> hair/head/body PNGs + draft
   assert.equal(at(20, 20), 0)
   const manifest = JSON.parse(await fs.readFile(path.join(dir, 'draft.json'), 'utf8'))
   assert.equal(manifest.version, 1)
+  assert.equal(manifest.preview, 'preview.png')
   assert.deepEqual(Object.keys(manifest.layers), ['hair', 'head', 'body'])
+  assert.equal(manifest.metadata.version, 1)
+  assert.deepEqual(manifest.metadata.coordinates.landmarkSource, { width: 2400, height: 2800 })
+  assert.deepEqual(manifest.metadata.coordinates.analysis, { width: 1755, height: 2048 })
+  assert.deepEqual(manifest.metadata.coordinates.work, { width: 658, height: 768 })
+  assert.equal(manifest.metadata.landmarks.status, 'recorded')
+  assert.equal(manifest.metadata.landmarks.sourcePoints.length, 28)
+  assert.equal(manifest.metadata.landmarks.workPoints.length, 28)
+  assert.equal(manifest.metadata.capabilities.motionReady, false)
+  assert.equal(manifest.metadata.provenance.runtimeModelIdentity, 'not_recorded', 'a fake engine cannot attest catalog models')
+  assert.equal('metadata' in result, false, 'internal coordinates never cross generation IPC')
   assert.ok(!JSON.stringify(manifest).includes(workDir), 'no source path in the manifest')
 })
 
@@ -146,6 +161,131 @@ test('generation stops at stage A, at missing models, and at a landmark rejectio
   assert.equal(await generatePortraitDraftFromPayload({}, { pickImagePath: async () => null, getEngine: () => hands.engine, draftRoot: root }), null, 'a cancelled picker returns null')
 })
 
+test('transparent preview matches the written layer union pixel-for-pixel, including soft alpha and background holes', async () => {
+  const filePath = await writeCharacter('character-preview.png', 1)
+  const { kp } = paintCharacter()
+  const { engine } = fakeEngine(() => accepted(kp))
+  const root = path.join(workDir, 'drafts-preview')
+  const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, {
+    pickImagePath: async () => null,
+    getEngine: () => engine,
+    getCutoutEngine: () => ({ prepare: async () => ({ status: 'ready' }), evaluate: async (image: object) => {
+      const alpha = plainBackgroundAlpha(image)
+      for (let i = 0; i < alpha.length; i += 1) if (alpha[i]) alpha[i] = 180
+      // A transparent region inside the face must not be filled by the preview.
+      for (let y = 290; y < 310; y += 1) for (let x = 290; x < 310; x += 1) alpha[y * 600 + x] = 0
+      return { accepted: true, alpha }
+    } }),
+    draftRoot: root,
+  })
+  assert.equal(result?.accepted, true)
+  if (!result?.accepted) return
+  const dir = path.join(root, result.draftId)
+  const layerPixels = await Promise.all(['hair', 'head', 'body'].map((name) => sharp(path.join(dir, `${name}.png`)).raw().toBuffer()))
+  const preview = await sharp(path.join(dir, 'preview.png')).raw().toBuffer({ resolveWithObject: true })
+  assert.deepEqual([preview.info.width, preview.info.height, preview.info.channels], [600, 700, 4])
+  let foreground = 0
+  for (let i = 0; i < 600 * 700; i += 1) {
+    const offset = i * 4
+    const alpha = Math.max(...layerPixels.map((data) => data[offset + 3]))
+    assert.equal(preview.data[offset + 3], alpha)
+    if (!alpha) continue
+    foreground += 1
+    assert.equal(alpha, 180, 'preview retains soft cutout alpha')
+    const layer = layerPixels.find((data) => data[offset + 3] > 0)!
+    assert.deepEqual(preview.data.subarray(offset, offset + 3), layer.subarray(offset, offset + 3))
+  }
+  assert.ok(foreground > 10_000)
+  assert.equal(preview.data[3], 0, 'background is transparent, never filled white')
+  assert.equal(preview.data[(300 * 600 + 300) * 4 + 3], 0, 'the interior hole remains transparent')
+  assert.equal('preview' in result, false, 'IPC result exposes no preview path or pixels')
+})
+
+test('only explicit preview opt-in returns the exact bounded PNG just generated, without a filesystem path', async () => {
+  const filePath = await writeCharacter('character-inline-preview.png', 1)
+  const { kp } = paintCharacter()
+  const { engine } = fakeEngine(() => accepted(kp))
+  const root = path.join(workDir, 'drafts-inline-preview')
+  const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, {
+    pickImagePath: async () => null, getEngine: () => engine, getCutoutEngine, draftRoot: root, includePreview: true,
+  })
+  assert.equal(result?.accepted, true)
+  if (!result?.accepted) return
+  assert.ok(result.preview)
+  assert.deepEqual(normalizePortraitPreview(result.preview), result.preview)
+  assert.deepEqual([result.preview.width, result.preview.height], [result.width, result.height])
+  const disk = await fs.readFile(path.join(root, result.draftId, 'preview.png'))
+  assert.deepEqual(Buffer.from(result.preview.dataUrl.split(',')[1], 'base64'), disk)
+  assert.ok(!JSON.stringify(result).includes(root))
+  assert.deepEqual(Object.keys(result.preview).sort(), ['dataUrl', 'height', 'width'])
+})
+
+test('an invalid opted-in preview fails with the stable error and removes the partial draft', async (t) => {
+  const filePath = await writeCharacter('character-invalid-preview.png', 1)
+  const { kp } = paintCharacter()
+  const { engine } = fakeEngine(() => accepted(kp))
+  const root = path.join(workDir, 'drafts-invalid-preview')
+  const readFile = fs.readFile
+  t.mock.method(fs, 'readFile', async (...args: Parameters<typeof fs.readFile>) => {
+    if (path.basename(String(args[0])) === 'preview.png') return Buffer.from('not PNG')
+    return readFile(...args)
+  })
+  await assert.rejects(generatePortraitDraftFromPayload({ imagePath: filePath }, {
+    pickImagePath: async () => null, getEngine: () => engine, getCutoutEngine, draftRoot: root, includePreview: true,
+  }), { message: 'portrait_draft_write_failed' })
+  assert.deepEqual(await fs.readdir(root), [])
+})
+
+test('a preview write failure removes the partial draft, preserves unrelated folders, and permits retry', async (t) => {
+  const filePath = await writeCharacter('character-write-retry.png', 1)
+  const { kp } = paintCharacter()
+  const { engine } = fakeEngine(() => accepted(kp))
+  const root = path.join(workDir, 'drafts-write-retry')
+  await fs.mkdir(path.join(root, 'keep-me'), { recursive: true })
+  await fs.writeFile(path.join(root, 'keep-me', 'notes.txt'), 'leave untouched')
+  const toFile = sharp.prototype.toFile
+  const seen: string[] = []
+  const mocked = t.mock.method(sharp.prototype, 'toFile', async function (this: sharp.Sharp, target: string) {
+    seen.push(path.basename(target))
+    if (path.basename(target) === 'preview.png') throw new Error(`disk failed at ${target}`)
+    return toFile.call(this, target)
+  })
+  const deps = { pickImagePath: async () => null, getEngine: () => engine, getCutoutEngine, draftRoot: root }
+  await assert.rejects(generatePortraitDraftFromPayload({ imagePath: filePath }, deps), (error: unknown) => {
+    assert.equal((error as Error).message, 'portrait_draft_write_failed')
+    assert.equal((error as Error).cause, undefined)
+    assert.ok(!String(error).includes(root))
+    return true
+  })
+  assert.deepEqual(seen, ['hair.png', 'head.png', 'body.png', 'preview.png'])
+  assert.deepEqual(await fs.readdir(root), ['keep-me'])
+  assert.equal(await fs.readFile(path.join(root, 'keep-me', 'notes.txt'), 'utf8'), 'leave untouched')
+  mocked.mock.restore()
+  const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, deps)
+  assert.equal(result?.accepted, true)
+  if (result?.accepted) assert.equal((await fs.stat(path.join(root, result.draftId, 'preview.png'))).isFile(), true)
+})
+
+test('an atomic manifest publish failure cleans the preview and temporary manifest without exposing private paths', async (t) => {
+  const filePath = await writeCharacter('character-manifest-failure.png', 1)
+  const { kp } = paintCharacter()
+  const { engine } = fakeEngine(() => accepted(kp))
+  const root = path.join(workDir, 'drafts-manifest-failure')
+  const rename = fs.rename
+  let attempted = false
+  t.mock.method(fs, 'rename', async (source: string, target: string) => {
+    if (target.endsWith('draft.json')) {
+      attempted = true
+      assert.equal((await fs.stat(source)).isFile(), true)
+      throw new Error(`private rename failure: ${source}`)
+    }
+    return rename(source, target)
+  })
+  await assert.rejects(generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, getCutoutEngine, draftRoot: root }), { message: 'portrait_draft_write_failed' })
+  assert.equal(attempted, true)
+  assert.deepEqual(await fs.readdir(root), [])
+})
+
 test(`only the newest ${PORTRAIT_DRAFT_KEEP} drafts are kept; other folders are left alone`, async () => {
   const filePath = await writeCharacter('character-c.png', 2)
   const { kp } = paintCharacter()
@@ -154,12 +294,44 @@ test(`only the newest ${PORTRAIT_DRAFT_KEEP} drafts are kept; other folders are 
   const { engine } = fakeEngine(() => accepted(kp.map(([x, y, c]) => [x * 2, y * 2, c])))
   const ids: string[] = []
   for (let i = 0; i < PORTRAIT_DRAFT_KEEP + 2; i += 1) {
-    const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, draftRoot: root, now: () => 1_700_000_000_000 + i })
+    const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, getCutoutEngine, draftRoot: root, now: () => 1_700_000_000_000 + i })
     if (result?.accepted) ids.push(result.draftId)
   }
   assert.equal(ids.length, PORTRAIT_DRAFT_KEEP + 2)
   assert.deepEqual((await fs.readdir(root)).sort(), [...ids.slice(-PORTRAIT_DRAFT_KEEP), 'keep-me'].sort())
   assert.equal(resolvePortraitDraftRoot('/u'), path.join('/u', 'portrait-drafts'))
+})
+
+test('an old-draft prune failure preserves the new successful preview, logs no private path, and is retried later', async (t) => {
+  const filePath = await writeCharacter('character-prune-retry.png', 1)
+  const { kp } = paintCharacter()
+  const { engine } = fakeEngine(() => accepted(kp))
+  const root = path.join(workDir, 'drafts-prune-retry')
+  const stale = 'draft-1699999999997-aaaaaaaa'
+  for (const name of [stale, 'draft-1699999999998-bbbbbbbb', 'draft-1699999999999-cccccccc', 'keep-me']) await fs.mkdir(path.join(root, name), { recursive: true })
+  const rm = fs.rm
+  const mocked = t.mock.method(fs, 'rm', async (...args: Parameters<typeof fs.rm>) => {
+    if (path.basename(String(args[0])) === stale) throw new Error(`EPERM private path ${args[0]}`)
+    return rm(...args)
+  })
+  const warnings: unknown[][] = []
+  t.mock.method(console, 'warn', (...args: unknown[]) => { warnings.push(args) })
+  const deps = { pickImagePath: async () => null, getEngine: () => engine, getCutoutEngine, draftRoot: root, includePreview: true }
+  const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { ...deps, now: () => 1_700_000_000_000 })
+  assert.equal(result?.accepted, true)
+  if (result?.accepted) {
+    assert.ok(normalizePortraitPreview(result.preview))
+    assert.equal((await fs.stat(path.join(root, result.draftId, 'draft.json'))).isFile(), true)
+  }
+  assert.deepEqual(warnings, [['portrait_draft_prune_failed']])
+  assert.equal((await fs.stat(path.join(root, stale))).isDirectory(), true)
+  mocked.mock.restore()
+  const next = await generatePortraitDraftFromPayload({ imagePath: filePath }, { ...deps, now: () => 1_700_000_000_001 })
+  assert.equal(next?.accepted, true)
+  const remaining = await fs.readdir(root)
+  assert.equal(remaining.filter((name) => name.startsWith('draft-')).length, PORTRAIT_DRAFT_KEEP)
+  assert.equal(remaining.includes('keep-me'), true)
+  assert.equal(remaining.includes(stale), false)
 })
 
 test('the gate returns landmarks only when asked and only on acceptance', async () => {
@@ -173,6 +345,25 @@ test('the gate returns landmarks only when asked and only on acceptance', async 
   assert.deepEqual(kept.keypoints, kp)
   const blank = await evaluatePortraitLandmarks({ rgb, alpha: null, width, height }, { detect: async () => [] }, { keepKeypoints: true })
   assert.equal('keypoints' in blank, false)
+})
+
+test('draft creation stops before disk writes when cutout is missing or its alpha is invalid, and can be retried', async () => {
+  const filePath = await writeCharacter('character-cutout-retry.png', 1)
+  const { kp } = paintCharacter()
+  const { engine } = fakeEngine(() => accepted(kp))
+  const root = path.join(workDir, 'drafts-cutout-retry')
+  const deps = { pickImagePath: async () => null, getEngine: () => engine, draftRoot: root }
+  const missing = await generatePortraitDraftFromPayload({ imagePath: filePath }, deps)
+  assert.deepEqual(missing && !missing.accepted && [missing.stage, missing.reasonCode, missing.detail], ['cutout', 'cutout_models_unavailable', 'missing'])
+  const invalid = await generatePortraitDraftFromPayload({ imagePath: filePath }, {
+    ...deps,
+    getCutoutEngine: () => ({ prepare: async () => ({ status: 'ready' }), evaluate: async () => ({ accepted: true, alpha: new Uint8Array(2) }) }),
+  })
+  assert.deepEqual(invalid && !invalid.accepted && [invalid.stage, invalid.reasonCode], ['cutout', 'cutout_mask_invalid'])
+  await assert.rejects(fs.stat(root), 'no partial draft is written on cutout failure')
+  const retry = await generatePortraitDraftFromPayload({ imagePath: filePath }, { ...deps, getCutoutEngine })
+  assert.equal(retry?.accepted, true)
+  assert.equal(retry?.accepted && retry.alphaSource, 'isnet')
 })
 
 test('the audit trail records the draft verdict and reason, never paths', () => {

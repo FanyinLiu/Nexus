@@ -39,9 +39,12 @@ part of the installer and are not covered by the Nexus MIT license.
   - https://huggingface.co/hysts/anime-face-detector-hrnetv2
   - https://github.com/hysts/anime-face-detector/blob/main/LICENSE
 - Anime character segmentation (ISNet, `isnetis.onnx`), from
-  SkyTNT/anime-segmentation: Apache License 2.0 (Apache-2.0). Planned for the v0.5 cutout
-  and not used by the app yet.
+  SkyTNT/anime-segmentation: Apache License 2.0 (Apache-2.0). Used locally for
+  opaque-image cutout in the v0.5 portrait draft pipeline.
   - https://huggingface.co/skytnt/anime-seg
   - https://github.com/SkyTNT/anime-segmentation/blob/main/LICENSE
 
-The upstream projects do not document the training data of these weights.
+Full training-data provenance for these pinned weights has not been verified.
+SkyTNT documents partial dataset sources (AniSeg and character_bg_seg_data):
+https://github.com/SkyTNT/anime-segmentation#dataset. This does not establish
+the complete training corpus or rights provenance of the redistributed weights.

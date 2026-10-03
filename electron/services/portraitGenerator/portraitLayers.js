@@ -330,6 +330,7 @@ export function segmentPortraitLayers(image, keypoints, params = PORTRAIT_LAYER_
     const km = kmeans(seedPoints, P.paletteSize)
     const total = km.counts.reduce((a, b) => a + b, 0)
     palette = km.centers.filter((_, k) => km.counts[k] >= P.seedMinShare * total)
+    const hairColours = palette.slice()
     let conflict = palette.map(() => false)
     // palette colours that are also the dominant clothing colours (narrow central torso column)
     const torso = grid((x, y, i) => fg[i] && Math.abs(x - cx) < P.torsoWidth * fw && y > chin + 0.35 * fh && y < chin + 1.2 * fh && dskin[i] > P.skinDeltaE)
@@ -404,6 +405,7 @@ export function segmentPortraitLayers(image, keypoints, params = PORTRAIT_LAYER_
         let colours = hk.centers.filter((_, k) => hk.counts[k] >= 0.08 * ht)
         if (torsoCount > 50) colours = colours.filter((col) => Math.min(...torsoColours.map((t) => Math.sqrt(dist2(col, t)))) >= P.torsoDeltaE)
         if (colours.length) {
+          hairColours.push(...colours)
           for (let y = 0; y < H; y += 1) {
             if (y < split) continue
             for (let x = 0; x < W; x += 1) {
@@ -413,6 +415,22 @@ export function segmentPortraitLayers(image, keypoints, params = PORTRAIT_LAYER_
               if (colours.some((col) => Math.sqrt(dist2(p, col)) < P.hairDeltaE)) hair[i] = 1
             }
           }
+        }
+      }
+    }
+    // Hair acceptance has a wider radius than the torso-palette conflict
+    // test. In that overlap, prefer an observed torso colour when its pixel
+    // evidence is stronger. Apply after every expansion so head priors and
+    // morphology cannot reintroduce clothing below the neck line.
+    if (torsoColours.length) {
+      for (let y = Math.max(0, Math.ceil(split)); y < H; y += 1) {
+        for (let x = 0; x < W; x += 1) {
+          const i = y * W + x
+          if (!hair[i]) continue
+          const p = labAt(i)
+          const torsoDistance = Math.min(...torsoColours.map((colour) => dist2(p, colour)))
+          const hairDistance = Math.min(...hairColours.map((colour) => dist2(p, colour)))
+          if (torsoDistance < P.torsoDeltaE ** 2 && torsoDistance < hairDistance) hair[i] = 0
         }
       }
     }

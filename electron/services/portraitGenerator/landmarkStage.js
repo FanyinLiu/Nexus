@@ -39,8 +39,13 @@ async function decode(source) {
     .toBuffer({ resolveWithObject: true })
   const metadata = await sharp(input, { limitInputPixels: 64_000_000 }).rotate().metadata()
   const orientedWidth = (metadata.orientation ?? 1) >= 5 ? metadata.height : metadata.width
+  const orientedHeight = (metadata.orientation ?? 1) >= 5 ? metadata.width : metadata.height
   const { rgb, alpha } = flattenOnWhite(data, info.width, info.height)
-  return { rgb, alpha, width: info.width, height: info.height, pixelScale: (orientedWidth ?? info.width) / info.width }
+  // Integer raster dimensions can make the two resize factors differ slightly.
+  const pixelScaleX = (orientedWidth ?? info.width) / info.width
+  const pixelScaleY = (orientedHeight ?? info.height) / info.height
+  return { rgb, alpha, width: info.width, height: info.height, pixelScale: pixelScaleX, pixelScaleX, pixelScaleY,
+    sourceSize: { width: orientedWidth ?? info.width, height: orientedHeight ?? info.height } }
 }
 
 /**
@@ -58,11 +63,14 @@ export async function runPortraitLandmarkStage(source, engine, options = {}) {
   } catch {
     return landmarkStageUnavailable('analysis_failed')
   }
-  const pixelScale = image.pixelScale
   try {
     const verdict = await engine.evaluate(image, options)
     if (Array.isArray(verdict?.keypoints)) {
-      verdict.keypoints = verdict.keypoints.map(([x, y, confidence]) => [x * pixelScale, y * pixelScale, confidence])
+      verdict.keypoints = verdict.keypoints.map(([x, y, confidence]) => [x * image.pixelScaleX, y * image.pixelScaleY, confidence])
+      if (options.keepKeypoints) {
+        // Only the private generation path retains input-derived geometry.
+        verdict.geometry = { source: image.sourceSize, analysis: { width: image.width, height: image.height } }
+      }
     }
     return verdict
   } catch {
