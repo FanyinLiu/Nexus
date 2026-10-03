@@ -25,3 +25,23 @@ Original sources:
 
 The Haru runtime manifest included with Nexus removes references to the sample
 voice files; those voice files are not bundled or used.
+
+## Portrait models (downloaded on first use, not bundled)
+
+The v0.5 portrait pipeline downloads these model files on first use from the
+Nexus GitHub Release `portrait-models-v1` (see
+`docs/PORTRAIT_LANDMARK_MODELS.md` for sizes and SHA-256 pins). They are not
+part of the installer and are not covered by the Nexus MIT license.
+
+- Anime face detector (YOLOv3) and 28-point face landmarks (HRNetV2), from
+  hysts/anime-face-detector: MIT License, Copyright (c) 2021 hysts.
+  - https://huggingface.co/hysts/anime-face-detector-yolov3
+  - https://huggingface.co/hysts/anime-face-detector-hrnetv2
+  - https://github.com/hysts/anime-face-detector/blob/main/LICENSE
+- Anime character segmentation (ISNet, `isnetis.onnx`), from
+  SkyTNT/anime-segmentation: Apache License 2.0 (Apache-2.0). Used for the character
+  cutout in v0.5 portrait drafts.
+  - https://huggingface.co/skytnt/anime-seg
+  - https://github.com/SkyTNT/anime-segmentation/blob/main/LICENSE
+
+The upstream projects do not document the training data of these weights.

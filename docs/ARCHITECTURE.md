@@ -767,6 +767,34 @@ than presenting Nexus as a Codex-style work agent.
   stage-direction-to-avatar cue bridging, and the `Live2DCanvas` component.
 - `features/character/` owns UI/voice/presence preset data that themes the app
   toward the companion-style presentation layer.
+- `electron/services/portraitGenerator/` holds the in-progress v0.5
+  one-image pet generator. Stage A (`rejectImage.js`) is a file-level `sharp`
+  gate (readable, decodable, PNG/JPEG/WebP, not animated, under the hard
+  256 MiB / 268 MP caps); images over 32 MiB or 64 MP are downscaled once to a
+  4096 px in-memory working copy instead of being rejected. Picture content
+  (background, blur, framing) is not judged there. It returns a stable reason
+  code and `messageKey` from `shared/portraitImageGate.js`; the image is read locally
+  and never reaches chat, desktop context, or model prompts. Its
+  `pet-model:check-portrait-image` IPC has no stable UI entry yet. Stage B
+  (`landmarkGate.js`) runs anime face/landmark models with `onnxruntime-web`
+  in a per-job worker thread (`landmarkRuntime.js`, `landmarkWorker.js`). The
+  models are downloaded on first use by `portraitModelDownloader.js` from the
+  pinned catalog in `shared/portraitModels.js` (see
+  `docs/PORTRAIT_LANDMARK_MODELS.md`). Without them, stage A's verdict stands.
+  The generation entry `portraitDraft.js` (`pet-model:generate-portrait-draft`,
+  no UI yet) chains stage A, the isnet-anime cutout (`cutoutStage.js`,
+  `cutoutModel.js`; skipped for transparent inputs; no plain-background
+  fallback: an untrusted or failed cutout rejects with
+  `background_not_separable`, missing models with
+  `portrait_models_not_downloaded`, see `shared/portraitDraft.js`), stage B with landmarks, and the hair/head/body
+  layering (`portraitLayers.js`, `portraitLayerStage.js`), then judges the
+  output (`portraitQuality.js`: cutout trust, photo texture on the cut-out face,
+  mouth landmarks, layer completeness, breathing-frame holes; stage `quality`)
+  before writing a same-canvas RGBA draft under `<userData>/portrait-drafts/`
+  (newest 3 kept). Stage B only refuses what generation cannot use (no face or
+  a tiny one, a second character, broken eye landmarks, a side profile, a full
+  body). Both models
+  run in the same worker pattern, one fresh worker per job.
 - `features/releaseNotes/` owns small release-communication contracts used by the
   app shell, such as the current About/Help release spotlight. It must stay
   content-only: no updater logic, IPC, migrations, or background checks.

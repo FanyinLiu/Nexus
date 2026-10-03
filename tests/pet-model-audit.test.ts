@@ -128,3 +128,46 @@ test('pet model confirmation policy distinguishes dialog-backed and direct actio
     targetPath: '/tmp/private-kit/pet.json',
   }), true)
 })
+
+test('portrait image check audit records verdict and reason code but no path or metrics', () => {
+  const request = summarizePetModelRequest('pet-model:check-portrait-image', {
+    imagePath: '/Users/me/Pictures/private-oc.png',
+  })
+  assert.deepEqual(request, {
+    channel: 'pet-model:check-portrait-image',
+    imagePath: { present: true, length: 33 },
+    dialogBacked: false,
+  })
+  assert.deepEqual(summarizePetModelRequest('pet-model:check-portrait-image', {}), {
+    channel: 'pet-model:check-portrait-image',
+    imagePath: { present: false, length: 0 },
+    dialogBacked: true,
+  })
+
+  const result = summarizePetModelResult('pet-model:check-portrait-image', {
+    accepted: false,
+    reasonCode: 'decode_failed',
+    messageKey: 'settings.pet.portrait_gate.decode_failed',
+    messageParams: {},
+    metrics: { width: 1234, height: 2345, byteLength: 4567 },
+  })
+  assert.equal(result.gateAccepted, false)
+  assert.equal(result.gateReasonCode, 'decode_failed')
+
+  const forged = summarizePetModelResult('pet-model:check-portrait-image', {
+    accepted: true,
+    reasonCode: '/Users/me/Pictures/private-oc.png',
+  })
+  assert.equal(forged.gateReasonCode, undefined)
+
+  const serialized = JSON.stringify({ request, result, forged })
+  for (const privateValue of ['/Users/me/Pictures', 'private-oc', '1234', '2345', '12.5']) {
+    assert.ok(!serialized.includes(privateValue), `${privateValue} should not be logged`)
+  }
+
+  assert.equal(petModelActionNeedsConfirmation('pet-model:check-portrait-image', {}), false)
+  assert.equal(
+    petModelActionNeedsConfirmation('pet-model:check-portrait-image', { imagePath: '/tmp/private.png' }),
+    true,
+  )
+})
