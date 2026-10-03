@@ -97,8 +97,10 @@ the main process or the companion windows:
   path, size and mtime) and that the WASM files can be found.
 - `evaluate()` starts a fresh worker per image, transfers the raster, and always
   terminates the worker afterwards. `session.release()` does not return WASM
-  memory; terminating the worker does. Jobs are serialised, and a job is abandoned
-  after 180 s (`timeout`).
+  memory; terminating the worker does. The IPC composition root injects one
+  shared queue into both landmark and cutout engines, held until termination
+  completes. A job is abandoned after 180 s (`timeout`), measured from worker
+  startup rather than time spent waiting in the queue.
 - Measured in Node 22 on the dev box: about 2 s to load both models, about 1.8 s per
   image with 4 WASM threads (about 6 s with 1), and 0.8–1 GB RSS in the worker
   (about 1.5 GB peak in the round-2 measurement). Threads default to

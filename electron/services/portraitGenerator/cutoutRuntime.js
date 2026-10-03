@@ -20,14 +20,14 @@ const WORKER_URL = new URL('./cutoutWorker.js', import.meta.url)
 /**
  * @param {{ directory: string, createWorker?: (url: URL) => import('node:worker_threads').Worker,
  * inspect?: typeof inspectLandmarkModels, wasmPaths?: { mjs: string, wasm: string } | null,
- * threads?: number, timeoutMs?: number }} options
+ * threads?: number, timeoutMs?: number, runExclusive?: ReturnType<typeof createAsyncLock> }} options
  */
 export function createWorkerCutoutEngine(options) {
   const inspect = options.inspect ?? inspectLandmarkModels
   const createWorker = options.createWorker ?? ((url) => new Worker(url))
   const wasmPaths = options.wasmPaths === undefined ? resolveOrtWasmPaths() : options.wasmPaths
   const threads = options.threads ?? defaultLandmarkThreads()
-  const withLock = createAsyncLock()
+  const withLock = options.runExclusive ?? createAsyncLock()
   let modelPath = null
   let status = 'missing'
 

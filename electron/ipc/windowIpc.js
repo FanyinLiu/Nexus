@@ -41,6 +41,7 @@ import {
   checkPortraitImageFromPayload,
 } from '../services/portraitGenerator/rejectImage.js'
 import { resolveLandmarkModelDirectory } from '../services/portraitGenerator/landmarkModels.js'
+import { createAsyncLock } from '../services/asyncLock.js'
 import { createWorkerLandmarkEngine } from '../services/portraitGenerator/landmarkRuntime.js'
 import { createWorkerCutoutEngine } from '../services/portraitGenerator/cutoutRuntime.js'
 import { exportPortraitDraftFromPayload } from '../services/portraitGenerator/portraitDraftExport.js'
@@ -114,15 +115,17 @@ const POWER_EVENT_CHANNEL = 'app:power-event'
 // models are downloaded it answers `missing` and stage A's verdict stands.
 const PORTRAIT_MODELS_PROGRESS_CHANNEL = 'pet-model:portrait-models-progress'
 const portraitModelDirectory = () => resolveLandmarkModelDirectory(app.getPath('userData'))
+// Both model families allocate large WASM heaps; keep one worker alive at a time.
+const runPortraitModelExclusive = createAsyncLock()
 let portraitLandmarkEngine = null
 const getPortraitLandmarkEngine = () => {
-  portraitLandmarkEngine ??= createWorkerLandmarkEngine({ directory: portraitModelDirectory() })
+  portraitLandmarkEngine ??= createWorkerLandmarkEngine({ directory: portraitModelDirectory(), runExclusive: runPortraitModelExclusive })
   return portraitLandmarkEngine
 }
 const portraitLandmarkStage = createPortraitLandmarkStage(getPortraitLandmarkEngine)
 let portraitCutoutEngine = null
 function getPortraitCutoutEngine() {
-  portraitCutoutEngine ??= createWorkerCutoutEngine({ directory: portraitModelDirectory() })
+  portraitCutoutEngine ??= createWorkerCutoutEngine({ directory: portraitModelDirectory(), runExclusive: runPortraitModelExclusive })
   return portraitCutoutEngine
 }
 let portraitModelDownload = null

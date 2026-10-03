@@ -776,6 +776,8 @@ than presenting Nexus as a Codex-style work agent.
   `pet-model:check-portrait-image` IPC has no stable UI entry yet. Stage B
   (`landmarkGate.js`) runs anime face/landmark models with `onnxruntime-web`
   in a per-job worker thread (`landmarkRuntime.js`, `landmarkWorker.js`). The
+  IPC composition root shares one execution queue with the cutout engine and
+  waits for worker termination before allocating the next model heap. The
   models are downloaded on first use by `portraitModelDownloader.js` from the
   pinned catalog in `shared/portraitModels.js` (see
   `docs/PORTRAIT_LANDMARK_MODELS.md`). Without them, stage A's verdict stands.

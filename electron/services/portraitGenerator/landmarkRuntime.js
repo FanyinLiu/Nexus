@@ -59,6 +59,7 @@ export function defaultLandmarkThreads(cores = os.availableParallelism?.() ?? os
  *   wasmPaths?: { mjs: string, wasm: string } | null,
  *   threads?: number,
  *   timeoutMs?: number,
+ *   runExclusive?: ReturnType<typeof createAsyncLock>,
  * }} options
  */
 export function createWorkerLandmarkEngine(options) {
@@ -67,7 +68,7 @@ export function createWorkerLandmarkEngine(options) {
   const wasmPaths = options.wasmPaths === undefined ? resolveOrtWasmPaths() : options.wasmPaths
   const threads = options.threads ?? defaultLandmarkThreads()
   const timeoutMs = options.timeoutMs ?? LANDMARK_WORKER_TIMEOUT_MS
-  const withLock = createAsyncLock()
+  const withLock = options.runExclusive ?? createAsyncLock()
   let modelPaths = null
 
   function runInWorker(image, keepKeypoints) {
@@ -80,26 +81,28 @@ export function createWorkerLandmarkEngine(options) {
         return
       }
       let settled = false
-      const finish = (verdict) => {
+      const finish = async (verdict) => {
         if (settled) return
         settled = true
         clearTimeout(timer)
-        Promise.resolve(worker.terminate()).catch(() => {})
+        // The next portrait job must not allocate until this WASM heap exits.
+        try { await worker.terminate() } catch { /* A dead worker already released its memory. */ }
         resolve(verdict)
       }
-      const timer = setTimeout(() => finish(landmarkStageUnavailable('timeout')), timeoutMs)
+      const timer = setTimeout(() => { void finish(landmarkStageUnavailable('timeout')) }, timeoutMs)
       worker.once('message', (message) => {
-        finish(message?.ok ? message.verdict : landmarkStageUnavailable(message?.code ?? 'analysis_failed'))
+        void finish(message?.ok ? message.verdict : landmarkStageUnavailable(message?.code ?? 'analysis_failed'))
       })
-      worker.once('error', () => finish(landmarkStageUnavailable('analysis_failed')))
-      worker.once('exit', () => finish(landmarkStageUnavailable('analysis_failed')))
+      worker.once('error', () => { void finish(landmarkStageUnavailable('analysis_failed')) })
+      worker.once('exit', () => { void finish(landmarkStageUnavailable('analysis_failed')) })
       const transfer = [image.rgb.buffer, image.alpha?.buffer].filter(Boolean)
-      worker.postMessage({ threads, wasmPaths, modelPaths, image, keepKeypoints }, transfer)
+      try { worker.postMessage({ threads, wasmPaths, modelPaths, image, keepKeypoints }, transfer) } catch { void finish(landmarkStageUnavailable('analysis_failed')) }
     })
   }
 
   return {
     async prepare() {
+      modelPaths = null
       if (!wasmPaths) return { status: 'runtime_unavailable' }
       const inspection = await inspect(options.directory)
       if (!inspection.ready) {
