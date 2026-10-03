@@ -11,7 +11,7 @@
  *   the dominant background colour.
  * - `textured`: share with a 7 x 7 grey local standard deviation above 6.
  *
- * Either above its limit rejects with stage A's `busy_background`. When
+ * Either above its limit rejects with `background_not_separable`. When
  * unsure, reject: the limits sit far above clean cutouts (both 0.000 on the
  * acceptance images) and well below a faded background figure (0.24 / 0.09).
  */

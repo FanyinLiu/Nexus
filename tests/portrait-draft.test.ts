@@ -14,7 +14,6 @@ import { evaluatePortraitLandmarks } from '../electron/services/portraitGenerato
 import { summarizePetModelResult } from '../electron/ipc/petModelAudit.js'
 import { resizeLanczosLikePillow } from '../electron/services/portraitGenerator/cutoutModel.js'
 import { PORTRAIT_LANDMARK_GATE_REASONS as R } from '../shared/portraitLandmarkGate.js'
-import { PORTRAIT_IMAGE_GATE_MESSAGE_KEYS, PORTRAIT_IMAGE_GATE_REASONS } from '../shared/portraitImageGate.js'
 import { PORTRAIT_DRAFT_MESSAGE_KEYS, PORTRAIT_DRAFT_REASONS as D, isPortraitDraftReason } from '../shared/portraitDraft.js'
 import { enSettingsWindow } from '../src/i18n/locales/en/settings-window.ts'
 import { zhCNSettingsWindow } from '../src/i18n/locales/zh-CN/settings-window.ts'
@@ -146,8 +145,8 @@ test('generation: gate -> cutout -> landmarks (original px) -> hair/head/body PN
 })
 
 test('generation stops at stage A, at missing models, and at a landmark rejection, without writing a draft', async () => {
-  const tiny = path.join(workDir, 'tiny.png')
-  await sharp({ create: { width: 64, height: 64, channels: 3, background: '#ffffff' } }).png().toFile(tiny)
+  const tiny = path.join(workDir, 'corrupt.png')
+  await fs.writeFile(tiny, Buffer.from('not an image'))
   const root = path.join(workDir, 'drafts-b')
   const untouched = fakeEngine(() => { throw new Error('not reached') })
   const small = await generatePortraitDraftFromPayload({ imagePath: tiny }, { pickImagePath: async () => null, getEngine: () => untouched.engine, draftRoot: root })
@@ -247,7 +246,7 @@ test('when unsure, reject: failing or untrusted cutouts give background_not_sepa
   await assert.rejects(fs.stat(root), 'no plain-background draft is ever written')
 })
 
-test('a plain border around a busy interior: a faded figure left outside the cutout is busy_background (stage cutout), nothing is written', async () => {
+test('a plain border around a busy interior: a faded figure left outside the cutout is background_not_separable (stage cutout), nothing is written', async () => {
   const { rgb, width, height, kp } = paintCharacter()
   // a faded close-up of the character behind it, on the left; the border stays plain white
   for (let y = 40; y < 520; y += 1) for (let x = 20; x < 150; x += 1) rgb.set([250, 232, 216], (y * width + x) * 3)
@@ -267,8 +266,8 @@ test('a plain border around a busy interior: a faded figure left outside the cut
     },
   })
   const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, draftRoot: root })
-  const busy = PORTRAIT_IMAGE_GATE_REASONS.BUSY_BACKGROUND
-  assert.deepEqual(result && !result.accepted && [result.stage, result.reasonCode, result.detail, result.messageKey], ['cutout', busy, 'background_residual', PORTRAIT_IMAGE_GATE_MESSAGE_KEYS[busy]], JSON.stringify(result))
+  const busy = D.BACKGROUND_NOT_SEPARABLE
+  assert.deepEqual(result && !result.accepted && [result.stage, result.reasonCode, result.detail, result.messageKey], ['cutout', busy, 'background_residual', PORTRAIT_DRAFT_MESSAGE_KEYS[busy]], JSON.stringify(result))
   assert.ok(!events.includes('landmarks'), 'the landmarks never run')
   await assert.rejects(fs.stat(root), 'no draft is written')
 })

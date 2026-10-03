@@ -5,7 +5,7 @@
  * accepted. Same shape: a stable reason code plus a renderer `messageKey`;
  * the renderer owns every sentence. v0.5 is narrowed to half-body
  * illustrations, so "no face found" on a full-body / small-face / chibi
- * image is reported as `half_body_only`, sharing stage A's message.
+ * image is reported as `half_body_only`.
  */
 
 export const PORTRAIT_LANDMARK_GATE_REASONS = Object.freeze({

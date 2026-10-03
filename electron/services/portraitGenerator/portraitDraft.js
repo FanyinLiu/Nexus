@@ -4,7 +4,8 @@
  *
  * v0.5 rule: when unsure, reject. There is no plain-background fallback.
  *
- * 1. Stage A (`rejectPortraitImage`) must accept the image. Generation needs
+ * 1. Stage A (`preparePortraitImage`) must accept the file; later stages read
+ *    its working copy (downscaled when the original was large). Generation needs
  *    the face models: if they are missing or damaged it stops with
  *    `portrait_models_not_downloaded` (download them first), checked before
  *    any model runs.
@@ -15,7 +16,7 @@
  *    rejects with `background_not_separable`. `detail` says which.
  *    Then whatever is left outside the mask must be plain background
  *    (`backgroundResidual.js`); a faded figure, scenery or props behind the
- *    character reject with `busy_background` (detail `background_residual`).
+ *    character reject with `background_not_separable` (detail `background_residual`).
  * 3. Stage B runs in the model worker with `keepKeypoints`, on the original
  *    pixels (the gate's thresholds were tuned on uncut images).
  * 4. `splitPortraitLayers` segments the working-size raster (long side 768)
@@ -35,13 +36,12 @@ import path from 'node:path'
 import sharp from 'sharp'
 
 import { PORTRAIT_DRAFT_MESSAGE_KEYS, PORTRAIT_DRAFT_REASONS } from '../../../shared/portraitDraft.js'
-import { PORTRAIT_IMAGE_GATE_MESSAGE_KEYS, PORTRAIT_IMAGE_GATE_REASONS } from '../../../shared/portraitImageGate.js'
 import { backgroundResidualFeatures, isBusyBackgroundResidual } from './backgroundResidual.js'
 import { runPortraitCutout } from './cutoutStage.js'
 import { landmarkStageUnavailable } from './landmarkGate.js'
 import { runPortraitLandmarkStage } from './landmarkStage.js'
 import { decodePortraitRaster, splitPortraitLayers } from './portraitLayerStage.js'
-import { rejectPortraitImage } from './rejectImage.js'
+import { preparePortraitImage } from './rejectImage.js'
 
 export const PORTRAIT_DRAFT_DIRECTORY_NAME = 'portrait-drafts'
 export const PORTRAIT_DRAFT_KEEP = 3
@@ -117,9 +117,10 @@ async function pruneDrafts(root, keep) {
 export async function generatePortraitDraftFromPayload(payload, deps) {
   const imagePath = payload?.imagePath || await deps.pickImagePath()
   if (!imagePath) return null
-  const source = { filePath: imagePath }
-  const stageA = await rejectPortraitImage(source)
-  if (!stageA.accepted) return rejection('image', stageA)
+  const prepared = await preparePortraitImage({ filePath: imagePath })
+  if (!prepared.result.accepted || !prepared.source) return rejection('image', prepared.result)
+  // Every later stage reads stage A's working copy (downscaled when large).
+  const source = prepared.source
   const engine = deps.getEngine()
   const clock = deps.clock ?? (() => performance.now())
   const timingsMs = {}
@@ -142,8 +143,7 @@ export async function generatePortraitDraftFromPayload(payload, deps) {
     if (MODEL_FILE_PROBLEMS.has(cutout.status)) return draftRejection('models', PORTRAIT_DRAFT_REASONS.MODELS_NOT_DOWNLOADED, `cutout_model_${cutout.status}`)
     if (cutout.status !== 'ok') return draftRejection('cutout', PORTRAIT_DRAFT_REASONS.BACKGROUND_NOT_SEPARABLE, cutout.status)
     if (isBusyBackgroundResidual(backgroundResidualFeatures(raster, cutout.alpha))) {
-      const busy = PORTRAIT_IMAGE_GATE_REASONS.BUSY_BACKGROUND
-      return { accepted: false, stage: 'cutout', reasonCode: busy, detail: 'background_residual', messageKey: PORTRAIT_IMAGE_GATE_MESSAGE_KEYS[busy], messageParams: {} }
+      return draftRejection('cutout', PORTRAIT_DRAFT_REASONS.BACKGROUND_NOT_SEPARABLE, 'background_residual')
     }
   }
   const stageB = await timed('landmarks', () => runPortraitLandmarkStage(source, engine, { keepKeypoints: true }))
