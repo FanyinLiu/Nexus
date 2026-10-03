@@ -14,6 +14,12 @@ import { evaluatePortraitLandmarks } from '../electron/services/portraitGenerato
 import { summarizePetModelResult } from '../electron/ipc/petModelAudit.js'
 import { resizeLanczosLikePillow } from '../electron/services/portraitGenerator/cutoutModel.js'
 import { PORTRAIT_LANDMARK_GATE_REASONS as R } from '../shared/portraitLandmarkGate.js'
+import { PORTRAIT_DRAFT_MESSAGE_KEYS, PORTRAIT_DRAFT_REASONS as D, isPortraitDraftReason } from '../shared/portraitDraft.js'
+import { enSettingsWindow } from '../src/i18n/locales/en/settings-window.ts'
+import { zhCNSettingsWindow } from '../src/i18n/locales/zh-CN/settings-window.ts'
+import { zhTWSettingsWindow } from '../src/i18n/locales/zh-TW/settings-window.ts'
+import { jaSettingsWindow } from '../src/i18n/locales/ja/settings-window.ts'
+import { koSettingsWindow } from '../src/i18n/locales/ko/settings-window.ts'
 
 let workDir = ''
 before(async () => { workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-portrait-draft-')) })
@@ -75,6 +81,14 @@ async function writeCharacter(name: string, factor = 4) {
   return filePath
 }
 
+/** Stand-in for isnet on the flat test image: every pixel that is not near-white is foreground. */
+async function stubCutout(image: { rgb: Uint8Array, width: number, height: number }, output: { width: number, height: number }) {
+  const resized = resizeLanczosLikePillow(image.rgb, image.width, image.height, 3, output.width, output.height)
+  const mask = new Uint8Array(output.width * output.height)
+  for (let i = 0; i < mask.length; i += 1) mask[i] = Math.min(resized[i * 3], resized[i * 3 + 1], resized[i * 3 + 2]) < 240 ? 255 : 0
+  return { ok: true, mask }
+}
+
 /** Engine stub: answers like the worker would, with landmarks in raster pixels. */
 function fakeEngine(verdictFor: (image: { width: number, height: number }) => object, status = 'ready') {
   const calls: Array<{ width: number, height: number, options: unknown }> = []
@@ -83,13 +97,15 @@ function fakeEngine(verdictFor: (image: { width: number, height: number }) => ob
     engine: {
       prepare: async () => ({ status }),
       evaluate: async (image: { width: number, height: number }, options: unknown) => { calls.push({ width: image.width, height: image.height, options }); return verdictFor(image) },
+      prepareCutout: async () => ({ status: 'ready' }),
+      cutout: stubCutout,
     },
   }
 }
 
 const accepted = (keypoints: number[][]) => ({ accepted: true, reasonCode: null, detail: null, messageKey: 'settings.pet.portrait_gate.accepted', messageParams: {}, metrics: { faces: 1 }, keypoints })
 
-test('generation: gate -> landmarks (original px) -> hair/head/body PNGs + draft.json, result without paths', async () => {
+test('generation: gate -> cutout -> landmarks (original px) -> hair/head/body PNGs + draft.json, result without paths', async () => {
   const filePath = await writeCharacter('character.png')
   const { kp } = paintCharacter()
   const root = path.join(workDir, 'drafts-a')
@@ -104,8 +120,8 @@ test('generation: gate -> landmarks (original px) -> hair/head/body PNGs + draft
   assert.equal(calls[0].width, 1755, 'the landmark raster is downsized to 2048 px')
   assert.match(result.draftId, /^draft-1700000000000-[0-9a-f]{8}$/)
   assert.deepEqual([result.width, result.height], [658, 768])
-  assert.equal(result.alphaSource, 'plain_background')
-  assert.deepEqual(result.cutout, { status: 'runtime_unavailable' }, 'an engine without cutout support falls back to the plain background')
+  assert.equal(result.alphaSource, 'cutout')
+  assert.equal(result.cutout.status, 'ok')
   assert.ok(result.layers.hair.share > 0.1 && result.layers.head.share > 0.1 && result.layers.body.share > 0.1, JSON.stringify(result.layers))
   assert.ok(!JSON.stringify(result).includes(workDir), 'no paths in the result')
 
@@ -122,8 +138,8 @@ test('generation: gate -> landmarks (original px) -> hair/head/body PNGs + draft
   assert.equal(at(20, 20), 0)
   const manifest = JSON.parse(await fs.readFile(path.join(dir, 'draft.json'), 'utf8'))
   assert.equal(manifest.version, 1)
-  assert.deepEqual(manifest.cutout, { status: 'runtime_unavailable' })
-  assert.ok(Number.isInteger(manifest.timingsMs.landmarks) && Number.isInteger(manifest.timingsMs.layers), JSON.stringify(manifest.timingsMs))
+  assert.deepEqual(manifest.cutout, result.cutout)
+  assert.ok(Number.isInteger(manifest.timingsMs.cutout) && Number.isInteger(manifest.timingsMs.landmarks) && Number.isInteger(manifest.timingsMs.layers), JSON.stringify(manifest.timingsMs))
   assert.deepEqual(Object.keys(manifest.layers), ['hair', 'head', 'body'])
   assert.ok(!JSON.stringify(manifest).includes(workDir), 'no source path in the manifest')
 })
@@ -140,7 +156,11 @@ test('generation stops at stage A, at missing models, and at a landmark rejectio
 
   const filePath = await writeCharacter('character-b.png', 2)
   const missing = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => fakeEngine(() => ({}), 'missing').engine, draftRoot: root })
-  assert.deepEqual(missing && !missing.accepted && [missing.stage, missing.reasonCode, missing.detail], ['landmarks', R.MODELS_UNAVAILABLE, 'missing'], 'generation needs the landmarks')
+  assert.deepEqual(missing && !missing.accepted && [missing.stage, missing.reasonCode, missing.detail, missing.messageKey], ['models', D.MODELS_NOT_DOWNLOADED, 'face_models_missing', PORTRAIT_DRAFT_MESSAGE_KEYS.portrait_models_not_downloaded], 'generation needs the face models: download them')
+  const damaged = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => fakeEngine(() => ({}), 'invalid').engine, draftRoot: root })
+  assert.deepEqual(damaged && !damaged.accepted && [damaged.reasonCode, damaged.detail], [D.MODELS_NOT_DOWNLOADED, 'face_models_invalid'])
+  const noRuntime = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => fakeEngine(() => ({}), 'runtime_unavailable').engine, draftRoot: root })
+  assert.deepEqual(noRuntime && !noRuntime.accepted && [noRuntime.stage, noRuntime.reasonCode], ['landmarks', R.MODELS_UNAVAILABLE], 'a missing runtime is not a download problem')
 
   const hands = fakeEngine(() => ({ accepted: false, reasonCode: R.HANDS_NEAR_FACE, detail: null, messageKey: 'settings.pet.portrait_gate.hands_near_face', messageParams: {}, metrics: {} }))
   const rejected = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => hands.engine, draftRoot: root })
@@ -203,25 +223,41 @@ test('generation with the cutout: gate -> cutout (full-size RGB in, working-size
   assert.equal(data[(10 * 658 + 10) * 4 + 3], 0, 'background transparent')
 })
 
-test('the plain-background alpha is only a fallback: missing, failing or untrusted cutouts still produce a draft and say why', async () => {
-  const filePath = await writeCharacter('character-fallback.png', 2)
+test('when unsure, reject: failing or untrusted cutouts give background_not_separable, a missing cutout model asks for the download, nothing is written', async () => {
+  const filePath = await writeCharacter('character-noseparate.png', 2)
   const { kp } = paintCharacter()
-  const root = path.join(workDir, 'drafts-fallback')
-  const cases: Array<[string, Record<string, unknown>]> = [
-    ['missing', { prepareCutout: async () => ({ status: 'missing' }) }],
-    ['invalid', { prepareCutout: async () => ({ status: 'invalid' }) }],
-    ['timeout', { cutout: async () => ({ ok: false, code: 'timeout' }) }],
-    ['load_failed', { cutout: async () => ({ ok: false, code: 'load_failed' }) }],
-    ['empty', { cutout: async (_image: Raster, output: Size) => ({ ok: true, mask: new Uint8Array(output.width * output.height) }) }],
+  const root = path.join(workDir, 'drafts-noseparate')
+  const cases: Array<[string, string, string, Record<string, unknown>]> = [
+    ['models', D.MODELS_NOT_DOWNLOADED, 'cutout_model_missing', { prepareCutout: async () => ({ status: 'missing' }) }],
+    ['models', D.MODELS_NOT_DOWNLOADED, 'cutout_model_invalid', { prepareCutout: async () => ({ status: 'invalid' }) }],
+    ['cutout', D.BACKGROUND_NOT_SEPARABLE, 'runtime_unavailable', { prepareCutout: undefined, cutout: undefined }],
+    ['cutout', D.BACKGROUND_NOT_SEPARABLE, 'timeout', { cutout: async () => ({ ok: false, code: 'timeout' }) }],
+    ['cutout', D.BACKGROUND_NOT_SEPARABLE, 'load_failed', { cutout: async () => ({ ok: false, code: 'load_failed' }) }],
+    ['cutout', D.BACKGROUND_NOT_SEPARABLE, 'analysis_failed', { cutout: async () => { throw new Error('boom') } }],
+    ['cutout', D.BACKGROUND_NOT_SEPARABLE, 'empty', { cutout: async (_image: Raster, output: Size) => ({ ok: true, mask: new Uint8Array(output.width * output.height) }) }],
+    ['cutout', D.BACKGROUND_NOT_SEPARABLE, 'empty', { cutout: async (_image: Raster, output: Size) => ({ ok: true, mask: new Uint8Array(output.width * output.height).fill(255) }) }],
   ]
-  for (const [status, overrides] of cases) {
-    const { engine } = cutoutEngine(scaledVerdict(kp, 2, 1200), overrides)
+  for (const [stage, reasonCode, detail, overrides] of cases) {
+    const { engine, events } = cutoutEngine(scaledVerdict(kp, 2, 1200), overrides)
     const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, draftRoot: root })
-    assert.equal(result?.accepted, true, status)
-    if (!result?.accepted) continue
-    assert.equal(result.alphaSource, 'plain_background', status)
-    assert.deepEqual(result.cutout, { status }, status)
+    assert.deepEqual(result && !result.accepted && [result.stage, result.reasonCode, result.detail, result.messageKey], [stage, reasonCode, detail, PORTRAIT_DRAFT_MESSAGE_KEYS[reasonCode as keyof typeof PORTRAIT_DRAFT_MESSAGE_KEYS]], detail)
+    assert.ok(!events.includes('landmarks'), `${detail}: the landmarks never run after a failed cutout`)
   }
+  await assert.rejects(fs.stat(root), 'no plain-background draft is ever written')
+})
+
+test('draft reasons have copy in all five locales, and the audit trail knows them', () => {
+  const tables = { enSettingsWindow, zhCNSettingsWindow, zhTWSettingsWindow, jaSettingsWindow, koSettingsWindow }
+  for (const code of Object.values(D)) {
+    assert.equal(isPortraitDraftReason(code), true)
+    const key = PORTRAIT_DRAFT_MESSAGE_KEYS[code]
+    for (const [locale, table] of Object.entries(tables)) assert.ok((table as Record<string, string>)[key], `${key} needs ${locale} copy`)
+    assert.equal(summarizePetModelResult('pet-model:generate-portrait-draft', { accepted: false, reasonCode: code }).gateReasonCode, code)
+  }
+  assert.equal((zhCNSettingsWindow as Record<string, string>)[PORTRAIT_DRAFT_MESSAGE_KEYS.background_not_separable], '背景分不干净，请换一张纯色或透明背景的立绘')
+  assert.match((enSettingsWindow as Record<string, string>)[PORTRAIT_DRAFT_MESSAGE_KEYS.background_not_separable], /plain or transparent background/)
+  assert.match((enSettingsWindow as Record<string, string>)[PORTRAIT_DRAFT_MESSAGE_KEYS.portrait_models_not_downloaded], /Download/)
+  assert.equal(isPortraitDraftReason('plain_background'), false)
 })
 
 test('transparent inputs keep their own alpha and never run the cutout; missing face models stop before the cutout runs', async () => {
@@ -244,7 +280,7 @@ test('transparent inputs keep their own alpha and never run the cutout; missing 
   const opaque = await writeCharacter('character-nomodels.png', 2)
   const noFaces = cutoutEngine(() => { throw new Error('not reached') }, { prepare: async () => ({ status: 'missing' }) })
   const stopped = await generatePortraitDraftFromPayload({ imagePath: opaque }, { pickImagePath: async () => null, getEngine: () => noFaces.engine, draftRoot: root })
-  assert.deepEqual(stopped && !stopped.accepted && [stopped.stage, stopped.reasonCode, stopped.detail], ['landmarks', R.MODELS_UNAVAILABLE, 'missing'])
+  assert.deepEqual(stopped && !stopped.accepted && [stopped.stage, stopped.reasonCode, stopped.detail], ['models', D.MODELS_NOT_DOWNLOADED, 'face_models_missing'])
   assert.deepEqual(noFaces.events, [], 'no cutout work when the landmarks cannot run')
 
   const rejecting = cutoutEngine(() => ({ accepted: false, reasonCode: R.HANDS_NEAR_FACE, detail: null, messageKey: 'settings.pet.portrait_gate.hands_near_face', messageParams: {}, metrics: {} }))

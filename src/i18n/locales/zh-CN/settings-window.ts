@@ -52,6 +52,8 @@ export const zhCNSettingsWindow = {
   'settings.pet.portrait_gate.mouth_covered': '嘴部被遮挡，请使用面部无遮挡的立绘。',
   'settings.pet.portrait_gate.hands_near_face': '手挡在脸旁或脖子前，请使用双手不遮挡脸和脖子的立绘。',
   'settings.pet.portrait_gate.landmark_models_unavailable': '面部检查模型尚未安装，只完成了基础图片检查。',
+  'settings.pet.portrait_gate.background_not_separable': '背景分不干净，请换一张纯色或透明背景的立绘',
+  'settings.pet.portrait_gate.portrait_models_not_downloaded': '角色生成所需的模型还没有下载。请先下载立绘模型，再试一次。',
   'settings.pet.success.imported': '已导入 {name}，现在可以直接切换。',
   'settings.pet.success.imported_from': '已从 {source} 导入 {name}，现在可以直接切换。',
   'settings.pet.success.sprite': '{action} {name}，现在可以直接切换。可分享 ZIP：{archive}。{audit}',

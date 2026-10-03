@@ -1,3 +1,4 @@
+import { isPortraitDraftReason } from '../../shared/portraitDraft.js'
 import { isPortraitImageGateReason } from '../../shared/portraitImageGate.js'
 import { isPortraitLandmarkGateReason } from '../../shared/portraitLandmarkGate.js'
 
@@ -19,7 +20,7 @@ function pathSummary(value) {
 // Only the verdict and a known reason code are logged; image metrics stay
 // out of the audit trail with the path and pixels.
 function portraitImageGateSummary(result = {}) {
-  const known = isPortraitImageGateReason(result?.reasonCode) || isPortraitLandmarkGateReason(result?.reasonCode)
+  const known = isPortraitImageGateReason(result?.reasonCode) || isPortraitLandmarkGateReason(result?.reasonCode) || isPortraitDraftReason(result?.reasonCode)
   return {
     gateAccepted: typeof result?.accepted === 'boolean' ? result.accepted : undefined,
     gateReasonCode: known ? result.reasonCode : undefined,

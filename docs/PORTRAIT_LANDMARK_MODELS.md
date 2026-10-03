@@ -109,6 +109,48 @@ fails if `build.files` excludes any of these files.
 For a local developer test, copy the files from the spike (or from the release
 assets) into `<userData>/models/portrait-landmarks/`. No code changes are needed.
 
+## Cutout (portrait drafts)
+
+`portraitDraft.js` runs: stage A -> cutout -> landmarks -> layers.
+
+- The cutout runs only when the image is not already transparent (at least 5% of
+  pixels with alpha < 26 keeps the image's own alpha, `cutout.status:
+  skipped_transparent`). Face models are checked first, so a missing landmark model
+  stops before any cutout work.
+- `cutoutStage.js` decodes with sharp (EXIF-rotated, **embedded ICC profile ignored**,
+  alpha dropped; only images above 4096 px are pre-shrunk) and sends the RGB raster to
+  the worker as a separate job (`task: 'cutout'`, fresh worker, same lock as the
+  landmark jobs, so two model heaps never coexist).
+- `cutoutModel.js` follows the spike's `cutout.py`: squash to 1024x1024, divide by the
+  image maximum, subtract the ImageNet mean (std 1), run `isnetis.onnx`, min-max
+  normalise the first output, truncate to 0..255, resize to the layer working size.
+  Both resizes use a port of Pillow's Lanczos (bit-exact against Pillow 12.3.0 on the
+  dev images).
+- Landmarks still run on the original pixels. The gate thresholds were tuned on
+  uncut images.
+- There is no plain-background fallback (v0.5: when unsure, reject). A missing or
+  damaged model (face models or cutout) stops generation with
+  `portrait_models_not_downloaded` ("download the models first"). Any other cutout
+  failure (runtime unavailable, load failure, worker error or timeout) or an untrusted
+  mask (foreground share outside 1-99%, `empty`) rejects the image with
+  `background_not_separable` ("use a plain or transparent background"); `detail`
+  carries the cutout status. Codes and message keys live in `shared/portraitDraft.js`.
+  Accepted drafts record `alphaSource` (`image` / `cutout`) and `cutout.status`.
+
+Parity with the spike (113 dev images, onnxruntime-web 1.24.3 in the worker vs
+Python onnxruntime 1.30.0 with Pillow 12.3.0): max absolute difference 1/255 on every image,
+for both the 1024x1024 mask and the original-size alpha; at most 0.0004% of pixels
+change side of 0.5; minimum IoU 0.99995. Before the Pillow resampler and the ICC fix,
+sharp's Lanczos flipped up to 7.8% of pixels on ambiguous images, and colour
+management flipped 33% on an ICC-tagged photo.
+
+Measured full pipeline in Node 22 on the 8-core dev box, 4 WASM threads
+(`round7_cutout/pipeline_bench.mjs`): 10.4-12.9 s per opaque image (cutout job
+5.2-6.9 s including worker start and the 176 MB model load, landmarks 3.5-6.7 s,
+layers 0.2-1.5 s), 4.5-5.5 s for transparent inputs. Peak process RSS 1.16-1.54 GB.
+Between jobs, glibc keeps the terminated workers' malloc arenas (RSS plateaus around
+0.6 GB on Linux; 240-270 MB with `MALLOC_ARENA_MAX=2`); the JS heap stays at 7 MB.
+
 ## Owner checklist before release
 
 1. ~~Create the GitHub Release `portrait-models-v1`~~ Done 2026-10-02: the three files

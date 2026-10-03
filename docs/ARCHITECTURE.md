@@ -781,8 +781,10 @@ than presenting Nexus as a Codex-style work agent.
   `docs/PORTRAIT_LANDMARK_MODELS.md`). Without them, stage A's verdict stands.
   The generation entry `portraitDraft.js` (`pet-model:generate-portrait-draft`,
   no UI yet) chains stage A, the isnet-anime cutout (`cutoutStage.js`,
-  `cutoutModel.js`; skipped for transparent inputs, plain-background alpha
-  only as a fallback), stage B with landmarks, and the hair/head/body
+  `cutoutModel.js`; skipped for transparent inputs; no plain-background
+  fallback: an untrusted or failed cutout rejects with
+  `background_not_separable`, missing models with
+  `portrait_models_not_downloaded`, see `shared/portraitDraft.js`), stage B with landmarks, and the hair/head/body
   layering (`portraitLayers.js`, `portraitLayerStage.js`) into a same-canvas
   RGBA draft under `<userData>/portrait-drafts/` (newest 3 kept). Both models
   run in the same worker pattern, one fresh worker per job.

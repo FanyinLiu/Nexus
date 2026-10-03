@@ -8,8 +8,8 @@
  * (`cutoutModel.js`), so the masks match the spike's Python results. Only
  * images larger than CUTOUT_DECODE_LONG_SIDE_PX are pre-shrunk by sharp.
  *
- * Never throws: problems come back as a stable status so the caller can fall
- * back to the plain-background alpha. Statuses: `ok`, `missing` / `invalid`
+ * Never throws: problems come back as a stable status, which
+ * `portraitDraft.js` turns into a rejection (no fallback). Statuses: `ok`, `missing` / `invalid`
  * / `runtime_unavailable` (models or runtime not ready), `load_failed` /
  * `analysis_failed` / `timeout` (worker), `empty` (the mask is nearly all
  * background or all foreground, so it is not trusted).

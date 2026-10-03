@@ -54,6 +54,8 @@ export const jaSettingsWindow = {
   'settings.pet.portrait_gate.mouth_covered': '口元が隠れています。顔が何にも遮られていないイラストを使ってください。',
   'settings.pet.portrait_gate.hands_near_face': '手が顔の横や首の前にあります。手で顔や首が隠れていないイラストを使ってください。',
   'settings.pet.portrait_gate.landmark_models_unavailable': '顔チェック用のモデルがまだインストールされていないため、基本的な画像チェックだけを行いました。',
+  'settings.pet.portrait_gate.background_not_separable': 'キャラクターを背景からきれいに切り抜けませんでした。単色または透明背景の立ち絵を使ってください。',
+  'settings.pet.portrait_gate.portrait_models_not_downloaded': 'キャラクター生成に必要なモデルがまだダウンロードされていません。先に立ち絵モデルをダウンロードしてから、もう一度お試しください。',
   'settings.pet.success.imported': '{name} をインポートしたよ。いま切り替えられる。',
   'settings.pet.success.imported_from': '{source} から {name} をインポートしたよ。いま切り替えられる。',
   'settings.pet.success.sprite': '{action} {name}。いま切り替えられる。共有用 ZIP：{archive}。{audit}',

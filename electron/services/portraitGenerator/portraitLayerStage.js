@@ -5,16 +5,16 @@
  * (long side <= 768, like the spike), and reports whether the image carries
  * its own transparency (>= 5% of pixels with alpha < 26).
  *
- * `splitPortraitLayers` picks the cutout alpha in this order:
- * 1. the image's own alpha when it is transparent (`image`);
- * 2. the isnet-anime cutout mask when one was computed (`cutout`);
- * 3. the plain-background estimate, as a fallback only (`plain_background`).
+ * `splitPortraitLayers` uses the image's own alpha when it is transparent
+ * (`image`), otherwise the isnet-anime cutout mask (`cutout`), which is then
+ * required: there is no plain-background estimate (v0.5: when unsure,
+ * reject; `portraitDraft.js` rejects before layering if the cutout fails).
  * Landmarks are given in original pixels and scaled to the working raster;
  * the returned masks are at working size with `scale` to map back.
  */
 import sharp from 'sharp'
 
-import { PORTRAIT_LAYER_PARAMS, plainBackgroundAlpha, segmentPortraitLayers } from './portraitLayers.js'
+import { PORTRAIT_LAYER_PARAMS, segmentPortraitLayers } from './portraitLayers.js'
 
 const OWN_ALPHA_SHARE = 0.05
 
@@ -47,7 +47,7 @@ export async function decodePortraitRaster(source) {
 /**
  * @param {Awaited<ReturnType<typeof decodePortraitRaster>>} raster
  * @param {number[][]} keypoints 28 landmarks in original image pixels
- * @param {Uint8Array | null} [cutoutAlpha] isnet mask at working size
+ * @param {Uint8Array | null} [cutoutAlpha] isnet mask at working size (required unless the image is transparent)
  */
 export function splitPortraitLayers(raster, keypoints, cutoutAlpha = null) {
   const { width, height, scale } = raster
@@ -60,8 +60,7 @@ export function splitPortraitLayers(raster, keypoints, cutoutAlpha = null) {
     alpha = cutoutAlpha
     alphaSource = 'cutout'
   } else {
-    alpha = plainBackgroundAlpha({ rgb: raster.rgb, width, height })
-    alphaSource = 'plain_background'
+    throw new Error('an opaque image needs a cutout mask of the working size')
   }
   const image = { rgb: raster.rgb, alpha, width, height }
   const scaled = keypoints.map((p) => [p[0] * scale, p[1] * scale, p[2] ?? 1])

@@ -54,6 +54,8 @@ export const zhTWSettingsWindow = {
   'settings.pet.portrait_gate.mouth_covered': '嘴部被遮擋，請使用臉部無遮擋的立繪。',
   'settings.pet.portrait_gate.hands_near_face': '手擋在臉旁或脖子前，請使用雙手不遮擋臉和脖子的立繪。',
   'settings.pet.portrait_gate.landmark_models_unavailable': '臉部檢查模型尚未安裝，只完成了基礎圖片檢查。',
+  'settings.pet.portrait_gate.background_not_separable': '背景分不乾淨，請換一張純色或透明背景的立繪',
+  'settings.pet.portrait_gate.portrait_models_not_downloaded': '角色生成所需的模型還沒有下載。請先下載立繪模型，再試一次。',
   'settings.pet.success.imported': '已匯入 {name}，現在可以直接切換。',
   'settings.pet.success.imported_from': '已從 {source} 匯入 {name}，現在可以直接切換。',
   'settings.pet.success.sprite': '{action} {name}，現在可以直接切換。可分享 ZIP：{archive}。{audit}',

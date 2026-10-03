@@ -54,6 +54,8 @@ export const koSettingsWindow = {
   'settings.pet.portrait_gate.mouth_covered': '입이 가려져 있습니다. 얼굴이 가려지지 않은 일러스트를 사용해 주세요.',
   'settings.pet.portrait_gate.hands_near_face': '손이 얼굴 옆이나 목 앞에 있습니다. 손이 얼굴이나 목을 가리지 않는 일러스트를 사용해 주세요.',
   'settings.pet.portrait_gate.landmark_models_unavailable': '얼굴 검사 모델이 아직 설치되지 않아 기본 이미지 검사만 진행했습니다.',
+  'settings.pet.portrait_gate.background_not_separable': '캐릭터를 배경에서 깔끔하게 분리하지 못했습니다. 단색 또는 투명 배경의 일러스트를 사용해 주세요.',
+  'settings.pet.portrait_gate.portrait_models_not_downloaded': '캐릭터 생성에 필요한 모델이 아직 다운로드되지 않았습니다. 먼저 일러스트 모델을 다운로드한 뒤 다시 시도해 주세요.',
   'settings.pet.success.imported': '{name} 가져오기를 마쳤어요. 이제 전환할 수 있어요.',
   'settings.pet.success.imported_from': '{source}에서 {name}을(를) 가져왔어요. 이제 전환할 수 있어요.',
   'settings.pet.success.sprite': '{action} {name}. 이제 전환할 수 있어요. 공유 ZIP: {archive}. {audit}',

@@ -54,6 +54,8 @@ export const enSettingsWindow = {
   'settings.pet.portrait_gate.mouth_covered': 'The mouth is covered. Please use an illustration where nothing blocks the face.',
   'settings.pet.portrait_gate.hands_near_face': 'A hand is raised next to the face or across the neck. Please use an illustration where the hands don\'t cover the face or neck.',
   'settings.pet.portrait_gate.landmark_models_unavailable': 'The face check isn\'t installed yet, so only the basic image checks ran.',
+  'settings.pet.portrait_gate.background_not_separable': 'Couldn\'t separate the character from the background; please use an illustration with a plain or transparent background',
+  'settings.pet.portrait_gate.portrait_models_not_downloaded': 'The character models haven\'t been downloaded yet. Download the portrait models first, then try again.',
   'settings.pet.success.imported': 'Imported {name}. You can switch to it now.',
   'settings.pet.success.imported_from': 'Imported {name} from {source}. You can switch to it now.',
   'settings.pet.success.sprite': '{action} {name}. You can switch to it now. Shareable ZIP: {archive}. {audit}',

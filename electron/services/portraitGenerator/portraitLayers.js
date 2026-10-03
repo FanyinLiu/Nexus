@@ -481,37 +481,3 @@ export function segmentPortraitLayers(image, keypoints, params = PORTRAIT_LAYER_
     },
   }
 }
-
-/**
- * Foreground alpha for an opaque image on a plain background (v0.5 scope):
- * pixels connected to the border whose Lab colour is within `tolerance` of
- * the border median are background. Transparent PNGs should use their own
- * alpha instead. Portrait drafts use the isnet-anime cutout and fall back to
- * this only when the cutout model is unavailable or its mask is not trusted.
- */
-export function plainBackgroundAlpha(image, tolerance = 8) {
-  const { width: W, height: H } = image
-  const n = W * H
-  const lab = windowLab(image, { left: 0, top: 0, width: W, height: H })
-  const border = new Uint8Array(n)
-  for (let x = 0; x < W; x += 1) { border[x] = 1; border[(H - 1) * W + x] = 1 }
-  for (let y = 0; y < H; y += 1) { border[y * W] = 1; border[y * W + W - 1] = 1 }
-  const ref = channelMedian(lab, border)
-  const near = (i) => Math.sqrt(dist2([lab.L[i], lab.A[i], lab.B[i]], ref)) < tolerance
-  const background = new Uint8Array(n)
-  const stack = []
-  for (let i = 0; i < n; i += 1) if (border[i] && near(i)) { background[i] = 1; stack.push(i) }
-  while (stack.length) {
-    const i = stack.pop()
-    const x = i % W
-    const y = (i - x) / W
-    for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
-      if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue
-      const j = ny * W + nx
-      if (!background[j] && near(j)) { background[j] = 1; stack.push(j) }
-    }
-  }
-  const alpha = new Uint8Array(n)
-  for (let i = 0; i < n; i += 1) alpha[i] = background[i] ? 0 : 255
-  return alpha
-}

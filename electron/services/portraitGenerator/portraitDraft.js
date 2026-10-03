@@ -2,17 +2,21 @@
  * v0.5 portrait generation entry (main process, no UI yet): image -> gate ->
  * cutout -> landmarks -> hair/head/body layers -> a draft on disk.
  *
+ * v0.5 rule: when unsure, reject. There is no plain-background fallback.
+ *
  * 1. Stage A (`rejectPortraitImage`) must accept the image. Generation needs
- *    the landmarks, so missing face models are a stop
- *    (`landmark_models_unavailable`), checked before any model runs.
+ *    the face models: if they are missing or damaged it stops with
+ *    `portrait_models_not_downloaded` (download them first), checked before
+ *    any model runs.
  * 2. Cutout: unless the image is already transparent, isnet-anime runs in
- *    the model worker (`cutoutStage.js`). If the cutout model is missing or
- *    fails, or its mask is not trusted, the plain-background estimate is
- *    used instead; `cutout.status` records why.
+ *    the model worker (`cutoutStage.js`). A missing or damaged cutout model
+ *    stops with `portrait_models_not_downloaded`; any other failure, or a
+ *    mask that is not trusted (nearly all background or all foreground),
+ *    rejects with `background_not_separable`. `detail` says which.
  * 3. Stage B runs in the model worker with `keepKeypoints`, on the original
  *    pixels (the gate's thresholds were tuned on uncut images).
  * 4. `splitPortraitLayers` segments the working-size raster (long side 768)
- *    with the image's own alpha, else the cutout, else plain background.
+ *    with the image's own alpha, else the isnet mask.
  * 5. The layers are written as RGBA PNGs (`hair.png`, `head.png`, `body.png`,
  *    same canvas) plus `draft.json` under
  *    `<userData>/portrait-drafts/<draftId>/`. Only the newest
@@ -27,6 +31,7 @@ import path from 'node:path'
 
 import sharp from 'sharp'
 
+import { PORTRAIT_DRAFT_MESSAGE_KEYS, PORTRAIT_DRAFT_REASONS } from '../../../shared/portraitDraft.js'
 import { runPortraitCutout } from './cutoutStage.js'
 import { landmarkStageUnavailable } from './landmarkGate.js'
 import { runPortraitLandmarkStage } from './landmarkStage.js'
@@ -42,6 +47,13 @@ const DRAFT_ID = /^draft-\d{13}-[0-9a-f]{8}$/
 /** `<userData>/portrait-drafts` */
 export function resolvePortraitDraftRoot(userDataDir) {
   return path.join(userDataDir, PORTRAIT_DRAFT_DIRECTORY_NAME)
+}
+
+const MODEL_FILE_PROBLEMS = new Set(['missing', 'invalid'])
+
+/** A generation-level rejection (`shared/portraitDraft.js`). */
+function draftRejection(stage, reasonCode, detail) {
+  return { accepted: false, stage, reasonCode, detail, messageKey: PORTRAIT_DRAFT_MESSAGE_KEYS[reasonCode], messageParams: {} }
 }
 
 function rejection(stage, verdict) {
@@ -94,8 +106,8 @@ async function pruneDrafts(root, keep) {
  *   now?: () => number,
  *   clock?: () => number,
  * }} deps
- * @returns {Promise<null | { accepted: false, stage: 'image' | 'landmarks', reasonCode: string, detail: string | null, messageKey: string, messageParams: object }
- *   | { accepted: true, draftId: string, width: number, height: number, alphaSource: 'image' | 'cutout' | 'plain_background', cutout: { status: string, foreground?: number }, layers: Record<string, { share: number }> }>}
+ * @returns {Promise<null | { accepted: false, stage: 'image' | 'models' | 'cutout' | 'landmarks', reasonCode: string, detail: string | null, messageKey: string, messageParams: object }
+ *   | { accepted: true, draftId: string, width: number, height: number, alphaSource: 'image' | 'cutout', cutout: { status: string, foreground?: number }, layers: Record<string, { share: number }> }>}
  */
 export async function generatePortraitDraftFromPayload(payload, deps) {
   const imagePath = payload?.imagePath || await deps.pickImagePath()
@@ -115,12 +127,15 @@ export async function generatePortraitDraftFromPayload(payload, deps) {
     }
   }
   const landmarkModels = await engine.prepare()
+  if (MODEL_FILE_PROBLEMS.has(landmarkModels.status)) return draftRejection('models', PORTRAIT_DRAFT_REASONS.MODELS_NOT_DOWNLOADED, `face_models_${landmarkModels.status}`)
   if (landmarkModels.status !== 'ready') return rejection('landmarks', landmarkStageUnavailable(landmarkModels.status))
 
   const raster = await decodePortraitRaster(source)
   let cutout = { status: 'skipped_transparent' }
   if (!raster.hasOwnAlpha) {
     cutout = await timed('cutout', () => runPortraitCutout(source, engine, { width: raster.width, height: raster.height }))
+    if (MODEL_FILE_PROBLEMS.has(cutout.status)) return draftRejection('models', PORTRAIT_DRAFT_REASONS.MODELS_NOT_DOWNLOADED, `cutout_model_${cutout.status}`)
+    if (cutout.status !== 'ok') return draftRejection('cutout', PORTRAIT_DRAFT_REASONS.BACKGROUND_NOT_SEPARABLE, cutout.status)
   }
   const stageB = await timed('landmarks', () => runPortraitLandmarkStage(source, engine, { keepKeypoints: true }))
   if (!stageB.accepted || !Array.isArray(stageB.keypoints)) return rejection('landmarks', stageB)
