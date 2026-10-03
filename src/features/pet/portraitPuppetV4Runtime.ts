@@ -99,14 +99,17 @@ function transformMatrix(
   translate: PortraitPuppetV4Point,
   rotateDeg: number,
   scale: PortraitPuppetV4Point,
+  canvas: PortraitPuppetV4Manifest['canvas'],
 ): PortraitPuppetV4Matrix {
   const radians = rotateDeg * Math.PI / 180
   const cosine = Math.cos(radians)
   const sine = Math.sin(radians)
+  // Normalized coordinates need D^-1 R S D (D = canvas pixel dimensions)
+  // so a rigid rotation preserves lengths on a rectangular portrait canvas.
   const aroundOrigin: PortraitPuppetV4Matrix = [
     cosine * scale[0],
-    sine * scale[0],
-    -sine * scale[1],
+    sine * scale[0] * canvas.width / canvas.height,
+    -sine * scale[1] * canvas.height / canvas.width,
     cosine * scale[1],
     0,
     0,
@@ -327,10 +330,11 @@ export function resolvePortraitPuppetV4Binding(
   }
 }
 
-/** Resolve local authored bindings into one transform and mesh deformation. */
+/** Resolve normalized bindings and mesh offsets, measuring rotation in canvas pixels. */
 export function resolvePortraitPuppetV4PartLocalState(
   part: PortraitPuppetV4Part,
   parameters: PortraitPuppetV4ParameterValues,
+  canvas: PortraitPuppetV4Manifest['canvas'],
 ) {
   const vertexCount = (part.mesh.columns + 1) * (part.mesh.rows + 1)
   const vertexOffsets = zeroOffsets(vertexCount)
@@ -355,7 +359,7 @@ export function resolvePortraitPuppetV4PartLocalState(
     })
   }
   return {
-    matrix: transformMatrix(part.pivot, translate, rotateDeg, scale),
+    matrix: transformMatrix(part.pivot, translate, rotateDeg, scale, canvas),
     opacity: clamp(opacity, 0, 1),
     vertexOffsets,
   }
@@ -368,7 +372,7 @@ export function resolvePortraitPuppetV4Parts(
 ): PortraitPuppetV4ResolvedPart[] {
   const byId = new Map(manifest.parts.map((part) => [part.id, part]))
   const localById = new Map(
-    manifest.parts.map((part) => [part.id, resolvePortraitPuppetV4PartLocalState(part, parameters)]),
+    manifest.parts.map((part) => [part.id, resolvePortraitPuppetV4PartLocalState(part, parameters, manifest.canvas)]),
   )
   const worldById = new Map<string, PortraitPuppetV4Matrix>()
   const resolving = new Set<string>()
