@@ -146,13 +146,13 @@ test('portrait image check audit records verdict and reason code but no path or 
 
   const result = summarizePetModelResult('pet-model:check-portrait-image', {
     accepted: false,
-    reasonCode: 'too_blurry',
-    messageKey: 'settings.pet.portrait_gate.too_blurry',
+    reasonCode: 'decode_failed',
+    messageKey: 'settings.pet.portrait_gate.decode_failed',
     messageParams: {},
-    metrics: { width: 1234, height: 2345, laplacianVariance: 12.5, edgeDensity: 0.001 },
+    metrics: { width: 1234, height: 2345, byteLength: 4567 },
   })
   assert.equal(result.gateAccepted, false)
-  assert.equal(result.gateReasonCode, 'too_blurry')
+  assert.equal(result.gateReasonCode, 'decode_failed')
 
   const forged = summarizePetModelResult('pet-model:check-portrait-image', {
     accepted: true,

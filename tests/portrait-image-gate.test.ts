@@ -10,8 +10,7 @@ import sharp from 'sharp'
 import {
   PORTRAIT_IMAGE_GATE_LIMITS,
   checkPortraitImageFromPayload,
-  measurePortraitImageBackground,
-  measurePortraitImageSharpness,
+  preparePortraitImage,
   rejectPortraitImage,
 } from '../electron/services/portraitGenerator/rejectImage.js'
 import {
@@ -102,8 +101,7 @@ test('accepts a sharp, portrait-shaped PNG from a file path', async () => {
   assert.equal(result.metrics.format, 'png')
   assert.equal(result.metrics.width, 768)
   assert.equal(result.metrics.height, 1024)
-  assert.ok((result.metrics.laplacianVariance ?? 0) >= PORTRAIT_IMAGE_GATE_LIMITS.minLaplacianVariance)
-  assert.ok((result.metrics.edgeDensity ?? 0) >= PORTRAIT_IMAGE_GATE_LIMITS.minEdgeDensity)
+  assert.equal(result.metrics.downscaled, undefined)
 })
 
 test('accepts JPEG and WebP buffers and judges EXIF-oriented dimensions', async () => {
@@ -122,55 +120,19 @@ test('accepts JPEG and WebP buffers and judges EXIF-oriented dimensions', async 
   assert.equal(webpResult.metrics.format, 'webp')
 })
 
-test('rejects a blurry image with the too_blurry reason', async () => {
-  const blurry = await checkerboardRaw(768, 1024).blur(24).png().toBuffer()
-  const result = await rejectPortraitImage({ buffer: blurry })
-
-  assert.equal(result.accepted, false)
-  assert.equal(result.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.TOO_BLURRY)
-  assert.equal(result.messageKey, PORTRAIT_IMAGE_GATE_MESSAGE_KEYS.too_blurry)
-  assert.ok((result.metrics.laplacianVariance ?? Infinity) < PORTRAIT_IMAGE_GATE_LIMITS.minLaplacianVariance)
+test('picture content is not judged here: blurry, narrow, wide, tall, and busy images all pass stage A', async () => {
+  const blurry = await rejectPortraitImage({ buffer: await checkerboardRaw(768, 1024).blur(24).png().toBuffer() })
+  assert.equal(blurry.accepted, true)
+  for (const [width, height] of [[400, 900], [2000, 600], [560, 1600], [64, 64]]) {
+    const result = await rejectPortraitImage({ buffer: await checkerboardPng(width, height) })
+    assert.equal(result.accepted, true, `${width}x${height}`)
+  }
+  const busy = await rejectPortraitImage({ buffer: await checkerboardRaw(768, 1024, 'busy').png().toBuffer() })
+  assert.equal(busy.accepted, true)
+  assert.deepEqual(Object.keys(busy.metrics).sort(), ['byteLength', 'format', 'height', 'width'])
 })
 
-test('rejects images narrower than the minimum width', async () => {
-  const result = await rejectPortraitImage({ buffer: await checkerboardPng(400, 900) })
-
-  assert.equal(result.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.TOO_SMALL)
-  assert.deepEqual(result.messageParams, { minWidth: 512 })
-  assert.equal(PORTRAIT_IMAGE_GATE_LIMITS.minWidthPx, 512)
-  assert.equal(result.metrics.laplacianVariance, undefined, 'cheap checks must short-circuit before decoding pixels')
-
-  const justWideEnough = await rejectPortraitImage({ buffer: await checkerboardPng(512, 700) })
-  assert.equal(justWideEnough.accepted, true)
-})
-
-test('rejects wide banners as extreme_aspect_ratio', async () => {
-  const wide = await rejectPortraitImage({ buffer: await checkerboardPng(2000, 600) })
-  assert.equal(wide.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.EXTREME_ASPECT_RATIO)
-  assert.deepEqual(wide.messageParams, { maxRatio: PORTRAIT_IMAGE_GATE_LIMITS.maxWideAspectRatio })
-
-  const landscapeBust = await rejectPortraitImage({ buffer: await checkerboardPng(1200, 600) })
-  assert.equal(landscapeBust.accepted, true)
-})
-
-test('tall full-body strips get the narrowed-scope half_body_only answer', async () => {
-  assert.equal(PORTRAIT_IMAGE_GATE_LIMITS.maxTallAspectRatio, 2)
-  // 2.86 tall: used to be extreme_aspect_ratio, now says what v0.5 supports.
-  const strip = await rejectPortraitImage({ buffer: await checkerboardPng(560, 1600) })
-  assert.equal(strip.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.HALF_BODY_ONLY)
-  assert.equal(strip.messageKey, PORTRAIT_IMAGE_GATE_MESSAGE_KEYS.half_body_only)
-  assert.equal(strip.metrics.laplacianVariance, undefined, 'shape check must short-circuit before decoding pixels')
-
-  // 2.2 tall (a typical full-body sprite) was accepted under the old 2.5 limit.
-  const fullBody = await rejectPortraitImage({ buffer: await checkerboardPng(600, 1320) })
-  assert.equal(fullBody.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.HALF_BODY_ONLY)
-
-  // 1.9 tall is still a plausible long half-body crop.
-  const longBust = await rejectPortraitImage({ buffer: await checkerboardPng(600, 1140) })
-  assert.equal(longBust.accepted, true)
-})
-
-test('rejects oversized files from their size alone without reading them', async () => {
+test('refuses files over the hard cap from their size alone without reading them', async () => {
   const filePath = path.join(workDir, 'huge.png')
   const handle = await fs.open(filePath, 'w')
   // A sparse file: stat reports the size, but nothing valid is inside.
@@ -179,15 +141,49 @@ test('rejects oversized files from their size alone without reading them', async
 
   const result = await rejectPortraitImage({ filePath })
   assert.equal(result.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.FILE_TOO_LARGE)
-  assert.deepEqual(result.messageParams, { maxMegabytes: 32 })
+  assert.deepEqual(result.messageParams, { maxMegabytes: 256 })
   assert.equal(result.metrics.byteLength, PORTRAIT_IMAGE_GATE_LIMITS.maxFileBytes + 1)
 })
 
-test('rejects headers that claim more pixels than the decode limit', async () => {
-  const result = await rejectPortraitImage({ buffer: pngHeaderOnly(9000, 8000) })
+test('files over the in-memory limit are decoded from disk and downscaled, not rejected', async () => {
+  assert.equal(PORTRAIT_IMAGE_GATE_LIMITS.inMemoryFileBytes, 32 * 1024 * 1024)
+  const filePath = path.join(workDir, 'big-file.png')
+  await fs.writeFile(filePath, await checkerboardPng(768, 1024))
+  // Trailing bytes after IEND (sparse) push the file past 32 MiB, like a PNG with large metadata.
+  const handle = await fs.open(filePath, 'r+')
+  await handle.truncate(PORTRAIT_IMAGE_GATE_LIMITS.inMemoryFileBytes + 1024)
+  await handle.close()
+
+  const prepared = await preparePortraitImage({ filePath })
+  assert.equal(prepared.result.accepted, true)
+  assert.equal(prepared.result.metrics.downscaled, true)
+  assert.equal(prepared.result.metrics.byteLength, PORTRAIT_IMAGE_GATE_LIMITS.inMemoryFileBytes + 1024)
+  assert.ok(Buffer.isBuffer(prepared.source?.buffer))
+  assert.ok((prepared.source?.buffer?.length ?? Infinity) < PORTRAIT_IMAGE_GATE_LIMITS.inMemoryFileBytes)
+  const working = await sharp(prepared.source?.buffer).metadata()
+  assert.equal(working.format, 'png')
+  assert.deepEqual([working.width, working.height], [768, 1024], 'small pixel sizes are never enlarged')
+})
+
+test('images over the pixel limit are downscaled to the working long side, not rejected', async () => {
+  const width = 9000
+  const height = 7200
+  assert.ok(width * height > PORTRAIT_IMAGE_GATE_LIMITS.normalizeAbovePixels)
+  const huge = await sharp({ create: { width, height, channels: 4, background: { r: 240, g: 240, b: 240, alpha: 0.5 } } }).png().toBuffer()
+  const prepared = await preparePortraitImage({ buffer: huge })
+  assert.equal(prepared.result.accepted, true)
+  assert.deepEqual([prepared.result.metrics.width, prepared.result.metrics.height], [width, height])
+  assert.deepEqual([prepared.result.metrics.workingWidth, prepared.result.metrics.workingHeight], [4096, 3277])
+  const working = await sharp(prepared.source?.buffer).metadata()
+  assert.equal(working.width, PORTRAIT_IMAGE_GATE_LIMITS.normalizedLongSidePx)
+  assert.equal(working.hasAlpha, true, 'transparency survives the downscale')
+})
+
+test('rejects headers that claim more pixels than the hard decode cap', async () => {
+  const result = await rejectPortraitImage({ buffer: pngHeaderOnly(20000, 15000) })
 
   assert.equal(result.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.DIMENSIONS_TOO_LARGE)
-  assert.deepEqual(result.messageParams, { maxMegapixels: 64 })
+  assert.deepEqual(result.messageParams, { maxMegapixels: 268 })
 })
 
 test('rejects corrupt, truncated, empty, and missing inputs as stable codes', async () => {
@@ -229,98 +225,6 @@ test('rejects decodable but unsupported or animated formats', async () => {
   assert.equal((await rejectPortraitImage({ buffer: animated })).reasonCode, PORTRAIT_IMAGE_GATE_REASONS.ANIMATED)
 })
 
-test('rejects busy backgrounds and accepts plain or transparent ones', async () => {
-  const busy = await rejectPortraitImage({ buffer: await checkerboardRaw(768, 1024, 'busy').png().toBuffer() })
-  assert.equal(busy.reasonCode, PORTRAIT_IMAGE_GATE_REASONS.BUSY_BACKGROUND)
-  assert.equal(busy.messageKey, PORTRAIT_IMAGE_GATE_MESSAGE_KEYS.busy_background)
-  assert.ok((busy.metrics.plainBorderRatio ?? 1) < PORTRAIT_IMAGE_GATE_LIMITS.minPlainBorderRatio)
-
-  const plain = await rejectPortraitImage({ buffer: await checkerboardPng(768, 1024) })
-  assert.equal(plain.accepted, true)
-  assert.ok((plain.metrics.plainBorderRatio ?? 0) >= PORTRAIT_IMAGE_GATE_LIMITS.minPlainBorderRatio)
-
-  // Transparent background: the hidden RGB under alpha 0 is deliberately noisy.
-  const width = 768
-  const height = 1024
-  const { data: pattern } = await checkerboardRaw(width, height, 'busy').raw().toBuffer({ resolveWithObject: true })
-  const rgba = Buffer.alloc(width * height * 4)
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const index = y * width + x
-      const inCharacter = x >= 160 && x < width - 160 && y >= 160 && y < height - 160
-      rgba[index * 4] = pattern[index * 3]
-      rgba[index * 4 + 1] = pattern[index * 3 + 1]
-      rgba[index * 4 + 2] = pattern[index * 3 + 2]
-      rgba[index * 4 + 3] = inCharacter ? 255 : 0
-    }
-  }
-  const transparentPng = await sharp(rgba, { raw: { width, height, channels: 4 } }).png().toBuffer()
-  const transparent = await rejectPortraitImage({ buffer: transparentPng })
-  assert.equal(transparent.accepted, true)
-  assert.equal(transparent.metrics.transparentBorderRatio, 1)
-})
-
-test('background metric treats transparency and one dominant colour as plain', () => {
-  const size = 64
-  const solid = new Uint8Array(size * size * 4)
-  for (let index = 0; index < size * size; index += 1) solid.set([30, 120, 200, 255], index * 4)
-  assert.deepEqual(measurePortraitImageBackground(solid, size, size), { plainBorderRatio: 1, transparentBorderRatio: 0, transparentPixelRatio: 0 })
-
-  const clear = new Uint8Array(size * size * 4)
-  assert.deepEqual(measurePortraitImageBackground(clear, size, size), { plainBorderRatio: 1, transparentBorderRatio: 1, transparentPixelRatio: 1 })
-
-  const noisy = new Uint8Array(size * size * 4)
-  for (let index = 0; index < size * size; index += 1) {
-    noisy.set([(index * 67) % 256, (index * 131) % 256, (index * 29) % 256, 255], index * 4)
-  }
-  assert.ok(measurePortraitImageBackground(noisy, size, size).plainBorderRatio < PORTRAIT_IMAGE_GATE_LIMITS.minPlainBorderRatio)
-})
-
-test('background metric ignores the bottom band, where half-body crops meet the frame', () => {
-  const size = 400
-  const band = Math.round(size * PORTRAIT_IMAGE_GATE_LIMITS.borderBandFraction)
-  const rgba = new Uint8Array(size * size * 4)
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      // Plain top and sides; the whole bottom band is a noisy "torso".
-      const value = y >= size - band ? [(x * 67) % 256, (x * 131 + y) % 256, (x * 29) % 256] : [240, 240, 240]
-      rgba.set([...value, 255], (y * size + x) * 4)
-    }
-  }
-  assert.equal(measurePortraitImageBackground(rgba, size, size).plainBorderRatio, 1)
-})
-
-test('mostly transparent images skip the busy-border check even when the character fills the edges', async () => {
-  const width = 768
-  const height = 1024
-  const { data: pattern } = await checkerboardRaw(width, height, 'busy').raw().toBuffer({ resolveWithObject: true })
-  const rgba = Buffer.alloc(width * height * 4)
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const index = y * width + x
-      // Opaque everywhere except a transparent block in the top centre (~8%).
-      const clear = y < 160 && x >= 192 && x < width - 192
-      rgba.set([pattern[index * 3], pattern[index * 3 + 1], pattern[index * 3 + 2], clear ? 0 : 255], index * 4)
-    }
-  }
-  const result = await rejectPortraitImage({ buffer: await sharp(rgba, { raw: { width, height, channels: 4 } }).png().toBuffer() })
-  assert.ok((result.metrics.plainBorderRatio ?? 1) < PORTRAIT_IMAGE_GATE_LIMITS.minPlainBorderRatio)
-  assert.ok((result.metrics.transparentPixelRatio ?? 0) >= PORTRAIT_IMAGE_GATE_LIMITS.transparentImageMinRatio)
-  assert.equal(result.accepted, true)
-})
-
-test('sharpness metric is zero for flat images and high for hard edges', () => {
-  const flat = new Uint8Array(64 * 64).fill(128)
-  assert.deepEqual(measurePortraitImageSharpness(flat, 64, 64), { laplacianVariance: 0, edgeDensity: 0 })
-  assert.deepEqual(measurePortraitImageSharpness(flat, 2, 2), { laplacianVariance: 0, edgeDensity: 0 })
-
-  const edges = new Uint8Array(64 * 64)
-  for (let index = 0; index < edges.length; index += 1) edges[index] = (index % 64) < 32 ? 0 : 255
-  const measured = measurePortraitImageSharpness(edges, 64, 64)
-  assert.ok(measured.laplacianVariance > PORTRAIT_IMAGE_GATE_LIMITS.minLaplacianVariance)
-  assert.ok(measured.edgeDensity > PORTRAIT_IMAGE_GATE_LIMITS.minEdgeDensity)
-})
-
 test('IPC entry uses the payload path, falls back to the picker, and returns null on cancel', async () => {
   const filePath = await writeFixture('private-character-name.png', await checkerboardPng(768, 1024))
   let pickerCalls = 0
@@ -356,9 +260,9 @@ test('every reason code has a message key with copy in all five locales', () => 
       assert.ok((table as Record<string, string>)[key], `${key} needs ${locale} copy`)
     }
   }
-  const halfBodyKey = PORTRAIT_IMAGE_GATE_MESSAGE_KEYS.half_body_only
-  assert.match(zh[halfBodyKey], /0\.5 暂时只支持半身立绘/)
-  assert.match(en[halfBodyKey], /0\.5 currently supports half-body illustrations only/)
+  assert.deepEqual(Object.values(PORTRAIT_IMAGE_GATE_REASONS).sort(), [
+    'animated', 'decode_failed', 'dimensions_too_large', 'file_too_large', 'unreadable', 'unsupported_format',
+  ])
   assert.ok(zh[PORTRAIT_IMAGE_GATE_MESSAGE_KEYS.accepted])
   assert.equal(isPortraitImageGateReason('/Users/me/private.png'), false)
 })

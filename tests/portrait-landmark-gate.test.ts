@@ -41,7 +41,6 @@ import {
   PORTRAIT_LANDMARK_GATE_REASONS,
   isPortraitLandmarkGateReason,
 } from '../shared/portraitLandmarkGate.js'
-import { PORTRAIT_IMAGE_GATE_MESSAGE_KEYS } from '../shared/portraitImageGate.js'
 import { enSettingsWindow } from '../src/i18n/locales/en/settings-window.ts'
 import { jaSettingsWindow } from '../src/i18n/locales/ja/settings-window.ts'
 import { koSettingsWindow } from '../src/i18n/locales/ko/settings-window.ts'
@@ -300,7 +299,7 @@ test('no face (even after the contrast retry) answers half_body_only, not "no fa
   const result = await evaluatePortraitLandmarks(blankImage(), detector)
   assert.equal(result.reasonCode, R.HALF_BODY_ONLY)
   assert.equal(result.detail, 'no_face')
-  assert.equal(result.messageKey, PORTRAIT_IMAGE_GATE_MESSAGE_KEYS.half_body_only, 'shares the stage-A half-body copy')
+  assert.equal(result.messageKey, PORTRAIT_LANDMARK_GATE_MESSAGE_KEYS.half_body_only)
   assert.deepEqual(detector.calls, ['original', 'normalized'])
 })
 
@@ -458,13 +457,13 @@ test('stage B is lazy, only runs after stage A accepts, and unavailable models n
   assert.equal(loaderBuilt, 0, 'nothing is built until an image is checked')
 
   const good = path.join(workDir, 'stage-a-good.png')
-  const tiny = path.join(workDir, 'stage-a-tiny.png')
+  const corrupt = path.join(workDir, 'stage-a-corrupt.png')
   const painted = paintFace(SKIN_TONES.tan)
   await sharp(Buffer.from(painted.rgb), { raw: { width: painted.width, height: painted.height, channels: 3 } }).png().toFile(good)
-  await sharp({ create: { width: 64, height: 64, channels: 3, background: '#ffffff' } }).png().toFile(tiny)
+  await fs.writeFile(corrupt, Buffer.from('not an image at all'))
   const pickImagePath = async () => null
-  const small = await checkPortraitImageFromPayload({ imagePath: tiny }, { pickImagePath, landmarkStage: stage })
-  assert.equal(small?.reasonCode, 'too_small')
+  const broken = await checkPortraitImageFromPayload({ imagePath: corrupt }, { pickImagePath, landmarkStage: stage })
+  assert.equal(broken?.reasonCode, 'decode_failed')
   assert.equal(loaderBuilt, 0, 'stage B is skipped when stage A rejects')
   const passed = await checkPortraitImageFromPayload({ imagePath: good }, { pickImagePath, landmarkStage: stage })
   assert.equal(passed?.accepted, true, JSON.stringify(passed))
