@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
 import {
   mainWindow,
   panelWindow,
@@ -36,6 +36,24 @@ import {
   saveTextFileFromDialog,
   openTextFileFromDialog,
 } from '../services/petModelService.js'
+import {
+  PORTRAIT_IMAGE_GATE_FILE_EXTENSIONS,
+  checkPortraitImageFromPayload,
+} from '../services/portraitGenerator/rejectImage.js'
+import { resolveLandmarkModelDirectory } from '../services/portraitGenerator/landmarkModels.js'
+import { createAsyncLock } from '../services/asyncLock.js'
+import { createWorkerLandmarkEngine } from '../services/portraitGenerator/landmarkRuntime.js'
+import { createWorkerCutoutEngine } from '../services/portraitGenerator/cutoutRuntime.js'
+import { exportPortraitDraftFromPayload } from '../services/portraitGenerator/portraitDraftExport.js'
+import { createPortraitLandmarkStage } from '../services/portraitGenerator/landmarkStage.js'
+import {
+  generatePortraitDraftFromPayload,
+  resolvePortraitDraftRoot,
+} from '../services/portraitGenerator/portraitDraft.js'
+import {
+  getPortraitModelStatus,
+  runPortraitModelDownload,
+} from '../services/portraitGenerator/portraitModelDownloader.js'
 import { invokeRegisteredTool } from '../tools/toolRegistry.js'
 import {
   captureActiveWindowContext,
@@ -77,6 +95,9 @@ import {
   validatePetModelCreatorKitOptionalPathPayload,
   validatePetModelGalleryImportPayload,
   validatePetModelGalleryListPayload,
+  validatePetModelPortraitDraftPayload,
+  validatePetModelPortraitDraftExportPayload,
+  validatePetModelPortraitImageCheckPayload,
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
@@ -89,6 +110,25 @@ import {
 import { POWER_EVENT_KINDS } from '../../shared/powerEventKinds.js'
 
 const POWER_EVENT_CHANNEL = 'app:power-event'
+
+// Portrait stage B runs onnxruntime-web in a worker thread. Until the face
+// models are downloaded it answers `missing` and stage A's verdict stands.
+const PORTRAIT_MODELS_PROGRESS_CHANNEL = 'pet-model:portrait-models-progress'
+const portraitModelDirectory = () => resolveLandmarkModelDirectory(app.getPath('userData'))
+// Both model families allocate large WASM heaps; keep one worker alive at a time.
+const runPortraitModelExclusive = createAsyncLock()
+let portraitLandmarkEngine = null
+const getPortraitLandmarkEngine = () => {
+  portraitLandmarkEngine ??= createWorkerLandmarkEngine({ directory: portraitModelDirectory(), runExclusive: runPortraitModelExclusive })
+  return portraitLandmarkEngine
+}
+const portraitLandmarkStage = createPortraitLandmarkStage(getPortraitLandmarkEngine)
+let portraitCutoutEngine = null
+function getPortraitCutoutEngine() {
+  portraitCutoutEngine ??= createWorkerCutoutEngine({ directory: portraitModelDirectory(), runExclusive: runPortraitModelExclusive })
+  return portraitCutoutEngine
+}
+let portraitModelDownload = null
 const PET_MODEL_LIBRARY_CHANGED_CHANNEL = 'pet-model:library-changed'
 let powerEventForwardingRegistered = false
 
@@ -108,6 +148,15 @@ function summarizeTextFileResult(result) {
     extension: extension.slice(0, 32),
     contentLength: typeof result?.content === 'string' ? result.content.length : undefined,
   }
+}
+
+async function pickPortraitImagePath(event) {
+  const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+  const selection = await dialog.showOpenDialog(parentWindow, {
+    properties: ['openFile'],
+    filters: [{ name: 'Image', extensions: [...PORTRAIT_IMAGE_GATE_FILE_EXTENSIONS] }],
+  })
+  return selection.canceled ? null : selection.filePaths[0] ?? null
 }
 
 async function confirmPetModelAction(event, channel, payload) {
@@ -368,6 +417,68 @@ export function register() {
     return runAuditedPetModelAction(event, 'pet-model:open-creator-kit-path', payload, () => (
       openSpritePetCreatorKitPathFromPayload(payload)
     ))
+  })
+
+  ipcMain.handle('pet-model:check-portrait-image', async (event, payload = {}) => {
+    requireTrustedSender(event)
+    payload = validatePetModelPortraitImageCheckPayload(payload)
+    return runAuditedPetModelAction(event, 'pet-model:check-portrait-image', payload, () => (
+      checkPortraitImageFromPayload(payload, {
+        pickImagePath: () => pickPortraitImagePath(event),
+        landmarkStage: portraitLandmarkStage,
+      })
+    ))
+  })
+
+  ipcMain.handle('pet-model:generate-portrait-draft', async (event, payload = {}) => {
+    requireTrustedSender(event)
+    payload = validatePetModelPortraitDraftPayload(payload)
+    return runAuditedPetModelAction(event, 'pet-model:generate-portrait-draft', payload, () => (
+      generatePortraitDraftFromPayload(payload, {
+        pickImagePath: () => pickPortraitImagePath(event),
+        getEngine: getPortraitLandmarkEngine,
+        getCutoutEngine: getPortraitCutoutEngine,
+        includePreview: true,
+        draftRoot: resolvePortraitDraftRoot(app.getPath('userData')),
+      })
+    ))
+  })
+
+  ipcMain.handle('pet-model:export-portrait-draft', async (event, payload) => {
+    requireTrustedSender(event)
+    payload = validatePetModelPortraitDraftExportPayload(payload)
+    return runAuditedPetModelAction(event, 'pet-model:export-portrait-draft', payload, () => (
+      exportPortraitDraftFromPayload(payload, {
+        draftRoot: resolvePortraitDraftRoot(app.getPath('userData')),
+        chooseArchivePath: async ({ defaultFileName }) => {
+          const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+          const selection = await dialog.showSaveDialog(parentWindow, {
+            defaultPath: defaultFileName,
+            filters: [{ name: 'Nexus', extensions: ['zip'] }],
+          })
+          return selection.canceled ? null : selection.filePath ?? null
+        },
+      })
+    ))
+  })
+
+  ipcMain.handle('pet-model:portrait-models-status', async (event) => {
+    requireTrustedSender(event)
+    return getPortraitModelStatus({ directory: portraitModelDirectory() })
+  })
+
+  ipcMain.handle('pet-model:download-portrait-models', async (event) => {
+    requireTrustedSender(event)
+    return runAuditedPetModelAction(event, 'pet-model:download-portrait-models', {}, () => {
+      // A second click joins the running download instead of starting another.
+      portraitModelDownload ??= runPortraitModelDownload({
+        directory: portraitModelDirectory(),
+        onProgress: (progress) => {
+          if (!event.sender.isDestroyed()) event.sender.send(PORTRAIT_MODELS_PROGRESS_CHANNEL, progress)
+        },
+      }).finally(() => { portraitModelDownload = null })
+      return portraitModelDownload
+    })
   })
 
   ipcMain.handle('pet-model:create-from-image', async (event) => {

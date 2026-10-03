@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { readFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, matchesGlob, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { walkFiles } from './lib/audit-framework.mjs'
 
@@ -38,6 +38,21 @@ const REQUIRED_LAZY_PATTERNS = [
     reason: 'Live2D runtime is loaded through vendor scripts on demand',
   },
 ]
+
+// The portrait landmark worker runs onnxruntime-web in the main process
+// (Node build + WASM, loaded from app.asar). These must survive build.files.
+const ORT_NODE_RUNTIME_FILES = [
+  'node_modules/onnxruntime-web/package.json',
+  'node_modules/onnxruntime-web/dist/ort.node.min.mjs',
+  'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs',
+  'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm',
+  'node_modules/onnxruntime-common/package.json',
+]
+/** electron-builder applies only the `!` patterns of build.files to node_modules. */
+function checkOrtNodeRuntimePackaging(build = {}) {
+  const exclusions = (build.files ?? []).filter((item) => typeof item === 'string' && item.startsWith('!')).map((item) => item.slice(1))
+  return ORT_NODE_RUNTIME_FILES.filter((file) => exclusions.some((pattern) => matchesGlob(file, pattern)))
+}
 
 function stripTypeOnlyImports(source) {
   return source
@@ -79,10 +94,13 @@ export function buildHeavyModuleAuditReport(root = ROOT) {
     'ort.webgpu',
   ].filter((needle) => !packageText.includes(needle))
 
+  const excludedNodeRuntimeFiles = checkOrtNodeRuntimePackaging(packageJson.build)
+
   const errors = {
     staticRendererImports,
     missingLazyPatterns,
     missingPackagingExclusions,
+    excludedNodeRuntimeFiles,
   }
   const errorCount = Object.values(errors).reduce((sum, list) => sum + list.length, 0)
 

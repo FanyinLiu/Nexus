@@ -767,6 +767,48 @@ than presenting Nexus as a Codex-style work agent.
   stage-direction-to-avatar cue bridging, and the `Live2DCanvas` component.
 - `features/character/` owns UI/voice/presence preset data that themes the app
   toward the companion-style presentation layer.
+- `electron/services/portraitGenerator/` holds the in-progress v0.5
+  one-image pet generator. Stage A (`rejectImage.js`) is a heuristic-only
+  `sharp` gate (decode, format, size, minimum width, aspect ratio, blur, plain
+  or transparent background) that returns a stable reason code and
+  `messageKey` from `shared/portraitImageGate.js`; the image is read locally
+  and never reaches chat, desktop context, or model prompts. Its
+  `pet-model:check-portrait-image` IPC has no stable UI entry yet. Stage B
+  (`landmarkGate.js`) runs anime face/landmark models with `onnxruntime-web`
+  in a per-job worker thread (`landmarkRuntime.js`, `landmarkWorker.js`). The
+  IPC composition root shares one execution queue with the cutout engine and
+  waits for worker termination before allocating the next model heap. The
+  models are downloaded on first use by `portraitModelDownloader.js` from the
+  pinned catalog in `shared/portraitModels.js` (see
+  `docs/PORTRAIT_LANDMARK_MODELS.md`). Without them, stage A's verdict stands.
+  The generation entry `portraitDraft.js` (`pet-model:generate-portrait-draft`)
+  chains stage A, stage B with landmarks, local ISNet cutout for opaque input
+  (`cutoutRuntime.js`, `cutoutWorker.js`), a background-residual check, and the hair/head/body
+  layering (`portraitLayers.js`, `portraitLayerStage.js`) into a same-canvas
+  RGBA draft and transparent union preview under `<userData>/portrait-drafts/`
+  (newest 3 kept, failed new drafts removed, final JSON written atomically).
+  `backgroundResidual.js` measures colour and local texture outside the dilated
+  original ISNet alpha, before partitioning or creating a draft. It reuses the
+  localized `busy_background` rejection without exposing diagnostic metrics.
+  Native alpha bypasses this check; earlier failures retain their priority.
+  The companion
+  settings disclosure (`components/PortraitDraftSetup.tsx`) exposes explicit
+  model-download consent, attribution, progress/retry and native image selection.
+  `features/pet/portraitDraftFlow.ts` owns its state transitions; the host hook
+  manages subscriptions. `shared/portraitPreview.js` bounds the optional PNG
+  response to the trusted requesting panel; no arbitrary local-file read API is
+  exposed and pixels are excluded from audit records. The preview renders one
+  union texture, starts static and offers explicit limited-motion start/pause.
+  Hidden/reduced-motion/inactive states stay static, and closing clears pixels.
+  `portraitDraftExport.js` explicitly exports a current preview through the
+  panel-only `pet-model:export-portrait-draft` channel. Renderer input contains a
+  validated draft ID, optional name and attribution, never source/destination
+  paths. A native save dialog owns the destination; staged ZIP publication is
+  atomic and exclusive. The format-2 package has zero motion intensity and no
+  expression/part layers. Export does not install or activate an avatar.
+  `shared/portraitDraftExport.js` owns the cross-process payload/error contract.
+  The frozen local acceptance runner
+  validates all fixture hashes before any model executes.
 - `features/releaseNotes/` owns small release-communication contracts used by the
   app shell, such as the current About/Help release spotlight. It must stay
   content-only: no updater logic, IPC, migrations, or background checks.

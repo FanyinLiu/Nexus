@@ -4,6 +4,7 @@ import { PORTRAIT_PUPPET_IMAGE_GENERATION_PROMPT } from '../../../shared/portrai
 import { PORTRAIT_PUPPET_V4_IMAGE_GENERATION_PROMPT } from '../../../shared/portraitPuppetV4Contract.js'
 import { RELATIONSHIP_OPTIONS } from '../../lib/relationshipTypes.ts'
 import { ChatStudioV3 } from './ChatStudioV3.tsx'
+import { PortraitDraftSetup } from '../../components/PortraitDraftSetup.tsx'
 import type {
   CodexPetGalleryCatalogResult,
   PetModelDefinition,
@@ -176,6 +177,7 @@ export const ChatSectionV3 = memo(function ChatSectionV3(props: ChatSectionV3Pro
             {props.importingPetModel ? ti('settings.chat.importing_model') : ti('settings.chat.create_sprite_pet_from_image')}
           </button>
         </SettingsV3Row>
+        <PortraitDraftSetup active={props.active} language={draft.uiLanguage} />
         <SettingsV3Disclosure
           title={ti('settings.chat.portrait_layered_prompt_title')}
           description={ti('settings.chat.portrait_layered_prompt_hint')}

@@ -64,6 +64,13 @@ The larger product steps are:
   routing, and home-device control require a separate discovery, authorization,
   and privacy design and are not part of the v0.5 baseline.
 
+The current one-image companion implementation track is recorded separately in
+[v0.5 Portrait Execution](V0.5_PORTRAIT_EXECUTION.md). Its accepted input scope is
+plain/transparent-background, front-to-three-quarter half-body illustrations.
+Image preflight, landmarks and layer drafts are existing unmerged dependencies;
+download consent, a draft user flow, actual cutout and frozen-image acceptance
+must be verified before the result can be presented as a finished companion.
+
 Both steps must preserve the v0.3 privacy posture: sanitized summaries for the
 model, no raw screenshot chat context, no precise timer language, and no
 Codex-style autonomous work-agent expansion by default.

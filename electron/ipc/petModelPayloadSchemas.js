@@ -1,4 +1,5 @@
 import { validateIpcPayload } from './schemaValidator.js'
+import { normalizePortraitDraftExportPayload, PORTRAIT_DRAFT_EXPORT_ERROR_CODES } from '../../shared/portraitDraftExport.js'
 import {
   PATH_TEXT_MAX,
   SHORT_TEXT_MAX,
@@ -65,6 +66,17 @@ const petModelCreatorKitOpenPathSchema = {
   },
 }
 
+const petModelPortraitImageCheckSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  unknown: 'reject',
+  fields: {
+    // No clamp: a truncated path would silently point at a different file.
+    imagePath: { type: 'string', optional: true, maxLength: PATH_TEXT_MAX, trim: true },
+  },
+}
+
 export function validatePetModelGalleryImportPayload(payload) {
   return validateIpcPayload('pet-model:import-codex-gallery', payload, petModelGalleryImportSchema)
 }
@@ -87,4 +99,19 @@ export function validatePetModelCreatorKitInstallPayload(payload) {
 
 export function validatePetModelCreatorKitOpenPathPayload(payload) {
   return validateIpcPayload('pet-model:open-creator-kit-path', payload, petModelCreatorKitOpenPathSchema)
+}
+
+export function validatePetModelPortraitImageCheckPayload(payload) {
+  return validateIpcPayload('pet-model:check-portrait-image', payload, petModelPortraitImageCheckSchema)
+}
+
+export function validatePetModelPortraitDraftPayload(payload) {
+  return validateIpcPayload('pet-model:generate-portrait-draft', payload, petModelPortraitImageCheckSchema)
+}
+
+/** Keep export input identical across IPC and direct local callers. */
+export function validatePetModelPortraitDraftExportPayload(payload) {
+  const normalized = normalizePortraitDraftExportPayload(payload)
+  if (!normalized) throw new Error(PORTRAIT_DRAFT_EXPORT_ERROR_CODES.INVALID)
+  return normalized
 }

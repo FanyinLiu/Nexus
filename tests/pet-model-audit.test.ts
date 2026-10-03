@@ -128,3 +128,69 @@ test('pet model confirmation policy distinguishes dialog-backed and direct actio
     targetPath: '/tmp/private-kit/pet.json',
   }), true)
 })
+
+test('portrait image check audit records verdict and reason code but no path or metrics', () => {
+  const request = summarizePetModelRequest('pet-model:check-portrait-image', {
+    imagePath: '/Users/me/Pictures/private-oc.png',
+  })
+  assert.deepEqual(request, {
+    channel: 'pet-model:check-portrait-image',
+    imagePath: { present: true, length: 33 },
+    dialogBacked: false,
+  })
+  assert.deepEqual(summarizePetModelRequest('pet-model:check-portrait-image', {}), {
+    channel: 'pet-model:check-portrait-image',
+    imagePath: { present: false, length: 0 },
+    dialogBacked: true,
+  })
+
+  const result = summarizePetModelResult('pet-model:check-portrait-image', {
+    accepted: false,
+    reasonCode: 'too_blurry',
+    messageKey: 'settings.pet.portrait_gate.too_blurry',
+    messageParams: {},
+    metrics: { width: 1234, height: 2345, laplacianVariance: 12.5, edgeDensity: 0.001 },
+  })
+  assert.equal(result.gateAccepted, false)
+  assert.equal(result.gateReasonCode, 'too_blurry')
+
+  const forged = summarizePetModelResult('pet-model:check-portrait-image', {
+    accepted: true,
+    reasonCode: '/Users/me/Pictures/private-oc.png',
+  })
+  assert.equal(forged.gateReasonCode, undefined)
+
+  const serialized = JSON.stringify({ request, result, forged })
+  for (const privateValue of ['/Users/me/Pictures', 'private-oc', '1234', '2345', '12.5']) {
+    assert.ok(!serialized.includes(privateValue), `${privateValue} should not be logged`)
+  }
+
+  assert.equal(petModelActionNeedsConfirmation('pet-model:check-portrait-image', {}), false)
+  assert.equal(
+    petModelActionNeedsConfirmation('pet-model:check-portrait-image', { imagePath: '/tmp/private.png' }),
+    true,
+  )
+})
+
+test('portrait draft audit records known cutout failure codes without exception details or pixels', () => {
+  for (const reasonCode of ['cutout_models_unavailable', 'cutout_mask_invalid']) {
+    const result = summarizePetModelResult('pet-model:generate-portrait-draft', { accepted: false, reasonCode, detail: '/private/model.onnx', alpha: [0, 255] })
+    assert.equal(result.gateReasonCode, reasonCode)
+    assert.equal(result.draftCreated, false)
+    assert.ok(!JSON.stringify(result).includes('/private'))
+    assert.equal('alpha' in result, false)
+  }
+})
+
+test('portrait draft audit omits inline preview pixels and private paths from successful results', () => {
+  const dataUrl = 'data:image/png;base64,cHJpdmF0ZS1waXhlbHM='
+  const result = summarizePetModelResult('pet-model:generate-portrait-draft', {
+    accepted: true, draftId: 'draft-123', layers: {},
+    preview: { dataUrl, width: 600, height: 700, path: '/private/portrait-preview.png' },
+  })
+  assert.equal(result.draftCreated, true)
+  assert.equal(result.gateAccepted, true)
+  assert.equal('preview' in result, false)
+  const serialized = JSON.stringify(result)
+  for (const secret of [dataUrl, 'cHJpdmF0ZS1waXhlbHM=', '/private/portrait-preview.png']) assert.ok(!serialized.includes(secret))
+})

@@ -16,14 +16,22 @@ test('IPC contract audit inventories the current preload and main handler surfac
 
   assert.equal(report.schemaVersion, 1)
   assert.equal(summary.errors, 0)
-  assert.equal(report.counts.preloadInvokeChannels, 196)
-  assert.equal(report.counts.mainHandlerChannels, 196)
-  assert.equal(report.counts.preloadSubscriptionChannels, 19)
+  assert.equal(report.counts.preloadInvokeChannels, 201)
+  assert.equal(report.counts.mainHandlerChannels, 201)
+  assert.equal(report.counts.preloadSubscriptionChannels, 20)
   assert.equal(report.errors.missingHandlers.length, 0)
   assert.equal(report.errors.duplicateHandlers.length, 0)
   assert.equal(report.errors.missingTrustedSender.length, 0)
   assert.equal(report.errors.missingSubscriptionSources.length, 0)
   assert.equal(report.errors.unclassifiedHighRiskCapabilities.length, 0)
+
+  const portraitExport = findChannel(report, 'pet-model:export-portrait-draft')
+  assert.equal(portraitExport?.riskLevel, 'high')
+  assert.equal(portraitExport?.channelCapability, 'panel')
+  assert.equal(portraitExport?.payloadValidation, 'schema')
+  assert.equal(portraitExport?.trustedSender, true)
+  assert.equal(portraitExport?.auditLogged, true)
+  assert.equal(portraitExport?.permissionHint, true)
 
   const localDataChatSessionsRead = findChannel(report, 'local-data:chat-sessions-read')
   assert.equal(localDataChatSessionsRead?.riskLevel, 'low')
@@ -274,6 +282,11 @@ test('IPC contract audit keeps pet model artifact channels out of high-risk warn
     'pet-model:install-creator-kit-codex',
     'pet-model:open-creator-kit-path',
     'pet-model:create-from-image',
+    'pet-model:check-portrait-image',
+    'pet-model:generate-portrait-draft',
+    'pet-model:export-portrait-draft',
+    'pet-model:portrait-models-status',
+    'pet-model:download-portrait-models',
   ]) {
     assert.ok(!highRiskWarnings.includes(channel), `${channel} should have audit and confirmation coverage`)
     assert.ok(!payloadWarnings.includes(channel), `${channel} should validate payloads or carry no renderer payload`)

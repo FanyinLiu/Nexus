@@ -14,6 +14,8 @@ const LAZY_FILES: Record<string, string> = {
 }
 
 const PACKAGE_EXCLUSIONS = [
+  '!node_modules/onnxruntime-web/{docs,lib}/**',
+  '!node_modules/onnxruntime-web/dist/!(ort.node.min.mjs|ort-wasm-simd-threaded.mjs|ort-wasm-simd-threaded.wasm)',
   '!**/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.*',
   '!**/onnxruntime-web/dist/ort-wasm-simd-threaded.jspi.*',
   '!**/onnxruntime-web/dist/ort.training.wasm.min.*',
@@ -93,4 +95,22 @@ test('heavy module audit rejects missing unused ORT packaging exclusions', () =>
     assert.equal(report.summary.ok, false)
     assert.ok(report.errors.missingPackagingExclusions.includes('ort.webgpu'))
   }, PACKAGE_EXCLUSIONS.filter((item) => !item.includes('ort.webgpu')))
+})
+
+test('heavy module audit keeps the Node ORT runtime files packaged', () => {
+  withHeavyModuleFixture({}, (root) => {
+    const report = buildHeavyModuleAuditReport(root)
+    assert.equal(report.summary.ok, false)
+    assert.ok(report.errors.excludedNodeRuntimeFiles.includes('node_modules/onnxruntime-web/dist/ort.node.min.mjs'))
+  }, [...PACKAGE_EXCLUSIONS, '!node_modules/onnxruntime-web/**'])
+
+  withHeavyModuleFixture({}, (root) => {
+    const report = buildHeavyModuleAuditReport(root)
+    assert.deepEqual(report.errors.excludedNodeRuntimeFiles, ['node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm'])
+  }, [...PACKAGE_EXCLUSIONS, '!**/*.wasm'].filter((item) => !item.includes('/dist/!(')))
+})
+
+test('heavy module audit passes the real package.json', () => {
+  const report = buildHeavyModuleAuditReport()
+  assert.deepEqual(report.errors.excludedNodeRuntimeFiles, [])
 })

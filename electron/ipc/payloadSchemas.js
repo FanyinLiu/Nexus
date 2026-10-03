@@ -89,6 +89,9 @@ export {
   validatePetModelCreatorKitOptionalPathPayload,
   validatePetModelGalleryImportPayload,
   validatePetModelGalleryListPayload,
+  validatePetModelPortraitDraftPayload,
+  validatePetModelPortraitDraftExportPayload,
+  validatePetModelPortraitImageCheckPayload,
 } from './petModelPayloadSchemas.js'
 export {
   validatePluginBusRecentPayload,

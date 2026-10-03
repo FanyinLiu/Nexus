@@ -95,7 +95,28 @@ npm run package:linux          # Linux AppImage
 npm run lint
 npm test
 npm run verify:release         # lint + test + build (run this before opening a PR)
+npm run portrait-flow:smoke    # isolated Electron consent, draft and preview UI checks
+npm run portrait:acceptance   # reports not_run until a frozen manifest is supplied
 ```
+
+The portrait-flow smoke uses a temporary profile, synthetic images and test-only
+download/success fixtures. It exercises the real Electron UI, preload and local
+cancel/rejection path; it is not model-download or artwork-quality acceptance.
+Screenshots and JSON evidence are written under `output/portrait-flow-smoke/`.
+Static export behavior tests cover the bounded draft contract, fixed source
+files, exclusive archive publication, attribution, format-2 round-trip and zero
+motion geometry. Product verification must separately exercise the native save
+dialog, explicit import and same-profile restart; a passing package validator
+alone does not establish that desktop rendering works.
+
+For a frozen portrait verdict run, use `npm run portrait:acceptance -- --manifest
+<manifest.json> --execute --models-dir <isolated-model-directory> --output
+<new-report.json>`. The manifest must lock 20 distinct local image hashes and
+expected outcomes, including at least two accepted dark-skinned illustrations.
+All files are validated before local inference. Nothing is uploaded. Missing
+fixtures/models or validation-only runs exit 2 with `not_run`; matching expected
+verdicts does not replace a human visual review. See
+[the execution checklist](docs/V0.5_PORTRAIT_EXECUTION.md) for the release boundary.
 
 ---
 
