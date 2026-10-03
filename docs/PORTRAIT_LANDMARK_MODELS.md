@@ -128,14 +128,16 @@ assets) into `<userData>/models/portrait-landmarks/`. No code changes are needed
   dev images).
 - Landmarks still run on the original pixels. The gate thresholds were tuned on
   uncut images.
-- There is no plain-background fallback (v0.5: when unsure, reject). A missing or
-  damaged model (face models or cutout) stops generation with
-  `portrait_models_not_downloaded` ("download the models first"). Any other cutout
-  failure (runtime unavailable, load failure, worker error or timeout) or an untrusted
-  mask (foreground share outside 1-99%, `empty`) rejects the image with
-  `background_not_separable` ("use a plain or transparent background"); `detail`
-  carries the cutout status. Codes and message keys live in `shared/portraitDraft.js`.
+- There is no plain-background fallback. A missing or damaged model (face models
+  or cutout) stops generation with `portrait_models_not_downloaded` ("download the
+  models first"). Any other cutout failure (runtime unavailable, load failure,
+  worker error or timeout) or an empty mask (foreground share outside 1-99%,
+  `empty`) rejects the image with `background_not_separable`; `detail` carries the
+  cutout status. Codes and message keys live in `shared/portraitDraft.js`.
   Accepted drafts record `alphaSource` (`image` / `cutout`) and `cutout.status`.
+- Busy backgrounds are not refused before generation any more (the old
+  post-cutout "background residual" rule and stage A's border rule are gone): the
+  output is judged instead, see below.
 
 Parity with the spike (113 dev images, onnxruntime-web 1.24.3 in the worker vs
 Python onnxruntime 1.30.0 with Pillow 12.3.0): max absolute difference 1/255 on every image,
@@ -151,46 +153,63 @@ layers 0.2-1.5 s), 4.5-5.5 s for transparent inputs. Peak process RSS 1.16-1.54 
 Between jobs, glibc keeps the terminated workers' malloc arenas (RSS plateaus around
 0.6 GB on Linux; 240-270 MB with `MALLOC_ARENA_MAX=2`); the JS heap stays at 7 MB.
 
-## Gate rules added after the stage 1-4 acceptance (2593532)
+## Generate first, then judge the output (v0.5 round 3 design)
 
-The frozen acceptance at 2593532 failed (a chibi reported as "hands near face",
-two hand-at-chin images and a faded background figure accepted, a real photo
-rejected only by luck). These rules were added; all follow "when unsure, reject".
-Thresholds live in `PORTRAIT_LANDMARK_GATE_LIMITS` (`landmarkGate.js`) and
-`PORTRAIT_BACKGROUND_RESIDUAL_LIMITS` (`backgroundResidual.js`). The face-size limit
-(96 px) is unchanged.
+Before generation only what generation cannot use is refused. Everything about
+the result is judged on the generated draft, and the user still sees a preview
+and must accept it.
 
-- **Second character** (`multiple_characters`, "0.5 只支持单人"): every detection
-  with score > 0.5 and at least 20% of the largest face's size counts (the face
-  picker for landmarks still uses 40%). A faded or oversized background face, which
-  the picker may even prefer over the real face, still makes the count two.
-- **Photo** (`photo_not_illustration`): no extra model; two texture statistics on the
-  detected face. (1) `flat`: the face box resampled to 128x128 grey, share of pixels
-  with Sobel |gx|+|gy| <= 4. Cel/anime shading leaves large exactly-flat areas; camera
-  skin does not. Below 0.05 is a photo. (2) `skinGrain`: the face rescaled to 120 px
-  wide, in the cheek skin (own skin between brows and mouth) away from strokes, the
-  share of pixels with |Laplacian of L| >= 1.5. If `flat` < 0.10 and `skinGrain`
-  >= 0.40 it is a photo. Known gap: a well-lit, smooth-skinned photo can pass
-  (1 of 6 dev photos does); stage A's busy-background check still catches most
-  photos with a real background.
-- **Chibi** (`half_body_only`, detail `chibi`), checked before every hand check: the
-  largest foreground component containing the face (alpha, else "not the border
-  colour", on a <= 256 px mask) ends at least 3% of the image height above the
-  bottom edge, is at most 5 face-box heights tall, and the mean width of its bottom
-  10% rows is at most 0.35 of its widest row (feet, not a cut-off bust).
-- **Hand at the chin or mouth** (`hands_near_face`, detail `chin_hidden` /
-  `hand_at_chin`): chin landmark confidence < 0.6 (a hand over the chin breaks the
-  chin point; good dev images are >= 0.68), or more than 3.5% of the box under the
-  chin (+-0.3 face widths, chin + 0.03..0.35 face heights) is thin valleys between
-  lit own skin (finger separations). A hand over the mouth is still caught by
-  `mouth_covered` first.
-- **Busy interior behind a plain border** (generation path, opaque images, after
-  the cutout; `busy_background`, stage `cutout`, detail `background_residual`):
-  outside the isnet mask dilated by 3% of the long side, reject if more than 5% of
-  pixels differ from the dominant background colour by > 24 (any channel), or more
-  than 4% have a 7x7 grey local std > 6. The faded close-up behind the character in
-  the acceptance set is not found by the face detector at any usable score, so this
-  rule, not the face count, is what rejects it.
+**Stage A** (`rejectImage.js`, before any model): unreadable, `decode_failed`,
+`unsupported_format`, `animated`, `file_too_large` (> 256 MiB),
+`dimensions_too_large` (> 268,402,689 px). Large images are downscaled, not
+refused (files > 32 MiB are decoded by libvips from the path; anything > 32 MiB or
+64 MP becomes a 4096 px lossless working copy).
+
+**Stage B before generation** (`landmarkGate.js`, `PORTRAIT_LANDMARK_GATE_LIMITS`),
+first match wins:
+
+| Check | Rule | Reason (detail) |
+| --- | --- | --- |
+| No face | none with score > 0.5 after a contrast retry | `half_body_only` (`no_face`) |
+| Second character | another face with score > 0.5 at >= 0.5 x the largest face's size | `multiple_characters` |
+| Face too small | < 96 px (original pixels) | `half_body_only` (`face_small`) |
+| Broken eye landmarks | eye spacing > 1 face width or an eye outside the outline | `eyes_unclear` (`eye_landmarks_broken`) |
+| True side profile | contour symmetry < 0.33 or eye spacing < 0.38 | `side_view` |
+| Full body | figure (largest foreground part holding the face) > 5.6 face-box heights | `half_body_only` (`full_body`) |
+
+Removed before generation: the 90%-border plain-colour rule, blur, small image,
+aspect ratio, chibi, hand at the chin / hands near the face, the post-cutout
+background residual, a small second face in the background, and the photo test
+(moved after generation because it called a textured illustration a photo). The
+mouth evidence (landmark confidence < 0.3 after one retry, nose < mouth < chin
+order < 0.06, an object across the mouth) is still measured here and passed on as
+`mouthCheck`.
+
+**After generation** (`portraitQuality.js`, `PORTRAIT_QUALITY_LIMITS`, stage
+`quality`, nothing is written on failure), first failure wins:
+
+| Check | Rule | Reason (detail) |
+| --- | --- | --- |
+| Cutout covers the face | alpha covers < 0.90 of the landmark face polygon | `background_not_separable` (`face_not_covered`) |
+| Cutout in one piece | largest connected part < 0.80 of the foreground | `background_not_separable` (`fragmented`) |
+| Photo | on the cut-out face (background painted white) at stage B resolution: flat share < 0.05, or < 0.10 with skin grain >= 0.40 | `photo_not_illustration` |
+| Mouth landmarks | `mouthCheck` set (a hand over the mouth lands here) | `mouth_unreliable` (`mouth_landmarks_missing` / `landmark_order` / `object_across_mouth`) |
+| Three layers | head < 0.03, body < 0.03 or hair < 0.02 of the foreground; < 0.85 of the visible face in the head layer | `layers_incomplete` (`missing_head` / `missing_body` / `missing_hair` / `face_split`) |
+| Breathing frame | holes > 0.6 face units (see below) | `breathing_holes` |
+
+Breathing frame (as the spike's `round4/breath.py`, without the tilt and the
+horizontal stretch): body stretched vertically by 3% about the figure's bottom
+row, head lifted by the body's displacement at the split row, hair with the head
+above the split and blended to the body over 0.5 face heights below it. The body
+counts as filled behind hair lying between body pixels of a row (gaps up to 0.6
+face widths) and under the chin. A hole is a pixel that was opaque and is
+uncovered with coverage both above and below within 2 x lift + 2 rows; the hole
+area is in face units (face width x face height).
+
+Known gaps: chibi has no dedicated rule (a chibi passes unless its output fails
+a check); a well-lit smooth photo can still pass the texture test; a second
+character the detector does not find is only caught if the cutout keeps it as a
+separate part.
 
 ## Owner checklist before release
 

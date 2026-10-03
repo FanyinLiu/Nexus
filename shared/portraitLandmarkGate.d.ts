@@ -3,9 +3,6 @@ export declare const PORTRAIT_LANDMARK_GATE_REASONS: Readonly<{
   MULTIPLE_CHARACTERS: 'multiple_characters'
   EYES_UNCLEAR: 'eyes_unclear'
   SIDE_VIEW: 'side_view'
-  MOUTH_COVERED: 'mouth_covered'
-  HANDS_NEAR_FACE: 'hands_near_face'
-  PHOTO_NOT_ILLUSTRATION: 'photo_not_illustration'
   MODELS_UNAVAILABLE: 'landmark_models_unavailable'
 }>
 
@@ -18,9 +15,6 @@ export declare const PORTRAIT_LANDMARK_GATE_MESSAGE_KEYS: Readonly<{
   multiple_characters: 'settings.pet.portrait_gate.multiple_characters'
   eyes_unclear: 'settings.pet.portrait_gate.eyes_unclear'
   side_view: 'settings.pet.portrait_gate.side_view'
-  mouth_covered: 'settings.pet.portrait_gate.mouth_covered'
-  hands_near_face: 'settings.pet.portrait_gate.hands_near_face'
-  photo_not_illustration: 'settings.pet.portrait_gate.photo_not_illustration'
   landmark_models_unavailable: 'settings.pet.portrait_gate.landmark_models_unavailable'
 }>
 
@@ -32,12 +26,7 @@ export type PortraitLandmarkGateDetail =
   | 'no_face'
   | 'face_small'
   | 'eye_landmarks_broken'
-  | 'mouth_landmarks_missing'
-  | 'landmark_order'
-  | 'object_across_mouth'
-  | 'chibi'
-  | 'chin_hidden'
-  | 'hand_at_chin'
+  | 'full_body'
   | null
 
 export type PortraitLandmarkGateResult = {
@@ -47,6 +36,8 @@ export type PortraitLandmarkGateResult = {
   messageKey: PortraitLandmarkGateMessageKey
   messageParams: Record<string, string | number>
   metrics: Record<string, number | boolean>
+  /** Accepted verdicts: the mouth evidence for the post-generation check (null when the mouth is clear). */
+  mouthCheck?: 'mouth_landmarks_missing' | 'landmark_order' | 'object_across_mouth' | null
 }
 
 export declare function isPortraitLandmarkGateReason(value: unknown): value is PortraitLandmarkGateReason

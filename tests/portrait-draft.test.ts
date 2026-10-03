@@ -162,9 +162,9 @@ test('generation stops at stage A, at missing models, and at a landmark rejectio
   const noRuntime = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => fakeEngine(() => ({}), 'runtime_unavailable').engine, draftRoot: root })
   assert.deepEqual(noRuntime && !noRuntime.accepted && [noRuntime.stage, noRuntime.reasonCode], ['landmarks', R.MODELS_UNAVAILABLE], 'a missing runtime is not a download problem')
 
-  const hands = fakeEngine(() => ({ accepted: false, reasonCode: R.HANDS_NEAR_FACE, detail: null, messageKey: 'settings.pet.portrait_gate.hands_near_face', messageParams: {}, metrics: {} }))
+  const hands = fakeEngine(() => ({ accepted: false, reasonCode: R.SIDE_VIEW, detail: null, messageKey: 'settings.pet.portrait_gate.side_view', messageParams: {}, metrics: {} }))
   const rejected = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => hands.engine, draftRoot: root })
-  assert.equal(rejected && !rejected.accepted && rejected.reasonCode, R.HANDS_NEAR_FACE)
+  assert.equal(rejected && !rejected.accepted && rejected.reasonCode, R.SIDE_VIEW)
   await assert.rejects(fs.stat(root), 'no draft directory is created for a rejected image')
 
   assert.equal(await generatePortraitDraftFromPayload({}, { pickImagePath: async () => null, getEngine: () => hands.engine, draftRoot: root }), null, 'a cancelled picker returns null')
@@ -246,7 +246,7 @@ test('when unsure, reject: failing or untrusted cutouts give background_not_sepa
   await assert.rejects(fs.stat(root), 'no plain-background draft is ever written')
 })
 
-test('a plain border around a busy interior: a faded figure left outside the cutout is background_not_separable (stage cutout), nothing is written', async () => {
+test('generate first, then judge: a faded figure left outside the cutout is no longer refused (r08), the output is judged instead', async () => {
   const { rgb, width, height, kp } = paintCharacter()
   // a faded close-up of the character behind it, on the left; the border stays plain white
   for (let y = 40; y < 520; y += 1) for (let x = 20; x < 150; x += 1) rgb.set([250, 232, 216], (y * width + x) * 3)
@@ -254,7 +254,7 @@ test('a plain border around a busy interior: a faded figure left outside the cut
   await sharp(Buffer.from(rgb), { raw: { width, height, channels: 3 } }).resize(width * 2, height * 2, { kernel: 'nearest' }).png().toFile(filePath)
   const root = path.join(workDir, 'drafts-ghost')
   // isnet keeps the character and drops the faded figure
-  const { engine, events } = cutoutEngine(scaledVerdict(kp, 2, 1200), {
+  const { engine } = cutoutEngine(scaledVerdict(kp, 2, 1200), {
     cutout: async (image: Raster, output: Size) => {
       const resized = resizeLanczosLikePillow(image.rgb, image.width, image.height, 3, output.width, output.height)
       const mask = new Uint8Array(output.width * output.height)
@@ -266,10 +266,43 @@ test('a plain border around a busy interior: a faded figure left outside the cut
     },
   })
   const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, draftRoot: root })
-  const busy = D.BACKGROUND_NOT_SEPARABLE
-  assert.deepEqual(result && !result.accepted && [result.stage, result.reasonCode, result.detail, result.messageKey], ['cutout', busy, 'background_residual', PORTRAIT_DRAFT_MESSAGE_KEYS[busy]], JSON.stringify(result))
-  assert.ok(!events.includes('landmarks'), 'the landmarks never run')
-  await assert.rejects(fs.stat(root), 'no draft is written')
+  assert.equal(result?.accepted, true, JSON.stringify(result))
+  if (!result?.accepted) return
+  assert.equal(result.quality.faceCovered, 1)
+  assert.equal(result.quality.largestComponent, 1)
+  const manifest = JSON.parse(await fs.readFile(path.join(root, result.draftId, 'draft.json'), 'utf8'))
+  assert.deepEqual(manifest.quality, result.quality)
+  assert.ok(Number.isInteger(manifest.timingsMs.quality), JSON.stringify(manifest.timingsMs))
+})
+
+test('post-generation checks reject at stage quality with their own reason, and nothing is written', async () => {
+  const filePath = await writeCharacter('character-quality.png', 2)
+  const { kp } = paintCharacter()
+  const root = path.join(workDir, 'drafts-quality')
+  const run = async (verdictFor: (image: Size) => object, overrides: Record<string, unknown> = {}) => {
+    const { engine } = cutoutEngine(verdictFor, overrides)
+    return generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, draftRoot: root })
+  }
+  // the face check saw a hand across the mouth: mouth_unreliable after generation
+  const mouth = await run((image) => ({ ...scaledVerdict(kp, 2, 1200)(image), mouthCheck: 'object_across_mouth' }))
+  assert.deepEqual(mouth && !mouth.accepted && [mouth.stage, mouth.reasonCode, mouth.detail, mouth.messageKey], ['quality', D.MOUTH_UNRELIABLE, 'object_across_mouth', PORTRAIT_DRAFT_MESSAGE_KEYS.mouth_unreliable], JSON.stringify(mouth))
+  assert.ok(mouth && !mouth.accepted && mouth.quality, 'the measurements come back with the rejection')
+  // a cutout that drops the face: background_not_separable / face_not_covered
+  const holed = await run(scaledVerdict(kp, 2, 1200), {
+    cutout: async (image: Raster, output: Size) => {
+      const resized = resizeLanczosLikePillow(image.rgb, image.width, image.height, 3, output.width, output.height)
+      const mask = new Uint8Array(output.width * output.height)
+      for (let i = 0; i < mask.length; i += 1) {
+        const x = (i % output.width) / output.width
+        const y = Math.floor(i / output.width) / output.height
+        const face = x > 0.36 && x < 0.64 && y > 0.3 && y < 0.5
+        mask[i] = !face && Math.min(resized[i * 3], resized[i * 3 + 1], resized[i * 3 + 2]) < 240 ? 255 : 0
+      }
+      return { ok: true, mask }
+    },
+  })
+  assert.deepEqual(holed && !holed.accepted && [holed.stage, holed.reasonCode, holed.detail], ['quality', D.BACKGROUND_NOT_SEPARABLE, 'face_not_covered'], JSON.stringify(holed))
+  await assert.rejects(fs.stat(root), 'no draft is written for a rejected output')
 })
 
 test('draft reasons have copy in all five locales, and the audit trail knows them', () => {
@@ -309,10 +342,10 @@ test('transparent inputs keep their own alpha and never run the cutout; missing 
   assert.deepEqual(stopped && !stopped.accepted && [stopped.stage, stopped.reasonCode, stopped.detail], ['models', D.MODELS_NOT_DOWNLOADED, 'face_models_missing'])
   assert.deepEqual(noFaces.events, [], 'no cutout work when the landmarks cannot run')
 
-  const rejecting = cutoutEngine(() => ({ accepted: false, reasonCode: R.HANDS_NEAR_FACE, detail: null, messageKey: 'settings.pet.portrait_gate.hands_near_face', messageParams: {}, metrics: {} }))
+  const rejecting = cutoutEngine(() => ({ accepted: false, reasonCode: R.SIDE_VIEW, detail: null, messageKey: 'settings.pet.portrait_gate.side_view', messageParams: {}, metrics: {} }))
   const rejectRoot = path.join(workDir, 'drafts-rejected-after-cutout')
   const rejected = await generatePortraitDraftFromPayload({ imagePath: opaque }, { pickImagePath: async () => null, getEngine: () => rejecting.engine, draftRoot: rejectRoot })
-  assert.equal(rejected && !rejected.accepted && rejected.reasonCode, R.HANDS_NEAR_FACE)
+  assert.equal(rejected && !rejected.accepted && rejected.reasonCode, R.SIDE_VIEW)
   await assert.rejects(fs.stat(rejectRoot), 'a landmark rejection after the cutout writes nothing')
 })
 
@@ -349,8 +382,8 @@ test('the audit trail records the draft verdict and reason, never paths', () => 
   const ok = summarizePetModelResult('pet-model:generate-portrait-draft', { accepted: true, draftId: 'draft-1', layers: {} })
   assert.equal(ok.gateAccepted, true)
   assert.equal(ok.draftCreated, true)
-  const rejected = summarizePetModelResult('pet-model:generate-portrait-draft', { accepted: false, reasonCode: R.HANDS_NEAR_FACE })
-  assert.equal(rejected.gateReasonCode, R.HANDS_NEAR_FACE)
+  const rejected = summarizePetModelResult('pet-model:generate-portrait-draft', { accepted: false, reasonCode: R.SIDE_VIEW })
+  assert.equal(rejected.gateReasonCode, R.SIDE_VIEW)
   assert.equal(rejected.draftCreated, false)
   assert.equal(summarizePetModelResult('pet-model:generate-portrait-draft', { accepted: false, reasonCode: '/Users/me/a.png' }).gateReasonCode, undefined)
 })

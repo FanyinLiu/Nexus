@@ -29,7 +29,8 @@ export function flattenOnWhite(rgba, width, height) {
   return { rgb, alpha }
 }
 
-async function decode(source) {
+/** Stage B's raster: EXIF-oriented, long side <= 2048, flattened on white; `pixelScale` = original px per raster px. */
+export async function decodeLandmarkRaster(source) {
   const input = source.buffer ?? source.filePath
   const image = sharp(input, { failOn: 'error', limitInputPixels: 64_000_000 }).rotate()
   const { data, info } = await image
@@ -54,7 +55,7 @@ export async function runPortraitLandmarkStage(source, engine, options = {}) {
   if (prepared.status !== 'ready') return landmarkStageUnavailable(prepared.status)
   let image
   try {
-    image = await decode(source)
+    image = await decodeLandmarkRaster(source)
   } catch {
     return landmarkStageUnavailable('analysis_failed')
   }

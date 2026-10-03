@@ -787,8 +787,13 @@ than presenting Nexus as a Codex-style work agent.
   fallback: an untrusted or failed cutout rejects with
   `background_not_separable`, missing models with
   `portrait_models_not_downloaded`, see `shared/portraitDraft.js`), stage B with landmarks, and the hair/head/body
-  layering (`portraitLayers.js`, `portraitLayerStage.js`) into a same-canvas
-  RGBA draft under `<userData>/portrait-drafts/` (newest 3 kept). Both models
+  layering (`portraitLayers.js`, `portraitLayerStage.js`), then judges the
+  output (`portraitQuality.js`: cutout trust, photo texture on the cut-out face,
+  mouth landmarks, layer completeness, breathing-frame holes; stage `quality`)
+  before writing a same-canvas RGBA draft under `<userData>/portrait-drafts/`
+  (newest 3 kept). Stage B only refuses what generation cannot use (no face or
+  a tiny one, a second character, broken eye landmarks, a side profile, a full
+  body). Both models
   run in the same worker pattern, one fresh worker per job.
 - `features/releaseNotes/` owns small release-communication contracts used by the
   app shell, such as the current About/Help release spotlight. It must stay
