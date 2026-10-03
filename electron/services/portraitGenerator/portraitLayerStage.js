@@ -9,6 +9,8 @@
 import sharp from 'sharp'
 
 import { cutoutUnavailable } from '../../../shared/portraitCutoutGate.js'
+import { PORTRAIT_IMAGE_GATE_MESSAGE_KEYS, PORTRAIT_IMAGE_GATE_REASONS } from '../../../shared/portraitImageGate.js'
+import { backgroundResidualFeatures, isBusyBackgroundResidual } from './backgroundResidual.js'
 import { validateCutoutAlpha } from './cutoutModel.js'
 import { PORTRAIT_LAYER_PARAMS, segmentPortraitLayers } from './portraitLayers.js'
 
@@ -53,6 +55,17 @@ export async function splitPortraitLayers(source, keypoints, options = {}) {
       const result = await engine.evaluate({ rgb: rgb.slice(), width, height })
       if (!result?.accepted) return cutoutUnavailable(result?.detail)
       if (!validateCutoutAlpha(result.alpha, width, height)) return cutoutUnavailable('invalid_mask')
+      // Inspect the original model alpha before any layer partition can alter it.
+      if (isBusyBackgroundResidual(backgroundResidualFeatures({ rgb, width, height }, result.alpha))) {
+        const reasonCode = PORTRAIT_IMAGE_GATE_REASONS.BUSY_BACKGROUND
+        return {
+          accepted: false,
+          reasonCode,
+          detail: 'background_residual',
+          messageKey: PORTRAIT_IMAGE_GATE_MESSAGE_KEYS[reasonCode],
+          messageParams: {},
+        }
+      }
       image.alpha = result.alpha
     } catch {
       return cutoutUnavailable('analysis_failed')

@@ -76,6 +76,22 @@ async function writeCharacter(name: string, factor = 4) {
   return filePath
 }
 
+/** Interior scenery stays outside the controlled character mask, with an unchanged white border. */
+async function writeResidualCharacter(name: string, nativeAlpha = false) {
+  const image = paintCharacter()
+  const { width, height, rgb } = image
+  const alpha = plainBackgroundAlpha(image).map((value: number) => value ? 180 : 0)
+  for (let y = 150; y < 550; y += 1) for (let x = 20; x < 130; x += 1) rgb.set([50, 90, 140], (y * width + x) * 3)
+  const rgba = new Uint8Array(width * height * 4)
+  for (let i = 0; i < alpha.length; i += 1) {
+    rgba.set(rgb.subarray(i * 3, i * 3 + 3), i * 4)
+    rgba[i * 4 + 3] = nativeAlpha ? alpha[i] : 255
+  }
+  const filePath = path.join(workDir, name)
+  await sharp(Buffer.from(rgba), { raw: { width, height, channels: 4 } }).png().toFile(filePath)
+  return { ...image, alpha, filePath }
+}
+
 /** Engine stub: answers like the worker would, with landmarks in raster pixels. */
 function fakeEngine(verdictFor: (image: { width: number, height: number }) => object, status = 'ready') {
   const calls: Array<{ width: number, height: number, options: unknown }> = []
@@ -364,6 +380,84 @@ test('draft creation stops before disk writes when cutout is missing or its alph
   const retry = await generatePortraitDraftFromPayload({ imagePath: filePath }, { ...deps, getCutoutEngine })
   assert.equal(retry?.accepted, true)
   assert.equal(retry?.accepted && retry.alphaSource, 'isnet')
+})
+
+test('interior background rejection writes no draft, preserves existing drafts, and allows a clean-image retry', async () => {
+  const fixture = await writeResidualCharacter('interior-background.png')
+  const originalAlpha = fixture.alpha.slice()
+  const { engine, calls } = fakeEngine(() => accepted(fixture.kp))
+  const root = path.join(workDir, 'drafts-background-retry')
+  let cutoutCalls = 0
+  const deps = {
+    pickImagePath: async () => null, getEngine: () => engine, draftRoot: root,
+    getCutoutEngine: () => ({ prepare: async () => ({ status: 'ready' }), evaluate: async () => {
+      cutoutCalls += 1
+      return { accepted: true, alpha: fixture.alpha }
+    } }),
+  }
+  const expected = { accepted: false, stage: 'cutout', reasonCode: 'busy_background', detail: 'background_residual', messageKey: 'settings.pet.portrait_gate.busy_background', messageParams: {} }
+  assert.deepEqual(await generatePortraitDraftFromPayload({ imagePath: fixture.filePath }, deps), expected)
+  assert.equal(calls.length, 1, 'the white-border fixture reaches real stage B before the new background check')
+  assert.equal(cutoutCalls, 1)
+  await assert.rejects(fs.stat(root), { code: 'ENOENT' })
+  const old = ['draft-1700000000000-aaaaaaaa', 'draft-1700000000001-bbbbbbbb', 'draft-1700000000002-cccccccc', 'external-not-a-draft']
+  for (const name of old) {
+    await fs.mkdir(path.join(root, name), { recursive: true })
+    await fs.writeFile(path.join(root, name, 'keep.txt'), `preserve ${name}`)
+  }
+  assert.deepEqual(await generatePortraitDraftFromPayload({ imagePath: fixture.filePath }, deps), expected)
+  assert.deepEqual((await fs.readdir(root)).sort(), old)
+  for (const name of old) assert.equal(await fs.readFile(path.join(root, name, 'keep.txt'), 'utf8'), `preserve ${name}`)
+  assert.deepEqual(fixture.alpha, originalAlpha)
+  const clean = await writeCharacter('clean-background-retry.png', 1)
+  const retry = await generatePortraitDraftFromPayload({ imagePath: clean }, { ...deps, now: () => 1_700_000_000_100 })
+  assert.equal(retry?.accepted, true, JSON.stringify(retry))
+  if (!retry?.accepted) return
+  assert.equal(retry.alphaSource, 'isnet')
+  assert.equal((await fs.stat(path.join(root, retry.draftId, 'draft.json'))).isFile(), true)
+  assert.deepEqual((await fs.readdir(root)).sort(), [...old.slice(1), retry.draftId].sort(), 'only the successful retry performs ordinary keep-three pruning')
+  assert.deepEqual(fixture.alpha, originalAlpha)
+})
+
+test('meaningful native alpha bypasses residual analysis of hidden scenery and preserves the generated transparency', async () => {
+  const fixture = await writeResidualCharacter('hidden-interior-background.png', true)
+  const { engine } = fakeEngine(() => accepted(fixture.kp))
+  const root = path.join(workDir, 'drafts-native-background')
+  let cutoutCalls = 0
+  const result = await generatePortraitDraftFromPayload({ imagePath: fixture.filePath }, {
+    pickImagePath: async () => null, getEngine: () => engine, draftRoot: root,
+    getCutoutEngine: () => { cutoutCalls += 1; throw new Error('native transparency must bypass cutout') },
+  })
+  assert.equal(result?.accepted, true, JSON.stringify(result))
+  assert.equal(cutoutCalls, 0)
+  if (!result?.accepted) return
+  assert.equal(result.alphaSource, 'image')
+  const preview = await sharp(path.join(root, result.draftId, 'preview.png')).raw().toBuffer()
+  for (let i = 0; i < fixture.alpha.length; i += 1) assert.equal(preview[i * 4 + 3], fixture.alpha[i])
+})
+
+test('landmark and cutout failures retain their original priority over residual background rejection', async () => {
+  const fixture = await writeResidualCharacter('interior-background-priority.png')
+  const root = path.join(workDir, 'drafts-background-priority')
+  let cutoutCalls = 0
+  const rejected = await generatePortraitDraftFromPayload({ imagePath: fixture.filePath }, {
+    pickImagePath: async () => null, draftRoot: root,
+    getEngine: () => fakeEngine(() => ({ accepted: false, reasonCode: R.HANDS_NEAR_FACE, detail: null, messageKey: 'settings.pet.portrait_gate.hands_near_face', messageParams: {} })).engine,
+    getCutoutEngine: () => { cutoutCalls += 1; throw new Error('landmark rejection must stop first') },
+  })
+  assert.deepEqual(rejected && !rejected.accepted && [rejected.stage, rejected.reasonCode, rejected.detail], ['landmarks', R.HANDS_NEAR_FACE, null])
+  assert.equal(cutoutCalls, 0)
+  for (const detail of ['missing', 'invalid', 'timeout', 'invalid_mask']) {
+    const result = await generatePortraitDraftFromPayload({ imagePath: fixture.filePath }, {
+      pickImagePath: async () => null, draftRoot: root, getEngine: () => fakeEngine(() => accepted(fixture.kp)).engine,
+      getCutoutEngine: () => ({
+        prepare: async () => ({ status: detail === 'missing' || detail === 'invalid' ? detail : 'ready' }),
+        evaluate: async () => detail === 'invalid_mask' ? { accepted: true, alpha: new Uint8Array(2) } : { accepted: false, detail },
+      }),
+    })
+    assert.deepEqual(result && !result.accepted && [result.stage, result.reasonCode, result.detail], ['cutout', detail === 'invalid_mask' ? 'cutout_mask_invalid' : 'cutout_models_unavailable', detail])
+  }
+  await assert.rejects(fs.stat(root), { code: 'ENOENT' })
 })
 
 test('the audit trail records the draft verdict and reason, never paths', () => {

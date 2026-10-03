@@ -783,10 +783,15 @@ than presenting Nexus as a Codex-style work agent.
   `docs/PORTRAIT_LANDMARK_MODELS.md`). Without them, stage A's verdict stands.
   The generation entry `portraitDraft.js` (`pet-model:generate-portrait-draft`)
   chains stage A, stage B with landmarks, local ISNet cutout for opaque input
-  (`cutoutRuntime.js`, `cutoutWorker.js`), and the hair/head/body
+  (`cutoutRuntime.js`, `cutoutWorker.js`), a background-residual check, and the hair/head/body
   layering (`portraitLayers.js`, `portraitLayerStage.js`) into a same-canvas
   RGBA draft and transparent union preview under `<userData>/portrait-drafts/`
-  (newest 3 kept, failed new drafts removed, final JSON written atomically). The companion
+  (newest 3 kept, failed new drafts removed, final JSON written atomically).
+  `backgroundResidual.js` measures colour and local texture outside the dilated
+  original ISNet alpha, before partitioning or creating a draft. It reuses the
+  localized `busy_background` rejection without exposing diagnostic metrics.
+  Native alpha bypasses this check; earlier failures retain their priority.
+  The companion
   settings disclosure (`components/PortraitDraftSetup.tsx`) exposes explicit
   model-download consent, attribution, progress/retry and native image selection.
   `features/pet/portraitDraftFlow.ts` owns its state transitions; the host hook
