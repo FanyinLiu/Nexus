@@ -25,10 +25,19 @@ import {
 } from '../electron/services/portraitGenerator/landmarkModels.js'
 import {
   PORTRAIT_LANDMARK_GATE_LIMITS,
+  characterFaceCount,
   evaluatePortraitLandmarks,
+  handAtChinDecision,
+  isChibiFigure,
+  isPhotoTexture,
   mouthCoveredDecision,
+  photoTextureFeatures,
   sideFeatures,
 } from '../electron/services/portraitGenerator/landmarkGate.js'
+import {
+  backgroundResidualFeatures,
+  isBusyBackgroundResidual,
+} from '../electron/services/portraitGenerator/backgroundResidual.js'
 import {
   combinePortraitGateStages,
   createPortraitLandmarkStage,
@@ -315,15 +324,29 @@ test('two characters, small faces, and weak or tiny detections', async () => {
   assert.equal(two.reasonCode, R.MULTIPLE_CHARACTERS)
   assert.deepEqual(two.messageParams, { count: 2 })
 
-  const background = faceAt(500, 100, 40)
-  const single = await evaluatePortraitLandmarks(paintFace(SKIN_TONES.light), detectorReturning({ original: [faceAt(), background, { ...faceAt(), bbox: [0, 0, 300, 300, 0.3] }] }))
-  assert.equal(single.metrics.faces, 1, 'faces under 40% of the largest or below score 0.5 are ignored')
+  const speck = faceAt(500, 100, 28)
+  const single = await evaluatePortraitLandmarks(paintFace(SKIN_TONES.light), detectorReturning({ original: [faceAt(), speck, { ...faceAt(), bbox: [0, 0, 300, 300, 0.3] }] }))
+  assert.equal(single.metrics.faces, 1, 'faces under 20% of the largest or below score 0.5 are ignored')
 
   const small = await evaluatePortraitLandmarks(blankImage(), detectorReturning({ original: [faceAt(300, 300, 60)] }))
   assert.equal(small.reasonCode, R.HALF_BODY_ONLY)
   assert.equal(small.detail, 'face_small')
   const scaled = await evaluatePortraitLandmarks({ ...blankImage(), pixelScale: 3 }, detectorReturning({ original: [faceAt(300, 300, 60)] }))
   assert.notEqual(scaled.detail, 'face_small', 'face size is judged in original pixels')
+})
+
+test('a second character counts even when faded, small, or larger than the main face (0.5 is single-character only)', async () => {
+  const main = faceAt()
+  const faded = faceAt(520, 120, 60, 0.6)
+  assert.equal(characterFaceCount([main, faded]), 2, 'a 30%-size face at score 0.6 is a second character')
+  assert.equal(characterFaceCount([main, faceAt(520, 120, 30, 0.9)]), 1, 'a 15%-size detection is noise')
+  assert.equal(characterFaceCount([main, faceAt(520, 120, 150, 0.45)]), 1, 'score 0.5 or below is not a face')
+  const background = await evaluatePortraitLandmarks(paintFace(SKIN_TONES.light), detectorReturning({ original: [main, faded] }))
+  assert.equal(background.reasonCode, R.MULTIPLE_CHARACTERS)
+  assert.deepEqual(background.messageParams, { count: 2 })
+  // An oversized ghost face behind the character: pickFaces keeps only the ghost, the count still sees two.
+  const ghost = await evaluatePortraitLandmarks(paintFace(SKIN_TONES.light), detectorReturning({ original: [faceAt(300, 300, 200), faceAt(300, 250, 520, 0.63)] }))
+  assert.equal(ghost.reasonCode, R.MULTIPLE_CHARACTERS)
 })
 
 test('broken eye landmarks say eyes_unclear, never side_view; only real profiles get side_view', async () => {
@@ -398,6 +421,124 @@ test('an arm raised out beside the body and bare shoulders joined to the neck ar
     const shoulder = await evaluatePortraitLandmarks(paintFace(skin, { hand: 'shoulder' }), detectorReturning({ original: [faceAt()] }))
     assert.equal(shoulder.reasonCode, null, `shoulder ${name}: ${JSON.stringify(shoulder)}`)
   }
+})
+
+/** Deterministic noise in [-amp, amp] (xorshift), for camera-like grain. */
+function grain(rgb: Uint8Array, amp: number, seed = 1) {
+  let state = seed
+  const next = () => { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; return ((state >>> 0) / 0xffffffff) * 2 - 1 }
+  const out = Uint8Array.from(rgb)
+  for (let i = 0; i < out.length; i += 3) {
+    const n = Math.round(next() * amp)
+    for (let c = 0; c < 3; c += 1) out[i + c] = Math.max(0, Math.min(255, out[i + c] + n))
+  }
+  return out
+}
+
+test('photo test: flat cel shading passes, camera grain on the face is photo_not_illustration', async () => {
+  const flat = paintFace(SKIN_TONES.light)
+  const clean = photoTextureFeatures(flat, faceAt())
+  assert.ok(clean && clean.flat > 0.3, JSON.stringify(clean))
+  assert.equal(isPhotoTexture(clean), false)
+  const photo = { ...flat, rgb: grain(flat.rgb, 12) }
+  const noisy = photoTextureFeatures(photo, faceAt())
+  assert.ok(noisy && noisy.flat < PORTRAIT_LANDMARK_GATE_LIMITS.photoMaybeFlat && isPhotoTexture(noisy), JSON.stringify(noisy))
+  const result = await evaluatePortraitLandmarks(photo, detectorReturning({ original: [faceAt()] }))
+  assert.equal(result.reasonCode, R.PHOTO_NOT_ILLUSTRATION, JSON.stringify(result))
+  assert.equal(result.messageKey, PORTRAIT_LANDMARK_GATE_MESSAGE_KEYS.photo_not_illustration)
+
+  const L = PORTRAIT_LANDMARK_GATE_LIMITS
+  assert.equal(isPhotoTexture(null), false)
+  assert.equal(isPhotoTexture({ flat: L.photoMaxFlat - 0.01, skinGrain: null }), true, 'almost no flat pixels: photo')
+  assert.equal(isPhotoTexture({ flat: L.photoMaybeFlat - 0.01, skinGrain: L.photoMinSkinGrain + 0.01 }), true, 'some flat pixels plus skin grain: photo')
+  assert.equal(isPhotoTexture({ flat: L.photoMaybeFlat - 0.01, skinGrain: L.photoMinSkinGrain - 0.01 }), false, 'painterly but smooth skin: illustration')
+  assert.equal(isPhotoTexture({ flat: L.photoMaybeFlat + 0.01, skinGrain: 0.9 }), false, 'grainy paint with flat areas: illustration')
+})
+
+/** A chibi: big head on a short body with two narrow legs, standing clear of the bottom edge, hand raised by the face. */
+function paintChibi(skin: RGB) {
+  const image = paintFace(skin, { hand: true })
+  const { rgb, width, height } = image
+  for (let y = 380; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let c: RGB | null = [255, 255, 255]
+      if (y < 400 && (x < 262 || x >= 338) && !(x >= 425 && x < 475)) c = null
+      else if (y >= 400 && y < 470) c = (x >= 425 && x < 475) ? skin : (x >= 262 && x < 338 ? scale(skin, 0.8) : [255, 255, 255])
+      if (y >= 470 && y < 560 && x >= 200 && x < 400) c = [40, 70, 160]
+      if (y >= 560 && y < 640 && ((x >= 270 && x < 290) || (x >= 310 && x < 330))) c = [60, 40, 30]
+      if (c && y >= 400) rgb.set(c, (y * width + x) * 3)
+    }
+  }
+  return image
+}
+
+test('chibi: a whole small figure clear of the bottom edge is half_body_only (chibi), checked before the hands', async () => {
+  for (const [name, skin] of Object.entries(SKIN_TONES)) {
+    const result = await evaluatePortraitLandmarks(paintChibi(skin), detectorReturning({ original: [faceAt()] }))
+    assert.equal(result.reasonCode, R.HALF_BODY_ONLY, `${name}: ${JSON.stringify(result)}`)
+    assert.equal(result.detail, 'chibi', name)
+  }
+  const L = PORTRAIT_LANDMARK_GATE_LIMITS
+  const chibi = { bottomGap: 0.2, heightInFaces: 3.5, footWidth: 0.1 }
+  assert.equal(isChibiFigure(chibi), true)
+  assert.equal(isChibiFigure(null), false)
+  assert.equal(isChibiFigure({ ...chibi, bottomGap: 0 }), false, 'a bust cut by the bottom edge is not a chibi')
+  assert.equal(isChibiFigure({ ...chibi, footWidth: L.chibiMaxFootWidth + 0.1 }), false, 'a floating bust has a wide bottom, not feet')
+  assert.equal(isChibiFigure({ ...chibi, heightInFaces: L.chibiMaxHeightInFaces + 1 }), false, 'normal proportions are not a chibi')
+})
+
+/** Fingers folded under the chin: lit skin with thin finger lines just below the jaw. */
+function paintChinHands(skin: RGB) {
+  const image = paintFace(skin)
+  const line = scale(skin, 0.6)
+  for (let y = 405; y < 470; y += 1) {
+    for (let x = 230; x < 370; x += 1) image.rgb.set((x - 230) % 14 < 2 ? line : skin, (y * image.width + x) * 3)
+  }
+  return image
+}
+
+test('hand at the chin: finger lines under the chin or a lost chin landmark say hands_near_face', async () => {
+  for (const [name, skin] of Object.entries(SKIN_TONES)) {
+    const fingers = await evaluatePortraitLandmarks(paintChinHands(skin), detectorReturning({ original: [faceAt()] }))
+    assert.equal(fingers.reasonCode, R.HANDS_NEAR_FACE, `${name}: ${JSON.stringify(fingers)}`)
+    assert.equal(fingers.detail, 'hand_at_chin', name)
+    const plain = await evaluatePortraitLandmarks(paintFace(skin), detectorReturning({ original: [faceAt()] }))
+    assert.equal(plain.reasonCode, null, `${name} bare neck: ${JSON.stringify(plain)}`)
+  }
+  const covered = faceAt()
+  covered.keypoints[2] = [covered.keypoints[2][0], covered.keypoints[2][1], 0.4]
+  const hidden = await evaluatePortraitLandmarks(paintFace(SKIN_TONES.light), detectorReturning({ original: [covered] }))
+  assert.equal(hidden.reasonCode, R.HANDS_NEAR_FACE, JSON.stringify(hidden))
+  assert.equal(hidden.detail, 'chin_hidden')
+
+  const L = PORTRAIT_LANDMARK_GATE_LIMITS
+  assert.equal(handAtChinDecision(L.minChinConfidence - 0.01, 0), 'chin_hidden')
+  assert.equal(handAtChinDecision(0.9, L.maxChinFingerLines + 0.01), 'hand_at_chin')
+  assert.equal(handAtChinDecision(0.9, L.maxChinFingerLines - 0.01), null)
+})
+
+test('post-cutout background: plain leftovers pass, a faded figure or texture outside the mask is busy', () => {
+  const width = 300
+  const height = 200
+  const raster = { rgb: new Uint8Array(width * height * 3).fill(255), width, height }
+  const mask = new Uint8Array(width * height)
+  for (let y = 40; y < 200; y += 1) for (let x = 180; x < 260; x += 1) mask[y * width + x] = 255
+  for (let i = 0; i < mask.length; i += 1) if (mask[i]) raster.rgb.set([40, 70, 160], i * 3)
+  const clean = backgroundResidualFeatures(raster, mask)
+  assert.deepEqual([clean.offColour, clean.textured], [0, 0])
+  assert.equal(isBusyBackgroundResidual(clean), false)
+
+  const ghost = { ...raster, rgb: Uint8Array.from(raster.rgb) }
+  for (let y = 10; y < 190; y += 1) for (let x = 10; x < 120; x += 1) ghost.rgb.set([246, 222, 200], (y * width + x) * 3)
+  const faded = backgroundResidualFeatures(ghost, mask)
+  assert.ok(faded.offColour > 0.3, JSON.stringify(faded))
+  assert.equal(isBusyBackgroundResidual(faded), true)
+
+  const textured = { ...raster, rgb: Uint8Array.from(raster.rgb) }
+  for (let y = 0; y < height; y += 1) for (let x = 0; x < 150; x += 1) if ((x + y) % 4 === 0) textured.rgb.set([236, 236, 236], (y * width + x) * 3)
+  const busy = backgroundResidualFeatures(textured, mask)
+  assert.ok(busy.textured > 0.1, JSON.stringify(busy))
+  assert.equal(isBusyBackgroundResidual(busy), true)
 })
 
 // ------------------------------------------------------------ stage runner
@@ -483,6 +624,8 @@ test('every landmark reason has a message key with copy in all five locales', ()
   }
   assert.match((zhCNSettingsWindow as Record<string, string>)[PORTRAIT_LANDMARK_GATE_MESSAGE_KEYS.half_body_only], /0\.5 暂时只支持半身立绘/)
   assert.match((enSettingsWindow as Record<string, string>)[PORTRAIT_LANDMARK_GATE_MESSAGE_KEYS.multiple_characters], /\{count\}/)
+  assert.match((zhCNSettingsWindow as Record<string, string>)[PORTRAIT_LANDMARK_GATE_MESSAGE_KEYS.multiple_characters], /0\.5 只支持单人/)
+  assert.match((zhCNSettingsWindow as Record<string, string>)[PORTRAIT_LANDMARK_GATE_MESSAGE_KEYS.photo_not_illustration], /插画/)
   assert.equal(isPortraitLandmarkGateReason('/Users/me/private.png'), false)
 })
 
@@ -499,5 +642,6 @@ test('privacy boundary: landmark and cutout modules import only the shared contr
   assert.deepEqual(await importsOf('landmarkWorker.js'), ['./cutoutModel.js', './landmarkEngine.js', 'node:fs/promises', 'node:worker_threads'])
   assert.deepEqual(await importsOf('cutoutModel.js'), [])
   assert.deepEqual(await importsOf('cutoutStage.js'), ['sharp'])
+  assert.deepEqual(await importsOf('backgroundResidual.js'), [])
   assert.deepEqual(await importsOf('landmarkRuntime.js'), ['../asyncLock.js', './landmarkGate.js', './landmarkModels.js', 'node:module', 'node:os', 'node:url', 'node:worker_threads'])
 })

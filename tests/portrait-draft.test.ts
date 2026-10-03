@@ -14,6 +14,7 @@ import { evaluatePortraitLandmarks } from '../electron/services/portraitGenerato
 import { summarizePetModelResult } from '../electron/ipc/petModelAudit.js'
 import { resizeLanczosLikePillow } from '../electron/services/portraitGenerator/cutoutModel.js'
 import { PORTRAIT_LANDMARK_GATE_REASONS as R } from '../shared/portraitLandmarkGate.js'
+import { PORTRAIT_IMAGE_GATE_MESSAGE_KEYS, PORTRAIT_IMAGE_GATE_REASONS } from '../shared/portraitImageGate.js'
 import { PORTRAIT_DRAFT_MESSAGE_KEYS, PORTRAIT_DRAFT_REASONS as D, isPortraitDraftReason } from '../shared/portraitDraft.js'
 import { enSettingsWindow } from '../src/i18n/locales/en/settings-window.ts'
 import { zhCNSettingsWindow } from '../src/i18n/locales/zh-CN/settings-window.ts'
@@ -244,6 +245,32 @@ test('when unsure, reject: failing or untrusted cutouts give background_not_sepa
     assert.ok(!events.includes('landmarks'), `${detail}: the landmarks never run after a failed cutout`)
   }
   await assert.rejects(fs.stat(root), 'no plain-background draft is ever written')
+})
+
+test('a plain border around a busy interior: a faded figure left outside the cutout is busy_background (stage cutout), nothing is written', async () => {
+  const { rgb, width, height, kp } = paintCharacter()
+  // a faded close-up of the character behind it, on the left; the border stays plain white
+  for (let y = 40; y < 520; y += 1) for (let x = 20; x < 150; x += 1) rgb.set([250, 232, 216], (y * width + x) * 3)
+  const filePath = path.join(workDir, 'character-ghost.png')
+  await sharp(Buffer.from(rgb), { raw: { width, height, channels: 3 } }).resize(width * 2, height * 2, { kernel: 'nearest' }).png().toFile(filePath)
+  const root = path.join(workDir, 'drafts-ghost')
+  // isnet keeps the character and drops the faded figure
+  const { engine, events } = cutoutEngine(scaledVerdict(kp, 2, 1200), {
+    cutout: async (image: Raster, output: Size) => {
+      const resized = resizeLanczosLikePillow(image.rgb, image.width, image.height, 3, output.width, output.height)
+      const mask = new Uint8Array(output.width * output.height)
+      for (let i = 0; i < mask.length; i += 1) {
+        const x = i % output.width
+        mask[i] = x > output.width * 0.27 && Math.min(resized[i * 3], resized[i * 3 + 1], resized[i * 3 + 2]) < 240 ? 255 : 0
+      }
+      return { ok: true, mask }
+    },
+  })
+  const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, draftRoot: root })
+  const busy = PORTRAIT_IMAGE_GATE_REASONS.BUSY_BACKGROUND
+  assert.deepEqual(result && !result.accepted && [result.stage, result.reasonCode, result.detail, result.messageKey], ['cutout', busy, 'background_residual', PORTRAIT_IMAGE_GATE_MESSAGE_KEYS[busy]], JSON.stringify(result))
+  assert.ok(!events.includes('landmarks'), 'the landmarks never run')
+  await assert.rejects(fs.stat(root), 'no draft is written')
 })
 
 test('draft reasons have copy in all five locales, and the audit trail knows them', () => {

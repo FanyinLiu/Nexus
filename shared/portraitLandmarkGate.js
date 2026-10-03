@@ -15,6 +15,7 @@ export const PORTRAIT_LANDMARK_GATE_REASONS = Object.freeze({
   SIDE_VIEW: 'side_view',
   MOUTH_COVERED: 'mouth_covered',
   HANDS_NEAR_FACE: 'hands_near_face',
+  PHOTO_NOT_ILLUSTRATION: 'photo_not_illustration',
   MODELS_UNAVAILABLE: 'landmark_models_unavailable',
 })
 
@@ -26,6 +27,7 @@ export const PORTRAIT_LANDMARK_GATE_MESSAGE_KEYS = Object.freeze({
   side_view: 'settings.pet.portrait_gate.side_view',
   mouth_covered: 'settings.pet.portrait_gate.mouth_covered',
   hands_near_face: 'settings.pet.portrait_gate.hands_near_face',
+  photo_not_illustration: 'settings.pet.portrait_gate.photo_not_illustration',
   landmark_models_unavailable: 'settings.pet.portrait_gate.landmark_models_unavailable',
 })
 

@@ -151,6 +151,47 @@ layers 0.2-1.5 s), 4.5-5.5 s for transparent inputs. Peak process RSS 1.16-1.54 
 Between jobs, glibc keeps the terminated workers' malloc arenas (RSS plateaus around
 0.6 GB on Linux; 240-270 MB with `MALLOC_ARENA_MAX=2`); the JS heap stays at 7 MB.
 
+## Gate rules added after the stage 1-4 acceptance (2593532)
+
+The frozen acceptance at 2593532 failed (a chibi reported as "hands near face",
+two hand-at-chin images and a faded background figure accepted, a real photo
+rejected only by luck). These rules were added; all follow "when unsure, reject".
+Thresholds live in `PORTRAIT_LANDMARK_GATE_LIMITS` (`landmarkGate.js`) and
+`PORTRAIT_BACKGROUND_RESIDUAL_LIMITS` (`backgroundResidual.js`). The face-size limit
+(96 px) is unchanged.
+
+- **Second character** (`multiple_characters`, "0.5 只支持单人"): every detection
+  with score > 0.5 and at least 20% of the largest face's size counts (the face
+  picker for landmarks still uses 40%). A faded or oversized background face, which
+  the picker may even prefer over the real face, still makes the count two.
+- **Photo** (`photo_not_illustration`): no extra model; two texture statistics on the
+  detected face. (1) `flat`: the face box resampled to 128x128 grey, share of pixels
+  with Sobel |gx|+|gy| <= 4. Cel/anime shading leaves large exactly-flat areas; camera
+  skin does not. Below 0.05 is a photo. (2) `skinGrain`: the face rescaled to 120 px
+  wide, in the cheek skin (own skin between brows and mouth) away from strokes, the
+  share of pixels with |Laplacian of L| >= 1.5. If `flat` < 0.10 and `skinGrain`
+  >= 0.40 it is a photo. Known gap: a well-lit, smooth-skinned photo can pass
+  (1 of 6 dev photos does); stage A's busy-background check still catches most
+  photos with a real background.
+- **Chibi** (`half_body_only`, detail `chibi`), checked before every hand check: the
+  largest foreground component containing the face (alpha, else "not the border
+  colour", on a <= 256 px mask) ends at least 3% of the image height above the
+  bottom edge, is at most 5 face-box heights tall, and the mean width of its bottom
+  10% rows is at most 0.35 of its widest row (feet, not a cut-off bust).
+- **Hand at the chin or mouth** (`hands_near_face`, detail `chin_hidden` /
+  `hand_at_chin`): chin landmark confidence < 0.6 (a hand over the chin breaks the
+  chin point; good dev images are >= 0.68), or more than 3.5% of the box under the
+  chin (+-0.3 face widths, chin + 0.03..0.35 face heights) is thin valleys between
+  lit own skin (finger separations). A hand over the mouth is still caught by
+  `mouth_covered` first.
+- **Busy interior behind a plain border** (generation path, opaque images, after
+  the cutout; `busy_background`, stage `cutout`, detail `background_residual`):
+  outside the isnet mask dilated by 3% of the long side, reject if more than 5% of
+  pixels differ from the dominant background colour by > 24 (any channel), or more
+  than 4% have a 7x7 grey local std > 6. The faded close-up behind the character in
+  the acceptance set is not found by the face detector at any usable score, so this
+  rule, not the face count, is what rejects it.
+
 ## Owner checklist before release
 
 1. ~~Create the GitHub Release `portrait-models-v1`~~ Done 2026-10-02: the three files

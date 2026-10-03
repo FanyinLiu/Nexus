@@ -7,14 +7,25 @@
  *
  * Rules, first match wins:
  *  1. no face (after one contrast-normalised retry) -> half_body_only
- *  2. more than one face                            -> multiple_characters
+ *  2. a second face (score > 0.5, >= 20% of the largest face's size, so
+ *     faded or oversized background faces count too) -> multiple_characters
  *  3. face smaller than 96 px                       -> half_body_only
  *  4. eye landmarks broken (eye spacing > 1 face width or an eye outside
  *     the face outline)                             -> eyes_unclear
  *     (a landmark failure, never reported as a side view)
  *  5. contour symmetry < 0.33 or eye spacing < 0.38 -> side_view
- *  6. mouth covered (g11-safe, below)               -> mouth_covered
- *  7. own-skin blob beside the face across the chin -> hands_near_face
+ *  6. photo texture on the face (`photoTextureFeatures`) -> photo_not_illustration
+ *  7. chibi: the whole figure stands inside the frame (clear margin under
+ *     it, narrow feet at the bottom) and is at most 5 face heights tall
+ *                                                   -> half_body_only (detail `chibi`)
+ *  8. mouth covered (g11-safe, below)               -> mouth_covered
+ *  9. hand at the chin or mouth: chin landmark lost, or finger
+ *     separations in the lit skin just under the chin -> hands_near_face
+ *     (detail `hand_at_chin`)
+ * 10. own-skin blob beside the face across the chin -> hands_near_face
+ *
+ * The chibi check runs before every hand check so a chibi (big head, hands
+ * held up by the face) is told "half body only", not "hands near face".
  *
  * Skin is never judged against absolute colour or lightness. Every colour
  * test compares against the character's own skin, sampled from the face
@@ -61,6 +72,38 @@ export const PORTRAIT_LANDMARK_GATE_LIMITS = Object.freeze({
   handStrokeBridgeFw: 0.05,
   /** Near-neutral skin (chroma below this) cannot separate hands from white props. */
   handMinSkinChroma: 7,
+  /**
+   * Second-character test: any other confident face at least this share of
+   * the largest face's size (looser than `faceRelativeSize`, so a faded or
+   * oversized background face also counts; when unsure, reject).
+   */
+  secondFaceRelativeSize: 0.2,
+  /**
+   * Photo test on the face box resampled to 128 x 128 grey: share of "flat"
+   * pixels (Sobel |gx|+|gy| <= 4). Cel/anime shading is flat; photo skin
+   * never is. Below `photoMaxFlat` -> photo outright.
+   */
+  photoMaxFlat: 0.05,
+  /**
+   * Second photo test for well-lit photos: flat share below
+   * `photoMaybeFlat` AND sensor/JPEG grain in the cheek skin (share of
+   * non-edge skin pixels with |Laplacian of L| >= 1.5 at a fixed face width
+   * of 120 px) at or above `photoMinSkinGrain`.
+   */
+  photoMaybeFlat: 0.1,
+  photoMinSkinGrain: 0.4,
+  /** Face width (px) the grain test is measured at. */
+  photoGrainFaceWidth: 120,
+  /** Chibi: clear margin under the figure (share of image height). */
+  chibiMinBottomGap: 0.03,
+  /** Chibi: figure height in face-box heights (normal bodies are 6-8). */
+  chibiMaxHeightInFaces: 5,
+  /** Chibi: mean width of the bottom 10% of the figure / its widest row (feet, not a cut-off bust). */
+  chibiMaxFootWidth: 0.35,
+  /** Hand at chin: a hand over the chin breaks the chin landmark (goods >= 0.68 in dev). */
+  minChinConfidence: 0.6,
+  /** Hand at chin: share of the under-chin box that is a thin valley between lit own skin. */
+  maxChinFingerLines: 0.035,
 })
 
 const SKIN = Object.freeze({
@@ -132,6 +175,20 @@ export function pickFaces(faces) {
   if (confident.length === 0) return []
   const largest = Math.max(...confident.map(size))
   return confident.filter((face) => size(face) >= limits.faceRelativeSize * largest).sort((a, b) => size(b) - size(a))
+}
+
+/**
+ * Number of characters: confident faces at least `secondFaceRelativeSize` of
+ * the largest one. Looser than `pickFaces` on purpose: a faded or oversized
+ * background face (which `pickFaces` may even prefer) means a second figure.
+ */
+export function characterFaceCount(faces) {
+  const limits = PORTRAIT_LANDMARK_GATE_LIMITS
+  const size = (face) => Math.min(face.bbox[2] - face.bbox[0], face.bbox[3] - face.bbox[1])
+  const confident = faces.filter((face) => face.bbox[4] > limits.faceScore)
+  if (confident.length === 0) return 0
+  const largest = Math.max(...confident.map(size))
+  return confident.filter((face) => size(face) >= limits.secondFaceRelativeSize * largest).length
 }
 
 // ------------------------------------------------------- raster utilities
@@ -534,6 +591,216 @@ export function handBlobFeature(image, analysis) {
   return best
 }
 
+/**
+ * RGB of the image region [x0, x1) x [y0, y1) resampled to outW x outH:
+ * box average when shrinking, bilinear when enlarging.
+ */
+export function resampleRegion(image, x0, y0, x1, y1, outW, outH) {
+  const { width, height, rgb } = image
+  const out = new Uint8Array(outW * outH * 3)
+  const sx = (x1 - x0) / outW
+  const sy = (y1 - y0) / outH
+  const clampX = (x) => Math.min(width - 1, Math.max(0, x))
+  const clampY = (y) => Math.min(height - 1, Math.max(0, y))
+  for (let oy = 0; oy < outH; oy += 1) {
+    for (let ox = 0; ox < outW; ox += 1) {
+      const o = (oy * outW + ox) * 3
+      if (sx > 1 || sy > 1) {
+        const ax = Math.floor(x0 + ox * sx)
+        const bx = Math.max(ax + 1, Math.floor(x0 + (ox + 1) * sx))
+        const ay = Math.floor(y0 + oy * sy)
+        const by = Math.max(ay + 1, Math.floor(y0 + (oy + 1) * sy))
+        let r = 0, g = 0, b = 0, n = 0
+        for (let y = ay; y < by; y += 1) {
+          const yy = clampY(y)
+          for (let x = ax; x < bx; x += 1) {
+            const i = (yy * width + clampX(x)) * 3
+            r += rgb[i]; g += rgb[i + 1]; b += rgb[i + 2]; n += 1
+          }
+        }
+        out[o] = Math.round(r / n); out[o + 1] = Math.round(g / n); out[o + 2] = Math.round(b / n)
+      } else {
+        const fx = x0 + (ox + 0.5) * sx - 0.5
+        const fy = y0 + (oy + 0.5) * sy - 0.5
+        const xa = clampX(Math.floor(fx)), xb = clampX(Math.floor(fx) + 1)
+        const ya = clampY(Math.floor(fy)), yb = clampY(Math.floor(fy) + 1)
+        const tx = Math.min(1, Math.max(0, fx - Math.floor(fx)))
+        const ty = Math.min(1, Math.max(0, fy - Math.floor(fy)))
+        for (let c = 0; c < 3; c += 1) {
+          const top = rgb[(ya * width + xa) * 3 + c] * (1 - tx) + rgb[(ya * width + xb) * 3 + c] * tx
+          const bottom = rgb[(yb * width + xa) * 3 + c] * (1 - tx) + rgb[(yb * width + xb) * 3 + c] * tx
+          out[o + c] = Math.round(top * (1 - ty) + bottom * ty)
+        }
+      }
+    }
+  }
+  return out
+}
+
+/**
+ * Photo vs illustration, measured on the face only (no extra model):
+ * - `flat`: share of flat pixels (Sobel |gx|+|gy| <= 4) in the face box
+ *   resampled to 128 x 128 grey. Cel shading leaves large exactly-flat
+ *   areas; camera skin (grain, pores, soft gradients) almost never does.
+ * - `skinGrain`: the face rescaled to a fixed width, then in the cheek skin
+ *   (own skin between brows and mouth) away from strokes, the share of
+ *   pixels with |Laplacian of L| >= 1.5. Sensor/JPEG grain is high; flat or
+ *   airbrushed digital paint is low.
+ */
+export function photoTextureFeatures(image, face) {
+  const limits = PORTRAIT_LANDMARK_GATE_LIMITS
+  const [bx0, by0, bx1, by1] = face.bbox
+  const x0 = Math.max(0, Math.floor(bx0)), y0 = Math.max(0, Math.floor(by0))
+  const x1 = Math.min(image.width, Math.ceil(bx1)), y1 = Math.min(image.height, Math.ceil(by1))
+  if (x1 - x0 < 8 || y1 - y0 < 8) return null
+  const S = 128
+  const crop = resampleRegion(image, x0, y0, x1, y1, S, S)
+  const grey = new Float32Array(S * S)
+  for (let i = 0; i < S * S; i += 1) grey[i] = Math.round(0.299 * crop[i * 3] + 0.587 * crop[i * 3 + 1] + 0.114 * crop[i * 3 + 2])
+  let flat = 0
+  for (let y = 1; y < S - 1; y += 1) {
+    for (let x = 1; x < S - 1; x += 1) {
+      const i = y * S + x
+      const gx = grey[i - S + 1] + 2 * grey[i + 1] + grey[i + S + 1] - grey[i - S - 1] - 2 * grey[i - 1] - grey[i + S - 1]
+      const gy = grey[i + S - 1] + 2 * grey[i + S] + grey[i + S + 1] - grey[i - S - 1] - 2 * grey[i - S] - grey[i - S + 1]
+      if (Math.abs(gx) + Math.abs(gy) <= 4) flat += 1
+    }
+  }
+  const result = { flat: flat / ((S - 2) * (S - 2)), skinGrain: null }
+
+  const g = faceGeometry(face.keypoints)
+  const scale = limits.photoGrainFaceWidth / g.fw
+  const rx0 = Math.max(0, Math.floor(g.x0 - 0.7 * g.fw)), ry0 = Math.max(0, Math.floor(g.brow - 0.6 * g.fh))
+  const rx1 = Math.min(image.width, Math.ceil(g.x1 + 0.7 * g.fw)), ry1 = Math.min(image.height, Math.ceil(g.chin + 0.8 * g.fh))
+  const w = Math.max(8, Math.round((rx1 - rx0) * scale)), h = Math.max(8, Math.round((ry1 - ry0) * scale))
+  const small = { rgb: resampleRegion(image, rx0, ry0, rx1, ry1, w, h), alpha: null, width: w, height: h }
+  const sxk = w / (rx1 - rx0), syk = h / (ry1 - ry0)
+  const keypoints = face.keypoints.map(([x, y, c]) => [(x - rx0) * sxk, (y - ry0) * syk, c])
+  const analysis = analyseFace(small, keypoints)
+  if (!analysis) return result
+  const { win, lab, ref, skin } = analysis
+  const L = lab.L
+  const ww = win.width
+  let n = 0, grain = 0
+  for (let y = 2; y < win.height - 2; y += 1) {
+    for (let x = 2; x < ww - 2; x += 1) {
+      const i = y * ww + x
+      if (!(ref[i] && skin[i])) continue
+      let edge = false
+      for (let dy = -2; dy <= 2 && !edge; dy += 1) {
+        for (let dx = -2; dx <= 2; dx += 1) if (Math.abs(L[i + dy * ww + dx] - L[i]) > 12) { edge = true; break }
+      }
+      if (edge) continue
+      n += 1
+      if (Math.abs(L[i - 1] + L[i + 1] + L[i - ww] + L[i + ww] - 4 * L[i]) >= 1.5) grain += 1
+    }
+  }
+  if (n >= 50) result.skinGrain = grain / n
+  return result
+}
+
+/** Photo decision (see `photoTextureFeatures`). */
+export function isPhotoTexture(features) {
+  const limits = PORTRAIT_LANDMARK_GATE_LIMITS
+  if (!features) return false
+  if (features.flat < limits.photoMaxFlat) return true
+  return features.flat < limits.photoMaybeFlat && features.skinGrain !== null && features.skinGrain >= limits.photoMinSkinGrain
+}
+
+/**
+ * Whole-figure shape for the chibi test, on a <= 256 px foreground mask:
+ * the largest foreground component whose box contains the face centre.
+ * `bottomGap`: empty share of the image height under it; `heightInFaces`:
+ * its height in face-box heights; `footWidth`: mean width of its bottom 10%
+ * rows over its widest row (feet are narrow; a bust cut by the frame is not).
+ */
+export function figureShapeFeatures(image, face) {
+  const { width, height } = image
+  const step = Math.max(1, Math.ceil(Math.max(width, height) / 256))
+  const w = Math.ceil(width / step)
+  const h = Math.ceil(height / step)
+  const full = foregroundMask(image, { left: 0, top: 0, width, height })
+  const small = new Uint8Array(w * h)
+  for (let y = 0; y < h; y += 1) {
+    for (let x = 0; x < w; x += 1) small[y * w + x] = full[Math.min(height - 1, y * step) * width + Math.min(width - 1, x * step)]
+  }
+  const { labels, stats } = connectedComponents(small, w, h)
+  const fx = Math.min(w - 1, Math.floor((face.bbox[0] + face.bbox[2]) / 2 / step))
+  const fy = Math.min(h - 1, Math.floor((face.bbox[1] + face.bbox[3]) / 2 / step))
+  let label = 0
+  for (let l = 1; l < stats.length; l += 1) {
+    const t = stats[l]
+    if (fx < t.minX || fx > t.maxX || fy < t.minY || fy > t.maxY) continue
+    if (!label || t.area > stats[label].area) label = l
+  }
+  if (!label) return null
+  const s = stats[label]
+  const rows = []
+  for (let y = s.minY; y <= s.maxY; y += 1) {
+    let lo = -1, hi = -1
+    for (let x = s.minX; x <= s.maxX; x += 1) if (labels[y * w + x] === label) { if (lo < 0) lo = x; hi = x }
+    rows.push(lo < 0 ? 0 : hi - lo + 1)
+  }
+  const widest = Math.max(...rows, 1)
+  const tail = rows.slice(Math.floor(rows.length * 0.9))
+  return {
+    bottomGap: ((h - 1 - s.maxY) * step) / height,
+    heightInFaces: ((s.maxY + 1 - s.minY) * step) / Math.max(face.bbox[3] - face.bbox[1], 1),
+    footWidth: tail.reduce((a, b) => a + b, 0) / Math.max(tail.length, 1) / widest,
+  }
+}
+
+/** Chibi decision (see `figureShapeFeatures`). */
+export function isChibiFigure(shape) {
+  const limits = PORTRAIT_LANDMARK_GATE_LIMITS
+  return Boolean(shape)
+    && shape.bottomGap >= limits.chibiMinBottomGap
+    && shape.heightInFaces <= limits.chibiMaxHeightInFaces
+    && shape.footWidth <= limits.chibiMaxFootWidth
+}
+
+/**
+ * Hand at the chin: the share of a box just under the chin (+-0.3 face
+ * widths, chin + 0.03..0.35 face heights) taken by thin valleys between lit
+ * own skin (a pixel that is not lit skin, with lit skin `reach` px away on
+ * both sides that is > 10 L brighter). Fingers folded under the chin draw
+ * several such lines; a bare neck draws almost none.
+ */
+export function chinFingerLines(image, analysis) {
+  const { g, win, lab, tone } = analysis
+  const { width, height } = win
+  const fg = foregroundMask(image, win)
+  const tight = skinLikeMask(lab, tone, TIGHT_SKIN)
+  const lit = tight.map((v, i) => v & fg[i])
+  const reach = Math.max(2, Math.round(0.03 * g.fw))
+  const cx = (g.x0 + g.x1) / 2
+  let lines = 0
+  let box = 0
+  for (let y = reach; y < height - reach; y += 1) {
+    const wy = win.top + y
+    if (wy < g.chin + 0.03 * g.fh || wy > g.chin + 0.35 * g.fh) continue
+    for (let x = reach; x < width - reach; x += 1) {
+      if (Math.abs(win.left + x - cx) > 0.3 * g.fw) continue
+      box += 1
+      const i = y * width + x
+      if (lit[i]) continue
+      const L = lab.L[i]
+      const across = lit[i - reach] && lit[i + reach] && Math.min(lab.L[i - reach], lab.L[i + reach]) - L > 10
+      const down = lit[i - reach * width] && lit[i + reach * width] && Math.min(lab.L[i - reach * width], lab.L[i + reach * width]) - L > 10
+      if (across || down) lines += 1
+    }
+  }
+  return lines / Math.max(box, 1)
+}
+
+/** Hand-at-chin decision: 'chin_hidden' (chin landmark lost), 'hand_at_chin' (finger lines), or null. */
+export function handAtChinDecision(chinConfidence, fingerLines) {
+  const limits = PORTRAIT_LANDMARK_GATE_LIMITS
+  if (chinConfidence < limits.minChinConfidence) return 'chin_hidden'
+  if (fingerLines > limits.maxChinFingerLines) return 'hand_at_chin'
+  return null
+}
+
 // ------------------------------------------------------------- decision
 
 function verdict(reasonCode, detail, metrics, messageParams = {}) {
@@ -562,24 +829,44 @@ export async function evaluatePortraitLandmarks(image, detector, options = {}) {
   const limits = PORTRAIT_LANDMARK_GATE_LIMITS
   const R = PORTRAIT_LANDMARK_GATE_REASONS
   const metrics = {}
-  let faces = pickFaces(await detector.detect('original'))
+  let detections = await detector.detect('original')
+  let faces = pickFaces(detections)
   if (faces.length === 0) {
-    faces = pickFaces(await detector.detect('normalized'))
+    detections = await detector.detect('normalized')
+    faces = pickFaces(detections)
     metrics.normalizedRetry = true
   }
-  metrics.faces = faces.length
+  const characters = characterFaceCount(detections)
+  metrics.faces = characters
   if (faces.length === 0) return verdict(R.HALF_BODY_ONLY, 'no_face', metrics)
-  if (faces.length > 1) return verdict(R.MULTIPLE_CHARACTERS, null, metrics, { count: faces.length })
+  if (characters > 1) return verdict(R.MULTIPLE_CHARACTERS, null, metrics, { count: characters })
   const face = faces[0]
   const facePx = Math.min(face.bbox[2] - face.bbox[0], face.bbox[3] - face.bbox[1]) * (image.pixelScale ?? 1)
   metrics.facePx = Math.round(facePx)
   if (facePx < limits.minFacePx) return verdict(R.HALF_BODY_ONLY, 'face_small', metrics)
+
 
   const side = sideFeatures(face.keypoints)
   metrics.eyeSpacing = round(side.eyeSpacing)
   metrics.contourSymmetry = round(side.contourSymmetry)
   if (side.eyeSpacing > limits.maxEyeSpacing || !side.eyesInside) return verdict(R.EYES_UNCLEAR, 'eye_landmarks_broken', metrics)
   if (side.contourSymmetry < limits.minContourSymmetry || side.eyeSpacing < limits.minEyeSpacing) return verdict(R.SIDE_VIEW, null, metrics)
+
+  const photo = photoTextureFeatures(image, face)
+  if (photo) {
+    metrics.photoFlat = round(photo.flat)
+    if (photo.skinGrain !== null) metrics.photoSkinGrain = round(photo.skinGrain)
+  }
+  if (isPhotoTexture(photo)) return verdict(R.PHOTO_NOT_ILLUSTRATION, null, metrics)
+
+  // Before any hand check: a chibi holds its hands up by its big head.
+  const shape = figureShapeFeatures(image, face)
+  if (shape) {
+    metrics.figureBottomGap = round(shape.bottomGap)
+    metrics.figureHeightInFaces = round(shape.heightInFaces)
+    metrics.figureFootWidth = round(shape.footWidth)
+  }
+  if (isChibiFigure(shape)) return verdict(R.HALF_BODY_ONLY, 'chibi', metrics)
 
   let keypoints = face.keypoints
   let evidence = mouthLandmarkEvidence(keypoints)
@@ -605,6 +892,13 @@ export async function evaluatePortraitLandmarks(image, detector, options = {}) {
   }
   const mouth = mouthCoveredDecision(evidence, occluder)
   if (mouth) return verdict(R.MOUTH_COVERED, mouth, metrics)
+
+  const chinConfidence = keypoints[2][2] ?? 0
+  const fingerLines = analysis ? chinFingerLines(image, analysis) : 0
+  metrics.chinConfidence = round(chinConfidence)
+  metrics.chinFingerLines = round(fingerLines)
+  const chin = handAtChinDecision(chinConfidence, fingerLines)
+  if (chin) return verdict(R.HANDS_NEAR_FACE, chin, metrics)
 
   const handBlob = analysis ? handBlobFeature(image, analysis) : 0
   metrics.handBlob = round(handBlob)

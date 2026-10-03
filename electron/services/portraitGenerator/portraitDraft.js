@@ -13,6 +13,9 @@
  *    stops with `portrait_models_not_downloaded`; any other failure, or a
  *    mask that is not trusted (nearly all background or all foreground),
  *    rejects with `background_not_separable`. `detail` says which.
+ *    Then whatever is left outside the mask must be plain background
+ *    (`backgroundResidual.js`); a faded figure, scenery or props behind the
+ *    character reject with `busy_background` (detail `background_residual`).
  * 3. Stage B runs in the model worker with `keepKeypoints`, on the original
  *    pixels (the gate's thresholds were tuned on uncut images).
  * 4. `splitPortraitLayers` segments the working-size raster (long side 768)
@@ -32,6 +35,8 @@ import path from 'node:path'
 import sharp from 'sharp'
 
 import { PORTRAIT_DRAFT_MESSAGE_KEYS, PORTRAIT_DRAFT_REASONS } from '../../../shared/portraitDraft.js'
+import { PORTRAIT_IMAGE_GATE_MESSAGE_KEYS, PORTRAIT_IMAGE_GATE_REASONS } from '../../../shared/portraitImageGate.js'
+import { backgroundResidualFeatures, isBusyBackgroundResidual } from './backgroundResidual.js'
 import { runPortraitCutout } from './cutoutStage.js'
 import { landmarkStageUnavailable } from './landmarkGate.js'
 import { runPortraitLandmarkStage } from './landmarkStage.js'
@@ -136,6 +141,10 @@ export async function generatePortraitDraftFromPayload(payload, deps) {
     cutout = await timed('cutout', () => runPortraitCutout(source, engine, { width: raster.width, height: raster.height }))
     if (MODEL_FILE_PROBLEMS.has(cutout.status)) return draftRejection('models', PORTRAIT_DRAFT_REASONS.MODELS_NOT_DOWNLOADED, `cutout_model_${cutout.status}`)
     if (cutout.status !== 'ok') return draftRejection('cutout', PORTRAIT_DRAFT_REASONS.BACKGROUND_NOT_SEPARABLE, cutout.status)
+    if (isBusyBackgroundResidual(backgroundResidualFeatures(raster, cutout.alpha))) {
+      const busy = PORTRAIT_IMAGE_GATE_REASONS.BUSY_BACKGROUND
+      return { accepted: false, stage: 'cutout', reasonCode: busy, detail: 'background_residual', messageKey: PORTRAIT_IMAGE_GATE_MESSAGE_KEYS[busy], messageParams: {} }
+    }
   }
   const stageB = await timed('landmarks', () => runPortraitLandmarkStage(source, engine, { keepKeypoints: true }))
   if (!stageB.accepted || !Array.isArray(stageB.keypoints)) return rejection('landmarks', stageB)
