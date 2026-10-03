@@ -18,6 +18,7 @@ import { createHash } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { pipeline } from 'node:stream/promises'
 
 import {
   PORTRAIT_MODEL_CATALOG,
@@ -47,6 +48,7 @@ export const PORTRAIT_MODEL_DOWNLOAD_ERRORS = Object.freeze({
 const E = PORTRAIT_MODEL_DOWNLOAD_ERRORS
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 const PROGRESS_STEP_BYTES = 1 << 20
+const DISK_ERROR_CODES = new Set(['ENOSPC', 'EACCES', 'EPERM', 'EIO', 'EROFS', 'EDQUOT', 'EFBIG', 'EISDIR', 'ENOTDIR', 'ENOENT', 'EMFILE', 'ENFILE', 'EBADF'])
 
 /** Download failure with a stable `code` (and optional numeric `status`). */
 export class PortraitModelDownloadError extends Error {
@@ -89,25 +91,11 @@ async function fetchFollowingRedirects(fetchImpl, url, headers, signal) {
       current = resolveModelDownloadRedirect(current, response.headers.get('location'))
     } catch {
       throw fail(E.UNSAFE_URL)
+    } finally {
+      await response.body?.cancel?.().catch(() => {})
     }
-    await response.body?.cancel?.().catch(() => {})
   }
   throw fail(E.HTTP_STATUS, 310)
-}
-
-/** Write with backpressure; both listeners are removed again, so a long download never piles them up. */
-async function writeChunk(stream, chunk) {
-  if (stream.write(chunk)) return
-  await new Promise((resolve, reject) => {
-    const onDrain = () => { stream.off('error', onError); resolve() }
-    const onError = (error) => { stream.off('drain', onDrain); reject(error) }
-    stream.once('drain', onDrain)
-    stream.once('error', onError)
-  })
-}
-
-async function closeStream(stream) {
-  await new Promise((resolve, reject) => stream.end((error) => (error ? reject(error) : resolve())))
 }
 
 /**
@@ -115,6 +103,7 @@ async function closeStream(stream) {
  * @returns {Promise<void>}
  */
 async function attemptDownload(model, dest, context) {
+  if (context.signal?.aborted) throw fail(E.ABORTED)
   const expected = validateModelIntegrity(model)
   const partial = `${dest}.partial`
   let offset = await fileSize(partial)
@@ -130,15 +119,18 @@ async function attemptDownload(model, dest, context) {
   context.signal?.addEventListener('abort', onAbort, { once: true })
   let stalled = false
   let stallTimer = null
+  let response
   const armStall = () => {
     clearTimeout(stallTimer)
     stallTimer = setTimeout(() => { stalled = true; stall.abort() }, context.stallMs)
   }
 
   try {
+    // The signal may have changed while the existing partial file was hashed.
+    if (context.signal?.aborted) throw fail(E.ABORTED)
     armStall()
     const headers = offset > 0 ? { Range: `bytes=${offset}-` } : {}
-    const response = await fetchFollowingRedirects(context.fetchImpl, model.url, headers, stall.signal)
+    response = await fetchFollowingRedirects(context.fetchImpl, model.url, headers, stall.signal)
     if (response.status === 200 && offset > 0) {
       offset = 0
       hash = createHash('sha256')
@@ -161,23 +153,24 @@ async function attemptDownload(model, dest, context) {
     let received = offset
     let reported = offset
     const out = createWriteStream(partial, { flags: offset > 0 ? 'a' : 'w' })
-    try {
-      for await (const chunk of response.body) {
+    // Pipeline observes asynchronous open/write/close errors even when every
+    // chunk fits in the buffer, and waits for the file handle before rename.
+    await pipeline(response.body, async function* (source) {
+      for await (const chunk of source) {
         // Do not rely on the fetch implementation erroring the body on abort.
         if (stall.signal.aborted) throw new Error('aborted')
         armStall()
         received += chunk.length
         if (received > expected.sizeBytes) throw fail(E.SIZE_MISMATCH)
         hash.update(chunk)
-        await writeChunk(out, chunk)
+        yield chunk
         if (received - reported >= PROGRESS_STEP_BYTES || received === expected.sizeBytes) {
           reported = received
           context.emit({ phase: 'downloading', modelId: model.id, receivedBytes: received, totalBytes: expected.sizeBytes })
         }
       }
-    } finally {
-      await closeStream(out).catch(() => {})
-    }
+    }, out, { signal: stall.signal })
+    if (context.signal?.aborted) throw fail(E.ABORTED)
     if (received !== expected.sizeBytes) throw fail(E.NETWORK)
     context.emit({ phase: 'verifying', modelId: model.id })
     if (hash.digest('hex') !== expected.sha256) {
@@ -194,11 +187,13 @@ async function attemptDownload(model, dest, context) {
     if (error instanceof PortraitModelDownloadError) throw error
     if (context.signal?.aborted) throw fail(E.ABORTED)
     if (stalled) throw fail(E.STALLED)
-    if (error?.code === 'ENOSPC' || error?.code === 'EACCES' || error?.code === 'EPERM') throw fail(E.DISK)
+    if (DISK_ERROR_CODES.has(error?.code)) throw fail(E.DISK)
     throw fail(E.NETWORK)
   } finally {
     clearTimeout(stallTimer)
     context.signal?.removeEventListener('abort', onAbort)
+    // Header/status failures never enter pipeline, which otherwise owns body cleanup.
+    if (response && !response.bodyUsed) await response.body?.cancel?.().catch(() => {})
   }
 }
 
@@ -239,6 +234,7 @@ async function alreadyInstalled(model, dest, hashFile) {
  * @returns {Promise<{ installed: string[], alreadyPresent: string[] }>}
  */
 export async function downloadPortraitModels(options) {
+  if (options.signal?.aborted) throw fail(E.ABORTED)
   const release = options.release ?? PORTRAIT_MODEL_RELEASE
   if (!release.published) throw fail(E.RELEASE_UNPUBLISHED)
   const models = options.models ?? selectPortraitModels()
@@ -266,8 +262,11 @@ export async function downloadPortraitModels(options) {
   const installed = []
   const alreadyPresent = []
   for (const model of models) {
+    if (options.signal?.aborted) throw fail(E.ABORTED)
     const dest = path.join(options.directory, model.fileName)
-    if (await alreadyInstalled(model, dest, hashFile)) {
+    const present = await alreadyInstalled(model, dest, hashFile)
+    if (options.signal?.aborted) throw fail(E.ABORTED)
+    if (present) {
       alreadyPresent.push(model.id)
       emit({ phase: 'installed', modelId: model.id })
       continue

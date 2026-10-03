@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { EventEmitter } from 'node:events'
 import fs from 'node:fs/promises'
@@ -190,6 +191,115 @@ test('backpressure waits do not pile up stream listeners (no MaxListenersExceede
     process.off('warning', onWarning)
   }
   assert.deepEqual(warnings.filter((name) => name === 'MaxListenersExceededWarning'), [])
+})
+
+for (const stage of ['open', 'write', 'close']) {
+  test(`download reports asynchronous small-chunk ${stage} errors as disk failures and can retry`, async () => {
+    const dir = await freshDir()
+    const fixture = fakeModel('disk-failure', 18, 11)
+    // A child makes an unhandled stream error a test failure without killing
+    // the test runner. The real WriteStream still owns opening/closing files.
+    const probe = `
+      import assert from 'node:assert/strict'
+      import fs from 'node:fs'
+      import promises from 'node:fs/promises'
+      import path from 'node:path'
+      import { syncBuiltinESMExports } from 'node:module'
+      import { runPortraitModelDownload } from './electron/services/portraitGenerator/portraitModelDownloader.js'
+      const [directory, stage, serialized, encoded] = process.argv.slice(1)
+      const model = JSON.parse(serialized), bytes = Buffer.from(encoded, 'base64')
+      const original = fs.createWriteStream
+      let injected = 0
+      const diskError = () => Object.assign(new Error('synthetic disk failure'), { code: stage === 'open' ? 'EACCES' : 'EIO' })
+      fs.createWriteStream = (file, options) => original(file, { ...options, fs: {
+        ...fs,
+        [stage]: (...args) => {
+          injected += 1
+          const callback = args.pop()
+          if (stage === 'close') fs.close(...args, error => callback(error ?? diskError()))
+          else setImmediate(() => callback(diskError()))
+        },
+      } })
+      syncBuiltinESMExports()
+      const events = []
+      const options = { directory, models: [model], release: { published: true }, maxAttempts: 1,
+        fetchImpl: async () => new Response(bytes), onProgress: event => events.push(event) }
+      const result = await runPortraitModelDownload(options)
+      fs.createWriteStream = original
+      syncBuiltinESMExports()
+      assert.equal(injected, 1)
+      assert.deepEqual(result, { ok: false, code: 'disk' })
+      assert.equal(events.some(event => ['installed', 'done'].includes(event.phase)), false)
+      assert.equal(fs.existsSync(path.join(directory, model.fileName)), false)
+      const partial = path.join(directory, model.fileName + '.partial')
+      assert.equal(fs.existsSync(partial), stage !== 'open')
+      if (stage !== 'open') assert.equal((await promises.stat(partial)).size, stage === 'close' ? bytes.length : 0)
+      const retry = await runPortraitModelDownload(options)
+      assert.equal(retry.ok, true)
+      assert.deepEqual(await promises.readFile(path.join(directory, model.fileName)), bytes)
+      assert.equal(fs.existsSync(partial), false)
+      console.log(JSON.stringify({ stage, result, retryOk: retry.ok }))
+    `
+    const child = spawnSync(process.execPath, ['--input-type=module', '-e', probe, dir, stage,
+      JSON.stringify(fixture.model), fixture.bytes.toString('base64')], { cwd: ROOT, encoding: 'utf8', timeout: 10_000 })
+    assert.equal(child.status, 0, `${stage}: child did not safely return (${child.error?.message ?? child.stderr})`)
+    assert.deepEqual(JSON.parse(child.stdout), { stage, result: { ok: false, code: E.DISK }, retryOk: true })
+  })
+}
+
+test('a signal aborted before download prevents fetch and creates no download directory', async () => {
+  const fixture = fakeModel('already-aborted', 18, 12)
+  const directory = path.join(await freshDir(), 'not-created')
+  const controller = new AbortController()
+  controller.abort()
+  const { impl, calls } = fakeFetch(new Map([[fixture.model.url, fixture.bytes]]))
+  const result = await runPortraitModelDownload({ directory, models: [fixture.model] as never, release: published,
+    fetchImpl: impl, signal: controller.signal })
+  assert.deepEqual(result, { ok: false, code: E.ABORTED })
+  assert.equal(calls.length, 0)
+  assert.equal(existsSync(directory), false)
+  await fs.mkdir(directory)
+  const installed = path.join(directory, fixture.model.fileName)
+  await fs.writeFile(installed, fixture.bytes)
+  assert.deepEqual(await runPortraitModelDownload({ directory, models: [fixture.model] as never, release: published,
+    fetchImpl: impl, signal: controller.signal, hashFile: async () => { assert.fail('an aborted call must not inspect installed files') } }), { ok: false, code: E.ABORTED })
+  assert.equal(calls.length, 0)
+  assert.deepEqual(await fs.readFile(installed), fixture.bytes)
+})
+
+test('aborting during retry backoff prevents another fetch or partial-file write', async () => {
+  const fixture = fakeModel('backoff-aborted', 18, 13)
+  const directory = await freshDir()
+  const controller = new AbortController()
+  const events: Array<Record<string, unknown>> = []
+  const { impl, calls } = fakeFetch(new Map([[fixture.model.url, fixture.bytes]]), [async () => respond(503, null)])
+  const result = await runPortraitModelDownload({ directory, models: [fixture.model] as never, release: published,
+    fetchImpl: impl, signal: controller.signal, sleep: async () => { controller.abort() }, onProgress: event => events.push(event) })
+  assert.deepEqual(result, { ok: false, code: E.ABORTED })
+  assert.equal(calls.length, 1)
+  assert.deepEqual(await fs.readdir(directory), [])
+  assert.equal(events.some(event => ['installed', 'done'].includes(String(event.phase))), false)
+})
+
+test('HTTP and header rejections cancel the unconsumed body once without creating a partial file', async () => {
+  const fixture = fakeModel('rejected-response', 18, 14)
+  for (const sample of [
+    { status: 503, headers: {}, code: E.HTTP_STATUS },
+    { status: 416, headers: {}, code: E.HTTP_STATUS },
+    { status: 206, headers: { 'content-range': 'bytes 9-17/18' }, code: E.HTTP_STATUS },
+    { status: 200, headers: { 'content-length': '999' }, code: E.SIZE_MISMATCH },
+    { status: 302, headers: { location: 'https://untrusted.invalid/model' }, code: E.UNSAFE_URL },
+  ]) {
+    const directory = await freshDir()
+    let cancelled = 0
+    const body = new ReadableStream({ start(controller) { controller.enqueue(fixture.bytes) }, cancel() { cancelled += 1 } })
+    const fetchImpl = (async () => new Response(body, { status: sample.status, headers: sample.headers as Record<string, string> })) as typeof fetch
+    const result = await runPortraitModelDownload({ directory, models: [fixture.model] as never,
+      release: published, maxAttempts: 1, fetchImpl })
+    assert.deepEqual(result, { ok: false, code: sample.code })
+    assert.equal(cancelled, 1, `status ${sample.status}`)
+    assert.deepEqual(await fs.readdir(directory), [])
+  }
 })
 
 test('an interrupted download resumes with Range from the partial file; a server ignoring Range restarts it', async () => {
