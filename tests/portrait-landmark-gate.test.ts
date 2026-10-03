@@ -486,7 +486,7 @@ test('every landmark reason has a message key with copy in all five locales', ()
   assert.equal(isPortraitLandmarkGateReason('/Users/me/private.png'), false)
 })
 
-test('privacy boundary: landmark modules import only the shared contracts, sharp, onnxruntime-web, and node built-ins', async () => {
+test('privacy boundary: landmark and cutout modules import only the shared contracts, sharp, onnxruntime-web, and node built-ins', async () => {
   const importsOf = async (file: string) => {
     const source = await fs.readFile(path.join(ROOT, 'electron/services/portraitGenerator', file), 'utf8')
     return [...source.matchAll(/^import[^'"]*['"]([^'"]+)['"]/gm)].map((m) => m[1]).sort()
@@ -496,6 +496,8 @@ test('privacy boundary: landmark modules import only the shared contracts, sharp
   assert.deepEqual(await importsOf('landmarkModels.js'), ['../../../shared/portraitModels.js', 'node:crypto', 'node:fs', 'node:fs/promises', 'node:path'])
   assert.deepEqual(await importsOf('landmarkStage.js'), ['../../../shared/portraitLandmarkGate.js', './landmarkGate.js', 'sharp'])
   assert.deepEqual(await importsOf('landmarkEngine.js'), ['./animeFaceModel.js', './landmarkGate.js'])
-  assert.deepEqual(await importsOf('landmarkWorker.js'), ['./landmarkEngine.js', 'node:fs/promises', 'node:worker_threads'])
+  assert.deepEqual(await importsOf('landmarkWorker.js'), ['./cutoutModel.js', './landmarkEngine.js', 'node:fs/promises', 'node:worker_threads'])
+  assert.deepEqual(await importsOf('cutoutModel.js'), [])
+  assert.deepEqual(await importsOf('cutoutStage.js'), ['sharp'])
   assert.deepEqual(await importsOf('landmarkRuntime.js'), ['../asyncLock.js', './landmarkGate.js', './landmarkModels.js', 'node:module', 'node:os', 'node:url', 'node:worker_threads'])
 })

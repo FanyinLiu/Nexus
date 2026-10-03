@@ -780,9 +780,12 @@ than presenting Nexus as a Codex-style work agent.
   pinned catalog in `shared/portraitModels.js` (see
   `docs/PORTRAIT_LANDMARK_MODELS.md`). Without them, stage A's verdict stands.
   The generation entry `portraitDraft.js` (`pet-model:generate-portrait-draft`,
-  no UI yet) chains stage A, stage B with landmarks, and the hair/head/body
+  no UI yet) chains stage A, the isnet-anime cutout (`cutoutStage.js`,
+  `cutoutModel.js`; skipped for transparent inputs, plain-background alpha
+  only as a fallback), stage B with landmarks, and the hair/head/body
   layering (`portraitLayers.js`, `portraitLayerStage.js`) into a same-canvas
-  RGBA draft under `<userData>/portrait-drafts/` (newest 3 kept).
+  RGBA draft under `<userData>/portrait-drafts/` (newest 3 kept). Both models
+  run in the same worker pattern, one fresh worker per job.
 - `features/releaseNotes/` owns small release-communication contracts used by the
   app shell, such as the current About/Help release spotlight. It must stay
   content-only: no updater logic, IPC, migrations, or background checks.

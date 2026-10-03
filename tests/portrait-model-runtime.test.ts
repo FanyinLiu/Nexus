@@ -62,7 +62,7 @@ test('catalog: pinned release URLs on allowlisted hosts, valid integrity, licenc
     assert.match(model.source.revision, /^[0-9a-f]{40}$/, 'source pinned to a commit')
     assert.equal(model.trainingDataDocumented, false, 'upstream does not document training data')
   }
-  assert.deepEqual(selectPortraitModels().map((m) => m.id), ['anime-face-yolov3', 'anime-face-hrnetv2'])
+  assert.deepEqual(selectPortraitModels().map((m) => m.id), ['anime-face-yolov3', 'anime-face-hrnetv2', 'isnet-anime'], 'all three are wired (isnet: portrait-draft cutout)')
   assert.deepEqual(selectPortraitModels({ includePlanned: true }).map((m) => m.id), ['anime-face-yolov3', 'anime-face-hrnetv2', 'isnet-anime'])
   assert.equal(PORTRAIT_MODEL_CATALOG.find((m) => m.id === 'isnet-anime')?.license.spdx, 'Apache-2.0')
   assert.deepEqual(Object.values(LANDMARK_MODEL_FILES).map((f) => f.fileName), ['anime_face_yolov3.onnx', 'anime_face_hrnetv2_flip.onnx'])
@@ -299,13 +299,13 @@ test('a stalled transfer is reported as stalled and retried', async () => {
   assert.deepEqual(events.filter((e) => e.phase === 'retrying').map((e) => e.code), [E.STALLED])
 })
 
-test('model status lists attribution and install state without paths; planned models do not count towards the download', async () => {
+test('model status lists attribution and install state without paths; all three wired models count towards the download', async () => {
   const dir = await freshDir()
   const status = await getPortraitModelStatus({ directory: dir })
   assert.equal(status.releasePublished, true)
   assert.equal(status.releaseTag, PORTRAIT_MODEL_RELEASE.tag)
   assert.deepEqual(status.models.map((m: { id: string, installed: string }) => [m.id, m.installed]), [['anime-face-yolov3', 'missing'], ['anime-face-hrnetv2', 'missing'], ['isnet-anime', 'missing']])
-  assert.equal(status.downloadBytes, 246_035_424 + 39_046_070)
+  assert.equal(status.downloadBytes, 246_035_424 + 39_046_070 + 176_069_933)
   await fs.writeFile(path.join(dir, 'anime_face_hrnetv2_flip.onnx'), Buffer.alloc(10))
   const partial = await getPortraitModelStatus({ directory: dir })
   assert.equal(partial.models[1].installed, 'invalid')

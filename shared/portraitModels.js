@@ -9,8 +9,10 @@
  * `PORTRAIT_MODEL_RELEASE.published` back to false makes the downloader
  * refuse to run (`release_unpublished`).
  *
- * `wired: false` marks a model that is planned but not used by the app yet
- * (isnet-anime cutout); the downloader skips it unless asked explicitly.
+ * `wired: false` would mark a model that is planned but not used by the app
+ * yet (the downloader skips those unless asked explicitly). All three are
+ * wired: the face detector + landmarks (image gate and drafts) and the
+ * isnet-anime cutout (portrait drafts).
  */
 
 const RELEASE_TAG = 'portrait-models-v1'
@@ -59,7 +61,7 @@ export const PORTRAIT_MODEL_CATALOG = Object.freeze([
   Object.freeze({
     id: 'isnet-anime',
     role: 'cutout',
-    wired: false,
+    wired: true,
     fileName: 'isnetis.onnx',
     sizeBytes: 176_069_933,
     sha256: 'f15622d853e8260172812b657053460e20806f04b9e05147d49af7bed31a6e99',

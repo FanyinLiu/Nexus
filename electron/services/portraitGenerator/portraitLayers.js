@@ -486,7 +486,8 @@ export function segmentPortraitLayers(image, keypoints, params = PORTRAIT_LAYER_
  * Foreground alpha for an opaque image on a plain background (v0.5 scope):
  * pixels connected to the border whose Lab colour is within `tolerance` of
  * the border median are background. Transparent PNGs should use their own
- * alpha instead; this is a stand-in until a cutout model is chosen.
+ * alpha instead. Portrait drafts use the isnet-anime cutout and fall back to
+ * this only when the cutout model is unavailable or its mask is not trusted.
  */
 export function plainBackgroundAlpha(image, tolerance = 8) {
   const { width: W, height: H } = image

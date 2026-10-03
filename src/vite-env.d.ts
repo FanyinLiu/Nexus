@@ -602,7 +602,7 @@ declare global {
       generatePortraitDraft: (payload?: { imagePath?: string }) => Promise<
         | null
         | { accepted: false, stage: 'image' | 'landmarks', reasonCode: string, detail: string | null, messageKey: string, messageParams: Record<string, string | number> }
-        | { accepted: true, draftId: string, width: number, height: number, alphaSource: 'image' | 'plain_background', layers: Record<'hair' | 'head' | 'body', { share: number }> }
+        | { accepted: true, draftId: string, width: number, height: number, alphaSource: 'image' | 'cutout' | 'plain_background', cutout: { status: string, foreground?: number }, layers: Record<'hair' | 'head' | 'body', { share: number }> }
       >
       getPortraitModelStatus: () => Promise<{
         releaseTag: string

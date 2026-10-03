@@ -1,14 +1,15 @@
 /**
- * Model files for the portrait landmark gate.
+ * Model files for the portrait pipeline.
  *
- * The two ONNX files (anime face detector ~246 MB, landmarks ~39 MB) are NOT
- * bundled or committed. `portraitModelDownloader.js` fetches them on first
- * use into `<userData>/models/portrait-landmarks/`; both are pinned by exact
+ * The ONNX files (anime face detector ~246 MB, landmarks ~39 MB, isnet-anime
+ * cutout ~176 MB) are NOT bundled or committed. `portraitModelDownloader.js`
+ * fetches them on first use into `<userData>/models/portrait-landmarks/`
+ * (directory name kept from the landmark-only first cut); all are pinned by exact
  * byte size + SHA-256 in `shared/portraitModels.js`. A missing or modified
  * file reports `missing` / `invalid`, and the caller skips the landmark
  * stage instead of failing the image.
  *
- * Hashing 285 MB takes about a second, so a successful verification is
+ * Hashing 285 MB takes about a second (461 MB with the cutout model), so a successful verification is
  * remembered for the life of the process, keyed by path + size + mtime.
  */
 
@@ -30,6 +31,11 @@ const catalogFile = (role) => {
 export const LANDMARK_MODEL_FILES = Object.freeze({
   detector: catalogFile('detector'),
   landmarks: catalogFile('landmarks'),
+})
+
+/** The isnet-anime cutout model (portrait drafts only). */
+export const CUTOUT_MODEL_FILES = Object.freeze({
+  cutout: catalogFile('cutout'),
 })
 
 const verifiedFiles = new Map()

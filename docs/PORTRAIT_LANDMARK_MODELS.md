@@ -1,8 +1,9 @@
-# Portrait models (v0.5): landmark gate and planned cutout
+# Portrait models (v0.5): landmark gate and cutout
 
 Stage B of the portrait image gate (`electron/services/portraitGenerator/landmarkGate.js`)
 runs an anime face detector and a 28-point landmark model on images that stage A
-(`rejectImage.js`) accepted. The v0.5 layering will also use an anime cutout model.
+(`rejectImage.js`) accepted. Portrait drafts (`portraitDraft.js`) also run an anime
+cutout model before layering.
 This document covers where the models come from, how the app downloads, verifies and
 runs them, and what the owner still has to do.
 
@@ -25,7 +26,7 @@ Release tag: **`portrait-models-v1`**. The pinned URL is
 | --- | --- | --- | --- | --- | --- |
 | `anime-face-yolov3` | face detector | `anime_face_yolov3.onnx` | 246,035,424 | `f44b484f59c3aaf113c4dea57338163fef1c9e470bee7bcfd95a69ff1ed9f1a9` | yes (stage B) |
 | `anime-face-hrnetv2` | 28 face landmarks | `anime_face_hrnetv2_flip.onnx` | 39,046,070 | `3c2eb13d89cde5ab5b668de710bec81d08264f8db2df5200e6dd3fb7ecdadf54` | yes (stage B) |
-| `isnet-anime` | character cutout | `isnetis.onnx` | 176,069,933 | `f15622d853e8260172812b657053460e20806f04b9e05147d49af7bed31a6e99` | planned (`wired: false`) |
+| `isnet-anime` | character cutout | `isnetis.onnx` | 176,069,933 | `f15622d853e8260172812b657053460e20806f04b9e05147d49af7bed31a6e99` | yes (portrait drafts) |
 
 | id | upstream source (pinned revision) | licence |
 | --- | --- | --- |
@@ -66,8 +67,8 @@ README records how the release files were re-checked under `onnxruntime-web`.
 `portraitModelDownloader.js` (IPC `pet-model:download-portrait-models`, panel window
 only, audited; progress on `pet-model:portrait-models-progress`) behaves as follows:
 
-- Downloads into `<userData>/models/portrait-landmarks/`. The wired models total
-  about 285 MB. `isnet-anime` is skipped until cutout is wired.
+- Downloads all three models into `<userData>/models/portrait-landmarks/` (the
+  directory name predates the cutout), about 461 MB in total.
 - Every request and redirect goes through the shared model-download allowlist
   (`modelDownloadSecurity.js`): HTTPS only, GitHub release hosts included.
 - Resumes `<file>.partial` with an HTTP `Range` request. The bytes already on disk

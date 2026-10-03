@@ -12,6 +12,7 @@ import {
 } from '../electron/services/portraitGenerator/portraitDraft.js'
 import { evaluatePortraitLandmarks } from '../electron/services/portraitGenerator/landmarkGate.js'
 import { summarizePetModelResult } from '../electron/ipc/petModelAudit.js'
+import { resizeLanczosLikePillow } from '../electron/services/portraitGenerator/cutoutModel.js'
 import { PORTRAIT_LANDMARK_GATE_REASONS as R } from '../shared/portraitLandmarkGate.js'
 
 let workDir = ''
@@ -104,6 +105,7 @@ test('generation: gate -> landmarks (original px) -> hair/head/body PNGs + draft
   assert.match(result.draftId, /^draft-1700000000000-[0-9a-f]{8}$/)
   assert.deepEqual([result.width, result.height], [658, 768])
   assert.equal(result.alphaSource, 'plain_background')
+  assert.deepEqual(result.cutout, { status: 'runtime_unavailable' }, 'an engine without cutout support falls back to the plain background')
   assert.ok(result.layers.hair.share > 0.1 && result.layers.head.share > 0.1 && result.layers.body.share > 0.1, JSON.stringify(result.layers))
   assert.ok(!JSON.stringify(result).includes(workDir), 'no paths in the result')
 
@@ -120,6 +122,8 @@ test('generation: gate -> landmarks (original px) -> hair/head/body PNGs + draft
   assert.equal(at(20, 20), 0)
   const manifest = JSON.parse(await fs.readFile(path.join(dir, 'draft.json'), 'utf8'))
   assert.equal(manifest.version, 1)
+  assert.deepEqual(manifest.cutout, { status: 'runtime_unavailable' })
+  assert.ok(Number.isInteger(manifest.timingsMs.landmarks) && Number.isInteger(manifest.timingsMs.layers), JSON.stringify(manifest.timingsMs))
   assert.deepEqual(Object.keys(manifest.layers), ['hair', 'head', 'body'])
   assert.ok(!JSON.stringify(manifest).includes(workDir), 'no source path in the manifest')
 })
@@ -144,6 +148,110 @@ test('generation stops at stage A, at missing models, and at a landmark rejectio
   await assert.rejects(fs.stat(root), 'no draft directory is created for a rejected image')
 
   assert.equal(await generatePortraitDraftFromPayload({}, { pickImagePath: async () => null, getEngine: () => hands.engine, draftRoot: root }), null, 'a cancelled picker returns null')
+})
+
+type Size = { width: number, height: number }
+type Raster = { rgb: Uint8Array, width: number, height: number }
+
+/**
+ * Engine stub with the cutout API. Its "model" marks every pixel that is
+ * not near-white as foreground (stands in for isnet on the flat test image);
+ * `events` records the order in which the stages ran.
+ */
+function cutoutEngine(verdictFor: (image: Size) => object, overrides: Record<string, unknown> = {}) {
+  const events: string[] = []
+  const engine = {
+    prepare: async () => { events.push('prepare'); return { status: 'ready' } },
+    evaluate: async (image: Size) => { events.push('landmarks'); return verdictFor(image) },
+    prepareCutout: async () => { events.push('prepareCutout'); return { status: 'ready' } },
+    cutout: async (image: Raster, output: Size) => {
+      events.push(`cutout:${image.width}x${image.height}->${output.width}x${output.height}`)
+      const resized = resizeLanczosLikePillow(image.rgb, image.width, image.height, 3, output.width, output.height)
+      const mask = new Uint8Array(output.width * output.height)
+      for (let i = 0; i < mask.length; i += 1) mask[i] = Math.min(resized[i * 3], resized[i * 3 + 1], resized[i * 3 + 2]) < 240 ? 255 : 0
+      return { ok: true, mask }
+    },
+    ...overrides,
+  }
+  return { engine, events }
+}
+
+const scaledVerdict = (kp: number[][], factor: number, originalWidth: number) => (image: Size) => {
+  const k = image.width / originalWidth
+  return accepted(kp.map(([x, y, c]) => [x * factor * k, y * factor * k, c]))
+}
+
+test('generation with the cutout: gate -> cutout (full-size RGB in, working-size mask out) -> landmarks -> layers cut with the isnet mask', async () => {
+  const filePath = await writeCharacter('character-cut.png', 2)
+  const { kp } = paintCharacter()
+  const root = path.join(workDir, 'drafts-cut')
+  const { engine, events } = cutoutEngine(scaledVerdict(kp, 2, 1200))
+  const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, draftRoot: root })
+  assert.equal(result?.accepted, true, JSON.stringify(result))
+  if (!result?.accepted) return
+  assert.deepEqual(events, ['prepare', 'prepareCutout', 'cutout:1200x1400->658x768', 'prepare', 'landmarks'], 'face models checked first, then cutout, then landmarks')
+  assert.equal(result.alphaSource, 'cutout')
+  assert.equal(result.cutout.status, 'ok')
+  assert.ok(result.cutout.foreground && result.cutout.foreground > 0.3 && result.cutout.foreground < 0.8, JSON.stringify(result.cutout))
+  assert.ok(result.layers.hair.share > 0.1 && result.layers.head.share > 0.1 && result.layers.body.share > 0.1, JSON.stringify(result.layers))
+  const manifest = JSON.parse(await fs.readFile(path.join(root, result.draftId, 'draft.json'), 'utf8'))
+  assert.equal(manifest.alphaSource, 'cutout')
+  assert.deepEqual(manifest.cutout, result.cutout)
+  assert.ok(Number.isInteger(manifest.timingsMs.cutout), JSON.stringify(manifest.timingsMs))
+  const { data } = await sharp(path.join(root, result.draftId, 'head.png')).raw().toBuffer({ resolveWithObject: true })
+  assert.equal(data[(Math.round(300 * 768 / 700) * 658 + Math.round(300 * 658 / 600)) * 4 + 3], 255, 'face centre opaque')
+  assert.equal(data[(10 * 658 + 10) * 4 + 3], 0, 'background transparent')
+})
+
+test('the plain-background alpha is only a fallback: missing, failing or untrusted cutouts still produce a draft and say why', async () => {
+  const filePath = await writeCharacter('character-fallback.png', 2)
+  const { kp } = paintCharacter()
+  const root = path.join(workDir, 'drafts-fallback')
+  const cases: Array<[string, Record<string, unknown>]> = [
+    ['missing', { prepareCutout: async () => ({ status: 'missing' }) }],
+    ['invalid', { prepareCutout: async () => ({ status: 'invalid' }) }],
+    ['timeout', { cutout: async () => ({ ok: false, code: 'timeout' }) }],
+    ['load_failed', { cutout: async () => ({ ok: false, code: 'load_failed' }) }],
+    ['empty', { cutout: async (_image: Raster, output: Size) => ({ ok: true, mask: new Uint8Array(output.width * output.height) }) }],
+  ]
+  for (const [status, overrides] of cases) {
+    const { engine } = cutoutEngine(scaledVerdict(kp, 2, 1200), overrides)
+    const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => engine, draftRoot: root })
+    assert.equal(result?.accepted, true, status)
+    if (!result?.accepted) continue
+    assert.equal(result.alphaSource, 'plain_background', status)
+    assert.deepEqual(result.cutout, { status }, status)
+  }
+})
+
+test('transparent inputs keep their own alpha and never run the cutout; missing face models stop before the cutout runs', async () => {
+  const { rgb, width, height, kp } = paintCharacter()
+  const rgba = new Uint8Array(width * height * 4)
+  for (let i = 0; i < width * height; i += 1) {
+    rgba.set(rgb.subarray(i * 3, i * 3 + 3), i * 4)
+    rgba[i * 4 + 3] = rgb[i * 3] === 255 && rgb[i * 3 + 1] === 255 && rgb[i * 3 + 2] === 255 ? 0 : 255
+  }
+  const filePath = path.join(workDir, 'transparent.png')
+  await sharp(Buffer.from(rgba), { raw: { width, height, channels: 4 } }).png().toFile(filePath)
+  const root = path.join(workDir, 'drafts-transparent')
+  const own = cutoutEngine(scaledVerdict(kp, 1, 600))
+  const result = await generatePortraitDraftFromPayload({ imagePath: filePath }, { pickImagePath: async () => null, getEngine: () => own.engine, draftRoot: root })
+  assert.equal(result?.accepted, true, JSON.stringify(result))
+  assert.equal(result?.accepted && result.alphaSource, 'image')
+  assert.deepEqual(result?.accepted && result.cutout, { status: 'skipped_transparent' })
+  assert.ok(!own.events.some((e) => e.startsWith('cutout') || e === 'prepareCutout'), own.events.join(','))
+
+  const opaque = await writeCharacter('character-nomodels.png', 2)
+  const noFaces = cutoutEngine(() => { throw new Error('not reached') }, { prepare: async () => ({ status: 'missing' }) })
+  const stopped = await generatePortraitDraftFromPayload({ imagePath: opaque }, { pickImagePath: async () => null, getEngine: () => noFaces.engine, draftRoot: root })
+  assert.deepEqual(stopped && !stopped.accepted && [stopped.stage, stopped.reasonCode, stopped.detail], ['landmarks', R.MODELS_UNAVAILABLE, 'missing'])
+  assert.deepEqual(noFaces.events, [], 'no cutout work when the landmarks cannot run')
+
+  const rejecting = cutoutEngine(() => ({ accepted: false, reasonCode: R.HANDS_NEAR_FACE, detail: null, messageKey: 'settings.pet.portrait_gate.hands_near_face', messageParams: {}, metrics: {} }))
+  const rejectRoot = path.join(workDir, 'drafts-rejected-after-cutout')
+  const rejected = await generatePortraitDraftFromPayload({ imagePath: opaque }, { pickImagePath: async () => null, getEngine: () => rejecting.engine, draftRoot: rejectRoot })
+  assert.equal(rejected && !rejected.accepted && rejected.reasonCode, R.HANDS_NEAR_FACE)
+  await assert.rejects(fs.stat(rejectRoot), 'a landmark rejection after the cutout writes nothing')
 })
 
 test(`only the newest ${PORTRAIT_DRAFT_KEEP} drafts are kept; other folders are left alone`, async () => {

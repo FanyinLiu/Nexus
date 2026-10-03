@@ -14,7 +14,7 @@ import {
   resizeMaskNearest,
   segmentPortraitLayers,
 } from '../electron/services/portraitGenerator/portraitLayers.js'
-import { splitPortraitLayers } from '../electron/services/portraitGenerator/portraitLayerStage.js'
+import { decodePortraitRaster, splitPortraitLayers } from '../electron/services/portraitGenerator/portraitLayerStage.js'
 
 let workDir = ''
 before(async () => { workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-portrait-layers-')) })
@@ -146,12 +146,15 @@ test('a raised sleeve beside the face counts as body at face level (armBody)', (
   assert.ok(result.metrics.armBody > 0.1, `armBody ${result.metrics.armBody}`)
 })
 
-test('stage wrapper decodes, scales landmarks to the working size, and picks the alpha source', async () => {
+test('stage wrapper decodes, scales landmarks to the working size, and picks the alpha source (own alpha > cutout > plain background)', async () => {
   const { image, kp, regions } = paintCharacter()
   const big = path.join(workDir, 'big.png')
   await sharp(Buffer.from(image.rgb), { raw: { width: 600, height: 700, channels: 3 } }).resize(1200, 1400, { kernel: 'nearest' }).png().toFile(big)
-  const result = await splitPortraitLayers({ filePath: big }, kp.map((p) => [p[0] * 2, p[1] * 2, p[2]]))
-  assert.equal(result.alphaSource, 'plain_background')
+  const raster = await decodePortraitRaster({ filePath: big })
+  assert.equal(raster.hasOwnAlpha, false)
+  const bigKp = kp.map((p) => [p[0] * 2, p[1] * 2, p[2]])
+  const result = splitPortraitLayers(raster, bigKp)
+  assert.equal(result.alphaSource, 'plain_background', 'fallback when no cutout was computed')
   assert.equal(result.width, 658)
   assert.ok(Math.abs(result.scale - 768 / 1400) < 1e-9)
   const scaledHair = resizeMaskNearest(result.hair, result.width, result.height, 600, 700)
@@ -163,5 +166,17 @@ test('stage wrapper decodes, scales landmarks to the working size, and picks the
     rgba[i * 4 + 3] = image.rgb[i * 3] === 255 && image.rgb[i * 3 + 1] === 255 && image.rgb[i * 3 + 2] === 255 ? 0 : 255
   }
   const transparent = await sharp(Buffer.from(rgba), { raw: { width: 600, height: 700, channels: 4 } }).png().toBuffer()
-  assert.equal((await splitPortraitLayers({ buffer: transparent }, kp)).alphaSource, 'image')
+  const own = await decodePortraitRaster({ buffer: transparent })
+  assert.equal(own.hasOwnAlpha, true)
+  assert.equal(splitPortraitLayers(own, kp).alphaSource, 'image')
+
+  // A cutout mask is used for opaque images; the image's own alpha still wins.
+  const plainAlpha = splitPortraitLayers(raster, bigKp).alpha
+  const cutout = Uint8Array.from(plainAlpha)
+  const withCutout = splitPortraitLayers(raster, bigKp, cutout)
+  assert.equal(withCutout.alphaSource, 'cutout')
+  assert.equal(withCutout.alpha, cutout)
+  assert.ok(share(resizeMaskNearest(withCutout.hair, withCutout.width, withCutout.height, 600, 700), regions.hair) > 0.85)
+  assert.equal(splitPortraitLayers(own, kp, new Uint8Array(own.width * own.height).fill(255)).alphaSource, 'image')
+  assert.equal(splitPortraitLayers(raster, bigKp, new Uint8Array(3)).alphaSource, 'plain_background', 'a mask of the wrong size is ignored')
 })
