@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { MODEL_CATALOG } from '../electron/services/modelDefinitions.js'
+import { PORTRAIT_MODEL_CATALOG, PORTRAIT_MODEL_RELEASE } from '../shared/portraitModels.js'
 import { validateModelDownloadUrl, validateModelIntegrity } from '../electron/services/modelDownloadSecurity.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -44,12 +45,45 @@ export function inspectModelCatalog(catalog) {
   return errors
 }
 
+const PORTRAIT_DOWNLOADER_PHRASES = [
+  'validateModelDownloadUrl',
+  'resolveModelDownloadRedirect',
+  'validateModelIntegrity',
+  "redirect: 'manual'",
+  'RELEASE_UNPUBLISHED',
+]
+
+/**
+ * Portrait models: pinned to the Nexus release, size + SHA-256, a commit-pinned
+ * upstream source, and a licence the app can show.
+ */
+export function inspectPortraitModelCatalog(catalog = PORTRAIT_MODEL_CATALOG, release = PORTRAIT_MODEL_RELEASE) {
+  const errors = []
+  for (const model of catalog) {
+    try {
+      validateModelDownloadUrl(model.url)
+      validateModelIntegrity(model)
+      if (model.url !== `${release.baseUrl}/${model.fileName}`) throw new Error('Portrait model URL must point at the pinned release asset')
+      if (!/^[a-f0-9]{40}$/.test(String(model.source?.revision ?? ''))) throw new Error('Portrait model source must be pinned to a full commit hash')
+      if (!model.license?.spdx || !/^https:\/\//.test(String(model.license?.url ?? ''))) throw new Error('Portrait model needs a licence id and URL')
+      if (typeof model.trainingDataDocumented !== 'boolean') throw new Error('Portrait model must state whether training data is documented')
+    } catch (error) {
+      errors.push({ modelId: model.id, message: error instanceof Error ? error.message : String(error) })
+    }
+  }
+  return errors
+}
+
 export function buildModelIntegrityReport(root = ROOT, catalog = MODEL_CATALOG) {
-  const catalogErrors = inspectModelCatalog(catalog)
+  const catalogErrors = [...inspectModelCatalog(catalog), ...inspectPortraitModelCatalog()]
   const downloader = readFileSync(join(root, 'electron/services/modelDownloader.js'), 'utf8')
-  const missingDownloaderPhrases = REQUIRED_DOWNLOADER_PHRASES.filter((phrase) => !downloader.includes(phrase))
+  const portraitDownloader = readFileSync(join(root, 'electron/services/portraitGenerator/portraitModelDownloader.js'), 'utf8')
+  const missingDownloaderPhrases = [
+    ...REQUIRED_DOWNLOADER_PHRASES.filter((phrase) => !downloader.includes(phrase)),
+    ...PORTRAIT_DOWNLOADER_PHRASES.filter((phrase) => !portraitDownloader.includes(phrase)).map((phrase) => `portrait: ${phrase}`),
+  ]
   return {
-    models: catalog.length,
+    models: catalog.length + PORTRAIT_MODEL_CATALOG.length,
     errors: { catalogErrors, missingDownloaderPhrases },
     summary: {
       ok: catalogErrors.length === 0 && missingDownloaderPhrases.length === 0,

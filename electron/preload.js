@@ -65,6 +65,14 @@ contextBridge.exposeInMainWorld('desktopPet', {
   installCodexPetCreatorKitToCodex: (payload) => ipcRenderer.invoke('pet-model:install-creator-kit-codex', payload),
   openCodexPetCreatorKitPath: (payload) => ipcRenderer.invoke('pet-model:open-creator-kit-path', payload),
   createSpritePetFromImage: () => ipcRenderer.invoke('pet-model:create-from-image'),
+  checkPortraitImage: (payload) => ipcRenderer.invoke('pet-model:check-portrait-image', payload),
+  getPortraitModelStatus: () => ipcRenderer.invoke('pet-model:portrait-models-status'),
+  downloadPortraitModels: () => ipcRenderer.invoke('pet-model:download-portrait-models'),
+  subscribePortraitModelProgress: (listener) => {
+    const handler = (_event, payload) => listener(payload)
+    ipcRenderer.on('pet-model:portrait-models-progress', handler)
+    return () => ipcRenderer.removeListener('pet-model:portrait-models-progress', handler)
+  },
   showConfirmDialog: (message) => ipcRenderer.invoke('dialog:confirm', message),
   saveTextFile: (payload) => ipcRenderer.invoke('file:save-text', payload),
   openTextFile: (payload) => ipcRenderer.invoke('file:open-text', payload),

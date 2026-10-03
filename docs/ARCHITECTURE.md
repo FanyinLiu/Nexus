@@ -767,6 +767,20 @@ than presenting Nexus as a Codex-style work agent.
   stage-direction-to-avatar cue bridging, and the `Live2DCanvas` component.
 - `features/character/` owns UI/voice/presence preset data that themes the app
   toward the companion-style presentation layer.
+- `electron/services/portraitGenerator/` holds the in-progress v0.5
+  one-image pet generator. Stage A (`rejectImage.js`) is a file-level `sharp`
+  gate (readable, decodable, PNG/JPEG/WebP, not animated, under the hard
+  256 MiB / 268 MP caps); images over 32 MiB or 64 MP are downscaled once to a
+  4096 px in-memory working copy instead of being rejected. Picture content
+  (background, blur, framing) is not judged there. It returns a stable reason
+  code and `messageKey` from `shared/portraitImageGate.js`; the image is read locally
+  and never reaches chat, desktop context, or model prompts. Its
+  `pet-model:check-portrait-image` IPC has no stable UI entry yet. Stage B
+  (`landmarkGate.js`) runs anime face/landmark models with `onnxruntime-web`
+  in a per-job worker thread (`landmarkRuntime.js`, `landmarkWorker.js`). The
+  models are downloaded on first use by `portraitModelDownloader.js` from the
+  pinned catalog in `shared/portraitModels.js` (see
+  `docs/PORTRAIT_LANDMARK_MODELS.md`). Without them, stage A's verdict stands.
 - `features/releaseNotes/` owns small release-communication contracts used by the
   app shell, such as the current About/Help release spotlight. It must stay
   content-only: no updater logic, IPC, migrations, or background checks.

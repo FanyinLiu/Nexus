@@ -65,6 +65,17 @@ const petModelCreatorKitOpenPathSchema = {
   },
 }
 
+const petModelPortraitImageCheckSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  unknown: 'reject',
+  fields: {
+    // No clamp: a truncated path would silently point at a different file.
+    imagePath: { type: 'string', optional: true, maxLength: PATH_TEXT_MAX, trim: true },
+  },
+}
+
 export function validatePetModelGalleryImportPayload(payload) {
   return validateIpcPayload('pet-model:import-codex-gallery', payload, petModelGalleryImportSchema)
 }
@@ -87,4 +98,8 @@ export function validatePetModelCreatorKitInstallPayload(payload) {
 
 export function validatePetModelCreatorKitOpenPathPayload(payload) {
   return validateIpcPayload('pet-model:open-creator-kit-path', payload, petModelCreatorKitOpenPathSchema)
+}
+
+export function validatePetModelPortraitImageCheckPayload(payload) {
+  return validateIpcPayload('pet-model:check-portrait-image', payload, petModelPortraitImageCheckSchema)
 }
