@@ -29,6 +29,10 @@ v0.4.7 remains the current stable release. Full detail in
 - Stable README link (#133): onboarding message-action demo styles are
   restored, and the distribution audit keeps the introductory stable entry on
   the public stable release.
+- Production audit highs are cleared with patch-level pins: `sharp` 0.35.5,
+  `js-yaml` 4.3.2, `adm-zip` 0.6.1, and `@xmldom/xmldom` 0.8.15.
+  `@huggingface/transformers` stays on 4.2.0; its audit finding was the
+  vulnerable `sharp` and `adm-zip` it pulled in.
 
 ## [0.4.7] - 2026-08-27
 

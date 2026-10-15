@@ -117,7 +117,7 @@
     "pixi.js": "^8.19.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "sharp": "^0.35.3",
+    "sharp": "^0.35.5",
     "sherpa-onnx-node": "^1.12.39",
     "tesseract.js": "^7.0.0",
     "ws": "^8.21.0"
@@ -159,13 +159,14 @@
     "fast-uri": "^3.1.2",
     "gh-pages": "^6.3.0",
     "ip-address": "^10.2.0",
-    "js-yaml": "^4.3.0",
+    "js-yaml": "^4.3.2",
     "minimatch@10": {
       "brace-expansion": "5.0.9"
     },
     "protobufjs": "^7.6.5",
     "qs": "^6.15.2",
-    "sharp": "^0.35.3",
+    "@xmldom/xmldom": "^0.8.15",
+    "sharp": "^0.35.5",
     "tar": "^7.5.21",
     "tmp": "^0.2.7",
     "typescript-eslint": {
@@ -192,7 +193,7 @@
     "@typescript-eslint/tsconfig-utils": {
       "typescript": "6.0.3"
     },
-    "adm-zip": "^0.6.0"
+    "adm-zip": "^0.6.1"
   },
   "build": {
     "appId": "ai.factory.desktoppet",
