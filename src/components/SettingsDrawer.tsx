@@ -667,7 +667,7 @@ export function SettingsDrawer({
   function handleOpenSettingsSection(sectionId: SettingsSectionId, moveFocus = true) {
     const normalizedSectionId = normalizeSettingsSectionId(sectionId)
     if (settingsView === 'section' && normalizedSectionId === activeSectionId) {
-      if (moveFocus) activeSectionHeadingRef.current?.focus({ preventScroll: true })
+      if (moveFocus) activeSectionHeadingRef.current?.focus({ preventScroll: true, focusVisible: false })
       return
     }
     shouldFocusActiveSectionHeadingRef.current = moveFocus
@@ -720,7 +720,9 @@ export function SettingsDrawer({
     if (!shouldMoveFocus) return undefined
 
     const frame = window.requestAnimationFrame(() => {
-      activeSectionHeadingRef.current?.focus({ preventScroll: true })
+      // The title is a programmatic target, not a tab stop. A focus ring
+      // around it reads as an input border.
+      activeSectionHeadingRef.current?.focus({ preventScroll: true, focusVisible: false })
     })
     return () => window.cancelAnimationFrame(frame)
   }, [activeSectionId, open, settingsView])
