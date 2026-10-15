@@ -5,7 +5,8 @@
 //     saves; callers serialise mutations themselves when they need to.
 // All writes go through atomicWriteJson. Debounced persist failures are
 // reported through onPersistError and never thrown, matching the stores this
-// replaces.
+// replaces. flushPending() cancels the debounce and writes immediately so
+// an update install cannot quit while a timer is still waiting.
 
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
@@ -28,6 +29,8 @@ export function createSyncJsonFileStore({
 }) {
   let cache = null
   let writeTimer = null
+  /** @type {Promise<boolean> | null} */
+  let pendingWrite = null
 
   function load() {
     if (cache !== null) return cache
@@ -45,11 +48,45 @@ export function createSyncJsonFileStore({
     if (writeTimer) clearTimeout(writeTimer)
     writeTimer = setTimeout(() => {
       writeTimer = null
-      atomicWriteJson(getStorePath(), cache).catch(onPersistError)
+      const write = atomicWriteJson(getStorePath(), cache).then(
+        () => true,
+        (error) => {
+          onPersistError(error)
+          return false
+        },
+      )
+      pendingWrite = write
+      void write.finally(() => {
+        if (pendingWrite === write) pendingWrite = null
+      })
     }, debounceMs)
   }
 
-  return { load, persistDebounced }
+  // Install prep awaits this. Failures are reported and returned, not thrown,
+  // so the store still matches STORE-1. The caller aborts install on false.
+  async function flushPending() {
+    const hadTimer = writeTimer !== null
+    if (writeTimer) {
+      clearTimeout(writeTimer)
+      writeTimer = null
+    }
+    let inFlightOk = true
+    if (pendingWrite) {
+      inFlightOk = await pendingWrite
+      pendingWrite = null
+    }
+    if (!hadTimer) return inFlightOk
+    if (cache === null) return inFlightOk
+    try {
+      await atomicWriteJson(getStorePath(), cache)
+      return true
+    } catch (error) {
+      onPersistError(error)
+      return false
+    }
+  }
+
+  return { load, persistDebounced, flushPending }
 }
 
 export function createAsyncJsonFileStore({

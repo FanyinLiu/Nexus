@@ -6,8 +6,10 @@
 //   - The renderer can also explicitly trigger checkForUpdatesNow() through IPC,
 //     used by the "Check for updates" button in settings.
 //   - When an update is available it is downloaded automatically (in the
-//     background). Once downloaded, the renderer is notified and may invoke
-//     installAndQuit() to apply the update.
+//     background). It is installed only when the user clicks restart.
+//     Ordinary quit does not apply a downloaded update.
+//   - quitAndInstallUpdate flushes durable stores and snapshots them first.
+//     A flush or snapshot failure is broadcast and does not quit.
 //
 // Events broadcast to the renderer (channel: 'updater:event'):
 //   { type: 'checking' }
@@ -15,10 +17,10 @@
 //   { type: 'not-available', version }
 //   { type: 'progress', percent, transferred, total, bytesPerSecond }
 //   { type: 'downloaded', version, releaseNotes? }
-//   { type: 'error', message }
+//   { type: 'error', message, code?, messageKey?, recommendationKey? }
 
 import electronUpdater from 'electron-updater'
-import { app, shell } from 'electron'
+import { app, BrowserWindow, session, shell } from 'electron'
 import {
   compareReleaseVersions,
   GITHUB_RELEASES_API_URL,
@@ -26,7 +28,21 @@ import {
   normalizeGithubReleasePayload,
   resolveUpdaterMode,
 } from './updatePolicy.js'
+import { UPDATE_INSTALL_PREP_FAILED } from '../../shared/updateErrorCodes.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { flushPetPrefsStore } from './petPrefsStore.js'
+import {
+  applyAutoUpdaterInstallPolicy,
+  buildDurableFlushScript,
+  checkpointLocalDataDatabase,
+  createUpdateInstallPrep,
+  decideUpdateInstall,
+  isDurableUpdateSnapshot,
+  UpdateInstallPrepError,
+  writeUpdateSnapshot,
+} from './updateInstallPrep.js'
+import { flushWindowBoundsStore } from './windowBoundsStore.js'
+import { flushRuntimeLogWriteBuffer } from '../windowManager.js'
 
 const { autoUpdater } = electronUpdater
 
@@ -73,9 +89,7 @@ export function initAutoUpdater({ getWindows }) {
     return
   }
 
-  autoUpdater.autoDownload = true
-  autoUpdater.autoInstallOnAppQuit = true
-  autoUpdater.allowDowngrade = false
+  applyAutoUpdaterInstallPolicy(autoUpdater)
 
   autoUpdater.on('checking-for-update', () => {
     broadcast({ type: 'checking' })
@@ -220,21 +234,120 @@ export async function checkForUpdatesNow() {
   }
 }
 
-export function quitAndInstallUpdate() {
-  if (!app.isPackaged) return false
-  if (updateMode === 'manual-download') {
-    const releaseUrl = lastStatus?.type === 'manual-update' ? lastStatus.releaseUrl : GITHUB_RELEASES_URL
-    setImmediate(() => {
-      shell.openExternal(releaseUrl).catch((error) => {
-        console.warn('[updater] failed to open release page:', getRedactedErrorMessage(error))
-      })
-    })
-    return true
+let rendererSnapshot = null
+let installChain = Promise.resolve()
+
+const updateInstallPrep = createUpdateInstallPrep({
+  flushSettings: async () => {
+    rendererSnapshot = await readRendererDurableSnapshot()
+    return rendererSnapshot.settings
+  },
+  flushMemoryV2: async () => {
+    if (!isDurableUpdateSnapshot(rendererSnapshot)) {
+      throw new UpdateInstallPrepError(
+        UPDATE_INSTALL_PREP_FAILED,
+        'updater.error.install_prep_failed',
+        'updater.error.install_prep_failed_rec',
+      )
+    }
+    return rendererSnapshot.memoryV2
+  },
+  flushMemoryVector: async () => {
+    const memoryVectorStore = await import('./memoryVectorStore.js')
+    await memoryVectorStore.flush()
+  },
+  closeMemoryVector: async () => {
+    const memoryVectorStore = await import('./memoryVectorStore.js')
+    await memoryVectorStore.terminate()
+  },
+  closeLocalData: () => checkpointLocalDataDatabase(),
+  flushPendingWrites: flushPendingDurableWrites,
+  writeSnapshot: (input) => writeUpdateSnapshot({
+    ...input,
+    userDataPath: input.userDataPath || app.getPath('userData'),
+    fromVersion: input.fromVersion ?? app.getVersion(),
+    toVersion: input.toVersion ?? (lastStatus?.type === 'downloaded' ? lastStatus.version : null),
+  }),
+})
+
+async function readRendererDurableSnapshot() {
+  const script = buildDurableFlushScript()
+  const windows = BrowserWindow.getAllWindows().filter((win) => !win.isDestroyed())
+  let snapshot = null
+  for (const win of windows) {
+    if (win.webContents.isLoading()) continue
+    try {
+      const result = await win.webContents.executeJavaScript(script, false)
+      if (isDurableUpdateSnapshot(result)) snapshot = result
+    } catch (error) {
+      console.warn('[updater] renderer durable flush failed:', getRedactedErrorMessage(error))
+    }
   }
-  setImmediate(() => {
-    autoUpdater.quitAndInstall(false, true)
+  if (!snapshot) {
+    throw new UpdateInstallPrepError(
+      UPDATE_INSTALL_PREP_FAILED,
+      'updater.error.install_prep_failed',
+      'updater.error.install_prep_failed_rec',
+    )
+  }
+  return snapshot
+}
+
+async function flushPendingDurableWrites() {
+  const boundsOk = await flushWindowBoundsStore()
+  const prefsOk = await flushPetPrefsStore()
+  await flushRuntimeLogWriteBuffer()
+  const flushStorage = session.defaultSession?.flushStorageData
+  if (typeof flushStorage === 'function') {
+    await Promise.resolve(flushStorage.call(session.defaultSession))
+  }
+  return boundsOk && prefsOk
+}
+
+function broadcastPrepFailure(error) {
+  console.warn('[updater] install prep failed:', getRedactedErrorMessage(error))
+  broadcast({
+    type: 'error',
+    code: error.code,
+    messageKey: error.messageKey,
+    recommendationKey: error.recommendationKey,
+    message: error.code,
   })
-  return true
+}
+
+/**
+ * Apply a downloaded update, or open the macOS release page.
+ * Win/Linux flushes and snapshots first. Failure returns false and does
+ * not call quitAndInstall. Unsigned macOS stays on the manual page.
+ */
+export function quitAndInstallUpdate() {
+  const run = installChain.then(() => decideUpdateInstall({
+    isPackaged: app.isPackaged,
+    updateMode,
+    releaseUrl: lastStatus?.type === 'manual-update' && lastStatus.releaseUrl
+      ? lastStatus.releaseUrl
+      : GITHUB_RELEASES_URL,
+    openReleasePage: (releaseUrl) => {
+      setImmediate(() => {
+        shell.openExternal(releaseUrl).catch((error) => {
+          console.warn('[updater] failed to open release page:', getRedactedErrorMessage(error))
+        })
+      })
+    },
+    prepareForUpdateInstall: () => updateInstallPrep.prepareForUpdateInstall({
+      userDataPath: app.getPath('userData'),
+      fromVersion: app.getVersion(),
+      toVersion: lastStatus?.type === 'downloaded' ? lastStatus.version : null,
+    }),
+    quitAndInstall: () => {
+      setImmediate(() => {
+        autoUpdater.quitAndInstall(false, true)
+      })
+    },
+    onPrepFailure: broadcastPrepFailure,
+  }))
+  installChain = run.then(() => undefined, () => undefined)
+  return run.then((result) => result.ok)
 }
 
 export function getUpdaterStatus() {

@@ -47,6 +47,7 @@ const pkg = readJson('package.json')
 const ciWorkflow = readText('.github/workflows/ci.yml')
 const releaseWorkflow = readText('.github/workflows/release.yml')
 const updaterService = readText('electron/services/updaterService.js')
+const updateInstallPrep = readText('electron/services/updateInstallPrep.js')
 const preload = readText('electron/preload.js')
 const releasingDoc = readText('docs/RELEASING.md')
 const readme = readText('README.md')
@@ -461,8 +462,12 @@ check('release workflow keeps unsigned packaging explicit and secret-free', () =
 })
 
 check('auto-updater is wired through main and preload', () => {
-  assert(updaterService.includes('autoUpdater.autoDownload = true'), 'auto-updater should download updates in the background')
-  assert(updaterService.includes('autoUpdater.allowDowngrade = false'), 'auto-updater should block downgrades')
+  assert(updateInstallPrep.includes('autoUpdater.autoDownload = true'), 'auto-updater should download updates in the background')
+  assert(updateInstallPrep.includes('autoUpdater.autoInstallOnAppQuit = false'), 'a downloaded update installs only when the user clicks restart')
+  assert(!updateInstallPrep.includes('autoUpdater.autoInstallOnAppQuit = true'), 'ordinary quit must not install a downloaded update')
+  assert(updateInstallPrep.includes('autoUpdater.allowDowngrade = false'), 'auto-updater should block downgrades')
+  assert(updaterService.includes('applyAutoUpdaterInstallPolicy'), 'updater service should apply the explicit-install policy')
+  assert(updaterService.includes('prepareForUpdateInstall'), 'quitAndInstall must flush durable state first')
   assert(updaterService.includes('!app.isPackaged'), 'auto-updater should explicitly skip dev mode')
   for (const api of ['updaterCheck', 'updaterStatus', 'updaterInstall', 'subscribeUpdaterEvent']) {
     assert(preload.includes(api), `preload missing ${api}`)

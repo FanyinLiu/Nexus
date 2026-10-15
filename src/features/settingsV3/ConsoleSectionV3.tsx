@@ -22,11 +22,13 @@ import { loadFirstConversationTelemetryStatus } from '../../features/onboarding/
 import { buildFirstRunQaReport } from '../../features/onboarding/firstRunQaReport.ts'
 import { resolveStartupStatusSummary } from '../../features/onboarding/startupStatusView.ts'
 import { useUpdater } from '../../features/updater/useUpdater.ts'
+import type { UpdaterEvent } from '../../features/updater/types.ts'
 import { getCoreRuntime } from '../../lib/coreRuntime.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { clearLogs, exportLogs, getLogEntries } from '../../lib/logger.ts'
 import { loadChatMessages } from '../../lib/storage/chat.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
+import type { TranslationKey } from '../../types/i18n.ts'
 import type { PetModelDefinition } from '../pet'
 import type { AppSettings, DebugConsoleEvent, ReminderTask, SpeechLevelSource, UiLanguage, VoicePipelineState, VoiceState, VoiceTraceEntry } from '../../types'
 import { SettingsV3Disclosure, SettingsV3Empty, SettingsV3Notice, SettingsV3Page, SettingsV3Row, SettingsV3Section, SettingsV3Toolbar } from './SettingsV3Primitives.tsx'
@@ -48,6 +50,26 @@ type Props = {
   voiceTrace: VoiceTraceEntry[]
   onOpenSettingsSection?: (sectionId: SettingsSectionId) => void
   confirm: ConfirmFn
+}
+
+function updaterCopyKey(value: string | undefined): TranslationKey | null {
+  if (!value) return null
+  if (value.startsWith('updater.error.') || value.startsWith('settings.updater.')) {
+    return value as TranslationKey
+  }
+  return null
+}
+
+function formatUpdaterError(
+  event: Extract<UpdaterEvent, { type: 'error' }>,
+  uiLanguage: UiLanguage,
+  prefix: string,
+): string {
+  const messageKey = updaterCopyKey(event.messageKey)
+  const recommendationKey = updaterCopyKey(event.recommendationKey)
+  const body = messageKey ? pickTranslatedUiText(uiLanguage, messageKey) : event.message
+  const recommendation = recommendationKey ? pickTranslatedUiText(uiLanguage, recommendationKey) : ''
+  return `${prefix}${body}${recommendation ? ` ${recommendation}` : ''}`
 }
 
 const ConsoleSpeechLevelMeta = memo(function ConsoleSpeechLevelMeta({
@@ -145,14 +167,16 @@ export const ConsoleSectionV3 = memo(function ConsoleSectionV3({
   }, [announce, download, firstConversationStatus, startup, uiLanguage])
 
   const updateStatus = updater.event.type === 'error'
-    ? `${ti('settings.updater.error_prefix')}${updater.event.message}`
+    ? formatUpdaterError(updater.event, uiLanguage, ti('settings.updater.error_prefix'))
     : updater.event.type === 'progress'
       ? `${ti('settings.updater.downloading')} ${Math.round(updater.event.percent)}%`
       : updater.event.type === 'downloaded'
         ? pickTranslatedUiText(uiLanguage, 'settings.updater.downloaded', { version: updater.event.version ?? '?' })
-        : updater.event.type === 'available' || updater.event.type === 'manual-update'
-          ? pickTranslatedUiText(uiLanguage, 'settings.updater.available', { version: updater.event.version ?? '?' })
-          : updater.event.type === 'checking'
+        : updater.event.type === 'manual-update'
+          ? pickTranslatedUiText(uiLanguage, 'settings.updater.manual_update_available', { version: updater.event.version ?? '?' })
+          : updater.event.type === 'available'
+            ? pickTranslatedUiText(uiLanguage, 'settings.updater.available', { version: updater.event.version ?? '?' })
+            : updater.event.type === 'checking'
             ? ti('settings.updater.checking_status')
             : updater.event.type === 'not-available'
               ? pickTranslatedUiText(uiLanguage, 'settings.updater.up_to_date', { version: updater.event.version ?? '?' })

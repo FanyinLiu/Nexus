@@ -27,3 +27,11 @@ export function savePetPref(key, value) {
   all[key] = value
   store.persistDebounced()
 }
+
+/**
+ * Persist any debounced pet preferences before an update install.
+ * False means the write failed and install must abort.
+ */
+export function flushPetPrefsStore() {
+  return store.flushPending()
+}

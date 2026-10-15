@@ -7,6 +7,10 @@
 // Domain modules under ./ build on top of these primitives.
 
 import { getRedactedLogErrorMessage } from '../logRedaction.ts'
+import {
+  DURABLE_STORAGE_FLUSH_EVENT,
+  DURABLE_UPDATE_SNAPSHOT_GLOBAL,
+} from '../../../shared/durableUpdateFlush.js'
 import { LOCAL_DATA_COMPANION_STORAGE_KEYS } from '../../../shared/localDataStorageKeys.js'
 import type { LocalDataCompanionStorageKey } from '../../../shared/localDataStorageKeys.js'
 
@@ -259,22 +263,89 @@ export function writeJson<T>(key: string, value: T): void {
 const debouncedTimers = new Map<string, number>()
 const pendingValues = new Map<string, unknown>()
 
-function flushPendingWrites(): void {
-  for (const [key, value] of pendingValues) {
+/**
+ * Write every debounced localStorage value now.
+ * A failed key stays pending so a later install attempt can retry it.
+ * Returns false when any write failed — update install must abort.
+ */
+export function flushPendingStorageWrites(): boolean {
+  let ok = true
+  for (const [key, value] of [...pendingValues]) {
     const timerId = debouncedTimers.get(key)
     if (timerId) window.clearTimeout(timerId)
     try {
       window.localStorage.setItem(key, JSON.stringify(value))
       mirrorCompanionLocalDataWrite(key, value)
       broadcastWrite(key, value)
-    } catch { /* best-effort on unload */ }
+      pendingValues.delete(key)
+      debouncedTimers.delete(key)
+    } catch {
+      ok = false
+    }
   }
-  pendingValues.clear()
-  debouncedTimers.clear()
+  return ok
+}
+
+export type DurableMemoryV2Snapshot = {
+  longTerm: string | null
+  daily: string | null
+  opLog: string | null
+  v1Backup: string | null
+}
+
+export type DurableUpdateSnapshot = {
+  settings: string | null
+  memoryV2: DurableMemoryV2Snapshot
+}
+
+function readStorageItem(key: string): string | null {
+  return window.localStorage.getItem(key)
+}
+
+/**
+ * The flush script reads this global after dispatching the event.
+ * Dispatch does not rethrow listener errors, so a failed capture must
+ * clear the previous value or install could copy a stale snapshot.
+ */
+function publishDurableUpdateSnapshot(snapshot: DurableUpdateSnapshot | null): void {
+  const target = window as unknown as Record<string, unknown>
+  target[DURABLE_UPDATE_SNAPSHOT_GLOBAL] = snapshot
+}
+
+/**
+ * Flush debounced renderer stores and publish settings plus memory v2
+ * for the main-process pre-install snapshot. Throws when a pending
+ * write cannot be stored, so install can abort instead of copying a gap.
+ */
+export function captureDurableUpdateSnapshot(): DurableUpdateSnapshot {
+  if (!flushPendingStorageWrites()) {
+    publishDurableUpdateSnapshot(null)
+    throw new Error('durable storage flush failed')
+  }
+  const snapshot: DurableUpdateSnapshot = {
+    settings: readStorageItem(SETTINGS_STORAGE_KEY),
+    memoryV2: {
+      longTerm: readStorageItem(MEMORY_STORAGE_KEY),
+      daily: readStorageItem(DAILY_MEMORY_STORAGE_KEY),
+      opLog: readStorageItem(MEMORY_OP_LOG_STORAGE_KEY),
+      v1Backup: readStorageItem(MEMORY_V1_BACKUP_STORAGE_KEY),
+    },
+  }
+  publishDurableUpdateSnapshot(snapshot)
+  return snapshot
 }
 
 if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', flushPendingWrites)
+  window.addEventListener('beforeunload', () => {
+    flushPendingStorageWrites()
+  })
+  window.addEventListener(DURABLE_STORAGE_FLUSH_EVENT, () => {
+    try {
+      captureDurableUpdateSnapshot()
+    } catch {
+      publishDurableUpdateSnapshot(null)
+    }
+  })
 }
 
 export function writeJsonDebounced<T>(key: string, value: T, delayMs = 500): void {
