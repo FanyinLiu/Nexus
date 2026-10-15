@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+    # Description edits must not start a second full matrix. Two Windows
+    # suites at once have timed out an unrelated renderer test.
+    types: [opened, synchronize, reopened]
     branches: [main]
 
 jobs:
